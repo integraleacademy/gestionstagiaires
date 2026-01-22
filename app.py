@@ -1447,10 +1447,10 @@ TPL_ADMIN_STAGIAIRE_SPACE = f"""
     const title = document.getElementById("testModalTitle");
     if(mode === "notify"){
       title.textContent = "Notifier test de français";
-      form.action = `/admin/sessions/${SESSION_ID}/stagiaires/${ST_ID}/test-fr/notify`;
+      form.action = "/admin/sessions/" + SESSION_ID + "/stagiaires/" + ST_ID + "/test-fr/notify";
     } else {
       title.textContent = "Relancer test de français";
-      form.action = `/admin/sessions/${SESSION_ID}/stagiaires/${ST_ID}/test-fr/relance`;
+      form.action = "/admin/sessions/" + SESSION_ID + "/stagiaires/" + ST_ID + "/test-fr/relance";
     }
     modal.style.display = "flex";
   }
