@@ -17,198 +17,408 @@
   </div>
 </div>
 
-<div class="table-wrap full-bleed">
-  <div class="card" style="padding:14px;">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
-      <div>
-        <div style="font-size:20px;font-weight:800;">
-          {{ trainee.first_name }} {{ trainee.last_name }}
-        </div>
-        <div class="meta-line" style="margin-top:6px;">
-          <span class="pill">ID: {{ trainee.personal_id or trainee.id }}</span>
-          <span>CNAPS : <strong id="cnapsText">{{ trainee.cnaps or "INCONNU" }}</strong></span>
-          {% if show_hosting %}
-            <span>Hébergement :
-              <strong>
-                {{ "réservé" if trainee.hosting_status=="reserved" else ("inconnu" if trainee.hosting_status=="unknown" else trainee.hosting_status) }}
-              </strong>
-            </span>
-          {% endif %}
-          {% if show_vae %}
-            <span>VAE : <strong>{{ trainee.vae_status or "—" }}</strong></span>
-          {% endif %}
-        </div>
+<div class="card" style="margin-top:12px;">
+  <div class="card-row" style="display:flex;gap:12px;align-items:flex-start;justify-content:space-between;">
+    <div>
+      <div style="font-size:20px;font-weight:900;">{{ trainee.first_name }} {{ trainee.last_name }}</div>
+      <div class="meta-line" style="margin-top:6px;">
+        <span class="mono">Email : {{ trainee.email or "—" }}</span>
+        <span class="mono">Tel : {{ trainee.phone or "—" }}</span>
+        <span class="mono">ID : {{ trainee.personal_id or trainee.id }}</span>
+      </div>
+      <div class="meta-line" style="margin-top:6px;">
+        <span class="pill">CNAPS : {{ trainee.cnaps or "INCONNU" }}</span>
+        <button class="mini-btn" id="btnRefreshCnaps" type="button">↻ Rafraîchir CNAPS</button>
       </div>
 
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-outline" id="btnRefreshCnaps" type="button">↻ Rafraîchir CNAPS</button>
-        <button class="btn btn-danger" id="btnDelete" type="button">🗑️ Supprimer</button>
-      </div>
+      {% if trainee.access_sent_at %}
+      <div class="hint" style="margin-top:8px;">✅ Accès envoyé le : <strong>{{ trainee.access_sent_at }}</strong></div>
+      {% endif %}
     </div>
 
-    <hr style="margin:14px 0;opacity:.15;">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+      <form method="post" action="{{ url_for('admin_delete_trainee', session_id=session.id, trainee_id=trainee.id) }}"
+            onsubmit="return confirm('Supprimer ce stagiaire ?');">
+        <button class="btn btn-danger" type="submit">🗑️ Supprimer le stagiaire</button>
+      </form>
 
-    <div class="form-grid">
-      <label>
-        <div class="label">Nom</div>
-        <input id="lastName" type="text" value="{{ trainee.last_name }}">
-      </label>
+      <a class="btn btn-outline"
+         href="{{ url_for('admin_etiquette_docx', session_id=session.id, trainee_id=trainee.id) }}">
+        🖨️ Imprimer étiquette dossier (Word)
+      </a>
 
-      <label>
-        <div class="label">Prénom</div>
-        <input id="firstName" type="text" value="{{ trainee.first_name }}">
-      </label>
-
-      <label>
-        <div class="label">Email</div>
-        <input id="email" type="email" value="{{ trainee.email }}">
-      </label>
-
-      <label>
-        <div class="label">Téléphone</div>
-        <input id="phone" type="tel" value="{{ trainee.phone }}">
-        <div class="hint">Format conseillé : +33…</div>
-      </label>
-
-      <label>
-        <div class="label">Convention</div>
-        <select id="convention" class="status sel">
-          {% for v in enums.convention %}
-            <option value="{{ v }}" {% if trainee.convention_status==v %}selected{% endif %}>
-              {{ "PROCHAINEMENT" if v=="soon" else ("EN COURS DE SIGNATURE" if v=="signing" else "SIGNÉE") }}
-            </option>
-          {% endfor %}
-        </select>
-      </label>
-
-      <label>
-        <div class="label">Test Français</div>
-        <select id="testfr" class="status sel">
-          <option value="soon" {% if trainee.test_fr_status=="soon" %}selected{% endif %}>prochainement</option>
-          <option value="in_progress" {% if trainee.test_fr_status=="in_progress" %}selected{% endif %}>en cours</option>
-          <option value="validated" {% if trainee.test_fr_status=="validated" %}selected{% endif %}>validé</option>
-          <option value="relance" {% if trainee.test_fr_status=="relance" %}selected{% endif %}>relancé</option>
-        </select>
-      </label>
-
-      <label>
-        <div class="label">Dossier</div>
-        <select id="dossier" class="status sel">
-          <option value="complete" {% if trainee.dossier_status=="complete" %}selected{% endif %}>complet</option>
-          <option value="incomplete" {% if trainee.dossier_status=="incomplete" %}selected{% endif %}>incomplet</option>
-        </select>
-      </label>
-
-      <label>
-        <div class="label">Financement</div>
-        <select id="finance" class="status sel">
-          <option value="soon" {% if trainee.financement_status=="soon" %}selected{% endif %}>prochainement</option>
-          <option value="in_review" {% if trainee.financement_status=="in_review" %}selected{% endif %}>en cours de validation</option>
-          <option value="validated" {% if trainee.financement_status=="validated" %}selected{% endif %}>validé</option>
-        </select>
-      </label>
-
-      {% if show_vae %}
-      <label>
-        <div class="label">VAE</div>
-        <select id="vae" class="status sel">
-          <option value="soon" {% if trainee.vae_status=="soon" %}selected{% endif %}>prochainement</option>
-          <option value="in_progress" {% if trainee.vae_status=="in_progress" %}selected{% endif %}>en cours</option>
-          <option value="validated" {% if trainee.vae_status=="validated" %}selected{% endif %}>validé</option>
-        </select>
-      </label>
-      {% endif %}
-
-      <label style="grid-column:1/-1;">
-        <div class="label">Commentaire</div>
-        <input id="comment" type="text" value="{{ trainee.comment }}" placeholder="Ajouter un commentaire...">
-        <div class="hint">Sauvegarde automatique</div>
-      </label>
+      <form method="post" action="{{ url_for('admin_send_access', session_id=session.id, trainee_id=trainee.id) }}">
+        <button class="btn btn-primary" type="submit">📩 Envoyer accès espace stagiaire</button>
+      </form>
     </div>
   </div>
 </div>
 
-<script>
-  const sessionId = "{{ session.id }}";
-  const traineeId = "{{ trainee.id }}";
 
-  async function save(payload){
-    await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
-      method:"POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify(payload)
+<div class="grid" style="grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px;">
+
+  <!-- ===================== -->
+  <!-- TEST DE FRANÇAIS       -->
+  <!-- ===================== -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-weight:900;">Test de français</div>
+      <div>
+        {% set tf = (trainee.test_fr_status or "soon") %}
+        {% set tf_label = ("A FAIRE" if tf=="soon" else ("EN COURS" if tf=="in_progress" else ("RELANCÉ" if tf=="relance" else "VALIDÉ"))) %}
+        <span class="pill
+          {% if tf=="soon" %}pill-red
+          {% elif tf=="in_progress" %}pill-yellow
+          {% elif tf=="relance" %}pill-orange
+          {% else %}pill-green
+          {% endif %}">
+          Statut : {{ tf_label }}
+        </span>
+      </div>
+    </div>
+
+    <div class="hint" style="margin-top:8px;">
+      Lien : <a href="https://testb1.lapreventionsecurite.org/Public/" target="_blank">https://testb1.lapreventionsecurite.org/Public/</a>
+    </div>
+
+    {% if trainee.test_fr_deadline %}
+      <div class="hint" style="margin-top:6px;">Échéance : <strong>{{ trainee.test_fr_deadline }}</strong></div>
+    {% endif %}
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+      <button class="btn btn-primary" type="button" onclick="openTestModal('notify')">🔔 Notifier test de français</button>
+      <button class="btn btn-outline" type="button" onclick="openTestModal('relance')">🔁 Relancer test de français</button>
+    </div>
+
+    {% if trainee.test_fr_last_notified_at %}
+      <div class="hint" style="margin-top:10px;">🟧 Notifié le : <strong>{{ trainee.test_fr_last_notified_at }}</strong></div>
+    {% endif %}
+    {% if trainee.test_fr_last_relance_at %}
+      <div class="hint">🟧 Relancé le : <strong>{{ trainee.test_fr_last_relance_at }}</strong></div>
+    {% endif %}
+  </div>
+
+
+  <!-- ===================== -->
+  <!-- DOCUMENTS              -->
+  <!-- ===================== -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-weight:900;">Gestion des documents</div>
+
+      {% set dossier_label = ("DOSSIER COMPLET" if dossier_is_complete else "DOSSIER INCOMPLET") %}
+      <span class="pill {% if dossier_is_complete %}pill-green{% else %}pill-red{% endif %}">
+        {{ dossier_label }}
+      </span>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+      <form method="post" action="{{ url_for('admin_docs_notify', session_id=session.id, trainee_id=trainee.id) }}">
+        <button class="btn btn-primary" type="submit">📩 Notifier envoi documents</button>
+      </form>
+
+      <form method="post" action="{{ url_for('admin_docs_nonconform_notify', session_id=session.id, trainee_id=trainee.id) }}">
+        <button class="btn btn-outline" type="submit">⚠️ Notifier documents non conformes</button>
+      </form>
+
+      <form method="post" action="{{ url_for('admin_docs_relance', session_id=session.id, trainee_id=trainee.id) }}">
+        <button class="btn btn-outline" type="submit">🔁 Relance stagiaire</button>
+      </form>
+
+      <a class="btn btn-outline"
+         href="{{ url_for('admin_docs_zip', session_id=session.id, trainee_id=trainee.id) }}">
+        ⬇️ Télécharger les documents (ZIP)
+      </a>
+    </div>
+
+    {% if trainee.docs_notified_at %}
+      <div class="hint" style="margin-top:10px;">🟧 Stagiaire notifié le : <strong>{{ trainee.docs_notified_at }}</strong></div>
+    {% endif %}
+    {% if trainee.docs_last_nonconform_notified_at %}
+      <div class="hint">🟧 Docs non conformes notifiés le : <strong>{{ trainee.docs_last_nonconform_notified_at }}</strong></div>
+    {% endif %}
+    {% if trainee.docs_last_relance_at %}
+      <div class="hint">🟧 Stagiaire relancé le : <strong>{{ trainee.docs_last_relance_at }}</strong></div>
+    {% endif %}
+
+    <div class="table-wrap" style="margin-top:10px;">
+      <table class="table" id="docsTable" data-session-id="{{ session.id }}" data-trainee-id="{{ trainee.id }}">
+        <thead>
+          <tr>
+            <th>Document</th>
+            <th>Statut</th>
+            <th>Commentaire</th>
+            <th>Fichier</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in (trainee.documents or []) %}
+          <tr data-doc-key="{{ d.key }}">
+            <td style="font-weight:800;">{{ d.label }}</td>
+
+            <td style="min-width:190px;">
+              <select class="status sel-doc" data-field="status">
+                {% set cur = (d.status or "A CONTRÔLER") %}
+                <option value="A CONTRÔLER" {% if cur=="A CONTRÔLER" or cur=="A CONTROLER" %}selected{% endif %}>A CONTRÔLER</option>
+                <option value="CONFORME" {% if cur=="CONFORME" %}selected{% endif %}>CONFORME</option>
+                <option value="NON CONFORME" {% if cur=="NON CONFORME" %}selected{% endif %}>NON CONFORME</option>
+              </select>
+              <div class="hint" style="margin-top:6px;">
+                {% if cur=="CONFORME" %}
+                  <span class="pill pill-green">CONFORME</span>
+                {% elif cur=="NON CONFORME" %}
+                  <span class="pill pill-red">NON CONFORME</span>
+                {% else %}
+                  <span class="pill pill-yellow">A CONTRÔLER</span>
+                {% endif %}
+              </div>
+            </td>
+
+            <td>
+              <input class="comment doc-comment" data-field="comment" value="{{ d.comment or "" }}" placeholder="Commentaire...">
+            </td>
+
+            <td class="mono" style="max-width:280px;">
+              {% if d.file %}
+                <a href="{{ url_for('admin_view_upload', path=d.file_token) }}" target="_blank">📎 Voir</a>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="hint" style="margin-top:8px;">Autosave actif (statut + commentaire).</div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ===================== -->
+<!-- VAE (DIRIGEANT VAE)    -->
+<!-- ===================== -->
+{% if show_vae %}
+<div class="card" style="margin-top:12px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-weight:900;">STATUT VAE</div>
+    <span class="pill">{{ trainee.vae_status_label or "—" }}</span>
+  </div>
+
+  <div class="hint" style="margin-top:8px;">(Encadré prêt : tu pourras déclencher mails/SMS sur chaque étape ensuite.)</div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+    {% for step in vae_steps %}
+      <button class="btn btn-outline" type="button" onclick="setVaeStep('{{ step.key }}')">{{ step.label }}</button>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+
+<!-- ===================== -->
+<!-- DIPLÔMES / ATTESTATIONS -->
+<!-- ===================== -->
+<div class="card" style="margin-top:12px;">
+  <div style="font-weight:900;">Diplômes & attestations</div>
+  <div class="hint" style="margin-top:6px;">Importer un fichier → stockage + mail/SMS “disponible sur votre espace stagiaire”.</div>
+
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;">
+    <form method="post" enctype="multipart/form-data"
+          action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='certificat_sst') }}">
+      <input type="file" name="file" required>
+      <button class="btn btn-primary" type="submit">⬆️ Importer certificat SST</button>
+    </form>
+
+    <form method="post" enctype="multipart/form-data"
+          action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='diplome') }}">
+      <input type="file" name="file" required>
+      <button class="btn btn-primary" type="submit">⬆️ Importer diplôme</button>
+    </form>
+
+    <form method="post" enctype="multipart/form-data"
+          action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='attestation_fin_formation') }}">
+      <input type="file" name="file" required>
+      <button class="btn btn-primary" type="submit">⬆️ Importer attestation fin de formation</button>
+    </form>
+
+    <form method="post" enctype="multipart/form-data"
+          action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='carte_sst') }}">
+      <input type="file" name="file" required>
+      <button class="btn btn-primary" type="submit">⬆️ Importer carte SST</button>
+    </form>
+
+    <form method="post" enctype="multipart/form-data"
+          action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='dossier_fin_formation') }}">
+      <input type="file" name="file" required>
+      <button class="btn btn-primary" type="submit">⬆️ Importer dossier fin de formation</button>
+    </form>
+  </div>
+
+  <div class="table-wrap" style="margin-top:10px;">
+    <table class="table">
+      <thead>
+        <tr><th>Élément</th><th>Statut</th><th>Fichier</th></tr>
+      </thead>
+      <tbody>
+        {% for item in deliverables_view %}
+        <tr>
+          <td style="font-weight:800;">{{ item.label }}</td>
+          <td>{% if item.file %}<span class="pill pill-green">Importé</span>{% else %}—{% endif %}</td>
+          <td class="mono">
+            {% if item.file %}
+              <a href="{{ url_for('admin_view_upload', path=item.file_token) }}" target="_blank">📎 Voir</a>
+            {% else %}
+              —
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ===================== -->
+<!-- MODALE Test FR         -->
+<!-- ===================== -->
+<div class="modal-backdrop" id="testModal" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="testModalTitle">Test de français</div>
+      <button class="icon-btn" data-close-modal="testModal">✕</button>
+    </div>
+
+    <form method="post" id="testForm">
+      <div class="modal-body">
+        <div class="form-grid">
+          <label>
+            <div class="label">Code (nouveau à chaque envoi)</div>
+            <input name="code" type="text" required placeholder="ex : B1-29384">
+          </label>
+          <label>
+            <div class="label">Date + heure max</div>
+            <input name="deadline" type="text" required placeholder="ex : 02/03/2026 18:00">
+          </label>
+        </div>
+        <div class="hint" style="margin-top:8px;">
+          Un mail + SMS seront envoyés (si email/tel renseignés).
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn" type="button" data-close-modal="testModal">Annuler</button>
+        <button class="btn btn-primary" type="submit">Envoyer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<script>
+  // util modal (si ton base.html fournit déjà openModal/closeModal, ça marchera aussi)
+  function openModal(id){ document.getElementById(id).setAttribute("aria-hidden","false"); document.getElementById(id).classList.add("show"); }
+  function closeModal(id){ document.getElementById(id).setAttribute("aria-hidden","true"); document.getElementById(id).classList.remove("show"); }
+
+  document.querySelectorAll("[data-close-modal]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const id = b.getAttribute("data-close-modal");
+      closeModal(id);
+    });
+  });
+
+  // Test FR modal logic
+  function openTestModal(mode){
+    const title = document.getElementById("testModalTitle");
+    const form = document.getElementById("testForm");
+    if(mode === "notify"){
+      title.textContent = "Notifier test de français";
+      form.action = "{{ url_for('admin_test_fr_notify', session_id=session.id, trainee_id=trainee.id) }}";
+    }else{
+      title.textContent = "Relancer test de français";
+      form.action = "{{ url_for('admin_test_fr_relance', session_id=session.id, trainee_id=trainee.id) }}";
+    }
+    openModal("testModal");
+  }
+
+  // Autosave documents
+  const docsTable = document.getElementById("docsTable");
+  if(docsTable){
+    const sessionId = docsTable.getAttribute("data-session-id");
+    const traineeId = docsTable.getAttribute("data-trainee-id");
+
+    async function saveDoc(key, field, value){
+      await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/documents/update`, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ key, field, value })
+      });
+    }
+
+    // select changes
+    docsTable.querySelectorAll("tr[data-doc-key]").forEach(tr=>{
+      const key = tr.getAttribute("data-doc-key");
+
+      const sel = tr.querySelector("select.sel-doc");
+      if(sel){
+        sel.addEventListener("change", async ()=>{
+          await saveDoc(key, "status", sel.value);
+          window.location.reload(); // pour recalcul dossier complet/incomplet
+        });
+      }
+
+      // comment debounce
+      const input = tr.querySelector("input.doc-comment");
+      if(input){
+        let t=null;
+        input.addEventListener("input", ()=>{
+          if(t) clearTimeout(t);
+          t=setTimeout(async ()=>{
+            await saveDoc(key, "comment", input.value);
+          }, 450);
+        });
+      }
     });
   }
 
-  // autosave (debounce)
-  let tmr = null;
-  function debounceSave(payload){
-    if(tmr) clearTimeout(tmr);
-    tmr = setTimeout(()=>save(payload), 450);
-  }
-
-  // champs texte
-  document.getElementById("lastName").addEventListener("input", e => debounceSave({ last_name: e.target.value }));
-  document.getElementById("firstName").addEventListener("input", e => debounceSave({ first_name: e.target.value }));
-  document.getElementById("email").addEventListener("input", e => debounceSave({ email: e.target.value }));
-  document.getElementById("phone").addEventListener("input", e => debounceSave({ phone: e.target.value }));
-  document.getElementById("comment").addEventListener("input", e => debounceSave({ comment: e.target.value }));
-
-  // selects
-  document.getElementById("convention").addEventListener("change", e => save({ convention_status: e.target.value }).then(()=>window.location.reload()));
-  document.getElementById("testfr").addEventListener("change", e => save({ test_fr_status: e.target.value }).then(()=>window.location.reload()));
-  document.getElementById("dossier").addEventListener("change", e => save({ dossier_status: e.target.value }).then(()=>window.location.reload()));
-  document.getElementById("finance").addEventListener("change", e => save({ financement_status: e.target.value }).then(()=>window.location.reload()));
-  const vaeEl = document.getElementById("vae");
-  if(vaeEl) vaeEl.addEventListener("change", e => save({ vae_status: e.target.value }).then(()=>window.location.reload()));
-
-  // CNAPS refresh
+  // Refresh CNAPS
   async function cnapsLookup(nom, prenom){
     const r = await fetch(`/api/cnaps_lookup?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}`);
     return await r.json();
   }
 
-  document.getElementById("btnRefreshCnaps").addEventListener("click", async ()=>{
-    const nom = (document.getElementById("lastName").value || "").trim();
-    const prenom = (document.getElementById("firstName").value || "").trim();
-    if(!nom || !prenom){
-      alert("Nom + prénom obligatoires");
-      return;
-    }
-    const btn = document.getElementById("btnRefreshCnaps");
-    btn.disabled = true;
+  document.getElementById("btnRefreshCnaps")?.addEventListener("click", async ()=>{
+    const nom = ("{{ trainee.last_name|e }}").trim();
+    const prenom = ("{{ trainee.first_name|e }}").trim();
+    if(!nom || !prenom){ alert("Nom / prénom introuvables"); return; }
+
     try{
       const res = await cnapsLookup(nom, prenom);
       const statut = (res.statut_cnaps || "INCONNU").toUpperCase();
-      document.getElementById("cnapsText").textContent = statut;
-      await save({ cnaps: statut });
+
+      await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ cnaps: statut })
+      });
+
+      window.location.reload();
     }catch(e){
       alert("Erreur CNAPS");
-    }finally{
-      btn.disabled = false;
     }
   });
 
-  // delete
-  document.getElementById("btnDelete").addEventListener("click", async ()=>{
-    if(!confirm("Supprimer ce stagiaire ?")) return;
-    const btn = document.getElementById("btnDelete");
-    btn.disabled = true;
-    try{
-      const r = await fetch(`/api/sessions/${sessionId}/trainees/${traineeId}/delete`, { method:"POST" });
-      const res = await r.json();
-      if(!r.ok || !res.ok){
-        alert("Erreur suppression");
-        btn.disabled = false;
-        return;
-      }
-      window.location.href = `/admin/sessions/${sessionId}/trainees`;
-    }catch(e){
-      alert("Erreur réseau");
-    }finally{
-      btn.disabled = false;
-    }
-  });
+  // VAE (simple update)
+  async function setVaeStep(stepKey){
+    await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
+      method:"POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ vae_status_label: stepKey })
+    });
+    window.location.reload();
+  }
 </script>
 
 {% endblock %}
