@@ -687,6 +687,10 @@ TPL_ADMIN_STAGIAIRES = f"""
   {BASE_CSS}
 </head>
 <body>
+<div style="background:#ff00ff;color:#000;font-weight:900;padding:10px;border-radius:10px;margin:10px;">
+  TEST STAGIAIRES TEMPLATE (STRING)
+</div>
+
   <div class="topbar">
     <div class="row" style="gap:14px">
       <a href="/admin/sessions">← Retour sessions</a>
