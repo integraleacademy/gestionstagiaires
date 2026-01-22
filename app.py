@@ -2,14 +2,13 @@ import os
 import json
 import uuid
 import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 
 import requests
-from flask import Flask, request, redirect, url_for, jsonify, render_template_string, abort
+from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file
 
 import zipfile
 from io import BytesIO
-from werkzeug.utils import secure_filename
 from docx import Document
 
 
@@ -39,16 +38,14 @@ BREVO_SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL", "ecole@integraleacadem
 BREVO_SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "Intégrale Academy")
 CNAPS_LOOKUP_ENDPOINT = os.environ.get("CNAPS_LOOKUP_ENDPOINT", "")
 
-
 # Placeholder: public student portal base URL (we'll build later)
 PUBLIC_STUDENT_PORTAL_BASE = os.environ.get("PUBLIC_STUDENT_PORTAL_BASE", "https://example.com/espace-stagiaire")
 
 # =========================
 # External integrations (placeholders)
 # =========================
-# You will replace these with your Render URLs later
-CNAPS_STATUS_ENDPOINT = os.environ.get("CNAPS_STATUS_ENDPOINT", "")         # e.g. https://xxx.onrender.com/api/cnaps_status?email=
-HEBERGEMENT_STATUS_ENDPOINT = os.environ.get("HEBERGEMENT_STATUS_ENDPOINT", "")  # e.g. https://yyy.onrender.com/api/hebergement?email=
+CNAPS_STATUS_ENDPOINT = os.environ.get("CNAPS_STATUS_ENDPOINT", "")              # optional
+HEBERGEMENT_STATUS_ENDPOINT = os.environ.get("HEBERGEMENT_STATUS_ENDPOINT", "")  # optional
 
 
 # =========================
@@ -142,6 +139,7 @@ def count_conformes(session: Dict[str, Any]) -> Dict[str, int]:
     non_conformes = len(stagiaires) - conformes
     return {"conformes": conformes, "non_conformes": non_conformes}
 
+
 def dossier_is_complet(st: Dict[str, Any]) -> bool:
     docs = st.get("documents", []) or []
     if not docs:
@@ -151,7 +149,6 @@ def dossier_is_complet(st: Dict[str, Any]) -> bool:
 
 def dossier_status_label(st: Dict[str, Any]) -> str:
     return "DOSSIER COMPLET" if dossier_is_complet(st) else "DOSSIER INCOMPLET"
-
 
 
 # =========================
@@ -183,14 +180,12 @@ def brevo_send_email(to_email: str, subject: str, html: str) -> bool:
 def brevo_send_sms(phone: str, message: str) -> bool:
     if not BREVO_API_KEY:
         return False
-    # Brevo SMS endpoint
     url = "https://api.brevo.com/v3/transactionalSMS/sms"
     headers = {
         "accept": "application/json",
         "api-key": BREVO_API_KEY,
         "content-type": "application/json",
     }
-    # Note: sender is optional; your Brevo account may require an approved sender
     payload = {
         "recipient": phone,
         "content": message,
@@ -204,10 +199,7 @@ def brevo_send_sms(phone: str, message: str) -> bool:
 
 
 def send_welcome_messages(stagiaire: Dict[str, Any], session: Dict[str, Any]) -> Dict[str, bool]:
-    # Public portal link placeholder (we'll build later)
-    # We'll attach a token-like id for later mapping
     portal_link = f"{PUBLIC_STUDENT_PORTAL_BASE}?id={stagiaire.get('id')}"
-
     formation_name = session.get("nom", "Votre formation")
     date_debut = session.get("date_debut", "xx")
     date_fin = session.get("date_fin", "xx")
@@ -252,7 +244,6 @@ def fetch_cnaps_status(email: str) -> Optional[str]:
         if r.status_code != 200:
             return None
         data = r.json()
-        # Expecting: {"status": "..."}  (adapt later)
         return data.get("status")
     except Exception:
         return None
@@ -266,7 +257,6 @@ def fetch_hebergement_status(email: str) -> Optional[str]:
         if r.status_code != 200:
             return None
         data = r.json()
-        # Expecting: {"reserved": true/false} (adapt later)
         if data.get("reserved") is True:
             return "réservé"
         if data.get("reserved") is False:
@@ -274,6 +264,7 @@ def fetch_hebergement_status(email: str) -> Optional[str]:
         return data.get("status")
     except Exception:
         return None
+
 
 def fetch_cnaps_status_by_name(nom: str, prenom: str) -> Optional[str]:
     if not CNAPS_LOOKUP_ENDPOINT:
@@ -292,7 +283,6 @@ def fetch_cnaps_status_by_name(nom: str, prenom: str) -> Optional[str]:
         return None
 
 
-
 # =========================
 # UI helpers
 # =========================
@@ -305,20 +295,20 @@ DOSSIER_STATUSES = ["complet", "incomplet"]
 FINANCEMENT_STATUSES = ["prochainement", "en cours de validation", "validé"]
 VAE_STATUSES = ["prochainement", "en cours", "validé", "non concerné"]
 
+
 def badge_class(value: str, col: str) -> str:
-    # Simple mapping to CSS classes
     if col in ("convention",):
-        return {"prochainement":"red","en cours de signature":"yellow","signée":"green"}.get(value, "gray")
+        return {"prochainement": "red", "en cours de signature": "yellow", "signée": "green"}.get(value, "gray")
     if col in ("test_francais",):
-        return {"prochainement":"red","en cours":"yellow","validé":"green","relancé":"orange"}.get(value, "gray")
+        return {"prochainement": "red", "en cours": "yellow", "validé": "green", "relancé": "orange"}.get(value, "gray")
     if col in ("dossier",):
-        return {"complet":"green","incomplet":"red"}.get(value, "gray")
+        return {"complet": "green", "incomplet": "red"}.get(value, "gray")
     if col in ("financement",):
-        return {"prochainement":"red","en cours de validation":"orange","validé":"green"}.get(value, "gray")
+        return {"prochainement": "red", "en cours de validation": "orange", "validé": "green"}.get(value, "gray")
     if col in ("cnaps",):
         v = (value or "").strip().upper()
         v = " ".join(v.split())
-    
+
         if v in ("", "INCONNU", "INCONNUE"):
             return "gray"
         if v == "TRANSMIS":
@@ -333,13 +323,12 @@ def badge_class(value: str, col: str) -> str:
             return "black"
         if v in ("DOCS COMPLÉMENTAIRES", "DOCS COMPLEMENTAIRES"):
             return "red"
-    
         return "gray"
 
     if col in ("hebergement",):
-        return {"réservé":"green","inconnu":"black"}.get(value, "gray")
+        return {"réservé": "green", "inconnu": "black"}.get(value, "gray")
     if col in ("vae",):
-        return {"validé":"green","en cours":"yellow","prochainement":"red","non concerné":"gray"}.get(value, "gray")
+        return {"validé": "green", "en cours": "yellow", "prochainement": "red", "non concerné": "gray"}.get(value, "gray")
     return "gray"
 
 
@@ -398,7 +387,7 @@ def admin_test_fr_relance(session_id: str, stagiaire_id: str):
 @app.post("/admin/sessions/<session_id>/stagiaires/<stagiaire_id>/test-fr/notify")
 def admin_test_fr_notify(session_id: str, stagiaire_id: str):
     code = (request.form.get("code") or "").strip()
-    deadline = (request.form.get("deadline") or "").strip()  # ex : 02/03/2026 18:00
+    deadline = (request.form.get("deadline") or "").strip()
     if not code or not deadline:
         return redirect(url_for("admin_stagiaire_space", session_id=session_id, stagiaire_id=stagiaire_id))
 
@@ -474,7 +463,6 @@ def admin_docs_zip(session_id: str, stagiaire_id: str):
 
     buf.seek(0)
     zipname = f"Documents_{st.get('prenom','')}_{st.get('nom','')}.zip".replace(" ", "_")
-
     return send_file(buf, as_attachment=True, download_name=zipname, mimetype="application/zip")
 
 
@@ -543,18 +531,13 @@ def admin_stagiaire_send_access(session_id: str, stagiaire_id: str):
 
     if st.get("email"):
         brevo_send_email(st["email"], subject, html)
-
     if st.get("telephone"):
         brevo_send_sms(st["telephone"], sms)
 
     st["access_sent_at"] = _now_iso()
     save_data(data)
 
-    return redirect(url_for(
-        "admin_stagiaire_space",
-        session_id=session_id,
-        stagiaire_id=stagiaire_id
-    ))
+    return redirect(url_for("admin_stagiaire_space", session_id=session_id, stagiaire_id=stagiaire_id))
 
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<stagiaire_id>/etiquette.docx")
@@ -596,13 +579,10 @@ def admin_stagiaire_delete(session_id: str, stagiaire_id: str):
     if not session:
         abort(404)
 
-    session["stagiaires"] = [
-        st for st in session.get("stagiaires", [])
-        if st.get("id") != stagiaire_id
-    ]
-
+    session["stagiaires"] = [st for st in session.get("stagiaires", []) if st.get("id") != stagiaire_id]
     save_data(data)
     return redirect(url_for("admin_stagiaires", session_id=session_id))
+
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<stagiaire_id>")
 def admin_stagiaire_space(session_id: str, stagiaire_id: str):
@@ -615,19 +595,18 @@ def admin_stagiaire_space(session_id: str, stagiaire_id: str):
     if not st:
         abort(404)
 
-    # statut dossier calculé automatiquement
     st["_dossier_calc"] = dossier_status_label(st)
-
-    # lien espace stagiaire public
     public_link = f"{PUBLIC_STUDENT_PORTAL_BASE}?token={st.get('public_token','')}"
 
-    return render_template_string(
-        TPL_ADMIN_STAGIAIRE_SPACE,
+    # ✅ Ici on utilise un fichier template (à créer)
+    return render_template(
+        "admin_trainee_space.html",
         session=session,
         st=st,
         public_link=public_link,
         badge_class=badge_class
     )
+
 
 @app.get("/")
 def home():
@@ -638,12 +617,12 @@ def home():
 def admin_sessions():
     data = load_data()
     sessions = data.get("sessions", [])
-    # compute flags
     for s in sessions:
         s["_conforme"] = session_is_conforme(s)
         s["_counts"] = count_conformes(s)
 
-    return render_template_string(TPL_ADMIN_SESSIONS, sessions=sessions, formation_types=FORMATION_TYPES)
+    # ✅ fichier template
+    return render_template("admin_sessions.html", sessions=sessions, formation_types=FORMATION_TYPES)
 
 
 @app.post("/admin/sessions/create")
@@ -702,7 +681,7 @@ def admin_stagiaires(session_id: str):
         else:
             st["cnaps"] = "INCONNU"
 
-        # Hébergement uniquement pour A3P (on garde l’email)
+        # Hébergement uniquement pour A3P
         if session.get("type_formation") == "A3P":
             email = st.get("email", "")
             if email:
@@ -718,8 +697,9 @@ def admin_stagiaires(session_id: str):
     counts = count_conformes(session)
     conforme = session_is_conforme(session)
 
-    return render_template_string(
-        TPL_ADMIN_STAGIAIRES,
+    # ✅ fichier template
+    return render_template(
+        "admin_trainees.html",
         session=session,
         counts=counts,
         session_conforme=conforme,
@@ -756,28 +736,29 @@ def admin_stagiaires_add(session_id: str):
         "prenom": prenom,
         "email": email,
         "telephone": telephone,
-        # defaults
+
         "convention": "prochainement",
-        "test_francais": "prochainement",
         "dossier": "incomplet",
         "cnaps": "inconnu",
         "financement": "prochainement",
         "commentaire": "",
-        # conditional:
+
+        # Conditional
         "vae": "prochainement" if session.get("type_formation") == "DIRIGEANT VAE" else "non concerné",
         "hebergement": "inconnu" if session.get("type_formation") == "A3P" else None,
+
         "created_at": _now_iso(),
 
         # --- Espace public stagiaire ---
         "public_token": uuid.uuid4().hex,
 
         # --- Test de français ---
-        "test_francais": "A FAIRE",          # A FAIRE / EN COURS / RELANCÉ / VALIDÉ
+        "test_francais": "A FAIRE",
         "test_fr_code": "",
         "test_fr_deadline": "",
         "test_fr_last_notified_at": "",
         "test_fr_last_relance_at": "",
-        
+
         # --- Gestion des documents ---
         "docs_notified_at": "",
         "docs_last_relance_at": "",
@@ -788,8 +769,7 @@ def admin_stagiaires_add(session_id: str):
             {"key": "dom", "label": "Justificatif de domicile (-3 mois)", "status": "A CONTRÔLER", "comment": "", "file": ""},
             {"key": "photo", "label": "Photo d'identité", "status": "A CONTRÔLER", "comment": "", "file": ""},
         ],
-        
-        # --- Diplômes / attestations ---
+
         "deliverables": {
             "diplome": "",
             "carte_sst": "",
@@ -797,15 +777,12 @@ def admin_stagiaires_add(session_id: str):
             "attestation_fin_formation": "",
             "dossier_fin_formation": ""
         },
-
     }
 
     session.setdefault("stagiaires", []).insert(0, st)
     save_data(data)
 
-    # Send welcome messages (best-effort)
     send_welcome_messages(st, session)
-
     return redirect(url_for("admin_stagiaires", session_id=session_id))
 
 
@@ -825,7 +802,6 @@ def api_update_stagiaire(session_id: str, stagiaire_id: str):
         return jsonify({"ok": False, "error": "stagiaire_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
-    # allow only safe keys
     allowed = {"convention", "test_francais", "dossier", "financement", "commentaire", "vae", "cnaps"}
 
     for k, v in payload.items():
@@ -841,6 +817,7 @@ def api_update_stagiaire(session_id: str, stagiaire_id: str):
 def health():
     return jsonify({"ok": True, "data_file": DATA_FILE})
 
+
 @app.get("/api/cnaps_lookup")
 def api_cnaps_lookup():
     nom = (request.args.get("nom") or "").strip()
@@ -849,641 +826,9 @@ def api_cnaps_lookup():
     if not nom or not prenom:
         return jsonify({"ok": False, "error": "missing_nom_or_prenom"}), 400
 
-    status = fetch_cnaps_status_by_name(nom, prenom)
-    if not status:
-        status = "INCONNU"
-
+    status = fetch_cnaps_status_by_name(nom, prenom) or "INCONNU"
     return jsonify({"ok": True, "nom": nom, "prenom": prenom, "statut_cnaps": status})
 
 
-
-# =========================
-# Templates (embedded, so you can deploy fast)
-# You can split into templates/*.html later if you want
-# =========================
-
-BASE_CSS = """
-<style>
-  body{font-family:Arial, sans-serif;background:#f6f6f6;margin:0}
-  .topbar{background:#0f3d2a;color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
-  .topbar a{color:#fff;text-decoration:none;font-weight:700}
-  .container{max-width:1150px;margin:18px auto;padding:0 14px}
-  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-  .card{background:#fff;border-radius:14px;padding:14px;box-shadow:0 6px 18px rgba(0,0,0,.06);border:1px solid #eee}
-  .muted{color:#666;font-size:13px}
-  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  .btn{border:none;border-radius:10px;padding:10px 12px;font-weight:700;cursor:pointer}
-  .btn-green{background:#1f8f4a;color:#fff}
-  .btn-red{background:#d64545;color:#fff}
-  .btn-gray{background:#eee}
-  .btn-outline{background:#fff;border:1px solid #ddd}
-  .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700}
-  .b-red{background:#ffe3e3;color:#a40000}
-  .b-yellow{background:#fff4cf;color:#7a5b00}
-  .b-orange{background:#ffe8d1;color:#8a3d00}
-  .b-green{background:#dff7e8;color:#0f6b31}
-  .b-gray{background:#efefef;color:#444}
-  .b-black{background:#eee;color:#111}
-  .bigflag{font-size:34px;line-height:1}
-  table{width:100%;border-collapse:separate;border-spacing:0 10px}
-  th{font-size:12px;color:#666;text-align:left;padding:0 8px}
-  td{background:#fff;padding:10px 8px;border-top:1px solid #eee;border-bottom:1px solid #eee}
-  tr td:first-child{border-left:1px solid #eee;border-top-left-radius:12px;border-bottom-left-radius:12px}
-  tr td:last-child{border-right:1px solid #eee;border-top-right-radius:12px;border-bottom-right-radius:12px}
-  select,input[type="text"]{padding:8px;border-radius:10px;border:1px solid #ddd;width:100%;box-sizing:border-box}
-  .highlight{outline:2px solid #ffcc00}
-  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:14px;z-index:50}
-  .modal{background:#fff;border-radius:16px;max-width:520px;width:100%;padding:16px;box-shadow:0 14px 40px rgba(0,0,0,.22)}
-  .modal h3{margin:0 0 10px 0}
-  .modal .row{margin-top:10px}
-  .right{margin-left:auto}
-  .notice{font-size:12px;color:#777}
-</style>
-"""
-
-TPL_ADMIN_SESSIONS = f"""
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Admin Sessions</title>
-  {BASE_CSS}
-</head>
-<body>
-  <div class="topbar">
-    <div><a href="/admin/sessions">Intégrale Academy • Admin Sessions</a></div>
-    <button class="btn btn-green" onclick="openModal()">➕ Nouvelle session</button>
-  </div>
-
-  <div class="container">
-    <div class="muted">Toutes les sessions apparaissent ici sous forme de cartes. ✅ = conforme, ❌ = non conforme.</div>
-    <div style="height:12px"></div>
-
-    <div class="grid">
-      {{% for s in sessions %}}
-      <div class="card">
-        <div class="row">
-          <div style="font-weight:800">{{{{ s.nom }}}}</div>
-          <div class="right bigflag">{{{{ "✅" if s._conforme else "❌" }}}}</div>
-        </div>
-        <div class="muted" style="margin-top:6px">
-          <div><strong>Type :</strong> {{{{ s.type_formation }}}}</div>
-          <div><strong>Formation :</strong> {{{{ s.date_debut or "—" }}}} → {{{{ s.date_fin or "—" }}}}</div>
-          <div><strong>Examen :</strong> {{{{ s.date_examen or "—" }}}}</div>
-          <div><strong>Stagiaires :</strong> {{{{ (s.stagiaires|length) }}}} • Conformes: {{{{ s._counts.conformes }}}} • Non: {{{{ s._counts.non_conformes }}}}</div>
-        </div>
-
-        <div class="row" style="margin-top:12px">
-          <form method="post" action="/admin/sessions/{{{{ s.id }}}}/delete" onsubmit="return confirm('Supprimer cette session ?')">
-            <button class="btn btn-red" type="submit">🗑️ Supprimer</button>
-          </form>
-          <a class="btn btn-outline" href="/admin/sessions/{{{{ s.id }}}}/stagiaires" style="text-decoration:none;display:inline-block">👥 Voir les stagiaires</a>
-        </div>
-      </div>
-      {{% endfor %}}
-    </div>
-
-    {{% if sessions|length == 0 %}}
-      <div class="card" style="margin-top:14px">
-        Aucune session pour l’instant. Clique sur <strong>Nouvelle session</strong>.
-      </div>
-    {{% endif %}}
-  </div>
-
-  <div class="modal-backdrop" id="modal">
-    <div class="modal">
-      <div class="row">
-        <h3>Nouvelle session</h3>
-        <button class="btn btn-gray right" onclick="closeModal()">✖</button>
-      </div>
-
-      <form method="post" action="/admin/sessions/create">
-        <div class="row">
-          <div style="flex:1">
-            <div class="muted">Nom de la session</div>
-            <input type="text" name="nom" required placeholder="ex : APS Janvier 2026">
-          </div>
-        </div>
-
-        <div class="row">
-          <div style="flex:1">
-            <div class="muted">Date début</div>
-            <input type="text" name="date_debut" placeholder="ex : 30/03/2026">
-          </div>
-          <div style="flex:1">
-            <div class="muted">Date fin</div>
-            <input type="text" name="date_fin" placeholder="ex : 02/06/2026">
-          </div>
-        </div>
-
-        <div class="row">
-          <div style="flex:1">
-            <div class="muted">Date d’examen</div>
-            <input type="text" name="date_examen" placeholder="ex : 03/06/2026">
-          </div>
-        </div>
-
-        <div class="row">
-          <div style="flex:1">
-            <div class="muted">Type de formation</div>
-            <select name="type_formation" required>
-              <option value="">— Choisir —</option>
-              {{% for t in formation_types %}}
-                <option value="{{{{ t }}}}">{{{{ t }}}}</option>
-              {{% endfor %}}
-            </select>
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:14px">
-          <button class="btn btn-green" type="submit">✅ Valider</button>
-          <span class="notice">La session apparaîtra immédiatement sur la page.</span>
-        </div>
-      </form>
-    </div>
-  </div>
-
-<script>
-  function openModal() {{
-    document.getElementById('modal').style.display = 'flex';
-  }}
-  function closeModal() {{
-    document.getElementById('modal').style.display = 'none';
-  }}
-</script>
-
-</body>
-</html>
-"""
-
-
-TPL_ADMIN_STAGIAIRES = f"""
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Admin Stagiaires</title>
-  {BASE_CSS}
-</head>
-<body>
-<div style="background:#ff00ff;color:#000;font-weight:900;padding:10px;border-radius:10px;margin:10px;">
-  TEST STAGIAIRES TEMPLATE (STRING)
-</div>
-
-  <div class="topbar">
-    <div class="row" style="gap:14px">
-      <a href="/admin/sessions">← Retour sessions</a>
-      <div style="font-weight:800">{{{{ session.nom }}}}</div>
-    </div>
-    <button class="btn btn-green" onclick="openModal()">➕ Ajouter un stagiaire</button>
-  </div>
-
-  <div class="container">
-    <div class="card">
-      <div class="row">
-        <div>
-          <div class="muted"><strong>Formation :</strong> {{{{ session.type_formation }}}}</div>
-          <div class="muted"><strong>Dates :</strong> {{{{ session.date_debut or "—" }}}} → {{{{ session.date_fin or "—" }}}}</div>
-          <div class="muted"><strong>Examen :</strong> {{{{ session.date_examen or "—" }}}}</div>
-          <div class="muted"><strong>Nombre stagiaires :</strong> {{{{ session.stagiaires|length }}}}</div>
-        </div>
-
-        <div class="right" style="text-align:right">
-          <div style="font-weight:800;font-size:18px">
-            Statut session : {{{{ "Conforme ✅" if session_conforme else "Non conforme ❌" }}}}
-          </div>
-          <div class="muted" style="margin-top:6px">
-            Conformes : <strong>{{{{ counts.conformes }}}}</strong> • Non conformes : <strong>{{{{ counts.non_conformes }}}}</strong>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div style="height:14px"></div>
-
-    <div class="card">
-      <div style="font-weight:800;margin-bottom:10px">Stagiaires</div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Nom</th>
-            <th>Prénom</th>
-            <th>Mail</th>
-            <th>Téléphone</th>
-            <th>Convention</th>
-            <th>Test FR</th>
-            <th>Dossier</th>
-            <th>CNAPS</th>
-            {{% if session.type_formation == "A3P" %}}<th>Hébergement</th>{{% endif %}}
-            <th>Commentaire</th>
-            {{% if session.type_formation == "DIRIGEANT VAE" %}}<th>VAE</th>{{% endif %}}
-            <th>Financement</th>
-            <th>Fiche</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {{% for st in session.stagiaires %}}
-          {{% set has_comment = (st.commentaire or "")|length > 0 %}}
-          <tr class="{{{{ 'highlight' if has_comment else '' }}}}">
-            <td><strong>{{{{ st.nom }}}}</strong></td>
-            <td>{{{{ st.prenom }}}}</td>
-            <td>{{{{ st.email or '' }}}}</td>
-            <td>{{{{ st.telephone or '' }}}}</td>
-
-            <td>
-              <select onchange="autosave('{{{{ st.id }}}}', 'convention', this.value)">
-                {{% for v in convention_statuses %}}
-                  <option value="{{{{ v }}}}" {{% if st.convention == v %}}selected{{% endif %}}>{{{{ v }}}}</option>
-                {{% endfor %}}
-              </select>
-              <div class="pill b-{{{{ badge_class(st.convention, 'convention') }}}}" style="margin-top:6px">{{{{ st.convention }}}}</div>
-            </td>
-
-            <td>
-              <select onchange="autosave('{{{{ st.id }}}}', 'test_francais', this.value)">
-                {{% for v in test_fr_statuses %}}
-                  <option value="{{{{ v }}}}" {{% if st.test_francais == v %}}selected{{% endif %}}>{{{{ v }}}}</option>
-                {{% endfor %}}
-              </select>
-              <div class="pill b-{{{{ badge_class(st.test_francais, 'test_francais') }}}}" style="margin-top:6px">{{{{ st.test_francais }}}}</div>
-            </td>
-
-            <td>
-              <select onchange="autosave('{{{{ st.id }}}}', 'dossier', this.value)">
-                {{% for v in dossier_statuses %}}
-                  <option value="{{{{ v }}}}" {{% if st.dossier == v %}}selected{{% endif %}}>{{{{ v }}}}</option>
-                {{% endfor %}}
-              </select>
-              <div class="pill b-{{{{ badge_class(st.dossier, 'dossier') }}}}" style="margin-top:6px">{{{{ st.dossier }}}}</div>
-            </td>
-
-            <td>
-              {{% set cn = st.cnaps if st.cnaps else "inconnu" %}}
-              <div class="pill b-{{{{ badge_class(cn, 'cnaps') }}}}">{{{{ cn }}}}</div>
-            </td>
-
-            {{% if session.type_formation == "A3P" %}}
-            <td>
-              {{% set hb = st.hebergement if st.hebergement else "inconnu" %}}
-              <div class="pill b-{{{{ badge_class(hb, 'hebergement') }}}}">{{{{ hb }}}}</div>
-            </td>
-            {{% endif %}}
-
-            <td>
-              <input type="text" value="{{{{ st.commentaire or '' }}}}" placeholder="Ajouter un commentaire…"
-                     oninput="debouncedSave('{{{{ st.id }}}}', 'commentaire', this.value)">
-              {{% if has_comment %}}
-                <div class="muted" style="margin-top:6px">⚠️ Commentaire présent</div>
-              {{% endif %}}
-            </td>
-
-            {{% if session.type_formation == "DIRIGEANT VAE" %}}
-            <td>
-              <select onchange="autosave('{{{{ st.id }}}}', 'vae', this.value)">
-                {{% for v in vae_statuses %}}
-                  <option value="{{{{ v }}}}" {{% if st.vae == v %}}selected{{% endif %}}>{{{{ v }}}}</option>
-                {{% endfor %}}
-              </select>
-              <div class="pill b-{{{{ badge_class(st.vae, 'vae') }}}}" style="margin-top:6px">{{{{ st.vae }}}}</div>
-            </td>
-            {{% endif %}}
-
-            <td>
-              <select onchange="autosave('{{{{ st.id }}}}', 'financement', this.value)">
-                {{% for v in financement_statuses %}}
-                  <option value="{{{{ v }}}}" {{% if st.financement == v %}}selected{{% endif %}}>{{{{ v }}}}</option>
-                {{% endfor %}}
-              </select>
-              <div class="pill b-{{{{ badge_class(st.financement, 'financement') }}}}" style="margin-top:6px">{{{{ st.financement }}}}</div>
-            </td>
-
-  <td>
-  <a class="btn btn-outline"
-     href="/admin/sessions/{{{{ session.id }}}}/stagiaires/{{{{ st.id }}}}"
-     style="text-decoration:none;display:inline-block">
-    📄 Fiche
-  </a>
-  <div class="muted" style="margin-top:6px">{{{{ st.id }}}}</div>
-</td>
-
-          </tr>
-          {{% endfor %}}
-        </tbody>
-      </table>
-
-      {{% if session.stagiaires|length == 0 %}}
-        <div class="muted">Aucun stagiaire pour l’instant. Clique sur <strong>Ajouter un stagiaire</strong>.</div>
-      {{% endif %}}
-    </div>
-
-  </div>
-
-  <div class="modal-backdrop" id="modal">
-    <div class="modal">
-      <div class="row">
-        <h3>Ajouter un stagiaire</h3>
-        <button class="btn btn-gray right" onclick="closeModal()">✖</button>
-      </div>
-
-      <form method="post" action="/admin/sessions/{{{{ session.id }}}}/stagiaires/add">
-        <div class="row">
-          <div style="flex:1">
-            <div class="muted">Nom</div>
-            <input type="text" name="nom" required>
-          </div>
-          <div style="flex:1">
-            <div class="muted">Prénom</div>
-            <input type="text" name="prenom" required>
-          </div>
-        </div>
-
-        <div class="row">
-          <div style="flex:1">
-            <div class="muted">Adresse mail</div>
-            <input type="text" name="email" placeholder="ex : prenom.nom@email.com">
-          </div>
-        </div>
-
-        <div class="row">
-          <div style="flex:1">
-            <div class="muted">Téléphone</div>
-            <input type="text" name="telephone" placeholder="ex : +33612345678">
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:14px">
-          <button class="btn btn-green" type="submit">✅ Sauvegarder</button>
-          <span class="notice">Un email + SMS de bienvenue seront envoyés automatiquement (si Brevo est configuré).</span>
-        </div>
-      </form>
-    </div>
-  </div>
-
-<script>
-  const SESSION_ID = "{{{{ session.id }}}}";
-  function openModal() {{
-    document.getElementById('modal').style.display = 'flex';
-  }}
-  function closeModal() {{
-    document.getElementById('modal').style.display = 'none';
-  }}
-
-  async function autosave(stagiaireId, field, value) {{
-    try {{
-      await fetch(`/api/sessions/${{SESSION_ID}}/stagiaires/${{stagiaireId}}/update`, {{
-        method: "POST",
-        headers: {{ "Content-Type": "application/json" }},
-        body: JSON.stringify({{ [field]: value }})
-      }});
-      // quick refresh to update highlight / counts visually (simple approach)
-      // You can remove this later and do partial updates
-      window.location.reload();
-    }} catch (e) {{
-      alert("Erreur autosave : " + e);
-    }}
-  }}
-
-  let _t = null;
-  function debouncedSave(stagiaireId, field, value) {{
-    if (_t) clearTimeout(_t);
-    _t = setTimeout(() => autosave(stagiaireId, field, value), 500);
-  }}
-</script>
-
-</body>
-</html>
-"""
-
-TPL_ADMIN_STAGIAIRE_SPACE = """
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Espace stagiaire (admin)</title>
-  {BASE_CSS}
-</head>
-<body>
-  <div class="topbar">
-    <div class="row" style="gap:14px">
-      <a href="/admin/sessions/{{{{ session.id }}}}/stagiaires">← Retour stagiaires</a>
-      <div style="font-weight:800">Espace stagiaire • {{{{ st.prenom }}}} {{{{ st.nom }}}}</div>
-    </div>
-    <div class="row">
-      <a class="btn btn-outline" href="{{{{ public_link }}}}" target="_blank" style="text-decoration:none">👁️ Voir espace public</a>
-    </div>
-  </div>
-
-  <div class="container">
-
-    <div class="card">
-      <div class="row">
-        <div>
-          <div style="font-weight:900;font-size:18px">{{{{ st.prenom }}}} {{{{ st.nom }}}}</div>
-          <div class="muted">Formation : <strong>{{{{ session.nom }}}}</strong> • {{{{ session.date_debut }}}} → {{{{ session.date_fin }}}}</div>
-          <div class="muted">Email : {{{{ st.email or "—" }}}} • Tel : {{{{ st.telephone or "—" }}}}</div>
-        </div>
-
-        <div class="right row">
-          <form method="post" action="/admin/sessions/{{{{ session.id }}}}/stagiaires/{{{{ st.id }}}}/delete"
-                onsubmit="return confirm('Supprimer ce stagiaire ?')">
-            <button class="btn btn-red" type="submit">🗑️ Supprimer le stagiaire</button>
-          </form>
-
-          <a class="btn btn-outline"
-             href="/admin/sessions/{{{{ session.id }}}}/stagiaires/{{{{ st.id }}}}/etiquette.docx"
-             style="text-decoration:none">🖨️ Imprimer étiquette dossier</a>
-
-          <form method="post" action="/admin/sessions/{{{{ session.id }}}}/stagiaires/{{{{ st.id }}}}/send-access">
-            <button class="btn btn-green" type="submit">📩 Envoyer accès espace stagiaire</button>
-          </form>
-        </div>
-      </div>
-
-      {{% if st.access_sent_at %}}
-        <div class="muted" style="margin-top:8px">✅ Accès envoyé le : <strong>{{{{ st.access_sent_at }}}}</strong></div>
-      {{% endif %}}
-    </div>
-
-    <div style="height:14px"></div>
-
-    <div class="grid" style="grid-template-columns:repeat(2,1fr)">
-
-      <div class="card">
-        <div style="font-weight:900;margin-bottom:10px">Test de français</div>
-
-        {{% set tf = (st.test_francais or "A FAIRE").upper() %}}
-        {{% set tf_class = "b-red" if tf=="A FAIRE" else ("b-yellow" if tf=="EN COURS" else ("b-orange" if tf=="RELANCÉ" or tf=="RELANCE" else "b-green")) %}}
-
-        <div class="row">
-          <div class="pill {{{{ tf_class }}}}">Statut : {{{{ tf }}}}</div>
-          {{% if st.test_fr_deadline %}}
-            <div class="muted">Échéance : <strong>{{{{ st.test_fr_deadline }}}}</strong></div>
-          {{% endif %}}
-        </div>
-
-        <div style="height:10px"></div>
-
-        <button class="btn btn-green" onclick="openTestModal('notify')">🔔 Notifier test de français</button>
-        <button class="btn btn-outline" onclick="openTestModal('relance')" style="margin-left:8px">🔁 Relancer test de français</button>
-
-        <div class="muted" style="margin-top:10px">
-          Lien test : <a href="https://testb1.lapreventionsecurite.org/Public/" target="_blank">https://testb1.lapreventionsecurite.org/Public/</a>
-        </div>
-
-        {{% if st.test_fr_last_notified_at %}}
-          <div class="muted" style="margin-top:8px">Dernière notification : <strong>{{{{ st.test_fr_last_notified_at }}}}</strong></div>
-        {{% endif %}}
-        {{% if st.test_fr_last_relance_at %}}
-          <div class="muted">Dernière relance : <strong>{{{{ st.test_fr_last_relance_at }}}}</strong></div>
-        {{% endif %}}
-      </div>
-
-      <div class="card">
-        <div style="font-weight:900;margin-bottom:10px">Gestion des documents</div>
-
-        {{% set ds = st._dossier_calc %}}
-        <div class="row">
-          <div class="pill {{{{ 'b-green' if ds=='DOSSIER COMPLET' else 'b-red' }}}}">{{{{ ds }}}}</div>
-        </div>
-
-        <div style="height:10px"></div>
-
-        <form method="post" action="/admin/sessions/{{{{ session.id }}}}/stagiaires/{{{{ st.id }}}}/docs/notify">
-          <button class="btn btn-green" type="submit">📩 Notifier envoi documents</button>
-        </form>
-
-        {{% if st.docs_notified_at %}}
-          <div class="muted" style="margin-top:8px">🟧 Stagiaire notifié le : <strong>{{{{ st.docs_notified_at }}}}</strong></div>
-        {{% endif %}}
-
-        <div style="height:12px"></div>
-
-        <div style="font-weight:800;margin-bottom:8px">Liste documents</div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Document</th>
-              <th>Statut</th>
-              <th>Commentaire</th>
-              <th>Fichier</th>
-            </tr>
-          </thead>
-          <tbody>
-            {{% for d in (st.documents or []) %}}
-            <tr>
-              <td><strong>{{{{ d.label }}}}</strong></td>
-              <td style="min-width:160px">
-                <select onchange="saveDoc('{{{{ d.key }}}}','status',this.value)">
-                  {{% set cur = (d.status or "A CONTRÔLER").upper() %}}
-                  <option value="CONFORME" {{% if cur=="CONFORME" %}}selected{{% endif %}}>CONFORME</option>
-                  <option value="NON CONFORME" {{% if cur=="NON CONFORME" %}}selected{{% endif %}}>NON CONFORME</option>
-                  <option value="A CONTRÔLER" {{% if cur=="A CONTRÔLER" or cur=="A CONTROLER" %}}selected{{% endif %}}>A CONTRÔLER</option>
-                </select>
-                {{% set pill = "b-green" if cur=="CONFORME" else ("b-red" if cur=="NON CONFORME" else "b-yellow") %}}
-                <div class="pill {{{{ pill }}}}" style="margin-top:6px">{{{{ cur }}}}</div>
-              </td>
-              <td>
-                <input type="text" value="{{{{ d.comment or '' }}}}" placeholder="Commentaire…"
-                       oninput="debouncedDoc('{{{{ d.key }}}}','comment',this.value)">
-              </td>
-              <td>
-                {{% if d.file %}}
-                  <div class="muted" style="word-break:break-all">{{{{ d.file }}}}</div>
-                {{% else %}}
-                  <span class="muted">—</span>
-                {{% endif %}}
-              </td>
-            </tr>
-            {{% endfor %}}
-          </tbody>
-        </table>
-
-        <div style="height:10px"></div>
-
-        <a class="btn btn-outline"
-           href="/admin/sessions/{{{{ session.id }}}}/stagiaires/{{{{ st.id }}}}/documents.zip"
-           style="text-decoration:none">⬇️ Télécharger les documents (ZIP)</a>
-      </div>
-
-    </div>
-  </div>
-
-  <div class="modal-backdrop" id="testModal">
-    <div class="modal">
-      <div class="row">
-        <h3 id="testModalTitle">Test de français</h3>
-        <button class="btn btn-gray right" onclick="closeTestModal()">✖</button>
-      </div>
-
-      <form method="post" id="testForm">
-        <div class="row">
-          <div style="flex:1">
-            <div class="muted">Code (nouveau à chaque envoi)</div>
-            <input type="text" name="code" required placeholder="ex : B1-29384">
-          </div>
-        </div>
-
-        <div class="row">
-          <div style="flex:1">
-            <div class="muted">Date + heure max (format libre)</div>
-            <input type="text" name="deadline" required placeholder="ex : 02/03/2026 18:00">
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:14px">
-          <button class="btn btn-green" type="submit">✅ Envoyer</button>
-          <span class="notice">Mail + SMS seront envoyés si disponibles.</span>
-        </div>
-      </form>
-    </div>
-  </div>
-
-<script>
-  const SESSION_ID = "{{{{ session.id }}}}";
-  const ST_ID = "{{{{ st.id }}}}";
-  let docTimer = null;
-
-  function openTestModal(mode){
-    const modal = document.getElementById("testModal");
-    const form = document.getElementById("testForm");
-    const title = document.getElementById("testModalTitle");
-    if(mode === "notify"){
-      title.textContent = "Notifier test de français";
-      form.action = "/admin/sessions/" + SESSION_ID + "/stagiaires/" + ST_ID + "/test-fr/notify";
-    } else {
-      title.textContent = "Relancer test de français";
-      form.action = "/admin/sessions/" + SESSION_ID + "/stagiaires/" + ST_ID + "/test-fr/relance";
-    }
-    modal.style.display = "flex";
-  }
-  function closeTestModal(){
-    document.getElementById("testModal").style.display = "none";
-  }
-
-  async function saveDoc(key, field, value){
-    await fetch(`/api/sessions/${SESSION_ID}/stagiaires/${ST_ID}/documents/update`, {
-      method:"POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ key, field, value })
-    });
-    window.location.reload();
-  }
-
-  function debouncedDoc(key, field, value){
-    if(docTimer) clearTimeout(docTimer);
-    docTimer = setTimeout(() => saveDoc(key, field, value), 450);
-  }
-</script>
-
-</body>
-</html>
-"""
-
-
-
 if __name__ == "__main__":
-    # local dev
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
