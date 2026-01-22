@@ -31,8 +31,29 @@ body{
 }
 
 /* Reset liens (stop violet) */
-a{color:inherit;text-decoration:none}
-a:hover{text-decoration:underline}
+/* =========================
+   LIENS – style admin propre
+   ========================= */
+a{
+  color: inherit;
+  text-decoration: none;
+}
+
+/* jamais de soulignement dans l’admin */
+a:hover,
+a:focus{
+  text-decoration: none;
+}
+
+/* si tu veux un vrai lien "texte" (rare) */
+.link{
+  color: var(--green2);
+  font-weight: 700;
+}
+.link:hover{
+  text-decoration: underline;
+}
+
 
 /* Layout */
 .container{max-width:1200px;margin:0 auto;padding:18px 14px 28px}
