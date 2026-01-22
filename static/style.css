@@ -1,79 +1,95 @@
 :root{
-  /* =========================
-     THEME CLAIR (pro & lisible)
-     ========================= */
-  --bg:#f6f8f7;          /* fond page */
-  --card:#ffffff;        /* cartes / blocs */
-  --muted:#6b7280;       /* texte secondaire */
-  --text:#111827;        /* texte principal */
-  --line:#e5e7eb;        /* bordures */
-  --shadow: 0 10px 30px rgba(0,0,0,0.06);
+  /* THEME CLAIR PRO */
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:#e2e8f0;
+  --shadow: 0 10px 30px rgba(2,6,23,0.06);
 
-  /* =========================
-     Couleurs statut
-     ========================= */
+  /* Brand */
   --green:#1f8f4a;
-  --red:#c0392b;
-  --yellow:#f1c40f;
-  --orange:#e67e22;
-  --neutral:#9ca3af;
+  --green2:#167a3e;
 
-  --white:#ffffff;
+  /* Status */
+  --red:#dc2626;
+  --yellow:#f59e0b;
+  --orange:#f97316;
+  --neutral:#94a3b8;
+
+  --radius:16px;
 }
 
 *{box-sizing:border-box}
-
+html,body{height:100%}
 body{
   margin:0;
-  font-family: Arial, sans-serif;
-  background: var(--bg);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  background: radial-gradient(900px 500px at 15% -10%, rgba(31,143,74,.10), transparent 60%),
+              var(--bg);
   color:var(--text);
 }
 
+/* Reset liens (stop violet) */
+a{color:inherit;text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* Layout */
+.container{max-width:1200px;margin:0 auto;padding:18px 14px 28px}
+
 /* =========================
-   Topbar / navigation
+   TOPBAR
    ========================= */
 .topbar{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:16px 20px;
-  border-bottom:1px solid var(--line);
-  background: rgba(255,255,255,0.85);
   position:sticky;
   top:0;
+  z-index:20;
+  background: rgba(255,255,255,0.86);
+  border-bottom:1px solid var(--line);
   backdrop-filter: blur(10px);
-  z-index:10;
 }
-.brand-title{font-weight:800;letter-spacing:.2px}
-.brand-sub{color:var(--muted);font-size:12px;margin-top:2px}
-
-.nav-link{
-  color:var(--text);
+.topbar-inner{
+  max-width:1200px;
+  margin:0 auto;
+  padding:14px 14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
   text-decoration:none;
-  padding:10px 12px;
-  border-radius:10px;
-  border:1px solid var(--line);
-  background:#fff;
 }
-.nav-link:hover{border-color:#d1d5db}
-
-.container{max-width:1200px;margin:24px auto;padding:0 16px}
+.logo{
+  width:34px;height:34px;border-radius:12px;
+  background: linear-gradient(135deg, var(--green), var(--green2));
+  box-shadow: 0 12px 30px rgba(31,143,74,.18);
+}
+.brand strong{font-weight:900;letter-spacing:.2px}
+.brand span{color:var(--muted);font-size:13px;margin-left:6px}
 
 /* =========================
-   Titres / Head
+   HEADERS
    ========================= */
+.breadcrumbs{margin:10px 0 6px;color:var(--muted)}
+.breadcrumbs a{color:var(--muted)}
+.breadcrumbs a:hover{color:var(--text)}
+
 .page-head{
   display:flex;
   justify-content:space-between;
   align-items:center;
+  gap:12px;
   margin:16px 0;
 }
 h1{margin:0 0 6px 0;font-size:28px}
-h2{margin:0;font-size:20px;color:#111827}
+h2{margin:0;font-size:20px;color:var(--text)}
 
 /* =========================
-   Boutons
+   BUTTONS
    ========================= */
 .btn{
   background:#fff;
@@ -83,74 +99,267 @@ h2{margin:0;font-size:20px;color:#111827}
   border-radius:12px;
   cursor:pointer;
   transition: .12s ease;
+  font-weight:800;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
 }
-.btn:hover{border-color:#d1d5db; transform: translateY(-1px)}
+.btn:hover{border-color:#cbd5e1; transform: translateY(-1px)}
 .btn:active{transform: translateY(0)}
 .btn-primary{
-  background:var(--green);
-  border-color:var(--green);
-  color:var(--white);
+  background: linear-gradient(135deg, var(--green), var(--green2));
+  border-color: rgba(31,143,74,.35);
+  color:#fff;
+  box-shadow: 0 14px 26px rgba(31,143,74,.16);
 }
 .btn-danger{
   background:#fff;
-  border-color:#f3c5bf;
-  color:#b42318;
+  border-color:#fecaca;
+  color:#b91c1c;
 }
-.btn-danger:hover{border-color:#f0a9a0}
-.btn-outline{opacity:.7; cursor:not-allowed;}
+.btn-danger:hover{border-color:#fca5a5}
+
+/* Le bouton Fiche ne doit PAS être grisé */
+.btn-outline{
+  opacity:1;
+  cursor:pointer;
+  background:#fff;
+}
 
 /* =========================
-   Grids / cards sessions
+   SESSION HEADER
    ========================= */
-.grid.cards{
-  display:grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap:14px;
-}
-
-.card{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:16px;
-  padding:14px;
-  box-shadow: var(--shadow);
-}
-.card-row{
+.session-header{
   display:flex;
   justify-content:space-between;
   align-items:flex-start;
-  gap:10px;
+  gap:16px;
+  flex-wrap:wrap;
+  padding:14px;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow: var(--shadow);
 }
-.card-title{font-weight:800;font-size:16px}
-.bigmark{font-size:28px;line-height:1}
-.card-meta{margin-top:10px;color:var(--muted);font-size:13px;display:grid;gap:6px}
-.card-actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
-
+.meta-line{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  color:var(--muted);
+  font-size:13px;
+  margin-top:6px;
+}
 .pill{
-  display:inline-block;
+  display:inline-flex;
+  align-items:center;
   padding:6px 10px;
   border-radius:999px;
-  background:#f3f4f6;
-  border:1px solid var(--line);
-  color:#111827;
+  background: rgba(31,143,74,.10);
+  border:1px solid rgba(31,143,74,.18);
+  color: var(--green2);
   font-size:12px;
-  font-weight:700;
+  font-weight:900;
+}
+
+.session-stats{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.stat{
+  background:#f8fafc;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:10px 12px;
+  min-width:150px;
+}
+.stat-title{font-size:12px;color:var(--muted);font-weight:800}
+.stat-value{font-size:16px;font-weight:1000;margin-top:4px}
+
+/* =========================
+   TABLE (ADMIN)
+   ========================= */
+.table-wrap{
+  margin-top:12px;
+  overflow:auto;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  background:var(--card);
+  box-shadow: var(--shadow);
+}
+
+/* Pleine largeur tableau */
+.table-wrap.full-bleed{
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  border-radius: var(--radius);
+}
+
+.table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  min-width:1250px;
+}
+
+/* Header sticky */
+.table th{
+  position:sticky;
+  top:0;
+  z-index:2;
+  text-align:left;
+  font-size:12px;
+  color:#334155;
+  background:#f8fafc;
+  border-bottom:1px solid var(--line);
+  padding:12px 12px;
+  white-space:nowrap;
+}
+
+/* Cells */
+.table td{
+  padding:12px 12px;
+  border-bottom:1px solid var(--line);
+  vertical-align:middle;
+  background:#fff;
+}
+
+/* Lignes alternées (beaucoup plus lisible) */
+.table tbody tr:nth-child(even) td{ background:#fbfdff; }
+.table tbody tr:hover td{ background:#f1f5f9; }
+
+/* Texte mono */
+.mono{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size:12px;
+  color:#0f172a;
+}
+
+/* Fix mail qui part en colonne */
+.table td:nth-child(3){
+  min-width: 260px;
+  max-width: 320px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.table td:nth-child(4){
+  min-width: 150px;
+  white-space: normal;
+}
+.table td:nth-child(1),
+.table td:nth-child(2){
+  font-weight:900;
+}
+
+/* Commentaire confortable */
+input.comment{
+  min-width: 380px;
+  width: 520px;
+  max-width: 680px;
+}
+
+/* Inputs / selects */
+input, select{
+  width:100%;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:#fff;
+  color:var(--text);
+  outline:none;
+}
+input:focus, select:focus{
+  border-color: rgba(31,143,74,.35);
+  box-shadow: 0 0 0 3px rgba(31,143,74,0.12);
+}
+
+/* Inline (CNAPS + refresh) */
+.inline{display:flex;gap:8px;align-items:center}
+.mini-btn{
+  border:1px solid var(--line);
+  background:#fff;
+  color:var(--text);
+  border-radius:10px;
+  padding:6px 8px;
+  cursor:pointer;
+  font-weight:900;
+}
+.mini-btn:hover{border-color:#cbd5e1}
+
+/* Row warning */
+.row-warning td{
+  background: rgba(249,115,22,0.08) !important;
 }
 
 /* =========================
-   Modale
+   CNAPS badge
+   ========================= */
+.cnaps{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:900;
+  font-size:12px;
+  border:1px solid var(--line);
+  background:#f1f5f9;
+  color:#0f172a;
+}
+.cnaps.cnaps-transmis{ background:#64748b; color:#fff; }
+.cnaps.cnaps-enregistre{ background:var(--orange); color:#111; }
+.cnaps.cnaps-instruction{ background:var(--yellow); color:#111; }
+.cnaps.cnaps-accepte{ background:var(--green); color:#fff; }
+.cnaps.cnaps-refuse{ background:#0f172a; color:#fff; }
+.cnaps.cnaps-docs{ background:var(--red); color:#fff; }
+.cnaps.cnaps-inconnu{ background:#e2e8f0; color:#475569; }
+
+/* =========================
+   Status pills (selects)
+   ========================= */
+.status-pill{
+  min-width: 0 !important;
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 900;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+  border: 1px solid rgba(2,6,23,0.08);
+  background: #e2e8f0;
+  cursor: pointer;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+.table td .status-pill{margin-top: 2px}
+
+.status-pill.is-soon{ background: var(--neutral); color:#0f172a; }
+.status-pill.is-signing{ background: var(--orange); color:#111; }
+.status-pill.is-signed{ background: var(--green); color:#fff; }
+.status-pill.is-in_progress{ background: var(--yellow); color:#111; }
+.status-pill.is-relance{ background: var(--red); color:#fff; }
+.status-pill.is-complete{ background: var(--green); color:#fff; }
+.status-pill.is-incomplete{ background: var(--orange); color:#111; }
+.status-pill.is-in_review{ background: var(--yellow); color:#111; }
+.status-pill.is-validated{ background: var(--green); color:#fff; }
+.status-pill.is-unknown{ background: var(--neutral); color:#0f172a; }
+.status-pill.is-reserved{ background: var(--green); color:#fff; }
+
+/* =========================
+   MODAL
    ========================= */
 .modal-backdrop{
   position:fixed;
   inset:0;
-  background:rgba(17,24,39,.45);
+  background:rgba(2,6,23,.45);
   display:none;
   align-items:center;
   justify-content:center;
   padding:16px;
-  z-index:20;
+  z-index:60;
 }
-.modal-backdrop.open{display:flex}
 .modal{
   width:min(720px, 96vw);
   background:var(--card);
@@ -166,7 +375,7 @@ h2{margin:0;font-size:20px;color:#111827}
   padding:14px 14px;
   border-bottom:1px solid var(--line);
 }
-.modal-title{font-weight:800}
+.modal-title{font-weight:1000}
 .icon-btn{
   background:#fff;
   border:1px solid var(--line);
@@ -174,9 +383,9 @@ h2{margin:0;font-size:20px;color:#111827}
   border-radius:12px;
   padding:8px 10px;
   cursor:pointer;
+  font-weight:1000;
 }
-.icon-btn:hover{border-color:#d1d5db}
-
+.icon-btn:hover{border-color:#cbd5e1}
 .modal-body{padding:14px}
 .modal-foot{
   padding:14px;
@@ -186,269 +395,15 @@ h2{margin:0;font-size:20px;color:#111827}
   gap:10px;
 }
 
-/* =========================
-   Form controls
-   ========================= */
 .form-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:12px;
 }
-label{display:block}
-.label{font-size:12px;color:var(--muted);margin:0 0 6px 0}
-
-input, select{
-  width:100%;
-  padding:10px 12px;
-  border-radius:12px;
-  border:1px solid var(--line);
-  background:#ffffff;
-  color:var(--text);
-  outline:none;
-}
-input:focus, select:focus{
-  border-color:#c7d2fe;
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.10);
-}
+.label{font-size:12px;color:var(--muted);margin:0 0 6px 0;font-weight:900}
 .hint{font-size:12px;color:var(--muted);margin-top:6px}
 
-/* =========================
-   Breadcrumbs
-   ========================= */
-.breadcrumbs a{color:#374151;text-decoration:none}
-.breadcrumbs a:hover{text-decoration:underline}
-
-/* =========================
-   Header session + stats
-   ========================= */
-.session-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:16px;
-  flex-wrap:wrap;
-  padding:14px;
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:16px;
-  box-shadow: var(--shadow);
-}
-.meta-line{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:13px}
-
-.session-stats{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
-.stat{
-  background:#f9fafb;
-  border:1px solid var(--line);
-  border-radius:14px;
-  padding:10px 12px;
-  min-width:120px;
-}
-.stat-title{font-size:12px;color:var(--muted)}
-.stat-value{font-size:16px;font-weight:900;margin-top:4px}
-
-/* =========================
-   TABLEAU stagiaires
-   ========================= */
-.table-wrap{
-  margin-top:12px;
-  overflow:auto;
-  border:1px solid var(--line);
-  border-radius:16px;
-  background:var(--card);
-  box-shadow: var(--shadow);
-}
-
-/* Pleine largeur uniquement pour le tableau stagiaires */
-.table-wrap.full-bleed{
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
-  margin-right: calc(50% - 50vw);
-  border-radius: 16px;
-}
-
-.table{
-  width:100%;
-  border-collapse:separate;
-  border-spacing:0;
-  min-width:1150px; /* un peu plus large pour éviter l’écrasement */
-}
-.table th, .table td{
-  padding:12px 12px;
-  border-bottom:1px solid var(--line);
-  vertical-align:middle;
-  white-space:nowrap;
-}
-.table th{
-  text-align:left;
-  font-size:12px;
-  color:#374151;
-  position:sticky;
-  top:0;
-  background:#f9fafb;
-  z-index:1;
-}
-.table tbody tr:hover{
-  background:#f9fafb;
-}
-
-.mono{
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-  font-size:12px;
-}
-
-/* largeur mini des sélecteurs */
-.status{min-width:160px}
-
-.inline{display:flex;gap:8px;align-items:center}
-
-/* petit bouton refresh */
-.mini-btn{
-  border:1px solid var(--line);
-  background:#fff;
-  color:var(--text);
-  border-radius:10px;
-  padding:6px 8px;
-  cursor:pointer;
-}
-.mini-btn:hover{border-color:#d1d5db}
-
-/* row warning (commentaire) */
-.row-warning{background: rgba(230,126,34,0.10)}
-.warn-line{margin-top:6px; font-size:16px}
-
-/* =========================
-   Toast
-   ========================= */
-.toast{
-  position:fixed;
-  bottom:16px;
-  right:16px;
-  padding:10px 12px;
-  border-radius:14px;
-  border:1px solid var(--line);
-  background:#ffffff;
-  color:var(--text);
-  box-shadow: var(--shadow);
-  opacity:0;
-  transform: translateY(8px);
-  transition: .2s ease;
-  z-index:30;
-}
-.toast.show{opacity:1; transform: translateY(0)}
-.toast.ok{border-color:#cfe8da}
-.toast.bad{border-color:#f3c5bf}
-
-/* =========================
-   CNAPS badge colors
-   ========================= */
-.cnaps{
-  display:inline-block;
-  padding:6px 10px;
-  border-radius:999px;
-  font-weight:900;
-  font-size:12px;
-  border:1px solid var(--line);
-  background:#f3f4f6;
-  color:#111827;
-}
-
-/* Couleurs demandées */
-.cnaps.cnaps-transmis{ background:#6b7280; color:#fff; }            /* gris */
-.cnaps.cnaps-enregistre{ background:var(--orange); color:#111; }    /* orange */
-.cnaps.cnaps-instruction{ background:var(--yellow); color:#111; }   /* jaune */
-.cnaps.cnaps-accepte{ background:var(--green); color:#fff; }        /* vert */
-.cnaps.cnaps-refuse{ background:#111827; color:#fff; }              /* noir */
-.cnaps.cnaps-docs{ background:var(--red); color:#fff; }             /* rouge */
-.cnaps.cnaps-inconnu{ background:#f3f4f6; color:#6b7280; }          /* inconnu */
-
-/* =========================
-   Select "pills" (statuts)
-   ========================= */
-.status-pill{
-  min-width: 0 !important;
-  width: fit-content;
-  padding: 8px 12px;
-  border-radius: 999px;
-  font-weight: 900;
-  letter-spacing: .3px;
-  text-transform: uppercase;
-  border: 1px solid var(--line);
-  background: #f3f4f6;
-  cursor: pointer;
-
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-}
-.table td .status-pill{margin-top: 2px}
-
-/* Couleurs par état (classes posées en JS) */
-.status-pill.is-soon{ background: var(--neutral); color:#111; }
-.status-pill.is-signing{ background: var(--orange); color:#111; }
-.status-pill.is-signed{ background: var(--green); color:#fff; }
-
-.status-pill.is-in_progress{ background: var(--yellow); color:#111; }
-.status-pill.is-relance{ background: var(--red); color:#fff; }
-
-.status-pill.is-complete{ background: var(--green); color:#fff; }
-.status-pill.is-incomplete{ background: var(--orange); color:#111; }
-
-.status-pill.is-in_review{ background: var(--yellow); color:#111; }
-.status-pill.is-validated{ background: var(--green); color:#fff; }
-
-.status-pill.is-unknown{ background: var(--neutral); color:#111; }
-.status-pill.is-reserved{ background: var(--green); color:#fff; }
-
-/* =========================
-   Responsive
-   ========================= */
 @media (max-width:720px){
   .form-grid{grid-template-columns:1fr}
   .container{padding:0 12px}
 }
-
-/* =========================
-   TABLE LISIBILITÉ (stagiaires)
-   ========================= */
-
-/* Autorise le retour à la ligne sur Mail / Tel / Commentaire */
-.table td:nth-child(3),   /* Mail */
-.table td:nth-child(4),   /* Téléphone */
-.table td:last-child{
-  white-space: normal;
-}
-
-/* Mail: limite et wrap propre */
-.table td:nth-child(3){
-  max-width: 260px;
-  word-break: break-word;
-}
-
-/* Commentaire: large + input confortable */
-.table td input.comment{
-  min-width: 320px;
-  width: 460px;
-  max-width: 620px;
-}
-
-/* Bouton Fiche: actif (pas grisé) */
-.table td .btn.btn-outline{
-  cursor: pointer !important;
-  opacity: 1 !important;
-  background: #fff !important;
-  border-color: var(--line) !important;
-}
-.table td .btn.btn-outline:hover{
-  border-color:#d1d5db !important;
-}
-
-/* Nom / prénom un peu plus visibles */
-.table td:nth-child(1),
-.table td:nth-child(2){
-  font-weight: 800;
-}
-
