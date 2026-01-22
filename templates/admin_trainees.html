@@ -73,14 +73,14 @@
         <td class="mono">{{ t.phone }}</td>
 
         <td>
-          <select class="status sel-convention" data-field="convention_status">
-            {% for v in enums.convention %}
-            <option value="{{ v }}" {% if t.convention_status==v %}selected{% endif %}>
-              {{ "prochainement" if v=="soon" else ("en cours de signature" if v=="signing" else "signée") }}
-            </option>
-            {% endfor %}
-          </select>
-          <span class="badge" data-badge="convention_status"></span>
+          <select class="status status-pill sel-convention" data-field="convention_status">
+  {% for v in enums.convention %}
+  <option value="{{ v }}" {% if t.convention_status==v %}selected{% endif %}>
+    {{ "PROCHAINEMENT" if v=="soon" else ("EN COURS DE SIGNATURE" if v=="signing" else "SIGNÉE") }}
+  </option>
+  {% endfor %}
+</select>
+
         </td>
 
         <td>
