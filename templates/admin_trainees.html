@@ -1,11 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div style="background:#ff00ff;color:#000;font-weight:900;padding:10px;border-radius:10px;margin:10px 0;">
-  TEST STAGIAIRES TEMPLATE
-</div>
-
-
 <div class="breadcrumbs">
   <a href="{{ url_for('admin_sessions', **request.args) }}">← Retour sessions</a>
 </div>
@@ -66,6 +61,7 @@
         {% if show_vae %}<th>VAE</th>{% endif %}
         <th>Financement</th>
         <th>Fiche</th>
+        <th>Suppr.</th>
       </tr>
     </thead>
 
@@ -78,44 +74,43 @@
         <td class="mono">{{ t.phone }}</td>
 
         <td>
-          <select class="status status-pill sel-convention" data-field="convention_status">
-  {% for v in enums.convention %}
-  <option value="{{ v }}" {% if t.convention_status==v %}selected{% endif %}>
-    {{ "PROCHAINEMENT" if v=="soon" else ("EN COURS DE SIGNATURE" if v=="signing" else "SIGNÉE") }}
-  </option>
-  {% endfor %}
-</select>
-
+          <select class="status sel" data-field="convention_status">
+            {% for v in enums.convention %}
+              <option value="{{ v }}" {% if t.convention_status==v %}selected{% endif %}>
+                {{ "PROCHAINEMENT" if v=="soon" else ("EN COURS DE SIGNATURE" if v=="signing" else "SIGNÉE") }}
+              </option>
+            {% endfor %}
+          </select>
         </td>
 
         <td>
-          <select class="status sel-testfr" data-field="test_fr_status">
+          <select class="status sel" data-field="test_fr_status">
             <option value="soon" {% if t.test_fr_status=="soon" %}selected{% endif %}>prochainement</option>
             <option value="in_progress" {% if t.test_fr_status=="in_progress" %}selected{% endif %}>en cours</option>
             <option value="validated" {% if t.test_fr_status=="validated" %}selected{% endif %}>validé</option>
             <option value="relance" {% if t.test_fr_status=="relance" %}selected{% endif %}>relancé</option>
           </select>
-          <span class="badge" data-badge="test_fr_status"></span>
         </td>
 
         <td>
-          <select class="status sel-dossier" data-field="dossier_status">
+          <select class="status sel" data-field="dossier_status">
             <option value="complete" {% if t.dossier_status=="complete" %}selected{% endif %}>complet</option>
             <option value="incomplete" {% if t.dossier_status=="incomplete" %}selected{% endif %}>incomplet</option>
           </select>
-          <span class="badge" data-badge="dossier_status"></span>
         </td>
 
         <td>
           <div class="inline">
             <span class="cnaps" data-cnaps>{{ t.cnaps or "INCONNU" }}</span>
-            <button class="mini-btn" data-refresh>↻</button>
+            <button class="mini-btn" data-refresh type="button">↻</button>
           </div>
         </td>
 
         {% if show_hosting %}
         <td>
-          <span class="hosting" data-hosting>{{ "réservé" if t.hosting_status=="reserved" else ("inconnu" if t.hosting_status=="unknown" else t.hosting_status) }}</span>
+          <span class="hosting" data-hosting>
+            {{ "réservé" if t.hosting_status=="reserved" else ("inconnu" if t.hosting_status=="unknown" else t.hosting_status) }}
+          </span>
         </td>
         {% endif %}
 
@@ -125,7 +120,7 @@
 
         {% if show_vae %}
         <td>
-          <select class="status sel-vae" data-field="vae_status">
+          <select class="status sel" data-field="vae_status">
             <option value="soon" {% if t.vae_status=="soon" %}selected{% endif %}>prochainement</option>
             <option value="in_progress" {% if t.vae_status=="in_progress" %}selected{% endif %}>en cours</option>
             <option value="validated" {% if t.vae_status=="validated" %}selected{% endif %}>validé</option>
@@ -134,25 +129,27 @@
         {% endif %}
 
         <td>
-          <select class="status sel-finance" data-field="financement_status">
+          <select class="status sel" data-field="financement_status">
             <option value="soon" {% if t.financement_status=="soon" %}selected{% endif %}>prochainement</option>
             <option value="in_review" {% if t.financement_status=="in_review" %}selected{% endif %}>en cours de validation</option>
             <option value="validated" {% if t.financement_status=="validated" %}selected{% endif %}>validé</option>
           </select>
-          <span class="badge" data-badge="financement_status"></span>
         </td>
 
         <td>
           <a class="btn btn-outline"
-   href="/admin/sessions/{{ session.id }}/stagiaires/{{ t.id }}"
-   style="text-decoration:none;display:inline-block">
-  Fiche
-</a>
-
+             href="/admin/sessions/{{ session.id }}/stagiaires/{{ t.id }}"
+             style="text-decoration:none;display:inline-block">
+            Fiche
+          </a>
           <div class="small mono">ID: {{ t.personal_id }}</div>
           {% if t.comment %}
             <div class="warn-line">⚠️</div>
           {% endif %}
+        </td>
+
+        <td>
+          <button class="btn btn-danger" data-delete-trainee type="button">🗑️</button>
         </td>
       </tr>
       {% endfor %}
@@ -198,10 +195,118 @@
 </div>
 
 <script>
+  const sessionId = document.getElementById("traineesTable").getAttribute("data-session-id");
+
+  // modal open
+  document.getElementById("btnOpenCreateTrainee")?.addEventListener("click", ()=>{
+    openModal("createTraineeModal");
+  });
+
+  // create trainee
+  document.getElementById("btnCreateTrainee")?.addEventListener("click", async ()=>{
+    const last_name = (document.getElementById("tLastName").value || "").trim();
+    const first_name = (document.getElementById("tFirstName").value || "").trim();
+    const email = (document.getElementById("tEmail").value || "").trim();
+    const phone = (document.getElementById("tPhone").value || "").trim();
+
+    if(!last_name || !first_name){
+      alert("Nom + prénom obligatoires");
+      return;
+    }
+
+    const btn = document.getElementById("btnCreateTrainee");
+    btn.disabled = true;
+
+    try{
+      const r = await fetch(`/api/sessions/${sessionId}/trainees/create`, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ last_name, first_name, email, phone })
+      });
+      const res = await r.json();
+      if(!r.ok || !res.ok){
+        alert("Erreur ajout stagiaire");
+        return;
+      }
+      window.location.reload();
+    }catch(e){
+      alert("Erreur réseau");
+    }finally{
+      btn.disabled = false;
+    }
+  });
+
+  // autosave (select + comment)
+  let debounceTimers = {};
+  async function saveField(traineeId, field, value){
+    await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
+      method:"POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ [field]: value })
+    });
+  }
+
+  document.querySelectorAll("tr[data-trainee-id]").forEach(tr=>{
+    const traineeId = tr.getAttribute("data-trainee-id");
+
+    tr.querySelectorAll("select.sel").forEach(sel=>{
+      sel.addEventListener("change", async ()=>{
+        const field = sel.getAttribute("data-field");
+        const value = sel.value;
+        try{
+          await saveField(traineeId, field, value);
+          window.location.reload(); // simple: recalcul conformités
+        }catch(e){
+          alert("Erreur sauvegarde");
+        }
+      });
+    });
+
+    const comment = tr.querySelector("input.comment");
+    if(comment){
+      comment.addEventListener("input", ()=>{
+        const field = comment.getAttribute("data-field");
+        const value = comment.value;
+
+        if(debounceTimers[traineeId]) clearTimeout(debounceTimers[traineeId]);
+        debounceTimers[traineeId] = setTimeout(async ()=>{
+          try{
+            await saveField(traineeId, field, value);
+            // pas besoin de reload à chaque frappe
+          }catch(e){
+            // silencieux
+          }
+        }, 450);
+      });
+    }
+
+    // delete trainee
+    const delBtn = tr.querySelector("[data-delete-trainee]");
+    if(delBtn){
+      delBtn.addEventListener("click", async ()=>{
+        if(!confirm("Supprimer ce stagiaire ?")) return;
+        delBtn.disabled = true;
+        try{
+          const r = await fetch(`/api/sessions/${sessionId}/trainees/${traineeId}/delete`, { method:"POST" });
+          const res = await r.json();
+          if(!r.ok || !res.ok){
+            alert("Erreur suppression stagiaire");
+            delBtn.disabled = false;
+            return;
+          }
+          window.location.reload();
+        }catch(e){
+          alert("Erreur réseau");
+        }finally{
+          delBtn.disabled = false;
+        }
+      });
+    }
+  });
+
+  // CNAPS refresh (your existing logic, kept)
   async function cnapsLookup(nom, prenom){
-    const r = await fetch(
-      `/api/cnaps_lookup?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}`
-    );
+    const r = await fetch(`/api/cnaps_lookup?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}`);
     return await r.json();
   }
 
@@ -212,7 +317,6 @@
       const tr = btn.closest("tr");
       const traineeId = tr.getAttribute("data-trainee-id");
 
-      // Dans ton tableau: col 1 = Nom, col 2 = Prénom
       const nom = tr.querySelector("td:nth-child(1)")?.textContent.trim() || "";
       const prenom = tr.querySelector("td:nth-child(2)")?.textContent.trim() || "";
 
@@ -227,12 +331,8 @@
         const res = await cnapsLookup(nom, prenom);
         const statut = (res.statut_cnaps || "INCONNU").toUpperCase();
 
-        // Mise à jour visuelle
         const span = tr.querySelector("[data-cnaps]");
         if (span) span.textContent = statut;
-
-        // Sauvegarde côté backend
-        const sessionId = document.getElementById("traineesTable").getAttribute("data-session-id");
 
         await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
           method: "POST",
@@ -248,6 +348,5 @@
     });
   });
 </script>
-
 
 {% endblock %}
