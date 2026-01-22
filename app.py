@@ -368,15 +368,15 @@ def admin_stagiaires(session_id: str):
         nom = (st.get("nom") or "").strip()
         prenom = (st.get("prenom") or "").strip()
 
-    # CNAPS : ne pas écraser si déjà défini manuellement
-    current_cnaps = (st.get("cnaps") or "").strip().upper()
-    
-    # On ne fait un lookup automatique QUE si c'est vide / inconnu
-    if current_cnaps in ("", "INCONNU", "INCONNUE", "INCONNU.", "INCONNU ") and nom and prenom:
-        cn = fetch_cnaps_status_by_name(nom, prenom)
-        st["cnaps"] = (cn or "INCONNU").strip()
-    elif not current_cnaps:
-        st["cnaps"] = "INCONNU"
+        # CNAPS : ne pas écraser si déjà défini manuellement
+        current_cnaps = (st.get("cnaps") or "").strip().upper()
+
+        # On ne fait un lookup automatique QUE si c'est vide / inconnu
+        if current_cnaps in ("", "INCONNU", "INCONNUE", "INCONNU.", "INCONNU ") and nom and prenom:
+            cn = fetch_cnaps_status_by_name(nom, prenom)
+            st["cnaps"] = normalize_cnaps_py(cn or "INCONNU")
+        elif not current_cnaps:
+            st["cnaps"] = "INCONNU"
 
         # Hébergement uniquement pour A3P (on garde l’email)
         if session.get("type_formation") == "A3P":
@@ -453,6 +453,13 @@ def admin_stagiaires_add(session_id: str):
 
     return redirect(url_for("admin_stagiaires", session_id=session_id))
 
+def normalize_cnaps_py(v):
+    if not v:
+        return "INCONNU"
+    v = str(v).strip().upper()
+    v = " ".join(v.split())
+    return v or "INCONNU"
+
 
 # =========================
 # Autosave API
@@ -475,7 +482,11 @@ def api_update_stagiaire(session_id: str, stagiaire_id: str):
 
     for k, v in payload.items():
         if k in allowed:
-            st[k] = v
+            if k == "cnaps":
+                st[k] = normalize_cnaps_py(v)
+            else:
+                st[k] = v
+
 
     st["updated_at"] = _now_iso()
     save_data(data)
