@@ -436,7 +436,7 @@ def admin_stagiaires_add(session_id: str):
         "convention": "prochainement",
         "test_francais": "prochainement",
         "dossier": "incomplet",
-        "cnaps": "inconnu",
+        "cnaps": "INCONNU",
         "financement": "prochainement",
         "commentaire": "",
         # conditional:
