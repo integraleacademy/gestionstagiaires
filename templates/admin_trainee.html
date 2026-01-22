@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="breadcrumbs">
+  <a href="{{ url_for('admin_trainees', session_id=session.id, **request.args) }}">← Retour stagiaires</a>
+</div>
+
+<div class="session-header">
+  <div>
+    <h1>Fiche stagiaire</h1>
+    <div class="meta-line">
+      <span class="pill">{{ session.training_type }}</span>
+      <span>Session : <strong>{{ session.name }}</strong></span>
+      <span>Formation : <strong>{{ session.date_start }}</strong> → <strong>{{ session.date_end }}</strong></span>
+      <span>Examen : <strong>{{ session.exam_date }}</strong></span>
+    </div>
+  </div>
+</div>
+
+<div class="table-wrap full-bleed">
+  <div class="card" style="padding:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:20px;font-weight:800;">
+          {{ trainee.first_name }} {{ trainee.last_name }}
+        </div>
+        <div class="meta-line" style="margin-top:6px;">
+          <span class="pill">ID: {{ trainee.personal_id or trainee.id }}</span>
+          <span>CNAPS : <strong id="cnapsText">{{ trainee.cnaps or "INCONNU" }}</strong></span>
+          {% if show_hosting %}
+            <span>Hébergement :
+              <strong>
+                {{ "réservé" if trainee.hosting_status=="reserved" else ("inconnu" if trainee.hosting_status=="unknown" else trainee.hosting_status) }}
+              </strong>
+            </span>
+          {% endif %}
+          {% if show_vae %}
+            <span>VAE : <strong>{{ trainee.vae_status or "—" }}</strong></span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-outline" id="btnRefreshCnaps" type="button">↻ Rafraîchir CNAPS</button>
+        <button class="btn btn-danger" id="btnDelete" type="button">🗑️ Supprimer</button>
+      </div>
+    </div>
+
+    <hr style="margin:14px 0;opacity:.15;">
+
+    <div class="form-grid">
+      <label>
+        <div class="label">Nom</div>
+        <input id="lastName" type="text" value="{{ trainee.last_name }}">
+      </label>
+
+      <label>
+        <div class="label">Prénom</div>
+        <input id="firstName" type="text" value="{{ trainee.first_name }}">
+      </label>
+
+      <label>
+        <div class="label">Email</div>
+        <input id="email" type="email" value="{{ trainee.email }}">
+      </label>
+
+      <label>
+        <div class="label">Téléphone</div>
+        <input id="phone" type="tel" value="{{ trainee.phone }}">
+        <div class="hint">Format conseillé : +33…</div>
+      </label>
+
+      <label>
+        <div class="label">Convention</div>
+        <select id="convention" class="status sel">
+          {% for v in enums.convention %}
+            <option value="{{ v }}" {% if trainee.convention_status==v %}selected{% endif %}>
+              {{ "PROCHAINEMENT" if v=="soon" else ("EN COURS DE SIGNATURE" if v=="signing" else "SIGNÉE") }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label>
+        <div class="label">Test Français</div>
+        <select id="testfr" class="status sel">
+          <option value="soon" {% if trainee.test_fr_status=="soon" %}selected{% endif %}>prochainement</option>
+          <option value="in_progress" {% if trainee.test_fr_status=="in_progress" %}selected{% endif %}>en cours</option>
+          <option value="validated" {% if trainee.test_fr_status=="validated" %}selected{% endif %}>validé</option>
+          <option value="relance" {% if trainee.test_fr_status=="relance" %}selected{% endif %}>relancé</option>
+        </select>
+      </label>
+
+      <label>
+        <div class="label">Dossier</div>
+        <select id="dossier" class="status sel">
+          <option value="complete" {% if trainee.dossier_status=="complete" %}selected{% endif %}>complet</option>
+          <option value="incomplete" {% if trainee.dossier_status=="incomplete" %}selected{% endif %}>incomplet</option>
+        </select>
+      </label>
+
+      <label>
+        <div class="label">Financement</div>
+        <select id="finance" class="status sel">
+          <option value="soon" {% if trainee.financement_status=="soon" %}selected{% endif %}>prochainement</option>
+          <option value="in_review" {% if trainee.financement_status=="in_review" %}selected{% endif %}>en cours de validation</option>
+          <option value="validated" {% if trainee.financement_status=="validated" %}selected{% endif %}>validé</option>
+        </select>
+      </label>
+
+      {% if show_vae %}
+      <label>
+        <div class="label">VAE</div>
+        <select id="vae" class="status sel">
+          <option value="soon" {% if trainee.vae_status=="soon" %}selected{% endif %}>prochainement</option>
+          <option value="in_progress" {% if trainee.vae_status=="in_progress" %}selected{% endif %}>en cours</option>
+          <option value="validated" {% if trainee.vae_status=="validated" %}selected{% endif %}>validé</option>
+        </select>
+      </label>
+      {% endif %}
+
+      <label style="grid-column:1/-1;">
+        <div class="label">Commentaire</div>
+        <input id="comment" type="text" value="{{ trainee.comment }}" placeholder="Ajouter un commentaire...">
+        <div class="hint">Sauvegarde automatique</div>
+      </label>
+    </div>
+  </div>
+</div>
+
+<script>
+  const sessionId = "{{ session.id }}";
+  const traineeId = "{{ trainee.id }}";
+
+  async function save(payload){
+    await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
+      method:"POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+  }
+
+  // autosave (debounce)
+  let tmr = null;
+  function debounceSave(payload){
+    if(tmr) clearTimeout(tmr);
+    tmr = setTimeout(()=>save(payload), 450);
+  }
+
+  // champs texte
+  document.getElementById("lastName").addEventListener("input", e => debounceSave({ last_name: e.target.value }));
+  document.getElementById("firstName").addEventListener("input", e => debounceSave({ first_name: e.target.value }));
+  document.getElementById("email").addEventListener("input", e => debounceSave({ email: e.target.value }));
+  document.getElementById("phone").addEventListener("input", e => debounceSave({ phone: e.target.value }));
+  document.getElementById("comment").addEventListener("input", e => debounceSave({ comment: e.target.value }));
+
+  // selects
+  document.getElementById("convention").addEventListener("change", e => save({ convention_status: e.target.value }).then(()=>window.location.reload()));
+  document.getElementById("testfr").addEventListener("change", e => save({ test_fr_status: e.target.value }).then(()=>window.location.reload()));
+  document.getElementById("dossier").addEventListener("change", e => save({ dossier_status: e.target.value }).then(()=>window.location.reload()));
+  document.getElementById("finance").addEventListener("change", e => save({ financement_status: e.target.value }).then(()=>window.location.reload()));
+  const vaeEl = document.getElementById("vae");
+  if(vaeEl) vaeEl.addEventListener("change", e => save({ vae_status: e.target.value }).then(()=>window.location.reload()));
+
+  // CNAPS refresh
+  async function cnapsLookup(nom, prenom){
+    const r = await fetch(`/api/cnaps_lookup?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}`);
+    return await r.json();
+  }
+
+  document.getElementById("btnRefreshCnaps").addEventListener("click", async ()=>{
+    const nom = (document.getElementById("lastName").value || "").trim();
+    const prenom = (document.getElementById("firstName").value || "").trim();
+    if(!nom || !prenom){
+      alert("Nom + prénom obligatoires");
+      return;
+    }
+    const btn = document.getElementById("btnRefreshCnaps");
+    btn.disabled = true;
+    try{
+      const res = await cnapsLookup(nom, prenom);
+      const statut = (res.statut_cnaps || "INCONNU").toUpperCase();
+      document.getElementById("cnapsText").textContent = statut;
+      await save({ cnaps: statut });
+    }catch(e){
+      alert("Erreur CNAPS");
+    }finally{
+      btn.disabled = false;
+    }
+  });
+
+  // delete
+  document.getElementById("btnDelete").addEventListener("click", async ()=>{
+    if(!confirm("Supprimer ce stagiaire ?")) return;
+    const btn = document.getElementById("btnDelete");
+    btn.disabled = true;
+    try{
+      const r = await fetch(`/api/sessions/${sessionId}/trainees/${traineeId}/delete`, { method:"POST" });
+      const res = await r.json();
+      if(!r.ok || !res.ok){
+        alert("Erreur suppression");
+        btn.disabled = false;
+        return;
+      }
+      window.location.href = `/admin/sessions/${sessionId}/trainees`;
+    }catch(e){
+      alert("Erreur réseau");
+    }finally{
+      btn.disabled = false;
+    }
+  });
+</script>
+
+{% endblock %}
