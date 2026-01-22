@@ -197,12 +197,77 @@
 <script>
   const sessionId = document.getElementById("traineesTable").getAttribute("data-session-id");
 
+  // =========================
+  // UI: colors for status selects + CNAPS + Hosting
+  // =========================
+  function toClassSafe(s){
+    return (s || "").toString().trim().toLowerCase().replace(/\s+/g,"_");
+  }
+
+  function applyStatusPill(selectEl){
+    if(!selectEl) return;
+    selectEl.classList.add("status-pill");
+
+    [...selectEl.classList].forEach(c=>{
+      if(c.startsWith("is-")) selectEl.classList.remove(c);
+    });
+
+    const v = toClassSafe(selectEl.value);
+    if(v) selectEl.classList.add("is-" + v);
+    else selectEl.classList.add("is-soon");
+  }
+
+  function cnapsClassFromText(txt){
+    const t = (txt || "").toString().trim().toUpperCase();
+    if(t.includes("TRANSM")) return "cnaps-transmis";
+    if(t.includes("ENREG"))  return "cnaps-enregistre";
+    if(t.includes("INSTRU")) return "cnaps-instruction";
+    if(t.includes("ACCEPT")) return "cnaps-accepte";
+    if(t.includes("REFUS"))  return "cnaps-refuse";
+    if(t.includes("DOC"))    return "cnaps-docs";
+    return "cnaps-inconnu";
+  }
+
+  function applyCnapsBadge(span){
+    if(!span) return;
+    span.classList.add("cnaps");
+    [...span.classList].forEach(c=>{
+      if(c.startsWith("cnaps-")) span.classList.remove(c);
+    });
+    span.classList.add(cnapsClassFromText(span.textContent));
+  }
+
+  function applyHostingBadge(span){
+    if(!span) return;
+    span.classList.add("status-pill");
+    [...span.classList].forEach(c=>{
+      if(c.startsWith("is-")) span.classList.remove(c);
+    });
+
+    const v = toClassSafe(span.textContent);
+    if(v.includes("reserved") || v.includes("réserv")) span.classList.add("is-reserved");
+    else span.classList.add("is-unknown");
+  }
+
+  function applyAllColors(){
+    document.querySelectorAll("select.sel").forEach(sel => applyStatusPill(sel));
+    document.querySelectorAll("[data-cnaps]").forEach(span => applyCnapsBadge(span));
+    document.querySelectorAll("[data-hosting]").forEach(span => applyHostingBadge(span));
+  }
+
+  // ✅ applique les couleurs au chargement
+  applyAllColors();
+
+  // =========================
   // modal open
+  // =========================
   document.getElementById("btnOpenCreateTrainee")?.addEventListener("click", ()=>{
     openModal("createTraineeModal");
   });
 
+  // =========================
   // create trainee
+  // =========================
   document.getElementById("btnCreateTrainee")?.addEventListener("click", async ()=>{
     const last_name = (document.getElementById("tLastName").value || "").trim();
     const first_name = (document.getElementById("tFirstName").value || "").trim();
@@ -236,8 +301,11 @@
     }
   });
 
+  // =========================
   // autosave (select + comment)
+  // =========================
   let debounceTimers = {};
+
   async function saveField(traineeId, field, value){
     await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
       method:"POST",
@@ -249,19 +317,24 @@
   document.querySelectorAll("tr[data-trainee-id]").forEach(tr=>{
     const traineeId = tr.getAttribute("data-trainee-id");
 
+    // select changes
     tr.querySelectorAll("select.sel").forEach(sel=>{
       sel.addEventListener("change", async ()=>{
         const field = sel.getAttribute("data-field");
         const value = sel.value;
+
+        applyStatusPill(sel); // ✅ recolor instant
+
         try{
           await saveField(traineeId, field, value);
-          window.location.reload(); // simple: recalcul conformités
+          window.location.reload(); // recalcul conformités
         }catch(e){
           alert("Erreur sauvegarde");
         }
       });
     });
 
+    // comment autosave
     const comment = tr.querySelector("input.comment");
     if(comment){
       comment.addEventListener("input", ()=>{
@@ -272,7 +345,6 @@
         debounceTimers[traineeId] = setTimeout(async ()=>{
           try{
             await saveField(traineeId, field, value);
-            // pas besoin de reload à chaque frappe
           }catch(e){
             // silencieux
           }
@@ -304,7 +376,9 @@
     }
   });
 
-  // CNAPS refresh (your existing logic, kept)
+  // =========================
+  // CNAPS refresh
+  // =========================
   async function cnapsLookup(nom, prenom){
     const r = await fetch(`/api/cnaps_lookup?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}`);
     return await r.json();
@@ -332,7 +406,10 @@
         const statut = (res.statut_cnaps || "INCONNU").toUpperCase();
 
         const span = tr.querySelector("[data-cnaps]");
-        if (span) span.textContent = statut;
+        if (span){
+          span.textContent = statut;
+          applyCnapsBadge(span); // ✅ recolor instant
+        }
 
         await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
           method: "POST",
@@ -348,5 +425,6 @@
     });
   });
 </script>
+
 
 {% endblock %}
