@@ -517,6 +517,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "financement_status",
         "vae_status",
         "comment",
+        "vae_status_label",
         "cnaps",
     }
 
@@ -646,6 +647,50 @@ def admin_view_upload(path: str):
         abort(404)
     # simple serve
     return send_file(full, as_attachment=False)
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/documents/<doc_key>/upload")
+def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    try:
+        stored = _store_file(session_id, trainee_id, "documents", f)
+    except Exception:
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    token = _tokenize_path(stored)
+
+    docs = t.get("documents") or []
+    found = False
+    for d in docs:
+        if d.get("key") == doc_key:
+            d["file"] = token
+            found = True
+            break
+
+    # si doc_key inconnu, on refuse silencieusement
+    if not found:
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    t["updated_at"] = _now_iso()
+
+    # IMPORTANT: recalc dossier_status (voir point 3)
+    t["dossier_status"] = "complete" if dossier_is_complete(t) else "incomplete"
+
+    s["trainees"] = trainees
+    save_data(data)
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
 
 
 # =========================
@@ -1017,9 +1062,18 @@ def api_docs_update(session_id: str, trainee_id: str):
             break
 
     t["updated_at"] = _now_iso()
+    
+    # ✅ Synchronisation automatique du statut dossier
+    t["dossier_status"] = "complete" if dossier_is_complete(t) else "incomplete"
+    
     s["trainees"] = trainees
     save_data(data)
-    return jsonify({"ok": True, "dossier_is_complete": dossier_is_complete(t)})
+    return jsonify({
+        "ok": True,
+        "dossier_is_complete": dossier_is_complete(t),
+        "dossier_status": t["dossier_status"]
+    })
+
 
 
 # =========================
