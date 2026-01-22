@@ -1251,7 +1251,7 @@ TPL_ADMIN_STAGIAIRES = f"""
 </html>
 """
 
-TPL_ADMIN_STAGIAIRE_SPACE = f"""
+TPL_ADMIN_STAGIAIRE_SPACE = """
 <!doctype html>
 <html>
 <head>
