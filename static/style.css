@@ -407,3 +407,40 @@ input:focus, select:focus{
   .form-grid{grid-template-columns:1fr}
   .container{padding:0 12px}
 }
+
+/* =========================
+   FIX: tableau + colonnes visibles
+   (à coller tout en bas)
+   ========================= */
+
+/* le tableau doit pouvoir rentrer plus facilement */
+.table{
+  min-width: 1100px !important; /* au lieu de 1250 */
+}
+
+/* compact un peu les cellules */
+.table th{ padding:10px 10px !important; }
+.table td{ padding:10px 10px !important; }
+
+/* colonnes fixes (lisibles) */
+.table th:nth-child(1), .table td:nth-child(1){ min-width:140px !important; } /* Nom */
+.table th:nth-child(2), .table td:nth-child(2){ min-width:120px !important; } /* Prénom */
+.table th:nth-child(4), .table td:nth-child(4){ min-width:150px !important; } /* Téléphone */
+
+/* Email: lisible mais pas gigantesque */
+.table th:nth-child(3), .table td:nth-child(3){
+  min-width: 220px !important;
+  max-width: 260px !important;
+}
+
+/* commentaire: réduit sinon ça explose la largeur */
+input.comment{
+  width: 320px !important;
+  min-width: 260px !important;
+  max-width: 380px !important;
+}
+
+/* les pills ne doivent pas prendre 100% */
+select.status-pill{
+  max-width: 190px !important;
+}
