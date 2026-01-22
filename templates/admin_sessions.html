@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head">
+  <h1>Sessions</h1>
+  <button class="btn btn-primary" id="btnOpenCreateSession">+ Nouvelle session</button>
+</div>
+
+<div class="grid cards" id="sessionsGrid">
+  {% for s in sessions %}
+  <div class="card">
+    <div class="card-row">
+      <div class="card-title">{{ s.name }}</div>
+      <div class="bigmark">{{ "✅" if s.session_is_conform else "❌" }}</div>
+    </div>
+    <div class="card-meta">
+      <div><span class="pill">{{ s.training_type }}</span></div>
+      <div>Formation : <strong>{{ s.date_start }}</strong> → <strong>{{ s.date_end }}</strong></div>
+      <div>Examen : <strong>{{ s.exam_date }}</strong></div>
+      <div>Stagiaires : <strong>{{ s.total }}</strong></div>
+    </div>
+
+    <div class="card-actions">
+      <a class="btn" href="{{ url_for('admin_trainees', session_id=s.id, **request.args) }}">Voir les stagiaires</a>
+      <button class="btn btn-danger" data-delete-session="{{ s.id }}">Supprimer</button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- MODALE CREATION SESSION -->
+<div class="modal-backdrop" id="createSessionModal" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Nouvelle session</div>
+      <button class="icon-btn" data-close-modal="createSessionModal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-grid">
+        <label>
+          <div class="label">Nom de la session</div>
+          <input id="sessionName" type="text" placeholder="ex: APS Mars 2026 - Paris">
+        </label>
+
+        <label>
+          <div class="label">Type de formation</div>
+          <select id="sessionType">
+            {% for t in formation_types %}
+            <option value="{{ t }}">{{ t }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label>
+          <div class="label">Date début</div>
+          <input id="dateStart" type="date">
+        </label>
+
+        <label>
+          <div class="label">Date fin</div>
+          <input id="dateEnd" type="date">
+        </label>
+
+        <label>
+          <div class="label">Date d’examen</div>
+          <input id="examDate" type="date">
+        </label>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" data-close-modal="createSessionModal">Annuler</button>
+      <button class="btn btn-primary" id="btnCreateSession">Valider</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
