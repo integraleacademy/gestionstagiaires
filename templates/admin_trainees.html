@@ -187,4 +187,57 @@
   </div>
 </div>
 
+<script>
+  async function cnapsLookup(nom, prenom){
+    const r = await fetch(
+      `/api/cnaps_lookup?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}`
+    );
+    return await r.json();
+  }
+
+  document.querySelectorAll("[data-refresh]").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault();
+
+      const tr = btn.closest("tr");
+      const traineeId = tr.getAttribute("data-trainee-id");
+
+      // Dans ton tableau: col 1 = Nom, col 2 = Prénom
+      const nom = tr.querySelector("td:nth-child(1)")?.textContent.trim() || "";
+      const prenom = tr.querySelector("td:nth-child(2)")?.textContent.trim() || "";
+
+      if (!traineeId || !nom || !prenom) {
+        alert("Nom / prénom introuvables");
+        return;
+      }
+
+      btn.disabled = true;
+
+      try {
+        const res = await cnapsLookup(nom, prenom);
+        const statut = (res.statut_cnaps || "INCONNU").toUpperCase();
+
+        // Mise à jour visuelle
+        const span = tr.querySelector("[data-cnaps]");
+        if (span) span.textContent = statut;
+
+        // Sauvegarde côté backend
+        const sessionId = document.getElementById("traineesTable").getAttribute("data-session-id");
+
+        await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ cnaps: statut })
+        });
+
+      } catch (err) {
+        alert("Erreur CNAPS");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+</script>
+
+
 {% endblock %}
