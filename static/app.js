@@ -173,3 +173,56 @@ async function api(url, method="GET", body=null) {
     applyBadges(row);
 
     qsa("select.status", row).forEach(sel => {
+      sel.addEventListener("change", () => {
+        const field = sel.getAttribute("data-field");
+        const value = sel.value;
+        scheduleSave(async () => {
+          try {
+            await saveField(row, field, value);
+            applyBadges(row);
+            toast("Enregistré ✅");
+          } catch (e) {
+            toast(e.message, false);
+          }
+        });
+      });
+    });
+
+    const comment = qs("input.comment", row);
+    if (comment) {
+      comment.addEventListener("input", () => {
+        scheduleSave(async () => {
+          try {
+            await saveField(row, "comment", comment.value);
+            // surlignage + warning
+            if ((comment.value || "").trim().length > 0) row.classList.add("row-warning");
+            else row.classList.remove("row-warning");
+            toast("Enregistré ✅");
+          } catch (e) {
+            toast(e.message, false);
+          }
+        });
+      });
+    }
+
+    // Refresh CNAPS / hosting
+    const refresh = qs("[data-refresh]", row);
+    if (refresh) {
+      refresh.addEventListener("click", async () => {
+        const traineeId = row.getAttribute("data-trainee-id");
+        try {
+          const data = await api("/api/trainees/refresh_external", "POST", { trainee_id: traineeId });
+          const cnapsEl = qs("[data-cnaps]", row);
+          if (cnapsEl) cnapsEl.textContent = data.cnaps_status || "unknown";
+          const hostingEl = qs("[data-hosting]", row);
+          if (hostingEl && data.hosting_status) {
+            hostingEl.textContent = (data.hosting_status === "reserved") ? "réservé" : "inconnu";
+          }
+          toast("Statuts mis à jour ✅");
+        } catch (e) {
+          toast(e.message, false);
+        }
+      });
+    }
+  });
+})();
