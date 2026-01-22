@@ -317,3 +317,12 @@ select.sel-cnaps.cnaps-refuse{ background:#000 !important; color:#fff !important
 select.sel-cnaps.cnaps-docs{ background:var(--red) !important; color:#fff !important; }
 
 
+/* Pleine largeur uniquement pour le tableau stagiaires */
+.table-wrap.full-bleed{
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  border-radius: 16px;
+}
+
+
