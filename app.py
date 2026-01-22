@@ -22,6 +22,8 @@ DATA_FILE = os.path.join(PERSIST_DIR, "data.json")
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 BREVO_SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL", "ecole@integraleacademy.com")
 BREVO_SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "Intégrale Academy")
+CNAPS_LOOKUP_ENDPOINT = os.environ.get("CNAPS_LOOKUP_ENDPOINT", "")
+
 
 # Placeholder: public student portal base URL (we'll build later)
 PUBLIC_STUDENT_PORTAL_BASE = os.environ.get("PUBLIC_STUDENT_PORTAL_BASE", "https://example.com/espace-stagiaire")
@@ -247,6 +249,23 @@ def fetch_hebergement_status(email: str) -> Optional[str]:
     except Exception:
         return None
 
+def fetch_cnaps_status_by_name(nom: str, prenom: str) -> Optional[str]:
+    if not CNAPS_LOOKUP_ENDPOINT:
+        return None
+    try:
+        r = requests.get(
+            CNAPS_LOOKUP_ENDPOINT,
+            params={"nom": nom, "prenom": prenom},
+            timeout=10
+        )
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        return data.get("statut_cnaps") or data.get("status")
+    except Exception:
+        return None
+
+
 
 # =========================
 # UI helpers
@@ -344,24 +363,31 @@ def admin_stagiaires(session_id: str):
     if not session:
         abort(404)
 
-    # refresh CNAPS / hebergement (optional, best-effort)
-    for st in session.get("stagiaires", []):
+# refresh CNAPS / hebergement (optional, best-effort)
+for st in session.get("stagiaires", []):
+    nom = (st.get("nom") or "").strip()
+    prenom = (st.get("prenom") or "").strip()
+
+    # CNAPS par nom + prénom
+    if nom and prenom:
+        cn = fetch_cnaps_status_by_name(nom, prenom)
+        st["cnaps"] = cn if cn else "INCONNU"
+    else:
+        st["cnaps"] = "INCONNU"
+
+    # Hébergement uniquement pour A3P (on garde l’email)
+    if session.get("type_formation") == "A3P":
         email = st.get("email", "")
         if email:
-            # CNAPS
-            cn = fetch_cnaps_status(email)
-            st["cnaps"] = cn if cn else "inconnu"
-            # Hebergement only for A3P
-            if session.get("type_formation") == "A3P":
-                hb = fetch_hebergement_status(email)
-                st["hebergement"] = hb if hb else "inconnu"
-            else:
-                st.pop("hebergement", None)
-
+            hb = fetch_hebergement_status(email)
+            st["hebergement"] = hb if hb else "inconnu"
         else:
-            st["cnaps"] = "inconnu"
+            st["hebergement"] = "inconnu"
+    else:
+        st.pop("hebergement", None)
 
-    save_data(data)
+save_data(data)
+
 
     counts = count_conformes(session)
     conforme = session_is_conforme(session)
@@ -443,7 +469,8 @@ def api_update_stagiaire(session_id: str, stagiaire_id: str):
 
     payload = request.get_json(silent=True) or {}
     # allow only safe keys
-    allowed = {"convention", "test_francais", "dossier", "financement", "commentaire", "vae"}
+    allowed = {"convention", "test_francais", "dossier", "financement", "commentaire", "vae", "cnaps"}
+
     for k, v in payload.items():
         if k in allowed:
             st[k] = v
@@ -456,6 +483,21 @@ def api_update_stagiaire(session_id: str, stagiaire_id: str):
 @app.get("/api/health")
 def health():
     return jsonify({"ok": True, "data_file": DATA_FILE})
+
+@app.get("/api/cnaps_lookup")
+def api_cnaps_lookup():
+    nom = (request.args.get("nom") or "").strip()
+    prenom = (request.args.get("prenom") or "").strip()
+
+    if not nom or not prenom:
+        return jsonify({"ok": False, "error": "missing_nom_or_prenom"}), 400
+
+    status = fetch_cnaps_status_by_name(nom, prenom)
+    if not status:
+        status = "INCONNU"
+
+    return jsonify({"ok": True, "nom": nom, "prenom": prenom, "statut_cnaps": status})
+
 
 
 # =========================
