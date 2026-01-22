@@ -363,31 +363,30 @@ def admin_stagiaires(session_id: str):
     if not session:
         abort(404)
 
-# refresh CNAPS / hebergement (optional, best-effort)
-for st in session.get("stagiaires", []):
-    nom = (st.get("nom") or "").strip()
-    prenom = (st.get("prenom") or "").strip()
+    # refresh CNAPS / hebergement (optional, best-effort)
+    for st in session.get("stagiaires", []):
+        nom = (st.get("nom") or "").strip()
+        prenom = (st.get("prenom") or "").strip()
 
-    # CNAPS par nom + prénom
-    if nom and prenom:
-        cn = fetch_cnaps_status_by_name(nom, prenom)
-        st["cnaps"] = cn if cn else "INCONNU"
-    else:
-        st["cnaps"] = "INCONNU"
-
-    # Hébergement uniquement pour A3P (on garde l’email)
-    if session.get("type_formation") == "A3P":
-        email = st.get("email", "")
-        if email:
-            hb = fetch_hebergement_status(email)
-            st["hebergement"] = hb if hb else "inconnu"
+        # CNAPS par nom + prénom
+        if nom and prenom:
+            cn = fetch_cnaps_status_by_name(nom, prenom)
+            st["cnaps"] = cn if cn else "INCONNU"
         else:
-            st["hebergement"] = "inconnu"
-    else:
-        st.pop("hebergement", None)
+            st["cnaps"] = "INCONNU"
 
-save_data(data)
+        # Hébergement uniquement pour A3P (on garde l’email)
+        if session.get("type_formation") == "A3P":
+            email = st.get("email", "")
+            if email:
+                hb = fetch_hebergement_status(email)
+                st["hebergement"] = hb if hb else "inconnu"
+            else:
+                st["hebergement"] = "inconnu"
+        else:
+            st.pop("hebergement", None)
 
+    save_data(data)
 
     counts = count_conformes(session)
     conforme = session_is_conforme(session)
