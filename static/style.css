@@ -1,32 +1,45 @@
 :root{
-  --bg:#0b0f0d;
-  --card:#111714;
-  --muted:#9aa7a0;
-  --text:#e8f0ea;
-  --line:#1c2621;
+  /* =========================
+     THEME CLAIR (pro & lisible)
+     ========================= */
+  --bg:#f6f8f7;          /* fond page */
+  --card:#ffffff;        /* cartes / blocs */
+  --muted:#6b7280;       /* texte secondaire */
+  --text:#111827;        /* texte principal */
+  --line:#e5e7eb;        /* bordures */
+  --shadow: 0 10px 30px rgba(0,0,0,0.06);
+
+  /* =========================
+     Couleurs statut
+     ========================= */
   --green:#1f8f4a;
   --red:#c0392b;
   --yellow:#f1c40f;
   --orange:#e67e22;
-  --neutral:#6b7a72;
+  --neutral:#9ca3af;
+
   --white:#ffffff;
 }
 
 *{box-sizing:border-box}
+
 body{
   margin:0;
   font-family: Arial, sans-serif;
-  background: linear-gradient(180deg, #0b0f0d, #0a0c0b);
+  background: var(--bg);
   color:var(--text);
 }
 
+/* =========================
+   Topbar / navigation
+   ========================= */
 .topbar{
   display:flex;
   justify-content:space-between;
   align-items:center;
   padding:16px 20px;
   border-bottom:1px solid var(--line);
-  background: rgba(10,12,11,0.9);
+  background: rgba(255,255,255,0.85);
   position:sticky;
   top:0;
   backdrop-filter: blur(10px);
@@ -34,17 +47,22 @@ body{
 }
 .brand-title{font-weight:800;letter-spacing:.2px}
 .brand-sub{color:var(--muted);font-size:12px;margin-top:2px}
+
 .nav-link{
   color:var(--text);
   text-decoration:none;
   padding:10px 12px;
   border-radius:10px;
   border:1px solid var(--line);
+  background:#fff;
 }
-.nav-link:hover{border-color:#26342c}
+.nav-link:hover{border-color:#d1d5db}
 
 .container{max-width:1200px;margin:24px auto;padding:0 16px}
 
+/* =========================
+   Titres / Head
+   ========================= */
 .page-head{
   display:flex;
   justify-content:space-between;
@@ -52,29 +70,38 @@ body{
   margin:16px 0;
 }
 h1{margin:0 0 6px 0;font-size:28px}
-h2{margin:0;font-size:20px;color:#dfe9e2}
+h2{margin:0;font-size:20px;color:#111827}
 
+/* =========================
+   Boutons
+   ========================= */
 .btn{
-  background:transparent;
+  background:#fff;
   border:1px solid var(--line);
   color:var(--text);
   padding:10px 12px;
   border-radius:12px;
   cursor:pointer;
+  transition: .12s ease;
 }
-.btn:hover{border-color:#2a3a31}
+.btn:hover{border-color:#d1d5db; transform: translateY(-1px)}
+.btn:active{transform: translateY(0)}
 .btn-primary{
   background:var(--green);
   border-color:var(--green);
   color:var(--white);
 }
 .btn-danger{
-  border-color:#3a1c1c;
-  color:#ffb8b0;
+  background:#fff;
+  border-color:#f3c5bf;
+  color:#b42318;
 }
-.btn-danger:hover{border-color:#5b2b2b}
+.btn-danger:hover{border-color:#f0a9a0}
 .btn-outline{opacity:.7; cursor:not-allowed;}
 
+/* =========================
+   Grids / cards sessions
+   ========================= */
 .grid.cards{
   display:grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -82,11 +109,11 @@ h2{margin:0;font-size:20px;color:#dfe9e2}
 }
 
 .card{
-  background:rgba(17,23,20,0.9);
+  background:var(--card);
   border:1px solid var(--line);
   border-radius:16px;
   padding:14px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+  box-shadow: var(--shadow);
 }
 .card-row{
   display:flex;
@@ -103,16 +130,20 @@ h2{margin:0;font-size:20px;color:#dfe9e2}
   display:inline-block;
   padding:6px 10px;
   border-radius:999px;
-  background:#0f1412;
+  background:#f3f4f6;
   border:1px solid var(--line);
-  color:#dfe9e2;
+  color:#111827;
   font-size:12px;
+  font-weight:700;
 }
 
+/* =========================
+   Modale
+   ========================= */
 .modal-backdrop{
   position:fixed;
   inset:0;
-  background:rgba(0,0,0,.55);
+  background:rgba(17,24,39,.45);
   display:none;
   align-items:center;
   justify-content:center;
@@ -122,10 +153,11 @@ h2{margin:0;font-size:20px;color:#dfe9e2}
 .modal-backdrop.open{display:flex}
 .modal{
   width:min(720px, 96vw);
-  background:rgba(17,23,20,0.98);
+  background:var(--card);
   border:1px solid var(--line);
   border-radius:18px;
   overflow:hidden;
+  box-shadow: var(--shadow);
 }
 .modal-head{
   display:flex;
@@ -136,13 +168,15 @@ h2{margin:0;font-size:20px;color:#dfe9e2}
 }
 .modal-title{font-weight:800}
 .icon-btn{
-  background:transparent;
+  background:#fff;
   border:1px solid var(--line);
   color:var(--text);
   border-radius:12px;
   padding:8px 10px;
   cursor:pointer;
 }
+.icon-btn:hover{border-color:#d1d5db}
+
 .modal-body{padding:14px}
 .modal-foot{
   padding:14px;
@@ -152,6 +186,9 @@ h2{margin:0;font-size:20px;color:#dfe9e2}
   gap:10px;
 }
 
+/* =========================
+   Form controls
+   ========================= */
 .form-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -159,21 +196,31 @@ h2{margin:0;font-size:20px;color:#dfe9e2}
 }
 label{display:block}
 .label{font-size:12px;color:var(--muted);margin:0 0 6px 0}
+
 input, select{
   width:100%;
   padding:10px 12px;
   border-radius:12px;
   border:1px solid var(--line);
-  background:#0f1412;
+  background:#ffffff;
   color:var(--text);
   outline:none;
 }
-input:focus, select:focus{border-color:#2f4338}
+input:focus, select:focus{
+  border-color:#c7d2fe;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.10);
+}
 .hint{font-size:12px;color:var(--muted);margin-top:6px}
 
-.breadcrumbs a{color:#b9c7bf;text-decoration:none}
+/* =========================
+   Breadcrumbs
+   ========================= */
+.breadcrumbs a{color:#374151;text-decoration:none}
 .breadcrumbs a:hover{text-decoration:underline}
 
+/* =========================
+   Header session + stats
+   ========================= */
 .session-header{
   display:flex;
   justify-content:space-between;
@@ -181,9 +228,10 @@ input:focus, select:focus{border-color:#2f4338}
   gap:16px;
   flex-wrap:wrap;
   padding:14px;
-  background:rgba(17,23,20,0.9);
+  background:var(--card);
   border:1px solid var(--line);
   border-radius:16px;
+  box-shadow: var(--shadow);
 }
 .meta-line{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:13px}
 
@@ -193,129 +241,26 @@ input:focus, select:focus{border-color:#2f4338}
   flex-wrap:wrap;
 }
 .stat{
-  background:#0f1412;
+  background:#f9fafb;
   border:1px solid var(--line);
   border-radius:14px;
   padding:10px 12px;
   min-width:120px;
 }
 .stat-title{font-size:12px;color:var(--muted)}
-.stat-value{font-size:16px;font-weight:800;margin-top:4px}
+.stat-value{font-size:16px;font-weight:900;margin-top:4px}
 
+/* =========================
+   TABLEAU stagiaires
+   ========================= */
 .table-wrap{
   margin-top:12px;
   overflow:auto;
   border:1px solid var(--line);
   border-radius:16px;
-  background:rgba(17,23,20,0.9);
+  background:var(--card);
+  box-shadow: var(--shadow);
 }
-.table{
-  width:100%;
-  border-collapse:collapse;
-  min-width:1050px;
-}
-.table th, .table td{
-  padding:10px 10px;
-  border-bottom:1px solid var(--line);
-  vertical-align:top;
-}
-.table th{
-  text-align:left;
-  font-size:12px;
-  color:#cfe0d7;
-  position:sticky;
-  top:0;
-  background:rgba(17,23,20,0.98);
-  z-index:1;
-}
-.mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size:12px;}
-
-.status{min-width:160px}
-.badge{
-  display:inline-block;
-  width:10px;height:10px;border-radius:999px;
-  margin-left:8px;
-  vertical-align:middle;
-  background:var(--neutral);
-}
-.badge.red{background:var(--red)}
-.badge.yellow{background:var(--yellow)}
-.badge.orange{background:var(--orange)}
-.badge.green{background:var(--green)}
-.badge.neutral{background:var(--neutral)}
-
-.inline{display:flex;gap:8px;align-items:center}
-.mini-btn{
-  border:1px solid var(--line);
-  background:#0f1412;
-  color:var(--text);
-  border-radius:10px;
-  padding:6px 8px;
-  cursor:pointer;
-}
-.mini-btn:hover{border-color:#2a3a31}
-
-.cnaps{color:#dfe9e2}
-.hosting{color:#dfe9e2}
-.row-warning{background: rgba(230,126,34,0.12)}
-.warn-line{margin-top:6px; font-size:16px}
-
-.toast{
-  position:fixed;
-  bottom:16px;
-  right:16px;
-  padding:10px 12px;
-  border-radius:14px;
-  border:1px solid var(--line);
-  background:rgba(15,20,18,.95);
-  color:var(--text);
-  opacity:0;
-  transform: translateY(8px);
-  transition: .2s ease;
-  z-index:30;
-}
-.toast.show{opacity:1; transform: translateY(0)}
-.toast.ok{border-color:#234a35}
-.toast.bad{border-color:#5b2b2b}
-
-@media (max-width:720px){
-  .form-grid{grid-template-columns:1fr}
-}
-
-/* =========================
-   CNAPS badge colors
-   ========================= */
-
-.cnaps{
-  display:inline-block;
-  padding:6px 10px;
-  border-radius:999px;
-  font-weight:800;
-  font-size:12px;
-  border:1px solid var(--line);
-  background:#0f1412;
-}
-
-/* Couleurs demandées */
-.cnaps.cnaps-transmis{ background:#374151; color:#fff; }     /* gris */
-.cnaps.cnaps-enregistre{ background:var(--orange); color:#111; } /* orange */
-.cnaps.cnaps-instruction{ background:var(--yellow); color:#111; } /* jaune */
-.cnaps.cnaps-accepte{ background:var(--green); color:#fff; }  /* vert */
-.cnaps.cnaps-refuse{ background:#000; color:#fff; }          /* noir */
-.cnaps.cnaps-docs{ background:var(--red); color:#fff; }      /* rouge */
-
-.cnaps.cnaps-inconnu{ background:#0f1412; color:#9aa7a0; }   /* inconnu */
-
-/* =========================
-   CNAPS (SELECT) colors
-   ========================= */
-select.sel-cnaps.cnaps-transmis{ background:#374151 !important; color:#fff !important; }
-select.sel-cnaps.cnaps-enregistre{ background:var(--orange) !important; color:#111 !important; }
-select.sel-cnaps.cnaps-instruction{ background:var(--yellow) !important; color:#111 !important; }
-select.sel-cnaps.cnaps-accepte{ background:var(--green) !important; color:#fff !important; }
-select.sel-cnaps.cnaps-refuse{ background:#000 !important; color:#fff !important; }
-select.sel-cnaps.cnaps-docs{ background:var(--red) !important; color:#fff !important; }
-
 
 /* Pleine largeur uniquement pour le tableau stagiaires */
 .table-wrap.full-bleed{
@@ -325,7 +270,104 @@ select.sel-cnaps.cnaps-docs{ background:var(--red) !important; color:#fff !impor
   border-radius: 16px;
 }
 
-/* Select qui ressemble à un bouton/pill */
+.table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  min-width:1150px; /* un peu plus large pour éviter l’écrasement */
+}
+.table th, .table td{
+  padding:12px 12px;
+  border-bottom:1px solid var(--line);
+  vertical-align:middle;
+  white-space:nowrap;
+}
+.table th{
+  text-align:left;
+  font-size:12px;
+  color:#374151;
+  position:sticky;
+  top:0;
+  background:#f9fafb;
+  z-index:1;
+}
+.table tbody tr:hover{
+  background:#f9fafb;
+}
+
+.mono{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size:12px;
+}
+
+/* largeur mini des sélecteurs */
+.status{min-width:160px}
+
+.inline{display:flex;gap:8px;align-items:center}
+
+/* petit bouton refresh */
+.mini-btn{
+  border:1px solid var(--line);
+  background:#fff;
+  color:var(--text);
+  border-radius:10px;
+  padding:6px 8px;
+  cursor:pointer;
+}
+.mini-btn:hover{border-color:#d1d5db}
+
+/* row warning (commentaire) */
+.row-warning{background: rgba(230,126,34,0.10)}
+.warn-line{margin-top:6px; font-size:16px}
+
+/* =========================
+   Toast
+   ========================= */
+.toast{
+  position:fixed;
+  bottom:16px;
+  right:16px;
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid var(--line);
+  background:#ffffff;
+  color:var(--text);
+  box-shadow: var(--shadow);
+  opacity:0;
+  transform: translateY(8px);
+  transition: .2s ease;
+  z-index:30;
+}
+.toast.show{opacity:1; transform: translateY(0)}
+.toast.ok{border-color:#cfe8da}
+.toast.bad{border-color:#f3c5bf}
+
+/* =========================
+   CNAPS badge colors
+   ========================= */
+.cnaps{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:900;
+  font-size:12px;
+  border:1px solid var(--line);
+  background:#f3f4f6;
+  color:#111827;
+}
+
+/* Couleurs demandées */
+.cnaps.cnaps-transmis{ background:#6b7280; color:#fff; }            /* gris */
+.cnaps.cnaps-enregistre{ background:var(--orange); color:#111; }    /* orange */
+.cnaps.cnaps-instruction{ background:var(--yellow); color:#111; }   /* jaune */
+.cnaps.cnaps-accepte{ background:var(--green); color:#fff; }        /* vert */
+.cnaps.cnaps-refuse{ background:#111827; color:#fff; }              /* noir */
+.cnaps.cnaps-docs{ background:var(--red); color:#fff; }             /* rouge */
+.cnaps.cnaps-inconnu{ background:#f3f4f6; color:#6b7280; }          /* inconnu */
+
+/* =========================
+   Select "pills" (statuts)
+   ========================= */
 .status-pill{
   min-width: 0 !important;
   width: fit-content;
@@ -335,14 +377,13 @@ select.sel-cnaps.cnaps-docs{ background:var(--red) !important; color:#fff !impor
   letter-spacing: .3px;
   text-transform: uppercase;
   border: 1px solid var(--line);
-  background: #0f1412;
+  background: #f3f4f6;
   cursor: pointer;
 
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
 }
-
 .table td .status-pill{margin-top: 2px}
 
 /* Couleurs par état (classes posées en JS) */
@@ -350,5 +391,22 @@ select.sel-cnaps.cnaps-docs{ background:var(--red) !important; color:#fff !impor
 .status-pill.is-signing{ background: var(--orange); color:#111; }
 .status-pill.is-signed{ background: var(--green); color:#fff; }
 
+.status-pill.is-in_progress{ background: var(--yellow); color:#111; }
+.status-pill.is-relance{ background: var(--red); color:#fff; }
 
+.status-pill.is-complete{ background: var(--green); color:#fff; }
+.status-pill.is-incomplete{ background: var(--orange); color:#111; }
 
+.status-pill.is-in_review{ background: var(--yellow); color:#111; }
+.status-pill.is-validated{ background: var(--green); color:#fff; }
+
+.status-pill.is-unknown{ background: var(--neutral); color:#111; }
+.status-pill.is-reserved{ background: var(--green); color:#fff; }
+
+/* =========================
+   Responsive
+   ========================= */
+@media (max-width:720px){
+  .form-grid{grid-template-columns:1fr}
+  .container{padding:0 12px}
+}
