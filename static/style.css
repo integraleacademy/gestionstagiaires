@@ -410,3 +410,45 @@ input:focus, select:focus{
   .form-grid{grid-template-columns:1fr}
   .container{padding:0 12px}
 }
+
+/* =========================
+   TABLE LISIBILITÉ (stagiaires)
+   ========================= */
+
+/* Autorise le retour à la ligne sur Mail / Tel / Commentaire */
+.table td:nth-child(3),   /* Mail */
+.table td:nth-child(4),   /* Téléphone */
+.table td:last-child{
+  white-space: normal;
+}
+
+/* Mail: limite et wrap propre */
+.table td:nth-child(3){
+  max-width: 260px;
+  word-break: break-word;
+}
+
+/* Commentaire: large + input confortable */
+.table td input.comment{
+  min-width: 320px;
+  width: 460px;
+  max-width: 620px;
+}
+
+/* Bouton Fiche: actif (pas grisé) */
+.table td .btn.btn-outline{
+  cursor: pointer !important;
+  opacity: 1 !important;
+  background: #fff !important;
+  border-color: var(--line) !important;
+}
+.table td .btn.btn-outline:hover{
+  border-color:#d1d5db !important;
+}
+
+/* Nom / prénom un peu plus visibles */
+.table td:nth-child(1),
+.table td:nth-child(2){
+  font-weight: 800;
+}
+
