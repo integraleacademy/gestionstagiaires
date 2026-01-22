@@ -27,7 +27,20 @@
         <span class="mono">ID : {{ trainee.personal_id or trainee.id }}</span>
       </div>
       <div class="meta-line" style="margin-top:6px;">
-        <span class="pill">CNAPS : {{ trainee.cnaps or "INCONNU" }}</span>
+{% set c = (trainee.cnaps or "INCONNU")|upper %}
+
+<span class="cnaps
+  {% if "TRANSM" in c %}cnaps-transmis
+  {% elif "ENREG" in c %}cnaps-enregistre
+  {% elif "INSTRU" in c %}cnaps-instruction
+  {% elif "ACCEPT" in c %}cnaps-accepte
+  {% elif "REFUS" in c %}cnaps-refuse
+  {% elif "DOC" in c %}cnaps-docs
+  {% else %}cnaps-inconnu
+  {% endif %}">
+  CNAPS : {{ c }}
+</span>
+
         <button class="mini-btn" id="btnRefreshCnaps" type="button">↻ Rafraîchir CNAPS</button>
       </div>
 
