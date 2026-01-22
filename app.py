@@ -733,6 +733,42 @@ def admin_delete_trainee(session_id: str, trainee_id: str):
     save_data(data)
     return redirect(url_for("admin_trainees", session_id=session_id))
 
+def _replace_in_docx(doc: Document, replacements: dict) -> None:
+    def replace_in_paragraph(p):
+        # Remplace dans les runs pour garder le style
+        for run in p.runs:
+            for k, v in replacements.items():
+                if k in run.text:
+                    run.text = run.text.replace(k, v)
+
+    def replace_in_table(table):
+        for row in table.rows:
+            for cell in row.cells:
+                for p in cell.paragraphs:
+                    replace_in_paragraph(p)
+                for t2 in cell.tables:
+                    replace_in_table(t2)
+
+    # Corps du document
+    for p in doc.paragraphs:
+        replace_in_paragraph(p)
+
+    for table in doc.tables:
+        replace_in_table(table)
+
+    # En-têtes / pieds de page
+    for section in doc.sections:
+        for p in section.header.paragraphs:
+            replace_in_paragraph(p)
+        for table in section.header.tables:
+            replace_in_table(table)
+
+        for p in section.footer.paragraphs:
+            replace_in_paragraph(p)
+        for table in section.footer.tables:
+            replace_in_table(table)
+
+
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/etiquette.docx")
 def admin_etiquette_docx(session_id: str, trainee_id: str):
     data = load_data()
@@ -777,10 +813,7 @@ def admin_etiquette_docx(session_id: str, trainee_id: str):
         "{{DATES}}": f"{_session_get(s,'date_start','')} → {_session_get(s,'date_end','')}",
     }
 
-    for p in doc.paragraphs:
-        for key, val in replacements.items():
-            if key in p.text:
-                p.text = p.text.replace(key, val)
+    _replace_in_docx(doc, replacements)
 
     # 4) Télécharger
     buf = BytesIO()
