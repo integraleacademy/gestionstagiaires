@@ -368,12 +368,15 @@ def admin_stagiaires(session_id: str):
         nom = (st.get("nom") or "").strip()
         prenom = (st.get("prenom") or "").strip()
 
-        # CNAPS par nom + prénom
-        if nom and prenom:
-            cn = fetch_cnaps_status_by_name(nom, prenom)
-            st["cnaps"] = cn if cn else "INCONNU"
-        else:
-            st["cnaps"] = "INCONNU"
+    # CNAPS : ne pas écraser si déjà défini manuellement
+    current_cnaps = (st.get("cnaps") or "").strip().upper()
+    
+    # On ne fait un lookup automatique QUE si c'est vide / inconnu
+    if current_cnaps in ("", "INCONNU", "INCONNUE", "INCONNU.", "INCONNU ") and nom and prenom:
+        cn = fetch_cnaps_status_by_name(nom, prenom)
+        st["cnaps"] = (cn or "INCONNU").strip()
+    elif not current_cnaps:
+        st["cnaps"] = "INCONNU"
 
         # Hébergement uniquement pour A3P (on garde l’email)
         if session.get("type_formation") == "A3P":
