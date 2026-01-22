@@ -13,6 +13,7 @@
       <div class="card-title">{{ s.name }}</div>
       <div class="bigmark">{{ "✅" if s.session_is_conform else "❌" }}</div>
     </div>
+
     <div class="card-meta">
       <div><span class="pill">{{ s.training_type }}</span></div>
       <div>Formation : <strong>{{ s.date_start }}</strong> → <strong>{{ s.date_end }}</strong></div>
@@ -27,6 +28,12 @@
   </div>
   {% endfor %}
 </div>
+
+{% if sessions|length == 0 %}
+  <div class="card" style="margin-top:12px;color:var(--muted)">
+    Aucune session pour l’instant. Clique sur <strong>Nouvelle session</strong>.
+  </div>
+{% endif %}
 
 <!-- MODALE CREATION SESSION -->
 <div class="modal-backdrop" id="createSessionModal" aria-hidden="true">
@@ -75,5 +82,74 @@
     </div>
   </div>
 </div>
+
+<script>
+  // open modal
+  document.getElementById("btnOpenCreateSession")?.addEventListener("click", ()=>{
+    openModal("createSessionModal");
+  });
+
+  // create session
+  document.getElementById("btnCreateSession")?.addEventListener("click", async ()=>{
+    const name = (document.getElementById("sessionName").value || "").trim();
+    const training_type = (document.getElementById("sessionType").value || "").trim();
+    const date_start = (document.getElementById("dateStart").value || "").trim();
+    const date_end = (document.getElementById("dateEnd").value || "").trim();
+    const exam_date = (document.getElementById("examDate").value || "").trim();
+
+    if(!name || !training_type){
+      alert("Nom + type de formation obligatoires");
+      return;
+    }
+
+    const btn = document.getElementById("btnCreateSession");
+    btn.disabled = true;
+
+    try{
+      const r = await fetch("/api/sessions/create", {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ name, training_type, date_start, date_end, exam_date })
+      });
+
+      const res = await r.json();
+      if(!r.ok || !res.ok){
+        alert("Erreur création session");
+        btn.disabled = false;
+        return;
+      }
+      window.location.reload();
+    }catch(e){
+      alert("Erreur réseau");
+    }finally{
+      btn.disabled = false;
+    }
+  });
+
+  // delete session
+  document.querySelectorAll("[data-delete-session]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const sid = btn.getAttribute("data-delete-session");
+      if(!sid) return;
+      if(!confirm("Supprimer cette session ?")) return;
+
+      btn.disabled = true;
+      try{
+        const r = await fetch(`/api/sessions/${sid}/delete`, { method:"POST" });
+        const res = await r.json();
+        if(!r.ok || !res.ok){
+          alert("Erreur suppression session");
+          btn.disabled = false;
+          return;
+        }
+        window.location.reload();
+      }catch(e){
+        alert("Erreur réseau");
+      }finally{
+        btn.disabled = false;
+      }
+    });
+  });
+</script>
 
 {% endblock %}
