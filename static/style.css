@@ -325,4 +325,30 @@ select.sel-cnaps.cnaps-docs{ background:var(--red) !important; color:#fff !impor
   border-radius: 16px;
 }
 
+/* Select qui ressemble à un bouton/pill */
+.status-pill{
+  min-width: 0 !important;
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 900;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+  border: 1px solid var(--line);
+  background: #0f1412;
+  cursor: pointer;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.table td .status-pill{margin-top: 2px}
+
+/* Couleurs par état (classes posées en JS) */
+.status-pill.is-soon{ background: var(--neutral); color:#111; }
+.status-pill.is-signing{ background: var(--orange); color:#111; }
+.status-pill.is-signed{ background: var(--green); color:#fff; }
+
+
 
