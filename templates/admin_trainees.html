@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="breadcrumbs">
+  <a href="{{ url_for('admin_sessions', **request.args) }}">← Retour sessions</a>
+</div>
+
+<div class="session-header">
+  <div>
+    <h1>{{ session.name }}</h1>
+    <div class="meta-line">
+      <span class="pill">{{ session.training_type }}</span>
+      <span>Formation : <strong>{{ session.date_start }}</strong> → <strong>{{ session.date_end }}</strong></span>
+      <span>Examen : <strong>{{ session.exam_date }}</strong></span>
+    </div>
+  </div>
+
+  <div class="session-stats">
+    <div class="stat">
+      <div class="stat-title">Stagiaires</div>
+      <div class="stat-value">{{ stats.total }}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-title">Conformes</div>
+      <div class="stat-value">{{ stats.conform_count }}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-title">Non conformes</div>
+      <div class="stat-value">{{ stats.non_conform_count }}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-title">Session</div>
+      <div class="stat-value">{{ "Conforme ✅" if stats.session_is_conform else "Non conforme ❌" }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="page-head">
+  <h2>Stagiaires</h2>
+  <button class="btn btn-primary" id="btnOpenCreateTrainee">+ Ajouter un stagiaire</button>
+</div>
+
+<div class="table-wrap">
+  <table class="table" id="traineesTable"
+         data-session-id="{{ session.id }}"
+         data-show-hosting="{{ '1' if show_hosting else '0' }}"
+         data-show-vae="{{ '1' if show_vae else '0' }}">
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Prénom</th>
+        <th>Mail</th>
+        <th>Téléphone</th>
+
+        <th>Convention</th>
+        <th>Test Français</th>
+        <th>Dossier</th>
+        <th>CNAPS</th>
+        {% if show_hosting %}<th>Hébergement</th>{% endif %}
+        <th>Commentaire</th>
+        {% if show_vae %}<th>VAE</th>{% endif %}
+        <th>Financement</th>
+        <th>Fiche</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for t in trainees %}
+      <tr class="row {% if t.comment %}row-warning{% endif %}" data-trainee-id="{{ t.id }}">
+        <td>{{ t.last_name }}</td>
+        <td>{{ t.first_name }}</td>
+        <td class="mono">{{ t.email }}</td>
+        <td class="mono">{{ t.phone }}</td>
+
+        <td>
+          <select class="status sel-convention" data-field="convention_status">
+            {% for v in enums.convention %}
+            <option value="{{ v }}" {% if t.convention_status==v %}selected{% endif %}>
+              {{ "prochainement" if v=="soon" else ("en cours de signature" if v=="signing" else "signée") }}
+            </option>
+            {% endfor %}
+          </select>
+          <span class="badge" data-badge="convention_status"></span>
+        </td>
+
+        <td>
+          <select class="status sel-testfr" data-field="test_fr_status">
+            <option value="soon" {% if t.test_fr_status=="soon" %}selected{% endif %}>prochainement</option>
+            <option value="in_progress" {% if t.test_fr_status=="in_progress" %}selected{% endif %}>en cours</option>
+            <option value="validated" {% if t.test_fr_status=="validated" %}selected{% endif %}>validé</option>
+            <option value="relance" {% if t.test_fr_status=="relance" %}selected{% endif %}>relancé</option>
+          </select>
+          <span class="badge" data-badge="test_fr_status"></span>
+        </td>
+
+        <td>
+          <select class="status sel-dossier" data-field="dossier_status">
+            <option value="complete" {% if t.dossier_status=="complete" %}selected{% endif %}>complet</option>
+            <option value="incomplete" {% if t.dossier_status=="incomplete" %}selected{% endif %}>incomplet</option>
+          </select>
+          <span class="badge" data-badge="dossier_status"></span>
+        </td>
+
+        <td>
+          <div class="inline">
+            <span class="cnaps" data-cnaps>{{ t.cnaps_status }}</span>
+            <button class="mini-btn" data-refresh>↻</button>
+          </div>
+        </td>
+
+        {% if show_hosting %}
+        <td>
+          <span class="hosting" data-hosting>{{ "réservé" if t.hosting_status=="reserved" else ("inconnu" if t.hosting_status=="unknown" else t.hosting_status) }}</span>
+        </td>
+        {% endif %}
+
+        <td>
+          <input class="comment" data-field="comment" value="{{ t.comment }}" placeholder="Ajouter un commentaire...">
+        </td>
+
+        {% if show_vae %}
+        <td>
+          <select class="status sel-vae" data-field="vae_status">
+            <option value="soon" {% if t.vae_status=="soon" %}selected{% endif %}>prochainement</option>
+            <option value="in_progress" {% if t.vae_status=="in_progress" %}selected{% endif %}>en cours</option>
+            <option value="validated" {% if t.vae_status=="validated" %}selected{% endif %}>validé</option>
+          </select>
+        </td>
+        {% endif %}
+
+        <td>
+          <select class="status sel-finance" data-field="financement_status">
+            <option value="soon" {% if t.financement_status=="soon" %}selected{% endif %}>prochainement</option>
+            <option value="in_review" {% if t.financement_status=="in_review" %}selected{% endif %}>en cours de validation</option>
+            <option value="validated" {% if t.financement_status=="validated" %}selected{% endif %}>validé</option>
+          </select>
+          <span class="badge" data-badge="financement_status"></span>
+        </td>
+
+        <td>
+          <button class="btn btn-outline" disabled title="À venir">Fiche</button>
+          <div class="small mono">ID: {{ t.personal_id }}</div>
+          {% if t.comment %}
+            <div class="warn-line">⚠️</div>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- MODALE CREATION STAGIAIRE -->
+<div class="modal-backdrop" id="createTraineeModal" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Ajouter un stagiaire</div>
+      <button class="icon-btn" data-close-modal="createTraineeModal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-grid">
+        <label>
+          <div class="label">Nom</div>
+          <input id="tLastName" type="text" placeholder="Nom">
+        </label>
+        <label>
+          <div class="label">Prénom</div>
+          <input id="tFirstName" type="text" placeholder="Prénom">
+        </label>
+        <label>
+          <div class="label">Adresse mail</div>
+          <input id="tEmail" type="email" placeholder="email@exemple.com">
+        </label>
+        <label>
+          <div class="label">Téléphone</div>
+          <input id="tPhone" type="tel" placeholder="+33600000000">
+          <div class="hint">Format conseillé : +33…</div>
+        </label>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" data-close-modal="createTraineeModal">Annuler</button>
+      <button class="btn btn-primary" id="btnCreateTrainee">Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
