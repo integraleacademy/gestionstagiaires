@@ -444,3 +444,24 @@ input.comment{
 select.status-pill{
   max-width: 190px !important;
 }
+
+/* =========================
+   MASQUER MAIL + TELEPHONE
+   ========================= */
+
+/* Mail (colonne 3) */
+.table th:nth-child(3),
+.table td:nth-child(3){
+  display: none;
+}
+
+/* Téléphone (colonne 4) */
+.table th:nth-child(4),
+.table td:nth-child(4){
+  display: none;
+}
+
+/* Le tableau peut maintenant être plus compact */
+.table{
+  min-width: 950px !important;
+}
