@@ -143,7 +143,12 @@
         </td>
 
         <td>
-          <button class="btn btn-outline" disabled title="À venir">Fiche</button>
+          <a class="btn btn-outline"
+   href="/admin/sessions/{{ session.id }}/stagiaires/{{ t.id }}"
+   style="text-decoration:none;display:inline-block">
+  Fiche
+</a>
+
           <div class="small mono">ID: {{ t.personal_id }}</div>
           {% if t.comment %}
             <div class="warn-line">⚠️</div>
