@@ -290,7 +290,26 @@ def badge_class(value: str, col: str) -> str:
     if col in ("financement",):
         return {"prochainement":"red","en cours de validation":"orange","validé":"green"}.get(value, "gray")
     if col in ("cnaps",):
-        return "red" if value in ("inconnu", "", None) else "green"
+        v = (value or "").strip().upper()
+        v = " ".join(v.split())
+    
+        if v in ("", "INCONNU", "INCONNUE"):
+            return "gray"
+        if v == "TRANSMIS":
+            return "gray"
+        if v in ("ENREGISTRÉ", "ENREGISTRE"):
+            return "orange"
+        if v == "INSTRUCTION":
+            return "yellow"
+        if v in ("ACCEPTÉ", "ACCEPTE"):
+            return "green"
+        if v in ("REFUSÉ", "REFUSE"):
+            return "black"
+        if v in ("DOCS COMPLÉMENTAIRES", "DOCS COMPLEMENTAIRES"):
+            return "red"
+
+    return "gray"
+
     if col in ("hebergement",):
         return {"réservé":"green","inconnu":"black"}.get(value, "gray")
     if col in ("vae",):
