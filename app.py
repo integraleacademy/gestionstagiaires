@@ -347,6 +347,263 @@ def badge_class(value: str, col: str) -> str:
 # Routes
 # =========================
 
+@app.post("/admin/sessions/<session_id>/stagiaires/<stagiaire_id>/test-fr/relance")
+def admin_test_fr_relance(session_id: str, stagiaire_id: str):
+    code = (request.form.get("code") or "").strip()
+    deadline = (request.form.get("deadline") or "").strip()
+    if not code or not deadline:
+        return redirect(url_for("admin_stagiaire_space", session_id=session_id, stagiaire_id=stagiaire_id))
+
+    data = load_data()
+    session = find_session(data, session_id)
+    if not session:
+        abort(404)
+
+    st = find_stagiaire(session, stagiaire_id)
+    if not st:
+        abort(404)
+
+    link = "https://testb1.lapreventionsecurite.org/Public/"
+
+    subject = "Relance – Test de français à réaliser"
+    html = f"""
+      <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
+        <div style="background:white;padding:18px;border-radius:12px">
+          <h2 style="margin:0 0 10px 0">Relance – Test de français</h2>
+          <p>Nous n’avons pas encore reçu votre test. Merci de le réaliser via :</p>
+          <p><a href="{link}">{link}</a></p>
+          <p><strong>Nouveau code :</strong> {code}</p>
+          <p><strong>À réaliser avant :</strong> {deadline}</p>
+          <p style="color:#666;font-size:13px;margin-top:12px">Intégrale Academy</p>
+        </div>
+      </div>
+    """
+
+    sms = f"Relance Intégrale Academy : Test FR. Lien: {link} Code: {code} Avant: {deadline}"
+
+    if st.get("email"):
+        brevo_send_email(st["email"], subject, html)
+    if st.get("telephone"):
+        brevo_send_sms(st["telephone"], sms)
+
+    st["test_francais"] = "RELANCÉ"
+    st["test_fr_code"] = code
+    st["test_fr_deadline"] = deadline
+    st["test_fr_last_relance_at"] = _now_iso()
+    save_data(data)
+
+    return redirect(url_for("admin_stagiaire_space", session_id=session_id, stagiaire_id=stagiaire_id))
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<stagiaire_id>/test-fr/notify")
+def admin_test_fr_notify(session_id: str, stagiaire_id: str):
+    code = (request.form.get("code") or "").strip()
+    deadline = (request.form.get("deadline") or "").strip()  # ex : 02/03/2026 18:00
+    if not code or not deadline:
+        return redirect(url_for("admin_stagiaire_space", session_id=session_id, stagiaire_id=stagiaire_id))
+
+    data = load_data()
+    session = find_session(data, session_id)
+    if not session:
+        abort(404)
+
+    st = find_stagiaire(session, stagiaire_id)
+    if not st:
+        abort(404)
+
+    link = "https://testb1.lapreventionsecurite.org/Public/"
+
+    subject = "Test de français à réaliser – Intégrale Academy"
+    html = f"""
+      <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
+        <div style="background:white;padding:18px;border-radius:12px">
+          <h2 style="margin:0 0 10px 0">Test de français – à faire</h2>
+          <p>Merci de réaliser votre test de français via le lien ci-dessous :</p>
+          <p><a href="{link}">{link}</a></p>
+          <p><strong>Code :</strong> {code}</p>
+          <p><strong>À réaliser avant :</strong> {deadline}</p>
+          <hr style="border:none;border-top:1px solid #eee;margin:16px 0">
+          <p style="color:#666;font-size:13px;margin:0">Intégrale Academy</p>
+        </div>
+      </div>
+    """
+
+    sms = f"Intégrale Academy : Test de français à faire. Lien: {link} Code: {code} Avant: {deadline}"
+
+    if st.get("email"):
+        brevo_send_email(st["email"], subject, html)
+    if st.get("telephone"):
+        brevo_send_sms(st["telephone"], sms)
+
+    st["test_francais"] = "EN COURS"
+    st["test_fr_code"] = code
+    st["test_fr_deadline"] = deadline
+    st["test_fr_last_notified_at"] = _now_iso()
+    save_data(data)
+
+    return redirect(url_for("admin_stagiaire_space", session_id=session_id, stagiaire_id=stagiaire_id))
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<stagiaire_id>/documents.zip")
+def admin_docs_zip(session_id: str, stagiaire_id: str):
+    data = load_data()
+    session = find_session(data, session_id)
+    if not session:
+        abort(404)
+
+    st = find_stagiaire(session, stagiaire_id)
+    if not st:
+        abort(404)
+
+    docs = st.get("documents", []) or []
+
+    buf = BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as z:
+        for d in docs:
+            fp = (d.get("file") or "").strip()
+            if not fp or not os.path.exists(fp):
+                continue
+
+            label = (d.get("label") or "document").replace("/", "-")
+            prenom = (st.get("prenom") or "").strip()
+            nom = (st.get("nom") or "").strip()
+
+            ext = os.path.splitext(fp)[1] or ""
+            newname = f"{label} {prenom} {nom}".strip().replace("  ", " ")
+            z.write(fp, arcname=(newname + ext))
+
+    buf.seek(0)
+    zipname = f"Documents_{st.get('prenom','')}_{st.get('nom','')}.zip".replace(" ", "_")
+
+    return send_file(buf, as_attachment=True, download_name=zipname, mimetype="application/zip")
+
+
+@app.post("/api/sessions/<session_id>/stagiaires/<stagiaire_id>/documents/update")
+def api_update_document(session_id: str, stagiaire_id: str):
+    data = load_data()
+    session = find_session(data, session_id)
+    if not session:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+
+    st = find_stagiaire(session, stagiaire_id)
+    if not st:
+        return jsonify({"ok": False, "error": "stagiaire_not_found"}), 404
+
+    payload = request.get_json(silent=True) or {}
+    doc_key = payload.get("key")
+    field = payload.get("field")
+    value = payload.get("value")
+
+    if field not in ("status", "comment"):
+        return jsonify({"ok": False, "error": "invalid_field"}), 400
+
+    docs = st.get("documents", []) or []
+    for d in docs:
+        if d.get("key") == doc_key:
+            d[field] = value
+            break
+
+    st["updated_at"] = _now_iso()
+    save_data(data)
+
+    return jsonify({"ok": True, "dossier_complet": dossier_is_complet(st)})
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<stagiaire_id>/send-access")
+def admin_stagiaire_send_access(session_id: str, stagiaire_id: str):
+    data = load_data()
+    session = find_session(data, session_id)
+    if not session:
+        abort(404)
+
+    st = find_stagiaire(session, stagiaire_id)
+    if not st:
+        abort(404)
+
+    public_link = f"{PUBLIC_STUDENT_PORTAL_BASE}?token={st.get('public_token','')}"
+    formation_name = session.get("nom", "Votre formation")
+
+    subject = "Accès à votre espace stagiaire – Intégrale Academy"
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
+      <div style="background:white;padding:18px;border-radius:12px">
+        <h2>Votre espace stagiaire est disponible</h2>
+        <p>Formation : <strong>{formation_name}</strong></p>
+        <p>
+          <a href="{public_link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">
+            Accéder à mon espace stagiaire
+          </a>
+        </p>
+        <p style="color:#666;font-size:13px">Intégrale Academy</p>
+      </div>
+    </div>
+    """
+
+    sms = f"Intégrale Academy : votre espace stagiaire est disponible : {public_link}"
+
+    if st.get("email"):
+        brevo_send_email(st["email"], subject, html)
+
+    if st.get("telephone"):
+        brevo_send_sms(st["telephone"], sms)
+
+    st["access_sent_at"] = _now_iso()
+    save_data(data)
+
+    return redirect(url_for(
+        "admin_stagiaire_space",
+        session_id=session_id,
+        stagiaire_id=stagiaire_id
+    ))
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<stagiaire_id>/etiquette.docx")
+def admin_stagiaire_etiquette_docx(session_id: str, stagiaire_id: str):
+    data = load_data()
+    session = find_session(data, session_id)
+    if not session:
+        abort(404)
+
+    st = find_stagiaire(session, stagiaire_id)
+    if not st:
+        abort(404)
+
+    doc = Document()
+    doc.add_heading("Étiquette dossier", level=1)
+    doc.add_paragraph(f"Nom : {st.get('nom','')}")
+    doc.add_paragraph(f"Prénom : {st.get('prenom','')}")
+    doc.add_paragraph(f"Formation : {session.get('nom','')}")
+    doc.add_paragraph(f"Type : {session.get('type_formation','')}")
+    doc.add_paragraph(f"Dates : {session.get('date_debut','')} → {session.get('date_fin','')}")
+
+    buf = BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+
+    filename = f"etiquette_{st.get('nom','')}_{st.get('prenom','')}.docx".replace(" ", "_")
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<stagiaire_id>/delete")
+def admin_stagiaire_delete(session_id: str, stagiaire_id: str):
+    data = load_data()
+    session = find_session(data, session_id)
+    if not session:
+        abort(404)
+
+    session["stagiaires"] = [
+        st for st in session.get("stagiaires", [])
+        if st.get("id") != stagiaire_id
+    ]
+
+    save_data(data)
+    return redirect(url_for("admin_stagiaires", session_id=session_id))
+
 @app.get("/admin/sessions/<session_id>/stagiaires/<stagiaire_id>")
 def admin_stagiaire_space(session_id: str, stagiaire_id: str):
     data = load_data()
