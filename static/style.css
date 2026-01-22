@@ -281,3 +281,28 @@ input:focus, select:focus{border-color:#2f4338}
 @media (max-width:720px){
   .form-grid{grid-template-columns:1fr}
 }
+
+/* =========================
+   CNAPS badge colors
+   ========================= */
+
+.cnaps{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:800;
+  font-size:12px;
+  border:1px solid var(--line);
+  background:#0f1412;
+}
+
+/* Couleurs demandées */
+.cnaps.cnaps-transmis{ background:#374151; color:#fff; }     /* gris */
+.cnaps.cnaps-enregistre{ background:var(--orange); color:#111; } /* orange */
+.cnaps.cnaps-instruction{ background:var(--yellow); color:#111; } /* jaune */
+.cnaps.cnaps-accepte{ background:var(--green); color:#fff; }  /* vert */
+.cnaps.cnaps-refuse{ background:#000; color:#fff; }          /* noir */
+.cnaps.cnaps-docs{ background:var(--red); color:#fff; }      /* rouge */
+
+.cnaps.cnaps-inconnu{ background:#0f1412; color:#9aa7a0; }   /* inconnu */
+
