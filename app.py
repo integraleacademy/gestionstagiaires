@@ -380,44 +380,7 @@ def admin_trainees(session_id: str):
 # =========================
 # FICHE STAGIAIRE (HTML)
 # =========================
-@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>")
-def admin_trainee_sheet(session_id: str, trainee_id: str):
-    data = load_data()
-    s = find_session(data, session_id)
-    if not s:
-        abort(404)
 
-    # vue session (même format que admin_trainees)
-    session_view = {
-        "id": s.get("id"),
-        "name": _session_get(s, "name", ""),
-        "training_type": _session_get(s, "training_type", ""),
-        "date_start": _session_get(s, "date_start", ""),
-        "date_end": _session_get(s, "date_end", ""),
-        "exam_date": _session_get(s, "exam_date", ""),
-    }
-
-    trainees = _session_trainees_list(s)
-    trainee = next((x for x in trainees if x.get("id") == trainee_id), None)
-    if not trainee:
-        abort(404)
-
-    show_hosting = (session_view["training_type"] == "A3P")
-    show_vae = (session_view["training_type"] == "DIRIGEANT VAE")
-
-    # (optionnel) on force le CNAPS à être propre pour l'affichage
-    if not trainee.get("cnaps"):
-        trainee["cnaps"] = "INCONNU"
-    trainee["cnaps"] = str(trainee["cnaps"]).upper()
-
-    return render_template(
-        "admin_trainee.html",
-        session=session_view,
-        trainee=trainee,
-        show_hosting=show_hosting,
-        show_vae=show_vae,
-        enums=ENUMS,
-    )
 
 
 # =========================
@@ -607,6 +570,599 @@ def api_cnaps_lookup():
 @app.get("/api/health")
 def health():
     return jsonify({"ok": True, "data_file": DATA_FILE})
+
+from werkzeug.utils import secure_filename
+
+# =========================
+# Brevo Email + SMS (si pas déjà)
+# =========================
+def brevo_send_email(to_email: str, subject: str, html: str) -> bool:
+    if not BREVO_API_KEY or not to_email:
+        return False
+    url = "https://api.brevo.com/v3/smtp/email"
+    headers = {"accept":"application/json","api-key":BREVO_API_KEY,"content-type":"application/json"}
+    payload = {
+        "sender": {"name": BREVO_SENDER_NAME, "email": BREVO_SENDER_EMAIL},
+        "to": [{"email": to_email}],
+        "subject": subject,
+        "htmlContent": html,
+    }
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=12)
+        return r.status_code in (200, 201, 202)
+    except Exception:
+        return False
+
+def brevo_send_sms(phone: str, message: str) -> bool:
+    if not BREVO_API_KEY or not phone:
+        return False
+    url = "https://api.brevo.com/v3/transactionalSMS/sms"
+    headers = {"accept":"application/json","api-key":BREVO_API_KEY,"content-type":"application/json"}
+    payload = {"recipient": phone, "content": message, "type":"transactional"}
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=12)
+        return r.status_code in (200, 201, 202)
+    except Exception:
+        return False
+
+
+# =========================
+# Upload helpers
+# =========================
+ALLOWED_EXT = {".pdf",".png",".jpg",".jpeg",".doc",".docx",".webp"}
+
+def _safe_ext(filename: str) -> str:
+    return os.path.splitext(filename)[1].lower()
+
+def _store_file(session_id: str, trainee_id: str, folder: str, f) -> str:
+    base = trainee_upload_dir(session_id, trainee_id)
+    target_dir = os.path.join(base, folder)
+    os.makedirs(target_dir, exist_ok=True)
+
+    filename = secure_filename(f.filename or "file")
+    ext = _safe_ext(filename)
+    if ext and ext not in ALLOWED_EXT:
+        raise ValueError("extension_not_allowed")
+
+    name = uuid.uuid4().hex[:10] + (ext or "")
+    path = os.path.join(target_dir, name)
+    f.save(path)
+    return path
+
+def _tokenize_path(path: str) -> str:
+    # on ne renvoie pas le chemin réel au template
+    # token = path relatif à PERSIST_DIR
+    rel = os.path.relpath(path, PERSIST_DIR).replace("\\","/")
+    return rel
+
+def _detokenize_path(token: str) -> str:
+    token = (token or "").replace("..","").lstrip("/").replace("\\","/")
+    return os.path.join(PERSIST_DIR, token)
+
+@app.get("/admin/uploads/<path:path>")
+def admin_view_upload(path: str):
+    full = _detokenize_path(path)
+    if not os.path.exists(full):
+        abort(404)
+    # simple serve
+    return send_file(full, as_attachment=False)
+
+
+# =========================
+# Documents logic
+# =========================
+def dossier_is_complete(trainee: Dict[str, Any]) -> bool:
+    docs = trainee.get("documents") or []
+    if not docs:
+        return False
+    for d in docs:
+        if (d.get("status") or "").upper() != "CONFORME":
+            return False
+    return True
+
+def docs_summary_text(trainee: Dict[str, Any]) -> str:
+    lines=[]
+    for d in (trainee.get("documents") or []):
+        st = (d.get("status") or "A CONTRÔLER").upper()
+        com = (d.get("comment") or "").strip()
+        if com:
+            lines.append(f"- {d.get('label','document')} : {st} — {com}")
+        else:
+            lines.append(f"- {d.get('label','document')} : {st}")
+    return "\n".join(lines)
+
+
+# =========================
+# Admin actions — trainee
+# =========================
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/delete")
+def admin_delete_trainee(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+    trainees = _session_trainees_list(s)
+    trainees = [x for x in trainees if x.get("id") != trainee_id]
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+    return redirect(url_for("admin_trainees", session_id=session_id))
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/etiquette.docx")
+def admin_etiquette_docx(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    if not t:
+        abort(404)
+
+    doc = Document()
+    doc.add_heading("Étiquette dossier", level=1)
+    doc.add_paragraph(f"Nom : {t.get('last_name','')}")
+    doc.add_paragraph(f"Prénom : {t.get('first_name','')}")
+    doc.add_paragraph(f"Formation : {_session_get(s,'name','')}")
+    doc.add_paragraph(f"Type : {_session_get(s,'training_type','')}")
+    doc.add_paragraph(f"Dates : {_session_get(s,'date_start','')} → {_session_get(s,'date_end','')}")
+
+    buf = BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+
+    filename = f"etiquette_{t.get('last_name','')}_{t.get('first_name','')}.docx".replace(" ","_")
+    return send_file(buf, as_attachment=True, download_name=filename,
+                     mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/send-access")
+def admin_send_access(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    if not t:
+        abort(404)
+
+    link = f"{PUBLIC_STUDENT_PORTAL_BASE}?token={t.get('public_token','')}"
+    subject = "Accès à votre espace stagiaire – Intégrale Academy"
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
+      <div style="background:white;padding:18px;border-radius:12px">
+        <h2>Votre espace stagiaire est disponible</h2>
+        <p>Formation : <strong>{_session_get(s,'name','')}</strong></p>
+        <p><a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">Accéder à mon espace stagiaire</a></p>
+        <p style="color:#666;font-size:13px">Intégrale Academy</p>
+      </div>
+    </div>
+    """
+    sms = f"Intégrale Academy : votre espace stagiaire est disponible : {link}"
+
+    brevo_send_email(t.get("email",""), subject, html)
+    brevo_send_sms(t.get("phone",""), sms)
+
+    t["access_sent_at"] = _now_iso()
+    s["trainees"] = trainees
+    save_data(data)
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+
+# =========================
+# Test de français — notify/relance
+# =========================
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/test-fr/notify")
+def admin_test_fr_notify(session_id: str, trainee_id: str):
+    code = (request.form.get("code") or "").strip()
+    deadline = (request.form.get("deadline") or "").strip()
+    if not code or not deadline:
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    if not t:
+        abort(404)
+
+    link = "https://testb1.lapreventionsecurite.org/Public/"
+    subject = "Test de français à réaliser – Intégrale Academy"
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
+      <div style="background:white;padding:18px;border-radius:12px">
+        <h2>Test de français – à faire</h2>
+        <p>Merci de réaliser votre test via : <a href="{link}">{link}</a></p>
+        <p><strong>Code :</strong> {code}</p>
+        <p><strong>À réaliser avant :</strong> {deadline}</p>
+        <p style="color:#666;font-size:13px">Intégrale Academy</p>
+      </div>
+    </div>
+    """
+    sms = f"Intégrale Academy : Test FR à faire. Lien: {link} Code: {code} Avant: {deadline}"
+
+    brevo_send_email(t.get("email",""), subject, html)
+    brevo_send_sms(t.get("phone",""), sms)
+
+    t["test_fr_status"] = "in_progress"
+    t["test_fr_code"] = code
+    t["test_fr_deadline"] = deadline
+    t["test_fr_last_notified_at"] = _now_iso()
+    t["updated_at"] = _now_iso()
+
+    s["trainees"] = trainees
+    save_data(data)
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/test-fr/relance")
+def admin_test_fr_relance(session_id: str, trainee_id: str):
+    code = (request.form.get("code") or "").strip()
+    deadline = (request.form.get("deadline") or "").strip()
+    if not code or not deadline:
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    if not t:
+        abort(404)
+
+    link = "https://testb1.lapreventionsecurite.org/Public/"
+    subject = "Relance – Test de français à réaliser"
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
+      <div style="background:white;padding:18px;border-radius:12px">
+        <h2>Relance – Test de français</h2>
+        <p>Nous n’avons pas encore reçu votre test. Merci de le réaliser via : <a href="{link}">{link}</a></p>
+        <p><strong>Nouveau code :</strong> {code}</p>
+        <p><strong>À réaliser avant :</strong> {deadline}</p>
+        <p style="color:#666;font-size:13px">Intégrale Academy</p>
+      </div>
+    </div>
+    """
+    sms = f"Relance Intégrale Academy : Test FR. Lien: {link} Code: {code} Avant: {deadline}"
+
+    brevo_send_email(t.get("email",""), subject, html)
+    brevo_send_sms(t.get("phone",""), sms)
+
+    t["test_fr_status"] = "relance"
+    t["test_fr_code"] = code
+    t["test_fr_deadline"] = deadline
+    t["test_fr_last_relance_at"] = _now_iso()
+    t["updated_at"] = _now_iso()
+
+    s["trainees"] = trainees
+    save_data(data)
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+
+# =========================
+# Documents — notify / nonconform / relance / zip
+# =========================
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/docs/notify")
+def admin_docs_notify(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    if not t:
+        abort(404)
+
+    link = f"{PUBLIC_STUDENT_PORTAL_BASE}?token={t.get('public_token','')}"
+    subject = "Documents à transmettre – Intégrale Academy"
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
+      <div style="background:white;padding:18px;border-radius:12px">
+        <h2>Documents à transmettre</h2>
+        <p>Merci de nous transmettre vos documents pour la formation :</p>
+        <p><a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">Accéder à mon espace stagiaire</a></p>
+        <p style="color:#666;font-size:13px">Intégrale Academy</p>
+      </div>
+    </div>
+    """
+    sms = f"Intégrale Academy : merci d’envoyer vos documents : {link}"
+
+    brevo_send_email(t.get("email",""), subject, html)
+    brevo_send_sms(t.get("phone",""), sms)
+
+    t["docs_notified_at"] = _now_iso()
+    t["updated_at"] = _now_iso()
+    s["trainees"] = trainees
+    save_data(data)
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/docs/nonconform-notify")
+def admin_docs_nonconform_notify(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    if not t:
+        abort(404)
+
+    link = f"{PUBLIC_STUDENT_PORTAL_BASE}?token={t.get('public_token','')}"
+    details = docs_summary_text(t)
+
+    subject = "Documents non conformes – Action requise"
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
+      <div style="background:white;padding:18px;border-radius:12px">
+        <h2>Documents non conformes</h2>
+        <p>Certains documents sont non conformes ou à contrôler. Merci de consulter le détail :</p>
+        <pre style="white-space:pre-wrap;background:#f2f2f2;padding:10px;border-radius:10px">{details}</pre>
+        <p>Vous pouvez déposer des documents corrigés ici :</p>
+        <p><a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">Accéder à mon espace stagiaire</a></p>
+        <p style="color:#666;font-size:13px">Intégrale Academy</p>
+      </div>
+    </div>
+    """
+    sms = f"Intégrale Academy : documents non conformes. Merci de consulter votre espace : {link}"
+
+    brevo_send_email(t.get("email",""), subject, html)
+    brevo_send_sms(t.get("phone",""), sms)
+
+    t["docs_last_nonconform_notified_at"] = _now_iso()
+    t["updated_at"] = _now_iso()
+    s["trainees"] = trainees
+    save_data(data)
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/docs/relance")
+def admin_docs_relance(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    if not t:
+        abort(404)
+
+    link = f"{PUBLIC_STUDENT_PORTAL_BASE}?token={t.get('public_token','')}"
+    details = docs_summary_text(t)
+
+    subject = "Relance – Documents à transmettre / corriger"
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
+      <div style="background:white;padding:18px;border-radius:12px">
+        <h2>Relance – Documents</h2>
+        <p>Nous n’avons pas encore reçu tous les documents conformes. Détail actuel :</p>
+        <pre style="white-space:pre-wrap;background:#f2f2f2;padding:10px;border-radius:10px">{details}</pre>
+        <p>Merci d’envoyer / corriger via :</p>
+        <p><a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">Accéder à mon espace stagiaire</a></p>
+        <p style="color:#666;font-size:13px">Intégrale Academy</p>
+      </div>
+    </div>
+    """
+    sms = f"Relance Intégrale Academy : merci d’envoyer / corriger vos documents : {link}"
+
+    brevo_send_email(t.get("email",""), subject, html)
+    brevo_send_sms(t.get("phone",""), sms)
+
+    t["docs_last_relance_at"] = _now_iso()
+    t["updated_at"] = _now_iso()
+    s["trainees"] = trainees
+    save_data(data)
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/documents.zip")
+def admin_docs_zip(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    if not t:
+        abort(404)
+
+    docs = t.get("documents") or []
+    buf = BytesIO()
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as z:
+        for d in docs:
+            token = (d.get("file") or "")
+            if not token:
+                continue
+            fp = _detokenize_path(token)
+            if not os.path.exists(fp):
+                continue
+
+            label = (d.get("label") or "document").replace("/", "-")
+            prenom = (t.get("first_name") or "").strip()
+            nom = (t.get("last_name") or "").strip()
+            ext = os.path.splitext(fp)[1] or ""
+            newname = f"{label} {prenom} {nom}".strip().replace("  ", " ")
+            z.write(fp, arcname=(newname + ext))
+
+    buf.seek(0)
+    zipname = f"Documents_{t.get('first_name','')}_{t.get('last_name','')}.zip".replace(" ", "_")
+    return send_file(buf, as_attachment=True, download_name=zipname, mimetype="application/zip")
+
+
+# =========================
+# API docs autosave (status/comment)
+# =========================
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/documents/update")
+def api_docs_update(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    if not t:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+
+    payload = request.get_json(silent=True) or {}
+    doc_key = payload.get("key")
+    field = payload.get("field")
+    value = payload.get("value")
+
+    if field not in ("status","comment"):
+        return jsonify({"ok": False, "error": "invalid_field"}), 400
+
+    docs = t.get("documents") or []
+    for d in docs:
+        if d.get("key") == doc_key:
+            d[field] = value
+            break
+
+    t["updated_at"] = _now_iso()
+    s["trainees"] = trainees
+    save_data(data)
+    return jsonify({"ok": True, "dossier_is_complete": dossier_is_complete(t)})
+
+
+# =========================
+# Deliverables upload (diplôme/SST/etc)
+# =========================
+DELIVERABLE_LABELS = {
+    "certificat_sst": "Certificat SST",
+    "carte_sst": "Carte SST",
+    "diplome": "Diplôme",
+    "attestation_fin_formation": "Attestation fin de formation",
+    "dossier_fin_formation": "Dossier fin de formation",
+}
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/deliverables/<kind>/upload")
+def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
+    if kind not in DELIVERABLE_LABELS:
+        abort(404)
+
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    if not t:
+        abort(404)
+
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    try:
+        stored = _store_file(session_id, trainee_id, "deliverables", f)
+    except Exception:
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    token = _tokenize_path(stored)
+
+    t.setdefault("deliverables", {})
+    t["deliverables"][kind] = token
+    t["updated_at"] = _now_iso()
+
+    link = f"{PUBLIC_STUDENT_PORTAL_BASE}?token={t.get('public_token','')}"
+    label = DELIVERABLE_LABELS[kind]
+
+    subject = f"{label} disponible – Intégrale Academy"
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
+      <div style="background:white;padding:18px;border-radius:12px">
+        <h2>{label} disponible</h2>
+        <p>Votre document est disponible sur votre espace stagiaire :</p>
+        <p><a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">Accéder à mon espace stagiaire</a></p>
+        <p style="color:#666;font-size:13px">Intégrale Academy</p>
+      </div>
+    </div>
+    """
+    sms = f"Intégrale Academy : {label} disponible sur votre espace stagiaire : {link}"
+
+    brevo_send_email(t.get("email",""), subject, html)
+    brevo_send_sms(t.get("phone",""), sms)
+
+    s["trainees"] = trainees
+    save_data(data)
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+
+# =========================
+# ✅ Remplace ta page JSON par une vraie page HTML
+# =========================
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>")
+def admin_trainee_page(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    session_view = {
+        "id": s.get("id"),
+        "name": _session_get(s, "name", ""),
+        "training_type": _session_get(s, "training_type", ""),
+        "date_start": _session_get(s, "date_start", ""),
+        "date_end": _session_get(s, "date_end", ""),
+        "exam_date": _session_get(s, "exam_date", ""),
+    }
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    if not t:
+        abort(404)
+
+    # ensure fields exist
+    t.setdefault("documents", [
+        {"key":"id","label":"Pièce d'identité","status":"A CONTRÔLER","comment":"","file":""},
+        {"key":"dom","label":"Justificatif de domicile (-3 mois)","status":"A CONTRÔLER","comment":"","file":""},
+        {"key":"photo","label":"Photo d'identité","status":"A CONTRÔLER","comment":"","file":""},
+    ])
+    t.setdefault("deliverables", {})
+
+    # file tokens for template links
+    for d in t.get("documents", []):
+        token = d.get("file") or ""
+        d["file_token"] = token
+
+    deliverables_view = []
+    for k, label in DELIVERABLE_LABELS.items():
+        token = (t.get("deliverables", {}) or {}).get(k, "")
+        deliverables_view.append({
+            "key": k,
+            "label": label,
+            "file": token,
+            "file_token": token,
+        })
+
+    show_vae = (session_view["training_type"] == "DIRIGEANT VAE")
+    vae_steps = [
+        {"key":"livret_1_redaction","label":"Livret 1 en cours de rédaction"},
+        {"key":"livret_1_recu","label":"Livret 1 reçu"},
+        {"key":"demande_modif_l1","label":"Demande modif livret 1"},
+        {"key":"modif_l1_recue","label":"Modif livret 1 reçue"},
+        {"key":"recevabilite_ok","label":"Recevabilité OK"},
+        {"key":"livret_2_recu","label":"Livret 2 reçu"},
+        {"key":"demande_modif_l2","label":"Demande modif livret 2"},
+        {"key":"modif_l2_recue","label":"Modif livret 2 reçue"},
+        {"key":"jury","label":"Passage devant jury"},
+    ]
+
+    # dossier status
+    dossier_complete = dossier_is_complete(t)
+
+    # persist normalized
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return render_template(
+        "admin_trainee.html",
+        session=session_view,
+        trainee=t,
+        show_vae=show_vae,
+        vae_steps=vae_steps,
+        dossier_is_complete=dossier_complete,
+        deliverables_view=deliverables_view,
+    )
 
 
 if __name__ == "__main__":
