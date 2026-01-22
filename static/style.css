@@ -306,3 +306,14 @@ input:focus, select:focus{border-color:#2f4338}
 
 .cnaps.cnaps-inconnu{ background:#0f1412; color:#9aa7a0; }   /* inconnu */
 
+/* =========================
+   CNAPS (SELECT) colors
+   ========================= */
+select.sel-cnaps.cnaps-transmis{ background:#374151 !important; color:#fff !important; }
+select.sel-cnaps.cnaps-enregistre{ background:var(--orange) !important; color:#111 !important; }
+select.sel-cnaps.cnaps-instruction{ background:var(--yellow) !important; color:#111 !important; }
+select.sel-cnaps.cnaps-accepte{ background:var(--green) !important; color:#fff !important; }
+select.sel-cnaps.cnaps-refuse{ background:#000 !important; color:#fff !important; }
+select.sel-cnaps.cnaps-docs{ background:var(--red) !important; color:#fff !important; }
+
+
