@@ -739,26 +739,62 @@ def admin_etiquette_docx(session_id: str, trainee_id: str):
     s = find_session(data, session_id)
     if not s:
         abort(404)
+
     trainees = _session_trainees_list(s)
-    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         abort(404)
 
-    doc = Document()
-    doc.add_heading("Étiquette dossier", level=1)
-    doc.add_paragraph(f"Nom : {t.get('last_name','')}")
-    doc.add_paragraph(f"Prénom : {t.get('first_name','')}")
-    doc.add_paragraph(f"Formation : {_session_get(s,'name','')}")
-    doc.add_paragraph(f"Type : {_session_get(s,'training_type','')}")
-    doc.add_paragraph(f"Dates : {_session_get(s,'date_start','')} → {_session_get(s,'date_end','')}")
+    # 1) Choix du modèle Word selon le type de formation
+    training_type = (_session_get(s, "training_type", "") or "").strip().upper()
 
+    TEMPLATE_MAP = {
+        "A3P": "etiquette_a3p.docx",
+        "APS": "etiquette_aps.docx",
+        "CHAUFFEUR VTC": "etiquette_vtc.docx",
+        "DIRIGEANT": "etiquette_dirigeant.docx",
+        "DIRIGEANT INITIAL": "etiquette_dirigeant_initial.docx",
+        "DIRIGEANT VAE": "etiquette_dirigeant.docx",
+    }
+
+    template_name = TEMPLATE_MAP.get(training_type)
+    if not template_name:
+        abort(400, f"Aucun modèle Word prévu pour la formation : {training_type}")
+
+    template_path = os.path.join("templates_word", template_name)
+    if not os.path.exists(template_path):
+        abort(500, f"Fichier Word manquant : {template_name} (dans /templates_word)")
+
+    # 2) Ouvrir le modèle
+    doc = Document(template_path)
+
+    # 3) Remplacements
+    replacements = {
+        "{{NOM}}": t.get("last_name", ""),
+        "{{PRENOM}}": t.get("first_name", ""),
+        "{{FORMATION}}": _session_get(s, "name", ""),
+        "{{TYPE_FORMATION}}": training_type,
+        "{{DATES}}": f"{_session_get(s,'date_start','')} → {_session_get(s,'date_end','')}",
+    }
+
+    for p in doc.paragraphs:
+        for key, val in replacements.items():
+            if key in p.text:
+                p.text = p.text.replace(key, val)
+
+    # 4) Télécharger
     buf = BytesIO()
     doc.save(buf)
     buf.seek(0)
 
-    filename = f"etiquette_{t.get('last_name','')}_{t.get('first_name','')}.docx".replace(" ","_")
-    return send_file(buf, as_attachment=True, download_name=filename,
-                     mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    filename = f"etiquette_{t.get('last_name','')}_{t.get('first_name','')}.docx".replace(" ", "_")
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
+
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/send-access")
 def admin_send_access(session_id: str, trainee_id: str):
