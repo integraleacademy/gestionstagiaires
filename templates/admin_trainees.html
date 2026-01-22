@@ -337,13 +337,15 @@
     transform: translateY(0);
   }
 
-  /* Couleurs CNAPS sur le SELECT */
-  .sel-cnaps.cnaps-transmis{ background:#e5e7eb; color:#111; }
-  .sel-cnaps.cnaps-enregistre{ background:#fb923c; color:#111; }
-  .sel-cnaps.cnaps-instruction{ background:#fde047; color:#111; }
-  .sel-cnaps.cnaps-accepte{ background:#22c55e; color:#0b1f0f; }
-  .sel-cnaps.cnaps-refuse{ background:#111; color:#fff; }
-  .sel-cnaps.cnaps-docs{ background:#ef4444; color:#fff; }
+/* Couleurs CNAPS sur le SELECT (prioritaire) */
+.sel-cnaps.cnaps-transmis{ background:#374151 !important; color:#fff !important; }      /* gris */
+.sel-cnaps.cnaps-enregistre{ background:#fb923c !important; color:#111 !important; }   /* orange */
+.sel-cnaps.cnaps-instruction{ background:#fde047 !important; color:#111 !important; }  /* jaune */
+.sel-cnaps.cnaps-accepte{ background:#22c55e !important; color:#0b1f0f !important; }   /* vert */
+.sel-cnaps.cnaps-refuse{ background:#000 !important; color:#fff !important; }          /* noir */
+.sel-cnaps.cnaps-docs{ background:#ef4444 !important; color:#fff !important; }         /* rouge */
+.sel-cnaps{ background:#0f1412 !important; color:#e8f0ea !important; }                 /* défaut / inconnu */
+}
 </style>
 
 
