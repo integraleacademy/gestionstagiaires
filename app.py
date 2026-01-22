@@ -1159,10 +1159,15 @@ TPL_ADMIN_STAGIAIRES = f"""
               <div class="pill b-{{{{ badge_class(st.financement, 'financement') }}}}" style="margin-top:6px">{{{{ st.financement }}}}</div>
             </td>
 
-            <td>
-              <button class="btn btn-outline" onclick="alert('Page fiche stagiaire (admin) : on la crée ensuite 😉')">📄</button>
-              <div class="muted" style="margin-top:6px">{{{{ st.id }}}}</div>
-            </td>
+  <td>
+  <a class="btn btn-outline"
+     href="/admin/sessions/{{{{ session.id }}}}/stagiaires/{{{{ st.id }}}}"
+     style="text-decoration:none;display:inline-block">
+    📄 Fiche
+  </a>
+  <div class="muted" style="margin-top:6px">{{{{ st.id }}}}</div>
+</td>
+
           </tr>
           {{% endfor %}}
         </tbody>
