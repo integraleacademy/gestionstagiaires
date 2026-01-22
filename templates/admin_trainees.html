@@ -102,22 +102,11 @@
         </td>
 
         <td>
-  <div class="inline">
-    <select class="status sel-cnaps" data-field="cnaps">
-      {% set current = (t.cnaps or "INCONNU") %}
-      <option value="INCONNU" {% if current=="INCONNU" %}selected{% endif %}>INCONNU</option>
-      <option value="TRANSMIS" {% if current=="TRANSMIS" %}selected{% endif %}>TRANSMIS</option>
-      <option value="ENREGISTRÉ" {% if current=="ENREGISTRÉ" or current=="ENREGISTRE" %}selected{% endif %}>ENREGISTRÉ</option>
-      <option value="INSTRUCTION" {% if current=="INSTRUCTION" %}selected{% endif %}>INSTRUCTION</option>
-      <option value="ACCEPTÉ" {% if current=="ACCEPTÉ" or current=="ACCEPTE" %}selected{% endif %}>ACCEPTÉ</option>
-      <option value="REFUSÉ" {% if current=="REFUSÉ" or current=="REFUSE" %}selected{% endif %}>REFUSÉ</option>
-      <option value="DOCS COMPLÉMENTAIRES" {% if current=="DOCS COMPLÉMENTAIRES" or current=="DOCS COMPLEMENTAIRES" %}selected{% endif %}>DOCS COMPLÉMENTAIRES</option>
-    </select>
-
-    <button class="mini-btn" data-refresh>↻</button>
-  </div>
-</td>
-
+          <div class="inline">
+            <span class="cnaps" data-cnaps>{{ t.cnaps or "INCONNU" }}</span>
+            <button class="mini-btn" data-refresh>↻</button>
+          </div>
+        </td>
 
         {% if show_hosting %}
         <td>
@@ -198,112 +187,48 @@
   </div>
 </div>
 
-<div id="autosaveStatus" class="autosave-status">sauvegardé</div>
-
-
 <script>
-  const autosaveEl = document.getElementById("autosaveStatus");
-
-  function showSaved(msg = "sauvegardé") {
-    if (!autosaveEl) return;
-    autosaveEl.textContent = msg;
-    autosaveEl.classList.add("show");
-    clearTimeout(showSaved._t);
-    showSaved._t = setTimeout(() => autosaveEl.classList.remove("show"), 1200);
-  }
-
-  function normalizeCnaps(s){
-    return (s || "INCONNU")
-      .toString()
-      .trim()
-      .toUpperCase()
-      .replace(/\s+/g, " ");
-  }
-
-  function applyCnapsStyle(sel){
-    if (!sel) return;
-    sel.classList.remove(
-      "cnaps-transmis","cnaps-enregistre","cnaps-instruction","cnaps-accepte","cnaps-refuse","cnaps-docs"
-    );
-
-    const v = normalizeCnaps(sel.value);
-
-    if (v === "TRANSMIS") sel.classList.add("cnaps-transmis");
-    else if (v === "ENREGISTRÉ" || v === "ENREGISTRE") sel.classList.add("cnaps-enregistre");
-    else if (v === "INSTRUCTION") sel.classList.add("cnaps-instruction");
-    else if (v === "ACCEPTÉ" || v === "ACCEPTE") sel.classList.add("cnaps-accepte");
-    else if (v === "REFUSÉ" || v === "REFUSE") sel.classList.add("cnaps-refuse");
-    else if (v === "DOCS COMPLÉMENTAIRES" || v === "DOCS COMPLEMENTAIRES") sel.classList.add("cnaps-docs");
-  }
-
   async function cnapsLookup(nom, prenom){
-    const r = await fetch(`/api/cnaps_lookup?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}`);
+    const r = await fetch(
+      `/api/cnaps_lookup?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}`
+    );
     return await r.json();
   }
 
-  async function saveCnaps(sessionId, traineeId, statut){
-    await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ cnaps: statut })
-    });
-  }
-
-  // 1) appliquer la couleur au chargement
-  document.querySelectorAll(".sel-cnaps").forEach(sel => applyCnapsStyle(sel));
-
-  // 2) autosave quand on change le CNAPS à la main
-  document.querySelectorAll(".sel-cnaps").forEach(sel => {
-    sel.addEventListener("change", async () => {
-      const tr = sel.closest("tr");
-      const traineeId = tr?.getAttribute("data-trainee-id");
-      const sessionId = document.getElementById("traineesTable")?.getAttribute("data-session-id");
-      if (!traineeId || !sessionId) return;
-
-      const statut = normalizeCnaps(sel.value);
-      sel.value = statut; // garde une valeur propre
-      applyCnapsStyle(sel);
-
-      try {
-        await saveCnaps(sessionId, traineeId, statut);
-        showSaved("sauvegardé");
-      } catch(e){
-        alert("Erreur sauvegarde CNAPS");
-      }
-    });
-  });
-
-  // 3) bouton ↻ : lookup + set select + save + “sauvegardé”
   document.querySelectorAll("[data-refresh]").forEach(btn => {
     btn.addEventListener("click", async (e) => {
       e.preventDefault();
 
       const tr = btn.closest("tr");
-      const traineeId = tr?.getAttribute("data-trainee-id");
-      const sessionId = document.getElementById("traineesTable")?.getAttribute("data-session-id");
+      const traineeId = tr.getAttribute("data-trainee-id");
 
+      // Dans ton tableau: col 1 = Nom, col 2 = Prénom
       const nom = tr.querySelector("td:nth-child(1)")?.textContent.trim() || "";
       const prenom = tr.querySelector("td:nth-child(2)")?.textContent.trim() || "";
 
-      if (!traineeId || !sessionId || !nom || !prenom) {
+      if (!traineeId || !nom || !prenom) {
         alert("Nom / prénom introuvables");
         return;
       }
 
-      const sel = tr.querySelector(".sel-cnaps");
       btn.disabled = true;
 
       try {
         const res = await cnapsLookup(nom, prenom);
-        const statut = normalizeCnaps(res.statut_cnaps || "INCONNU");
+        const statut = (res.statut_cnaps || "INCONNU").toUpperCase();
 
-        if (sel){
-          sel.value = statut;
-          applyCnapsStyle(sel);
-        }
+        // Mise à jour visuelle
+        const span = tr.querySelector("[data-cnaps]");
+        if (span) span.textContent = statut;
 
-        await saveCnaps(sessionId, traineeId, statut);
-        showSaved("sauvegardé");
+        // Sauvegarde côté backend
+        const sessionId = document.getElementById("traineesTable").getAttribute("data-session-id");
+
+        await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ cnaps: statut })
+        });
 
       } catch (err) {
         alert("Erreur CNAPS");
@@ -313,41 +238,6 @@
     });
   });
 </script>
-
-
-<style>
-  .autosave-status{
-    position: fixed;
-    right: 18px;
-    bottom: 18px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    background: #111;
-    color: #fff;
-    font-weight: 700;
-    font-size: 13px;
-    opacity: 0;
-    transform: translateY(6px);
-    transition: opacity .2s ease, transform .2s ease;
-    z-index: 9999;
-    pointer-events: none;
-  }
-  .autosave-status.show{
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-/* Couleurs CNAPS sur le SELECT (prioritaire) */
-.sel-cnaps.cnaps-transmis{ background:#374151 !important; color:#fff !important; }      /* gris */
-.sel-cnaps.cnaps-enregistre{ background:#fb923c !important; color:#111 !important; }   /* orange */
-.sel-cnaps.cnaps-instruction{ background:#fde047 !important; color:#111 !important; }  /* jaune */
-.sel-cnaps.cnaps-accepte{ background:#22c55e !important; color:#0b1f0f !important; }   /* vert */
-.sel-cnaps.cnaps-refuse{ background:#000 !important; color:#fff !important; }          /* noir */
-.sel-cnaps.cnaps-docs{ background:#ef4444 !important; color:#fff !important; }         /* rouge */
-.sel-cnaps{ background:#0f1412 !important; color:#e8f0ea !important; }                 /* défaut / inconnu */
-</style>
-
-
 
 
 {% endblock %}
