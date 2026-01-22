@@ -378,7 +378,7 @@ def admin_trainees(session_id: str):
 
 
 # =========================
-# “Fiche” (temporaire en JSON, pour ne pas casser le lien)
+# FICHE STAGIAIRE (HTML)
 # =========================
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>")
 def admin_trainee_sheet(session_id: str, trainee_id: str):
@@ -386,15 +386,38 @@ def admin_trainee_sheet(session_id: str, trainee_id: str):
     s = find_session(data, session_id)
     if not s:
         abort(404)
+
+    # vue session (même format que admin_trainees)
+    session_view = {
+        "id": s.get("id"),
+        "name": _session_get(s, "name", ""),
+        "training_type": _session_get(s, "training_type", ""),
+        "date_start": _session_get(s, "date_start", ""),
+        "date_end": _session_get(s, "date_end", ""),
+        "exam_date": _session_get(s, "exam_date", ""),
+    }
+
     trainees = _session_trainees_list(s)
-    t = None
-    for x in trainees:
-        if x.get("id") == trainee_id:
-            t = x
-            break
-    if not t:
+    trainee = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not trainee:
         abort(404)
-    return jsonify({"ok": True, "session_id": session_id, "trainee": t})
+
+    show_hosting = (session_view["training_type"] == "A3P")
+    show_vae = (session_view["training_type"] == "DIRIGEANT VAE")
+
+    # (optionnel) on force le CNAPS à être propre pour l'affichage
+    if not trainee.get("cnaps"):
+        trainee["cnaps"] = "INCONNU"
+    trainee["cnaps"] = str(trainee["cnaps"]).upper()
+
+    return render_template(
+        "admin_trainee.html",
+        session=session_view,
+        trainee=trainee,
+        show_hosting=show_hosting,
+        show_vae=show_vae,
+        enums=ENUMS,
+    )
 
 
 # =========================
