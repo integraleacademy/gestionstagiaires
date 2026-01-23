@@ -411,32 +411,38 @@
 
 
 
-      <div class="docrow">
-        <div class="docmeta"><div class="label">Ma carte SST</div></div>
-        {% if d.get('carte_sst') %}
-          <a class="btn outline small" target="_blank" href="/admin/uploads/{{ d.get('carte_sst') }}">Voir</a>
-        {% else %}
-          <span class="pill gray">Prochainement</span>
-        {% endif %}
-      </div>
+    {% set deliv = trainee.deliverables or {} %}
 
-      <div class="docrow">
-        <div class="docmeta"><div class="label">Mon diplôme</div></div>
-        {% if d.get('diplome') %}
-          <a class="btn outline small" target="_blank" href="/admin/uploads/{{ d.get('diplome') }}">Voir</a>
-        {% else %}
-          <span class="pill gray">Prochainement</span>
-        {% endif %}
-      </div>
+<div class="docrow">
+  <div class="docmeta"><div class="label">Ma carte SST</div></div>
+  {% if deliv.get('carte_sst') %}
+    <a class="btn outline small" target="_blank"
+       href="/admin/uploads/{{ deliv.get('carte_sst') }}">Voir</a>
+  {% else %}
+    <span class="pill gray">Prochainement</span>
+  {% endif %}
+</div>
 
-      <div class="docrow">
-        <div class="docmeta"><div class="label">Mes attestations de fin de formation</div></div>
-        {% if d.get('attestation_fin_formation') %}
-          <a class="btn outline small" target="_blank" href="/admin/uploads/{{ d.get('attestation_fin_formation') }}">Voir</a>
-        {% else %}
-          <span class="pill gray">Prochainement</span>
-        {% endif %}
-      </div>
+<div class="docrow">
+  <div class="docmeta"><div class="label">Mon diplôme</div></div>
+  {% if deliv.get('diplome') %}
+    <a class="btn outline small" target="_blank"
+       href="/admin/uploads/{{ deliv.get('diplome') }}">Voir</a>
+  {% else %}
+    <span class="pill gray">Prochainement</span>
+  {% endif %}
+</div>
+
+<div class="docrow">
+  <div class="docmeta"><div class="label">Mes attestations de fin de formation</div></div>
+  {% if deliv.get('attestation_fin_formation') %}
+    <a class="btn outline small" target="_blank"
+       href="/admin/uploads/{{ deliv.get('attestation_fin_formation') }}">Voir</a>
+  {% else %}
+    <span class="pill gray">Prochainement</span>
+  {% endif %}
+</div>
+
     </div>
 
   </div>
