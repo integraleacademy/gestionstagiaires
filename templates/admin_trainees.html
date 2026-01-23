@@ -83,14 +83,24 @@
           </select>
         </td>
 
-        <td>
-          <select class="status sel" data-field="test_fr_status">
-            <option value="soon" {% if t.test_fr_status=="soon" %}selected{% endif %}>prochainement</option>
-            <option value="in_progress" {% if t.test_fr_status=="in_progress" %}selected{% endif %}>en cours</option>
-            <option value="validated" {% if t.test_fr_status=="validated" %}selected{% endif %}>validé</option>
-            <option value="relance" {% if t.test_fr_status=="relance" %}selected{% endif %}>relancé</option>
-          </select>
-        </td>
+<td>
+  <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start;">
+    <select class="status sel" data-field="test_fr_status">
+      <option value="soon" {% if t.test_fr_status=="soon" or not t.test_fr_status %}selected{% endif %}>PROCHAINEMENT</option>
+      <option value="in_progress" {% if t.test_fr_status=="in_progress" %}selected{% endif %}>EN COURS</option>
+      <option value="relance" {% if t.test_fr_status=="relance" %}selected{% endif %}>RELANCÉ</option>
+      <option value="validated" {% if t.test_fr_status=="validated" %}selected{% endif %}>VALIDÉ</option>
+    </select>
+
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;opacity:.9;user-select:none;">
+      <input type="checkbox"
+             class="test-validated"
+             {% if t.test_fr_status=="validated" %}checked{% endif %}>
+      Test validé
+    </label>
+  </div>
+</td>
+
 
         <td>
           <select class="status sel" data-field="dossier_status">
@@ -316,6 +326,33 @@
 
   document.querySelectorAll("tr[data-trainee-id]").forEach(tr=>{
     const traineeId = tr.getAttribute("data-trainee-id");
+
+        // test validé checkbox -> force validated (ou repasse en in_progress si décoché)
+    const tfSel = tr.querySelector('select.sel[data-field="test_fr_status"]');
+    const tfChk = tr.querySelector('input.test-validated');
+
+    if(tfSel && tfChk){
+      // si on change le select, on synchronise la checkbox
+      tfSel.addEventListener("change", ()=>{
+        tfChk.checked = (tfSel.value === "validated");
+      });
+
+      // si on coche/décoche la checkbox, on force le statut + save
+      tfChk.addEventListener("change", async ()=>{
+        const newVal = tfChk.checked ? "validated" : (tfSel.value === "validated" ? "in_progress" : tfSel.value);
+
+        tfSel.value = newVal;
+        applyStatusPill(tfSel);
+
+        try{
+          await saveField(traineeId, "test_fr_status", newVal);
+          window.location.reload(); // recalcul conformités
+        }catch(e){
+          alert("Erreur sauvegarde");
+        }
+      });
+    }
+
 
     // select changes
     tr.querySelectorAll("select.sel").forEach(sel=>{
