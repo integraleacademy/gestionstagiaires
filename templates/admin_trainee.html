@@ -77,16 +77,17 @@
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <div style="font-weight:900;">Test de français</div>
       <div>
-        {% set tf = (trainee.test_fr_status or "soon") %}
-        {% set tf_label = ("A FAIRE" if tf=="soon" else ("EN COURS" if tf=="in_progress" else ("RELANCÉ" if tf=="relance" else "VALIDÉ"))) %}
-        <span class="pill
-          {% if tf=="soon" %}pill-red
-          {% elif tf=="in_progress" %}pill-yellow
-          {% elif tf=="relance" %}pill-orange
-          {% else %}pill-green
-          {% endif %}">
-          Statut : {{ tf_label }}
-        </span>
+{% set tf = (trainee.test_fr_status or "soon") %}
+{% set tf_label = ("PROCHAINEMENT" if tf=="soon" else ("EN COURS" if tf=="in_progress" else ("RELANCÉ" if tf=="relance" else "VALIDÉ"))) %}
+<span class="pill
+  {% if tf=="soon" %}pill-gray
+  {% elif tf=="in_progress" %}pill-orange
+  {% elif tf=="relance" %}pill-red
+  {% else %}pill-green
+  {% endif %}">
+  Statut : {{ tf_label }}
+</span>
+
       </div>
     </div>
 
