@@ -239,18 +239,20 @@
     Tant qu’un champ est incomplet, il apparaît en <span style="color:#b91c1c;font-weight:900;">rouge</span>.
   </div>
 
-  {% macro field(label, id, value, placeholder) %}
-    {% set ok = value and value|length > 3 %}
-    <div class="field" style="border-left:4px solid {{ '#16a34a' if ok else '#dc2626' }};padding-left:10px;">
-      <label class="label">{{ label }}</label>
-      <input id="{{ id }}" value="{{ value or '' }}" placeholder="{{ placeholder }}">
-      {% if ok %}
-        <span class="saved show">✅ Enregistré</span>
-      {% else %}
-        <span class="saved show" style="color:#dc2626;">❌ À compléter</span>
-      {% endif %}
+{% macro field(label, id, value, placeholder) %}
+  {% set ok = value and value|length > 3 %}
+  <div class="field" style="border-left:4px solid {{ '#16a34a' if ok else '#dc2626' }};padding-left:10px;">
+    <label class="label">{{ label }}</label>
+
+    <div style="display:flex;gap:10px;align-items:center;">
+      <input id="{{ id }}" value="{{ value or '' }}" placeholder="{{ placeholder }}" style="flex:1;">
+      <span id="ok_{{ id }}" class="saved show" style="min-width:110px;text-align:right;{% if ok %}color:#16a34a;{% else %}color:#dc2626;{% endif %}">
+        {% if ok %}✅{% else %}⚠️ À compléter{% endif %}
+      </span>
     </div>
-  {% endmacro %}
+  </div>
+{% endmacro %}
+
 
   {{ field("Numéro de sécurité sociale",
            "carte_vitale",
@@ -401,28 +403,173 @@
     setTimeout(()=>el.classList.remove("show"), 1200);
   }
 
+function setFieldState(inputId){
+  const input = document.getElementById(inputId);
+  const ok = document.getElementById("ok_" + inputId);
+  if(!input || !ok) return;
+
+  const v = (input.value || "").trim();
+  if(v.length > 0){
+    input.style.borderColor = "#bbf7d0";
+    ok.textContent = "✅";
+    ok.style.color = "#16a34a";
+  }else{
+    input.style.borderColor = "#fecdd3";
+    ok.textContent = "⚠️ À compléter";
+    ok.style.color = "#dc2626";
+  }
+}
+
+
   let tmr = null;
   function autosave(){
     clearTimeout(tmr);
     tmr = setTimeout(async ()=>{
-      const carte_vitale = document.getElementById("carte_vitale").value;
-      const pre_number = document.getElementById("pre_number").value;
 
+      const carte_vitale  = document.getElementById("carte_vitale")?.value || "";
+      const pre_number    = document.getElementById("pre_number")?.value || "";
+
+      const birth_date    = document.getElementById("birth_date")?.value || "";
+      const birth_city    = document.getElementById("birth_city")?.value || "";
+      const birth_country = document.getElementById("birth_country")?.value || "";
+      const nationality   = document.getElementById("nationality")?.value || "";
+
+      const address       = document.getElementById("address")?.value || "";
+      const zip_code      = document.getElementById("zip_code")?.value || "";
+      const city          = document.getElementById("city")?.value || "";
+
+      applyFormatting();
       const r = await fetch(`/espace/${token}/infos/update`, {
         method: "POST",
         headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({carte_vitale, pre_number})
+        body: JSON.stringify({
+          carte_vitale, pre_number,
+          birth_date, birth_city, birth_country, nationality,
+          address, zip_code, city
+        })
       });
 
       if(r.ok){
+        // ✅ feedback minimal: on montre que c'est enregistré
         flashSaved("saved_carte");
         flashSaved("saved_pre");
+
+        // ✅ état “à compléter / ok” (on le fera joli après)
+        setFieldStateValidated("carte_vitale");
+        setFieldStateValidated("pre_number");
+        setFieldStateValidated("birth_date");
+        setFieldStateValidated("birth_city");
+        setFieldStateValidated("birth_country");
+        setFieldStateValidated("nationality");
+        setFieldStateValidated("address");
+        setFieldStateValidated("zip_code");
+        setFieldStateValidated("city");
+
+
       }
     }, 400);
   }
 
-  document.getElementById("carte_vitale").addEventListener("input", autosave);
-  document.getElementById("pre_number").addEventListener("input", autosave);
+  // listeners existants (garde-les si tu veux) + nouveaux
+  [
+    "carte_vitale","pre_number",
+    "birth_date","birth_city","birth_country","nationality",
+    "address","zip_code","city"
+  ].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener("input", autosave);
+  });
+
+  // premier passage pour mettre rouge/✅ dès l'ouverture
+  window.addEventListener("load", ()=>{
+  setFieldStateValidated("carte_vitale");
+  setFieldStateValidated("pre_number");
+  setFieldStateValidated("birth_date");
+  setFieldStateValidated("birth_city");
+  setFieldStateValidated("birth_country");
+  setFieldStateValidated("nationality");
+  setFieldStateValidated("address");
+  setFieldStateValidated("zip_code");
+  setFieldStateValidated("city");
+
+
+  });
+
+  function digitsOnly(s){
+  return (s || "").toString().replace(/\D+/g, "");
+}
+
+// Format Sécu : 15 chiffres (on affiche avec espaces pour lecture)
+function formatSecuDisplay(digits){
+  // 15 digits: 1 85 12 34 567 890 12
+  const parts = [
+    digits.slice(0,1),
+    digits.slice(1,3),
+    digits.slice(3,5),
+    digits.slice(5,7),
+    digits.slice(7,10),
+    digits.slice(10,13),
+    digits.slice(13,15),
+  ].filter(p => p.length);
+  return parts.join(" ");
+}
+
+function normalizePRE(s){
+  return (s || "").toString().trim().toUpperCase().replace(/\s+/g, "");
+}
+
+function isValidSecu(digits){
+  return digits.length === 15; // simple (on peut faire le vrai contrôle clé ensuite)
+}
+
+// PRE/CAR-083-2025-12-01-20250000000
+function isValidPRE(v){
+  if(!v) return false;
+  return /^(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11,}$/.test(v);
+}
+
+function applyFormatting(){
+  const secu = document.getElementById("carte_vitale");
+  if(secu){
+    const d = digitsOnly(secu.value);
+    secu.value = formatSecuDisplay(d).slice(0, 23); // limite visuelle
+  }
+
+  const pre = document.getElementById("pre_number");
+  if(pre){
+    pre.value = normalizePRE(pre.value);
+  }
+}
+
+function setFieldStateValidated(inputId){
+  const input = document.getElementById(inputId);
+  const ok = document.getElementById("ok_" + inputId);
+  if(!input || !ok) return;
+
+  const raw = (input.value || "").trim();
+
+  let valid = raw.length > 0;
+
+  if(inputId === "carte_vitale"){
+    valid = isValidSecu(digitsOnly(raw));
+  }
+  if(inputId === "pre_number"){
+    valid = isValidPRE(normalizePRE(raw));
+  }
+
+  if(valid){
+    input.style.borderColor = "#bbf7d0";
+    ok.textContent = "✅";
+    ok.style.color = "#16a34a";
+  }else{
+    input.style.borderColor = "#fecdd3";
+    ok.textContent = "⚠️ À compléter";
+    ok.style.color = "#dc2626";
+  }
+}
+
+  
 </script>
+
 
 {% endblock %}
