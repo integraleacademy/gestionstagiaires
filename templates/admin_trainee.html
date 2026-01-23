@@ -171,6 +171,46 @@
   </select>
 </div>
 
+    <!-- ===================== -->
+  <!-- FINANCEMENT           -->
+  <!-- ===================== -->
+  <div class="card">
+    <div class="card-head">
+      <div>Financement</div>
+
+      {% set fs = (trainee.financement_status or "soon") %}
+      {% set fs_label = (
+        "PROCHAINEMENT" if fs=="soon"
+        else ("EN COURS DE VALIDATION" if fs=="in_review" else "VALIDÉ")
+      ) %}
+
+      <span class="pill
+        {% if fs=="soon" %}pill-gray
+        {% elif fs=="in_review" %}pill-orange
+        {% else %}pill-green
+        {% endif %}">
+        {{ fs_label }}
+      </span>
+    </div>
+
+    <div class="hint" style="margin-bottom:8px;">
+      Suivi du financement (France Travail / OPCO / CPF / etc.).
+    </div>
+
+    <select id="financementSelect" class="status-pill">
+      <option value="soon" {% if fs=="soon" %}selected{% endif %}>
+        PROCHAINEMENT
+      </option>
+      <option value="in_review" {% if fs=="in_review" %}selected{% endif %}>
+        EN COURS DE VALIDATION
+      </option>
+      <option value="validated" {% if fs=="validated" %}selected{% endif %}>
+        VALIDÉ
+      </option>
+    </select>
+  </div>
+
+
 
 
   <!-- ===================== -->
@@ -577,6 +617,33 @@ if(conventionSelect){
     }
   });
 }
+
+// =========================
+// Financement status update
+// =========================
+const financementSelect = document.getElementById("financementSelect");
+
+if(financementSelect){
+  applyStatusPill(financementSelect); // ✅ couleur au chargement
+
+  financementSelect.addEventListener("change", async ()=>{
+    applyStatusPill(financementSelect); // ✅ couleur immédiate
+
+    const value = financementSelect.value;
+
+    try{
+      await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ financement_status: value })
+      });
+      window.location.reload();
+    }catch(e){
+      alert("Erreur sauvegarde financement");
+    }
+  });
+}
+  
 
   
 
