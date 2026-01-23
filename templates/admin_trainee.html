@@ -104,6 +104,15 @@
       <button class="btn btn-outline" type="button" onclick="openTestModal('relance')">🔁 Relancer test de français</button>
     </div>
 
+    <div style="margin-top:10px;">
+  <label style="display:flex;align-items:center;gap:10px;font-weight:900;">
+    <input id="chkTestFrValidated" type="checkbox" {% if (trainee.test_fr_status or "soon")=="validated" %}checked{% endif %}>
+    Test validé
+  </label>
+  <div class="hint" style="margin-top:6px;">Si coché, le statut passe à “VALIDÉ”.</div>
+</div>
+
+    
     {% if trainee.test_fr_last_notified_at %}
       <div class="hint" style="margin-top:10px;">🟧 Notifié le : <strong>{{ trainee.test_fr_last_notified_at }}</strong></div>
     {% endif %}
@@ -442,6 +451,26 @@
     });
     window.location.reload();
   }
+
+    // ✅ Checkbox "Test validé" -> test_fr_status = validated / in_progress
+  const chk = document.getElementById("chkTestFrValidated");
+  if(chk){
+    chk.addEventListener("change", async ()=>{
+      const newVal = chk.checked ? "validated" : "in_progress";
+
+      try{
+        await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
+          method:"POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ test_fr_status: newVal })
+        });
+        window.location.reload();
+      }catch(e){
+        alert("Erreur sauvegarde test de français");
+      }
+    });
+  }
+
 </script>
 
 {% endblock %}
