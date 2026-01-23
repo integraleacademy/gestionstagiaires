@@ -227,46 +227,56 @@
         </thead>
         <tbody>
           {% for d in (trainee.documents or []) %}
+          {% set has_file = (d.file and d.file|length > 0) %}
+          {% set cur = (d.status or ("A CONTRÔLER" if has_file else "NON DÉPOSÉ")) %}
+
           <tr data-doc-key="{{ d.key }}">
             <td style="font-weight:800;">{{ d.label }}</td>
 
             <td style="min-width:190px;">
-              <select class="status sel-doc" data-field="status">
-                {% set cur = (d.status or "A CONTRÔLER") %}
+              <select class="status sel-doc" data-field="status" {% if not has_file %}disabled{% endif %}>
+                <option value="NON DÉPOSÉ" {% if cur=="NON DÉPOSÉ" %}selected{% endif %}>NON DÉPOSÉ</option>
                 <option value="A CONTRÔLER" {% if cur=="A CONTRÔLER" or cur=="A CONTROLER" %}selected{% endif %}>A CONTRÔLER</option>
                 <option value="CONFORME" {% if cur=="CONFORME" %}selected{% endif %}>CONFORME</option>
                 <option value="NON CONFORME" {% if cur=="NON CONFORME" %}selected{% endif %}>NON CONFORME</option>
               </select>
+
               <div class="hint" style="margin-top:6px;">
                 {% if cur=="CONFORME" %}
                   <span class="pill pill-green">CONFORME</span>
                 {% elif cur=="NON CONFORME" %}
                   <span class="pill pill-red">NON CONFORME</span>
+                {% elif cur=="NON DÉPOSÉ" %}
+                  <span class="pill pill-gray">NON DÉPOSÉ</span>
                 {% else %}
                   <span class="pill pill-yellow">A CONTRÔLER</span>
                 {% endif %}
               </div>
+
+              {% if not has_file %}
+                <div class="hint" style="margin-top:6px;">(statut activé dès qu’un fichier est déposé)</div>
+              {% endif %}
             </td>
 
             <td>
               <input class="comment doc-comment" data-field="comment" value="{{ d.comment or "" }}" placeholder="Commentaire...">
             </td>
 
-<td class="mono" style="max-width:320px;">
-  {% if d.file %}
-    <a href="{{ url_for('admin_view_upload', path=d.file_token) }}" target="_blank">📎 Voir</a>
-    <span class="hint" style="margin-left:8px;">(déjà uploadé)</span>
-  {% else %}
-    <span class="hint">Aucun fichier</span>
-  {% endif %}
+            <td class="mono" style="max-width:320px;">
+              {% if has_file %}
+                <a href="{{ url_for('admin_view_upload', path=d.file_token) }}" target="_blank">📎 Voir</a>
+                <span class="hint" style="margin-left:8px;">(déjà uploadé)</span>
+              {% else %}
+                <span class="hint">Aucun fichier</span>
+              {% endif %}
 
-  <form method="post" enctype="multipart/form-data"
-        action="{{ url_for('admin_upload_doc_file', session_id=session.id, trainee_id=trainee.id, doc_key=d.key) }}"
-        style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-    <input type="file" name="file" required>
-    <button class="btn btn-outline" type="submit">⬆️ Uploader</button>
-  </form>
-</td>
+              <form method="post" enctype="multipart/form-data"
+                    action="{{ url_for('admin_upload_doc_file', session_id=session.id, trainee_id=trainee.id, doc_key=d.key) }}"
+                    style="margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <input type="file" name="file" required>
+                <button class="btn btn-outline" type="submit">⬆️ Uploader</button>
+              </form>
+            </td>
 
           </tr>
           {% endfor %}
@@ -277,6 +287,7 @@
   </div>
 
 </div>
+
 
 
 <!-- ===================== -->
