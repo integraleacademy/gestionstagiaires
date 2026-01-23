@@ -468,18 +468,15 @@ select.status-pill{
 
 /* =========================
    MASQUER MAIL + TELEPHONE
+   (UNIQUEMENT sur la table stagiaires)
    ========================= */
 
-/* Mail (colonne 3) */
-.table th:nth-child(3),
-.table td:nth-child(3){
-  display: none;
-}
-
-/* Téléphone (colonne 4) */
-.table th:nth-child(4),
-.table td:nth-child(4){
-  display: none;
+/* ⚠️ on cible admin_trainees.html */
+#traineesTable th:nth-child(3),
+#traineesTable td:nth-child(3),
+#traineesTable th:nth-child(4),
+#traineesTable td:nth-child(4){
+  display:none;
 }
 
 /* Le tableau peut maintenant être plus compact */
