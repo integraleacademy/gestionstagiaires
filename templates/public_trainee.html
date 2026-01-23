@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container">
+  <div class="session-header">
+    <div>
+      <h1>Espace stagiaire</h1>
+      <div class="meta-line">
+        <span>Nom : <strong>{{ trainee.last_name }}</strong></span>
+        <span>Prénom : <strong>{{ trainee.first_name }}</strong></span>
+        <span>Formation : <strong>{{ session.training_type }}</strong></span>
+        <span>Dates : <strong>{{ session.date_start }}</strong> → <strong>{{ session.date_end }}</strong></span>
+        <span>Examen : <strong>{{ session.exam_date }}</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:12px;">
+    <div style="font-weight:900;">Suivi de dossier</div>
+    <div class="meta-line" style="margin-top:8px;">
+      <span class="mono">Convention : {{ trainee.convention_status or "—" }}</span>
+      <span class="mono">Dossier : {{ trainee.dossier_status or "—" }}</span>
+      <span class="mono">CNAPS : {{ trainee.cnaps or "INCONNU" }}</span>
+      <span class="mono">Test FR : {{ trainee.test_fr_status or "soon" }}</span>
+      <span class="mono">Financement : {{ trainee.financement_status or "soon" }}</span>
+      {% if show_hosting %}
+        <span class="mono">Hébergement : {{ trainee.hosting_status or "INCONNU" }}</span>
+      {% endif %}
+    </div>
+
+    {% if show_hosting and (trainee.hosting_status or "INCONNU")|upper == "INCONNU" %}
+      <div class="hint" style="margin-top:8px;">
+        Pour réserver l’hébergement :
+        <a class="link" target="_blank" href="https://assistance-alw9.onrender.com/hebergement">
+          cliquez ici
+        </a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
