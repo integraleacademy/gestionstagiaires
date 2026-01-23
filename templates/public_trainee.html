@@ -37,6 +37,42 @@
   .docrow{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 0;border-top:1px dashed #edf2f7}
   .docrow:first-child{border-top:none;padding-top:0}
   .docmeta{display:flex;flex-direction:column;gap:2px}
+
+    .docrow.missing{
+    border:2px dashed #fecaca;
+    background:#fff1f2;
+    border-radius:14px;
+    padding:12px;
+  }
+  .docrow.pending{
+    border:2px solid #fed7aa;
+    background:#fff7ed;
+    border-radius:14px;
+    padding:12px;
+  }
+  .doctag{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 12px;
+    border-radius:999px;
+    font-weight:900;
+    font-size:12px;
+    border:1px solid #e5e7eb;
+    background:#fff;
+  }
+  .doctag.missing{
+    border-color:#fecaca;
+    color:#b91c1c;
+    background:#fff;
+  }
+  .doctag.pending{
+    border-color:#fed7aa;
+    color:#9a3412;
+    background:#fff;
+  }
+
+  
 </style>
 
 {% set training_type = (session.training_type or '') %}
@@ -324,35 +360,49 @@
       {% set id_doc = (docs | selectattr("key","equalto","id") | list | first) %}
       {% set photo_doc = (docs | selectattr("key","equalto","photo") | list | first) %}
 
-      <div class="docrow">
-        <div class="docmeta">
-          <div class="label">Carte d’identité recto/verso ou passeport</div>
-          <div class="muted">PDF uniquement</div>
-          {% if id_doc and id_doc.file %}
-            <div class="oktag">✅ Enregistré</div>
-          {% endif %}
-        </div>
+{% set id_ok = (id_doc and id_doc.file) %}
+{% set photo_ok = (photo_doc and photo_doc.file) %}
 
-        <form action="/espace/{{ token }}/documents/id/upload" method="post" enctype="multipart/form-data">
-          <input type="file" name="file" accept="application/pdf" required>
-          <button class="btn small" type="submit">Télécharger</button>
-        </form>
-      </div>
+<div class="docrow {% if id_ok %}pending{% else %}missing{% endif %}">
+  <div class="docmeta">
+    <div class="label">Carte d’identité recto/verso ou passeport</div>
+    <div class="muted">PDF uniquement</div>
 
-      <div class="docrow">
-        <div class="docmeta">
-          <div class="label">Photo d’identité</div>
-          <div class="muted">JPEG ou PNG</div>
-          {% if photo_doc and photo_doc.file %}
-            <div class="oktag">✅ Enregistré</div>
-          {% endif %}
-        </div>
+    {% if id_ok %}
+      <div class="doctag pending">⏳ Document déposé — en attente de contrôle</div>
+    {% else %}
+      <div class="doctag missing">📌 Document à déposer (obligatoire)</div>
+    {% endif %}
+  </div>
 
-        <form action="/espace/{{ token }}/documents/photo/upload" method="post" enctype="multipart/form-data">
-          <input type="file" name="file" accept="image/jpeg,image/png" required>
-          <button class="btn small" type="submit">Télécharger</button>
-        </form>
-      </div>
+  <form action="/espace/{{ token }}/documents/id/upload" method="post" enctype="multipart/form-data">
+    <input type="file" name="file" accept="application/pdf" required>
+    <button class="btn small" type="submit">
+      {% if id_ok %}Remplacer{% else %}Déposer{% endif %}
+    </button>
+  </form>
+</div>
+
+<div class="docrow {% if photo_ok %}pending{% else %}missing{% endif %}">
+  <div class="docmeta">
+    <div class="label">Photo d’identité</div>
+    <div class="muted">JPEG ou PNG</div>
+
+    {% if photo_ok %}
+      <div class="doctag pending">⏳ Document déposé — en attente de contrôle</div>
+    {% else %}
+      <div class="doctag missing">📌 Document à déposer (obligatoire)</div>
+    {% endif %}
+  </div>
+
+  <form action="/espace/{{ token }}/documents/photo/upload" method="post" enctype="multipart/form-data">
+    <input type="file" name="file" accept="image/jpeg,image/png" required>
+    <button class="btn small" type="submit">
+      {% if photo_ok %}Remplacer{% else %}Déposer{% endif %}
+    </button>
+  </form>
+</div>
+
     </div>
 
     <!-- Encadré 4 : diplômes et attestations -->
@@ -406,19 +456,25 @@
 function setFieldState(inputId){
   const input = document.getElementById(inputId);
   const ok = document.getElementById("ok_" + inputId);
-  if(!input || !ok) return;
+  const wrapper = input?.closest(".field"); // 👈 LA CLÉ EST LÀ
+  if(!input || !ok || !wrapper) return;
 
   const v = (input.value || "").trim();
-  if(v.length > 0){
+  const valid = v.length > 0;
+
+  if(valid){
     input.style.borderColor = "#bbf7d0";
     ok.textContent = "✅";
     ok.style.color = "#16a34a";
+    wrapper.style.borderLeft = "4px solid #16a34a"; // 🟢 LIVE
   }else{
     input.style.borderColor = "#fecdd3";
     ok.textContent = "⚠️ À compléter";
     ok.style.color = "#dc2626";
+    wrapper.style.borderLeft = "4px solid #dc2626"; // 🔴 LIVE
   }
 }
+
 
 
   let tmr = null;
