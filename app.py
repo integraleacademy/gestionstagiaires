@@ -1278,10 +1278,21 @@ def public_infos_update(token: str):
         return jsonify({"ok": False}), 404
 
     payload = request.get_json(silent=True) or {}
+
+    # Champs "Infos à compléter"
     t["carte_vitale"] = (payload.get("carte_vitale") or "").strip()
     t["pre_number"] = (payload.get("pre_number") or "").strip()
-    t["updated_at"] = _now_iso()
 
+    t["birth_date"] = (payload.get("birth_date") or "").strip()         # YYYY-MM-DD
+    t["birth_city"] = (payload.get("birth_city") or "").strip()
+    t["birth_country"] = (payload.get("birth_country") or "").strip()
+    t["nationality"] = (payload.get("nationality") or "").strip()
+
+    t["address"] = (payload.get("address") or "").strip()
+    t["zip_code"] = (payload.get("zip_code") or "").strip()
+    t["city"] = (payload.get("city") or "").strip()
+
+    t["updated_at"] = _now_iso()
     save_data(data)
     return jsonify({"ok": True})
 
