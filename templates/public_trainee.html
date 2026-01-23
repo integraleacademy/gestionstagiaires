@@ -1,42 +1,323 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="container">
-  <div class="session-header">
+<style>
+  .public-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+  .grid{display:grid;grid-template-columns:1fr;gap:14px;}
+  @media(min-width:900px){ .grid{grid-template-columns:1fr 1fr;} }
+
+  .card{background:#fff;border:1px solid #e8eef3;border-radius:16px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.03);}
+  .card h2{margin:0 0 10px 0;font-size:18px}
+  .muted{color:#6b7280;font-size:13px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .line{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px dashed #edf2f7}
+  .line:first-child{border-top:none;padding-top:0}
+  .label{font-weight:800}
+  .value{font-weight:700}
+
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;font-weight:800;font-size:12px;border:1px solid #e5e7eb;background:#f9fafb}
+  .pill.red{background:#fff1f2;border-color:#fecdd3;color:#9f1239}
+  .pill.orange{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
+  .pill.yellow{background:#fefce8;border-color:#fde68a;color:#854d0e}
+  .pill.green{background:#ecfdf5;border-color:#bbf7d0;color:#065f46}
+  .pill.gray{background:#f3f4f6;border-color:#e5e7eb;color:#374151}
+  .pill.blue{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:10px 12px;font-weight:900;border:1px solid #e5e7eb;background:#111827;color:#fff;text-decoration:none;cursor:pointer}
+  .btn.outline{background:#fff;color:#111827}
+  .btn.small{padding:8px 10px;border-radius:10px;font-size:13px}
+  .hint{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-top:10px}
+  .oktag{font-weight:900;color:#065f46}
+
+  .field{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+  .field input{border:1px solid #e5e7eb;border-radius:12px;padding:10px 12px;font-weight:700}
+  .saved{font-size:12px;color:#065f46;font-weight:900;display:none}
+  .saved.show{display:inline-block}
+
+  .docrow{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 0;border-top:1px dashed #edf2f7}
+  .docrow:first-child{border-top:none;padding-top:0}
+  .docmeta{display:flex;flex-direction:column;gap:2px}
+</style>
+
+{% set training_type = (session.training_type or '') %}
+{% set formation_name = (session.name or session.training_type or '') %}
+
+{# helpers de couleur pour statuts #}
+{% macro pill_for(kind, value) %}
+  {% set v = (value or '') %}
+  {% set u = v|string %}
+  {% set up = u.upper() %}
+  {% set cls = 'gray' %}
+
+  {# Convention #}
+  {% if kind=='convention' %}
+    {% if v=='signed' %}{% set cls='green' %}
+    {% elif v=='signing' %}{% set cls='yellow' %}
+    {% else %}{% set cls='red' %}{% endif %}
+  {% endif %}
+
+  {# Dossier #}
+  {% if kind=='dossier' %}
+    {% if v=='complete' %}{% set cls='green' %}
+    {% else %}{% set cls='red' %}{% endif %}
+  {% endif %}
+
+  {# Test FR #}
+  {% if kind=='test_fr' %}
+    {% if v=='validated' %}{% set cls='green' %}
+    {% elif v=='relance' %}{% set cls='orange' %}
+    {% elif v=='in_progress' %}{% set cls='yellow' %}
+    {% else %}{% set cls='red' %}{% endif %}
+  {% endif %}
+
+  {# Financement #}
+  {% if kind=='financement' %}
+    {% if v=='validated' %}{% set cls='green' %}
+    {% elif v=='in_review' %}{% set cls='yellow' %}
+    {% else %}{% set cls='red' %}{% endif %}
+  {% endif %}
+
+  {# Hébergement #}
+  {% if kind=='hosting' %}
+    {% if v=='reserved' %}{% set cls='green' %}
+    {% else %}{% set cls='red' %}{% endif %}
+  {% endif %}
+
+  {# CNAPS #}
+  {% if kind=='cnaps' %}
+    {% if up in ['DELIVREE','DÉLIVRÉE','VALIDE','VALIDEE','VALIDÉE'] %}{% set cls='green' %}
+    {% elif up in ['INSTRUCTION','EN INSTRUCTION','EN_INSTRUCTION'] %}{% set cls='yellow' %}
+    {% elif up in ['REFUSEE','REFUSÉE','EXPIREE','EXPIRÉE'] %}{% set cls='red' %}
+    {% else %}{% set cls='gray' %}{% endif %}
+  {% endif %}
+
+  <span class="pill {{cls}}">
+    {{ u if u else '—' }}
+  </span>
+{% endmacro %}
+
+<div class="public-wrap">
+  <div class="row" style="justify-content:space-between;margin-bottom:10px;">
     <div>
-      <h1>Espace stagiaire</h1>
-      <div class="meta-line">
-        <span>Nom : <strong>{{ trainee.last_name }}</strong></span>
-        <span>Prénom : <strong>{{ trainee.first_name }}</strong></span>
-        <span>Formation : <strong>{{ session.training_type }}</strong></span>
-        <span>Dates : <strong>{{ session.date_start }}</strong> → <strong>{{ session.date_end }}</strong></span>
-        <span>Examen : <strong>{{ session.exam_date }}</strong></span>
-      </div>
+      <div style="font-size:26px;font-weight:1000;">Espace stagiaire</div>
+      <div class="muted">Vos informations et documents — Intégrale Academy</div>
     </div>
   </div>
 
-  <div class="card" style="margin-top:12px;">
-    <div style="font-weight:900;">Suivi de dossier</div>
-    <div class="meta-line" style="margin-top:8px;">
-      <span class="mono">Convention : {{ trainee.convention_status or "—" }}</span>
-      <span class="mono">Dossier : {{ trainee.dossier_status or "—" }}</span>
-      <span class="mono">CNAPS : {{ trainee.cnaps or "INCONNU" }}</span>
-      <span class="mono">Test FR : {{ trainee.test_fr_status or "soon" }}</span>
-      <span class="mono">Financement : {{ trainee.financement_status or "soon" }}</span>
+  <div class="grid">
+
+    <!-- Encadré 1 : infos générales -->
+    <div class="card">
+      <h2>Infos générales</h2>
+
+      <div class="line">
+        <div class="label">Nom</div>
+        <div class="value">{{ trainee.last_name }}</div>
+      </div>
+      <div class="line">
+        <div class="label">Prénom</div>
+        <div class="value">{{ trainee.first_name }}</div>
+      </div>
+      <div class="line">
+        <div class="label">Formation</div>
+        <div class="value">{{ formation_name }}</div>
+      </div>
+      <div class="line">
+        <div class="label">Dates de formation</div>
+        <div class="value">{{ session.date_start }} → {{ session.date_end }}</div>
+      </div>
+      <div class="line">
+        <div class="label">Date d’examen</div>
+        <div class="value">{{ session.exam_date }}</div>
+      </div>
+    </div>
+
+    <!-- Encadré 2 : suivi de dossier -->
+    <div class="card">
+      <h2>Suivi de dossier</h2>
+
+      <div class="docrow">
+        <div class="docmeta"><div class="label">Convention</div></div>
+        {{ pill_for('convention', trainee.convention_status) }}
+      </div>
+
+      <div class="docrow">
+        <div class="docmeta"><div class="label">Dossier</div></div>
+        {{ pill_for('dossier', trainee.dossier_status) }}
+      </div>
+
+      <div class="docrow">
+        <div class="docmeta"><div class="label">CNAPS</div></div>
+        {{ pill_for('cnaps', trainee.cnaps) }}
+      </div>
+
+      <div class="docrow">
+        <div class="docmeta"><div class="label">Test de français</div></div>
+        {{ pill_for('test_fr', trainee.test_fr_status) }}
+      </div>
+
+      <div class="docrow">
+        <div class="docmeta"><div class="label">Financement</div></div>
+        {{ pill_for('financement', trainee.financement_status) }}
+      </div>
+
       {% if show_hosting %}
-        <span class="mono">Hébergement : {{ trainee.hosting_status or "INCONNU" }}</span>
+        <div class="docrow">
+          <div class="docmeta"><div class="label">Hébergement</div></div>
+          {{ pill_for('hosting', trainee.hosting_status) }}
+        </div>
+
+        {% if (trainee.hosting_status or 'unknown') != 'reserved' %}
+          <div class="hint">
+            <div style="font-weight:900;margin-bottom:6px;">Hébergement non réservé</div>
+            Pour réserver l’hébergement :
+            <a class="btn outline small" target="_blank" href="https://assistance-alw9.onrender.com/hebergement">Cliquez ici</a>
+          </div>
+        {% endif %}
       {% endif %}
     </div>
 
-    {% if show_hosting and (trainee.hosting_status or "INCONNU")|upper == "INCONNU" %}
-      <div class="hint" style="margin-top:8px;">
-        Pour réserver l’hébergement :
-        <a class="link" target="_blank" href="https://assistance-alw9.onrender.com/hebergement">
-          cliquez ici
-        </a>
+    <!-- Encadré : infos à compléter (autosave) -->
+    <div class="card">
+      <h2>Infos à compléter</h2>
+      <div class="muted">Ces informations se sauvegardent automatiquement.</div>
+
+      <div class="field">
+        <label class="label">Numéro de carte vitale</label>
+        <input id="carte_vitale" value="{{ trainee.carte_vitale or '' }}" placeholder="Ex : 1 85 12 34 567 890 12">
+        <span id="saved_carte" class="saved">✅ Enregistré</span>
       </div>
+
+      <div class="field">
+        <label class="label">Numéro PRE</label>
+        <input id="pre_number" value="{{ trainee.pre_number or '' }}" placeholder="Ex : PRE-XXXXXX">
+        <span id="saved_pre" class="saved">✅ Enregistré</span>
+      </div>
+    </div>
+
+    <!-- Encadré STATUT VAE (si DIRIGEANT VAE) -->
+    {% if show_vae %}
+    <div class="card">
+      <h2>Statut VAE</h2>
+      <div class="muted">Lecture seule (mis à jour par l’administration).</div>
+
+      {% set v = trainee.vae_status or '' %}
+      <div class="row" style="margin-top:10px;">
+        <span class="pill blue">Statut : {{ v if v else '—' }}</span>
+      </div>
+    </div>
     {% endif %}
+
+    <!-- Encadré 3 : mes documents (upload) -->
+    <div class="card" style="grid-column:1/-1;">
+      <h2>Mes documents</h2>
+      <div class="muted">Déposez vos documents. Un tag “Enregistré” apparaît après upload.</div>
+
+      {% set docs = trainee.documents or [] %}
+      {% set id_doc = (docs | selectattr("key","equalto","id") | list | first) %}
+      {% set photo_doc = (docs | selectattr("key","equalto","photo") | list | first) %}
+
+      <div class="docrow">
+        <div class="docmeta">
+          <div class="label">Carte d’identité recto/verso ou passeport</div>
+          <div class="muted">PDF uniquement</div>
+          {% if id_doc and id_doc.file %}
+            <div class="oktag">✅ Enregistré</div>
+          {% endif %}
+        </div>
+
+        <form action="/espace/{{ token }}/documents/id/upload" method="post" enctype="multipart/form-data">
+          <input type="file" name="file" accept="application/pdf" required>
+          <button class="btn small" type="submit">Télécharger</button>
+        </form>
+      </div>
+
+      <div class="docrow">
+        <div class="docmeta">
+          <div class="label">Photo d’identité</div>
+          <div class="muted">JPEG ou PNG</div>
+          {% if photo_doc and photo_doc.file %}
+            <div class="oktag">✅ Enregistré</div>
+          {% endif %}
+        </div>
+
+        <form action="/espace/{{ token }}/documents/photo/upload" method="post" enctype="multipart/form-data">
+          <input type="file" name="file" accept="image/jpeg,image/png" required>
+          <button class="btn small" type="submit">Télécharger</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Encadré 4 : diplômes et attestations -->
+    <div class="card" style="grid-column:1/-1;">
+      <h2>Mes diplômes et attestations</h2>
+      <div class="muted">Quand l’administration dépose un document, il apparaît ici.</div>
+
+      {% set d = trainee.deliverables or {} %}
+
+      <div class="docrow">
+        <div class="docmeta"><div class="label">Ma carte SST</div></div>
+        {% if d.get('carte_sst') %}
+          <a class="btn outline small" target="_blank" href="/admin/uploads/{{ d.get('carte_sst') }}">Voir</a>
+        {% else %}
+          <span class="pill gray">Prochainement</span>
+        {% endif %}
+      </div>
+
+      <div class="docrow">
+        <div class="docmeta"><div class="label">Mon diplôme</div></div>
+        {% if d.get('diplome') %}
+          <a class="btn outline small" target="_blank" href="/admin/uploads/{{ d.get('diplome') }}">Voir</a>
+        {% else %}
+          <span class="pill gray">Prochainement</span>
+        {% endif %}
+      </div>
+
+      <div class="docrow">
+        <div class="docmeta"><div class="label">Mes attestations de fin de formation</div></div>
+        {% if d.get('attestation_fin_formation') %}
+          <a class="btn outline small" target="_blank" href="/admin/uploads/{{ d.get('attestation_fin_formation') }}">Voir</a>
+        {% else %}
+          <span class="pill gray">Prochainement</span>
+        {% endif %}
+      </div>
+    </div>
+
   </div>
 </div>
+
+<script>
+  const token = "{{ token }}";
+
+  function flashSaved(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.add("show");
+    setTimeout(()=>el.classList.remove("show"), 1200);
+  }
+
+  let tmr = null;
+  function autosave(){
+    clearTimeout(tmr);
+    tmr = setTimeout(async ()=>{
+      const carte_vitale = document.getElementById("carte_vitale").value;
+      const pre_number = document.getElementById("pre_number").value;
+
+      const r = await fetch(`/espace/${token}/infos/update`, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({carte_vitale, pre_number})
+      });
+
+      if(r.ok){
+        flashSaved("saved_carte");
+        flashSaved("saved_pre");
+      }
+    }, 400);
+  }
+
+  document.getElementById("carte_vitale").addEventListener("input", autosave);
+  document.getElementById("pre_number").addEventListener("input", autosave);
+</script>
 
 {% endblock %}
