@@ -38,7 +38,11 @@ BREVO_SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL", "ecole@integraleacadem
 BREVO_SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "Intégrale Academy")
 CNAPS_LOOKUP_ENDPOINT = os.environ.get("CNAPS_LOOKUP_ENDPOINT", "")
 
-PUBLIC_STUDENT_PORTAL_BASE = os.environ.get("PUBLIC_STUDENT_PORTAL_BASE", "https://example.com/espace-stagiaire")
+PUBLIC_STUDENT_PORTAL_BASE = os.environ.get(
+    "PUBLIC_STUDENT_PORTAL_BASE",
+    "https://gestionstagiaires-r5no.onrender.com"
+)
+
 
 CNAPS_STATUS_ENDPOINT = os.environ.get("CNAPS_STATUS_ENDPOINT", "")
 HEBERGEMENT_STATUS_ENDPOINT = os.environ.get("HEBERGEMENT_STATUS_ENDPOINT", "")
@@ -59,7 +63,14 @@ def load_data() -> Dict[str, Any]:
         return base
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+
+        # ✅ Assure que tous les stagiaires ont un public_token
+        if ensure_public_tokens(data):
+            save_data(data)
+
+        return data
+
     except Exception:
         try:
             backup = DATA_FILE + ".corrupt." + str(int(datetime.datetime.utcnow().timestamp()))
@@ -69,6 +80,7 @@ def load_data() -> Dict[str, Any]:
         base = {"sessions": []}
         save_data(base)
         return base
+
 
 
 def save_data(data: Dict[str, Any]) -> None:
@@ -83,6 +95,21 @@ def find_session(data: Dict[str, Any], session_id: str) -> Optional[Dict[str, An
         if s.get("id") == session_id:
             return s
     return None
+
+
+def ensure_public_tokens(data):
+    changed = False
+
+    for session in data.get("sessions", []):
+        trainees = session.get("trainees") or session.get("stagiaires") or []
+
+        for trainee in trainees:
+            if "public_token" not in trainee or not trainee["public_token"]:
+                trainee["public_token"] = uuid.uuid4().hex
+                changed = True
+
+    return changed
+
 
 
 def find_trainee(session: Dict[str, Any], trainee_id: str) -> Optional[Dict[str, Any]]:
@@ -840,7 +867,7 @@ def admin_send_access(session_id: str, trainee_id: str):
     if not t:
         abort(404)
 
-    link = f"{PUBLIC_STUDENT_PORTAL_BASE}?token={t.get('public_token','')}"
+    link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
     subject = "Accès à votre espace stagiaire – Intégrale Academy"
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
@@ -969,7 +996,7 @@ def admin_docs_notify(session_id: str, trainee_id: str):
     if not t:
         abort(404)
 
-    link = f"{PUBLIC_STUDENT_PORTAL_BASE}?token={t.get('public_token','')}"
+    link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
     subject = "Documents à transmettre – Intégrale Academy"
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
@@ -1003,7 +1030,7 @@ def admin_docs_nonconform_notify(session_id: str, trainee_id: str):
     if not t:
         abort(404)
 
-    link = f"{PUBLIC_STUDENT_PORTAL_BASE}?token={t.get('public_token','')}"
+    link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
     details = docs_summary_text(t)
 
     subject = "Documents non conformes – Action requise"
@@ -1041,7 +1068,7 @@ def admin_docs_relance(session_id: str, trainee_id: str):
     if not t:
         abort(404)
 
-    link = f"{PUBLIC_STUDENT_PORTAL_BASE}?token={t.get('public_token','')}"
+    link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
     details = docs_summary_text(t)
 
     subject = "Relance – Documents à transmettre / corriger"
@@ -1185,7 +1212,7 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
     t["deliverables"][kind] = token
     t["updated_at"] = _now_iso()
 
-    link = f"{PUBLIC_STUDENT_PORTAL_BASE}?token={t.get('public_token','')}"
+    link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
     label = DELIVERABLE_LABELS[kind]
 
     subject = f"{label} disponible – Intégrale Academy"
@@ -1207,6 +1234,40 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
     s["trainees"] = trainees
     save_data(data)
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+
+
+def find_session_and_trainee_by_token(data, token: str):
+    # data["sessions"] attendu: liste de sessions avec "id" + "trainees" (ou "stagiaires")
+    sessions = data.get("sessions", [])
+    for s in sessions:
+        trainees = s.get("trainees") or s.get("stagiaires") or []
+        for t in trainees:
+            if (t.get("public_token") or "") == token:
+                return s, t
+    return None, None
+
+@app.get("/espace/<token>")
+def public_trainee_space(token):
+    data = load_data()  # <- tu as déjà cette fonction dans ton app
+    session, trainee = find_session_and_trainee_by_token(data, token)
+
+    if not session or not trainee:
+        abort(404)
+
+    training_type = (session.get("training_type") or "").upper()
+
+    show_hosting = (training_type == "A3P")
+    show_vae = ("VAE" in training_type)  # ex: "DIRIGEANT VAE"
+
+    return render_template(
+        "public_trainee.html",
+        session=session,
+        trainee=trainee,
+        show_hosting=show_hosting,
+        show_vae=show_vae,
+    )
+  
 
 
 # =========================
