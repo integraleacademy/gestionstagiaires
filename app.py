@@ -14,6 +14,40 @@ from docx import Document
 
 app = Flask(__name__)
 
+from datetime import datetime
+
+def fr_date(value: str) -> str:
+    """Convertit 'YYYY-MM-DD' -> 'DD/MM/YYYY' (sinon renvoie tel quel)."""
+    s = (value or "").strip()
+    if not s:
+        return ""
+    # ex: 2026-01-01
+    try:
+        dt = datetime.strptime(s[:10], "%Y-%m-%d")
+        return dt.strftime("%d/%m/%Y")
+    except Exception:
+        return value  # si déjà bon ou autre format
+
+def fr_datetime(value: str) -> str:
+    """Convertit 'YYYY-MM-DDTHH:MM...' ou 'YYYY-MM-DD HH:MM' -> 'DD/MM/YYYY HH:MM'."""
+    s = (value or "").strip()
+    if not s:
+        return ""
+    # On tente plusieurs formats
+    for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            dt = datetime.strptime(s[:len(fmt)], fmt)
+            return dt.strftime("%d/%m/%Y %H:%M")
+        except Exception:
+            pass
+    # fallback: au moins la date
+    return fr_date(s)
+
+# ✅ Filtres utilisables dans tous tes templates
+app.add_template_filter(fr_date, "frdate")
+app.add_template_filter(fr_datetime, "frdatetime")
+
+
 # =========================
 # Persistent disk (Render)
 # =========================
@@ -1053,7 +1087,7 @@ def admin_etiquette_docx(session_id: str, trainee_id: str):
         "{{PRENOM}}": t.get("first_name", ""),
         "{{FORMATION}}": _session_get(s, "name", ""),
         "{{TYPE_FORMATION}}": training_type,
-        "{{DATES}}": f"{_session_get(s,'date_start','')} → {_session_get(s,'date_end','')}",
+        "{{DATES}}": f"{fr_date(_session_get(s,'date_start',''))} → {fr_date(_session_get(s,'date_end',''))}",
     }
 
     _replace_in_docx(doc, replacements)
