@@ -1279,15 +1279,15 @@ def public_infos_update(token: str):
 
     payload = request.get_json(silent=True) or {}
 
-    # Champs "Infos à compléter"
+    # Champs existants
     t["carte_vitale"] = (payload.get("carte_vitale") or "").strip()
     t["pre_number"] = (payload.get("pre_number") or "").strip()
 
-    t["birth_date"] = (payload.get("birth_date") or "").strip()         # YYYY-MM-DD
+    # Nouveaux champs
+    t["birth_date"] = (payload.get("birth_date") or "").strip()          # ex: 1998-04-23
     t["birth_city"] = (payload.get("birth_city") or "").strip()
     t["birth_country"] = (payload.get("birth_country") or "").strip()
     t["nationality"] = (payload.get("nationality") or "").strip()
-
     t["address"] = (payload.get("address") or "").strip()
     t["zip_code"] = (payload.get("zip_code") or "").strip()
     t["city"] = (payload.get("city") or "").strip()
@@ -1295,6 +1295,7 @@ def public_infos_update(token: str):
     t["updated_at"] = _now_iso()
     save_data(data)
     return jsonify({"ok": True})
+
 
 
 @app.post("/espace/<token>/documents/<doc_key>/upload")
