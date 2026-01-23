@@ -62,6 +62,13 @@
 
       <form method="post" action="{{ url_for('admin_send_access', session_id=session.id, trainee_id=trainee.id) }}">
         <button class="btn btn-primary" type="submit">📩 Envoyer accès espace stagiaire</button>
+        <a class="btn btn-outline"
+   href="{{ PUBLIC_STUDENT_PORTAL_BASE.rstrip('/') }}/espace/{{ trainee.public_token }}"
+   target="_blank"
+   rel="noopener">
+  👁️ Voir espace stagiaire (public)
+</a>
+
       </form>
     </div>
   </div>
