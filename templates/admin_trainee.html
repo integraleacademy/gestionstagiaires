@@ -121,6 +121,46 @@
     {% endif %}
   </div>
 
+  <!-- ===================== -->
+<!-- CONVENTION            -->
+<!-- ===================== -->
+<div class="card">
+  <div class="card-head">
+    <div>Convention</div>
+
+    {% set cs = (trainee.convention_status or "soon") %}
+    {% set cs_label = (
+      "PROCHAINEMENT" if cs=="soon"
+      else ("EN COURS DE SIGNATURE" if cs=="signing" else "SIGNÉE")
+    ) %}
+
+    <span class="pill
+      {% if cs=="soon" %}pill-gray
+      {% elif cs=="signing" %}pill-orange
+      {% else %}pill-green
+      {% endif %}">
+      {{ cs_label }}
+    </span>
+  </div>
+
+  <div class="hint" style="margin-bottom:8px;">
+    Avancement de la convention de formation.
+  </div>
+
+  <select id="conventionSelect" class="status-pill">
+    <option value="soon" {% if cs=="soon" %}selected{% endif %}>
+      PROCHAINEMENT
+    </option>
+    <option value="signing" {% if cs=="signing" %}selected{% endif %}>
+      EN COURS DE SIGNATURE
+    </option>
+    <option value="signed" {% if cs=="signed" %}selected{% endif %}>
+      SIGNÉE
+    </option>
+  </select>
+</div>
+
+
 
   <!-- ===================== -->
   <!-- DOCUMENTS              -->
@@ -350,6 +390,24 @@
 
 
 <script>
+
+  function toClassSafe(s){
+  return (s || "").toString().trim().toLowerCase().replace(/\s+/g,"_");
+}
+
+function applyStatusPill(selectEl){
+  if(!selectEl) return;
+  selectEl.classList.add("status-pill");
+
+  [...selectEl.classList].forEach(c=>{
+    if(c.startsWith("is-")) selectEl.classList.remove(c);
+  });
+
+  const v = toClassSafe(selectEl.value);
+  if(v) selectEl.classList.add("is-" + v);
+  else selectEl.classList.add("is-soon");
+}
+
   // util modal (si ton base.html fournit déjà openModal/closeModal, ça marchera aussi)
   function openModal(id){ document.getElementById(id).setAttribute("aria-hidden","false"); document.getElementById(id).classList.add("show"); }
   function closeModal(id){ document.getElementById(id).setAttribute("aria-hidden","true"); document.getElementById(id).classList.remove("show"); }
@@ -470,6 +528,35 @@
       }
     });
   }
+
+  // =========================
+// Convention status update
+// =========================
+
+const conventionSelect = document.getElementById("conventionSelect");
+
+if(conventionSelect){
+  applyStatusPill(conventionSelect); // ✅ couleur au chargement
+
+  conventionSelect.addEventListener("change", async ()=>{
+    applyStatusPill(conventionSelect); // ✅ couleur immédiate
+
+    const value = conventionSelect.value;
+
+    try{
+      await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ convention_status: value })
+      });
+      window.location.reload();
+    }catch(e){
+      alert("Erreur sauvegarde convention");
+    }
+  });
+}
+
+  
 
 </script>
 
