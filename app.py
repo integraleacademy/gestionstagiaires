@@ -66,10 +66,20 @@ def load_data() -> Dict[str, Any]:
             data = json.load(f)
 
         # ✅ Assure que tous les stagiaires ont un public_token
+        changed = False
+
         if ensure_public_tokens(data):
+            changed = True
+
+        # ✅ IMPORTANT : normalise en "trainees" partout (sinon admin/public désynchronisés)
+        if normalize_sessions_schema(data):
+            changed = True
+
+        if changed:
             save_data(data)
 
         return data
+
 
     except Exception:
         try:
@@ -80,6 +90,7 @@ def load_data() -> Dict[str, Any]:
         base = {"sessions": []}
         save_data(base)
         return base
+
 
 
 
@@ -248,6 +259,21 @@ def session_is_conform(session: Dict[str, Any]) -> bool:
     if not trainees:
         return False
     return all(trainee_is_conform(t, training_type) for t in trainees)
+
+def normalize_sessions_schema(data: Dict[str, Any]) -> bool:
+    changed = False
+    for s in data.get("sessions", []):
+        # Si pas de trainees, on convertit depuis stagiaires
+        if "trainees" not in s or not isinstance(s.get("trainees"), list):
+            s["trainees"] = _session_trainees_list(s)
+            changed = True
+
+        # On supprime l’ancienne clé pour éviter 2 sources
+        if "stagiaires" in s:
+            s.pop("stagiaires", None)
+            changed = True
+
+    return changed
 
 
 def compute_stats(session: Dict[str, Any]) -> Dict[str, Any]:
@@ -1300,7 +1326,7 @@ def public_infos_update(token: str):
 
 @app.post("/espace/<token>/documents/<doc_key>/upload")
 def public_doc_upload(token: str, doc_key: str):
-    if doc_key not in ("id", "photo"):
+    if doc_key not in ("id", "dom", "photo"):
         abort(404)
 
     data = load_data()
@@ -1314,7 +1340,7 @@ def public_doc_upload(token: str, doc_key: str):
 
     # ✅ restrictions strictes
     ext = _safe_ext(f.filename)
-    if doc_key == "id" and ext != ".pdf":
+    if doc_key in ("id", "dom") and ext != ".pdf":
         return redirect(url_for("public_trainee_space", token=token))
     if doc_key == "photo" and ext not in (".jpg", ".jpeg", ".png"):
         return redirect(url_for("public_trainee_space", token=token))
@@ -1337,14 +1363,14 @@ def public_doc_upload(token: str, doc_key: str):
     for d in t["documents"]:
         if d.get("key") == doc_key:
             d["file"] = token_path
-            # statut reste "A CONTRÔLER" => c’est l’admin qui valide
             break
 
     t["updated_at"] = _now_iso()
     t["dossier_status"] = "complete" if dossier_is_complete(t) else "incomplete"
-
     save_data(data)
+
     return redirect(url_for("public_trainee_space", token=token))
+
 
 
 
