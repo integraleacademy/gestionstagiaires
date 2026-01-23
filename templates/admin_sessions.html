@@ -6,6 +6,18 @@
   <button class="btn btn-primary" id="btnOpenCreateSession">+ Nouvelle session</button>
 </div>
 
+<div class="card" style="margin-bottom:12px;">
+  <div class="card-row" style="justify-content:space-between;align-items:center;">
+    <div>
+      <div class="card-title">Documents à contrôler</div>
+      <div class="muted">Liste des stagiaires avec des documents “A CONTRÔLER”.</div>
+    </div>
+    <button class="btn btn-primary" id="btnOpenDocsToControl">Voir</button>
+  </div>
+  <div class="muted" id="docsToControlCount" style="margin-top:8px;">Chargement…</div>
+</div>
+
+
 <div class="grid cards" id="sessionsGrid">
   {% for s in sessions %}
   <div class="card">
@@ -83,8 +95,27 @@
   </div>
 </div>
 
+<!-- MODALE DOCS A CONTROLER -->
+<div class="modal-backdrop" id="docsToControlModal" aria-hidden="true">
+  <div class="modal" style="max-width:780px;">
+    <div class="modal-head">
+      <div class="modal-title">Documents à contrôler</div>
+      <button class="icon-btn" data-close-modal="docsToControlModal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div id="docsToControlList" class="muted">Chargement…</div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" data-close-modal="docsToControlModal">Fermer</button>
+    </div>
+  </div>
+</div>
+
+
 <script>
-  // open modal
+  // open modal (create session)
   document.getElementById("btnOpenCreateSession")?.addEventListener("click", ()=>{
     openModal("createSessionModal");
   });
@@ -115,7 +146,6 @@
       const res = await r.json();
       if(!r.ok || !res.ok){
         alert("Erreur création session");
-        btn.disabled = false;
         return;
       }
       window.location.reload();
@@ -139,7 +169,6 @@
         const res = await r.json();
         if(!r.ok || !res.ok){
           alert("Erreur suppression session");
-          btn.disabled = false;
           return;
         }
         window.location.reload();
@@ -150,6 +179,89 @@
       }
     });
   });
+
+  // =========================
+  // Docs à contrôler (modal)
+  // =========================
+  async function loadDocsToControl(){
+    const countEl = document.getElementById("docsToControlCount");
+    const listEl  = document.getElementById("docsToControlList");
+
+    if(countEl) countEl.textContent = "Chargement…";
+    if(listEl) listEl.textContent = "Chargement…";
+
+    try{
+      const r = await fetch("/api/docs_to_control");
+      const res = await r.json();
+
+      if(!r.ok || !res.ok){
+        if(countEl) countEl.textContent = "Erreur chargement.";
+        if(listEl) listEl.textContent = "Erreur chargement.";
+        return;
+      }
+
+      const items = res.items || [];
+      if(countEl) countEl.textContent = `${items.length} stagiaire(s) avec documents à contrôler`;
+
+      if(!listEl) return;
+
+      if(items.length === 0){
+        listEl.innerHTML = `<div class="pill green">✅ Aucun document à contrôler</div>`;
+        return;
+      }
+
+      listEl.innerHTML = `
+        <div class="table-wrap" style="margin-top:6px;">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Stagiaire</th>
+                <th>Session</th>
+                <th>Docs</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(it => {
+                const full = `${(it.first_name||"").toUpperCase()} ${(it.last_name||"").toUpperCase()}`.trim();
+                const sess = `${it.session_name || ""} (${it.training_type || ""})`.trim();
+                const nb = it.pending_count ?? "";
+                const url = `/admin/sessions/${it.session_id}/stagiaires/${it.trainee_id}`;
+                return `
+                  <tr>
+                    <td style="font-weight:900;">${full || "—"}</td>
+                    <td>${sess || "—"}</td>
+                    <td class="mono">${nb}</td>
+                    <td style="text-align:right;">
+                      <a class="btn btn-outline" href="${url}" style="text-decoration:none;display:inline-block">
+                        Ouvrir la fiche
+                      </a>
+                    </td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }catch(e){
+      if(countEl) countEl.textContent = "Erreur réseau.";
+      if(listEl) listEl.textContent = "Erreur réseau.";
+    }
+  }
+
+  // bouton "Voir"
+  document.getElementById("btnOpenDocsToControl")?.addEventListener("click", async ()=>{
+    openModal("docsToControlModal");
+    await loadDocsToControl();
+  });
+
+  // charge le compteur dès l'ouverture
+  window.addEventListener("load", ()=>{
+    loadDocsToControl();
+  });
 </script>
+
+
 
 {% endblock %}
