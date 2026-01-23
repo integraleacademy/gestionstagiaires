@@ -75,8 +75,19 @@
   
 </style>
 
-{% set training_type = (session.training_type or '') %}
-{% set formation_name = (session.name or session.training_type or '') %}
+{% set tt = (session.training_type or '')|string|upper %}
+
+{% if 'A3P' in tt %}
+  {% set formation_label = "Agent de protection physique des personnes (A3P)" %}
+{% elif 'APS' in tt %}
+  {% set formation_label = "Agent de prévention et de sécurité (APS)" %}
+{% elif 'DIRIGEANT' in tt or 'DESP' in tt %}
+  {% set formation_label = "Dirigeant d'entreprise de sécurité (DESP)" %}
+{% else %}
+  {# fallback : nom de session si tu l’as, sinon training_type #}
+  {% set formation_label = (session.name or session.training_type or "—") %}
+{% endif %}
+
 
 {# helpers de couleur pour statuts #}
 {% macro pill_for(kind, value) %}
@@ -203,9 +214,15 @@
         <div class="value">{{ trainee.first_name }}</div>
       </div>
       <div class="line">
-        <div class="label">Formation</div>
-        <div class="value">{{ formation_name }}</div>
-      </div>
+  <div class="label">Formation</div>
+  <div class="value">{{ formation_label }}</div>
+</div>
+      <div class="line">
+  <div class="label">Type</div>
+  <div class="value">{{ session.training_type }}</div>
+</div>
+
+
       <div class="line">
         <div class="label">Dates de formation</div>
         <div class="value">{{ session.date_start|frdate }} → {{ session.date_end|frdate }}</div>
