@@ -232,21 +232,72 @@
     </div>
 
     <!-- Encadré : infos à compléter (autosave) -->
-    <div class="card">
-      <h2>Infos à compléter</h2>
-      <div class="muted">Ces informations se sauvegardent automatiquement.</div>
+<div class="card">
+  <h2>Infos à compléter</h2>
+  <div class="muted" style="margin-bottom:10px;">
+    ⚠️ Ces informations sont <strong>obligatoires</strong>.  
+    Tant qu’un champ est incomplet, il apparaît en <span style="color:#b91c1c;font-weight:900;">rouge</span>.
+  </div>
 
-      <div class="field">
-        <label class="label">Numéro de carte vitale</label>
-        <input id="carte_vitale" value="{{ trainee.carte_vitale or '' }}" placeholder="Ex : 1 85 12 34 567 890 12">
-        <span id="saved_carte" class="saved">✅ Enregistré</span>
-      </div>
+  {% macro field(label, id, value, placeholder) %}
+    {% set ok = value and value|length > 3 %}
+    <div class="field" style="border-left:4px solid {{ '#16a34a' if ok else '#dc2626' }};padding-left:10px;">
+      <label class="label">{{ label }}</label>
+      <input id="{{ id }}" value="{{ value or '' }}" placeholder="{{ placeholder }}">
+      {% if ok %}
+        <span class="saved show">✅ Enregistré</span>
+      {% else %}
+        <span class="saved show" style="color:#dc2626;">❌ À compléter</span>
+      {% endif %}
+    </div>
+  {% endmacro %}
 
-      <div class="field">
-        <label class="label">Numéro PRE</label>
-        <input id="pre_number" value="{{ trainee.pre_number or '' }}" placeholder="Ex : PRE-XXXXXX">
-        <span id="saved_pre" class="saved">✅ Enregistré</span>
-      </div>
+  {{ field("Numéro de sécurité sociale",
+           "carte_vitale",
+           trainee.carte_vitale,
+           "Ex : 1 85 12 34 567 890 12") }}
+
+  {{ field("Numéro PRE",
+           "pre_number",
+           trainee.pre_number,
+           "Ex : PRE-083-2025-12-01-20250000000 ou CAR-083-2025-12-01-20250000000") }}
+
+  {{ field("Date de naissance",
+           "birth_date",
+           trainee.birth_date,
+           "Ex : 1998-04-23") }}
+
+  {{ field("Ville de naissance",
+           "birth_city",
+           trainee.birth_city,
+           "Ex : Marseille") }}
+
+  {{ field("Pays de naissance",
+           "birth_country",
+           trainee.birth_country,
+           "Ex : France") }}
+
+  {{ field("Nationalité",
+           "nationality",
+           trainee.nationality,
+           "Ex : Française") }}
+
+  {{ field("Adresse postale",
+           "address",
+           trainee.address,
+           "Ex : 12 rue de la République") }}
+
+  {{ field("Code postal",
+           "zip_code",
+           trainee.zip_code,
+           "Ex : 75001") }}
+
+  {{ field("Ville",
+           "city",
+           trainee.city,
+           "Ex : Paris") }}
+</div>
+
     </div>
 
     <!-- Encadré STATUT VAE (si DIRIGEANT VAE) -->
