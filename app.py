@@ -1264,10 +1264,76 @@ def public_trainee_space(token):
         "public_trainee.html",
         session=session,
         trainee=trainee,
+        token=token,
         show_hosting=show_hosting,
         show_vae=show_vae,
     )
-  
+
+
+  @app.post("/espace/<token>/infos/update")
+def public_infos_update(token: str):
+    data = load_data()
+    s, t = find_session_and_trainee_by_token(data, token)
+    if not s or not t:
+        return jsonify({"ok": False}), 404
+
+    payload = request.get_json(silent=True) or {}
+    t["carte_vitale"] = (payload.get("carte_vitale") or "").strip()
+    t["pre_number"] = (payload.get("pre_number") or "").strip()
+    t["updated_at"] = _now_iso()
+
+    save_data(data)
+    return jsonify({"ok": True})
+
+
+@app.post("/espace/<token>/documents/<doc_key>/upload")
+def public_doc_upload(token: str, doc_key: str):
+    if doc_key not in ("id", "photo"):
+        abort(404)
+
+    data = load_data()
+    s, t = find_session_and_trainee_by_token(data, token)
+    if not s or not t:
+        abort(404)
+
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return redirect(url_for("public_trainee_space", token=token))
+
+    # ✅ restrictions strictes
+    ext = _safe_ext(f.filename)
+    if doc_key == "id" and ext != ".pdf":
+        return redirect(url_for("public_trainee_space", token=token))
+    if doc_key == "photo" and ext not in (".jpg", ".jpeg", ".png"):
+        return redirect(url_for("public_trainee_space", token=token))
+
+    session_id = s.get("id")
+    trainee_id = t.get("id")
+    if not session_id or not trainee_id:
+        abort(500)
+
+    stored = _store_file(session_id, trainee_id, "public_documents", f)
+    token_path = _tokenize_path(stored)
+
+    # assure documents list
+    t.setdefault("documents", [
+        {"key":"id","label":"Pièce d'identité","status":"A CONTRÔLER","comment":"","file":""},
+        {"key":"dom","label":"Justificatif de domicile (-3 mois)","status":"A CONTRÔLER","comment":"","file":""},
+        {"key":"photo","label":"Photo d'identité","status":"A CONTRÔLER","comment":"","file":""},
+    ])
+
+    for d in t["documents"]:
+        if d.get("key") == doc_key:
+            d["file"] = token_path
+            # statut reste "A CONTRÔLER" => c’est l’admin qui valide
+            break
+
+    t["updated_at"] = _now_iso()
+    t["dossier_status"] = "complete" if dossier_is_complete(t) else "incomplete"
+
+    save_data(data)
+    return redirect(url_for("public_trainee_space", token=token))
+
 
 
 # =========================
