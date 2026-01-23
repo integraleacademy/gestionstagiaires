@@ -411,6 +411,10 @@
       <div class="muted">Quand l’administration dépose un document, il apparaît ici.</div>
 
       {% set d = trainee.deliverables or {} %}
+      <div class="hint" style="margin-top:10px;">
+  DEBUG deliverables : <span class="mono">{{ d }}</span>
+</div>
+
 
       <div class="docrow">
         <div class="docmeta"><div class="label">Ma carte SST</div></div>
