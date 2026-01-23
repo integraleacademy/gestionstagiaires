@@ -208,11 +208,11 @@
       </div>
       <div class="line">
         <div class="label">Dates de formation</div>
-        <div class="value">{{ session.date_start }} → {{ session.date_end }}</div>
+        <div class="value">{{ session.date_start|frdate }} → {{ session.date_end|frdate }}</div>
       </div>
       <div class="line">
         <div class="label">Date d’examen</div>
-        <div class="value">{{ session.exam_date }}</div>
+        <div class="value">{{ session.exam_date|frdate }}</div>
       </div>
     </div>
 
