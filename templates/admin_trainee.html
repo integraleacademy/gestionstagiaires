@@ -15,8 +15,9 @@
     <div class="meta-line">
       <span class="pill">{{ session.training_type }}</span>
       <span>Session : <strong>{{ session.name }}</strong></span>
-      <span>Formation : <strong>{{ session.date_start }}</strong> → <strong>{{ session.date_end }}</strong></span>
-      <span>Examen : <strong>{{ session.exam_date }}</strong></span>
+      <span>Formation : <strong>{{ session.date_start|frdate }}</strong> → <strong>{{ session.date_end|frdate }}</strong></span>
+      <span>Examen : <strong>{{ session.exam_date|frdate }}</strong></span>
+
     </div>
   </div>
 </div>
