@@ -1270,7 +1270,7 @@ def public_trainee_space(token):
     )
 
 
-  @app.post("/espace/<token>/infos/update")
+@app.post("/espace/<token>/infos/update")
 def public_infos_update(token: str):
     data = load_data()
     s, t = find_session_and_trainee_by_token(data, token)
