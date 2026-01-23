@@ -337,6 +337,113 @@ ENUMS = {
     "vae": ["soon", "in_progress", "validated"],
 }
 
+# =========================
+# Documents requis par formation
+# =========================
+
+REQUIRED_DOCS = {
+    "COMMON": [
+        {"key": "id", "label": "Carte d’identité recto/verso ou titre de séjour", "accept": "application/pdf"},
+        {"key": "photo", "label": "Photo d’identité officielle", "accept": "image/jpeg,image/png"},
+        {"key": "carte_vitale_doc", "label": "Carte vitale", "accept": "application/pdf"},
+        {"key": "cnaps_doc", "label": "Autorisation CNAPS ou carte professionnelle (en cours de validité)", "accept": "application/pdf"},
+    ],
+    "A3P_ONLY": [
+        {"key": "permis", "label": "Permis de conduire (obligatoire sauf si vous n’avez pas le permis)", "accept": "application/pdf"},
+        {"key": "certif_med", "label": "Certificat médical (-3 mois)", "accept": "application/pdf"},
+        {"key": "assurance_rc", "label": "Attestation d’assurance responsabilité civile", "accept": "application/pdf"},
+    ],
+}
+
+def required_docs_for_training(training_type: str) -> List[Dict[str, Any]]:
+    tt = (training_type or "").strip().upper()
+    docs = list(REQUIRED_DOCS["COMMON"])
+    if tt == "A3P":
+        docs += list(REQUIRED_DOCS["A3P_ONLY"])
+    return docs
+
+def ensure_documents_schema_for_trainee(t: Dict[str, Any], training_type: str) -> bool:
+    """
+    S'assure que t["documents"] contient tous les docs requis pour la formation,
+    sans écraser fichiers/statuts existants. Supprime l'ancien doc 'dom' (domicile).
+    """
+    required = required_docs_for_training(training_type)
+    existing = t.get("documents") or []
+    changed = False
+
+    # index existant
+    by_key = {d.get("key"): d for d in existing if isinstance(d, dict) and d.get("key")}
+
+    out = []
+    for rd in required:
+        k = rd["key"]
+        if k in by_key:
+            d = by_key[k]
+            # complète sans casser
+            if not d.get("label"):
+                d["label"] = rd["label"]; changed = True
+            if "accept" not in d:
+                d["accept"] = rd.get("accept", ""); changed = True
+            if "status" not in d:
+                d["status"] = "NON DÉPOSÉ"; changed = True
+            if "comment" not in d:
+                d["comment"] = ""; changed = True
+            if "file" not in d:
+                d["file"] = ""; changed = True
+            out.append(d)
+        else:
+            out.append({
+                "key": k,
+                "label": rd["label"],
+                "accept": rd.get("accept", ""),
+                "status": "NON DÉPOSÉ",
+                "comment": "",
+                "file": "",
+            })
+            changed = True
+
+    # 🔥 on vire dom (plus utilisé)
+    if "dom" in by_key:
+        changed = True
+
+    t["documents"] = out
+    return changed
+
+def allowed_doc_keys_for_training(training_type: str) -> set:
+    return {d["key"] for d in required_docs_for_training(training_type)}
+
+def dossier_is_complete(trainee: Dict[str, Any], training_type: str) -> bool:
+    """
+    Complet si TOUS les docs requis sont CONFORME,
+    sauf permis si trainee a coché no_permis=True (A3P).
+    """
+    docs = trainee.get("documents") or []
+    if not docs:
+        return False
+
+    by_key = {d.get("key"): d for d in docs if isinstance(d, dict)}
+
+    tt = (training_type or "").strip().upper()
+    no_permis = bool(trainee.get("no_permis"))  # checkbox "je n'ai pas le permis"
+
+    for rd in required_docs_for_training(training_type):
+        k = rd["key"]
+
+        # permis optionnel si no_permis
+        if tt == "A3P" and k == "permis" and no_permis:
+            continue
+
+        d = by_key.get(k)
+        if not d:
+            return False
+
+        st = (d.get("status") or "").strip().upper()
+        if st != "CONFORME":
+            return False
+
+    return True
+
+
 
 # =========================
 # Pages (templates)
@@ -526,15 +633,17 @@ def api_create_trainee(session_id: str):
 
         "public_token": uuid.uuid4().hex,
 
-        "documents": [
-            {"key": "id", "label": "Pièce d'identité", "status": "NON DÉPOSÉ", "comment": "", "file": ""},
-            {"key": "dom", "label": "Justificatif de domicile (-3 mois)", "status": "NON DÉPOSÉ", "comment": "", "file": ""},
-            {"key": "photo", "label": "Photo d'identité", "status": "NON DÉPOSÉ", "comment": "", "file": ""},
-        ],
-
+        # ✅ on ne met plus le vieux trio id/dom/photo : on génère selon REQUIRED_DOCS
+        "documents": [],
 
         "created_at": _now_iso(),
     }
+
+    # ✅ construit les docs requis (COMMON + A3P_ONLY si A3P) et retire l'ancien "dom"
+    ensure_documents_schema_for_trainee(t, training_type)
+
+    # ✅ calcule dossier_status au départ (complet si tous les docs requis sont CONFORME)
+    t["dossier_status"] = "complete" if dossier_is_complete(t, training_type) else "incomplete"
 
     trainees = _session_trainees_list(s)
     trainees.insert(0, t)
@@ -542,6 +651,7 @@ def api_create_trainee(session_id: str):
     s.pop("stagiaires", None)
     save_data(data)
     return jsonify({"ok": True, "id": trainee_id})
+
 
 
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/update")
@@ -708,10 +818,20 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
     s = find_session(data, session_id)
     if not s:
         abort(404)
+
     trainees = _session_trainees_list(s)
     t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         abort(404)
+
+    training_type = _session_get(s, "training_type", "")
+
+    # ✅ s'assure que la liste de documents correspond à la formation (et supprime dom)
+    ensure_documents_schema_for_trainee(t, training_type)
+
+    # ✅ refuse les doc_key inconnus pour cette formation
+    if doc_key not in allowed_doc_keys_for_training(training_type):
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
     f = request.files.get("file")
     if not f or not f.filename:
@@ -725,49 +845,35 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
     token = _tokenize_path(stored)
 
     docs = t.get("documents") or []
-    found = False
     for d in docs:
         if d.get("key") == doc_key:
             d["file"] = token
-    
-            # ✅ si un fichier est déposé, et que le statut était "NON DÉPOSÉ" (ou vide),
-            # on le passe automatiquement à "A CONTRÔLER"
+
             cur = (d.get("status") or "").strip().upper()
             if cur in ("", "NON DÉPOSÉ", "NON DEPOSÉ", "NON_DEPOSE"):
                 d["status"] = "A CONTRÔLER"
             if d.get("status") == "A CONTROLER":
                 d["status"] = "A CONTRÔLER"
-    
-            found = True
             break
-
-
-    # si doc_key inconnu, on refuse silencieusement
-    if not found:
-        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
     t["updated_at"] = _now_iso()
 
-    # IMPORTANT: recalc dossier_status (voir point 3)
-    t["dossier_status"] = "complete" if dossier_is_complete(t) else "incomplete"
+    # ✅ recalcul dossier_status
+    t["dossier_status"] = "complete" if dossier_is_complete(t, training_type) else "incomplete"
 
     s["trainees"] = trainees
+    s.pop("stagiaires", None)
     save_data(data)
+
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
 
 
 
 # =========================
 # Documents logic
 # =========================
-def dossier_is_complete(trainee: Dict[str, Any]) -> bool:
-    docs = trainee.get("documents") or []
-    if not docs:
-        return False
-    for d in docs:
-        if (d.get("status") or "").upper() != "CONFORME":
-            return False
-    return True
+
 
 def docs_summary_text(trainee: Dict[str, Any]) -> str:
     lines=[]
@@ -1175,8 +1281,9 @@ def api_docs_update(session_id: str, trainee_id: str):
     s = find_session(data, session_id)
     if not s:
         return jsonify({"ok": False, "error": "session_not_found"}), 404
+
     trainees = _session_trainees_list(s)
-    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         return jsonify({"ok": False, "error": "trainee_not_found"}), 404
 
@@ -1185,7 +1292,7 @@ def api_docs_update(session_id: str, trainee_id: str):
     field = payload.get("field")
     value = payload.get("value")
 
-    if field not in ("status","comment"):
+    if field not in ("status", "comment"):
         return jsonify({"ok": False, "error": "invalid_field"}), 400
 
     docs = t.get("documents") or []
@@ -1195,17 +1302,22 @@ def api_docs_update(session_id: str, trainee_id: str):
             break
 
     t["updated_at"] = _now_iso()
-    
+
     # ✅ Synchronisation automatique du statut dossier
-    t["dossier_status"] = "complete" if dossier_is_complete(t) else "incomplete"
-    
+    training_type = _session_get(s, "training_type", "")
+    t["dossier_status"] = "complete" if dossier_is_complete(t, training_type) else "incomplete"
+
+    # ✅ PERSISTENCE (sinon ça se perd au refresh)
     s["trainees"] = trainees
+    s.pop("stagiaires", None)
     save_data(data)
+
     return jsonify({
         "ok": True,
-        "dossier_is_complete": dossier_is_complete(t),
+        "dossier_is_complete": dossier_is_complete(t, training_type),
         "dossier_status": t["dossier_status"]
     })
+
 
 
 
@@ -1337,23 +1449,35 @@ def public_infos_update(token: str):
 
 @app.post("/espace/<token>/documents/<doc_key>/upload")
 def public_doc_upload(token: str, doc_key: str):
-    if doc_key not in ("id", "dom", "photo"):
-        abort(404)
-
     data = load_data()
     s, t = find_session_and_trainee_by_token(data, token)
     if not s or not t:
         abort(404)
 
+    training_type = _session_get(s, "training_type", "")
+    ensure_documents_schema_for_trainee(t, training_type)
+
+    # ✅ doc_key doit être dans la liste requise
+    if doc_key not in allowed_doc_keys_for_training(training_type):
+        return redirect(url_for("public_trainee_space", token=token))
+
     f = request.files.get("file")
     if not f or not f.filename:
         return redirect(url_for("public_trainee_space", token=token))
 
-    # ✅ restrictions strictes
+    # ✅ contrôle extension par doc (accept)
     ext = _safe_ext(f.filename)
-    if doc_key in ("id", "dom") and ext != ".pdf":
+    docs = t.get("documents") or []
+    target = next((d for d in docs if d.get("key") == doc_key), None)
+    if not target:
         return redirect(url_for("public_trainee_space", token=token))
-    if doc_key == "photo" and ext not in (".jpg", ".jpeg", ".png"):
+
+    accept = (target.get("accept") or "").lower()
+
+    # règles simples : pdf / images
+    if "application/pdf" in accept and ext != ".pdf":
+        return redirect(url_for("public_trainee_space", token=token))
+    if "image/" in accept and ext not in (".jpg", ".jpeg", ".png", ".webp"):
         return redirect(url_for("public_trainee_space", token=token))
 
     session_id = s.get("id")
@@ -1364,15 +1488,7 @@ def public_doc_upload(token: str, doc_key: str):
     stored = _store_file(session_id, trainee_id, "public_documents", f)
     token_path = _tokenize_path(stored)
 
-    # assure documents list
-    t.setdefault("documents", [
-        {"key":"id","label":"Pièce d'identité","status":"NON DÉPOSÉ","comment":"","file":""},
-        {"key":"dom","label":"Justificatif de domicile (-3 mois)","status":"NON DÉPOSÉ","comment":"","file":""},
-        {"key":"photo","label":"Photo d'identité","status":"NON DÉPOSÉ","comment":"","file":""},
-    ])
-
-
-    for d in t["documents"]:
+    for d in docs:
         if d.get("key") == doc_key:
             d["file"] = token_path
             cur = (d.get("status") or "").strip().upper()
@@ -1380,11 +1496,14 @@ def public_doc_upload(token: str, doc_key: str):
                 d["status"] = "A CONTRÔLER"
             if d.get("status") == "A CONTROLER":
                 d["status"] = "A CONTRÔLER"
-
             break
 
     t["updated_at"] = _now_iso()
-    t["dossier_status"] = "complete" if dossier_is_complete(t) else "incomplete"
+    t["dossier_status"] = "complete" if dossier_is_complete(t, training_type) else "incomplete"
+
+    # ✅ persistance
+    s["trainees"] = _session_trainees_list(s)
+    s.pop("stagiaires", None)
     save_data(data)
 
     return redirect(url_for("public_trainee_space", token=token))
@@ -1412,24 +1531,24 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     }
 
     trainees = _session_trainees_list(s)
-    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         abort(404)
 
-    # ensure fields exist
-    t.setdefault("documents", [
-        {"key":"id","label":"Pièce d'identité","status":"NON DÉPOSÉ","comment":"","file":""},
-        {"key":"dom","label":"Justificatif de domicile (-3 mois)","status":"NON DÉPOSÉ","comment":"","file":""},
-        {"key":"photo","label":"Photo d'identité","status":"NON DÉPOSÉ","comment":"","file":""},
-    ])
+    training_type = session_view["training_type"]
 
+    # ✅ IMPORTANT : on impose la liste de documents selon la formation (et supprime dom)
+    ensure_documents_schema_for_trainee(t, training_type)
+
+    # ✅ deliverables
     t.setdefault("deliverables", {})
 
-    # file tokens for template links
-    for d in t.get("documents", []):
+    # file tokens for template links (documents)
+    for d in (t.get("documents") or []):
         token = d.get("file") or ""
         d["file_token"] = token
 
+    # deliverables view
     deliverables_view = []
     for k, label in DELIVERABLE_LABELS.items():
         token = (t.get("deliverables", {}) or {}).get(k, "")
@@ -1440,7 +1559,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
             "file_token": token,
         })
 
-    show_vae = (session_view["training_type"] == "DIRIGEANT VAE")
+    show_vae = (training_type == "DIRIGEANT VAE")
     vae_steps = [
         {"key":"livret_1_redaction","label":"Livret 1 en cours de rédaction"},
         {"key":"livret_1_recu","label":"Livret 1 reçu"},
@@ -1453,10 +1572,12 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         {"key":"jury","label":"Passage devant jury"},
     ]
 
-    # dossier status
-    dossier_complete = dossier_is_complete(t)
+    # ✅ dossier_status cohérent avec les docs requis
+    dossier_complete = dossier_is_complete(t, training_type)
+    t["dossier_status"] = "complete" if dossier_complete else "incomplete"
+    t["updated_at"] = _now_iso()
 
-    # persist normalized
+    # ✅ persistance
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     save_data(data)
