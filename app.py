@@ -711,6 +711,7 @@ def api_create_trainee(session_id: str):
     first_name = (payload.get("first_name") or "").strip()
     email = (payload.get("email") or "").strip()
     phone = (payload.get("phone") or "").strip()
+    carte_pro_ok = bool(payload.get("carte_pro_ok"))
 
     if not last_name or not first_name:
         return jsonify({"ok": False, "error": "missing_name"}), 400
@@ -731,7 +732,7 @@ def api_create_trainee(session_id: str):
         "email": email,
         "phone": phone,
         "comment": "",
-        "cnaps": "INCONNU",
+        "cnaps": "CARTE PROFESSIONNELLE OK" if carte_pro_ok else "INCONNU",
         "convention_status": "soon",
         "test_fr_status": "soon",
         "dossier_status": "incomplete",
