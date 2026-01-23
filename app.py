@@ -1398,16 +1398,28 @@ def find_session_and_trainee_by_token(data, token: str):
 
 @app.get("/espace/<token>")
 def public_trainee_space(token):
-    data = load_data()  # <- tu as déjà cette fonction dans ton app
+    data = load_data()
     session, trainee = find_session_and_trainee_by_token(data, token)
 
     if not session or not trainee:
         abort(404)
 
-    training_type = (session.get("training_type") or "").upper()
+    training_type = _session_get(session, "training_type", "")
 
-    show_hosting = (training_type == "A3P")
-    show_vae = ("VAE" in training_type)  # ex: "DIRIGEANT VAE"
+    # ✅ IMPORTANT : on aligne la liste des docs requis (comme côté admin)
+    ensure_documents_schema_for_trainee(trainee, training_type)
+
+    # (optionnel mais pratique si tu veux des liens plus tard)
+    for d in (trainee.get("documents") or []):
+        d["file_token"] = d.get("file") or ""
+
+    show_hosting = ((training_type or "").strip().upper() == "A3P")
+    show_vae = ("VAE" in (training_type or "").upper())
+
+    # ✅ persistance (sinon au prochain affichage ça repart)
+    session["trainees"] = _session_trainees_list(session)
+    session.pop("stagiaires", None)
+    save_data(data)
 
     return render_template(
         "public_trainee.html",
@@ -1417,6 +1429,7 @@ def public_trainee_space(token):
         show_hosting=show_hosting,
         show_vae=show_vae,
     )
+
 
 
 @app.post("/espace/<token>/infos/update")
