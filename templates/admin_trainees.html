@@ -122,12 +122,19 @@
 
         {% if show_vae %}
         <td>
-          <select class="status sel" data-field="vae_status">
-            <option value="soon" {% if t.vae_status=="soon" %}selected{% endif %}>prochainement</option>
-            <option value="in_progress" {% if t.vae_status=="in_progress" %}selected{% endif %}>en cours</option>
-            <option value="validated" {% if t.vae_status=="validated" %}selected{% endif %}>validé</option>
-          </select>
-        </td>
+  <select class="status sel" data-field="vae_status">
+    <option value="soon" {% if t.vae_status=="soon" or not t.vae_status %}selected{% endif %}>
+      PROCHAINEMENT
+    </option>
+    <option value="in_progress" {% if t.vae_status=="in_progress" %}selected{% endif %}>
+      EN COURS
+    </option>
+    <option value="validated" {% if t.vae_status=="validated" %}selected{% endif %}>
+      VALIDÉ
+    </option>
+  </select>
+</td>
+
         {% endif %}
 
         <td>
