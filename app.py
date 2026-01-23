@@ -86,19 +86,39 @@ def brevo_send_email(to_email: str, subject: str, html: str) -> bool:
 def brevo_send_sms(phone: str, message: str) -> bool:
     phone = normalize_phone_fr(phone)
     if not BREVO_API_KEY or not phone:
+        print("[SMS] Missing BREVO_API_KEY or phone")
         return False
+
     url = "https://api.brevo.com/v3/transactionalSMS/sms"
     headers = {
         "accept": "application/json",
         "api-key": BREVO_API_KEY,
         "content-type": "application/json",
     }
-    payload = {"recipient": phone, "content": message, "type": "transactional"}
+
+    # (souvent requis selon config Brevo) : nom d’expéditeur SMS
+    sms_sender = os.environ.get("BREVO_SMS_SENDER", "").strip()
+
+    payload = {
+        "recipient": phone,
+        "content": message,
+        "type": "transactional",
+    }
+    if sms_sender:
+        payload["sender"] = sms_sender  # ex: "INTEGRALE"
+
     try:
         r = requests.post(url, headers=headers, json=payload, timeout=12)
+
+        # ✅ logs indispensables (status + réponse Brevo)
+        print("[SMS] status=", r.status_code)
+        print("[SMS] response=", r.text)
+
         return r.status_code in (200, 201, 202)
-    except Exception:
+    except Exception as e:
+        print("[SMS] exception=", repr(e))
         return False
+
 
 
 # =========================
