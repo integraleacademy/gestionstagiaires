@@ -674,4 +674,11 @@ select.status-pill{
   max-width: 260px;
 }
 
+.pill-gray{
+  background: rgba(148,163,184,.18) !important;  /* --neutral en transparent */
+  border-color: rgba(148,163,184,.30) !important;
+  color: #334155 !important;
+}
+
+
 
