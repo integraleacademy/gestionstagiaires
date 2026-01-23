@@ -356,99 +356,58 @@
   <h2>Mes documents</h2>
   <div class="muted">Déposez vos documents. Un tag s’affiche après contrôle par l’administration.</div>
 
-  {% set docs = trainee.documents or [] %}
-  {% set id_doc = (docs | selectattr("key","equalto","id") | list | first) %}
-  {% set photo_doc = (docs | selectattr("key","equalto","photo") | list | first) %}
+  {% for d in (trainee.documents or []) %}
+    {% set has_file = (d and d.file) %}
+    {% set st = (d.status if d and d.status else ("NON DÉPOSÉ" if not has_file else "A CONTRÔLER")) %}
+    {% set up = (st|string)|upper %}
 
-  {# ===================== #}
-  {# ID (pièce d'identité) #}
-  {# ===================== #}
-  {% set id_has_file = (id_doc and id_doc.file) %}
-  {% set id_status = (id_doc.status if id_doc and id_doc.status else ("NON DÉPOSÉ" if not id_has_file else "A CONTRÔLER")) %}
-  {% set id_up = (id_status|string)|upper %}
-
-  {% set id_row_cls = "missing" %}
-  {% if id_has_file %}
-    {% if id_up == "CONFORME" %}
-      {% set id_row_cls = "" %}
-    {% elif id_up == "NON CONFORME" %}
-      {% set id_row_cls = "missing" %}
-    {% else %}
-      {% set id_row_cls = "pending" %}
-    {% endif %}
-  {% endif %}
-
-  <div class="docrow {{ id_row_cls }}">
-    <div class="docmeta">
-      <div class="label">Carte d’identité recto/verso ou passeport</div>
-      <div class="muted">PDF uniquement</div>
-
-      {% if not id_has_file %}
-        <div class="doctag missing">📌 Document à déposer (obligatoire)</div>
+    {% set row_cls = "missing" %}
+    {% if has_file %}
+      {% if up == "CONFORME" %}
+        {% set row_cls = "" %}
+      {% elif up == "NON CONFORME" %}
+        {% set row_cls = "missing" %}
       {% else %}
-        {% if id_up == "CONFORME" %}
-          <div class="doctag" style="border-color:#bbf7d0;color:#065f46;background:#fff;">✅ Document conforme</div>
-        {% elif id_up == "NON CONFORME" %}
-          <div class="doctag missing">❌ Document non conforme — à remplacer</div>
-        {% else %}
-          <div class="doctag pending">⏳ Document déposé — en attente de contrôle</div>
-        {% endif %}
+        {% set row_cls = "pending" %}
       {% endif %}
-    </div>
-
-    <form action="/espace/{{ token }}/documents/id/upload" method="post" enctype="multipart/form-data">
-      <input type="file" name="file" accept="application/pdf" required>
-      <button class="btn small" type="submit">
-        {% if id_has_file %}Remplacer{% else %}Déposer{% endif %}
-      </button>
-    </form>
-  </div>
-
-  {# ============ #}
-  {# PHOTO ID     #}
-  {# ============ #}
-  {% set photo_has_file = (photo_doc and photo_doc.file) %}
-  {% set photo_status = (photo_doc.status if photo_doc and photo_doc.status else ("NON DÉPOSÉ" if not photo_has_file else "A CONTRÔLER")) %}
-  {% set photo_up = (photo_status|string)|upper %}
-
-  {% set photo_row_cls = "missing" %}
-  {% if photo_has_file %}
-    {% if photo_up == "CONFORME" %}
-      {% set photo_row_cls = "" %}
-    {% elif photo_up == "NON CONFORME" %}
-      {% set photo_row_cls = "missing" %}
-    {% else %}
-      {% set photo_row_cls = "pending" %}
     {% endif %}
-  {% endif %}
 
-  <div class="docrow {{ photo_row_cls }}">
-    <div class="docmeta">
-      <div class="label">Photo d’identité</div>
-      <div class="muted">JPEG ou PNG</div>
+    {% set accept = (d.accept or "") %}
+    {% set hint = "Fichier" %}
+    {% if "application/pdf" in accept %}
+      {% set hint = "PDF uniquement" %}
+    {% elif "image/" in accept %}
+      {% set hint = "JPEG ou PNG" %}
+    {% endif %}
 
-      {% if not photo_has_file %}
-        <div class="doctag missing">📌 Document à déposer (obligatoire)</div>
-      {% else %}
-        {% if photo_up == "CONFORME" %}
-          <div class="doctag" style="border-color:#bbf7d0;color:#065f46;background:#fff;">✅ Document conforme</div>
-        {% elif photo_up == "NON CONFORME" %}
-          <div class="doctag missing">❌ Document non conforme — à remplacer</div>
+    <div class="docrow {{ row_cls }}">
+      <div class="docmeta">
+        <div class="label">{{ d.label }}</div>
+        <div class="muted">{{ hint }}</div>
+
+        {% if not has_file %}
+          <div class="doctag missing">📌 Document à déposer (obligatoire)</div>
         {% else %}
-          <div class="doctag pending">⏳ Document déposé — en attente de contrôle</div>
+          {% if up == "CONFORME" %}
+            <div class="doctag" style="border-color:#bbf7d0;color:#065f46;background:#fff;">✅ Document conforme</div>
+          {% elif up == "NON CONFORME" %}
+            <div class="doctag missing">❌ Document non conforme — à remplacer</div>
+          {% else %}
+            <div class="doctag pending">⏳ Document déposé — en attente de contrôle</div>
+          {% endif %}
         {% endif %}
-      {% endif %}
+      </div>
+
+      <form action="/espace/{{ token }}/documents/{{ d.key }}/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" accept="{{ accept }}" required>
+        <button class="btn small" type="submit">
+          {% if has_file %}Remplacer{% else %}Déposer{% endif %}
+        </button>
+      </form>
     </div>
-
-    <form action="/espace/{{ token }}/documents/photo/upload" method="post" enctype="multipart/form-data">
-      <input type="file" name="file" accept="image/jpeg,image/png" required>
-      <button class="btn small" type="submit">
-        {% if photo_has_file %}Remplacer{% else %}Déposer{% endif %}
-      </button>
-    </form>
-  </div>
-
+  {% endfor %}
 </div>
+
 
 
     <!-- Encadré 4 : diplômes et attestations -->
