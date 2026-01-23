@@ -527,10 +527,11 @@ def api_create_trainee(session_id: str):
         "public_token": uuid.uuid4().hex,
 
         "documents": [
-            {"key": "id", "label": "Pièce d'identité", "status": "A CONTRÔLER", "comment": "", "file": ""},
-            {"key": "dom", "label": "Justificatif de domicile (-3 mois)", "status": "A CONTRÔLER", "comment": "", "file": ""},
-            {"key": "photo", "label": "Photo d'identité", "status": "A CONTRÔLER", "comment": "", "file": ""},
+            {"key": "id", "label": "Pièce d'identité", "status": "NON DÉPOSÉ", "comment": "", "file": ""},
+            {"key": "dom", "label": "Justificatif de domicile (-3 mois)", "status": "NON DÉPOSÉ", "comment": "", "file": ""},
+            {"key": "photo", "label": "Photo d'identité", "status": "NON DÉPOSÉ", "comment": "", "file": ""},
         ],
+
 
         "created_at": _now_iso(),
     }
@@ -728,8 +729,18 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
     for d in docs:
         if d.get("key") == doc_key:
             d["file"] = token
+    
+            # ✅ si un fichier est déposé, et que le statut était "NON DÉPOSÉ" (ou vide),
+            # on le passe automatiquement à "A CONTRÔLER"
+            cur = (d.get("status") or "").strip().upper()
+            if cur in ("", "NON DÉPOSÉ", "NON DEPOSÉ", "NON_DEPOSE"):
+                d["status"] = "A CONTRÔLER"
+            if d.get("status") == "A CONTROLER":
+                d["status"] = "A CONTRÔLER"
+    
             found = True
             break
+
 
     # si doc_key inconnu, on refuse silencieusement
     if not found:
@@ -1355,14 +1366,21 @@ def public_doc_upload(token: str, doc_key: str):
 
     # assure documents list
     t.setdefault("documents", [
-        {"key":"id","label":"Pièce d'identité","status":"A CONTRÔLER","comment":"","file":""},
-        {"key":"dom","label":"Justificatif de domicile (-3 mois)","status":"A CONTRÔLER","comment":"","file":""},
-        {"key":"photo","label":"Photo d'identité","status":"A CONTRÔLER","comment":"","file":""},
+        {"key":"id","label":"Pièce d'identité","status":"NON DÉPOSÉ","comment":"","file":""},
+        {"key":"dom","label":"Justificatif de domicile (-3 mois)","status":"NON DÉPOSÉ","comment":"","file":""},
+        {"key":"photo","label":"Photo d'identité","status":"NON DÉPOSÉ","comment":"","file":""},
     ])
+
 
     for d in t["documents"]:
         if d.get("key") == doc_key:
             d["file"] = token_path
+            cur = (d.get("status") or "").strip().upper()
+            if cur in ("", "NON DÉPOSÉ", "NON DEPOSÉ", "NON_DEPOSE"):
+                d["status"] = "A CONTRÔLER"
+            if d.get("status") == "A CONTROLER":
+                d["status"] = "A CONTRÔLER"
+
             break
 
     t["updated_at"] = _now_iso()
@@ -1400,10 +1418,11 @@ def admin_trainee_page(session_id: str, trainee_id: str):
 
     # ensure fields exist
     t.setdefault("documents", [
-        {"key":"id","label":"Pièce d'identité","status":"A CONTRÔLER","comment":"","file":""},
-        {"key":"dom","label":"Justificatif de domicile (-3 mois)","status":"A CONTRÔLER","comment":"","file":""},
-        {"key":"photo","label":"Photo d'identité","status":"A CONTRÔLER","comment":"","file":""},
+        {"key":"id","label":"Pièce d'identité","status":"NON DÉPOSÉ","comment":"","file":""},
+        {"key":"dom","label":"Justificatif de domicile (-3 mois)","status":"NON DÉPOSÉ","comment":"","file":""},
+        {"key":"photo","label":"Photo d'identité","status":"NON DÉPOSÉ","comment":"","file":""},
     ])
+
     t.setdefault("deliverables", {})
 
     # file tokens for template links
