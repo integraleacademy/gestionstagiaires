@@ -194,6 +194,11 @@
           <input id="tPhone" type="tel" placeholder="+33600000000">
           <div class="hint">Format conseillé : +33…</div>
         </label>
+        <label style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+  <input id="tCarteProOk" type="checkbox" style="width:18px;height:18px;">
+  <div class="label" style="margin:0;">Carte professionnelle (CNAPS) déjà OK</div>
+</label>
+
       </div>
     </div>
 
@@ -283,6 +288,8 @@
     const first_name = (document.getElementById("tFirstName").value || "").trim();
     const email = (document.getElementById("tEmail").value || "").trim();
     const phone = (document.getElementById("tPhone").value || "").trim();
+    const carte_pro_ok = !!document.getElementById("tCarteProOk")?.checked;
+
 
     if(!last_name || !first_name){
       alert("Nom + prénom obligatoires");
@@ -296,7 +303,7 @@
       const r = await fetch(`/api/sessions/${sessionId}/trainees/create`, {
         method:"POST",
         headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ last_name, first_name, email, phone })
+        body: JSON.stringify({ last_name, first_name, email, phone, carte_pro_ok })
       });
       const res = await r.json();
       if(!r.ok || !res.ok){
