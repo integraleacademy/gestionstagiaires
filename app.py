@@ -48,6 +48,59 @@ CNAPS_STATUS_ENDPOINT = os.environ.get("CNAPS_STATUS_ENDPOINT", "")
 HEBERGEMENT_STATUS_ENDPOINT = os.environ.get("HEBERGEMENT_STATUS_ENDPOINT", "")
 
 
+def normalize_phone_fr(phone: str) -> str:
+    p = (phone or "").strip().replace(" ", "").replace(".", "").replace("-", "")
+    if not p:
+        return ""
+    if p.startswith("+"):
+        return p
+    if p.startswith("00"):
+        return "+" + p[2:]
+    if p.startswith("0") and len(p) == 10 and p[1:].isdigit():
+        return "+33" + p[1:]
+    return p
+
+
+def brevo_send_email(to_email: str, subject: str, html: str) -> bool:
+    if not BREVO_API_KEY or not to_email:
+        return False
+    url = "https://api.brevo.com/v3/smtp/email"
+    headers = {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json",
+    }
+    payload = {
+        "sender": {"name": BREVO_SENDER_NAME, "email": BREVO_SENDER_EMAIL},
+        "to": [{"email": to_email}],
+        "subject": subject,
+        "htmlContent": html,
+    }
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=12)
+        return r.status_code in (200, 201, 202)
+    except Exception:
+        return False
+
+
+def brevo_send_sms(phone: str, message: str) -> bool:
+    phone = normalize_phone_fr(phone)
+    if not BREVO_API_KEY or not phone:
+        return False
+    url = "https://api.brevo.com/v3/transactionalSMS/sms"
+    headers = {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json",
+    }
+    payload = {"recipient": phone, "content": message, "type": "transactional"}
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=12)
+        return r.status_code in (200, 201, 202)
+    except Exception:
+        return False
+
+
 # =========================
 # Helpers
 # =========================
@@ -232,6 +285,8 @@ def _map_hosting_to_enum(v: Optional[str]) -> str:
     if v in ("réservé", "reserve", "reserved"):
         return "reserved"
     return "unknown"
+
+
 
 
 # =========================
@@ -612,37 +667,29 @@ def api_create_trainee(session_id: str):
     show_hosting = (training_type == "A3P")
     show_vae = (training_type == "DIRIGEANT VAE")
 
+    public_token = uuid.uuid4().hex
+
     t = {
         "id": trainee_id,
         "personal_id": trainee_id,
-
         "last_name": last_name,
         "first_name": first_name,
         "email": email,
         "phone": phone,
-
         "comment": "",
         "cnaps": "INCONNU",
-
         "convention_status": "soon",
         "test_fr_status": "soon",
         "dossier_status": "incomplete",
         "financement_status": "soon",
         "vae_status": "soon" if show_vae else "",
         "hosting_status": "unknown" if show_hosting else "",
-
-        "public_token": uuid.uuid4().hex,
-
-        # ✅ on ne met plus le vieux trio id/dom/photo : on génère selon REQUIRED_DOCS
+        "public_token": public_token,
         "documents": [],
-
         "created_at": _now_iso(),
     }
 
-    # ✅ construit les docs requis (COMMON + A3P_ONLY si A3P) et retire l'ancien "dom"
     ensure_documents_schema_for_trainee(t, training_type)
-
-    # ✅ calcule dossier_status au départ (complet si tous les docs requis sont CONFORME)
     t["dossier_status"] = "complete" if dossier_is_complete(t, training_type) else "incomplete"
 
     trainees = _session_trainees_list(s)
@@ -650,7 +697,44 @@ def api_create_trainee(session_id: str):
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     save_data(data)
-    return jsonify({"ok": True, "id": trainee_id})
+
+    # ✅ ENVOI MAIL + SMS à la création
+    link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}"
+    subject = "Accès à votre espace stagiaire – Intégrale Academy"
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
+      <div style="background:white;padding:18px;border-radius:12px">
+        <h2>Votre espace stagiaire est disponible</h2>
+        <p>Bonjour <strong>{first_name} {last_name}</strong>,</p>
+        <p>Voici votre lien d’accès :</p>
+        <p>
+          <a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">
+            Accéder à mon espace stagiaire
+          </a>
+        </p>
+        <p style="color:#666;font-size:13px">Intégrale Academy</p>
+      </div>
+    </div>
+    """
+    sms = f"Intégrale Academy : votre espace stagiaire est disponible : {link}"
+
+    email_ok = brevo_send_email(email, subject, html) if email else False
+    sms_ok = brevo_send_sms(phone, sms) if phone else False
+
+    t["access_sent_at"] = _now_iso()
+    t["access_sent_email_ok"] = bool(email_ok)
+    t["access_sent_sms_ok"] = bool(sms_ok)
+    save_data(data)
+
+    return jsonify({
+        "ok": True,
+        "id": trainee_id,
+        "access_email_ok": email_ok,
+        "access_sms_ok": sms_ok,
+        "public_link": link
+    })
+
+
 
 
 
@@ -738,37 +822,6 @@ def health():
 
 from werkzeug.utils import secure_filename
 
-# =========================
-# Brevo Email + SMS (si pas déjà)
-# =========================
-def brevo_send_email(to_email: str, subject: str, html: str) -> bool:
-    if not BREVO_API_KEY or not to_email:
-        return False
-    url = "https://api.brevo.com/v3/smtp/email"
-    headers = {"accept":"application/json","api-key":BREVO_API_KEY,"content-type":"application/json"}
-    payload = {
-        "sender": {"name": BREVO_SENDER_NAME, "email": BREVO_SENDER_EMAIL},
-        "to": [{"email": to_email}],
-        "subject": subject,
-        "htmlContent": html,
-    }
-    try:
-        r = requests.post(url, headers=headers, json=payload, timeout=12)
-        return r.status_code in (200, 201, 202)
-    except Exception:
-        return False
-
-def brevo_send_sms(phone: str, message: str) -> bool:
-    if not BREVO_API_KEY or not phone:
-        return False
-    url = "https://api.brevo.com/v3/transactionalSMS/sms"
-    headers = {"accept":"application/json","api-key":BREVO_API_KEY,"content-type":"application/json"}
-    payload = {"recipient": phone, "content": message, "type":"transactional"}
-    try:
-        r = requests.post(url, headers=headers, json=payload, timeout=12)
-        return r.status_code in (200, 201, 202)
-    except Exception:
-        return False
 
 
 # =========================
