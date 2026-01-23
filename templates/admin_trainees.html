@@ -319,31 +319,7 @@
   document.querySelectorAll("tr[data-trainee-id]").forEach(tr=>{
     const traineeId = tr.getAttribute("data-trainee-id");
 
-        // test validé checkbox -> force validated (ou repasse en in_progress si décoché)
-    const tfSel = tr.querySelector('select.sel[data-field="test_fr_status"]');
-    const tfChk = tr.querySelector('input.test-validated');
-
-    if(tfSel && tfChk){
-      // si on change le select, on synchronise la checkbox
-      tfSel.addEventListener("change", ()=>{
-        tfChk.checked = (tfSel.value === "validated");
-      });
-
-      // si on coche/décoche la checkbox, on force le statut + save
-      tfChk.addEventListener("change", async ()=>{
-        const newVal = tfChk.checked ? "validated" : (tfSel.value === "validated" ? "in_progress" : tfSel.value);
-
-        tfSel.value = newVal;
-        applyStatusPill(tfSel);
-
-        try{
-          await saveField(traineeId, "test_fr_status", newVal);
-          window.location.reload(); // recalcul conformités
-        }catch(e){
-          alert("Erreur sauvegarde");
-        }
-      });
-    }
+  
 
 
     // select changes
