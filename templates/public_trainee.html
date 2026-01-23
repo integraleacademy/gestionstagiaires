@@ -91,9 +91,57 @@
     {% else %}{% set cls='gray' %}{% endif %}
   {% endif %}
 
-  <span class="pill {{cls}}">
-    {{ u if u else '—' }}
-  </span>
+{# texte affiché #}
+{% set text = u if u else '—' %}
+
+{# Convention #}
+{% if kind=='convention' %}
+  {% if v=='signed' %}{% set text='SIGNÉE' %}
+  {% elif v=='signing' %}{% set text='EN COURS DE SIGNATURE' %}
+  {% else %}{% set text='À VENIR' %}{% endif %}
+{% endif %}
+
+{# Dossier #}
+{% if kind=='dossier' %}
+  {% if v=='complete' %}{% set text='COMPLET' %}
+  {% else %}{% set text='INCOMPLET' %}{% endif %}
+{% endif %}
+
+{# Test FR #}
+{% if kind=='test_fr' %}
+  {% if v=='validated' %}{% set text='VALIDÉ' %}
+  {% elif v=='relance' %}{% set text='RELANCÉ' %}
+  {% elif v=='in_progress' %}{% set text='EN COURS' %}
+  {% else %}{% set text='À FAIRE' %}{% endif %}
+{% endif %}
+
+{# Financement #}
+{% if kind=='financement' %}
+  {% if v=='validated' %}{% set text='VALIDÉ' %}
+  {% elif v=='in_review' %}{% set text='EN COURS' %}
+  {% else %}{% set text='À VENIR' %}{% endif %}
+{% endif %}
+
+{# Hébergement #}
+{% if kind=='hosting' %}
+  {% if v=='reserved' %}{% set text='RÉSERVÉ' %}
+  {% else %}{% set text='INCONNU' %}{% endif %}
+{% endif %}
+
+{# CNAPS #}
+{% if kind=='cnaps' %}
+  {% if up in ['DELIVREE','DÉLIVRÉE','VALIDE','VALIDEE','VALIDÉE'] %}{% set cls='green' %}
+  {% elif up in ['INSTRUCTION','EN INSTRUCTION','EN_INSTRUCTION'] %}{% set cls='yellow' %}
+  {% elif up in ['REFUSEE','REFUSÉE','EXPIREE','EXPIRÉE'] %}{% set cls='red' %}
+  {% elif up in ['INCONNU','UNKNOWN',''] %}{% set cls='red' %}
+  {% else %}{% set cls='gray' %}{% endif %}
+{% endif %}
+
+
+<span class="pill {{cls}}">
+  {{ text }}
+</span>
+
 {% endmacro %}
 
 <div class="public-wrap">
@@ -137,7 +185,13 @@
       <h2>Suivi de dossier</h2>
 
       <div class="docrow">
-        <div class="docmeta"><div class="label">Convention</div></div>
+  <div class="docmeta"><div class="label">Inscription validée</div></div>
+  <span class="pill green">✅ VALIDÉE</span>
+</div>
+
+
+      <div class="docrow">
+        <div class="docmeta"><div class="label">Convention de formation</div></div>
         {{ pill_for('convention', trainee.convention_status) }}
       </div>
 
@@ -167,7 +221,7 @@
           {{ pill_for('hosting', trainee.hosting_status) }}
         </div>
 
-        {% if (trainee.hosting_status or 'unknown') != 'reserved' %}
+        {% if (trainee.hosting_status or 'unknown') == 'unknown' %}
           <div class="hint">
             <div style="font-weight:900;margin-bottom:6px;">Hébergement non réservé</div>
             Pour réserver l’hébergement :
