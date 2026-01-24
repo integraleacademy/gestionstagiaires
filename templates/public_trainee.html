@@ -145,7 +145,7 @@
 {% if kind=='convention' %}
   {% if v=='signed' %}{% set text='SIGNÉE' %}
   {% elif v=='signing' %}{% set text='EN COURS DE SIGNATURE' %}
-  {% else %}{% set text='À VENIR' %}{% endif %}
+  {% else %}{% set text='PROCHAINEMENT' %}{% endif %}
 {% endif %}
 
 {# Dossier #}
@@ -166,7 +166,7 @@
 {% if kind=='financement' %}
   {% if v=='validated' %}{% set text='VALIDÉ' %}
   {% elif v=='in_review' %}{% set text='EN COURS' %}
-  {% else %}{% set text='À VENIR' %}{% endif %}
+  {% else %}{% set text='PROCHAINEMENT' %}{% endif %}
 {% endif %}
 
 {# Hébergement #}
