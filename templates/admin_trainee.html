@@ -206,23 +206,7 @@
   </div>
 </div>
 
-    <div class="hint" style="margin-bottom:8px;">
-      Suivi du financement (France Travail / OPCO / CPF / etc.).
-    </div>
-
-    <select id="financementSelect" class="status-pill">
-      <option value="soon" {% if fs=="soon" %}selected{% endif %}>
-        PROCHAINEMENT
-      </option>
-      <option value="in_review" {% if fs=="in_review" %}selected{% endif %}>
-        EN COURS DE VALIDATION
-      </option>
-      <option value="validated" {% if fs=="validated" %}selected{% endif %}>
-        VALIDÉ
-      </option>
-    </select>
-  </div>
-
+  
 
 
 
@@ -465,6 +449,29 @@
 
 
 <script>
+
+  // =========================
+// Financement comment autosave
+// =========================
+const financementComment = document.getElementById("financementComment");
+if(financementComment){
+  let t=null;
+  financementComment.addEventListener("input", ()=>{
+    if(t) clearTimeout(t);
+    t = setTimeout(async ()=>{
+      try{
+        await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
+          method:"POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ financement_comment: financementComment.value })
+        });
+      }catch(e){
+        // pas de reload, on évite d'emmerder
+        console.log("Erreur sauvegarde commentaire financement");
+      }
+    }, 450);
+  });
+}
 
   function toClassSafe(s){
   return (s || "").toString().trim().toLowerCase().replace(/\s+/g,"_");
