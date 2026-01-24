@@ -80,8 +80,7 @@
 </div>
 
 
-<div class="grid trainee-grid" style="gap:12px;margin-top:12px;">
-
+<div class="grid trainee-grid two-cols" style="gap:12px;margin-top:12px;">
 
   <!-- ===================== -->
   <!-- TEST DE FRANÇAIS       -->
@@ -90,17 +89,16 @@
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <div style="font-weight:900;">Test de français</div>
       <div>
-{% set tf = (trainee.test_fr_status or "soon") %}
-{% set tf_label = ("PROCHAINEMENT" if tf=="soon" else ("EN COURS" if tf=="in_progress" else ("RELANCÉ" if tf=="relance" else "VALIDÉ"))) %}
-<span class="pill
-  {% if tf=="soon" %}pill-gray
-  {% elif tf=="in_progress" %}pill-orange
-  {% elif tf=="relance" %}pill-red
-  {% else %}pill-green
-  {% endif %}">
-  Statut : {{ tf_label }}
-</span>
-
+        {% set tf = (trainee.test_fr_status or "soon") %}
+        {% set tf_label = ("PROCHAINEMENT" if tf=="soon" else ("EN COURS" if tf=="in_progress" else ("RELANCÉ" if tf=="relance" else "VALIDÉ"))) %}
+        <span class="pill
+          {% if tf=="soon" %}pill-gray
+          {% elif tf=="in_progress" %}pill-orange
+          {% elif tf=="relance" %}pill-red
+          {% else %}pill-green
+          {% endif %}">
+          Statut : {{ tf_label }}
+        </span>
       </div>
     </div>
 
@@ -118,14 +116,13 @@
     </div>
 
     <div style="margin-top:10px;">
-  <label style="display:flex;align-items:center;gap:10px;font-weight:900;">
-    <input id="chkTestFrValidated" type="checkbox" {% if (trainee.test_fr_status or "soon")=="validated" %}checked{% endif %}>
-    Test validé
-  </label>
-  <div class="hint" style="margin-top:6px;">Si coché, le statut passe à “VALIDÉ”.</div>
-</div>
+      <label style="display:flex;align-items:center;gap:10px;font-weight:900;">
+        <input id="chkTestFrValidated" type="checkbox" {% if (trainee.test_fr_status or "soon")=="validated" %}checked{% endif %}>
+        Test validé
+      </label>
+      <div class="hint" style="margin-top:6px;">Si coché, le statut passe à “VALIDÉ”.</div>
+    </div>
 
-    
     {% if trainee.test_fr_last_notified_at %}
       <div class="hint" style="margin-top:10px;">🟧 Notifié le : <strong>{{ trainee.test_fr_last_notified_at }}</strong></div>
     {% endif %}
@@ -134,72 +131,55 @@
     {% endif %}
   </div>
 
-<!-- ===================== -->
-<!-- CONVENTION & FINANCEMENT -->
-<!-- ===================== -->
-<div class="card">
-  <div class="card-head">
-    <div>Convention & Financement</div>
-  </div>
-
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-
-    <!-- CONVENTION -->
-    <div>
-      <div style="font-weight:900;margin-bottom:6px;">Convention</div>
-
-      {% set cs = (trainee.convention_status or "soon") %}
-      {% set cs_label = (
-        "PROCHAINEMENT" if cs=="soon"
-        else ("EN COURS DE SIGNATURE" if cs=="signing" else "SIGNÉE")
-      ) %}
-
-
-      <select id="conventionSelect" class="status-pill" style="margin-top:8px;">
-        <option value="soon" {% if cs=="soon" %}selected{% endif %}>PROCHAINEMENT</option>
-        <option value="signing" {% if cs=="signing" %}selected{% endif %}>EN COURS DE SIGNATURE</option>
-        <option value="signed" {% if cs=="signed" %}selected{% endif %}>SIGNÉE</option>
-      </select>
-    </div>
-
-    <!-- FINANCEMENT -->
-    <div>
-      <div style="font-weight:900;margin-bottom:6px;">Financement</div>
-
-      {% set fs = (trainee.financement_status or "soon") %}
-      {% set fs_label = (
-        "PROCHAINEMENT" if fs=="soon"
-        else ("EN COURS DE VALIDATION" if fs=="in_review" else "VALIDÉ")
-      ) %}
-
-
-      <select id="financementSelect" class="status-pill" style="margin-top:8px;">
-        <option value="soon" {% if fs=="soon" %}selected{% endif %}>PROCHAINEMENT</option>
-        <option value="in_review" {% if fs=="in_review" %}selected{% endif %}>EN COURS DE VALIDATION</option>
-        <option value="validated" {% if fs=="validated" %}selected{% endif %}>VALIDÉ</option>
-      </select>
-    </div>
-
-<div style="margin-top:10px;grid-column:1 / -1;">
-  <div class="label">Commentaire financement</div>
-  <input id="financementComment"
-         type="text"
-         value="{{ trainee.financement_comment or '' }}"
-         placeholder="Ex : France Travail en attente / OPCO validé / CPF…">
-  <div class="hint">Sauvegarde automatique.</div>
-</div>
-
-  </div>
-</div>
-
-  
-
-
-
   <!-- ===================== -->
-  <!-- DOCUMENTS              -->
+  <!-- CONVENTION & FINANCEMENT -->
   <!-- ===================== -->
   <div class="card">
+    <div class="card-head">
+      <div>Convention & Financement</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+      <!-- CONVENTION -->
+      <div>
+        <div style="font-weight:900;margin-bottom:6px;">Convention</div>
+        {% set cs = (trainee.convention_status or "soon") %}
+        <select id="conventionSelect" class="status-pill" style="margin-top:8px;">
+          <option value="soon" {% if cs=="soon" %}selected{% endif %}>PROCHAINEMENT</option>
+          <option value="signing" {% if cs=="signing" %}selected{% endif %}>EN COURS DE SIGNATURE</option>
+          <option value="signed" {% if cs=="signed" %}selected{% endif %}>SIGNÉE</option>
+        </select>
+      </div>
+
+      <!-- FINANCEMENT -->
+      <div>
+        <div style="font-weight:900;margin-bottom:6px;">Financement</div>
+        {% set fs = (trainee.financement_status or "soon") %}
+        <select id="financementSelect" class="status-pill" style="margin-top:8px;">
+          <option value="soon" {% if fs=="soon" %}selected{% endif %}>PROCHAINEMENT</option>
+          <option value="in_review" {% if fs=="in_review" %}selected{% endif %}>EN COURS DE VALIDATION</option>
+          <option value="validated" {% if fs=="validated" %}selected{% endif %}>VALIDÉ</option>
+        </select>
+      </div>
+
+      <!-- COMMENTAIRE FINANCEMENT (pleine largeur dans la carte) -->
+      <div style="margin-top:10px;grid-column:1 / -1;">
+        <div class="label">Commentaire financement</div>
+        <input id="financementComment"
+               type="text"
+               value="{{ trainee.financement_comment or '' }}"
+               placeholder="Ex : France Travail en attente / OPCO validé / CPF…">
+        <div class="hint">Sauvegarde automatique.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===================== -->
+  <!-- DOCUMENTS (pleine largeur) -->
+  <!-- ===================== -->
+  <div class="card" style="grid-column:1 / -1;">
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <div style="font-weight:900;">Gestion des documents</div>
 
