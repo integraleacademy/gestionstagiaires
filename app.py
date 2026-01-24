@@ -605,11 +605,22 @@ def admin_trainees(session_id: str):
     for t in trainees:
         ln = (t.get("last_name") or "").strip()
         fn = (t.get("first_name") or "").strip()
-        if ln and fn:
-            cn = fetch_cnaps_status_by_name(ln, fn)
-            if cn:
-                t["cnaps"] = str(cn).upper()
-        if not t.get("cnaps"):
+
+        # ✅ si déjà validé manuellement, on ne touche pas
+        if (t.get("cnaps") or "").strip().upper() == "CARTE PROFESSIONNELLE OK":
+            pass
+        else:
+            if ln and fn:
+                cn = fetch_cnaps_status_by_name(ln, fn)
+
+                # ✅ n'écrase jamais avec INCONNU
+                if cn:
+                    cn_u = str(cn).strip().upper()
+                    if cn_u not in ("INCONNU", "UNKNOWN", ""):
+                        t["cnaps"] = cn_u
+
+        # valeur par défaut si vide
+        if not (t.get("cnaps") or "").strip():
             t["cnaps"] = "INCONNU"
 
         # hosting only for A3P
@@ -620,11 +631,10 @@ def admin_trainees(session_id: str):
         else:
             t.pop("hosting_status", None)
 
-    # persist normalized trainees back into storage (so future pages are consistent)
+    # persist normalized trainees back into storage
     s["trainees"] = trainees
-    s.pop("stagiaires", None)  # optional cleanup
+    s.pop("stagiaires", None)
     save_data(data)
-
     stats = compute_stats(s)
     show_hosting = (session_view["training_type"] == "A3P")
     show_vae = (session_view["training_type"] == "DIRIGEANT VAE")
