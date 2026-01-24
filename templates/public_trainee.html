@@ -207,11 +207,11 @@
 
       <div class="line">
         <div class="label">Nom</div>
-        <div class="value">{{ trainee.last_name }}</div>
+        <div class="value">{{ (trainee.last_name or '')|upper }}</div>
       </div>
       <div class="line">
         <div class="label">Prénom</div>
-        <div class="value">{{ trainee.first_name }}</div>
+        <div class="value">{{ (trainee.first_name or '')|upper }}</div>
       </div>
       <div class="line">
   <div class="label">Formation</div>
