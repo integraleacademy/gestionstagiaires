@@ -17,6 +17,59 @@
   .modal.modal-wide .table{
     min-width: 980px; /* évite que ça s’écrase */
   }
+
+  /* =========================
+     UI PLUS VISUELLE (DOCS)
+     ========================= */
+
+  /* Badge docs à contrôler */
+  .docs-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 12px;
+    border-radius:999px;
+    font-weight:900;
+    font-size:13px;
+    border:1px solid #e5e7eb;
+    background:#f9fafb;
+    color:#111827;
+  }
+  .docs-badge--loading{ background:#f3f4f6; }
+  .docs-badge--ok{ background:#ecfdf5; border-color:#bbf7d0; color:#065f46; }
+  .docs-badge--warn{ background:#fefce8; border-color:#fde68a; color:#854d0e; }
+  .docs-badge--danger{ background:#fff1f2; border-color:#fecdd3; color:#9f1239; }
+
+  /* Bouton “Voir” qui attire l’œil quand il y a des docs */
+  .btn-attention{
+    animation: pulseDocs 1.4s ease-in-out infinite;
+    box-shadow: 0 0 0 0 rgba(220,38,38,.25);
+  }
+  @keyframes pulseDocs{
+    0%{ transform:scale(1); box-shadow:0 0 0 0 rgba(220,38,38,.25); }
+    70%{ transform:scale(1.03); box-shadow:0 0 0 12px rgba(220,38,38,0); }
+    100%{ transform:scale(1); box-shadow:0 0 0 0 rgba(220,38,38,0); }
+  }
+
+  /* Lignes dans la modale */
+  .row-danger{ background:#fff1f2; }
+  .row-warn{ background:#fff7ed; }
+
+  /* Pastille du nombre de docs */
+  .doccount{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:34px;
+    height:26px;
+    padding:0 10px;
+    border-radius:999px;
+    font-weight:900;
+    border:1px solid #e5e7eb;
+    background:#f9fafb;
+  }
+  .doccount.warn{ background:#fff7ed; border-color:#fed7aa; color:#9a3412; }
+  .doccount.danger{ background:#fff1f2; border-color:#fecdd3; color:#9f1239; }
 </style>
 
 <div class="page-head">
@@ -32,7 +85,12 @@
     </div>
     <button class="btn btn-primary" id="btnOpenDocsToControl">Voir</button>
   </div>
-  <div class="muted" id="docsToControlCount" style="margin-top:8px;">Chargement…</div>
+
+  <!-- ✅ Badge + compteur (plus visuel) -->
+  <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <span id="docsToControlBadge" class="docs-badge docs-badge--loading">Chargement…</span>
+    <span class="muted" id="docsToControlCount">Chargement…</span>
+  </div>
 </div>
 
 
@@ -204,7 +262,13 @@
   async function loadDocsToControl(){
     const countEl = document.getElementById("docsToControlCount");
     const listEl  = document.getElementById("docsToControlList");
+    const badgeEl = document.getElementById("docsToControlBadge");
+    const btnView = document.getElementById("btnOpenDocsToControl");
 
+    if(badgeEl){
+      badgeEl.className = "docs-badge docs-badge--loading";
+      badgeEl.textContent = "Chargement…";
+    }
     if(countEl) countEl.textContent = "Chargement…";
     if(listEl) listEl.textContent = "Chargement…";
 
@@ -213,13 +277,42 @@
       const res = await r.json();
 
       if(!r.ok || !res.ok){
+        if(badgeEl){
+          badgeEl.className = "docs-badge docs-badge--danger";
+          badgeEl.textContent = "❌ Erreur chargement";
+        }
         if(countEl) countEl.textContent = "Erreur chargement.";
         if(listEl) listEl.textContent = "Erreur chargement.";
+        if(btnView){
+          btnView.classList.remove("btn-attention");
+          btnView.textContent = "Voir";
+        }
         return;
       }
 
       const items = res.items || [];
-      if(countEl) countEl.textContent = `${items.length} stagiaire(s) avec documents à contrôler`;
+
+      // total docs à contrôler (plus parlant)
+      const totalDocs = items.reduce((sum, it)=> sum + (Number(it.pending_count)||0), 0);
+
+      // Badge + bouton (pulse)
+      if(badgeEl){
+        const cls = (totalDocs === 0) ? "docs-badge--ok" : (totalDocs <= 3 ? "docs-badge--warn" : "docs-badge--danger");
+        badgeEl.className = "docs-badge " + cls;
+        badgeEl.textContent = (totalDocs === 0) ? "✅ Aucun doc à contrôler" : `⚠️ ${totalDocs} doc(s) à contrôler`;
+      }
+
+      if(btnView){
+        btnView.classList.toggle("btn-attention", totalDocs > 0);
+        btnView.textContent = (totalDocs === 0) ? "Voir" : `Voir (${totalDocs})`;
+      }
+
+      // Texte sous badge
+      if(countEl){
+        countEl.textContent = (totalDocs === 0)
+          ? "Tout est à jour."
+          : `${items.length} stagiaire(s) concerné(s)`;
+      }
 
       if(!listEl) return;
 
@@ -243,13 +336,19 @@
               ${items.map(it => {
                 const full = `${(it.first_name||"").toUpperCase()} ${(it.last_name||"").toUpperCase()}`.trim();
                 const sess = `${it.session_name || ""} (${it.training_type || ""})`.trim();
-                const nb = it.pending_count ?? "";
+                const nbNum = Number(it.pending_count ?? 0) || 0;
                 const url = `/admin/sessions/${it.session_id}/stagiaires/${it.trainee_id}`;
+
+                const rowClass = (nbNum >= 3) ? "row-danger" : (nbNum >= 1 ? "row-warn" : "");
+                const pillClass = (nbNum >= 3) ? "danger" : "warn";
+
                 return `
-                  <tr>
+                  <tr class="${rowClass}">
                     <td style="font-weight:900;">${full || "—"}</td>
                     <td>${sess || "—"}</td>
-                    <td class="mono">${nb}</td>
+                    <td class="mono">
+                      <span class="doccount ${pillClass}">${nbNum}</span>
+                    </td>
                     <td style="text-align:right;">
                       <a class="btn btn-outline" href="${url}" style="text-decoration:none;display:inline-block">
                         Ouvrir la fiche
@@ -263,8 +362,17 @@
         </div>
       `;
     }catch(e){
+      if(badgeEl){
+        badgeEl.className = "docs-badge docs-badge--danger";
+        badgeEl.textContent = "❌ Erreur réseau";
+      }
       if(countEl) countEl.textContent = "Erreur réseau.";
       if(listEl) listEl.textContent = "Erreur réseau.";
+      const btnView = document.getElementById("btnOpenDocsToControl");
+      if(btnView){
+        btnView.classList.remove("btn-attention");
+        btnView.textContent = "Voir";
+      }
     }
   }
 
@@ -279,7 +387,5 @@
     loadDocsToControl();
   });
 </script>
-
-
 
 {% endblock %}
