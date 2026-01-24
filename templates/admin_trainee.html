@@ -154,13 +154,6 @@
         else ("EN COURS DE SIGNATURE" if cs=="signing" else "SIGNÉE")
       ) %}
 
-      <span class="pill
-        {% if cs=="soon" %}pill-gray
-        {% elif cs=="signing" %}pill-orange
-        {% else %}pill-green
-        {% endif %}">
-        {{ cs_label }}
-      </span>
 
       <select id="conventionSelect" class="status-pill" style="margin-top:8px;">
         <option value="soon" {% if cs=="soon" %}selected{% endif %}>PROCHAINEMENT</option>
@@ -179,13 +172,6 @@
         else ("EN COURS DE VALIDATION" if fs=="in_review" else "VALIDÉ")
       ) %}
 
-      <span class="pill
-        {% if fs=="soon" %}pill-gray
-        {% elif fs=="in_review" %}pill-orange
-        {% else %}pill-green
-        {% endif %}">
-        {{ fs_label }}
-      </span>
 
       <select id="financementSelect" class="status-pill" style="margin-top:8px;">
         <option value="soon" {% if fs=="soon" %}selected{% endif %}>PROCHAINEMENT</option>
@@ -194,7 +180,7 @@
       </select>
     </div>
 
-    <div style="margin-top:10px;">
+<div style="margin-top:10px;grid-column:1 / -1;">
   <div class="label">Commentaire financement</div>
   <input id="financementComment"
          type="text"
