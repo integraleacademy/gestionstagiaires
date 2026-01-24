@@ -1,6 +1,24 @@
 {% extends "base.html" %}
 {% block content %}
 
+<style>
+  /* Modale plus large */
+  .modal.modal-wide{
+    width: min(1200px, 96vw);
+    max-width: none; /* on annule l'ancien max-width */
+  }
+
+  /* Et on force le tableau à rester bien visible */
+  .modal.modal-wide .table-wrap{
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .modal.modal-wide .table{
+    min-width: 980px; /* évite que ça s’écrase */
+  }
+</style>
+
 <div class="page-head">
   <h1>Sessions</h1>
   <button class="btn btn-primary" id="btnOpenCreateSession">+ Nouvelle session</button>
