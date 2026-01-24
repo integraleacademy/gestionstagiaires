@@ -814,6 +814,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "financement_status",
         "vae_status",
         "comment",
+        "financement_comment",
         "vae_status_label",
         "cnaps",
     }
