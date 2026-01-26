@@ -1089,8 +1089,8 @@ def admin_etiquette_docx(session_id: str, trainee_id: str):
 
     # 3) Remplacements
     replacements = {
-        "{{NOM}}": t.get("last_name", ""),
-        "{{PRENOM}}": t.get("first_name", ""),
+        "{{NOM}}": (t.get("last_name", "") or "").upper(),
+        "{{PRENOM}}": (t.get("first_name", "") or "").upper(),
         "{{FORMATION}}": _session_get(s, "name", ""),
         "{{TYPE_FORMATION}}": training_type,
         "{{DATES}}": f"{fr_date(_session_get(s,'date_start',''))} → {fr_date(_session_get(s,'date_end',''))}",
