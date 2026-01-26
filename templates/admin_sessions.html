@@ -104,8 +104,8 @@
 
     <div class="card-meta">
       <div><span class="pill">{{ s.training_type }}</span></div>
-      <div>Formation : <strong>{{ s.date_start }}</strong> → <strong>{{ s.date_end }}</strong></div>
-      <div>Examen : <strong>{{ s.exam_date }}</strong></div>
+      <div>Formation : <strong>{{ s.date_start|frdate }}</strong> → <strong>{{ s.date_end|frdate }}</strong></div>
+<div>Examen : <strong>{{ s.exam_date|frdate }}</strong></div>
       <div>Stagiaires : <strong>{{ s.total }}</strong></div>
     </div>
 
