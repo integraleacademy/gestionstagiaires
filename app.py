@@ -1441,7 +1441,6 @@ DELIVERABLE_LABELS = {
     "carte_sst": "Carte SST",
     "diplome": "Diplôme",
     "attestation_fin_formation": "Attestation fin de formation",
-    "dossier_fin_formation": "Dossier fin de formation",
 }
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/deliverables/<kind>/upload")
