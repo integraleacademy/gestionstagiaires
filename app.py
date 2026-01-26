@@ -1438,7 +1438,6 @@ def api_docs_update(session_id: str, trainee_id: str):
 # Deliverables upload (diplôme/SST/etc)
 # =========================
 DELIVERABLE_LABELS = {
-    "certificat_sst": "Certificat SST",
     "carte_sst": "Carte SST",
     "diplome": "Diplôme",
     "attestation_fin_formation": "Attestation fin de formation",
