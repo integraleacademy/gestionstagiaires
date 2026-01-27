@@ -426,8 +426,9 @@
         {% endif %}
       </div>
 
-      <form
+<form
   {% if d.key == "photo" %}id="photo_form"{% endif %}
+  {% if d.key == "id" %}id="id_form"{% endif %}
   action="/espace/{{ token }}/documents/{{ d.key }}/upload"
   method="post"
   enctype="multipart/form-data">
@@ -452,10 +453,25 @@
           {% if has_file %}Remplacer{% else %}Déposer{% endif %}
         </button>
       </form>
+
+      {% if d.key == "id" %}
+  <div id="id_hint_id" style="display:none;margin-top:12px;border:2px solid #fed7aa;background:#fff7ed;padding:12px;border-radius:12px;">
+    <div style="font-weight:900;color:#9a3412;margin-bottom:8px;">
+      Avez-vous bien fourni votre passeport, ou votre carte d'identité
+      <span style="color:#b91c1c;">RECTO / VERSO (2 côtés)</span> ?
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn outline small" onclick="cancelIdUpload()">Modifier</button>
+      <button type="button" class="btn small" onclick="confirmIdUpload()">Oui, je confirme</button>
+    </div>
+  </div>
+{% endif %}
+      
 {% if d.key == "photo" %}
   <div id="photo_hint_photo" style="display:none;margin-top:12px;border:2px solid #fed7aa;background:#fff7ed;padding:12px;border-radius:12px;">
     <div style="font-weight:900;color:#9a3412;margin-bottom:8px;">
-      Avez-vous bien fourni une photo d’identité conforme ?
+      Avez-vous bien fourni une photo d’identité conforme ? (photo de face, sur fond neutre). Cette photo apparaîtra sur votre diplôme. 
     </div>
 
     <img src="/static/photo-exemple.png"
@@ -775,6 +791,39 @@ window.addEventListener("DOMContentLoaded", ()=>{
     }
   });
 });
+// ========= CARTE D'IDENTITÉ confirmation =========
+function cancelIdUpload(){
+  const hint = document.getElementById("id_hint_id");
+  if(hint) hint.style.display = "none";
+  const form = document.getElementById("id_form");
+  if(form) form.dataset.confirmed = "";
+}
+
+function confirmIdUpload(){
+  const form = document.getElementById("id_form");
+  if(form){
+    form.dataset.confirmed = "1";
+    form.submit();
+  }
+}
+
+window.addEventListener("DOMContentLoaded", ()=>{
+  const form = document.getElementById("id_form");
+  if(!form) return;
+
+  form.addEventListener("submit", (e)=>{
+    if(form.dataset.confirmed === "1") return;
+
+    const input = form.querySelector('input[type="file"]');
+    // On affiche la confirmation seulement si l'utilisateur a choisi des fichiers
+    if(input && input.files && input.files.length){
+      e.preventDefault();
+      const hint = document.getElementById("id_hint_id");
+      if(hint) hint.style.display = "block";
+    }
+  });
+});
+  
 </script>
 
   
