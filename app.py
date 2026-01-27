@@ -168,21 +168,46 @@ def normalize_phone_fr(phone: str) -> str:
 
 
 
+import base64
+
 def brevo_send_email(to_email: str, subject: str, html: str) -> bool:
     if not BREVO_API_KEY or not to_email:
         return False
+
     url = "https://api.brevo.com/v3/smtp/email"
     headers = {
         "accept": "application/json",
         "api-key": BREVO_API_KEY,
         "content-type": "application/json",
     }
+
+    attachments = []
+
+    # 🔒 Logo inline (CID)
+    try:
+        logo_path = os.path.join(app.root_path, "static", "logo-integrale.png")
+        if os.path.exists(logo_path):
+            with open(logo_path, "rb") as f:
+                logo_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+            attachments.append({
+                "content": logo_b64,
+                "name": "logo-integrale.png",
+                "contentId": "logo_integrale"
+            })
+    except Exception:
+        pass
+
     payload = {
         "sender": {"name": BREVO_SENDER_NAME, "email": BREVO_SENDER_EMAIL},
         "to": [{"email": to_email}],
         "subject": subject,
         "htmlContent": html,
     }
+
+    if attachments:
+        payload["attachment"] = attachments
+
     try:
         r = requests.post(url, headers=headers, json=payload, timeout=12)
         return r.status_code in (200, 201, 202)
@@ -228,13 +253,15 @@ def brevo_send_sms(phone: str, message: str) -> bool:
 
 
 def mail_layout(inner_html: str) -> str:
-    logo_url = f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png"
+    # logo inline (CID Brevo)
+    logo_src = "cid:logo_integrale"
 
     return f"""
     <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
       <div style="background:white;padding:18px;border-radius:12px">
         <div style="text-align:center;margin-bottom:18px">
-          <img src="{logo_url}" alt="Intégrale Academy" style="height:60px;width:auto">
+          <img src="{logo_src}" alt="Intégrale Academy"
+               style="height:60px;width:auto;display:block;margin:0 auto;border:0;outline:none;text-decoration:none">
         </div>
 
         {inner_html}
@@ -861,21 +888,16 @@ def api_create_trainee(session_id: str):
     # ✅ ENVOI MAIL + SMS à la création
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}"
     subject = "Accès à votre espace stagiaire – Intégrale Academy"
-    html = f"""
-    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
-      <div style="background:white;padding:18px;border-radius:12px">
-        <h2>Votre espace stagiaire est disponible</h2>
-        <p>Bonjour <strong>{first_name} {last_name}</strong>,</p>
-        <p>Voici votre lien d’accès :</p>
-        <p>
-          <a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">
-            Accéder à mon espace stagiaire
-          </a>
-        </p>
-        <p style="color:#666;font-size:13px">Intégrale Academy</p>
-      </div>
-    </div>
-    """
+    html = mail_layout(f"""
+      <h2>Votre espace stagiaire est disponible</h2>
+      <p>Bonjour <strong>{first_name} {last_name}</strong>,</p>
+      <p>Voici votre lien d’accès :</p>
+      <p>
+        <a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">
+          Accéder à mon espace stagiaire
+        </a>
+      </p>
+    """)
     sms = f"Intégrale Academy : votre espace stagiaire est disponible : {link}"
 
     email_ok = brevo_send_email(email, subject, html) if email else False
