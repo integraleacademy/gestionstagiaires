@@ -1142,31 +1142,32 @@ def admin_send_access(session_id: str, trainee_id: str):
     if not s:
         abort(404)
     trainees = _session_trainees_list(s)
-    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         abort(404)
 
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
     subject = "Accès à votre espace stagiaire – Intégrale Academy"
-html = mail_layout(f"""
-  <h2>Votre espace stagiaire est disponible</h2>
-  <p>Formation : <strong>{_session_get(s,'name','')}</strong></p>
-  <p>
-    <a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">
-      Accéder à mon espace stagiaire
-    </a>
-  </p>
-""")
+
+    html = mail_layout(f"""
+      <h2>Votre espace stagiaire est disponible</h2>
+      <p>Formation : <strong>{_session_get(s,'name','')}</strong></p>
+      <p>
+        <a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">
+          Accéder à mon espace stagiaire
+        </a>
+      </p>
+    """)
+
     sms = f"Intégrale Academy : votre espace stagiaire est disponible : {link}"
 
-    brevo_send_email(t.get("email",""), subject, html)
-    brevo_send_sms(t.get("phone",""), sms)
+    brevo_send_email(t.get("email", ""), subject, html)
+    brevo_send_sms(t.get("phone", ""), sms)
 
     t["access_sent_at"] = _now_iso()
     s["trainees"] = trainees
     save_data(data)
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
-
 
 # =========================
 # Test de français — notify/relance
