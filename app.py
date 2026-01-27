@@ -1575,33 +1575,50 @@ def admin_docs_zip(session_id: str, trainee_id: str):
     s = find_session(data, session_id)
     if not s:
         abort(404)
+
     trainees = _session_trainees_list(s)
-    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         abort(404)
 
     docs = t.get("documents") or []
     buf = BytesIO()
+
     with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as z:
         for d in docs:
-            token = (d.get("file") or "")
-            if not token:
-                continue
-            fp = _detokenize_path(token)
-            if not os.path.exists(fp):
+            tokens = []
+
+            # ✅ multi-fichiers en priorité
+            if isinstance(d.get("files"), list) and d["files"]:
+                tokens = [x for x in d["files"] if x]
+            else:
+                # compat: 1 fichier
+                tok = (d.get("file") or "")
+                if tok:
+                    tokens = [tok]
+
+            if not tokens:
                 continue
 
             label = (d.get("label") or "document").replace("/", "-")
             prenom = (t.get("first_name") or "").strip()
             nom = (t.get("last_name") or "").strip()
-            ext = os.path.splitext(fp)[1] or ""
-            newname = f"{label} {prenom} {nom}".strip().replace("  ", " ")
-            z.write(fp, arcname=(newname + ext))
+
+            for i, token in enumerate(tokens, start=1):
+                fp = _detokenize_path(token)
+                if not os.path.exists(fp):
+                    continue
+
+                ext = os.path.splitext(fp)[1] or ""
+                base = f"{label} {prenom} {nom}".strip().replace("  ", " ")
+
+                # ✅ si plusieurs fichiers: suffixe _1, _2...
+                arc = (base + ext) if len(tokens) == 1 else (f"{base}_{i}{ext}")
+                z.write(fp, arcname=arc)
 
     buf.seek(0)
     zipname = f"Documents_{t.get('first_name','')}_{t.get('last_name','')}.zip".replace(" ", "_")
     return send_file(buf, as_attachment=True, download_name=zipname, mimetype="application/zip")
-
 
 # =========================
 # API docs autosave (status/comment)
@@ -1809,12 +1826,13 @@ def public_doc_upload(token: str, doc_key: str):
     if doc_key not in allowed_doc_keys_for_training(training_type):
         return redirect(url_for("public_trainee_space", token=token))
 
-    f = request.files.get("file")
-    if not f or not f.filename:
+    # ✅ multi-fichiers (utile pour Carte d'identité recto/verso)
+    files = request.files.getlist("file")
+    files = [x for x in files if x and x.filename]
+    if not files:
         return redirect(url_for("public_trainee_space", token=token))
 
-    # ✅ contrôle extension par doc (accept)
-    ext = _safe_ext(f.filename)
+    # ✅ retrouver la config du doc (accept)
     docs = t.get("documents") or []
     target = next((d for d in docs if d.get("key") == doc_key), None)
     if not target:
@@ -1822,25 +1840,39 @@ def public_doc_upload(token: str, doc_key: str):
 
     accept = (target.get("accept") or "").lower()
 
-    # règles simples : pdf / images
-    if "application/pdf" in accept and ext != ".pdf":
-        return redirect(url_for("public_trainee_space", token=token))
-    if "image/" in accept and ext not in (".jpg", ".jpeg", ".png", ".webp"):
+    # ✅ validation recto/verso pour la carte d'identité
+    if doc_key == "id" and len(files) < 2:
         return redirect(url_for("public_trainee_space", token=token))
 
+    # ✅ contrôle type (pdf ou image)
+    def _accepts_file(ext: str) -> bool:
+        if "application/pdf" in accept:
+            return ext == ".pdf"
+        if "image/" in accept:
+            return ext in (".jpg", ".jpeg", ".png", ".webp")
+        # fallback
+        return ext in ALLOWED_EXT
+
+    # ✅ stockage : 1 ou plusieurs fichiers
+    stored_tokens = []
     session_id = s.get("id")
     trainee_id = t.get("id")
-    if not session_id or not trainee_id:
-        abort(500)
 
-    stored = _store_file(session_id, trainee_id, "public_documents", f)
-    token_path = _tokenize_path(stored)
+    for f in files:
+        ext = _safe_ext(f.filename)
+        if not _accepts_file(ext):
+            return redirect(url_for("public_trainee_space", token=token))
 
+        stored = _store_file(session_id, trainee_id, "public_documents", f)
+        stored_tokens.append(_tokenize_path(stored))
+
+    # ✅ MAJ du doc dans la liste
     for d in docs:
         if d.get("key") == doc_key:
-            d["file"] = token_path
+            d["file"] = stored_tokens[0] if stored_tokens else ""
+            d["files"] = stored_tokens  # ✅ nouveau champ pour multi
             cur = (d.get("status") or "").strip().upper()
-            if cur in ("", "NON DÉPOSÉ", "NON DEPOSÉ", "NON_DEPOSE"):
+            if cur in ("", "NON DÉPOSÉ", "NON DEPOSE", "NON_DEPOSE"):
                 d["status"] = "A CONTRÔLER"
             if d.get("status") == "A CONTROLER":
                 d["status"] = "A CONTRÔLER"
@@ -1894,8 +1926,16 @@ def admin_trainee_page(session_id: str, trainee_id: str):
 
     # file tokens for template links (documents)
     for d in (t.get("documents") or []):
+        # compat: 1 fichier
         token = d.get("file") or ""
         d["file_token"] = token
+    
+        # ✅ multi-fichiers
+        files = d.get("files")
+        if isinstance(files, list) and files:
+            d["file_tokens"] = [x for x in files if x]
+        else:
+            d["file_tokens"] = []
 
     # deliverables view
     deliverables_view = []
