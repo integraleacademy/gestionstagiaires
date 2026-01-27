@@ -3,6 +3,8 @@ import json
 import uuid
 import datetime
 from typing import Dict, Any, Optional, List
+from functools import wraps
+from flask import session
 
 import requests
 from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file
@@ -13,6 +15,77 @@ from docx import Document
 
 
 app = Flask(__name__)
+
+# =========================
+# Auth (admin)
+# =========================
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+
+ADMIN_USER = os.environ.get("ADMIN_USER", "")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "30"))
+
+app.config.update(
+    SESSION_COOKIE_NAME="integrale_admin",
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=True,  # Render = https
+    PERMANENT_SESSION_LIFETIME=datetime.timedelta(days=SESSION_DAYS),
+)
+
+def admin_login_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login", next=request.path))
+        return view(*args, **kwargs)
+    return wrapped
+
+@app.get("/admin/login")
+def admin_login():
+    # mini page sans template (pour aller vite)
+    next_url = request.args.get("next") or url_for("admin_sessions")
+    return f"""
+    <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Connexion admin</title></head>
+    <body style="font-family:Arial,sans-serif;max-width:420px;margin:60px auto;padding:20px">
+      <h2>Connexion</h2>
+      <form method="post" action="/admin/login">
+        <input type="hidden" name="next" value="{next_url}">
+        <div style="margin:10px 0">
+          <label>Identifiant</label><br>
+          <input name="username" autocomplete="username" style="width:100%;padding:10px">
+        </div>
+        <div style="margin:10px 0">
+          <label>Mot de passe</label><br>
+          <input name="password" type="password" autocomplete="current-password" style="width:100%;padding:10px">
+        </div>
+        <button style="padding:10px 14px">Se connecter</button>
+      </form>
+    </body></html>
+    """
+
+@app.post("/admin/login")
+def admin_login_post():
+    username = (request.form.get("username") or "").strip()
+    password = (request.form.get("password") or "").strip()
+    next_url = request.form.get("next") or url_for("admin_sessions")
+
+    # sécurité minimale : si pas configuré, on refuse
+    if not ADMIN_USER or not ADMIN_PASSWORD:
+        abort(500, "ADMIN_USER/ADMIN_PASSWORD non configurés")
+
+    if username == ADMIN_USER and password == ADMIN_PASSWORD:
+        session["admin_logged_in"] = True
+        session.permanent = True  # ✅ cookie persistant
+        return redirect(next_url)
+
+    return redirect(url_for("admin_login", next=next_url))
+
+@app.get("/admin/logout")
+def admin_logout():
+    session.clear()
+    return redirect(url_for("admin_login"))
 
 def fr_date(value: str) -> str:
     s = (value or "").strip()
@@ -581,6 +654,7 @@ def home():
 
 
 @app.get("/admin/sessions")
+@admin_login_required
 def admin_sessions():
     data = load_data()
     out_sessions = []
@@ -606,6 +680,7 @@ def admin_sessions():
 
 
 @app.get("/admin/sessions/<session_id>/trainees")
+@admin_login_required
 def admin_trainees(session_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -684,6 +759,7 @@ def admin_trainees(session_id: str):
 # =========================
 
 @app.post("/api/sessions/create")
+@admin_login_required
 def api_create_session():
     data = load_data()
     payload = request.get_json(silent=True) or {}
@@ -714,6 +790,7 @@ def api_create_session():
 
 
 @app.post("/api/sessions/<session_id>/delete")
+@admin_login_required
 def api_delete_session(session_id: str):
     data = load_data()
     before = len(data.get("sessions", []))
@@ -727,6 +804,7 @@ def api_delete_session(session_id: str):
 # =========================
 
 @app.post("/api/sessions/<session_id>/trainees/create")
+@admin_login_required
 def api_create_trainee(session_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -821,6 +899,7 @@ def api_create_trainee(session_id: str):
 
 
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/update")
+@admin_login_required
 def api_update_trainee(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -864,6 +943,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
 
 
 @app.post("/api/sessions/<session_id>/trainees/<trainee_id>/delete")
+@admin_login_required
 def api_delete_trainee(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -941,6 +1021,7 @@ def _detokenize_path(token: str) -> str:
     return os.path.join(PERSIST_DIR, token)
 
 @app.get("/admin/uploads/<path:path>")
+@admin_login_required
 def admin_view_upload(path: str):
     full = _detokenize_path(path)
     if not os.path.exists(full):
@@ -949,6 +1030,7 @@ def admin_view_upload(path: str):
     return send_file(full, as_attachment=False)
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/documents/<doc_key>/upload")
+@admin_login_required
 def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -1027,6 +1109,7 @@ def docs_summary_text(trainee: Dict[str, Any]) -> str:
 # Admin actions — trainee
 # =========================
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/delete")
+@admin_login_required
 def admin_delete_trainee(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -1136,6 +1219,7 @@ def admin_etiquette_docx(session_id: str, trainee_id: str):
 
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/send-access")
+@admin_login_required
 def admin_send_access(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -1173,6 +1257,7 @@ def admin_send_access(session_id: str, trainee_id: str):
 # Test de français — notify/relance
 # =========================
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/test-fr/notify")
+@admin_login_required
 def admin_test_fr_notify(session_id: str, trainee_id: str):
     code = (request.form.get("code") or "").strip()
     deadline = (request.form.get("deadline") or "").strip()
@@ -1217,6 +1302,7 @@ def admin_test_fr_notify(session_id: str, trainee_id: str):
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/test-fr/relance")
+@admin_login_required
 def admin_test_fr_relance(session_id: str, trainee_id: str):
     code = (request.form.get("code") or "").strip()
     deadline = (request.form.get("deadline") or "").strip()
@@ -1265,6 +1351,7 @@ def admin_test_fr_relance(session_id: str, trainee_id: str):
 # Documents — notify / nonconform / relance / zip
 # =========================
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/docs/notify")
+@admin_login_required
 def admin_docs_notify(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -1299,6 +1386,7 @@ def admin_docs_notify(session_id: str, trainee_id: str):
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/docs/nonconform-notify")
+@admin_login_required
 def admin_docs_nonconform_notify(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -1337,6 +1425,7 @@ def admin_docs_nonconform_notify(session_id: str, trainee_id: str):
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/docs/relance")
+@admin_login_required
 def admin_docs_relance(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -1375,6 +1464,7 @@ def admin_docs_relance(session_id: str, trainee_id: str):
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/documents.zip")
+@admin_login_required
 def admin_docs_zip(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -1412,6 +1502,7 @@ def admin_docs_zip(session_id: str, trainee_id: str):
 # API docs autosave (status/comment)
 # =========================
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/documents/update")
+@admin_login_required
 def api_docs_update(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -1467,6 +1558,7 @@ DELIVERABLE_LABELS = {
 }
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/deliverables/<kind>/upload")
+@admin_login_required
 def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
     if kind not in DELIVERABLE_LABELS:
         abort(404)
@@ -1662,6 +1754,7 @@ def public_doc_upload(token: str, doc_key: str):
 # ✅ Remplace ta page JSON par une vraie page HTML
 # =========================
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>")
+@admin_login_required
 def admin_trainee_page(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -1741,6 +1834,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     )
 
 @app.get("/api/docs_to_control")
+@admin_login_required
 def api_docs_to_control():
     data = load_data()
     out = []
