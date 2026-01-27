@@ -385,7 +385,14 @@
   <div class="muted">Déposez vos documents. Un tag s’affiche après contrôle par l’administration.</div>
 
   {% for d in (trainee.documents or []) %}
-    {% set has_file = (d and d.file) %}
+{% set has_file = false %}
+{% if d %}
+  {% if d.files is defined and d.files is sequence and (d.files|length) > 0 %}
+    {% set has_file = true %}
+  {% elif d.file %}
+    {% set has_file = true %}
+  {% endif %}
+{% endif %}
     {% set st = (d.status if d and d.status else ("NON DÉPOSÉ" if not has_file else "A CONTRÔLER")) %}
     {% set up = (st|string)|upper %}
 
