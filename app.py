@@ -684,6 +684,10 @@ def infos_is_complete(t: Dict[str, Any]) -> bool:
 
     return True
 
+def dossier_is_complete_total(trainee: Dict[str, Any], training_type: str) -> bool:
+    # ✅ complet seulement si infos OK + tous docs CONFORME
+    return infos_is_complete(trainee) and dossier_is_complete(trainee, training_type)
+
 
 # =========================
 # Pages (templates)
@@ -891,7 +895,7 @@ def api_create_trainee(session_id: str):
     }
 
     ensure_documents_schema_for_trainee(t, training_type)
-    t["dossier_status"] = "complete" if dossier_is_complete(t, training_type) else "incomplete"
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
 
     trainees = _session_trainees_list(s)
     trainees.insert(0, t)
@@ -1178,7 +1182,7 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
     t["updated_at"] = _now_iso()
 
     # ✅ recalcul dossier_status
-    t["dossier_status"] = "complete" if dossier_is_complete(t, training_type) else "incomplete"
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
@@ -1633,7 +1637,7 @@ def api_docs_update(session_id: str, trainee_id: str):
 
     # ✅ Synchronisation automatique du statut dossier
     training_type = _session_get(s, "training_type", "")
-    t["dossier_status"] = "complete" if dossier_is_complete(t, training_type) else "incomplete"
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
 
     # ✅ PERSISTENCE (sinon ça se perd au refresh)
     s["trainees"] = trainees
@@ -1642,7 +1646,7 @@ def api_docs_update(session_id: str, trainee_id: str):
 
     return jsonify({
         "ok": True,
-        "dossier_is_complete": dossier_is_complete(t, training_type),
+        "dossier_is_complete": dossier_is_complete_total(t, training_type),
         "dossier_status": t["dossier_status"]
     })
 
@@ -1755,7 +1759,7 @@ def public_trainee_space(token):
         token=token,
         show_hosting=show_hosting,
         show_vae=show_vae,
-        dossier_ok=dossier_ok,
+        dossier_ok = dossier_is_complete_total(trainee, training_type)
     )
 
 
@@ -1781,6 +1785,9 @@ def public_infos_update(token: str):
     t["address"] = (payload.get("address") or "").strip()
     t["zip_code"] = (payload.get("zip_code") or "").strip()
     t["city"] = (payload.get("city") or "").strip()
+
+    training_type = _session_get(s, "training_type", "")
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
 
     t["updated_at"] = _now_iso()
     save_data(data)
@@ -1840,7 +1847,7 @@ def public_doc_upload(token: str, doc_key: str):
             break
 
     t["updated_at"] = _now_iso()
-    t["dossier_status"] = "complete" if dossier_is_complete(t, training_type) else "incomplete"
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
 
     # ✅ persistance
     s["trainees"] = _session_trainees_list(s)
@@ -1915,7 +1922,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     ]
 
     # ✅ dossier_status cohérent avec les docs requis
-    dossier_complete = dossier_is_complete(t, training_type)
+    dossier_complete = dossier_is_complete_total(t, training_type)
     t["dossier_status"] = "complete" if dossier_complete else "incomplete"
     t["updated_at"] = _now_iso()
 
