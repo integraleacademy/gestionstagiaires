@@ -287,10 +287,11 @@
 <!-- Encadré : infos à compléter (autosave) -->
 <div class="card" style="grid-column:1/-1;">
   <h2>Infos à compléter</h2>
-  <div class="muted" style="margin-bottom:10px;">
-    ⚠️ Ces informations sont <strong>obligatoires</strong>.  
-    Tant qu’un champ est incomplet, il apparaît en <span style="color:#b91c1c;font-weight:900;">rouge</span>.
-  </div>
+<div class="muted" style="margin-bottom:10px;">
+  ✅ <strong>Tout ce que vous saisissez est enregistré automatiquement.</strong><br>
+  ⚠️ Ces informations sont <strong>obligatoires</strong>.
+  Quand un champ est incomplet, il apparaît en <span style="color:#b91c1c;font-weight:900;">rouge</span>.
+</div>
 
 {% macro field(label, id, value, placeholder) %}
   {% set ok = value and value|length > 3 %}
@@ -317,10 +318,20 @@
            trainee.pre_number,
            "Ex : PRE-083-2025-12-01-20250000000 ou CAR-083-2025-12-01-20250000000") }}
 
-  {{ field("Date de naissance",
-           "birth_date",
-           trainee.birth_date,
-           "Ex : 1998-04-23") }}
+{# Date de naissance (type date) #}
+<div class="field" style="border-left:4px solid {{ '#16a34a' if (trainee.birth_date or '') else '#dc2626' }};padding-left:10px;">
+  <label class="label">Date de naissance</label>
+
+  <div style="display:flex;gap:10px;align-items:center;">
+    <input id="birth_date"
+           type="date"
+           value="{{ trainee.birth_date or '' }}"
+           style="flex:1;">
+    <span id="ok_birth_date" class="saved show" style="min-width:110px;text-align:right;{% if (trainee.birth_date or '') %}color:#16a34a;{% else %}color:#dc2626;{% endif %}">
+      {% if (trainee.birth_date or '') %}✅{% else %}⚠️ À compléter{% endif %}
+    </span>
+  </div>
+</div>
 
   {{ field("Ville de naissance",
            "birth_city",
@@ -473,6 +484,44 @@
 <script>
   const token = "{{ token }}";
 
+  // ✅ Helpers formatage live
+function digitsOnly(s){
+  return (s || "").toString().replace(/\D+/g, "");
+}
+
+// Affichage Sécu : 15 chiffres -> "1 85 12 34 567 890 12"
+function formatSecuDisplay(digits){
+  const parts = [
+    digits.slice(0,1),
+    digits.slice(1,3),
+    digits.slice(3,5),
+    digits.slice(5,7),
+    digits.slice(7,10),
+    digits.slice(10,13),
+    digits.slice(13,15),
+  ].filter(p => p.length);
+  return parts.join(" ");
+}
+
+function normalizePRE(s){
+  return (s || "").toString().trim().toUpperCase().replace(/\s+/g, "");
+}
+
+function applyFormattingLive(){
+  // Sécu
+  const secu = document.getElementById("carte_vitale");
+  if(secu){
+    const d = digitsOnly(secu.value).slice(0, 15);
+    secu.value = formatSecuDisplay(d);
+  }
+
+  // PRE
+  const pre = document.getElementById("pre_number");
+  if(pre){
+    pre.value = normalizePRE(pre.value);
+  }
+}
+
   function flashSaved(id){
     const el = document.getElementById(id);
     if(!el) return;
@@ -562,6 +611,15 @@ function setFieldState(inputId){
     const el = document.getElementById(id);
     if(el) el.addEventListener("input", autosave);
   });
+
+  // ✅ Formatage en direct pendant la saisie
+["carte_vitale","pre_number"].forEach(id=>{
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.addEventListener("input", ()=>{
+    applyFormattingLive();
+  });
+});
 
   // premier passage pour mettre rouge/✅ dès l'ouverture
   window.addEventListener("load", ()=>{
