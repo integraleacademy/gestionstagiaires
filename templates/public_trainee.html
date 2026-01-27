@@ -427,7 +427,23 @@
       </div>
 
       <form action="/espace/{{ token }}/documents/{{ d.key }}/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="file" accept="{{ accept }}" required>
+        {% if d.key == "id" %}
+  <div class="muted" style="font-weight:900;color:#111;margin-bottom:6px;">
+    📌 Carte d’identité obligatoire — 
+    <span style="color:#b91c1c;">RECTO + VERSO (2 fichiers à déposer)</span>
+  </div>
+
+  <input type="file"
+         name="file"
+         accept="{{ accept }}"
+         multiple
+         required>
+{% else %}
+  <input type="file"
+         name="file"
+         accept="{{ accept }}"
+         required>
+{% endif %}
         <button class="btn small" type="submit">
           {% if has_file %}Remplacer{% else %}Déposer{% endif %}
         </button>
