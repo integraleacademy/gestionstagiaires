@@ -654,6 +654,35 @@ def dossier_is_complete(trainee: Dict[str, Any], training_type: str) -> bool:
 
     return True
 
+    
+import re
+
+def infos_is_complete(t: Dict[str, Any]) -> bool:
+    # Champs obligatoires
+    required = [
+        "birth_date",
+        "birth_city",
+        "birth_country",
+        "nationality",
+        "address",
+        "zip_code",
+        "city",
+    ]
+    for k in required:
+        if not (t.get(k) or "").strip():
+            return False
+
+    # Sécu : 15 chiffres
+    secu_digits = re.sub(r"\D+", "", (t.get("carte_vitale") or ""))
+    if len(secu_digits) != 15:
+        return False
+
+    # PRE : format PRE-083-2025-12-01-20250000000 ou CAR-...
+    pre = (t.get("pre_number") or "").strip().upper().replace(" ", "")
+    if not re.match(r"^(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11,}$", pre):
+        return False
+
+    return True
 
 
 # =========================
@@ -1726,6 +1755,7 @@ def public_trainee_space(token):
         token=token,
         show_hosting=show_hosting,
         show_vae=show_vae,
+        dossier_ok=dossier_ok,
     )
 
 
