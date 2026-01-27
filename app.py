@@ -1840,9 +1840,6 @@ def public_doc_upload(token: str, doc_key: str):
 
     accept = (target.get("accept") or "").lower()
 
-    # ✅ validation recto/verso pour la carte d'identité
-    if doc_key == "id" and len(files) < 2:
-        return redirect(url_for("public_trainee_space", token=token))
 
     # ✅ contrôle type (pdf ou image)
     def _accepts_file(ext: str) -> bool:
