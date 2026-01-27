@@ -71,6 +71,11 @@ PUBLIC_STUDENT_PORTAL_BASE = os.environ.get(
     "https://gestionstagiaires-r5no.onrender.com"
 )
 
+PUBLIC_BASE_URL = os.environ.get(
+    "PUBLIC_BASE_URL",
+    "https://gestionstagiaires-r5no.onrender.com"
+)
+
 
 CNAPS_STATUS_ENDPOINT = os.environ.get("CNAPS_STATUS_ENDPOINT", "")
 HEBERGEMENT_STATUS_ENDPOINT = os.environ.get("HEBERGEMENT_STATUS_ENDPOINT", "")
@@ -87,6 +92,7 @@ def normalize_phone_fr(phone: str) -> str:
     if p.startswith("0") and len(p) == 10 and p[1:].isdigit():
         return "+33" + p[1:]
     return p
+
 
 
 def brevo_send_email(to_email: str, subject: str, html: str) -> bool:
@@ -148,7 +154,24 @@ def brevo_send_sms(phone: str, message: str) -> bool:
         return False
 
 
+def mail_layout(inner_html: str) -> str:
+    logo_url = f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png"
 
+    return f"""
+    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
+      <div style="background:white;padding:18px;border-radius:12px">
+        <div style="text-align:center;margin-bottom:18px">
+          <img src="{logo_url}" alt="Intégrale Academy" style="height:60px;width:auto">
+        </div>
+
+        {inner_html}
+
+        <p style="margin-top:30px;color:#666;font-size:13px;text-align:center">
+          Intégrale Academy
+        </p>
+      </div>
+    </div>
+    """
 # =========================
 # Helpers
 # =========================
@@ -1125,16 +1148,15 @@ def admin_send_access(session_id: str, trainee_id: str):
 
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
     subject = "Accès à votre espace stagiaire – Intégrale Academy"
-    html = f"""
-    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
-      <div style="background:white;padding:18px;border-radius:12px">
-        <h2>Votre espace stagiaire est disponible</h2>
-        <p>Formation : <strong>{_session_get(s,'name','')}</strong></p>
-        <p><a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">Accéder à mon espace stagiaire</a></p>
-        <p style="color:#666;font-size:13px">Intégrale Academy</p>
-      </div>
-    </div>
-    """
+html = mail_layout(f"""
+  <h2>Votre espace stagiaire est disponible</h2>
+  <p>Formation : <strong>{_session_get(s,'name','')}</strong></p>
+  <p>
+    <a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">
+      Accéder à mon espace stagiaire
+    </a>
+  </p>
+""")
     sms = f"Intégrale Academy : votre espace stagiaire est disponible : {link}"
 
     brevo_send_email(t.get("email",""), subject, html)
