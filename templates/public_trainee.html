@@ -426,7 +426,11 @@
         {% endif %}
       </div>
 
-      <form action="/espace/{{ token }}/documents/{{ d.key }}/upload" method="post" enctype="multipart/form-data">
+      <form
+  {% if d.key == "photo" %}id="photo_form"{% endif %}
+  action="/espace/{{ token }}/documents/{{ d.key }}/upload"
+  method="post"
+  enctype="multipart/form-data">
         {% if d.key == "id" %}
   <div class="muted" style="font-weight:900;color:#111;margin-bottom:6px;">
     📌 Carte d’identité obligatoire — 
@@ -448,6 +452,23 @@
           {% if has_file %}Remplacer{% else %}Déposer{% endif %}
         </button>
       </form>
+{% if d.key == "photo" %}
+  <div id="photo_hint_photo" style="display:none;margin-top:12px;border:2px solid #fed7aa;background:#fff7ed;padding:12px;border-radius:12px;">
+    <div style="font-weight:900;color:#9a3412;margin-bottom:8px;">
+      Avez-vous bien fourni une photo d’identité conforme ?
+    </div>
+
+    <img src="/static/photo-identite-exemple.png"
+         alt="Exemple photo identité conforme"
+         style="max-width:240px;width:100%;border-radius:10px;border:1px solid #e5e7eb;display:block;margin-bottom:10px;">
+
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn outline small" onclick="cancelPhotoUpload()">Modifier</button>
+      <button type="button" class="btn small" onclick="confirmPhotoUpload()">Oui, je confirme</button>
+    </div>
+  </div>
+{% endif %}
+      
     </div>
   {% endfor %}
 </div>
@@ -652,10 +673,6 @@ function setFieldState(inputId){
 
   });
 
-  function digitsOnly(s){
-  return (s || "").toString().replace(/\D+/g, "");
-}
-
 // Format Sécu : 15 chiffres (on affiche avec espaces pour lecture)
 function formatSecuDisplay(digits){
   // 15 digits: 1 85 12 34 567 890 12
@@ -725,8 +742,43 @@ function setFieldStateValidated(inputId){
   }
 }
 
-  
+ 
+
+  // ========= PHOTO confirmation (exemple) =========
+function cancelPhotoUpload(){
+  const hint = document.getElementById("photo_hint_photo");
+  if(hint) hint.style.display = "none";
+  const form = document.getElementById("photo_form");
+  if(form) form.dataset.confirmed = "";
+}
+
+function confirmPhotoUpload(){
+  const form = document.getElementById("photo_form");
+  if(form){
+    form.dataset.confirmed = "1";
+    form.submit();
+  }
+}
+
+window.addEventListener("DOMContentLoaded", ()=>{
+  const form = document.getElementById("photo_form");
+  if(!form) return;
+
+  form.addEventListener("submit", (e)=>{
+    if(form.dataset.confirmed === "1") return;
+
+    const input = form.querySelector('input[type="file"]');
+    if(input && input.files && input.files.length){
+      e.preventDefault();
+      const hint = document.getElementById("photo_hint_photo");
+      if(hint) hint.style.display = "block";
+    }
+  });
+});
 </script>
+
+  
+
 
 
 {% endblock %}
