@@ -250,7 +250,7 @@
 
       <div class="docrow">
         <div class="docmeta"><div class="label">Dossier</div></div>
-        {{ pill_for('dossier', trainee.dossier_status) }}
+        {{ pill_for('dossier', 'complete' if dossier_ok else 'incomplete') }}
       </div>
 
       <div class="docrow">
