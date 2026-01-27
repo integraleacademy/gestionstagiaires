@@ -181,22 +181,7 @@ def brevo_send_email(to_email: str, subject: str, html: str) -> bool:
         "content-type": "application/json",
     }
 
-    attachments = []
-
-    # 🔒 Logo inline (CID)
-    try:
-        logo_path = os.path.join(app.root_path, "static", "logo-integrale.png")
-        if os.path.exists(logo_path):
-            with open(logo_path, "rb") as f:
-                logo_b64 = base64.b64encode(f.read()).decode("utf-8")
-
-            attachments.append({
-                "content": logo_b64,
-                "name": "logo-integrale.png",
-                "contentId": "logo_integrale"
-            })
-    except Exception:
-        pass
+    attachments = []  # ✅ pas d'inline CID, Gmail casse souvent
 
     payload = {
         "sender": {"name": BREVO_SENDER_NAME, "email": BREVO_SENDER_EMAIL},
@@ -253,8 +238,8 @@ def brevo_send_sms(phone: str, message: str) -> bool:
 
 
 def mail_layout(inner_html: str) -> str:
-    # logo inline (CID Brevo)
-    logo_src = "cid:logo_integrale"
+    # ✅ logo en URL HTTPS (fiable dans Gmail)
+    logo_src = f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png"
 
     return f"""
     <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
