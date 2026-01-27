@@ -872,18 +872,83 @@ def api_create_trainee(session_id: str):
 
     # ✅ ENVOI MAIL + SMS à la création
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}"
-    subject = "Accès à votre espace stagiaire – Intégrale Academy"
+
+    formation_name = _session_get(s, "name", "").strip()
+    dstart = fr_date(_session_get(s, "date_start", ""))
+    dend = fr_date(_session_get(s, "date_end", ""))
+
+    subject = "Votre inscription en formation – Intégrale Academy"
+
     html = mail_layout(f"""
-      <h2>Votre espace stagiaire est disponible</h2>
-      <p>Bonjour <strong>{first_name} {last_name}</strong>,</p>
-      <p>Voici votre lien d’accès :</p>
+      <h2>🎉 Confirmation d’inscription</h2>
+
+      <p>Bonjour <strong>{first_name}</strong>,</p>
+
       <p>
-        <a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">
-          Accéder à mon espace stagiaire
+        Je vous confirme que vous êtes inscrit(e) en formation
+        <strong>{formation_name}</strong>, qui se déroulera
+        du <strong>{dstart}</strong> au <strong>{dend}</strong>.
+      </p>
+
+      <p>🙏 Je vous remercie pour votre confiance !</p>
+
+      <p>
+        Vous recevrez prochainement par mail votre <strong>Contrat de formation</strong>
+        que je vous invite à signer dès réception (signature électronique).
+      </p>
+
+      <p>
+        📂 Je vous remercie de bien vouloir compléter dès que possible votre
+        <strong>Dossier Formation</strong> depuis votre Espace Stagiaire en cliquant sur le bouton ci-dessous.
+      </p>
+
+      <p style="color:#b91c1c;font-weight:bold">
+        ⚠️ Attention : votre dossier doit être complet au plus tard <u>10 jours avant le début de votre formation</u> !
+      </p>
+
+      <p>
+        <a href="{link}"
+           style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+          👉 Accéder à mon espace stagiaire
+        </a>
+      </p>
+
+      <p style="margin-top:25px">
+        ☎️ Pour tous renseignements, vous pouvez nous contacter au <strong>04 22 47 07 68</strong>
+        ou utiliser notre formulaire d’assistance :
+      </p>
+
+      <p>
+        <a href="https://assistance-alw9.onrender.com/"
+           style="display:inline-block;background:#2563eb;color:white;padding:10px 16px;border-radius:10px;text-decoration:none;font-weight:bold">
+          🛠️ Formulaire d’assistance
+        </a>
+      </p>
+
+      <p style="margin-top:30px">
+        Je reste à votre disposition pour tous renseignements complémentaires,<br>
+        <strong>Clément VAILLANT</strong><br>
+        Directeur Intégrale Academy
+      </p>
+
+      <hr style="margin:30px 0;border:none;border-top:1px solid #e5e7eb">
+
+      <p style="font-size:12px;color:#6b7280;text-align:center;line-height:1.6">
+        © Intégrale Academy — Merci de votre confiance 💛<br>
+        54 chemin du Carreou 83480 PUGET SUR ARGENS / 142 rue de Rivoli 75001 PARIS<br>
+        SIREN 840 899 884 - NDA 93830600283 - Certification Nationale QUALIOPI : n°03169 en date du 21/10/2024<br>
+        UAI Côte d'Azur 0831774C - UAI Paris 0756548K<br>
+        <a href="https://www.integraleacademy.com" style="color:#1f8f4a;text-decoration:none;font-weight:bold">
+          integraleacademy.com
         </a>
       </p>
     """)
-    sms = f"Intégrale Academy : votre espace stagiaire est disponible : {link}"
+
+    sms = (
+        f"Intégrale Academy 🎓 Bonjour {first_name}, inscription confirmée : {formation_name} "
+        f"({dstart} au {dend}). Contrat envoyé prochainement. Dossier à compléter : {link} "
+        f"(au + tard 10j avant). Aide : 04 22 47 07 68 / https://assistance-alw9.onrender.com/"
+    )
 
     email_ok = brevo_send_email(email, subject, html) if email else False
     sms_ok = brevo_send_sms(phone, sms) if phone else False
