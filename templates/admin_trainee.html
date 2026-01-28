@@ -20,72 +20,72 @@
 </div>
 
 <div class="card" style="margin-top:12px;">
-  <div class="card-row" style="display:flex;gap:12px;align-items:flex-start;justify-content:space-between;">
-    <div>
+  <!-- LIGNE 1 : NOM + PHOTO CÔTE À CÔTE -->
+  <div style="display:flex;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;">
+    <div style="flex:1;min-width:320px;">
 
+      <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+        <div style="font-size:20px;font-weight:900;line-height:1.1;">
+          {{ trainee.first_name }} {{ trainee.last_name }}
+        </div>
 
+        <div style="width:110px;">
+          {% if trainee.identity_photo %}
+            <img
+              src="{{ url_for('admin_view_upload', path=trainee.identity_photo) }}"
+              alt="Photo d'identité"
+              style="width:110px;height:140px;object-fit:cover;border-radius:12px;border:1px solid #e5e7eb;background:#fff;"
+            />
+          {% else %}
+            <div style="width:110px;height:140px;border-radius:12px;border:1px dashed #cbd5e1;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:12px;color:#64748b;text-align:center;">
+              Aucune photo
+            </div>
+          {% endif %}
+        </div>
 
-
-<div style="display:flex; gap:12px; align-items:flex-start;">
-  <!-- Colonne gauche -->
-  <div style="flex:1; min-width:0;">
-    <div style="font-size:20px;font-weight:900;">{{ trainee.first_name }} {{ trainee.last_name }}</div>
-
-    <div class="meta-line" style="margin-top:6px;">
-      <span class="mono">Email : {{ trainee.email or "—" }}</span>
-      <span class="mono">Tel : {{ trainee.phone or "—" }}</span>
-      <span class="mono">ID : {{ trainee.personal_id or trainee.id }}</span>
-    </div>
-
-<div class="meta-line" style="margin-top:6px;">
-  {% set c = (trainee.cnaps or "INCONNU")|upper %}
-
-  <span class="cnaps
-    {% if "TRANSM" in c %}cnaps-transmis
-    {% elif "ENREG" in c %}cnaps-enregistre
-    {% elif "INSTRU" in c %}cnaps-instruction
-    {% elif "ACCEPT" in c %}cnaps-accepte
-    {% elif "REFUS" in c %}cnaps-refuse
-    {% elif "DOC" in c %}cnaps-docs
-    {% else %}cnaps-inconnu
-    {% endif %}">
-    CNAPS : {{ c }}
-  </span>
-
-  <button class="mini-btn" id="btnRefreshCnaps" type="button">↻ Rafraîchir CNAPS</button>
-</div>
-
-<form method="post" enctype="multipart/form-data"
-      action="{{ url_for('admin_upload_identity_photo', session_id=session.id, trainee_id=trainee.id) }}"
-      style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px;">
-  <input type="file" name="file" accept="image/*" required>
-  <button class="btn btn-outline" type="submit">🪪 Importer photo d’identité</button>
-</form>
-      
-    </div>
-  </div>
-
-  <!-- Colonne droite (photo) -->
-  <div style="width:110px;">
-    {% if trainee.identity_photo %}
-      <img
-        src="{{ url_for('admin_view_upload', path=trainee.identity_photo) }}"
-        alt="Photo d'identité"
-        style="width:110px;height:140px;object-fit:cover;border-radius:12px;border:1px solid #e5e7eb;background:#fff;"
-      />
-    {% else %}
-      <div style="width:110px;height:140px;border-radius:12px;border:1px dashed #cbd5e1;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:12px;color:#64748b;text-align:center;">
-        Aucune photo
+        <!-- Upload juste sous la photo (mais toujours à côté du nom, pas dessous dans la page) -->
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <form id="photoForm" method="post" enctype="multipart/form-data"
+                action="{{ url_for('admin_upload_identity_photo', session_id=session.id, trainee_id=trainee.id) }}">
+            <input id="photoInput" type="file" name="file" accept="image/*" required style="display:none;">
+            <label for="photoInput" class="btn btn-outline" style="padding:8px 10px;cursor:pointer;white-space:nowrap;">
+              🪪 Importer photo
+            </label>
+          </form>
+          <div class="hint">(upload immédiat)</div>
+        </div>
       </div>
-    {% endif %}
-  </div>
-</div>
-      {% if trainee.access_sent_at %}
-      <div class="hint" style="margin-top:8px;">✅ Accès envoyé le : <strong>{{ trainee.access_sent_at }}</strong></div>
-      {% endif %}
+
+      <div class="meta-line" style="margin-top:10px;">
+        <span class="mono">Email : {{ trainee.email or "—" }}</span>
+        <span class="mono">Tel : {{ trainee.phone or "—" }}</span>
+        <span class="mono">ID : {{ trainee.personal_id or trainee.id }}</span>
+      </div>
+
+      <div class="meta-line" style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        {% set c = (trainee.cnaps or "INCONNU")|upper %}
+        <span class="cnaps
+          {% if "TRANSM" in c %}cnaps-transmis
+          {% elif "ENREG" in c %}cnaps-enregistre
+          {% elif "INSTRU" in c %}cnaps-instruction
+          {% elif "ACCEPT" in c %}cnaps-accepte
+          {% elif "REFUS" in c %}cnaps-refuse
+          {% elif "DOC" in c %}cnaps-docs
+          {% else %}cnaps-inconnu
+          {% endif %}">
+          CNAPS : {{ c }}
+        </span>
+
+        <button class="mini-btn" id="btnRefreshCnaps" type="button">↻ Rafraîchir CNAPS</button>
+
+        {% if trainee.access_sent_at %}
+          <span class="hint">✅ Accès envoyé le : <strong>{{ trainee.access_sent_at }}</strong></span>
+        {% endif %}
+      </div>
     </div>
 
-    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+    <!-- BOUTONS ACTIONS À DROITE -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">
       <form method="post" action="{{ url_for('admin_delete_trainee', session_id=session.id, trainee_id=trainee.id) }}"
             onsubmit="return confirm('Supprimer ce stagiaire ?');">
         <button class="btn btn-danger" type="submit">🗑️ Supprimer le stagiaire</button>
@@ -98,17 +98,24 @@
 
       <form method="post" action="{{ url_for('admin_send_access', session_id=session.id, trainee_id=trainee.id) }}">
         <button class="btn btn-primary" type="submit">📩 Envoyer accès espace stagiaire</button>
-        <a class="btn btn-outline"
-   href="{{ PUBLIC_STUDENT_PORTAL_BASE.rstrip('/') }}/espace/{{ trainee.public_token }}"
-   target="_blank"
-   rel="noopener">
-  👁️ Voir espace stagiaire (public)
-</a>
-
       </form>
+
+      <a class="btn btn-outline"
+         href="{{ PUBLIC_STUDENT_PORTAL_BASE.rstrip('/') }}/espace/{{ trainee.public_token }}"
+         target="_blank" rel="noopener">
+        👁️ Voir espace stagiaire (public)
+      </a>
     </div>
   </div>
 </div>
+
+<script>
+  document.getElementById("photoInput")?.addEventListener("change", function(){
+    if(this.files && this.files.length > 0){
+      document.getElementById("photoForm")?.submit();
+    }
+  });
+</script>
 
 
 <div class="grid trainee-grid two-cols" style="gap:12px;margin-top:12px;">
