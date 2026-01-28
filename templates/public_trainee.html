@@ -675,13 +675,18 @@ function setFieldState(inputId){
 
   // listeners existants (garde-les si tu veux) + nouveaux
   [
-    "carte_vitale","pre_number",
-    "birth_date","birth_city","birth_country","nationality",
-    "address","zip_code","city"
-  ].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.addEventListener("input", autosave);
+  "carte_vitale","pre_number",
+  "birth_date","birth_city","birth_country","nationality",
+  "address","zip_code","city"
+].forEach(id=>{
+  const el = document.getElementById(id);
+  if(!el) return;
+
+  el.addEventListener("input", () => {
+    setFieldStateValidated(id);   // ✅ mise à jour live du trait rouge/vert
+    autosave();                   // ✅ sauvegarde différée
   });
+});
 
   // ✅ Formatage en direct pendant la saisie
 ["carte_vitale","pre_number"].forEach(id=>{
@@ -752,10 +757,10 @@ function applyFormatting(){
 function setFieldStateValidated(inputId){
   const input = document.getElementById(inputId);
   const ok = document.getElementById("ok_" + inputId);
-  if(!input || !ok) return;
+  const wrapper = input?.closest(".field");
+  if(!input || !ok || !wrapper) return;
 
   const raw = (input.value || "").trim();
-
   let valid = raw.length > 0;
 
   if(inputId === "carte_vitale"){
@@ -769,10 +774,12 @@ function setFieldStateValidated(inputId){
     input.style.borderColor = "#bbf7d0";
     ok.textContent = "✅";
     ok.style.color = "#16a34a";
+    wrapper.style.borderLeft = "4px solid #16a34a";   // ✅ IMPORTANT
   }else{
     input.style.borderColor = "#fecdd3";
     ok.textContent = "⚠️ À compléter";
     ok.style.color = "#dc2626";
+    wrapper.style.borderLeft = "4px solid #dc2626";   // ✅ IMPORTANT
   }
 }
 
