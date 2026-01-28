@@ -2138,6 +2138,54 @@ def api_docs_to_control():
     return jsonify({"ok": True, "items": out, "count": len(out)})
 
 
+from flask import make_response
+
+@app.get("/docs_to_control.json")
+def public_docs_to_control():
+    data = load_data()
+    out = []
+
+    for s in data.get("sessions", []):
+        session_id = s.get("id")
+        session_name = _session_get(s, "name", "")
+        training_type = _session_get(s, "training_type", "")
+
+        trainees = _session_trainees_list(s)
+
+        for t in trainees:
+            ensure_documents_schema_for_trainee(t, training_type)
+
+            docs = t.get("documents") or []
+            pending = 0
+            for d in docs:
+                st = (d.get("status") or "").strip().upper()
+                if st in ("A CONTRÔLER", "A CONTROLER"):
+                    pending += 1
+
+            if pending > 0:
+                out.append({
+                    "session_id": session_id,
+                    "session_name": session_name,
+                    "training_type": training_type,
+                    "trainee_id": t.get("id"),
+                    "last_name": t.get("last_name", ""),
+                    "first_name": t.get("first_name", ""),
+                    "pending_count": pending,
+                    "admin_url": f"/admin/sessions/{session_id}/stagiaires/{t.get('id')}",
+                })
+
+    out.sort(key=lambda x: x.get("pending_count", 0), reverse=True)
+
+    resp = make_response(jsonify({"ok": True, "items": out, "count": len(out)}))
+
+    # ✅ autorise le fetch depuis ton dashboard (autre domaine)
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+
+    return resp
+
+
 @app.get("/api/trainees_search")
 @admin_login_required
 def api_trainees_search():
