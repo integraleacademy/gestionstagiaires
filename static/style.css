@@ -677,5 +677,13 @@ select.status-pill{
   color: #334155 !important;
 }
 
+.btn-uniform{
+  min-width:260px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  white-space:nowrap;
+}
 
 
