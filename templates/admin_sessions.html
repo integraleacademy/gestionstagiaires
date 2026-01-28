@@ -2,6 +2,20 @@
 {% block content %}
 
 <style>
+
+  .search-item{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 12px;
+  border-top:1px solid #f1f5f9;
+}
+.search-item:first-child{ border-top:none; }
+.search-item:hover{ background:#f9fafb; }
+.search-name{ font-weight:900; }
+.search-sub{ color:#6b7280; font-size:12px; margin-top:2px; }
+.search-open{ white-space:nowrap; }
+  
   /* Modale plus large */
   .modal.modal-wide{
     width: min(1200px, 96vw);
@@ -75,6 +89,31 @@
 <div class="page-head">
   <h1>Sessions</h1>
   <button class="btn btn-primary" id="btnOpenCreateSession">+ Nouvelle session</button>
+</div>
+
+<!-- 🔎 Recherche stagiaire (global) -->
+<div class="card" style="margin-bottom:12px;">
+  <div class="card-row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div>
+      <div class="card-title">Rechercher un stagiaire</div>
+      <div class="muted">Tape un nom ou un prénom pour ouvrir directement la fiche.</div>
+    </div>
+
+    <div style="min-width:min(520px, 100%);position:relative;">
+      <input id="traineeSearchInput"
+             type="text"
+             placeholder="Ex : Dupont, Sarah…"
+             autocomplete="off"
+             style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:12px;outline:none;">
+      
+      <div id="traineeSearchResults"
+           style="display:none;position:absolute;z-index:50;left:0;right:0;top:calc(100% + 8px);
+                  background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.08);
+                  overflow:hidden;">
+        <div id="traineeSearchResultsInner" style="max-height:320px;overflow:auto;"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="card" style="margin-bottom:12px;">
@@ -386,6 +425,111 @@
   window.addEventListener("load", ()=>{
     loadDocsToControl();
   });
+
+    // =========================
+  // 🔎 Recherche stagiaire (global)
+  // =========================
+  (function(){
+    const input = document.getElementById("traineeSearchInput");
+    const box = document.getElementById("traineeSearchResults");
+    const inner = document.getElementById("traineeSearchResultsInner");
+    if(!input || !box || !inner) return;
+
+    let timer = null;
+    let lastQ = "";
+
+    function closeBox(){
+      box.style.display = "none";
+      inner.innerHTML = "";
+    }
+
+    function openBox(){
+      box.style.display = "block";
+    }
+
+    async function doSearch(q){
+      q = (q || "").trim();
+      lastQ = q;
+
+      if(q.length < 2){
+        closeBox();
+        return;
+      }
+
+      inner.innerHTML = `<div class="muted" style="padding:12px;">Recherche…</div>`;
+      openBox();
+
+      try{
+        const r = await fetch(`/api/trainees_search?q=${encodeURIComponent(q)}`);
+        const res = await r.json();
+
+        if(!r.ok || !res.ok){
+          inner.innerHTML = `<div class="muted" style="padding:12px;">Erreur de recherche.</div>`;
+          return;
+        }
+
+        // si l'utilisateur a continué de taper entre temps
+        if(input.value.trim() !== lastQ) return;
+
+        const items = res.items || [];
+        if(items.length === 0){
+          inner.innerHTML = `<div class="muted" style="padding:12px;">Aucun résultat.</div>`;
+          return;
+        }
+
+        inner.innerHTML = items.map(it => {
+          const full = `${(it.first_name||"").toUpperCase()} ${(it.last_name||"").toUpperCase()}`.trim();
+          const sub = `${it.session_name || ""} ${it.training_type ? "• " + it.training_type : ""}`.trim();
+          const url = it.admin_url || `/admin/sessions/${it.session_id}/stagiaires/${it.trainee_id}`;
+
+          return `
+            <div class="search-item">
+              <div>
+                <div class="search-name">${full || "—"}</div>
+                <div class="search-sub">${sub || "—"}</div>
+              </div>
+              <div class="search-open">
+                <a class="btn btn-outline" href="${url}" style="text-decoration:none;display:inline-block">
+                  Ouvrir
+                </a>
+              </div>
+            </div>
+          `;
+        }).join("");
+      }catch(e){
+        inner.innerHTML = `<div class="muted" style="padding:12px;">Erreur réseau.</div>`;
+      }
+    }
+
+    input.addEventListener("input", ()=>{
+      const q = input.value;
+      clearTimeout(timer);
+      timer = setTimeout(()=>doSearch(q), 220);
+    });
+
+    // fermer quand on clique dehors
+    document.addEventListener("click", (e)=>{
+      const target = e.target;
+      if(!target) return;
+      if(target === input) return;
+      if(box.contains(target)) return;
+      closeBox();
+    });
+
+    // ESC pour fermer
+    input.addEventListener("keydown", (e)=>{
+      if(e.key === "Escape"){
+        closeBox();
+        input.blur();
+      }
+    });
+
+    // focus: relance si déjà du texte
+    input.addEventListener("focus", ()=>{
+      const q = input.value.trim();
+      if(q.length >= 2) doSearch(q);
+    });
+  })();
 </script>
 
 {% endblock %}
