@@ -92,27 +92,23 @@
     <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">
       <form method="post" action="{{ url_for('admin_delete_trainee', session_id=session.id, trainee_id=trainee.id) }}"
             onsubmit="return confirm('Supprimer ce stagiaire ?');">
-<button class="btn btn-danger" type="submit"
-        style="min-width:260px;justify-content:center;">
+<button class="btn btn-danger btn-uniform" type="submit">
   🗑️ Supprimer le stagiaire
 </button>
       </form>
 
-<a class="btn btn-outline"
-   style="min-width:260px;justify-content:center;"
+<a class="btn btn-outline btn-uniform"
    href="{{ url_for('admin_etiquette_docx', session_id=session.id, trainee_id=trainee.id) }}">
   🖨️ Imprimer étiquette dossier (Word)
 </a>
 
       <form method="post" action="{{ url_for('admin_send_access', session_id=session.id, trainee_id=trainee.id) }}">
-       <button class="btn btn-primary" type="submit"
-        style="min-width:260px;justify-content:center;">
+<button class="btn btn-primary btn-uniform" type="submit">
   📩 Envoyer accès espace stagiaire
 </button>
       </form>
 
-      <a class="btn btn-outline"
-   style="min-width:260px;justify-content:center;"
+<a class="btn btn-outline btn-uniform"
    href="{{ PUBLIC_STUDENT_PORTAL_BASE.rstrip('/') }}/espace/{{ trainee.public_token }}"
    target="_blank" rel="noopener">
   👁️ Voir espace stagiaire (public)
@@ -244,24 +240,24 @@
       </span>
     </div>
 
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
-      <form method="post" action="{{ url_for('admin_docs_notify', session_id=session.id, trainee_id=trainee.id) }}">
-        <button class="btn btn-primary" type="submit">📩 Notifier envoi documents</button>
-      </form>
+   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+  <form method="post" action="{{ url_for('admin_docs_notify', session_id=session.id, trainee_id=trainee.id) }}">
+    <button class="btn btn-primary btn-uniform" type="submit">📩 Notifier envoi documents</button>
+  </form>
 
-      <form method="post" action="{{ url_for('admin_docs_nonconform_notify', session_id=session.id, trainee_id=trainee.id) }}">
-        <button class="btn btn-outline" type="submit">⚠️ Notifier documents non conformes</button>
-      </form>
+  <form method="post" action="{{ url_for('admin_docs_nonconform_notify', session_id=session.id, trainee_id=trainee.id) }}">
+    <button class="btn btn-outline btn-uniform" type="submit">⚠️ Notifier documents non conformes</button>
+  </form>
 
-      <form method="post" action="{{ url_for('admin_docs_relance', session_id=session.id, trainee_id=trainee.id) }}">
-        <button class="btn btn-outline" type="submit">🔁 Relance stagiaire</button>
-      </form>
+  <form method="post" action="{{ url_for('admin_docs_relance', session_id=session.id, trainee_id=trainee.id) }}">
+    <button class="btn btn-outline btn-uniform" type="submit">🔁 Relance stagiaire</button>
+  </form>
 
-      <a class="btn btn-outline"
-         href="{{ url_for('admin_docs_zip', session_id=session.id, trainee_id=trainee.id) }}">
-        ⬇️ Télécharger les documents (ZIP)
-      </a>
-    </div>
+  <a class="btn btn-outline btn-uniform"
+     href="{{ url_for('admin_docs_zip', session_id=session.id, trainee_id=trainee.id) }}">
+    ⬇️ Télécharger les documents (ZIP)
+  </a>
+</div>
 
     {% if trainee.docs_notified_at %}
       <div class="hint" style="margin-top:10px;">🟧 Stagiaire notifié le : <strong>{{ trainee.docs_notified_at }}</strong></div>
