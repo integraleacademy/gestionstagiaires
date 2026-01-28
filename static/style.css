@@ -756,4 +756,28 @@ input[type="file"]{
   flex:0 0 auto;
 }
 
+/* ✅ Upload diplômes/attestations : aligné + propre */
+.upload-form{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+
+/* on force une largeur propre au file input (sinon c’est l’horreur selon navigateur) */
+.upload-form input[type="file"]{
+  width: 420px !important;
+  max-width: 100%;
+  padding: 8px 10px !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 12px !important;
+  background:#fff !important;
+}
+
+/* le bouton ne doit pas s’écraser */
+.upload-form .btn{
+  white-space:nowrap;
+}
+
 
