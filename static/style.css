@@ -677,44 +677,38 @@ select.status-pill{
   color: #334155 !important;
 }
 
-.btn-uniform{
-  min-width:260px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
-  white-space:nowrap;
-}
+/* =========================
+   BOUTONS — LIGNES UNIFORMES (FIX)
+   ========================= */
 
-/* Conteneur de boutons uniformes (marche pareil sur iPad) */
+/* Ligne */
 .btn-row{
   display:flex;
-  flex-wrap:nowrap;   /* ✅ 1 seule ligne */
   gap:10px;
+  flex-wrap:nowrap;      /* 1 seule ligne */
   align-items:stretch;
-  overflow-x:auto;    /* ✅ si ça dépasse sur iPad, ça scroll horizontal */
 }
 
-/* Chaque item (form ou lien) prend la même largeur */
+/* Chaque item (form ou lien) prend la même place */
 .btn-row > form,
 .btn-row > a{
-  flex: 0 0 260px;     /* largeur FIXE */
-  max-width:260px;
+  flex: 1 1 0;           /* ✅ tous égaux, remplissent la ligne */
+  min-width: 0;          /* ✅ indispensable pour éviter les bugs de shrink */
+  margin: 0;
 }
 
-/* Important : le form ne doit pas être "block chelou" */
+/* Form = container propre */
 .btn-row > form{
   display:flex;
-  margin:0;
 }
 
-/* Le bouton remplit son item */
+/* Le bouton remplit son “slot” */
 .btn-row .btn{
   width:100%;
-  display:inline-flex;
-  align-items:center;
+  min-width:0;           /* ✅ autorise le shrink */
   justify-content:center;
-  text-align:center;
   white-space:nowrap;
+  overflow:hidden;       /* ✅ coupe proprement si trop long */
+  text-overflow:ellipsis;
 }
 
