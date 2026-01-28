@@ -383,23 +383,23 @@
   <div style="font-weight:900;">Diplômes & attestations</div>
   <div class="hint" style="margin-top:6px;">Importer un fichier → stockage + mail/SMS “disponible sur votre espace stagiaire”.</div>
 
-    <form method="post" enctype="multipart/form-data"
-          action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='diplome') }}">
-      <input type="file" name="file" required>
-      <button class="btn btn-primary" type="submit">⬆️ Importer diplôme</button>
-    </form>
+<form class="upload-form" method="post" enctype="multipart/form-data"
+      action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='diplome') }}">
+  <input type="file" name="file" required>
+  <button class="btn btn-primary" type="submit">⬆️ Importer diplôme</button>
+</form>
 
-    <form method="post" enctype="multipart/form-data"
-          action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='attestation_fin_formation') }}">
-      <input type="file" name="file" required>
-      <button class="btn btn-primary" type="submit">⬆️ Importer attestation fin de formation</button>
-    </form>
+<form class="upload-form" method="post" enctype="multipart/form-data"
+      action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='attestation_fin_formation') }}">
+  <input type="file" name="file" required>
+  <button class="btn btn-primary" type="submit">⬆️ Importer attestation fin de formation</button>
+</form>
 
-    <form method="post" enctype="multipart/form-data"
-          action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='carte_sst') }}">
-      <input type="file" name="file" required>
-      <button class="btn btn-primary" type="submit">⬆️ Importer carte SST</button>
-    </form>
+<form class="upload-form" method="post" enctype="multipart/form-data"
+      action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='carte_sst') }}">
+  <input type="file" name="file" required>
+  <button class="btn btn-primary" type="submit">⬆️ Importer carte SST</button>
+</form>
   </div>
 
   <div class="table-wrap" style="margin-top:10px;">
