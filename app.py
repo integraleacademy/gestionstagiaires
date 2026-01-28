@@ -1853,6 +1853,44 @@ def public_trainee_space(token):
         dossier_ok = dossier_is_complete_total(trainee, training_type)
     )
 
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/identity-photo/upload")
+@admin_login_required
+def admin_upload_identity_photo(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    # ✅ on limite aux images
+    ext = _safe_ext(f.filename)
+    if ext not in (".jpg", ".jpeg", ".png", ".webp"):
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    try:
+        stored = _store_file(session_id, trainee_id, "identity_photo", f)
+    except Exception:
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    token = _tokenize_path(stored)
+
+    # ✅ on sauvegarde le token dans le stagiaire
+    t["identity_photo"] = token
+    t["updated_at"] = _now_iso()
+
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 
 @app.post("/espace/<token>/infos/update")
