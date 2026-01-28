@@ -89,7 +89,7 @@
     </div>
 
     <!-- BOUTONS ACTIONS À DROITE -->
-    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">
+    <div class="btn-row" style="justify-content:flex-end;">
       <form method="post" action="{{ url_for('admin_delete_trainee', session_id=session.id, trainee_id=trainee.id) }}"
             onsubmit="return confirm('Supprimer ce stagiaire ?');">
 <button class="btn btn-danger btn-uniform" type="submit">
@@ -240,7 +240,7 @@
       </span>
     </div>
 
-   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+   <div class="btn-row" style="margin-top:10px;">
   <form method="post" action="{{ url_for('admin_docs_notify', session_id=session.id, trainee_id=trainee.id) }}">
     <button class="btn btn-primary btn-uniform" type="submit">📩 Notifier envoi documents</button>
   </form>
