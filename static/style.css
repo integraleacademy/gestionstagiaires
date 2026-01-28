@@ -686,4 +686,34 @@ select.status-pill{
   white-space:nowrap;
 }
 
+/* Conteneur de boutons uniformes (marche pareil sur iPad) */
+.btn-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:stretch;
+}
+
+/* Chaque item (form ou lien) prend la même largeur */
+.btn-row > form,
+.btn-row > a{
+  flex: 0 0 260px;     /* largeur FIXE */
+  max-width:260px;
+}
+
+/* Important : le form ne doit pas être "block chelou" */
+.btn-row > form{
+  display:flex;
+  margin:0;
+}
+
+/* Le bouton remplit son item */
+.btn-row .btn{
+  width:100%;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  white-space:nowrap;
+}
 
