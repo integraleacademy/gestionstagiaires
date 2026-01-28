@@ -712,3 +712,21 @@ select.status-pill{
   text-overflow:ellipsis;
 }
 
+/* ✅ même taille de texte pour <a> et <button> (et iOS) */
+html{
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* les contrôles de formulaire n'héritent pas toujours correctement */
+button, input, select, textarea{
+  font: inherit;
+}
+
+/* taille/line-height cohérentes pour tous les .btn */
+.btn{
+  font-family: inherit;
+  font-size: 14px;      /* ajuste si tu veux (ex: 13px ou 15px) */
+  line-height: 1.1;
+}
+
