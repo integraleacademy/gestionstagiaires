@@ -161,18 +161,21 @@
       <button class="btn btn-outline" type="button" onclick="openTestModal('relance')">🔁 Relancer test de français</button>
     </div>
 
-    <div style="margin-top:10px;">
-<label style="display:flex;align-items:center;gap:4px;font-weight:900;">
+<div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
   <input
     id="chkTestFrValidated"
     type="checkbox"
     style="margin:0;"
     {% if (trainee.test_fr_status or "soon")=="validated" %}checked{% endif %}
   >
-  <span>Test validé</span>
-</label>
-      <div class="hint" style="margin-top:6px;">Si coché, le statut passe à “VALIDÉ”.</div>
-    </div>
+  <label for="chkTestFrValidated" style="font-weight:900;cursor:pointer;">
+    Test validé
+  </label>
+</div>
+
+<div class="hint" style="margin-top:6px;">
+  Si coché, le statut passe à “VALIDÉ”.
+</div>
 
     {% if trainee.test_fr_last_notified_at %}
       <div class="hint" style="margin-top:10px;">🟧 Notifié le : <strong>{{ trainee.test_fr_last_notified_at }}</strong></div>
