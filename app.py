@@ -1390,7 +1390,7 @@ def admin_etiquette_docx(session_id: str, trainee_id: str):
     photo_token = (t.get("identity_photo") or "").strip()
     if photo_token:
         photo_path = _detokenize_path(photo_token)
-        _insert_label_photo(doc, "{{PHOTO}}", photo_path, width_cm=3.5, height_cm=4.5)
+        _insert_label_photo(doc, "{{PHOTO}}", photo_path, width_cm=7.0, height_cm=9.0)
     else:
         # si pas de photo, on enlève le placeholder
         _replace_in_docx(doc, {"{{PHOTO}}": ""})
