@@ -730,3 +730,30 @@ button, input, select, textarea{
   line-height: 1.1;
 }
 
+/* ✅ IMPORTANT : ne pas appliquer width:100% aux checkbox/radio/file */
+input[type="checkbox"],
+input[type="radio"]{
+  width: auto !important;
+  padding: 0 !important;
+  border-radius: 4px;
+  box-shadow: none !important;
+}
+
+input[type="file"]{
+  width: auto !important;
+  padding: 0 !important;
+}
+
+/* bloc checkbox + texte collés */
+.chk-inline{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  font-weight:900;
+}
+.chk-inline input[type="checkbox"]{
+  margin:0;
+  flex:0 0 auto;
+}
+
+
