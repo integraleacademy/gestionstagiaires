@@ -1190,6 +1190,66 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
 
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/documents/<doc_key>/delete")
+@admin_login_required
+def admin_delete_doc_file(session_id: str, trainee_id: str, doc_key: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    training_type = _session_get(s, "training_type", "")
+    ensure_documents_schema_for_trainee(t, training_type)
+
+    # sécurité: n'accepte que les doc_key requis
+    if doc_key not in allowed_doc_keys_for_training(training_type):
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    docs = t.get("documents") or []
+    target = next((d for d in docs if d.get("key") == doc_key), None)
+    if not target:
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    # tokens à supprimer (multi ou mono)
+    tokens = []
+    if isinstance(target.get("files"), list) and target["files"]:
+        tokens = [x for x in target["files"] if x]
+    else:
+        tok = (target.get("file") or "").strip()
+        if tok:
+            tokens = [tok]
+
+    # suppression fichiers sur disque
+    for tok in tokens:
+        try:
+            fp = _detokenize_path(tok)
+            if os.path.exists(fp):
+                os.remove(fp)
+        except Exception:
+            pass
+
+    # reset du doc
+    target["file"] = ""
+    target["files"] = []
+    target["status"] = "NON DÉPOSÉ"
+    # on garde le commentaire (pratique), ou tu peux le vider si tu préfères
+
+    t["updated_at"] = _now_iso()
+
+    # recalcul dossier_status
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
 
 
 
