@@ -590,7 +590,6 @@ def ensure_documents_schema_for_trainee(t: Dict[str, Any], training_type: str) -
         k = rd["key"]
         if k in by_key:
             d = by_key[k]
-            # complète sans casser
             if not d.get("label"):
                 d["label"] = rd["label"]; changed = True
             if "accept" not in d:
@@ -601,6 +600,9 @@ def ensure_documents_schema_for_trainee(t: Dict[str, Any], training_type: str) -
                 d["comment"] = ""; changed = True
             if "file" not in d:
                 d["file"] = ""; changed = True
+            if "files" not in d or not isinstance(d.get("files"), list):
+                d["files"] = []
+                changed = True
             out.append(d)
         else:
             out.append({
@@ -610,6 +612,7 @@ def ensure_documents_schema_for_trainee(t: Dict[str, Any], training_type: str) -
                 "status": "NON DÉPOSÉ",
                 "comment": "",
                 "file": "",
+                "files": [],
             })
             changed = True
 
@@ -1170,10 +1173,21 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
     docs = t.get("documents") or []
     for d in docs:
         if d.get("key") == doc_key:
-            d["file"] = token
+            cur_files = d.get("files")
+            if not isinstance(cur_files, list):
+                cur_files = []
+
+            old = (d.get("file") or "").strip()
+            if old and old not in cur_files:
+                cur_files.append(old)
+
+            cur_files.append(token)
+
+            d["files"] = cur_files
+            d["file"] = cur_files[0] if cur_files else ""
 
             cur = (d.get("status") or "").strip().upper()
-            if cur in ("", "NON DÉPOSÉ", "NON DEPOSÉ", "NON_DEPOSE"):
+            if cur in ("", "NON DÉPOSÉ", "NON DEPOSE", "NON_DEPOSE"):
                 d["status"] = "A CONTRÔLER"
             if d.get("status") == "A CONTROLER":
                 d["status"] = "A CONTRÔLER"
@@ -1886,55 +1900,60 @@ def public_doc_upload(token: str, doc_key: str):
     if doc_key not in allowed_doc_keys_for_training(training_type):
         return redirect(url_for("public_trainee_space", token=token))
 
-    # ✅ multi-fichiers (utile pour Carte d'identité recto/verso)
-    files = request.files.getlist("file")
-    files = [x for x in files if x and x.filename]
-    if not files:
+    # ✅ 1 fichier par envoi (mais on peut en envoyer plusieurs fois)
+    f = request.files.get("file")
+    if not f or not f.filename:
         return redirect(url_for("public_trainee_space", token=token))
-
+    
     # ✅ retrouver la config du doc (accept)
     docs = t.get("documents") or []
     target = next((d for d in docs if d.get("key") == doc_key), None)
     if not target:
         return redirect(url_for("public_trainee_space", token=token))
-
+    
     accept = (target.get("accept") or "").lower()
-
-
-    # ✅ contrôle type (pdf ou image)
+    
     def _accepts_file(ext: str) -> bool:
-        if "application/pdf" in accept:
+        acc = [a.strip().lower() for a in accept.split(",") if a.strip()]
+        if "application/pdf" in acc:
             return ext == ".pdf"
-        if "image/" in accept:
+        if any(a.startswith("image/") for a in acc) or ("image/jpeg" in acc) or ("image/png" in acc):
             return ext in (".jpg", ".jpeg", ".png", ".webp")
-        # fallback
         return ext in ALLOWED_EXT
-
-    # ✅ stockage : 1 ou plusieurs fichiers
-    stored_tokens = []
+    
+    ext = _safe_ext(f.filename)
+    if not _accepts_file(ext):
+        return redirect(url_for("public_trainee_space", token=token))
+    
+    # ✅ stockage du fichier
     session_id = s.get("id")
     trainee_id = t.get("id")
-
-    for f in files:
-        ext = _safe_ext(f.filename)
-        if not _accepts_file(ext):
-            return redirect(url_for("public_trainee_space", token=token))
-
-        stored = _store_file(session_id, trainee_id, "public_documents", f)
-        stored_tokens.append(_tokenize_path(stored))
-
-    # ✅ MAJ du doc dans la liste
+    stored = _store_file(session_id, trainee_id, "public_documents", f)
+    new_token = _tokenize_path(stored)
+    
+    # ✅ MAJ du doc: on APPEND dans files (sans écraser)
     for d in docs:
         if d.get("key") == doc_key:
-            d["file"] = stored_tokens[0] if stored_tokens else ""
-            d["files"] = stored_tokens  # ✅ nouveau champ pour multi
+            cur_files = d.get("files")
+            if not isinstance(cur_files, list):
+                cur_files = []
+            # compat: si un ancien "file" existe mais pas dans files, on le garde
+            old = (d.get("file") or "").strip()
+            if old and old not in cur_files:
+                cur_files.append(old)
+    
+            cur_files.append(new_token)
+    
+            # on garde le premier fichier dans "file" (pour compat template/admin)
+            d["files"] = cur_files
+            d["file"] = cur_files[0] if cur_files else ""
+    
             cur = (d.get("status") or "").strip().upper()
             if cur in ("", "NON DÉPOSÉ", "NON DEPOSE", "NON_DEPOSE"):
                 d["status"] = "A CONTRÔLER"
             if d.get("status") == "A CONTROLER":
                 d["status"] = "A CONTRÔLER"
             break
-
     t["updated_at"] = _now_iso()
     t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
 
