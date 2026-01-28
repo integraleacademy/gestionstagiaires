@@ -25,6 +25,27 @@
 <div class="card" style="margin-top:12px;">
   <div class="card-row" style="display:flex;gap:12px;align-items:flex-start;justify-content:space-between;">
     <div>
+      <!-- PHOTO D'IDENTITÉ -->
+<div style="margin-bottom:10px;">
+  {% if trainee.identity_photo %}
+    <img
+      src="{{ url_for('admin_view_upload', path=trainee.identity_photo) }}"
+      alt="Photo d'identité"
+      style="width:110px;height:140px;object-fit:cover;border-radius:12px;border:1px solid #e5e7eb;background:#fff;"
+    />
+  {% else %}
+    <div style="width:110px;height:140px;border-radius:12px;border:1px dashed #cbd5e1;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:12px;color:#64748b;text-align:center;">
+      Aucune photo
+    </div>
+  {% endif %}
+</div>
+
+<form method="post" enctype="multipart/form-data"
+      action="{{ url_for('admin_upload_identity_photo', session_id=session.id, trainee_id=trainee.id) }}"
+      style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+  <input type="file" name="file" accept="image/*" required>
+  <button class="btn btn-outline" type="submit">🪪 Importer photo d’identité</button>
+</form>
       <div style="font-size:20px;font-weight:900;">{{ trainee.first_name }} {{ trainee.last_name }}</div>
       <div class="meta-line" style="margin-top:6px;">
         <span class="mono">Email : {{ trainee.email or "—" }}</span>
