@@ -395,6 +395,8 @@
 {% endif %}
     {% set st = (d.status if d and d.status else ("NON DÉPOSÉ" if not has_file else "A CONTRÔLER")) %}
     {% set up = (st|string)|upper %}
+  {% set can_replace = (has_file and up == "NON CONFORME") %}
+{% set show_upload = (not has_file) or can_replace %}
 
     {% set row_cls = "missing" %}
     {% if has_file %}
@@ -433,33 +435,42 @@
         {% endif %}
       </div>
 
-<form
-  {% if d.key == "photo" %}id="photo_form"{% endif %}
-  {% if d.key == "id" %}id="id_form"{% endif %}
+{% if show_upload %}
+<form class="upload-form"
+id="upload_{{ d.key }}"
   action="/espace/{{ token }}/documents/{{ d.key }}/upload"
   method="post"
   enctype="multipart/form-data">
-        {% if d.key == "id" %}
-  <div class="muted" style="font-weight:900;color:#111;margin-bottom:6px;">
-    📌 Carte d’identité obligatoire — 
-    <span style="color:#b91c1c;">RECTO + VERSO (vous pouvez déposer 1 fichier si votre document contient recto/verso, sinon 2 fichiers)</span>
-  </div>
 
-  <input type="file"
-         name="file"
-         accept="{{ accept }}"
-         multiple
-         required>
+    {% if d.key == "id" %}
+      <div class="muted" style="font-weight:900;color:#111;margin-bottom:6px;">
+        📌 Carte d’identité obligatoire —
+        <span style="color:#b91c1c;">RECTO + VERSO (vous pouvez déposer 1 fichier si votre document contient recto/verso, sinon 2 fichiers)</span>
+      </div>
+
+      <input type="file"
+             name="file"
+             accept="{{ accept }}"
+             multiple
+             required>
+    {% else %}
+      <input type="file"
+             name="file"
+             accept="{{ accept }}"
+             required>
+    {% endif %}
+
+   <button class="btn small" type="submit">
+  {% if can_replace %}Remplacer{% else %}Déposer{% endif %}
+</button>
+
+<div class="uploading-msg" style="display:none;margin-top:8px;font-weight:900;">
+  ⏳ Envoi en cours…
+</div>
+</form>
 {% else %}
-  <input type="file"
-         name="file"
-         accept="{{ accept }}"
-         required>
+  <span class="pill green">📎 Fichier déjà envoyé</span>
 {% endif %}
-        <button class="btn small" type="submit">
-          {% if has_file %}Remplacer{% else %}Déposer{% endif %}
-        </button>
-      </form>
 
       {% if d.key == "id" %}
   <div id="id_hint_id" style="display:none;margin-top:12px;border:2px solid #fed7aa;background:#fff7ed;padding:12px;border-radius:12px;">
@@ -771,12 +782,12 @@ function setFieldStateValidated(inputId){
 function cancelPhotoUpload(){
   const hint = document.getElementById("photo_hint_photo");
   if(hint) hint.style.display = "none";
-  const form = document.getElementById("photo_form");
+  const form = document.getElementById("upload_photo");
   if(form) form.dataset.confirmed = "";
 }
 
 function confirmPhotoUpload(){
-  const form = document.getElementById("photo_form");
+  const form = document.getElementById("upload_photo");
   if(form){
     form.dataset.confirmed = "1";
     form.submit();
@@ -784,7 +795,7 @@ function confirmPhotoUpload(){
 }
 
 window.addEventListener("DOMContentLoaded", ()=>{
-  const form = document.getElementById("photo_form");
+  const form = document.getElementById("upload_photo");
   if(!form) return;
 
   form.addEventListener("submit", (e)=>{
@@ -802,12 +813,12 @@ window.addEventListener("DOMContentLoaded", ()=>{
 function cancelIdUpload(){
   const hint = document.getElementById("id_hint_id");
   if(hint) hint.style.display = "none";
-  const form = document.getElementById("id_form");
+  const form = document.getElementById("upload_id");
   if(form) form.dataset.confirmed = "";
 }
 
 function confirmIdUpload(){
-  const form = document.getElementById("id_form");
+  const form = document.getElementById("upload_id");
   if(form){
     form.dataset.confirmed = "1";
     form.submit();
@@ -815,7 +826,7 @@ function confirmIdUpload(){
 }
 
 window.addEventListener("DOMContentLoaded", ()=>{
-  const form = document.getElementById("id_form");
+  const form = document.getElementById("upload_id");
   if(!form) return;
 
   form.addEventListener("submit", (e)=>{
@@ -828,6 +839,26 @@ window.addEventListener("DOMContentLoaded", ()=>{
       const hint = document.getElementById("id_hint_id");
       if(hint) hint.style.display = "block";
     }
+  });
+});
+
+  // ====== UX upload : cacher input + bouton dès submit ======
+window.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("form.upload-form").forEach(form => {
+    form.addEventListener("submit", (e) => {
+      // Si on est sur un form avec confirmation (photo/id) et que pas confirmé, on ne masque rien
+      if ((form.id === "upload_photo" || form.id === "upload_id") && form.dataset.confirmed !== "1") {
+        return;
+      }
+
+      const fileInput = form.querySelector('input[type="file"]');
+      const btn = form.querySelector('button[type="submit"]');
+      if (fileInput) fileInput.style.display = "none";
+      if (btn) btn.style.display = "none";
+
+      const msg = form.querySelector(".uploading-msg");
+      if (msg) msg.style.display = "block";
+    });
   });
 });
   
