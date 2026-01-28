@@ -689,9 +689,10 @@ select.status-pill{
 /* Conteneur de boutons uniformes (marche pareil sur iPad) */
 .btn-row{
   display:flex;
-  flex-wrap:wrap;
+  flex-wrap:nowrap;   /* ✅ 1 seule ligne */
   gap:10px;
   align-items:stretch;
+  overflow-x:auto;    /* ✅ si ça dépasse sur iPad, ça scroll horizontal */
 }
 
 /* Chaque item (form ou lien) prend la même largeur */
