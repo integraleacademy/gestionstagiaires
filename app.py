@@ -5,6 +5,9 @@ import datetime
 from typing import Dict, Any, Optional, List
 from functools import wraps
 from flask import session
+from PIL import Image
+import tempfile
+from docx.shared import Inches
 
 import requests
 from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file
@@ -1383,6 +1386,15 @@ def admin_etiquette_docx(session_id: str, trainee_id: str):
 
     _replace_in_docx(doc, replacements)
 
+    # ✅ Photo identité dans l'étiquette (même taille, sans déformation)
+    photo_token = (t.get("identity_photo") or "").strip()
+    if photo_token:
+        photo_path = _detokenize_path(photo_token)
+        _insert_label_photo(doc, "{{PHOTO}}", photo_path, width_cm=3.5, height_cm=4.5)
+    else:
+        # si pas de photo, on enlève le placeholder
+        _replace_in_docx(doc, {"{{PHOTO}}": ""})
+
     # 4) Télécharger
     buf = BytesIO()
     doc.save(buf)
@@ -1395,6 +1407,73 @@ def admin_etiquette_docx(session_id: str, trainee_id: str):
         download_name=filename,
         mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
+
+def _prepare_photo_for_label(src_path: str, target_ratio: float) -> str:
+    """
+    Recadre la photo au centre au bon ratio (sans déformation),
+    et retourne un chemin vers un JPG temporaire compatible Word.
+    """
+    im = Image.open(src_path).convert("RGB")
+    w, h = im.size
+    src_ratio = w / h
+
+    if src_ratio > target_ratio:
+        # image trop large → on coupe sur les côtés
+        new_w = int(h * target_ratio)
+        left = (w - new_w) // 2
+        im = im.crop((left, 0, left + new_w, h))
+    else:
+        # image trop haute → on coupe en haut/bas
+        new_h = int(w / target_ratio)
+        top = (h - new_h) // 2
+        im = im.crop((0, top, w, top + new_h))
+
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+    im.save(tmp.name, "JPEG", quality=90)
+    return tmp.name
+
+
+def _insert_label_photo(doc: Document, placeholder: str, photo_path: str, width_cm: float, height_cm: float) -> bool:
+    if not photo_path or not os.path.exists(photo_path):
+        return False
+
+    target_ratio = width_cm / height_cm
+    prepared = _prepare_photo_for_label(photo_path, target_ratio)
+
+    width = Inches(width_cm / 2.54)
+    height = Inches(height_cm / 2.54)
+
+    def process_paragraph(p) -> bool:
+        full = "".join(run.text for run in p.runs)
+        if placeholder not in full:
+            return False
+
+        # vide le paragraphe
+        for run in p.runs:
+            run.text = ""
+
+        # insère l'image recadrée au bon ratio, donc pas de déformation
+        r = p.add_run()
+        r.add_picture(prepared, width=width, height=height)
+        return True
+
+    def process_table(table) -> bool:
+        ok = False
+        for row in table.rows:
+            for cell in row.cells:
+                for p in cell.paragraphs:
+                    ok = process_paragraph(p) or ok
+                for t2 in cell.tables:
+                    ok = process_table(t2) or ok
+        return ok
+
+    inserted = False
+    for p in doc.paragraphs:
+        inserted = process_paragraph(p) or inserted
+    for table in doc.tables:
+        inserted = process_table(table) or inserted
+
+    return inserted
 
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/send-access")
