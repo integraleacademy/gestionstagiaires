@@ -92,23 +92,31 @@
     <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start;">
       <form method="post" action="{{ url_for('admin_delete_trainee', session_id=session.id, trainee_id=trainee.id) }}"
             onsubmit="return confirm('Supprimer ce stagiaire ?');">
-        <button class="btn btn-danger" type="submit">🗑️ Supprimer le stagiaire</button>
+<button class="btn btn-danger" type="submit"
+        style="min-width:260px;justify-content:center;">
+  🗑️ Supprimer le stagiaire
+</button>
       </form>
 
-      <a class="btn btn-outline"
-         href="{{ url_for('admin_etiquette_docx', session_id=session.id, trainee_id=trainee.id) }}">
-        🖨️ Imprimer étiquette dossier (Word)
-      </a>
+<a class="btn btn-outline"
+   style="min-width:260px;justify-content:center;"
+   href="{{ url_for('admin_etiquette_docx', session_id=session.id, trainee_id=trainee.id) }}">
+  🖨️ Imprimer étiquette dossier (Word)
+</a>
 
       <form method="post" action="{{ url_for('admin_send_access', session_id=session.id, trainee_id=trainee.id) }}">
-        <button class="btn btn-primary" type="submit">📩 Envoyer accès espace stagiaire</button>
+       <button class="btn btn-primary" type="submit"
+        style="min-width:260px;justify-content:center;">
+  📩 Envoyer accès espace stagiaire
+</button>
       </form>
 
       <a class="btn btn-outline"
-         href="{{ PUBLIC_STUDENT_PORTAL_BASE.rstrip('/') }}/espace/{{ trainee.public_token }}"
-         target="_blank" rel="noopener">
-        👁️ Voir espace stagiaire (public)
-      </a>
+   style="min-width:260px;justify-content:center;"
+   href="{{ PUBLIC_STUDENT_PORTAL_BASE.rstrip('/') }}/espace/{{ trainee.public_token }}"
+   target="_blank" rel="noopener">
+  👁️ Voir espace stagiaire (public)
+</a>
     </div>
   </div>
 </div>
@@ -158,10 +166,15 @@
     </div>
 
     <div style="margin-top:10px;">
-      <label style="display:flex;align-items:center;gap:10px;font-weight:900;">
-        <input id="chkTestFrValidated" type="checkbox" {% if (trainee.test_fr_status or "soon")=="validated" %}checked{% endif %}>
-        Test validé
-      </label>
+<label style="display:flex;align-items:center;gap:4px;font-weight:900;">
+  <input
+    id="chkTestFrValidated"
+    type="checkbox"
+    style="margin:0;"
+    {% if (trainee.test_fr_status or "soon")=="validated" %}checked{% endif %}
+  >
+  <span>Test validé</span>
+</label>
       <div class="hint" style="margin-top:6px;">Si coché, le statut passe à “VALIDÉ”.</div>
     </div>
 
