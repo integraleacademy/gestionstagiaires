@@ -2100,6 +2100,49 @@ def api_docs_to_control():
     return jsonify({"ok": True, "items": out, "count": len(out)})
 
 
+@app.get("/api/trainees_search")
+@admin_login_required
+def api_trainees_search():
+    q = (request.args.get("q") or "").strip().lower()
+    if not q or len(q) < 2:
+        return jsonify({"ok": True, "items": []})
+
+    data = load_data()
+    out = []
+
+    for s in data.get("sessions", []):
+        session_id = s.get("id")
+        session_name = _session_get(s, "name", "")
+        training_type = _session_get(s, "training_type", "")
+
+        trainees = _session_trainees_list(s)
+
+        for t in trainees:
+            fn = (t.get("first_name") or "").strip()
+            ln = (t.get("last_name") or "").strip()
+            full = f"{fn} {ln}".strip().lower()
+
+            # match prénom/nom (contient)
+            if q in full or q in fn.lower() or q in ln.lower():
+                out.append({
+                    "session_id": session_id,
+                    "session_name": session_name,
+                    "training_type": training_type,
+                    "trainee_id": t.get("id"),
+                    "first_name": fn,
+                    "last_name": ln,
+                    "admin_url": f"/admin/sessions/{session_id}/stagiaires/{t.get('id')}",
+                })
+
+    # tri: nom puis prénom
+    out.sort(key=lambda x: ((x.get("last_name") or "").lower(), (x.get("first_name") or "").lower()))
+
+    # limite pour éviter des réponses énormes
+    out = out[:30]
+
+    return jsonify({"ok": True, "items": out, "count": len(out)})
+
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
