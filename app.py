@@ -920,7 +920,7 @@ def api_create_trainee(session_id: str):
     subject = "Votre inscription en formation – Intégrale Academy"
 
     html = mail_layout(f"""
-      <h2>🎉 Confirmation d’inscription</h2>
+      <h2 style="text-align:center">🎉 Confirmation d’inscription</h2>
 
       <p>Bonjour <strong>{first_name}</strong>,</p>
 
@@ -930,7 +930,7 @@ def api_create_trainee(session_id: str):
         du <strong>{dstart}</strong> au <strong>{dend}</strong>.
       </p>
 
-      <p>🙏 Je vous remercie pour votre confiance !</p>
+      <p>Je vous remercie pour votre confiance !</p>
 
       <p>
         Vous recevrez prochainement par mail votre <strong>Contrat de formation</strong>
@@ -946,24 +946,24 @@ def api_create_trainee(session_id: str):
         ⚠️ Attention : votre dossier doit être complet au plus tard <u>10 jours avant le début de votre formation</u> !
       </p>
 
-      <p>
-        <a href="{link}"
-           style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
-          👉 Accéder à mon espace stagiaire
-        </a>
-      </p>
+        <p style="text-align:center">
+          <a href="{link}"
+             style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+            👉 Accéder à mon espace stagiaire
+          </a>
+        </p>
 
       <p style="margin-top:25px">
         ☎️ Pour tous renseignements, vous pouvez nous contacter au <strong>04 22 47 07 68</strong>
         ou utiliser notre formulaire d’assistance :
       </p>
 
-      <p>
-        <a href="https://assistance-alw9.onrender.com/"
-           style="display:inline-block;background:#2563eb;color:white;padding:10px 16px;border-radius:10px;text-decoration:none;font-weight:bold">
-          🛠️ Formulaire d’assistance
-        </a>
-      </p>
+<p style="text-align:center">
+  <a href="https://assistance-alw9.onrender.com/"
+     style="display:inline-block;background:#2563eb;color:white;padding:10px 16px;border-radius:10px;text-decoration:none;font-weight:bold">
+    🛠️ Formulaire d’assistance
+  </a>
+</p>
 
       <p style="margin-top:30px">
         Je reste à votre disposition pour tous renseignements complémentaires,<br>
@@ -1537,18 +1537,62 @@ def admin_test_fr_notify(session_id: str, trainee_id: str):
 
     link = "https://testb1.lapreventionsecurite.org/Public/"
     subject = "Test de français à réaliser – Intégrale Academy"
-    html = f"""
-    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
-      <div style="background:white;padding:18px;border-radius:12px">
-        <h2>Test de français – à faire</h2>
-        <p>Merci de réaliser votre test via : <a href="{link}">{link}</a></p>
-        <p><strong>Code :</strong> {code}</p>
-        <p><strong>À réaliser avant :</strong> {deadline}</p>
-        <p style="color:#666;font-size:13px">Intégrale Academy</p>
+
+    formation_type = (_session_get(s, "training_type", "") or _session_get(s, "name", "")).strip()
+    dstart = fr_date(_session_get(s, "date_start", ""))
+    dend = fr_date(_session_get(s, "date_end", ""))
+
+    html = mail_layout(f"""
+      <h2 style="text-align:center">📝 Test de français obligatoire</h2>
+
+      <p>Bonjour <strong>{t.get("first_name","").strip() or "Madame, Monsieur"}</strong>,</p>
+
+      <p>
+        Je me permets de revenir vers vous concernant votre inscription en formation
+        <strong>{formation_type}</strong>, qui se déroulera du <strong>{dstart}</strong> au <strong>{dend}</strong>.
+      </p>
+
+      <p>
+        Conformément à la réglementation, nous vous demandons de bien vouloir procéder au
+        <strong>Test de français obligatoire</strong> avant votre entrée en formation.
+      </p>
+
+      <div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:16px 0">
+        <p style="margin:0 0 10px 0"><strong>🔗 Lien du test :</strong>
+          <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
+        </p>
+
+        <p style="margin:0 0 10px 0"><strong>🔑 Code d’activation :</strong>
+          <span style="font-size:16px;letter-spacing:1px">{code}</span>
+        </p>
+
+        <p style="margin:0;color:#b91c1c;font-weight:bold">
+          ⚠️ Attention : le test doit être réalisé le <u>{fr_date(deadline)}</u>.
+        </p>
       </div>
-    </div>
-    """
-    sms = f"Intégrale Academy : Test FR à faire. Lien: {link} Code: {code} Avant: {deadline}"
+
+      <p>Je vous remercie par avance et je vous souhaite une excellente journée,</p>
+
+      <p style="margin-top:22px">
+        <strong>Clément VAILLANT</strong><br>
+        Directeur Intégrale Academy
+      </p>
+
+      <p style="text-align:center;margin-top:18px">
+        <a href="{link}"
+           style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+          👉 Accéder au test de français
+        </a>
+      </p>
+    """)
+    deadline_fr = fr_date(deadline)
+
+    sms = (
+        f"Intégrale Academy 📝 Bonjour {t.get('first_name','')}, "
+        f"Vous devez réalsier le Test de français obligatoire pour votre formation {formation_type}. "
+        f"Lien : {link} | Code : {code} | À faire le {deadline_fr}. "
+        f"Besoin d’aide ? 04 22 47 07 68"
+    )
 
     brevo_send_email(t.get("email",""), subject, html)
     brevo_send_sms(t.get("phone",""), sms)
@@ -1575,28 +1619,76 @@ def admin_test_fr_relance(session_id: str, trainee_id: str):
     s = find_session(data, session_id)
     if not s:
         abort(404)
+
     trainees = _session_trainees_list(s)
-    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         abort(404)
 
     link = "https://testb1.lapreventionsecurite.org/Public/"
     subject = "Relance – Test de français à réaliser"
-    html = f"""
-    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
-      <div style="background:white;padding:18px;border-radius:12px">
-        <h2>Relance – Test de français</h2>
-        <p>Nous n’avons pas encore reçu votre test. Merci de le réaliser via : <a href="{link}">{link}</a></p>
-        <p><strong>Nouveau code :</strong> {code}</p>
-        <p><strong>À réaliser avant :</strong> {deadline}</p>
-        <p style="color:#666;font-size:13px">Intégrale Academy</p>
-      </div>
-    </div>
-    """
-    sms = f"Relance Intégrale Academy : Test FR. Lien: {link} Code: {code} Avant: {deadline}"
 
-    brevo_send_email(t.get("email",""), subject, html)
-    brevo_send_sms(t.get("phone",""), sms)
+    formation_type = (_session_get(s, "training_type", "") or _session_get(s, "name", "")).strip()
+    dstart = fr_date(_session_get(s, "date_start", ""))
+    dend = fr_date(_session_get(s, "date_end", ""))
+    deadline_fr = fr_date(deadline)
+
+    html = mail_layout(f"""
+      <h2 style="text-align:center;color:#b91c1c">⏰ Relance – Test de français obligatoire</h2>
+
+      <p>Bonjour <strong>{t.get("first_name","").strip() or "Madame, Monsieur"}</strong>,</p>
+
+      <p>
+        Nous revenons vers vous concernant votre inscription en formation
+        <strong>{formation_type}</strong> (du <strong>{dstart}</strong> au <strong>{dend}</strong>).
+      </p>
+
+      <p>
+        À ce jour, nous n’avons pas encore reçu la validation de votre <strong>Test de français obligatoire</strong>.
+        Merci de le réaliser dès que possible.
+      </p>
+
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px;margin:16px 0">
+        <p style="margin:0 0 10px 0"><strong>🔗 Lien du test :</strong>
+          <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
+        </p>
+
+        <p style="margin:0 0 10px 0"><strong>🔑 Code d’activation :</strong>
+          <span style="font-size:16px;letter-spacing:1px">{code}</span>
+        </p>
+
+        <p style="margin:0;color:#b91c1c;font-weight:bold">
+          ⚠️ Date limite : <u>{deadline_fr}</u>
+        </p>
+      </div>
+
+      <p style="margin-top:22px">
+        Si vous avez la moindre difficulté, contactez-nous au <strong>04 22 47 07 68</strong>.
+      </p>
+
+      <p style="margin-top:22px">
+        Merci par avance,<br>
+        <strong>Clément VAILLANT</strong><br>
+        Directeur Intégrale Academy
+      </p>
+
+      <p style="text-align:center;margin-top:18px">
+        <a href="{link}"
+           style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+          👉 Accéder au test de français
+        </a>
+      </p>
+    """)
+
+    sms = (
+        f"Intégrale Academy ⏰ Relance : Bonjour {t.get('first_name','')}, "
+        f"Vous n'avez pas encore réalisé votre Test de français obligatoire avant votre entrée en formation {formation_type}. "
+        f"Lien : {link} | Code : {code} | Date limite : {deadline_fr}. "
+        f"Besoin d’aide ? 04 22 47 07 68"
+    )
+
+    brevo_send_email(t.get("email", ""), subject, html)
+    brevo_send_sms(t.get("phone", ""), sms)
 
     t["test_fr_status"] = "relance"
     t["test_fr_code"] = code
@@ -1608,7 +1700,6 @@ def admin_test_fr_relance(session_id: str, trainee_id: str):
     save_data(data)
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
-
 # =========================
 # Documents — notify / nonconform / relance / zip
 # =========================
@@ -1619,34 +1710,80 @@ def admin_docs_notify(session_id: str, trainee_id: str):
     s = find_session(data, session_id)
     if not s:
         abort(404)
+
     trainees = _session_trainees_list(s)
-    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         abort(404)
 
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
-    subject = "Documents à transmettre – Intégrale Academy"
-    html = f"""
-    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
-      <div style="background:white;padding:18px;border-radius:12px">
-        <h2>Documents à transmettre</h2>
-        <p>Merci de nous transmettre vos documents pour la formation :</p>
-        <p><a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">Accéder à mon espace stagiaire</a></p>
-        <p style="color:#666;font-size:13px">Intégrale Academy</p>
-      </div>
-    </div>
-    """
-    sms = f"Intégrale Academy : merci d’envoyer vos documents : {link}"
+    subject = "Envoi de documents – Action requise (Intégrale Academy)"
 
-    brevo_send_email(t.get("email",""), subject, html)
-    brevo_send_sms(t.get("phone",""), sms)
+    formation_type = (_session_get(s, "training_type", "") or _session_get(s, "name", "")).strip()
+    dstart = fr_date(_session_get(s, "date_start", ""))
+    dend = fr_date(_session_get(s, "date_end", ""))
+
+    first_name = (t.get("first_name") or "").strip() or "Madame, Monsieur"
+
+    html = mail_layout(f"""
+      <h2 style="text-align:center">📄 Envoi de documents – Dossier formation</h2>
+
+      <p>Bonjour <strong>{first_name}</strong>,</p>
+
+      <p>
+        Dans le cadre de votre inscription en formation
+        <strong>{formation_type}</strong> (du <strong>{dstart}</strong> au <strong>{dend}</strong>),
+        nous vous invitons à compléter votre Dossier Formation via votre espace stagiaire.
+      </p>
+
+      <div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:16px 0">
+        <p style="margin:0 0 10px 0">
+          <strong>📍 Accès à votre espace stagiaire :</strong><br>
+          <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
+        </p>
+
+        <p style="margin:0;color:#b91c1c;font-weight:bold">
+          ⚠️ Pour un meilleur traitement de votre inscription, nous vous invitons à compléter votre dossier dès que possible. Attention, votre dossier doit être complet au plus tard 10 jours avant votre entrée en formation.
+        </p>
+      </div>
+
+      <p style="margin-top:22px">
+        Si vous avez la moindre difficulté, vous pouvez nous contacter au <strong>04 22 47 07 68</strong>.
+      </p>
+
+      <p style="margin-top:22px">
+        Merci par avance,<br>
+        <strong>Clément VAILLANT</strong><br>
+        Directeur Intégrale Academy
+      </p>
+
+      <p style="text-align:center;margin-top:18px">
+        <a href="{link}"
+           style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+          👉 Accéder à mon espace stagiaire
+        </a>
+      </p>
+    """)
+
+    sms = (
+        f"Intégrale Academy 📄 Bonjour {t.get('first_name','')}, "
+        f"Nous vous remercions de bien vouloir compléter votre Dossier Formation concernant votre formation {formation_type} "
+        f"({dstart} au {dend}) via votre espace : {link} "
+        f"Besoin d’aide ? 04 22 47 07 68"
+    )
+
+    brevo_send_email(t.get("email", ""), subject, html)
+    brevo_send_sms(t.get("phone", ""), sms)
 
     t["docs_notified_at"] = _now_iso()
     t["updated_at"] = _now_iso()
-    s["trainees"] = trainees
-    save_data(data)
-    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+    
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/docs/nonconform-notify")
 @admin_login_required
 def admin_docs_nonconform_notify(session_id: str, trainee_id: str):
@@ -1693,36 +1830,87 @@ def admin_docs_relance(session_id: str, trainee_id: str):
     s = find_session(data, session_id)
     if not s:
         abort(404)
+
     trainees = _session_trainees_list(s)
-    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         abort(404)
 
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
     details = docs_summary_text(t)
 
-    subject = "Relance – Documents à transmettre / corriger"
-    html = f"""
-    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
-      <div style="background:white;padding:18px;border-radius:12px">
-        <h2>Relance – Documents</h2>
-        <p>Nous n’avons pas encore reçu tous les documents conformes. Détail actuel :</p>
-        <pre style="white-space:pre-wrap;background:#f2f2f2;padding:10px;border-radius:10px">{details}</pre>
-        <p>Merci d’envoyer / corriger via :</p>
-        <p><a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">Accéder à mon espace stagiaire</a></p>
-        <p style="color:#666;font-size:13px">Intégrale Academy</p>
-      </div>
-    </div>
-    """
-    sms = f"Relance Intégrale Academy : merci d’envoyer / corriger vos documents : {link}"
+    formation_type = (_session_get(s, "training_type", "") or _session_get(s, "name", "")).strip()
+    dstart = fr_date(_session_get(s, "date_start", ""))
+    dend = fr_date(_session_get(s, "date_end", ""))
 
-    brevo_send_email(t.get("email",""), subject, html)
-    brevo_send_sms(t.get("phone",""), sms)
+    first_name = (t.get("first_name") or "").strip() or "Madame, Monsieur"
+
+    subject = "Relance : Dossier Formation incomplet"
+
+    html = mail_layout(f"""
+      <h2 style="text-align:center;color:#b91c1c">⏰ Relance – Votre Dossier Formation est incomplet</h2>
+
+      <p>Bonjour <strong>{first_name}</strong>,</p>
+
+      <p>
+        Nous revenons vers vous concernant votre inscription en formation
+        <strong>{formation_type}</strong> (du <strong>{dstart}</strong> au <strong>{dend}</strong>).
+      </p>
+
+      <p>
+        À ce jour, votre dossier est INCOMPLET (éléments manquants et/ou à corriger).
+        Merci de déposer les éléments nécessaires dès que possible via votre espace stagiaire.
+      </p>
+
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px;margin:16px 0">
+        <p style="margin:0 0 10px 0"><strong>📌 Votre dossier détaillé :</strong></p>
+        <pre style="white-space:pre-wrap;background:#fff;border:1px solid #fee2e2;padding:10px;border-radius:10px;margin:0">{details}</pre>
+
+        <p style="margin:12px 0 0 0">
+          <strong>📍 Informations à compléter et Dépôt des documents :</strong><br>
+          <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
+        </p>
+
+        <p style="margin:10px 0 0 0;color:#b91c1c;font-weight:bold">
+          ⚠️ Nous vous remercions de bien vouloir compléter votre dossier dès que possible !
+        </p>
+      </div>
+
+      <p style="margin-top:22px">
+        Si vous avez la moindre difficulté, contactez-nous au <strong>04 22 47 07 68</strong>.
+      </p>
+
+      <p style="margin-top:22px">
+        Merci par avance,<br>
+        <strong>Clément VAILLANT</strong><br>
+        Directeur Intégrale Academy
+      </p>
+
+      <p style="text-align:center;margin-top:18px">
+        <a href="{link}"
+           style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+          👉 Accéder à mon espace stagiaire
+        </a>
+      </p>
+    """)
+
+    sms = (
+        f"Intégrale Academy ⏰ Relance : Bonjour {t.get('first_name','')}, "
+        f"Nous revenons vers vous au sujet de votre formation {formation_type}. A ce jour votre Dossier Formation est INCOMPLET. Votre formation approche, et pour un meilleur suivi de votre inscription, nous vous remercions de bien vouloir compléter votre dossier dès que possible. "
+        f"({dstart} au {dend}). Vous pouvez compléter votre dossier en cliquant ici : {link} "
+        f"Besoin d’aide ? 04 22 47 07 68"
+    )
+
+    brevo_send_email(t.get("email", ""), subject, html)
+    brevo_send_sms(t.get("phone", ""), sms)
 
     t["docs_last_relance_at"] = _now_iso()
     t["updated_at"] = _now_iso()
+
     s["trainees"] = trainees
+    s.pop("stagiaires", None)
     save_data(data)
+
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/documents.zip")
