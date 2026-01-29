@@ -2742,6 +2742,33 @@ def api_trainees_search():
     return jsonify({"ok": True, "items": out, "count": len(out)})
 
 
+@app.get("/admin/sessions/archived")
+@admin_login_required
+def admin_sessions_archived():
+    data = load_data()
+    out_sessions = []
+
+    for s in data.get("sessions", []):
+        if not bool(s.get("archived")):
+            continue
+
+        st = compute_stats(s)
+        out_sessions.append({
+            "id": s.get("id"),
+            "name": _session_get(s, "name", ""),
+            "training_type": _session_get(s, "training_type", ""),
+            "date_start": _session_get(s, "date_start", ""),
+            "date_end": _session_get(s, "date_end", ""),
+            "exam_date": _session_get(s, "exam_date", ""),
+            "total": st["total"],
+            "session_is_conform": st["session_is_conform"],
+        })
+
+    return render_template(
+        "admin_sessions_archived.html",
+        sessions=out_sessions,
+        formation_types=FORMATION_TYPES,
+    )
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
