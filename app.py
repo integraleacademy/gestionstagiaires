@@ -2336,27 +2336,50 @@ def public_infos_update(token: str):
 
     payload = request.get_json(silent=True) or {}
 
-    # Champs existants
-    t["carte_vitale"] = (payload.get("carte_vitale") or "").strip()
-    t["pre_number"] = (payload.get("pre_number") or "").strip()
+    # champs autorisés (sécurité)
+    allowed = {
+        "carte_vitale",
+        "pre_number",
+        "birth_date",
+        "birth_city",
+        "birth_country",
+        "nationality",
+        "address",
+        "zip_code",
+        "city",
+        "no_permis",
+    }
 
-    # Nouveaux champs
-    t["birth_date"] = (payload.get("birth_date") or "").strip()          # ex: 1998-04-23
-    t["birth_city"] = (payload.get("birth_city") or "").strip()
-    t["birth_country"] = (payload.get("birth_country") or "").strip()
-    t["nationality"] = (payload.get("nationality") or "").strip()
-    t["address"] = (payload.get("address") or "").strip()
-    t["zip_code"] = (payload.get("zip_code") or "").strip()
-    t["city"] = (payload.get("city") or "").strip()
-    # ✅ Ne pas écraser si le champ n'est pas envoyé
-    if "no_permis" in payload:
-        t["no_permis"] = bool(payload.get("no_permis"))
+    for k, v in payload.items():
+        if k not in allowed:
+            continue
+
+        # no_permis = bool
+        if k == "no_permis":
+            t["no_permis"] = bool(v)
+            continue
+
+        # strings : on n'écrase PAS avec vide
+        if v is None:
+            continue
+        if isinstance(v, str):
+            vv = v.strip()
+            if vv == "":
+                continue
+            t[k] = vv
+        else:
+            # si jamais tu envoies autre chose
+            t[k] = v
 
     training_type = _session_get(s, "training_type", "")
     t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
-
     t["updated_at"] = _now_iso()
+
+    # ✅ IMPORTANT : persister la session normalisée comme ailleurs
+    s["trainees"] = _session_trainees_list(s)
+    s.pop("stagiaires", None)
     save_data(data)
+
     return jsonify({"ok": True})
 
 
