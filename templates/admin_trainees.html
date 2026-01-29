@@ -209,6 +209,29 @@
   </div>
 </div>
 
+<!-- MODALE CONFIRM ENVOI -->
+<div class="modal-backdrop" id="sendAccessModal" aria-hidden="true">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head">
+      <div class="modal-title">Envoyer l’accès au stagiaire ?</div>
+      <button class="icon-btn" data-close-modal="sendAccessModal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p style="margin:0 0 10px 0">
+        Tu veux envoyer <strong>le mail + le SMS</strong> maintenant ?
+      </p>
+      <div class="hint" id="sendAccessPreview" style="margin-top:8px"></div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" data-close-modal="sendAccessModal">Annuler</button>
+      <button class="btn btn-outline" id="btnCreateNoSend">Créer sans envoyer</button>
+      <button class="btn btn-primary" id="btnCreateAndSend">Créer + envoyer</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const sessionId = document.getElementById("traineesTable").getAttribute("data-session-id");
 
@@ -284,39 +307,86 @@
   // =========================
   // create trainee
   // =========================
-  document.getElementById("btnCreateTrainee")?.addEventListener("click", async ()=>{
+
+  // --- helper : lire le formulaire une seule fois ---
+  function readCreateForm(){
     const last_name = (document.getElementById("tLastName").value || "").trim();
     const first_name = (document.getElementById("tFirstName").value || "").trim();
     const email = (document.getElementById("tEmail").value || "").trim();
     const phone = (document.getElementById("tPhone").value || "").trim();
     const carte_pro_ok = !!document.getElementById("tCarteProOk")?.checked;
+    return { last_name, first_name, email, phone, carte_pro_ok };
+  }
 
+  function setCreateButtonsDisabled(disabled){
+    const b1 = document.getElementById("btnCreateTrainee");
+    const b2 = document.getElementById("btnCreateNoSend");
+    const b3 = document.getElementById("btnCreateAndSend");
+    if(b1) b1.disabled = disabled;
+    if(b2) b2.disabled = disabled;
+    if(b3) b3.disabled = disabled;
+  }
+
+  async function createTrainee(send_access){
+    const { last_name, first_name, email, phone, carte_pro_ok } = readCreateForm();
 
     if(!last_name || !first_name){
       alert("Nom + prénom obligatoires");
       return;
     }
 
-    const btn = document.getElementById("btnCreateTrainee");
-    btn.disabled = true;
+    setCreateButtonsDisabled(true);
 
     try{
       const r = await fetch(`/api/sessions/${sessionId}/trainees/create`, {
         method:"POST",
         headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ last_name, first_name, email, phone, carte_pro_ok })
+        body: JSON.stringify({ last_name, first_name, email, phone, carte_pro_ok, send_access })
       });
+
       const res = await r.json();
       if(!r.ok || !res.ok){
         alert("Erreur ajout stagiaire");
         return;
       }
+
       window.location.reload();
     }catch(e){
       alert("Erreur réseau");
     }finally{
-      btn.disabled = false;
+      setCreateButtonsDisabled(false);
     }
+  }
+
+  // ✅ 1) clic sur "Sauvegarder" => ouvre la modale de choix
+  document.getElementById("btnCreateTrainee")?.addEventListener("click", ()=>{
+    const { last_name, first_name, email, phone } = readCreateForm();
+
+    if(!last_name || !first_name){
+      alert("Nom + prénom obligatoires");
+      return;
+    }
+
+    const preview = document.getElementById("sendAccessPreview");
+    if(preview){
+      const parts = [];
+      if(email) parts.push(`📧 ${email}`);
+      if(phone) parts.push(`📱 ${phone}`);
+      preview.textContent = parts.length ? ("Destinataire : " + parts.join("  •  ")) : "Aucun email/téléphone renseigné.";
+    }
+
+    // on ferme la modale de création, puis on ouvre la modale de choix
+    closeModal("createTraineeModal");
+    openModal("sendAccessModal");
+  });
+
+  // ✅ 2) boutons de décision
+  document.getElementById("btnCreateNoSend")?.addEventListener("click", async ()=>{
+    await createTrainee(false);
+  });
+
+  document.getElementById("btnCreateAndSend")?.addEventListener("click", async ()=>{
+    await createTrainee(true);
   });
 
   // =========================
