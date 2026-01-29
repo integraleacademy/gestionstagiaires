@@ -313,7 +313,7 @@
            trainee.carte_vitale,
            "Ex : 1 85 12 34 567 890 12") }}
 
-{{ field("Numéro PRE ou CAR (numéro d'autorisation préalable CNAPS qui commence par PRE ou numéro de carte professionnelle CNAPS qui commence par PRE",
+{{ field("Numéro PRE ou CAR (numéro d'autorisation préalable CNAPS qui commence par PRE ou numéro de carte professionnelle CNAPS qui commence par CAR",
          "pre_number",
          trainee.pre_number,
          "Ex : PRE-2025-01-01-20210000000 ou CAR-2025-01-01-20210000000") }}
@@ -574,28 +574,42 @@ id="upload_{{ d.key }}"
 <!-- ✅ Welcome popup (plus joli, affiché une seule fois) -->
 <style>
   /* Backdrop */
-  .ia-modal-backdrop{
-    position:fixed; inset:0;
-    display:none;
-    background:rgba(15,23,42,.55);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    z-index:9999;
-    padding:18px;
-  }
-  .ia-modal-backdrop.show{display:flex;align-items:center;justify-content:center;}
+.ia-modal-backdrop{
+  position:fixed; inset:0;
+  display:flex;                 /* ✅ toujours flex */
+  align-items:center;           /* ✅ centré vertical */
+  justify-content:center;       /* ✅ centré horizontal */
+  background:rgba(15,23,42,.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index:9999;
+  padding:18px;
+
+  /* ✅ caché par défaut */
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transition: opacity .15s ease;
+}
+.ia-modal-backdrop.show{
+  opacity:1;
+  visibility:visible;
+  pointer-events:auto;
+}
+
 
   /* Modal */
-  .ia-modal{
-    width:min(780px, 100%);
-    background:#fff;
-    border-radius:22px;
-    border:1px solid #e5e7eb;
-    box-shadow:0 25px 70px rgba(0,0,0,.25);
-    overflow:hidden;
-    transform: translateY(6px);
-    animation: iaPop .18s ease-out forwards;
-  }
+.ia-modal{
+  width:min(780px, 100%);
+  max-height: calc(100vh - 36px);
+  overflow:auto;
+  background:#fff;
+  border-radius:22px;
+  border:1px solid #e5e7eb;
+  box-shadow:0 25px 70px rgba(0,0,0,.25);
+  transform: translateY(6px);
+  animation: iaPop .18s ease-out forwards;
+}
   @keyframes iaPop{to{transform: translateY(0)}}
 
   /* Top accent */
@@ -625,7 +639,7 @@ id="upload_{{ d.key }}"
     display:flex;align-items:center;justify-content:center;
     overflow:hidden;
   }
-  .ia-logo img{height:44px;width:auto;display:block;}
+  .ia-logo img{height:70px;width:auto;display:block;}
   .ia-title{
     font-size:20px;
     font-weight:1000;
@@ -693,7 +707,7 @@ id="upload_{{ d.key }}"
   }
 </style>
 
-<div id="welcomeModal" class="ia-modal-backdrop" style="display:none;">
+<div id="welcomeModal" class="ia-modal-backdrop">
   <div class="ia-modal" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
     <div class="ia-accent"></div>
 
@@ -751,8 +765,7 @@ if (typeof openModal !== "function") {
   window.openModal = (id) => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.style.display = "flex";
-    el.classList.add("show");
+    el.classList.add("show"); // ✅
   };
 }
 
@@ -760,8 +773,7 @@ if (typeof closeModal !== "function") {
   window.closeModal = (id) => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.classList.remove("show");
-    el.style.display = "none";
+    el.classList.remove("show"); // ✅
   };
 }
   const token = "{{ token }}";
