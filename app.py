@@ -2402,15 +2402,18 @@ def public_doc_upload(token: str, doc_key: str):
     f = request.files.get("file")
     if not f or not f.filename:
         return redirect(url_for("public_trainee_space", token=token))
-    
+
+    # ✅ garder le nom original pour la popup (GET params)
+    original_name = secure_filename(f.filename or "document")
+
     # ✅ retrouver la config du doc (accept)
     docs = t.get("documents") or []
     target = next((d for d in docs if d.get("key") == doc_key), None)
     if not target:
         return redirect(url_for("public_trainee_space", token=token))
-    
+
     accept = (target.get("accept") or "").lower()
-    
+
     def _accepts_file(ext: str) -> bool:
         acc = [a.strip().lower() for a in accept.split(",") if a.strip()]
         if "application/pdf" in acc:
@@ -2418,40 +2421,42 @@ def public_doc_upload(token: str, doc_key: str):
         if any(a.startswith("image/") for a in acc) or ("image/jpeg" in acc) or ("image/png" in acc):
             return ext in (".jpg", ".jpeg", ".png", ".webp")
         return ext in ALLOWED_EXT
-    
+
     ext = _safe_ext(f.filename)
     if not _accepts_file(ext):
         return redirect(url_for("public_trainee_space", token=token))
-    
+
     # ✅ stockage du fichier
     session_id = s.get("id")
     trainee_id = t.get("id")
     stored = _store_file(session_id, trainee_id, "public_documents", f)
     new_token = _tokenize_path(stored)
-    
+
     # ✅ MAJ du doc: on APPEND dans files (sans écraser)
     for d in docs:
         if d.get("key") == doc_key:
             cur_files = d.get("files")
             if not isinstance(cur_files, list):
                 cur_files = []
+
             # compat: si un ancien "file" existe mais pas dans files, on le garde
             old = (d.get("file") or "").strip()
             if old and old not in cur_files:
                 cur_files.append(old)
-    
+
             cur_files.append(new_token)
-    
+
             # on garde le premier fichier dans "file" (pour compat template/admin)
             d["files"] = cur_files
             d["file"] = cur_files[0] if cur_files else ""
-    
+
             cur = (d.get("status") or "").strip().upper()
             if cur in ("", "NON DÉPOSÉ", "NON DEPOSE", "NON_DEPOSE"):
                 d["status"] = "A CONTRÔLER"
             if d.get("status") == "A CONTROLER":
                 d["status"] = "A CONTRÔLER"
             break
+
     t["updated_at"] = _now_iso()
     t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
 
@@ -2460,7 +2465,13 @@ def public_doc_upload(token: str, doc_key: str):
     s.pop("stagiaires", None)
     save_data(data)
 
-    return redirect(url_for("public_trainee_space", token=token))
+    # ✅ IMPORTANT: on renvoie l’info au GET (pour popup + scroll ensuite)
+    return redirect(url_for(
+        "public_trainee_space",
+        token=token,
+        uploaded=doc_key,
+        fname=original_name
+    ))
 
 
 
