@@ -1994,7 +1994,9 @@ def public_infos_update(token: str):
     t["address"] = (payload.get("address") or "").strip()
     t["zip_code"] = (payload.get("zip_code") or "").strip()
     t["city"] = (payload.get("city") or "").strip()
-    t["no_permis"] = bool(payload.get("no_permis"))
+    # ✅ Ne pas écraser si le champ n'est pas envoyé
+    if "no_permis" in payload:
+        t["no_permis"] = bool(payload.get("no_permis"))
 
     training_type = _session_get(s, "training_type", "")
     t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
@@ -2155,6 +2157,9 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         {"key":"modif_l2_recue","label":"Modif livret 2 reçue"},
         {"key":"jury","label":"Passage devant jury"},
     ]
+
+    # ✅ s'assure que no_permis est bien un bool
+    t["no_permis"] = bool(t.get("no_permis"))
 
     # ✅ dossier_status cohérent avec les docs requis
     dossier_complete = dossier_is_complete_total(t, training_type)
