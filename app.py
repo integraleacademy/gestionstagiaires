@@ -3012,5 +3012,26 @@ def phone_followup_reply(token: str):
     </div>
     """
 
+# =========================
+# ALIAS rétrocompatibilité (stagiaires <-> trainees)
+# =========================
+
+@app.post("/api/sessions/<session_id>/stagiaires/create")
+@admin_login_required
+def api_create_trainee_alias(session_id: str):
+    # redirige vers la vraie fonction
+    return api_create_trainee(session_id)
+
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/delete")
+@admin_login_required
+def api_delete_trainee_alias(session_id: str, trainee_id: str):
+    return api_delete_trainee(session_id, trainee_id)
+
+@app.post("/api/sessions/<session_id>/trainees/<trainee_id>/update")
+@admin_login_required
+def api_update_trainee_alias(session_id: str, trainee_id: str):
+    # ton update actuel est en /stagiaires/.../update
+    return api_update_trainee(session_id, trainee_id)
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
