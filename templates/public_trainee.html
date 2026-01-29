@@ -3,8 +3,16 @@
 
 <style>
   .public-wrap{max-width:1100px;margin:0 auto;padding:18px;}
-  .grid{display:grid;grid-template-columns:1fr;gap:14px;}
-  @media(min-width:900px){ .grid{grid-template-columns:1fr 1fr;} }
+.public-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:14px;
+}
+@media(min-width:900px){
+  .public-grid{
+    grid-template-columns:1fr 1fr;
+  }
+}
 
   .card{background:#fff;border:1px solid #e8eef3;border-radius:16px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,.03);}
   .card h2{margin:0 0 10px 0;font-size:18px}
@@ -38,18 +46,18 @@
   .docrow:first-child{border-top:none;padding-top:0}
   .docmeta{display:flex;flex-direction:column;gap:2px}
 
-    .docrow.missing{
-    border:2px dashed #fecaca;
-    background:#fff1f2;
-    border-radius:14px;
-    padding:12px;
-  }
-  .docrow.pending{
-    border:2px solid #fed7aa;
-    background:#fff7ed;
-    border-radius:14px;
-    padding:12px;
-  }
+.docrow.missing{
+  border:1px dashed #fecaca;
+  background:#fff1f2;
+  border-radius:12px;
+  padding:10px;
+}
+.docrow.pending{
+  border:1px solid #fed7aa;
+  background:#fff7ed;
+  border-radius:12px;
+  padding:10px;
+}
   .doctag{
     display:inline-flex;
     align-items:center;
@@ -72,6 +80,43 @@
     background:#fff;
   }
 
+  /* ✅ évite les doubles cadres : on enlève la séparation "border-top" quand c’est missing/pending */
+.docrow.missing,
+.docrow.pending{
+  border-top: none !important;
+}
+
+  /* ✅ Page stagiaire : ne pas forcer les file inputs en full width */
+.public-wrap input[type="file"]{
+  width:auto !important;
+  max-width:100% !important;
+}
+
+/* ✅ Form upload aligné propre */
+.public-wrap .upload-form{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+
+  /* ✅ état normal : discret mais structuré */
+.public-wrap .docrow{
+  border-radius:12px;
+}
+
+/* document conforme → très léger */
+.public-wrap .docrow:not(.missing):not(.pending){
+  background:#f9fafb;
+  border:1px solid #e5e7eb;
+  padding:10px;
+}
+
+/* on enlève le border-top interne dans tous les cas */
+.public-wrap .docrow{
+  border-top:none !important;
+}
   
 </style>
 
@@ -199,7 +244,7 @@
     </div>
   </div>
 
-  <div class="grid">
+  <div class="public-grid">
 
     <!-- Encadré 1 : infos générales -->
     <div class="card">
