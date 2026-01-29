@@ -142,6 +142,55 @@
 .public-wrap .docs-stack .docrow{
   margin:0 !important;
 }
+
+  /* =========================
+   ✅ MES DOCUMENTS (PROPRE)
+   ========================= */
+
+/* stack avec vrai espacement */
+.public-wrap .docs-stack{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  margin-top:12px;
+}
+
+/* 1 document = 1 carte verticale */
+.public-wrap .docs-stack > .docrow{
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:stretch !important;
+  justify-content:flex-start !important;
+  gap:10px !important;
+
+  padding:14px !important;
+  border-radius:14px !important;
+
+  border-top:none !important;     /* on vire l’effet “liste” */
+}
+
+/* on évite l’impression “tout collé” dans la carte */
+.public-wrap .docs-stack .docmeta{
+  gap:6px;
+}
+.public-wrap .docs-stack .doctag{
+  margin-top:6px;
+}
+
+/* le form upload respire */
+.public-wrap .docs-stack .upload-form{
+  margin-top:6px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+/* évite les cadres qui se chevauchent */
+.public-wrap .docs-stack .docrow.missing,
+.public-wrap .docs-stack .docrow.pending{
+  padding:14px !important;
+}
   
 </style>
 
