@@ -117,6 +117,31 @@
 .public-wrap .docrow{
   border-top:none !important;
 }
+
+  /* ✅ Documents : empilement vertical propre */
+.public-wrap .card > .docrow{
+  display:block;
+  width:100%;
+  margin-bottom:14px;   /* espace entre les documents */
+}
+
+/* dernier doc sans marge inutile */
+.public-wrap .card > .docrow:last-child{
+  margin-bottom:0;
+}
+
+  /* ✅ Mes documents : 1 doc = 1 bloc, empilé, espacé */
+.public-wrap .docs-stack{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  margin-top:12px;
+}
+
+/* on évite que .docrow rajoute encore des marges */
+.public-wrap .docs-stack .docrow{
+  margin:0 !important;
+}
   
 </style>
 
@@ -429,6 +454,8 @@
   <h2>Mes documents</h2>
   <div class="muted">Déposez ici vos documents.</div>
 
+  <div class="docs-stack">
+
   {% for d in (trainee.documents or []) %}
 {% set has_file = false %}
 {% if d %}
@@ -573,6 +600,7 @@ id="upload_{{ d.key }}"
     </div>
   {% endfor %}
 </div>
+    </div>
     <!-- Encadré 4 : diplômes et attestations -->
     <div class="card" style="grid-column:1/-1;">
       <h2>Mes diplômes et attestations</h2>
