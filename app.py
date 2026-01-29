@@ -1041,6 +1041,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "financement_comment",
         "vae_status_label",
         "cnaps",
+        "no_permis", 
     }
 
     for k, v in payload.items():
@@ -1050,6 +1051,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
     t["updated_at"] = _now_iso()
     s["trainees"] = trainees
     s.pop("stagiaires", None)
+    training_type = _session_get(s, "training_type", "")
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
     save_data(data)
     return jsonify({"ok": True})
 
