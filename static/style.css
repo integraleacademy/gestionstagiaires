@@ -780,4 +780,21 @@ input[type="file"]{
   white-space:nowrap;
 }
 
+/* =========================
+   MODAL – afficher quand .show
+   ========================= */
+.modal-backdrop.show{
+  display:flex;
+}
+
+/* optionnel : petite anim */
+.modal{
+  transform: translateY(8px);
+  opacity: 0;
+  transition: .12s ease;
+}
+.modal-backdrop.show .modal{
+  transform: translateY(0);
+  opacity: 1;
+}
 
