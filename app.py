@@ -198,6 +198,8 @@ def brevo_send_email(to_email: str, subject: str, html: str) -> bool:
 
     try:
         r = requests.post(url, headers=headers, json=payload, timeout=12)
+        print("[EMAIL] status=", r.status_code)
+        print("[EMAIL] response=", r.text)
         return r.status_code in (200, 201, 202)
     except Exception:
         return False
