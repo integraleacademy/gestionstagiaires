@@ -2774,5 +2774,328 @@ def admin_sessions_archived():
         formation_types=FORMATION_TYPES,
     )
 
+# =========================
+# RELANCE TELEPHONIQUE
+# =========================
+
+def phone_missing_details_text(t: Dict[str, Any], training_type: str) -> str:
+    # docs requis alignés
+    ensure_documents_schema_for_trainee(t, training_type)
+
+    # documents incomplets = tout ce qui n'est pas CONFORME (et le permis si A3P + no_permis)
+    docs_lines = []
+    tt = (training_type or "").strip().upper()
+    no_permis = bool(t.get("no_permis"))
+
+    for d in (t.get("documents") or []):
+        key = (d.get("key") or "").strip()
+        label = (d.get("label") or "Document").strip()
+        st = (d.get("status") or "").strip().upper()
+
+        # permis optionnel si no_permis
+        if tt == "A3P" and key == "permis" and no_permis:
+            continue
+
+        if st != "CONFORME":
+            if not st:
+                st = "NON DÉPOSÉ"
+            docs_lines.append(f"- {label} : {st}")
+
+    docs_txt = "\n".join(docs_lines) if docs_lines else "- Aucun (selon statuts actuels)"
+
+    infos_txt = infos_missing_text(t) or "- Aucune"
+
+    return (
+        "📄 Documents incomplets :\n"
+        f"{docs_txt}\n\n"
+        "🧾 Informations à compléter :\n"
+        f"{infos_txt}\n"
+    )
+
+
+def _find_session_and_trainee(data: Dict[str, Any], session_id: str, trainee_id: str):
+    s = find_session(data, session_id)
+    if not s:
+        return None, None
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    return s, t
+
+
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/phone-relance/send")
+@admin_login_required
+def api_phone_relance_send(session_id: str, trainee_id: str):
+    payload = request.get_json(silent=True) or {}
+    admin_comment = (payload.get("comment") or "").strip()
+
+    data = load_data()
+    s, t = _find_session_and_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "not_found"}), 404
+
+    training_type = _session_get(s, "training_type", "")
+    t.setdefault("phone_followups", [])
+
+    # Détails incomplets
+    missing_details = phone_missing_details_text(t, training_type)
+
+    # Token unique pour les actions secrétaire
+    followup_token = uuid.uuid4().hex
+    followup_id = "PHN-" + followup_token[:10].upper()
+
+    # Enregistre la demande
+    entry = {
+        "id": followup_id,
+        "token": followup_token,
+        "type": "DEMANDE RELANCE",
+        "at": _now_iso(),
+        "details": missing_details,
+        "comment": admin_comment,
+        "status": "PENDING",
+    }
+    t["phone_followups"].insert(0, entry)
+
+    # Infos mail
+    first_name = (t.get("first_name") or "").strip()
+    last_name = (t.get("last_name") or "").strip()
+    email = (t.get("email") or "").strip()
+    phone = (t.get("phone") or "").strip()
+
+    formation_type = (_session_get(s, "training_type", "") or _session_get(s, "name", "")).strip()
+    dstart = fr_date(_session_get(s, "date_start", ""))
+    dend = fr_date(_session_get(s, "date_end", ""))
+
+    # Liens actions secrétaire (page qui ouvre une modale)
+    base = PUBLIC_BASE_URL.rstrip("/")
+    action_url = f"{base}/phone-followup/{followup_token}"
+
+    url_called = action_url + "?action=called"
+    url_noanswer = action_url + "?action=no_answer"
+
+    subject = f"📞 Relance téléphonique – Dossier incomplet – {first_name} {last_name}".strip()
+
+    html = mail_layout(f"""
+      <h2 style="text-align:center">📞 Relance téléphonique – Dossier incomplet</h2>
+
+      <div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:14px 0">
+        <p style="margin:0 0 8px 0"><strong>Stagiaire :</strong> {first_name} {last_name}</p>
+        <p style="margin:0 0 8px 0"><strong>Formation :</strong> {formation_type}</p>
+        <p style="margin:0 0 8px 0"><strong>Dates :</strong> {dstart} → {dend}</p>
+        <p style="margin:0 0 8px 0"><strong>Téléphone :</strong> {phone or "—"}</p>
+        <p style="margin:0"><strong>Email :</strong> {email or "—"}</p>
+      </div>
+
+      <p style="margin:12px 0 8px 0"><strong>Éléments incomplets :</strong></p>
+      <pre style="white-space:pre-wrap;background:#fff;border:1px solid #e5e7eb;padding:12px;border-radius:12px;margin:0">{missing_details}</pre>
+
+      {"<p style='margin-top:12px'><strong>Commentaire admin :</strong><br>" + admin_comment + "</p>" if admin_comment else ""}
+
+      <div style="text-align:center;margin-top:18px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <a href="{url_called}"
+           style="display:inline-block;background:#16a34a;color:white;padding:12px 16px;border-radius:10px;text-decoration:none;font-weight:800">
+          ✅ J’ai appelé la personne
+        </a>
+
+        <a href="{url_noanswer}"
+           style="display:inline-block;background:#dc2626;color:white;padding:12px 16px;border-radius:10px;text-decoration:none;font-weight:800">
+          ❌ Je n’ai pas pu joindre la personne
+        </a>
+      </div>
+
+      <p class="hint" style="margin-top:14px;color:#6b7280;font-size:13px;text-align:center">
+        Ces boutons ouvrent une page avec une modale pour saisir le commentaire.
+      </p>
+    """)
+
+    # envoi au mail secrétaire
+    ok = brevo_send_email("clement@integraleacademy.com", subject, html)
+
+    # persistance
+    s["trainees"] = _session_trainees_list(s)
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return jsonify({"ok": True, "email_ok": bool(ok), "followup_id": followup_id})
+
+
+@app.get("/phone-followup/<token>")
+def phone_followup_page(token: str):
+    # page publique "action secrétaire" (sans login), basée sur un token unique
+    action = (request.args.get("action") or "").strip()  # called / no_answer
+
+    data = load_data()
+    found = None
+    found_session_id = None
+    found_trainee_id = None
+
+    for s in data.get("sessions", []) or []:
+        for t in (s.get("trainees") or []):
+            for it in (t.get("phone_followups") or []):
+                if (it.get("token") or "").strip() == token:
+                    found = it
+                    found_session_id = s.get("id")
+                    found_trainee_id = t.get("id")
+                    break
+            if found:
+                break
+        if found:
+            break
+
+    if not found:
+        return "<h3>Lien invalide ou expiré.</h3>", 404
+
+    # petite page qui ouvre automatiquement une modale (comme demandé)
+    # et envoie le commentaire via POST
+    return f"""
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Relance téléphonique</title>
+  <style>
+    body{{font-family:Arial,sans-serif;background:#f6f7f9;margin:0;padding:22px}}
+    .wrap{{max-width:720px;margin:0 auto}}
+    .card{{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px}}
+    .btn{{display:inline-block;border:0;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}}
+    .btn-green{{background:#16a34a;color:#fff}}
+    .btn-red{{background:#dc2626;color:#fff}}
+    .hint{{color:#6b7280;font-size:13px}}
+    .modal-backdrop{{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px}}
+    .modal{{width:min(640px,100%);background:#fff;border-radius:16px;border:1px solid #e5e7eb;overflow:hidden}}
+    .modal-head{{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #e5e7eb}}
+    .modal-title{{font-weight:900}}
+    .modal-body{{padding:14px}}
+    .modal-foot{{display:flex;gap:10px;justify-content:flex-end;padding:12px 14px;border-top:1px solid #e5e7eb}}
+    textarea{{width:100%;min-height:110px;border:1px solid #e5e7eb;border-radius:12px;padding:10px;box-sizing:border-box}}
+    .xbtn{{background:transparent;border:0;font-size:18px;cursor:pointer}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div style="font-weight:900;font-size:18px">Relance téléphonique</div>
+      <div class="hint" style="margin-top:6px">
+        Sélectionne l’action puis ajoute un commentaire.
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <button class="btn btn-green" id="btnCalled">✅ J’ai appelé la personne</button>
+        <button class="btn btn-red" id="btnNoAnswer">❌ Je n’ai pas pu joindre la personne</button>
+      </div>
+
+      <div class="hint" style="margin-top:12px">
+        Référence : {found.get("id","")}
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="m">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-title" id="mt">Action</div>
+        <button class="xbtn" id="mx">✕</button>
+      </div>
+
+      <form method="post" action="/phone-followup/{token}/reply">
+        <input type="hidden" name="outcome" id="outcome" value="">
+        <div class="modal-body">
+          <div class="hint" style="margin-bottom:8px">Commentaire secrétaire</div>
+          <textarea name="comment" placeholder="Ex : Appelé à 10h15, pièce d’identité à renvoyer, PRE manquant..."></textarea>
+        </div>
+        <div class="modal-foot">
+          <button class="btn" type="button" id="cancel">Annuler</button>
+          <button class="btn btn-green" type="submit">Envoyer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const modal = document.getElementById("m");
+    const mt = document.getElementById("mt");
+    const outcome = document.getElementById("outcome");
+
+    function openModal(title, val){
+      mt.textContent = title;
+      outcome.value = val;
+      modal.style.display = "flex";
+    }
+    function closeModal(){ modal.style.display = "none"; }
+
+    document.getElementById("mx").onclick = closeModal;
+    document.getElementById("cancel").onclick = closeModal;
+
+    document.getElementById("btnCalled").onclick = ()=>openModal("✅ J’ai appelé la personne", "CALLED");
+    document.getElementById("btnNoAnswer").onclick = ()=>openModal("❌ Je n’ai pas pu joindre la personne", "NO_ANSWER");
+
+    // auto-open selon le lien du mail
+    const action = "{action}";
+    if(action === "called") openModal("✅ J’ai appelé la personne", "CALLED");
+    if(action === "no_answer") openModal("❌ Je n’ai pas pu joindre la personne", "NO_ANSWER");
+  </script>
+</body>
+</html>
+"""
+
+
+@app.post("/phone-followup/<token>/reply")
+def phone_followup_reply(token: str):
+    outcome = (request.form.get("outcome") or "").strip().upper()
+    comment = (request.form.get("comment") or "").strip()
+
+    if outcome not in ("CALLED", "NO_ANSWER"):
+        return "<h3>Action invalide.</h3>", 400
+
+    data = load_data()
+
+    s_found = None
+    t_found = None
+    entry_found = None
+
+    for s in data.get("sessions", []) or []:
+        for t in (s.get("trainees") or []):
+            for it in (t.get("phone_followups") or []):
+                if (it.get("token") or "").strip() == token:
+                    s_found = s
+                    t_found = t
+                    entry_found = it
+                    break
+            if entry_found:
+                break
+        if entry_found:
+            break
+
+    if not entry_found:
+        return "<h3>Lien invalide ou expiré.</h3>", 404
+
+    # on enregistre la réponse comme un nouvel événement (historique)
+    t_found.setdefault("phone_followups", [])
+    t_found["phone_followups"].insert(0, {
+        "id": "PHN-REP-" + uuid.uuid4().hex[:8].upper(),
+        "type": "RÉPONSE SECRÉTAIRE",
+        "at": _now_iso(),
+        "details": ("✅ Appelé" if outcome == "CALLED" else "❌ Pas pu joindre"),
+        "comment": comment,
+        "ref": entry_found.get("id", ""),
+    })
+
+    # marque la demande comme traitée (optionnel)
+    entry_found["status"] = "DONE"
+    entry_found["done_at"] = _now_iso()
+    entry_found["done_outcome"] = outcome
+
+    # persist
+    s_found["trainees"] = _session_trainees_list(s_found)
+    s_found.pop("stagiaires", None)
+    save_data(data)
+
+    return """
+    <div style="font-family:Arial,sans-serif;max-width:520px;margin:60px auto;padding:18px;border:1px solid #e5e7eb;border-radius:14px">
+      <h2 style="margin:0 0 10px 0">✅ Réponse enregistrée</h2>
+      <p style="margin:0;color:#374151">Merci, le retour a bien été ajouté à l’historique.</p>
+    </div>
+    """
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
