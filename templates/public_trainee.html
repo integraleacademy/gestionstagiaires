@@ -396,7 +396,7 @@
     {% set st = (d.status if d and d.status else ("NON DÉPOSÉ" if not has_file else "A CONTRÔLER")) %}
     {% set up = (st|string)|upper %}
   {% set can_replace = (has_file and up == "NON CONFORME") %}
-{% set show_upload = (not has_file) or can_replace %}
+{% set show_upload = ((not has_file) or can_replace) and not (d.key == "permis" and trainee.no_permis) %}
 
     {% set row_cls = "missing" %}
     {% if has_file %}
@@ -420,20 +420,43 @@
     <div class="docrow {{ row_cls }}">
       <div class="docmeta">
         <div class="label">{{ d.label }}</div>
+        {% if d.key == "permis" %}
+  <label style="margin-top:8px;display:flex;align-items:center;gap:8px;font-weight:800;">
+    <input
+      type="checkbox"
+      id="no_permis_checkbox"
+      {% if trainee.no_permis %}checked{% endif %}
+    >
+    Je n’ai pas le permis de conduire
+  </label>
+
+  <div class="muted" style="margin-top:4px;">
+    Si vous cochez cette case, le dépôt du permis n’est pas obligatoire.
+  </div>
+{% endif %}
+
+        {% if d.key == "permis" and trainee.no_permis %}
+  <div class="doctag"
+       style="margin-top:8px;border-color:#bbf7d0;color:#065f46;">
+    ✅ Permis non requis (déclaré)
+  </div>
+{% endif %}
+        
         <div class="muted">{{ hint }}</div>
 
-        {% if not has_file %}
-          <div class="doctag missing">📌 Document à déposer (obligatoire)</div>
-        {% else %}
-          {% if up == "CONFORME" %}
-            <div class="doctag" style="border-color:#bbf7d0;color:#065f46;background:#fff;">✅ Document conforme</div>
-          {% elif up == "NON CONFORME" %}
-            <div class="doctag missing">❌ Document non conforme — à remplacer</div>
-          {% else %}
-            <div class="doctag pending">⏳ Document déposé — en attente de contrôle</div>
-          {% endif %}
-        {% endif %}
-      </div>
+{% if not has_file and not (d.key == "permis" and trainee.no_permis) %}
+  <div class="doctag missing">📌 Document à déposer (obligatoire)</div>
+{% else %}
+  {% if has_file %}
+    {% if up == "CONFORME" %}
+      <div class="doctag" style="border-color:#bbf7d0;color:#065f46;background:#fff;">✅ Document conforme</div>
+    {% elif up == "NON CONFORME" %}
+      <div class="doctag missing">❌ Document non conforme — à remplacer</div>
+    {% else %}
+      <div class="doctag pending">⏳ Document déposé — en attente de contrôle</div>
+    {% endif %}
+  {% endif %}
+{% endif %}
 
 {% if show_upload %}
 <form class="upload-form"
@@ -442,24 +465,24 @@ id="upload_{{ d.key }}"
   method="post"
   enctype="multipart/form-data">
 
-    {% if d.key == "id" %}
-      <div class="muted" style="font-weight:900;color:#111;margin-bottom:6px;">
-        📌 Carte d’identité obligatoire —
-        <span style="color:#b91c1c;">RECTO + VERSO (vous pouvez déposer 1 fichier si votre document contient recto/verso, sinon 2 fichiers)</span>
-      </div>
+{% if d.key == "id" %}
+  <div class="muted" style="font-weight:900;color:#111;margin-bottom:6px;">
+    📌 Carte d’identité obligatoire —
+    <span style="color:#b91c1c;">RECTO + VERSO (vous pouvez déposer 1 fichier si votre document contient recto/verso, sinon 2 fichiers)</span>
+  </div>
 
   <input type="file"
-       name="file"
-       accept="{{ accept }}"
-       required>
-    {% else %}
-      <input type="file"
-             name="file"
-             accept="{{ accept }}"
-             required>
-    {% endif %}
+         name="file"
+         accept="{{ accept }}"
+         required>
+{% else %}
+  <input type="file"
+         name="file"
+         accept="{{ accept }}"
+         {% if not (d.key == "permis" and trainee.no_permis) %}required{% endif %}>
+{% endif %}
 
-   <button class="btn small" type="submit">
+<button class="btn small" type="submit">
   {% if can_replace %}Remplacer{% else %}Déposer{% endif %}
 </button>
 
@@ -471,7 +494,7 @@ id="upload_{{ d.key }}"
   <span class="pill green">📎 Fichier déjà envoyé</span>
 {% endif %}
 
-      {% if d.key == "id" %}
+{% if d.key == "id" %}
   <div id="id_hint_id" style="display:none;margin-top:12px;border:2px solid #fed7aa;background:#fff7ed;padding:12px;border-radius:12px;">
     <div style="font-weight:900;color:#9a3412;margin-bottom:8px;">
       Avez-vous bien fourni votre passeport, ou votre carte d'identité
@@ -484,11 +507,11 @@ id="upload_{{ d.key }}"
     </div>
   </div>
 {% endif %}
-      
+
 {% if d.key == "photo" %}
   <div id="photo_hint_photo" style="display:none;margin-top:12px;border:2px solid #fed7aa;background:#fff7ed;padding:12px;border-radius:12px;">
     <div style="font-weight:900;color:#9a3412;margin-bottom:8px;">
-      Avez-vous bien fourni une photo d’identité conforme ? (photo de face, sur fond neutre). Cette photo apparaîtra sur votre diplôme. 
+      Avez-vous bien fourni une photo d’identité conforme ? (photo de face, sur fond neutre). Cette photo apparaîtra sur votre diplôme.
     </div>
 
     <img src="/static/photo-exemple.png"
@@ -501,13 +524,10 @@ id="upload_{{ d.key }}"
     </div>
   </div>
 {% endif %}
-      
+
     </div>
   {% endfor %}
 </div>
-
-
-
     <!-- Encadré 4 : diplômes et attestations -->
     <div class="card" style="grid-column:1/-1;">
       <h2>Mes diplômes et attestations</h2>
@@ -867,8 +887,27 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   });
 });
-  
+
+document.addEventListener("DOMContentLoaded", () => {
+  const cb = document.getElementById("no_permis_checkbox");
+  if (!cb) return;
+
+  cb.addEventListener("change", async () => {
+    const r = await fetch(`/espace/${token}/infos/update`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        no_permis: cb.checked
+      })
+    });
+
+    if (!r.ok) {
+      alert("Erreur lors de l’enregistrement du choix.");
+    }
+  });
+});
 </script>
+  
 
   
 
