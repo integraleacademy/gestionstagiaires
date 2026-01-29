@@ -900,6 +900,8 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!cb) return;
 
   cb.addEventListener("change", async () => {
+
+    // 1️⃣ Sauvegarde backend
     const r = await fetch(`/espace/${token}/infos/update`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -910,6 +912,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!r.ok) {
       alert("Erreur lors de l’enregistrement du choix.");
+      return;
+    }
+
+    // 2️⃣ Mise à jour UI en live (sans refresh)
+    const permisRow = document.getElementById("upload_permis")?.closest(".docrow");
+    if (!permisRow) return;
+
+    if (cb.checked) {
+      // ➜ permis non requis
+      permisRow.querySelector("form")?.remove();
+      permisRow.querySelector(".doctag.missing")?.remove();
+
+      const tag = document.createElement("div");
+      tag.className = "doctag";
+      tag.style.borderColor = "#bbf7d0";
+      tag.style.color = "#065f46";
+      tag.style.marginTop = "8px";
+      tag.textContent = "✅ Permis non requis (déclaré)";
+      permisRow.querySelector(".docmeta")?.appendChild(tag);
+    } else {
+      // ➜ on recharge la page pour revenir à l’état initial
+      location.reload();
     }
   });
 });
