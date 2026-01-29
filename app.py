@@ -1291,6 +1291,48 @@ def docs_summary_text(trainee: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+import re
+
+def infos_missing_text(trainee: dict) -> str:
+    """
+    Retourne une liste texte des infos à compléter (ou invalides),
+    exactement comme dans l'espace stagiaire (Infos à compléter).
+    """
+    missing = []
+
+    # --- champs simples obligatoires ---
+    simple_required = [
+        ("birth_date", "Date de naissance"),
+        ("birth_city", "Ville de naissance"),
+        ("birth_country", "Pays de naissance"),
+        ("nationality", "Nationalité"),
+        ("address", "Adresse postale"),
+        ("zip_code", "Code postal"),
+        ("city", "Ville"),
+    ]
+    for key, label in simple_required:
+        if not (trainee.get(key) or "").strip():
+            missing.append(f"- {label}")
+
+    # --- Numéro de sécu : 15 chiffres ---
+    secu_raw = (trainee.get("carte_vitale") or "").strip()
+    secu_digits = re.sub(r"\D+", "", secu_raw)
+    if not secu_raw:
+        missing.append("- Numéro de sécurité sociale")
+    elif len(secu_digits) != 15:
+        missing.append("- Numéro de sécurité sociale (15 chiffres)")
+
+    # --- PRE/CAR ---
+    pre_raw = (trainee.get("pre_number") or "").strip()
+    pre = pre_raw.upper().replace(" ", "")
+    if not pre_raw:
+        missing.append("- Numéro PRE / CAR")
+    elif not re.match(r"^(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11,}$", pre):
+        missing.append("- Numéro PRE / CAR (format invalide)")
+
+    return "\n".join(missing)
+
+
 # =========================
 # Admin actions — trainee
 # =========================
@@ -1784,35 +1826,75 @@ def admin_docs_notify(session_id: str, trainee_id: str):
 
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
     
-@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/docs/nonconform-notify")
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/docs/nonconform/notify")
 @admin_login_required
 def admin_docs_nonconform_notify(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
     if not s:
         abort(404)
+
     trainees = _session_trainees_list(s)
-    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         abort(404)
 
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
+    training_type = _session_get(s, "training_type", "")
+    ensure_documents_schema_for_trainee(t, training_type)
+
     details = docs_summary_text(t)
 
-    subject = "Documents non conformes – Action requise"
-    html = f"""
-    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
-      <div style="background:white;padding:18px;border-radius:12px">
-        <h2>Documents non conformes</h2>
-        <p>Certains documents sont non conformes ou à contrôler. Merci de consulter le détail :</p>
-        <pre style="white-space:pre-wrap;background:#f2f2f2;padding:10px;border-radius:10px">{details}</pre>
-        <p>Vous pouvez déposer des documents corrigés ici :</p>
-        <p><a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">Accéder à mon espace stagiaire</a></p>
-        <p style="color:#666;font-size:13px">Intégrale Academy</p>
+    subject = "Documents non conformes – Action requise (Intégrale Academy)"
+
+    html = mail_layout(f"""
+      <h2 style="text-align:center;color:#b91c1c">❌ Documents non conformes / à corriger</h2>
+
+      <p>Bonjour <strong>{(t.get("first_name") or "").strip() or "Madame, Monsieur"}</strong>,</p>
+
+      <p>
+        Certains documents déposés dans votre dossier ne sont pas conformes (ou doivent être corrigés).
+        Merci de consulter le détail ci-dessous et de déposer les documents corrigés depuis votre espace stagiaire.
+      </p>
+
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px;margin:16px 0">
+        <p style="margin:0 0 10px 0"><strong>📌 Détail de vos documents :</strong></p>
+        <pre style="white-space:pre-wrap;background:#fff;border:1px solid #fee2e2;padding:10px;border-radius:10px;margin:0">{details or "Aucun détail disponible."}</pre>
+
+        <p style="margin:14px 0 0 0">
+          <strong>📍 Déposer les documents corrigés :</strong><br>
+          <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
+        </p>
+
+        <p style="margin:10px 0 0 0;color:#b91c1c;font-weight:bold">
+          ⚠️ Merci de corriger et renvoyer dès que possible pour valider votre inscription.
+        </p>
       </div>
-    </div>
-    """
-    sms = f"Intégrale Academy : documents non conformes. Merci de consulter votre espace : {link}"
+
+      <p style="margin-top:22px">
+        Besoin d’aide ? Contactez-nous au <strong>04 22 47 07 68</strong>.
+      </p>
+
+      <p style="margin-top:22px">
+        Merci par avance,<br>
+        <strong>Clément VAILLANT</strong><br>
+        Directeur Intégrale Academy
+      </p>
+
+      <p style="text-align:center;margin-top:18px">
+        <a href="{link}"
+           style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+          👉 Accéder à mon espace stagiaire
+        </a>
+      </p>
+    """)
+
+    sms = (
+        f"Intégrale Academy ❌ Bonjour {t.get('first_name','')}, "
+        f"Certains documents déposés sont NON CONFORMES. Nous vous invitons à corriger votre dépôt. La liste détaillée des non conformités vous a été adressée par mail. "
+        f"Merci de déposer les documents corrigés sur votre espace : {link} "
+        f"Aide : 04 22 47 07 68"
+    )
 
     brevo_send_email(t.get("email",""), subject, html)
     brevo_send_sms(t.get("phone",""), sms)
@@ -1820,7 +1902,9 @@ def admin_docs_nonconform_notify(session_id: str, trainee_id: str):
     t["docs_last_nonconform_notified_at"] = _now_iso()
     t["updated_at"] = _now_iso()
     s["trainees"] = trainees
+    s.pop("stagiaires", None)
     save_data(data)
+
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/docs/relance")
@@ -1837,7 +1921,11 @@ def admin_docs_relance(session_id: str, trainee_id: str):
         abort(404)
 
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
-    details = docs_summary_text(t)
+    training_type = _session_get(s, "training_type", "")
+    ensure_documents_schema_for_trainee(t, training_type)
+    
+    docs_details = docs_summary_text(t)
+    infos_details = infos_missing_text(t)
 
     formation_type = (_session_get(s, "training_type", "") or _session_get(s, "name", "")).strip()
     dstart = fr_date(_session_get(s, "date_start", ""))
@@ -1864,7 +1952,10 @@ def admin_docs_relance(session_id: str, trainee_id: str):
 
       <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px;margin:16px 0">
         <p style="margin:0 0 10px 0"><strong>📌 Votre dossier détaillé :</strong></p>
-        <pre style="white-space:pre-wrap;background:#fff;border:1px solid #fee2e2;padding:10px;border-radius:10px;margin:0">{details}</pre>
+       <pre style="white-space:pre-wrap;background:#fff;border:1px solid #fee2e2;padding:10px;border-radius:10px;margin:0">{docs_details or "Aucun document en attente."}</pre>
+
+    <p style="margin:14px 0 10px 0"><strong>🧾 Informations à compléter :</strong></p>
+    <pre style="white-space:pre-wrap;background:#fff;border:1px solid #fee2e2;padding:10px;border-radius:10px;margin:0">{infos_details or "Aucune information manquante."}</pre>
 
         <p style="margin:12px 0 0 0">
           <strong>📍 Informations à compléter et Dépôt des documents :</strong><br>
@@ -2034,8 +2125,9 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
     s = find_session(data, session_id)
     if not s:
         abort(404)
+
     trainees = _session_trainees_list(s)
-    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         abort(404)
 
@@ -2057,37 +2149,94 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
     label = DELIVERABLE_LABELS[kind]
 
+    # =========================
+    # ✅ Jolis mails + SMS
+    # =========================
+    first_name = (t.get("first_name") or "").strip() or "Madame, Monsieur"
+    formation_type = (_session_get(s, "training_type", "") or _session_get(s, "name", "")).strip()
+    dstart = fr_date(_session_get(s, "date_start", ""))
+    dend = fr_date(_session_get(s, "date_end", ""))
+
+    extra_line = ""
+    if kind == "diplome":
+        extra_line = "🎉 Félicitations ! Votre diplôme est maintenant disponible."
+    elif kind == "attestation_fin_formation":
+        extra_line = "📄 Votre attestation de fin de formation est disponible et peut être téléchargée à tout moment."
+    elif kind == "carte_sst":
+        extra_line = "🩺 Votre carte SST est disponible. Conservez-la précieusement, elle peut être demandée par un employeur."
+
     subject = f"{label} disponible – Intégrale Academy"
-    html = f"""
-    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
-      <div style="background:white;padding:18px;border-radius:12px">
-        <h2>{label} disponible</h2>
-        <p>Votre document est disponible sur votre espace stagiaire :</p>
-        <p><a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">Accéder à mon espace stagiaire</a></p>
-        <p style="color:#666;font-size:13px">Intégrale Academy</p>
+
+    html = mail_layout(f"""
+      <h2 style="text-align:center">✅ {label} disponible</h2>
+
+      <p>Bonjour <strong>{first_name}</strong>,</p>
+
+      <p>
+        Nous avons le plaisir de vous informer que votre <strong>{label}</strong>
+        est désormais disponible dans votre espace stagiaire.
+      </p>
+
+      {"<p style='margin-top:10px;font-weight:700'>" + extra_line + "</p>" if extra_line else ""}
+
+      <div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:16px 0">
+        <p style="margin:0 0 10px 0">
+          <strong>📌 Formation :</strong> {formation_type}
+          {" — <strong>Dates :</strong> " + dstart + " au " + dend if (dstart or dend) else ""}
+        </p>
+
+        <p style="margin:0">
+          <strong>📍 Accéder à votre espace stagiaire :</strong><br>
+          <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
+        </p>
       </div>
-    </div>
-    """
-    sms = f"Intégrale Academy : {label} disponible sur votre espace stagiaire : {link}"
 
-    brevo_send_email(t.get("email",""), subject, html)
-    brevo_send_sms(t.get("phone",""), sms)
+      <p style="text-align:center;margin-top:18px">
+        <a href="{link}"
+           style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;
+                  text-decoration:none;font-weight:bold">
+          👉 Accéder à mon espace stagiaire
+        </a>
+      </p>
 
+      <p style="margin-top:22px">
+        Pour toute question, vous pouvez nous contacter au <strong>04 22 47 07 68</strong>.
+      </p>
+
+      <p style="margin-top:22px">
+        Bien cordialement,<br>
+        <strong>Clément VAILLANT</strong><br>
+        Directeur Intégrale Academy
+      </p>
+
+      <hr style="margin:26px 0;border:none;border-top:1px solid #e5e7eb">
+
+      <p style="font-size:12px;color:#6b7280;text-align:center;line-height:1.6">
+        © Intégrale Academy — Merci de votre confiance 💛<br>
+        54 chemin du Carreou 83480 PUGET SUR ARGENS / 142 rue de Rivoli 75001 PARIS<br>
+        <a href="https://www.integraleacademy.com"
+           style="color:#1f8f4a;text-decoration:none;font-weight:bold">
+          integraleacademy.com
+        </a>
+      </p>
+    """)
+
+    sms_name = (t.get("first_name") or "").strip()
+    sms = (
+        f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
+        f"votre {label} est disponible sur votre espace : {link} "
+        f"(Aide : 04 22 47 07 68)"
+    )
+
+    brevo_send_email(t.get("email", ""), subject, html)
+    brevo_send_sms(t.get("phone", ""), sms)
+
+    # ✅ persistance
     s["trainees"] = trainees
+    s.pop("stagiaires", None)
     save_data(data)
+
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
-
-
-
-def find_session_and_trainee_by_token(data, token: str):
-    # data["sessions"] attendu: liste de sessions avec "id" + "trainees" (ou "stagiaires")
-    sessions = data.get("sessions", [])
-    for s in sessions:
-        trainees = s.get("trainees") or s.get("stagiaires") or []
-        for t in trainees:
-            if (t.get("public_token") or "") == token:
-                return s, t
-    return None, None
 
 @app.get("/espace/<token>")
 def public_trainee_space(token):
