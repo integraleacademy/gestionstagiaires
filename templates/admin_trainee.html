@@ -246,14 +246,20 @@
       </span>
     </div>
 
-      <!-- Permis requis / non requis -->
+{% if (session.training_type or '')|upper == "A3P" %}
   <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+    <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+      <input type="checkbox" id="chkNoPermis" {% if trainee.no_permis %}checked{% endif %}>
+      <span>Le stagiaire n’a pas le permis</span>
+    </label>
+
     {% if trainee.no_permis %}
       <span class="pill pill-gray">🚫 Permis non requis</span>
     {% else %}
       <span class="pill pill-yellow">🪪 Permis requis</span>
     {% endif %}
   </div>
+{% endif %}
 
    <div class="btn-row" style="margin-top:10px;">
   <form method="post" action="{{ url_for('admin_docs_notify', session_id=session.id, trainee_id=trainee.id) }}">
@@ -688,7 +694,22 @@ if(financementSelect){
   });
 }
   
-
+// ✅ Checkbox "Pas de permis" (A3P) -> no_permis = true/false
+const chkNoPermis = document.getElementById("chkNoPermis");
+if(chkNoPermis){
+  chkNoPermis.addEventListener("change", async ()=>{
+    try{
+      await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ no_permis: chkNoPermis.checked })
+      });
+      window.location.reload();
+    }catch(e){
+      alert("Erreur sauvegarde permis");
+    }
+  });
+}
   
 
 </script>
