@@ -41,11 +41,10 @@
   </div>
 
 <script>
-  // Modal helpers (generic) - version robuste
   window.openModal = function(id){
     const el = document.getElementById(id);
     if(!el) return;
-    el.style.display = "flex";
+    el.classList.add("show");
     el.setAttribute("aria-hidden","false");
     document.body.style.overflow = "hidden";
   };
@@ -53,20 +52,17 @@
   window.closeModal = function(id){
     const el = document.getElementById(id);
     if(!el) return;
-    el.style.display = "none";
+    el.classList.remove("show");
     el.setAttribute("aria-hidden","true");
     document.body.style.overflow = "";
   };
 
-  // ✅ Délégation: marche même si le DOM change / si le template ajoute des boutons après
   document.addEventListener("click", (e)=>{
-    const btn = e.target.closest?.("[data-close-modal]");
-    if(btn){
-      const id = btn.getAttribute("data-close-modal");
-      window.closeModal(id);
+    const closeBtn = e.target.closest?.("[data-close-modal]");
+    if(closeBtn){
+      window.closeModal(closeBtn.getAttribute("data-close-modal"));
       return;
     }
-
     const backdrop = e.target.closest?.(".modal-backdrop");
     if(backdrop && e.target === backdrop){
       window.closeModal(backdrop.id);
