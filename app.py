@@ -400,6 +400,7 @@ def _convert_old_stagiaire_to_trainee(st: Dict[str, Any]) -> Dict[str, Any]:
         "public_token": st.get("public_token") or "",
         "created_at": st.get("created_at") or "",
         "updated_at": st.get("updated_at") or "",
+        "phone_followups": st.get("phone_followups") or [],
     }
 
 
@@ -935,6 +936,7 @@ def api_create_trainee(session_id: str):
         "no_permis": False,
         "documents": [],
         "created_at": _now_iso(),
+        "phone_followups": [],
     }
 
     ensure_documents_schema_for_trainee(t, training_type)
