@@ -1213,10 +1213,78 @@ function formatPreCarDisplay(raw){
 function normalizePRE(s){
   return formatPreCarDisplay(s);
 }
+
+  <script>
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const uploaded = params.get("uploaded");
+  const fname = params.get("fname");
+
+  if(uploaded){
+    // 1️⃣ ouvrir la popup
+    const nameEl = document.getElementById("uploadedFileName");
+    if(nameEl){
+      nameEl.textContent = fname || "votre document";
+    }
+    openModal("uploadSuccessModal");
+
+    // 2️⃣ scroller exactement sur le document concerné
+    const form = document.getElementById("upload_" + uploaded);
+    if(form){
+      setTimeout(()=>{
+        form.scrollIntoView({
+          behavior: "smooth",
+          block: "center"
+        });
+      }, 150);
+    }
+
+    // 3️⃣ nettoyer l’URL (évite popup au refresh)
+    const cleanUrl = window.location.pathname;
+    window.history.replaceState({}, "", cleanUrl);
+  }
+})();
+</script>
 </script>
   
 
+<!-- ✅ Popup confirmation dépôt document -->
+<div id="uploadSuccessModal" class="ia-modal-backdrop">
+  <div class="ia-modal" role="dialog" aria-modal="true">
+    <div class="ia-accent"></div>
 
+    <div class="ia-head">
+      <div class="ia-brand">
+        <div class="ia-logo">
+          <img src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy">
+        </div>
+        <div>
+          <div class="ia-title">Document déposé avec succès</div>
+          <div class="ia-sub">Merci pour votre envoi</div>
+        </div>
+      </div>
+
+      <button type="button" class="ia-close" onclick="closeModal('uploadSuccessModal')">✕</button>
+    </div>
+
+    <div class="ia-body">
+      <div class="ia-card">
+        <p class="ia-p">
+          ✅ Votre document <strong id="uploadedFileName"></strong> a bien été déposé.
+        </p>
+        <p class="ia-p">
+          Notre équipe va procéder à un contrôle de votre document afin de s’assurer de sa conformité.
+        </p>
+      </div>
+    </div>
+
+    <div class="ia-foot">
+      <button class="btn" onclick="closeModal('uploadSuccessModal')">
+        Déposer mes autres documents
+      </button>
+    </div>
+  </div>
+</div>
 
 
 {% endblock %}
