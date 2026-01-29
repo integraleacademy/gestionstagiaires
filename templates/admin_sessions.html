@@ -148,10 +148,13 @@
       <div>Stagiaires : <strong>{{ s.total }}</strong></div>
     </div>
 
-    <div class="card-actions">
-      <a class="btn" href="{{ url_for('admin_trainees', session_id=s.id, **request.args) }}">Voir les stagiaires</a>
-      <button class="btn btn-danger" data-delete-session="{{ s.id }}">Supprimer</button>
-    </div>
+<div class="card-actions">
+  <a class="btn" href="{{ url_for('admin_trainees', session_id=s.id, **request.args) }}">Voir les stagiaires</a>
+
+  <button class="btn btn-outline" data-archive-session="{{ s.id }}">Archiver</button>
+
+  <button class="btn btn-danger" data-delete-session="{{ s.id }}">Supprimer</button>
+</div>
   </div>
   {% endfor %}
 </div>
@@ -530,6 +533,30 @@
       if(q.length >= 2) doSearch(q);
     });
   })();
+
+  // archive session
+document.querySelectorAll("[data-archive-session]").forEach(btn=>{
+  btn.addEventListener("click", async ()=>{
+    const sid = btn.getAttribute("data-archive-session");
+    if(!sid) return;
+    if(!confirm("Archiver cette session ? (elle sera déplacée dans 'Sessions archivées')")) return;
+
+    btn.disabled = true;
+    try{
+      const r = await fetch(`/api/sessions/${sid}/archive`, { method:"POST" });
+      const res = await r.json();
+      if(!r.ok || !res.ok){
+        alert("Erreur archivage session");
+        return;
+      }
+      window.location.reload();
+    }catch(e){
+      alert("Erreur réseau");
+    }finally{
+      btn.disabled = false;
+    }
+  });
+});
 </script>
 
 {% endblock %}
