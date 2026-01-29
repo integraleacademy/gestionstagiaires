@@ -258,34 +258,46 @@
     Historique des relances / retours secrétaire.
   </div>
 
-  <!-- Historique (affichage simple pour l’instant) -->
-  <div id="phoneRelanceHistory" style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">
-    {% if trainee.phone_followups and trainee.phone_followups|length > 0 %}
-      {% for it in trainee.phone_followups %}
-        <div style="border:1px solid #e5e7eb;border-radius:12px;padding:10px;background:#fff;">
+
+
+  {% set calls = trainee.phone_followups or [] %}
+
+<div style="margin-top:12px;border-top:1px dashed #e5e7eb;padding-top:12px;">
+  <div style="font-weight:900;margin-bottom:8px;">Historique</div>
+
+  {% if calls|length == 0 %}
+    <div class="hint">Aucune relance téléphonique enregistrée.</div>
+  {% else %}
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      {% for it in calls %}
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:10px;">
           <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-            <div style="font-weight:800;">
-              {{ it.type or "Événement" }}
+            <div style="font-weight:900;">
+              {{ it.type or "Évènement" }}
+              {% if it.details %}<span class="hint" style="margin-left:8px;">— {{ it.details }}</span>{% endif %}
             </div>
             <div class="hint">{{ it.at or "" }}</div>
           </div>
 
-          {% if it.details %}
-            <pre style="white-space:pre-wrap;margin:8px 0 0 0;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:8px;">{{ it.details }}</pre>
+          {% if it.ref %}
+            <div class="hint" style="margin-top:6px;">Réf : <span class="mono">{{ it.ref }}</span></div>
           {% endif %}
 
           {% if it.comment %}
-            <div style="margin-top:8px;">
-              <div class="hint">Commentaire :</div>
-              <div style="font-weight:700;">{{ it.comment }}</div>
+            <div style="margin-top:8px;white-space:pre-wrap;">{{ it.comment }}</div>
+          {% endif %}
+
+          {% if it.status %}
+            <div class="hint" style="margin-top:8px;">
+              Statut : <strong>{{ it.status }}</strong>
+              {% if it.done_outcome %} — <strong>{{ it.done_outcome }}</strong>{% endif %}
+              {% if it.done_at %} ({{ it.done_at }}){% endif %}
             </div>
           {% endif %}
         </div>
       {% endfor %}
-    {% else %}
-      <div class="hint">Aucune relance téléphonique enregistrée.</div>
-    {% endif %}
-  </div>
+    </div>
+  {% endif %}
 </div>
 
 <!-- ===================== -->
@@ -325,12 +337,12 @@
 
       <div class="modal-foot">
         <button class="btn" type="button" data-close-modal="phoneRelanceModal">Annuler</button>
-        <button class="btn btn-primary" type="submit">Envoyer</button>
+        <button class="btn btn-primary" type="submit" id="btnSendPhoneRelance">Envoyer</button>
       </div>
     </form>
   </div>
 </div> 
-
+</div>
   <!-- ===================== -->
   <!-- DOCUMENTS (pleine largeur) -->
   <!-- ===================== -->
@@ -833,7 +845,7 @@ if(traineeComment){
   });
 }
 
-  <script>
+
   // ===== RELANCE TELEPHONIQUE (UI only) =====
   const btnOpenPhoneRelance = document.getElementById("btnOpenPhoneRelance");
   const phoneRelanceForm = document.getElementById("phoneRelanceForm");
@@ -926,13 +938,48 @@ if(traineeComment){
   });
 
   // Pour l’instant : on empêche l’envoi (pas encore branché backend)
-  phoneRelanceForm?.addEventListener("submit", (e)=>{
-    e.preventDefault();
-    alert("OK UI prêt ✅\nÉtape suivante : on branche l’envoi mail + enregistrement.");
-  });
+phoneRelanceForm?.addEventListener("submit", async (e)=>{
+  e.preventDefault();
+
+  const btn = document.getElementById("btnSendPhoneRelance");
+  const commentEl = document.getElementById("phoneRelanceComment");
+  const comment = (commentEl?.value || "").trim();
+
+  if(btn){
+    btn.disabled = true;
+    btn.textContent = "Envoi...";
+  }
+
+  try{
+    const r = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/phone-relance/send`, {
+      method:"POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ comment })
+    });
+
+    const res = await r.json();
+
+    if(!res.ok){
+      alert("Erreur envoi relance : " + (res.error || "unknown"));
+      return;
+    }
+
+    // ✅ ferme la modale + refresh pour voir l’historique
+    closeModal("phoneRelanceModal");
+    window.location.reload();
+
+  }catch(err){
+    alert("Erreur réseau / serveur (relance téléphonique).");
+  }finally{
+    if(btn){
+      btn.disabled = false;
+      btn.textContent = "ENVOYER";
+    }
+  }
+});
 </script>
   
-</script>
+
 
 
 
