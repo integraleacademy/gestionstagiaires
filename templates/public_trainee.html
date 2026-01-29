@@ -571,8 +571,78 @@ id="upload_{{ d.key }}"
   </div>
 </div>
 
+ <!-- ✅ Welcome popup (affiché une seule fois) -->
+<div id="welcomeModal" class="modal-backdrop" style="display:none;">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+    <div class="modal-head">
+      <div>
+        <div id="welcomeTitle" class="modal-title">
+          Bonjour {{ (trainee.first_name or '')|title }},
+        </div>
+        <div class="hint" style="margin-top:4px;font-weight:800;color:#334155;">
+          Bienvenue dans votre Espace Stagiaire Intégrale Academy.
+        </div>
+      </div>
+
+      <button type="button" class="icon-btn" data-close-modal="welcomeModal" aria-label="Fermer">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p>
+        Vous devez à présent compléter vos informations personnelles et déposer vos documents obligatoires.
+        Pour un meilleur traitement de votre dossier, merci de réaliser cette étape dès que possible
+        et au plus tard <strong>10 jours avant</strong> votre entrée en formation.
+      </p>
+
+      <p style="margin-top:10px;">
+        Merci par avance,<br>
+        <strong>La Team Intégrale Academy</strong>
+      </p>
+    </div>
+
+    <div class="modal-foot">
+      <button type="button" class="btn btn-primary" data-close-modal="welcomeModal">J’ai compris</button>
+    </div>
+  </div>
+</div> 
+
+
 <script>
+
   const token = "{{ token }}";
+// ✅ Welcome popup — une seule fois par stagiaire (token)
+(function(){
+  const seenKey = "ia_welcome_seen_" + token;
+
+  document.addEventListener("DOMContentLoaded", () => {
+    let seen = false;
+    try { seen = localStorage.getItem(seenKey) === "1"; } catch(e){}
+
+    if(!seen){
+      // openModal() vient de base.html
+      openModal("welcomeModal");
+    }
+
+    // Quand on ferme => on marque vu
+    const modal = document.getElementById("welcomeModal");
+    if(!modal) return;
+
+    const markSeen = () => { try { localStorage.setItem(seenKey, "1"); } catch(e){} };
+
+    modal.querySelectorAll('[data-close-modal="welcomeModal"]').forEach(btn=>{
+      btn.addEventListener("click", markSeen);
+    });
+
+    // clic sur le fond
+    modal.addEventListener("click", (e)=>{
+      if(e.target === modal){
+        closeModal("welcomeModal");
+        markSeen();
+      }
+    });
+  });
+})();
+
 
   // ✅ Helpers formatage live
 function digitsOnly(s){
@@ -979,7 +1049,6 @@ function normalizePRE(s){
 </script>
   
 
-  
 
 
 
