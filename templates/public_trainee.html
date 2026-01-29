@@ -756,6 +756,44 @@ id="upload_{{ d.key }}"
   </div>
 </div>
 
+<!-- ✅ Popup confirmation dépôt document -->
+<div id="uploadSuccessModal" class="ia-modal-backdrop">
+  <div class="ia-modal" role="dialog" aria-modal="true">
+    <div class="ia-accent"></div>
+
+    <div class="ia-head">
+      <div class="ia-brand">
+        <div class="ia-logo">
+          <img src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy">
+        </div>
+        <div>
+          <div class="ia-title">Document déposé avec succès</div>
+          <div class="ia-sub">Merci pour votre envoi</div>
+        </div>
+      </div>
+
+      <button type="button" class="ia-close" onclick="closeModal('uploadSuccessModal')">✕</button>
+    </div>
+
+    <div class="ia-body">
+      <div class="ia-card">
+        <p class="ia-p">
+          ✅ Votre document <strong id="uploadedFileName"></strong> a bien été déposé.
+        </p>
+        <p class="ia-p">
+          Notre équipe va procéder à un contrôle de votre document afin de s’assurer de sa conformité.
+        </p>
+      </div>
+    </div>
+
+    <div class="ia-foot">
+      <button class="btn" onclick="closeModal('uploadSuccessModal')">
+        Déposer mes autres documents
+      </button>
+    </div>
+  </div>
+</div>
+
 
 <script>
 
@@ -1246,43 +1284,7 @@ if(row){
 </script>
   
 
-<!-- ✅ Popup confirmation dépôt document -->
-<div id="uploadSuccessModal" class="ia-modal-backdrop">
-  <div class="ia-modal" role="dialog" aria-modal="true">
-    <div class="ia-accent"></div>
 
-    <div class="ia-head">
-      <div class="ia-brand">
-        <div class="ia-logo">
-          <img src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy">
-        </div>
-        <div>
-          <div class="ia-title">Document déposé avec succès</div>
-          <div class="ia-sub">Merci pour votre envoi</div>
-        </div>
-      </div>
-
-      <button type="button" class="ia-close" onclick="closeModal('uploadSuccessModal')">✕</button>
-    </div>
-
-    <div class="ia-body">
-      <div class="ia-card">
-        <p class="ia-p">
-          ✅ Votre document <strong id="uploadedFileName"></strong> a bien été déposé.
-        </p>
-        <p class="ia-p">
-          Notre équipe va procéder à un contrôle de votre document afin de s’assurer de sa conformité.
-        </p>
-      </div>
-    </div>
-
-    <div class="ia-foot">
-      <button class="btn" onclick="closeModal('uploadSuccessModal')">
-        Déposer mes autres documents
-      </button>
-    </div>
-  </div>
-</div>
 
 
 {% endblock %}
