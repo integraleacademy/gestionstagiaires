@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Relance téléphonique</title>
+  <style>
+    body{font-family:Arial,sans-serif;background:#f6f7f9;margin:0;padding:22px}
+    .wrap{max-width:720px;margin:0 auto}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px}
+    .btn{display:inline-block;border:0;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer}
+    .btn-green{background:#16a34a;color:#fff}
+    .btn-red{background:#dc2626;color:#fff}
+    .hint{color:#6b7280;font-size:13px}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px}
+    .modal{width:min(640px,100%);background:#fff;border-radius:16px;border:1px solid #e5e7eb;overflow:hidden}
+    .modal-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #e5e7eb}
+    .modal-title{font-weight:900}
+    .modal-body{padding:14px}
+    .modal-foot{display:flex;gap:10px;justify-content:flex-end;padding:12px 14px;border-top:1px solid #e5e7eb}
+    textarea{width:100%;min-height:110px;border:1px solid #e5e7eb;border-radius:12px;padding:10px;box-sizing:border-box}
+    .xbtn{background:transparent;border:0;font-size:18px;cursor:pointer}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div style="font-weight:900;font-size:18px">Relance téléphonique</div>
+      <div class="hint" style="margin-top:6px">
+        Sélectionne l’action puis ajoute un commentaire.
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <button class="btn btn-green" id="btnCalled">✅ J’ai appelé la personne</button>
+        <button class="btn btn-red" id="btnNoAnswer">❌ Je n’ai pas pu joindre la personne</button>
+      </div>
+
+      <div class="hint" style="margin-top:12px">
+        Référence : {{ ref_id }}
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="m">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-title" id="mt">Action</div>
+        <button class="xbtn" id="mx">✕</button>
+      </div>
+
+      <form method="post" action="/phone-followup/{{ token }}/reply">
+        <input type="hidden" name="outcome" id="outcome" value="">
+        <div class="modal-body">
+          <div class="hint" style="margin-bottom:8px">Commentaire secrétaire</div>
+          <textarea name="comment" placeholder="Ex : Appelé à 10h15, pièce d’identité à renvoyer, PRE manquant..."></textarea>
+        </div>
+        <div class="modal-foot">
+          <button class="btn" type="button" id="cancel">Annuler</button>
+          <button class="btn btn-green" type="submit">Envoyer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const modal = document.getElementById("m");
+    const mt = document.getElementById("mt");
+    const outcome = document.getElementById("outcome");
+
+    function openModal(title, val){
+      mt.textContent = title;
+      outcome.value = val;
+      modal.style.display = "flex";
+    }
+    function closeModal(){ modal.style.display = "none"; }
+
+    document.getElementById("mx").onclick = closeModal;
+    document.getElementById("cancel").onclick = closeModal;
+
+    document.getElementById("btnCalled").onclick = ()=>openModal("✅ J’ai appelé la personne", "CALLED");
+    document.getElementById("btnNoAnswer").onclick = ()=>openModal("❌ Je n’ai pas pu joindre la personne", "NO_ANSWER");
+
+    // auto-open selon le lien du mail
+    const action = "{{ action }}";
+    if(action === "called") openModal("✅ J’ai appelé la personne", "CALLED");
+    if(action === "no_answer") openModal("❌ Je n’ai pas pu joindre la personne", "NO_ANSWER");
+  </script>
+</body>
+</html>
