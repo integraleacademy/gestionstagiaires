@@ -710,6 +710,8 @@ def admin_sessions():
     data = load_data()
     out_sessions = []
     for s in data.get("sessions", []):
+        if bool(s.get("archived")):
+            continue
         trainees = _session_trainees_list(s)
         st = compute_stats(s)
         out_sessions.append({
@@ -722,7 +724,6 @@ def admin_sessions():
             "total": st["total"],
             "session_is_conform": st["session_is_conform"],
         })
-
     return render_template(
         "admin_sessions.html",
         sessions=out_sessions,
@@ -834,6 +835,7 @@ def api_create_session():
         "exam_date": exam_date,
         "created_at": _now_iso(),
         "trainees": [],
+        "archived": False, 
     }
     data["sessions"].insert(0, s)
     save_data(data)
@@ -848,6 +850,34 @@ def api_delete_session(session_id: str):
     data["sessions"] = [s for s in data.get("sessions", []) if s.get("id") != session_id]
     save_data(data)
     return jsonify({"ok": True, "deleted": (len(data["sessions"]) != before)})
+
+@app.post("/api/sessions/<session_id>/archive")
+@admin_login_required
+def api_archive_session(session_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+
+    s["archived"] = True
+    s["archived_at"] = _now_iso()
+    save_data(data)
+    return jsonify({"ok": True})
+
+
+@app.post("/api/sessions/<session_id>/unarchive")
+@admin_login_required
+def api_unarchive_session(session_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+
+    s["archived"] = False
+    # optionnel: garder archived_at pour l'historique, ou le vider
+    # s["archived_at"] = ""
+    save_data(data)
+    return jsonify({"ok": True})
 
 
 # =========================
