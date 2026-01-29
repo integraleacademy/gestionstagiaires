@@ -896,6 +896,7 @@ def api_create_trainee(session_id: str):
         "vae_status": "soon" if show_vae else "",
         "hosting_status": "unknown" if show_hosting else "",
         "public_token": public_token,
+        "no_permis": False,
         "documents": [],
         "created_at": _now_iso(),
     }
@@ -1993,6 +1994,7 @@ def public_infos_update(token: str):
     t["address"] = (payload.get("address") or "").strip()
     t["zip_code"] = (payload.get("zip_code") or "").strip()
     t["city"] = (payload.get("city") or "").strip()
+    t["no_permis"] = bool(payload.get("no_permis"))
 
     training_type = _session_get(s, "training_type", "")
     t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
