@@ -913,7 +913,7 @@ def api_create_trainee(session_id: str):
     # ✅ ENVOI MAIL + SMS à la création
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}"
 
-    formation_name = _session_get(s, "name", "").strip()
+    formation_type = _session_get(s, "training_type", "").strip()  # ✅ type de formation (APS, SSIAP 1, BTS MOS, etc.)
     dstart = fr_date(_session_get(s, "date_start", ""))
     dend = fr_date(_session_get(s, "date_end", ""))
 
@@ -926,7 +926,7 @@ def api_create_trainee(session_id: str):
 
       <p>
         Je vous confirme que vous êtes inscrit(e) en formation
-        <strong>{formation_name}</strong>, qui se déroulera
+        <strong>{formation_type}</strong>, qui se déroulera
         du <strong>{dstart}</strong> au <strong>{dend}</strong>.
       </p>
 
@@ -985,9 +985,9 @@ def api_create_trainee(session_id: str):
     """)
 
     sms = (
-        f"Intégrale Academy 🎓 Bonjour {first_name}, inscription confirmée : {formation_name} "
-        f"({dstart} au {dend}). Contrat envoyé prochainement. Dossier à compléter : {link} "
-        f"(au + tard 10j avant). Aide : 04 22 47 07 68 / https://assistance-alw9.onrender.com/"
+        f"Intégrale Academy 🎓 Bonjour {first_name}, Votre inscription en formation {formation_type} est confirmée. "
+        f"({dstart} au {dend}). Vous allez prochainement recevoir par mail votre Contrat de formation (signature électronique). Vous devez à présent compléter votre Dossier Formation : {link} "
+        f"(votre dossier doit être COMPLET au plus tard 10 jours avant votre entrée en formation). Pour toute demande d'assistance vous pouvez nous contacter au 04 22 47 07 68."
     )
 
     email_ok = brevo_send_email(email, subject, html) if email else False
