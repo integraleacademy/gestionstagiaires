@@ -417,7 +417,7 @@
       {% set hint = "JPEG ou PNG" %}
     {% endif %}
 
-<div class="docrow">
+<div class="docrow {{ row_cls }}" id="doc_{{ d.key }}">
       <div class="docmeta">
         <div class="label">{{ d.label }}</div>
         {% if d.key == "permis" %}
@@ -1231,15 +1231,12 @@ function normalizePRE(s){
     openModal("uploadSuccessModal");
 
     // 2️⃣ scroller exactement sur le document concerné
-    const form = document.getElementById("upload_" + uploaded);
-    if(form){
-      setTimeout(()=>{
-        form.scrollIntoView({
-          behavior: "smooth",
-          block: "center"
-        });
-      }, 150);
-    }
+const row = document.getElementById("doc_" + uploaded);
+if(row){
+  setTimeout(()=>{
+    row.scrollIntoView({ behavior:"smooth", block:"center" });
+  }, 150);
+}
 
     // 3️⃣ nettoyer l’URL (évite popup au refresh)
     const cleanUrl = window.location.pathname;
