@@ -2238,40 +2238,54 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
 
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
+def find_session_and_trainee_by_token(data: Dict[str, Any], token: str):
+    token = (token or "").strip()
+    if not token:
+        return None, None
+
+    sessions = data.get("sessions", []) or []
+    for s in sessions:
+        trainees = s.get("trainees") or s.get("stagiaires") or []
+        for t in trainees:
+            if (t.get("public_token") or "").strip() == token:
+                return s, t
+    return None, None
+
+
 @app.get("/espace/<token>")
 def public_trainee_space(token):
     data = load_data()
-    session, trainee = find_session_and_trainee_by_token(data, token)
+    s, t = find_session_and_trainee_by_token(data, token)
 
-    if not session or not trainee:
+    if not s or not t:
         abort(404)
 
-    training_type = _session_get(session, "training_type", "")
+    training_type = _session_get(s, "training_type", "")
 
-    # ✅ IMPORTANT : on aligne la liste des docs requis (comme côté admin)
-    ensure_documents_schema_for_trainee(trainee, training_type)
+    # ✅ aligne la liste des docs requis
+    ensure_documents_schema_for_trainee(t, training_type)
 
-    # (optionnel mais pratique si tu veux des liens plus tard)
-    for d in (trainee.get("documents") or []):
+    for d in (t.get("documents") or []):
         d["file_token"] = d.get("file") or ""
 
     show_hosting = ((training_type or "").strip().upper() == "A3P")
     show_vae = ("VAE" in (training_type or "").upper())
 
-    # ✅ persistance (sinon au prochain affichage ça repart)
-    session["trainees"] = _session_trainees_list(session)
-    session.pop("stagiaires", None)
+    # ✅ persistance
+    s["trainees"] = _session_trainees_list(s)
+    s.pop("stagiaires", None)
     save_data(data)
 
     return render_template(
         "public_trainee.html",
-        session=session,
-        trainee=trainee,
+        session=s,
+        trainee=t,
         token=token,
         show_hosting=show_hosting,
         show_vae=show_vae,
-        dossier_ok = dossier_is_complete_total(trainee, training_type)
+        dossier_ok=dossier_is_complete_total(t, training_type),
     )
+    
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/identity-photo/upload")
 @admin_login_required
