@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+  <div>
+    <h1 style="margin:0">Sessions archivées</h1>
+    <div class="muted" style="margin-top:6px;">Ici tu retrouves les sessions archivées. Tu peux les restaurer ou les supprimer.</div>
+  </div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <a class="btn btn-outline" href="{{ url_for('admin_sessions') }}">← Retour</a>
+  </div>
+</div>
+
+<div class="grid cards" id="archivedSessionsGrid" style="margin-top:12px;">
+  {% for s in sessions %}
+  <div class="card">
+    <div class="card-row">
+      <div class="card-title">{{ s.name }}</div>
+      <div class="bigmark">{{ "✅" if s.session_is_conform else "❌" }}</div>
+    </div>
+
+    <div class="card-meta">
+      <div><span class="pill">{{ s.training_type }}</span></div>
+      <div>Formation : <strong>{{ s.date_start|frdate }}</strong> → <strong>{{ s.date_end|frdate }}</strong></div>
+      <div>Examen : <strong>{{ s.exam_date|frdate }}</strong></div>
+      <div>Stagiaires : <strong>{{ s.total }}</strong></div>
+    </div>
+
+    <div class="card-actions">
+      <a class="btn" href="{{ url_for('admin_trainees', session_id=s.id, **request.args) }}">Voir les stagiaires</a>
+
+      <button class="btn btn-primary" data-unarchive-session="{{ s.id }}">Restaurer</button>
+
+      <button class="btn btn-danger" data-delete-session="{{ s.id }}">Supprimer</button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if sessions|length == 0 %}
+  <div class="card" style="margin-top:12px;color:var(--muted)">
+    Aucune session archivée pour l’instant.
+  </div>
+{% endif %}
+
+<script>
+  // restaurer session
+  document.querySelectorAll("[data-unarchive-session]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const sid = btn.getAttribute("data-unarchive-session");
+      if(!sid) return;
+      if(!confirm("Restaurer cette session ? (elle reviendra dans la liste des sessions)")) return;
+
+      btn.disabled = true;
+      try{
+        const r = await fetch(`/api/sessions/${sid}/unarchive`, { method:"POST" });
+        const res = await r.json();
+        if(!r.ok || !res.ok){
+          alert("Erreur restauration session");
+          return;
+        }
+        window.location.reload();
+      }catch(e){
+        alert("Erreur réseau");
+      }finally{
+        btn.disabled = false;
+      }
+    });
+  });
+
+  // supprimer session (définitif)
+  document.querySelectorAll("[data-delete-session]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const sid = btn.getAttribute("data-delete-session");
+      if(!sid) return;
+      if(!confirm("Supprimer définitivement cette session ?")) return;
+
+      btn.disabled = true;
+      try{
+        const r = await fetch(`/api/sessions/${sid}/delete`, { method:"POST" });
+        const res = await r.json();
+        if(!r.ok || !res.ok){
+          alert("Erreur suppression session");
+          return;
+        }
+        window.location.reload();
+      }catch(e){
+        alert("Erreur réseau");
+      }finally{
+        btn.disabled = false;
+      }
+    });
+  });
+</script>
+
+{% endblock %}
