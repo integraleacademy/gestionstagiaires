@@ -242,6 +242,95 @@
   >{{ trainee.comment or "" }}</textarea>
 </div>
 
+ <!-- ===================== -->
+<!-- RELANCE TELEPHONIQUE  -->
+<!-- ===================== -->
+<div class="card" style="grid-column:1 / -1;">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div style="font-weight:900;">Relance téléphonique</div>
+
+    <button class="btn btn-primary" type="button" id="btnOpenPhoneRelance">
+      📞 Relance téléphonique
+    </button>
+  </div>
+
+  <div class="hint" style="margin-top:6px;">
+    Historique des relances / retours secrétaire.
+  </div>
+
+  <!-- Historique (affichage simple pour l’instant) -->
+  <div id="phoneRelanceHistory" style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">
+    {% if trainee.phone_followups and trainee.phone_followups|length > 0 %}
+      {% for it in trainee.phone_followups %}
+        <div style="border:1px solid #e5e7eb;border-radius:12px;padding:10px;background:#fff;">
+          <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+            <div style="font-weight:800;">
+              {{ it.type or "Événement" }}
+            </div>
+            <div class="hint">{{ it.at or "" }}</div>
+          </div>
+
+          {% if it.details %}
+            <pre style="white-space:pre-wrap;margin:8px 0 0 0;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:8px;">{{ it.details }}</pre>
+          {% endif %}
+
+          {% if it.comment %}
+            <div style="margin-top:8px;">
+              <div class="hint">Commentaire :</div>
+              <div style="font-weight:700;">{{ it.comment }}</div>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="hint">Aucune relance téléphonique enregistrée.</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ===================== -->
+<!-- MODALE Relance tel     -->
+<!-- ===================== -->
+<div class="modal-backdrop" id="phoneRelanceModal" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Relance téléphonique</div>
+      <button class="icon-btn" type="button" data-close-modal="phoneRelanceModal">✕</button>
+    </div>
+
+    <form id="phoneRelanceForm">
+      <div class="modal-body">
+
+        <div class="hint" style="margin-bottom:10px;">
+          Le mail de relance sera envoyé à <strong>clement@integraleacademy.com</strong> avec le détail des éléments incomplets.
+        </div>
+
+        <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:10px;">
+          <div style="font-weight:800;margin-bottom:6px;">Éléments incomplets détectés</div>
+
+          <!-- On remplira ce bloc en JS à l’étape suivante -->
+          <pre id="phoneRelanceMissingPreview"
+               style="white-space:pre-wrap;margin:0;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px;">(chargement...)</pre>
+        </div>
+
+        <div style="margin-top:12px;">
+          <div class="label">Commentaire (admin)</div>
+          <textarea id="phoneRelanceComment"
+                    style="width:100%;min-height:90px;"
+                    placeholder="Ex : Stagiaire injoignable hier, rappeler demain matin..."></textarea>
+          <div class="hint" style="margin-top:6px;">Ce commentaire sera inclus dans le mail.</div>
+        </div>
+
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn" type="button" data-close-modal="phoneRelanceModal">Annuler</button>
+        <button class="btn btn-primary" type="submit">Envoyer</button>
+      </div>
+    </form>
+  </div>
+</div> 
+
   <!-- ===================== -->
   <!-- DOCUMENTS (pleine largeur) -->
   <!-- ===================== -->
@@ -743,6 +832,106 @@ if(traineeComment){
     }, 450);
   });
 }
+
+  <script>
+  // ===== RELANCE TELEPHONIQUE (UI only) =====
+  const btnOpenPhoneRelance = document.getElementById("btnOpenPhoneRelance");
+  const phoneRelanceForm = document.getElementById("phoneRelanceForm");
+  const phoneRelanceMissingPreview = document.getElementById("phoneRelanceMissingPreview");
+
+  // 1) Calcul des docs manquants / non conformes depuis le tableau docs
+  function computeMissingDocsFromTable(){
+    const out = [];
+    const table = document.getElementById("docsTable");
+    if(!table) return out;
+
+    table.querySelectorAll("tr[data-doc-key]").forEach(tr=>{
+      const docLabel = tr.querySelector("td")?.innerText?.trim() || "Document";
+      const sel = tr.querySelector("select.sel-doc");
+      // si pas de select => on saute
+      if(!sel) return;
+
+      const status = (sel.value || "").toUpperCase().trim();
+      // non déposé / à contrôler / non conforme => incomplet
+      if(status === "NON DÉPOSÉ" || status === "A CONTRÔLER" || status === "A CONTROLER" || status === "NON CONFORME"){
+        out.push(`- ${docLabel} : ${status}`);
+      }
+    });
+
+    return out;
+  }
+
+  // 2) Calcul des infos manquantes via les champs connus (fallback)
+  // On ne peut pas lire directement les infos du public space ici, donc on utilise les valeurs du stagiaire injectées par Jinja.
+  function computeMissingInfosFromTrainee(){
+    const missing = [];
+
+    const birth_date = ("{{ trainee.birth_date or '' }}").trim();
+    const birth_city = ("{{ trainee.birth_city or '' }}").trim();
+    const birth_country = ("{{ trainee.birth_country or '' }}").trim();
+    const nationality = ("{{ trainee.nationality or '' }}").trim();
+    const address = ("{{ trainee.address or '' }}").trim();
+    const zip_code = ("{{ trainee.zip_code or '' }}").trim();
+    const city = ("{{ trainee.city or '' }}").trim();
+
+    const carte_vitale_raw = ("{{ trainee.carte_vitale or '' }}").trim();
+    const pre_number_raw = ("{{ trainee.pre_number or '' }}").trim();
+
+    if(!birth_date) missing.push("- Date de naissance");
+    if(!birth_city) missing.push("- Ville de naissance");
+    if(!birth_country) missing.push("- Pays de naissance");
+    if(!nationality) missing.push("- Nationalité");
+    if(!address) missing.push("- Adresse postale");
+    if(!zip_code) missing.push("- Code postal");
+    if(!city) missing.push("- Ville");
+
+    // sécu : 15 chiffres
+    if(!carte_vitale_raw){
+      missing.push("- Numéro de sécurité sociale");
+    } else {
+      const digits = carte_vitale_raw.replace(/\D+/g,"");
+      if(digits.length !== 15) missing.push("- Numéro de sécurité sociale (15 chiffres)");
+    }
+
+    // PRE/CAR format (on reste simple côté front)
+    if(!pre_number_raw){
+      missing.push("- Numéro PRE / CAR");
+    } else {
+      const pre = pre_number_raw.toUpperCase().replace(/\s+/g,"");
+      const ok = /^(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11,}$/.test(pre);
+      if(!ok) missing.push("- Numéro PRE / CAR (format invalide)");
+    }
+
+    return missing;
+  }
+
+  function buildMissingPreviewText(){
+    const docs = computeMissingDocsFromTable();
+    const infos = computeMissingInfosFromTrainee();
+
+    let txt = "";
+    txt += "📄 Documents incomplets :\n";
+    txt += (docs.length ? docs.join("\n") : "- Aucun (selon les statuts actuels)") + "\n\n";
+    txt += "🧾 Informations à compléter :\n";
+    txt += (infos.length ? infos.join("\n") : "- Aucune") + "\n";
+    return txt;
+  }
+
+  // OUVERTURE MODALE + remplissage preview
+  btnOpenPhoneRelance?.addEventListener("click", ()=>{
+    if(phoneRelanceMissingPreview){
+      phoneRelanceMissingPreview.textContent = buildMissingPreviewText();
+    }
+    openModal("phoneRelanceModal");
+  });
+
+  // Pour l’instant : on empêche l’envoi (pas encore branché backend)
+  phoneRelanceForm?.addEventListener("submit", (e)=>{
+    e.preventDefault();
+    alert("OK UI prêt ✅\nÉtape suivante : on branche l’envoi mail + enregistrement.");
+  });
+</script>
+  
 </script>
 
 
