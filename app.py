@@ -557,10 +557,10 @@ ENUMS = {
 
 REQUIRED_DOCS = {
     "COMMON": [
-        {"key": "id", "label": "Carte d’identité recto/verso ou titre de séjour", "accept": "application/pdf"},
-        {"key": "photo", "label": "Photo d’identité officielle", "accept": "image/jpeg,image/png"},
+        {"key": "id", "label": "Passeport OU Carte d’identité recto/verso OU Titre de séjour", "accept": "application/pdf"},
+        {"key": "photo", "label": "Photo d’identité officielle (photo de face de votre visage sur fond neutre)", "accept": "image/jpeg,image/png"},
         {"key": "carte_vitale_doc", "label": "Carte vitale", "accept": "application/pdf"},
-        {"key": "cnaps_doc", "label": "Autorisation CNAPS ou carte professionnelle (en cours de validité)", "accept": "application/pdf"},
+        {"key": "cnaps_doc", "label": "Autorisation CNAPS ou Carte professionnelle CNAPS (en cours de validité)", "accept": "application/pdf"},
     ],
     "A3P_ONLY": [
         {"key": "permis", "label": "Permis de conduire (obligatoire sauf si vous n’avez pas le permis)", "accept": "application/pdf"},
