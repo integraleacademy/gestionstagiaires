@@ -246,6 +246,15 @@
       </span>
     </div>
 
+      <!-- Permis requis / non requis -->
+  <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+    {% if trainee.no_permis %}
+      <span class="pill pill-gray">🚫 Permis non requis</span>
+    {% else %}
+      <span class="pill pill-yellow">🪪 Permis requis</span>
+    {% endif %}
+  </div>
+
    <div class="btn-row" style="margin-top:10px;">
   <form method="post" action="{{ url_for('admin_docs_notify', session_id=session.id, trainee_id=trainee.id) }}">
     <button class="btn btn-primary btn-uniform" type="submit">📩 Notifier envoi documents</button>
