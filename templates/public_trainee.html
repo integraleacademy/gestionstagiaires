@@ -101,46 +101,20 @@
   margin-top:10px;
 }
 
-  /* ✅ état normal : discret mais structuré */
-.public-wrap .docrow{
-  border-radius:12px;
-}
+  /* ❌ enlève les styles globaux sur .docrow */
+/* .public-wrap .docrow{ ... } */
+/* .public-wrap .docrow:not(.missing):not(.pending){ ... } */
+/* .public-wrap .docrow{ ... } */
 
-/* document conforme → très léger */
-.public-wrap .docrow:not(.missing):not(.pending){
+/* ✅ styles "cartes" UNIQUEMENT pour Mes documents */
+.public-wrap .docs-stack .docrow{
+  border-top:none !important;
+  border-radius:14px;
+}
+.public-wrap .docs-stack .docrow:not(.missing):not(.pending){
   background:#f9fafb;
   border:1px solid #e5e7eb;
-  padding:10px;
-}
-
-/* on enlève le border-top interne dans tous les cas */
-.public-wrap .docrow{
-  border-top:none !important;
-}
-
-  /* ✅ Documents : empilement vertical propre */
-.public-wrap .card > .docrow{
-  display:block;
-  width:100%;
-  margin-bottom:14px;   /* espace entre les documents */
-}
-
-/* dernier doc sans marge inutile */
-.public-wrap .card > .docrow:last-child{
-  margin-bottom:0;
-}
-
-  /* ✅ Mes documents : 1 doc = 1 bloc, empilé, espacé */
-.public-wrap .docs-stack{
-  display:flex;
-  flex-direction:column;
-  gap:14px;
-  margin-top:12px;
-}
-
-/* on évite que .docrow rajoute encore des marges */
-.public-wrap .docs-stack .docrow{
-  margin:0 !important;
+  padding:14px;
 }
 
   /* =========================
