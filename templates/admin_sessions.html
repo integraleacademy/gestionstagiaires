@@ -86,9 +86,13 @@
   .doccount.danger{ background:#fff1f2; border-color:#fecdd3; color:#9f1239; }
 </style>
 
-<div class="page-head">
-  <h1>Sessions</h1>
-  <button class="btn btn-primary" id="btnOpenCreateSession">+ Nouvelle session</button>
+<div class="page-head" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+  <h1 style="margin:0">Sessions</h1>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <a class="btn btn-outline" href="{{ url_for('admin_sessions_archived') }}">Sessions archivées</a>
+    <button class="btn btn-primary" id="btnOpenCreateSession">+ Nouvelle session</button>
+  </div>
 </div>
 
 <!-- 🔎 Recherche stagiaire (global) -->
