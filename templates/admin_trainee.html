@@ -176,10 +176,6 @@
   </div>
 </div>
 
-<div class="hint" style="margin-top:6px;">
-  Si coché, le statut passe à “VALIDÉ”.
-</div>
-
     {% if trainee.test_fr_last_notified_at %}
       <div class="hint" style="margin-top:10px;">🟧 Notifié le : <strong>{{ trainee.test_fr_last_notified_at }}</strong></div>
     {% endif %}
@@ -232,6 +228,19 @@
 
     </div>
   </div>
+
+  <!-- ===================== -->
+<!-- COMMENTAIRE (ADMIN)    -->
+<!-- ===================== -->
+<div class="card" style="grid-column:1 / -1;">
+  <div style="font-weight:900;">Commentaire (admin)</div>
+  <div class="hint" style="margin-top:6px;">Visible dans la liste stagiaires + fiche. Sauvegarde automatique.</div>
+
+  <textarea id="traineeComment"
+            style="width:100%;min-height:90px;margin-top:10px;"
+            placeholder="Tape ton commentaire..."
+  >{{ trainee.comment or "" }}</textarea>
+</div>
 
   <!-- ===================== -->
   <!-- DOCUMENTS (pleine largeur) -->
@@ -711,127 +720,31 @@ if(chkNoPermis){
   });
 }
 
-  <!-- ✅ Welcome popup (1 seule fois / stagiaire) -->
-<div id="welcomeModal" class="ia-modal" aria-hidden="true">
-  <div class="ia-modal__backdrop"></div>
 
-  <div class="ia-modal__card" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
-    <div class="ia-modal__top">
-      <div class="ia-badge">Intégrale Academy</div>
-      <button type="button" class="ia-modal__close" id="welcomeCloseBtn" aria-label="Fermer">✕</button>
-    </div>
 
-    <h2 id="welcomeTitle" class="ia-modal__title">
-      Bonjour {{ (trainee.first_name or "")|e }},
-    </h2>
-
-    <p class="ia-modal__text">
-      Bienvenue dans votre <strong>Espace Stagiaire Intégrale Academy</strong>.
-    </p>
-
-    <div class="ia-modal__panel">
-      <p class="ia-modal__text" style="margin:0;">
-        Vous devez à présent compléter vos informations personnelles et déposer vos documents obligatoires.
-        Pour un meilleur traitement de votre dossier, nous vous demandons de réaliser cette étape dès que possible
-        et au plus tard <strong>10 jours avant</strong> votre entrée en formation.
-      </p>
-    </div>
-
-    <p class="ia-modal__text" style="margin-top:14px;">
-      Merci par avance,<br>
-      <strong>La Team Intégrale Academy</strong>
-    </p>
-
-    <div class="ia-modal__actions">
-      <button type="button" class="btn btn-primary" id="welcomeOkBtn">
-        J’ai compris ✅
-      </button>
-    </div>
-  </div>
-</div>
-
-<style>
-  /* ====== Intégrale Academy Modal ====== */
-  .ia-modal{position:fixed;inset:0;display:none;z-index:9999}
-  .ia-modal.show{display:block}
-  .ia-modal__backdrop{position:absolute;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(3px)}
-  .ia-modal__card{
-    position:relative;
-    width:min(560px, calc(100% - 28px));
-    margin:10vh auto 0;
-    background:#fff;
-    border-radius:18px;
-    border:1px solid #e5e7eb;
-    box-shadow:0 16px 50px rgba(0,0,0,.18);
-    padding:18px 18px 16px;
-    animation:iaPop .18s ease-out;
-  }
-  @keyframes iaPop{from{transform:translateY(10px);opacity:.6}to{transform:translateY(0);opacity:1}}
-  .ia-modal__top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-  .ia-badge{
-    display:inline-flex;align-items:center;gap:8px;
-    padding:6px 10px;border-radius:999px;
-    background:#f4f5f7;border:1px solid #e5e7eb;
-    font-weight:800;font-size:12px;color:#111827;
-  }
-  .ia-modal__close{
-    border:0;background:transparent;cursor:pointer;
-    width:34px;height:34px;border-radius:10px;
-    font-size:16px;line-height:34px;
-    color:#374151;
-  }
-  .ia-modal__close:hover{background:#f3f4f6}
-  .ia-modal__title{margin:2px 0 10px 0;font-size:20px;font-weight:900;color:#0f172a}
-  .ia-modal__text{margin:0 0 10px 0;color:#334155;font-size:14px;line-height:1.45}
-  .ia-modal__panel{
-    background:#f8fafc;border:1px dashed #cbd5e1;border-radius:14px;
-    padding:12px 12px;
-  }
-  .ia-modal__actions{display:flex;justify-content:flex-end;margin-top:12px}
-</style>
-
-<script>
-  (function(){
-    const modal = document.getElementById("welcomeModal");
-    if(!modal) return;
-
-    const token = "{{ token|e }}"; // ✅ tu passes déjà token au template
-    const key = "ia_welcome_seen_" + token;
-
-    function open(){
-      modal.classList.add("show");
-      modal.setAttribute("aria-hidden","false");
-      document.body.style.overflow = "hidden";
-    }
-    function close(){
-      modal.classList.remove("show");
-      modal.setAttribute("aria-hidden","true");
-      document.body.style.overflow = "";
-      try{ localStorage.setItem(key, "1"); }catch(e){}
-    }
-
-    // ✅ Afficher 1 seule fois
-    let seen = false;
-    try{ seen = localStorage.getItem(key) === "1"; }catch(e){}
-    if(!seen){
-      // petite pause pour laisser la page se charger proprement
-      setTimeout(open, 250);
-    }
-
-    document.getElementById("welcomeOkBtn")?.addEventListener("click", close);
-    document.getElementById("welcomeCloseBtn")?.addEventListener("click", close);
-
-    // clic sur fond = fermer
-    modal.querySelector(".ia-modal__backdrop")?.addEventListener("click", close);
-
-    // ESC = fermer
-    document.addEventListener("keydown", (e)=>{
-      if(e.key === "Escape" && modal.classList.contains("show")) close();
-    });
-  })();
+  // =========================
+// Commentaire stagiaire autosave
+// =========================
+const traineeComment = document.getElementById("traineeComment");
+if(traineeComment){
+  let t=null;
+  traineeComment.addEventListener("input", ()=>{
+    if(t) clearTimeout(t);
+    t = setTimeout(async ()=>{
+      try{
+        await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
+          method:"POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ comment: traineeComment.value })
+        });
+      }catch(e){
+        console.log("Erreur sauvegarde commentaire stagiaire");
+      }
+    }, 450);
+  });
+}
 </script>
 
-</script>
 
 
 
