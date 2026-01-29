@@ -1001,7 +1001,7 @@ function isValidSecu(digits){
 // PRE/CAR-083-2025-12-01-20250000000
 function isValidPRE(v){
   if(!v) return false;
-  return /^(PRE|CAR)-\d{4}-\d{2}-\d{2}-\d{11}$/.test(v);
+  return /^(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11,}$/.test(v);
 }
 
 function applyFormatting(){
@@ -1193,18 +1193,21 @@ function formatPreCarDisplay(raw){
   // récupère tous les chiffres après le prefix
   let digits = raw.slice(3).replace(/\D/g, "");
 
-  // attendu : YYYY(4) MM(2) DD(2) + LAST(11) => 19 chiffres
-  digits = digits.slice(0, 19);
+  // attendu : DDD(3) + YYYY(4) + MM(2) + DD(2) + LAST(11+) => min 22 chiffres
+  // on coupe large pour éviter que ça parte en vrille si le stagiaire colle trop long
+  digits = digits.slice(0, 3 + 4 + 2 + 2 + 20);
 
-  const y = digits.slice(0, 4);
-  const m = digits.slice(4, 6);
-  const d = digits.slice(6, 8);
-  const last = digits.slice(8, 19);
+  const dep  = digits.slice(0, 3);
+  const y    = digits.slice(3, 7);
+  const m    = digits.slice(7, 9);
+  const d    = digits.slice(9, 11);
+  const last = digits.slice(11); // 11+ chiffres
 
   let out = prefix;
-  if (y) out += "-" + y;
-  if (m) out += "-" + m;
-  if (d) out += "-" + d;
+  if (dep)  out += "-" + dep;
+  if (y)    out += "-" + y;
+  if (m)    out += "-" + m;
+  if (d)    out += "-" + d;
   if (last) out += "-" + last;
 
   return out;
@@ -1214,7 +1217,6 @@ function normalizePRE(s){
   return formatPreCarDisplay(s);
 }
 
-  <script>
 (function(){
   const params = new URLSearchParams(window.location.search);
   const uploaded = params.get("uploaded");
@@ -1244,7 +1246,6 @@ function normalizePRE(s){
     window.history.replaceState({}, "", cleanUrl);
   }
 })();
-</script>
 </script>
   
 
