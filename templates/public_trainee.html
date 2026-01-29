@@ -579,23 +579,6 @@ function digitsOnly(s){
   return (s || "").toString().replace(/\D+/g, "");
 }
 
-// Affichage Sécu : 15 chiffres -> "1 85 12 34 567 890 12"
-function formatSecuDisplay(digits){
-  const parts = [
-    digits.slice(0,1),
-    digits.slice(1,3),
-    digits.slice(3,5),
-    digits.slice(5,7),
-    digits.slice(7,10),
-    digits.slice(10,13),
-    digits.slice(13,15),
-  ].filter(p => p.length);
-  return parts.join(" ");
-}
-
-function normalizePRE(s){
-  return (s || "").toString().trim().toUpperCase().replace(/\s+/g, "");
-}
 
 function applyFormattingLive(){
   // Sécu
@@ -673,8 +656,8 @@ function setFieldState(inputId){
 
       if(r.ok){
         // ✅ feedback minimal: on montre que c'est enregistré
-        flashSaved("saved_carte");
-        flashSaved("saved_pre");
+        flashSaved("ok_carte_vitale");
+        flashSaved("ok_pre_number");
 
         // ✅ état “à compléter / ok” (on le fera joli après)
         setFieldStateValidated("carte_vitale");
@@ -707,14 +690,41 @@ function setFieldState(inputId){
   });
 });
 
-  // ✅ Formatage en direct pendant la saisie
-["carte_vitale","pre_number"].forEach(id=>{
-  const el = document.getElementById(id);
+function formatInputWithCaret(el, formatter){
   if(!el) return;
-  el.addEventListener("input", ()=>{
-    applyFormattingLive();
+
+  const start = el.selectionStart || 0;
+  const before =  el.value || "";
+  const beforeLen = before.length;
+
+  const after = formatter(before);
+
+  if(after === before) return;
+
+  el.value = after;
+
+  // Ajustement simple du caret (évite le “saut” le plus pénible)
+  const delta = after.length - beforeLen;
+  const newPos = Math.max(0, Math.min(after.length, start + delta));
+  try { el.setSelectionRange(newPos, newPos); } catch(e){}
+}
+
+// ✅ Formatage en direct pendant la saisie
+const secuEl = document.getElementById("carte_vitale");
+if(secuEl){
+  secuEl.addEventListener("input", ()=>{
+    // sécu: on reformate propre
+    const d = digitsOnly(secuEl.value).slice(0, 15);
+    secuEl.value = formatSecuDisplay(d);
   });
-});
+}
+
+const preEl = document.getElementById("pre_number");
+if(preEl){
+  preEl.addEventListener("input", ()=>{
+    formatInputWithCaret(preEl, formatPreCarDisplay);
+  });
+}
 
   // premier passage pour mettre rouge/✅ dès l'ouverture
   window.addEventListener("load", ()=>{
@@ -746,9 +756,6 @@ function formatSecuDisplay(digits){
   return parts.join(" ");
 }
 
-function normalizePRE(s){
-  return (s || "").toString().trim().toUpperCase().replace(/\s+/g, "");
-}
 
 function isValidSecu(digits){
   return digits.length === 15; // simple (on peut faire le vrai contrôle clé ensuite)
@@ -906,6 +913,53 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+
+// --- PRE/CAR live formatter ---
+// attendu : PRE-083-2025-12-01-20250000000 (11+ digits à la fin)
+function formatPreCarDisplay(raw){
+  let s = (raw || "").toString().toUpperCase();
+
+  // on garde lettres + chiffres uniquement (on vire tirets/espaces/underscore/etc)
+  s = s.replace(/[^A-Z0-9]/g, "");
+
+  // prefix
+  let prefix = "";
+  if (s.startsWith("PRE")) { prefix = "PRE"; s = s.slice(3); }
+  else if (s.startsWith("CAR")) { prefix = "CAR"; s = s.slice(3); }
+  else {
+    // si l'utilisateur tape P/R/E ou C/A/R au début, on tente de deviner
+    if (s.startsWith("P")) { prefix = "PRE"; s = s.replace(/^P+/, ""); }
+    else if (s.startsWith("C")) { prefix = "CAR"; s = s.replace(/^C+/, ""); }
+  }
+
+  // maintenant s = uniquement digits (ou mélange si l'utilisateur a fait n'importe quoi)
+  // on garde seulement les digits
+  const d = s.replace(/\D/g, "");
+
+  // segments: 3 - 4 - 2 - 2 - reste(11+)
+  const seg1 = d.slice(0, 3);
+  const seg2 = d.slice(3, 7);
+  const seg3 = d.slice(7, 9);
+  const seg4 = d.slice(9, 11);
+  const seg5 = d.slice(11); // reste
+
+  // construit en n'ajoutant le tiret que si segment présent
+  const parts = [];
+  if (prefix) parts.push(prefix);
+  if (seg1) parts.push(seg1);
+  if (seg2) parts.push(seg2);
+  if (seg3) parts.push(seg3);
+  if (seg4) parts.push(seg4);
+  if (seg5) parts.push(seg5);
+
+  return parts.join("-");
+}
+
+function normalizePRE(s){
+  // pour la validation/serveur : on garde le format final propre
+  return formatPreCarDisplay(s);
+}
 </script>
   
 
