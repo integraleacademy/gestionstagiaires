@@ -3033,5 +3033,114 @@ def api_update_trainee_alias(session_id: str, trainee_id: str):
     # ton update actuel est en /stagiaires/.../update
     return api_update_trainee(session_id, trainee_id)
 
+import re
+import unicodedata
+from werkzeug.utils import secure_filename
+from flask import request, jsonify
+
+# ⚠️ évite d’écraser ton ALLOWED_EXT global (docs)
+SST_BULK_ALLOWED_EXT = {".pdf", ".jpg", ".jpeg", ".png"}
+
+def _norm_name(s: str) -> str:
+    if not s:
+        return ""
+    s = s.strip().lower()
+    s = unicodedata.normalize("NFD", s)
+    s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")  # enlève accents
+    s = re.sub(r"[^a-z0-9]+", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+def _find_trainee_by_filename(trainees, filename: str):
+    """
+    Match: si NOM et PRENOM sont présents dans le nom de fichier (normalisé)
+    """
+    fn = _norm_name(filename)
+
+    candidates = []
+    for t in trainees:
+        ln = _norm_name(t.get("last_name", ""))
+        fnm = _norm_name(t.get("first_name", ""))
+        if not ln or not fnm:
+            continue
+        if ln in fn and fnm in fn:
+            candidates.append(t)
+
+    if len(candidates) == 1:
+        return candidates[0], None
+    if len(candidates) == 0:
+        return None, "nom/prénom non trouvés dans le fichier"
+    return None, "plusieurs stagiaires correspondent"
+
+
+@app.post("/api/sessions/<session_id>/sst/bulk_upload")
+@admin_login_required
+def api_bulk_sst_upload(session_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+
+    files = request.files.getlist("files")
+    if not files:
+        return jsonify({"ok": False, "error": "no_files"}), 400
+
+    trainees = _session_trainees_list(s)
+
+    added = []
+    failed = []
+    total = 0
+
+    for f in files:
+        if not f or not f.filename:
+            continue
+
+        total += 1
+        original_name = f.filename
+        safe = secure_filename(original_name)
+        ext = os.path.splitext(safe)[1].lower()
+
+        if ext not in SST_BULK_ALLOWED_EXT:
+            failed.append({"filename": original_name, "reason": "extension non autorisée"})
+            continue
+
+        trainee, reason = _find_trainee_by_filename(trainees, original_name)
+        if not trainee:
+            failed.append({"filename": original_name, "reason": reason or "non rattaché"})
+            continue
+
+        # ✅ on stocke comme tes deliverables: via _store_file + token
+        try:
+            stored = _store_file(session_id, trainee.get("id"), "deliverables", f)
+            token = _tokenize_path(stored)
+        except Exception:
+            failed.append({"filename": original_name, "reason": "erreur stockage fichier"})
+            continue
+
+        trainee.setdefault("deliverables", {})
+        trainee["deliverables"]["carte_sst"] = token
+        trainee["updated_at"] = _now_iso()
+
+        added.append({
+            "filename": original_name,
+            "trainee_id": trainee.get("id"),
+            "trainee_name": f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip()
+        })
+
+    # ✅ persistance
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return jsonify({
+        "ok": True,
+        "total": total,
+        "added_count": len(added),
+        "added": added,
+        "failed": failed
+    })
+
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
