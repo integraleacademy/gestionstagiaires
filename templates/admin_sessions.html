@@ -152,10 +152,11 @@
       <div>Stagiaires : <strong>{{ s.total }}</strong></div>
     </div>
 
-    <div>
+<div>
   Docs fin de formation :
-  <strong>{{ s.fin_docs_done or 0 }}/{{ s.total or 0 }}</strong>
+  <strong>{{ s.deliverables_done or 0 }}/{{ s.deliverables_total or 0 }}</strong>
 </div>
+
 
 
 <div class="card-actions">
