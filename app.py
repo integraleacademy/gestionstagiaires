@@ -3070,23 +3070,20 @@ def _match_trainee_from_filename(trainees: list, filename: str):
 @app.post("/api/sessions/<session_id>/sst/bulk_upload")
 @admin_login_required
 def api_sst_bulk_upload(session_id: str):
+    import traceback
+
     data = load_data()
     s = find_session(data, session_id)
     if not s:
         return jsonify({"ok": False, "error": "session_not_found"}), 404
 
-    # ✅ accepter files ET files[]
     files = request.files.getlist("files")
-    if not files:
-        files = request.files.getlist("files[]")
-
     if not files:
         return jsonify({"ok": False, "error": "no_files"}), 400
 
     trainees = _session_trainees_list(s)
 
-    received = 0           # fichiers réellement reçus par Flask
-    processed = 0          # fichiers traités (extension OK)
+    received = 0
     added = []
     failed = []
 
@@ -3098,60 +3095,62 @@ def api_sst_bulk_upload(session_id: str):
         original_name = f.filename
         ext = _safe_ext(original_name)
 
-        # extensions autorisées
         if ext not in (".pdf", ".jpg", ".jpeg", ".png"):
-            failed.append({
-                "filename": original_name,
-                "reason": "extension non autorisée"
-            })
+            failed.append({"filename": original_name, "reason": "extension non autorisée"})
             continue
-
-        processed += 1
 
         trainee, reason = _match_trainee_from_filename(trainees, original_name)
         if not trainee:
-            failed.append({
-                "filename": original_name,
-                "reason": reason or "aucune correspondance nom/prénom"
-            })
+            failed.append({"filename": original_name, "reason": reason or "non rattaché"})
+            continue
+
+        # ✅ sécurise l'id (selon ton schéma)
+        trainee_id = trainee.get("id") or trainee.get("trainee_id") or trainee.get("personal_id")
+        if not trainee_id:
+            failed.append({"filename": original_name, "reason": "trainee_id introuvable (id manquant dans data.json)"})
             continue
 
         try:
-            stored = _store_file(
-                session_id=session_id,
-                trainee_id=trainee.get("id"),
-                category="deliverables",
-                file=f
-            )
+            # ✅ sécurité : remet le curseur au début (selon navigateur / proxy ça évite des fichiers vides)
+            try:
+                f.stream.seek(0)
+            except Exception:
+                pass
+
+            stored = _store_file(session_id, trainee_id, "deliverables", f)
             token = _tokenize_path(stored)
-        except Exception:
-            failed.append({
-                "filename": original_name,
-                "reason": "erreur stockage"
-            })
+
+        except Exception as e:
+            # ✅ on log l'erreur complète dans Render
+            print("=== BULK SST: erreur stockage ===")
+            print("session_id:", session_id)
+            print("trainee_id:", trainee_id)
+            print("filename:", original_name)
+            traceback.print_exc()
+
+            # ✅ et on renvoie un message utile côté UI
+            failed.append({"filename": original_name, "reason": f"erreur stockage: {str(e)}"})
             continue
 
-        # ✅ rattachement SST (même logique que tes autres deliverables)
         trainee.setdefault("deliverables", {})
         trainee["deliverables"]["carte_sst"] = token
         trainee["updated_at"] = _now_iso()
 
         added.append({
             "filename": original_name,
-            "trainee_id": trainee.get("id"),
+            "trainee_id": trainee_id,
             "trainee_name": f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip()
         })
 
-    # persistance
+    # persist
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     save_data(data)
 
     return jsonify({
         "ok": True,
-        "received": received,          # ✅ fichiers reçus par Flask
-        "processed": processed,        # fichiers avec extension valide
-        "added_count": len(added),     # fichiers réellement importés
+        "received": received,
+        "added_count": len(added),
         "added": added,
         "failed": failed
     })
