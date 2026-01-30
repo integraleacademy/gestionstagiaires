@@ -251,7 +251,6 @@
   </summary>
 
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-    <div style="font-weight:900;">Relance téléphonique</div>
 
     <button class="btn btn-primary" type="button" id="btnOpenPhoneRelance">
       📞 Relance téléphonique
@@ -358,7 +357,7 @@
   </summary>
 
     <div style="display:flex;justify-content:space-between;align-items:center;">
-      <div style="font-weight:900;">Gestion des documents</div>
+
 
       {% set dossier_label = ("DOSSIER COMPLET" if dossier_is_complete else "DOSSIER INCOMPLET") %}
       <span class="pill {% if dossier_is_complete %}pill-green{% else %}pill-red{% endif %}">
@@ -513,28 +512,32 @@
 <!-- ===================== -->
 <!-- DIPLÔMES / ATTESTATIONS -->
 <!-- ===================== -->
-<div class="card" style="margin-top:12px;">
-  <div style="font-weight:900;">Diplômes & attestations</div>
-  <div class="hint" style="margin-top:6px;">Importer un fichier → stockage + mail/SMS “disponible sur votre espace stagiaire”.</div>
+<details class="card" style="margin-top:12px;">
+  <summary style="cursor:pointer;font-weight:900;">
+    🎓 Diplômes & attestations
+  </summary>
 
-<form class="upload-form" method="post" enctype="multipart/form-data"
-      action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='diplome') }}">
-  <input type="file" name="file" required>
-  <button class="btn btn-primary" type="submit">⬆️ Importer diplôme</button>
-</form>
-
-<form class="upload-form" method="post" enctype="multipart/form-data"
-      action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='attestation_fin_formation') }}">
-  <input type="file" name="file" required>
-  <button class="btn btn-primary" type="submit">⬆️ Importer attestation fin de formation</button>
-</form>
-
-<form class="upload-form" method="post" enctype="multipart/form-data"
-      action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='carte_sst') }}">
-  <input type="file" name="file" required>
-  <button class="btn btn-primary" type="submit">⬆️ Importer carte SST</button>
-</form>
+  <div class="hint" style="margin-top:6px;">
+    Importer un fichier → stockage + mail/SMS “disponible sur votre espace stagiaire”.
   </div>
+
+  <form class="upload-form" method="post" enctype="multipart/form-data"
+        action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='diplome') }}">
+    <input type="file" name="file" required>
+    <button class="btn btn-primary" type="submit">⬆️ Importer diplôme</button>
+  </form>
+
+  <form class="upload-form" method="post" enctype="multipart/form-data"
+        action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='attestation_fin_formation') }}">
+    <input type="file" name="file" required>
+    <button class="btn btn-primary" type="submit">⬆️ Importer attestation fin de formation</button>
+  </form>
+
+  <form class="upload-form" method="post" enctype="multipart/form-data"
+        action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='carte_sst') }}">
+    <input type="file" name="file" required>
+    <button class="btn btn-primary" type="submit">⬆️ Importer carte SST</button>
+  </form>
 
   <div class="table-wrap" style="margin-top:10px;">
     <table class="table">
@@ -558,7 +561,8 @@
       </tbody>
     </table>
   </div>
-</div>
+</details>
+
 
 
 <!-- ===================== -->
