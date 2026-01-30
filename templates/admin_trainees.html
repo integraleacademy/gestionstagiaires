@@ -43,6 +43,13 @@
  <button class="btn btn-outline" id="btnBulkSst">⬇️ Télécharger les SST en masse</button>
 <input id="bulkSstInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
 
+  <button class="btn btn-outline" id="btnBulkDiplome">⬇️ Télécharger les Diplômes en masse</button>
+<input id="bulkDiplomeInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+
+<button class="btn btn-outline" id="btnBulkAttestation">⬇️ Télécharger les Attestations en masse</button>
+<input id="bulkAttestationInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+  
+
 
     <button class="btn btn-primary" id="btnOpenCreateTrainee">+ Ajouter un stagiaire</button>
   </div>
@@ -265,6 +272,58 @@
   </div>
 </div>
 
+<!-- MODALE RESULTAT IMPORT DIPLOMES -->
+<div class="modal-backdrop" id="bulkDiplomeResultModal" aria-hidden="true">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-head">
+      <div class="modal-title">Import Diplômes terminé</div>
+      <button class="icon-btn" data-close-modal="bulkDiplomeResultModal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="hint" id="bulkDiplomeSummary" style="margin-bottom:10px;"></div>
+
+      <div id="bulkDiplomeFailuresWrap" style="display:none;">
+        <div style="font-weight:900;margin-bottom:6px;">Fichiers non rattachés</div>
+        <div class="hint" style="margin-bottom:8px;">
+          (Nom/prénom introuvables dans le fichier ou document déjà existant)
+        </div>
+        <ul id="bulkDiplomeFailures" style="margin:0;padding-left:18px;"></ul>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" data-close-modal="bulkDiplomeResultModal">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE RESULTAT IMPORT ATTESTATIONS -->
+<div class="modal-backdrop" id="bulkAttestationResultModal" aria-hidden="true">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-head">
+      <div class="modal-title">Import Attestations terminé</div>
+      <button class="icon-btn" data-close-modal="bulkAttestationResultModal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="hint" id="bulkAttestationSummary" style="margin-bottom:10px;"></div>
+
+      <div id="bulkAttestationFailuresWrap" style="display:none;">
+        <div style="font-weight:900;margin-bottom:6px;">Fichiers non rattachés</div>
+        <div class="hint" style="margin-bottom:8px;">
+          (Nom/prénom introuvables dans le fichier ou document déjà existant)
+        </div>
+        <ul id="bulkAttestationFailures" style="margin:0;padding-left:18px;"></ul>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" data-close-modal="bulkAttestationResultModal">OK</button>
+    </div>
+  </div>
+</div>
+
 
 <script>
   const sessionId = document.getElementById("traineesTable").getAttribute("data-session-id");
@@ -394,6 +453,157 @@ bulkSstInput?.addEventListener("change", async ()=>{
     btnBulkSst.textContent = "⬇️ Télécharger les SST en masse";
   }
 });
+
+  // =========================
+// Bulk Diplôme upload
+// =========================
+const btnBulkDiplome = document.getElementById("btnBulkDiplome");
+const bulkDiplomeInput = document.getElementById("bulkDiplomeInput");
+
+btnBulkDiplome?.addEventListener("click", ()=>{
+  bulkDiplomeInput.value = "";
+  bulkDiplomeInput.click();
+});
+
+bulkDiplomeInput?.addEventListener("change", async ()=>{
+  const files = [...bulkDiplomeInput.files || []];
+  if(!files.length) return;
+
+  const allowed = ["application/pdf","image/jpeg","image/png"];
+  const bad = files.filter(f => !allowed.includes(f.type) && !f.name.toLowerCase().endsWith(".pdf"));
+  if(bad.length){
+    alert("Certains fichiers ne sont pas acceptés (PDF/JPG/PNG).");
+    return;
+  }
+
+  btnBulkDiplome.disabled = true;
+  btnBulkDiplome.textContent = "Import en cours...";
+
+  try{
+    const fd = new FormData();
+    files.forEach(f => fd.append("files", f));
+
+    const r = await fetch(`/api/sessions/${sessionId}/diplome/bulk_upload`, {
+      method: "POST",
+      body: fd
+    });
+
+    const res = await r.json();
+
+    if(!r.ok || !res.ok){
+      alert("Erreur import Diplômes : " + (res.error || "unknown"));
+      return;
+    }
+
+    const summary = document.getElementById("bulkDiplomeSummary");
+    const wrap = document.getElementById("bulkDiplomeFailuresWrap");
+    const ul = document.getElementById("bulkDiplomeFailures");
+
+    const received = (res.received ?? res.total ?? files.length);
+    const added = res.added_count ?? 0;
+    const failed = res.failed || [];
+
+    if(summary){
+      summary.innerHTML = `<strong>${added} fichiers ajoutés</strong> sur <strong>${received}</strong> reçus.`;
+    }
+
+    if(ul) ul.innerHTML = "";
+    if(failed.length){
+      if(wrap) wrap.style.display = "block";
+      failed.forEach(it=>{
+        const li = document.createElement("li");
+        li.textContent = `${it.filename}${it.reason ? " — " + it.reason : ""}`;
+        ul.appendChild(li);
+      });
+    }else{
+      if(wrap) wrap.style.display = "none";
+    }
+
+    openModal("bulkDiplomeResultModal");
+
+  }catch(e){
+    alert("Erreur réseau pendant l'import Diplômes");
+  }finally{
+    btnBulkDiplome.disabled = false;
+    btnBulkDiplome.textContent = "⬇️ Télécharger les Diplômes en masse";
+  }
+});
+
+  // =========================
+// Bulk Attestation upload
+// =========================
+const btnBulkAttestation = document.getElementById("btnBulkAttestation");
+const bulkAttestationInput = document.getElementById("bulkAttestationInput");
+
+btnBulkAttestation?.addEventListener("click", ()=>{
+  bulkAttestationInput.value = "";
+  bulkAttestationInput.click();
+});
+
+bulkAttestationInput?.addEventListener("change", async ()=>{
+  const files = [...bulkAttestationInput.files || []];
+  if(!files.length) return;
+
+  const allowed = ["application/pdf","image/jpeg","image/png"];
+  const bad = files.filter(f => !allowed.includes(f.type) && !f.name.toLowerCase().endsWith(".pdf"));
+  if(bad.length){
+    alert("Certains fichiers ne sont pas acceptés (PDF/JPG/PNG).");
+    return;
+  }
+
+  btnBulkAttestation.disabled = true;
+  btnBulkAttestation.textContent = "Import en cours...";
+
+  try{
+    const fd = new FormData();
+    files.forEach(f => fd.append("files", f));
+
+    const r = await fetch(`/api/sessions/${sessionId}/attestation/bulk_upload`, {
+      method: "POST",
+      body: fd
+    });
+
+    const res = await r.json();
+
+    if(!r.ok || !res.ok){
+      alert("Erreur import Attestations : " + (res.error || "unknown"));
+      return;
+    }
+
+    const summary = document.getElementById("bulkAttestationSummary");
+    const wrap = document.getElementById("bulkAttestationFailuresWrap");
+    const ul = document.getElementById("bulkAttestationFailures");
+
+    const received = (res.received ?? res.total ?? files.length);
+    const added = res.added_count ?? 0;
+    const failed = res.failed || [];
+
+    if(summary){
+      summary.innerHTML = `<strong>${added} fichiers ajoutés</strong> sur <strong>${received}</strong> reçus.`;
+    }
+
+    if(ul) ul.innerHTML = "";
+    if(failed.length){
+      if(wrap) wrap.style.display = "block";
+      failed.forEach(it=>{
+        const li = document.createElement("li");
+        li.textContent = `${it.filename}${it.reason ? " — " + it.reason : ""}`;
+        ul.appendChild(li);
+      });
+    }else{
+      if(wrap) wrap.style.display = "none";
+    }
+
+    openModal("bulkAttestationResultModal");
+
+  }catch(e){
+    alert("Erreur réseau pendant l'import Attestations");
+  }finally{
+    btnBulkAttestation.disabled = false;
+    btnBulkAttestation.textContent = "⬇️ Télécharger les Attestations en masse";
+  }
+});
+
 
 
   // =========================
