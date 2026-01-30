@@ -323,6 +323,8 @@ btnBulkSst?.addEventListener("click", ()=>{
 
 bulkSstInput?.addEventListener("change", async ()=>{
   const files = [...bulkSstInput.files || []];
+    console.log("SST sélectionnés :", files.length, files.map(f => f.name));
+
   if(!files.length) return;
 
   // petit garde-fou
@@ -346,6 +348,8 @@ bulkSstInput?.addEventListener("change", async ()=>{
     });
 
     const res = await r.json();
+        console.log("Réponse bulk_upload :", res);
+
 
     if(!r.ok || !res.ok){
       alert("Erreur import SST : " + (res.error || "unknown"));
@@ -357,12 +361,12 @@ bulkSstInput?.addEventListener("change", async ()=>{
     const wrap = document.getElementById("bulkSstFailuresWrap");
     const ul = document.getElementById("bulkSstFailures");
 
-    const total = res.total || files.length;
-    const added = res.added_count || 0;
+    const received = (res.received ?? res.total ?? files.length);   // ✅ priorité au backend
+    const added = res.added_count ?? 0;
     const failed = res.failed || [];
 
     if(summary){
-      summary.innerHTML = `<strong>${added} fichiers ajoutés</strong> sur <strong>${total}</strong> téléchargés.`;
+      summary.innerHTML = `<strong>${added} fichiers ajoutés</strong> sur <strong>${received}</strong> reçus.`;
     }
 
     if(ul) ul.innerHTML = "";
@@ -378,6 +382,7 @@ bulkSstInput?.addEventListener("change", async ()=>{
     }
 
     openModal("bulkSstResultModal");
+
 
     // refresh table (pour voir le SST importé sur les fiches si tu affiches un indicateur)
     // window.location.reload();
