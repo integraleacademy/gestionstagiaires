@@ -3035,47 +3035,41 @@ def api_update_trainee_alias(session_id: str, trainee_id: str):
 
 import re
 import unicodedata
-from werkzeug.utils import secure_filename
 from flask import request, jsonify
 
-# ⚠️ évite d’écraser ton ALLOWED_EXT global (docs)
-SST_BULK_ALLOWED_EXT = {".pdf", ".jpg", ".jpeg", ".png"}
-
 def _norm_name(s: str) -> str:
-    if not s:
-        return ""
-    s = s.strip().lower()
+    s = (s or "").strip().lower()
     s = unicodedata.normalize("NFD", s)
     s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")  # enlève accents
     s = re.sub(r"[^a-z0-9]+", " ", s)
     s = re.sub(r"\s+", " ", s).strip()
     return s
 
-def _find_trainee_by_filename(trainees, filename: str):
+def _match_trainee_from_filename(trainees: list, filename: str):
     """
-    Match: si NOM et PRENOM sont présents dans le nom de fichier (normalisé)
+    Match si NOM et PRÉNOM apparaissent dans le nom de fichier (normalisé).
+    Renvoie (trainee, None) si OK, sinon (None, reason).
     """
     fn = _norm_name(filename)
 
-    candidates = []
+    hits = []
     for t in trainees:
         ln = _norm_name(t.get("last_name", ""))
         fnm = _norm_name(t.get("first_name", ""))
         if not ln or not fnm:
             continue
         if ln in fn and fnm in fn:
-            candidates.append(t)
+            hits.append(t)
 
-    if len(candidates) == 1:
-        return candidates[0], None
-    if len(candidates) == 0:
+    if len(hits) == 1:
+        return hits[0], None
+    if len(hits) == 0:
         return None, "nom/prénom non trouvés dans le fichier"
-    return None, "plusieurs stagiaires correspondent"
-
+    return None, "plusieurs stagiaires correspondent (homonyme)"
 
 @app.post("/api/sessions/<session_id>/sst/bulk_upload")
 @admin_login_required
-def api_bulk_sst_upload(session_id: str):
+def api_sst_bulk_upload(session_id: str):
     data = load_data()
     s = find_session(data, session_id)
     if not s:
@@ -3087,9 +3081,9 @@ def api_bulk_sst_upload(session_id: str):
 
     trainees = _session_trainees_list(s)
 
+    total = 0
     added = []
     failed = []
-    total = 0
 
     for f in files:
         if not f or not f.filename:
@@ -3097,26 +3091,26 @@ def api_bulk_sst_upload(session_id: str):
 
         total += 1
         original_name = f.filename
-        safe = secure_filename(original_name)
-        ext = os.path.splitext(safe)[1].lower()
+        ext = _safe_ext(original_name)
 
-        if ext not in SST_BULK_ALLOWED_EXT:
+        # mêmes extensions que tes uploads images/pdf
+        if ext not in (".pdf", ".jpg", ".jpeg", ".png"):
             failed.append({"filename": original_name, "reason": "extension non autorisée"})
             continue
 
-        trainee, reason = _find_trainee_by_filename(trainees, original_name)
+        trainee, reason = _match_trainee_from_filename(trainees, original_name)
         if not trainee:
             failed.append({"filename": original_name, "reason": reason or "non rattaché"})
             continue
 
-        # ✅ on stocke comme tes deliverables: via _store_file + token
         try:
             stored = _store_file(session_id, trainee.get("id"), "deliverables", f)
             token = _tokenize_path(stored)
         except Exception:
-            failed.append({"filename": original_name, "reason": "erreur stockage fichier"})
+            failed.append({"filename": original_name, "reason": "erreur stockage"})
             continue
 
+        # ✅ IMPORTANT : même schéma que ton upload deliverables existant
         trainee.setdefault("deliverables", {})
         trainee["deliverables"]["carte_sst"] = token
         trainee["updated_at"] = _now_iso()
@@ -3127,7 +3121,7 @@ def api_bulk_sst_upload(session_id: str):
             "trainee_name": f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip()
         })
 
-    # ✅ persistance
+    # persist
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     save_data(data)
@@ -3139,6 +3133,7 @@ def api_bulk_sst_upload(session_id: str):
         "added": added,
         "failed": failed
     })
+
 
 
 
