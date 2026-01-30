@@ -842,3 +842,24 @@ input[type="file"]{
     border-top:1px dashed #edf2f7;
   }
 
+/* ✅ Priorité aux surlignages OK / TODO (écrase zebra + hover) */
+#traineesTable tr.row-ok td{
+  background: #ecfdf5 !important;
+}
+#traineesTable tr.row-ok:hover td{
+  background: #dcfce7 !important;
+}
+
+#traineesTable tr.row-todo td{
+  background: #fffbeb !important;
+}
+#traineesTable tr.row-todo:hover td{
+  background: #fef3c7 !important;
+}
+
+/* warning reste prioritaire si commentaire */
+#traineesTable tr.row-warning td{
+  background: rgba(249,115,22,0.08) !important;
+}
+
+
