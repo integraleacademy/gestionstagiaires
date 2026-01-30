@@ -309,10 +309,6 @@ input:focus, select:focus{
 }
 .mini-btn:hover{border-color:#cbd5e1}
 
-/* Row warning */
-.row-warning td{
-  background: rgba(249,115,22,0.08) !important;
-}
 
 /* =========================
    CNAPS badge
@@ -842,38 +838,33 @@ input[type="file"]{
     border-top:1px dashed #edf2f7;
   }
 
-/* ✅ Priorité aux surlignages OK / TODO (écrase zebra + hover) */
-#traineesTable tr.row-ok td{
-  background: #ecfdf5 !important;
-}
-#traineesTable tr.row-ok:hover td{
-  background: #dcfce7 !important;
-}
 
+
+/* =========================
+   SURLIGNAGE LIGNES – TABLE STAGIAIRES
+   PRIORITÉ : OK > WARNING > TODO
+   ========================= */
+
+/* TODO (jaune) */
 #traineesTable tr.row-todo td{
-  background: #fffbeb !important;
+  background:#fffbeb !important;
 }
 #traineesTable tr.row-todo:hover td{
-  background: #fef3c7 !important;
+  background:#fef3c7 !important;
 }
 
-/* warning reste prioritaire si commentaire */
+/* WARNING (commentaire) */
 #traineesTable tr.row-warning td{
   background: rgba(249,115,22,0.08) !important;
 }
 
-tr.row-ok td{
-  background: #ecfdf5;   /* vert clair */
+/* OK (VERT – PRIORITÉ ABSOLUE) */
+#traineesTable tr.row-ok td{
+  background:#ecfdf5 !important;
 }
-tr.row-todo td{
-  background: #fffbeb;   /* jaune clair */
-}
-tr.row-warning td{
-  background: #fff1f2;   /* rose clair (commentaire) */
+#traineesTable tr.row-ok:hover td{
+  background:#dcfce7 !important;
 }
 
-/* ✅ PRIORITÉ : si ok, on force le vert même s'il y a un commentaire */
-tr.row.row-ok td{
-  background: #ecfdf5 !important;
-}
+
 
