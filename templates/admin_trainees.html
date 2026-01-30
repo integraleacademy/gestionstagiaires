@@ -40,9 +40,9 @@
   <h2 style="margin:0;">Stagiaires</h2>
 
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-    <button class="btn btn-outline" id="btnBulkSst">
-      ⬇️ Télécharger les SST en masse
-    </button>
+ <button class="btn btn-outline" id="btnBulkSst">⬇️ Télécharger les SST en masse</button>
+<input id="bulkSstInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+
 
     <button class="btn btn-primary" id="btnOpenCreateTrainee">+ Ajouter un stagiaire</button>
   </div>
@@ -239,8 +239,76 @@
   </div>
 </div>
 
+  <!-- MODALE RESULTAT IMPORT SST -->
+<div class="modal-backdrop" id="bulkSstResultModal" aria-hidden="true">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-head">
+      <div class="modal-title">Import SST terminé</div>
+      <button class="icon-btn" data-close-modal="bulkSstResultModal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="hint" id="bulkSstSummary" style="margin-bottom:10px;"></div>
+
+      <div id="bulkSstFailuresWrap" style="display:none;">
+        <div style="font-weight:900;margin-bottom:6px;">Fichiers non rattachés</div>
+        <div class="hint" style="margin-bottom:8px;">
+          (Nom/prénom introuvables dans le fichier ou plusieurs correspondances)
+        </div>
+        <ul id="bulkSstFailures" style="margin:0;padding-left:18px;"></ul>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" data-close-modal="bulkSstResultModal">OK</button>
+    </div>
+  </div>
+</div>
+
+
 <script>
   const sessionId = document.getElementById("traineesTable").getAttribute("data-session-id");
+
+  document.querySelectorAll("[data-refresh]").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault();
+
+      const tr = btn.closest("tr");
+      const traineeId = tr.getAttribute("data-trainee-id");
+
+      const nom = tr.querySelector("td:nth-child(1)")?.textContent.trim() || "";
+      const prenom = tr.querySelector("td:nth-child(2)")?.textContent.trim() || "";
+
+      if (!traineeId || !nom || !prenom) {
+        alert("Nom / prénom introuvables");
+        return;
+      }
+
+      btn.disabled = true;
+
+      try {
+        const res = await cnapsLookup(nom, prenom);
+        const statut = (res.statut_cnaps || "INCONNU").toUpperCase();
+
+        const span = tr.querySelector("[data-cnaps]");
+        if (span){
+          span.textContent = statut;
+          applyCnapsBadge(span); // ✅ recolor instant
+        }
+
+        await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ cnaps: statut })
+        });
+
+      } catch (err) {
+        alert("Erreur CNAPS");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
 
   // =========================
 // Bulk SST upload
@@ -563,74 +631,7 @@ bulkSstInput?.addEventListener("change", async ()=>{
     return await r.json();
   }
 
-  document.querySelectorAll("[data-refresh]").forEach(btn => {
-    btn.addEventListener("click", async (e) => {
-      e.preventDefault();
 
-      const tr = btn.closest("tr");
-      const traineeId = tr.getAttribute("data-trainee-id");
-
-      const nom = tr.querySelector("td:nth-child(1)")?.textContent.trim() || "";
-      const prenom = tr.querySelector("td:nth-child(2)")?.textContent.trim() || "";
-
-      if (!traineeId || !nom || !prenom) {
-        alert("Nom / prénom introuvables");
-        return;
-      }
-
-      btn.disabled = true;
-
-      try {
-        const res = await cnapsLookup(nom, prenom);
-        const statut = (res.statut_cnaps || "INCONNU").toUpperCase();
-
-        const span = tr.querySelector("[data-cnaps]");
-        if (span){
-          span.textContent = statut;
-          applyCnapsBadge(span); // ✅ recolor instant
-        }
-
-        await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
-          method: "POST",
-          headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({ cnaps: statut })
-        });
-
-      } catch (err) {
-        alert("Erreur CNAPS");
-      } finally {
-        btn.disabled = false;
-      }
-    });
-  });
-<!-- input file caché -->
-<input id="bulkSstInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none;">
-
-<!-- MODALE RESULTAT IMPORT SST -->
-<div class="modal-backdrop" id="bulkSstResultModal" aria-hidden="true">
-  <div class="modal" style="max-width:640px">
-    <div class="modal-head">
-      <div class="modal-title">Import SST terminé</div>
-      <button class="icon-btn" data-close-modal="bulkSstResultModal">✕</button>
-    </div>
-
-    <div class="modal-body">
-      <div class="hint" id="bulkSstSummary" style="margin-bottom:10px;"></div>
-
-      <div id="bulkSstFailuresWrap" style="display:none;">
-        <div style="font-weight:900;margin-bottom:6px;">Fichiers non rattachés</div>
-        <div class="hint" style="margin-bottom:8px;">
-          (Nom/prénom introuvables dans le fichier ou plusieurs correspondances)
-        </div>
-        <ul id="bulkSstFailures" style="margin:0;padding-left:18px;"></ul>
-      </div>
-    </div>
-
-    <div class="modal-foot">
-      <button class="btn" data-close-modal="bulkSstResultModal">OK</button>
-    </div>
-  </div>
-</div>
 
   
 </script>
