@@ -798,3 +798,47 @@ input[type="file"]{
   opacity: 1;
 }
 
+ /* Accordéon */
+  details.fold{
+    border:1px solid #e8eef3;
+    border-radius:16px;
+    background:#fff;
+    box-shadow:0 2px 10px rgba(0,0,0,.03);
+    overflow:hidden;
+  }
+  details.fold > summary{
+    list-style:none;
+    cursor:pointer;
+    padding:14px 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    user-select:none;
+  }
+  details.fold > summary::-webkit-details-marker{ display:none; }
+
+  .fold-title{
+    font-weight:900;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:0;
+  }
+
+  .fold-chevron{
+    width:30px;height:30px;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:10px;
+    border:1px solid #e5e7eb;
+    background:#f9fafb;
+    flex-shrink:0;
+    transition: transform .15s ease;
+  }
+  details.fold[open] .fold-chevron{ transform: rotate(90deg); }
+
+  .fold-body{
+    padding:0 16px 16px 16px;
+    border-top:1px dashed #edf2f7;
+  }
+
