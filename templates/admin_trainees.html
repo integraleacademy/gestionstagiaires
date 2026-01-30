@@ -36,9 +36,16 @@
   </div>
 </div>
 
-<div class="page-head">
-  <h2>Stagiaires</h2>
-  <button class="btn btn-primary" id="btnOpenCreateTrainee">+ Ajouter un stagiaire</button>
+<div class="page-head" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
+  <h2 style="margin:0;">Stagiaires</h2>
+
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <button class="btn btn-outline" id="btnBulkSst">
+      ⬇️ Télécharger les SST en masse
+    </button>
+
+    <button class="btn btn-primary" id="btnOpenCreateTrainee">+ Ajouter un stagiaire</button>
+  </div>
 </div>
 
 <div class="table-wrap full-bleed">
@@ -234,6 +241,87 @@
 
 <script>
   const sessionId = document.getElementById("traineesTable").getAttribute("data-session-id");
+
+  // =========================
+// Bulk SST upload
+// =========================
+const btnBulkSst = document.getElementById("btnBulkSst");
+const bulkSstInput = document.getElementById("bulkSstInput");
+
+btnBulkSst?.addEventListener("click", ()=>{
+  bulkSstInput.value = "";
+  bulkSstInput.click();
+});
+
+bulkSstInput?.addEventListener("change", async ()=>{
+  const files = [...bulkSstInput.files || []];
+  if(!files.length) return;
+
+  // petit garde-fou
+  const allowed = ["application/pdf","image/jpeg","image/png"];
+  const bad = files.filter(f => !allowed.includes(f.type) && !f.name.toLowerCase().endsWith(".pdf"));
+  if(bad.length){
+    alert("Certains fichiers ne sont pas acceptés (PDF/JPG/PNG).");
+    return;
+  }
+
+  btnBulkSst.disabled = true;
+  btnBulkSst.textContent = "Import en cours...";
+
+  try{
+    const fd = new FormData();
+    files.forEach(f => fd.append("files", f));
+
+    const r = await fetch(`/api/sessions/${sessionId}/sst/bulk_upload`, {
+      method: "POST",
+      body: fd
+    });
+
+    const res = await r.json();
+
+    if(!r.ok || !res.ok){
+      alert("Erreur import SST : " + (res.error || "unknown"));
+      return;
+    }
+
+    // UI résultat
+    const summary = document.getElementById("bulkSstSummary");
+    const wrap = document.getElementById("bulkSstFailuresWrap");
+    const ul = document.getElementById("bulkSstFailures");
+
+    const total = res.total || files.length;
+    const added = res.added_count || 0;
+    const failed = res.failed || [];
+
+    if(summary){
+      summary.innerHTML = `<strong>${added} fichiers ajoutés</strong> sur <strong>${total}</strong> téléchargés.`;
+    }
+
+    if(ul) ul.innerHTML = "";
+    if(failed.length){
+      if(wrap) wrap.style.display = "block";
+      failed.forEach(it=>{
+        const li = document.createElement("li");
+        li.textContent = `${it.filename}${it.reason ? " — " + it.reason : ""}`;
+        ul.appendChild(li);
+      });
+    }else{
+      if(wrap) wrap.style.display = "none";
+    }
+
+    openModal("bulkSstResultModal");
+
+    // refresh table (pour voir le SST importé sur les fiches si tu affiches un indicateur)
+    // window.location.reload();
+
+  }catch(e){
+    alert("Erreur réseau pendant l'import SST");
+  }finally{
+    btnBulkSst.disabled = false;
+    btnBulkSst.textContent = "⬇️ Télécharger les SST en masse";
+  }
+});
+
 
   // =========================
   // UI: colors for status selects + CNAPS + Hosting
@@ -515,6 +603,36 @@
       }
     });
   });
+<!-- input file caché -->
+<input id="bulkSstInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none;">
+
+<!-- MODALE RESULTAT IMPORT SST -->
+<div class="modal-backdrop" id="bulkSstResultModal" aria-hidden="true">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-head">
+      <div class="modal-title">Import SST terminé</div>
+      <button class="icon-btn" data-close-modal="bulkSstResultModal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="hint" id="bulkSstSummary" style="margin-bottom:10px;"></div>
+
+      <div id="bulkSstFailuresWrap" style="display:none;">
+        <div style="font-weight:900;margin-bottom:6px;">Fichiers non rattachés</div>
+        <div class="hint" style="margin-bottom:8px;">
+          (Nom/prénom introuvables dans le fichier ou plusieurs correspondances)
+        </div>
+        <ul id="bulkSstFailures" style="margin:0;padding-left:18px;"></ul>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" data-close-modal="bulkSstResultModal">OK</button>
+    </div>
+  </div>
+</div>
+
+  
 </script>
 
 
