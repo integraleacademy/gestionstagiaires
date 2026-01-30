@@ -93,25 +93,25 @@
       <form method="post" action="{{ url_for('admin_delete_trainee', session_id=session.id, trainee_id=trainee.id) }}"
             onsubmit="return confirm('Supprimer ce stagiaire ?');">
 <button class="btn btn-danger btn-uniform" type="submit">
-  🗑️ Supprimer le stagiaire
+  🗑️ Supprimer
 </button>
       </form>
 
 <a class="btn btn-outline btn-uniform"
    href="{{ url_for('admin_etiquette_docx', session_id=session.id, trainee_id=trainee.id) }}">
-  🖨️ Imprimer étiquette dossier (Word)
+  🖨️ Etiquette WORD
 </a>
 
       <form method="post" action="{{ url_for('admin_send_access', session_id=session.id, trainee_id=trainee.id) }}">
 <button class="btn btn-primary btn-uniform" type="submit">
-  📩 Envoyer accès espace stagiaire
+  📩 Envoyer espace stagiaire
 </button>
       </form>
 
 <a class="btn btn-outline btn-uniform"
    href="{{ PUBLIC_STUDENT_PORTAL_BASE.rstrip('/') }}/espace/{{ trainee.public_token }}"
    target="_blank" rel="noopener">
-  👁️ Voir espace stagiaire (public)
+  👁️ Espace stagiaire
 </a>
     </div>
   </div>
