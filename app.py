@@ -3110,6 +3110,13 @@ def api_sst_bulk_upload(session_id: str):
             failed.append({"filename": original_name, "reason": "trainee_id introuvable (id manquant dans data.json)"})
             continue
 
+        # ✅ si déjà un SST, on n'écrase pas + on n'envoie pas
+        existing = ((trainee.get("deliverables") or {}).get("carte_sst") or "").strip()
+        if existing:
+            failed.append({"filename": original_name, "reason": "déjà un SST existant (non remplacé)"})
+            continue
+ 
+
         try:
             # ✅ sécurité : remet le curseur au début (selon navigateur / proxy ça évite des fichiers vides)
             try:
@@ -3136,6 +3143,78 @@ def api_sst_bulk_upload(session_id: str):
         trainee["deliverables"]["carte_sst"] = token
         trainee["updated_at"] = _now_iso()
 
+        # ✅ Envoi mail + SMS (comme l'import manuel deliverables)
+        try:
+            link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{trainee.get('public_token','')}"
+            label = DELIVERABLE_LABELS["carte_sst"]
+
+            first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
+            formation_type = (_session_get(s, "training_type", "") or _session_get(s, "name", "")).strip()
+            dstart = fr_date(_session_get(s, "date_start", ""))
+            dend = fr_date(_session_get(s, "date_end", ""))
+
+            extra_line = "🩺 Votre carte SST est disponible. Conservez-la précieusement, elle peut être demandée par un employeur."
+            subject = f"{label} disponible – Intégrale Academy"
+
+            html = mail_layout(f"""
+              <h2 style="text-align:center">✅ {label} disponible</h2>
+
+              <p>Bonjour <strong>{first_name}</strong>,</p>
+
+              <p>
+                Nous avons le plaisir de vous informer que votre <strong>{label}</strong>
+                est désormais disponible dans votre espace stagiaire.
+              </p>
+
+              <p style='margin-top:10px;font-weight:700'>{extra_line}</p>
+
+              <div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:16px 0">
+                <p style="margin:0 0 10px 0">
+                  <strong>📌 Formation :</strong> {formation_type}
+                  {" — <strong>Dates :</strong> " + dstart + " au " + dend if (dstart or dend) else ""}
+                </p>
+
+                <p style="margin:0">
+                  <strong>📍 Accéder à votre espace stagiaire :</strong><br>
+                  <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
+                </p>
+              </div>
+
+              <p style="text-align:center;margin-top:18px">
+                <a href="{link}"
+                   style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;
+                          text-decoration:none;font-weight:bold">
+                  👉 Accéder à mon espace stagiaire
+                </a>
+              </p>
+
+              <p style="margin-top:22px">
+                Pour toute question, vous pouvez nous contacter au <strong>04 22 47 07 68</strong>.
+              </p>
+
+              <p style="margin-top:22px">
+                Bien cordialement,<br>
+                <strong>Clément VAILLANT</strong><br>
+                Directeur Intégrale Academy
+              </p>
+            """)
+
+            sms_name = (trainee.get("first_name") or "").strip()
+            sms = (
+                f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
+                f"votre {label} est disponible sur votre espace : {link} "
+                f"(Aide : 04 22 47 07 68)"
+            )
+
+            if (trainee.get("email") or "").strip():
+                brevo_send_email(trainee.get("email",""), subject, html)
+            if (trainee.get("phone") or "").strip():
+                brevo_send_sms(trainee.get("phone",""), sms)
+
+        except Exception as e:
+            print("=== BULK SST: erreur envoi mail/sms ===", repr(e))
+
+
         added.append({
             "filename": original_name,
             "trainee_id": trainee_id,
@@ -3155,6 +3234,228 @@ def api_sst_bulk_upload(session_id: str):
         "failed": failed
     })
 
+
+@app.post("/api/sessions/<session_id>/diplome/bulk_upload")
+@admin_login_required
+def api_diplome_bulk_upload(session_id: str):
+    import traceback
+
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+
+    files = request.files.getlist("files")
+    if not files:
+        return jsonify({"ok": False, "error": "no_files"}), 400
+
+    trainees = _session_trainees_list(s)
+
+    received = 0
+    added = []
+    failed = []
+
+    for f in files:
+        if not f or not f.filename:
+            continue
+
+        received += 1
+        original_name = f.filename
+        ext = _safe_ext(original_name)
+
+        if ext not in (".pdf", ".jpg", ".jpeg", ".png"):
+            failed.append({"filename": original_name, "reason": "extension non autorisée"})
+            continue
+
+        trainee, reason = _match_trainee_from_filename(trainees, original_name)
+        if not trainee:
+            failed.append({"filename": original_name, "reason": reason or "non rattaché"})
+            continue
+
+        trainee_id = trainee.get("id") or trainee.get("trainee_id") or trainee.get("personal_id")
+        if not trainee_id:
+            failed.append({"filename": original_name, "reason": "trainee_id introuvable"})
+            continue
+
+        # ✅ si déjà un diplôme, on n'écrase pas + on n'envoie pas
+        existing = ((trainee.get("deliverables") or {}).get("diplome") or "").strip()
+        if existing:
+            failed.append({"filename": original_name, "reason": "déjà un diplôme existant (non remplacé)"})
+            continue
+
+        try:
+            try:
+                f.stream.seek(0)
+            except Exception:
+                pass
+
+            stored = _store_file(session_id, trainee_id, "deliverables", f)
+            token = _tokenize_path(stored)
+        except Exception as e:
+            print("=== BULK DIPLOME: erreur stockage ===")
+            traceback.print_exc()
+            failed.append({"filename": original_name, "reason": f"erreur stockage: {str(e)}"})
+            continue
+
+        trainee.setdefault("deliverables", {})
+        trainee["deliverables"]["diplome"] = token
+        trainee["updated_at"] = _now_iso()
+
+        # ✅ Envoi mail + SMS (même logique que deliverables upload)
+        try:
+            link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{trainee.get('public_token','')}"
+            label = DELIVERABLE_LABELS["diplome"]
+
+            first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
+            subject = f"{label} disponible – Intégrale Academy"
+
+            html = mail_layout(f"""
+              <h2 style="text-align:center">✅ {label} disponible</h2>
+              <p>Bonjour <strong>{first_name}</strong>,</p>
+              <p>🎉 Félicitations ! Votre diplôme est maintenant disponible dans votre espace stagiaire.</p>
+              <p style="text-align:center;margin-top:18px">
+                <a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+                  👉 Accéder à mon espace stagiaire
+                </a>
+              </p>
+            """)
+
+            sms_name = (trainee.get("first_name") or "").strip()
+            sms = (
+                f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
+                f"votre {label} est disponible sur votre espace : {link} (Aide : 04 22 47 07 68)"
+            )
+
+            if (trainee.get("email") or "").strip():
+                brevo_send_email(trainee.get("email",""), subject, html)
+            if (trainee.get("phone") or "").strip():
+                brevo_send_sms(trainee.get("phone",""), sms)
+
+        except Exception as e:
+            print("=== BULK DIPLOME: erreur envoi mail/sms ===", repr(e))
+
+        added.append({
+            "filename": original_name,
+            "trainee_id": trainee_id,
+            "trainee_name": f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip()
+        })
+
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return jsonify({"ok": True, "received": received, "added_count": len(added), "added": added, "failed": failed})
+
+@app.post("/api/sessions/<session_id>/attestation/bulk_upload")
+@admin_login_required
+def api_attestation_bulk_upload(session_id: str):
+    import traceback
+
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+
+    files = request.files.getlist("files")
+    if not files:
+        return jsonify({"ok": False, "error": "no_files"}), 400
+
+    trainees = _session_trainees_list(s)
+
+    received = 0
+    added = []
+    failed = []
+
+    for f in files:
+        if not f or not f.filename:
+            continue
+
+        received += 1
+        original_name = f.filename
+        ext = _safe_ext(original_name)
+
+        if ext not in (".pdf", ".jpg", ".jpeg", ".png"):
+            failed.append({"filename": original_name, "reason": "extension non autorisée"})
+            continue
+
+        trainee, reason = _match_trainee_from_filename(trainees, original_name)
+        if not trainee:
+            failed.append({"filename": original_name, "reason": reason or "non rattaché"})
+            continue
+
+        trainee_id = trainee.get("id") or trainee.get("trainee_id") or trainee.get("personal_id")
+        if not trainee_id:
+            failed.append({"filename": original_name, "reason": "trainee_id introuvable"})
+            continue
+
+        # ✅ si déjà une attestation, on n'écrase pas + on n'envoie pas
+        existing = ((trainee.get("deliverables") or {}).get("attestation_fin_formation") or "").strip()
+        if existing:
+            failed.append({"filename": original_name, "reason": "déjà une attestation existante (non remplacée)"})
+            continue
+
+        try:
+            try:
+                f.stream.seek(0)
+            except Exception:
+                pass
+
+            stored = _store_file(session_id, trainee_id, "deliverables", f)
+            token = _tokenize_path(stored)
+        except Exception as e:
+            print("=== BULK ATTESTATION: erreur stockage ===")
+            traceback.print_exc()
+            failed.append({"filename": original_name, "reason": f"erreur stockage: {str(e)}"})
+            continue
+
+        trainee.setdefault("deliverables", {})
+        trainee["deliverables"]["attestation_fin_formation"] = token
+        trainee["updated_at"] = _now_iso()
+
+        # ✅ mail + sms
+        try:
+            link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{trainee.get('public_token','')}"
+            label = DELIVERABLE_LABELS["attestation_fin_formation"]
+
+            first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
+            subject = f"{label} disponible – Intégrale Academy"
+
+            html = mail_layout(f"""
+              <h2 style="text-align:center">✅ {label} disponible</h2>
+              <p>Bonjour <strong>{first_name}</strong>,</p>
+              <p>📄 Votre attestation de fin de formation est disponible dans votre espace stagiaire.</p>
+              <p style="text-align:center;margin-top:18px">
+                <a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+                  👉 Accéder à mon espace stagiaire
+                </a>
+              </p>
+            """)
+
+            sms_name = (trainee.get("first_name") or "").strip()
+            sms = (
+                f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
+                f"votre {label} est disponible sur votre espace : {link} (Aide : 04 22 47 07 68)"
+            )
+
+            if (trainee.get("email") or "").strip():
+                brevo_send_email(trainee.get("email",""), subject, html)
+            if (trainee.get("phone") or "").strip():
+                brevo_send_sms(trainee.get("phone",""), sms)
+
+        except Exception as e:
+            print("=== BULK ATTESTATION: erreur envoi mail/sms ===", repr(e))
+
+        added.append({
+            "filename": original_name,
+            "trainee_id": trainee_id,
+            "trainee_name": f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip()
+        })
+
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return jsonify({"ok": True, "received": received, "added_count": len(added), "added": added, "failed": failed})
 
 
 
