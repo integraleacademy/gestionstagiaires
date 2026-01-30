@@ -84,10 +84,9 @@
       {% for t in trainees %}
       <tr class="row {% if t.comment %}row-warning{% endif %}"
     data-trainee-id="{{ t.id }}"
-    data-has-sst="{{ '1' if t.sst_file else '0' }}"
-    data-has-diplome="{{ '1' if t.diplome_file else '0' }}"
-    data-has-attestation="{{ '1' if t.attestation_file else '0' }}">
-
+data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}"
+  data-has-diplome="{{ '1' if (t.get('deliverables', {}).get('diplome')) else '0' }}"
+  data-has-attestation="{{ '1' if (t.get('deliverables', {}).get('attestation_fin_formation')) else '0' }}">
         <td>{{ t.last_name }}</td>
         <td>{{ t.first_name }}</td>
         <td class="mono">{{ t.email }}</td>
@@ -482,7 +481,8 @@ bulkSstInput?.addEventListener("change", async ()=>{
     }
 
     openModal("bulkSstResultModal");
-    window.location.reload();
+    setTimeout(()=>window.location.reload(), 800);
+
 
 
     // refresh table (pour voir le SST importé sur les fiches si tu affiches un indicateur)
@@ -562,7 +562,7 @@ bulkDiplomeInput?.addEventListener("change", async ()=>{
     }
 
     openModal("bulkDiplomeResultModal");
-    window.location.reload();
+    setTimeout(()=>window.location.reload(), 800);
 
   }catch(e){
     alert("Erreur réseau pendant l'import Diplômes");
@@ -638,7 +638,7 @@ bulkAttestationInput?.addEventListener("change", async ()=>{
     }
 
     openModal("bulkAttestationResultModal");
-    window.location.reload();
+    setTimeout(()=>window.location.reload(), 800);
     
   }catch(e){
     alert("Erreur réseau pendant l'import Attestations");
