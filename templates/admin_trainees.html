@@ -82,7 +82,12 @@
 
     <tbody>
       {% for t in trainees %}
-      <tr class="row {% if t.comment %}row-warning{% endif %}" data-trainee-id="{{ t.id }}">
+      <tr class="row {% if t.comment %}row-warning{% endif %}"
+    data-trainee-id="{{ t.id }}"
+    data-has-sst="{{ '1' if t.sst_file else '0' }}"
+    data-has-diplome="{{ '1' if t.diplome_file else '0' }}"
+    data-has-attestation="{{ '1' if t.attestation_file else '0' }}">
+
         <td>{{ t.last_name }}</td>
         <td>{{ t.first_name }}</td>
         <td class="mono">{{ t.email }}</td>
@@ -477,6 +482,7 @@ bulkSstInput?.addEventListener("change", async ()=>{
     }
 
     openModal("bulkSstResultModal");
+    
 
 
     // refresh table (pour voir le SST importé sur les fiches si tu affiches un indicateur)
@@ -704,41 +710,24 @@ bulkAttestationInput?.addEventListener("change", async ()=>{
   // ✅ applique les couleurs au chargement
   applyAllColors();
 
-  function recomputeRowHighlight(){
+
+function recomputeRowHighlight(){
   document.querySelectorAll("tr[data-trainee-id]").forEach(tr=>{
-    // si commentaire => priorité au warning (tu l’as déjà en Jinja)
+    // si commentaire => priorité au warning
     if(tr.classList.contains("row-warning")) return;
 
-    const getVal = (field) => tr.querySelector(`select[data-field="${field}"]`)?.value || "";
+    const hasSst = tr.getAttribute("data-has-sst") === "1";
+    const hasDiplome = tr.getAttribute("data-has-diplome") === "1";
+    const hasAttestation = tr.getAttribute("data-has-attestation") === "1";
 
-    const convention = getVal("convention_status");
-    const testfr    = getVal("test_fr_status");
-    const dossier   = getVal("dossier_status");
-    const vae       = tr.querySelector(`select[data-field="vae_status"]`) ? getVal("vae_status") : null;
-    const finance   = getVal("financement_status");
-
-    // CNAPS texte
-    const cnapsTxt = (tr.querySelector("[data-cnaps]")?.textContent || "").toUpperCase();
-
-    // ✅ règle “OK” (tu peux durcir/assouplir après)
-    const ok =
-      (convention === "signed") &&
-      (testfr === "validated") &&
-      (dossier === "complete") &&
-      (finance === "validated") &&
-      (!vae || vae === "validated") &&
-      (
-        cnapsTxt.includes("ACCEPT") ||
-        cnapsTxt.includes("ENREG") ||
-        cnapsTxt.includes("INSTRU") ||
-        cnapsTxt.includes("TRANSM") ||
-        cnapsTxt.includes("CARTE PROFESSIONNELLE OK")
-      );
+    const ok = hasSst && hasDiplome && hasAttestation;
 
     tr.classList.remove("row-ok","row-todo");
     tr.classList.add(ok ? "row-ok" : "row-todo");
   });
 }
+
+
 
 // au chargement
 recomputeRowHighlight();
