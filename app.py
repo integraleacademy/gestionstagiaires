@@ -2171,17 +2171,31 @@ def api_docs_update(session_id: str, trainee_id: str):
         "dossier_status": t["dossier_status"]
     })
 
-
-
-
 # =========================
-# Deliverables upload (diplôme/SST/etc)
+# Deliverables required (fin de formation)
 # =========================
 DELIVERABLE_LABELS = {
     "carte_sst": "Carte SST",
     "diplome": "Diplôme",
     "attestation_fin_formation": "Attestation fin de formation",
 }
+
+DELIVERABLE_REQUIRED_KEYS = ["diplome", "carte_sst", "attestation_fin_formation"]
+
+def deliverables_progress(t: Dict[str, Any]):
+    """
+    Retourne (done, total, is_complete) pour les 3 deliverables.
+    done = nb de fichiers présents dans t['deliverables'] pour les clés attendues.
+    """
+    dv = t.get("deliverables") or {}
+    done = 0
+    for k in DELIVERABLE_REQUIRED_KEYS:
+        tok = (dv.get(k) or "").strip()
+        if tok:
+            done += 1
+    total = len(DELIVERABLE_REQUIRED_KEYS)
+    return done, total, (done == total)
+
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/deliverables/<kind>/upload")
 @admin_login_required
@@ -2217,24 +2231,7 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
     label = DELIVERABLE_LABELS[kind]
 
-    # =========================
-    # Deliverables required (fin de formation)
-    # =========================
-    DELIVERABLE_REQUIRED_KEYS = ["diplome", "carte_sst", "attestation_fin_formation"]
-    
-    def deliverables_progress(t: Dict[str, Any]):
-        """
-        Retourne (done, total, is_complete) pour les 3 deliverables.
-        done = nb de fichiers présents dans t['deliverables'] pour les clés attendues.
-        """
-        dv = t.get("deliverables") or {}
-        done = 0
-        for k in DELIVERABLE_REQUIRED_KEYS:
-            tok = (dv.get(k) or "").strip()
-            if tok:
-                done += 1
-        total = len(DELIVERABLE_REQUIRED_KEYS)
-        return done, total, (done == total)
+
 
 
 
