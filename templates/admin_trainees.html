@@ -324,9 +324,45 @@
   </div>
 </div>
 
+<style>
+  tr.row-ok td{
+    background: #ecfdf5;   /* vert clair */
+  }
+  tr.row-todo td{
+    background: #fffbeb;   /* jaune clair */
+  }
+  tr.row-warning td{
+    background: #fff1f2;   /* rose clair (commentaire) */
+  }
+</style>
+
+
 
 <script>
   const sessionId = document.getElementById("traineesTable").getAttribute("data-session-id");
+
+  // ✅ AJOUTE ÇA
+  function openModal(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.add("show");
+    el.setAttribute("aria-hidden", "false");
+  }
+
+  function closeModal(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.remove("show");
+    el.setAttribute("aria-hidden", "true");
+  }
+
+  // (optionnel) fermer en cliquant sur le fond
+  document.querySelectorAll(".modal-backdrop").forEach(bg=>{
+    bg.addEventListener("click", (e)=>{
+      if(e.target === bg) closeModal(bg.id);
+    });
+  });
+
 
   document.querySelectorAll("[data-refresh]").forEach(btn => {
     btn.addEventListener("click", async (e) => {
@@ -668,6 +704,53 @@ bulkAttestationInput?.addEventListener("change", async ()=>{
   // ✅ applique les couleurs au chargement
   applyAllColors();
 
+  function recomputeRowHighlight(){
+  document.querySelectorAll("tr[data-trainee-id]").forEach(tr=>{
+    // si commentaire => priorité au warning (tu l’as déjà en Jinja)
+    if(tr.classList.contains("row-warning")) return;
+
+    const getVal = (field) => tr.querySelector(`select[data-field="${field}"]`)?.value || "";
+
+    const convention = getVal("convention_status");
+    const testfr    = getVal("test_fr_status");
+    const dossier   = getVal("dossier_status");
+    const vae       = tr.querySelector(`select[data-field="vae_status"]`) ? getVal("vae_status") : null;
+    const finance   = getVal("financement_status");
+
+    // CNAPS texte
+    const cnapsTxt = (tr.querySelector("[data-cnaps]")?.textContent || "").toUpperCase();
+
+    // ✅ règle “OK” (tu peux durcir/assouplir après)
+    const ok =
+      (convention === "signed") &&
+      (testfr === "validated") &&
+      (dossier === "complete") &&
+      (finance === "validated") &&
+      (!vae || vae === "validated") &&
+      (
+        cnapsTxt.includes("ACCEPT") ||
+        cnapsTxt.includes("ENREG") ||
+        cnapsTxt.includes("INSTRU") ||
+        cnapsTxt.includes("TRANSM") ||
+        cnapsTxt.includes("CARTE PROFESSIONNELLE OK")
+      );
+
+    tr.classList.remove("row-ok","row-todo");
+    tr.classList.add(ok ? "row-ok" : "row-todo");
+  });
+}
+
+// au chargement
+recomputeRowHighlight();
+
+// à chaque changement de select, recalcul instant
+document.querySelectorAll("select.sel").forEach(sel=>{
+  sel.addEventListener("change", ()=>recomputeRowHighlight());
+});
+
+  
+  
+
   // =========================
   // modal open
   // =========================
@@ -789,7 +872,7 @@ bulkAttestationInput?.addEventListener("change", async ()=>{
 
         try{
           await saveField(traineeId, field, value);
-          window.location.reload(); // recalcul conformités
+          recomputeRowHighlight();
         }catch(e){
           alert("Erreur sauvegarde");
         }
