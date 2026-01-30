@@ -862,4 +862,18 @@ input[type="file"]{
   background: rgba(249,115,22,0.08) !important;
 }
 
+tr.row-ok td{
+  background: #ecfdf5;   /* vert clair */
+}
+tr.row-todo td{
+  background: #fffbeb;   /* jaune clair */
+}
+tr.row-warning td{
+  background: #fff1f2;   /* rose clair (commentaire) */
+}
+
+/* ✅ PRIORITÉ : si ok, on force le vert même s'il y a un commentaire */
+tr.row.row-ok td{
+  background: #ecfdf5 !important;
+}
 
