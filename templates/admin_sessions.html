@@ -152,6 +152,12 @@
       <div>Stagiaires : <strong>{{ s.total }}</strong></div>
     </div>
 
+    <div>
+  Docs fin de formation :
+  <strong>{{ s.fin_docs_done or 0 }}/{{ s.total or 0 }}</strong>
+</div>
+
+
 <div class="card-actions">
   <a class="btn" href="{{ url_for('admin_trainees', session_id=s.id, **request.args) }}">Voir les stagiaires</a>
 
