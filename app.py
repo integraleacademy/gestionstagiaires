@@ -3500,6 +3500,9 @@ def api_attestation_bulk_upload(session_id: str):
 
     return jsonify({"ok": True, "received": received, "added_count": len(added), "added": added, "failed": failed})
 
+@app.get("/admin/sessions/")
+def admin_sessions_slash_redirect():
+    return redirect(url_for("admin_sessions"), code=301)
 
 
 
