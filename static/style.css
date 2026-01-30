@@ -845,12 +845,14 @@ input[type="file"]{
    PRIORITÉ : OK > WARNING > TODO
    ========================= */
 
-/* TODO (jaune) */
+/* TODO (JAUNE – MANQUE DOCS) */
 #traineesTable tr.row-todo td{
-  background:#fffbeb !important;
+  background: linear-gradient(90deg, #fde68a 0%, #fef3c7 100%) !important;
+  border-top: 1px solid #f59e0b !important;
+  border-bottom: 1px solid #f59e0b !important;
 }
 #traineesTable tr.row-todo:hover td{
-  background:#fef3c7 !important;
+  background: linear-gradient(90deg, #fcd34d 0%, #fde68a 100%) !important;
 }
 
 /* WARNING (commentaire) */
