@@ -3075,13 +3075,18 @@ def api_sst_bulk_upload(session_id: str):
     if not s:
         return jsonify({"ok": False, "error": "session_not_found"}), 404
 
+    # ✅ accepter files ET files[]
     files = request.files.getlist("files")
+    if not files:
+        files = request.files.getlist("files[]")
+
     if not files:
         return jsonify({"ok": False, "error": "no_files"}), 400
 
     trainees = _session_trainees_list(s)
 
-    total = 0
+    received = 0           # fichiers réellement reçus par Flask
+    processed = 0          # fichiers traités (extension OK)
     added = []
     failed = []
 
@@ -3089,28 +3094,44 @@ def api_sst_bulk_upload(session_id: str):
         if not f or not f.filename:
             continue
 
-        total += 1
+        received += 1
         original_name = f.filename
         ext = _safe_ext(original_name)
 
-        # mêmes extensions que tes uploads images/pdf
+        # extensions autorisées
         if ext not in (".pdf", ".jpg", ".jpeg", ".png"):
-            failed.append({"filename": original_name, "reason": "extension non autorisée"})
+            failed.append({
+                "filename": original_name,
+                "reason": "extension non autorisée"
+            })
             continue
+
+        processed += 1
 
         trainee, reason = _match_trainee_from_filename(trainees, original_name)
         if not trainee:
-            failed.append({"filename": original_name, "reason": reason or "non rattaché"})
+            failed.append({
+                "filename": original_name,
+                "reason": reason or "aucune correspondance nom/prénom"
+            })
             continue
 
         try:
-            stored = _store_file(session_id, trainee.get("id"), "deliverables", f)
+            stored = _store_file(
+                session_id=session_id,
+                trainee_id=trainee.get("id"),
+                category="deliverables",
+                file=f
+            )
             token = _tokenize_path(stored)
         except Exception:
-            failed.append({"filename": original_name, "reason": "erreur stockage"})
+            failed.append({
+                "filename": original_name,
+                "reason": "erreur stockage"
+            })
             continue
 
-        # ✅ IMPORTANT : même schéma que ton upload deliverables existant
+        # ✅ rattachement SST (même logique que tes autres deliverables)
         trainee.setdefault("deliverables", {})
         trainee["deliverables"]["carte_sst"] = token
         trainee["updated_at"] = _now_iso()
@@ -3121,18 +3142,20 @@ def api_sst_bulk_upload(session_id: str):
             "trainee_name": f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip()
         })
 
-    # persist
+    # persistance
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     save_data(data)
 
     return jsonify({
         "ok": True,
-        "total": total,
-        "added_count": len(added),
+        "received": received,          # ✅ fichiers reçus par Flask
+        "processed": processed,        # fichiers avec extension valide
+        "added_count": len(added),     # fichiers réellement importés
         "added": added,
         "failed": failed
     })
+
 
 
 
