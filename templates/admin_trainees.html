@@ -713,9 +713,6 @@ bulkAttestationInput?.addEventListener("change", async ()=>{
 
 function recomputeRowHighlight(){
   document.querySelectorAll("tr[data-trainee-id]").forEach(tr=>{
-    // si commentaire => priorité au warning
-    if(tr.classList.contains("row-warning")) return;
-
     const hasSst = tr.getAttribute("data-has-sst") === "1";
     const hasDiplome = tr.getAttribute("data-has-diplome") === "1";
     const hasAttestation = tr.getAttribute("data-has-attestation") === "1";
@@ -723,9 +720,15 @@ function recomputeRowHighlight(){
     const ok = hasSst && hasDiplome && hasAttestation;
 
     tr.classList.remove("row-ok","row-todo");
-    tr.classList.add(ok ? "row-ok" : "row-todo");
+
+    if(ok){
+      tr.classList.add("row-ok");      // ✅ vert basé sur les 3 docs
+    }else{
+      tr.classList.add("row-todo");    // ✅ jaune si manque au moins 1 doc
+    }
   });
 }
+
 
 
 
