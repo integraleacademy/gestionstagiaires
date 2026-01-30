@@ -719,12 +719,15 @@ def admin_sessions():
         trainees = _session_trainees_list(s)
         st = compute_stats(s)
 
-        # ✅ docs fin de formation (sommes sur les stagiaires)
+        # ✅ docs fin de formation : nb de stagiaires COMPLETS / nb stagiaires
         done_total = 0
         for t in trainees:
-            d, total, _ = deliverables_progress(t)
-            done_total += d
-        total_total = len(DELIVERABLE_REQUIRED_KEYS) * len(trainees)
+            _, _, ok = deliverables_progress(t)
+            if ok:
+                done_total += 1
+        
+        total_total = len(trainees)
+
 
         out_sessions.append({
             "id": s.get("id"),
