@@ -486,33 +486,12 @@
   </div>
 
 </details>
-</div>
-
-<!-- ===================== -->
-<!-- VAE (DIRIGEANT VAE)    -->
-<!-- ===================== -->
-{% if show_vae %}
-<div class="card" style="margin-top:12px;">
-  <div style="display:flex;justify-content:space-between;align-items:center;">
-    <div style="font-weight:900;">STATUT VAE</div>
-    <span class="pill">{{ trainee.vae_status_label or "—" }}</span>
-  </div>
-
-  <div class="hint" style="margin-top:8px;">(Encadré prêt : tu pourras déclencher mails/SMS sur chaque étape ensuite.)</div>
-
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
-    {% for step in vae_steps %}
-      <button class="btn btn-outline" type="button" onclick="setVaeStep('{{ step.key }}')">{{ step.label }}</button>
-    {% endfor %}
-  </div>
-</div>
-{% endif %}
-
 
 <!-- ===================== -->
 <!-- DIPLÔMES / ATTESTATIONS -->
 <!-- ===================== -->
-<details class="card" style="margin-top:12px;">
+<details class="card" style="grid-column:1 / -1; margin-top:12px;">
+
   <summary style="cursor:pointer;font-weight:900;">
     🎓 Diplômes & attestations
   </summary>
@@ -562,6 +541,30 @@
     </table>
   </div>
 </details>
+</div>
+
+<!-- ===================== -->
+<!-- VAE (DIRIGEANT VAE)    -->
+<!-- ===================== -->
+{% if show_vae %}
+<div class="card" style="margin-top:12px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div style="font-weight:900;">STATUT VAE</div>
+    <span class="pill">{{ trainee.vae_status_label or "—" }}</span>
+  </div>
+
+  <div class="hint" style="margin-top:8px;">(Encadré prêt : tu pourras déclencher mails/SMS sur chaque étape ensuite.)</div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+    {% for step in vae_steps %}
+      <button class="btn btn-outline" type="button" onclick="setVaeStep('{{ step.key }}')">{{ step.label }}</button>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+
+
 
 
 
