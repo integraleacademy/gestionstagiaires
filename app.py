@@ -715,8 +715,17 @@ def admin_sessions():
     for s in data.get("sessions", []):
         if bool(s.get("archived")):
             continue
+
         trainees = _session_trainees_list(s)
         st = compute_stats(s)
+
+        # ✅ docs fin de formation (sommes sur les stagiaires)
+        done_total = 0
+        for t in trainees:
+            d, total, _ = deliverables_progress(t)
+            done_total += d
+        total_total = len(DELIVERABLE_REQUIRED_KEYS) * len(trainees)
+
         out_sessions.append({
             "id": s.get("id"),
             "name": _session_get(s, "name", ""),
@@ -726,12 +735,18 @@ def admin_sessions():
             "exam_date": _session_get(s, "exam_date", ""),
             "total": st["total"],
             "session_is_conform": st["session_is_conform"],
+
+            # ✅ new
+            "deliverables_done": done_total,
+            "deliverables_total": total_total,
         })
+
     return render_template(
         "admin_sessions.html",
         sessions=out_sessions,
         formation_types=FORMATION_TYPES,
     )
+
 
 
 @app.get("/admin/sessions/<session_id>/trainees")
@@ -791,6 +806,16 @@ def admin_trainees(session_id: str):
     stats = compute_stats(s)
     show_hosting = (session_view["training_type"] == "A3P")
     show_vae = (session_view["training_type"] == "DIRIGEANT VAE")
+
+     # ✅ docs fin de formation par stagiaire (pour surlignage + n/3)
+    for t in trainees:
+        t.setdefault("deliverables", {})
+        d_done, d_total, d_ok = deliverables_progress(t)
+        t["deliverables_done"] = d_done
+        t["deliverables_total"] = d_total
+        t["deliverables_ok"] = d_ok
+        t["deliverables_text"] = f"{d_done}/{d_total}"
+
 
     return render_template(
         "admin_trainees.html",
@@ -2191,6 +2216,27 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
 
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
     label = DELIVERABLE_LABELS[kind]
+
+    # =========================
+    # Deliverables required (fin de formation)
+    # =========================
+    DELIVERABLE_REQUIRED_KEYS = ["diplome", "carte_sst", "attestation_fin_formation"]
+    
+    def deliverables_progress(t: Dict[str, Any]):
+        """
+        Retourne (done, total, is_complete) pour les 3 deliverables.
+        done = nb de fichiers présents dans t['deliverables'] pour les clés attendues.
+        """
+        dv = t.get("deliverables") or {}
+        done = 0
+        for k in DELIVERABLE_REQUIRED_KEYS:
+            tok = (dv.get(k) or "").strip()
+            if tok:
+                done += 1
+        total = len(DELIVERABLE_REQUIRED_KEYS)
+        return done, total, (done == total)
+
+
 
     # =========================
     # ✅ Jolis mails + SMS
