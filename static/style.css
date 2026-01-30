@@ -839,39 +839,52 @@ input[type="file"]{
   }
 
 
-
 /* =========================
-   SURLIGNAGE LIGNES – TABLE STAGIAIRES
-   PRIORITÉ : OK > WARNING > TODO
+   LIGNES STAGIAIRES — SIMPLE & PRO
    ========================= */
 
-/* TODO (JAUNE – MANQUE DOCS) */
-#traineesTable tr.row-todo td{
-  background: #fde68a !important;   /* jaune clair mais visible */
-  border-left: 6px solid #f59e0b !important;
-  color: #92400e;
-  font-weight: 600;
-}
-#traineesTable tr.row-todo:hover td{
-  background: #fcd34d !important;
-}
-
-
-/* WARNING (commentaire) */
+/* reset : pas d'effet parasite */
+#traineesTable tr.row-ok td,
+#traineesTable tr.row-todo td,
 #traineesTable tr.row-warning td{
-  background: rgba(249,115,22,0.08) !important;
+  background: transparent !important;
 }
 
-/* OK (VERT – PRIORITÉ ABSOLUE) */
+/* JAUNE = incomplet */
+#traineesTable tr.row-todo{
+  background: #fde68a !important;
+}
+#traineesTable tr.row-todo td{
+  background: #fde68a !important;
+}
+
+/* VERT = OK */
+#traineesTable tr.row-ok{
+  background: #86efac !important;
+}
 #traineesTable tr.row-ok td{
-  background: #86efac !important;   /* vert bien franc */
-  border-left: 6px solid #16a34a !important;
-  color: #065f46;
-  font-weight: 600;
-}
-#traineesTable tr.row-ok:hover td{
-  background: #4ade80 !important;
+  background: #86efac !important;
 }
 
+/* ORANGE = commentaire */
+#traineesTable tr.row-warning{
+  background: #fed7aa !important;
+}
+#traineesTable tr.row-warning td{
+  background: #fed7aa !important;
+}
+
+/* hover neutre (optionnel mais conseillé) */
+#traineesTable tbody tr:hover,
+#traineesTable tbody tr:hover td{
+  background: inherit !important;
+}
 
 
+/* IMPORTANT : on coupe le zébrage et le hover UNIQUEMENT sur la table stagiaires */
+#traineesTable tbody tr:nth-child(even) td{
+  background: inherit !important;
+}
+#traineesTable tbody tr:hover td{
+  background: inherit !important;
+}
