@@ -1003,7 +1003,7 @@ def api_create_trainee(session_id: str):
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}"
 
     if send_access:
-        formation_type = _session_get(s, "training_type", "").strip()
+        formation_type = formation_label(_session_get(s, "training_type", ""))
         dstart = fr_date(_session_get(s, "date_start", ""))
         dend = fr_date(_session_get(s, "date_end", ""))
 
