@@ -2439,6 +2439,18 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
 
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
+def find_session_and_trainee_by_token(data: Dict[str, Any], token: str):
+    token = (token or "").strip()
+    if not token:
+        return None, None
+
+    sessions = data.get("sessions", []) or []
+    for s in sessions:
+        trainees = s.get("trainees") or s.get("stagiaires") or []
+        for t in trainees:
+            if (t.get("public_token") or "").strip() == token:
+                return s, t
+    return None, None
 
 
 @app.get("/espace/<token>")
