@@ -117,6 +117,31 @@
   </div>
 </div>
 
+<!-- ===================== -->
+<!-- VISIBILITÉ ESPACE STAGIAIRE -->
+<!-- ===================== -->
+<div class="card" style="grid-column:1 / -1;">
+  <div style="font-weight:900;">Visibilité espace stagiaire</div>
+  <div class="hint" style="margin-top:6px;">Ces options masquent des blocs côté stagiaire.</div>
+
+  <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;align-items:center;">
+
+    <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+      <input type="checkbox" id="chkHideInfos"
+             {% if trainee.public_hide_infos %}checked{% endif %}>
+      <span>Masquer “Infos à compléter”</span>
+    </label>
+
+    <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+      <input type="checkbox" id="chkHideDocs"
+             {% if trainee.public_hide_docs %}checked{% endif %}>
+      <span>Masquer “Mes documents”</span>
+    </label>
+
+  </div>
+</div>
+
+
 <script>
   document.getElementById("photoInput")?.addEventListener("change", function(){
     if(this.files && this.files.length > 0){
@@ -993,6 +1018,39 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
     }
   }
 });
+
+  async function updateTrainee(payload){
+  await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
+    method:"POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(payload)
+  });
+}
+
+const chkHideInfos = document.getElementById("chkHideInfos");
+if(chkHideInfos){
+  chkHideInfos.addEventListener("change", async ()=>{
+    try{
+      await updateTrainee({ public_hide_infos: chkHideInfos.checked });
+      window.location.reload();
+    }catch(e){
+      alert("Erreur sauvegarde visibilité infos");
+    }
+  });
+}
+
+const chkHideDocs = document.getElementById("chkHideDocs");
+if(chkHideDocs){
+  chkHideDocs.addEventListener("change", async ()=>{
+    try{
+      await updateTrainee({ public_hide_docs: chkHideDocs.checked });
+      window.location.reload();
+    }catch(e){
+      alert("Erreur sauvegarde visibilité documents");
+    }
+  });
+}
+
 </script>
   
 
