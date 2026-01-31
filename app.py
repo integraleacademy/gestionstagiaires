@@ -3447,7 +3447,7 @@ def api_diplome_bulk_upload(session_id: str):
         trainee["deliverables"]["diplome"] = token
         trainee["updated_at"] = _now_iso()
 
-        # ✅ Envoi mail + SMS (même logique que deliverables upload)
+        # ✅ Envoi mail + SMS (mail enrichi + CNAPS + avis Google)
         try:
             link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{trainee.get('public_token','')}"
             label = DELIVERABLE_LABELS["diplome"]
@@ -3455,13 +3455,141 @@ def api_diplome_bulk_upload(session_id: str):
             first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
             subject = f"{label} disponible – Intégrale Academy"
 
+            # --- Détection type formation (APS / A3P / Dirigeant) ---
+            formation_type = formation_label(_session_get(s, "training_type", ""))
+            ft = (formation_type or "").lower()
+
+            cnaps_title = ""
+            cnaps_html = ""
+
+            if "aps" in ft:
+                cnaps_title = "📌 Carte professionnelle : aucune démarche"
+                cnaps_html = """
+                  <p style="margin:0">
+                    <strong>Vous n'avez aucune démarche à effectuer pour votre carte professionnelle.</strong>
+                    Votre diplôme a été automatiquement transmis au CNAPS qui procède actuellement à une enquête administrative.
+                    Dès que l'enquête sera terminée, vous recevrez votre carte professionnelle directement chez vous par courrier postal.
+                  </p>
+                  <p style="margin:10px 0 0 0">
+                    <strong>Pour rappel :</strong> vous ne pouvez pas exercer la profession tant que vous n'avez pas reçu votre carte professionnelle.
+                  </p>
+                """
+            elif "a3p" in ft:
+                cnaps_title = "📌 Carte professionnelle : démarche à effectuer sur Téléservices CNAPS"
+                cnaps_html = """
+                  <p style="margin:0">
+                    Vous pouvez à présent procéder à la demande de carte professionnelle depuis l'espace Téléservices du CNAPS.
+                  </p>
+                  <ul style="margin:10px 0 0 18px; padding:0; line-height:1.6">
+                    <li>Si vous êtes déjà agent de sécurité : cliquez sur <strong>"Ma demande concerne une extension de carte professionnelle"</strong>.</li>
+                    <li>Si vous n'êtes pas agent de sécurité : cliquez sur <strong>"Ma demande concerne une carte professionnelle"</strong>.</li>
+                    <li>Dans les deux cas, complétez la rubrique <strong>"J'ai un NUB"</strong> en indiquant :
+                      <strong>votre NOM</strong> (uniquement votre nom, pas votre prénom) et votre <strong>NUB</strong>
+                      (les <strong>7 derniers chiffres</strong> de votre numéro d'autorisation préalable ou de votre carte professionnelle).
+                    </li>
+                    <li>Suivez les étapes et téléchargez les pièces justificatives :
+                      <strong>pièce d'identité</strong>, <strong>justificatif de domicile</strong> de moins de 3 mois, et <strong>votre diplôme</strong>.
+                    </li>
+                  </ul>
+                  <p style="margin:12px 0 0 0">
+                    <a href="https://depot-teleservices-cnaps.interieur.gouv.fr/"
+                       style="color:#1f8f4a;text-decoration:none;font-weight:800">
+                      👉 Cliquez ici pour demander votre carte professionnelle
+                    </a>
+                  </p>
+                """
+            elif "dirigeant" in ft:
+                cnaps_title = "📌 Agrément dirigeant : démarche à effectuer"
+                cnaps_html = """
+                  <p style="margin:0">
+                    Vous pouvez à présent procéder à votre demande d'agrément dirigeant directement depuis le site internet du CNAPS
+                    en complétant le formulaire en cliquant ici :
+                  </p>
+                  <p style="margin:12px 0 0 0">
+                    <a href="https://www.cnaps.interieur.gouv.fr/Demarches-en-ligne/Vous-etes-un-particulier/Diriger-une-entreprise-de-securite-privee-un-organisme-de-formation-un-service-interne-de-securite/Diriger-un-organisme-de-formation-une-entreprise-de-securite-privee-un-service-interne-de-securite"
+                       style="color:#1f8f4a;text-decoration:none;font-weight:800">
+                      👉 Faire ma demande d'agrément dirigeant
+                    </a>
+                  </p>
+                """
+
+            cnaps_block = ""
+            if cnaps_html:
+                cnaps_block = f"""
+                  <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:14px;padding:14px;margin:16px 0">
+                    <div style="font-weight:900;margin:0 0 8px 0">{cnaps_title}</div>
+                    <div style="color:#111827;line-height:1.6">{cnaps_html}</div>
+                  </div>
+                """
+
+            # --- Bloc Avis Google (convaincant, pro, court) ---
+            avis_block = """
+              <div style="background:#ecfdf5;border:1px solid #bbf7d0;border-radius:14px;padding:14px;margin:18px 0">
+                <div style="font-weight:900;margin:0 0 8px 0">⭐ Un avis Google, ça nous aide énormément</div>
+                <div style="color:#065f46;line-height:1.6">
+                  Si la formation vous a été utile, pouvez-vous prendre <strong>1 minute</strong> pour laisser un avis ?
+                  Ça aide les futurs stagiaires à choisir une école sérieuse, et ça nous permet d’améliorer encore notre accompagnement.
+                </div>
+                <div style="text-align:center;margin-top:12px">
+                  <a href="https://g.page/r/CZ0Ug-feyXjHEAE"
+                     style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;
+                            text-decoration:none;font-weight:900">
+                    👉 Laisser un avis Google
+                  </a>
+                </div>
+              </div>
+            """
+
             html = mail_layout(f"""
               <h2 style="text-align:center">✅ {label} disponible</h2>
+
               <p>Bonjour <strong>{first_name}</strong>,</p>
-              <p>🎉 Félicitations ! Votre diplôme est maintenant disponible dans votre espace stagiaire.</p>
+
+              <p style="margin-top:10px;font-weight:800">
+                🎉 Félicitations ! Votre diplôme est maintenant disponible dans votre espace stagiaire.
+              </p>
+
+              <div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:16px 0">
+                <p style="margin:0 0 10px 0">
+                  <strong>📌 Formation :</strong> {formation_type}
+                </p>
+
+                <p style="margin:0">
+                  <strong>📍 Accéder à votre espace stagiaire :</strong><br>
+                  <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
+                </p>
+              </div>
+
               <p style="text-align:center;margin-top:18px">
-                <a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+                <a href="{link}"
+                   style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;
+                          text-decoration:none;font-weight:bold">
                   👉 Accéder à mon espace stagiaire
+                </a>
+              </p>
+
+              {cnaps_block}
+
+              {avis_block}
+
+              <p style="margin-top:18px">
+                Pour toute question, vous pouvez nous contacter au <strong>04 22 47 07 68</strong>.
+              </p>
+
+              <p style="margin-top:18px">
+                Bien cordialement,<br>
+                <strong>Clément VAILLANT</strong><br>
+                Directeur Intégrale Academy
+              </p>
+
+              <hr style="margin:26px 0;border:none;border-top:1px solid #e5e7eb">
+
+              <p style="font-size:12px;color:#6b7280;text-align:center;line-height:1.6">
+                © Intégrale Academy — Merci de votre confiance 💛<br>
+                54 chemin du Carreou 83480 PUGET SUR ARGENS / 142 rue de Rivoli 75001 PARIS<br>
+                <a href="https://www.integraleacademy.com"
+                   style="color:#1f8f4a;text-decoration:none;font-weight:bold">
+                  integraleacademy.com
                 </a>
               </p>
             """)
@@ -3469,13 +3597,14 @@ def api_diplome_bulk_upload(session_id: str):
             sms_name = (trainee.get("first_name") or "").strip()
             sms = (
                 f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
-                f"votre {label} est disponible sur votre espace : {link} (Aide : 04 22 47 07 68)"
+                f"votre {label} est disponible sur votre espace : {link} "
+                f"(Aide : 04 22 47 07 68)"
             )
 
             if (trainee.get("email") or "").strip():
-                brevo_send_email(trainee.get("email",""), subject, html)
+                brevo_send_email(trainee.get("email", ""), subject, html)
             if (trainee.get("phone") or "").strip():
-                brevo_send_sms(trainee.get("phone",""), sms)
+                brevo_send_sms(trainee.get("phone", ""), sms)
 
         except Exception as e:
             print("=== BULK DIPLOME: erreur envoi mail/sms ===", repr(e))
