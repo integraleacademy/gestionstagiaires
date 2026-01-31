@@ -555,6 +555,29 @@ ENUMS = {
 }
 
 # =========================
+# Libellés longs (pour mails/SMS)
+# =========================
+FORMATION_LONG_LABELS = {
+    "APS": "Agent de Prévention et de Sécurité (APS)",
+    "A3P": "Agent de Protection Physique des Personnes (A3P)",
+    "SSIAP 1": "Service de Sécurité Incendie et d’Assistance à Personnes – niveau 1 (SSIAP 1)",
+    "CHEF DE POSTE": "Chef de Poste en sécurité privée / CPSP",
+    "DIRIGEANT": "Dirigeant d'une entreprise de sécurité privée (DESP)",
+    "DIRIGEANT INITIAL": "Dirigeant d'une entreprise de sécurité privée (DESP)",
+    "DIRIGEANT VAE": "Dirigeant d'une entreprise de sécurité privée (DESP) – VAE",
+}
+
+def formation_label(training_type: str) -> str:
+    """
+    Retourne un libellé lisible pour les mails/SMS.
+    Si non trouvé, renvoie le training_type brut.
+    """
+    tt = (training_type or "").strip()
+    key = tt.upper()
+    return FORMATION_LONG_LABELS.get(key, tt)
+
+
+# =========================
 # Documents requis par formation
 # =========================
 
@@ -1660,7 +1683,7 @@ def admin_test_fr_notify(session_id: str, trainee_id: str):
     link = "https://testb1.lapreventionsecurite.org/Public/"
     subject = "Test de français à réaliser – Intégrale Academy"
 
-    formation_type = (_session_get(s, "training_type", "") or _session_get(s, "name", "")).strip()
+    formation_type = formation_label(_session_get(s, "training_type", ""))
     dstart = fr_date(_session_get(s, "date_start", ""))
     dend = fr_date(_session_get(s, "date_end", ""))
 
@@ -1750,7 +1773,7 @@ def admin_test_fr_relance(session_id: str, trainee_id: str):
     link = "https://testb1.lapreventionsecurite.org/Public/"
     subject = "Relance – Test de français à réaliser"
 
-    formation_type = (_session_get(s, "training_type", "") or _session_get(s, "name", "")).strip()
+    formation_type = formation_label(_session_get(s, "training_type", ""))
     dstart = fr_date(_session_get(s, "date_start", ""))
     dend = fr_date(_session_get(s, "date_end", ""))
     deadline_fr = fr_date(deadline)
@@ -1841,7 +1864,7 @@ def admin_docs_notify(session_id: str, trainee_id: str):
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
     subject = "Envoi de documents – Action requise (Intégrale Academy)"
 
-    formation_type = (_session_get(s, "training_type", "") or _session_get(s, "name", "")).strip()
+    formation_type = formation_label(_session_get(s, "training_type", ""))
     dstart = fr_date(_session_get(s, "date_start", ""))
     dend = fr_date(_session_get(s, "date_end", ""))
 
@@ -2007,7 +2030,7 @@ def admin_docs_relance(session_id: str, trainee_id: str):
     docs_details = docs_summary_text(t)
     infos_details = infos_missing_text(t)
 
-    formation_type = (_session_get(s, "training_type", "") or _session_get(s, "name", "")).strip()
+    formation_type = formation_label(_session_get(s, "training_type", ""))
     dstart = fr_date(_session_get(s, "date_start", ""))
     dend = fr_date(_session_get(s, "date_end", ""))
 
@@ -2251,7 +2274,7 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
     # ✅ Jolis mails + SMS
     # =========================
     first_name = (t.get("first_name") or "").strip() or "Madame, Monsieur"
-    formation_type = (_session_get(s, "training_type", "") or _session_get(s, "name", "")).strip()
+    formation_type = formation_label(_session_get(s, "training_type", ""))
     dstart = fr_date(_session_get(s, "date_start", ""))
     dend = fr_date(_session_get(s, "date_end", ""))
 
@@ -2916,7 +2939,7 @@ def api_phone_relance_send(session_id: str, trainee_id: str):
     email = (t.get("email") or "").strip()
     phone = (t.get("phone") or "").strip()
 
-    formation_type = (_session_get(s, "training_type", "") or _session_get(s, "name", "")).strip()
+    formation_type = formation_label(_session_get(s, "training_type", ""))
     dstart = fr_date(_session_get(s, "date_start", ""))
     dend = fr_date(_session_get(s, "date_end", ""))
 
@@ -3204,7 +3227,7 @@ def api_sst_bulk_upload(session_id: str):
             label = DELIVERABLE_LABELS["carte_sst"]
 
             first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
-            formation_type = (_session_get(s, "training_type", "") or _session_get(s, "name", "")).strip()
+            formation_type = formation_label(_session_get(s, "training_type", ""))
             dstart = fr_date(_session_get(s, "date_start", ""))
             dend = fr_date(_session_get(s, "date_end", ""))
 
