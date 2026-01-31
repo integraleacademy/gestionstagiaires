@@ -41,10 +41,12 @@
     {% endif %}
   </div>
 
-  <!-- NOM / PRÉNOM À DROITE -->
+<!-- NOM / PRÉNOM À DROITE -->
 <div style="font-size:20px;font-weight:900;line-height:1.1;margin-top:2px;">
-    {{ trainee.first_name }} {{ trainee.last_name }}
-  </div>
+  {{ (trainee.last_name or "")|upper }}
+  {{ (trainee.first_name or "")|lower|capitalize }}
+</div>
+
 
   <!-- UPLOAD À CÔTÉ -->
   <div style="display:flex;flex-direction:column;gap:6px;">
