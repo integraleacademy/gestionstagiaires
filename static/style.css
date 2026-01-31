@@ -840,51 +840,29 @@ input[type="file"]{
 
 
 /* =========================
-   LIGNES STAGIAIRES — SIMPLE & PRO
+   LIGNES STAGIAIRES — FINAL
    ========================= */
 
-/* reset : pas d'effet parasite */
-#traineesTable tr.row-ok td,
-#traineesTable tr.row-todo td,
-#traineesTable tr.row-warning td{
-  background: transparent !important;
+/* reset : aucune couleur par défaut */
+#traineesTable tr,
+#traineesTable tr td{
+  background: #ffffff !important;
 }
 
-/* JAUNE = incomplet */
-#traineesTable tr.row-todo{
-  background: #fde68a !important;
-}
-#traineesTable tr.row-todo td{
-  background: #fde68a !important;
-}
-
-/* VERT = OK */
-#traineesTable tr.row-ok{
-  background: #86efac !important;
-}
+/* VERT = OK (3 documents) */
+#traineesTable tr.row-ok,
 #traineesTable tr.row-ok td{
   background: #86efac !important;
 }
 
-/* ORANGE = commentaire */
-#traineesTable tr.row-warning{
-  background: #fed7aa !important;
-}
+/* ORANGE = commentaire (optionnel) */
+#traineesTable tr.row-warning,
 #traineesTable tr.row-warning td{
   background: #fed7aa !important;
 }
 
-/* hover neutre (optionnel mais conseillé) */
+/* PAS de hover qui recolorie */
 #traineesTable tbody tr:hover,
-#traineesTable tbody tr:hover td{
-  background: inherit !important;
-}
-
-
-/* IMPORTANT : on coupe le zébrage et le hover UNIQUEMENT sur la table stagiaires */
-#traineesTable tbody tr:nth-child(even) td{
-  background: inherit !important;
-}
 #traineesTable tbody tr:hover td{
   background: inherit !important;
 }
