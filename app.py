@@ -2266,10 +2266,6 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
     label = DELIVERABLE_LABELS[kind]
 
-
-
-
-
     # =========================
     # ✅ Jolis mails + SMS
     # =========================
@@ -2278,15 +2274,95 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
     dstart = fr_date(_session_get(s, "date_start", ""))
     dend = fr_date(_session_get(s, "date_end", ""))
 
+    # ✅ type formation brut pour la logique CNAPS
+    tt_raw = (_session_get(s, "training_type", "") or "").strip()
+    tt = tt_raw.upper()
+
     extra_line = ""
+    cnaps_block = ""
+
     if kind == "diplome":
         extra_line = "🎉 Félicitations ! Votre diplôme est maintenant disponible."
+
+        # --- CNAPS (différent selon formation) ---
+        if tt == "APS":
+            cnaps_block = f"""
+            <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:14px;margin:16px 0">
+              <p style="margin:0 0 8px 0;font-weight:900;color:#9a3412">🛡️ Carte professionnelle – Information importante</p>
+              <p style="margin:0;color:#7c2d12;line-height:1.55">
+                <strong>Vous n'avez aucune démarche à effectuer pour votre carte professionnelle.</strong>
+                Votre diplôme a été automatiquement transmis au CNAPS qui procède actuellement à une enquête administrative.
+                Dès que l'enquête sera terminée, vous recevrez votre carte professionnelle directement chez vous par courrier postal.
+                <br><br>
+                <strong>Pour rappel, vous ne pouvez pas exercer la profession tant que vous n'avez pas reçu votre carte professionnelle.</strong>
+              </p>
+            </div>
+            """
+        elif tt == "A3P":
+            cnaps_block = f"""
+            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px;margin:16px 0">
+              <p style="margin:0 0 8px 0;font-weight:900;color:#1d4ed8">🛡️ Demande de carte professionnelle (CNAPS)</p>
+              <p style="margin:0;color:#1e3a8a;line-height:1.55">
+                Vous pouvez à présent procéder à la demande de carte professionnelle depuis l'espace Téléservices du CNAPS.
+                <br><br>
+                Si vous êtes déjà agent de sécurité, cliquez sur <strong>"Ma demande concerne une extension de carte professionnelle"</strong>.<br>
+                Si vous n'êtes pas agent de sécurité, cliquez sur <strong>"Ma demande concerne une carte professionnelle"</strong>.
+                <br><br>
+                Dans les deux cas, complétez la rubrique <strong>"J'ai un NUB"</strong> en indiquant <strong>votre NOM</strong>
+                (uniquement votre nom, pas votre prénom) et votre <strong>NUB</strong>
+                (7 derniers chiffres de votre numéro d'autorisation préalable ou de votre carte professionnelle).
+                Suivez les étapes et téléchargez les pièces justificatives : votre pièce d'identité, votre justificatif de domicile de moins de 3 mois et votre diplôme.
+              </p>
+
+              <p style="margin:12px 0 0 0;text-align:center">
+                <a href="https://depot-teleservices-cnaps.interieur.gouv.fr/"
+                   style="display:inline-block;background:#1d4ed8;color:white;padding:12px 16px;border-radius:10px;text-decoration:none;font-weight:900">
+                  👉 Demander ma carte professionnelle CNAPS
+                </a>
+              </p>
+            </div>
+            """
+        elif "DIRIGEANT" in tt:
+            cnaps_block = f"""
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px;margin:16px 0">
+              <p style="margin:0 0 8px 0;font-weight:900;color:#166534">🏛️ Agrément dirigeant (CNAPS)</p>
+              <p style="margin:0;color:#14532d;line-height:1.55">
+                Vous pouvez à présent procéder à votre demande d'agrément dirigeant directement depuis le site internet du CNAPS
+                en complétant le formulaire en cliquant ci-dessous.
+              </p>
+
+              <p style="margin:12px 0 0 0;text-align:center">
+                <a href="https://www.cnaps.interieur.gouv.fr/Demarches-en-ligne/Vous-etes-un-particulier/Diriger-une-entreprise-de-securite-privee-un-organisme-de-formation-un-service-interne-de-securite/Diriger-un-organisme-de-formation-une-entreprise-de-securite-privee-un-service-interne-de-securite"
+                   style="display:inline-block;background:#16a34a;color:white;padding:12px 16px;border-radius:10px;text-decoration:none;font-weight:900">
+                  👉 Faire ma demande d’agrément dirigeant
+                </a>
+              </p>
+            </div>
+            """
+
     elif kind == "attestation_fin_formation":
         extra_line = "📄 Votre attestation de fin de formation est disponible et peut être téléchargée à tout moment."
     elif kind == "carte_sst":
         extra_line = "🩺 Votre carte SST est disponible. Conservez-la précieusement, elle peut être demandée par un employeur."
 
     subject = f"{label} disponible – Intégrale Academy"
+
+    # ✅ Bloc avis Google (tous les cas)
+    google_block = """
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:16px 0">
+        <p style="margin:0 0 8px 0;font-weight:900">⭐ Un petit service (1 minute)</p>
+        <p style="margin:0;color:#374151;line-height:1.55">
+          Si la formation vous a été utile, votre avis aide énormément les futurs stagiaires à choisir une école sérieuse
+          et nous permet d’améliorer encore notre accompagnement.
+        </p>
+        <p style="margin:12px 0 0 0;text-align:center">
+          <a href="https://g.page/r/CZ0Ug-feyXjHEAE"
+             style="display:inline-block;background:#f59e0b;color:#111827;padding:12px 16px;border-radius:10px;text-decoration:none;font-weight:900">
+            👉 Laisser un avis Google
+          </a>
+        </p>
+      </div>
+    """
 
     html = mail_layout(f"""
       <h2 style="text-align:center">✅ {label} disponible</h2>
@@ -2299,6 +2375,8 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
       </p>
 
       {"<p style='margin-top:10px;font-weight:700'>" + extra_line + "</p>" if extra_line else ""}
+
+      {cnaps_block}
 
       <div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:16px 0">
         <p style="margin:0 0 10px 0">
@@ -2319,6 +2397,8 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
           👉 Accéder à mon espace stagiaire
         </a>
       </p>
+
+      {google_block}
 
       <p style="margin-top:22px">
         Pour toute question, vous pouvez nous contacter au <strong>04 22 47 07 68</strong>.
@@ -2359,18 +2439,6 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
 
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
-def find_session_and_trainee_by_token(data: Dict[str, Any], token: str):
-    token = (token or "").strip()
-    if not token:
-        return None, None
-
-    sessions = data.get("sessions", []) or []
-    for s in sessions:
-        trainees = s.get("trainees") or s.get("stagiaires") or []
-        for t in trainees:
-            if (t.get("public_token") or "").strip() == token:
-                return s, t
-    return None, None
 
 
 @app.get("/espace/<token>")
