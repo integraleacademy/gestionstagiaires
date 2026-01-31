@@ -87,8 +87,9 @@
 data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}"
   data-has-diplome="{{ '1' if (t.get('deliverables', {}).get('diplome')) else '0' }}"
   data-has-attestation="{{ '1' if (t.get('deliverables', {}).get('attestation_fin_formation')) else '0' }}">
-        <td>{{ t.last_name }}</td>
-        <td>{{ t.first_name }}</td>
+<td>{{ (t.last_name or "")|upper }}</td>
+<td>{{ (t.first_name or "")|lower|capitalize }}</td>
+
         <td class="mono">{{ t.email }}</td>
         <td class="mono">{{ t.phone }}</td>
 
