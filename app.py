@@ -1113,11 +1113,20 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vae_status_label",
         "cnaps",
         "no_permis", 
+        "public_hide_infos",
+        "public_hide_docs",
     }
 
     for k, v in payload.items():
-        if k in allowed:
+        if k not in allowed:
+            continue
+    
+        # ✅ champs bool
+        if k in ("no_permis", "public_hide_infos", "public_hide_docs"):
+            t[k] = True if v in (True, "true", "1", 1, "yes", "on") else False
+        else:
             t[k] = v
+
 
     t["updated_at"] = _now_iso()
     s["trainees"] = trainees
