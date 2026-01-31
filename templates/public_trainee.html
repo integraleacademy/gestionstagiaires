@@ -377,6 +377,7 @@
       {% endif %}
     </div>
 
+    {% if not trainee.public_hide_infos %}
 <!-- Encadré : infos à compléter (autosave) -->
 <div class="card" style="grid-column:1/-1;">
   <h2>Infos à compléter</h2>
@@ -471,7 +472,11 @@
       </div>
     </div>
     {% endif %}
+  {% endif %}
 
+
+  {% if not trainee.public_hide_docs %}
+  
 <!-- Encadré 3 : mes documents (upload) -->
 <div class="card" style="grid-column:1/-1;">
   <h2>Mes documents</h2>
@@ -625,6 +630,8 @@ id="upload_{{ d.key }}"
   
 </div>
     </div>
+
+  {% endif %}
     <!-- Encadré 4 : diplômes et attestations -->
     <div class="card" style="grid-column:1/-1;">
       <h2>Mes diplômes et attestations</h2>
