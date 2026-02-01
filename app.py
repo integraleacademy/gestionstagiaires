@@ -3311,47 +3311,49 @@ def api_sst_bulk_upload(session_id: str):
         trainee["deliverables"]["carte_sst"] = token
         trainee["updated_at"] = _now_iso()
 
-        # ✅ Envoi mail + SMS (comme l'import manuel deliverables)
+          # ✅ Envoi mail + SMS (comme l'import manuel deliverables)
         try:
             link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{trainee.get('public_token','')}"
             label = DELIVERABLE_LABELS["carte_sst"]
-
+        
             first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
             formation_type = formation_label(_session_get(s, "training_type", ""))
             dstart = fr_date(_session_get(s, "date_start", ""))
             dend = fr_date(_session_get(s, "date_end", ""))
-
+        
             extra_line = (
                 "🩺 Votre carte SST est disponible sur votre espace en ligne. "
                 "Nous vous remettrons également un exemplaire papier en main propre "
                 "(attention : aucun duplicata ne sera délivré). "
                 "Conservez-la précieusement, elle peut être demandée par un employeur."
             )
-
+        
+            subject = f"{label} disponible – Intégrale Academy"  # ✅ FIX ICI
+        
             html = mail_layout(f"""
               <h2 style="text-align:center">✅ {label} disponible</h2>
-
+        
               <p>Bonjour <strong>{first_name}</strong>,</p>
-
+        
               <p>
                 Nous avons le plaisir de vous informer que votre <strong>{label}</strong>
                 est désormais disponible dans votre espace stagiaire.
               </p>
-
+        
               <p style='margin-top:10px;font-weight:700'>{extra_line}</p>
-
+        
               <div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:16px 0">
                 <p style="margin:0 0 10px 0">
                   <strong>📌 Formation :</strong> {formation_type}
                   {" — <strong>Dates :</strong> " + dstart + " au " + dend if (dstart or dend) else ""}
                 </p>
-
+        
                 <p style="margin:0">
                   <strong>📍 Accéder à votre espace stagiaire :</strong><br>
                   <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
                 </p>
               </div>
-
+        
               <p style="text-align:center;margin-top:18px">
                 <a href="{link}"
                    style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;
@@ -3359,32 +3361,33 @@ def api_sst_bulk_upload(session_id: str):
                   👉 Accéder à mon espace stagiaire
                 </a>
               </p>
-
+        
               <p style="margin-top:22px">
                 Pour toute question, vous pouvez nous contacter au <strong>04 22 47 07 68</strong>.
               </p>
-
+        
               <p style="margin-top:22px">
                 Bien cordialement,<br>
                 <strong>Clément VAILLANT</strong><br>
                 Directeur Intégrale Academy
               </p>
             """)
-
+        
             sms_name = (trainee.get("first_name") or "").strip()
             sms = (
                 f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
                 f"Votre {label} est disponible sur votre Espace Stagiaire : {link} "
                 f"A bientôt, la Team Intégrale Academy"
             )
-
+        
             if (trainee.get("email") or "").strip():
                 brevo_send_email(trainee.get("email",""), subject, html)
             if (trainee.get("phone") or "").strip():
                 brevo_send_sms(trainee.get("phone",""), sms)
-
+        
         except Exception as e:
             print("=== BULK SST: erreur envoi mail/sms ===", repr(e))
+
 
 
         added.append({
