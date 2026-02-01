@@ -931,9 +931,13 @@ if (typeof closeModal !== "function") {
 }
   const token = "{{ token }}";
 {% if not trainee.public_hide_welcome_popup %}
-// ✅ Welcome popup — une seule fois par stagiaire (token)
+// ✅ Welcome popup — une seule fois (on marque "vu" dès l'ouverture)
 (function(){
   const seenKey = "ia_welcome_seen_" + token;
+
+  function markSeen(){
+    try { localStorage.setItem(seenKey, "1"); } catch(e){}
+  }
 
   document.addEventListener("DOMContentLoaded", () => {
     let seen = false;
@@ -941,26 +945,25 @@ if (typeof closeModal !== "function") {
 
     if(!seen){
       openModal("welcomeModal");
+      markSeen(); // ✅ important : on marque vu tout de suite
     }
 
     const modal = document.getElementById("welcomeModal");
     if(!modal) return;
 
-    const markSeen = () => { try { localStorage.setItem(seenKey, "1"); } catch(e){} };
-
+    // ✅ fermeture via tes boutons data-close-modal
     modal.querySelectorAll('[data-close-modal="welcomeModal"]').forEach(btn=>{
-      btn.addEventListener("click", markSeen);
+      btn.addEventListener("click", ()=> closeModal("welcomeModal"));
     });
 
+    // ✅ fermeture en cliquant hors de la modal
     modal.addEventListener("click", (e)=>{
-      if(e.target === modal){
-        closeModal("welcomeModal");
-        markSeen();
-      }
+      if(e.target === modal) closeModal("welcomeModal");
     });
   });
 })();
 {% endif %}
+
 
 
 
