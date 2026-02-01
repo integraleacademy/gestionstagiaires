@@ -140,6 +140,14 @@
       <span>Masquer “Mes documents”</span>
     </label>
 
+    <label style="display:flex;align-items:center;gap:8px;">
+  <input type="checkbox"
+         id="public_hide_suivi"
+         {% if trainee.public_hide_suivi %}checked{% endif %}>
+  <span>Masquer Suivi dossier</span>
+</label>
+
+
   </div>
 </div>
 
@@ -1052,6 +1060,27 @@ if(chkHideDocs){
     }
   });
 }
+
+  (async function(){
+  const cb = document.getElementById("public_hide_suivi");
+  if(!cb) return;
+
+  cb.addEventListener("change", async () => {
+    try{
+      const res = await fetch("{{ url_for('api_update_trainee', session_id=session.id, trainee_id=trainee.id) }}", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ public_hide_suivi: cb.checked })
+      });
+      // optionnel: tu peux afficher un toast si tu veux
+      if(!res.ok){
+        console.error("Save failed", await res.text());
+      }
+    }catch(e){
+      console.error(e);
+    }
+  });
+})();
 
 </script>
   
