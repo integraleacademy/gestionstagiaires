@@ -3364,8 +3364,8 @@ def api_sst_bulk_upload(session_id: str):
             sms_name = (trainee.get("first_name") or "").strip()
             sms = (
                 f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
-                f"votre {label} est disponible sur votre espace : {link} "
-                f"(Aide : 04 22 47 07 68)"
+                f"Votre {label} est disponible sur votre Espace Stagiaire : {link} "
+                f"A bientôt, la Team Intégrale Academy"
             )
 
             if (trainee.get("email") or "").strip():
