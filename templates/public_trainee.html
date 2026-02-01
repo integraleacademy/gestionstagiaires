@@ -821,6 +821,7 @@ id="upload_{{ d.key }}"
   }
 </style>
 
+{% if not trainee.public_hide_welcome_popup %}
 <div id="welcomeModal" class="ia-modal-backdrop">
   <div class="ia-modal" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
     <div class="ia-accent"></div>
@@ -869,7 +870,7 @@ id="upload_{{ d.key }}"
     </div>
   </div>
 </div>
-
+{% endif %}
 <!-- ✅ Popup confirmation dépôt document -->
 <div id="uploadSuccessModal" class="ia-modal-backdrop">
   <div class="ia-modal" role="dialog" aria-modal="true">
@@ -929,6 +930,7 @@ if (typeof closeModal !== "function") {
   };
 }
   const token = "{{ token }}";
+{% if not trainee.public_hide_welcome_popup %}
 // ✅ Welcome popup — une seule fois par stagiaire (token)
 (function(){
   const seenKey = "ia_welcome_seen_" + token;
@@ -938,11 +940,9 @@ if (typeof closeModal !== "function") {
     try { seen = localStorage.getItem(seenKey) === "1"; } catch(e){}
 
     if(!seen){
-      // openModal() vient de base.html
       openModal("welcomeModal");
     }
 
-    // Quand on ferme => on marque vu
     const modal = document.getElementById("welcomeModal");
     if(!modal) return;
 
@@ -952,7 +952,6 @@ if (typeof closeModal !== "function") {
       btn.addEventListener("click", markSeen);
     });
 
-    // clic sur le fond
     modal.addEventListener("click", (e)=>{
       if(e.target === modal){
         closeModal("welcomeModal");
@@ -961,6 +960,8 @@ if (typeof closeModal !== "function") {
     });
   });
 })();
+{% endif %}
+
 
 
   // ✅ Helpers formatage live
