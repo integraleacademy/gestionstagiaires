@@ -3321,12 +3321,12 @@ def api_sst_bulk_upload(session_id: str):
             dstart = fr_date(_session_get(s, "date_start", ""))
             dend = fr_date(_session_get(s, "date_end", ""))
 
-           extra_line = (
-            "🩺 Votre carte SST est disponible sur votre espace en ligne. "
-            "Nous vous remettrons également un exemplaire papier en main propre "
-            "(attention : aucun duplicata ne sera délivré). "
-            "Conservez-la précieusement, elle peut être demandée par un employeur."
-        )
+            extra_line = (
+                "🩺 Votre carte SST est disponible sur votre espace en ligne. "
+                "Nous vous remettrons également un exemplaire papier en main propre "
+                "(attention : aucun duplicata ne sera délivré). "
+                "Conservez-la précieusement, elle peut être demandée par un employeur."
+            )
 
             html = mail_layout(f"""
               <h2 style="text-align:center">✅ {label} disponible</h2>
