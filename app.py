@@ -3361,13 +3361,12 @@ def api_sst_bulk_upload(session_id: str):
               </p>
             """)
 
-            sms_name = (t.get("first_name") or "").strip()
+            sms_name = (trainee.get("first_name") or "").strip()
             sms = (
-                f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}\n"
-                f"Votre {label} est disponible sur votre espace :\n"
-                f"{link}\n"
-                f"A bientôt, la Team Intégrale Academy"
-        )
+                f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
+                f"votre {label} est disponible sur votre espace : {link} "
+                f"(Aide : 04 22 47 07 68)"
+            )
 
             if (trainee.get("email") or "").strip():
                 brevo_send_email(trainee.get("email",""), subject, html)
@@ -3726,7 +3725,7 @@ def api_attestation_bulk_upload(session_id: str):
             sms_name = (trainee.get("first_name") or "").strip()
             sms = (
                 f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
-                f"votre {label} est disponible sur votre espace : {link} (Aide : 04 22 47 07 68)"
+                f"Votre {label} est disponible sur votre Espace Stagiaire : {link} A bientôt, la Team Intégrale Academy"
             )
 
             if (trainee.get("email") or "").strip():
