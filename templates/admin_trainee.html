@@ -147,6 +147,12 @@
   <span>Masquer Suivi dossier</span>
 </label>
 
+    <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+  <input type="checkbox" id="chkHideUploadPopup"
+         {% if trainee.public_hide_upload_popup %}checked{% endif %}>
+  <span>Masquer popup “Document déposé”</span>
+</label>
+
 
   </div>
 </div>
@@ -1081,6 +1087,19 @@ if(chkHideDocs){
     }
   });
 })();
+
+  const chkHideSuivi = document.getElementById("public_hide_suivi");
+if(chkHideSuivi){
+  chkHideSuivi.addEventListener("change", async ()=>{
+    try{
+      await updateTrainee({ public_hide_suivi: chkHideSuivi.checked });
+      window.location.reload();
+    }catch(e){
+      alert("Erreur sauvegarde visibilité suivi dossier");
+    }
+  });
+}
+
 
 </script>
   
