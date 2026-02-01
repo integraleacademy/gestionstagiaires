@@ -1139,16 +1139,17 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "public_hide_infos",
         "public_hide_docs",
         "public_hide_suivi", 
+        "public_hide_popup",
+
     }
 
     for k, v in payload.items():
         if k not in allowed:
             continue
     
-        if k in ("no_permis", "public_hide_infos", "public_hide_docs", "public_hide_suivi"):
+        if k in ("no_permis", "public_hide_infos", "public_hide_docs", "public_hide_suivi", "public_hide_popup"):
             t[k] = True if v in (True, "true", "1", 1, "yes", "on") else False
-        else:
-            t[k] = v
+        
 
 
     t["updated_at"] = _now_iso()
