@@ -988,6 +988,7 @@ def api_create_trainee(session_id: str):
         "documents": [],
         "created_at": _now_iso(),
         "phone_followups": [],
+        "public_hide_popup": False,
     }
 
     ensure_documents_schema_for_trainee(t, training_type)
