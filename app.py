@@ -225,6 +225,7 @@ def brevo_send_sms(phone: str, message: str) -> bool:
         "recipient": phone,
         "content": message,
         "type": "transactional",
+        "unicodeEnabled": True, 
     }
     if sms_sender:
         payload["sender"] = sms_sender  # ex: "INTEGRALE"
@@ -2426,10 +2427,11 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
 
     sms_name = (t.get("first_name") or "").strip()
     sms = (
-        f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
-        f"votre {label} est disponible sur votre espace : {link} "
-        f"(Aide : 04 22 47 07 68)"
-    )
+        f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}\n"
+        f"Votre {label} est disponible sur votre espace :\n"
+        f"{link}\n"
+        f"A bientôt, la Team Intégrale Academy"
+)
 
     brevo_send_email(t.get("email", ""), subject, html)
     brevo_send_sms(t.get("phone", ""), sms)
