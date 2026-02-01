@@ -327,6 +327,7 @@
     </div>
 
     <!-- Encadré 2 : suivi de dossier -->
+  {% if not trainee.public_hide_suivi %}
     <div class="card">
       <h2>Suivi de dossier</h2>
 
@@ -376,7 +377,7 @@
         {% endif %}
       {% endif %}
     </div>
-
+{% endif %}
     {% if not trainee.public_hide_infos %}
 <!-- Encadré : infos à compléter (autosave) -->
 <div class="card" style="grid-column:1/-1;">
