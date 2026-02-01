@@ -2346,7 +2346,7 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
     elif kind == "attestation_fin_formation":
         extra_line = "📄 Votre attestation de fin de formation est disponible et peut être téléchargée à tout moment."
     elif kind == "carte_sst":
-        extra_line = "🩺 Votre carte SST est disponible. Conservez-la précieusement, elle peut être demandée par un employeur."
+        extra_line = "🩺 Votre carte SST est disponible sur votre espace en ligne. Nous vous remettrons également un exemplaire "papier" en main propre (attention aucun duplicata ne sera délivré). Conservez-la précieusement, elle peut être demandée par un employeur."
 
     subject = f"{label} disponible – Intégrale Academy"
 
@@ -3315,7 +3315,7 @@ def api_sst_bulk_upload(session_id: str):
             dstart = fr_date(_session_get(s, "date_start", ""))
             dend = fr_date(_session_get(s, "date_end", ""))
 
-            extra_line = "🩺 Votre carte SST est disponible. Conservez-la précieusement, elle peut être demandée par un employeur."
+            extra_line = "🩺 Votre carte SST est disponible sur votre espace en ligne. Nous vous remettrons également un exemplaire "papier" en main propre (attention aucun duplicata ne sera délivré). Conservez-la précieusement, elle peut être demandée par un employeur."
             subject = f"{label} disponible – Intégrale Academy"
 
             html = mail_layout(f"""
