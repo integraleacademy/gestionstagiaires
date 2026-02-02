@@ -1421,25 +1421,7 @@ def _token_belongs_to_trainee(t: dict, file_token: str) -> bool:
     return False
 
 
-@app.get("/espace/<token>/download/<path:file_token>")
-def public_download_file(token: str, file_token: str):
-    data = load_data()
-    s, t = find_session_and_trainee_by_token(data, token)
-    if not s or not t:
-        abort(404)
-
-    # Sécurité : le fichier doit appartenir à CE stagiaire
-    if not _token_belongs_to_trainee(t, file_token):
-        abort(403)
-
-    full = _detokenize_path(file_token)
-    if not os.path.exists(full):
-        abort(404)
-
-    return send_file(full, as_attachment=False)
-
-
-@app.get("/espace/<token>/login")
+@app.route("/espace/<token>/login", methods=["GET", "POST"])
 def public_trainee_login(token: str):
     # ✅ si admin connecté, bypass
     if session.get("admin_logged_in"):
@@ -1450,24 +1432,42 @@ def public_trainee_login(token: str):
     if not s or not t:
         abort(404)
 
-    # si déjà auth, go direct
+    # ✅ si déjà auth, go direct
     if session.get(f"public_auth_{token}"):
         return redirect(url_for("public_trainee_space", token=token))
 
+    # ✅ TRAITEMENT DU POST (login)
+    if request.method == "POST":
+        last_name = (request.form.get("last_name") or "").strip().upper()
+        birth = (request.form.get("birth") or "").strip()
+
+        # normalisations utiles
+        birth = birth.replace("/", "").replace("-", "").replace(" ", "")
+
+        trainee_last = (t.get("last_name") or t.get("nom") or "").strip().upper()
+        trainee_birth = (t.get("birth") or t.get("date_birth") or t.get("dob") or "").strip()
+        trainee_birth = trainee_birth.replace("/", "").replace("-", "").replace(" ", "")
+
+        if last_name == trainee_last and birth == trainee_birth:
+            session[f"public_auth_{token}"] = True
+            session.permanent = True
+            return redirect(url_for("public_trainee_space", token=token))
+
+        # ❌ KO -> on renvoie sur GET avec error=1
+        return redirect(url_for("public_trainee_login", token=token, error="1"))
+
+    # ✅ GET: affichage page
     error = (request.args.get("error") or "").strip()
 
-    # mini page HTML (sans template) pour aller vite
-    # ⚠️ IMPORTANT : dans une f-string, on doit échapper les accolades CSS => {{ et }}
     return f"""
-    <!doctype html>
-    <html lang="fr">
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width,initial-scale=1">
-      <title>Accès espace stagiaire</title>
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Accès espace stagiaire</title>
 
 <style>
-  /* ✅ FIX GLOBAL : empêche tout dépassement */
   *, *::before, *::after {{
     box-sizing: border-box;
   }}
@@ -1480,8 +1480,6 @@ def public_trainee_login(token: str):
     display: flex;
     align-items: center;
     justify-content: center;
-
-    /* ✅ respiration sur petits écrans */
     padding: 16px;
   }}
 
@@ -1493,8 +1491,6 @@ def public_trainee_login(token: str):
     padding: 28px 26px;
     box-shadow: 0 20px 50px rgba(2,6,23,0.12);
     border: 1px solid #e5e7eb;
-
-    /* ✅ sécurité anti-débordement */
     overflow: hidden;
   }}
 
@@ -1578,34 +1574,34 @@ def public_trainee_login(token: str):
   }}
 </style>
 
-    </head>
+</head>
 
-    <body>
-      <div class="card">
+<body>
+  <div class="card">
 
-        <!-- 🔰 LOGO -->
-        <img src="/static/logo-integrale.png" class="logo" alt="Intégrale Academy">
+    <img src="/static/logo-integrale.png" class="logo" alt="Intégrale Academy">
 
-        <h2>Accès à votre espace stagiaire</h2>
-        <p>Veuillez saisir votre nom de famille et votre date de naissance pour continuer.</p>
+    <h2>Accès à votre espace stagiaire</h2>
+    <p>Veuillez saisir votre nom de famille et votre date de naissance pour continuer.</p>
 
-        {"<div class='err'>Nom ou date de naissance incorrect.</div>" if error else ""}
+    {"<div class='err'>Nom ou date de naissance incorrect.</div>" if error else ""}
 
-        <form method="post" action="/espace/{token}/login">
-          <label>Nom de famille</label>
-          <input name="last_name" autocomplete="family-name" required>
+    <form method="post" action="">
+      <label>Nom de famille</label>
+      <input name="last_name" autocomplete="family-name" required>
 
-          <label>Date de naissance</label>
-          <input name="birth" inputmode="numeric" placeholder="JJMMYYYY" required>
+      <label>Date de naissance</label>
+      <input name="birth" inputmode="numeric" placeholder="JJMMYYYY" required>
 
-          <button class="btn">Se connecter</button>
-        </form>
+      <button class="btn" type="submit">Se connecter</button>
+    </form>
 
-        <div class="hint">Format demandé : <strong>JJMMYYYY</strong> (ex : 16091993)</div>
-      </div>
-    </body>
-    </html>
-    """
+    <div class="hint">Format demandé : <strong>JJMMYYYY</strong> (ex : 16091993)</div>
+  </div>
+</body>
+</html>
+"""
+
 
 
 
