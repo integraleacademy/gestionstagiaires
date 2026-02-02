@@ -834,14 +834,31 @@ def admin_trainees(session_id: str):
     show_hosting = (session_view["training_type"] == "A3P")
     show_vae = (session_view["training_type"] == "DIRIGEANT VAE")
 
-     # ✅ docs fin de formation par stagiaire (pour surlignage + n/3)
+    # ✅ docs fin de formation par stagiaire (pour surlignage + n/3 + étiquettes)
     for t in trainees:
-        t.setdefault("deliverables", {})
-        d_done, d_total, d_ok = deliverables_progress(t)
-        t["deliverables_done"] = d_done
-        t["deliverables_total"] = d_total
-        t["deliverables_ok"] = d_ok
-        t["deliverables_text"] = f"{d_done}/{d_total}"
+    t.setdefault("deliverables", {})
+    d_done, d_total, d_ok = deliverables_progress(t)
+    t["deliverables_done"] = d_done
+    t["deliverables_total"] = d_total
+    t["deliverables_ok"] = d_ok
+    t["deliverables_text"] = f"{d_done}/{d_total}"
+
+    # ✅ étiquettes ligne (admin_trainees.html)
+    dv = t.get("deliverables") or {}
+    t["has_sst"] = bool((dv.get("carte_sst") or "").strip())
+    t["has_attestation"] = bool((dv.get("attestation_fin_formation") or "").strip())
+    t["has_diplome"] = bool((dv.get("diplome") or "").strip())
+
+    # Option pratique : liste prête à boucler dans le HTML
+    badges = []
+    if t["has_sst"]:
+        badges.append("SST")
+    if t["has_attestation"]:
+        badges.append("ATTESTATIONS")
+    if t["has_diplome"]:
+        badges.append("DIPLÔME")
+    t["badges"] = badges
+
 
 
     return render_template(
