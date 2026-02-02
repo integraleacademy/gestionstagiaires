@@ -866,3 +866,61 @@ input[type="file"]{
 #traineesTable tbody tr:hover td{
   background: inherit !important;
 }
+
+/* =========================
+   FIX iPad : figer Nom + Prénom dans admin trainees
+   ========================= */
+
+:root{
+  --sticky-nom: 160px;     /* largeur Nom */
+  --sticky-prenom: 140px;  /* largeur Prénom */
+}
+
+/* scroll horizontal fluide iPad */
+.table-wrap{
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* obligé pour que sticky fonctionne bien */
+#traineesTable{
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* ----- NOM (col 1) figée ----- */
+#traineesTable th:nth-child(1),
+#traineesTable td:nth-child(1){
+  position: sticky;
+  left: 0;
+  min-width: var(--sticky-nom);
+  max-width: var(--sticky-nom);
+  z-index: 50;
+  background: inherit !important; /* IMPORTANT : suit tes couleurs de ligne */
+}
+
+/* ----- PRÉNOM (col 2) figée ----- */
+#traineesTable th:nth-child(2),
+#traineesTable td:nth-child(2){
+  position: sticky;
+  left: var(--sticky-nom);
+  min-width: var(--sticky-prenom);
+  max-width: var(--sticky-prenom);
+  z-index: 50;
+  background: inherit !important; /* suit tes couleurs de ligne */
+}
+
+/* le header (th) doit passer au-dessus */
+#traineesTable thead th:nth-child(1),
+#traineesTable thead th:nth-child(2){
+  z-index: 200;
+  background: #f8fafc !important;
+}
+
+/* séparateur visuel (ombre) après prénom */
+#traineesTable th:nth-child(2),
+#traineesTable td:nth-child(2){
+  box-shadow: 10px 0 14px rgba(2,6,23,0.10);
+}
+
