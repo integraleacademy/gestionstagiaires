@@ -1421,7 +1421,25 @@ def _token_belongs_to_trainee(t: dict, file_token: str) -> bool:
     return False
 
 
-@app.route("/espace/<token>/login", methods=["GET", "POST"])
+@app.get("/espace/<token>/download/<path:file_token>")
+def public_download_file(token: str, file_token: str):
+    data = load_data()
+    s, t = find_session_and_trainee_by_token(data, token)
+    if not s or not t:
+        abort(404)
+
+    # Sécurité : le fichier doit appartenir à CE stagiaire
+    if not _token_belongs_to_trainee(t, file_token):
+        abort(403)
+
+    full = _detokenize_path(file_token)
+    if not os.path.exists(full):
+        abort(404)
+
+    return send_file(full, as_attachment=False)
+
+
+@app.get("/espace/<token>/login")
 def public_trainee_login(token: str):
     # ✅ si admin connecté, bypass
     if session.get("admin_logged_in"):
@@ -1432,44 +1450,21 @@ def public_trainee_login(token: str):
     if not s or not t:
         abort(404)
 
-    # ✅ si déjà auth, go direct
+    # si déjà auth, go direct
     if session.get(f"public_auth_{token}"):
         return redirect(url_for("public_trainee_space", token=token))
 
-    # ✅ TRAITEMENT DU POST (login)
-    if request.method == "POST":
-        last_name = (request.form.get("last_name") or "").strip()
-        birth = (request.form.get("birth") or "").strip()
-    
-        # Normalise ce que l'utilisateur tape
-        ln_in = _norm_lastname(last_name)
-        bd_in = re.sub(r"\D+", "", birth)  # JJMMYYYY attendu
-    
-        # Normalise ce que tu as en base
-        ln_db = _norm_lastname(t.get("last_name") or t.get("nom") or "")
-        bd_db = _birth_to_ddmmyyyy(
-            t.get("birth_date") or t.get("birth") or t.get("date_birth") or t.get("dob") or ""
-        )
-    
-        if ln_in and bd_in and ln_in == ln_db and bd_in == bd_db:
-            session[f"public_auth_{token}"] = True
-            session.permanent = True
-            return redirect(url_for("public_trainee_space", token=token))
-    
-        return redirect(url_for("public_trainee_login", token=token, error="1"))
-
-
-    # ✅ GET: affichage page
     error = (request.args.get("error") or "").strip()
 
+    # mini page HTML (sans template) pour aller vite
     return f"""
-<!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Accès espace stagiaire</title>
-
+    <!doctype html>
+    <html lang="fr">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <title>Accès espace stagiaire</title>
+    
 <style>
   *, *::before, *::after {{
     box-sizing: border-box;
@@ -1577,35 +1572,68 @@ def public_trainee_login(token: str):
   }}
 </style>
 
-</head>
+    </head>
+    
+    <body>
+      <div class="card">
+    
+        <!-- 🔰 LOGO -->
+        <img src="/static/logo-integrale.png" class="logo" alt="Intégrale Academy">
+    
+        <h2>Accès à votre espace stagiaire</h2>
+        <p>Veuillez saisir votre nom de famille et votre date de naissance pour continuer.</p>
+    
+        <form method="post" action="/espace/{token}/login">
+          <label>Nom de famille</label>
+          <input name="last_name" autocomplete="family-name" required>
+    
+          <label>Date de naissance</label>
+          <input name="birth" inputmode="numeric" placeholder="JJMMYYYY" required>
+    
+          <button class="btn">Se connecter</button>
+        </form>
+    
+        <div class="hint">Format demandé : <strong>JJMMYYYY</strong> (ex : 16091993)</div>
+      </div>
+    </body>
+    </html>
+    """
 
-<body>
-  <div class="card">
-
-    <img src="/static/logo-integrale.png" class="logo" alt="Intégrale Academy">
-
-    <h2>Accès à votre espace stagiaire</h2>
-    <p>Veuillez saisir votre nom de famille et votre date de naissance pour continuer.</p>
-
-    {"<div class='err'>Nom ou date de naissance incorrect.</div>" if error else ""}
-
-    <form method="post" action="">
-      <label>Nom de famille</label>
-      <input name="last_name" autocomplete="family-name" required>
-
-      <label>Date de naissance</label>
-      <input name="birth" inputmode="numeric" placeholder="JJMMYYYY" required>
-
-      <button class="btn" type="submit">Se connecter</button>
-    </form>
-
-    <div class="hint">Format demandé : <strong>JJMMYYYY</strong> (ex : 16091993)</div>
-  </div>
-</body>
-</html>
-"""
 
 
+@app.post("/espace/<token>/login")
+def public_trainee_login_post(token: str):
+    # ✅ si admin connecté, bypass
+    if session.get("admin_logged_in"):
+        return redirect(url_for("public_trainee_space", token=token))
+
+    data = load_data()
+    s, t = find_session_and_trainee_by_token(data, token)
+    if not s or not t:
+        abort(404)
+
+    last_in = (request.form.get("last_name") or "").strip()
+    birth_in = (request.form.get("birth") or "").strip()
+
+    # normalisation saisies
+    last_in_norm = _norm_lastname(last_in)
+    birth_in_digits = re.sub(r"\D+", "", birth_in)  # doit donner 8 chiffres
+
+    # valeurs attendues
+    expected_last = _norm_lastname(t.get("last_name", ""))
+    expected_birth = _birth_to_ddmmyyyy(t.get("birth_date", ""))
+
+    # 🔒 contrôle strict
+    if not expected_last or not expected_birth:
+        # si les infos ne sont pas renseignées côté dossier, on refuse
+        return redirect(url_for("public_trainee_login", token=token, error="1"))
+
+    if last_in_norm == expected_last and birth_in_digits == expected_birth:
+        session[f"public_auth_{token}"] = True
+        session.permanent = True  # cookie persistant (comme admin)
+        return redirect(url_for("public_trainee_space", token=token))
+
+    return redirect(url_for("public_trainee_login", token=token, error="1"))
 
 
 
