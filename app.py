@@ -1347,6 +1347,50 @@ def admin_view_upload(path: str):
     # simple serve
     return send_file(full, as_attachment=False)
 
+def _token_belongs_to_trainee(t: dict, file_token: str) -> bool:
+    file_token = (file_token or "").strip()
+    if not file_token:
+        return False
+
+    # Deliverables (diplôme / SST / attestation)
+    dv = t.get("deliverables") or {}
+    for k in ("diplome", "carte_sst", "attestation_fin_formation"):
+        if (dv.get(k) or "").strip() == file_token:
+            return True
+
+    # Documents (mono + multi fichiers)
+    for d in (t.get("documents") or []):
+        if (d.get("file") or "").strip() == file_token:
+            return True
+        files = d.get("files")
+        if isinstance(files, list) and file_token in [x.strip() for x in files if isinstance(x, str)]:
+            return True
+
+    # Photo identité (optionnel mais utile)
+    if (t.get("identity_photo") or "").strip() == file_token:
+        return True
+
+    return False
+
+
+@app.get("/espace/<token>/download/<path:file_token>")
+def public_download_file(token: str, file_token: str):
+    data = load_data()
+    s, t = find_session_and_trainee_by_token(data, token)
+    if not s or not t:
+        abort(404)
+
+    # Sécurité : le fichier doit appartenir à CE stagiaire
+    if not _token_belongs_to_trainee(t, file_token):
+        abort(403)
+
+    full = _detokenize_path(file_token)
+    if not os.path.exists(full):
+        abort(404)
+
+    return send_file(full, as_attachment=True)
+
+
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/documents/<doc_key>/upload")
 @admin_login_required
 def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
