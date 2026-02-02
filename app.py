@@ -1623,6 +1623,12 @@ def public_trainee_login_post(token: str):
     expected_last = _norm_lastname(t.get("last_name", ""))
     expected_birth = _birth_to_ddmmyyyy(t.get("birth_date", ""))
 
+    print("[PUBLIC LOGIN] token =", token)
+    print("[PUBLIC LOGIN] trainee keys =", list(t.keys()))
+    print("[PUBLIC LOGIN] raw last_name =", t.get("last_name"))
+    print("[PUBLIC LOGIN] raw birth_date =", t.get("birth_date"))
+
+
     # 🔒 contrôle strict
     if not expected_last or not expected_birth:
         # si les infos ne sont pas renseignées côté dossier, on refuse
