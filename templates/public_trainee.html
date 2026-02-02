@@ -644,8 +644,9 @@ id="upload_{{ d.key }}"
 <div class="docrow">
   <div class="docmeta"><div class="label">Ma carte SST</div></div>
   {% if deliv.get('carte_sst') %}
-    <a class="btn outline small" target="_blank"
-       href="/admin/uploads/{{ deliv.get('carte_sst') }}">Voir</a>
+<a class="btn outline small" target="_blank"
+   href="/espace/{{ token }}/download/{{ deliv.get('carte_sst') }}">Voir</a>
+
   {% else %}
     <span class="pill gray">Prochainement</span>
   {% endif %}
@@ -655,7 +656,8 @@ id="upload_{{ d.key }}"
   <div class="docmeta"><div class="label">Mon diplôme</div></div>
   {% if deliv.get('diplome') %}
     <a class="btn outline small" target="_blank"
-       href="/admin/uploads/{{ deliv.get('diplome') }}">Voir</a>
+   href="/espace/{{ token }}/download/{{ deliv.get('diplome') }}">Voir</a>
+
   {% else %}
     <span class="pill gray">Prochainement</span>
   {% endif %}
@@ -664,8 +666,9 @@ id="upload_{{ d.key }}"
 <div class="docrow">
   <div class="docmeta"><div class="label">Mes attestations de fin de formation</div></div>
   {% if deliv.get('attestation_fin_formation') %}
-    <a class="btn outline small" target="_blank"
-       href="/admin/uploads/{{ deliv.get('attestation_fin_formation') }}">Voir</a>
+   <a class="btn outline small" target="_blank"
+   href="/espace/{{ token }}/download/{{ deliv.get('attestation_fin_formation') }}">Voir</a>
+
   {% else %}
     <span class="pill gray">Prochainement</span>
   {% endif %}
