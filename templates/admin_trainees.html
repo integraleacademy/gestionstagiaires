@@ -171,10 +171,19 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
              style="text-decoration:none;display:inline-block">
             Fiche
           </a>
-          <div class="small mono">ID: {{ t.personal_id }}</div>
-          {% if t.comment %}
-            <div class="warn-line">⚠️</div>
-          {% endif %}
+<div class="small mono">ID: {{ t.personal_id }}</div>
+
+<div class="doc-badges"
+     data-doc-badges
+     data-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}"
+     data-diplome="{{ '1' if (t.get('deliverables', {}).get('diplome')) else '0' }}"
+     data-attestation="{{ '1' if (t.get('deliverables', {}).get('attestation_fin_formation')) else '0' }}">
+</div>
+
+{% if t.comment %}
+  <div class="warn-line">⚠️</div>
+{% endif %}
+
         </td>
 
         <td>
@@ -333,12 +342,43 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   tr.row-ok td{
     background: #ecfdf5;   /* vert clair */
   }
-  tr.row-todo td{
-    background: #fffbeb;   /* jaune clair */
-  }
+tr.row-todo td{
+  background: #ffffff;   /* blanc */
+}
+
   tr.row-warning td{
     background: #fff1f2;   /* rose clair (commentaire) */
   }
+
+ .doc-badges{
+  margin-top:6px;
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+}
+
+.badge-doc{
+  font-size:11px;
+  padding:3px 8px;
+  border-radius:999px;
+  border:1px solid #e2e8f0;
+  background:#fff;
+  display:inline-flex;
+  gap:6px;
+  align-items:center;
+  line-height:1;
+}
+
+.badge-doc.ok{
+  border-color:#86efac;
+  background:#ecfdf5;
+}
+
+.badge-doc.miss{
+  border-color:#fecaca;
+  background:#fff1f2;
+}
+ 
 </style>
 
 
@@ -924,6 +964,25 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     return await r.json();
   }
 
+function renderDocBadges(){
+  document.querySelectorAll("[data-doc-badges]").forEach(el=>{
+    const sst = el.getAttribute("data-sst") === "1";
+    const dip = el.getAttribute("data-diplome") === "1";
+    const att = el.getAttribute("data-attestation") === "1";
+
+    const mk = (label, ok) =>
+      `<span class="badge-doc ${ok ? "ok" : "miss"}">${ok ? "✅" : "❌"} ${label}</span>`;
+
+    el.innerHTML = [
+      mk("SST", sst),
+      mk("Diplôme", dip),
+      mk("Attestation", att),
+    ].join("");
+  });
+}
+
+// au chargement
+renderDocBadges();
 
 
   
