@@ -534,7 +534,18 @@ def fetch_hebergement_status(email: str) -> Optional[str]:
     if not email:
         return None
 
-    # petit retry (2 tentatives) car ces API peuvent être instables
+    def _is_truthy(v) -> bool:
+        if v is True:
+            return True
+        if isinstance(v, (int, float)) and v == 1:
+            return True
+        if isinstance(v, str) and v.strip().lower() in ("true", "1", "yes", "y", "ok", "oui"):
+            return True
+        return False
+
+    def _norm(s: str) -> str:
+        return (s or "").strip().lower().replace("é", "e").replace("è", "e").replace("ê", "e")
+
     for attempt in range(2):
         try:
             r = requests.get(
@@ -543,7 +554,6 @@ def fetch_hebergement_status(email: str) -> Optional[str]:
                 timeout=8
             )
 
-            # logs utiles
             print("[HEBERGEMENT] status=", r.status_code, "email=", email)
             if r.status_code != 200:
                 print("[HEBERGEMENT] body=", r.text[:400])
@@ -553,12 +563,28 @@ def fetch_hebergement_status(email: str) -> Optional[str]:
             data = r.json()
             print("[HEBERGEMENT] json=", data)
 
-            # priorité à un bool reserved clair
-            if data.get("reserved") is True:
+            # 1) cas idéal : bool clair
+            if _is_truthy(data.get("reserved")):
                 return "reserved"
 
-            # si c'est False ou absent, on ne retourne PAS "unknown" agressif
-            # on renvoie None => le caller garde l'ancien
+            # 2) cas fréquent : champ texte
+            candidates = [
+                data.get("status"),
+                data.get("hosting_status"),
+                data.get("hebergement"),
+                data.get("value"),
+                data.get("result"),
+            ]
+            for c in candidates:
+                if isinstance(c, str):
+                    cc = _norm(c)
+                    if cc in ("reserved", "reserve", "reserver", "reservé", "reservee", "ok", "oui"):
+                        return "reserved"
+                    if cc in ("unknown", "inconnu", "non", "no", "false"):
+                        # on ne downgrade pas agressivement
+                        return None
+
+            # 3) si rien de concluant -> on ne touche pas l'existant
             return None
 
         except Exception as e:
@@ -566,6 +592,7 @@ def fetch_hebergement_status(email: str) -> Optional[str]:
             time.sleep(0.3)
 
     return None
+
 
 
 
