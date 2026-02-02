@@ -866,33 +866,3 @@ input[type="file"]{
 #traineesTable tbody tr:hover td{
   background: inherit !important;
 }
-
-/* =========================
-   FIX iPad Safari — tableau tronqué / full-bleed 100vw
-   ========================= */
-
-/* 1) Le wrapper doit scroller horizontalement correctement sur iOS */
-.table-wrap{
-  overflow-x: auto;
-  overflow-y: hidden;               /* évite des bugs d'overflow iOS */
-  -webkit-overflow-scrolling: touch;/* momentum scroll iPad */
-  width: 100%;
-}
-
-/* 2) Désactiver le "full-bleed 100vw" qui casse sur Safari iOS */
-@supports (-webkit-touch-callout: none) {
-  .table-wrap.full-bleed{
-    width: 100% !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    border-radius: var(--radius);
-  }
-}
-
-/* 3) Optionnel mais aide : éviter des rétrécissements bizarres */
-.table{
-  width: max-content;   /* le tableau garde sa largeur naturelle */
-  min-width: 950px;     /* garde ton minimum */
-}
-
-
