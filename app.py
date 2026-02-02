@@ -836,28 +836,28 @@ def admin_trainees(session_id: str):
 
     # ✅ docs fin de formation par stagiaire (pour surlignage + n/3 + étiquettes)
     for t in trainees:
-    t.setdefault("deliverables", {})
-    d_done, d_total, d_ok = deliverables_progress(t)
-    t["deliverables_done"] = d_done
-    t["deliverables_total"] = d_total
-    t["deliverables_ok"] = d_ok
-    t["deliverables_text"] = f"{d_done}/{d_total}"
+        t.setdefault("deliverables", {})
+        d_done, d_total, d_ok = deliverables_progress(t)
+        t["deliverables_done"] = d_done
+        t["deliverables_total"] = d_total
+        t["deliverables_ok"] = d_ok
+        t["deliverables_text"] = f"{d_done}/{d_total}"
 
-    # ✅ étiquettes ligne (admin_trainees.html)
-    dv = t.get("deliverables") or {}
-    t["has_sst"] = bool((dv.get("carte_sst") or "").strip())
-    t["has_attestation"] = bool((dv.get("attestation_fin_formation") or "").strip())
-    t["has_diplome"] = bool((dv.get("diplome") or "").strip())
+        # ✅ étiquettes ligne (admin_trainees.html)
+        dv = t.get("deliverables") or {}
+        t["has_sst"] = bool((dv.get("carte_sst") or "").strip())
+        t["has_attestation"] = bool((dv.get("attestation_fin_formation") or "").strip())
+        t["has_diplome"] = bool((dv.get("diplome") or "").strip())
 
-    # Option pratique : liste prête à boucler dans le HTML
-    badges = []
-    if t["has_sst"]:
-        badges.append("SST")
-    if t["has_attestation"]:
-        badges.append("ATTESTATIONS")
-    if t["has_diplome"]:
-        badges.append("DIPLÔME")
-    t["badges"] = badges
+        badges = []
+        if t["has_sst"]:
+            badges.append("SST")
+        if t["has_attestation"]:
+            badges.append("ATTESTATIONS")
+        if t["has_diplome"]:
+            badges.append("DIPLÔME")
+        t["badges"] = badges
+
 
 
 
@@ -1165,9 +1165,21 @@ def api_update_trainee(session_id: str, trainee_id: str):
     for k, v in payload.items():
         if k not in allowed:
             continue
-    
+
+        # bools
         if k in ("no_permis", "public_hide_infos", "public_hide_docs", "public_hide_suivi", "public_hide_popup"):
             t[k] = True if v in (True, "true", "1", 1, "yes", "on") else False
+            continue
+
+        # strings (statuts / texte)
+        if v is None:
+            continue
+
+        if isinstance(v, str):
+            t[k] = v.strip()
+        else:
+            t[k] = v
+
         
 
 
