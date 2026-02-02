@@ -1438,23 +1438,26 @@ def public_trainee_login(token: str):
 
     # ✅ TRAITEMENT DU POST (login)
     if request.method == "POST":
-        last_name = (request.form.get("last_name") or "").strip().upper()
+        last_name = (request.form.get("last_name") or "").strip()
         birth = (request.form.get("birth") or "").strip()
-
-        # normalisations utiles
-        birth = birth.replace("/", "").replace("-", "").replace(" ", "")
-
-        trainee_last = (t.get("last_name") or t.get("nom") or "").strip().upper()
-        trainee_birth = (t.get("birth") or t.get("date_birth") or t.get("dob") or "").strip()
-        trainee_birth = trainee_birth.replace("/", "").replace("-", "").replace(" ", "")
-
-        if last_name == trainee_last and birth == trainee_birth:
+    
+        # Normalise ce que l'utilisateur tape
+        ln_in = _norm_lastname(last_name)
+        bd_in = re.sub(r"\D+", "", birth)  # JJMMYYYY attendu
+    
+        # Normalise ce que tu as en base
+        ln_db = _norm_lastname(t.get("last_name") or t.get("nom") or "")
+        bd_db = _birth_to_ddmmyyyy(
+            t.get("birth_date") or t.get("birth") or t.get("date_birth") or t.get("dob") or ""
+        )
+    
+        if ln_in and bd_in and ln_in == ln_db and bd_in == bd_db:
             session[f"public_auth_{token}"] = True
             session.permanent = True
             return redirect(url_for("public_trainee_space", token=token))
-
-        # ❌ KO -> on renvoie sur GET avec error=1
+    
         return redirect(url_for("public_trainee_login", token=token, error="1"))
+
 
     # ✅ GET: affichage page
     error = (request.args.get("error") or "").strip()
