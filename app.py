@@ -524,21 +524,49 @@ def fetch_cnaps_status_by_name(nom: str, prenom: str) -> Optional[str]:
         return None
 
 
+import time
+
 def fetch_hebergement_status(email: str) -> Optional[str]:
     if not HEBERGEMENT_STATUS_ENDPOINT:
         return None
-    try:
-        r = requests.get(HEBERGEMENT_STATUS_ENDPOINT, params={"email": email}, timeout=10)
-        if r.status_code != 200:
-            return None
-        data = r.json()
-        if data.get("reserved") is True:
-            return "reserved"
-        if data.get("reserved") is False:
-            return "unknown"
-        return data.get("status")
-    except Exception:
+
+    email = (email or "").strip().lower()
+    if not email:
         return None
+
+    # petit retry (2 tentatives) car ces API peuvent être instables
+    for attempt in range(2):
+        try:
+            r = requests.get(
+                HEBERGEMENT_STATUS_ENDPOINT,
+                params={"email": email},
+                timeout=8
+            )
+
+            # logs utiles
+            print("[HEBERGEMENT] status=", r.status_code, "email=", email)
+            if r.status_code != 200:
+                print("[HEBERGEMENT] body=", r.text[:400])
+                time.sleep(0.3)
+                continue
+
+            data = r.json()
+            print("[HEBERGEMENT] json=", data)
+
+            # priorité à un bool reserved clair
+            if data.get("reserved") is True:
+                return "reserved"
+
+            # si c'est False ou absent, on ne retourne PAS "unknown" agressif
+            # on renvoie None => le caller garde l'ancien
+            return None
+
+        except Exception as e:
+            print("[HEBERGEMENT] exception=", repr(e))
+            time.sleep(0.3)
+
+    return None
+
 
 
 # =========================
@@ -820,11 +848,24 @@ def admin_trainees(session_id: str):
 
         # hosting only for A3P
         if session_view["training_type"] == "A3P":
-            email = t.get("email") or ""
+            email = (t.get("email") or "").strip().lower()
+        
             hb = fetch_hebergement_status(email) if email else None
-            t["hosting_status"] = hb if hb else (t.get("hosting_status") or "unknown")
+        
+            # ✅ règle anti-bug : on ne downgrade JAMAIS "reserved"
+            current = (t.get("hosting_status") or "unknown").strip().lower()
+        
+            if hb == "reserved":
+                t["hosting_status"] = "reserved"
+            elif current == "reserved":
+                # on garde reserved quoi qu'il arrive
+                t["hosting_status"] = "reserved"
+            else:
+                # sinon on garde l'ancien si on n'a pas mieux
+                t["hosting_status"] = current if current else "unknown"
         else:
             t.pop("hosting_status", None)
+
 
     # persist normalized trainees back into storage
     s["trainees"] = trainees
