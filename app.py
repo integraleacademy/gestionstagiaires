@@ -1458,44 +1458,127 @@ def public_trainee_login(token: str):
 
     # mini page HTML (sans template) pour aller vite
     return f"""
-    <!doctype html><html lang="fr">
+    <!doctype html>
+    <html lang="fr">
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       <title>Accès espace stagiaire</title>
+    
       <style>
-        body{{font-family:Arial,sans-serif;background:#f6f8fb;margin:0}}
-        .wrap{{max-width:460px;margin:70px auto;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:18px;box-shadow:0 10px 30px rgba(2,6,23,0.06)}}
-        h2{{margin:0 0 8px 0}}
-        p{{margin:0 0 14px 0;color:#4b5563}}
-        label{{display:block;font-weight:700;margin:10px 0 6px}}
-        input{{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:12px;font-size:15px}}
-        .btn{{margin-top:14px;width:100%;padding:12px 14px;border:0;border-radius:12px;background:#1f8f4a;color:#fff;font-weight:800;font-size:15px;cursor:pointer}}
-        .err{{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:10px 12px;border-radius:12px;margin:10px 0}}
-        .hint{{font-size:13px;color:#6b7280;margin-top:10px}}
+        body {{
+          margin: 0;
+          font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+          background: linear-gradient(180deg, #f6f8fb, #eef2f7);
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }}
+    
+        .card {{
+          width: 100%;
+          max-width: 420px;
+          background: #fff;
+          border-radius: 18px;
+          padding: 28px 26px;
+          box-shadow: 0 20px 50px rgba(2,6,23,0.12);
+          border: 1px solid #e5e7eb;
+        }}
+    
+        .logo {{
+          display: block;
+          margin: 0 auto 14px auto;
+          max-height: 70px;
+        }}
+    
+        h2 {{
+          text-align: center;
+          margin: 10px 0 6px 0;
+          font-size: 22px;
+          color: #0f172a;
+        }}
+    
+        p {{
+          text-align: center;
+          margin: 0 0 22px 0;
+          font-size: 14px;
+          color: #64748b;
+        }}
+    
+        label {{
+          display: block;
+          font-weight: 600;
+          font-size: 14px;
+          margin: 14px 0 6px 0;
+          color: #0f172a;
+        }}
+    
+        input {{
+          width: 100%;
+          padding: 12px 14px;
+          border-radius: 12px;
+          border: 1px solid #d1d5db;
+          font-size: 15px;
+          outline: none;
+        }}
+    
+        input:focus {{
+          border-color: #1f8f4a;
+          box-shadow: 0 0 0 2px rgba(31,143,74,0.15);
+        }}
+    
+        .btn {{
+          margin-top: 22px;
+          width: 100%;
+          padding: 13px;
+          border-radius: 14px;
+          border: none;
+          background: linear-gradient(135deg, #1f8f4a, #167a3e);
+          color: #fff;
+          font-size: 16px;
+          font-weight: 700;
+          cursor: pointer;
+        }}
+    
+        .btn:hover {{
+          filter: brightness(1.05);
+        }}
+    
+        .hint {{
+          margin-top: 12px;
+          text-align: center;
+          font-size: 13px;
+          color: #6b7280;
+        }}
       </style>
     </head>
+    
     <body>
-      <div class="wrap">
+      <div class="card">
+    
+        <!-- 🔰 LOGO -->
+        <img src="/static/logo-integrale.png" class="logo" alt="Intégrale Academy">
+    
         <h2>Accès à votre espace stagiaire</h2>
-        <p>Veuillez saisir votre <strong>nom de famille</strong> et votre <strong>date de naissance</strong> pour continuer.</p>
-
-        {f'<div class="err">Identifiants incorrects. Vérifiez le nom et la date (format JJMMYYYY).</div>' if error else ''}
-
+        <p>Veuillez saisir votre nom de famille et votre date de naissance pour continuer.</p>
+    
         <form method="post" action="/espace/{token}/login">
           <label>Nom de famille</label>
-          <input name="last_name" autocomplete="family-name" placeholder="Ex : DUPONT" required>
-
+          <input name="last_name" autocomplete="family-name" required>
+    
           <label>Date de naissance</label>
-          <input name="birth" inputmode="numeric" placeholder="JJMMYYYY (ex : 16091993)" required>
-
+          <input name="birth" inputmode="numeric" placeholder="JJMMYYYY" required>
+    
           <button class="btn">Se connecter</button>
         </form>
-
+    
         <div class="hint">Format demandé : <strong>JJMMYYYY</strong> (ex : 16091993)</div>
       </div>
-    </body></html>
+    </body>
+    </html>
     """
+
 
 
 @app.post("/espace/<token>/login")
