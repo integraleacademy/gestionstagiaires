@@ -1388,7 +1388,7 @@ def public_download_file(token: str, file_token: str):
     if not os.path.exists(full):
         abort(404)
 
-    return send_file(full, as_attachment=True)
+    return send_file(full, as_attachment=False)
 
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/documents/<doc_key>/upload")
