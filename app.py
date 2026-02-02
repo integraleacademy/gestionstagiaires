@@ -1465,93 +1465,107 @@ def public_trainee_login(token: str):
       <meta name="viewport" content="width=device-width,initial-scale=1">
       <title>Accès espace stagiaire</title>
     
-      <style>
-        body {{
-          margin: 0;
-          font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-          background: linear-gradient(180deg, #f6f8fb, #eef2f7);
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }}
-    
-        .card {{
-          width: 100%;
-          max-width: 420px;
-          background: #fff;
-          border-radius: 18px;
-          padding: 28px 26px;
-          box-shadow: 0 20px 50px rgba(2,6,23,0.12);
-          border: 1px solid #e5e7eb;
-        }}
-    
-        .logo {{
-          display: block;
-          margin: 0 auto 14px auto;
-          max-height: 70px;
-        }}
-    
-        h2 {{
-          text-align: center;
-          margin: 10px 0 6px 0;
-          font-size: 22px;
-          color: #0f172a;
-        }}
-    
-        p {{
-          text-align: center;
-          margin: 0 0 22px 0;
-          font-size: 14px;
-          color: #64748b;
-        }}
-    
-        label {{
-          display: block;
-          font-weight: 600;
-          font-size: 14px;
-          margin: 14px 0 6px 0;
-          color: #0f172a;
-        }}
-    
-        input {{
-          width: 100%;
-          padding: 12px 14px;
-          border-radius: 12px;
-          border: 1px solid #d1d5db;
-          font-size: 15px;
-          outline: none;
-        }}
-    
-        input:focus {{
-          border-color: #1f8f4a;
-          box-shadow: 0 0 0 2px rgba(31,143,74,0.15);
-        }}
-    
-        .btn {{
-          margin-top: 22px;
-          width: 100%;
-          padding: 13px;
-          border-radius: 14px;
-          border: none;
-          background: linear-gradient(135deg, #1f8f4a, #167a3e);
-          color: #fff;
-          font-size: 16px;
-          font-weight: 700;
-          cursor: pointer;
-        }}
-    
-        .btn:hover {{
-          filter: brightness(1.05);
-        }}
-    
-        .hint {{
-          margin-top: 12px;
-          text-align: center;
-          font-size: 13px;
-          color: #6b7280;
-        }}
-      </style>
+<style>
+  /* ✅ FIX GLOBAL : empêche tout dépassement */
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    background: linear-gradient(180deg, #f6f8fb, #eef2f7);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* ✅ respiration sur petits écrans */
+    padding: 16px;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 420px;
+    background: #fff;
+    border-radius: 18px;
+    padding: 28px 26px;
+    box-shadow: 0 20px 50px rgba(2,6,23,0.12);
+    border: 1px solid #e5e7eb;
+
+    /* ✅ sécurité anti-débordement */
+    overflow: hidden;
+  }
+
+  .logo {
+    display: block;
+    margin: 0 auto 14px auto;
+    max-height: 70px;
+    max-width: 100%;
+  }
+
+  h2 {
+    text-align: center;
+    margin: 10px 0 6px 0;
+    font-size: 22px;
+    color: #0f172a;
+  }
+
+  p {
+    text-align: center;
+    margin: 0 0 22px 0;
+    font-size: 14px;
+    color: #64748b;
+  }
+
+  label {
+    display: block;
+    font-weight: 600;
+    font-size: 14px;
+    margin: 14px 0 6px 0;
+    color: #0f172a;
+  }
+
+  input {
+    width: 100%;
+    max-width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid #d1d5db;
+    font-size: 15px;
+    outline: none;
+  }
+
+  input:focus {
+    border-color: #1f8f4a;
+    box-shadow: 0 0 0 2px rgba(31,143,74,0.15);
+  }
+
+  .btn {
+    margin-top: 22px;
+    width: 100%;
+    padding: 13px;
+    border-radius: 14px;
+    border: none;
+    background: linear-gradient(135deg, #1f8f4a, #167a3e);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .btn:hover {
+    filter: brightness(1.05);
+  }
+
+  .hint {
+    margin-top: 12px;
+    text-align: center;
+    font-size: 13px;
+    color: #6b7280;
+  }
+</style>
+
     </head>
     
     <body>
