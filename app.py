@@ -1457,6 +1457,7 @@ def public_trainee_login(token: str):
     error = (request.args.get("error") or "").strip()
 
     # mini page HTML (sans template) pour aller vite
+    # ⚠️ IMPORTANT : dans une f-string, on doit échapper les accolades CSS => {{ et }}
     return f"""
     <!doctype html>
     <html lang="fr">
@@ -1464,14 +1465,14 @@ def public_trainee_login(token: str):
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       <title>Accès espace stagiaire</title>
-    
+
 <style>
   /* ✅ FIX GLOBAL : empêche tout dépassement */
-  *, *::before, *::after {
+  *, *::before, *::after {{
     box-sizing: border-box;
-  }
+  }}
 
-  body {
+  body {{
     margin: 0;
     font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
     background: linear-gradient(180deg, #f6f8fb, #eef2f7);
@@ -1482,9 +1483,9 @@ def public_trainee_login(token: str):
 
     /* ✅ respiration sur petits écrans */
     padding: 16px;
-  }
+  }}
 
-  .card {
+  .card {{
     width: 100%;
     max-width: 420px;
     background: #fff;
@@ -1495,38 +1496,38 @@ def public_trainee_login(token: str):
 
     /* ✅ sécurité anti-débordement */
     overflow: hidden;
-  }
+  }}
 
-  .logo {
+  .logo {{
     display: block;
     margin: 0 auto 14px auto;
     max-height: 70px;
     max-width: 100%;
-  }
+  }}
 
-  h2 {
+  h2 {{
     text-align: center;
     margin: 10px 0 6px 0;
     font-size: 22px;
     color: #0f172a;
-  }
+  }}
 
-  p {
+  p {{
     text-align: center;
     margin: 0 0 22px 0;
     font-size: 14px;
     color: #64748b;
-  }
+  }}
 
-  label {
+  label {{
     display: block;
     font-weight: 600;
     font-size: 14px;
     margin: 14px 0 6px 0;
     color: #0f172a;
-  }
+  }}
 
-  input {
+  input {{
     width: 100%;
     max-width: 100%;
     padding: 12px 14px;
@@ -1534,14 +1535,14 @@ def public_trainee_login(token: str):
     border: 1px solid #d1d5db;
     font-size: 15px;
     outline: none;
-  }
+  }}
 
-  input:focus {
+  input:focus {{
     border-color: #1f8f4a;
     box-shadow: 0 0 0 2px rgba(31,143,74,0.15);
-  }
+  }}
 
-  .btn {
+  .btn {{
     margin-top: 22px;
     width: 100%;
     padding: 13px;
@@ -1552,82 +1553,60 @@ def public_trainee_login(token: str):
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
-  }
+  }}
 
-  .btn:hover {
+  .btn:hover {{
     filter: brightness(1.05);
-  }
+  }}
 
-  .hint {
+  .hint {{
     margin-top: 12px;
     text-align: center;
     font-size: 13px;
     color: #6b7280;
-  }
+  }}
+
+  .err {{
+    margin: 0 0 12px 0;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+    color: #9f1239;
+    font-size: 13px;
+    text-align: center;
+  }}
 </style>
 
     </head>
-    
+
     <body>
       <div class="card">
-    
+
         <!-- 🔰 LOGO -->
         <img src="/static/logo-integrale.png" class="logo" alt="Intégrale Academy">
-    
+
         <h2>Accès à votre espace stagiaire</h2>
         <p>Veuillez saisir votre nom de famille et votre date de naissance pour continuer.</p>
-    
+
+        {"<div class='err'>Nom ou date de naissance incorrect.</div>" if error else ""}
+
         <form method="post" action="/espace/{token}/login">
           <label>Nom de famille</label>
           <input name="last_name" autocomplete="family-name" required>
-    
+
           <label>Date de naissance</label>
           <input name="birth" inputmode="numeric" placeholder="JJMMYYYY" required>
-    
+
           <button class="btn">Se connecter</button>
         </form>
-    
+
         <div class="hint">Format demandé : <strong>JJMMYYYY</strong> (ex : 16091993)</div>
       </div>
     </body>
     </html>
     """
 
-
-
-@app.post("/espace/<token>/login")
-def public_trainee_login_post(token: str):
-    # ✅ si admin connecté, bypass
-    if session.get("admin_logged_in"):
-        return redirect(url_for("public_trainee_space", token=token))
-
-    data = load_data()
-    s, t = find_session_and_trainee_by_token(data, token)
-    if not s or not t:
-        abort(404)
-
-    last_in = (request.form.get("last_name") or "").strip()
-    birth_in = (request.form.get("birth") or "").strip()
-
-    # normalisation saisies
-    last_in_norm = _norm_lastname(last_in)
-    birth_in_digits = re.sub(r"\D+", "", birth_in)  # doit donner 8 chiffres
-
-    # valeurs attendues
-    expected_last = _norm_lastname(t.get("last_name", ""))
-    expected_birth = _birth_to_ddmmyyyy(t.get("birth_date", ""))
-
-    # 🔒 contrôle strict
-    if not expected_last or not expected_birth:
-        # si les infos ne sont pas renseignées côté dossier, on refuse
-        return redirect(url_for("public_trainee_login", token=token, error="1"))
-
-    if last_in_norm == expected_last and birth_in_digits == expected_birth:
-        session[f"public_auth_{token}"] = True
-        session.permanent = True  # cookie persistant (comme admin)
-        return redirect(url_for("public_trainee_space", token=token))
-
-    return redirect(url_for("public_trainee_login", token=token, error="1"))
 
 
 
