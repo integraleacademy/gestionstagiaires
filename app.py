@@ -267,6 +267,54 @@ def mail_layout(inner_html: str) -> str:
 # Helpers
 # =========================
 
+# =========================
+# Public trainee "mini-login" (nom + date naissance)
+# =========================
+import unicodedata
+import re
+
+def _norm_lastname(s: str) -> str:
+    s = (s or "").strip().lower()
+    s = unicodedata.normalize("NFD", s)
+    s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")  # remove accents
+    s = re.sub(r"[^a-z0-9]+", "", s)  # keep only alnum, no spaces
+    return s
+
+def _birth_to_ddmmyyyy(value: str) -> str:
+    """
+    Convertit une date stockée (ex: '1993-09-16' ou '16/09/1993' ou '16091993')
+    en 'DDMMYYYY'. Si impossible, renvoie ''.
+    """
+    v = (value or "").strip()
+    if not v:
+        return ""
+
+    # déjà au bon format
+    digits = re.sub(r"\D+", "", v)
+    if len(digits) == 8:
+        # peut être DDMMYYYY ou YYYYMMDD -> on tente de deviner
+        # si commence par 19/20 => probablement YYYYMMDD
+        if digits.startswith(("19", "20")):
+            return digits[6:8] + digits[4:6] + digits[0:4]  # DDMMYYYY
+        return digits  # DDMMYYYY
+
+    # formats classiques
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+        try:
+            dt = datetime.datetime.strptime(v[:10], fmt)
+            return dt.strftime("%d%m%Y")
+        except Exception:
+            pass
+
+    return ""
+
+def _public_is_authed(token: str) -> bool:
+    # ✅ si admin connecté, on bypass toujours
+    if session.get("admin_logged_in"):
+        return True
+    return bool(session.get(f"public_auth_{token}"))
+
+
 def _now_iso() -> str:
     return datetime.datetime.utcnow().isoformat() + "Z"
 
@@ -1389,6 +1437,101 @@ def public_download_file(token: str, file_token: str):
         abort(404)
 
     return send_file(full, as_attachment=False)
+
+
+@app.get("/espace/<token>/login")
+def public_trainee_login(token: str):
+    # ✅ si admin connecté, bypass
+    if session.get("admin_logged_in"):
+        return redirect(url_for("public_trainee_space", token=token))
+
+    data = load_data()
+    s, t = find_session_and_trainee_by_token(data, token)
+    if not s or not t:
+        abort(404)
+
+    # si déjà auth, go direct
+    if session.get(f"public_auth_{token}"):
+        return redirect(url_for("public_trainee_space", token=token))
+
+    error = (request.args.get("error") or "").strip()
+
+    # mini page HTML (sans template) pour aller vite
+    return f"""
+    <!doctype html><html lang="fr">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <title>Accès espace stagiaire</title>
+      <style>
+        body{{font-family:Arial,sans-serif;background:#f6f8fb;margin:0}}
+        .wrap{{max-width:460px;margin:70px auto;background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:18px;box-shadow:0 10px 30px rgba(2,6,23,0.06)}}
+        h2{{margin:0 0 8px 0}}
+        p{{margin:0 0 14px 0;color:#4b5563}}
+        label{{display:block;font-weight:700;margin:10px 0 6px}}
+        input{{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:12px;font-size:15px}}
+        .btn{{margin-top:14px;width:100%;padding:12px 14px;border:0;border-radius:12px;background:#1f8f4a;color:#fff;font-weight:800;font-size:15px;cursor:pointer}}
+        .err{{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:10px 12px;border-radius:12px;margin:10px 0}}
+        .hint{{font-size:13px;color:#6b7280;margin-top:10px}}
+      </style>
+    </head>
+    <body>
+      <div class="wrap">
+        <h2>Accès à votre espace stagiaire</h2>
+        <p>Veuillez saisir votre <strong>nom de famille</strong> et votre <strong>date de naissance</strong> pour continuer.</p>
+
+        {f'<div class="err">Identifiants incorrects. Vérifiez le nom et la date (format JJMMYYYY).</div>' if error else ''}
+
+        <form method="post" action="/espace/{token}/login">
+          <label>Nom de famille</label>
+          <input name="last_name" autocomplete="family-name" placeholder="Ex : DUPONT" required>
+
+          <label>Date de naissance</label>
+          <input name="birth" inputmode="numeric" placeholder="JJMMYYYY (ex : 16091993)" required>
+
+          <button class="btn">Se connecter</button>
+        </form>
+
+        <div class="hint">Format demandé : <strong>JJMMYYYY</strong> (ex : 16091993)</div>
+      </div>
+    </body></html>
+    """
+
+
+@app.post("/espace/<token>/login")
+def public_trainee_login_post(token: str):
+    # ✅ si admin connecté, bypass
+    if session.get("admin_logged_in"):
+        return redirect(url_for("public_trainee_space", token=token))
+
+    data = load_data()
+    s, t = find_session_and_trainee_by_token(data, token)
+    if not s or not t:
+        abort(404)
+
+    last_in = (request.form.get("last_name") or "").strip()
+    birth_in = (request.form.get("birth") or "").strip()
+
+    # normalisation saisies
+    last_in_norm = _norm_lastname(last_in)
+    birth_in_digits = re.sub(r"\D+", "", birth_in)  # doit donner 8 chiffres
+
+    # valeurs attendues
+    expected_last = _norm_lastname(t.get("last_name", ""))
+    expected_birth = _birth_to_ddmmyyyy(t.get("birth_date", ""))
+
+    # 🔒 contrôle strict
+    if not expected_last or not expected_birth:
+        # si les infos ne sont pas renseignées côté dossier, on refuse
+        return redirect(url_for("public_trainee_login", token=token, error="1"))
+
+    if last_in_norm == expected_last and birth_in_digits == expected_birth:
+        session[f"public_auth_{token}"] = True
+        session.permanent = True  # cookie persistant (comme admin)
+        return redirect(url_for("public_trainee_space", token=token))
+
+    return redirect(url_for("public_trainee_login", token=token, error="1"))
+
 
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/documents/<doc_key>/upload")
@@ -2611,6 +2754,11 @@ def public_trainee_space(token):
 
     if not s or not t:
         abort(404)
+
+    # 🔒 Verrou public : si pas auth → login
+    if not _public_is_authed(token):
+        return redirect(url_for("public_trainee_login", token=token))
+
 
     training_type = _session_get(s, "training_type", "")
 
