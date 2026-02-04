@@ -1735,14 +1735,16 @@ def admin_delete_doc_file(session_id: str, trainee_id: str, doc_key: str):
     if not target:
         return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
-    # tokens à supprimer (multi ou mono)
-    tokens = []
-    if isinstance(target.get("files"), list) and target["files"]:
-        tokens = [x for x in target["files"] if x]
-    else:
+    file_token = (request.args.get("file_token") or "").strip()
+    existing_files = [x for x in (target.get("files") or []) if x]
+    if not existing_files:
         tok = (target.get("file") or "").strip()
-        if tok:
-            tokens = [tok]
+        existing_files = [tok] if tok else []
+
+    if file_token:
+        tokens = [file_token] if file_token in existing_files else []
+    else:
+        tokens = list(existing_files)
 
     # suppression fichiers sur disque
     for tok in tokens:
@@ -1754,9 +1756,11 @@ def admin_delete_doc_file(session_id: str, trainee_id: str, doc_key: str):
             pass
 
     # reset du doc
-    target["file"] = ""
-    target["files"] = []
-    target["status"] = "NON DÉPOSÉ"
+    remaining = [x for x in existing_files if x not in tokens]
+    target["files"] = remaining
+    target["file"] = remaining[0] if remaining else ""
+    if not remaining:
+        target["status"] = "NON DÉPOSÉ"
     # on garde le commentaire (pratique), ou tu peux le vider si tu préfères
 
     t["updated_at"] = _now_iso()
@@ -2875,7 +2879,13 @@ def public_trainee_space(token):
     ensure_documents_schema_for_trainee(t, training_type)
 
     for d in (t.get("documents") or []):
-        d["file_token"] = d.get("file") or ""
+        file_token = d.get("file") or ""
+        d["file_token"] = file_token
+        files = d.get("files")
+        file_tokens = [x for x in files if x] if isinstance(files, list) else []
+        if file_token and file_token not in file_tokens:
+            file_tokens.insert(0, file_token)
+        d["file_tokens"] = file_tokens
 
     show_hosting = ((training_type or "").strip().upper() == "A3P")
     show_vae = ("VAE" in (training_type or "").upper())
@@ -3007,13 +3017,11 @@ def public_doc_upload(token: str, doc_key: str):
     if doc_key not in allowed_doc_keys_for_training(training_type):
         return redirect(url_for("public_trainee_space", token=token))
 
-    # ✅ 1 fichier par envoi (mais on peut en envoyer plusieurs fois)
-    f = request.files.get("file")
-    if not f or not f.filename:
+    # ✅ 1 fichier par envoi (mais l'ID peut en contenir 2)
+    incoming_files = request.files.getlist("files") or request.files.getlist("file")
+    incoming_files = [f for f in incoming_files if f and f.filename]
+    if not incoming_files:
         return redirect(url_for("public_trainee_space", token=token))
-
-    # ✅ garder le nom original pour la popup (GET params)
-    original_name = secure_filename(f.filename or "document")
 
     # ✅ retrouver la config du doc (accept)
     docs = t.get("documents") or []
@@ -3031,17 +3039,12 @@ def public_doc_upload(token: str, doc_key: str):
             return ext in (".jpg", ".jpeg", ".png", ".webp")
         return ext in ALLOWED_EXT
 
-    ext = _safe_ext(f.filename)
-    if not _accepts_file(ext):
-        return redirect(url_for("public_trainee_space", token=token))
-
     # ✅ stockage du fichier
     session_id = s.get("id")
     trainee_id = t.get("id")
-    stored = _store_file(session_id, trainee_id, "public_documents", f)
-    new_token = _tokenize_path(stored)
 
     # ✅ MAJ du doc: on APPEND dans files (sans écraser)
+    original_name = ""
     for d in docs:
         if d.get("key") == doc_key:
             cur_files = d.get("files")
@@ -3053,7 +3056,26 @@ def public_doc_upload(token: str, doc_key: str):
             if old and old not in cur_files:
                 cur_files.append(old)
 
-            cur_files.append(new_token)
+            cur_status = (d.get("status") or "").strip().upper()
+            if cur_status in ("NON CONFORME", "NON_CONFORME"):
+                cur_files = []
+            max_files = 2 if doc_key == "id" else 1
+            remaining_slots = max(max_files - len(cur_files), 0)
+            files_to_store = incoming_files[:remaining_slots] if remaining_slots else []
+            if not files_to_store:
+                return redirect(url_for("public_trainee_space", token=token))
+
+            for f in files_to_store:
+                ext = _safe_ext(f.filename)
+                if not _accepts_file(ext):
+                    return redirect(url_for("public_trainee_space", token=token))
+
+            for f in files_to_store:
+                if not original_name:
+                    original_name = secure_filename(f.filename or "document")
+                stored = _store_file(session_id, trainee_id, "public_documents", f)
+                new_token = _tokenize_path(stored)
+                cur_files.append(new_token)
 
             # on garde le premier fichier dans "file" (pour compat template/admin)
             d["files"] = cur_files
@@ -3123,13 +3145,13 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         # compat: 1 fichier
         token = d.get("file") or ""
         d["file_token"] = token
-    
+
         # ✅ multi-fichiers
         files = d.get("files")
-        if isinstance(files, list) and files:
-            d["file_tokens"] = [x for x in files if x]
-        else:
-            d["file_tokens"] = []
+        file_tokens = [x for x in files if x] if isinstance(files, list) else []
+        if token and token not in file_tokens:
+            file_tokens.insert(0, token)
+        d["file_tokens"] = file_tokens
 
     # deliverables view
     deliverables_view = []
