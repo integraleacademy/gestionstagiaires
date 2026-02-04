@@ -491,6 +491,18 @@
   <div class="docs-stack">
 
   {% for d in (trainee.documents or []) %}
+{% set ns = namespace(file_tokens=[]) %}
+{% if d.files is defined and d.files is sequence %}
+  {% for f in d.files %}
+    {% if f %}
+      {% set _ = ns.file_tokens.append(f) %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+{% if d.file and d.file not in ns.file_tokens %}
+  {% set _ = ns.file_tokens.insert(0, d.file) %}
+{% endif %}
+{% set file_tokens = ns.file_tokens %}
 {% set file_tokens = d.file_tokens if d.file_tokens is defined else [] %}
 {% set has_file = (file_tokens|length) > 0 %}
     {% set st = (d.status if d and d.status else ("NON DÉPOSÉ" if not has_file else "A CONTRÔLER")) %}
