@@ -90,6 +90,26 @@
         <span class="mono">ID : {{ trainee.personal_id or trainee.id }}</span>
       </div>
 
+      <div class="form-grid" style="margin-top:12px;max-width:720px;">
+        <label>
+          <div class="label">Nom</div>
+          <input id="editLastName" type="text" value="{{ trainee.last_name or '' }}" placeholder="Nom">
+        </label>
+        <label>
+          <div class="label">Prénom</div>
+          <input id="editFirstName" type="text" value="{{ trainee.first_name or '' }}" placeholder="Prénom">
+        </label>
+        <label>
+          <div class="label">Adresse mail</div>
+          <input id="editEmail" type="email" value="{{ trainee.email or '' }}" placeholder="email@exemple.com">
+        </label>
+        <label>
+          <div class="label">Téléphone</div>
+          <input id="editPhone" type="tel" value="{{ trainee.phone or '' }}" placeholder="+33600000000">
+        </label>
+      </div>
+      <div class="hint" style="margin-top:6px;">Sauvegarde automatique des informations de contact.</div>
+
       <div class="meta-line" style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
         {% set c = (trainee.cnaps or "INCONNU")|upper %}
         <span class="cnaps
@@ -163,17 +183,11 @@
     </label>
 
     <label style="display:flex;align-items:center;gap:8px;">
-  <input type="checkbox"
-         id="public_hide_suivi"
-         {% if trainee.public_hide_suivi %}checked{% endif %}>
-  <span>Masquer Suivi dossier</span>
-</label>
-
-    <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-  <input type="checkbox" id="chkHideUploadPopup"
-         {% if trainee.public_hide_upload_popup %}checked{% endif %}>
-  <span>Masquer popup “Document déposé”</span>
-</label>
+      <input type="checkbox"
+             id="public_hide_suivi"
+             {% if trainee.public_hide_suivi %}checked{% endif %}>
+      <span><strong>Masquer Suivi dossier</strong></span>
+    </label>
 
 
   </div>
