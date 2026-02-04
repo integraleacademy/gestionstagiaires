@@ -43,8 +43,8 @@
 
 <!-- NOM / PRÉNOM À DROITE -->
 <div style="font-size:20px;font-weight:900;line-height:1.1;margin-top:2px;">
-  {{ (trainee.last_name or "")|upper }}
-  {{ (trainee.first_name or "")|lower|capitalize }}
+  <span id="traineeLastNameDisplay">{{ (trainee.last_name or "")|upper }}</span>
+  <span id="traineeFirstNameDisplay">{{ (trainee.first_name or "")|lower|capitalize }}</span>
 </div>
 
 
@@ -63,10 +63,30 @@
 </div>
 
       <div class="meta-line" style="margin-top:10px;">
-        <span class="mono">Email : {{ trainee.email or "—" }}</span>
-        <span class="mono">Tel : {{ trainee.phone or "—" }}</span>
+        <span class="mono">Email : <span id="traineeEmailDisplay">{{ trainee.email or "—" }}</span></span>
+        <span class="mono">Tel : <span id="traineePhoneDisplay">{{ trainee.phone or "—" }}</span></span>
         <span class="mono">ID : {{ trainee.personal_id or trainee.id }}</span>
       </div>
+
+      <div class="form-grid" style="margin-top:12px;max-width:720px;">
+        <label>
+          <div class="label">Nom</div>
+          <input id="editLastName" type="text" value="{{ trainee.last_name or '' }}" placeholder="Nom">
+        </label>
+        <label>
+          <div class="label">Prénom</div>
+          <input id="editFirstName" type="text" value="{{ trainee.first_name or '' }}" placeholder="Prénom">
+        </label>
+        <label>
+          <div class="label">Adresse mail</div>
+          <input id="editEmail" type="email" value="{{ trainee.email or '' }}" placeholder="email@exemple.com">
+        </label>
+        <label>
+          <div class="label">Téléphone</div>
+          <input id="editPhone" type="tel" value="{{ trainee.phone or '' }}" placeholder="+33600000000">
+        </label>
+      </div>
+      <div class="hint" style="margin-top:6px;">Sauvegarde automatique des informations de contact.</div>
 
       <div class="meta-line" style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
         {% set c = (trainee.cnaps or "INCONNU")|upper %}
@@ -1058,6 +1078,60 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
     body: JSON.stringify(payload)
   });
 }
+
+  const contactDebounce = {};
+
+  function formatName(value){
+    const v = (value || "").trim();
+    if(!v) return "";
+    return v.charAt(0).toUpperCase() + v.slice(1).toLowerCase();
+  }
+
+  function setupContactAutosave({ inputId, field, displayId, formatter }){
+    const input = document.getElementById(inputId);
+    if(!input) return;
+    const displayEl = displayId ? document.getElementById(displayId) : null;
+
+    input.addEventListener("input", ()=>{
+      const value = input.value;
+      if(displayEl){
+        const formatted = formatter ? formatter(value) : value;
+        displayEl.textContent = (formatted && formatted.trim()) ? formatted : "—";
+      }
+
+      if(contactDebounce[field]) clearTimeout(contactDebounce[field]);
+      contactDebounce[field] = setTimeout(async ()=>{
+        try{
+          await updateTrainee({ [field]: value });
+        }catch(e){
+          console.error("Erreur sauvegarde contact", field);
+        }
+      }, 450);
+    });
+  }
+
+  setupContactAutosave({
+    inputId: "editLastName",
+    field: "last_name",
+    displayId: "traineeLastNameDisplay",
+    formatter: (value) => (value || "").toUpperCase()
+  });
+  setupContactAutosave({
+    inputId: "editFirstName",
+    field: "first_name",
+    displayId: "traineeFirstNameDisplay",
+    formatter: (value) => formatName(value)
+  });
+  setupContactAutosave({
+    inputId: "editEmail",
+    field: "email",
+    displayId: "traineeEmailDisplay"
+  });
+  setupContactAutosave({
+    inputId: "editPhone",
+    field: "phone",
+    displayId: "traineePhoneDisplay"
+  });
 
 const chkHideInfos = document.getElementById("chkHideInfos");
 if(chkHideInfos){
