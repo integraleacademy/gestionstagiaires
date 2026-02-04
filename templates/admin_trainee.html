@@ -141,17 +141,11 @@
     </label>
 
     <label style="display:flex;align-items:center;gap:8px;">
-  <input type="checkbox"
-         id="public_hide_suivi"
-         {% if trainee.public_hide_suivi %}checked{% endif %}>
-  <span>Masquer Suivi dossier</span>
-</label>
-
-    <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-  <input type="checkbox" id="chkHideUploadPopup"
-         {% if trainee.public_hide_upload_popup %}checked{% endif %}>
-  <span>Masquer popup “Document déposé”</span>
-</label>
+      <input type="checkbox"
+             id="public_hide_suivi"
+             {% if trainee.public_hide_suivi %}checked{% endif %}>
+      <span><strong>Masquer Suivi dossier</strong></span>
+    </label>
 
 
   </div>
