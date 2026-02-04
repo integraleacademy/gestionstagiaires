@@ -504,6 +504,91 @@ select.status-pill{
   padding: 14px;
 }
 
+.session-card{
+  border-left: 6px solid transparent;
+}
+
+.session-card--ended{
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #6b7280;
+}
+
+.session-card--ended .card-title,
+.session-card--ended .card-meta strong,
+.session-card--ended .trainees-count{
+  color: #111827;
+}
+
+.session-tags{
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pill-training{
+  font-weight: 700;
+}
+
+.pill-status{
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.pill-status--ongoing{
+  background: #ecfdf3;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.pill-status--ended{
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+
+.pill-status--upcoming{
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.trainees-highlight{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px dashed #e2e8f0;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.trainees-count{
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.docs-progress{
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.docs-progress strong{
+  color: var(--text);
+}
+
+/* couleurs par type de formation */
+.training-aps{ border-left-color: #2563eb; }
+.training-a3p{ border-left-color: #16a34a; }
+.training-dirigeant{ border-left-color: #f97316; }
+.training-other{ border-left-color: #64748b; }
+
 /* en-tête de carte */
 .card-row{
   display: flex;
@@ -923,4 +1008,3 @@ input[type="file"]{
 #traineesTable td:nth-child(2){
   box-shadow: 10px 0 14px rgba(2,6,23,0.10);
 }
-
