@@ -586,9 +586,11 @@ id="upload_{{ d.key }}"
   </div>
 
   <input type="file"
-         name="file"
+         name="files"
+         multiple
          accept="{{ accept }}"
          required>
+  <div class="muted" style="margin-top:4px;">Vous pouvez sélectionner 1 ou 2 fichiers avant de cliquer sur “Déposer”.</div>
 {% else %}
   <input type="file"
          name="file"
