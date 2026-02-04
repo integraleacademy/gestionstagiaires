@@ -591,6 +591,7 @@ id="upload_{{ d.key }}"
          accept="{{ accept }}"
          required>
   <div id="id_files_summary" class="muted" style="margin-top:4px;">Aucun fichier sélectionné.</div>
+  <ul id="id_files_list" class="muted" style="margin:4px 0 0 18px;"></ul>
   <div class="muted" style="margin-top:4px;">Vous pouvez sélectionner 1 ou 2 fichiers avant de cliquer sur “Déposer”.</div>
 {% else %}
   <input type="file"
@@ -1291,14 +1292,27 @@ window.addEventListener("DOMContentLoaded", ()=>{
 
   const input = form.querySelector('input[type="file"]');
   const summary = document.getElementById("id_files_summary");
+  const list = document.getElementById("id_files_list");
   const updateSummary = () => {
     if(!summary) return;
     const count = input?.files?.length || 0;
+    if(list){
+      list.innerHTML = "";
+    }
     if(!count){
       summary.textContent = "Aucun fichier sélectionné.";
       return;
     }
-    summary.textContent = `${count} fichier${count > 1 ? "s" : ""} sélectionné${count > 1 ? "s" : ""}.`;
+    const names = input?.files ? Array.from(input.files).map((f) => f.name) : [];
+    const label = `${count} fichier${count > 1 ? "s" : ""} sélectionné${count > 1 ? "s" : ""}`;
+    summary.textContent = names.length ? `${label} : ${names.join(", ")}` : `${label}.`;
+    if(list && input?.files?.length){
+      for(const f of input.files){
+        const li = document.createElement("li");
+        li.textContent = f.name;
+        list.appendChild(li);
+      }
+    }
   };
 
   if(input){
