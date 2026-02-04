@@ -592,6 +592,9 @@ id="upload_{{ d.key }}"
          required>
   <div id="id_files_summary" class="muted" style="margin-top:4px;">Aucun fichier sélectionné.</div>
   <ul id="id_files_list" class="muted" style="margin:4px 0 0 18px;"></ul>
+  <div class="row" style="margin-top:6px;">
+    <button type="button" class="btn outline small" id="id_add_file_btn">Ajouter un autre fichier</button>
+  </div>
   <div class="muted" style="margin-top:4px;">Vous pouvez sélectionner 1 ou 2 fichiers avant de cliquer sur “Déposer”.</div>
 {% else %}
   <input type="file"
@@ -1293,9 +1296,13 @@ window.addEventListener("DOMContentLoaded", ()=>{
   const input = form.querySelector('input[type="file"]');
   const summary = document.getElementById("id_files_summary");
   const list = document.getElementById("id_files_list");
+  const addBtn = document.getElementById("id_add_file_btn");
+  const dataTransfer = new DataTransfer();
+  const maxFiles = 2;
   const updateSummary = () => {
     if(!summary) return;
-    const count = input?.files?.length || 0;
+    const currentFiles = dataTransfer.files?.length ? dataTransfer.files : input?.files;
+    const count = currentFiles?.length || 0;
     if(list){
       list.innerHTML = "";
     }
@@ -1303,21 +1310,45 @@ window.addEventListener("DOMContentLoaded", ()=>{
       summary.textContent = "Aucun fichier sélectionné.";
       return;
     }
-    const names = input?.files ? Array.from(input.files).map((f) => f.name) : [];
+    const names = currentFiles ? Array.from(currentFiles).map((f) => f.name) : [];
     const label = `${count} fichier${count > 1 ? "s" : ""} sélectionné${count > 1 ? "s" : ""}`;
     summary.textContent = names.length ? `${label} : ${names.join(", ")}` : `${label}.`;
-    if(list && input?.files?.length){
-      for(const f of input.files){
+    if(list && currentFiles?.length){
+      for(const f of currentFiles){
         const li = document.createElement("li");
         li.textContent = f.name;
         list.appendChild(li);
       }
     }
+    if(addBtn){
+      addBtn.disabled = count >= maxFiles;
+    }
   };
 
   if(input){
-    input.addEventListener("change", updateSummary);
+    input.addEventListener("change", () => {
+      if(input.files){
+        for(const f of input.files){
+          if(dataTransfer.files.length >= maxFiles){
+            break;
+          }
+          const exists = Array.from(dataTransfer.files).some((existing) => existing.name == f.name && existing.size == f.size);
+          if(!exists){
+            dataTransfer.items.add(f);
+          }
+        }
+        input.files = dataTransfer.files;
+      }
+      updateSummary();
+    });
     updateSummary();
+  }
+
+  if(addBtn && input){
+    addBtn.addEventListener("click", () => {
+      if(dataTransfer.files.length >= maxFiles) return;
+      input.click();
+    });
   }
 
   form.addEventListener("submit", (e)=>{
