@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+{% set token_safe = token or trainee.public_token or '' %}
 
 <style>
 
@@ -491,18 +492,25 @@
   <div class="docs-stack">
 
   {% for d in (trainee.documents or []) %}
-{% set has_file = false %}
-{% if d %}
-  {% if d.files is defined and d.files is sequence and (d.files|length) > 0 %}
-    {% set has_file = true %}
-  {% elif d.file %}
-    {% set has_file = true %}
-  {% endif %}
+{% set ns = namespace(file_tokens=[]) %}
+{% if d.files is defined and d.files is sequence %}
+  {% for f in d.files %}
+    {% if f %}
+      {% set _ = ns.file_tokens.append(f) %}
+    {% endif %}
+  {% endfor %}
 {% endif %}
+{% if d.file and d.file not in ns.file_tokens %}
+  {% set _ = ns.file_tokens.insert(0, d.file) %}
+{% endif %}
+{% set file_tokens = ns.file_tokens %}
+{% set has_file = (file_tokens|length) > 0 %}
     {% set st = (d.status if d and d.status else ("NON DÉPOSÉ" if not has_file else "A CONTRÔLER")) %}
     {% set up = (st|string)|upper %}
   {% set can_replace = (has_file and up == "NON CONFORME") %}
-{% set show_upload = ((not has_file) or can_replace) and not (d.key == "permis" and trainee.no_permis) %}
+  {% set max_files = 2 if d.key == "id" else 1 %}
+  {% set can_add_more = (file_tokens|length) < max_files %}
+{% set show_upload = ((not has_file) or can_replace or (d.key == "id" and can_add_more)) and not (d.key == "permis" and trainee.no_permis) %}
 
     {% set row_cls = "missing" %}
     {% if has_file %}
@@ -567,7 +575,7 @@
 {% if show_upload %}
 <form class="upload-form"
 id="upload_{{ d.key }}"
-  action="/espace/{{ token }}/documents/{{ d.key }}/upload"
+  action="/espace/{{ token_safe }}/documents/{{ d.key }}/upload"
   method="post"
   enctype="multipart/form-data">
 
@@ -589,7 +597,7 @@ id="upload_{{ d.key }}"
 {% endif %}
 
 <button class="btn small" type="submit">
-  {% if can_replace %}Remplacer{% else %}Déposer{% endif %}
+  {% if can_replace %}Remplacer{% elif d.key == "id" and has_file %}Ajouter un autre{% else %}Déposer{% endif %}
 </button>
 
 <div class="uploading-msg" style="display:none;margin-top:8px;font-weight:900;">
@@ -598,6 +606,21 @@ id="upload_{{ d.key }}"
 </form>
 {% else %}
   <span class="pill green">📎 Fichier déjà envoyé</span>
+{% endif %}
+
+{% if has_file %}
+  <div style="margin-top:10px;">
+    <div class="muted" style="font-weight:700;">Fichier(s) déposé(s)</div>
+    <ul style="margin:6px 0 0 18px;">
+      {% for ft in file_tokens %}
+        <li>
+          <a href="/espace/{{ token_safe }}/download/{{ ft }}" target="_blank" rel="noopener">
+            Voir le fichier {{ loop.index }}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
 {% endif %}
 
 {% if d.key == "id" %}
@@ -650,7 +673,7 @@ id="upload_{{ d.key }}"
   <div class="docmeta"><div class="label">Ma carte SST</div></div>
   {% if deliv.get('carte_sst') %}
 <a class="btn outline small" target="_blank"
-   href="/espace/{{ token }}/download/{{ deliv.get('carte_sst') }}">Voir</a>
+   href="/espace/{{ token_safe }}/download/{{ deliv.get('carte_sst') }}">Voir</a>
 
   {% else %}
     <span class="pill gray">Prochainement</span>
@@ -661,7 +684,7 @@ id="upload_{{ d.key }}"
   <div class="docmeta"><div class="label">Mon diplôme</div></div>
   {% if deliv.get('diplome') %}
     <a class="btn outline small" target="_blank"
-   href="/espace/{{ token }}/download/{{ deliv.get('diplome') }}">Voir</a>
+   href="/espace/{{ token_safe }}/download/{{ deliv.get('diplome') }}">Voir</a>
 
   {% else %}
     <span class="pill gray">Prochainement</span>
@@ -672,7 +695,7 @@ id="upload_{{ d.key }}"
   <div class="docmeta"><div class="label">Mes attestations de fin de formation</div></div>
   {% if deliv.get('attestation_fin_formation') %}
    <a class="btn outline small" target="_blank"
-   href="/espace/{{ token }}/download/{{ deliv.get('attestation_fin_formation') }}">Voir</a>
+   href="/espace/{{ token_safe }}/download/{{ deliv.get('attestation_fin_formation') }}">Voir</a>
 
   {% else %}
     <span class="pill gray">Prochainement</span>
@@ -937,7 +960,7 @@ if (typeof closeModal !== "function") {
     el.classList.remove("show"); // ✅
   };
 }
-  const token = "{{ token }}";
+  const token = "{{ token_safe }}";
 {% if not trainee.public_hide_welcome_popup %}
 // ✅ Welcome popup — une seule fois (on marque "vu" dès l'ouverture)
 (function(){
