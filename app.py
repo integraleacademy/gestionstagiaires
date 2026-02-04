@@ -855,6 +855,39 @@ def admin_sessions():
         
         total_total = len(trainees)
 
+        date_start_raw = _session_get(s, "date_start", "")
+        date_end_raw = _session_get(s, "date_end", "")
+        today = datetime.date.today()
+        status_key = "upcoming"
+        try:
+            dt_start = datetime.datetime.strptime(date_start_raw[:10], "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            dt_start = None
+        try:
+            dt_end = datetime.datetime.strptime(date_end_raw[:10], "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            dt_end = None
+
+        if dt_end and dt_end < today:
+            status_key = "ended"
+        elif dt_start and dt_start <= today:
+            status_key = "ongoing"
+
+        status_label = {
+            "ended": "Formation terminée",
+            "ongoing": "Formation en cours",
+            "upcoming": "Prochainement",
+        }[status_key]
+
+        training_type_raw = (_session_get(s, "training_type", "") or "").strip().upper()
+        if training_type_raw.startswith("APS"):
+            training_type_class = "aps"
+        elif training_type_raw.startswith("A3P"):
+            training_type_class = "a3p"
+        elif training_type_raw.startswith("DIRIGEANT"):
+            training_type_class = "dirigeant"
+        else:
+            training_type_class = "other"
 
         out_sessions.append({
             "id": s.get("id"),
@@ -869,6 +902,9 @@ def admin_sessions():
             # ✅ new
             "deliverables_done": done_total,
             "deliverables_total": total_total,
+            "status_label": status_label,
+            "status_key": status_key,
+            "training_type_class": training_type_class,
         })
 
     return render_template(

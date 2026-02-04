@@ -139,23 +139,31 @@
 
 <div class="grid cards" id="sessionsGrid">
   {% for s in sessions %}
-  <div class="card">
+  <div class="card session-card session-card--{{ s.status_key }} training-{{ s.training_type_class }}">
     <div class="card-row">
-      <div class="card-title">{{ s.name }}</div>
+      <div>
+        <div class="card-title">{{ s.name }}</div>
+        <div class="session-tags">
+          <span class="pill pill-training">{{ s.training_type }}</span>
+          <span class="pill pill-status pill-status--{{ s.status_key }}">{{ s.status_label }}</span>
+        </div>
+      </div>
       <div class="bigmark">{{ "✅" if s.session_is_conform else "❌" }}</div>
     </div>
 
     <div class="card-meta">
-      <div><span class="pill">{{ s.training_type }}</span></div>
       <div>Formation : <strong>{{ s.date_start|frdate }}</strong> → <strong>{{ s.date_end|frdate }}</strong></div>
 <div>Examen : <strong>{{ s.exam_date|frdate }}</strong></div>
-      <div>Stagiaires : <strong>{{ s.total }}</strong></div>
+      <div class="trainees-highlight">
+        <span>Stagiaires</span>
+        <span class="trainees-count">{{ s.total }}</span>
+      </div>
     </div>
 
-<div>
-  Docs fin de formation :
-  <strong>{{ s.deliverables_done or 0 }}/{{ s.deliverables_total or 0 }}</strong>
-</div>
+    <div class="docs-progress">
+      Docs fin de formation :
+      <strong>{{ s.deliverables_done or 0 }}/{{ s.deliverables_total or 0 }}</strong>
+    </div>
 
 
 
