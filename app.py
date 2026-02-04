@@ -2875,7 +2875,13 @@ def public_trainee_space(token):
     ensure_documents_schema_for_trainee(t, training_type)
 
     for d in (t.get("documents") or []):
-        d["file_token"] = d.get("file") or ""
+        token = d.get("file") or ""
+        d["file_token"] = token
+        files = d.get("files")
+        file_tokens = [x for x in files if x] if isinstance(files, list) else []
+        if token and token not in file_tokens:
+            file_tokens.insert(0, token)
+        d["file_tokens"] = file_tokens
 
     show_hosting = ((training_type or "").strip().upper() == "A3P")
     show_vae = ("VAE" in (training_type or "").upper())
