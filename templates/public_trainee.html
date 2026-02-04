@@ -592,9 +592,6 @@ id="upload_{{ d.key }}"
          required>
   <div id="id_files_summary" class="muted" style="margin-top:4px;">Aucun fichier sélectionné.</div>
   <ul id="id_files_list" class="muted" style="margin:4px 0 0 18px;"></ul>
-  <div class="row" style="margin-top:6px;">
-    <button type="button" class="btn outline small" id="id_add_file_btn">Ajouter un autre fichier</button>
-  </div>
   <div class="muted" style="margin-top:4px;">Vous pouvez sélectionner 1 ou 2 fichiers avant de cliquer sur “Déposer”.</div>
 {% else %}
   <input type="file"
@@ -1296,7 +1293,6 @@ window.addEventListener("DOMContentLoaded", ()=>{
   const input = form.querySelector('input[type="file"]');
   const summary = document.getElementById("id_files_summary");
   const list = document.getElementById("id_files_list");
-  const addBtn = document.getElementById("id_add_file_btn");
   const dataTransfer = new DataTransfer();
   const maxFiles = 2;
   const updateSummary = () => {
@@ -1320,9 +1316,6 @@ window.addEventListener("DOMContentLoaded", ()=>{
         list.appendChild(li);
       }
     }
-    if(addBtn){
-      addBtn.disabled = count >= maxFiles;
-    }
   };
 
   if(input){
@@ -1342,13 +1335,6 @@ window.addEventListener("DOMContentLoaded", ()=>{
       updateSummary();
     });
     updateSummary();
-  }
-
-  if(addBtn && input){
-    addBtn.addEventListener("click", () => {
-      if(dataTransfer.files.length >= maxFiles) return;
-      input.click();
-    });
   }
 
   form.addEventListener("submit", (e)=>{
