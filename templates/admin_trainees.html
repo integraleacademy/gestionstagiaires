@@ -222,6 +222,10 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           <input id="tFirstName" type="text" placeholder="Prénom">
         </label>
         <label>
+          <div class="label">Date de naissance (facultatif)</div>
+          <input id="tBirthDate" type="date">
+        </label>
+        <label>
           <div class="label">Adresse mail</div>
           <input id="tEmail" type="email" placeholder="email@exemple.com">
         </label>
@@ -813,10 +817,11 @@ document.querySelectorAll("select.sel").forEach(sel=>{
   function readCreateForm(){
     const last_name = (document.getElementById("tLastName").value || "").trim();
     const first_name = (document.getElementById("tFirstName").value || "").trim();
+    const birth_date = (document.getElementById("tBirthDate").value || "").trim();
     const email = (document.getElementById("tEmail").value || "").trim();
     const phone = (document.getElementById("tPhone").value || "").trim();
     const carte_pro_ok = !!document.getElementById("tCarteProOk")?.checked;
-    return { last_name, first_name, email, phone, carte_pro_ok };
+    return { last_name, first_name, birth_date, email, phone, carte_pro_ok };
   }
 
   function setCreateButtonsDisabled(disabled){
@@ -829,7 +834,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
   }
 
   async function createTrainee(send_access){
-    const { last_name, first_name, email, phone, carte_pro_ok } = readCreateForm();
+    const { last_name, first_name, birth_date, email, phone, carte_pro_ok } = readCreateForm();
 
     if(!last_name || !first_name){
       alert("Nom + prénom obligatoires");
@@ -842,7 +847,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       const r = await fetch(`/api/sessions/${sessionId}/trainees/create`, {
         method:"POST",
         headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ last_name, first_name, email, phone, carte_pro_ok, send_access })
+        body: JSON.stringify({ last_name, first_name, birth_date, email, phone, carte_pro_ok, send_access })
       });
 
       const res = await r.json();
