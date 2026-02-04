@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+{% set token_safe = token or trainee.public_token or '' %}
 
 <style>
 
@@ -503,7 +504,6 @@
   {% set _ = ns.file_tokens.insert(0, d.file) %}
 {% endif %}
 {% set file_tokens = ns.file_tokens %}
-{% set file_tokens = d.file_tokens if d.file_tokens is defined else [] %}
 {% set has_file = (file_tokens|length) > 0 %}
     {% set st = (d.status if d and d.status else ("NON DÉPOSÉ" if not has_file else "A CONTRÔLER")) %}
     {% set up = (st|string)|upper %}
@@ -575,7 +575,7 @@
 {% if show_upload %}
 <form class="upload-form"
 id="upload_{{ d.key }}"
-  action="/espace/{{ token }}/documents/{{ d.key }}/upload"
+  action="/espace/{{ token_safe }}/documents/{{ d.key }}/upload"
   method="post"
   enctype="multipart/form-data">
 
@@ -614,7 +614,7 @@ id="upload_{{ d.key }}"
     <ul style="margin:6px 0 0 18px;">
       {% for ft in file_tokens %}
         <li>
-          <a href="/espace/{{ token }}/download/{{ ft }}" target="_blank" rel="noopener">
+          <a href="/espace/{{ token_safe }}/download/{{ ft }}" target="_blank" rel="noopener">
             Voir le fichier {{ loop.index }}
           </a>
         </li>
@@ -673,7 +673,7 @@ id="upload_{{ d.key }}"
   <div class="docmeta"><div class="label">Ma carte SST</div></div>
   {% if deliv.get('carte_sst') %}
 <a class="btn outline small" target="_blank"
-   href="/espace/{{ token }}/download/{{ deliv.get('carte_sst') }}">Voir</a>
+   href="/espace/{{ token_safe }}/download/{{ deliv.get('carte_sst') }}">Voir</a>
 
   {% else %}
     <span class="pill gray">Prochainement</span>
@@ -684,7 +684,7 @@ id="upload_{{ d.key }}"
   <div class="docmeta"><div class="label">Mon diplôme</div></div>
   {% if deliv.get('diplome') %}
     <a class="btn outline small" target="_blank"
-   href="/espace/{{ token }}/download/{{ deliv.get('diplome') }}">Voir</a>
+   href="/espace/{{ token_safe }}/download/{{ deliv.get('diplome') }}">Voir</a>
 
   {% else %}
     <span class="pill gray">Prochainement</span>
@@ -695,7 +695,7 @@ id="upload_{{ d.key }}"
   <div class="docmeta"><div class="label">Mes attestations de fin de formation</div></div>
   {% if deliv.get('attestation_fin_formation') %}
    <a class="btn outline small" target="_blank"
-   href="/espace/{{ token }}/download/{{ deliv.get('attestation_fin_formation') }}">Voir</a>
+   href="/espace/{{ token_safe }}/download/{{ deliv.get('attestation_fin_formation') }}">Voir</a>
 
   {% else %}
     <span class="pill gray">Prochainement</span>
@@ -960,7 +960,7 @@ if (typeof closeModal !== "function") {
     el.classList.remove("show"); // ✅
   };
 }
-  const token = "{{ token }}";
+  const token = "{{ token_safe }}";
 {% if not trainee.public_hide_welcome_popup %}
 // ✅ Welcome popup — une seule fois (on marque "vu" dès l'ouverture)
 (function(){
