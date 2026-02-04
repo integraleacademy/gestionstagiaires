@@ -854,6 +854,17 @@ id="upload_{{ d.key }}"
     border-top:1px solid #eef2f7;
     background:#fff;
   }
+
+  .ia-loader{
+    width:44px;
+    height:44px;
+    border-radius:50%;
+    border:4px solid #e5e7eb;
+    border-top-color:#111827;
+    animation: iaSpin .8s linear infinite;
+    margin:0 auto 12px auto;
+  }
+  @keyframes iaSpin{to{transform:rotate(360deg)}}
 </style>
 
 {% if not trainee.public_hide_welcome_popup %}
@@ -906,6 +917,33 @@ id="upload_{{ d.key }}"
   </div>
 </div>
 {% endif %}
+<!-- ✅ Popup chargement dépôt document -->
+<div id="uploadLoadingModal" class="ia-modal-backdrop" aria-live="polite">
+  <div class="ia-modal" role="dialog" aria-modal="true" aria-labelledby="uploadLoadingTitle">
+    <div class="ia-accent"></div>
+
+    <div class="ia-head">
+      <div class="ia-brand">
+        <div class="ia-logo">
+          <img src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy">
+        </div>
+        <div>
+          <div id="uploadLoadingTitle" class="ia-title">Envoi en cours</div>
+          <div class="ia-sub">Veuillez patienter</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ia-body">
+      <div class="ia-card">
+        <div class="ia-loader" aria-hidden="true"></div>
+        <p class="ia-p" style="text-align:center;">
+          Votre document est en train d’être envoyé. Merci de ne pas fermer cette page.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
 <!-- ✅ Popup confirmation dépôt document -->
 <div id="uploadSuccessModal" class="ia-modal-backdrop">
   <div class="ia-modal" role="dialog" aria-modal="true">
@@ -1365,6 +1403,8 @@ window.addEventListener("DOMContentLoaded", () => {
 
       const msg = form.querySelector(".uploading-msg");
       if (msg) msg.style.display = "block";
+
+      openModal("uploadLoadingModal");
     });
   });
 });
