@@ -462,7 +462,7 @@
         </thead>
         <tbody>
           {% for d in (trainee.documents or []) %}
-          {% set has_file = (d.file and d.file|length > 0) %}
+          {% set has_file = (d.file_tokens and d.file_tokens|length > 0) or (d.file and d.file|length > 0) %}
           {% set cur = (d.status or ("A CONTRÔLER" if has_file else "NON DÉPOSÉ")) %}
 
           <tr data-doc-key="{{ d.key }}">
@@ -499,15 +499,19 @@
 
             <td class="mono" style="max-width:320px;">
              {% if has_file %}
-  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-    <a href="{{ url_for('admin_view_upload', path=d.file_token) }}" target="_blank">📎 Voir</a>
+  <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;">
+    {% for ft in (d.file_tokens or []) %}
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <a href="{{ url_for('admin_view_upload', path=ft) }}" target="_blank">📎 Voir fichier {{ loop.index }}</a>
 
-    <form method="post"
-          action="{{ url_for('admin_delete_doc_file', session_id=session.id, trainee_id=trainee.id, doc_key=d.key) }}"
-          onsubmit="return confirm('Supprimer ce fichier ?');"
-          style="display:inline;">
-      <button class="btn btn-danger" type="submit" style="padding:6px 10px;">🗑️ Supprimer</button>
-    </form>
+        <form method="post"
+              action="{{ url_for('admin_delete_doc_file', session_id=session.id, trainee_id=trainee.id, doc_key=d.key, file_token=ft) }}"
+              onsubmit="return confirm('Supprimer ce fichier ?');"
+              style="display:inline;">
+          <button class="btn btn-danger" type="submit" style="padding:6px 10px;">🗑️ Supprimer</button>
+        </form>
+      </div>
+    {% endfor %}
 
     <span class="hint">(déjà uploadé)</span>
   </div>

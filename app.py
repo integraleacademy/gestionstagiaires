@@ -1735,14 +1735,16 @@ def admin_delete_doc_file(session_id: str, trainee_id: str, doc_key: str):
     if not target:
         return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
-    # tokens à supprimer (multi ou mono)
-    tokens = []
-    if isinstance(target.get("files"), list) and target["files"]:
-        tokens = [x for x in target["files"] if x]
-    else:
+    file_token = (request.args.get("file_token") or "").strip()
+    existing_files = [x for x in (target.get("files") or []) if x]
+    if not existing_files:
         tok = (target.get("file") or "").strip()
-        if tok:
-            tokens = [tok]
+        existing_files = [tok] if tok else []
+
+    if file_token:
+        tokens = [file_token] if file_token in existing_files else []
+    else:
+        tokens = list(existing_files)
 
     # suppression fichiers sur disque
     for tok in tokens:
@@ -1754,9 +1756,11 @@ def admin_delete_doc_file(session_id: str, trainee_id: str, doc_key: str):
             pass
 
     # reset du doc
-    target["file"] = ""
-    target["files"] = []
-    target["status"] = "NON DÉPOSÉ"
+    remaining = [x for x in existing_files if x not in tokens]
+    target["files"] = remaining
+    target["file"] = remaining[0] if remaining else ""
+    if not remaining:
+        target["status"] = "NON DÉPOSÉ"
     # on garde le commentaire (pratique), ou tu peux le vider si tu préfères
 
     t["updated_at"] = _now_iso()
@@ -3141,13 +3145,13 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         # compat: 1 fichier
         token = d.get("file") or ""
         d["file_token"] = token
-    
+
         # ✅ multi-fichiers
         files = d.get("files")
-        if isinstance(files, list) and files:
-            d["file_tokens"] = [x for x in files if x]
-        else:
-            d["file_tokens"] = []
+        file_tokens = [x for x in files if x] if isinstance(files, list) else []
+        if token and token not in file_tokens:
+            file_tokens.insert(0, token)
+        d["file_tokens"] = file_tokens
 
     # deliverables view
     deliverables_view = []
