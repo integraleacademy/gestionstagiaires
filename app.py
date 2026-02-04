@@ -1119,6 +1119,7 @@ def api_create_trainee(session_id: str):
     payload = request.get_json(silent=True) or {}
     last_name = (payload.get("last_name") or "").strip()
     first_name = (payload.get("first_name") or "").strip()
+    birth_date = (payload.get("birth_date") or "").strip()
     email = (payload.get("email") or "").strip()
     phone = (payload.get("phone") or "").strip()
     carte_pro_ok = bool(payload.get("carte_pro_ok"))
@@ -1143,6 +1144,7 @@ def api_create_trainee(session_id: str):
         "personal_id": trainee_id,
         "last_name": last_name,
         "first_name": first_name,
+        "birth_date": birth_date,
         "email": email,
         "phone": phone,
         "comment": "",
