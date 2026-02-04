@@ -1275,6 +1275,10 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "public_hide_docs",
         "public_hide_suivi", 
         "public_hide_popup",
+        "last_name",
+        "first_name",
+        "email",
+        "phone",
 
     }
 

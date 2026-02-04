@@ -87,11 +87,19 @@
 data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}"
   data-has-diplome="{{ '1' if (t.get('deliverables', {}).get('diplome')) else '0' }}"
   data-has-attestation="{{ '1' if (t.get('deliverables', {}).get('attestation_fin_formation')) else '0' }}">
-<td>{{ (t.last_name or "")|upper }}</td>
-<td>{{ (t.first_name or "")|lower|capitalize }}</td>
+<td>
+  <input class="inline-edit" data-field="last_name" value="{{ t.last_name or '' }}" placeholder="Nom" style="width:100%;min-width:140px;">
+</td>
+<td>
+  <input class="inline-edit" data-field="first_name" value="{{ t.first_name or '' }}" placeholder="Prénom" style="width:100%;min-width:140px;">
+</td>
 
-        <td class="mono">{{ t.email }}</td>
-        <td class="mono">{{ t.phone }}</td>
+        <td class="mono">
+          <input class="inline-edit" data-field="email" type="email" value="{{ t.email or '' }}" placeholder="email@exemple.com" style="width:100%;min-width:200px;">
+        </td>
+        <td class="mono">
+          <input class="inline-edit" data-field="phone" type="tel" value="{{ t.phone or '' }}" placeholder="+33600000000" style="width:100%;min-width:150px;">
+        </td>
 
         <td>
           <select class="status sel" data-field="convention_status">
@@ -416,8 +424,12 @@ tr.row-todo td{
       const tr = btn.closest("tr");
       const traineeId = tr.getAttribute("data-trainee-id");
 
-      const nom = tr.querySelector("td:nth-child(1)")?.textContent.trim() || "";
-      const prenom = tr.querySelector("td:nth-child(2)")?.textContent.trim() || "";
+      const nom = tr.querySelector("td:nth-child(1) input")?.value.trim()
+        || tr.querySelector("td:nth-child(1)")?.textContent.trim()
+        || "";
+      const prenom = tr.querySelector("td:nth-child(2) input")?.value.trim()
+        || tr.querySelector("td:nth-child(2)")?.textContent.trim()
+        || "";
 
       if (!traineeId || !nom || !prenom) {
         alert("Nom / prénom introuvables");
@@ -911,6 +923,24 @@ document.querySelectorAll("select.sel").forEach(sel=>{
         }catch(e){
           alert("Erreur sauvegarde");
         }
+      });
+    });
+
+    // inline inputs autosave (nom/prénom/email/tel)
+    tr.querySelectorAll("input.inline-edit").forEach(input => {
+      input.addEventListener("input", ()=>{
+        const field = input.getAttribute("data-field");
+        const value = input.value;
+        const key = `${traineeId}-${field}`;
+
+        if(debounceTimers[key]) clearTimeout(debounceTimers[key]);
+        debounceTimers[key] = setTimeout(async ()=>{
+          try{
+            await saveField(traineeId, field, value);
+          }catch(e){
+            // silencieux
+          }
+        }, 450);
       });
     });
 
