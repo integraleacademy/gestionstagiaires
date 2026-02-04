@@ -726,6 +726,25 @@ function applyStatusPill(selectEl){
       });
     }
 
+    function updateDocPill(row, status){
+      if(!row) return;
+      const hint = row.querySelector("td:nth-child(2) .hint");
+      if(!hint) return;
+      let pillClass = "pill-yellow";
+      let label = "A CONTRÔLER";
+      if(status === "CONFORME"){
+        pillClass = "pill-green";
+        label = "CONFORME";
+      }else if(status === "NON CONFORME"){
+        pillClass = "pill-red";
+        label = "NON CONFORME";
+      }else if(status === "NON DÉPOSÉ"){
+        pillClass = "pill-gray";
+        label = "NON DÉPOSÉ";
+      }
+      hint.innerHTML = `<span class="pill ${pillClass}">${label}</span>`;
+    }
+
     // select changes
     docsTable.querySelectorAll("tr[data-doc-key]").forEach(tr=>{
       const key = tr.getAttribute("data-doc-key");
@@ -734,7 +753,7 @@ function applyStatusPill(selectEl){
       if(sel){
         sel.addEventListener("change", async ()=>{
           await saveDoc(key, "status", sel.value);
-          window.location.reload(); // pour recalcul dossier complet/incomplet
+          updateDocPill(tr, sel.value);
         });
       }
 
