@@ -503,6 +503,7 @@
   {% set _ = ns.file_tokens.insert(0, d.file) %}
 {% endif %}
 {% set file_tokens = ns.file_tokens %}
+{% set file_tokens = d.file_tokens if d.file_tokens is defined else [] %}
 {% set has_file = (file_tokens|length) > 0 %}
     {% set st = (d.status if d and d.status else ("NON DÉPOSÉ" if not has_file else "A CONTRÔLER")) %}
     {% set up = (st|string)|upper %}
