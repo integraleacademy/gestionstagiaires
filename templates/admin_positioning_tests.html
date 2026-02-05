@@ -6,6 +6,11 @@
     <h1 style="margin:0 0 6px;">Tests de positionnement</h1>
     <div class="muted">Liste des candidats ayant passé le test et leur résultat.</div>
   </div>
+  {% if entries|length > 0 %}
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="btn btn-danger" type="button" id="btnDeleteAllTests">Tout supprimer</button>
+  </div>
+  {% endif %}
 </div>
 
 <div class="card" style="margin-top:16px;">
@@ -20,6 +25,7 @@
           <th>Téléphone</th>
           <th>Score</th>
           <th>Score / 20</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -32,6 +38,12 @@
           <td>{{ entry.contact.phone }}</td>
           <td>{{ entry.score }}/{{ entry.total }}</td>
           <td>{{ entry.score_over_20 }}</td>
+          <td>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <a class="btn btn-outline" href="{{ url_for('admin_positioning_test_detail', test_id=entry.id) }}">Voir réponses</a>
+              <button class="btn btn-danger" type="button" data-delete-test="{{ entry.id }}">Supprimer</button>
+            </div>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -42,5 +54,49 @@
     <div style="margin-top:12px;color:var(--muted)">Aucun test enregistré pour le moment.</div>
   {% endif %}
 </div>
+
+<script>
+  document.querySelectorAll("[data-delete-test]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      if(!confirm("Supprimer ce candidat ?")) return;
+      btn.disabled = true;
+      const testId = btn.getAttribute("data-delete-test");
+      try{
+        const r = await fetch(`/api/test-positionnement/${testId}/delete`, { method:"POST" });
+        const res = await r.json();
+        if(!r.ok || !res.ok){
+          alert("Erreur suppression");
+          btn.disabled = false;
+          return;
+        }
+        window.location.reload();
+      }catch(e){
+        alert("Erreur réseau");
+      }finally{
+        btn.disabled = false;
+      }
+    });
+  });
+
+  const btnDeleteAll = document.getElementById("btnDeleteAllTests");
+  btnDeleteAll?.addEventListener("click", async ()=>{
+    if(!confirm("Supprimer tous les résultats ?")) return;
+    btnDeleteAll.disabled = true;
+    try{
+      const r = await fetch("/api/test-positionnement/delete_all", { method:"POST" });
+      const res = await r.json();
+      if(!r.ok || !res.ok){
+        alert("Erreur suppression");
+        btnDeleteAll.disabled = false;
+        return;
+      }
+      window.location.reload();
+    }catch(e){
+      alert("Erreur réseau");
+    }finally{
+      btnDeleteAll.disabled = false;
+    }
+  });
+</script>
 
 {% endblock %}

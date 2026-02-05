@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  .test-detail .question{
+    padding:12px 0;
+    border-bottom:1px dashed var(--border);
+  }
+  .test-detail .question:last-child{
+    border-bottom:none;
+  }
+  .test-detail .question-title{
+    font-weight:700;
+    margin-bottom:8px;
+  }
+  .test-detail .options{
+    display:grid;
+    gap:8px;
+  }
+  .test-detail .option{
+    padding:10px 12px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:#f8fafc;
+  }
+  .test-detail .option.correct{
+    border-color:#16a34a;
+    background:#dcfce7;
+    color:#14532d;
+  }
+  .test-detail .option.wrong{
+    border-color:#dc2626;
+    background:#fee2e2;
+    color:#7f1d1d;
+  }
+  .test-detail .meta-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:12px;
+  }
+  .test-detail .meta-item{
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    background:#fff;
+  }
+  .test-detail .meta-label{
+    font-size:12px;
+    color:var(--muted);
+  }
+  .test-detail .meta-value{
+    font-weight:700;
+  }
+</style>
+
+<div class="test-detail">
+  <div class="page-head" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div>
+      <h1 style="margin:0 0 6px;">Résultats du test</h1>
+      <div class="muted">Détails des réponses du candidat.</div>
+    </div>
+    <a class="btn btn-outline" href="{{ url_for('admin_positioning_tests') }}">← Retour</a>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div class="meta-grid">
+      <div class="meta-item">
+        <div class="meta-label">Date de réalisation</div>
+        <div class="meta-value">{{ entry.created_at|frdatetime }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Nom</div>
+        <div class="meta-value">{{ entry.contact.last_name }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Prénom</div>
+        <div class="meta-value">{{ entry.contact.first_name }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Mail</div>
+        <div class="meta-value">{{ entry.contact.email }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Téléphone</div>
+        <div class="meta-value">{{ entry.contact.phone }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Score</div>
+        <div class="meta-value">{{ entry.score }}/{{ entry.total }} ({{ entry.score_over_20 }}/20)</div>
+      </div>
+    </div>
+  </div>
+
+  {% for section in sections %}
+  <div class="card" style="margin-top:16px;">
+    <h2 style="margin:0 0 10px;">{{ section.title }}</h2>
+    {% for question in section.questions %}
+      {% set user_answer = entry.answers.get(question.id) %}
+      <div class="question">
+        <div class="question-title">{{ loop.index }}. {{ question.text }}</div>
+        <div class="options">
+          {% for option in question.options %}
+            {% set is_selected = (user_answer is not none and user_answer == loop.index0) %}
+            {% set is_correct = (loop.index0 == question.correct_index) %}
+            <div class="option{% if is_correct %} correct{% endif %}{% if is_selected and not is_correct %} wrong{% endif %}">
+              {{ option }}
+            </div>
+          {% endfor %}
+        </div>
+        <div class="muted" style="margin-top:8px;">
+          {% if user_answer is none %}
+            Réponse du candidat : <strong>Aucune réponse</strong>.
+          {% else %}
+            Réponse du candidat : <strong>{{ question.options[user_answer] }}</strong>.
+          {% endif %}
+          Correction : <strong>{{ question.options[question.correct_index] }}</strong>.
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}
