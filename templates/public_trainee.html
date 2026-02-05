@@ -1285,11 +1285,29 @@ function cancelPhotoUpload(){
   if(form) form.dataset.confirmed = "";
 }
 
+function triggerUploadSubmit(form){
+  if(!form) return;
+  if(typeof form.requestSubmit === "function"){
+    form.requestSubmit();
+    return;
+  }
+  const fileInput = form.querySelector('input[type="file"]');
+  const btn = form.querySelector('button[type="submit"]');
+  if (fileInput) fileInput.style.display = "none";
+  if (btn) btn.style.display = "none";
+
+  const msg = form.querySelector(".uploading-msg");
+  if (msg) msg.style.display = "block";
+
+  openModal("uploadLoadingModal");
+  form.submit();
+}
+
 function confirmPhotoUpload(){
   const form = document.getElementById("upload_photo");
   if(form){
     form.dataset.confirmed = "1";
-    form.submit();
+    triggerUploadSubmit(form);
   }
 }
 
@@ -1320,7 +1338,7 @@ function confirmIdUpload(){
   const form = document.getElementById("upload_id");
   if(form){
     form.dataset.confirmed = "1";
-    form.submit();
+    triggerUploadSubmit(form);
   }
 }
 
