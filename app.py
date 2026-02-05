@@ -2,7 +2,7 @@ import os
 import json
 import uuid
 import datetime
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Iterable
 from functools import wraps
 from flask import session
 from PIL import Image
@@ -2576,15 +2576,41 @@ def admin_delete_doc_file(session_id: str, trainee_id: str, doc_key: str):
 # =========================
 
 
-def docs_summary_text(trainee: Dict[str, Any]) -> str:
-    lines=[]
+def _normalize_status(value: str) -> str:
+    return (
+        value.strip()
+        .upper()
+        .replace("_", " ")
+        .replace("É", "E")
+        .replace("È", "E")
+        .replace("Ê", "E")
+        .replace("À", "A")
+        .replace("Â", "A")
+        .replace("Ô", "O")
+        .replace("Û", "U")
+        .replace("Ï", "I")
+        .replace("Î", "I")
+    )
+
+
+def docs_summary_text(
+    trainee: Dict[str, Any],
+    allowed_statuses: Optional[Iterable[str]] = None,
+) -> str:
+    lines = []
+    allowed_norms = (
+        {_normalize_status(s) for s in allowed_statuses} if allowed_statuses else None
+    )
     for d in (trainee.get("documents") or []):
-        st = (d.get("status") or "A CONTRÔLER").upper()
+        st_raw = (d.get("status") or "A CONTRÔLER").strip().upper()
+        st_norm = _normalize_status(st_raw)
+        if allowed_norms and st_norm not in allowed_norms:
+            continue
         com = (d.get("comment") or "").strip()
         if com:
-            lines.append(f"- {d.get('label','document')} : {st} — {com}")
+            lines.append(f"- {d.get('label','document')} : {st_raw} — {com}")
         else:
-            lines.append(f"- {d.get('label','document')} : {st}")
+            lines.append(f"- {d.get('label','document')} : {st_raw}")
     return "\n".join(lines)
 
 
@@ -3140,7 +3166,15 @@ def admin_docs_nonconform_notify(session_id: str, trainee_id: str):
     training_type = _session_get(s, "training_type", "")
     ensure_documents_schema_for_trainee(t, training_type)
 
-    details = docs_summary_text(t)
+    details = docs_summary_text(
+        t,
+        allowed_statuses={
+            "NON CONFORME",
+            "NON_CONFORME",
+            "NON DÉPOSÉ",
+            "NON DEPOSE",
+        },
+    )
 
     subject = "Documents non conformes – Action requise (Intégrale Academy)"
 
