@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 import datetime
+import unicodedata
 from typing import Dict, Any, Optional, List, Iterable
 from functools import wraps
 from flask import session
@@ -604,6 +605,21 @@ def compute_stats(session: Dict[str, Any]) -> Dict[str, Any]:
 def fetch_cnaps_status_by_name(nom: str, prenom: str) -> Optional[str]:
     if not CNAPS_LOOKUP_ENDPOINT:
         return None
+
+    def _normalize_cnaps_name(value: str) -> str:
+        raw = (value or "").strip()
+        if not raw:
+            return ""
+        cleaned = unicodedata.normalize("NFD", raw)
+        cleaned = "".join(ch for ch in cleaned if unicodedata.category(ch) != "Mn")
+        cleaned = " ".join(cleaned.replace("-", " ").split())
+        return cleaned.upper()
+
+    nom = _normalize_cnaps_name(nom)
+    prenom = _normalize_cnaps_name(prenom)
+    if not nom or not prenom:
+        return None
+
     try:
         r = requests.get(CNAPS_LOOKUP_ENDPOINT, params={"nom": nom, "prenom": prenom}, timeout=10)
         if r.status_code != 200:
