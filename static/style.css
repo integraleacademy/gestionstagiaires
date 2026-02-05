@@ -292,6 +292,10 @@ h2{margin:0;font-size:20px;color:var(--text)}
 .table-positioning td:nth-child(1){
   width: 110px;
 }
+.table-positioning th:nth-child(4),
+.table-positioning td:nth-child(4){
+  width: 260px;
+}
 .table-positioning th:nth-child(6),
 .table-positioning td:nth-child(6),
 .table-positioning th:nth-child(7),
@@ -301,6 +305,12 @@ h2{margin:0;font-size:20px;color:var(--text)}
 .table-positioning th:nth-child(8),
 .table-positioning td:nth-child(8){
   width: 150px;
+}
+.table-positioning td:nth-child(1),
+.table-positioning td:nth-child(4){
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Commentaire confortable */
