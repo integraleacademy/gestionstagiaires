@@ -70,6 +70,7 @@
         <th>Convention</th>
         <th>Test Français</th>
         <th>Dossier</th>
+        <th>Dossier complet</th>
         <th>CNAPS</th>
         {% if show_hosting %}<th>Hébergement</th>{% endif %}
         <th>Commentaire</th>
@@ -127,6 +128,16 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
             <option value="complete" {% if t.dossier_status=="complete" %}selected{% endif %}>complet</option>
             <option value="incomplete" {% if t.dossier_status=="incomplete" %}selected{% endif %}>incomplet</option>
           </select>
+        </td>
+
+        <td>
+          <label class="inline" style="gap:6px;">
+            <input type="checkbox"
+                   class="force-dossier"
+                   data-field="force_dossier_complete"
+                   {% if t.force_dossier_complete %}checked{% endif %}>
+            <span class="muted">Forcer</span>
+          </label>
         </td>
 
         <td>
@@ -901,11 +912,12 @@ document.querySelectorAll("select.sel").forEach(sel=>{
   let debounceTimers = {};
 
   async function saveField(traineeId, field, value){
-    await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
+    const res = await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
       method:"POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ [field]: value })
     });
+    return await res.json().catch(()=> ({}));
   }
 
   document.querySelectorAll("tr[data-trainee-id]").forEach(tr=>{
@@ -913,6 +925,31 @@ document.querySelectorAll("select.sel").forEach(sel=>{
 
   
 
+
+    const dossierSelect = tr.querySelector('select[data-field="dossier_status"]');
+    const forceDossier = tr.querySelector('input.force-dossier');
+    if (dossierSelect && forceDossier) {
+      dossierSelect.disabled = forceDossier.checked;
+      if (forceDossier.checked) {
+        dossierSelect.value = "complete";
+        applyStatusPill(dossierSelect);
+      }
+      forceDossier.addEventListener("change", async ()=>{
+        try{
+          const data = await saveField(traineeId, "force_dossier_complete", forceDossier.checked);
+          dossierSelect.disabled = forceDossier.checked;
+          if (data?.dossier_status) {
+            dossierSelect.value = data.dossier_status;
+          } else if (forceDossier.checked) {
+            dossierSelect.value = "complete";
+          }
+          applyStatusPill(dossierSelect);
+          recomputeRowHighlight();
+        }catch(e){
+          alert("Erreur sauvegarde");
+        }
+      });
+    }
 
     // select changes
     tr.querySelectorAll("select.sel").forEach(sel=>{
@@ -923,7 +960,11 @@ document.querySelectorAll("select.sel").forEach(sel=>{
         applyStatusPill(sel); // ✅ recolor instant
 
         try{
-          await saveField(traineeId, field, value);
+          const data = await saveField(traineeId, field, value);
+          if (data?.dossier_status && dossierSelect) {
+            dossierSelect.value = data.dossier_status;
+            applyStatusPill(dossierSelect);
+          }
           recomputeRowHighlight();
         }catch(e){
           alert("Erreur sauvegarde");

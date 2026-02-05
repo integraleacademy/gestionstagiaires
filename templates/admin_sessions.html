@@ -148,7 +148,9 @@
           <span class="pill pill-status pill-status--{{ s.status_key }}">{{ s.status_label }}</span>
         </div>
       </div>
-      <div class="bigmark">{{ "✅" if s.session_is_conform else "❌" }}</div>
+      {% if s.session_dossier_complete %}
+      <div class="bigmark">✅</div>
+      {% endif %}
     </div>
 
     <div class="card-meta">
