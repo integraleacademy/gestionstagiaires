@@ -76,8 +76,6 @@
         <th>Commentaire</th>
         {% if show_vae %}<th>VAE</th>{% endif %}
         <th>Financement</th>
-        <th>Fiche</th>
-        <th>Suppr.</th>
       </tr>
     </thead>
 
@@ -85,14 +83,30 @@
       {% for t in trainees %}
       <tr class="row {% if t.comment %}row-warning{% endif %}"
     data-trainee-id="{{ t.id }}"
+    data-last-name="{{ t.last_name or '' }}"
+    data-first-name="{{ t.first_name or '' }}"
 data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}"
   data-has-diplome="{{ '1' if (t.get('deliverables', {}).get('diplome')) else '0' }}"
   data-has-attestation="{{ '1' if (t.get('deliverables', {}).get('attestation_fin_formation')) else '0' }}">
 <td>
-  <input class="inline-edit" data-field="last_name" value="{{ t.last_name or '' }}" placeholder="Nom" style="width:100%;min-width:140px;">
+  <a class="trainee-link"
+     href="/admin/sessions/{{ session.id }}/stagiaires/{{ t.id }}"
+     style="text-decoration:none;">
+    {{ t.last_name or "" }}
+  </a>
+  <div class="doc-badges"
+       data-doc-badges
+       data-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}"
+       data-diplome="{{ '1' if (t.get('deliverables', {}).get('diplome')) else '0' }}"
+       data-attestation="{{ '1' if (t.get('deliverables', {}).get('attestation_fin_formation')) else '0' }}">
+  </div>
 </td>
 <td>
-  <input class="inline-edit" data-field="first_name" value="{{ t.first_name or '' }}" placeholder="Prénom" style="width:100%;min-width:140px;">
+  <a class="trainee-link"
+     href="/admin/sessions/{{ session.id }}/stagiaires/{{ t.id }}"
+     style="text-decoration:none;">
+    {{ t.first_name or "" }}
+  </a>
 </td>
 
         <td class="mono">
@@ -103,30 +117,30 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         </td>
 
         <td>
-          <select class="status sel" data-field="convention_status">
+          <select class="status sel status-dot" data-field="convention_status">
             {% for v in enums.convention %}
               <option value="{{ v }}" {% if t.convention_status==v %}selected{% endif %}>
-                {{ "PROCHAINEMENT" if v=="soon" else ("EN COURS DE SIGNATURE" if v=="signing" else "SIGNÉE") }}
+                {{ "🟠" if v=="soon" else ("🟡" if v=="signing" else "🟢") }}
               </option>
             {% endfor %}
           </select>
         </td>
 
 <td>
-  <select class="status sel" data-field="test_fr_status">
-    <option value="soon" {% if t.test_fr_status=="soon" or not t.test_fr_status %}selected{% endif %}>PROCHAINEMENT</option>
-    <option value="in_progress" {% if t.test_fr_status=="in_progress" %}selected{% endif %}>EN COURS</option>
-    <option value="relance" {% if t.test_fr_status=="relance" %}selected{% endif %}>RELANCÉ</option>
-    <option value="validated" {% if t.test_fr_status=="validated" %}selected{% endif %}>VALIDÉ</option>
+  <select class="status sel status-dot" data-field="test_fr_status">
+    <option value="soon" {% if t.test_fr_status=="soon" or not t.test_fr_status %}selected{% endif %}>🟠</option>
+    <option value="in_progress" {% if t.test_fr_status=="in_progress" %}selected{% endif %}>🟡</option>
+    <option value="relance" {% if t.test_fr_status=="relance" %}selected{% endif %}>🔴</option>
+    <option value="validated" {% if t.test_fr_status=="validated" %}selected{% endif %}>🟢</option>
   </select>
 </td>
 
 
 
         <td>
-          <select class="status sel" data-field="dossier_status">
-            <option value="complete" {% if t.dossier_status=="complete" %}selected{% endif %}>complet</option>
-            <option value="incomplete" {% if t.dossier_status=="incomplete" %}selected{% endif %}>incomplet</option>
+          <select class="status sel status-dot" data-field="dossier_status">
+            <option value="complete" {% if t.dossier_status=="complete" %}selected{% endif %}>🟢</option>
+            <option value="incomplete" {% if t.dossier_status=="incomplete" %}selected{% endif %}>🔴</option>
           </select>
         </td>
 
@@ -177,36 +191,14 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         {% endif %}
 
         <td>
-          <select class="status sel" data-field="financement_status">
-            <option value="soon" {% if t.financement_status=="soon" %}selected{% endif %}>prochainement</option>
-            <option value="in_review" {% if t.financement_status=="in_review" %}selected{% endif %}>en cours de validation</option>
-            <option value="validated" {% if t.financement_status=="validated" %}selected{% endif %}>validé</option>
+          <select class="status sel status-dot" data-field="financement_status">
+            <option value="soon" {% if t.financement_status=="soon" %}selected{% endif %}>🟠</option>
+            <option value="in_review" {% if t.financement_status=="in_review" %}selected{% endif %}>🟡</option>
+            <option value="validated" {% if t.financement_status=="validated" %}selected{% endif %}>🟢</option>
           </select>
-        </td>
-
-        <td>
-          <a class="btn btn-outline"
-             href="/admin/sessions/{{ session.id }}/stagiaires/{{ t.id }}"
-             style="text-decoration:none;display:inline-block">
-            Fiche
-          </a>
-<div class="small mono">ID: {{ t.personal_id }}</div>
-
-<div class="doc-badges"
-     data-doc-badges
-     data-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}"
-     data-diplome="{{ '1' if (t.get('deliverables', {}).get('diplome')) else '0' }}"
-     data-attestation="{{ '1' if (t.get('deliverables', {}).get('attestation_fin_formation')) else '0' }}">
-</div>
-
-{% if t.comment %}
-  <div class="warn-line">⚠️</div>
-{% endif %}
-
-        </td>
-
-        <td>
-          <button class="btn btn-danger" data-delete-trainee type="button">🗑️</button>
+          {% if t.comment %}
+            <div class="warn-line">⚠️</div>
+          {% endif %}
         </td>
       </tr>
       {% endfor %}
@@ -377,12 +369,12 @@ tr.row-todo td{
   margin-top:6px;
   display:flex;
   gap:6px;
-  flex-wrap:wrap;
+  flex-wrap:nowrap;
 }
 
 .badge-doc{
-  font-size:11px;
-  padding:3px 8px;
+  font-size:10px;
+  padding:2px 6px;
   border-radius:999px;
   border:1px solid #e2e8f0;
   background:#fff;
@@ -439,10 +431,10 @@ tr.row-todo td{
       const tr = btn.closest("tr");
       const traineeId = tr.getAttribute("data-trainee-id");
 
-      const nom = tr.querySelector("td:nth-child(1) input")?.value.trim()
+      const nom = tr.getAttribute("data-last-name")?.trim()
         || tr.querySelector("td:nth-child(1)")?.textContent.trim()
         || "";
-      const prenom = tr.querySelector("td:nth-child(2) input")?.value.trim()
+      const prenom = tr.getAttribute("data-first-name")?.trim()
         || tr.querySelector("td:nth-child(2)")?.textContent.trim()
         || "";
 
@@ -972,7 +964,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       });
     });
 
-    // inline inputs autosave (nom/prénom/email/tel)
+    // inline inputs autosave (email/tel)
     tr.querySelectorAll("input.inline-edit").forEach(input => {
       input.addEventListener("input", ()=>{
         const field = input.getAttribute("data-field");
@@ -1008,28 +1000,6 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       });
     }
 
-    // delete trainee
-    const delBtn = tr.querySelector("[data-delete-trainee]");
-    if(delBtn){
-      delBtn.addEventListener("click", async ()=>{
-        if(!confirm("Supprimer ce stagiaire ?")) return;
-        delBtn.disabled = true;
-        try{
-          const r = await fetch(`/api/sessions/${sessionId}/trainees/${traineeId}/delete`, { method:"POST" });
-          const res = await r.json();
-          if(!r.ok || !res.ok){
-            alert("Erreur suppression stagiaire");
-            delBtn.disabled = false;
-            return;
-          }
-          window.location.reload();
-        }catch(e){
-          alert("Erreur réseau");
-        }finally{
-          delBtn.disabled = false;
-        }
-      });
-    }
   });
 
   // =========================

@@ -352,6 +352,18 @@ input:focus, select:focus{
 }
 .table td .status-pill{margin-top: 2px}
 
+/* pastilles compactes (admin trainees) */
+select.status-dot.status-pill{
+  padding: 2px 8px;
+  min-width: 44px;
+  font-size: 16px;
+  line-height: 1.2;
+  text-transform: none;
+  letter-spacing: 0;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
 .status-pill.is-soon{ background: var(--neutral); color:#0f172a; }
 .status-pill.is-signing{ background: var(--orange); color:#111; }
 .status-pill.is-signed{ background: var(--green); color:#fff; }
