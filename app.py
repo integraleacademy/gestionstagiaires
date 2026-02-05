@@ -349,6 +349,16 @@ def record_cnaps_status_change(t: Dict[str, Any], new_status: Optional[str]) -> 
     t["cnaps_history"] = history
 
 
+def ensure_cnaps_history(t: Dict[str, Any]) -> None:
+    history = t.get("cnaps_history")
+    if not isinstance(history, list):
+        history = []
+    t["cnaps_history"] = history
+    current_status = (t.get("cnaps") or "INCONNU").strip()
+    if current_status:
+        record_cnaps_status_change(t, current_status)
+
+
 def load_data() -> Dict[str, Any]:
     if not os.path.exists(DATA_FILE):
         base = {"sessions": [], "positioning_tests": []}
