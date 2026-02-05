@@ -332,6 +332,23 @@ def _now_iso() -> str:
     return datetime.datetime.utcnow().isoformat() + "Z"
 
 
+def _normalize_cnaps_status(value: Optional[str]) -> str:
+    return (value or "").strip().upper()
+
+
+def record_cnaps_status_change(t: Dict[str, Any], new_status: Optional[str]) -> None:
+    normalized = (new_status or "").strip()
+    if not normalized:
+        return
+    history = t.get("cnaps_history")
+    if not isinstance(history, list):
+        history = []
+    last_status = history[-1].get("status") if history else ""
+    if _normalize_cnaps_status(last_status) != _normalize_cnaps_status(normalized):
+        history.append({"status": normalized, "date": _now_iso()})
+    t["cnaps_history"] = history
+
+
 def load_data() -> Dict[str, Any]:
     if not os.path.exists(DATA_FILE):
         base = {"sessions": [], "positioning_tests": []}
@@ -1713,8 +1730,10 @@ def admin_trainees(session_id: str):
         if fn:
             t["first_name"] = fn
 
+        current_cnaps = t.get("cnaps") or ""
+
         # ✅ si déjà validé manuellement, on ne touche pas
-        if (t.get("cnaps") or "").strip().upper() == "CARTE PROFESSIONNELLE OK":
+        if _normalize_cnaps_status(current_cnaps) == "CARTE PROFESSIONNELLE OK":
             pass
         else:
             if ln and fn:
@@ -1724,7 +1743,9 @@ def admin_trainees(session_id: str):
                 if cn:
                     cn_u = str(cn).strip().upper()
                     if cn_u not in ("INCONNU", "UNKNOWN", ""):
-                        t["cnaps"] = cn_u
+                        if _normalize_cnaps_status(cn_u) != _normalize_cnaps_status(current_cnaps):
+                            t["cnaps"] = cn_u
+                            record_cnaps_status_change(t, cn_u)
 
         # valeur par défaut si vide
         if not (t.get("cnaps") or "").strip():
@@ -2109,6 +2130,14 @@ def api_update_trainee(session_id: str, trainee_id: str):
             continue
 
         if isinstance(v, str):
+            if k == "cnaps":
+                new_val = v.strip()
+                if _normalize_cnaps_status(new_val) != _normalize_cnaps_status(t.get(k)):
+                    t[k] = new_val
+                    record_cnaps_status_change(t, new_val)
+                else:
+                    t[k] = new_val
+                continue
             if k == "last_name":
                 t[k] = normalize_last_name(v)
             elif k == "first_name":
