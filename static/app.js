@@ -136,7 +136,7 @@ async function api(url, method="GET", body=null) {
 
   async function saveField(row, field, value) {
     const traineeId = row.getAttribute("data-trainee-id");
-    await api("/api/trainees/update", "POST", { trainee_id: traineeId, field, value });
+    return await api("/api/trainees/update", "POST", { trainee_id: traineeId, field, value });
   }
 
   function applyBadges(row) {
@@ -178,7 +178,11 @@ async function api(url, method="GET", body=null) {
         const value = sel.value;
         scheduleSave(async () => {
           try {
-            await saveField(row, field, value);
+            const data = await saveField(row, field, value);
+            if (data?.dossier_status) {
+              const dossierSel = qs('select[data-field="dossier_status"]', row);
+              if (dossierSel) dossierSel.value = data.dossier_status;
+            }
             applyBadges(row);
             toast("Enregistré ✅");
           } catch (e) {
@@ -197,6 +201,34 @@ async function api(url, method="GET", body=null) {
             // surlignage + warning
             if ((comment.value || "").trim().length > 0) row.classList.add("row-warning");
             else row.classList.remove("row-warning");
+            toast("Enregistré ✅");
+          } catch (e) {
+            toast(e.message, false);
+          }
+        });
+      });
+    }
+
+    const forceDossier = qs("input.force-dossier", row);
+    if (forceDossier) {
+      const dossierSel = qs('select[data-field="dossier_status"]', row);
+      if (dossierSel) {
+        dossierSel.disabled = forceDossier.checked;
+        if (forceDossier.checked) dossierSel.value = "complete";
+      }
+      forceDossier.addEventListener("change", () => {
+        scheduleSave(async () => {
+          try {
+            const data = await saveField(row, "force_dossier_complete", forceDossier.checked);
+            if (dossierSel) {
+              dossierSel.disabled = forceDossier.checked;
+              if (data?.dossier_status) {
+                dossierSel.value = data.dossier_status;
+              } else if (forceDossier.checked) {
+                dossierSel.value = "complete";
+              }
+            }
+            applyBadges(row);
             toast("Enregistré ✅");
           } catch (e) {
             toast(e.message, false);
