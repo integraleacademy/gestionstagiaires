@@ -864,6 +864,9 @@ def infos_is_complete(t: Dict[str, Any]) -> bool:
 
 def dossier_is_complete_total(trainee: Dict[str, Any], training_type: str) -> bool:
     # ✅ complet seulement si infos OK + tous docs CONFORME
+    # ✅ OU si forçage admin
+    if trainee.get("force_dossier_complete"):
+        return True
     return infos_is_complete(trainee) and dossier_is_complete(trainee, training_type)
 
 
@@ -1562,6 +1565,11 @@ def admin_sessions():
                 done_total += 1
         
         total_total = len(trainees)
+        dossier_complete_total = 0
+        for t in trainees:
+            if dossier_is_complete_total(t, _session_get(s, "training_type", "")):
+                dossier_complete_total += 1
+        session_dossier_complete = (total_total > 0 and dossier_complete_total == total_total)
 
         date_start_raw = _session_get(s, "date_start", "")
         date_end_raw = _session_get(s, "date_end", "")
@@ -1606,6 +1614,7 @@ def admin_sessions():
             "exam_date": _session_get(s, "exam_date", ""),
             "total": st["total"],
             "session_is_conform": st["session_is_conform"],
+            "session_dossier_complete": session_dossier_complete,
 
             # ✅ new
             "deliverables_done": done_total,
@@ -1888,6 +1897,7 @@ def api_create_trainee(session_id: str):
         "hosting_status": "unknown" if show_hosting else "",
         "public_token": public_token,
         "no_permis": False,
+        "force_dossier_complete": False,
         "documents": [],
         "created_at": _now_iso(),
         "phone_followups": [],
@@ -2033,6 +2043,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "convention_status",
         "test_fr_status",
         "dossier_status",
+        "force_dossier_complete",
         "financement_status",
         "vae_status",
         "comment",
@@ -2056,7 +2067,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
             continue
 
         # bools
-        if k in ("no_permis", "public_hide_infos", "public_hide_docs", "public_hide_suivi", "public_hide_popup"):
+        if k in ("no_permis", "public_hide_infos", "public_hide_docs", "public_hide_suivi", "public_hide_popup", "force_dossier_complete"):
             t[k] = True if v in (True, "true", "1", 1, "yes", "on") else False
             continue
 
@@ -2078,7 +2089,11 @@ def api_update_trainee(session_id: str, trainee_id: str):
     training_type = _session_get(s, "training_type", "")
     t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
     save_data(data)
-    return jsonify({"ok": True})
+    return jsonify({
+        "ok": True,
+        "dossier_status": t.get("dossier_status"),
+        "force_dossier_complete": bool(t.get("force_dossier_complete")),
+    })
 
 
 @app.post("/api/sessions/<session_id>/trainees/<trainee_id>/delete")
@@ -4224,6 +4239,11 @@ def admin_sessions_archived():
             continue
 
         st = compute_stats(s)
+        trainees = _session_trainees_list(s)
+        dossier_complete_total = sum(
+            1 for t in trainees if dossier_is_complete_total(t, _session_get(s, "training_type", ""))
+        )
+        session_dossier_complete = (len(trainees) > 0 and dossier_complete_total == len(trainees))
         out_sessions.append({
             "id": s.get("id"),
             "name": _session_get(s, "name", ""),
@@ -4233,6 +4253,7 @@ def admin_sessions_archived():
             "exam_date": _session_get(s, "exam_date", ""),
             "total": st["total"],
             "session_is_conform": st["session_is_conform"],
+            "session_dossier_complete": session_dossier_complete,
         })
 
     return render_template(
