@@ -1537,6 +1537,11 @@ def positioning_test_public():
     )
 
 
+@app.get("/positioning_test_public.html")
+def positioning_test_public_legacy():
+    return redirect(url_for("positioning_test_public"), code=301)
+
+
 @app.get("/admin/sessions")
 @admin_login_required
 def admin_sessions():
