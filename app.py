@@ -1630,6 +1630,20 @@ def admin_positioning_tests():
     entries.sort(key=lambda e: e.get("created_at") or "", reverse=True)
     return render_template("admin_positioning_tests.html", entries=entries)
 
+@app.get("/admin/test-positionnement/<test_id>")
+@admin_login_required
+def admin_positioning_test_detail(test_id: str):
+    data = load_data()
+    entries = list(data.get("positioning_tests", []))
+    entry = next((e for e in entries if e.get("id") == test_id), None)
+    if not entry:
+        abort(404)
+    return render_template(
+        "admin_positioning_test_detail.html",
+        entry=entry,
+        sections=POSITIONING_TEST_SECTIONS,
+    )
+
 
 
 @app.get("/admin/sessions/<session_id>/trainees")
@@ -2147,6 +2161,27 @@ def api_positioning_test_submit():
             "score_over_20": score_data["score_over_20"],
         }
     )
+
+
+@app.post("/api/test-positionnement/<test_id>/delete")
+@admin_login_required
+def api_positioning_test_delete(test_id: str):
+    data = load_data()
+    entries = list(data.get("positioning_tests", []))
+    new_entries = [e for e in entries if e.get("id") != test_id]
+    data["positioning_tests"] = new_entries
+    save_data(data)
+    return jsonify({"ok": True, "deleted": len(entries) - len(new_entries)})
+
+
+@app.post("/api/test-positionnement/delete_all")
+@admin_login_required
+def api_positioning_test_delete_all():
+    data = load_data()
+    deleted = len(data.get("positioning_tests", []))
+    data["positioning_tests"] = []
+    save_data(data)
+    return jsonify({"ok": True, "deleted": deleted})
 
 from werkzeug.utils import secure_filename
 
