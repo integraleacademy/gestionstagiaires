@@ -274,6 +274,45 @@ h2{margin:0;font-size:20px;color:var(--text)}
   font-weight:900;
 }
 
+/* Tableau tests de positionnement (admin) */
+.table-wrap-positioning{
+  overflow-x: auto;
+}
+.table-positioning{
+  min-width: 0 !important;
+  width: 100%;
+  table-layout: fixed;
+}
+.table-positioning th,
+.table-positioning td{
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.table-positioning th:nth-child(1),
+.table-positioning td:nth-child(1){
+  width: 110px;
+}
+.table-positioning th:nth-child(4),
+.table-positioning td:nth-child(4){
+  width: 260px;
+}
+.table-positioning th:nth-child(6),
+.table-positioning td:nth-child(6),
+.table-positioning th:nth-child(7),
+.table-positioning td:nth-child(7){
+  width: 90px;
+}
+.table-positioning th:nth-child(8),
+.table-positioning td:nth-child(8){
+  width: 150px;
+}
+.table-positioning td:nth-child(1),
+.table-positioning td:nth-child(4){
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Commentaire confortable */
 input.comment{
   min-width: 380px;
