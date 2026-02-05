@@ -3359,7 +3359,7 @@ def admin_docs_relance(session_id: str, trainee_id: str):
     sms = (
         f"Intégrale Academy ⏰ Relance : Bonjour {t.get('first_name','')}, "
         f"Nous revenons vers vous au sujet de votre formation {formation_type}. A ce jour votre Dossier Formation est INCOMPLET. Votre formation approche, et pour un meilleur suivi de votre inscription, nous vous remercions de bien vouloir compléter votre dossier dès que possible. "
-        f"({dstart} au {dend}). Vous pouvez compléter votre dossier en cliquant ici : {link} "
+        f"Pour rappel, votre dossier doit être COMPLET au plus tard 10 jours avant votre entrée en formation. Vous pouvez compléter votre dossier en cliquant ici : {link} "
         f"Besoin d’aide ? 04 22 47 07 68"
     )
 
