@@ -3910,7 +3910,7 @@ def public_doc_upload(token: str, doc_key: str):
             d["file"] = cur_files[0] if cur_files else ""
 
             cur = (d.get("status") or "").strip().upper()
-            if cur in ("", "NON DÉPOSÉ", "NON DEPOSE", "NON_DEPOSE"):
+            if cur in ("", "NON DÉPOSÉ", "NON DEPOSE", "NON_DEPOSE") or cur_status in ("NON CONFORME", "NON_CONFORME"):
                 d["status"] = "A CONTRÔLER"
             if d.get("status") == "A CONTROLER":
                 d["status"] = "A CONTRÔLER"
