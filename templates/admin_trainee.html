@@ -115,6 +115,17 @@
           <span class="hint">✅ Accès envoyé le : <strong>{{ trainee.access_sent_at }}</strong></span>
         {% endif %}
       </div>
+      {% set cnaps_history = trainee.cnaps_history or [] %}
+      {% if cnaps_history %}
+        <div class="hint" style="margin-top:6px;">
+          Historique CNAPS :
+          {% for entry in cnaps_history %}
+            <span style="display:inline-block;margin-right:10px;">
+              {{ entry.status|upper }} · {{ entry.date|frdatetime }}
+            </span>
+          {% endfor %}
+        </div>
+      {% endif %}
     </div>
 
     <!-- BOUTONS ACTIONS À DROITE -->
