@@ -1750,6 +1750,7 @@ def admin_trainees(session_id: str):
         # valeur par défaut si vide
         if not (t.get("cnaps") or "").strip():
             t["cnaps"] = "INCONNU"
+            record_cnaps_status_change(t, t["cnaps"])
 
         # hosting only for A3P
         if session_view["training_type"] == "A3P":
@@ -4146,6 +4147,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     dossier_complete = dossier_is_complete_total(t, training_type)
     t["dossier_status"] = "complete" if dossier_complete else "incomplete"
     t["updated_at"] = _now_iso()
+    ensure_cnaps_history(t)
 
     # ✅ persistance
     s["trainees"] = trainees
