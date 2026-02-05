@@ -452,7 +452,7 @@ select.status-dot.status-pill{
 .table td{ padding:10px 10px !important; }
 
 /* colonnes fixes (lisibles) */
-.table th:nth-child(1), .table td:nth-child(1){ min-width:140px !important; } /* Nom */
+.table th:nth-child(1), .table td:nth-child(1){ min-width:200px !important; } /* Nom */
 .table th:nth-child(2), .table td:nth-child(2){ min-width:120px !important; } /* Prénom */
 .table th:nth-child(4), .table td:nth-child(4){ min-width:150px !important; } /* Téléphone */
 
@@ -969,7 +969,7 @@ input[type="file"]{
    ========================= */
 
 :root{
-  --sticky-nom: 160px;     /* largeur Nom */
+  --sticky-nom: 200px;     /* largeur Nom */
   --sticky-prenom: 140px;  /* largeur Prénom */
 }
 
