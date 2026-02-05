@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 import datetime
+import unicodedata
 from typing import Dict, Any, Optional, List, Iterable
 from functools import wraps
 from flask import session
@@ -168,6 +169,18 @@ def normalize_phone_fr(phone: str) -> str:
     if p.startswith("0") and len(p) == 10 and p[1:].isdigit():
         return "+33" + p[1:]
     return p
+
+def _collapse_spaces(value: str) -> str:
+    return " ".join((value or "").strip().split())
+
+def normalize_last_name(value: str) -> str:
+    collapsed = _collapse_spaces(value)
+    return collapsed.upper()
+
+def normalize_first_name(value: str) -> str:
+    collapsed = _collapse_spaces(value)
+    lowered = collapsed.lower()
+    return lowered.title()
 
 
 
@@ -604,6 +617,21 @@ def compute_stats(session: Dict[str, Any]) -> Dict[str, Any]:
 def fetch_cnaps_status_by_name(nom: str, prenom: str) -> Optional[str]:
     if not CNAPS_LOOKUP_ENDPOINT:
         return None
+
+    def _normalize_cnaps_name(value: str) -> str:
+        raw = (value or "").strip()
+        if not raw:
+            return ""
+        cleaned = unicodedata.normalize("NFD", raw)
+        cleaned = "".join(ch for ch in cleaned if unicodedata.category(ch) != "Mn")
+        cleaned = " ".join(cleaned.replace("-", " ").split())
+        return cleaned.upper()
+
+    nom = _normalize_cnaps_name(nom)
+    prenom = _normalize_cnaps_name(prenom)
+    if not nom or not prenom:
+        return None
+
     try:
         r = requests.get(CNAPS_LOOKUP_ENDPOINT, params={"nom": nom, "prenom": prenom}, timeout=10)
         if r.status_code != 200:
@@ -1677,8 +1705,13 @@ def admin_trainees(session_id: str):
 
     # refresh CNAPS (best-effort) using last_name/first_name
     for t in trainees:
-        ln = (t.get("last_name") or "").strip()
-        fn = (t.get("first_name") or "").strip()
+        ln = normalize_last_name(t.get("last_name") or "")
+        fn = normalize_first_name(t.get("first_name") or "")
+
+        if ln:
+            t["last_name"] = ln
+        if fn:
+            t["first_name"] = fn
 
         # ✅ si déjà validé manuellement, on ne touche pas
         if (t.get("cnaps") or "").strip().upper() == "CARTE PROFESSIONNELLE OK":
@@ -1857,8 +1890,8 @@ def api_create_trainee(session_id: str):
         return jsonify({"ok": False, "error": "session_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
-    last_name = (payload.get("last_name") or "").strip()
-    first_name = (payload.get("first_name") or "").strip()
+    last_name = normalize_last_name(payload.get("last_name") or "")
+    first_name = normalize_first_name(payload.get("first_name") or "")
     birth_date = (payload.get("birth_date") or "").strip()
     email = (payload.get("email") or "").strip()
     phone = (payload.get("phone") or "").strip()
@@ -2076,7 +2109,12 @@ def api_update_trainee(session_id: str, trainee_id: str):
             continue
 
         if isinstance(v, str):
-            t[k] = v.strip()
+            if k == "last_name":
+                t[k] = normalize_last_name(v)
+            elif k == "first_name":
+                t[k] = normalize_first_name(v)
+            else:
+                t[k] = v.strip()
         else:
             t[k] = v
 
