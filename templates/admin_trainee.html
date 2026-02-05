@@ -42,17 +42,17 @@
   </div>
 
 <!-- NOM / PRÉNOM À DROITE -->
-<div style="display:flex;gap:8px;align-items:center;font-size:20px;font-weight:900;line-height:1.1;margin-top:2px;flex-wrap:wrap;">
+<div class="trainee-name-row">
   <input id="editLastName"
+         class="trainee-name-input trainee-name-input--last"
          type="text"
          value="{{ trainee.last_name or '' }}"
-         placeholder="Nom"
-         style="font-size:20px;font-weight:900;line-height:1.1;border:none;background:transparent;padding:0;outline:none;text-transform:uppercase;min-width:140px;">
+         placeholder="Nom">
   <input id="editFirstName"
+         class="trainee-name-input trainee-name-input--first"
          type="text"
          value="{{ trainee.first_name or '' }}"
-         placeholder="Prénom"
-         style="font-size:20px;font-weight:900;line-height:1.1;border:none;background:transparent;padding:0;outline:none;text-transform:capitalize;min-width:140px;">
+         placeholder="Prénom">
 </div>
 
 

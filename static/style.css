@@ -732,6 +732,33 @@ select.status-pill{
   white-space:nowrap;
 }
 
+/* nom/prenom: éviter le rognage de la première lettre */
+.trainee-name-row{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  margin-top:2px;
+  flex-wrap:wrap;
+}
+.trainee-name-input{
+  font-size:20px;
+  font-weight:900;
+  line-height:1.2;
+  border:none;
+  background:transparent;
+  padding:2px 4px;
+  outline:none;
+  width:auto;
+  min-width:140px;
+  flex:0 1 auto;
+}
+.trainee-name-input--last{
+  text-transform:uppercase;
+}
+.trainee-name-input--first{
+  text-transform:capitalize;
+}
+
 /* titres de cartes (Test FR / Docs) */
 .card-head{
   display:flex;
