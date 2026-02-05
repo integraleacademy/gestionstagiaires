@@ -186,7 +186,12 @@ def normalize_first_name(value: str) -> str:
 
 import base64
 
-def brevo_send_email(to_email: str, subject: str, html: str) -> bool:
+def brevo_send_email(
+    to_email: str,
+    subject: str,
+    html: str,
+    cc_emails: Optional[List[str]] = None,
+) -> bool:
     if not BREVO_API_KEY or not to_email:
         return False
 
@@ -205,6 +210,10 @@ def brevo_send_email(to_email: str, subject: str, html: str) -> bool:
         "subject": subject,
         "htmlContent": html,
     }
+
+    cc_list = [email for email in (cc_emails or []) if email]
+    if cc_list:
+        payload["cc"] = [{"email": email} for email in cc_list]
 
     if attachments:
         payload["attachment"] = attachments
@@ -4476,7 +4485,12 @@ def api_phone_relance_send(session_id: str, trainee_id: str):
     """)
 
     # envoi au mail secrétaire
-    ok = brevo_send_email("clement@integraleacademy.com", subject, html)
+    ok = brevo_send_email(
+        "znaw83@gmail.com",
+        subject,
+        html,
+        cc_emails=["clement@integraleacademy.com"],
+    )
 
     # persistance
     s["trainees"] = _session_trainees_list(s)
