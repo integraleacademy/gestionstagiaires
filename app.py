@@ -332,6 +332,33 @@ def _now_iso() -> str:
     return datetime.datetime.utcnow().isoformat() + "Z"
 
 
+def _normalize_cnaps_status(value: Optional[str]) -> str:
+    return (value or "").strip().upper()
+
+
+def ensure_cnaps_history(t: Dict[str, Any]) -> None:
+    history = t.get("cnaps_history")
+    if not isinstance(history, list):
+        history = []
+    t["cnaps_history"] = history
+    current = (t.get("cnaps") or "").strip()
+    if current and not history:
+        history.append({"status": current, "date": t.get("updated_at") or _now_iso()})
+
+
+def record_cnaps_status_change(t: Dict[str, Any], new_status: Optional[str]) -> None:
+    normalized = (new_status or "").strip()
+    if not normalized:
+        return
+    history = t.get("cnaps_history")
+    if not isinstance(history, list):
+        history = []
+    last_status = history[-1].get("status") if history else ""
+    if _normalize_cnaps_status(last_status) != _normalize_cnaps_status(normalized):
+        history.append({"status": normalized, "date": _now_iso()})
+    t["cnaps_history"] = history
+
+
 def load_data() -> Dict[str, Any]:
     if not os.path.exists(DATA_FILE):
         base = {"sessions": [], "positioning_tests": []}
@@ -1713,8 +1740,10 @@ def admin_trainees(session_id: str):
         if fn:
             t["first_name"] = fn
 
+        current_cnaps = t.get("cnaps") or ""
+
         # ✅ si déjà validé manuellement, on ne touche pas
-        if (t.get("cnaps") or "").strip().upper() == "CARTE PROFESSIONNELLE OK":
+        if _normalize_cnaps_status(current_cnaps) == "CARTE PROFESSIONNELLE OK":
             pass
         else:
             if ln and fn:
@@ -1724,11 +1753,14 @@ def admin_trainees(session_id: str):
                 if cn:
                     cn_u = str(cn).strip().upper()
                     if cn_u not in ("INCONNU", "UNKNOWN", ""):
-                        t["cnaps"] = cn_u
+                        if _normalize_cnaps_status(cn_u) != _normalize_cnaps_status(current_cnaps):
+                            t["cnaps"] = cn_u
+                            record_cnaps_status_change(t, cn_u)
 
         # valeur par défaut si vide
         if not (t.get("cnaps") or "").strip():
             t["cnaps"] = "INCONNU"
+            record_cnaps_status_change(t, t["cnaps"])
 
         # hosting only for A3P
         if session_view["training_type"] == "A3P":
@@ -2109,6 +2141,11 @@ def api_update_trainee(session_id: str, trainee_id: str):
             continue
 
         if isinstance(v, str):
+            if k == "cnaps":
+                new_val = v.strip()
+                t[k] = new_val
+                record_cnaps_status_change(t, new_val)
+                continue
             if k == "last_name":
                 t[k] = normalize_last_name(v)
             elif k == "first_name":
@@ -4117,6 +4154,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     dossier_complete = dossier_is_complete_total(t, training_type)
     t["dossier_status"] = "complete" if dossier_complete else "incomplete"
     t["updated_at"] = _now_iso()
+    ensure_cnaps_history(t)
 
     # ✅ persistance
     s["trainees"] = trainees
