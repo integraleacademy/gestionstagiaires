@@ -68,6 +68,7 @@
         <th>Téléphone</th>
 
         <th>Convention</th>
+        <th>Financement</th>
         <th>Test Français</th>
         <th>Dossier</th>
         <th>Dossier complet</th>
@@ -75,7 +76,6 @@
         {% if show_hosting %}<th>Hébergement</th>{% endif %}
         <th>Commentaire</th>
         {% if show_vae %}<th>VAE</th>{% endif %}
-        <th>Financement</th>
       </tr>
     </thead>
 
@@ -124,6 +124,17 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
               </option>
             {% endfor %}
           </select>
+        </td>
+
+        <td>
+          <select class="status sel status-dot" data-field="financement_status">
+            <option value="soon" {% if t.financement_status=="soon" %}selected{% endif %}>🟠</option>
+            <option value="in_review" {% if t.financement_status=="in_review" %}selected{% endif %}>🟡</option>
+            <option value="validated" {% if t.financement_status=="validated" %}selected{% endif %}>🟢</option>
+          </select>
+          {% if t.comment %}
+            <div class="warn-line">⚠️</div>
+          {% endif %}
         </td>
 
 <td>
@@ -190,16 +201,6 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 
         {% endif %}
 
-        <td>
-          <select class="status sel status-dot" data-field="financement_status">
-            <option value="soon" {% if t.financement_status=="soon" %}selected{% endif %}>🟠</option>
-            <option value="in_review" {% if t.financement_status=="in_review" %}selected{% endif %}>🟡</option>
-            <option value="validated" {% if t.financement_status=="validated" %}selected{% endif %}>🟢</option>
-          </select>
-          {% if t.comment %}
-            <div class="warn-line">⚠️</div>
-          {% endif %}
-        </td>
       </tr>
       {% endfor %}
     </tbody>
