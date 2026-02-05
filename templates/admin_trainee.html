@@ -413,13 +413,15 @@
     📁 Gestion des documents
   </summary>
 
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-
-
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
       {% set dossier_label = ("DOSSIER COMPLET" if dossier_is_complete else "DOSSIER INCOMPLET") %}
-      <span class="pill {% if dossier_is_complete %}pill-green{% else %}pill-red{% endif %}">
+      <span id="dossierStatusPill" class="pill {% if dossier_is_complete %}pill-green{% else %}pill-red{% endif %}">
         {{ dossier_label }}
       </span>
+      <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="forceDossierComplete" {% if trainee.force_dossier_complete %}checked{% endif %}>
+        <span>Forcer dossier complet</span>
+      </label>
     </div>
 
 {% if (session.training_type or '')|upper == "A3P" %}
@@ -706,6 +708,15 @@ function applyStatusPill(selectEl){
   else selectEl.classList.add("is-soon");
 }
 
+function setDossierPill(status){
+  const pill = document.getElementById("dossierStatusPill");
+  if(!pill) return;
+  pill.classList.remove("pill-green", "pill-red");
+  const isComplete = status === "complete";
+  pill.classList.add(isComplete ? "pill-green" : "pill-red");
+  pill.textContent = isComplete ? "DOSSIER COMPLET" : "DOSSIER INCOMPLET";
+}
+
   // util modal (si ton base.html fournit déjà openModal/closeModal, ça marchera aussi)
   function openModal(id){ document.getElementById(id).setAttribute("aria-hidden","false"); document.getElementById(id).classList.add("show"); }
   function closeModal(id){ document.getElementById(id).setAttribute("aria-hidden","true"); document.getElementById(id).classList.remove("show"); }
@@ -729,6 +740,32 @@ function applyStatusPill(selectEl){
       form.action = "{{ url_for('admin_test_fr_relance', session_id=session.id, trainee_id=trainee.id) }}";
     }
     openModal("testModal");
+  }
+
+  const forceDossierCheckbox = document.getElementById("forceDossierComplete");
+  if(forceDossierCheckbox){
+    forceDossierCheckbox.addEventListener("change", async ()=>{
+      const value = forceDossierCheckbox.checked;
+      try{
+        const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
+          method:"POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ force_dossier_complete: value })
+        });
+        const data = await res.json().catch(()=> ({}));
+        if(!res.ok || data.ok === false){
+          throw new Error("save_failed");
+        }
+        if(data?.dossier_status){
+          setDossierPill(data.dossier_status);
+        }else{
+          setDossierPill(value ? "complete" : "incomplete");
+        }
+      }catch(e){
+        forceDossierCheckbox.checked = !value;
+        alert("Erreur sauvegarde dossier");
+      }
+    });
   }
 
   // Autosave documents

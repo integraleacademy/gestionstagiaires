@@ -4073,6 +4073,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
 
     # ✅ s'assure que no_permis est bien un bool
     t["no_permis"] = bool(t.get("no_permis"))
+    t["force_dossier_complete"] = bool(t.get("force_dossier_complete"))
 
     # ✅ dossier_status cohérent avec les docs requis
     dossier_complete = dossier_is_complete_total(t, training_type)
