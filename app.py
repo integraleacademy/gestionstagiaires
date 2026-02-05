@@ -1009,7 +1009,7 @@ POSITIONING_TEST_SECTIONS = [
                     "Nommés par le Premier ministre",
                     "Nommés par le Président de la République",
                 ],
-                "correct_index": 3,
+                "correct_index": 2,
             },
             {
                 "id": "s1q14",
