@@ -1020,3 +1020,9 @@ input[type="file"]{
 #traineesTable td:nth-child(2){
   box-shadow: 10px 0 14px rgba(2,6,23,0.10);
 }
+
+/* Aligner Nom + Prénom sur la même ligne malgré les badges */
+#traineesTable td:nth-child(1),
+#traineesTable td:nth-child(2){
+  vertical-align: top;
+}
