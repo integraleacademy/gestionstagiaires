@@ -130,6 +130,13 @@
 
     <!-- BOUTONS ACTIONS À DROITE -->
     <div class="btn-row" style="justify-content:flex-end;">
+      {% set cnaps_full_name = ((trainee.last_name or "XXXXX") ~ " " ~ (trainee.first_name or ""))|trim %}
+      {% set cnaps_birth_date = (trainee.birth_date or "XXXX") %}
+      {% set cnaps_body = "Bonjour,\n\nJe me permets de revenir vers nous concernant la demande d'autorisation préalable de " ~ cnaps_full_name ~ " né le " ~ cnaps_birth_date ~ ".\n\nLe suivi de la demande indique que la demande a été acceptée, mais cette personne n'a pas reçu le courrier officiel de notification par courrier postal et nous ne disposons donc pas de son numéro PRE nécessaire à son entrée en formation.\n\nVous serait-il possible svp de me communiquer le numéro PRE ?\n\nJe vous remercie par avance,\n\nBien cordialement,\n\nClément VAILLANT\nDirecteur Intégrale Sécurité Formations" %}
+      <a class="btn btn-outline btn-uniform"
+         href="mailto:elsaduq83@gmail.com,clement@integraleacademy.com?subject={{ 'Demande de numéro PRE'|urlencode }}&body={{ cnaps_body|urlencode }}">
+        ✉️ Contacter le CNAPS
+      </a>
       <form method="post" action="{{ url_for('admin_delete_trainee', session_id=session.id, trainee_id=trainee.id) }}"
             onsubmit="return confirm('Supprimer ce stagiaire ?');">
 <button class="btn btn-danger btn-uniform" type="submit">
