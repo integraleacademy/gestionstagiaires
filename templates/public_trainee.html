@@ -1472,10 +1472,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 // --- PRE/CAR live formatter ---
-// attendu : PRE-083-2025-12-01-20250000000 (11+ digits à la fin)
+// attendu : PRE-083-2025-12-01-20250000000 (11 digits à la fin)
 function formatPreCarDisplay(raw){
   raw = (raw || "").toString().toUpperCase().replace(/\s+/g, "");
   raw = raw.replace(/[^A-Z0-9-]/g, "");
+
+  const limitTo25 = (value) => {
+    let out = "";
+    let count = 0;
+    for (const ch of value) {
+      const isDash = ch === "-";
+      if (!isDash) {
+        if (count >= 25) break;
+        count += 1;
+      }
+      out += ch;
+    }
+    return out;
+  };
 
   // prefix PRE ou CAR
   let prefix = "";
@@ -1483,14 +1497,14 @@ function formatPreCarDisplay(raw){
   else if (raw.startsWith("CAR")) prefix = "CAR";
 
   // si pas de prefix valide, on laisse l'utilisateur taper (mais on nettoie)
-  if (!prefix) return raw.replace(/[^A-Z0-9-]/g, "");
+  if (!prefix) return limitTo25(raw.replace(/[^A-Z0-9-]/g, ""));
 
   // récupère tous les chiffres après le prefix
   let digits = raw.slice(3).replace(/\D/g, "");
 
-  // attendu : DDD(3) + YYYY(4) + MM(2) + DD(2) + LAST(11+) => min 22 chiffres
-  // on coupe large pour éviter que ça parte en vrille si le stagiaire colle trop long
-  digits = digits.slice(0, 3 + 4 + 2 + 2 + 20);
+  // attendu : DDD(3) + YYYY(4) + MM(2) + DD(2) + LAST(11) => 22 chiffres
+  // 25 caractères max sans les tirets (PRE/CAR + 22 chiffres)
+  digits = digits.slice(0, 3 + 4 + 2 + 2 + 11);
 
   const dep  = digits.slice(0, 3);
   const y    = digits.slice(3, 7);
@@ -1505,7 +1519,7 @@ function formatPreCarDisplay(raw){
   if (d)    out += "-" + d;
   if (last) out += "-" + last;
 
-  return out;
+  return limitTo25(out);
 }
 
 function normalizePRE(s){
