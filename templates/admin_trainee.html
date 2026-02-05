@@ -105,6 +105,11 @@
         </span>
 
         <button class="mini-btn" id="btnRefreshCnaps" type="button">↻ Rafraîchir CNAPS</button>
+        <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="chkCnapsOk"
+                 {% if c == "CARTE PROFESSIONNELLE OK" %}checked{% endif %}>
+          <span>CNAPS OK</span>
+        </label>
 
         {% if trainee.access_sent_at %}
           <span class="hint">✅ Accès envoyé le : <strong>{{ trainee.access_sent_at }}</strong></span>
@@ -853,6 +858,23 @@ function setDossierPill(status){
       alert("Erreur CNAPS");
     }
   });
+
+  const chkCnapsOk = document.getElementById("chkCnapsOk");
+  if(chkCnapsOk){
+    chkCnapsOk.addEventListener("change", async ()=>{
+      const newVal = chkCnapsOk.checked ? "CARTE PROFESSIONNELLE OK" : "INCONNU";
+      try{
+        await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
+          method:"POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ cnaps: newVal })
+        });
+        window.location.reload();
+      }catch(e){
+        alert("Erreur sauvegarde CNAPS");
+      }
+    });
+  }
 
   // VAE (simple update)
   async function setVaeStep(stepKey){
