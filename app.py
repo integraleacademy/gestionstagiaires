@@ -3295,7 +3295,18 @@ def admin_docs_relance(session_id: str, trainee_id: str):
     training_type = _session_get(s, "training_type", "")
     ensure_documents_schema_for_trainee(t, training_type)
     
-    docs_details = docs_summary_text(t)
+    docs_details = docs_summary_text(
+        t,
+        allowed_statuses={
+            "A CONTRÔLER",
+            "A CONTROLER",
+            "NON CONFORME",
+            "NON_CONFORME",
+            "NON DÉPOSÉ",
+            "NON DEPOSE",
+            "NON_DEPOSE",
+        },
+    )
     infos_details = infos_missing_text(t)
 
     formation_type = formation_label(_session_get(s, "training_type", ""))
