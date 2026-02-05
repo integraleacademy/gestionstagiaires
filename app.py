@@ -321,7 +321,7 @@ def _now_iso() -> str:
 
 def load_data() -> Dict[str, Any]:
     if not os.path.exists(DATA_FILE):
-        base = {"sessions": []}
+        base = {"sessions": [], "positioning_tests": []}
         save_data(base)
         return base
     try:
@@ -338,6 +338,10 @@ def load_data() -> Dict[str, Any]:
         if normalize_sessions_schema(data):
             changed = True
 
+        if "positioning_tests" not in data:
+            data["positioning_tests"] = []
+            changed = True
+
         if changed:
             save_data(data)
 
@@ -350,7 +354,7 @@ def load_data() -> Dict[str, Any]:
             os.replace(DATA_FILE, backup)
         except Exception:
             pass
-        base = {"sessions": []}
+        base = {"sessions": [], "positioning_tests": []}
         save_data(base)
         return base
 
@@ -362,6 +366,44 @@ def save_data(data: Dict[str, Any]) -> None:
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     os.replace(tmp, DATA_FILE)
+
+
+def positioning_test_public_sections() -> List[Dict[str, Any]]:
+    public_sections = []
+    for section in POSITIONING_TEST_SECTIONS:
+        public_sections.append(
+            {
+                "id": section["id"],
+                "title": section["title"],
+                "questions": [
+                    {
+                        "id": q["id"],
+                        "text": q["text"],
+                        "options": q["options"],
+                    }
+                    for q in section["questions"]
+                ],
+            }
+        )
+    return public_sections
+
+
+def positioning_test_score(answers: Dict[str, Any]) -> Dict[str, Any]:
+    score = 0
+    total = POSITIONING_TEST_TOTAL
+    for section in POSITIONING_TEST_SECTIONS:
+        for question in section["questions"]:
+            qid = question["id"]
+            if qid not in answers:
+                continue
+            try:
+                selected = int(answers[qid])
+            except (TypeError, ValueError):
+                continue
+            if selected == question["correct_index"]:
+                score += 1
+    score_over_20 = round((score / total) * 20, 2) if total else 0
+    return {"score": score, "total": total, "score_over_20": score_over_20}
 
 
 def find_session(data: Dict[str, Any], session_id: str) -> Optional[Dict[str, Any]]:
@@ -829,9 +871,670 @@ def dossier_is_complete_total(trainee: Dict[str, Any], training_type: str) -> bo
 # Pages (templates)
 # =========================
 
+POSITIONING_TEST_SECTIONS = [
+    {
+        "id": "section-1",
+        "title": "Section 1 – Institutions françaises, Principes généraux de République et économie (14 questions)",
+        "questions": [
+            {
+                "id": "s1q1",
+                "text": "Quelle est la devise de la République Française ?",
+                "options": [
+                    "Liberté, égalité, fraternité",
+                    "Travail, Famille, Patrie",
+                    "Unité, justice, progrès",
+                ],
+                "correct_index": 0,
+            },
+            {
+                "id": "s1q2",
+                "text": "Quelle est le régime politique de la France ?",
+                "options": [
+                    "Dictature",
+                    "Monarchie absolue",
+                    "République parlementaire",
+                    "République présidentielle",
+                ],
+                "correct_index": 2,
+            },
+            {
+                "id": "s1q3",
+                "text": "Qui est le chef de l’Etat en France ?",
+                "options": [
+                    "Le premier Ministre",
+                    "Le Président de la République",
+                    "Le Président de l’Assemblée nationale",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s1q4",
+                "text": "Quel est le principal symbole de la République française ?",
+                "options": [
+                    "La Marseillaise",
+                    "Le coq",
+                    "Le drapeau tricolore",
+                ],
+                "correct_index": 2,
+            },
+            {
+                "id": "s1q5",
+                "text": "Quel document est considéré comme la loi fondamentale de la République ?",
+                "options": [
+                    "La Constitution",
+                    "Le Code civil",
+                    "La Déclaration des Droits de l'Homme et du Citoyen",
+                ],
+                "correct_index": 2,
+            },
+            {
+                "id": "s1q6",
+                "text": "Qui propose les lois en France ?",
+                "options": [
+                    "Les députés et les sénateurs",
+                    "Le Président uniquement",
+                    "Le Premier ministre uniquement",
+                ],
+                "correct_index": 0,
+            },
+            {
+                "id": "s1q7",
+                "text": "Qui est le chef du gouvernement français ?",
+                "options": [
+                    "Le Président",
+                    "Le Premier ministre",
+                    "Le ministre de l’Intérieur",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s1q8",
+                "text": "A quoi fait référence la date du 14 juillet, jour férié en France ?",
+                "options": [
+                    "Fin de la Première guerre mondiale",
+                    "Prise de la Bastille",
+                    "Fin de la Seconde guerre mondiale",
+                    "Fête des feux d’artifices",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s1q9",
+                "text": "Quel est le principe de la laïcité ?",
+                "options": [
+                    "Les religions sont interdites",
+                    "La séparation de l’Eglise et de l’Etat",
+                    "L’Etat soutient toutes les religions",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s1q10",
+                "text": "Parmi les organismes publics cités ci-dessous, lequel est une collectivité territoriale ?",
+                "options": [
+                    "Le ministère de l’Économie",
+                    "La mairie de Nice",
+                    "Le centre des finances publiques de Fréjus",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s1q11",
+                "text": "Comment s’appelle l’élu à la tête d’un département ?",
+                "options": [
+                    "Le préfet",
+                    "Le Président du conseil général",
+                    "Le Maire",
+                    "Le Commissaire",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s1q12",
+                "text": "Les décisions du préfet sont des :",
+                "options": [
+                    "Décrets",
+                    "Arrêtés",
+                    "Ordonnances",
+                    "Lois",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s1q13",
+                "text": "Les ministres sont :",
+                "options": [
+                    "Désignés par les députés",
+                    "Désignés par les députés et les sénateurs",
+                    "Nommés par le Premier ministre",
+                    "Nommés par le Président de la République",
+                ],
+                "correct_index": 3,
+            },
+            {
+                "id": "s1q14",
+                "text": "Comment s’appellent les élus de l’Assemblée nationale ?",
+                "options": [
+                    "Les sénateurs",
+                    "Les députés",
+                    "Les ministres",
+                    "Les aristocrates",
+                ],
+                "correct_index": 1,
+            },
+        ],
+    },
+    {
+        "id": "section-2",
+        "title": "Section 2 – Police, justice, sécurité (16 questions)",
+        "questions": [
+            {
+                "id": "s2q1",
+                "text": "Quelle est la principale mission de la police nationale ?",
+                "options": [
+                    "Protéger la sécurité intérieure",
+                    "Assurer la sécurité routière",
+                    "Contrôler les frontières",
+                ],
+                "correct_index": 0,
+            },
+            {
+                "id": "s2q2",
+                "text": "Qu’est-ce qui distingue la gendarmerie de la police nationale ?",
+                "options": [
+                    "La gendarmerie est civile, la police est militaire",
+                    "La gendarmerie est militaire, la police est civile",
+                    "Aucune différence",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s2q3",
+                "text": "Qui supervise la police nationale ?",
+                "options": [
+                    "Le ministère de la Défense",
+                    "Le ministère de l’Intérieur",
+                    "Le ministère des Transports",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s2q4",
+                "text": "Quel est le rôle principal des agents de sécurité privée ?",
+                "options": [
+                    "Contrôler les billets à l’entrée d’un événement",
+                    "Protéger les biens et les personnes",
+                    "Faire la circulation",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s2q5",
+                "text": "Quel numéro dois-je composer pour appeler les forces de l’ordre ?",
+                "options": [
+                    "15",
+                    "17",
+                    "18",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s2q6",
+                "text": "Les agents de sécurité privée ont-ils les mêmes droits que les forces de l’ordre ?",
+                "options": [
+                    "Oui",
+                    "Non",
+                    "Cela dépend de la situation",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s2q7",
+                "text": "Quelle est la plus haute juridiction en France ?",
+                "options": [
+                    "La Cour d’Appel",
+                    "La Cour de cassation",
+                    "Le Conseil d’Etat",
+                ],
+                "correct_index": 2,
+            },
+            {
+                "id": "s2q8",
+                "text": "Quel est le rôle de la Cour d’Assises ?",
+                "options": [
+                    "Juger les affaires civiles",
+                    "Juger les crimes graves",
+                    "Juger les infractions mineures",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s2q9",
+                "text": "Quel est le tribunal chargé de régler les conflits du travail ?",
+                "options": [
+                    "Le Tribunal de grande instance",
+                    "Les Prud’hommes",
+                    "Le Tribunal administratif",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s2q10",
+                "text": "Qui supervise la Police Municipale ?",
+                "options": [
+                    "Le ministère de la Défense",
+                    "Le ministère de l’Intérieur",
+                    "Le Maire",
+                ],
+                "correct_index": 2,
+            },
+            {
+                "id": "s2q11",
+                "text": "Quel est le rôle principal de l'armée ?",
+                "options": [
+                    "Protéger les citoyens",
+                    "Défendre le pays contre les agressions extérieures",
+                    "Appliquer la loi",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s2q12",
+                "text": "Quel type d’opération la gendarmerie exerce-t-elle principalement ?",
+                "options": [
+                    "Mission de secours",
+                    "Opération de maintien de l’ordre",
+                    "Aucune intervention, uniquement des enquêtes",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s2q13",
+                "text": "Quelle opération de l'armée française a pour but de mener des actions de lutte contre le terrorisme sur le territoire national ?",
+                "options": [
+                    "Sentinelle",
+                    "Barkhane",
+                    "Serval",
+                ],
+                "correct_index": 0,
+            },
+            {
+                "id": "s2q14",
+                "text": "Quel est le système d'alerte d'urgence en cas de menace terroriste en France ?",
+                "options": [
+                    "Plan Antiterrorisme",
+                    "Plan Urgence Sécurité",
+                    "Plan Vigipirate",
+                ],
+                "correct_index": 2,
+            },
+            {
+                "id": "s2q15",
+                "text": "Quelle est la mission des forces de l’ordre lors d’une manifestation ?",
+                "options": [
+                    "Arrêter tous les manifestants",
+                    "Préserver l’ordre public tout en garantissant le droit de manifester",
+                    "Disperser la manifestation sans complexe",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s2q16",
+                "text": "En cas d'agression, que doit faire un agent de sécurité privée avant tout ?",
+                "options": [
+                    "Appeler la police",
+                    "Intervenir directement",
+                    "Ignorer la situation",
+                ],
+                "correct_index": 0,
+            },
+        ],
+    },
+    {
+        "id": "section-3",
+        "title": "Section 3 : Compréhension de la langue française (12 questions)",
+        "questions": [
+            {
+                "id": "s3q1",
+                "text": "Dans la phrase \"Les agents de sécurité ont procédé à des palpations de sécurité\", quel est le temps verbal ?",
+                "options": [
+                    "Passé composé",
+                    "Présent de l’indicatif",
+                    "Futur",
+                ],
+                "correct_index": 0,
+            },
+            {
+                "id": "s3q2",
+                "text": "Quelle est la forme correcte au futur du verbe \"aller\" à la deuxième personne du pluriel ?",
+                "options": [
+                    "Vous allez",
+                    "Vous irez",
+                    "Tu iras",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s3q3",
+                "text": "Quelle phrase est grammaticalement correcte ?",
+                "options": [
+                    "Elle prit les livres",
+                    "Elle a pris les livres",
+                    "Elle a pris le livres",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s3q4",
+                "text": "Dans la phrase « Il a appelé la police », quel est le sujet ?",
+                "options": [
+                    "Police",
+                    "Il",
+                    "Appelé",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s3q5",
+                "text": "Quel est la définition du mot « éloquent » ?",
+                "options": [
+                    "Qui parle peu",
+                    "Qui sait bien s’exprimer",
+                    "Qui est difficile à comprendre",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s3q6",
+                "text": "Quel est l’antonyme du mot « heureux » ?",
+                "options": [
+                    "Content",
+                    "Triste",
+                    "Energique",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s3q7",
+                "text": "Quel est la bonne conjugaison du verbe « avoir » à la première personne du singulier au présent de l’indicatif ?",
+                "options": [
+                    "Je suis",
+                    "J’avais",
+                    "J’ai",
+                ],
+                "correct_index": 2,
+            },
+            {
+                "id": "s3q8",
+                "text": "Lequel de ces mots est de genre féminin ?",
+                "options": [
+                    "Entracte",
+                    "Ovule",
+                    "Oasis",
+                    "Eloge",
+                ],
+                "correct_index": 2,
+            },
+            {
+                "id": "s3q9",
+                "text": "Dans cette phrase « Pierre porte une parka noire », quel est l’adjectif ?",
+                "options": [
+                    "Parka",
+                    "Pierre",
+                    "Noire",
+                ],
+                "correct_index": 2,
+            },
+            {
+                "id": "s3q10",
+                "text": "Dans la phrase \"Elle parle doucement\", quel est le complément ?",
+                "options": [
+                    "Elle",
+                    "Doucement",
+                    "Parle",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s3q11",
+                "text": "Quelle phrase est correcte ?",
+                "options": [
+                    "Je suis allé au cinéma hier",
+                    "Je suis allée au cinémas hier",
+                    "Je suis allé au cinémas hier",
+                ],
+                "correct_index": 0,
+            },
+            {
+                "id": "s3q12",
+                "text": "Quel pronom personnel peut remplacer le groupe nominal \"les enfants\" dans la phrase suivante : \"Les enfants jouent\" ?",
+                "options": [
+                    "Ils",
+                    "Leur",
+                    "Les",
+                ],
+                "correct_index": 0,
+            },
+        ],
+    },
+    {
+        "id": "section-4",
+        "title": "Section 4 : Logique et calculs (14 questions)",
+        "questions": [
+            {
+                "id": "s4q1",
+                "text": "Si une tarte est coupée en 8 parts égales et que 2 parts sont mangées, quelle fraction de la tarte reste-t-il ?",
+                "options": [
+                    "1/2",
+                    "3/8",
+                    "6/8",
+                ],
+                "correct_index": 2,
+            },
+            {
+                "id": "s4q2",
+                "text": "Dans une pièce, il y a 5 chaises : une rouge, une bleue, une verte, une jaune et une noire. Si on enlève la chaise verte et qu’on ajoute 2 chaises oranges, combien de chaises noires reste-t-il ?",
+                "options": [
+                    "3",
+                    "4",
+                    "6",
+                    "1",
+                ],
+                "correct_index": 3,
+            },
+            {
+                "id": "s4q3",
+                "text": "Lors d'une course, si Paul court plus vite que tous les autres et que seuls deux coureurs dépassent Paul, quel est son rang à l'arrivée ?",
+                "options": [
+                    "Dernier",
+                    "Premier",
+                    "Troisième",
+                ],
+                "correct_index": 2,
+            },
+            {
+                "id": "s4q4",
+                "text": "Si un train part de Paris à 14h00, qu’il ne subit aucun retard et qu'il roule à une vitesse constante de 90 km/h, à quelle heure arrivera-t-il s’il parcours 180 km ?",
+                "options": [
+                    "15h00",
+                    "15h30",
+                    "16h00",
+                ],
+                "correct_index": 2,
+            },
+            {
+                "id": "s4q5",
+                "text": "Si une pizza coûte 12 euros et qu'un client en achète 3, quel est le coût total pour le client après application d’une remise fidélité de 3 euros ?",
+                "options": [
+                    "24 euros",
+                    "36 euros",
+                    "33 euros",
+                    "48 euros",
+                ],
+                "correct_index": 2,
+            },
+            {
+                "id": "s4q6",
+                "text": "Dans une famille, le père a 40 ans et la mère a 38 ans. Leur fils a 8 ans. Dans combien d'années le fils aura-t-il la moitié de l'âge de son père ?",
+                "options": [
+                    "8",
+                    "12",
+                    "16",
+                    "20",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s4q7",
+                "text": "Quelle est la suite logique qui suit ce modèle ? 2, 4, 8, 16, ?",
+                "options": [
+                    "24",
+                    "30",
+                    "32",
+                    "40",
+                ],
+                "correct_index": 2,
+            },
+            {
+                "id": "s4q8",
+                "text": "Dans un sac, il y a 5 billes rouges, 3 billes bleues et 2 billes vertes. Si l’on tire une bille au hasard, quelle est la probabilité d’en tirer une bleue ?",
+                "options": [
+                    "1/5",
+                    "1/3",
+                    "3/10",
+                    "3/5",
+                ],
+                "correct_index": 2,
+            },
+            {
+                "id": "s4q9",
+                "text": "Si 4 x 3 = 12, quelle est la valeur de 12 ÷ 4 ?",
+                "options": [
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s4q10",
+                "text": "Si une boîte a la forme d'un cube, combien de faces a-t-elle ?",
+                "options": [
+                    "4",
+                    "5",
+                    "6",
+                    "8",
+                ],
+                "correct_index": 2,
+            },
+            {
+                "id": "s4q11",
+                "text": "Si \"X\" est une abeille et \"Y\" est un insecte, alors :",
+                "options": [
+                    "X est un insecte",
+                    "Y est une abeille",
+                    "X n’est pas un insecte",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s4q12",
+                "text": "Si vous avez un livre qui compte 300 pages et que vous en lisez 50 par jour, combien de jours vous faudra-t-il pour le terminer ?",
+                "options": [
+                    "6 jours",
+                    "5 jours",
+                    "7 jours",
+                ],
+                "correct_index": 0,
+            },
+            {
+                "id": "s4q13",
+                "text": "Si A est plus grand que B, et B est plus grand que C, qu'est-ce que cela implique pour A et C ?",
+                "options": [
+                    "A est égal à C",
+                    "A est plus petit que C",
+                    "A est plus grand que C",
+                ],
+                "correct_index": 2,
+            },
+            {
+                "id": "s4q14",
+                "text": "Si un film dure 120 minutes et commence à 14h00, à quelle heure se termine-t-il ?",
+                "options": [
+                    "15h00",
+                    "15h30",
+                    "16h00",
+                ],
+                "correct_index": 2,
+            },
+        ],
+    },
+    {
+        "id": "section-5",
+        "title": "Section 5 : Economie et culture générale (4 questions)",
+        "questions": [
+            {
+                "id": "s5q1",
+                "text": "Qu’est-ce qu’un ménage ?",
+                "options": [
+                    "Le nettoyage de locaux",
+                    "Un ensemble de personnes vivant ensemble",
+                    "Une méthode de cuisine",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s5q2",
+                "text": "Dans une économie, la rémunération du travail est généralement appelée :",
+                "options": [
+                    "Salaire",
+                    "Dividende",
+                    "Intérêt",
+                ],
+                "correct_index": 0,
+            },
+            {
+                "id": "s5q3",
+                "text": "Quel indicateur économique permet de mesurer le niveau de vie d'une population ?",
+                "options": [
+                    "Taux de chômage",
+                    "PIB par habitant",
+                    "Taux d’inflation",
+                ],
+                "correct_index": 1,
+            },
+            {
+                "id": "s5q4",
+                "text": "Que signifie la \"consommation\" dans le contexte économique ?",
+                "options": [
+                    "L’acquisition de biens et de services par les ménages",
+                    "La production de biens et de services",
+                    "L’épargne et l’investissement",
+                ],
+                "correct_index": 0,
+            },
+        ],
+    },
+]
+
+POSITIONING_TEST_TOTAL = sum(
+    len(section["questions"]) for section in POSITIONING_TEST_SECTIONS
+)
+
 @app.get("/")
 def home():
     return redirect(url_for("admin_sessions"))
+
+
+@app.get("/test-positionnement")
+def positioning_test_public():
+    return render_template(
+        "positioning_test_public.html",
+        sections=positioning_test_public_sections(),
+        total_questions=POSITIONING_TEST_TOTAL,
+        total_over_20=20,
+    )
 
 
 @app.get("/admin/sessions")
@@ -912,6 +1615,15 @@ def admin_sessions():
         sessions=out_sessions,
         formation_types=FORMATION_TYPES,
     )
+
+
+@app.get("/admin/test-positionnement")
+@admin_login_required
+def admin_positioning_tests():
+    data = load_data()
+    entries = list(data.get("positioning_tests", []))
+    entries.sort(key=lambda e: e.get("created_at") or "", reverse=True)
+    return render_template("admin_positioning_tests.html", entries=entries)
 
 
 
@@ -1390,6 +2102,46 @@ def api_cnaps_lookup():
 @app.get("/api/health")
 def health():
     return jsonify({"ok": True, "data_file": DATA_FILE})
+
+
+@app.post("/api/test-positionnement/submit")
+def api_positioning_test_submit():
+    payload = request.get_json(silent=True) or {}
+    contact = payload.get("contact") or {}
+    answers = payload.get("answers") or {}
+
+    contact_data = {
+        "last_name": (contact.get("last_name") or "").strip(),
+        "first_name": (contact.get("first_name") or "").strip(),
+        "email": (contact.get("email") or "").strip(),
+        "phone": (contact.get("phone") or "").strip(),
+    }
+    if not all(contact_data.values()):
+        return jsonify({"ok": False, "error": "missing_contact_fields"}), 400
+
+    score_data = positioning_test_score(answers)
+    entry = {
+        "id": uuid.uuid4().hex,
+        "created_at": _now_iso(),
+        "contact": contact_data,
+        "answers": answers,
+        "score": score_data["score"],
+        "total": score_data["total"],
+        "score_over_20": score_data["score_over_20"],
+    }
+
+    data = load_data()
+    data.setdefault("positioning_tests", []).append(entry)
+    save_data(data)
+
+    return jsonify(
+        {
+            "ok": True,
+            "score": score_data["score"],
+            "total": score_data["total"],
+            "score_over_20": score_data["score_over_20"],
+        }
+    )
 
 from werkzeug.utils import secure_filename
 

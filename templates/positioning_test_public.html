@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Test de positionnement • Intégrale Academy</title>
+  <style>
+    :root{
+      --primary:#1f4cd6;
+      --text:#0f172a;
+      --muted:#6b7280;
+      --border:#e2e8f0;
+      --bg:#f8fafc;
+      --white:#ffffff;
+    }
+    body{
+      margin:0;
+      font-family: "Inter", "Segoe UI", Arial, sans-serif;
+      color:var(--text);
+      background:var(--bg);
+    }
+    .page{
+      max-width:980px;
+      margin:32px auto 80px;
+      padding:0 20px;
+    }
+    .hero{
+      background:var(--white);
+      border:1px solid var(--border);
+      border-radius:20px;
+      padding:24px;
+      margin-bottom:20px;
+      box-shadow:0 10px 25px rgba(15, 23, 42, 0.04);
+    }
+    .hero h1{
+      margin:0 0 6px;
+      font-size:28px;
+    }
+    .hero p{
+      margin:0;
+      color:var(--muted);
+    }
+    .notice{
+      margin-top:16px;
+      background:#eff6ff;
+      border:1px solid #bfdbfe;
+      padding:16px;
+      border-radius:12px;
+      color:#1e3a8a;
+      line-height:1.5;
+      white-space:pre-line;
+    }
+    .card{
+      background:var(--white);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:20px;
+      margin-bottom:18px;
+    }
+    .section-title{
+      margin:0 0 14px;
+      font-size:20px;
+    }
+    .question{
+      padding:14px 0;
+      border-top:1px dashed #e5e7eb;
+    }
+    .question:first-of-type{
+      border-top:none;
+    }
+    .question h3{
+      margin:0 0 10px;
+      font-size:16px;
+    }
+    .options{
+      display:grid;
+      gap:8px;
+    }
+    .option{
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:10px;
+      cursor:pointer;
+      transition: border-color .2s ease, box-shadow .2s ease;
+      background:#fff;
+    }
+    .option input{
+      margin-top:2px;
+    }
+    .option:hover{
+      border-color:#cbd5f5;
+      box-shadow:0 4px 10px rgba(15, 23, 42, 0.06);
+    }
+    .actions{
+      display:flex;
+      justify-content:flex-end;
+      margin-top:20px;
+    }
+    .btn{
+      background:var(--primary);
+      color:#fff;
+      border:none;
+      border-radius:10px;
+      padding:12px 18px;
+      font-weight:600;
+      cursor:pointer;
+      transition:opacity .2s ease;
+    }
+    .btn:disabled{
+      opacity:.6;
+      cursor:not-allowed;
+    }
+    .result{
+      margin-top:16px;
+      padding:14px;
+      border-radius:12px;
+      border:1px solid #d1fae5;
+      background:#ecfdf3;
+      color:#065f46;
+      display:none;
+    }
+    .modal-backdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(15, 23, 42, 0.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+      z-index:20;
+    }
+    .modal{
+      background:var(--white);
+      border-radius:16px;
+      padding:24px;
+      width:min(520px, 100%);
+      box-shadow:0 12px 30px rgba(15,23,42,.2);
+    }
+    .modal h2{
+      margin:0 0 8px;
+    }
+    .modal p{
+      margin:0 0 16px;
+      color:var(--muted);
+    }
+    .form-grid{
+      display:grid;
+      gap:12px;
+    }
+    .form-grid label{
+      font-size:13px;
+      color:var(--muted);
+      display:grid;
+      gap:6px;
+    }
+    .form-grid input{
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:10px;
+      font-size:15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="hero">
+      <h1>TEST DE POSITIONNEMENT</h1>
+      <p>Merci de renseigner vos informations puis de répondre à toutes les questions.</p>
+      <div class="notice">
+        Vous avez 40 minutes pour répondre à ce test. Il n’y a qu’une seule bonne réponse par question. Ce n’est pas un test éliminatoire.
+        Il s’agit simplement d’un test de positionnement pour évaluer vos connaissances et pour élaborer votre Projet Individuel de Formation (PIF).
+      </div>
+      <div class="notice" style="background:#f8fafc;color:#0f172a;border-color:#e2e8f0;">
+        Chaque question compte 1 point (total {{ total_questions }} points). Le score final est converti sur {{ total_over_20 }}.
+      </div>
+    </div>
+
+    <form id="testForm" style="display:none;">
+      <div id="sectionsContainer"></div>
+
+      <div class="actions">
+        <button class="btn" type="submit" id="submitBtn">Soumettre mes réponses</button>
+      </div>
+      <div class="result" id="resultBox"></div>
+    </form>
+  </div>
+
+  <div class="modal-backdrop" id="contactModal">
+    <div class="modal">
+      <h2>Avant de commencer</h2>
+      <p>Merci de renseigner vos informations.</p>
+      <form id="contactForm">
+        <div class="form-grid">
+          <label>Nom
+            <input type="text" name="last_name" required>
+          </label>
+          <label>Prénom
+            <input type="text" name="first_name" required>
+          </label>
+          <label>Mail
+            <input type="email" name="email" required>
+          </label>
+          <label>Téléphone
+            <input type="tel" name="phone" required>
+          </label>
+        </div>
+        <div class="actions" style="margin-top:16px;">
+          <button class="btn" type="submit">Commencer le test</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const sections = {{ sections|tojson }};
+    const contactModal = document.getElementById("contactModal");
+    const contactForm = document.getElementById("contactForm");
+    const testForm = document.getElementById("testForm");
+    const sectionsContainer = document.getElementById("sectionsContainer");
+    const resultBox = document.getElementById("resultBox");
+    const submitBtn = document.getElementById("submitBtn");
+    let contactData = null;
+
+    function shuffle(array){
+      const arr = [...array];
+      for(let i = arr.length - 1; i > 0; i -= 1){
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function renderQuestions(){
+      sectionsContainer.innerHTML = "";
+      sections.forEach((section)=>{
+        const sectionCard = document.createElement("div");
+        sectionCard.className = "card";
+
+        const title = document.createElement("h2");
+        title.className = "section-title";
+        title.textContent = section.title;
+        sectionCard.appendChild(title);
+
+        const shuffledQuestions = shuffle(section.questions);
+        shuffledQuestions.forEach((question, index)=>{
+          const qWrap = document.createElement("div");
+          qWrap.className = "question";
+
+          const qTitle = document.createElement("h3");
+          qTitle.textContent = `${index + 1}. ${question.text}`;
+          qWrap.appendChild(qTitle);
+
+          const optionsWrap = document.createElement("div");
+          optionsWrap.className = "options";
+
+          question.options.forEach((option, optIndex)=>{
+            const label = document.createElement("label");
+            label.className = "option";
+            const input = document.createElement("input");
+            input.type = "radio";
+            input.name = question.id;
+            input.value = String(optIndex);
+            input.required = true;
+            const span = document.createElement("span");
+            span.textContent = option;
+            label.appendChild(input);
+            label.appendChild(span);
+            optionsWrap.appendChild(label);
+          });
+
+          qWrap.appendChild(optionsWrap);
+          sectionCard.appendChild(qWrap);
+        });
+
+        sectionsContainer.appendChild(sectionCard);
+      });
+    }
+
+    contactForm.addEventListener("submit", (event)=>{
+      event.preventDefault();
+      const formData = new FormData(contactForm);
+      contactData = Object.fromEntries(formData.entries());
+      contactModal.style.display = "none";
+      testForm.style.display = "block";
+      renderQuestions();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    testForm.addEventListener("submit", async (event)=>{
+      event.preventDefault();
+      if(!contactData){
+        contactModal.style.display = "flex";
+        return;
+      }
+      if(!testForm.checkValidity()){
+        testForm.reportValidity();
+        return;
+      }
+      const formData = new FormData(testForm);
+      const answers = {};
+      for(const [key, value] of formData.entries()){
+        if(key === "csrf_token"){
+          continue;
+        }
+        answers[key] = Number(value);
+      }
+
+      if(Object.keys(answers).length === 0){
+        alert("Merci de répondre à toutes les questions.");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Envoi en cours...";
+
+      try{
+        const response = await fetch("/api/test-positionnement/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contact: contactData, answers })
+        });
+        const data = await response.json();
+        if(!response.ok || !data.ok){
+          throw new Error(data.error || "Erreur inconnue");
+        }
+        resultBox.style.display = "block";
+        resultBox.textContent = `Merci ! Votre test a été enregistré. Score : ${data.score}/${data.total} (soit ${data.score_over_20}/20).`;
+        window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+      } catch (error){
+        alert("Une erreur est survenue lors de l'envoi. Merci de réessayer.");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Soumettre mes réponses";
+      }
+    });
+
+    window.addEventListener("load", ()=>{
+      contactModal.style.display = "flex";
+    });
+  </script>
+</body>
+</html>
