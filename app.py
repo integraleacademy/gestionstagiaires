@@ -336,16 +336,6 @@ def _normalize_cnaps_status(value: Optional[str]) -> str:
     return (value or "").strip().upper()
 
 
-def ensure_cnaps_history(t: Dict[str, Any]) -> None:
-    history = t.get("cnaps_history")
-    if not isinstance(history, list):
-        history = []
-    t["cnaps_history"] = history
-    current = (t.get("cnaps") or "").strip()
-    if current and not history:
-        history.append({"status": current, "date": t.get("updated_at") or _now_iso()})
-
-
 def record_cnaps_status_change(t: Dict[str, Any], new_status: Optional[str]) -> None:
     normalized = (new_status or "").strip()
     if not normalized:
@@ -2143,8 +2133,11 @@ def api_update_trainee(session_id: str, trainee_id: str):
         if isinstance(v, str):
             if k == "cnaps":
                 new_val = v.strip()
-                t[k] = new_val
-                record_cnaps_status_change(t, new_val)
+                if _normalize_cnaps_status(new_val) != _normalize_cnaps_status(t.get(k)):
+                    t[k] = new_val
+                    record_cnaps_status_change(t, new_val)
+                else:
+                    t[k] = new_val
                 continue
             if k == "last_name":
                 t[k] = normalize_last_name(v)
