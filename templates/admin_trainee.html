@@ -142,6 +142,9 @@
          href="mailto:?bcc=jenny.tarallo@interieur.gouv.fr,cnaps-dt-sud@interieur.gouv.fr&subject={{ 'Demande de numéro PRE'|urlencode }}&body={{ cnaps_body|urlencode }}">
         ✉️ Contacter le CNAPS
       </a>
+      <button class="btn btn-primary btn-uniform" id="btnOpenPreReception" type="button">
+        ✅ Réception PRE
+      </button>
       <form method="post" action="{{ url_for('admin_delete_trainee', session_id=session.id, trainee_id=trainee.id) }}"
             onsubmit="return confirm('Supprimer ce stagiaire ?');">
 <button class="btn btn-danger btn-uniform" type="submit">

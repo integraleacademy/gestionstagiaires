@@ -84,12 +84,49 @@
   }
   .doccount.warn{ background:#fff7ed; border-color:#fed7aa; color:#9a3412; }
   .doccount.danger{ background:#fff1f2; border-color:#fecdd3; color:#9f1239; }
+
+  .cnaps-panel{
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:12px;
+    background:#fff;
+  }
+  .cnaps-list{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    max-height:320px;
+    overflow:auto;
+  }
+  .cnaps-item{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding:8px 10px;
+    border-radius:10px;
+    border:1px solid #f1f5f9;
+    background:#f9fafb;
+  }
+  .cnaps-item strong{ display:block; }
+  .cnaps-item span{ color:#6b7280; font-size:12px; }
+  .cnaps-search{
+    width:100%;
+    padding:8px 10px;
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+    outline:none;
+  }
+  .cnaps-search-empty{
+    color:#6b7280;
+    font-size:12px;
+  }
 </style>
 
 <div class="page-head" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
   <h1 style="margin:0">Sessions</h1>
 
   <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <button class="btn btn-outline" id="btnOpenCnaps">CONTACTER LE CNAPS</button>
     <a class="btn btn-outline" href="{{ url_for('admin_sessions_archived') }}">Sessions archivées</a>
     <button class="btn btn-primary" id="btnOpenCreateSession">+ Nouvelle session</button>
   </div>
@@ -252,6 +289,34 @@
   </div>
 </div>
 
+<!-- MODALE CONTACT CNAPS -->
+<div class="modal-backdrop" id="cnapsModal" aria-hidden="true">
+  <div class="modal modal-wide">
+    <div class="modal-head">
+      <div class="modal-title">Contacter le CNAPS</div>
+      <button class="icon-btn" data-close-modal="cnapsModal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="muted" style="margin-bottom:12px;">
+        Sélectionne les dossiers concernés, puis les stagiaires à inclure dans la demande.
+      </div>
+
+      <div class="cnaps-panel">
+        <div class="card-title" style="margin-bottom:8px;">Stagiaires</div>
+        <input id="cnapsTraineeSearch" class="cnaps-search" type="text" placeholder="Rechercher un stagiaire (nom ou prénom)…" autocomplete="off" />
+        <div id="cnapsTraineesList" class="cnaps-list muted">Chargement…</div>
+      </div>
+
+      <div id="cnapsSelectionSummary" class="muted" style="margin-top:12px;"></div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" data-close-modal="cnapsModal">Annuler</button>
+      <button class="btn btn-primary" id="btnCnapsEmail" disabled>Préparer l’email</button>
+    </div>
+  </div>
+</div>
 
 <script>
   // open modal (create session)
@@ -578,6 +643,183 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
     }
   });
 });
+
+  // =========================
+  // ✉️ CONTACTER LE CNAPS
+  // =========================
+  const cnapsState = {
+    sessions: [],
+    selectedTrainees: new Set(),
+    traineeIndex: new Map(),
+    loaded: false,
+  };
+
+  function cnapsKey(sessionId, traineeId){
+    return `${sessionId}::${traineeId}`;
+  }
+
+  function formatBirthDate(value){
+    const raw = (value || "").trim();
+    if(!raw) return "";
+    const digits = raw.replace(/\D+/g, "");
+    if(digits.length === 8){
+      if(digits.startsWith("19") || digits.startsWith("20")){
+        return `${digits.slice(6, 8)}/${digits.slice(4, 6)}/${digits.slice(0, 4)}`;
+      }
+      return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
+    }
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(isoMatch){
+      return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+    }
+    const frMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if(frMatch){
+      return `${frMatch[1]}/${frMatch[2]}/${frMatch[3]}`;
+    }
+    return "";
+  }
+
+  function updateCnapsSummary(){
+    const summary = document.getElementById("cnapsSelectionSummary");
+    if(!summary) return;
+    const traineesCount = cnapsState.selectedTrainees.size;
+    summary.textContent = `${traineesCount} stagiaire(s) sélectionné(s)`;
+    const btn = document.getElementById("btnCnapsEmail");
+    if(btn) btn.disabled = traineesCount === 0;
+  }
+
+  function renderCnapsTrainees(){
+    const list = document.getElementById("cnapsTraineesList");
+    const searchInput = document.getElementById("cnapsTraineeSearch");
+    if(!list) return;
+    const trainees = [];
+    cnapsState.traineeIndex.clear();
+    cnapsState.sessions.forEach(sess => {
+      sess.trainees.forEach(t => {
+        const key = cnapsKey(sess.id, t.id);
+        cnapsState.traineeIndex.set(key, { ...t, session: sess });
+        trainees.push({ key, trainee: t, session: sess });
+      });
+    });
+
+    const searchValue = (searchInput?.value || "").trim().toLowerCase();
+    const filtered = searchValue
+      ? trainees.filter(item => {
+          const full = `${(item.trainee.first_name || "")} ${(item.trainee.last_name || "")}`.trim().toLowerCase();
+          return full.includes(searchValue);
+        })
+      : trainees;
+
+    if(trainees.length === 0){
+      list.textContent = "Aucun stagiaire disponible.";
+      return;
+    }
+
+    if(filtered.length === 0){
+      list.innerHTML = `<div class="cnaps-search-empty">Aucun stagiaire trouvé pour cette recherche.</div>`;
+      return;
+    }
+
+    list.innerHTML = filtered.map(item => {
+      const t = item.trainee;
+      const sessionLabel = `${item.session.name || "Session"}${item.session.training_type ? " • " + item.session.training_type : ""}`;
+      const full = `${(t.last_name || "").toUpperCase()} ${(t.first_name || "").trim()}`.trim() || "—";
+      const birth = formatBirthDate(t.birth_date);
+      const checked = cnapsState.selectedTrainees.has(item.key) ? "checked" : "";
+      return `
+        <label class="cnaps-item">
+          <input type="checkbox" data-cnaps-trainee="${item.key}" data-cnaps-session="${item.session.id}" ${checked} />
+          <div>
+            <strong>${full}</strong>
+            <span>${sessionLabel}${birth ? " • né(e) le " + birth : ""}</span>
+          </div>
+        </label>
+      `;
+    }).join("");
+
+    list.querySelectorAll("[data-cnaps-trainee]").forEach(input => {
+      input.addEventListener("change", () => {
+        const key = input.getAttribute("data-cnaps-trainee");
+        if(!key) return;
+        if(input.checked){
+          cnapsState.selectedTrainees.add(key);
+        }else{
+          cnapsState.selectedTrainees.delete(key);
+        }
+        updateCnapsSummary();
+      });
+    });
+  }
+
+  async function loadCnapsSessions(){
+    if(cnapsState.loaded) return;
+    try{
+      const r = await fetch("/api/cnaps/trainees");
+      const res = await r.json();
+      if(!r.ok || !res.ok){
+        const list = document.getElementById("cnapsTraineesList");
+        if(list) list.textContent = "Erreur de chargement.";
+        return;
+      }
+      cnapsState.sessions = res.sessions || [];
+      cnapsState.loaded = true;
+      renderCnapsTrainees();
+      updateCnapsSummary();
+    }catch(e){
+      const list = document.getElementById("cnapsTraineesList");
+      if(list) list.textContent = "Erreur réseau.";
+    }
+  }
+
+  document.getElementById("btnOpenCnaps")?.addEventListener("click", async ()=>{
+    openModal("cnapsModal");
+    await loadCnapsSessions();
+  });
+
+  document.getElementById("cnapsTraineeSearch")?.addEventListener("input", ()=>{
+    renderCnapsTrainees();
+  });
+
+  document.getElementById("btnCnapsEmail")?.addEventListener("click", ()=>{
+    const selected = Array.from(cnapsState.selectedTrainees)
+      .map(key => cnapsState.traineeIndex.get(key))
+      .filter(Boolean);
+
+    if(selected.length === 0){
+      alert("Sélectionne au moins un stagiaire.");
+      return;
+    }
+
+    const lines = selected.map(t => {
+      const last = (t.last_name || "").toUpperCase();
+      const first = (t.first_name || "").trim();
+      const birth = formatBirthDate(t.birth_date) || "??/??/????";
+      return `- ${`${last} ${first}`.trim()} né(e) le ${birth}`;
+    });
+
+    const body = [
+      "Bonjour,",
+      "",
+      "Je me permets de vous contacter concernant les demandes d'autorisation préalable des personnes listées ci-dessous :",
+      "",
+      ...lines,
+      "",
+      "Le suivi en ligne indique que les demandes ont été acceptées mais ils n'ont pas reçu le courrier officiel de notification par courrier postal et nous ne disposons donc pas des numéros PRE nécessaires à leur entrée en formation.",
+      "",
+      "Vous serait-il possible svp de nous transmettre les numéros PRE des personnes concernées ?",
+      "",
+      "Je vous remercie par avance pour votre aide et je vous souhaite une agréable journée,",
+      "",
+      "Bien cordialement,",
+      "",
+      "Clément VAILLANT",
+      "Directeur Intégrale Sécurité Formations"
+    ].join("\n");
+
+    const subject = "Demande de numéros PRE";
+    const mailto = `mailto:clement.annecy@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailto;
+  });
 </script>
 
 {% endblock %}
