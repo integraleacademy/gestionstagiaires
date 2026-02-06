@@ -2215,7 +2215,7 @@ def api_admin_pre_reception(session_id: str, trainee_id: str):
     save_data(data)
 
     email = (t.get("email") or "").strip()
-    training_name = (s.get("name") or s.get("training_type") or "formation").strip()
+    training_name = formation_label(_session_get(s, "training_type", "") or s.get("name") or "formation")
     dstart = fr_date(s.get("date_start") or "")
     dend = fr_date(s.get("date_end") or "")
     date_phrase = f"qui se déroulera du {dstart} au {dend}." if dstart and dend else "qui se déroulera prochainement."
