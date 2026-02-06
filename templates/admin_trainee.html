@@ -16,6 +16,11 @@
       <span>Examen : <strong>{{ session.exam_date|frdate }}</strong></span>
 
     </div>
+    <div class="meta-line" style="margin-top:8px;">
+      <button class="btn btn-primary btn-uniform" data-pre-reception type="button">
+        ✅ Réception PRE
+      </button>
+    </div>
   </div>
 </div>
 
@@ -129,7 +134,7 @@
     </div>
 
     <!-- BOUTONS ACTIONS À DROITE -->
-    <div class="btn-row" style="justify-content:flex-end;">
+    <div class="btn-row btn-row-wrap" style="justify-content:flex-end;">
       {% set cnaps_full_name = ((trainee.first_name or "Prénom") ~ " " ~ (trainee.last_name or "NOM"))|trim %}
       {% set cnaps_birth_date = (trainee.birth_date|frdate or "DD/MM/YYYY") %}
       {% set cnaps_body = "Bonjour,\n\nJe me permets de revenir vers nous concernant la demande d'autorisation préalable de " ~ cnaps_full_name ~ " né le " ~ cnaps_birth_date ~ ".\n\nLe suivi en ligne indique que la demande a été acceptée, mais cette personne n'a pas reçu le courrier officiel de notification par courrier postal et nous ne disposons donc pas de son numéro PRE nécessaire à son entrée en formation.\n\nVous serait-il possible svp de me communiquer le numéro PRE ?\n\nJe vous remercie par avance pour votre aide et je vous souhaite une agréable journée,\n\nBien cordialement,\n\nClément VAILLANT\nDirecteur Intégrale Sécurité Formations" %}
@@ -381,6 +386,37 @@
       {% endfor %}
     </div>
   {% endif %}
+</div>
+
+<!-- ===================== -->
+<!-- MODALE Réception PRE  -->
+<!-- ===================== -->
+<div class="modal-backdrop" id="preReceptionModal" aria-hidden="true">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-head">
+      <div class="modal-title">Réception PRE</div>
+      <button class="icon-btn" type="button" data-close-modal="preReceptionModal">✕</button>
+    </div>
+
+    <form id="preReceptionForm">
+      <div class="modal-body">
+        <div class="label">Numéro PRE (ou CAR)</div>
+        <input id="preReceptionNumber"
+               type="text"
+               placeholder="Ex : PRE-083-2025-12-01-20250000000"
+               value="{{ trainee.pre_number or '' }}"
+               style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
+        <div class="hint" style="margin-top:6px;">
+          Format attendu : PRE-083-2025-12-01-20250000000 ou CAR-083-2025-12-01-20250000000
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn" type="button" data-close-modal="preReceptionModal">Annuler</button>
+        <button class="btn btn-primary" type="submit" id="btnSavePreReception">Valider</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <!-- ===================== -->
@@ -751,6 +787,111 @@ function setDossierPill(status){
     });
   });
 
+  // --- PRE/CAR live formatter ---
+  function formatPreCarDisplay(raw){
+    raw = (raw || "").toString().toUpperCase().replace(/\s+/g, "");
+    raw = raw.replace(/[^A-Z0-9-]/g, "");
+
+    const limitTo25 = (value) => {
+      let out = "";
+      let count = 0;
+      for (const ch of value) {
+        const isDash = ch === "-";
+        if (!isDash) {
+          if (count >= 25) break;
+          count += 1;
+        }
+        out += ch;
+      }
+      return out;
+    };
+
+    let prefix = "";
+    if (raw.startsWith("PRE")) prefix = "PRE";
+    else if (raw.startsWith("CAR")) prefix = "CAR";
+
+    if (!prefix) return limitTo25(raw.replace(/[^A-Z0-9-]/g, ""));
+
+    let digits = raw.slice(3).replace(/\D/g, "");
+    digits = digits.slice(0, 3 + 4 + 2 + 2 + 11);
+
+    const dep  = digits.slice(0, 3);
+    const y    = digits.slice(3, 7);
+    const m    = digits.slice(7, 9);
+    const d    = digits.slice(9, 11);
+    const last = digits.slice(11);
+
+    let out = prefix;
+    if (dep)  out += "-" + dep;
+    if (y)    out += "-" + y;
+    if (m)    out += "-" + m;
+    if (d)    out += "-" + d;
+    if (last) out += "-" + last;
+
+    return limitTo25(out);
+  }
+
+  function normalizePRE(s){
+    return formatPreCarDisplay(s);
+  }
+
+  function isValidPRE(v){
+    return /^(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11,}$/.test(v);
+  }
+
+  const preReceptionForm = document.getElementById("preReceptionForm");
+  const preReceptionInput = document.getElementById("preReceptionNumber");
+  const btnSavePreReception = document.getElementById("btnSavePreReception");
+
+  if(preReceptionInput){
+    preReceptionInput.addEventListener("input", ()=>{
+      preReceptionInput.value = normalizePRE(preReceptionInput.value);
+    });
+  }
+
+  document.querySelectorAll("[data-pre-reception]").forEach((btn)=>{
+    btn.addEventListener("click", ()=>{
+      if(preReceptionInput){
+        preReceptionInput.value = normalizePRE(preReceptionInput.value);
+      }
+      openModal("preReceptionModal");
+    });
+  });
+
+  preReceptionForm?.addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    if(!preReceptionInput) return;
+
+    const normalized = normalizePRE(preReceptionInput.value || "");
+    if(!isValidPRE(normalized)){
+      alert("Numéro PRE/CAR invalide. Format attendu : PRE-083-2025-12-01-20250000000");
+      return;
+    }
+
+    preReceptionInput.value = normalized;
+    if(btnSavePreReception) btnSavePreReception.disabled = true;
+
+    try{
+      const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/pre-reception`, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ pre_number: normalized })
+      });
+      const data = await res.json().catch(()=> ({}));
+      if(!res.ok || data.ok === false){
+        throw new Error(data.error || "save_failed");
+      }
+      traineePreNumber = normalized;
+      closeModal("preReceptionModal");
+      const emailMsg = data.email_ok ? "Mail envoyé au stagiaire." : "Mail non envoyé (adresse manquante).";
+      alert(`Numéro PRE enregistré. ${emailMsg}`);
+    }catch(e){
+      alert("Erreur lors de l'enregistrement du numéro PRE.");
+    }finally{
+      if(btnSavePreReception) btnSavePreReception.disabled = false;
+    }
+  });
+
   // Test FR modal logic
   function openTestModal(mode){
     const title = document.getElementById("testModalTitle");
@@ -1047,6 +1188,7 @@ if(traineeComment){
 
   // 2) Calcul des infos manquantes via les champs connus (fallback)
   // On ne peut pas lire directement les infos du public space ici, donc on utilise les valeurs du stagiaire injectées par Jinja.
+  let traineePreNumber = "{{ trainee.pre_number or '' }}";
   function computeMissingInfosFromTrainee(){
     const missing = [];
 
@@ -1059,7 +1201,7 @@ if(traineeComment){
     const city = ("{{ trainee.city or '' }}").trim();
 
     const carte_vitale_raw = ("{{ trainee.carte_vitale or '' }}").trim();
-    const pre_number_raw = ("{{ trainee.pre_number or '' }}").trim();
+    const pre_number_raw = (traineePreNumber || "").trim();
 
     if(!birth_date) missing.push("- Date de naissance");
     if(!birth_city) missing.push("- Ville de naissance");
