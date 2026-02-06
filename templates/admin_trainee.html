@@ -17,7 +17,8 @@
 
     </div>
     <div class="meta-line" style="margin-top:8px;">
-      <button class="btn btn-primary btn-uniform" data-pre-reception type="button">
+      <button class="btn btn-primary btn-uniform" data-pre-reception type="button"
+              onclick="(function(){var el=document.getElementById('preReceptionModal');if(!el)return;el.classList.add('show');el.style.display='flex';el.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';})()">
         ✅ Réception PRE
       </button>
     </div>
