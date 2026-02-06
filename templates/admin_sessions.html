@@ -117,6 +117,23 @@
   }
   .cnaps-item strong{ display:block; }
   .cnaps-item span{ color:#6b7280; font-size:12px; }
+  .cnaps-search{
+    width:100%;
+    padding:8px 10px;
+    border:1px solid #e5e7eb;
+    border-radius:10px;
+    outline:none;
+  }
+  .cnaps-search-results{
+    margin-top:8px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .cnaps-search-empty{
+    color:#6b7280;
+    font-size:12px;
+  }
 </style>
 
 <div class="page-head" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -307,6 +324,8 @@
 
         <div class="cnaps-panel">
           <div class="card-title" style="margin-bottom:8px;">Stagiaires</div>
+          <input id="cnapsTraineeSearch" class="cnaps-search" type="text" placeholder="Rechercher un stagiaire (nom ou prénom)…" autocomplete="off" />
+          <div id="cnapsSearchResults" class="cnaps-search-results"></div>
           <div id="cnapsTraineesList" class="cnaps-list muted">
             Sélectionne au moins un dossier.
           </div>
@@ -738,6 +757,7 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
 
   function renderCnapsTrainees(){
     const list = document.getElementById("cnapsTraineesList");
+    const searchInput = document.getElementById("cnapsTraineeSearch");
     if(!list) return;
     const selectedSessions = Array.from(cnapsState.selectedSessions);
     if(selectedSessions.length === 0){
@@ -756,12 +776,25 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
       });
     });
 
+    const searchValue = (searchInput?.value || "").trim().toLowerCase();
+    const filtered = searchValue
+      ? trainees.filter(item => {
+          const full = `${(item.trainee.first_name || "")} ${(item.trainee.last_name || "")}`.trim().toLowerCase();
+          return full.includes(searchValue);
+        })
+      : trainees;
+
     if(trainees.length === 0){
       list.textContent = "Aucun stagiaire disponible pour ces dossiers.";
       return;
     }
 
-    list.innerHTML = trainees.map(item => {
+    if(filtered.length === 0){
+      list.innerHTML = `<div class="cnaps-search-empty">Aucun stagiaire trouvé pour cette recherche.</div>`;
+      return;
+    }
+
+    list.innerHTML = filtered.map(item => {
       const t = item.trainee;
       const sessionLabel = `${item.session.name || "Session"}${item.session.training_type ? " • " + item.session.training_type : ""}`;
       const full = `${(t.last_name || "").toUpperCase()} ${(t.first_name || "").trim()}`.trim() || "—";
@@ -792,6 +825,66 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
     });
   }
 
+  function renderCnapsSearchResults(){
+    const results = document.getElementById("cnapsSearchResults");
+    const searchInput = document.getElementById("cnapsTraineeSearch");
+    if(!results || !searchInput) return;
+
+    const query = (searchInput.value || "").trim().toLowerCase();
+    if(query.length < 2){
+      results.innerHTML = "";
+      return;
+    }
+
+    const matches = [];
+    cnapsState.sessions.forEach(sess => {
+      sess.trainees.forEach(t => {
+        const full = `${(t.first_name || "")} ${(t.last_name || "")}`.trim().toLowerCase();
+        if(full.includes(query)){
+          matches.push({ session: sess, trainee: t });
+        }
+      });
+    });
+
+    if(matches.length === 0){
+      results.innerHTML = `<div class="cnaps-search-empty">Aucun résultat.</div>`;
+      return;
+    }
+
+    results.innerHTML = matches.slice(0, 8).map(item => {
+      const full = `${(item.trainee.last_name || "").toUpperCase()} ${(item.trainee.first_name || "").trim()}`.trim() || "—";
+      const birth = formatBirthDate(item.trainee.birth_date);
+      const sessionLabel = `${item.session.name || "Session"}${item.session.training_type ? " • " + item.session.training_type : ""}`;
+      const key = cnapsKey(item.session.id, item.trainee.id);
+      const isSelected = cnapsState.selectedTrainees.has(key);
+      return `
+        <div class="cnaps-item">
+          <div style="flex:1;">
+            <strong>${full}</strong>
+            <span>${sessionLabel}${birth ? " • né(e) le " + birth : ""}</span>
+          </div>
+          <button class="btn btn-outline" data-cnaps-add="${key}">
+            ${isSelected ? "Ajouté" : "Ajouter"}
+          </button>
+        </div>
+      `;
+    }).join("");
+
+    results.querySelectorAll("[data-cnaps-add]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const key = btn.getAttribute("data-cnaps-add");
+        if(!key) return;
+        const [sessionId] = key.split("::");
+        cnapsState.selectedSessions.add(sessionId);
+        cnapsState.selectedTrainees.add(key);
+        renderCnapsSessions();
+        renderCnapsTrainees();
+        updateCnapsSummary();
+        btn.textContent = "Ajouté";
+      });
+    });
+  }
+
   async function loadCnapsSessions(){
     if(cnapsState.loaded) return;
     const list = document.getElementById("cnapsSessionsList");
@@ -808,6 +901,7 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
       renderCnapsSessions();
       renderCnapsTrainees();
       updateCnapsSummary();
+      renderCnapsSearchResults();
     }catch(e){
       if(list) list.textContent = "Erreur réseau.";
     }
@@ -816,6 +910,11 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
   document.getElementById("btnOpenCnaps")?.addEventListener("click", async ()=>{
     openModal("cnapsModal");
     await loadCnapsSessions();
+  });
+
+  document.getElementById("cnapsTraineeSearch")?.addEventListener("input", ()=>{
+    renderCnapsSearchResults();
+    renderCnapsTrainees();
   });
 
   document.getElementById("btnCnapsEmail")?.addEventListener("click", ()=>{
