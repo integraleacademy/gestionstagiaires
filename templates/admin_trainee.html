@@ -837,57 +837,59 @@ function setDossierPill(status){
     return /^(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}$/.test(v);
   }
 
-  const preReceptionForm = document.getElementById("preReceptionForm");
-  const preReceptionInput = document.getElementById("preReceptionNumber");
-  const btnSavePreReception = document.getElementById("btnSavePreReception");
+  document.addEventListener("DOMContentLoaded", ()=>{
+    const preReceptionForm = document.getElementById("preReceptionForm");
+    const preReceptionInput = document.getElementById("preReceptionNumber");
+    const btnSavePreReception = document.getElementById("btnSavePreReception");
 
-  if(preReceptionInput){
-    preReceptionInput.addEventListener("input", ()=>{
-      preReceptionInput.value = normalizePRE(preReceptionInput.value);
-    });
-  }
-
-  document.querySelectorAll("[data-pre-reception]").forEach((btn)=>{
-    btn.addEventListener("click", ()=>{
-      if(preReceptionInput){
+    if(preReceptionInput){
+      preReceptionInput.addEventListener("input", ()=>{
         preReceptionInput.value = normalizePRE(preReceptionInput.value);
-      }
-      openModal("preReceptionModal");
-    });
-  });
-
-  preReceptionForm?.addEventListener("submit", async (e)=>{
-    e.preventDefault();
-    if(!preReceptionInput) return;
-
-    const normalized = normalizePRE(preReceptionInput.value || "");
-    if(!isValidPRE(normalized)){
-      alert("Numéro PRE/CAR invalide. Format attendu : PRE-083-2025-12-01-20250000000 ou PRE-2025-12-01-20250000000");
-      return;
-    }
-
-    preReceptionInput.value = normalized;
-    if(btnSavePreReception) btnSavePreReception.disabled = true;
-
-    try{
-      const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/pre-reception`, {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ pre_number: normalized })
       });
-      const data = await res.json().catch(()=> ({}));
-      if(!res.ok || data.ok === false){
-        throw new Error(data.error || "save_failed");
-      }
-      traineePreNumber = normalized;
-      closeModal("preReceptionModal");
-      const emailMsg = data.email_ok ? "Mail envoyé au stagiaire." : "Mail non envoyé (adresse manquante).";
-      alert(`Numéro PRE enregistré. ${emailMsg}`);
-    }catch(e){
-      alert("Erreur lors de l'enregistrement du numéro PRE.");
-    }finally{
-      if(btnSavePreReception) btnSavePreReception.disabled = false;
     }
+
+    document.querySelectorAll("[data-pre-reception]").forEach((btn)=>{
+      btn.addEventListener("click", ()=>{
+        if(preReceptionInput){
+          preReceptionInput.value = normalizePRE(preReceptionInput.value);
+        }
+        openModal("preReceptionModal");
+      });
+    });
+
+    preReceptionForm?.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      if(!preReceptionInput) return;
+
+      const normalized = normalizePRE(preReceptionInput.value || "");
+      if(!isValidPRE(normalized)){
+        alert("Numéro PRE/CAR invalide. Format attendu : PRE-083-2025-12-01-20250000000 ou PRE-2025-12-01-20250000000");
+        return;
+      }
+
+      preReceptionInput.value = normalized;
+      if(btnSavePreReception) btnSavePreReception.disabled = true;
+
+      try{
+        const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/pre-reception`, {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ pre_number: normalized })
+        });
+        const data = await res.json().catch(()=> ({}));
+        if(!res.ok || data.ok === false){
+          throw new Error(data.error || "save_failed");
+        }
+        traineePreNumber = normalized;
+        closeModal("preReceptionModal");
+        const emailMsg = data.email_ok ? "Mail envoyé au stagiaire." : "Mail non envoyé (adresse manquante).";
+        alert(`Numéro PRE enregistré. ${emailMsg}`);
+      }catch(e){
+        alert("Erreur lors de l'enregistrement du numéro PRE.");
+      }finally{
+        if(btnSavePreReception) btnSavePreReception.disabled = false;
+      }
+    });
   });
 
   // Test FR modal logic
