@@ -85,14 +85,6 @@
   .doccount.warn{ background:#fff7ed; border-color:#fed7aa; color:#9a3412; }
   .doccount.danger{ background:#fff1f2; border-color:#fecdd3; color:#9f1239; }
 
-  .cnaps-grid{
-    display:grid;
-    grid-template-columns:minmax(240px, 1fr) minmax(320px, 2fr);
-    gap:16px;
-  }
-  @media (max-width: 900px){
-    .cnaps-grid{ grid-template-columns:1fr; }
-  }
   .cnaps-panel{
     border:1px solid #e5e7eb;
     border-radius:12px;
@@ -310,19 +302,10 @@
         Sélectionne les dossiers concernés, puis les stagiaires à inclure dans la demande.
       </div>
 
-      <div class="cnaps-grid">
-        <div class="cnaps-panel">
-          <div class="card-title" style="margin-bottom:8px;">Dossiers (sessions)</div>
-          <div id="cnapsSessionsList" class="cnaps-list muted">Chargement…</div>
-        </div>
-
-        <div class="cnaps-panel">
-          <div class="card-title" style="margin-bottom:8px;">Stagiaires</div>
-          <input id="cnapsTraineeSearch" class="cnaps-search" type="text" placeholder="Rechercher un stagiaire (nom ou prénom)…" autocomplete="off" />
-          <div id="cnapsTraineesList" class="cnaps-list muted">
-            Sélectionne au moins un dossier.
-          </div>
-        </div>
+      <div class="cnaps-panel">
+        <div class="card-title" style="margin-bottom:8px;">Stagiaires</div>
+        <input id="cnapsTraineeSearch" class="cnaps-search" type="text" placeholder="Rechercher un stagiaire (nom ou prénom)…" autocomplete="off" />
+        <div id="cnapsTraineesList" class="cnaps-list muted">Chargement…</div>
       </div>
 
       <div id="cnapsSelectionSummary" class="muted" style="margin-top:12px;"></div>
@@ -666,7 +649,6 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
   // =========================
   const cnapsState = {
     sessions: [],
-    selectedSessions: new Set(),
     selectedTrainees: new Set(),
     traineeIndex: new Map(),
     loaded: false,
@@ -701,67 +683,18 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
     const summary = document.getElementById("cnapsSelectionSummary");
     if(!summary) return;
     const traineesCount = cnapsState.selectedTrainees.size;
-    const sessionsCount = cnapsState.selectedSessions.size;
-    summary.textContent = `${sessionsCount} dossier(s) sélectionné(s) • ${traineesCount} stagiaire(s) sélectionné(s)`;
+    summary.textContent = `${traineesCount} stagiaire(s) sélectionné(s)`;
     const btn = document.getElementById("btnCnapsEmail");
     if(btn) btn.disabled = traineesCount === 0;
-  }
-
-  function renderCnapsSessions(){
-    const list = document.getElementById("cnapsSessionsList");
-    if(!list) return;
-    if(cnapsState.sessions.length === 0){
-      list.textContent = "Aucun dossier disponible.";
-      return;
-    }
-    list.innerHTML = cnapsState.sessions.map(sess => {
-      const label = `${sess.name || "Session"}${sess.training_type ? " • " + sess.training_type : ""}`;
-      const checked = cnapsState.selectedSessions.has(sess.id) ? "checked" : "";
-      return `
-        <label class="cnaps-item">
-          <input type="checkbox" data-cnaps-session="${sess.id}" ${checked} />
-          <div>
-            <strong>${label}</strong>
-            <span>${sess.trainees.length} stagiaire(s)</span>
-          </div>
-        </label>
-      `;
-    }).join("");
-
-    list.querySelectorAll("[data-cnaps-session]").forEach(input => {
-      input.addEventListener("change", () => {
-        const sid = input.getAttribute("data-cnaps-session");
-        if(!sid) return;
-        if(input.checked){
-          cnapsState.selectedSessions.add(sid);
-        }else{
-          cnapsState.selectedSessions.delete(sid);
-          cnapsState.selectedTrainees.forEach(key => {
-            if(key.startsWith(`${sid}::`)){
-              cnapsState.selectedTrainees.delete(key);
-            }
-          });
-        }
-        renderCnapsTrainees();
-        updateCnapsSummary();
-      });
-    });
   }
 
   function renderCnapsTrainees(){
     const list = document.getElementById("cnapsTraineesList");
     const searchInput = document.getElementById("cnapsTraineeSearch");
     if(!list) return;
-    const selectedSessions = Array.from(cnapsState.selectedSessions);
-    if(selectedSessions.length === 0){
-      list.textContent = "Sélectionne au moins un dossier.";
-      return;
-    }
-
     const trainees = [];
     cnapsState.traineeIndex.clear();
     cnapsState.sessions.forEach(sess => {
-      if(!cnapsState.selectedSessions.has(sess.id)) return;
       sess.trainees.forEach(t => {
         const key = cnapsKey(sess.id, t.id);
         cnapsState.traineeIndex.set(key, { ...t, session: sess });
@@ -778,7 +711,7 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
       : trainees;
 
     if(trainees.length === 0){
-      list.textContent = "Aucun stagiaire disponible pour ces dossiers.";
+      list.textContent = "Aucun stagiaire disponible.";
       return;
     }
 
@@ -795,7 +728,7 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
       const checked = cnapsState.selectedTrainees.has(item.key) ? "checked" : "";
       return `
         <label class="cnaps-item">
-          <input type="checkbox" data-cnaps-trainee="${item.key}" ${checked} />
+          <input type="checkbox" data-cnaps-trainee="${item.key}" data-cnaps-session="${item.session.id}" ${checked} />
           <div>
             <strong>${full}</strong>
             <span>${sessionLabel}${birth ? " • né(e) le " + birth : ""}</span>
@@ -820,21 +753,20 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
 
   async function loadCnapsSessions(){
     if(cnapsState.loaded) return;
-    const list = document.getElementById("cnapsSessionsList");
-    if(list) list.textContent = "Chargement…";
     try{
       const r = await fetch("/api/cnaps/trainees");
       const res = await r.json();
       if(!r.ok || !res.ok){
+        const list = document.getElementById("cnapsTraineesList");
         if(list) list.textContent = "Erreur de chargement.";
         return;
       }
       cnapsState.sessions = res.sessions || [];
       cnapsState.loaded = true;
-      renderCnapsSessions();
       renderCnapsTrainees();
       updateCnapsSummary();
     }catch(e){
+      const list = document.getElementById("cnapsTraineesList");
       if(list) list.textContent = "Erreur réseau.";
     }
   }
