@@ -18,15 +18,16 @@
       <span>Examen : <strong>{{ session.exam_date|frdate }}</strong></span>
 
     </div>
-    <div class="meta-line" style="margin-top:8px;">
-      <a class="btn btn-primary btn-uniform" data-pre-reception
-         href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=trainee.id, pre_reception=1) }}"
-         onclick="try{var el=document.getElementById('preReceptionModal');if(el){el.classList.add('show');el.style.display='flex';el.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';return false;}}catch(e){}">
-        ✅ Réception PRE
-      </a>
-    </div>
-  </div>
+<div class="meta-line" style="margin-top:8px;">
+  <a class="btn btn-primary btn-uniform"
+     data-pre-reception
+     href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=trainee.id, pre_reception=1) }}">
+    ✅ Réception PRE
+  </a>
 </div>
+</div>
+</div>
+
 
 <div class="card" style="margin-top:12px;">
   <!-- LIGNE 1 : NOM + PHOTO CÔTE À CÔTE -->
@@ -392,38 +393,7 @@
   {% endif %}
 </div>
 
-<!-- ===================== -->
-<!-- MODALE Réception PRE  -->
-<!-- ===================== -->
-<div class="modal-backdrop{% if pre_reception_open %} show{% endif %}" id="preReceptionModal"
-     aria-hidden="{% if pre_reception_open %}false{% else %}true{% endif %}"
-     {% if pre_reception_open %}style="display:flex;"{% endif %}>
-  <div class="modal" style="max-width:520px;">
-    <div class="modal-head">
-      <div class="modal-title">Réception PRE</div>
-      <button class="icon-btn" type="button" data-close-modal="preReceptionModal">✕</button>
-    </div>
 
-    <form id="preReceptionForm">
-      <div class="modal-body">
-        <div class="label">Numéro PRE (ou CAR)</div>
-        <input id="preReceptionNumber"
-               type="text"
-               placeholder="Ex : PRE-083-2025-12-01-20250000000"
-               value="{{ trainee.pre_number or '' }}"
-               style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
-        <div class="hint" style="margin-top:6px;">
-          Format attendu : PRE-083-2025-12-01-20250000000 ou CAR-083-2025-12-01-20250000000
-        </div>
-      </div>
-
-      <div class="modal-foot">
-        <button class="btn" type="button" data-close-modal="preReceptionModal">Annuler</button>
-        <button class="btn btn-primary" type="submit" id="btnSavePreReception">Valider</button>
-      </div>
-    </form>
-  </div>
-</div>
 
 <!-- ===================== -->
 <!-- MODALE Relance tel     -->
@@ -1367,26 +1337,7 @@ if(chkHideDocs){
   });
 }
 
-  (async function(){
-  const cb = document.getElementById("public_hide_suivi");
-  if(!cb) return;
 
-  cb.addEventListener("change", async () => {
-    try{
-      const res = await fetch("{{ url_for('api_update_trainee', session_id=session.id, trainee_id=trainee.id) }}", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ public_hide_suivi: cb.checked })
-      });
-      // optionnel: tu peux afficher un toast si tu veux
-      if(!res.ok){
-        console.error("Save failed", await res.text());
-      }
-    }catch(e){
-      console.error(e);
-    }
-  });
-})();
 
   const chkHideSuivi = document.getElementById("public_hide_suivi");
 if(chkHideSuivi){
@@ -1404,7 +1355,38 @@ if(chkHideSuivi){
 </script>
   
 
+<!-- ===================== -->
+<!-- MODALE Réception PRE  -->
+<!-- ===================== -->
+<div class="modal-backdrop{% if pre_reception_open %} show{% endif %}" id="preReceptionModal"
+     aria-hidden="{% if pre_reception_open %}false{% else %}true{% endif %}"
+     {% if pre_reception_open %}style="display:flex;"{% endif %}>
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-head">
+      <div class="modal-title">Réception PRE</div>
+      <button class="icon-btn" type="button" data-close-modal="preReceptionModal">✕</button>
+    </div>
 
+    <form id="preReceptionForm">
+      <div class="modal-body">
+        <div class="label">Numéro PRE (ou CAR)</div>
+        <input id="preReceptionNumber"
+               type="text"
+               placeholder="Ex : PRE-083-2025-12-01-20250000000"
+               value="{{ trainee.pre_number or '' }}"
+               style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
+        <div class="hint" style="margin-top:6px;">
+          Format attendu : PRE-083-2025-12-01-20250000000 ou CAR-083-2025-12-01-20250000000
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn" type="button" data-close-modal="preReceptionModal">Annuler</button>
+        <button class="btn btn-primary" type="submit" id="btnSavePreReception">Valider</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 
 
