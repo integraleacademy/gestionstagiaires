@@ -646,6 +646,39 @@ def compute_stats(session: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _session_jury_entries(session: Dict[str, Any]) -> List[Dict[str, Any]]:
+    raw = session.get("juries")
+    if raw is None:
+        raw = session.get("jurys")
+    if raw is None:
+        raw = session.get("jury")
+    if isinstance(raw, dict):
+        if isinstance(raw.get("items"), list):
+            raw = raw.get("items")
+        else:
+            raw = [raw]
+    if not isinstance(raw, list):
+        return []
+    return [item for item in raw if isinstance(item, dict)]
+
+
+def _normalize_jury_status(value: str) -> str:
+    raw = (value or "").strip()
+    if not raw:
+        return ""
+    cleaned = unicodedata.normalize("NFD", raw)
+    cleaned = "".join(ch for ch in cleaned if unicodedata.category(ch) != "Mn")
+    cleaned = cleaned.upper()
+    cleaned = " ".join(cleaned.replace("_", " ").replace("-", " ").split())
+    if cleaned in ("EN ATTENTE", "EN ATTENTE DE REPONSE", "ATTENTE", "PENDING", "A CONFIRMER"):
+        return "pending"
+    if cleaned in ("PRESENT", "PRESENTE", "PRESENTS", "PRESENTES"):
+        return "present"
+    if cleaned in ("ABSENT", "ABSENTE", "ABSENTS", "ABSENTES"):
+        return "absent"
+    return ""
+
+
 # =========================
 # CNAPS / Hosting fetchers
 # =========================
@@ -1635,6 +1668,18 @@ def admin_sessions():
                 dossier_complete_total += 1
         session_dossier_complete = (total_total > 0 and dossier_complete_total == total_total)
 
+        jury_entries = _session_jury_entries(s)
+        jury_notified = bool(s.get("juries_notified_at") or s.get("jury_notified_at"))
+        jury_counts = {"pending": 0, "present": 0, "absent": 0}
+        for jury in jury_entries:
+            status_raw = jury.get("status") or jury.get("state") or jury.get("response")
+            status_key = _normalize_jury_status(status_raw)
+            if status_key:
+                jury_counts[status_key] += 1
+                jury_notified = True
+            if jury.get("notified_at") or jury.get("notified"):
+                jury_notified = True
+
         date_start_raw = _session_get(s, "date_start", "")
         date_end_raw = _session_get(s, "date_end", "")
         today = datetime.date.today()
@@ -1686,6 +1731,10 @@ def admin_sessions():
             "status_label": status_label,
             "status_key": status_key,
             "training_type_class": training_type_class,
+            "jury_notified": jury_notified,
+            "jury_pending": jury_counts["pending"],
+            "jury_present": jury_counts["present"],
+            "jury_absent": jury_counts["absent"],
         })
 
     return render_template(
