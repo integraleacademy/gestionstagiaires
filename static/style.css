@@ -848,6 +848,16 @@ select.status-pill{
   align-items:stretch;
 }
 
+/* Variante multi-lignes (actions admin avec beaucoup de boutons) */
+.btn-row-wrap{
+  flex-wrap:wrap;
+}
+
+.btn-row-wrap > form,
+.btn-row-wrap > a{
+  flex: 1 1 180px;
+}
+
 /* Chaque item (form ou lien) prend la même place */
 .btn-row > form,
 .btn-row > a{
