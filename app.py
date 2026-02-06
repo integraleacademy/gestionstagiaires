@@ -4317,6 +4317,33 @@ def api_trainees_search():
     return jsonify({"ok": True, "items": out, "count": len(out)})
 
 
+@app.get("/api/cnaps/trainees")
+@admin_login_required
+def api_cnaps_trainees():
+    data = load_data()
+    sessions_out = []
+    for s in data.get("sessions", []):
+        if bool(s.get("archived")):
+            continue
+        trainees = _session_trainees_list(s)
+        sessions_out.append({
+            "id": s.get("id"),
+            "name": _session_get(s, "name", ""),
+            "training_type": _session_get(s, "training_type", ""),
+            "trainees": [
+                {
+                    "id": t.get("id"),
+                    "first_name": t.get("first_name", ""),
+                    "last_name": t.get("last_name", ""),
+                    "birth_date": t.get("birth_date", ""),
+                }
+                for t in trainees
+            ],
+        })
+
+    return jsonify({"ok": True, "sessions": sessions_out})
+
+
 @app.get("/admin/sessions/archived")
 @admin_login_required
 def admin_sessions_archived():
