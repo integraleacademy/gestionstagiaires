@@ -17,7 +17,7 @@
 
     </div>
     <div class="meta-line" style="margin-top:8px;">
-      <button class="btn btn-primary btn-uniform" id="btnOpenPreReception" type="button">
+      <button class="btn btn-primary btn-uniform" data-pre-reception type="button">
         ✅ Réception PRE
       </button>
     </div>
@@ -842,7 +842,6 @@ function setDossierPill(status){
     return /^(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11,}$/.test(v);
   }
 
-  const btnOpenPreReception = document.getElementById("btnOpenPreReception");
   const preReceptionForm = document.getElementById("preReceptionForm");
   const preReceptionInput = document.getElementById("preReceptionNumber");
   const btnSavePreReception = document.getElementById("btnSavePreReception");
@@ -853,11 +852,13 @@ function setDossierPill(status){
     });
   }
 
-  btnOpenPreReception?.addEventListener("click", ()=>{
-    if(preReceptionInput){
-      preReceptionInput.value = normalizePRE(preReceptionInput.value);
-    }
-    openModal("preReceptionModal");
+  document.querySelectorAll("[data-pre-reception]").forEach((btn)=>{
+    btn.addEventListener("click", ()=>{
+      if(preReceptionInput){
+        preReceptionInput.value = normalizePRE(preReceptionInput.value);
+      }
+      openModal("preReceptionModal");
+    });
   });
 
   preReceptionForm?.addEventListener("submit", async (e)=>{
