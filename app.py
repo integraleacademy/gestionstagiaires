@@ -919,9 +919,9 @@ def infos_is_complete(t: Dict[str, Any]) -> bool:
     if len(secu_digits) != 15:
         return False
 
-    # PRE : format PRE-083-2025-12-01-20250000000 ou CAR-...
+    # PRE : format PRE-083-2025-12-01-20250000000 ou PRE-2025-12-01-20250000000
     pre = (t.get("pre_number") or "").strip().upper().replace(" ", "")
-    if not re.match(r"^(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11,}$", pre):
+    if not re.match(r"^(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}$", pre):
         return False
 
     return True
@@ -2202,7 +2202,7 @@ def api_admin_pre_reception(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "missing_pre"}), 400
 
     pre = pre_raw.upper().replace(" ", "")
-    if not re.match(r"^(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11,}$", pre):
+    if not re.match(r"^(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}$", pre):
         return jsonify({"ok": False, "error": "invalid_pre"}), 400
 
     t["pre_number"] = pre
@@ -2215,7 +2215,7 @@ def api_admin_pre_reception(session_id: str, trainee_id: str):
     save_data(data)
 
     email = (t.get("email") or "").strip()
-    training_name = (s.get("name") or s.get("training_type") or "formation").strip()
+    training_name = formation_label(_session_get(s, "training_type", "") or s.get("name") or "formation")
     dstart = fr_date(s.get("date_start") or "")
     dend = fr_date(s.get("date_end") or "")
     date_phrase = f"qui se déroulera du {dstart} au {dend}." if dstart and dend else "qui se déroulera prochainement."
@@ -2853,7 +2853,7 @@ def infos_missing_text(trainee: dict) -> str:
     pre = pre_raw.upper().replace(" ", "")
     if not pre_raw:
         missing.append("- Numéro PRE / CAR")
-    elif not re.match(r"^(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11,}$", pre):
+    elif not re.match(r"^(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}$", pre):
         missing.append("- Numéro PRE / CAR (format invalide)")
 
     return "\n".join(missing)
