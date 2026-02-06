@@ -2183,6 +2183,67 @@ def api_update_trainee(session_id: str, trainee_id: str):
     })
 
 
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/pre-reception")
+@admin_login_required
+def api_admin_pre_reception(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+
+    payload = request.get_json(silent=True) or {}
+    pre_raw = (payload.get("pre_number") or "").strip()
+    if not pre_raw:
+        return jsonify({"ok": False, "error": "missing_pre"}), 400
+
+    pre = pre_raw.upper().replace(" ", "")
+    if not re.match(r"^(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11,}$", pre):
+        return jsonify({"ok": False, "error": "invalid_pre"}), 400
+
+    t["pre_number"] = pre
+    training_type = _session_get(s, "training_type", "")
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+    t["updated_at"] = _now_iso()
+
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    email = (t.get("email") or "").strip()
+    training_name = (s.get("name") or s.get("training_type") or "formation").strip()
+    dstart = fr_date(s.get("date_start") or "")
+    dend = fr_date(s.get("date_end") or "")
+    date_phrase = f"qui se déroulera du {dstart} au {dend}." if dstart and dend else "qui se déroulera prochainement."
+
+    html = mail_layout(f"""
+        <p>Bonjour,</p>
+        <p>
+          Nous revenons vers vous concernant votre formation <strong>{training_name}</strong>, {date_phrase}
+        </p>
+        <p>
+          Vous nous avez indiqué ne pas avoir reçu par courrier postal votre autorisation préalable du CNAPS
+          (Ministère de l'intérieur), alors que votre demande a bien été validée par leurs services.
+        </p>
+        <p>
+          Afin de pouvoir finaliser votre entrée en formation, nous avons donc pris contact avec le CNAPS pour obtenir
+          votre numéro d’autorisation.
+          Après vérification, le CNAPS nous a confirmé que votre numéro d’autorisation est le suivant :
+          <strong>{pre}</strong>
+        </p>
+        <p>Nous vous informons que votre dossier en ligne a été automatiquement complété avec ce numéro.</p>
+        <p>Nous restons à votre disposition si besoin et vous souhaitons une excellente journée.</p>
+        <p>Bien cordialement,<br>Intégrale Academy</p>
+    """)
+
+    email_ok = brevo_send_email(email, "Votre numéro d’autorisation CNAPS (PRE)", html) if email else False
+
+    return jsonify({"ok": True, "pre_number": pre, "email_ok": bool(email_ok)})
+
 @app.post("/api/sessions/<session_id>/trainees/<trainee_id>/delete")
 @admin_login_required
 def api_delete_trainee(session_id: str, trainee_id: str):
