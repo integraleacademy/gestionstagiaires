@@ -634,6 +634,15 @@ select.status-pill{
   color: var(--text);
 }
 
+.jury-status{
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+}
+
 /* couleurs par type de formation */
 .training-aps{ border-left-color: #2563eb; }
 .training-a3p{ border-left-color: #16a34a; }
