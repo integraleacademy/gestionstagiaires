@@ -2216,7 +2216,9 @@ def api_update_trainee(session_id: str, trainee_id: str):
         else:
             t[k] = v
 
-        
+    if (payload.get("financement_status") or "").strip() == "validated":
+        t["financement_rejected_note"] = ""
+        t["comment"] = _remove_admin_comment_flag(t.get("comment", ""), "⚠️ Prélèvement rejeté")
 
 
     t["updated_at"] = _now_iso()
@@ -4648,6 +4650,13 @@ def _append_admin_comment_flag(current: str, flag_text: str) -> str:
     if flag_text in current:
         return current
     return current + "\n" + flag_text
+
+def _remove_admin_comment_flag(current: str, flag_text: str) -> str:
+    current = (current or "").strip()
+    if not current:
+        return ""
+    kept = [line for line in current.splitlines() if line.strip() != flag_text]
+    return "\n".join(kept).strip()
 
 
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/financement-rejet/send")
