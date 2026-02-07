@@ -447,6 +447,31 @@
   </div>
 </div> 
 
+<!-- ===================== -->
+<!-- MODALE Commentaire docs -->
+<!-- ===================== -->
+<div class="modal-backdrop" id="docCommentModal" aria-hidden="true">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-head">
+      <div class="modal-title">Commentaire document</div>
+      <button class="icon-btn" type="button" data-close-modal="docCommentModal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="label">Commentaire</div>
+      <textarea id="docCommentInput"
+                style="width:100%;min-height:120px;"
+                placeholder="Saisir un commentaire..."></textarea>
+      <div class="hint" style="margin-top:6px;">Le commentaire est sauvegardé au clic sur “Enregistrer”.</div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" type="button" data-close-modal="docCommentModal">Annuler</button>
+      <button class="btn btn-primary" type="button" id="docCommentSave">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 </details>
 
   <!-- ===================== -->
@@ -556,7 +581,21 @@
             </td>
 
             <td>
-              <input class="comment doc-comment" data-field="comment" value="{{ d.comment or "" }}" placeholder="Commentaire...">
+              <div class="doc-comment-cell" style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;">
+                <button class="btn btn-outline btn-uniform doc-comment-btn"
+                        type="button"
+                        data-doc-key="{{ d.key }}"
+                        data-comment="{{ d.comment or '' }}">
+                  📝 Commentaire
+                </button>
+                <span class="hint doc-comment-preview">
+                  {% if d.comment %}
+                    Commentaire enregistré
+                  {% else %}
+                    Aucun commentaire
+                  {% endif %}
+                </span>
+              </div>
             </td>
 
             <td class="mono" style="max-width:320px;">
@@ -1101,18 +1140,42 @@ function setDossierPill(status){
         });
       }
 
-      // comment debounce
-      const input = tr.querySelector("input.doc-comment");
-      if(input){
-        let t=null;
-        input.addEventListener("input", ()=>{
-          if(t) clearTimeout(t);
-          t=setTimeout(async ()=>{
-            await saveDoc(key, "comment", input.value);
-          }, 450);
-        });
-      }
     });
+
+    let activeDocRow = null;
+    let activeDocButton = null;
+    let activeDocKey = null;
+    const docCommentModal = document.getElementById("docCommentModal");
+    const docCommentInput = document.getElementById("docCommentInput");
+    const docCommentSave = document.getElementById("docCommentSave");
+
+    docsTable.querySelectorAll(".doc-comment-btn").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        activeDocKey = btn.getAttribute("data-doc-key");
+        activeDocButton = btn;
+        activeDocRow = btn.closest("tr");
+        const existing = btn.getAttribute("data-comment") || "";
+        if(docCommentInput) docCommentInput.value = existing;
+        openModal("docCommentModal");
+        docCommentInput?.focus();
+      });
+    });
+
+    if(docCommentSave){
+      docCommentSave.addEventListener("click", async ()=>{
+        if(!activeDocKey) return;
+        const value = (docCommentInput?.value || "").toString();
+        await saveDoc(activeDocKey, "comment", value);
+        if(activeDocButton) activeDocButton.setAttribute("data-comment", value);
+        if(activeDocRow){
+          const preview = activeDocRow.querySelector(".doc-comment-preview");
+          if(preview){
+            preview.textContent = value.trim().length ? "Commentaire enregistré" : "Aucun commentaire";
+          }
+        }
+        closeModal("docCommentModal");
+      });
+    }
   }
 
   // Refresh CNAPS
