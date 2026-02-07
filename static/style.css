@@ -281,7 +281,7 @@ h2{margin:0;font-size:20px;color:var(--text)}
 .table-positioning{
   min-width: 0 !important;
   width: 100%;
-  table-layout: fixed;
+  table-layout: auto;
 }
 .table-positioning th,
 .table-positioning td{
@@ -290,11 +290,11 @@ h2{margin:0;font-size:20px;color:var(--text)}
 }
 .table-positioning th:nth-child(1),
 .table-positioning td:nth-child(1){
-  width: 110px;
+  width: 140px;
 }
 .table-positioning th:nth-child(4),
 .table-positioning td:nth-child(4){
-  width: 260px;
+  width: 320px;
 }
 .table-positioning th:nth-child(6),
 .table-positioning td:nth-child(6),
@@ -306,11 +306,12 @@ h2{margin:0;font-size:20px;color:var(--text)}
 .table-positioning td:nth-child(8){
   width: 150px;
 }
-.table-positioning td:nth-child(1),
-.table-positioning td:nth-child(4){
+.table-positioning td:nth-child(1){
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+.table-positioning td:nth-child(4){
+  white-space: normal;
+  word-break: break-word;
 }
 
 /* Commentaire confortable */
