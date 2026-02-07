@@ -134,6 +134,12 @@ h2{margin:0;font-size:20px;color:var(--text)}
   color:#fff;
   box-shadow: 0 14px 26px rgba(31,143,74,.16);
 }
+.btn-orange{
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  border-color: rgba(249,115,22,.4);
+  color:#fff;
+  box-shadow: 0 14px 26px rgba(249,115,22,.18);
+}
 .btn-danger{
   background:#fff;
   border-color:#fecaca;
