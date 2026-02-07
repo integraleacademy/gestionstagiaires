@@ -14,13 +14,13 @@ function openModal(id) {
   const el = qs(`#${id}`);
   if (!el) return;
   el.setAttribute("aria-hidden", "false");
-  el.classList.add("open");
+  el.classList.add("open", "show");
 }
 function closeModal(id) {
   const el = qs(`#${id}`);
   if (!el) return;
   el.setAttribute("aria-hidden", "true");
-  el.classList.remove("open");
+  el.classList.remove("open", "show");
 }
 
 function withAdminKey(url) {
