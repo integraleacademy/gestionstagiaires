@@ -120,6 +120,31 @@
     color:#6b7280;
     font-size:12px;
   }
+
+  .session-filter-bar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:12px;
+  }
+  .filter-btn{
+    border:1px solid transparent;
+    border-radius:999px;
+    padding:8px 12px;
+    font-size:12px;
+    font-weight:700;
+    cursor:pointer;
+    transition:transform .08s ease, box-shadow .2s ease, opacity .2s ease;
+  }
+  .filter-btn:hover{ transform:translateY(-1px); }
+  .filter-btn.is-active{
+    box-shadow:0 6px 16px rgba(15,23,42,.18);
+  }
+  .filter-btn--aps{ background:#dbeafe; color:#1d4ed8; }
+  .filter-btn--dirigeant{ background:#ffedd5; color:#9a3412; }
+  .filter-btn--a3p{ background:#dcfce7; color:#15803d; }
+  .filter-btn--status{ background:#e5e7eb; color:#374151; }
+  .filter-btn--all{ background:#cbd5f5; color:#1e1b4b; }
 </style>
 
 <div class="page-head" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -170,6 +195,16 @@
   <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
     <span id="docsToControlBadge" class="docs-badge docs-badge--loading">Chargement…</span>
     <span class="muted" id="docsToControlCount">Chargement…</span>
+  </div>
+
+  <div class="session-filter-bar" aria-label="Filtres des formations">
+    <button class="filter-btn filter-btn--aps" data-filter-group="training" data-filter-value="aps">APS</button>
+    <button class="filter-btn filter-btn--dirigeant" data-filter-group="training" data-filter-value="dirigeant">DIRIGEANT</button>
+    <button class="filter-btn filter-btn--a3p" data-filter-group="training" data-filter-value="a3p">A3P</button>
+    <button class="filter-btn filter-btn--status" data-filter-group="status" data-filter-value="ongoing">Afficher les formations en cours</button>
+    <button class="filter-btn filter-btn--status" data-filter-group="status" data-filter-value="upcoming">Afficher les prochaines formations</button>
+    <button class="filter-btn filter-btn--status" data-filter-group="status" data-filter-value="ended">Afficher les formations terminées</button>
+    <button class="filter-btn filter-btn--all" data-filter-reset="true">Afficher toutes les formations</button>
   </div>
 </div>
 
@@ -524,6 +559,64 @@
   window.addEventListener("load", ()=>{
     loadDocsToControl();
   });
+
+  // =========================
+  // Filtres sessions
+  // =========================
+  (function(){
+    const cards = Array.from(document.querySelectorAll(".session-card"));
+    const filterButtons = Array.from(document.querySelectorAll("[data-filter-group]"));
+    const resetButton = document.querySelector("[data-filter-reset]");
+    if(cards.length === 0 || (filterButtons.length === 0 && !resetButton)) return;
+
+    const filterState = {
+      training: null,
+      status: null,
+    };
+
+    function applyFilters(){
+      cards.forEach(card => {
+        const matchTraining = !filterState.training || card.classList.contains(`training-${filterState.training}`);
+        const matchStatus = !filterState.status || card.classList.contains(`session-card--${filterState.status}`);
+        card.style.display = (matchTraining && matchStatus) ? "" : "none";
+      });
+    }
+
+    function setActiveButtons(){
+      filterButtons.forEach(btn => {
+        const group = btn.dataset.filterGroup;
+        const value = btn.dataset.filterValue;
+        const isActive = filterState[group] === value;
+        btn.classList.toggle("is-active", isActive);
+      });
+      if(resetButton){
+        resetButton.classList.toggle("is-active", !filterState.training && !filterState.status);
+      }
+    }
+
+    filterButtons.forEach(btn => {
+      btn.addEventListener("click", ()=>{
+        const group = btn.dataset.filterGroup;
+        const value = btn.dataset.filterValue;
+        if(!group || !value) return;
+        filterState[group] = (filterState[group] === value) ? null : value;
+        if(group === "status"){
+          filterState.training = null;
+        }
+        setActiveButtons();
+        applyFilters();
+      });
+    });
+
+    resetButton?.addEventListener("click", ()=>{
+      filterState.training = null;
+      filterState.status = null;
+      setActiveButtons();
+      applyFilters();
+    });
+
+    setActiveButtons();
+  })();
 
     // =========================
   // 🔎 Recherche stagiaire (global)
