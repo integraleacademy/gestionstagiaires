@@ -240,18 +240,6 @@
       <strong>{{ s.deliverables_done or 0 }}/{{ s.deliverables_total or 0 }}</strong>
     </div>
 
-    <div class="jury-status">
-      {% if not s.jury_notified %}
-        <span class="pill pill-orange">Jury à notifier</span>
-      {% else %}
-        <span class="pill pill-red">{{ s.jury_pending }} en attente de réponse</span>
-        <span class="pill pill-green">{{ s.jury_present }} présent{{ "s" if s.jury_present != 1 }}</span>
-        <span class="pill pill-red">{{ s.jury_absent }} absent{{ "s" if s.jury_absent != 1 }}</span>
-      {% endif %}
-    </div>
-
-
-
 <div class="card-actions">
   <a class="btn" href="{{ url_for('admin_trainees', session_id=s.id, **request.args) }}">Voir les stagiaires</a>
 
