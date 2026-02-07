@@ -426,7 +426,7 @@ select.status-dot.status-pill{
   align-items:center;
   justify-content:center;
   padding:16px;
-  z-index:60;
+  z-index:1000;
 }
 .modal{
   width:min(720px, 96vw);
