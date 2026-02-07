@@ -304,6 +304,14 @@
           <option value="in_review" {% if fs=="in_review" %}selected{% endif %}>EN COURS DE VALIDATION</option>
           <option value="validated" {% if fs=="validated" %}selected{% endif %}>VALIDÉ</option>
         </select>
+        <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;">
+          <button class="btn btn-outline" type="button" id="btnOpenFinancementReject">
+            ⚠️ Prélèvement rejeté
+          </button>
+        </div>
+        <div id="financementRejectedNote" class="hint" style="margin-top:8px;{% if not trainee.financement_rejected_note %}display:none;{% endif %}">
+          {{ trainee.financement_rejected_note or "⚠️ Prélèvement rejeté" }}
+        </div>
       </div>
 
       <!-- COMMENTAIRE FINANCEMENT (pleine largeur dans la carte) -->
@@ -700,6 +708,44 @@
   </div>
 </div>
 
+<!-- ===================== -->
+<!-- MODALE PRELEVEMENT REJETE -->
+<!-- ===================== -->
+<div class="modal-backdrop" id="financementRejectModal" aria-hidden="true">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-head">
+      <div class="modal-title">Prélèvement rejeté</div>
+      <button class="icon-btn" type="button" data-close-modal="financementRejectModal">✕</button>
+    </div>
+
+    <form id="financementRejectForm">
+      <div class="modal-body">
+        <div class="label">Montant du prélèvement rejeté</div>
+        <input id="financementRejectAmount"
+               type="number"
+               min="0"
+               step="0.01"
+               placeholder="Ex : 150.00"
+               required>
+
+        <div class="label" style="margin-top:10px;">Date du prélèvement initialement prévue</div>
+        <input id="financementRejectDate"
+               type="date"
+               required>
+
+        <div class="hint" style="margin-top:8px;">
+          Un mail + SMS seront envoyés au stagiaire avec un lien pour proposer une nouvelle date.
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn" type="button" data-close-modal="financementRejectModal">Annuler</button>
+        <button class="btn btn-primary" type="submit" id="btnSendFinancementReject">Envoyer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 
 <script>
 
@@ -761,6 +807,79 @@ function setDossierPill(status){
       const id = b.getAttribute("data-close-modal");
       closeModal(id);
     });
+  });
+
+  const btnOpenFinancementReject = document.getElementById("btnOpenFinancementReject");
+  const financementRejectForm = document.getElementById("financementRejectForm");
+  const financementRejectAmount = document.getElementById("financementRejectAmount");
+  const financementRejectDate = document.getElementById("financementRejectDate");
+  const btnSendFinancementReject = document.getElementById("btnSendFinancementReject");
+  const financementRejectedNote = document.getElementById("financementRejectedNote");
+
+  function ensureAdminCommentFlag(updatedValue){
+    const adminComment = document.getElementById("traineeComment");
+    if(!adminComment) return;
+    const flagText = "⚠️ Prélèvement rejeté";
+    if(updatedValue){
+      adminComment.value = updatedValue;
+      adminComment.dispatchEvent(new Event("input"));
+      return;
+    }
+    if((adminComment.value || "").includes(flagText)) return;
+    adminComment.value = (adminComment.value || "").trim()
+      ? `${adminComment.value.trim()}\n${flagText}`
+      : flagText;
+    adminComment.dispatchEvent(new Event("input"));
+  }
+
+  if(btnOpenFinancementReject){
+    btnOpenFinancementReject.addEventListener("click", ()=>openModal("financementRejectModal"));
+  }
+
+  financementRejectForm?.addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    if(!financementRejectAmount || !financementRejectDate) return;
+    const amount = (financementRejectAmount.value || "").trim();
+    const scheduledDate = (financementRejectDate.value || "").trim();
+    if(!amount || !scheduledDate){
+      alert("Merci de renseigner le montant et la date.");
+      return;
+    }
+
+    if(btnSendFinancementReject) btnSendFinancementReject.disabled = true;
+
+    try{
+      const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/financement-rejet/send`, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ amount: amount, scheduled_date: scheduledDate })
+      });
+      const data = await res.json().catch(()=> ({}));
+      if(!res.ok || data.ok === false){
+        throw new Error(data.error || "send_failed");
+      }
+
+      if(financementSelect){
+        financementSelect.value = "in_review";
+        applyStatusPill(financementSelect);
+      }
+
+      if(financementRejectedNote){
+        financementRejectedNote.textContent = data.note || "⚠️ Prélèvement rejeté";
+        financementRejectedNote.style.display = "block";
+      }
+
+      ensureAdminCommentFlag(data.comment);
+
+      closeModal("financementRejectModal");
+      const emailMsg = data.email_ok ? "Mail envoyé." : "Mail non envoyé (adresse manquante).";
+      const smsMsg = data.sms_ok ? "SMS envoyé." : "SMS non envoyé (numéro manquant).";
+      alert(`Prélèvement rejeté : ${emailMsg} ${smsMsg}`);
+    }catch(e){
+      alert("Erreur lors de l'envoi du mail/SMS de prélèvement rejeté.");
+    }finally{
+      if(btnSendFinancementReject) btnSendFinancementReject.disabled = false;
+    }
   });
 
   // --- PRE/CAR live formatter ---

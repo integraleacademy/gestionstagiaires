@@ -4637,6 +4637,218 @@ def api_phone_relance_send(session_id: str, trainee_id: str):
     return jsonify({"ok": True, "email_ok": bool(ok), "followup_id": followup_id})
 
 
+# =========================
+# PRELEVEMENT REJETE
+# =========================
+
+def _append_admin_comment_flag(current: str, flag_text: str) -> str:
+    current = (current or "").strip()
+    if not current:
+        return flag_text
+    if flag_text in current:
+        return current
+    return current + "\n" + flag_text
+
+
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/financement-rejet/send")
+@admin_login_required
+def api_financement_rejet_send(session_id: str, trainee_id: str):
+    payload = request.get_json(silent=True) or {}
+    amount = (payload.get("amount") or "").strip()
+    scheduled_date = (payload.get("scheduled_date") or "").strip()
+
+    if not amount or not scheduled_date:
+        return jsonify({"ok": False, "error": "missing_fields"}), 400
+
+    data = load_data()
+    s, t = _find_session_and_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "not_found"}), 404
+
+    token = uuid.uuid4().hex
+    entry_id = "PAY-" + token[:10].upper()
+
+    t.setdefault("financement_rejected_requests", [])
+    t["financement_rejected_requests"].insert(0, {
+        "id": entry_id,
+        "token": token,
+        "amount": amount,
+        "scheduled_date": scheduled_date,
+        "at": _now_iso(),
+        "status": "PENDING",
+    })
+
+    t["financement_status"] = "in_review"
+    t["financement_rejected_note"] = "⚠️ Prélèvement rejeté"
+    t["comment"] = _append_admin_comment_flag(t.get("comment", ""), "⚠️ Prélèvement rejeté")
+
+    first_name = (t.get("first_name") or "").strip()
+    last_name = (t.get("last_name") or "").strip()
+    email = (t.get("email") or "").strip()
+    phone = (t.get("phone") or "").strip()
+    formation_type = formation_label(_session_get(s, "training_type", ""))
+    scheduled_fr = fr_date(scheduled_date) or scheduled_date
+
+    base = PUBLIC_BASE_URL.rstrip("/")
+    reply_url = f"{base}/prelevement-rejete/{token}"
+
+    subject = "⚠️ Prélèvement rejeté – action requise"
+    html = mail_layout(f"""
+      <p>Bonjour {first_name} {last_name},</p>
+
+      <p>Je me permets de revenir vers vous concernant votre formation
+      <strong>{formation_type}</strong>.</p>
+
+      <p>Nous avons pu constater que votre prélèvement d'un montant de
+      <strong>{amount}</strong> initialement prévu le <strong>{scheduled_fr}</strong> a été rejeté.</p>
+
+      <p>Pourriez-vous svp nous indiquer à quelle date nous pouvons prévoir un nouveau prélèvement
+      en cliquant ici ?</p>
+
+      <p style="text-align:center;margin:18px 0">
+        <a href="{reply_url}"
+           style="display:inline-block;background:#2563eb;color:#fff;padding:12px 16px;border-radius:10px;text-decoration:none;font-weight:800">
+          Indiquer une nouvelle date
+        </a>
+      </p>
+
+      <p>En cas de difficulté vous pouvez nous contacter au 04 22 47 07 68.</p>
+
+      <p>Je vous remercie par avance,</p>
+
+      <p>Clément VAILLANT<br>Directeur Intégrale Academy</p>
+    """)
+
+    email_ok = brevo_send_email(email, subject, html) if email else False
+
+    sms_name = f"{first_name} {last_name}".strip()
+    sms_prefix = f"Bonjour {sms_name}, " if sms_name else "Bonjour, "
+    sms = (
+        f"{sms_prefix}votre prélèvement de {amount} prévu le {scheduled_fr} a été rejeté. "
+        f"Indiquez une nouvelle date ici : {reply_url}"
+    ).strip()
+    sms_ok = brevo_send_sms(phone, sms) if phone else False
+
+    s["trainees"] = _session_trainees_list(s)
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return jsonify({
+        "ok": True,
+        "email_ok": bool(email_ok),
+        "sms_ok": bool(sms_ok),
+        "reply_url": reply_url,
+        "note": t.get("financement_rejected_note"),
+        "comment": t.get("comment", ""),
+    })
+
+
+@app.get("/prelevement-rejete/<token>")
+def prelevement_rejete_page(token: str):
+    data = load_data()
+    found = None
+    found_trainee = None
+    found_session = None
+
+    for s in data.get("sessions", []) or []:
+        for t in (s.get("trainees") or []):
+            for it in (t.get("financement_rejected_requests") or []):
+                if (it.get("token") or "").strip() == token:
+                    found = it
+                    found_trainee = t
+                    found_session = s
+                    break
+            if found:
+                break
+        if found:
+            break
+
+    if not found:
+        return "<h3>Lien invalide ou expiré.</h3>", 404
+
+    return render_template(
+        "prelevement_rejete.html",
+        token=token,
+        trainee=found_trainee,
+        session=found_session,
+        formation_label=formation_label(_session_get(found_session, "training_type", "")),
+        amount=found.get("amount", ""),
+        scheduled_date=fr_date(found.get("scheduled_date", "")),
+        ref_id=found.get("id", ""),
+    )
+
+
+@app.post("/prelevement-rejete/<token>/reply")
+def prelevement_rejete_reply(token: str):
+    new_date = (request.form.get("new_date") or "").strip()
+    comment = (request.form.get("comment") or "").strip()
+
+    if not new_date:
+        return "<h3>Veuillez indiquer une date.</h3>", 400
+
+    data = load_data()
+    found = None
+    found_trainee = None
+    found_session = None
+
+    for s in data.get("sessions", []) or []:
+        for t in (s.get("trainees") or []):
+            for it in (t.get("financement_rejected_requests") or []):
+                if (it.get("token") or "").strip() == token:
+                    found = it
+                    found_trainee = t
+                    found_session = s
+                    break
+            if found:
+                break
+        if found:
+            break
+
+    if not found:
+        return "<h3>Lien invalide ou expiré.</h3>", 404
+
+    found["status"] = "DONE"
+    found["responded_at"] = _now_iso()
+    found["new_date"] = new_date
+    found["comment"] = comment
+
+    first_name = (found_trainee.get("first_name") or "").strip()
+    last_name = (found_trainee.get("last_name") or "").strip()
+    formation_type = formation_label(_session_get(found_session, "training_type", ""))
+
+    amount = found.get("amount", "")
+    scheduled_date = fr_date(found.get("scheduled_date", ""))
+    new_date_fr = fr_date(new_date) or new_date
+
+    subject = f"📩 Nouveau prélèvement proposé – {first_name} {last_name}".strip()
+    html = mail_layout(f"""
+      <h2 style="text-align:center">📩 Nouveau prélèvement proposé</h2>
+
+      <div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:14px 0">
+        <p style="margin:0 0 8px 0"><strong>Stagiaire :</strong> {first_name} {last_name}</p>
+        <p style="margin:0 0 8px 0"><strong>Formation :</strong> {formation_type}</p>
+        <p style="margin:0 0 8px 0"><strong>Montant :</strong> {amount}</p>
+        <p style="margin:0 0 8px 0"><strong>Date initiale :</strong> {scheduled_date}</p>
+        <p style="margin:0"><strong>Nouvelle date proposée :</strong> {new_date_fr}</p>
+      </div>
+
+      {"<p><strong>Commentaire :</strong><br>" + comment + "</p>" if comment else ""}
+    """)
+
+    brevo_send_email("clement@integraleacademy.com", subject, html)
+
+    found_session["trainees"] = _session_trainees_list(found_session)
+    found_session.pop("stagiaires", None)
+    save_data(data)
+
+    return """
+    <div style="font-family:Arial,sans-serif;max-width:520px;margin:60px auto;padding:18px;border:1px solid #e5e7eb;border-radius:14px">
+      <h2 style="margin:0 0 10px 0">✅ Merci !</h2>
+      <p style="margin:0;color:#374151">Votre réponse a bien été transmise. Nous revenons vers vous rapidement.</p>
+    </div>
+    """
+
+
 @app.get("/phone-followup/<token>")
 def phone_followup_page(token: str):
     # page publique "action secrétaire" (sans login), basée sur un token unique
