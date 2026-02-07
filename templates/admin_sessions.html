@@ -588,9 +588,6 @@
         const value = btn.dataset.filterValue;
         if(!group || !value) return;
         filterState[group] = (filterState[group] === value) ? null : value;
-        if(group === "status"){
-          filterState.training = null;
-        }
         setActiveButtons();
         applyFilters();
       });
