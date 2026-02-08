@@ -97,6 +97,7 @@
     .docrow .pill,
     .docrow .btn{width:100%;justify-content:center;}
     .field > div{flex-direction:column;align-items:flex-start;gap:6px;}
+    .field-date > div{flex-direction:column;align-items:flex-start;gap:6px;}
     .saved{min-width:auto !important;text-align:left;}
     .public-wrap .upload-form{flex-direction:column;align-items:stretch;}
     .public-wrap .upload-form .btn{width:100%;}
@@ -440,7 +441,7 @@
          "Ex : PRE-083-2025-01-01-20210000000 ou PRE-2025-01-01-20210000000") }}
 
 {# Date de naissance (type date) #}
-<div class="field" style="border-left:4px solid {{ '#16a34a' if (trainee.birth_date or '') else '#dc2626' }};padding-left:10px;">
+<div class="field field-date" style="border-left:4px solid {{ '#16a34a' if (trainee.birth_date or '') else '#dc2626' }};padding-left:10px;">
   <label class="label">Date de naissance</label>
 
   <div style="display:flex;gap:10px;align-items:center;">
