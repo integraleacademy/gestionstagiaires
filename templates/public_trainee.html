@@ -584,11 +584,16 @@
 {% if not has_file and not (d.key == "permis" and trainee.no_permis) %}
   <div class="doctag missing">📌 Document à déposer (obligatoire)</div>
 {% else %}
-  {% if has_file %}
-    {% if up == "CONFORME" %}
+    {% if has_file %}
+      {% if up == "CONFORME" %}
       <div class="doctag" style="border-color:#bbf7d0;color:#065f46;background:#fff;">✅ Document conforme</div>
     {% elif up == "NON CONFORME" %}
       <div class="doctag missing">❌ Document non conforme — à remplacer</div>
+      {% if d.comment %}
+        <div class="muted" style="margin-top:6px;color:#b91c1c;font-weight:700;">
+          Motif : {{ d.comment }}
+        </div>
+      {% endif %}
     {% else %}
       <div class="doctag pending">⏳ Document déposé — en attente de contrôle</div>
     {% endif %}
