@@ -328,9 +328,14 @@
             {% set financement_ns.new_date = req.new_date %}
           {% endif %}
         {% endfor %}
-        {% if financement_ns.new_date %}
-          <div id="financementRejectedNewDate" class="hint" style="margin-top:4px;">
+        {% if financement_ns.new_date and fs != "validated" %}
+          <div id="financementRejectedNewDate" class="hint" style="margin-top:4px;display:flex;align-items:center;gap:6px;">
             👉 Un nouveau prélèvement a été proposé le {{ fr_date(financement_ns.new_date) or financement_ns.new_date }}
+            <button type="button" class="icon-btn" id="financementNewDateIndicator"
+                    data-seen="{{ '1' if trainee.financement_new_date_seen else '0' }}"
+                    title="Marquer comme vu">
+              {% if trainee.financement_new_date_seen %}🟢{% else %}🔴{% endif %}
+            </button>
           </div>
         {% endif %}
       </div>
@@ -1304,6 +1309,26 @@ if(financementSelect){
       window.location.reload();
     }catch(e){
       alert("Erreur sauvegarde financement");
+    }
+  });
+}
+
+const financementNewDateIndicator = document.getElementById("financementNewDateIndicator");
+if(financementNewDateIndicator){
+  financementNewDateIndicator.addEventListener("click", async ()=>{
+    if(financementNewDateIndicator.getAttribute("data-seen") === "1"){
+      return;
+    }
+    try{
+      await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ financement_new_date_seen: true })
+      });
+      financementNewDateIndicator.textContent = "🟢";
+      financementNewDateIndicator.setAttribute("data-seen", "1");
+    }catch(e){
+      alert("Erreur sauvegarde prélèvement");
     }
   });
 }
