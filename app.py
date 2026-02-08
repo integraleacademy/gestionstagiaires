@@ -4354,6 +4354,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         dossier_is_complete=dossier_complete,
         deliverables_view=deliverables_view,
         PUBLIC_STUDENT_PORTAL_BASE=PUBLIC_STUDENT_PORTAL_BASE,
+        fr_date=fr_date,
     )
 
 @app.get("/api/docs_to_control")
