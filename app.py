@@ -4857,7 +4857,7 @@ def api_financement_rejet_send(session_id: str, trainee_id: str):
         </a>
       </p>
     """)
-    brevo_send_email("clement.annecy@gmail.com", secretariat_subject, secretariat_html)
+    brevo_send_email("znaw83@gmail.com", secretariat_subject, secretariat_html)
 
     sms_name = first_name.strip()
     sms_prefix = f"Bonjour {sms_name}, " if sms_name else "Bonjour, "
