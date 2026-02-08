@@ -2171,6 +2171,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vae_status",
         "comment",
         "financement_comment",
+        "financement_new_date_seen",
         "vae_status_label",
         "cnaps",
         "no_permis", 
@@ -2190,7 +2191,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
             continue
 
         # bools
-        if k in ("no_permis", "public_hide_infos", "public_hide_docs", "public_hide_suivi", "public_hide_popup", "force_dossier_complete"):
+        if k in ("no_permis", "public_hide_infos", "public_hide_docs", "public_hide_suivi", "public_hide_popup", "force_dossier_complete", "financement_new_date_seen"):
             t[k] = True if v in (True, "true", "1", 1, "yes", "on") else False
             continue
 
@@ -2218,6 +2219,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
 
     if (payload.get("financement_status") or "").strip() == "validated":
         t["financement_rejected_note"] = ""
+        t["financement_new_date_seen"] = False
         t["comment"] = _remove_admin_comment_flag(t.get("comment", ""), "⚠️ Prélèvement rejeté")
 
 
