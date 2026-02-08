@@ -4859,11 +4859,16 @@ def api_financement_rejet_send(session_id: str, trainee_id: str):
     """)
     brevo_send_email("clement.annecy@gmail.com", secretariat_subject, secretariat_html)
 
-    sms_name = f"{first_name} {last_name}".strip()
+    sms_name = first_name.strip()
     sms_prefix = f"Bonjour {sms_name}, " if sms_name else "Bonjour, "
     sms = (
-        f"{sms_prefix}votre prélèvement de {amount} prévu le {scheduled_fr} a été rejeté. "
-        f"Indiquez une nouvelle date ici : {reply_url}"
+        f"{sms_prefix}Je reviens vers vous concernant votre formation {training_name}. "
+        f"Votre prélèvement d'un montant de {amount} euros prévu le {scheduled_fr} a été rejeté. "
+        "Nous vous remercions de bien vouloir nous indiquer une nouvelle date de prélèvement "
+        f"en cliquant ici : {reply_url} "
+        "En cas de difficultés, vous pouvez nous contacter au 04 22 47 07 68. "
+        "Je vous remercie par avance, "
+        "Clément VAILLANT - Intégrale Academy"
     ).strip()
     sms_ok = brevo_send_sms(phone, sms) if phone else False
 
