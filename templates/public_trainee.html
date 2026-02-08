@@ -86,6 +86,27 @@
     background:#fff;
   }
 
+  @media (max-width: 640px){
+    .public-wrap{padding:12px;}
+    .public-grid{gap:12px;}
+    .card{padding:14px;border-radius:14px;}
+    .row{gap:8px;}
+    .line{flex-direction:column;align-items:flex-start;gap:4px;}
+    .line .value{text-align:left;}
+    .docrow{flex-direction:column;align-items:flex-start;}
+    .docrow .pill,
+    .docrow .btn{width:100%;justify-content:center;}
+    .field > div{flex-direction:column;align-items:flex-start;gap:6px;}
+    .field-date > div{flex-direction:column;align-items:flex-start;gap:6px;}
+    .saved{min-width:auto !important;text-align:left;}
+    .public-wrap .upload-form{flex-direction:column;align-items:stretch;}
+    .public-wrap .upload-form .btn{width:100%;}
+    .public-wrap .upload-form input[type="file"]{width:100% !important;}
+    .public-wrap .docs-stack .doctag{white-space:normal;text-align:left;}
+    .public-wrap .docs-stack .docmeta .label{font-size:14px;line-height:1.3;}
+    .public-wrap .docs-stack .muted{word-break:break-word;}
+  }
+
   /* ✅ évite les doubles cadres : on enlève la séparation "border-top" quand c’est missing/pending */
 .docrow.missing,
 .docrow.pending{
@@ -420,7 +441,7 @@
          "Ex : PRE-083-2025-01-01-20210000000 ou PRE-2025-01-01-20210000000") }}
 
 {# Date de naissance (type date) #}
-<div class="field" style="border-left:4px solid {{ '#16a34a' if (trainee.birth_date or '') else '#dc2626' }};padding-left:10px;">
+<div class="field field-date" style="border-left:4px solid {{ '#16a34a' if (trainee.birth_date or '') else '#dc2626' }};padding-left:10px;">
   <label class="label">Date de naissance</label>
 
   <div style="display:flex;gap:10px;align-items:center;">
