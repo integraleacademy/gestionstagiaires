@@ -4721,6 +4721,38 @@ def _remove_admin_comment_flag(current: str, flag_text: str) -> str:
     kept = [line for line in current.splitlines() if line.strip() != flag_text]
     return "\n".join(kept).strip()
 
+def _send_prelevement_new_date_email(
+    trainee: dict,
+    session: dict,
+    rejected_request: dict,
+    new_date: str,
+    comment: str = "",
+) -> None:
+    first_name = (trainee.get("first_name") or "").strip()
+    last_name = (trainee.get("last_name") or "").strip()
+    formation_type = formation_label(_session_get(session, "training_type", ""))
+
+    amount = rejected_request.get("amount", "")
+    scheduled_date = fr_date(rejected_request.get("scheduled_date", ""))
+    new_date_fr = fr_date(new_date) or new_date
+
+    subject = f"📩 Nouveau prélèvement proposé – {first_name} {last_name}".strip()
+    html = mail_layout(f"""
+      <h2 style="text-align:center">📩 Nouveau prélèvement proposé</h2>
+
+      <div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:14px 0">
+        <p style="margin:0 0 8px 0"><strong>Stagiaire :</strong> {first_name} {last_name}</p>
+        <p style="margin:0 0 8px 0"><strong>Formation :</strong> {formation_type}</p>
+        <p style="margin:0 0 8px 0"><strong>Montant :</strong> {amount}</p>
+        <p style="margin:0 0 8px 0"><strong>Date initiale :</strong> {scheduled_date}</p>
+        <p style="margin:0"><strong>Nouvelle date proposée :</strong> {new_date_fr}</p>
+      </div>
+
+      {"<p><strong>Commentaire :</strong><br>" + comment + "</p>" if comment else ""}
+    """)
+
+    brevo_send_email("clement@integraleacademy.com", subject, html)
+
 
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/financement-rejet/send")
 @admin_login_required
@@ -4872,9 +4904,7 @@ def prelevement_rejete_page(token: str):
     if not found:
         return "<h3>Lien invalide ou expiré.</h3>", 404
 
-    already_indicated = bool(found.get("new_date")) and found.get("new_date_source") == "TRAINEE"
-    new_date_value = found.get("new_date")
-    new_date_fr = fr_date(new_date_value) if new_date_value else ""
+    new_date = found.get("new_date")
 
     return render_template(
         "prelevement_rejete.html",
@@ -4885,8 +4915,7 @@ def prelevement_rejete_page(token: str):
         amount=found.get("amount", ""),
         scheduled_date=fr_date(found.get("scheduled_date", "")),
         ref_id=found.get("id", ""),
-        already_indicated=already_indicated,
-        new_date=new_date_fr or new_date_value or "",
+        new_date=new_date,
     )
 
 
@@ -4975,6 +5004,8 @@ def prelevement_rejete_secretaire_reply(token: str):
     found["new_date"] = new_date
     found["new_date_source"] = "SECRETARIAT"
 
+    _send_prelevement_new_date_email(found_trainee, found_session, found, new_date)
+
     found_session["trainees"] = _session_trainees_list(found_session)
     found_session.pop("stagiaires", None)
     save_data(data)
@@ -5013,10 +5044,7 @@ def prelevement_rejete_reply(token: str):
     if not found:
         return "<h3>Lien invalide ou expiré.</h3>", 404
 
-    already_indicated = bool(found.get("new_date")) and found.get("new_date_source") == "TRAINEE"
-    if already_indicated:
-        new_date_value = found.get("new_date")
-        new_date_fr = fr_date(new_date_value) if new_date_value else ""
+    if found.get("new_date"):
         return render_template(
             "prelevement_rejete.html",
             token=token,
@@ -5026,12 +5054,8 @@ def prelevement_rejete_reply(token: str):
             amount=found.get("amount", ""),
             scheduled_date=fr_date(found.get("scheduled_date", "")),
             ref_id=found.get("id", ""),
-            already_indicated=True,
-            new_date=new_date_fr or new_date_value or "",
+            new_date=found.get("new_date"),
         )
-
-    if not new_date:
-        return "<h3>Veuillez indiquer une date.</h3>", 400
 
     found["status"] = "DONE"
     found["responded_at"] = _now_iso()
@@ -5039,30 +5063,7 @@ def prelevement_rejete_reply(token: str):
     found["comment"] = comment
     found["new_date_source"] = "TRAINEE"
 
-    first_name = (found_trainee.get("first_name") or "").strip()
-    last_name = (found_trainee.get("last_name") or "").strip()
-    formation_type = formation_label(_session_get(found_session, "training_type", ""))
-
-    amount = found.get("amount", "")
-    scheduled_date = fr_date(found.get("scheduled_date", ""))
-    new_date_fr = fr_date(new_date) or new_date
-
-    subject = f"📩 Nouveau prélèvement proposé – {first_name} {last_name}".strip()
-    html = mail_layout(f"""
-      <h2 style="text-align:center">📩 Nouveau prélèvement proposé</h2>
-
-      <div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:14px 0">
-        <p style="margin:0 0 8px 0"><strong>Stagiaire :</strong> {first_name} {last_name}</p>
-        <p style="margin:0 0 8px 0"><strong>Formation :</strong> {formation_type}</p>
-        <p style="margin:0 0 8px 0"><strong>Montant :</strong> {amount}</p>
-        <p style="margin:0 0 8px 0"><strong>Date initiale :</strong> {scheduled_date}</p>
-        <p style="margin:0"><strong>Nouvelle date proposée :</strong> {new_date_fr}</p>
-      </div>
-
-      {"<p><strong>Commentaire :</strong><br>" + comment + "</p>" if comment else ""}
-    """)
-
-    brevo_send_email("clement@integraleacademy.com", subject, html)
+    _send_prelevement_new_date_email(found_trainee, found_session, found, new_date, comment)
 
     found_session["trainees"] = _session_trainees_list(found_session)
     found_session.pop("stagiaires", None)

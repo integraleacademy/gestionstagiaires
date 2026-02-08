@@ -19,15 +19,10 @@
   <div class="wrap">
     <div class="card">
       <div style="font-weight:900;font-size:18px">Prélèvement rejeté</div>
-      {% if already_indicated %}
+      {% if new_date %}
         <div class="hint" style="margin-top:6px">
-          Vous avez déjà indiqué une nouvelle date de prélèvement.
+          Une nouvelle date de prélèvement a déjà été indiquée lors de vos échanges avec notre équipe.
         </div>
-        {% if new_date %}
-          <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-top:12px">
-            <p style="margin:0"><strong>Nouvelle date enregistrée :</strong> {{ new_date }}</p>
-          </div>
-        {% endif %}
       {% else %}
         <div class="hint" style="margin-top:6px">
           Merci d’indiquer une nouvelle date de prélèvement.
@@ -41,7 +36,7 @@
         <p style="margin:0"><strong>Date initiale :</strong> {{ scheduled_date }}</p>
       </div>
 
-      {% if not already_indicated %}
+      {% if not new_date %}
         <form method="post" action="/prelevement-rejete/{{ token }}/reply" style="margin-top:14px">
           <div class="hint" style="margin-bottom:6px">Nouvelle date souhaitée</div>
           <input type="date" name="new_date" required>
