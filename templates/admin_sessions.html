@@ -233,6 +233,9 @@
         <span>Stagiaires</span>
         <span class="trainees-count">{{ s.total }}</span>
       </div>
+      <div class="muted" style="margin-top:4px;">
+        🛜 {{ s.public_logged_in_total or 0 }}/{{ s.total }}
+      </div>
     </div>
 
     <div class="docs-progress">
