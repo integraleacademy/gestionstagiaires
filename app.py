@@ -4776,7 +4776,7 @@ def api_financement_rejet_send(session_id: str, trainee_id: str):
       <strong>{formation_type}</strong>.</p>
 
       <p>Nous avons pu constater que votre prélèvement d'un montant de
-      <strong>{amount}</strong> initialement prévu le <strong>{scheduled_fr}</strong> a été rejeté.</p>
+      <strong>{amount}</strong> euros initialement prévu le <strong>{scheduled_fr}</strong> a été rejeté.</p>
 
       <p>Pourriez-vous svp nous indiquer à quelle date nous pouvons prévoir un nouveau prélèvement
       en cliquant ici ?</p>
