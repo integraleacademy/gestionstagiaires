@@ -1073,87 +1073,89 @@ function setDossierPill(status){
   }
 
   // Autosave documents
-  const docsTable = document.getElementById("docsTable");
-  if(docsTable){
-    const sessionId = docsTable.getAttribute("data-session-id");
-    const traineeId = docsTable.getAttribute("data-trainee-id");
+  document.addEventListener("DOMContentLoaded", ()=>{
+    const docsTable = document.getElementById("docsTable");
+    if(docsTable){
+      const sessionId = docsTable.getAttribute("data-session-id");
+      const traineeId = docsTable.getAttribute("data-trainee-id");
 
-    async function saveDoc(key, field, value){
-      await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/documents/update`, {
-        method:"POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ key, field, value })
-      });
-    }
-
-    function updateDocPill(row, status){
-      if(!row) return;
-      const hint = row.querySelector("td:nth-child(2) .hint");
-      if(!hint) return;
-      let pillClass = "pill-yellow";
-      let label = "A CONTRÔLER";
-      if(status === "CONFORME"){
-        pillClass = "pill-green";
-        label = "CONFORME";
-      }else if(status === "NON CONFORME"){
-        pillClass = "pill-red";
-        label = "NON CONFORME";
-      }else if(status === "NON DÉPOSÉ"){
-        pillClass = "pill-gray";
-        label = "NON DÉPOSÉ";
-      }
-      hint.innerHTML = `<span class="pill ${pillClass}">${label}</span>`;
-    }
-
-    // select changes
-    docsTable.querySelectorAll("tr[data-doc-key]").forEach(tr=>{
-      const key = tr.getAttribute("data-doc-key");
-
-      const sel = tr.querySelector("select.sel-doc");
-      if(sel){
-        sel.addEventListener("change", async ()=>{
-          await saveDoc(key, "status", sel.value);
-          updateDocPill(tr, sel.value);
+      async function saveDoc(key, field, value){
+        await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/documents/update`, {
+          method:"POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ key, field, value })
         });
       }
 
-    });
-
-    let activeDocRow = null;
-    let activeDocButton = null;
-    let activeDocKey = null;
-    const docCommentModal = document.getElementById("docCommentModal");
-    const docCommentInput = document.getElementById("docCommentInput");
-    const docCommentSave = document.getElementById("docCommentSave");
-
-    docsTable.querySelectorAll(".doc-comment-btn").forEach(btn=>{
-      btn.addEventListener("click", ()=>{
-        activeDocKey = btn.getAttribute("data-doc-key");
-        activeDocButton = btn;
-        activeDocRow = btn.closest("tr");
-        const existing = btn.getAttribute("data-comment") || "";
-        if(docCommentInput) docCommentInput.value = existing;
-        openModal("docCommentModal");
-        docCommentInput?.focus();
-      });
-    });
-
-    if(docCommentSave){
-      docCommentSave.addEventListener("click", async ()=>{
-        if(!activeDocKey) return;
-        const value = (docCommentInput?.value || "").toString();
-        await saveDoc(activeDocKey, "comment", value);
-        if(activeDocButton) activeDocButton.setAttribute("data-comment", value);
-        if(activeDocRow){
-          const preview = activeDocRow.querySelector(".doc-comment-preview");
-          if(preview){
-            preview.textContent = value.trim().length ? "Commentaire enregistré" : "Aucun commentaire";
-          }
+      function updateDocPill(row, status){
+        if(!row) return;
+        const hint = row.querySelector("td:nth-child(2) .hint");
+        if(!hint) return;
+        let pillClass = "pill-yellow";
+        let label = "A CONTRÔLER";
+        if(status === "CONFORME"){
+          pillClass = "pill-green";
+          label = "CONFORME";
+        }else if(status === "NON CONFORME"){
+          pillClass = "pill-red";
+          label = "NON CONFORME";
+        }else if(status === "NON DÉPOSÉ"){
+          pillClass = "pill-gray";
+          label = "NON DÉPOSÉ";
         }
-        closeModal("docCommentModal");
+        hint.innerHTML = `<span class="pill ${pillClass}">${label}</span>`;
+      }
+
+      // select changes
+      docsTable.querySelectorAll("tr[data-doc-key]").forEach(tr=>{
+        const key = tr.getAttribute("data-doc-key");
+
+        const sel = tr.querySelector("select.sel-doc");
+        if(sel){
+          sel.addEventListener("change", async ()=>{
+            await saveDoc(key, "status", sel.value);
+            updateDocPill(tr, sel.value);
+          });
+        }
+
       });
+
+      let activeDocRow = null;
+      let activeDocButton = null;
+      let activeDocKey = null;
+      const docCommentModal = document.getElementById("docCommentModal");
+      const docCommentInput = document.getElementById("docCommentInput");
+      const docCommentSave = document.getElementById("docCommentSave");
+
+      docsTable.querySelectorAll(".doc-comment-btn").forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+          activeDocKey = btn.getAttribute("data-doc-key");
+          activeDocButton = btn;
+          activeDocRow = btn.closest("tr");
+          const existing = btn.getAttribute("data-comment") || "";
+          if(docCommentInput) docCommentInput.value = existing;
+          openModal("docCommentModal");
+          docCommentInput?.focus();
+        });
+      });
+
+      if(docCommentSave){
+        docCommentSave.addEventListener("click", async ()=>{
+          if(!activeDocKey) return;
+          const value = (docCommentInput?.value || "").toString();
+          await saveDoc(activeDocKey, "comment", value);
+          if(activeDocButton) activeDocButton.setAttribute("data-comment", value);
+          if(activeDocRow){
+            const preview = activeDocRow.querySelector(".doc-comment-preview");
+            if(preview){
+              preview.textContent = value.trim().length ? "Commentaire enregistré" : "Aucun commentaire";
+            }
+          }
+          closeModal("docCommentModal");
+        });
+      }
     }
-  }
+  });
 
   // Refresh CNAPS
   async function cnapsLookup(nom, prenom){
