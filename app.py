@@ -4872,6 +4872,10 @@ def prelevement_rejete_page(token: str):
     if not found:
         return "<h3>Lien invalide ou expiré.</h3>", 404
 
+    already_indicated = bool(found.get("new_date")) and found.get("new_date_source") == "TRAINEE"
+    new_date_value = found.get("new_date")
+    new_date_fr = fr_date(new_date_value) if new_date_value else ""
+
     return render_template(
         "prelevement_rejete.html",
         token=token,
@@ -4881,6 +4885,8 @@ def prelevement_rejete_page(token: str):
         amount=found.get("amount", ""),
         scheduled_date=fr_date(found.get("scheduled_date", "")),
         ref_id=found.get("id", ""),
+        already_indicated=already_indicated,
+        new_date=new_date_fr or new_date_value or "",
     )
 
 
@@ -4986,9 +4992,6 @@ def prelevement_rejete_reply(token: str):
     new_date = (request.form.get("new_date") or "").strip()
     comment = (request.form.get("comment") or "").strip()
 
-    if not new_date:
-        return "<h3>Veuillez indiquer une date.</h3>", 400
-
     data = load_data()
     found = None
     found_trainee = None
@@ -5009,6 +5012,26 @@ def prelevement_rejete_reply(token: str):
 
     if not found:
         return "<h3>Lien invalide ou expiré.</h3>", 404
+
+    already_indicated = bool(found.get("new_date")) and found.get("new_date_source") == "TRAINEE"
+    if already_indicated:
+        new_date_value = found.get("new_date")
+        new_date_fr = fr_date(new_date_value) if new_date_value else ""
+        return render_template(
+            "prelevement_rejete.html",
+            token=token,
+            trainee=found_trainee,
+            session=found_session,
+            formation_label=formation_label(_session_get(found_session, "training_type", "")),
+            amount=found.get("amount", ""),
+            scheduled_date=fr_date(found.get("scheduled_date", "")),
+            ref_id=found.get("id", ""),
+            already_indicated=True,
+            new_date=new_date_fr or new_date_value or "",
+        )
+
+    if not new_date:
+        return "<h3>Veuillez indiquer une date.</h3>", 400
 
     found["status"] = "DONE"
     found["responded_at"] = _now_iso()

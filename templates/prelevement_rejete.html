@@ -19,9 +19,20 @@
   <div class="wrap">
     <div class="card">
       <div style="font-weight:900;font-size:18px">Prélèvement rejeté</div>
-      <div class="hint" style="margin-top:6px">
-        Merci d’indiquer une nouvelle date de prélèvement.
-      </div>
+      {% if already_indicated %}
+        <div class="hint" style="margin-top:6px">
+          Vous avez déjà indiqué une nouvelle date de prélèvement.
+        </div>
+        {% if new_date %}
+          <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-top:12px">
+            <p style="margin:0"><strong>Nouvelle date enregistrée :</strong> {{ new_date }}</p>
+          </div>
+        {% endif %}
+      {% else %}
+        <div class="hint" style="margin-top:6px">
+          Merci d’indiquer une nouvelle date de prélèvement.
+        </div>
+      {% endif %}
 
       <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-top:12px">
         <p style="margin:0 0 6px 0"><strong>Stagiaire :</strong> {{ (trainee.first_name or '') }} {{ (trainee.last_name or '') }}</p>
@@ -30,17 +41,19 @@
         <p style="margin:0"><strong>Date initiale :</strong> {{ scheduled_date }}</p>
       </div>
 
-      <form method="post" action="/prelevement-rejete/{{ token }}/reply" style="margin-top:14px">
-        <div class="hint" style="margin-bottom:6px">Nouvelle date souhaitée</div>
-        <input type="date" name="new_date" required>
+      {% if not already_indicated %}
+        <form method="post" action="/prelevement-rejete/{{ token }}/reply" style="margin-top:14px">
+          <div class="hint" style="margin-bottom:6px">Nouvelle date souhaitée</div>
+          <input type="date" name="new_date" required>
 
-        <div class="hint" style="margin-top:10px;margin-bottom:6px">Commentaire (optionnel)</div>
-        <textarea name="comment" placeholder="Ex : possible à partir du 15 du mois..."></textarea>
+          <div class="hint" style="margin-top:10px;margin-bottom:6px">Commentaire (optionnel)</div>
+          <textarea name="comment" placeholder="Ex : possible à partir du 15 du mois..."></textarea>
 
-        <div style="display:flex;justify-content:flex-end;margin-top:12px">
-          <button class="btn btn-primary" type="submit">Envoyer</button>
-        </div>
-      </form>
+          <div style="display:flex;justify-content:flex-end;margin-top:12px">
+            <button class="btn btn-primary" type="submit">Envoyer</button>
+          </div>
+        </form>
+      {% endif %}
 
       <div class="hint" style="margin-top:12px">
         Référence : {{ ref_id }}
