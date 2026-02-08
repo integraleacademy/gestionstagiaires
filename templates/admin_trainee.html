@@ -322,6 +322,17 @@
         <div id="financementRejectedNote" class="hint" style="margin-top:8px;{% if not trainee.financement_rejected_note %}display:none;{% endif %}">
           {{ trainee.financement_rejected_note or "⚠️ Prélèvement rejeté" }}
         </div>
+        {% set financement_ns = namespace(new_date=None) %}
+        {% for req in trainee.financement_rejected_requests or [] %}
+          {% if req.new_date and not financement_ns.new_date %}
+            {% set financement_ns.new_date = req.new_date %}
+          {% endif %}
+        {% endfor %}
+        {% if financement_ns.new_date %}
+          <div id="financementRejectedNewDate" class="hint" style="margin-top:4px;">
+            👉 Un nouveau prélèvement a été proposé le {{ fr_date(financement_ns.new_date) or financement_ns.new_date }}
+          </div>
+        {% endif %}
       </div>
 
       <!-- COMMENTAIRE FINANCEMENT (pleine largeur dans la carte) -->
