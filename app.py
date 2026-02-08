@@ -3135,6 +3135,66 @@ def admin_send_access(session_id: str, trainee_id: str):
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 # =========================
+# Convention — non signée
+# =========================
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/unsigned-notify")
+@admin_login_required
+def admin_convention_unsigned_notify(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    formation_type = formation_label(_session_get(s, "training_type", ""))
+    dstart = fr_date(_session_get(s, "date_start", ""))
+    dend = fr_date(_session_get(s, "date_end", ""))
+
+    subject = "Relance contrat de formation à signer – Intégrale Academy"
+    html = mail_layout(f"""
+      <h2 style="text-align:center;color:#b91c1c">Contrat de formation à signer</h2>
+
+      <p>Bonjour <strong>{t.get("first_name","").strip() or "Madame, Monsieur"}</strong>,</p>
+
+      <p>
+        Vous n'avez pas encore signé votre <strong>Contrat de formation</strong>
+        concernant votre formation <strong>{formation_type}</strong> qui se déroulera (du <strong>{dstart}</strong> au <strong>{dend}</strong>).
+      </p>
+
+      <p>
+        Nous vous remercions de bien vouloir finaliser la signature électronique dès que possible. Si vous n’avez pas reçu le lien de signature, nous vous remercions de bien vouloir nous contacter au 04 22 47 07 68.
+      </p>
+
+      <p style="margin-top:22px">
+        Merci par avance,<br>
+        <strong>Clément VAILLANT</strong><br>
+        Directeur Intégrale Academy
+      </p>
+    """)
+
+    sms_prefix = f"Bonjour {t.get('first_name','').strip()}, " if (t.get("first_name") or "").strip() else "Bonjour, "
+    sms = (
+        f"Intégrale Academy ❗ {sms_prefix}"
+        f"Vous n'avez pas encore signé votre Contrat de formation"
+        f"concernant votre formation {formation_type} ({dstart} au {dend}). "
+        "Nous vous remercions de bien vouloir procéder à la signature de ce document. Besoin d'aide ? 04 22 47 07 68."
+    )
+
+    brevo_send_email(t.get("email", ""), subject, html)
+    brevo_send_sms(t.get("phone", ""), sms)
+
+    t["convention_unsigned_notified_at"] = _now_iso()
+    t["updated_at"] = _now_iso()
+
+    s["trainees"] = trainees
+    save_data(data)
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+# =========================
 # Test de français — notify/relance
 # =========================
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/test-fr/notify")
