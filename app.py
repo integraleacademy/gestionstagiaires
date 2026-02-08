@@ -3154,20 +3154,19 @@ def admin_convention_unsigned_notify(session_id: str, trainee_id: str):
     dstart = fr_date(_session_get(s, "date_start", ""))
     dend = fr_date(_session_get(s, "date_end", ""))
 
-    subject = "Convention de formation non signée – Intégrale Academy"
+    subject = "Relance contrat de formation à signer – Intégrale Academy"
     html = mail_layout(f"""
-      <h2 style="text-align:center;color:#b91c1c">Convention de formation non signée</h2>
+      <h2 style="text-align:center;color:#b91c1c">Contrat de formation à signer</h2>
 
       <p>Bonjour <strong>{t.get("first_name","").strip() or "Madame, Monsieur"}</strong>,</p>
 
       <p>
-        Nous n’avons pas encore reçu votre <strong>Convention / Contrat de formation</strong> signée
-        pour la formation <strong>{formation_type}</strong> (du <strong>{dstart}</strong> au <strong>{dend}</strong>).
+        Vous n'avez pas encore signé votre <strong>Contrat de formation</strong>
+        concernant votre formation <strong>{formation_type}</strong> qui se déroulera (du <strong>{dstart}</strong> au <strong>{dend}</strong>).
       </p>
 
       <p>
-        Merci de finaliser la signature électronique dès que possible. Si vous n’avez pas reçu le lien,
-        contactez-nous afin que nous vous le renvoyions.
+        Nous vous remercions de bien vouloir finaliser la signature électronique dès que possible. Si vous n’avez pas reçu le lien de signature, nous vous remercions de bien vouloir nous contacter au 04 22 47 07 68.
       </p>
 
       <p style="margin-top:22px">
@@ -3180,9 +3179,9 @@ def admin_convention_unsigned_notify(session_id: str, trainee_id: str):
     sms_prefix = f"Bonjour {t.get('first_name','').strip()}, " if (t.get("first_name") or "").strip() else "Bonjour, "
     sms = (
         f"Intégrale Academy ❗ {sms_prefix}"
-        f"nous n'avons pas reçu votre Convention/Contrat de formation signée "
-        f"pour la formation {formation_type} ({dstart} au {dend}). "
-        "Merci de signer dès que possible. Besoin d'aide ? 04 22 47 07 68."
+        f"Vous n"avez pas encore signé votre Contrat de formation"
+        f"concernant votre formation {formation_type} ({dstart} au {dend}). "
+        "Nous vous remercions de bien vouloir procéder à la signature de ce document. Besoin d'aide ? 04 22 47 07 68."
     )
 
     brevo_send_email(t.get("email", ""), subject, html)
