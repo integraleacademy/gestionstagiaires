@@ -3163,7 +3163,7 @@ def admin_convention_unsigned_notify(session_id: str, trainee_id: str):
       <p>Bonjour <strong>{t.get("first_name","").strip() or "Madame, Monsieur"}</strong>,</p>
 
       <p>
-        Vous n'avez pas encore signé votre <strong>Contrat de formation</strong>
+        Vous n'avez pas encore signé votre <strong>Contrat</strong>
         concernant votre formation <strong>{formation_type}</strong> qui se déroulera (du <strong>{dstart}</strong> au <strong>{dend}</strong>).
       </p>
 
@@ -3180,8 +3180,8 @@ def admin_convention_unsigned_notify(session_id: str, trainee_id: str):
 
     sms_prefix = f"Bonjour {t.get('first_name','').strip()}, " if (t.get("first_name") or "").strip() else "Bonjour, "
     sms = (
-        f"Intégrale Academy ❗ {sms_prefix}"
-        f"Vous n'avez pas encore signé votre Contrat de formation"
+        f"Intégrale Academy {sms_prefix}"
+        f"Vous n'avez pas encore signé votre Contrat"
         f"concernant votre formation {formation_type} ({dstart} au {dend}). "
         "Nous vous remercions de bien vouloir procéder à la signature de ce document. Besoin d'aide ? 04 22 47 07 68."
     )
