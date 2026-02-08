@@ -447,30 +447,7 @@
   </div>
 </div> 
 
-<!-- ===================== -->
-<!-- MODALE Commentaire docs -->
-<!-- ===================== -->
-<div class="modal-backdrop" id="docCommentModal" aria-hidden="true">
-  <div class="modal" style="max-width:520px;">
-    <div class="modal-head">
-      <div class="modal-title">Commentaire document</div>
-      <button class="icon-btn" type="button" data-close-modal="docCommentModal">✕</button>
-    </div>
 
-    <div class="modal-body">
-      <div class="label">Commentaire</div>
-      <textarea id="docCommentInput"
-                style="width:100%;min-height:120px;"
-                placeholder="Saisir un commentaire..."></textarea>
-      <div class="hint" style="margin-top:6px;">Le commentaire est sauvegardé au clic sur “Enregistrer”.</div>
-    </div>
-
-    <div class="modal-foot">
-      <button class="btn" type="button" data-close-modal="docCommentModal">Annuler</button>
-      <button class="btn btn-primary" type="button" id="docCommentSave">Enregistrer</button>
-    </div>
-  </div>
-</div>
 
 </details>
 
@@ -1599,6 +1576,29 @@ if(chkHideSuivi){
   </div>
 </div>
 
+<!-- ===================== -->
+<!-- MODALE Commentaire docs -->
+<!-- ===================== -->
+<div class="modal-backdrop" id="docCommentModal" aria-hidden="true">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-head">
+      <div class="modal-title">Commentaire document</div>
+      <button class="icon-btn" type="button" data-close-modal="docCommentModal">✕</button>
+    </div>
 
+    <div class="modal-body">
+      <div class="label">Commentaire</div>
+      <textarea id="docCommentInput"
+                style="width:100%;min-height:120px;"
+                placeholder="Saisir un commentaire..."></textarea>
+      <div class="hint" style="margin-top:6px;">Le commentaire est sauvegardé au clic sur “Enregistrer”.</div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" type="button" data-close-modal="docCommentModal">Annuler</button>
+      <button class="btn btn-primary" type="button" id="docCommentSave">Enregistrer</button>
+    </div>
+  </div>
+</div>
 
 {% endblock %}
