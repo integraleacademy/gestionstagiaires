@@ -5023,9 +5023,6 @@ def prelevement_rejete_reply(token: str):
     new_date = (request.form.get("new_date") or "").strip()
     comment = (request.form.get("comment") or "").strip()
 
-    if not new_date:
-        return "<h3>Veuillez indiquer une date.</h3>", 400
-
     data = load_data()
     found = None
     found_trainee = None
