@@ -4736,12 +4736,14 @@ def api_financement_rejet_send(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "not_found"}), 404
 
     token = uuid.uuid4().hex
+    secretariat_token = uuid.uuid4().hex
     entry_id = "PAY-" + token[:10].upper()
 
     t.setdefault("financement_rejected_requests", [])
     t["financement_rejected_requests"].insert(0, {
         "id": entry_id,
         "token": token,
+        "secretariat_token": secretariat_token,
         "amount": amount,
         "scheduled_date": scheduled_date,
         "at": _now_iso(),
@@ -4757,10 +4759,12 @@ def api_financement_rejet_send(session_id: str, trainee_id: str):
     email = (t.get("email") or "").strip()
     phone = (t.get("phone") or "").strip()
     formation_type = formation_label(_session_get(s, "training_type", ""))
+    training_name = formation_label(_session_get(s, "training_type", "") or s.get("name") or "formation")
     scheduled_fr = fr_date(scheduled_date) or scheduled_date
 
     base = PUBLIC_BASE_URL.rstrip("/")
     reply_url = f"{base}/prelevement-rejete/{token}"
+    secretariat_url = f"{base}/prelevement-rejete-secretaire/{secretariat_token}"
 
     subject = "⚠️ Prélèvement rejeté – action requise"
     html = mail_layout(f"""
@@ -4790,6 +4794,36 @@ def api_financement_rejet_send(session_id: str, trainee_id: str):
     """)
 
     email_ok = brevo_send_email(email, subject, html) if email else False
+
+    dstart = fr_date(_session_get(s, "date_start", ""))
+    dend = fr_date(_session_get(s, "date_end", ""))
+    exam_date = fr_date(_session_get(s, "exam_date", ""))
+    formation_dates = "Du <strong>{}</strong> au <strong>{}</strong>".format(dstart, dend) if dstart and dend else "Dates à confirmer"
+
+    secretariat_subject = f"⚠️ Prélèvement rejeté – rappel à prévoir ({first_name} {last_name})".strip()
+    secretariat_html = mail_layout(f"""
+      <h2 style="text-align:center">⚠️ Prélèvement rejeté</h2>
+      <p>Merci de rappeler le stagiaire pour convenir d’une nouvelle date de prélèvement.</p>
+
+      <div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:14px 0">
+        <p style="margin:0 0 8px 0"><strong>Stagiaire :</strong> {first_name} {last_name}</p>
+        <p style="margin:0 0 8px 0"><strong>Téléphone :</strong> {phone or "—"}</p>
+        <p style="margin:0 0 8px 0"><strong>Email :</strong> {email or "—"}</p>
+        <p style="margin:0 0 8px 0"><strong>Formation :</strong> {training_name}</p>
+        <p style="margin:0 0 8px 0"><strong>Dates de formation :</strong> {formation_dates}</p>
+        <p style="margin:0 0 8px 0"><strong>Date d’examen :</strong> {exam_date or "—"}</p>
+        <p style="margin:0 0 8px 0"><strong>Montant :</strong> {amount}</p>
+        <p style="margin:0"><strong>Date initiale :</strong> {scheduled_fr}</p>
+      </div>
+
+      <p style="text-align:center;margin:18px 0">
+        <a href="{secretariat_url}"
+           style="display:inline-block;background:#2563eb;color:#fff;padding:12px 16px;border-radius:10px;text-decoration:none;font-weight:800">
+          Proposer une nouvelle date
+        </a>
+      </p>
+    """)
+    brevo_send_email("clement.annecy@gmail.com", secretariat_subject, secretariat_html)
 
     sms_name = f"{first_name} {last_name}".strip()
     sms_prefix = f"Bonjour {sms_name}, " if sms_name else "Bonjour, "
@@ -4848,6 +4882,103 @@ def prelevement_rejete_page(token: str):
     )
 
 
+@app.get("/prelevement-rejete-secretaire/<token>")
+def prelevement_rejete_secretaire_page(token: str):
+    data = load_data()
+    found = None
+    found_trainee = None
+    found_session = None
+
+    for s in data.get("sessions", []) or []:
+        for t in (s.get("trainees") or []):
+            for it in (t.get("financement_rejected_requests") or []):
+                if (it.get("secretariat_token") or "").strip() == token:
+                    found = it
+                    found_trainee = t
+                    found_session = s
+                    break
+            if found:
+                break
+        if found:
+            break
+
+    if not found:
+        return "<h3>Lien invalide ou expiré.</h3>", 404
+
+    new_date = found.get("new_date")
+    new_date_fr = fr_date(new_date) if new_date else ""
+
+    return render_template(
+        "prelevement_rejete_secretaire.html",
+        token=token,
+        trainee=found_trainee,
+        session=found_session,
+        formation_label=formation_label(_session_get(found_session, "training_type", "")),
+        amount=found.get("amount", ""),
+        scheduled_date=fr_date(found.get("scheduled_date", "")),
+        ref_id=found.get("id", ""),
+        new_date=new_date_fr or new_date or "",
+    )
+
+
+@app.post("/prelevement-rejete-secretaire/<token>/reply")
+def prelevement_rejete_secretaire_reply(token: str):
+    new_date = (request.form.get("new_date") or "").strip()
+
+    data = load_data()
+    found = None
+    found_trainee = None
+    found_session = None
+
+    for s in data.get("sessions", []) or []:
+        for t in (s.get("trainees") or []):
+            for it in (t.get("financement_rejected_requests") or []):
+                if (it.get("secretariat_token") or "").strip() == token:
+                    found = it
+                    found_trainee = t
+                    found_session = s
+                    break
+            if found:
+                break
+        if found:
+            break
+
+    if not found:
+        return "<h3>Lien invalide ou expiré.</h3>", 404
+
+    if found.get("new_date"):
+        return render_template(
+            "prelevement_rejete_secretaire.html",
+            token=token,
+            trainee=found_trainee,
+            session=found_session,
+            formation_label=formation_label(_session_get(found_session, "training_type", "")),
+            amount=found.get("amount", ""),
+            scheduled_date=fr_date(found.get("scheduled_date", "")),
+            ref_id=found.get("id", ""),
+            new_date=fr_date(found.get("new_date")) or found.get("new_date"),
+        )
+
+    if not new_date:
+        return "<h3>Veuillez indiquer une date.</h3>", 400
+
+    found["status"] = "DONE"
+    found["responded_at"] = _now_iso()
+    found["new_date"] = new_date
+    found["new_date_source"] = "SECRETARIAT"
+
+    found_session["trainees"] = _session_trainees_list(found_session)
+    found_session.pop("stagiaires", None)
+    save_data(data)
+
+    return """
+    <div style="font-family:Arial,sans-serif;max-width:520px;margin:60px auto;padding:18px;border:1px solid #e5e7eb;border-radius:14px">
+      <h2 style="margin:0 0 10px 0">✅ Merci !</h2>
+      <p style="margin:0;color:#374151">La nouvelle date a bien été enregistrée.</p>
+    </div>
+    """
+
+
 @app.post("/prelevement-rejete/<token>/reply")
 def prelevement_rejete_reply(token: str):
     new_date = (request.form.get("new_date") or "").strip()
@@ -4881,6 +5012,7 @@ def prelevement_rejete_reply(token: str):
     found["responded_at"] = _now_iso()
     found["new_date"] = new_date
     found["comment"] = comment
+    found["new_date_source"] = "TRAINEE"
 
     first_name = (found_trainee.get("first_name") or "").strip()
     last_name = (found_trainee.get("last_name") or "").strip()
