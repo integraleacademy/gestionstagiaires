@@ -314,7 +314,7 @@
           <option value="validated" {% if fs=="validated" %}selected{% endif %}>VALIDÉ</option>
         </select>
         <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;">
-          <button class="btn btn-orange" type="button" id="btnOpenFinancementReject"
+          <button class="btn {% if trainee.financement_rejected_note %}btn-orange{% else %}btn-outline{% endif %}" type="button" id="btnOpenFinancementReject"
                   onclick="document.getElementById('financementRejectModal').classList.add('show');document.getElementById('financementRejectModal').setAttribute('aria-hidden','false');">
             Prélèvement rejeté
           </button>
@@ -896,6 +896,11 @@ function setDossierPill(status){
       if(financementRejectedNote){
         financementRejectedNote.textContent = data.note || "⚠️ Prélèvement rejeté";
         financementRejectedNote.style.display = "block";
+      }
+
+      if(btnOpenFinancementReject){
+        btnOpenFinancementReject.classList.remove("btn-outline");
+        btnOpenFinancementReject.classList.add("btn-orange");
       }
 
       ensureAdminCommentFlag(data.comment);
