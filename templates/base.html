@@ -11,7 +11,7 @@
 
 </head>
 
-<body>
+<body class="{% if is_read_only %}read-only{% endif %}">
   <div class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="{{ url_for('admin_sessions') }}">
@@ -25,6 +25,11 @@
           <span>Plateforme gestion stagiaires</span>
         </div>
       </a>
+      {% if is_read_only %}
+        <div style="margin-left:16px;padding:6px 10px;border-radius:999px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:12px;font-weight:700;">
+          Mode consultation (lecture seule)
+        </div>
+      {% endif %}
       <div style="display:flex;align-items:center;gap:10px;">
         {% if session.get("admin_logged_in") %}
           <a href="{{ url_for('admin_positioning_tests') }}"

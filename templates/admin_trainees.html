@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+{% set read_only_attr = "disabled" if is_read_only else "" %}
 
 <div class="breadcrumbs">
   <a href="{{ url_for('admin_sessions', **request.args) }}">← Retour sessions</a>
@@ -40,18 +41,17 @@
   <h2 style="margin:0;">Stagiaires</h2>
 
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
- <button class="btn btn-outline" id="btnBulkSst">⬇️ Télécharger les SST en masse</button>
-<input id="bulkSstInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+    {% if not is_read_only %}
+      <button class="btn btn-outline" id="btnBulkSst">⬇️ Télécharger les SST en masse</button>
+      <input id="bulkSstInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
 
-  <button class="btn btn-outline" id="btnBulkDiplome">⬇️ Télécharger les Diplômes en masse</button>
-<input id="bulkDiplomeInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+      <button class="btn btn-outline" id="btnBulkDiplome">⬇️ Télécharger les Diplômes en masse</button>
+      <input id="bulkDiplomeInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
 
-<button class="btn btn-outline" id="btnBulkAttestation">⬇️ Télécharger les Attestations en masse</button>
-<input id="bulkAttestationInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
-  
-
-
-    <button class="btn btn-primary" id="btnOpenCreateTrainee">+ Ajouter un stagiaire</button>
+      <button class="btn btn-outline" id="btnBulkAttestation">⬇️ Télécharger les Attestations en masse</button>
+      <input id="bulkAttestationInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+      <button class="btn btn-primary" id="btnOpenCreateTrainee">+ Ajouter un stagiaire</button>
+    {% endif %}
   </div>
 </div>
 
@@ -110,14 +110,14 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 </td>
 
         <td class="mono">
-          <input class="inline-edit" data-field="email" type="email" value="{{ t.email or '' }}" placeholder="email@exemple.com" style="width:100%;min-width:200px;">
+          <input class="inline-edit" data-field="email" type="email" value="{{ t.email or '' }}" placeholder="email@exemple.com" style="width:100%;min-width:200px;" {{ read_only_attr }}>
         </td>
         <td class="mono">
-          <input class="inline-edit" data-field="phone" type="tel" value="{{ t.phone or '' }}" placeholder="+33600000000" style="width:100%;min-width:150px;">
+          <input class="inline-edit" data-field="phone" type="tel" value="{{ t.phone or '' }}" placeholder="+33600000000" style="width:100%;min-width:150px;" {{ read_only_attr }}>
         </td>
 
         <td>
-          <select class="status sel status-dot" data-field="convention_status">
+          <select class="status sel status-dot" data-field="convention_status" {{ read_only_attr }}>
             {% for v in enums.convention %}
               <option value="{{ v }}" {% if t.convention_status==v %}selected{% endif %}>
                 {{ "🟠" if v=="soon" else ("🟡" if v=="signing" else "🟢") }}
@@ -127,7 +127,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         </td>
 
         <td>
-          <select class="status sel status-dot" data-field="financement_status">
+          <select class="status sel status-dot" data-field="financement_status" {{ read_only_attr }}>
             <option value="soon" {% if t.financement_status=="soon" %}selected{% endif %}>🟠</option>
             <option value="in_review" {% if t.financement_status=="in_review" %}selected{% endif %}>🟡</option>
             <option value="validated" {% if t.financement_status=="validated" %}selected{% endif %}>🟢</option>
@@ -138,7 +138,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         </td>
 
 <td>
-  <select class="status sel status-dot" data-field="test_fr_status">
+  <select class="status sel status-dot" data-field="test_fr_status" {{ read_only_attr }}>
     <option value="soon" {% if t.test_fr_status=="soon" or not t.test_fr_status %}selected{% endif %}>🟠</option>
     <option value="in_progress" {% if t.test_fr_status=="in_progress" %}selected{% endif %}>🟡</option>
     <option value="relance" {% if t.test_fr_status=="relance" %}selected{% endif %}>🔴</option>
@@ -149,7 +149,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 
 
         <td>
-          <select class="status sel status-dot" data-field="dossier_status">
+          <select class="status sel status-dot" data-field="dossier_status" {{ read_only_attr }}>
             <option value="complete" {% if t.dossier_status=="complete" %}selected{% endif %}>🟢</option>
             <option value="incomplete" {% if t.dossier_status=="incomplete" %}selected{% endif %}>🔴</option>
           </select>
@@ -160,7 +160,8 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
             <input type="checkbox"
                    class="force-dossier"
                    data-field="force_dossier_complete"
-                   {% if t.force_dossier_complete %}checked{% endif %}>
+                   {% if t.force_dossier_complete %}checked{% endif %}
+                   {{ read_only_attr }}>
             <span class="muted">Forcer</span>
           </label>
         </td>
@@ -168,7 +169,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         <td>
           <div class="inline">
             <span class="cnaps" data-cnaps>{{ t.cnaps or "INCONNU" }}</span>
-            <button class="mini-btn" data-refresh type="button">↻</button>
+            <button class="mini-btn" data-refresh type="button" {{ read_only_attr }}>↻</button>
           </div>
         </td>
 
@@ -181,12 +182,12 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         {% endif %}
 
         <td>
-          <input class="comment" data-field="comment" value="{{ t.comment }}" placeholder="Ajouter un commentaire...">
+          <input class="comment" data-field="comment" value="{{ t.comment }}" placeholder="Ajouter un commentaire..." {{ read_only_attr }}>
         </td>
 
         {% if show_vae %}
         <td>
-  <select class="status sel" data-field="vae_status">
+  <select class="status sel" data-field="vae_status" {{ read_only_attr }}>
     <option value="soon" {% if t.vae_status=="soon" or not t.vae_status %}selected{% endif %}>
       PROCHAINEMENT
     </option>

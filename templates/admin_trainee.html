@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+{% set read_only_attr = "disabled" if is_read_only else "" %}
 
 {% set pre_reception_open = request.args.get("pre_reception") %}
 
@@ -57,25 +58,29 @@
          class="trainee-name-input trainee-name-input--last"
          type="text"
          value="{{ trainee.last_name or '' }}"
-         placeholder="Nom">
+         placeholder="Nom"
+         {{ read_only_attr }}>
   <input id="editFirstName"
          class="trainee-name-input trainee-name-input--first"
          type="text"
          value="{{ trainee.first_name or '' }}"
-         placeholder="Prénom">
+         placeholder="Prénom"
+         {{ read_only_attr }}>
 </div>
 
 
   <!-- UPLOAD À CÔTÉ -->
   <div style="display:flex;flex-direction:column;gap:6px;">
-    <form id="photoForm" method="post" enctype="multipart/form-data"
-          action="{{ url_for('admin_upload_identity_photo', session_id=session.id, trainee_id=trainee.id) }}">
-      <input id="photoInput" type="file" name="file" accept="image/*" required style="display:none;">
-      <label for="photoInput" class="btn btn-outline" style="padding:8px 10px;cursor:pointer;white-space:nowrap;">
-        🪪 Importer photo
-      </label>
-    </form>
-    <div class="hint">(upload immédiat)</div>
+    {% if not is_read_only %}
+      <form id="photoForm" method="post" enctype="multipart/form-data"
+            action="{{ url_for('admin_upload_identity_photo', session_id=session.id, trainee_id=trainee.id) }}">
+        <input id="photoInput" type="file" name="file" accept="image/*" required style="display:none;">
+        <label for="photoInput" class="btn btn-outline" style="padding:8px 10px;cursor:pointer;white-space:nowrap;">
+          🪪 Importer photo
+        </label>
+      </form>
+      <div class="hint">(upload immédiat)</div>
+    {% endif %}
   </div>
 
 </div>
@@ -87,7 +92,8 @@
                  type="email"
                  value="{{ trainee.email or '' }}"
                  placeholder="email@exemple.com"
-                 style="border:none;background:transparent;padding:0;outline:none;min-width:220px;">
+                 style="border:none;background:transparent;padding:0;outline:none;min-width:220px;"
+                 {{ read_only_attr }}>
         </span>
         <span class="mono">
           Tel :
@@ -95,7 +101,8 @@
                  type="tel"
                  value="{{ trainee.phone or '' }}"
                  placeholder="+33600000000"
-                 style="border:none;background:transparent;padding:0;outline:none;min-width:150px;">
+                 style="border:none;background:transparent;padding:0;outline:none;min-width:150px;"
+                 {{ read_only_attr }}>
         </span>
         <span class="mono">ID : {{ trainee.personal_id or trainee.id }}</span>
       </div>
@@ -114,10 +121,11 @@
           CNAPS : {{ c }}
         </span>
 
-        <button class="mini-btn" id="btnRefreshCnaps" type="button">↻ Rafraîchir CNAPS</button>
+        <button class="mini-btn" id="btnRefreshCnaps" type="button" {{ read_only_attr }}>↻ Rafraîchir CNAPS</button>
         <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
           <input type="checkbox" id="chkCnapsOk"
-                 {% if c == "CARTE PROFESSIONNELLE OK" %}checked{% endif %}>
+                 {% if c == "CARTE PROFESSIONNELLE OK" %}checked{% endif %}
+                 {{ read_only_attr }}>
           <span>CNAPS OK</span>
         </label>
 
@@ -147,23 +155,27 @@
          href="mailto:?bcc=jenny.tarallo@interieur.gouv.fr,cnaps-dt-sud@interieur.gouv.fr&subject={{ 'Demande de numéro PRE'|urlencode }}&body={{ cnaps_body|urlencode }}">
         ✉️ Contacter le CNAPS
       </a>
-      <form method="post" action="{{ url_for('admin_delete_trainee', session_id=session.id, trainee_id=trainee.id) }}"
-            onsubmit="return confirm('Supprimer ce stagiaire ?');">
-<button class="btn btn-danger btn-uniform" type="submit">
-  🗑️ Supprimer
-</button>
-      </form>
+      {% if not is_read_only %}
+        <form method="post" action="{{ url_for('admin_delete_trainee', session_id=session.id, trainee_id=trainee.id) }}"
+              onsubmit="return confirm('Supprimer ce stagiaire ?');">
+  <button class="btn btn-danger btn-uniform" type="submit">
+    🗑️ Supprimer
+  </button>
+        </form>
+      {% endif %}
 
 <a class="btn btn-outline btn-uniform"
    href="{{ url_for('admin_etiquette_docx', session_id=session.id, trainee_id=trainee.id) }}">
   🖨️ Etiquette WORD
 </a>
 
-      <form method="post" action="{{ url_for('admin_send_access', session_id=session.id, trainee_id=trainee.id) }}">
-<button class="btn btn-primary btn-uniform" type="submit">
-  📩 Espace stagiaire
-</button>
-      </form>
+      {% if not is_read_only %}
+        <form method="post" action="{{ url_for('admin_send_access', session_id=session.id, trainee_id=trainee.id) }}">
+  <button class="btn btn-primary btn-uniform" type="submit">
+    📩 Espace stagiaire
+  </button>
+        </form>
+      {% endif %}
 
 <a class="btn btn-outline btn-uniform"
    href="{{ PUBLIC_STUDENT_PORTAL_BASE.rstrip('/') }}/espace/{{ trainee.public_token }}"
@@ -185,20 +197,23 @@
 
     <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
       <input type="checkbox" id="chkHideInfos"
-             {% if trainee.public_hide_infos %}checked{% endif %}>
+             {% if trainee.public_hide_infos %}checked{% endif %}
+             {{ read_only_attr }}>
       <span>Masquer Infos à compléter</span>
     </label>
 
     <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
       <input type="checkbox" id="chkHideDocs"
-             {% if trainee.public_hide_docs %}checked{% endif %}>
+             {% if trainee.public_hide_docs %}checked{% endif %}
+             {{ read_only_attr }}>
       <span>Masquer Mes documents</span>
     </label>
 
     <label style="display:flex;align-items:center;gap:8px;">
       <input type="checkbox"
              id="public_hide_suivi"
-             {% if trainee.public_hide_suivi %}checked{% endif %}>
+             {% if trainee.public_hide_suivi %}checked{% endif %}
+             {{ read_only_attr }}>
       <span><strong>Masquer Suivi dossier</strong></span>
     </label>
 
@@ -246,10 +261,12 @@
       <div class="hint" style="margin-top:6px;">Échéance : <strong>{{ trainee.test_fr_deadline }}</strong></div>
     {% endif %}
 
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
-      <button class="btn btn-primary" type="button" onclick="openTestModal('notify')">🔔 Notifier test de français</button>
-      <button class="btn btn-outline" type="button" onclick="openTestModal('relance')">🔁 Relancer test de français</button>
-    </div>
+    {% if not is_read_only %}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+        <button class="btn btn-primary" type="button" onclick="openTestModal('notify')">🔔 Notifier test de français</button>
+        <button class="btn btn-outline" type="button" onclick="openTestModal('relance')">🔁 Relancer test de français</button>
+      </div>
+    {% endif %}
 
 <div style="margin-top:10px;">
   <div class="chk-inline">
@@ -257,6 +274,7 @@
       id="chkTestFrValidated"
       type="checkbox"
       {% if (trainee.test_fr_status or "soon")=="validated" %}checked{% endif %}
+      {{ read_only_attr }}
     >
     <label for="chkTestFrValidated" style="cursor:pointer;">Test validé</label>
   </div>
@@ -288,17 +306,19 @@
       <div>
         <div style="font-weight:900;margin-bottom:6px;">Convention</div>
         {% set cs = (trainee.convention_status or "soon") %}
-        <select id="conventionSelect" class="status-pill" style="margin-top:8px;">
+        <select id="conventionSelect" class="status-pill" style="margin-top:8px;" {{ read_only_attr }}>
           <option value="soon" {% if cs=="soon" %}selected{% endif %}>PROCHAINEMENT</option>
           <option value="signing" {% if cs=="signing" %}selected{% endif %}>EN COURS DE SIGNATURE</option>
           <option value="signed" {% if cs=="signed" %}selected{% endif %}>SIGNÉE</option>
         </select>
-        <form method="post"
-              action="{{ url_for('admin_convention_unsigned_notify', session_id=session.id, trainee_id=trainee.id) }}"
-              style="margin-top:10px;"
-              onsubmit="return confirm('Envoyer un rappel convention non signée ?');">
-          <button class="btn btn-outline btn-uniform" type="submit">📩 Convention non signée</button>
-        </form>
+        {% if not is_read_only %}
+          <form method="post"
+                action="{{ url_for('admin_convention_unsigned_notify', session_id=session.id, trainee_id=trainee.id) }}"
+                style="margin-top:10px;"
+                onsubmit="return confirm('Envoyer un rappel convention non signée ?');">
+            <button class="btn btn-outline btn-uniform" type="submit">📩 Convention non signée</button>
+          </form>
+        {% endif %}
         {% if trainee.convention_unsigned_notified_at %}
           <div class="hint" style="margin-top:8px;">🟧 Notifié le : <strong>{{ trainee.convention_unsigned_notified_at }}</strong></div>
         {% endif %}
@@ -308,17 +328,19 @@
       <div>
         <div style="font-weight:900;margin-bottom:6px;">Financement</div>
         {% set fs = (trainee.financement_status or "soon") %}
-        <select id="financementSelect" class="status-pill" style="margin-top:8px;">
+        <select id="financementSelect" class="status-pill" style="margin-top:8px;" {{ read_only_attr }}>
           <option value="soon" {% if fs=="soon" %}selected{% endif %}>PROCHAINEMENT</option>
           <option value="in_review" {% if fs=="in_review" %}selected{% endif %}>EN COURS DE VALIDATION</option>
           <option value="validated" {% if fs=="validated" %}selected{% endif %}>VALIDÉ</option>
         </select>
-        <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;">
-          <button class="btn {% if trainee.financement_rejected_note %}btn-orange{% else %}btn-outline{% endif %}" type="button" id="btnOpenFinancementReject"
-                  onclick="document.getElementById('financementRejectModal').classList.add('show');document.getElementById('financementRejectModal').setAttribute('aria-hidden','false');">
-            Prélèvement rejeté
-          </button>
-        </div>
+        {% if not is_read_only %}
+          <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;">
+            <button class="btn {% if trainee.financement_rejected_note %}btn-orange{% else %}btn-outline{% endif %}" type="button" id="btnOpenFinancementReject"
+                    onclick="document.getElementById('financementRejectModal').classList.add('show');document.getElementById('financementRejectModal').setAttribute('aria-hidden','false');">
+              Prélèvement rejeté
+            </button>
+          </div>
+        {% endif %}
         <div id="financementRejectedNote" class="hint" style="margin-top:8px;{% if not trainee.financement_rejected_note %}display:none;{% endif %}">
           {{ trainee.financement_rejected_note or "⚠️ Prélèvement rejeté" }}
         </div>
@@ -331,7 +353,7 @@
         {% if financement_ns.new_date and fs != "validated" %}
           <div id="financementRejectedNewDate" class="hint" style="margin-top:4px;display:flex;align-items:center;gap:6px;">
             👉 Un nouveau prélèvement a été proposé le {{ fr_date(financement_ns.new_date) or financement_ns.new_date }}
-            <button type="button" class="icon-btn" id="financementNewDateIndicator"
+            <button type="button" class="icon-btn" id="financementNewDateIndicator" {{ read_only_attr }}
                     data-seen="{{ '1' if trainee.financement_new_date_seen else '0' }}"
                     title="Marquer comme vu">
               {% if trainee.financement_new_date_seen %}🟢{% else %}🔴{% endif %}
@@ -346,7 +368,8 @@
         <input id="financementComment"
                type="text"
                value="{{ trainee.financement_comment or '' }}"
-               placeholder="Ex : France Travail en attente / OPCO validé / CPF…">
+               placeholder="Ex : France Travail en attente / OPCO validé / CPF…"
+               {{ read_only_attr }}>
         <div class="hint">Sauvegarde automatique.</div>
       </div>
 
@@ -363,6 +386,7 @@
   <textarea id="traineeComment"
             style="width:100%;min-height:90px;margin-top:10px;"
             placeholder="Tape ton commentaire..."
+            {{ read_only_attr }}
   >{{ trainee.comment or "" }}</textarea>
 </div>
 
@@ -376,9 +400,11 @@
 
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
 
-    <button class="btn btn-primary" type="button" id="btnOpenPhoneRelance">
-      📞 Relance téléphonique
-    </button>
+    {% if not is_read_only %}
+      <button class="btn btn-primary" type="button" id="btnOpenPhoneRelance">
+        📞 Relance téléphonique
+      </button>
+    {% endif %}
   </div>
 
   <div class="hint" style="margin-top:6px;">
@@ -458,7 +484,8 @@
           <div class="label">Commentaire (admin)</div>
           <textarea id="phoneRelanceComment"
                     style="width:100%;min-height:90px;"
-                    placeholder="Ex : Stagiaire injoignable hier, rappeler demain matin..."></textarea>
+                    placeholder="Ex : Stagiaire injoignable hier, rappeler demain matin..."
+                    {{ read_only_attr }}></textarea>
           <div class="hint" style="margin-top:6px;">Ce commentaire sera inclus dans le mail.</div>
         </div>
 
@@ -466,7 +493,7 @@
 
       <div class="modal-foot">
         <button class="btn" type="button" data-close-modal="phoneRelanceModal">Annuler</button>
-        <button class="btn btn-primary" type="submit" id="btnSendPhoneRelance">Envoyer</button>
+        <button class="btn btn-primary" type="submit" id="btnSendPhoneRelance" {{ read_only_attr }}>Envoyer</button>
       </div>
     </form>
   </div>
@@ -490,7 +517,7 @@
         {{ dossier_label }}
       </span>
       <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-        <input type="checkbox" id="forceDossierComplete" {% if trainee.force_dossier_complete %}checked{% endif %}>
+        <input type="checkbox" id="forceDossierComplete" {% if trainee.force_dossier_complete %}checked{% endif %} {{ read_only_attr }}>
         <span>Forcer dossier complet</span>
       </label>
     </div>
@@ -498,7 +525,7 @@
 {% if (session.training_type or '')|upper == "A3P" %}
   <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
     <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-      <input type="checkbox" id="chkNoPermis" {% if trainee.no_permis %}checked{% endif %}>
+      <input type="checkbox" id="chkNoPermis" {% if trainee.no_permis %}checked{% endif %} {{ read_only_attr }}>
       <span>Le stagiaire n’a pas le permis</span>
     </label>
 
@@ -511,23 +538,25 @@
 {% endif %}
 
    <div class="btn-row" style="margin-top:10px;">
-  <form method="post" action="{{ url_for('admin_docs_notify', session_id=session.id, trainee_id=trainee.id) }}">
-    <button class="btn btn-primary btn-uniform" type="submit">📩 Notifier envoi documents</button>
-  </form>
+  {% if not is_read_only %}
+    <form method="post" action="{{ url_for('admin_docs_notify', session_id=session.id, trainee_id=trainee.id) }}">
+      <button class="btn btn-primary btn-uniform" type="submit">📩 Notifier envoi documents</button>
+    </form>
 
-  <form method="post" action="{{ url_for('admin_docs_nonconform_notify', session_id=session.id, trainee_id=trainee.id) }}">
-    <button class="btn btn-outline btn-uniform" type="submit">⚠️ Notifier documents non conformes</button>
-  </form>
+    <form method="post" action="{{ url_for('admin_docs_nonconform_notify', session_id=session.id, trainee_id=trainee.id) }}">
+      <button class="btn btn-outline btn-uniform" type="submit">⚠️ Notifier documents non conformes</button>
+    </form>
 
-  <form method="post" action="{{ url_for('admin_docs_relance', session_id=session.id, trainee_id=trainee.id) }}">
-    <button class="btn btn-outline btn-uniform" type="submit">🔁 Relance stagiaire</button>
-  </form>
+    <form method="post" action="{{ url_for('admin_docs_relance', session_id=session.id, trainee_id=trainee.id) }}">
+      <button class="btn btn-outline btn-uniform" type="submit">🔁 Relance stagiaire</button>
+    </form>
+  {% endif %}
 
-  <a class="btn btn-outline btn-uniform"
-     href="{{ url_for('admin_docs_zip', session_id=session.id, trainee_id=trainee.id) }}">
-    ⬇️ Télécharger les documents (ZIP)
-  </a>
-</div>
+    <a class="btn btn-outline btn-uniform"
+       href="{{ url_for('admin_docs_zip', session_id=session.id, trainee_id=trainee.id) }}">
+      ⬇️ Télécharger les documents (ZIP)
+    </a>
+  </div>
 
     {% if trainee.docs_notified_at %}
       <div class="hint" style="margin-top:10px;">🟧 Stagiaire notifié le : <strong>{{ trainee.docs_notified_at }}</strong></div>
@@ -558,7 +587,7 @@
             <td style="font-weight:800;">{{ d.label }}</td>
 
             <td style="min-width:190px;">
-              <select class="status sel-doc" data-field="status" {% if not has_file %}disabled{% endif %}>
+              <select class="status sel-doc" data-field="status" {% if not has_file %}disabled{% endif %} {{ read_only_attr }}>
                 <option value="NON DÉPOSÉ" {% if cur=="NON DÉPOSÉ" %}selected{% endif %}>NON DÉPOSÉ</option>
                 <option value="A CONTRÔLER" {% if cur=="A CONTRÔLER" or cur=="A CONTROLER" %}selected{% endif %}>A CONTRÔLER</option>
                 <option value="CONFORME" {% if cur=="CONFORME" %}selected{% endif %}>CONFORME</option>
@@ -587,7 +616,8 @@
                 <button class="btn btn-outline btn-uniform doc-comment-btn"
                         type="button"
                         data-doc-key="{{ d.key }}"
-                        data-comment="{{ d.comment or '' }}">
+                        data-comment="{{ d.comment or '' }}"
+                        {{ read_only_attr }}>
                   📝 Commentaire
                 </button>
                 <span class="hint doc-comment-preview">
@@ -607,12 +637,14 @@
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
         <a href="{{ url_for('admin_view_upload', path=ft) }}" target="_blank">📎 Voir fichier {{ loop.index }}</a>
 
-        <form method="post"
-              action="{{ url_for('admin_delete_doc_file', session_id=session.id, trainee_id=trainee.id, doc_key=d.key, file_token=ft) }}"
-              onsubmit="return confirm('Supprimer ce fichier ?');"
-              style="display:inline;">
-          <button class="btn btn-danger" type="submit" style="padding:6px 10px;">🗑️ Supprimer</button>
-        </form>
+        {% if not is_read_only %}
+          <form method="post"
+                action="{{ url_for('admin_delete_doc_file', session_id=session.id, trainee_id=trainee.id, doc_key=d.key, file_token=ft) }}"
+                onsubmit="return confirm('Supprimer ce fichier ?');"
+                style="display:inline;">
+            <button class="btn btn-danger" type="submit" style="padding:6px 10px;">🗑️ Supprimer</button>
+          </form>
+        {% endif %}
       </div>
     {% endfor %}
 
@@ -647,23 +679,25 @@
     Importer un fichier → stockage + mail/SMS “disponible sur votre espace stagiaire”.
   </div>
 
-  <form class="upload-form" method="post" enctype="multipart/form-data"
-        action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='diplome') }}">
-    <input type="file" name="file" required>
-    <button class="btn btn-primary" type="submit">⬆️ Importer diplôme</button>
-  </form>
+  {% if not is_read_only %}
+    <form class="upload-form" method="post" enctype="multipart/form-data"
+          action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='diplome') }}">
+      <input type="file" name="file" required>
+      <button class="btn btn-primary" type="submit">⬆️ Importer diplôme</button>
+    </form>
 
-  <form class="upload-form" method="post" enctype="multipart/form-data"
-        action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='attestation_fin_formation') }}">
-    <input type="file" name="file" required>
-    <button class="btn btn-primary" type="submit">⬆️ Importer attestation fin de formation</button>
-  </form>
+    <form class="upload-form" method="post" enctype="multipart/form-data"
+          action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='attestation_fin_formation') }}">
+      <input type="file" name="file" required>
+      <button class="btn btn-primary" type="submit">⬆️ Importer attestation fin de formation</button>
+    </form>
 
-  <form class="upload-form" method="post" enctype="multipart/form-data"
-        action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='carte_sst') }}">
-    <input type="file" name="file" required>
-    <button class="btn btn-primary" type="submit">⬆️ Importer carte SST</button>
-  </form>
+    <form class="upload-form" method="post" enctype="multipart/form-data"
+          action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='carte_sst') }}">
+      <input type="file" name="file" required>
+      <button class="btn btn-primary" type="submit">⬆️ Importer carte SST</button>
+    </form>
+  {% endif %}
 
   <div class="table-wrap" style="margin-top:10px;">
     <table class="table">
@@ -704,7 +738,7 @@
 
   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
     {% for step in vae_steps %}
-      <button class="btn btn-outline" type="button" onclick="setVaeStep('{{ step.key }}')">{{ step.label }}</button>
+      <button class="btn btn-outline" type="button" onclick="setVaeStep('{{ step.key }}')" {{ read_only_attr }}>{{ step.label }}</button>
     {% endfor %}
   </div>
 </div>
@@ -730,11 +764,11 @@
         <div class="form-grid">
           <label>
             <div class="label">Code (nouveau à chaque envoi)</div>
-            <input name="code" type="text" required placeholder="ex : B1-29384">
+            <input name="code" type="text" required placeholder="ex : B1-29384" {{ read_only_attr }}>
           </label>
           <label>
             <div class="label">Date + heure max</div>
-            <input name="deadline" type="text" required placeholder="ex : 02/03/2026 18:00">
+            <input name="deadline" type="text" required placeholder="ex : 02/03/2026 18:00" {{ read_only_attr }}>
           </label>
         </div>
         <div class="hint" style="margin-top:8px;">
@@ -744,7 +778,7 @@
 
       <div class="modal-foot">
         <button class="btn" type="button" data-close-modal="testModal">Annuler</button>
-        <button class="btn btn-primary" type="submit">Envoyer</button>
+        <button class="btn btn-primary" type="submit" {{ read_only_attr }}>Envoyer</button>
       </div>
     </form>
   </div>
@@ -769,12 +803,14 @@
                min="0"
                step="0.01"
                placeholder="Ex : 150.00"
-               required>
+               required
+               {{ read_only_attr }}>
 
         <div class="label" style="margin-top:10px;">Date du prélèvement initialement prévue</div>
         <input id="financementRejectDate"
                type="date"
-               required>
+               required
+               {{ read_only_attr }}>
 
         <div class="hint" style="margin-top:8px;">
           Un mail + SMS seront envoyés au stagiaire avec un lien pour proposer une nouvelle date.
@@ -784,7 +820,7 @@
       <div class="modal-foot">
         <button class="btn" type="button" data-close-modal="financementRejectModal"
                 onclick="document.getElementById('financementRejectModal').classList.remove('show');document.getElementById('financementRejectModal').setAttribute('aria-hidden','true');">Annuler</button>
-        <button class="btn btn-primary" type="submit" id="btnSendFinancementReject">Envoyer</button>
+        <button class="btn btn-primary" type="submit" id="btnSendFinancementReject" {{ read_only_attr }}>Envoyer</button>
       </div>
     </form>
   </div>
@@ -1614,7 +1650,8 @@ if(chkHideSuivi){
                type="text"
                placeholder="Ex : PRE-083-2025-12-01-20250000000 ou PRE-2025-12-01-20250000000"
                value="{{ trainee.pre_number or '' }}"
-               style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;">
+               style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;"
+               {{ read_only_attr }}>
         <div class="hint" style="margin-top:6px;">
           Format attendu : PRE-083-2025-12-01-20250000000, PRE-2025-12-01-20250000000 ou équivalent CAR
         </div>
@@ -1622,7 +1659,7 @@ if(chkHideSuivi){
 
       <div class="modal-foot">
         <button class="btn" type="button" data-close-modal="preReceptionModal">Annuler</button>
-        <button class="btn btn-primary" type="submit" id="btnSavePreReception">Valider</button>
+        <button class="btn btn-primary" type="submit" id="btnSavePreReception" {{ read_only_attr }}>Valider</button>
       </div>
     </form>
   </div>
@@ -1642,13 +1679,14 @@ if(chkHideSuivi){
       <div class="label">Commentaire</div>
       <textarea id="docCommentInput"
                 style="width:100%;min-height:120px;"
-                placeholder="Saisir un commentaire..."></textarea>
+                placeholder="Saisir un commentaire..."
+                {{ read_only_attr }}></textarea>
       <div class="hint" style="margin-top:6px;">Le commentaire est sauvegardé au clic sur “Enregistrer”.</div>
     </div>
 
     <div class="modal-foot">
       <button class="btn" type="button" data-close-modal="docCommentModal">Annuler</button>
-      <button class="btn btn-primary" type="button" id="docCommentSave">Enregistrer</button>
+      <button class="btn btn-primary" type="button" id="docCommentSave" {{ read_only_attr }}>Enregistrer</button>
     </div>
   </div>
 </div>
