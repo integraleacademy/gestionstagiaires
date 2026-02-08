@@ -340,6 +340,14 @@ def _public_is_authed(token: str) -> bool:
 def _now_iso() -> str:
     return datetime.datetime.utcnow().isoformat() + "Z"
 
+def _mark_public_login(data: Dict[str, Any], session_data: Dict[str, Any], trainee: Dict[str, Any]) -> None:
+    if not trainee.get("public_has_logged_in"):
+        trainee["public_has_logged_in"] = True
+    trainee["public_last_login_at"] = _now_iso()
+    session_data["trainees"] = _session_trainees_list(session_data)
+    session_data.pop("stagiaires", None)
+    save_data(data)
+
 
 def _normalize_cnaps_status(value: Optional[str]) -> str:
     return (value or "").strip().upper()
@@ -2692,12 +2700,7 @@ def public_trainee_login_post(token: str):
     if last_in_norm == expected_last and birth_in_digits == expected_birth:
         session[f"public_auth_{token}"] = True
         session.permanent = True  # cookie persistant (comme admin)
-        if not t.get("public_has_logged_in"):
-            t["public_has_logged_in"] = True
-        t["public_last_login_at"] = _now_iso()
-        s["trainees"] = _session_trainees_list(s)
-        s.pop("stagiaires", None)
-        save_data(data)
+        _mark_public_login(data, s, t)
         return redirect(url_for("public_trainee_space", token=token))
 
     return redirect(url_for("public_trainee_login", token=token, error="1"))
@@ -4038,6 +4041,8 @@ def public_trainee_space(token):
     if not _public_is_authed(token):
         return redirect(url_for("public_trainee_login", token=token))
 
+    if not session.get("admin_logged_in") and not t.get("public_has_logged_in"):
+        _mark_public_login(data, s, t)
 
     training_type = _session_get(s, "training_type", "")
 
