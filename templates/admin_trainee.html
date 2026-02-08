@@ -293,6 +293,15 @@
           <option value="signing" {% if cs=="signing" %}selected{% endif %}>EN COURS DE SIGNATURE</option>
           <option value="signed" {% if cs=="signed" %}selected{% endif %}>SIGNÉE</option>
         </select>
+        <form method="post"
+              action="{{ url_for('admin_convention_unsigned_notify', session_id=session.id, trainee_id=trainee.id) }}"
+              style="margin-top:10px;"
+              onsubmit="return confirm('Envoyer un rappel convention non signée ?');">
+          <button class="btn btn-outline btn-uniform" type="submit">📩 Convention non signée</button>
+        </form>
+        {% if trainee.convention_unsigned_notified_at %}
+          <div class="hint" style="margin-top:8px;">🟧 Notifié le : <strong>{{ trainee.convention_unsigned_notified_at }}</strong></div>
+        {% endif %}
       </div>
 
       <!-- FINANCEMENT -->
@@ -305,7 +314,7 @@
           <option value="validated" {% if fs=="validated" %}selected{% endif %}>VALIDÉ</option>
         </select>
         <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;">
-          <button class="btn btn-orange" type="button" id="btnOpenFinancementReject"
+          <button class="btn {% if trainee.financement_rejected_note %}btn-orange{% else %}btn-outline{% endif %}" type="button" id="btnOpenFinancementReject"
                   onclick="document.getElementById('financementRejectModal').classList.add('show');document.getElementById('financementRejectModal').setAttribute('aria-hidden','false');">
             Prélèvement rejeté
           </button>
@@ -313,6 +322,17 @@
         <div id="financementRejectedNote" class="hint" style="margin-top:8px;{% if not trainee.financement_rejected_note %}display:none;{% endif %}">
           {{ trainee.financement_rejected_note or "⚠️ Prélèvement rejeté" }}
         </div>
+        {% set financement_ns = namespace(new_date=None) %}
+        {% for req in trainee.financement_rejected_requests or [] %}
+          {% if req.new_date and not financement_ns.new_date %}
+            {% set financement_ns.new_date = req.new_date %}
+          {% endif %}
+        {% endfor %}
+        {% if financement_ns.new_date %}
+          <div id="financementRejectedNewDate" class="hint" style="margin-top:4px;">
+            👉 Un nouveau prélèvement a été proposé le {{ fr_date(financement_ns.new_date) or financement_ns.new_date }}
+          </div>
+        {% endif %}
       </div>
 
       <!-- COMMENTAIRE FINANCEMENT (pleine largeur dans la carte) -->
@@ -887,6 +907,11 @@ function setDossierPill(status){
       if(financementRejectedNote){
         financementRejectedNote.textContent = data.note || "⚠️ Prélèvement rejeté";
         financementRejectedNote.style.display = "block";
+      }
+
+      if(btnOpenFinancementReject){
+        btnOpenFinancementReject.classList.remove("btn-outline");
+        btnOpenFinancementReject.classList.add("btn-orange");
       }
 
       ensureAdminCommentFlag(data.comment);
