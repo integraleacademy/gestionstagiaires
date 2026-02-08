@@ -1660,6 +1660,10 @@ def admin_sessions():
             _, _, ok = deliverables_progress(t)
             if ok:
                 done_total += 1
+
+        public_logged_in_total = sum(
+            1 for t in trainees if bool(t.get("public_has_logged_in"))
+        )
         
         total_total = len(trainees)
         dossier_complete_total = 0
@@ -1728,6 +1732,7 @@ def admin_sessions():
             # ✅ new
             "deliverables_done": done_total,
             "deliverables_total": total_total,
+            "public_logged_in_total": public_logged_in_total,
             "status_label": status_label,
             "status_key": status_key,
             "training_type_class": training_type_class,
@@ -2687,6 +2692,12 @@ def public_trainee_login_post(token: str):
     if last_in_norm == expected_last and birth_in_digits == expected_birth:
         session[f"public_auth_{token}"] = True
         session.permanent = True  # cookie persistant (comme admin)
+        if not t.get("public_has_logged_in"):
+            t["public_has_logged_in"] = True
+        t["public_last_login_at"] = _now_iso()
+        s["trainees"] = _session_trainees_list(s)
+        s.pop("stagiaires", None)
+        save_data(data)
         return redirect(url_for("public_trainee_space", token=token))
 
     return redirect(url_for("public_trainee_login", token=token, error="1"))
