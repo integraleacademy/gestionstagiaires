@@ -2453,6 +2453,8 @@ def api_create_trainee(session_id: str):
         "vtc_cm_login": "",
         "vtc_cm_password": "",
         "vtc_cm_submitted_at": "",
+        "exam_fees_paid": False,
+        "exam_fees_paid_at": "",
         "documents": [],
         "created_at": _now_iso(),
         "phone_followups": [],
@@ -2599,6 +2601,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "trainee_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
+    was_exam_fees_paid = bool(t.get("exam_fees_paid"))
 
     # Your template uses:
     # - convention_status, test_fr_status, dossier_status, financement_status, vae_status, comment, cnaps
@@ -2634,6 +2637,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vtc_cm_login",
         "vtc_cm_password",
         "vtc_cm_submitted_at",
+        "exam_fees_paid",
 
     }
 
@@ -2642,7 +2646,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
             continue
 
         # bools
-        if k in ("no_permis", "public_hide_infos", "public_hide_docs", "public_hide_suivi", "public_hide_popup", "force_dossier_complete", "financement_new_date_seen"):
+        if k in ("no_permis", "public_hide_infos", "public_hide_docs", "public_hide_suivi", "public_hide_popup", "force_dossier_complete", "financement_new_date_seen", "exam_fees_paid"):
             t[k] = True if v in (True, "true", "1", 1, "yes", "on") else False
             continue
 
@@ -2673,6 +2677,30 @@ def api_update_trainee(session_id: str, trainee_id: str):
         t["financement_new_date_seen"] = False
         t["comment"] = _remove_admin_comment_flag(t.get("comment", ""), "⚠️ Prélèvement rejeté")
 
+    if "exam_fees_paid" in payload:
+        now_paid = bool(t.get("exam_fees_paid"))
+        if now_paid and not was_exam_fees_paid:
+            t["exam_fees_paid_at"] = _now_iso()
+            trainee_name = f"{t.get('first_name','').strip()} {t.get('last_name','').strip()}".strip()
+            session_name = _session_get(s, "name", "")
+            email = (t.get("email") or "").strip()
+            phone = (t.get("phone") or "").strip()
+            subject = "Frais d'examen réglés"
+            message = "Nous venons de payer les frais d'examen, la Chambre des métiers vous enverra prochainement votre convocation."
+            html = mail_layout(f"""
+              <h2>Frais d'examen réglés</h2>
+              <p>{message}</p>
+              <p><strong>Stagiaire :</strong> {trainee_name or '—'}</p>
+              <p><strong>Session :</strong> {session_name or '—'}</p>
+            """)
+            if email:
+                brevo_send_email(email, subject, html)
+            if phone:
+                sms_prefix = f"Bonjour {t.get('first_name','').strip()}, " if (t.get("first_name") or "").strip() else "Bonjour, "
+                sms = f"{sms_prefix}{message}"
+                brevo_send_sms(phone, sms)
+        elif not now_paid:
+            t["exam_fees_paid_at"] = ""
 
     t["updated_at"] = _now_iso()
     s["trainees"] = trainees

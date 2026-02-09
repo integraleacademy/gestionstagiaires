@@ -243,6 +243,39 @@
     margin:0 0 8px 0;
     font-size:18px;
   }
+  .collapse-card{
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+    background:#fff;
+    box-shadow:0 2px 10px rgba(0,0,0,.03);
+  }
+  .collapse-card[open] .collapse-summary{
+    border-bottom:1px dashed #e5e7eb;
+  }
+  .collapse-summary{
+    list-style:none;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:16px;
+    cursor:pointer;
+    font-weight:900;
+    font-size:18px;
+  }
+  .collapse-summary::-webkit-details-marker{display:none;}
+  .collapse-summary::after{
+    content:"▸";
+    font-size:16px;
+    color:#6b7280;
+    transition:transform .2s ease;
+  }
+  .collapse-card[open] .collapse-summary::after{
+    transform:rotate(90deg);
+  }
+  .collapse-content{
+    padding:0 16px 16px 16px;
+  }
   @keyframes vtcPulse{
     0%{box-shadow:0 0 0 0 rgba(251,191,36,.45);}
     70%{box-shadow:0 0 0 12px rgba(251,191,36,0);}
@@ -477,13 +510,19 @@
 {% endif %}
     {% if not trainee.public_hide_infos %}
 <!-- Encadré : infos à compléter (autosave) -->
+{% if show_vtc %}
+<details class="collapse-card" style="grid-column:1/-1;">
+  <summary class="collapse-summary">Infos à compléter</summary>
+  <div class="collapse-content">
+{% else %}
 <div class="card" style="grid-column:1/-1;">
   <h2>Infos à compléter</h2>
-<div class="muted" style="margin-bottom:10px;">
-  ✅ <strong>Tout ce que vous saisissez est enregistré automatiquement.</strong><br>
-  ⚠️ Ces informations sont <strong>obligatoires</strong>.
-  Quand un champ est incomplet, il apparaît en <span style="color:#b91c1c;font-weight:900;">rouge</span>.
-</div>
+{% endif %}
+  <div class="muted" style="margin-bottom:10px;">
+    ✅ <strong>Tout ce que vous saisissez est enregistré automatiquement.</strong><br>
+    ⚠️ Ces informations sont <strong>obligatoires</strong>.
+    Quand un champ est incomplet, il apparaît en <span style="color:#b91c1c;font-weight:900;">rouge</span>.
+  </div>
 
 {% macro field(label, id, value, placeholder) %}
   {% set ok = value and value|length > 3 %}
@@ -554,7 +593,12 @@
            "city",
            trainee.city,
            "Ex : Paris") }}
+{% if show_vtc %}
+  </div>
+</details>
+{% else %}
 </div>
+{% endif %}
 
     </div>
 
@@ -604,9 +648,18 @@
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;">
           <button class="btn" type="submit">Envoyer</button>
-          <div id="vtcCredentialsStatus" class="hint" role="status" aria-live="polite"></div>
+          <div id="vtcCredentialsStatus" class="hint" role="status" aria-live="polite" style="{% if not trainee.vtc_cm_submitted_at %}display:none;{% endif %}">
+            {% if trainee.vtc_cm_submitted_at %}
+              ✅ Nous avons bien reçu votre identifiant et votre mot de passe, nous allons à présent procéder au paiement des frais d'examen.
+            {% endif %}
+          </div>
         </div>
       </form>
+      {% if trainee.exam_fees_paid %}
+        <div class="hint" style="margin-top:12px;">
+          Nous venons de payer les frais d'examen, la Chambre des métiers vous enverra prochainement votre convocation.
+        </div>
+      {% endif %}
     </div>
   </div>
   {% endif %}
@@ -1173,11 +1226,17 @@ if (typeof closeModal !== "function") {
       const status = document.getElementById("vtcCredentialsStatus");
 
       if(!login || !password){
-        if(status) status.textContent = "Merci de renseigner le login et le mot de passe.";
+        if(status){
+          status.style.display = "block";
+          status.textContent = "Merci de renseigner le login et le mot de passe.";
+        }
         return;
       }
 
-      if(status) status.textContent = "Envoi en cours...";
+      if(status){
+        status.style.display = "block";
+        status.textContent = "Envoi en cours...";
+      }
       try{
         const r = await fetch(`/espace/${token}/vtc-credentials`, {
           method:"POST",
@@ -1186,12 +1245,21 @@ if (typeof closeModal !== "function") {
         });
         const res = await r.json().catch(()=> ({}));
         if(!r.ok || !res.ok){
-          if(status) status.textContent = "Erreur lors de l’envoi. Merci de réessayer.";
+          if(status){
+            status.style.display = "block";
+            status.textContent = "Erreur lors de l’envoi. Merci de réessayer.";
+          }
           return;
         }
-        if(status) status.textContent = "✅ Identifiants envoyés. Merci !";
+        if(status){
+          status.style.display = "block";
+          status.textContent = "✅ Nous avons bien reçu votre identifiant et votre mot de passe, nous allons à présent procéder au paiement des frais d'examen.";
+        }
       }catch(err){
-        if(status) status.textContent = "Erreur réseau. Merci de réessayer.";
+        if(status){
+          status.style.display = "block";
+          status.textContent = "Erreur réseau. Merci de réessayer.";
+        }
       }
     });
   }
