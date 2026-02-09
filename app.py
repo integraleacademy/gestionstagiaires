@@ -3,7 +3,7 @@ import json
 import uuid
 import datetime
 import unicodedata
-from typing import Dict, Any, Optional, List, Iterable
+from typing import Dict, Any, Optional, List, Iterable, Tuple
 from functools import wraps
 from flask import session
 from PIL import Image
@@ -310,6 +310,70 @@ def mail_layout(inner_html: str) -> str:
       </div>
     </div>
     """
+
+
+def build_vtc_onboarding_email(first_name: str, form_link: str) -> Tuple[str, str]:
+    first_name = (first_name or "").strip()
+    greeting = f"Bonjour <strong>{first_name}</strong>," if first_name else "Bonjour,"
+    subject = "Votre inscription Chauffeur VTC – Intégrale Academy"
+
+    html = mail_layout(f"""
+      <p>{greeting}</p>
+      <p>
+        Je fais suite à votre inscription en formation <strong>Chauffeur VTC</strong>.
+        Je vous remercie pour votre confiance !
+        Afin que nous puissions procéder à votre inscription à l’examen Chauffeur VTC,
+        merci de suivre les étapes ci-dessous :
+      </p>
+
+      <h3 style="margin:18px 0 6px 0;">1. Création de votre compte</h3>
+      <p>
+        Rendez-vous sur le site officiel des examens VTC :
+        <a href="https://www.exament3p.fr/" target="_blank" rel="noopener">https://www.exament3p.fr/</a>
+      </p>
+
+      <h3 style="margin:18px 0 6px 0;">2. Dépôt des pièces justificatives</h3>
+      <p>Téléversez les documents suivants :</p>
+      <ul style="padding-left:18px;margin-top:6px;">
+        <li>Permis de conduire RECTO et VERSO</li>
+        <li>Pièce d’identité valide RECTO et VERSO</li>
+        <li>Photo d’identité scannée en haute qualité</li>
+        <li>Justificatif de domicile de moins de 3 mois</li>
+        <li>Scan de votre signature</li>
+      </ul>
+      <p style="color:#b91c1c;font-weight:bold;">⚠️ Attention : tout dossier incomplet sera automatiquement rejeté.</p>
+
+      <h3 style="margin:18px 0 6px 0;">3. Validation du paiement</h3>
+      <p>
+        Attention, ne procédez pas au paiement des frais d'examen sur exament3p.fr.
+        Les frais d’examen sont inclus dans le prix de votre formation et seront réglés
+        directement par notre centre de formation.
+      </p>
+      <p>
+        Pour que nous puissions prendre en charge le paiement de vos frais d’examen,
+        merci de compléter le formulaire ci-dessous :
+      </p>
+      <p style="text-align:center;margin:18px 0;">
+        <a href="{form_link}"
+           style="display:inline-block;background:#7c3aed;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+          👉 Renseigner mes identifiants Chambre des métiers
+        </a>
+      </p>
+
+      <p>
+        Nous restons à votre disposition pour tout renseignement complémentaire.<br>
+        Excellente journée à vous.
+      </p>
+
+      <p style="margin-top:18px;">
+        Bien cordialement,<br>
+        <strong>Clément VAILLANT</strong><br>
+        Directeur Général – Intégrale Sécurité Formations<br>
+        04 22 47 07 68<br>
+        <a href="https://www.integraleacademy.com" target="_blank" rel="noopener">www.integraleacademy.com</a>
+      </p>
+    """)
+    return subject, html
 # =========================
 # Helpers
 # =========================
@@ -582,6 +646,8 @@ def _session_get(s: Dict[str, Any], key: str, fallback: str = "") -> str:
         "date_start": "date_debut",
         "date_end": "date_fin",
         "exam_date": "date_examen",
+        "exam_theory_date": "date_examen_theorique",
+        "exam_practice_date": "date_examen_pratique",
         "training_type": "type_formation",
         "trainees": "stagiaires",
     }
@@ -874,7 +940,7 @@ def fetch_hebergement_status(email: str) -> Optional[str]:
 # UI enums (for template)
 # =========================
 
-FORMATION_TYPES = ["APS", "A3P", "DIRIGEANT initial", "DIRIGEANT VAE", "SSIAP 1", "CHEF DE POSTE"]
+FORMATION_TYPES = ["APS", "A3P", "DIRIGEANT initial", "DIRIGEANT VAE", "SSIAP 1", "CHEF DE POSTE", "VTC"]
 FORMATION_PRICE_DEFAULTS = {
     "A3P": 4200,
     "APS": 1650,
@@ -896,6 +962,7 @@ ENUMS = {
 FORMATION_LONG_LABELS = {
     "APS": "Agent de Prévention et de Sécurité (APS)",
     "A3P": "Agent de Protection Physique des Personnes (A3P)",
+    "VTC": "Chauffeur VTC",
     "SSIAP 1": "Service de Sécurité Incendie et d’Assistance à Personnes – niveau 1 (SSIAP 1)",
     "CHEF DE POSTE": "Chef de Poste en sécurité privée / CPSP",
     "DIRIGEANT": "Dirigeant d'une entreprise de sécurité privée (DESP)",
@@ -1830,6 +1897,8 @@ def admin_sessions():
             training_type_class = "aps"
         elif training_type_raw.startswith("A3P"):
             training_type_class = "a3p"
+        elif "VTC" in training_type_raw:
+            training_type_class = "vtc"
         elif training_type_raw.startswith("DIRIGEANT"):
             training_type_class = "dirigeant"
         else:
@@ -1842,6 +1911,8 @@ def admin_sessions():
             "date_start": _session_get(s, "date_start", ""),
             "date_end": _session_get(s, "date_end", ""),
             "exam_date": _session_get(s, "exam_date", ""),
+            "exam_theory_date": _session_get(s, "exam_theory_date", ""),
+            "exam_practice_date": _session_get(s, "exam_practice_date", ""),
             "total": st["total"],
             "session_is_conform": st["session_is_conform"],
             "session_dossier_complete": session_dossier_complete,
@@ -2074,6 +2145,8 @@ def admin_trainees(session_id: str):
         "date_start": _session_get(s, "date_start", ""),
         "date_end": _session_get(s, "date_end", ""),
         "exam_date": _session_get(s, "exam_date", ""),
+        "exam_theory_date": _session_get(s, "exam_theory_date", ""),
+        "exam_practice_date": _session_get(s, "exam_practice_date", ""),
     }
 
     trainees = _session_trainees_list(s)
@@ -2199,6 +2272,8 @@ def api_create_session():
     date_start = (payload.get("date_start") or "").strip()
     date_end = (payload.get("date_end") or "").strip()
     exam_date = (payload.get("exam_date") or "").strip()
+    exam_theory_date = (payload.get("exam_theory_date") or "").strip()
+    exam_practice_date = (payload.get("exam_practice_date") or "").strip()
 
     if not name or not training_type:
         return jsonify({"ok": False, "error": "missing_name_or_training_type"}), 400
@@ -2211,6 +2286,8 @@ def api_create_session():
         "date_start": date_start,
         "date_end": date_end,
         "exam_date": exam_date,
+        "exam_theory_date": exam_theory_date,
+        "exam_practice_date": exam_practice_date,
         "created_at": _now_iso(),
         "trainees": [],
         "archived": False, 
@@ -2281,6 +2358,7 @@ def api_create_trainee(session_id: str):
     birth_city = (payload.get("birth_city") or "").strip()
     email = (payload.get("email") or "").strip()
     phone = (payload.get("phone") or "").strip()
+    address = (payload.get("address") or "").strip()
     zip_code = (payload.get("zip_code") or "").strip()
     city = (payload.get("city") or "").strip()
     cpf_amount = (payload.get("cpf_amount") or "").strip()
@@ -2313,6 +2391,7 @@ def api_create_trainee(session_id: str):
         "birth_city": birth_city,
         "email": email,
         "phone": phone,
+        "address": address,
         "zip_code": zip_code,
         "city": city,
         "comment": "",
@@ -2330,6 +2409,9 @@ def api_create_trainee(session_id: str):
         "public_token": public_token,
         "no_permis": False,
         "force_dossier_complete": False,
+        "vtc_cm_login": "",
+        "vtc_cm_password": "",
+        "vtc_cm_submitted_at": "",
         "documents": [],
         "created_at": _now_iso(),
         "phone_followups": [],
@@ -2349,81 +2431,87 @@ def api_create_trainee(session_id: str):
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}"
 
     if send_access:
-        formation_type = formation_label(_session_get(s, "training_type", ""))
-        dstart = fr_date(_session_get(s, "date_start", ""))
-        dend = fr_date(_session_get(s, "date_end", ""))
+        training_type = _session_get(s, "training_type", "")
+        if "VTC" in (training_type or "").upper():
+            subject, html = build_vtc_onboarding_email(first_name, link)
+            email_ok = brevo_send_email(email, subject, html) if email else False
+            sms_ok = False
+        else:
+            formation_type = formation_label(training_type)
+            dstart = fr_date(_session_get(s, "date_start", ""))
+            dend = fr_date(_session_get(s, "date_end", ""))
 
-        subject = "Votre inscription en formation – Intégrale Academy"
+            subject = "Votre inscription en formation – Intégrale Academy"
 
-        html = mail_layout(f"""
-          <h2 style="text-align:center">🎉 Confirmation d’inscription</h2>
-          <p>Bonjour <strong>{first_name}</strong>,</p>
-          <p>
-            Je vous confirme que vous êtes inscrit(e) en formation
-            <strong>{formation_type}</strong>, qui se déroulera
-            du <strong>{dstart}</strong> au <strong>{dend}</strong>.
-          </p>
-          <p>Je vous remercie pour votre confiance !</p>
-          <p>
-            Vous recevrez prochainement par mail votre <strong>Contrat de formation</strong>
-            que je vous invite à signer dès réception (signature électronique).
-          </p>
-          <p>
-            📂 Je vous remercie de bien vouloir compléter dès que possible votre
-            <strong>Dossier Formation</strong> depuis votre Espace Stagiaire en cliquant sur le bouton ci-dessous.
-          </p>
-          <p style="color:#b91c1c;font-weight:bold">
-            ⚠️ Attention : votre dossier doit être complet au plus tard <u>10 jours avant le début de votre formation</u> !
-          </p>
+            html = mail_layout(f"""
+              <h2 style="text-align:center">🎉 Confirmation d’inscription</h2>
+              <p>Bonjour <strong>{first_name}</strong>,</p>
+              <p>
+                Je vous confirme que vous êtes inscrit(e) en formation
+                <strong>{formation_type}</strong>, qui se déroulera
+                du <strong>{dstart}</strong> au <strong>{dend}</strong>.
+              </p>
+              <p>Je vous remercie pour votre confiance !</p>
+              <p>
+                Vous recevrez prochainement par mail votre <strong>Contrat de formation</strong>
+                que je vous invite à signer dès réception (signature électronique).
+              </p>
+              <p>
+                📂 Je vous remercie de bien vouloir compléter dès que possible votre
+                <strong>Dossier Formation</strong> depuis votre Espace Stagiaire en cliquant sur le bouton ci-dessous.
+              </p>
+              <p style="color:#b91c1c;font-weight:bold">
+                ⚠️ Attention : votre dossier doit être complet au plus tard <u>10 jours avant le début de votre formation</u> !
+              </p>
 
-          <p style="text-align:center">
-            <a href="{link}"
-               style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
-              👉 Accéder à mon espace stagiaire
-            </a>
-          </p>
+              <p style="text-align:center">
+                <a href="{link}"
+                   style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+                  👉 Accéder à mon espace stagiaire
+                </a>
+              </p>
 
-          <p style="margin-top:25px">
-            ☎️ Pour tous renseignements, vous pouvez nous contacter au <strong>04 22 47 07 68</strong>
-            ou utiliser notre formulaire d’assistance :
-          </p>
+              <p style="margin-top:25px">
+                ☎️ Pour tous renseignements, vous pouvez nous contacter au <strong>04 22 47 07 68</strong>
+                ou utiliser notre formulaire d’assistance :
+              </p>
 
-          <p style="text-align:center">
-            <a href="https://assistance-alw9.onrender.com/"
-               style="display:inline-block;background:#2563eb;color:white;padding:10px 16px;border-radius:10px;text-decoration:none;font-weight:bold">
-              🛠️ Formulaire d’assistance
-            </a>
-          </p>
+              <p style="text-align:center">
+                <a href="https://assistance-alw9.onrender.com/"
+                   style="display:inline-block;background:#2563eb;color:white;padding:10px 16px;border-radius:10px;text-decoration:none;font-weight:bold">
+                  🛠️ Formulaire d’assistance
+                </a>
+              </p>
 
-          <p style="margin-top:30px">
-            Je reste à votre disposition pour tous renseignements complémentaires,<br>
-            <strong>Clément VAILLANT</strong><br>
-            Directeur Intégrale Academy
-          </p>
+              <p style="margin-top:30px">
+                Je reste à votre disposition pour tous renseignements complémentaires,<br>
+                <strong>Clément VAILLANT</strong><br>
+                Directeur Intégrale Academy
+              </p>
 
-          <hr style="margin:30px 0;border:none;border-top:1px solid #e5e7eb">
+              <hr style="margin:30px 0;border:none;border-top:1px solid #e5e7eb">
 
-          <p style="font-size:12px;color:#6b7280;text-align:center;line-height:1.6">
-            © Intégrale Academy — Merci de votre confiance 💛<br>
-            54 chemin du Carreou 83480 PUGET SUR ARGENS / 142 rue de Rivoli 75001 PARIS<br>
-            SIREN 840 899 884 - NDA 93830600283 - Certification Nationale QUALIOPI : n°03169 en date du 21/10/2024<br>
-            UAI Côte d'Azur 0831774C - UAI Paris 0756548K<br>
-            <a href="https://www.integraleacademy.com" style="color:#1f8f4a;text-decoration:none;font-weight:bold">
-              integraleacademy.com
-            </a>
-          </p>
-        """)
+              <p style="font-size:12px;color:#6b7280;text-align:center;line-height:1.6">
+                © Intégrale Academy — Merci de votre confiance 💛<br>
+                54 chemin du Carreou 83480 PUGET SUR ARGENS / 142 rue de Rivoli 75001 PARIS<br>
+                SIREN 840 899 884 - NDA 93830600283 - Certification Nationale QUALIOPI : n°03169 en date du 21/10/2024<br>
+                UAI Côte d'Azur 0831774C - UAI Paris 0756548K<br>
+                <a href="https://www.integraleacademy.com" style="color:#1f8f4a;text-decoration:none;font-weight:bold">
+                  integraleacademy.com
+                </a>
+              </p>
+            """)
 
-        sms = (
-            f"Intégrale Academy 🎓 Bonjour {first_name}, Votre inscription en formation {formation_type} est confirmée. "
-            f"({dstart} au {dend}). Vous allez prochainement recevoir par mail votre Contrat de formation (signature électronique). "
-            f"Vous devez à présent compléter votre Dossier Formation : {link} "
-            f"(votre dossier doit être COMPLET au plus tard 10 jours avant votre entrée en formation). "
-            f"Pour toute demande d'assistance vous pouvez nous contacter au 04 22 47 07 68."
-        )
+            sms = (
+                f"Intégrale Academy 🎓 Bonjour {first_name}, Votre inscription en formation {formation_type} est confirmée. "
+                f"({dstart} au {dend}). Vous allez prochainement recevoir par mail votre Contrat de formation (signature électronique). "
+                f"Vous devez à présent compléter votre Dossier Formation : {link} "
+                f"(votre dossier doit être COMPLET au plus tard 10 jours avant votre entrée en formation). "
+                f"Pour toute demande d'assistance vous pouvez nous contacter au 04 22 47 07 68."
+            )
 
-        email_ok = brevo_send_email(email, subject, html) if email else False
-        sms_ok = brevo_send_sms(phone, sms) if phone else False
+            email_ok = brevo_send_email(email, subject, html) if email else False
+            sms_ok = brevo_send_sms(phone, sms) if phone else False
 
         t["access_sent_at"] = _now_iso()
         t["access_sent_email_ok"] = bool(email_ok)
@@ -2499,8 +2587,12 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "personal_amount",
         "other_amount",
         "birth_city",
+        "address",
         "zip_code",
         "city",
+        "vtc_cm_login",
+        "vtc_cm_password",
+        "vtc_cm_submitted_at",
 
     }
 
@@ -3441,22 +3533,24 @@ def admin_send_access(session_id: str, trainee_id: str):
         abort(404)
 
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
-    subject = "Accès à votre espace stagiaire – Intégrale Academy"
-
-    html = mail_layout(f"""
-      <h2>Votre espace stagiaire est disponible</h2>
-      <p>Formation : <strong>{_session_get(s,'name','')}</strong></p>
-      <p>
-        <a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">
-          Accéder à mon espace stagiaire
-        </a>
-      </p>
-    """)
-
-    sms = f"Intégrale Academy : votre espace stagiaire est disponible : {link}"
-
-    brevo_send_email(t.get("email", ""), subject, html)
-    brevo_send_sms(t.get("phone", ""), sms)
+    training_type = _session_get(s, "training_type", "")
+    if "VTC" in (training_type or "").upper():
+        subject, html = build_vtc_onboarding_email(t.get("first_name", ""), link)
+        brevo_send_email(t.get("email", ""), subject, html)
+    else:
+        subject = "Accès à votre espace stagiaire – Intégrale Academy"
+        html = mail_layout(f"""
+          <h2>Votre espace stagiaire est disponible</h2>
+          <p>Formation : <strong>{_session_get(s,'name','')}</strong></p>
+          <p>
+            <a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;text-decoration:none">
+              Accéder à mon espace stagiaire
+            </a>
+          </p>
+        """)
+        sms = f"Intégrale Academy : votre espace stagiaire est disponible : {link}"
+        brevo_send_email(t.get("email", ""), subject, html)
+        brevo_send_sms(t.get("phone", ""), sms)
 
     t["access_sent_at"] = _now_iso()
     s["trainees"] = trainees
@@ -4442,6 +4536,7 @@ def public_trainee_space(token):
 
     show_hosting = ((training_type or "").strip().upper() == "A3P")
     show_vae = ("VAE" in (training_type or "").upper())
+    show_vtc = ("VTC" in (training_type or "").upper())
 
     # ✅ persistance
     s["trainees"] = _session_trainees_list(s)
@@ -4455,6 +4550,7 @@ def public_trainee_space(token):
         token=token,
         show_hosting=show_hosting,
         show_vae=show_vae,
+        show_vtc=show_vtc,
         dossier_ok=dossier_is_complete_total(t, training_type),
     )
     
@@ -4552,6 +4648,50 @@ def public_infos_update(token: str):
     s["trainees"] = _session_trainees_list(s)
     s.pop("stagiaires", None)
     save_data(data)
+
+    return jsonify({"ok": True})
+
+
+@app.post("/espace/<token>/vtc-credentials")
+def public_vtc_credentials(token: str):
+    data = load_data()
+    s, t = find_session_and_trainee_by_token(data, token)
+    if not s or not t:
+        return jsonify({"ok": False}), 404
+
+    if not _public_is_authed(token):
+        return jsonify({"ok": False, "error": "not_authenticated"}), 403
+
+    payload = request.get_json(silent=True) or {}
+    login = (payload.get("login") or "").strip()
+    password = (payload.get("password") or "").strip()
+
+    if not login or not password:
+        return jsonify({"ok": False, "error": "missing_credentials"}), 400
+
+    t["vtc_cm_login"] = login
+    t["vtc_cm_password"] = password
+    t["vtc_cm_submitted_at"] = _now_iso()
+    t["updated_at"] = _now_iso()
+
+    s["trainees"] = _session_trainees_list(s)
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    trainee_name = f"{t.get('first_name','').strip()} {t.get('last_name','').strip()}".strip()
+    session_name = _session_get(s, "name", "")
+    subject = "Identifiants examen VTC transmis"
+    html = mail_layout(f"""
+      <h2>Identifiants VTC transmis</h2>
+      <p><strong>Stagiaire :</strong> {trainee_name or '—'}</p>
+      <p><strong>Session :</strong> {session_name or '—'}</p>
+      <p><strong>Email :</strong> {t.get("email") or "—"}</p>
+      <p><strong>Téléphone :</strong> {t.get("phone") or "—"}</p>
+      <hr style="margin:16px 0;border:none;border-top:1px solid #e5e7eb">
+      <p><strong>Login :</strong> {login}</p>
+      <p><strong>Mot de passe :</strong> {password}</p>
+    """)
+    brevo_send_email("clement@integraleacademy.com", subject, html)
 
     return jsonify({"ok": True})
 
@@ -4679,6 +4819,8 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         "date_start": _session_get(s, "date_start", ""),
         "date_end": _session_get(s, "date_end", ""),
         "exam_date": _session_get(s, "exam_date", ""),
+        "exam_theory_date": _session_get(s, "exam_theory_date", ""),
+        "exam_practice_date": _session_get(s, "exam_practice_date", ""),
     }
 
     trainees = _session_trainees_list(s)
@@ -4980,6 +5122,8 @@ def admin_sessions_archived():
             "date_start": _session_get(s, "date_start", ""),
             "date_end": _session_get(s, "date_end", ""),
             "exam_date": _session_get(s, "exam_date", ""),
+            "exam_theory_date": _session_get(s, "exam_theory_date", ""),
+            "exam_practice_date": _session_get(s, "exam_practice_date", ""),
             "total": st["total"],
             "session_is_conform": st["session_is_conform"],
             "session_dossier_complete": session_dossier_complete,

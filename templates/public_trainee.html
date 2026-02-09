@@ -210,6 +210,38 @@
   {% set formation_label = (session.name or session.training_type or "—") %}
 {% endif %}
 
+const vtcForm = document.getElementById("vtcCredentialsForm");
+if(vtcForm){
+  vtcForm.addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    const login = (document.getElementById("vtcLogin")?.value || "").trim();
+    const password = (document.getElementById("vtcPassword")?.value || "").trim();
+    const status = document.getElementById("vtcCredentialsStatus");
+
+    if(!login || !password){
+      if(status) status.textContent = "Merci de renseigner le login et le mot de passe.";
+      return;
+    }
+
+    if(status) status.textContent = "Envoi en cours...";
+    try{
+      const r = await fetch(`/espace/${token}/vtc-credentials`, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ login, password })
+      });
+      const res = await r.json().catch(()=> ({}));
+      if(!r.ok || !res.ok){
+        if(status) status.textContent = "Erreur lors de l’envoi. Merci de réessayer.";
+        return;
+      }
+      if(status) status.textContent = "✅ Identifiants envoyés. Merci !";
+    }catch(err){
+      if(status) status.textContent = "Erreur réseau. Merci de réessayer.";
+    }
+  });
+}
+
 
 {# helpers de couleur pour statuts #}
 {% macro pill_for(kind, value) %}
@@ -349,11 +381,49 @@
         <div class="label">Dates de formation</div>
         <div class="value">{{ session.date_start|frdate }} → {{ session.date_end|frdate }}</div>
       </div>
-      <div class="line">
-        <div class="label">Date d’examen</div>
-        <div class="value">{{ session.exam_date|frdate }}</div>
-      </div>
+      {% if show_vtc %}
+        {% set theory_date = session.exam_theory_date or session.exam_date %}
+        {% set practice_date = session.exam_practice_date or session.exam_date %}
+        <div class="line">
+          <div class="label">Examen théorique</div>
+          <div class="value">{{ theory_date|frdate }}</div>
+        </div>
+        <div class="line">
+          <div class="label">Examen pratique</div>
+          <div class="value">{{ practice_date|frdate }}</div>
+        </div>
+      {% else %}
+        <div class="line">
+          <div class="label">Date d’examen</div>
+          <div class="value">{{ session.exam_date|frdate }}</div>
+        </div>
+      {% endif %}
     </div>
+
+    {% if show_vtc %}
+    <div class="card" style="grid-column:1/-1;">
+      <h2>Identifiants Chambre des métiers</h2>
+      <div class="muted" style="margin-bottom:10px;">
+        Renseignez votre login et mot de passe exament3p.fr pour que nous puissions valider le paiement des frais d’examen.
+      </div>
+      <form id="vtcCredentialsForm">
+        <div class="form-grid">
+          <label>
+            <div class="label">Login exament3p.fr</div>
+            <input id="vtcLogin" type="text" value="{{ trainee.vtc_cm_login or '' }}" placeholder="Votre login">
+          </label>
+          <label>
+            <div class="label">Mot de passe exament3p.fr</div>
+            <input id="vtcPassword" type="password" value="{{ trainee.vtc_cm_password or '' }}" placeholder="Votre mot de passe">
+          </label>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+          <button class="btn" type="submit">Envoyer</button>
+          <div id="vtcCredentialsStatus" class="hint" role="status" aria-live="polite"></div>
+        </div>
+      </form>
+    </div>
+    {% endif %}
 
     <!-- Encadré 2 : suivi de dossier -->
   {% if not trainee.public_hide_suivi %}
