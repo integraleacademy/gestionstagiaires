@@ -198,6 +198,7 @@
 </style>
 
 {% set tt = (session.training_type or '')|string|upper %}
+{% set training_type_label = "CHAUFFEUR VTC" if tt == "VTC" else session.training_type %}
 
 {% if 'A3P' in tt %}
   {% set formation_label = "Agent de protection physique des personnes (A3P)" %}
@@ -337,9 +338,9 @@
   <div class="label">Formation</div>
   <div class="value">{{ formation_label }}</div>
 </div>
-      <div class="line">
+<div class="line">
   <div class="label">Type</div>
-  <div class="value">{{ session.training_type }}</div>
+  <div class="value">{{ training_type_label }}</div>
 </div>
 
 
@@ -407,6 +408,7 @@
         {{ pill_for('convention', trainee.convention_status) }}
       </div>
 
+      {% if not show_vtc %}
       <div class="docrow">
         <div class="docmeta"><div class="label">Dossier</div></div>
         {{ pill_for('dossier', 'complete' if dossier_ok else 'incomplete') }}
@@ -421,6 +423,7 @@
         <div class="docmeta"><div class="label">Test de français</div></div>
         {{ pill_for('test_fr', trainee.test_fr_status) }}
       </div>
+      {% endif %}
 
       <div class="docrow">
         <div class="docmeta"><div class="label">Financement</div></div>
@@ -541,7 +544,7 @@
   {% endif %}
 
 
-  {% if not trainee.public_hide_docs %}
+  {% if not trainee.public_hide_docs and not show_vtc %}
   
 <!-- Encadré 3 : mes documents (upload) -->
 <div class="card" style="grid-column:1/-1;">
@@ -729,6 +732,7 @@ id="upload_{{ d.key }}"
     </div>
 
   {% endif %}
+    {% if not show_vtc %}
     <!-- Encadré 4 : diplômes et attestations -->
     <div class="card" style="grid-column:1/-1;">
       <h2>Mes diplômes et attestations</h2>
@@ -771,6 +775,7 @@ id="upload_{{ d.key }}"
 </div>
 
     </div>
+    {% endif %}
 
   </div>
 </div>

@@ -3,6 +3,8 @@
 {% set read_only_attr = "disabled" if is_read_only else "" %}
 
 {% set pre_reception_open = request.args.get("pre_reception") %}
+{% set is_vtc = "VTC" in (session.training_type or "")|upper %}
+{% set training_type_label = "CHAUFFEUR VTC" if (session.training_type or "")|upper == "VTC" else session.training_type %}
 
 <div class="breadcrumbs">
   <a href="{{ url_for('admin_trainees', session_id=session.id, **request.args) }}">← Retour stagiaires</a>
@@ -13,7 +15,7 @@
     <h1>Fiche stagiaire</h1>
 
     <div class="meta-line">
-      <span class="pill">{{ session.training_type }}</span>
+      <span class="pill">{{ training_type_label }}</span>
       <span>Session : <strong>{{ session.name }}</strong></span>
       <span>Formation : <strong>{{ session.date_start|frdate }}</strong> → <strong>{{ session.date_end|frdate }}</strong></span>
       {% if "VTC" in (session.training_type or "")|upper %}
@@ -27,27 +29,33 @@
 
     </div>
 <div class="meta-line" style="margin-top:8px;">
-  <a class="btn btn-primary btn-uniform"
-     data-pre-reception
-     href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=trainee.id, pre_reception=1) }}">
-    ✅ Réception PRE
-  </a>
-  <button class="btn btn-outline btn-uniform" type="button" data-open-section="documentsSection">
-    📁 DOCUMENTS
-  </button>
+  {% if not is_vtc %}
+    <a class="btn btn-primary btn-uniform"
+       data-pre-reception
+       href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=trainee.id, pre_reception=1) }}">
+      ✅ Réception PRE
+    </a>
+  {% endif %}
+  {% if not is_vtc %}
+    <button class="btn btn-outline btn-uniform" type="button" data-open-section="documentsSection">
+      📁 DOCUMENTS
+    </button>
+  {% endif %}
   <button class="btn btn-outline btn-uniform" type="button" data-open-section="phoneRelanceSection">
     📞 RELANCE TEL
   </button>
-  {% set cnaps_full_name = ((trainee.first_name or "Prénom") ~ " " ~ (trainee.last_name or "NOM"))|trim %}
-  {% set cnaps_birth_date = (trainee.birth_date|frdate or "DD/MM/YYYY") %}
-  {% set cnaps_body = "Bonjour,\n\nJe me permets de revenir vers nous concernant la demande d'autorisation préalable de " ~ cnaps_full_name ~ " né le " ~ cnaps_birth_date ~ ".\n\nLe suivi en ligne indique que la demande a été acceptée, mais cette personne n'a pas reçu le courrier officiel de notification par courrier postal et nous ne disposons donc pas de son numéro PRE nécessaire à son entrée en formation.\n\nVous serait-il possible svp de me communiquer le numéro PRE ?\n\nJe vous remercie par avance pour votre aide et je vous souhaite une agréable journée,\n\nBien cordialement,\n\nClément VAILLANT\nDirecteur Intégrale Sécurité Formations" %}
-  <a class="btn btn-outline btn-uniform"
-     id="btnCnapsContact"
-     data-session-id="{{ session.id }}"
-     data-trainee-id="{{ trainee.id }}"
-     href="mailto:?bcc=jenny.tarallo@interieur.gouv.fr,cnaps-dt-sud@interieur.gouv.fr&subject={{ 'Demande de numéro PRE'|urlencode }}&body={{ cnaps_body|urlencode }}">
-    ✉️ Contacter le CNAPS
-  </a>
+  {% if not is_vtc %}
+    {% set cnaps_full_name = ((trainee.first_name or "Prénom") ~ " " ~ (trainee.last_name or "NOM"))|trim %}
+    {% set cnaps_birth_date = (trainee.birth_date|frdate or "DD/MM/YYYY") %}
+    {% set cnaps_body = "Bonjour,\n\nJe me permets de revenir vers nous concernant la demande d'autorisation préalable de " ~ cnaps_full_name ~ " né le " ~ cnaps_birth_date ~ ".\n\nLe suivi en ligne indique que la demande a été acceptée, mais cette personne n'a pas reçu le courrier officiel de notification par courrier postal et nous ne disposons donc pas de son numéro PRE nécessaire à son entrée en formation.\n\nVous serait-il possible svp de me communiquer le numéro PRE ?\n\nJe vous remercie par avance pour votre aide et je vous souhaite une agréable journée,\n\nBien cordialement,\n\nClément VAILLANT\nDirecteur Intégrale Sécurité Formations" %}
+    <a class="btn btn-outline btn-uniform"
+       id="btnCnapsContact"
+       data-session-id="{{ session.id }}"
+       data-trainee-id="{{ trainee.id }}"
+       href="mailto:?bcc=jenny.tarallo@interieur.gouv.fr,cnaps-dt-sud@interieur.gouv.fr&subject={{ 'Demande de numéro PRE'|urlencode }}&body={{ cnaps_body|urlencode }}">
+      ✉️ Contacter le CNAPS
+    </a>
+  {% endif %}
   {% if not is_read_only %}
     <form method="post" action="{{ url_for('admin_delete_trainee', session_id=session.id, trainee_id=trainee.id) }}"
           onsubmit="return confirm('Supprimer ce stagiaire ?');">
@@ -144,48 +152,50 @@
         <span class="mono">ID : {{ trainee.personal_id or trainee.id }}</span>
       </div>
 
-      <div class="meta-line" style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-        {% set c = (trainee.cnaps or "INCONNU")|upper %}
-        <span class="cnaps
-          {% if "TRANSM" in c %}cnaps-transmis
-          {% elif "ENREG" in c %}cnaps-enregistre
-          {% elif "INSTRU" in c %}cnaps-instruction
-          {% elif "ACCEPT" in c %}cnaps-accepte
-          {% elif "REFUS" in c %}cnaps-refuse
-          {% elif "DOC" in c %}cnaps-docs
-          {% else %}cnaps-inconnu
-          {% endif %}">
-          CNAPS : {{ c }}
-        </span>
+      {% if not is_vtc %}
+        <div class="meta-line" style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          {% set c = (trainee.cnaps or "INCONNU")|upper %}
+          <span class="cnaps
+            {% if "TRANSM" in c %}cnaps-transmis
+            {% elif "ENREG" in c %}cnaps-enregistre
+            {% elif "INSTRU" in c %}cnaps-instruction
+            {% elif "ACCEPT" in c %}cnaps-accepte
+            {% elif "REFUS" in c %}cnaps-refuse
+            {% elif "DOC" in c %}cnaps-docs
+            {% else %}cnaps-inconnu
+            {% endif %}">
+            CNAPS : {{ c }}
+          </span>
 
-        <button class="mini-btn" id="btnRefreshCnaps" type="button" {{ read_only_attr }}>↻ Rafraîchir CNAPS</button>
-        <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-          <input type="checkbox" id="chkCnapsOk"
-                 {% if c == "CARTE PROFESSIONNELLE OK" %}checked{% endif %}
-                 {{ read_only_attr }}>
-          <span>CNAPS OK</span>
-        </label>
+          <button class="mini-btn" id="btnRefreshCnaps" type="button" {{ read_only_attr }}>↻ Rafraîchir CNAPS</button>
+          <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="chkCnapsOk"
+                   {% if c == "CARTE PROFESSIONNELLE OK" %}checked{% endif %}
+                   {{ read_only_attr }}>
+            <span>CNAPS OK</span>
+          </label>
 
-        {% if trainee.access_sent_at %}
-          <span class="hint">✅ Accès envoyé le : <strong>{{ trainee.access_sent_at }}</strong></span>
-        {% endif %}
-      </div>
-      {% set cnaps_history = trainee.cnaps_history or [] %}
-      {% if cnaps_history %}
-        <div class="hint" style="margin-top:6px;">
-          Historique CNAPS :
-          {% for entry in cnaps_history %}
-            <span style="display:inline-block;margin-right:10px;">
-              {% if entry.kind == "pre_request" %}
-                <span style="color:var(--orange);font-weight:600;">
-                  Demande de numéro PRE faite au CNAPS le {{ entry.date|frdate }}
-                </span>
-              {% else %}
-                {{ entry.status|upper }} · {{ entry.date|frdatetime }}
-              {% endif %}
-            </span>
-          {% endfor %}
+          {% if trainee.access_sent_at %}
+            <span class="hint">✅ Accès envoyé le : <strong>{{ trainee.access_sent_at }}</strong></span>
+          {% endif %}
         </div>
+        {% set cnaps_history = trainee.cnaps_history or [] %}
+        {% if cnaps_history %}
+          <div class="hint" style="margin-top:6px;">
+            Historique CNAPS :
+            {% for entry in cnaps_history %}
+              <span style="display:inline-block;margin-right:10px;">
+                {% if entry.kind == "pre_request" %}
+                  <span style="color:var(--orange);font-weight:600;">
+                    Demande de numéro PRE faite au CNAPS le {{ entry.date|frdate }}
+                  </span>
+                {% else %}
+                  {{ entry.status|upper }} · {{ entry.date|frdatetime }}
+                {% endif %}
+              </span>
+            {% endfor %}
+          </div>
+        {% endif %}
       {% endif %}
     </div>
 
@@ -282,61 +292,63 @@
   <!-- ===================== -->
   <!-- TEST DE FRANÇAIS       -->
   <!-- ===================== -->
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <div style="font-weight:900;">Test de français</div>
-      <div>
-        {% set tf = (trainee.test_fr_status or "soon") %}
-        {% set tf_label = ("PROCHAINEMENT" if tf=="soon" else ("EN COURS" if tf=="in_progress" else ("RELANCÉ" if tf=="relance" else "VALIDÉ"))) %}
-        <span class="pill
-          {% if tf=="soon" %}pill-gray
-          {% elif tf=="in_progress" %}pill-orange
-          {% elif tf=="relance" %}pill-red
-          {% else %}pill-green
-          {% endif %}">
-          Statut : {{ tf_label }}
-        </span>
+  {% if not is_vtc %}
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-weight:900;">Test de français</div>
+        <div>
+          {% set tf = (trainee.test_fr_status or "soon") %}
+          {% set tf_label = ("PROCHAINEMENT" if tf=="soon" else ("EN COURS" if tf=="in_progress" else ("RELANCÉ" if tf=="relance" else "VALIDÉ"))) %}
+          <span class="pill
+            {% if tf=="soon" %}pill-gray
+            {% elif tf=="in_progress" %}pill-orange
+            {% elif tf=="relance" %}pill-red
+            {% else %}pill-green
+            {% endif %}">
+            Statut : {{ tf_label }}
+          </span>
+        </div>
       </div>
-    </div>
 
-    <div class="hint" style="margin-top:8px;">
-      Lien : <a href="https://testb1.lapreventionsecurite.org/Public/" target="_blank">https://testb1.lapreventionsecurite.org/Public/</a>
-    </div>
-
-    {% if trainee.test_fr_deadline %}
-      <div class="hint" style="margin-top:6px;">Échéance : <strong>{{ trainee.test_fr_deadline }}</strong></div>
-    {% endif %}
-
-    {% if not is_read_only %}
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
-        <button class="btn btn-primary" type="button" onclick="openTestModal('notify')">🔔 Notifier test de français</button>
-        <button class="btn btn-outline" type="button" onclick="openTestModal('relance')">🔁 Relancer test de français</button>
+      <div class="hint" style="margin-top:8px;">
+        Lien : <a href="https://testb1.lapreventionsecurite.org/Public/" target="_blank">https://testb1.lapreventionsecurite.org/Public/</a>
       </div>
-    {% endif %}
 
-<div style="margin-top:10px;">
-  <div class="chk-inline">
-    <input
-      id="chkTestFrValidated"
-      type="checkbox"
-      {% if (trainee.test_fr_status or "soon")=="validated" %}checked{% endif %}
-      {{ read_only_attr }}
-    >
-    <label for="chkTestFrValidated" style="cursor:pointer;">Test validé</label>
-  </div>
+      {% if trainee.test_fr_deadline %}
+        <div class="hint" style="margin-top:6px;">Échéance : <strong>{{ trainee.test_fr_deadline }}</strong></div>
+      {% endif %}
 
-  <div class="hint" style="margin-top:6px;">
-    Si coché, le statut passe à “VALIDÉ”.
-  </div>
-</div>
+      {% if not is_read_only %}
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+          <button class="btn btn-primary" type="button" onclick="openTestModal('notify')">🔔 Notifier test de français</button>
+          <button class="btn btn-outline" type="button" onclick="openTestModal('relance')">🔁 Relancer test de français</button>
+        </div>
+      {% endif %}
 
-    {% if trainee.test_fr_last_notified_at %}
-      <div class="hint" style="margin-top:10px;">🟧 Notifié le : <strong>{{ trainee.test_fr_last_notified_at }}</strong></div>
-    {% endif %}
-    {% if trainee.test_fr_last_relance_at %}
-      <div class="hint">🟧 Relancé le : <strong>{{ trainee.test_fr_last_relance_at }}</strong></div>
-    {% endif %}
-  </div>
+      <div style="margin-top:10px;">
+        <div class="chk-inline">
+          <input
+            id="chkTestFrValidated"
+            type="checkbox"
+            {% if (trainee.test_fr_status or "soon")=="validated" %}checked{% endif %}
+            {{ read_only_attr }}
+          >
+          <label for="chkTestFrValidated" style="cursor:pointer;">Test validé</label>
+        </div>
+
+        <div class="hint" style="margin-top:6px;">
+          Si coché, le statut passe à “VALIDÉ”.
+        </div>
+      </div>
+
+      {% if trainee.test_fr_last_notified_at %}
+        <div class="hint" style="margin-top:10px;">🟧 Notifié le : <strong>{{ trainee.test_fr_last_notified_at }}</strong></div>
+      {% endif %}
+      {% if trainee.test_fr_last_relance_at %}
+        <div class="hint">🟧 Relancé le : <strong>{{ trainee.test_fr_last_relance_at }}</strong></div>
+      {% endif %}
+    </div>
+  {% endif %}
 
   <!-- ===================== -->
   <!-- CONVENTION & FINANCEMENT -->
@@ -591,10 +603,11 @@
   <!-- ===================== -->
   <!-- DOCUMENTS (pleine largeur) -->
   <!-- ===================== -->
-<details class="card" id="documentsSection" style="grid-column:1 / -1;">
-  <summary style="cursor:pointer;font-weight:900;">
-    📁 Gestion des documents
-  </summary>
+{% if not is_vtc %}
+  <details class="card" id="documentsSection" style="grid-column:1 / -1;">
+    <summary style="cursor:pointer;font-weight:900;">
+      📁 Gestion des documents
+    </summary>
 
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
       {% set dossier_label = ("DOSSIER COMPLET" if dossier_is_complete else "DOSSIER INCOMPLET") %}
@@ -750,10 +763,12 @@
   </div>
 
 </details>
+{% endif %}
 
 <!-- ===================== -->
 <!-- DIPLÔMES / ATTESTATIONS -->
 <!-- ===================== -->
+{% if not is_vtc %}
 <details class="card" style="grid-column:1 / -1; margin-top:12px;">
 
   <summary style="cursor:pointer;font-weight:900;">
@@ -807,6 +822,7 @@
     </table>
   </div>
 </details>
+{% endif %}
 </div>
 
 <!-- ===================== -->

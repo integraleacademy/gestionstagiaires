@@ -26,7 +26,7 @@
     </div>
 
     <div class="card-meta">
-      <div><span class="pill">{{ s.training_type }}</span></div>
+      <div><span class="pill">{{ "CHAUFFEUR VTC" if (s.training_type or "")|upper == "VTC" else s.training_type }}</span></div>
       <div>Formation : <strong>{{ s.date_start|frdate }}</strong> → <strong>{{ s.date_end|frdate }}</strong></div>
       {% if "VTC" in (s.training_type or "")|upper %}
         {% set theory_date = s.exam_theory_date or s.exam_date %}
