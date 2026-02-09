@@ -12,7 +12,14 @@
     <div class="meta-line">
       <span class="pill">{{ session.training_type }}</span>
       <span>Formation : <strong>{{ session.date_start|frdate }}</strong> → <strong>{{ session.date_end|frdate }}</strong></span>
-      <span>Examen : <strong>{{ session.exam_date|frdate }}</strong></span>
+      {% if "VTC" in (session.training_type or "")|upper %}
+        {% set theory_date = session.exam_theory_date or session.exam_date %}
+        {% set practice_date = session.exam_practice_date or session.exam_date %}
+        <span>Examen théorique : <strong>{{ theory_date|frdate }}</strong></span>
+        <span>Examen pratique : <strong>{{ practice_date|frdate }}</strong></span>
+      {% else %}
+        <span>Examen : <strong>{{ session.exam_date|frdate }}</strong></span>
+      {% endif %}
 
     </div>
   </div>
@@ -311,6 +318,10 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           <div class="hint">Format conseillé : +33…</div>
         </label>
         <label>
+          <div class="label">Adresse postale</div>
+          <input id="tAddress" type="text" placeholder="Adresse postale">
+        </label>
+        <label>
           <div class="label">Code postal actuel (facultatif)</div>
           <input id="tZipCode" type="text" placeholder="Code postal">
         </label>
@@ -354,8 +365,9 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
     </div>
 
     <div class="modal-body">
+      {% set access_label = "le mail" if session.training_type|upper == "VTC" else "le mail + le SMS" %}
       <p style="margin:0 0 10px 0">
-        Tu veux envoyer <strong>le mail + le SMS</strong> maintenant ?
+        Tu veux envoyer <strong>{{ access_label }}</strong> maintenant ?
       </p>
       <div class="hint" id="sendAccessPreview" style="margin-top:8px"></div>
     </div>
@@ -980,6 +992,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     const birth_city = (document.getElementById("tBirthPlace").value || "").trim();
     const email = (document.getElementById("tEmail").value || "").trim();
     const phone = (document.getElementById("tPhone").value || "").trim();
+    const address = (document.getElementById("tAddress").value || "").trim();
     const zip_code = (document.getElementById("tZipCode").value || "").trim();
     const city = (document.getElementById("tCity").value || "").trim();
     const cpf_amount = (document.getElementById("tCpfAmount").value || "").trim();
@@ -993,6 +1006,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       birth_city,
       email,
       phone,
+      address,
       zip_code,
       city,
       cpf_amount,
@@ -1019,6 +1033,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       birth_city,
       email,
       phone,
+      address,
       zip_code,
       city,
       cpf_amount,
@@ -1045,6 +1060,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
           birth_city,
           email,
           phone,
+          address,
           zip_code,
           city,
           cpf_amount,

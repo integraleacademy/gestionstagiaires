@@ -28,7 +28,14 @@
     <div class="card-meta">
       <div><span class="pill">{{ s.training_type }}</span></div>
       <div>Formation : <strong>{{ s.date_start|frdate }}</strong> → <strong>{{ s.date_end|frdate }}</strong></div>
-      <div>Examen : <strong>{{ s.exam_date|frdate }}</strong></div>
+      {% if "VTC" in (s.training_type or "")|upper %}
+        {% set theory_date = s.exam_theory_date or s.exam_date %}
+        {% set practice_date = s.exam_practice_date or s.exam_date %}
+        <div>Examen théorique : <strong>{{ theory_date|frdate }}</strong></div>
+        <div>Examen pratique : <strong>{{ practice_date|frdate }}</strong></div>
+      {% else %}
+        <div>Examen : <strong>{{ s.exam_date|frdate }}</strong></div>
+      {% endif %}
       <div>Stagiaires : <strong>{{ s.total }}</strong></div>
     </div>
 

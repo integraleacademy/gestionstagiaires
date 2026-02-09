@@ -16,7 +16,14 @@
       <span class="pill">{{ session.training_type }}</span>
       <span>Session : <strong>{{ session.name }}</strong></span>
       <span>Formation : <strong>{{ session.date_start|frdate }}</strong> → <strong>{{ session.date_end|frdate }}</strong></span>
-      <span>Examen : <strong>{{ session.exam_date|frdate }}</strong></span>
+      {% if "VTC" in (session.training_type or "")|upper %}
+        {% set theory_date = session.exam_theory_date or session.exam_date %}
+        {% set practice_date = session.exam_practice_date or session.exam_date %}
+        <span>Examen théorique : <strong>{{ theory_date|frdate }}</strong></span>
+        <span>Examen pratique : <strong>{{ practice_date|frdate }}</strong></span>
+      {% else %}
+        <span>Examen : <strong>{{ session.exam_date|frdate }}</strong></span>
+      {% endif %}
 
     </div>
 <div class="meta-line" style="margin-top:8px;">
@@ -201,6 +208,20 @@
     </div>
   </div>
 </div>
+
+{% if "VTC" in (session.training_type or "")|upper %}
+  <div class="card" style="margin-top:12px;">
+    <div style="font-weight:900;">Identifiants Chambre des métiers (VTC)</div>
+    <div class="hint" style="margin-top:6px;">Renseignés par le stagiaire via l’espace stagiaire.</div>
+    <div style="display:grid;gap:8px;margin-top:10px;">
+      <div><strong>Login :</strong> {{ trainee.vtc_cm_login or "—" }}</div>
+      <div><strong>Mot de passe :</strong> {{ trainee.vtc_cm_password or "—" }}</div>
+      {% if trainee.vtc_cm_submitted_at %}
+        <div class="hint">Reçu le {{ trainee.vtc_cm_submitted_at }}</div>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
 
 <!-- ===================== -->
 <!-- VISIBILITÉ ESPACE STAGIAIRE -->
