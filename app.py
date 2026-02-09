@@ -2286,6 +2286,7 @@ def api_create_session():
     exam_date = (payload.get("exam_date") or "").strip()
     exam_theory_date = (payload.get("exam_theory_date") or "").strip()
     exam_practice_date = (payload.get("exam_practice_date") or "").strip()
+    practice_training_date = (payload.get("practice_training_date") or "").strip()
 
     if not name or not training_type:
         return jsonify({"ok": False, "error": "missing_name_or_training_type"}), 400
@@ -2300,6 +2301,7 @@ def api_create_session():
         "exam_date": exam_date,
         "exam_theory_date": exam_theory_date,
         "exam_practice_date": exam_practice_date,
+        "practice_training_date": practice_training_date,
         "created_at": _now_iso(),
         "trainees": [],
         "archived": False, 
