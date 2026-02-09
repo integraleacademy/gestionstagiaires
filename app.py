@@ -1997,6 +1997,33 @@ def api_secretariat_notification_toggle(bucket: str, notification_id: str):
     return jsonify({"ok": True, "done": bool(entry.get("done"))})
 
 
+@app.post("/api/secretariat/notifications/<bucket>/<notification_id>/delete")
+@admin_login_required
+def api_secretariat_notification_delete(bucket: str, notification_id: str):
+    bucket_map = {
+        "edof": "notifications_edof",
+        "prelevements": "notifications_prelevements",
+        "relances": "notifications_phone_relances",
+    }
+    bucket_key = bucket_map.get(bucket)
+    if not bucket_key:
+        return jsonify({"ok": False, "error": "invalid_bucket"}), 400
+
+    data = load_data()
+    notifications = data.get(bucket_key, [])
+    entry = next((item for item in notifications if item.get("id") == notification_id), None)
+    if not entry:
+        return jsonify({"ok": False, "error": "not_found"}), 404
+
+    if not entry.get("done"):
+        return jsonify({"ok": False, "error": "not_done"}), 400
+
+    data[bucket_key] = [item for item in notifications if item.get("id") != notification_id]
+    save_data(data)
+
+    return jsonify({"ok": True})
+
+
 @app.get("/admin/test-positionnement")
 @admin_login_required
 def admin_positioning_tests():
