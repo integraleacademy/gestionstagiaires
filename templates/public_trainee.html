@@ -270,13 +270,19 @@
     margin-top:18px;
     padding:16px 18px;
     border-radius:16px;
-    border:2px solid #e0f2fe;
-    background:linear-gradient(120deg, #ffffff 0%, #f0f9ff 100%);
+    border:2px solid #bae6fd;
+    background:linear-gradient(135deg, rgba(14,165,233,.12), rgba(59,130,246,.08));
     box-shadow:0 6px 16px rgba(15,23,42,.05);
   }
   .vtc-assistance h3{
     margin:0 0 8px 0;
     font-size:18px;
+  }
+  .vtc-assistance .assist-subtitle{
+    font-size:14px;
+    color:#334155;
+    margin-bottom:10px;
+    font-weight:600;
   }
   .vtc-assistance ul{
     margin:8px 0 0 0;
@@ -293,8 +299,8 @@
     align-items:flex-start;
     padding:12px 14px;
     border-radius:14px;
-    border:1px solid #dbeafe;
-    background:#fff;
+    border:1px solid #bfdbfe;
+    background:linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
     box-shadow:0 4px 12px rgba(15,23,42,.06);
   }
   .assist-icon{
@@ -320,22 +326,34 @@
     gap:8px;
     margin-top:8px;
   }
+  .assist-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:6px 10px;
+    border-radius:999px;
+    background:#fff7ed;
+    color:#9a3412;
+    border:1px solid #fed7aa;
+    font-weight:700;
+    font-size:12px;
+  }
   .assist-btn{
     display:inline-flex;
     align-items:center;
     gap:6px;
     padding:8px 12px;
     border-radius:999px;
-    border:1px solid #bfdbfe;
-    background:#eff6ff;
-    color:#1d4ed8;
+    border:1px solid #93c5fd;
+    background:#dbeafe;
+    color:#1e3a8a;
     font-weight:700;
     text-decoration:none;
   }
   .assist-btn.secondary{
-    background:#ecfdf5;
-    border-color:#bbf7d0;
-    color:#15803d;
+    background:#dcfce7;
+    border-color:#86efac;
+    color:#166534;
   }
   .collapse-card{
     border:1px solid #e5e7eb;
@@ -757,7 +775,8 @@
       </div>
     </div>
     <div class="vtc-assistance">
-      <h3>Assistance</h3>
+      <h3>Assistance express ✨</h3>
+      <div class="assist-subtitle">Des réponses rapides pour avancer sereinement.</div>
       <ul>
         <li class="assist-item">
           <div class="assist-icon" aria-hidden="true">🎓</div>
@@ -765,6 +784,7 @@
             <div class="assist-title">Formation & suivi</div>
             <div>Besoin d'aide pour votre formation ? Nous sommes là pour vous.</div>
             <div class="assist-actions">
+              <span class="assist-pill">Réponse rapide</span>
               <a class="assist-btn" href="tel:0422470768">📞 04 22 47 07 68</a>
               <a class="assist-btn secondary" href="https://assistance-alw9.onrender.com/" target="_blank" rel="noopener">💬 Ouvrir l’assistance</a>
             </div>
@@ -776,6 +796,7 @@
             <div class="assist-title">Examen VTC</div>
             <div>Contactez la Chambre des métiers selon votre département.</div>
             <div class="assist-actions">
+              <span class="assist-pill">Chambre des métiers</span>
               <a class="assist-btn" href="tel:0492125338">📍 Alpes-Maritimes (06) : 04 92 12 53 38</a>
               <a class="assist-btn secondary" href="tel:0494619925">📍 Var (83) : 04 94 61 99 25</a>
             </div>
