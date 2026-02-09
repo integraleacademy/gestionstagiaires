@@ -782,6 +782,7 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
     traineeIndex: new Map(),
     loaded: false,
   };
+  const cnapsCanWrite = {{ "false" if is_read_only else "true" }};
 
   function cnapsKey(sessionId, traineeId){
     return `${sessionId}::${traineeId}`;
@@ -947,6 +948,30 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
 
     const subject = "Demande de numéros PRE";
     const mailto = `mailto:jenny.tarallo@interieur.gouv.fr,cnaps-dt-sud@interieur.gouv.fr?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    if(cnapsCanWrite){
+      const items = selected.map(t => ({
+        session_id: t.session?.id,
+        trainee_id: t.id,
+      })).filter(item => item.session_id && item.trainee_id);
+      if(items.length){
+        const payload = JSON.stringify({ items });
+        if(navigator.sendBeacon){
+          navigator.sendBeacon(
+            "/api/cnaps/pre_request",
+            new Blob([payload], { type: "application/json" })
+          );
+        }else{
+          fetch("/api/cnaps/pre_request", {
+            method:"POST",
+            headers: {"Content-Type":"application/json"},
+            body: payload,
+            keepalive: true,
+          }).catch(()=>{});
+        }
+      }
+    }
+
     window.location.href = mailto;
   });
 </script>
