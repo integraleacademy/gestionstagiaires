@@ -243,6 +243,49 @@
     margin:0 0 8px 0;
     font-size:18px;
   }
+  .vtc-status-list{
+    margin-top:14px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .vtc-status-item{
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    padding:12px 14px;
+    border-radius:12px;
+    border:1px solid #dbeafe;
+    background:#fff;
+    color:#1f2937;
+    font-size:15px;
+    font-weight:600;
+    box-shadow:0 4px 10px rgba(15,23,42,.06);
+  }
+  .vtc-status-date{
+    font-weight:800;
+    white-space:nowrap;
+  }
+  .vtc-assistance{
+    margin-top:18px;
+    padding:16px 18px;
+    border-radius:16px;
+    border:2px solid #e5e7eb;
+    background:#fff;
+    box-shadow:0 6px 16px rgba(15,23,42,.05);
+  }
+  .vtc-assistance h3{
+    margin:0 0 8px 0;
+    font-size:18px;
+  }
+  .vtc-assistance ul{
+    margin:8px 0 0 18px;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .vtc-assistance a{color:#1d4ed8;text-decoration:underline;}
   .collapse-card{
     border:1px solid #e5e7eb;
     border-radius:16px;
@@ -648,18 +691,33 @@
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;">
           <button class="btn" type="submit">Envoyer</button>
-          <div id="vtcCredentialsStatus" class="hint" role="status" aria-live="polite" style="{% if not trainee.vtc_cm_submitted_at %}display:none;{% endif %}">
-            {% if trainee.vtc_cm_submitted_at %}
-              ✅ Nous avons bien reçu votre identifiant et votre mot de passe, nous allons à présent procéder au paiement des frais d'examen.
-            {% endif %}
-          </div>
         </div>
       </form>
-      {% if trainee.exam_fees_paid %}
-        <div class="hint" style="margin-top:12px;">
-          Nous venons de payer les frais d'examen, la Chambre des métiers vous enverra prochainement votre convocation.
+      {% set has_vtc_status = trainee.vtc_cm_submitted_at or trainee.exam_fees_paid %}
+      <div id="vtcStatusList" class="vtc-status-list" style="{% if not has_vtc_status %}display:none;{% endif %}">
+        <div id="vtcCredentialsStatus" class="vtc-status-item" role="status" aria-live="polite" style="{% if not trainee.vtc_cm_submitted_at %}display:none;{% endif %}">
+          ✅ <span class="vtc-status-date">{{ trainee.vtc_cm_submitted_at|frdate or "DD/MM/YYYY" }}</span> : Nous avons bien reçu votre identifiant et votre mot de passe, nous allons à présent procéder au paiement des frais d'examen.
         </div>
-      {% endif %}
+        {% if trainee.exam_fees_paid %}
+          <div class="vtc-status-item">
+            ✅ <span class="vtc-status-date">{{ trainee.exam_fees_paid_at|frdate or "DD/MM/YYYY" }}</span> : Nous venons de payer les frais d'examen, la Chambre des métiers vous enverra prochainement votre convocation.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="vtc-assistance">
+      <h3>Assistance</h3>
+      <ul>
+        <li>
+          Des problèmes concernant votre formation ? Vous pouvez nous contacter au 04 22 47 07 68 ou en cliquant
+          <a href="https://assistance-alw9.onrender.com/" target="_blank" rel="noopener">ici</a>.
+        </li>
+        <li>
+          Des problèmes concernant l'examen ? Vous pouvez contacter directement la Chambre des métiers.
+          Si vous résidez dans le 06, Chambre des métiers des Alpes-Maritimes : 04 92 12 53 38 / Si vous résidez dans le 83,
+          Chambre des métiers du Var : 04 94 61 99 25.
+        </li>
+      </ul>
     </div>
   </div>
   {% endif %}
@@ -1224,11 +1282,19 @@ if (typeof closeModal !== "function") {
       const login = (document.getElementById("vtcLogin")?.value || "").trim();
       const password = (document.getElementById("vtcPassword")?.value || "").trim();
       const status = document.getElementById("vtcCredentialsStatus");
+      const statusList = document.getElementById("vtcStatusList");
+      const formatDate = (d) => {
+        const day = String(d.getDate()).padStart(2, "0");
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+      };
 
       if(!login || !password){
         if(status){
           status.style.display = "block";
           status.textContent = "Merci de renseigner le login et le mot de passe.";
+          if(statusList) statusList.style.display = "flex";
         }
         return;
       }
@@ -1236,6 +1302,7 @@ if (typeof closeModal !== "function") {
       if(status){
         status.style.display = "block";
         status.textContent = "Envoi en cours...";
+        if(statusList) statusList.style.display = "flex";
       }
       try{
         const r = await fetch(`/espace/${token}/vtc-credentials`, {
@@ -1253,12 +1320,14 @@ if (typeof closeModal !== "function") {
         }
         if(status){
           status.style.display = "block";
-          status.textContent = "✅ Nous avons bien reçu votre identifiant et votre mot de passe, nous allons à présent procéder au paiement des frais d'examen.";
+          status.innerHTML = `✅ <span class="vtc-status-date">${formatDate(new Date())}</span> : Nous avons bien reçu votre identifiant et votre mot de passe, nous allons à présent procéder au paiement des frais d'examen.`;
+          if(statusList) statusList.style.display = "flex";
         }
       }catch(err){
         if(status){
           status.style.display = "block";
           status.textContent = "Erreur réseau. Merci de réessayer.";
+          if(statusList) statusList.style.display = "flex";
         }
       }
     });
