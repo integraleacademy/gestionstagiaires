@@ -818,6 +818,25 @@ FORMATION_LONG_LABELS = {
     "DIRIGEANT VAE": "Dirigeant d'une entreprise de sécurité privée (DESP) – VAE",
 }
 
+EDOF_TRAININGS = {
+    "A3P": {
+        "label": "Agent de protection physique des personnes (A3P)",
+        "calendly": "https://calendly.com/integraleacademy/apr",
+    },
+    "APS": {
+        "label": "Agent de prévention et de sécurité (APS)",
+        "calendly": "https://calendly.com/integraleacademy/aps",
+    },
+    "VTC": {
+        "label": "Chauffeur VTC",
+        "calendly": "https://calendly.com/integraleacademy/chauffeurvtc",
+    },
+    "DESP": {
+        "label": "Dirigeant d'entreprise de sécurité privée (DESP)",
+        "calendly": "https://calendly.com/integraleacademy/dirigeant",
+    },
+}
+
 def formation_label(training_type: str) -> str:
     """
     Retourne un libellé lisible pour les mails/SMS.
@@ -1755,6 +1774,95 @@ def admin_sessions():
         sessions=out_sessions,
         formation_types=FORMATION_TYPES,
     )
+
+
+@app.post("/admin/edof/submit")
+@admin_login_required
+def admin_edof_submit():
+    payload = request.get_json(silent=True) or {}
+    last_name = (payload.get("last_name") or "").strip()
+    first_name = (payload.get("first_name") or "").strip()
+    phone = (payload.get("phone") or "").strip()
+    email = (payload.get("email") or "").strip()
+    training_key = (payload.get("training") or "").strip()
+
+    if not all([last_name, first_name, phone, email, training_key]):
+        return jsonify({"ok": False, "error": "missing_fields"}), 400
+
+    training = EDOF_TRAININGS.get(training_key)
+    if not training:
+        return jsonify({"ok": False, "error": "invalid_training"}), 400
+
+    training_label = training["label"]
+    calendly_url = training["calendly"]
+
+    admin_subject = f"🟦 Demande CPF (EDOF) – {first_name} {last_name}".strip()
+    admin_html = mail_layout(f"""
+      <p>Cette personne a fait une demande d'inscription en formation depuis son Compte Personnel de Formation (CPF), il faudrait la rappeler pour lui donner tous les renseignements et prendre un RDV téléphonique pour finaliser son inscription.</p>
+
+      <div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:14px 0">
+        <p style="margin:0 0 8px 0"><strong>Nom :</strong> {last_name}</p>
+        <p style="margin:0 0 8px 0"><strong>Prénom :</strong> {first_name}</p>
+        <p style="margin:0 0 8px 0"><strong>Email :</strong> {email}</p>
+        <p style="margin:0 0 8px 0"><strong>Téléphone :</strong> {phone}</p>
+        <p style="margin:0"><strong>Formation :</strong> {training_label}</p>
+      </div>
+    """)
+
+    admin_email_ok = brevo_send_email(
+        "clement@integraleacademy.com",
+        admin_subject,
+        admin_html,
+        cc_emails=["znaw83@gmail.com"],
+    )
+
+    user_subject = f"Votre demande d'inscription – {training_label}".strip()
+    user_html = mail_layout(f"""
+      <p>Bonjour {first_name},</p>
+
+      <p>Je me permets de revenir vers vous concernant votre demande d'inscription en <strong>{training_label}</strong> depuis votre Compte Personnel de Formation (CPF). Je vous remercie pour votre demande !</p>
+
+      <p>Afin que nous puissions finaliser ensemble votre inscription vous serait-il possible de nous contacter au 04 22 47 07 68 ?</p>
+
+      <p>Vous pouvez également réserver un RDV téléphonique en cliquant ici :</p>
+
+      <p style="text-align:center;margin:18px 0">
+        <a href="{calendly_url}"
+           style="display:inline-block;background:#2563eb;color:#fff;padding:12px 16px;border-radius:10px;text-decoration:none;font-weight:800">
+          Réserver un RDV téléphonique
+        </a>
+      </p>
+
+      <p>Je vous remercie par avance et je vous souhaite une bonne journée,</p>
+
+      <p>A très bientôt !</p>
+
+      <p>Clément VAILLANT<br>Directeur Intégrale Academy</p>
+    """)
+
+    email_ok = brevo_send_email(email, user_subject, user_html)
+
+    sms = (
+        f"Bonjour {first_name},\n"
+        f"Je me permets de revenir vers vous concernant votre demande d'inscription en {training_label} "
+        "depuis votre Compte Personnel de Formation (CPF). Je vous remercie pour votre demande !\n\n"
+        "Afin que nous puissions finaliser ensemble votre inscription vous serait-il possible de nous contacter au 04 22 47 07 68 ?\n\n"
+        "Vous pouvez également réserver un RDV téléphonique en cliquant ici :\n"
+        f"{calendly_url}\n\n"
+        "Je vous remercie par avance et je vous souhaite une bonne journée,\n\n"
+        "A très bientôt !\n"
+        "Clément VAILLANT\n"
+        "Directeur Intégrale Academy"
+    ).strip()
+
+    sms_ok = brevo_send_sms(phone, sms)
+
+    return jsonify({
+        "ok": True,
+        "admin_email_ok": bool(admin_email_ok),
+        "email_ok": bool(email_ok),
+        "sms_ok": bool(sms_ok),
+    })
 
 
 @app.get("/admin/test-positionnement")
