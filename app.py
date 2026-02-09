@@ -3477,32 +3477,16 @@ def admin_convention_unsigned_notify(session_id: str, trainee_id: str):
 # =========================
 # Test de français — notify/relance
 # =========================
-@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/test-fr/notify")
-@admin_login_required
-@admin_write_required
-def admin_test_fr_notify(session_id: str, trainee_id: str):
-    code = (request.form.get("code") or "").strip()
-    deadline = (request.form.get("deadline") or "").strip()
-    if not code or not deadline:
-        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
-
-    data = load_data()
-    s = find_session(data, session_id)
-    if not s:
-        abort(404)
-    trainees = _session_trainees_list(s)
-    t = next((x for x in trainees if x.get("id")==trainee_id), None)
-    if not t:
-        abort(404)
-
+def _build_test_fr_payload(t, s, code, deadline, mode):
     link = "https://testb1.lapreventionsecurite.org/Public/"
-    subject = "Test de français à réaliser – Intégrale Academy"
-
     formation_type = formation_label(_session_get(s, "training_type", ""))
     dstart = fr_date(_session_get(s, "date_start", ""))
     dend = fr_date(_session_get(s, "date_end", ""))
+    deadline_fr = fr_date(deadline)
 
-    html = mail_layout(f"""
+    if mode == "notify":
+        subject = "Test de français à réaliser – Intégrale Academy"
+        html = mail_layout(f"""
       <h2 style="text-align:center">📝 Test de français obligatoire</h2>
 
       <p>Bonjour <strong>{t.get("first_name","").strip() or "Madame, Monsieur"}</strong>,</p>
@@ -3527,7 +3511,7 @@ def admin_test_fr_notify(session_id: str, trainee_id: str):
         </p>
 
         <p style="margin:0;color:#b91c1c;font-weight:bold">
-          ⚠️ Attention : le test doit être réalisé le <u>{fr_date(deadline)}</u>.
+          ⚠️ Attention : le test doit être réalisé le <u>{deadline_fr}</u>.
         </p>
       </div>
 
@@ -3545,56 +3529,18 @@ def admin_test_fr_notify(session_id: str, trainee_id: str):
         </a>
       </p>
     """)
-    deadline_fr = fr_date(deadline)
 
-    sms = (
-        f"Intégrale Academy 📝 Bonjour {t.get('first_name','')}, "
-        f"Vous devez réalsier le Test de français obligatoire pour votre formation {formation_type}. "
-        f"Lien : {link} | Code : {code} | À faire le {deadline_fr}. "
-        f"Besoin d’aide ? 04 22 47 07 68"
-    )
-
-    brevo_send_email(t.get("email",""), subject, html)
-    brevo_send_sms(t.get("phone",""), sms)
-
-    t["test_fr_status"] = "in_progress"
-    t["test_fr_code"] = code
-    t["test_fr_deadline"] = deadline
-    t["test_fr_last_notified_at"] = _now_iso()
-    t["updated_at"] = _now_iso()
-
-    s["trainees"] = trainees
-    save_data(data)
-    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
-
-@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/test-fr/relance")
-@admin_login_required
-@admin_write_required
-def admin_test_fr_relance(session_id: str, trainee_id: str):
-    code = (request.form.get("code") or "").strip()
-    deadline = (request.form.get("deadline") or "").strip()
-    if not code or not deadline:
-        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
-
-    data = load_data()
-    s = find_session(data, session_id)
-    if not s:
-        abort(404)
-
-    trainees = _session_trainees_list(s)
-    t = next((x for x in trainees if x.get("id") == trainee_id), None)
-    if not t:
-        abort(404)
-
-    link = "https://testb1.lapreventionsecurite.org/Public/"
-    subject = "Relance – Test de français à réaliser"
-
-    formation_type = formation_label(_session_get(s, "training_type", ""))
-    dstart = fr_date(_session_get(s, "date_start", ""))
-    dend = fr_date(_session_get(s, "date_end", ""))
-    deadline_fr = fr_date(deadline)
-
-    html = mail_layout(f"""
+        sms = (
+            f"Intégrale Academy 📝 Bonjour {t.get('first_name','')}, "
+            f"Vous devez réalsier le Test de français obligatoire pour votre formation {formation_type}. "
+            f"Lien : {link} | Code : {code} | À faire le {deadline_fr}. "
+            f"Besoin d’aide ? 04 22 47 07 68"
+        )
+        status = "in_progress"
+        stamp_field = "test_fr_last_notified_at"
+    else:
+        subject = "Relance – Test de français à réaliser"
+        html = mail_layout(f"""
       <h2 style="text-align:center;color:#b91c1c">⏰ Relance – Test de français obligatoire</h2>
 
       <p>Bonjour <strong>{t.get("first_name","").strip() or "Madame, Monsieur"}</strong>,</p>
@@ -3641,25 +3587,119 @@ def admin_test_fr_relance(session_id: str, trainee_id: str):
       </p>
     """)
 
-    sms = (
-        f"Intégrale Academy ⏰ Relance : Bonjour {t.get('first_name','')}, "
-        f"Vous n'avez pas encore réalisé votre Test de français obligatoire avant votre entrée en formation {formation_type}. "
-        f"Lien : {link} | Code : {code} | Date limite : {deadline_fr}. "
-        f"Besoin d’aide ? 04 22 47 07 68"
-    )
+        sms = (
+            f"Intégrale Academy ⏰ Relance : Bonjour {t.get('first_name','')}, "
+            f"Vous n'avez pas encore réalisé votre Test de français obligatoire avant votre entrée en formation {formation_type}. "
+            f"Lien : {link} | Code : {code} | Date limite : {deadline_fr}. "
+            f"Besoin d’aide ? 04 22 47 07 68"
+        )
+        status = "relance"
+        stamp_field = "test_fr_last_relance_at"
 
-    brevo_send_email(t.get("email", ""), subject, html)
-    brevo_send_sms(t.get("phone", ""), sms)
+    return {
+        "subject": subject,
+        "html": html,
+        "sms": sms,
+        "status": status,
+        "stamp_field": stamp_field,
+    }
 
-    t["test_fr_status"] = "relance"
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/test-fr/notify")
+@admin_login_required
+@admin_write_required
+def admin_test_fr_notify(session_id: str, trainee_id: str):
+    code = (request.form.get("code") or "").strip()
+    deadline = (request.form.get("deadline") or "").strip()
+    if not code or not deadline:
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id")==trainee_id), None)
+    if not t:
+        abort(404)
+
+    payload = _build_test_fr_payload(t, s, code, deadline, "notify")
+    brevo_send_email(t.get("email",""), payload["subject"], payload["html"])
+    brevo_send_sms(t.get("phone",""), payload["sms"])
+
+    t["test_fr_status"] = payload["status"]
     t["test_fr_code"] = code
     t["test_fr_deadline"] = deadline
-    t["test_fr_last_relance_at"] = _now_iso()
+    t[payload["stamp_field"]] = _now_iso()
     t["updated_at"] = _now_iso()
 
     s["trainees"] = trainees
     save_data(data)
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/test-fr/relance")
+@admin_login_required
+@admin_write_required
+def admin_test_fr_relance(session_id: str, trainee_id: str):
+    code = (request.form.get("code") or "").strip()
+    deadline = (request.form.get("deadline") or "").strip()
+    if not code or not deadline:
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    payload = _build_test_fr_payload(t, s, code, deadline, "relance")
+    brevo_send_email(t.get("email", ""), payload["subject"], payload["html"])
+    brevo_send_sms(t.get("phone", ""), payload["sms"])
+
+    t["test_fr_status"] = payload["status"]
+    t["test_fr_code"] = code
+    t["test_fr_deadline"] = deadline
+    t[payload["stamp_field"]] = _now_iso()
+    t["updated_at"] = _now_iso()
+
+    s["trainees"] = trainees
+    save_data(data)
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/test-fr/notify-bulk")
+@admin_login_required
+@admin_write_required
+def admin_test_fr_notify_bulk(session_id: str):
+    code = (request.form.get("code") or "").strip()
+    deadline = (request.form.get("deadline") or "").strip()
+    if not code or not deadline:
+        return redirect(url_for("admin_trainees", session_id=session_id))
+
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    for t in trainees:
+        payload = _build_test_fr_payload(t, s, code, deadline, "notify")
+        brevo_send_email(t.get("email",""), payload["subject"], payload["html"])
+        brevo_send_sms(t.get("phone",""), payload["sms"])
+
+        t["test_fr_status"] = payload["status"]
+        t["test_fr_code"] = code
+        t["test_fr_deadline"] = deadline
+        t[payload["stamp_field"]] = _now_iso()
+        t["updated_at"] = _now_iso()
+
+    s["trainees"] = trainees
+    save_data(data)
+    return redirect(url_for("admin_trainees", session_id=session_id))
 
 # =========================
 # Documents — notify / nonconform / relance / zip
