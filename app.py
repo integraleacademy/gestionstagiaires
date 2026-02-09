@@ -377,6 +377,14 @@ def _mark_public_login(data: Dict[str, Any], session_data: Dict[str, Any], train
 def _normalize_cnaps_status(value: Optional[str]) -> str:
     return (value or "").strip().upper()
 
+def _cnaps_is_accepted(value: Optional[str]) -> bool:
+    normalized = _normalize_cnaps_status(value)
+    if not normalized:
+        return False
+    if normalized in {"ACCEPTE", "ACCEPTÉ"}:
+        return True
+    return normalized.startswith("CARTE PROFESSIONNELLE OK")
+
 
 def record_cnaps_status_change(t: Dict[str, Any], new_status: Optional[str]) -> None:
     normalized = (new_status or "").strip()
@@ -715,11 +723,13 @@ def compute_stats(session: Dict[str, Any]) -> Dict[str, Any]:
     trainees = _session_trainees_list(session)
     conform_count = sum(1 for t in trainees if trainee_is_conform(t, training_type))
     total = len(trainees)
+    cnaps_accepted_count = sum(1 for t in trainees if _cnaps_is_accepted(t.get("cnaps")))
     return {
         "total": total,
         "conform_count": conform_count,
         "non_conform_count": total - conform_count,
         "session_is_conform": (total > 0 and conform_count == total),
+        "cnaps_accepted_count": cnaps_accepted_count,
     }
 
 
