@@ -48,6 +48,14 @@
   .saved{font-size:12px;color:#065f46;font-weight:900;display:none}
   .saved.show{display:inline-block}
 
+  .form-grid{
+    display:grid;
+    gap:12px;
+  }
+  @media(min-width:760px){
+    .form-grid{grid-template-columns:1fr 1fr;}
+  }
+
   .docrow{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 0;border-top:1px dashed #edf2f7}
   .docrow:first-child{border-top:none;padding-top:0}
   .docmeta{display:flex;flex-direction:column;gap:2px}
@@ -191,9 +199,55 @@
 
 /* évite les cadres qui se chevauchent */
 .public-wrap .docs-stack .docrow.missing,
-.public-wrap .docs-stack .docrow.pending{
+  .public-wrap .docs-stack .docrow.pending{
   padding:14px !important;
 }
+
+  .vtc-credentials-card{
+    border:2px solid #e5e7eb;
+  }
+  .vtc-cta{
+    padding:14px 16px;
+    border-radius:14px;
+    border:2px dashed #fde68a;
+    background:linear-gradient(90deg, rgba(254,243,199,0.5), rgba(255,255,255,0.9));
+    animation: vtcPulse 1.6s ease-in-out infinite;
+  }
+  .vtc-cta.is-confirmed{
+    border-style:solid;
+    border-color:#bbf7d0;
+    background:#ecfdf5;
+    animation:none;
+  }
+  .vtc-cta-label{
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+    font-weight:900;
+    color:#111827;
+  }
+  .vtc-cta-label input{
+    margin-top:3px;
+    transform:scale(1.2);
+  }
+  .vtc-cta-label a{color:#1d4ed8;text-decoration:underline;}
+  .vtc-credentials-panel{
+    margin-top:16px;
+    padding:18px;
+    border-radius:16px;
+    border:2px solid #bfdbfe;
+    background:#eff6ff;
+    box-shadow:0 8px 20px rgba(29,78,216,.08);
+  }
+  .vtc-credentials-panel h3{
+    margin:0 0 8px 0;
+    font-size:18px;
+  }
+  @keyframes vtcPulse{
+    0%{box-shadow:0 0 0 0 rgba(251,191,36,.45);}
+    70%{box-shadow:0 0 0 12px rgba(251,191,36,0);}
+    100%{box-shadow:0 0 0 0 rgba(251,191,36,0);}
+  }
   
 </style>
 
@@ -367,31 +421,6 @@
       {% endif %}
     </div>
 
-    {% if show_vtc %}
-    <div class="card" style="grid-column:1/-1;">
-      <h2>Identifiants Chambre des métiers</h2>
-      <div class="muted" style="margin-bottom:10px;">
-        Renseignez votre login et mot de passe exament3p.fr pour que nous puissions valider le paiement des frais d’examen.
-      </div>
-      <form id="vtcCredentialsForm">
-        <div class="form-grid">
-          <label>
-            <div class="label">Login exament3p.fr</div>
-            <input id="vtcLogin" type="text" value="{{ trainee.vtc_cm_login or '' }}" placeholder="Votre login">
-          </label>
-          <label>
-            <div class="label">Mot de passe exament3p.fr</div>
-            <input id="vtcPassword" type="password" value="{{ trainee.vtc_cm_password or '' }}" placeholder="Votre mot de passe">
-          </label>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
-          <button class="btn" type="submit">Envoyer</button>
-          <div id="vtcCredentialsStatus" class="hint" role="status" aria-live="polite"></div>
-        </div>
-      </form>
-    </div>
-    {% endif %}
-
     <!-- Encadré 2 : suivi de dossier -->
   {% if not trainee.public_hide_suivi %}
     <div class="card">
@@ -541,6 +570,45 @@
       </div>
     </div>
     {% endif %}
+  {% endif %}
+
+  {% if show_vtc %}
+  <div class="card vtc-credentials-card" style="grid-column:1/-1;">
+    <h2>Chambre des métiers</h2>
+    <div class="vtc-cta" id="vtcCta">
+      <label class="vtc-cta-label">
+        <input type="checkbox" id="vtcCmReady">
+        <span>
+          Vous devez créer votre Espace sur le site internet de la Chambre des métiers
+          <a href="https://www.exament3p.fr/" target="_blank" rel="noopener">https://www.exament3p.fr/</a>.
+          <strong>J’ai créé mon espace sur le site de la chambre des métiers</strong>
+        </span>
+      </label>
+    </div>
+
+    <div id="vtcCredentialsPanel" class="vtc-credentials-panel" hidden>
+      <h3>Identifiants Chambre des métiers</h3>
+      <div class="muted" style="margin-bottom:10px;">
+        Renseignez votre login et mot de passe exament3p.fr pour que nous puissions valider le paiement des frais d’examen.
+      </div>
+      <form id="vtcCredentialsForm">
+        <div class="form-grid">
+          <label>
+            <div class="label">Login exament3p.fr</div>
+            <input id="vtcLogin" type="text" value="{{ trainee.vtc_cm_login or '' }}" placeholder="Votre login">
+          </label>
+          <label>
+            <div class="label">Mot de passe exament3p.fr</div>
+            <input id="vtcPassword" type="password" value="{{ trainee.vtc_cm_password or '' }}" placeholder="Votre mot de passe">
+          </label>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;">
+          <button class="btn" type="submit">Envoyer</button>
+          <div id="vtcCredentialsStatus" class="hint" role="status" aria-live="polite"></div>
+        </div>
+      </form>
+    </div>
+  </div>
   {% endif %}
 
 
@@ -1072,6 +1140,29 @@ if (typeof closeModal !== "function") {
   };
 }
   const token = "{{ token_safe }}";
+
+  const vtcReady = document.getElementById("vtcCmReady");
+  const vtcPanel = document.getElementById("vtcCredentialsPanel");
+  const vtcCta = document.getElementById("vtcCta");
+  const vtcLoginInput = document.getElementById("vtcLogin");
+  const vtcPasswordInput = document.getElementById("vtcPassword");
+
+  const syncVtcPanel = () => {
+    if (!vtcReady || !vtcPanel) return;
+    const hasSavedCreds = !!((vtcLoginInput?.value || "").trim() || (vtcPasswordInput?.value || "").trim());
+    const isChecked = vtcReady.checked || hasSavedCreds;
+    vtcReady.checked = isChecked;
+    vtcPanel.hidden = !isChecked;
+    if (vtcCta) vtcCta.classList.toggle("is-confirmed", isChecked);
+  };
+
+  if (vtcReady) {
+    vtcReady.addEventListener("change", () => {
+      syncVtcPanel();
+      if (vtcReady.checked) vtcLoginInput?.focus();
+    });
+    syncVtcPanel();
+  }
 
   const vtcForm = document.getElementById("vtcCredentialsForm");
   if(vtcForm){
