@@ -231,7 +231,14 @@
 
     <div class="card-meta">
       <div>Formation : <strong>{{ s.date_start|frdate }}</strong> → <strong>{{ s.date_end|frdate }}</strong></div>
-<div>Examen : <strong>{{ s.exam_date|frdate }}</strong></div>
+      {% if "VTC" in (s.training_type or "")|upper %}
+        {% set theory_date = s.exam_theory_date or s.exam_date %}
+        {% set practice_date = s.exam_practice_date or s.exam_date %}
+        <div>Examen théorique : <strong>{{ theory_date|frdate }}</strong></div>
+        <div>Examen pratique : <strong>{{ practice_date|frdate }}</strong></div>
+      {% else %}
+        <div>Examen : <strong>{{ s.exam_date|frdate }}</strong></div>
+      {% endif %}
       <div class="trainees-highlight">
         <span>Stagiaires</span>
         <span class="trainees-count">{{ s.total }}</span>
@@ -299,9 +306,17 @@
           <input id="dateEnd" type="date">
         </label>
 
-        <label>
+        <label id="examDateField">
           <div class="label">Date d’examen</div>
           <input id="examDate" type="date">
+        </label>
+        <label id="examTheoryField" style="display:none;">
+          <div class="label">Date examen théorique</div>
+          <input id="examTheoryDate" type="date">
+        </label>
+        <label id="examPracticeField" style="display:none;">
+          <div class="label">Date examen pratique</div>
+          <input id="examPracticeDate" type="date">
         </label>
       </div>
     </div>
@@ -366,6 +381,21 @@
     openModal("createSessionModal");
   });
 
+  function toggleExamFields(){
+    const type = (document.getElementById("sessionType")?.value || "").toUpperCase();
+    const examDateField = document.getElementById("examDateField");
+    const examTheoryField = document.getElementById("examTheoryField");
+    const examPracticeField = document.getElementById("examPracticeField");
+    const isVtc = type.includes("VTC");
+
+    if(examDateField) examDateField.style.display = isVtc ? "none" : "";
+    if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
+    if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
+  }
+
+  document.getElementById("sessionType")?.addEventListener("change", toggleExamFields);
+  toggleExamFields();
+
   // create session
   document.getElementById("btnCreateSession")?.addEventListener("click", async ()=>{
     const name = (document.getElementById("sessionName").value || "").trim();
@@ -373,6 +403,8 @@
     const date_start = (document.getElementById("dateStart").value || "").trim();
     const date_end = (document.getElementById("dateEnd").value || "").trim();
     const exam_date = (document.getElementById("examDate").value || "").trim();
+    const exam_theory_date = (document.getElementById("examTheoryDate")?.value || "").trim();
+    const exam_practice_date = (document.getElementById("examPracticeDate")?.value || "").trim();
 
     if(!name || !training_type){
       alert("Nom + type de formation obligatoires");
@@ -386,7 +418,7 @@
       const r = await fetch("/api/sessions/create", {
         method:"POST",
         headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ name, training_type, date_start, date_end, exam_date })
+        body: JSON.stringify({ name, training_type, date_start, date_end, exam_date, exam_theory_date, exam_practice_date })
       });
 
       const res = await r.json();
