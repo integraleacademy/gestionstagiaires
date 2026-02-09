@@ -31,6 +31,9 @@
              style="font-size:13px;color:#1f2937;text-decoration:none;padding:6px 10px;border:1px solid #d1d5db;border-radius:8px;background:#fff;">
             Tests de positionnement
           </a>
+          <button type="button" class="btn btn-blue" style="font-size:13px;padding:6px 10px;" onclick="openModal('edofModal')">
+            EDOF
+          </button>
           <a href="{{ url_for('admin_logout') }}"
              style="font-size:13px;color:#555;text-decoration:none;padding:6px 10px;border:1px solid #ddd;border-radius:8px;">
             Déconnexion
@@ -43,6 +46,54 @@
   <div class="container">
     {% block content %}{% endblock %}
   </div>
+
+  {% if session.get("admin_logged_in") %}
+  <div class="modal-backdrop" id="edofModal" aria-hidden="true">
+    <div class="modal" style="max-width:560px;">
+      <div class="modal-head">
+        <div class="modal-title">Demande CPF (EDOF)</div>
+        <button class="icon-btn" type="button" data-close-modal="edofModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="edofForm">
+          <div class="form-grid">
+            <label>
+              <div class="label">Nom</div>
+              <input type="text" name="last_name" required>
+            </label>
+            <label>
+              <div class="label">Prénom</div>
+              <input type="text" name="first_name" required>
+            </label>
+            <label>
+              <div class="label">Téléphone</div>
+              <input type="tel" name="phone" required>
+            </label>
+            <label>
+              <div class="label">Mail</div>
+              <input type="email" name="email" required>
+            </label>
+            <label style="grid-column:1 / -1;">
+              <div class="label">Formation</div>
+              <select name="training" required>
+                <option value="" disabled selected>Choisir une formation</option>
+                <option value="A3P">Agent de protection physique des personnes (A3P)</option>
+                <option value="APS">Agent de prévention et de sécurité (APS)</option>
+                <option value="VTC">Chauffeur VTC</option>
+                <option value="DESP">Dirigeant d'entreprise de sécurité privée (DESP)</option>
+              </select>
+            </label>
+          </div>
+          <div id="edofFeedback" class="hint" role="status" aria-live="polite" style="margin-top:10px;"></div>
+        </form>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" type="button" data-close-modal="edofModal">Annuler</button>
+        <button class="btn btn-blue" type="submit" form="edofForm" id="edofSubmitBtn">Envoyer</button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
 <script>
   function openModal(id){
@@ -73,6 +124,49 @@
       closeModal(backdrop.id);
     }
   });
+
+  const edofForm = document.getElementById("edofForm");
+  if(edofForm){
+    edofForm.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      const feedback = document.getElementById("edofFeedback");
+      const submitBtn = document.getElementById("edofSubmitBtn");
+      const formData = new FormData(edofForm);
+      const payload = Object.fromEntries(formData.entries());
+
+      if(feedback){
+        feedback.textContent = "Envoi en cours…";
+      }
+      if(submitBtn){
+        submitBtn.disabled = true;
+      }
+
+      try{
+        const res = await fetch("/admin/edof/submit", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if(!res.ok || !data.ok){
+          throw new Error(data.error || "Erreur lors de l’envoi.");
+        }
+        if(feedback){
+          feedback.textContent = "Demande envoyée ✅";
+        }
+        edofForm.reset();
+        setTimeout(()=>closeModal("edofModal"), 600);
+      }catch(err){
+        if(feedback){
+          feedback.textContent = err.message || "Erreur lors de l’envoi.";
+        }
+      }finally{
+        if(submitBtn){
+          submitBtn.disabled = false;
+        }
+      }
+    });
+  }
 </script>
 </body>
 </html>
