@@ -865,6 +865,12 @@ def fetch_hebergement_status(email: str) -> Optional[str]:
 # =========================
 
 FORMATION_TYPES = ["APS", "A3P", "DIRIGEANT initial", "DIRIGEANT VAE", "SSIAP 1", "CHEF DE POSTE"]
+FORMATION_PRICE_DEFAULTS = {
+    "A3P": 4200,
+    "APS": 1650,
+    "DIRIGEANT INITIAL": 4300,
+    "DIRIGEANT VAE": 4300,
+}
 
 ENUMS = {
     "convention": ["soon", "signing", "signed"],
@@ -914,6 +920,11 @@ def formation_label(training_type: str) -> str:
     tt = (training_type or "").strip()
     key = tt.upper()
     return FORMATION_LONG_LABELS.get(key, tt)
+
+
+def default_training_price(training_type: str) -> Optional[int]:
+    key = (training_type or "").strip().upper()
+    return FORMATION_PRICE_DEFAULTS.get(key)
 
 
 # =========================
@@ -2246,6 +2257,7 @@ def api_create_trainee(session_id: str):
     training_type = _session_get(s, "training_type", "")
     show_hosting = (training_type == "A3P")
     show_vae = (training_type == "DIRIGEANT VAE")
+    default_price = default_training_price(training_type)
 
     public_token = uuid.uuid4().hex
 
@@ -2263,6 +2275,10 @@ def api_create_trainee(session_id: str):
         "test_fr_status": "soon",
         "dossier_status": "incomplete",
         "financement_status": "soon",
+        "training_price": default_price if default_price is not None else "",
+        "cpf_amount": "",
+        "personal_amount": "",
+        "other_amount": "",
         "vae_status": "soon" if show_vae else "",
         "hosting_status": "unknown" if show_hosting else "",
         "public_token": public_token,
@@ -2431,6 +2447,10 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "first_name",
         "email",
         "phone",
+        "training_price",
+        "cpf_amount",
+        "personal_amount",
+        "other_amount",
 
     }
 
@@ -4556,6 +4576,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         abort(404)
 
     training_type = session_view["training_type"]
+    default_price = default_training_price(training_type)
 
     # ✅ IMPORTANT : on impose la liste de documents selon la formation (et supprime dom)
     ensure_documents_schema_for_trainee(t, training_type)
@@ -4603,6 +4624,8 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     # ✅ s'assure que no_permis est bien un bool
     t["no_permis"] = bool(t.get("no_permis"))
     t["force_dossier_complete"] = bool(t.get("force_dossier_complete"))
+    if not (str(t.get("training_price") or "").strip()) and default_price is not None:
+        t["training_price"] = default_price
 
     # ✅ dossier_status cohérent avec les docs requis
     dossier_complete = dossier_is_complete_total(t, training_type)
@@ -4623,6 +4646,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         vae_steps=vae_steps,
         dossier_is_complete=dossier_complete,
         deliverables_view=deliverables_view,
+        default_training_price=default_price,
         PUBLIC_STUDENT_PORTAL_BASE=PUBLIC_STUDENT_PORTAL_BASE,
         fr_date=fr_date,
     )
