@@ -799,6 +799,9 @@ select.status-pill{
   margin-top: 12px;
   grid-template-columns: 360px 1fr;
 }
+.trainee-grid--vtc{
+  grid-template-columns: 1fr;
+}
 
 /* responsive */
 @media (max-width: 980px){
