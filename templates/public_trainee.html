@@ -270,22 +270,91 @@
     margin-top:18px;
     padding:16px 18px;
     border-radius:16px;
-    border:2px solid #e5e7eb;
-    background:#fff;
+    border:2px solid #bae6fd;
+    background:linear-gradient(135deg, rgba(14,165,233,.12), rgba(59,130,246,.08));
     box-shadow:0 6px 16px rgba(15,23,42,.05);
   }
   .vtc-assistance h3{
     margin:0 0 8px 0;
     font-size:18px;
   }
+  .vtc-assistance .assist-subtitle{
+    font-size:14px;
+    color:#334155;
+    margin-bottom:10px;
+    font-weight:600;
+  }
   .vtc-assistance ul{
-    margin:8px 0 0 18px;
+    margin:8px 0 0 0;
     padding:0;
     display:flex;
     flex-direction:column;
-    gap:8px;
+    gap:12px;
+    list-style:none;
   }
   .vtc-assistance a{color:#1d4ed8;text-decoration:underline;}
+  .assist-item{
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+    padding:12px 14px;
+    border-radius:14px;
+    border:1px solid #bfdbfe;
+    background:linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow:0 4px 12px rgba(15,23,42,.06);
+  }
+  .assist-icon{
+    width:36px;
+    height:36px;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:18px;
+    background:#eff6ff;
+    color:#1d4ed8;
+    flex:0 0 auto;
+  }
+  .assist-title{
+    font-weight:800;
+    margin-bottom:4px;
+    color:#0f172a;
+  }
+  .assist-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:8px;
+  }
+  .assist-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:6px 10px;
+    border-radius:999px;
+    background:#fff7ed;
+    color:#9a3412;
+    border:1px solid #fed7aa;
+    font-weight:700;
+    font-size:12px;
+  }
+  .assist-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:8px 12px;
+    border-radius:999px;
+    border:1px solid #93c5fd;
+    background:#dbeafe;
+    color:#1e3a8a;
+    font-weight:700;
+    text-decoration:none;
+  }
+  .assist-btn.secondary{
+    background:#dcfce7;
+    border-color:#86efac;
+    color:#166534;
+  }
   .collapse-card{
     border:1px solid #e5e7eb;
     border-radius:16px;
@@ -706,16 +775,32 @@
       </div>
     </div>
     <div class="vtc-assistance">
-      <h3>Assistance</h3>
+      <h3>Assistance express ✨</h3>
+      <div class="assist-subtitle">Des réponses rapides pour avancer sereinement.</div>
       <ul>
-        <li>
-          Des problèmes concernant votre formation ? Vous pouvez nous contacter au 04 22 47 07 68 ou en cliquant
-          <a href="https://assistance-alw9.onrender.com/" target="_blank" rel="noopener">ici</a>.
+        <li class="assist-item">
+          <div class="assist-icon" aria-hidden="true">🎓</div>
+          <div>
+            <div class="assist-title">Formation & suivi</div>
+            <div>Besoin d'aide pour votre formation ? Nous sommes là pour vous.</div>
+            <div class="assist-actions">
+              <span class="assist-pill">Réponse rapide</span>
+              <a class="assist-btn" href="tel:0422470768">📞 04 22 47 07 68</a>
+              <a class="assist-btn secondary" href="https://assistance-alw9.onrender.com/" target="_blank" rel="noopener">💬 Ouvrir l’assistance</a>
+            </div>
+          </div>
         </li>
-        <li>
-          Des problèmes concernant l'examen ? Vous pouvez contacter directement la Chambre des métiers.
-          Si vous résidez dans le 06, Chambre des métiers des Alpes-Maritimes : 04 92 12 53 38 / Si vous résidez dans le 83,
-          Chambre des métiers du Var : 04 94 61 99 25.
+        <li class="assist-item">
+          <div class="assist-icon" aria-hidden="true">📝</div>
+          <div>
+            <div class="assist-title">Examen VTC</div>
+            <div>Contactez la Chambre des métiers selon votre département.</div>
+            <div class="assist-actions">
+              <span class="assist-pill">Chambre des métiers</span>
+              <a class="assist-btn" href="tel:0492125338">📍 Alpes-Maritimes (06) : 04 92 12 53 38</a>
+              <a class="assist-btn secondary" href="tel:0494619925">📍 Var (83) : 04 94 61 99 25</a>
+            </div>
+          </div>
         </li>
       </ul>
     </div>
