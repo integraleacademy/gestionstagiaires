@@ -239,6 +239,17 @@
         <div class="hint">Reçu le {{ trainee.vtc_cm_submitted_at }}</div>
       {% endif %}
     </div>
+    <div style="margin-top:12px;">
+      <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="chkExamFeesPaid"
+               {% if trainee.exam_fees_paid %}checked{% endif %}
+               {{ read_only_attr }}>
+        <span>Paiement des frais d'examen</span>
+      </label>
+      <div id="examFeesPaidHint" class="hint" style="margin-top:6px;{% if not trainee.exam_fees_paid_at %}display:none;{% endif %}">
+        Frais d'examen réglés le <strong>{{ trainee.exam_fees_paid_at|frdate }}</strong>
+      </div>
+    </div>
   </div>
 {% endif %}
 
@@ -1842,13 +1853,41 @@ if(chkHideDocs){
 
 
   const chkHideSuivi = document.getElementById("public_hide_suivi");
-if(chkHideSuivi){
+  if(chkHideSuivi){
   chkHideSuivi.addEventListener("change", async ()=>{
     try{
       await updateTrainee({ public_hide_suivi: chkHideSuivi.checked });
       window.location.reload();
     }catch(e){
       alert("Erreur sauvegarde visibilité suivi dossier");
+    }
+  });
+}
+
+const chkExamFeesPaid = document.getElementById("chkExamFeesPaid");
+const examFeesPaidHint = document.getElementById("examFeesPaidHint");
+const formatDateFr = (d) => {
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+};
+
+if(chkExamFeesPaid){
+  chkExamFeesPaid.addEventListener("change", async ()=>{
+    try{
+      await updateTrainee({ exam_fees_paid: chkExamFeesPaid.checked });
+      if(examFeesPaidHint){
+        if(chkExamFeesPaid.checked){
+          examFeesPaidHint.style.display = "block";
+          examFeesPaidHint.innerHTML = `Frais d'examen réglés le <strong>${formatDateFr(new Date())}</strong>`;
+        }else{
+          examFeesPaidHint.style.display = "none";
+          examFeesPaidHint.innerHTML = "";
+        }
+      }
+    }catch(e){
+      alert("Erreur sauvegarde paiement frais d'examen");
     }
   });
 }
