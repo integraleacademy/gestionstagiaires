@@ -1925,6 +1925,7 @@ def admin_sessions():
             "exam_date": _session_get(s, "exam_date", ""),
             "exam_theory_date": _session_get(s, "exam_theory_date", ""),
             "exam_practice_date": _session_get(s, "exam_practice_date", ""),
+            "practice_training_date": _session_get(s, "practice_training_date", ""),
             "total": st["total"],
             "session_is_conform": st["session_is_conform"],
             "session_dossier_complete": session_dossier_complete,
@@ -2309,6 +2310,32 @@ def api_create_session():
     data["sessions"].insert(0, s)
     save_data(data)
     return jsonify({"ok": True, "id": session_id})
+
+
+@app.post("/api/sessions/<session_id>/update")
+@admin_login_required
+@admin_write_required
+def api_update_session(session_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+
+    payload = request.get_json(silent=True) or {}
+    for key in (
+        "date_start",
+        "date_end",
+        "exam_date",
+        "exam_theory_date",
+        "exam_practice_date",
+        "practice_training_date",
+    ):
+        if key in payload:
+            s[key] = (payload.get(key) or "").strip()
+
+    s["updated_at"] = _now_iso()
+    save_data(data)
+    return jsonify({"ok": True})
 
 
 @app.post("/api/sessions/<session_id>/delete")

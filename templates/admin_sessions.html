@@ -257,6 +257,17 @@
   <a class="btn" href="{{ url_for('admin_trainees', session_id=s.id, **request.args) }}">Voir les stagiaires</a>
 
   {% if not is_read_only %}
+    <button class="btn btn-outline"
+            data-edit-session="{{ s.id }}"
+            data-training-type="{{ s.training_type }}"
+            data-date-start="{{ s.date_start }}"
+            data-date-end="{{ s.date_end }}"
+            data-exam-date="{{ s.exam_date }}"
+            data-exam-theory-date="{{ s.exam_theory_date }}"
+            data-exam-practice-date="{{ s.exam_practice_date }}"
+            data-practice-training-date="{{ s.practice_training_date }}">
+      Modifier les dates
+    </button>
     <button class="btn btn-outline" data-archive-session="{{ s.id }}">Archiver</button>
 
     <button class="btn btn-danger" data-delete-session="{{ s.id }}">Supprimer</button>
@@ -350,6 +361,57 @@
   </div>
 </div>
 
+<!-- MODALE MODIFICATION DATES SESSION -->
+<div class="modal-backdrop" id="editSessionModal" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Modifier les dates</div>
+      <button class="icon-btn" data-close-modal="editSessionModal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-grid">
+        <label>
+          <div class="label">Type de formation</div>
+          <input id="editSessionTrainingType" type="text" disabled>
+        </label>
+
+        <label>
+          <div class="label">Date début</div>
+          <input id="editDateStart" type="date">
+        </label>
+
+        <label>
+          <div class="label">Date fin</div>
+          <input id="editDateEnd" type="date">
+        </label>
+
+        <label id="editExamDateField">
+          <div class="label">Date d’examen</div>
+          <input id="editExamDate" type="date">
+        </label>
+        <label id="editExamTheoryField" style="display:none;">
+          <div class="label">Date examen théorique</div>
+          <input id="editExamTheoryDate" type="date">
+        </label>
+        <label id="editExamPracticeField" style="display:none;">
+          <div class="label">Date examen pratique</div>
+          <input id="editExamPracticeDate" type="date">
+        </label>
+        <label id="editPracticeTrainingField" style="display:none;">
+          <div class="label">Date formation pratique</div>
+          <input id="editPracticeTrainingDate" type="date">
+        </label>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" data-close-modal="editSessionModal">Annuler</button>
+      <button class="btn btn-primary" id="btnUpdateSession">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODALE CONTACT CNAPS -->
 <div class="modal-backdrop" id="cnapsModal" aria-hidden="true">
   <div class="modal modal-wide">
@@ -402,6 +464,22 @@
   document.getElementById("sessionType")?.addEventListener("change", toggleExamFields);
   toggleExamFields();
 
+  let currentEditSessionId = null;
+
+  function toggleEditExamFields(trainingType){
+    const type = (trainingType || "").toUpperCase();
+    const examDateField = document.getElementById("editExamDateField");
+    const examTheoryField = document.getElementById("editExamTheoryField");
+    const examPracticeField = document.getElementById("editExamPracticeField");
+    const practiceTrainingField = document.getElementById("editPracticeTrainingField");
+    const isVtc = type.includes("VTC");
+
+    if(examDateField) examDateField.style.display = isVtc ? "none" : "";
+    if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
+    if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
+    if(practiceTrainingField) practiceTrainingField.style.display = isVtc ? "" : "none";
+  }
+
   // create session
   document.getElementById("btnCreateSession")?.addEventListener("click", async ()=>{
     const name = (document.getElementById("sessionName").value || "").trim();
@@ -440,6 +518,56 @@
       const res = await r.json();
       if(!r.ok || !res.ok){
         alert("Erreur création session");
+        return;
+      }
+      window.location.reload();
+    }catch(e){
+      alert("Erreur réseau");
+    }finally{
+      btn.disabled = false;
+    }
+  });
+
+  // edit session dates
+  document.querySelectorAll("[data-edit-session]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      currentEditSessionId = btn.getAttribute("data-edit-session");
+      const trainingType = btn.getAttribute("data-training-type") || "";
+
+      document.getElementById("editSessionTrainingType").value = trainingType;
+      document.getElementById("editDateStart").value = btn.getAttribute("data-date-start") || "";
+      document.getElementById("editDateEnd").value = btn.getAttribute("data-date-end") || "";
+      document.getElementById("editExamDate").value = btn.getAttribute("data-exam-date") || "";
+      document.getElementById("editExamTheoryDate").value = btn.getAttribute("data-exam-theory-date") || "";
+      document.getElementById("editExamPracticeDate").value = btn.getAttribute("data-exam-practice-date") || "";
+      document.getElementById("editPracticeTrainingDate").value = btn.getAttribute("data-practice-training-date") || "";
+
+      toggleEditExamFields(trainingType);
+      openModal("editSessionModal");
+    });
+  });
+
+  document.getElementById("btnUpdateSession")?.addEventListener("click", async ()=>{
+    if(!currentEditSessionId) return;
+    const btn = document.getElementById("btnUpdateSession");
+    btn.disabled = true;
+
+    try{
+      const r = await fetch(`/api/sessions/${currentEditSessionId}/update`, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+          date_start: (document.getElementById("editDateStart").value || "").trim(),
+          date_end: (document.getElementById("editDateEnd").value || "").trim(),
+          exam_date: (document.getElementById("editExamDate").value || "").trim(),
+          exam_theory_date: (document.getElementById("editExamTheoryDate").value || "").trim(),
+          exam_practice_date: (document.getElementById("editExamPracticeDate").value || "").trim(),
+          practice_training_date: (document.getElementById("editPracticeTrainingDate").value || "").trim()
+        })
+      });
+      const res = await r.json();
+      if(!r.ok || !res.ok){
+        alert("Erreur mise à jour session");
         return;
       }
       window.location.reload();
