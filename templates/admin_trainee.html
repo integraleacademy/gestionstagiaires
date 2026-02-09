@@ -35,6 +35,9 @@
   {% set cnaps_birth_date = (trainee.birth_date|frdate or "DD/MM/YYYY") %}
   {% set cnaps_body = "Bonjour,\n\nJe me permets de revenir vers nous concernant la demande d'autorisation préalable de " ~ cnaps_full_name ~ " né le " ~ cnaps_birth_date ~ ".\n\nLe suivi en ligne indique que la demande a été acceptée, mais cette personne n'a pas reçu le courrier officiel de notification par courrier postal et nous ne disposons donc pas de son numéro PRE nécessaire à son entrée en formation.\n\nVous serait-il possible svp de me communiquer le numéro PRE ?\n\nJe vous remercie par avance pour votre aide et je vous souhaite une agréable journée,\n\nBien cordialement,\n\nClément VAILLANT\nDirecteur Intégrale Sécurité Formations" %}
   <a class="btn btn-outline btn-uniform"
+     id="btnCnapsContact"
+     data-session-id="{{ session.id }}"
+     data-trainee-id="{{ trainee.id }}"
      href="mailto:?bcc=jenny.tarallo@interieur.gouv.fr,cnaps-dt-sud@interieur.gouv.fr&subject={{ 'Demande de numéro PRE'|urlencode }}&body={{ cnaps_body|urlencode }}">
     ✉️ Contacter le CNAPS
   </a>
@@ -166,7 +169,13 @@
           Historique CNAPS :
           {% for entry in cnaps_history %}
             <span style="display:inline-block;margin-right:10px;">
-              {{ entry.status|upper }} · {{ entry.date|frdatetime }}
+              {% if entry.kind == "pre_request" %}
+                <span style="color:var(--orange);font-weight:600;">
+                  Demande de numéro PRE faite au CNAPS le {{ entry.date|frdate }}
+                </span>
+              {% else %}
+                {{ entry.status|upper }} · {{ entry.date|frdatetime }}
+              {% endif %}
             </span>
           {% endfor %}
         </div>
@@ -1391,6 +1400,33 @@ function setDossierPill(status){
       alert("Erreur CNAPS");
     }
   });
+
+  const cnapsContactBtn = document.getElementById("btnCnapsContact");
+  if(cnapsContactBtn){
+    const canWrite = {{ "false" if is_read_only else "true" }};
+    cnapsContactBtn.addEventListener("click", ()=>{
+      if(!canWrite) return;
+      const sessionId = cnapsContactBtn.getAttribute("data-session-id");
+      const traineeId = cnapsContactBtn.getAttribute("data-trainee-id");
+      if(!sessionId || !traineeId) return;
+      const payload = JSON.stringify({
+        items: [{ session_id: sessionId, trainee_id: traineeId }]
+      });
+      if(navigator.sendBeacon){
+        navigator.sendBeacon(
+          "/api/cnaps/pre_request",
+          new Blob([payload], { type: "application/json" })
+        );
+        return;
+      }
+      fetch("/api/cnaps/pre_request", {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: payload,
+        keepalive: true,
+      }).catch(()=>{});
+    });
+  }
 
   const chkCnapsOk = document.getElementById("chkCnapsOk");
   if(chkCnapsOk){

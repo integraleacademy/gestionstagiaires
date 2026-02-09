@@ -399,6 +399,18 @@ def record_cnaps_status_change(t: Dict[str, Any], new_status: Optional[str]) -> 
     t["cnaps_history"] = history
 
 
+def record_cnaps_pre_request(t: Dict[str, Any]) -> None:
+    history = t.get("cnaps_history")
+    if not isinstance(history, list):
+        history = []
+    history.append({
+        "status": "Demande de numéro PRE faite au CNAPS",
+        "date": _now_iso(),
+        "kind": "pre_request",
+    })
+    t["cnaps_history"] = history
+
+
 def ensure_cnaps_history(t: Dict[str, Any]) -> None:
     history = t.get("cnaps_history")
     if not isinstance(history, list):
@@ -4955,6 +4967,41 @@ def api_cnaps_trainees():
         })
 
     return jsonify({"ok": True, "sessions": sessions_out})
+
+
+@app.post("/api/cnaps/pre_request")
+@admin_login_required
+@admin_write_required
+def api_cnaps_pre_request():
+    payload = request.get_json(silent=True) or {}
+    items = payload.get("items") if isinstance(payload.get("items"), list) else []
+    if not items:
+        return jsonify({"ok": False, "error": "no_items"}), 400
+
+    data = load_data()
+    updated = 0
+
+    for item in items:
+        session_id = str(item.get("session_id") or "").strip()
+        trainee_id = str(item.get("trainee_id") or "").strip()
+        if not session_id or not trainee_id:
+            continue
+        s = find_session(data, session_id)
+        if not s:
+            continue
+        trainees = _session_trainees_list(s)
+        t = next((x for x in trainees if x.get("id") == trainee_id), None)
+        if not t:
+            continue
+        record_cnaps_pre_request(t)
+        updated += 1
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+
+    if updated:
+        save_data(data)
+
+    return jsonify({"ok": True, "updated": updated})
 
 
 @app.get("/admin/sessions/archived")
