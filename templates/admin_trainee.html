@@ -373,6 +373,45 @@
         <div class="hint">Sauvegarde automatique.</div>
       </div>
 
+      <!-- DETAILS FINANCEMENT (pleine largeur dans la carte) -->
+      <div style="margin-top:16px;grid-column:1 / -1;" id="financementDetails"
+           data-training-type="{{ session.training_type }}"
+           data-default-price="{{ default_training_price or '' }}"
+           data-read-only="{{ '1' if is_read_only else '0' }}">
+        <div style="font-weight:900;margin-bottom:6px;">Détail du financement</div>
+        <div class="hint" style="margin-bottom:10px;">
+          Indiquez comment la formation a été payée. Le total se calcule automatiquement.
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+          <div>
+            <div class="label">Montant CPF</div>
+            <input id="cpfAmount" type="number" min="0" step="0.01" value="{{ trainee.cpf_amount or '' }}" {{ read_only_attr }}>
+          </div>
+          <div>
+            <div class="label">Montant financement personnel</div>
+            <input id="personalAmount" type="number" min="0" step="0.01" value="{{ trainee.personal_amount or '' }}" {{ read_only_attr }}>
+          </div>
+          <div>
+            <div class="label">Montant autre</div>
+            <input id="otherAmount" type="number" min="0" step="0.01" value="{{ trainee.other_amount or '' }}" {{ read_only_attr }}>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px;align-items:end;">
+          <div>
+            <div class="label">Tarif formation (modifiable)</div>
+            <input id="trainingPrice" type="number" min="0" step="0.01" value="{{ trainee.training_price or default_training_price or '' }}" {{ read_only_attr }}>
+            <div class="hint">Tarif par défaut : A3P 4200 € / APS 1650 € / Dirigeant 4300 €.</div>
+          </div>
+          <div>
+            <div class="label">TOTAL (calcul automatique)</div>
+            <div id="paymentTotalLine" style="font-weight:800;">—</div>
+            <div id="paymentDiffLine" class="hint"></div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -850,6 +889,93 @@ if(financementComment){
       }
     }, 450);
   });
+}
+
+// =========================
+// Financement details autosave + totals
+// =========================
+const financementDetails = document.getElementById("financementDetails");
+if(financementDetails){
+  const cpfAmount = document.getElementById("cpfAmount");
+  const personalAmount = document.getElementById("personalAmount");
+  const otherAmount = document.getElementById("otherAmount");
+  const trainingPrice = document.getElementById("trainingPrice");
+  const totalLine = document.getElementById("paymentTotalLine");
+  const diffLine = document.getElementById("paymentDiffLine");
+  const isReadOnly = financementDetails.getAttribute("data-read-only") === "1";
+
+  const debounceMap = {};
+
+  const parseAmount = (value) => {
+    const normalized = (value || "").toString().replace(",", ".").trim();
+    const n = parseFloat(normalized);
+    return Number.isNaN(n) ? 0 : n;
+  };
+
+  const formatEuros = (value) => {
+    const rounded = Math.round(value * 100) / 100;
+    return rounded.toLocaleString("fr-FR", {
+      minimumFractionDigits: rounded % 1 === 0 ? 0 : 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const computeDefaultPrice = () => {
+    const dataDefault = parseAmount(financementDetails.getAttribute("data-default-price"));
+    if (dataDefault > 0) return dataDefault;
+    const trainingType = (financementDetails.getAttribute("data-training-type") || "").toUpperCase();
+    if (trainingType === "A3P") return 4200;
+    if (trainingType === "APS") return 1650;
+    if (trainingType === "DIRIGEANT INITIAL" || trainingType === "DIRIGEANT VAE") return 4300;
+    return 0;
+  };
+
+  const renderTotals = () => {
+    if(!totalLine) return;
+    const cpfVal = parseAmount(cpfAmount?.value);
+    const personalVal = parseAmount(personalAmount?.value);
+    const otherVal = parseAmount(otherAmount?.value);
+    const total = cpfVal + personalVal + otherVal;
+
+    const priceRaw = parseAmount(trainingPrice?.value);
+    const price = priceRaw > 0 ? priceRaw : computeDefaultPrice();
+
+    totalLine.textContent = `TOTAL (calcul automatique) : ${formatEuros(total)} € / ${formatEuros(price)} € (prix de la formation).`;
+
+    if(diffLine){
+      const diff = price - total;
+      diffLine.textContent = `Différence de : ${formatEuros(diff)} €`;
+      diffLine.style.color = diff === 0 ? "#16a34a" : "#dc2626";
+      diffLine.style.fontWeight = "700";
+    }
+  };
+
+  const setupAutosave = (input, field) => {
+    if(!input || isReadOnly) return;
+    input.addEventListener("input", ()=>{
+      renderTotals();
+      if(debounceMap[field]) clearTimeout(debounceMap[field]);
+      debounceMap[field] = setTimeout(async ()=>{
+        try{
+          await updateTrainee({ [field]: input.value });
+        }catch(e){
+          console.error("Erreur sauvegarde financement", field);
+        }
+      }, 450);
+    });
+  };
+
+  setupAutosave(cpfAmount, "cpf_amount");
+  setupAutosave(personalAmount, "personal_amount");
+  setupAutosave(otherAmount, "other_amount");
+  setupAutosave(trainingPrice, "training_price");
+
+  [cpfAmount, personalAmount, otherAmount, trainingPrice].forEach((input)=>{
+    if(!input) return;
+    input.addEventListener("change", renderTotals);
+  });
+
+  renderTotals();
 }
 
   function toClassSafe(s){
