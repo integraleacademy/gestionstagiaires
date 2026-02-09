@@ -50,6 +50,7 @@
 
       <button class="btn btn-outline" id="btnBulkAttestation">⬇️ Télécharger les Attestations en masse</button>
       <input id="bulkAttestationInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+      <button class="btn btn-outline" id="btnBulkTestFr">🔔 Notifier test de français en masse</button>
       <button class="btn btn-primary" id="btnOpenCreateTrainee">+ Ajouter un stagiaire</button>
     {% endif %}
   </div>
@@ -206,6 +207,39 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
       {% endfor %}
     </tbody>
   </table>
+</div>
+
+<!-- MODALE NOTIFICATION TEST DE FRANÇAIS EN MASSE -->
+<div class="modal-backdrop" id="bulkTestFrModal" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Notifier test de français en masse</div>
+      <button class="icon-btn" data-close-modal="bulkTestFrModal">✕</button>
+    </div>
+
+    <form method="post" action="{{ url_for('admin_test_fr_notify_bulk', session_id=session.id) }}">
+      <div class="modal-body">
+        <div class="form-grid">
+          <label>
+            <div class="label">Code (nouveau à chaque envoi)</div>
+            <input name="code" type="text" required placeholder="ex : B1-29384" {{ read_only_attr }}>
+          </label>
+          <label>
+            <div class="label">Date + heure max</div>
+            <input name="deadline" type="text" required placeholder="ex : 02/03/2026 18:00" {{ read_only_attr }}>
+          </label>
+        </div>
+        <div class="hint" style="margin-top:8px;">
+          Un mail + SMS seront envoyés à tous les stagiaires (si email/tel renseignés).
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn" type="button" data-close-modal="bulkTestFrModal">Annuler</button>
+        <button class="btn btn-primary" type="submit" {{ read_only_attr }}>Envoyer</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <!-- MODALE CREATION STAGIAIRE -->
@@ -423,6 +457,11 @@ tr.row-todo td{
     bg.addEventListener("click", (e)=>{
       if(e.target === bg) closeModal(bg.id);
     });
+  });
+
+  const btnBulkTestFr = document.getElementById("btnBulkTestFr");
+  btnBulkTestFr?.addEventListener("click", ()=>{
+    openModal("bulkTestFrModal");
   });
 
 
