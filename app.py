@@ -1820,7 +1820,7 @@ def admin_edof_submit():
     user_html = mail_layout(f"""
       <p>Bonjour {first_name},</p>
 
-      <p>Je me permets de revenir vers vous concernant votre demande d'inscription en <strong>{training_label}</strong> depuis votre Compte Personnel de Formation (CPF). Je vous remercie pour votre demande !</p>
+      <p>Je me permets de revenir vers vous concernant votre demande d'inscription en formation <strong>{training_label}</strong> depuis votre Compte Personnel de Formation (CPF). Je vous remercie pour votre demande !</p>
 
       <p>Afin que nous puissions finaliser ensemble votre inscription vous serait-il possible de nous contacter au 04 22 47 07 68 ?</p>
 
@@ -1844,7 +1844,7 @@ def admin_edof_submit():
 
     sms = (
         f"Bonjour {first_name},\n"
-        f"Je me permets de revenir vers vous concernant votre demande d'inscription en {training_label} "
+        f"Je me permets de revenir vers vous concernant votre demande d'inscription en formation {training_label} "
         "depuis votre Compte Personnel de Formation (CPF). Je vous remercie pour votre demande !\n\n"
         "Afin que nous puissions finaliser ensemble votre inscription vous serait-il possible de nous contacter au 04 22 47 07 68 ?\n\n"
         "Vous pouvez également réserver un RDV téléphonique en cliquant ici :\n"
