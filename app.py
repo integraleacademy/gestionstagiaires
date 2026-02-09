@@ -3705,6 +3705,8 @@ def admin_test_fr_notify_bulk(session_id: str):
     code = (request.form.get("code") or "").strip()
     deadline = (request.form.get("deadline") or "").strip()
     if not code or not deadline:
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": False, "error": "code_or_deadline_missing"}), 400
         return redirect(url_for("admin_trainees", session_id=session_id))
 
     data = load_data()
@@ -3713,10 +3715,19 @@ def admin_test_fr_notify_bulk(session_id: str):
         abort(404)
 
     trainees = _session_trainees_list(s)
+    total = len(trainees)
+    sent = 0
     for t in trainees:
         payload = _build_test_fr_payload(t, s, code, deadline, "notify")
-        brevo_send_email(t.get("email",""), payload["subject"], payload["html"])
-        brevo_send_sms(t.get("phone",""), payload["sms"])
+        email = (t.get("email") or "").strip()
+        phone = (t.get("phone") or "").strip()
+        can_send = bool(email or phone)
+        if can_send:
+            sent += 1
+        if email:
+            brevo_send_email(email, payload["subject"], payload["html"])
+        if phone:
+            brevo_send_sms(phone, payload["sms"])
 
         t["test_fr_status"] = payload["status"]
         t["test_fr_code"] = code
@@ -3726,6 +3737,16 @@ def admin_test_fr_notify_bulk(session_id: str):
 
     s["trainees"] = trainees
     save_data(data)
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify(
+            {
+                "ok": True,
+                "total": total,
+                "sent": sent,
+                "missing": total - sent,
+                "all_ok": total > 0 and sent == total,
+            }
+        )
     return redirect(url_for("admin_trainees", session_id=session_id))
 
 # =========================

@@ -217,7 +217,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
       <button class="icon-btn" data-close-modal="bulkTestFrModal">✕</button>
     </div>
 
-    <form method="post" action="{{ url_for('admin_test_fr_notify_bulk', session_id=session.id) }}">
+    <form method="post" id="bulkTestFrForm" action="{{ url_for('admin_test_fr_notify_bulk', session_id=session.id) }}">
       <div class="modal-body">
         <div class="form-grid">
           <label>
@@ -239,6 +239,35 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         <button class="btn btn-primary" type="submit" {{ read_only_attr }}>Envoyer</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- MODALE ENVOI TEST DE FRANÇAIS EN COURS -->
+<div class="modal-backdrop" id="bulkTestFrProgressModal" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Envoi des tests de français</div>
+    </div>
+    <div class="modal-body">
+      <div class="hint">Envoi des tests de français en cours.</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE RESULTAT ENVOI TEST DE FRANÇAIS -->
+<div class="modal-backdrop" id="bulkTestFrResultModal" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Envoi des tests de français terminé</div>
+      <button class="icon-btn" data-close-modal="bulkTestFrResultModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="hint" id="bulkTestFrSummary" style="margin-bottom:10px;"></div>
+      <div class="hint" id="bulkTestFrDetails"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close-modal="bulkTestFrResultModal">OK</button>
+    </div>
   </div>
 </div>
 
@@ -462,6 +491,64 @@ tr.row-todo td{
   const btnBulkTestFr = document.getElementById("btnBulkTestFr");
   btnBulkTestFr?.addEventListener("click", ()=>{
     openModal("bulkTestFrModal");
+  });
+
+  const bulkTestFrForm = document.getElementById("bulkTestFrForm");
+  const bulkTestFrSubmit = bulkTestFrForm?.querySelector("button[type='submit']");
+  bulkTestFrForm?.addEventListener("submit", async (event)=>{
+    event.preventDefault();
+    if (!bulkTestFrForm) return;
+
+    const formData = new FormData(bulkTestFrForm);
+    const summary = document.getElementById("bulkTestFrSummary");
+    const details = document.getElementById("bulkTestFrDetails");
+    const originalLabel = bulkTestFrSubmit?.textContent || "Envoyer";
+
+    if (bulkTestFrSubmit) {
+      bulkTestFrSubmit.disabled = true;
+      bulkTestFrSubmit.textContent = "Envoi en cours...";
+    }
+
+    openModal("bulkTestFrProgressModal");
+
+    try {
+      const response = await fetch(bulkTestFrForm.action, {
+        method: "POST",
+        body: formData,
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.error || "Erreur pendant l'envoi");
+      }
+
+      const total = Number(data.total || 0);
+      const sent = Number(data.sent || 0);
+      const missing = Number(data.missing || 0);
+      const allOk = Boolean(data.all_ok);
+
+      if (summary) {
+        summary.textContent = allOk
+          ? "✅ Tout est bon : tous les stagiaires ont été notifiés."
+          : "Envoi terminé.";
+      }
+      if (details) {
+        details.textContent = `Envoyés : ${sent}/${total} stagiaire(s).` + (missing > 0 ? ` ${missing} sans email/téléphone.` : "");
+      }
+
+      closeModal("bulkTestFrProgressModal");
+      closeModal("bulkTestFrModal");
+      openModal("bulkTestFrResultModal");
+    } catch (error) {
+      closeModal("bulkTestFrProgressModal");
+      alert(error?.message || "Erreur réseau pendant l'envoi des tests");
+    } finally {
+      if (bulkTestFrSubmit) {
+        bulkTestFrSubmit.disabled = false;
+        bulkTestFrSubmit.textContent = originalLabel;
+      }
+    }
   });
 
 
