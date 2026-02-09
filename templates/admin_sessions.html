@@ -268,9 +268,9 @@
             data-practice-training-date="{{ s.practice_training_date }}">
       Modifier les dates
     </button>
-    <button class="btn btn-outline" data-archive-session="{{ s.id }}">Archiver</button>
+    <button class="btn btn-outline" data-archive-session="{{ s.id }}" aria-label="Archiver">📦</button>
 
-    <button class="btn btn-danger" data-delete-session="{{ s.id }}">Supprimer</button>
+    <button class="btn btn-danger" data-delete-session="{{ s.id }}" aria-label="Supprimer">🗑️</button>
   {% endif %}
 </div>
   </div>
