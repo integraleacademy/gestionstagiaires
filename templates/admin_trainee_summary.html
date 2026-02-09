@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <a href="{{ url_for('admin_trainees', session_id=session.id) }}">← Retour stagiaires</a>
+
+  <div class="page-head" style="margin-top:10px;">
+    <div>
+      <h1 style="margin:0;">Récapitulatif du stagiaire</h1>
+      <div class="hint">Le stagiaire a bien été créé et ajouté à la session.</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <a class="btn btn-outline" href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=trainee.id) }}">Ouvrir la fiche stagiaire</a>
+      <a class="btn btn-primary" href="{{ url_for('admin_trainees', session_id=session.id) }}">Retour à la liste</a>
+    </div>
+  </div>
+
+  <div class="grid cards">
+    <div class="card">
+      <div class="card-title">Formation</div>
+      <div class="card-meta">
+        <div><strong>Nom complet de la formation :</strong> {{ training_name }}</div>
+        <div><strong>Dates de formation :</strong> {{ formation_dates }}</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Stagiaire</div>
+      <div class="card-meta">
+        <div><strong>Nom :</strong> {{ trainee.last_name or "—" }}</div>
+        <div><strong>Prénom :</strong> {{ trainee.first_name or "—" }}</div>
+        <div><strong>Date de naissance :</strong> {{ trainee.birth_date|frdate or "—" }}</div>
+        <div><strong>Lieu de naissance :</strong> {{ trainee.birth_city or "—" }}</div>
+        <div><strong>Code postal actuel :</strong> {{ trainee.zip_code or "—" }}</div>
+        <div><strong>Ville actuelle :</strong> {{ trainee.city or "—" }}</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Détail du financement</div>
+      <div class="card-meta">
+        <div><strong>Montant CPF :</strong> {{ trainee.cpf_amount or "—" }}</div>
+        <div><strong>Montant financement personnel :</strong> {{ trainee.personal_amount or "—" }}</div>
+        <div><strong>Montant autre :</strong> {{ trainee.other_amount or "—" }}</div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
