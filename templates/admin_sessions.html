@@ -192,7 +192,7 @@
       <div class="card-title">Documents à contrôler</div>
       <div class="muted">Liste des stagiaires avec des documents “A CONTRÔLER”.</div>
     </div>
-    <button class="btn btn-primary" id="btnOpenDocsToControl">Voir</button>
+    <button class="btn btn-primary" id="btnOpenDocsToControl">Aucun doc à contrôler</button>
   </div>
 
   <!-- ✅ Badge + compteur (plus visuel) -->
@@ -455,7 +455,7 @@
         if(listEl) listEl.textContent = "Erreur chargement.";
         if(btnView){
           btnView.classList.remove("btn-attention");
-          btnView.textContent = "Voir";
+          btnView.textContent = "Aucun doc à contrôler";
         }
         return;
       }
@@ -474,7 +474,7 @@
 
       if(btnView){
         btnView.classList.toggle("btn-attention", totalDocs > 0);
-        btnView.textContent = (totalDocs === 0) ? "Voir" : `Voir (${totalDocs})`;
+        btnView.textContent = (totalDocs === 0) ? "Aucun doc à contrôler" : `Docs à contrôler (${totalDocs})`;
       }
 
       // Texte sous badge
@@ -541,7 +541,7 @@
       const btnView = document.getElementById("btnOpenDocsToControl");
       if(btnView){
         btnView.classList.remove("btn-attention");
-        btnView.textContent = "Voir";
+        btnView.textContent = "Aucun doc à contrôler";
       }
     }
   }
