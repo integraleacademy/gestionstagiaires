@@ -799,8 +799,8 @@ select.status-pill{
   margin-top: 12px;
   grid-template-columns: 360px 1fr;
 }
-.trainee-grid .card--full{
-  grid-column: 1 / -1;
+.trainee-grid--vtc{
+  grid-template-columns: 1fr;
 }
 
 /* responsive */
