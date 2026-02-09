@@ -209,40 +209,6 @@
   {# fallback : nom de session si tu l’as, sinon training_type #}
   {% set formation_label = (session.name or session.training_type or "—") %}
 {% endif %}
-
-const vtcForm = document.getElementById("vtcCredentialsForm");
-if(vtcForm){
-  vtcForm.addEventListener("submit", async (e)=>{
-    e.preventDefault();
-    const login = (document.getElementById("vtcLogin")?.value || "").trim();
-    const password = (document.getElementById("vtcPassword")?.value || "").trim();
-    const status = document.getElementById("vtcCredentialsStatus");
-
-    if(!login || !password){
-      if(status) status.textContent = "Merci de renseigner le login et le mot de passe.";
-      return;
-    }
-
-    if(status) status.textContent = "Envoi en cours...";
-    try{
-      const r = await fetch(`/espace/${token}/vtc-credentials`, {
-        method:"POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ login, password })
-      });
-      const res = await r.json().catch(()=> ({}));
-      if(!r.ok || !res.ok){
-        if(status) status.textContent = "Erreur lors de l’envoi. Merci de réessayer.";
-        return;
-      }
-      if(status) status.textContent = "✅ Identifiants envoyés. Merci !";
-    }catch(err){
-      if(status) status.textContent = "Erreur réseau. Merci de réessayer.";
-    }
-  });
-}
-
-
 {# helpers de couleur pour statuts #}
 {% macro pill_for(kind, value) %}
   {% set v = (value or '') %}
@@ -1101,6 +1067,38 @@ if (typeof closeModal !== "function") {
   };
 }
   const token = "{{ token_safe }}";
+
+  const vtcForm = document.getElementById("vtcCredentialsForm");
+  if(vtcForm){
+    vtcForm.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      const login = (document.getElementById("vtcLogin")?.value || "").trim();
+      const password = (document.getElementById("vtcPassword")?.value || "").trim();
+      const status = document.getElementById("vtcCredentialsStatus");
+
+      if(!login || !password){
+        if(status) status.textContent = "Merci de renseigner le login et le mot de passe.";
+        return;
+      }
+
+      if(status) status.textContent = "Envoi en cours...";
+      try{
+        const r = await fetch(`/espace/${token}/vtc-credentials`, {
+          method:"POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ login, password })
+        });
+        const res = await r.json().catch(()=> ({}));
+        if(!r.ok || !res.ok){
+          if(status) status.textContent = "Erreur lors de l’envoi. Merci de réessayer.";
+          return;
+        }
+        if(status) status.textContent = "✅ Identifiants envoyés. Merci !";
+      }catch(err){
+        if(status) status.textContent = "Erreur réseau. Merci de réessayer.";
+      }
+    });
+  }
 {% if not trainee.public_hide_welcome_popup %}
 // ✅ Welcome popup — une seule fois (on marque "vu" dès l'ouverture)
 (function(){
