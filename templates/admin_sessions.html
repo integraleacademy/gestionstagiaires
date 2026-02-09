@@ -153,6 +153,7 @@
 
   <div style="display:flex;gap:10px;flex-wrap:wrap;">
     <button class="btn btn-outline" id="btnOpenCnaps">CONTACTER LE CNAPS</button>
+    <a class="btn btn-outline" href="{{ url_for('admin_secretariat') }}">Gestion secrétariat</a>
     <a class="btn btn-outline" href="{{ url_for('admin_sessions_archived') }}">Sessions archivées</a>
     {% if not is_read_only %}
       <button class="btn btn-primary" id="btnOpenCreateSession">+ Nouvelle session</button>

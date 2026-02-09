@@ -403,7 +403,13 @@ def ensure_cnaps_history(t: Dict[str, Any]) -> None:
 
 def load_data() -> Dict[str, Any]:
     if not os.path.exists(DATA_FILE):
-        base = {"sessions": [], "positioning_tests": []}
+        base = {
+            "sessions": [],
+            "positioning_tests": [],
+            "notifications_edof": [],
+            "notifications_prelevements": [],
+            "notifications_phone_relances": [],
+        }
         save_data(base)
         return base
     try:
@@ -423,6 +429,15 @@ def load_data() -> Dict[str, Any]:
         if "positioning_tests" not in data:
             data["positioning_tests"] = []
             changed = True
+        if "notifications_edof" not in data:
+            data["notifications_edof"] = []
+            changed = True
+        if "notifications_prelevements" not in data:
+            data["notifications_prelevements"] = []
+            changed = True
+        if "notifications_phone_relances" not in data:
+            data["notifications_phone_relances"] = []
+            changed = True
 
         if changed:
             save_data(data)
@@ -436,7 +451,13 @@ def load_data() -> Dict[str, Any]:
             os.replace(DATA_FILE, backup)
         except Exception:
             pass
-        base = {"sessions": [], "positioning_tests": []}
+        base = {
+            "sessions": [],
+            "positioning_tests": [],
+            "notifications_edof": [],
+            "notifications_prelevements": [],
+            "notifications_phone_relances": [],
+        }
         save_data(base)
         return base
 
@@ -448,6 +469,29 @@ def save_data(data: Dict[str, Any]) -> None:
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     os.replace(tmp, DATA_FILE)
+
+
+def _notification_id(prefix: str) -> str:
+    return f"{prefix}-{uuid.uuid4().hex[:10].upper()}"
+
+
+def add_notification(data: Dict[str, Any], bucket: str, label: str, meta: Optional[dict] = None) -> dict:
+    notifications = data.setdefault(bucket, [])
+    prefix_map = {
+        "notifications_edof": "EDOF",
+        "notifications_prelevements": "PREL",
+        "notifications_phone_relances": "REL",
+    }
+    entry = {
+        "id": _notification_id(prefix_map.get(bucket, "NOTI")),
+        "label": label,
+        "created_at": _now_iso(),
+        "done": False,
+    }
+    if meta:
+        entry["meta"] = meta
+    notifications.insert(0, entry)
+    return entry
 
 
 def positioning_test_public_sections() -> List[Dict[str, Any]]:
@@ -1801,6 +1845,18 @@ def admin_sessions():
     )
 
 
+@app.get("/admin/gestion-secretariat")
+@admin_login_required
+def admin_secretariat():
+    data = load_data()
+    return render_template(
+        "admin_secretariat.html",
+        edof_notifications=data.get("notifications_edof", []),
+        prelevement_notifications=data.get("notifications_prelevements", []),
+        phone_notifications=data.get("notifications_phone_relances", []),
+    )
+
+
 @app.post("/admin/edof/submit")
 @admin_login_required
 def admin_edof_submit():
@@ -1840,6 +1896,21 @@ def admin_edof_submit():
         admin_html,
         cc_emails=["znaw83@gmail.com"],
     )
+
+    data = load_data()
+    add_notification(
+        data,
+        "notifications_edof",
+        f"{first_name} {last_name} • {training_label} • {phone} • {email}",
+        meta={
+            "first_name": first_name,
+            "last_name": last_name,
+            "training": training_label,
+            "phone": phone,
+            "email": email,
+        },
+    )
+    save_data(data)
 
     user_subject = f"Votre demande d'inscription – {training_label}".strip()
     user_html = mail_layout(f"""
@@ -1888,6 +1959,31 @@ def admin_edof_submit():
         "email_ok": bool(email_ok),
         "sms_ok": bool(sms_ok),
     })
+
+
+@app.post("/api/secretariat/notifications/<bucket>/<notification_id>/toggle")
+@admin_login_required
+def api_secretariat_notification_toggle(bucket: str, notification_id: str):
+    bucket_map = {
+        "edof": "notifications_edof",
+        "prelevements": "notifications_prelevements",
+        "relances": "notifications_phone_relances",
+    }
+    bucket_key = bucket_map.get(bucket)
+    if not bucket_key:
+        return jsonify({"ok": False, "error": "invalid_bucket"}), 400
+
+    data = load_data()
+    notifications = data.get(bucket_key, [])
+    entry = next((item for item in notifications if item.get("id") == notification_id), None)
+    if not entry:
+        return jsonify({"ok": False, "error": "not_found"}), 404
+
+    entry["done"] = not bool(entry.get("done"))
+    entry["done_at"] = _now_iso() if entry["done"] else ""
+    save_data(data)
+
+    return jsonify({"ok": True, "done": bool(entry.get("done"))})
 
 
 @app.get("/admin/test-positionnement")
@@ -4867,6 +4963,22 @@ def api_phone_relance_send(session_id: str, trainee_id: str):
         cc_emails=["clement@integraleacademy.com"],
     )
 
+    add_notification(
+        data,
+        "notifications_phone_relances",
+        f"{first_name} {last_name} • {formation_type}",
+        meta={
+            "first_name": first_name,
+            "last_name": last_name,
+            "training": formation_type,
+            "phone": phone,
+            "email": email,
+            "session_id": s.get("id"),
+            "trainee_id": t.get("id"),
+            "followup_id": followup_id,
+        },
+    )
+
     # persistance
     s["trainees"] = _session_trainees_list(s)
     s.pop("stagiaires", None)
@@ -5045,6 +5157,22 @@ def api_financement_rejet_send(session_id: str, trainee_id: str):
         "Clément VAILLANT - Intégrale Academy"
     ).strip()
     sms_ok = brevo_send_sms(phone, sms) if phone else False
+
+    add_notification(
+        data,
+        "notifications_prelevements",
+        f"{first_name} {last_name} • {training_name} • {amount} • {scheduled_fr}",
+        meta={
+            "first_name": first_name,
+            "last_name": last_name,
+            "training": training_name,
+            "amount": amount,
+            "scheduled_date": scheduled_date,
+            "session_id": s.get("id"),
+            "trainee_id": t.get("id"),
+            "entry_id": entry_id,
+        },
+    )
 
     s["trainees"] = _session_trainees_list(s)
     s.pop("stagiaires", None)
