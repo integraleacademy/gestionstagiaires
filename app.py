@@ -2278,8 +2278,14 @@ def api_create_trainee(session_id: str):
     last_name = normalize_last_name(payload.get("last_name") or "")
     first_name = normalize_first_name(payload.get("first_name") or "")
     birth_date = (payload.get("birth_date") or "").strip()
+    birth_city = (payload.get("birth_city") or "").strip()
     email = (payload.get("email") or "").strip()
     phone = (payload.get("phone") or "").strip()
+    zip_code = (payload.get("zip_code") or "").strip()
+    city = (payload.get("city") or "").strip()
+    cpf_amount = (payload.get("cpf_amount") or "").strip()
+    personal_amount = (payload.get("personal_amount") or "").strip()
+    other_amount = (payload.get("other_amount") or "").strip()
     carte_pro_ok = bool(payload.get("carte_pro_ok"))
 
     # ✅ nouveau : choisir si on envoie l'accès tout de suite
@@ -2304,8 +2310,11 @@ def api_create_trainee(session_id: str):
         "last_name": last_name,
         "first_name": first_name,
         "birth_date": birth_date,
+        "birth_city": birth_city,
         "email": email,
         "phone": phone,
+        "zip_code": zip_code,
+        "city": city,
         "comment": "",
         "cnaps": "CARTE PROFESSIONNELLE OK" if carte_pro_ok else "INCONNU",
         "convention_status": "soon",
@@ -2313,9 +2322,9 @@ def api_create_trainee(session_id: str):
         "dossier_status": "incomplete",
         "financement_status": "soon",
         "training_price": default_price if default_price is not None else "",
-        "cpf_amount": "",
-        "personal_amount": "",
-        "other_amount": "",
+        "cpf_amount": cpf_amount,
+        "personal_amount": personal_amount,
+        "other_amount": other_amount,
         "vae_status": "soon" if show_vae else "",
         "hosting_status": "unknown" if show_hosting else "",
         "public_token": public_token,
@@ -2434,7 +2443,8 @@ def api_create_trainee(session_id: str):
         "id": trainee_id,
         "access_email_ok": email_ok,
         "access_sms_ok": sms_ok,
-        "public_link": link
+        "public_link": link,
+        "summary_url": url_for("admin_trainee_summary", session_id=session_id, trainee_id=trainee_id)
     })
 
 
@@ -2488,6 +2498,9 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "cpf_amount",
         "personal_amount",
         "other_amount",
+        "birth_city",
+        "zip_code",
+        "city",
 
     }
 
@@ -4747,6 +4760,41 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         default_training_price=default_price,
         PUBLIC_STUDENT_PORTAL_BASE=PUBLIC_STUDENT_PORTAL_BASE,
         fr_date=fr_date,
+    )
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/summary")
+@admin_login_required
+def admin_trainee_summary(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    training_name = (s.get("name") or "").strip() or formation_label(_session_get(s, "training_type", ""))
+    dstart = fr_date(_session_get(s, "date_start", ""))
+    dend = fr_date(_session_get(s, "date_end", ""))
+    formation_dates = f"Du {dstart} au {dend}" if dstart and dend else "Dates à confirmer"
+
+    session_view = {
+        "id": s.get("id"),
+        "name": _session_get(s, "name", ""),
+        "training_type": _session_get(s, "training_type", ""),
+        "date_start": _session_get(s, "date_start", ""),
+        "date_end": _session_get(s, "date_end", ""),
+    }
+
+    return render_template(
+        "admin_trainee_summary.html",
+        session=session_view,
+        trainee=t,
+        training_name=training_name or "Formation",
+        formation_dates=formation_dates,
     )
 
 @app.get("/api/docs_to_control")
