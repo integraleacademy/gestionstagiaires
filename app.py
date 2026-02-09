@@ -27,6 +27,8 @@ app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
 ADMIN_USER = os.environ.get("ADMIN_USER", "")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+SECRETARY_USER = os.environ.get("SECRETARY_USER", "")
+SECRETARY_PASSWORD = os.environ.get("SECRETARY_PASSWORD", "")
 SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "30"))
 
 app.config.update(
@@ -45,6 +47,18 @@ def admin_login_required(view):
         return view(*args, **kwargs)
     return wrapped
 
+def admin_write_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if session.get("admin_role") == "viewer":
+            abort(403)
+        return view(*args, **kwargs)
+    return wrapped
+
+@app.context_processor
+def inject_read_only():
+    return {"is_read_only": session.get("admin_role") == "viewer"}
+
 @app.get("/admin/login")
 def admin_login():
     # mini page sans template (pour aller vite)
@@ -54,6 +68,9 @@ def admin_login():
     <title>Connexion admin</title></head>
     <body style="font-family:Arial,sans-serif;max-width:420px;margin:60px auto;padding:20px">
       <h2>Connexion</h2>
+      <p style="color:#6b7280;font-size:13px;margin-top:-4px">
+        Un compte de consultation peut être configuré pour un accès en lecture seule.
+      </p>
       <form method="post" action="/admin/login">
         <input type="hidden" name="next" value="{next_url}">
         <div style="margin:10px 0">
@@ -76,13 +93,21 @@ def admin_login_post():
     next_url = request.form.get("next") or url_for("admin_sessions")
 
     # sécurité minimale : si pas configuré, on refuse
-    if not ADMIN_USER or not ADMIN_PASSWORD:
+    if not (ADMIN_USER and ADMIN_PASSWORD) and not (SECRETARY_USER and SECRETARY_PASSWORD):
         abort(500, "ADMIN_USER/ADMIN_PASSWORD non configurés")
 
     if username == ADMIN_USER and password == ADMIN_PASSWORD:
         session["admin_logged_in"] = True
+        session["admin_role"] = "admin"
         session.permanent = True  # ✅ cookie persistant
         return redirect(next_url)
+
+    if SECRETARY_USER and SECRETARY_PASSWORD:
+        if username == SECRETARY_USER and password == SECRETARY_PASSWORD:
+            session["admin_logged_in"] = True
+            session["admin_role"] = "viewer"
+            session.permanent = True
+            return redirect(next_url)
 
     return redirect(url_for("admin_login", next=next_url))
 
@@ -2020,6 +2045,7 @@ def admin_trainees(session_id: str):
 
 @app.post("/api/sessions/create")
 @admin_login_required
+@admin_write_required
 def api_create_session():
     data = load_data()
     payload = request.get_json(silent=True) or {}
@@ -2052,6 +2078,7 @@ def api_create_session():
 
 @app.post("/api/sessions/<session_id>/delete")
 @admin_login_required
+@admin_write_required
 def api_delete_session(session_id: str):
     data = load_data()
     before = len(data.get("sessions", []))
@@ -2061,6 +2088,7 @@ def api_delete_session(session_id: str):
 
 @app.post("/api/sessions/<session_id>/archive")
 @admin_login_required
+@admin_write_required
 def api_archive_session(session_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -2075,6 +2103,7 @@ def api_archive_session(session_id: str):
 
 @app.post("/api/sessions/<session_id>/unarchive")
 @admin_login_required
+@admin_write_required
 def api_unarchive_session(session_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -2094,6 +2123,7 @@ def api_unarchive_session(session_id: str):
 
 @app.post("/api/sessions/<session_id>/trainees/create")
 @admin_login_required
+@admin_write_required
 def api_create_trainee(session_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -2264,6 +2294,7 @@ def api_create_trainee(session_id: str):
 
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/update")
 @admin_login_required
+@admin_write_required
 def api_update_trainee(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -2359,6 +2390,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
 
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/pre-reception")
 @admin_login_required
+@admin_write_required
 def api_admin_pre_reception(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -2420,6 +2452,7 @@ def api_admin_pre_reception(session_id: str, trainee_id: str):
 
 @app.post("/api/sessions/<session_id>/trainees/<trainee_id>/delete")
 @admin_login_required
+@admin_write_required
 def api_delete_trainee(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -2502,6 +2535,7 @@ def api_positioning_test_submit():
 
 @app.post("/api/test-positionnement/<test_id>/delete")
 @admin_login_required
+@admin_write_required
 def api_positioning_test_delete(test_id: str):
     data = load_data()
     entries = list(data.get("positioning_tests", []))
@@ -2513,6 +2547,7 @@ def api_positioning_test_delete(test_id: str):
 
 @app.post("/api/test-positionnement/delete_all")
 @admin_login_required
+@admin_write_required
 def api_positioning_test_delete_all():
     data = load_data()
     deleted = len(data.get("positioning_tests", []))
@@ -2817,6 +2852,7 @@ def public_trainee_login_post(token: str):
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/documents/<doc_key>/upload")
 @admin_login_required
+@admin_write_required
 def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -2884,6 +2920,7 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/documents/<doc_key>/delete")
 @admin_login_required
+@admin_write_required
 def admin_delete_doc_file(session_id: str, trainee_id: str, doc_key: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -3039,6 +3076,7 @@ def infos_missing_text(trainee: dict) -> str:
 # =========================
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/delete")
 @admin_login_required
+@admin_write_required
 def admin_delete_trainee(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -3225,6 +3263,7 @@ def _insert_label_photo(doc: Document, placeholder: str, photo_path: str, width_
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/send-access")
 @admin_login_required
+@admin_write_required
 def admin_send_access(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -3263,6 +3302,7 @@ def admin_send_access(session_id: str, trainee_id: str):
 # =========================
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/unsigned-notify")
 @admin_login_required
+@admin_write_required
 def admin_convention_unsigned_notify(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -3323,6 +3363,7 @@ def admin_convention_unsigned_notify(session_id: str, trainee_id: str):
 # =========================
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/test-fr/notify")
 @admin_login_required
+@admin_write_required
 def admin_test_fr_notify(session_id: str, trainee_id: str):
     code = (request.form.get("code") or "").strip()
     deadline = (request.form.get("deadline") or "").strip()
@@ -3412,6 +3453,7 @@ def admin_test_fr_notify(session_id: str, trainee_id: str):
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/test-fr/relance")
 @admin_login_required
+@admin_write_required
 def admin_test_fr_relance(session_id: str, trainee_id: str):
     code = (request.form.get("code") or "").strip()
     deadline = (request.form.get("deadline") or "").strip()
@@ -3508,6 +3550,7 @@ def admin_test_fr_relance(session_id: str, trainee_id: str):
 # =========================
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/docs/notify")
 @admin_login_required
+@admin_write_required
 def admin_docs_notify(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -3589,6 +3632,7 @@ def admin_docs_notify(session_id: str, trainee_id: str):
     
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/docs/nonconform/notify")
 @admin_login_required
+@admin_write_required
 def admin_docs_nonconform_notify(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -3678,6 +3722,7 @@ def admin_docs_nonconform_notify(session_id: str, trainee_id: str):
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/docs/relance")
 @admin_login_required
+@admin_write_required
 def admin_docs_relance(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -3841,6 +3886,7 @@ def admin_docs_zip(session_id: str, trainee_id: str):
 # =========================
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/documents/update")
 @admin_login_required
+@admin_write_required
 def api_docs_update(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -3911,6 +3957,7 @@ def deliverables_progress(t: Dict[str, Any]):
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/deliverables/<kind>/upload")
 @admin_login_required
+@admin_write_required
 def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
     if kind not in DELIVERABLE_LABELS:
         abort(404)
@@ -4187,6 +4234,7 @@ def public_trainee_space(token):
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/identity-photo/upload")
 @admin_login_required
+@admin_write_required
 def admin_upload_identity_photo(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -4727,6 +4775,7 @@ def _find_session_and_trainee(data: Dict[str, Any], session_id: str, trainee_id:
 
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/phone-relance/send")
 @admin_login_required
+@admin_write_required
 def api_phone_relance_send(session_id: str, trainee_id: str):
     payload = request.get_json(silent=True) or {}
     admin_comment = (payload.get("comment") or "").strip()
@@ -4880,6 +4929,7 @@ def _send_prelevement_new_date_email(
 
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/financement-rejet/send")
 @admin_login_required
+@admin_write_required
 def api_financement_rejet_send(session_id: str, trainee_id: str):
     payload = request.get_json(silent=True) or {}
     amount = (payload.get("amount") or "").strip()
@@ -5306,17 +5356,20 @@ def phone_followup_reply(token: str):
 
 @app.post("/api/sessions/<session_id>/stagiaires/create")
 @admin_login_required
+@admin_write_required
 def api_create_trainee_alias(session_id: str):
     # redirige vers la vraie fonction
     return api_create_trainee(session_id)
 
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/delete")
 @admin_login_required
+@admin_write_required
 def api_delete_trainee_alias(session_id: str, trainee_id: str):
     return api_delete_trainee(session_id, trainee_id)
 
 @app.post("/api/sessions/<session_id>/trainees/<trainee_id>/update")
 @admin_login_required
+@admin_write_required
 def api_update_trainee_alias(session_id: str, trainee_id: str):
     # ton update actuel est en /stagiaires/.../update
     return api_update_trainee(session_id, trainee_id)
@@ -5357,6 +5410,7 @@ def _match_trainee_from_filename(trainees: list, filename: str):
 
 @app.post("/api/sessions/<session_id>/sst/bulk_upload")
 @admin_login_required
+@admin_write_required
 def api_sst_bulk_upload(session_id: str):
     import traceback
 
@@ -5532,6 +5586,7 @@ def api_sst_bulk_upload(session_id: str):
 
 @app.post("/api/sessions/<session_id>/diplome/bulk_upload")
 @admin_login_required
+@admin_write_required
 def api_diplome_bulk_upload(session_id: str):
     import traceback
 
@@ -5772,6 +5827,7 @@ def api_diplome_bulk_upload(session_id: str):
 
 @app.post("/api/sessions/<session_id>/attestation/bulk_upload")
 @admin_login_required
+@admin_write_required
 def api_attestation_bulk_upload(session_id: str):
     import traceback
 

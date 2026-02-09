@@ -4,7 +4,10 @@
 <div class="page-head" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
   <div>
     <h1 style="margin:0">Sessions archivées</h1>
-    <div class="muted" style="margin-top:6px;">Ici tu retrouves les sessions archivées. Tu peux les restaurer ou les supprimer.</div>
+    <div class="muted" style="margin-top:6px;">
+      Ici tu retrouves les sessions archivées.
+      {% if not is_read_only %}Tu peux les restaurer ou les supprimer.{% endif %}
+    </div>
   </div>
 
   <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -32,9 +35,11 @@
     <div class="card-actions">
       <a class="btn" href="{{ url_for('admin_trainees', session_id=s.id, **request.args) }}">Voir les stagiaires</a>
 
-      <button class="btn btn-primary" data-unarchive-session="{{ s.id }}">Restaurer</button>
+      {% if not is_read_only %}
+        <button class="btn btn-primary" data-unarchive-session="{{ s.id }}">Restaurer</button>
 
-      <button class="btn btn-danger" data-delete-session="{{ s.id }}">Supprimer</button>
+        <button class="btn btn-danger" data-delete-session="{{ s.id }}">Supprimer</button>
+      {% endif %}
     </div>
   </div>
   {% endfor %}

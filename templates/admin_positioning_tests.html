@@ -12,10 +12,10 @@
     <h1 style="margin:0 0 6px;">Tests de positionnement</h1>
     <div class="muted">Liste des candidats ayant passé le test et leur résultat.</div>
   </div>
-  {% if entries|length > 0 %}
-  <div style="display:flex;gap:8px;flex-wrap:wrap;">
-    <button class="btn btn-danger" type="button" id="btnDeleteAllTests">Tout supprimer</button>
-  </div>
+  {% if entries|length > 0 and not is_read_only %}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-danger" type="button" id="btnDeleteAllTests">Tout supprimer</button>
+    </div>
   {% endif %}
 </div>
 
@@ -47,7 +47,9 @@
           <td>
             <div style="display:flex;gap:6px;flex-wrap:wrap;">
               <a class="btn btn-outline" href="{{ url_for('admin_positioning_test_detail', test_id=entry.id) }}">Voir réponses</a>
-              <button class="btn btn-danger" type="button" data-delete-test="{{ entry.id }}">Supprimer</button>
+              {% if not is_read_only %}
+                <button class="btn btn-danger" type="button" data-delete-test="{{ entry.id }}">Supprimer</button>
+              {% endif %}
             </div>
           </td>
         </tr>

@@ -154,7 +154,9 @@
   <div style="display:flex;gap:10px;flex-wrap:wrap;">
     <button class="btn btn-outline" id="btnOpenCnaps">CONTACTER LE CNAPS</button>
     <a class="btn btn-outline" href="{{ url_for('admin_sessions_archived') }}">Sessions archivées</a>
-    <button class="btn btn-primary" id="btnOpenCreateSession">+ Nouvelle session</button>
+    {% if not is_read_only %}
+      <button class="btn btn-primary" id="btnOpenCreateSession">+ Nouvelle session</button>
+    {% endif %}
   </div>
 </div>
 
@@ -246,9 +248,11 @@
 <div class="card-actions">
   <a class="btn" href="{{ url_for('admin_trainees', session_id=s.id, **request.args) }}">Voir les stagiaires</a>
 
-  <button class="btn btn-outline" data-archive-session="{{ s.id }}">Archiver</button>
+  {% if not is_read_only %}
+    <button class="btn btn-outline" data-archive-session="{{ s.id }}">Archiver</button>
 
-  <button class="btn btn-danger" data-delete-session="{{ s.id }}">Supprimer</button>
+    <button class="btn btn-danger" data-delete-session="{{ s.id }}">Supprimer</button>
+  {% endif %}
 </div>
   </div>
   {% endfor %}
