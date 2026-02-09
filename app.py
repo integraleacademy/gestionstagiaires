@@ -3532,7 +3532,7 @@ def _build_test_fr_payload(t, s, code, deadline, mode):
 
         sms = (
             f"Intégrale Academy 📝 Bonjour {t.get('first_name','')}, "
-            f"Vous devez réalsier le Test de français obligatoire pour votre formation {formation_type}. "
+            f"Vous devez réaliser le Test de français obligatoire pour votre formation {formation_type}. "
             f"Lien : {link} | Code : {code} | À faire le {deadline_fr}. "
             f"Besoin d’aide ? 04 22 47 07 68"
         )
