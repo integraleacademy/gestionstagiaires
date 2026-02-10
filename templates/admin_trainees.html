@@ -201,15 +201,12 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         {% if show_vae %}
         <td>
   <select class="status sel" data-field="vae_status" {{ read_only_attr }}>
-    <option value="soon" {% if t.vae_status=="soon" or not t.vae_status %}selected{% endif %}>
-      PROCHAINEMENT
-    </option>
-    <option value="in_progress" {% if t.vae_status=="in_progress" %}selected{% endif %}>
-      EN COURS
-    </option>
-    <option value="validated" {% if t.vae_status=="validated" %}selected{% endif %}>
-      VALIDÉ
-    </option>
+    <option value="livret_1_todo" {% if t.vae_status=="livret_1_todo" or not t.vae_status %}selected{% endif %}>Livret 1 à compléter</option>
+    <option value="livret_1_analysis" {% if t.vae_status=="livret_1_analysis" %}selected{% endif %}>Livret 1 en cours d'analyse</option>
+    <option value="livret_2_todo" {% if t.vae_status=="livret_2_todo" %}selected{% endif %}>Livret 2 à compléter</option>
+    <option value="livret_2_analysis" {% if t.vae_status=="livret_2_analysis" %}selected{% endif %}>Livret 2 en cours d'analyse</option>
+    <option value="jury" {% if t.vae_status=="jury" %}selected{% endif %}>Passage devant le jury</option>
+    <option value="certified" {% if t.vae_status=="certified" %}selected{% endif %}>Certification obtenue</option>
   </select>
 </td>
 
