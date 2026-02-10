@@ -5086,6 +5086,7 @@ def admin_vtc_cm_autologin(session_id: str, trainee_id: str):
     login_esc = html.escape(login)
     password_esc = html.escape(password)
     target_url = "https://www.exament3p.fr/id/14"
+    login_endpoint = "https://www.exament3p.fr/connexion"
 
     return f"""
 <!doctype html>
@@ -5095,40 +5096,85 @@ def admin_vtc_cm_autologin(session_id: str, trainee_id: str):
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Connexion auto Exament3P</title>
   <style>
-    body {{ font-family: Arial, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 16px; line-height: 1.45; }}
+    body {{ font-family: Arial, sans-serif; max-width: 820px; margin: 40px auto; padding: 0 16px; line-height: 1.45; }}
     .card {{ border:1px solid #e5e7eb; border-radius:14px; padding:18px; background:#fff; }}
     .ok {{ color:#166534; font-weight:700; }}
     .hint {{ color:#6b7280; }}
-    .btn {{ display:inline-block; margin-top:12px; border:1px solid #d1d5db; border-radius:8px; padding:8px 12px; text-decoration:none; color:#111827; }}
+    .btn {{ display:inline-block; margin-top:12px; border:1px solid #d1d5db; border-radius:8px; padding:8px 12px; text-decoration:none; color:#111827; background:#fff; cursor:pointer; }}
+    .btn + .btn {{ margin-left:8px; }}
   </style>
 </head>
 <body>
   <div class="card">
     <div class="ok">✅ Tentative de connexion automatique à Exament3P en cours…</div>
-    <p>Nous envoyons automatiquement les identifiants enregistrés pour <strong>{html.escape(trainee_name)}</strong>.</p>
-    <p class="hint">Si le site n’accepte pas l’auto-connexion (champs/anti-bot), utilisez les identifiants affichés dans la fiche stagiaire.</p>
-    <a class="btn" href="{target_url}" rel="noopener">Ouvrir Exament3P manuellement</a>
+    <p>Nous ouvrons Exament3P et tentons la connexion avec les identifiants enregistrés pour <strong>{html.escape(trainee_name)}</strong>.</p>
+    <p class="hint">Si Exament3P refuse l’auto-connexion (anti-bot/changement de formulaire), utilisez les boutons de secours ci-dessous.</p>
+
+    <button class="btn" type="button" onclick="runAutoLogin()">Relancer la connexion auto</button>
+    <a class="btn" href="{target_url}" target="_blank" rel="noopener">Ouvrir Exament3P manuellement</a>
   </div>
 
-  <form id="autoLoginForm" method="post" action="{target_url}" style="display:none;">
+  <form id="autoLoginConnexion" method="post" action="{login_endpoint}" target="exament3p_auto" style="display:none;">
+    <input name="email" value="{login_esc}">
     <input name="login" value="{login_esc}">
     <input name="username" value="{login_esc}">
     <input name="identifiant" value="{login_esc}">
-    <input name="email" value="{login_esc}">
+    <input name="_username" value="{login_esc}">
+
     <input name="password" type="password" value="{password_esc}">
     <input name="passwd" type="password" value="{password_esc}">
     <input name="mot_de_passe" type="password" value="{password_esc}">
+    <input name="_password" type="password" value="{password_esc}">
+
+    <input name="remember" value="1">
+    <input name="_remember_me" value="on">
+  </form>
+
+  <form id="autoLoginId14" method="post" action="{target_url}" target="exament3p_auto" style="display:none;">
+    <input name="email" value="{login_esc}">
+    <input name="login" value="{login_esc}">
+    <input name="username" value="{login_esc}">
+    <input name="identifiant" value="{login_esc}">
+    <input name="_username" value="{login_esc}">
+
+    <input name="password" type="password" value="{password_esc}">
+    <input name="passwd" type="password" value="{password_esc}">
+    <input name="mot_de_passe" type="password" value="{password_esc}">
+    <input name="_password" type="password" value="{password_esc}">
   </form>
 
   <script>
-    setTimeout(function() {{
-      const f = document.getElementById('autoLoginForm');
-      if (f) f.submit();
-    }}, 120);
+    function runAutoLogin() {{
+      const win = window.open('about:blank', 'exament3p_auto');
+      if (!win) {{
+        window.location.href = '{target_url}';
+        return;
+      }}
+
+      const formConnexion = document.getElementById('autoLoginConnexion');
+      const formId14 = document.getElementById('autoLoginId14');
+
+      if (formConnexion) formConnexion.submit();
+
+      setTimeout(function() {{
+        if (formId14) formId14.submit();
+      }}, 900);
+
+      setTimeout(function() {{
+        try {{
+          win.location.href = '{target_url}';
+        }} catch (e) {{
+          // cross-origin: ignore
+        }}
+      }}, 1700);
+    }}
+
+    setTimeout(runAutoLogin, 120);
   </script>
 </body>
 </html>
 """
+
 
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/summary")
