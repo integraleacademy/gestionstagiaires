@@ -2263,6 +2263,57 @@ def api_secretariat_prelevement_new_date(notification_id: str):
     return jsonify({"ok": True, "new_date": new_date, **refreshed_payload})
 
 
+@app.post("/api/secretariat/notifications/prelevements/<notification_id>/call-result")
+@admin_login_required
+@admin_write_required
+def api_secretariat_prelevement_result(notification_id: str):
+    payload = request.get_json(silent=True) or {}
+    outcome = (payload.get("outcome") or "").strip().upper()
+    comment = (payload.get("comment") or "").strip()
+    if outcome not in ("CALLED", "NO_ANSWER"):
+        return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+
+    data = load_data()
+    notification = next(
+        (item for item in data.get("notifications_prelevements", []) if item.get("id") == notification_id),
+        None,
+    )
+    if not notification:
+        return jsonify({"ok": False, "error": "notification_not_found"}), 404
+
+    notification_meta = notification.setdefault("meta", {})
+    previous_no_answer = int(notification_meta.get("no_answer_count") or 0)
+    if outcome == "NO_ANSWER":
+        no_answer_count = min(3, previous_no_answer + 1)
+        display = {
+            1: "1er appel pas de réponse",
+            2: "2ème appel pas de réponse",
+            3: "3ème appel pas de réponse",
+        }[no_answer_count]
+        notification["done"] = no_answer_count >= 3
+        notification["done_at"] = _now_iso() if notification.get("done") else ""
+    else:
+        no_answer_count = 0
+        display = "Personne jointe"
+        notification["done"] = True
+        notification["done_at"] = _now_iso()
+
+    notification_meta["call_status"] = display
+    notification_meta["no_answer_count"] = no_answer_count
+    if comment:
+        notification_meta["last_comment"] = comment
+
+    save_data(data)
+    refreshed_payload = _secretariat_notifications_payload(data)
+    return jsonify({
+        "ok": True,
+        "done": bool(notification.get("done")),
+        "call_status": display,
+        "no_answer_count": no_answer_count,
+        **refreshed_payload,
+    })
+
+
 @app.post("/api/secretariat/notifications/relances/<notification_id>/call-result")
 @admin_login_required
 @admin_write_required
