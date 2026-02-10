@@ -80,7 +80,7 @@
         </div>
       {% endif %}
       <div class="topbar-actions" style="display:flex;align-items:center;gap:10px;">
-        {% if session.get("admin_logged_in") %}
+        {% if is_admin_logged_in and (request.endpoint in ["admin_sessions", "admin_trainees", "admin_trainee_page"]) %}
           {% if admin_can_access_notifications and request.endpoint != "admin_secretariat" %}
             <div class="notif-wrap" id="adminNotifWrap">
               <button type="button"
@@ -137,7 +137,7 @@
     {% block content %}{% endblock %}
   </div>
 
-  {% if session.get("admin_logged_in") %}
+  {% if is_admin_logged_in and (request.endpoint in ["admin_sessions", "admin_trainees", "admin_trainee_page"]) %}
   <div class="modal-backdrop" id="edofModal" aria-hidden="true">
     <div class="modal" style="max-width:560px;">
       <div class="modal-head">
