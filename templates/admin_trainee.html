@@ -67,17 +67,6 @@
     </div>
   </div>
 
-  {% if admin_can_access_notifications %}
-    <div style="display:flex;justify-content:flex-end;align-self:flex-start;">
-      <button type="button"
-              class="notif-btn {% if admin_unresolved_total > 0 %}has-unread{% endif %}"
-              data-admin-notif-shortcut="true">
-        🔔 Notifications
-        <span class="notif-count" {% if admin_unresolved_total == 0 %}style="display:none;"{% endif %}>{{ admin_unresolved_total }}</span>
-        <span class="notif-dot" {% if admin_unresolved_total == 0 %}style="display:none;"{% endif %}></span>
-      </button>
-    </div>
-  {% endif %}
 </div>
 
 <div class="card" style="margin-top:12px;">
