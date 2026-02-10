@@ -347,8 +347,8 @@ def notify_elearning_access_available(trainee: Dict[str, Any], session_obj: Dict
     sms_name = (trainee.get("first_name") or "").strip()
     sms = (
         f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
-        "votre accès e-learning est disponible. "
-        f"Retrouvez-le dans votre Espace Stagiaire : {access_link}"
+        "Votre accès e-learning Formation VTC est disponible. "
+        f"Connectez vous à votre Espace Stagiaire pour suivre votre formation : {access_link}"
     )
 
     email_ok = brevo_send_email((trainee.get("email") or "").strip(), subject, html)
