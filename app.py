@@ -1244,6 +1244,12 @@ REQUIRED_DOCS = {
 def required_docs_for_training(training_type: str) -> List[Dict[str, Any]]:
     tt = (training_type or "").strip().upper()
     docs = list(REQUIRED_DOCS["COMMON"])
+
+    # Pour les parcours dirigeant (initial / VAE),
+    # ne pas demander le justificatif CNAPS à l'inscription.
+    if tt in {"DIRIGEANT INITIAL", "DIRIGEANT VAE"}:
+        docs = [d for d in docs if d.get("key") != "cnaps_doc"]
+
     if tt == "A3P":
         docs += list(REQUIRED_DOCS["A3P_ONLY"])
     return docs
