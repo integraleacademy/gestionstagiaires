@@ -401,33 +401,49 @@
     font-weight:900;
     font-size:18px;
   }
+  .collapse-summary-main{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:0;
+    flex-wrap:wrap;
+  }
   .collapse-summary::-webkit-details-marker{display:none;}
   .collapse-summary::after{
-    content:"▸";
-    font-size:16px;
+    content:"▼";
+    font-size:28px;
+    line-height:1;
+    font-weight:900;
     color:#6b7280;
-    transition:transform .2s ease;
+    transition:transform .25s ease;
+    animation: infosArrowBounce 1.2s ease-in-out infinite;
   }
   .collapse-card[open] .collapse-summary::after{
-    transform:rotate(90deg);
+    transform:rotate(180deg);
+    animation:none;
   }
   .collapse-content{
     padding:0 16px 16px 16px;
   }
   .infos-warning{
-    margin:0 0 14px 0;
-    padding:12px 14px;
+    margin:0;
+    padding:4px 10px;
     border-radius:12px;
     border:1px solid #fed7aa;
     background:#fff7ed;
     color:#9a3412;
     font-weight:800;
-    font-size:14px;
+    font-size:13px;
   }
+  .vtc-cta.is-hidden{display:none;}
   @keyframes vtcPulse{
     0%{box-shadow:0 0 0 0 rgba(251,191,36,.45);}
     70%{box-shadow:0 0 0 12px rgba(251,191,36,0);}
     100%{box-shadow:0 0 0 0 rgba(251,191,36,0);}
+  }
+  @keyframes infosArrowBounce{
+    0%,100%{transform:translateY(0);}
+    50%{transform:translateY(3px);}
   }
   .vtc-credentials-card{margin-top:8px;}
   .vtc-form-actions{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;}
@@ -694,11 +710,15 @@
     {% if not trainee.public_hide_infos %}
 <!-- Encadré : infos à compléter (autosave) -->
 {% if show_vtc %}
-<div id="infosToCompleteAlert" class="infos-warning" role="status" aria-live="polite" hidden>
-  ⚠️ Ouvrez cet onglet pour compléter vos informations
-</div>
 <details id="infosToCompleteDetails" class="collapse-card" style="grid-column:1/-1;">
-  <summary class="collapse-summary">Infos à compléter</summary>
+  <summary class="collapse-summary">
+    <span class="collapse-summary-main">
+      <span>Infos à compléter</span>
+      <span id="infosToCompleteAlert" class="infos-warning" role="status" aria-live="polite" hidden>
+        ⚠️ Ouvrez cet onglet pour compléter vos informations
+      </span>
+    </span>
+  </summary>
   <div class="collapse-content">
 {% else %}
 <div class="card" style="grid-column:1/-1;">
@@ -1444,11 +1464,15 @@ if (typeof closeModal !== "function") {
 
   const syncVtcPanel = () => {
     if (!vtcReady || !vtcPanel) return;
-    const hasSavedCreds = !!((vtcLoginInput?.value || "").trim() || (vtcPasswordInput?.value || "").trim());
+    const hasLogin = !!(vtcLoginInput?.value || "").trim();
+    const hasPassword = !!(vtcPasswordInput?.value || "").trim();
+    const hasSavedCreds = hasLogin || hasPassword;
+    const hasCompleteCreds = hasLogin && hasPassword;
     const isChecked = vtcReady.checked || hasSavedCreds;
     vtcReady.checked = isChecked;
     vtcPanel.hidden = !isChecked;
     if (vtcCta) vtcCta.classList.toggle("is-confirmed", isChecked);
+    if (vtcCta) vtcCta.classList.toggle("is-hidden", hasCompleteCreds || isVtcCredentialsSubmitted());
   };
 
   if (vtcReady) {
@@ -1458,6 +1482,10 @@ if (typeof closeModal !== "function") {
     });
     syncVtcPanel();
   }
+  [vtcLoginInput, vtcPasswordInput].forEach((input) => {
+    if (!input) return;
+    input.addEventListener("input", syncVtcPanel);
+  });
   if (infosDetails) {
     infosDetails.addEventListener("toggle", updateInfosToCompleteWarning);
   }
