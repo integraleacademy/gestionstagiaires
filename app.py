@@ -315,6 +315,8 @@ def notify_elearning_access_available(trainee: Dict[str, Any], session_obj: Dict
     training_name = formation_label(_session_get(session_obj, "training_type", ""))
     date_start = fr_date(_session_get(session_obj, "date_start", ""))
     date_end = fr_date(_session_get(session_obj, "date_end", ""))
+    student_space_link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{(trainee.get('public_token') or '').strip()}"
+    access_link = student_space_link if (trainee.get("public_token") or "").strip() else link
 
     subject = "Votre accès e-learning est disponible – Intégrale Academy"
     html = mail_layout(f"""
@@ -330,18 +332,21 @@ def notify_elearning_access_available(trainee: Dict[str, Any], session_obj: Dict
           {" — <strong>Dates :</strong> " + date_start + " au " + date_end if (date_start or date_end) else ""}
         </p>
         <p style="margin:0;">
-          <strong>🔗 Démarrer votre formation :</strong><br>
-          <a href="{link}" style="color:#1d4ed8;text-decoration:none;font-weight:700;">{link}</a>
+          <strong>🔗 Accéder à votre Espace Stagiaire :</strong><br>
+          <a href="{access_link}" style="color:#1d4ed8;text-decoration:none;font-weight:700;">{access_link}</a>
         </p>
       </div>
-      <p>Vous pouvez commencer dès maintenant.</p>
+      <p>
+        Vous pouvez dès maintenant retrouver vos accès à la formation théorique e-learning
+        directement dans votre Espace Stagiaire.
+      </p>
     """)
 
     sms_name = (trainee.get("first_name") or "").strip()
     sms = (
         f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
         "votre accès e-learning est disponible. "
-        f"Vous pouvez commencer votre formation ici : {link}"
+        f"Retrouvez-le dans votre Espace Stagiaire : {access_link}"
     )
 
     email_ok = brevo_send_email((trainee.get("email") or "").strip(), subject, html)
@@ -380,43 +385,33 @@ def build_vtc_onboarding_email(first_name: str, form_link: str) -> Tuple[str, st
       <p>{greeting}</p>
       <p>
         Je fais suite à votre inscription en formation <strong>Chauffeur VTC</strong>.
-        Je vous remercie pour votre confiance !
-        Afin que nous puissions procéder à votre inscription à l’examen Chauffeur VTC,
-        merci de suivre les étapes ci-dessous :
       </p>
-
-      <h3 style="margin:18px 0 6px 0;">1. Création de votre compte</h3>
+      <p>Je vous remercie pour votre confiance !</p>
       <p>
-        Rendez-vous sur le site officiel des examens VTC :
-        <a href="https://www.exament3p.fr/" target="_blank" rel="noopener">https://www.exament3p.fr/</a>
-      </p>
-
-      <h3 style="margin:18px 0 6px 0;">2. Dépôt des pièces justificatives</h3>
-      <p>Téléversez les documents suivants :</p>
-      <ul style="padding-left:18px;margin-top:6px;">
-        <li>Permis de conduire RECTO et VERSO</li>
-        <li>Pièce d’identité valide RECTO et VERSO</li>
-        <li>Photo d’identité scannée en haute qualité</li>
-        <li>Justificatif de domicile de moins de 3 mois</li>
-        <li>Scan de votre signature</li>
-      </ul>
-      <p style="color:#b91c1c;font-weight:bold;">⚠️ Attention : tout dossier incomplet sera automatiquement rejeté.</p>
-
-      <h3 style="margin:18px 0 6px 0;">3. Validation du paiement</h3>
-      <p>
-        Attention, ne procédez pas au paiement des frais d'examen sur exament3p.fr.
-        Les frais d’examen sont inclus dans le prix de votre formation et seront réglés
-        directement par notre centre de formation.
-      </p>
-      <p>
-        Pour que nous puissions prendre en charge le paiement de vos frais d’examen,
-        merci de compléter le formulaire ci-dessous :
+        Vous pouvez à présent accéder à votre Espace Stagiaire en cliquant ici :
       </p>
       <p style="text-align:center;margin:18px 0;">
         <a href="{form_link}"
-           style="display:inline-block;background:#7c3aed;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
-          👉 Renseigner mes identifiants Chambre des métiers
+           style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+          👉 Accéder à mon Espace Stagiaire
         </a>
+      </p>
+
+      <p>Dans votre Espace Stagiaire vous allez retrouver :</p>
+
+      <p>
+        1️⃣ Les indications pour créer votre compte Chambre des métiers (exament3p) :
+        ce compte vous permettra de déposer vos documents officiels nécessaires pour
+        l'inscription à l'examen théorique et l'examen pratique
+      </p>
+      <p>
+        2️⃣ Dès que votre compte Chambre des métiers sera créé, vous devrez nous indiquer,
+        dans votre Espace Stagiaire, votre identifiant et votre mot de passe Chambre des métiers,
+        afin que nous puissions nous connecter et procéder au paiement des frais d'examen
+        (⚠️ Veillez à ne pas régler les frais d'inscriptions, ils sont inclus dans votre formation)
+      </p>
+      <p>
+        3️⃣ Les accès à votre formation théorique en e-learning
       </p>
 
       <p>
