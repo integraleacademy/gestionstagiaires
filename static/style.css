@@ -92,6 +92,39 @@ a:focus{
 .brand strong{font-weight:900;letter-spacing:.2px}
 .brand span{color:var(--muted);font-size:13px;margin-left:6px}
 
+
+.topbar-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+@media (max-width: 980px){
+  .topbar-inner{
+    flex-wrap:wrap;
+    align-items:flex-start;
+  }
+  .topbar-actions{
+    width:100%;
+    justify-content:flex-start;
+  }
+}
+
+@media (max-width: 720px){
+  .topbar-actions .notif-btn{
+    font-size:12px;
+    padding:6px 8px;
+    gap:6px;
+  }
+  .topbar-actions .notif-panel{
+    right:auto;
+    left:0;
+    width:min(96vw, 420px);
+  }
+}
+
 /* =========================
    HEADERS
    ========================= */
