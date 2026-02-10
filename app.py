@@ -65,6 +65,7 @@ def inject_read_only():
         except Exception:
             admin_notifications = {"notifications": [], "unresolved_total": 0}
     return {
+        "is_admin_logged_in": bool(session.get("admin_logged_in")),
         "is_read_only": session.get("admin_role") == "viewer",
         "admin_notifications": admin_notifications["notifications"],
         "admin_unresolved_total": admin_notifications["unresolved_total"],
