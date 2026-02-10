@@ -292,7 +292,7 @@
     gap:12px;
     list-style:none;
   }
-  .vtc-assistance a{color:#1d4ed8;text-decoration:underline;}
+  .vtc-assistance a{color:#1d4ed8;text-decoration:none;}
   .assist-item{
     display:flex;
     gap:12px;
@@ -348,7 +348,7 @@
     background:#dbeafe;
     color:#1e3a8a;
     font-weight:700;
-    text-decoration:none;
+    text-decoration:none !important;
   }
   .assist-btn.secondary{
     background:#dcfce7;
@@ -388,10 +388,34 @@
   .collapse-content{
     padding:0 16px 16px 16px;
   }
+  .infos-warning{
+    margin:0 0 14px 0;
+    padding:12px 14px;
+    border-radius:12px;
+    border:1px solid #fed7aa;
+    background:#fff7ed;
+    color:#9a3412;
+    font-weight:800;
+    font-size:14px;
+  }
   @keyframes vtcPulse{
     0%{box-shadow:0 0 0 0 rgba(251,191,36,.45);}
     70%{box-shadow:0 0 0 12px rgba(251,191,36,0);}
     100%{box-shadow:0 0 0 0 rgba(251,191,36,0);}
+  }
+  .vtc-credentials-card{margin-top:8px;}
+  .vtc-form-actions{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;}
+  .vtc-form-actions.is-submitted{display:none;}
+
+  @media (max-width: 640px){
+    .vtc-cta-label{align-items:flex-start;gap:10px;}
+    .vtc-cta-label input{
+      width:20px;
+      height:20px;
+      margin-top:2px;
+      flex:0 0 auto;
+      accent-color:#1d4ed8;
+    }
   }
   
 </style>
@@ -623,7 +647,10 @@
     {% if not trainee.public_hide_infos %}
 <!-- Encadré : infos à compléter (autosave) -->
 {% if show_vtc %}
-<details class="collapse-card" style="grid-column:1/-1;">
+<div id="infosToCompleteAlert" class="infos-warning" role="status" aria-live="polite" hidden>
+  ⚠️ Ouvrez cet onglet pour compléter vos informations
+</div>
+<details id="infosToCompleteDetails" class="collapse-card" style="grid-column:1/-1;">
   <summary class="collapse-summary">Infos à compléter</summary>
   <div class="collapse-content">
 {% else %}
@@ -758,8 +785,8 @@
             <input id="vtcPassword" type="password" value="{{ trainee.vtc_cm_password or '' }}" placeholder="Votre mot de passe">
           </label>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;">
-          <button class="btn" type="submit">Envoyer</button>
+        <div id="vtcCredentialsActions" class="vtc-form-actions">
+          <button id="vtcSubmitBtn" class="btn" type="submit">Envoyer</button>
         </div>
       </form>
       {% set has_vtc_status = trainee.vtc_cm_submitted_at or trainee.exam_fees_paid %}
@@ -784,7 +811,6 @@
             <div class="assist-title">Formation & suivi</div>
             <div>Besoin d'aide pour votre formation ? Nous sommes là pour vous.</div>
             <div class="assist-actions">
-              <span class="assist-pill">Réponse rapide</span>
               <a class="assist-btn" href="tel:0422470768">📞 04 22 47 07 68</a>
               <a class="assist-btn secondary" href="https://assistance-alw9.onrender.com/" target="_blank" rel="noopener">💬 Ouvrir l’assistance</a>
             </div>
@@ -796,7 +822,6 @@
             <div class="assist-title">Examen VTC</div>
             <div>Contactez la Chambre des métiers selon votre département.</div>
             <div class="assist-actions">
-              <span class="assist-pill">Chambre des métiers</span>
               <a class="assist-btn" href="tel:0492125338">📍 Alpes-Maritimes (06) : 04 92 12 53 38</a>
               <a class="assist-btn secondary" href="tel:0494619925">📍 Var (83) : 04 94 61 99 25</a>
             </div>
@@ -1342,6 +1367,33 @@ if (typeof closeModal !== "function") {
   const vtcCta = document.getElementById("vtcCta");
   const vtcLoginInput = document.getElementById("vtcLogin");
   const vtcPasswordInput = document.getElementById("vtcPassword");
+  const vtcFormActions = document.getElementById("vtcCredentialsActions");
+  const infosDetails = document.getElementById("infosToCompleteDetails");
+  const infosWarning = document.getElementById("infosToCompleteAlert");
+
+  const isVtcCredentialsSubmitted = () => {
+    const hasSubmittedStatus = !!(document.querySelector("#vtcCredentialsStatus .vtc-status-date") || document.querySelector("#vtcStatusList .vtc-status-item"));
+    const loginLocked = !!((vtcLoginInput?.dataset.locked || "") === "1");
+    return hasSubmittedStatus || loginLocked;
+  };
+
+  const lockVtcCredentialsForm = () => {
+    if (vtcLoginInput) {
+      vtcLoginInput.readOnly = true;
+      vtcLoginInput.dataset.locked = "1";
+    }
+    if (vtcPasswordInput) {
+      vtcPasswordInput.readOnly = true;
+      vtcPasswordInput.dataset.locked = "1";
+    }
+    if (vtcFormActions) vtcFormActions.classList.add("is-submitted");
+  };
+
+  const updateInfosToCompleteWarning = () => {
+    if (!infosDetails || !infosWarning) return;
+    const pending = Array.from(document.querySelectorAll('.field .saved[id^="ok_"]')).some((el) => (el.textContent || "").includes("À compléter"));
+    infosWarning.hidden = !pending || infosDetails.open;
+  };
 
   const syncVtcPanel = () => {
     if (!vtcReady || !vtcPanel) return;
@@ -1355,9 +1407,12 @@ if (typeof closeModal !== "function") {
   if (vtcReady) {
     vtcReady.addEventListener("change", () => {
       syncVtcPanel();
-      if (vtcReady.checked) vtcLoginInput?.focus();
+      if (vtcReady.checked && !isVtcCredentialsSubmitted()) vtcLoginInput?.focus();
     });
     syncVtcPanel();
+  }
+  if (infosDetails) {
+    infosDetails.addEventListener("toggle", updateInfosToCompleteWarning);
   }
 
   const vtcForm = document.getElementById("vtcCredentialsForm");
@@ -1408,6 +1463,7 @@ if (typeof closeModal !== "function") {
           status.innerHTML = `✅ <span class="vtc-status-date">${formatDate(new Date())}</span> : Nous avons bien reçu votre identifiant et votre mot de passe, nous allons à présent procéder au paiement des frais d'examen.`;
           if(statusList) statusList.style.display = "flex";
         }
+        lockVtcCredentialsForm();
       }catch(err){
         if(status){
           status.style.display = "block";
@@ -1417,6 +1473,11 @@ if (typeof closeModal !== "function") {
       }
     });
   }
+
+  if (isVtcCredentialsSubmitted()) {
+    lockVtcCredentialsForm();
+  }
+  updateInfosToCompleteWarning();
 {% if not trainee.public_hide_welcome_popup %}
 // ✅ Welcome popup — une seule fois (on marque "vu" dès l'ouverture)
 (function(){
@@ -1549,7 +1610,7 @@ function setFieldState(inputId){
         setFieldStateValidated("address");
         setFieldStateValidated("zip_code");
         setFieldStateValidated("city");
-
+        updateInfosToCompleteWarning();
 
       }
     }, 400);
@@ -1617,7 +1678,7 @@ if(preEl){
   setFieldStateValidated("address");
   setFieldStateValidated("zip_code");
   setFieldStateValidated("city");
-
+  updateInfosToCompleteWarning();
 
   });
 
