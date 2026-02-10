@@ -5086,7 +5086,6 @@ def admin_vtc_cm_autologin(session_id: str, trainee_id: str):
     login_esc = html.escape(login)
     password_esc = html.escape(password)
     target_url = "https://www.exament3p.fr/id/14"
-    login_endpoint = "https://www.exament3p.fr/connexion"
 
     return f"""
 <!doctype html>
@@ -5107,66 +5106,41 @@ def admin_vtc_cm_autologin(session_id: str, trainee_id: str):
 <body>
   <div class="card">
     <div class="ok">✅ Tentative de connexion automatique à Exament3P en cours…</div>
-    <p>Nous ouvrons Exament3P et tentons la connexion avec les identifiants enregistrés pour <strong>{html.escape(trainee_name)}</strong>.</p>
-    <p class="hint">Si Exament3P refuse l’auto-connexion (anti-bot/changement de formulaire), utilisez les boutons de secours ci-dessous.</p>
+    <p>Nous envoyons automatiquement les identifiants enregistrés pour <strong>{html.escape(trainee_name)}</strong>.</p>
+    <p class="hint">Le site Exament3P utilise une modale JavaScript : si la connexion n’aboutit pas, cliquez sur « Relancer » puis « Se connecter » sur leur fenêtre.</p>
 
     <button class="btn" type="button" onclick="runAutoLogin()">Relancer la connexion auto</button>
     <a class="btn" href="{target_url}" target="_blank" rel="noopener">Ouvrir Exament3P manuellement</a>
   </div>
 
-  <form id="autoLoginConnexion" method="post" action="{login_endpoint}" target="exament3p_auto" style="display:none;">
+  <form id="autoLogin" method="post" action="{target_url}" style="display:none;">
     <input name="email" value="{login_esc}">
+    <input name="loginEmail" value="{login_esc}">
+    <input name="uac_email" value="{login_esc}">
     <input name="login" value="{login_esc}">
     <input name="username" value="{login_esc}">
     <input name="identifiant" value="{login_esc}">
-    <input name="_username" value="{login_esc}">
 
     <input name="password" type="password" value="{password_esc}">
+    <input name="loginPassword" type="password" value="{password_esc}">
+    <input name="uac_password" type="password" value="{password_esc}">
     <input name="passwd" type="password" value="{password_esc}">
     <input name="mot_de_passe" type="password" value="{password_esc}">
-    <input name="_password" type="password" value="{password_esc}">
 
+    <input name="idpage" value="14">
+    <input name="pageid" value="14">
+    <input name="_remember_me" value="1">
     <input name="remember" value="1">
-    <input name="_remember_me" value="on">
-  </form>
-
-  <form id="autoLoginId14" method="post" action="{target_url}" target="exament3p_auto" style="display:none;">
-    <input name="email" value="{login_esc}">
-    <input name="login" value="{login_esc}">
-    <input name="username" value="{login_esc}">
-    <input name="identifiant" value="{login_esc}">
-    <input name="_username" value="{login_esc}">
-
-    <input name="password" type="password" value="{password_esc}">
-    <input name="passwd" type="password" value="{password_esc}">
-    <input name="mot_de_passe" type="password" value="{password_esc}">
-    <input name="_password" type="password" value="{password_esc}">
   </form>
 
   <script>
     function runAutoLogin() {{
-      const win = window.open('about:blank', 'exament3p_auto');
-      if (!win) {{
+      const form = document.getElementById('autoLogin');
+      if (!form) {{
         window.location.href = '{target_url}';
         return;
       }}
-
-      const formConnexion = document.getElementById('autoLoginConnexion');
-      const formId14 = document.getElementById('autoLoginId14');
-
-      if (formConnexion) formConnexion.submit();
-
-      setTimeout(function() {{
-        if (formId14) formId14.submit();
-      }}, 900);
-
-      setTimeout(function() {{
-        try {{
-          win.location.href = '{target_url}';
-        }} catch (e) {{
-          // cross-origin: ignore
-        }}
-      }}, 1700);
+      form.submit();
     }}
 
     setTimeout(runAutoLogin, 120);
