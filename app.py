@@ -2566,9 +2566,9 @@ def api_secretariat_relance_result(notification_id: str):
     )
     call_icon = "🟢" if outcome == "CALLED" else ({1: "🟡", 2: "🟠", 3: "🔴"}.get(no_answer_count, "🟡"))
     call_label = (
-        f"{call_icon}Pré-inscription CPF {trainee_display_name} a été appelé"
+        f"{call_icon}Relance téléphonique {trainee_display_name} a été appelé"
         if outcome == "CALLED"
-        else f"{call_icon}Pré-inscription CPF {trainee_display_name} {display}"
+        else f"{call_icon}Relance téléphonique {trainee_display_name} {display}"
     )
     add_admin_notification(
         data,
@@ -6655,7 +6655,7 @@ def phone_followup_reply(token: str):
     if outcome == "CALLED":
         add_admin_notification(
             data,
-            f"🟢Pré-inscription CPF {trainee_display_name} a été appelé",
+            f"🟢Relance téléphonique {trainee_display_name} a été appelé",
             meta={
                 "type": "relance_call_result",
                 "source": "phone_followup_public_page",
@@ -6678,7 +6678,7 @@ def phone_followup_reply(token: str):
         icon = {1: '🟡', 2: '🟠', 3: '🔴'}[no_answer_count]
         add_admin_notification(
             data,
-            f"{icon}Pré-inscription CPF {trainee_display_name} {display}",
+            f"{icon}Relance téléphonique {trainee_display_name} {display}",
             meta={
                 "type": "relance_call_result",
                 "source": "phone_followup_public_page",
