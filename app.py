@@ -3211,6 +3211,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
 
     }
 
+    previous_vae_status = vae_status_view(t.get("vae_status"))["key"]
+
     for k, v in payload.items():
         if k not in allowed:
             continue
@@ -3243,6 +3245,14 @@ def api_update_trainee(session_id: str, trainee_id: str):
                 t[k] = v.strip()
         else:
             t[k] = v
+
+    if "vae_status" in payload or "vae_status_label" in payload:
+        requested_vae = (payload.get("vae_status") or payload.get("vae_status_label") or "").strip()
+        view = vae_status_view(requested_vae)
+        t["vae_status"] = view["key"]
+        t["vae_status_label"] = view["label"]
+        if view["key"] != previous_vae_status:
+            _notify_vae_status_change(t, view["key"])
 
     if (payload.get("financement_status") or "").strip() == "validated":
         t["financement_rejected_note"] = ""
@@ -4936,9 +4946,84 @@ DELIVERABLE_LABELS = {
     "carte_sst": "Carte SST",
     "diplome": "Diplôme",
     "attestation_fin_formation": "Attestation fin de formation",
+    "attestation_recevabilite": "Attestation de recevabilité VAE",
 }
 
 DELIVERABLE_REQUIRED_KEYS = ["diplome", "carte_sst", "attestation_fin_formation"]
+
+VAE_STATUS_STEPS = {
+    "livret_1_todo": {"label": "Livret 1 à compléter", "pill": "orange"},
+    "livret_1_analysis": {"label": "Livret 1 en cours d'analyse", "pill": "gray"},
+    "livret_2_todo": {"label": "Livret 2 à compléter", "pill": "orange"},
+    "livret_2_analysis": {"label": "Livret 2 en cours d'analyse", "pill": "gray"},
+    "jury": {"label": "Passage devant le jury", "pill": "yellow"},
+    "certified": {"label": "Certification obtenue", "pill": "green"},
+}
+
+
+def vae_status_view(status_key: Optional[str]) -> Dict[str, str]:
+    key = (status_key or "").strip()
+    if key not in VAE_STATUS_STEPS:
+        key = "livret_1_todo"
+    step = VAE_STATUS_STEPS[key]
+    return {"key": key, "label": step["label"], "pill": step["pill"]}
+
+
+def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
+    status_key = (status_key or "").strip()
+    email = (t.get("email") or "").strip()
+    phone = (t.get("phone") or "").strip()
+    first_name = (t.get("first_name") or "").strip() or "Madame, Monsieur"
+
+    subject = ""
+    html = ""
+    sms = ""
+
+    if status_key == "livret_1_analysis":
+        subject = "VAE : Livret 1 bien reçu"
+        html = f"""
+        <p>Bonjour {first_name},</p>
+        <p>Nous vous confirmons la bonne réception de votre <strong>Livret 1 VAE</strong>.</p>
+        <p>Votre dossier est désormais <strong>en cours d'analyse</strong>. Si tout est conforme, vous recevrez prochainement votre attestation de recevabilité.</p>
+        <p>L'équipe Intégrale Academy.</p>
+        """
+        sms = "Intégrale Academy : nous avons bien reçu votre Livret 1 VAE. Votre dossier est en cours d'analyse. Si tout est bon, vous recevrez prochainement l'attestation de recevabilité."
+    elif status_key == "livret_2_todo":
+        subject = "VAE acceptée : attestation de recevabilité disponible"
+        html = f"""
+        <p>Bonjour {first_name},</p>
+        <p>Nous avons le plaisir de vous informer que votre VAE a été acceptée.</p>
+        <p>Votre <strong>attestation de recevabilité</strong> est disponible dans votre espace stagiaire.</p>
+        <p>Vous pouvez maintenant nous faire parvenir votre <strong>Livret 2</strong>.</p>
+        <p>L'équipe Intégrale Academy.</p>
+        """
+        sms = "Intégrale Academy : votre VAE a été acceptée. Téléchargez votre attestation de recevabilité dans votre espace stagiaire et envoyez-nous maintenant votre Livret 2."
+    elif status_key == "livret_2_analysis":
+        subject = "VAE : Livret 2 bien reçu"
+        html = f"""
+        <p>Bonjour {first_name},</p>
+        <p>Nous vous confirmons la bonne réception de votre <strong>Livret 2 VAE</strong>.</p>
+        <p>Votre dossier est désormais <strong>en cours d'analyse</strong>. Si tout est conforme, nous reviendrons vers vous pour planifier une date de passage devant le jury de certification.</p>
+        <p>L'équipe Intégrale Academy.</p>
+        """
+        sms = "Intégrale Academy : nous avons bien reçu votre Livret 2 VAE. Votre dossier est en cours d'analyse. Si tout est bon, nous vous recontacterons pour planifier votre passage devant le jury."
+    elif status_key == "jury":
+        subject = "VAE : Livret 2 validé"
+        html = f"""
+        <p>Bonjour {first_name},</p>
+        <p>Bonne nouvelle : votre <strong>Livret 2</strong> est validé.</p>
+        <p>Nous pouvons à présent prévoir une date de passage devant le jury de certification.</p>
+        <p>L'équipe Intégrale Academy.</p>
+        """
+        sms = "Intégrale Academy : votre Livret 2 est validé. Nous pouvons maintenant planifier une date de passage devant le jury de certification."
+
+    if not subject:
+        return
+
+    if email:
+        brevo_send_email(email, subject, html)
+    if phone:
+        brevo_send_sms(phone, sms)
 
 def deliverables_progress(t: Dict[str, Any]):
     """
@@ -4985,6 +5070,11 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
 
     t.setdefault("deliverables", {})
     t["deliverables"][kind] = token
+    if kind == "attestation_recevabilite":
+        view = vae_status_view("livret_2_todo")
+        t["vae_status"] = view["key"]
+        t["vae_status_label"] = view["label"]
+        _notify_vae_status_change(t, "livret_2_todo")
     t["updated_at"] = _now_iso()
 
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
@@ -5298,6 +5388,8 @@ def public_infos_update(token: str):
         "no_permis",
     }
 
+    previous_vae_status = vae_status_view(t.get("vae_status"))["key"]
+
     for k, v in payload.items():
         if k not in allowed:
             continue
@@ -5553,17 +5645,9 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         })
 
     show_vae = (training_type == "DIRIGEANT VAE")
-    vae_steps = [
-        {"key":"livret_1_redaction","label":"Livret 1 en cours de rédaction"},
-        {"key":"livret_1_recu","label":"Livret 1 reçu"},
-        {"key":"demande_modif_l1","label":"Demande modif livret 1"},
-        {"key":"modif_l1_recue","label":"Modif livret 1 reçue"},
-        {"key":"recevabilite_ok","label":"Recevabilité OK"},
-        {"key":"livret_2_recu","label":"Livret 2 reçu"},
-        {"key":"demande_modif_l2","label":"Demande modif livret 2"},
-        {"key":"modif_l2_recue","label":"Modif livret 2 reçue"},
-        {"key":"jury","label":"Passage devant jury"},
-    ]
+    vae_steps = [{"key": k, "label": v["label"], "pill": v["pill"]} for k, v in VAE_STATUS_STEPS.items()]
+    t["vae_status"] = vae_status_view(t.get("vae_status") or t.get("vae_status_label"))["key"]
+    t["vae_status_label"] = vae_status_view(t.get("vae_status"))["label"]
 
     # ✅ s'assure que no_permis est bien un bool
     t["no_permis"] = bool(t.get("no_permis"))
