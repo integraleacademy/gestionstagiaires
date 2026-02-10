@@ -206,6 +206,32 @@
   .vtc-credentials-card{
     border:2px solid #e5e7eb;
   }
+
+  .elearning-card{
+    grid-column:1/-1;
+    border:2px solid #bfdbfe;
+    background:linear-gradient(135deg,#eff6ff 0%, #ffffff 70%);
+    box-shadow:0 12px 28px rgba(29,78,216,.08);
+  }
+  .elearning-card h2{display:flex;align-items:center;gap:10px;font-size:22px;margin-bottom:8px;}
+  .elearning-state{
+    margin-top:12px;
+    border-radius:14px;
+    padding:14px;
+    font-weight:700;
+    border:1px solid #cbd5e1;
+    background:#f8fafc;
+  }
+  .elearning-state.pending{
+    border-color:#fed7aa;
+    background:#fff7ed;
+    color:#9a3412;
+  }
+  .elearning-state.ready{
+    border-color:#bbf7d0;
+    background:#ecfdf5;
+    color:#065f46;
+  }
   .vtc-cta{
     padding:14px 16px;
     border-radius:14px;
@@ -544,6 +570,27 @@
   </div>
 
   <div class="public-grid">
+
+    {% set elearning_link = (trainee.elearning_link or '')|trim %}
+    <div class="card elearning-card">
+      <h2>🎓 Accès à votre espace Formation théorique en e-learning</h2>
+      {% if elearning_link %}
+        <div class="elearning-state ready">
+          ✅ Votre accès est disponible. Vous pouvez débuter votre formation dès maintenant.
+        </div>
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <a class="btn" href="{{ elearning_link }}" target="_blank" rel="noopener">🚀 Commencer ma formation</a>
+          <span class="muted">Pensez à enregistrer ce lien dans vos favoris.</span>
+        </div>
+      {% else %}
+        <div class="elearning-state pending">
+          ⏳ Votre accès sera bientôt disponible.
+        </div>
+        <div class="muted" style="margin-top:8px;">
+          Vous recevrez automatiquement un email et un SMS dès que votre lien sera activé.
+        </div>
+      {% endif %}
+    </div>
 
     <!-- Encadré 1 : infos générales -->
     <div class="card">

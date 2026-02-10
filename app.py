@@ -291,6 +291,45 @@ def brevo_send_sms(phone: str, message: str) -> bool:
         return False
 
 
+def notify_elearning_access_available(trainee: Dict[str, Any], session_obj: Dict[str, Any], link: str) -> Dict[str, bool]:
+    first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
+    training_name = formation_label(_session_get(session_obj, "training_type", ""))
+    date_start = fr_date(_session_get(session_obj, "date_start", ""))
+    date_end = fr_date(_session_get(session_obj, "date_end", ""))
+
+    subject = "Votre accès e-learning est disponible – Intégrale Academy"
+    html = mail_layout(f"""
+      <h2 style="text-align:center">🚀 Accès e-learning activé</h2>
+      <p>Bonjour <strong>{first_name}</strong>,</p>
+      <p>
+        Bonne nouvelle : votre accès à la <strong>Formation théorique en e-learning</strong>
+        est maintenant disponible.
+      </p>
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px;margin:16px 0;">
+        <p style="margin:0 0 10px 0;">
+          <strong>📌 Formation :</strong> {training_name}
+          {" — <strong>Dates :</strong> " + date_start + " au " + date_end if (date_start or date_end) else ""}
+        </p>
+        <p style="margin:0;">
+          <strong>🔗 Démarrer votre formation :</strong><br>
+          <a href="{link}" style="color:#1d4ed8;text-decoration:none;font-weight:700;">{link}</a>
+        </p>
+      </div>
+      <p>Vous pouvez commencer dès maintenant.</p>
+    """)
+
+    sms_name = (trainee.get("first_name") or "").strip()
+    sms = (
+        f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
+        "votre accès e-learning est disponible. "
+        f"Vous pouvez commencer votre formation ici : {link}"
+    )
+
+    email_ok = brevo_send_email((trainee.get("email") or "").strip(), subject, html)
+    sms_ok = brevo_send_sms((trainee.get("phone") or "").strip(), sms)
+    return {"email_ok": bool(email_ok), "sms_ok": bool(sms_ok)}
+
+
 def mail_layout(inner_html: str) -> str:
     # ✅ logo en URL HTTPS (fiable dans Gmail)
     logo_src = f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png"
@@ -2456,6 +2495,10 @@ def api_create_trainee(session_id: str):
         "vtc_cm_submitted_at": "",
         "exam_fees_paid": False,
         "exam_fees_paid_at": "",
+        "elearning_link": "",
+        "elearning_link_sent_at": "",
+        "elearning_link_email_ok": False,
+        "elearning_link_sms_ok": False,
         "documents": [],
         "created_at": _now_iso(),
         "phone_followups": [],
@@ -2603,6 +2646,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
 
     payload = request.get_json(silent=True) or {}
     was_exam_fees_paid = bool(t.get("exam_fees_paid"))
+    previous_elearning_link = (t.get("elearning_link") or "").strip()
 
     # Your template uses:
     # - convention_status, test_fr_status, dossier_status, financement_status, vae_status, comment, cnaps
@@ -2639,6 +2683,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vtc_cm_password",
         "vtc_cm_submitted_at",
         "exam_fees_paid",
+        "elearning_link",
 
     }
 
@@ -2668,6 +2713,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
                 t[k] = normalize_last_name(v)
             elif k == "first_name":
                 t[k] = normalize_first_name(v)
+            elif k == "elearning_link":
+                t[k] = v.strip()
             else:
                 t[k] = v.strip()
         else:
@@ -2703,6 +2750,18 @@ def api_update_trainee(session_id: str, trainee_id: str):
         elif not now_paid:
             t["exam_fees_paid_at"] = ""
 
+    elearning_notifications = {"email_ok": False, "sms_ok": False}
+    now_elearning_link = (t.get("elearning_link") or "").strip()
+    if now_elearning_link and now_elearning_link != previous_elearning_link:
+        elearning_notifications = notify_elearning_access_available(t, s, now_elearning_link)
+        t["elearning_link_sent_at"] = _now_iso()
+        t["elearning_link_email_ok"] = bool(elearning_notifications.get("email_ok"))
+        t["elearning_link_sms_ok"] = bool(elearning_notifications.get("sms_ok"))
+    elif not now_elearning_link:
+        t["elearning_link_sent_at"] = ""
+        t["elearning_link_email_ok"] = False
+        t["elearning_link_sms_ok"] = False
+
     t["updated_at"] = _now_iso()
     s["trainees"] = trainees
     s.pop("stagiaires", None)
@@ -2713,6 +2772,9 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "ok": True,
         "dossier_status": t.get("dossier_status"),
         "force_dossier_complete": bool(t.get("force_dossier_complete")),
+        "elearning_link_sent_at": t.get("elearning_link_sent_at") or "",
+        "elearning_link_email_ok": bool(t.get("elearning_link_email_ok")),
+        "elearning_link_sms_ok": bool(t.get("elearning_link_sms_ok")),
     })
 
 

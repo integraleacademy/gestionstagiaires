@@ -264,6 +264,28 @@
 <!-- VISIBILITÉ ESPACE STAGIAIRE -->
 <!-- ===================== -->
 <div class="card" style="grid-column:1 / -1;">
+  <div style="font-weight:900;">E-learning candidat</div>
+  <div class="hint" style="margin-top:6px;">
+    Saisissez le lien d'accès à la formation théorique e-learning du stagiaire.
+    Dès qu'un lien est renseigné, un email et un SMS sont envoyés automatiquement.
+  </div>
+  <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">
+    <label class="label" for="editElearningLink">Lien e-learning</label>
+    <input id="editElearningLink"
+           type="url"
+           value="{{ trainee.elearning_link or '' }}"
+           placeholder="https://..."
+           style="width:100%;max-width:840px;"
+           {{ read_only_attr }}>
+    <div id="elearningSaveHint" class="hint" style="margin-top:0;{% if not trainee.elearning_link_sent_at %}display:none;{% endif %}">
+      ✅ Notification e-learning envoyée le <strong>{{ trainee.elearning_link_sent_at|frdatetime }}</strong>
+      {% if trainee.elearning_link_email_ok %}<span style="margin-left:8px;">📧 Email envoyé</span>{% endif %}
+      {% if trainee.elearning_link_sms_ok %}<span style="margin-left:8px;">📱 SMS envoyé</span>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card" style="grid-column:1 / -1;">
   <div style="font-weight:900;">Visibilité espace stagiaire</div>
   <div class="hint" style="margin-top:6px;">Ces options masquent des blocs côté stagiaire.</div>
 
@@ -1789,11 +1811,12 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
   });
 
   async function updateTrainee(payload){
-  await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
+  const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
     method:"POST",
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify(payload)
   });
+  return res.json();
 }
 
   const contactDebounce = {};
@@ -1832,6 +1855,33 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
     inputId: "editPhone",
     field: "phone"
   });
+
+  const elearningInput = document.getElementById("editElearningLink");
+  const elearningSaveHint = document.getElementById("elearningSaveHint");
+  if(elearningInput){
+    elearningInput.addEventListener("input", ()=>{
+      if(contactDebounce.elearning_link) clearTimeout(contactDebounce.elearning_link);
+      contactDebounce.elearning_link = setTimeout(async ()=>{
+        try{
+          const result = await updateTrainee({ elearning_link: elearningInput.value });
+          if(!elearningSaveHint) return;
+          const sentAt = (result && result.elearning_link_sent_at) ? result.elearning_link_sent_at : "";
+          if(!sentAt){
+            elearningSaveHint.style.display = "none";
+            elearningSaveHint.innerHTML = "";
+            return;
+          }
+          const flags = [];
+          if(result.elearning_link_email_ok) flags.push("📧 Email envoyé");
+          if(result.elearning_link_sms_ok) flags.push("📱 SMS envoyé");
+          elearningSaveHint.style.display = "block";
+          elearningSaveHint.innerHTML = `✅ Notification e-learning envoyée (${flags.join(" • ") || "envoi en cours"})`;
+        }catch(e){
+          console.error("Erreur sauvegarde lien e-learning");
+        }
+      }, 450);
+    });
+  }
 
 const chkHideInfos = document.getElementById("chkHideInfos");
 if(chkHideInfos){
