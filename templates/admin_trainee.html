@@ -14,19 +14,6 @@
   <div>
     <h1>Fiche stagiaire</h1>
 
-    {% if admin_can_access_notifications %}
-      <div style="margin:8px 0 0;">
-        <button type="button"
-                class="btn btn-outline"
-                onclick="(function(){var b=document.getElementById('adminNotifBtn'); if(b){b.click();} window.scrollTo({top:0,behavior:'smooth'});})();">
-          🔔 Notifications
-          {% if admin_unresolved_total > 0 %}
-            <span class="pill" style="margin-left:4px;">{{ admin_unresolved_total }}</span>
-          {% endif %}
-        </button>
-      </div>
-    {% endif %}
-
     <div class="meta-line">
       <span class="pill">{{ training_type_label }}</span>
       <span>Session : <strong>{{ session.name }}</strong></span>
@@ -41,46 +28,57 @@
       {% endif %}
 
     </div>
-<div class="meta-line" style="margin-top:8px;">
-  {% if not is_vtc %}
-    <a class="btn btn-primary btn-uniform"
-       data-pre-reception
-       href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=trainee.id, pre_reception=1) }}">
-      ✅ Réception PRE
-    </a>
-  {% endif %}
-  {% if not is_vtc %}
-    <button class="btn btn-outline btn-uniform" type="button" data-open-section="documentsSection">
-      📁 DOCUMENTS
-    </button>
-  {% endif %}
-  <button class="btn btn-outline btn-uniform" type="button" data-open-section="phoneRelanceSection">
-    📞 RELANCE TEL
-  </button>
-  {% if not is_vtc %}
-    {% set cnaps_full_name = ((trainee.first_name or "Prénom") ~ " " ~ (trainee.last_name or "NOM"))|trim %}
-    {% set cnaps_birth_date = (trainee.birth_date|frdate or "DD/MM/YYYY") %}
-    {% set cnaps_body = "Bonjour,\n\nJe me permets de revenir vers nous concernant la demande d'autorisation préalable de " ~ cnaps_full_name ~ " né le " ~ cnaps_birth_date ~ ".\n\nLe suivi en ligne indique que la demande a été acceptée, mais cette personne n'a pas reçu le courrier officiel de notification par courrier postal et nous ne disposons donc pas de son numéro PRE nécessaire à son entrée en formation.\n\nVous serait-il possible svp de me communiquer le numéro PRE ?\n\nJe vous remercie par avance pour votre aide et je vous souhaite une agréable journée,\n\nBien cordialement,\n\nClément VAILLANT\nDirecteur Intégrale Sécurité Formations" %}
-    <a class="btn btn-outline btn-uniform"
-       id="btnCnapsContact"
-       data-session-id="{{ session.id }}"
-       data-trainee-id="{{ trainee.id }}"
-       href="mailto:?bcc=jenny.tarallo@interieur.gouv.fr,cnaps-dt-sud@interieur.gouv.fr&subject={{ 'Demande de numéro PRE'|urlencode }}&body={{ cnaps_body|urlencode }}">
-      ✉️ Contacter le CNAPS
-    </a>
-  {% endif %}
-  {% if not is_read_only %}
-    <form method="post" action="{{ url_for('admin_delete_trainee', session_id=session.id, trainee_id=trainee.id) }}"
-          onsubmit="return confirm('Supprimer ce stagiaire ?');">
-      <button class="btn btn-danger btn-uniform" type="submit">
-        🗑️ Supprimer
+    <div class="meta-line" style="margin-top:8px;">
+      {% if not is_vtc %}
+        <a class="btn btn-primary btn-uniform"
+           data-pre-reception
+           href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=trainee.id, pre_reception=1) }}">
+          ✅ Réception PRE
+        </a>
+      {% endif %}
+      {% if not is_vtc %}
+        <button class="btn btn-outline btn-uniform" type="button" data-open-section="documentsSection">
+          📁 DOCUMENTS
+        </button>
+      {% endif %}
+      <button class="btn btn-outline btn-uniform" type="button" data-open-section="phoneRelanceSection">
+        📞 RELANCE TEL
       </button>
-    </form>
+      {% if not is_vtc %}
+        {% set cnaps_full_name = ((trainee.first_name or "Prénom") ~ " " ~ (trainee.last_name or "NOM"))|trim %}
+        {% set cnaps_birth_date = (trainee.birth_date|frdate or "DD/MM/YYYY") %}
+        {% set cnaps_body = "Bonjour,\n\nJe me permets de revenir vers nous concernant la demande d'autorisation préalable de " ~ cnaps_full_name ~ " né le " ~ cnaps_birth_date ~ ".\n\nLe suivi en ligne indique que la demande a été acceptée, mais cette personne n'a pas reçu le courrier officiel de notification par courrier postal et nous ne disposons donc pas de son numéro PRE nécessaire à son entrée en formation.\n\nVous serait-il possible svp de me communiquer le numéro PRE ?\n\nJe vous remercie par avance pour votre aide et je vous souhaite une agréable journée,\n\nBien cordialement,\n\nClément VAILLANT\nDirecteur Intégrale Sécurité Formations" %}
+        <a class="btn btn-outline btn-uniform"
+           id="btnCnapsContact"
+           data-session-id="{{ session.id }}"
+           data-trainee-id="{{ trainee.id }}"
+           href="mailto:?bcc=jenny.tarallo@interieur.gouv.fr,cnaps-dt-sud@interieur.gouv.fr&subject={{ 'Demande de numéro PRE'|urlencode }}&body={{ cnaps_body|urlencode }}">
+          ✉️ Contacter le CNAPS
+        </a>
+      {% endif %}
+      {% if not is_read_only %}
+        <form method="post" action="{{ url_for('admin_delete_trainee', session_id=session.id, trainee_id=trainee.id) }}"
+              onsubmit="return confirm('Supprimer ce stagiaire ?');">
+          <button class="btn btn-danger btn-uniform" type="submit">
+            🗑️ Supprimer
+          </button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if admin_can_access_notifications %}
+    <div style="display:flex;justify-content:flex-end;align-self:flex-start;">
+      <button type="button"
+              class="notif-btn {% if admin_unresolved_total > 0 %}has-unread{% endif %}"
+              onclick="(function(){var b=document.getElementById('adminNotifBtn'); if(b){b.click();} window.scrollTo({top:0,behavior:'smooth'});})();">
+        🔔 Notifications
+        <span class="notif-count" {% if admin_unresolved_total == 0 %}style="display:none;"{% endif %}>{{ admin_unresolved_total }}</span>
+        <span class="notif-dot" {% if admin_unresolved_total == 0 %}style="display:none;"{% endif %}></span>
+      </button>
+    </div>
   {% endif %}
 </div>
-</div>
-</div>
-
 
 <div class="card" style="margin-top:12px;">
   <!-- LIGNE 1 : NOM + PHOTO CÔTE À CÔTE -->
