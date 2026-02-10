@@ -3201,6 +3201,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "financement_comment",
         "financement_new_date_seen",
         "vae_status_label",
+        "vae_jury_date",
         "cnaps",
         "no_permis", 
         "public_hide_infos",
@@ -4973,10 +4974,12 @@ DELIVERABLE_REQUIRED_KEYS = ["diplome", "carte_sst", "attestation_fin_formation"
 VAE_STATUS_STEPS = {
     "livret_1_todo": {"label": "Livret 1 à compléter", "pill": "orange"},
     "livret_1_analysis": {"label": "Livret 1 en cours d'analyse", "pill": "gray"},
+    "livret_1_validated": {"label": "Livret 1 validé", "pill": "green"},
     "livret_2_todo": {"label": "Livret 2 à compléter", "pill": "orange"},
     "livret_2_analysis": {"label": "Livret 2 en cours d'analyse", "pill": "gray"},
+    "livret_2_validated": {"label": "Livret 2 validé", "pill": "green"},
     "jury": {"label": "Passage devant le jury", "pill": "yellow"},
-    "certified": {"label": "Certification obtenue", "pill": "green"},
+    "certified": {"label": "Diplôme obtenu", "pill": "green"},
 }
 
 
