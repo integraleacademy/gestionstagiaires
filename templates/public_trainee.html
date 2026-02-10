@@ -1321,6 +1321,28 @@ id="upload_{{ d.key }}"
 
     <div class="ia-body">
       <div class="ia-card">
+        {% if is_vtc_training %}
+        <p class="ia-p">
+          Dans votre Espace Stagiaire vous allez retrouver :
+        </p>
+
+        <p class="ia-p">
+          1️⃣ Les indications pour créer votre compte Chambre des métiers (exament3p) : ce compte vous permettra de déposer vos documents officiels nécessaires pour l'inscription à l'examen théorique et l'examen pratique
+        </p>
+
+        <p class="ia-p">
+          2️⃣ Dès que votre compte Chambre des métiers sera créé, vous devrez nous indiquer, dans votre Espace Stagiaire, votre identifiant et votre mot de passe Chambre des métiers, afin que nous puissions nous connecter et procéder au paiement des frais d'examen (⚠️ Veillez à ne pas régler les frais d'inscriptions, ils sont inclus dans votre formation)
+        </p>
+
+        <p class="ia-p">
+          3️⃣ Les accès à votre formation théorique en e-learning
+        </p>
+
+        <p class="ia-p" style="margin-top:12px;">
+          Nous vous souhaitons une bonne formation !<br>
+          <strong>La Team Intégrale Academy</strong>
+        </p>
+        {% else %}
         <p class="ia-p">
           Si vous avez déjà suivi votre formation, veuillez ne pas tenir compte de ce message : Vous devez à présent compléter vos informations personnelles et déposer vos documents obligatoires.
           Pour un meilleur traitement de votre dossier, merci de réaliser cette étape dès que possible
@@ -1336,6 +1358,7 @@ id="upload_{{ d.key }}"
           Merci par avance,<br>
           <strong>La Team Intégrale Academy</strong>
         </p>
+        {% endif %}
       </div>
     </div>
 
