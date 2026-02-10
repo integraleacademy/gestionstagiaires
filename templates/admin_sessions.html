@@ -246,8 +246,10 @@
       {% if "VTC" in (s.training_type or "")|upper %}
         {% set theory_date = s.exam_theory_date or s.exam_date %}
         {% set practice_date = s.exam_practice_date or s.exam_date %}
+        {% set practice_training_date = s.practice_training_date %}
         <div>Examen théorique : <strong>{{ theory_date|frdate }}</strong></div>
         <div>Examen pratique : <strong>{{ practice_date|frdate }}</strong></div>
+        <div>Formation pratique : <strong>{{ practice_training_date|frdate }}</strong></div>
       {% else %}
         <div>Examen : <strong>{{ s.exam_date|frdate }}</strong></div>
       {% endif %}
