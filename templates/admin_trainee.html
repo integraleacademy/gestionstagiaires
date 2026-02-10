@@ -916,9 +916,12 @@
   <div class="hint" style="margin-top:8px;">Le changement de statut peut envoyer automatiquement un email et un SMS selon l'étape.</div>
 
   <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
-    {% for step in vae_steps %}
-      <button class="btn btn-outline" type="button" onclick="setVaeStep('{{ step.key }}')" {{ read_only_attr }}>{{ step.label }}</button>
-    {% endfor %}
+    <button class="btn btn-outline" type="button" onclick="setVaeAction('livret_1_received')" {{ read_only_attr }}>Réception Livret 1</button>
+    <button class="btn btn-outline" type="button" onclick="setVaeAction('livret_1_validated')" {{ read_only_attr }}>Livret 1 validé</button>
+    <button class="btn btn-outline" type="button" onclick="setVaeAction('livret_2_received')" {{ read_only_attr }}>Réception Livret 2</button>
+    <button class="btn btn-outline" type="button" onclick="setVaeAction('livret_2_validated')" {{ read_only_attr }}>Livret 2 validé</button>
+    <button class="btn btn-outline" type="button" onclick="setVaeAction('jury_date')" {{ read_only_attr }}>Date d'examen</button>
+    <button class="btn btn-outline" type="button" onclick="setVaeAction('diplome_obtenu')" {{ read_only_attr }}>Diplôme obtenu</button>
   </div>
 </div>
 {% endif %}
@@ -1560,13 +1563,40 @@ function setDossierPill(status){
     });
   }
 
-  // VAE (simple update)
-  window.setVaeStep = async function setVaeStep(stepKey){
+  // VAE (actions dédiées DIRIGEANT VAE)
+  window.setVaeAction = async function setVaeAction(actionKey){
+    const payload = {};
+
+    if(actionKey === "livret_1_received"){
+      payload.vae_status = "livret_1_analysis";
+    }else if(actionKey === "livret_1_validated"){
+      payload.vae_status = "livret_1_validated";
+    }else if(actionKey === "livret_2_received"){
+      payload.vae_status = "livret_2_analysis";
+    }else if(actionKey === "livret_2_validated"){
+      payload.vae_status = "livret_2_validated";
+    }else if(actionKey === "jury_date"){
+      const raw = window.prompt("Indiquez la date d'examen (JJ/MM/AAAA)");
+      if(raw === null) return;
+      const value = (raw || "").trim();
+      const m = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if(!m){
+        alert("Format attendu : JJ/MM/AAAA");
+        return;
+      }
+      payload.vae_status = "jury";
+      payload.vae_jury_date = `${m[3]}-${m[2]}-${m[1]}`;
+    }else if(actionKey === "diplome_obtenu"){
+      payload.vae_status = "certified";
+    }else{
+      return;
+    }
+
     try{
       const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
         method:"POST",
         headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ vae_status: stepKey })
+        body: JSON.stringify(payload)
       });
       const data = await res.json().catch(()=>({}));
       if(!res.ok || data.ok === false){

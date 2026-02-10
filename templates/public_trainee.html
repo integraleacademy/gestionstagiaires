@@ -472,6 +472,9 @@
   .vae-step-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
   .vae-step-badge{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:999px;background:#9ca3af;color:#fff;font-weight:1000;}
   .vae-step-card.is-done .vae-step-badge{background:#1d4ed8;}
+  .vae-step-card.is-current{border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.2),0 6px 16px rgba(15,23,42,.06);}
+  .vae-step-card.is-current .vae-step-badge{background:#f59e0b;}
+  .vae-step-current{display:inline-block;margin-bottom:8px;padding:3px 10px;border-radius:999px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;font-size:12px;font-weight:800;}
   .vae-step-check{
     position:absolute;
     right:12px;
@@ -761,8 +764,10 @@
         'livret_1_analysis': {'label':"Livret 1 en cours d'analyse",'cls':'gray'},
         'livret_2_todo': {'label':'Livret 2 à compléter','cls':'orange'},
         'livret_2_analysis': {'label':"Livret 2 en cours d'analyse",'cls':'gray'},
+        'livret_2_validated': {'label':'Livret 2 validé','cls':'green'},
+        'livret_1_validated': {'label':'Livret 1 validé','cls':'green'},
         'jury': {'label':'Passage devant le jury','cls':'yellow'},
-        'certified': {'label':'Certification obtenue','cls':'green'}
+        'certified': {'label':'Diplôme obtenu','cls':'green'}
       } %}
       {% set vae_current = vae_map[vae_key] if vae_key in vae_map else vae_map['livret_1_todo'] %}
       <div class="row" style="margin-top:10px;">
@@ -1193,33 +1198,50 @@ id="upload_{{ d.key }}"
   {% set vae_step_index_map = {
     'livret_1_todo': 0,
     'livret_1_analysis': 1,
+    'livret_1_validated': 3,
     'livret_2_todo': 3,
     'livret_2_analysis': 4,
+    'livret_2_validated': 6,
     'jury': 6,
     'certified': 8
   } %}
   {% set vae_done_until = vae_step_index_map[vae_key] if vae_key in vae_step_index_map else 0 %}
+  {% set vae_current_step_map = {
+    'livret_1_todo': 1,
+    'livret_1_analysis': 2,
+    'livret_1_validated': 4,
+    'livret_2_todo': 4,
+    'livret_2_analysis': 5,
+    'livret_2_validated': 7,
+    'jury': 7,
+    'certified': 8
+  } %}
+  {% set vae_current_step = vae_current_step_map[vae_key] if vae_key in vae_current_step_map else 1 %}
+  {% set vae_jury_date = trainee.vae_jury_date|frdate %}
   <div class="card" style="grid-column:1/-1;background:linear-gradient(135deg,#eef2ff,#fff7ed);border:1px solid #c7d2fe;">
     <h2>✨ Les étapes de votre VAE</h2>
     <div class="muted" style="margin-bottom:12px;">Suivez chaque étape. Chaque carte correspond à une phase clé de votre parcours.</div>
 
     <div class="vae-steps-grid">
-      <div class="vae-step-card {% if vae_done_until >= 1 %}is-done{% endif %}">
+      <div class="vae-step-card {% if vae_done_until >= 1 %}is-done{% endif %} {% if vae_current_step == 1 and vae_done_until < 1 %}is-current{% endif %}">
         {% if vae_done_until >= 1 %}<div class="vae-step-check">✅</div>{% endif %}
         <div class="vae-step-head"><span class="vae-step-badge">1</span><div class="vae-step-title">1ère étape : Rédaction du livret 1</div></div>
+        {% if vae_current_step == 1 and vae_done_until < 1 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
         <p><a href="#">Téléchargez le Livret 1 en cliquant ici</a></p>
         <p><a href="#">Téléchargez la Fiche de renseignement candidat</a></p>
       </div>
 
-      <div class="vae-step-card {% if vae_done_until >= 2 %}is-done{% endif %}">
+      <div class="vae-step-card {% if vae_done_until >= 2 %}is-done{% endif %} {% if vae_current_step == 2 and vae_done_until < 2 %}is-current{% endif %}">
         {% if vae_done_until >= 2 %}<div class="vae-step-check">✅</div>{% endif %}
         <div class="vae-step-head"><span class="vae-step-badge">2</span><div class="vae-step-title">2ème étape : Réception et analyse du Livret 1</div></div>
+        {% if vae_current_step == 2 and vae_done_until < 2 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
         <p class="muted">Après réception, votre livret 1 est analysé par notre équipe pédagogique.</p>
       </div>
 
-      <div class="vae-step-card {% if vae_done_until >= 3 %}is-done{% endif %}">
+      <div class="vae-step-card {% if vae_done_until >= 3 %}is-done{% endif %} {% if vae_current_step == 3 and vae_done_until < 3 %}is-current{% endif %}">
         {% if vae_done_until >= 3 %}<div class="vae-step-check">✅</div>{% endif %}
         <div class="vae-step-head"><span class="vae-step-badge">3</span><div class="vae-step-title">3ème étape : Livret 1 validé, attestation de recevabilité</div></div>
+        {% if vae_current_step == 3 and vae_done_until < 3 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
         {% set receva = (trainee.deliverables or {}).get('attestation_recevabilite') %}
         {% if receva %}
           <p><a class="btn outline small" target="_blank" href="/espace/{{ token_safe }}/download/{{ receva }}">Télécharger mon attestation de recevabilité</a></p>
@@ -1228,33 +1250,44 @@ id="upload_{{ d.key }}"
         {% endif %}
       </div>
 
-      <div class="vae-step-card {% if vae_done_until >= 4 %}is-done{% endif %}">
+      <div class="vae-step-card {% if vae_done_until >= 4 %}is-done{% endif %} {% if vae_current_step == 4 and vae_done_until < 4 %}is-current{% endif %}">
         {% if vae_done_until >= 4 %}<div class="vae-step-check">✅</div>{% endif %}
         <div class="vae-step-head"><span class="vae-step-badge">4</span><div class="vae-step-title">4ème étape : Rédaction du Livret 2</div></div>
+        {% if vae_current_step == 4 and vae_done_until < 4 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
         <p><a href="#">Téléchargez le Livret 2 en cliquant ici</a></p>
       </div>
 
-      <div class="vae-step-card {% if vae_done_until >= 5 %}is-done{% endif %}">
+      <div class="vae-step-card {% if vae_done_until >= 5 %}is-done{% endif %} {% if vae_current_step == 5 and vae_done_until < 5 %}is-current{% endif %}">
         {% if vae_done_until >= 5 %}<div class="vae-step-check">✅</div>{% endif %}
         <div class="vae-step-head"><span class="vae-step-badge">5</span><div class="vae-step-title">5ème étape : Réception et analyse du Livret 2</div></div>
+        {% if vae_current_step == 5 and vae_done_until < 5 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
         <p class="muted">Après réception, votre livret 2 est analysé par notre équipe pédagogique.</p>
       </div>
 
-      <div class="vae-step-card {% if vae_done_until >= 6 %}is-done{% endif %}">
+      <div class="vae-step-card {% if vae_done_until >= 6 %}is-done{% endif %} {% if vae_current_step == 6 and vae_done_until < 6 %}is-current{% endif %}">
         {% if vae_done_until >= 6 %}<div class="vae-step-check">✅</div>{% endif %}
         <div class="vae-step-head"><span class="vae-step-badge">6</span><div class="vae-step-title">6ème étape : Livret 2 validé</div></div>
+        {% if vae_current_step == 6 and vae_done_until < 6 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
         <p class="muted">Lorsque votre livret 2 est validé, nous vous accompagnons pour préparer la suite du parcours.</p>
       </div>
 
-      <div class="vae-step-card {% if vae_done_until >= 7 %}is-done{% endif %}">
+      <div class="vae-step-card {% if vae_done_until >= 7 %}is-done{% endif %} {% if vae_current_step == 7 and vae_done_until < 7 %}is-current{% endif %}">
         {% if vae_done_until >= 7 %}<div class="vae-step-check">✅</div>{% endif %}
         <div class="vae-step-head"><span class="vae-step-badge">7</span><div class="vae-step-title">7ème étape : Passage devant le jury de certification</div></div>
-        <p class="muted">Vous passez devant le jury de certification selon la date planifiée.</p>
+        {% if vae_current_step == 7 and vae_done_until < 7 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
+        <p class="muted">
+          {% if vae_jury_date %}
+            Passage devant le jury de certification le {{ vae_jury_date }}.
+          {% else %}
+            Vous passez devant le jury de certification selon la date planifiée.
+          {% endif %}
+        </p>
       </div>
 
-      <div class="vae-step-card {% if vae_done_until >= 8 %}is-done{% endif %}" style="grid-column:1/-1;">
+      <div class="vae-step-card {% if vae_done_until >= 8 %}is-done{% endif %} {% if vae_current_step == 8 and vae_done_until < 8 %}is-current{% endif %}" style="grid-column:1/-1;">
         {% if vae_done_until >= 8 %}<div class="vae-step-check">✅</div>{% endif %}
         <div class="vae-step-head"><span class="vae-step-badge">8</span><div class="vae-step-title">8ème étape : Obtention de votre certification Dirigeant d'entreprise de sécurité privée (DESP)</div></div>
+        {% if vae_current_step == 8 and vae_done_until < 8 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
         <p class="muted">Félicitations ! Après validation finale, vous obtenez votre certification DESP.</p>
       </div>
     </div>
