@@ -1003,8 +1003,18 @@
   {% if not trainee.public_hide_docs and not show_vtc %}
   
 <!-- Encadré 3 : mes documents (upload) -->
+{% if show_vae %}
+<details id="documentsDetails" class="collapse-card" style="grid-column:1/-1;">
+  <summary class="collapse-summary">
+    <span class="collapse-summary-main">
+      <span>Mes documents</span>
+    </span>
+  </summary>
+  <div class="collapse-content">
+{% else %}
 <div class="card" style="grid-column:1/-1;">
   <h2>Mes documents</h2>
+{% endif %}
   <div class="muted">Déposez ici vos documents.</div>
 
   <div class="docs-stack">
@@ -1185,7 +1195,12 @@ id="upload_{{ d.key }}"
   {% endfor %}
   
 </div>
-    </div>
+{% if show_vae %}
+  </div>
+</details>
+{% else %}
+</div>
+{% endif %}
 
   {% endif %}
     {% if not show_vtc and not is_dirigeant_vae %}
