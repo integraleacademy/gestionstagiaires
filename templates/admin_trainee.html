@@ -1561,13 +1561,21 @@ function setDossierPill(status){
   }
 
   // VAE (simple update)
-  async function setVaeStep(stepKey){
-    await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
-      method:"POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ vae_status_label: stepKey })
-    });
-    window.location.reload();
+  window.setVaeStep = async function setVaeStep(stepKey){
+    try{
+      const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ vae_status: stepKey })
+      });
+      const data = await res.json().catch(()=>({}));
+      if(!res.ok || data.ok === false){
+        throw new Error('save_failed');
+      }
+      window.location.reload();
+    }catch(e){
+      alert("Erreur mise à jour statut VAE");
+    }
   }
 
     // ✅ Checkbox "Test validé" -> test_fr_status = validated / in_progress

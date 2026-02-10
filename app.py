@@ -5665,7 +5665,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
 
     show_vae = (training_type == "DIRIGEANT VAE")
     vae_steps = [{"key": k, "label": v["label"], "pill": v["pill"]} for k, v in VAE_STATUS_STEPS.items()]
-    t["vae_status"] = vae_status_view(t.get("vae_status_label") or t.get("vae_status"))["key"]
+    t["vae_status"] = vae_status_view(t.get("vae_status") or t.get("vae_status_label"))["key"]
     t["vae_status_label"] = vae_status_view(t.get("vae_status"))["label"]
 
     # ✅ s'assure que no_permis est bien un bool

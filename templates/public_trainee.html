@@ -451,6 +451,29 @@
   .vtc-form-actions{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;}
   .vtc-form-actions.is-submitted{display:none;}
 
+
+  .vae-steps-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:14px;
+    margin-top:8px;
+  }
+  @media(min-width:900px){
+    .vae-steps-grid{grid-template-columns:1fr 1fr;}
+  }
+  .vae-step-card{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:16px;
+    padding:16px;
+    box-shadow:0 6px 16px rgba(15,23,42,.06);
+  }
+  .vae-step-head{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .vae-step-badge{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:999px;background:#1d4ed8;color:#fff;font-weight:1000;}
+  .vae-step-title{font-size:20px;font-weight:1000;line-height:1.2;color:#0f172a;}
+  .vae-step-card p{margin:0 0 8px 0;line-height:1.55;}
+  .vae-step-card .muted{font-size:14px;}
+
   @media (max-width: 640px){
     .vtc-cta-label{align-items:flex-start;gap:10px;}
     .vtc-cta-label input{
@@ -641,7 +664,7 @@
         <div class="label">Dates de formation</div>
         <div class="value">{{ session.date_start|frdate }} → {{ session.date_end|frdate }}</div>
       </div>
-      {% if show_vtc %}
+      {% if show_vtc or is_dirigeant_vae %}
         {% set theory_date = session.exam_theory_date or session.exam_date %}
         {% set practice_date = session.exam_practice_date or session.exam_date %}
         <div class="line">
@@ -715,9 +738,33 @@
       {% endif %}
     </div>
 {% endif %}
+
+
+    <!-- Encadré STATUT VAE (si DIRIGEANT VAE) -->
+    {% if show_vae %}
+    <div class="card">
+      <h2>Suivi VAE</h2>
+      <div class="muted">Lecture seule (mis à jour par l’administration).</div>
+
+      {% set vae_key = trainee.vae_status or 'livret_1_todo' %}
+      {% set vae_map = {
+        'livret_1_todo': {'label':'Livret 1 à compléter','cls':'orange'},
+        'livret_1_analysis': {'label':"Livret 1 en cours d'analyse",'cls':'gray'},
+        'livret_2_todo': {'label':'Livret 2 à compléter','cls':'orange'},
+        'livret_2_analysis': {'label':"Livret 2 en cours d'analyse",'cls':'gray'},
+        'jury': {'label':'Passage devant le jury','cls':'yellow'},
+        'certified': {'label':'Certification obtenue','cls':'green'}
+      } %}
+      {% set vae_current = vae_map[vae_key] if vae_key in vae_map else vae_map['livret_1_todo'] %}
+      <div class="row" style="margin-top:10px;">
+        <span class="pill {{ vae_current.cls }}">Statut : {{ vae_current.label }}</span>
+      </div>
+    </div>
+    {% endif %}
+
     {% if not trainee.public_hide_infos %}
 <!-- Encadré : infos à compléter (autosave) -->
-{% if show_vtc %}
+{% if show_vtc or is_dirigeant_vae %}
 <details id="infosToCompleteDetails" class="collapse-card" style="grid-column:1/-1;">
   <summary class="collapse-summary">
     <span class="collapse-summary-main">
@@ -810,7 +857,7 @@
            "city",
            trainee.city,
            "Ex : Paris") }}
-{% if show_vtc %}
+{% if show_vtc or is_dirigeant_vae %}
   </div>
 </details>
 {% else %}
@@ -818,28 +865,6 @@
 {% endif %}
 
     </div>
-
-    <!-- Encadré STATUT VAE (si DIRIGEANT VAE) -->
-    {% if show_vae %}
-    <div class="card">
-      <h2>Suivi VAE</h2>
-      <div class="muted">Lecture seule (mis à jour par l’administration).</div>
-
-      {% set vae_key = trainee.vae_status or 'livret_1_todo' %}
-      {% set vae_map = {
-        'livret_1_todo': {'label':'Livret 1 à compléter','cls':'orange'},
-        'livret_1_analysis': {'label':"Livret 1 en cours d'analyse",'cls':'gray'},
-        'livret_2_todo': {'label':'Livret 2 à compléter','cls':'orange'},
-        'livret_2_analysis': {'label':"Livret 2 en cours d'analyse",'cls':'gray'},
-        'jury': {'label':'Passage devant le jury','cls':'yellow'},
-        'certified': {'label':'Certification obtenue','cls':'green'}
-      } %}
-      {% set vae_current = vae_map[vae_key] if vae_key in vae_map else vae_map['livret_1_todo'] %}
-      <div class="row" style="margin-top:10px;">
-        <span class="pill {{ vae_current.cls }}">Statut : {{ vae_current.label }}</span>
-      </div>
-    </div>
-    {% endif %}
   {% endif %}
 
   {% if show_vtc %}
@@ -1157,39 +1182,53 @@ id="upload_{{ d.key }}"
   {% if is_dirigeant_vae %}
   <div class="card" style="grid-column:1/-1;background:linear-gradient(135deg,#eef2ff,#fff7ed);border:1px solid #c7d2fe;">
     <h2>✨ Les étapes de votre VAE</h2>
-    <div class="muted" style="margin-bottom:12px;">Suivez ces étapes pour avancer sereinement dans votre parcours.</div>
+    <div class="muted" style="margin-bottom:12px;">Suivez chaque étape. Chaque carte correspond à une phase clé de votre parcours.</div>
 
-    <div class="docs-stack">
-      <div class="docrow" style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;">
-        <div class="docmeta">
-          <div class="label">1ère étape : Rédaction du Livret 1</div>
-          <div>Téléchargez le Livret 1 en cliquant ici</div>
-          <div>Téléchargez la Fiche de renseignement candidat</div>
-          <div class="muted" style="margin-top:8px;">Pour démarrer votre processus de VAE, vous devez nous faire parvenir par mail à l'adresse <strong>ecole@integraleacademy.com</strong> votre Livret 1 complété + Fiche de renseignement candidat + Justificatif de niveau bac + CV complet à jour + Copie de votre pièce d'identité.</div>
-          <div class="muted">Le Livret 1 d’une VAE sert à vérifier que votre demande est recevable. Il permet de prouver que vous avez au moins un an d’expérience en lien direct avec le diplôme visé (salariat, bénévolat, activité indépendante, etc.). Vous devez présenter votre parcours et vos expériences, sans entrer encore dans le détail des compétences.</div>
-          <div style="font-weight:800;">Besoin d'aide ? Vous pouvez nous contacter au 04 22 47 07 68.</div>
-        </div>
+    <div class="vae-steps-grid">
+      <div class="vae-step-card">
+        <div class="vae-step-head"><span class="vae-step-badge">1</span><div class="vae-step-title">1ère étape : Rédaction du Livret 1</div></div>
+        <p><a href="#">Téléchargez le Livret 1 en cliquant ici</a></p>
+        <p><a href="#">Téléchargez la Fiche de renseignement candidat</a></p>
+        <p class="muted">Pour démarrer votre processus de VAE, vous devez nous faire parvenir par mail à l'adresse <strong>ecole@integraleacademy.com</strong> votre Livret 1 complété + Fiche de renseignement candidat + Justificatif de niveau bac + CV complet à jour + Copie de votre pièce d'identité.</p>
+        <p class="muted">Le Livret 1 d’une VAE sert à vérifier que votre demande est recevable. Il permet de prouver que vous avez au moins un an d’expérience en lien direct avec le diplôme visé (salariat, bénévolat, activité indépendante, etc.). Vous devez présenter votre parcours et vos expériences, sans entrer encore dans le détail des compétences.</p>
+        <p><strong>Besoin d'aide ?</strong> Vous pouvez nous contacter au 04 22 47 07 68.</p>
       </div>
 
-      <div class="docrow" style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;">
-        <div class="docmeta">
-          <div class="label">2ème étape : Attestation de recevabilité</div>
-          {% set receva = (trainee.deliverables or {}).get('attestation_recevabilite') %}
-          {% if receva %}
-            <a class="btn outline small" target="_blank" href="/espace/{{ token_safe }}/download/{{ receva }}">Télécharger mon attestation de recevabilité</a>
-          {% else %}
-            <span class="pill gray">Prochainement disponible</span>
-          {% endif %}
-        </div>
+      <div class="vae-step-card">
+        <div class="vae-step-head"><span class="vae-step-badge">2</span><div class="vae-step-title">2ème étape : Attestation de recevabilité</div></div>
+        {% set receva = (trainee.deliverables or {}).get('attestation_recevabilite') %}
+        {% if receva %}
+          <p><a class="btn outline small" target="_blank" href="/espace/{{ token_safe }}/download/{{ receva }}">Télécharger mon attestation de recevabilité</a></p>
+        {% else %}
+          <p><span class="pill gray">Prochainement disponible</span></p>
+        {% endif %}
       </div>
 
-      <div class="docrow" style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;">
-        <div class="docmeta">
-          <div class="label">3ème étape : Rédaction du Livret 2</div>
-          <div>Téléchargez le Livret 2 en cliquant ici</div>
-          <div class="muted" style="margin-top:8px;">Le Livret 2 d’une VAE consiste à décrire et analyser en détail vos compétences, en lien direct avec le diplôme visé. Vous devez expliquer ce que vous faites réellement, comment vous le faites et avec quels outils ou responsabilités. C’est ce document qui permet au jury d’évaluer si votre expérience correspond aux exigences de la certification.</div>
-          <div style="font-weight:800;">Besoin d'aide ? Vous pouvez nous contacter au 04 22 47 07 68.</div>
-        </div>
+      <div class="vae-step-card">
+        <div class="vae-step-head"><span class="vae-step-badge">3</span><div class="vae-step-title">3ème étape : Rédaction du Livret 2</div></div>
+        <p><a href="#">Téléchargez le Livret 2 en cliquant ici</a></p>
+        <p class="muted">Le Livret 2 d’une VAE consiste à décrire et analyser en détail vos compétences, en lien direct avec le diplôme visé. Vous devez expliquer ce que vous faites réellement, comment vous le faites et avec quels outils ou responsabilités. C’est ce document qui permet au jury d’évaluer si votre expérience correspond aux exigences de la certification.</p>
+        <p><strong>Besoin d'aide ?</strong> Vous pouvez nous contacter au 04 22 47 07 68.</p>
+      </div>
+
+      <div class="vae-step-card">
+        <div class="vae-step-head"><span class="vae-step-badge">4</span><div class="vae-step-title">4ème étape : Étude du livret 2</div></div>
+        <p class="muted">Après réception, votre livret 2 est analysé par notre équipe pédagogique.</p>
+      </div>
+
+      <div class="vae-step-card">
+        <div class="vae-step-head"><span class="vae-step-badge">5</span><div class="vae-step-title">5ème étape : Livret 2 validé</div></div>
+        <p class="muted">Lorsque votre livret 2 est validé, nous vous accompagnons pour préparer la suite du parcours.</p>
+      </div>
+
+      <div class="vae-step-card">
+        <div class="vae-step-head"><span class="vae-step-badge">6</span><div class="vae-step-title">6ème étape : Passage devant le jury d'examen</div></div>
+        <p class="muted">Vous passez devant le jury de certification selon la date planifiée.</p>
+      </div>
+
+      <div class="vae-step-card" style="grid-column:1/-1;">
+        <div class="vae-step-head"><span class="vae-step-badge">7</span><div class="vae-step-title">7ème étape : Obtention de votre certification Dirigeant d'entreprise de sécurité privée (DESP)</div></div>
+        <p class="muted">Félicitations ! Après validation finale, vous obtenez votre certification DESP.</p>
       </div>
     </div>
   </div>
