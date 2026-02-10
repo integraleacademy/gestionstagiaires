@@ -858,7 +858,7 @@
       </form>
       {% set has_vtc_status = trainee.vtc_cm_submitted_at or trainee.exam_fees_paid %}
       <div id="vtcStatusList" class="vtc-status-list" style="{% if not has_vtc_status %}display:none;{% endif %}">
-        <div id="vtcCredentialsStatus" class="vtc-status-item" role="status" aria-live="polite" style="{% if not trainee.vtc_cm_submitted_at %}display:none;{% endif %}">
+        <div id="vtcCredentialsStatus" class="vtc-status-item" role="status" aria-live="polite" data-submitted="{% if trainee.vtc_cm_submitted_at %}1{% else %}0{% endif %}" style="{% if not trainee.vtc_cm_submitted_at %}display:none;{% endif %}">
           ✅ <span class="vtc-status-date">{{ trainee.vtc_cm_submitted_at|frdate or "DD/MM/YYYY" }}</span> : Nous avons bien reçu votre identifiant et votre mot de passe, nous allons à présent procéder au paiement des frais d'examen.
         </div>
         {% if trainee.exam_fees_paid %}
@@ -1439,7 +1439,8 @@ if (typeof closeModal !== "function") {
   const infosWarning = document.getElementById("infosToCompleteAlert");
 
   const isVtcCredentialsSubmitted = () => {
-    const hasSubmittedStatus = !!(document.querySelector("#vtcCredentialsStatus .vtc-status-date") || document.querySelector("#vtcStatusList .vtc-status-item"));
+    const statusEl = document.getElementById("vtcCredentialsStatus");
+    const hasSubmittedStatus = !!(statusEl && statusEl.dataset.submitted === "1");
     const loginLocked = !!((vtcLoginInput?.dataset.locked || "") === "1");
     return hasSubmittedStatus || loginLocked;
   };
@@ -1535,6 +1536,7 @@ if (typeof closeModal !== "function") {
         }
         if(status){
           status.style.display = "block";
+          status.dataset.submitted = "1";
           status.innerHTML = `✅ <span class="vtc-status-date">${formatDate(new Date())}</span> : Nous avons bien reçu votre identifiant et votre mot de passe, nous allons à présent procéder au paiement des frais d'examen.`;
           if(statusList) statusList.style.display = "flex";
         }
