@@ -333,7 +333,9 @@ def notify_elearning_access_available(trainee: Dict[str, Any], session_obj: Dict
         </p>
         <p style="margin:0;">
           <strong>🔗 Accéder à votre Espace Stagiaire :</strong><br>
-          <a href="{access_link}" style="color:#1d4ed8;text-decoration:none;font-weight:700;">{access_link}</a>
+          <a href="{access_link}" style="display:inline-block;margin-top:8px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:700;padding:10px 16px;border-radius:8px;">
+            Accéder à mon Espace Stagiaire
+          </a>
         </p>
       </div>
       <p>
