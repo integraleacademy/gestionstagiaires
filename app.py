@@ -131,10 +131,16 @@ def fr_datetime(value: str) -> str:
     s = (value or "").strip()
     if not s:
         return ""
-    for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"):
+    normalized = s.replace("Z", "+00:00")
+    try:
+        dt = datetime.datetime.fromisoformat(normalized)
+        return dt.strftime("%d/%m/%Y à %Hh%M")
+    except Exception:
+        pass
+    for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
         try:
-            dt = datetime.datetime.strptime(s[:len(fmt)], fmt)
-            return dt.strftime("%d/%m/%Y %H:%M")
+            dt = datetime.datetime.strptime(s[:26], fmt)
+            return dt.strftime("%d/%m/%Y à %Hh%M")
         except Exception:
             pass
     return fr_date(s)
@@ -627,10 +633,18 @@ def _notifications_bucket_key(bucket: str) -> Optional[str]:
 
 
 def _secretariat_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
+    def _with_created_fr(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        out = []
+        for item in items:
+            cloned = dict(item)
+            cloned["created_fr"] = fr_datetime(item.get("created_at") or "")
+            out.append(cloned)
+        return out
+
     notifications = {
-        "edof": list(data.get("notifications_edof", [])),
-        "prelevements": list(data.get("notifications_prelevements", [])),
-        "relances": list(data.get("notifications_phone_relances", [])),
+        "edof": _with_created_fr(list(data.get("notifications_edof", []))),
+        "prelevements": _with_created_fr(list(data.get("notifications_prelevements", []))),
+        "relances": _with_created_fr(list(data.get("notifications_phone_relances", []))),
     }
     unresolved_total = 0
     for items in notifications.values():
@@ -2321,6 +2335,57 @@ def api_secretariat_relance_result(notification_id: str):
     s.pop("stagiaires", None)
     save_data(data)
 
+    refreshed_payload = _secretariat_notifications_payload(data)
+    return jsonify({
+        "ok": True,
+        "done": bool(notification.get("done")),
+        "call_status": display,
+        "no_answer_count": no_answer_count,
+        **refreshed_payload,
+    })
+
+
+@app.post("/api/secretariat/notifications/edof/<notification_id>/call-result")
+@admin_login_required
+@admin_write_required
+def api_secretariat_edof_result(notification_id: str):
+    payload = request.get_json(silent=True) or {}
+    outcome = (payload.get("outcome") or "").strip().upper()
+    comment = (payload.get("comment") or "").strip()
+    if outcome not in ("CALLED", "NO_ANSWER"):
+        return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+
+    data = load_data()
+    notification = next(
+        (item for item in data.get("notifications_edof", []) if item.get("id") == notification_id),
+        None,
+    )
+    if not notification:
+        return jsonify({"ok": False, "error": "notification_not_found"}), 404
+
+    notification_meta = notification.setdefault("meta", {})
+    previous_no_answer = int(notification_meta.get("no_answer_count") or 0)
+    if outcome == "NO_ANSWER":
+        no_answer_count = min(3, previous_no_answer + 1)
+        display = {
+            1: "1er appel pas de réponse",
+            2: "2ème appel pas de réponse",
+            3: "3ème appel pas de réponse",
+        }[no_answer_count]
+        notification["done"] = no_answer_count >= 3
+        notification["done_at"] = _now_iso() if notification.get("done") else ""
+    else:
+        no_answer_count = 0
+        display = "Personne jointe"
+        notification["done"] = True
+        notification["done_at"] = _now_iso()
+
+    notification_meta["call_status"] = display
+    notification_meta["no_answer_count"] = no_answer_count
+    if comment:
+        notification_meta["last_comment"] = comment
+
+    save_data(data)
     refreshed_payload = _secretariat_notifications_payload(data)
     return jsonify({
         "ok": True,
