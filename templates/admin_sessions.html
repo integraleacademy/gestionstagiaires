@@ -144,6 +144,7 @@
   .filter-btn--aps{ background:#dbeafe; color:#1d4ed8; }
   .filter-btn--dirigeant{ background:#ffedd5; color:#9a3412; }
   .filter-btn--a3p{ background:#dcfce7; color:#15803d; }
+  .filter-btn--vtc{ background:#f3e8ff; color:#7e22ce; }
   .filter-btn--status{ background:#e5e7eb; color:#374151; }
   .filter-btn--all{ background:#cbd5f5; color:#1e1b4b; }
 </style>
@@ -201,10 +202,21 @@
     <span class="muted" id="docsToControlCount">Chargement…</span>
   </div>
 
+</div>
+
+<div class="card" style="margin-bottom:12px;">
+  <div class="card-row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div>
+      <div class="card-title">Filtres des sessions</div>
+      <div class="muted">Affiche uniquement les types de formation ou les statuts qui t’intéressent.</div>
+    </div>
+  </div>
+
   <div class="session-filter-bar" aria-label="Filtres des formations">
     <button class="filter-btn filter-btn--aps" data-filter-group="training" data-filter-value="aps">APS</button>
     <button class="filter-btn filter-btn--dirigeant" data-filter-group="training" data-filter-value="dirigeant">DIRIGEANT</button>
     <button class="filter-btn filter-btn--a3p" data-filter-group="training" data-filter-value="a3p">A3P</button>
+    <button class="filter-btn filter-btn--vtc" data-filter-group="training" data-filter-value="vtc">VTC</button>
     <button class="filter-btn filter-btn--status" data-filter-group="status" data-filter-value="ongoing">Afficher les formations en cours</button>
     <button class="filter-btn filter-btn--status" data-filter-group="status" data-filter-value="upcoming">Afficher les prochaines formations</button>
     <button class="filter-btn filter-btn--status" data-filter-group="status" data-filter-value="ended">Afficher les formations terminées</button>
