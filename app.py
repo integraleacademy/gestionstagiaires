@@ -58,7 +58,18 @@ def admin_write_required(view):
 
 @app.context_processor
 def inject_read_only():
-    return {"is_read_only": session.get("admin_role") == "viewer"}
+    admin_notifications = {"notifications": [], "unresolved_total": 0}
+    if session.get("admin_logged_in") and _admin_can_access_notifications():
+        try:
+            admin_notifications = _admin_notifications_payload(load_data())
+        except Exception:
+            admin_notifications = {"notifications": [], "unresolved_total": 0}
+    return {
+        "is_read_only": session.get("admin_role") == "viewer",
+        "admin_notifications": admin_notifications["notifications"],
+        "admin_unresolved_total": admin_notifications["unresolved_total"],
+        "admin_can_access_notifications": _admin_can_access_notifications(),
+    }
 
 @app.get("/admin/login")
 def admin_login():
@@ -539,6 +550,7 @@ def load_data() -> Dict[str, Any]:
             "notifications_edof": [],
             "notifications_prelevements": [],
             "notifications_phone_relances": [],
+            "notifications_admin": [],
         }
         save_data(base)
         return base
@@ -568,6 +580,9 @@ def load_data() -> Dict[str, Any]:
         if "notifications_phone_relances" not in data:
             data["notifications_phone_relances"] = []
             changed = True
+        if "notifications_admin" not in data:
+            data["notifications_admin"] = []
+            changed = True
 
         if changed:
             save_data(data)
@@ -587,6 +602,7 @@ def load_data() -> Dict[str, Any]:
             "notifications_edof": [],
             "notifications_prelevements": [],
             "notifications_phone_relances": [],
+            "notifications_admin": [],
         }
         save_data(base)
         return base
@@ -611,6 +627,7 @@ def add_notification(data: Dict[str, Any], bucket: str, label: str, meta: Option
         "notifications_edof": "EDOF",
         "notifications_prelevements": "PREL",
         "notifications_phone_relances": "REL",
+        "notifications_admin": "ADM",
     }
     entry = {
         "id": _notification_id(prefix_map.get(bucket, "NOTI")),
@@ -653,6 +670,85 @@ def _secretariat_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
         "notifications": notifications,
         "unresolved_total": unresolved_total,
     }
+
+
+def _session_period_label(session_obj: Dict[str, Any]) -> str:
+    training = formation_label(_session_get(session_obj, "training_type", ""))
+    start = fr_date(_session_get(session_obj, "date_start", ""))
+    end = fr_date(_session_get(session_obj, "date_end", ""))
+    if training and start and end:
+        return f"{training} du {start} au {end}"
+    if training:
+        return training
+    return ""
+
+
+def _find_session_by_id(data: Dict[str, Any], session_id: str) -> Optional[Dict[str, Any]]:
+    target = (session_id or "").strip()
+    if not target:
+        return None
+    for session_obj in (data.get("sessions", []) or []):
+        if (session_obj.get("id") or "").strip() == target:
+            return session_obj
+    return None
+
+
+def _admin_notification_details(data: Dict[str, Any], item: Dict[str, Any]) -> List[str]:
+    meta = item.get("meta") or {}
+    details: List[str] = []
+
+    session_obj = _find_session_by_id(data, meta.get("session_id") or "")
+    period = ""
+    if session_obj:
+        period = _session_period_label(session_obj)
+    if not period:
+        training = (meta.get("training") or "").strip()
+        date_start = fr_date(meta.get("date_start") or "")
+        date_end = fr_date(meta.get("date_end") or "")
+        if training and date_start and date_end:
+            period = f"{training} du {date_start} au {date_end}"
+        elif training:
+            period = training
+    if period:
+        details.append(period)
+
+    comment = (meta.get("comment") or meta.get("last_comment") or "").strip()
+    if comment:
+        details.append(f"Commentaire : {comment}")
+
+    call_status = (meta.get("call_status") or "").strip()
+    if call_status and "appel" in call_status.lower():
+        details.append(call_status)
+
+    return details
+
+
+def _admin_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
+    notifications = []
+    unresolved_total = 0
+    for item in list(data.get("notifications_admin", [])):
+        cloned = dict(item)
+        cloned["created_fr"] = fr_datetime(item.get("created_at") or "")
+        cloned["details"] = _admin_notification_details(data, item)
+        notifications.append(cloned)
+        if not item.get("done"):
+            unresolved_total += 1
+    return {
+        "notifications": notifications,
+        "unresolved_total": unresolved_total,
+    }
+
+
+def _admin_can_access_notifications() -> bool:
+    return session.get("admin_role") == "admin"
+
+
+def _format_trainee_name(first_name: str, last_name: str) -> str:
+    return f"{normalize_first_name(first_name)} {normalize_last_name(last_name)}".strip()
+
+
+def add_admin_notification(data: Dict[str, Any], label: str, meta: Optional[dict] = None) -> dict:
+    return add_notification(data, "notifications_admin", label, meta=meta)
 
 
 def _find_prelevement_request(data: Dict[str, Any], entry_id: str):
@@ -2068,6 +2164,57 @@ def api_secretariat_notifications():
     return jsonify({"ok": True, **payload})
 
 
+@app.get("/api/admin/notifications")
+@admin_login_required
+def api_admin_notifications():
+    if not _admin_can_access_notifications():
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    data = load_data()
+    payload = _admin_notifications_payload(data)
+    return jsonify({"ok": True, **payload})
+
+
+@app.post("/api/admin/notifications/<notification_id>/toggle")
+@admin_login_required
+@admin_write_required
+def api_admin_notification_toggle(notification_id: str):
+    if not _admin_can_access_notifications():
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    data = load_data()
+    notifications = data.get("notifications_admin", [])
+    entry = next((item for item in notifications if item.get("id") == notification_id), None)
+    if not entry:
+        return jsonify({"ok": False, "error": "notification_not_found"}), 404
+
+    done = bool(entry.get("done"))
+    entry["done"] = not done
+    entry["done_at"] = _now_iso() if entry["done"] else ""
+
+    save_data(data)
+    payload = _admin_notifications_payload(data)
+    return jsonify({"ok": True, "done": bool(entry.get("done")), **payload})
+
+
+@app.post("/api/admin/notifications/<notification_id>/delete")
+@admin_login_required
+@admin_write_required
+def api_admin_notification_delete(notification_id: str):
+    if not _admin_can_access_notifications():
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    data = load_data()
+    notifications = data.get("notifications_admin", [])
+    entry = next((item for item in notifications if item.get("id") == notification_id), None)
+    if not entry:
+        return jsonify({"ok": False, "error": "notification_not_found"}), 404
+
+    data["notifications_admin"] = [item for item in notifications if item.get("id") != notification_id]
+    save_data(data)
+    payload = _admin_notifications_payload(data)
+    return jsonify({"ok": True, **payload})
+
+
 @app.post("/admin/edof/submit")
 @admin_login_required
 def admin_edof_submit():
@@ -2251,6 +2398,20 @@ def api_secretariat_prelevement_new_date(notification_id: str):
 
     _send_prelevement_new_date_email(t, s, req, new_date)
 
+    trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
+    add_admin_notification(
+        data,
+        f"🟢{trainee_display_name} - Nouveau prélèvement proposé le {fr_date(new_date) or new_date}",
+        meta={
+            "type": "prelevement_new_date",
+            "source": "secretariat_dashboard",
+            "session_id": s.get("id"),
+            "trainee_id": t.get("id"),
+            "entry_id": entry_id,
+            "comment": (req.get("comment") or "").strip(),
+        },
+    )
+
     notification.setdefault("meta", {})["new_date"] = new_date
     notification["done"] = True
     notification["done_at"] = _now_iso()
@@ -2302,6 +2463,30 @@ def api_secretariat_prelevement_result(notification_id: str):
     notification_meta["no_answer_count"] = no_answer_count
     if comment:
         notification_meta["last_comment"] = comment
+
+    trainee_display_name = _format_trainee_name(
+        notification_meta.get("first_name", ""),
+        notification_meta.get("last_name", ""),
+    )
+    call_icon = "🟢" if outcome == "CALLED" else ({1: "🟡", 2: "🟠", 3: "🔴"}.get(no_answer_count, "🟡"))
+    call_label = (
+        f"{call_icon}Prélèvement rejeté {trainee_display_name} - personne appelée"
+        if outcome == "CALLED"
+        else f"{call_icon}Prélèvement rejeté {trainee_display_name} - {display}"
+    )
+    add_admin_notification(
+        data,
+        call_label,
+        meta={
+            "type": "prelevement_call_result",
+            "outcome": outcome,
+            "no_answer_count": no_answer_count,
+            "session_id": notification_meta.get("session_id"),
+            "trainee_id": notification_meta.get("trainee_id"),
+            "comment": comment,
+            "call_status": display,
+        },
+    )
 
     save_data(data)
     refreshed_payload = _secretariat_notifications_payload(data)
@@ -2375,6 +2560,30 @@ def api_secretariat_relance_result(notification_id: str):
     if comment:
         notification_meta["last_comment"] = comment
 
+    trainee_display_name = _format_trainee_name(
+        notification_meta.get("first_name", ""),
+        notification_meta.get("last_name", ""),
+    )
+    call_icon = "🟢" if outcome == "CALLED" else ({1: "🟡", 2: "🟠", 3: "🔴"}.get(no_answer_count, "🟡"))
+    call_label = (
+        f"{call_icon}Pré-inscription CPF {trainee_display_name} a été appelé"
+        if outcome == "CALLED"
+        else f"{call_icon}Pré-inscription CPF {trainee_display_name} {display}"
+    )
+    add_admin_notification(
+        data,
+        call_label,
+        meta={
+            "type": "relance_call_result",
+            "outcome": outcome,
+            "no_answer_count": no_answer_count,
+            "session_id": s.get("id") if s else None,
+            "trainee_id": t.get("id") if t else None,
+            "comment": comment,
+            "call_status": display,
+        },
+    )
+
     if outcome == "CALLED":
         notification["done"] = True
         notification["done_at"] = _now_iso()
@@ -2435,6 +2644,30 @@ def api_secretariat_edof_result(notification_id: str):
     notification_meta["no_answer_count"] = no_answer_count
     if comment:
         notification_meta["last_comment"] = comment
+
+    trainee_display_name = _format_trainee_name(
+        notification_meta.get("first_name", ""),
+        notification_meta.get("last_name", ""),
+    )
+    call_icon = "🟢" if outcome == "CALLED" else ({1: "🟡", 2: "🟠", 3: "🔴"}.get(no_answer_count, "🟡"))
+    call_label = (
+        f"{call_icon}Pré-inscription CPF {trainee_display_name} a été appelé"
+        if outcome == "CALLED"
+        else f"{call_icon}Pré-inscription CPF {trainee_display_name} {display}"
+    )
+    add_admin_notification(
+        data,
+        call_label,
+        meta={
+            "type": "edof_call_result",
+            "outcome": outcome,
+            "no_answer_count": no_answer_count,
+            "session_id": notification_meta.get("session_id"),
+            "trainee_id": notification_meta.get("trainee_id"),
+            "comment": comment,
+            "call_status": display,
+        },
+    )
 
     save_data(data)
     refreshed_payload = _secretariat_notifications_payload(data)
@@ -2936,6 +3169,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
     payload = request.get_json(silent=True) or {}
     was_exam_fees_paid = bool(t.get("exam_fees_paid"))
     previous_elearning_link = (t.get("elearning_link") or "").strip()
+    previous_cnaps_status = (t.get("cnaps") or "").strip()
 
     # Your template uses:
     # - convention_status, test_fr_status, dossier_status, financement_status, vae_status, comment, cnaps
@@ -3013,6 +3247,27 @@ def api_update_trainee(session_id: str, trainee_id: str):
         t["financement_rejected_note"] = ""
         t["financement_new_date_seen"] = False
         t["comment"] = _remove_admin_comment_flag(t.get("comment", ""), "⚠️ Prélèvement rejeté")
+
+    if "cnaps" in payload:
+        new_cnaps_status = (t.get("cnaps") or "").strip()
+        if _normalize_cnaps_status(new_cnaps_status) != _normalize_cnaps_status(previous_cnaps_status):
+            trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
+            normalized_new = _normalize_cnaps_status(new_cnaps_status)
+            icon = "🟠"
+            if normalized_new == "ACCEPTE":
+                icon = "🟢"
+            add_admin_notification(
+                data,
+                f"{icon}{trainee_display_name} CNAPS {new_cnaps_status.lower()}",
+                meta={
+                    "type": "cnaps_status_change",
+                    "session_id": s.get("id"),
+                    "trainee_id": t.get("id"),
+                    "old_status": previous_cnaps_status,
+                    "new_status": new_cnaps_status,
+                    "comment": (t.get("comment") or "").strip(),
+                },
+            )
 
     if "exam_fees_paid" in payload:
         now_paid = bool(t.get("exam_fees_paid"))
@@ -5096,6 +5351,18 @@ def public_vtc_credentials(token: str):
     t["vtc_cm_submitted_at"] = _now_iso()
     t["updated_at"] = _now_iso()
 
+    trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
+    add_admin_notification(
+        data,
+        f"🟢{trainee_display_name} - Identifiants chambre des métiers VTC envoyés",
+        meta={
+            "type": "vtc_credentials",
+            "session_id": s.get("id"),
+            "trainee_id": t.get("id"),
+            "comment": (t.get("comment") or "").strip(),
+        },
+    )
+
     s["trainees"] = _session_trainees_list(s)
     s.pop("stagiaires", None)
     save_data(data)
@@ -6202,6 +6469,20 @@ def prelevement_rejete_secretaire_reply(token: str):
 
     _send_prelevement_new_date_email(found_trainee, found_session, found, new_date)
 
+    trainee_display_name = _format_trainee_name(found_trainee.get("first_name", ""), found_trainee.get("last_name", ""))
+    add_admin_notification(
+        data,
+        f"🟢{trainee_display_name} - Nouveau prélèvement proposé le {fr_date(new_date) or new_date}",
+        meta={
+            "type": "prelevement_new_date",
+            "source": "secretariat_public_page",
+            "session_id": found_session.get("id"),
+            "trainee_id": found_trainee.get("id"),
+            "entry_id": found.get("id"),
+            "comment": (found.get("comment") or "").strip(),
+        },
+    )
+
     found_session["trainees"] = _session_trainees_list(found_session)
     found_session.pop("stagiaires", None)
     save_data(data)
@@ -6260,6 +6541,20 @@ def prelevement_rejete_reply(token: str):
     found["new_date_source"] = "TRAINEE"
 
     _send_prelevement_new_date_email(found_trainee, found_session, found, new_date, comment)
+
+    trainee_display_name = _format_trainee_name(found_trainee.get("first_name", ""), found_trainee.get("last_name", ""))
+    add_admin_notification(
+        data,
+        f"🟢{trainee_display_name} - Nouveau prélèvement proposé le {fr_date(new_date) or new_date}",
+        meta={
+            "type": "prelevement_new_date",
+            "source": "trainee_public_page",
+            "session_id": found_session.get("id"),
+            "trainee_id": found_trainee.get("id"),
+            "entry_id": found.get("id"),
+            "comment": comment,
+        },
+    )
 
     found_session["trainees"] = _session_trainees_list(found_session)
     found_session.pop("stagiaires", None)
@@ -6354,6 +6649,46 @@ def phone_followup_reply(token: str):
     entry_found["status"] = "DONE"
     entry_found["done_at"] = _now_iso()
     entry_found["done_outcome"] = outcome
+
+    trainee_display_name = _format_trainee_name(t_found.get("first_name", ""), t_found.get("last_name", ""))
+    if outcome == "CALLED":
+        add_admin_notification(
+            data,
+            f"🟢Pré-inscription CPF {trainee_display_name} a été appelé",
+            meta={
+                "type": "relance_call_result",
+                "source": "phone_followup_public_page",
+                "outcome": outcome,
+                "session_id": s_found.get("id"),
+                "trainee_id": t_found.get("id"),
+                "comment": comment,
+                "call_status": "Personne jointe",
+            },
+        )
+    else:
+        current_no_answer = int(entry_found.get("no_answer_count") or 0)
+        no_answer_count = min(3, current_no_answer + 1)
+        entry_found["no_answer_count"] = no_answer_count
+        display = {
+            1: "1er appel pas de réponse",
+            2: "2ème appel pas de réponse",
+            3: "3ème appel pas de réponse",
+        }[no_answer_count]
+        icon = {1: '🟡', 2: '🟠', 3: '🔴'}[no_answer_count]
+        add_admin_notification(
+            data,
+            f"{icon}Pré-inscription CPF {trainee_display_name} {display}",
+            meta={
+                "type": "relance_call_result",
+                "source": "phone_followup_public_page",
+                "outcome": outcome,
+                "no_answer_count": no_answer_count,
+                "session_id": s_found.get("id"),
+                "trainee_id": t_found.get("id"),
+                "comment": comment,
+                "call_status": display,
+            },
+        )
 
     # persist
     s_found["trainees"] = _session_trainees_list(s_found)
