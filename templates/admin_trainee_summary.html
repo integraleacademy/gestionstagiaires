@@ -28,6 +28,8 @@
       <div class="card-meta">
         <div><strong>Nom :</strong> {{ trainee.last_name or "—" }}</div>
         <div><strong>Prénom :</strong> {{ trainee.first_name or "—" }}</div>
+        <div><strong>Email :</strong> {{ trainee.email or "—" }}</div>
+        <div><strong>Téléphone :</strong> {{ trainee.phone or "—" }}</div>
         <div><strong>Date de naissance :</strong> {{ trainee.birth_date|frdate or "—" }}</div>
         <div><strong>Lieu de naissance :</strong> {{ trainee.birth_city or "—" }}</div>
         <div><strong>Code postal actuel :</strong> {{ trainee.zip_code or "—" }}</div>
