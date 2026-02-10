@@ -463,6 +463,7 @@
 </style>
 
 {% set tt = (session.training_type or '')|string|upper %}
+{% set is_vtc_training = 'VTC' in tt %}
 {% set training_type_label = "CHAUFFEUR VTC" if tt == "VTC" else session.training_type %}
 
 {% if 'A3P' in tt %}
@@ -587,26 +588,28 @@
 
   <div class="public-grid">
 
-    {% set elearning_link = (trainee.elearning_link or '')|trim %}
-    <div class="card elearning-card">
-      <h2>🎓 Accès à votre espace Formation théorique en e-learning</h2>
-      {% if elearning_link %}
-        <div class="elearning-state ready">
-          ✅ Votre accès est disponible. Vous pouvez débuter votre formation dès maintenant.
-        </div>
-        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-          <a class="btn" href="{{ elearning_link }}" target="_blank" rel="noopener">🚀 Commencer ma formation</a>
-          <span class="muted">Pensez à enregistrer ce lien dans vos favoris.</span>
-        </div>
-      {% else %}
-        <div class="elearning-state pending">
-          ⏳ Votre accès sera bientôt disponible.
-        </div>
-        <div class="muted" style="margin-top:8px;">
-          Vous recevrez automatiquement un email et un SMS dès que votre lien sera activé.
-        </div>
-      {% endif %}
-    </div>
+    {% if is_vtc_training %}
+      {% set elearning_link = (trainee.elearning_link or '')|trim %}
+      <div class="card elearning-card">
+        <h2>🎓 Accès à votre espace Formation théorique en e-learning</h2>
+        {% if elearning_link %}
+          <div class="elearning-state ready">
+            ✅ Votre accès est disponible. Vous pouvez débuter votre formation dès maintenant.
+          </div>
+          <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <a class="btn" href="{{ elearning_link }}" target="_blank" rel="noopener">🚀 Commencer ma formation</a>
+            <span class="muted">Pensez à enregistrer ce lien dans vos favoris.</span>
+          </div>
+        {% else %}
+          <div class="elearning-state pending">
+            ⏳ Votre accès sera bientôt disponible.
+          </div>
+          <div class="muted" style="margin-top:8px;">
+            Vous recevrez automatiquement un email et un SMS dès que votre lien sera activé.
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
 
     <!-- Encadré 1 : infos générales -->
     <div class="card">
