@@ -28,6 +28,21 @@
   .line:first-child{border-top:none;padding-top:0}
   .label{font-weight:800}
   .value{font-weight:700}
+  .practice-training-box{
+    margin-top:8px;
+    padding:12px;
+    border:1px solid #dbeafe;
+    border-radius:12px;
+    background:#f8fbff;
+    font-size:15px;
+    line-height:1.45;
+    font-weight:600;
+  }
+  .practice-training-box .muted{
+    display:block;
+    margin-top:8px;
+    font-size:13px;
+  }
 
   .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;font-weight:800;font-size:12px;border:1px solid #e5e7eb;background:#f9fafb}
   .pill.red{background:#fff1f2;border-color:#fecdd3;color:#9f1239}
@@ -691,10 +706,9 @@
         {% if show_vtc %}
         <div class="line" style="display:block;">
           <div class="label">Formation pratique VTC</div>
-          <div class="value" style="line-height:1.55;">
+          <div class="practice-training-box">
             La formation pratique se déroulera le {{ practice_training_date|frdate }} de 08h30 à 12h00 dans nos locaux Intégrale Academy, 54 chemin du Carreou 83480 PUGET SUR ARGENS.
-            <br>
-            Une convocation pour la formation pratique sera envoyée par mail.
+            <span class="muted">Une convocation pour la formation pratique sera envoyée par mail.</span>
           </div>
         </div>
         {% endif %}
