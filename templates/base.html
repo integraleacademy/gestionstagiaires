@@ -78,7 +78,7 @@
           Mode consultation (lecture seule)
         </div>
       {% endif %}
-      <div style="display:flex;align-items:center;gap:10px;">
+      <div class="topbar-actions" style="display:flex;align-items:center;gap:10px;">
         {% if session.get("admin_logged_in") %}
           {% if admin_can_access_notifications %}
             <div class="notif-wrap" id="adminNotifWrap">
@@ -104,8 +104,10 @@
                           {% endfor %}
                         {% endif %}
                         <div class="notif-actions">
+{% if admin_can_manage_notifications %}
                           <button type="button" class="notif-icon-btn" data-action="delete" title="Supprimer">❌</button>
                           <button type="button" class="notif-icon-btn" data-action="toggle" title="Traiter">✅</button>
+                        {% endif %}
                         </div>
                       </div>
                     {% endfor %}
@@ -269,6 +271,8 @@
       return String(s || "").replace(/[&<>\"']/g, (c)=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c] || c));
     }
 
+    const canManageNotifications = {{ "true" if admin_can_manage_notifications else "false" }};
+
     function render(items){
       if(!items || !items.length){
         list.innerHTML = '<div class="notif-empty">Aucune notification.</div>';
@@ -279,10 +283,10 @@
           <div class="notif-label">${esc(n.label)}</div>
           <div class="notif-meta">${esc(n.created_fr || "")}</div>
           ${(Array.isArray(n.details) ? n.details : []).map((d)=>`<div class="notif-meta">${esc(d)}</div>`).join("")}
-          <div class="notif-actions">
+          ${canManageNotifications ? `<div class="notif-actions">
             <button type="button" class="notif-icon-btn" data-action="delete" title="Supprimer">❌</button>
             <button type="button" class="notif-icon-btn" data-action="toggle" title="Traiter">✅</button>
-          </div>
+          </div>` : ""}
         </div>
       `).join("");
     }
@@ -329,6 +333,7 @@
     });
 
     list.addEventListener('click', async (e)=>{
+      if(!canManageNotifications) return;
       const actionBtn = e.target.closest('[data-action]');
       if(!actionBtn) return;
       const item = actionBtn.closest('[data-notification-id]');
