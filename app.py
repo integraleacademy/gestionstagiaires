@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 import datetime
+import html
 import unicodedata
 from typing import Dict, Any, Optional, List, Iterable, Tuple
 from functools import wraps
@@ -4972,6 +4973,99 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         PUBLIC_STUDENT_PORTAL_BASE=PUBLIC_STUDENT_PORTAL_BASE,
         fr_date=fr_date,
     )
+
+
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/vtc-cm-autologin")
+@admin_login_required
+def admin_vtc_cm_autologin(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    login = (t.get("vtc_cm_login") or "").strip()
+    password = (t.get("vtc_cm_password") or "").strip()
+    trainee_name = f"{(t.get('first_name') or '').strip()} {(t.get('last_name') or '').strip()}".strip() or "stagiaire"
+
+    if not login or not password:
+        return f"""
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Connexion auto Exament3P</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 16px; line-height: 1.45; }}
+    .card {{ border:1px solid #e5e7eb; border-radius:14px; padding:18px; background:#fff; }}
+    .warn {{ color:#b45309; font-weight:700; margin-bottom:10px; }}
+    a {{ color:#1d4ed8; }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="warn">⚠️ Connexion automatique impossible</div>
+    <p>Les identifiants Exament3P de <strong>{html.escape(trainee_name)}</strong> sont incomplets.</p>
+    <p>Renseignez le login et le mot de passe dans l’espace stagiaire, puis réessayez.</p>
+    <p><a href="{url_for('admin_trainee_page', session_id=session_id, trainee_id=trainee_id)}">← Retour à la fiche stagiaire</a></p>
+  </div>
+</body>
+</html>
+""", 400
+
+    login_esc = html.escape(login)
+    password_esc = html.escape(password)
+    target_url = "https://www.exament3p.fr/id/14"
+
+    return f"""
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Connexion auto Exament3P</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 16px; line-height: 1.45; }}
+    .card {{ border:1px solid #e5e7eb; border-radius:14px; padding:18px; background:#fff; }}
+    .ok {{ color:#166534; font-weight:700; }}
+    .hint {{ color:#6b7280; }}
+    .btn {{ display:inline-block; margin-top:12px; border:1px solid #d1d5db; border-radius:8px; padding:8px 12px; text-decoration:none; color:#111827; }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="ok">✅ Tentative de connexion automatique à Exament3P en cours…</div>
+    <p>Nous envoyons automatiquement les identifiants enregistrés pour <strong>{html.escape(trainee_name)}</strong>.</p>
+    <p class="hint">Si le site n’accepte pas l’auto-connexion (champs/anti-bot), utilisez les identifiants affichés dans la fiche stagiaire.</p>
+    <a class="btn" href="{target_url}" rel="noopener">Ouvrir Exament3P manuellement</a>
+  </div>
+
+  <form id="autoLoginForm" method="post" action="{target_url}" style="display:none;">
+    <input name="login" value="{login_esc}">
+    <input name="username" value="{login_esc}">
+    <input name="identifiant" value="{login_esc}">
+    <input name="email" value="{login_esc}">
+    <input name="password" type="password" value="{password_esc}">
+    <input name="passwd" type="password" value="{password_esc}">
+    <input name="mot_de_passe" type="password" value="{password_esc}">
+  </form>
+
+  <script>
+    setTimeout(function() {{
+      const f = document.getElementById('autoLoginForm');
+      if (f) f.submit();
+    }}, 120);
+  </script>
+</body>
+</html>
+"""
 
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/summary")
