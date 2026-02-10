@@ -4136,8 +4136,9 @@ def _insert_label_photo(doc: Document, placeholder: str, photo_path: str, width_
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/send-access")
 @admin_login_required
-@admin_write_required
 def admin_send_access(session_id: str, trainee_id: str):
+    # Autorisé aussi pour le profil consultation (lecture seule)
+    # afin de permettre l'envoi de l'accès à l'espace stagiaire.
     data = load_data()
     s = find_session(data, session_id)
     if not s:

@@ -211,13 +211,11 @@
   📄 Fiche récap
 </a>
 
-      {% if not is_read_only %}
-        <form method="post" action="{{ url_for('admin_send_access', session_id=session.id, trainee_id=trainee.id) }}">
+      <form method="post" action="{{ url_for('admin_send_access', session_id=session.id, trainee_id=trainee.id) }}">
   <button class="btn btn-primary btn-uniform" type="submit">
     📩 Espace stagiaire
   </button>
-        </form>
-      {% endif %}
+      </form>
 
 <a class="btn btn-outline btn-uniform"
    href="{{ PUBLIC_STUDENT_PORTAL_BASE.rstrip('/') }}/espace/{{ trainee.public_token }}"
