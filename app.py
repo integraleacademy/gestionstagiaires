@@ -2457,7 +2457,6 @@ def api_secretariat_prelevement_new_date(notification_id: str):
 
 @app.post("/api/secretariat/notifications/prelevements/<notification_id>/call-result")
 @admin_login_required
-@admin_write_required
 def api_secretariat_prelevement_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
@@ -2532,7 +2531,6 @@ def api_secretariat_prelevement_result(notification_id: str):
 
 @app.post("/api/secretariat/notifications/relances/<notification_id>/call-result")
 @admin_login_required
-@admin_write_required
 def api_secretariat_relance_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
@@ -2638,7 +2636,6 @@ def api_secretariat_relance_result(notification_id: str):
 
 @app.post("/api/secretariat/notifications/edof/<notification_id>/call-result")
 @admin_login_required
-@admin_write_required
 def api_secretariat_edof_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
