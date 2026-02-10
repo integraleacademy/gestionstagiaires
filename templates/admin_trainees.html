@@ -363,7 +363,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
     </div>
 
     <div class="modal-body">
-      {% set access_label = "le mail" if session.training_type|upper == "VTC" else "le mail + le SMS" %}
+      {% set access_label = "le mail + le SMS" %}
       <p style="margin:0 0 10px 0">
         Tu veux envoyer <strong>{{ access_label }}</strong> maintenant ?
       </p>
