@@ -314,6 +314,15 @@
     refresh().catch(()=>{});
     setInterval(()=>{ refresh().catch(()=>{}); }, 3000);
 
+    document.querySelectorAll('[data-admin-notif-shortcut="true"]').forEach((shortcut)=>{
+      shortcut.addEventListener('click', (e)=>{
+        e.preventDefault();
+        e.stopPropagation();
+        btn.click();
+        window.scrollTo({top:0, behavior:'smooth'});
+      });
+    });
+
     btn.addEventListener('click', async ()=>{
       const isOpen = panel.classList.toggle('show');
       btn.classList.toggle('is-active', isOpen);
