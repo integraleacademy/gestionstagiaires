@@ -81,7 +81,7 @@
       {% endif %}
       <div class="topbar-actions" style="display:flex;align-items:center;gap:10px;">
         {% if session.get("admin_logged_in") %}
-          {% if admin_can_access_notifications %}
+          {% if admin_can_access_notifications and request.endpoint != "admin_secretariat" %}
             <div class="notif-wrap" id="adminNotifWrap">
               <button type="button"
                       id="adminNotifBtn"
