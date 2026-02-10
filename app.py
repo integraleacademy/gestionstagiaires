@@ -3534,6 +3534,7 @@ def admin_etiquette_docx(session_id: str, trainee_id: str):
         "A3P": "etiquette_a3p.docx",
         "APS": "etiquette_aps.docx",
         "CHAUFFEUR VTC": "etiquette_vtc.docx",
+        "VTC": "etiquette_vtc.docx",
         "DIRIGEANT": "etiquette_dirigeant.docx",
         "DIRIGEANT INITIAL": "etiquette_dirigeant_initial.docx",
         "DIRIGEANT VAE": "etiquette_dirigeant.docx",
