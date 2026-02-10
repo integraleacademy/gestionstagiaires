@@ -679,6 +679,7 @@
       {% if show_vtc or is_dirigeant_vae %}
         {% set theory_date = session.exam_theory_date or session.exam_date %}
         {% set practice_date = session.exam_practice_date or session.exam_date %}
+        {% set practice_training_date = session.practice_training_date %}
         <div class="line">
           <div class="label">Examen théorique</div>
           <div class="value">{{ theory_date|frdate }}</div>
@@ -687,6 +688,16 @@
           <div class="label">Examen pratique</div>
           <div class="value">{{ practice_date|frdate }}</div>
         </div>
+        {% if show_vtc %}
+        <div class="line" style="display:block;">
+          <div class="label">Formation pratique VTC</div>
+          <div class="value" style="line-height:1.55;">
+            La formation pratique se déroulera le {{ practice_training_date|frdate }} de 08h30 à 12h00 dans nos locaux Intégrale Academy, 54 chemin du Carreou 83480 PUGET SUR ARGENS.
+            <br>
+            Une convocation pour la formation pratique sera envoyée par mail.
+          </div>
+        </div>
+        {% endif %}
       {% else %}
         <div class="line">
           <div class="label">Date d’examen</div>
