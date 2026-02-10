@@ -231,12 +231,27 @@
 {% if "VTC" in (session.training_type or "")|upper %}
   <div class="card" style="margin-top:12px;">
     <div style="font-weight:900;">Identifiants Chambre des métiers (VTC)</div>
-    <div class="hint" style="margin-top:6px;">Renseignés par le stagiaire via l’espace stagiaire.</div>
-    <div style="display:grid;gap:8px;margin-top:10px;">
-      <div><strong>Login :</strong> {{ trainee.vtc_cm_login or "—" }}</div>
-      <div><strong>Mot de passe :</strong> {{ trainee.vtc_cm_password or "—" }}</div>
+    <div class="hint" style="margin-top:6px;">Renseignables par le stagiaire ou directement depuis cet espace admin.</div>
+    <div style="display:grid;gap:8px;margin-top:10px;max-width:720px;">
+      <label>
+        <div class="label">Login exament3p.fr</div>
+        <input id="editVtcCmLogin"
+               type="text"
+               value="{{ trainee.vtc_cm_login or '' }}"
+               placeholder="Votre login"
+               {{ read_only_attr }}>
+      </label>
+      <label>
+        <div class="label">Mot de passe exament3p.fr</div>
+        <input id="editVtcCmPassword"
+               type="text"
+               value="{{ trainee.vtc_cm_password or '' }}"
+               placeholder="Votre mot de passe"
+               {{ read_only_attr }}>
+      </label>
+      <div id="vtcCredentialsAdminHint" class="hint" style="display:none;"></div>
       {% if trainee.vtc_cm_submitted_at %}
-        <div class="hint">Reçu le {{ trainee.vtc_cm_submitted_at }}</div>
+        <div class="hint">Reçu le {{ trainee.vtc_cm_submitted_at|frdatetime }}</div>
       {% endif %}
       <div style="margin-top:6px;">
         <a class="btn btn-outline btn-uniform"
@@ -1882,6 +1897,43 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
       }, 450);
     });
   }
+
+  const editVtcCmLogin = document.getElementById("editVtcCmLogin");
+  const editVtcCmPassword = document.getElementById("editVtcCmPassword");
+  const vtcCredentialsAdminHint = document.getElementById("vtcCredentialsAdminHint");
+
+  const showVtcAdminHint = (text, isError=false) => {
+    if(!vtcCredentialsAdminHint) return;
+    vtcCredentialsAdminHint.style.display = "block";
+    vtcCredentialsAdminHint.style.color = isError ? "#b91c1c" : "#15803d";
+    vtcCredentialsAdminHint.textContent = text;
+  };
+
+  const saveVtcCredentialsFromAdmin = () => {
+    if(contactDebounce.vtc_credentials) clearTimeout(contactDebounce.vtc_credentials);
+    contactDebounce.vtc_credentials = setTimeout(async ()=>{
+      try{
+        const login = (editVtcCmLogin?.value || "").trim();
+        const password = (editVtcCmPassword?.value || "").trim();
+        const payload = {
+          vtc_cm_login: login,
+          vtc_cm_password: password,
+        };
+        if(login && password){
+          payload.vtc_cm_submitted_at = new Date().toISOString();
+        }
+        await updateTrainee(payload);
+        showVtcAdminHint("✅ Identifiants Chambre des métiers enregistrés.");
+      }catch(e){
+        showVtcAdminHint("Erreur sauvegarde identifiants Chambre des métiers.", true);
+      }
+    }, 450);
+  };
+
+  [editVtcCmLogin, editVtcCmPassword].forEach((input)=>{
+    if(!input) return;
+    input.addEventListener("input", saveVtcCredentialsFromAdmin);
+  });
 
 const chkHideInfos = document.getElementById("chkHideInfos");
 if(chkHideInfos){
