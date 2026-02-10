@@ -303,12 +303,14 @@
   .vtc-assistance h3{
     margin:0 0 8px 0;
     font-size:18px;
+    text-align:center;
   }
   .vtc-assistance .assist-subtitle{
     font-size:14px;
     color:#334155;
     margin-bottom:10px;
     font-weight:600;
+    text-align:center;
   }
   .vtc-assistance ul{
     margin:8px 0 0 0;
@@ -414,7 +416,7 @@
     font-size:28px;
     line-height:1;
     font-weight:900;
-    color:#6b7280;
+    color:#f97316;
     transition:transform .25s ease;
     animation: infosArrowBounce 1.2s ease-in-out infinite;
   }
@@ -717,6 +719,7 @@
   <summary class="collapse-summary">
     <span class="collapse-summary-main">
       <span>Infos à compléter</span>
+      <span id="infosToCompleteOk" class="oktag" hidden>Tout est OK ✅</span>
       <span id="infosToCompleteAlert" class="infos-warning" role="status" aria-live="polite" hidden>
         ⚠️ Ouvrez cet onglet pour compléter vos informations
       </span>
@@ -753,10 +756,12 @@
            trainee.carte_vitale,
            "Ex : 1 85 12 34 567 890 12") }}
 
-{{ field("Numéro PRE ou CAR (numéro d'autorisation préalable CNAPS qui commence par PRE ou numéro de carte professionnelle CNAPS qui commence par CAR)",
-         "pre_number",
-         trainee.pre_number,
-         "Ex : PRE-083-2025-01-01-20210000000 ou PRE-2025-01-01-20210000000") }}
+{% if not show_vtc %}
+  {{ field("Numéro PRE ou CAR (numéro d'autorisation préalable CNAPS qui commence par PRE ou numéro de carte professionnelle CNAPS qui commence par CAR)",
+           "pre_number",
+           trainee.pre_number,
+           "Ex : PRE-083-2025-01-01-20210000000 ou PRE-2025-01-01-20210000000") }}
+{% endif %}
 
 {# Date de naissance (type date) #}
 <div class="field field-date" style="border-left:4px solid {{ '#16a34a' if (trainee.birth_date or '') else '#dc2626' }};padding-left:10px;">
@@ -841,10 +846,11 @@
 
     <div id="vtcCredentialsPanel" class="vtc-credentials-panel" hidden>
       <h3>Identifiants Chambre des métiers</h3>
-      <div class="muted" style="margin-bottom:10px;">
+      {% set has_vtc_credentials_submitted = trainee.vtc_cm_submitted_at %}
+      <div id="vtcCredentialsHint" class="muted" style="margin-bottom:10px;{% if has_vtc_credentials_submitted %}display:none;{% endif %}">
         Renseignez votre login et mot de passe exament3p.fr pour que nous puissions valider le paiement des frais d’examen.
       </div>
-      <form id="vtcCredentialsForm">
+      <form id="vtcCredentialsForm" {% if has_vtc_credentials_submitted %}style="display:none;"{% endif %}>
         <div class="form-grid">
           <label>
             <div class="label">Login exament3p.fr</div>
@@ -1440,6 +1446,8 @@ if (typeof closeModal !== "function") {
   const vtcFormActions = document.getElementById("vtcCredentialsActions");
   const infosDetails = document.getElementById("infosToCompleteDetails");
   const infosWarning = document.getElementById("infosToCompleteAlert");
+  const infosOk = document.getElementById("infosToCompleteOk");
+  const vtcCredentialsHint = document.getElementById("vtcCredentialsHint");
 
   const isVtcCredentialsSubmitted = () => {
     const statusEl = document.getElementById("vtcCredentialsStatus");
@@ -1458,12 +1466,20 @@ if (typeof closeModal !== "function") {
       vtcPasswordInput.dataset.locked = "1";
     }
     if (vtcFormActions) vtcFormActions.classList.add("is-submitted");
+    const vtcForm = document.getElementById("vtcCredentialsForm");
+    if (vtcForm) vtcForm.style.display = "none";
+    if (vtcCredentialsHint) vtcCredentialsHint.style.display = "none";
   };
 
   const updateInfosToCompleteWarning = () => {
-    if (!infosDetails || !infosWarning) return;
-    const pending = Array.from(document.querySelectorAll('.field .saved[id^="ok_"]')).some((el) => (el.textContent || "").includes("À compléter"));
-    infosWarning.hidden = !pending || infosDetails.open;
+    const fieldsToCheck = ["carte_vitale","birth_date","birth_city","birth_country","nationality","address","zip_code","city"];
+    if (document.getElementById("pre_number")) fieldsToCheck.push("pre_number");
+    const pending = fieldsToCheck.some((id) => {
+      const statusEl = document.getElementById(`ok_${id}`);
+      return statusEl && (statusEl.textContent || "").includes("À compléter");
+    });
+    if (infosWarning && infosDetails) infosWarning.hidden = !pending || infosDetails.open;
+    if (infosOk) infosOk.hidden = pending;
   };
 
   const syncVtcPanel = () => {
@@ -1698,7 +1714,7 @@ function setFieldState(inputId){
 
   // listeners existants (garde-les si tu veux) + nouveaux
   [
-  "carte_vitale","pre_number",
+  "carte_vitale",
   "birth_date","birth_city","birth_country","nationality",
   "address","zip_code","city"
 ].forEach(id=>{
@@ -1750,7 +1766,7 @@ if(preEl){
   // premier passage pour mettre rouge/✅ dès l'ouverture
   window.addEventListener("load", ()=>{
   setFieldStateValidated("carte_vitale");
-  setFieldStateValidated("pre_number");
+  if (document.getElementById("pre_number")) setFieldStateValidated("pre_number");
   setFieldStateValidated("birth_date");
   setFieldStateValidated("birth_city");
   setFieldStateValidated("birth_country");
