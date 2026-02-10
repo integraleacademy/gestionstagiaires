@@ -9,6 +9,18 @@
 <div class="session-header">
   <div>
     <h1>{{ session.name }}</h1>
+    {% if admin_can_access_notifications %}
+      <div style="margin:8px 0 0;">
+        <button type="button"
+                class="btn btn-outline"
+                onclick="(function(){var b=document.getElementById('adminNotifBtn'); if(b){b.click();} window.scrollTo({top:0,behavior:'smooth'});})();">
+          🔔 Notifications
+          {% if admin_unresolved_total > 0 %}
+            <span class="pill" style="margin-left:4px;">{{ admin_unresolved_total }}</span>
+          {% endif %}
+        </button>
+      </div>
+    {% endif %}
     <div class="meta-line">
       {% set training_type_label = "CHAUFFEUR VTC" if (session.training_type or "")|upper == "VTC" else session.training_type %}
       <span class="pill">{{ training_type_label }}</span>
