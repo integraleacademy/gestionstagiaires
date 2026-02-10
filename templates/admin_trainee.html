@@ -238,6 +238,13 @@
       {% if trainee.vtc_cm_submitted_at %}
         <div class="hint">Reçu le {{ trainee.vtc_cm_submitted_at }}</div>
       {% endif %}
+      <div style="margin-top:6px;">
+        <a class="btn btn-outline btn-uniform"
+           href="{{ url_for('admin_vtc_cm_autologin', session_id=session.id, trainee_id=trainee.id) }}"
+           target="_blank" rel="noopener">
+          🔐 Connexion auto exament3p.fr
+        </a>
+      </div>
     </div>
     <div style="margin-top:12px;">
       <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
