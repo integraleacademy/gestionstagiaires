@@ -672,12 +672,64 @@ def _secretariat_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _session_period_label(session_obj: Dict[str, Any]) -> str:
+    training = formation_label(_session_get(session_obj, "training_type", ""))
+    start = fr_date(_session_get(session_obj, "date_start", ""))
+    end = fr_date(_session_get(session_obj, "date_end", ""))
+    if training and start and end:
+        return f"{training} du {start} au {end}"
+    if training:
+        return training
+    return ""
+
+
+def _find_session_by_id(data: Dict[str, Any], session_id: str) -> Optional[Dict[str, Any]]:
+    target = (session_id or "").strip()
+    if not target:
+        return None
+    for session_obj in (data.get("sessions", []) or []):
+        if (session_obj.get("id") or "").strip() == target:
+            return session_obj
+    return None
+
+
+def _admin_notification_details(data: Dict[str, Any], item: Dict[str, Any]) -> List[str]:
+    meta = item.get("meta") or {}
+    details: List[str] = []
+
+    session_obj = _find_session_by_id(data, meta.get("session_id") or "")
+    period = ""
+    if session_obj:
+        period = _session_period_label(session_obj)
+    if not period:
+        training = (meta.get("training") or "").strip()
+        date_start = fr_date(meta.get("date_start") or "")
+        date_end = fr_date(meta.get("date_end") or "")
+        if training and date_start and date_end:
+            period = f"{training} du {date_start} au {date_end}"
+        elif training:
+            period = training
+    if period:
+        details.append(period)
+
+    comment = (meta.get("comment") or meta.get("last_comment") or "").strip()
+    if comment:
+        details.append(f"Commentaire : {comment}")
+
+    call_status = (meta.get("call_status") or "").strip()
+    if call_status and "appel" in call_status.lower():
+        details.append(call_status)
+
+    return details
+
+
 def _admin_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
     notifications = []
     unresolved_total = 0
     for item in list(data.get("notifications_admin", [])):
         cloned = dict(item)
         cloned["created_fr"] = fr_datetime(item.get("created_at") or "")
+        cloned["details"] = _admin_notification_details(data, item)
         notifications.append(cloned)
         if not item.get("done"):
             unresolved_total += 1
@@ -2356,6 +2408,7 @@ def api_secretariat_prelevement_new_date(notification_id: str):
             "session_id": s.get("id"),
             "trainee_id": t.get("id"),
             "entry_id": entry_id,
+            "comment": (req.get("comment") or "").strip(),
         },
     )
 
@@ -2430,6 +2483,8 @@ def api_secretariat_prelevement_result(notification_id: str):
             "no_answer_count": no_answer_count,
             "session_id": notification_meta.get("session_id"),
             "trainee_id": notification_meta.get("trainee_id"),
+            "comment": comment,
+            "call_status": display,
         },
     )
 
@@ -2524,6 +2579,8 @@ def api_secretariat_relance_result(notification_id: str):
             "no_answer_count": no_answer_count,
             "session_id": s.get("id") if s else None,
             "trainee_id": t.get("id") if t else None,
+            "comment": comment,
+            "call_status": display,
         },
     )
 
@@ -2605,6 +2662,10 @@ def api_secretariat_edof_result(notification_id: str):
             "type": "edof_call_result",
             "outcome": outcome,
             "no_answer_count": no_answer_count,
+            "session_id": notification_meta.get("session_id"),
+            "trainee_id": notification_meta.get("trainee_id"),
+            "comment": comment,
+            "call_status": display,
         },
     )
 
@@ -3204,6 +3265,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
                     "trainee_id": t.get("id"),
                     "old_status": previous_cnaps_status,
                     "new_status": new_cnaps_status,
+                    "comment": (t.get("comment") or "").strip(),
                 },
             )
 
@@ -5297,6 +5359,7 @@ def public_vtc_credentials(token: str):
             "type": "vtc_credentials",
             "session_id": s.get("id"),
             "trainee_id": t.get("id"),
+            "comment": (t.get("comment") or "").strip(),
         },
     )
 
@@ -6416,6 +6479,7 @@ def prelevement_rejete_secretaire_reply(token: str):
             "session_id": found_session.get("id"),
             "trainee_id": found_trainee.get("id"),
             "entry_id": found.get("id"),
+            "comment": (found.get("comment") or "").strip(),
         },
     )
 
@@ -6488,6 +6552,7 @@ def prelevement_rejete_reply(token: str):
             "session_id": found_session.get("id"),
             "trainee_id": found_trainee.get("id"),
             "entry_id": found.get("id"),
+            "comment": comment,
         },
     )
 
@@ -6596,6 +6661,8 @@ def phone_followup_reply(token: str):
                 "outcome": outcome,
                 "session_id": s_found.get("id"),
                 "trainee_id": t_found.get("id"),
+                "comment": comment,
+                "call_status": "Personne jointe",
             },
         )
     else:
@@ -6618,6 +6685,8 @@ def phone_followup_reply(token: str):
                 "no_answer_count": no_answer_count,
                 "session_id": s_found.get("id"),
                 "trainee_id": t_found.get("id"),
+                "comment": comment,
+                "call_status": display,
             },
         )
 

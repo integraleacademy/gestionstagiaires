@@ -18,10 +18,10 @@
       border:1px solid #fca5a5;
       background:#fef3c7;
       color:#9f1239;
-      border-radius:999px;
-      padding:8px 14px;
-      font-size:24px;
-      font-weight:900;
+      border-radius:8px;
+      padding:6px 10px;
+      font-size:13px;
+      font-weight:700;
       display:inline-flex;
       align-items:center;
       gap:8px;
@@ -29,7 +29,7 @@
     }
     .notif-btn.is-active{ box-shadow:0 0 0 3px rgba(244,114,182,.2); }
     .notif-btn.has-unread{ animation:notifPulse 1.4s ease-in-out infinite; }
-    .notif-dot{ width:12px;height:12px;border-radius:50%;background:#fb7185;display:inline-block; }
+    .notif-dot{ width:10px;height:10px;border-radius:50%;background:#fb7185;display:inline-block; }
     .notif-count{ background:#f43f5e;color:#fff;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:900; }
     @keyframes notifPulse{
       0%{transform:scale(1)}
@@ -98,6 +98,11 @@
                       <div class="notif-item {% if n.done %}done{% endif %}" data-notification-id="{{ n.id }}">
                         <div class="notif-label">{{ n.label }}</div>
                         <div class="notif-meta">{{ n.created_fr }}</div>
+                        {% if n.details %}
+                          {% for d in n.details %}
+                            <div class="notif-meta">{{ d }}</div>
+                          {% endfor %}
+                        {% endif %}
                         <div class="notif-actions">
                           <button type="button" class="notif-icon-btn" data-action="delete" title="Supprimer">❌</button>
                           <button type="button" class="notif-icon-btn" data-action="toggle" title="Traiter">✅</button>
@@ -273,6 +278,7 @@
         <div class="notif-item ${n.done ? 'done' : ''}" data-notification-id="${esc(n.id)}">
           <div class="notif-label">${esc(n.label)}</div>
           <div class="notif-meta">${esc(n.created_fr || "")}</div>
+          ${(Array.isArray(n.details) ? n.details : []).map((d)=>`<div class="notif-meta">${esc(d)}</div>`).join("")}
           <div class="notif-actions">
             <button type="button" class="notif-icon-btn" data-action="delete" title="Supprimer">❌</button>
             <button type="button" class="notif-icon-btn" data-action="toggle" title="Traiter">✅</button>
@@ -301,6 +307,9 @@
       render(data.notifications || []);
       updateBadge(data.unresolved_total || 0);
     }
+
+    refresh().catch(()=>{});
+    setInterval(()=>{ refresh().catch(()=>{}); }, 3000);
 
     btn.addEventListener('click', async ()=>{
       const isOpen = panel.classList.toggle('show');
