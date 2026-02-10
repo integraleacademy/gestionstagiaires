@@ -467,6 +467,7 @@
 {% set tt = (session.training_type or '')|string|upper %}
 {% set is_vtc_training = 'VTC' in tt %}
 {% set training_type_label = "CHAUFFEUR VTC" if tt == "VTC" else session.training_type %}
+{% set is_dirigeant_vae = (tt == 'DIRIGEANT VAE') %}
 
 {% if 'A3P' in tt %}
   {% set formation_label = "Agent de protection physique des personnes (A3P)" %}
@@ -635,6 +636,7 @@
 </div>
 
 
+      {% if not is_dirigeant_vae %}
       <div class="line">
         <div class="label">Dates de formation</div>
         <div class="value">{{ session.date_start|frdate }} → {{ session.date_end|frdate }}</div>
@@ -656,6 +658,7 @@
           <div class="value">{{ session.exam_date|frdate }}</div>
         </div>
       {% endif %}
+      {% endif %}
     </div>
 
     <!-- Encadré 2 : suivi de dossier -->
@@ -670,11 +673,16 @@
 
 
       <div class="docrow">
-        <div class="docmeta"><div class="label">Convention de formation</div></div>
+        <div class="docmeta"><div class="label">{{ 'Convention VAE' if is_dirigeant_vae else 'Convention de formation' }}</div></div>
         {{ pill_for('convention', trainee.convention_status) }}
       </div>
 
-      {% if not show_vtc %}
+      <div class="docrow">
+        <div class="docmeta"><div class="label">Financement</div></div>
+        {{ pill_for('financement', trainee.financement_status) }}
+      </div>
+
+      {% if not show_vtc and not is_dirigeant_vae %}
       <div class="docrow">
         <div class="docmeta"><div class="label">Dossier</div></div>
         {{ pill_for('dossier', 'complete' if dossier_ok else 'incomplete') }}
@@ -690,11 +698,6 @@
         {{ pill_for('test_fr', trainee.test_fr_status) }}
       </div>
       {% endif %}
-
-      <div class="docrow">
-        <div class="docmeta"><div class="label">Financement</div></div>
-        {{ pill_for('financement', trainee.financement_status) }}
-      </div>
 
       {% if show_hosting %}
         <div class="docrow">
@@ -756,7 +759,7 @@
            trainee.carte_vitale,
            "Ex : 1 85 12 34 567 890 12") }}
 
-{% if not show_vtc %}
+{% if not show_vtc and not is_dirigeant_vae %}
   {{ field("Numéro PRE ou CAR (numéro d'autorisation préalable CNAPS qui commence par PRE ou numéro de carte professionnelle CNAPS qui commence par CAR)",
            "pre_number",
            trainee.pre_number,
@@ -819,12 +822,21 @@
     <!-- Encadré STATUT VAE (si DIRIGEANT VAE) -->
     {% if show_vae %}
     <div class="card">
-      <h2>Statut VAE</h2>
+      <h2>Suivi VAE</h2>
       <div class="muted">Lecture seule (mis à jour par l’administration).</div>
 
-      {% set v = trainee.vae_status or '' %}
+      {% set vae_key = trainee.vae_status or 'livret_1_todo' %}
+      {% set vae_map = {
+        'livret_1_todo': {'label':'Livret 1 à compléter','cls':'orange'},
+        'livret_1_analysis': {'label':"Livret 1 en cours d'analyse",'cls':'gray'},
+        'livret_2_todo': {'label':'Livret 2 à compléter','cls':'orange'},
+        'livret_2_analysis': {'label':"Livret 2 en cours d'analyse",'cls':'gray'},
+        'jury': {'label':'Passage devant le jury','cls':'yellow'},
+        'certified': {'label':'Certification obtenue','cls':'green'}
+      } %}
+      {% set vae_current = vae_map[vae_key] if vae_key in vae_map else vae_map['livret_1_todo'] %}
       <div class="row" style="margin-top:10px;">
-        <span class="pill blue">Statut : {{ v if v else '—' }}</span>
+        <span class="pill {{ vae_current.cls }}">Statut : {{ vae_current.label }}</span>
       </div>
     </div>
     {% endif %}
@@ -1097,7 +1109,7 @@ id="upload_{{ d.key }}"
     </div>
 
   {% endif %}
-    {% if not show_vtc %}
+    {% if not show_vtc and not is_dirigeant_vae %}
     <!-- Encadré 4 : diplômes et attestations -->
     <div class="card" style="grid-column:1/-1;">
       <h2>Mes diplômes et attestations</h2>
@@ -1141,6 +1153,47 @@ id="upload_{{ d.key }}"
 
     </div>
     {% endif %}
+
+  {% if is_dirigeant_vae %}
+  <div class="card" style="grid-column:1/-1;background:linear-gradient(135deg,#eef2ff,#fff7ed);border:1px solid #c7d2fe;">
+    <h2>✨ Les étapes de votre VAE</h2>
+    <div class="muted" style="margin-bottom:12px;">Suivez ces étapes pour avancer sereinement dans votre parcours.</div>
+
+    <div class="docs-stack">
+      <div class="docrow" style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;">
+        <div class="docmeta">
+          <div class="label">1ère étape : Rédaction du Livret 1</div>
+          <div>Téléchargez le Livret 1 en cliquant ici</div>
+          <div>Téléchargez la Fiche de renseignement candidat</div>
+          <div class="muted" style="margin-top:8px;">Pour démarrer votre processus de VAE, vous devez nous faire parvenir par mail à l'adresse <strong>ecole@integraleacademy.com</strong> votre Livret 1 complété + Fiche de renseignement candidat + Justificatif de niveau bac + CV complet à jour + Copie de votre pièce d'identité.</div>
+          <div class="muted">Le Livret 1 d’une VAE sert à vérifier que votre demande est recevable. Il permet de prouver que vous avez au moins un an d’expérience en lien direct avec le diplôme visé (salariat, bénévolat, activité indépendante, etc.). Vous devez présenter votre parcours et vos expériences, sans entrer encore dans le détail des compétences.</div>
+          <div style="font-weight:800;">Besoin d'aide ? Vous pouvez nous contacter au 04 22 47 07 68.</div>
+        </div>
+      </div>
+
+      <div class="docrow" style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;">
+        <div class="docmeta">
+          <div class="label">2ème étape : Attestation de recevabilité</div>
+          {% set receva = (trainee.deliverables or {}).get('attestation_recevabilite') %}
+          {% if receva %}
+            <a class="btn outline small" target="_blank" href="/espace/{{ token_safe }}/download/{{ receva }}">Télécharger mon attestation de recevabilité</a>
+          {% else %}
+            <span class="pill gray">Prochainement disponible</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="docrow" style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;">
+        <div class="docmeta">
+          <div class="label">3ème étape : Rédaction du Livret 2</div>
+          <div>Téléchargez le Livret 2 en cliquant ici</div>
+          <div class="muted" style="margin-top:8px;">Le Livret 2 d’une VAE consiste à décrire et analyser en détail vos compétences, en lien direct avec le diplôme visé. Vous devez expliquer ce que vous faites réellement, comment vous le faites et avec quels outils ou responsabilités. C’est ce document qui permet au jury d’évaluer si votre expérience correspond aux exigences de la certification.</div>
+          <div style="font-weight:800;">Besoin d'aide ? Vous pouvez nous contacter au 04 22 47 07 68.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   </div>
 </div>
