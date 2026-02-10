@@ -618,6 +618,47 @@ def add_notification(data: Dict[str, Any], bucket: str, label: str, meta: Option
     return entry
 
 
+def _notifications_bucket_key(bucket: str) -> Optional[str]:
+    return {
+        "edof": "notifications_edof",
+        "prelevements": "notifications_prelevements",
+        "relances": "notifications_phone_relances",
+    }.get(bucket)
+
+
+def _secretariat_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
+    notifications = {
+        "edof": list(data.get("notifications_edof", [])),
+        "prelevements": list(data.get("notifications_prelevements", [])),
+        "relances": list(data.get("notifications_phone_relances", [])),
+    }
+    unresolved_total = 0
+    for items in notifications.values():
+        unresolved_total += sum(1 for item in items if not item.get("done"))
+    return {
+        "notifications": notifications,
+        "unresolved_total": unresolved_total,
+    }
+
+
+def _find_prelevement_request(data: Dict[str, Any], entry_id: str):
+    for s in data.get("sessions", []) or []:
+        for t in _session_trainees_list(s):
+            for req in (t.get("financement_rejected_requests") or []):
+                if (req.get("id") or "").strip() == (entry_id or "").strip():
+                    return s, t, req
+    return None, None, None
+
+
+def _find_phone_followup_entry(data: Dict[str, Any], followup_id: str):
+    for s in data.get("sessions", []) or []:
+        for t in _session_trainees_list(s):
+            for req in (t.get("phone_followups") or []):
+                if (req.get("id") or "").strip() == (followup_id or "").strip():
+                    return s, t, req
+    return None, None, None
+
+
 def positioning_test_public_sections() -> List[Dict[str, Any]]:
     public_sections = []
     for section in POSITIONING_TEST_SECTIONS:
@@ -1994,12 +2035,23 @@ def admin_sessions():
 @admin_login_required
 def admin_secretariat():
     data = load_data()
+    payload = _secretariat_notifications_payload(data)
+    notifications = payload["notifications"]
     return render_template(
         "admin_secretariat.html",
-        edof_notifications=data.get("notifications_edof", []),
-        prelevement_notifications=data.get("notifications_prelevements", []),
-        phone_notifications=data.get("notifications_phone_relances", []),
+        edof_notifications=notifications["edof"],
+        prelevement_notifications=notifications["prelevements"],
+        phone_notifications=notifications["relances"],
+        unresolved_total=payload["unresolved_total"],
     )
+
+
+@app.get("/api/secretariat/notifications")
+@admin_login_required
+def api_secretariat_notifications():
+    data = load_data()
+    payload = _secretariat_notifications_payload(data)
+    return jsonify({"ok": True, **payload})
 
 
 @app.post("/admin/edof/submit")
@@ -2109,12 +2161,7 @@ def admin_edof_submit():
 @app.post("/api/secretariat/notifications/<bucket>/<notification_id>/toggle")
 @admin_login_required
 def api_secretariat_notification_toggle(bucket: str, notification_id: str):
-    bucket_map = {
-        "edof": "notifications_edof",
-        "prelevements": "notifications_prelevements",
-        "relances": "notifications_phone_relances",
-    }
-    bucket_key = bucket_map.get(bucket)
+    bucket_key = _notifications_bucket_key(bucket)
     if not bucket_key:
         return jsonify({"ok": False, "error": "invalid_bucket"}), 400
 
@@ -2128,18 +2175,14 @@ def api_secretariat_notification_toggle(bucket: str, notification_id: str):
     entry["done_at"] = _now_iso() if entry["done"] else ""
     save_data(data)
 
-    return jsonify({"ok": True, "done": bool(entry.get("done"))})
+    payload = _secretariat_notifications_payload(data)
+    return jsonify({"ok": True, "done": bool(entry.get("done")), **payload})
 
 
 @app.post("/api/secretariat/notifications/<bucket>/<notification_id>/delete")
 @admin_login_required
 def api_secretariat_notification_delete(bucket: str, notification_id: str):
-    bucket_map = {
-        "edof": "notifications_edof",
-        "prelevements": "notifications_prelevements",
-        "relances": "notifications_phone_relances",
-    }
-    bucket_key = bucket_map.get(bucket)
+    bucket_key = _notifications_bucket_key(bucket)
     if not bucket_key:
         return jsonify({"ok": False, "error": "invalid_bucket"}), 400
 
@@ -2155,7 +2198,137 @@ def api_secretariat_notification_delete(bucket: str, notification_id: str):
     data[bucket_key] = [item for item in notifications if item.get("id") != notification_id]
     save_data(data)
 
-    return jsonify({"ok": True})
+    payload = _secretariat_notifications_payload(data)
+    return jsonify({"ok": True, **payload})
+
+
+@app.post("/api/secretariat/notifications/prelevements/<notification_id>/new-date")
+@admin_login_required
+@admin_write_required
+def api_secretariat_prelevement_new_date(notification_id: str):
+    payload = request.get_json(silent=True) or {}
+    new_date = (payload.get("new_date") or "").strip()
+    if not new_date:
+        return jsonify({"ok": False, "error": "missing_new_date"}), 400
+
+    data = load_data()
+    notification = next(
+        (item for item in data.get("notifications_prelevements", []) if item.get("id") == notification_id),
+        None,
+    )
+    if not notification:
+        return jsonify({"ok": False, "error": "notification_not_found"}), 404
+
+    entry_id = ((notification.get("meta") or {}).get("entry_id") or "").strip()
+    if not entry_id:
+        return jsonify({"ok": False, "error": "entry_not_found"}), 404
+
+    s, t, req = _find_prelevement_request(data, entry_id)
+    if not s or not t or not req:
+        return jsonify({"ok": False, "error": "entry_not_found"}), 404
+
+    if req.get("new_date"):
+        return jsonify({"ok": False, "error": "already_set"}), 400
+
+    req["status"] = "DONE"
+    req["responded_at"] = _now_iso()
+    req["new_date"] = new_date
+    req["new_date_source"] = "SECRETARIAT_DASHBOARD"
+
+    _send_prelevement_new_date_email(t, s, req, new_date)
+
+    notification.setdefault("meta", {})["new_date"] = new_date
+    notification["done"] = True
+    notification["done_at"] = _now_iso()
+
+    s["trainees"] = _session_trainees_list(s)
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    refreshed_payload = _secretariat_notifications_payload(data)
+    return jsonify({"ok": True, "new_date": new_date, **refreshed_payload})
+
+
+@app.post("/api/secretariat/notifications/relances/<notification_id>/call-result")
+@admin_login_required
+@admin_write_required
+def api_secretariat_relance_result(notification_id: str):
+    payload = request.get_json(silent=True) or {}
+    outcome = (payload.get("outcome") or "").strip().upper()
+    comment = (payload.get("comment") or "").strip()
+    if outcome not in ("CALLED", "NO_ANSWER"):
+        return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+
+    data = load_data()
+    notification = next(
+        (item for item in data.get("notifications_phone_relances", []) if item.get("id") == notification_id),
+        None,
+    )
+    if not notification:
+        return jsonify({"ok": False, "error": "notification_not_found"}), 404
+
+    followup_id = ((notification.get("meta") or {}).get("followup_id") or "").strip()
+    if not followup_id:
+        return jsonify({"ok": False, "error": "followup_not_found"}), 404
+
+    s, t, entry = _find_phone_followup_entry(data, followup_id)
+    if not s or not t or not entry:
+        return jsonify({"ok": False, "error": "followup_not_found"}), 404
+
+    previous_no_answer = int((entry.get("no_answer_count") or 0))
+    if outcome == "NO_ANSWER":
+        no_answer_count = min(3, previous_no_answer + 1)
+        detail = "❌ Pas pu joindre"
+        display = {
+            1: "1er appel pas de réponse",
+            2: "2ème appel pas de réponse",
+            3: "3ème appel pas de réponse",
+        }[no_answer_count]
+    else:
+        no_answer_count = 0
+        detail = "✅ Appelé"
+        display = "Personne jointe"
+
+    t.setdefault("phone_followups", [])
+    t["phone_followups"].insert(0, {
+        "id": "PHN-REP-" + uuid.uuid4().hex[:8].upper(),
+        "type": "RÉPONSE SECRÉTAIRE",
+        "at": _now_iso(),
+        "details": detail,
+        "comment": comment,
+        "ref": entry.get("id", ""),
+    })
+
+    entry["status"] = "DONE" if outcome == "CALLED" else "PENDING"
+    entry["done_at"] = _now_iso() if outcome == "CALLED" else ""
+    entry["done_outcome"] = outcome
+    entry["no_answer_count"] = no_answer_count
+
+    notification_meta = notification.setdefault("meta", {})
+    notification_meta["call_status"] = display
+    notification_meta["no_answer_count"] = no_answer_count
+    if comment:
+        notification_meta["last_comment"] = comment
+
+    if outcome == "CALLED":
+        notification["done"] = True
+        notification["done_at"] = _now_iso()
+    else:
+        notification["done"] = no_answer_count >= 3
+        notification["done_at"] = _now_iso() if notification["done"] else ""
+
+    s["trainees"] = _session_trainees_list(s)
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    refreshed_payload = _secretariat_notifications_payload(data)
+    return jsonify({
+        "ok": True,
+        "done": bool(notification.get("done")),
+        "call_status": display,
+        "no_answer_count": no_answer_count,
+        **refreshed_payload,
+    })
 
 
 @app.get("/admin/test-positionnement")
@@ -5571,6 +5744,10 @@ def api_phone_relance_send(session_id: str, trainee_id: str):
             "session_id": s.get("id"),
             "trainee_id": t.get("id"),
             "followup_id": followup_id,
+            "missing_details": missing_details,
+            "admin_comment": admin_comment,
+            "call_status": "À appeler",
+            "no_answer_count": 0,
         },
     )
 
@@ -5766,6 +5943,7 @@ def api_financement_rejet_send(session_id: str, trainee_id: str):
             "session_id": s.get("id"),
             "trainee_id": t.get("id"),
             "entry_id": entry_id,
+            "secretariat_token": secretariat_token,
         },
     )
 
