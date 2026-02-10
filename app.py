@@ -3569,7 +3569,7 @@ def _token_belongs_to_trainee(t: dict, file_token: str) -> bool:
 
     # Deliverables (diplôme / SST / attestation)
     dv = t.get("deliverables") or {}
-    for k in ("diplome", "carte_sst", "attestation_fin_formation"):
+    for k in ("diplome", "carte_sst", "attestation_fin_formation", "attestation_recevabilite"):
         if (dv.get(k) or "").strip() == file_token:
             return True
 
