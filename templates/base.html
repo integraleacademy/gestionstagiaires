@@ -58,6 +58,7 @@
     .notif-meta{ color:#6b7280; font-size:12px; }
     .notif-actions{ margin-top:8px; display:flex; gap:6px; justify-content:flex-end; }
     .notif-icon-btn{ border:1px solid #d1d5db; background:#fff; border-radius:10px; padding:4px 8px; cursor:pointer; }
+    .notif-icon-btn.is-disabled{ opacity:.45; cursor:not-allowed; }
     .notif-empty{ color:#6b7280; font-size:13px; padding:8px; }
   </style>
   <div class="topbar">
@@ -104,10 +105,8 @@
                           {% endfor %}
                         {% endif %}
                         <div class="notif-actions">
-{% if admin_can_manage_notifications %}
-                          <button type="button" class="notif-icon-btn" data-action="delete" title="Supprimer">❌</button>
-                          <button type="button" class="notif-icon-btn" data-action="toggle" title="Traiter">✅</button>
-                        {% endif %}
+                          <button type="button" class="notif-icon-btn {% if not admin_can_manage_notifications %}is-disabled{% endif %}" data-action="delete" title="{% if admin_can_manage_notifications %}Supprimer{% else %}Action réservée à l’admin{% endif %}" {% if not admin_can_manage_notifications %}disabled aria-disabled="true"{% endif %}>❌</button>
+                          <button type="button" class="notif-icon-btn {% if not admin_can_manage_notifications %}is-disabled{% endif %}" data-action="toggle" title="{% if admin_can_manage_notifications %}Traiter{% else %}Action réservée à l’admin{% endif %}" {% if not admin_can_manage_notifications %}disabled aria-disabled="true"{% endif %}>✅</button>
                         </div>
                       </div>
                     {% endfor %}
@@ -283,10 +282,10 @@
           <div class="notif-label">${esc(n.label)}</div>
           <div class="notif-meta">${esc(n.created_fr || "")}</div>
           ${(Array.isArray(n.details) ? n.details : []).map((d)=>`<div class="notif-meta">${esc(d)}</div>`).join("")}
-          ${canManageNotifications ? `<div class="notif-actions">
-            <button type="button" class="notif-icon-btn" data-action="delete" title="Supprimer">❌</button>
-            <button type="button" class="notif-icon-btn" data-action="toggle" title="Traiter">✅</button>
-          </div>` : ""}
+          <div class="notif-actions">
+            <button type="button" class="notif-icon-btn ${canManageNotifications ? "" : "is-disabled"}" data-action="delete" title="${canManageNotifications ? "Supprimer" : "Action réservée à l’admin"}" ${canManageNotifications ? "" : "disabled aria-disabled='true'"}>❌</button>
+            <button type="button" class="notif-icon-btn ${canManageNotifications ? "" : "is-disabled"}" data-action="toggle" title="${canManageNotifications ? "Traiter" : "Action réservée à l’admin"}" ${canManageNotifications ? "" : "disabled aria-disabled='true'"}>✅</button>
+          </div>
         </div>
       `).join("");
     }
@@ -333,7 +332,10 @@
     });
 
     list.addEventListener('click', async (e)=>{
-      if(!canManageNotifications) return;
+      if(!canManageNotifications){
+        alert("Ces actions (❌/✅) sont réservées au compte admin.");
+        return;
+      }
       const actionBtn = e.target.closest('[data-action]');
       if(!actionBtn) return;
       const item = actionBtn.closest('[data-notification-id]');
