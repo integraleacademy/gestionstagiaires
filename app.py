@@ -333,7 +333,9 @@ def notify_elearning_access_available(trainee: Dict[str, Any], session_obj: Dict
         </p>
         <p style="margin:0;">
           <strong>🔗 Accéder à votre Espace Stagiaire :</strong><br>
-          <a href="{access_link}" style="color:#1d4ed8;text-decoration:none;font-weight:700;">{access_link}</a>
+          <a href="{access_link}" style="display:inline-block;margin-top:8px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:700;padding:10px 16px;border-radius:8px;">
+            Accéder à mon Espace Stagiaire
+          </a>
         </p>
       </div>
       <p>
@@ -345,8 +347,8 @@ def notify_elearning_access_available(trainee: Dict[str, Any], session_obj: Dict
     sms_name = (trainee.get("first_name") or "").strip()
     sms = (
         f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
-        "votre accès e-learning est disponible. "
-        f"Retrouvez-le dans votre Espace Stagiaire : {access_link}"
+        "Votre accès e-learning Formation VTC est disponible. "
+        f"Connectez vous à votre Espace Stagiaire pour suivre votre formation : {access_link}"
     )
 
     email_ok = brevo_send_email((trainee.get("email") or "").strip(), subject, html)
@@ -428,6 +430,19 @@ def build_vtc_onboarding_email(first_name: str, form_link: str) -> Tuple[str, st
       </p>
     """)
     return subject, html
+
+
+def build_vtc_onboarding_sms(first_name: str, form_link: str) -> str:
+    first_name = (first_name or "").strip()
+    greeting = f"Bonjour {first_name}, " if first_name else "Bonjour, "
+    return (
+        "Intégrale Academy 🚖 "
+        f"{greeting}"
+        "votre inscription en formation Chauffeur VTC est confirmée. "
+        f"Accédez à votre Espace Stagiaire : {form_link} "
+        "Vous y retrouverez les étapes Chambre des métiers et vos accès e-learning. "
+        "Besoin d'aide ? 04 22 47 07 68."
+    )
 # =========================
 # Helpers
 # =========================
@@ -3044,8 +3059,9 @@ def api_create_trainee(session_id: str):
         training_type = _session_get(s, "training_type", "")
         if "VTC" in (training_type or "").upper():
             subject, html = build_vtc_onboarding_email(first_name, link)
+            sms = build_vtc_onboarding_sms(first_name, link)
             email_ok = brevo_send_email(email, subject, html) if email else False
-            sms_ok = False
+            sms_ok = brevo_send_sms(phone, sms) if phone else False
         else:
             formation_type = formation_label(training_type)
             dstart = fr_date(_session_get(s, "date_start", ""))
@@ -4224,8 +4240,11 @@ def admin_send_access(session_id: str, trainee_id: str):
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
     training_type = _session_get(s, "training_type", "")
     if "VTC" in (training_type or "").upper():
-        subject, html = build_vtc_onboarding_email(t.get("first_name", ""), link)
+        first_name = t.get("first_name", "")
+        subject, html = build_vtc_onboarding_email(first_name, link)
+        sms = build_vtc_onboarding_sms(first_name, link)
         brevo_send_email(t.get("email", ""), subject, html)
+        brevo_send_sms(t.get("phone", ""), sms)
     else:
         subject = "Accès à votre espace stagiaire – Intégrale Academy"
         html = mail_layout(f"""

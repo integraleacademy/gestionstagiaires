@@ -21,8 +21,10 @@
       {% if "VTC" in (session.training_type or "")|upper %}
         {% set theory_date = session.exam_theory_date or session.exam_date %}
         {% set practice_date = session.exam_practice_date or session.exam_date %}
+        {% set practice_training_date = session.practice_training_date %}
         <span>Examen théorique : <strong>{{ theory_date|frdate }}</strong></span>
         <span>Examen pratique : <strong>{{ practice_date|frdate }}</strong></span>
+        <span>Formation pratique : <strong>{{ practice_training_date|frdate }}</strong></span>
       {% else %}
         <span>Examen : <strong>{{ session.exam_date|frdate }}</strong></span>
       {% endif %}
@@ -227,6 +229,19 @@
 </div>
 
 {% if "VTC" in (session.training_type or "")|upper %}
+  {% set practice_training_date = session.practice_training_date %}
+  <div class="card" style="margin-top:12px;background:#f8fafc;border:1px solid #e2e8f0;">
+    <div style="font-weight:900;">Formation pratique VTC</div>
+    <div style="margin-top:8px;line-height:1.55;">
+      La formation pratique se déroulera
+      <strong>le {{ practice_training_date|frdate }}</strong>
+      de <strong>08h30 à 12h00</strong>
+      dans nos locaux <strong>Intégrale Academy</strong>, 54 chemin du Carreou 83480 PUGET SUR ARGENS.
+      <br>
+      <em>Une convocation pour la formation pratique sera envoyée par mail.</em>
+    </div>
+  </div>
+
   <div class="card" style="margin-top:12px;">
     <div style="font-weight:900;">Identifiants Chambre des métiers (VTC)</div>
     <div class="hint" style="margin-top:6px;">Renseignables par le stagiaire ou directement depuis cet espace admin.</div>
