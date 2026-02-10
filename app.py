@@ -59,7 +59,7 @@ def admin_write_required(view):
 @app.context_processor
 def inject_read_only():
     admin_notifications = {"notifications": [], "unresolved_total": 0}
-    if session.get("admin_logged_in") and _admin_can_access_notifications():
+    if session.get("admin_logged_in") and _admin_can_view_notifications():
         try:
             admin_notifications = _admin_notifications_payload(load_data())
         except Exception:
@@ -68,7 +68,8 @@ def inject_read_only():
         "is_read_only": session.get("admin_role") == "viewer",
         "admin_notifications": admin_notifications["notifications"],
         "admin_unresolved_total": admin_notifications["unresolved_total"],
-        "admin_can_access_notifications": _admin_can_access_notifications(),
+        "admin_can_access_notifications": _admin_can_view_notifications(),
+        "admin_can_manage_notifications": _admin_can_manage_notifications(),
     }
 
 @app.get("/admin/login")
@@ -739,7 +740,11 @@ def _admin_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _admin_can_access_notifications() -> bool:
+def _admin_can_view_notifications() -> bool:
+    return bool(session.get("admin_logged_in"))
+
+
+def _admin_can_manage_notifications() -> bool:
     return session.get("admin_role") == "admin"
 
 
@@ -2167,7 +2172,7 @@ def api_secretariat_notifications():
 @app.get("/api/admin/notifications")
 @admin_login_required
 def api_admin_notifications():
-    if not _admin_can_access_notifications():
+    if not _admin_can_view_notifications():
         return jsonify({"ok": False, "error": "forbidden"}), 403
     data = load_data()
     payload = _admin_notifications_payload(data)
@@ -2178,7 +2183,7 @@ def api_admin_notifications():
 @admin_login_required
 @admin_write_required
 def api_admin_notification_toggle(notification_id: str):
-    if not _admin_can_access_notifications():
+    if not _admin_can_manage_notifications():
         return jsonify({"ok": False, "error": "forbidden"}), 403
 
     data = load_data()
@@ -2200,7 +2205,7 @@ def api_admin_notification_toggle(notification_id: str):
 @admin_login_required
 @admin_write_required
 def api_admin_notification_delete(notification_id: str):
-    if not _admin_can_access_notifications():
+    if not _admin_can_manage_notifications():
         return jsonify({"ok": False, "error": "forbidden"}), 403
 
     data = load_data()
