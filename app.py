@@ -218,6 +218,15 @@ def normalize_phone_fr(phone: str) -> str:
 def _collapse_spaces(value: str) -> str:
     return " ".join((value or "").strip().split())
 
+
+def _parse_no_answer_count(value: Any) -> int:
+    try:
+        count = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, min(3, count))
+
+
 def normalize_last_name(value: str) -> str:
     collapsed = _collapse_spaces(value)
     return collapsed.upper()
@@ -2459,7 +2468,7 @@ def api_secretariat_prelevement_result(notification_id: str):
         return jsonify({"ok": False, "error": "notification_not_found"}), 404
 
     notification_meta = notification.setdefault("meta", {})
-    previous_no_answer = int(notification_meta.get("no_answer_count") or 0)
+    previous_no_answer = _parse_no_answer_count(notification_meta.get("no_answer_count"))
     if outcome == "NO_ANSWER":
         no_answer_count = min(3, previous_no_answer + 1)
         display = {
@@ -2541,7 +2550,7 @@ def api_secretariat_relance_result(notification_id: str):
     if not s or not t or not entry:
         return jsonify({"ok": False, "error": "followup_not_found"}), 404
 
-    previous_no_answer = int((entry.get("no_answer_count") or 0))
+    previous_no_answer = _parse_no_answer_count(entry.get("no_answer_count"))
     if outcome == "NO_ANSWER":
         no_answer_count = min(3, previous_no_answer + 1)
         detail = "❌ Pas pu joindre"
@@ -2640,7 +2649,7 @@ def api_secretariat_edof_result(notification_id: str):
         return jsonify({"ok": False, "error": "notification_not_found"}), 404
 
     notification_meta = notification.setdefault("meta", {})
-    previous_no_answer = int(notification_meta.get("no_answer_count") or 0)
+    previous_no_answer = _parse_no_answer_count(notification_meta.get("no_answer_count"))
     if outcome == "NO_ANSWER":
         no_answer_count = min(3, previous_no_answer + 1)
         display = {
@@ -6774,7 +6783,7 @@ def phone_followup_reply(token: str):
             },
         )
     else:
-        current_no_answer = int(entry_found.get("no_answer_count") or 0)
+        current_no_answer = _parse_no_answer_count(entry_found.get("no_answer_count"))
         no_answer_count = min(3, current_no_answer + 1)
         entry_found["no_answer_count"] = no_answer_count
         display = {
