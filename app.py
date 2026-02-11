@@ -453,6 +453,164 @@ def build_vtc_onboarding_sms(first_name: str, form_link: str) -> str:
         "Vous y retrouverez les étapes Chambre des métiers et vos accès e-learning. "
         "Besoin d'aide ? 04 22 47 07 68."
     )
+
+
+def _parse_iso_datetime(value: str) -> Optional[datetime.datetime]:
+    raw = (value or "").strip()
+    if not raw:
+        return None
+    normalized = raw.replace("Z", "+00:00")
+    try:
+        return datetime.datetime.fromisoformat(normalized)
+    except Exception:
+        return None
+
+
+def build_vtc_credentials_reminder_email(first_name: str, form_link: str) -> Tuple[str, str]:
+    first_name = (first_name or "").strip()
+    greeting = f"Bonjour <strong>{first_name}</strong>," if first_name else "Bonjour,"
+    subject = "Relance – Identifiants Chambre des métiers manquants"
+
+    html = mail_layout(f"""
+      <h2 style="text-align:center;color:#b91c1c">⏰ Relance – Formation Chauffeur VTC</h2>
+      <p>{greeting}</p>
+      <p>
+        Je me permets de revenir vers vous concernant votre formation <strong>Chauffeur VTC</strong>.
+      </p>
+      <p>
+        À ce jour, nous n'avons toujours pas reçu vos identifiants Chambre des métiers
+        (<strong>exament3p</strong>) afin que nous puissions procéder au paiement de vos frais d'examen.
+      </p>
+      <p>
+        Nous vous rappelons que vous devez nous faire parvenir vos identifiants via votre
+        <strong>Espace Stagiaire</strong> (les envois par mail et tout autre moyen de communication
+        ne sont pas pris en compte).
+      </p>
+      <p style="text-align:center;margin:18px 0;">
+        <a href="{form_link}"
+           style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+          👉 Accéder à mon Espace Stagiaire
+        </a>
+      </p>
+
+      <p>
+        Je vous remercie par avance.
+      </p>
+
+      <p style="margin-top:18px;">
+        Bien cordialement,<br>
+        <strong>Clément VAILLANT</strong><br>
+        Directeur Intégrale Academy
+      </p>
+    """)
+    return subject, html
+
+
+def build_vtc_credentials_reminder_sms(first_name: str, form_link: str) -> str:
+    first_name = (first_name or "").strip()
+    greeting = f"Bonjour {first_name}, " if first_name else "Bonjour, "
+    return (
+        "Intégrale Academy ⏰ "
+        f"{greeting}nous n'avons pas reçu vos identifiants Chambre des métiers (exament3p). "
+        "Merci de les transmettre uniquement via votre Espace Stagiaire : "
+        f"{form_link}"
+    )
+
+
+def _send_vtc_credentials_missing_reminders(data: Dict[str, Any]) -> bool:
+    changed = False
+    now_utc = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+    session_list = data.get("sessions") or []
+
+    for session_obj in session_list:
+        if session_obj.get("archived"):
+            continue
+
+        training_type = (_session_get(session_obj, "training_type", "") or "").upper()
+        if "VTC" not in training_type:
+            continue
+
+        trainees = _session_trainees_list(session_obj)
+        for trainee in trainees:
+            if (trainee.get("vtc_cm_login") or "").strip() and (trainee.get("vtc_cm_password") or "").strip():
+                continue
+            if (trainee.get("vtc_cm_submitted_at") or "").strip():
+                continue
+            if (trainee.get("vtc_cm_reminder_sent_at") or "").strip():
+                continue
+
+            created_at = _parse_iso_datetime(trainee.get("created_at") or "")
+            if not created_at:
+                continue
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(tzinfo=datetime.timezone.utc)
+
+            days_since_creation = (now_utc - created_at).days
+            if days_since_creation < 7:
+                continue
+
+            link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{(trainee.get('public_token') or '').strip()}"
+            first_name = (trainee.get("first_name") or "").strip()
+            subject, html_content = build_vtc_credentials_reminder_email(first_name, link)
+
+            trainee_email = (trainee.get("email") or "").strip()
+            trainee_phone = (trainee.get("phone") or "").strip()
+
+            email_ok = brevo_send_email(
+                trainee_email,
+                subject,
+                html_content,
+                cc_emails=["clement@integraleacademy.com"],
+            ) if trainee_email else False
+            sms_ok = brevo_send_sms(trainee_phone, build_vtc_credentials_reminder_sms(first_name, link)) if trainee_phone else False
+
+            copy_subject = f"Copie relance VTC identifiants envoyée – {first_name} {(trainee.get('last_name') or '').strip()}".strip()
+            copy_html = mail_layout(f"""
+              <h2>Copie relance VTC</h2>
+              <p><strong>Stagiaire :</strong> {_format_trainee_name(trainee.get('first_name', ''), trainee.get('last_name', ''))}</p>
+              <p><strong>Session :</strong> {_session_get(session_obj, 'name', '') or '—'}</p>
+              <p><strong>Email stagiaire :</strong> {trainee_email or 'Non renseigné'}</p>
+              <p><strong>Téléphone stagiaire :</strong> {trainee_phone or 'Non renseigné'}</p>
+              <p><strong>Email stagiaire envoyé :</strong> {'Oui' if email_ok else 'Non'}</p>
+              <p><strong>SMS envoyé :</strong> {'Oui' if sms_ok else 'Non'}</p>
+            """)
+            copy_email_ok = brevo_send_email("clement@integraleacademy.com", copy_subject, copy_html)
+
+            trainee["vtc_cm_reminder_sent_at"] = _now_iso()
+            trainee["vtc_cm_reminder_email_ok"] = bool(email_ok)
+            trainee["vtc_cm_reminder_sms_ok"] = bool(sms_ok)
+            trainee["vtc_cm_reminder_copy_email_ok"] = bool(copy_email_ok)
+            trainee["updated_at"] = _now_iso()
+
+            phone_followups = trainee.get("phone_followups")
+            if not isinstance(phone_followups, list):
+                phone_followups = []
+            phone_followups.insert(0, {
+                "type": "RELANCE VTC IDENTIFIANTS",
+                "details": "Relance automatique J+7",
+                "at": _now_iso(),
+                "status": "ENVOYÉE",
+                "comment": "Relance automatique envoyée (mail + SMS) pour identifiants Chambre des métiers manquants.",
+            })
+            trainee["phone_followups"] = phone_followups
+
+            trainee_display_name = _format_trainee_name(trainee.get("first_name", ""), trainee.get("last_name", ""))
+            add_admin_notification(
+                data,
+                f"⏰ Relance VTC identifiants envoyée à {trainee_display_name}",
+                meta={
+                    "type": "vtc_credentials_reminder",
+                    "session_id": session_obj.get("id"),
+                    "trainee_id": trainee.get("id"),
+                },
+            )
+
+            changed = True
+
+        session_obj["trainees"] = trainees
+        session_obj.pop("stagiaires", None)
+
+    return changed
 # =========================
 # Helpers
 # =========================
@@ -605,6 +763,9 @@ def load_data() -> Dict[str, Any]:
             changed = True
         if "notifications_admin" not in data:
             data["notifications_admin"] = []
+            changed = True
+
+        if _send_vtc_credentials_missing_reminders(data):
             changed = True
 
         if changed:
@@ -3054,6 +3215,10 @@ def api_create_trainee(session_id: str):
         "vtc_cm_login": "",
         "vtc_cm_password": "",
         "vtc_cm_submitted_at": "",
+        "vtc_cm_reminder_sent_at": "",
+        "vtc_cm_reminder_email_ok": False,
+        "vtc_cm_reminder_sms_ok": False,
+        "vtc_cm_reminder_copy_email_ok": False,
         "exam_fees_paid": False,
         "exam_fees_paid_at": "",
         "elearning_link": "",

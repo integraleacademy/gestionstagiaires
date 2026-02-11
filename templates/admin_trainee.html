@@ -266,6 +266,13 @@
       {% if trainee.vtc_cm_submitted_at %}
         <div class="hint">Reçu le {{ trainee.vtc_cm_submitted_at|frdatetime }}</div>
       {% endif %}
+      {% if trainee.vtc_cm_reminder_sent_at %}
+        <div class="hint" style="margin-top:4px;">
+          ⏰ Relance identifiants envoyée le <strong>{{ trainee.vtc_cm_reminder_sent_at|frdatetime }}</strong>
+          {% if trainee.vtc_cm_reminder_email_ok %}<span style="margin-left:8px;">📧 Email envoyé</span>{% else %}<span style="margin-left:8px;">📧 Email non envoyé</span>{% endif %}
+          {% if trainee.vtc_cm_reminder_sms_ok %}<span style="margin-left:8px;">📱 SMS envoyé</span>{% else %}<span style="margin-left:8px;">📱 SMS non envoyé</span>{% endif %}
+        </div>
+      {% endif %}
       <div style="margin-top:6px;">
         <a class="btn btn-outline btn-uniform"
            href="{{ url_for('admin_vtc_cm_autologin', session_id=session.id, trainee_id=trainee.id) }}"
