@@ -2761,6 +2761,7 @@ def admin_trainees(session_id: str):
         "exam_date": _session_get(s, "exam_date", ""),
         "exam_theory_date": _session_get(s, "exam_theory_date", ""),
         "exam_practice_date": _session_get(s, "exam_practice_date", ""),
+        "practice_training_date": _session_get(s, "practice_training_date", ""),
     }
 
     trainees = _session_trainees_list(s)
@@ -2825,6 +2826,7 @@ def admin_trainees(session_id: str):
     stats = compute_stats(s)
     show_hosting = (session_view["training_type"] == "A3P")
     show_vae = (session_view["training_type"] == "DIRIGEANT VAE")
+    is_vtc = ("VTC" in (session_view["training_type"] or "").upper())
 
     # ✅ docs fin de formation par stagiaire (pour surlignage + n/3 + étiquettes)
     for t in trainees:
@@ -2860,6 +2862,7 @@ def admin_trainees(session_id: str):
         stats=stats,
         show_hosting=show_hosting,
         show_vae=show_vae,
+        is_vtc=is_vtc,
         enums=ENUMS,
     )
 
