@@ -7470,6 +7470,9 @@ def _vae_default_dossier(dossier_id: Optional[str] = None) -> Dict[str, Any]:
             "intitule": "DIRIGEANT D’ENTREPRISE DE SÉCURITÉ PRIVÉE",
             "rncp": "40385",
             "certificateur": "SCOTIA FORMATION",
+            "option": "NC",
+            "parcours_mention": "NC",
+            "prerequis": "",
             "vise": "complete",
             "blocs_vises": []
         },

@@ -26,11 +26,16 @@
 
     for (const [k, v] of fd.entries()) {
       if (k === 'certification.blocs_vises') {
-        setPath(payload, k, String(v).split(',').map(s => s.trim()).filter(Boolean));
+        setPath(payload, k, String(v).split(',').map((s) => s.trim()).filter(Boolean));
+      } else if (k === 'candidat.objectifs') {
+        // handled separately to preserve all checked values
       } else {
         setPath(payload, k, v);
       }
     }
+
+    const objectifs = [...form.querySelectorAll('[name="candidat.objectifs"]:checked')].map((el) => el.value);
+    setPath(payload, 'candidat.objectifs', objectifs);
 
     ['engagement.souhaite_accompagnement', 'engagement.accord_analyse'].forEach((name) => {
       const el = form.querySelector(`[name="${name}"]`);
