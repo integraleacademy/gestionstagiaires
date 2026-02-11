@@ -7943,12 +7943,8 @@ def _validate_vae_for_submit(dossier: Dict[str, Any]) -> List[str]:
         errors.append("7ème étape (Accord d'analyse) : vous devez accepter l'analyse du dossier")
     return errors
 
-@app.get('/vae/nouveau')
-def vae_new():
-    trainee_token = (request.args.get('trainee_token') or '').strip()
-    if not trainee_token:
-        trainee_token = _vae_extract_trainee_token_from_referer(request.headers.get('Referer', ''))
-
+def _vae_create_and_redirect_for_trainee_token(trainee_token: str):
+    trainee_token = (trainee_token or '').strip()
     linked_trainee_id = ''
     linked_session_id = ''
 
@@ -7961,15 +7957,29 @@ def vae_new():
 
     data = _vae_load_all()
     dossier = _vae_default_dossier()
+    dossier.setdefault('meta', {})['linkage_id'] = str(uuid.uuid4())
+    if trainee_token:
+        dossier.setdefault('meta', {})['trainee_token'] = trainee_token
     if linked_trainee_id:
-        dossier['meta'] = {
-            'trainee_id': linked_trainee_id,
-            'session_id': linked_session_id,
-            'trainee_token': trainee_token,
-        }
+        dossier['meta']['trainee_id'] = linked_trainee_id
+        dossier['meta']['session_id'] = linked_session_id
+
     data.setdefault("dossiers", []).insert(0, dossier)
     _vae_save_all(data)
     return redirect(url_for('vae_wizard', token=dossier['id']))
+
+
+@app.get('/vae/nouveau/<trainee_token>')
+def vae_new_for_trainee(trainee_token: str):
+    return _vae_create_and_redirect_for_trainee_token(trainee_token)
+
+
+@app.get('/vae/nouveau')
+def vae_new():
+    trainee_token = (request.args.get('trainee_token') or '').strip()
+    if not trainee_token:
+        trainee_token = _vae_extract_trainee_token_from_referer(request.headers.get('Referer', ''))
+    return _vae_create_and_redirect_for_trainee_token(trainee_token)
 
 @app.get('/vae/<token>')
 def vae_wizard(token: str):
