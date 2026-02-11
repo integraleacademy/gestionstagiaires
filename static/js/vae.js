@@ -10,6 +10,24 @@
   const initial = window.__VAE_INITIAL__ || {};
   let current = 0;
 
+  const STEP_LABELS = {
+    1: 'Nature de la demande',
+    2: '1ère étape : Informations générales sur le candidat',
+    3: '2ème étape : Certification professionnelle visée',
+    4: '3ème étape : Expériences du candidat',
+    5: '4ème étape : Analyse des compétences du candidat',
+    6: '5ème étape : Parcours prévisionnel du candidat',
+    7: '6ème étape : Formulaire d’avis de faisabilité',
+    8: '7ème étape : Accord pour l\'analyse de la faisabilité',
+  };
+
+  const REQUIRED_CANDIDAT_FIELDS = {
+    nom_naissance: 'Nom de naissance',
+    prenoms: 'Prénom(s)',
+    date_naissance: 'Date de naissance',
+    email: 'Adresse email',
+  };
+
   function setPath(obj, path, value) {
     const keys = path.split('.');
     let ref = obj;
@@ -97,28 +115,60 @@
   function frontValidate() {
     const payload = getPayload();
     const e = [];
-    ['nom_naissance', 'prenoms', 'date_naissance', 'email'].forEach((k) => {
-      if (!payload.candidat?.[k]) e.push(`candidat.${k} requis`);
+    Object.entries(REQUIRED_CANDIDAT_FIELDS).forEach(([key, label]) => {
+      if (!payload.candidat?.[key]) {
+        e.push({
+          step: 2,
+          message: `${label} manquant`,
+        });
+      }
     });
+
     for (let i = 1; i <= 5; i++) {
       const act = payload.blocs_competences?.[`activite${i}`] || {};
-      if (['oui', 'partiellement'].includes(act.statut) && !act.commentaires) e.push(`commentaires activité ${i} requis`);
+      if (['oui', 'partiellement'].includes(act.statut) && !act.commentaires) {
+        e.push({
+          step: 5,
+          message: `Commentaires manquants pour l'activité ${i} (statut : ${act.statut})`,
+        });
+      }
     }
-    if (!payload.engagement?.accord_analyse) e.push('accord_analyse obligatoire');
+
+    if (!payload.engagement?.accord_analyse) {
+      e.push({
+        step: 8,
+        message: "Vous devez accepter l'analyse du dossier",
+      });
+    }
+
     return e;
+  }
+
+  function renderErrors(errors = []) {
+    if (!errors.length) {
+      errorsEl.innerHTML = '';
+      return;
+    }
+    errorsEl.innerHTML = errors
+      .map((error) => {
+        if (typeof error === 'string') return `<div>${error}</div>`;
+        const stepLabel = STEP_LABELS[error.step] || `Étape ${error.step}`;
+        return `<div><strong>${stepLabel}</strong> : ${error.message}</div>`;
+      })
+      .join('');
   }
 
   async function submitDossier() {
     const localErrors = frontValidate();
     if (localErrors.length) {
-      errorsEl.innerHTML = localErrors.map((e) => `<div>${e}</div>`).join('');
+      renderErrors(localErrors);
       return;
     }
     await autosave();
     const res = await fetch(`/api/vae/${dossierId}/submit`, { method: 'POST' });
     const data = await res.json();
     if (!res.ok) {
-      errorsEl.innerHTML = (data.errors || ['Erreur soumission']).map((e) => `<div>${e}</div>`).join('');
+      renderErrors(data.errors || ['Erreur soumission']);
       return;
     }
     window.location.href = data.redirect_url;
