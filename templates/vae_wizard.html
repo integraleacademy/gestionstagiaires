@@ -203,12 +203,38 @@
       <div class="step-readonly card">
         Cette rubrique est complétée uniquement par l'accompagnateur. Le candidat ne peut pas la modifier.
       </div>
+      <p><strong>Les informations ci-dessous sont à compléter :</strong></p>
+      <ul>
+        <li>par l'accompagnateur lorsque le candidat est accompagné ;</li>
+        <li>ou par le candidat lui-même, en autonomie, dans le cadre d'une autoévaluation préalable ;</li>
+        <li>et validé par l'organisme certificateur avant la recevabilité.</li>
+      </ul>
+
+      <p><u>Préconisation d’accompagnement méthodologique</u> (cette rubrique s’adresse exclusivement aux candidats bénéficiant d'un accompagnement) servant à accompagner le candidat dans la rédaction de son dossier de faisabilité et à la préparation de son passage devant le jury de certification :</p>
       <div class="grid-2">
-        <input name="parcours_previsionnel.accompagnement_individuel.heures" placeholder="Accompagnement individuel (heures)" value="{{ dossier.parcours_previsionnel.accompagnement_individuel.heures }}" disabled>
-        <input name="parcours_previsionnel.accompagnement_collectif.heures" placeholder="Accompagnement collectif (heures)" value="{{ dossier.parcours_previsionnel.accompagnement_collectif.heures }}" disabled>
-        <input name="parcours_previsionnel.formations_prealables.organisme" placeholder="Organisme" value="{{ dossier.parcours_previsionnel.formations_prealables.organisme }}" disabled>
-        <input name="parcours_previsionnel.immersion.structure" placeholder="Structure d'immersion" value="{{ dossier.parcours_previsionnel.immersion.structure }}" disabled>
+        <input name="parcours_previsionnel.accompagnement_individuel.heures" placeholder="Accompagnement individuel (nombre d'heures proposées)" value="{{ dossier.parcours_previsionnel.accompagnement_individuel.heures }}" disabled>
+        <input name="parcours_previsionnel.accompagnement_collectif.heures" placeholder="Accompagnement collectif (nombre d'heures proposées)" value="{{ dossier.parcours_previsionnel.accompagnement_collectif.heures }}" disabled>
+        <textarea name="parcours_previsionnel.accompagnement_individuel.modalites" placeholder="Accompagnement individuel (modalités de mise en œuvre)" disabled>{{ dossier.parcours_previsionnel.accompagnement_individuel.modalites }}</textarea>
+        <textarea name="parcours_previsionnel.accompagnement_collectif.modalites" placeholder="Accompagnement collectif (modalités de mise en œuvre)" disabled>{{ dossier.parcours_previsionnel.accompagnement_collectif.modalites }}</textarea>
       </div>
+
+      <p><u>Formations préalables à envisager</u> :</p>
+      <div class="grid-2">
+        <input name="parcours_previsionnel.formations_prealables.organisme" placeholder="Organisme de formation retenu" value="{{ dossier.parcours_previsionnel.formations_prealables.organisme }}" disabled>
+        <input name="parcours_previsionnel.formations_prealables.intitule" placeholder="Intitulé de la formation" value="{{ dossier.parcours_previsionnel.formations_prealables.intitule }}" disabled>
+        <input name="parcours_previsionnel.formations_prealables.objectifs" placeholder="Objectif(s) de la formation" value="{{ dossier.parcours_previsionnel.formations_prealables.objectifs }}" disabled>
+        <input name="parcours_previsionnel.formations_prealables.heures" placeholder="Nombre d'heures" value="{{ dossier.parcours_previsionnel.formations_prealables.heures }}" disabled>
+      </div>
+
+      <p><u>Expérimentations complémentaires (ex : PMSMP/période de mise en situation en milieu professionnel)</u> :</p>
+      <div class="grid-2">
+        <input name="parcours_previsionnel.immersion.type" placeholder="Type d'immersion (PMSMP, action de formation en situation de travail ...)" value="{{ dossier.parcours_previsionnel.immersion.type }}" disabled>
+        <input name="parcours_previsionnel.immersion.structure" placeholder="Type d'entreprise ou de structure" value="{{ dossier.parcours_previsionnel.immersion.structure }}" disabled>
+        <input name="parcours_previsionnel.immersion.objectifs" placeholder="Objectif(s) de l'immersion" value="{{ dossier.parcours_previsionnel.immersion.objectifs }}" disabled>
+        <input name="parcours_previsionnel.immersion.heures" placeholder="Nombre d'heures" value="{{ dossier.parcours_previsionnel.immersion.heures }}" disabled>
+      </div>
+
+      <p><u>Autres actions à l’initiative du candidat</u> :</p>
       <textarea name="parcours_previsionnel.autres_actions" placeholder="Autres actions" disabled>{{ dossier.parcours_previsionnel.autres_actions }}</textarea>
     </section>
 
