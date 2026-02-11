@@ -5487,9 +5487,26 @@ def find_session_and_trainee_by_token(data: Dict[str, Any], token: str):
     for s in sessions:
         trainees = s.get("trainees") or s.get("stagiaires") or []
         for t in trainees:
-            if (t.get("public_token") or "").strip() == token:
+            public_token = (t.get("public_token") or "").strip()
+            legacy_token = (t.get("token") or "").strip()
+            if public_token == token or legacy_token == token:
                 return s, t
     return None, None
+
+
+def _vae_extract_trainee_token_from_referer(referer: str) -> str:
+    raw = str(referer or "").strip()
+    if not raw:
+        return ""
+
+    marker = "/espace/"
+    idx = raw.find(marker)
+    if idx < 0:
+        return ""
+
+    tail = raw[idx + len(marker):]
+    token = tail.split("?", 1)[0].split("#", 1)[0].split("/", 1)[0].strip()
+    return token
 
 
 @app.get("/espace/<token>")
@@ -7893,9 +7910,8 @@ def _validate_vae_for_submit(dossier: Dict[str, Any]) -> List[str]:
         errors.append("7ème étape (Accord d'analyse) : vous devez accepter l'analyse du dossier")
     return errors
 
-@app.get('/vae/nouveau')
-def vae_new():
-    trainee_token = (request.args.get('trainee_token') or '').strip()
+def _vae_create_and_redirect_for_trainee_token(trainee_token: str):
+    trainee_token = (trainee_token or '').strip()
     linked_trainee_id = ''
     linked_session_id = ''
 
@@ -7908,15 +7924,29 @@ def vae_new():
 
     data = _vae_load_all()
     dossier = _vae_default_dossier()
+    dossier.setdefault('meta', {})['linkage_id'] = str(uuid.uuid4())
+    if trainee_token:
+        dossier.setdefault('meta', {})['trainee_token'] = trainee_token
     if linked_trainee_id:
-        dossier['meta'] = {
-            'trainee_id': linked_trainee_id,
-            'session_id': linked_session_id,
-            'trainee_token': trainee_token,
-        }
+        dossier['meta']['trainee_id'] = linked_trainee_id
+        dossier['meta']['session_id'] = linked_session_id
+
     data.setdefault("dossiers", []).insert(0, dossier)
     _vae_save_all(data)
     return redirect(url_for('vae_wizard', token=dossier['id']))
+
+
+@app.get('/vae/nouveau/<trainee_token>')
+def vae_new_for_trainee(trainee_token: str):
+    return _vae_create_and_redirect_for_trainee_token(trainee_token)
+
+
+@app.get('/vae/nouveau')
+def vae_new():
+    trainee_token = (request.args.get('trainee_token') or '').strip()
+    if not trainee_token:
+        trainee_token = _vae_extract_trainee_token_from_referer(request.headers.get('Referer', ''))
+    return _vae_create_and_redirect_for_trainee_token(trainee_token)
 
 @app.get('/vae/<token>')
 def vae_wizard(token: str):
@@ -7958,36 +7988,55 @@ def api_vae_submit(dossier_id: str):
     dossier["updated_at"] = _now_iso_utc()
     _vae_save_all(data)
 
-    trainee_id = str(((dossier.get('meta') or {}).get('trainee_id')) or '')
-    session_id = str(((dossier.get('meta') or {}).get('session_id')) or '')
-    if trainee_id and session_id:
-        data_main = load_data()
-        s = find_session(data_main, session_id)
-        if s:
-            trainees = _session_trainees_list(s)
-            t = next((x for x in trainees if str(x.get('id') or '') == trainee_id), None)
-            if t:
-                view = vae_status_view('livret_1_analysis')
-                t['vae_status'] = view['key']
-                t['vae_status_label'] = view['label']
-                if not isinstance(t.get('vae_action_dates'), dict):
-                    t['vae_action_dates'] = {}
-                if not t['vae_action_dates'].get('livret_1_received'):
-                    t['vae_action_dates']['livret_1_received'] = _fr_date(datetime.datetime.utcnow())
-                trainee_display_name = _format_trainee_name(t.get('first_name', ''), t.get('last_name', ''))
-                add_admin_notification(
-                    data_main,
-                    f"VAE Livret 1️⃣ Déposé par {trainee_display_name}",
-                    meta={
-                        'type': 'vae_livret_1_submit',
-                        'session_id': s.get('id'),
-                        'trainee_id': t.get('id'),
-                        'vae_dossier_id': dossier_id,
-                    },
-                )
-                s['trainees'] = trainees
-                s.pop('stagiaires', None)
-                save_data(data_main)
+    meta = dossier.get('meta') or {}
+    trainee_id = str(meta.get('trainee_id') or '')
+    session_id = str(meta.get('session_id') or '')
+
+    data_main = load_data()
+    s = find_session(data_main, session_id) if session_id else None
+    t = None
+
+    if s and trainee_id:
+        trainees = _session_trainees_list(s)
+        t = next((x for x in trainees if str(x.get('id') or '') == trainee_id), None)
+    else:
+        trainee_token = str(meta.get('trainee_token') or '').strip()
+        if trainee_token:
+            s, t = find_session_and_trainee_by_token(data_main, trainee_token)
+            if s and t:
+                trainee_id = str(t.get('id') or '')
+                session_id = str(s.get('id') or '')
+                dossier.setdefault('meta', {})['trainee_id'] = trainee_id
+                dossier.setdefault('meta', {})['session_id'] = session_id
+                dossier['updated_at'] = _now_iso_utc()
+                _vae_save_all(data)
+
+    if s and t:
+        trainees = _session_trainees_list(s)
+        current_trainee_id = str(t.get('id') or '')
+        t = next((x for x in trainees if str(x.get('id') or '') == current_trainee_id), t)
+
+        view = vae_status_view('livret_1_analysis')
+        t['vae_status'] = view['key']
+        t['vae_status_label'] = view['label']
+        if not isinstance(t.get('vae_action_dates'), dict):
+            t['vae_action_dates'] = {}
+        if not t['vae_action_dates'].get('livret_1_received'):
+            t['vae_action_dates']['livret_1_received'] = _fr_date(datetime.datetime.utcnow())
+        trainee_display_name = _format_trainee_name(t.get('first_name', ''), t.get('last_name', ''))
+        add_admin_notification(
+            data_main,
+            f"VAE Livret 1️⃣ Déposé par {trainee_display_name}",
+            meta={
+                'type': 'vae_livret_1_submit',
+                'session_id': s.get('id'),
+                'trainee_id': t.get('id'),
+                'vae_dossier_id': dossier_id,
+            },
+        )
+        s['trainees'] = trainees
+        s.pop('stagiaires', None)
+        save_data(data_main)
 
     return jsonify({"ok": True, "redirect_url": url_for('vae_success', token=dossier_id)})
 
