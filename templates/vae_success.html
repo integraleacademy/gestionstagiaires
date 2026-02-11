@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="/static/css/vae.css">
+<div class="vae-container">
+  <h1>✅ Dossier soumis</h1>
+  <p>Votre dossier de faisabilité VAE DESP a bien été soumis.</p>
+  <p><strong>ID dossier :</strong> {{ dossier.id }}</p>
+  <a class="btn" href="/vae/{{ dossier.id }}">Consulter le dossier</a>
+</div>
+{% endblock %}

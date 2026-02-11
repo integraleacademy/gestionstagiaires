@@ -4,6 +4,7 @@ import uuid
 import datetime
 import html
 import unicodedata
+import threading
 from typing import Dict, Any, Optional, List, Iterable, Tuple
 from functools import wraps
 from flask import session
@@ -460,6 +461,7 @@ def build_vtc_onboarding_sms(first_name: str, form_link: str) -> str:
 # Public trainee "mini-login" (nom + date naissance)
 # =========================
 import unicodedata
+import threading
 import re
 
 def _norm_lastname(s: str) -> str:
@@ -6876,6 +6878,7 @@ def api_update_trainee_alias(session_id: str, trainee_id: str):
 
 import re
 import unicodedata
+import threading
 from flask import request, jsonify
 
 def _norm_name(s: str) -> str:
@@ -7436,6 +7439,235 @@ def api_attestation_bulk_upload(session_id: str):
     save_data(data)
 
     return jsonify({"ok": True, "received": received, "added_count": len(added), "added": added, "failed": failed})
+
+
+
+# =========================
+# VAE DESP - Dossier de faisabilité
+# =========================
+VAE_DATA_FILE = os.path.join(PERSIST_DIR, "data_vae.json")
+_vae_lock = threading.RLock()
+
+def _now_iso_utc() -> str:
+    return datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+
+def _vae_default_dossier(dossier_id: Optional[str] = None) -> Dict[str, Any]:
+    now = _now_iso_utc()
+    return {
+        "id": dossier_id or str(uuid.uuid4()),
+        "statut_dossier": "brouillon",
+        "nature_demande": "initiale",
+        "candidat": {
+            "nom_naissance": "", "nom_usage": "", "prenoms": "", "date_naissance": "", "nationalite": "",
+            "genre": "", "niveau_formation": "", "niveau_certification": "", "certifications_obtenues": "",
+            "adresse": "", "telephone": "", "email": "", "statut": "", "convention_collective": "", "objectifs": []
+        },
+        "certification": {
+            "intitule": "DIRIGEANT D’ENTREPRISE DE SÉCURITÉ PRIVÉE",
+            "rncp": "40385",
+            "certificateur": "SCOTIA FORMATION",
+            "vise": "complete",
+            "blocs_vises": []
+        },
+        "experiences": [{"date_debut": "", "duree": "", "description": ""}],
+        "blocs_competences": {
+            "activite1": {"statut": "", "commentaires": ""},
+            "activite2": {"statut": "", "commentaires": ""},
+            "activite3": {"statut": "", "commentaires": ""},
+            "activite4": {"statut": "", "commentaires": ""},
+            "activite5": {"statut": "", "commentaires": ""}
+        },
+        "parcours_previsionnel": {
+            "accompagnement_individuel": {"heures": "", "modalites": ""},
+            "accompagnement_collectif": {"heures": "", "modalites": ""},
+            "formations_prealables": {"organisme": "", "intitule": "", "objectifs": "", "heures": ""},
+            "immersion": {"type": "", "structure": "", "objectifs": "", "heures": ""},
+            "autres_actions": ""
+        },
+        "avis_admin": {
+            "decision": "", "motivation": "", "nom_accompagnateur": "", "email": "",
+            "telephone": "", "organisme": "", "date": ""
+        },
+        "engagement": {
+            "souhaite_accompagnement": False, "accord_analyse": False,
+            "lieu_signature": "", "date_signature": "", "nom_signature": ""
+        },
+        "created_at": now,
+        "updated_at": now,
+    }
+
+def _vae_load_all() -> Dict[str, Any]:
+    with _vae_lock:
+        if not os.path.exists(VAE_DATA_FILE):
+            data = {"dossiers": []}
+            _vae_save_all(data)
+            return data
+        try:
+            with open(VAE_DATA_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, dict):
+                data = {"dossiers": []}
+            if "dossiers" not in data or not isinstance(data["dossiers"], list):
+                data["dossiers"] = []
+            return data
+        except Exception:
+            backup = VAE_DATA_FILE + ".corrupt." + str(int(datetime.datetime.utcnow().timestamp()))
+            try:
+                os.replace(VAE_DATA_FILE, backup)
+            except Exception:
+                pass
+            data = {"dossiers": []}
+            _vae_save_all(data)
+            return data
+
+def _vae_save_all(data: Dict[str, Any]) -> None:
+    with _vae_lock:
+        tmp = VAE_DATA_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, VAE_DATA_FILE)
+
+def _vae_find_dossier(data: Dict[str, Any], dossier_id: str) -> Optional[Dict[str, Any]]:
+    for d in data.get("dossiers", []):
+        if d.get("id") == dossier_id:
+            return d
+    return None
+
+def _merge_dict(base: Dict[str, Any], incoming: Dict[str, Any]) -> None:
+    for k, v in incoming.items():
+        if isinstance(v, dict) and isinstance(base.get(k), dict):
+            _merge_dict(base[k], v)
+        else:
+            base[k] = v
+
+def _validate_vae_for_submit(dossier: Dict[str, Any]) -> List[str]:
+    errors: List[str] = []
+    candidat = dossier.get("candidat", {})
+    for key in ["nom_naissance", "prenoms", "date_naissance", "email"]:
+        if not (str(candidat.get(key) or "").strip()):
+            errors.append(f"Le champ candidat.{key} est requis")
+
+    blocs = dossier.get("blocs_competences", {})
+    for i in range(1, 6):
+        item = blocs.get(f"activite{i}", {})
+        statut = (item.get("statut") or "").strip()
+        commentaires = (item.get("commentaires") or "").strip()
+        if statut in {"oui", "partiellement"} and not commentaires:
+            errors.append(f"Le commentaire de activite{i} est requis si statut = {statut}")
+
+    engagement = dossier.get("engagement", {})
+    if not bool(engagement.get("accord_analyse")):
+        errors.append("Vous devez accepter l'analyse du dossier avant soumission")
+    return errors
+
+@app.get('/vae/nouveau')
+def vae_new():
+    data = _vae_load_all()
+    dossier = _vae_default_dossier()
+    data.setdefault("dossiers", []).insert(0, dossier)
+    _vae_save_all(data)
+    return redirect(url_for('vae_wizard', token=dossier['id']))
+
+@app.get('/vae/<token>')
+def vae_wizard(token: str):
+    data = _vae_load_all()
+    dossier = _vae_find_dossier(data, token)
+    if not dossier:
+        abort(404)
+    return render_template('vae_wizard.html', dossier=dossier, dossier_json=json.dumps(dossier, ensure_ascii=False))
+
+@app.post('/api/vae/<dossier_id>/save')
+@app.patch('/api/vae/<dossier_id>/save')
+def api_vae_save(dossier_id: str):
+    payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "invalid_payload"}), 400
+
+    data = _vae_load_all()
+    dossier = _vae_find_dossier(data, dossier_id)
+    if not dossier:
+        return jsonify({"ok": False, "error": "not_found"}), 404
+
+    _merge_dict(dossier, payload)
+    dossier["updated_at"] = _now_iso_utc()
+    _vae_save_all(data)
+    return jsonify({"ok": True, "id": dossier_id, "updated_at": dossier["updated_at"]})
+
+@app.post('/api/vae/<dossier_id>/submit')
+def api_vae_submit(dossier_id: str):
+    data = _vae_load_all()
+    dossier = _vae_find_dossier(data, dossier_id)
+    if not dossier:
+        return jsonify({"ok": False, "error": "not_found"}), 404
+
+    errors = _validate_vae_for_submit(dossier)
+    if errors:
+        return jsonify({"ok": False, "errors": errors}), 400
+
+    dossier["statut_dossier"] = "soumis"
+    dossier["updated_at"] = _now_iso_utc()
+    _vae_save_all(data)
+    return jsonify({"ok": True, "redirect_url": url_for('vae_success', token=dossier_id)})
+
+@app.get('/vae/<token>/succes')
+def vae_success(token: str):
+    data = _vae_load_all()
+    dossier = _vae_find_dossier(data, token)
+    if not dossier:
+        abort(404)
+    return render_template('vae_success.html', dossier=dossier)
+
+@app.get('/admin/vae')
+@admin_login_required
+def admin_vae_list():
+    data = _vae_load_all()
+    dossiers = sorted(data.get("dossiers", []), key=lambda d: d.get("updated_at", ""), reverse=True)
+    return render_template('admin_vae_list.html', dossiers=dossiers)
+
+@app.route('/admin/vae/<dossier_id>', methods=['GET', 'POST'])
+@admin_login_required
+def admin_vae_detail(dossier_id: str):
+    data = _vae_load_all()
+    dossier = _vae_find_dossier(data, dossier_id)
+    if not dossier:
+        abort(404)
+
+    if request.method == 'POST':
+        action = request.form.get('action', '').strip()
+        if action == 'update_avis':
+            avis = dossier.setdefault('avis_admin', {})
+            avis['decision'] = request.form.get('decision', '').strip()
+            avis['motivation'] = request.form.get('motivation', '').strip()
+            avis['nom_accompagnateur'] = request.form.get('nom_accompagnateur', '').strip()
+            avis['email'] = request.form.get('email', '').strip()
+            avis['telephone'] = request.form.get('telephone', '').strip()
+            avis['organisme'] = request.form.get('organisme', '').strip()
+            avis['date'] = request.form.get('date', '').strip()
+        elif action == 'mark_recevable':
+            dossier['statut_dossier'] = 'recevable'
+        elif action == 'mark_refuse':
+            dossier['statut_dossier'] = 'refuse'
+        dossier['updated_at'] = _now_iso_utc()
+        _vae_save_all(data)
+        return redirect(url_for('admin_vae_detail', dossier_id=dossier_id))
+
+    return render_template('admin_vae_detail.html', dossier=dossier)
+
+@app.get('/admin/vae/<dossier_id>/export')
+@admin_login_required
+def admin_vae_export(dossier_id: str):
+    data = _vae_load_all()
+    dossier = _vae_find_dossier(data, dossier_id)
+    if not dossier:
+        abort(404)
+
+    blob = json.dumps(dossier, ensure_ascii=False, indent=2).encode('utf-8')
+    return send_file(
+        BytesIO(blob),
+        mimetype='application/json',
+        as_attachment=True,
+        download_name=f'vae_{dossier_id}.json'
+    )
 
 @app.get("/admin/sessions/")
 def admin_sessions_slash_redirect():

@@ -1,0 +1,21 @@
+.vae-container{max-width:980px;margin:24px auto;padding:20px;background:#fff;border:1px solid #e5e7eb;border-radius:14px}
+.vae-container h1{margin:0 0 4px}
+.muted{color:#6b7280}
+.progress-wrap{height:10px;background:#e5e7eb;border-radius:999px;margin:16px 0}
+.progress-bar{height:100%;width:0;background:#1f8f4a;border-radius:999px;transition:width .2s}
+.step{display:none}
+.step.active{display:block}
+.grid-2,.grid-3{display:grid;gap:10px}
+.grid-2{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.grid-3{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+input,select,textarea{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0}
+textarea{min-height:90px}
+.btn{background:#1f8f4a;color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;text-decoration:none;display:inline-block}
+.btn.secondary{background:#f3f4f6;color:#111827}
+.btn.danger{background:#b91c1c;color:#fff}
+.wizard-actions{display:flex;align-items:center;gap:10px;margin-top:16px}
+.card{border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin:10px 0}
+.errors{color:#b91c1c;font-weight:700}
+.vae-table{width:100%;border-collapse:collapse}
+.vae-table th,.vae-table td{padding:8px;border-bottom:1px solid #e5e7eb;text-align:left}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
