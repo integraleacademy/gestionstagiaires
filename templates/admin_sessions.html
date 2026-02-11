@@ -263,8 +263,13 @@
     </div>
 
     <div class="docs-progress">
+      {% if "VTC" in (s.training_type or "")|upper %}
+      Inscriptions CMAR :
+      <strong>{{ s.cmar_registered_total or 0 }}/{{ s.total }}</strong>
+      {% else %}
       Docs fin de formation :
       <strong>{{ s.deliverables_done or 0 }}/{{ s.deliverables_total or 0 }}</strong>
+      {% endif %}
     </div>
 
 <div class="card-actions">

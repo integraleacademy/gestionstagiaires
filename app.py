@@ -2093,6 +2093,9 @@ def admin_sessions():
         public_logged_in_total = sum(
             1 for t in trainees if bool(t.get("public_has_logged_in"))
         )
+        cmar_registered_total = sum(
+            1 for t in trainees if bool((t.get("vtc_cm_submitted_at") or "").strip())
+        )
         
         total_total = len(trainees)
         dossier_complete_total = 0
@@ -2167,6 +2170,7 @@ def admin_sessions():
             "deliverables_done": done_total,
             "deliverables_total": total_total,
             "public_logged_in_total": public_logged_in_total,
+            "cmar_registered_total": cmar_registered_total,
             "status_label": status_label,
             "status_key": status_key,
             "training_type_class": training_type_class,
