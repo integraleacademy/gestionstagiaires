@@ -8,7 +8,7 @@
 
   <form id="vaeForm">
     <section class="step active" data-step="1">
-      <h2>Étape 1 — Nature de la demande</h2>
+      <h2>Nature de la demande</h2>
       <label>Nature de la demande</label>
       <select name="nature_demande" required>
         <option value="initiale" {% if dossier.nature_demande=='initiale' %}selected{% endif %}>Initiale</option>
@@ -17,7 +17,7 @@
     </section>
 
     <section class="step" data-step="2">
-      <h2>Étape 2 — Informations générales sur le candidat</h2>
+      <h2>1ère étape : INFORMATIONS GÉNÉRALES SUR LE CANDIDAT</h2>
       <div class="grid-2">
         <input name="candidat.nom_naissance" placeholder="Nom de naissance*" value="{{ dossier.candidat.nom_naissance }}" required>
         <input name="candidat.nom_usage" placeholder="Nom d'usage" value="{{ dossier.candidat.nom_usage }}">
@@ -87,7 +87,7 @@
     </section>
 
     <section class="step" data-step="3">
-      <h2>Étape 3 — Certification professionnelle visée</h2>
+      <h2>2ème étape : CERTIFICATION PROFESSIONNELLE VISÉE</h2>
       <input value="{{ dossier.certification.intitule }}" readonly>
       <div class="grid-3">
         <input value="RNCP {{ dossier.certification.rncp }}" readonly>
@@ -106,7 +106,7 @@
     </section>
 
     <section class="step" data-step="4">
-      <h2>Étape 4 — TABLEAU DES EXPÉRIENCES PROFESSIONNELLES OU PERSONNELLES</h2>
+      <h2>3ème étape : TABLEAU DES EXPÉRIENCES PROFESSIONNELLES OU PERSONNELLES</h2>
       <p>
         Le tableau ci-dessous permet au certificateur de connaître les expériences du candidat<br>
         (professionnelles, personnelles, bénévoles…) en lien direct avec la certification visée.<br>
@@ -130,7 +130,7 @@
     </section>
 
     <section class="step" data-step="5">
-      <h2>Étape 5 — TABLEAU DE POSITIONNEMENT PAR COMPÉTENCES</h2>
+      <h2>4ème étape : TABLEAU DE POSITIONNEMENT PAR COMPÉTENCES</h2>
       <div class="step-instructions card">
         <p>
           Il s'agit de recueillir des informations en lien avec le référentiel d'activités et de compétences visé à partir d’expériences déclarées par le candidat.
@@ -167,7 +167,7 @@
     </section>
 
     <section class="step" data-step="6">
-      <h2>Étape 6 — Parcours prévisionnel</h2>
+      <h2>5ème étape : Parcours prévisionnel du candidat</h2>
       <div class="grid-2">
         <input name="parcours_previsionnel.accompagnement_individuel.heures" placeholder="Accompagnement individuel (heures)" value="{{ dossier.parcours_previsionnel.accompagnement_individuel.heures }}">
         <input name="parcours_previsionnel.accompagnement_collectif.heures" placeholder="Accompagnement collectif (heures)" value="{{ dossier.parcours_previsionnel.accompagnement_collectif.heures }}">
@@ -178,17 +178,25 @@
     </section>
 
     <section class="step" data-step="7">
-      <h2>Étape 7 — Engagement</h2>
+      <h2>6ème étape : Formulaire d’avis de faisabilité</h2>
+      <input name="avis_admin.decision" placeholder="Décision (favorable / réservé / défavorable)" value="{{ dossier.avis_admin.decision }}">
+      <textarea name="avis_admin.motivation" placeholder="Motivation de l'avis">{{ dossier.avis_admin.motivation }}</textarea>
+      <div class="grid-2">
+        <input name="avis_admin.nom_accompagnateur" placeholder="Nom de l'accompagnateur" value="{{ dossier.avis_admin.nom_accompagnateur }}">
+        <input type="email" name="avis_admin.email" placeholder="Email" value="{{ dossier.avis_admin.email }}">
+        <input name="avis_admin.telephone" placeholder="Téléphone" value="{{ dossier.avis_admin.telephone }}">
+        <input name="avis_admin.organisme" placeholder="Organisme" value="{{ dossier.avis_admin.organisme }}">
+      </div>
+      <input type="date" name="avis_admin.date" value="{{ dossier.avis_admin.date }}">
+    </section>
+
+    <section class="step" data-step="8">
+      <h2>7ème étape : Accord pour l'analyse de la faisabilité</h2>
       <label><input type="checkbox" name="engagement.souhaite_accompagnement" {% if dossier.engagement.souhaite_accompagnement %}checked{% endif %}> Je souhaite un accompagnement</label>
       <label><input type="checkbox" name="engagement.accord_analyse" {% if dossier.engagement.accord_analyse %}checked{% endif %} required> J'accepte l'analyse de mon dossier*</label>
       <input name="engagement.lieu_signature" placeholder="Lieu" value="{{ dossier.engagement.lieu_signature }}">
       <input type="date" name="engagement.date_signature" value="{{ dossier.engagement.date_signature }}">
       <input name="engagement.nom_signature" placeholder="Nom de signature" value="{{ dossier.engagement.nom_signature }}">
-    </section>
-
-    <section class="step" data-step="8">
-      <h2>Étape 8 — Confirmation</h2>
-      <p>Relisez votre dossier, puis cliquez sur « Soumettre ».</p>
       <div id="submitErrors" class="errors"></div>
       <button type="button" class="btn" id="submitDossier">Soumettre</button>
     </section>

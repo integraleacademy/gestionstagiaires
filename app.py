@@ -5712,6 +5712,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
 
     show_vae = (training_type == "DIRIGEANT VAE")
     vae_steps = [{"key": k, "label": v["label"], "pill": v["pill"]} for k, v in VAE_STATUS_STEPS.items()]
+    vae_dossier = _vae_find_latest_for_trainee(str(t.get('id') or '')) if show_vae else None
     t["vae_status"] = vae_status_view(t.get("vae_status") or t.get("vae_status_label"))["key"]
     t["vae_status_label"] = vae_status_view(t.get("vae_status"))["label"]
     if not isinstance(t.get("vae_action_dates"), dict):
@@ -5740,6 +5741,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         trainee=t,
         show_vae=show_vae,
         vae_steps=vae_steps,
+        vae_dossier=vae_dossier,
         dossier_is_complete=dossier_complete,
         deliverables_view=deliverables_view,
         default_training_price=default_price,
@@ -7540,6 +7542,135 @@ def _vae_find_dossier(data: Dict[str, Any], dossier_id: str) -> Optional[Dict[st
             return d
     return None
 
+def _vae_find_latest_for_trainee(trainee_id: str) -> Optional[Dict[str, Any]]:
+    if not trainee_id:
+        return None
+    data = _vae_load_all()
+    dossiers = [
+        d for d in data.get("dossiers", [])
+        if str((d.get("meta") or {}).get("trainee_id") or "") == str(trainee_id)
+    ]
+    if not dossiers:
+        return None
+    dossiers.sort(key=lambda d: d.get("updated_at") or d.get("created_at") or "", reverse=True)
+    return dossiers[0]
+
+def _pdf_escape(text: Any) -> str:
+    s = str(text or "")
+    return s.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+def _build_simple_pdf(lines: List[str]) -> bytes:
+    clean_lines = [line if isinstance(line, str) else str(line) for line in lines]
+    if not clean_lines:
+        clean_lines = [""]
+
+    objects: List[bytes] = []
+    objects.append(b"1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n")
+    objects.append(b"2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n")
+    objects.append(b"3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj\n")
+    objects.append(b"4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj\n")
+
+    y = 805
+    content_lines = ["BT", "/F1 9 Tf"]
+    for raw in clean_lines:
+        parts = [raw[i:i + 110] for i in range(0, len(raw), 110)] or [""]
+        for part in parts:
+            if y < 40:
+                break
+            content_lines.append(f"1 0 0 1 30 {y} Tm ({_pdf_escape(part)}) Tj")
+            y -= 12
+        if y < 40:
+            break
+    content_lines.append("ET")
+    content = ("\n".join(content_lines) + "\n").encode("latin-1", errors="replace")
+    objects.append(f"5 0 obj << /Length {len(content)} >> stream\n".encode("ascii") + content + b"endstream\nendobj\n")
+
+    pdf = bytearray(b"%PDF-1.4\n")
+    offsets = [0]
+    for obj in objects:
+        offsets.append(len(pdf))
+        pdf.extend(obj)
+
+    xref_pos = len(pdf)
+    total = len(objects) + 1
+    pdf.extend(f"xref\n0 {total}\n".encode("ascii"))
+    pdf.extend(b"0000000000 65535 f \n")
+    for off in offsets[1:]:
+        pdf.extend(f"{off:010d} 00000 n \n".encode("ascii"))
+    pdf.extend(f"trailer << /Size {total} /Root 1 0 R >>\nstartxref\n{xref_pos}\n%%EOF".encode("ascii"))
+    return bytes(pdf)
+
+def _vae_dossier_to_lines(dossier: Dict[str, Any]) -> List[str]:
+    candidat = dossier.get("candidat", {})
+    certification = dossier.get("certification", {})
+    parcours = dossier.get("parcours_previsionnel", {})
+    avis = dossier.get("avis_admin", {})
+    engagement = dossier.get("engagement", {})
+    objectifs = ", ".join(candidat.get("objectifs") or [])
+    blocs_vises = ", ".join(certification.get("blocs_vises") or [])
+
+    lines = [
+        "DOSSIER DE FAISABILITE VAE DESP",
+        f"ID dossier: {dossier.get('id')}",
+        f"Statut dossier: {dossier.get('statut_dossier')}",
+        "",
+        "1. Nature de la demande",
+        f"Nature: {dossier.get('nature_demande')}",
+        "",
+        "2. Informations generales sur le candidat",
+        f"Nom de naissance: {candidat.get('nom_naissance')}",
+        f"Nom d'usage: {candidat.get('nom_usage')}",
+        f"Prenoms: {candidat.get('prenoms')}",
+        f"Date de naissance: {candidat.get('date_naissance')}",
+        f"Nationalite: {candidat.get('nationalite')}",
+        f"Telephone: {candidat.get('telephone')}",
+        f"Email: {candidat.get('email')}",
+        f"Objectifs: {objectifs}",
+        "",
+        "3. Certification professionnelle visee",
+        f"Intitule: {certification.get('intitule')}",
+        f"RNCP: {certification.get('rncp')}",
+        f"Certificateur: {certification.get('certificateur')}",
+        f"Parcours/mention: {certification.get('parcours_mention')}",
+        f"Type de visee: {certification.get('vise')}",
+        f"Blocs vises: {blocs_vises}",
+        "",
+        "4. Experiences professionnelles ou personnelles",
+    ]
+
+    for idx, exp in enumerate(dossier.get("experiences") or [], start=1):
+        lines.extend([
+            f"Experience {idx}: debut={exp.get('date_debut')} duree={exp.get('duree')}",
+            f"Description: {exp.get('description')}",
+        ])
+
+    lines.extend(["", "5. Positionnement par competences"])
+    blocs = dossier.get("blocs_competences", {})
+    for i in range(1, 6):
+        act = blocs.get(f"activite{i}", {})
+        lines.append(f"Activite {i}: statut={act.get('statut')} commentaires={act.get('commentaires')}")
+
+    lines.extend([
+        "",
+        "6. Parcours previsionnel",
+        f"Accompagnement individuel (heures): {(parcours.get('accompagnement_individuel') or {}).get('heures')}",
+        f"Accompagnement collectif (heures): {(parcours.get('accompagnement_collectif') or {}).get('heures')}",
+        f"Formations prealables: {(parcours.get('formations_prealables') or {}).get('organisme')} / {(parcours.get('formations_prealables') or {}).get('intitule')}",
+        f"Immersion: {(parcours.get('immersion') or {}).get('structure')}",
+        f"Autres actions: {parcours.get('autres_actions')}",
+        "",
+        "7. Formulaire d'avis de faisabilite",
+        f"Decision: {avis.get('decision')}",
+        f"Motivation: {avis.get('motivation')}",
+        f"Accompagnateur: {avis.get('nom_accompagnateur')} ({avis.get('email')}, {avis.get('telephone')})",
+        "",
+        "8. Accord pour l'analyse de la faisabilite",
+        f"Souhaite accompagnement: {'Oui' if engagement.get('souhaite_accompagnement') else 'Non'}",
+        f"Accord analyse: {'Oui' if engagement.get('accord_analyse') else 'Non'}",
+        f"Signature: {engagement.get('nom_signature')} le {engagement.get('date_signature')} a {engagement.get('lieu_signature')}",
+    ])
+    return lines
+
 def _merge_dict(base: Dict[str, Any], incoming: Dict[str, Any]) -> None:
     for k, v in incoming.items():
         if isinstance(v, dict) and isinstance(base.get(k), dict):
@@ -7569,8 +7700,25 @@ def _validate_vae_for_submit(dossier: Dict[str, Any]) -> List[str]:
 
 @app.get('/vae/nouveau')
 def vae_new():
+    trainee_token = (request.args.get('trainee_token') or '').strip()
+    linked_trainee_id = ''
+    linked_session_id = ''
+
+    if trainee_token:
+        data_main = load_data()
+        s, t = find_session_and_trainee_by_token(data_main, trainee_token)
+        if s and t:
+            linked_trainee_id = str(t.get('id') or '')
+            linked_session_id = str(s.get('id') or '')
+
     data = _vae_load_all()
     dossier = _vae_default_dossier()
+    if linked_trainee_id:
+        dossier['meta'] = {
+            'trainee_id': linked_trainee_id,
+            'session_id': linked_session_id,
+            'trainee_token': trainee_token,
+        }
     data.setdefault("dossiers", []).insert(0, dossier)
     _vae_save_all(data)
     return redirect(url_for('vae_wizard', token=dossier['id']))
@@ -7614,6 +7762,38 @@ def api_vae_submit(dossier_id: str):
     dossier["statut_dossier"] = "soumis"
     dossier["updated_at"] = _now_iso_utc()
     _vae_save_all(data)
+
+    trainee_id = str(((dossier.get('meta') or {}).get('trainee_id')) or '')
+    session_id = str(((dossier.get('meta') or {}).get('session_id')) or '')
+    if trainee_id and session_id:
+        data_main = load_data()
+        s = find_session(data_main, session_id)
+        if s:
+            trainees = _session_trainees_list(s)
+            t = next((x for x in trainees if str(x.get('id') or '') == trainee_id), None)
+            if t:
+                view = vae_status_view('livret_1_analysis')
+                t['vae_status'] = view['key']
+                t['vae_status_label'] = view['label']
+                if not isinstance(t.get('vae_action_dates'), dict):
+                    t['vae_action_dates'] = {}
+                if not t['vae_action_dates'].get('livret_1_received'):
+                    t['vae_action_dates']['livret_1_received'] = _fr_date(datetime.datetime.utcnow())
+                trainee_display_name = _format_trainee_name(t.get('first_name', ''), t.get('last_name', ''))
+                add_admin_notification(
+                    data_main,
+                    f"VAE Livret 1️⃣ Déposé par {trainee_display_name}",
+                    meta={
+                        'type': 'vae_livret_1_submit',
+                        'session_id': s.get('id'),
+                        'trainee_id': t.get('id'),
+                        'vae_dossier_id': dossier_id,
+                    },
+                )
+                s['trainees'] = trainees
+                s.pop('stagiaires', None)
+                save_data(data_main)
+
     return jsonify({"ok": True, "redirect_url": url_for('vae_success', token=dossier_id)})
 
 @app.get('/vae/<token>/succes')
@@ -7668,12 +7848,12 @@ def admin_vae_export(dossier_id: str):
     if not dossier:
         abort(404)
 
-    blob = json.dumps(dossier, ensure_ascii=False, indent=2).encode('utf-8')
+    pdf_blob = _build_simple_pdf(_vae_dossier_to_lines(dossier))
     return send_file(
-        BytesIO(blob),
-        mimetype='application/json',
+        BytesIO(pdf_blob),
+        mimetype='application/pdf',
         as_attachment=True,
-        download_name=f'vae_{dossier_id}.json'
+        download_name=f'vae_{dossier_id}.pdf'
     )
 
 @app.get("/admin/sessions/")
