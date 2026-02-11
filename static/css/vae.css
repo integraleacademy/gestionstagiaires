@@ -48,3 +48,7 @@ h3{margin:18px 0 8px;font-size:1.05rem}
 .activity-status-select{min-width:220px}
 
 .step-readonly{background:#fff7ed;border-color:#fdba74;color:#9a3412;font-weight:600}
+
+.readonly-options{display:grid;gap:8px;background:#eef2ff}
+.readonly-options label{display:flex;align-items:center;gap:8px;font-weight:600}
+.readonly-options input[type="checkbox"]{width:auto;margin:0}

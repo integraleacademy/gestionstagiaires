@@ -7674,7 +7674,7 @@ def _vae_default_dossier(dossier_id: Optional[str] = None) -> Dict[str, Any]:
         },
         "engagement": {
             "souhaite_accompagnement": False, "accord_analyse": False,
-            "lieu_signature": "", "date_signature": "", "nom_signature": ""
+            "lieu_signature": "", "date_signature": "", "nom_signature": "", "commentaires_defavorable": ""
         },
         "created_at": now,
         "updated_at": now,
@@ -7844,6 +7844,7 @@ def _vae_dossier_to_lines(dossier: Dict[str, Any]) -> List[str]:
         "",
         "8. Accord pour l'analyse de la faisabilite",
         f"Souhaite accompagnement: {'Oui' if engagement.get('souhaite_accompagnement') else 'Non'}",
+        f"Commentaires si avis défavorable: {engagement.get('commentaires_defavorable')}",
         f"Accord analyse: {'Oui' if engagement.get('accord_analyse') else 'Non'}",
         f"Signature: {engagement.get('nom_signature')} le {engagement.get('date_signature')} a {engagement.get('lieu_signature')}",
     ])
