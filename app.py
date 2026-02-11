@@ -5000,7 +5000,7 @@ VAE_STATUS_STEPS = {
     "livret_1_analysis": {"label": "Livret 1 en cours d'analyse", "pill": "gray"},
     "livret_1_validated": {"label": "Livret 1 validé", "pill": "green"},
     "livret_2_todo": {"label": "Livret 2 à compléter", "pill": "orange"},
-    "livret_2_analysis": {"label": "Livret 2 en cours d'analyse", "pill": "gray"},
+    "livret_2_analysis": {"label": "Réception livret 2", "pill": "gray"},
     "livret_2_validated": {"label": "Livret 2 validé", "pill": "green"},
     "jury": {"label": "Passage devant le jury", "pill": "yellow"},
     "certified": {"label": "Diplôme obtenu", "pill": "green"},
@@ -5623,6 +5623,10 @@ def public_doc_upload(token: str, doc_key: str):
     save_data(data)
 
     if doc_key == "livret_2":
+        view = vae_status_view("livret_2_analysis")
+        t["vae_status"] = view["key"]
+        t["vae_status_label"] = view["label"]
+        _notify_vae_status_change(t, "livret_2_analysis")
         trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
         add_admin_notification(
             data,
