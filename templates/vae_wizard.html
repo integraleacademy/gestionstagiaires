@@ -130,7 +130,27 @@
     </section>
 
     <section class="step" data-step="5">
-      <h2>Étape 5 — Blocs compétences</h2>
+      <h2>Étape 5 — TABLEAU DE POSITIONNEMENT PAR COMPÉTENCES</h2>
+      <div class="step-instructions card">
+        <p>
+          Il s'agit de recueillir des informations en lien avec le référentiel d'activités et de compétences visé à partir d’expériences déclarées par le candidat.
+          Il ne s'agit pas d'une évaluation des compétences du candidat car les compétences sont évaluées par le jury de certification.
+        </p>
+        <ul>
+          <li>écrire « OUI » dans la colonne « Activité » si le candidat déclare exercer ou avoir exercé des activités en lien avec le bloc de compétences, et expliciter les conditions et contextes de réalisation.</li>
+          <li>écrire « NON » dans la colonne « Activité » si le candidat déclare ne pas avoir exercé d'activités en lien avec le bloc de compétences, et/ou n'est pas en capacité d'expliciter les conditions et contextes de réalisation.</li>
+          <li>écrire « PARTIELLEMENT » dans la colonne « Activité » si le candidat déclare exercer ou avoir exercé partiellement des activités en lien avec le bloc de compétences, et est en capacité d'expliciter partiellement les conditions et contextes de réalisation.</li>
+          <li>dans le champ « Commentaires », détailler l'activité et le niveau d'autonomie et/ou de responsabilité du candidat en donnant des exemples concrets et en indiquant les outils, méthodes, supports utilisés, les projets menés…</li>
+          <li>préciser les points forts du candidat ou les points de fragilité nécessitant des préconisations d'accompagnement individuel/collectif, acte formatif, immersion professionnelle ou autre(s) action(s) à l'initiative du candidat.</li>
+          <li>la zone de commentaire doit être obligatoirement renseignée en cas d'activité déclarée réalisée ou partiellement réalisée. Tout commentaire insuffisamment précisé sera considéré comme incomplet et impliquera le renvoi du dossier pour complément.</li>
+        </ul>
+        <p>
+          Pour la bonne compréhension des informations, un soin particulier devra être porté à la syntaxe et à l'orthographe.
+          Ajouter autant de lignes que de blocs de compétences visés dans le cadre du parcours.
+          Lorsque le parcours vise une certification complète, il convient de renseigner l'ensemble des blocs composant cette certification.
+        </p>
+      </div>
+      <p class="livret-tip">💡 Vous pouvez vous aider du Livret 2 pour trouver des compétences à indiquer. <a href="/static/vae_livret_2.pdf" target="_blank" rel="noopener">Téléchargez le Livret 2 en cliquant ici.</a></p>
       {% for idx in range(1,6) %}
       {% set act = dossier.blocs_competences['activite' ~ idx] %}
       <div class="card">

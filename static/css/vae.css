@@ -25,3 +25,10 @@ h3{margin:18px 0 8px;font-size:1.05rem}
 .checkbox-grid.two-cols{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
 .checkbox-grid label{display:flex;align-items:flex-start;gap:8px}
 .checkbox-grid input[type="checkbox"],.checkbox-grid input[type="radio"]{width:auto;margin-top:2px}
+
+
+.step-instructions p{margin:0 0 10px;line-height:1.45}
+.step-instructions ul{margin:0 0 10px 18px;padding:0;display:grid;gap:8px}
+.step-instructions li{line-height:1.45}
+.livret-tip{margin:10px 0 14px;font-weight:500}
+.livret-tip a{font-weight:700}
