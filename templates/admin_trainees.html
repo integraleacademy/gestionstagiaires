@@ -82,10 +82,13 @@
 
         <th>Convention</th>
         <th>Financement</th>
-        <th>Test Français</th>
+        {% if not is_vtc %}<th>Test Français</th>{% endif %}
         <th>Dossier</th>
         <th>Dossier complet</th>
-        <th>CNAPS</th>
+        {% if not is_vtc %}<th>CNAPS</th>{% endif %}
+        {% if is_vtc %}<th>Inscription CMAR</th>{% endif %}
+        {% if is_vtc %}<th>E-learning</th>{% endif %}
+        {% if is_vtc %}<th>Date formation pratique</th>{% endif %}
         {% if show_hosting %}<th>Hébergement</th>{% endif %}
         <th>Commentaire</th>
         {% if show_vae %}<th>VAE</th>{% endif %}
@@ -150,6 +153,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           {% endif %}
         </td>
 
+{% if not is_vtc %}
 <td>
   <select class="status sel status-dot" data-field="test_fr_status" {{ read_only_attr }}>
     <option value="soon" {% if t.test_fr_status=="soon" or not t.test_fr_status %}selected{% endif %}>🟠</option>
@@ -158,6 +162,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
     <option value="validated" {% if t.test_fr_status=="validated" %}selected{% endif %}>🟢</option>
   </select>
 </td>
+{% endif %}
 
 
 
@@ -179,12 +184,20 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           </label>
         </td>
 
+        {% if not is_vtc %}
         <td>
           <div class="inline">
             <span class="cnaps" data-cnaps>{{ t.cnaps or "INCONNU" }}</span>
             <button class="mini-btn" data-refresh type="button" {{ read_only_attr }}>↻</button>
           </div>
         </td>
+        {% endif %}
+
+        {% if is_vtc %}
+        <td>{{ "🟢" if t.exam_fees_paid else "🔴" }}</td>
+        <td>{{ "🟢" if (t.elearning_link or "")|trim else "🔴" }}</td>
+        <td>{{ session.practice_training_date|frdate }}</td>
+        {% endif %}
 
         {% if show_hosting %}
         <td>
