@@ -230,11 +230,41 @@
 
     <section class="step" data-step="8">
       <h2>7ème étape : Accord pour l'analyse de la faisabilité</h2>
-      <label><input type="checkbox" name="engagement.souhaite_accompagnement" {% if dossier.engagement.souhaite_accompagnement %}checked{% endif %}> Je souhaite un accompagnement</label>
-      <label><input type="checkbox" name="engagement.accord_analyse" {% if dossier.engagement.accord_analyse %}checked{% endif %} required> J'accepte l'analyse de mon dossier*</label>
-      <input name="engagement.lieu_signature" placeholder="Lieu" value="{{ dossier.engagement.lieu_signature }}">
-      <input type="date" name="engagement.date_signature" value="{{ dossier.engagement.date_signature }}">
-      <input name="engagement.nom_signature" placeholder="Nom de signature" value="{{ dossier.engagement.nom_signature }}">
+      <p class="engagement-subtitle">À signer par le candidat.</p>
+
+      <div class="engagement-inline-field">
+        <label for="engagement_nom_signature">Je soussigné(e)</label>
+        <input id="engagement_nom_signature" name="engagement.nom_signature" placeholder="Nom et prénom" value="{{ dossier.engagement.nom_signature }}" required>
+      </div>
+
+      <p class="engagement-text">
+        certifie l'exactitude des informations fournies et accepte que mon dossier soit analysé par
+        l’organisme certificateur dans le cadre de l’étude de faisabilité préalable à l’entrée en
+        parcours VAE. Je donne mon accord pour qu’une copie du résultat de recevabilité et qu’une
+        copie des résultats du jury VAE soient transmis à la personne chargée de mon
+        accompagnement.
+      </p>
+
+      <div class="engagement-dates">
+        <div class="engagement-inline-field">
+          <label for="engagement_lieu_signature">Fait à :</label>
+          <input id="engagement_lieu_signature" name="engagement.lieu_signature" placeholder="Ville" value="{{ dossier.engagement.lieu_signature }}">
+        </div>
+        <div class="engagement-inline-field">
+          <label for="engagement_date_signature">Le :</label>
+          <input id="engagement_date_signature" type="date" name="engagement.date_signature" value="{{ dossier.engagement.date_signature }}">
+        </div>
+      </div>
+
+      <div class="engagement-signature-block">
+        <label for="engagement_signature_notice">Signature du candidat :</label>
+        <div id="engagement_signature_notice" class="signature-placeholder">
+          Signature manuscrite à apposer lors de l'impression du dossier.
+        </div>
+      </div>
+
+      <label class="consent-checkbox"><input type="checkbox" name="engagement.souhaite_accompagnement" {% if dossier.engagement.souhaite_accompagnement %}checked{% endif %}> Je souhaite un accompagnement VAE</label>
+      <label class="consent-checkbox"><input type="checkbox" name="engagement.accord_analyse" {% if dossier.engagement.accord_analyse %}checked{% endif %} required> J'accepte l'analyse de mon dossier*</label>
       <div id="submitErrors" class="errors"></div>
       <button type="button" class="btn" id="submitDossier">Soumettre</button>
     </section>
