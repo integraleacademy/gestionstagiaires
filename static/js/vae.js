@@ -102,9 +102,12 @@
     const div = document.createElement('div');
     div.className = 'experience-item card';
     div.innerHTML = `
-      <input type="date" name="exp_date_debut" value="${exp.date_debut || ''}">
+      <div class="field-with-label">
+        <label>Date de début</label>
+        <input type="date" name="exp_date_debut" value="${exp.date_debut || ''}">
+      </div>
       <input name="exp_duree" placeholder="Durée" value="${exp.duree || ''}">
-      <textarea name="exp_description" placeholder="Description">${exp.description || ''}</textarea>
+      <textarea name="exp_description" placeholder="Description de l'expérience/ de la mission professionnelle et, le cas échéant, intitulé de la fonction occupée">${exp.description || ''}</textarea>
       <button type="button" class="btn danger remove-exp">Supprimer</button>`;
     div.querySelector('.remove-exp').addEventListener('click', () => {
       div.remove();
@@ -126,6 +129,19 @@
       }
     });
     if (payload.certification?.vise !== 'complete') e.push('La certification complète est obligatoire');
+    const activites = payload.blocs_competences || {};
+    for (let idx = 1; idx <= 5; idx += 1) {
+      const activite = activites[`activite${idx}`] || {};
+      for (let competenceIdx = 1; competenceIdx <= 4; competenceIdx += 1) {
+        const competence = activite[`competence${competenceIdx}`] || {};
+        if (!String(competence.intitule || '').trim() || !String(competence.statut || '').trim()) {
+          e.push({
+            step: 5,
+            message: `Tous les champs sont obligatoires en 4ème étape (Activité ${idx}, compétence ${competenceIdx})`,
+          });
+        }
+      }
+    }
     if (!payload.engagement?.accord_analyse) e.push('accord_analyse obligatoire');
     return e;
   }

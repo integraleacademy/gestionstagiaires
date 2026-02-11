@@ -181,10 +181,10 @@
             </td>
             {% endif %}
             <td>
-              <input name="blocs_competences.activite{{ idx }}.competence{{ competence_idx }}.intitule" placeholder="Compétence {{ competence_idx }}" value="{{ competence.intitule }}">
+              <input name="blocs_competences.activite{{ idx }}.competence{{ competence_idx }}.intitule" placeholder="Compétence {{ competence_idx }}" value="{{ competence.intitule }}" required>
             </td>
             <td>
-              <select name="blocs_competences.activite{{ idx }}.competence{{ competence_idx }}.statut" class="activity-status-select">
+              <select name="blocs_competences.activite{{ idx }}.competence{{ competence_idx }}.statut" class="activity-status-select" required>
                 <option value="">-- Choisir --</option>
                 <option value="oui" {% if competence.statut=='oui' %}selected{% endif %}>Oui</option>
                 <option value="partiellement" {% if competence.statut=='partiellement' %}selected{% endif %}>Partiellement</option>
