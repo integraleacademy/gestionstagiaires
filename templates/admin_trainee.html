@@ -557,6 +557,46 @@
   >{{ trainee.comment or "" }}</textarea>
 </div>
 
+{% if show_vae %}
+{% set vae_action_dates = trainee.vae_action_dates or {} %}
+<div class="card" style="grid-column:1 / -1; margin-top:12px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div>
+      <div style="font-weight:900;">STATUT VAE</div>
+      <div class="hint" style="margin-top:4px;">Le changement de statut peut envoyer automatiquement un email et un SMS selon l'étape.</div>
+    </div>
+    <span class="pill">{{ trainee.vae_status_label or "—" }}</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:12px;">
+    <button class="btn {% if vae_action_dates.get('livret_1_received') %}btn-primary{% else %}btn-outline{% endif %}" type="button" onclick="setVaeAction('livret_1_received')" {{ read_only_attr }}>
+      Réception Livret 1
+      {% if vae_action_dates.get('livret_1_received') %}<span style="font-weight:600;opacity:.95;">({{ vae_action_dates.get('livret_1_received') }})</span>{% endif %}
+    </button>
+    <button class="btn {% if vae_action_dates.get('livret_1_validated') %}btn-primary{% else %}btn-outline{% endif %}" type="button" onclick="setVaeAction('livret_1_validated')" {{ read_only_attr }}>
+      Livret 1 validé
+      {% if vae_action_dates.get('livret_1_validated') %}<span style="font-weight:600;opacity:.95;">({{ vae_action_dates.get('livret_1_validated') }})</span>{% endif %}
+    </button>
+    <button class="btn {% if vae_action_dates.get('livret_2_received') %}btn-primary{% else %}btn-outline{% endif %}" type="button" onclick="setVaeAction('livret_2_received')" {{ read_only_attr }}>
+      Réception Livret 2
+      {% if vae_action_dates.get('livret_2_received') %}<span style="font-weight:600;opacity:.95;">({{ vae_action_dates.get('livret_2_received') }})</span>{% endif %}
+    </button>
+    <button class="btn {% if vae_action_dates.get('livret_2_validated') %}btn-primary{% else %}btn-outline{% endif %}" type="button" onclick="setVaeAction('livret_2_validated')" {{ read_only_attr }}>
+      Livret 2 validé
+      {% if vae_action_dates.get('livret_2_validated') %}<span style="font-weight:600;opacity:.95;">({{ vae_action_dates.get('livret_2_validated') }})</span>{% endif %}
+    </button>
+    <button class="btn {% if vae_action_dates.get('jury_date') %}btn-primary{% else %}btn-outline{% endif %}" type="button" onclick="setVaeAction('jury_date')" {{ read_only_attr }}>
+      Date d'examen
+      {% if vae_action_dates.get('jury_date') %}<span style="font-weight:600;opacity:.95;">({{ vae_action_dates.get('jury_date') }})</span>{% endif %}
+    </button>
+    <button class="btn {% if vae_action_dates.get('diplome_obtenu') %}btn-primary{% else %}btn-outline{% endif %}" type="button" onclick="setVaeAction('diplome_obtenu')" {{ read_only_attr }}>
+      Diplôme obtenu
+      {% if vae_action_dates.get('diplome_obtenu') %}<span style="font-weight:600;opacity:.95;">({{ vae_action_dates.get('diplome_obtenu') }})</span>{% endif %}
+    </button>
+  </div>
+</div>
+{% endif %}
+
  <!-- ===================== -->
 <!-- RELANCE TELEPHONIQUE  -->
 <!-- ===================== -->
@@ -902,33 +942,6 @@
 </details>
 {% endif %}
 </div>
-
-<!-- ===================== -->
-<!-- VAE (DIRIGEANT VAE)    -->
-<!-- ===================== -->
-{% if show_vae %}
-<div class="card" style="margin-top:12px;">
-  <div style="display:flex;justify-content:space-between;align-items:center;">
-    <div style="font-weight:900;">STATUT VAE</div>
-    <span class="pill">{{ trainee.vae_status_label or "—" }}</span>
-  </div>
-
-  <div class="hint" style="margin-top:8px;">Le changement de statut peut envoyer automatiquement un email et un SMS selon l'étape.</div>
-
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
-    <button class="btn btn-outline" type="button" onclick="setVaeAction('livret_1_received')" {{ read_only_attr }}>Réception Livret 1</button>
-    <button class="btn btn-outline" type="button" onclick="setVaeAction('livret_1_validated')" {{ read_only_attr }}>Livret 1 validé</button>
-    <button class="btn btn-outline" type="button" onclick="setVaeAction('livret_2_received')" {{ read_only_attr }}>Réception Livret 2</button>
-    <button class="btn btn-outline" type="button" onclick="setVaeAction('livret_2_validated')" {{ read_only_attr }}>Livret 2 validé</button>
-    <button class="btn btn-outline" type="button" onclick="setVaeAction('jury_date')" {{ read_only_attr }}>Date d'examen</button>
-    <button class="btn btn-outline" type="button" onclick="setVaeAction('diplome_obtenu')" {{ read_only_attr }}>Diplôme obtenu</button>
-  </div>
-</div>
-{% endif %}
-
-
-
-
 
 
 <!-- ===================== -->
@@ -1566,6 +1579,9 @@ function setDossierPill(status){
   // VAE (actions dédiées DIRIGEANT VAE)
   window.setVaeAction = async function setVaeAction(actionKey){
     const payload = {};
+    const currentVaeActionDates = {{ (trainee.vae_action_dates or {})|tojson }};
+    const now = new Date();
+    const clickedAt = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
 
     if(actionKey === "livret_1_received"){
       payload.vae_status = "livret_1_analysis";
@@ -1591,6 +1607,11 @@ function setDossierPill(status){
     }else{
       return;
     }
+
+    payload.vae_action_dates = {
+      ...currentVaeActionDates,
+      [actionKey]: clickedAt,
+    };
 
     try{
       const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {

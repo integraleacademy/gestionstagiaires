@@ -3214,6 +3214,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "financement_new_date_seen",
         "vae_status_label",
         "vae_jury_date",
+        "vae_action_dates",
         "cnaps",
         "no_permis", 
         "public_hide_infos",
@@ -5682,6 +5683,8 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     vae_steps = [{"key": k, "label": v["label"], "pill": v["pill"]} for k, v in VAE_STATUS_STEPS.items()]
     t["vae_status"] = vae_status_view(t.get("vae_status") or t.get("vae_status_label"))["key"]
     t["vae_status_label"] = vae_status_view(t.get("vae_status"))["label"]
+    if not isinstance(t.get("vae_action_dates"), dict):
+        t["vae_action_dates"] = {}
 
     # ✅ s'assure que no_permis est bien un bool
     t["no_permis"] = bool(t.get("no_permis"))
