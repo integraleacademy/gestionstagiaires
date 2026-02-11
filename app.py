@@ -517,6 +517,66 @@ def build_vtc_credentials_reminder_sms(first_name: str, form_link: str) -> str:
     )
 
 
+def _send_vtc_credentials_reminder(data: Dict[str, Any], session_obj: Dict[str, Any], trainee: Dict[str, Any], details: str) -> bool:
+    link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{(trainee.get('public_token') or '').strip()}"
+    first_name = (trainee.get("first_name") or "").strip()
+    subject, html_content = build_vtc_credentials_reminder_email(first_name, link)
+
+    trainee_email = (trainee.get("email") or "").strip()
+    trainee_phone = (trainee.get("phone") or "").strip()
+
+    email_ok = brevo_send_email(
+        trainee_email,
+        subject,
+        html_content,
+        cc_emails=["clement@integraleacademy.com"],
+    ) if trainee_email else False
+    sms_ok = brevo_send_sms(trainee_phone, build_vtc_credentials_reminder_sms(first_name, link)) if trainee_phone else False
+
+    copy_subject = f"Copie relance VTC identifiants envoyée – {first_name} {(trainee.get('last_name') or '').strip()}".strip()
+    copy_html = mail_layout(f"""
+      <h2>Copie relance VTC</h2>
+      <p><strong>Stagiaire :</strong> {_format_trainee_name(trainee.get('first_name', ''), trainee.get('last_name', ''))}</p>
+      <p><strong>Session :</strong> {_session_get(session_obj, 'name', '') or '—'}</p>
+      <p><strong>Email stagiaire :</strong> {trainee_email or 'Non renseigné'}</p>
+      <p><strong>Téléphone stagiaire :</strong> {trainee_phone or 'Non renseigné'}</p>
+      <p><strong>Email stagiaire envoyé :</strong> {'Oui' if email_ok else 'Non'}</p>
+      <p><strong>SMS envoyé :</strong> {'Oui' if sms_ok else 'Non'}</p>
+      <p><strong>Contexte :</strong> {details}</p>
+    """)
+    copy_email_ok = brevo_send_email("clement@integraleacademy.com", copy_subject, copy_html)
+
+    trainee["vtc_cm_reminder_sent_at"] = _now_iso()
+    trainee["vtc_cm_reminder_email_ok"] = bool(email_ok)
+    trainee["vtc_cm_reminder_sms_ok"] = bool(sms_ok)
+    trainee["vtc_cm_reminder_copy_email_ok"] = bool(copy_email_ok)
+    trainee["updated_at"] = _now_iso()
+
+    phone_followups = trainee.get("phone_followups")
+    if not isinstance(phone_followups, list):
+        phone_followups = []
+    phone_followups.insert(0, {
+        "type": "RELANCE VTC IDENTIFIANTS",
+        "details": details,
+        "at": _now_iso(),
+        "status": "ENVOYÉE",
+        "comment": "Relance envoyée (mail + SMS) pour identifiants Chambre des métiers manquants.",
+    })
+    trainee["phone_followups"] = phone_followups
+
+    trainee_display_name = _format_trainee_name(trainee.get("first_name", ""), trainee.get("last_name", ""))
+    add_admin_notification(
+        data,
+        f"⏰ Relance VTC identifiants envoyée à {trainee_display_name}",
+        meta={
+            "type": "vtc_credentials_reminder",
+            "session_id": session_obj.get("id"),
+            "trainee_id": trainee.get("id"),
+        },
+    )
+    return bool(email_ok or sms_ok or copy_email_ok)
+
+
 def _send_vtc_credentials_missing_reminders(data: Dict[str, Any]) -> bool:
     changed = False
     now_utc = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
@@ -549,68 +609,14 @@ def _send_vtc_credentials_missing_reminders(data: Dict[str, Any]) -> bool:
             if days_since_creation < 7:
                 continue
 
-            link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{(trainee.get('public_token') or '').strip()}"
-            first_name = (trainee.get("first_name") or "").strip()
-            subject, html_content = build_vtc_credentials_reminder_email(first_name, link)
-
-            trainee_email = (trainee.get("email") or "").strip()
-            trainee_phone = (trainee.get("phone") or "").strip()
-
-            email_ok = brevo_send_email(
-                trainee_email,
-                subject,
-                html_content,
-                cc_emails=["clement@integraleacademy.com"],
-            ) if trainee_email else False
-            sms_ok = brevo_send_sms(trainee_phone, build_vtc_credentials_reminder_sms(first_name, link)) if trainee_phone else False
-
-            copy_subject = f"Copie relance VTC identifiants envoyée – {first_name} {(trainee.get('last_name') or '').strip()}".strip()
-            copy_html = mail_layout(f"""
-              <h2>Copie relance VTC</h2>
-              <p><strong>Stagiaire :</strong> {_format_trainee_name(trainee.get('first_name', ''), trainee.get('last_name', ''))}</p>
-              <p><strong>Session :</strong> {_session_get(session_obj, 'name', '') or '—'}</p>
-              <p><strong>Email stagiaire :</strong> {trainee_email or 'Non renseigné'}</p>
-              <p><strong>Téléphone stagiaire :</strong> {trainee_phone or 'Non renseigné'}</p>
-              <p><strong>Email stagiaire envoyé :</strong> {'Oui' if email_ok else 'Non'}</p>
-              <p><strong>SMS envoyé :</strong> {'Oui' if sms_ok else 'Non'}</p>
-            """)
-            copy_email_ok = brevo_send_email("clement@integraleacademy.com", copy_subject, copy_html)
-
-            trainee["vtc_cm_reminder_sent_at"] = _now_iso()
-            trainee["vtc_cm_reminder_email_ok"] = bool(email_ok)
-            trainee["vtc_cm_reminder_sms_ok"] = bool(sms_ok)
-            trainee["vtc_cm_reminder_copy_email_ok"] = bool(copy_email_ok)
-            trainee["updated_at"] = _now_iso()
-
-            phone_followups = trainee.get("phone_followups")
-            if not isinstance(phone_followups, list):
-                phone_followups = []
-            phone_followups.insert(0, {
-                "type": "RELANCE VTC IDENTIFIANTS",
-                "details": "Relance automatique J+7",
-                "at": _now_iso(),
-                "status": "ENVOYÉE",
-                "comment": "Relance automatique envoyée (mail + SMS) pour identifiants Chambre des métiers manquants.",
-            })
-            trainee["phone_followups"] = phone_followups
-
-            trainee_display_name = _format_trainee_name(trainee.get("first_name", ""), trainee.get("last_name", ""))
-            add_admin_notification(
-                data,
-                f"⏰ Relance VTC identifiants envoyée à {trainee_display_name}",
-                meta={
-                    "type": "vtc_credentials_reminder",
-                    "session_id": session_obj.get("id"),
-                    "trainee_id": trainee.get("id"),
-                },
-            )
-
+            _send_vtc_credentials_reminder(data, session_obj, trainee, "Relance automatique J+7")
             changed = True
 
         session_obj["trainees"] = trainees
         session_obj.pop("stagiaires", None)
 
     return changed
+
 # =========================
 # Helpers
 # =========================
@@ -4460,6 +4466,33 @@ def admin_send_access(session_id: str, trainee_id: str):
     t["access_sent_at"] = _now_iso()
     s["trainees"] = trainees
     save_data(data)
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/vtc-cmar-relance")
+@admin_login_required
+@admin_write_required
+def admin_vtc_cmar_relance(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    training_type = (_session_get(s, "training_type", "") or "").upper()
+    if "VTC" not in training_type:
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    _send_vtc_credentials_reminder(data, s, t, "Relance manuelle CMAR (admin)")
+
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 # =========================
