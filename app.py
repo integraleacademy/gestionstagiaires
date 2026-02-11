@@ -2260,6 +2260,9 @@ def admin_sessions():
         public_logged_in_total = sum(
             1 for t in trainees if bool(t.get("public_has_logged_in"))
         )
+        cmar_registered_total = sum(
+            1 for t in trainees if bool((t.get("vtc_cm_submitted_at") or "").strip())
+        )
         
         total_total = len(trainees)
         dossier_complete_total = 0
@@ -2334,6 +2337,7 @@ def admin_sessions():
             "deliverables_done": done_total,
             "deliverables_total": total_total,
             "public_logged_in_total": public_logged_in_total,
+            "cmar_registered_total": cmar_registered_total,
             "status_label": status_label,
             "status_key": status_key,
             "training_type_class": training_type_class,
@@ -2928,6 +2932,7 @@ def admin_trainees(session_id: str):
         "exam_date": _session_get(s, "exam_date", ""),
         "exam_theory_date": _session_get(s, "exam_theory_date", ""),
         "exam_practice_date": _session_get(s, "exam_practice_date", ""),
+        "practice_training_date": _session_get(s, "practice_training_date", ""),
     }
 
     trainees = _session_trainees_list(s)
@@ -2992,6 +2997,7 @@ def admin_trainees(session_id: str):
     stats = compute_stats(s)
     show_hosting = (session_view["training_type"] == "A3P")
     show_vae = (session_view["training_type"] == "DIRIGEANT VAE")
+    is_vtc = ("VTC" in (session_view["training_type"] or "").upper())
 
     # ✅ docs fin de formation par stagiaire (pour surlignage + n/3 + étiquettes)
     for t in trainees:
@@ -3027,6 +3033,7 @@ def admin_trainees(session_id: str):
         stats=stats,
         show_hosting=show_hosting,
         show_vae=show_vae,
+        is_vtc=is_vtc,
         enums=ENUMS,
     )
 
@@ -5513,9 +5520,26 @@ def find_session_and_trainee_by_token(data: Dict[str, Any], token: str):
     for s in sessions:
         trainees = s.get("trainees") or s.get("stagiaires") or []
         for t in trainees:
-            if (t.get("public_token") or "").strip() == token:
+            public_token = (t.get("public_token") or "").strip()
+            legacy_token = (t.get("token") or "").strip()
+            if public_token == token or legacy_token == token:
                 return s, t
     return None, None
+
+
+def _vae_extract_trainee_token_from_referer(referer: str) -> str:
+    raw = str(referer or "").strip()
+    if not raw:
+        return ""
+
+    marker = "/espace/"
+    idx = raw.find(marker)
+    if idx < 0:
+        return ""
+
+    tail = raw[idx + len(marker):]
+    token = tail.split("?", 1)[0].split("#", 1)[0].split("/", 1)[0].strip()
+    return token
 
 
 @app.get("/espace/<token>")
@@ -7700,7 +7724,7 @@ def _vae_default_dossier(dossier_id: Optional[str] = None) -> Dict[str, Any]:
         },
         "engagement": {
             "souhaite_accompagnement": False, "accord_analyse": False,
-            "lieu_signature": "", "date_signature": "", "nom_signature": ""
+            "lieu_signature": "", "date_signature": "", "nom_signature": "", "commentaires_defavorable": ""
         },
         "created_at": now,
         "updated_at": now,
@@ -7870,6 +7894,7 @@ def _vae_dossier_to_lines(dossier: Dict[str, Any]) -> List[str]:
         "",
         "8. Accord pour l'analyse de la faisabilite",
         f"Souhaite accompagnement: {'Oui' if engagement.get('souhaite_accompagnement') else 'Non'}",
+        f"Commentaires si avis défavorable: {engagement.get('commentaires_defavorable')}",
         f"Accord analyse: {'Oui' if engagement.get('accord_analyse') else 'Non'}",
         f"Signature: {engagement.get('nom_signature')} le {engagement.get('date_signature')} a {engagement.get('lieu_signature')}",
     ])
@@ -7899,6 +7924,20 @@ def _validate_vae_for_submit(dossier: Dict[str, Any]) -> List[str]:
     if (certification.get("vise") or "") != "complete":
         errors.append("La certification visée doit être la certification professionnelle dans son intégralité")
 
+    blocs_competences = dossier.get("blocs_competences", {})
+    for activity_idx in range(1, 6):
+        activity = blocs_competences.get(f"activite{activity_idx}", {})
+        for competence_idx in range(1, 5):
+            competence = activity.get(f"competence{competence_idx}", {})
+            if not str(competence.get("intitule") or "").strip():
+                errors.append(
+                    f"4ème étape (Tableau de positionnement) : intitulé manquant pour Activité {activity_idx}, compétence {competence_idx}"
+                )
+            if not str(competence.get("statut") or "").strip():
+                errors.append(
+                    f"4ème étape (Tableau de positionnement) : activité manquante pour Activité {activity_idx}, compétence {competence_idx}"
+                )
+
     engagement = dossier.get("engagement", {})
     if not bool(engagement.get("accord_analyse")):
         errors.append("7ème étape (Accord d'analyse) : vous devez accepter l'analyse du dossier")
@@ -7907,6 +7946,9 @@ def _validate_vae_for_submit(dossier: Dict[str, Any]) -> List[str]:
 @app.get('/vae/nouveau')
 def vae_new():
     trainee_token = (request.args.get('trainee_token') or '').strip()
+    if not trainee_token:
+        trainee_token = _vae_extract_trainee_token_from_referer(request.headers.get('Referer', ''))
+
     linked_trainee_id = ''
     linked_session_id = ''
 
@@ -7969,36 +8011,55 @@ def api_vae_submit(dossier_id: str):
     dossier["updated_at"] = _now_iso_utc()
     _vae_save_all(data)
 
-    trainee_id = str(((dossier.get('meta') or {}).get('trainee_id')) or '')
-    session_id = str(((dossier.get('meta') or {}).get('session_id')) or '')
-    if trainee_id and session_id:
-        data_main = load_data()
-        s = find_session(data_main, session_id)
-        if s:
-            trainees = _session_trainees_list(s)
-            t = next((x for x in trainees if str(x.get('id') or '') == trainee_id), None)
-            if t:
-                view = vae_status_view('livret_1_analysis')
-                t['vae_status'] = view['key']
-                t['vae_status_label'] = view['label']
-                if not isinstance(t.get('vae_action_dates'), dict):
-                    t['vae_action_dates'] = {}
-                if not t['vae_action_dates'].get('livret_1_received'):
-                    t['vae_action_dates']['livret_1_received'] = _fr_date(datetime.datetime.utcnow())
-                trainee_display_name = _format_trainee_name(t.get('first_name', ''), t.get('last_name', ''))
-                add_admin_notification(
-                    data_main,
-                    f"VAE Livret 1️⃣ Déposé par {trainee_display_name}",
-                    meta={
-                        'type': 'vae_livret_1_submit',
-                        'session_id': s.get('id'),
-                        'trainee_id': t.get('id'),
-                        'vae_dossier_id': dossier_id,
-                    },
-                )
-                s['trainees'] = trainees
-                s.pop('stagiaires', None)
-                save_data(data_main)
+    meta = dossier.get('meta') or {}
+    trainee_id = str(meta.get('trainee_id') or '')
+    session_id = str(meta.get('session_id') or '')
+
+    data_main = load_data()
+    s = find_session(data_main, session_id) if session_id else None
+    t = None
+
+    if s and trainee_id:
+        trainees = _session_trainees_list(s)
+        t = next((x for x in trainees if str(x.get('id') or '') == trainee_id), None)
+    else:
+        trainee_token = str(meta.get('trainee_token') or '').strip()
+        if trainee_token:
+            s, t = find_session_and_trainee_by_token(data_main, trainee_token)
+            if s and t:
+                trainee_id = str(t.get('id') or '')
+                session_id = str(s.get('id') or '')
+                dossier.setdefault('meta', {})['trainee_id'] = trainee_id
+                dossier.setdefault('meta', {})['session_id'] = session_id
+                dossier['updated_at'] = _now_iso_utc()
+                _vae_save_all(data)
+
+    if s and t:
+        trainees = _session_trainees_list(s)
+        current_trainee_id = str(t.get('id') or '')
+        t = next((x for x in trainees if str(x.get('id') or '') == current_trainee_id), t)
+
+        view = vae_status_view('livret_1_analysis')
+        t['vae_status'] = view['key']
+        t['vae_status_label'] = view['label']
+        if not isinstance(t.get('vae_action_dates'), dict):
+            t['vae_action_dates'] = {}
+        if not t['vae_action_dates'].get('livret_1_received'):
+            t['vae_action_dates']['livret_1_received'] = _fr_date(datetime.datetime.utcnow())
+        trainee_display_name = _format_trainee_name(t.get('first_name', ''), t.get('last_name', ''))
+        add_admin_notification(
+            data_main,
+            f"VAE Livret 1️⃣ Déposé par {trainee_display_name}",
+            meta={
+                'type': 'vae_livret_1_submit',
+                'session_id': s.get('id'),
+                'trainee_id': t.get('id'),
+                'vae_dossier_id': dossier_id,
+            },
+        )
+        s['trainees'] = trainees
+        s.pop('stagiaires', None)
+        save_data(data_main)
 
     return jsonify({"ok": True, "redirect_url": url_for('vae_success', token=dossier_id)})
 

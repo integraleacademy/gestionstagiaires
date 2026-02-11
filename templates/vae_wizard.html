@@ -160,6 +160,98 @@
         "Gestion marketing et commerciale de l'entreprise de sécurité privée",
         "Constitution, management et pilotage d'une équipe de sécurité"
       ] %}
+      {% set competences_options = {
+        1: [
+          "Réaliser un business plan",
+          "Connaissance des différents statuts juridiques",
+          "Démarches de création, de reprise ou de rachat d'une entreprise",
+          "Analyse du marché local et national de la sécurité privée",
+          "Identification des branches d’activité (surveillance humaine, événementiel, sûreté aéroportuaire, télésurveillance, etc.)",
+          "Étude de la concurrence et positionnement stratégique",
+          "Définition d’un modèle économique viable",
+          "Élaboration d’un prévisionnel financier (charges, masse salariale, investissements)",
+          "Identification des obligations CNAPS et préfectorales",
+          "Demande d’autorisation d’exercer et agrément dirigeant",
+          "Définition de la stratégie de développement à court, moyen et long terme",
+          "Choix des assurances professionnelles adaptées",
+          "Mise en place des outils de pilotage (tableaux de bord, indicateurs de performance)",
+          "Évaluation des risques juridiques et financiers liés au projet"
+        ],
+        2: [
+          "Connaissance du Livre VI du Code de sécurité intérieure",
+          "La règlementation incendie des ERP",
+          "La déontologie professionnelle",
+          "Législation relative au respect des libertés publiques",
+          "Application du principe d’exercice exclusif",
+          "Respect des règles relatives au port d’uniforme et à l’identification",
+          "Maîtrise des règles relatives au port et à l’usage des armes",
+          "Application des dispositions du Code pénal (légitime défense, non-assistance, etc.)",
+          "Respect du RGPD et des obligations CNIL",
+          "Mise en conformité des procédures internes avec la réglementation",
+          "Veille juridique et réglementaire permanente",
+          "Gestion des contrôles administratifs (CNAPS, inspection du travail, préfecture)",
+          "Respect des règles relatives aux IGH",
+          "Supervision des qualifications SSIAP 1, 2 et 3",
+          "Prévention des situations de confusion avec un service public"
+        ],
+        3: [
+          "Tenue des opérations comptables d'une entreprise",
+          "Connaître les différentes aides de financement possibles",
+          "Connaître les dispositifs d'optimisation fiscale",
+          "Piloter l'équilibre financier de l'entreprise",
+          "Gérer les contrats de travail",
+          "Gestion de la trésorerie",
+          "Contrôle des déclarations fiscales (TVA, IS, charges sociales)",
+          "Suivi du bilan et du compte de résultat",
+          "Collaboration avec un expert-comptable",
+          "Recours éventuel à un commissaire aux comptes",
+          "Gestion des assurances professionnelles",
+          "Élaboration des budgets annuels",
+          "Gestion des ruptures de contrat (licenciement, rupture conventionnelle)",
+          "Respect du droit du travail et de la convention collective de la sécurité privée",
+          "Gestion des accidents du travail et déclarations obligatoires",
+          "Mise en place d’un système de facturation et de recouvrement",
+          "Gestion des équipements (achats, inventaire, maintenance)",
+          "Contrôle des marges par site ou par client",
+          "Mise en place d’outils de gestion (logiciel comptable, ERP, tableaux de bord)"
+        ],
+        4: [
+          "Élaboration d’un plan de communication",
+          "Développement de la stratégie digitale (site internet, réseaux sociaux)",
+          "Réponse aux appels d’offres publics (BOAMP, JOUE, JAL)",
+          "Analyse des cahiers des charges",
+          "Rédaction d’offres commerciales",
+          "Construction d’une grille tarifaire adaptée",
+          "Négociation commerciale",
+          "Développement de partenariats stratégiques",
+          "Participation à des salons professionnels",
+          "Mise en place d’une stratégie de prospection",
+          "Gestion du portefeuille clients",
+          "Suivi de la satisfaction client",
+          "Gestion des réclamations",
+          "Fidélisation des donneurs d’ordre",
+          "Analyse des indicateurs commerciaux (taux de transformation, panier moyen)"
+        ],
+        5: [
+          "Recrutement d’agents de sécurité",
+          "Vérification des cartes professionnelles",
+          "Organisation des plannings et rotations",
+          "Répartition des missions sur site",
+          "Supervision opérationnelle",
+          "Mise en place de procédures internes",
+          "Évaluation annuelle des collaborateurs",
+          "Gestion des conflits internes",
+          "Management par objectifs",
+          "Mise en place de plans de formation",
+          "Accompagnement à la montée en compétences",
+          "Gestion des absences et remplacements",
+          "Animation de réunions d’équipe",
+          "Mise en place d’indicateurs de performance terrain",
+          "Gestion des situations d’urgence",
+          "Fidélisation des collaborateurs",
+          "Développement de plans de carrière"
+        ]
+      } %}
       <table class="positionnement-table">
         <thead>
           <tr>
@@ -181,10 +273,19 @@
             </td>
             {% endif %}
             <td>
-              <input name="blocs_competences.activite{{ idx }}.competence{{ competence_idx }}.intitule" placeholder="Compétence {{ competence_idx }}" value="{{ competence.intitule }}">
+              {% set activity_competences = competences_options[idx] %}
+              <select name="blocs_competences.activite{{ idx }}.competence{{ competence_idx }}.intitule" required>
+                <option value="">-- Choisir une compétence --</option>
+                {% if competence.intitule and competence.intitule not in activity_competences %}
+                <option value="{{ competence.intitule }}" selected>{{ competence.intitule }} (valeur existante)</option>
+                {% endif %}
+                {% for intitule in activity_competences %}
+                <option value="{{ intitule }}" {% if competence.intitule == intitule %}selected{% endif %}>{{ intitule }}</option>
+                {% endfor %}
+              </select>
             </td>
             <td>
-              <select name="blocs_competences.activite{{ idx }}.competence{{ competence_idx }}.statut" class="activity-status-select">
+              <select name="blocs_competences.activite{{ idx }}.competence{{ competence_idx }}.statut" class="activity-status-select" required>
                 <option value="">-- Choisir --</option>
                 <option value="oui" {% if competence.statut=='oui' %}selected{% endif %}>Oui</option>
                 <option value="partiellement" {% if competence.statut=='partiellement' %}selected{% endif %}>Partiellement</option>
@@ -203,34 +304,77 @@
       <div class="step-readonly card">
         Cette rubrique est complétée uniquement par l'accompagnateur. Le candidat ne peut pas la modifier.
       </div>
+      <p><strong>Les informations ci-dessous sont à compléter :</strong></p>
+      <ul>
+        <li>par l'accompagnateur lorsque le candidat est accompagné ;</li>
+        <li>ou par le candidat lui-même, en autonomie, dans le cadre d'une autoévaluation préalable ;</li>
+        <li>et validé par l'organisme certificateur avant la recevabilité.</li>
+      </ul>
+
+      <p><u>Préconisation d’accompagnement méthodologique</u> (cette rubrique s’adresse exclusivement aux candidats bénéficiant d'un accompagnement) servant à accompagner le candidat dans la rédaction de son dossier de faisabilité et à la préparation de son passage devant le jury de certification :</p>
       <div class="grid-2">
-        <input name="parcours_previsionnel.accompagnement_individuel.heures" placeholder="Accompagnement individuel (heures)" value="{{ dossier.parcours_previsionnel.accompagnement_individuel.heures }}" disabled>
-        <input name="parcours_previsionnel.accompagnement_collectif.heures" placeholder="Accompagnement collectif (heures)" value="{{ dossier.parcours_previsionnel.accompagnement_collectif.heures }}" disabled>
-        <input name="parcours_previsionnel.formations_prealables.organisme" placeholder="Organisme" value="{{ dossier.parcours_previsionnel.formations_prealables.organisme }}" disabled>
-        <input name="parcours_previsionnel.immersion.structure" placeholder="Structure d'immersion" value="{{ dossier.parcours_previsionnel.immersion.structure }}" disabled>
+        <input name="parcours_previsionnel.accompagnement_individuel.heures" placeholder="Accompagnement individuel (nombre d'heures proposées)" value="{{ dossier.parcours_previsionnel.accompagnement_individuel.heures }}" disabled>
+        <input name="parcours_previsionnel.accompagnement_collectif.heures" placeholder="Accompagnement collectif (nombre d'heures proposées)" value="{{ dossier.parcours_previsionnel.accompagnement_collectif.heures }}" disabled>
+        <textarea name="parcours_previsionnel.accompagnement_individuel.modalites" placeholder="Accompagnement individuel (modalités de mise en œuvre)" disabled>{{ dossier.parcours_previsionnel.accompagnement_individuel.modalites }}</textarea>
+        <textarea name="parcours_previsionnel.accompagnement_collectif.modalites" placeholder="Accompagnement collectif (modalités de mise en œuvre)" disabled>{{ dossier.parcours_previsionnel.accompagnement_collectif.modalites }}</textarea>
       </div>
+
+      <p><u>Formations préalables à envisager</u> :</p>
+      <div class="grid-2">
+        <input name="parcours_previsionnel.formations_prealables.organisme" placeholder="Organisme de formation retenu" value="{{ dossier.parcours_previsionnel.formations_prealables.organisme }}" disabled>
+        <input name="parcours_previsionnel.formations_prealables.intitule" placeholder="Intitulé de la formation" value="{{ dossier.parcours_previsionnel.formations_prealables.intitule }}" disabled>
+        <input name="parcours_previsionnel.formations_prealables.objectifs" placeholder="Objectif(s) de la formation" value="{{ dossier.parcours_previsionnel.formations_prealables.objectifs }}" disabled>
+        <input name="parcours_previsionnel.formations_prealables.heures" placeholder="Nombre d'heures" value="{{ dossier.parcours_previsionnel.formations_prealables.heures }}" disabled>
+      </div>
+
+      <p><u>Expérimentations complémentaires (ex : PMSMP/période de mise en situation en milieu professionnel)</u> :</p>
+      <div class="grid-2">
+        <input name="parcours_previsionnel.immersion.type" placeholder="Type d'immersion (PMSMP, action de formation en situation de travail ...)" value="{{ dossier.parcours_previsionnel.immersion.type }}" disabled>
+        <input name="parcours_previsionnel.immersion.structure" placeholder="Type d'entreprise ou de structure" value="{{ dossier.parcours_previsionnel.immersion.structure }}" disabled>
+        <input name="parcours_previsionnel.immersion.objectifs" placeholder="Objectif(s) de l'immersion" value="{{ dossier.parcours_previsionnel.immersion.objectifs }}" disabled>
+        <input name="parcours_previsionnel.immersion.heures" placeholder="Nombre d'heures" value="{{ dossier.parcours_previsionnel.immersion.heures }}" disabled>
+      </div>
+
+      <p><u>Autres actions à l’initiative du candidat</u> :</p>
       <textarea name="parcours_previsionnel.autres_actions" placeholder="Autres actions" disabled>{{ dossier.parcours_previsionnel.autres_actions }}</textarea>
     </section>
 
     <section class="step" data-step="7">
       <h2>6ème étape : Formulaire d’avis de faisabilité</h2>
+      <p><strong><em>Ce formulaire est à compléter uniquement :<br>par l'accompagnateur lorsque le candidat est accompagné ;</em></strong></p>
       <div class="step-readonly card">
         Cette rubrique est complétée uniquement par l'accompagnateur. Le candidat ne peut pas la modifier.
       </div>
-      <input name="avis_admin.decision" placeholder="Décision (favorable / réservé / défavorable)" value="{{ dossier.avis_admin.decision }}" disabled>
-      <textarea name="avis_admin.motivation" placeholder="Motivation de l'avis" disabled>{{ dossier.avis_admin.motivation }}</textarea>
+      <div class="field-with-label">
+        <label>Avis sur la faisabilité du parcours :</label>
+        <div class="readonly-options card">
+          <label><input type="checkbox" {% if dossier.avis_admin.decision=='faisable' %}checked{% endif %} disabled> Faisable</label>
+          <label><input type="checkbox" {% if dossier.avis_admin.decision=='faisable_complements' %}checked{% endif %} disabled> Faisable avec compléments</label>
+          <label><input type="checkbox" {% if dossier.avis_admin.decision=='non_faisable' %}checked{% endif %} disabled> Non faisable</label>
+        </div>
+      </div>
+      <div class="field-with-label">
+        <label>Motivation de l’avis et des préconisations éventuelles (éléments d’argumentation, réorientation éventuelle...) :</label>
+        <textarea name="avis_admin.motivation" placeholder="Motivation de l'avis" disabled>{{ dossier.avis_admin.motivation }}</textarea>
+      </div>
       <div class="grid-2">
-        <input name="avis_admin.nom_accompagnateur" placeholder="Nom de l'accompagnateur" value="{{ dossier.avis_admin.nom_accompagnateur }}" disabled>
+        <input name="avis_admin.nom_accompagnateur" placeholder="Nom et prénom et fonction de la personne ayant rendu l’avis (si accompagné)" value="{{ dossier.avis_admin.nom_accompagnateur }}" disabled>
         <input type="email" name="avis_admin.email" placeholder="Email" value="{{ dossier.avis_admin.email }}" disabled>
         <input name="avis_admin.telephone" placeholder="Téléphone" value="{{ dossier.avis_admin.telephone }}" disabled>
-        <input name="avis_admin.organisme" placeholder="Organisme" value="{{ dossier.avis_admin.organisme }}" disabled>
+        <input name="avis_admin.organisme" placeholder="Raison sociale de l’organisme d’accompagnement" value="{{ dossier.avis_admin.organisme }}" disabled>
       </div>
       <input type="date" name="avis_admin.date" value="{{ dossier.avis_admin.date }}" disabled>
     </section>
 
     <section class="step" data-step="8">
       <h2>7ème étape : Accord pour l'analyse de la faisabilité</h2>
+      <div class="field-with-label">
+        <label>Commentaires du candidat lorsque l’avis de la personne chargée de l’accompagnement est défavorable (éléments d’argumentation) :</label>
+        <textarea name="engagement.commentaires_defavorable" placeholder="Commentaires du candidat (si avis défavorable)">{{ dossier.engagement.commentaires_defavorable }}</textarea>
+      </div>
+      <h3>ENGAGEMENT DU CANDIDAT/DE LA CANDIDATE À SUIVRE CE PARCOURS</h3>
       <label><input type="checkbox" name="engagement.souhaite_accompagnement" {% if dossier.engagement.souhaite_accompagnement %}checked{% endif %}> Je souhaite un accompagnement</label>
+      <p class="muted">Si le candidat coche cette case, il reste nécessaire de passer par le portail numérique « France VAE » mentionné à l’<a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000047924037" target="_blank" rel="noopener noreferrer">article R. 6411-2 du code du travail</a> pour déposer le dossier de validation afin que ce dernier soit transmis au certificateur.</p>
       <label><input type="checkbox" name="engagement.accord_analyse" {% if dossier.engagement.accord_analyse %}checked{% endif %} required> J'accepte l'analyse de mon dossier*</label>
       <input name="engagement.lieu_signature" placeholder="Lieu" value="{{ dossier.engagement.lieu_signature }}">
       <input type="date" name="engagement.date_signature" value="{{ dossier.engagement.date_signature }}">
