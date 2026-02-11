@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="/static/css/vae.css">
+<div class="vae-container">
+  <h1>Dossier VAE {{ dossier.id }}</h1>
+  <p><strong>Candidat :</strong> {{ dossier.candidat.nom_naissance }} {{ dossier.candidat.prenoms }} — {{ dossier.candidat.email }}</p>
+  <p><strong>Statut :</strong> {{ dossier.statut_dossier }}</p>
+
+  <div class="row">
+    <form method="post"><input type="hidden" name="action" value="mark_recevable"><button class="btn" type="submit">Marquer recevable</button></form>
+    <form method="post"><input type="hidden" name="action" value="mark_refuse"><button class="btn danger" type="submit">Marquer refusé</button></form>
+    <a class="btn secondary" href="/admin/vae/{{ dossier.id }}/export">Télécharger JSON</a>
+  </div>
+
+  <h2>Avis admin</h2>
+  <form method="post" class="admin-form">
+    <input type="hidden" name="action" value="update_avis">
+    <label>Décision</label>
+    <select name="decision">
+      <option value="">-- Choisir --</option>
+      <option value="faisable" {% if dossier.avis_admin.decision=='faisable' %}selected{% endif %}>Faisable</option>
+      <option value="faisable_complements" {% if dossier.avis_admin.decision=='faisable_complements' %}selected{% endif %}>Faisable avec compléments</option>
+      <option value="non_faisable" {% if dossier.avis_admin.decision=='non_faisable' %}selected{% endif %}>Non faisable</option>
+    </select>
+    <textarea name="motivation" placeholder="Motivation">{{ dossier.avis_admin.motivation }}</textarea>
+    <input name="nom_accompagnateur" placeholder="Nom accompagnateur" value="{{ dossier.avis_admin.nom_accompagnateur }}">
+    <input type="email" name="email" placeholder="Email" value="{{ dossier.avis_admin.email }}">
+    <input name="telephone" placeholder="Téléphone" value="{{ dossier.avis_admin.telephone }}">
+    <input name="organisme" placeholder="Organisme" value="{{ dossier.avis_admin.organisme }}">
+    <input type="date" name="date" value="{{ dossier.avis_admin.date }}">
+    <button class="btn" type="submit">Enregistrer avis</button>
+  </form>
+</div>
+{% endblock %}
