@@ -160,6 +160,98 @@
         "Gestion marketing et commerciale de l'entreprise de sécurité privée",
         "Constitution, management et pilotage d'une équipe de sécurité"
       ] %}
+      {% set competences_options = {
+        1: [
+          "Réaliser un business plan",
+          "Connaissance des différents statuts juridiques",
+          "Démarches de création, de reprise ou de rachat d'une entreprise",
+          "Analyse du marché local et national de la sécurité privée",
+          "Identification des branches d’activité (surveillance humaine, événementiel, sûreté aéroportuaire, télésurveillance, etc.)",
+          "Étude de la concurrence et positionnement stratégique",
+          "Définition d’un modèle économique viable",
+          "Élaboration d’un prévisionnel financier (charges, masse salariale, investissements)",
+          "Identification des obligations CNAPS et préfectorales",
+          "Demande d’autorisation d’exercer et agrément dirigeant",
+          "Définition de la stratégie de développement à court, moyen et long terme",
+          "Choix des assurances professionnelles adaptées",
+          "Mise en place des outils de pilotage (tableaux de bord, indicateurs de performance)",
+          "Évaluation des risques juridiques et financiers liés au projet"
+        ],
+        2: [
+          "Connaissance du Livre VI du Code de sécurité intérieure",
+          "La règlementation incendie des ERP",
+          "La déontologie professionnelle",
+          "Législation relative au respect des libertés publiques",
+          "Application du principe d’exercice exclusif",
+          "Respect des règles relatives au port d’uniforme et à l’identification",
+          "Maîtrise des règles relatives au port et à l’usage des armes",
+          "Application des dispositions du Code pénal (légitime défense, non-assistance, etc.)",
+          "Respect du RGPD et des obligations CNIL",
+          "Mise en conformité des procédures internes avec la réglementation",
+          "Veille juridique et réglementaire permanente",
+          "Gestion des contrôles administratifs (CNAPS, inspection du travail, préfecture)",
+          "Respect des règles relatives aux IGH",
+          "Supervision des qualifications SSIAP 1, 2 et 3",
+          "Prévention des situations de confusion avec un service public"
+        ],
+        3: [
+          "Tenue des opérations comptables d'une entreprise",
+          "Connaître les différentes aides de financement possibles",
+          "Connaître les dispositifs d'optimisation fiscale",
+          "Piloter l'équilibre financier de l'entreprise",
+          "Gérer les contrats de travail",
+          "Gestion de la trésorerie",
+          "Contrôle des déclarations fiscales (TVA, IS, charges sociales)",
+          "Suivi du bilan et du compte de résultat",
+          "Collaboration avec un expert-comptable",
+          "Recours éventuel à un commissaire aux comptes",
+          "Gestion des assurances professionnelles",
+          "Élaboration des budgets annuels",
+          "Gestion des ruptures de contrat (licenciement, rupture conventionnelle)",
+          "Respect du droit du travail et de la convention collective de la sécurité privée",
+          "Gestion des accidents du travail et déclarations obligatoires",
+          "Mise en place d’un système de facturation et de recouvrement",
+          "Gestion des équipements (achats, inventaire, maintenance)",
+          "Contrôle des marges par site ou par client",
+          "Mise en place d’outils de gestion (logiciel comptable, ERP, tableaux de bord)"
+        ],
+        4: [
+          "Élaboration d’un plan de communication",
+          "Développement de la stratégie digitale (site internet, réseaux sociaux)",
+          "Réponse aux appels d’offres publics (BOAMP, JOUE, JAL)",
+          "Analyse des cahiers des charges",
+          "Rédaction d’offres commerciales",
+          "Construction d’une grille tarifaire adaptée",
+          "Négociation commerciale",
+          "Développement de partenariats stratégiques",
+          "Participation à des salons professionnels",
+          "Mise en place d’une stratégie de prospection",
+          "Gestion du portefeuille clients",
+          "Suivi de la satisfaction client",
+          "Gestion des réclamations",
+          "Fidélisation des donneurs d’ordre",
+          "Analyse des indicateurs commerciaux (taux de transformation, panier moyen)"
+        ],
+        5: [
+          "Recrutement d’agents de sécurité",
+          "Vérification des cartes professionnelles",
+          "Organisation des plannings et rotations",
+          "Répartition des missions sur site",
+          "Supervision opérationnelle",
+          "Mise en place de procédures internes",
+          "Évaluation annuelle des collaborateurs",
+          "Gestion des conflits internes",
+          "Management par objectifs",
+          "Mise en place de plans de formation",
+          "Accompagnement à la montée en compétences",
+          "Gestion des absences et remplacements",
+          "Animation de réunions d’équipe",
+          "Mise en place d’indicateurs de performance terrain",
+          "Gestion des situations d’urgence",
+          "Fidélisation des collaborateurs",
+          "Développement de plans de carrière"
+        ]
+      } %}
       <table class="positionnement-table">
         <thead>
           <tr>
@@ -181,7 +273,16 @@
             </td>
             {% endif %}
             <td>
-              <input name="blocs_competences.activite{{ idx }}.competence{{ competence_idx }}.intitule" placeholder="Compétence {{ competence_idx }}" value="{{ competence.intitule }}" required>
+              {% set activity_competences = competences_options[idx] %}
+              <select name="blocs_competences.activite{{ idx }}.competence{{ competence_idx }}.intitule" required>
+                <option value="">-- Choisir une compétence --</option>
+                {% if competence.intitule and competence.intitule not in activity_competences %}
+                <option value="{{ competence.intitule }}" selected>{{ competence.intitule }} (valeur existante)</option>
+                {% endif %}
+                {% for intitule in activity_competences %}
+                <option value="{{ intitule }}" {% if competence.intitule == intitule %}selected{% endif %}>{{ intitule }}</option>
+                {% endfor %}
+              </select>
             </td>
             <td>
               <select name="blocs_competences.activite{{ idx }}.competence{{ competence_idx }}.statut" class="activity-status-select" required>
