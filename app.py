@@ -1248,6 +1248,13 @@ REQUIRED_DOCS = {
         {"key": "certif_med", "label": "Certificat médical (-3 mois)", "accept": "application/pdf"},
         {"key": "assurance_rc", "label": "Attestation d’assurance responsabilité civile", "accept": "application/pdf"},
     ],
+    "DIRIGEANT_VAE_ONLY": [
+        {
+            "key": "livret_2",
+            "label": "Livret 2 VAE",
+            "accept": "application/pdf,image/jpeg,image/png",
+        },
+    ],
 }
 
 def required_docs_for_training(training_type: str) -> List[Dict[str, Any]]:
@@ -1261,6 +1268,8 @@ def required_docs_for_training(training_type: str) -> List[Dict[str, Any]]:
 
     if tt == "A3P":
         docs += list(REQUIRED_DOCS["A3P_ONLY"])
+    if tt == "DIRIGEANT VAE":
+        docs += list(REQUIRED_DOCS["DIRIGEANT_VAE_ONLY"])
     return docs
 
 def ensure_documents_schema_for_trainee(t: Dict[str, Any], training_type: str) -> bool:
@@ -5571,9 +5580,12 @@ def public_doc_upload(token: str, doc_key: str):
             cur_status = (d.get("status") or "").strip().upper()
             if cur_status in ("NON CONFORME", "NON_CONFORME"):
                 cur_files = []
-            max_files = 2 if doc_key == "id" else 1
-            remaining_slots = max(max_files - len(cur_files), 0)
-            files_to_store = incoming_files[:remaining_slots] if remaining_slots else []
+            max_files = 2 if doc_key == "id" else (-1 if doc_key == "livret_2" else 1)
+            if max_files < 0:
+                files_to_store = incoming_files
+            else:
+                remaining_slots = max(max_files - len(cur_files), 0)
+                files_to_store = incoming_files[:remaining_slots] if remaining_slots else []
             if not files_to_store:
                 return redirect(url_for("public_trainee_space", token=token))
 
@@ -5607,6 +5619,19 @@ def public_doc_upload(token: str, doc_key: str):
     s["trainees"] = _session_trainees_list(s)
     s.pop("stagiaires", None)
     save_data(data)
+
+    if doc_key == "livret_2":
+        trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
+        add_admin_notification(
+            data,
+            f"VAE Livret 2️⃣ Déposé par {trainee_display_name}",
+            meta={
+                "type": "vae_livret_2_upload",
+                "session_id": s.get("id"),
+                "trainee_id": t.get("id"),
+            },
+        )
+        save_data(data)
 
     # ✅ IMPORTANT: on renvoie l’info au GET (pour popup + scroll ensuite)
     return redirect(url_for(
