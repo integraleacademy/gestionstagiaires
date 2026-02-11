@@ -60,6 +60,8 @@
       setPath(payload, name, !!(el && el.checked));
     });
 
+    setPath(payload, 'certification.vise', 'complete');
+
     const experiences = [...document.querySelectorAll('.experience-item')].map((item) => ({
       date_debut: item.querySelector('[name="exp_date_debut"]').value,
       duree: item.querySelector('[name="exp_duree"]').value,
@@ -123,24 +125,8 @@
         });
       }
     });
-
-    for (let i = 1; i <= 5; i++) {
-      const act = payload.blocs_competences?.[`activite${i}`] || {};
-      if (['oui', 'partiellement'].includes(act.statut) && !act.commentaires) {
-        e.push({
-          step: 5,
-          message: `Commentaires manquants pour l'activité ${i} (statut : ${act.statut})`,
-        });
-      }
-    }
-
-    if (!payload.engagement?.accord_analyse) {
-      e.push({
-        step: 8,
-        message: "Vous devez accepter l'analyse du dossier",
-      });
-    }
-
+    if (payload.certification?.vise !== 'complete') e.push('La certification complète est obligatoire');
+    if (!payload.engagement?.accord_analyse) e.push('accord_analyse obligatoire');
     return e;
   }
 

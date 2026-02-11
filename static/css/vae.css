@@ -10,6 +10,7 @@
 .grid-3{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
 input,select,textarea{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0}
 textarea{min-height:90px}
+input:disabled,select:disabled,textarea:disabled{background:#f3f4f6;color:#6b7280;cursor:not-allowed}
 .btn{background:#1f8f4a;color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;text-decoration:none;display:inline-block}
 .btn.secondary{background:#f3f4f6;color:#111827}
 .btn.danger{background:#b91c1c;color:#fff}
@@ -32,3 +33,15 @@ h3{margin:18px 0 8px;font-size:1.05rem}
 .step-instructions li{line-height:1.45}
 .livret-tip{margin:10px 0 14px;font-weight:500}
 .livret-tip a{font-weight:700}
+
+.field-with-label label{display:block;font-weight:600;margin:6px 0 2px}
+.field-with-label input,.field-with-label select{margin-top:0}
+
+.positionnement-table{width:100%;border-collapse:collapse;margin-top:10px}
+.positionnement-table th,.positionnement-table td{border:1px solid #1f2937;padding:10px;vertical-align:top}
+.positionnement-table th{background:#5f77a6;color:#fff;text-transform:uppercase;font-size:.95rem;text-align:left}
+.positionnement-table tbody tr:nth-child(even) td{background:#eef2ff}
+.positionnement-table td.activity-title{background:#f3f4f6;font-weight:500;line-height:1.35}
+.activity-status-select{min-width:220px}
+
+.step-readonly{background:#fff7ed;border-color:#fdba74;color:#9a3412;font-weight:600}

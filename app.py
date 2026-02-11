@@ -7480,11 +7480,11 @@ def _vae_default_dossier(dossier_id: Optional[str] = None) -> Dict[str, Any]:
         },
         "experiences": [{"date_debut": "", "duree": "", "description": ""}],
         "blocs_competences": {
-            "activite1": {"statut": "", "commentaires": ""},
-            "activite2": {"statut": "", "commentaires": ""},
-            "activite3": {"statut": "", "commentaires": ""},
-            "activite4": {"statut": "", "commentaires": ""},
-            "activite5": {"statut": "", "commentaires": ""}
+            "activite1": {"competence1": {"intitule": "", "statut": ""}, "competence2": {"intitule": "", "statut": ""}, "competence3": {"intitule": "", "statut": ""}, "competence4": {"intitule": "", "statut": ""}},
+            "activite2": {"competence1": {"intitule": "", "statut": ""}, "competence2": {"intitule": "", "statut": ""}, "competence3": {"intitule": "", "statut": ""}, "competence4": {"intitule": "", "statut": ""}},
+            "activite3": {"competence1": {"intitule": "", "statut": ""}, "competence2": {"intitule": "", "statut": ""}, "competence3": {"intitule": "", "statut": ""}, "competence4": {"intitule": "", "statut": ""}},
+            "activite4": {"competence1": {"intitule": "", "statut": ""}, "competence2": {"intitule": "", "statut": ""}, "competence3": {"intitule": "", "statut": ""}, "competence4": {"intitule": "", "statut": ""}},
+            "activite5": {"competence1": {"intitule": "", "statut": ""}, "competence2": {"intitule": "", "statut": ""}, "competence3": {"intitule": "", "statut": ""}, "competence4": {"intitule": "", "statut": ""}}
         },
         "parcours_previsionnel": {
             "accompagnement_individuel": {"heures": "", "modalites": ""},
@@ -7648,7 +7648,10 @@ def _vae_dossier_to_lines(dossier: Dict[str, Any]) -> List[str]:
     blocs = dossier.get("blocs_competences", {})
     for i in range(1, 6):
         act = blocs.get(f"activite{i}", {})
-        lines.append(f"Activite {i}: statut={act.get('statut')} commentaires={act.get('commentaires')}")
+        lines.append(f"Activite {i}:")
+        for j in range(1, 5):
+            comp = act.get(f"competence{j}", {}) if isinstance(act, dict) else {}
+            lines.append(f"  - Competence {j}: intitule={comp.get('intitule')} statut={comp.get('statut')}")
 
     lines.extend([
         "",
@@ -7691,15 +7694,9 @@ def _validate_vae_for_submit(dossier: Dict[str, Any]) -> List[str]:
         if not (str(candidat.get(key) or "").strip()):
             errors.append(f"1ère étape (Informations candidat) : {label} manquant")
 
-    blocs = dossier.get("blocs_competences", {})
-    for i in range(1, 6):
-        item = blocs.get(f"activite{i}", {})
-        statut = (item.get("statut") or "").strip()
-        commentaires = (item.get("commentaires") or "").strip()
-        if statut in {"oui", "partiellement"} and not commentaires:
-            errors.append(
-                f"4ème étape (Analyse des compétences) : commentaires manquants pour l'activité {i} (statut : {statut})"
-            )
+    certification = dossier.get("certification", {})
+    if (certification.get("vise") or "") != "complete":
+        errors.append("La certification visée doit être la certification professionnelle dans son intégralité")
 
     engagement = dossier.get("engagement", {})
     if not bool(engagement.get("accord_analyse")):
