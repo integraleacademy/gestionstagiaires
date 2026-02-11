@@ -7684,9 +7684,15 @@ def _merge_dict(base: Dict[str, Any], incoming: Dict[str, Any]) -> None:
 def _validate_vae_for_submit(dossier: Dict[str, Any]) -> List[str]:
     errors: List[str] = []
     candidat = dossier.get("candidat", {})
-    for key in ["nom_naissance", "prenoms", "date_naissance", "email"]:
+    required_fields = {
+        "nom_naissance": "Nom de naissance",
+        "prenoms": "Prénom(s)",
+        "date_naissance": "Date de naissance",
+        "email": "Adresse email",
+    }
+    for key, label in required_fields.items():
         if not (str(candidat.get(key) or "").strip()):
-            errors.append(f"Le champ candidat.{key} est requis")
+            errors.append(f"1ère étape (Informations candidat) : {label} manquant")
 
     certification = dossier.get("certification", {})
     if (certification.get("vise") or "") != "complete":
@@ -7694,7 +7700,7 @@ def _validate_vae_for_submit(dossier: Dict[str, Any]) -> List[str]:
 
     engagement = dossier.get("engagement", {})
     if not bool(engagement.get("accord_analyse")):
-        errors.append("Vous devez accepter l'analyse du dossier avant soumission")
+        errors.append("7ème étape (Accord d'analyse) : vous devez accepter l'analyse du dossier")
     return errors
 
 @app.get('/vae/nouveau')
