@@ -7701,6 +7701,20 @@ def _validate_vae_for_submit(dossier: Dict[str, Any]) -> List[str]:
     if (certification.get("vise") or "") != "complete":
         errors.append("La certification visée doit être la certification professionnelle dans son intégralité")
 
+    blocs_competences = dossier.get("blocs_competences", {})
+    for activity_idx in range(1, 6):
+        activity = blocs_competences.get(f"activite{activity_idx}", {})
+        for competence_idx in range(1, 5):
+            competence = activity.get(f"competence{competence_idx}", {})
+            if not str(competence.get("intitule") or "").strip():
+                errors.append(
+                    f"4ème étape (Tableau de positionnement) : intitulé manquant pour Activité {activity_idx}, compétence {competence_idx}"
+                )
+            if not str(competence.get("statut") or "").strip():
+                errors.append(
+                    f"4ème étape (Tableau de positionnement) : activité manquante pour Activité {activity_idx}, compétence {competence_idx}"
+                )
+
     engagement = dossier.get("engagement", {})
     if not bool(engagement.get("accord_analyse")):
         errors.append("7ème étape (Accord d'analyse) : vous devez accepter l'analyse du dossier")
