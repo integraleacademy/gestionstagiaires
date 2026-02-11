@@ -19,3 +19,9 @@ textarea{min-height:90px}
 .vae-table{width:100%;border-collapse:collapse}
 .vae-table th,.vae-table td{padding:8px;border-bottom:1px solid #e5e7eb;text-align:left}
 .row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+
+h3{margin:18px 0 8px;font-size:1.05rem}
+.checkbox-grid{display:grid;gap:8px;margin:8px 0 12px}
+.checkbox-grid.two-cols{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.checkbox-grid label{display:flex;align-items:flex-start;gap:8px}
+.checkbox-grid input[type="checkbox"],.checkbox-grid input[type="radio"]{width:auto;margin-top:2px}

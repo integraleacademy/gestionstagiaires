@@ -17,29 +17,92 @@
     </section>
 
     <section class="step" data-step="2">
-      <h2>Étape 2 — Infos candidat</h2>
+      <h2>Étape 2 — Informations générales sur le candidat</h2>
       <div class="grid-2">
         <input name="candidat.nom_naissance" placeholder="Nom de naissance*" value="{{ dossier.candidat.nom_naissance }}" required>
         <input name="candidat.nom_usage" placeholder="Nom d'usage" value="{{ dossier.candidat.nom_usage }}">
-        <input name="candidat.prenoms" placeholder="Prénoms*" value="{{ dossier.candidat.prenoms }}" required>
+        <input name="candidat.prenoms" placeholder="Prénom(s) (tous les prénoms)*" value="{{ dossier.candidat.prenoms }}" required>
         <input type="date" name="candidat.date_naissance" value="{{ dossier.candidat.date_naissance }}" required>
-        <input type="email" name="candidat.email" placeholder="Email*" value="{{ dossier.candidat.email }}" required>
+        <input name="candidat.nationalite" placeholder="Nationalité" value="{{ dossier.candidat.nationalite }}">
+        <select name="candidat.genre">
+          <option value="">Genre</option>
+          <option value="homme" {% if dossier.candidat.genre=='homme' %}selected{% endif %}>Homme</option>
+          <option value="femme" {% if dossier.candidat.genre=='femme' %}selected{% endif %}>Femme</option>
+          <option value="autre" {% if dossier.candidat.genre=='autre' %}selected{% endif %}>Autre</option>
+        </select>
+        <select name="candidat.niveau_formation">
+          <option value="">Niveau de formation le plus élevé</option>
+          {% for niveau in ['2','3','4','5','6','7','8'] %}
+          <option value="{{ niveau }}" {% if dossier.candidat.niveau_formation==niveau %}selected{% endif %}>Niveau {{ niveau }}</option>
+          {% endfor %}
+        </select>
+        <select name="candidat.niveau_certification">
+          <option value="">Niveau de certification obtenu le plus élevé</option>
+          {% for niveau in ['3','4','5','6','7','8'] %}
+          <option value="{{ niveau }}" {% if dossier.candidat.niveau_certification==niveau %}selected{% endif %}>Niveau {{ niveau }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <input name="candidat.certifications_obtenues" placeholder="Intitulé des certifications obtenues" value="{{ dossier.candidat.certifications_obtenues }}">
+      <input name="candidat.adresse" placeholder="Adresse postale (adresse, code postal, ville, pays)" value="{{ dossier.candidat.adresse }}">
+      <div class="grid-2">
         <input name="candidat.telephone" placeholder="Téléphone" value="{{ dossier.candidat.telephone }}">
+        <input type="email" name="candidat.email" placeholder="Adresse email*" value="{{ dossier.candidat.email }}" required>
+      </div>
+
+      <h3>Statut du candidat</h3>
+      <div class="checkbox-grid two-cols">
+        {% set statuts = [
+          ("salarie_prive", "Salarié du secteur privé"),
+          ("fonctionnaire_agent_public", "Fonctionnaire et agent public"),
+          ("benevole", "Bénévole"),
+          ("aidant_familial", "Aidant familial"),
+          ("aidant_familial_agricole", "Aidant familial agricole"),
+          ("demandeur_emploi", "Demandeur d'emploi"),
+          ("travailleur_non_salarie", "Travailleur non salarié"),
+          ("retraite", "Retraité"),
+          ("mandat_electif", "Titulaire d'un mandat électif (électoral ou syndical)")
+        ] %}
+        {% for value, label in statuts %}
+        <label><input type="radio" name="candidat.statut" value="{{ value }}" {% if dossier.candidat.statut==value %}checked{% endif %}> {{ label }}</label>
+        {% endfor %}
+      </div>
+      <input name="candidat.convention_collective" placeholder="Identification de la convention collective de l’employeur (le cas échéant)" value="{{ dossier.candidat.convention_collective }}">
+
+      <h3>Objectifs du candidat</h3>
+      <div class="checkbox-grid">
+        {% set objectifs = [
+          ("trouver_emploi", "Trouver plus facilement un emploi"),
+          ("faire_reconnaitre_competences", "Faire reconnaître officiellement ses compétences"),
+          ("etre_reconnu_profession", "Être reconnu dans sa profession"),
+          ("obtenir_meilleur_salaire", "Obtenir un meilleur salaire"),
+          ("se_reorienter", "Se réorienter"),
+          ("se_maintenir_evoluer", "Se maintenir ou évoluer dans son emploi"),
+          ("confirmer_acquis_metier", "Confirmer ses acquis métier")
+        ] %}
+        {% for value, label in objectifs %}
+        <label><input type="checkbox" name="candidat.objectifs" value="{{ value }}" {% if value in (dossier.candidat.objectifs or []) %}checked{% endif %}> {{ label }}</label>
+        {% endfor %}
       </div>
     </section>
 
     <section class="step" data-step="3">
-      <h2>Étape 3 — Certification</h2>
+      <h2>Étape 3 — Certification professionnelle visée</h2>
       <input value="{{ dossier.certification.intitule }}" readonly>
       <div class="grid-3">
         <input value="RNCP {{ dossier.certification.rncp }}" readonly>
         <input value="{{ dossier.certification.certificateur }}" readonly>
-        <select name="certification.vise">
-          <option value="complete" {% if dossier.certification.vise=='complete' %}selected{% endif %}>Certification complète</option>
-          <option value="blocs" {% if dossier.certification.vise=='blocs' %}selected{% endif %}>Par blocs</option>
-        </select>
+        <input name="certification.option" placeholder="Option (le cas échéant)" value="{{ dossier.certification.option }}">
       </div>
-      <input name="certification.blocs_vises" placeholder="Blocs visés (séparés par virgules)">
+      <input name="certification.parcours_mention" placeholder="Parcours / option / mention / spécialité (le cas échéant)" value="{{ dossier.certification.parcours_mention }}">
+
+      <h3>Le candidat vise</h3>
+      <div class="checkbox-grid">
+        <label><input type="radio" name="certification.vise" value="complete" {% if dossier.certification.vise=='complete' %}checked{% endif %}> La certification professionnelle dans son intégralité</label>
+        <label><input type="radio" name="certification.vise" value="blocs" {% if dossier.certification.vise=='blocs' %}checked{% endif %}> Un ou plusieurs bloc(s) de compétences</label>
+      </div>
+      <input name="certification.blocs_vises" placeholder="Préciser le(s) bloc(s) visé(s) (séparés par virgules)" value="{{ (dossier.certification.blocs_vises or [])|join(', ') }}">
+      <textarea name="certification.prerequis" placeholder="Liste des prérequis réglementaires de la certification professionnelle visée">{{ dossier.certification.prerequis }}</textarea>
     </section>
 
     <section class="step" data-step="4">
