@@ -1325,9 +1325,40 @@ id="upload_{{ d.key }}"
         {% if vae_current_step == 4 and vae_done_until < 4 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
         {% set livret_docs = trainee.documents or [] %}
         {% set livret2_doc = (livret_docs | selectattr('key', 'equalto', 'livret_2') | list | first) %}
-        {% set livret2_count = livret2_doc.files|length if livret2_doc and livret2_doc.files else 0 %}
+        {% set ns_livret2 = namespace(tokens=[]) %}
+        {% if livret2_doc %}
+          {% if livret2_doc.files is defined and livret2_doc.files is sequence and livret2_doc.files is not string %}
+            {% for ft in livret2_doc.files %}
+              {% if ft %}
+                {% set _ = ns_livret2.tokens.append(ft) %}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+          {% if livret2_doc.file and livret2_doc.file not in ns_livret2.tokens %}
+            {% set _ = ns_livret2.tokens.insert(0, livret2_doc.file) %}
+          {% endif %}
+        {% endif %}
+        {% set livret2_count = ns_livret2.tokens|length %}
         {% if vae_done_until >= 4 %}
           <p class="oktag">Votre Livret 2 a bien été déposé, il est actuellement en cours d'analyse par notre équipe, nous reviendrons vers vous prochainement.</p>
+          {% if livret2_count %}
+            <p class="muted">{{ livret2_count }} fichier(s) Livret 2 déjà déposé(s).</p>
+            <ul style="margin:6px 0 0 18px;">
+              {% for ft in ns_livret2.tokens %}
+                <li>
+                  <a href="/espace/{{ token_safe }}/download/{{ ft }}" target="_blank" rel="noopener">
+                    Voir le fichier {{ loop.index }}
+                  </a>
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+          <p class="muted" style="margin-top:8px;">Vous pouvez continuer à ajouter d'autres fichiers, un par un.</p>
+          <form class="upload-form" id="upload_livret_2_step4_done" action="/espace/{{ token_safe }}/documents/livret_2/upload" method="post" enctype="multipart/form-data">
+            <input type="file" name="files" accept="application/pdf,image/jpeg,image/png">
+            <button class="btn small" type="submit">Ajouter un fichier</button>
+            <div class="uploading-msg muted" style="display:none;">Envoi en cours… merci de patienter.</div>
+          </form>
         {% elif vae_current_step == 4 and vae_done_until < 4 %}
           <p><a href="/static/vae_livret_2.pdf" target="_blank" rel="noopener">Téléchargez le Livret 2 en cliquant ici</a></p>
           <form class="upload-form" id="upload_livret_2" action="/espace/{{ token_safe }}/documents/livret_2/upload" method="post" enctype="multipart/form-data">
