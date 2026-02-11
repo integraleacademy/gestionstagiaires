@@ -42,6 +42,8 @@
       setPath(payload, name, !!(el && el.checked));
     });
 
+    setPath(payload, 'certification.vise', 'complete');
+
     const experiences = [...document.querySelectorAll('.experience-item')].map((item) => ({
       date_debut: item.querySelector('[name="exp_date_debut"]').value,
       duree: item.querySelector('[name="exp_duree"]').value,
@@ -100,10 +102,7 @@
     ['nom_naissance', 'prenoms', 'date_naissance', 'email'].forEach((k) => {
       if (!payload.candidat?.[k]) e.push(`candidat.${k} requis`);
     });
-    for (let i = 1; i <= 5; i++) {
-      const act = payload.blocs_competences?.[`activite${i}`] || {};
-      if (['oui', 'partiellement'].includes(act.statut) && !act.commentaires) e.push(`commentaires activité ${i} requis`);
-    }
+    if (payload.certification?.vise !== 'complete') e.push('La certification complète est obligatoire');
     if (!payload.engagement?.accord_analyse) e.push('accord_analyse obligatoire');
     return e;
   }

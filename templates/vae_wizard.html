@@ -22,7 +22,10 @@
         <input name="candidat.nom_naissance" placeholder="Nom de naissance*" value="{{ dossier.candidat.nom_naissance }}" required>
         <input name="candidat.nom_usage" placeholder="Nom d'usage" value="{{ dossier.candidat.nom_usage }}">
         <input name="candidat.prenoms" placeholder="Prénom(s) (tous les prénoms)*" value="{{ dossier.candidat.prenoms }}" required>
-        <input type="date" name="candidat.date_naissance" value="{{ dossier.candidat.date_naissance }}" required>
+        <div class="field-with-label">
+          <label for="date_naissance">Date de naissance*</label>
+          <input id="date_naissance" type="date" name="candidat.date_naissance" value="{{ dossier.candidat.date_naissance }}" required>
+        </div>
         <input name="candidat.nationalite" placeholder="Nationalité" value="{{ dossier.candidat.nationalite }}">
         <select name="candidat.genre">
           <option value="">Genre</option>
@@ -30,18 +33,24 @@
           <option value="femme" {% if dossier.candidat.genre=='femme' %}selected{% endif %}>Femme</option>
           <option value="autre" {% if dossier.candidat.genre=='autre' %}selected{% endif %}>Autre</option>
         </select>
-        <select name="candidat.niveau_formation">
-          <option value="">Niveau de formation le plus élevé</option>
-          {% for niveau in ['2','3','4','5','6','7','8'] %}
-          <option value="{{ niveau }}" {% if dossier.candidat.niveau_formation==niveau %}selected{% endif %}>Niveau {{ niveau }}</option>
-          {% endfor %}
-        </select>
-        <select name="candidat.niveau_certification">
-          <option value="">Niveau de certification obtenu le plus élevé</option>
-          {% for niveau in ['3','4','5','6','7','8'] %}
-          <option value="{{ niveau }}" {% if dossier.candidat.niveau_certification==niveau %}selected{% endif %}>Niveau {{ niveau }}</option>
-          {% endfor %}
-        </select>
+        <div class="field-with-label">
+          <label for="niveau_formation">Niveau de formation le plus élevé</label>
+          <select id="niveau_formation" name="candidat.niveau_formation">
+            <option value="">Sélectionner un niveau</option>
+            {% for niveau in ['2','3','4','5','6','7','8'] %}
+            <option value="{{ niveau }}" {% if dossier.candidat.niveau_formation==niveau %}selected{% endif %}>Niveau {{ niveau }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field-with-label">
+          <label for="niveau_certification">Niveau de certification la plus élevée</label>
+          <select id="niveau_certification" name="candidat.niveau_certification">
+            <option value="">Sélectionner un niveau</option>
+            {% for niveau in ['3','4','5','6','7','8'] %}
+            <option value="{{ niveau }}" {% if dossier.candidat.niveau_certification==niveau %}selected{% endif %}>Niveau {{ niveau }}</option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
       <input name="candidat.certifications_obtenues" placeholder="Intitulé des certifications obtenues" value="{{ dossier.candidat.certifications_obtenues }}">
       <input name="candidat.adresse" placeholder="Adresse postale (adresse, code postal, ville, pays)" value="{{ dossier.candidat.adresse }}">
@@ -98,33 +107,26 @@
 
       <h3>Le candidat vise</h3>
       <div class="checkbox-grid">
-        <label><input type="radio" name="certification.vise" value="complete" {% if dossier.certification.vise=='complete' %}checked{% endif %}> La certification professionnelle dans son intégralité</label>
-        <label><input type="radio" name="certification.vise" value="blocs" {% if dossier.certification.vise=='blocs' %}checked{% endif %}> Un ou plusieurs bloc(s) de compétences</label>
+        <input type="hidden" name="certification.vise" value="complete">
+        <label><input type="radio" checked disabled> La certification professionnelle dans son intégralité (obligatoire)</label>
+        <label><input type="radio" disabled> Un ou plusieurs bloc(s) de compétences (non disponible)</label>
       </div>
-      <input name="certification.blocs_vises" placeholder="Préciser le(s) bloc(s) visé(s) (séparés par virgules)" value="{{ (dossier.certification.blocs_vises or [])|join(', ') }}">
+      <input name="certification.blocs_vises" placeholder="Préciser le(s) bloc(s) visé(s) (séparés par virgules)" value="{{ (dossier.certification.blocs_vises or [])|join(', ') }}" disabled>
       <textarea name="certification.prerequis" placeholder="Liste des prérequis réglementaires de la certification professionnelle visée">{{ dossier.certification.prerequis }}</textarea>
     </section>
 
     <section class="step" data-step="4">
       <h2>3ème étape : TABLEAU DES EXPÉRIENCES PROFESSIONNELLES OU PERSONNELLES</h2>
-      <p>
-        Le tableau ci-dessous permet au certificateur de connaître les expériences du candidat<br>
-        (professionnelles, personnelles, bénévoles…) en lien direct avec la certification visée.<br>
-        Il est demandé de dupliquer le tableau pour chaque expérience en lien avec la certification<br>
-        visée.<br>
-        L'intitulé de la fonction occupée par le candidat est indiqué ainsi que l'ensemble des<br>
-        activités liées à l'expérience qui apporteront un éclairage pertinent au regard du référentiel<br>
-        de la certification visée.<br>
-        Tout élément relatif aux environnements de travail (ex : type d'entreprise dans lequel il ou<br>
-        elle a exercé) et aux contextes d'exercice (ex : niveau d'autonomie dans la pratique,<br>
-        relations avec d'autres catégories professionnelles) permettra au certificateur de mieux<br>
-        appréhender le parcours du candidat.<br>
-        Point d'attention : les dossiers de faisabilité qui ne présenteraient pas d'expériences en lien<br>
-        avec le contenu de la certification visée seront considérés comme incomplets et seront<br>
-        rejetés.<br>
-        Pour la bonne compréhension des informations, un soin particulier devra être porté à la<br>
-        syntaxe et à l'orthographe
-      </p>
+      <div class="step-instructions card">
+        <p>Le tableau ci-dessous permet au certificateur de connaître les expériences du candidat (professionnelles, personnelles, bénévoles…) en lien direct avec la certification visée.</p>
+        <ul>
+          <li>Dupliquer le tableau pour chaque expérience en lien avec la certification visée.</li>
+          <li>Indiquer l'intitulé de la fonction occupée ainsi que les activités liées à l'expérience.</li>
+          <li>Préciser les environnements de travail et les contextes d'exercice pour faciliter l'analyse du parcours.</li>
+          <li>Les dossiers sans expérience en lien avec la certification visée seront considérés comme incomplets.</li>
+          <li>Porter une attention particulière à la syntaxe et à l'orthographe.</li>
+        </ul>
+      </div>
       <div id="experiencesContainer"></div>
       <button class="btn secondary" type="button" id="addExperience">Ajouter une expérience</button>
     </section>
@@ -151,43 +153,79 @@
         </p>
       </div>
       <p class="livret-tip">💡 Vous pouvez vous aider du Livret 2 pour trouver des compétences à indiquer. <a href="/static/vae_livret_2.pdf" target="_blank" rel="noopener">Téléchargez le Livret 2 en cliquant ici.</a></p>
-      {% for idx in range(1,6) %}
-      {% set act = dossier.blocs_competences['activite' ~ idx] %}
-      <div class="card">
-        <strong>Activité {{ idx }}</strong>
-        <select name="blocs_competences.activite{{ idx }}.statut" class="bloc-statut" data-activity="{{ idx }}">
-          <option value="">-- Choisir --</option>
-          <option value="oui" {% if act.statut=='oui' %}selected{% endif %}>Oui</option>
-          <option value="partiellement" {% if act.statut=='partiellement' %}selected{% endif %}>Partiellement</option>
-          <option value="non" {% if act.statut=='non' %}selected{% endif %}>Non</option>
-        </select>
-        <textarea name="blocs_competences.activite{{ idx }}.commentaires" placeholder="Commentaires">{{ act.commentaires }}</textarea>
-      </div>
-      {% endfor %}
+      {% set activites = [
+        "Cadrage du projet de création ou de reprise d’entreprise de sécurité privée",
+        "Sécurisation et conformité des règles, principes et normes régissant le secteur de la sécurité privée",
+        "Gestion financière, juridique et administrative de l'entreprise de sécurité privée",
+        "Gestion marketing et commerciale de l'entreprise de sécurité privée",
+        "Constitution, management et pilotage d'une équipe de sécurité"
+      ] %}
+      <table class="positionnement-table">
+        <thead>
+          <tr>
+            <th>INTITULÉ DES ACTIVITÉS</th>
+            <th>LISTE DES COMPÉTENCES</th>
+            <th>ACTIVITÉ (OUI/NON/PARTIELLEMENT)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for idx in range(1,6) %}
+          {% set act = (dossier.blocs_competences.get('activite' ~ idx) or {}) %}
+          {% for competence_idx in range(1,5) %}
+          {% set competence = (act.get('competence' ~ competence_idx) or {}) %}
+          <tr>
+            {% if competence_idx == 1 %}
+            <td class="activity-title" rowspan="4">
+              <strong>Activité {{ idx }}</strong><br>
+              {{ activites[idx - 1] }}
+            </td>
+            {% endif %}
+            <td>
+              <input name="blocs_competences.activite{{ idx }}.competence{{ competence_idx }}.intitule" placeholder="Compétence {{ competence_idx }}" value="{{ competence.intitule }}">
+            </td>
+            <td>
+              <select name="blocs_competences.activite{{ idx }}.competence{{ competence_idx }}.statut" class="activity-status-select">
+                <option value="">-- Choisir --</option>
+                <option value="oui" {% if competence.statut=='oui' %}selected{% endif %}>Oui</option>
+                <option value="partiellement" {% if competence.statut=='partiellement' %}selected{% endif %}>Partiellement</option>
+                <option value="non" {% if competence.statut=='non' %}selected{% endif %}>Non</option>
+              </select>
+            </td>
+          </tr>
+          {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
     </section>
 
     <section class="step" data-step="6">
       <h2>5ème étape : Parcours prévisionnel du candidat</h2>
-      <div class="grid-2">
-        <input name="parcours_previsionnel.accompagnement_individuel.heures" placeholder="Accompagnement individuel (heures)" value="{{ dossier.parcours_previsionnel.accompagnement_individuel.heures }}">
-        <input name="parcours_previsionnel.accompagnement_collectif.heures" placeholder="Accompagnement collectif (heures)" value="{{ dossier.parcours_previsionnel.accompagnement_collectif.heures }}">
-        <input name="parcours_previsionnel.formations_prealables.organisme" placeholder="Organisme" value="{{ dossier.parcours_previsionnel.formations_prealables.organisme }}">
-        <input name="parcours_previsionnel.immersion.structure" placeholder="Structure d'immersion" value="{{ dossier.parcours_previsionnel.immersion.structure }}">
+      <div class="step-readonly card">
+        Cette rubrique est complétée uniquement par l'accompagnateur. Le candidat ne peut pas la modifier.
       </div>
-      <textarea name="parcours_previsionnel.autres_actions" placeholder="Autres actions">{{ dossier.parcours_previsionnel.autres_actions }}</textarea>
+      <div class="grid-2">
+        <input name="parcours_previsionnel.accompagnement_individuel.heures" placeholder="Accompagnement individuel (heures)" value="{{ dossier.parcours_previsionnel.accompagnement_individuel.heures }}" disabled>
+        <input name="parcours_previsionnel.accompagnement_collectif.heures" placeholder="Accompagnement collectif (heures)" value="{{ dossier.parcours_previsionnel.accompagnement_collectif.heures }}" disabled>
+        <input name="parcours_previsionnel.formations_prealables.organisme" placeholder="Organisme" value="{{ dossier.parcours_previsionnel.formations_prealables.organisme }}" disabled>
+        <input name="parcours_previsionnel.immersion.structure" placeholder="Structure d'immersion" value="{{ dossier.parcours_previsionnel.immersion.structure }}" disabled>
+      </div>
+      <textarea name="parcours_previsionnel.autres_actions" placeholder="Autres actions" disabled>{{ dossier.parcours_previsionnel.autres_actions }}</textarea>
     </section>
 
     <section class="step" data-step="7">
       <h2>6ème étape : Formulaire d’avis de faisabilité</h2>
-      <input name="avis_admin.decision" placeholder="Décision (favorable / réservé / défavorable)" value="{{ dossier.avis_admin.decision }}">
-      <textarea name="avis_admin.motivation" placeholder="Motivation de l'avis">{{ dossier.avis_admin.motivation }}</textarea>
-      <div class="grid-2">
-        <input name="avis_admin.nom_accompagnateur" placeholder="Nom de l'accompagnateur" value="{{ dossier.avis_admin.nom_accompagnateur }}">
-        <input type="email" name="avis_admin.email" placeholder="Email" value="{{ dossier.avis_admin.email }}">
-        <input name="avis_admin.telephone" placeholder="Téléphone" value="{{ dossier.avis_admin.telephone }}">
-        <input name="avis_admin.organisme" placeholder="Organisme" value="{{ dossier.avis_admin.organisme }}">
+      <div class="step-readonly card">
+        Cette rubrique est complétée uniquement par l'accompagnateur. Le candidat ne peut pas la modifier.
       </div>
-      <input type="date" name="avis_admin.date" value="{{ dossier.avis_admin.date }}">
+      <input name="avis_admin.decision" placeholder="Décision (favorable / réservé / défavorable)" value="{{ dossier.avis_admin.decision }}" disabled>
+      <textarea name="avis_admin.motivation" placeholder="Motivation de l'avis" disabled>{{ dossier.avis_admin.motivation }}</textarea>
+      <div class="grid-2">
+        <input name="avis_admin.nom_accompagnateur" placeholder="Nom de l'accompagnateur" value="{{ dossier.avis_admin.nom_accompagnateur }}" disabled>
+        <input type="email" name="avis_admin.email" placeholder="Email" value="{{ dossier.avis_admin.email }}" disabled>
+        <input name="avis_admin.telephone" placeholder="Téléphone" value="{{ dossier.avis_admin.telephone }}" disabled>
+        <input name="avis_admin.organisme" placeholder="Organisme" value="{{ dossier.avis_admin.organisme }}" disabled>
+      </div>
+      <input type="date" name="avis_admin.date" value="{{ dossier.avis_admin.date }}" disabled>
     </section>
 
     <section class="step" data-step="8">
