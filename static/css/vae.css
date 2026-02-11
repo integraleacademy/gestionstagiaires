@@ -49,14 +49,6 @@ h3{margin:18px 0 8px;font-size:1.05rem}
 
 .step-readonly{background:#fff7ed;border-color:#fdba74;color:#9a3412;font-weight:600}
 
-.engagement-subtitle{font-style:italic;font-weight:700;margin:0 0 8px}
-.engagement-inline-field{display:flex;align-items:center;gap:10px;margin:10px 0}
-.engagement-inline-field label{margin:0;font-weight:700;white-space:nowrap}
-.engagement-inline-field input{margin:0}
-.engagement-text{line-height:1.5;margin:10px 0 14px}
-.engagement-dates{margin:8px 0 14px}
-.engagement-signature-block{margin:6px 0 16px}
-.engagement-signature-block label{display:block;font-weight:700;margin-bottom:8px}
-.signature-placeholder{min-height:120px;border:1px dashed #94a3b8;border-radius:10px;background:#eef2ff;color:#475569;padding:14px}
-.consent-checkbox{display:flex;align-items:flex-start;gap:8px;margin:8px 0}
-.consent-checkbox input[type="checkbox"]{width:auto;margin-top:2px}
+.readonly-options{display:grid;gap:8px;background:#eef2ff}
+.readonly-options label{display:flex;align-items:center;gap:8px;font-weight:600}
+.readonly-options input[type="checkbox"]{width:auto;margin:0}

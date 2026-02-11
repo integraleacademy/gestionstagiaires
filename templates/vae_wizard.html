@@ -214,57 +214,44 @@
 
     <section class="step" data-step="7">
       <h2>6ème étape : Formulaire d’avis de faisabilité</h2>
+      <p><strong><em>Ce formulaire est à compléter uniquement :<br>par l'accompagnateur lorsque le candidat est accompagné ;</em></strong></p>
       <div class="step-readonly card">
         Cette rubrique est complétée uniquement par l'accompagnateur. Le candidat ne peut pas la modifier.
       </div>
-      <input name="avis_admin.decision" placeholder="Décision (favorable / réservé / défavorable)" value="{{ dossier.avis_admin.decision }}" disabled>
-      <textarea name="avis_admin.motivation" placeholder="Motivation de l'avis" disabled>{{ dossier.avis_admin.motivation }}</textarea>
+      <div class="field-with-label">
+        <label>Avis sur la faisabilité du parcours :</label>
+        <div class="readonly-options card">
+          <label><input type="checkbox" {% if dossier.avis_admin.decision=='faisable' %}checked{% endif %} disabled> Faisable</label>
+          <label><input type="checkbox" {% if dossier.avis_admin.decision=='faisable_complements' %}checked{% endif %} disabled> Faisable avec compléments</label>
+          <label><input type="checkbox" {% if dossier.avis_admin.decision=='non_faisable' %}checked{% endif %} disabled> Non faisable</label>
+        </div>
+      </div>
+      <div class="field-with-label">
+        <label>Motivation de l’avis et des préconisations éventuelles (éléments d’argumentation, réorientation éventuelle...) :</label>
+        <textarea name="avis_admin.motivation" placeholder="Motivation de l'avis" disabled>{{ dossier.avis_admin.motivation }}</textarea>
+      </div>
       <div class="grid-2">
-        <input name="avis_admin.nom_accompagnateur" placeholder="Nom de l'accompagnateur" value="{{ dossier.avis_admin.nom_accompagnateur }}" disabled>
+        <input name="avis_admin.nom_accompagnateur" placeholder="Nom et prénom et fonction de la personne ayant rendu l’avis (si accompagné)" value="{{ dossier.avis_admin.nom_accompagnateur }}" disabled>
         <input type="email" name="avis_admin.email" placeholder="Email" value="{{ dossier.avis_admin.email }}" disabled>
         <input name="avis_admin.telephone" placeholder="Téléphone" value="{{ dossier.avis_admin.telephone }}" disabled>
-        <input name="avis_admin.organisme" placeholder="Organisme" value="{{ dossier.avis_admin.organisme }}" disabled>
+        <input name="avis_admin.organisme" placeholder="Raison sociale de l’organisme d’accompagnement" value="{{ dossier.avis_admin.organisme }}" disabled>
       </div>
       <input type="date" name="avis_admin.date" value="{{ dossier.avis_admin.date }}" disabled>
     </section>
 
     <section class="step" data-step="8">
       <h2>7ème étape : Accord pour l'analyse de la faisabilité</h2>
-      <p class="engagement-subtitle">À signer par le candidat.</p>
-
-      <div class="engagement-inline-field">
-        <label for="engagement_nom_signature">Je soussigné(e)</label>
-        <input id="engagement_nom_signature" name="engagement.nom_signature" placeholder="Nom et prénom" value="{{ dossier.engagement.nom_signature }}" required>
+      <div class="field-with-label">
+        <label>Commentaires du candidat lorsque l’avis de la personne chargée de l’accompagnement est défavorable (éléments d’argumentation) :</label>
+        <textarea name="engagement.commentaires_defavorable" placeholder="Commentaires du candidat (si avis défavorable)">{{ dossier.engagement.commentaires_defavorable }}</textarea>
       </div>
-
-      <p class="engagement-text">
-        certifie l'exactitude des informations fournies et accepte que mon dossier soit analysé par
-        l’organisme certificateur dans le cadre de l’étude de faisabilité préalable à l’entrée en
-        parcours VAE. Je donne mon accord pour qu’une copie du résultat de recevabilité et qu’une
-        copie des résultats du jury VAE soient transmis à la personne chargée de mon
-        accompagnement.
-      </p>
-
-      <div class="engagement-dates">
-        <div class="engagement-inline-field">
-          <label for="engagement_lieu_signature">Fait à :</label>
-          <input id="engagement_lieu_signature" name="engagement.lieu_signature" placeholder="Ville" value="{{ dossier.engagement.lieu_signature }}">
-        </div>
-        <div class="engagement-inline-field">
-          <label for="engagement_date_signature">Le :</label>
-          <input id="engagement_date_signature" type="date" name="engagement.date_signature" value="{{ dossier.engagement.date_signature }}">
-        </div>
-      </div>
-
-      <div class="engagement-signature-block">
-        <label for="engagement_signature_notice">Signature du candidat :</label>
-        <div id="engagement_signature_notice" class="signature-placeholder">
-          Signature manuscrite à apposer lors de l'impression du dossier.
-        </div>
-      </div>
-
-      <label class="consent-checkbox"><input type="checkbox" name="engagement.souhaite_accompagnement" {% if dossier.engagement.souhaite_accompagnement %}checked{% endif %}> Je souhaite un accompagnement VAE</label>
-      <label class="consent-checkbox"><input type="checkbox" name="engagement.accord_analyse" {% if dossier.engagement.accord_analyse %}checked{% endif %} required> J'accepte l'analyse de mon dossier*</label>
+      <h3>ENGAGEMENT DU CANDIDAT/DE LA CANDIDATE À SUIVRE CE PARCOURS</h3>
+      <label><input type="checkbox" name="engagement.souhaite_accompagnement" {% if dossier.engagement.souhaite_accompagnement %}checked{% endif %}> Je souhaite un accompagnement</label>
+      <p class="muted">Si le candidat coche cette case, il reste nécessaire de passer par le portail numérique « France VAE » mentionné à l’<a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000047924037" target="_blank" rel="noopener noreferrer">article R. 6411-2 du code du travail</a> pour déposer le dossier de validation afin que ce dernier soit transmis au certificateur.</p>
+      <label><input type="checkbox" name="engagement.accord_analyse" {% if dossier.engagement.accord_analyse %}checked{% endif %} required> J'accepte l'analyse de mon dossier*</label>
+      <input name="engagement.lieu_signature" placeholder="Lieu" value="{{ dossier.engagement.lieu_signature }}">
+      <input type="date" name="engagement.date_signature" value="{{ dossier.engagement.date_signature }}">
+      <input name="engagement.nom_signature" placeholder="Nom de signature" value="{{ dossier.engagement.nom_signature }}">
       <div id="submitErrors" class="errors"></div>
       <button type="button" class="btn" id="submitDossier">Soumettre</button>
     </section>
