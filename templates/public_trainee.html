@@ -765,7 +765,7 @@
         'livret_1_todo': {'label':'Livret 1 à compléter','cls':'orange'},
         'livret_1_analysis': {'label':"Livret 1 en cours d'analyse",'cls':'gray'},
         'livret_2_todo': {'label':'Livret 2 à compléter','cls':'orange'},
-        'livret_2_analysis': {'label':"Livret 2 en cours d'analyse",'cls':'gray'},
+        'livret_2_analysis': {'label':'Réception livret 2','cls':'gray'},
         'livret_2_validated': {'label':'Livret 2 validé','cls':'green'},
         'livret_1_validated': {'label':'Livret 1 validé','cls':'green'},
         'jury': {'label':'Passage devant le jury','cls':'yellow'},
@@ -1279,7 +1279,7 @@ id="upload_{{ d.key }}"
   } %}
   {% set vae_current_step = vae_current_step_map[vae_key] if vae_key in vae_current_step_map else 1 %}
   {% set vae_jury_date = trainee.vae_jury_date|frdate %}
-  <div class="card" style="grid-column:1/-1;background:linear-gradient(135deg,#eef2ff,#fff7ed);border:1px solid #c7d2fe;">
+  <div class="card" style="grid-column:1/-1;margin-top:14px;background:linear-gradient(135deg,#eef2ff,#fff7ed);border:1px solid #c7d2fe;">
     <h2>✨ Les étapes de votre VAE</h2>
     <div class="muted" style="margin-bottom:12px;">Suivez chaque étape. Chaque carte correspond à une phase clé de votre parcours.</div>
 
@@ -1288,15 +1288,23 @@ id="upload_{{ d.key }}"
         {% if vae_done_until >= 1 %}<div class="vae-step-check">✓</div>{% endif %}
         <div class="vae-step-head"><span class="vae-step-badge">1</span><div class="vae-step-title">1ère étape <small>Rédaction du Livret 1</small></div></div>
         {% if vae_current_step == 1 and vae_done_until < 1 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
-        <p><a href="/vae/nouveau" target="_blank" rel="noopener">Compléter le Livret 1 en cliquant ici</a></p>
-        <p><a href="#">Téléchargez la Fiche de renseignement candidat</a></p>
+        {% if vae_done_until >= 1 %}
+          <p class="oktag">Étape terminée</p>
+        {% else %}
+          <p><a href="/vae/nouveau" target="_blank" rel="noopener">Compléter le Livret 1 en cliquant ici</a></p>
+          <p><a href="#">Téléchargez la Fiche de renseignement candidat</a></p>
+        {% endif %}
       </div>
 
       <div class="vae-step-card {% if vae_done_until >= 2 %}is-done{% endif %} {% if vae_current_step == 2 and vae_done_until < 2 %}is-current{% endif %}">
         {% if vae_done_until >= 2 %}<div class="vae-step-check">✓</div>{% endif %}
         <div class="vae-step-head"><span class="vae-step-badge">2</span><div class="vae-step-title">2ème étape <small>Réception et analyse du Livret 1</small></div></div>
         {% if vae_current_step == 2 and vae_done_until < 2 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
-        <p class="muted">Après réception, votre livret 1 est analysé par notre équipe pédagogique.</p>
+        {% if vae_done_until >= 2 %}
+          <p class="oktag">Étape terminée</p>
+        {% else %}
+          <p class="muted">Après réception, votre livret 1 est analysé par notre équipe pédagogique.</p>
+        {% endif %}
       </div>
 
       <div class="vae-step-card {% if vae_done_until >= 3 %}is-done{% endif %} {% if vae_current_step == 3 and vae_done_until < 3 %}is-current{% endif %}">
@@ -1315,15 +1323,24 @@ id="upload_{{ d.key }}"
         {% if vae_done_until >= 4 %}<div class="vae-step-check">✓</div>{% endif %}
         <div class="vae-step-head"><span class="vae-step-badge">4</span><div class="vae-step-title">4ème étape <small>Rédaction du Livret 2</small></div></div>
         {% if vae_current_step == 4 and vae_done_until < 4 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
-        <p><a href="/static/vae_livret_2.pdf" target="_blank" rel="noopener">Téléchargez le Livret 2 en cliquant ici</a></p>
-        <form class="upload-form" action="/espace/{{ token_safe }}/documents/livret_2/upload" method="post" enctype="multipart/form-data">
-          <input type="file" name="files" multiple accept="application/pdf,image/jpeg,image/png">
-          <button class="btn small" type="submit">Déposer mon Livret 2</button>
-        </form>
         {% set livret_docs = trainee.documents or [] %}
         {% set livret2_doc = (livret_docs | selectattr('key', 'equalto', 'livret_2') | list | first) %}
-        {% if livret2_doc and livret2_doc.files %}
-          <p class="muted">{{ livret2_doc.files|length }} fichier(s) Livret 2 déjà déposé(s).</p>
+        {% set livret2_count = livret2_doc.files|length if livret2_doc and livret2_doc.files else 0 %}
+        {% if vae_done_until >= 4 %}
+          <p class="oktag">Votre Livret 2 a bien été déposé, il est actuellement en cours d'analyse par notre équipe, nous reviendrons vers vous prochainement.</p>
+        {% elif vae_current_step == 4 and vae_done_until < 4 %}
+          <p><a href="/static/vae_livret_2.pdf" target="_blank" rel="noopener">Téléchargez le Livret 2 en cliquant ici</a></p>
+          <form class="upload-form" id="upload_livret_2" action="/espace/{{ token_safe }}/documents/livret_2/upload" method="post" enctype="multipart/form-data">
+            <input id="livret2_files_input" type="file" name="files" multiple accept="application/pdf,image/jpeg,image/png">
+            <button class="btn small" type="submit">Déposer mon Livret 2</button>
+            <div class="uploading-msg muted" style="display:none;">Envoi en cours… merci de patienter.</div>
+          </form>
+          <div id="livret2_files_summary" class="muted" style="margin-top:4px;">Aucun fichier sélectionné.</div>
+          {% if livret2_count %}
+            <p class="muted">{{ livret2_count }} fichier(s) Livret 2 déjà déposé(s).</p>
+          {% endif %}
+        {% else %}
+          <p class="muted">Cette étape sera disponible lorsqu'elle sera en cours.</p>
         {% endif %}
       </div>
 
@@ -2234,6 +2251,25 @@ window.addEventListener("DOMContentLoaded", ()=>{
       if(hint) hint.style.display = "block";
     }
   });
+});
+
+window.addEventListener("DOMContentLoaded", ()=>{
+  const input = document.getElementById("livret2_files_input");
+  const summary = document.getElementById("livret2_files_summary");
+  if(!input || !summary) return;
+
+  const updateSummary = () => {
+    const files = input.files ? Array.from(input.files) : [];
+    if(!files.length){
+      summary.textContent = "Aucun fichier sélectionné.";
+      return;
+    }
+    const count = files.length;
+    summary.textContent = `${count} fichier${count > 1 ? "s" : ""} sélectionné${count > 1 ? "s" : ""} : ${files.map((f)=>f.name).join(", ")}`;
+  };
+
+  input.addEventListener("change", updateSummary);
+  updateSummary();
 });
 
   // ====== UX upload : cacher input + bouton dès submit ======
