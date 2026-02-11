@@ -5623,6 +5623,9 @@ def public_doc_upload(token: str, doc_key: str):
     save_data(data)
 
     if doc_key == "livret_2":
+        if not isinstance(t.get("vae_action_dates"), dict):
+            t["vae_action_dates"] = {}
+        t["vae_action_dates"]["livret_2_received"] = datetime.date.today().strftime("%d/%m/%Y")
         view = vae_status_view("livret_2_analysis")
         t["vae_status"] = view["key"]
         t["vae_status_label"] = view["label"]
