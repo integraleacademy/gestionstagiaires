@@ -562,6 +562,22 @@
 <div class="card" style="grid-column:1 / -1; margin-top:12px;">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
     <div>
+      <div style="font-weight:900;">DOSSIER DE FAISABILITÉ VAE</div>
+      <div class="hint" style="margin-top:4px;">Consultation du livret 1 soumis par le candidat.</div>
+    </div>
+    {% if vae_dossier %}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a class="btn btn-outline" href="{{ url_for('admin_vae_detail', dossier_id=vae_dossier.id) }}" target="_blank" rel="noopener">Voir le formulaire</a>
+      <a class="btn btn-primary" href="{{ url_for('admin_vae_export', dossier_id=vae_dossier.id) }}">Télécharger PDF</a>
+    </div>
+    {% else %}
+    <span class="hint">Aucun livret 1 soumis pour ce stagiaire.</span>
+    {% endif %}
+  </div>
+</div>
+<div class="card" style="grid-column:1 / -1; margin-top:12px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div>
       <div style="font-weight:900;">STATUT VAE</div>
       <div class="hint" style="margin-top:4px;">Le changement de statut peut envoyer automatiquement un email et un SMS selon l'étape.</div>
     </div>

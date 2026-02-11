@@ -1291,7 +1291,7 @@ id="upload_{{ d.key }}"
         {% if vae_done_until >= 1 %}
           <p class="oktag">Étape terminée</p>
         {% else %}
-          <p><a href="/vae/nouveau" target="_blank" rel="noopener">Compléter le Livret 1 en cliquant ici</a></p>
+          <p><a href="/vae/nouveau?trainee_token={{ trainee.token }}" target="_blank" rel="noopener">Compléter le Livret 1 en cliquant ici</a></p>
           <p><a href="#">Téléchargez la Fiche de renseignement candidat</a></p>
         {% endif %}
       </div>
