@@ -14,7 +14,14 @@
 .search-item:hover{ background:#f9fafb; }
 .search-name{ font-weight:900; }
 .search-sub{ color:#6b7280; font-size:12px; margin-top:2px; }
-.search-open{ white-space:nowrap; }
+.search-open{ white-space:nowrap; display:flex; gap:8px; align-items:center; }
+  .btn-quick-action[disabled]{
+    background:#9ca3af !important;
+    border-color:#9ca3af !important;
+    color:#fff !important;
+    cursor:not-allowed;
+    opacity:1;
+  }
   
   /* Modale plus large */
   .modal.modal-wide{
@@ -862,9 +869,11 @@
           const full = `${(it.first_name||"").toUpperCase()} ${(it.last_name||"").toUpperCase()}`.trim();
           const sub = `${it.session_name || ""} ${it.training_type ? "• " + it.training_type : ""}`.trim();
           const url = it.admin_url || `/admin/sessions/${it.session_id}/stagiaires/${it.trainee_id}`;
+          const conventionSigned = (it.convention_status || "soon") === "signed";
+          const testFrValidated = (it.test_fr_status || "soon") === "validated";
 
           return `
-            <div class="search-item">
+            <div class="search-item" data-session-id="${it.session_id}" data-trainee-id="${it.trainee_id}">
               <div>
                 <div class="search-name">${full || "—"}</div>
                 <div class="search-sub">${sub || "—"}</div>
@@ -873,6 +882,8 @@
                 <a class="btn btn-outline" href="${url}" style="text-decoration:none;display:inline-block">
                   Ouvrir
                 </a>
+                <button type="button" class="btn btn-primary btn-quick-action" data-quick-action="convention" ${conventionSigned ? "disabled" : ""}>Convention</button>
+                <button type="button" class="btn btn-primary btn-quick-action" data-quick-action="test-fr" ${testFrValidated ? "disabled" : ""}>Test FR</button>
               </div>
             </div>
           `;
@@ -886,6 +897,44 @@
       const q = input.value;
       clearTimeout(timer);
       timer = setTimeout(()=>doSearch(q), 220);
+    });
+
+    inner.addEventListener("click", async (e)=>{
+      const btn = e.target.closest("[data-quick-action]");
+      if(!btn || btn.disabled) return;
+
+      const item = btn.closest(".search-item");
+      if(!item) return;
+
+      const sessionId = item.getAttribute("data-session-id");
+      const traineeId = item.getAttribute("data-trainee-id");
+      const action = btn.getAttribute("data-quick-action");
+      if(!sessionId || !traineeId || !action) return;
+
+      const payload = {};
+      if(action === "convention") payload.convention_status = "signed";
+      if(action === "test-fr") payload.test_fr_status = "validated";
+      if(!Object.keys(payload).length) return;
+
+      const oldText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "...";
+
+      try{
+        const r = await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
+          method:"POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify(payload)
+        });
+        const res = await r.json().catch(()=>({}));
+        if(!r.ok || res.ok === false) throw new Error("update_failed");
+
+        btn.textContent = oldText;
+      }catch(err){
+        btn.disabled = false;
+        btn.textContent = oldText;
+        alert("Erreur de mise à jour.");
+      }
     });
 
     // fermer quand on clique dehors
