@@ -209,8 +209,11 @@
     <!-- BOUTONS ACTIONS À DROITE -->
     <div class="btn-row btn-row-wrap" style="justify-content:flex-end;">
 
-<a class="btn btn-outline btn-uniform"
-   href="{{ url_for('admin_etiquette_docx', session_id=session.id, trainee_id=trainee.id) }}">
+<a class="btn btn-outline btn-uniform {% if trainee.etiquette_word_downloaded_at %}btn-word-downloaded{% endif %}"
+   id="btnEtiquetteWord"
+   data-downloaded="{{ '1' if trainee.etiquette_word_downloaded_at else '0' }}"
+   href="{{ url_for('admin_etiquette_docx', session_id=session.id, trainee_id=trainee.id) }}"
+   title="{% if trainee.etiquette_word_downloaded_at %}Déjà téléchargée le {{ trainee.etiquette_word_downloaded_at|frdatetime }}{% else %}Télécharger l'étiquette Word{% endif %}">
   🖨️ Etiquette WORD
 </a>
 <a class="btn btn-outline btn-uniform"
@@ -611,6 +614,9 @@
 
 {% if show_vae %}
 <div class="card" style="grid-column:1 / -1; margin-top:12px;">
+  <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+    <a class="btn btn-outline" href="{{ url_for('admin_trainee_candidate_sheet', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener">Fiche candidat complétée</a>
+  </div>
   {% set vae_docs = trainee.documents or [] %}
   {% set vae_doc_keys = ['livret_2', 'id', 'justif_dom', 'diplome'] %}
   {% set vae_support_docs = [] %}
@@ -2173,6 +2179,17 @@ if(chkExamFeesPaid){
       }
     }catch(e){
       alert("Erreur sauvegarde paiement frais d'examen");
+    }
+  });
+}
+
+const btnEtiquetteWord = document.getElementById("btnEtiquetteWord");
+if(btnEtiquetteWord){
+  btnEtiquetteWord.addEventListener("click", (e)=>{
+    if(btnEtiquetteWord.dataset.downloaded !== "1") return;
+    const ok = window.confirm("Vous avez déjà téléchargé l'étiquette WORD, voulez-vous continuer ?");
+    if(!ok){
+      e.preventDefault();
     }
   });
 }

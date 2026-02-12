@@ -69,6 +69,13 @@
     }));
     payload.experiences = experiences;
 
+    const signName = String(payload.engagement?.nom_signature || '').trim();
+    const signDate = String(payload.engagement?.signature_signed_at || '').trim();
+    if (!signName || !signDate) {
+      setPath(payload, 'engagement.signature_trace', '');
+      setPath(payload, 'engagement.signature_signed_at', '');
+    }
+
     return payload;
   }
 
@@ -102,6 +109,9 @@
     const div = document.createElement('div');
     div.className = 'experience-item card';
     div.innerHTML = `
+      <div class="experience-item-header">
+        <button type="button" class="btn experience-add-btn add-exp-inline">Ajouter une expérience</button>
+      </div>
       <div class="field-with-label">
         <label>Date de début</label>
         <input type="date" name="exp_date_debut" value="${exp.date_debut || ''}">
@@ -109,12 +119,60 @@
       <input name="exp_duree" placeholder="Durée" value="${exp.duree || ''}">
       <textarea name="exp_description" placeholder="Description de l'expérience/ de la mission professionnelle et, le cas échéant, intitulé de la fonction occupée">${exp.description || ''}</textarea>
       <button type="button" class="btn danger remove-exp">Supprimer</button>`;
+    div.querySelector('.add-exp-inline').addEventListener('click', () => {
+      addExperienceRow();
+      autosaveDebounced();
+    });
     div.querySelector('.remove-exp').addEventListener('click', () => {
       div.remove();
       autosaveDebounced();
     });
     div.querySelectorAll('input, textarea').forEach((el) => el.addEventListener('input', autosaveDebounced));
     wrap.appendChild(div);
+  }
+
+
+  function formatFrDate(date = new Date()) {
+    const d = String(date.getDate()).padStart(2, '0');
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const y = date.getFullYear();
+    return `${d}/${m}/${y}`;
+  }
+
+  function toHandwritten(name) {
+    return String(name || '').toLowerCase().split('').join(' ');
+  }
+
+  function renderSignaturePreview() {
+    const nameInput = form.querySelector('[name="engagement.nom_signature"]');
+    const traceInput = form.querySelector('[name="engagement.signature_trace"]');
+    const dateInput = form.querySelector('[name="engagement.signature_signed_at"]');
+    const preview = document.getElementById('signaturePreview');
+    const hand = document.getElementById('signatureHandwritten');
+    const meta = document.getElementById('signatureMeta');
+    const signer = String(nameInput?.value || '').trim();
+    const trace = String(traceInput?.value || '').trim();
+    const signedAt = String(dateInput?.value || '').trim();
+
+    hand.textContent = trace;
+    meta.textContent = trace && signedAt ? `Document signé le ${signedAt} par ${signer}` : '';
+    preview.classList.toggle('signed', Boolean(trace && signedAt));
+  }
+
+  function signDocument() {
+    const nameInput = form.querySelector('[name="engagement.nom_signature"]');
+    const traceInput = form.querySelector('[name="engagement.signature_trace"]');
+    const dateInput = form.querySelector('[name="engagement.signature_signed_at"]');
+    const signer = String(nameInput?.value || '').trim();
+    if (!signer) {
+      errorsEl.innerHTML = '<div>Veuillez renseigner le nom et prénom avant de signer.</div>';
+      return;
+    }
+    errorsEl.innerHTML = '';
+    traceInput.value = toHandwritten(signer);
+    dateInput.value = formatFrDate(new Date());
+    renderSignaturePreview();
+    autosaveDebounced();
   }
 
   function frontValidate() {
@@ -183,9 +241,12 @@
   document.getElementById('prevStep').addEventListener('click', () => { current = Math.max(0, current - 1); renderStep(); });
   document.getElementById('nextStep').addEventListener('click', () => { current = Math.min(steps.length - 1, current + 1); renderStep(); });
   document.getElementById('submitDossier').addEventListener('click', () => submitDossier().catch(() => {}));
+  document.getElementById('signDocument').addEventListener('click', signDocument);
 
   form.querySelectorAll('input, select, textarea').forEach((el) => el.addEventListener('input', autosaveDebounced));
+  form.querySelector('[name="engagement.nom_signature"]').addEventListener('input', renderSignaturePreview);
   const exp = Array.isArray(initial.experiences) && initial.experiences.length ? initial.experiences : [{}];
   exp.forEach(addExperienceRow);
+  renderSignaturePreview();
   renderStep();
 })();

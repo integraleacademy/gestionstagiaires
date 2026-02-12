@@ -1576,7 +1576,7 @@ REQUIRED_DOCS = {
         },
         {
             "key": "candidate_info_sheet",
-            "label": "Fiche de renseignement candidat complétée",
+            "label": "Fiche de renseignement candidat à compléter",
             "accept": "application/pdf,image/jpeg,image/png",
         },
     ],
@@ -3785,13 +3785,34 @@ def api_create_trainee(session_id: str):
             subject = "Votre VAE Dirigeant d'entreprise de sécurité privée (DESP)"
             html = mail_layout(f"""
               <style>
+                .vae-mail {{
+                  font-size: 16px;
+                  line-height: 1.65;
+                  color: #0f172a;
+                }}
+                .vae-mail p {{
+                  margin: 0 0 14px 0;
+                }}
+                .vae-mail .step {{
+                  background: #f8fafc;
+                  border: 1px solid #e2e8f0;
+                  border-radius: 12px;
+                  padding: 14px;
+                  margin: 0 0 12px 0;
+                }}
+                .vae-mail .step-title {{
+                  font-weight: 700;
+                  margin-bottom: 6px;
+                  display: block;
+                }}
                 @keyframes vaeCtaPulse {{
                   0% {{ box-shadow: 0 0 0 0 rgba(31, 143, 74, 0.45); transform: scale(1); }}
                   70% {{ box-shadow: 0 0 0 12px rgba(31, 143, 74, 0); transform: scale(1.02); }}
                   100% {{ box-shadow: 0 0 0 0 rgba(31, 143, 74, 0); transform: scale(1); }}
                 }}
               </style>
-              <h2 style="text-align:center">🚀 En route vers la VAE</h2>
+              <div class="vae-mail">
+              <h2 style="text-align:center;margin:0 0 16px 0">🚀 En route vers la VAE</h2>
               <p>Bonjour {first_name},</p>
 
               <p>
@@ -3801,36 +3822,36 @@ def api_create_trainee(session_id: str):
 
               <p><strong>Les étapes :</strong></p>
 
-              <p><strong>1️⃣ Rédaction du Livret 1 (dossier de faisabilité)</strong><br>
-              Vous allez compléter en ligne votre dossier de faisabilité depuis votre Espace candidat en cliquant ici.<br>
+              <div class="step"><span class="step-title">1️⃣ Rédaction du Livret 1 (dossier de faisabilité)</span>
+              Vous allez compléter en ligne votre dossier de faisabilité depuis votre Espace candidat.<br>
               Ce document permet de présenter votre parcours professionnel, vos fonctions exercées et vos responsabilités,
               afin de vérifier que votre expérience correspond bien aux compétences attendues pour le DESP.
               C’est en quelque sorte la « photographie » de votre expérience.<br>
-              ⏳ Durée estimée : environ 30 minutes.</p>
+              ⏳ Durée estimée : environ 30 minutes.</div>
 
-              <p><strong>2️⃣ Étude du Livret 1 et attestation de recevabilité</strong><br>
+              <div class="step"><span class="step-title">2️⃣ Étude du Livret 1 et attestation de recevabilité</span>
               Votre dossier est étudié par la commission.<br>
               Si les éléments fournis sont conformes et suffisants, une attestation de recevabilité vous est délivrée.<br>
               À partir de ce moment, nous prendrons contact avec vous pour mettre en place la convention de VAE
-              et procéder au règlement de l’acompte (1 140 €).</p>
+              et procéder au règlement de l’acompte (1 140 €).</div>
 
-              <p><strong>3️⃣ Rédaction du Livret 2</strong><br>
+              <div class="step"><span class="step-title">3️⃣ Rédaction du Livret 2</span>
               Vous devrez ensuite compléter le Livret 2.<br>
               Ce document est le cœur de votre démarche : vous y détaillez précisément vos activités, vos missions,
               les situations professionnelles rencontrées, ainsi que les compétences mobilisées.<br>
-              C’est ce dossier qui sera présenté au jury de certification.</p>
+              C’est ce dossier qui sera présenté au jury de certification.</div>
 
-              <p><strong>4️⃣ Étude du Livret 2</strong><br>
+              <div class="step"><span class="step-title">4️⃣ Étude du Livret 2</span>
               La commission analyse votre dossier.<br>
-              Si l’ensemble est conforme et complet, une date de passage devant le jury de certification est programmée.</p>
+              Si l’ensemble est conforme et complet, une date de passage devant le jury de certification est programmée.</div>
 
-              <p><strong>5️⃣ Passage devant le jury de certification</strong><br>
+              <div class="step"><span class="step-title">5️⃣ Passage devant le jury de certification</span>
               Vous serez convoqué à un entretien professionnel d’environ une heure.<br>
               Lors de cet échange, le jury reviendra sur votre parcours et sur les éléments présentés dans le Livret 2.<br>
               L’objectif est de vérifier la maîtrise des compétences attendues, à travers des questions concrètes sur
-              votre expérience et vos pratiques professionnelles.</p>
+              votre expérience et vos pratiques professionnelles.</div>
 
-              <p><strong>6️⃣ Obtention de votre certification</strong></p>
+              <div class="step"><span class="step-title">6️⃣ Obtention de votre certification</span></div>
 
               <p style="text-align:center;margin:24px 0">
                 <a href="{link}"
@@ -3844,6 +3865,7 @@ def api_create_trainee(session_id: str):
                 <strong>Clément VAILLANT</strong><br>
                 Directeur Intégrale Academy
               </p>
+              </div>
             """)
 
             sms = (
@@ -3984,6 +4006,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
     # - convention_status, test_fr_status, dossier_status, financement_status, vae_status, comment, cnaps
     allowed = {
         "convention_status",
+        "convention_saisie_done",
+        "convention_signed_done",
         "test_fr_status",
         "dossier_status",
         "force_dossier_complete",
@@ -5075,6 +5099,10 @@ def admin_etiquette_docx(session_id: str, trainee_id: str):
     buf = BytesIO()
     doc.save(buf)
     buf.seek(0)
+
+    t["etiquette_word_downloaded_at"] = _now_iso()
+    s["trainees"] = trainees
+    save_data(data)
 
     filename = f"etiquette_{t.get('last_name','')}_{t.get('first_name','')}.docx".replace(" ", "_")
     return send_file(
@@ -6212,10 +6240,6 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
 
     t.setdefault("deliverables", {})
     t["deliverables"][kind] = token
-    if kind == "attestation_recevabilite":
-        view = vae_status_view("livret_2_todo")
-        t["vae_status"] = view["key"]
-        t["vae_status_label"] = view["label"]
     t["updated_at"] = _now_iso()
 
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
@@ -6801,6 +6825,39 @@ def public_doc_upload(token: str, doc_key: str):
     ))
 
 
+@app.post("/espace/<token>/documents/candidate_info_sheet/validate")
+def public_candidate_sheet_validate(token: str):
+    data = load_data()
+    s, t = find_session_and_trainee_by_token(data, token)
+    if not s or not t:
+        abort(404)
+
+    if not _public_is_authed(token):
+        return redirect(url_for("public_trainee_login", token=token))
+
+    training_type = _session_get(s, "training_type", "")
+    if (training_type or "").strip().upper() != "DIRIGEANT VAE":
+        return redirect(url_for("public_trainee_space", token=token))
+
+    ensure_documents_schema_for_trainee(t, training_type)
+
+    docs = t.get("documents") or []
+    target = next((d for d in docs if d.get("key") == "candidate_info_sheet"), None)
+    if target:
+        target["status"] = "A CONTRÔLER"
+        if target.get("status") == "A CONTROLER":
+            target["status"] = "A CONTRÔLER"
+
+    t["updated_at"] = _now_iso()
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+
+    s["trainees"] = _session_trainees_list(s)
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return redirect(url_for("public_trainee_space", token=token))
+
+
 
 
 # =========================
@@ -7050,6 +7107,111 @@ def admin_trainee_summary(session_id: str, trainee_id: str):
         formation_dates=formation_dates,
     )
 
+
+def _build_candidate_sheet_data(session_data: Dict[str, Any], trainee_data: Dict[str, Any]) -> Dict[str, Any]:
+    dossier = _vae_find_latest_for_trainee(str(trainee_data.get("id") or ""))
+    candidat = (dossier or {}).get("candidat") or {}
+
+    def pick(*values: Any) -> str:
+        for value in values:
+            txt = str(value or "").strip()
+            if txt:
+                return txt
+        return ""
+
+    def clean_phone(value: Any) -> str:
+        raw = re.sub(r"\D", "", str(value or ""))
+        if len(raw) == 10:
+            return " ".join(raw[i:i + 2] for i in range(0, len(raw), 2))
+        return str(value or "").strip()
+
+    return {
+        "formation_type": "Validation des acquis de l'expérience (VAE)",
+        "date_entree_stage": fr_date(_session_get(session_data, "date_start", "")) or "",
+        "situation": pick(candidat.get("statut")),
+        "company": pick(trainee_data.get("company_name"), trainee_data.get("employer"), trainee_data.get("entreprise")),
+        "financing": "",
+        "interviewer": pick(trainee_data.get("interviewer"), trainee_data.get("referent_name")),
+        "last_name": pick(trainee_data.get("last_name"), candidat.get("nom_naissance")),
+        "usage_name": pick(candidat.get("nom_usage")),
+        "first_names": pick(trainee_data.get("first_name"), candidat.get("prenoms")),
+        "address": pick(trainee_data.get("address"), candidat.get("adresse")),
+        "postal_code": pick(trainee_data.get("zip_code"), trainee_data.get("postal_code")),
+        "city": pick(trainee_data.get("city"), trainee_data.get("birth_city")),
+        "phone": clean_phone(pick(trainee_data.get("phone"), candidat.get("telephone"))),
+        "email": pick(trainee_data.get("email"), candidat.get("email")),
+        "birth_date": fr_date(pick(trainee_data.get("birth_date"), candidat.get("date_naissance"))) or pick(trainee_data.get("birth_date"), candidat.get("date_naissance")),
+        "birth_city": pick(trainee_data.get("birth_city"), trainee_data.get("birth_place")),
+        "department": pick(trainee_data.get("department")),
+        "country": pick(trainee_data.get("country"), "France"),
+        "nationality": pick(trainee_data.get("nationality"), candidat.get("nationalite")),
+        "emergency_contact": pick(trainee_data.get("emergency_contact"), trainee_data.get("emergency_phone")),
+        "cnaps_number": "",
+        "study_level": pick(candidat.get("niveau_formation")),
+        "study_domain": pick(trainee_data.get("study_domain")),
+        "last_certification_level": pick(candidat.get("niveau_certification")),
+        "last_certification_domain": pick(trainee_data.get("last_certification_domain")),
+        "last_job": pick(trainee_data.get("last_job")),
+        "years_experience": pick(trainee_data.get("years_experience")),
+        "company_name": pick(trainee_data.get("company_name"), trainee_data.get("employer")),
+        "gross_salary": pick(trainee_data.get("gross_salary")),
+    }
+
+
+@app.get("/espace/<token>/fiche-candidat")
+def public_trainee_candidate_sheet(token: str):
+    data = load_data()
+    s, t = find_session_and_trainee_by_token(data, token)
+    if not s or not t:
+        abort(404)
+
+    if not _public_is_authed(token):
+        return redirect(url_for("public_trainee_login", token=token))
+
+    training_type = (_session_get(s, "training_type", "") or "").strip().upper()
+    if training_type != "DIRIGEANT VAE":
+        abort(404)
+
+    photo_url = ""
+    photo_token = (t.get("identity_photo") or "").strip()
+    if photo_token:
+        photo_url = url_for("public_download_file", token=token, file_token=photo_token)
+
+    return render_template(
+        "public_candidate_sheet_form.html",
+        candidate=_build_candidate_sheet_data(s, t),
+        photo_url=photo_url,
+    )
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/fiche-candidat-completee")
+@admin_login_required
+def admin_trainee_candidate_sheet(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    training_type = (_session_get(s, "training_type", "") or "").strip().upper()
+    if training_type != "DIRIGEANT VAE":
+        abort(404)
+
+    photo_url = ""
+    photo_token = (t.get("identity_photo") or "").strip()
+    if photo_token:
+        photo_url = url_for("admin_view_upload", path=photo_token)
+
+    return render_template(
+        "admin_trainee_candidate_sheet.html",
+        candidate=_build_candidate_sheet_data(s, t),
+        photo_url=photo_url,
+    )
+
 @app.get("/api/docs_to_control")
 @admin_login_required
 def api_docs_to_control():
@@ -7172,6 +7334,8 @@ def api_trainees_search():
                     "first_name": fn,
                     "last_name": ln,
                     "convention_status": t.get("convention_status") or "soon",
+                    "convention_saisie_done": bool(t.get("convention_saisie_done")),
+                    "convention_signed_done": bool(t.get("convention_signed_done")),
                     "test_fr_status": t.get("test_fr_status") or "soon",
                     "admin_url": f"/admin/sessions/{session_id}/stagiaires/{t.get('id')}",
                 })
@@ -8621,7 +8785,7 @@ def _vae_default_dossier(dossier_id: Optional[str] = None) -> Dict[str, Any]:
         "candidat": {
             "nom_naissance": "", "nom_usage": "", "prenoms": "", "date_naissance": "", "nationalite": "",
             "genre": "", "niveau_formation": "", "niveau_certification": "", "certifications_obtenues": "",
-            "adresse": "", "telephone": "", "email": "", "statut": "", "convention_collective": "", "objectifs": []
+            "adresse": "", "code_postal": "", "ville": "", "telephone": "", "email": "", "statut": "", "convention_collective": "", "objectifs": []
         },
         "certification": {
             "intitule": "DIRIGEANT D’ENTREPRISE DE SÉCURITÉ PRIVÉE",
@@ -8654,7 +8818,7 @@ def _vae_default_dossier(dossier_id: Optional[str] = None) -> Dict[str, Any]:
         },
         "engagement": {
             "souhaite_accompagnement": False, "accord_analyse": False,
-            "lieu_signature": "", "date_signature": "", "nom_signature": "", "commentaires_defavorable": ""
+            "lieu_signature": "", "date_signature": "", "nom_signature": "", "signature_trace": "", "signature_signed_at": "", "commentaires_defavorable": ""
         },
         "created_at": now,
         "updated_at": now,
@@ -8774,6 +8938,9 @@ def _vae_dossier_to_lines(dossier: Dict[str, Any]) -> List[str]:
         f"Prenoms: {candidat.get('prenoms')}",
         f"Date de naissance: {candidat.get('date_naissance')}",
         f"Nationalite: {candidat.get('nationalite')}",
+        f"Adresse: {candidat.get('adresse')}",
+        f"Code postal: {candidat.get('code_postal')}",
+        f"Ville: {candidat.get('ville')}",
         f"Telephone: {candidat.get('telephone')}",
         f"Email: {candidat.get('email')}",
         f"Objectifs: {objectifs}",
@@ -8823,6 +8990,7 @@ def _vae_dossier_to_lines(dossier: Dict[str, Any]) -> List[str]:
         f"Commentaires si avis défavorable: {engagement.get('commentaires_defavorable')}",
         f"Accord analyse: {'Oui' if engagement.get('accord_analyse') else 'Non'}",
         f"Signature: {engagement.get('nom_signature')} le {engagement.get('date_signature')} a {engagement.get('lieu_signature')}",
+        f"Trace signature: {engagement.get('signature_trace')} ({engagement.get('signature_signed_at')})",
     ])
     return lines
 

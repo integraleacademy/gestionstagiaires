@@ -193,6 +193,13 @@ h2{margin:0;font-size:20px;color:var(--text)}
   background:#fff;
 }
 
+.btn-word-downloaded{
+  background:#f3f4f6;
+  border-color:#f97316;
+  color:#6b7280;
+  box-shadow:0 0 0 2px rgba(249,115,22,.25);
+}
+
 /* =========================
    SESSION HEADER
    ========================= */
