@@ -1387,7 +1387,7 @@ id="upload_{{ d.key }}"
             </ul>
           {% endif %}
         {% elif vae_current_step == 4 and vae_done_until < 4 %}
-          <p><a href="/static/vae_livret_2.pdf" target="_blank" rel="noopener">Téléchargez le Livret 2 en cliquant ici</a></p>
+          <p><a href="/static/vae_livret_2.pdf" target="_blank" rel="noopener">Téléchargez le Livret 2 A COMPLETER en cliquant ici</a></p>
           <form class="upload-form" id="upload_livret_2" action="/espace/{{ token_safe }}/documents/livret_2/upload" method="post" enctype="multipart/form-data">
             <input id="livret2_files_input" type="file" name="files" multiple accept="application/pdf,image/jpeg,image/png">
             <button class="btn small" type="submit">Déposer mon Livret 2</button>
