@@ -32,9 +32,19 @@
     .footer-text{flex:1;text-align:center;font-size:8.7pt;line-height:1.25}
 
     @media print{
-      @page{size:A4;margin:8mm}
+      @page{size:A4;margin:5mm}
       body,.page{background:#fff;padding:0;margin:0;width:auto;min-height:auto}
+      .page{padding:5mm}
       .toolbar{display:none}
+      ul.lines li{font-size:9.6pt;line-height:1.16;margin:1.1mm 0}
+      .line{min-height:5.8mm;padding:.7mm 1.6mm;font-size:9.6pt}
+      .box{padding:2.4mm 3mm;margin-top:2.6mm}
+      .box h2{margin:0 0 1.2mm;font-size:11.8pt}
+      .section-title{margin:2.6mm 0 1mm;font-size:9.8pt}
+      .photo{height:42mm}
+      .footer{margin-top:2.6mm}
+      .footer img{width:15mm;height:15mm}
+      .footer-text{font-size:7.8pt;line-height:1.12}
     }
   </style>
 </head>
