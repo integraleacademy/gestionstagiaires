@@ -1826,6 +1826,10 @@ function closeUploadSuccessModal(event) {
     event.stopPropagation();
   }
   closeModal("uploadSuccessModal");
+
+  if (window.lastUploadedDocRow instanceof HTMLElement) {
+    window.lastUploadedDocRow.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 }
   const token = "{{ token_safe }}";
 
@@ -2562,6 +2566,7 @@ function normalizePRE(s){
 
   if(uploaded){
     const row = document.getElementById("doc_" + uploaded);
+    window.lastUploadedDocRow = row || null;
 
     // 1) Texte de la modale = label du doc
     let label = null;
