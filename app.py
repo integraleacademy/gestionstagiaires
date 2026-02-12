@@ -920,21 +920,55 @@ def _notifications_bucket_key(bucket: str) -> Optional[str]:
 
 
 def _secretariat_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
-    def _with_created_fr(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _clean(value: Any) -> str:
+        return str(value or "").strip()
+
+    def _test_fr_contact(meta: Dict[str, Any]) -> Dict[str, str]:
+        session_id = _clean(meta.get("session_id"))
+        trainee_id = _clean(meta.get("trainee_id"))
+        if not session_id or not trainee_id:
+            return {}
+
+        session_obj = _find_session_by_id(data, session_id)
+        if not session_obj:
+            return {}
+
+        trainee = next(
+            (item for item in _session_trainees_list(session_obj) if _clean(item.get("id")) == trainee_id),
+            None,
+        )
+        if not trainee:
+            return {}
+
+        return {
+            "first_name": _clean(trainee.get("first_name")),
+            "last_name": _clean(trainee.get("last_name")),
+            "phone": _clean(trainee.get("phone")),
+        }
+
+    def _with_created_fr(items: List[Dict[str, Any]], bucket: str) -> List[Dict[str, Any]]:
         out = []
         for item in items:
             cloned = dict(item)
             cloned["created_fr"] = fr_datetime(item.get("created_at") or "")
+            if bucket == "test_fr":
+                meta = dict(cloned.get("meta") or {})
+                fallback = _test_fr_contact(meta)
+                for key in ("first_name", "last_name", "phone"):
+                    if not _clean(meta.get(key)) and fallback.get(key):
+                        meta[key] = fallback[key]
+                if meta:
+                    cloned["meta"] = meta
             out.append(cloned)
         return out
 
     notifications = {
-        "edof": _with_created_fr(list(data.get("notifications_edof", []))),
-        "financement_refuse": _with_created_fr(list(data.get("notifications_financement_refuse", []))),
-        "prelevements": _with_created_fr(list(data.get("notifications_prelevements", []))),
-        "relances": _with_created_fr(list(data.get("notifications_phone_relances", []))),
-        "cnaps_pre": _with_created_fr(list(data.get("notifications_cnaps_pre_relances", []))),
-        "test_fr": _with_created_fr(list(data.get("notifications_test_fr", []))),
+        "edof": _with_created_fr(list(data.get("notifications_edof", [])), "edof"),
+        "financement_refuse": _with_created_fr(list(data.get("notifications_financement_refuse", [])), "financement_refuse"),
+        "prelevements": _with_created_fr(list(data.get("notifications_prelevements", [])), "prelevements"),
+        "relances": _with_created_fr(list(data.get("notifications_phone_relances", [])), "relances"),
+        "cnaps_pre": _with_created_fr(list(data.get("notifications_cnaps_pre_relances", [])), "cnaps_pre"),
+        "test_fr": _with_created_fr(list(data.get("notifications_test_fr", [])), "test_fr"),
     }
     unresolved_total = 0
     for items in notifications.values():
