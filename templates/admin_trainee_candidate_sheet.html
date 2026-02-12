@@ -5,107 +5,88 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dossier candidat</title>
   <style>
-    :root{
-      --blue:#465a77;
-      --line:#4b5563;
-      --fill:#dce3fb;
-    }
+    :root{--blue:#495e7b;--orange:#ef7e2f;--fill:#dbe2f8;--txt:#0f172a}
     *{box-sizing:border-box}
-    body{font-family:Arial,Helvetica,sans-serif;background:#efefef;margin:0;padding:16px;color:#111827}
-    .sheet{max-width:1000px;margin:0 auto;background:#efefef}
-    .printbar{display:flex;justify-content:flex-end;margin-bottom:10px}
-    .btn{border:1px solid #cbd5e1;background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:700}
+    body{font-family:Arial,Helvetica,sans-serif;background:#ececec;margin:0;color:var(--txt)}
+    .page{width:210mm;min-height:297mm;margin:0 auto;padding:8mm;background:#ececec}
+    .toolbar{display:flex;justify-content:flex-end;margin-bottom:6px}
+    .btn{border:1px solid #cbd5e1;background:#fff;border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer}
 
-    .banner{border:3px solid #ef7e2f;padding:4px;margin-bottom:18px}
-    .banner-inner{background:var(--blue);color:#fff;text-align:center;padding:30px 10px;font-size:48px;letter-spacing:1px}
+    .header{border:2px solid var(--orange);padding:3px;margin-bottom:10px}
+    .header>div{background:var(--blue);color:#fff;text-align:center;padding:16px 8px;font-size:20px;letter-spacing:.6px}
 
-    .top-grid{display:grid;grid-template-columns:1fr 182px;gap:18px}
-    .photo-box{border:3px solid #c2c2c2;height:250px;background:#f5f5f5;display:flex;align-items:center;justify-content:center;overflow:hidden}
-    .photo-box img{width:100%;height:100%;object-fit:cover}
-    .photo-placeholder{font-size:40px;opacity:.45}
+    .top{display:grid;grid-template-columns:1fr 38mm;gap:8mm;align-items:start}
+    .photo{height:50mm;border:2px solid #bdbdbd;background:#f6f6f6;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .photo img{width:100%;height:100%;object-fit:cover}
 
-    .line-list{margin:0;padding:0 0 0 18px;list-style:square}
-    .line-list li{margin:10px 0;font-size:35px}
-    .line{display:inline-block;vertical-align:middle;min-width:240px;padding:4px 8px;background:var(--fill);border-bottom:2px dotted var(--line)}
+    ul.lines{margin:0;padding-left:5mm;list-style:square}
+    ul.lines li{font-size:10.8pt;line-height:1.35;margin:2.3mm 0}
+    .line{display:inline-block;min-height:7mm;vertical-align:middle;background:var(--fill);border-bottom:1px dotted #4b5563;padding:1mm 2mm}
 
-    .candidate-box{border:2px solid #111827;padding:12px 16px;margin-top:14px;position:relative}
-    .candidate-box h2{margin:0 auto 10px;text-align:center;text-decoration:underline;font-size:44px;font-weight:500;letter-spacing:1px}
+    .box{border:1px solid #111827;padding:3mm 4mm;margin-top:4mm}
+    .box h2{margin:0 0 2mm;text-align:center;font-size:13pt;text-decoration:underline;font-weight:500;letter-spacing:.4px}
+    .section-title{margin:5mm 0 2mm;text-align:center;font-size:11pt;font-weight:700;text-decoration:underline}
 
-    .section-title{font-size:42px;text-align:center;text-decoration:underline;margin:20px 0 10px;font-weight:600}
-    .footer{display:flex;align-items:flex-end;gap:12px;margin-top:20px}
-    .footer img{width:96px;height:96px;object-fit:contain}
-    .footer-text{flex:1;text-align:center;font-size:22px}
+    .footer{margin-top:5mm;display:flex;align-items:flex-end;gap:4mm}
+    .footer img{width:20mm;height:20mm;object-fit:contain}
+    .footer-text{flex:1;text-align:center;font-size:8.7pt;line-height:1.25}
 
     @media print{
       @page{size:A4;margin:8mm}
-      body{padding:0;background:#fff}
-      .printbar{display:none}
-      .sheet{max-width:none}
+      body,.page{background:#fff;padding:0;margin:0;width:auto;min-height:auto}
+      .toolbar{display:none}
     }
   </style>
 </head>
 <body>
-  <div class="sheet">
-    <div class="printbar">
-      <button class="btn" onclick="window.print()">🖨️ Imprimer</button>
-    </div>
+  <div class="page">
+    <div class="toolbar"><button class="btn" onclick="window.print()">🖨️ Imprimer</button></div>
 
-    <div class="banner">
-      <div class="banner-inner">DOSSIER CANDIDAT</div>
-    </div>
+    <div class="header"><div>DOSSIER CANDIDAT</div></div>
 
-    <div class="top-grid">
-      <ul class="line-list">
-        <li>TYPE DE FORMATION : <span class="line" style="min-width:560px;">{{ candidate.formation_type }}</span></li>
-        <li>DATE D’ENTREE EN STAGE : <span class="line" style="min-width:500px;">{{ candidate.date_entree_stage }}</span></li>
-        <li>SITUATION PROFESSIONNELLE : <span class="line" style="min-width:480px;">{{ candidate.situation }}</span></li>
-        <li>NOM DE L’ENTREPRISE (si salarié ou employeur) : <span class="line" style="min-width:330px;">{{ candidate.company }}</span></li>
-        <li>FINANCEMENT : <span class="line" style="min-width:560px;">{{ candidate.financing }}</span></li>
-        <li>ENTRETIEN REALISE PAR : <span class="line" style="min-width:540px;">{{ candidate.interviewer }}</span></li>
+    <div class="top">
+      <ul class="lines">
+        <li>TYPE DE FORMATION : <span class="line" style="min-width:110mm;">{{ candidate.formation_type }}</span></li>
+        <li>DATE D’ENTREE EN STAGE : <span class="line" style="min-width:102mm;">{{ candidate.date_entree_stage }}</span></li>
+        <li>SITUATION PROFESSIONNELLE : <span class="line" style="min-width:96mm;">{{ candidate.situation }}</span></li>
+        <li>NOM DE L’ENTREPRISE (si salarié ou employeur) : <span class="line" style="min-width:74mm;">{{ candidate.company }}</span></li>
+        <li>FINANCEMENT : <span class="line" style="min-width:110mm;">{{ candidate.financing }}</span></li>
+        <li>ENTRETIEN REALISE PAR : <span class="line" style="min-width:103mm;">{{ candidate.interviewer }}</span></li>
       </ul>
-      <div class="photo-box">
-        {% if photo_url %}
-          <img src="{{ photo_url }}" alt="Photo candidat">
-        {% else %}
-          <div class="photo-placeholder">🖼️</div>
-        {% endif %}
-      </div>
+      <div class="photo">{% if photo_url %}<img src="{{ photo_url }}" alt="Photo candidat">{% else %}🖼️{% endif %}</div>
     </div>
 
-    <div class="candidate-box">
+    <div class="box">
       <h2>LE CANDIDAT</h2>
-      <ul class="line-list">
-        <li>Nom : <span class="line" style="min-width:760px;">{{ candidate.last_name }}</span></li>
-        <li>Nom d’usage : <span class="line" style="min-width:690px;">{{ candidate.usage_name }}</span></li>
-        <li>Prénoms : <span class="line" style="min-width:730px;">{{ candidate.first_names }}</span></li>
-        <li>Adresse : <span class="line" style="min-width:740px;">{{ candidate.address }}</span></li>
-        <li>Code postal : <span class="line" style="min-width:300px;">{{ candidate.postal_code }}</span> Ville : <span class="line" style="min-width:360px;">{{ candidate.city }}</span></li>
-        <li>Tél : <span class="line" style="min-width:330px;">{{ candidate.phone }}</span> Adresse mail : <span class="line" style="min-width:360px;">{{ candidate.email }}</span></li>
-        <li>Né(e) le : <span class="line" style="min-width:230px;">{{ candidate.birth_date }}</span> A : <span class="line" style="min-width:230px;">{{ candidate.birth_city }}</span> Département : <span class="line" style="min-width:240px;">{{ candidate.department }}</span></li>
-        <li>Pays : <span class="line" style="min-width:270px;">{{ candidate.country }}</span> Nationalité : <span class="line" style="min-width:420px;">{{ candidate.nationality }}</span></li>
-        <li>Personne à contacter en cas d’urgence (Nom et numéro de téléphone) : <span class="line" style="min-width:860px;">{{ candidate.emergency_contact }}</span></li>
-        <li>Numéro de votre carte professionnelle (CNAPS) : <span class="line" style="min-width:560px;">{{ candidate.cnaps_number }}</span></li>
+      <ul class="lines">
+        <li>Nom : <span class="line" style="min-width:155mm;">{{ candidate.last_name }}</span></li>
+        <li>Nom d’usage : <span class="line" style="min-width:145mm;">{{ candidate.usage_name }}</span></li>
+        <li>Prénoms : <span class="line" style="min-width:150mm;">{{ candidate.first_names }}</span></li>
+        <li>Adresse : <span class="line" style="min-width:152mm;">{{ candidate.address }}</span></li>
+        <li>Code postal : <span class="line" style="min-width:48mm;">{{ candidate.postal_code }}</span> Ville : <span class="line" style="min-width:76mm;">{{ candidate.city }}</span></li>
+        <li>Tél : <span class="line" style="min-width:52mm;">{{ candidate.phone }}</span> Adresse mail : <span class="line" style="min-width:88mm;">{{ candidate.email }}</span></li>
+        <li>Né(e) le : <span class="line" style="min-width:38mm;">{{ candidate.birth_date }}</span> A : <span class="line" style="min-width:38mm;">{{ candidate.birth_city }}</span> Département : <span class="line" style="min-width:41mm;">{{ candidate.department }}</span></li>
+        <li>Pays : <span class="line" style="min-width:50mm;">{{ candidate.country }}</span> Nationalité : <span class="line" style="min-width:82mm;">{{ candidate.nationality }}</span></li>
+        <li>Personne à contacter en cas d’urgence (Nom et numéro de téléphone) : <span class="line" style="min-width:155mm;">{{ candidate.emergency_contact }}</span></li>
+        <li>Numéro de votre carte professionnelle (CNAPS) : <span class="line" style="min-width:101mm;">{{ candidate.cnaps_number }}</span></li>
       </ul>
     </div>
 
     <div class="section-title">Informations à remplir (obligatoire) pour le suivi des titres RNCP auprès de France compétences</div>
-    <ul class="line-list">
-      <li>Niveau d’étude à l’entrée en formation : <span class="line" style="min-width:740px;">{{ candidate.study_level }}</span></li>
-      <li>Domaine des études suivies : <span class="line" style="min-width:790px;">{{ candidate.study_domain }}</span></li>
-      <li>Niveau de la dernière certification obtenu : <span class="line" style="min-width:670px;">{{ candidate.last_certification_level }}</span></li>
-      <li>Domaine de la dernière certification : <span class="line" style="min-width:730px;">{{ candidate.last_certification_domain }}</span></li>
-      <li>Dernier métier ( + poste) exercé : <span class="line" style="min-width:730px;">{{ candidate.last_job }}</span></li>
-      <li>Durée (en année) : <span class="line" style="min-width:860px;">{{ candidate.years_experience }}</span></li>
-      <li>Nom de l’entreprise : <span class="line" style="min-width:820px;">{{ candidate.company_name }}</span></li>
-      <li>Rémunération brute annuelle : <span class="line" style="min-width:760px;">{{ candidate.gross_salary }}</span></li>
+    <ul class="lines">
+      <li>Niveau d’étude à l’entrée en formation : <span class="line" style="min-width:143mm;">{{ candidate.study_level }}</span></li>
+      <li>Domaine des études suivies : <span class="line" style="min-width:151mm;">{{ candidate.study_domain }}</span></li>
+      <li>Niveau de la dernière certification obtenu : <span class="line" style="min-width:131mm;">{{ candidate.last_certification_level }}</span></li>
+      <li>Domaine de la dernière certification : <span class="line" style="min-width:139mm;">{{ candidate.last_certification_domain }}</span></li>
+      <li>Dernier métier ( + poste) exercé : <span class="line" style="min-width:140mm;">{{ candidate.last_job }}</span></li>
+      <li>Durée (en année) : <span class="line" style="min-width:160mm;">{{ candidate.years_experience }}</span></li>
+      <li>Nom de l’entreprise : <span class="line" style="min-width:149mm;">{{ candidate.company_name }}</span></li>
+      <li>Rémunération brute annuelle : <span class="line" style="min-width:143mm;">{{ candidate.gross_salary }}</span></li>
     </ul>
 
     <div class="footer">
       <img src="{{ url_for('static', filename='scotia.png') }}" alt="Scotia">
-      <div class="footer-text">
-        SCOTIA FORMATION – 1662 RN7 – 06270 Villeneuve Loubet<br>
-        N° déclaration d’activité : 93061023706 – Siret 91812189800012 – Code APE : 8559A - www.scotiagroupe.com
-      </div>
+      <div class="footer-text">SCOTIA FORMATION – 1662 RN7 – 06270 Villeneuve Loubet<br>N° déclaration d’activité : 93061023706 – Siret 91812189800012 – Code APE : 8559A - www.scotiagroupe.com</div>
     </div>
   </div>
 </body>
