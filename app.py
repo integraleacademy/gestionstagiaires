@@ -1747,6 +1747,17 @@ def required_docs_are_deposited(trainee: Dict[str, Any], training_type: str) -> 
         if not d:
             return False
 
+        # La fiche candidat (DIRIGEANT VAE) est un formulaire HTML sauvegardé,
+        # pas forcément un upload de fichier binaire.
+        if k == "candidate_info_sheet":
+            st = (d.get("status") or "").strip().upper()
+            candidate_sheet_saved = bool(trainee.get("candidate_sheet_saved_at") or trainee.get("candidate_sheet"))
+            if st in {"A CONTRÔLER", "A CONTROLER", "CONFORME", "NON CONFORME"}:
+                continue
+            if candidate_sheet_saved and st not in {"", "NON DÉPOSÉ", "NON DEPOSE"}:
+                continue
+            return False
+
         files = d.get("files") if isinstance(d.get("files"), list) else []
         has_files = any(f for f in files)
         has_file = bool((d.get("file") or "").strip())
