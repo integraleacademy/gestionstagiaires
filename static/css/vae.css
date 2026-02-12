@@ -52,3 +52,17 @@ h3{margin:18px 0 8px;font-size:1.05rem}
 .readonly-options{display:grid;gap:8px;background:#eef2ff}
 .readonly-options label{display:flex;align-items:center;gap:8px;font-weight:600}
 .readonly-options input[type="checkbox"]{width:auto;margin:0}
+
+
+.step-auto-note{margin:6px 0 12px;padding:10px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;color:#1e3a8a;font-weight:600}
+
+.experience-item-header{display:flex;justify-content:flex-end;margin-bottom:8px}
+.experience-add-btn{background:#2563eb;color:#fff;animation:pulseBlue 1.8s ease-in-out infinite;box-shadow:0 0 0 0 rgba(37,99,235,.45)}
+.experience-add-btn:hover{background:#1d4ed8}
+@keyframes pulseBlue{0%{transform:scale(1);box-shadow:0 0 0 0 rgba(37,99,235,.45)}70%{transform:scale(1.03);box-shadow:0 0 0 12px rgba(37,99,235,0)}100%{transform:scale(1);box-shadow:0 0 0 0 rgba(37,99,235,0)}}
+
+.signature-btn{margin-top:4px}
+.signature-preview{margin-top:10px;padding:12px;border:1px dashed #9ca3af;border-radius:10px;background:#f9fafb}
+.signature-preview.signed{border-style:solid;border-color:#bfdbfe;background:#eff6ff}
+.signature-handwritten{font-family:"Brush Script MT","Segoe Script","Lucida Handwriting",cursive;font-size:2rem;color:#1f2937;min-height:40px}
+.signature-meta{font-family:Arial,sans-serif;font-size:10px;color:#111827;min-height:14px}
