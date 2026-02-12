@@ -223,6 +223,7 @@
     const resultBox = document.getElementById("resultBox");
     const submitBtn = document.getElementById("submitBtn");
     let contactData = null;
+    let hasSubmitted = false;
 
     function shuffle(array){
       const arr = [...array];
@@ -263,7 +264,6 @@
             input.type = "radio";
             input.name = question.id;
             input.value = String(optIndex);
-            input.required = true;
             const span = document.createElement("span");
             span.textContent = option;
             label.appendChild(input);
@@ -295,10 +295,6 @@
         contactModal.style.display = "flex";
         return;
       }
-      if(!testForm.checkValidity()){
-        testForm.reportValidity();
-        return;
-      }
       const formData = new FormData(testForm);
       const answers = {};
       for(const [key, value] of formData.entries()){
@@ -308,8 +304,13 @@
         answers[key] = Number(value);
       }
 
-      if(Object.keys(answers).length === 0){
-        alert("Merci de répondre à toutes les questions.");
+      const expectedAnswers = sections.reduce((count, section)=> count + section.questions.length, 0);
+      if(Object.keys(answers).length !== expectedAnswers){
+        alert("Merci de répondre à toutes les questions avant de soumettre le test.");
+        return;
+      }
+      if(hasSubmitted){
+        alert("Votre test a déjà été envoyé.");
         return;
       }
 
@@ -326,14 +327,22 @@
         if(!response.ok || !data.ok){
           throw new Error(data.error || "Erreur inconnue");
         }
+        hasSubmitted = true;
+        submitBtn.textContent = "Test envoyé";
         resultBox.style.display = "block";
         resultBox.textContent = `Merci ! Votre test a été enregistré. Score : ${data.score}/${data.total} (soit ${data.score_over_20}/20).`;
         window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
       } catch (error){
-        alert("Une erreur est survenue lors de l'envoi. Merci de réessayer.");
+        if(error?.message === "email_already_submitted"){
+          alert("Un test a déjà été soumis avec cette adresse email.");
+        } else {
+          alert("Une erreur est survenue lors de l'envoi. Merci de réessayer.");
+        }
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Soumettre mes réponses";
+        if(!hasSubmitted){
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Soumettre mes réponses";
+        }
       }
     });
 

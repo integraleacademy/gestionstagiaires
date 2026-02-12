@@ -3813,7 +3813,19 @@ def api_positioning_test_submit():
     if not all(contact_data.values()):
         return jsonify({"ok": False, "error": "missing_contact_fields"}), 400
 
+    email_normalized = contact_data["email"].lower()
+
     score_data = positioning_test_score(answers)
+
+    data = load_data()
+    existing_entries = data.get("positioning_tests", [])
+    already_submitted = any(
+        (entry.get("contact") or {}).get("email", "").strip().lower() == email_normalized
+        for entry in existing_entries
+    )
+    if already_submitted:
+        return jsonify({"ok": False, "error": "email_already_submitted"}), 409
+
     entry = {
         "id": uuid.uuid4().hex,
         "created_at": _now_iso(),
@@ -3824,7 +3836,6 @@ def api_positioning_test_submit():
         "score_over_20": score_data["score_over_20"],
     }
 
-    data = load_data()
     data.setdefault("positioning_tests", []).append(entry)
     save_data(data)
 
