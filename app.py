@@ -6667,10 +6667,13 @@ def public_doc_upload(token: str, doc_key: str):
 
     def _accepts_file(ext: str) -> bool:
         acc = [a.strip().lower() for a in accept.split(",") if a.strip()]
+        allowed_exts = set()
         if "application/pdf" in acc:
-            return ext == ".pdf"
+            allowed_exts.add(".pdf")
         if any(a.startswith("image/") for a in acc) or ("image/jpeg" in acc) or ("image/png" in acc):
-            return ext in (".jpg", ".jpeg", ".png", ".webp")
+            allowed_exts.update({".jpg", ".jpeg", ".png", ".webp"})
+        if allowed_exts:
+            return ext in allowed_exts
         return ext in ALLOWED_EXT
 
     # ✅ stockage du fichier
