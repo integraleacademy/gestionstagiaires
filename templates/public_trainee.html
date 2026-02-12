@@ -1313,7 +1313,7 @@ id="upload_{{ d.key }}"
           <p class="oktag">Étape terminée</p>
         {% else %}
           <p><a href="/vae/nouveau/{{ token_safe }}" target="_blank" rel="noopener">Compléter le Livret 1 en cliquant ici</a></p>
-          <p class="muted">Pensez aussi à déposer votre CV, votre diplôme le plus élevé et la fiche de renseignement candidat complétée dans l'onglet "Mes documents".</p>
+          <p class="muted">Pensez aussi à déposer dans l'onglet "Mes documents" : votre CV, votre fiche de renseignement candidat complétée et votre diplôme le plus élevé.</p>
         {% endif %}
       </div>
 
@@ -1333,6 +1333,9 @@ id="upload_{{ d.key }}"
         <div class="vae-step-head"><span class="vae-step-badge">3</span><div class="vae-step-title">3ème étape <small>Livret 1 validé, attestation de recevabilité</small></div></div>
         {% if vae_current_step == 3 and vae_done_until < 3 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
         {% set receva = (trainee.deliverables or {}).get('attestation_recevabilite') %}
+        {% if vae_done_until >= 3 %}
+          <p class="oktag">Étape terminée</p>
+        {% endif %}
         {% if receva %}
           <p><a class="btn outline small" target="_blank" href="/espace/{{ token_safe }}/download/{{ receva }}">Télécharger mon attestation de recevabilité</a></p>
         {% endif %}
@@ -1364,7 +1367,11 @@ id="upload_{{ d.key }}"
           {% endif %}
         {% endif %}
         {% set livret2_count = ns_livret2.tokens|length %}
+        {% if receva %}
+          <p><a class="btn outline small" target="_blank" href="/espace/{{ token_safe }}/download/{{ receva }}">Télécharger mon attestation de recevabilité</a></p>
+        {% endif %}
         {% if vae_done_until >= 4 %}
+          <p class="oktag">Étape terminée</p>
           <p class="oktag">Votre Livret 2 a bien été déposé, il est actuellement en cours d'analyse par notre équipe, nous reviendrons vers vous prochainement.</p>
           {% if livret2_count %}
             <p class="muted">{{ livret2_count }} fichier(s) Livret 2 déjà déposé(s).</p>
@@ -1404,6 +1411,7 @@ id="upload_{{ d.key }}"
         {% if vae_done_until >= 5 %}<div class="vae-step-check">✓</div>{% endif %}
         <div class="vae-step-head"><span class="vae-step-badge">5</span><div class="vae-step-title">5ème étape <small>Réception et analyse du Livret 2</small></div></div>
         {% if vae_current_step == 5 and vae_done_until < 5 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
+        {% if vae_done_until >= 5 %}<p class="oktag">Étape terminée</p>{% endif %}
         <p class="muted">Après réception, votre livret 2 est analysé par notre équipe pédagogique.</p>
       </div>
 
@@ -1411,6 +1419,7 @@ id="upload_{{ d.key }}"
         {% if vae_done_until >= 6 %}<div class="vae-step-check">✓</div>{% endif %}
         <div class="vae-step-head"><span class="vae-step-badge">6</span><div class="vae-step-title">6ème étape <small>Livret 2 validé</small></div></div>
         {% if vae_current_step == 6 and vae_done_until < 6 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
+        {% if vae_done_until >= 6 %}<p class="oktag">Étape terminée</p>{% endif %}
         <p class="muted">Lorsque votre livret 2 est validé, nous vous accompagnons pour préparer la suite du parcours.</p>
       </div>
 
@@ -1418,6 +1427,7 @@ id="upload_{{ d.key }}"
         {% if vae_done_until >= 7 %}<div class="vae-step-check">✓</div>{% endif %}
         <div class="vae-step-head"><span class="vae-step-badge">7</span><div class="vae-step-title">7ème étape <small>Passage devant le jury de certification</small></div></div>
         {% if vae_current_step == 7 and vae_done_until < 7 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
+        {% if vae_done_until >= 7 %}<p class="oktag">Étape terminée</p>{% endif %}
         <p class="muted">
           {% if vae_jury_date %}
             Passage devant le jury de certification le {{ vae_jury_date }}.
@@ -1431,6 +1441,7 @@ id="upload_{{ d.key }}"
         {% if vae_done_until >= 8 %}<div class="vae-step-check">✓</div>{% endif %}
         <div class="vae-step-head"><span class="vae-step-badge">8</span><div class="vae-step-title">8ème étape <small>Obtention de votre certification Dirigeant d'entreprise de sécurité privée (DESP)</small></div></div>
         {% if vae_current_step == 8 and vae_done_until < 8 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
+        {% if vae_done_until >= 8 %}<p class="oktag">Étape terminée</p>{% endif %}
         <p class="muted">Félicitations ! Après validation finale, vous obtenez votre certification DESP.</p>
       </div>
     </div>
