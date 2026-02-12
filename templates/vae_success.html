@@ -5,6 +5,8 @@
   <h1>✅ Dossier soumis</h1>
   <p>Votre dossier de faisabilité VAE DESP a bien été soumis.</p>
   <p><strong>ID dossier :</strong> {{ dossier.id }}</p>
-  <a class="btn" href="/vae/{{ dossier.id }}">Consulter le dossier</a>
+  {% if trainee_space_url %}
+  <a class="btn" href="{{ trainee_space_url }}">Revenir à mon espace stagiaire</a>
+  {% endif %}
 </div>
 {% endblock %}

@@ -8720,6 +8720,8 @@ def vae_wizard(token: str):
     dossier = _vae_find_dossier(data, token)
     if not dossier:
         abort(404)
+    if (dossier.get('statut_dossier') or '').strip().lower() == 'soumis':
+        return redirect(url_for('vae_success', token=token))
     return render_template('vae_wizard.html', dossier=dossier, dossier_json=json.dumps(dossier, ensure_ascii=False))
 
 @app.post('/api/vae/<dossier_id>/save')
@@ -8733,6 +8735,8 @@ def api_vae_save(dossier_id: str):
     dossier = _vae_find_dossier(data, dossier_id)
     if not dossier:
         return jsonify({"ok": False, "error": "not_found"}), 404
+    if (dossier.get('statut_dossier') or '').strip().lower() == 'soumis':
+        return jsonify({"ok": False, "error": "already_submitted"}), 403
 
     _merge_dict(dossier, payload)
     dossier["updated_at"] = _now_iso_utc()
@@ -8812,7 +8816,12 @@ def vae_success(token: str):
     dossier = _vae_find_dossier(data, token)
     if not dossier:
         abort(404)
-    return render_template('vae_success.html', dossier=dossier)
+    trainee_space_url = None
+    meta = dossier.get('meta') or {}
+    trainee_token = (meta.get('trainee_token') or '').strip()
+    if trainee_token:
+        trainee_space_url = url_for('public_trainee_space', token=trainee_token)
+    return render_template('vae_success.html', dossier=dossier, trainee_space_url=trainee_space_url)
 
 @app.get('/admin/vae')
 @admin_login_required
