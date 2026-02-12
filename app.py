@@ -920,21 +920,55 @@ def _notifications_bucket_key(bucket: str) -> Optional[str]:
 
 
 def _secretariat_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
-    def _with_created_fr(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _clean(value: Any) -> str:
+        return str(value or "").strip()
+
+    def _test_fr_contact(meta: Dict[str, Any]) -> Dict[str, str]:
+        session_id = _clean(meta.get("session_id"))
+        trainee_id = _clean(meta.get("trainee_id"))
+        if not session_id or not trainee_id:
+            return {}
+
+        session_obj = _find_session_by_id(data, session_id)
+        if not session_obj:
+            return {}
+
+        trainee = next(
+            (item for item in _session_trainees_list(session_obj) if _clean(item.get("id")) == trainee_id),
+            None,
+        )
+        if not trainee:
+            return {}
+
+        return {
+            "first_name": _clean(trainee.get("first_name")),
+            "last_name": _clean(trainee.get("last_name")),
+            "phone": _clean(trainee.get("phone")),
+        }
+
+    def _with_created_fr(items: List[Dict[str, Any]], bucket: str) -> List[Dict[str, Any]]:
         out = []
         for item in items:
             cloned = dict(item)
             cloned["created_fr"] = fr_datetime(item.get("created_at") or "")
+            if bucket == "test_fr":
+                meta = dict(cloned.get("meta") or {})
+                fallback = _test_fr_contact(meta)
+                for key in ("first_name", "last_name", "phone"):
+                    if not _clean(meta.get(key)) and fallback.get(key):
+                        meta[key] = fallback[key]
+                if meta:
+                    cloned["meta"] = meta
             out.append(cloned)
         return out
 
     notifications = {
-        "edof": _with_created_fr(list(data.get("notifications_edof", []))),
-        "financement_refuse": _with_created_fr(list(data.get("notifications_financement_refuse", []))),
-        "prelevements": _with_created_fr(list(data.get("notifications_prelevements", []))),
-        "relances": _with_created_fr(list(data.get("notifications_phone_relances", []))),
-        "cnaps_pre": _with_created_fr(list(data.get("notifications_cnaps_pre_relances", []))),
-        "test_fr": _with_created_fr(list(data.get("notifications_test_fr", []))),
+        "edof": _with_created_fr(list(data.get("notifications_edof", [])), "edof"),
+        "financement_refuse": _with_created_fr(list(data.get("notifications_financement_refuse", [])), "financement_refuse"),
+        "prelevements": _with_created_fr(list(data.get("notifications_prelevements", [])), "prelevements"),
+        "relances": _with_created_fr(list(data.get("notifications_phone_relances", [])), "relances"),
+        "cnaps_pre": _with_created_fr(list(data.get("notifications_cnaps_pre_relances", [])), "cnaps_pre"),
+        "test_fr": _with_created_fr(list(data.get("notifications_test_fr", [])), "test_fr"),
     }
     unresolved_total = 0
     for items in notifications.values():
@@ -3270,6 +3304,80 @@ def api_secretariat_edof_result(notification_id: str):
     })
 
 
+@app.post("/api/secretariat/notifications/test_fr/<notification_id>/call-result")
+@admin_login_required
+def api_secretariat_test_fr_result(notification_id: str):
+    payload = request.get_json(silent=True) or {}
+    outcome = (payload.get("outcome") or "").strip().upper()
+    comment = (payload.get("comment") or "").strip()
+    if outcome not in ("CALLED", "NO_ANSWER"):
+        return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+
+    data = load_data()
+    notification = next(
+        (item for item in data.get("notifications_test_fr", []) if item.get("id") == notification_id),
+        None,
+    )
+    if not notification:
+        return jsonify({"ok": False, "error": "notification_not_found"}), 404
+
+    notification_meta = notification.setdefault("meta", {})
+    previous_no_answer = _parse_no_answer_count(notification_meta.get("no_answer_count"))
+    if outcome == "NO_ANSWER":
+        no_answer_count = min(3, previous_no_answer + 1)
+        display = {
+            1: "1er appel pas de réponse",
+            2: "2ème appel pas de réponse",
+            3: "3ème appel pas de réponse",
+        }[no_answer_count]
+        notification["done"] = no_answer_count >= 3
+        notification["done_at"] = _now_iso() if notification.get("done") else ""
+    else:
+        no_answer_count = 0
+        display = "Personne jointe"
+        notification["done"] = True
+        notification["done_at"] = _now_iso()
+
+    notification_meta["call_status"] = display
+    notification_meta["no_answer_count"] = no_answer_count
+    if comment:
+        notification_meta["last_comment"] = comment
+
+    trainee_display_name = _format_trainee_name(
+        notification_meta.get("first_name", ""),
+        notification_meta.get("last_name", ""),
+    )
+    call_icon = "🟢" if outcome == "CALLED" else ({1: "🟡", 2: "🟠", 3: "🔴"}.get(no_answer_count, "🟡"))
+    call_label = (
+        f"{call_icon}Test de français {trainee_display_name} - personne appelée"
+        if outcome == "CALLED"
+        else f"{call_icon}Test de français {trainee_display_name} - {display}"
+    )
+    add_admin_notification(
+        data,
+        call_label,
+        meta={
+            "type": "test_fr_call_result",
+            "outcome": outcome,
+            "no_answer_count": no_answer_count,
+            "session_id": notification_meta.get("session_id"),
+            "trainee_id": notification_meta.get("trainee_id"),
+            "comment": comment,
+            "call_status": display,
+        },
+    )
+
+    save_data(data)
+    refreshed_payload = _secretariat_notifications_payload(data)
+    return jsonify({
+        "ok": True,
+        "done": bool(notification.get("done")),
+        "call_status": display,
+        "no_answer_count": no_answer_count,
+        **refreshed_payload,
+    })
+
+
 @app.get("/admin/test-positionnement")
 @admin_login_required
 def admin_positioning_tests():
@@ -5400,6 +5508,7 @@ def admin_test_fr_relance(session_id: str, trainee_id: str):
             "trainee_id": t.get("id"),
             "first_name": t.get("first_name", ""),
             "last_name": t.get("last_name", ""),
+            "phone": t.get("phone", ""),
             "deadline": deadline,
         },
     )
@@ -5450,6 +5559,7 @@ def admin_test_fr_echec(session_id: str, trainee_id: str):
             "trainee_id": t.get("id"),
             "first_name": t.get("first_name", ""),
             "last_name": t.get("last_name", ""),
+            "phone": t.get("phone", ""),
             "deadline": deadline,
         },
     )
