@@ -529,6 +529,9 @@
   .vae-step-title small{display:block;font-size:15px;font-weight:800;color:#334155;margin-top:2px;}
   .vae-step-card p{margin:0 0 8px 0;line-height:1.55;}
   .vae-step-card .muted{font-size:14px;}
+  .vae-step-action{margin-top:4px;}
+  .vae-step-action .btn{font-size:15px;padding:12px 14px;}
+  .vae-step-action-note{font-size:13px;color:#9a3412;font-weight:700;}
 
   @media (max-width: 640px){
     .vtc-cta-label{align-items:flex-start;gap:10px;}
@@ -1320,10 +1323,12 @@ id="upload_{{ d.key }}"
         {% if vae_done_until >= 1 %}
           <p class="oktag">Étape terminée</p>
         {% elif vae_step1_unlocked %}
-          <p><a href="/vae/nouveau/{{ token_safe }}" target="_blank" rel="noopener">Compléter le Livret 1 en cliquant ici</a></p>
+          <p><strong>👉 Commencez maintenant votre Livret 1.</strong></p>
+          <p class="vae-step-action"><a class="btn" href="/vae/nouveau/{{ token_safe }}" target="_blank" rel="noopener">Compléter mon Livret 1</a></p>
+          <p class="vae-step-action-note">Ce bouton ouvre le formulaire de rédaction du Livret 1.</p>
         {% else %}
           <p>🔒</p>
-          <p class="muted">⚠️ Vous devez dépoer tous vos documents dans la rubrique Mes documents avant de commencer la rédaction de votre Livret 1 (dossier de faisabilité)</p>
+          <p class="muted">⚠️ Vous devez déposer tous vos documents dans la rubrique Mes documents avant de commencer la rédaction de votre Livret 1 (dossier de faisabilité)</p>
         {% endif %}
       </div>
 
