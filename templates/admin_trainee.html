@@ -859,13 +859,15 @@
         <tbody>
           {% for d in (trainee.documents or []) %}
           {% set has_file = (d.file_tokens and d.file_tokens|length > 0) or (d.file and d.file|length > 0) %}
-          {% set cur = (d.status or ("A CONTRÔLER" if has_file else "NON DÉPOSÉ")) %}
+          {% set candidate_sheet_saved = d.key == "candidate_info_sheet" and (trainee.candidate_sheet_saved_at or trainee.candidate_sheet) %}
+          {% set has_status_source = has_file or candidate_sheet_saved %}
+          {% set cur = (d.status or ("A CONTRÔLER" if has_status_source else "NON DÉPOSÉ")) %}
 
           <tr data-doc-key="{{ d.key }}">
             <td style="font-weight:800;">{{ d.label }}</td>
 
             <td style="min-width:190px;">
-              <select class="status sel-doc" data-field="status" {% if not has_file %}disabled{% endif %} {{ read_only_attr }}>
+              <select class="status sel-doc" data-field="status" {% if not has_status_source %}disabled{% endif %} {{ read_only_attr }}>
                 <option value="NON DÉPOSÉ" {% if cur=="NON DÉPOSÉ" %}selected{% endif %}>NON DÉPOSÉ</option>
                 <option value="A CONTRÔLER" {% if cur=="A CONTRÔLER" or cur=="A CONTROLER" %}selected{% endif %}>A CONTRÔLER</option>
                 <option value="CONFORME" {% if cur=="CONFORME" %}selected{% endif %}>CONFORME</option>
@@ -884,8 +886,10 @@
                 {% endif %}
               </div>
 
-              {% if not has_file %}
+              {% if not has_status_source %}
                 <div class="hint" style="margin-top:6px;">(statut activé dès qu’un fichier est déposé)</div>
+              {% elif candidate_sheet_saved and not has_file %}
+                <div class="hint" style="margin-top:6px;">(statut activé car la fiche candidat a été complétée)</div>
               {% endif %}
             </td>
 
