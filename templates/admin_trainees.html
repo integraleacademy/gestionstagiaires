@@ -156,8 +156,8 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         </td>
 
 {% if show_vae %}
-<td style="min-width:290px;">
-  <select class="status sel" data-field="vae_status" {{ read_only_attr }} style="min-width:260px;">
+<td style="min-width:340px;">
+  <select class="status sel vae-status-select" data-field="vae_status" {{ read_only_attr }} style="min-width:320px;">
     <option value="livret_1_todo" {% if t.vae_status=="livret_1_todo" or not t.vae_status %}selected{% endif %}>Livret 1 à compléter</option>
     <option value="livret_1_analysis" {% if t.vae_status=="livret_1_analysis" %}selected{% endif %}>Livret 1 en cours d'analyse</option>
     <option value="financement_validated" {% if t.vae_status=="financement_validated" %}selected{% endif %}>Financement validé</option>
@@ -510,6 +510,12 @@ tr.row-todo td{
 .badge-doc.miss{
   border-color:#fecaca;
   background:#fff1f2;
+}
+
+#traineesTable .vae-status-select.status-pill{
+  min-width:320px !important;
+  width:auto;
+  max-width:none !important;
 }
  
 </style>
