@@ -1576,7 +1576,7 @@ REQUIRED_DOCS = {
         },
         {
             "key": "candidate_info_sheet",
-            "label": "Fiche de renseignement candidat complétée",
+            "label": "Fiche de renseignement candidat à compléter",
             "accept": "application/pdf,image/jpeg,image/png",
         },
     ],
@@ -3823,7 +3823,7 @@ def api_create_trainee(session_id: str):
               <p><strong>Les étapes :</strong></p>
 
               <div class="step"><span class="step-title">1️⃣ Rédaction du Livret 1 (dossier de faisabilité)</span>
-              Vous allez compléter en ligne votre dossier de faisabilité depuis votre Espace candidat en cliquant ici.<br>
+              Vous allez compléter en ligne votre dossier de faisabilité depuis votre Espace candidat.<br>
               Ce document permet de présenter votre parcours professionnel, vos fonctions exercées et vos responsabilités,
               afin de vérifier que votre expérience correspond bien aux compétences attendues pour le DESP.
               C’est en quelque sorte la « photographie » de votre expérience.<br>
@@ -6823,6 +6823,39 @@ def public_doc_upload(token: str, doc_key: str):
         uploaded=doc_key,
         fname=original_name
     ))
+
+
+@app.post("/espace/<token>/documents/candidate_info_sheet/validate")
+def public_candidate_sheet_validate(token: str):
+    data = load_data()
+    s, t = find_session_and_trainee_by_token(data, token)
+    if not s or not t:
+        abort(404)
+
+    if not _public_is_authed(token):
+        return redirect(url_for("public_trainee_login", token=token))
+
+    training_type = _session_get(s, "training_type", "")
+    if (training_type or "").strip().upper() != "DIRIGEANT VAE":
+        return redirect(url_for("public_trainee_space", token=token))
+
+    ensure_documents_schema_for_trainee(t, training_type)
+
+    docs = t.get("documents") or []
+    target = next((d for d in docs if d.get("key") == "candidate_info_sheet"), None)
+    if target:
+        target["status"] = "A CONTRÔLER"
+        if target.get("status") == "A CONTROLER":
+            target["status"] = "A CONTRÔLER"
+
+    t["updated_at"] = _now_iso()
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+
+    s["trainees"] = _session_trainees_list(s)
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return redirect(url_for("public_trainee_space", token=token))
 
 
 

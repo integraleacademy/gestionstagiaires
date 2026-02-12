@@ -1084,12 +1084,17 @@
 
 <div class="docrow {{ row_cls }}" id="doc_{{ d.key }}">
       <div class="docmeta">
-        <div class="label">{{ d.label }}</div>
+        <div class="label">{{ "Fiche de renseignement candidat à compléter" if d.key == "candidate_info_sheet" else d.label }}</div>
         {% if d.key == "candidate_info_sheet" %}
-          <div style="margin-top:8px;">
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <a class="btn small outline" href="{{ url_for('public_trainee_candidate_sheet', token=token_safe) }}" target="_blank" rel="noopener">
               📝 Compléter la fiche candidat (HTML imprimable)
             </a>
+            {% if up in ["NON DÉPOSÉ", "NON DEPOSE", ""] %}
+              <form action="{{ url_for('public_candidate_sheet_validate', token=token_safe) }}" method="post" style="margin:0;">
+                <button class="btn small" type="submit">Valider ma fiche candidat</button>
+              </form>
+            {% endif %}
           </div>
         {% endif %}
         {% if d.key == "permis" %}
@@ -1114,9 +1119,11 @@
   </div>
 {% endif %}
         
-        <div class="muted">{{ hint }}</div>
+        {% if d.key != "candidate_info_sheet" %}
+          <div class="muted">{{ hint }}</div>
+        {% endif %}
 
-{% if not has_file and not (d.key == "permis" and trainee.no_permis) %}
+{% if not has_file and not (d.key == "permis" and trainee.no_permis) and d.key != "candidate_info_sheet" %}
   <div class="doctag missing">📌 Document à déposer (obligatoire)</div>
 {% else %}
     {% if has_file %}
@@ -1135,7 +1142,7 @@
   {% endif %}
 {% endif %}
 
-{% if show_upload %}
+{% if show_upload and d.key != "candidate_info_sheet" %}
 <form class="upload-form"
 id="upload_{{ d.key }}"
   action="/espace/{{ token_safe }}/documents/{{ d.key }}/upload"
@@ -1178,7 +1185,9 @@ id="upload_{{ d.key }}"
 </div>
 </form>
 {% else %}
-  <span class="pill green">📎 Fichier déjà envoyé</span>
+  {% if d.key != "candidate_info_sheet" %}
+    <span class="pill green">📎 Fichier déjà envoyé</span>
+  {% endif %}
 {% endif %}
 
 {% if has_file %}
@@ -1826,6 +1835,10 @@ function closeUploadSuccessModal(event) {
     event.stopPropagation();
   }
   closeModal("uploadSuccessModal");
+
+  if (documentsDetails instanceof HTMLDetailsElement) {
+    documentsDetails.open = true;
+  }
 
   if (window.lastUploadedDocRow instanceof HTMLElement) {
     window.lastUploadedDocRow.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -2567,6 +2580,10 @@ function normalizePRE(s){
   if(uploaded){
     const row = document.getElementById("doc_" + uploaded);
     window.lastUploadedDocRow = row || null;
+
+    if (documentsDetails instanceof HTMLDetailsElement) {
+      documentsDetails.open = true;
+    }
 
     // 1) Texte de la modale = label du doc
     let label = null;
