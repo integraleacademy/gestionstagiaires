@@ -3723,8 +3723,15 @@ def api_send_cnaps_pre_relance(session_id: str, trainee_id: str):
           être obtenue avant toute entrée en formation.
         </p>
         <p>
-          Pour déposer votre demande, cliquez ici :
-          <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
+          Pour déposer votre demande, cliquez sur le bouton ci-dessous :
+        </p>
+        <p style="text-align:center;margin:18px 0;">
+          <a href="{link}" style="display:inline-block;background:#1f8f4a;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 18px;border-radius:8px;">
+            Déposer ma demande CNAPS
+          </a>
+        </p>
+        <p>
+          Pour toute question vous pouvez nous contacter au 04 22 47 07 68.
         </p>
         <p>Je vous remercie par avance,</p>
         <p>
@@ -3743,7 +3750,7 @@ def api_send_cnaps_pre_relance(session_id: str, trainee_id: str):
 
     email = (t.get("email") or "").strip()
     phone = (t.get("phone") or "").strip()
-    email_ok = brevo_send_email(email, "Relance PRE CNAPS – Documents manquants", html) if email else False
+    email_ok = brevo_send_email(email, "Relance documents CNAPS Ministère de l'intérieur", html) if email else False
     sms_ok = brevo_send_sms(phone, sms) if phone else False
 
     t["cnaps_pre_relance_last_sent_at"] = _now_iso()
