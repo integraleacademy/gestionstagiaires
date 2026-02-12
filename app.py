@@ -6485,6 +6485,8 @@ def api_trainees_search():
                     "trainee_id": t.get("id"),
                     "first_name": fn,
                     "last_name": ln,
+                    "convention_status": t.get("convention_status") or "soon",
+                    "test_fr_status": t.get("test_fr_status") or "soon",
                     "admin_url": f"/admin/sessions/{session_id}/stagiaires/{t.get('id')}",
                 })
 
