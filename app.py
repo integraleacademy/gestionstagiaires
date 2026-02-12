@@ -5100,6 +5100,10 @@ def admin_etiquette_docx(session_id: str, trainee_id: str):
     doc.save(buf)
     buf.seek(0)
 
+    t["etiquette_word_downloaded_at"] = _now_iso()
+    s["trainees"] = trainees
+    save_data(data)
+
     filename = f"etiquette_{t.get('last_name','')}_{t.get('first_name','')}.docx".replace(" ", "_")
     return send_file(
         buf,
