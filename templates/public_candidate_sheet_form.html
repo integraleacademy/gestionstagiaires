@@ -11,6 +11,7 @@
     .page{width:210mm;min-height:297mm;margin:0 auto;padding:8mm;background:#ececec}
     .toolbar{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:6px}
     .hint{font-size:12px;color:#475569}
+    .actions{display:flex;justify-content:flex-end}
     .btn{border:1px solid #cbd5e1;background:#fff;border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer}
 
     .header{border:2px solid var(--orange);padding:3px;margin-bottom:10px}
@@ -54,20 +55,23 @@
 <body>
   <div class="page">
     <div class="toolbar">
-      <div class="hint">Complétez les champs puis imprimez en PDF et déposez le fichier dans « Mes documents ».</div>
-      <button class="btn" onclick="window.print()">🖨️ Imprimer</button>
+      <div class="hint">Complétez les champs puis enregistrez la fiche pour la valider dans « Mes documents ».</div>
+      <div class="actions">
+        <button class="btn" type="submit" form="candidate-sheet-form">ENREGISTRER</button>
+      </div>
     </div>
 
+    <form id="candidate-sheet-form" method="post" action="{{ save_url }}">
     <div class="header"><div>DOSSIER CANDIDAT</div></div>
 
     <div class="top">
       <ul class="lines">
-        <li>TYPE DE FORMATION : <input class="field" style="min-width:110mm;" value="{{ candidate.formation_type }}"></li>
-        <li>DATE D’ENTREE EN STAGE : <input class="field" style="min-width:102mm;" value="{{ candidate.date_entree_stage }}"></li>
-        <li>SITUATION PROFESSIONNELLE : <input class="field" style="min-width:96mm;" value="{{ candidate.situation }}"></li>
-        <li>NOM DE L’ENTREPRISE (si salarié ou employeur) : <input class="field" style="min-width:74mm;" value="{{ candidate.company }}"></li>
-        <li>FINANCEMENT : <input class="field" style="min-width:110mm;" value=""></li>
-        <li>ENTRETIEN REALISE PAR : <input class="field" style="min-width:103mm;" value="{{ candidate.interviewer }}"></li>
+        <li>TYPE DE FORMATION : <input class="field" style="min-width:110mm;" name="formation_type" value="{{ candidate.formation_type }}"></li>
+        <li>DATE D’ENTREE EN STAGE : <input class="field" style="min-width:102mm;" name="date_entree_stage" value="{{ candidate.date_entree_stage }}"></li>
+        <li>SITUATION PROFESSIONNELLE : <input class="field" style="min-width:96mm;" name="situation" value="{{ candidate.situation }}"></li>
+        <li>NOM DE L’ENTREPRISE (si salarié ou employeur) : <input class="field" style="min-width:74mm;" name="company" value="{{ candidate.company }}"></li>
+        <li>FINANCEMENT : <input class="field" style="min-width:110mm;" name="financing" value="{{ candidate.financing }}"></li>
+        <li>ENTRETIEN REALISE PAR : <input class="field" style="min-width:103mm;" name="interviewer" value="{{ candidate.interviewer }}"></li>
       </ul>
       <div class="photo">{% if photo_url %}<img src="{{ photo_url }}" alt="Photo candidat">{% else %}🖼️{% endif %}</div>
     </div>
@@ -75,35 +79,36 @@
     <div class="box">
       <h2>LE CANDIDAT</h2>
       <ul class="lines">
-        <li>Nom : <input class="field" style="min-width:155mm;" value="{{ candidate.last_name }}"></li>
-        <li>Nom d’usage : <input class="field" style="min-width:145mm;" value="{{ candidate.usage_name }}"></li>
-        <li>Prénoms : <input class="field" style="min-width:150mm;" value="{{ candidate.first_names }}"></li>
-        <li>Adresse : <input class="field" style="min-width:152mm;" value="{{ candidate.address }}"></li>
-        <li>Code postal : <input class="field" style="min-width:48mm;" value="{{ candidate.postal_code }}"> Ville : <input class="field" style="min-width:76mm;" value="{{ candidate.city }}"></li>
-        <li>Tél : <input class="field" style="min-width:52mm;" value="{{ candidate.phone }}"> Adresse mail : <input class="field" style="min-width:88mm;" value="{{ candidate.email }}"></li>
-        <li>Né(e) le : <input class="field" style="min-width:38mm;" value="{{ candidate.birth_date }}"> A : <input class="field" style="min-width:38mm;" value="{{ candidate.birth_city }}"> Département : <input class="field" style="min-width:41mm;" value="{{ candidate.department }}"></li>
-        <li>Pays : <input class="field" style="min-width:50mm;" value="{{ candidate.country }}"> Nationalité : <input class="field" style="min-width:82mm;" value="{{ candidate.nationality }}"></li>
-        <li>Personne à contacter en cas d’urgence (Nom et numéro de téléphone) : <input class="field" style="min-width:155mm;" value="{{ candidate.emergency_contact }}"></li>
-        <li>Numéro de votre carte professionnelle (CNAPS) : <input class="field" style="min-width:101mm;" value=""></li>
+        <li>Nom : <input class="field" style="min-width:155mm;" name="last_name" value="{{ candidate.last_name }}"></li>
+        <li>Nom d’usage : <input class="field" style="min-width:145mm;" name="usage_name" value="{{ candidate.usage_name }}"></li>
+        <li>Prénoms : <input class="field" style="min-width:150mm;" name="first_names" value="{{ candidate.first_names }}"></li>
+        <li>Adresse : <input class="field" style="min-width:152mm;" name="address" value="{{ candidate.address }}"></li>
+        <li>Code postal : <input class="field" style="min-width:48mm;" name="postal_code" value="{{ candidate.postal_code }}"> Ville : <input class="field" style="min-width:76mm;" name="city" value="{{ candidate.city }}"></li>
+        <li>Tél : <input class="field" style="min-width:52mm;" name="phone" value="{{ candidate.phone }}"> Adresse mail : <input class="field" style="min-width:88mm;" name="email" value="{{ candidate.email }}"></li>
+        <li>Né(e) le : <input class="field" style="min-width:38mm;" name="birth_date" value="{{ candidate.birth_date }}"> A : <input class="field" style="min-width:38mm;" name="birth_city" value="{{ candidate.birth_city }}"> Département : <input class="field" style="min-width:41mm;" name="department" value="{{ candidate.department }}"></li>
+        <li>Pays : <input class="field" style="min-width:50mm;" name="country" value="{{ candidate.country }}"> Nationalité : <input class="field" style="min-width:82mm;" name="nationality" value="{{ candidate.nationality }}"></li>
+        <li>Personne à contacter en cas d’urgence (Nom et numéro de téléphone) : <input class="field" style="min-width:155mm;" name="emergency_contact" value="{{ candidate.emergency_contact }}"></li>
+        <li>Numéro de votre carte professionnelle (CNAPS) : <input class="field" style="min-width:101mm;" name="cnaps_number" value="{{ candidate.cnaps_number }}"></li>
       </ul>
     </div>
 
     <div class="section-title">Informations à remplir (obligatoire) pour le suivi des titres RNCP auprès de France compétences</div>
     <ul class="lines">
-      <li>Niveau d’étude à l’entrée en formation : <input class="field" style="min-width:143mm;" value="{{ candidate.study_level }}"></li>
-      <li>Domaine des études suivies : <input class="field" style="min-width:151mm;" value="{{ candidate.study_domain }}"></li>
-      <li>Niveau de la dernière certification obtenu : <input class="field" style="min-width:131mm;" value="{{ candidate.last_certification_level }}"></li>
-      <li>Domaine de la dernière certification : <input class="field" style="min-width:139mm;" value="{{ candidate.last_certification_domain }}"></li>
-      <li>Dernier métier ( + poste) exercé : <input class="field" style="min-width:140mm;" value="{{ candidate.last_job }}"></li>
-      <li>Durée (en année) : <input class="field" style="min-width:160mm;" value="{{ candidate.years_experience }}"></li>
-      <li>Nom de l’entreprise : <input class="field" style="min-width:149mm;" value="{{ candidate.company_name }}"></li>
-      <li>Rémunération brute annuelle : <input class="field" style="min-width:143mm;" value="{{ candidate.gross_salary }}"></li>
+      <li>Niveau d’étude à l’entrée en formation : <input class="field" style="min-width:143mm;" name="study_level" value="{{ candidate.study_level }}"></li>
+      <li>Domaine des études suivies : <input class="field" style="min-width:151mm;" name="study_domain" value="{{ candidate.study_domain }}"></li>
+      <li>Niveau de la dernière certification obtenu : <input class="field" style="min-width:131mm;" name="last_certification_level" value="{{ candidate.last_certification_level }}"></li>
+      <li>Domaine de la dernière certification : <input class="field" style="min-width:139mm;" name="last_certification_domain" value="{{ candidate.last_certification_domain }}"></li>
+      <li>Dernier métier ( + poste) exercé : <input class="field" style="min-width:140mm;" name="last_job" value="{{ candidate.last_job }}"></li>
+      <li>Durée (en année) : <input class="field" style="min-width:160mm;" name="years_experience" value="{{ candidate.years_experience }}"></li>
+      <li>Nom de l’entreprise : <input class="field" style="min-width:149mm;" name="company_name" value="{{ candidate.company_name }}"></li>
+      <li>Rémunération brute annuelle : <input class="field" style="min-width:143mm;" name="gross_salary" value="{{ candidate.gross_salary }}"></li>
     </ul>
 
     <div class="footer">
       <img src="{{ url_for('static', filename='scotia.png') }}" alt="Scotia">
       <div class="footer-text">SCOTIA FORMATION – 1662 RN7 – 06270 Villeneuve Loubet<br>N° déclaration d’activité : 93061023706 – Siret 91812189800012 – Code APE : 8559A - www.scotiagroupe.com</div>
     </div>
+    </form>
   </div>
 </body>
 </html>
