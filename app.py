@@ -6074,9 +6074,9 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
         <p>Nous avons le plaisir de vous informer que la commission a rendu un <strong>avis favorable</strong> à votre demande de VAE.</p>
         <p>Pour passer à l'étape suivante, nous devons organiser un rendez-vous téléphonique afin de :</p>
         <ul>
-          <li>1️⃣ mettre en place le financement de votre VAE (versement de l'acompte),</li>
-          <li>2️⃣ finaliser et signer votre convention de VAE,</li>
-          <li>3️⃣ vous transmettre le cadre de travail pour la rédaction de votre Livret 2.</li>
+          <li>1️⃣ Mettre en place le financement de votre VAE (versement de l'acompte),</li>
+          <li>2️⃣ Finaliser et signer votre convention de VAE,</li>
+          <li>3️⃣ Vous transmettre le cadre de travail pour la rédaction de votre Livret 2.</li>
         </ul>
         <p style=\"margin:18px 0;\"><a href=\"{booking_url}\" style=\"{primary_btn}\">Réserver un RDV téléphonique</a></p>
         <p>Vous pouvez également récupérer votre <strong>attestation de recevabilité</strong> directement dans votre espace candidat :</p>
