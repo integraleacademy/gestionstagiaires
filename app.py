@@ -1523,8 +1523,18 @@ REQUIRED_DOCS = {
     ],
     "DIRIGEANT_VAE_ONLY": [
         {
-            "key": "livret_2",
-            "label": "Livret 2 VAE",
+            "key": "cv",
+            "label": "CV",
+            "accept": "application/pdf,image/jpeg,image/png",
+        },
+        {
+            "key": "highest_diploma",
+            "label": "Diplôme le plus élevé",
+            "accept": "application/pdf,image/jpeg,image/png",
+        },
+        {
+            "key": "candidate_info_sheet",
+            "label": "Fiche de renseignement candidat complétée",
             "accept": "application/pdf,image/jpeg,image/png",
         },
     ],
@@ -1596,7 +1606,10 @@ def ensure_documents_schema_for_trainee(t: Dict[str, Any], training_type: str) -
     return changed
 
 def allowed_doc_keys_for_training(training_type: str) -> set:
-    return {d["key"] for d in required_docs_for_training(training_type)}
+    keys = {d["key"] for d in required_docs_for_training(training_type)}
+    if (training_type or "").strip().upper() == "DIRIGEANT VAE":
+        keys.add("livret_2")
+    return keys
 
 def dossier_is_complete(trainee: Dict[str, Any], training_type: str) -> bool:
     """
@@ -5823,6 +5836,7 @@ VAE_STATUS_STEPS = {
     "livret_1_todo": {"label": "Livret 1 à compléter", "pill": "orange"},
     "livret_1_analysis": {"label": "Livret 1 en cours d'analyse", "pill": "gray"},
     "livret_1_validated": {"label": "Livret 1 validé", "pill": "green"},
+    "financement_validated": {"label": "Financement validé", "pill": "green"},
     "livret_2_todo": {"label": "Livret 2 à compléter", "pill": "orange"},
     "livret_2_analysis": {"label": "Réception livret 2", "pill": "gray"},
     "livret_2_validated": {"label": "Livret 2 validé", "pill": "green"},

@@ -336,6 +336,18 @@
     list-style:none;
   }
   .vtc-assistance a{color:#1d4ed8;text-decoration:none;}
+
+  .vae-welcome-banner{
+    margin-top:10px;
+    margin-bottom:14px;
+    padding:14px 18px;
+    border-radius:14px;
+    border:2px solid #bfdbfe;
+    background:linear-gradient(135deg,#eff6ff,#ffffff);
+    color:#1e3a8a;
+    font-weight:900;
+    box-shadow:0 8px 18px rgba(30,58,138,.08);
+  }
   .assist-item{
     display:flex;
     gap:12px;
@@ -656,6 +668,10 @@
     </div>
   </div>
 
+  {% if is_dirigeant_vae %}
+  <div class="vae-welcome-banner">🚀 Bienvenue dans votre Espace VAE Dirigeant d'entreprise de sécurité privée (DESP)</div>
+  {% endif %}
+
   <div class="public-grid">
 
     {% if is_vtc_training %}
@@ -743,10 +759,12 @@
     <div class="card">
       <h2>Suivi de dossier</h2>
 
+      {% if not is_dirigeant_vae %}
       <div class="docrow">
   <div class="docmeta"><div class="label">Inscription validée</div></div>
   <span class="pill green">✅ VALIDÉE</span>
 </div>
+      {% endif %}
 
 
       <div class="docrow">
@@ -768,6 +786,7 @@
         'livret_2_analysis': {'label':'Réception livret 2','cls':'gray'},
         'livret_2_validated': {'label':'Livret 2 validé','cls':'green'},
         'livret_1_validated': {'label':'Livret 1 validé','cls':'green'},
+        'financement_validated': {'label':'Financement validé','cls':'green'},
         'jury': {'label':'Passage devant le jury','cls':'yellow'},
         'certified': {'label':'Diplôme obtenu','cls':'green'}
       } %}
@@ -1019,7 +1038,7 @@
 
   <div class="docs-stack">
 
-  {% for d in (trainee.documents or []) %}
+  {% for d in (trainee.documents or []) if not (is_dirigeant_vae and d.key == "livret_2") %}
 {% set ns = namespace(file_tokens=[]) %}
 {% if d.files is defined and d.files is sequence %}
   {% for f in d.files %}
@@ -1259,7 +1278,8 @@ id="upload_{{ d.key }}"
   {% set vae_step_index_map = {
     'livret_1_todo': 0,
     'livret_1_analysis': 1,
-    'livret_1_validated': 3,
+    'livret_1_validated': 2,
+    'financement_validated': 3,
     'livret_2_todo': 3,
     'livret_2_analysis': 4,
     'livret_2_validated': 6,
@@ -1270,7 +1290,8 @@ id="upload_{{ d.key }}"
   {% set vae_current_step_map = {
     'livret_1_todo': 1,
     'livret_1_analysis': 2,
-    'livret_1_validated': 4,
+    'livret_1_validated': 3,
+    'financement_validated': 4,
     'livret_2_todo': 4,
     'livret_2_analysis': 5,
     'livret_2_validated': 7,
@@ -1292,7 +1313,7 @@ id="upload_{{ d.key }}"
           <p class="oktag">Étape terminée</p>
         {% else %}
           <p><a href="/vae/nouveau/{{ token_safe }}" target="_blank" rel="noopener">Compléter le Livret 1 en cliquant ici</a></p>
-          <p><a href="#">Téléchargez la Fiche de renseignement candidat</a></p>
+          <p class="muted">Pensez aussi à déposer votre CV, votre diplôme le plus élevé et la fiche de renseignement candidat complétée dans l'onglet "Mes documents".</p>
         {% endif %}
       </div>
 
@@ -1314,7 +1335,11 @@ id="upload_{{ d.key }}"
         {% set receva = (trainee.deliverables or {}).get('attestation_recevabilite') %}
         {% if receva %}
           <p><a class="btn outline small" target="_blank" href="/espace/{{ token_safe }}/download/{{ receva }}">Télécharger mon attestation de recevabilité</a></p>
-        {% else %}
+        {% endif %}
+        {% if vae_key in ['livret_1_validated','financement_validated'] %}
+          <p>🥳La commission a donné un Avis Favorable à votre demande de VAE. Pour passer à l'étape suivante, nous devons convenir d'un RDV téléphonique ensemble pour mettre en place le financement de votre VAE (versement de l'acompte) et signer votre convention de VAE.</p>
+          <p><a class="btn small" target="_blank" rel="noopener" href="https://calendly.com/integraleacademy/dirigeant">Réserver un RDV téléphonique</a></p>
+        {% elif not receva %}
           <p><span class="pill gray">Prochainement disponible</span></p>
         {% endif %}
       </div>
@@ -1408,6 +1433,28 @@ id="upload_{{ d.key }}"
         {% if vae_current_step == 8 and vae_done_until < 8 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
         <p class="muted">Félicitations ! Après validation finale, vous obtenez votre certification DESP.</p>
       </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if is_dirigeant_vae %}
+  <div class="card" style="grid-column:1/-1;">
+    <div class="vtc-assistance" style="margin-top:0;">
+      <h3>Assistance express ✨</h3>
+      <div class="assist-subtitle">Des réponses rapides pour avancer sereinement.</div>
+      <ul>
+        <li class="assist-item">
+          <div class="assist-icon" aria-hidden="true">🎓</div>
+          <div>
+            <div class="assist-title">Formation & suivi</div>
+            <div>Besoin d'aide pour votre parcours VAE ? Nous sommes là pour vous.</div>
+            <div class="assist-actions">
+              <a class="assist-btn" href="tel:0422470768">📞 04 22 47 07 68</a>
+              <a class="assist-btn secondary" href="https://assistance-alw9.onrender.com/" target="_blank" rel="noopener">💬 Ouvrir l’assistance</a>
+            </div>
+          </div>
+        </li>
+      </ul>
     </div>
   </div>
   {% endif %}
@@ -1620,18 +1667,15 @@ id="upload_{{ d.key }}"
         </p>
         {% elif is_dirigeant_vae %}
         <p class="ia-p">
-          Votre parcours de <strong>VAE DESP</strong> commence maintenant.
+          Bienvenue dans votre parcours VAE Dirigeant d'entreprise de sécurité (DESP)
         </p>
 
         <p class="ia-p">
-          ✅ Commencez par compléter le <strong>Livret 1</strong> dans votre espace candidat.
-          Une fois votre recevabilité validée, vous passerez au <strong>Livret 2</strong>, puis à l'entretien
-          devant le jury de certification.
+          ✅ Commencez par compléter le Livret 1 (dossier de faisabilité) dans votre Espace Candidat. Dès que votre dossier de faisabilité sera validé, vous rédigerez votre Livret 2, puis vous présenterez votre projet professionnel devant le jury de certification.
         </p>
 
         <p class="ia-p">
-          📌 Pensez à consulter régulièrement votre espace : vous y retrouverez vos étapes,
-          vos dépôts de documents et l’avancement de votre dossier VAE.
+          📌 Pensez à consulter régulièrement votre Espace Candidat : vous pourrez suivre pas à pas l'avancé de votre demande de VAE et déposer vos documents.
         </p>
 
         <p class="ia-p" style="margin-top:12px;">
@@ -2309,8 +2353,9 @@ window.addEventListener("DOMContentLoaded", ()=>{
   const summary = document.getElementById("livret2_files_summary");
   if(!input || !summary) return;
 
+  const dataTransfer = new DataTransfer();
   const updateSummary = () => {
-    const files = input.files ? Array.from(input.files) : [];
+    const files = dataTransfer.files ? Array.from(dataTransfer.files) : [];
     if(!files.length){
       summary.textContent = "Aucun fichier sélectionné.";
       return;
@@ -2319,7 +2364,18 @@ window.addEventListener("DOMContentLoaded", ()=>{
     summary.textContent = `${count} fichier${count > 1 ? "s" : ""} sélectionné${count > 1 ? "s" : ""} : ${files.map((f)=>f.name).join(", ")}`;
   };
 
-  input.addEventListener("change", updateSummary);
+  input.addEventListener("change", () => {
+    if(input.files){
+      for(const f of input.files){
+        const exists = Array.from(dataTransfer.files).some((existing) => existing.name === f.name && existing.size === f.size);
+        if(!exists){
+          dataTransfer.items.add(f);
+        }
+      }
+      input.files = dataTransfer.files;
+    }
+    updateSummary();
+  });
   updateSummary();
 });
 
