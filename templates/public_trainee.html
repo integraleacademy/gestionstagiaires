@@ -1081,6 +1081,13 @@
 <div class="docrow {{ row_cls }}" id="doc_{{ d.key }}">
       <div class="docmeta">
         <div class="label">{{ d.label }}</div>
+        {% if d.key == "candidate_info_sheet" %}
+          <div style="margin-top:8px;">
+            <a class="btn small outline" href="/static/fiche-renseignement-candidat.html" download>
+              📥 Télécharger la fiche candidat à compléter
+            </a>
+          </div>
+        {% endif %}
         {% if d.key == "permis" %}
   <label style="margin-top:8px;display:flex;align-items:center;gap:8px;font-weight:800;">
     <input
