@@ -737,6 +737,7 @@ def load_data() -> Dict[str, Any]:
             "notifications_edof": [],
             "notifications_prelevements": [],
             "notifications_phone_relances": [],
+            "notifications_cnaps_pre_relances": [],
             "notifications_admin": [],
         }
         save_data(base)
@@ -767,6 +768,9 @@ def load_data() -> Dict[str, Any]:
         if "notifications_phone_relances" not in data:
             data["notifications_phone_relances"] = []
             changed = True
+        if "notifications_cnaps_pre_relances" not in data:
+            data["notifications_cnaps_pre_relances"] = []
+            changed = True
         if "notifications_admin" not in data:
             data["notifications_admin"] = []
             changed = True
@@ -792,6 +796,7 @@ def load_data() -> Dict[str, Any]:
             "notifications_edof": [],
             "notifications_prelevements": [],
             "notifications_phone_relances": [],
+            "notifications_cnaps_pre_relances": [],
             "notifications_admin": [],
         }
         save_data(base)
@@ -817,6 +822,7 @@ def add_notification(data: Dict[str, Any], bucket: str, label: str, meta: Option
         "notifications_edof": "EDOF",
         "notifications_prelevements": "PREL",
         "notifications_phone_relances": "REL",
+        "notifications_cnaps_pre_relances": "PRE",
         "notifications_admin": "ADM",
     }
     entry = {
@@ -836,6 +842,7 @@ def _notifications_bucket_key(bucket: str) -> Optional[str]:
         "edof": "notifications_edof",
         "prelevements": "notifications_prelevements",
         "relances": "notifications_phone_relances",
+        "cnaps_pre": "notifications_cnaps_pre_relances",
     }.get(bucket)
 
 
@@ -852,6 +859,7 @@ def _secretariat_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
         "edof": _with_created_fr(list(data.get("notifications_edof", []))),
         "prelevements": _with_created_fr(list(data.get("notifications_prelevements", []))),
         "relances": _with_created_fr(list(data.get("notifications_phone_relances", []))),
+        "cnaps_pre": _with_created_fr(list(data.get("notifications_cnaps_pre_relances", []))),
     }
     unresolved_total = 0
     for items in notifications.values():
@@ -2387,6 +2395,7 @@ def admin_secretariat():
         edof_notifications=notifications["edof"],
         prelevement_notifications=notifications["prelevements"],
         phone_notifications=notifications["relances"],
+        cnaps_pre_notifications=notifications["cnaps_pre"],
         unresolved_total=payload["unresolved_total"],
     )
 
@@ -2828,6 +2837,80 @@ def api_secretariat_relance_result(notification_id: str):
     s.pop("stagiaires", None)
     save_data(data)
 
+    refreshed_payload = _secretariat_notifications_payload(data)
+    return jsonify({
+        "ok": True,
+        "done": bool(notification.get("done")),
+        "call_status": display,
+        "no_answer_count": no_answer_count,
+        **refreshed_payload,
+    })
+
+
+@app.post("/api/secretariat/notifications/cnaps_pre/<notification_id>/call-result")
+@admin_login_required
+def api_secretariat_cnaps_pre_result(notification_id: str):
+    payload = request.get_json(silent=True) or {}
+    outcome = (payload.get("outcome") or "").strip().upper()
+    comment = (payload.get("comment") or "").strip()
+    if outcome not in ("CALLED", "NO_ANSWER"):
+        return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+
+    data = load_data()
+    notification = next(
+        (item for item in data.get("notifications_cnaps_pre_relances", []) if item.get("id") == notification_id),
+        None,
+    )
+    if not notification:
+        return jsonify({"ok": False, "error": "notification_not_found"}), 404
+
+    notification_meta = notification.setdefault("meta", {})
+    previous_no_answer = _parse_no_answer_count(notification_meta.get("no_answer_count"))
+    if outcome == "NO_ANSWER":
+        no_answer_count = min(3, previous_no_answer + 1)
+        display = {
+            1: "1er appel pas de réponse",
+            2: "2ème appel pas de réponse",
+            3: "3ème appel pas de réponse",
+        }[no_answer_count]
+        notification["done"] = no_answer_count >= 3
+        notification["done_at"] = _now_iso() if notification.get("done") else ""
+    else:
+        no_answer_count = 0
+        display = "Personne jointe"
+        notification["done"] = True
+        notification["done_at"] = _now_iso()
+
+    notification_meta["call_status"] = display
+    notification_meta["no_answer_count"] = no_answer_count
+    if comment:
+        notification_meta["last_comment"] = comment
+
+    trainee_display_name = _format_trainee_name(
+        notification_meta.get("first_name", ""),
+        notification_meta.get("last_name", ""),
+    )
+    call_icon = "🟢" if outcome == "CALLED" else ({1: "🟡", 2: "🟠", 3: "🔴"}.get(no_answer_count, "🟡"))
+    call_label = (
+        f"{call_icon}Relance PRE CNAPS {trainee_display_name} - personne appelée"
+        if outcome == "CALLED"
+        else f"{call_icon}Relance PRE CNAPS {trainee_display_name} - {display}"
+    )
+    add_admin_notification(
+        data,
+        call_label,
+        meta={
+            "type": "cnaps_pre_call_result",
+            "outcome": outcome,
+            "no_answer_count": no_answer_count,
+            "session_id": notification_meta.get("session_id"),
+            "trainee_id": notification_meta.get("trainee_id"),
+            "comment": comment,
+            "call_status": display,
+        },
+    )
+
+    save_data(data)
     refreshed_payload = _secretariat_notifications_payload(data)
     return jsonify({
         "ok": True,
@@ -3777,6 +3860,32 @@ def api_send_cnaps_pre_relance(session_id: str, trainee_id: str):
 
     t["cnaps_pre_relance_last_sent_at"] = _now_iso()
     t["updated_at"] = _now_iso()
+
+    first_name = (t.get("first_name") or "").strip()
+    last_name = (t.get("last_name") or "").strip()
+    phone_display = phone or ""
+    email_display = email or ""
+    label_name = _format_trainee_name(first_name, last_name)
+    label_parts = [label_name]
+    if training_name:
+        label_parts.append(training_name)
+    add_notification(
+        data,
+        "notifications_cnaps_pre_relances",
+        " • ".join([part for part in label_parts if part]).strip(),
+        meta={
+            "first_name": first_name,
+            "last_name": last_name,
+            "training": training_name,
+            "phone": phone_display,
+            "email": email_display,
+            "session_id": s.get("id"),
+            "trainee_id": t.get("id"),
+            "call_status": "À appeler",
+            "no_answer_count": 0,
+        },
+    )
+
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     save_data(data)
