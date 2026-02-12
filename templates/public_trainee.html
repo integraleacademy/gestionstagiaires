@@ -1772,7 +1772,7 @@ id="upload_{{ d.key }}"
         </div>
       </div>
 
-      <button type="button" class="ia-close" onclick="closeModal('uploadSuccessModal')">✕</button>
+      <button type="button" class="ia-close" onclick="closeUploadSuccessModal(event)">✕</button>
     </div>
 
     <div class="ia-body">
@@ -1787,7 +1787,7 @@ id="upload_{{ d.key }}"
     </div>
 
     <div class="ia-foot">
-      <button class="btn" onclick="closeModal('uploadSuccessModal')">
+      <button type="button" class="btn" onclick="closeUploadSuccessModal(event)">
         Déposer mes autres documents
       </button>
     </div>
@@ -1813,6 +1813,14 @@ if (typeof closeModal !== "function") {
     if (!el) return;
     el.classList.remove("show"); // ✅
   };
+}
+
+function closeUploadSuccessModal(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  closeModal("uploadSuccessModal");
 }
   const token = "{{ token_safe }}";
 
