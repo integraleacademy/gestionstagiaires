@@ -15,6 +15,8 @@ python app.py
 - `SECRETARY_USER`
 - `SECRETARY_PASSWORD`
 - `PERSIST_DIR` (par défaut `/data`)
+- `BACKUP_RETENTION` (optionnel, nombre de snapshots conservés, défaut `120`)
+- `BACKUP_MIN_INTERVAL_SECONDS` (optionnel, fréquence mini entre snapshots automatiques, défaut `300`)
 
 ## Module VAE DESP
 
@@ -28,3 +30,11 @@ python app.py
 - Export JSON : `GET /admin/vae/<id>/export`
 
 Les dossiers VAE sont persistés dans `data_vae.json` dans `PERSIST_DIR`.
+
+
+## Sauvegardes anti-perte de données
+
+- Chaque écriture de `data.json` et `data_vae.json` est atomique (`.tmp` puis `os.replace`).
+- Un snapshot JSON est créé automatiquement dans `PERSIST_DIR/backups` (au plus toutes les 5 minutes par défaut).
+- Les actions de suppression sensibles forcent un snapshot immédiat juste avant la suppression.
+- L'endpoint `GET /api/health` expose le nombre de sauvegardes présentes pour vérification rapide.
