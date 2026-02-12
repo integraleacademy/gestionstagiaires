@@ -797,6 +797,7 @@ def load_data() -> Dict[str, Any]:
             "sessions": [],
             "positioning_tests": [],
             "notifications_edof": [],
+            "notifications_financement_refuse": [],
             "notifications_prelevements": [],
             "notifications_phone_relances": [],
             "notifications_cnaps_pre_relances": [],
@@ -827,6 +828,9 @@ def load_data() -> Dict[str, Any]:
         if "notifications_prelevements" not in data:
             data["notifications_prelevements"] = []
             changed = True
+        if "notifications_financement_refuse" not in data:
+            data["notifications_financement_refuse"] = []
+            changed = True
         if "notifications_phone_relances" not in data:
             data["notifications_phone_relances"] = []
             changed = True
@@ -856,6 +860,7 @@ def load_data() -> Dict[str, Any]:
             "sessions": [],
             "positioning_tests": [],
             "notifications_edof": [],
+            "notifications_financement_refuse": [],
             "notifications_prelevements": [],
             "notifications_phone_relances": [],
             "notifications_cnaps_pre_relances": [],
@@ -879,6 +884,7 @@ def add_notification(data: Dict[str, Any], bucket: str, label: str, meta: Option
     notifications = data.setdefault(bucket, [])
     prefix_map = {
         "notifications_edof": "EDOF",
+        "notifications_financement_refuse": "FTR",
         "notifications_prelevements": "PREL",
         "notifications_phone_relances": "REL",
         "notifications_cnaps_pre_relances": "PRE",
@@ -899,6 +905,7 @@ def add_notification(data: Dict[str, Any], bucket: str, label: str, meta: Option
 def _notifications_bucket_key(bucket: str) -> Optional[str]:
     return {
         "edof": "notifications_edof",
+        "financement_refuse": "notifications_financement_refuse",
         "prelevements": "notifications_prelevements",
         "relances": "notifications_phone_relances",
         "cnaps_pre": "notifications_cnaps_pre_relances",
@@ -916,6 +923,7 @@ def _secretariat_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
 
     notifications = {
         "edof": _with_created_fr(list(data.get("notifications_edof", []))),
+        "financement_refuse": _with_created_fr(list(data.get("notifications_financement_refuse", []))),
         "prelevements": _with_created_fr(list(data.get("notifications_prelevements", []))),
         "relances": _with_created_fr(list(data.get("notifications_phone_relances", []))),
         "cnaps_pre": _with_created_fr(list(data.get("notifications_cnaps_pre_relances", []))),
@@ -1473,6 +1481,13 @@ EDOF_TRAININGS = {
         "label": "Dirigeant d'entreprise de sécurité privée (DESP)",
         "calendly": "https://calendly.com/integraleacademy/dirigeant",
     },
+}
+
+FINANCEMENT_REFUSE_TRAININGS = {
+    "A3P": "Agent de protection physique des personnes (A3P)",
+    "APS": "Agent de prévention et de sécurité (APS)",
+    "VTC": "Chauffeur VTC",
+    "DIRIGEANT": "Dirigeant d'entreprise de sécurité privée (DESP)",
 }
 
 def formation_label(training_type: str) -> str:
@@ -2452,6 +2467,7 @@ def admin_secretariat():
     return render_template(
         "admin_secretariat.html",
         edof_notifications=notifications["edof"],
+        financement_refuse_notifications=notifications["financement_refuse"],
         prelevement_notifications=notifications["prelevements"],
         phone_notifications=notifications["relances"],
         cnaps_pre_notifications=notifications["cnaps_pre"],
@@ -2617,6 +2633,76 @@ def admin_edof_submit():
     return jsonify({
         "ok": True,
         "admin_email_ok": bool(admin_email_ok),
+        "email_ok": bool(email_ok),
+        "sms_ok": bool(sms_ok),
+    })
+
+
+@app.post("/admin/financement-refuse/submit")
+@admin_login_required
+def admin_financement_refuse_submit():
+    payload = request.get_json(silent=True) or {}
+    last_name = (payload.get("last_name") or "").strip()
+    first_name = (payload.get("first_name") or "").strip()
+    phone = (payload.get("phone") or "").strip()
+    email = (payload.get("email") or "").strip()
+    training_key = (payload.get("training") or "").strip().upper()
+
+    if not all([last_name, first_name, phone, email, training_key]):
+        return jsonify({"ok": False, "error": "missing_fields"}), 400
+
+    training_label = FINANCEMENT_REFUSE_TRAININGS.get(training_key)
+    if not training_label:
+        return jsonify({"ok": False, "error": "invalid_training"}), 400
+
+    full_name = f"{first_name} {last_name}".strip()
+
+    user_subject = f"Financement France Travail refusé – {training_label}"
+    user_html = mail_layout(f"""
+      <p>Bonjour {first_name},</p>
+
+      <p>Je me permets de revenir vers vous concernant votre formation <strong>{training_label}</strong>.</p>
+
+      <p>Suite à la demande de financement que nous avons envoyée, je suis au regret de vous annoncer que France Travail a refusé de financer votre formation.</p>
+
+      <p>Si vous souhaitez malgré tout vous inscrire en formation, nous vous remercions de bien vouloir nous contacter au <strong>04 22 47 07 68</strong>.</p>
+
+      <p>Nous pouvons vous proposer un paiement en plusieurs fois par prélèvement tous les mois, jusqu'à la date d'examen.</p>
+
+      <p>Nous restons à votre disposition pour tous renseignements complémentaires et nous vous souhaitons une bonne journée.</p>
+
+      <p>La Team Intégrale Academy</p>
+    """)
+
+    sms = (
+        f"Bonjour {first_name}, je me permets de revenir vers vous concernant votre formation {training_label}. "
+        "Suite à la demande de financement que nous avons envoyée, je suis au regret de vous annoncer que France Travail a refusé de financer votre formation. "
+        "Si vous souhaitez malgré tout vous inscrire en formation, merci de nous contacter au 04 22 47 07 68. "
+        "Nous pouvons vous proposer un paiement en plusieurs fois par prélèvement tous les mois, jusqu'à la date d'examen. "
+        "Nous restons à votre disposition pour tous renseignements complémentaires et nous vous souhaitons une bonne journée. "
+        "La Team Intégrale Academy"
+    ).strip()
+
+    email_ok = brevo_send_email(email, user_subject, user_html)
+    sms_ok = brevo_send_sms(phone, sms)
+
+    data = load_data()
+    add_notification(
+        data,
+        "notifications_financement_refuse",
+        f"{full_name} • {training_label} • {phone} • {email}",
+        meta={
+            "first_name": first_name,
+            "last_name": last_name,
+            "training": training_label,
+            "phone": phone,
+            "email": email,
+        },
+    )
+    save_data(data)
+
+    return jsonify({
+        "ok": True,
         "email_ok": bool(email_ok),
         "sms_ok": bool(sms_ok),
     })
@@ -2960,6 +3046,80 @@ def api_secretariat_cnaps_pre_result(notification_id: str):
         call_label,
         meta={
             "type": "cnaps_pre_call_result",
+            "outcome": outcome,
+            "no_answer_count": no_answer_count,
+            "session_id": notification_meta.get("session_id"),
+            "trainee_id": notification_meta.get("trainee_id"),
+            "comment": comment,
+            "call_status": display,
+        },
+    )
+
+    save_data(data)
+    refreshed_payload = _secretariat_notifications_payload(data)
+    return jsonify({
+        "ok": True,
+        "done": bool(notification.get("done")),
+        "call_status": display,
+        "no_answer_count": no_answer_count,
+        **refreshed_payload,
+    })
+
+
+@app.post("/api/secretariat/notifications/financement_refuse/<notification_id>/call-result")
+@admin_login_required
+def api_secretariat_financement_refuse_result(notification_id: str):
+    payload = request.get_json(silent=True) or {}
+    outcome = (payload.get("outcome") or "").strip().upper()
+    comment = (payload.get("comment") or "").strip()
+    if outcome not in ("CALLED", "NO_ANSWER"):
+        return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+
+    data = load_data()
+    notification = next(
+        (item for item in data.get("notifications_financement_refuse", []) if item.get("id") == notification_id),
+        None,
+    )
+    if not notification:
+        return jsonify({"ok": False, "error": "notification_not_found"}), 404
+
+    notification_meta = notification.setdefault("meta", {})
+    previous_no_answer = _parse_no_answer_count(notification_meta.get("no_answer_count"))
+    if outcome == "NO_ANSWER":
+        no_answer_count = min(3, previous_no_answer + 1)
+        display = {
+            1: "1er appel pas de réponse",
+            2: "2ème appel pas de réponse",
+            3: "3ème appel pas de réponse",
+        }[no_answer_count]
+        notification["done"] = no_answer_count >= 3
+        notification["done_at"] = _now_iso() if notification.get("done") else ""
+    else:
+        no_answer_count = 0
+        display = "Personne jointe"
+        notification["done"] = True
+        notification["done_at"] = _now_iso()
+
+    notification_meta["call_status"] = display
+    notification_meta["no_answer_count"] = no_answer_count
+    if comment:
+        notification_meta["last_comment"] = comment
+
+    trainee_display_name = _format_trainee_name(
+        notification_meta.get("first_name", ""),
+        notification_meta.get("last_name", ""),
+    )
+    call_icon = "🟢" if outcome == "CALLED" else ({1: "🟡", 2: "🟠", 3: "🔴"}.get(no_answer_count, "🟡"))
+    call_label = (
+        f"{call_icon}Financement refusé France Travail {trainee_display_name} a été appelé"
+        if outcome == "CALLED"
+        else f"{call_icon}Financement refusé France Travail {trainee_display_name} {display}"
+    )
+    add_admin_notification(
+        data,
+        call_label,
+        meta={
+            "type": "financement_refuse_call_result",
             "outcome": outcome,
             "no_answer_count": no_answer_count,
             "session_id": notification_meta.get("session_id"),
