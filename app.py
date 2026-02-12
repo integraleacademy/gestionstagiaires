@@ -6116,13 +6116,13 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
             y, m, d = jury_date_iso.split("-")
             jury_date = f"{d}/{m}/{y}"
         html = mail_layout(f"""
-        <h2 style=\"margin:0 0 12px 0;color:#0f172a;\">📅 Votre date d'examen VAE</h2>
+        <h2 style=\"margin:0 0 12px 0;color:#0f172a;text-align:center;\">📅 Votre date d'examen VAE Dirigeant (DESP)</h2>
         <p>Bonjour <strong>{first_name}</strong>,</p>
         <p>Nous revenons vers vous concernant votre passage devant le jury de certification.</p>
         <p>Votre examen est planifié le <strong>{jury_date or 'DD/MM/YYYY'}</strong>.</p>
         <p>Nous vous communiquerons prochainement toutes les informations utiles : horaires, modalités de passage, documents à prévoir et consignes pratiques.</p>
         <p>En attendant, n'hésitez pas à consulter votre espace candidat pour suivre votre dossier.</p>
-        <p style=\"margin-top:18px;\"><a href=\"{space_url}\" style=\"{secondary_btn}\">Ouvrir mon espace candidat</a></p>
+        <p style=\"margin-top:18px;text-align:center;\"><a href=\"{space_url}\" style=\"{secondary_btn}\">Ouvrir mon espace candidat</a></p>
         """)
 
     if not subject:
