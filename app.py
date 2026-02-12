@@ -3270,6 +3270,80 @@ def api_secretariat_edof_result(notification_id: str):
     })
 
 
+@app.post("/api/secretariat/notifications/test_fr/<notification_id>/call-result")
+@admin_login_required
+def api_secretariat_test_fr_result(notification_id: str):
+    payload = request.get_json(silent=True) or {}
+    outcome = (payload.get("outcome") or "").strip().upper()
+    comment = (payload.get("comment") or "").strip()
+    if outcome not in ("CALLED", "NO_ANSWER"):
+        return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+
+    data = load_data()
+    notification = next(
+        (item for item in data.get("notifications_test_fr", []) if item.get("id") == notification_id),
+        None,
+    )
+    if not notification:
+        return jsonify({"ok": False, "error": "notification_not_found"}), 404
+
+    notification_meta = notification.setdefault("meta", {})
+    previous_no_answer = _parse_no_answer_count(notification_meta.get("no_answer_count"))
+    if outcome == "NO_ANSWER":
+        no_answer_count = min(3, previous_no_answer + 1)
+        display = {
+            1: "1er appel pas de réponse",
+            2: "2ème appel pas de réponse",
+            3: "3ème appel pas de réponse",
+        }[no_answer_count]
+        notification["done"] = no_answer_count >= 3
+        notification["done_at"] = _now_iso() if notification.get("done") else ""
+    else:
+        no_answer_count = 0
+        display = "Personne jointe"
+        notification["done"] = True
+        notification["done_at"] = _now_iso()
+
+    notification_meta["call_status"] = display
+    notification_meta["no_answer_count"] = no_answer_count
+    if comment:
+        notification_meta["last_comment"] = comment
+
+    trainee_display_name = _format_trainee_name(
+        notification_meta.get("first_name", ""),
+        notification_meta.get("last_name", ""),
+    )
+    call_icon = "🟢" if outcome == "CALLED" else ({1: "🟡", 2: "🟠", 3: "🔴"}.get(no_answer_count, "🟡"))
+    call_label = (
+        f"{call_icon}Test de français {trainee_display_name} - personne appelée"
+        if outcome == "CALLED"
+        else f"{call_icon}Test de français {trainee_display_name} - {display}"
+    )
+    add_admin_notification(
+        data,
+        call_label,
+        meta={
+            "type": "test_fr_call_result",
+            "outcome": outcome,
+            "no_answer_count": no_answer_count,
+            "session_id": notification_meta.get("session_id"),
+            "trainee_id": notification_meta.get("trainee_id"),
+            "comment": comment,
+            "call_status": display,
+        },
+    )
+
+    save_data(data)
+    refreshed_payload = _secretariat_notifications_payload(data)
+    return jsonify({
+        "ok": True,
+        "done": bool(notification.get("done")),
+        "call_status": display,
+        "no_answer_count": no_answer_count,
+        **refreshed_payload,
+    })
+
+
 @app.get("/admin/test-positionnement")
 @admin_login_required
 def admin_positioning_tests():
@@ -5400,6 +5474,7 @@ def admin_test_fr_relance(session_id: str, trainee_id: str):
             "trainee_id": t.get("id"),
             "first_name": t.get("first_name", ""),
             "last_name": t.get("last_name", ""),
+            "phone": t.get("phone", ""),
             "deadline": deadline,
         },
     )
@@ -5450,6 +5525,7 @@ def admin_test_fr_echec(session_id: str, trainee_id: str):
             "trainee_id": t.get("id"),
             "first_name": t.get("first_name", ""),
             "last_name": t.get("last_name", ""),
+            "phone": t.get("phone", ""),
             "deadline": deadline,
         },
     )
