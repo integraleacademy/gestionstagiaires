@@ -1718,6 +1718,35 @@ def dossier_is_complete(trainee: Dict[str, Any], training_type: str) -> bool:
 
     return True
 
+
+def required_docs_are_deposited(trainee: Dict[str, Any], training_type: str) -> bool:
+    """Vrai si tous les documents requis sont déposés (peu importe leur conformité)."""
+    docs = trainee.get("documents") or []
+    if not docs:
+        return False
+
+    by_key = {d.get("key"): d for d in docs if isinstance(d, dict)}
+    tt = (training_type or "").strip().upper()
+    no_permis = bool(trainee.get("no_permis"))
+
+    for rd in required_docs_for_training(training_type):
+        k = rd["key"]
+
+        if tt == "A3P" and k == "permis" and no_permis:
+            continue
+
+        d = by_key.get(k)
+        if not d:
+            return False
+
+        files = d.get("files") if isinstance(d.get("files"), list) else []
+        has_files = any(f for f in files)
+        has_file = bool((d.get("file") or "").strip())
+        if not (has_files or has_file):
+            return False
+
+    return True
+
     
 import re
 
@@ -6446,6 +6475,7 @@ def public_trainee_space(token):
         show_vae=show_vae,
         show_vtc=show_vtc,
         dossier_ok=dossier_is_complete_total(t, training_type),
+        vae_required_docs_deposited=required_docs_are_deposited(t, training_type),
     )
     
 
@@ -8841,6 +8871,9 @@ def _vae_create_and_redirect_for_trainee_token(trainee_token: str):
         data_main = load_data()
         s, t = find_session_and_trainee_by_token(data_main, trainee_token)
         if s and t:
+            training_type = _session_get(s, "training_type", "")
+            if not required_docs_are_deposited(t, training_type):
+                abort(403)
             linked_trainee_id = str(t.get('id') or '')
             linked_session_id = str(s.get('id') or '')
 
