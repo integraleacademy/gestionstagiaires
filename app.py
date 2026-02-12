@@ -6069,18 +6069,18 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
     elif status_key == "livret_1_validated":
         subject = "Livret 1 validé par la commission 🎉"
         html = mail_layout(f"""
-        <h2 style=\"margin:0 0 12px 0;color:#0f172a;\">Votre Livret 1 est validé 🥳</h2>
+        <h2 style=\"margin:0 0 12px 0;color:#0f172a;text-align:center;\">Votre Livret 1 est validé 🥳</h2>
         <p>Bonjour <strong>{first_name}</strong>,</p>
         <p>Nous avons le plaisir de vous informer que la commission a rendu un <strong>avis favorable</strong> à votre demande de VAE.</p>
         <p>Pour passer à l'étape suivante, nous devons organiser un rendez-vous téléphonique afin de :</p>
-        <ul>
+        <ul style=\"list-style:none;padding-left:0;margin:0;\">
           <li>1️⃣ Mettre en place le financement de votre VAE (versement de l'acompte),</li>
           <li>2️⃣ Finaliser et signer votre convention de VAE,</li>
           <li>3️⃣ Vous transmettre le cadre de travail pour la rédaction de votre Livret 2.</li>
         </ul>
-        <p style=\"margin:18px 0;\"><a href=\"{booking_url}\" style=\"{primary_btn}\">Réserver un RDV téléphonique</a></p>
+        <p style=\"margin:18px 0;text-align:center;\"><a href=\"{booking_url}\" style=\"{primary_btn}\">Réserver un RDV téléphonique</a></p>
         <p>Vous pouvez également récupérer votre <strong>attestation de recevabilité</strong> directement dans votre espace candidat :</p>
-        <p style=\"margin-top:10px;\"><a href=\"{space_url}\" style=\"{secondary_btn}\">Aller vers mon espace candidat</a></p>
+        <p style=\"margin-top:10px;text-align:center;\"><a href=\"{space_url}\" style=\"{secondary_btn}\">Aller vers mon espace candidat</a></p>
         <p style=\"margin-top:18px;\">Notre équipe reste disponible si vous souhaitez être accompagné(e) dans la préparation de votre Livret 2.</p>
         <p>Nous vous souhaitons une excellente journée.<br>L'équipe Intégrale Academy</p>
         """)
