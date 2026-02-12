@@ -3811,9 +3811,8 @@ def api_create_trainee(session_id: str):
             """)
 
             sms = (
-                f"Intégrale Academy 🚀 Bonjour {first_name}, votre VAE DESP commence aujourd'hui. "
-                "1) Livret 1 (30 min) 2) Étude + recevabilité 3) Livret 2 4) Étude 5) Jury 6) Certification. "
-                f"Pour démarrer votre VAE : {link} "
+                f"Intégrale Academy Bonjour {first_name}, votre VAE Dirigeant d'entreprise de sécurité (DESP) commence aujourd'hui 🚀. "
+                f"Pour démarrer votre VAE cliquez ici : {link} "
                 "Je reste à votre disposition. Clément VAILLANT - Intégrale Academy"
             )
 
