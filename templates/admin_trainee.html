@@ -183,7 +183,7 @@
           {% endif %}
 
           {% if trainee.access_sent_at %}
-            <span class="hint">✅ Accès envoyé le : <strong>{{ trainee.access_sent_at }}</strong></span>
+            <span class="hint">✅ Accès envoyé le : <strong>{{ trainee.access_sent_at|frdatetime }}</strong></span>
           {% endif %}
         </div>
         {% set cnaps_history = trainee.cnaps_history or [] %}
@@ -417,10 +417,10 @@
       </div>
 
       {% if trainee.test_fr_last_notified_at %}
-        <div class="hint" style="margin-top:10px;">🟧 Notifié le : <strong>{{ trainee.test_fr_last_notified_at }}</strong></div>
+        <div class="hint" style="margin-top:10px;">🟧 Notifié le : <strong>{{ trainee.test_fr_last_notified_at|frdatetime }}</strong></div>
       {% endif %}
       {% if trainee.test_fr_last_relance_at %}
-        <div class="hint">🟧 Relancé le : <strong>{{ trainee.test_fr_last_relance_at }}</strong></div>
+        <div class="hint">🟧 Relancé le : <strong>{{ trainee.test_fr_last_relance_at|frdatetime }}</strong></div>
       {% endif %}
     </div>
   {% endif %}
@@ -453,7 +453,7 @@
           </form>
         {% endif %}
         {% if trainee.convention_unsigned_notified_at %}
-          <div class="hint" style="margin-top:8px;">🟧 Notifié le : <strong>{{ trainee.convention_unsigned_notified_at }}</strong></div>
+          <div class="hint" style="margin-top:8px;">🟧 Notifié le : <strong>{{ trainee.convention_unsigned_notified_at|frdatetime }}</strong></div>
         {% endif %}
       </div>
 
@@ -672,7 +672,7 @@
             <div class="hint" style="margin-top:8px;">
               Statut : <strong>{{ it.status }}</strong>
               {% if it.done_outcome %} — <strong>{{ it.done_outcome }}</strong>{% endif %}
-              {% if it.done_at %} ({{ it.done_at }}){% endif %}
+              {% if it.done_at %} ({{ it.done_at|frdatetime }}){% endif %}
             </div>
           {% endif %}
         </div>
@@ -788,13 +788,13 @@
   </div>
 
     {% if trainee.docs_notified_at %}
-      <div class="hint" style="margin-top:10px;">🟧 Stagiaire notifié le : <strong>{{ trainee.docs_notified_at }}</strong></div>
+      <div class="hint" style="margin-top:10px;">🟧 Stagiaire notifié le : <strong>{{ trainee.docs_notified_at|frdatetime }}</strong></div>
     {% endif %}
     {% if trainee.docs_last_nonconform_notified_at %}
-      <div class="hint">🟧 Docs non conformes notifiés le : <strong>{{ trainee.docs_last_nonconform_notified_at }}</strong></div>
+      <div class="hint">🟧 Docs non conformes notifiés le : <strong>{{ trainee.docs_last_nonconform_notified_at|frdatetime }}</strong></div>
     {% endif %}
     {% if trainee.docs_last_relance_at %}
-      <div class="hint">🟧 Stagiaire relancé le : <strong>{{ trainee.docs_last_relance_at }}</strong></div>
+      <div class="hint">🟧 Stagiaire relancé le : <strong>{{ trainee.docs_last_relance_at|frdatetime }}</strong></div>
     {% endif %}
 
     <div class="table-wrap" style="margin-top:10px;">
