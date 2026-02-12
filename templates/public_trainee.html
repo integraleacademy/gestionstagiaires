@@ -1099,6 +1099,8 @@
           </div>
           {% if up in ["NON DÉPOSÉ", "NON DEPOSE", ""] and not candidate_sheet_saved %}
             <div class="doctag missing">📌 Complétez puis enregistrez votre fiche candidat avant l'envoi</div>
+          {% elif up in ["NON DÉPOSÉ", "NON DEPOSE", ""] and candidate_sheet_saved %}
+            <div class="muted" style="margin-top:8px;">📌 Cliquez sur « Envoyer ma fiche candidat » pour soumettre votre fiche au contrôle.</div>
           {% elif up == "CONFORME" %}
             <div class="doctag" style="margin-top:8px;border-color:#bbf7d0;color:#065f46;background:#fff;">✅ Document conforme</div>
           {% elif up == "NON CONFORME" %}
