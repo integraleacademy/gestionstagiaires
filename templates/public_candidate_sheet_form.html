@@ -34,9 +34,19 @@
     .footer-text{flex:1;text-align:center;font-size:8.7pt;line-height:1.25}
 
     @media print{
-      @page{size:A4;margin:8mm}
+      @page{size:A4;margin:6mm}
       body,.page{background:#fff;padding:0;margin:0;width:auto;min-height:auto}
+      .page{padding:6mm}
       .toolbar{display:none}
+      ul.lines li{font-size:10pt;line-height:1.2;margin:1.3mm 0}
+      .field{height:6mm;font-size:10pt;padding:.8mm 1.8mm}
+      .box{padding:2.4mm 3.2mm;margin-top:3mm}
+      .box h2{margin:0 0 1.4mm;font-size:12pt}
+      .section-title{margin:3.2mm 0 1.2mm;font-size:10.2pt}
+      .photo{height:44mm}
+      .footer{margin-top:3.5mm}
+      .footer img{width:16mm;height:16mm}
+      .footer-text{font-size:8pt;line-height:1.15}
       .field{appearance:none;-webkit-appearance:none;color:#000}
     }
   </style>
@@ -56,7 +66,7 @@
         <li>DATE D’ENTREE EN STAGE : <input class="field" style="min-width:102mm;" value="{{ candidate.date_entree_stage }}"></li>
         <li>SITUATION PROFESSIONNELLE : <input class="field" style="min-width:96mm;" value="{{ candidate.situation }}"></li>
         <li>NOM DE L’ENTREPRISE (si salarié ou employeur) : <input class="field" style="min-width:74mm;" value="{{ candidate.company }}"></li>
-        <li>FINANCEMENT : <input class="field" style="min-width:110mm;" value="{{ candidate.financing }}"></li>
+        <li>FINANCEMENT : <input class="field" style="min-width:110mm;" value=""></li>
         <li>ENTRETIEN REALISE PAR : <input class="field" style="min-width:103mm;" value="{{ candidate.interviewer }}"></li>
       </ul>
       <div class="photo">{% if photo_url %}<img src="{{ photo_url }}" alt="Photo candidat">{% else %}🖼️{% endif %}</div>
@@ -74,7 +84,7 @@
         <li>Né(e) le : <input class="field" style="min-width:38mm;" value="{{ candidate.birth_date }}"> A : <input class="field" style="min-width:38mm;" value="{{ candidate.birth_city }}"> Département : <input class="field" style="min-width:41mm;" value="{{ candidate.department }}"></li>
         <li>Pays : <input class="field" style="min-width:50mm;" value="{{ candidate.country }}"> Nationalité : <input class="field" style="min-width:82mm;" value="{{ candidate.nationality }}"></li>
         <li>Personne à contacter en cas d’urgence (Nom et numéro de téléphone) : <input class="field" style="min-width:155mm;" value="{{ candidate.emergency_contact }}"></li>
-        <li>Numéro de votre carte professionnelle (CNAPS) : <input class="field" style="min-width:101mm;" value="{{ candidate.cnaps_number }}"></li>
+        <li>Numéro de votre carte professionnelle (CNAPS) : <input class="field" style="min-width:101mm;" value=""></li>
       </ul>
     </div>
 
