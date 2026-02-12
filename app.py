@@ -6051,20 +6051,19 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
     booking_url = "https://calendly.com/integraleacademy/dirigeant"
 
     if status_key == "livret_1_analysis":
-        subject = "VAE : Livret 1 bien reçu"
+        subject = "Réception de votre Livret 1✅"
         html = mail_layout(f"""
-        <h2 style=\"margin:0 0 12px 0;color:#0f172a;\">✅ Réception de votre Livret 1</h2>
+        <h2 style="margin:0 0 12px 0;color:#0f172a;text-align:center;">✅ Réception de votre Livret 1</h2>
         <p>Bonjour <strong>{first_name}</strong>,</p>
-        <p>Nous avons bien reçu votre <strong>Livret 1</strong>. Merci pour votre envoi.</p>
+        <p>Nous vous informons que nous avons bien reçu votre Livret 1 dans le cadre de votre VAE Dirigeant d'entreprise de sécurité privée (DESP).</p>
         <p>Votre dossier de faisabilité est désormais transmis à la commission pour étude. Cette étape permet de vérifier la conformité de votre demande et l'adéquation de votre expérience avec le référentiel de la certification visée.</p>
         <p>Notre équipe reviendra vers vous dès que l'analyse sera finalisée. Si votre dossier est recevable, vous recevrez :</p>
-        <ul>
-          <li>votre <strong>attestation de recevabilité</strong>,</li>
-          <li>les consignes pour démarrer la rédaction du <strong>Livret 2</strong>,</li>
-          <li>la suite de votre parcours VAE étape par étape.</li>
-        </ul>
+        <p>1️⃣ votre attestation de recevabilité,<br>
+        2️⃣ les consignes pour démarrer la rédaction du Livret 2,<br>
+        3️⃣ la suite de votre parcours VAE étape par étape.</p>
         <p>En attendant, vous pouvez continuer à consulter votre espace candidat pour suivre l'avancement de votre dossier.</p>
-        <p style=\"margin-top:18px;\"><a href=\"{space_url}\" style=\"{secondary_btn}\">Accéder à mon espace candidat</a></p>
+        <p style="margin-top:18px;text-align:center;"><a href="{space_url}" style="{secondary_btn}">Accéder à mon espace candidat</a></p>
+        <p>Nous vous souhaitons une bonne journée et nous restons à votre disposition, la Team Intégrale Academy</p>
         """)
     elif status_key == "livret_1_validated":
         subject = "Livret 1 validé par la commission 🎉"
