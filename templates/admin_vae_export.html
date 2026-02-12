@@ -4,42 +4,51 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Dossier de faisabilité VAE — {{ dossier.id }}</title>
-  <link rel="stylesheet" href="/static/css/vae.css">
   <style>
-    body{margin:0;background:#f3f4f6;color:#0f172a;font-family:Inter,"Segoe UI",Arial,sans-serif}
-    .print-toolbar{position:sticky;top:0;z-index:20;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#111827;color:#fff}
-    .print-toolbar .btn{padding:8px 12px}
-    .export-wrap{max-width:1180px;margin:18px auto;padding:0 12px}
-    .export-step{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:20px;margin-bottom:16px;page-break-after:always}
-    .export-step:last-child{page-break-after:auto}
-    .export-step h2{margin-top:0}
-    .field-label{font-weight:600;margin:8px 0 4px;display:block}
-    .print-value{width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;background:#fff;min-height:42px}
-    .print-value.multiline{min-height:90px;white-space:pre-wrap}
-    .kv{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .choice-list{display:grid;gap:8px}
-    .choice{display:flex;align-items:flex-start;gap:8px;border:1px solid #e5e7eb;border-radius:10px;padding:10px;background:#fff}
-    .choice .dot{width:16px;height:16px;border-radius:3px;border:1px solid #9ca3af;display:inline-flex;align-items:center;justify-content:center;font-size:12px;line-height:1}
-    .choice.checked .dot{background:#1f8f4a;color:#fff;border-color:#1f8f4a}
+    :root{
+      --blue:#1f4e84;
+      --line:#1f2937;
+      --light:#dfe6f8;
+    }
+    body{margin:0;background:#ececec;color:#000;font-family:"Times New Roman", Times, serif;font-size:12px;line-height:1.35}
+    .toolbar{position:sticky;top:0;z-index:30;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#111827;color:#fff}
+    .toolbar button{font-size:12px;padding:8px 12px}
+    .wrap{max-width:980px;margin:14px auto 20px;padding:0 8px}
+    .page{background:#fff;width:210mm;min-height:297mm;margin:0 auto 12px;padding:14mm 14mm 16mm;border:1px solid #d1d5db;box-sizing:border-box;page-break-after:always}
+    .page:last-child{page-break-after:auto}
 
-    .competence-card{border:1px solid #cbd5e1;border-radius:18px;padding:16px 18px;margin:12px 0;background:#fff}
-    .competence-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-    .competence-title{font-size:38px;font-weight:700;color:#0f2b4d;margin:0}
-    .comp-label{font-size:22px;color:#64748b;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
-    .comp-status{font-size:22px;font-weight:700;color:#083344}
-    .comp-value{font-size:44px;line-height:1.2;color:#0f2b4d;margin-top:6px}
-    .obs-box{border:3px dashed #cbd5e1;border-radius:20px;min-height:220px;padding:20px;margin-top:20px}
-    .obs-box .label{font-size:36px;color:#64748b}
+    .logo{width:58px;height:58px;object-fit:contain;margin-bottom:8px}
+    h1{font-size:48px;line-height:1.2;text-align:center;color:var(--blue);margin:8px 0 14px;font-weight:500}
+    h2{font-size:34px;line-height:1.2;color:var(--blue);margin:20px 0 4px;text-transform:uppercase}
+    h3{font-size:26px;line-height:1.2;color:var(--blue);margin:18px 0 6px}
+    .subline{border-top:2px solid #2f5f93;padding-top:10px;margin-bottom:14px}
+    .info-note{font-size:12px;margin-bottom:14px}
+    .italic{font-style:italic}
+    .underline{text-decoration:underline}
 
-    .cover h1{font-size:40px;margin:0 0 6px}
-    .cover .muted{font-size:20px}
+    .box{border:1px solid var(--line);padding:8px;margin:10px 0}
+    .line{display:grid;grid-template-columns:235px 1fr;align-items:stretch;border-bottom:1px solid #cbd5e1}
+    .line:last-child{border-bottom:none}
+    .label{padding:8px 8px 8px 4px;font-weight:700}
+    .value{padding:8px;min-height:20px;background:var(--light)}
+    .value.white{background:#fff}
+    .muted{color:#111}
+    .check{font-family:Arial,sans-serif}
+
+    .twocol{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .spacer{height:14px}
+
+    .tbl{width:100%;border-collapse:collapse;margin:10px 0}
+    .tbl th,.tbl td{border:1px solid #111827;vertical-align:top;padding:6px}
+    .tbl th{background:#436799;color:#fff;font-size:12px;text-transform:uppercase}
+    .activity-title{font-size:24px;color:var(--blue);font-weight:700;margin:10px 0 6px}
+    .small{font-size:11px}
 
     @media print{
       body{background:#fff}
-      .print-toolbar{display:none!important}
-      .export-wrap{max-width:none;margin:0;padding:0}
-      .export-step{border:0;border-radius:0;margin:0;padding:12mm 10mm;box-shadow:none;min-height:297mm}
-      .print-value{break-inside:avoid}
+      .toolbar{display:none!important}
+      .wrap{max-width:none;margin:0;padding:0}
+      .page{border:0;margin:0;min-height:297mm}
     }
   </style>
 </head>
@@ -51,193 +60,183 @@
   {% set engagement = dossier.engagement or {} %}
   {% set experiences = dossier.experiences or [] %}
   {% set blocs = dossier.blocs_competences or {} %}
+  {% set activity_labels = {
+      'activite1': "Cadrage du projet de création ou de reprise d’entreprise de sécurité privée",
+      'activite2': "Sécurisation et conformité des règles, principes et normes",
+      'activite3': "Gestion financière, juridique et administrative",
+      'activite4': "Gestion marketing et commerciale",
+      'activite5': "Constitution, management et pilotage d’une équipe"
+    }
+  %}
 
-  <div class="print-toolbar">
-    <div>Version conforme au formulaire en ligne (étapes et intitulés). Imprimer → Enregistrer en PDF.</div>
-    <button type="button" class="btn" onclick="window.print()">Imprimer / PDF</button>
+  <div class="toolbar">
+    <div>Export dossier de faisabilité (mise en page printable conforme au modèle certificateur).</div>
+    <button type="button" onclick="window.print()">Imprimer / Télécharger PDF</button>
   </div>
 
-  <main class="export-wrap">
-    <section class="export-step cover">
-      <h1>VAE DESP – Dossier de faisabilité</h1>
-      <div class="muted">RNCP 40385</div>
-      <p><strong>ID dossier :</strong> {{ dossier.id }}</p>
-      <p><strong>Statut :</strong> {{ dossier.statut_dossier or '—' }}</p>
-      <p><strong>Créé le :</strong> {{ dossier.created_at or '—' }}</p>
-      <p><strong>Mis à jour le :</strong> {{ dossier.updated_at or '—' }}</p>
+  <main class="wrap">
+    <section class="page">
+      <img class="logo" src="/static/logo-integrale.png" alt="Logo">
+      <h1>Dossier de faisabilité – Validation des<br>acquis de l’expérience (VAE)</h1>
+      <div class="subline info-note"><strong>Modèle proposé par l’organisme certificateur conformément au décret n° 2025-663 du 18 juillet 2025</strong> <span class="italic">(dossier de faisabilité : anciennement nommé livret 1 ou cerfa de recevabilité).</span></div>
+
+      <h2>NATURE DE LA DEMANDE</h2>
+      <div class="box">
+        <div><span class="check">{{ '☑' if dossier.nature_demande == 'initiale' else '☐' }}</span> Demande initiale de recevabilité</div>
+        <div><span class="check">{{ '☑' if dossier.nature_demande != 'initiale' else '☐' }}</span> Demande de renouvellement d’une recevabilité déjà obtenue</div>
+      </div>
+
+      <h2>1. INFORMATIONS GÉNÉRALES SUR LE CANDIDAT</h2>
+      <p class="italic underline">À compléter par la personne chargée de l’accompagnement ou du candidat seul s’il n’est pas accompagné.</p>
+
+      <div class="line"><div class="label">Nom de naissance :</div><div class="value">{{ candidat.nom_naissance or '' }}</div></div>
+      <div class="line"><div class="label">Nom d’usage :</div><div class="value">{{ candidat.nom_usage or '' }}</div></div>
+      <div class="line"><div class="label">Prénom(s) :</div><div class="value">{{ candidat.prenoms or '' }}</div></div>
+      <div class="line"><div class="label">Date de naissance :</div><div class="value">{{ candidat.date_naissance or '' }}</div></div>
+      <div class="line"><div class="label">Nationalité :</div><div class="value">{{ candidat.nationalite or '' }}</div></div>
+      <div class="line"><div class="label">Genre :</div><div class="value">{{ candidat.genre or '' }}</div></div>
+      <div class="line"><div class="label">Niveau de formation le plus élevé :</div><div class="value">{{ candidat.niveau_formation or '' }}</div></div>
+      <div class="line"><div class="label">Niveau de certification la plus élevée :</div><div class="value">{{ candidat.niveau_certification or '' }}</div></div>
+      <div class="line"><div class="label">Intitulé des certifications obtenues :</div><div class="value">{{ candidat.certifications_obtenues or '' }}</div></div>
+      <div class="line"><div class="label">Adresse postale :</div><div class="value">{{ candidat.adresse or '' }}</div></div>
+      <div class="line"><div class="label">Téléphone :</div><div class="value">{{ candidat.telephone or '' }}</div></div>
+      <div class="line"><div class="label">Adresse email :</div><div class="value">{{ candidat.email or '' }}</div></div>
     </section>
 
-    <section class="export-step">
-      <h2>Nature de la demande</h2>
-      <label class="field-label">Nature de la demande</label>
-      <div class="print-value">{{ dossier.nature_demande or '—' }}</div>
+    <section class="page">
+      <img class="logo" src="/static/logo-integrale.png" alt="Logo">
+      <h2>STATUT DU CANDIDAT</h2>
+      {% set status_options = ['Salarié du secteur privé','Fonctionnaire et agent public','Bénévole','Aidant familial','Aidant familial Agricole','Demandeur d’emploi','Travailleur non salarié','Retraité','Titulaire d’un mandat électif'] %}
+      {% for s in status_options %}
+        <div><span class="check">{{ '☑' if candidat.statut == s else '☐' }}</span> {{ s }}</div>
+      {% endfor %}
+      <div class="line"><div class="label">Convention collective employeur :</div><div class="value">{{ candidat.convention_collective or '' }}</div></div>
+
+      <h2>OBJECTIFS DU CANDIDAT</h2>
+      {% set objectifs = candidat.objectifs or [] %}
+      {% set objectif_options = ['Trouver plus facilement un emploi','Faire reconnaître officiellement ses compétences','Être reconnu dans sa profession','Obtenir un meilleur salaire','Se réorienter','Se maintenir ou évoluer dans son emploi','Confirmer ses acquis métier'] %}
+      {% for o in objectif_options %}
+        <div><span class="check">{{ '☑' if o in objectifs else '☐' }}</span> {{ o }}</div>
+      {% endfor %}
+
+      <h2>2. CERTIFICATION PROFESSIONNELLE VISÉE</h2>
+      <p class="italic underline">À compléter par la personne chargée de l’accompagnement ou du candidat seul s’il n’est pas accompagné.</p>
+      <p><strong>Intitulé exact de la certification :</strong> {{ certification.intitule or '' }}</p>
+      <p><strong>Code RNCP :</strong> {{ certification.rncp or '' }}</p>
+      <p><strong>Certificateur(s) :</strong> {{ certification.certificateur or '' }}</p>
+      <p><strong>Option :</strong> {{ certification.option or '' }}</p>
+      <p><strong>Parcours/mention/spécialité :</strong> {{ certification.parcours_mention or '' }}</p>
+      <p><strong>Le candidat vise :</strong></p>
+      <div><span class="check">{{ '☑' if certification.vise == 'complete' else '☐' }}</span> La certification professionnelle dans son intégralité</div>
+      <div><span class="check">{{ '☑' if certification.vise == 'blocs' else '☐' }}</span> Un ou plusieurs bloc(s) de compétences</div>
+      <p><strong>Blocs visés :</strong> {{ (certification.blocs_vises or [])|join(', ') }}</p>
+      <p><strong>Liste des prérequis réglementaires :</strong> {{ certification.prerequis or '' }}</p>
     </section>
 
-    <section class="export-step">
-      <h2>1ère étape : INFORMATIONS GÉNÉRALES SUR LE CANDIDAT</h2>
-      <div class="kv">
-        <div><label class="field-label">Nom de naissance*</label><div class="print-value">{{ candidat.nom_naissance or '—' }}</div></div>
-        <div><label class="field-label">Nom d'usage</label><div class="print-value">{{ candidat.nom_usage or '—' }}</div></div>
-        <div><label class="field-label">Prénom(s) (tous les prénoms)*</label><div class="print-value">{{ candidat.prenoms or '—' }}</div></div>
-        <div><label class="field-label">Date de naissance*</label><div class="print-value">{{ candidat.date_naissance or '—' }}</div></div>
-        <div><label class="field-label">Nationalité</label><div class="print-value">{{ candidat.nationalite or '—' }}</div></div>
-        <div><label class="field-label">Genre</label><div class="print-value">{{ candidat.genre or '—' }}</div></div>
-        <div><label class="field-label">Niveau de formation le plus élevé</label><div class="print-value">{{ candidat.niveau_formation or '—' }}</div></div>
-        <div><label class="field-label">Niveau de certification la plus élevée</label><div class="print-value">{{ candidat.niveau_certification or '—' }}</div></div>
-      </div>
-      <label class="field-label">Intitulé des certifications obtenues</label><div class="print-value">{{ candidat.certifications_obtenues or '—' }}</div>
-      <label class="field-label">Adresse postale (adresse, code postal, ville, pays)</label><div class="print-value">{{ candidat.adresse or '—' }}</div>
-      <div class="kv">
-        <div><label class="field-label">Téléphone</label><div class="print-value">{{ candidat.telephone or '—' }}</div></div>
-        <div><label class="field-label">Adresse email*</label><div class="print-value">{{ candidat.email or '—' }}</div></div>
-      </div>
-
-      <h3>Statut du candidat</h3>
-      {% set statuts = [
-        ("salarie_prive", "Salarié du secteur privé"),
-        ("fonctionnaire_agent_public", "Fonctionnaire et agent public"),
-        ("benevole", "Bénévole"),
-        ("aidant_familial", "Aidant familial"),
-        ("aidant_familial_agricole", "Aidant familial agricole"),
-        ("demandeur_emploi", "Demandeur d'emploi"),
-        ("travailleur_non_salarie", "Travailleur non salarié"),
-        ("retraite", "Retraité"),
-        ("mandat_electif", "Titulaire d'un mandat électif (électoral ou syndical)")
-      ] %}
-      <div class="choice-list">
-        {% for value, label in statuts %}
-          <div class="choice {% if candidat.statut==value %}checked{% endif %}"><span class="dot">{% if candidat.statut==value %}✓{% endif %}</span><span>{{ label }}</span></div>
-        {% endfor %}
-      </div>
-
-      <label class="field-label">Identification de la convention collective de l’employeur (le cas échéant)</label><div class="print-value">{{ candidat.convention_collective or '—' }}</div>
-
-      <h3>Objectifs du candidat</h3>
-      {% set objectifs = [
-        ("trouver_emploi", "Trouver plus facilement un emploi"),
-        ("faire_reconnaitre_competences", "Faire reconnaître officiellement ses compétences"),
-        ("etre_reconnu_profession", "Être reconnu dans sa profession"),
-        ("obtenir_meilleur_salaire", "Obtenir un meilleur salaire"),
-        ("se_reorienter", "Se réorienter"),
-        ("se_maintenir_evoluer", "Se maintenir ou évoluer dans son emploi"),
-        ("confirmer_acquis_metier", "Confirmer ses acquis métier")
-      ] %}
-      <div class="choice-list">
-        {% for value, label in objectifs %}
-          <div class="choice {% if value in (candidat.objectifs or []) %}checked{% endif %}"><span class="dot">{% if value in (candidat.objectifs or []) %}✓{% endif %}</span><span>{{ label }}</span></div>
-        {% endfor %}
-      </div>
-    </section>
-
-    <section class="export-step">
-      <h2>2ème étape : CERTIFICATION PROFESSIONNELLE VISÉE</h2>
-      <div class="kv">
-        <div><label class="field-label">Intitulé de la certification</label><div class="print-value">{{ certification.intitule or '—' }}</div></div>
-        <div><label class="field-label">RNCP</label><div class="print-value">{{ certification.rncp or '—' }}</div></div>
-        <div><label class="field-label">Certificateur</label><div class="print-value">{{ certification.certificateur or '—' }}</div></div>
-        <div><label class="field-label">Parcours / mention / option</label><div class="print-value">{{ certification.parcours_mention or certification.option or '—' }}</div></div>
-        <div><label class="field-label">Prérequis</label><div class="print-value">{{ certification.prerequis or '—' }}</div></div>
-        <div><label class="field-label">Certification visée</label><div class="print-value">{{ certification.vise or '—' }}</div></div>
-      </div>
-      <label class="field-label">Blocs visés</label>
-      <div class="print-value">{{ (certification.blocs_vises or [])|join(', ') if certification.blocs_vises else '—' }}</div>
-    </section>
-
-    <section class="export-step">
-      <h2>3ème étape : EXPÉRIENCES EN RAPPORT AVEC LA CERTIFICATION VISÉE</h2>
-      {% for exp in experiences %}
-        <div class="card">
-          <div class="kv">
-            <div><label class="field-label">Date de début</label><div class="print-value">{{ exp.date_debut or '—' }}</div></div>
-            <div><label class="field-label">Durée</label><div class="print-value">{{ exp.duree or '—' }}</div></div>
-          </div>
-          <label class="field-label">Description de l'expérience</label>
-          <div class="print-value multiline">{{ exp.description or '—' }}</div>
-        </div>
-      {% else %}
-        <div class="print-value">Aucune expérience renseignée.</div>
+    <section class="page">
+      <img class="logo" src="/static/logo-integrale.png" alt="Logo">
+      <h2>3. TABLEAU DES EXPÉRIENCES PROFESSIONNELLES OU PERSONNELLES</h2>
+      <p class="italic underline">À compléter par la personne chargée de l’accompagnement ou du candidat seul s’il n’est pas accompagné.</p>
+      <p>Le tableau ci-dessous permet au certificateur de connaître les expériences du candidat en lien direct avec la certification visée.</p>
+      {% for exp in experiences[:3] %}
+        <table class="tbl">
+          <tr><th colspan="2">{{ loop.index }} - Expérience déclarée</th></tr>
+          <tr><td style="width:42%"><strong>Date de début *</strong></td><td class="value">{{ exp.date_debut or '' }}</td></tr>
+          <tr><td><strong>Durée *</strong></td><td class="value">{{ exp.duree or '' }}</td></tr>
+          <tr><td><strong>Description de l'expérience/de la mission *</strong></td><td class="value" style="min-height:70px">{{ exp.description or '' }}</td></tr>
+        </table>
       {% endfor %}
     </section>
 
-    {% for i in range(1,6) %}
-      {% set act = blocs.get('activite' ~ i, {}) %}
-      <section class="export-step">
-        <h2 class="competence-title">5. Positionnement par compétences — Activité {{ i }}</h2>
-        {% for j in range(1,5) %}
-          {% set comp = act.get('competence' ~ j, {}) if act else {} %}
-          <article class="competence-card">
-            <div class="competence-head">
-              <div class="comp-label">COMPÉTENCE {{ j }}</div>
-              <div class="comp-status">Statut: {{ comp.statut or '—' }}</div>
-            </div>
-            <div class="comp-value">{{ comp.intitule or '—' }}</div>
-          </article>
-        {% endfor %}
-        <div class="obs-box"><div class="label">OBSERVATIONS JURY / ACCOMPAGNATEUR</div></div>
+    <section class="page">
+      <img class="logo" src="/static/logo-integrale.png" alt="Logo">
+      <h2>3. TABLEAU DES EXPÉRIENCES (SUITE)</h2>
+      {% for exp in experiences[3:] %}
+        <table class="tbl">
+          <tr><th colspan="2">{{ loop.index + 3 }} - Expérience déclarée</th></tr>
+          <tr><td style="width:42%"><strong>Date de début *</strong></td><td class="value">{{ exp.date_debut or '' }}</td></tr>
+          <tr><td><strong>Durée *</strong></td><td class="value">{{ exp.duree or '' }}</td></tr>
+          <tr><td><strong>Description de l'expérience/de la mission *</strong></td><td class="value" style="min-height:70px">{{ exp.description or '' }}</td></tr>
+        </table>
+      {% endfor %}
+    </section>
+
+    {% for i in range(1, 6) %}
+      {% set activity_key = "activite" ~ i %}
+      {% set activity = blocs.get(activity_key, {}) %}
+      <section class="page">
+        <img class="logo" src="/static/logo-integrale.png" alt="Logo">
+        <h2>4. TABLEAU DE POSITIONNEMENT PAR COMPÉTENCES</h2>
+        <div class="activity-title">{{ activity_key|replace('activite', 'Activité ') }} — {{ activity_labels.get(activity_key, '') }}</div>
+        <table class="tbl">
+          <tr>
+            <th style="width:52%">LISTE DES COMPÉTENCES</th>
+            <th>ACTIVITÉ (OUI/NON/PARTIELLEMENT)</th>
+          </tr>
+          {% for idx in range(1, 5) %}
+            {% set comp = activity.get('competence' ~ idx, {}) %}
+            <tr>
+              <td>{{ comp.intitule or '' }}</td>
+              <td>{{ comp.statut or '' }}</td>
+            </tr>
+          {% endfor %}
+          <tr>
+            <td><strong>Commentaires :</strong></td>
+            <td class="value white"></td>
+          </tr>
+        </table>
       </section>
     {% endfor %}
 
-    <section class="export-step">
-      <h2>5ème étape : Parcours prévisionnel du candidat</h2>
-      <p><strong><em>Cette rubrique est complétée uniquement par l'accompagnateur. Le candidat ne peut pas la modifier.</em></strong></p>
-      <div class="kv">
-        <div><label class="field-label">Accompagnement individuel (nombre d'heures proposées)</label><div class="print-value">{{ (parcours.accompagnement_individuel or {}).heures or '—' }}</div></div>
-        <div><label class="field-label">Accompagnement collectif (nombre d'heures proposées)</label><div class="print-value">{{ (parcours.accompagnement_collectif or {}).heures or '—' }}</div></div>
-        <div><label class="field-label">Accompagnement individuel (modalités de mise en œuvre)</label><div class="print-value multiline">{{ (parcours.accompagnement_individuel or {}).modalites or '—' }}</div></div>
-        <div><label class="field-label">Accompagnement collectif (modalités de mise en œuvre)</label><div class="print-value multiline">{{ (parcours.accompagnement_collectif or {}).modalites or '—' }}</div></div>
-      </div>
+    <section class="page">
+      <img class="logo" src="/static/logo-integrale.png" alt="Logo">
+      <h2>5. PARCOURS PRÉVISIONNEL DU CANDIDAT</h2>
+      <p class="italic"><strong>Les informations ci-dessous sont à compléter par l'accompagnateur lorsque le candidat est accompagné.</strong></p>
+      <div class="line"><div class="label">Accompagnement individuel (heures) :</div><div class="value">{{ (parcours.accompagnement_individuel or {}).heures or '' }}</div></div>
+      <div class="line"><div class="label">Accompagnement individuel (modalités) :</div><div class="value">{{ (parcours.accompagnement_individuel or {}).modalites or '' }}</div></div>
+      <div class="line"><div class="label">Accompagnement collectif (heures) :</div><div class="value">{{ (parcours.accompagnement_collectif or {}).heures or '' }}</div></div>
+      <div class="line"><div class="label">Accompagnement collectif (modalités) :</div><div class="value">{{ (parcours.accompagnement_collectif or {}).modalites or '' }}</div></div>
+
       <h3>Formations préalables à envisager</h3>
-      <div class="kv">
-        <div><label class="field-label">Organisme de formation retenu</label><div class="print-value">{{ (parcours.formations_prealables or {}).organisme or '—' }}</div></div>
-        <div><label class="field-label">Intitulé de la formation</label><div class="print-value">{{ (parcours.formations_prealables or {}).intitule or '—' }}</div></div>
-        <div><label class="field-label">Objectif(s) de la formation</label><div class="print-value">{{ (parcours.formations_prealables or {}).objectifs or '—' }}</div></div>
-        <div><label class="field-label">Nombre d'heures</label><div class="print-value">{{ (parcours.formations_prealables or {}).heures or '—' }}</div></div>
-      </div>
+      <div class="line"><div class="label">Organisme de formation retenu :</div><div class="value">{{ (parcours.formations_prealables or {}).organisme or '' }}</div></div>
+      <div class="line"><div class="label">Intitulé de la formation :</div><div class="value">{{ (parcours.formations_prealables or {}).intitule or '' }}</div></div>
+      <div class="line"><div class="label">Objectif(s) de la formation :</div><div class="value">{{ (parcours.formations_prealables or {}).objectifs or '' }}</div></div>
+      <div class="line"><div class="label">Nombre d'heures :</div><div class="value">{{ (parcours.formations_prealables or {}).heures or '' }}</div></div>
+
       <h3>Expérimentations complémentaires</h3>
-      <div class="kv">
-        <div><label class="field-label">Type d'immersion</label><div class="print-value">{{ (parcours.immersion or {}).type or '—' }}</div></div>
-        <div><label class="field-label">Type d'entreprise ou de structure</label><div class="print-value">{{ (parcours.immersion or {}).structure or '—' }}</div></div>
-        <div><label class="field-label">Objectif(s) de l'immersion</label><div class="print-value">{{ (parcours.immersion or {}).objectifs or '—' }}</div></div>
-        <div><label class="field-label">Nombre d'heures</label><div class="print-value">{{ (parcours.immersion or {}).heures or '—' }}</div></div>
-      </div>
-      <label class="field-label">Autres actions à l’initiative du candidat</label>
-      <div class="print-value multiline">{{ parcours.autres_actions or '—' }}</div>
+      <div class="line"><div class="label">Type d'immersion :</div><div class="value">{{ (parcours.immersion or {}).type or '' }}</div></div>
+      <div class="line"><div class="label">Type de structure :</div><div class="value">{{ (parcours.immersion or {}).structure or '' }}</div></div>
+      <div class="line"><div class="label">Objectif(s) immersion :</div><div class="value">{{ (parcours.immersion or {}).objectifs or '' }}</div></div>
+      <div class="line"><div class="label">Nombre d'heures :</div><div class="value">{{ (parcours.immersion or {}).heures or '' }}</div></div>
+      <div class="line"><div class="label">Autres actions à l’initiative du candidat :</div><div class="value">{{ parcours.autres_actions or '' }}</div></div>
     </section>
 
-    <section class="export-step">
-      <h2>6ème étape : Formulaire d’avis de faisabilité</h2>
-      <p><strong><em>Ce formulaire est à compléter uniquement par l'accompagnateur lorsque le candidat est accompagné.</em></strong></p>
-      {% set decisions = [("faisable","Faisable"),("faisable_complements","Faisable avec compléments"),("non_faisable","Non faisable")] %}
-      <div class="choice-list">
-        {% for value, label in decisions %}
-          <div class="choice {% if avis.decision==value %}checked{% endif %}"><span class="dot">{% if avis.decision==value %}✓{% endif %}</span><span>{{ label }}</span></div>
-        {% endfor %}
+    <section class="page">
+      <img class="logo" src="/static/logo-integrale.png" alt="Logo">
+      <h2>6. FORMULAIRE D’AVIS DE FAISABILITÉ</h2>
+      <p class="italic"><strong>Ce formulaire est à compléter uniquement par l’accompagnateur lorsque le candidat est accompagné.</strong></p>
+      <div class="box">
+        <div><span class="check">{{ '☑' if avis.decision == 'faisable' else '☐' }}</span> Faisable</div>
+        <div><span class="check">{{ '☑' if avis.decision == 'faisable_complements' else '☐' }}</span> Faisable avec compléments</div>
+        <div><span class="check">{{ '☑' if avis.decision == 'non_faisable' else '☐' }}</span> Non faisable</div>
       </div>
-      <label class="field-label">Motivation de l’avis et des préconisations éventuelles</label>
-      <div class="print-value multiline">{{ avis.motivation or '—' }}</div>
-      <div class="kv">
-        <div><label class="field-label">Nom et prénom et fonction</label><div class="print-value">{{ avis.nom_accompagnateur or '—' }}</div></div>
-        <div><label class="field-label">Email</label><div class="print-value">{{ avis.email or '—' }}</div></div>
-        <div><label class="field-label">Téléphone</label><div class="print-value">{{ avis.telephone or '—' }}</div></div>
-        <div><label class="field-label">Raison sociale de l’organisme d’accompagnement</label><div class="print-value">{{ avis.organisme or '—' }}</div></div>
-      </div>
-      <label class="field-label">Date</label><div class="print-value">{{ avis.date or '—' }}</div>
-    </section>
+      <div class="line"><div class="label">Motivation de l’avis :</div><div class="value">{{ avis.motivation or '' }}</div></div>
+      <div class="line"><div class="label">Nom, prénom et fonction :</div><div class="value">{{ avis.nom_accompagnateur or '' }}</div></div>
+      <div class="line"><div class="label">Courriel :</div><div class="value">{{ avis.email or '' }}</div></div>
+      <div class="line"><div class="label">Coordonnées téléphoniques :</div><div class="value">{{ avis.telephone or '' }}</div></div>
+      <div class="line"><div class="label">Organisme d’accompagnement :</div><div class="value">{{ avis.organisme or '' }}</div></div>
+      <div class="line"><div class="label">Date :</div><div class="value">{{ avis.date or '' }}</div></div>
 
-    <section class="export-step">
-      <h2>7ème étape : Accord pour l'analyse de la faisabilité</h2>
-      <label class="field-label">Commentaires du candidat lorsque l’avis est défavorable</label>
-      <div class="print-value multiline">{{ engagement.commentaires_defavorable or '—' }}</div>
-      <h3>ENGAGEMENT DU CANDIDAT/DE LA CANDIDATE À SUIVRE CE PARCOURS</h3>
-      <div class="choice-list">
-        <div class="choice {% if engagement.souhaite_accompagnement %}checked{% endif %}"><span class="dot">{% if engagement.souhaite_accompagnement %}✓{% endif %}</span><span>Je souhaite un accompagnement</span></div>
-        <div class="choice {% if engagement.accord_analyse %}checked{% endif %}"><span class="dot">{% if engagement.accord_analyse %}✓{% endif %}</span><span>J'accepte l'analyse de mon dossier*</span></div>
-      </div>
-      <div class="kv">
-        <div><label class="field-label">Lieu</label><div class="print-value">{{ engagement.lieu_signature or '—' }}</div></div>
-        <div><label class="field-label">Date</label><div class="print-value">{{ engagement.date_signature or '—' }}</div></div>
-      </div>
-      <label class="field-label">Nom de signature</label><div class="print-value">{{ engagement.nom_signature or '—' }}</div>
+      <h2>7. ACCORD POUR L’ANALYSE DE LA FAISABILITÉ</h2>
+      <p class="italic"><strong>À signer par le candidat.</strong></p>
+      <div class="line"><div class="label">Commentaires du candidat si avis défavorable :</div><div class="value">{{ engagement.commentaires_defavorable or '' }}</div></div>
+      <div class="spacer"></div>
+      <div><span class="check">{{ '☑' if engagement.souhaite_accompagnement else '☐' }}</span> Je souhaite être accompagné pour la suite de mon parcours.</div>
+      <div><span class="check">{{ '☑' if engagement.accord_analyse else '☐' }}</span> Je certifie l’exactitude des informations et accepte l’analyse de mon dossier.</div>
+      <div class="line"><div class="label">Fait à :</div><div class="value">{{ engagement.lieu_signature or '' }}</div></div>
+      <div class="line"><div class="label">Le :</div><div class="value">{{ engagement.date_signature or '' }}</div></div>
+      <div class="line"><div class="label">Signature du candidat :</div><div class="value">{{ engagement.nom_signature or '' }}</div></div>
+      <p class="small muted">Identifiant dossier: {{ dossier.id }} — Statut: {{ dossier.statut_dossier or 'brouillon' }}</p>
     </section>
   </main>
 </body>
