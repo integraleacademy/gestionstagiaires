@@ -172,6 +172,14 @@ PERSIST_DIR = os.environ.get("PERSIST_DIR", "/data")
 os.makedirs(PERSIST_DIR, exist_ok=True)
 DATA_FILE = os.path.join(PERSIST_DIR, "data.json")
 
+BACKUP_DIR = os.path.join(PERSIST_DIR, "backups")
+os.makedirs(BACKUP_DIR, exist_ok=True)
+BACKUP_RETENTION = int(os.environ.get("BACKUP_RETENTION", "120"))
+BACKUP_MIN_INTERVAL_SECONDS = int(os.environ.get("BACKUP_MIN_INTERVAL_SECONDS", "300"))
+
+_data_lock = threading.RLock()
+_last_backup_times: Dict[str, float] = {}
+
 UPLOADS_DIR = os.path.join(PERSIST_DIR, "uploads")
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
@@ -179,6 +187,60 @@ def trainee_upload_dir(session_id: str, trainee_id: str) -> str:
     d = os.path.join(UPLOADS_DIR, session_id, trainee_id)
     os.makedirs(d, exist_ok=True)
     return d
+
+
+def _cleanup_backups_for(prefix: str) -> None:
+    try:
+        names = sorted(
+            [name for name in os.listdir(BACKUP_DIR) if name.startswith(prefix + ".")],
+            reverse=True,
+        )
+        for old_name in names[BACKUP_RETENTION:]:
+            old_path = os.path.join(BACKUP_DIR, old_name)
+            if os.path.isfile(old_path):
+                os.remove(old_path)
+    except Exception:
+        pass
+
+
+def _force_backup_snapshot(path: str) -> None:
+    base_name = os.path.basename(path)
+    prefix = base_name.replace(".", "_")
+    if not os.path.exists(path):
+        return
+    stamp = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    backup_path = os.path.join(BACKUP_DIR, f"{prefix}.manual.{stamp}.json")
+    try:
+        with open(path, "rb") as src, open(backup_path, "wb") as dst:
+            dst.write(src.read())
+        _cleanup_backups_for(prefix)
+    except Exception:
+        pass
+
+
+def _write_json_with_backups(path: str, payload: Dict[str, Any], lock: threading.RLock) -> None:
+    with lock:
+        now_ts = datetime.datetime.utcnow().timestamp()
+        base_name = os.path.basename(path)
+        prefix = base_name.replace(".", "_")
+
+        if os.path.exists(path):
+            last = _last_backup_times.get(path, 0)
+            if now_ts - last >= BACKUP_MIN_INTERVAL_SECONDS:
+                stamp = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+                backup_path = os.path.join(BACKUP_DIR, f"{prefix}.{stamp}.json")
+                try:
+                    with open(path, "rb") as src, open(backup_path, "wb") as dst:
+                        dst.write(src.read())
+                    _last_backup_times[path] = now_ts
+                    _cleanup_backups_for(prefix)
+                except Exception:
+                    pass
+
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, path)
 
 
 # =========================
@@ -801,10 +863,7 @@ def load_data() -> Dict[str, Any]:
 
 
 def save_data(data: Dict[str, Any]) -> None:
-    tmp = DATA_FILE + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, DATA_FILE)
+    _write_json_with_backups(DATA_FILE, data, _data_lock)
 
 
 def _notification_id(prefix: str) -> str:
@@ -3140,6 +3199,7 @@ def api_update_session(session_id: str):
 @admin_write_required
 def api_delete_session(session_id: str):
     data = load_data()
+    _force_backup_snapshot(DATA_FILE)
     before = len(data.get("sessions", []))
     data["sessions"] = [s for s in data.get("sessions", []) if s.get("id") != session_id]
     save_data(data)
@@ -3789,6 +3849,7 @@ def api_send_cnaps_pre_relance(session_id: str, trainee_id: str):
 @admin_write_required
 def api_delete_trainee(session_id: str, trainee_id: str):
     data = load_data()
+    _force_backup_snapshot(DATA_FILE)
     s = find_session(data, session_id)
     if not s:
         return jsonify({"ok": False, "error": "session_not_found"}), 404
@@ -3824,7 +3885,19 @@ def api_cnaps_lookup():
 
 @app.get("/api/health")
 def health():
-    return jsonify({"ok": True, "data_file": DATA_FILE})
+    backup_files = []
+    try:
+        backup_files = [n for n in os.listdir(BACKUP_DIR) if n.endswith(".json")]
+    except Exception:
+        backup_files = []
+    return jsonify({
+        "ok": True,
+        "data_file": DATA_FILE,
+        "vae_data_file": VAE_DATA_FILE,
+        "backup_dir": BACKUP_DIR,
+        "backups_count": len(backup_files),
+        "backup_retention": BACKUP_RETENTION,
+    })
 
 
 @app.post("/api/test-positionnement/submit")
@@ -3883,6 +3956,7 @@ def api_positioning_test_submit():
 @admin_write_required
 def api_positioning_test_delete(test_id: str):
     data = load_data()
+    _force_backup_snapshot(DATA_FILE)
     entries = list(data.get("positioning_tests", []))
     new_entries = [e for e in entries if e.get("id") != test_id]
     data["positioning_tests"] = new_entries
@@ -3895,6 +3969,7 @@ def api_positioning_test_delete(test_id: str):
 @admin_write_required
 def api_positioning_test_delete_all():
     data = load_data()
+    _force_backup_snapshot(DATA_FILE)
     deleted = len(data.get("positioning_tests", []))
     data["positioning_tests"] = []
     save_data(data)
@@ -4268,6 +4343,7 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
 @admin_write_required
 def admin_delete_doc_file(session_id: str, trainee_id: str, doc_key: str):
     data = load_data()
+    _force_backup_snapshot(DATA_FILE)
     s = find_session(data, session_id)
     if not s:
         abort(404)
@@ -4424,6 +4500,7 @@ def infos_missing_text(trainee: dict) -> str:
 @admin_write_required
 def admin_delete_trainee(session_id: str, trainee_id: str):
     data = load_data()
+    _force_backup_snapshot(DATA_FILE)
     s = find_session(data, session_id)
     if not s:
         abort(404)
@@ -8030,11 +8107,7 @@ def _vae_load_all() -> Dict[str, Any]:
             return data
 
 def _vae_save_all(data: Dict[str, Any]) -> None:
-    with _vae_lock:
-        tmp = VAE_DATA_FILE + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, VAE_DATA_FILE)
+    _write_json_with_backups(VAE_DATA_FILE, data, _vae_lock)
 
 def _vae_find_dossier(data: Dict[str, Any], dossier_id: str) -> Optional[Dict[str, Any]]:
     for d in data.get("dossiers", []):
