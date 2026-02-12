@@ -8055,7 +8055,7 @@ def api_vae_submit(dossier_id: str):
         if not isinstance(t.get('vae_action_dates'), dict):
             t['vae_action_dates'] = {}
         if not t['vae_action_dates'].get('livret_1_received'):
-            t['vae_action_dates']['livret_1_received'] = _fr_date(datetime.datetime.utcnow())
+            t['vae_action_dates']['livret_1_received'] = fr_date(datetime.datetime.utcnow().strftime('%Y-%m-%d'))
         trainee_display_name = _format_trainee_name(t.get('first_name', ''), t.get('last_name', ''))
         add_admin_notification(
             data_main,
