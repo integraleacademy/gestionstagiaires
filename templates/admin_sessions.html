@@ -880,13 +880,14 @@
           const full = `${(it.first_name||"").toUpperCase()} ${(it.last_name||"").toUpperCase()}`.trim();
           const sub = `${it.session_name || ""} ${it.training_type ? "• " + it.training_type : ""}`.trim();
           const url = it.admin_url || `/admin/sessions/${it.session_id}/stagiaires/${it.trainee_id}`;
-          const conventionSaisieDone = !!it.convention_saisie_done;
-          const conventionSignedDone = !!it.convention_signed_done;
+          const conventionStatus = (it.convention_status || "soon");
+          const conventionSaisieDone = !!it.convention_saisie_done || conventionStatus === "signing" || conventionStatus === "signed";
+          const conventionSignedDone = !!it.convention_signed_done || conventionStatus === "signed";
           const conventionDone = conventionSaisieDone && conventionSignedDone;
           const testFrValidated = (it.test_fr_status || "soon") === "validated";
 
           return `
-            <div class="search-item" data-session-id="${it.session_id}" data-trainee-id="${it.trainee_id}" data-convention-saisie-done="${conventionSaisieDone ? "1" : "0"}" data-convention-signed-done="${conventionSignedDone ? "1" : "0"}">
+            <div class="search-item" data-session-id="${it.session_id}" data-trainee-id="${it.trainee_id}" data-convention-status="${conventionStatus}" data-convention-saisie-done="${conventionSaisieDone ? "1" : "0"}" data-convention-signed-done="${conventionSignedDone ? "1" : "0"}">
               <div>
                 <div class="search-name">${full || "—"}</div>
                 <div class="search-sub">${sub || "—"}</div>
@@ -958,7 +959,15 @@
 
         btn.textContent = oldText;
         if(action === "convention-saisie") item.setAttribute("data-convention-saisie-done", "1");
+        if(action === "convention-saisie") item.setAttribute("data-convention-status", "signing");
         if(action === "convention-signee") item.setAttribute("data-convention-signed-done", "1");
+        if(action === "convention-signee") item.setAttribute("data-convention-status", "signed");
+
+        const conventionStatus = item.getAttribute("data-convention-status") || "soon";
+        const saisieBtn = item.querySelector('[data-quick-action="convention-saisie"]');
+        const signeeBtn = item.querySelector('[data-quick-action="convention-signee"]');
+        if(saisieBtn && (conventionStatus === "signing" || conventionStatus === "signed")) saisieBtn.disabled = true;
+        if(signeeBtn && conventionStatus === "signed") signeeBtn.disabled = true;
 
         const saisieDone = item.getAttribute("data-convention-saisie-done") === "1";
         const signedDone = item.getAttribute("data-convention-signed-done") === "1";
