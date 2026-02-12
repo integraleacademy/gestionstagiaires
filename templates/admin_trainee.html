@@ -247,31 +247,31 @@
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:12px;">
     <button class="btn {% if vae_action_dates.get('livret_1_received') %}btn-primary{% else %}btn-outline{% endif %}" type="button" onclick="setVaeAction('livret_1_received')" {{ read_only_attr }}>
       Réception Livret 1
-      {% if vae_action_dates.get('livret_1_received') %}<span style="font-weight:600;opacity:.95;">({{ vae_action_dates.get('livret_1_received') }})</span>{% endif %}
+      {% if vae_action_dates.get('livret_1_received') %}<span style="font-weight:600;opacity:.95;">(Étape terminée le {{ vae_action_dates.get('livret_1_received') }})</span>{% endif %}
     </button>
     <button class="btn {% if vae_action_dates.get('livret_1_validated') %}btn-primary{% else %}btn-outline{% endif %}" type="button" onclick="setVaeAction('livret_1_validated')" {{ read_only_attr }}>
       Livret 1 validé
-      {% if vae_action_dates.get('livret_1_validated') %}<span style="font-weight:600;opacity:.95;">({{ vae_action_dates.get('livret_1_validated') }})</span>{% endif %}
+      {% if vae_action_dates.get('livret_1_validated') %}<span style="font-weight:600;opacity:.95;">(Étape terminée le {{ vae_action_dates.get('livret_1_validated') }})</span>{% endif %}
     </button>
     <button class="btn {% if vae_action_dates.get('financement_validated') %}btn-primary{% else %}btn-outline{% endif %}" type="button" onclick="setVaeAction('financement_validated')" {{ read_only_attr }}>
       Financement validé
-      {% if vae_action_dates.get('financement_validated') %}<span style="font-weight:600;opacity:.95;">({{ vae_action_dates.get('financement_validated') }})</span>{% endif %}
+      {% if vae_action_dates.get('financement_validated') %}<span style="font-weight:600;opacity:.95;">(Étape terminée le {{ vae_action_dates.get('financement_validated') }})</span>{% endif %}
     </button>
     <button class="btn {% if vae_action_dates.get('livret_2_received') %}btn-primary{% else %}btn-outline{% endif %}" type="button" onclick="setVaeAction('livret_2_received')" {{ read_only_attr }}>
       Réception Livret 2
-      {% if vae_action_dates.get('livret_2_received') %}<span style="font-weight:600;opacity:.95;">({{ vae_action_dates.get('livret_2_received') }})</span>{% endif %}
+      {% if vae_action_dates.get('livret_2_received') %}<span style="font-weight:600;opacity:.95;">(Étape terminée le {{ vae_action_dates.get('livret_2_received') }})</span>{% endif %}
     </button>
     <button class="btn {% if vae_action_dates.get('livret_2_validated') %}btn-primary{% else %}btn-outline{% endif %}" type="button" onclick="setVaeAction('livret_2_validated')" {{ read_only_attr }}>
       Livret 2 validé
-      {% if vae_action_dates.get('livret_2_validated') %}<span style="font-weight:600;opacity:.95;">({{ vae_action_dates.get('livret_2_validated') }})</span>{% endif %}
+      {% if vae_action_dates.get('livret_2_validated') %}<span style="font-weight:600;opacity:.95;">(Étape terminée le {{ vae_action_dates.get('livret_2_validated') }})</span>{% endif %}
     </button>
     <button class="btn {% if vae_action_dates.get('jury_date') %}btn-primary{% else %}btn-outline{% endif %}" type="button" onclick="setVaeAction('jury_date')" {{ read_only_attr }}>
       Date d'examen
-      {% if vae_action_dates.get('jury_date') %}<span style="font-weight:600;opacity:.95;">({{ vae_action_dates.get('jury_date') }})</span>{% endif %}
+      {% if vae_action_dates.get('jury_date') %}<span style="font-weight:600;opacity:.95;">(Étape terminée le {{ vae_action_dates.get('jury_date') }})</span>{% endif %}
     </button>
     <button class="btn {% if vae_action_dates.get('diplome_obtenu') %}btn-primary{% else %}btn-outline{% endif %}" type="button" onclick="setVaeAction('diplome_obtenu')" {{ read_only_attr }}>
       Diplôme obtenu
-      {% if vae_action_dates.get('diplome_obtenu') %}<span style="font-weight:600;opacity:.95;">({{ vae_action_dates.get('diplome_obtenu') }})</span>{% endif %}
+      {% if vae_action_dates.get('diplome_obtenu') %}<span style="font-weight:600;opacity:.95;">(Étape terminée le {{ vae_action_dates.get('diplome_obtenu') }})</span>{% endif %}
     </button>
   </div>
 </div>
