@@ -6086,13 +6086,13 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
     elif status_key == "livret_2_analysis":
         subject = "Transmission du Livret 2"
         html = mail_layout(f"""
-        <h2 style=\"margin:0 0 12px 0;color:#0f172a;\">✅ Réception de votre Livret 2</h2>
+        <h2 style=\"margin:0 0 12px 0;color:#0f172a;text-align:center;\">✅ Réception de votre Livret 2</h2>
         <p>Bonjour <strong>{first_name}</strong>,</p>
-        <p>Nous avons bien reçu votre <strong>Livret 2</strong>. Merci pour votre transmission.</p>
+        <p>Nous avons bien reçu votre Livret 2 dans le cadre de votre VAE Dirigeant d'entreprise de sécurité privée (DESP).</p>
         <p>Votre dossier est à présent en cours d'étude par la commission, qui va en vérifier la conformité et la cohérence au regard du référentiel de certification.</p>
         <p>Dès que l'analyse sera terminée, nous reviendrons vers vous. Si tout est conforme, nous pourrons passer à la dernière étape de votre parcours : votre passage devant le <strong>jury de certification</strong>.</p>
         <p>Vous pouvez suivre votre progression à tout moment depuis votre espace candidat.</p>
-        <p style=\"margin-top:18px;\"><a href=\"{space_url}\" style=\"{secondary_btn}\">Suivre mon dossier VAE</a></p>
+        <p style=\"margin-top:18px;text-align:center;\"><a href=\"{space_url}\" style=\"{secondary_btn}\">Suivre mon dossier VAE</a></p>
         <p>Nous vous souhaitons une excellente journée.<br>L'équipe Intégrale Academy</p>
         """)
     elif status_key == "livret_2_validated":
