@@ -802,6 +802,7 @@ def load_data() -> Dict[str, Any]:
             "notifications_phone_relances": [],
             "notifications_cnaps_pre_relances": [],
             "notifications_test_fr": [],
+            "notifications_convention_unsigned": [],
             "notifications_admin": [],
         }
         save_data(base)
@@ -841,6 +842,9 @@ def load_data() -> Dict[str, Any]:
         if "notifications_test_fr" not in data:
             data["notifications_test_fr"] = []
             changed = True
+        if "notifications_convention_unsigned" not in data:
+            data["notifications_convention_unsigned"] = []
+            changed = True
         if "notifications_admin" not in data:
             data["notifications_admin"] = []
             changed = True
@@ -869,6 +873,7 @@ def load_data() -> Dict[str, Any]:
             "notifications_phone_relances": [],
             "notifications_cnaps_pre_relances": [],
             "notifications_test_fr": [],
+            "notifications_convention_unsigned": [],
             "notifications_admin": [],
         }
         save_data(base)
@@ -894,6 +899,7 @@ def add_notification(data: Dict[str, Any], bucket: str, label: str, meta: Option
         "notifications_phone_relances": "REL",
         "notifications_cnaps_pre_relances": "PRE",
         "notifications_test_fr": "TFR",
+        "notifications_convention_unsigned": "CNS",
         "notifications_admin": "ADM",
     }
     entry = {
@@ -916,6 +922,7 @@ def _notifications_bucket_key(bucket: str) -> Optional[str]:
         "relances": "notifications_phone_relances",
         "cnaps_pre": "notifications_cnaps_pre_relances",
         "test_fr": "notifications_test_fr",
+        "convention_unsigned": "notifications_convention_unsigned",
     }.get(bucket)
 
 
@@ -969,6 +976,7 @@ def _secretariat_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
         "relances": _with_created_fr(list(data.get("notifications_phone_relances", [])), "relances"),
         "cnaps_pre": _with_created_fr(list(data.get("notifications_cnaps_pre_relances", [])), "cnaps_pre"),
         "test_fr": _with_created_fr(list(data.get("notifications_test_fr", [])), "test_fr"),
+        "convention_unsigned": _with_created_fr(list(data.get("notifications_convention_unsigned", [])), "convention_unsigned"),
     }
     unresolved_total = 0
     for items in notifications.values():
@@ -2590,6 +2598,7 @@ def admin_secretariat():
         phone_notifications=notifications["relances"],
         cnaps_pre_notifications=notifications["cnaps_pre"],
         test_fr_notifications=notifications["test_fr"],
+        convention_unsigned_notifications=notifications["convention_unsigned"],
         unresolved_total=payload["unresolved_total"],
     )
 
@@ -3387,6 +3396,80 @@ def api_secretariat_test_fr_result(notification_id: str):
         call_label,
         meta={
             "type": "test_fr_call_result",
+            "outcome": outcome,
+            "no_answer_count": no_answer_count,
+            "session_id": notification_meta.get("session_id"),
+            "trainee_id": notification_meta.get("trainee_id"),
+            "comment": comment,
+            "call_status": display,
+        },
+    )
+
+    save_data(data)
+    refreshed_payload = _secretariat_notifications_payload(data)
+    return jsonify({
+        "ok": True,
+        "done": bool(notification.get("done")),
+        "call_status": display,
+        "no_answer_count": no_answer_count,
+        **refreshed_payload,
+    })
+
+
+@app.post("/api/secretariat/notifications/convention_unsigned/<notification_id>/call-result")
+@admin_login_required
+def api_secretariat_convention_unsigned_result(notification_id: str):
+    payload = request.get_json(silent=True) or {}
+    outcome = (payload.get("outcome") or "").strip().upper()
+    comment = (payload.get("comment") or "").strip()
+    if outcome not in ("CALLED", "NO_ANSWER"):
+        return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+
+    data = load_data()
+    notification = next(
+        (item for item in data.get("notifications_convention_unsigned", []) if item.get("id") == notification_id),
+        None,
+    )
+    if not notification:
+        return jsonify({"ok": False, "error": "notification_not_found"}), 404
+
+    notification_meta = notification.setdefault("meta", {})
+    previous_no_answer = _parse_no_answer_count(notification_meta.get("no_answer_count"))
+    if outcome == "NO_ANSWER":
+        no_answer_count = min(3, previous_no_answer + 1)
+        display = {
+            1: "1er appel pas de réponse",
+            2: "2ème appel pas de réponse",
+            3: "3ème appel pas de réponse",
+        }[no_answer_count]
+        notification["done"] = no_answer_count >= 3
+        notification["done_at"] = _now_iso() if notification.get("done") else ""
+    else:
+        no_answer_count = 0
+        display = "Personne jointe"
+        notification["done"] = True
+        notification["done_at"] = _now_iso()
+
+    notification_meta["call_status"] = display
+    notification_meta["no_answer_count"] = no_answer_count
+    if comment:
+        notification_meta["last_comment"] = comment
+
+    trainee_display_name = _format_trainee_name(
+        notification_meta.get("first_name", ""),
+        notification_meta.get("last_name", ""),
+    )
+    call_icon = "🟢" if outcome == "CALLED" else ({1: "🟡", 2: "🟠", 3: "🔴"}.get(no_answer_count, "🟡"))
+    call_label = (
+        f"{call_icon}Convention non signée {trainee_display_name} - personne appelée"
+        if outcome == "CALLED"
+        else f"{call_icon}Convention non signée {trainee_display_name} - {display}"
+    )
+    add_admin_notification(
+        data,
+        call_label,
+        meta={
+            "type": "convention_unsigned_call_result",
             "outcome": outcome,
             "no_answer_count": no_answer_count,
             "session_id": notification_meta.get("session_id"),
@@ -5302,6 +5385,25 @@ def admin_convention_unsigned_notify(session_id: str, trainee_id: str):
 
     brevo_send_email(t.get("email", ""), subject, html)
     brevo_send_sms(t.get("phone", ""), sms)
+
+    full_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
+    period = f"{dstart} au {dend}" if (dstart and dend) else "Dates à confirmer"
+    add_notification(
+        data,
+        "notifications_convention_unsigned",
+        f"{full_name} • {formation_type} • {period}",
+        meta={
+            "first_name": t.get("first_name", ""),
+            "last_name": t.get("last_name", ""),
+            "phone": t.get("phone", ""),
+            "email": t.get("email", ""),
+            "training": formation_type,
+            "training_start_date": dstart,
+            "training_end_date": dend,
+            "session_id": s.get("id"),
+            "trainee_id": t.get("id"),
+        },
+    )
 
     t["convention_unsigned_notified_at"] = _now_iso()
     t["updated_at"] = _now_iso()
