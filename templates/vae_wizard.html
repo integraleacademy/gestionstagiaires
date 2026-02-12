@@ -53,7 +53,11 @@
         </div>
       </div>
       <input name="candidat.certifications_obtenues" placeholder="Intitulé des certifications obtenues" value="{{ dossier.candidat.certifications_obtenues }}">
-      <input name="candidat.adresse" placeholder="Adresse postale (adresse, code postal, ville, pays)" value="{{ dossier.candidat.adresse }}">
+      <div class="grid-3">
+        <input name="candidat.adresse" placeholder="Adresse" value="{{ dossier.candidat.adresse }}">
+        <input name="candidat.code_postal" placeholder="Code postal" value="{{ dossier.candidat.code_postal }}">
+        <input name="candidat.ville" placeholder="Ville" value="{{ dossier.candidat.ville }}">
+      </div>
       <div class="grid-2">
         <input name="candidat.telephone" placeholder="Téléphone" value="{{ dossier.candidat.telephone }}">
         <input type="email" name="candidat.email" placeholder="Adresse email*" value="{{ dossier.candidat.email }}" required>
@@ -97,6 +101,7 @@
 
     <section class="step" data-step="3">
       <h2>2ème étape : CERTIFICATION PROFESSIONNELLE VISÉE</h2>
+      <p class="step-auto-note">Cette partie est complétée automatiquement, vous n'avez rien à ajouter.</p>
       <input value="{{ dossier.certification.intitule }}" readonly>
       <div class="grid-3">
         <input value="RNCP {{ dossier.certification.rncp }}" readonly>
@@ -128,7 +133,7 @@
         </ul>
       </div>
       <div id="experiencesContainer"></div>
-      <button class="btn secondary" type="button" id="addExperience">Ajouter une expérience</button>
+      <button class="btn experience-add-btn" type="button" id="addExperience">Ajouter une expérience</button>
     </section>
 
     <section class="step" data-step="5">
@@ -378,7 +383,18 @@
       <label><input type="checkbox" name="engagement.accord_analyse" {% if dossier.engagement.accord_analyse %}checked{% endif %} required> J'accepte l'analyse de mon dossier*</label>
       <input name="engagement.lieu_signature" placeholder="Lieu" value="{{ dossier.engagement.lieu_signature }}">
       <input type="date" name="engagement.date_signature" value="{{ dossier.engagement.date_signature }}">
-      <input name="engagement.nom_signature" placeholder="Nom de signature" value="{{ dossier.engagement.nom_signature }}">
+      <input name="engagement.nom_signature" placeholder="Nom et prénom" value="{{ dossier.engagement.nom_signature }}">
+      <input type="hidden" name="engagement.signature_trace" value="{{ dossier.engagement.signature_trace }}">
+      <input type="hidden" name="engagement.signature_signed_at" value="{{ dossier.engagement.signature_signed_at }}">
+      <button type="button" class="btn signature-btn" id="signDocument">Signer le document</button>
+      <div id="signaturePreview" class="signature-preview{% if dossier.engagement.signature_trace %} signed{% endif %}">
+        <div class="signature-handwritten" id="signatureHandwritten">{{ dossier.engagement.signature_trace }}</div>
+        <div class="signature-meta" id="signatureMeta">
+          {% if dossier.engagement.signature_signed_at and dossier.engagement.nom_signature %}
+          Document signé le {{ dossier.engagement.signature_signed_at }} par {{ dossier.engagement.nom_signature }}
+          {% endif %}
+        </div>
+      </div>
       <div id="submitErrors" class="errors"></div>
       <button type="button" class="btn" id="submitDossier">Soumettre</button>
     </section>

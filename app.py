@@ -8621,7 +8621,7 @@ def _vae_default_dossier(dossier_id: Optional[str] = None) -> Dict[str, Any]:
         "candidat": {
             "nom_naissance": "", "nom_usage": "", "prenoms": "", "date_naissance": "", "nationalite": "",
             "genre": "", "niveau_formation": "", "niveau_certification": "", "certifications_obtenues": "",
-            "adresse": "", "telephone": "", "email": "", "statut": "", "convention_collective": "", "objectifs": []
+            "adresse": "", "code_postal": "", "ville": "", "telephone": "", "email": "", "statut": "", "convention_collective": "", "objectifs": []
         },
         "certification": {
             "intitule": "DIRIGEANT D’ENTREPRISE DE SÉCURITÉ PRIVÉE",
@@ -8654,7 +8654,7 @@ def _vae_default_dossier(dossier_id: Optional[str] = None) -> Dict[str, Any]:
         },
         "engagement": {
             "souhaite_accompagnement": False, "accord_analyse": False,
-            "lieu_signature": "", "date_signature": "", "nom_signature": "", "commentaires_defavorable": ""
+            "lieu_signature": "", "date_signature": "", "nom_signature": "", "signature_trace": "", "signature_signed_at": "", "commentaires_defavorable": ""
         },
         "created_at": now,
         "updated_at": now,
@@ -8774,6 +8774,9 @@ def _vae_dossier_to_lines(dossier: Dict[str, Any]) -> List[str]:
         f"Prenoms: {candidat.get('prenoms')}",
         f"Date de naissance: {candidat.get('date_naissance')}",
         f"Nationalite: {candidat.get('nationalite')}",
+        f"Adresse: {candidat.get('adresse')}",
+        f"Code postal: {candidat.get('code_postal')}",
+        f"Ville: {candidat.get('ville')}",
         f"Telephone: {candidat.get('telephone')}",
         f"Email: {candidat.get('email')}",
         f"Objectifs: {objectifs}",
@@ -8823,6 +8826,7 @@ def _vae_dossier_to_lines(dossier: Dict[str, Any]) -> List[str]:
         f"Commentaires si avis défavorable: {engagement.get('commentaires_defavorable')}",
         f"Accord analyse: {'Oui' if engagement.get('accord_analyse') else 'Non'}",
         f"Signature: {engagement.get('nom_signature')} le {engagement.get('date_signature')} a {engagement.get('lieu_signature')}",
+        f"Trace signature: {engagement.get('signature_trace')} ({engagement.get('signature_signed_at')})",
     ])
     return lines
 
