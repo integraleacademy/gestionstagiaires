@@ -54,6 +54,9 @@
     .notif-panel.show{ display:block; }
     .notif-item{ border:1px solid #e5e7eb; border-radius:12px; padding:10px; margin-bottom:8px; background:#fff; }
     .notif-item.done{ background:#ecfdf5; border-color:#bbf7d0; }
+    .notif-main{ display:block; color:inherit; text-decoration:none; border-radius:8px; }
+    .notif-main:hover{ background:#f8fafc; }
+    .notif-main.is-link{ cursor:pointer; }
     .notif-label{ font-weight:700; font-size:14px; margin-bottom:6px; }
     .notif-meta{ color:#6b7280; font-size:12px; }
     .notif-actions{ margin-top:8px; display:flex; gap:6px; justify-content:flex-end; }
@@ -97,12 +100,22 @@
                   {% if admin_notifications %}
                     {% for n in admin_notifications %}
                       <div class="notif-item {% if n.done %}done{% endif %}" data-notification-id="{{ n.id }}">
-                        <div class="notif-label">{{ n.label }}</div>
-                        <div class="notif-meta">{{ n.created_fr }}</div>
-                        {% if n.details %}
-                          {% for d in n.details %}
-                            <div class="notif-meta">{{ d }}</div>
-                          {% endfor %}
+                        {% if n.trainee_url %}
+                          <a class="notif-main is-link" href="{{ n.trainee_url }}">
+                        {% else %}
+                          <div class="notif-main">
+                        {% endif %}
+                          <div class="notif-label">{{ n.label }}</div>
+                          <div class="notif-meta">{{ n.created_fr }}</div>
+                          {% if n.details %}
+                            {% for d in n.details %}
+                              <div class="notif-meta">{{ d }}</div>
+                            {% endfor %}
+                          {% endif %}
+                        {% if n.trainee_url %}
+                          </a>
+                        {% else %}
+                          </div>
                         {% endif %}
                         <div class="notif-actions">
                           <button type="button" class="notif-icon-btn {% if not admin_can_manage_notifications %}is-disabled{% endif %}" data-action="delete" title="{% if admin_can_manage_notifications %}Supprimer{% else %}Action réservée à l’admin{% endif %}" {% if not admin_can_manage_notifications %}disabled aria-disabled="true"{% endif %}>❌</button>
@@ -277,17 +290,25 @@
         list.innerHTML = '<div class="notif-empty">Aucune notification.</div>';
         return;
       }
-      list.innerHTML = items.map((n)=>`
+      list.innerHTML = items.map((n)=>{
+        const mainOpen = n.trainee_url
+          ? `<a class="notif-main is-link" href="${esc(n.trainee_url)}">`
+          : `<div class="notif-main">`;
+        const mainClose = n.trainee_url ? `</a>` : `</div>`;
+        return `
         <div class="notif-item ${n.done ? 'done' : ''}" data-notification-id="${esc(n.id)}">
-          <div class="notif-label">${esc(n.label)}</div>
-          <div class="notif-meta">${esc(n.created_fr || "")}</div>
-          ${(Array.isArray(n.details) ? n.details : []).map((d)=>`<div class="notif-meta">${esc(d)}</div>`).join("")}
+          ${mainOpen}
+            <div class="notif-label">${esc(n.label)}</div>
+            <div class="notif-meta">${esc(n.created_fr || "")}</div>
+            ${(Array.isArray(n.details) ? n.details : []).map((d)=>`<div class="notif-meta">${esc(d)}</div>`).join("")}
+          ${mainClose}
           <div class="notif-actions">
             <button type="button" class="notif-icon-btn ${canManageNotifications ? "" : "is-disabled"}" data-action="delete" title="${canManageNotifications ? "Supprimer" : "Action réservée à l’admin"}" ${canManageNotifications ? "" : "disabled aria-disabled='true'"}>❌</button>
             <button type="button" class="notif-icon-btn ${canManageNotifications ? "" : "is-disabled"}" data-action="toggle" title="${canManageNotifications ? "Traiter" : "Action réservée à l’admin"}" ${canManageNotifications ? "" : "disabled aria-disabled='true'"}>✅</button>
           </div>
         </div>
-      `).join("");
+      `;
+      }).join("");
     }
 
     function updateBadge(unresolved){
