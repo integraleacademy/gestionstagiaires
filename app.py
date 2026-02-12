@@ -5890,58 +5890,93 @@ def vae_status_view(status_key: Optional[str]) -> Dict[str, str]:
 def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
     status_key = (status_key or "").strip()
     email = (t.get("email") or "").strip()
-    phone = (t.get("phone") or "").strip()
     first_name = (t.get("first_name") or "").strip() or "Madame, Monsieur"
+    trainee_link = (t.get("public_link") or "").strip()
 
     subject = ""
     html = ""
-    sms = ""
+    primary_btn = "display:inline-block;background:#1f8f4a;color:#ffffff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:700"
+    secondary_btn = "display:inline-block;background:#ffffff;color:#1f8f4a;padding:12px 20px;border:1px solid #1f8f4a;border-radius:10px;text-decoration:none;font-weight:700"
+    space_url = trainee_link or f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace"
+    booking_url = "https://calendly.com/integraleacademy"
 
     if status_key == "livret_1_analysis":
         subject = "VAE : Livret 1 bien reçu"
-        html = f"""
-        <p>Bonjour {first_name},</p>
-        <p>Nous vous confirmons la bonne réception de votre <strong>Livret 1 VAE</strong>.</p>
-        <p>Votre dossier est désormais <strong>en cours d'analyse</strong>. Si tout est conforme, vous recevrez prochainement votre attestation de recevabilité.</p>
-        <p>L'équipe Intégrale Academy.</p>
-        """
-        sms = "Intégrale Academy : nous avons bien reçu votre Livret 1 VAE. Votre dossier est en cours d'analyse. Si tout est bon, vous recevrez prochainement l'attestation de recevabilité."
-    elif status_key == "livret_2_todo":
-        subject = "VAE acceptée : attestation de recevabilité disponible"
-        html = f"""
-        <p>Bonjour {first_name},</p>
-        <p>Nous avons le plaisir de vous informer que votre VAE a été acceptée.</p>
-        <p>Votre <strong>attestation de recevabilité</strong> est disponible dans votre espace stagiaire.</p>
-        <p>Vous pouvez maintenant nous faire parvenir votre <strong>Livret 2</strong>.</p>
-        <p>L'équipe Intégrale Academy.</p>
-        """
-        sms = "Intégrale Academy : votre VAE a été acceptée. Téléchargez votre attestation de recevabilité dans votre espace stagiaire et envoyez-nous maintenant votre Livret 2."
+        html = mail_layout(f"""
+        <h2 style=\"margin:0 0 12px 0;color:#0f172a;\">✅ Réception de votre Livret 1</h2>
+        <p>Bonjour <strong>{first_name}</strong>,</p>
+        <p>Nous avons bien reçu votre <strong>Livret 1</strong>. Merci pour votre envoi.</p>
+        <p>Votre dossier de faisabilité est désormais transmis à la commission pour étude. Cette étape permet de vérifier la conformité de votre demande et l'adéquation de votre expérience avec le référentiel de la certification visée.</p>
+        <p>Notre équipe reviendra vers vous dès que l'analyse sera finalisée. Si votre dossier est recevable, vous recevrez :</p>
+        <ul>
+          <li>votre <strong>attestation de recevabilité</strong>,</li>
+          <li>les consignes pour démarrer la rédaction du <strong>Livret 2</strong>,</li>
+          <li>la suite de votre parcours VAE étape par étape.</li>
+        </ul>
+        <p>En attendant, vous pouvez continuer à consulter votre espace candidat pour suivre l'avancement de votre dossier.</p>
+        <p style=\"margin-top:18px;\"><a href=\"{space_url}\" style=\"{secondary_btn}\">Accéder à mon espace candidat</a></p>
+        """)
+    elif status_key == "livret_1_validated":
+        subject = "VAE : Livret 1 validé par la commission 🎉"
+        html = mail_layout(f"""
+        <h2 style=\"margin:0 0 12px 0;color:#0f172a;\">🥳 Livret 1 validé</h2>
+        <p>Bonjour <strong>{first_name}</strong>,</p>
+        <p>Nous avons le plaisir de vous informer que la commission a rendu un <strong>avis favorable</strong> à votre demande de VAE.</p>
+        <p>Pour passer à l'étape suivante, nous devons organiser un rendez-vous téléphonique afin de :</p>
+        <ul>
+          <li>mettre en place le financement de votre VAE (versement de l'acompte),</li>
+          <li>finaliser et signer votre convention de VAE,</li>
+          <li>vous transmettre le cadre de travail pour la rédaction de votre Livret 2.</li>
+        </ul>
+        <p style=\"margin:18px 0;\"><a href=\"{booking_url}\" style=\"{primary_btn}\">Réserver un RDV téléphonique</a></p>
+        <p>Vous pouvez également récupérer votre <strong>attestation de recevabilité</strong> directement dans votre espace candidat :</p>
+        <p style=\"margin-top:10px;\"><a href=\"{space_url}\" style=\"{secondary_btn}\">Aller vers mon espace candidat</a></p>
+        <p style=\"margin-top:18px;\">Notre équipe reste disponible si vous souhaitez être accompagné(e) dans la préparation de votre Livret 2.</p>
+        """)
     elif status_key == "livret_2_analysis":
         subject = "VAE : Livret 2 bien reçu"
-        html = f"""
-        <p>Bonjour {first_name},</p>
-        <p>Nous vous confirmons la bonne réception de votre <strong>Livret 2 VAE</strong>.</p>
-        <p>Votre dossier est désormais <strong>en cours d'analyse</strong>. Si tout est conforme, nous reviendrons vers vous pour planifier une date de passage devant le jury de certification.</p>
-        <p>L'équipe Intégrale Academy.</p>
-        """
-        sms = "Intégrale Academy : nous avons bien reçu votre Livret 2 VAE. Votre dossier est en cours d'analyse. Si tout est bon, nous vous recontacterons pour planifier votre passage devant le jury."
-    elif status_key == "jury":
+        html = mail_layout(f"""
+        <h2 style=\"margin:0 0 12px 0;color:#0f172a;\">✅ Réception de votre Livret 2</h2>
+        <p>Bonjour <strong>{first_name}</strong>,</p>
+        <p>Nous avons bien reçu votre <strong>Livret 2</strong>. Merci pour votre transmission.</p>
+        <p>Votre dossier est à présent en cours d'étude par la commission, qui va en vérifier la conformité et la cohérence au regard du référentiel de certification.</p>
+        <p>Dès que l'analyse sera terminée, nous reviendrons vers vous. Si tout est conforme, nous pourrons passer à la dernière étape de votre parcours : votre passage devant le <strong>jury de certification</strong>.</p>
+        <p>Vous pouvez suivre votre progression à tout moment depuis votre espace candidat.</p>
+        <p style=\"margin-top:18px;\"><a href=\"{space_url}\" style=\"{secondary_btn}\">Suivre mon dossier VAE</a></p>
+        """)
+    elif status_key == "livret_2_validated":
         subject = "VAE : Livret 2 validé"
-        html = f"""
-        <p>Bonjour {first_name},</p>
-        <p>Bonne nouvelle : votre <strong>Livret 2</strong> est validé.</p>
-        <p>Nous pouvons à présent prévoir une date de passage devant le jury de certification.</p>
-        <p>L'équipe Intégrale Academy.</p>
-        """
-        sms = "Intégrale Academy : votre Livret 2 est validé. Nous pouvons maintenant planifier une date de passage devant le jury de certification."
+        html = mail_layout(f"""
+        <h2 style=\"margin:0 0 12px 0;color:#0f172a;\">🎉 Livret 2 validé</h2>
+        <p>Bonjour <strong>{first_name}</strong>,</p>
+        <p>Nous avons le plaisir de vous informer que votre <strong>Livret 2 VAE Dirigeant d'entreprise de sécurité (DESP)</strong> est conforme.</p>
+        <p>Nous allons désormais programmer votre date de passage devant le jury de certification.</p>
+        <p>Afin d'organiser votre passage et finaliser le financement de votre VAE, merci de réserver un rendez-vous téléphonique avec notre équipe.</p>
+        <p style=\"margin-top:18px;\"><a href=\"{booking_url}\" style=\"{primary_btn}\">Réserver un RDV téléphonique</a></p>
+        <p style=\"margin-top:18px;\">Lors de cet échange, nous vous préciserons les prochaines étapes administratives et pratiques jusqu'à l'examen final.</p>
+        """)
+    elif status_key == "jury":
+        subject = "VAE : date de passage devant le jury"
+        jury_date_iso = (t.get("vae_jury_date") or "").strip()
+        jury_date = jury_date_iso
+        if jury_date_iso and re.match(r"^\d{4}-\d{2}-\d{2}$", jury_date_iso):
+            y, m, d = jury_date_iso.split("-")
+            jury_date = f"{d}/{m}/{y}"
+        html = mail_layout(f"""
+        <h2 style=\"margin:0 0 12px 0;color:#0f172a;\">📅 Votre date d'examen VAE</h2>
+        <p>Bonjour <strong>{first_name}</strong>,</p>
+        <p>Nous revenons vers vous concernant votre passage devant le jury de certification.</p>
+        <p>Votre examen est planifié le <strong>{jury_date or 'DD/MM/YYYY'}</strong>.</p>
+        <p>Nous vous communiquerons prochainement toutes les informations utiles : horaires, modalités de passage, documents à prévoir et consignes pratiques.</p>
+        <p>En attendant, n'hésitez pas à consulter votre espace candidat pour suivre votre dossier.</p>
+        <p style=\"margin-top:18px;\"><a href=\"{space_url}\" style=\"{secondary_btn}\">Ouvrir mon espace candidat</a></p>
+        """)
 
     if not subject:
         return
 
     if email:
         brevo_send_email(email, subject, html)
-    if phone:
-        brevo_send_sms(phone, sms)
 
 def deliverables_progress(t: Dict[str, Any]):
     """
