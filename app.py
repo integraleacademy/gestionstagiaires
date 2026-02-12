@@ -6234,10 +6234,6 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
 
     t.setdefault("deliverables", {})
     t["deliverables"][kind] = token
-    if kind == "attestation_recevabilite":
-        view = vae_status_view("livret_2_todo")
-        t["vae_status"] = view["key"]
-        t["vae_status_label"] = view["label"]
     t["updated_at"] = _now_iso()
 
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
