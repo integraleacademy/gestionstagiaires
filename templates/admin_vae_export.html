@@ -92,7 +92,7 @@
 
   <main class="wrap">
     <section class="page">
-      <img class="logo" src="/static/logo-integrale.png" alt="Logo">
+      <img class="logo" src="/static/scotia.png" alt="Logo">
       <h1>Dossier de faisabilité – Validation des<br>acquis de l’expérience (VAE)</h1>
       <div class="subline info-note"><strong>Modèle proposé par l’organisme certificateur conformément au décret n° 2025-663 du 18 juillet 2025</strong> <span class="italic">(dossier de faisabilité : anciennement nommé livret 1 ou cerfa de recevabilité).</span></div>
 
@@ -119,7 +119,7 @@
     </section>
 
     <section class="page">
-      <img class="logo" src="/static/logo-integrale.png" alt="Logo">
+      <img class="logo" src="/static/scotia.png" alt="Logo">
       <h2>STATUT DU CANDIDAT</h2>
       {% set status_options = ['salarie_prive','fonctionnaire_agent_public','benevole','aidant_familial','aidant_familial_agricole','demandeur_emploi','travailleur_non_salarie','retraite','mandat_electif'] %}
       {% for s in status_options %}
@@ -149,7 +149,7 @@
     </section>
 
     <section class="page">
-      <img class="logo" src="/static/logo-integrale.png" alt="Logo">
+      <img class="logo" src="/static/scotia.png" alt="Logo">
       <h2>3. TABLEAU DES EXPÉRIENCES PROFESSIONNELLES OU PERSONNELLES</h2>
       <p class="italic underline">À compléter par la personne chargée de l’accompagnement ou du candidat seul s’il n’est pas accompagné.</p>
       <p>Le tableau ci-dessous permet au certificateur de connaître les expériences du candidat (professionnelles, personnelles, bénévoles…) en lien direct avec la certification visée.</p>
@@ -167,7 +167,7 @@
     </section>
 
     <section class="page">
-      <img class="logo" src="/static/logo-integrale.png" alt="Logo">
+      <img class="logo" src="/static/scotia.png" alt="Logo">
       <h2>3. TABLEAU DES EXPÉRIENCES (SUITE)</h2>
       {% for exp in experiences[3:] %}
         <table class="tbl">
@@ -183,7 +183,7 @@
       {% set activity_key = "activite" ~ i %}
       {% set activity = blocs.get(activity_key, {}) %}
       <section class="page">
-        <img class="logo" src="/static/logo-integrale.png" alt="Logo">
+        <img class="logo" src="/static/scotia.png" alt="Logo">
         <h2>4. TABLEAU DE POSITIONNEMENT PAR COMPÉTENCES</h2>
         <p class="italic underline">À compléter par la personne chargée de l’accompagnement ou du candidat seul s’il n’est pas accompagné.</p>
         <p>Il s’agit de recueillir les informations en lien avec le référentiel d’activités et de compétences visé à partir d’expériences déclarées par le candidat. Il ne s’agit pas d’une évaluation des compétences du candidat car les compétences sont évaluées par le jury de certification.</p>
@@ -203,7 +203,7 @@
     {% endfor %}
 
     <section class="page">
-      <img class="logo" src="/static/logo-integrale.png" alt="Logo">
+      <img class="logo" src="/static/scotia.png" alt="Logo">
       <h2>5. PARCOURS PRÉVISIONNEL DU CANDIDAT</h2>
       <p class="italic"><strong>Les informations ci-dessous sont à compléter par l'accompagnateur lorsque le candidat est accompagné.</strong></p>
       <div class="line"><div class="label">Accompagnement individuel (heures) :</div><div class="value">{{ (parcours.accompagnement_individuel or {}).heures or '' }}</div></div>
@@ -224,7 +224,7 @@
     </section>
 
     <section class="page">
-      <img class="logo" src="/static/logo-integrale.png" alt="Logo">
+      <img class="logo" src="/static/scotia.png" alt="Logo">
       <h2>6. FORMULAIRE D’AVIS DE FAISABILITÉ</h2>
       <p class="italic"><strong>Ce formulaire est à compléter uniquement par l’accompagnateur lorsque le candidat est accompagné.</strong></p>
       <div class="box">
