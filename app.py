@@ -3263,6 +3263,73 @@ def api_create_trainee(session_id: str):
             sms = build_vtc_onboarding_sms(first_name, link)
             email_ok = brevo_send_email(email, subject, html) if email else False
             sms_ok = brevo_send_sms(phone, sms) if phone else False
+        elif (training_type or "") == "DIRIGEANT VAE":
+            subject = "Votre VAE Dirigeant d'entreprise de sécurité privée (DESP)"
+            html = mail_layout(f"""
+              <h2 style="text-align:center">🚀 En route vers la VAE</h2>
+              <p>Bonjour {first_name},</p>
+
+              <p>
+                Votre VAE (Validation des acquis de l'expérience) Dirigeant d'entreprise de sécurité privée (DESP)
+                commence aujourd'hui.
+              </p>
+
+              <p><strong>Les étapes :</strong></p>
+
+              <p><strong>1️⃣ Rédaction du Livret 1 (dossier de faisabilité)</strong><br>
+              Vous allez compléter en ligne votre dossier de faisabilité depuis votre Espace candidat en cliquant ici.<br>
+              Ce document permet de présenter votre parcours professionnel, vos fonctions exercées et vos responsabilités,
+              afin de vérifier que votre expérience correspond bien aux compétences attendues pour le DESP.
+              C’est en quelque sorte la « photographie » de votre expérience.<br>
+              ⏳ Durée estimée : environ 30 minutes.</p>
+
+              <p><strong>2️⃣ Étude du Livret 1 et attestation de recevabilité</strong><br>
+              Votre dossier est étudié par la commission.<br>
+              Si les éléments fournis sont conformes et suffisants, une attestation de recevabilité vous est délivrée.<br>
+              À partir de ce moment, nous prendrons contact avec vous pour mettre en place la convention de VAE
+              et procéder au règlement de l’acompte (1 140 €).</p>
+
+              <p><strong>3️⃣ Rédaction du Livret 2</strong><br>
+              Vous devrez ensuite compléter le Livret 2.<br>
+              Ce document est le cœur de votre démarche : vous y détaillez précisément vos activités, vos missions,
+              les situations professionnelles rencontrées, ainsi que les compétences mobilisées.<br>
+              C’est ce dossier qui sera présenté au jury de certification.</p>
+
+              <p><strong>4️⃣ Étude du Livret 2</strong><br>
+              La commission analyse votre dossier.<br>
+              Si l’ensemble est conforme et complet, une date de passage devant le jury de certification est programmée.</p>
+
+              <p><strong>5️⃣ Passage devant le jury de certification</strong><br>
+              Vous serez convoqué à un entretien professionnel d’environ une heure.<br>
+              Lors de cet échange, le jury reviendra sur votre parcours et sur les éléments présentés dans le Livret 2.<br>
+              L’objectif est de vérifier la maîtrise des compétences attendues, à travers des questions concrètes sur
+              votre expérience et vos pratiques professionnelles.</p>
+
+              <p><strong>6️⃣ Obtention de votre certification</strong></p>
+
+              <p style="text-align:center;margin:24px 0">
+                <a href="{link}"
+                   style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+                  Démarrer ma VAE
+                </a>
+              </p>
+
+              <p>
+                Je reste à votre disposition pour tous renseignements complémentaires,<br>
+                <strong>Clément VAILLANT</strong><br>
+                Directeur Intégrale Academy
+              </p>
+            """)
+
+            sms = (
+                f"Intégrale Academy 🚀 Bonjour {first_name}, votre VAE DESP commence aujourd'hui. "
+                "1) Livret 1 (30 min) 2) Étude + recevabilité 3) Livret 2 4) Étude 5) Jury 6) Certification. "
+                f"Pour démarrer votre VAE : {link} "
+                "Je reste à votre disposition. Clément VAILLANT - Intégrale Academy"
+            )
+
+            email_ok = brevo_send_email(email, subject, html) if email else False
+            sms_ok = brevo_send_sms(phone, sms) if phone else False
         else:
             formation_type = formation_label(training_type)
             dstart = fr_date(_session_get(s, "date_start", ""))
