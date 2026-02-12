@@ -6433,16 +6433,45 @@ def public_doc_upload(token: str, doc_key: str):
     if doc_key not in allowed_doc_keys_for_training(training_type):
         return redirect(url_for("public_trainee_space", token=token))
 
-    # ✅ 1 fichier par envoi (mais l'ID peut en contenir 2)
-    incoming_files = request.files.getlist("files") or request.files.getlist("file")
-    incoming_files = [f for f in incoming_files if f and f.filename]
-    if not incoming_files:
-        return redirect(url_for("public_trainee_space", token=token))
-
     # ✅ retrouver la config du doc (accept)
     docs = t.get("documents") or []
     target = next((d for d in docs if d.get("key") == doc_key), None)
     if not target:
+        return redirect(url_for("public_trainee_space", token=token))
+
+    # ✅ 1 fichier par envoi (mais l'ID peut en contenir 2)
+    incoming_files = request.files.getlist("files") or request.files.getlist("file")
+    incoming_files = [f for f in incoming_files if f and f.filename]
+    if not incoming_files:
+        if doc_key == "livret_2":
+            existing_files = target.get("files") if isinstance(target.get("files"), list) else []
+            legacy_file = (target.get("file") or "").strip()
+            has_existing_livret_2 = bool(existing_files or legacy_file)
+            if has_existing_livret_2:
+                if not isinstance(t.get("vae_action_dates"), dict):
+                    t["vae_action_dates"] = {}
+                t["vae_action_dates"]["livret_2_received"] = datetime.date.today().strftime("%d/%m/%Y")
+                view = vae_status_view("livret_2_analysis")
+                previous_status = (t.get("vae_status") or "").strip()
+                t["vae_status"] = view["key"]
+                t["vae_status_label"] = view["label"]
+                if previous_status != view["key"]:
+                    _notify_vae_status_change(t, "livret_2_analysis")
+                    trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
+                    add_admin_notification(
+                        data,
+                        f"VAE Livret 2️⃣ Déposé par {trainee_display_name}",
+                        meta={
+                            "type": "vae_livret_2_upload",
+                            "session_id": s.get("id"),
+                            "trainee_id": t.get("id"),
+                        },
+                    )
+                t["updated_at"] = _now_iso()
+                t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+                s["trainees"] = _session_trainees_list(s)
+                s.pop("stagiaires", None)
+                save_data(data)
         return redirect(url_for("public_trainee_space", token=token))
 
     accept = (target.get("accept") or "").lower()
