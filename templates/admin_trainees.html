@@ -62,7 +62,9 @@
 
       <button class="btn btn-outline" id="btnBulkAttestation">⬇️ Télécharger les Attestations en masse</button>
       <input id="bulkAttestationInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+      {% if not show_vae %}
       <button class="btn btn-outline" id="btnBulkTestFr">🔔 Notifier test de français en masse</button>
+      {% endif %}
       <button class="btn btn-primary" id="btnOpenCreateTrainee">+ Ajouter un stagiaire</button>
     {% endif %}
   </div>
@@ -82,16 +84,16 @@
 
         <th>Convention</th>
         <th>Financement</th>
-        {% if not is_vtc %}<th>Test Français</th>{% endif %}
+        {% if show_vae %}<th>VAE</th>{% endif %}
+        {% if not is_vtc and not show_vae %}<th>Test Français</th>{% endif %}
         <th>Dossier</th>
         <th>Dossier complet</th>
-        {% if not is_vtc %}<th>CNAPS</th>{% endif %}
+        {% if not is_vtc and not show_vae %}<th>CNAPS</th>{% endif %}
         {% if is_vtc %}<th>Inscription CMAR</th>{% endif %}
         {% if is_vtc %}<th>E-learning</th>{% endif %}
         {% if is_vtc %}<th>Date formation pratique</th>{% endif %}
         {% if show_hosting %}<th>Hébergement</th>{% endif %}
         <th>Commentaire</th>
-        {% if show_vae %}<th>VAE</th>{% endif %}
       </tr>
     </thead>
 
@@ -153,7 +155,20 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           {% endif %}
         </td>
 
-{% if not is_vtc %}
+{% if show_vae %}
+<td>
+  <select class="status sel" data-field="vae_status" {{ read_only_attr }}>
+    <option value="livret_1_todo" {% if t.vae_status=="livret_1_todo" or not t.vae_status %}selected{% endif %}>Livret 1 à compléter</option>
+    <option value="livret_1_analysis" {% if t.vae_status=="livret_1_analysis" %}selected{% endif %}>Livret 1 en cours d'analyse</option>
+    <option value="livret_2_todo" {% if t.vae_status=="livret_2_todo" %}selected{% endif %}>Livret 2 à compléter</option>
+    <option value="livret_2_analysis" {% if t.vae_status=="livret_2_analysis" %}selected{% endif %}>Livret 2 en cours d'analyse</option>
+    <option value="jury" {% if t.vae_status=="jury" %}selected{% endif %}>Passage devant le jury</option>
+    <option value="certified" {% if t.vae_status=="certified" %}selected{% endif %}>Certification obtenue</option>
+  </select>
+</td>
+{% endif %}
+
+{% if not is_vtc and not show_vae %}
 <td>
   <select class="status sel status-dot" data-field="test_fr_status" {{ read_only_attr }}>
     <option value="soon" {% if t.test_fr_status=="soon" or not t.test_fr_status %}selected{% endif %}>🟠</option>
@@ -184,7 +199,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           </label>
         </td>
 
-        {% if not is_vtc %}
+        {% if not is_vtc and not show_vae %}
         <td>
           <div class="inline">
             <span class="cnaps" data-cnaps>{{ t.cnaps or "INCONNU" }}</span>
@@ -210,20 +225,6 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         <td>
           <input class="comment" data-field="comment" value="{{ t.comment }}" placeholder="Ajouter un commentaire..." {{ read_only_attr }}>
         </td>
-
-        {% if show_vae %}
-        <td>
-  <select class="status sel" data-field="vae_status" {{ read_only_attr }}>
-    <option value="livret_1_todo" {% if t.vae_status=="livret_1_todo" or not t.vae_status %}selected{% endif %}>Livret 1 à compléter</option>
-    <option value="livret_1_analysis" {% if t.vae_status=="livret_1_analysis" %}selected{% endif %}>Livret 1 en cours d'analyse</option>
-    <option value="livret_2_todo" {% if t.vae_status=="livret_2_todo" %}selected{% endif %}>Livret 2 à compléter</option>
-    <option value="livret_2_analysis" {% if t.vae_status=="livret_2_analysis" %}selected{% endif %}>Livret 2 en cours d'analyse</option>
-    <option value="jury" {% if t.vae_status=="jury" %}selected{% endif %}>Passage devant le jury</option>
-    <option value="certified" {% if t.vae_status=="certified" %}selected{% endif %}>Certification obtenue</option>
-  </select>
-</td>
-
-        {% endif %}
 
       </tr>
       {% endfor %}
