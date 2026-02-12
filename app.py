@@ -8367,12 +8367,28 @@ def admin_vae_export(dossier_id: str):
     if not dossier:
         abort(404)
 
-    pdf_blob = _build_simple_pdf(_vae_dossier_to_lines(dossier))
-    return send_file(
-        BytesIO(pdf_blob),
-        mimetype='application/pdf',
-        as_attachment=True,
-        download_name=f'vae_{dossier_id}.pdf'
+    statut_labels = {
+        "brouillon": "Brouillon",
+        "soumis": "Soumis",
+        "recevable": "Recevable",
+        "refuse": "Refusé",
+    }
+    decision_labels = {
+        "faisable": "Faisable",
+        "faisable_complements": "Faisable avec compléments",
+        "non_faisable": "Non faisable",
+    }
+
+    minimum_pages = 10
+    base_pages = 9
+    annex_pages = max(0, minimum_pages - base_pages)
+
+    return render_template(
+        'admin_vae_export.html',
+        dossier=dossier,
+        statut_labels=statut_labels,
+        decision_labels=decision_labels,
+        annex_pages=annex_pages,
     )
 
 @app.get("/admin/sessions/")
