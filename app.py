@@ -5013,11 +5013,13 @@ def admin_test_fr_echec(session_id: str, trainee_id: str):
     brevo_send_email(t.get("email", ""), payload["subject"], payload["html"])
     brevo_send_sms(t.get("phone", ""), payload["sms"])
 
+    now = _now_iso()
     t["test_fr_status"] = payload["status"]
     t["test_fr_code"] = code
     t["test_fr_deadline"] = deadline
-    t[payload["stamp_field"]] = _now_iso()
-    t["updated_at"] = _now_iso()
+    t[payload["stamp_field"]] = now
+    t["test_fr_last_failed_at"] = now
+    t["updated_at"] = now
 
     s["trainees"] = trainees
     save_data(data)
