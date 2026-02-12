@@ -3823,7 +3823,7 @@ def api_create_trainee(session_id: str):
               <p><strong>Les étapes :</strong></p>
 
               <div class="step"><span class="step-title">1️⃣ Rédaction du Livret 1 (dossier de faisabilité)</span>
-              Vous allez compléter en ligne votre dossier de faisabilité depuis votre Espace candidat en cliquant ici.<br>
+              Vous allez compléter en ligne votre dossier de faisabilité depuis votre Espace candidat.<br>
               Ce document permet de présenter votre parcours professionnel, vos fonctions exercées et vos responsabilités,
               afin de vérifier que votre expérience correspond bien aux compétences attendues pour le DESP.
               C’est en quelque sorte la « photographie » de votre expérience.<br>
