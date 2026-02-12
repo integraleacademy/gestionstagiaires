@@ -2612,6 +2612,20 @@ function normalizePRE(s){
     window.history.replaceState({}, "", cleanUrl);
   }
 })();
+
+(function(){
+  if (window.location.hash === "#doc_candidate_info_sheet") {
+    const row = document.getElementById("doc_candidate_info_sheet");
+    if (documentsDetails instanceof HTMLDetailsElement) {
+      documentsDetails.open = true;
+    }
+    if (row) {
+      setTimeout(() => {
+        row.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    }
+  }
+})();
 </script>
   
 

@@ -7125,7 +7125,7 @@ def _build_candidate_sheet_data(session_data: Dict[str, Any], trainee_data: Dict
             return " ".join(raw[i:i + 2] for i in range(0, len(raw), 2))
         return str(value or "").strip()
 
-    return {
+    payload = {
         "formation_type": "Validation des acquis de l'expérience (VAE)",
         "date_entree_stage": fr_date(_session_get(session_data, "date_start", "")) or "",
         "situation": pick(candidat.get("statut")),
@@ -7157,6 +7157,50 @@ def _build_candidate_sheet_data(session_data: Dict[str, Any], trainee_data: Dict
         "gross_salary": pick(trainee_data.get("gross_salary")),
     }
 
+    saved_sheet = trainee_data.get("candidate_sheet")
+    if isinstance(saved_sheet, dict):
+        for key in payload.keys():
+            if key in saved_sheet:
+                payload[key] = str(saved_sheet.get(key) or "").strip()
+
+    return payload
+
+
+@app.post("/espace/<token>/fiche-candidat/enregistrer")
+def public_trainee_candidate_sheet_save(token: str):
+    data = load_data()
+    s, t = find_session_and_trainee_by_token(data, token)
+    if not s or not t:
+        abort(404)
+
+    if not _public_is_authed(token):
+        return redirect(url_for("public_trainee_login", token=token))
+
+    training_type = (_session_get(s, "training_type", "") or "").strip().upper()
+    if training_type != "DIRIGEANT VAE":
+        abort(404)
+
+    base_sheet = _build_candidate_sheet_data(s, t)
+    saved_sheet: Dict[str, str] = {}
+    for key in base_sheet.keys():
+        saved_sheet[key] = str(request.form.get(key, "") or "").strip()
+    t["candidate_sheet"] = saved_sheet
+
+    ensure_documents_schema_for_trainee(t, training_type)
+    docs = t.get("documents") or []
+    target = next((d for d in docs if d.get("key") == "candidate_info_sheet"), None)
+    if target:
+        target["status"] = "A CONTRÔLER"
+
+    t["updated_at"] = _now_iso()
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+
+    s["trainees"] = _session_trainees_list(s)
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return redirect(url_for("public_trainee_space", token=token) + "#doc_candidate_info_sheet")
+
 
 @app.get("/espace/<token>/fiche-candidat")
 def public_trainee_candidate_sheet(token: str):
@@ -7181,6 +7225,7 @@ def public_trainee_candidate_sheet(token: str):
         "public_candidate_sheet_form.html",
         candidate=_build_candidate_sheet_data(s, t),
         photo_url=photo_url,
+        save_url=url_for("public_trainee_candidate_sheet_save", token=token),
     )
 
 
