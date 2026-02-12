@@ -22,6 +22,17 @@
     cursor:not-allowed;
     opacity:1;
   }
+  .btn-warning{
+    background:linear-gradient(135deg, #facc15, #eab308);
+    border-color:#ca8a04;
+    color:#111827;
+  }
+  .btn-success{
+    background:linear-gradient(135deg, #22c55e, #16a34a);
+    border-color:#15803d;
+    color:#ffffff;
+  }
+  .quick-convention-state.is-hidden{ display:none; }
   
   /* Modale plus large */
   .modal.modal-wide{
@@ -869,11 +880,13 @@
           const full = `${(it.first_name||"").toUpperCase()} ${(it.last_name||"").toUpperCase()}`.trim();
           const sub = `${it.session_name || ""} ${it.training_type ? "• " + it.training_type : ""}`.trim();
           const url = it.admin_url || `/admin/sessions/${it.session_id}/stagiaires/${it.trainee_id}`;
-          const conventionSigned = (it.convention_status || "soon") === "signed";
+          const conventionSaisieDone = !!it.convention_saisie_done;
+          const conventionSignedDone = !!it.convention_signed_done;
+          const conventionDone = conventionSaisieDone && conventionSignedDone;
           const testFrValidated = (it.test_fr_status || "soon") === "validated";
 
           return `
-            <div class="search-item" data-session-id="${it.session_id}" data-trainee-id="${it.trainee_id}">
+            <div class="search-item" data-session-id="${it.session_id}" data-trainee-id="${it.trainee_id}" data-convention-saisie-done="${conventionSaisieDone ? "1" : "0"}" data-convention-signed-done="${conventionSignedDone ? "1" : "0"}">
               <div>
                 <div class="search-name">${full || "—"}</div>
                 <div class="search-sub">${sub || "—"}</div>
@@ -882,7 +895,9 @@
                 <a class="btn btn-outline" href="${url}" style="text-decoration:none;display:inline-block">
                   Ouvrir
                 </a>
-                <button type="button" class="btn btn-primary btn-quick-action" data-quick-action="convention" ${conventionSigned ? "disabled" : ""}>Convention</button>
+                <button type="button" class="btn btn-primary btn-quick-action" data-quick-action="convention" ${conventionDone ? "disabled" : ""}>Convention</button>
+                <button type="button" class="btn btn-warning btn-quick-action quick-convention-state is-hidden" data-quick-action="convention-saisie" ${conventionSaisieDone ? "disabled" : ""}>Saisie</button>
+                <button type="button" class="btn btn-success btn-quick-action quick-convention-state is-hidden" data-quick-action="convention-signee" ${conventionSignedDone ? "disabled" : ""}>Signée</button>
                 <button type="button" class="btn btn-primary btn-quick-action" data-quick-action="test-fr" ${testFrValidated ? "disabled" : ""}>Test FR</button>
               </div>
             </div>
@@ -911,8 +926,20 @@
       const action = btn.getAttribute("data-quick-action");
       if(!sessionId || !traineeId || !action) return;
 
+      if(action === "convention"){
+        item.querySelectorAll('.quick-convention-state').forEach(el=>el.classList.remove('is-hidden'));
+        return;
+      }
+
       const payload = {};
-      if(action === "convention") payload.convention_status = "signed";
+      if(action === "convention-saisie"){
+        payload.convention_status = "signing";
+        payload.convention_saisie_done = true;
+      }
+      if(action === "convention-signee"){
+        payload.convention_status = "signed";
+        payload.convention_signed_done = true;
+      }
       if(action === "test-fr") payload.test_fr_status = "validated";
       if(!Object.keys(payload).length) return;
 
@@ -930,6 +957,15 @@
         if(!r.ok || res.ok === false) throw new Error("update_failed");
 
         btn.textContent = oldText;
+        if(action === "convention-saisie") item.setAttribute("data-convention-saisie-done", "1");
+        if(action === "convention-signee") item.setAttribute("data-convention-signed-done", "1");
+
+        const saisieDone = item.getAttribute("data-convention-saisie-done") === "1";
+        const signedDone = item.getAttribute("data-convention-signed-done") === "1";
+        if(saisieDone && signedDone){
+          const conventionBtn = item.querySelector('[data-quick-action="convention"]');
+          if(conventionBtn) conventionBtn.disabled = true;
+        }
       }catch(err){
         btn.disabled = false;
         btn.textContent = oldText;

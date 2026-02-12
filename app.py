@@ -4006,6 +4006,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
     # - convention_status, test_fr_status, dossier_status, financement_status, vae_status, comment, cnaps
     allowed = {
         "convention_status",
+        "convention_saisie_done",
+        "convention_signed_done",
         "test_fr_status",
         "dossier_status",
         "force_dossier_complete",
@@ -7269,6 +7271,8 @@ def api_trainees_search():
                     "first_name": fn,
                     "last_name": ln,
                     "convention_status": t.get("convention_status") or "soon",
+                    "convention_saisie_done": bool(t.get("convention_saisie_done")),
+                    "convention_signed_done": bool(t.get("convention_signed_done")),
                     "test_fr_status": t.get("test_fr_status") or "soon",
                     "admin_url": f"/admin/sessions/{session_id}/stagiaires/{t.get('id')}",
                 })
