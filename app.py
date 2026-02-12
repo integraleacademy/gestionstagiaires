@@ -6027,7 +6027,6 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
         view = vae_status_view("livret_2_todo")
         t["vae_status"] = view["key"]
         t["vae_status_label"] = view["label"]
-        _notify_vae_status_change(t, "livret_2_todo")
     t["updated_at"] = _now_iso()
 
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
@@ -6203,8 +6202,9 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
         f"A bientôt, la Team Intégrale Academy"
 )
 
-    brevo_send_email(t.get("email", ""), subject, html)
-    brevo_send_sms(t.get("phone", ""), sms)
+    if kind != "attestation_recevabilite":
+        brevo_send_email(t.get("email", ""), subject, html)
+        brevo_send_sms(t.get("phone", ""), sms)
 
     # ✅ persistance
     s["trainees"] = trainees
