@@ -1307,6 +1307,7 @@ id="upload_{{ d.key }}"
   } %}
   {% set vae_current_step = vae_current_step_map[vae_key] if vae_key in vae_current_step_map else 1 %}
   {% set vae_jury_date = trainee.vae_jury_date|frdate %}
+  {% set vae_step1_unlocked = vae_required_docs_deposited|default(false) %}
   <div class="card" style="grid-column:1/-1;margin-top:14px;background:linear-gradient(135deg,#eef2ff,#fff7ed);border:1px solid #c7d2fe;">
     <h2>✨ Les étapes de votre VAE</h2>
     <div class="muted" style="margin-bottom:12px;">Suivez chaque étape. Chaque carte correspond à une phase clé de votre parcours.</div>
@@ -1318,9 +1319,11 @@ id="upload_{{ d.key }}"
         {% if vae_current_step == 1 and vae_done_until < 1 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
         {% if vae_done_until >= 1 %}
           <p class="oktag">Étape terminée</p>
-        {% else %}
+        {% elif vae_step1_unlocked %}
           <p><a href="/vae/nouveau/{{ token_safe }}" target="_blank" rel="noopener">Compléter le Livret 1 en cliquant ici</a></p>
-          <p class="muted">Pensez aussi à déposer dans l'onglet "Mes documents" : votre CV, votre fiche de renseignement candidat complétée et votre diplôme le plus élevé.</p>
+        {% else %}
+          <p>🔒</p>
+          <p class="muted">faut devez déposer tous vos documents dans la rubrique Mes documents avant de commencer la rédaction de votre Livret 1 (dossier de faisabilité)</p>
         {% endif %}
       </div>
 
