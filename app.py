@@ -5013,11 +5013,13 @@ def admin_test_fr_echec(session_id: str, trainee_id: str):
     brevo_send_email(t.get("email", ""), payload["subject"], payload["html"])
     brevo_send_sms(t.get("phone", ""), payload["sms"])
 
+    now = _now_iso()
     t["test_fr_status"] = payload["status"]
     t["test_fr_code"] = code
     t["test_fr_deadline"] = deadline
-    t[payload["stamp_field"]] = _now_iso()
-    t["updated_at"] = _now_iso()
+    t[payload["stamp_field"]] = now
+    t["test_fr_last_failed_at"] = now
+    t["updated_at"] = now
 
     s["trainees"] = trainees
     save_data(data)
@@ -8398,29 +8400,7 @@ def admin_vae_export(dossier_id: str):
     if not dossier:
         abort(404)
 
-    statut_labels = {
-        "brouillon": "Brouillon",
-        "soumis": "Soumis",
-        "recevable": "Recevable",
-        "refuse": "Refusé",
-    }
-    decision_labels = {
-        "faisable": "Faisable",
-        "faisable_complements": "Faisable avec compléments",
-        "non_faisable": "Non faisable",
-    }
-
-    minimum_pages = 10
-    base_pages = 9
-    annex_pages = max(0, minimum_pages - base_pages)
-
-    return render_template(
-        'admin_vae_export.html',
-        dossier=dossier,
-        statut_labels=statut_labels,
-        decision_labels=decision_labels,
-        annex_pages=annex_pages,
-    )
+    return render_template('admin_vae_export.html', dossier=dossier)
 
 @app.get("/admin/sessions/")
 def admin_sessions_slash_redirect():
