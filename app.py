@@ -172,6 +172,14 @@ PERSIST_DIR = os.environ.get("PERSIST_DIR", "/data")
 os.makedirs(PERSIST_DIR, exist_ok=True)
 DATA_FILE = os.path.join(PERSIST_DIR, "data.json")
 
+BACKUP_DIR = os.path.join(PERSIST_DIR, "backups")
+os.makedirs(BACKUP_DIR, exist_ok=True)
+BACKUP_RETENTION = int(os.environ.get("BACKUP_RETENTION", "120"))
+BACKUP_MIN_INTERVAL_SECONDS = int(os.environ.get("BACKUP_MIN_INTERVAL_SECONDS", "300"))
+
+_data_lock = threading.RLock()
+_last_backup_times: Dict[str, float] = {}
+
 UPLOADS_DIR = os.path.join(PERSIST_DIR, "uploads")
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
@@ -179,6 +187,60 @@ def trainee_upload_dir(session_id: str, trainee_id: str) -> str:
     d = os.path.join(UPLOADS_DIR, session_id, trainee_id)
     os.makedirs(d, exist_ok=True)
     return d
+
+
+def _cleanup_backups_for(prefix: str) -> None:
+    try:
+        names = sorted(
+            [name for name in os.listdir(BACKUP_DIR) if name.startswith(prefix + ".")],
+            reverse=True,
+        )
+        for old_name in names[BACKUP_RETENTION:]:
+            old_path = os.path.join(BACKUP_DIR, old_name)
+            if os.path.isfile(old_path):
+                os.remove(old_path)
+    except Exception:
+        pass
+
+
+def _force_backup_snapshot(path: str) -> None:
+    base_name = os.path.basename(path)
+    prefix = base_name.replace(".", "_")
+    if not os.path.exists(path):
+        return
+    stamp = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    backup_path = os.path.join(BACKUP_DIR, f"{prefix}.manual.{stamp}.json")
+    try:
+        with open(path, "rb") as src, open(backup_path, "wb") as dst:
+            dst.write(src.read())
+        _cleanup_backups_for(prefix)
+    except Exception:
+        pass
+
+
+def _write_json_with_backups(path: str, payload: Dict[str, Any], lock: threading.RLock) -> None:
+    with lock:
+        now_ts = datetime.datetime.utcnow().timestamp()
+        base_name = os.path.basename(path)
+        prefix = base_name.replace(".", "_")
+
+        if os.path.exists(path):
+            last = _last_backup_times.get(path, 0)
+            if now_ts - last >= BACKUP_MIN_INTERVAL_SECONDS:
+                stamp = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+                backup_path = os.path.join(BACKUP_DIR, f"{prefix}.{stamp}.json")
+                try:
+                    with open(path, "rb") as src, open(backup_path, "wb") as dst:
+                        dst.write(src.read())
+                    _last_backup_times[path] = now_ts
+                    _cleanup_backups_for(prefix)
+                except Exception:
+                    pass
+
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, path)
 
 
 # =========================
@@ -737,6 +799,7 @@ def load_data() -> Dict[str, Any]:
             "notifications_edof": [],
             "notifications_prelevements": [],
             "notifications_phone_relances": [],
+            "notifications_cnaps_pre_relances": [],
             "notifications_admin": [],
         }
         save_data(base)
@@ -767,6 +830,9 @@ def load_data() -> Dict[str, Any]:
         if "notifications_phone_relances" not in data:
             data["notifications_phone_relances"] = []
             changed = True
+        if "notifications_cnaps_pre_relances" not in data:
+            data["notifications_cnaps_pre_relances"] = []
+            changed = True
         if "notifications_admin" not in data:
             data["notifications_admin"] = []
             changed = True
@@ -792,6 +858,7 @@ def load_data() -> Dict[str, Any]:
             "notifications_edof": [],
             "notifications_prelevements": [],
             "notifications_phone_relances": [],
+            "notifications_cnaps_pre_relances": [],
             "notifications_admin": [],
         }
         save_data(base)
@@ -801,10 +868,7 @@ def load_data() -> Dict[str, Any]:
 
 
 def save_data(data: Dict[str, Any]) -> None:
-    tmp = DATA_FILE + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, DATA_FILE)
+    _write_json_with_backups(DATA_FILE, data, _data_lock)
 
 
 def _notification_id(prefix: str) -> str:
@@ -817,6 +881,7 @@ def add_notification(data: Dict[str, Any], bucket: str, label: str, meta: Option
         "notifications_edof": "EDOF",
         "notifications_prelevements": "PREL",
         "notifications_phone_relances": "REL",
+        "notifications_cnaps_pre_relances": "PRE",
         "notifications_admin": "ADM",
     }
     entry = {
@@ -836,6 +901,7 @@ def _notifications_bucket_key(bucket: str) -> Optional[str]:
         "edof": "notifications_edof",
         "prelevements": "notifications_prelevements",
         "relances": "notifications_phone_relances",
+        "cnaps_pre": "notifications_cnaps_pre_relances",
     }.get(bucket)
 
 
@@ -852,6 +918,7 @@ def _secretariat_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
         "edof": _with_created_fr(list(data.get("notifications_edof", []))),
         "prelevements": _with_created_fr(list(data.get("notifications_prelevements", []))),
         "relances": _with_created_fr(list(data.get("notifications_phone_relances", []))),
+        "cnaps_pre": _with_created_fr(list(data.get("notifications_cnaps_pre_relances", []))),
     }
     unresolved_total = 0
     for items in notifications.values():
@@ -913,6 +980,27 @@ def _admin_notification_details(data: Dict[str, Any], item: Dict[str, Any]) -> L
     return details
 
 
+def _admin_notification_trainee_url(data: Dict[str, Any], item: Dict[str, Any]) -> str:
+    meta = item.get("meta") or {}
+    session_id = (meta.get("session_id") or "").strip()
+    trainee_id = (meta.get("trainee_id") or "").strip()
+    if not session_id or not trainee_id:
+        return ""
+
+    session_obj = _find_session_by_id(data, session_id)
+    if not session_obj:
+        return ""
+
+    trainee_exists = any(
+        (trainee.get("id") or "").strip() == trainee_id
+        for trainee in _session_trainees_list(session_obj)
+    )
+    if not trainee_exists:
+        return ""
+
+    return url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id)
+
+
 def _admin_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
     notifications = []
     unresolved_total = 0
@@ -920,6 +1008,7 @@ def _admin_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
         cloned = dict(item)
         cloned["created_fr"] = fr_datetime(item.get("created_at") or "")
         cloned["details"] = _admin_notification_details(data, item)
+        cloned["trainee_url"] = _admin_notification_trainee_url(data, item)
         notifications.append(cloned)
         if not item.get("done"):
             unresolved_total += 1
@@ -2365,6 +2454,7 @@ def admin_secretariat():
         edof_notifications=notifications["edof"],
         prelevement_notifications=notifications["prelevements"],
         phone_notifications=notifications["relances"],
+        cnaps_pre_notifications=notifications["cnaps_pre"],
         unresolved_total=payload["unresolved_total"],
     )
 
@@ -2816,6 +2906,80 @@ def api_secretariat_relance_result(notification_id: str):
     })
 
 
+@app.post("/api/secretariat/notifications/cnaps_pre/<notification_id>/call-result")
+@admin_login_required
+def api_secretariat_cnaps_pre_result(notification_id: str):
+    payload = request.get_json(silent=True) or {}
+    outcome = (payload.get("outcome") or "").strip().upper()
+    comment = (payload.get("comment") or "").strip()
+    if outcome not in ("CALLED", "NO_ANSWER"):
+        return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+
+    data = load_data()
+    notification = next(
+        (item for item in data.get("notifications_cnaps_pre_relances", []) if item.get("id") == notification_id),
+        None,
+    )
+    if not notification:
+        return jsonify({"ok": False, "error": "notification_not_found"}), 404
+
+    notification_meta = notification.setdefault("meta", {})
+    previous_no_answer = _parse_no_answer_count(notification_meta.get("no_answer_count"))
+    if outcome == "NO_ANSWER":
+        no_answer_count = min(3, previous_no_answer + 1)
+        display = {
+            1: "1er appel pas de réponse",
+            2: "2ème appel pas de réponse",
+            3: "3ème appel pas de réponse",
+        }[no_answer_count]
+        notification["done"] = no_answer_count >= 3
+        notification["done_at"] = _now_iso() if notification.get("done") else ""
+    else:
+        no_answer_count = 0
+        display = "Personne jointe"
+        notification["done"] = True
+        notification["done_at"] = _now_iso()
+
+    notification_meta["call_status"] = display
+    notification_meta["no_answer_count"] = no_answer_count
+    if comment:
+        notification_meta["last_comment"] = comment
+
+    trainee_display_name = _format_trainee_name(
+        notification_meta.get("first_name", ""),
+        notification_meta.get("last_name", ""),
+    )
+    call_icon = "🟢" if outcome == "CALLED" else ({1: "🟡", 2: "🟠", 3: "🔴"}.get(no_answer_count, "🟡"))
+    call_label = (
+        f"{call_icon}Relance PRE CNAPS {trainee_display_name} - personne appelée"
+        if outcome == "CALLED"
+        else f"{call_icon}Relance PRE CNAPS {trainee_display_name} - {display}"
+    )
+    add_admin_notification(
+        data,
+        call_label,
+        meta={
+            "type": "cnaps_pre_call_result",
+            "outcome": outcome,
+            "no_answer_count": no_answer_count,
+            "session_id": notification_meta.get("session_id"),
+            "trainee_id": notification_meta.get("trainee_id"),
+            "comment": comment,
+            "call_status": display,
+        },
+    )
+
+    save_data(data)
+    refreshed_payload = _secretariat_notifications_payload(data)
+    return jsonify({
+        "ok": True,
+        "done": bool(notification.get("done")),
+        "call_status": display,
+        "no_answer_count": no_answer_count,
+        **refreshed_payload,
+    })
+
+
 @app.post("/api/secretariat/notifications/edof/<notification_id>/call-result")
 @admin_login_required
 def api_secretariat_edof_result(notification_id: str):
@@ -3118,6 +3282,7 @@ def api_update_session(session_id: str):
 @admin_write_required
 def api_delete_session(session_id: str):
     data = load_data()
+    _force_backup_snapshot(DATA_FILE)
     before = len(data.get("sessions", []))
     data["sessions"] = [s for s in data.get("sessions", []) if s.get("id") != session_id]
     save_data(data)
@@ -3723,8 +3888,15 @@ def api_send_cnaps_pre_relance(session_id: str, trainee_id: str):
           être obtenue avant toute entrée en formation.
         </p>
         <p>
-          Pour déposer votre demande, cliquez ici :
-          <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
+          Pour déposer votre demande, cliquez sur le bouton ci-dessous :
+        </p>
+        <p style="text-align:center;margin:18px 0;">
+          <a href="{link}" style="display:inline-block;background:#1f8f4a;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 18px;border-radius:8px;">
+            Déposer ma demande CNAPS
+          </a>
+        </p>
+        <p>
+          Pour toute question vous pouvez nous contacter au 04 22 47 07 68.
         </p>
         <p>Je vous remercie par avance,</p>
         <p>
@@ -3743,11 +3915,37 @@ def api_send_cnaps_pre_relance(session_id: str, trainee_id: str):
 
     email = (t.get("email") or "").strip()
     phone = (t.get("phone") or "").strip()
-    email_ok = brevo_send_email(email, "Relance PRE CNAPS – Documents manquants", html) if email else False
+    email_ok = brevo_send_email(email, "Relance documents CNAPS Ministère de l'intérieur", html) if email else False
     sms_ok = brevo_send_sms(phone, sms) if phone else False
 
     t["cnaps_pre_relance_last_sent_at"] = _now_iso()
     t["updated_at"] = _now_iso()
+
+    first_name = (t.get("first_name") or "").strip()
+    last_name = (t.get("last_name") or "").strip()
+    phone_display = phone or ""
+    email_display = email or ""
+    label_name = _format_trainee_name(first_name, last_name)
+    label_parts = [label_name]
+    if training_name:
+        label_parts.append(training_name)
+    add_notification(
+        data,
+        "notifications_cnaps_pre_relances",
+        " • ".join([part for part in label_parts if part]).strip(),
+        meta={
+            "first_name": first_name,
+            "last_name": last_name,
+            "training": training_name,
+            "phone": phone_display,
+            "email": email_display,
+            "session_id": s.get("id"),
+            "trainee_id": t.get("id"),
+            "call_status": "À appeler",
+            "no_answer_count": 0,
+        },
+    )
+
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     save_data(data)
@@ -3760,6 +3958,7 @@ def api_send_cnaps_pre_relance(session_id: str, trainee_id: str):
 @admin_write_required
 def api_delete_trainee(session_id: str, trainee_id: str):
     data = load_data()
+    _force_backup_snapshot(DATA_FILE)
     s = find_session(data, session_id)
     if not s:
         return jsonify({"ok": False, "error": "session_not_found"}), 404
@@ -3795,7 +3994,19 @@ def api_cnaps_lookup():
 
 @app.get("/api/health")
 def health():
-    return jsonify({"ok": True, "data_file": DATA_FILE})
+    backup_files = []
+    try:
+        backup_files = [n for n in os.listdir(BACKUP_DIR) if n.endswith(".json")]
+    except Exception:
+        backup_files = []
+    return jsonify({
+        "ok": True,
+        "data_file": DATA_FILE,
+        "vae_data_file": VAE_DATA_FILE,
+        "backup_dir": BACKUP_DIR,
+        "backups_count": len(backup_files),
+        "backup_retention": BACKUP_RETENTION,
+    })
 
 
 @app.post("/api/test-positionnement/submit")
@@ -3854,6 +4065,7 @@ def api_positioning_test_submit():
 @admin_write_required
 def api_positioning_test_delete(test_id: str):
     data = load_data()
+    _force_backup_snapshot(DATA_FILE)
     entries = list(data.get("positioning_tests", []))
     new_entries = [e for e in entries if e.get("id") != test_id]
     data["positioning_tests"] = new_entries
@@ -3866,6 +4078,7 @@ def api_positioning_test_delete(test_id: str):
 @admin_write_required
 def api_positioning_test_delete_all():
     data = load_data()
+    _force_backup_snapshot(DATA_FILE)
     deleted = len(data.get("positioning_tests", []))
     data["positioning_tests"] = []
     save_data(data)
@@ -4239,6 +4452,7 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
 @admin_write_required
 def admin_delete_doc_file(session_id: str, trainee_id: str, doc_key: str):
     data = load_data()
+    _force_backup_snapshot(DATA_FILE)
     s = find_session(data, session_id)
     if not s:
         abort(404)
@@ -4395,6 +4609,7 @@ def infos_missing_text(trainee: dict) -> str:
 @admin_write_required
 def admin_delete_trainee(session_id: str, trainee_id: str):
     data = load_data()
+    _force_backup_snapshot(DATA_FILE)
     s = find_session(data, session_id)
     if not s:
         abort(404)
@@ -4984,11 +5199,13 @@ def admin_test_fr_echec(session_id: str, trainee_id: str):
     brevo_send_email(t.get("email", ""), payload["subject"], payload["html"])
     brevo_send_sms(t.get("phone", ""), payload["sms"])
 
+    now = _now_iso()
     t["test_fr_status"] = payload["status"]
     t["test_fr_code"] = code
     t["test_fr_deadline"] = deadline
-    t[payload["stamp_field"]] = _now_iso()
-    t["updated_at"] = _now_iso()
+    t[payload["stamp_field"]] = now
+    t["test_fr_last_failed_at"] = now
+    t["updated_at"] = now
 
     s["trainees"] = trainees
     save_data(data)
@@ -6485,6 +6702,8 @@ def api_trainees_search():
                     "trainee_id": t.get("id"),
                     "first_name": fn,
                     "last_name": ln,
+                    "convention_status": t.get("convention_status") or "soon",
+                    "test_fr_status": t.get("test_fr_status") or "soon",
                     "admin_url": f"/admin/sessions/{session_id}/stagiaires/{t.get('id')}",
                 })
 
@@ -7997,11 +8216,7 @@ def _vae_load_all() -> Dict[str, Any]:
             return data
 
 def _vae_save_all(data: Dict[str, Any]) -> None:
-    with _vae_lock:
-        tmp = VAE_DATA_FILE + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, VAE_DATA_FILE)
+    _write_json_with_backups(VAE_DATA_FILE, data, _vae_lock)
 
 def _vae_find_dossier(data: Dict[str, Any], dossier_id: str) -> Optional[Dict[str, Any]]:
     for d in data.get("dossiers", []):

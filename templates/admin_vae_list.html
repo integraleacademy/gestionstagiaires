@@ -12,8 +12,8 @@
         <td>{{ d.candidat.nom_naissance }} {{ d.candidat.prenoms }}</td>
         <td>{{ d.candidat.email }}</td>
         <td>{{ d.statut_dossier }}</td>
-        <td>{{ d.created_at }}</td>
-        <td>{{ d.updated_at }}</td>
+        <td>{{ d.created_at|frdatetime }}</td>
+        <td>{{ d.updated_at|frdatetime }}</td>
         <td><a class="btn secondary" href="/admin/vae/{{ d.id }}">Ouvrir</a></td>
       </tr>
       {% else %}
