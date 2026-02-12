@@ -37,8 +37,17 @@
           <label for="niveau_formation">Niveau de formation le plus élevé</label>
           <select id="niveau_formation" name="candidat.niveau_formation">
             <option value="">Sélectionner un niveau</option>
-            {% for niveau in ['2','3','4','5','6','7','8'] %}
-            <option value="{{ niveau }}" {% if dossier.candidat.niveau_formation==niveau %}selected{% endif %}>Niveau {{ niveau }}</option>
+            {% set niveaux_formation = [
+              ('2', 'Niveau 2'),
+              ('3', 'Niveau 3 (CAP, BEP)'),
+              ('4', 'Niveau 4 (Bac)'),
+              ('5', 'Niveau 5 (DEUG, BTS, DUT)'),
+              ('6', 'Niveau 6 (Licence, BUT, Maîtrise)'),
+              ('7', 'Niveau 7 (Master)'),
+              ('8', 'Niveau 8 (Doctorat)')
+            ] %}
+            {% for niveau, label in niveaux_formation %}
+            <option value="{{ niveau }}" {% if dossier.candidat.niveau_formation==niveau %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
           </select>
         </div>
@@ -46,11 +55,20 @@
           <label for="niveau_certification">Niveau de certification la plus élevée</label>
           <select id="niveau_certification" name="candidat.niveau_certification">
             <option value="">Sélectionner un niveau</option>
-            {% for niveau in ['3','4','5','6','7','8'] %}
-            <option value="{{ niveau }}" {% if dossier.candidat.niveau_certification==niveau %}selected{% endif %}>Niveau {{ niveau }}</option>
+            {% set niveaux_certification = [
+              ('3', 'Niveau 3 (CAP, BEP)'),
+              ('4', 'Niveau 4 (Bac)'),
+              ('5', 'Niveau 5 (DEUG, BTS, DUT)'),
+              ('6', 'Niveau 6 (Licence, BUT, Maîtrise)'),
+              ('7', 'Niveau 7 (Master)'),
+              ('8', 'Niveau 8 (Doctorat)')
+            ] %}
+            {% for niveau, label in niveaux_certification %}
+            <option value="{{ niveau }}" {% if dossier.candidat.niveau_certification==niveau %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
           </select>
         </div>
+        <p class="muted levels-hint">Correspondance des niveaux : CAP/BEP = 3, Bac = 4, DEUG/BTS/DUT = 5, Licence/BUT/Maîtrise = 6, Master = 7, Doctorat = 8.</p>
       </div>
       <input name="candidat.certifications_obtenues" placeholder="Intitulé des certifications obtenues" value="{{ dossier.candidat.certifications_obtenues }}">
       <input name="candidat.adresse" placeholder="Adresse postale (adresse, code postal, ville, pays)" value="{{ dossier.candidat.adresse }}">
