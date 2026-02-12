@@ -801,6 +801,7 @@ def load_data() -> Dict[str, Any]:
             "notifications_prelevements": [],
             "notifications_phone_relances": [],
             "notifications_cnaps_pre_relances": [],
+            "notifications_test_fr": [],
             "notifications_admin": [],
         }
         save_data(base)
@@ -837,6 +838,9 @@ def load_data() -> Dict[str, Any]:
         if "notifications_cnaps_pre_relances" not in data:
             data["notifications_cnaps_pre_relances"] = []
             changed = True
+        if "notifications_test_fr" not in data:
+            data["notifications_test_fr"] = []
+            changed = True
         if "notifications_admin" not in data:
             data["notifications_admin"] = []
             changed = True
@@ -864,6 +868,7 @@ def load_data() -> Dict[str, Any]:
             "notifications_prelevements": [],
             "notifications_phone_relances": [],
             "notifications_cnaps_pre_relances": [],
+            "notifications_test_fr": [],
             "notifications_admin": [],
         }
         save_data(base)
@@ -888,6 +893,7 @@ def add_notification(data: Dict[str, Any], bucket: str, label: str, meta: Option
         "notifications_prelevements": "PREL",
         "notifications_phone_relances": "REL",
         "notifications_cnaps_pre_relances": "PRE",
+        "notifications_test_fr": "TFR",
         "notifications_admin": "ADM",
     }
     entry = {
@@ -909,6 +915,7 @@ def _notifications_bucket_key(bucket: str) -> Optional[str]:
         "prelevements": "notifications_prelevements",
         "relances": "notifications_phone_relances",
         "cnaps_pre": "notifications_cnaps_pre_relances",
+        "test_fr": "notifications_test_fr",
     }.get(bucket)
 
 
@@ -927,6 +934,7 @@ def _secretariat_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
         "prelevements": _with_created_fr(list(data.get("notifications_prelevements", []))),
         "relances": _with_created_fr(list(data.get("notifications_phone_relances", []))),
         "cnaps_pre": _with_created_fr(list(data.get("notifications_cnaps_pre_relances", []))),
+        "test_fr": _with_created_fr(list(data.get("notifications_test_fr", []))),
     }
     unresolved_total = 0
     for items in notifications.values():
@@ -2518,6 +2526,7 @@ def admin_secretariat():
         prelevement_notifications=notifications["prelevements"],
         phone_notifications=notifications["relances"],
         cnaps_pre_notifications=notifications["cnaps_pre"],
+        test_fr_notifications=notifications["test_fr"],
         unresolved_total=payload["unresolved_total"],
     )
 
@@ -5339,11 +5348,13 @@ def admin_test_fr_notify(session_id: str, trainee_id: str):
     brevo_send_email(t.get("email",""), payload["subject"], payload["html"])
     brevo_send_sms(t.get("phone",""), payload["sms"])
 
+    now = _now_iso()
     t["test_fr_status"] = payload["status"]
     t["test_fr_code"] = code
     t["test_fr_deadline"] = deadline
-    t[payload["stamp_field"]] = _now_iso()
-    t["updated_at"] = _now_iso()
+    t[payload["stamp_field"]] = now
+    t["updated_at"] = now
+
 
     s["trainees"] = trainees
     save_data(data)
@@ -5372,11 +5383,26 @@ def admin_test_fr_relance(session_id: str, trainee_id: str):
     brevo_send_email(t.get("email", ""), payload["subject"], payload["html"])
     brevo_send_sms(t.get("phone", ""), payload["sms"])
 
+    now = _now_iso()
     t["test_fr_status"] = payload["status"]
     t["test_fr_code"] = code
     t["test_fr_deadline"] = deadline
-    t[payload["stamp_field"]] = _now_iso()
-    t["updated_at"] = _now_iso()
+    t[payload["stamp_field"]] = now
+    t["updated_at"] = now
+
+    add_notification(
+        data,
+        "notifications_test_fr",
+        f"Cette personne n'a pas réalisé son test de français, un nouveau lien a été envoyé, le test doit être réalisé le {fr_date(deadline) or deadline}",
+        meta={
+            "type": "test_fr_relance",
+            "session_id": s.get("id"),
+            "trainee_id": t.get("id"),
+            "first_name": t.get("first_name", ""),
+            "last_name": t.get("last_name", ""),
+            "deadline": deadline,
+        },
+    )
 
     s["trainees"] = trainees
     save_data(data)
@@ -5413,6 +5439,20 @@ def admin_test_fr_echec(session_id: str, trainee_id: str):
     t[payload["stamp_field"]] = now
     t["test_fr_last_failed_at"] = now
     t["updated_at"] = now
+
+    add_notification(
+        data,
+        "notifications_test_fr",
+        f"Cette personne a échoué son test de français, un nouveau lien a été envoyé, le test doit être réalisé le {fr_date(deadline) or deadline}",
+        meta={
+            "type": "test_fr_echec",
+            "session_id": s.get("id"),
+            "trainee_id": t.get("id"),
+            "first_name": t.get("first_name", ""),
+            "last_name": t.get("last_name", ""),
+            "deadline": deadline,
+        },
+    )
 
     s["trainees"] = trainees
     save_data(data)
