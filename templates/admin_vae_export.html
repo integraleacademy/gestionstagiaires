@@ -52,50 +52,10 @@
   {% set experiences = dossier.experiences or [] %}
   {% set blocs = dossier.blocs_competences or {} %}
 
-  <section class="page">
-    <h1 class="doc-title">Dossier de faisabilité VAE DESP</h1>
-    <p><strong>Référence :</strong> {{ dossier.id }}</p>
-    <p><strong>Statut :</strong> <span class="pill">{{ statut_labels.get(dossier.statut_dossier, dossier.statut_dossier or '—') }}</span></p>
-    <p><strong>Date de création :</strong> {{ dossier.created_at|frdatetime or '—' }}</p>
-    <p><strong>Dernière mise à jour :</strong> {{ dossier.updated_at|frdatetime or '—' }}</p>
-
-    <h2 class="section-title" style="margin-top:24px;">Sommaire</h2>
-    <ol>
-      <li>Page de garde et sommaire</li>
-      <li>Nature de la demande</li>
-      <li>Informations générales candidat</li>
-      <li>Certification professionnelle visée</li>
-      <li>Expériences professionnelles ou personnelles</li>
-      <li>Positionnement par compétences — Activités 1 & 2</li>
-      <li>Positionnement par compétences — Activités 3 & 4</li>
-      <li>Positionnement par compétences — Activité 5 et synthèse</li>
-      <li>Parcours prévisionnel</li>
-      <li>Avis de faisabilité, engagement et annexes</li>
-    </ol>
-
-    <p class="small">Ce document est optimisé pour l’impression A4 et l’export PDF depuis le navigateur.</p>
-  </section>
-
-  <section class="page">
-    <h2 class="section-title">1. Nature de la demande</h2>
-    <div class="field">
-      <div class="label">Nature de la demande</div>
-      <div class="value">{{ dossier.nature_demande or '—' }}</div>
-    </div>
-
-    <h2 class="section-title" style="margin-top:22px;">2. Informations générales sur le candidat</h2>
-    <div class="grid-two">
-      <div class="field"><div class="label">Nom de naissance</div><div class="value">{{ candidat.nom_naissance or '—' }}</div></div>
-      <div class="field"><div class="label">Nom d'usage</div><div class="value">{{ candidat.nom_usage or '—' }}</div></div>
-      <div class="field"><div class="label">Prénom(s)</div><div class="value">{{ candidat.prenoms or '—' }}</div></div>
-      <div class="field"><div class="label">Date de naissance</div><div class="value">{{ candidat.date_naissance or '—' }}</div></div>
-      <div class="field"><div class="label">Nationalité</div><div class="value">{{ candidat.nationalite or '—' }}</div></div>
-      <div class="field"><div class="label">Téléphone</div><div class="value">{{ candidat.telephone or '—' }}</div></div>
-      <div class="field"><div class="label">Email</div><div class="value">{{ candidat.email or '—' }}</div></div>
-      <div class="field"><div class="label">Adresse</div><div class="value">{{ candidat.adresse or '—' }}</div></div>
-      <div class="field"><div class="label">Statut</div><div class="value">{{ candidat.statut or '—' }}</div></div>
-      <div class="field"><div class="label">Convention collective</div><div class="value">{{ candidat.convention_collective or '—' }}</div></div>
-    </div>
+  <div class="print-toolbar">
+    <div>Version conforme au formulaire en ligne (étapes et intitulés). Imprimer → Enregistrer en PDF.</div>
+    <button type="button" class="btn" onclick="window.print()">Imprimer / PDF</button>
+  </div>
 
   <main class="export-wrap">
     <section class="export-step cover">
