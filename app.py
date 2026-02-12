@@ -3784,6 +3784,13 @@ def api_create_trainee(session_id: str):
         elif (training_type or "") == "DIRIGEANT VAE":
             subject = "Votre VAE Dirigeant d'entreprise de sécurité privée (DESP)"
             html = mail_layout(f"""
+              <style>
+                @keyframes vaeCtaPulse {{
+                  0% {{ box-shadow: 0 0 0 0 rgba(31, 143, 74, 0.45); transform: scale(1); }}
+                  70% {{ box-shadow: 0 0 0 12px rgba(31, 143, 74, 0); transform: scale(1.02); }}
+                  100% {{ box-shadow: 0 0 0 0 rgba(31, 143, 74, 0); transform: scale(1); }}
+                }}
+              </style>
               <h2 style="text-align:center">🚀 En route vers la VAE</h2>
               <p>Bonjour {first_name},</p>
 
@@ -3827,7 +3834,7 @@ def api_create_trainee(session_id: str):
 
               <p style="text-align:center;margin:24px 0">
                 <a href="{link}"
-                   style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+                   style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold;animation:vaeCtaPulse 1.8s ease-out infinite;box-shadow:0 0 0 0 rgba(31, 143, 74, 0.45)">
                   Démarrer ma VAE
                 </a>
               </p>
