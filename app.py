@@ -1605,6 +1605,40 @@ def ensure_documents_schema_for_trainee(t: Dict[str, Any], training_type: str) -
     t["documents"] = out
     return changed
 
+
+def _ensure_livret2_document_entry(t: Dict[str, Any]) -> Dict[str, Any]:
+    """Garantit la présence du document technique livret_2 pour les uploads publics VAE."""
+    docs = t.get("documents")
+    if not isinstance(docs, list):
+        docs = []
+        t["documents"] = docs
+
+    existing = next((d for d in docs if isinstance(d, dict) and d.get("key") == "livret_2"), None)
+    if existing:
+        if "files" not in existing or not isinstance(existing.get("files"), list):
+            existing["files"] = []
+        if "file" not in existing:
+            existing["file"] = ""
+        if "status" not in existing:
+            existing["status"] = "NON DÉPOSÉ"
+        if "accept" not in existing:
+            existing["accept"] = "application/pdf,image/jpeg,image/png"
+        if "label" not in existing:
+            existing["label"] = "Livret 2"
+        return existing
+
+    livret2_doc = {
+        "key": "livret_2",
+        "label": "Livret 2",
+        "accept": "application/pdf,image/jpeg,image/png",
+        "status": "NON DÉPOSÉ",
+        "comment": "",
+        "file": "",
+        "files": [],
+    }
+    docs.append(livret2_doc)
+    return livret2_doc
+
 def allowed_doc_keys_for_training(training_type: str) -> set:
     keys = {d["key"] for d in required_docs_for_training(training_type)}
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
@@ -6194,6 +6228,8 @@ def public_trainee_space(token):
 
     # ✅ aligne la liste des docs requis
     ensure_documents_schema_for_trainee(t, training_type)
+    if (training_type or "").strip().upper() == "DIRIGEANT VAE":
+        _ensure_livret2_document_entry(t)
 
     for d in (t.get("documents") or []):
         file_token = d.get("file") or ""
@@ -6390,6 +6426,8 @@ def public_doc_upload(token: str, doc_key: str):
 
     training_type = _session_get(s, "training_type", "")
     ensure_documents_schema_for_trainee(t, training_type)
+    if (training_type or "").strip().upper() == "DIRIGEANT VAE":
+        _ensure_livret2_document_entry(t)
 
     # ✅ doc_key doit être dans la liste requise
     if doc_key not in allowed_doc_keys_for_training(training_type):
