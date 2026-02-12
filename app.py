@@ -5945,15 +5945,17 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
         <p style=\"margin-top:18px;\"><a href=\"{space_url}\" style=\"{secondary_btn}\">Suivre mon dossier VAE</a></p>
         """)
     elif status_key == "livret_2_validated":
-        subject = "VAE : Livret 2 validé"
+        subject = "Livret 2 VAE dirigeant validé 🎉"
         html = mail_layout(f"""
-        <h2 style=\"margin:0 0 12px 0;color:#0f172a;\">🎉 Livret 2 validé</h2>
+        <h2 style=\"margin:0 0 12px 0;color:#0f172a;\">Votre Livret 2 VAE est validé 🎉</h2>
         <p>Bonjour <strong>{first_name}</strong>,</p>
         <p>Nous avons le plaisir de vous informer que votre <strong>Livret 2 VAE Dirigeant d'entreprise de sécurité (DESP)</strong> est conforme.</p>
         <p>Nous allons désormais programmer votre date de passage devant le jury de certification.</p>
-        <p>Afin d'organiser votre passage et finaliser le financement de votre VAE, merci de réserver un rendez-vous téléphonique avec notre équipe.</p>
+        <p>Afin d'organiser votre passage et finaliser le financement de votre VAE, nous vous remercions de bien vouloir réserver un rendez-vous téléphonique avec notre équipe.</p>
         <p style=\"margin-top:18px;\"><a href=\"{booking_url}\" style=\"{primary_btn}\">Réserver un RDV téléphonique</a></p>
-        <p style=\"margin-top:18px;\">Lors de cet échange, nous vous préciserons les prochaines étapes administratives et pratiques jusqu'à l'examen final.</p>
+        <p style=\"margin-top:18px;\">Lors de cet échange, nous vous préciserons les prochaines étapes administratives et pratiques jusqu'à l'obtention de votre certification dirigeant.</p>
+        <p>Nous restons à votre disposition et nous vous souhaitons une agréable journée,</p>
+        <p><strong>La Team Intégrale Academy</strong></p>
         """)
     elif status_key == "jury":
         subject = "VAE : date de passage devant le jury"
