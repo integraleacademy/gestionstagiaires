@@ -913,6 +913,27 @@ def _admin_notification_details(data: Dict[str, Any], item: Dict[str, Any]) -> L
     return details
 
 
+def _admin_notification_trainee_url(data: Dict[str, Any], item: Dict[str, Any]) -> str:
+    meta = item.get("meta") or {}
+    session_id = (meta.get("session_id") or "").strip()
+    trainee_id = (meta.get("trainee_id") or "").strip()
+    if not session_id or not trainee_id:
+        return ""
+
+    session_obj = _find_session_by_id(data, session_id)
+    if not session_obj:
+        return ""
+
+    trainee_exists = any(
+        (trainee.get("id") or "").strip() == trainee_id
+        for trainee in _session_trainees_list(session_obj)
+    )
+    if not trainee_exists:
+        return ""
+
+    return url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id)
+
+
 def _admin_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
     notifications = []
     unresolved_total = 0
@@ -920,6 +941,7 @@ def _admin_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
         cloned = dict(item)
         cloned["created_fr"] = fr_datetime(item.get("created_at") or "")
         cloned["details"] = _admin_notification_details(data, item)
+        cloned["trainee_url"] = _admin_notification_trainee_url(data, item)
         notifications.append(cloned)
         if not item.get("done"):
             unresolved_total += 1
