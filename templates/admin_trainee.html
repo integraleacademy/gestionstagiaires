@@ -396,6 +396,7 @@
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
           <button class="btn btn-primary" type="button" onclick="openTestModal('notify')">🔔 Notifier test de français</button>
           <button class="btn btn-outline" type="button" onclick="openTestModal('relance')">🔁 Relancer test de français</button>
+          <button class="btn btn-outline" type="button" onclick="openTestModal('echec')">❌ Échec test de français</button>
         </div>
       {% endif %}
 
@@ -1407,6 +1408,9 @@ function setDossierPill(status){
     if(mode === "notify"){
       title.textContent = "Notifier test de français";
       form.action = "{{ url_for('admin_test_fr_notify', session_id=session.id, trainee_id=trainee.id) }}";
+    }else if(mode === "echec"){
+      title.textContent = "Échec test de français";
+      form.action = "{{ url_for('admin_test_fr_echec', session_id=session.id, trainee_id=trainee.id) }}";
     }else{
       title.textContent = "Relancer test de français";
       form.action = "{{ url_for('admin_test_fr_relance', session_id=session.id, trainee_id=trainee.id) }}";

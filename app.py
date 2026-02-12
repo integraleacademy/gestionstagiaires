@@ -4772,7 +4772,7 @@ def _build_test_fr_payload(t, s, code, deadline, mode):
         )
         status = "in_progress"
         stamp_field = "test_fr_last_notified_at"
-    else:
+    elif mode == "relance":
         subject = "Relance – Test de français à réaliser"
         html = mail_layout(f"""
       <h2 style="text-align:center;color:#b91c1c">⏰ Relance – Test de français obligatoire</h2>
@@ -4824,6 +4824,62 @@ def _build_test_fr_payload(t, s, code, deadline, mode):
         sms = (
             f"Intégrale Academy ⏰ Relance : Bonjour {t.get('first_name','')}, "
             f"Vous n'avez pas encore réalisé votre Test de français obligatoire avant votre entrée en formation {formation_type}. "
+            f"Lien : {link} | Code : {code} | Date limite : {deadline_fr}. "
+            f"Besoin d’aide ? 04 22 47 07 68"
+        )
+        status = "relance"
+        stamp_field = "test_fr_last_relance_at"
+    else:
+        subject = "Échec au test de français – Test à refaire"
+        html = mail_layout(f"""
+      <h2 style="text-align:center;color:#b91c1c">❌ Échec au test de français</h2>
+
+      <p>Bonjour <strong>{t.get("first_name","").strip() or "Madame, Monsieur"}</strong>,</p>
+
+      <p>
+        Nous revenons vers vous concernant votre inscription en formation
+        <strong>{formation_type}</strong> (du <strong>{dstart}</strong> au <strong>{dend}</strong>).
+      </p>
+
+      <p>
+        Suite à un <strong>échec au test de français</strong>, vous devez <strong>refaire le test de français obligatoire</strong>.
+      </p>
+
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px;margin:16px 0">
+        <p style="margin:0 0 10px 0"><strong>🔗 Lien du test :</strong>
+          <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
+        </p>
+
+        <p style="margin:0 0 10px 0"><strong>🔑 Code d’activation :</strong>
+          <span style="font-size:16px;letter-spacing:1px">{code}</span>
+        </p>
+
+        <p style="margin:0;color:#b91c1c;font-weight:bold">
+          ⚠️ Date limite : <u>{deadline_fr}</u>
+        </p>
+      </div>
+
+      <p style="margin-top:22px">
+        Si vous avez la moindre difficulté, contactez-nous au <strong>04 22 47 07 68</strong>.
+      </p>
+
+      <p style="margin-top:22px">
+        Merci par avance,<br>
+        <strong>Clément VAILLANT</strong><br>
+        Directeur Intégrale Academy
+      </p>
+
+      <p style="text-align:center;margin-top:18px">
+        <a href="{link}"
+           style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+          👉 Refaire le test de français
+        </a>
+      </p>
+    """)
+
+        sms = (
+            f"Intégrale Academy ❌ Bonjour {t.get('first_name','')}, "
+            f"Suite à un échec, vous devez refaire votre Test de français obligatoire pour la formation {formation_type}. "
             f"Lien : {link} | Code : {code} | Date limite : {deadline_fr}. "
             f"Besoin d’aide ? 04 22 47 07 68"
         )
@@ -4891,6 +4947,40 @@ def admin_test_fr_relance(session_id: str, trainee_id: str):
         abort(404)
 
     payload = _build_test_fr_payload(t, s, code, deadline, "relance")
+    brevo_send_email(t.get("email", ""), payload["subject"], payload["html"])
+    brevo_send_sms(t.get("phone", ""), payload["sms"])
+
+    t["test_fr_status"] = payload["status"]
+    t["test_fr_code"] = code
+    t["test_fr_deadline"] = deadline
+    t[payload["stamp_field"]] = _now_iso()
+    t["updated_at"] = _now_iso()
+
+    s["trainees"] = trainees
+    save_data(data)
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/test-fr/echec")
+@admin_login_required
+@admin_write_required
+def admin_test_fr_echec(session_id: str, trainee_id: str):
+    code = (request.form.get("code") or "").strip()
+    deadline = (request.form.get("deadline") or "").strip()
+    if not code or not deadline:
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    payload = _build_test_fr_payload(t, s, code, deadline, "failure")
     brevo_send_email(t.get("email", ""), payload["subject"], payload["html"])
     brevo_send_sms(t.get("phone", ""), payload["sms"])
 
