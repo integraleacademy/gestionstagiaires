@@ -1301,7 +1301,7 @@ id="upload_{{ d.key }}"
     'financement_validated': 4,
     'livret_2_todo': 4,
     'livret_2_analysis': 5,
-    'livret_2_validated': 7,
+    'livret_2_validated': 6,
     'jury': 7,
     'certified': 8
   } %}
@@ -1330,7 +1330,7 @@ id="upload_{{ d.key }}"
         {% if vae_current_step == 2 and vae_done_until < 2 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
         {% if vae_done_until >= 2 %}
           <p class="oktag">Étape terminée</p>
-        {% else %}
+        {% elif vae_current_step == 2 and vae_done_until < 2 %}
           <p class="muted">Après réception, votre livret 1 est analysé par notre équipe pédagogique.</p>
         {% endif %}
       </div>
@@ -1349,8 +1349,6 @@ id="upload_{{ d.key }}"
         {% if vae_key in ['livret_1_validated','financement_validated'] %}
           <p>🥳La commission a donné un Avis Favorable à votre demande de VAE. Pour passer à l'étape suivante, nous devons convenir d'un RDV téléphonique ensemble pour mettre en place le financement de votre VAE (versement de l'acompte) et signer votre convention de VAE.</p>
           <p><a class="btn small" target="_blank" rel="noopener" href="https://calendly.com/integraleacademy/dirigeant">Réserver un RDV téléphonique</a></p>
-        {% elif not receva %}
-          <p><span class="pill gray">Prochainement disponible</span></p>
         {% endif %}
       </div>
 
@@ -1399,8 +1397,6 @@ id="upload_{{ d.key }}"
           {% if livret2_count %}
             <p class="muted">{{ livret2_count }} fichier(s) Livret 2 déjà déposé(s).</p>
           {% endif %}
-        {% else %}
-          <p class="muted">Cette étape sera disponible lorsqu'elle sera en cours.</p>
         {% endif %}
       </div>
 
@@ -1408,38 +1404,52 @@ id="upload_{{ d.key }}"
         {% if vae_done_until >= 5 %}<div class="vae-step-check">✓</div>{% endif %}
         <div class="vae-step-head"><span class="vae-step-badge">5</span><div class="vae-step-title">5ème étape <small>Réception et analyse du Livret 2</small></div></div>
         {% if vae_current_step == 5 and vae_done_until < 5 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
-        {% if vae_done_until >= 5 %}<p class="oktag">Étape terminée</p>{% endif %}
-        <p class="muted">Après réception, votre livret 2 est analysé par notre équipe pédagogique.</p>
+        {% if vae_done_until >= 5 %}
+          <p class="oktag">Étape terminée</p>
+        {% elif vae_current_step == 5 and vae_done_until < 5 %}
+          <p class="muted">Après réception, votre livret 2 est analysé par notre équipe pédagogique.</p>
+        {% endif %}
       </div>
 
       <div class="vae-step-card {% if vae_done_until >= 6 %}is-done{% endif %} {% if vae_current_step == 6 and vae_done_until < 6 %}is-current{% endif %}">
         {% if vae_done_until >= 6 %}<div class="vae-step-check">✓</div>{% endif %}
         <div class="vae-step-head"><span class="vae-step-badge">6</span><div class="vae-step-title">6ème étape <small>Livret 2 validé</small></div></div>
         {% if vae_current_step == 6 and vae_done_until < 6 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
-        {% if vae_done_until >= 6 %}<p class="oktag">Étape terminée</p>{% endif %}
-        <p class="muted">Lorsque votre livret 2 est validé, nous vous accompagnons pour préparer la suite du parcours.</p>
+        {% if vae_done_until >= 6 %}
+          <p class="oktag">Étape terminée</p>
+        {% endif %}
+        {% if vae_key == 'livret_2_validated' %}
+          <p>La commission a jugé conforme votre Livret 2. Afin d'organiser votre passage devant le jury de certification et finaliser le financement de votre VAE, merci de bien vouloir réserver un RDV téléphonique en cliquant ici :</p>
+          <p><a class="btn small" target="_blank" rel="noopener" href="https://calendly.com/integraleacademy/dirigeant">Réserver un RDV téléphonique</a></p>
+        {% endif %}
       </div>
 
       <div class="vae-step-card {% if vae_done_until >= 7 %}is-done{% endif %} {% if vae_current_step == 7 and vae_done_until < 7 %}is-current{% endif %}">
         {% if vae_done_until >= 7 %}<div class="vae-step-check">✓</div>{% endif %}
         <div class="vae-step-head"><span class="vae-step-badge">7</span><div class="vae-step-title">7ème étape <small>Passage devant le jury de certification</small></div></div>
         {% if vae_current_step == 7 and vae_done_until < 7 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
-        {% if vae_done_until >= 7 %}<p class="oktag">Étape terminée</p>{% endif %}
-        <p class="muted">
-          {% if vae_jury_date %}
-            Passage devant le jury de certification le {{ vae_jury_date }}.
-          {% else %}
-            Vous passez devant le jury de certification selon la date planifiée.
-          {% endif %}
-        </p>
+        {% if vae_done_until >= 7 %}
+          <p class="oktag">Étape terminée</p>
+        {% elif vae_current_step == 7 and vae_done_until < 7 %}
+          <p class="muted">
+            {% if vae_jury_date %}
+              Passage devant le jury de certification le {{ vae_jury_date }}.
+            {% else %}
+              Vous passez devant le jury de certification selon la date planifiée.
+            {% endif %}
+          </p>
+        {% endif %}
       </div>
 
       <div class="vae-step-card {% if vae_done_until >= 8 %}is-done{% endif %} {% if vae_current_step == 8 and vae_done_until < 8 %}is-current{% endif %}" style="grid-column:1/-1;">
         {% if vae_done_until >= 8 %}<div class="vae-step-check">✓</div>{% endif %}
         <div class="vae-step-head"><span class="vae-step-badge">8</span><div class="vae-step-title">8ème étape <small>Obtention de votre certification Dirigeant d'entreprise de sécurité privée (DESP)</small></div></div>
         {% if vae_current_step == 8 and vae_done_until < 8 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
-        {% if vae_done_until >= 8 %}<p class="oktag">Étape terminée</p>{% endif %}
-        <p class="muted">Félicitations ! Après validation finale, vous obtenez votre certification DESP.</p>
+        {% if vae_done_until >= 8 %}
+          <p class="oktag">Étape terminée</p>
+        {% elif vae_current_step == 8 and vae_done_until < 8 %}
+          <p class="muted">Félicitations ! Après validation finale, vous obtenez votre certification DESP.</p>
+        {% endif %}
       </div>
     </div>
   </div>
