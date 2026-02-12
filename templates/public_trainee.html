@@ -1086,16 +1086,26 @@
       <div class="docmeta">
         <div class="label">{{ "Fiche de renseignement candidat à compléter" if d.key == "candidate_info_sheet" else d.label }}</div>
         {% if d.key == "candidate_info_sheet" %}
+          {% set candidate_sheet_saved = trainee.candidate_sheet_saved_at or trainee.candidate_sheet %}
           <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             <a class="btn small outline" href="{{ url_for('public_trainee_candidate_sheet', token=token_safe) }}" target="_blank" rel="noopener">
               📝 Compléter la fiche candidat (HTML imprimable)
             </a>
-            {% if up in ["NON DÉPOSÉ", "NON DEPOSE", ""] %}
+            {% if up in ["NON DÉPOSÉ", "NON DEPOSE", ""] and candidate_sheet_saved %}
               <form action="{{ url_for('public_candidate_sheet_validate', token=token_safe) }}" method="post" style="margin:0;">
-                <button class="btn small" type="submit">Valider ma fiche candidat</button>
+                <button class="btn small" type="submit">Envoyer ma fiche candidat</button>
               </form>
             {% endif %}
           </div>
+          {% if up in ["NON DÉPOSÉ", "NON DEPOSE", ""] and not candidate_sheet_saved %}
+            <div class="doctag missing">📌 Complétez puis enregistrez votre fiche candidat avant l'envoi</div>
+          {% elif up == "CONFORME" %}
+            <div class="doctag" style="margin-top:8px;border-color:#bbf7d0;color:#065f46;background:#fff;">✅ Document conforme</div>
+          {% elif up == "NON CONFORME" %}
+            <div class="doctag missing" style="margin-top:8px;">❌ Document non conforme — à corriger</div>
+          {% else %}
+            <div class="doctag pending" style="margin-top:8px;">⏳ Document déposé — en attente de contrôle</div>
+          {% endif %}
         {% endif %}
         {% if d.key == "permis" %}
   <label style="margin-top:8px;display:flex;align-items:center;gap:8px;font-weight:800;">

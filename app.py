@@ -7287,12 +7287,9 @@ def public_trainee_candidate_sheet_save(token: str):
     for key in base_sheet.keys():
         saved_sheet[key] = str(request.form.get(key, "") or "").strip()
     t["candidate_sheet"] = saved_sheet
+    t["candidate_sheet_saved_at"] = _now_iso()
 
     ensure_documents_schema_for_trainee(t, training_type)
-    docs = t.get("documents") or []
-    target = next((d for d in docs if d.get("key") == "candidate_info_sheet"), None)
-    if target:
-        target["status"] = "A CONTRÔLER"
 
     t["updated_at"] = _now_iso()
     t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
