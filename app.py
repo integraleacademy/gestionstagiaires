@@ -7050,6 +7050,85 @@ def admin_trainee_summary(session_id: str, trainee_id: str):
         formation_dates=formation_dates,
     )
 
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/fiche-candidat-completee")
+@admin_login_required
+def admin_trainee_candidate_sheet(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    training_type = (_session_get(s, "training_type", "") or "").strip().upper()
+    if training_type != "DIRIGEANT VAE":
+        abort(404)
+
+    dossier = _vae_find_latest_for_trainee(str(t.get("id") or ""))
+    candidat = (dossier or {}).get("candidat") or {}
+
+    def pick(*values: Any) -> str:
+        for value in values:
+            txt = str(value or "").strip()
+            if txt:
+                return txt
+        return ""
+
+    def clean_phone(value: Any) -> str:
+        raw = re.sub(r"\D", "", str(value or ""))
+        if len(raw) == 10:
+            return " ".join(raw[i:i + 2] for i in range(0, len(raw), 2))
+        return str(value or "").strip()
+
+    photo_url = ""
+    photo_token = (t.get("identity_photo") or "").strip()
+    if photo_token:
+        photo_url = url_for("admin_view_upload", path=photo_token)
+
+    candidate = {
+        "formation_type": "Validation des acquis de l'expérience (VAE)",
+        "date_entree_stage": fr_date(_session_get(s, "date_start", "")) or "",
+        "situation": pick(candidat.get("statut")),
+        "company": pick(t.get("company_name"), t.get("employer"), t.get("entreprise")),
+        "financing": pick(t.get("financing"), "CPF + Pôle emploi – Opco"),
+        "interviewer": pick(t.get("interviewer"), t.get("referent_name")),
+        "last_name": pick(t.get("last_name"), candidat.get("nom_naissance")),
+        "usage_name": pick(candidat.get("nom_usage")),
+        "first_names": pick(t.get("first_name"), candidat.get("prenoms")),
+        "address": pick(t.get("address"), candidat.get("adresse")),
+        "postal_code": pick(t.get("zip_code"), t.get("postal_code")),
+        "city": pick(t.get("city"), t.get("birth_city")),
+        "phone": clean_phone(pick(t.get("phone"), candidat.get("telephone"))),
+        "email": pick(t.get("email"), candidat.get("email")),
+        "birth_date": fr_date(pick(t.get("birth_date"), candidat.get("date_naissance"))) or pick(t.get("birth_date"), candidat.get("date_naissance")),
+        "birth_city": pick(t.get("birth_city"), t.get("birth_place")),
+        "department": pick(t.get("department")),
+        "country": pick(t.get("country"), "France"),
+        "nationality": pick(t.get("nationality"), candidat.get("nationalite")),
+        "emergency_contact": pick(t.get("emergency_contact"), t.get("emergency_phone")),
+        "cnaps_number": pick(t.get("cnaps_number"), t.get("personal_id")),
+        "study_level": pick(candidat.get("niveau_formation")),
+        "study_domain": pick(t.get("study_domain")),
+        "last_certification_level": pick(candidat.get("niveau_certification")),
+        "last_certification_domain": pick(t.get("last_certification_domain")),
+        "last_job": pick(t.get("last_job")),
+        "years_experience": pick(t.get("years_experience")),
+        "company_name": pick(t.get("company_name"), t.get("employer")),
+        "gross_salary": pick(t.get("gross_salary")),
+    }
+
+    return render_template(
+        "admin_trainee_candidate_sheet.html",
+        session=s,
+        trainee=t,
+        candidate=candidate,
+        photo_url=photo_url,
+    )
+
 @app.get("/api/docs_to_control")
 @admin_login_required
 def api_docs_to_control():
