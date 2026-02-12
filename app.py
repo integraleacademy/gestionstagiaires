@@ -3681,6 +3681,80 @@ def api_admin_pre_reception(session_id: str, trainee_id: str):
 
     return jsonify({"ok": True, "pre_number": pre, "email_ok": bool(email_ok)})
 
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/cnaps-pre-relance/send")
+@admin_login_required
+@admin_write_required
+def api_send_cnaps_pre_relance(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+
+    training_name = formation_label(_session_get(s, "training_type", "") or s.get("name") or "formation")
+    dstart = fr_date(s.get("date_start") or "")
+    dend = fr_date(s.get("date_end") or "")
+    if dstart and dend:
+        date_phrase = f"qui se déroulera du <strong>{dstart}</strong> au <strong>{dend}</strong>."
+        date_phrase_sms = f"du {dstart} au {dend}."
+    else:
+        date_phrase = "qui se déroulera prochainement."
+        date_phrase_sms = "qui se déroulera prochainement."
+
+    link = "https://cnapsv5-1.onrender.com/"
+
+    html = mail_layout(f"""
+        <p>Bonjour,</p>
+        <p>
+          Je me permets de revenir vers vous concernant votre formation
+          <strong>{training_name}</strong> {date_phrase}
+        </p>
+        <p>
+          À ce jour, nous n’avons toujours pas reçu les documents indispensables pour effectuer
+          votre demande d’autorisation préalable d’entrée en formation auprès du CNAPS
+          (Ministère de l’Intérieur).
+        </p>
+        <p>
+          Nous vous rappelons que cette autorisation est obligatoire et doit impérativement
+          être obtenue avant toute entrée en formation.
+        </p>
+        <p>
+          Pour déposer votre demande, cliquez ici :
+          <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
+        </p>
+        <p>Je vous remercie par avance,</p>
+        <p>
+          Clément VAILLANT<br>
+          Directeur Intégrale Academy
+        </p>
+    """)
+
+    sms = (
+        "Intégrale Academy : Bonjour, "
+        f"je me permets de revenir vers vous concernant votre formation {training_name} {date_phrase_sms} "
+        "Nous n'avons pas reçu les documents pour votre demande d'autorisation préalable CNAPS. "
+        "Cette autorisation est obligatoire avant l'entrée en formation. "
+        f"Déposez votre demande ici : {link}"
+    )
+
+    email = (t.get("email") or "").strip()
+    phone = (t.get("phone") or "").strip()
+    email_ok = brevo_send_email(email, "Relance PRE CNAPS – Documents manquants", html) if email else False
+    sms_ok = brevo_send_sms(phone, sms) if phone else False
+
+    t["cnaps_pre_relance_last_sent_at"] = _now_iso()
+    t["updated_at"] = _now_iso()
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return jsonify({"ok": True, "email_ok": bool(email_ok), "sms_ok": bool(sms_ok)})
+
+
 @app.post("/api/sessions/<session_id>/trainees/<trainee_id>/delete")
 @admin_login_required
 @admin_write_required

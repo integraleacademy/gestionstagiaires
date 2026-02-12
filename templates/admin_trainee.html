@@ -176,6 +176,11 @@
                    {{ read_only_attr }}>
             <span>CNAPS OK</span>
           </label>
+          {% if not is_read_only %}
+            <button class="btn btn-outline btn-uniform" id="btnCnapsPreRelance" type="button">
+              Relance PRE
+            </button>
+          {% endif %}
 
           {% if trainee.access_sent_at %}
             <span class="hint">✅ Accès envoyé le : <strong>{{ trainee.access_sent_at }}</strong></span>
@@ -1571,6 +1576,31 @@ function setDossierPill(status){
         body: payload,
         keepalive: true,
       }).catch(()=>{});
+    });
+  }
+
+  const cnapsPreRelanceBtn = document.getElementById("btnCnapsPreRelance");
+  if(cnapsPreRelanceBtn){
+    cnapsPreRelanceBtn.addEventListener("click", async ()=>{
+      if(!confirm("Envoyer une relance PRE par mail + SMS ?")) return;
+      try{
+        cnapsPreRelanceBtn.disabled = true;
+        const r = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/cnaps-pre-relance/send`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({})
+        });
+        const data = await r.json();
+        if(!r.ok || !data.ok){
+          throw new Error(data.error || "send_failed");
+        }
+        alert(`Relance PRE envoyée. Mail: ${data.email_ok ? "oui" : "non"} / SMS: ${data.sms_ok ? "oui" : "non"}`);
+      }catch(e){
+        console.error(e);
+        alert("Erreur lors de l'envoi de la relance PRE.");
+      }finally{
+        cnapsPreRelanceBtn.disabled = false;
+      }
     });
   }
 
