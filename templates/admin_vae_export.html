@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dossier de faisabilité VAE — {{ dossier.id }}</title>
+  <style>
+    :root {
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #d1d5db;
+      --accent: #0f766e;
+      --bg-soft: #f8fafc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: "Inter", "Segoe UI", Arial, sans-serif;
+      background: #e5e7eb;
+      line-height: 1.45;
+    }
+
+    .print-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: #111827;
+      color: #fff;
+      padding: 12px 18px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+    }
+
+    .print-toolbar button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #10b981;
+      color: #052e2b;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 16px auto;
+      background: #fff;
+      padding: 16mm;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, .12);
+      page-break-after: always;
+    }
+
+    .page:last-child { page-break-after: auto; }
+
+    .doc-title {
+      margin: 0 0 10px;
+      font-size: 30px;
+      line-height: 1.2;
+      color: #0b3b37;
+    }
+
+    .section-title {
+      font-size: 19px;
+      margin: 0 0 12px;
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 8px;
+    }
+
+    .grid-two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 16px;
+    }
+
+    .field {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 10px;
+      background: var(--bg-soft);
+    }
+
+    .label {
+      font-size: 12px;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+
+    .value {
+      font-size: 15px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .pill {
+      display: inline-flex;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .competence {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      padding: 10px;
+    }
+
+    .competence .status {
+      float: right;
+      color: #0b3b37;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .note-box {
+      border: 2px dashed var(--line);
+      border-radius: 10px;
+      min-height: 76mm;
+      padding: 10px;
+      background: #fff;
+    }
+
+    .small { font-size: 12px; color: var(--muted); }
+
+    .sign-zone {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .line {
+      border-bottom: 1px solid #111827;
+      height: 26px;
+      margin-top: 10px;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .print-toolbar { display: none !important; }
+      .page {
+        margin: 0;
+        width: auto;
+        min-height: auto;
+        box-shadow: none;
+        page-break-after: always;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-toolbar">
+    <div>Version HTML imprimable — utilisez <strong>Imprimer</strong> puis « Enregistrer en PDF ».</div>
+    <button type="button" onclick="window.print()">Imprimer / PDF</button>
+  </div>
+
+  {% set candidat = dossier.candidat or {} %}
+  {% set certification = dossier.certification or {} %}
+  {% set parcours = dossier.parcours_previsionnel or {} %}
+  {% set avis = dossier.avis_admin or {} %}
+  {% set engagement = dossier.engagement or {} %}
+  {% set experiences = dossier.experiences or [] %}
+  {% set blocs = dossier.blocs_competences or {} %}
+
+  <section class="page">
+    <h1 class="doc-title">Dossier de faisabilité VAE DESP</h1>
+    <p><strong>Référence :</strong> {{ dossier.id }}</p>
+    <p><strong>Statut :</strong> <span class="pill">{{ statut_labels.get(dossier.statut_dossier, dossier.statut_dossier or '—') }}</span></p>
+    <p><strong>Date de création :</strong> {{ dossier.created_at or '—' }}</p>
+    <p><strong>Dernière mise à jour :</strong> {{ dossier.updated_at or '—' }}</p>
+
+    <h2 class="section-title" style="margin-top:24px;">Sommaire</h2>
+    <ol>
+      <li>Page de garde et sommaire</li>
+      <li>Nature de la demande</li>
+      <li>Informations générales candidat</li>
+      <li>Certification professionnelle visée</li>
+      <li>Expériences professionnelles ou personnelles</li>
+      <li>Positionnement par compétences — Activités 1 & 2</li>
+      <li>Positionnement par compétences — Activités 3 & 4</li>
+      <li>Positionnement par compétences — Activité 5 et synthèse</li>
+      <li>Parcours prévisionnel</li>
+      <li>Avis de faisabilité, engagement et annexes</li>
+    </ol>
+
+    <p class="small">Ce document est optimisé pour l’impression A4 et l’export PDF depuis le navigateur.</p>
+  </section>
+
+  <section class="page">
+    <h2 class="section-title">1. Nature de la demande</h2>
+    <div class="field">
+      <div class="label">Nature de la demande</div>
+      <div class="value">{{ dossier.nature_demande or '—' }}</div>
+    </div>
+
+    <h2 class="section-title" style="margin-top:22px;">2. Informations générales sur le candidat</h2>
+    <div class="grid-two">
+      <div class="field"><div class="label">Nom de naissance</div><div class="value">{{ candidat.nom_naissance or '—' }}</div></div>
+      <div class="field"><div class="label">Nom d'usage</div><div class="value">{{ candidat.nom_usage or '—' }}</div></div>
+      <div class="field"><div class="label">Prénom(s)</div><div class="value">{{ candidat.prenoms or '—' }}</div></div>
+      <div class="field"><div class="label">Date de naissance</div><div class="value">{{ candidat.date_naissance or '—' }}</div></div>
+      <div class="field"><div class="label">Nationalité</div><div class="value">{{ candidat.nationalite or '—' }}</div></div>
+      <div class="field"><div class="label">Téléphone</div><div class="value">{{ candidat.telephone or '—' }}</div></div>
+      <div class="field"><div class="label">Email</div><div class="value">{{ candidat.email or '—' }}</div></div>
+      <div class="field"><div class="label">Adresse</div><div class="value">{{ candidat.adresse or '—' }}</div></div>
+      <div class="field"><div class="label">Statut</div><div class="value">{{ candidat.statut or '—' }}</div></div>
+      <div class="field"><div class="label">Convention collective</div><div class="value">{{ candidat.convention_collective or '—' }}</div></div>
+    </div>
+
+    <div class="field" style="margin-top:14px;">
+      <div class="label">Objectifs VAE</div>
+      <div class="value">{{ (candidat.objectifs or [])|join(', ') if candidat.objectifs else '—' }}</div>
+    </div>
+  </section>
+
+  <section class="page">
+    <h2 class="section-title">3. Certification professionnelle visée</h2>
+    <div class="grid-two">
+      <div class="field"><div class="label">Intitulé</div><div class="value">{{ certification.intitule or '—' }}</div></div>
+      <div class="field"><div class="label">RNCP</div><div class="value">{{ certification.rncp or '—' }}</div></div>
+      <div class="field"><div class="label">Certificateur</div><div class="value">{{ certification.certificateur or '—' }}</div></div>
+      <div class="field"><div class="label">Option / Parcours</div><div class="value">{{ certification.parcours_mention or certification.option or '—' }}</div></div>
+      <div class="field"><div class="label">Type de visée</div><div class="value">{{ certification.vise or '—' }}</div></div>
+      <div class="field"><div class="label">Prérequis</div><div class="value">{{ certification.prerequis or '—' }}</div></div>
+    </div>
+
+    <div class="field" style="margin-top:14px;">
+      <div class="label">Blocs visés</div>
+      <div class="value">{{ (certification.blocs_vises or [])|join(', ') if certification.blocs_vises else 'Certification complète / non précisé' }}</div>
+    </div>
+
+    <h2 class="section-title" style="margin-top:24px;">4. Expériences professionnelles ou personnelles</h2>
+    {% if experiences %}
+      {% for exp in experiences %}
+      <div class="field" style="margin-bottom:10px;">
+        <div class="label">Expérience {{ loop.index }}</div>
+        <div class="value"><strong>Début :</strong> {{ exp.date_debut or '—' }} · <strong>Durée :</strong> {{ exp.duree or '—' }}</div>
+        <div class="value" style="margin-top:6px;">{{ exp.description or '—' }}</div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="field"><div class="value">Aucune expérience renseignée.</div></div>
+    {% endif %}
+  </section>
+
+  {% for activity_number in [1,2] %}
+  <section class="page">
+    <h2 class="section-title">5. Positionnement par compétences — Activité {{ activity_number }}</h2>
+    {% set act = blocs.get('activite' ~ activity_number, {}) %}
+    {% for comp_number in [1,2,3,4] %}
+      {% set comp = act.get('competence' ~ comp_number, {}) if act else {} %}
+      <article class="competence">
+        <div class="status">Statut: {{ comp.statut or 'non renseigné' }}</div>
+        <div class="label">Compétence {{ comp_number }}</div>
+        <div class="value">{{ comp.intitule or '—' }}</div>
+      </article>
+    {% endfor %}
+    <div class="note-box" style="margin-top:16px;">
+      <div class="label">Observations jury / accompagnateur</div>
+    </div>
+  </section>
+  {% endfor %}
+
+  {% for activity_number in [3,4] %}
+  <section class="page">
+    <h2 class="section-title">5. Positionnement par compétences — Activité {{ activity_number }}</h2>
+    {% set act = blocs.get('activite' ~ activity_number, {}) %}
+    {% for comp_number in [1,2,3,4] %}
+      {% set comp = act.get('competence' ~ comp_number, {}) if act else {} %}
+      <article class="competence">
+        <div class="status">Statut: {{ comp.statut or 'non renseigné' }}</div>
+        <div class="label">Compétence {{ comp_number }}</div>
+        <div class="value">{{ comp.intitule or '—' }}</div>
+      </article>
+    {% endfor %}
+    <div class="note-box" style="margin-top:16px;">
+      <div class="label">Observations jury / accompagnateur</div>
+    </div>
+  </section>
+  {% endfor %}
+
+  <section class="page">
+    <h2 class="section-title">5. Positionnement par compétences — Activité 5</h2>
+    {% set act = blocs.get('activite5', {}) %}
+    {% for comp_number in [1,2,3,4] %}
+      {% set comp = act.get('competence' ~ comp_number, {}) if act else {} %}
+      <article class="competence">
+        <div class="status">Statut: {{ comp.statut or 'non renseigné' }}</div>
+        <div class="label">Compétence {{ comp_number }}</div>
+        <div class="value">{{ comp.intitule or '—' }}</div>
+      </article>
+    {% endfor %}
+
+    <h3 style="margin-top:18px;">Synthèse du positionnement</h3>
+    <div class="note-box">
+      <div class="label">Points forts, écarts constatés et recommandations</div>
+    </div>
+  </section>
+
+  <section class="page">
+    <h2 class="section-title">6. Parcours prévisionnel</h2>
+    <div class="grid-two">
+      <div class="field"><div class="label">Accompagnement individuel (heures)</div><div class="value">{{ (parcours.accompagnement_individuel or {}).heures or '—' }}</div></div>
+      <div class="field"><div class="label">Modalités individuel</div><div class="value">{{ (parcours.accompagnement_individuel or {}).modalites or '—' }}</div></div>
+      <div class="field"><div class="label">Accompagnement collectif (heures)</div><div class="value">{{ (parcours.accompagnement_collectif or {}).heures or '—' }}</div></div>
+      <div class="field"><div class="label">Modalités collectif</div><div class="value">{{ (parcours.accompagnement_collectif or {}).modalites or '—' }}</div></div>
+      <div class="field"><div class="label">Formation préalable — organisme</div><div class="value">{{ (parcours.formations_prealables or {}).organisme or '—' }}</div></div>
+      <div class="field"><div class="label">Formation préalable — intitulé</div><div class="value">{{ (parcours.formations_prealables or {}).intitule or '—' }}</div></div>
+      <div class="field"><div class="label">Immersion — type</div><div class="value">{{ (parcours.immersion or {}).type or '—' }}</div></div>
+      <div class="field"><div class="label">Immersion — structure</div><div class="value">{{ (parcours.immersion or {}).structure or '—' }}</div></div>
+    </div>
+
+    <div class="field" style="margin-top:12px;"><div class="label">Autres actions</div><div class="value">{{ parcours.autres_actions or '—' }}</div></div>
+  </section>
+
+  <section class="page">
+    <h2 class="section-title">7. Formulaire d'avis de faisabilité</h2>
+    <div class="field"><div class="label">Décision</div><div class="value">{{ decision_labels.get(avis.decision, avis.decision or 'Non renseignée') }}</div></div>
+    <div class="field" style="margin-top:10px;"><div class="label">Motivation</div><div class="value">{{ avis.motivation or '—' }}</div></div>
+
+    <div class="grid-two" style="margin-top:10px;">
+      <div class="field"><div class="label">Accompagnateur</div><div class="value">{{ avis.nom_accompagnateur or '—' }}</div></div>
+      <div class="field"><div class="label">Organisme</div><div class="value">{{ avis.organisme or '—' }}</div></div>
+      <div class="field"><div class="label">Email</div><div class="value">{{ avis.email or '—' }}</div></div>
+      <div class="field"><div class="label">Téléphone</div><div class="value">{{ avis.telephone or '—' }}</div></div>
+      <div class="field"><div class="label">Date de l'avis</div><div class="value">{{ avis.date or '—' }}</div></div>
+    </div>
+
+    <h2 class="section-title" style="margin-top:24px;">8. Accord pour l'analyse de faisabilité</h2>
+    <div class="grid-two">
+      <div class="field"><div class="label">Souhaite un accompagnement</div><div class="value">{{ 'Oui' if engagement.souhaite_accompagnement else 'Non' }}</div></div>
+      <div class="field"><div class="label">Accord d'analyse</div><div class="value">{{ 'Oui' if engagement.accord_analyse else 'Non' }}</div></div>
+      <div class="field"><div class="label">Nom du signataire</div><div class="value">{{ engagement.nom_signature or '—' }}</div></div>
+      <div class="field"><div class="label">Date de signature</div><div class="value">{{ engagement.date_signature or '—' }}</div></div>
+      <div class="field"><div class="label">Lieu de signature</div><div class="value">{{ engagement.lieu_signature or '—' }}</div></div>
+    </div>
+    <div class="field" style="margin-top:10px;"><div class="label">Commentaires en cas d'avis défavorable</div><div class="value">{{ engagement.commentaires_defavorable or '—' }}</div></div>
+
+    <div class="sign-zone">
+      <div>
+        <div class="label">Signature candidat</div>
+        <div class="line"></div>
+      </div>
+      <div>
+        <div class="label">Signature accompagnateur</div>
+        <div class="line"></div>
+      </div>
+    </div>
+  </section>
+
+  {% for i in range(annex_pages) %}
+  <section class="page">
+    <h2 class="section-title">Annexe {{ i + 1 }}</h2>
+    <p class="small">Page ajoutée pour garantir un document d'au moins 10 pages à l'impression.</p>
+    <div class="note-box" style="min-height:220mm;">
+      <div class="label">Notes complémentaires / pièces jointes / observations</div>
+    </div>
+  </section>
+  {% endfor %}
+</body>
+</html>
