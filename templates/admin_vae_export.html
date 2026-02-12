@@ -12,7 +12,7 @@
     .wrap{max-width:980px;margin:14px auto 20px;padding:0 8px}
     .page{background:#fff;width:210mm;min-height:297mm;margin:0 auto 12px;padding:14mm 14mm 16mm;border:1px solid #d1d5db;box-sizing:border-box;page-break-after:always}
     .page:last-child{page-break-after:auto}
-    .logo{width:68px;height:68px;object-fit:contain;margin-bottom:8px}
+    .logo{width:75px;height:75px;object-fit:contain;margin-bottom:8px}
     h1{font-size:26px;line-height:1.25;text-align:center;color:var(--blue);margin:8px 0 14px;font-weight:500}
     h2{font-size:14px;line-height:1.2;color:var(--blue);margin:18px 0 6px;text-transform:uppercase}
     h3{font-size:13px;line-height:1.2;color:var(--blue);margin:14px 0 6px}
@@ -166,18 +166,7 @@
       {% endfor %}
     </section>
 
-    <section class="page">
-      <img class="logo" src="/static/scotia.png" alt="Logo">
-      <h2>3. TABLEAU DES EXPÉRIENCES (SUITE)</h2>
-      {% for exp in experiences[3:] %}
-        <table class="tbl">
-          <tr><th colspan="2">{{ loop.index + 3 }} - Expérience déclarée</th></tr>
-          <tr><td style="width:42%"><strong>Date de début *</strong></td><td class="value">{{ fr_date(exp.date_debut) }}</td></tr>
-          <tr><td><strong>Durée *</strong></td><td class="value">{{ exp.duree or '' }}</td></tr>
-          <tr><td><strong>Description de l'expérience/de la mission *</strong></td><td class="value" style="min-height:70px">{{ exp.description or '' }}</td></tr>
-        </table>
-      {% endfor %}
-    </section>
+
 
     {% for i in range(1, 6) %}
       {% set activity_key = "activite" ~ i %}
