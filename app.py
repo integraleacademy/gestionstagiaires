@@ -5897,8 +5897,9 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
     html = ""
     primary_btn = "display:inline-block;background:#1f8f4a;color:#ffffff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:700"
     secondary_btn = "display:inline-block;background:#ffffff;color:#1f8f4a;padding:12px 20px;border:1px solid #1f8f4a;border-radius:10px;text-decoration:none;font-weight:700"
-    space_url = trainee_link or f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace"
-    booking_url = "https://calendly.com/integraleacademy"
+    public_token = (t.get("public_token") or "").strip()
+    space_url = trainee_link or (f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}" if public_token else f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}")
+    booking_url = "https://calendly.com/integraleacademy/dirigeant"
 
     if status_key == "livret_1_analysis":
         subject = "VAE : Livret 1 bien reçu"
@@ -5917,24 +5918,25 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
         <p style=\"margin-top:18px;\"><a href=\"{space_url}\" style=\"{secondary_btn}\">Accéder à mon espace candidat</a></p>
         """)
     elif status_key == "livret_1_validated":
-        subject = "VAE : Livret 1 validé par la commission 🎉"
+        subject = "Livret 1 validé par la commission 🎉"
         html = mail_layout(f"""
-        <h2 style=\"margin:0 0 12px 0;color:#0f172a;\">🥳 Livret 1 validé</h2>
+        <h2 style=\"margin:0 0 12px 0;color:#0f172a;\">Votre Livret 1 est validé 🥳</h2>
         <p>Bonjour <strong>{first_name}</strong>,</p>
         <p>Nous avons le plaisir de vous informer que la commission a rendu un <strong>avis favorable</strong> à votre demande de VAE.</p>
         <p>Pour passer à l'étape suivante, nous devons organiser un rendez-vous téléphonique afin de :</p>
         <ul>
-          <li>mettre en place le financement de votre VAE (versement de l'acompte),</li>
-          <li>finaliser et signer votre convention de VAE,</li>
-          <li>vous transmettre le cadre de travail pour la rédaction de votre Livret 2.</li>
+          <li>1️⃣ mettre en place le financement de votre VAE (versement de l'acompte),</li>
+          <li>2️⃣ finaliser et signer votre convention de VAE,</li>
+          <li>3️⃣ vous transmettre le cadre de travail pour la rédaction de votre Livret 2.</li>
         </ul>
         <p style=\"margin:18px 0;\"><a href=\"{booking_url}\" style=\"{primary_btn}\">Réserver un RDV téléphonique</a></p>
         <p>Vous pouvez également récupérer votre <strong>attestation de recevabilité</strong> directement dans votre espace candidat :</p>
         <p style=\"margin-top:10px;\"><a href=\"{space_url}\" style=\"{secondary_btn}\">Aller vers mon espace candidat</a></p>
         <p style=\"margin-top:18px;\">Notre équipe reste disponible si vous souhaitez être accompagné(e) dans la préparation de votre Livret 2.</p>
+        <p>Nous vous souhaitons une excellente journée.<br>L'équipe Intégrale Academy</p>
         """)
     elif status_key == "livret_2_analysis":
-        subject = "VAE : Livret 2 bien reçu"
+        subject = "Transmission du Livret 2"
         html = mail_layout(f"""
         <h2 style=\"margin:0 0 12px 0;color:#0f172a;\">✅ Réception de votre Livret 2</h2>
         <p>Bonjour <strong>{first_name}</strong>,</p>
@@ -5943,6 +5945,7 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
         <p>Dès que l'analyse sera terminée, nous reviendrons vers vous. Si tout est conforme, nous pourrons passer à la dernière étape de votre parcours : votre passage devant le <strong>jury de certification</strong>.</p>
         <p>Vous pouvez suivre votre progression à tout moment depuis votre espace candidat.</p>
         <p style=\"margin-top:18px;\"><a href=\"{space_url}\" style=\"{secondary_btn}\">Suivre mon dossier VAE</a></p>
+        <p>Nous vous souhaitons une excellente journée.<br>L'équipe Intégrale Academy</p>
         """)
     elif status_key == "livret_2_validated":
         subject = "VAE : Livret 2 validé"
