@@ -7050,6 +7050,111 @@ def admin_trainee_summary(session_id: str, trainee_id: str):
         formation_dates=formation_dates,
     )
 
+
+def _build_candidate_sheet_data(session_data: Dict[str, Any], trainee_data: Dict[str, Any]) -> Dict[str, Any]:
+    dossier = _vae_find_latest_for_trainee(str(trainee_data.get("id") or ""))
+    candidat = (dossier or {}).get("candidat") or {}
+
+    def pick(*values: Any) -> str:
+        for value in values:
+            txt = str(value or "").strip()
+            if txt:
+                return txt
+        return ""
+
+    def clean_phone(value: Any) -> str:
+        raw = re.sub(r"\D", "", str(value or ""))
+        if len(raw) == 10:
+            return " ".join(raw[i:i + 2] for i in range(0, len(raw), 2))
+        return str(value or "").strip()
+
+    return {
+        "formation_type": "Validation des acquis de l'expérience (VAE)",
+        "date_entree_stage": fr_date(_session_get(session_data, "date_start", "")) or "",
+        "situation": pick(candidat.get("statut")),
+        "company": pick(trainee_data.get("company_name"), trainee_data.get("employer"), trainee_data.get("entreprise")),
+        "financing": pick(trainee_data.get("financing"), "CPF + Pôle emploi – Opco"),
+        "interviewer": pick(trainee_data.get("interviewer"), trainee_data.get("referent_name")),
+        "last_name": pick(trainee_data.get("last_name"), candidat.get("nom_naissance")),
+        "usage_name": pick(candidat.get("nom_usage")),
+        "first_names": pick(trainee_data.get("first_name"), candidat.get("prenoms")),
+        "address": pick(trainee_data.get("address"), candidat.get("adresse")),
+        "postal_code": pick(trainee_data.get("zip_code"), trainee_data.get("postal_code")),
+        "city": pick(trainee_data.get("city"), trainee_data.get("birth_city")),
+        "phone": clean_phone(pick(trainee_data.get("phone"), candidat.get("telephone"))),
+        "email": pick(trainee_data.get("email"), candidat.get("email")),
+        "birth_date": fr_date(pick(trainee_data.get("birth_date"), candidat.get("date_naissance"))) or pick(trainee_data.get("birth_date"), candidat.get("date_naissance")),
+        "birth_city": pick(trainee_data.get("birth_city"), trainee_data.get("birth_place")),
+        "department": pick(trainee_data.get("department")),
+        "country": pick(trainee_data.get("country"), "France"),
+        "nationality": pick(trainee_data.get("nationality"), candidat.get("nationalite")),
+        "emergency_contact": pick(trainee_data.get("emergency_contact"), trainee_data.get("emergency_phone")),
+        "cnaps_number": pick(trainee_data.get("cnaps_number"), trainee_data.get("personal_id")),
+        "study_level": pick(candidat.get("niveau_formation")),
+        "study_domain": pick(trainee_data.get("study_domain")),
+        "last_certification_level": pick(candidat.get("niveau_certification")),
+        "last_certification_domain": pick(trainee_data.get("last_certification_domain")),
+        "last_job": pick(trainee_data.get("last_job")),
+        "years_experience": pick(trainee_data.get("years_experience")),
+        "company_name": pick(trainee_data.get("company_name"), trainee_data.get("employer")),
+        "gross_salary": pick(trainee_data.get("gross_salary")),
+    }
+
+
+@app.get("/espace/<token>/fiche-candidat")
+def public_trainee_candidate_sheet(token: str):
+    data = load_data()
+    s, t = find_session_and_trainee_by_token(data, token)
+    if not s or not t:
+        abort(404)
+
+    if not _public_is_authed(token):
+        return redirect(url_for("public_trainee_login", token=token))
+
+    training_type = (_session_get(s, "training_type", "") or "").strip().upper()
+    if training_type != "DIRIGEANT VAE":
+        abort(404)
+
+    photo_url = ""
+    photo_token = (t.get("identity_photo") or "").strip()
+    if photo_token:
+        photo_url = url_for("public_download_file", token=token, file_token=photo_token)
+
+    return render_template(
+        "public_candidate_sheet_form.html",
+        candidate=_build_candidate_sheet_data(s, t),
+        photo_url=photo_url,
+    )
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/fiche-candidat-completee")
+@admin_login_required
+def admin_trainee_candidate_sheet(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    training_type = (_session_get(s, "training_type", "") or "").strip().upper()
+    if training_type != "DIRIGEANT VAE":
+        abort(404)
+
+    photo_url = ""
+    photo_token = (t.get("identity_photo") or "").strip()
+    if photo_token:
+        photo_url = url_for("admin_view_upload", path=photo_token)
+
+    return render_template(
+        "admin_trainee_candidate_sheet.html",
+        candidate=_build_candidate_sheet_data(s, t),
+        photo_url=photo_url,
+    )
+
 @app.get("/api/docs_to_control")
 @admin_login_required
 def api_docs_to_control():

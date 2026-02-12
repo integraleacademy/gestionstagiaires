@@ -611,6 +611,9 @@
 
 {% if show_vae %}
 <div class="card" style="grid-column:1 / -1; margin-top:12px;">
+  <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+    <a class="btn btn-outline" href="{{ url_for('admin_trainee_candidate_sheet', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener">Fiche candidat complétée</a>
+  </div>
   {% set vae_docs = trainee.documents or [] %}
   {% set vae_doc_keys = ['livret_2', 'id', 'justif_dom', 'diplome'] %}
   {% set vae_support_docs = [] %}

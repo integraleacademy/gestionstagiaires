@@ -1087,8 +1087,8 @@
         <div class="label">{{ d.label }}</div>
         {% if d.key == "candidate_info_sheet" %}
           <div style="margin-top:8px;">
-            <a class="btn small outline" href="/static/fiche_candidat.pdf" download>
-              📥 Télécharger la fiche candidat à compléter
+            <a class="btn small outline" href="{{ url_for('public_trainee_candidate_sheet', token=token_safe) }}" target="_blank" rel="noopener">
+              📝 Compléter la fiche candidat (HTML imprimable)
             </a>
           </div>
         {% endif %}

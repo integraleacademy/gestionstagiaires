@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fiche candidat à compléter</title>
+  <style>
+    :root{--blue:#495e7b;--orange:#ef7e2f;--fill:#dbe2f8;--txt:#0f172a}
+    *{box-sizing:border-box}
+    body{font-family:Arial,Helvetica,sans-serif;background:#ececec;margin:0;color:var(--txt)}
+    .page{width:210mm;min-height:297mm;margin:0 auto;padding:8mm;background:#ececec}
+    .toolbar{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:6px}
+    .hint{font-size:12px;color:#475569}
+    .btn{border:1px solid #cbd5e1;background:#fff;border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer}
+
+    .header{border:2px solid var(--orange);padding:3px;margin-bottom:10px}
+    .header>div{background:var(--blue);color:#fff;text-align:center;padding:16px 8px;font-size:20px;letter-spacing:.6px}
+
+    .top{display:grid;grid-template-columns:1fr 38mm;gap:8mm;align-items:start}
+    .photo{height:50mm;border:2px solid #bdbdbd;background:#f6f6f6;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .photo img{width:100%;height:100%;object-fit:cover}
+
+    ul.lines{margin:0;padding-left:5mm;list-style:square}
+    ul.lines li{font-size:10.8pt;line-height:1.35;margin:2.3mm 0}
+    .field{height:7mm;border:0;border-bottom:1px dotted #4b5563;background:var(--fill);padding:1mm 2mm;font-size:10.5pt;min-width:40mm;vertical-align:middle}
+    textarea.field{height:12mm;resize:vertical}
+
+    .box{border:1px solid #111827;padding:3mm 4mm;margin-top:4mm}
+    .box h2{margin:0 0 2mm;text-align:center;font-size:13pt;text-decoration:underline;font-weight:500;letter-spacing:.4px}
+    .section-title{margin:5mm 0 2mm;text-align:center;font-size:11pt;font-weight:700;text-decoration:underline}
+
+    .footer{margin-top:5mm;display:flex;align-items:flex-end;gap:4mm}
+    .footer img{width:20mm;height:20mm;object-fit:contain}
+    .footer-text{flex:1;text-align:center;font-size:8.7pt;line-height:1.25}
+
+    @media print{
+      @page{size:A4;margin:8mm}
+      body,.page{background:#fff;padding:0;margin:0;width:auto;min-height:auto}
+      .toolbar{display:none}
+      .field{appearance:none;-webkit-appearance:none;color:#000}
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="toolbar">
+      <div class="hint">Complétez les champs puis imprimez en PDF et déposez le fichier dans « Mes documents ».</div>
+      <button class="btn" onclick="window.print()">🖨️ Imprimer</button>
+    </div>
+
+    <div class="header"><div>DOSSIER CANDIDAT</div></div>
+
+    <div class="top">
+      <ul class="lines">
+        <li>TYPE DE FORMATION : <input class="field" style="min-width:110mm;" value="{{ candidate.formation_type }}"></li>
+        <li>DATE D’ENTREE EN STAGE : <input class="field" style="min-width:102mm;" value="{{ candidate.date_entree_stage }}"></li>
+        <li>SITUATION PROFESSIONNELLE : <input class="field" style="min-width:96mm;" value="{{ candidate.situation }}"></li>
+        <li>NOM DE L’ENTREPRISE (si salarié ou employeur) : <input class="field" style="min-width:74mm;" value="{{ candidate.company }}"></li>
+        <li>FINANCEMENT : <input class="field" style="min-width:110mm;" value="{{ candidate.financing }}"></li>
+        <li>ENTRETIEN REALISE PAR : <input class="field" style="min-width:103mm;" value="{{ candidate.interviewer }}"></li>
+      </ul>
+      <div class="photo">{% if photo_url %}<img src="{{ photo_url }}" alt="Photo candidat">{% else %}🖼️{% endif %}</div>
+    </div>
+
+    <div class="box">
+      <h2>LE CANDIDAT</h2>
+      <ul class="lines">
+        <li>Nom : <input class="field" style="min-width:155mm;" value="{{ candidate.last_name }}"></li>
+        <li>Nom d’usage : <input class="field" style="min-width:145mm;" value="{{ candidate.usage_name }}"></li>
+        <li>Prénoms : <input class="field" style="min-width:150mm;" value="{{ candidate.first_names }}"></li>
+        <li>Adresse : <input class="field" style="min-width:152mm;" value="{{ candidate.address }}"></li>
+        <li>Code postal : <input class="field" style="min-width:48mm;" value="{{ candidate.postal_code }}"> Ville : <input class="field" style="min-width:76mm;" value="{{ candidate.city }}"></li>
+        <li>Tél : <input class="field" style="min-width:52mm;" value="{{ candidate.phone }}"> Adresse mail : <input class="field" style="min-width:88mm;" value="{{ candidate.email }}"></li>
+        <li>Né(e) le : <input class="field" style="min-width:38mm;" value="{{ candidate.birth_date }}"> A : <input class="field" style="min-width:38mm;" value="{{ candidate.birth_city }}"> Département : <input class="field" style="min-width:41mm;" value="{{ candidate.department }}"></li>
+        <li>Pays : <input class="field" style="min-width:50mm;" value="{{ candidate.country }}"> Nationalité : <input class="field" style="min-width:82mm;" value="{{ candidate.nationality }}"></li>
+        <li>Personne à contacter en cas d’urgence (Nom et numéro de téléphone) : <input class="field" style="min-width:155mm;" value="{{ candidate.emergency_contact }}"></li>
+        <li>Numéro de votre carte professionnelle (CNAPS) : <input class="field" style="min-width:101mm;" value="{{ candidate.cnaps_number }}"></li>
+      </ul>
+    </div>
+
+    <div class="section-title">Informations à remplir (obligatoire) pour le suivi des titres RNCP auprès de France compétences</div>
+    <ul class="lines">
+      <li>Niveau d’étude à l’entrée en formation : <input class="field" style="min-width:143mm;" value="{{ candidate.study_level }}"></li>
+      <li>Domaine des études suivies : <input class="field" style="min-width:151mm;" value="{{ candidate.study_domain }}"></li>
+      <li>Niveau de la dernière certification obtenu : <input class="field" style="min-width:131mm;" value="{{ candidate.last_certification_level }}"></li>
+      <li>Domaine de la dernière certification : <input class="field" style="min-width:139mm;" value="{{ candidate.last_certification_domain }}"></li>
+      <li>Dernier métier ( + poste) exercé : <input class="field" style="min-width:140mm;" value="{{ candidate.last_job }}"></li>
+      <li>Durée (en année) : <input class="field" style="min-width:160mm;" value="{{ candidate.years_experience }}"></li>
+      <li>Nom de l’entreprise : <input class="field" style="min-width:149mm;" value="{{ candidate.company_name }}"></li>
+      <li>Rémunération brute annuelle : <input class="field" style="min-width:143mm;" value="{{ candidate.gross_salary }}"></li>
+    </ul>
+
+    <div class="footer">
+      <img src="{{ url_for('static', filename='scotia.png') }}" alt="Scotia">
+      <div class="footer-text">SCOTIA FORMATION – 1662 RN7 – 06270 Villeneuve Loubet<br>N° déclaration d’activité : 93061023706 – Siret 91812189800012 – Code APE : 8559A - www.scotiagroupe.com</div>
+    </div>
+  </div>
+</body>
+</html>
