@@ -137,6 +137,9 @@
           <button type="button" class="btn btn-blue" style="font-size:13px;padding:6px 10px;" onclick="openModal('edofModal')">
             EDOF
           </button>
+          <button type="button" class="btn" style="font-size:13px;padding:6px 10px;background:#dc2626;color:#fff;border-color:#dc2626;" onclick="openModal('financementRefuseModal')">
+            FT Refusé
+          </button>
           <a href="{{ url_for('admin_logout') }}"
              style="font-size:13px;color:#555;text-decoration:none;padding:6px 10px;border:1px solid #ddd;border-radius:8px;">
             Déconnexion
@@ -151,6 +154,52 @@
   </div>
 
   {% if is_admin_logged_in and (request.endpoint in ["admin_sessions", "admin_trainees", "admin_trainee_page"]) %}
+  <div class="modal-backdrop" id="financementRefuseModal" aria-hidden="true">
+    <div class="modal" style="max-width:560px;">
+      <div class="modal-head">
+        <div class="modal-title">Financement France Travail refusé</div>
+        <button class="icon-btn" type="button" data-close-modal="financementRefuseModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="financementRefuseForm">
+          <div class="form-grid">
+            <label>
+              <div class="label">Nom</div>
+              <input type="text" name="last_name" required>
+            </label>
+            <label>
+              <div class="label">Prénom</div>
+              <input type="text" name="first_name" required>
+            </label>
+            <label>
+              <div class="label">Téléphone</div>
+              <input type="tel" name="phone" required>
+            </label>
+            <label>
+              <div class="label">Mail</div>
+              <input type="email" name="email" required>
+            </label>
+            <label style="grid-column:1 / -1;">
+              <div class="label">Formation</div>
+              <select name="training" required>
+                <option value="" disabled selected>Choisir une formation</option>
+                <option value="APS">APS</option>
+                <option value="DIRIGEANT">Dirigeant</option>
+                <option value="A3P">A3P</option>
+                <option value="VTC">VTC</option>
+              </select>
+            </label>
+          </div>
+          <div id="financementRefuseFeedback" class="hint" role="status" aria-live="polite" style="margin-top:10px;"></div>
+        </form>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" type="button" data-close-modal="financementRefuseModal">Annuler</button>
+        <button class="btn" style="background:#dc2626;color:#fff;border-color:#dc2626;" type="submit" form="financementRefuseForm" id="financementRefuseSubmitBtn">VALIDER</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="edofModal" aria-hidden="true">
     <div class="modal" style="max-width:560px;">
       <div class="modal-head">
@@ -227,6 +276,49 @@
       closeModal(backdrop.id);
     }
   });
+
+  const financementRefuseForm = document.getElementById("financementRefuseForm");
+  if(financementRefuseForm){
+    financementRefuseForm.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      const feedback = document.getElementById("financementRefuseFeedback");
+      const submitBtn = document.getElementById("financementRefuseSubmitBtn");
+      const formData = new FormData(financementRefuseForm);
+      const payload = Object.fromEntries(formData.entries());
+
+      if(feedback){
+        feedback.textContent = "Envoi en cours…";
+      }
+      if(submitBtn){
+        submitBtn.disabled = true;
+      }
+
+      try{
+        const res = await fetch("/admin/financement-refuse/submit", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if(!res.ok || !data.ok){
+          throw new Error(data.error || "Erreur lors de l’envoi.");
+        }
+        if(feedback){
+          feedback.textContent = "Notification envoyée ✅";
+        }
+        financementRefuseForm.reset();
+        setTimeout(()=>closeModal("financementRefuseModal"), 600);
+      }catch(err){
+        if(feedback){
+          feedback.textContent = err.message || "Erreur lors de l’envoi.";
+        }
+      }finally{
+        if(submitBtn){
+          submitBtn.disabled = false;
+        }
+      }
+    });
+  }
 
   const edofForm = document.getElementById("edofForm");
   if(edofForm){
