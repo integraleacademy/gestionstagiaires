@@ -8367,13 +8367,7 @@ def admin_vae_export(dossier_id: str):
     if not dossier:
         abort(404)
 
-    pdf_blob = _build_simple_pdf(_vae_dossier_to_lines(dossier))
-    return send_file(
-        BytesIO(pdf_blob),
-        mimetype='application/pdf',
-        as_attachment=True,
-        download_name=f'vae_{dossier_id}.pdf'
-    )
+    return render_template('admin_vae_export.html', dossier=dossier)
 
 @app.get("/admin/sessions/")
 def admin_sessions_slash_redirect():
