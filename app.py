@@ -8398,29 +8398,7 @@ def admin_vae_export(dossier_id: str):
     if not dossier:
         abort(404)
 
-    statut_labels = {
-        "brouillon": "Brouillon",
-        "soumis": "Soumis",
-        "recevable": "Recevable",
-        "refuse": "Refusé",
-    }
-    decision_labels = {
-        "faisable": "Faisable",
-        "faisable_complements": "Faisable avec compléments",
-        "non_faisable": "Non faisable",
-    }
-
-    minimum_pages = 10
-    base_pages = 9
-    annex_pages = max(0, minimum_pages - base_pages)
-
-    return render_template(
-        'admin_vae_export.html',
-        dossier=dossier,
-        statut_labels=statut_labels,
-        decision_labels=decision_labels,
-        annex_pages=annex_pages,
-    )
+    return render_template('admin_vae_export.html', dossier=dossier)
 
 @app.get("/admin/sessions/")
 def admin_sessions_slash_redirect():
