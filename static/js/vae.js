@@ -140,7 +140,7 @@
   }
 
   function toHandwritten(name) {
-    return String(name || '').toUpperCase().split('').join(' ');
+    return String(name || '').toLowerCase().split('').join(' ');
   }
 
   function renderSignaturePreview() {
