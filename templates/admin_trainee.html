@@ -422,6 +422,9 @@
       {% if trainee.test_fr_last_relance_at %}
         <div class="hint">🟧 Relancé le : <strong>{{ trainee.test_fr_last_relance_at }}</strong></div>
       {% endif %}
+      {% if trainee.test_fr_last_failed_at %}
+        <div class="hint">🟥 Échec enregistré le : <strong>{{ trainee.test_fr_last_failed_at }}</strong></div>
+      {% endif %}
     </div>
   {% endif %}
 
