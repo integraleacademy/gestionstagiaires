@@ -5,54 +5,48 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Dossier de faisabilité VAE — {{ dossier.id }}</title>
   <style>
-    :root{
-      --blue:#1f4e84;
-      --line:#1f2937;
-      --light:#dfe6f8;
-    }
-    body{margin:0;background:#ececec;color:#000;font-family:"Times New Roman", Times, serif;font-size:12px;line-height:1.35}
+    :root{--blue:#1f4e84;--line:#1f2937;--light:#dfe6f8}
+    body{margin:0;background:#ececec;color:#000;font-family:"Times New Roman",Times,serif;font-size:12px;line-height:1.35}
     .toolbar{position:sticky;top:0;z-index:30;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#111827;color:#fff}
     .toolbar button{font-size:12px;padding:8px 12px}
     .wrap{max-width:980px;margin:14px auto 20px;padding:0 8px}
     .page{background:#fff;width:210mm;min-height:297mm;margin:0 auto 12px;padding:14mm 14mm 16mm;border:1px solid #d1d5db;box-sizing:border-box;page-break-after:always}
     .page:last-child{page-break-after:auto}
-
     .logo{width:58px;height:58px;object-fit:contain;margin-bottom:8px}
-    h1{font-size:48px;line-height:1.2;text-align:center;color:var(--blue);margin:8px 0 14px;font-weight:500}
-    h2{font-size:34px;line-height:1.2;color:var(--blue);margin:20px 0 4px;text-transform:uppercase}
-    h3{font-size:26px;line-height:1.2;color:var(--blue);margin:18px 0 6px}
+    h1{font-size:26px;line-height:1.25;text-align:center;color:var(--blue);margin:8px 0 14px;font-weight:500}
+    h2{font-size:14px;line-height:1.2;color:var(--blue);margin:18px 0 6px;text-transform:uppercase}
+    h3{font-size:13px;line-height:1.2;color:var(--blue);margin:14px 0 6px}
     .subline{border-top:2px solid #2f5f93;padding-top:10px;margin-bottom:14px}
-    .info-note{font-size:12px;margin-bottom:14px}
-    .italic{font-style:italic}
-    .underline{text-decoration:underline}
-
+    .info-note{font-size:12px;margin-bottom:14px}.italic{font-style:italic}.underline{text-decoration:underline}
     .box{border:1px solid var(--line);padding:8px;margin:10px 0}
     .line{display:grid;grid-template-columns:235px 1fr;align-items:stretch;border-bottom:1px solid #cbd5e1}
-    .line:last-child{border-bottom:none}
-    .label{padding:8px 8px 8px 4px;font-weight:700}
-    .value{padding:8px;min-height:20px;background:var(--light)}
-    .value.white{background:#fff}
-    .muted{color:#111}
-    .check{font-family:Arial,sans-serif}
-
-    .twocol{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .spacer{height:14px}
-
+    .line:last-child{border-bottom:none}.label{padding:8px 8px 8px 4px;font-weight:700}
+    .value{padding:8px;min-height:20px;background:var(--light)}.value.white{background:#fff}
+    .muted{color:#111}.check{font-family:Arial,sans-serif}.spacer{height:14px}
     .tbl{width:100%;border-collapse:collapse;margin:10px 0}
     .tbl th,.tbl td{border:1px solid #111827;vertical-align:top;padding:6px}
     .tbl th{background:#436799;color:#fff;font-size:12px;text-transform:uppercase}
-    .activity-title{font-size:24px;color:var(--blue);font-weight:700;margin:10px 0 6px}
+    .activity-title{font-size:13px;color:var(--blue);font-weight:700;margin:10px 0 6px}
     .small{font-size:11px}
-
-    @media print{
-      body{background:#fff}
-      .toolbar{display:none!important}
-      .wrap{max-width:none;margin:0;padding:0}
-      .page{border:0;margin:0;min-height:297mm}
-    }
+    @media print{body{background:#fff}.toolbar{display:none!important}.wrap{max-width:none;margin:0;padding:0}.page{border:0;margin:0;min-height:297mm}}
   </style>
 </head>
 <body>
+  {% macro fr_date(value) -%}
+    {%- set raw = (value|string).strip() -%}
+    {%- if not raw -%}
+      {{ '' }}
+    {%- elif '/' in raw and raw|length >= 10 -%}
+      {{ raw[:10] }}
+    {%- elif 'T' in raw -%}
+      {{ fr_date(raw.split('T')[0]) }}
+    {%- elif '-' in raw and raw|length >= 10 -%}
+      {{ raw[8:10] ~ '/' ~ raw[5:7] ~ '/' ~ raw[0:4] }}
+    {%- else -%}
+      {{ raw }}
+    {%- endif -%}
+  {%- endmacro %}
+
   {% set candidat = dossier.candidat or {} %}
   {% set certification = dossier.certification or {} %}
   {% set parcours = dossier.parcours_previsionnel or {} %}
@@ -66,6 +60,28 @@
       'activite3': "Gestion financière, juridique et administrative",
       'activite4': "Gestion marketing et commerciale",
       'activite5': "Constitution, management et pilotage d’une équipe"
+    }
+  %}
+  {% set status_labels = {
+      'salarie_prive': 'Salarié du secteur privé',
+      'fonctionnaire_agent_public': 'Fonctionnaire et agent public',
+      'benevole': 'Bénévole',
+      'aidant_familial': 'Aidant familial',
+      'aidant_familial_agricole': 'Aidant familial Agricole',
+      'demandeur_emploi': 'Demandeur d’emploi',
+      'travailleur_non_salarie': 'Travailleur non salarié',
+      'retraite': 'Retraité',
+      'mandat_electif': 'Titulaire d’un mandat électif'
+    }
+  %}
+  {% set objectifs_labels = {
+      'trouver_emploi': 'Trouver plus facilement un emploi',
+      'faire_reconnaitre_competences': 'Faire reconnaître officiellement ses compétences',
+      'etre_reconnu_profession': 'Être reconnu dans sa profession',
+      'obtenir_meilleur_salaire': 'Obtenir un meilleur salaire',
+      'se_reorienter': 'Se réorienter',
+      'se_maintenir_evoluer': 'Se maintenir ou évoluer dans son emploi',
+      'confirmer_acquis_metier': 'Confirmer ses acquis métier'
     }
   %}
 
@@ -88,11 +104,10 @@
 
       <h2>1. INFORMATIONS GÉNÉRALES SUR LE CANDIDAT</h2>
       <p class="italic underline">À compléter par la personne chargée de l’accompagnement ou du candidat seul s’il n’est pas accompagné.</p>
-
       <div class="line"><div class="label">Nom de naissance :</div><div class="value">{{ candidat.nom_naissance or '' }}</div></div>
       <div class="line"><div class="label">Nom d’usage :</div><div class="value">{{ candidat.nom_usage or '' }}</div></div>
       <div class="line"><div class="label">Prénom(s) :</div><div class="value">{{ candidat.prenoms or '' }}</div></div>
-      <div class="line"><div class="label">Date de naissance :</div><div class="value">{{ candidat.date_naissance or '' }}</div></div>
+      <div class="line"><div class="label">Date de naissance :</div><div class="value">{{ fr_date(candidat.date_naissance) }}</div></div>
       <div class="line"><div class="label">Nationalité :</div><div class="value">{{ candidat.nationalite or '' }}</div></div>
       <div class="line"><div class="label">Genre :</div><div class="value">{{ candidat.genre or '' }}</div></div>
       <div class="line"><div class="label">Niveau de formation le plus élevé :</div><div class="value">{{ candidat.niveau_formation or '' }}</div></div>
@@ -106,17 +121,17 @@
     <section class="page">
       <img class="logo" src="/static/logo-integrale.png" alt="Logo">
       <h2>STATUT DU CANDIDAT</h2>
-      {% set status_options = ['Salarié du secteur privé','Fonctionnaire et agent public','Bénévole','Aidant familial','Aidant familial Agricole','Demandeur d’emploi','Travailleur non salarié','Retraité','Titulaire d’un mandat électif'] %}
+      {% set status_options = ['salarie_prive','fonctionnaire_agent_public','benevole','aidant_familial','aidant_familial_agricole','demandeur_emploi','travailleur_non_salarie','retraite','mandat_electif'] %}
       {% for s in status_options %}
-        <div><span class="check">{{ '☑' if candidat.statut == s else '☐' }}</span> {{ s }}</div>
+        <div><span class="check">{{ '☑' if candidat.statut == s else '☐' }}</span> {{ status_labels[s] }}</div>
       {% endfor %}
       <div class="line"><div class="label">Convention collective employeur :</div><div class="value">{{ candidat.convention_collective or '' }}</div></div>
 
       <h2>OBJECTIFS DU CANDIDAT</h2>
       {% set objectifs = candidat.objectifs or [] %}
-      {% set objectif_options = ['Trouver plus facilement un emploi','Faire reconnaître officiellement ses compétences','Être reconnu dans sa profession','Obtenir un meilleur salaire','Se réorienter','Se maintenir ou évoluer dans son emploi','Confirmer ses acquis métier'] %}
+      {% set objectif_options = ['trouver_emploi','faire_reconnaitre_competences','etre_reconnu_profession','obtenir_meilleur_salaire','se_reorienter','se_maintenir_evoluer','confirmer_acquis_metier'] %}
       {% for o in objectif_options %}
-        <div><span class="check">{{ '☑' if o in objectifs else '☐' }}</span> {{ o }}</div>
+        <div><span class="check">{{ '☑' if o in objectifs else '☐' }}</span> {{ objectifs_labels[o] }}</div>
       {% endfor %}
 
       <h2>2. CERTIFICATION PROFESSIONNELLE VISÉE</h2>
@@ -137,11 +152,14 @@
       <img class="logo" src="/static/logo-integrale.png" alt="Logo">
       <h2>3. TABLEAU DES EXPÉRIENCES PROFESSIONNELLES OU PERSONNELLES</h2>
       <p class="italic underline">À compléter par la personne chargée de l’accompagnement ou du candidat seul s’il n’est pas accompagné.</p>
-      <p>Le tableau ci-dessous permet au certificateur de connaître les expériences du candidat en lien direct avec la certification visée.</p>
+      <p>Le tableau ci-dessous permet au certificateur de connaître les expériences du candidat (professionnelles, personnelles, bénévoles…) en lien direct avec la certification visée.</p>
+      <p>Il est demandé de dupliquer le tableau pour chaque expérience en lien avec la certification visée. L’intitulé de la fonction occupée par le candidat est indiqué ainsi que l’ensemble des activités liées à l’expérience qui apporteront un éclairage pertinent au regard du référentiel de la certification visée.</p>
+      <p>Tout élément relatif aux environnements de travail et aux contextes d’exercice permettra au certificateur de mieux appréhender le parcours du candidat. Les dossiers sans expériences en lien avec la certification visée sont considérés comme incomplets et rejetés.</p>
+      <p>Pour la bonne compréhension des informations, un soin particulier devra être porté à la syntaxe et à l’orthographe.</p>
       {% for exp in experiences[:3] %}
         <table class="tbl">
           <tr><th colspan="2">{{ loop.index }} - Expérience déclarée</th></tr>
-          <tr><td style="width:42%"><strong>Date de début *</strong></td><td class="value">{{ exp.date_debut or '' }}</td></tr>
+          <tr><td style="width:42%"><strong>Date de début *</strong></td><td class="value">{{ fr_date(exp.date_debut) }}</td></tr>
           <tr><td><strong>Durée *</strong></td><td class="value">{{ exp.duree or '' }}</td></tr>
           <tr><td><strong>Description de l'expérience/de la mission *</strong></td><td class="value" style="min-height:70px">{{ exp.description or '' }}</td></tr>
         </table>
@@ -154,7 +172,7 @@
       {% for exp in experiences[3:] %}
         <table class="tbl">
           <tr><th colspan="2">{{ loop.index + 3 }} - Expérience déclarée</th></tr>
-          <tr><td style="width:42%"><strong>Date de début *</strong></td><td class="value">{{ exp.date_debut or '' }}</td></tr>
+          <tr><td style="width:42%"><strong>Date de début *</strong></td><td class="value">{{ fr_date(exp.date_debut) }}</td></tr>
           <tr><td><strong>Durée *</strong></td><td class="value">{{ exp.duree or '' }}</td></tr>
           <tr><td><strong>Description de l'expérience/de la mission *</strong></td><td class="value" style="min-height:70px">{{ exp.description or '' }}</td></tr>
         </table>
@@ -167,23 +185,19 @@
       <section class="page">
         <img class="logo" src="/static/logo-integrale.png" alt="Logo">
         <h2>4. TABLEAU DE POSITIONNEMENT PAR COMPÉTENCES</h2>
+        <p class="italic underline">À compléter par la personne chargée de l’accompagnement ou du candidat seul s’il n’est pas accompagné.</p>
+        <p>Il s’agit de recueillir les informations en lien avec le référentiel d’activités et de compétences visé à partir d’expériences déclarées par le candidat. Il ne s’agit pas d’une évaluation des compétences du candidat car les compétences sont évaluées par le jury de certification.</p>
+        <p>- écrire « OUI » dans la colonne « Activité » si le candidat déclare exercer ou avoir exercé des activités en lien avec le bloc de compétences, et expliciter les conditions et contextes de réalisation ;</p>
+        <p>- écrire « NON » dans la colonne « Activité » si le candidat déclare ne pas avoir exercé d’activités en lien avec le bloc de compétences ;</p>
+        <p>- écrire « PARTIELLEMENT » dans la colonne « Activité » si le candidat déclare exercer partiellement des activités en lien avec le bloc de compétences et est en capacité d’expliquer les conditions et contextes de réalisation.</p>
         <div class="activity-title">{{ activity_key|replace('activite', 'Activité ') }} — {{ activity_labels.get(activity_key, '') }}</div>
         <table class="tbl">
-          <tr>
-            <th style="width:52%">LISTE DES COMPÉTENCES</th>
-            <th>ACTIVITÉ (OUI/NON/PARTIELLEMENT)</th>
-          </tr>
+          <tr><th style="width:52%">LISTE DES COMPÉTENCES</th><th>ACTIVITÉ (OUI/NON/PARTIELLEMENT)</th></tr>
           {% for idx in range(1, 5) %}
             {% set comp = activity.get('competence' ~ idx, {}) %}
-            <tr>
-              <td>{{ comp.intitule or '' }}</td>
-              <td>{{ comp.statut or '' }}</td>
-            </tr>
+            <tr><td>{{ comp.intitule or '' }}</td><td>{{ comp.statut or '' }}</td></tr>
           {% endfor %}
-          <tr>
-            <td><strong>Commentaires :</strong></td>
-            <td class="value white"></td>
-          </tr>
+          <tr><td><strong>Commentaires :</strong></td><td class="value white"></td></tr>
         </table>
       </section>
     {% endfor %}
@@ -196,13 +210,11 @@
       <div class="line"><div class="label">Accompagnement individuel (modalités) :</div><div class="value">{{ (parcours.accompagnement_individuel or {}).modalites or '' }}</div></div>
       <div class="line"><div class="label">Accompagnement collectif (heures) :</div><div class="value">{{ (parcours.accompagnement_collectif or {}).heures or '' }}</div></div>
       <div class="line"><div class="label">Accompagnement collectif (modalités) :</div><div class="value">{{ (parcours.accompagnement_collectif or {}).modalites or '' }}</div></div>
-
       <h3>Formations préalables à envisager</h3>
       <div class="line"><div class="label">Organisme de formation retenu :</div><div class="value">{{ (parcours.formations_prealables or {}).organisme or '' }}</div></div>
       <div class="line"><div class="label">Intitulé de la formation :</div><div class="value">{{ (parcours.formations_prealables or {}).intitule or '' }}</div></div>
       <div class="line"><div class="label">Objectif(s) de la formation :</div><div class="value">{{ (parcours.formations_prealables or {}).objectifs or '' }}</div></div>
       <div class="line"><div class="label">Nombre d'heures :</div><div class="value">{{ (parcours.formations_prealables or {}).heures or '' }}</div></div>
-
       <h3>Expérimentations complémentaires</h3>
       <div class="line"><div class="label">Type d'immersion :</div><div class="value">{{ (parcours.immersion or {}).type or '' }}</div></div>
       <div class="line"><div class="label">Type de structure :</div><div class="value">{{ (parcours.immersion or {}).structure or '' }}</div></div>
@@ -225,7 +237,7 @@
       <div class="line"><div class="label">Courriel :</div><div class="value">{{ avis.email or '' }}</div></div>
       <div class="line"><div class="label">Coordonnées téléphoniques :</div><div class="value">{{ avis.telephone or '' }}</div></div>
       <div class="line"><div class="label">Organisme d’accompagnement :</div><div class="value">{{ avis.organisme or '' }}</div></div>
-      <div class="line"><div class="label">Date :</div><div class="value">{{ avis.date or '' }}</div></div>
+      <div class="line"><div class="label">Date :</div><div class="value">{{ fr_date(avis.date) }}</div></div>
 
       <h2>7. ACCORD POUR L’ANALYSE DE LA FAISABILITÉ</h2>
       <p class="italic"><strong>À signer par le candidat.</strong></p>
@@ -234,7 +246,7 @@
       <div><span class="check">{{ '☑' if engagement.souhaite_accompagnement else '☐' }}</span> Je souhaite être accompagné pour la suite de mon parcours.</div>
       <div><span class="check">{{ '☑' if engagement.accord_analyse else '☐' }}</span> Je certifie l’exactitude des informations et accepte l’analyse de mon dossier.</div>
       <div class="line"><div class="label">Fait à :</div><div class="value">{{ engagement.lieu_signature or '' }}</div></div>
-      <div class="line"><div class="label">Le :</div><div class="value">{{ engagement.date_signature or '' }}</div></div>
+      <div class="line"><div class="label">Le :</div><div class="value">{{ fr_date(engagement.date_signature) }}</div></div>
       <div class="line"><div class="label">Signature du candidat :</div><div class="value">{{ engagement.nom_signature or '' }}</div></div>
       <p class="small muted">Identifiant dossier: {{ dossier.id }} — Statut: {{ dossier.statut_dossier or 'brouillon' }}</p>
     </section>
