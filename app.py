@@ -7244,7 +7244,7 @@ def _build_candidate_sheet_data(session_data: Dict[str, Any], trainee_data: Dict
         "situation": pick(candidat.get("statut")),
         "company": pick(trainee_data.get("company_name"), trainee_data.get("employer"), trainee_data.get("entreprise")),
         "financing": "",
-        "interviewer": pick(trainee_data.get("interviewer"), trainee_data.get("referent_name")),
+        "interviewer": "Clément VAILLANT",
         "last_name": pick(trainee_data.get("last_name"), candidat.get("nom_naissance")),
         "usage_name": pick(candidat.get("nom_usage")),
         "first_names": pick(trainee_data.get("first_name"), candidat.get("prenoms")),
