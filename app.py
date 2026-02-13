@@ -7,7 +7,7 @@ import datetime
 import html
 import unicodedata
 import threading
-from typing import Dict, Any, Optional, List, Iterable, Tuple
+from typing import Dict, Any, Optional, List, Iterable, Tuple, Set
 from functools import wraps
 from zoneinfo import ZoneInfo
 from flask import session
@@ -544,6 +544,23 @@ def _canonical_cmar_identifier(value: str) -> str:
     if normalized.startswith("CMAR"):
         return normalized[4:]
     return normalized
+
+
+def _cmar_identifier_match_keys(value: str) -> Set[str]:
+    """
+    Construit des clés de comparaison robustes pour un identifiant CMAR.
+    Permet notamment de rapprocher "00000088" et "88".
+    """
+    canonical = _canonical_cmar_identifier(value)
+    if not canonical:
+        return set()
+
+    keys = {canonical}
+    digits = re.sub(r"\D", "", canonical)
+    if digits:
+        keys.add(digits)
+        keys.add(digits.lstrip("0") or "0")
+    return {k for k in keys if k}
 
 
 def _extract_cmar_identifiers_from_pdf(file_bytes: bytes) -> List[str]:
@@ -5486,7 +5503,21 @@ def api_vtc_check_import():
         return jsonify({"ok": True, "matches": [], "count": 0, "message": "aucun stagiaire VTC trouvé"})
 
     data = load_data()
-    wanted = {_canonical_cmar_identifier(identifier) for identifier in identifiers if _canonical_cmar_identifier(identifier)}
+    wanted = set()
+    for identifier in identifiers:
+        wanted.update(_cmar_identifier_match_keys(identifier))
+
+    admissible_tokens = {
+        key
+        for token in admissible_tokens
+        for key in _cmar_identifier_match_keys(token)
+    }
+    non_admissible_tokens = {
+        key
+        for token in non_admissible_tokens
+        for key in _cmar_identifier_match_keys(token)
+    }
+
     admissible_matches = []
     non_admissible_matches = []
     seen = set()
@@ -5501,11 +5532,15 @@ def api_vtc_check_import():
             if not cmar_id:
                 continue
 
-            token_match = cmar_id in wanted
+            cmar_keys = _cmar_identifier_match_keys(cmar_id)
+            token_match = bool(cmar_keys & wanted)
 
             cmar_digits = re.sub(r"\D", "", cmar_id)
+            cmar_digits_stripped = cmar_digits.lstrip("0") or "0"
             fallback_alnum_match = bool(file_alnum and cmar_id in file_alnum)
-            fallback_digits_match = bool(cmar_digits and len(cmar_digits) >= 6 and file_digits and cmar_digits in file_digits)
+            fallback_digits_match = bool(cmar_digits and len(cmar_digits) >= 6 and file_digits and (
+                cmar_digits in file_digits or (len(cmar_digits_stripped) >= 6 and cmar_digits_stripped in file_digits)
+            ))
 
             if not (token_match or fallback_alnum_match or fallback_digits_match):
                 continue
@@ -5516,10 +5551,10 @@ def api_vtc_check_import():
             seen.add(key)
             target = admissible_matches
             status = "admissible"
-            if cmar_id in non_admissible_tokens:
+            if cmar_keys & non_admissible_tokens:
                 target = non_admissible_matches
                 status = "non_admissible"
-            elif admissible_tokens and cmar_id in admissible_tokens:
+            elif admissible_tokens and (cmar_keys & admissible_tokens):
                 target = admissible_matches
                 status = "admissible"
 
