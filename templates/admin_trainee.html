@@ -51,6 +51,17 @@
       <button class="btn btn-outline btn-uniform" type="button" onclick="openModal('historyModal')">
         📜 Historique
       </button>
+      {% if is_vtc %}
+        <button class="btn {% if trainee.vtc_book_sent_at %}btn-disabled-muted{% else %}btn-outline{% endif %} btn-uniform"
+                type="button"
+                id="btnOpenBookModal"
+                {% if trainee.vtc_book_sent_at or is_read_only %}disabled{% endif %}>
+          📚 Livre VTC
+        </button>
+        <span class="hint" id="vtcBookStatusTop" style="{% if not trainee.vtc_book_sent_at %}display:none;{% endif %}">
+          ✅ Livre VTC envoyé le <strong id="vtcBookStatusTopDate">{{ trainee.vtc_book_sent_at|frdate }}</strong>
+        </span>
+      {% endif %}
       {% if show_vae %}
         <button class="btn {% if vae_action_dates.get('livret_1_transmitted_scotia') %}btn-disabled-muted{% else %}btn-blue{% endif %} btn-uniform" type="button" onclick="setVaeAction('livret_1_transmitted_scotia')" {% if vae_action_dates.get('livret_1_transmitted_scotia') %}disabled{% endif %} {{ read_only_attr }}>
           L1 transmis scotia
