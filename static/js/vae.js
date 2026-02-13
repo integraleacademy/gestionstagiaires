@@ -28,6 +28,25 @@
     email: 'Adresse email',
   };
 
+  const STEP_REQUIRED_FIELDS = {
+    5: [
+      ...Array.from({ length: 5 }, (_, actIdx) =>
+        Array.from({ length: 4 }, (_, compIdx) => [
+          `blocs_competences.activite${actIdx + 1}.competence${compIdx + 1}.intitule`,
+          `blocs_competences.activite${actIdx + 1}.competence${compIdx + 1}.statut`,
+        ]),
+      ).flat(),
+    ],
+    8: [
+      'engagement.accord_analyse',
+      'engagement.lieu_signature',
+      'engagement.date_signature',
+      'engagement.nom_signature',
+      'engagement.signature_trace',
+      'engagement.signature_signed_at',
+    ],
+  };
+
   function setPath(obj, path, value) {
     const keys = path.split('.');
     let ref = obj;
@@ -102,6 +121,42 @@
     progress.style.width = `${((current + 1) / steps.length) * 100}%`;
     document.getElementById('prevStep').style.visibility = current === 0 ? 'hidden' : 'visible';
     document.getElementById('nextStep').style.visibility = current === steps.length - 1 ? 'hidden' : 'visible';
+  }
+
+  function updateConventionCollectiveState() {
+    const statut = form.querySelector('[name="candidat.statut"]:checked')?.value || '';
+    const convention = form.querySelector('#conventionCollective');
+    if (!convention) return;
+    const enabled = statut === 'salarie_prive';
+    convention.disabled = !enabled;
+    if (!enabled) {
+      convention.value = '';
+    }
+  }
+
+  function hasValueForField(payload, fieldName) {
+    if (fieldName === 'engagement.accord_analyse') {
+      return !!payload.engagement?.accord_analyse;
+    }
+    const keys = fieldName.split('.');
+    let ref = payload;
+    for (const key of keys) {
+      ref = ref?.[key];
+    }
+    return typeof ref === 'boolean' ? ref : String(ref || '').trim().length > 0;
+  }
+
+  function validateCurrentStep() {
+    const step = current + 1;
+    const payload = getPayload();
+    const required = STEP_REQUIRED_FIELDS[step] || [];
+    const missing = required.filter((field) => !hasValueForField(payload, field));
+    if (!missing.length) {
+      errorsEl.innerHTML = '';
+      return true;
+    }
+    errorsEl.innerHTML = `<div><strong>${STEP_LABELS[step] || `Étape ${step}`}</strong> : tous les champs obligatoires doivent être renseignés avant de continuer.</div>`;
+    return false;
   }
 
   function addExperienceRow(exp = { date_debut: '', duree: '', description: '' }) {
@@ -201,6 +256,12 @@
       }
     }
     if (!payload.engagement?.accord_analyse) e.push('accord_analyse obligatoire');
+    if (!String(payload.engagement?.lieu_signature || '').trim()) e.push('Lieu de signature obligatoire');
+    if (!String(payload.engagement?.date_signature || '').trim()) e.push('Date de signature obligatoire');
+    if (!String(payload.engagement?.nom_signature || '').trim()) e.push('Nom et prénom obligatoires');
+    if (!String(payload.engagement?.signature_trace || '').trim() || !String(payload.engagement?.signature_signed_at || '').trim()) {
+      e.push('Signature électronique obligatoire');
+    }
     return e;
   }
 
@@ -239,14 +300,25 @@
     autosaveDebounced();
   });
   document.getElementById('prevStep').addEventListener('click', () => { current = Math.max(0, current - 1); renderStep(); });
-  document.getElementById('nextStep').addEventListener('click', () => { current = Math.min(steps.length - 1, current + 1); renderStep(); });
+  document.getElementById('nextStep').addEventListener('click', () => {
+    if (!validateCurrentStep()) return;
+    current = Math.min(steps.length - 1, current + 1);
+    renderStep();
+  });
   document.getElementById('submitDossier').addEventListener('click', () => submitDossier().catch(() => {}));
   document.getElementById('signDocument').addEventListener('click', signDocument);
 
   form.querySelectorAll('input, select, textarea').forEach((el) => el.addEventListener('input', autosaveDebounced));
+  form.querySelectorAll('[name="candidat.statut"]').forEach((el) => {
+    el.addEventListener('change', () => {
+      updateConventionCollectiveState();
+      autosaveDebounced();
+    });
+  });
   form.querySelector('[name="engagement.nom_signature"]').addEventListener('input', renderSignaturePreview);
   const exp = Array.isArray(initial.experiences) && initial.experiences.length ? initial.experiences : [{}];
   exp.forEach(addExperienceRow);
   renderSignaturePreview();
+  updateConventionCollectiveState();
   renderStep();
 })();

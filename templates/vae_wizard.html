@@ -10,9 +10,9 @@
     <section class="step active" data-step="1">
       <h2>Nature de la demande</h2>
       <label>Nature de la demande</label>
-      <select name="nature_demande" required>
+      <input type="hidden" name="nature_demande" value="initiale">
+      <select required disabled>
         <option value="initiale" {% if dossier.nature_demande=='initiale' %}selected{% endif %}>Initiale</option>
-        <option value="renouvellement" {% if dossier.nature_demande=='renouvellement' %}selected{% endif %}>Renouvellement</option>
       </select>
     </section>
 
@@ -68,7 +68,6 @@
             {% endfor %}
           </select>
         </div>
-        <p class="muted levels-hint">Correspondance des niveaux : CAP/BEP = 3, Bac = 4, DEUG/BTS/DUT = 5, Licence/BUT/Maîtrise = 6, Master = 7, Doctorat = 8.</p>
       </div>
       <input name="candidat.certifications_obtenues" placeholder="Intitulé des certifications obtenues" value="{{ dossier.candidat.certifications_obtenues }}">
       <div class="grid-3">
@@ -98,7 +97,7 @@
         <label><input type="radio" name="candidat.statut" value="{{ value }}" {% if dossier.candidat.statut==value %}checked{% endif %}> {{ label }}</label>
         {% endfor %}
       </div>
-      <input name="candidat.convention_collective" placeholder="Identification de la convention collective de l’employeur (le cas échéant)" value="{{ dossier.candidat.convention_collective }}">
+      <input name="candidat.convention_collective" id="conventionCollective" placeholder="Identification de la convention collective de l’employeur (le cas échéant)" value="{{ dossier.candidat.convention_collective }}" disabled>
 
       <h3>Objectifs du candidat</h3>
       <div class="checkbox-grid">
@@ -124,9 +123,9 @@
       <div class="grid-3">
         <input value="RNCP {{ dossier.certification.rncp }}" readonly>
         <input value="{{ dossier.certification.certificateur }}" readonly>
-        <input name="certification.option" placeholder="Option (le cas échéant)" value="{{ dossier.certification.option }}">
+        <input name="certification.option" placeholder="Option (le cas échéant)" value="{{ dossier.certification.option }}" readonly>
       </div>
-      <input name="certification.parcours_mention" placeholder="Parcours / option / mention / spécialité (le cas échéant)" value="{{ dossier.certification.parcours_mention }}">
+      <input name="certification.parcours_mention" placeholder="Parcours / option / mention / spécialité (le cas échéant)" value="{{ dossier.certification.parcours_mention }}" readonly>
 
       <h3>Le candidat vise</h3>
       <div class="checkbox-grid">
@@ -135,7 +134,7 @@
         <label><input type="radio" disabled> Un ou plusieurs bloc(s) de compétences (non disponible)</label>
       </div>
       <input name="certification.blocs_vises" placeholder="Préciser le(s) bloc(s) visé(s) (séparés par virgules)" value="{{ (dossier.certification.blocs_vises or [])|join(', ') }}" disabled>
-      <textarea name="certification.prerequis" placeholder="Liste des prérequis réglementaires de la certification professionnelle visée">{{ dossier.certification.prerequis }}</textarea>
+      <textarea name="certification.prerequis" placeholder="Liste des prérequis réglementaires de la certification professionnelle visée" readonly>{{ dossier.certification.prerequis }}</textarea>
     </section>
 
     <section class="step" data-step="4">
@@ -399,9 +398,9 @@
       <label><input type="checkbox" name="engagement.souhaite_accompagnement" {% if dossier.engagement.souhaite_accompagnement %}checked{% endif %}> Je souhaite un accompagnement</label>
       <p class="muted">Si le candidat coche cette case, il reste nécessaire de passer par le portail numérique « France VAE » mentionné à l’<a href="https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000047924037" target="_blank" rel="noopener noreferrer">article R. 6411-2 du code du travail</a> pour déposer le dossier de validation afin que ce dernier soit transmis au certificateur.</p>
       <label><input type="checkbox" name="engagement.accord_analyse" {% if dossier.engagement.accord_analyse %}checked{% endif %} required> J'accepte l'analyse de mon dossier*</label>
-      <input name="engagement.lieu_signature" placeholder="Lieu" value="{{ dossier.engagement.lieu_signature }}">
-      <input type="date" name="engagement.date_signature" value="{{ dossier.engagement.date_signature }}">
-      <input name="engagement.nom_signature" placeholder="Nom et prénom" value="{{ dossier.engagement.nom_signature }}">
+      <input name="engagement.lieu_signature" placeholder="Lieu*" value="{{ dossier.engagement.lieu_signature }}" required>
+      <input type="date" name="engagement.date_signature" value="{{ dossier.engagement.date_signature }}" required>
+      <input name="engagement.nom_signature" placeholder="Nom et prénom*" value="{{ dossier.engagement.nom_signature }}" required>
       <input type="hidden" name="engagement.signature_trace" value="{{ dossier.engagement.signature_trace }}">
       <input type="hidden" name="engagement.signature_signed_at" value="{{ dossier.engagement.signature_signed_at }}">
       <button type="button" class="btn signature-btn" id="signDocument">Signer le document</button>

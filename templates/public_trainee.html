@@ -431,6 +431,10 @@
     font-weight:900;
     font-size:18px;
   }
+  .collapse-card.is-locked .collapse-summary{
+    cursor:not-allowed;
+    opacity:.85;
+  }
   .collapse-summary-main{
     display:flex;
     align-items:center;
@@ -532,6 +536,13 @@
   .vae-step-action{margin-top:4px;}
   .vae-step-action .btn{font-size:15px;padding:12px 14px;}
   .vae-step-action-note{font-size:13px;color:#9a3412;font-weight:700;}
+  .vae-step-lock{
+    position:absolute;
+    top:10px;
+    right:14px;
+    font-size:34px;
+    line-height:1;
+  }
 
   @media (max-width: 640px){
     .vtc-cta-label{align-items:flex-start;gap:10px;}
@@ -840,10 +851,10 @@
 <details id="infosToCompleteDetails" class="collapse-card" style="grid-column:1/-1;">
   <summary class="collapse-summary">
     <span class="collapse-summary-main">
-      <span>Infos à compléter</span>
+      <span>{{ '1️⃣ Infos à compléter' if is_dirigeant_vae else 'Infos à compléter' }}</span>
       <span id="infosToCompleteOk" class="oktag" hidden>Tout est OK ✅</span>
       <span id="infosToCompleteAlert" class="infos-warning" role="status" aria-live="polite" hidden>
-        ⚠️ Ouvrez cet onglet pour compléter vos informations
+        {{ '⚠️ Commencez par compléter vos informations' if is_dirigeant_vae else '⚠️ Ouvrez cet onglet pour compléter vos informations' }}
       </span>
     </span>
   </summary>
@@ -1023,9 +1034,9 @@
 <!-- Encadré 3 : mes documents (upload) -->
 {% if show_vae %}
 <details id="documentsDetails" class="collapse-card" style="grid-column:1/-1;">
-  <summary class="collapse-summary">
+  <summary id="documentsSummary" class="collapse-summary">
     <span class="collapse-summary-main">
-      <span>Mes documents</span>
+      <span>{{ '2️⃣ Mes documents' if is_dirigeant_vae else 'Mes documents' }} <span id="documentsLockIcon" hidden>🔒</span></span>
       <span id="documentsOkTag" class="oktag" hidden>Tout est OK ✅</span>
       <span id="documentsAlert" class="infos-warning" role="status" aria-live="polite" hidden>
         ⚠️ Ouvrez cet onglet pour déposer vos documents
@@ -1037,7 +1048,7 @@
 <div class="card" style="grid-column:1/-1;">
   <h2>Mes documents</h2>
 {% endif %}
-  <div class="muted">⚠️ Ouvrez cet onglet pour déposer vos documents.</div>
+  <div id="documentsHint" class="muted">⚠️ Ouvrez cet onglet pour déposer vos documents.</div>
 
   <div class="docs-stack">
 
@@ -1087,10 +1098,13 @@
         <div class="label">{{ "Fiche de renseignement candidat à compléter" if d.key == "candidate_info_sheet" else d.label }}</div>
         {% if d.key == "candidate_info_sheet" %}
           {% set candidate_sheet_saved = trainee.candidate_sheet_saved_at or trainee.candidate_sheet %}
+          {% set candidate_sheet_pending_review = up not in ["NON DÉPOSÉ", "NON DEPOSE", "", "NON CONFORME", "CONFORME"] %}
           <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            <a class="btn small outline" href="{{ url_for('public_trainee_candidate_sheet', token=token_safe) }}" target="_blank" rel="noopener">
-              📝 Compléter la fiche candidat (HTML imprimable)
-            </a>
+            {% if not candidate_sheet_pending_review %}
+              <a class="btn small outline" href="{{ url_for('public_trainee_candidate_sheet', token=token_safe) }}" target="_blank" rel="noopener">
+                📝 Compléter la fiche candidat (HTML imprimable)
+              </a>
+            {% endif %}
             {% if up in ["NON DÉPOSÉ", "NON DEPOSE", ""] and candidate_sheet_saved %}
               <form action="{{ url_for('public_candidate_sheet_validate', token=token_safe) }}" method="post" style="margin:0;">
                 <button class="btn small" type="submit">Envoyer ma fiche candidat</button>
@@ -1348,8 +1362,8 @@ id="upload_{{ d.key }}"
           <p><strong>👉 Commencez maintenant votre Livret 1.</strong></p>
           <p class="vae-step-action"><a class="btn" href="/vae/nouveau/{{ token_safe }}" target="_blank" rel="noopener">Compléter mon Livret 1</a></p>
         {% else %}
-          <p>🔒</p>
-          <p class="muted">⚠️ Vous devez déposer tous vos documents dans la rubrique Mes documents avant de commencer la rédaction de votre Livret 1 (dossier de faisabilité)</p>
+          <div class="vae-step-lock" aria-hidden="true">🔒</div>
+          <p class="muted">⚠️ Vous devez compléter vos informations et déposer tous vos documents dans la rubrique Mes documents avant de commencer la rédaction de votre Livret 1 (dossier de faisabilité)</p>
         {% endif %}
       </div>
 
@@ -1718,7 +1732,11 @@ id="upload_{{ d.key }}"
         </p>
 
         <p class="ia-p">
-          ✅ Commencez par compléter le Livret 1 (dossier de faisabilité) dans votre Espace Candidat. Dès que votre dossier de faisabilité sera validé, vous rédigerez votre Livret 2, puis vous présenterez votre projet professionnel devant le jury de certification.
+          1️⃣ Vous devez tout d'abord télécharger vos documents (pièce d'identité, carte vitale, photo d'identité, CV, diplôme le plus élevé) dans la rubrique Mes documents.
+        </p>
+
+        <p class="ia-p">
+          2️⃣ Dès que tous vos documents auront été déposés, vous pourrez commencer la rédaction du Livret 1 (dossier de faisabilité) dans votre Espace Candidat. Dès que votre dossier de faisabilité sera validé, vous rédigerez votre Livret 2, puis vous présenterez votre projet professionnel devant le jury de certification.
         </p>
 
         <p class="ia-p">
@@ -1870,6 +1888,9 @@ function closeUploadSuccessModal(event) {
   const documentsDetails = document.getElementById("documentsDetails");
   const documentsWarning = document.getElementById("documentsAlert");
   const documentsOk = document.getElementById("documentsOkTag");
+  const documentsHint = document.getElementById("documentsHint");
+  const documentsSummary = document.getElementById("documentsSummary");
+  const documentsLockIcon = document.getElementById("documentsLockIcon");
   const vtcCredentialsHint = document.getElementById("vtcCredentialsHint");
 
   const isVtcCredentialsSubmitted = () => {
@@ -1894,21 +1915,55 @@ function closeUploadSuccessModal(event) {
     if (vtcCredentialsHint) vtcCredentialsHint.style.display = "none";
   };
 
-  const updateInfosToCompleteWarning = () => {
+  const infosAreComplete = () => {
     const fieldsToCheck = ["carte_vitale","birth_date","birth_city","birth_country","nationality","address","zip_code","city"];
     if (document.getElementById("pre_number")) fieldsToCheck.push("pre_number");
-    const pending = fieldsToCheck.some((id) => {
+    return !fieldsToCheck.some((id) => {
       const statusEl = document.getElementById(`ok_${id}`);
       return statusEl && (statusEl.textContent || "").includes("À compléter");
     });
-    if (infosWarning && infosDetails) infosWarning.hidden = !pending || infosDetails.open;
-    if (infosOk) infosOk.hidden = pending;
+  };
+
+  const updateInfosToCompleteWarning = () => {
+    const complete = infosAreComplete();
+    if (infosWarning && infosDetails) infosWarning.hidden = complete || infosDetails.open;
+    if (infosOk) infosOk.hidden = !complete;
   };
 
   const updateDocumentsWarning = () => {
     const hasBlocking = !!document.querySelector(".docs-stack .docrow.missing, .docs-stack .docrow.pending");
-    if (documentsWarning && documentsDetails) documentsWarning.hidden = !hasBlocking || documentsDetails.open;
-    if (documentsOk) documentsOk.hidden = hasBlocking;
+    const infosComplete = infosAreComplete();
+    const locked = !infosComplete;
+
+    if (documentsDetails) {
+      documentsDetails.classList.toggle("is-locked", locked);
+      if (locked && documentsDetails.open) documentsDetails.open = false;
+    }
+    if (documentsSummary) {
+      documentsSummary.setAttribute("aria-disabled", locked ? "true" : "false");
+    }
+    if (documentsLockIcon) documentsLockIcon.hidden = !locked;
+
+    if (documentsHint) {
+      if (locked) {
+        documentsHint.textContent = "🔒 Vous pourrez déposer vos documents quand vous aurez saisi vos informations.";
+      } else if (hasBlocking) {
+        documentsHint.textContent = "⚠️ Déposez maintenant vos documents.";
+      } else {
+        documentsHint.textContent = "Tout est OK ✅";
+      }
+    }
+
+    if (documentsWarning && documentsDetails) {
+      if (locked) {
+        documentsWarning.hidden = documentsDetails.open;
+        documentsWarning.textContent = "🔒 Vous pourrez déposer vos documents quand vous aurez saisi vos informations";
+      } else {
+        documentsWarning.hidden = !hasBlocking || documentsDetails.open;
+        documentsWarning.textContent = "⚠️ Déposez maintenant vos documents";
+      }
+    }
+    if (documentsOk) documentsOk.hidden = locked || hasBlocking;
   };
 
   const syncVtcPanel = () => {
@@ -1939,7 +1994,12 @@ function closeUploadSuccessModal(event) {
     infosDetails.addEventListener("toggle", updateInfosToCompleteWarning);
   }
   if (documentsDetails) {
-    documentsDetails.addEventListener("toggle", updateDocumentsWarning);
+    documentsDetails.addEventListener("toggle", () => {
+      if (documentsDetails.classList.contains("is-locked") && documentsDetails.open) {
+        documentsDetails.open = false;
+      }
+      updateDocumentsWarning();
+    });
   }
 
   const vtcForm = document.getElementById("vtcCredentialsForm");

@@ -6315,10 +6315,20 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
         """)
 
     if not subject:
+        print(f"[VAE][EMAIL] status inconnu, aucun envoi déclenché: status={status_key!r}")
         return
 
-    if email:
-        brevo_send_email(email, subject, html)
+    if not email:
+        trainee_id = str(t.get("id") or "")
+        print(f"[VAE][EMAIL] aucun email stagiaire, envoi ignoré: trainee_id={trainee_id!r} status={status_key!r}")
+        return
+
+    email_ok = brevo_send_email(email, subject, html)
+    trainee_id = str(t.get("id") or "")
+    print(
+        f"[VAE][EMAIL] envoi statut VAE: trainee_id={trainee_id!r} status={status_key!r} "
+        f"to={email!r} ok={bool(email_ok)}"
+    )
 
 def deliverables_progress(t: Dict[str, Any]):
     """
@@ -7256,7 +7266,7 @@ def _build_candidate_sheet_data(session_data: Dict[str, Any], trainee_data: Dict
         "situation": pick(candidat.get("statut")),
         "company": pick(trainee_data.get("company_name"), trainee_data.get("employer"), trainee_data.get("entreprise")),
         "financing": "",
-        "interviewer": pick(trainee_data.get("interviewer"), trainee_data.get("referent_name")),
+        "interviewer": "Clément VAILLANT",
         "last_name": pick(trainee_data.get("last_name"), candidat.get("nom_naissance")),
         "usage_name": pick(candidat.get("nom_usage")),
         "first_names": pick(trainee_data.get("first_name"), candidat.get("prenoms")),
@@ -9170,6 +9180,10 @@ def _merge_dict(base: Dict[str, Any], incoming: Dict[str, Any]) -> None:
 
 def _validate_vae_for_submit(dossier: Dict[str, Any]) -> List[str]:
     errors: List[str] = []
+
+    if (dossier.get("nature_demande") or "") != "initiale":
+        errors.append("Nature de la demande : seule la valeur Initiale est autorisée")
+
     candidat = dossier.get("candidat", {})
     required_fields = {
         "nom_naissance": "Nom de naissance",
@@ -9199,9 +9213,20 @@ def _validate_vae_for_submit(dossier: Dict[str, Any]) -> List[str]:
                     f"4ème étape (Tableau de positionnement) : activité manquante pour Activité {activity_idx}, compétence {competence_idx}"
                 )
 
+    if (candidat.get("statut") or "") != "salarie_prive" and str(candidat.get("convention_collective") or "").strip():
+        errors.append("1ère étape (Informations candidat) : la convention collective doit rester vide hors salarié du secteur privé")
+
     engagement = dossier.get("engagement", {})
     if not bool(engagement.get("accord_analyse")):
         errors.append("7ème étape (Accord d'analyse) : vous devez accepter l'analyse du dossier")
+    if not str(engagement.get("lieu_signature") or "").strip():
+        errors.append("7ème étape (Accord d'analyse) : lieu de signature manquant")
+    if not str(engagement.get("date_signature") or "").strip():
+        errors.append("7ème étape (Accord d'analyse) : date de signature manquante")
+    if not str(engagement.get("nom_signature") or "").strip():
+        errors.append("7ème étape (Accord d'analyse) : nom et prénom du signataire manquants")
+    if not str(engagement.get("signature_trace") or "").strip() or not str(engagement.get("signature_signed_at") or "").strip():
+        errors.append("7ème étape (Accord d'analyse) : signature électronique obligatoire")
     return errors
 
 def _vae_create_and_redirect_for_trainee_token(trainee_token: str):
@@ -9270,6 +9295,13 @@ def api_vae_save(dossier_id: str):
         return jsonify({"ok": False, "error": "already_submitted"}), 403
 
     _merge_dict(dossier, payload)
+
+    # Contraintes métier côté serveur
+    dossier["nature_demande"] = "initiale"
+    candidat = dossier.get("candidat") if isinstance(dossier.get("candidat"), dict) else {}
+    if candidat.get("statut") != "salarie_prive":
+        candidat["convention_collective"] = ""
+
     dossier["updated_at"] = _now_iso_utc()
     _vae_save_all(data)
     return jsonify({"ok": True, "id": dossier_id, "updated_at": dossier["updated_at"]})
@@ -9317,6 +9349,7 @@ def api_vae_submit(dossier_id: str):
         current_trainee_id = str(t.get('id') or '')
         t = next((x for x in trainees if str(x.get('id') or '') == current_trainee_id), t)
 
+        previous_status = vae_status_view(t.get('vae_status') or t.get('vae_status_label'))['key']
         view = vae_status_view('livret_1_analysis')
         t['vae_status'] = view['key']
         t['vae_status_label'] = view['label']
@@ -9338,6 +9371,19 @@ def api_vae_submit(dossier_id: str):
         s['trainees'] = trainees
         s.pop('stagiaires', None)
         save_data(data_main)
+
+        if previous_status != view['key']:
+            _notify_vae_status_change(t, view['key'])
+        else:
+            print(
+                f"[VAE][EMAIL] statut inchangé après soumission livret 1, pas d'email envoyé: "
+                f"trainee_id={current_trainee_id!r} status={view['key']!r}"
+            )
+    else:
+        print(
+            f"[VAE][EMAIL] liaison session/stagiaire introuvable après soumission livret 1: "
+            f"dossier_id={dossier_id!r} session_id={session_id!r} trainee_id={trainee_id!r}"
+        )
 
     return jsonify({"ok": True, "redirect_url": url_for('vae_success', token=dossier_id)})
 

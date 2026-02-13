@@ -68,10 +68,22 @@
       <ul class="lines">
         <li>TYPE DE FORMATION : <input class="field" style="min-width:110mm;" name="formation_type" value="{{ candidate.formation_type }}"></li>
         <li>DATE D’ENTREE EN STAGE : <input class="field" style="min-width:102mm;" name="date_entree_stage" value="{{ candidate.date_entree_stage }}"></li>
-        <li>SITUATION PROFESSIONNELLE : <input class="field" style="min-width:96mm;" name="situation" value="{{ candidate.situation }}"></li>
+        <li>SITUATION PROFESSIONNELLE : <select class="field" style="min-width:96mm;" name="situation">
+          <option value="" {% if not candidate.situation %}selected{% endif %}></option>
+          <option value="Salarié" {% if candidate.situation == 'Salarié' %}selected{% endif %}>Salarié</option>
+          <option value="employeur" {% if candidate.situation == 'employeur' %}selected{% endif %}>employeur</option>
+          <option value="demandeur d'emploi" {% if candidate.situation == "demandeur d'emploi" %}selected{% endif %}>demandeur d'emploi</option>
+        </select></li>
         <li>NOM DE L’ENTREPRISE (si salarié ou employeur) : <input class="field" style="min-width:74mm;" name="company" value="{{ candidate.company }}"></li>
-        <li>FINANCEMENT : <input class="field" style="min-width:110mm;" name="financing" value="{{ candidate.financing }}"></li>
-        <li>ENTRETIEN REALISE PAR : <input class="field" style="min-width:103mm;" name="interviewer" value="{{ candidate.interviewer }}"></li>
+        <li>FINANCEMENT : <select class="field" style="min-width:110mm;" name="financing">
+          <option value="" {% if not candidate.financing %}selected{% endif %}></option>
+          <option value="Individuel" {% if candidate.financing == 'Individuel' %}selected{% endif %}>Individuel</option>
+          <option value="France Travail" {% if candidate.financing == 'France Travail' %}selected{% endif %}>France Travail</option>
+          <option value="Entreprise" {% if candidate.financing == 'Entreprise' %}selected{% endif %}>Entreprise</option>
+          <option value="CPF + France Travail" {% if candidate.financing == 'CPF + France Travail' %}selected{% endif %}>CPF + France Travail</option>
+          <option value="OPCO" {% if candidate.financing == 'OPCO' %}selected{% endif %}>OPCO</option>
+        </select></li>
+        <li>ENTRETIEN REALISE PAR : <input class="field" style="min-width:103mm;" name="interviewer" value="Clément VAILLANT" readonly></li>
       </ul>
       <div class="photo">{% if photo_url %}<img src="{{ photo_url }}" alt="Photo candidat">{% else %}🖼️{% endif %}</div>
     </div>

@@ -5,6 +5,7 @@
 {% set pre_reception_open = request.args.get("pre_reception") %}
 {% set is_vtc = "VTC" in (session.training_type or "")|upper %}
 {% set training_type_label = "CHAUFFEUR VTC" if (session.training_type or "")|upper == "VTC" else session.training_type %}
+{% set vae_action_dates = trainee.vae_action_dates or {} %}
 
 <div class="breadcrumbs">
   <a href="{{ url_for('admin_trainees', session_id=session.id, **request.args) }}">← Retour stagiaires</a>
@@ -31,7 +32,7 @@
 
     </div>
     <div class="meta-line" style="margin-top:8px;">
-      {% if not is_vtc %}
+      {% if not is_vtc and not show_vae %}
         <a class="btn btn-primary btn-uniform"
            data-pre-reception
            href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=trainee.id, pre_reception=1) }}">
@@ -46,7 +47,15 @@
       <button class="btn btn-outline btn-uniform" type="button" data-open-section="phoneRelanceSection">
         📞 RELANCE TEL
       </button>
-      {% if not is_vtc %}
+      {% if show_vae %}
+        <button class="btn {% if vae_action_dates.get('livret_1_transmitted_scotia') %}btn-disabled-muted{% else %}btn-blue{% endif %} btn-uniform" type="button" onclick="setVaeAction('livret_1_transmitted_scotia')" {% if vae_action_dates.get('livret_1_transmitted_scotia') %}disabled{% endif %} {{ read_only_attr }}>
+          L1 transmis scotia
+        </button>
+        <button class="btn {% if vae_action_dates.get('livret_2_transmitted_scotia') %}btn-disabled-muted{% else %}btn-blue{% endif %} btn-uniform" type="button" onclick="setVaeAction('livret_2_transmitted_scotia')" {% if vae_action_dates.get('livret_2_transmitted_scotia') %}disabled{% endif %} {{ read_only_attr }}>
+          L2 transmis scotia
+        </button>
+      {% endif %}
+      {% if not is_vtc and not show_vae %}
         {% set cnaps_full_name = ((trainee.first_name or "Prénom") ~ " " ~ (trainee.last_name or "NOM"))|trim %}
         {% set cnaps_birth_date = (trainee.birth_date|frdate or "DD/MM/YYYY") %}
         {% set cnaps_body = "Bonjour,\n\nJe me permets de revenir vers nous concernant la demande d'autorisation préalable de " ~ cnaps_full_name ~ " né le " ~ cnaps_birth_date ~ ".\n\nLe suivi en ligne indique que la demande a été acceptée, mais cette personne n'a pas reçu le courrier officiel de notification par courrier postal et nous ne disposons donc pas de son numéro PRE nécessaire à son entrée en formation.\n\nVous serait-il possible svp de me communiquer le numéro PRE ?\n\nJe vous remercie par avance pour votre aide et je vous souhaite une agréable journée,\n\nBien cordialement,\n\nClément VAILLANT\nDirecteur Intégrale Sécurité Formations" %}
@@ -154,7 +163,7 @@
         <span class="mono">ID : {{ trainee.personal_id or trainee.id }}</span>
       </div>
 
-      {% if not is_vtc %}
+      {% if not is_vtc and not show_vae %}
         <div class="meta-line" style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
           {% set c = (trainee.cnaps or "INCONNU")|upper %}
           <span class="cnaps
@@ -237,7 +246,61 @@
 </div>
 
 {% if show_vae %}
-{% set vae_action_dates = trainee.vae_action_dates or {} %}
+<div class="card" style="grid-column:1 / -1; margin-top:12px;">
+  <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+    <a class="btn btn-outline" href="{{ url_for('admin_trainee_candidate_sheet', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener">Fiche candidat complétée</a>
+  </div>
+  {% set vae_docs = trainee.documents or [] %}
+  {% set vae_doc_keys = ['livret_2', 'id', 'justif_dom', 'diplome'] %}
+  {% set vae_support_docs = [] %}
+  {% for d in vae_docs %}
+    {% if d.key in vae_doc_keys %}
+      {% set tokens = d.file_tokens or ([d.file] if d.file else []) %}
+      {% if tokens %}
+        {% set _ = vae_support_docs.append({'label': d.label, 'key': d.key, 'tokens': tokens}) %}
+      {% endif %}
+    {% endif %}
+  {% endfor %}
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div>
+      <div style="font-weight:900;">DOSSIER DE FAISABILITÉ VAE</div>
+      <div class="hint" style="margin-top:4px;">Consultation du livret 1 soumis par le candidat, du dossier n°2 et des pièces justificatives.</div>
+    </div>
+    {% if vae_dossier %}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a class="btn btn-outline" href="{{ url_for('admin_vae_detail', dossier_id=vae_dossier.id) }}" target="_blank" rel="noopener">Voir le formulaire</a>
+      <a class="btn btn-primary" href="{{ url_for('admin_vae_export', dossier_id=vae_dossier.id) }}">Télécharger PDF</a>
+    </div>
+    {% else %}
+    <span class="hint">Aucun livret 1 soumis pour ce stagiaire.</span>
+    {% endif %}
+  </div>
+
+  <div style="margin-top:12px;padding-top:12px;border-top:1px dashed #e5e7eb;">
+    <div style="font-weight:800;">Dossier n°2 & pièces justificatives</div>
+    {% if vae_support_docs %}
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+        {% for doc in vae_support_docs %}
+          <div>
+            <div class="hint" style="margin-bottom:4px;">{{ doc.label }}</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              {% for ft in doc.tokens %}
+                <a class="btn btn-outline" href="{{ url_for('admin_view_upload', path=ft) }}" target="_blank" rel="noopener">
+                  📎 Voir fichier {% if doc.tokens|length > 1 %}{{ loop.index }}{% endif %}
+                </a>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="hint" style="margin-top:6px;">Aucun dossier n°2 ou pièce justificative déposé pour ce stagiaire.</div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% if show_vae %}
 <div class="card" style="grid-column:1 / -1; margin-top:12px;">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
     <div>
@@ -278,6 +341,7 @@
     </button>
   </div>
 </div>
+
 {% endif %}
 
 {% if "VTC" in (session.training_type or "")|upper %}
@@ -611,61 +675,6 @@
             {{ read_only_attr }}
   >{{ trainee.comment or "" }}</textarea>
 </div>
-
-{% if show_vae %}
-<div class="card" style="grid-column:1 / -1; margin-top:12px;">
-  <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-    <a class="btn btn-outline" href="{{ url_for('admin_trainee_candidate_sheet', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener">Fiche candidat complétée</a>
-  </div>
-  {% set vae_docs = trainee.documents or [] %}
-  {% set vae_doc_keys = ['livret_2', 'id', 'justif_dom', 'diplome'] %}
-  {% set vae_support_docs = [] %}
-  {% for d in vae_docs %}
-    {% if d.key in vae_doc_keys %}
-      {% set tokens = d.file_tokens or ([d.file] if d.file else []) %}
-      {% if tokens %}
-        {% set _ = vae_support_docs.append({'label': d.label, 'key': d.key, 'tokens': tokens}) %}
-      {% endif %}
-    {% endif %}
-  {% endfor %}
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-    <div>
-      <div style="font-weight:900;">DOSSIER DE FAISABILITÉ VAE</div>
-      <div class="hint" style="margin-top:4px;">Consultation du livret 1 soumis par le candidat, du dossier n°2 et des pièces justificatives.</div>
-    </div>
-    {% if vae_dossier %}
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <a class="btn btn-outline" href="{{ url_for('admin_vae_detail', dossier_id=vae_dossier.id) }}" target="_blank" rel="noopener">Voir le formulaire</a>
-      <a class="btn btn-primary" href="{{ url_for('admin_vae_export', dossier_id=vae_dossier.id) }}">Télécharger PDF</a>
-    </div>
-    {% else %}
-    <span class="hint">Aucun livret 1 soumis pour ce stagiaire.</span>
-    {% endif %}
-  </div>
-
-  <div style="margin-top:12px;padding-top:12px;border-top:1px dashed #e5e7eb;">
-    <div style="font-weight:800;">Dossier n°2 & pièces justificatives</div>
-    {% if vae_support_docs %}
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
-        {% for doc in vae_support_docs %}
-          <div>
-            <div class="hint" style="margin-bottom:4px;">{{ doc.label }}</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              {% for ft in doc.tokens %}
-                <a class="btn btn-outline" href="{{ url_for('admin_view_upload', path=ft) }}" target="_blank" rel="noopener">
-                  📎 Voir fichier {% if doc.tokens|length > 1 %}{{ loop.index }}{% endif %}
-                </a>
-              {% endfor %}
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="hint" style="margin-top:6px;">Aucun dossier n°2 ou pièce justificative déposé pour ce stagiaire.</div>
-    {% endif %}
-  </div>
-</div>
-{% endif %}
 
  <!-- ===================== -->
 <!-- RELANCE TELEPHONIQUE  -->
@@ -1722,6 +1731,10 @@ function setDossierPill(status){
       payload.vae_jury_date = `${m[3]}-${m[2]}-${m[1]}`;
     }else if(actionKey === "diplome_obtenu"){
       payload.vae_status = "certified";
+    }else if(actionKey === "livret_1_transmitted_scotia"){
+      // date only
+    }else if(actionKey === "livret_2_transmitted_scotia"){
+      // date only
     }else{
       return;
     }
