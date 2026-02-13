@@ -85,6 +85,7 @@
         <th>Convention</th>
         <th>Financement</th>
         {% if show_vae %}<th>VAE</th>{% endif %}
+        {% if show_vae %}<th>Suivi transmission</th>{% endif %}
         {% if not is_vtc and not show_vae %}<th>Test Français</th>{% endif %}
         <th>Dossier</th>
         <th>Dossier complet</th>
@@ -166,6 +167,19 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
     <option value="jury" {% if t.vae_status=="jury" %}selected{% endif %}>Passage devant le jury</option>
     <option value="certified" {% if t.vae_status=="certified" %}selected{% endif %}>Certification obtenue</option>
   </select>
+</td>
+{% endif %}
+
+{% if show_vae %}
+<td>
+  {% set vae_action_dates = t.vae_action_dates or {} %}
+  {% if vae_action_dates.get('livret_2_transmitted_scotia') %}
+    🟢 Livret 2 transmis
+  {% elif vae_action_dates.get('livret_1_transmitted_scotia') %}
+    🟡 Livret 1 transmis
+  {% else %}
+    🟠 Aucune transmission
+  {% endif %}
 </td>
 {% endif %}
 
@@ -557,6 +571,7 @@ tr.row-todo td{
   bulkTestFrForm?.addEventListener("submit", async (event)=>{
     event.preventDefault();
     if (!bulkTestFrForm) return;
+    if(!await window.confirmMailSmsSend?.()) return;
 
     const formData = new FormData(bulkTestFrForm);
     const summary = document.getElementById("bulkTestFrSummary");
@@ -1136,6 +1151,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
   });
 
   document.getElementById("btnCreateAndSend")?.addEventListener("click", async ()=>{
+    if(!await window.confirmMailSmsSend?.()) return;
     await createTrainee(true);
   });
 
