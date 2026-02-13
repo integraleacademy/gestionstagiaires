@@ -507,6 +507,31 @@ def build_vtc_practice_convocation_sms(first_name: str, practice_training_date: 
     )
 
 
+def build_vtc_practice_exam_success_email(first_name: str, practice_exam_date: str) -> Tuple[str, str]:
+    first_name = (first_name or "").strip()
+    greeting = f"Bonjour <strong>{first_name}</strong>," if first_name else "Bonjour,"
+    practice_exam_date_fr = format_fr_date(practice_exam_date)
+    subject = "Félicitations 🎉 Réussite à l'examen pratique VTC"
+
+    html = mail_layout(f"""
+      <p style="margin:0 0 10px 0;">{greeting}</p>
+      <p style="margin:0 0 10px 0;">Félicitations pour votre réussite à l'examen pratique VTC 👏</p>
+      <p style="margin:0 0 10px 0;">Votre examen pratique du <strong>{practice_exam_date_fr}</strong> est validé.</p>
+      <p style="margin:0;">Nous restons à votre disposition pour la suite de vos démarches.</p>
+    """)
+    return subject, html
+
+
+def build_vtc_practice_exam_success_sms(first_name: str, practice_exam_date: str) -> str:
+    first_name = (first_name or "").strip()
+    greeting = f"Bonjour {first_name}, " if first_name else "Bonjour, "
+    practice_exam_date_fr = format_fr_date(practice_exam_date)
+    return (
+        f"{greeting}félicitations pour votre réussite à l'examen pratique VTC du {practice_exam_date_fr}. "
+        "Intégrale Academy reste disponible pour la suite de votre dossier."
+    )
+
+
 def _normalize_cmar_identifier(value: str) -> str:
     raw = (value or "").strip().upper()
     if not raw:
@@ -1079,6 +1104,36 @@ def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dic
         "email_ok": bool(email_ok),
         "sms_ok": bool(sms_ok),
         "sent_at": trainee.get("vtc_theory_exam_sent_at") or "",
+    }
+
+
+def _send_vtc_practice_exam_success_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, Any]:
+    practice_exam_date = (
+        _session_get(session_obj, "exam_practice_date", "")
+        or _session_get(session_obj, "exam_date", "")
+    )
+
+    first_name = (trainee.get("first_name") or "").strip()
+    email = (trainee.get("email") or "").strip()
+    phone = (trainee.get("phone") or "").strip()
+
+    subject, html = build_vtc_practice_exam_success_email(first_name, practice_exam_date)
+    sms = build_vtc_practice_exam_success_sms(first_name, practice_exam_date)
+
+    email_ok = brevo_send_email(email, subject, html) if email else False
+    sms_ok = brevo_send_sms(phone, sms) if phone else False
+
+    trainee["vtc_practice_result"] = "success"
+    trainee["vtc_practice_result_label"] = "réussite examen pratique"
+    trainee["vtc_practice_exam_sent_at"] = _now_iso()
+    trainee["vtc_practice_exam_email_ok"] = bool(email_ok)
+    trainee["vtc_practice_exam_sms_ok"] = bool(sms_ok)
+    trainee["updated_at"] = _now_iso()
+
+    return {
+        "email_ok": bool(email_ok),
+        "sms_ok": bool(sms_ok),
+        "sent_at": trainee.get("vtc_practice_exam_sent_at") or "",
     }
 
 
@@ -4942,6 +4997,9 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vtc_book_sent_at",
         "vtc_theory_exam_sent_at",
         "vtc_practice_convocation_sent_at",
+        "vtc_practice_result",
+        "vtc_practice_result_label",
+        "vtc_practice_exam_sent_at",
 
     }
 
@@ -5273,6 +5331,33 @@ def api_send_vtc_theory_exam(session_id: str, trainee_id: str):
 
     result = _send_vtc_theory_exam_notification(s, t, send_email=send_email)
     _add_vtc_practice_convocation_notification(data, s, t)
+
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return jsonify({"ok": True, **result})
+
+
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/vtc-practice-exam-success/send")
+@admin_login_required
+@admin_write_required
+def api_send_vtc_practice_exam_success(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+
+    training_type = (_session_get(s, "training_type", "") or "").upper()
+    if "VTC" not in training_type:
+        return jsonify({"ok": False, "error": "not_vtc_session"}), 400
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+
+    result = _send_vtc_practice_exam_success_notification(s, t)
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
