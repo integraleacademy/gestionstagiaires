@@ -1931,7 +1931,7 @@ function closeUploadSuccessModal(event) {
   };
 
   const updateDocumentsWarning = () => {
-    const hasBlocking = !!document.querySelector(".docs-stack .docrow.missing, .docs-stack .docrow.pending");
+    const hasMissing = !!document.querySelector(".docs-stack .docrow.missing");
     const infosComplete = infosAreComplete();
     const locked = !infosComplete;
 
@@ -1947,7 +1947,7 @@ function closeUploadSuccessModal(event) {
     if (documentsHint) {
       if (locked) {
         documentsHint.textContent = "🔒 Vous pourrez déposer vos documents quand vous aurez saisi vos informations.";
-      } else if (hasBlocking) {
+      } else if (hasMissing) {
         documentsHint.textContent = "⚠️ Déposez maintenant vos documents.";
       } else {
         documentsHint.textContent = "Tout est OK ✅";
@@ -1959,11 +1959,11 @@ function closeUploadSuccessModal(event) {
         documentsWarning.hidden = documentsDetails.open;
         documentsWarning.textContent = "🔒 Vous pourrez déposer vos documents quand vous aurez saisi vos informations";
       } else {
-        documentsWarning.hidden = !hasBlocking || documentsDetails.open;
+        documentsWarning.hidden = !hasMissing || documentsDetails.open;
         documentsWarning.textContent = "⚠️ Déposez maintenant vos documents";
       }
     }
-    if (documentsOk) documentsOk.hidden = locked || hasBlocking;
+    if (documentsOk) documentsOk.hidden = locked || hasMissing;
   };
 
   const syncVtcPanel = () => {
