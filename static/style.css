@@ -947,6 +947,11 @@ select.status-pill{
   text-overflow:ellipsis;
 }
 
+/* bouton principal "Espace stagiaire" un peu plus large visuellement */
+.btn-trainee-access-send{
+  min-width: 200px;
+}
+
 /* ✅ même taille de texte pour <a> et <button> (et iOS) */
 html{
   -webkit-text-size-adjust: 100%;
