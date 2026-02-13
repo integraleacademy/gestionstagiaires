@@ -46,6 +46,8 @@ h3{margin:18px 0 8px;font-size:1.05rem}
 .positionnement-table th:nth-child(2),.positionnement-table td:nth-child(2){width:50%}
 .positionnement-table th:nth-child(3),.positionnement-table td:nth-child(3){width:20%}
 .activity-status-select{min-width:220px}
+.activity-comment-cell label{display:block;margin-bottom:6px}
+.activity-comment-cell textarea{min-height:110px}
 
 .step-readonly{background:#fff7ed;border-color:#fdba74;color:#9a3412;font-weight:600}
 

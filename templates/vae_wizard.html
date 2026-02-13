@@ -182,6 +182,13 @@
         "Gestion marketing et commerciale de l'entreprise de sécurité privée",
         "Constitution, management et pilotage d'une équipe de sécurité"
       ] %}
+      {% set commentaires_examples = {
+        1: "Exemple : J'ai déjà réalisé un business plan lorsque j'ai créé une société en 2020 : étude de marché locale, choix du statut SAS, prévisionnel financier sur 3 ans et dépôt de la demande d'agrément dirigeant auprès du CNAPS.",
+        2: "Exemple : Je réalise une veille juridique mensuelle et j'ai mis à jour nos procédures internes (RGPD, port d'uniforme, registre des contrôles CNAPS) pour rester conforme à la réglementation.",
+        3: "Exemple : Je pilote la trésorerie avec un tableau de bord hebdomadaire, je valide les factures fournisseurs et j'ai mis en place un plan de recouvrement qui a réduit les impayés de 20 %.",
+        4: "Exemple : J'ai répondu à 6 appels d'offres en 2023, négocié une nouvelle grille tarifaire et lancé une campagne de prospection LinkedIn qui a généré 12 rendez-vous qualifiés.",
+        5: "Exemple : Je planifie les équipes sur 4 sites, j'anime des briefings sécurité chaque semaine et j'ai accompagné 3 agents vers une montée en compétences SSIAP.",
+      } %}
       {% set competences_options = {
         1: [
           "Réaliser un business plan",
@@ -316,6 +323,12 @@
             </td>
           </tr>
           {% endfor %}
+          <tr>
+            <td colspan="3" class="activity-comment-cell">
+              <label for="activite{{ idx }}_commentaires"><strong>Commentaires (obligatoire) – Activité {{ idx }}</strong></label>
+              <textarea id="activite{{ idx }}_commentaires" name="blocs_competences.activite{{ idx }}.commentaires" placeholder="{{ commentaires_examples[idx] }}" required>{{ act.commentaires or '' }}</textarea>
+            </td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>

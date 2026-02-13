@@ -9077,11 +9077,11 @@ def _vae_default_dossier(dossier_id: Optional[str] = None) -> Dict[str, Any]:
         },
         "experiences": [{"date_debut": "", "duree": "", "description": ""}],
         "blocs_competences": {
-            "activite1": {"competence1": {"intitule": "", "statut": ""}, "competence2": {"intitule": "", "statut": ""}, "competence3": {"intitule": "", "statut": ""}, "competence4": {"intitule": "", "statut": ""}},
-            "activite2": {"competence1": {"intitule": "", "statut": ""}, "competence2": {"intitule": "", "statut": ""}, "competence3": {"intitule": "", "statut": ""}, "competence4": {"intitule": "", "statut": ""}},
-            "activite3": {"competence1": {"intitule": "", "statut": ""}, "competence2": {"intitule": "", "statut": ""}, "competence3": {"intitule": "", "statut": ""}, "competence4": {"intitule": "", "statut": ""}},
-            "activite4": {"competence1": {"intitule": "", "statut": ""}, "competence2": {"intitule": "", "statut": ""}, "competence3": {"intitule": "", "statut": ""}, "competence4": {"intitule": "", "statut": ""}},
-            "activite5": {"competence1": {"intitule": "", "statut": ""}, "competence2": {"intitule": "", "statut": ""}, "competence3": {"intitule": "", "statut": ""}, "competence4": {"intitule": "", "statut": ""}}
+            "activite1": {"commentaires": "", "competence1": {"intitule": "", "statut": ""}, "competence2": {"intitule": "", "statut": ""}, "competence3": {"intitule": "", "statut": ""}, "competence4": {"intitule": "", "statut": ""}},
+            "activite2": {"commentaires": "", "competence1": {"intitule": "", "statut": ""}, "competence2": {"intitule": "", "statut": ""}, "competence3": {"intitule": "", "statut": ""}, "competence4": {"intitule": "", "statut": ""}},
+            "activite3": {"commentaires": "", "competence1": {"intitule": "", "statut": ""}, "competence2": {"intitule": "", "statut": ""}, "competence3": {"intitule": "", "statut": ""}, "competence4": {"intitule": "", "statut": ""}},
+            "activite4": {"commentaires": "", "competence1": {"intitule": "", "statut": ""}, "competence2": {"intitule": "", "statut": ""}, "competence3": {"intitule": "", "statut": ""}, "competence4": {"intitule": "", "statut": ""}},
+            "activite5": {"commentaires": "", "competence1": {"intitule": "", "statut": ""}, "competence2": {"intitule": "", "statut": ""}, "competence3": {"intitule": "", "statut": ""}, "competence4": {"intitule": "", "statut": ""}}
         },
         "parcours_previsionnel": {
             "accompagnement_individuel": {"heures": "", "modalites": ""},
@@ -9248,6 +9248,7 @@ def _vae_dossier_to_lines(dossier: Dict[str, Any]) -> List[str]:
         for j in range(1, 5):
             comp = act.get(f"competence{j}", {}) if isinstance(act, dict) else {}
             lines.append(f"  - Competence {j}: intitule={comp.get('intitule')} statut={comp.get('statut')}")
+        lines.append(f"  - Commentaires: {(act or {}).get('commentaires') if isinstance(act, dict) else ''}")
 
     lines.extend([
         "",
@@ -9324,6 +9325,10 @@ def _validate_vae_for_submit(dossier: Dict[str, Any]) -> List[str]:
                 errors.append(
                     f"4ème étape (Tableau de positionnement) : activité manquante pour Activité {activity_idx}, compétence {competence_idx}"
                 )
+        if not str((activity or {}).get("commentaires") or "").strip():
+            errors.append(
+                f"4ème étape (Tableau de positionnement) : commentaire manquant pour Activité {activity_idx}"
+            )
 
     if (candidat.get("statut") or "") != "salarie_prive" and str(candidat.get("convention_collective") or "").strip():
         errors.append("1ère étape (Informations candidat) : la convention collective doit rester vide hors salarié du secteur privé")
