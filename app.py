@@ -675,6 +675,32 @@ def _extract_cmar_identifiers_from_pdf(file_bytes: bytes) -> List[str]:
     return sorted(candidates)
 
 
+def _build_pdf_search_haystacks(file_bytes: bytes) -> Tuple[str, str]:
+    """
+    Retourne 2 haystacks:
+    - alnum_only: contenu PDF réduit à A-Z0-9
+    - digits_only: contenu PDF réduit à 0-9
+    Permet un matching robuste même si l'extraction tokenisée rate un format.
+    """
+    if not file_bytes:
+        return "", ""
+
+    chunks: List[bytes] = [file_bytes]
+    for m in re.finditer(rb"stream\r?\n(.*?)\r?\nendstream", file_bytes, flags=re.S):
+        stream_data = m.group(1)
+        chunks.append(stream_data)
+        if b"/FlateDecode" in file_bytes[max(0, m.start() - 250):m.start()]:
+            try:
+                chunks.append(zlib.decompress(stream_data))
+            except Exception:
+                pass
+
+    merged = "\n".join(chunk.decode("latin-1", errors="ignore") for chunk in chunks).upper()
+    alnum_only = re.sub(r"[^A-Z0-9]", "", merged)
+    digits_only = re.sub(r"[^0-9]", "", merged)
+    return alnum_only, digits_only
+
+
 def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any], send_email: bool = True) -> Dict[str, Any]:
     practice_training_date = (
         _session_get(session_obj, "practice_training_date", "")
@@ -4877,10 +4903,14 @@ def api_vtc_check_import():
     if not filename.endswith(".pdf"):
         return jsonify({"ok": False, "error": "invalid_file_type"}), 400
 
+    pdf_bytes = pdf.read() or b""
+
     try:
-        identifiers = _extract_cmar_identifiers_from_pdf(pdf.read())
+        identifiers = _extract_cmar_identifiers_from_pdf(pdf_bytes)
     except Exception:
         return jsonify({"ok": False, "error": "pdf_parse_error"}), 400
+
+    pdf_alnum, pdf_digits = _build_pdf_search_haystacks(pdf_bytes)
 
     if not identifiers:
         return jsonify({"ok": True, "matches": [], "count": 0, "message": "aucun stagiaire VTC trouvé"})
@@ -4895,9 +4925,22 @@ def api_vtc_check_import():
             continue
         trainees = _session_trainees_list(sess)
         for trainee in trainees:
-            cmar_id = _normalize_cmar_identifier(trainee.get("vtc_cmar_id") or "")
-            if not cmar_id or cmar_id not in wanted:
+            cmar_id_raw = trainee.get("vtc_cmar_id") or ""
+            cmar_id = _normalize_cmar_identifier(cmar_id_raw)
+            if not cmar_id:
                 continue
+
+            # Match principal: extraction tokenisée
+            token_match = cmar_id in wanted
+
+            # Match fallback: recherche substring robuste dans tout le PDF
+            cmar_digits = re.sub(r"\D", "", cmar_id)
+            fallback_alnum_match = bool(pdf_alnum and cmar_id in pdf_alnum)
+            fallback_digits_match = bool(cmar_digits and len(cmar_digits) >= 6 and pdf_digits and cmar_digits in pdf_digits)
+
+            if not (token_match or fallback_alnum_match or fallback_digits_match):
+                continue
+
             key = (sess.get("id"), trainee.get("id"))
             if key in seen:
                 continue
