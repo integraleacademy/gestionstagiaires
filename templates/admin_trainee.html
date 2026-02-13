@@ -6,6 +6,7 @@
 {% set is_vtc = "VTC" in (session.training_type or "")|upper %}
 {% set training_type_label = "CHAUFFEUR VTC" if (session.training_type or "")|upper == "VTC" else session.training_type %}
 {% set vae_action_dates = trainee.vae_action_dates or {} %}
+{% set vtc_book_sent_at = trainee.vtc_book_sent_at or "" %}
 
 <div class="breadcrumbs">
   <a href="{{ url_for('admin_trainees', session_id=session.id, **request.args) }}">← Retour stagiaires</a>
@@ -79,6 +80,9 @@
         </form>
       {% endif %}
     </div>
+    {% if is_vtc and trainee.vtc_book_sent_at %}
+      <div class="hint" id="bookSentInlineHint" style="margin-top:8px;">✅ Livre VTC envoyé le <strong>{{ trainee.vtc_book_sent_at|frdate }}</strong></div>
+    {% endif %}
   </div>
 
 </div>
@@ -819,8 +823,60 @@
   </div>
 </div>
 
+    <div class="modal-body">
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:12px;line-height:1.5;white-space:pre-line;">
+{{ (trainee.first_name or "Prénom") ~ " " ~ (trainee.last_name or "NOM") }}
+{{ trainee.address or "Adresse" }}
+{{ trainee.zip_code or "Code postal" }} {{ trainee.city or "VILLE" }}
+      </div>
+
+      <div id="vtcBookSentLine" class="hint" style="margin-top:10px;{% if not vtc_book_sent_at %}display:none;{% endif %}">
+        Livre VTC envoyé le <strong id="vtcBookSentDate">{{ vtc_book_sent_at }}</strong>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" type="button" data-close-modal="vtcBookModal">Annuler</button>
+      <button class="btn {% if vtc_book_sent_at %}btn-disabled-muted{% else %}btn-primary{% endif %}" type="button" id="btnConfirmVtcBookSent" {% if vtc_book_sent_at %}disabled{% endif %} {{ read_only_attr }}>
+        Livre envoyé
+      </button>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 </details>
+
+{% if is_vtc %}
+<div class="modal-backdrop" id="bookSentModal" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Envoi livre VTC</div>
+      <button class="icon-btn" type="button" data-close-modal="bookSentModal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <pre style="white-space:pre-wrap;margin:0;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px;font-family:inherit;">{{ (trainee.first_name or "Prénom")|trim }} {{ (trainee.last_name or "NOM")|trim|upper }}
+{{ trainee.address or "Adresse" }}
+{{ trainee.zip_code or "Code postal" }} {{ (trainee.city or "VILLE")|upper }}</pre>
+
+      <div id="bookSentHint" class="hint" style="margin-top:10px;{% if not trainee.vtc_book_sent_at %}display:none;{% endif %}">
+        ✅ Livre VTC envoyé le {{ trainee.vtc_book_sent_at|frdate }}
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" type="button" data-close-modal="bookSentModal">Fermer</button>
+      <button class="btn {% if trainee.vtc_book_sent_at %}btn-disabled-muted{% else %}btn-primary{% endif %}"
+              type="button"
+              id="btnBookSent"
+              {% if trainee.vtc_book_sent_at or is_read_only %}disabled{% endif %}>
+        Livre envoyé
+      </button>
+    </div>
+  </div>
+</div>
+{% endif %}
 
   <!-- ===================== -->
   <!-- DOCUMENTS (pleine largeur) -->
@@ -1976,6 +2032,12 @@ if(traineeComment){
   const btnOpenPhoneRelance = document.getElementById("btnOpenPhoneRelance");
   const phoneRelanceForm = document.getElementById("phoneRelanceForm");
   const phoneRelanceMissingPreview = document.getElementById("phoneRelanceMissingPreview");
+  const btnOpenVtcBookModal = document.getElementById("btnOpenVtcBookModal");
+  const btnConfirmVtcBookSent = document.getElementById("btnConfirmVtcBookSent");
+  const vtcBookSentLine = document.getElementById("vtcBookSentLine");
+  const vtcBookSentDate = document.getElementById("vtcBookSentDate");
+  const vtcBookStatusTop = document.getElementById("vtcBookStatusTop");
+  const vtcBookStatusTopDate = document.getElementById("vtcBookStatusTopDate");
 
   // 1) Calcul des docs manquants / non conformes depuis le tableau docs
   function computeMissingDocsFromTable(){
@@ -2106,6 +2168,44 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
   }
 });
 
+  btnOpenVtcBookModal?.addEventListener("click", ()=>{
+    openModal("vtcBookModal");
+  });
+
+  btnConfirmVtcBookSent?.addEventListener("click", async ()=>{
+    const now = new Date();
+    const sentAt = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
+
+    try{
+      btnConfirmVtcBookSent.disabled = true;
+      const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ vtc_book_sent_at: sentAt })
+      });
+      const data = await res.json().catch(()=>({}));
+      if(!res.ok || data.ok === false){
+        throw new Error("save_failed");
+      }
+
+      if(vtcBookSentDate) vtcBookSentDate.textContent = sentAt;
+      if(vtcBookSentLine) vtcBookSentLine.style.display = "block";
+      if(vtcBookStatusTopDate) vtcBookStatusTopDate.textContent = sentAt;
+      if(vtcBookStatusTop) vtcBookStatusTop.style.display = "inline";
+      btnConfirmVtcBookSent.classList.remove("btn-primary");
+      btnConfirmVtcBookSent.classList.add("btn-disabled-muted");
+      if(btnOpenVtcBookModal){
+        btnOpenVtcBookModal.disabled = true;
+        btnOpenVtcBookModal.classList.remove("btn-blue");
+        btnOpenVtcBookModal.classList.add("btn-disabled-muted");
+      }
+      closeModal("vtcBookModal");
+    }catch(e){
+      alert("Erreur lors de la sauvegarde de l'envoi du livre.");
+      btnConfirmVtcBookSent.disabled = false;
+    }
+  });
+
   document.querySelectorAll("[data-open-section]").forEach((btn)=>{
     btn.addEventListener("click", ()=>{
       const targetId = btn.getAttribute("data-open-section");
@@ -2231,6 +2331,56 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
     if(!input) return;
     input.addEventListener("input", saveVtcCredentialsFromAdmin);
   });
+
+  const btnOpenBookModal = document.getElementById("btnOpenBookModal");
+  const btnBookSent = document.getElementById("btnBookSent");
+  const bookSentHint = document.getElementById("bookSentHint");
+  const bookSentInlineHint = document.getElementById("bookSentInlineHint");
+  if(btnOpenBookModal){
+    btnOpenBookModal.addEventListener("click", ()=>openModal("bookSentModal"));
+  }
+  if(btnBookSent){
+    btnBookSent.addEventListener("click", async ()=>{
+      if(btnBookSent.disabled) return;
+      btnBookSent.disabled = true;
+      btnBookSent.textContent = "Enregistrement...";
+      try{
+        const nowIso = new Date().toISOString();
+        await updateTrainee({ vtc_book_sent_at: nowIso });
+        const nowFr = new Date(nowIso).toLocaleDateString("fr-FR");
+        if(bookSentHint){
+          bookSentHint.style.display = "block";
+          bookSentHint.innerHTML = `✅ Livre VTC envoyé le ${nowFr}`;
+        }
+        if(bookSentInlineHint){
+          bookSentInlineHint.style.display = "block";
+          bookSentInlineHint.innerHTML = `✅ Livre VTC envoyé le <strong>${nowFr}</strong>`;
+        }
+        if(!bookSentInlineHint){
+          const host = btnOpenBookModal?.parentElement;
+          if(host){
+            const line = document.createElement("div");
+            line.id = "bookSentInlineHint";
+            line.className = "hint";
+            line.style.marginTop = "8px";
+            line.innerHTML = `✅ Livre VTC envoyé le <strong>${nowFr}</strong>`;
+            host.insertAdjacentElement("afterend", line);
+          }
+        }
+        btnBookSent.classList.remove("btn-primary");
+        btnBookSent.classList.add("btn-disabled-muted");
+        btnBookSent.textContent = "Livre envoyé";
+        if(btnOpenBookModal){
+          btnOpenBookModal.disabled = true;
+          btnOpenBookModal.classList.add("btn-disabled-muted");
+        }
+      }catch(e){
+        btnBookSent.disabled = false;
+        btnBookSent.textContent = "Livre envoyé";
+        alert("Erreur lors de l'enregistrement de l'envoi du livre.");
+      }
+    });
+  }
 
 const chkHideInfos = document.getElementById("chkHideInfos");
 if(chkHideInfos){
