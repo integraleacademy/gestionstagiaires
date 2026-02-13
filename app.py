@@ -6422,6 +6422,20 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
         return
 
     email_ok = brevo_send_email(email, subject, html)
+    sent_at = _now_iso()
+
+    phone_followups = t.get("phone_followups")
+    if not isinstance(phone_followups, list):
+        phone_followups = []
+    status_label = vae_status_view(status_key)["label"]
+    phone_followups.insert(0, {
+        "type": "Suivi VAE",
+        "details": f"Mail VAE - {status_label}",
+        "comment": f"Objet : {subject} · Envoi {'confirmé' if email_ok else 'tenté'}",
+        "at": sent_at,
+    })
+    t["phone_followups"] = phone_followups
+
     trainee_id = str(t.get("id") or "")
     print(
         f"[VAE][EMAIL] envoi statut VAE: trainee_id={trainee_id!r} status={status_key!r} "
