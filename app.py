@@ -6303,10 +6303,20 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
         """)
 
     if not subject:
+        print(f"[VAE][EMAIL] status inconnu, aucun envoi déclenché: status={status_key!r}")
         return
 
-    if email:
-        brevo_send_email(email, subject, html)
+    if not email:
+        trainee_id = str(t.get("id") or "")
+        print(f"[VAE][EMAIL] aucun email stagiaire, envoi ignoré: trainee_id={trainee_id!r} status={status_key!r}")
+        return
+
+    email_ok = brevo_send_email(email, subject, html)
+    trainee_id = str(t.get("id") or "")
+    print(
+        f"[VAE][EMAIL] envoi statut VAE: trainee_id={trainee_id!r} status={status_key!r} "
+        f"to={email!r} ok={bool(email_ok)}"
+    )
 
 def deliverables_progress(t: Dict[str, Any]):
     """
@@ -9305,6 +9315,7 @@ def api_vae_submit(dossier_id: str):
         current_trainee_id = str(t.get('id') or '')
         t = next((x for x in trainees if str(x.get('id') or '') == current_trainee_id), t)
 
+        previous_status = vae_status_view(t.get('vae_status') or t.get('vae_status_label'))['key']
         view = vae_status_view('livret_1_analysis')
         t['vae_status'] = view['key']
         t['vae_status_label'] = view['label']
@@ -9326,6 +9337,19 @@ def api_vae_submit(dossier_id: str):
         s['trainees'] = trainees
         s.pop('stagiaires', None)
         save_data(data_main)
+
+        if previous_status != view['key']:
+            _notify_vae_status_change(t, view['key'])
+        else:
+            print(
+                f"[VAE][EMAIL] statut inchangé après soumission livret 1, pas d'email envoyé: "
+                f"trainee_id={current_trainee_id!r} status={view['key']!r}"
+            )
+    else:
+        print(
+            f"[VAE][EMAIL] liaison session/stagiaire introuvable après soumission livret 1: "
+            f"dossier_id={dossier_id!r} session_id={session_id!r} trainee_id={trainee_id!r}"
+        )
 
     return jsonify({"ok": True, "redirect_url": url_for('vae_success', token=dossier_id)})
 
