@@ -221,8 +221,8 @@
   📄 Fiche récap
 </a>
 
-      <form method="post" action="{{ url_for('admin_send_access', session_id=session.id, trainee_id=trainee.id) }}">
-  <button class="btn btn-primary btn-uniform btn-trainee-access-send" type="submit">
+      <form method="post" action="{{ url_for('admin_send_access', session_id=session.id, trainee_id=trainee.id) }}" data-mail-sms-confirm="true">
+  <button class="btn btn-primary btn-uniform" type="submit">
     📩 Espace stagiaire
   </button>
       </form>
@@ -1720,6 +1720,7 @@ function setDossierPill(status){
     const currentVaeActionDates = {{ (trainee.vae_action_dates or {})|tojson }};
     const now = new Date();
     const clickedAt = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
+    const statusesSendingMail = ["livret_1_analysis", "livret_1_validated", "livret_2_analysis", "livret_2_validated", "jury"];
 
     if(actionKey === "livret_1_received"){
       payload.vae_status = "livret_1_analysis";
@@ -1756,6 +1757,11 @@ function setDossierPill(status){
       ...currentVaeActionDates,
       [actionKey]: clickedAt,
     };
+
+    if(statusesSendingMail.includes(payload.vae_status)){
+      const ok = await window.confirmMailSmsSend?.();
+      if(!ok) return;
+    }
 
     try{
       const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
