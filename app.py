@@ -20,6 +20,7 @@ from flask import Flask, request, redirect, url_for, jsonify, render_template, a
 import zipfile
 from io import BytesIO
 from docx import Document
+import xml.etree.ElementTree as ET
 
 
 app = Flask(__name__)
@@ -699,6 +700,273 @@ def _build_pdf_search_haystacks(file_bytes: bytes) -> Tuple[str, str]:
     alnum_only = re.sub(r"[^A-Z0-9]", "", merged)
     digits_only = re.sub(r"[^0-9]", "", merged)
     return alnum_only, digits_only
+
+
+def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any], send_email: bool = True) -> Dict[str, Any]:
+    practice_training_date = (
+        _session_get(session_obj, "practice_training_date", "")
+        or _session_get(session_obj, "exam_practice_date", "")
+        or _session_get(session_obj, "exam_date", "")
+    )
+
+
+def _normalize_cmar_identifier(value: str) -> str:
+    raw = (value or "").strip().upper()
+    if not raw:
+        return ""
+    return "".join(ch for ch in raw if ch.isalnum())
+
+
+def _extract_cmar_identifiers_from_pdf(file_bytes: bytes) -> List[str]:
+    if not file_bytes:
+        return []
+
+    def _decode_pdf_text(raw: bytes) -> str:
+        if not raw:
+            return ""
+        if raw.startswith(b"\xfe\xff"):
+            try:
+                return raw[2:].decode("utf-16-be", errors="ignore")
+            except Exception:
+                pass
+        if raw.startswith(b"\xff\xfe"):
+            try:
+                return raw[2:].decode("utf-16-le", errors="ignore")
+            except Exception:
+                pass
+
+        nul_even = sum(1 for i in range(0, len(raw), 2) if raw[i] == 0)
+        nul_odd = sum(1 for i in range(1, len(raw), 2) if raw[i] == 0)
+        pairs = max(1, len(raw) // 2)
+
+        if nul_even / pairs > 0.30:
+            try:
+                return raw.decode("utf-16-be", errors="ignore")
+            except Exception:
+                pass
+        if nul_odd / pairs > 0.30:
+            try:
+                return raw.decode("utf-16-le", errors="ignore")
+            except Exception:
+                pass
+
+        return raw.decode("latin-1", errors="ignore")
+
+    def _decode_pdf_literal_strings(blob: bytes) -> List[str]:
+        out: List[str] = []
+        i = 0
+        n = len(blob)
+        while i < n:
+            if blob[i] != 0x28:  # (
+                i += 1
+                continue
+
+            i += 1
+            depth = 1
+            buf = bytearray()
+            while i < n and depth > 0:
+                ch = blob[i]
+
+                if ch == 0x5C:  # backslash
+                    i += 1
+                    if i >= n:
+                        break
+                    esc = blob[i]
+                    simple = {
+                        0x6E: 0x0A,  # \n
+                        0x72: 0x0D,  # \r
+                        0x74: 0x09,  # \t
+                        0x62: 0x08,  # \b
+                        0x66: 0x0C,  # \f
+                        0x28: 0x28,  # \(
+                        0x29: 0x29,  # \)
+                        0x5C: 0x5C,  # \\
+                    }
+                    if esc in simple:
+                        buf.append(simple[esc])
+                        i += 1
+                        continue
+
+                    if 0x30 <= esc <= 0x37:
+                        oct_digits = bytes([esc])
+                        i += 1
+                        for _ in range(2):
+                            if i < n and 0x30 <= blob[i] <= 0x37:
+                                oct_digits += bytes([blob[i]])
+                                i += 1
+                            else:
+                                break
+                        buf.append(int(oct_digits, 8) & 0xFF)
+                        continue
+
+                    buf.append(esc)
+                    i += 1
+                    continue
+
+                if ch == 0x28:  # (
+                    depth += 1
+                    buf.append(ch)
+                    i += 1
+                    continue
+
+                if ch == 0x29:  # )
+                    depth -= 1
+                    if depth > 0:
+                        buf.append(ch)
+                    i += 1
+                    continue
+
+                buf.append(ch)
+                i += 1
+
+            if buf:
+                out.append(_decode_pdf_text(bytes(buf)))
+
+        return out
+
+    def _decode_pdf_hex_strings(blob: bytes) -> List[str]:
+        out: List[str] = []
+        for m in re.finditer(rb"<([0-9A-Fa-f\s]{4,})>", blob):
+            raw = re.sub(rb"\s+", b"", m.group(1))
+            if len(raw) % 2 == 1:
+                raw += b"0"
+            try:
+                decoded = bytes.fromhex(raw.decode("ascii", errors="ignore"))
+                out.append(_decode_pdf_text(decoded))
+            except Exception:
+                continue
+        return out
+
+    chunks: List[bytes] = [file_bytes]
+    for m in re.finditer(rb"stream\r?\n(.*?)\r?\nendstream", file_bytes, flags=re.S):
+        stream_data = m.group(1)
+        chunks.append(stream_data)
+
+        if b"/FlateDecode" in file_bytes[max(0, m.start() - 250):m.start()]:
+            try:
+                inflated = zlib.decompress(stream_data)
+                chunks.append(inflated)
+            except Exception:
+                pass
+
+    text_sources: List[str] = []
+    for chunk in chunks:
+        text_sources.append(_decode_pdf_text(chunk))
+        text_sources.extend(_decode_pdf_literal_strings(chunk))
+        text_sources.extend(_decode_pdf_hex_strings(chunk))
+
+    content = "\n".join(text_sources).upper()
+    candidates = set()
+
+    for token in re.findall(r"\b(?:CMAR\s*[:\-]?)?([A-Z0-9\-]{4,})\b", content):
+        normalized = _normalize_cmar_identifier(token)
+        if not normalized:
+            continue
+        if normalized.startswith("CMAR"):
+            normalized = normalized[4:]
+        if normalized.isdigit() and len(normalized) < 6:
+            continue
+        if normalized.isdigit() and len(normalized) > 20:
+            continue
+        if any(ch.isdigit() for ch in normalized) and len(normalized) >= 6:
+            candidates.add(normalized)
+
+    # fallback : capture les suites numériques même si le PDF met des séparateurs/NULL
+    compact_digits = re.sub(r"[^0-9]", " ", content)
+    for token in compact_digits.split():
+        if 6 <= len(token) <= 20:
+            candidates.add(token)
+
+    return sorted(candidates)
+
+
+def _build_pdf_search_haystacks(file_bytes: bytes) -> Tuple[str, str]:
+    """
+    Retourne 2 haystacks:
+    - alnum_only: contenu PDF réduit à A-Z0-9
+    - digits_only: contenu PDF réduit à 0-9
+    Permet un matching robuste même si l'extraction tokenisée rate un format.
+    """
+    if not file_bytes:
+        return "", ""
+
+    chunks: List[bytes] = [file_bytes]
+    for m in re.finditer(rb"stream\r?\n(.*?)\r?\nendstream", file_bytes, flags=re.S):
+        stream_data = m.group(1)
+        chunks.append(stream_data)
+        if b"/FlateDecode" in file_bytes[max(0, m.start() - 250):m.start()]:
+            try:
+                chunks.append(zlib.decompress(stream_data))
+            except Exception:
+                pass
+
+    merged = "\n".join(chunk.decode("latin-1", errors="ignore") for chunk in chunks).upper()
+    alnum_only = re.sub(r"[^A-Z0-9]", "", merged)
+    digits_only = re.sub(r"[^0-9]", "", merged)
+    return alnum_only, digits_only
+
+
+def _extract_cmar_identifiers_from_excel(file_name: str, file_bytes: bytes) -> List[str]:
+    name = (file_name or "").lower().strip()
+    if not file_bytes:
+        return []
+
+    def _ids_from_text(raw_text: str) -> List[str]:
+        out = set()
+        txt = (raw_text or "").upper()
+        for token in re.findall(r"\b(?:CMAR\s*[:\-]?)?([A-Z0-9\-]{4,})\b", txt):
+            normalized = _normalize_cmar_identifier(token)
+            if normalized.startswith("CMAR"):
+                normalized = normalized[4:]
+            if any(ch.isdigit() for ch in normalized) and len(normalized) >= 6:
+                out.add(normalized)
+        digits = re.sub(r"[^0-9]", " ", txt)
+        for token in digits.split():
+            if 6 <= len(token) <= 20:
+                out.add(token)
+        return sorted(out)
+
+    if name.endswith(".csv"):
+        csv_text = file_bytes.decode("utf-8", errors="ignore")
+        return _ids_from_text(csv_text)
+
+    if not name.endswith(".xlsx"):
+        return []
+
+    texts: List[str] = []
+    try:
+        with zipfile.ZipFile(BytesIO(file_bytes), "r") as zf:
+            shared_strings: List[str] = []
+            if "xl/sharedStrings.xml" in zf.namelist():
+                root = ET.fromstring(zf.read("xl/sharedStrings.xml"))
+                for si in root.findall("{*}si"):
+                    parts = [t.text or "" for t in si.findall(".//{*}t")]
+                    shared_strings.append("".join(parts))
+
+            sheet_files = [n for n in zf.namelist() if re.match(r"xl/worksheets/sheet\d+\.xml", n)]
+            for sheet in sheet_files:
+                root = ET.fromstring(zf.read(sheet))
+                for c in root.findall(".//{*}c"):
+                    cell_type = c.attrib.get("t") or ""
+                    v = c.find("{*}v")
+                    if v is None or v.text is None:
+                        continue
+                    raw = v.text.strip()
+                    if not raw:
+                        continue
+                    if cell_type == "s":
+                        try:
+                            idx = int(raw)
+                            if 0 <= idx < len(shared_strings):
+                                texts.append(shared_strings[idx])
+                        except Exception:
+                            continue
+                    else:
+                        texts.append(raw)
+    except Exception:
+        return []
+
+    return _ids_from_text("\n".join(texts))
 
 
 def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any], send_email: bool = True) -> Dict[str, Any]:
@@ -4900,17 +5168,22 @@ def api_vtc_check_import():
         return jsonify({"ok": False, "error": "missing_file"}), 400
 
     filename = (pdf.filename or "").lower()
-    if not filename.endswith(".pdf"):
+    if not (filename.endswith(".pdf") or filename.endswith(".xlsx") or filename.endswith(".csv")):
         return jsonify({"ok": False, "error": "invalid_file_type"}), 400
 
     pdf_bytes = pdf.read() or b""
 
     try:
-        identifiers = _extract_cmar_identifiers_from_pdf(pdf_bytes)
+        if filename.endswith(".pdf"):
+            identifiers = _extract_cmar_identifiers_from_pdf(pdf_bytes)
+        else:
+            identifiers = _extract_cmar_identifiers_from_excel(filename, pdf_bytes)
     except Exception:
-        return jsonify({"ok": False, "error": "pdf_parse_error"}), 400
+        return jsonify({"ok": False, "error": "file_parse_error"}), 400
 
-    pdf_alnum, pdf_digits = _build_pdf_search_haystacks(pdf_bytes)
+    pdf_alnum, pdf_digits = ("", "")
+    if filename.endswith(".pdf"):
+        pdf_alnum, pdf_digits = _build_pdf_search_haystacks(pdf_bytes)
 
     if not identifiers:
         return jsonify({"ok": True, "matches": [], "count": 0, "message": "aucun stagiaire VTC trouvé"})

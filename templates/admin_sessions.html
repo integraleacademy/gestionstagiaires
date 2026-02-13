@@ -495,10 +495,10 @@
 
     <div class="modal-body">
       <div class="muted" style="margin-bottom:10px;">
-        Importe un PDF contenant des identifiants CMAR pour vérifier automatiquement les stagiaires VTC.
+        Importe un fichier PDF, Excel (.xlsx) ou CSV contenant des identifiants CMAR pour vérifier automatiquement les stagiaires VTC.
       </div>
 
-      <input id="vtcCheckFile" type="file" accept="application/pdf,.pdf" style="margin-bottom:10px;" />
+      <input id="vtcCheckFile" type="file" accept="application/pdf,.pdf,.xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="margin-bottom:10px;" />
       <button class="btn btn-primary" id="btnVtcCheckImport">IMPORTER</button>
 
       <div id="vtcCheckStatus" class="muted" style="margin-top:10px;"></div>
