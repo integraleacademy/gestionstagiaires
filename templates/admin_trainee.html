@@ -1708,47 +1708,80 @@ function setDossierPill(status){
   window.setVaeAction = async function setVaeAction(actionKey){
     const payload = {};
     const currentVaeActionDates = {{ (trainee.vae_action_dates or {})|tojson }};
+    const isReset = !!currentVaeActionDates[actionKey];
     const now = new Date();
     const clickedAt = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
     const statusesSendingMail = ["livret_1_analysis", "livret_1_validated", "livret_2_analysis", "livret_2_validated", "jury"];
+    const actionStatusMap = {
+      livret_1_received: "livret_1_analysis",
+      livret_1_validated: "livret_1_validated",
+      financement_validated: "livret_2_todo",
+      livret_2_received: "livret_2_analysis",
+      livret_2_validated: "livret_2_validated",
+      jury_date: "jury",
+      diplome_obtenu: "certified",
+    };
+    const orderedActions = [
+      "diplome_obtenu",
+      "jury_date",
+      "livret_2_validated",
+      "livret_2_received",
+      "financement_validated",
+      "livret_1_validated",
+      "livret_1_received",
+    ];
 
-    if(actionKey === "livret_1_received"){
-      payload.vae_status = "livret_1_analysis";
-    }else if(actionKey === "livret_1_validated"){
-      payload.vae_status = "livret_1_validated";
-    }else if(actionKey === "financement_validated"){
-      payload.vae_status = "livret_2_todo";
-    }else if(actionKey === "livret_2_received"){
-      payload.vae_status = "livret_2_analysis";
-    }else if(actionKey === "livret_2_validated"){
-      payload.vae_status = "livret_2_validated";
-    }else if(actionKey === "jury_date"){
-      const raw = window.prompt("Indiquez la date d'examen (JJ/MM/AAAA)");
-      if(raw === null) return;
-      const value = (raw || "").trim();
-      const m = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-      if(!m){
-        alert("Format attendu : JJ/MM/AAAA");
+    if(isReset){
+      const nextActionDates = { ...currentVaeActionDates };
+      delete nextActionDates[actionKey];
+      payload.vae_action_dates = nextActionDates;
+
+      if(actionKey === "jury_date"){
+        payload.vae_jury_date = "";
+      }
+
+      const latestDoneAction = orderedActions.find((key) => !!nextActionDates[key]);
+      payload.vae_status = latestDoneAction ? actionStatusMap[latestDoneAction] : "livret_1_todo";
+    }else{
+
+      if(actionKey === "livret_1_received"){
+        payload.vae_status = "livret_1_analysis";
+      }else if(actionKey === "livret_1_validated"){
+        payload.vae_status = "livret_1_validated";
+      }else if(actionKey === "financement_validated"){
+        payload.vae_status = "livret_2_todo";
+      }else if(actionKey === "livret_2_received"){
+        payload.vae_status = "livret_2_analysis";
+      }else if(actionKey === "livret_2_validated"){
+        payload.vae_status = "livret_2_validated";
+      }else if(actionKey === "jury_date"){
+        const raw = window.prompt("Indiquez la date d'examen (JJ/MM/AAAA)");
+        if(raw === null) return;
+        const value = (raw || "").trim();
+        const m = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if(!m){
+          alert("Format attendu : JJ/MM/AAAA");
+          return;
+        }
+        payload.vae_status = "jury";
+        payload.vae_jury_date = `${m[3]}-${m[2]}-${m[1]}`;
+      }else if(actionKey === "diplome_obtenu"){
+        payload.vae_status = "certified";
+      }else if(actionKey === "livret_1_transmitted_scotia"){
+        // date only
+      }else if(actionKey === "livret_2_transmitted_scotia"){
+        // date only
+      }else{
         return;
       }
-      payload.vae_status = "jury";
-      payload.vae_jury_date = `${m[3]}-${m[2]}-${m[1]}`;
-    }else if(actionKey === "diplome_obtenu"){
-      payload.vae_status = "certified";
-    }else if(actionKey === "livret_1_transmitted_scotia"){
-      // date only
-    }else if(actionKey === "livret_2_transmitted_scotia"){
-      // date only
-    }else{
-      return;
+
+      payload.vae_action_dates = {
+        ...currentVaeActionDates,
+        [actionKey]: clickedAt,
+      };
     }
 
-    payload.vae_action_dates = {
-      ...currentVaeActionDates,
-      [actionKey]: clickedAt,
-    };
-
-    let sendVaeNotification = true;
+    let sendVaeNotification = !isReset;
     if(statusesSendingMail.includes(payload.vae_status)){
       sendVaeNotification = await window.confirmMailSmsSend?.();
     }
