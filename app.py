@@ -4362,6 +4362,14 @@ def admin_trainees(session_id: str):
         else:
             t.pop("hosting_status", None)
 
+    show_vae = (session_view["training_type"] == "DIRIGEANT VAE")
+    if show_vae:
+        for t in trainees:
+            view = vae_status_view(t.get("vae_status") or t.get("vae_status_label"))
+            t["vae_status"] = view["key"]
+            t["vae_status_label"] = view["label"]
+            if not isinstance(t.get("vae_action_dates"), dict):
+                t["vae_action_dates"] = {}
 
     # persist normalized trainees back into storage
     s["trainees"] = trainees
@@ -4369,7 +4377,6 @@ def admin_trainees(session_id: str):
     save_data(data)
     stats = compute_stats(s)
     show_hosting = (session_view["training_type"] == "A3P")
-    show_vae = (session_view["training_type"] == "DIRIGEANT VAE")
     is_vtc = ("VTC" in (session_view["training_type"] or "").upper())
 
     # ✅ docs fin de formation par stagiaire (pour surlignage + n/3 + étiquettes)
