@@ -975,6 +975,14 @@ select.status-pill{
   min-width: 200px;
 }
 
+.btn-admin-trainee-side-action{
+  height:44px;
+  display:inline-flex;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+}
+
 /* ✅ même taille de texte pour <a> et <button> (et iOS) */
 html{
   -webkit-text-size-adjust: 100%;
