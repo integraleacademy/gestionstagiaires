@@ -1253,10 +1253,11 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
         if(list){
           const renderItem = (it, isAdmissible) => {
             const full = `${(it.last_name || "").toUpperCase()} ${(it.first_name || "")}`.trim();
+            const importedSuffix = it.already_imported ? " • 📥 DÉJÀ IMPORTÉ" : "";
             return `
               <div class="vtc-check-item">
                 <strong>${full || "—"}</strong>
-                <span>${it.session_name || "Session"} • CMAR: ${it.cmar_id || "—"} • ${isAdmissible ? "✅ ADMISSIBLE" : "❌ NON ADMISSIBLE"}</span>
+                <span>${it.session_name || "Session"} • CMAR: ${it.cmar_id || "—"} • ${isAdmissible ? "✅ ADMISSIBLE" : "❌ NON ADMISSIBLE"}${importedSuffix}</span>
               </div>
             `;
           };
@@ -1306,7 +1307,7 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
         if(status) status.textContent = "Erreur pendant l'envoi des notifications.";
         return;
       }
-      if(status) status.textContent = `${res.sent || 0} admissible(s) notifié(s) • ${res.non_admissible_marked || 0} non admissible(s) marqué(s) en échec.`;
+      if(status) status.textContent = `${res.sent || 0} admissible(s) notifié(s) • ${res.non_admissible_marked || 0} non admissible(s) marqué(s) en échec • ${res.skipped_already_notified || 0} notification(s) déjà envoyée(s) ignorée(s).`;
     }catch(e){
       if(status) status.textContent = "Erreur réseau.";
     }finally{
