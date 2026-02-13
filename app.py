@@ -4265,88 +4265,48 @@ def api_create_trainee(session_id: str):
         elif (training_type or "") == "DIRIGEANT VAE":
             subject = "Votre VAE Dirigeant d'entreprise de sécurité privée (DESP)"
             html = mail_layout(f"""
-              <style>
-                .vae-mail {{
-                  font-size: 16px;
-                  line-height: 1.65;
-                  color: #0f172a;
-                }}
-                .vae-mail p {{
-                  margin: 0 0 14px 0;
-                }}
-                .vae-mail .step {{
-                  background: #f8fafc;
-                  border: 1px solid #e2e8f0;
-                  border-radius: 12px;
-                  padding: 14px;
-                  margin: 0 0 12px 0;
-                }}
-                .vae-mail .step-title {{
-                  font-weight: 700;
-                  margin-bottom: 6px;
-                  display: block;
-                }}
-                @keyframes vaeCtaPulse {{
-                  0% {{ box-shadow: 0 0 0 0 rgba(31, 143, 74, 0.45); transform: scale(1); }}
-                  70% {{ box-shadow: 0 0 0 12px rgba(31, 143, 74, 0); transform: scale(1.02); }}
-                  100% {{ box-shadow: 0 0 0 0 rgba(31, 143, 74, 0); transform: scale(1); }}
-                }}
-              </style>
-              <div class="vae-mail">
-              <h2 style="text-align:center;margin:0 0 16px 0">🚀 En route vers la VAE</h2>
-              <p>Bonjour {first_name},</p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;color:#0f172a;font-size:16px;line-height:1.6;">
+                <tr>
+                  <td style="text-align:center;font-size:26px;font-weight:700;padding:0 0 16px 0;">🚀 En route vers la VAE</td>
+                </tr>
+                <tr>
+                  <td style="padding:0 0 12px 0;">Bonjour {first_name},</td>
+                </tr>
+                <tr>
+                  <td style="padding:0 0 12px 0;">
+                    Votre VAE (Validation des acquis de l'expérience) Dirigeant d'entreprise de sécurité privée (DESP)
+                    commence aujourd'hui.
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0 0 12px 0;"><strong>Les étapes :</strong></td>
+                </tr>
 
-              <p>
-                Votre VAE (Validation des acquis de l'expérience) Dirigeant d'entreprise de sécurité privée (DESP)
-                commence aujourd'hui.
-              </p>
+                <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong>1️⃣ Rédaction du Livret 1 (dossier de faisabilité)</strong><br>Vous allez compléter en ligne votre dossier de faisabilité depuis votre Espace candidat.<br>Ce document permet de présenter votre parcours professionnel, vos fonctions exercées et vos responsabilités, afin de vérifier que votre expérience correspond bien aux compétences attendues pour le DESP. C’est en quelque sorte la « photographie » de votre expérience.<br>⏳ Durée estimée : environ 30 minutes.</td></tr>
+                <tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>
+                <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong>2️⃣ Étude du Livret 1 et attestation de recevabilité</strong><br>Votre dossier est étudié par la commission.<br>Si les éléments fournis sont conformes et suffisants, une attestation de recevabilité vous est délivrée.<br>À partir de ce moment, nous prendrons contact avec vous pour mettre en place la convention de VAE et procéder au règlement de l’acompte (1 140 €).</td></tr>
+                <tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>
+                <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong>3️⃣ Rédaction du Livret 2</strong><br>Vous devrez ensuite compléter le Livret 2.<br>Ce document est le cœur de votre démarche : vous y détaillez précisément vos activités, vos missions, les situations professionnelles rencontrées, ainsi que les compétences mobilisées.<br>C’est ce dossier qui sera présenté au jury de certification.</td></tr>
+                <tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>
+                <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong>4️⃣ Étude du Livret 2</strong><br>La commission analyse votre dossier.<br>Si l’ensemble est conforme et complet, une date de passage devant le jury de certification est programmée.</td></tr>
+                <tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>
+                <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong>5️⃣ Passage devant le jury de certification</strong><br>Vous serez convoqué à un entretien professionnel d’environ une heure.<br>Lors de cet échange, le jury reviendra sur votre parcours et sur les éléments présentés dans le Livret 2.<br>L’objectif est de vérifier la maîtrise des compétences attendues, à travers des questions concrètes sur votre expérience et vos pratiques professionnelles.</td></tr>
+                <tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>
+                <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong>6️⃣ Obtention de votre certification</strong></td></tr>
 
-              <p><strong>Les étapes :</strong></p>
-
-              <div class="step"><span class="step-title">1️⃣ Rédaction du Livret 1 (dossier de faisabilité)</span>
-              Vous allez compléter en ligne votre dossier de faisabilité depuis votre Espace candidat.<br>
-              Ce document permet de présenter votre parcours professionnel, vos fonctions exercées et vos responsabilités,
-              afin de vérifier que votre expérience correspond bien aux compétences attendues pour le DESP.
-              C’est en quelque sorte la « photographie » de votre expérience.<br>
-              ⏳ Durée estimée : environ 30 minutes.</div>
-
-              <div class="step"><span class="step-title">2️⃣ Étude du Livret 1 et attestation de recevabilité</span>
-              Votre dossier est étudié par la commission.<br>
-              Si les éléments fournis sont conformes et suffisants, une attestation de recevabilité vous est délivrée.<br>
-              À partir de ce moment, nous prendrons contact avec vous pour mettre en place la convention de VAE
-              et procéder au règlement de l’acompte (1 140 €).</div>
-
-              <div class="step"><span class="step-title">3️⃣ Rédaction du Livret 2</span>
-              Vous devrez ensuite compléter le Livret 2.<br>
-              Ce document est le cœur de votre démarche : vous y détaillez précisément vos activités, vos missions,
-              les situations professionnelles rencontrées, ainsi que les compétences mobilisées.<br>
-              C’est ce dossier qui sera présenté au jury de certification.</div>
-
-              <div class="step"><span class="step-title">4️⃣ Étude du Livret 2</span>
-              La commission analyse votre dossier.<br>
-              Si l’ensemble est conforme et complet, une date de passage devant le jury de certification est programmée.</div>
-
-              <div class="step"><span class="step-title">5️⃣ Passage devant le jury de certification</span>
-              Vous serez convoqué à un entretien professionnel d’environ une heure.<br>
-              Lors de cet échange, le jury reviendra sur votre parcours et sur les éléments présentés dans le Livret 2.<br>
-              L’objectif est de vérifier la maîtrise des compétences attendues, à travers des questions concrètes sur
-              votre expérience et vos pratiques professionnelles.</div>
-
-              <div class="step"><span class="step-title">6️⃣ Obtention de votre certification</span></div>
-
-              <p style="text-align:center;margin:24px 0">
-                <a href="{link}"
-                   style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold;animation:vaeCtaPulse 1.8s ease-out infinite;box-shadow:0 0 0 0 rgba(31, 143, 74, 0.45)">
-                  Démarrer ma VAE
-                </a>
-              </p>
-
-              <p>
-                Je reste à votre disposition pour tous renseignements complémentaires,<br>
-                <strong>Clément VAILLANT</strong><br>
-                Directeur Intégrale Academy
-              </p>
-              </div>
+                <tr>
+                  <td style="text-align:center;padding:22px 0;">
+                    <a href="{link}" style="display:inline-block;background:#1f8f4a;color:#ffffff;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:700;">Démarrer ma VAE</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    Je reste à votre disposition pour tous renseignements complémentaires,<br>
+                    <strong>Clément VAILLANT</strong><br>
+                    Directeur Intégrale Academy
+                  </td>
+                </tr>
+              </table>
             """)
 
             sms = (
