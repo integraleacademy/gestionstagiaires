@@ -970,6 +970,14 @@ def _build_excel_search_haystacks(file_name: str, file_bytes: bytes) -> Tuple[st
                     root = ET.fromstring(zf.read(sheet))
                     for c in root.findall(".//{*}c"):
                         cell_type = c.attrib.get("t") or ""
+
+                        if cell_type == "inlineStr":
+                            inline_parts = [t.text or "" for t in c.findall(".//{*}is//{*}t")]
+                            inline_raw = "".join(inline_parts).strip()
+                            if inline_raw:
+                                texts.append(inline_raw)
+                            continue
+
                         v = c.find("{*}v")
                         if v is None or v.text is None:
                             continue
@@ -992,6 +1000,8 @@ def _build_excel_search_haystacks(file_name: str, file_bytes: bytes) -> Tuple[st
     alnum_only = re.sub(r"[^A-Z0-9]", "", merged)
     digits_only = re.sub(r"[^0-9]", "", merged)
     return alnum_only, digits_only
+
+
 def _extract_cmar_identifiers_from_excel(file_name: str, file_bytes: bytes) -> List[str]:
     name = (file_name or "").lower().strip()
     if not file_bytes:
@@ -1034,6 +1044,14 @@ def _extract_cmar_identifiers_from_excel(file_name: str, file_bytes: bytes) -> L
                 root = ET.fromstring(zf.read(sheet))
                 for c in root.findall(".//{*}c"):
                     cell_type = c.attrib.get("t") or ""
+
+                    if cell_type == "inlineStr":
+                        inline_parts = [t.text or "" for t in c.findall(".//{*}is//{*}t")]
+                        inline_raw = "".join(inline_parts).strip()
+                        if inline_raw:
+                            texts.append(inline_raw)
+                        continue
+
                     v = c.find("{*}v")
                     if v is None or v.text is None:
                         continue
@@ -1091,6 +1109,14 @@ def _extract_vtc_exam_results(file_name: str, file_bytes: bytes) -> Dict[str, An
                         row_values = []
                         for c in row.findall("{*}c"):
                             cell_type = c.attrib.get("t") or ""
+
+                            if cell_type == "inlineStr":
+                                inline_parts = [t.text or "" for t in c.findall(".//{*}is//{*}t")]
+                                inline_raw = "".join(inline_parts).strip()
+                                if inline_raw:
+                                    row_values.append(inline_raw)
+                                continue
+
                             v = c.find("{*}v")
                             if v is None or v.text is None:
                                 continue
