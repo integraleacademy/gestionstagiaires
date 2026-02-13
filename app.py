@@ -447,6 +447,60 @@ def notify_elearning_access_available(trainee: Dict[str, Any], session_obj: Dict
     return {"email_ok": bool(email_ok), "sms_ok": bool(sms_ok)}
 
 
+
+
+def build_vtc_practice_convocation_email(first_name: str, practice_training_date: str) -> Tuple[str, str]:
+    trainee_first_name = (first_name or "").strip() or "Prénom"
+    practice_date_fr = fr_date(practice_training_date) or "DATE FORMATION PRATIQUE"
+
+    subject = "Convocation formation pratique"
+    html = mail_layout(f"""
+      <div style="background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:1px solid #dbeafe;border-radius:14px;padding:18px;">
+        <h2 style="margin:0 0 12px 0;color:#0f172a;">Convocation formation pratique</h2>
+        <p style="margin:0 0 10px 0;">Bonjour {trainee_first_name},</p>
+
+        <p style="margin:0 0 10px 0;">Je reviens vers vous concernant votre parcours Chauffeur VTC.</p>
+
+        <p style="margin:0 0 10px 0;">Tout d’abord, félicitations pour votre réussite à l’examen théorique 👏 C’est une étape importante vers l’obtention de votre carte professionnelle !</p>
+
+        <p style="margin:0 0 10px 0;">Vous avez normalement reçu un message de la Chambre de Métiers et de l'Artisanat vous demandant de préciser le centre de formation ainsi que l’établissement mettant à disposition le véhicule à doubles commandes pour l’épreuve pratique. Merci d’indiquer : Intégrale Sécurité Formations.</p>
+
+        <div style="background:#ffffff;border:1px solid #bbf7d0;border-radius:12px;padding:12px 14px;margin:12px 0;">
+          <p style="margin:0;">Votre formation pratique est prévue le {practice_date_fr}, de 08h30 à 12h00, dans nos locaux :<br>
+          Intégrale Academy<br>
+          54 chemin du Carreou<br>
+          83480 PUGET-SUR-ARGENS</p>
+        </div>
+
+        <p style="margin:0 0 8px 0;">Au cours de cette matinée, nous vous préparerons concrètement à l’examen pratique :</p>
+        <ul style="margin:0 0 12px 18px;padding:0;">
+          <li>déroulement détaillé de l’épreuve,</li>
+          <li>mise en situation professionnelle,</li>
+          <li>examen blanc,</li>
+          <li>prise en main du véhicule à doubles commandes,</li>
+          <li>conseils méthodologiques pour optimiser votre passage devant le jury.</li>
+        </ul>
+
+        <p style="margin:0 0 10px 0;">Vous recevrez prochainement par mail votre convocation à la formation pratique, ainsi que le document officiel de prêt du véhicule à doubles commandes.<br>
+        ⚠️ Il est impératif de présenter ce document le jour de l’examen : en son absence, le jury peut prononcer un ajournement.</p>
+
+        <p style="margin:0 0 10px 0;">Nous restons à votre disposition si vous avez la moindre question.<br>
+        À très bientôt pour la préparation finale ! 🚗</p>
+      </div>
+    """)
+    return subject, html
+
+
+def build_vtc_practice_convocation_sms(first_name: str, practice_training_date: str) -> str:
+    trainee_first_name = (first_name or "").strip()
+    practice_date_fr = fr_date(practice_training_date) or "DATE FORMATION PRATIQUE"
+    greeting = f"Bonjour {trainee_first_name}, " if trainee_first_name else "Bonjour, "
+    return (
+        "Intégrale Academy 🚗 "
+        f"{greeting}félicitations pour votre réussite à l'examen théorique. "
+        f"Votre formation pratique VTC est prévue le {practice_date_fr} de 08h30 à 12h00 "
+        "à Intégrale Academy, 54 chemin du Carreou 83480 Puget-sur-Argens."
+    )
 def mail_layout(inner_html: str) -> str:
     # ✅ logo en URL HTTPS (fiable dans Gmail)
     logo_src = f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png"
@@ -4234,6 +4288,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "exam_fees_paid",
         "elearning_link",
         "vtc_book_sent_at",
+        "vtc_theory_exam_sent_at",
+        "vtc_practice_convocation_sent_at",
 
     }
 
@@ -4539,6 +4595,61 @@ def api_send_cnaps_pre_relance(session_id: str, trainee_id: str):
 
     return jsonify({"ok": True, "email_ok": bool(email_ok), "sms_ok": bool(sms_ok)})
 
+
+
+
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/vtc-theory-exam/send")
+@admin_login_required
+@admin_write_required
+def api_send_vtc_theory_exam(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+
+    training_type = (_session_get(s, "training_type", "") or "").upper()
+    if "VTC" not in training_type:
+        return jsonify({"ok": False, "error": "not_vtc_session"}), 400
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+
+    payload = request.get_json(silent=True) or {}
+    send_email = payload.get("send_email", True) in (True, "true", "1", 1, "yes", "on")
+
+    practice_training_date = (
+        _session_get(s, "practice_training_date", "")
+        or _session_get(s, "exam_practice_date", "")
+        or _session_get(s, "exam_date", "")
+    )
+
+    first_name = (t.get("first_name") or "").strip()
+    email = (t.get("email") or "").strip()
+    phone = (t.get("phone") or "").strip()
+
+    subject, html = build_vtc_practice_convocation_email(first_name, practice_training_date)
+    sms = build_vtc_practice_convocation_sms(first_name, practice_training_date)
+
+    email_ok = brevo_send_email(email, subject, html) if (send_email and email) else False
+    sms_ok = brevo_send_sms(phone, sms) if phone else False
+
+    t["vtc_theory_exam_sent_at"] = _now_iso()
+    t["vtc_theory_exam_email_ok"] = bool(email_ok)
+    t["vtc_theory_exam_sms_ok"] = bool(sms_ok)
+    t["updated_at"] = _now_iso()
+
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return jsonify({
+        "ok": True,
+        "email_ok": bool(email_ok),
+        "sms_ok": bool(sms_ok),
+        "sent_at": t.get("vtc_theory_exam_sent_at") or "",
+    })
 
 @app.post("/api/sessions/<session_id>/trainees/<trainee_id>/delete")
 @admin_login_required
