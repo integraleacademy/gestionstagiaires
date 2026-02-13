@@ -455,7 +455,7 @@ def build_vtc_practice_convocation_email(first_name: str, practice_training_date
     trainee_first_name = (first_name or "").strip() or "Prénom"
     practice_date_fr = fr_date(practice_training_date) or "DATE FORMATION PRATIQUE"
 
-    subject = "Convocation formation pratique"
+    subject = "Formation pratique Chauffeur VTC 🚘"
     html = mail_layout(f"""
       <div style="background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:1px solid #dbeafe;border-radius:14px;padding:18px;">
         <h2 style="margin:0 0 12px 0;color:#0f172a;">Convocation formation pratique</h2>
@@ -499,9 +499,9 @@ def build_vtc_practice_convocation_sms(first_name: str, practice_training_date: 
     greeting = f"Bonjour {trainee_first_name}, " if trainee_first_name else "Bonjour, "
     return (
         "Intégrale Academy 🚗 "
-        f"{greeting}félicitations pour votre réussite à l'examen théorique. "
+        f"{greeting}Félicitations pour votre réussite à l'examen théorique Chauffeur VTC. "
         f"Votre formation pratique VTC est prévue le {practice_date_fr} de 08h30 à 12h00 "
-        "à Intégrale Academy, 54 chemin du Carreou 83480 Puget-sur-Argens."
+        "dans nos locaux Intégrale Academy, 54 chemin du Carreou 83480 Puget-sur-Argens. Pour plus d'informations, consultez vos mails."
     )
 
 
@@ -2175,12 +2175,44 @@ def infos_is_complete(t: Dict[str, Any]) -> bool:
 
     return True
 
+
+def infos_is_complete_for_training(t: Dict[str, Any], training_type: str) -> bool:
+    """
+    Vérifie la complétude des informations selon le parcours.
+
+    - Parcours standards : règles existantes (infos + sécu + PRE/CAR).
+    - DIRIGEANT VAE : accepte aussi la fiche candidat complétée,
+      qui ne contient pas les champs sécu/PRE.
+    """
+    tt = (training_type or "").strip().upper()
+    if tt != "DIRIGEANT VAE":
+        return infos_is_complete(t)
+
+    # Si les champs standards sont tous OK, on est complet aussi.
+    if infos_is_complete(t):
+        return True
+
+    sheet = t.get("candidate_sheet")
+    if not isinstance(sheet, dict):
+        return False
+
+    required_sheet_fields = [
+        "birth_date",
+        "birth_city",
+        "country",
+        "nationality",
+        "address",
+        "postal_code",
+        "city",
+    ]
+    return all(str(sheet.get(k) or "").strip() for k in required_sheet_fields)
+
 def dossier_is_complete_total(trainee: Dict[str, Any], training_type: str) -> bool:
     # ✅ complet seulement si infos OK + tous docs CONFORME
     # ✅ OU si forçage admin
     if trainee.get("force_dossier_complete"):
         return True
-    return infos_is_complete(trainee) and dossier_is_complete(trainee, training_type)
+    return infos_is_complete_for_training(trainee, training_type) and dossier_is_complete(trainee, training_type)
 
 
 # =========================

@@ -12,7 +12,27 @@
     .toolbar{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:6px}
     .hint{font-size:12px;color:#475569}
     .actions{display:flex;justify-content:flex-end}
-    .btn{border:1px solid #cbd5e1;background:#fff;border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer}
+    .btn-save{
+      border:1px solid #1d4ed8;
+      background:linear-gradient(135deg,#2563eb,#1e40af);
+      color:#fff;
+      border-radius:10px;
+      padding:7px 16px;
+      font-weight:700;
+      letter-spacing:.4px;
+      cursor:pointer;
+      box-shadow:0 5px 12px rgba(37,99,235,.28);
+      transition:transform .2s ease, box-shadow .2s ease, filter .2s ease;
+      animation:savePulse 1.8s ease-in-out infinite;
+    }
+    .btn-save:hover{transform:translateY(-1px);box-shadow:0 8px 16px rgba(29,78,216,.34);filter:brightness(1.05)}
+    .btn-save:active{transform:translateY(0)}
+    .actions-bottom{display:flex;justify-content:flex-end;margin-top:10px}
+
+    @keyframes savePulse{
+      0%,100%{box-shadow:0 5px 12px rgba(37,99,235,.28)}
+      50%{box-shadow:0 0 0 6px rgba(37,99,235,.12),0 7px 18px rgba(37,99,235,.34)}
+    }
 
     .header{border:2px solid var(--orange);padding:3px;margin-bottom:10px}
     .header>div{background:var(--blue);color:#fff;text-align:center;padding:16px 8px;font-size:20px;letter-spacing:.6px}
@@ -39,6 +59,7 @@
       body,.page{background:#fff;padding:0;margin:0;width:auto;min-height:auto}
       .page{padding:5mm}
       .toolbar{display:none}
+      .actions-bottom{display:none}
       ul.lines li{font-size:9.6pt;line-height:1.16;margin:1.1mm 0}
       .field{height:5.8mm;font-size:9.6pt;padding:.7mm 1.6mm}
       .box{padding:2.4mm 3mm;margin-top:2.6mm}
@@ -57,7 +78,7 @@
     <div class="toolbar">
       <div class="hint">Complétez les champs puis enregistrez la fiche pour la valider dans « Mes documents ».</div>
       <div class="actions">
-        <button class="btn" type="submit" form="candidate-sheet-form">ENREGISTRER</button>
+        <button class="btn-save" type="submit" form="candidate-sheet-form">ENREGISTRER</button>
       </div>
     </div>
 
@@ -119,6 +140,10 @@
     <div class="footer">
       <img src="{{ url_for('static', filename='scotia.png') }}" alt="Scotia">
       <div class="footer-text">SCOTIA FORMATION – 1662 RN7 – 06270 Villeneuve Loubet<br>N° déclaration d’activité : 93061023706 – Siret 91812189800012 – Code APE : 8559A - www.scotiagroupe.com</div>
+    </div>
+
+    <div class="actions-bottom">
+      <button class="btn-save" type="submit">ENREGISTRER</button>
     </div>
     </form>
   </div>
