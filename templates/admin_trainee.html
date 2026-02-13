@@ -942,7 +942,11 @@
     <span class="hint">(déjà uploadé)</span>
   </div>
 {% else %}
-  <span class="hint">Aucun fichier</span>
+  {% if d.key == "candidate_info_sheet" and cur != "NON DÉPOSÉ" %}
+    <span class="pill pill-green">📎 Fichier déjà envoyé</span>
+  {% else %}
+    <span class="hint">Aucun fichier</span>
+  {% endif %}
 {% endif %}
 
   
