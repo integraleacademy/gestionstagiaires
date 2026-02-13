@@ -3850,6 +3850,7 @@ def api_create_trainee(session_id: str):
         "elearning_link_sent_at": "",
         "elearning_link_email_ok": False,
         "elearning_link_sms_ok": False,
+        "vtc_book_sent_at": "",
         "documents": [],
         "created_at": _now_iso(),
         "phone_followups": [],
@@ -4136,6 +4137,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vtc_cm_submitted_at",
         "exam_fees_paid",
         "elearning_link",
+        "vtc_book_sent_at",
 
     }
 
