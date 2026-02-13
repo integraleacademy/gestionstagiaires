@@ -557,6 +557,7 @@ tr.row-todo td{
   bulkTestFrForm?.addEventListener("submit", async (event)=>{
     event.preventDefault();
     if (!bulkTestFrForm) return;
+    if(!await window.confirmMailSmsSend?.()) return;
 
     const formData = new FormData(bulkTestFrForm);
     const summary = document.getElementById("bulkTestFrSummary");
@@ -1136,6 +1137,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
   });
 
   document.getElementById("btnCreateAndSend")?.addEventListener("click", async ()=>{
+    if(!await window.confirmMailSmsSend?.()) return;
     await createTrainee(true);
   });
 
