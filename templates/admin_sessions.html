@@ -165,6 +165,10 @@
   .filter-btn--vtc{ background:#f3e8ff; color:#7e22ce; }
   .filter-btn--status{ background:#e5e7eb; color:#374151; }
   .filter-btn--all{ background:#cbd5f5; color:#1e1b4b; }
+  .vtc-check-list{ display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+  .vtc-check-item{ border:1px solid #e5e7eb; border-radius:10px; padding:8px 10px; background:#f9fafb; }
+  .vtc-check-item strong{ display:block; }
+  .vtc-check-item span{ color:#6b7280; font-size:12px; }
 </style>
 
 <div class="page-head" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -173,6 +177,9 @@
   <div style="display:flex;gap:10px;flex-wrap:wrap;">
     <button class="btn btn-outline" id="btnOpenCnaps">CONTACTER LE CNAPS</button>
     <a class="btn btn-outline" href="{{ url_for('admin_secretariat') }}">Gestion secrétariat</a>
+    {% if not is_read_only %}
+      <button class="btn btn-outline" id="btnOpenVtcCheck">Check VTC</button>
+    {% endif %}
     <a class="btn btn-outline" href="{{ url_for('admin_sessions_archived') }}">Sessions archivées</a>
     {% if not is_read_only %}
       <button class="btn btn-primary" id="btnOpenCreateSession">+ Nouvelle session</button>
@@ -474,6 +481,33 @@
     <div class="modal-foot">
       <button class="btn" data-close-modal="cnapsModal">Annuler</button>
       <button class="btn btn-primary" id="btnCnapsEmail" disabled>Préparer l’email</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE CHECK VTC -->
+<div class="modal-backdrop" id="vtcCheckModal" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Check VTC</div>
+      <button class="icon-btn" data-close-modal="vtcCheckModal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="muted" style="margin-bottom:10px;">
+        Importe un PDF contenant des identifiants CMAR pour vérifier automatiquement les stagiaires VTC.
+      </div>
+
+      <input id="vtcCheckFile" type="file" accept="application/pdf,.pdf" style="margin-bottom:10px;" />
+      <button class="btn btn-primary" id="btnVtcCheckImport">IMPORTER</button>
+
+      <div id="vtcCheckStatus" class="muted" style="margin-top:10px;"></div>
+      <div id="vtcCheckList" class="vtc-check-list"></div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" data-close-modal="vtcCheckModal">Fermer</button>
+      <button class="btn btn-primary" id="btnVtcCheckNotify" style="display:none;">Notifier</button>
     </div>
   </div>
 </div>
@@ -1161,6 +1195,107 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
   document.getElementById("btnOpenCnaps")?.addEventListener("click", async ()=>{
     openModal("cnapsModal");
     await loadCnapsSessions();
+  });
+
+  const vtcCheckState = { matches: [] };
+
+  document.getElementById("btnOpenVtcCheck")?.addEventListener("click", ()=>{
+    vtcCheckState.matches = [];
+    const status = document.getElementById("vtcCheckStatus");
+    const list = document.getElementById("vtcCheckList");
+    const notifyBtn = document.getElementById("btnVtcCheckNotify");
+    const fileInput = document.getElementById("vtcCheckFile");
+    if(status) status.textContent = "";
+    if(list) list.innerHTML = "";
+    if(notifyBtn) notifyBtn.style.display = "none";
+    if(fileInput) fileInput.value = "";
+    openModal("vtcCheckModal");
+  });
+
+  document.getElementById("btnVtcCheckImport")?.addEventListener("click", async ()=>{
+    const fileInput = document.getElementById("vtcCheckFile");
+    const status = document.getElementById("vtcCheckStatus");
+    const list = document.getElementById("vtcCheckList");
+    const notifyBtn = document.getElementById("btnVtcCheckNotify");
+    const btn = document.getElementById("btnVtcCheckImport");
+    const file = fileInput?.files?.[0];
+
+    if(!file){
+      if(status) status.textContent = "Veuillez choisir un PDF.";
+      return;
+    }
+
+    btn.disabled = true;
+    if(status) status.textContent = "Analyse du PDF en cours…";
+    if(list) list.innerHTML = "";
+    if(notifyBtn) notifyBtn.style.display = "none";
+
+    try{
+      const fd = new FormData();
+      fd.append("file", file);
+      const r = await fetch("/api/vtc/check/import", { method:"POST", body: fd });
+      const res = await r.json();
+      if(!r.ok || !res.ok){
+        if(status) status.textContent = "Impossible de lire ce PDF.";
+        return;
+      }
+
+      vtcCheckState.matches = res.matches || [];
+      if(status) status.textContent = res.message || "Aucun résultat.";
+
+      if(vtcCheckState.matches.length){
+        if(list){
+          list.innerHTML = vtcCheckState.matches.map(it => {
+            const full = `${(it.last_name || "").toUpperCase()} ${(it.first_name || "")}`.trim();
+            return `
+              <div class="vtc-check-item">
+                <strong>${full || "—"}</strong>
+                <span>${it.session_name || "Session"} • CMAR: ${it.cmar_id || "—"}</span>
+              </div>
+            `;
+          }).join("");
+        }
+        if(notifyBtn) notifyBtn.style.display = "inline-flex";
+      }
+    }catch(e){
+      if(status) status.textContent = "Erreur réseau.";
+    }finally{
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById("btnVtcCheckNotify")?.addEventListener("click", async ()=>{
+    const status = document.getElementById("vtcCheckStatus");
+    const btn = document.getElementById("btnVtcCheckNotify");
+    if(!vtcCheckState.matches.length){
+      if(status) status.textContent = "Aucun stagiaire à notifier.";
+      return;
+    }
+
+    btn.disabled = true;
+    if(status) status.textContent = "Notification en cours…";
+
+    try{
+      const items = vtcCheckState.matches.map(it => ({
+        session_id: it.session_id,
+        trainee_id: it.trainee_id,
+      }));
+      const r = await fetch("/api/vtc/check/notify", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ items })
+      });
+      const res = await r.json();
+      if(!r.ok || !res.ok){
+        if(status) status.textContent = "Erreur pendant l'envoi des notifications.";
+        return;
+      }
+      if(status) status.textContent = `${res.sent || 0} stagiaire(s) notifié(s).`;
+    }catch(e){
+      if(status) status.textContent = "Erreur réseau.";
+    }finally{
+      btn.disabled = false;
+    }
   });
 
   document.getElementById("cnapsTraineeSearch")?.addEventListener("input", ()=>{
