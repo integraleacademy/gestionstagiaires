@@ -21,6 +21,8 @@
       <span>Session : <strong>{{ session.name }}</strong></span>
       <span>Formation : <strong>{{ session.date_start|frdate }}</strong> → <strong>{{ session.date_end|frdate }}</strong></span>
       {% if "VTC" in (session.training_type or "")|upper %}
+  {% set vtc_theory_date = session.exam_theory_date or session.exam_date %}
+  {% set vtc_practice_training_date = session.practice_training_date or session.exam_practice_date or session.exam_date %}
         {% set theory_date = session.exam_theory_date or session.exam_date %}
         {% set practice_date = session.exam_practice_date or session.exam_date %}
         {% set practice_training_date = session.practice_training_date %}
@@ -247,22 +249,25 @@
 <a class="btn btn-outline btn-uniform {% if trainee.etiquette_word_downloaded_at %}btn-word-downloaded{% endif %}"
    id="btnEtiquetteWord"
    data-downloaded="{{ '1' if trainee.etiquette_word_downloaded_at else '0' }}"
+   style="min-width:170px;display:inline-flex;justify-content:center;align-items:center;text-align:center;"
    href="{{ url_for('admin_etiquette_docx', session_id=session.id, trainee_id=trainee.id) }}"
    title="{% if trainee.etiquette_word_downloaded_at %}Déjà téléchargée le {{ trainee.etiquette_word_downloaded_at|frdatetime }}{% else %}Télécharger l'étiquette Word{% endif %}">
   🖨️ Etiquette WORD
 </a>
 <a class="btn btn-outline btn-uniform"
+   style="min-width:170px;display:inline-flex;justify-content:center;align-items:center;text-align:center;"
    href="{{ url_for('admin_trainee_summary', session_id=session.id, trainee_id=trainee.id) }}">
   📄 Fiche récap
 </a>
 
       <form method="post" action="{{ url_for('admin_send_access', session_id=session.id, trainee_id=trainee.id) }}" data-mail-sms-confirm="true">
-  <button class="btn btn-primary btn-uniform" type="submit">
-    SEND
+  <button class="btn btn-primary btn-uniform" type="submit" style="min-width:170px;display:inline-flex;justify-content:center;align-items:center;text-align:center;">
+    📤 SEND
   </button>
       </form>
 
 <a class="btn btn-outline btn-uniform"
+   style="min-width:170px;display:inline-flex;justify-content:center;align-items:center;text-align:center;"
    href="{{ PUBLIC_STUDENT_PORTAL_BASE.rstrip('/') }}/espace/{{ trainee.public_token }}"
    target="_blank" rel="noopener">
   👁️ Espace stagiaire
@@ -374,8 +379,43 @@
 {% endif %}
 
 {% if "VTC" in (session.training_type or "")|upper %}
+  {% set vtc_theory_date = session.exam_theory_date or session.exam_date %}
+  {% set vtc_practice_training_date = session.practice_training_date or session.exam_practice_date or session.exam_date %}
   <div class="card" style="margin-top:12px;">
-    <div style="font-weight:900;">Identifiants Chambre des métiers (VTC)</div>
+    <div style="font-weight:900;">STATUT VTC</div>
+    <div class="hint" style="margin-top:6px;">Actions de suivi VTC réservées à cette fiche stagiaire.</div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;align-items:center;">
+      <button class="btn {% if trainee.vtc_theory_exam_sent_at %}btn-primary{% else %}btn-outline{% endif %} btn-uniform"
+              type="button"
+              id="btnVtcTheoryExam"
+              {% if trainee.vtc_theory_exam_sent_at or is_read_only %}disabled{% endif %}>
+        Examen théorique le {{ vtc_theory_date|frdate }}
+      </button>
+
+      <button class="btn {% if trainee.vtc_practice_convocation_sent_at %}btn-primary{% else %}btn-outline{% endif %} btn-uniform"
+              type="button"
+              id="btnVtcPracticeConvocation"
+              {% if trainee.vtc_practice_convocation_sent_at or is_read_only %}disabled{% endif %}>
+        Convocation Formation pratique le {{ vtc_practice_training_date|frdate }}
+      </button>
+    </div>
+
+    <div id="vtcStatusHint" class="hint" style="margin-top:8px;
+      {% if not trainee.vtc_theory_exam_sent_at and not trainee.vtc_practice_convocation_sent_at %}display:none;{% endif %}">
+      {% if trainee.vtc_theory_exam_sent_at %}
+        ✅ Examen théorique validé le <strong>{{ trainee.vtc_theory_exam_sent_at|frdatetime }}</strong>
+        {% if trainee.vtc_theory_exam_email_ok %}<span style="margin-left:8px;">📧 Email envoyé</span>{% endif %}
+        {% if trainee.vtc_theory_exam_sms_ok %}<span style="margin-left:8px;">📱 SMS envoyé</span>{% endif %}
+      {% endif %}
+      {% if trainee.vtc_practice_convocation_sent_at %}
+        <div>✅ Convocation formation pratique validée le <strong>{{ trainee.vtc_practice_convocation_sent_at|frdatetime }}</strong></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <details class="card" style="margin-top:12px;">
+    <summary style="cursor:pointer;font-weight:900;">Identifiants Chambre des métiers (VTC)</summary>
     <div class="hint" style="margin-top:6px;">Renseignables par le stagiaire ou directement depuis cet espace admin.</div>
     <div style="display:grid;gap:8px;margin-top:10px;max-width:720px;">
       <label>
@@ -429,42 +469,8 @@
         Frais d'examen réglés le <strong>{{ trainee.exam_fees_paid_at|frdate }}</strong>
       </div>
     </div>
-  </div>
+  </details>
 
-  {% set vtc_theory_date = session.exam_theory_date or session.exam_date %}
-  {% set vtc_practice_training_date = session.practice_training_date or session.exam_practice_date or session.exam_date %}
-  <div class="card" style="margin-top:12px;">
-    <div style="font-weight:900;">STATUT VTC</div>
-    <div class="hint" style="margin-top:6px;">Actions de suivi VTC réservées à cette fiche stagiaire.</div>
-
-    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;align-items:center;">
-      <button class="btn {% if trainee.vtc_theory_exam_sent_at %}btn-primary{% else %}btn-outline{% endif %} btn-uniform"
-              type="button"
-              id="btnVtcTheoryExam"
-              {% if trainee.vtc_theory_exam_sent_at or is_read_only %}disabled{% endif %}>
-        Examen théorique le {{ vtc_theory_date|frdate }}
-      </button>
-
-      <button class="btn {% if trainee.vtc_practice_convocation_sent_at %}btn-primary{% else %}btn-outline{% endif %} btn-uniform"
-              type="button"
-              id="btnVtcPracticeConvocation"
-              {% if trainee.vtc_practice_convocation_sent_at or is_read_only %}disabled{% endif %}>
-        Convocation Formation pratique le {{ vtc_practice_training_date|frdate }}
-      </button>
-    </div>
-
-    <div id="vtcStatusHint" class="hint" style="margin-top:8px;
-      {% if not trainee.vtc_theory_exam_sent_at and not trainee.vtc_practice_convocation_sent_at %}display:none;{% endif %}">
-      {% if trainee.vtc_theory_exam_sent_at %}
-        ✅ Examen théorique validé le <strong>{{ trainee.vtc_theory_exam_sent_at|frdatetime }}</strong>
-        {% if trainee.vtc_theory_exam_email_ok %}<span style="margin-left:8px;">📧 Email envoyé</span>{% endif %}
-        {% if trainee.vtc_theory_exam_sms_ok %}<span style="margin-left:8px;">📱 SMS envoyé</span>{% endif %}
-      {% endif %}
-      {% if trainee.vtc_practice_convocation_sent_at %}
-        <div>✅ Convocation formation pratique validée le <strong>{{ trainee.vtc_practice_convocation_sent_at|frdatetime }}</strong></div>
-      {% endif %}
-    </div>
-  </div>
 {% endif %}
 
 <!-- ===================== -->
@@ -606,10 +612,18 @@
   <!-- ===================== -->
   <!-- CONVENTION & FINANCEMENT -->
   <!-- ===================== -->
+  {% if is_vtc %}
+  <details class="card card--full">
+    <summary style="cursor:pointer;font-weight:900;">Convention &amp; Financement</summary>
+  {% else %}
   <div class="card{% if is_vtc %} card--full{% endif %}">
+  {% endif %}
+
+    {% if not is_vtc %}
     <div class="card-head">
       <div>Convention & Financement</div>
     </div>
+    {% endif %}
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
 
@@ -724,7 +738,11 @@
       </div>
 
     </div>
+  {% if is_vtc %}
+  </details>
+  {% else %}
   </div>
+  {% endif %}
 
   <!-- ===================== -->
 <!-- COMMENTAIRE (ADMIN)    -->
