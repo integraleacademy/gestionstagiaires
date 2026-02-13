@@ -5350,6 +5350,10 @@ def api_vtc_check_import():
                 target = admissible_matches
                 status = "admissible"
 
+            already_notified = bool(trainee.get("vtc_theory_exam_sent_at"))
+            already_marked_non_admissible = (trainee.get("vtc_theory_result") == "non_admissible")
+            already_imported = bool(trainee.get("vtc_theory_result")) or already_notified or already_marked_non_admissible
+
             target.append({
                 "session_id": sess.get("id") or "",
                 "session_name": sess.get("name") or "",
@@ -5358,15 +5362,22 @@ def api_vtc_check_import():
                 "last_name": (trainee.get("last_name") or "").strip(),
                 "cmar_id": trainee.get("vtc_cmar_id") or "",
                 "status": status,
+                "already_imported": already_imported,
+                "already_notified": already_notified,
+                "already_marked_non_admissible": already_marked_non_admissible,
             })
 
     count_adm = len(admissible_matches)
     count_non_adm = len(non_admissible_matches)
     count = count_adm + count_non_adm
+    already_imported_count = sum(1 for it in (admissible_matches + non_admissible_matches) if it.get("already_imported"))
     if count == 0:
         message = "aucun stagiaire VTC trouvé"
     else:
-        message = f"{count} stagiaire(s) trouvé(s) • {count_adm} admissible(s) • {count_non_adm} non admissible(s)"
+        message = (
+            f"{count} stagiaire(s) trouvé(s) • {count_adm} admissible(s) • {count_non_adm} non admissible(s)"
+            f" • {already_imported_count} déjà importé(s)"
+        )
 
     return jsonify({
         "ok": True,
@@ -5376,6 +5387,7 @@ def api_vtc_check_import():
         "count": count,
         "admissible_count": count_adm,
         "non_admissible_count": count_non_adm,
+        "already_imported_count": already_imported_count,
         "message": message,
     })
 
@@ -5393,6 +5405,8 @@ def api_vtc_check_notify():
     sent = 0
     failed = 0
     non_admissible_marked = 0
+    skipped_already_notified = 0
+    skipped_already_marked = 0
 
     for item in items:
         session_id = str(item.get("session_id") or "").strip()
@@ -5413,6 +5427,9 @@ def api_vtc_check_notify():
 
         status = str(item.get("status") or "admissible").strip().lower()
         if status == "non_admissible":
+            if trainee.get("vtc_theory_result") == "non_admissible":
+                skipped_already_marked += 1
+                continue
             trainee["vtc_theory_result"] = "non_admissible"
             trainee["vtc_theory_result_label"] = "échec examen théorique"
             trainee["vtc_theory_failed_at"] = _now_iso()
@@ -5430,6 +5447,9 @@ def api_vtc_check_notify():
             )
             non_admissible_marked += 1
         else:
+            if trainee.get("vtc_theory_exam_sent_at"):
+                skipped_already_notified += 1
+                continue
             trainee["vtc_theory_result"] = "admissible"
             trainee["vtc_theory_result_label"] = "admissible"
             _send_vtc_theory_exam_notification(sess, trainee, send_email=True)
@@ -5440,7 +5460,14 @@ def api_vtc_check_notify():
         sess.pop("stagiaires", None)
 
     save_data(data)
-    return jsonify({"ok": True, "sent": sent, "failed": failed, "non_admissible_marked": non_admissible_marked})
+    return jsonify({
+        "ok": True,
+        "sent": sent,
+        "failed": failed,
+        "non_admissible_marked": non_admissible_marked,
+        "skipped_already_notified": skipped_already_notified,
+        "skipped_already_marked": skipped_already_marked,
+    })
 
 @app.post("/api/sessions/<session_id>/trainees/<trainee_id>/delete")
 @admin_login_required
