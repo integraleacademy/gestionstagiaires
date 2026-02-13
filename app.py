@@ -1,6 +1,7 @@
 import os
 import json
 import uuid
+import re
 import datetime
 import html
 import unicodedata
@@ -501,6 +502,59 @@ def build_vtc_practice_convocation_sms(first_name: str, practice_training_date: 
         f"Votre formation pratique VTC est prévue le {practice_date_fr} de 08h30 à 12h00 "
         "à Intégrale Academy, 54 chemin du Carreou 83480 Puget-sur-Argens."
     )
+
+
+def _normalize_cmar_identifier(value: str) -> str:
+    raw = (value or "").strip().upper()
+    if not raw:
+        return ""
+    return "".join(ch for ch in raw if ch.isalnum())
+
+
+def _extract_cmar_identifiers_from_pdf(file_bytes: bytes) -> List[str]:
+    if not file_bytes:
+        return []
+
+    content = file_bytes.decode("latin-1", errors="ignore").upper()
+    candidates = set()
+
+    for token in re.findall(r"\b(?:CMAR\s*[:\-]?)?([A-Z0-9\-]{6,})\b", content):
+        normalized = _normalize_cmar_identifier(token)
+        if any(ch.isdigit() for ch in normalized) and len(normalized) >= 6:
+            candidates.add(normalized)
+
+    return sorted(candidates)
+
+
+def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any], send_email: bool = True) -> Dict[str, Any]:
+    practice_training_date = (
+        _session_get(session_obj, "practice_training_date", "")
+        or _session_get(session_obj, "exam_practice_date", "")
+        or _session_get(session_obj, "exam_date", "")
+    )
+
+    first_name = (trainee.get("first_name") or "").strip()
+    email = (trainee.get("email") or "").strip()
+    phone = (trainee.get("phone") or "").strip()
+
+    subject, html = build_vtc_practice_convocation_email(first_name, practice_training_date)
+    sms = build_vtc_practice_convocation_sms(first_name, practice_training_date)
+
+    email_ok = brevo_send_email(email, subject, html) if (send_email and email) else False
+    sms_ok = brevo_send_sms(phone, sms) if phone else False
+
+    trainee["vtc_theory_exam_sent_at"] = _now_iso()
+    trainee["vtc_theory_exam_email_ok"] = bool(email_ok)
+    trainee["vtc_theory_exam_sms_ok"] = bool(sms_ok)
+    trainee["updated_at"] = _now_iso()
+
+    return {
+        "email_ok": bool(email_ok),
+        "sms_ok": bool(sms_ok),
+        "sent_at": trainee.get("vtc_theory_exam_sent_at") or "",
+    }
+
+
 def mail_layout(inner_html: str) -> str:
     # ✅ logo en URL HTTPS (fiable dans Gmail)
     logo_src = f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png"
@@ -4621,37 +4675,109 @@ def api_send_vtc_theory_exam(session_id: str, trainee_id: str):
     payload = request.get_json(silent=True) or {}
     send_email = payload.get("send_email", True) in (True, "true", "1", 1, "yes", "on")
 
-    practice_training_date = (
-        _session_get(s, "practice_training_date", "")
-        or _session_get(s, "exam_practice_date", "")
-        or _session_get(s, "exam_date", "")
-    )
-
-    first_name = (t.get("first_name") or "").strip()
-    email = (t.get("email") or "").strip()
-    phone = (t.get("phone") or "").strip()
-
-    subject, html = build_vtc_practice_convocation_email(first_name, practice_training_date)
-    sms = build_vtc_practice_convocation_sms(first_name, practice_training_date)
-
-    email_ok = brevo_send_email(email, subject, html) if (send_email and email) else False
-    sms_ok = brevo_send_sms(phone, sms) if phone else False
-
-    t["vtc_theory_exam_sent_at"] = _now_iso()
-    t["vtc_theory_exam_email_ok"] = bool(email_ok)
-    t["vtc_theory_exam_sms_ok"] = bool(sms_ok)
-    t["updated_at"] = _now_iso()
+    result = _send_vtc_theory_exam_notification(s, t, send_email=send_email)
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     save_data(data)
 
-    return jsonify({
-        "ok": True,
-        "email_ok": bool(email_ok),
-        "sms_ok": bool(sms_ok),
-        "sent_at": t.get("vtc_theory_exam_sent_at") or "",
-    })
+    return jsonify({"ok": True, **result})
+
+
+@app.post("/api/vtc/check/import")
+@admin_login_required
+@admin_write_required
+def api_vtc_check_import():
+    pdf = request.files.get("file")
+    if not pdf:
+        return jsonify({"ok": False, "error": "missing_file"}), 400
+
+    filename = (pdf.filename or "").lower()
+    if not filename.endswith(".pdf"):
+        return jsonify({"ok": False, "error": "invalid_file_type"}), 400
+
+    try:
+        identifiers = _extract_cmar_identifiers_from_pdf(pdf.read())
+    except Exception:
+        return jsonify({"ok": False, "error": "pdf_parse_error"}), 400
+
+    if not identifiers:
+        return jsonify({"ok": True, "matches": [], "count": 0, "message": "aucun stagiaire VTC trouvé"})
+
+    data = load_data()
+    wanted = set(identifiers)
+    matches = []
+    seen = set()
+
+    for sess in data.get("sessions", []):
+        if "VTC" not in (_session_get(sess, "training_type", "") or "").upper():
+            continue
+        trainees = _session_trainees_list(sess)
+        for trainee in trainees:
+            cmar_id = _normalize_cmar_identifier(trainee.get("vtc_cmar_id") or "")
+            if not cmar_id or cmar_id not in wanted:
+                continue
+            key = (sess.get("id"), trainee.get("id"))
+            if key in seen:
+                continue
+            seen.add(key)
+            matches.append({
+                "session_id": sess.get("id") or "",
+                "session_name": sess.get("name") or "",
+                "trainee_id": trainee.get("id") or "",
+                "first_name": (trainee.get("first_name") or "").strip(),
+                "last_name": (trainee.get("last_name") or "").strip(),
+                "cmar_id": trainee.get("vtc_cmar_id") or "",
+            })
+
+    count = len(matches)
+    if count == 0:
+        message = "aucun stagiaire VTC trouvé"
+    elif count == 1:
+        message = "1 stagiaire VTC trouvé"
+    else:
+        message = f"{count} stagiaires VTC trouvés"
+
+    return jsonify({"ok": True, "matches": matches, "count": count, "message": message})
+
+
+@app.post("/api/vtc/check/notify")
+@admin_login_required
+@admin_write_required
+def api_vtc_check_notify():
+    payload = request.get_json(silent=True) or {}
+    items = payload.get("items") or []
+    if not isinstance(items, list) or not items:
+        return jsonify({"ok": False, "error": "missing_items"}), 400
+
+    data = load_data()
+    sent = 0
+    failed = 0
+
+    for item in items:
+        session_id = str(item.get("session_id") or "").strip()
+        trainee_id = str(item.get("trainee_id") or "").strip()
+        if not session_id or not trainee_id:
+            failed += 1
+            continue
+
+        sess = find_session(data, session_id)
+        if not sess:
+            failed += 1
+            continue
+        trainees = _session_trainees_list(sess)
+        trainee = next((x for x in trainees if x.get("id") == trainee_id), None)
+        if not trainee:
+            failed += 1
+            continue
+
+        _send_vtc_theory_exam_notification(sess, trainee, send_email=True)
+        sess["trainees"] = trainees
+        sess.pop("stagiaires", None)
+        sent += 1
+
+    save_data(data)
+    return jsonify({"ok": True, "sent": sent, "failed": failed})
 
 @app.post("/api/sessions/<session_id>/trainees/<trainee_id>/delete")
 @admin_login_required
