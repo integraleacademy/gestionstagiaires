@@ -1,6 +1,8 @@
 import os
 import json
 import uuid
+import re
+import zlib
 import datetime
 import html
 import unicodedata
@@ -501,6 +503,233 @@ def build_vtc_practice_convocation_sms(first_name: str, practice_training_date: 
         f"Votre formation pratique VTC est prévue le {practice_date_fr} de 08h30 à 12h00 "
         "à Intégrale Academy, 54 chemin du Carreou 83480 Puget-sur-Argens."
     )
+
+
+def _normalize_cmar_identifier(value: str) -> str:
+    raw = (value or "").strip().upper()
+    if not raw:
+        return ""
+    return "".join(ch for ch in raw if ch.isalnum())
+
+
+def _extract_cmar_identifiers_from_pdf(file_bytes: bytes) -> List[str]:
+    if not file_bytes:
+        return []
+
+    def _decode_pdf_text(raw: bytes) -> str:
+        if not raw:
+            return ""
+        if raw.startswith(b"\xfe\xff"):
+            try:
+                return raw[2:].decode("utf-16-be", errors="ignore")
+            except Exception:
+                pass
+        if raw.startswith(b"\xff\xfe"):
+            try:
+                return raw[2:].decode("utf-16-le", errors="ignore")
+            except Exception:
+                pass
+
+        nul_even = sum(1 for i in range(0, len(raw), 2) if raw[i] == 0)
+        nul_odd = sum(1 for i in range(1, len(raw), 2) if raw[i] == 0)
+        pairs = max(1, len(raw) // 2)
+
+        if nul_even / pairs > 0.30:
+            try:
+                return raw.decode("utf-16-be", errors="ignore")
+            except Exception:
+                pass
+        if nul_odd / pairs > 0.30:
+            try:
+                return raw.decode("utf-16-le", errors="ignore")
+            except Exception:
+                pass
+
+        return raw.decode("latin-1", errors="ignore")
+
+    def _decode_pdf_literal_strings(blob: bytes) -> List[str]:
+        out: List[str] = []
+        i = 0
+        n = len(blob)
+        while i < n:
+            if blob[i] != 0x28:  # (
+                i += 1
+                continue
+
+            i += 1
+            depth = 1
+            buf = bytearray()
+            while i < n and depth > 0:
+                ch = blob[i]
+
+                if ch == 0x5C:  # backslash
+                    i += 1
+                    if i >= n:
+                        break
+                    esc = blob[i]
+                    simple = {
+                        0x6E: 0x0A,  # \n
+                        0x72: 0x0D,  # \r
+                        0x74: 0x09,  # \t
+                        0x62: 0x08,  # \b
+                        0x66: 0x0C,  # \f
+                        0x28: 0x28,  # \(
+                        0x29: 0x29,  # \)
+                        0x5C: 0x5C,  # \\
+                    }
+                    if esc in simple:
+                        buf.append(simple[esc])
+                        i += 1
+                        continue
+
+                    if 0x30 <= esc <= 0x37:
+                        oct_digits = bytes([esc])
+                        i += 1
+                        for _ in range(2):
+                            if i < n and 0x30 <= blob[i] <= 0x37:
+                                oct_digits += bytes([blob[i]])
+                                i += 1
+                            else:
+                                break
+                        buf.append(int(oct_digits, 8) & 0xFF)
+                        continue
+
+                    buf.append(esc)
+                    i += 1
+                    continue
+
+                if ch == 0x28:  # (
+                    depth += 1
+                    buf.append(ch)
+                    i += 1
+                    continue
+
+                if ch == 0x29:  # )
+                    depth -= 1
+                    if depth > 0:
+                        buf.append(ch)
+                    i += 1
+                    continue
+
+                buf.append(ch)
+                i += 1
+
+            if buf:
+                out.append(_decode_pdf_text(bytes(buf)))
+
+        return out
+
+    def _decode_pdf_hex_strings(blob: bytes) -> List[str]:
+        out: List[str] = []
+        for m in re.finditer(rb"<([0-9A-Fa-f\s]{4,})>", blob):
+            raw = re.sub(rb"\s+", b"", m.group(1))
+            if len(raw) % 2 == 1:
+                raw += b"0"
+            try:
+                decoded = bytes.fromhex(raw.decode("ascii", errors="ignore"))
+                out.append(_decode_pdf_text(decoded))
+            except Exception:
+                continue
+        return out
+
+    chunks: List[bytes] = [file_bytes]
+    for m in re.finditer(rb"stream\r?\n(.*?)\r?\nendstream", file_bytes, flags=re.S):
+        stream_data = m.group(1)
+        chunks.append(stream_data)
+
+        if b"/FlateDecode" in file_bytes[max(0, m.start() - 250):m.start()]:
+            try:
+                inflated = zlib.decompress(stream_data)
+                chunks.append(inflated)
+            except Exception:
+                pass
+
+    text_sources: List[str] = []
+    for chunk in chunks:
+        text_sources.append(_decode_pdf_text(chunk))
+        text_sources.extend(_decode_pdf_literal_strings(chunk))
+        text_sources.extend(_decode_pdf_hex_strings(chunk))
+
+    content = "\n".join(text_sources).upper()
+    candidates = set()
+
+    for token in re.findall(r"\b(?:CMAR\s*[:\-]?)?([A-Z0-9\-]{4,})\b", content):
+        normalized = _normalize_cmar_identifier(token)
+        if not normalized:
+            continue
+        if normalized.startswith("CMAR"):
+            normalized = normalized[4:]
+        if normalized.isdigit() and len(normalized) < 6:
+            continue
+        if normalized.isdigit() and len(normalized) > 20:
+            continue
+        if any(ch.isdigit() for ch in normalized) and len(normalized) >= 6:
+            candidates.add(normalized)
+
+    # fallback : capture les suites numériques même si le PDF met des séparateurs/NULL
+    compact_digits = re.sub(r"[^0-9]", " ", content)
+    for token in compact_digits.split():
+        if 6 <= len(token) <= 20:
+            candidates.add(token)
+
+    return sorted(candidates)
+
+
+def _build_pdf_search_haystacks(file_bytes: bytes) -> Tuple[str, str]:
+    """
+    Retourne 2 haystacks:
+    - alnum_only: contenu PDF réduit à A-Z0-9
+    - digits_only: contenu PDF réduit à 0-9
+    Permet un matching robuste même si l'extraction tokenisée rate un format.
+    """
+    if not file_bytes:
+        return "", ""
+
+    chunks: List[bytes] = [file_bytes]
+    for m in re.finditer(rb"stream\r?\n(.*?)\r?\nendstream", file_bytes, flags=re.S):
+        stream_data = m.group(1)
+        chunks.append(stream_data)
+        if b"/FlateDecode" in file_bytes[max(0, m.start() - 250):m.start()]:
+            try:
+                chunks.append(zlib.decompress(stream_data))
+            except Exception:
+                pass
+
+    merged = "\n".join(chunk.decode("latin-1", errors="ignore") for chunk in chunks).upper()
+    alnum_only = re.sub(r"[^A-Z0-9]", "", merged)
+    digits_only = re.sub(r"[^0-9]", "", merged)
+    return alnum_only, digits_only
+
+
+def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any], send_email: bool = True) -> Dict[str, Any]:
+    practice_training_date = (
+        _session_get(session_obj, "practice_training_date", "")
+        or _session_get(session_obj, "exam_practice_date", "")
+        or _session_get(session_obj, "exam_date", "")
+    )
+
+    first_name = (trainee.get("first_name") or "").strip()
+    email = (trainee.get("email") or "").strip()
+    phone = (trainee.get("phone") or "").strip()
+
+    subject, html = build_vtc_practice_convocation_email(first_name, practice_training_date)
+    sms = build_vtc_practice_convocation_sms(first_name, practice_training_date)
+
+    email_ok = brevo_send_email(email, subject, html) if (send_email and email) else False
+    sms_ok = brevo_send_sms(phone, sms) if phone else False
+
+    trainee["vtc_theory_exam_sent_at"] = _now_iso()
+    trainee["vtc_theory_exam_email_ok"] = bool(email_ok)
+    trainee["vtc_theory_exam_sms_ok"] = bool(sms_ok)
+    trainee["updated_at"] = _now_iso()
+
+    return {
+        "email_ok": bool(email_ok),
+        "sms_ok": bool(sms_ok),
+        "sent_at": trainee.get("vtc_theory_exam_sent_at") or "",
+    }
+
+
 def mail_layout(inner_html: str) -> str:
     # ✅ logo en URL HTTPS (fiable dans Gmail)
     logo_src = f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png"
@@ -4621,37 +4850,126 @@ def api_send_vtc_theory_exam(session_id: str, trainee_id: str):
     payload = request.get_json(silent=True) or {}
     send_email = payload.get("send_email", True) in (True, "true", "1", 1, "yes", "on")
 
-    practice_training_date = (
-        _session_get(s, "practice_training_date", "")
-        or _session_get(s, "exam_practice_date", "")
-        or _session_get(s, "exam_date", "")
-    )
-
-    first_name = (t.get("first_name") or "").strip()
-    email = (t.get("email") or "").strip()
-    phone = (t.get("phone") or "").strip()
-
-    subject, html = build_vtc_practice_convocation_email(first_name, practice_training_date)
-    sms = build_vtc_practice_convocation_sms(first_name, practice_training_date)
-
-    email_ok = brevo_send_email(email, subject, html) if (send_email and email) else False
-    sms_ok = brevo_send_sms(phone, sms) if phone else False
-
-    t["vtc_theory_exam_sent_at"] = _now_iso()
-    t["vtc_theory_exam_email_ok"] = bool(email_ok)
-    t["vtc_theory_exam_sms_ok"] = bool(sms_ok)
-    t["updated_at"] = _now_iso()
+    result = _send_vtc_theory_exam_notification(s, t, send_email=send_email)
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     save_data(data)
 
-    return jsonify({
-        "ok": True,
-        "email_ok": bool(email_ok),
-        "sms_ok": bool(sms_ok),
-        "sent_at": t.get("vtc_theory_exam_sent_at") or "",
-    })
+    return jsonify({"ok": True, **result})
+
+
+@app.post("/api/vtc/check/import")
+@admin_login_required
+@admin_write_required
+def api_vtc_check_import():
+    pdf = request.files.get("file")
+    if not pdf:
+        return jsonify({"ok": False, "error": "missing_file"}), 400
+
+    filename = (pdf.filename or "").lower()
+    if not filename.endswith(".pdf"):
+        return jsonify({"ok": False, "error": "invalid_file_type"}), 400
+
+    pdf_bytes = pdf.read() or b""
+
+    try:
+        identifiers = _extract_cmar_identifiers_from_pdf(pdf_bytes)
+    except Exception:
+        return jsonify({"ok": False, "error": "pdf_parse_error"}), 400
+
+    pdf_alnum, pdf_digits = _build_pdf_search_haystacks(pdf_bytes)
+
+    if not identifiers:
+        return jsonify({"ok": True, "matches": [], "count": 0, "message": "aucun stagiaire VTC trouvé"})
+
+    data = load_data()
+    wanted = set(identifiers)
+    matches = []
+    seen = set()
+
+    for sess in data.get("sessions", []):
+        if "VTC" not in (_session_get(sess, "training_type", "") or "").upper():
+            continue
+        trainees = _session_trainees_list(sess)
+        for trainee in trainees:
+            cmar_id_raw = trainee.get("vtc_cmar_id") or ""
+            cmar_id = _normalize_cmar_identifier(cmar_id_raw)
+            if not cmar_id:
+                continue
+
+            # Match principal: extraction tokenisée
+            token_match = cmar_id in wanted
+
+            # Match fallback: recherche substring robuste dans tout le PDF
+            cmar_digits = re.sub(r"\D", "", cmar_id)
+            fallback_alnum_match = bool(pdf_alnum and cmar_id in pdf_alnum)
+            fallback_digits_match = bool(cmar_digits and len(cmar_digits) >= 6 and pdf_digits and cmar_digits in pdf_digits)
+
+            if not (token_match or fallback_alnum_match or fallback_digits_match):
+                continue
+
+            key = (sess.get("id"), trainee.get("id"))
+            if key in seen:
+                continue
+            seen.add(key)
+            matches.append({
+                "session_id": sess.get("id") or "",
+                "session_name": sess.get("name") or "",
+                "trainee_id": trainee.get("id") or "",
+                "first_name": (trainee.get("first_name") or "").strip(),
+                "last_name": (trainee.get("last_name") or "").strip(),
+                "cmar_id": trainee.get("vtc_cmar_id") or "",
+            })
+
+    count = len(matches)
+    if count == 0:
+        message = "aucun stagiaire VTC trouvé"
+    elif count == 1:
+        message = "1 stagiaire VTC trouvé"
+    else:
+        message = f"{count} stagiaires VTC trouvés"
+
+    return jsonify({"ok": True, "matches": matches, "count": count, "message": message})
+
+
+@app.post("/api/vtc/check/notify")
+@admin_login_required
+@admin_write_required
+def api_vtc_check_notify():
+    payload = request.get_json(silent=True) or {}
+    items = payload.get("items") or []
+    if not isinstance(items, list) or not items:
+        return jsonify({"ok": False, "error": "missing_items"}), 400
+
+    data = load_data()
+    sent = 0
+    failed = 0
+
+    for item in items:
+        session_id = str(item.get("session_id") or "").strip()
+        trainee_id = str(item.get("trainee_id") or "").strip()
+        if not session_id or not trainee_id:
+            failed += 1
+            continue
+
+        sess = find_session(data, session_id)
+        if not sess:
+            failed += 1
+            continue
+        trainees = _session_trainees_list(sess)
+        trainee = next((x for x in trainees if x.get("id") == trainee_id), None)
+        if not trainee:
+            failed += 1
+            continue
+
+        _send_vtc_theory_exam_notification(sess, trainee, send_email=True)
+        sess["trainees"] = trainees
+        sess.pop("stagiaires", None)
+        sent += 1
+
+    save_data(data)
+    return jsonify({"ok": True, "sent": sent, "failed": failed})
 
 @app.post("/api/sessions/<session_id>/trainees/<trainee_id>/delete")
 @admin_login_required
