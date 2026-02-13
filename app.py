@@ -9199,6 +9199,17 @@ def _validate_vae_for_submit(dossier: Dict[str, Any]) -> List[str]:
     if (certification.get("vise") or "") != "complete":
         errors.append("La certification visée doit être la certification professionnelle dans son intégralité")
 
+    experiences = dossier.get("experiences") if isinstance(dossier.get("experiences"), list) else []
+    has_filled_experience = any(
+        isinstance(exp, dict)
+        and str(exp.get("date_debut") or "").strip()
+        and str(exp.get("duree") or "").strip()
+        and str(exp.get("description") or "").strip()
+        for exp in experiences
+    )
+    if not has_filled_experience:
+        errors.append("3ème étape (Expériences du candidat) : au moins une expérience doit être renseignée")
+
     blocs_competences = dossier.get("blocs_competences", {})
     for activity_idx in range(1, 6):
         activity = blocs_competences.get(f"activite{activity_idx}", {})
