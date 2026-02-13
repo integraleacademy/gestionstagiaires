@@ -3428,12 +3428,10 @@ def admin_sessions():
         elif dt_start and dt_start <= today:
             status_key = "ongoing"
 
-        if status_key == "ended":
-            continue
-
         status_label = {
             "ongoing": "Formation en cours",
             "upcoming": "Prochainement",
+            "ended": "Terminée",
         }[status_key]
 
         training_type_raw = (_session_get(s, "training_type", "") or "").strip().upper()
