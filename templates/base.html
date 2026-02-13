@@ -247,6 +247,20 @@
   </div>
   {% endif %}
 
+  <div class="modal-backdrop" id="mailSmsConfirmModal" aria-hidden="true">
+    <div class="modal" style="max-width:500px;border-radius:20px;overflow:hidden;">
+      <div style="padding:22px 22px 12px 22px;text-align:center;background:linear-gradient(135deg,#eff6ff,#fef2f2);">
+        <img src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy" style="height:64px;width:auto;display:block;margin:0 auto 10px auto;">
+        <div style="font-size:22px;font-weight:900;color:#1f2937;">Confirmation d’envoi</div>
+        <div style="margin-top:8px;color:#4b5563;">Voulez-vous envoyer le mail / SMS&nbsp;?</div>
+      </div>
+      <div class="modal-foot" style="justify-content:center;gap:12px;padding:16px 22px 22px 22px;">
+        <button class="btn" type="button" id="mailSmsConfirmNoBtn" style="min-width:150px;">Non ❌</button>
+        <button class="btn btn-primary" type="button" id="mailSmsConfirmYesBtn" style="min-width:150px;">Oui ✅</button>
+      </div>
+    </div>
+  </div>
+
 <script>
   function openModal(id){
     const el = document.getElementById(id);
@@ -255,6 +269,39 @@
     el.style.display = "flex"; // optionnel, mais safe
     document.body.style.overflow = "hidden";
   }
+
+  function confirmMailSmsSend(){
+    return new Promise((resolve)=>{
+      const modal = document.getElementById("mailSmsConfirmModal");
+      const yesBtn = document.getElementById("mailSmsConfirmYesBtn");
+      const noBtn = document.getElementById("mailSmsConfirmNoBtn");
+      if(!modal || !yesBtn || !noBtn){
+        resolve(window.confirm("Voulez-vous envoyer le mail / SMS ?"));
+        return;
+      }
+
+      const finish = (ok)=>{
+        yesBtn.removeEventListener("click", onYes);
+        noBtn.removeEventListener("click", onNo);
+        modal.removeEventListener("click", onBackdropClick);
+        document.removeEventListener("keydown", onEsc);
+        closeModal("mailSmsConfirmModal");
+        resolve(ok);
+      };
+      const onYes = ()=>finish(true);
+      const onNo = ()=>finish(false);
+      const onBackdropClick = (e)=>{ if(e.target === modal) finish(false); };
+      const onEsc = (e)=>{ if(e.key === "Escape") finish(false); };
+
+      yesBtn.addEventListener("click", onYes);
+      noBtn.addEventListener("click", onNo);
+      modal.addEventListener("click", onBackdropClick);
+      document.addEventListener("keydown", onEsc);
+      openModal("mailSmsConfirmModal");
+    });
+  }
+
+  window.confirmMailSmsSend = confirmMailSmsSend;
 
   function closeModal(id){
     const el = document.getElementById(id);
@@ -281,6 +328,7 @@
   if(financementRefuseForm){
     financementRefuseForm.addEventListener("submit", async (e)=>{
       e.preventDefault();
+      if(!await confirmMailSmsSend()) return;
       const feedback = document.getElementById("financementRefuseFeedback");
       const submitBtn = document.getElementById("financementRefuseSubmitBtn");
       const formData = new FormData(financementRefuseForm);
@@ -324,6 +372,7 @@
   if(edofForm){
     edofForm.addEventListener("submit", async (e)=>{
       e.preventDefault();
+      if(!await confirmMailSmsSend()) return;
       const feedback = document.getElementById("edofFeedback");
       const submitBtn = document.getElementById("edofSubmitBtn");
       const formData = new FormData(edofForm);
