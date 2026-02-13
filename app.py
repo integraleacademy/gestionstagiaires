@@ -4136,6 +4136,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vtc_cm_submitted_at",
         "exam_fees_paid",
         "elearning_link",
+        "vtc_book_sent_at",
 
     }
 
