@@ -1066,16 +1066,19 @@
 {% endif %}
 {% set file_tokens = ns.file_tokens %}
 {% set has_file = (file_tokens|length) > 0 %}
+{% set candidate_sheet_saved = trainee.candidate_sheet_saved_at or trainee.candidate_sheet %}
     {% set st = (d.status if d and d.status else ("NON DÉPOSÉ" if not has_file else "A CONTRÔLER")) %}
     {% set up = (st|string)|upper %}
+{% set candidate_sheet_sent = d.key == "candidate_info_sheet" and up not in ["NON DÉPOSÉ", "NON DEPOSE", ""] %}
+{% set has_submission = has_file or candidate_sheet_sent %}
   {% set can_replace = (has_file and up == "NON CONFORME") %}
-  {% set is_pending_review = (has_file and up != "CONFORME" and up != "NON CONFORME") %}
+  {% set is_pending_review = (has_submission and up != "CONFORME" and up != "NON CONFORME") %}
   {% set max_files = 2 if d.key == "id" else (0 if d.key == "livret_2" else 1) %}
   {% set can_add_more = (d.key == "livret_2") or ((file_tokens|length) < max_files) %}
 {% set show_upload = ((not has_file) or can_replace or ((d.key == "id" or d.key == "livret_2") and can_add_more and not is_pending_review)) and not (d.key == "permis" and trainee.no_permis) %}
 
     {% set row_cls = "missing" %}
-    {% if has_file %}
+    {% if has_submission %}
       {% if up == "CONFORME" %}
         {% set row_cls = "" %}
       {% elif up == "NON CONFORME" %}
@@ -1097,7 +1100,6 @@
       <div class="docmeta">
         <div class="label">{{ "Fiche de renseignement candidat à compléter" if d.key == "candidate_info_sheet" else d.label }}</div>
         {% if d.key == "candidate_info_sheet" %}
-          {% set candidate_sheet_saved = trainee.candidate_sheet_saved_at or trainee.candidate_sheet %}
           {% set candidate_sheet_pending_review = up not in ["NON DÉPOSÉ", "NON DEPOSE", "", "NON CONFORME", "CONFORME"] %}
           <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
             {% if not candidate_sheet_pending_review %}
@@ -1211,7 +1213,9 @@ id="upload_{{ d.key }}"
 </div>
 </form>
 {% else %}
-  {% if d.key != "candidate_info_sheet" %}
+  {% if d.key == "candidate_info_sheet" and candidate_sheet_sent %}
+    <span class="pill green">📎 Fichier déjà envoyé</span>
+  {% elif d.key != "candidate_info_sheet" %}
     <span class="pill green">📎 Fichier déjà envoyé</span>
   {% endif %}
 {% endif %}
