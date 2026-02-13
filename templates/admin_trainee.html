@@ -221,7 +221,7 @@
   📄 Fiche récap
 </a>
 
-      <form method="post" action="{{ url_for('admin_send_access', session_id=session.id, trainee_id=trainee.id) }}">
+      <form method="post" action="{{ url_for('admin_send_access', session_id=session.id, trainee_id=trainee.id) }}" data-mail-sms-confirm="true">
   <button class="btn btn-primary btn-uniform" type="submit">
     📩 Espace stagiaire
   </button>
@@ -313,7 +313,7 @@
         </div>
       {% endif %}
       {% if not is_read_only %}
-      <form method="post" action="{{ url_for('admin_vtc_cmar_relance', session_id=session.id, trainee_id=trainee.id) }}" style="margin-top:6px;">
+      <form method="post" action="{{ url_for('admin_vtc_cmar_relance', session_id=session.id, trainee_id=trainee.id) }}" style="margin-top:6px;" data-mail-sms-confirm="true">
         <button class="btn btn-outline btn-uniform" type="submit">🔁 Relance CMAR</button>
       </form>
       {% endif %}
@@ -498,7 +498,7 @@
           <form method="post"
                 action="{{ url_for('admin_convention_unsigned_notify', session_id=session.id, trainee_id=trainee.id) }}"
                 style="margin-top:10px;"
-                onsubmit="return confirm('Envoyer un rappel convention non signée ?');">
+                data-mail-sms-confirm="true">
             <button class="btn btn-outline btn-uniform" type="submit">📩 Convention non signée</button>
           </form>
         {% endif %}
@@ -817,15 +817,15 @@
 
    <div class="btn-row" style="margin-top:10px;">
   {% if not is_read_only %}
-    <form method="post" action="{{ url_for('admin_docs_notify', session_id=session.id, trainee_id=trainee.id) }}">
+    <form method="post" action="{{ url_for('admin_docs_notify', session_id=session.id, trainee_id=trainee.id) }}" data-mail-sms-confirm="true">
       <button class="btn btn-primary btn-uniform" type="submit">📩 Notifier envoi documents</button>
     </form>
 
-    <form method="post" action="{{ url_for('admin_docs_nonconform_notify', session_id=session.id, trainee_id=trainee.id) }}">
+    <form method="post" action="{{ url_for('admin_docs_nonconform_notify', session_id=session.id, trainee_id=trainee.id) }}" data-mail-sms-confirm="true">
       <button class="btn btn-outline btn-uniform" type="submit">⚠️ Notifier documents non conformes</button>
     </form>
 
-    <form method="post" action="{{ url_for('admin_docs_relance', session_id=session.id, trainee_id=trainee.id) }}">
+    <form method="post" action="{{ url_for('admin_docs_relance', session_id=session.id, trainee_id=trainee.id) }}" data-mail-sms-confirm="true">
       <button class="btn btn-outline btn-uniform" type="submit">🔁 Relance stagiaire</button>
     </form>
   {% endif %}
@@ -1028,7 +1028,7 @@
       <button class="icon-btn" data-close-modal="testModal">✕</button>
     </div>
 
-    <form method="post" id="testForm">
+    <form method="post" id="testForm" data-mail-sms-confirm="true">
       <div class="modal-body">
         <div class="form-grid">
           <label>
@@ -1275,6 +1275,7 @@ function setDossierPill(status){
   if(financementRejectForm){
     financementRejectForm.addEventListener("submit", async (e)=>{
       e.preventDefault();
+      if(!await window.confirmMailSmsSend?.()) return;
       if(!financementRejectAmount || !financementRejectDate) return;
     const amount = (financementRejectAmount.value || "").trim();
     const scheduledDate = (financementRejectDate.value || "").trim();
@@ -1636,10 +1637,22 @@ function setDossierPill(status){
     });
   }
 
+  document.querySelectorAll('form[data-mail-sms-confirm="true"]').forEach((form)=>{
+    form.addEventListener("submit", async (e)=>{
+      if(form.dataset.confirmedMailSms === "true") return;
+      e.preventDefault();
+      const ok = await window.confirmMailSmsSend?.();
+      if(!ok) return;
+      form.dataset.confirmedMailSms = "true";
+      form.requestSubmit?.();
+      setTimeout(()=>{ delete form.dataset.confirmedMailSms; }, 0);
+    });
+  });
+
   const cnapsPreRelanceBtn = document.getElementById("btnCnapsPreRelance");
   if(cnapsPreRelanceBtn){
     cnapsPreRelanceBtn.addEventListener("click", async ()=>{
-      if(!confirm("Envoyer une relance PRE par mail + SMS ?")) return;
+      if(!await window.confirmMailSmsSend?.()) return;
       try{
         cnapsPreRelanceBtn.disabled = true;
         const r = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/cnaps-pre-relance/send`, {
@@ -1684,6 +1697,7 @@ function setDossierPill(status){
     const currentVaeActionDates = {{ (trainee.vae_action_dates or {})|tojson }};
     const now = new Date();
     const clickedAt = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
+    const statusesSendingMail = ["livret_1_analysis", "livret_1_validated", "livret_2_analysis", "livret_2_validated", "jury"];
 
     if(actionKey === "livret_1_received"){
       payload.vae_status = "livret_1_analysis";
@@ -1716,6 +1730,11 @@ function setDossierPill(status){
       ...currentVaeActionDates,
       [actionKey]: clickedAt,
     };
+
+    if(statusesSendingMail.includes(payload.vae_status)){
+      const ok = await window.confirmMailSmsSend?.();
+      if(!ok) return;
+    }
 
     try{
       const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
@@ -1962,6 +1981,7 @@ if(traineeComment){
   // Pour l’instant : on empêche l’envoi (pas encore branché backend)
 phoneRelanceForm?.addEventListener("submit", async (e)=>{
   e.preventDefault();
+  if(!await window.confirmMailSmsSend?.()) return;
 
   const btn = document.getElementById("btnSendPhoneRelance");
   const commentEl = document.getElementById("phoneRelanceComment");
