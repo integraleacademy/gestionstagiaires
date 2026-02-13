@@ -431,6 +431,10 @@
     font-weight:900;
     font-size:18px;
   }
+  .collapse-card.is-locked .collapse-summary{
+    cursor:not-allowed;
+    opacity:.85;
+  }
   .collapse-summary-main{
     display:flex;
     align-items:center;
@@ -840,10 +844,10 @@
 <details id="infosToCompleteDetails" class="collapse-card" style="grid-column:1/-1;">
   <summary class="collapse-summary">
     <span class="collapse-summary-main">
-      <span>Infos à compléter</span>
+      <span>{{ '1️⃣ Infos à compléter' if is_dirigeant_vae else 'Infos à compléter' }}</span>
       <span id="infosToCompleteOk" class="oktag" hidden>Tout est OK ✅</span>
       <span id="infosToCompleteAlert" class="infos-warning" role="status" aria-live="polite" hidden>
-        ⚠️ Ouvrez cet onglet pour compléter vos informations
+        {{ '⚠️ Commencez par compléter vos informations' if is_dirigeant_vae else '⚠️ Ouvrez cet onglet pour compléter vos informations' }}
       </span>
     </span>
   </summary>
@@ -1023,9 +1027,9 @@
 <!-- Encadré 3 : mes documents (upload) -->
 {% if show_vae %}
 <details id="documentsDetails" class="collapse-card" style="grid-column:1/-1;">
-  <summary class="collapse-summary">
+  <summary id="documentsSummary" class="collapse-summary">
     <span class="collapse-summary-main">
-      <span>Mes documents</span>
+      <span>{{ '2️⃣ Mes documents' if is_dirigeant_vae else 'Mes documents' }} <span id="documentsLockIcon" hidden>🔒</span></span>
       <span id="documentsOkTag" class="oktag" hidden>Tout est OK ✅</span>
       <span id="documentsAlert" class="infos-warning" role="status" aria-live="polite" hidden>
         ⚠️ Ouvrez cet onglet pour déposer vos documents
@@ -1037,7 +1041,7 @@
 <div class="card" style="grid-column:1/-1;">
   <h2>Mes documents</h2>
 {% endif %}
-  <div class="muted">⚠️ Ouvrez cet onglet pour déposer vos documents.</div>
+  <div id="documentsHint" class="muted">⚠️ Ouvrez cet onglet pour déposer vos documents.</div>
 
   <div class="docs-stack">
 
@@ -1349,7 +1353,7 @@ id="upload_{{ d.key }}"
           <p class="vae-step-action"><a class="btn" href="/vae/nouveau/{{ token_safe }}" target="_blank" rel="noopener">Compléter mon Livret 1</a></p>
         {% else %}
           <p>🔒</p>
-          <p class="muted">⚠️ Vous devez déposer tous vos documents dans la rubrique Mes documents avant de commencer la rédaction de votre Livret 1 (dossier de faisabilité)</p>
+          <p class="muted">⚠️ Vous devez renseigner vos informations et déposer tous vos documents dans la rubrique Mes documents avant de commencer la rédaction de votre Livret 1 (dossier de faisabilité)</p>
         {% endif %}
       </div>
 
@@ -1870,6 +1874,9 @@ function closeUploadSuccessModal(event) {
   const documentsDetails = document.getElementById("documentsDetails");
   const documentsWarning = document.getElementById("documentsAlert");
   const documentsOk = document.getElementById("documentsOkTag");
+  const documentsHint = document.getElementById("documentsHint");
+  const documentsSummary = document.getElementById("documentsSummary");
+  const documentsLockIcon = document.getElementById("documentsLockIcon");
   const vtcCredentialsHint = document.getElementById("vtcCredentialsHint");
 
   const isVtcCredentialsSubmitted = () => {
@@ -1894,21 +1901,55 @@ function closeUploadSuccessModal(event) {
     if (vtcCredentialsHint) vtcCredentialsHint.style.display = "none";
   };
 
-  const updateInfosToCompleteWarning = () => {
+  const infosAreComplete = () => {
     const fieldsToCheck = ["carte_vitale","birth_date","birth_city","birth_country","nationality","address","zip_code","city"];
     if (document.getElementById("pre_number")) fieldsToCheck.push("pre_number");
-    const pending = fieldsToCheck.some((id) => {
+    return !fieldsToCheck.some((id) => {
       const statusEl = document.getElementById(`ok_${id}`);
       return statusEl && (statusEl.textContent || "").includes("À compléter");
     });
-    if (infosWarning && infosDetails) infosWarning.hidden = !pending || infosDetails.open;
-    if (infosOk) infosOk.hidden = pending;
+  };
+
+  const updateInfosToCompleteWarning = () => {
+    const complete = infosAreComplete();
+    if (infosWarning && infosDetails) infosWarning.hidden = complete || infosDetails.open;
+    if (infosOk) infosOk.hidden = !complete;
   };
 
   const updateDocumentsWarning = () => {
     const hasBlocking = !!document.querySelector(".docs-stack .docrow.missing, .docs-stack .docrow.pending");
-    if (documentsWarning && documentsDetails) documentsWarning.hidden = !hasBlocking || documentsDetails.open;
-    if (documentsOk) documentsOk.hidden = hasBlocking;
+    const infosComplete = infosAreComplete();
+    const locked = !infosComplete;
+
+    if (documentsDetails) {
+      documentsDetails.classList.toggle("is-locked", locked);
+      if (locked && documentsDetails.open) documentsDetails.open = false;
+    }
+    if (documentsSummary) {
+      documentsSummary.setAttribute("aria-disabled", locked ? "true" : "false");
+    }
+    if (documentsLockIcon) documentsLockIcon.hidden = !locked;
+
+    if (documentsHint) {
+      if (locked) {
+        documentsHint.textContent = "🔒 Vous pourrez déposer vos documents quand vous aurez saisi vos informations.";
+      } else if (hasBlocking) {
+        documentsHint.textContent = "⚠️ Déposez maintenant vos documents.";
+      } else {
+        documentsHint.textContent = "Tout est OK ✅";
+      }
+    }
+
+    if (documentsWarning && documentsDetails) {
+      if (locked) {
+        documentsWarning.hidden = documentsDetails.open;
+        documentsWarning.textContent = "🔒 Vous pourrez déposer vos documents quand vous aurez saisi vos informations";
+      } else {
+        documentsWarning.hidden = !hasBlocking || documentsDetails.open;
+        documentsWarning.textContent = "⚠️ Déposez maintenant vos documents";
+      }
+    }
+    if (documentsOk) documentsOk.hidden = locked || hasBlocking;
   };
 
   const syncVtcPanel = () => {
@@ -1939,7 +1980,12 @@ function closeUploadSuccessModal(event) {
     infosDetails.addEventListener("toggle", updateInfosToCompleteWarning);
   }
   if (documentsDetails) {
-    documentsDetails.addEventListener("toggle", updateDocumentsWarning);
+    documentsDetails.addEventListener("toggle", () => {
+      if (documentsDetails.classList.contains("is-locked") && documentsDetails.open) {
+        documentsDetails.open = false;
+      }
+      updateDocumentsWarning();
+    });
   }
 
   const vtcForm = document.getElementById("vtcCredentialsForm");
