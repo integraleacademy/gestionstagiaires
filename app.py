@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 import re
+import zlib
 import datetime
 import html
 import unicodedata
@@ -520,6 +521,144 @@ def _extract_cmar_identifiers_from_pdf(file_bytes: bytes) -> List[str]:
 
     for token in re.findall(r"\b(?:CMAR\s*[:\-]?)?([A-Z0-9\-]{6,})\b", content):
         normalized = _normalize_cmar_identifier(token)
+        if any(ch.isdigit() for ch in normalized) and len(normalized) >= 6:
+            candidates.add(normalized)
+
+    return sorted(candidates)
+
+
+def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any], send_email: bool = True) -> Dict[str, Any]:
+    practice_training_date = (
+        _session_get(session_obj, "practice_training_date", "")
+        or _session_get(session_obj, "exam_practice_date", "")
+        or _session_get(session_obj, "exam_date", "")
+    )
+
+
+def _normalize_cmar_identifier(value: str) -> str:
+    raw = (value or "").strip().upper()
+    if not raw:
+        return ""
+    return "".join(ch for ch in raw if ch.isalnum())
+
+
+def _extract_cmar_identifiers_from_pdf(file_bytes: bytes) -> List[str]:
+    if not file_bytes:
+        return []
+
+    def _decode_pdf_literal_strings(blob: bytes) -> List[str]:
+        out: List[str] = []
+        i = 0
+        n = len(blob)
+        while i < n:
+            if blob[i] != 0x28:  # (
+                i += 1
+                continue
+
+            i += 1
+            depth = 1
+            buf = bytearray()
+            while i < n and depth > 0:
+                ch = blob[i]
+
+                if ch == 0x5C:  # backslash
+                    i += 1
+                    if i >= n:
+                        break
+                    esc = blob[i]
+                    simple = {
+                        0x6E: 0x0A,  # \n
+                        0x72: 0x0D,  # \r
+                        0x74: 0x09,  # \t
+                        0x62: 0x08,  # \b
+                        0x66: 0x0C,  # \f
+                        0x28: 0x28,  # \(
+                        0x29: 0x29,  # \)
+                        0x5C: 0x5C,  # \\
+                    }
+                    if esc in simple:
+                        buf.append(simple[esc])
+                        i += 1
+                        continue
+
+                    if 0x30 <= esc <= 0x37:
+                        oct_digits = bytes([esc])
+                        i += 1
+                        for _ in range(2):
+                            if i < n and 0x30 <= blob[i] <= 0x37:
+                                oct_digits += bytes([blob[i]])
+                                i += 1
+                            else:
+                                break
+                        buf.append(int(oct_digits, 8) & 0xFF)
+                        continue
+
+                    buf.append(esc)
+                    i += 1
+                    continue
+
+                if ch == 0x28:  # (
+                    depth += 1
+                    buf.append(ch)
+                    i += 1
+                    continue
+
+                if ch == 0x29:  # )
+                    depth -= 1
+                    if depth > 0:
+                        buf.append(ch)
+                    i += 1
+                    continue
+
+                buf.append(ch)
+                i += 1
+
+            if buf:
+                out.append(buf.decode("latin-1", errors="ignore"))
+
+        return out
+
+    def _decode_pdf_hex_strings(blob: bytes) -> List[str]:
+        out: List[str] = []
+        for m in re.finditer(rb"<([0-9A-Fa-f\s]{4,})>", blob):
+            raw = re.sub(rb"\s+", b"", m.group(1))
+            if len(raw) % 2 == 1:
+                raw += b"0"
+            try:
+                out.append(bytes.fromhex(raw.decode("ascii", errors="ignore")).decode("latin-1", errors="ignore"))
+            except Exception:
+                continue
+        return out
+
+    chunks: List[bytes] = [file_bytes]
+    for m in re.finditer(rb"stream\r?\n(.*?)\r?\nendstream", file_bytes, flags=re.S):
+        stream_data = m.group(1)
+        chunks.append(stream_data)
+
+        if b"/FlateDecode" in file_bytes[max(0, m.start() - 250):m.start()]:
+            try:
+                inflated = zlib.decompress(stream_data)
+                chunks.append(inflated)
+            except Exception:
+                pass
+
+    text_sources: List[str] = []
+    for chunk in chunks:
+        text_sources.append(chunk.decode("latin-1", errors="ignore"))
+        text_sources.extend(_decode_pdf_literal_strings(chunk))
+        text_sources.extend(_decode_pdf_hex_strings(chunk))
+
+    content = "\n".join(text_sources).upper()
+    candidates = set()
+
+    for token in re.findall(r"\b(?:CMAR\s*[:\-]?)?([A-Z0-9\-]{4,})\b", content):
+        normalized = _normalize_cmar_identifier(token)
+        if not normalized:
+            continue
+        if normalized.startswith("CMAR"):
+            normalized = normalized[4:]
+        if normalized.isdigit() and len(normalized) < 6:
+            continue
         if any(ch.isdigit() for ch in normalized) and len(normalized) >= 6:
             candidates.add(normalized)
 
@@ -4676,19 +4815,6 @@ def api_send_vtc_theory_exam(session_id: str, trainee_id: str):
     send_email = payload.get("send_email", True) in (True, "true", "1", 1, "yes", "on")
 
     result = _send_vtc_theory_exam_notification(s, t, send_email=send_email)
-
-    first_name_value = (t.get("first_name") or "").strip()
-    last_name_value = (t.get("last_name") or "").strip().upper()
-    full_name = " ".join(part for part in [first_name_value, last_name_value] if part).strip()
-    add_notification(
-        data,
-        "notifications_admin",
-        f"🚘 Convocation formation pratique VTC à envoyer {full_name}".strip(),
-        {
-            "session_id": session_id,
-            "trainee_id": trainee_id,
-        },
-    )
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
