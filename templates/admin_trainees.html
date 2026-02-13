@@ -88,7 +88,7 @@
         {% if show_vae %}<th>Suivi transmission</th>{% endif %}
         {% if not is_vtc and not show_vae %}<th>Test Français</th>{% endif %}
         {% if not is_vtc %}<th>Dossier</th>{% endif %}
-        <th>Dossier complet</th>
+        {% if not is_vtc %}<th>Dossier complet</th>{% endif %}
         {% if not is_vtc and not show_vae %}<th>CNAPS</th>{% endif %}
         {% if is_vtc %}<th>Inscription CMAR</th>{% endif %}
         {% if is_vtc %}<th>E-learning</th>{% endif %}
@@ -206,6 +206,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         </td>
         {% endif %}
 
+        {% if not is_vtc %}
         <td>
           <label class="inline" style="gap:6px;">
             <input type="checkbox"
@@ -216,6 +217,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
             <span class="muted">Forcer</span>
           </label>
         </td>
+        {% endif %}
 
         {% if not is_vtc and not show_vae %}
         <td>
