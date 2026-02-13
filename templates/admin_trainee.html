@@ -230,9 +230,9 @@
   📄 Fiche récap
 </a>
 
-      <form method="post" action="{{ url_for('admin_send_access', session_id=session.id, trainee_id=trainee.id) }}">
-  <button class="btn btn-primary btn-uniform btn-trainee-access-send" type="submit">
-    📩 SEND
+      <form method="post" action="{{ url_for('admin_send_access', session_id=session.id, trainee_id=trainee.id) }}" data-mail-sms-confirm="true">
+  <button class="btn btn-primary btn-uniform" type="submit">
+    📩 Espace stagiaire
   </button>
       </form>
 
@@ -1744,16 +1744,19 @@ function setDossierPill(status){
       [actionKey]: clickedAt,
     };
 
+    let sendVaeNotification = true;
     if(statusesSendingMail.includes(payload.vae_status)){
-      const ok = await window.confirmMailSmsSend?.();
-      if(!ok) return;
+      sendVaeNotification = await window.confirmMailSmsSend?.();
     }
 
     try{
       const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
         method:"POST",
         headers: {"Content-Type":"application/json"},
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          ...payload,
+          send_vae_notification: !!sendVaeNotification,
+        })
       });
       const data = await res.json().catch(()=>({}));
       if(!res.ok || data.ok === false){
@@ -2093,27 +2096,32 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
   const elearningInput = document.getElementById("editElearningLink");
   const elearningSaveHint = document.getElementById("elearningSaveHint");
   if(elearningInput){
-    elearningInput.addEventListener("input", ()=>{
-      if(contactDebounce.elearning_link) clearTimeout(contactDebounce.elearning_link);
-      contactDebounce.elearning_link = setTimeout(async ()=>{
-        try{
-          const result = await updateTrainee({ elearning_link: elearningInput.value });
-          if(!elearningSaveHint) return;
-          const sentAt = (result && result.elearning_link_sent_at) ? result.elearning_link_sent_at : "";
-          if(!sentAt){
-            elearningSaveHint.style.display = "none";
-            elearningSaveHint.innerHTML = "";
-            return;
-          }
-          const flags = [];
-          if(result.elearning_link_email_ok) flags.push("📧 Email envoyé");
-          if(result.elearning_link_sms_ok) flags.push("📱 SMS envoyé");
-          elearningSaveHint.style.display = "block";
-          elearningSaveHint.innerHTML = `✅ Notification e-learning envoyée (${flags.join(" • ") || "envoi en cours"})`;
-        }catch(e){
-          console.error("Erreur sauvegarde lien e-learning");
+    elearningInput.addEventListener("change", async ()=>{
+      try{
+        const linkValue = (elearningInput.value || "").trim();
+        let sendElearningNotification = false;
+        if(linkValue){
+          sendElearningNotification = await window.confirmMailSmsSend?.();
         }
-      }, 450);
+        const result = await updateTrainee({
+          elearning_link: linkValue,
+          send_elearning_notification: !!sendElearningNotification,
+        });
+        if(!elearningSaveHint) return;
+        const sentAt = (result && result.elearning_link_sent_at) ? result.elearning_link_sent_at : "";
+        if(!sentAt){
+          elearningSaveHint.style.display = "none";
+          elearningSaveHint.innerHTML = "";
+          return;
+        }
+        const flags = [];
+        if(result.elearning_link_email_ok) flags.push("📧 Email envoyé");
+        if(result.elearning_link_sms_ok) flags.push("📱 SMS envoyé");
+        elearningSaveHint.style.display = "block";
+        elearningSaveHint.innerHTML = `✅ Notification e-learning envoyée (${flags.join(" • ") || "envoi en cours"})`;
+      }catch(e){
+        console.error("Erreur sauvegarde lien e-learning");
+      }
     });
   }
 
@@ -2204,7 +2212,14 @@ const formatDateFr = (d) => {
 if(chkExamFeesPaid){
   chkExamFeesPaid.addEventListener("change", async ()=>{
     try{
-      await updateTrainee({ exam_fees_paid: chkExamFeesPaid.checked });
+      let sendExamFeesNotification = false;
+      if(chkExamFeesPaid.checked){
+        sendExamFeesNotification = await window.confirmMailSmsSend?.();
+      }
+      await updateTrainee({
+        exam_fees_paid: chkExamFeesPaid.checked,
+        send_exam_fees_notification: !!sendExamFeesNotification,
+      });
       if(examFeesPaidHint){
         if(chkExamFeesPaid.checked){
           examFeesPaidHint.style.display = "block";
