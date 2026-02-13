@@ -36,6 +36,7 @@
           `blocs_competences.activite${actIdx + 1}.competence${compIdx + 1}.statut`,
         ]),
       ).flat(2),
+      ...Array.from({ length: 5 }, (_, actIdx) => `blocs_competences.activite${actIdx + 1}.commentaires`),
     ],
     8: [
       'engagement.accord_analyse',
@@ -162,6 +163,11 @@
       const competence = competenceMatch[2];
       const type = competenceMatch[3] === 'intitule' ? 'Intitulé de la compétence' : 'Niveau de réalisation';
       return `Activité ${activite} – Compétence ${competence} : ${type}`;
+    }
+
+    const commentaireMatch = fieldName.match(/^blocs_competences\.activite(\d+)\.commentaires$/);
+    if (commentaireMatch) {
+      return `Activité ${commentaireMatch[1]} : Commentaires`;
     }
 
     if (fieldName === 'engagement.accord_analyse') return 'Accord pour l’analyse de la faisabilité';
@@ -315,6 +321,12 @@
             message: `Tous les champs sont obligatoires en 4ème étape (Activité ${idx}, compétence ${competenceIdx})`,
           });
         }
+      }
+      if (!String(activite.commentaires || '').trim()) {
+        e.push({
+          step: 5,
+          message: `Le commentaire est obligatoire pour l'Activité ${idx}`,
+        });
       }
     }
     if (!payload.engagement?.accord_analyse) e.push('accord_analyse obligatoire');

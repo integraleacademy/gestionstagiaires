@@ -186,7 +186,7 @@
             {% set comp = activity.get('competence' ~ idx, {}) %}
             <tr><td>{{ comp.intitule or '' }}</td><td>{{ comp.statut or '' }}</td></tr>
           {% endfor %}
-          <tr><td><strong>Commentaires :</strong></td><td class="value white"></td></tr>
+          <tr><td><strong>Commentaires :</strong></td><td class="value white">{{ activity.commentaires or '' }}</td></tr>
         </table>
       </section>
     {% endfor %}
