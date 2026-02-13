@@ -279,7 +279,10 @@
       <a class="btn btn-primary" href="{{ url_for('admin_vae_export', dossier_id=vae_dossier.id) }}">Télécharger PDF</a>
     </div>
     {% else %}
-    <span class="hint">Aucun livret 1 soumis pour ce stagiaire.</span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <button class="btn btn-disabled-muted" type="button" disabled aria-disabled="true">Télécharger PDF</button>
+      <span class="hint">Aucun livret 1 soumis pour ce stagiaire.</span>
+    </div>
     {% endif %}
   </div>
 
