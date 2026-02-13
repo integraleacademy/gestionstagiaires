@@ -455,7 +455,7 @@ def build_vtc_practice_convocation_email(first_name: str, practice_training_date
     trainee_first_name = (first_name or "").strip() or "Prénom"
     practice_date_fr = fr_date(practice_training_date) or "DATE FORMATION PRATIQUE"
 
-    subject = "Convocation formation pratique"
+    subject = "Formation pratique Chauffeur VTC 🚘"
     html = mail_layout(f"""
       <div style="background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:1px solid #dbeafe;border-radius:14px;padding:18px;">
         <h2 style="margin:0 0 12px 0;color:#0f172a;">Convocation formation pratique</h2>
@@ -499,9 +499,39 @@ def build_vtc_practice_convocation_sms(first_name: str, practice_training_date: 
     greeting = f"Bonjour {trainee_first_name}, " if trainee_first_name else "Bonjour, "
     return (
         "Intégrale Academy 🚗 "
-        f"{greeting}félicitations pour votre réussite à l'examen théorique. "
+        f"{greeting}Félicitations pour votre réussite à l'examen théorique Chauffeur VTC. "
         f"Votre formation pratique VTC est prévue le {practice_date_fr} de 08h30 à 12h00 "
-        "à Intégrale Academy, 54 chemin du Carreou 83480 Puget-sur-Argens."
+        "dans nos locaux Intégrale Academy, 54 chemin du Carreou 83480 Puget-sur-Argens. Pour plus d'informations, consultez vos mails."
+    )
+
+
+def _normalize_cmar_identifier(value: str) -> str:
+    raw = (value or "").strip().upper()
+    if not raw:
+        return ""
+    return "".join(ch for ch in raw if ch.isalnum())
+
+
+def _extract_cmar_identifiers_from_pdf(file_bytes: bytes) -> List[str]:
+    if not file_bytes:
+        return []
+
+    content = file_bytes.decode("latin-1", errors="ignore").upper()
+    candidates = set()
+
+    for token in re.findall(r"\b(?:CMAR\s*[:\-]?)?([A-Z0-9\-]{6,})\b", content):
+        normalized = _normalize_cmar_identifier(token)
+        if any(ch.isdigit() for ch in normalized) and len(normalized) >= 6:
+            candidates.add(normalized)
+
+    return sorted(candidates)
+
+
+def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any], send_email: bool = True) -> Dict[str, Any]:
+    practice_training_date = (
+        _session_get(session_obj, "practice_training_date", "")
+        or _session_get(session_obj, "exam_practice_date", "")
+        or _session_get(session_obj, "exam_date", "")
     )
 
 
