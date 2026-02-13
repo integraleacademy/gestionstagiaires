@@ -471,43 +471,6 @@
     </div>
   </details>
 
-  {% set vtc_theory_date = session.exam_theory_date or session.exam_date %}
-  {% set vtc_practice_training_date = session.practice_training_date or session.exam_practice_date or session.exam_date %}
-  <div class="card" style="margin-top:12px;">
-    <div style="font-weight:900;">STATUT VTC</div>
-    <div class="hint" style="margin-top:6px;">Actions de suivi VTC réservées à cette fiche stagiaire.</div>
-
-    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;align-items:center;">
-      <button class="btn {% if trainee.vtc_theory_exam_sent_at %}btn-primary{% else %}btn-outline{% endif %} btn-uniform"
-              type="button"
-              id="btnVtcTheoryExam"
-              {% if trainee.vtc_theory_exam_sent_at or is_read_only %}disabled{% endif %}>
-        Examen théorique le {{ vtc_theory_date|frdate }}
-      </button>
-
-      <button class="btn {% if trainee.vtc_practice_convocation_sent_at %}btn-primary{% else %}btn-outline{% endif %} btn-uniform"
-              type="button"
-              id="btnVtcPracticeConvocation"
-              {% if trainee.vtc_practice_convocation_sent_at or is_read_only %}disabled{% endif %}>
-        Convocation Formation pratique le {{ vtc_practice_training_date|frdate }}
-      </button>
-    </div>
-
-    <div id="vtcStatusHint" class="hint" style="margin-top:8px;
-      {% if not trainee.vtc_theory_exam_sent_at and not trainee.vtc_practice_convocation_sent_at and trainee.vtc_theory_result != "non_admissible" %}display:none;{% endif %}">
-      {% if trainee.vtc_theory_result == "non_admissible" %}
-        <div>❌ <strong>échec examen théorique</strong>{% if trainee.vtc_theory_failed_at %} le <strong>{{ trainee.vtc_theory_failed_at|frdatetime }}</strong>{% endif %}</div>
-      {% endif %}
-      {% if trainee.vtc_theory_exam_sent_at %}
-        ✅ Examen théorique validé le <strong>{{ trainee.vtc_theory_exam_sent_at|frdatetime }}</strong>
-        {% if trainee.vtc_theory_exam_email_ok %}<span style="margin-left:8px;">📧 Email envoyé</span>{% endif %}
-        {% if trainee.vtc_theory_exam_sms_ok %}<span style="margin-left:8px;">📱 SMS envoyé</span>{% endif %}
-      {% endif %}
-      {% if trainee.vtc_practice_convocation_sent_at %}
-        <div>✅ Convocation formation pratique validée le <strong>{{ trainee.vtc_practice_convocation_sent_at|frdatetime }}</strong></div>
-      {% endif %}
-    </div>
-  </div>
 {% endif %}
 
 <!-- ===================== -->

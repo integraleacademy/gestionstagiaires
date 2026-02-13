@@ -515,6 +515,22 @@ select.status-dot.status-pill{
 }
 .icon-btn:hover{border-color:#cbd5e1}
 .modal-body{padding:14px}
+.vtc-check-upload{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
+}
+
+.vtc-check-upload input[type="file"]{
+  max-width:100%;
+}
+
+.vtc-check-upload .btn{
+  white-space:nowrap;
+}
+
 .modal-foot{
   padding:14px;
   border-top:1px solid var(--line);
