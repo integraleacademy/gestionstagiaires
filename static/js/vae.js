@@ -178,16 +178,18 @@
     const step = current + 1;
     const payload = getPayload();
     const required = STEP_REQUIRED_FIELDS[step] || [];
+    const currentStepEl = steps[current];
+    currentStepEl?.querySelectorAll('.field-error').forEach((el) => el.classList.remove('field-error'));
     const missing = required.filter((field) => !hasValueForField(payload, field));
     if (!missing.length) {
       errorsEl.innerHTML = '';
       return true;
     }
-    const fieldsList = missing.map((field) => `<li>${humanizeFieldName(field)}</li>`).join('');
-    errorsEl.innerHTML = `
-      <div><strong>${STEP_LABELS[step] || `Étape ${step}`}</strong> : les champs suivants sont obligatoires avant de continuer.</div>
-      <ul>${fieldsList}</ul>
-    `;
+    missing.forEach((field) => {
+      const fieldElements = currentStepEl?.querySelectorAll(`[name="${field}"]`) || [];
+      fieldElements.forEach((el) => el.classList.add('field-error'));
+    });
+    errorsEl.innerHTML = '<div>Vous n\'avez pas rempli tous les champs</div>';
     return false;
   }
 

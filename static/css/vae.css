@@ -67,3 +67,5 @@ h3{margin:18px 0 8px;font-size:1.05rem}
 .signature-preview.signed{border-style:solid;border-color:#bfdbfe;background:#eff6ff}
 .signature-handwritten{font-family:"Brush Script MT","Segoe Script","Lucida Handwriting",cursive;font-size:2rem;color:#1f2937;min-height:40px}
 .signature-meta{font-family:Arial,sans-serif;font-size:10px;color:#111827;min-height:14px}
+
+.field-error{border:2px solid #dc2626 !important;box-shadow:0 0 0 1px #dc2626 inset}
