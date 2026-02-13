@@ -54,7 +54,6 @@ a:focus{
   text-decoration: underline;
 }
 
-
 /* Layout */
 .container{max-width:1200px;margin:0 auto;padding:18px 14px 28px}
 
@@ -91,7 +90,6 @@ a:focus{
 }
 .brand strong{font-weight:900;letter-spacing:.2px}
 .brand span{color:var(--muted);font-size:13px;margin-left:6px}
-
 
 .topbar-actions{
   display:flex;
@@ -407,7 +405,6 @@ input:focus, select:focus{
   font-weight:900;
 }
 .mini-btn:hover{border-color:#cbd5e1}
-
 
 /* =========================
    CNAPS badge
@@ -1104,7 +1101,6 @@ input[type="file"]{
     padding:0 16px 16px 16px;
     border-top:1px dashed #edf2f7;
   }
-
 
 /* =========================
    LIGNES STAGIAIRES — FINAL
