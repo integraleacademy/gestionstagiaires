@@ -536,6 +536,13 @@
   .vae-step-action{margin-top:4px;}
   .vae-step-action .btn{font-size:15px;padding:12px 14px;}
   .vae-step-action-note{font-size:13px;color:#9a3412;font-weight:700;}
+  .vae-step-lock{
+    position:absolute;
+    top:10px;
+    right:14px;
+    font-size:34px;
+    line-height:1;
+  }
 
   @media (max-width: 640px){
     .vtc-cta-label{align-items:flex-start;gap:10px;}
@@ -1352,8 +1359,8 @@ id="upload_{{ d.key }}"
           <p><strong>👉 Commencez maintenant votre Livret 1.</strong></p>
           <p class="vae-step-action"><a class="btn" href="/vae/nouveau/{{ token_safe }}" target="_blank" rel="noopener">Compléter mon Livret 1</a></p>
         {% else %}
-          <p>🔒</p>
-          <p class="muted">⚠️ Vous devez renseigner vos informations et déposer tous vos documents dans la rubrique Mes documents avant de commencer la rédaction de votre Livret 1 (dossier de faisabilité)</p>
+          <div class="vae-step-lock" aria-hidden="true">🔒</div>
+          <p class="muted">⚠️ Vous devez déposer tous vos documents dans la rubrique Mes documents avant de commencer la rédaction de votre Livret 1 (dossier de faisabilité)</p>
         {% endif %}
       </div>
 
