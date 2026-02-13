@@ -539,6 +539,13 @@ def _normalize_cmar_identifier(value: str) -> str:
     return "".join(ch for ch in raw if ch.isalnum())
 
 
+def _canonical_cmar_identifier(value: str) -> str:
+    normalized = _normalize_cmar_identifier(value)
+    if normalized.startswith("CMAR"):
+        return normalized[4:]
+    return normalized
+
+
 def _extract_cmar_identifiers_from_pdf(file_bytes: bytes) -> List[str]:
     if not file_bytes:
         return []
@@ -932,6 +939,59 @@ def _build_pdf_search_haystacks(file_bytes: bytes) -> Tuple[str, str]:
     return alnum_only, digits_only
 
 
+
+
+def _build_excel_search_haystacks(file_name: str, file_bytes: bytes) -> Tuple[str, str]:
+    """
+    Retourne 2 haystacks pour CSV/XLSX:
+    - alnum_only: contenu réduit à A-Z0-9
+    - digits_only: contenu réduit à 0-9
+    """
+    name = (file_name or "").lower().strip()
+    if not file_bytes:
+        return "", ""
+
+    texts: List[str] = []
+
+    if name.endswith(".csv"):
+        texts.append(file_bytes.decode("utf-8", errors="ignore"))
+    elif name.endswith(".xlsx"):
+        try:
+            with zipfile.ZipFile(BytesIO(file_bytes), "r") as zf:
+                shared_strings: List[str] = []
+                if "xl/sharedStrings.xml" in zf.namelist():
+                    root = ET.fromstring(zf.read("xl/sharedStrings.xml"))
+                    for si in root.findall("{*}si"):
+                        parts = [t.text or "" for t in si.findall(".//{*}t")]
+                        shared_strings.append("".join(parts))
+
+                sheet_files = [n for n in zf.namelist() if re.match(r"xl/worksheets/sheet\d+\.xml", n)]
+                for sheet in sheet_files:
+                    root = ET.fromstring(zf.read(sheet))
+                    for c in root.findall(".//{*}c"):
+                        cell_type = c.attrib.get("t") or ""
+                        v = c.find("{*}v")
+                        if v is None or v.text is None:
+                            continue
+                        raw = v.text.strip()
+                        if not raw:
+                            continue
+                        if cell_type == "s":
+                            try:
+                                idx = int(raw)
+                                if 0 <= idx < len(shared_strings):
+                                    texts.append(shared_strings[idx])
+                            except Exception:
+                                continue
+                        else:
+                            texts.append(raw)
+        except Exception:
+            return "", ""
+
+    merged = "\n".join(texts).upper()
+    alnum_only = re.sub(r"[^A-Z0-9]", "", merged)
+    digits_only = re.sub(r"[^0-9]", "", merged)
+    return alnum_only, digits_only
 def _extract_cmar_identifiers_from_excel(file_name: str, file_bytes: bytes) -> List[str]:
     name = (file_name or "").lower().strip()
     if not file_bytes:
@@ -5390,15 +5450,17 @@ def api_vtc_check_import():
     except Exception:
         return jsonify({"ok": False, "error": "file_parse_error"}), 400
 
-    pdf_alnum, pdf_digits = ("", "")
+    file_alnum, file_digits = ("", "")
     if filename.endswith(".pdf"):
-        pdf_alnum, pdf_digits = _build_pdf_search_haystacks(pdf_bytes)
+        file_alnum, file_digits = _build_pdf_search_haystacks(pdf_bytes)
+    else:
+        file_alnum, file_digits = _build_excel_search_haystacks(filename, pdf_bytes)
 
     if not identifiers:
         return jsonify({"ok": True, "matches": [], "count": 0, "message": "aucun stagiaire VTC trouvé"})
 
     data = load_data()
-    wanted = set(identifiers)
+    wanted = {_canonical_cmar_identifier(identifier) for identifier in identifiers if _canonical_cmar_identifier(identifier)}
     admissible_matches = []
     non_admissible_matches = []
     seen = set()
@@ -5409,15 +5471,15 @@ def api_vtc_check_import():
         trainees = _session_trainees_list(sess)
         for trainee in trainees:
             cmar_id_raw = trainee.get("vtc_cmar_id") or ""
-            cmar_id = _normalize_cmar_identifier(cmar_id_raw)
+            cmar_id = _canonical_cmar_identifier(cmar_id_raw)
             if not cmar_id:
                 continue
 
             token_match = cmar_id in wanted
 
             cmar_digits = re.sub(r"\D", "", cmar_id)
-            fallback_alnum_match = bool(pdf_alnum and cmar_id in pdf_alnum)
-            fallback_digits_match = bool(cmar_digits and len(cmar_digits) >= 6 and pdf_digits and cmar_digits in pdf_digits)
+            fallback_alnum_match = bool(file_alnum and cmar_id in file_alnum)
+            fallback_digits_match = bool(cmar_digits and len(cmar_digits) >= 6 and file_digits and cmar_digits in file_digits)
 
             if not (token_match or fallback_alnum_match or fallback_digits_match):
                 continue
