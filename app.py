@@ -3373,8 +3373,10 @@ def admin_sessions():
         elif dt_start and dt_start <= today:
             status_key = "ongoing"
 
+        if status_key == "ended":
+            continue
+
         status_label = {
-            "ended": "Formation terminée",
             "ongoing": "Formation en cours",
             "upcoming": "Prochainement",
         }[status_key]
