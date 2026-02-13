@@ -4642,6 +4642,19 @@ def api_send_vtc_theory_exam(session_id: str, trainee_id: str):
     t["vtc_theory_exam_sms_ok"] = bool(sms_ok)
     t["updated_at"] = _now_iso()
 
+    first_name_value = (t.get("first_name") or "").strip()
+    last_name_value = (t.get("last_name") or "").strip().upper()
+    full_name = " ".join(part for part in [first_name_value, last_name_value] if part).strip()
+    add_notification(
+        data,
+        "notifications_admin",
+        f"🚘 Convocation formation pratique VTC à envoyer {full_name}".strip(),
+        {
+            "session_id": session_id,
+            "trainee_id": trainee_id,
+        },
+    )
+
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     save_data(data)
