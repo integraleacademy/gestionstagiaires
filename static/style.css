@@ -200,6 +200,13 @@ h2{margin:0;font-size:20px;color:var(--text)}
   box-shadow:0 0 0 2px rgba(249,115,22,.25);
 }
 
+.btn-disabled-muted{
+  background:#f3f4f6;
+  border-color:#d1d5db;
+  color:#6b7280;
+  box-shadow:none;
+}
+
 /* =========================
    SESSION HEADER
    ========================= */
