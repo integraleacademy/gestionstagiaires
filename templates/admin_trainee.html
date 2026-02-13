@@ -47,6 +47,9 @@
       <button class="btn btn-outline btn-uniform" type="button" data-open-section="phoneRelanceSection">
         📞 RELANCE TEL
       </button>
+      <button class="btn btn-outline btn-uniform" type="button" onclick="openModal('historyModal')">
+        📜 Historique
+      </button>
       {% if show_vae %}
         <button class="btn {% if vae_action_dates.get('livret_1_transmitted_scotia') %}btn-disabled-muted{% else %}btn-blue{% endif %} btn-uniform" type="button" onclick="setVaeAction('livret_1_transmitted_scotia')" {% if vae_action_dates.get('livret_1_transmitted_scotia') %}disabled{% endif %} {{ read_only_attr }}>
           L1 transmis scotia
@@ -785,6 +788,36 @@
   </div>
 </div> 
 
+<div class="modal-backdrop" id="historyModal" aria-hidden="true">
+  <div class="modal" style="max-width:760px;">
+    <div class="modal-head">
+      <div class="modal-title">Historique complet des échanges</div>
+      <button class="icon-btn" type="button" data-close-modal="historyModal">✕</button>
+    </div>
+    <div class="modal-body" style="max-height:65vh;overflow:auto;">
+      {% if trainee_history %}
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          {% for item in trainee_history %}
+            <div style="border:1px solid #e5e7eb;border-radius:12px;padding:10px;background:#fff;">
+              <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+                <div style="font-weight:800;">{{ item.emoji }} {{ item.label }}</div>
+                <div class="hint" style="white-space:nowrap;">{{ item.at_display }}</div>
+              </div>
+              {% if item.details %}
+                <div style="margin-top:6px;white-space:pre-wrap;">{{ item.details }}</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="hint">Aucun historique pour le moment.</div>
+      {% endif %}
+    </div>
+    <div class="modal-foot">
+      <button class="btn" type="button" data-close-modal="historyModal">Fermer</button>
+    </div>
+  </div>
+</div>
 
 
 </details>
