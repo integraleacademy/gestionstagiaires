@@ -539,6 +539,13 @@ def _normalize_cmar_identifier(value: str) -> str:
     return "".join(ch for ch in raw if ch.isalnum())
 
 
+def _canonical_cmar_identifier(value: str) -> str:
+    normalized = _normalize_cmar_identifier(value)
+    if normalized.startswith("CMAR"):
+        return normalized[4:]
+    return normalized
+
+
 def _extract_cmar_identifiers_from_pdf(file_bytes: bytes) -> List[str]:
     if not file_bytes:
         return []
@@ -5398,7 +5405,7 @@ def api_vtc_check_import():
         return jsonify({"ok": True, "matches": [], "count": 0, "message": "aucun stagiaire VTC trouvé"})
 
     data = load_data()
-    wanted = set(identifiers)
+    wanted = {_canonical_cmar_identifier(identifier) for identifier in identifiers if _canonical_cmar_identifier(identifier)}
     admissible_matches = []
     non_admissible_matches = []
     seen = set()
@@ -5409,7 +5416,7 @@ def api_vtc_check_import():
         trainees = _session_trainees_list(sess)
         for trainee in trainees:
             cmar_id_raw = trainee.get("vtc_cmar_id") or ""
-            cmar_id = _normalize_cmar_identifier(cmar_id_raw)
+            cmar_id = _canonical_cmar_identifier(cmar_id_raw)
             if not cmar_id:
                 continue
 
