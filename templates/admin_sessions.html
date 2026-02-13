@@ -186,6 +186,7 @@
     <a class="btn btn-outline" href="{{ url_for('admin_secretariat') }}">Gestion secrétariat</a>
     {% if not is_read_only %}
       <button class="btn btn-outline" id="btnOpenVtcCheck">Check VTC théorie</button>
+      <button class="btn btn-outline" id="btnOpenVtcPracticeCheck">Check VTC pratique</button>
     {% endif %}
     <a class="btn btn-outline" href="{{ url_for('admin_sessions_archived') }}">Sessions archivées</a>
     {% if not is_read_only %}
@@ -496,13 +497,13 @@
 <div class="modal-backdrop" id="vtcCheckModal" aria-hidden="true">
   <div class="modal">
     <div class="modal-head">
-      <div class="modal-title">Check VTC</div>
+      <div class="modal-title" id="vtcCheckModalTitle">Check VTC théorie</div>
       <button class="icon-btn" data-close-modal="vtcCheckModal">✕</button>
     </div>
 
     <div class="modal-body">
       <div class="muted" style="margin-bottom:10px;">
-        Importe un fichier PDF, Excel (.xlsx) ou CSV contenant des identifiants CMAR pour vérifier automatiquement les stagiaires VTC.
+        <span id="vtcCheckModalDescription">Importe un fichier PDF, Excel (.xlsx) ou CSV contenant des identifiants CMAR pour vérifier automatiquement les stagiaires VTC.</span>
       </div>
 
       <div class="vtc-check-upload">
@@ -1206,9 +1207,15 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
     await loadCnapsSessions();
   });
 
-  const vtcCheckState = { matches: [], admissibleMatches: [], nonAdmissibleMatches: [] };
+  const vtcCheckState = {
+    mode: "theory",
+    matches: [],
+    admissibleMatches: [],
+    nonAdmissibleMatches: [],
+  };
 
-  document.getElementById("btnOpenVtcCheck")?.addEventListener("click", ()=>{
+  function resetVtcCheckModal(mode){
+    vtcCheckState.mode = mode;
     vtcCheckState.matches = [];
     vtcCheckState.admissibleMatches = [];
     vtcCheckState.nonAdmissibleMatches = [];
@@ -1216,11 +1223,21 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
     const list = document.getElementById("vtcCheckList");
     const notifyBtn = document.getElementById("btnVtcCheckNotify");
     const fileInput = document.getElementById("vtcCheckFile");
+    const modalTitle = document.getElementById("vtcCheckModalTitle");
     if(status) status.textContent = "";
     if(list) list.innerHTML = "";
     if(notifyBtn) notifyBtn.style.display = "none";
     if(fileInput) fileInput.value = "";
+    if(modalTitle) modalTitle.textContent = mode === "practice" ? "Check VTC pratique" : "Check VTC théorie";
     openModal("vtcCheckModal");
+  }
+
+  document.getElementById("btnOpenVtcCheck")?.addEventListener("click", ()=>{
+    resetVtcCheckModal("theory");
+  });
+
+  document.getElementById("btnOpenVtcPracticeCheck")?.addEventListener("click", ()=>{
+    resetVtcCheckModal("practice");
   });
 
   document.getElementById("btnVtcCheckImport")?.addEventListener("click", async ()=>{
@@ -1244,7 +1261,7 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
     try{
       const fd = new FormData();
       fd.append("file", file);
-      const r = await fetch("/api/vtc/check/import", { method:"POST", body: fd });
+      const r = await fetch(`/api/vtc/check/import?mode=${encodeURIComponent(vtcCheckState.mode)}`, { method:"POST", body: fd });
       const res = await r.json();
       if(!r.ok || !res.ok){
         if(status) status.textContent = "Impossible de lire ce fichier.";
@@ -1304,7 +1321,7 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
         trainee_id: it.trainee_id,
         status: it.status || "admissible",
       }));
-      const r = await fetch("/api/vtc/check/notify", {
+      const r = await fetch(`/api/vtc/check/notify?mode=${encodeURIComponent(vtcCheckState.mode)}`, {
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body: JSON.stringify({ items })
