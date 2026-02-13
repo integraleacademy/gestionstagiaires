@@ -58,9 +58,6 @@
                 {% if trainee.vtc_book_sent_at or is_read_only %}disabled{% endif %}>
           📚 Livre VTC
         </button>
-        <span class="hint" id="vtcBookStatusTop" style="{% if not trainee.vtc_book_sent_at %}display:none;{% endif %}">
-          ✅ Livre VTC envoyé le <strong id="vtcBookStatusTopDate">{{ trainee.vtc_book_sent_at|frdate }}</strong>
-        </span>
       {% endif %}
       {% if show_vae %}
         <button class="btn {% if vae_action_dates.get('livret_1_transmitted_scotia') %}btn-disabled-muted{% else %}btn-blue{% endif %} btn-uniform" type="button" onclick="setVaeAction('livret_1_transmitted_scotia')" {% if vae_action_dates.get('livret_1_transmitted_scotia') %}disabled{% endif %} {{ read_only_attr }}>
@@ -2058,8 +2055,6 @@ if(traineeComment){
   const btnConfirmVtcBookSent = document.getElementById("btnConfirmVtcBookSent");
   const vtcBookSentLine = document.getElementById("vtcBookSentLine");
   const vtcBookSentDate = document.getElementById("vtcBookSentDate");
-  const vtcBookStatusTop = document.getElementById("vtcBookStatusTop");
-  const vtcBookStatusTopDate = document.getElementById("vtcBookStatusTopDate");
 
   // 1) Calcul des docs manquants / non conformes depuis le tableau docs
   function computeMissingDocsFromTable(){
@@ -2212,8 +2207,6 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
 
       if(vtcBookSentDate) vtcBookSentDate.textContent = sentAt;
       if(vtcBookSentLine) vtcBookSentLine.style.display = "block";
-      if(vtcBookStatusTopDate) vtcBookStatusTopDate.textContent = sentAt;
-      if(vtcBookStatusTop) vtcBookStatusTop.style.display = "inline";
       btnConfirmVtcBookSent.classList.remove("btn-primary");
       btnConfirmVtcBookSent.classList.add("btn-disabled-muted");
       if(btnOpenVtcBookModal){
