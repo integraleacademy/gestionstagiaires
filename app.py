@@ -969,6 +969,89 @@ def _extract_cmar_identifiers_from_excel(file_name: str, file_bytes: bytes) -> L
     return _ids_from_text("\n".join(texts))
 
 
+def _extract_vtc_exam_results(file_name: str, file_bytes: bytes) -> Dict[str, Any]:
+    name = (file_name or "").lower().strip()
+    ids = _extract_cmar_identifiers_from_pdf(file_bytes) if name.endswith(".pdf") else _extract_cmar_identifiers_from_excel(file_name, file_bytes)
+    admissible_ids = set()
+    non_admissible_ids = set()
+
+    def _status_from_text(text: str) -> str:
+        txt = (text or "").upper()
+        if "NON ADMISSIBLE" in txt:
+            return "non_admissible"
+        if "ADMISSIBLE" in txt:
+            return "admissible"
+        return ""
+
+    row_texts: List[str] = []
+
+    if name.endswith(".csv"):
+        csv_text = file_bytes.decode("utf-8", errors="ignore")
+        row_texts = [line for line in csv_text.splitlines() if line.strip()]
+    elif name.endswith(".xlsx"):
+        try:
+            with zipfile.ZipFile(BytesIO(file_bytes), "r") as zf:
+                shared_strings: List[str] = []
+                if "xl/sharedStrings.xml" in zf.namelist():
+                    root = ET.fromstring(zf.read("xl/sharedStrings.xml"))
+                    for si in root.findall("{*}si"):
+                        parts = [t.text or "" for t in si.findall(".//{*}t")]
+                        shared_strings.append("".join(parts))
+
+                sheet_files = [n for n in zf.namelist() if re.match(r"xl/worksheets/sheet\d+\.xml", n)]
+                for sheet in sheet_files:
+                    root = ET.fromstring(zf.read(sheet))
+                    for row in root.findall(".//{*}row"):
+                        row_values = []
+                        for c in row.findall("{*}c"):
+                            cell_type = c.attrib.get("t") or ""
+                            v = c.find("{*}v")
+                            if v is None or v.text is None:
+                                continue
+                            raw = v.text.strip()
+                            if not raw:
+                                continue
+                            if cell_type == "s":
+                                try:
+                                    idx = int(raw)
+                                    if 0 <= idx < len(shared_strings):
+                                        row_values.append(shared_strings[idx])
+                                except Exception:
+                                    continue
+                            else:
+                                row_values.append(raw)
+                        if row_values:
+                            row_texts.append(" ".join(row_values))
+        except Exception:
+            row_texts = []
+    elif name.endswith(".pdf"):
+        content = file_bytes.decode("latin-1", errors="ignore")
+        row_texts = [line for line in content.splitlines() if line.strip()]
+
+    for line in row_texts:
+        status = _status_from_text(line)
+        if not status:
+            continue
+        tokens = re.findall(r"\b(?:CMAR\s*[:\-]?)?([A-Z0-9\-]{4,})\b", line.upper())
+        for token in tokens:
+            normalized = _normalize_cmar_identifier(token)
+            if normalized.startswith("CMAR"):
+                normalized = normalized[4:]
+            if not normalized:
+                continue
+            if status == "non_admissible":
+                non_admissible_ids.add(normalized)
+                admissible_ids.discard(normalized)
+            elif normalized not in non_admissible_ids:
+                admissible_ids.add(normalized)
+
+    return {
+        "all_ids": sorted(set(ids)),
+        "admissible_ids": sorted(admissible_ids),
+        "non_admissible_ids": sorted(non_admissible_ids),
+    }
+
+
 def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any], send_email: bool = True) -> Dict[str, Any]:
     practice_training_date = (
         _session_get(session_obj, "practice_training_date", "")
@@ -5134,10 +5217,10 @@ def api_vtc_check_import():
     pdf_bytes = pdf.read() or b""
 
     try:
-        if filename.endswith(".pdf"):
-            identifiers = _extract_cmar_identifiers_from_pdf(pdf_bytes)
-        else:
-            identifiers = _extract_cmar_identifiers_from_excel(filename, pdf_bytes)
+        extraction = _extract_vtc_exam_results(filename, pdf_bytes)
+        identifiers = extraction.get("all_ids") or []
+        admissible_tokens = set(extraction.get("admissible_ids") or [])
+        non_admissible_tokens = set(extraction.get("non_admissible_ids") or [])
     except Exception:
         return jsonify({"ok": False, "error": "file_parse_error"}), 400
 
@@ -5150,7 +5233,8 @@ def api_vtc_check_import():
 
     data = load_data()
     wanted = set(identifiers)
-    matches = []
+    admissible_matches = []
+    non_admissible_matches = []
     seen = set()
 
     for sess in data.get("sessions", []):
@@ -5178,24 +5262,43 @@ def api_vtc_check_import():
             if key in seen:
                 continue
             seen.add(key)
-            matches.append({
+            target = admissible_matches
+            status = "admissible"
+            if cmar_id in non_admissible_tokens:
+                target = non_admissible_matches
+                status = "non_admissible"
+            elif admissible_tokens and cmar_id in admissible_tokens:
+                target = admissible_matches
+                status = "admissible"
+
+            target.append({
                 "session_id": sess.get("id") or "",
                 "session_name": sess.get("name") or "",
                 "trainee_id": trainee.get("id") or "",
                 "first_name": (trainee.get("first_name") or "").strip(),
                 "last_name": (trainee.get("last_name") or "").strip(),
                 "cmar_id": trainee.get("vtc_cmar_id") or "",
+                "status": status,
             })
 
-    count = len(matches)
+    count_adm = len(admissible_matches)
+    count_non_adm = len(non_admissible_matches)
+    count = count_adm + count_non_adm
     if count == 0:
         message = "aucun stagiaire VTC trouvé"
-    elif count == 1:
-        message = "1 stagiaire VTC trouvé"
     else:
-        message = f"{count} stagiaires VTC trouvés"
+        message = f"{count} stagiaire(s) trouvé(s) • {count_adm} admissible(s) • {count_non_adm} non admissible(s)"
 
-    return jsonify({"ok": True, "matches": matches, "count": count, "message": message})
+    return jsonify({
+        "ok": True,
+        "matches": admissible_matches + non_admissible_matches,
+        "admissible_matches": admissible_matches,
+        "non_admissible_matches": non_admissible_matches,
+        "count": count,
+        "admissible_count": count_adm,
+        "non_admissible_count": count_non_adm,
+        "message": message,
+    })
 
 
 @app.post("/api/vtc/check/notify")
@@ -5210,6 +5313,7 @@ def api_vtc_check_notify():
     data = load_data()
     sent = 0
     failed = 0
+    non_admissible_marked = 0
 
     for item in items:
         session_id = str(item.get("session_id") or "").strip()
@@ -5228,13 +5332,35 @@ def api_vtc_check_notify():
             failed += 1
             continue
 
-        _send_vtc_theory_exam_notification(sess, trainee, send_email=True)
+        status = str(item.get("status") or "admissible").strip().lower()
+        if status == "non_admissible":
+            trainee["vtc_theory_result"] = "non_admissible"
+            trainee["vtc_theory_result_label"] = "échec examen théorique"
+            trainee["vtc_theory_failed_at"] = _now_iso()
+            add_admin_notification(
+                data,
+                f"🚘 {_format_trainee_name(trainee.get('first_name', ''), trainee.get('last_name', ''))} a échoué à l'examen théorique VTC",
+                {
+                    "kind": "vtc_theory_exam_failed",
+                    "session_id": sess.get("id") or "",
+                    "session_name": sess.get("name") or "",
+                    "trainee_id": trainee.get("id") or "",
+                    "first_name": trainee.get("first_name") or "",
+                    "last_name": trainee.get("last_name") or "",
+                },
+            )
+            non_admissible_marked += 1
+        else:
+            trainee["vtc_theory_result"] = "admissible"
+            trainee["vtc_theory_result_label"] = "admissible"
+            _send_vtc_theory_exam_notification(sess, trainee, send_email=True)
+            sent += 1
+
         sess["trainees"] = trainees
         sess.pop("stagiaires", None)
-        sent += 1
 
     save_data(data)
-    return jsonify({"ok": True, "sent": sent, "failed": failed})
+    return jsonify({"ok": True, "sent": sent, "failed": failed, "non_admissible_marked": non_admissible_marked})
 
 @app.post("/api/sessions/<session_id>/trainees/<trainee_id>/delete")
 @admin_login_required

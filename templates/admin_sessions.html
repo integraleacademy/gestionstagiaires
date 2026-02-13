@@ -1197,10 +1197,12 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
     await loadCnapsSessions();
   });
 
-  const vtcCheckState = { matches: [] };
+  const vtcCheckState = { matches: [], admissibleMatches: [], nonAdmissibleMatches: [] };
 
   document.getElementById("btnOpenVtcCheck")?.addEventListener("click", ()=>{
     vtcCheckState.matches = [];
+    vtcCheckState.admissibleMatches = [];
+    vtcCheckState.nonAdmissibleMatches = [];
     const status = document.getElementById("vtcCheckStatus");
     const list = document.getElementById("vtcCheckList");
     const notifyBtn = document.getElementById("btnVtcCheckNotify");
@@ -1220,13 +1222,13 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
     const btn = document.getElementById("btnVtcCheckImport");
     const file = fileInput?.files?.[0];
 
-    if(!file){
-      if(status) status.textContent = "Veuillez choisir un PDF.";
+      if(!file){
+      if(status) status.textContent = "Veuillez choisir un fichier.";
       return;
     }
 
     btn.disabled = true;
-    if(status) status.textContent = "Analyse du PDF en cours…";
+    if(status) status.textContent = "Analyse du fichier en cours…";
     if(list) list.innerHTML = "";
     if(notifyBtn) notifyBtn.style.display = "none";
 
@@ -1236,26 +1238,37 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
       const r = await fetch("/api/vtc/check/import", { method:"POST", body: fd });
       const res = await r.json();
       if(!r.ok || !res.ok){
-        if(status) status.textContent = "Impossible de lire ce PDF.";
+        if(status) status.textContent = "Impossible de lire ce fichier.";
         return;
       }
 
       vtcCheckState.matches = res.matches || [];
+      vtcCheckState.admissibleMatches = res.admissible_matches || [];
+      vtcCheckState.nonAdmissibleMatches = res.non_admissible_matches || [];
       if(status) status.textContent = res.message || "Aucun résultat.";
 
       if(vtcCheckState.matches.length){
         if(list){
-          list.innerHTML = vtcCheckState.matches.map(it => {
+          const renderItem = (it, isAdmissible) => {
             const full = `${(it.last_name || "").toUpperCase()} ${(it.first_name || "")}`.trim();
             return `
               <div class="vtc-check-item">
                 <strong>${full || "—"}</strong>
-                <span>${it.session_name || "Session"} • CMAR: ${it.cmar_id || "—"}</span>
+                <span>${it.session_name || "Session"} • CMAR: ${it.cmar_id || "—"} • ${isAdmissible ? "✅ ADMISSIBLE" : "❌ NON ADMISSIBLE"}</span>
               </div>
             `;
-          }).join("");
+          };
+
+          const admissibleHtml = vtcCheckState.admissibleMatches.length
+            ? `<div class="hint" style="margin:8px 0 4px 0;"><strong>Admissibles (${vtcCheckState.admissibleMatches.length})</strong></div>${vtcCheckState.admissibleMatches.map(it => renderItem(it, true)).join("")}`
+            : "";
+          const nonAdmissibleHtml = vtcCheckState.nonAdmissibleMatches.length
+            ? `<div class="hint" style="margin:12px 0 4px 0;"><strong>Non admissibles (${vtcCheckState.nonAdmissibleMatches.length})</strong></div>${vtcCheckState.nonAdmissibleMatches.map(it => renderItem(it, false)).join("")}`
+            : "";
+
+          list.innerHTML = admissibleHtml + nonAdmissibleHtml;
         }
-        if(notifyBtn) notifyBtn.style.display = "inline-flex";
+        if(notifyBtn) notifyBtn.style.display = vtcCheckState.admissibleMatches.length ? "inline-flex" : "none";
       }
     }catch(e){
       if(status) status.textContent = "Erreur réseau.";
@@ -1267,8 +1280,8 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
   document.getElementById("btnVtcCheckNotify")?.addEventListener("click", async ()=>{
     const status = document.getElementById("vtcCheckStatus");
     const btn = document.getElementById("btnVtcCheckNotify");
-    if(!vtcCheckState.matches.length){
-      if(status) status.textContent = "Aucun stagiaire à notifier.";
+    if(!vtcCheckState.admissibleMatches.length){
+      if(status) status.textContent = "Aucun stagiaire admissible à notifier.";
       return;
     }
 
@@ -1279,6 +1292,7 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
       const items = vtcCheckState.matches.map(it => ({
         session_id: it.session_id,
         trainee_id: it.trainee_id,
+        status: it.status || "admissible",
       }));
       const r = await fetch("/api/vtc/check/notify", {
         method:"POST",
@@ -1290,7 +1304,7 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
         if(status) status.textContent = "Erreur pendant l'envoi des notifications.";
         return;
       }
-      if(status) status.textContent = `${res.sent || 0} stagiaire(s) notifié(s).`;
+      if(status) status.textContent = `${res.sent || 0} admissible(s) notifié(s) • ${res.non_admissible_marked || 0} non admissible(s) marqué(s) en échec.`;
     }catch(e){
       if(status) status.textContent = "Erreur réseau.";
     }finally{
