@@ -826,6 +826,14 @@
   </div>
 </div>
 
+{% if is_vtc %}
+<div class="modal-backdrop" id="vtcBookModal" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Envoi livre VTC</div>
+      <button class="icon-btn" type="button" data-close-modal="vtcBookModal">✕</button>
+    </div>
+
     <div class="modal-body">
       <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:12px;line-height:1.5;white-space:pre-line;">
 {{ (trainee.first_name or "Prénom") ~ " " ~ (trainee.last_name or "NOM") }}
