@@ -87,7 +87,7 @@
         {% if show_vae %}<th>VAE</th>{% endif %}
         {% if show_vae %}<th>Suivi transmission</th>{% endif %}
         {% if not is_vtc and not show_vae %}<th>Test Français</th>{% endif %}
-        <th>Dossier</th>
+        {% if not is_vtc %}<th>Dossier</th>{% endif %}
         <th>Dossier complet</th>
         {% if not is_vtc and not show_vae %}<th>CNAPS</th>{% endif %}
         {% if is_vtc %}<th>Inscription CMAR</th>{% endif %}
@@ -197,12 +197,14 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 
 
 
+        {% if not is_vtc %}
         <td>
           <select class="status sel status-dot" data-field="dossier_status" {{ read_only_attr }}>
             <option value="complete" {% if t.dossier_status=="complete" %}selected{% endif %}>🟢</option>
             <option value="incomplete" {% if t.dossier_status=="incomplete" %}selected{% endif %}>🔴</option>
           </select>
         </td>
+        {% endif %}
 
         <td>
           <label class="inline" style="gap:6px;">

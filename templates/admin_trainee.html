@@ -83,6 +83,9 @@
         </form>
       {% endif %}
     </div>
+    {% if is_vtc and trainee.vtc_book_sent_at %}
+      <div class="hint" id="bookSentInlineHint" style="margin-top:8px;">✅ Livre VTC envoyé le <strong>{{ trainee.vtc_book_sent_at|frdate }}</strong></div>
+    {% endif %}
   </div>
 
 </div>
@@ -823,6 +826,37 @@
 {% endif %}
 
 </details>
+
+{% if is_vtc %}
+<div class="modal-backdrop" id="bookSentModal" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Envoi livre VTC</div>
+      <button class="icon-btn" type="button" data-close-modal="bookSentModal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <pre style="white-space:pre-wrap;margin:0;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px;font-family:inherit;">{{ (trainee.first_name or "Prénom")|trim }} {{ (trainee.last_name or "NOM")|trim|upper }}
+{{ trainee.address or "Adresse" }}
+{{ trainee.zip_code or "Code postal" }} {{ (trainee.city or "VILLE")|upper }}</pre>
+
+      <div id="bookSentHint" class="hint" style="margin-top:10px;{% if not trainee.vtc_book_sent_at %}display:none;{% endif %}">
+        ✅ Livre VTC envoyé le {{ trainee.vtc_book_sent_at|frdate }}
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" type="button" data-close-modal="bookSentModal">Fermer</button>
+      <button class="btn {% if trainee.vtc_book_sent_at %}btn-disabled-muted{% else %}btn-primary{% endif %}"
+              type="button"
+              id="btnBookSent"
+              {% if trainee.vtc_book_sent_at or is_read_only %}disabled{% endif %}>
+        Livre envoyé
+      </button>
+    </div>
+  </div>
+</div>
+{% endif %}
 
   <!-- ===================== -->
   <!-- DOCUMENTS (pleine largeur) -->
@@ -2277,6 +2311,56 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
     if(!input) return;
     input.addEventListener("input", saveVtcCredentialsFromAdmin);
   });
+
+  const btnOpenBookModal = document.getElementById("btnOpenBookModal");
+  const btnBookSent = document.getElementById("btnBookSent");
+  const bookSentHint = document.getElementById("bookSentHint");
+  const bookSentInlineHint = document.getElementById("bookSentInlineHint");
+  if(btnOpenBookModal){
+    btnOpenBookModal.addEventListener("click", ()=>openModal("bookSentModal"));
+  }
+  if(btnBookSent){
+    btnBookSent.addEventListener("click", async ()=>{
+      if(btnBookSent.disabled) return;
+      btnBookSent.disabled = true;
+      btnBookSent.textContent = "Enregistrement...";
+      try{
+        const nowIso = new Date().toISOString();
+        await updateTrainee({ vtc_book_sent_at: nowIso });
+        const nowFr = new Date(nowIso).toLocaleDateString("fr-FR");
+        if(bookSentHint){
+          bookSentHint.style.display = "block";
+          bookSentHint.innerHTML = `✅ Livre VTC envoyé le ${nowFr}`;
+        }
+        if(bookSentInlineHint){
+          bookSentInlineHint.style.display = "block";
+          bookSentInlineHint.innerHTML = `✅ Livre VTC envoyé le <strong>${nowFr}</strong>`;
+        }
+        if(!bookSentInlineHint){
+          const host = btnOpenBookModal?.parentElement;
+          if(host){
+            const line = document.createElement("div");
+            line.id = "bookSentInlineHint";
+            line.className = "hint";
+            line.style.marginTop = "8px";
+            line.innerHTML = `✅ Livre VTC envoyé le <strong>${nowFr}</strong>`;
+            host.insertAdjacentElement("afterend", line);
+          }
+        }
+        btnBookSent.classList.remove("btn-primary");
+        btnBookSent.classList.add("btn-disabled-muted");
+        btnBookSent.textContent = "Livre envoyé";
+        if(btnOpenBookModal){
+          btnOpenBookModal.disabled = true;
+          btnOpenBookModal.classList.add("btn-disabled-muted");
+        }
+      }catch(e){
+        btnBookSent.disabled = false;
+        btnBookSent.textContent = "Livre envoyé";
+        alert("Erreur lors de l'enregistrement de l'envoi du livre.");
+      }
+    });
+  }
 
 const chkHideInfos = document.getElementById("chkHideInfos");
 if(chkHideInfos){
