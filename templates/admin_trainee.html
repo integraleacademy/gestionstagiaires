@@ -1706,6 +1706,7 @@ function setDossierPill(status){
     const currentVaeActionDates = {{ (trainee.vae_action_dates or {})|tojson }};
     const now = new Date();
     const clickedAt = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
+    const statusesSendingMail = ["livret_1_analysis", "livret_1_validated", "livret_2_analysis", "livret_2_validated", "jury"];
 
     if(actionKey === "livret_1_received"){
       payload.vae_status = "livret_1_analysis";
@@ -1742,6 +1743,11 @@ function setDossierPill(status){
       ...currentVaeActionDates,
       [actionKey]: clickedAt,
     };
+
+    if(statusesSendingMail.includes(payload.vae_status)){
+      const ok = await window.confirmMailSmsSend?.();
+      if(!ok) return;
+    }
 
     try{
       const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
