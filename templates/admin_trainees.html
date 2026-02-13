@@ -38,10 +38,12 @@
       <div class="stat-title">Non conformes</div>
       <div class="stat-value">{{ stats.non_conform_count }}</div>
     </div>
+    {% if not show_vae %}
     <div class="stat">
       <div class="stat-title">CNAPS acceptés</div>
       <div class="stat-value">{{ stats.cnaps_accepted_count }}</div>
     </div>
+    {% endif %}
     <div class="stat">
       <div class="stat-title">Session</div>
       <div class="stat-value">{{ "Conforme ✅" if stats.session_is_conform else "Non conforme ❌" }}</div>
@@ -162,9 +164,11 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   <select class="status sel vae-status-select" data-field="vae_status" {{ read_only_attr }} style="min-width:320px;">
     <option value="livret_1_todo" {% if t.vae_status=="livret_1_todo" or not t.vae_status %}selected{% endif %}>Livret 1 à compléter</option>
     <option value="livret_1_analysis" {% if t.vae_status=="livret_1_analysis" %}selected{% endif %}>Livret 1 en cours d'analyse</option>
+    <option value="livret_1_validated" {% if t.vae_status=="livret_1_validated" %}selected{% endif %}>Livret 1 validé</option>
     <option value="financement_validated" {% if t.vae_status=="financement_validated" %}selected{% endif %}>Financement validé</option>
     <option value="livret_2_todo" {% if t.vae_status=="livret_2_todo" %}selected{% endif %}>Livret 2 à compléter</option>
     <option value="livret_2_analysis" {% if t.vae_status=="livret_2_analysis" %}selected{% endif %}>Livret 2 en cours d'analyse</option>
+    <option value="livret_2_validated" {% if t.vae_status=="livret_2_validated" %}selected{% endif %}>Livret 2 validé</option>
     <option value="jury" {% if t.vae_status=="jury" %}selected{% endif %}>Passage devant le jury</option>
     <option value="certified" {% if t.vae_status=="certified" %}selected{% endif %}>Certification obtenue</option>
   </select>
