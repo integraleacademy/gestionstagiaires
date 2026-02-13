@@ -9,6 +9,7 @@ import unicodedata
 import threading
 from typing import Dict, Any, Optional, List, Iterable, Tuple
 from functools import wraps
+from zoneinfo import ZoneInfo
 from flask import session
 from PIL import Image
 import tempfile
@@ -1388,6 +1389,54 @@ def _public_is_authed(token: str) -> bool:
 def _now_iso() -> str:
     return datetime.datetime.utcnow().isoformat() + "Z"
 
+
+VTC_EXAM_RESULTS_NOTIFICATION_SCHEDULE = [
+    ("🚘Résultats examen pratique VTC à télécharger", "2026-03-07T12:00:00"),
+    ("🚘Résultats examen pratique VTC à télécharger", "2026-05-07T12:00:00"),
+    ("🚘Résultats examen pratique VTC à télécharger", "2026-07-03T12:00:00"),
+    ("🚘Résultats examen pratique VTC à télécharger", "2026-09-04T12:00:00"),
+    ("🚘Résultats examen pratique VTC à télécharger", "2026-11-06T12:00:00"),
+    ("🚘Résultats examen pratique VTC à télécharger", "2027-01-12T12:00:00"),
+    ("🚘Résultats examen théorique VTC à télécharger", "2026-04-07T12:00:00"),
+    ("🚘Résultats examen théorique VTC à télécharger", "2026-06-05T12:00:00"),
+    ("🚘Résultats examen théorique VTC à télécharger", "2026-08-07T12:00:00"),
+    ("🚘Résultats examen théorique VTC à télécharger", "2026-10-09T12:00:00"),
+    ("🚘Résultats examen théorique VTC à télécharger", "2026-12-16T12:00:00"),
+]
+
+
+def _inject_vtc_exam_results_notifications(data: Dict[str, Any]) -> bool:
+    paris_tz = ZoneInfo("Europe/Paris")
+    now_paris = datetime.datetime.now(paris_tz)
+    notifications = data.setdefault("notifications_admin", [])
+    existing_keys = {
+        (
+            ((item.get("meta") or {}).get("kind") or "").strip(),
+            ((item.get("meta") or {}).get("scheduled_at") or "").strip(),
+        )
+        for item in notifications
+    }
+
+    changed = False
+    for label, schedule_at in VTC_EXAM_RESULTS_NOTIFICATION_SCHEDULE:
+        schedule_paris = datetime.datetime.fromisoformat(schedule_at).replace(tzinfo=paris_tz)
+        key = ("vtc_exam_results_download", schedule_at)
+        if now_paris < schedule_paris or key in existing_keys:
+            continue
+        add_admin_notification(
+            data,
+            label,
+            {
+                "kind": "vtc_exam_results_download",
+                "scheduled_at": schedule_at,
+                "timezone": "Europe/Paris",
+            },
+        )
+        existing_keys.add(key)
+        changed = True
+
+    return changed
+
 def _mark_public_login(data: Dict[str, Any], session_data: Dict[str, Any], trainee: Dict[str, Any]) -> None:
     if not trainee.get("public_has_logged_in"):
         trainee["public_has_logged_in"] = True
@@ -1503,6 +1552,9 @@ def load_data() -> Dict[str, Any]:
             changed = True
 
         if _send_vtc_credentials_missing_reminders(data):
+            changed = True
+
+        if _inject_vtc_exam_results_notifications(data):
             changed = True
 
         if changed:
