@@ -25,10 +25,24 @@
     nom_naissance: 'Nom de naissance',
     prenoms: 'Prénom(s)',
     date_naissance: 'Date de naissance',
+    nationalite: 'Nationalité',
+    genre: 'Genre',
+    niveau_formation: 'Niveau de formation le plus élevé',
+    niveau_certification: 'Niveau de certification la plus élevée',
+    certifications_obtenues: 'Intitulé des certifications obtenues',
+    adresse: 'Adresse',
+    code_postal: 'Code postal',
+    ville: 'Ville',
+    telephone: 'Téléphone',
     email: 'Adresse email',
+    statut: 'Statut du candidat',
   };
 
   const STEP_REQUIRED_FIELDS = {
+    2: [
+      ...Object.keys(REQUIRED_CANDIDAT_FIELDS).map((field) => `candidat.${field}`),
+      'candidat.objectifs',
+    ],
     5: [
       ...Array.from({ length: 5 }, (_, actIdx) =>
         Array.from({ length: 4 }, (_, compIdx) => [

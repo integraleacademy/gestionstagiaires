@@ -26,17 +26,17 @@
           <label for="date_naissance">Date de naissance*</label>
           <input id="date_naissance" type="date" name="candidat.date_naissance" value="{{ dossier.candidat.date_naissance }}" required>
         </div>
-        <input name="candidat.nationalite" placeholder="Nationalité" value="{{ dossier.candidat.nationalite }}">
-        <select name="candidat.genre">
-          <option value="">Genre</option>
+        <input name="candidat.nationalite" placeholder="Nationalité*" value="{{ dossier.candidat.nationalite }}" required>
+        <select name="candidat.genre" required>
+          <option value="">Genre*</option>
           <option value="homme" {% if dossier.candidat.genre=='homme' %}selected{% endif %}>Homme</option>
           <option value="femme" {% if dossier.candidat.genre=='femme' %}selected{% endif %}>Femme</option>
           <option value="autre" {% if dossier.candidat.genre=='autre' %}selected{% endif %}>Autre</option>
         </select>
         <div class="field-with-label">
-          <label for="niveau_formation">Niveau de formation le plus élevé</label>
-          <select id="niveau_formation" name="candidat.niveau_formation">
-            <option value="">Sélectionner un niveau</option>
+          <label for="niveau_formation">Niveau de formation le plus élevé*</label>
+          <select id="niveau_formation" name="candidat.niveau_formation" required>
+            <option value="">Sélectionner un niveau*</option>
             {% set niveaux_formation = [
               ('2', 'Niveau 2'),
               ('3', 'Niveau 3 (CAP, BEP)'),
@@ -52,9 +52,9 @@
           </select>
         </div>
         <div class="field-with-label">
-          <label for="niveau_certification">Niveau de certification la plus élevée</label>
-          <select id="niveau_certification" name="candidat.niveau_certification">
-            <option value="">Sélectionner un niveau</option>
+          <label for="niveau_certification">Niveau de certification la plus élevée*</label>
+          <select id="niveau_certification" name="candidat.niveau_certification" required>
+            <option value="">Sélectionner un niveau*</option>
             {% set niveaux_certification = [
               ('3', 'Niveau 3 (CAP, BEP)'),
               ('4', 'Niveau 4 (Bac)'),
@@ -69,14 +69,14 @@
           </select>
         </div>
       </div>
-      <input name="candidat.certifications_obtenues" placeholder="Intitulé des certifications obtenues" value="{{ dossier.candidat.certifications_obtenues }}">
+      <input name="candidat.certifications_obtenues" placeholder="Intitulé des certifications obtenues*" value="{{ dossier.candidat.certifications_obtenues }}" required>
       <div class="grid-3">
-        <input name="candidat.adresse" placeholder="Adresse" value="{{ dossier.candidat.adresse }}">
-        <input name="candidat.code_postal" placeholder="Code postal" value="{{ dossier.candidat.code_postal }}">
-        <input name="candidat.ville" placeholder="Ville" value="{{ dossier.candidat.ville }}">
+        <input name="candidat.adresse" placeholder="Adresse*" value="{{ dossier.candidat.adresse }}" required>
+        <input name="candidat.code_postal" placeholder="Code postal*" value="{{ dossier.candidat.code_postal }}" required>
+        <input name="candidat.ville" placeholder="Ville*" value="{{ dossier.candidat.ville }}" required>
       </div>
       <div class="grid-2">
-        <input name="candidat.telephone" placeholder="Téléphone" value="{{ dossier.candidat.telephone }}">
+        <input name="candidat.telephone" placeholder="Téléphone*" value="{{ dossier.candidat.telephone }}" required>
         <input type="email" name="candidat.email" placeholder="Adresse email*" value="{{ dossier.candidat.email }}" required>
       </div>
 
@@ -94,7 +94,7 @@
           ("mandat_electif", "Titulaire d'un mandat électif (électoral ou syndical)")
         ] %}
         {% for value, label in statuts %}
-        <label><input type="radio" name="candidat.statut" value="{{ value }}" {% if dossier.candidat.statut==value %}checked{% endif %}> {{ label }}</label>
+        <label><input type="radio" name="candidat.statut" value="{{ value }}" {% if dossier.candidat.statut==value %}checked{% endif %} required> {{ label }}</label>
         {% endfor %}
       </div>
       <input name="candidat.convention_collective" id="conventionCollective" placeholder="Identification de la convention collective de l’employeur (le cas échéant)" value="{{ dossier.candidat.convention_collective }}" disabled>
@@ -426,7 +426,7 @@
         </div>
       </div>
       <div id="submitErrors" class="errors"></div>
-      <button type="button" class="btn" id="submitDossier">Déposer mon Dossier de faisabilité</button>
+      <button type="button" class="btn submit-dossier-btn" id="submitDossier">Déposer mon dossier de faisabilité 🚀</button>
     </section>
 
     <div class="wizard-actions">
