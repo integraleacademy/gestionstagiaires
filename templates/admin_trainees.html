@@ -96,6 +96,7 @@
         {% if is_vtc %}<th>E-learning</th>{% endif %}
         {% if is_vtc %}<th>Livre</th>{% endif %}
         {% if is_vtc %}<th>Théorie</th>{% endif %}
+        {% if is_vtc %}<th>Pratique</th>{% endif %}
         {% if is_vtc %}<th>Date formation pratique</th>{% endif %}
         {% if show_hosting %}<th>Hébergement</th>{% endif %}
         <th>Commentaire</th>
@@ -241,6 +242,15 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           {% if t.vtc_theory_result == "non_admissible" %}
             🔴
           {% elif t.vtc_theory_exam_sent_at %}
+            🟢
+          {% else %}
+            🟡
+          {% endif %}
+        </td>
+        <td>
+          {% if t.vtc_practice_result == "failed" %}
+            🔴
+          {% elif t.vtc_practice_result == "success" or t.vtc_practice_exam_sent_at %}
             🟢
           {% else %}
             🟡
