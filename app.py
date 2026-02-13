@@ -5368,6 +5368,10 @@ def api_send_vtc_practice_exam_success(session_id: str, trainee_id: str):
 @admin_login_required
 @admin_write_required
 def api_vtc_check_import():
+    mode = (request.args.get("mode") or "theory").strip().lower()
+    if mode not in {"theory", "practice"}:
+        mode = "theory"
+
     pdf = request.files.get("file")
     if not pdf:
         return jsonify({"ok": False, "error": "missing_file"}), 400
@@ -5409,10 +5413,8 @@ def api_vtc_check_import():
             if not cmar_id:
                 continue
 
-            # Match principal: extraction tokenisée
             token_match = cmar_id in wanted
 
-            # Match fallback: recherche substring robuste dans tout le PDF
             cmar_digits = re.sub(r"\D", "", cmar_id)
             fallback_alnum_match = bool(pdf_alnum and cmar_id in pdf_alnum)
             fallback_digits_match = bool(cmar_digits and len(cmar_digits) >= 6 and pdf_digits and cmar_digits in pdf_digits)
@@ -5433,9 +5435,11 @@ def api_vtc_check_import():
                 target = admissible_matches
                 status = "admissible"
 
-            already_notified = bool(trainee.get("vtc_theory_exam_sent_at"))
-            already_marked_non_admissible = (trainee.get("vtc_theory_result") == "non_admissible")
-            already_imported = bool(trainee.get("vtc_theory_result")) or already_notified or already_marked_non_admissible
+            sent_key = "vtc_practice_exam_sent_at" if mode == "practice" else "vtc_theory_exam_sent_at"
+            result_key = "vtc_practice_result" if mode == "practice" else "vtc_theory_result"
+            already_notified = bool(trainee.get(sent_key))
+            already_marked_non_admissible = (trainee.get(result_key) == "non_admissible")
+            already_imported = bool(trainee.get(result_key)) or already_notified or already_marked_non_admissible
 
             target.append({
                 "session_id": sess.get("id") or "",
@@ -5479,6 +5483,10 @@ def api_vtc_check_import():
 @admin_login_required
 @admin_write_required
 def api_vtc_check_notify():
+    mode = (request.args.get("mode") or "theory").strip().lower()
+    if mode not in {"theory", "practice"}:
+        mode = "theory"
+
     payload = request.get_json(silent=True) or {}
     items = payload.get("items") or []
     if not isinstance(items, list) or not items:
@@ -5510,33 +5518,55 @@ def api_vtc_check_notify():
 
         status = str(item.get("status") or "admissible").strip().lower()
         if status == "non_admissible":
-            if trainee.get("vtc_theory_result") == "non_admissible":
+            result_key = "vtc_practice_result" if mode == "practice" else "vtc_theory_result"
+            if trainee.get(result_key) == "non_admissible":
                 skipped_already_marked += 1
                 continue
-            trainee["vtc_theory_result"] = "non_admissible"
-            trainee["vtc_theory_result_label"] = "échec examen théorique"
-            trainee["vtc_theory_failed_at"] = _now_iso()
-            add_admin_notification(
-                data,
-                f"🚘 {_format_trainee_name(trainee.get('first_name', ''), trainee.get('last_name', ''))} a échoué à l'examen théorique VTC",
-                {
-                    "kind": "vtc_theory_exam_failed",
-                    "session_id": sess.get("id") or "",
-                    "session_name": sess.get("name") or "",
-                    "trainee_id": trainee.get("id") or "",
-                    "first_name": trainee.get("first_name") or "",
-                    "last_name": trainee.get("last_name") or "",
-                },
-            )
+            if mode == "practice":
+                trainee["vtc_practice_result"] = "non_admissible"
+                trainee["vtc_practice_result_label"] = "échec examen pratique"
+                trainee["vtc_practice_failed_at"] = _now_iso()
+                add_admin_notification(
+                    data,
+                    f"🚘 {_format_trainee_name(trainee.get('first_name', ''), trainee.get('last_name', ''))} a échoué à l'examen pratique VTC",
+                    {
+                        "kind": "vtc_practice_exam_failed",
+                        "session_id": sess.get("id") or "",
+                        "session_name": sess.get("name") or "",
+                        "trainee_id": trainee.get("id") or "",
+                        "first_name": trainee.get("first_name") or "",
+                        "last_name": trainee.get("last_name") or "",
+                    },
+                )
+            else:
+                trainee["vtc_theory_result"] = "non_admissible"
+                trainee["vtc_theory_result_label"] = "échec examen théorique"
+                trainee["vtc_theory_failed_at"] = _now_iso()
+                add_admin_notification(
+                    data,
+                    f"🚘 {_format_trainee_name(trainee.get('first_name', ''), trainee.get('last_name', ''))} a échoué à l'examen théorique VTC",
+                    {
+                        "kind": "vtc_theory_exam_failed",
+                        "session_id": sess.get("id") or "",
+                        "session_name": sess.get("name") or "",
+                        "trainee_id": trainee.get("id") or "",
+                        "first_name": trainee.get("first_name") or "",
+                        "last_name": trainee.get("last_name") or "",
+                    },
+                )
             non_admissible_marked += 1
         else:
-            if trainee.get("vtc_theory_exam_sent_at"):
+            sent_key = "vtc_practice_exam_sent_at" if mode == "practice" else "vtc_theory_exam_sent_at"
+            if trainee.get(sent_key):
                 skipped_already_notified += 1
                 continue
-            trainee["vtc_theory_result"] = "admissible"
-            trainee["vtc_theory_result_label"] = "admissible"
-            _send_vtc_theory_exam_notification(sess, trainee, send_email=True)
-            _add_vtc_practice_convocation_notification(data, sess, trainee)
+            if mode == "practice":
+                _send_vtc_practice_exam_success_notification(sess, trainee)
+            else:
+                trainee["vtc_theory_result"] = "admissible"
+                trainee["vtc_theory_result_label"] = "admissible"
+                _send_vtc_theory_exam_notification(sess, trainee, send_email=True)
+                _add_vtc_practice_convocation_notification(data, sess, trainee)
             sent += 1
 
         sess["trainees"] = trainees
