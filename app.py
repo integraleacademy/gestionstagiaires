@@ -9158,6 +9158,10 @@ def _merge_dict(base: Dict[str, Any], incoming: Dict[str, Any]) -> None:
 
 def _validate_vae_for_submit(dossier: Dict[str, Any]) -> List[str]:
     errors: List[str] = []
+
+    if (dossier.get("nature_demande") or "") != "initiale":
+        errors.append("Nature de la demande : seule la valeur Initiale est autorisée")
+
     candidat = dossier.get("candidat", {})
     required_fields = {
         "nom_naissance": "Nom de naissance",
@@ -9187,9 +9191,20 @@ def _validate_vae_for_submit(dossier: Dict[str, Any]) -> List[str]:
                     f"4ème étape (Tableau de positionnement) : activité manquante pour Activité {activity_idx}, compétence {competence_idx}"
                 )
 
+    if (candidat.get("statut") or "") != "salarie_prive" and str(candidat.get("convention_collective") or "").strip():
+        errors.append("1ère étape (Informations candidat) : la convention collective doit rester vide hors salarié du secteur privé")
+
     engagement = dossier.get("engagement", {})
     if not bool(engagement.get("accord_analyse")):
         errors.append("7ème étape (Accord d'analyse) : vous devez accepter l'analyse du dossier")
+    if not str(engagement.get("lieu_signature") or "").strip():
+        errors.append("7ème étape (Accord d'analyse) : lieu de signature manquant")
+    if not str(engagement.get("date_signature") or "").strip():
+        errors.append("7ème étape (Accord d'analyse) : date de signature manquante")
+    if not str(engagement.get("nom_signature") or "").strip():
+        errors.append("7ème étape (Accord d'analyse) : nom et prénom du signataire manquants")
+    if not str(engagement.get("signature_trace") or "").strip() or not str(engagement.get("signature_signed_at") or "").strip():
+        errors.append("7ème étape (Accord d'analyse) : signature électronique obligatoire")
     return errors
 
 def _vae_create_and_redirect_for_trainee_token(trainee_token: str):
@@ -9258,6 +9273,13 @@ def api_vae_save(dossier_id: str):
         return jsonify({"ok": False, "error": "already_submitted"}), 403
 
     _merge_dict(dossier, payload)
+
+    # Contraintes métier côté serveur
+    dossier["nature_demande"] = "initiale"
+    candidat = dossier.get("candidat") if isinstance(dossier.get("candidat"), dict) else {}
+    if candidat.get("statut") != "salarie_prive":
+        candidat["convention_collective"] = ""
+
     dossier["updated_at"] = _now_iso_utc()
     _vae_save_all(data)
     return jsonify({"ok": True, "id": dossier_id, "updated_at": dossier["updated_at"]})
