@@ -2139,12 +2139,44 @@ def infos_is_complete(t: Dict[str, Any]) -> bool:
 
     return True
 
+
+def infos_is_complete_for_training(t: Dict[str, Any], training_type: str) -> bool:
+    """
+    Vérifie la complétude des informations selon le parcours.
+
+    - Parcours standards : règles existantes (infos + sécu + PRE/CAR).
+    - DIRIGEANT VAE : accepte aussi la fiche candidat complétée,
+      qui ne contient pas les champs sécu/PRE.
+    """
+    tt = (training_type or "").strip().upper()
+    if tt != "DIRIGEANT VAE":
+        return infos_is_complete(t)
+
+    # Si les champs standards sont tous OK, on est complet aussi.
+    if infos_is_complete(t):
+        return True
+
+    sheet = t.get("candidate_sheet")
+    if not isinstance(sheet, dict):
+        return False
+
+    required_sheet_fields = [
+        "birth_date",
+        "birth_city",
+        "country",
+        "nationality",
+        "address",
+        "postal_code",
+        "city",
+    ]
+    return all(str(sheet.get(k) or "").strip() for k in required_sheet_fields)
+
 def dossier_is_complete_total(trainee: Dict[str, Any], training_type: str) -> bool:
     # ✅ complet seulement si infos OK + tous docs CONFORME
     # ✅ OU si forçage admin
     if trainee.get("force_dossier_complete"):
         return True
-    return infos_is_complete(trainee) and dossier_is_complete(trainee, training_type)
+    return infos_is_complete_for_training(trainee, training_type) and dossier_is_complete(trainee, training_type)
 
 
 # =========================
