@@ -4141,7 +4141,13 @@ def api_update_trainee(session_id: str, trainee_id: str):
 
     previous_vae_status = vae_status_view(t.get("vae_status"))["key"]
 
+    send_vae_notification = True if payload.get("send_vae_notification", True) in (True, "true", "1", 1, "yes", "on") else False
+    send_exam_fees_notification = True if payload.get("send_exam_fees_notification", True) in (True, "true", "1", 1, "yes", "on") else False
+    send_elearning_notification = True if payload.get("send_elearning_notification", True) in (True, "true", "1", 1, "yes", "on") else False
+
     for k, v in payload.items():
+        if k in ("send_vae_notification", "send_exam_fees_notification", "send_elearning_notification"):
+            continue
         if k not in allowed:
             continue
 
@@ -4179,7 +4185,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         view = vae_status_view(requested_vae)
         t["vae_status"] = view["key"]
         t["vae_status_label"] = view["label"]
-        if view["key"] != previous_vae_status:
+        if view["key"] != previous_vae_status and send_vae_notification:
             _notify_vae_status_change(t, view["key"])
 
     if (payload.get("financement_status") or "").strip() == "validated":
@@ -4224,22 +4230,28 @@ def api_update_trainee(session_id: str, trainee_id: str):
               <p><strong>Stagiaire :</strong> {trainee_name or '—'}</p>
               <p><strong>Session :</strong> {session_name or '—'}</p>
             """)
-            if email:
-                brevo_send_email(email, subject, html)
-            if phone:
-                sms_prefix = f"Bonjour {t.get('first_name','').strip()}, " if (t.get("first_name") or "").strip() else "Bonjour, "
-                sms = f"{sms_prefix}{message}"
-                brevo_send_sms(phone, sms)
+            if send_exam_fees_notification:
+                if email:
+                    brevo_send_email(email, subject, html)
+                if phone:
+                    sms_prefix = f"Bonjour {t.get('first_name','').strip()}, " if (t.get("first_name") or "").strip() else "Bonjour, "
+                    sms = f"{sms_prefix}{message}"
+                    brevo_send_sms(phone, sms)
         elif not now_paid:
             t["exam_fees_paid_at"] = ""
 
     elearning_notifications = {"email_ok": False, "sms_ok": False}
     now_elearning_link = (t.get("elearning_link") or "").strip()
     if now_elearning_link and now_elearning_link != previous_elearning_link:
-        elearning_notifications = notify_elearning_access_available(t, s, now_elearning_link)
-        t["elearning_link_sent_at"] = _now_iso()
-        t["elearning_link_email_ok"] = bool(elearning_notifications.get("email_ok"))
-        t["elearning_link_sms_ok"] = bool(elearning_notifications.get("sms_ok"))
+        if send_elearning_notification:
+            elearning_notifications = notify_elearning_access_available(t, s, now_elearning_link)
+            t["elearning_link_sent_at"] = _now_iso()
+            t["elearning_link_email_ok"] = bool(elearning_notifications.get("email_ok"))
+            t["elearning_link_sms_ok"] = bool(elearning_notifications.get("sms_ok"))
+        else:
+            t["elearning_link_sent_at"] = ""
+            t["elearning_link_email_ok"] = False
+            t["elearning_link_sms_ok"] = False
     elif not now_elearning_link:
         t["elearning_link_sent_at"] = ""
         t["elearning_link_email_ok"] = False
