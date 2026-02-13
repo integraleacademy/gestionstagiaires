@@ -55,6 +55,26 @@
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:10px 12px;font-weight:900;border:1px solid #e5e7eb;background:#111827;color:#fff;text-decoration:none;cursor:pointer}
   .btn.outline{background:#fff;color:#111827}
   .btn.small{padding:8px 10px;border-radius:10px;font-size:13px}
+  .btn.upload-cta{
+    background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);
+    border-color:#1d4ed8;
+    color:#fff;
+    box-shadow:0 6px 16px rgba(37,99,235,.35);
+    animation: uploadCtaPulse 1.4s ease-in-out infinite;
+  }
+  .btn.upload-cta:hover{
+    background:linear-gradient(135deg,#1d4ed8 0%,#1e40af 100%);
+    transform:translateY(-1px);
+  }
+
+  @keyframes uploadCtaPulse{
+    0%,100%{transform:scale(1);box-shadow:0 6px 16px rgba(37,99,235,.35);}
+    50%{transform:scale(1.04);box-shadow:0 10px 24px rgba(37,99,235,.45);}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .btn.upload-cta{animation:none;}
+  }
   .hint{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-top:10px}
   .oktag{font-weight:900;color:#065f46}
 
@@ -1204,7 +1224,7 @@ id="upload_{{ d.key }}"
          {% if not (d.key == "permis" and trainee.no_permis) %}required{% endif %}>
 {% endif %}
 
-<button class="btn small" type="submit">
+<button class="btn small upload-cta" type="submit">
   {% if d.key == "livret_2" %}Déposer mon Livret 2{% elif can_replace %}Remplacer{% elif d.key == "id" and has_file %}Ajouter un autre{% else %}Déposer{% endif %}
 </button>
 

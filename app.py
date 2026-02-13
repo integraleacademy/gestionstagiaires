@@ -456,7 +456,7 @@ def build_vtc_practice_convocation_email(first_name: str, practice_training_date
     trainee_first_name = (first_name or "").strip() or "Prénom"
     practice_date_fr = fr_date(practice_training_date) or "DATE FORMATION PRATIQUE"
 
-    subject = "Convocation formation pratique"
+    subject = "Formation pratique Chauffeur VTC 🚘"
     html = mail_layout(f"""
       <div style="background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:1px solid #dbeafe;border-radius:14px;padding:18px;">
         <h2 style="margin:0 0 12px 0;color:#0f172a;">Convocation formation pratique</h2>
@@ -500,9 +500,213 @@ def build_vtc_practice_convocation_sms(first_name: str, practice_training_date: 
     greeting = f"Bonjour {trainee_first_name}, " if trainee_first_name else "Bonjour, "
     return (
         "Intégrale Academy 🚗 "
-        f"{greeting}félicitations pour votre réussite à l'examen théorique. "
+        f"{greeting}Félicitations pour votre réussite à l'examen théorique Chauffeur VTC. "
         f"Votre formation pratique VTC est prévue le {practice_date_fr} de 08h30 à 12h00 "
-        "à Intégrale Academy, 54 chemin du Carreou 83480 Puget-sur-Argens."
+        "dans nos locaux Intégrale Academy, 54 chemin du Carreou 83480 Puget-sur-Argens. Pour plus d'informations, consultez vos mails."
+    )
+
+
+def _normalize_cmar_identifier(value: str) -> str:
+    raw = (value or "").strip().upper()
+    if not raw:
+        return ""
+    return "".join(ch for ch in raw if ch.isalnum())
+
+
+def _extract_cmar_identifiers_from_pdf(file_bytes: bytes) -> List[str]:
+    if not file_bytes:
+        return []
+
+    def _decode_pdf_text(raw: bytes) -> str:
+        if not raw:
+            return ""
+        if raw.startswith(b"\xfe\xff"):
+            try:
+                return raw[2:].decode("utf-16-be", errors="ignore")
+            except Exception:
+                pass
+        if raw.startswith(b"\xff\xfe"):
+            try:
+                return raw[2:].decode("utf-16-le", errors="ignore")
+            except Exception:
+                pass
+
+        nul_even = sum(1 for i in range(0, len(raw), 2) if raw[i] == 0)
+        nul_odd = sum(1 for i in range(1, len(raw), 2) if raw[i] == 0)
+        pairs = max(1, len(raw) // 2)
+
+        if nul_even / pairs > 0.30:
+            try:
+                return raw.decode("utf-16-be", errors="ignore")
+            except Exception:
+                pass
+        if nul_odd / pairs > 0.30:
+            try:
+                return raw.decode("utf-16-le", errors="ignore")
+            except Exception:
+                pass
+
+        return raw.decode("latin-1", errors="ignore")
+
+    def _decode_pdf_literal_strings(blob: bytes) -> List[str]:
+        out: List[str] = []
+        i = 0
+        n = len(blob)
+        while i < n:
+            if blob[i] != 0x28:  # (
+                i += 1
+                continue
+
+            i += 1
+            depth = 1
+            buf = bytearray()
+            while i < n and depth > 0:
+                ch = blob[i]
+
+                if ch == 0x5C:  # backslash
+                    i += 1
+                    if i >= n:
+                        break
+                    esc = blob[i]
+                    simple = {
+                        0x6E: 0x0A,  # \n
+                        0x72: 0x0D,  # \r
+                        0x74: 0x09,  # \t
+                        0x62: 0x08,  # \b
+                        0x66: 0x0C,  # \f
+                        0x28: 0x28,  # \(
+                        0x29: 0x29,  # \)
+                        0x5C: 0x5C,  # \\
+                    }
+                    if esc in simple:
+                        buf.append(simple[esc])
+                        i += 1
+                        continue
+
+                    if 0x30 <= esc <= 0x37:
+                        oct_digits = bytes([esc])
+                        i += 1
+                        for _ in range(2):
+                            if i < n and 0x30 <= blob[i] <= 0x37:
+                                oct_digits += bytes([blob[i]])
+                                i += 1
+                            else:
+                                break
+                        buf.append(int(oct_digits, 8) & 0xFF)
+                        continue
+
+                    buf.append(esc)
+                    i += 1
+                    continue
+
+                if ch == 0x28:  # (
+                    depth += 1
+                    buf.append(ch)
+                    i += 1
+                    continue
+
+                if ch == 0x29:  # )
+                    depth -= 1
+                    if depth > 0:
+                        buf.append(ch)
+                    i += 1
+                    continue
+
+                buf.append(ch)
+                i += 1
+
+            if buf:
+                out.append(_decode_pdf_text(bytes(buf)))
+
+        return out
+
+    def _decode_pdf_hex_strings(blob: bytes) -> List[str]:
+        out: List[str] = []
+        for m in re.finditer(rb"<([0-9A-Fa-f\s]{4,})>", blob):
+            raw = re.sub(rb"\s+", b"", m.group(1))
+            if len(raw) % 2 == 1:
+                raw += b"0"
+            try:
+                decoded = bytes.fromhex(raw.decode("ascii", errors="ignore"))
+                out.append(_decode_pdf_text(decoded))
+            except Exception:
+                continue
+        return out
+
+    chunks: List[bytes] = [file_bytes]
+    for m in re.finditer(rb"stream\r?\n(.*?)\r?\nendstream", file_bytes, flags=re.S):
+        stream_data = m.group(1)
+        chunks.append(stream_data)
+
+        if b"/FlateDecode" in file_bytes[max(0, m.start() - 250):m.start()]:
+            try:
+                inflated = zlib.decompress(stream_data)
+                chunks.append(inflated)
+            except Exception:
+                pass
+
+    text_sources: List[str] = []
+    for chunk in chunks:
+        text_sources.append(_decode_pdf_text(chunk))
+        text_sources.extend(_decode_pdf_literal_strings(chunk))
+        text_sources.extend(_decode_pdf_hex_strings(chunk))
+
+    content = "\n".join(text_sources).upper()
+    candidates = set()
+
+    for token in re.findall(r"\b(?:CMAR\s*[:\-]?)?([A-Z0-9\-]{4,})\b", content):
+        normalized = _normalize_cmar_identifier(token)
+        if not normalized:
+            continue
+        if normalized.startswith("CMAR"):
+            normalized = normalized[4:]
+        if normalized.isdigit() and len(normalized) < 6:
+            continue
+        if normalized.isdigit() and len(normalized) > 20:
+            continue
+        if any(ch.isdigit() for ch in normalized) and len(normalized) >= 6:
+            candidates.add(normalized)
+
+    # fallback : capture les suites numériques même si le PDF met des séparateurs/NULL
+    compact_digits = re.sub(r"[^0-9]", " ", content)
+    for token in compact_digits.split():
+        if 6 <= len(token) <= 20:
+            candidates.add(token)
+
+    return sorted(candidates)
+
+
+def _build_pdf_search_haystacks(file_bytes: bytes) -> Tuple[str, str]:
+    """
+    Retourne 2 haystacks:
+    - alnum_only: contenu PDF réduit à A-Z0-9
+    - digits_only: contenu PDF réduit à 0-9
+    Permet un matching robuste même si l'extraction tokenisée rate un format.
+    """
+    if not file_bytes:
+        return "", ""
+
+    chunks: List[bytes] = [file_bytes]
+    for m in re.finditer(rb"stream\r?\n(.*?)\r?\nendstream", file_bytes, flags=re.S):
+        stream_data = m.group(1)
+        chunks.append(stream_data)
+        if b"/FlateDecode" in file_bytes[max(0, m.start() - 250):m.start()]:
+            try:
+                chunks.append(zlib.decompress(stream_data))
+            except Exception:
+                pass
+
+    merged = "\n".join(chunk.decode("latin-1", errors="ignore") for chunk in chunks).upper()
+    alnum_only = re.sub(r"[^A-Z0-9]", "", merged)
+    digits_only = re.sub(r"[^0-9]", "", merged)
+    return alnum_only, digits_only
+
+
+def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any], send_email: bool = True) -> Dict[str, Any]:
+    practice_training_date = (
+        _session_get(session_obj, "practice_training_date", "")
+        or _session_get(session_obj, "exam_practice_date", "")
+        or _session_get(session_obj, "exam_date", "")
     )
 
 
@@ -2239,12 +2443,44 @@ def infos_is_complete(t: Dict[str, Any]) -> bool:
 
     return True
 
+
+def infos_is_complete_for_training(t: Dict[str, Any], training_type: str) -> bool:
+    """
+    Vérifie la complétude des informations selon le parcours.
+
+    - Parcours standards : règles existantes (infos + sécu + PRE/CAR).
+    - DIRIGEANT VAE : accepte aussi la fiche candidat complétée,
+      qui ne contient pas les champs sécu/PRE.
+    """
+    tt = (training_type or "").strip().upper()
+    if tt != "DIRIGEANT VAE":
+        return infos_is_complete(t)
+
+    # Si les champs standards sont tous OK, on est complet aussi.
+    if infos_is_complete(t):
+        return True
+
+    sheet = t.get("candidate_sheet")
+    if not isinstance(sheet, dict):
+        return False
+
+    required_sheet_fields = [
+        "birth_date",
+        "birth_city",
+        "country",
+        "nationality",
+        "address",
+        "postal_code",
+        "city",
+    ]
+    return all(str(sheet.get(k) or "").strip() for k in required_sheet_fields)
+
 def dossier_is_complete_total(trainee: Dict[str, Any], training_type: str) -> bool:
     # ✅ complet seulement si infos OK + tous docs CONFORME
     # ✅ OU si forçage admin
     if trainee.get("force_dossier_complete"):
         return True
-    return infos_is_complete(trainee) and dossier_is_complete(trainee, training_type)
+    return infos_is_complete_for_training(trainee, training_type) and dossier_is_complete(trainee, training_type)
 
 
 # =========================
