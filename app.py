@@ -7956,6 +7956,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         "exam_date": _session_get(s, "exam_date", ""),
         "exam_theory_date": _session_get(s, "exam_theory_date", ""),
         "exam_practice_date": _session_get(s, "exam_practice_date", ""),
+        "practice_training_date": _session_get(s, "practice_training_date", ""),
     }
 
     trainees = _session_trainees_list(s)
