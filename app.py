@@ -1822,6 +1822,23 @@ def add_admin_notification(data: Dict[str, Any], label: str, meta: Optional[dict
     return add_notification(data, "notifications_admin", label, meta=meta)
 
 
+def _add_vtc_practice_convocation_notification(data: Dict[str, Any], session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> dict:
+    first_name = trainee.get("first_name") or ""
+    last_name = trainee.get("last_name") or ""
+    return add_admin_notification(
+        data,
+        f"🚘 Convocation formation pratique VTC à envoyer à {_format_trainee_name(first_name, last_name)}",
+        {
+            "kind": "vtc_practice_convocation_to_send",
+            "session_id": session_obj.get("id") or "",
+            "session_name": session_obj.get("name") or "",
+            "trainee_id": trainee.get("id") or "",
+            "first_name": first_name,
+            "last_name": last_name,
+        },
+    )
+
+
 def _find_prelevement_request(data: Dict[str, Any], entry_id: str):
     for s in data.get("sessions", []) or []:
         for t in _session_trainees_list(s):
@@ -5201,6 +5218,7 @@ def api_send_vtc_theory_exam(session_id: str, trainee_id: str):
     send_email = payload.get("send_email", True) in (True, "true", "1", 1, "yes", "on")
 
     result = _send_vtc_theory_exam_notification(s, t, send_email=send_email)
+    _add_vtc_practice_convocation_notification(data, s, t)
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
@@ -5361,6 +5379,7 @@ def api_vtc_check_notify():
             trainee["vtc_theory_result"] = "admissible"
             trainee["vtc_theory_result_label"] = "admissible"
             _send_vtc_theory_exam_notification(sess, trainee, send_email=True)
+            _add_vtc_practice_convocation_notification(data, sess, trainee)
             sent += 1
 
         sess["trainees"] = trainees
