@@ -9302,6 +9302,17 @@ def api_vae_save(dossier_id: str):
     if candidat.get("statut") != "salarie_prive":
         candidat["convention_collective"] = ""
 
+    engagement = dossier.get("engagement") if isinstance(dossier.get("engagement"), dict) else {}
+    prenoms = str(candidat.get("prenoms") or "").strip()
+    nom_usage = str(candidat.get("nom_usage") or "").strip()
+    nom_naissance = str(candidat.get("nom_naissance") or "").strip()
+    full_name = " ".join([part for part in [prenoms, nom_usage or nom_naissance] if part]).strip()
+    if full_name:
+        engagement["nom_signature"] = full_name
+    if not str(engagement.get("date_signature") or "").strip():
+        engagement["date_signature"] = datetime.date.today().isoformat()
+    dossier["engagement"] = engagement
+
     dossier["updated_at"] = _now_iso_utc()
     _vae_save_all(data)
     return jsonify({"ok": True, "id": dossier_id, "updated_at": dossier["updated_at"]})

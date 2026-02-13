@@ -191,6 +191,34 @@
     return false;
   }
 
+
+  function formatIsoDate(date = new Date()) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function getCandidateFullName() {
+    const prenoms = String(form.querySelector('[name="candidat.prenoms"]')?.value || '').trim();
+    const nomUsage = String(form.querySelector('[name="candidat.nom_usage"]')?.value || '').trim();
+    const nomNaissance = String(form.querySelector('[name="candidat.nom_naissance"]')?.value || '').trim();
+    return [prenoms, nomUsage || nomNaissance].filter(Boolean).join(' ').trim();
+  }
+
+  function syncEngagementIdentityAndDate() {
+    const dateInput = form.querySelector('[name="engagement.date_signature"]');
+    const nameInput = form.querySelector('[name="engagement.nom_signature"]');
+    if (dateInput && !String(dateInput.value || '').trim()) {
+      dateInput.value = formatIsoDate(new Date());
+    }
+    if (nameInput) {
+      const fullName = getCandidateFullName();
+      nameInput.value = fullName;
+    }
+    renderSignaturePreview();
+  }
+
   function addExperienceRow(exp = { date_debut: '', duree: '', description: '' }) {
     const wrap = document.getElementById('experiencesContainer');
     const div = document.createElement('div');
@@ -347,10 +375,22 @@
       autosaveDebounced();
     });
   });
-  form.querySelector('[name="engagement.nom_signature"]').addEventListener('input', renderSignaturePreview);
+  form.querySelector('[name="candidat.prenoms"]').addEventListener('input', () => {
+    syncEngagementIdentityAndDate();
+    autosaveDebounced();
+  });
+  form.querySelector('[name="candidat.nom_usage"]').addEventListener('input', () => {
+    syncEngagementIdentityAndDate();
+    autosaveDebounced();
+  });
+  form.querySelector('[name="candidat.nom_naissance"]').addEventListener('input', () => {
+    syncEngagementIdentityAndDate();
+    autosaveDebounced();
+  });
+
   const exp = Array.isArray(initial.experiences) && initial.experiences.length ? initial.experiences : [{}];
   exp.forEach(addExperienceRow);
-  renderSignaturePreview();
+  syncEngagementIdentityAndDate();
   updateConventionCollectiveState();
   renderStep();
 })();
