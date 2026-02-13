@@ -178,6 +178,17 @@
                  style="border:none;background:transparent;padding:0;outline:none;min-width:150px;"
                  {{ read_only_attr }}>
         </span>
+        {% if is_vtc %}
+        <span class="mono">
+          Identifiant CMAR :
+          <input id="editVtcCmarId"
+                 type="text"
+                 value="{{ trainee.vtc_cmar_id or '' }}"
+                 placeholder="Identifiant CMAR"
+                 style="border:none;background:transparent;padding:0;outline:none;min-width:180px;"
+                 {{ read_only_attr }}>
+        </span>
+        {% endif %}
         <span class="mono">ID : {{ trainee.personal_id or trainee.id }}</span>
       </div>
 
@@ -2318,6 +2329,10 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
   setupContactAutosave({
     inputId: "editPhone",
     field: "phone"
+  });
+  setupContactAutosave({
+    inputId: "editVtcCmarId",
+    field: "vtc_cmar_id"
   });
 
   const elearningInput = document.getElementById("editElearningLink");
