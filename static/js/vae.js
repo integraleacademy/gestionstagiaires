@@ -35,7 +35,7 @@
           `blocs_competences.activite${actIdx + 1}.competence${compIdx + 1}.intitule`,
           `blocs_competences.activite${actIdx + 1}.competence${compIdx + 1}.statut`,
         ]),
-      ).flat(),
+      ).flat(2),
     ],
     8: [
       'engagement.accord_analyse',
@@ -135,6 +135,7 @@
   }
 
   function hasValueForField(payload, fieldName) {
+    if (typeof fieldName !== 'string') return false;
     if (fieldName === 'engagement.accord_analyse') {
       return !!payload.engagement?.accord_analyse;
     }
@@ -146,6 +147,33 @@
     return typeof ref === 'boolean' ? ref : String(ref || '').trim().length > 0;
   }
 
+  function humanizeFieldName(fieldName) {
+    if (typeof fieldName !== 'string') return 'Champ obligatoire';
+    const el = form.querySelector(`[name="${fieldName}"]`);
+    if (el) {
+      const labelEl = el.closest('.field-with-label')?.querySelector('label');
+      if (labelEl?.textContent?.trim()) return labelEl.textContent.trim();
+      if (el.placeholder?.trim()) return el.placeholder.trim();
+    }
+
+    const competenceMatch = fieldName.match(/^blocs_competences\.activite(\d+)\.competence(\d+)\.(intitule|statut)$/);
+    if (competenceMatch) {
+      const activite = competenceMatch[1];
+      const competence = competenceMatch[2];
+      const type = competenceMatch[3] === 'intitule' ? 'Intitulé de la compétence' : 'Niveau de réalisation';
+      return `Activité ${activite} – Compétence ${competence} : ${type}`;
+    }
+
+    if (fieldName === 'engagement.accord_analyse') return 'Accord pour l’analyse de la faisabilité';
+    if (fieldName === 'engagement.lieu_signature') return 'Lieu de signature';
+    if (fieldName === 'engagement.date_signature') return 'Date de signature';
+    if (fieldName === 'engagement.nom_signature') return 'Nom et prénom';
+    if (fieldName === 'engagement.signature_trace') return 'Signature électronique';
+    if (fieldName === 'engagement.signature_signed_at') return 'Date de signature électronique';
+
+    return fieldName;
+  }
+
   function validateCurrentStep() {
     const step = current + 1;
     const payload = getPayload();
@@ -155,7 +183,11 @@
       errorsEl.innerHTML = '';
       return true;
     }
-    errorsEl.innerHTML = `<div><strong>${STEP_LABELS[step] || `Étape ${step}`}</strong> : tous les champs obligatoires doivent être renseignés avant de continuer.</div>`;
+    const fieldsList = missing.map((field) => `<li>${humanizeFieldName(field)}</li>`).join('');
+    errorsEl.innerHTML = `
+      <div><strong>${STEP_LABELS[step] || `Étape ${step}`}</strong> : les champs suivants sont obligatoires avant de continuer.</div>
+      <ul>${fieldsList}</ul>
+    `;
     return false;
   }
 
