@@ -160,6 +160,25 @@ def fr_datetime(value: str) -> str:
     return fr_date(s)
 
 
+def history_datetime(value: str) -> str:
+    s = (value or "").strip()
+    if not s:
+        return ""
+    normalized = s.replace("Z", "+00:00")
+    try:
+        dt = datetime.datetime.fromisoformat(normalized)
+        return dt.strftime("%d/%m/%Y %H:%M")
+    except Exception:
+        pass
+    for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
+        try:
+            dt = datetime.datetime.strptime(s[:26], fmt)
+            return dt.strftime("%d/%m/%Y %H:%M")
+        except Exception:
+            pass
+    return fr_date(s)
+
+
 # ✅ Filtres utilisables dans tous tes templates
 app.add_template_filter(fr_date, "frdate")
 app.add_template_filter(fr_datetime, "frdatetime")
@@ -1006,6 +1025,83 @@ def _find_session_by_id(data: Dict[str, Any], session_id: str) -> Optional[Dict[
         if (session_obj.get("id") or "").strip() == target:
             return session_obj
     return None
+
+
+def _history_sort_key(value: str) -> float:
+    s = (value or "").strip()
+    if not s:
+        return 0.0
+    normalized = s.replace("Z", "+00:00")
+    try:
+        return datetime.datetime.fromisoformat(normalized).timestamp()
+    except Exception:
+        pass
+    for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
+        try:
+            return datetime.datetime.strptime(s[:26], fmt).timestamp()
+        except Exception:
+            pass
+    return 0.0
+
+
+def build_trainee_history_entries(trainee: Dict[str, Any]) -> List[Dict[str, str]]:
+    entries: List[Dict[str, str]] = []
+
+    def _add(kind: str, label: str, at: str, details: str = "") -> None:
+        if not (at or "").strip():
+            return
+        emoji = {
+            "mail": "📧",
+            "relance": "🔁",
+            "appel": "📞",
+            "sms": "📱",
+            "action": "📝",
+        }.get(kind, "📌")
+        entries.append({
+            "kind": kind,
+            "emoji": emoji,
+            "label": label,
+            "at": at,
+            "at_display": history_datetime(at),
+            "details": (details or "").strip(),
+        })
+
+    field_events = [
+        ("access_sent_at", "Espace stagiaire envoyé", "mail"),
+        ("docs_notified_at", "Notification envoi des documents", "mail"),
+        ("docs_last_nonconform_notified_at", "Notification documents non conformes", "mail"),
+        ("docs_last_relance_at", "Relance documents", "relance"),
+        ("test_fr_last_notified_at", "Lien test de français envoyé", "mail"),
+        ("test_fr_last_relance_at", "Relance test de français", "relance"),
+        ("convention_unsigned_notified_at", "Relance convention non signée", "relance"),
+        ("cnaps_pre_relance_last_sent_at", "Relance PRE envoyée", "relance"),
+        ("elearning_link_sent_at", "Lien e-learning envoyé", "mail"),
+        ("vtc_cm_reminder_sent_at", "Relance identifiants VTC envoyée", "relance"),
+    ]
+    for field_name, label, kind in field_events:
+        _add(kind, label, trainee.get(field_name) or "")
+
+    for followup in (trainee.get("phone_followups") or []):
+        event_type = (followup.get("type") or "Suivi").strip()
+        details = (followup.get("details") or "").strip()
+        comment = (followup.get("comment") or "").strip()
+
+        source_text = f"{event_type} {details}".upper()
+        kind = "action"
+        if "SMS" in source_text:
+            kind = "sms"
+        elif "MAIL" in source_text:
+            kind = "mail"
+        elif "APPEL" in source_text or "RÉPONSE SECRÉTAIRE" in source_text or "REPONSE SECRETAIRE" in source_text:
+            kind = "appel"
+        elif "RELANCE" in source_text:
+            kind = "relance"
+
+        full_details = " · ".join([chunk for chunk in (details, comment) if chunk])
+        _add(kind, event_type, followup.get("at") or "", full_details)
+
+    entries.sort(key=lambda item: _history_sort_key(item.get("at") or ""), reverse=True)
+    return entries
 
 
 def _admin_notification_details(data: Dict[str, Any], item: Dict[str, Any]) -> List[str]:
@@ -7082,6 +7178,8 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     s.pop("stagiaires", None)
     save_data(data)
 
+    trainee_history = build_trainee_history_entries(t)
+
     return render_template(
         "admin_trainee.html",
         session=session_view,
@@ -7092,6 +7190,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         dossier_is_complete=dossier_complete,
         deliverables_view=deliverables_view,
         default_training_price=default_price,
+        trainee_history=trainee_history,
         PUBLIC_STUDENT_PORTAL_BASE=PUBLIC_STUDENT_PORTAL_BASE,
         fr_date=fr_date,
     )
