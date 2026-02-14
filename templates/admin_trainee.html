@@ -1794,11 +1794,15 @@ function setDossierPill(status){
     try{
       const res = await cnapsLookup(nom, prenom);
       const statut = (res.statut_cnaps || "INCONNU").toUpperCase();
+      const statutHistory = Array.isArray(res.statut_cnaps_history) ? res.statut_cnaps_history : [];
 
       await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
         method:"POST",
         headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ cnaps: statut })
+        body: JSON.stringify({
+          cnaps: statut,
+          statut_cnaps_history: statutHistory,
+        })
       });
 
       window.location.reload();
