@@ -3,7 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Dossier de faisabilité VAE — {{ dossier.id }}</title>
+  {% set candidat = dossier.candidat or {} %}
+  {% set prenom_pdf = ((candidat.prenoms or '')|trim).split(' ')|first %}
+  {% set nom_pdf = (candidat.nom_usage or candidat.nom_naissance or '')|trim %}
+  <title>Dossier de faisabilité VAE DESP{% if prenom_pdf or nom_pdf %} {{ prenom_pdf }} {{ nom_pdf|upper }}{% endif %}</title>
   <style>
     :root{--blue:#1f4e84;--line:#1f2937;--light:#dfe6f8}
     body{margin:0;background:#ececec;color:#000;font-family:"Times New Roman",Times,serif;font-size:12px;line-height:1.35}
