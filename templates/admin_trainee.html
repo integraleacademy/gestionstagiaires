@@ -190,7 +190,7 @@
     <a class="btn btn-outline btn-uniform" href="mailto:{{ trainee.email }}">✉️ {{ trainee.email }}</a>
   {% endif %}
   {% if trainee.phone %}
-    <a class="btn btn-outline btn-uniform" href="tel:{{ (trainee.phone or '')|replace(' ', '') }}">📞 {{ trainee.phone }}</a>
+    <span>📞 {{ trainee.phone }}</span>
   {% endif %}
 </div>
 
