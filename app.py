@@ -11068,6 +11068,8 @@ def admin_vae_detail(dossier_id: str):
 
     if request.method == 'POST':
         action = request.form.get('action', '').strip()
+        redirect_endpoint = None
+        redirect_kwargs = {}
         if action == 'update_avis':
             avis = dossier.setdefault('avis_admin', {})
             avis['decision'] = request.form.get('decision', '').strip()
@@ -11077,12 +11079,20 @@ def admin_vae_detail(dossier_id: str):
             avis['telephone'] = request.form.get('telephone', '').strip()
             avis['organisme'] = request.form.get('organisme', '').strip()
             avis['date'] = request.form.get('date', '').strip()
+            meta = dossier.get('meta') or {}
+            session_id = str(meta.get('session_id') or '').strip()
+            trainee_id = str(meta.get('trainee_id') or '').strip()
+            if session_id and trainee_id:
+                redirect_endpoint = 'admin_trainee_page'
+                redirect_kwargs = {'session_id': session_id, 'trainee_id': trainee_id}
         elif action == 'mark_recevable':
             dossier['statut_dossier'] = 'recevable'
         elif action == 'mark_refuse':
             dossier['statut_dossier'] = 'refuse'
         dossier['updated_at'] = _now_iso_utc()
         _vae_save_all(data)
+        if redirect_endpoint:
+            return redirect(url_for(redirect_endpoint, **redirect_kwargs))
         return redirect(url_for('admin_vae_detail', dossier_id=dossier_id))
 
     avis_admin = dict(dossier.get('avis_admin') or {})
