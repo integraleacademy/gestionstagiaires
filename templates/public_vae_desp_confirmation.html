@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>✅ Confirmation VAE DESP</title>
+  <style>
+    :root{
+      --bg:#f8fafc;
+      --text:#0f172a;
+      --line:#cbd5e1;
+      --card:#ffffff;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,Arial,sans-serif;background:radial-gradient(circle at 10% 10%,#dbeafe 0,#f8fafc 38%),radial-gradient(circle at 90% 0%,#ede9fe 0,#f8fafc 40%),var(--bg);color:var(--text)}
+    .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:14px}
+    .card{width:min(1400px,98vw);min-height:94vh;background:var(--card);border:1px solid var(--line);border-radius:34px;padding:56px 48px;text-align:center;box-shadow:0 24px 62px rgba(15,23,42,.13);display:flex;flex-direction:column;justify-content:center}
+    .logo{height:130px;width:auto;display:block;margin:0 auto 30px}
+    h1{margin:0;font-size:clamp(42px,8vw,92px);line-height:1.05}
+    .emoji{font-size:clamp(42px,9vw,92px);display:block;margin-bottom:18px}
+    p{margin:24px auto 0;max-width:1200px;font-size:clamp(24px,3.4vw,44px);line-height:1.35;font-weight:800;color:#1e293b}
+    .cta{margin-top:28px;display:inline-block;padding:12px 18px;border-radius:12px;background:#0f172a;color:#fff;text-decoration:none;font-weight:700}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <img class="logo" src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Logo Intégrale Academy">
+      <span class="emoji">🎉📩🚀</span>
+      <h1>C'est parti !</h1>
+      <p>
+        Vérifiez vos mails et commencez le processus de VAE.<br><br>
+        Plus que quelques semaines avant l'obtention de votre titre Dirigeant d'entreprise de sécurité privée.
+      </p>
+      <a class="cta" href="{{ url_for('public_vae_desp_form') }}">Retour au formulaire</a>
+    </section>
+  </main>
+</body>
+</html>

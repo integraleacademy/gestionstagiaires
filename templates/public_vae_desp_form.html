@@ -139,9 +139,8 @@
           throw new Error(msg);
         }
 
-        feedback.classList.add('ok');
-        feedback.textContent = '✅ C’est envoyé ! Vérifiez vos messages (mail + SMS).';
-        form.reset();
+        const redirectUrl = json.redirect_url || '/vae-desp/confirmation';
+        window.location.assign(redirectUrl);
       }catch(err){
         feedback.classList.add('err');
         feedback.textContent = err.message || 'Impossible d’envoyer le formulaire.';
