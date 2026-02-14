@@ -184,6 +184,16 @@
 
 </div>
 
+
+<div class="meta-line" style="margin-top:8px;gap:8px;">
+  {% if trainee.email %}
+    <a class="btn btn-outline btn-uniform" href="mailto:{{ trainee.email }}">✉️ {{ trainee.email }}</a>
+  {% endif %}
+  {% if trainee.phone %}
+    <a class="btn btn-outline btn-uniform" href="tel:{{ (trainee.phone or '')|replace(' ', '') }}">📞 {{ trainee.phone }}</a>
+  {% endif %}
+</div>
+
       <div class="meta-line" style="margin-top:10px;">
         <span class="mono">
           Email :
