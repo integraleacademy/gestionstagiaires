@@ -96,6 +96,10 @@
                 <span class="notif-dot" {% if admin_unresolved_total == 0 %}style="display:none;"{% endif %}></span>
               </button>
               <div id="adminNotifPanel" class="notif-panel" role="menu" aria-label="Notifications admin">
+                <div style="display:flex;gap:8px;align-items:center;padding:8px;border-bottom:1px solid #eef2ff;">
+                  <button type="button" id="adminPushToggleBtn" class="notif-icon-btn" title="Activer les notifications push sur cet appareil">📲 Activer push iPhone</button>
+                  <span id="adminPushStatus" class="notif-meta"></span>
+                </div>
                 <div id="adminNotifList">
                   {% if admin_notifications %}
                     {% for n in admin_notifications %}
@@ -425,6 +429,106 @@
     }
 
     const canManageNotifications = {{ "true" if admin_can_manage_notifications else "false" }};
+    const pushBtn = document.getElementById("adminPushToggleBtn");
+    const pushStatus = document.getElementById("adminPushStatus");
+
+    function setPushStatus(text){
+      if(pushStatus) pushStatus.textContent = text || "";
+    }
+
+    function urlBase64ToUint8Array(base64String){
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const raw = atob(base64);
+      const out = new Uint8Array(raw.length);
+      for(let i=0;i<raw.length;i++) out[i] = raw.charCodeAt(i);
+      return out;
+    }
+
+    async function initPushToggle(){
+      if(!pushBtn) return;
+      if(!canManageNotifications){
+        pushBtn.disabled = true;
+        setPushStatus('Activation réservée au compte admin.');
+        return;
+      }
+      if(!('serviceWorker' in navigator) || !('PushManager' in window)){
+        pushBtn.disabled = true;
+        setPushStatus('Push non supporté sur cet appareil.');
+        return;
+      }
+
+      let cfg;
+      try{
+        const res = await fetch('/api/admin/push/config');
+        cfg = await res.json();
+        if(!res.ok || !cfg.ok) throw new Error(cfg.error || 'config_error');
+      }catch(_e){
+        pushBtn.disabled = true;
+        setPushStatus('Impossible de charger la config push.');
+        return;
+      }
+
+      if(!cfg.enabled || !cfg.vapid_public_key){
+        pushBtn.disabled = true;
+        setPushStatus('Push non configuré côté serveur.');
+        return;
+      }
+
+      let registration;
+      try{
+        registration = await navigator.serviceWorker.register('/service-worker.js');
+      }catch(_e){
+        pushBtn.disabled = true;
+        setPushStatus('Service worker indisponible.');
+        return;
+      }
+      let sub = await registration.pushManager.getSubscription();
+      if(sub){
+        pushBtn.textContent = '🔕 Désactiver push iPhone';
+        setPushStatus('Push actif sur cet appareil.');
+      } else {
+        setPushStatus('Ajoutez le site à l’écran d’accueil iPhone puis activez.');
+      }
+
+      pushBtn.addEventListener('click', async ()=>{
+        try{
+          if(Notification.permission === 'denied'){
+            setPushStatus('Notifications bloquées dans Safari.');
+            return;
+          }
+
+          const current = await registration.pushManager.getSubscription();
+          if(current){
+            await fetch('/api/admin/push/unsubscribe', {
+              method: 'POST',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({endpoint: current.endpoint}),
+            });
+            await current.unsubscribe();
+            pushBtn.textContent = '📲 Activer push iPhone';
+            setPushStatus('Push désactivé.');
+            return;
+          }
+
+          const nextSub = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(cfg.vapid_public_key),
+          });
+          const res = await fetch('/api/admin/push/subscribe', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({subscription: nextSub.toJSON()}),
+          });
+          const data = await res.json();
+          if(!res.ok || !data.ok) throw new Error(data.error || 'subscribe_failed');
+          pushBtn.textContent = '🔕 Désactiver push iPhone';
+          setPushStatus('Push activé ✅');
+        }catch(_e){
+          setPushStatus('Activation push impossible.');
+        }
+      });
+    }
 
     function render(items){
       if(!items || !items.length){
@@ -473,6 +577,7 @@
       updateBadge(data.unresolved_total || 0);
     }
 
+    initPushToggle().catch(()=>{});
     refresh().catch(()=>{});
     setInterval(()=>{ refresh().catch(()=>{}); }, 3000);
 
