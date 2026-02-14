@@ -8,6 +8,25 @@
 {% set vae_action_dates = trainee.vae_action_dates or {} %}
 {% set vtc_book_sent_at = trainee.vtc_book_sent_at or "" %}
 
+<style>
+  .btn-docs-pending{
+    background: var(--orange) !important;
+    border-color: var(--orange) !important;
+    color:#fff !important;
+    animation: docsPendingPulse 1.2s ease-in-out infinite;
+  }
+  .btn-docs-ok{
+    background:#9ca3af !important;
+    border-color:#9ca3af !important;
+    color:#fff !important;
+    animation:none !important;
+  }
+  @keyframes docsPendingPulse{
+    0%,100%{ transform: scale(1); box-shadow:0 0 0 0 rgba(245,158,11,.35); }
+    50%{ transform: scale(1.03); box-shadow:0 0 0 10px rgba(245,158,11,0); }
+  }
+</style>
+
 <div class="breadcrumbs">
   <a href="{{ url_for('admin_trainees', session_id=session.id, **request.args) }}">← Retour stagiaires</a>
 </div>
@@ -36,15 +55,15 @@
     </div>
     <div class="meta-line" style="margin-top:8px;">
       {% if not is_vtc and not show_vae %}
-        <a class="btn btn-primary btn-uniform"
+        <a class="btn btn-outline btn-uniform"
            data-pre-reception
            href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=trainee.id, pre_reception=1) }}">
           ✅ Réception PRE
         </a>
       {% endif %}
       {% if not is_vtc %}
-        <button class="btn btn-outline btn-uniform" type="button" data-open-section="documentsSection">
-          📁 DOCUMENTS
+        <button class="btn btn-outline btn-uniform" type="button" data-open-section="documentsSection" id="btnOpenDocumentsSection">
+          📁 Mes documents
         </button>
       {% endif %}
       <button class="btn btn-outline btn-uniform" type="button" data-open-section="phoneRelanceSection">
@@ -1729,6 +1748,35 @@ function setDossierPill(status){
         hint.innerHTML = `<span class="pill ${pillClass}">${label}</span>`;
       }
 
+      function updateDocumentsHeaderButtonState(){
+        const docsBtn = document.getElementById("btnOpenDocumentsSection");
+        if(!docsBtn) return;
+
+        const rows = docsTable.querySelectorAll("tr[data-doc-key]");
+        let hasToControl = false;
+        let hasTrackableDoc = false;
+
+        rows.forEach((tr)=>{
+          const sel = tr.querySelector("select.sel-doc");
+          if(!sel || sel.disabled) return;
+          hasTrackableDoc = true;
+          const status = (sel.value || "").toUpperCase().trim();
+          if(status === "A CONTRÔLER" || status === "A CONTROLER" || status === "NON CONFORME"){
+            hasToControl = true;
+          }
+        });
+
+        docsBtn.classList.remove("btn-outline", "btn-docs-pending", "btn-docs-ok");
+
+        if(hasTrackableDoc && !hasToControl){
+          docsBtn.classList.add("btn-docs-ok");
+          docsBtn.textContent = "📁 Mes documents ✅";
+        }else{
+          docsBtn.classList.add("btn-docs-pending");
+          docsBtn.textContent = "📁 Mes documents";
+        }
+      }
+
       // select changes
       docsTable.querySelectorAll("tr[data-doc-key]").forEach(tr=>{
         const key = tr.getAttribute("data-doc-key");
@@ -1738,6 +1786,7 @@ function setDossierPill(status){
           sel.addEventListener("change", async ()=>{
             await saveDoc(key, "status", sel.value);
             updateDocPill(tr, sel.value);
+            updateDocumentsHeaderButtonState();
           });
         }
 
@@ -1761,6 +1810,8 @@ function setDossierPill(status){
           docCommentInput?.focus();
         });
       });
+
+      updateDocumentsHeaderButtonState();
 
       if(docCommentSave){
         docCommentSave.addEventListener("click", async ()=>{
@@ -1794,11 +1845,15 @@ function setDossierPill(status){
     try{
       const res = await cnapsLookup(nom, prenom);
       const statut = (res.statut_cnaps || "INCONNU").toUpperCase();
+      const statutHistory = Array.isArray(res.statut_cnaps_history) ? res.statut_cnaps_history : [];
 
       await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
         method:"POST",
         headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ cnaps: statut })
+        body: JSON.stringify({
+          cnaps: statut,
+          statut_cnaps_history: statutHistory,
+        })
       });
 
       window.location.reload();
