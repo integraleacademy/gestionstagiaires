@@ -3612,6 +3612,11 @@ def public_vae_desp_form():
     return render_template("public_vae_desp_form.html")
 
 
+@app.get("/vae-desp/confirmation")
+def public_vae_desp_confirmation():
+    return render_template("public_vae_desp_confirmation.html")
+
+
 @app.post("/vae-desp")
 def public_vae_desp_submit():
     payload = request.get_json(silent=True) or request.form
@@ -3717,7 +3722,14 @@ def public_vae_desp_submit():
     email_ok = brevo_send_email(email, subject, html) if email else False
     sms_ok = brevo_send_sms(phone, sms) if phone else False
 
-    return jsonify({"ok": True, "email_ok": bool(email_ok), "sms_ok": bool(sms_ok)})
+    return jsonify(
+        {
+            "ok": True,
+            "email_ok": bool(email_ok),
+            "sms_ok": bool(sms_ok),
+            "redirect_url": url_for("public_vae_desp_confirmation"),
+        }
+    )
 
 
 @app.get("/admin/sessions")
