@@ -3696,6 +3696,20 @@ def public_vae_desp_submit():
     trainees.insert(0, trainee)
     target_session["trainees"] = trainees
     target_session.pop("stagiaires", None)
+
+    add_admin_notification(
+        data,
+        f"🔔 Nouvelle demande de VAE {first_name} {last_name}",
+        {
+            "kind": "public_vae_desp_request",
+            "session_id": target_session.get("id") or "",
+            "session_name": target_session.get("name") or "",
+            "trainee_id": trainee_id,
+            "first_name": first_name,
+            "last_name": last_name,
+            "comment": "Demande issue du formulaire public VAE DESP",
+        },
+    )
     save_data(data)
 
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}"
