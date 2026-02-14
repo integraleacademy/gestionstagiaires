@@ -895,7 +895,7 @@
     <label class="label">{{ label }}</label>
 
     <div style="display:flex;gap:10px;align-items:center;">
-      <input id="{{ id }}" value="{{ value or '' }}" placeholder="{{ placeholder }}" style="flex:1;">
+      <input id="{{ id }}" value="{{ value or '' }}" placeholder="{{ placeholder }}" style="flex:1;min-width:0;">
       <span id="ok_{{ id }}" class="saved show" style="min-width:110px;text-align:right;{% if ok %}color:#16a34a;{% else %}color:#dc2626;{% endif %}">
         {% if ok %}✅{% else %}⚠️ À compléter{% endif %}
       </span>
