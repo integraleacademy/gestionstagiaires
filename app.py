@@ -3614,7 +3614,19 @@ def public_vae_desp_form():
 
 @app.get("/vae-desp/confirmation")
 def public_vae_desp_confirmation():
-    return render_template("public_vae_desp_confirmation.html")
+    token = (request.args.get("token") or "").strip()
+    trainee_space_url = url_for("public_vae_desp_form")
+
+    if token:
+        data = load_data()
+        _, trainee = find_session_and_trainee_by_token(data, token)
+        if trainee:
+            trainee_space_url = url_for("public_trainee_space", token=token)
+
+    return render_template(
+        "public_vae_desp_confirmation.html",
+        trainee_space_url=trainee_space_url,
+    )
 
 
 @app.post("/vae-desp")
@@ -3727,7 +3739,7 @@ def public_vae_desp_submit():
             "ok": True,
             "email_ok": bool(email_ok),
             "sms_ok": bool(sms_ok),
-            "redirect_url": url_for("public_vae_desp_confirmation"),
+            "redirect_url": url_for("public_vae_desp_confirmation", token=public_token),
         }
     )
 
