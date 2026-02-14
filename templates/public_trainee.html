@@ -909,7 +909,7 @@
            trainee.carte_vitale,
            "Ex : 1 85 12 34 567 890 12") }}
 
-{% if not show_vtc and not is_dirigeant_vae %}
+{% if not show_vtc and not is_dirigeant_vae and "DIRIGEANT" not in tt %}
   {{ field("Numéro PRE ou CAR (numéro d'autorisation préalable CNAPS qui commence par PRE ou numéro de carte professionnelle CNAPS qui commence par CAR)",
            "pre_number",
            trainee.pre_number,
