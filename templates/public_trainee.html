@@ -2185,6 +2185,8 @@ function setFieldState(inputId){
     clearTimeout(tmr);
     tmr = setTimeout(async ()=>{
 
+      applyFormatting();
+
       const carte_vitale  = document.getElementById("carte_vitale")?.value || "";
       const pre_number    = document.getElementById("pre_number")?.value || "";
 
@@ -2197,7 +2199,6 @@ function setFieldState(inputId){
       const zip_code      = document.getElementById("zip_code")?.value || "";
       const city          = document.getElementById("city")?.value || "";
 
-      applyFormatting();
       const r = await fetch(`/espace/${token}/infos/update`, {
         method: "POST",
         headers: {"Content-Type":"application/json"},
@@ -2320,7 +2321,8 @@ function isValidSecu(digits){
 // PRE/CAR-083-2025-12-01-20250000000 ou PRE-2025-12-01-20250000000
 function isValidPRE(v){
   if(!v) return false;
-  return /^(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}$/.test(v);
+  const normalized = normalizePRE(v);
+  return /^(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}$/.test(normalized);
 }
 
 function applyFormatting(){
@@ -2598,71 +2600,46 @@ function formatPreCarDisplay(raw){
   raw = (raw || "").toString().toUpperCase().replace(/\s+/g, "");
   raw = raw.replace(/[^A-Z0-9-]/g, "");
 
-  const limitTo25 = (value) => {
-    let out = "";
-    let count = 0;
-    for (const ch of value) {
-      const isDash = ch === "-";
-      if (!isDash) {
-        if (count >= 25) break;
-        count += 1;
-      }
-      out += ch;
-    }
-    return out;
-  };
-
-  // prefix PRE ou CAR
-  let prefix = "";
-  if (raw.startsWith("PRE")) prefix = "PRE";
-  else if (raw.startsWith("CAR")) prefix = "CAR";
-
-  // si pas de prefix valide, on laisse l'utilisateur taper (mais on nettoie)
-  if (!prefix) return limitTo25(raw.replace(/[^A-Z0-9-]/g, ""));
+  const prefix = raw.startsWith("PRE") ? "PRE" : (raw.startsWith("CAR") ? "CAR" : "");
+  if(!prefix) return raw;
 
   const afterPrefix = raw.slice(3);
-  let hasDep = false;
-  if (afterPrefix.startsWith("-")) {
-    const firstSegment = afterPrefix.slice(1).split("-")[0];
-    if (/^\d{3}$/.test(firstSegment)) hasDep = true;
+  const explicitSegments = afterPrefix
+    .replace(/^-/, "")
+    .split("-")
+    .map((seg) => seg.replace(/\D/g, ""))
+    .filter(Boolean);
+
+  const firstSeg = explicitSegments[0] || "";
+  let hasDep = firstSeg.length === 3;
+
+  const digits = afterPrefix.replace(/\D/g, "");
+  if(!hasDep && digits.length > 19) hasDep = true;
+
+  const grouped = [];
+  if(hasDep){
+    const dep = digits.slice(0, 3);
+    const yyyy = digits.slice(3, 7);
+    const mm = digits.slice(7, 9);
+    const dd = digits.slice(9, 11);
+    const serial = digits.slice(11, 22);
+    if(dep) grouped.push(dep);
+    if(yyyy) grouped.push(yyyy);
+    if(mm) grouped.push(mm);
+    if(dd) grouped.push(dd);
+    if(serial) grouped.push(serial);
+  } else {
+    const yyyy = digits.slice(0, 4);
+    const mm = digits.slice(4, 6);
+    const dd = digits.slice(6, 8);
+    const serial = digits.slice(8, 19);
+    if(yyyy) grouped.push(yyyy);
+    if(mm) grouped.push(mm);
+    if(dd) grouped.push(dd);
+    if(serial) grouped.push(serial);
   }
 
-  let digits = afterPrefix.replace(/\D/g, "");
-  if (!hasDep && digits.length > 19) hasDep = true;
-
-  let out = prefix;
-  if (hasDep) {
-    // attendu : DDD(3) + YYYY(4) + MM(2) + DD(2) + LAST(11) => 22 chiffres
-    digits = digits.slice(0, 3 + 4 + 2 + 2 + 11);
-
-    const dep  = digits.slice(0, 3);
-    const y    = digits.slice(3, 7);
-    const m    = digits.slice(7, 9);
-    const d    = digits.slice(9, 11);
-    const last = digits.slice(11); // 11+ chiffres
-
-    if (dep)  out += "-" + dep;
-    if (y)    out += "-" + y;
-    if (m)    out += "-" + m;
-    if (d)    out += "-" + d;
-    if (last) out += "-" + last;
-
-    return limitTo25(out);
-  }
-
-  // attendu : YYYY(4) + MM(2) + DD(2) + LAST(11) => 19 chiffres
-  digits = digits.slice(0, 4 + 2 + 2 + 11);
-  const y    = digits.slice(0, 4);
-  const m    = digits.slice(4, 6);
-  const d    = digits.slice(6, 8);
-  const last = digits.slice(8); // 11+ chiffres
-
-  if (y)    out += "-" + y;
-  if (m)    out += "-" + m;
-  if (d)    out += "-" + d;
-  if (last) out += "-" + last;
-
-  return limitTo25(out);
+  return [prefix, ...grouped].join("-");
 }
 
 function normalizePRE(s){
