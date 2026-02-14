@@ -2817,9 +2817,9 @@ def infos_is_complete(t: Dict[str, Any]) -> bool:
     if len(secu_digits) != 15:
         return False
 
-    # PRE : format PRE-083-2025-12-01-20250000000 ou PRE-2025-12-01-20250000000
+    # PRE/CAR : format strict PRE-013-2029-07-25-20240908920 ou CAR-013-2029-07-25-20240908920
     pre = (t.get("pre_number") or "").strip().upper().replace(" ", "")
-    if not re.match(r"^(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}$", pre):
+    if not re.match(r"^(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11}$", pre):
         return False
 
     return True
@@ -5333,7 +5333,7 @@ def api_admin_pre_reception(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "missing_pre"}), 400
 
     pre = pre_raw.upper().replace(" ", "")
-    if not re.match(r"^(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}$", pre):
+    if not re.match(r"^(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11}$", pre):
         return jsonify({"ok": False, "error": "invalid_pre"}), 400
 
     t["pre_number"] = pre
@@ -6430,7 +6430,7 @@ def infos_missing_text(trainee: dict) -> str:
     pre = pre_raw.upper().replace(" ", "")
     if not pre_raw:
         missing.append("- Numéro PRE / CAR")
-    elif not re.match(r"^(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}$", pre):
+    elif not re.match(r"^(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11}$", pre):
         missing.append("- Numéro PRE / CAR (format invalide)")
 
     return "\n".join(missing)
@@ -8747,10 +8747,21 @@ def admin_trainee_candidate_sheet(session_id: str, trainee_id: str):
     if photo_token:
         photo_url = url_for("admin_view_upload", path=photo_token)
 
+    candidate_data = _build_candidate_sheet_data(s, t)
+
+    first_name = str(t.get("first_name") or "").strip()
+    if not first_name:
+        first_name = str((candidate_data.get("first_names") or "").strip().split(" ")[0])
+    last_name = str(t.get("last_name") or "").strip().upper()
+    pdf_title = "Fiche candidat VAE DESP"
+    if first_name or last_name:
+        pdf_title = f"{pdf_title} {first_name} {last_name}".strip()
+
     return render_template(
         "admin_trainee_candidate_sheet.html",
-        candidate=_build_candidate_sheet_data(s, t),
+        candidate=candidate_data,
         photo_url=photo_url,
+        pdf_title=pdf_title,
     )
 
 @app.get("/api/docs_to_control")
