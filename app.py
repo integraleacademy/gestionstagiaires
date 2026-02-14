@@ -10672,7 +10672,12 @@ def vae_wizard(token: str):
     if (dossier.get('statut_dossier') or '').strip().lower() == 'soumis' and not admin_edit_mode:
         return redirect(url_for('vae_success', token=token))
 
-    return render_template('vae_wizard.html', dossier=dossier, dossier_json=json.dumps(dossier, ensure_ascii=False))
+    return render_template(
+        'vae_wizard.html',
+        dossier=dossier,
+        dossier_json=json.dumps(dossier, ensure_ascii=False),
+        admin_edit_mode=admin_edit_mode,
+    )
 
 @app.post('/api/vae/<dossier_id>/save')
 @app.patch('/api/vae/<dossier_id>/save')
