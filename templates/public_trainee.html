@@ -2279,6 +2279,8 @@ const preEl = document.getElementById("pre_number");
 if(preEl){
   preEl.addEventListener("input", ()=>{
     formatInputWithCaret(preEl, formatPreCarDisplay);
+    setFieldStateValidated("pre_number");
+    autosave();
   });
 }
 
