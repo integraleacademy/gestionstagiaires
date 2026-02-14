@@ -176,6 +176,64 @@
   .vtc-check-item{ border:1px solid #e5e7eb; border-radius:10px; padding:8px 10px; background:#f9fafb; }
   .vtc-check-item strong{ display:block; }
   .vtc-check-item span{ color:#6b7280; font-size:12px; }
+
+  .quick-create-wrap{ position:relative; }
+  .btn-plus{
+    min-width:44px;
+    height:44px;
+    border-radius:12px;
+    padding:0;
+    font-size:24px;
+    line-height:1;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .quick-create-menu{
+    position:absolute;
+    top:calc(100% + 8px);
+    right:0;
+    z-index:80;
+    min-width:230px;
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    box-shadow:0 12px 30px rgba(15,23,42,.14);
+    padding:8px;
+    display:none;
+  }
+  .quick-create-menu.is-open{ display:block; }
+  .quick-create-option{
+    width:100%;
+    border:none;
+    border-radius:10px;
+    padding:10px 12px;
+    font-weight:800;
+    font-size:14px;
+    text-align:left;
+    cursor:pointer;
+    margin:0;
+  }
+  .quick-create-option + .quick-create-option{ margin-top:6px; }
+  .quick-create-option--session{ background:#dcfce7; color:#166534; }
+  .quick-create-option--trainee{ background:#dbeafe; color:#1d4ed8; }
+
+  .training-chooser{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .training-choice{
+    border:1px solid #cbd5e1;
+    border-radius:999px;
+    background:#f8fafc;
+    color:#334155;
+    font-weight:800;
+    font-size:12px;
+    padding:8px 12px;
+    cursor:pointer;
+  }
+  .training-choice.is-active{
+    background:#1d4ed8;
+    color:#fff;
+    border-color:#1d4ed8;
+  }
 </style>
 
 <div class="page-head" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -190,7 +248,13 @@
     {% endif %}
     <a class="btn btn-outline" href="{{ url_for('admin_sessions_archived') }}">Sessions archivées</a>
     {% if not is_read_only %}
-      <button class="btn btn-primary" id="btnOpenCreateSession">+ Nouvelle session</button>
+      <div class="quick-create-wrap">
+        <button class="btn btn-primary btn-plus" id="btnOpenCreateMenu" aria-label="Créer">+</button>
+        <div class="quick-create-menu" id="quickCreateMenu">
+          <button class="quick-create-option quick-create-option--session" id="btnOpenCreateSession">💼Nouvelle session</button>
+          <button class="quick-create-option quick-create-option--trainee" id="btnOpenCreateTraineeFromSessions">👨‍🎓Nouveau stagiaire</button>
+        </div>
+      </div>
     {% endif %}
   </div>
 </div>
@@ -335,7 +399,7 @@
 
 {% if sessions|length == 0 %}
   <div class="card" style="margin-top:12px;color:var(--muted)">
-    Aucune session pour l’instant. Clique sur <strong>Nouvelle session</strong>.
+    Aucune session pour l’instant. Clique sur <strong>+</strong>.
   </div>
 {% endif %}
 
@@ -395,6 +459,92 @@
     <div class="modal-foot">
       <button class="btn" data-close-modal="createSessionModal">Annuler</button>
       <button class="btn btn-primary" id="btnCreateSession">Valider</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE CREATION STAGIAIRE (depuis sessions) -->
+<div class="modal-backdrop" id="createTraineeFromSessionsModal" aria-hidden="true">
+  <div class="modal" style="max-width:860px;">
+    <div class="modal-head">
+      <div class="modal-title">Ajouter un stagiaire</div>
+      <button class="icon-btn" data-close-modal="createTraineeFromSessionsModal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="label" style="margin-bottom:8px;">Formation</div>
+      <div class="training-chooser" id="trainingChooser">
+        <button class="training-choice" data-training="APS">APS</button>
+        <button class="training-choice" data-training="A3P">A3P</button>
+        <button class="training-choice" data-training="DIRIGEANT initial">DIRIGEANT INITIAL</button>
+        <button class="training-choice" data-training="DIRIGEANT VAE">VAE DIRIGEANT</button>
+        <button class="training-choice" data-training="VTC">CHAUFFEUR VTC</button>
+      </div>
+
+      <label style="margin-bottom:14px;display:block;">
+        <div class="label">Session</div>
+        <select id="traineeTargetSession"></select>
+      </label>
+
+      <div class="form-grid">
+        <label>
+          <div class="label">Nom</div>
+          <input id="sessionTLastName" type="text" placeholder="Nom">
+        </label>
+        <label>
+          <div class="label">Prénom</div>
+          <input id="sessionTFirstName" type="text" placeholder="Prénom">
+        </label>
+        <label>
+          <div class="label">Date de naissance (facultatif)</div>
+          <input id="sessionTBirthDate" type="date">
+        </label>
+        <label>
+          <div class="label">Lieu de naissance (facultatif)</div>
+          <input id="sessionTBirthPlace" type="text" placeholder="Ville de naissance">
+        </label>
+        <label>
+          <div class="label">Adresse mail</div>
+          <input id="sessionTEmail" type="email" placeholder="email@exemple.com">
+        </label>
+        <label>
+          <div class="label">Téléphone</div>
+          <input id="sessionTPhone" type="tel" placeholder="+33600000000">
+        </label>
+        <label>
+          <div class="label">Adresse postale</div>
+          <input id="sessionTAddress" type="text" placeholder="Adresse postale">
+        </label>
+        <label>
+          <div class="label">Code postal actuel (facultatif)</div>
+          <input id="sessionTZipCode" type="text" placeholder="Code postal">
+        </label>
+        <label>
+          <div class="label">Ville actuelle (facultatif)</div>
+          <input id="sessionTCity" type="text" placeholder="Ville actuelle">
+        </label>
+        <label>
+          <div class="label">Montant CPF</div>
+          <input id="sessionTCpfAmount" type="number" min="0" step="0.01" placeholder="0.00">
+        </label>
+        <label>
+          <div class="label">Montant financement personnel</div>
+          <input id="sessionTPersonalAmount" type="number" min="0" step="0.01" placeholder="0.00">
+        </label>
+        <label>
+          <div class="label">Montant autre financement</div>
+          <input id="sessionTOtherAmount" type="number" min="0" step="0.01" placeholder="0.00">
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+          <input id="sessionTCarteProOk" type="checkbox" style="width:18px;height:18px;">
+          <div class="label" style="margin:0;">Carte professionnelle (CNAPS) déjà OK</div>
+        </label>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" data-close-modal="createTraineeFromSessionsModal">Annuler</button>
+      <button class="btn btn-primary" id="btnCreateTraineeFromSessions">Sauvegarder</button>
     </div>
   </div>
 </div>
@@ -527,9 +677,145 @@
 </div>
 
 <script>
+  const availableSessionsForCreate = {{ sessions|tojson }};
+
+  function normalizeTrainingChoice(value){
+    const v = (value || "").trim().toUpperCase();
+    if(v.startsWith("APS")) return "APS";
+    if(v.startsWith("A3P")) return "A3P";
+    if(v.startsWith("DIRIGEANT INITIAL")) return "DIRIGEANT initial";
+    if(v.startsWith("DIRIGEANT VAE") || v.startsWith("VAE DIRIGEANT")) return "DIRIGEANT VAE";
+    if(v.includes("VTC") || v.includes("CHAUFFEUR VTC")) return "VTC";
+    return value || "";
+  }
+
+  function closeQuickCreateMenu(){
+    document.getElementById("quickCreateMenu")?.classList.remove("is-open");
+  }
+
+  document.getElementById("btnOpenCreateMenu")?.addEventListener("click", (event)=>{
+    event.stopPropagation();
+    document.getElementById("quickCreateMenu")?.classList.toggle("is-open");
+  });
+
+  document.addEventListener("click", (event)=>{
+    const wrap = document.querySelector(".quick-create-wrap");
+    if(!wrap || wrap.contains(event.target)) return;
+    closeQuickCreateMenu();
+  });
+
   // open modal (create session)
   document.getElementById("btnOpenCreateSession")?.addEventListener("click", ()=>{
+    closeQuickCreateMenu();
     openModal("createSessionModal");
+  });
+
+  let selectedTrainingForCreate = "";
+
+  function getTraineeCreatePayload(){
+    return {
+      last_name: (document.getElementById("sessionTLastName")?.value || "").trim(),
+      first_name: (document.getElementById("sessionTFirstName")?.value || "").trim(),
+      birth_date: (document.getElementById("sessionTBirthDate")?.value || "").trim(),
+      birth_city: (document.getElementById("sessionTBirthPlace")?.value || "").trim(),
+      email: (document.getElementById("sessionTEmail")?.value || "").trim(),
+      phone: (document.getElementById("sessionTPhone")?.value || "").trim(),
+      address: (document.getElementById("sessionTAddress")?.value || "").trim(),
+      zip_code: (document.getElementById("sessionTZipCode")?.value || "").trim(),
+      city: (document.getElementById("sessionTCity")?.value || "").trim(),
+      cpf_amount: (document.getElementById("sessionTCpfAmount")?.value || "").trim(),
+      personal_amount: (document.getElementById("sessionTPersonalAmount")?.value || "").trim(),
+      other_amount: (document.getElementById("sessionTOtherAmount")?.value || "").trim(),
+      carte_pro_ok: !!document.getElementById("sessionTCarteProOk")?.checked,
+      send_access: false,
+    };
+  }
+
+  function refreshTrainingButtons(){
+    document.querySelectorAll("#trainingChooser .training-choice").forEach(btn=>{
+      const active = btn.getAttribute("data-training") === selectedTrainingForCreate;
+      btn.classList.toggle("is-active", active);
+    });
+  }
+
+  function refreshSessionChoices(){
+    const select = document.getElementById("traineeTargetSession");
+    if(!select) return;
+
+    const matching = availableSessionsForCreate.filter(s => normalizeTrainingChoice(s.training_type) === selectedTrainingForCreate);
+    select.innerHTML = "";
+
+    if(matching.length === 0){
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "Aucune session disponible";
+      select.appendChild(opt);
+      select.disabled = true;
+      return;
+    }
+
+    matching.forEach(s=>{
+      const opt = document.createElement("option");
+      opt.value = s.id;
+      opt.textContent = `${s.name || "Session"} (${s.training_type || ""})`;
+      select.appendChild(opt);
+    });
+    select.disabled = false;
+  }
+
+  function initializeTraineeCreateFromSessions(){
+    const first = document.querySelector("#trainingChooser .training-choice");
+    selectedTrainingForCreate = first?.getAttribute("data-training") || "";
+    refreshTrainingButtons();
+    refreshSessionChoices();
+  }
+
+  document.querySelectorAll("#trainingChooser .training-choice").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      selectedTrainingForCreate = btn.getAttribute("data-training") || "";
+      refreshTrainingButtons();
+      refreshSessionChoices();
+    });
+  });
+
+  document.getElementById("btnOpenCreateTraineeFromSessions")?.addEventListener("click", ()=>{
+    closeQuickCreateMenu();
+    initializeTraineeCreateFromSessions();
+    openModal("createTraineeFromSessionsModal");
+  });
+
+  document.getElementById("btnCreateTraineeFromSessions")?.addEventListener("click", async ()=>{
+    const payload = getTraineeCreatePayload();
+    if(!payload.last_name || !payload.first_name){
+      alert("Nom + prénom obligatoires");
+      return;
+    }
+
+    const sessionId = (document.getElementById("traineeTargetSession")?.value || "").trim();
+    if(!sessionId){
+      alert("Sélectionne une session");
+      return;
+    }
+
+    const btn = document.getElementById("btnCreateTraineeFromSessions");
+    btn.disabled = true;
+    try{
+      const r = await fetch(`/api/sessions/${sessionId}/trainees/create`, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload),
+      });
+      const res = await r.json();
+      if(!r.ok || !res.ok){
+        alert("Erreur ajout stagiaire");
+        return;
+      }
+      window.location.href = `/admin/sessions/${sessionId}/stagiaires`;
+    }catch(e){
+      alert("Erreur réseau");
+    }finally{
+      btn.disabled = false;
+    }
   });
 
   function toggleExamFields(){
