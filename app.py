@@ -1329,6 +1329,62 @@ def build_vtc_onboarding_sms(first_name: str, form_link: str) -> str:
     )
 
 
+def build_dirigeant_vae_onboarding_email_sms(first_name: str, link: str) -> Tuple[str, str, str]:
+    first_name = (first_name or "").strip()
+    subject = "Votre VAE Dirigeant d'entreprise de sécurité privée (DESP)"
+    html = mail_layout(f"""
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;color:#0f172a;font-size:16px;line-height:1.6;">
+        <tr>
+          <td style="text-align:center;font-size:26px;font-weight:700;padding:0 0 16px 0;">🚀 En route vers la VAE</td>
+        </tr>
+        <tr>
+          <td style="padding:0 0 12px 0;">Bonjour {first_name},</td>
+        </tr>
+        <tr>
+          <td style="padding:0 0 12px 0;">
+            Votre VAE (Validation des acquis de l'expérience) Dirigeant d'entreprise de sécurité privée (DESP)
+            commence aujourd'hui.
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 0 12px 0;"><strong>Les étapes :</strong></td>
+        </tr>
+
+        <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong>1️⃣ Rédaction du Livret 1 (dossier de faisabilité)</strong><br>Vous allez compléter en ligne votre dossier de faisabilité depuis votre Espace candidat.<br>Ce document permet de présenter votre parcours professionnel, vos fonctions exercées et vos responsabilités, afin de vérifier que votre expérience correspond bien aux compétences attendues pour le DESP. C’est en quelque sorte la « photographie » de votre expérience.<br>⏳ Durée estimée : environ 30 minutes.</td></tr>
+        <tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>
+        <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong>2️⃣ Étude du Livret 1 et attestation de recevabilité</strong><br>Votre dossier est étudié par la commission.<br>Si les éléments fournis sont conformes et suffisants, une attestation de recevabilité vous est délivrée.<br>À partir de ce moment, nous prendrons contact avec vous pour mettre en place la convention de VAE et procéder au règlement de l’acompte (1 140 €).</td></tr>
+        <tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>
+        <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong>3️⃣ Rédaction du Livret 2</strong><br>Vous devrez ensuite compléter le Livret 2.<br>Ce document est le cœur de votre démarche : vous y détaillez précisément vos activités, vos missions, les situations professionnelles rencontrées, ainsi que les compétences mobilisées.<br>C’est ce dossier qui sera présenté au jury de certification.</td></tr>
+        <tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>
+        <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong>4️⃣ Étude du Livret 2</strong><br>La commission analyse votre dossier.<br>Si l’ensemble est conforme et complet, une date de passage devant le jury de certification est programmée.</td></tr>
+        <tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>
+        <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong>5️⃣ Passage devant le jury de certification</strong><br>Vous serez convoqué à un entretien professionnel d’environ une heure.<br>Lors de cet échange, le jury reviendra sur votre parcours et sur les éléments présentés dans le Livret 2.<br>L’objectif est de vérifier la maîtrise des compétences attendues, à travers des questions concrètes sur votre expérience et vos pratiques professionnelles.</td></tr>
+        <tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>
+        <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong>6️⃣ Obtention de votre certification</strong></td></tr>
+
+        <tr>
+          <td style="text-align:center;padding:22px 0;">
+            <a href="{link}" style="display:inline-block;background:#1f8f4a;color:#ffffff;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:700;">Démarrer ma VAE</a>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Je reste à votre disposition pour tous renseignements complémentaires,<br>
+            <strong>Clément VAILLANT</strong><br>
+            Directeur Intégrale Academy
+          </td>
+        </tr>
+      </table>
+    """)
+
+    sms = (
+        f"Intégrale Academy Bonjour {first_name}, votre VAE Dirigeant d'entreprise de sécurité (DESP) commence aujourd'hui 🚀. "
+        f"Pour démarrer votre VAE cliquez ici : {link} "
+        "Je reste à votre disposition. Clément VAILLANT - Intégrale Academy"
+    )
+    return subject, html, sms
+
+
 def _parse_iso_datetime(value: str) -> Optional[datetime.datetime]:
     raw = (value or "").strip()
     if not raw:
@@ -3519,6 +3575,18 @@ POSITIONING_TEST_TOTAL = sum(
     len(section["questions"]) for section in POSITIONING_TEST_SECTIONS
 )
 
+PUBLIC_VAE_DESP_SESSION_NAME = "VAE DESP 2026"
+
+
+def find_session_by_name(data: Dict[str, Any], session_name: str) -> Optional[Dict[str, Any]]:
+    target = (session_name or "").strip().lower()
+    if not target:
+        return None
+    for s in data.get("sessions", []):
+        if (_session_get(s, "name", "") or "").strip().lower() == target:
+            return s
+    return None
+
 @app.get("/")
 def home():
     return redirect(url_for("admin_sessions"))
@@ -3537,6 +3605,105 @@ def positioning_test_public():
 @app.get("/positioning_test_public.html")
 def positioning_test_public_legacy():
     return redirect(url_for("positioning_test_public"), code=301)
+
+
+@app.get("/vae-desp")
+def public_vae_desp_form():
+    return render_template("public_vae_desp_form.html")
+
+
+@app.post("/vae-desp")
+def public_vae_desp_submit():
+    payload = request.get_json(silent=True) or request.form
+    last_name = normalize_last_name(payload.get("last_name") or "")
+    first_name = normalize_first_name(payload.get("first_name") or "")
+    birth_date = (payload.get("birth_date") or "").strip()
+    email = (payload.get("email") or "").strip()
+    email_confirm = (payload.get("email_confirm") or "").strip()
+    phone = (payload.get("phone") or "").strip()
+    eligibility_confirmed = payload.get("eligibility_confirmed")
+    eligibility_confirmed = True if eligibility_confirmed in (True, "true", "1", 1, "yes", "on") else False
+
+    if not all([last_name, first_name, birth_date, email, email_confirm, phone]):
+        return jsonify({"ok": False, "error": "missing_fields"}), 400
+    if email.lower() != email_confirm.lower():
+        return jsonify({"ok": False, "error": "email_mismatch"}), 400
+    if not eligibility_confirmed:
+        return jsonify({"ok": False, "error": "eligibility_required"}), 400
+
+    data = load_data()
+    target_session = find_session_by_name(data, PUBLIC_VAE_DESP_SESSION_NAME)
+    if not target_session:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+
+    trainee_id = "TRN-" + uuid.uuid4().hex[:8].upper()
+    public_token = uuid.uuid4().hex
+    training_type = _session_get(target_session, "training_type", "")
+    default_price = default_training_price(training_type)
+
+    trainee = {
+        "id": trainee_id,
+        "personal_id": trainee_id,
+        "last_name": last_name,
+        "first_name": first_name,
+        "birth_date": birth_date,
+        "birth_city": "",
+        "email": email,
+        "phone": phone,
+        "vtc_cmar_id": "",
+        "address": "",
+        "zip_code": "",
+        "city": "",
+        "comment": "Inscription via formulaire public VAE DESP",
+        "cnaps": "INCONNU",
+        "convention_status": "soon",
+        "test_fr_status": "soon",
+        "dossier_status": "incomplete",
+        "financement_status": "soon",
+        "training_price": default_price if default_price is not None else "",
+        "cpf_amount": "",
+        "personal_amount": "",
+        "other_amount": "",
+        "vae_status": "soon",
+        "hosting_status": "",
+        "public_token": public_token,
+        "no_permis": False,
+        "force_dossier_complete": False,
+        "vtc_cm_login": "",
+        "vtc_cm_password": "",
+        "vtc_cm_submitted_at": "",
+        "vtc_cm_reminder_sent_at": "",
+        "vtc_cm_reminder_email_ok": False,
+        "vtc_cm_reminder_sms_ok": False,
+        "vtc_cm_reminder_copy_email_ok": False,
+        "exam_fees_paid": False,
+        "exam_fees_paid_at": "",
+        "elearning_link": "",
+        "elearning_link_sent_at": "",
+        "elearning_link_email_ok": False,
+        "elearning_link_sms_ok": False,
+        "vtc_book_sent_at": "",
+        "documents": [],
+        "created_at": _now_iso(),
+        "phone_followups": [],
+        "public_hide_popup": False,
+    }
+
+    ensure_documents_schema_for_trainee(trainee, training_type)
+    trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, training_type) else "incomplete"
+
+    trainees = _session_trainees_list(target_session)
+    trainees.insert(0, trainee)
+    target_session["trainees"] = trainees
+    target_session.pop("stagiaires", None)
+    save_data(data)
+
+    link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}"
+    subject, html, sms = build_dirigeant_vae_onboarding_email_sms(first_name, link)
+    email_ok = brevo_send_email(email, subject, html) if email else False
+    sms_ok = brevo_send_sms(phone, sms) if phone else False
+
+    return jsonify({"ok": True, "email_ok": bool(email_ok), "sms_ok": bool(sms_ok)})
 
 
 @app.get("/admin/sessions")
@@ -4945,57 +5112,7 @@ def api_create_trainee(session_id: str):
             email_ok = brevo_send_email(email, subject, html) if email else False
             sms_ok = brevo_send_sms(phone, sms) if phone else False
         elif (training_type or "") == "DIRIGEANT VAE":
-            subject = "Votre VAE Dirigeant d'entreprise de sécurité privée (DESP)"
-            html = mail_layout(f"""
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;color:#0f172a;font-size:16px;line-height:1.6;">
-                <tr>
-                  <td style="text-align:center;font-size:26px;font-weight:700;padding:0 0 16px 0;">🚀 En route vers la VAE</td>
-                </tr>
-                <tr>
-                  <td style="padding:0 0 12px 0;">Bonjour {first_name},</td>
-                </tr>
-                <tr>
-                  <td style="padding:0 0 12px 0;">
-                    Votre VAE (Validation des acquis de l'expérience) Dirigeant d'entreprise de sécurité privée (DESP)
-                    commence aujourd'hui.
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding:0 0 12px 0;"><strong>Les étapes :</strong></td>
-                </tr>
-
-                <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong>1️⃣ Rédaction du Livret 1 (dossier de faisabilité)</strong><br>Vous allez compléter en ligne votre dossier de faisabilité depuis votre Espace candidat.<br>Ce document permet de présenter votre parcours professionnel, vos fonctions exercées et vos responsabilités, afin de vérifier que votre expérience correspond bien aux compétences attendues pour le DESP. C’est en quelque sorte la « photographie » de votre expérience.<br>⏳ Durée estimée : environ 30 minutes.</td></tr>
-                <tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>
-                <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong>2️⃣ Étude du Livret 1 et attestation de recevabilité</strong><br>Votre dossier est étudié par la commission.<br>Si les éléments fournis sont conformes et suffisants, une attestation de recevabilité vous est délivrée.<br>À partir de ce moment, nous prendrons contact avec vous pour mettre en place la convention de VAE et procéder au règlement de l’acompte (1 140 €).</td></tr>
-                <tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>
-                <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong>3️⃣ Rédaction du Livret 2</strong><br>Vous devrez ensuite compléter le Livret 2.<br>Ce document est le cœur de votre démarche : vous y détaillez précisément vos activités, vos missions, les situations professionnelles rencontrées, ainsi que les compétences mobilisées.<br>C’est ce dossier qui sera présenté au jury de certification.</td></tr>
-                <tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>
-                <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong>4️⃣ Étude du Livret 2</strong><br>La commission analyse votre dossier.<br>Si l’ensemble est conforme et complet, une date de passage devant le jury de certification est programmée.</td></tr>
-                <tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>
-                <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong>5️⃣ Passage devant le jury de certification</strong><br>Vous serez convoqué à un entretien professionnel d’environ une heure.<br>Lors de cet échange, le jury reviendra sur votre parcours et sur les éléments présentés dans le Livret 2.<br>L’objectif est de vérifier la maîtrise des compétences attendues, à travers des questions concrètes sur votre expérience et vos pratiques professionnelles.</td></tr>
-                <tr><td style="height:10px;font-size:0;line-height:0;">&nbsp;</td></tr>
-                <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;"><strong>6️⃣ Obtention de votre certification</strong></td></tr>
-
-                <tr>
-                  <td style="text-align:center;padding:22px 0;">
-                    <a href="{link}" style="display:inline-block;background:#1f8f4a;color:#ffffff;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:700;">Démarrer ma VAE</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    Je reste à votre disposition pour tous renseignements complémentaires,<br>
-                    <strong>Clément VAILLANT</strong><br>
-                    Directeur Intégrale Academy
-                  </td>
-                </tr>
-              </table>
-            """)
-
-            sms = (
-                f"Intégrale Academy Bonjour {first_name}, votre VAE Dirigeant d'entreprise de sécurité (DESP) commence aujourd'hui 🚀. "
-                f"Pour démarrer votre VAE cliquez ici : {link} "
-                "Je reste à votre disposition. Clément VAILLANT - Intégrale Academy"
-            )
+            subject, html, sms = build_dirigeant_vae_onboarding_email_sms(first_name, link)
 
             email_ok = brevo_send_email(email, subject, html) if email else False
             sms_ok = brevo_send_sms(phone, sms) if phone else False
