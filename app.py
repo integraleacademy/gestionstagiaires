@@ -26,6 +26,13 @@ import xml.etree.ElementTree as ET
 
 app = Flask(__name__)
 
+
+@app.errorhandler(404)
+def page_not_found(error):
+    if request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json":
+        return jsonify({"ok": False, "error": "not_found"}), 404
+    return render_template("404.html"), 404
+
 # =========================
 # Auth (admin)
 # =========================
