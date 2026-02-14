@@ -10524,6 +10524,13 @@ def api_attestation_bulk_upload(session_id: str):
 VAE_DATA_FILE = os.path.join(PERSIST_DIR, "data_vae.json")
 _vae_lock = threading.RLock()
 
+VAE_AVIS_ADMIN_DEFAULTS = {
+    "nom_accompagnateur": "Clément VAILLANT",
+    "email": "clement@integraleacademy.com",
+    "telephone": "04 22 47 07 68",
+    "organisme": "Intégrale Academy",
+}
+
 def _now_iso_utc() -> str:
     return datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
 
@@ -11078,7 +11085,14 @@ def admin_vae_detail(dossier_id: str):
         _vae_save_all(data)
         return redirect(url_for('admin_vae_detail', dossier_id=dossier_id))
 
-    return render_template('admin_vae_detail.html', dossier=dossier)
+    avis_admin = dict(dossier.get('avis_admin') or {})
+    for key, default_value in VAE_AVIS_ADMIN_DEFAULTS.items():
+        if not str(avis_admin.get(key) or '').strip():
+            avis_admin[key] = default_value
+    if not str(avis_admin.get('date') or '').strip():
+        avis_admin['date'] = datetime.datetime.now().strftime('%Y-%m-%d')
+
+    return render_template('admin_vae_detail.html', dossier=dossier, avis_admin=avis_admin)
 
 @app.get('/admin/vae/<dossier_id>/export')
 @admin_login_required

@@ -18,16 +18,16 @@
     <label>Décision</label>
     <select name="decision">
       <option value="">-- Choisir --</option>
-      <option value="faisable" {% if dossier.avis_admin.decision=='faisable' %}selected{% endif %}>Faisable</option>
-      <option value="faisable_complements" {% if dossier.avis_admin.decision=='faisable_complements' %}selected{% endif %}>Faisable avec compléments</option>
-      <option value="non_faisable" {% if dossier.avis_admin.decision=='non_faisable' %}selected{% endif %}>Non faisable</option>
+      <option value="faisable" {% if avis_admin.decision=='faisable' %}selected{% endif %}>Faisable</option>
+      <option value="faisable_complements" {% if avis_admin.decision=='faisable_complements' %}selected{% endif %}>Faisable avec compléments</option>
+      <option value="non_faisable" {% if avis_admin.decision=='non_faisable' %}selected{% endif %}>Non faisable</option>
     </select>
-    <textarea name="motivation" placeholder="Motivation">{{ dossier.avis_admin.motivation }}</textarea>
-    <input name="nom_accompagnateur" placeholder="Nom accompagnateur" value="{{ dossier.avis_admin.nom_accompagnateur }}">
-    <input type="email" name="email" placeholder="Email" value="{{ dossier.avis_admin.email }}">
-    <input name="telephone" placeholder="Téléphone" value="{{ dossier.avis_admin.telephone }}">
-    <input name="organisme" placeholder="Organisme" value="{{ dossier.avis_admin.organisme }}">
-    <input type="date" name="date" value="{{ dossier.avis_admin.date }}">
+    <textarea name="motivation" placeholder="Motivation">{{ avis_admin.motivation }}</textarea>
+    <input name="nom_accompagnateur" placeholder="Nom accompagnateur" value="{{ avis_admin.nom_accompagnateur }}">
+    <input type="email" name="email" placeholder="Email" value="{{ avis_admin.email }}">
+    <input name="telephone" placeholder="Téléphone" value="{{ avis_admin.telephone }}">
+    <input name="organisme" placeholder="Organisme" value="{{ avis_admin.organisme }}">
+    <input type="date" name="date" value="{{ avis_admin.date }}">
     <button class="btn" type="submit">Enregistrer avis</button>
   </form>
 </div>
