@@ -85,6 +85,13 @@
       <div class="topbar-actions" style="display:flex;align-items:center;gap:10px;">
         {% if is_admin_logged_in and (request.endpoint in ["admin_sessions", "admin_trainees", "admin_trainee_page"]) %}
           {% if admin_can_access_notifications and request.endpoint != "admin_secretariat" %}
+            <button type="button"
+                    id="adminPushQuickBtn"
+                    class="btn"
+                    style="font-size:13px;padding:6px 10px;"
+                    title="Activer les notifications push sur cet iPhone">
+              📲 Push iPhone
+            </button>
             <div class="notif-wrap" id="adminNotifWrap">
               <button type="button"
                       id="adminNotifBtn"
@@ -431,6 +438,7 @@
     const canManageNotifications = {{ "true" if admin_can_manage_notifications else "false" }};
     const pushBtn = document.getElementById("adminPushToggleBtn");
     const pushStatus = document.getElementById("adminPushStatus");
+    const pushQuickBtn = document.getElementById("adminPushQuickBtn");
 
     function setPushStatus(text){
       if(pushStatus) pushStatus.textContent = text || "";
@@ -449,11 +457,13 @@
       if(!pushBtn) return;
       if(!canManageNotifications){
         pushBtn.disabled = true;
+        if(pushQuickBtn) pushQuickBtn.disabled = true;
         setPushStatus('Activation réservée au compte admin.');
         return;
       }
       if(!('serviceWorker' in navigator) || !('PushManager' in window)){
         pushBtn.disabled = true;
+        if(pushQuickBtn) pushQuickBtn.disabled = true;
         setPushStatus('Push non supporté sur cet appareil.');
         return;
       }
@@ -465,12 +475,14 @@
         if(!res.ok || !cfg.ok) throw new Error(cfg.error || 'config_error');
       }catch(_e){
         pushBtn.disabled = true;
+        if(pushQuickBtn) pushQuickBtn.disabled = true;
         setPushStatus('Impossible de charger la config push.');
         return;
       }
 
       if(!cfg.enabled || !cfg.vapid_public_key){
         pushBtn.disabled = true;
+        if(pushQuickBtn) pushQuickBtn.disabled = true;
         setPushStatus('Push non configuré côté serveur.');
         return;
       }
@@ -480,14 +492,17 @@
         registration = await navigator.serviceWorker.register('/service-worker.js');
       }catch(_e){
         pushBtn.disabled = true;
+        if(pushQuickBtn) pushQuickBtn.disabled = true;
         setPushStatus('Service worker indisponible.');
         return;
       }
       let sub = await registration.pushManager.getSubscription();
       if(sub){
         pushBtn.textContent = '🔕 Désactiver push iPhone';
+        if(pushQuickBtn) pushQuickBtn.textContent = '🔕 Push actif';
         setPushStatus('Push actif sur cet appareil.');
       } else {
+        if(pushQuickBtn) pushQuickBtn.textContent = '📲 Push iPhone';
         setPushStatus('Ajoutez le site à l’écran d’accueil iPhone puis activez.');
       }
 
@@ -507,7 +522,14 @@
             });
             await current.unsubscribe();
             pushBtn.textContent = '📲 Activer push iPhone';
+            if(pushQuickBtn) pushQuickBtn.textContent = '📲 Push iPhone';
             setPushStatus('Push désactivé.');
+            return;
+          }
+
+          const permission = await Notification.requestPermission();
+          if(permission !== 'granted'){
+            setPushStatus('Autorisation notifications refusée.');
             return;
           }
 
@@ -523,11 +545,24 @@
           const data = await res.json();
           if(!res.ok || !data.ok) throw new Error(data.error || 'subscribe_failed');
           pushBtn.textContent = '🔕 Désactiver push iPhone';
+          if(pushQuickBtn) pushQuickBtn.textContent = '🔕 Push actif';
           setPushStatus('Push activé ✅');
         }catch(_e){
           setPushStatus('Activation push impossible.');
         }
       });
+
+      if(pushQuickBtn){
+        pushQuickBtn.disabled = false;
+        pushQuickBtn.addEventListener('click', ()=>{
+          if(!panel.classList.contains('show')){
+            panel.classList.add('show');
+            btn.classList.add('is-active');
+            btn.setAttribute('aria-expanded', 'true');
+          }
+          pushBtn.click();
+        });
+      }
     }
 
     function render(items){
