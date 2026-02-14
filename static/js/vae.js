@@ -2,6 +2,7 @@
   const container = document.querySelector('.vae-container[data-vae-id]');
   if (!container) return;
   const dossierId = container.dataset.vaeId;
+  const adminEditMode = container.dataset.adminEdit === '1';
   const form = document.getElementById('vaeForm');
   const steps = [...document.querySelectorAll('.step')];
   const progress = document.getElementById('vaeProgress');
@@ -368,6 +369,14 @@
   }
 
   async function submitDossier() {
+    if (adminEditMode) {
+      errorsEl.innerHTML = '';
+      await autosave();
+      saveStatus.textContent = 'Dossier mis à jour';
+      setTimeout(() => (saveStatus.textContent = ''), 1800);
+      return;
+    }
+
     const localErrors = frontValidate();
     if (localErrors.length) {
       renderErrors(localErrors);

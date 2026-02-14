@@ -10656,9 +10656,17 @@ def vae_wizard(token: str):
     dossier = _vae_find_dossier(data, token)
     if not dossier:
         abort(404)
-    if (dossier.get('statut_dossier') or '').strip().lower() == 'soumis':
+
+    admin_edit_mode = request.args.get('admin_edit') == '1' and bool(session.get('admin_logged_in'))
+    if (dossier.get('statut_dossier') or '').strip().lower() == 'soumis' and not admin_edit_mode:
         return redirect(url_for('vae_success', token=token))
-    return render_template('vae_wizard.html', dossier=dossier, dossier_json=json.dumps(dossier, ensure_ascii=False))
+
+    return render_template(
+        'vae_wizard.html',
+        dossier=dossier,
+        dossier_json=json.dumps(dossier, ensure_ascii=False),
+        admin_edit_mode=admin_edit_mode,
+    )
 
 @app.post('/api/vae/<dossier_id>/save')
 @app.patch('/api/vae/<dossier_id>/save')
@@ -10671,7 +10679,9 @@ def api_vae_save(dossier_id: str):
     dossier = _vae_find_dossier(data, dossier_id)
     if not dossier:
         return jsonify({"ok": False, "error": "not_found"}), 404
-    if (dossier.get('statut_dossier') or '').strip().lower() == 'soumis':
+
+    admin_edit_mode = bool(session.get('admin_logged_in'))
+    if (dossier.get('statut_dossier') or '').strip().lower() == 'soumis' and not admin_edit_mode:
         return jsonify({"ok": False, "error": "already_submitted"}), 403
 
     _merge_dict(dossier, payload)

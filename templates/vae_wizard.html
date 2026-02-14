@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <link rel="stylesheet" href="/static/css/vae.css">
-<div class="vae-container" data-vae-id="{{ dossier.id }}">
+<div class="vae-container" data-vae-id="{{ dossier.id }}" data-admin-edit="{{ '1' if admin_edit_mode else '0' }}">
   <h1>VAE DESP – Dossier de faisabilité</h1>
   <div class="muted">RNCP 40385</div>
   <div class="progress-wrap"><div class="progress-bar" id="vaeProgress"></div></div>
@@ -426,7 +426,7 @@
         </div>
       </div>
       <div id="submitErrors" class="errors"></div>
-      <button type="button" class="btn submit-dossier-btn" id="submitDossier">Déposer mon dossier de faisabilité 🚀</button>
+      <button type="button" class="btn submit-dossier-btn" id="submitDossier">{{ 'Mettre à jour le dossier' if admin_edit_mode else 'Déposer mon dossier de faisabilité 🚀' }}</button>
     </section>
 
     <div class="wizard-actions">
