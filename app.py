@@ -8961,7 +8961,7 @@ def admin_trainee_candidate_sheet_save(session_id: str, trainee_id: str):
     s.pop("stagiaires", None)
     save_data(data)
 
-    return redirect(url_for("admin_trainee", session_id=session_id, trainee_id=trainee_id) + "#doc_candidate_info_sheet")
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#doc_candidate_info_sheet")
 
 @app.get("/api/docs_to_control")
 @admin_login_required
