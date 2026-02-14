@@ -2337,7 +2337,67 @@ def _normalize_jury_status(value: str) -> str:
 # CNAPS / Hosting fetchers
 # =========================
 
-def fetch_cnaps_status_by_name(nom: str, prenom: str) -> Optional[str]:
+def _normalize_cnaps_remote_history(raw_history: Any) -> List[Dict[str, str]]:
+    normalized_entries: List[Dict[str, str]] = []
+    if not isinstance(raw_history, list):
+        return normalized_entries
+
+    for item in raw_history:
+        status = ""
+        date = ""
+        if isinstance(item, dict):
+            status = (
+                item.get("status")
+                or item.get("statut")
+                or item.get("statut_cnaps")
+                or item.get("label")
+                or ""
+            )
+            date = item.get("date") or item.get("at") or item.get("created_at") or ""
+        elif isinstance(item, str):
+            status = item
+
+        status = str(status or "").strip()
+        date = str(date or "").strip()
+        if not status:
+            continue
+        normalized_entries.append({"status": status.upper(), "date": date})
+
+    return normalized_entries
+
+
+def merge_cnaps_history_entries(t: Dict[str, Any], entries: List[Dict[str, str]]) -> None:
+    if not isinstance(entries, list) or not entries:
+        return
+
+    history = t.get("cnaps_history")
+    if not isinstance(history, list):
+        history = []
+
+    def _entry_key(entry: Dict[str, Any]) -> str:
+        status = _normalize_cnaps_status(entry.get("status"))
+        date = str(entry.get("date") or "").strip()
+        return f"{status}|{date}"
+
+    known = {_entry_key(item) for item in history if isinstance(item, dict)}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        status = str(entry.get("status") or "").strip()
+        date = str(entry.get("date") or "").strip()
+        if not status:
+            continue
+        candidate = {"status": status.upper(), "date": date or _now_iso()}
+        key = _entry_key(candidate)
+        if key in known:
+            continue
+        history.append(candidate)
+        known.add(key)
+
+    t["cnaps_history"] = history
+
+
+def fetch_cnaps_lookup_by_name(nom: str, prenom: str) -> Optional[Dict[str, Any]]:
     if not CNAPS_LOOKUP_ENDPOINT:
         return None
 
@@ -2360,9 +2420,20 @@ def fetch_cnaps_status_by_name(nom: str, prenom: str) -> Optional[str]:
         if r.status_code != 200:
             return None
         data = r.json()
-        return data.get("statut_cnaps") or data.get("status")
+        status = data.get("statut_cnaps") or data.get("status")
+        return {
+            "status": str(status or "").strip() or "INCONNU",
+            "statut_cnaps_history": _normalize_cnaps_remote_history(data.get("statut_cnaps_history")),
+        }
     except Exception:
         return None
+
+
+def fetch_cnaps_status_by_name(nom: str, prenom: str) -> Optional[str]:
+    lookup = fetch_cnaps_lookup_by_name(nom, prenom)
+    if not lookup:
+        return None
+    return lookup.get("status")
 
 
 import time
@@ -5050,6 +5121,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "trainee_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
+    cnaps_remote_history = payload.pop("statut_cnaps_history", None)
     was_exam_fees_paid = bool(t.get("exam_fees_paid"))
     previous_elearning_link = (t.get("elearning_link") or "").strip()
     previous_cnaps_status = (t.get("cnaps") or "").strip()
@@ -5157,6 +5229,9 @@ def api_update_trainee(session_id: str, trainee_id: str):
         t["financement_rejected_note"] = ""
         t["financement_new_date_seen"] = False
         t["comment"] = _remove_admin_comment_flag(t.get("comment", ""), "⚠️ Prélèvement rejeté")
+
+    if isinstance(cnaps_remote_history, list):
+        merge_cnaps_history_entries(t, _normalize_cnaps_remote_history(cnaps_remote_history))
 
     if "cnaps" in payload:
         new_cnaps_status = (t.get("cnaps") or "").strip()
@@ -5736,8 +5811,16 @@ def api_cnaps_lookup():
     if not nom or not prenom:
         return jsonify({"ok": False, "error": "missing_nom_or_prenom"}), 400
 
-    status = fetch_cnaps_status_by_name(nom, prenom) or "INCONNU"
-    return jsonify({"ok": True, "nom": nom, "prenom": prenom, "statut_cnaps": str(status).upper()})
+    lookup = fetch_cnaps_lookup_by_name(nom, prenom) or {}
+    status = str(lookup.get("status") or "INCONNU").upper()
+    history = lookup.get("statut_cnaps_history") or []
+    return jsonify({
+        "ok": True,
+        "nom": nom,
+        "prenom": prenom,
+        "statut_cnaps": status,
+        "statut_cnaps_history": history,
+    })
 
 
 # =========================
