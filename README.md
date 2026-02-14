@@ -14,6 +14,10 @@ python app.py
 - `ADMIN_PASSWORD`
 - `SECRETARY_USER`
 - `SECRETARY_PASSWORD`
+- `ADMIN_PUSH_NOTIFICATIONS_ENABLED` (`1/true/on` pour activer l'envoi push des notifications admin)
+- `ADMIN_PUSH_WEBHOOK_URL` (URL webhook du service push vers ton téléphone)
+- `ADMIN_PUSH_TOKEN` (optionnel, envoyé en `Authorization: Bearer ...`)
+- `ADMIN_PUSH_TITLE` (optionnel, titre affiché pour la notification, défaut `Gestion stagiaires`)
 - `PERSIST_DIR` (par défaut `/data`)
 - `BACKUP_RETENTION` (optionnel, nombre de snapshots conservés, défaut `120`)
 - `BACKUP_MIN_INTERVAL_SECONDS` (optionnel, fréquence mini entre snapshots automatiques, défaut `300`)
