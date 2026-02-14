@@ -32,8 +32,17 @@
     input[type="text"],input[type="email"],input[type="tel"],input[type="date"]{margin-top:6px;width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;font-size:15px}
     .full{grid-column:1/-1}
     .check{display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--muted);margin-top:4px}
-    .btn{appearance:none;border:0;background:linear-gradient(135deg,var(--ok),#22c55e);color:#fff;font-weight:900;letter-spacing:.2px;padding:14px 18px;border-radius:12px;cursor:pointer;font-size:16px}
+    .cta-title{text-align:center}
+    .form-actions{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap}
+    .btn{appearance:none;border:0;background:linear-gradient(135deg,var(--ok),#22c55e);color:#fff;font-weight:900;letter-spacing:.2px;padding:14px 18px;border-radius:12px;cursor:pointer;font-size:16px;transition:transform .22s ease,box-shadow .22s ease,filter .22s ease;box-shadow:0 8px 18px rgba(22,163,74,.28);animation:btnPulse 2.2s ease-in-out infinite}
+    .btn:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 12px 24px rgba(22,163,74,.36);filter:saturate(1.08)}
+    .btn:active{transform:translateY(0) scale(.99)}
     .btn:disabled{opacity:.55;cursor:not-allowed}
+    .btn:disabled{animation:none;transform:none;box-shadow:none}
+    @keyframes btnPulse{
+      0%,100%{box-shadow:0 8px 18px rgba(22,163,74,.28)}
+      50%{box-shadow:0 12px 24px rgba(22,163,74,.45)}
+    }
     .feedback{margin-top:10px;font-size:14px;font-weight:700}
     .ok{color:#166534}.err{color:#b91c1c}
   </style>
@@ -88,7 +97,7 @@
     </section>
 
     <section class="card">
-      <h2>Complétez le formulaire pour commencer votre VAE</h2>
+      <h2 class="cta-title">Complétez le formulaire pour commencer votre VAE</h2>
       <form id="vaeForm" class="form-grid" novalidate>
         <label>Nom<input name="last_name" type="text" required></label>
         <label>Prénom<input name="first_name" type="text" required></label>
@@ -97,7 +106,7 @@
         <label>Confirmation mail<input name="email_confirm" type="email" required></label>
         <label>Téléphone<input name="phone" type="tel" required></label>
         <label class="full check"><input type="checkbox" name="eligibility_confirmed" required>Je confirme respecter les conditions d’éligibilité (expérience sécurité privée et/ou gestion/management).</label>
-        <div class="full" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div class="full form-actions">
           <button class="btn" type="submit" id="submitBtn">Commencer ma VAE</button>
           <div id="feedback" class="feedback" aria-live="polite"></div>
         </div>
