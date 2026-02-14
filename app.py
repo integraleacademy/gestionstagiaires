@@ -8664,10 +8664,21 @@ def admin_trainee_candidate_sheet(session_id: str, trainee_id: str):
     if photo_token:
         photo_url = url_for("admin_view_upload", path=photo_token)
 
+    candidate_data = _build_candidate_sheet_data(s, t)
+
+    first_name = str(t.get("first_name") or "").strip()
+    if not first_name:
+        first_name = str((candidate_data.get("first_names") or "").strip().split(" ")[0])
+    last_name = str(t.get("last_name") or "").strip().upper()
+    pdf_title = "Fiche candidat VAE DESP"
+    if first_name or last_name:
+        pdf_title = f"{pdf_title} {first_name} {last_name}".strip()
+
     return render_template(
         "admin_trainee_candidate_sheet.html",
-        candidate=_build_candidate_sheet_data(s, t),
+        candidate=candidate_data,
         photo_url=photo_url,
+        pdf_title=pdf_title,
     )
 
 @app.get("/api/docs_to_control")
