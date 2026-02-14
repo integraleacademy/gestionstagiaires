@@ -294,6 +294,38 @@
 
 {% if show_vae %}
 <div class="card" style="grid-column:1 / -1; margin-top:12px;">
+  <div style="font-weight:900;">Visibilité espace stagiaire</div>
+  <div class="hint" style="margin-top:6px;">Ces options masquent des blocs côté stagiaire.</div>
+
+  <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;align-items:center;">
+
+    <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+      <input type="checkbox" id="chkHideInfos"
+             {% if trainee.public_hide_infos %}checked{% endif %}
+             {{ read_only_attr }}>
+      <span>Masquer Infos à compléter</span>
+    </label>
+
+    <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+      <input type="checkbox" id="chkHideDocs"
+             {% if trainee.public_hide_docs %}checked{% endif %}
+             {{ read_only_attr }}>
+      <span>Masquer Mes documents</span>
+    </label>
+
+    <label style="display:flex;align-items:center;gap:8px;">
+      <input type="checkbox"
+             id="public_hide_suivi"
+             {% if trainee.public_hide_suivi %}checked{% endif %}
+             {{ read_only_attr }}>
+      <span><strong>Masquer Suivi dossier</strong></span>
+    </label>
+
+
+  </div>
+</div>
+
+<div class="card" style="grid-column:1 / -1; margin-top:12px;">
   <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
     <a class="btn btn-outline" href="{{ url_for('admin_trainee_candidate_sheet', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener">Fiche candidat complétée</a>
   </div>
@@ -315,7 +347,8 @@
     </div>
     {% if vae_dossier %}
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <a class="btn btn-outline" href="{{ url_for('admin_vae_detail', dossier_id=vae_dossier.id) }}" target="_blank" rel="noopener">Voir le formulaire</a>
+      <a class="btn btn-outline" href="{{ url_for('admin_vae_detail', dossier_id=vae_dossier.id) }}" target="_blank" rel="noopener">Avis recevabilité</a>
+      <a class="btn btn-outline" href="{{ url_for('vae_wizard', token=vae_dossier.id, admin_edit=1) }}" target="_blank" rel="noopener">Modifier le formulaire</a>
       <a class="btn btn-primary" href="{{ url_for('admin_vae_export', dossier_id=vae_dossier.id) }}">Télécharger PDF</a>
     </div>
     {% else %}
@@ -351,7 +384,7 @@
 {% endif %}
 
 {% if show_vae %}
-<div class="card" style="grid-column:1 / -1; margin-top:12px;">
+<div class="card" style="grid-column:1 / -1; margin-top:12px; border:1px solid #22c55e; box-shadow:0 0 0 2px rgba(34,197,94,.08);">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
     <div>
       <div style="font-weight:900;">STATUT VAE</div>
@@ -531,6 +564,7 @@
 </div>
 {% endif %}
 
+{% if not show_vae %}
 <div class="card" style="grid-column:1 / -1;">
   <div style="font-weight:900;">Visibilité espace stagiaire</div>
   <div class="hint" style="margin-top:6px;">Ces options masquent des blocs côté stagiaire.</div>
@@ -562,7 +596,7 @@
 
   </div>
 </div>
-
+{% endif %}
 
 <script>
   document.getElementById("photoInput")?.addEventListener("change", function(){
