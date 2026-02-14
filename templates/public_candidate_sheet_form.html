@@ -76,7 +76,7 @@
 <body>
   <div class="page">
     <div class="toolbar">
-      <div class="hint">Complétez les champs puis enregistrez la fiche pour la valider dans « Mes documents ».</div>
+      <div class="hint">{% if admin_mode %}Mode admin : complétez directement la fiche candidat puis enregistrez.{% else %}Complétez les champs puis enregistrez la fiche pour la valider dans « Mes documents ».{% endif %}</div>
       <div class="actions">
         <button class="btn-save" type="submit" form="candidate-sheet-form">ENREGISTRER</button>
       </div>

@@ -332,64 +332,6 @@
   </div>
 </div>
 
-<div class="card" style="grid-column:1 / -1; margin-top:12px;">
-  <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-    <a class="btn btn-outline" href="{{ url_for('admin_trainee_candidate_sheet', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener">Fiche candidat complétée</a>
-  </div>
-  {% set vae_docs = trainee.documents or [] %}
-  {% set vae_doc_keys = ['livret_2', 'id', 'justif_dom', 'diplome'] %}
-  {% set vae_support_docs = [] %}
-  {% for d in vae_docs %}
-    {% if d.key in vae_doc_keys %}
-      {% set tokens = d.file_tokens or ([d.file] if d.file else []) %}
-      {% if tokens %}
-        {% set _ = vae_support_docs.append({'label': d.label, 'key': d.key, 'tokens': tokens}) %}
-      {% endif %}
-    {% endif %}
-  {% endfor %}
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-    <div>
-      <div style="font-weight:900;">DOSSIER DE FAISABILITÉ VAE</div>
-      <div class="hint" style="margin-top:4px;">Consultation du livret 1 soumis par le candidat, du dossier n°2 et des pièces justificatives.</div>
-    </div>
-    {% if vae_dossier %}
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <a class="btn btn-outline" href="{{ url_for('admin_vae_detail', dossier_id=vae_dossier.id) }}" target="_blank" rel="noopener">Avis recevabilité</a>
-      <a class="btn btn-outline" href="{{ url_for('vae_wizard', token=vae_dossier.id, admin_edit=1) }}" target="_blank" rel="noopener">Modifier le formulaire</a>
-      <a class="btn btn-primary" href="{{ url_for('admin_vae_export', dossier_id=vae_dossier.id) }}">Télécharger PDF</a>
-    </div>
-    {% else %}
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-      <button class="btn btn-disabled-muted" type="button" disabled aria-disabled="true">Télécharger PDF</button>
-      <span class="hint">Aucun livret 1 soumis pour ce stagiaire.</span>
-    </div>
-    {% endif %}
-  </div>
-
-  <div style="margin-top:12px;padding-top:12px;border-top:1px dashed #e5e7eb;">
-    <div style="font-weight:800;">Dossier n°2 & pièces justificatives</div>
-    {% if vae_support_docs %}
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
-        {% for doc in vae_support_docs %}
-          <div>
-            <div class="hint" style="margin-bottom:4px;">{{ doc.label }}</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              {% for ft in doc.tokens %}
-                <a class="btn btn-outline" href="{{ url_for('admin_view_upload', path=ft) }}" target="_blank" rel="noopener">
-                  📎 Voir fichier {% if doc.tokens|length > 1 %}{{ loop.index }}{% endif %}
-                </a>
-              {% endfor %}
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="hint" style="margin-top:6px;">Aucun dossier n°2 ou pièce justificative déposé pour ce stagiaire.</div>
-    {% endif %}
-  </div>
-</div>
-{% endif %}
-
 {% if show_vae %}
 <div class="card" style="grid-column:1 / -1; margin-top:12px; border:1px solid #22c55e; box-shadow:0 0 0 2px rgba(34,197,94,.08);">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -432,6 +374,68 @@
   </div>
 </div>
 
+
+
+<div class="card" style="grid-column:1 / -1; margin-top:12px; border-left:4px solid #22c55e;">
+  <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+    <a class="btn btn-outline" href="{{ url_for('admin_trainee_candidate_sheet_edit', session_id=session.id, trainee_id=trainee.id) }}">Compléter la fiche candidat</a>
+    <a class="btn btn-outline" href="{{ url_for('admin_trainee_candidate_sheet', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener">Voir fiche candidat</a>
+  </div>
+  {% set vae_docs = trainee.documents or [] %}
+  {% set vae_doc_keys = ['livret_2', 'id', 'justif_dom', 'diplome'] %}
+  {% set vae_support_docs = [] %}
+  {% for d in vae_docs %}
+    {% if d.key in vae_doc_keys %}
+      {% set tokens = d.file_tokens or ([d.file] if d.file else []) %}
+      {% if tokens %}
+        {% set _ = vae_support_docs.append({'label': d.label, 'key': d.key, 'tokens': tokens}) %}
+      {% endif %}
+    {% endif %}
+  {% endfor %}
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div>
+      <div style="font-weight:900;">DOSSIER DE FAISABILITÉ VAE</div>
+      <div class="hint" style="margin-top:4px;">Consultation du livret 1 soumis par le candidat, du dossier n°2 et des pièces justificatives.</div>
+    </div>
+    {% if vae_dossier %}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a class="btn btn-outline" href="{{ url_for('admin_vae_detail', dossier_id=vae_dossier.id) }}" target="_blank" rel="noopener">Avis recevabilité</a>
+      <a class="btn btn-outline" href="{{ url_for('vae_wizard', token=vae_dossier.id, admin_edit=1) }}" target="_blank" rel="noopener">Modifier le formulaire</a>
+      <a class="btn btn-primary" href="{{ url_for('admin_vae_export', dossier_id=vae_dossier.id) }}">Télécharger PDF</a>
+    </div>
+    {% else %}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <form method="post" action="{{ url_for('admin_create_vae_dossier', session_id=session.id, trainee_id=trainee.id) }}" style="margin:0;">
+        <button class="btn btn-primary" type="submit">Créer dossier de faisabilité</button>
+      </form>
+      <button class="btn btn-disabled-muted" type="button" disabled aria-disabled="true">Télécharger PDF</button>
+      <span class="hint">Aucun livret 1 soumis pour ce stagiaire.</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <div style="margin-top:12px;padding-top:12px;border-top:1px dashed #e5e7eb;">
+    <div style="font-weight:800;">Dossier n°2 & pièces justificatives</div>
+    {% if vae_support_docs %}
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+        {% for doc in vae_support_docs %}
+          <div>
+            <div class="hint" style="margin-bottom:4px;">{{ doc.label }}</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              {% for ft in doc.tokens %}
+                <a class="btn btn-outline" href="{{ url_for('admin_view_upload', path=ft) }}" target="_blank" rel="noopener">
+                  📎 Voir fichier {% if doc.tokens|length > 1 %}{{ loop.index }}{% endif %}
+                </a>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="hint" style="margin-top:6px;">Aucun dossier n°2 ou pièce justificative déposé pour ce stagiaire.</div>
+    {% endif %}
+  </div>
+</div>
 {% endif %}
 
 {% if "VTC" in (session.training_type or "")|upper %}

@@ -8764,6 +8764,74 @@ def admin_trainee_candidate_sheet(session_id: str, trainee_id: str):
         pdf_title=pdf_title,
     )
 
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/fiche-candidat")
+@admin_login_required
+def admin_trainee_candidate_sheet_edit(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    training_type = (_session_get(s, "training_type", "") or "").strip().upper()
+    if training_type != "DIRIGEANT VAE":
+        abort(404)
+
+    photo_url = ""
+    photo_token = (t.get("identity_photo") or "").strip()
+    if photo_token:
+        photo_url = url_for("admin_view_upload", path=photo_token)
+
+    return render_template(
+        "public_candidate_sheet_form.html",
+        candidate=_build_candidate_sheet_data(s, t),
+        photo_url=photo_url,
+        save_url=url_for("admin_trainee_candidate_sheet_save", session_id=session_id, trainee_id=trainee_id),
+        admin_mode=True,
+    )
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/fiche-candidat/enregistrer")
+@admin_login_required
+def admin_trainee_candidate_sheet_save(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    training_type = (_session_get(s, "training_type", "") or "").strip().upper()
+    if training_type != "DIRIGEANT VAE":
+        abort(404)
+
+    base_sheet = _build_candidate_sheet_data(s, t)
+    saved_sheet: Dict[str, str] = {}
+    for key in base_sheet.keys():
+        saved_sheet[key] = str(request.form.get(key, "") or "").strip()
+
+    t["candidate_sheet"] = saved_sheet
+    t["candidate_sheet_saved_at"] = _now_iso()
+
+    ensure_documents_schema_for_trainee(t, training_type)
+
+    t["updated_at"] = _now_iso()
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return redirect(url_for("admin_trainee", session_id=session_id, trainee_id=trainee_id) + "#doc_candidate_info_sheet")
+
 @app.get("/api/docs_to_control")
 @admin_login_required
 def api_docs_to_control():
@@ -10648,6 +10716,39 @@ def _vae_create_and_redirect_for_trainee_token(trainee_token: str):
     _vae_save_all(data)
     return redirect(url_for('vae_wizard', token=dossier['id']))
 
+
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/vae-dossier/creer")
+@admin_login_required
+def admin_create_vae_dossier(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    training_type = (_session_get(s, "training_type", "") or "").strip().upper()
+    if training_type != "DIRIGEANT VAE":
+        abort(404)
+
+    vae_data = _vae_load_all()
+    dossier = _vae_default_dossier()
+    dossier.setdefault("meta", {})["linkage_id"] = str(uuid.uuid4())
+    dossier["meta"]["trainee_id"] = str(trainee_id)
+    dossier["meta"]["session_id"] = str(session_id)
+    trainee_token = str(t.get("token") or "").strip()
+    if trainee_token:
+        dossier["meta"]["trainee_token"] = trainee_token
+
+    vae_data.setdefault("dossiers", []).insert(0, dossier)
+    _vae_save_all(vae_data)
+
+    return redirect(url_for("vae_wizard", token=dossier["id"], admin_edit=1))
 
 @app.get('/vae/nouveau/<trainee_token>')
 def vae_new_for_trainee(trainee_token: str):
