@@ -7,6 +7,7 @@ import datetime
 import html
 import unicodedata
 import threading
+import importlib.util
 from typing import Dict, Any, Optional, List, Iterable, Tuple, Set
 from functools import wraps
 from zoneinfo import ZoneInfo
@@ -36,6 +37,11 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 SECRETARY_USER = os.environ.get("SECRETARY_USER", "")
 SECRETARY_PASSWORD = os.environ.get("SECRETARY_PASSWORD", "")
 SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "30"))
+ADMIN_PUSH_TITLE = os.environ.get("ADMIN_PUSH_TITLE", "Gestion stagiaires")
+WEB_PUSH_VAPID_PUBLIC_KEY = os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY", "").strip()
+WEB_PUSH_VAPID_PRIVATE_KEY = os.environ.get("WEB_PUSH_VAPID_PRIVATE_KEY", "").strip()
+WEB_PUSH_VAPID_CLAIMS_SUB = os.environ.get("WEB_PUSH_VAPID_CLAIMS_SUB", "mailto:admin@example.com").strip()
+WEB_PUSH_LIBRARY_AVAILABLE = importlib.util.find_spec("pywebpush") is not None
 
 app.config.update(
     SESSION_COOKIE_NAME="integrale_admin",
@@ -1720,6 +1726,7 @@ def load_data() -> Dict[str, Any]:
             "notifications_test_fr": [],
             "notifications_convention_unsigned": [],
             "notifications_admin": [],
+            "admin_push_subscriptions": [],
         }
         save_data(base)
         return base
@@ -1764,6 +1771,9 @@ def load_data() -> Dict[str, Any]:
         if "notifications_admin" not in data:
             data["notifications_admin"] = []
             changed = True
+        if "admin_push_subscriptions" not in data:
+            data["admin_push_subscriptions"] = []
+            changed = True
 
         if _send_vtc_credentials_missing_reminders(data):
             changed = True
@@ -1794,6 +1804,7 @@ def load_data() -> Dict[str, Any]:
             "notifications_test_fr": [],
             "notifications_convention_unsigned": [],
             "notifications_admin": [],
+            "admin_push_subscriptions": [],
         }
         save_data(base)
         return base
@@ -2084,8 +2095,75 @@ def _format_trainee_name(first_name: str, last_name: str) -> str:
     return f"{normalize_first_name(first_name)} {normalize_last_name(last_name)}".strip()
 
 
+def _web_push_enabled() -> bool:
+    return bool(WEB_PUSH_VAPID_PUBLIC_KEY and WEB_PUSH_VAPID_PRIVATE_KEY and WEB_PUSH_LIBRARY_AVAILABLE)
+
+
+def _normalize_push_subscription(payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    endpoint = str(payload.get("endpoint") or "").strip()
+    keys = payload.get("keys") or {}
+    p256dh = str(keys.get("p256dh") or "").strip()
+    auth = str(keys.get("auth") or "").strip()
+    if not endpoint or not p256dh or not auth:
+        return None
+    return {
+        "endpoint": endpoint,
+        "keys": {
+            "p256dh": p256dh,
+            "auth": auth,
+        },
+    }
+
+
+def _send_admin_push_notifications(data: Dict[str, Any], notification: Dict[str, Any]) -> int:
+    if not _web_push_enabled():
+        return 0
+
+    subscriptions = list(data.get("admin_push_subscriptions", []))
+    if not subscriptions:
+        return 0
+
+    from pywebpush import webpush, WebPushException
+
+    payload = json.dumps({
+        "title": ADMIN_PUSH_TITLE or "Gestion stagiaires",
+        "body": (notification.get("label") or "").strip() or "Nouvelle notification admin",
+        "url": url_for("admin_sessions", _external=True),
+        "notification_id": notification.get("id") or "",
+    })
+    sent = 0
+    invalid_endpoints: Set[str] = set()
+
+    for sub in subscriptions:
+        try:
+            webpush(
+                subscription_info=sub,
+                data=payload,
+                vapid_private_key=WEB_PUSH_VAPID_PRIVATE_KEY,
+                vapid_claims={"sub": WEB_PUSH_VAPID_CLAIMS_SUB},
+                ttl=300,
+            )
+            sent += 1
+        except WebPushException as exc:
+            status = getattr(exc.response, "status_code", None)
+            if status in (404, 410):
+                invalid_endpoints.add(str(sub.get("endpoint") or ""))
+        except Exception as exc:
+            print(f"[PUSH] Erreur push web: {exc}")
+
+    if invalid_endpoints:
+        data["admin_push_subscriptions"] = [
+            sub for sub in subscriptions
+            if str(sub.get("endpoint") or "") not in invalid_endpoints
+        ]
+
+    return sent
+
+
 def add_admin_notification(data: Dict[str, Any], label: str, meta: Optional[dict] = None) -> dict:
-    return add_notification(data, "notifications_admin", label, meta=meta)
+    entry = add_notification(data, "notifications_admin", label, meta=meta)
+    _send_admin_push_notifications(data, entry)
+    return entry
 
 
 def _add_vtc_practice_convocation_notification(data: Dict[str, Any], session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> dict:
@@ -3895,6 +3973,65 @@ def api_admin_notifications():
     data = load_data()
     payload = _admin_notifications_payload(data)
     return jsonify({"ok": True, **payload})
+
+
+@app.get("/api/admin/push/config")
+@admin_login_required
+def api_admin_push_config():
+    if not _admin_can_view_notifications():
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    return jsonify({
+        "ok": True,
+        "enabled": _web_push_enabled(),
+        "vapid_public_key": WEB_PUSH_VAPID_PUBLIC_KEY,
+    })
+
+
+@app.post("/api/admin/push/subscribe")
+@admin_login_required
+@admin_write_required
+def api_admin_push_subscribe():
+    if not _admin_can_manage_notifications():
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    if not _web_push_enabled():
+        return jsonify({"ok": False, "error": "push_not_configured"}), 400
+
+    body = request.get_json(silent=True) or {}
+    subscription = _normalize_push_subscription(body.get("subscription") or {})
+    if not subscription:
+        return jsonify({"ok": False, "error": "invalid_subscription"}), 400
+
+    data = load_data()
+    current = data.setdefault("admin_push_subscriptions", [])
+    endpoint = subscription["endpoint"]
+    current = [item for item in current if str(item.get("endpoint") or "") != endpoint]
+    current.insert(0, subscription)
+    data["admin_push_subscriptions"] = current[:30]
+    save_data(data)
+    return jsonify({"ok": True})
+
+
+@app.post("/api/admin/push/unsubscribe")
+@admin_login_required
+@admin_write_required
+def api_admin_push_unsubscribe():
+    if not _admin_can_manage_notifications():
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    body = request.get_json(silent=True) or {}
+    endpoint = str(body.get("endpoint") or "").strip()
+    if not endpoint:
+        return jsonify({"ok": False, "error": "missing_endpoint"}), 400
+
+    data = load_data()
+    before = len(data.get("admin_push_subscriptions", []))
+    data["admin_push_subscriptions"] = [
+        item for item in data.get("admin_push_subscriptions", [])
+        if str(item.get("endpoint") or "") != endpoint
+    ]
+    if len(data["admin_push_subscriptions"]) != before:
+        save_data(data)
+    return jsonify({"ok": True})
 
 
 @app.post("/api/admin/notifications/<notification_id>/toggle")
