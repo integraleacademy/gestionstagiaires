@@ -184,6 +184,16 @@
 
 </div>
 
+
+<div class="meta-line" style="margin-top:8px;gap:8px;">
+  {% if trainee.email %}
+    <a class="btn btn-outline btn-uniform" href="mailto:{{ trainee.email }}">✉️ {{ trainee.email }}</a>
+  {% endif %}
+  {% if trainee.phone %}
+    <a class="btn btn-outline btn-uniform" href="tel:{{ (trainee.phone or '')|replace(' ', '') }}">📞 {{ trainee.phone }}</a>
+  {% endif %}
+</div>
+
       <div class="meta-line" style="margin-top:10px;">
         <span class="mono">
           Email :
@@ -332,7 +342,6 @@
   </div>
 </div>
 
-{% if show_vae %}
 <div class="card" style="grid-column:1 / -1; margin-top:12px; border:1px solid #22c55e; box-shadow:0 0 0 2px rgba(34,197,94,.08);">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
     <div>
