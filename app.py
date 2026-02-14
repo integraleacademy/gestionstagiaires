@@ -36,6 +36,12 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 SECRETARY_USER = os.environ.get("SECRETARY_USER", "")
 SECRETARY_PASSWORD = os.environ.get("SECRETARY_PASSWORD", "")
 SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "30"))
+ADMIN_PUSH_NOTIFICATIONS_ENABLED = os.environ.get("ADMIN_PUSH_NOTIFICATIONS_ENABLED", "0").strip().lower() in {
+    "1", "true", "yes", "on"
+}
+ADMIN_PUSH_WEBHOOK_URL = os.environ.get("ADMIN_PUSH_WEBHOOK_URL", "").strip()
+ADMIN_PUSH_TOKEN = os.environ.get("ADMIN_PUSH_TOKEN", "").strip()
+ADMIN_PUSH_TITLE = os.environ.get("ADMIN_PUSH_TITLE", "Gestion stagiaires")
 
 app.config.update(
     SESSION_COOKIE_NAME="integrale_admin",
@@ -2085,7 +2091,39 @@ def _format_trainee_name(first_name: str, last_name: str) -> str:
 
 
 def add_admin_notification(data: Dict[str, Any], label: str, meta: Optional[dict] = None) -> dict:
-    return add_notification(data, "notifications_admin", label, meta=meta)
+    entry = add_notification(data, "notifications_admin", label, meta=meta)
+    _send_admin_push_notification(entry)
+    return entry
+
+
+def _send_admin_push_notification(notification: Dict[str, Any]) -> None:
+    if not ADMIN_PUSH_NOTIFICATIONS_ENABLED:
+        return
+    if not ADMIN_PUSH_WEBHOOK_URL:
+        return
+
+    title = ADMIN_PUSH_TITLE or "Gestion stagiaires"
+    label = (notification.get("label") or "").strip() or "Nouvelle notification admin"
+    body = {
+        "title": title,
+        "message": label,
+        "notification_id": notification.get("id") or "",
+        "created_at": notification.get("created_at") or "",
+        "meta": notification.get("meta") or {},
+    }
+    headers = {"Content-Type": "application/json"}
+    if ADMIN_PUSH_TOKEN:
+        headers["Authorization"] = f"Bearer {ADMIN_PUSH_TOKEN}"
+
+    try:
+        requests.post(
+            ADMIN_PUSH_WEBHOOK_URL,
+            json=body,
+            headers=headers,
+            timeout=8,
+        )
+    except Exception as exc:
+        print(f"[PUSH] Impossible d'envoyer la notification push admin: {exc}")
 
 
 def _add_vtc_practice_convocation_notification(data: Dict[str, Any], session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> dict:
