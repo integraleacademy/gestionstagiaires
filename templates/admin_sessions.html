@@ -372,9 +372,6 @@
 <div class="card-actions">
   <a class="btn" href="{{ url_for('admin_trainees', session_id=s.id, **request.args) }}">Voir les stagiaires</a>
 
-  {% if (s.name or "")|trim == "VAE DESP 2026" %}
-    <a class="btn btn-outline" href="{{ url_for('public_vae_desp_form') }}" target="_blank" rel="noopener">Formulaire public VAE</a>
-  {% endif %}
 
   {% if not is_read_only %}
     <button class="btn btn-outline"
