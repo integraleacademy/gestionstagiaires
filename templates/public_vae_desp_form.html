@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>🚀 Démarrez ma VAE DESP</title>
+  <style>
+    :root{
+      --bg:#f7f8fc;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#475569;
+      --brand:#3b82f6;
+      --brand2:#8b5cf6;
+      --ok:#16a34a;
+      --line:#e2e8f0;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,Arial,sans-serif;background:radial-gradient(circle at 0% 0%,#dbeafe 0,#f7f8fc 35%),radial-gradient(circle at 100% 0%,#ede9fe 0,#f7f8fc 30%),var(--bg);color:var(--text)}
+    .wrap{max-width:980px;margin:0 auto;padding:28px 16px 60px}
+    .hero{background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:#fff;border-radius:24px;padding:28px;box-shadow:0 20px 60px rgba(29,78,216,.22)}
+    .hero h1{margin:0 0 10px;font-size:clamp(28px,4vw,42px);line-height:1.1}
+    .hero p{margin:0;opacity:.95;max-width:720px}
+    .card{margin-top:18px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:0 14px 34px rgba(15,23,42,.07)}
+    .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+    .step{border:1px solid #dbeafe;border-radius:16px;padding:14px;background:linear-gradient(180deg,#f8fbff,#fff)}
+    .step b{display:block;margin-bottom:6px}
+    .conditions{background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;padding:12px 14px;border-radius:12px;margin:16px 0 6px;font-weight:700}
+    .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    @media(max-width:760px){.form-grid{grid-template-columns:1fr}}
+    label{display:block;font-weight:700;font-size:14px}
+    input[type="text"],input[type="email"],input[type="tel"],input[type="date"]{margin-top:6px;width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;font-size:15px}
+    .full{grid-column:1/-1}
+    .check{display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--muted);margin-top:4px}
+    .btn{appearance:none;border:0;background:linear-gradient(135deg,var(--ok),#22c55e);color:#fff;font-weight:900;letter-spacing:.2px;padding:14px 18px;border-radius:12px;cursor:pointer;font-size:16px}
+    .btn:disabled{opacity:.55;cursor:not-allowed}
+    .feedback{margin-top:10px;font-size:14px;font-weight:700}
+    .ok{color:#166534}.err{color:#b91c1c}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>🚀 Démarrez ma VAE Dirigeant d’entreprise de sécurité (DESP)</h1>
+      <p>Un parcours accompagné, progressif et concret pour transformer votre expérience en certification reconnue.</p>
+    </section>
+
+    <section class="card">
+      <h2>Comment se déroule votre VAE DESP ?</h2>
+      <div class="steps">
+        <article class="step"><b>1️⃣ Livret 1</b>Complétez votre dossier de faisabilité (≈ 30 min) pour présenter votre parcours et vos responsabilités.</article>
+        <article class="step"><b>2️⃣ Recevabilité</b>La commission étudie votre dossier puis délivre l’attestation de recevabilité si conforme.</article>
+        <article class="step"><b>3️⃣ Livret 2</b>Vous détaillez vos missions, situations professionnelles et compétences mobilisées.</article>
+        <article class="step"><b>4️⃣ Étude du Livret 2</b>Après validation du dossier complet, votre passage devant jury est programmé.</article>
+        <article class="step"><b>5️⃣ Jury</b>Entretien professionnel d’environ 1 heure pour valider vos compétences sur des cas concrets.</article>
+        <article class="step"><b>6️⃣ Certification</b>Vous obtenez votre certification DESP et valorisez officiellement votre expérience.</article>
+      </div>
+      <div class="conditions">Conditions : Expérience en sécurité privée ET/OU expérience en gestion d’entreprise, management d’équipe.</div>
+    </section>
+
+    <section class="card">
+      <h2>Formulaire d’inscription</h2>
+      <form id="vaeForm" class="form-grid" novalidate>
+        <label>Nom<input name="last_name" type="text" required></label>
+        <label>Prénom<input name="first_name" type="text" required></label>
+        <label>Date de naissance<input name="birth_date" type="date" required></label>
+        <label>Mail<input name="email" type="email" required></label>
+        <label>Confirmation mail<input name="email_confirm" type="email" required></label>
+        <label>Téléphone<input name="phone" type="tel" required></label>
+        <label class="full check"><input type="checkbox" name="eligibility_confirmed" required>Je confirme respecter les conditions d’éligibilité (expérience sécurité privée et/ou gestion/management).</label>
+        <div class="full" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <button class="btn" type="submit" id="submitBtn">Commencer ma VAE</button>
+          <div id="feedback" class="feedback" aria-live="polite"></div>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById('vaeForm');
+    const feedback = document.getElementById('feedback');
+    const submitBtn = document.getElementById('submitBtn');
+
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      if(!form.reportValidity()) return;
+
+      submitBtn.disabled = true;
+      feedback.className = 'feedback';
+      feedback.textContent = 'Envoi en cours…';
+
+      const payload = Object.fromEntries(new FormData(form).entries());
+      payload.eligibility_confirmed = !!form.querySelector('[name="eligibility_confirmed"]').checked;
+
+      try{
+        const r = await fetch('/vae-desp', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const json = await r.json().catch(()=>({ok:false,error:'invalid_response'}));
+        if(!r.ok || !json.ok){
+          const msg = json.error === 'email_mismatch'
+            ? 'Les emails ne correspondent pas.'
+            : json.error === 'eligibility_required'
+            ? 'Merci de confirmer les conditions d’éligibilité.'
+            : json.error === 'session_not_found'
+            ? 'Session "VAE DESP 2026" introuvable côté administration.'
+            : 'Une erreur est survenue, merci de réessayer.';
+          throw new Error(msg);
+        }
+
+        feedback.classList.add('ok');
+        feedback.textContent = '✅ C’est envoyé ! Vérifiez vos messages (mail + SMS).';
+        form.reset();
+      }catch(err){
+        feedback.classList.add('err');
+        feedback.textContent = err.message || 'Impossible d’envoyer le formulaire.';
+      }finally{
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
