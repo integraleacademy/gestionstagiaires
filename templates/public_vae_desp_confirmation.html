@@ -16,10 +16,14 @@
     .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:14px}
     .card{width:min(1400px,98vw);min-height:94vh;background:var(--card);border:1px solid var(--line);border-radius:34px;padding:56px 48px;text-align:center;box-shadow:0 24px 62px rgba(15,23,42,.13);display:flex;flex-direction:column;justify-content:center}
     .logo{height:130px;width:auto;display:block;margin:0 auto 30px}
-    h1{margin:0;font-size:clamp(42px,8vw,92px);line-height:1.05}
+    h1{margin:0;font-size:clamp(40px,7.5vw,84px);line-height:1.05}
     .emoji{font-size:clamp(42px,9vw,92px);display:block;margin-bottom:18px}
-    p{margin:24px auto 0;max-width:1200px;font-size:clamp(24px,3.4vw,44px);line-height:1.35;font-weight:800;color:#1e293b}
-    .cta{margin-top:28px;display:inline-block;padding:12px 18px;border-radius:12px;background:#0f172a;color:#fff;text-decoration:none;font-weight:700}
+    p{margin:24px auto 0;max-width:1200px;font-size:clamp(22px,3vw,38px);line-height:1.35;font-weight:800;color:#1e293b}
+    .cta{margin-top:28px;display:inline-block;padding:14px 24px;border-radius:12px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;animation:pulseCta 1.7s ease-in-out infinite;box-shadow:0 10px 26px rgba(37,99,235,.35)}
+    @keyframes pulseCta{
+      0%,100%{transform:scale(1);box-shadow:0 10px 26px rgba(37,99,235,.35)}
+      50%{transform:scale(1.03);box-shadow:0 14px 32px rgba(37,99,235,.5)}
+    }
   </style>
 </head>
 <body>
@@ -29,10 +33,10 @@
       <span class="emoji">🎉📩🚀</span>
       <h1>C'est parti !</h1>
       <p>
-        Vérifiez vos mails et commencez le processus de VAE.<br><br>
-        Plus que quelques semaines avant l'obtention de votre titre Dirigeant d'entreprise de sécurité privée.
+        Commencez votre processus de VAE dès maintenant.<br><br>
+        Plus que quelques semaines avant l'obtention de votre titre Dirigeant d'entreprise de sécurité privée !
       </p>
-      <a class="cta" href="{{ url_for('public_vae_desp_form') }}">Retour au formulaire</a>
+      <a class="cta" href="{{ url_for('public_vae_desp_form') }}">Complétez mon dossier VAE en cliquant ici</a>
     </section>
   </main>
 </body>
