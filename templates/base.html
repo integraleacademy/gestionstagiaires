@@ -477,7 +477,7 @@
 
       let registration;
       try{
-        registration = await navigator.serviceWorker.register('/static/sw.js');
+        registration = await navigator.serviceWorker.register('/service-worker.js');
       }catch(_e){
         pushBtn.disabled = true;
         setPushStatus('Service worker indisponible.');

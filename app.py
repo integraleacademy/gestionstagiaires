@@ -43,6 +43,16 @@ WEB_PUSH_VAPID_PRIVATE_KEY = os.environ.get("WEB_PUSH_VAPID_PRIVATE_KEY", "").st
 WEB_PUSH_VAPID_CLAIMS_SUB = os.environ.get("WEB_PUSH_VAPID_CLAIMS_SUB", "mailto:admin@example.com").strip()
 WEB_PUSH_LIBRARY_AVAILABLE = importlib.util.find_spec("pywebpush") is not None
 
+
+
+@app.get("/service-worker.js")
+def service_worker():
+    sw_path = os.path.join(app.static_folder or "static", "sw.js")
+    response = send_file(sw_path, mimetype="application/javascript")
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["Service-Worker-Allowed"] = "/"
+    return response
+
 app.config.update(
     SESSION_COOKIE_NAME="integrale_admin",
     SESSION_COOKIE_HTTPONLY=True,
