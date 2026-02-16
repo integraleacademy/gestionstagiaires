@@ -11,6 +11,7 @@
   const experienceDocsInput = document.getElementById('experienceDocsInput');
   const experienceDocsList = document.getElementById('experienceDocsList');
   const experienceDocsStatus = document.getElementById('experienceDocsStatus');
+  const experienceDocsSelected = document.getElementById('experienceDocsSelected');
   const initial = window.__VAE_INITIAL__ || {};
   let current = 0;
   let experienceDocs = Array.isArray(initial.justificatifs_experience) ? [...initial.justificatifs_experience] : [];
@@ -492,10 +493,22 @@
   form.querySelectorAll('input, select, textarea').forEach((el) => el.addEventListener('input', autosaveDebounced));
   if (experienceDocsInput) {
     experienceDocsInput.addEventListener('change', () => {
-      uploadExperienceDocs(experienceDocsInput.files).catch(() => {
+      const files = experienceDocsInput.files;
+      const count = files?.length || 0;
+      if (experienceDocsSelected) {
+        experienceDocsSelected.textContent = count
+          ? `${count} fichier${count > 1 ? 's' : ''} sélectionné${count > 1 ? 's' : ''}`
+          : 'Aucun fichier sélectionné';
+      }
+      uploadExperienceDocs(files).catch(() => {
         if (experienceDocsStatus) experienceDocsStatus.textContent = 'Erreur lors du téléversement';
       });
       experienceDocsInput.value = '';
+      if (experienceDocsSelected) {
+        setTimeout(() => {
+          experienceDocsSelected.textContent = 'Aucun fichier sélectionné';
+        }, 1200);
+      }
     });
   }
   form.querySelectorAll('[name="candidat.statut"]').forEach((el) => {

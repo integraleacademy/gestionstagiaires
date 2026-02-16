@@ -154,14 +154,18 @@
 
       <div class="step-instructions card experience-docs-block">
         <p><strong>Pièces justificatives liées à vos expériences</strong></p>
-        <p>Veuillez joindre les justificatifs utiles pour appuyer vos expériences professionnelles (sans créer d'étape supplémentaire), par exemple :</p>
+        <p>Veuillez joindre les justificatifs utiles pour appuyer vos expériences professionnelles, par exemple :</p>
         <ul>
           <li>extrait KBIS si vous gérez ou avez géré une entreprise ;</li>
           <li>carte professionnelle CNAPS (si détenue) ;</li>
           <li>diplômes et attestations ;</li>
           <li>tout autre document attestant de votre expérience professionnelle.</li>
         </ul>
-        <input type="file" id="experienceDocsInput" multiple>
+        <div class="experience-doc-upload-row">
+          <label for="experienceDocsInput" class="btn experience-doc-upload-btn">Ajouter des justificatifs</label>
+          <span id="experienceDocsSelected" class="muted">Aucun fichier sélectionné</span>
+        </div>
+        <input type="file" id="experienceDocsInput" class="experience-doc-file-input" multiple>
         <div id="experienceDocsStatus" class="muted"></div>
         <div id="experienceDocsList" class="experience-docs-list"></div>
       </div>
