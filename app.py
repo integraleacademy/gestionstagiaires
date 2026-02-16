@@ -324,6 +324,17 @@ def normalize_phone_fr(phone: str) -> str:
         return "+33" + p[1:]
     return p
 
+
+def format_phone_fr_for_display(phone: str) -> str:
+    digits = "".join(ch for ch in (phone or "") if ch.isdigit())
+    if len(digits) == 10 and digits.startswith("0"):
+        return " ".join(digits[i:i + 2] for i in range(0, 10, 2))
+    if len(digits) == 11 and digits.startswith("33"):
+        local = "0" + digits[2:]
+        return " ".join(local[i:i + 2] for i in range(0, 10, 2))
+    return _collapse_spaces(phone)
+
+
 def _collapse_spaces(value: str) -> str:
     return " ".join((value or "").strip().split())
 
@@ -4944,6 +4955,47 @@ def admin_positioning_test_detail(test_id: str):
         sections=POSITIONING_TEST_SECTIONS,
     )
 
+
+
+@app.get("/admin/sessions/<session_id>/trainees/print")
+@admin_login_required
+def admin_trainees_print(session_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    session_view = {
+        "id": s.get("id"),
+        "name": _session_get(s, "name", ""),
+        "training_type": _session_get(s, "training_type", ""),
+        "date_start": _session_get(s, "date_start", ""),
+        "date_end": _session_get(s, "date_end", ""),
+        "exam_date": _session_get(s, "exam_date", ""),
+        "exam_theory_date": _session_get(s, "exam_theory_date", ""),
+        "exam_practice_date": _session_get(s, "exam_practice_date", ""),
+    }
+
+    trainees = _session_trainees_list(s)
+    printable_trainees = []
+    for t in trainees:
+        printable_trainees.append({
+            "last_name": normalize_last_name(t.get("last_name") or ""),
+            "first_name": normalize_first_name(t.get("first_name") or ""),
+            "email": (t.get("email") or "").strip(),
+            "phone": format_phone_fr_for_display((t.get("phone") or "").strip()),
+        })
+
+    printable_trainees.sort(key=lambda t: (
+        (t.get("last_name") or "").upper(),
+        (t.get("first_name") or "").upper(),
+    ))
+
+    return render_template(
+        "admin_trainees_print.html",
+        session=session_view,
+        trainees=printable_trainees,
+    )
 
 
 @app.get("/admin/sessions/<session_id>/trainees")
