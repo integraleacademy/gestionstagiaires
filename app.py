@@ -32,7 +32,13 @@ app = Flask(__name__)
 def page_not_found(error):
     if request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json":
         return jsonify({"ok": False, "error": "not_found"}), 404
-    return render_template("404.html"), 404
+
+    trainee_login_url = None
+    path_parts = [part for part in request.path.split("/") if part]
+    if len(path_parts) >= 2 and path_parts[0] == "espace":
+        trainee_login_url = url_for("public_trainee_login", token=path_parts[1])
+
+    return render_template("404.html", trainee_login_url=trainee_login_url), 404
 
 # =========================
 # Auth (admin)
