@@ -3,11 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>{{ title or "Plateforme • Intégrale Academy" }}</title>
+  <title>{{ title or "Intégrale Academy • Gestion stagiaires" }}</title>
 
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
-
+  <meta name="apple-mobile-web-app-title" content="Intégrale Academy">
+  <meta name="application-name" content="Intégrale Academy">
+  <meta name="theme-color" content="#111827">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='logo-integrale.png') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo-integrale.png') }}">
 
 </head>
 
