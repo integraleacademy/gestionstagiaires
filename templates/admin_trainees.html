@@ -120,12 +120,14 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
      style="text-decoration:none;">
     {% if t.public_has_logged_in %}🛜 {% endif %}{{ t.last_name or "" }}
   </a>
+  {% if not is_vtc and not show_vae %}
   <div class="doc-badges"
        data-doc-badges
        data-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}"
        data-diplome="{{ '1' if (t.get('deliverables', {}).get('diplome')) else '0' }}"
        data-attestation="{{ '1' if (t.get('deliverables', {}).get('attestation_fin_formation')) else '0' }}">
   </div>
+  {% endif %}
 </td>
 <td>
   <a class="trainee-link"
