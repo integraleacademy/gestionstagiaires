@@ -32,7 +32,13 @@ app = Flask(__name__)
 def page_not_found(error):
     if request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json":
         return jsonify({"ok": False, "error": "not_found"}), 404
-    return render_template("404.html"), 404
+
+    trainee_login_url = None
+    path_parts = [part for part in request.path.split("/") if part]
+    if len(path_parts) >= 2 and path_parts[0] == "espace":
+        trainee_login_url = url_for("public_trainee_login", token=path_parts[1])
+
+    return render_template("404.html", trainee_login_url=trainee_login_url), 404
 
 # =========================
 # Auth (admin)
@@ -323,6 +329,17 @@ def normalize_phone_fr(phone: str) -> str:
     if p.startswith("0") and len(p) == 10 and p[1:].isdigit():
         return "+33" + p[1:]
     return p
+
+
+def format_phone_fr_for_display(phone: str) -> str:
+    digits = "".join(ch for ch in (phone or "") if ch.isdigit())
+    if len(digits) == 10 and digits.startswith("0"):
+        return " ".join(digits[i:i + 2] for i in range(0, 10, 2))
+    if len(digits) == 11 and digits.startswith("33"):
+        local = "0" + digits[2:]
+        return " ".join(local[i:i + 2] for i in range(0, 10, 2))
+    return _collapse_spaces(phone)
+
 
 def _collapse_spaces(value: str) -> str:
     return " ".join((value or "").strip().split())
@@ -4984,7 +5001,7 @@ def admin_trainees_print(session_id: str):
             "last_name": normalize_last_name(t.get("last_name") or ""),
             "first_name": normalize_first_name(t.get("first_name") or ""),
             "email": (t.get("email") or "").strip(),
-            "phone": (t.get("phone") or "").strip(),
+            "phone": format_phone_fr_for_display((t.get("phone") or "").strip()),
         })
 
     printable_trainees.sort(key=lambda t: (
