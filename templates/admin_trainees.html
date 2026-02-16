@@ -97,6 +97,7 @@
         {% if is_vtc %}<th>E-learning</th>{% endif %}
         {% if is_vtc %}<th>Livre</th>{% endif %}
         {% if is_vtc %}<th>Théorie</th>{% endif %}
+        {% if is_vtc %}<th>Formation pratique</th>{% endif %}
         {% if is_vtc %}<th>Pratique</th>{% endif %}
         {% if is_vtc %}<th>Date formation pratique</th>{% endif %}
         {% if show_hosting %}<th>Hébergement</th>{% endif %}
@@ -247,6 +248,15 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           {% else %}
             🟡
           {% endif %}
+        </td>
+        <td>
+          <button type="button"
+                  class="mini-btn"
+                  data-toggle-vtc-practice-convocation
+                  data-current-value="{{ t.vtc_practice_convocation_sent_at or '' }}"
+                  {{ read_only_attr }}>
+            {{ "🟢" if t.vtc_practice_convocation_sent_at else "🔴" }}
+          </button>
         </td>
         <td>
           {% if t.vtc_practice_result == "failed" %}
@@ -1325,6 +1335,25 @@ document.querySelectorAll("select.sel").forEach(sel=>{
         }
       });
     });
+
+    const practiceConvocationBtn = tr.querySelector("button[data-toggle-vtc-practice-convocation]");
+    if(practiceConvocationBtn){
+      practiceConvocationBtn.addEventListener("click", async ()=>{
+        const previousValue = practiceConvocationBtn.getAttribute("data-current-value") || "";
+        const nextValue = previousValue ? "" : new Date().toISOString();
+
+        practiceConvocationBtn.textContent = nextValue ? "🟢" : "🔴";
+        practiceConvocationBtn.setAttribute("data-current-value", nextValue);
+
+        try{
+          await saveField(traineeId, "vtc_practice_convocation_sent_at", nextValue);
+        }catch(e){
+          practiceConvocationBtn.textContent = previousValue ? "🟢" : "🔴";
+          practiceConvocationBtn.setAttribute("data-current-value", previousValue);
+          alert("Erreur sauvegarde");
+        }
+      });
+    }
 
     // inline inputs autosave (email/tel)
     tr.querySelectorAll("input.inline-edit").forEach(input => {
