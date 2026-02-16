@@ -44,7 +44,7 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 SECRETARY_USER = os.environ.get("SECRETARY_USER", "")
 SECRETARY_PASSWORD = os.environ.get("SECRETARY_PASSWORD", "")
 SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "30"))
-ADMIN_PUSH_TITLE = os.environ.get("ADMIN_PUSH_TITLE", "Gestion stagiaires")
+ADMIN_PUSH_TITLE = os.environ.get("ADMIN_PUSH_TITLE", "Intégrale Academy")
 WEB_PUSH_VAPID_PUBLIC_KEY = os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY", "").strip()
 WEB_PUSH_VAPID_PRIVATE_KEY = os.environ.get("WEB_PUSH_VAPID_PRIVATE_KEY", "").strip()
 WEB_PUSH_VAPID_CLAIMS_SUB = os.environ.get("WEB_PUSH_VAPID_CLAIMS_SUB", "mailto:admin@example.com").strip()
@@ -2143,10 +2143,13 @@ def _send_admin_push_notifications(data: Dict[str, Any], notification: Dict[str,
     from pywebpush import webpush, WebPushException
 
     payload = json.dumps({
-        "title": ADMIN_PUSH_TITLE or "Gestion stagiaires",
+        "title": ADMIN_PUSH_TITLE or "Intégrale Academy",
         "body": (notification.get("label") or "").strip() or "Nouvelle notification admin",
         "url": url_for("admin_sessions", _external=True),
         "notification_id": notification.get("id") or "",
+        "icon": url_for("static", filename="logo-integrale.png", _external=True),
+        "badge": url_for("static", filename="logo-integrale.png", _external=True),
+        "image": url_for("static", filename="logo-integrale.png", _external=True),
     })
     sent = 0
     invalid_endpoints: Set[str] = set()

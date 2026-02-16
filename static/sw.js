@@ -6,14 +6,30 @@ self.addEventListener('push', (event) => {
     data = {};
   }
 
-  const title = data.title || 'Gestion stagiaires';
+  const title = (data.title || 'Intégrale Academy').trim() || 'Intégrale Academy';
+  const body = (data.body || 'Nouvelle notification admin').trim() || 'Nouvelle notification admin';
+  const icon = data.icon || '/static/logo-integrale.png';
+  const badge = data.badge || icon;
+  const image = data.image || icon;
+
   const options = {
-    body: data.body || 'Nouvelle notification admin',
-    icon: '/static/logo-integrale.png',
-    badge: '/static/logo-integrale.png',
+    body,
+    icon,
+    badge,
+    image,
+    tag: data.notification_id || 'admin-notification',
+    renotify: false,
+    timestamp: Date.now(),
     data: {
       url: data.url || '/admin/sessions',
+      notification_id: data.notification_id || '',
     },
+    actions: [
+      {
+        action: 'open',
+        title: 'Ouvrir',
+      },
+    ],
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
