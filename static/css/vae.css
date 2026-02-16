@@ -61,6 +61,15 @@ h3{margin:18px 0 8px;font-size:1.05rem}
 .experience-item-header{display:flex;justify-content:flex-end;margin-bottom:8px}
 .experience-add-btn{background:#2563eb;color:#fff;animation:pulseBlue 1.8s ease-in-out infinite;box-shadow:0 0 0 0 rgba(37,99,235,.45)}
 .experience-add-btn:hover{background:#1d4ed8}
+.experience-docs-block{margin-top:14px}
+.experience-doc-upload-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
+.experience-doc-file-input{position:absolute;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none}
+.experience-doc-upload-btn{background:#2563eb;color:#fff;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer;display:inline-block}
+.experience-doc-upload-btn:hover{background:#1d4ed8}
+.experience-docs-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.experience-doc-item{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;background:#fff}
+.experience-doc-item-name{font-weight:600;word-break:break-all}
+.experience-doc-item-actions{display:flex;gap:8px;flex-wrap:wrap}
 @keyframes pulseBlue{0%{transform:scale(1);box-shadow:0 0 0 0 rgba(37,99,235,.45)}70%{transform:scale(1.03);box-shadow:0 0 0 12px rgba(37,99,235,0)}100%{transform:scale(1);box-shadow:0 0 0 0 rgba(37,99,235,0)}}
 
 .signature-btn{margin-top:4px;background:#2563eb;color:#fff;animation:pulseBlue 1.8s ease-in-out infinite;box-shadow:0 0 0 0 rgba(37,99,235,.45)}

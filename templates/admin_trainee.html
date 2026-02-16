@@ -413,6 +413,9 @@
       <a class="btn btn-outline" href="{{ url_for('admin_vae_detail', dossier_id=vae_dossier.id) }}" target="_blank" rel="noopener">Avis recevabilité</a>
       <a class="btn btn-outline" href="{{ url_for('vae_wizard', token=vae_dossier.id, admin_edit=1) }}" target="_blank" rel="noopener">Modifier le formulaire</a>
       <a class="btn btn-primary" href="{{ url_for('admin_vae_export', dossier_id=vae_dossier.id) }}">Télécharger PDF</a>
+      {% if vae_dossier.justificatifs_experience %}
+      <a class="btn btn-outline" href="{{ url_for('admin_vae_experience_docs_zip', dossier_id=vae_dossier.id) }}">Télécharger les justificatifs (ZIP)</a>
+      {% endif %}
     </div>
     {% else %}
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
