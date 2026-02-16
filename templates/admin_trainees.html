@@ -97,6 +97,7 @@
         {% if is_vtc %}<th>E-learning</th>{% endif %}
         {% if is_vtc %}<th>Livre</th>{% endif %}
         {% if is_vtc %}<th>Théorie</th>{% endif %}
+        {% if is_vtc %}<th>Formation pratique</th>{% endif %}
         {% if is_vtc %}<th>Pratique</th>{% endif %}
         {% if is_vtc %}<th>Date formation pratique</th>{% endif %}
         {% if show_hosting %}<th>Hébergement</th>{% endif %}
@@ -248,6 +249,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
             🟡
           {% endif %}
         </td>
+        <td>{{ "🟢" if t.vtc_practice_convocation_sent_at else "🔴" }}</td>
         <td>
           {% if t.vtc_practice_result == "failed" %}
             🔴
