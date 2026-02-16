@@ -563,6 +563,29 @@
   </div>
 </div>
 
+<!-- MODALE CONFIRM ENVOI (création stagiaire depuis sessions) -->
+<div class="modal-backdrop" id="sendAccessFromSessionsModal" aria-hidden="true">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head">
+      <div class="modal-title">Envoyer l’accès au stagiaire ?</div>
+      <button class="icon-btn" data-close-modal="sendAccessFromSessionsModal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p style="margin:0 0 10px 0">
+        Tu veux envoyer <strong>le mail + le SMS</strong> maintenant ?
+      </p>
+      <div class="hint" id="sendAccessFromSessionsPreview" style="margin-top:8px"></div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" data-close-modal="sendAccessFromSessionsModal">Annuler</button>
+      <button class="btn btn-outline" id="btnCreateFromSessionsNoSend">Créer sans envoyer</button>
+      <button class="btn btn-primary" id="btnCreateFromSessionsAndSend">Créer + envoyer</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODALE DOCS A CONTROLER -->
 <div class="modal-backdrop" id="docsToControlModal" aria-hidden="true">
   <div class="modal modal-wide">
@@ -748,8 +771,49 @@
       personal_amount: (document.getElementById("sessionTPersonalAmount")?.value || "").trim(),
       other_amount: (document.getElementById("sessionTOtherAmount")?.value || "").trim(),
       carte_pro_ok: !!document.getElementById("sessionTCarteProOk")?.checked,
-      send_access: false,
     };
+  }
+
+  function setCreateFromSessionsButtonsDisabled(disabled){
+    const b1 = document.getElementById("btnCreateTraineeFromSessions");
+    const b2 = document.getElementById("btnCreateFromSessionsNoSend");
+    const b3 = document.getElementById("btnCreateFromSessionsAndSend");
+    if(b1) b1.disabled = disabled;
+    if(b2) b2.disabled = disabled;
+    if(b3) b3.disabled = disabled;
+  }
+
+  async function createTraineeFromSessions(send_access){
+    const payload = getTraineeCreatePayload();
+    if(!payload.last_name || !payload.first_name){
+      alert("Nom + prénom obligatoires");
+      return;
+    }
+
+    const sessionId = (document.getElementById("traineeTargetSession")?.value || "").trim();
+    if(!sessionId){
+      alert("Sélectionne une session");
+      return;
+    }
+
+    setCreateFromSessionsButtonsDisabled(true);
+    try{
+      const r = await fetch(`/api/sessions/${sessionId}/trainees/create`, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ ...payload, send_access }),
+      });
+      const res = await r.json();
+      if(!r.ok || !res.ok){
+        alert("Erreur ajout stagiaire");
+        return;
+      }
+      window.location.href = `/admin/sessions/${sessionId}/trainees`;
+    }catch(e){
+      alert("Erreur réseau");
+    }finally{
+      setCreateFromSessionsButtonsDisabled(false);
+    }
   }
 
   function refreshTrainingButtons(){
@@ -805,7 +869,7 @@
     openModal("createTraineeFromSessionsModal");
   });
 
-  document.getElementById("btnCreateTraineeFromSessions")?.addEventListener("click", async ()=>{
+  document.getElementById("btnCreateTraineeFromSessions")?.addEventListener("click", ()=>{
     const payload = getTraineeCreatePayload();
     if(!payload.last_name || !payload.first_name){
       alert("Nom + prénom obligatoires");
@@ -818,25 +882,25 @@
       return;
     }
 
-    const btn = document.getElementById("btnCreateTraineeFromSessions");
-    btn.disabled = true;
-    try{
-      const r = await fetch(`/api/sessions/${sessionId}/trainees/create`, {
-        method:"POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify(payload),
-      });
-      const res = await r.json();
-      if(!r.ok || !res.ok){
-        alert("Erreur ajout stagiaire");
-        return;
-      }
-      window.location.href = `/admin/sessions/${sessionId}/trainees`;
-    }catch(e){
-      alert("Erreur réseau");
-    }finally{
-      btn.disabled = false;
+    const preview = document.getElementById("sendAccessFromSessionsPreview");
+    if(preview){
+      const parts = [];
+      if(payload.email) parts.push(`📧 ${payload.email}`);
+      if(payload.phone) parts.push(`📱 ${payload.phone}`);
+      preview.textContent = parts.length ? ("Destinataire : " + parts.join("  •  ")) : "Aucun email/téléphone renseigné.";
     }
+
+    closeModal("createTraineeFromSessionsModal");
+    openModal("sendAccessFromSessionsModal");
+  });
+
+  document.getElementById("btnCreateFromSessionsNoSend")?.addEventListener("click", async ()=>{
+    await createTraineeFromSessions(false);
+  });
+
+  document.getElementById("btnCreateFromSessionsAndSend")?.addEventListener("click", async ()=>{
+    if(!await window.confirmMailSmsSend?.()) return;
+    await createTraineeFromSessions(true);
   });
 
   function toggleExamFields(){
