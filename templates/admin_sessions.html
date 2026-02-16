@@ -230,10 +230,21 @@
     text-align:left;
     cursor:pointer;
     margin:0;
+    transition:transform .18s ease, box-shadow .18s ease, filter .18s ease;
   }
   .quick-create-option + .quick-create-option{ margin-top:6px; }
   .quick-create-option--session{ background:#dcfce7; color:#166534; }
   .quick-create-option--trainee{ background:#dbeafe; color:#1d4ed8; }
+  .quick-create-option:hover,
+  .quick-create-option:focus-visible{
+    transform:translateY(-1px);
+    box-shadow:0 8px 18px rgba(15, 23, 42, .14);
+    filter:saturate(1.05);
+  }
+  .quick-create-option:active{
+    transform:translateY(0);
+    box-shadow:0 3px 8px rgba(15, 23, 42, .1);
+  }
 
   .training-chooser{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
   .training-choice{
