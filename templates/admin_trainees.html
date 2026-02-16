@@ -97,9 +97,9 @@
         {% if is_vtc %}<th>E-learning</th>{% endif %}
         {% if is_vtc %}<th>Livre</th>{% endif %}
         {% if is_vtc %}<th>Théorie</th>{% endif %}
-        {% if is_vtc %}<th>Formation pratique</th>{% endif %}
-        {% if is_vtc %}<th>Pratique</th>{% endif %}
+        {% if is_vtc %}<th>Convocation</th>{% endif %}
         {% if is_vtc %}<th>Date formation pratique</th>{% endif %}
+        {% if is_vtc %}<th>Pratique</th>{% endif %}
         {% if show_hosting %}<th>Hébergement</th>{% endif %}
         <th>Commentaire</th>
       </tr>
@@ -120,12 +120,14 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
      style="text-decoration:none;">
     {% if t.public_has_logged_in %}🛜 {% endif %}{{ t.last_name or "" }}
   </a>
+  {% if not is_vtc and not show_vae %}
   <div class="doc-badges"
        data-doc-badges
        data-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}"
        data-diplome="{{ '1' if (t.get('deliverables', {}).get('diplome')) else '0' }}"
        data-attestation="{{ '1' if (t.get('deliverables', {}).get('attestation_fin_formation')) else '0' }}">
   </div>
+  {% endif %}
 </td>
 <td>
   <a class="trainee-link"
@@ -249,7 +251,6 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
             🟡
           {% endif %}
         </td>
-        <td>{{ "🟢" if t.vtc_practice_convocation_sent_at else "🔴" }}</td>
         <td>
           <select class="status sel status-dot"
                   data-field="vtc_practice_convocation_sent_at"
@@ -259,15 +260,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
             <option value="validated" {% if t.vtc_practice_convocation_sent_at %}selected{% endif %}>🟢</option>
           </select>
         </td>
-        <td>
-          <button type="button"
-                  class="mini-btn"
-                  data-toggle-vtc-practice-convocation
-                  data-current-value="{{ t.vtc_practice_convocation_sent_at or '' }}"
-                  {{ read_only_attr }}>
-            {{ "🟢" if t.vtc_practice_convocation_sent_at else "🔴" }}
-          </button>
-        </td>
+        <td>{{ session.practice_training_date|frdate }}</td>
         <td>
           {% if t.vtc_practice_result == "failed" %}
             🔴
@@ -277,7 +270,6 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
             🟡
           {% endif %}
         </td>
-        <td>{{ session.practice_training_date|frdate }}</td>
         {% endif %}
 
         {% if show_hosting %}
