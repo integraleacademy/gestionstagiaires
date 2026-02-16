@@ -8,8 +8,12 @@
   const progress = document.getElementById('vaeProgress');
   const saveStatus = document.getElementById('saveStatus');
   const errorsEl = document.getElementById('submitErrors');
+  const experienceDocsInput = document.getElementById('experienceDocsInput');
+  const experienceDocsList = document.getElementById('experienceDocsList');
+  const experienceDocsStatus = document.getElementById('experienceDocsStatus');
   const initial = window.__VAE_INITIAL__ || {};
   let current = 0;
+  let experienceDocs = Array.isArray(initial.justificatifs_experience) ? [...initial.justificatifs_experience] : [];
 
   const STEP_LABELS = {
     1: 'Nature de la demande',
@@ -202,6 +206,9 @@
     const currentStepEl = steps[current];
     currentStepEl?.querySelectorAll('.field-error').forEach((el) => el.classList.remove('field-error'));
     const missing = required.filter((field) => !hasValueForField(payload, field));
+    if (step === 4 && experienceDocs.length === 0) {
+      missing.push('justificatifs_experience');
+    }
     if (!missing.length) {
       errorsEl.innerHTML = '';
       return true;
@@ -212,6 +219,77 @@
     });
     errorsEl.innerHTML = '<div>Vous n\'avez pas rempli tous les champs</div>';
     return false;
+  }
+
+  function buildAdminUploadUrl(token) {
+    if (!token) return '';
+    return `/admin/uploads/${encodeURIComponent(String(token)).replace(/%2F/g, '/')}`;
+  }
+
+  function renderExperienceDocs() {
+    if (!experienceDocsList) return;
+    if (!experienceDocs.length) {
+      experienceDocsList.innerHTML = '<div class="muted">Aucun justificatif déposé pour le moment.</div>';
+      return;
+    }
+
+    const canDelete = adminEditMode || String(initial?.statut_dossier || '').toLowerCase() !== 'soumis';
+    experienceDocsList.innerHTML = experienceDocs.map((doc) => {
+      const id = String(doc?.id || '');
+      const name = String(doc?.name || 'justificatif');
+      const token = String(doc?.token || '');
+      const viewBtn = adminEditMode && token
+        ? `<a class="btn secondary" href="${buildAdminUploadUrl(token)}" target="_blank" rel="noopener">Voir</a>`
+        : '';
+      const deleteBtn = canDelete && id
+        ? `<button type="button" class="btn danger" data-delete-doc="${id}">Supprimer</button>`
+        : '';
+      return `<div class="experience-doc-item"><div class="experience-doc-item-name">${name}</div><div class="experience-doc-item-actions">${viewBtn}${deleteBtn}</div></div>`;
+    }).join('');
+
+    experienceDocsList.querySelectorAll('[data-delete-doc]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const docId = btn.getAttribute('data-delete-doc');
+        deleteExperienceDoc(docId).catch(() => {
+          if (experienceDocsStatus) experienceDocsStatus.textContent = 'Erreur lors de la suppression';
+        });
+      });
+    });
+  }
+
+  async function deleteExperienceDoc(docId) {
+    if (!docId) return;
+    if (experienceDocsStatus) experienceDocsStatus.textContent = 'Suppression…';
+    const res = await fetch(`/api/vae/${dossierId}/experience-docs/${docId}/delete`, { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (experienceDocsStatus) experienceDocsStatus.textContent = 'Erreur lors de la suppression';
+      return;
+    }
+    experienceDocs = Array.isArray(data.files) ? data.files : [];
+    initial.justificatifs_experience = experienceDocs;
+    if (experienceDocsStatus) experienceDocsStatus.textContent = 'Justificatif supprimé';
+    renderExperienceDocs();
+  }
+
+  async function uploadExperienceDocs(files) {
+    if (!files?.length) return;
+    const fd = new FormData();
+    [...files].forEach((file) => fd.append('files', file));
+    if (experienceDocsStatus) experienceDocsStatus.textContent = 'Téléversement en cours…';
+    const res = await fetch(`/api/vae/${dossierId}/experience-docs/upload`, {
+      method: 'POST',
+      body: fd,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (experienceDocsStatus) experienceDocsStatus.textContent = 'Erreur lors du téléversement';
+      return;
+    }
+    experienceDocs = Array.isArray(data.files) ? data.files : [];
+    initial.justificatifs_experience = experienceDocs;
+    if (experienceDocsStatus) experienceDocsStatus.textContent = `${(data.added || []).length} justificatif(s) ajouté(s)`;
+    renderExperienceDocs();
   }
 
 
@@ -325,6 +403,12 @@
       }
     });
     if (payload.certification?.vise !== 'complete') e.push('La certification complète est obligatoire');
+    if (!experienceDocs.length) {
+      e.push({
+        step: 4,
+        message: 'Au moins un justificatif d’expérience professionnelle doit être déposé',
+      });
+    }
     const activites = payload.blocs_competences || {};
     for (let idx = 1; idx <= 5; idx += 1) {
       const activite = activites[`activite${idx}`] || {};
@@ -406,6 +490,14 @@
   document.getElementById('signDocument').addEventListener('click', signDocument);
 
   form.querySelectorAll('input, select, textarea').forEach((el) => el.addEventListener('input', autosaveDebounced));
+  if (experienceDocsInput) {
+    experienceDocsInput.addEventListener('change', () => {
+      uploadExperienceDocs(experienceDocsInput.files).catch(() => {
+        if (experienceDocsStatus) experienceDocsStatus.textContent = 'Erreur lors du téléversement';
+      });
+      experienceDocsInput.value = '';
+    });
+  }
   form.querySelectorAll('[name="candidat.statut"]').forEach((el) => {
     el.addEventListener('change', () => {
       updateConventionCollectiveState();
@@ -427,6 +519,7 @@
 
   const exp = Array.isArray(initial.experiences) && initial.experiences.length ? initial.experiences : [{}];
   exp.forEach(addExperienceRow);
+  renderExperienceDocs();
   syncEngagementIdentityAndDate();
   updateConventionCollectiveState();
   renderStep();

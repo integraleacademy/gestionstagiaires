@@ -10736,6 +10736,7 @@ def _vae_default_dossier(dossier_id: Optional[str] = None) -> Dict[str, Any]:
             "blocs_vises": []
         },
         "experiences": [{"date_debut": "", "duree": "", "description": ""}],
+        "justificatifs_experience": [],
         "blocs_competences": {
             "activite1": {"commentaires": "", "competence1": {"intitule": "", "statut": ""}, "competence2": {"intitule": "", "statut": ""}, "competence3": {"intitule": "", "statut": ""}, "competence4": {"intitule": "", "statut": ""}},
             "activite2": {"commentaires": "", "competence1": {"intitule": "", "statut": ""}, "competence2": {"intitule": "", "statut": ""}, "competence3": {"intitule": "", "statut": ""}, "competence4": {"intitule": "", "statut": ""}},
@@ -10972,6 +10973,10 @@ def _validate_vae_for_submit(dossier: Dict[str, Any]) -> List[str]:
     if not has_filled_experience:
         errors.append("3ème étape (Expériences du candidat) : au moins une expérience doit être renseignée")
 
+    justificatifs = dossier.get("justificatifs_experience") if isinstance(dossier.get("justificatifs_experience"), list) else []
+    if not justificatifs:
+        errors.append("3ème étape (Expériences du candidat) : au moins un justificatif d'expérience professionnelle doit être déposé")
+
     blocs_competences = dossier.get("blocs_competences", {})
     for activity_idx in range(1, 6):
         activity = blocs_competences.get(f"activite{activity_idx}", {})
@@ -11005,6 +11010,127 @@ def _validate_vae_for_submit(dossier: Dict[str, Any]) -> List[str]:
     if not str(engagement.get("signature_trace") or "").strip() or not str(engagement.get("signature_signed_at") or "").strip():
         errors.append("7ème étape (Accord d'analyse) : signature électronique obligatoire")
     return errors
+
+def _vae_upload_dir(dossier_id: str) -> str:
+    base = os.path.join(PERSIST_DIR, "uploads", "vae", str(dossier_id or "").strip())
+    os.makedirs(base, exist_ok=True)
+    return base
+
+def _store_vae_file(dossier_id: str, f) -> str:
+    target_dir = _vae_upload_dir(dossier_id)
+    filename = secure_filename(f.filename or "piece_justificative")
+    ext = _safe_ext(filename)
+    if ext and ext not in ALLOWED_EXT:
+        raise ValueError("extension_not_allowed")
+    stored_name = uuid.uuid4().hex[:10] + (ext or "")
+    path = os.path.join(target_dir, stored_name)
+    f.save(path)
+    return path
+
+@app.post('/api/vae/<dossier_id>/experience-docs/upload')
+def api_vae_experience_docs_upload(dossier_id: str):
+    data = _vae_load_all()
+    dossier = _vae_find_dossier(data, dossier_id)
+    if not dossier:
+        return jsonify({"ok": False, "error": "not_found"}), 404
+
+    admin_edit_mode = bool(session.get('admin_logged_in'))
+    if (dossier.get('statut_dossier') or '').strip().lower() == 'soumis' and not admin_edit_mode:
+        return jsonify({"ok": False, "error": "already_submitted"}), 403
+
+    incoming_files = request.files.getlist('files') or request.files.getlist('file')
+    incoming_files = [f for f in incoming_files if f and f.filename]
+    if not incoming_files:
+        return jsonify({"ok": False, "error": "missing_file"}), 400
+
+    justificatifs = dossier.get('justificatifs_experience') if isinstance(dossier.get('justificatifs_experience'), list) else []
+    added = []
+    for f in incoming_files:
+        try:
+            stored = _store_vae_file(dossier_id, f)
+        except ValueError:
+            return jsonify({"ok": False, "error": "extension_not_allowed"}), 400
+        token = _tokenize_path(stored)
+        entry = {
+            "id": str(uuid.uuid4()),
+            "name": secure_filename(f.filename or "justificatif"),
+            "token": token,
+            "uploaded_at": _now_iso_utc(),
+        }
+        justificatifs.append(entry)
+        added.append(entry)
+
+    dossier['justificatifs_experience'] = justificatifs
+    dossier['updated_at'] = _now_iso_utc()
+    _vae_save_all(data)
+    return jsonify({"ok": True, "files": justificatifs, "added": added})
+
+@app.post('/api/vae/<dossier_id>/experience-docs/<doc_id>/delete')
+def api_vae_experience_doc_delete(dossier_id: str, doc_id: str):
+    data = _vae_load_all()
+    dossier = _vae_find_dossier(data, dossier_id)
+    if not dossier:
+        return jsonify({"ok": False, "error": "not_found"}), 404
+
+    admin_edit_mode = bool(session.get('admin_logged_in'))
+    if (dossier.get('statut_dossier') or '').strip().lower() == 'soumis' and not admin_edit_mode:
+        return jsonify({"ok": False, "error": "already_submitted"}), 403
+
+    justificatifs = dossier.get('justificatifs_experience') if isinstance(dossier.get('justificatifs_experience'), list) else []
+    kept = []
+    deleted = None
+    for entry in justificatifs:
+        if str((entry or {}).get('id') or '') == str(doc_id):
+            deleted = entry
+        else:
+            kept.append(entry)
+
+    if not deleted:
+        return jsonify({"ok": False, "error": "not_found"}), 404
+
+    token = str((deleted or {}).get('token') or '').strip()
+    if token:
+        try:
+            fp = _detokenize_path(token)
+            if os.path.exists(fp):
+                os.remove(fp)
+        except Exception:
+            pass
+
+    dossier['justificatifs_experience'] = kept
+    dossier['updated_at'] = _now_iso_utc()
+    _vae_save_all(data)
+    return jsonify({"ok": True, "files": kept})
+
+@app.get('/admin/vae/<dossier_id>/experience-docs.zip')
+@admin_login_required
+def admin_vae_experience_docs_zip(dossier_id: str):
+    data = _vae_load_all()
+    dossier = _vae_find_dossier(data, dossier_id)
+    if not dossier:
+        abort(404)
+
+    justificatifs = dossier.get('justificatifs_experience') if isinstance(dossier.get('justificatifs_experience'), list) else []
+    if not justificatifs:
+        abort(404)
+
+    buf = BytesIO()
+    with zipfile.ZipFile(buf, 'w', compression=zipfile.ZIP_DEFLATED) as z:
+        for idx, entry in enumerate(justificatifs, start=1):
+            token = str((entry or {}).get('token') or '').strip()
+            if not token:
+                continue
+            fp = _detokenize_path(token)
+            if not os.path.exists(fp):
+                continue
+            original_name = secure_filename((entry or {}).get('name') or '')
+            ext = os.path.splitext(original_name)[1] or os.path.splitext(fp)[1] or ''
+            arcname = f"Justificatif_experience_{idx}{ext}"
+            z.write(fp, arcname=arcname)
+
+    buf.seek(0)
+    zipname = f"VAE_Justificatifs_Experience_{dossier_id}.zip"
+    return send_file(buf, as_attachment=True, download_name=zipname, mimetype='application/zip')
 
 def _vae_create_and_redirect_for_trainee_token(trainee_token: str):
     trainee_token = (trainee_token or '').strip()
