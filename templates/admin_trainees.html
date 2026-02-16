@@ -97,6 +97,7 @@
         {% if is_vtc %}<th>E-learning</th>{% endif %}
         {% if is_vtc %}<th>Livre</th>{% endif %}
         {% if is_vtc %}<th>Théorie</th>{% endif %}
+        {% if is_vtc %}<th>Convocation</th>{% endif %}
         {% if is_vtc %}<th>Date formation pratique</th>{% endif %}
         {% if is_vtc %}<th>Pratique</th>{% endif %}
         {% if show_hosting %}<th>Hébergement</th>{% endif %}
@@ -247,6 +248,15 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           {% else %}
             🟡
           {% endif %}
+        </td>
+        <td>
+          <select class="status sel status-dot"
+                  data-field="vtc_practice_convocation_sent_at"
+                  data-current-value="{{ t.vtc_practice_convocation_sent_at or '' }}"
+                  {{ read_only_attr }}>
+            <option value="pending" {% if not t.vtc_practice_convocation_sent_at %}selected{% endif %}>🔴</option>
+            <option value="validated" {% if t.vtc_practice_convocation_sent_at %}selected{% endif %}>🟢</option>
+          </select>
         </td>
         <td>{{ session.practice_training_date|frdate }}</td>
         <td>
