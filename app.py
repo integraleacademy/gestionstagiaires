@@ -4946,6 +4946,47 @@ def admin_positioning_test_detail(test_id: str):
 
 
 
+@app.get("/admin/sessions/<session_id>/trainees/print")
+@admin_login_required
+def admin_trainees_print(session_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    session_view = {
+        "id": s.get("id"),
+        "name": _session_get(s, "name", ""),
+        "training_type": _session_get(s, "training_type", ""),
+        "date_start": _session_get(s, "date_start", ""),
+        "date_end": _session_get(s, "date_end", ""),
+        "exam_date": _session_get(s, "exam_date", ""),
+        "exam_theory_date": _session_get(s, "exam_theory_date", ""),
+        "exam_practice_date": _session_get(s, "exam_practice_date", ""),
+    }
+
+    trainees = _session_trainees_list(s)
+    printable_trainees = []
+    for t in trainees:
+        printable_trainees.append({
+            "last_name": normalize_last_name(t.get("last_name") or ""),
+            "first_name": normalize_first_name(t.get("first_name") or ""),
+            "email": (t.get("email") or "").strip(),
+            "phone": (t.get("phone") or "").strip(),
+        })
+
+    printable_trainees.sort(key=lambda t: (
+        (t.get("last_name") or "").upper(),
+        (t.get("first_name") or "").upper(),
+    ))
+
+    return render_template(
+        "admin_trainees_print.html",
+        session=session_view,
+        trainees=printable_trainees,
+    )
+
+
 @app.get("/admin/sessions/<session_id>/trainees")
 @admin_login_required
 def admin_trainees(session_id: str):

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Liste stagiaires - {{ session.name }}</title>
+  <style>
+    :root { color-scheme: light; }
+    body { font-family: Arial, sans-serif; margin: 0; color: #111; background: #f6f7fb; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 24px; }
+    .toolbar { display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 12px; }
+    .btn { border: 1px solid #ccd1dc; border-radius: 8px; background: #fff; padding: 8px 12px; cursor: pointer; }
+    .sheet { background: #fff; border: 1px solid #e2e6ef; border-radius: 12px; padding: 20px; }
+    h1 { margin: 0 0 6px; font-size: 24px; }
+    .meta { margin: 0 0 16px; color: #4c5567; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { border: 1px solid #d9dfeb; padding: 8px; text-align: left; vertical-align: top; }
+    th { background: #f1f4fb; }
+    .num { width: 56px; text-align: center; }
+
+    @media print {
+      body { background: #fff; }
+      .wrap { max-width: none; margin: 0; padding: 0; }
+      .toolbar { display: none !important; }
+      .sheet { border: 0; border-radius: 0; padding: 0; }
+      @page { size: A4 portrait; margin: 12mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="toolbar">
+      <button type="button" class="btn" onclick="window.print()">🖨️ Imprimer</button>
+    </div>
+
+    <div class="sheet">
+      <h1>{{ session.name }}</h1>
+      {% set training_type_label = "CHAUFFEUR VTC" if (session.training_type or "")|upper == "VTC" else session.training_type %}
+      <p class="meta">
+        {{ training_type_label }} · Formation du <strong>{{ session.date_start|frdate }}</strong> au <strong>{{ session.date_end|frdate }}</strong>
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th class="num">#</th>
+            <th>Nom</th>
+            <th>Prénom</th>
+            <th>Email</th>
+            <th>Téléphone</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in trainees %}
+          <tr>
+            <td class="num">{{ loop.index }}</td>
+            <td>{{ t.last_name }}</td>
+            <td>{{ t.first_name }}</td>
+            <td>{{ t.email }}</td>
+            <td>{{ t.phone }}</td>
+          </tr>
+          {% endfor %}
+          {% if not trainees %}
+          <tr>
+            <td colspan="5">Aucun stagiaire pour cette session.</td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>
