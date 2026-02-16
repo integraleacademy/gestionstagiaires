@@ -188,6 +188,23 @@
     display:inline-flex;
     align-items:center;
     justify-content:center;
+    transform-origin:center;
+    animation:plusPulse 1.6s ease-in-out infinite;
+    transition:transform .2s ease, box-shadow .2s ease;
+  }
+  .btn-plus:hover,
+  .btn-plus:focus-visible{
+    animation-play-state:paused;
+    transform:scale(1.08);
+  }
+  .btn-plus.is-open{
+    animation:none;
+    transform:rotate(45deg) scale(1.03);
+    box-shadow:0 10px 20px rgba(29,78,216,.35);
+  }
+  @keyframes plusPulse{
+    0%,100%{ transform:scale(1); box-shadow:0 0 0 0 rgba(29,78,216,.25); }
+    55%{ transform:scale(1.08); box-shadow:0 0 0 10px rgba(29,78,216,0); }
   }
   .quick-create-menu{
     position:absolute;
@@ -249,7 +266,7 @@
     <a class="btn btn-outline" href="{{ url_for('admin_sessions_archived') }}">Sessions archivées</a>
     {% if not is_read_only %}
       <div class="quick-create-wrap">
-        <button class="btn btn-primary btn-plus" id="btnOpenCreateMenu" aria-label="Créer">+</button>
+        <button class="btn btn-primary btn-plus" id="btnOpenCreateMenu" aria-label="Créer" aria-expanded="false">+</button>
         <div class="quick-create-menu" id="quickCreateMenu">
           <button class="quick-create-option quick-create-option--session" id="btnOpenCreateSession">💼Nouvelle session</button>
           <button class="quick-create-option quick-create-option--trainee" id="btnOpenCreateTraineeFromSessions">👨‍🎓Nouveau stagiaire</button>
@@ -688,11 +705,18 @@
 
   function closeQuickCreateMenu(){
     document.getElementById("quickCreateMenu")?.classList.remove("is-open");
+    document.getElementById("btnOpenCreateMenu")?.classList.remove("is-open");
+    document.getElementById("btnOpenCreateMenu")?.setAttribute("aria-expanded", "false");
   }
 
   document.getElementById("btnOpenCreateMenu")?.addEventListener("click", (event)=>{
     event.stopPropagation();
-    document.getElementById("quickCreateMenu")?.classList.toggle("is-open");
+    const menu = document.getElementById("quickCreateMenu");
+    const button = document.getElementById("btnOpenCreateMenu");
+    if(!menu || !button) return;
+    const isOpen = menu.classList.toggle("is-open");
+    button.classList.toggle("is-open", isOpen);
+    button.setAttribute("aria-expanded", isOpen ? "true" : "false");
   });
 
   document.addEventListener("click", (event)=>{
