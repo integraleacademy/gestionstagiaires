@@ -55,6 +55,7 @@
   <h2 style="margin:0;">Stagiaires</h2>
 
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <button class="btn btn-outline" id="btnPrintTrainees" type="button">🖨️ Imprimer la liste</button>
     {% if not is_read_only %}
       <button class="btn btn-outline" id="btnBulkSst">⬇️ Télécharger les SST en masse</button>
       <input id="bulkSstInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
@@ -561,6 +562,38 @@ tr.row-todo td{
   width:auto;
   max-width:none !important;
 }
+
+@media print{
+  .breadcrumbs,
+  .page-head > div,
+  .mini-btn,
+  .doc-badges,
+  .modal-backdrop,
+  .warn-line{
+    display:none !important;
+  }
+
+  body{
+    background:#fff !important;
+  }
+
+  .session-header,
+  .table-wrap,
+  #traineesTable{
+    width:100% !important;
+  }
+
+  #traineesTable input,
+  #traineesTable select,
+  #traineesTable button{
+    border:0 !important;
+    background:transparent !important;
+    appearance:none !important;
+    -webkit-appearance:none !important;
+    pointer-events:none !important;
+    color:#111827 !important;
+  }
+}
  
 </style>
 
@@ -568,6 +601,11 @@ tr.row-todo td{
 
 <script>
   const sessionId = document.getElementById("traineesTable").getAttribute("data-session-id");
+  const btnPrintTrainees = document.getElementById("btnPrintTrainees");
+
+  btnPrintTrainees?.addEventListener("click", ()=>{
+    window.print();
+  });
 
   // ✅ AJOUTE ÇA
   function openModal(id){
