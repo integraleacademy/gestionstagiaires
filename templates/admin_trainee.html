@@ -467,12 +467,30 @@
         Examen théorique le {{ vtc_theory_date|frdate }}
       </button>
 
+      {% if not is_read_only %}
+      <button class="btn btn-outline btn-uniform"
+              type="button"
+              id="btnVtcTheoryExamUndo"
+              style="{% if not trainee.vtc_theory_exam_sent_at %}display:none;{% endif %}">
+        ↩️ Dévalider
+      </button>
+      {% endif %}
+
       <button class="btn {% if trainee.vtc_practice_convocation_sent_at %}btn-primary{% else %}btn-outline{% endif %} btn-uniform"
               type="button"
               id="btnVtcPracticeConvocation"
               {% if trainee.vtc_practice_convocation_sent_at or is_read_only %}disabled{% endif %}>
         Convocation Formation pratique le {{ vtc_practice_training_date|frdate }}
       </button>
+
+      {% if not is_read_only %}
+      <button class="btn btn-outline btn-uniform"
+              type="button"
+              id="btnVtcPracticeConvocationUndo"
+              style="{% if not trainee.vtc_practice_convocation_sent_at %}display:none;{% endif %}">
+        ↩️ Dévalider
+      </button>
+      {% endif %}
 
       {% set vtc_practice_exam_date = session.exam_practice_date or session.exam_date %}
       <button class="btn {% if trainee.vtc_practice_exam_sent_at %}btn-primary{% else %}btn-outline{% endif %} btn-uniform"
@@ -481,6 +499,15 @@
               {% if trainee.vtc_practice_exam_sent_at or is_read_only %}disabled{% endif %}>
         Examen pratique le {{ vtc_practice_exam_date|frdate }}
       </button>
+
+      {% if not is_read_only %}
+      <button class="btn btn-outline btn-uniform"
+              type="button"
+              id="btnVtcPracticeExamSuccessUndo"
+              style="{% if not trainee.vtc_practice_exam_sent_at %}display:none;{% endif %}">
+        ↩️ Dévalider
+      </button>
+      {% endif %}
     </div>
 
     <div id="vtcStatusHint" class="hint" style="margin-top:8px;
@@ -2696,9 +2723,80 @@ if(chkExamFeesPaid){
 }
 
 const btnVtcTheoryExam = document.getElementById("btnVtcTheoryExam");
+const btnVtcTheoryExamUndo = document.getElementById("btnVtcTheoryExamUndo");
 const btnVtcPracticeConvocation = document.getElementById("btnVtcPracticeConvocation");
+const btnVtcPracticeConvocationUndo = document.getElementById("btnVtcPracticeConvocationUndo");
 const btnVtcPracticeExamSuccess = document.getElementById("btnVtcPracticeExamSuccess");
+const btnVtcPracticeExamSuccessUndo = document.getElementById("btnVtcPracticeExamSuccessUndo");
 const vtcStatusHint = document.getElementById("vtcStatusHint");
+
+const vtcStatusState = {
+  theory: {
+    sentAt: {{ 'true' if trainee.vtc_theory_exam_sent_at else 'false' }},
+    emailOk: {{ 'true' if trainee.vtc_theory_exam_email_ok else 'false' }},
+    smsOk: {{ 'true' if trainee.vtc_theory_exam_sms_ok else 'false' }},
+  },
+  practiceConvocation: {
+    sentAt: {{ 'true' if trainee.vtc_practice_convocation_sent_at else 'false' }},
+  },
+  practiceExam: {
+    sentAt: {{ 'true' if trainee.vtc_practice_exam_sent_at else 'false' }},
+    emailOk: {{ 'true' if trainee.vtc_practice_exam_email_ok else 'false' }},
+    smsOk: {{ 'true' if trainee.vtc_practice_exam_sms_ok else 'false' }},
+  },
+  failures: {
+    theory: {{ 'true' if trainee.vtc_theory_result == 'non_admissible' else 'false' }},
+    practice: {{ 'true' if trainee.vtc_practice_result == 'non_admissible' else 'false' }},
+  }
+};
+
+const setStepValidatedUi = (btn, undoBtn, isValidated) => {
+  if(btn){
+    btn.classList.toggle("btn-primary", isValidated);
+    btn.classList.toggle("btn-outline", !isValidated);
+    btn.disabled = isValidated;
+  }
+  if(undoBtn){
+    undoBtn.style.display = isValidated ? "" : "none";
+  }
+};
+
+const renderVtcStatus = () => {
+  setStepValidatedUi(btnVtcTheoryExam, btnVtcTheoryExamUndo, vtcStatusState.theory.sentAt);
+  setStepValidatedUi(btnVtcPracticeConvocation, btnVtcPracticeConvocationUndo, vtcStatusState.practiceConvocation.sentAt);
+  setStepValidatedUi(btnVtcPracticeExamSuccess, btnVtcPracticeExamSuccessUndo, vtcStatusState.practiceExam.sentAt);
+
+  if(!vtcStatusHint) return;
+
+  const lines = [];
+  if(vtcStatusState.failures.theory) lines.push("<div>❌ Échec examen théorique</div>");
+
+  if(vtcStatusState.theory.sentAt){
+    const emailFlag = vtcStatusState.theory.emailOk ? '<span style="margin-left:8px;">📧 Email envoyé</span>' : '<span style="margin-left:8px;">📧 Email non envoyé</span>';
+    const smsFlag = vtcStatusState.theory.smsOk ? '<span style="margin-left:8px;">📱 SMS envoyé</span>' : '<span style="margin-left:8px;">📱 SMS non envoyé</span>';
+    lines.push(`✅ Examen théorique validé ${emailFlag}${smsFlag}`);
+  }
+
+  if(vtcStatusState.practiceConvocation.sentAt){
+    lines.push("<div>✅ Convocation formation pratique validée</div>");
+  }
+
+  if(vtcStatusState.practiceExam.sentAt){
+    const emailFlag = vtcStatusState.practiceExam.emailOk ? '<span style="margin-left:8px;">📧 Email envoyé</span>' : '<span style="margin-left:8px;">📧 Email non envoyé</span>';
+    const smsFlag = vtcStatusState.practiceExam.smsOk ? '<span style="margin-left:8px;">📱 SMS envoyé</span>' : '<span style="margin-left:8px;">📱 SMS non envoyé</span>';
+    lines.push(`<div>✅ Examen pratique validé ${emailFlag}${smsFlag}</div>`);
+  }
+
+  if(vtcStatusState.failures.practice) lines.push("<div>❌ Échec examen pratique</div>");
+
+  if(lines.length){
+    vtcStatusHint.style.display = "block";
+    vtcStatusHint.innerHTML = lines.join("<br>");
+  }else{
+    vtcStatusHint.style.display = "none";
+    vtcStatusHint.innerHTML = "";
+  }
+};
 
 if(btnVtcTheoryExam){
   btnVtcTheoryExam.addEventListener("click", async ()=>{
@@ -2716,18 +2814,37 @@ if(btnVtcTheoryExam){
         throw new Error(data.error || "send_failed");
       }
 
-      btnVtcTheoryExam.classList.remove("btn-outline");
-      btnVtcTheoryExam.classList.add("btn-primary");
-
-      if(vtcStatusHint){
-        const emailFlag = data.email_ok ? "<span style=\"margin-left:8px;\">📧 Email envoyé</span>" : "<span style=\"margin-left:8px;\">📧 Email non envoyé</span>";
-        const smsFlag = data.sms_ok ? "<span style=\"margin-left:8px;\">📱 SMS envoyé</span>" : "<span style=\"margin-left:8px;\">📱 SMS non envoyé</span>";
-        vtcStatusHint.style.display = "block";
-        vtcStatusHint.innerHTML = `✅ Examen théorique validé ${emailFlag}${smsFlag}`;
-      }
+      vtcStatusState.theory.sentAt = true;
+      vtcStatusState.theory.emailOk = !!data.email_ok;
+      vtcStatusState.theory.smsOk = !!data.sms_ok;
+      renderVtcStatus();
     }catch(e){
       btnVtcTheoryExam.disabled = false;
       alert("Erreur lors de l'envoi de la convocation formation pratique.");
+    }
+  });
+}
+
+if(btnVtcTheoryExamUndo){
+  btnVtcTheoryExamUndo.addEventListener("click", async ()=>{
+    const ok = window.confirm("Dévalider l'étape \"Examen théorique\" ?");
+    if(!ok) return;
+    try{
+      btnVtcTheoryExamUndo.disabled = true;
+      const res = await updateTrainee({
+        vtc_theory_exam_sent_at: "",
+        vtc_theory_exam_email_ok: false,
+        vtc_theory_exam_sms_ok: false,
+      });
+      if(!res || res.ok === false) throw new Error("save_failed");
+      vtcStatusState.theory.sentAt = false;
+      vtcStatusState.theory.emailOk = false;
+      vtcStatusState.theory.smsOk = false;
+      renderVtcStatus();
+    }catch(e){
+      alert("Erreur lors de la dévalidation de l'examen théorique.");
+    }finally{
+      btnVtcTheoryExamUndo.disabled = false;
     }
   });
 }
@@ -2741,13 +2858,8 @@ if(btnVtcPracticeConvocation){
       if(!res || res.ok === false){
         throw new Error("save_failed");
       }
-      btnVtcPracticeConvocation.classList.remove("btn-outline");
-      btnVtcPracticeConvocation.classList.add("btn-primary");
-      if(vtcStatusHint){
-        const previous = vtcStatusHint.innerHTML ? `${vtcStatusHint.innerHTML}<br>` : "";
-        vtcStatusHint.style.display = "block";
-        vtcStatusHint.innerHTML = `${previous}✅ Convocation formation pratique validée`;
-      }
+      vtcStatusState.practiceConvocation.sentAt = true;
+      renderVtcStatus();
     }catch(e){
       btnVtcPracticeConvocation.disabled = false;
       alert("Erreur lors de la sauvegarde du statut VTC.");
@@ -2755,6 +2867,23 @@ if(btnVtcPracticeConvocation){
   });
 }
 
+if(btnVtcPracticeConvocationUndo){
+  btnVtcPracticeConvocationUndo.addEventListener("click", async ()=>{
+    const ok = window.confirm("Dévalider l'étape \"Convocation formation pratique\" ?");
+    if(!ok) return;
+    try{
+      btnVtcPracticeConvocationUndo.disabled = true;
+      const res = await updateTrainee({ vtc_practice_convocation_sent_at: "" });
+      if(!res || res.ok === false) throw new Error("save_failed");
+      vtcStatusState.practiceConvocation.sentAt = false;
+      renderVtcStatus();
+    }catch(e){
+      alert("Erreur lors de la dévalidation de la convocation formation pratique.");
+    }finally{
+      btnVtcPracticeConvocationUndo.disabled = false;
+    }
+  });
+}
 
 if(btnVtcPracticeExamSuccess){
   btnVtcPracticeExamSuccess.addEventListener("click", async ()=>{
@@ -2769,21 +2898,44 @@ if(btnVtcPracticeExamSuccess){
       if(!r.ok || !data.ok){
         throw new Error(data.error || "send_failed");
       }
-      btnVtcPracticeExamSuccess.classList.remove("btn-outline");
-      btnVtcPracticeExamSuccess.classList.add("btn-primary");
-      if(vtcStatusHint){
-        const previous = vtcStatusHint.innerHTML ? `${vtcStatusHint.innerHTML}<br>` : "";
-        const emailFlag = data.email_ok ? '<span style="margin-left:8px;">📧 Email envoyé</span>' : '<span style="margin-left:8px;">📧 Email non envoyé</span>';
-        const smsFlag = data.sms_ok ? '<span style="margin-left:8px;">📱 SMS envoyé</span>' : '<span style="margin-left:8px;">📱 SMS non envoyé</span>';
-        vtcStatusHint.style.display = "block";
-        vtcStatusHint.innerHTML = `${previous}✅ Examen pratique validé ${emailFlag}${smsFlag}`;
-      }
+      vtcStatusState.practiceExam.sentAt = true;
+      vtcStatusState.practiceExam.emailOk = !!data.email_ok;
+      vtcStatusState.practiceExam.smsOk = !!data.sms_ok;
+      renderVtcStatus();
     }catch(e){
       btnVtcPracticeExamSuccess.disabled = false;
       alert("Erreur lors de l'envoi de la notification examen pratique.");
     }
   });
 }
+
+if(btnVtcPracticeExamSuccessUndo){
+  btnVtcPracticeExamSuccessUndo.addEventListener("click", async ()=>{
+    const ok = window.confirm("Dévalider l'étape \"Examen pratique\" ?");
+    if(!ok) return;
+    try{
+      btnVtcPracticeExamSuccessUndo.disabled = true;
+      const res = await updateTrainee({
+        vtc_practice_exam_sent_at: "",
+        vtc_practice_exam_email_ok: false,
+        vtc_practice_exam_sms_ok: false,
+        vtc_practice_result: "",
+        vtc_practice_result_label: "",
+      });
+      if(!res || res.ok === false) throw new Error("save_failed");
+      vtcStatusState.practiceExam.sentAt = false;
+      vtcStatusState.practiceExam.emailOk = false;
+      vtcStatusState.practiceExam.smsOk = false;
+      renderVtcStatus();
+    }catch(e){
+      alert("Erreur lors de la dévalidation de l'examen pratique.");
+    }finally{
+      btnVtcPracticeExamSuccessUndo.disabled = false;
+    }
+  });
+}
+
+renderVtcStatus();
 
 const btnEtiquetteWord = document.getElementById("btnEtiquetteWord");
 if(btnEtiquetteWord){
