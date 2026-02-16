@@ -4312,7 +4312,6 @@ def api_secretariat_notification_delete(bucket: str, notification_id: str):
 
 @app.post("/api/secretariat/notifications/prelevements/<notification_id>/new-date")
 @admin_login_required
-@admin_write_required
 def api_secretariat_prelevement_new_date(notification_id: str):
     payload = request.get_json(silent=True) or {}
     new_date = (payload.get("new_date") or "").strip()
