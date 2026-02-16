@@ -386,6 +386,46 @@
 </div>
 
 
+<div class="card" style="grid-column:1 / -1; margin-top:12px; border:1px solid #0ea5e9; box-shadow:0 0 0 2px rgba(14,165,233,.08);">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div>
+      <div style="font-weight:900;">RELANCES VAE</div>
+      <div class="hint" style="margin-top:4px;">Envoi automatique selon les délais + envoi manuel possible.</div>
+    </div>
+  </div>
+
+  {% set relances = vae_relances or {} %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px;">
+    {% set relance_cards = [
+      ('livret_1', 'Relance LIVRET 1', 15),
+      ('rdv_recevabilite', 'Relance RDV recevabilité', 5),
+      ('livret_2', 'Relance LIVRET 2', 10),
+      ('rdv_livret_2', 'Relance RDV Livret 2', 5)
+    ] %}
+    {% for key, label, delay in relance_cards %}
+      {% set state = relances.get(key, {}) %}
+      <div style="border:1px solid #e2e8f0;border-radius:12px;padding:12px;background:#f8fafc;">
+        <div style="font-weight:800;">{{ label }}</div>
+        <div class="hint" style="margin-top:6px;">Automatique à J+{{ delay }} (si étape déclenchée).</div>
+        <button class="btn {% if state.get('sent_at') %}btn-primary{% else %}btn-outline{% endif %}"
+                type="button"
+                data-vae-relance-send="{{ key }}"
+                style="margin-top:10px;"
+                {% if state.get('sent_at') or is_read_only %}disabled{% endif %}>
+          📨 Envoyer maintenant
+        </button>
+        <div class="hint" style="margin-top:8px;">
+          Date envoi auto prévue : <strong>{{ state.get('planned_at')|frdatetime if state.get('planned_at') else '—' }}</strong>
+        </div>
+        <div class="hint" style="margin-top:4px;">
+          Date d'envoi : <strong>{{ state.get('sent_at')|frdatetime if state.get('sent_at') else '—' }}</strong>
+          {% if state.get('sent_mode') %}({{ 'manuel' if state.get('sent_mode') == 'manual' else 'automatique' }}){% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
 
 <div class="card" style="grid-column:1 / -1; margin-top:12px; border-left:4px solid #22c55e;">
   <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
@@ -2059,6 +2099,43 @@ function setDossierPill(status){
       }
     });
   }
+
+  // VAE relances manuelles
+  document.querySelectorAll('[data-vae-relance-send]').forEach((btn)=>{
+    btn.addEventListener('click', async ()=>{
+      const relanceKey = btn.getAttribute('data-vae-relance-send');
+      if(!relanceKey) return;
+
+      let confirmed = true;
+      if(typeof window.confirmMailSmsSend === 'function'){
+        confirmed = await window.confirmMailSmsSend();
+      }else{
+        confirmed = window.confirm('Voulez-vous envoyer le mail / SMS ?');
+      }
+      if(!confirmed) return;
+
+      btn.disabled = true;
+      try{
+        const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/vae-relance/${relanceKey}/send`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({}),
+        });
+        const data = await res.json().catch(()=>({}));
+        if(!res.ok || data.ok === false){
+          const serverError = (data && (data.error || data.message)) ? ` (${data.error || data.message})` : '';
+          throw new Error(`send_failed${serverError}`);
+        }
+        alert(`Relance envoyée. Mail: ${data.email_ok ? 'oui' : 'non'} / SMS: ${data.sms_ok ? 'oui' : 'non'}`);
+        window.location.reload();
+      }catch(e){
+        console.error(e);
+        alert(`Erreur lors de l'envoi de la relance VAE${e?.message ? ` : ${e.message}` : '.'}`);
+        btn.disabled = false;
+      }
+    });
+  });
+
 
   // VAE (actions dédiées DIRIGEANT VAE)
   window.setVaeAction = async function setVaeAction(actionKey){
