@@ -55,6 +55,7 @@
   <h2 style="margin:0;">Stagiaires</h2>
 
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <button class="btn btn-outline" id="btnPrintTrainees" type="button">🖨️ Imprimer la liste</button>
     {% if not is_read_only %}
       <button class="btn btn-outline" id="btnBulkSst">⬇️ Télécharger les SST en masse</button>
       <input id="bulkSstInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
@@ -572,36 +573,36 @@ tr.row-todo td{
   max-width:none !important;
 }
 
-.prospects-notes-card{
-  margin-top:18px;
-  border:1px solid #e5e7eb;
-  border-radius:12px;
-  background:#fff;
-  padding:14px;
-}
+@media print{
+  .breadcrumbs,
+  .page-head > div,
+  .mini-btn,
+  .doc-badges,
+  .modal-backdrop,
+  .warn-line{
+    display:none !important;
+  }
 
-.prospects-notes-head{
-  display:flex;
-  flex-wrap:wrap;
-  align-items:center;
-  justify-content:space-between;
-  gap:8px;
-  margin-bottom:10px;
-}
+  body{
+    background:#fff !important;
+  }
 
-.prospects-notes-head h3{
-  margin:0;
-}
+  .session-header,
+  .table-wrap,
+  #traineesTable{
+    width:100% !important;
+  }
 
-.prospects-notes-textarea{
-  width:100%;
-  min-height:180px;
-  resize:vertical;
-  border:1px solid #d1d5db;
-  border-radius:10px;
-  padding:12px;
-  font:inherit;
-  line-height:1.45;
+  #traineesTable input,
+  #traineesTable select,
+  #traineesTable button{
+    border:0 !important;
+    background:transparent !important;
+    appearance:none !important;
+    -webkit-appearance:none !important;
+    pointer-events:none !important;
+    color:#111827 !important;
+  }
 }
  
 </style>
@@ -610,30 +611,11 @@ tr.row-todo td{
 
 <script>
   const sessionId = document.getElementById("traineesTable").getAttribute("data-session-id");
-  const prospectsComment = document.getElementById("sessionProspectsComment");
+  const btnPrintTrainees = document.getElementById("btnPrintTrainees");
 
-  const saveSessionField = async (field, value) => {
-    const res = await fetch(`/api/sessions/${sessionId}/update`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [field]: value })
-    });
-    if (!res.ok) throw new Error(`Erreur sauvegarde session (${res.status})`);
-  };
-
-  if (prospectsComment) {
-    let prospectsCommentTimer = null;
-    prospectsComment.addEventListener("input", () => {
-      clearTimeout(prospectsCommentTimer);
-      prospectsCommentTimer = setTimeout(async () => {
-        try {
-          await saveSessionField("prospects_comment", prospectsComment.value);
-        } catch (error) {
-          console.error(error);
-        }
-      }, 400);
-    });
-  }
+  btnPrintTrainees?.addEventListener("click", ()=>{
+    window.print();
+  });
 
   // ✅ AJOUTE ÇA
   function openModal(id){
