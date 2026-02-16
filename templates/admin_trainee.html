@@ -163,6 +163,11 @@
         </div>
       {% endif %}
     {% endif %}
+    <div style="margin-top:8px;text-align:center;">
+      <span class="pill {% if dossier_is_complete %}pill-green{% else %}pill-red{% endif %}" style="display:inline-flex;justify-content:center;min-width:110px;font-size:11px;padding:4px 8px;">
+        {% if dossier_is_complete %}Dossier complet{% else %}Dossier incomplet{% endif %}
+      </span>
+    </div>
   </div>
 
 <!-- NOM / PRÉNOM À DROITE -->
