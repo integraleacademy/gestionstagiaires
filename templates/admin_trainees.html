@@ -260,6 +260,15 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           </select>
         </td>
         <td>
+          <button type="button"
+                  class="mini-btn"
+                  data-toggle-vtc-practice-convocation
+                  data-current-value="{{ t.vtc_practice_convocation_sent_at or '' }}"
+                  {{ read_only_attr }}>
+            {{ "🟢" if t.vtc_practice_convocation_sent_at else "🔴" }}
+          </button>
+        </td>
+        <td>
           {% if t.vtc_practice_result == "failed" %}
             🔴
           {% elif t.vtc_practice_result == "success" or t.vtc_practice_exam_sent_at %}
@@ -1351,6 +1360,25 @@ document.querySelectorAll("select.sel").forEach(sel=>{
         }
       });
     });
+
+    const practiceConvocationBtn = tr.querySelector("button[data-toggle-vtc-practice-convocation]");
+    if(practiceConvocationBtn){
+      practiceConvocationBtn.addEventListener("click", async ()=>{
+        const previousValue = practiceConvocationBtn.getAttribute("data-current-value") || "";
+        const nextValue = previousValue ? "" : new Date().toISOString();
+
+        practiceConvocationBtn.textContent = nextValue ? "🟢" : "🔴";
+        practiceConvocationBtn.setAttribute("data-current-value", nextValue);
+
+        try{
+          await saveField(traineeId, "vtc_practice_convocation_sent_at", nextValue);
+        }catch(e){
+          practiceConvocationBtn.textContent = previousValue ? "🟢" : "🔴";
+          practiceConvocationBtn.setAttribute("data-current-value", previousValue);
+          alert("Erreur sauvegarde");
+        }
+      });
+    }
 
     // inline inputs autosave (email/tel)
     tr.querySelectorAll("input.inline-edit").forEach(input => {
