@@ -102,6 +102,13 @@ async function api(url, method="GET", body=null) {
   const sessionId = table.getAttribute("data-session-id");
   const modalId = "createTraineeModal";
 
+  const btnPrintTrainees = qs("#btnPrintTrainees");
+  if (btnPrintTrainees) {
+    btnPrintTrainees.addEventListener("click", () => {
+      window.print();
+    });
+  }
+
   const btnOpen = qs("#btnOpenCreateTrainee");
   if (btnOpen) btnOpen.addEventListener("click", () => openModal(modalId));
   qsa("[data-close-modal]").forEach(b => b.addEventListener("click", () => closeModal(b.getAttribute("data-close-modal"))));
