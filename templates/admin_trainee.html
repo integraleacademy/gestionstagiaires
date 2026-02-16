@@ -2105,7 +2105,15 @@ function setDossierPill(status){
     btn.addEventListener('click', async ()=>{
       const relanceKey = btn.getAttribute('data-vae-relance-send');
       if(!relanceKey) return;
-      if(!await window.confirmMailSmsSend?.()) return;
+
+      let confirmed = true;
+      if(typeof window.confirmMailSmsSend === 'function'){
+        confirmed = await window.confirmMailSmsSend();
+      }else{
+        confirmed = window.confirm('Voulez-vous envoyer le mail / SMS ?');
+      }
+      if(!confirmed) return;
+
       btn.disabled = true;
       try{
         const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/vae-relance/${relanceKey}/send`, {
@@ -2115,16 +2123,19 @@ function setDossierPill(status){
         });
         const data = await res.json().catch(()=>({}));
         if(!res.ok || data.ok === false){
-          throw new Error(data.error || 'send_failed');
+          const serverError = (data && (data.error || data.message)) ? ` (${data.error || data.message})` : '';
+          throw new Error(`send_failed${serverError}`);
         }
         alert(`Relance envoyée. Mail: ${data.email_ok ? 'oui' : 'non'} / SMS: ${data.sms_ok ? 'oui' : 'non'}`);
         window.location.reload();
       }catch(e){
-        alert('Erreur lors de l'envoi de la relance VAE.');
+        console.error(e);
+        alert(`Erreur lors de l'envoi de la relance VAE${e?.message ? ` : ${e.message}` : '.'}`);
         btn.disabled = false;
       }
     });
   });
+
 
   // VAE (actions dédiées DIRIGEANT VAE)
   window.setVaeAction = async function setVaeAction(actionKey){
