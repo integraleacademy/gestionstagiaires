@@ -1739,6 +1739,7 @@ def load_data() -> Dict[str, Any]:
             "notifications_financement_refuse": [],
             "notifications_prelevements": [],
             "notifications_phone_relances": [],
+            "notifications_vae_relances": [],
             "notifications_cnaps_pre_relances": [],
             "notifications_test_fr": [],
             "notifications_convention_unsigned": [],
@@ -1776,6 +1777,9 @@ def load_data() -> Dict[str, Any]:
         if "notifications_phone_relances" not in data:
             data["notifications_phone_relances"] = []
             changed = True
+        if "notifications_vae_relances" not in data:
+            data["notifications_vae_relances"] = []
+            changed = True
         if "notifications_cnaps_pre_relances" not in data:
             data["notifications_cnaps_pre_relances"] = []
             changed = True
@@ -1793,6 +1797,9 @@ def load_data() -> Dict[str, Any]:
             changed = True
 
         if _send_vtc_credentials_missing_reminders(data):
+            changed = True
+
+        if _send_vae_relance_reminders(data):
             changed = True
 
         if _inject_vtc_exam_results_notifications(data):
@@ -1817,6 +1824,7 @@ def load_data() -> Dict[str, Any]:
             "notifications_financement_refuse": [],
             "notifications_prelevements": [],
             "notifications_phone_relances": [],
+            "notifications_vae_relances": [],
             "notifications_cnaps_pre_relances": [],
             "notifications_test_fr": [],
             "notifications_convention_unsigned": [],
@@ -1844,6 +1852,7 @@ def add_notification(data: Dict[str, Any], bucket: str, label: str, meta: Option
         "notifications_financement_refuse": "FTR",
         "notifications_prelevements": "PREL",
         "notifications_phone_relances": "REL",
+        "notifications_vae_relances": "RVE",
         "notifications_cnaps_pre_relances": "PRE",
         "notifications_test_fr": "TFR",
         "notifications_convention_unsigned": "CNS",
@@ -1867,6 +1876,7 @@ def _notifications_bucket_key(bucket: str) -> Optional[str]:
         "financement_refuse": "notifications_financement_refuse",
         "prelevements": "notifications_prelevements",
         "relances": "notifications_phone_relances",
+        "vae_relances": "notifications_vae_relances",
         "cnaps_pre": "notifications_cnaps_pre_relances",
         "test_fr": "notifications_test_fr",
         "convention_unsigned": "notifications_convention_unsigned",
@@ -1921,6 +1931,7 @@ def _secretariat_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
         "financement_refuse": _with_created_fr(list(data.get("notifications_financement_refuse", [])), "financement_refuse"),
         "prelevements": _with_created_fr(list(data.get("notifications_prelevements", [])), "prelevements"),
         "relances": _with_created_fr(list(data.get("notifications_phone_relances", [])), "relances"),
+        "vae_relances": _with_created_fr(list(data.get("notifications_vae_relances", [])), "vae_relances"),
         "cnaps_pre": _with_created_fr(list(data.get("notifications_cnaps_pre_relances", [])), "cnaps_pre"),
         "test_fr": _with_created_fr(list(data.get("notifications_test_fr", [])), "test_fr"),
         "convention_unsigned": _with_created_fr(list(data.get("notifications_convention_unsigned", [])), "convention_unsigned"),
@@ -3970,6 +3981,7 @@ def admin_secretariat():
         financement_refuse_notifications=notifications["financement_refuse"],
         prelevement_notifications=notifications["prelevements"],
         phone_notifications=notifications["relances"],
+        vae_relance_notifications=notifications["vae_relances"],
         cnaps_pre_notifications=notifications["cnaps_pre"],
         test_fr_notifications=notifications["test_fr"],
         convention_unsigned_notifications=notifications["convention_unsigned"],
@@ -5654,6 +5666,10 @@ def api_update_trainee(session_id: str, trainee_id: str):
         t["elearning_link_sent_at"] = ""
         t["elearning_link_email_ok"] = False
         t["elearning_link_sms_ok"] = False
+
+    if (_session_get(s, "training_type", "") or "").strip().upper() == "DIRIGEANT VAE":
+        ensure_vae_relances_state(t)
+        refresh_vae_relance_schedule(t)
 
     t["updated_at"] = _now_iso()
     s["trainees"] = trainees
@@ -7929,6 +7945,235 @@ def vae_status_view(status_key: Optional[str]) -> Dict[str, str]:
     return {"key": key, "label": step["label"], "pill": step["pill"]}
 
 
+VAE_RELANCE_CONFIGS = {
+    "livret_1": {
+        "label": "Relance Livret 1",
+        "delay_days": 15,
+        "anchor": "created_at",
+        "cancel_if_action_done": "livret_1_received",
+        "admin_label": "Relance Livret 1 VAE",
+        "secretariat_label": "Relance Livret 1",
+        "subject": "Relance Livret 1 – VAE Dirigeant (DESP)",
+        "email_intro": "Je me permets de revenir vers vous concernant votre VAE Dirigeant d'entreprise de sécurité (DESP).",
+        "email_body": "A ce jour nous n'avons pas encore reçu votre Livret 1 (dossier de faisabilité).",
+        "sms_body": "A ce jour nous n'avons pas encore reçu votre Livret 1 (dossier de faisabilité).",
+    },
+    "rdv_recevabilite": {
+        "label": "Relance RDV recevabilité",
+        "delay_days": 5,
+        "anchor": "livret_1_validated",
+        "admin_label": "Relance RDV recevabilité VAE",
+        "secretariat_label": "Relance RDV recevabilité",
+        "subject": "Relance RDV recevabilité – VAE Dirigeant (DESP)",
+        "email_intro": "Je me permets de revenir vers vous concernant votre VAE Dirigeant d'entreprise de sécurité (DESP).",
+        "email_body": "Comme annoncé il y a quelques jours, votre Livret 1 a été validé par la commission qui vous a délivré une attestation de recevabilité. Afin que nous puissions finaliser votre parcours VAE, nous vous remercions de bien vouloir réserver un rendez-vous téléphonique (voir email Livret 1 validé).",
+        "sms_body": "Votre Livret 1 a été validé. Merci de réserver votre rendez-vous téléphonique (voir email Livret 1 validé).",
+    },
+    "livret_2": {
+        "label": "Relance Livret 2",
+        "delay_days": 10,
+        "anchor": "financement_validated",
+        "admin_label": "Relance Livret 2 VAE",
+        "secretariat_label": "Relance Livret 2",
+        "subject": "Relance Livret 2 – VAE Dirigeant (DESP)",
+        "email_intro": "Je me permets de revenir vers vous concernant votre VAE Dirigeant d'entreprise de sécurité (DESP).",
+        "email_body": "A ce jour nous n'avons pas encore reçu votre Livret 2.",
+        "sms_body": "A ce jour nous n'avons pas encore reçu votre Livret 2.",
+    },
+    "rdv_livret_2": {
+        "label": "Relance RDV Livret 2",
+        "delay_days": 5,
+        "anchor": "livret_2_validated",
+        "admin_label": "Relance RDV Livret 2 VAE",
+        "secretariat_label": "Relance RDV Livret 2",
+        "subject": "Relance RDV Livret 2 – VAE Dirigeant (DESP)",
+        "email_intro": "Je me permets de revenir vers vous concernant votre VAE Dirigeant d'entreprise de sécurité (DESP).",
+        "email_body": "Comme annoncé il y a quelques jours, votre Livret 2 a été jugé conforme par la commission. Afin que nous puissions programmer une date de passage devant le jury, nous vous remercions de bien vouloir réserver un rendez-vous téléphonique (voir email Livret 2 validé).",
+        "sms_body": "Votre Livret 2 a été jugé conforme. Merci de réserver votre rendez-vous téléphonique (voir email Livret 2 validé).",
+    },
+}
+
+
+def _parse_fr_date_value(value: str) -> Optional[datetime.datetime]:
+    raw = (value or "").strip()
+    if not raw:
+        return None
+    m = re.match(r"^(\d{2})/(\d{2})/(\d{4})$", raw)
+    if m:
+        return datetime.datetime(int(m.group(3)), int(m.group(2)), int(m.group(1)), tzinfo=datetime.timezone.utc)
+    return _parse_iso_datetime(raw)
+
+
+def _compute_vae_relance_anchor_datetime(trainee: Dict[str, Any], anchor_key: str) -> Optional[datetime.datetime]:
+    if anchor_key == "created_at":
+        base = _parse_iso_datetime(trainee.get("created_at") or "")
+        if base and base.tzinfo is None:
+            base = base.replace(tzinfo=datetime.timezone.utc)
+        return base
+    action_dates = trainee.get("vae_action_dates") if isinstance(trainee.get("vae_action_dates"), dict) else {}
+    return _parse_fr_date_value(action_dates.get(anchor_key) or "")
+
+
+def ensure_vae_relances_state(trainee: Dict[str, Any]) -> Dict[str, Any]:
+    state = trainee.get("vae_relances")
+    if not isinstance(state, dict):
+        state = {}
+    for key in VAE_RELANCE_CONFIGS.keys():
+        item = state.get(key)
+        if not isinstance(item, dict):
+            item = {}
+        item.setdefault("planned_at", "")
+        item.setdefault("sent_at", "")
+        item.setdefault("sent_mode", "")
+        item.setdefault("email_ok", False)
+        item.setdefault("sms_ok", False)
+        state[key] = item
+    trainee["vae_relances"] = state
+    return state
+
+
+def _vae_relance_is_blocked(trainee: Dict[str, Any], cfg: Dict[str, Any]) -> bool:
+    action_key = (cfg.get("cancel_if_action_done") or "").strip()
+    if not action_key:
+        return False
+    action_dates = trainee.get("vae_action_dates") if isinstance(trainee.get("vae_action_dates"), dict) else {}
+    return bool((action_dates.get(action_key) or "").strip())
+
+
+def refresh_vae_relance_schedule(trainee: Dict[str, Any]) -> None:
+    state = ensure_vae_relances_state(trainee)
+    for key, cfg in VAE_RELANCE_CONFIGS.items():
+        item = state[key]
+        if (item.get("sent_at") or "").strip():
+            continue
+        if _vae_relance_is_blocked(trainee, cfg):
+            item["planned_at"] = ""
+            continue
+        anchor_dt = _compute_vae_relance_anchor_datetime(trainee, cfg["anchor"])
+        if not anchor_dt:
+            item["planned_at"] = ""
+            continue
+        planned = anchor_dt + datetime.timedelta(days=int(cfg["delay_days"]))
+        item["planned_at"] = planned.astimezone(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _send_vae_relance_message(data: Dict[str, Any], session_obj: Dict[str, Any], trainee: Dict[str, Any], relance_key: str, mode: str) -> Dict[str, Any]:
+    cfg = VAE_RELANCE_CONFIGS[relance_key]
+    first_name = (trainee.get("first_name") or "").strip()
+    last_name = (trainee.get("last_name") or "").strip()
+    trainee_display_name = _format_trainee_name(first_name, last_name)
+    email = (trainee.get("email") or "").strip()
+    phone = (trainee.get("phone") or "").strip()
+
+    intro = cfg["email_intro"]
+    body = cfg["email_body"]
+    help_line = "Si vous rencontrez des difficultés, n'hésitez pas à nous contacter au 04 22 47 07 68."
+    html = mail_layout(f"""
+      <h2 style="margin:0 0 12px 0;color:#0f172a;text-align:center;">{cfg['label']} - VAE Dirigeant</h2>
+      <p>Bonjour <strong>{first_name or 'Madame, Monsieur'}</strong>,</p>
+      <p>{intro}</p>
+      <p>{body}</p>
+      <p>{help_line}</p>
+      <p style="margin-top:18px;">Bien cordialement,<br><strong>L'équipe Intégrale Academy</strong></p>
+    """)
+    sms = (
+        f"Intégrale Academy - {intro} {cfg['sms_body']} "
+        "Si vous rencontrez des difficultés, contactez-nous au 04 22 47 07 68."
+    )
+
+    email_ok = brevo_send_email(email, cfg["subject"], html) if email else False
+    sms_ok = brevo_send_sms(phone, sms) if phone else False
+    sent_at = _now_iso()
+
+    state = ensure_vae_relances_state(trainee)
+    relance_state = state[relance_key]
+    relance_state["sent_at"] = sent_at
+    relance_state["sent_mode"] = mode
+    relance_state["email_ok"] = bool(email_ok)
+    relance_state["sms_ok"] = bool(sms_ok)
+
+    trainee.setdefault("phone_followups", [])
+    trainee["phone_followups"].insert(0, {
+        "id": "VAE-REL-" + uuid.uuid4().hex[:8].upper(),
+        "type": "RELANCE VAE",
+        "at": sent_at,
+        "details": f"{cfg['label']} ({'automatique' if mode == 'auto' else 'manuelle'})",
+        "comment": f"Mail: {'oui' if email_ok else 'non'} · SMS: {'oui' if sms_ok else 'non'}",
+    })
+
+    add_admin_notification(
+        data,
+        f"{cfg['admin_label']} {trainee_display_name} envoyée",
+        meta={
+            "type": "vae_relance_sent",
+            "relance_key": relance_key,
+            "session_id": session_obj.get("id"),
+            "trainee_id": trainee.get("id"),
+            "mode": mode,
+        },
+    )
+
+    add_notification(
+        data,
+        "notifications_vae_relances",
+        f"{cfg['secretariat_label']} • {trainee_display_name}",
+        meta={
+            "type": "vae_relance",
+            "relance_key": relance_key,
+            "relance_label": cfg["label"],
+            "first_name": first_name,
+            "last_name": last_name,
+            "training": formation_label(_session_get(session_obj, "training_type", "")),
+            "phone": phone,
+            "email": email,
+            "session_id": session_obj.get("id"),
+            "trainee_id": trainee.get("id"),
+            "call_status": "À appeler",
+            "no_answer_count": 0,
+        },
+    )
+
+    refresh_vae_relance_schedule(trainee)
+    return {"email_ok": bool(email_ok), "sms_ok": bool(sms_ok), "sent_at": sent_at}
+
+
+def _send_vae_relance_reminders(data: Dict[str, Any]) -> bool:
+    changed = False
+    now_utc = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+    for session_obj in (data.get("sessions") or []):
+        if session_obj.get("archived"):
+            continue
+        training_type = (_session_get(session_obj, "training_type", "") or "").strip().upper()
+        if training_type != "DIRIGEANT VAE":
+            continue
+
+        trainees = _session_trainees_list(session_obj)
+        for trainee in trainees:
+            ensure_vae_relances_state(trainee)
+            refresh_vae_relance_schedule(trainee)
+            state = trainee.get("vae_relances") or {}
+            for relance_key, cfg in VAE_RELANCE_CONFIGS.items():
+                item = state.get(relance_key) or {}
+                if (item.get("sent_at") or "").strip():
+                    continue
+                if _vae_relance_is_blocked(trainee, cfg):
+                    continue
+                planned_at = _parse_iso_datetime(item.get("planned_at") or "")
+                if not planned_at:
+                    continue
+                if planned_at.tzinfo is None:
+                    planned_at = planned_at.replace(tzinfo=datetime.timezone.utc)
+                if now_utc < planned_at:
+                    continue
+                _send_vae_relance_message(data, session_obj, trainee, relance_key, mode="auto")
+                changed = True
+
+        session_obj["trainees"] = trainees
+        session_obj.pop("stagiaires", None)
+
+    return changed
+
+
 def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
     status_key = (status_key or "").strip()
     email = (t.get("email") or "").strip()
@@ -8781,6 +9026,8 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     t["vae_status_label"] = vae_status_view(t.get("vae_status"))["label"]
     if not isinstance(t.get("vae_action_dates"), dict):
         t["vae_action_dates"] = {}
+    ensure_vae_relances_state(t)
+    refresh_vae_relance_schedule(t)
 
     # ✅ s'assure que no_permis est bien un bool
     t["no_permis"] = bool(t.get("no_permis"))
@@ -8808,6 +9055,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         show_vae=show_vae,
         vae_steps=vae_steps,
         vae_dossier=vae_dossier,
+        vae_relances=(t.get("vae_relances") or {}),
         dossier_is_complete=dossier_complete,
         deliverables_view=deliverables_view,
         default_training_price=default_price,
@@ -9593,6 +9841,115 @@ def api_phone_relance_send(session_id: str, trainee_id: str):
     save_data(data)
 
     return jsonify({"ok": True, "email_ok": bool(ok), "followup_id": followup_id})
+
+
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/vae-relance/<relance_key>/send")
+@admin_login_required
+@admin_write_required
+def api_send_vae_relance(session_id: str, trainee_id: str, relance_key: str):
+    relance_key = (relance_key or "").strip()
+    if relance_key not in VAE_RELANCE_CONFIGS:
+        return jsonify({"ok": False, "error": "invalid_relance_key"}), 400
+
+    data = load_data()
+    s, t = _find_session_and_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "not_found"}), 404
+
+    training_type = (_session_get(s, "training_type", "") or "").strip().upper()
+    if training_type != "DIRIGEANT VAE":
+        return jsonify({"ok": False, "error": "not_vae"}), 400
+
+    ensure_vae_relances_state(t)
+    refresh_vae_relance_schedule(t)
+    relance_state = (t.get("vae_relances") or {}).get(relance_key) or {}
+    if (relance_state.get("sent_at") or "").strip():
+        return jsonify({"ok": False, "error": "already_sent"}), 409
+
+    result = _send_vae_relance_message(data, s, t, relance_key, mode="manual")
+
+    t["updated_at"] = _now_iso()
+    s["trainees"] = _session_trainees_list(s)
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return jsonify({"ok": True, **result, "vae_relances": t.get("vae_relances", {})})
+
+
+@app.post("/api/secretariat/notifications/vae_relances/<notification_id>/call-result")
+@admin_login_required
+def api_secretariat_vae_relance_result(notification_id: str):
+    payload = request.get_json(silent=True) or {}
+    outcome = (payload.get("outcome") or "").strip().upper()
+    comment = (payload.get("comment") or "").strip()
+    if outcome not in ("CALLED", "NO_ANSWER"):
+        return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+
+    data = load_data()
+    notification = next(
+        (item for item in data.get("notifications_vae_relances", []) if item.get("id") == notification_id),
+        None,
+    )
+    if not notification:
+        return jsonify({"ok": False, "error": "notification_not_found"}), 404
+
+    notification_meta = notification.setdefault("meta", {})
+    previous_no_answer = _parse_no_answer_count(notification_meta.get("no_answer_count"))
+    if outcome == "NO_ANSWER":
+        no_answer_count = min(3, previous_no_answer + 1)
+        display = {
+            1: "1er appel pas de réponse",
+            2: "2ème appel pas de réponse",
+            3: "3ème appel pas de réponse",
+        }[no_answer_count]
+        notification["done"] = no_answer_count >= 3
+        notification["done_at"] = _now_iso() if notification.get("done") else ""
+    else:
+        no_answer_count = 0
+        display = "Personne jointe"
+        notification["done"] = True
+        notification["done_at"] = _now_iso()
+
+    notification_meta["call_status"] = display
+    notification_meta["no_answer_count"] = no_answer_count
+    if comment:
+        notification_meta["last_comment"] = comment
+
+    trainee_display_name = _format_trainee_name(
+        notification_meta.get("first_name", ""),
+        notification_meta.get("last_name", ""),
+    )
+    relance_label = (notification_meta.get("relance_label") or "Relance VAE").strip()
+    call_icon = "🟢" if outcome == "CALLED" else ({1: "🟡", 2: "🟠", 3: "🔴"}.get(no_answer_count, "🟡"))
+    call_label = (
+        f"{call_icon}{relance_label} {trainee_display_name} - personne appelée"
+        if outcome == "CALLED"
+        else f"{call_icon}{relance_label} {trainee_display_name} - {display}"
+    )
+    add_admin_notification(
+        data,
+        call_label,
+        meta={
+            "type": "vae_relance_call_result",
+            "outcome": outcome,
+            "no_answer_count": no_answer_count,
+            "session_id": notification_meta.get("session_id"),
+            "trainee_id": notification_meta.get("trainee_id"),
+            "comment": comment,
+            "call_status": display,
+            "relance_key": notification_meta.get("relance_key"),
+        },
+    )
+
+    save_data(data)
+    refreshed_payload = _secretariat_notifications_payload(data)
+    return jsonify({
+        "ok": True,
+        "done": bool(notification.get("done")),
+        "call_status": display,
+        "no_answer_count": no_answer_count,
+        **refreshed_payload,
+    })
 
 
 # =========================
