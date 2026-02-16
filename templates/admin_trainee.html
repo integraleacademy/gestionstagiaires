@@ -1773,11 +1773,19 @@ function setDossierPill(status){
       const traineeId = docsTable.getAttribute("data-trainee-id");
 
       async function saveDoc(key, field, value){
-        await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/documents/update`, {
+        const res = await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/documents/update`, {
           method:"POST",
           headers: {"Content-Type":"application/json"},
           body: JSON.stringify({ key, field, value })
         });
+        const data = await res.json().catch(()=> ({}));
+        if(!res.ok || data.ok === false){
+          throw new Error(data.error || "save_doc_failed");
+        }
+        if(data?.dossier_status){
+          setDossierPill(data.dossier_status);
+        }
+        return data;
       }
 
       function updateDocPill(row, status){
@@ -1842,10 +1850,20 @@ function setDossierPill(status){
         const sel = tr.querySelector("select.sel-doc");
         if(sel){
           sel.addEventListener("change", async ()=>{
-            await saveDoc(key, "status", sel.value);
-            updateDocPill(tr, sel.value);
-            updateDocumentsHeaderButtonState();
+            const previousValue = sel.getAttribute("data-prev-value") || "";
+            try{
+              await saveDoc(key, "status", sel.value);
+              sel.setAttribute("data-prev-value", sel.value);
+              updateDocPill(tr, sel.value);
+              updateDocumentsHeaderButtonState();
+            }catch(e){
+              sel.value = previousValue;
+              updateDocPill(tr, previousValue);
+              updateDocumentsHeaderButtonState();
+              alert("Erreur sauvegarde document");
+            }
           });
+          sel.setAttribute("data-prev-value", sel.value || "");
         }
 
       });
