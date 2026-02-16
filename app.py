@@ -7967,6 +7967,7 @@ VAE_RELANCE_CONFIGS = {
         "label": "Relance Livret 1",
         "delay_days": 15,
         "anchor": "created_at",
+        "cancel_if_action_done": "livret_1_received",
         "admin_label": "Relance Livret 1 VAE",
         "secretariat_label": "Relance Livret 1",
         "subject": "Relance Livret 1 – VAE Dirigeant (DESP)",
@@ -8048,11 +8049,22 @@ def ensure_vae_relances_state(trainee: Dict[str, Any]) -> Dict[str, Any]:
     return state
 
 
+def _vae_relance_is_blocked(trainee: Dict[str, Any], cfg: Dict[str, Any]) -> bool:
+    action_key = (cfg.get("cancel_if_action_done") or "").strip()
+    if not action_key:
+        return False
+    action_dates = trainee.get("vae_action_dates") if isinstance(trainee.get("vae_action_dates"), dict) else {}
+    return bool((action_dates.get(action_key) or "").strip())
+
+
 def refresh_vae_relance_schedule(trainee: Dict[str, Any]) -> None:
     state = ensure_vae_relances_state(trainee)
     for key, cfg in VAE_RELANCE_CONFIGS.items():
         item = state[key]
         if (item.get("sent_at") or "").strip():
+            continue
+        if _vae_relance_is_blocked(trainee, cfg):
+            item["planned_at"] = ""
             continue
         anchor_dt = _compute_vae_relance_anchor_datetime(trainee, cfg["anchor"])
         if not anchor_dt:
@@ -8157,9 +8169,11 @@ def _send_vae_relance_reminders(data: Dict[str, Any]) -> bool:
             ensure_vae_relances_state(trainee)
             refresh_vae_relance_schedule(trainee)
             state = trainee.get("vae_relances") or {}
-            for relance_key in VAE_RELANCE_CONFIGS.keys():
+            for relance_key, cfg in VAE_RELANCE_CONFIGS.items():
                 item = state.get(relance_key) or {}
                 if (item.get("sent_at") or "").strip():
+                    continue
+                if _vae_relance_is_blocked(trainee, cfg):
                     continue
                 planned_at = _parse_iso_datetime(item.get("planned_at") or "")
                 if not planned_at:
