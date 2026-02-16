@@ -251,6 +251,15 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         </td>
         <td>{{ "🟢" if t.vtc_practice_convocation_sent_at else "🔴" }}</td>
         <td>
+          <select class="status sel status-dot"
+                  data-field="vtc_practice_convocation_sent_at"
+                  data-current-value="{{ t.vtc_practice_convocation_sent_at or '' }}"
+                  {{ read_only_attr }}>
+            <option value="pending" {% if not t.vtc_practice_convocation_sent_at %}selected{% endif %}>🔴</option>
+            <option value="validated" {% if t.vtc_practice_convocation_sent_at %}selected{% endif %}>🟢</option>
+          </select>
+        </td>
+        <td>
           {% if t.vtc_practice_result == "failed" %}
             🔴
           {% elif t.vtc_practice_result == "success" or t.vtc_practice_exam_sent_at %}
@@ -1311,18 +1320,33 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     tr.querySelectorAll("select.sel").forEach(sel=>{
       sel.addEventListener("change", async ()=>{
         const field = sel.getAttribute("data-field");
-        const value = sel.value;
+        let previousSelectValue = "";
+        let value = sel.value;
+
+        if(field === "vtc_practice_convocation_sent_at") {
+          previousSelectValue = sel.getAttribute("data-current-value") || "";
+          if(value === "validated") value = new Date().toISOString();
+          else value = "";
+        }
 
         applyStatusPill(sel); // ✅ recolor instant
 
         try{
           const data = await saveField(traineeId, field, value);
+          sel.setAttribute("data-current-value", value);
+          if(field === "vtc_practice_convocation_sent_at"){
+            sel.value = value ? "validated" : "pending";
+          }
           if (data?.dossier_status && dossierSelect) {
             dossierSelect.value = data.dossier_status;
             applyStatusPill(dossierSelect);
           }
           recomputeRowHighlight();
         }catch(e){
+          if(field === "vtc_practice_convocation_sent_at"){
+            sel.value = previousSelectValue ? "validated" : "pending";
+          }
+          applyStatusPill(sel);
           alert("Erreur sauvegarde");
         }
       });
