@@ -57,9 +57,13 @@
       <span class="not-found-badge">Oups, erreur 404</span>
       <p class="not-found-code">404</p>
       <h1 id="notFoundTitle" class="not-found-title">Cette page n’existe pas</h1>
-      <p class="not-found-text">Le lien est peut-être incorrect, expiré, ou la page a été déplacée. Vous pouvez revenir à l’accueil du site en un clic.</p>
+      <p class="not-found-text">Le lien est peut-être incorrect, expiré, ou la page a été déplacée. Vous pouvez vous reconnecter à votre espace stagiaire en un clic.</p>
       <div class="not-found-actions">
-        <a class="btn btn-primary" href="{{ url_for('home') }}">Retour à l’accueil</a>
+        {% if trainee_login_url %}
+          <a class="btn btn-primary" href="{{ trainee_login_url }}">Connexion stagiaire</a>
+        {% else %}
+          <a class="btn btn-primary" href="{{ url_for('home') }}">Retour à l’accueil</a>
+        {% endif %}
         <button class="btn" type="button" onclick="window.history.back()">Page précédente</button>
       </div>
     </section>
