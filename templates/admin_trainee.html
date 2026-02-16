@@ -484,7 +484,10 @@
     </div>
 
     <div id="vtcStatusHint" class="hint" style="margin-top:8px;
-      {% if not trainee.vtc_theory_exam_sent_at and not trainee.vtc_practice_convocation_sent_at %}display:none;{% endif %}">
+      {% if not trainee.vtc_theory_exam_sent_at and not trainee.vtc_practice_convocation_sent_at and not trainee.vtc_practice_exam_sent_at and trainee.vtc_theory_result != "non_admissible" and trainee.vtc_practice_result != "non_admissible" %}display:none;{% endif %}">
+      {% if trainee.vtc_theory_result == "non_admissible" %}
+        <div>❌ Échec examen théorique</div>
+      {% endif %}
       {% if trainee.vtc_theory_exam_sent_at %}
         ✅ Examen théorique validé le <strong>{{ trainee.vtc_theory_exam_sent_at|frdatetime }}</strong>
         {% if trainee.vtc_theory_exam_email_ok %}<span style="margin-left:8px;">📧 Email envoyé</span>{% endif %}
@@ -499,6 +502,9 @@
           {% if trainee.vtc_practice_exam_email_ok %}<span style="margin-left:8px;">📧 Email envoyé</span>{% endif %}
           {% if trainee.vtc_practice_exam_sms_ok %}<span style="margin-left:8px;">📱 SMS envoyé</span>{% endif %}
         </div>
+      {% endif %}
+      {% if trainee.vtc_practice_result == "non_admissible" %}
+        <div>❌ Échec examen pratique</div>
       {% endif %}
     </div>
   </div>
