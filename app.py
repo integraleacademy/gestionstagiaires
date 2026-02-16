@@ -4963,6 +4963,7 @@ def admin_trainees(session_id: str):
         "exam_theory_date": _session_get(s, "exam_theory_date", ""),
         "exam_practice_date": _session_get(s, "exam_practice_date", ""),
         "practice_training_date": _session_get(s, "practice_training_date", ""),
+        "prospects_comment": _session_get(s, "prospects_comment", ""),
     }
 
     trainees = _session_trainees_list(s)
@@ -5141,6 +5142,7 @@ def api_update_session(session_id: str):
         "exam_theory_date",
         "exam_practice_date",
         "practice_training_date",
+        "prospects_comment",
     ):
         if key in payload:
             s[key] = (payload.get(key) or "").strip()

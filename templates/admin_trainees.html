@@ -278,6 +278,16 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   </table>
 </div>
 
+<div class="prospects-notes-card">
+  <div class="prospects-notes-head">
+    <h3>Commentaires / prospects potentiels</h3>
+    <span class="hint">Notes globales de la session (sauvegarde automatique)</span>
+  </div>
+  <textarea id="sessionProspectsComment"
+            class="prospects-notes-textarea"
+            placeholder="Ex : prospect à recontacter, candidat intéressé pour la prochaine session..." {{ read_only_attr }}>{{ session.prospects_comment or '' }}</textarea>
+</div>
+
 <!-- MODALE NOTIFICATION TEST DE FRANÇAIS EN MASSE -->
 <div class="modal-backdrop" id="bulkTestFrModal" aria-hidden="true">
   <div class="modal">
