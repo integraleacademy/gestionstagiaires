@@ -6849,6 +6849,54 @@ def admin_delete_trainee(session_id: str, trainee_id: str):
     save_data(data)
     return redirect(url_for("admin_trainees", session_id=session_id))
 
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/transfer")
+@admin_login_required
+@admin_write_required
+def admin_transfer_trainee(session_id: str, trainee_id: str):
+    data = load_data()
+    _force_backup_snapshot(DATA_FILE)
+
+    source_session = find_session(data, session_id)
+    if not source_session:
+        abort(404)
+
+    target_session_id = (request.form.get("target_session_id") or "").strip()
+    if not target_session_id:
+        flash("Merci de sélectionner une session de destination.", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    if target_session_id == session_id:
+        flash("La session de destination doit être différente de la session actuelle.", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    target_session = find_session(data, target_session_id)
+    if not target_session or bool(target_session.get("archived")):
+        flash("Session de destination introuvable ou archivée.", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    source_trainees = _session_trainees_list(source_session)
+    trainee = next((x for x in source_trainees if x.get("id") == trainee_id), None)
+    if not trainee:
+        abort(404)
+
+    source_session["trainees"] = [x for x in source_trainees if x.get("id") != trainee_id]
+    source_session.pop("stagiaires", None)
+
+    target_trainees = _session_trainees_list(target_session)
+    target_trainees.insert(0, trainee)
+    target_session["trainees"] = target_trainees
+    target_session.pop("stagiaires", None)
+
+    target_training_type = _session_get(target_session, "training_type", "")
+    ensure_documents_schema_for_trainee(trainee, target_training_type)
+    trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, target_training_type) else "incomplete"
+    trainee["updated_at"] = _now_iso()
+
+    save_data(data)
+    flash("Stagiaire transféré avec succès.", "success")
+    return redirect(url_for("admin_trainees", session_id=target_session_id))
+
 def _replace_in_docx(doc: Document, replacements: dict) -> None:
     def replace_in_paragraph(p):
         # Remplace dans les runs pour garder le style
@@ -9069,6 +9117,20 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     save_data(data)
 
     trainee_history = build_trainee_history_entries(t)
+    transfer_sessions = []
+    for sess in data.get("sessions", []):
+        sid = str(sess.get("id") or "").strip()
+        if not sid or sid == session_id or bool(sess.get("archived")):
+            continue
+        transfer_sessions.append({
+            "id": sid,
+            "name": _session_get(sess, "name", ""),
+            "training_type": _session_get(sess, "training_type", ""),
+            "date_start": _session_get(sess, "date_start", ""),
+            "date_end": _session_get(sess, "date_end", ""),
+        })
+
+    transfer_sessions.sort(key=lambda x: ((x.get("date_start") or "9999-99-99"), (x.get("name") or "").upper()))
 
     return render_template(
         "admin_trainee.html",
@@ -9082,6 +9144,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         deliverables_view=deliverables_view,
         default_training_price=default_price,
         trainee_history=trainee_history,
+        transfer_sessions=transfer_sessions,
         PUBLIC_STUDENT_PORTAL_BASE=PUBLIC_STUDENT_PORTAL_BASE,
         fr_date=fr_date,
     )
