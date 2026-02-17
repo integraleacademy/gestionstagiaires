@@ -108,6 +108,9 @@
         </a>
       {% endif %}
       {% if not is_read_only %}
+        <button class="btn btn-outline btn-uniform" type="button" onclick="openModal('transferTraineeModal')">
+          🔁 Transfert
+        </button>
         <form method="post" action="{{ url_for('admin_delete_trainee', session_id=session.id, trainee_id=trainee.id) }}"
               onsubmit="return confirm('Supprimer ce stagiaire ?');">
           <button class="btn btn-danger btn-uniform" type="submit">
@@ -122,6 +125,41 @@
   </div>
 
 </div>
+
+{% if not is_read_only %}
+<div class="modal-backdrop" id="transferTraineeModal" aria-hidden="true">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-head">
+      <div class="modal-title">Transférer le candidat</div>
+      <button class="icon-btn" type="button" onclick="closeModal('transferTraineeModal')">✕</button>
+    </div>
+
+    <form method="post" action="{{ url_for('admin_transfer_trainee', session_id=session.id, trainee_id=trainee.id) }}" onsubmit="return confirmTransferTrainee(this);">
+      <div class="modal-body">
+        <p style="margin:0 0 12px 0;">Choisis la session de destination. Le candidat sera retiré de la session en cours.</p>
+        <label>
+          <div class="label">Session de destination</div>
+          <select name="target_session_id" class="sel" required style="width:100%;">
+            <option value="">-- Sélectionner une session --</option>
+            {% for ts in transfer_sessions %}
+              {% set ts_training_label = "CHAUFFEUR VTC" if (ts.training_type or "")|upper == "VTC" else ts.training_type %}
+              <option value="{{ ts.id }}">{{ ts.name }} — {{ ts_training_label }} ({{ ts.date_start|frdate }} → {{ ts.date_end|frdate }})</option>
+            {% endfor %}
+          </select>
+        </label>
+        {% if transfer_sessions|length == 0 %}
+          <div class="hint" style="margin-top:8px;">Aucune autre session disponible pour le transfert.</div>
+        {% endif %}
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn" type="button" onclick="closeModal('transferTraineeModal')">Annuler</button>
+        <button class="btn btn-primary" type="submit" {% if transfer_sessions|length == 0 %}disabled{% endif %}>Valider le transfert</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
 
 <div class="card" style="margin-top:12px;">
   <!-- LIGNE 1 : NOM + PHOTO CÔTE À CÔTE -->
@@ -1599,6 +1637,16 @@ function setDossierPill(status){
   // util modal (si ton base.html fournit déjà openModal/closeModal, ça marchera aussi)
   function openModal(id){ document.getElementById(id).setAttribute("aria-hidden","false"); document.getElementById(id).classList.add("show"); }
   function closeModal(id){ document.getElementById(id).setAttribute("aria-hidden","true"); document.getElementById(id).classList.remove("show"); }
+
+  function confirmTransferTrainee(formEl){
+    const select = formEl?.querySelector('select[name="target_session_id"]');
+    if(!select || !select.value){
+      alert("Merci de sélectionner une session de destination.");
+      return false;
+    }
+    const selectedLabel = select.options[select.selectedIndex]?.textContent?.trim() || "la session choisie";
+    return confirm(`Confirmer le transfert vers "${selectedLabel}" ?\n\nLe candidat sera retiré de la session actuelle.`);
+  }
 
   document.querySelectorAll("[data-close-modal]").forEach(b=>{
     b.addEventListener("click", ()=>{
