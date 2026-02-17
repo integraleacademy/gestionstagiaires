@@ -423,6 +423,12 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           <div class="label">Montant autre financement</div>
           <input id="tOtherAmount" type="number" min="0" step="0.01" placeholder="0.00">
         </label>
+        {% if is_vtc %}
+        <label style="grid-column:1/-1;">
+          <div class="label" style="font-weight:900;color:#f97316;">Dates réelles de formation VTC</div>
+          <input id="tVtcRealTrainingDates" type="text" placeholder="Ex : 10/05/2026 au 12/05/2026">
+        </label>
+        {% endif %}
         <label style="display:flex;align-items:center;gap:10px;margin-top:8px;">
   <input id="tCarteProOk" type="checkbox" style="width:18px;height:18px;">
   <div class="label" style="margin:0;">Carte professionnelle (CNAPS) déjà OK</div>
@@ -1149,6 +1155,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     const cpf_amount = (document.getElementById("tCpfAmount").value || "").trim();
     const personal_amount = (document.getElementById("tPersonalAmount").value || "").trim();
     const other_amount = (document.getElementById("tOtherAmount").value || "").trim();
+    const vtc_real_training_dates = (document.getElementById("tVtcRealTrainingDates")?.value || "").trim();
     const carte_pro_ok = !!document.getElementById("tCarteProOk")?.checked;
     return {
       last_name,
@@ -1163,6 +1170,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       cpf_amount,
       personal_amount,
       other_amount,
+      vtc_real_training_dates,
       carte_pro_ok
     };
   }
@@ -1190,6 +1198,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       cpf_amount,
       personal_amount,
       other_amount,
+      vtc_real_training_dates,
       carte_pro_ok
     } = readCreateForm();
 
@@ -1217,6 +1226,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
           cpf_amount,
           personal_amount,
           other_amount,
+          vtc_real_training_dates,
           carte_pro_ok,
           send_access
         })

@@ -5293,6 +5293,7 @@ def api_create_trainee(session_id: str):
     personal_amount = (payload.get("personal_amount") or "").strip()
     other_amount = (payload.get("other_amount") or "").strip()
     carte_pro_ok = bool(payload.get("carte_pro_ok"))
+    vtc_real_training_dates = (payload.get("vtc_real_training_dates") or "").strip()
 
     # ✅ nouveau : choisir si on envoie l'accès tout de suite
     send_access = payload.get("send_access", True)
@@ -5352,6 +5353,7 @@ def api_create_trainee(session_id: str):
         "elearning_link_email_ok": False,
         "elearning_link_sms_ok": False,
         "vtc_book_sent_at": "",
+        "vtc_real_training_dates": vtc_real_training_dates,
         "documents": [],
         "created_at": _now_iso(),
         "phone_followups": [],
@@ -5560,6 +5562,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vtc_practice_exam_sent_at",
         "vtc_practice_exam_email_ok",
         "vtc_practice_exam_sms_ok",
+        "vtc_real_training_dates",
 
     }
 
@@ -9229,6 +9232,7 @@ def admin_trainee_summary(session_id: str, trainee_id: str):
         trainee=t,
         training_name=training_name or "Formation",
         formation_dates=formation_dates,
+        is_vtc=("VTC" in (_session_get(s, "training_type", "") or "").upper()),
     )
 
 

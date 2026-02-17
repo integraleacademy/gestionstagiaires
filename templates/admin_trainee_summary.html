@@ -20,6 +20,9 @@
       <div class="card-meta">
         <div><strong>Nom complet de la formation :</strong> {{ training_name }}</div>
         <div><strong>Dates de formation :</strong> {{ formation_dates }}</div>
+        {% if is_vtc %}
+        <div style="font-weight:900;color:#f97316;"><strong>Dates réelles de formation VTC :</strong> {{ trainee.vtc_real_training_dates or "—" }}</div>
+        {% endif %}
       </div>
     </div>
 

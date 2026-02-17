@@ -560,6 +560,10 @@
           <div class="label">Montant autre financement</div>
           <input id="sessionTOtherAmount" type="number" min="0" step="0.01" placeholder="0.00">
         </label>
+        <label id="sessionVtcRealTrainingDatesField" style="grid-column:1/-1;display:none;">
+          <div class="label" style="font-weight:900;color:#f97316;">Dates réelles de formation VTC</div>
+          <input id="sessionTVtcRealTrainingDates" type="text" placeholder="Ex : 10/05/2026 au 12/05/2026">
+        </label>
         <label style="display:flex;align-items:center;gap:10px;margin-top:8px;">
           <input id="sessionTCarteProOk" type="checkbox" style="width:18px;height:18px;">
           <div class="label" style="margin:0;">Carte professionnelle (CNAPS) déjà OK</div>
@@ -781,6 +785,7 @@
       cpf_amount: (document.getElementById("sessionTCpfAmount")?.value || "").trim(),
       personal_amount: (document.getElementById("sessionTPersonalAmount")?.value || "").trim(),
       other_amount: (document.getElementById("sessionTOtherAmount")?.value || "").trim(),
+      vtc_real_training_dates: (document.getElementById("sessionTVtcRealTrainingDates")?.value || "").trim(),
       carte_pro_ok: !!document.getElementById("sessionTCarteProOk")?.checked,
     };
   }
@@ -834,6 +839,15 @@
     });
   }
 
+  function refreshVtcRealTrainingDatesVisibility(){
+    const wrapper = document.getElementById("sessionVtcRealTrainingDatesField");
+    const input = document.getElementById("sessionTVtcRealTrainingDates");
+    if(!wrapper) return;
+    const isVtc = selectedTrainingForCreate === "VTC";
+    wrapper.style.display = isVtc ? "block" : "none";
+    if(!isVtc && input) input.value = "";
+  }
+
   function refreshSessionChoices(){
     const select = document.getElementById("traineeTargetSession");
     if(!select) return;
@@ -863,6 +877,7 @@
     const first = document.querySelector("#trainingChooser .training-choice");
     selectedTrainingForCreate = first?.getAttribute("data-training") || "";
     refreshTrainingButtons();
+    refreshVtcRealTrainingDatesVisibility();
     refreshSessionChoices();
   }
 
@@ -870,6 +885,7 @@
     btn.addEventListener("click", ()=>{
       selectedTrainingForCreate = btn.getAttribute("data-training") || "";
       refreshTrainingButtons();
+      refreshVtcRealTrainingDatesVisibility();
       refreshSessionChoices();
     });
   });
