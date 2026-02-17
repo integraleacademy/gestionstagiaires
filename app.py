@@ -8062,6 +8062,7 @@ def refresh_vae_relance_schedule(trainee: Dict[str, Any]) -> None:
     for key, cfg in VAE_RELANCE_CONFIGS.items():
         item = state[key]
         if (item.get("sent_at") or "").strip():
+            item["planned_at"] = ""
             continue
         if _vae_relance_is_blocked(trainee, cfg):
             item["planned_at"] = ""
@@ -8104,6 +8105,7 @@ def _send_vae_relance_message(data: Dict[str, Any], session_obj: Dict[str, Any],
 
     state = ensure_vae_relances_state(trainee)
     relance_state = state[relance_key]
+    relance_state["planned_at"] = ""
     relance_state["sent_at"] = sent_at
     relance_state["sent_mode"] = mode
     relance_state["email_ok"] = bool(email_ok)
