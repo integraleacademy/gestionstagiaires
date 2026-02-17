@@ -55,6 +55,21 @@
   <h2 style="margin:0;">Stagiaires</h2>
 
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    {% if show_vae %}
+      <label for="vaeStatusFilter" class="muted" style="font-weight:700;">Filtre statut VAE</label>
+      <select id="vaeStatusFilter" class="sel status-pill" style="min-width:280px;">
+        <option value="all">Tous les statuts VAE</option>
+        <option value="livret_1_todo">Livret 1 à compléter</option>
+        <option value="livret_1_analysis">Livret 1 en cours d'analyse</option>
+        <option value="livret_1_validated">Livret 1 validé</option>
+        <option value="financement_validated">Financement validé</option>
+        <option value="livret_2_todo">Livret 2 à compléter</option>
+        <option value="livret_2_analysis">Livret 2 en cours d'analyse</option>
+        <option value="livret_2_validated">Livret 2 validé</option>
+        <option value="jury">Passage devant le jury</option>
+        <option value="certified">Certification obtenue</option>
+      </select>
+    {% endif %}
     <a class="btn btn-outline" id="btnPrintTrainees" href="{{ url_for('admin_trainees_print', session_id=session.id, **request.args) }}" target="_blank" rel="noopener">🖨️ Imprimer la liste</a>
     {% if not is_read_only %}
       <button class="btn btn-outline" id="btnBulkSst">⬇️ Télécharger les SST en masse</button>
@@ -107,10 +122,11 @@
 
     <tbody>
       {% for t in trainees %}
-      <tr class="row {% if t.comment %}row-warning{% endif %}"
+<tr class="row {% if t.comment %}row-warning{% endif %}"
     data-trainee-id="{{ t.id }}"
     data-last-name="{{ t.last_name or '' }}"
     data-first-name="{{ t.first_name or '' }}"
+    data-vae-status="{{ t.vae_status or 'livret_1_todo' }}"
 data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}"
   data-has-diplome="{{ '1' if (t.get('deliverables', {}).get('diplome')) else '0' }}"
   data-has-attestation="{{ '1' if (t.get('deliverables', {}).get('attestation_fin_formation')) else '0' }}">
@@ -1092,7 +1108,7 @@ bulkAttestationInput?.addEventListener("change", async ()=>{
   applyAllColors();
 
 
-function recomputeRowHighlight(){
+  function recomputeRowHighlight(){
   document.querySelectorAll("tr[data-trainee-id]").forEach(tr=>{
     const hasSst = tr.getAttribute("data-has-sst") === "1";
     const hasDiplome = tr.getAttribute("data-has-diplome") === "1";
@@ -1107,6 +1123,18 @@ function recomputeRowHighlight(){
     }else{
       tr.classList.add("row-todo");    // ✅ jaune si manque au moins 1 doc
     }
+  });
+}
+
+function applyVaeStatusFilter(){
+  const filter = document.getElementById("vaeStatusFilter");
+  if(!filter) return;
+  const selected = filter.value || "all";
+
+  document.querySelectorAll("tr[data-trainee-id]").forEach(tr => {
+    const rowStatus = tr.getAttribute("data-vae-status") || "livret_1_todo";
+    const shouldShow = selected === "all" || rowStatus === selected;
+    tr.style.display = shouldShow ? "" : "none";
   });
 }
 
@@ -1332,6 +1360,11 @@ document.querySelectorAll("select.sel").forEach(sel=>{
 
         applyStatusPill(sel); // ✅ recolor instant
 
+        if(field === "vae_status"){
+          tr.setAttribute("data-vae-status", value || "livret_1_todo");
+          applyVaeStatusFilter();
+        }
+
         try{
           const data = await saveField(traineeId, field, value);
           sel.setAttribute("data-current-value", value);
@@ -1435,8 +1468,14 @@ function renderDocBadges(){
   });
 }
 
-// au chargement
+  // au chargement
 renderDocBadges();
+
+const vaeStatusFilter = document.getElementById("vaeStatusFilter");
+if(vaeStatusFilter){
+  vaeStatusFilter.addEventListener("change", applyVaeStatusFilter);
+  applyVaeStatusFilter();
+}
 
 
   
