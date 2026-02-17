@@ -229,6 +229,20 @@
         <span class="mono">ID : {{ trainee.personal_id or trainee.id }}</span>
       </div>
 
+      {% if is_vtc %}
+      <div class="meta-line" style="margin-top:8px;">
+        <span class="mono" style="font-weight:900;color:#f97316;">
+          Dates réelles de formation VTC :
+          <input id="editVtcRealTrainingDates"
+                 type="text"
+                 value="{{ trainee.vtc_real_training_dates or '' }}"
+                 placeholder="Ex : 10/05/2026 au 12/05/2026"
+                 style="border:none;background:transparent;padding:0;outline:none;min-width:260px;font-weight:900;color:#f97316;"
+                 {{ read_only_attr }}>
+        </span>
+      </div>
+      {% endif %}
+
       {% if not is_vtc and not show_vae and not is_dirigeant %}
         <div class="meta-line" style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
           {% set c = (trainee.cnaps or "INCONNU")|upper %}
@@ -2605,6 +2619,10 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
   setupContactAutosave({
     inputId: "editVtcCmarId",
     field: "vtc_cmar_id"
+  });
+  setupContactAutosave({
+    inputId: "editVtcRealTrainingDates",
+    field: "vtc_real_training_dates"
   });
 
   const elearningInput = document.getElementById("editElearningLink");
