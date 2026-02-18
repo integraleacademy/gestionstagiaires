@@ -3007,6 +3007,25 @@ def infos_is_complete(t: Dict[str, Any]) -> bool:
     return True
 
 
+def infos_is_complete_without_pre(t: Dict[str, Any]) -> bool:
+    """Version de complétude infos sans exigence PRE/CAR."""
+    required = [
+        "birth_date",
+        "birth_city",
+        "birth_country",
+        "nationality",
+        "address",
+        "zip_code",
+        "city",
+    ]
+    for k in required:
+        if not (t.get(k) or "").strip():
+            return False
+
+    secu_digits = re.sub(r"\D+", "", (t.get("carte_vitale") or ""))
+    return len(secu_digits) == 15
+
+
 def infos_is_complete_for_training(t: Dict[str, Any], training_type: str) -> bool:
     """
     Vérifie la complétude des informations selon le parcours.
@@ -3016,6 +3035,11 @@ def infos_is_complete_for_training(t: Dict[str, Any], training_type: str) -> boo
       qui ne contient pas les champs sécu/PRE.
     """
     tt = (training_type or "").strip().upper()
+
+    # Pour VTC et parcours dirigeant hors VAE, le champ PRE/CAR n'est pas demandé.
+    if "VTC" in tt or ("DIRIGEANT" in tt and tt != "DIRIGEANT VAE"):
+        return infos_is_complete_without_pre(t)
+
     if tt != "DIRIGEANT VAE":
         return infos_is_complete(t)
 
