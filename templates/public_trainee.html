@@ -581,6 +581,7 @@
 {% set is_vtc_training = 'VTC' in tt %}
 {% set training_type_label = "CHAUFFEUR VTC" if tt == "VTC" else session.training_type %}
 {% set is_dirigeant_vae = (tt == 'DIRIGEANT VAE') %}
+{% set is_dirigeant_training = ('DIRIGEANT' in tt) or ('DESP' in tt) %}
 {% set is_security_training = ('APS' in tt) or ('A3P' in tt) or ('DIRIGEANT' in tt) %}
 
 {% if 'A3P' in tt %}
@@ -1925,6 +1926,7 @@ function closeUploadSuccessModal(event) {
   const documentsSummary = document.getElementById("documentsSummary");
   const documentsLockIcon = document.getElementById("documentsLockIcon");
   const vtcCredentialsHint = document.getElementById("vtcCredentialsHint");
+  const documentsLockEnabled = {{ "false" if is_security_training else "true" }};
 
   const isVtcCredentialsSubmitted = () => {
     const statusEl = document.getElementById("vtcCredentialsStatus");
@@ -1966,7 +1968,7 @@ function closeUploadSuccessModal(event) {
   const updateDocumentsWarning = () => {
     const hasMissing = !!document.querySelector(".docs-stack .docrow.missing");
     const infosComplete = infosAreComplete();
-    const locked = !infosComplete;
+    const locked = documentsLockEnabled && !infosComplete;
 
     if (documentsDetails) {
       documentsDetails.classList.toggle("is-locked", locked);
