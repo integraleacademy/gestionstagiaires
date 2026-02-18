@@ -581,6 +581,7 @@
 {% set is_vtc_training = 'VTC' in tt %}
 {% set training_type_label = "CHAUFFEUR VTC" if tt == "VTC" else session.training_type %}
 {% set is_dirigeant_vae = (tt == 'DIRIGEANT VAE') %}
+{% set is_dirigeant_training = ('DIRIGEANT' in tt or 'DESP' in tt) %}
 
 {% if 'A3P' in tt %}
   {% set formation_label = "Agent de protection physique des personnes (A3P)" %}
@@ -1307,6 +1308,7 @@ id="upload_{{ d.key }}"
 
     {% set deliv = trainee.deliverables or {} %}
 
+{% if not is_dirigeant_training %}
 <div class="docrow">
   <div class="docmeta"><div class="label">Ma carte SST</div></div>
   {% if deliv.get('carte_sst') %}
@@ -1317,6 +1319,7 @@ id="upload_{{ d.key }}"
     <span class="pill gray">Prochainement</span>
   {% endif %}
 </div>
+{% endif %}
 
 <div class="docrow">
   <div class="docmeta"><div class="label">Mon diplôme</div></div>
