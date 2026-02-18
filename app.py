@@ -8030,6 +8030,7 @@ VAE_RELANCE_CONFIGS = {
         "label": "Relance RDV recevabilité",
         "delay_days": 5,
         "anchor": "livret_1_validated",
+        "blocked_if_vae_status_in": ["financement_validated", "livret_2_todo", "livret_2_analysis", "livret_2_validated", "jury", "certified"],
         "admin_label": "Relance RDV recevabilité VAE",
         "secretariat_label": "Relance RDV recevabilité",
         "subject": "Relance RDV recevabilité – VAE Dirigeant (DESP)",
@@ -8041,6 +8042,7 @@ VAE_RELANCE_CONFIGS = {
         "label": "Relance Livret 2",
         "delay_days": 10,
         "anchor": "financement_validated",
+        "blocked_if_vae_status_in": ["livret_2_analysis", "livret_2_validated", "jury", "certified"],
         "admin_label": "Relance Livret 2 VAE",
         "secretariat_label": "Relance Livret 2",
         "subject": "Relance Livret 2 – VAE Dirigeant (DESP)",
@@ -8052,6 +8054,7 @@ VAE_RELANCE_CONFIGS = {
         "label": "Relance RDV Livret 2",
         "delay_days": 5,
         "anchor": "livret_2_validated",
+        "blocked_if_vae_status_in": ["jury", "certified"],
         "admin_label": "Relance RDV Livret 2 VAE",
         "secretariat_label": "Relance RDV Livret 2",
         "subject": "Relance RDV Livret 2 – VAE Dirigeant (DESP)",
@@ -8101,6 +8104,12 @@ def ensure_vae_relances_state(trainee: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _vae_relance_is_blocked(trainee: Dict[str, Any], cfg: Dict[str, Any]) -> bool:
+    blocked_statuses = cfg.get("blocked_if_vae_status_in") or []
+    if isinstance(blocked_statuses, list):
+        current_status = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))["key"]
+        if current_status in blocked_statuses:
+            return True
+
     action_key = (cfg.get("cancel_if_action_done") or "").strip()
     if not action_key:
         return False
@@ -8210,6 +8219,10 @@ def _send_vae_relance_message(data: Dict[str, Any], session_obj: Dict[str, Any],
 def _send_vae_relance_reminders(data: Dict[str, Any]) -> bool:
     changed = False
     now_utc = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+    paris_now = now_utc.astimezone(ZoneInfo("Europe/Paris"))
+    if not (8 <= paris_now.hour < 20):
+        return changed
+
     for session_obj in (data.get("sessions") or []):
         if session_obj.get("archived"):
             continue
