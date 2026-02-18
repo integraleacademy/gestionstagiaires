@@ -17,7 +17,7 @@ import tempfile
 from docx.shared import Inches
 
 import requests
-from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file
+from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file, flash
 
 import zipfile
 from io import BytesIO
