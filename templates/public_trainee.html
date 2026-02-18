@@ -1295,7 +1295,7 @@ id="upload_{{ d.key }}"
   {% endfor %}
   
 </div>
-{% if show_vae %}
+{% if show_vae or is_security_training %}
   </div>
 </details>
 {% else %}
