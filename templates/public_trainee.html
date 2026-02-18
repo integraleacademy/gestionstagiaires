@@ -1095,7 +1095,7 @@
   {% set is_pending_review = (has_submission and up != "CONFORME" and up != "NON CONFORME") %}
   {% set max_files = 2 if d.key == "id" else (0 if d.key == "livret_2" else 1) %}
   {% set can_add_more = (d.key == "livret_2") or ((file_tokens|length) < max_files) %}
-{% set show_upload = ((not has_file) or can_replace or ((d.key == "id" or d.key == "livret_2") and can_add_more and not is_pending_review)) and not (d.key == "permis" and trainee.no_permis) %}
+{% set show_upload = ((not has_file) or can_replace or (d.key == "livret_2" and can_add_more and not is_pending_review)) and not (d.key == "permis" and trainee.no_permis) %}
 
     {% set row_cls = "missing" %}
     {% if has_submission %}
