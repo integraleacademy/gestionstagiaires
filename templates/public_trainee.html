@@ -581,6 +581,7 @@
 {% set is_vtc_training = 'VTC' in tt %}
 {% set training_type_label = "CHAUFFEUR VTC" if tt == "VTC" else session.training_type %}
 {% set is_dirigeant_vae = (tt == 'DIRIGEANT VAE') %}
+{% set is_security_training = ('APS' in tt) or ('A3P' in tt) or ('DIRIGEANT' in tt) %}
 
 {% if 'A3P' in tt %}
   {% set formation_label = "Agent de protection physique des personnes (A3P)" %}
@@ -867,14 +868,14 @@
 
     {% if not trainee.public_hide_infos %}
 <!-- Encadré : infos à compléter (autosave) -->
-{% if show_vtc or is_dirigeant_vae %}
+{% if show_vtc or is_security_training %}
 <details id="infosToCompleteDetails" class="collapse-card" style="grid-column:1/-1;">
   <summary class="collapse-summary">
     <span class="collapse-summary-main">
-      <span>{{ '1️⃣ Infos à compléter' if is_dirigeant_vae else 'Infos à compléter' }}</span>
+      <span>{{ '1️⃣ Infos à compléter' if is_security_training else 'Infos à compléter' }}</span>
       <span id="infosToCompleteOk" class="oktag" hidden>Tout est OK ✅</span>
       <span id="infosToCompleteAlert" class="infos-warning" role="status" aria-live="polite" hidden>
-        {{ '⚠️ Commencez par compléter vos informations' if is_dirigeant_vae else '⚠️ Ouvrez cet onglet pour compléter vos informations' }}
+        ⚠️ Ouvrez cet onglet pour compléter vos informations
       </span>
     </span>
   </summary>
@@ -960,7 +961,7 @@
            "city",
            trainee.city,
            "Ex : Paris") }}
-{% if show_vtc or is_dirigeant_vae %}
+{% if show_vtc or is_security_training %}
   </div>
 </details>
 {% else %}
@@ -1052,11 +1053,11 @@
   {% if not trainee.public_hide_docs and not show_vtc %}
   
 <!-- Encadré 3 : mes documents (upload) -->
-{% if show_vae %}
+{% if show_vae or is_security_training %}
 <details id="documentsDetails" class="collapse-card" style="grid-column:1/-1;">
   <summary id="documentsSummary" class="collapse-summary">
     <span class="collapse-summary-main">
-      <span>{{ '2️⃣ Mes documents' if is_dirigeant_vae else 'Mes documents' }} <span id="documentsLockIcon" hidden>🔒</span></span>
+      <span>{{ '2️⃣ Mes documents' if is_security_training else 'Mes documents' }} <span id="documentsLockIcon" hidden>🔒</span></span>
       <span id="documentsOkTag" class="oktag" hidden>Tout est OK ✅</span>
       <span id="documentsAlert" class="infos-warning" role="status" aria-live="polite" hidden>
         ⚠️ Ouvrez cet onglet pour déposer vos documents
