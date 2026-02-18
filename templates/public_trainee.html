@@ -837,6 +837,8 @@
         {{ pill_for('dossier', 'complete' if dossier_ok else 'incomplete') }}
       </div>
 
+      {% if "DIRIGEANT" not in tt and "DESP" not in tt %}
+
       <div class="docrow">
         <div class="docmeta"><div class="label">CNAPS</div></div>
         {{ pill_for('cnaps', trainee.cnaps) }}
@@ -846,6 +848,7 @@
         <div class="docmeta"><div class="label">Test de français</div></div>
         {{ pill_for('test_fr', trainee.test_fr_status) }}
       </div>
+      {% endif %}
       {% endif %}
 
       {% if show_hosting %}
