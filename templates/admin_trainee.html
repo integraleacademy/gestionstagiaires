@@ -426,6 +426,10 @@
       Livret 2 validé
       {% if vae_action_dates.get('livret_2_validated') %}<span style="font-weight:600;opacity:.95;">(Étape terminée le {{ vae_action_dates.get('livret_2_validated') }})</span>{% endif %}
     </button>
+    <button class="btn {% if vae_action_dates.get('financement_l2_validated') %}btn-primary{% else %}btn-outline{% endif %}" type="button" onclick="setVaeAction('financement_l2_validated')" {{ read_only_attr }}>
+      Financement L2 validé
+      {% if vae_action_dates.get('financement_l2_validated') %}<span style="font-weight:600;opacity:.95;">(Étape terminée le {{ vae_action_dates.get('financement_l2_validated') }})</span>{% endif %}
+    </button>
     <button class="btn {% if vae_action_dates.get('jury_date') %}btn-primary{% else %}btn-outline{% endif %}" type="button" onclick="setVaeAction('jury_date')" {{ read_only_attr }}>
       Date d'examen
       {% if vae_action_dates.get('jury_date') %}<span style="font-weight:600;opacity:.95;">(Étape terminée le {{ vae_action_dates.get('jury_date') }})</span>{% endif %}
@@ -2213,12 +2217,14 @@ function setDossierPill(status){
       financement_validated: "livret_2_todo",
       livret_2_received: "livret_2_analysis",
       livret_2_validated: "livret_2_validated",
+      financement_l2_validated: "financement_l2_validated",
       jury_date: "jury",
       diplome_obtenu: "certified",
     };
     const orderedActions = [
       "diplome_obtenu",
       "jury_date",
+      "financement_l2_validated",
       "livret_2_validated",
       "livret_2_received",
       "financement_validated",
@@ -2249,6 +2255,8 @@ function setDossierPill(status){
         payload.vae_status = "livret_2_analysis";
       }else if(actionKey === "livret_2_validated"){
         payload.vae_status = "livret_2_validated";
+      }else if(actionKey === "financement_l2_validated"){
+        payload.vae_status = "financement_l2_validated";
       }else if(actionKey === "jury_date"){
         const raw = window.prompt("Indiquez la date d'examen (JJ/MM/AAAA)");
         if(raw === null) return;

@@ -819,6 +819,7 @@
         'livret_2_todo': {'label':'Livret 2 à compléter','cls':'orange'},
         'livret_2_analysis': {'label':'Réception livret 2','cls':'gray'},
         'livret_2_validated': {'label':'Livret 2 validé','cls':'green'},
+        'financement_l2_validated': {'label':'Financement L2 validé','cls':'green'},
         'livret_1_validated': {'label':'Livret 1 validé','cls':'green'},
         'financement_validated': {'label':'Financement validé','cls':'green'},
         'jury': {'label':'Passage devant le jury','cls':'yellow'},
@@ -1353,7 +1354,8 @@ id="upload_{{ d.key }}"
     'livret_2_todo': 3,
     'livret_2_analysis': 4,
     'livret_2_validated': 6,
-    'jury': 6,
+    'financement_l2_validated': 6,
+    'jury': 7,
     'certified': 8
   } %}
   {% set vae_done_until = vae_step_index_map[vae_key] if vae_key in vae_step_index_map else 0 %}
@@ -1365,7 +1367,8 @@ id="upload_{{ d.key }}"
     'livret_2_todo': 4,
     'livret_2_analysis': 5,
     'livret_2_validated': 6,
-    'jury': 7,
+    'financement_l2_validated': 7,
+    'jury': 8,
     'certified': 8
   } %}
   {% set vae_current_step = vae_current_step_map[vae_key] if vae_key in vae_current_step_map else 1 %}

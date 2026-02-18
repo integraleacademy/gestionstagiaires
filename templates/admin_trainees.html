@@ -66,6 +66,7 @@
         <option value="livret_2_todo">Livret 2 à compléter</option>
         <option value="livret_2_analysis">Livret 2 en cours d'analyse</option>
         <option value="livret_2_validated">Livret 2 validé</option>
+        <option value="financement_l2_validated">Financement L2 validé</option>
         <option value="jury">Passage devant le jury</option>
         <option value="certified">Certification obtenue</option>
       </select>
@@ -191,6 +192,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
     <option value="livret_2_todo" {% if t.vae_status=="livret_2_todo" %}selected{% endif %}>Livret 2 à compléter</option>
     <option value="livret_2_analysis" {% if t.vae_status=="livret_2_analysis" %}selected{% endif %}>Livret 2 en cours d'analyse</option>
     <option value="livret_2_validated" {% if t.vae_status=="livret_2_validated" %}selected{% endif %}>Livret 2 validé</option>
+    <option value="financement_l2_validated" {% if t.vae_status=="financement_l2_validated" %}selected{% endif %}>Financement L2 validé</option>
     <option value="jury" {% if t.vae_status=="jury" %}selected{% endif %}>Passage devant le jury</option>
     <option value="certified" {% if t.vae_status=="certified" %}selected{% endif %}>Certification obtenue</option>
   </select>
