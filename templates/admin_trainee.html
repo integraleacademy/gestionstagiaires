@@ -1965,7 +1965,7 @@ function setDossierPill(status){
 
         rows.forEach((tr)=>{
           const sel = tr.querySelector("select.sel-doc");
-          if(!sel || sel.disabled) return;
+          if(!sel) return;
           hasTrackableDoc = true;
           const status = (sel.value || "").toUpperCase().trim();
           if(status === "A CONTRÔLER" || status === "A CONTROLER"){
