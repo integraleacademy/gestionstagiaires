@@ -8080,6 +8080,7 @@ VAE_RELANCE_CONFIGS = {
         "delay_days": 5,
         "anchor": "livret_2_validated",
         "blocked_if_vae_status_in": ["financement_l2_validated", "jury", "certified"],
+        "cancel_if_action_done": "financement_l2_validated",
         "admin_label": "Relance RDV Livret 2 VAE",
         "secretariat_label": "Relance RDV Livret 2",
         "subject": "Relance RDV Livret 2 – VAE Dirigeant (DESP)",
