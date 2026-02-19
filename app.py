@@ -4011,7 +4011,6 @@ def admin_sessions():
 
 
 @app.get("/admin/gestion-secretariat")
-@admin_login_required
 def admin_secretariat():
     data = load_data()
     payload = _secretariat_notifications_payload(data)
@@ -4031,7 +4030,6 @@ def admin_secretariat():
 
 
 @app.get("/api/secretariat/notifications")
-@admin_login_required
 def api_secretariat_notifications():
     data = load_data()
     payload = _secretariat_notifications_payload(data)
@@ -4323,7 +4321,6 @@ def admin_financement_refuse_submit():
 
 
 @app.post("/api/secretariat/notifications/<bucket>/<notification_id>/toggle")
-@admin_login_required
 def api_secretariat_notification_toggle(bucket: str, notification_id: str):
     bucket_key = _notifications_bucket_key(bucket)
     if not bucket_key:
@@ -4344,7 +4341,6 @@ def api_secretariat_notification_toggle(bucket: str, notification_id: str):
 
 
 @app.post("/api/secretariat/notifications/<bucket>/<notification_id>/delete")
-@admin_login_required
 def api_secretariat_notification_delete(bucket: str, notification_id: str):
     bucket_key = _notifications_bucket_key(bucket)
     if not bucket_key:
@@ -4367,7 +4363,6 @@ def api_secretariat_notification_delete(bucket: str, notification_id: str):
 
 
 @app.post("/api/secretariat/notifications/prelevements/<notification_id>/new-date")
-@admin_login_required
 def api_secretariat_prelevement_new_date(notification_id: str):
     payload = request.get_json(silent=True) or {}
     new_date = (payload.get("new_date") or "").strip()
@@ -4427,7 +4422,6 @@ def api_secretariat_prelevement_new_date(notification_id: str):
 
 
 @app.post("/api/secretariat/notifications/prelevements/<notification_id>/call-result")
-@admin_login_required
 def api_secretariat_prelevement_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
@@ -4501,7 +4495,6 @@ def api_secretariat_prelevement_result(notification_id: str):
 
 
 @app.post("/api/secretariat/notifications/relances/<notification_id>/call-result")
-@admin_login_required
 def api_secretariat_relance_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
@@ -4606,7 +4599,6 @@ def api_secretariat_relance_result(notification_id: str):
 
 
 @app.post("/api/secretariat/notifications/cnaps_pre/<notification_id>/call-result")
-@admin_login_required
 def api_secretariat_cnaps_pre_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
@@ -4680,7 +4672,6 @@ def api_secretariat_cnaps_pre_result(notification_id: str):
 
 
 @app.post("/api/secretariat/notifications/financement_refuse/<notification_id>/call-result")
-@admin_login_required
 def api_secretariat_financement_refuse_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
@@ -4754,7 +4745,6 @@ def api_secretariat_financement_refuse_result(notification_id: str):
 
 
 @app.post("/api/secretariat/notifications/edof/<notification_id>/call-result")
-@admin_login_required
 def api_secretariat_edof_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
@@ -4828,7 +4818,6 @@ def api_secretariat_edof_result(notification_id: str):
 
 
 @app.post("/api/secretariat/notifications/test_fr/<notification_id>/call-result")
-@admin_login_required
 def api_secretariat_test_fr_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
@@ -4902,7 +4891,6 @@ def api_secretariat_test_fr_result(notification_id: str):
 
 
 @app.post("/api/secretariat/notifications/convention_unsigned/<notification_id>/call-result")
-@admin_login_required
 def api_secretariat_convention_unsigned_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
@@ -10026,7 +10014,6 @@ def api_send_vae_relance(session_id: str, trainee_id: str, relance_key: str):
 
 
 @app.post("/api/secretariat/notifications/vae_relances/<notification_id>/call-result")
-@admin_login_required
 def api_secretariat_vae_relance_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
