@@ -2210,7 +2210,7 @@ function setDossierPill(status){
     const isReset = !!currentVaeActionDates[actionKey];
     const now = new Date();
     const clickedAt = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
-    const statusesSendingMail = ["livret_1_analysis", "livret_1_validated", "livret_2_analysis", "livret_2_validated", "jury"];
+    const statusesSendingMail = ["livret_1_analysis", "livret_1_validated", "livret_2_todo", "livret_2_analysis", "livret_2_validated", "jury"];
     const actionStatusMap = {
       livret_1_received: "livret_1_analysis",
       livret_1_validated: "livret_1_validated",
