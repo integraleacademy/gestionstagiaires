@@ -8845,6 +8845,9 @@ def public_vtc_credentials(token: str):
     if not login or not password:
         return jsonify({"ok": False, "error": "missing_credentials"}), 400
 
+    if not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]+$", login):
+        return jsonify({"ok": False, "error": "invalid_login_email"}), 400
+
     t["vtc_cm_login"] = login
     t["vtc_cm_password"] = password
     t["vtc_cm_submitted_at"] = _now_iso()
