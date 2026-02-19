@@ -8355,6 +8355,16 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
         <p>Nous restons à votre disposition et nous vous souhaitons une agréable journée,</p>
         <p><strong>La Team Intégrale Academy</strong></p>
         """)
+    elif status_key == "livret_2_todo":
+        subject = "Financement VAE validé ✅"
+        html = mail_layout(f"""
+        <h2 style=\"margin:0 0 12px 0;color:#0f172a;text-align:center;\">Financement VAE validé ✅</h2>
+        <p>Bonjour <strong>{first_name}</strong>,</p>
+        <p>Nous vous confirmons que le financement de votre VAE Dirigeant d'entreprise de sécurité privée (DESP) est validé.</p>
+        <p>Vous pouvez à présent compléter le Livret 2 en vous rendant dans votre Espace Candidat.</p>
+        <p style=\"margin-top:18px;text-align:center;\"><a href=\"{space_url}\" style=\"{primary_btn}\">Accéder à mon Espace Candidat</a></p>
+        <p>Nous restons à votre disposition et nous vous souhaitons une excellente journée.<br>L'équipe Intégrale Academy</p>
+        """)
     elif status_key == "jury":
         subject = "VAE : date de passage devant le jury"
         jury_date_iso = (t.get("vae_jury_date") or "").strip()
@@ -8382,6 +8392,17 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
         return
 
     email_ok = brevo_send_email(email, subject, html)
+    sms_ok = False
+    if status_key == "livret_2_todo":
+        sms_name = (t.get("first_name") or "").strip()
+        sms = (
+            f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
+            "Nous vous confirmons que le financement de votre VAE Dirigeant d'entreprise de sécurité privée (DESP) est validé. "
+            "Vous pouvez à présent compléter le Livret 2 en vous rendant dans votre Espace Candidat : "
+            f"{space_url}"
+        )
+        phone = (t.get("phone") or "").strip()
+        sms_ok = brevo_send_sms(phone, sms) if phone else False
     sent_at = _now_iso()
 
     phone_followups = t.get("phone_followups")
@@ -8391,7 +8412,10 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
     phone_followups.insert(0, {
         "type": "Suivi VAE",
         "details": f"Mail VAE - {status_label}",
-        "comment": f"Objet : {subject} · Envoi {'confirmé' if email_ok else 'tenté'}",
+        "comment": (
+            f"Objet : {subject} · Mail {'confirmé' if email_ok else 'tenté'}"
+            + (f" · SMS {'confirmé' if sms_ok else 'tenté'}" if status_key == "livret_2_todo" else "")
+        ),
         "at": sent_at,
     })
     t["phone_followups"] = phone_followups
@@ -8399,7 +8423,7 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
     trainee_id = str(t.get("id") or "")
     print(
         f"[VAE][EMAIL] envoi statut VAE: trainee_id={trainee_id!r} status={status_key!r} "
-        f"to={email!r} ok={bool(email_ok)}"
+        f"to={email!r} email_ok={bool(email_ok)} sms_ok={bool(sms_ok)}"
     )
 
 def deliverables_progress(t: Dict[str, Any]):
