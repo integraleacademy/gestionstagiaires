@@ -1003,7 +1003,7 @@
         <div class="form-grid">
           <label>
             <div class="label">Login exament3p.fr</div>
-            <input id="vtcLogin" type="text" value="{{ trainee.vtc_cm_login or '' }}" placeholder="Votre login">
+            <input id="vtcLogin" type="email" value="{{ trainee.vtc_cm_login or '' }}" placeholder="Votre adresse email" inputmode="email" autocomplete="email">
           </label>
           <label>
             <div class="label">Mot de passe exament3p.fr</div>
@@ -2059,6 +2059,16 @@ function closeUploadSuccessModal(event) {
         if(status){
           status.style.display = "block";
           status.textContent = "Merci de renseigner le login et le mot de passe.";
+          if(statusList) statusList.style.display = "flex";
+        }
+        return;
+      }
+
+      const isEmailLogin = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(login);
+      if(!isEmailLogin){
+        if(status){
+          status.style.display = "block";
+          status.textContent = "Le login exament3p.fr doit être une adresse email valide.";
           if(statusList) statusList.style.display = "flex";
         }
         return;
