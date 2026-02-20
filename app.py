@@ -4026,6 +4026,7 @@ def admin_secretariat():
         test_fr_notifications=notifications["test_fr"],
         convention_unsigned_notifications=notifications["convention_unsigned"],
         unresolved_total=payload["unresolved_total"],
+        secretariat_read_only=False,
     )
 
 
