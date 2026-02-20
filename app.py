@@ -17,7 +17,7 @@ import tempfile
 from docx.shared import Inches
 
 import requests
-from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file, flash
+from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file, flash, has_request_context
 
 import zipfile
 from io import BytesIO
@@ -317,6 +317,53 @@ PUBLIC_BASE_URL = os.environ.get(
 CNAPS_STATUS_ENDPOINT = os.environ.get("CNAPS_STATUS_ENDPOINT", "")
 HEBERGEMENT_STATUS_ENDPOINT = os.environ.get("HEBERGEMENT_STATUS_ENDPOINT", "")
 
+BREVO_NO_CREDIT_MARKERS = (
+    "not enough credits",
+    "insufficient credits",
+    "out of credits",
+    "insufficient balance",
+)
+
+
+def _brevo_no_credit_detected(response_text: str) -> bool:
+    text = (response_text or "").lower()
+    return any(marker in text for marker in BREVO_NO_CREDIT_MARKERS)
+
+
+def _notify_brevo_credit_alert_once(channel: str, recipient: str, response_text: str) -> None:
+    if not has_request_context():
+        return
+    if session.get("_brevo_credit_alert_sending"):
+        return
+
+    subject = "[ALERTE] Crédits Brevo insuffisants"
+    html_body = mail_layout(f"""
+      <h2 style=\"text-align:center\">⚠️ Crédits Brevo insuffisants</h2>
+      <p>Un envoi automatique a échoué car les crédits Brevo semblent épuisés.</p>
+      <p><strong>Canal :</strong> {html.escape(channel)}</p>
+      <p><strong>Destinataire :</strong> {html.escape(recipient or '—')}</p>
+      <p><strong>Réponse Brevo :</strong><br>{html.escape((response_text or '—')[:1200])}</p>
+    """)
+
+    session["_brevo_credit_alert_sending"] = True
+    try:
+        brevo_send_email("clement@integraleacademy.com", subject, html_body)
+    except Exception:
+        pass
+    finally:
+        session.pop("_brevo_credit_alert_sending", None)
+
+
+def _register_brevo_no_credit(channel: str, recipient: str, response_text: str) -> None:
+    if not has_request_context():
+        return
+    session["brevo_no_credit_notice"] = {
+        "channel": channel,
+        "recipient": recipient,
+        "at": _now_iso(),
+    }
+    _notify_brevo_credit_alert_once(channel, recipient, response_text)
+
 
 def normalize_phone_fr(phone: str) -> str:
     p = (phone or "").strip().replace(" ", "").replace(".", "").replace("-", "")
@@ -402,7 +449,10 @@ def brevo_send_email(
         r = requests.post(url, headers=headers, json=payload, timeout=12)
         print("[EMAIL] status=", r.status_code)
         print("[EMAIL] response=", r.text)
-        return r.status_code in (200, 201, 202)
+        ok = r.status_code in (200, 201, 202)
+        if (not ok) and _brevo_no_credit_detected(r.text):
+            _register_brevo_no_credit("email", to_email, r.text)
+        return ok
     except Exception:
         return False
 
@@ -439,7 +489,10 @@ def brevo_send_sms(phone: str, message: str) -> bool:
         print("[SMS] status=", r.status_code)
         print("[SMS] response=", r.text)
 
-        return r.status_code in (200, 201, 202)
+        ok = r.status_code in (200, 201, 202)
+        if (not ok) and _brevo_no_credit_detected(r.text):
+            _register_brevo_no_credit("sms", phone, r.text)
+        return ok
     except Exception as e:
         print("[SMS] exception=", repr(e))
         return False
@@ -9186,6 +9239,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         })
 
     transfer_sessions.sort(key=lambda x: ((x.get("date_start") or "9999-99-99"), (x.get("name") or "").upper()))
+    brevo_no_credit_notice = session.pop("brevo_no_credit_notice", None)
 
     return render_template(
         "admin_trainee.html",
@@ -9202,6 +9256,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         transfer_sessions=transfer_sessions,
         PUBLIC_STUDENT_PORTAL_BASE=PUBLIC_STUDENT_PORTAL_BASE,
         fr_date=fr_date,
+        brevo_no_credit_notice=brevo_no_credit_notice,
     )
 
 
