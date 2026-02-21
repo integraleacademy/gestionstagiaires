@@ -1808,6 +1808,7 @@ def load_data() -> Dict[str, Any]:
             "notifications_edof": [],
             "notifications_financement_refuse": [],
             "notifications_prelevements": [],
+            "notifications_prelevement_non_valides": [],
             "notifications_phone_relances": [],
             "notifications_vae_relances": [],
             "notifications_cnaps_pre_relances": [],
@@ -1840,6 +1841,9 @@ def load_data() -> Dict[str, Any]:
             changed = True
         if "notifications_prelevements" not in data:
             data["notifications_prelevements"] = []
+            changed = True
+        if "notifications_prelevement_non_valides" not in data:
+            data["notifications_prelevement_non_valides"] = []
             changed = True
         if "notifications_financement_refuse" not in data:
             data["notifications_financement_refuse"] = []
@@ -1893,6 +1897,7 @@ def load_data() -> Dict[str, Any]:
             "notifications_edof": [],
             "notifications_financement_refuse": [],
             "notifications_prelevements": [],
+            "notifications_prelevement_non_valides": [],
             "notifications_phone_relances": [],
             "notifications_vae_relances": [],
             "notifications_cnaps_pre_relances": [],
@@ -1921,6 +1926,7 @@ def add_notification(data: Dict[str, Any], bucket: str, label: str, meta: Option
         "notifications_edof": "EDOF",
         "notifications_financement_refuse": "FTR",
         "notifications_prelevements": "PREL",
+        "notifications_prelevement_non_valides": "PNV",
         "notifications_phone_relances": "REL",
         "notifications_vae_relances": "RVE",
         "notifications_cnaps_pre_relances": "PRE",
@@ -1945,6 +1951,7 @@ def _notifications_bucket_key(bucket: str) -> Optional[str]:
         "edof": "notifications_edof",
         "financement_refuse": "notifications_financement_refuse",
         "prelevements": "notifications_prelevements",
+        "prelevements_non_valides": "notifications_prelevement_non_valides",
         "relances": "notifications_phone_relances",
         "vae_relances": "notifications_vae_relances",
         "cnaps_pre": "notifications_cnaps_pre_relances",
@@ -2000,6 +2007,7 @@ def _secretariat_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
         "edof": _with_created_fr(list(data.get("notifications_edof", [])), "edof"),
         "financement_refuse": _with_created_fr(list(data.get("notifications_financement_refuse", [])), "financement_refuse"),
         "prelevements": _with_created_fr(list(data.get("notifications_prelevements", [])), "prelevements"),
+        "prelevements_non_valides": _with_created_fr(list(data.get("notifications_prelevement_non_valides", [])), "prelevements_non_valides"),
         "relances": _with_created_fr(list(data.get("notifications_phone_relances", [])), "relances"),
         "vae_relances": _with_created_fr(list(data.get("notifications_vae_relances", [])), "vae_relances"),
         "cnaps_pre": _with_created_fr(list(data.get("notifications_cnaps_pre_relances", [])), "cnaps_pre"),
@@ -4073,6 +4081,7 @@ def admin_secretariat():
         edof_notifications=notifications["edof"],
         financement_refuse_notifications=notifications["financement_refuse"],
         prelevement_notifications=notifications["prelevements"],
+        prelevement_non_valide_notifications=notifications["prelevements_non_valides"],
         phone_notifications=notifications["relances"],
         vae_relance_notifications=notifications["vae_relances"],
         cnaps_pre_notifications=notifications["cnaps_pre"],
@@ -10166,6 +10175,42 @@ def _remove_admin_comment_flag(current: str, flag_text: str) -> str:
     kept = [line for line in current.splitlines() if line.strip() != flag_text]
     return "\n".join(kept).strip()
 
+def _send_prelevement_pending_validation_messages(trainee: dict, session: dict) -> Tuple[bool, bool]:
+    first_name = (trainee.get("first_name") or "").strip()
+    last_name = (trainee.get("last_name") or "").strip()
+    email = (trainee.get("email") or "").strip()
+    phone = (trainee.get("phone") or "").strip()
+    training_name = formation_label(_session_get(session, "training_type", "") or session.get("name") or "formation")
+
+    subject = "Prélèvement en attente - validation du mandat"
+    html = mail_layout(f"""
+      <p>Bonjour,</p>
+
+      <p>Je me permets de revenir vers vous concernant votre formation <strong>{training_name}</strong>.</p>
+
+      <p>A ce jour, vous n'avez pas encore validé le mandat de prélèvement que nous vous avons envoyé.
+      Vous serait-il possible svp de valider le mandat de prélèvement afin que nous puissions valider votre inscription ?
+      Si vous n'avez pas reçu le lien (depuis notre banque QONTO) ou si vous rencontrez des difficultés,
+      vous pouvez nous contacter au 04 22 47 07 68.</p>
+
+      <p>Je vous remercie par avance,<br>Clément VAILLANT</p>
+    """)
+    email_ok = brevo_send_email(email, subject, html) if email else False
+
+    sms = (
+        "Bonjour, "
+        f"Je me permets de revenir vers vous concernant votre formation {training_name}. "
+        "A ce jour, vous n'avez pas encore validé le mandat de prélèvement que nous vous avons envoyé. "
+        "Vous serait-il possible svp de valider le mandat de prélèvement afin que nous puissions valider votre inscription ? "
+        "Si vous n'avez pas reçu le lien (depuis notre banque QONTO) ou si vous rencontrez des difficultés, "
+        "vous pouvez nous contacter au 04 22 47 07 68. "
+        "Je vous remercie par avance, Clément VAILLANT"
+    ).strip()
+    sms_ok = brevo_send_sms(phone, sms) if phone else False
+
+    return bool(email_ok), bool(sms_ok)
+
+
 def _send_prelevement_new_date_email(
     trainee: dict,
     session: dict,
@@ -10334,6 +10379,7 @@ def api_financement_rejet_send(session_id: str, trainee_id: str):
             "secretariat_token": secretariat_token,
         },
     )
+    t.setdefault("financement_pending_notification_sent_at", "")
 
     s["trainees"] = _session_trainees_list(s)
     s.pop("stagiaires", None)
@@ -10346,6 +10392,55 @@ def api_financement_rejet_send(session_id: str, trainee_id: str):
         "reply_url": reply_url,
         "note": t.get("financement_rejected_note"),
         "comment": t.get("comment", ""),
+    })
+
+
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/financement-en-attente/send")
+@admin_login_required
+@admin_write_required
+def api_financement_pending_send(session_id: str, trainee_id: str):
+    data = load_data()
+    s, t = _find_session_and_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "not_found"}), 404
+
+    already_sent_at = (t.get("financement_pending_notification_sent_at") or "").strip()
+    if already_sent_at:
+        return jsonify({"ok": False, "error": "already_sent", "sent_at": already_sent_at}), 400
+
+    email_ok, sms_ok = _send_prelevement_pending_validation_messages(t, s)
+
+    sent_at = _now_iso()
+    t["financement_pending_notification_sent_at"] = sent_at
+
+    first_name = (t.get("first_name") or "").strip()
+    last_name = (t.get("last_name") or "").strip()
+    training_name = formation_label(_session_get(s, "training_type", "") or s.get("name") or "formation")
+
+    add_notification(
+        data,
+        "notifications_prelevement_non_valides",
+        f"{first_name} {last_name} • {training_name}",
+        meta={
+            "first_name": first_name,
+            "last_name": last_name,
+            "training": training_name,
+            "session_id": s.get("id"),
+            "trainee_id": t.get("id"),
+            "sent_at": sent_at,
+        },
+    )
+
+    s["trainees"] = _session_trainees_list(s)
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return jsonify({
+        "ok": True,
+        "email_ok": bool(email_ok),
+        "sms_ok": bool(sms_ok),
+        "sent_at": sent_at,
+        "sent_at_fr": fr_date(sent_at[:10]) if sent_at else "",
     })
 
 
