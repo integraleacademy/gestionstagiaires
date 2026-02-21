@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
 {% set read_only_attr = "disabled" if is_read_only else "" %}
+{% set vtc_theory_exam_date = session.exam_theory_date or session.exam_date %}
+{% set vtc_practice_exam_date = session.exam_practice_date or session.exam_date %}
 
 <div class="breadcrumbs">
   <a href="{{ url_for('admin_sessions', **request.args) }}">← Retour sessions</a>
@@ -14,10 +16,8 @@
       <span class="pill">{{ training_type_label }}</span>
       <span>Formation : <strong>{{ session.date_start|frdate }}</strong> → <strong>{{ session.date_end|frdate }}</strong></span>
       {% if "VTC" in (session.training_type or "")|upper %}
-        {% set theory_date = session.exam_theory_date or session.exam_date %}
-        {% set practice_date = session.exam_practice_date or session.exam_date %}
-        <span>Examen théorique : <strong>{{ theory_date|frdate }}</strong></span>
-        <span>Examen pratique : <strong>{{ practice_date|frdate }}</strong></span>
+        <span>Examen théorique : <strong>{{ vtc_theory_exam_date|frdate }}</strong></span>
+        <span>Examen pratique : <strong>{{ vtc_practice_exam_date|frdate }}</strong></span>
       {% else %}
         <span>Examen : <strong>{{ session.exam_date|frdate }}</strong></span>
       {% endif %}
@@ -262,7 +262,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         <td>{{ "🟢" if t.exam_fees_paid else "🔴" }}</td>
         <td>{{ "🟢" if (t.elearning_link or "")|trim else "🔴" }}</td>
         <td>{{ "🟢" if (t.vtc_book_sent_at or "")|trim else "🔴" }}</td>
-        <td>
+        <td title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">
           {% if t.vtc_theory_result == "non_admissible" %}
             🔴
           {% elif t.vtc_theory_exam_sent_at %}
@@ -281,7 +281,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           </select>
         </td>
         <td>{{ session.practice_training_date|frdate }}</td>
-        <td>
+        <td title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">
           {% if t.vtc_practice_result == "failed" %}
             🔴
           {% elif t.vtc_practice_result == "success" or t.vtc_practice_exam_sent_at %}
