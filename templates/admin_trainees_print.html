@@ -17,11 +17,26 @@
     th, td { border: 1px solid #d9dfeb; padding: 8px; text-align: left; vertical-align: top; }
     th { background: #f1f4fb; }
     .num { width: 56px; text-align: center; }
+    .actions { width: 44px; text-align: center; }
+    .remove-row {
+      width: 26px;
+      height: 26px;
+      border: 1px solid #d9dfeb;
+      border-radius: 50%;
+      background: #fff;
+      color: #991b1b;
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .remove-row:hover { background: #fee2e2; border-color: #fca5a5; }
+    .empty-row td { text-align: center; color: #4c5567; font-style: italic; }
 
     @media print {
       body { background: #fff; }
       .wrap { max-width: none; margin: 0; padding: 0; }
       .toolbar { display: none !important; }
+      .actions { display: none !important; }
       .sheet { border: 0; border-radius: 0; padding: 0; }
       @page { size: A4 portrait; margin: 12mm; }
     }
@@ -48,26 +63,55 @@
             <th>Prénom</th>
             <th>Email</th>
             <th>Téléphone</th>
+            <th class="actions" aria-label="Retirer"></th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="traineesTableBody">
           {% for t in trainees %}
-          <tr>
+          <tr data-trainee-row>
             <td class="num">{{ loop.index }}</td>
             <td>{{ t.last_name }}</td>
             <td>{{ t.first_name }}</td>
             <td>{{ t.email }}</td>
             <td>{{ t.phone }}</td>
+            <td class="actions">
+              <button type="button" class="remove-row" data-remove-row title="Retirer de l'impression" aria-label="Retirer {{ t.first_name }} {{ t.last_name }}">×</button>
+            </td>
           </tr>
           {% endfor %}
-          {% if not trainees %}
-          <tr>
-            <td colspan="5">Aucun stagiaire pour cette session.</td>
+          <tr id="emptyStateRow" class="empty-row"{% if trainees %} hidden{% endif %}>
+            <td colspan="6">Aucun stagiaire pour cette impression.</td>
           </tr>
-          {% endif %}
         </tbody>
       </table>
     </div>
   </div>
+  <script>
+    (function () {
+      const tbody = document.getElementById("traineesTableBody");
+      const emptyStateRow = document.getElementById("emptyStateRow");
+      if (!tbody || !emptyStateRow) return;
+
+      const updateRows = () => {
+        const rows = Array.from(tbody.querySelectorAll("tr[data-trainee-row]"));
+        rows.forEach((row, idx) => {
+          const numCell = row.querySelector(".num");
+          if (numCell) numCell.textContent = String(idx + 1);
+        });
+        emptyStateRow.hidden = rows.length > 0;
+      };
+
+      tbody.addEventListener("click", (event) => {
+        const btn = event.target.closest("[data-remove-row]");
+        if (!btn) return;
+        const row = btn.closest("tr[data-trainee-row]");
+        if (!row) return;
+        row.remove();
+        updateRows();
+      });
+
+      updateRows();
+    })();
+  </script>
 </body>
 </html>
