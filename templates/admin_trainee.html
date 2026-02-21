@@ -551,7 +551,34 @@
 {% if "VTC" in (session.training_type or "")|upper %}
   {% set vtc_theory_date = session.exam_theory_date or session.exam_date %}
   {% set vtc_practice_training_date = session.practice_training_date or session.exam_practice_date or session.exam_date %}
-  <div class="card" style="margin-top:12px;">
+  <!-- ===================== -->
+  <!-- VISIBILITÉ ESPACE STAGIAIRE -->
+  <!-- ===================== -->
+  {% if is_vtc %}
+  <div class="card" style="grid-column:1 / -1;margin-top:16px;">
+    <div style="font-weight:900;">E-learning candidat</div>
+    <div class="hint" style="margin-top:6px;">
+      Saisissez le lien d'accès à la formation théorique e-learning du stagiaire.
+      Dès qu'un lien est renseigné, un email et un SMS sont envoyés automatiquement.
+    </div>
+    <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">
+      <label class="label" for="editElearningLink">Lien e-learning</label>
+      <input id="editElearningLink"
+             type="url"
+             value="{{ trainee.elearning_link or '' }}"
+             placeholder="https://..."
+             style="width:100%;max-width:840px;"
+             {{ read_only_attr }}>
+      <div id="elearningSaveHint" class="hint" style="margin-top:0;{% if not trainee.elearning_link_sent_at %}display:none;{% endif %}">
+        ✅ Notification e-learning envoyée le <strong>{{ trainee.elearning_link_sent_at|frdatetime }}</strong>
+        {% if trainee.elearning_link_email_ok %}<span style="margin-left:8px;">📧 Email envoyé</span>{% endif %}
+        {% if trainee.elearning_link_sms_ok %}<span style="margin-left:8px;">📱 SMS envoyé</span>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card" style="margin-top:12px;border:1px solid #cbd5e1;">
     <div style="font-weight:900;">STATUT VTC</div>
     <div class="hint" style="margin-top:6px;">Actions de suivi VTC réservées à cette fiche stagiaire.</div>
 
@@ -656,16 +683,40 @@
       {% if trainee.vtc_cm_submitted_at %}
         <div class="hint">Reçu le {{ trainee.vtc_cm_submitted_at|frdatetime }}</div>
       {% endif %}
+
+      {% set auto_disabled = trainee.vtc_cm_reminder_auto_disabled or trainee.vtc_cm_reminder_auto_disabled_at %}
+      {% if trainee.vtc_cm_reminder_sent_at %}
+        <div class="hint" style="margin-top:4px;color:#166534;font-weight:700;">
+          ✅ Relance identifiants envoyée le <strong>{{ trainee.vtc_cm_reminder_sent_at|frdatetime }}</strong>
+        </div>
+      {% elif trainee.vtc_cm_reminder_scheduled_for and not auto_disabled %}
+        <div class="hint" style="margin-top:4px;">
+          ⏳ Relance automatique prévue le <strong>{{ trainee.vtc_cm_reminder_scheduled_for|frdatetime }}</strong>
+        </div>
+      {% elif auto_disabled %}
+        <div class="hint" style="margin-top:4px;">
+          ⏸️ Relance automatique désactivée.
+          {% if trainee.vtc_cm_reminder_auto_disabled_at %}
+            <span>Désactivée le <strong>{{ trainee.vtc_cm_reminder_auto_disabled_at|frdatetime }}</strong>.</span>
+          {% endif %}
+        </div>
+      {% endif %}
+
       {% if trainee.vtc_cm_reminder_sent_at %}
         <div class="hint" style="margin-top:4px;">
-          ⏰ Relance identifiants envoyée le <strong>{{ trainee.vtc_cm_reminder_sent_at|frdatetime }}</strong>
           {% if trainee.vtc_cm_reminder_email_ok %}<span style="margin-left:8px;">📧 Email envoyé</span>{% else %}<span style="margin-left:8px;">📧 Email non envoyé</span>{% endif %}
           {% if trainee.vtc_cm_reminder_sms_ok %}<span style="margin-left:8px;">📱 SMS envoyé</span>{% else %}<span style="margin-left:8px;">📱 SMS non envoyé</span>{% endif %}
         </div>
       {% endif %}
       {% if not is_read_only %}
+      <form method="post" action="{{ url_for('admin_vtc_cmar_reminder_auto', session_id=session.id, trainee_id=trainee.id) }}" style="margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <input type="hidden" name="enabled" value="{% if auto_disabled %}1{% else %}0{% endif %}">
+        <button class="btn btn-outline btn-uniform" type="submit">
+          {% if auto_disabled %}▶️ Réactiver relance auto{% else %}⏸️ Désactiver relance auto{% endif %}
+        </button>
+      </form>
       <form method="post" action="{{ url_for('admin_vtc_cmar_relance', session_id=session.id, trainee_id=trainee.id) }}" style="margin-top:6px;" data-mail-sms-confirm="true">
-        <button class="btn btn-outline btn-uniform" type="submit">🔁 Relance CMAR</button>
+        <button class="btn {% if trainee.vtc_cm_reminder_sent_at %}btn-primary{% else %}btn-outline{% endif %} btn-uniform" type="submit">🔁 Envoyer maintenant</button>
       </form>
       {% endif %}
       <div style="margin-top:6px;">
@@ -689,33 +740,6 @@
     </div>
   </details>
 
-{% endif %}
-
-<!-- ===================== -->
-<!-- VISIBILITÉ ESPACE STAGIAIRE -->
-<!-- ===================== -->
-{% if is_vtc %}
-<div class="card" style="grid-column:1 / -1;">
-  <div style="font-weight:900;">E-learning candidat</div>
-  <div class="hint" style="margin-top:6px;">
-    Saisissez le lien d'accès à la formation théorique e-learning du stagiaire.
-    Dès qu'un lien est renseigné, un email et un SMS sont envoyés automatiquement.
-  </div>
-  <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">
-    <label class="label" for="editElearningLink">Lien e-learning</label>
-    <input id="editElearningLink"
-           type="url"
-           value="{{ trainee.elearning_link or '' }}"
-           placeholder="https://..."
-           style="width:100%;max-width:840px;"
-           {{ read_only_attr }}>
-    <div id="elearningSaveHint" class="hint" style="margin-top:0;{% if not trainee.elearning_link_sent_at %}display:none;{% endif %}">
-      ✅ Notification e-learning envoyée le <strong>{{ trainee.elearning_link_sent_at|frdatetime }}</strong>
-      {% if trainee.elearning_link_email_ok %}<span style="margin-left:8px;">📧 Email envoyé</span>{% endif %}
-      {% if trainee.elearning_link_sms_ok %}<span style="margin-left:8px;">📱 SMS envoyé</span>{% endif %}
-    </div>
-  </div>
-</div>
 {% endif %}
 
 {% if not show_vae %}
@@ -883,10 +907,20 @@
                     onclick="document.getElementById('financementRejectModal').classList.add('show');document.getElementById('financementRejectModal').setAttribute('aria-hidden','false');">
               Prélèvement rejeté
             </button>
+            <button class="btn {% if trainee.financement_pending_notification_sent_at %}btn-secondary{% else %}btn-outline{% endif %}"
+                    type="button"
+                    id="btnSendFinancementPending"
+                    {% if trainee.financement_pending_notification_sent_at %}disabled{% endif %}>
+              Prélèvement en attente
+            </button>
           </div>
         {% endif %}
         <div id="financementRejectedNote" class="hint" style="margin-top:8px;{% if not trainee.financement_rejected_note %}display:none;{% endif %}">
           {{ trainee.financement_rejected_note or "⚠️ Prélèvement rejeté" }}
+        </div>
+        <div id="financementPendingSentAt" class="hint" style="margin-top:4px;{% if not trainee.financement_pending_notification_sent_at %}display:none;{% endif %}">
+          🟧 Prélèvement en attente envoyé le :
+          <strong>{% if trainee.financement_pending_notification_sent_at %}{{ trainee.financement_pending_notification_sent_at[:10]|frdate }}{% endif %}</strong>
         </div>
         {% set financement_ns = namespace(new_date=None) %}
         {% for req in trainee.financement_rejected_requests or [] %}
@@ -1720,6 +1754,8 @@ function updateDocsRelanceState(status, plannedDateIso){
   updateDocsRelanceState("{{ 'complete' if dossier_is_complete else 'incomplete' }}", "{{ trainee.docs_relance_auto_planned_date or '' }}");
 
   const btnOpenFinancementReject = document.getElementById("btnOpenFinancementReject");
+  const btnSendFinancementPending = document.getElementById("btnSendFinancementPending");
+  const financementPendingSentAt = document.getElementById("financementPendingSentAt");
   const financementRejectForm = document.getElementById("financementRejectForm");
   const financementRejectAmount = document.getElementById("financementRejectAmount");
   const financementRejectDate = document.getElementById("financementRejectDate");
@@ -1744,6 +1780,40 @@ function updateDocsRelanceState(status, plannedDateIso){
 
   if(btnOpenFinancementReject){
     btnOpenFinancementReject.addEventListener("click", ()=>openModal("financementRejectModal"));
+  }
+
+  if(btnSendFinancementPending){
+    btnSendFinancementPending.addEventListener("click", async ()=>{
+      if(btnSendFinancementPending.disabled) return;
+      if(!await window.confirmMailSmsSend?.()) return;
+      btnSendFinancementPending.disabled = true;
+      try{
+        const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/financement-en-attente/send`, {
+          method: "POST",
+          headers: {"Content-Type":"application/json"}
+        });
+        const data = await res.json().catch(()=> ({}));
+        if(!res.ok || data.ok === false){
+          throw new Error(data.error || "send_failed");
+        }
+
+        btnSendFinancementPending.classList.remove("btn-outline");
+        btnSendFinancementPending.classList.add("btn-secondary");
+
+        if(financementPendingSentAt){
+          const dateText = data.sent_at_fr || "";
+          financementPendingSentAt.innerHTML = `🟧 Prélèvement en attente envoyé le : <strong>${dateText}</strong>`;
+          financementPendingSentAt.style.display = "block";
+        }
+
+        const emailMsg = data.email_ok ? "Mail envoyé." : "Mail non envoyé (adresse manquante).";
+        const smsMsg = data.sms_ok ? "SMS envoyé." : "SMS non envoyé (numéro manquant).";
+        alert(`Prélèvement en attente : ${emailMsg} ${smsMsg}`);
+      }catch(e){
+        alert("Erreur lors de l'envoi du mail/SMS de prélèvement en attente.");
+        btnSendFinancementPending.disabled = false;
+      }
+    });
   }
 
   if(financementRejectForm){

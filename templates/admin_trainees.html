@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
 {% set read_only_attr = "disabled" if is_read_only else "" %}
+{% set vtc_theory_exam_date = session.exam_theory_date or session.exam_date %}
+{% set vtc_practice_exam_date = session.exam_practice_date or session.exam_date %}
 
 <div class="breadcrumbs">
   <a href="{{ url_for('admin_sessions', **request.args) }}">← Retour sessions</a>
@@ -14,10 +16,8 @@
       <span class="pill">{{ training_type_label }}</span>
       <span>Formation : <strong>{{ session.date_start|frdate }}</strong> → <strong>{{ session.date_end|frdate }}</strong></span>
       {% if "VTC" in (session.training_type or "")|upper %}
-        {% set theory_date = session.exam_theory_date or session.exam_date %}
-        {% set practice_date = session.exam_practice_date or session.exam_date %}
-        <span>Examen théorique : <strong>{{ theory_date|frdate }}</strong></span>
-        <span>Examen pratique : <strong>{{ practice_date|frdate }}</strong></span>
+        <span>Examen théorique : <strong>{{ vtc_theory_exam_date|frdate }}</strong></span>
+        <span>Examen pratique : <strong>{{ vtc_practice_exam_date|frdate }}</strong></span>
       {% else %}
         <span>Examen : <strong>{{ session.exam_date|frdate }}</strong></span>
       {% endif %}
@@ -107,10 +107,10 @@
         <th>Financement</th>
         {% if show_vae %}<th>VAE</th>{% endif %}
         {% if show_vae %}<th>Suivi transmission</th>{% endif %}
-        {% if not is_vtc and not show_vae %}<th>Test Français</th>{% endif %}
+        {% if not is_vtc and not show_vae and not is_dirigeant %}<th>Test Français</th>{% endif %}
         {% if not is_vtc %}<th>Dossier</th>{% endif %}
         {% if not is_vtc %}<th>Dossier complet</th>{% endif %}
-        {% if not is_vtc and not show_vae %}<th>CNAPS</th>{% endif %}
+        {% if not is_vtc and not show_vae and not is_dirigeant %}<th>CNAPS</th>{% endif %}
         {% if is_vtc %}<th>Inscription CMAR</th>{% endif %}
         {% if is_vtc %}<th>E-learning</th>{% endif %}
         {% if is_vtc %}<th>Livre</th>{% endif %}
@@ -214,7 +214,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 </td>
 {% endif %}
 
-{% if not is_vtc and not show_vae %}
+{% if not is_vtc and not show_vae and not is_dirigeant %}
 <td>
   <select class="status sel status-dot" data-field="test_fr_status" {{ read_only_attr }}>
     <option value="soon" {% if t.test_fr_status=="soon" or not t.test_fr_status %}selected{% endif %}>🟠</option>
@@ -249,7 +249,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         </td>
         {% endif %}
 
-        {% if not is_vtc and not show_vae %}
+        {% if not is_vtc and not show_vae and not is_dirigeant %}
         <td>
           <div class="inline">
             <span class="cnaps" data-cnaps>{{ t.cnaps or "INCONNU" }}</span>
@@ -264,11 +264,11 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         <td>{{ "🟢" if (t.vtc_book_sent_at or "")|trim else "🔴" }}</td>
         <td>
           {% if t.vtc_theory_result == "non_admissible" %}
-            🔴
+            <span title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">🔴</span>
           {% elif t.vtc_theory_exam_sent_at %}
-            🟢
+            <span title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">🟢</span>
           {% else %}
-            🟡
+            <span title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">🟡</span>
           {% endif %}
         </td>
         <td>
@@ -283,11 +283,11 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         <td>{{ session.practice_training_date|frdate }}</td>
         <td>
           {% if t.vtc_practice_result == "failed" %}
-            🔴
+            <span title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">🔴</span>
           {% elif t.vtc_practice_result == "success" or t.vtc_practice_exam_sent_at %}
-            🟢
+            <span title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">🟢</span>
           {% else %}
-            🟡
+            <span title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">🟡</span>
           {% endif %}
         </td>
         {% endif %}
