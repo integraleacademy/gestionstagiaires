@@ -1640,6 +1640,185 @@ def _send_vtc_credentials_missing_reminders(data: Dict[str, Any]) -> bool:
 
     return changed
 
+
+def _session_start_date(session_obj: Dict[str, Any]) -> Optional[datetime.date]:
+    raw = (_session_get(session_obj, "date_start", "") or "").strip()
+    if not raw:
+        return None
+    try:
+        return datetime.datetime.strptime(raw[:10], "%Y-%m-%d").date()
+    except Exception:
+        return None
+
+
+def _docs_relance_planned_date(session_obj: Dict[str, Any]) -> Optional[datetime.date]:
+    start_date = _session_start_date(session_obj)
+    if not start_date:
+        return None
+    return start_date - datetime.timedelta(days=15)
+
+
+def _send_docs_relance_message(
+    data: Dict[str, Any],
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    *,
+    source: str,
+) -> Dict[str, Any]:
+    link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{trainee.get('public_token','')}"
+    training_type = _session_get(session_obj, "training_type", "")
+    ensure_documents_schema_for_trainee(trainee, training_type)
+
+    docs_details = docs_summary_text(
+        trainee,
+        allowed_statuses={
+            "A CONTRÔLER",
+            "A CONTROLER",
+            "NON CONFORME",
+            "NON_CONFORME",
+            "NON DÉPOSÉ",
+            "NON DEPOSE",
+            "NON_DEPOSE",
+        },
+    )
+    infos_details = infos_missing_text(trainee)
+
+    formation_type = formation_label(_session_get(session_obj, "training_type", ""))
+    dstart = fr_date(_session_get(session_obj, "date_start", ""))
+    dend = fr_date(_session_get(session_obj, "date_end", ""))
+
+    first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
+
+    subject = "Relance : Dossier Formation incomplet"
+
+    html = mail_layout(f"""
+      <h2 style="text-align:center;color:#b91c1c">⏰ Relance – Votre Dossier Formation est incomplet</h2>
+
+      <p>Bonjour <strong>{first_name}</strong>,</p>
+
+      <p>
+        Nous revenons vers vous concernant votre inscription en formation
+        <strong>{formation_type}</strong> (du <strong>{dstart}</strong> au <strong>{dend}</strong>).
+      </p>
+
+      <p>
+        À ce jour, votre dossier est INCOMPLET (éléments manquants et/ou à corriger).
+        Merci de déposer les éléments nécessaires dès que possible via votre espace stagiaire.
+      </p>
+
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px;margin:16px 0">
+        <p style="margin:0 0 10px 0"><strong>📌 Votre dossier détaillé :</strong></p>
+       <pre style="white-space:pre-wrap;background:#fff;border:1px solid #fee2e2;padding:10px;border-radius:10px;margin:0">{docs_details or "Aucun document en attente."}</pre>
+
+    <p style="margin:14px 0 10px 0"><strong>🧾 Informations à compléter :</strong></p>
+    <pre style="white-space:pre-wrap;background:#fff;border:1px solid #fee2e2;padding:10px;border-radius:10px;margin:0">{infos_details or "Aucune information manquante."}</pre>
+
+        <p style="margin:12px 0 0 0">
+          <strong>📍 Informations à compléter et Dépôt des documents :</strong><br>
+          <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
+        </p>
+
+        <p style="margin:10px 0 0 0;color:#b91c1c;font-weight:bold">
+          ⚠️ Nous vous remercions de bien vouloir compléter votre dossier dès que possible !
+        </p>
+      </div>
+
+      <p style="margin-top:22px">
+        Si vous avez la moindre difficulté, contactez-nous au <strong>04 22 47 07 68</strong>.
+      </p>
+
+      <p style="margin-top:22px">
+        Merci par avance,<br>
+        <strong>Clément VAILLANT</strong><br>
+        Directeur Intégrale Academy
+      </p>
+
+      <p style="text-align:center;margin-top:18px">
+        <a href="{link}"
+           style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+          👉 Accéder à mon espace stagiaire
+        </a>
+      </p>
+    """)
+
+    sms = (
+        f"Intégrale Academy ⏰ Relance : Bonjour {trainee.get('first_name','')}, "
+        f"Nous revenons vers vous au sujet de votre formation {formation_type}. A ce jour votre Dossier Formation est INCOMPLET. Votre formation approche, et pour un meilleur suivi de votre inscription, nous vous remercions de bien vouloir compléter votre dossier dès que possible. "
+        f"Pour rappel, votre dossier doit être COMPLET au plus tard 10 jours avant votre entrée en formation. Vous pouvez compléter votre dossier en cliquant ici : {link} "
+        f"Besoin d’aide ? 04 22 47 07 68"
+    )
+
+    email_ok = brevo_send_email(trainee.get("email", ""), subject, html)
+    sms_ok = brevo_send_sms(trainee.get("phone", ""), sms)
+
+    sent_at = _now_iso()
+    trainee["docs_last_relance_at"] = sent_at
+    trainee["updated_at"] = sent_at
+    trainee["docs_relance_auto_planned_date"] = ""
+    if source == "auto":
+        trainee["docs_relance_auto_sent_at"] = sent_at
+
+    trainee_display_name = _format_trainee_name(trainee.get("first_name", ""), trainee.get("last_name", ""))
+    formation_label_text = formation_label(_session_get(session_obj, "training_type", ""))
+    add_notification(
+        data,
+        "notifications_phone_relances",
+        f"{trainee_display_name} • {formation_label_text}",
+        meta={
+            "first_name": (trainee.get("first_name") or "").strip(),
+            "last_name": (trainee.get("last_name") or "").strip(),
+            "training": formation_label_text,
+            "phone": (trainee.get("phone") or "").strip(),
+            "email": (trainee.get("email") or "").strip(),
+            "session_id": session_obj.get("id"),
+            "trainee_id": trainee.get("id"),
+            "call_status": "À appeler",
+            "no_answer_count": 0,
+            "source": f"docs_relance_{source}",
+        },
+    )
+
+    return {"email_ok": bool(email_ok), "sms_ok": bool(sms_ok)}
+
+
+def _send_docs_relance_reminders(data: Dict[str, Any]) -> bool:
+    changed = False
+    today = datetime.date.today()
+
+    for session_obj in (data.get("sessions") or []):
+        if session_obj.get("archived"):
+            continue
+        planned_date = _docs_relance_planned_date(session_obj)
+        planned_date_iso = planned_date.isoformat() if planned_date else ""
+
+        trainees = _session_trainees_list(session_obj)
+        for trainee in trainees:
+            training_type = _session_get(session_obj, "training_type", "")
+            dossier_complete = dossier_is_complete_total(trainee, training_type)
+
+            if trainee.get("docs_relance_auto_planned_date") != planned_date_iso:
+                trainee["docs_relance_auto_planned_date"] = planned_date_iso
+                changed = True
+
+            if dossier_complete:
+                if trainee.get("docs_relance_auto_planned_date"):
+                    trainee["docs_relance_auto_planned_date"] = ""
+                    changed = True
+                continue
+
+            if not planned_date or today < planned_date:
+                continue
+            if (trainee.get("docs_relance_auto_sent_at") or "").strip():
+                continue
+
+            _send_docs_relance_message(data, session_obj, trainee, source="auto")
+            changed = True
+
+        session_obj["trainees"] = trainees
+        session_obj.pop("stagiaires", None)
+
+    return changed
+
 # =========================
 # Helpers
 # =========================
@@ -1870,6 +2049,9 @@ def load_data() -> Dict[str, Any]:
             changed = True
 
         if _send_vae_relance_reminders(data):
+            changed = True
+
+        if _send_docs_relance_reminders(data):
             changed = True
 
         if _inject_vtc_exam_results_notifications(data):
@@ -5761,12 +5943,18 @@ def api_update_trainee(session_id: str, trainee_id: str):
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     training_type = _session_get(s, "training_type", "")
-    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+    dossier_complete = dossier_is_complete_total(t, training_type)
+    t["dossier_status"] = "complete" if dossier_complete else "incomplete"
+    planned = _docs_relance_planned_date(s)
+    t["docs_relance_auto_planned_date"] = "" if dossier_complete else (planned.isoformat() if planned else "")
+    if dossier_complete:
+        t["docs_relance_auto_sent_at"] = ""
     save_data(data)
     return jsonify({
         "ok": True,
         "dossier_status": t.get("dossier_status"),
         "force_dossier_complete": bool(t.get("force_dossier_complete")),
+        "docs_relance_auto_planned_date": t.get("docs_relance_auto_planned_date") or "",
         "elearning_link_sent_at": t.get("elearning_link_sent_at") or "",
         "elearning_link_email_ok": bool(t.get("elearning_link_email_ok")),
         "elearning_link_sms_ok": bool(t.get("elearning_link_sms_ok")),
@@ -7851,94 +8039,7 @@ def admin_docs_relance(session_id: str, trainee_id: str):
     if not t:
         abort(404)
 
-    link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
-    training_type = _session_get(s, "training_type", "")
-    ensure_documents_schema_for_trainee(t, training_type)
-    
-    docs_details = docs_summary_text(
-        t,
-        allowed_statuses={
-            "A CONTRÔLER",
-            "A CONTROLER",
-            "NON CONFORME",
-            "NON_CONFORME",
-            "NON DÉPOSÉ",
-            "NON DEPOSE",
-            "NON_DEPOSE",
-        },
-    )
-    infos_details = infos_missing_text(t)
-
-    formation_type = formation_label(_session_get(s, "training_type", ""))
-    dstart = fr_date(_session_get(s, "date_start", ""))
-    dend = fr_date(_session_get(s, "date_end", ""))
-
-    first_name = (t.get("first_name") or "").strip() or "Madame, Monsieur"
-
-    subject = "Relance : Dossier Formation incomplet"
-
-    html = mail_layout(f"""
-      <h2 style="text-align:center;color:#b91c1c">⏰ Relance – Votre Dossier Formation est incomplet</h2>
-
-      <p>Bonjour <strong>{first_name}</strong>,</p>
-
-      <p>
-        Nous revenons vers vous concernant votre inscription en formation
-        <strong>{formation_type}</strong> (du <strong>{dstart}</strong> au <strong>{dend}</strong>).
-      </p>
-
-      <p>
-        À ce jour, votre dossier est INCOMPLET (éléments manquants et/ou à corriger).
-        Merci de déposer les éléments nécessaires dès que possible via votre espace stagiaire.
-      </p>
-
-      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px;margin:16px 0">
-        <p style="margin:0 0 10px 0"><strong>📌 Votre dossier détaillé :</strong></p>
-       <pre style="white-space:pre-wrap;background:#fff;border:1px solid #fee2e2;padding:10px;border-radius:10px;margin:0">{docs_details or "Aucun document en attente."}</pre>
-
-    <p style="margin:14px 0 10px 0"><strong>🧾 Informations à compléter :</strong></p>
-    <pre style="white-space:pre-wrap;background:#fff;border:1px solid #fee2e2;padding:10px;border-radius:10px;margin:0">{infos_details or "Aucune information manquante."}</pre>
-
-        <p style="margin:12px 0 0 0">
-          <strong>📍 Informations à compléter et Dépôt des documents :</strong><br>
-          <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
-        </p>
-
-        <p style="margin:10px 0 0 0;color:#b91c1c;font-weight:bold">
-          ⚠️ Nous vous remercions de bien vouloir compléter votre dossier dès que possible !
-        </p>
-      </div>
-
-      <p style="margin-top:22px">
-        Si vous avez la moindre difficulté, contactez-nous au <strong>04 22 47 07 68</strong>.
-      </p>
-
-      <p style="margin-top:22px">
-        Merci par avance,<br>
-        <strong>Clément VAILLANT</strong><br>
-        Directeur Intégrale Academy
-      </p>
-
-      <p style="text-align:center;margin-top:18px">
-        <a href="{link}"
-           style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
-          👉 Accéder à mon espace stagiaire
-        </a>
-      </p>
-    """)
-
-    sms = (
-        f"Intégrale Academy ⏰ Relance : Bonjour {t.get('first_name','')}, "
-        f"Nous revenons vers vous au sujet de votre formation {formation_type}. A ce jour votre Dossier Formation est INCOMPLET. Votre formation approche, et pour un meilleur suivi de votre inscription, nous vous remercions de bien vouloir compléter votre dossier dès que possible. "
-        f"Pour rappel, votre dossier doit être COMPLET au plus tard 10 jours avant votre entrée en formation. Vous pouvez compléter votre dossier en cliquant ici : {link} "
-        f"Besoin d’aide ? 04 22 47 07 68"
-    )
-
-    brevo_send_email(t.get("email", ""), subject, html)
-    brevo_send_sms(t.get("phone", ""), sms)
-
-    t["docs_last_relance_at"] = _now_iso()
-    t["updated_at"] = _now_iso()
+    _send_docs_relance_message(data, s, t, source="manual")
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
@@ -8033,7 +8134,12 @@ def api_docs_update(session_id: str, trainee_id: str):
 
     # ✅ Synchronisation automatique du statut dossier
     training_type = _session_get(s, "training_type", "")
-    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+    dossier_complete = dossier_is_complete_total(t, training_type)
+    t["dossier_status"] = "complete" if dossier_complete else "incomplete"
+    planned = _docs_relance_planned_date(s)
+    t["docs_relance_auto_planned_date"] = "" if dossier_complete else (planned.isoformat() if planned else "")
+    if dossier_complete:
+        t["docs_relance_auto_sent_at"] = ""
 
     # ✅ PERSISTENCE (sinon ça se perd au refresh)
     s["trainees"] = trainees
@@ -8042,8 +8148,9 @@ def api_docs_update(session_id: str, trainee_id: str):
 
     return jsonify({
         "ok": True,
-        "dossier_is_complete": dossier_is_complete_total(t, training_type),
-        "dossier_status": t["dossier_status"]
+        "dossier_is_complete": dossier_complete,
+        "dossier_status": t["dossier_status"],
+        "docs_relance_auto_planned_date": t.get("docs_relance_auto_planned_date") or "",
     })
 
 # =========================
@@ -9216,6 +9323,10 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     # ✅ dossier_status cohérent avec les docs requis
     dossier_complete = dossier_is_complete_total(t, training_type)
     t["dossier_status"] = "complete" if dossier_complete else "incomplete"
+    planned_relance_date = _docs_relance_planned_date(s)
+    t["docs_relance_auto_planned_date"] = "" if dossier_complete else (planned_relance_date.isoformat() if planned_relance_date else "")
+    if dossier_complete:
+        t["docs_relance_auto_sent_at"] = ""
     t["updated_at"] = _now_iso()
     ensure_cnaps_history(t)
 
@@ -9257,6 +9368,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         PUBLIC_STUDENT_PORTAL_BASE=PUBLIC_STUDENT_PORTAL_BASE,
         fr_date=fr_date,
         brevo_no_credit_notice=brevo_no_credit_notice,
+        docs_relance_planned_fr=fr_date(t.get("docs_relance_auto_planned_date") or ""),
     )
 
 

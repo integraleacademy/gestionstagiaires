@@ -1242,7 +1242,12 @@
     </form>
 
     <form method="post" action="{{ url_for('admin_docs_relance', session_id=session.id, trainee_id=trainee.id) }}" data-mail-sms-confirm="true">
-      <button class="btn btn-outline btn-uniform" type="submit">🔁 Relance stagiaire</button>
+      <button id="btnDocsRelance"
+              class="btn btn-outline btn-uniform {% if dossier_is_complete %}btn-disabled-muted{% endif %}"
+              type="submit"
+              {% if dossier_is_complete %}disabled{% endif %}>
+        🔁 Relance stagiaire
+      </button>
     </form>
   {% endif %}
 
@@ -1260,6 +1265,11 @@
     {% endif %}
     {% if trainee.docs_last_relance_at %}
       <div class="hint">🟧 Stagiaire relancé le : <strong>{{ trainee.docs_last_relance_at|frdatetime }}</strong></div>
+    {% endif %}
+    {% if docs_relance_planned_fr %}
+      <div class="hint">⏰ Relance stagiaire prévue le : <strong id="docsRelancePlannedDate">{{ docs_relance_planned_fr }}</strong></div>
+    {% else %}
+      <div class="hint" id="docsRelancePlannedHint" style="display:none;">⏰ Relance stagiaire prévue le : <strong id="docsRelancePlannedDate"></strong></div>
     {% endif %}
 
     <div class="table-wrap" style="margin-top:10px;">
@@ -1654,6 +1664,33 @@ function setDossierPill(status){
   pill.textContent = isComplete ? "DOSSIER COMPLET" : "DOSSIER INCOMPLET";
 }
 
+function formatIsoDateFr(isoDate){
+  const raw = (isoDate || "").toString().trim();
+  if(!raw) return "";
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return raw;
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
+function updateDocsRelanceState(status, plannedDateIso){
+  const btn = document.getElementById("btnDocsRelance");
+  const isComplete = status === "complete";
+  if(btn){
+    btn.disabled = isComplete;
+    btn.classList.toggle("btn-disabled-muted", isComplete);
+  }
+
+  const hint = document.getElementById("docsRelancePlannedHint");
+  const dateEl = document.getElementById("docsRelancePlannedDate");
+  if(dateEl){
+    const formatted = formatIsoDateFr(plannedDateIso);
+    dateEl.textContent = formatted;
+    if(hint){
+      hint.style.display = formatted ? "" : "none";
+    }
+  }
+}
+
   // util modal (si ton base.html fournit déjà openModal/closeModal, ça marchera aussi)
   function openModal(id){ document.getElementById(id).setAttribute("aria-hidden","false"); document.getElementById(id).classList.add("show"); }
   function closeModal(id){ document.getElementById(id).setAttribute("aria-hidden","true"); document.getElementById(id).classList.remove("show"); }
@@ -1679,6 +1716,8 @@ function setDossierPill(status){
   if(brevoNoCreditNotice && Object.keys(brevoNoCreditNotice).length){
     openModal("brevoCreditModal");
   }
+
+  updateDocsRelanceState("{{ 'complete' if dossier_is_complete else 'incomplete' }}", "{{ trainee.docs_relance_auto_planned_date or '' }}");
 
   const btnOpenFinancementReject = document.getElementById("btnOpenFinancementReject");
   const financementRejectForm = document.getElementById("financementRejectForm");
@@ -1923,8 +1962,10 @@ function setDossierPill(status){
         }
         if(data?.dossier_status){
           setDossierPill(data.dossier_status);
+          updateDocsRelanceState(data.dossier_status, data.docs_relance_auto_planned_date || "");
         }else{
           setDossierPill(value ? "complete" : "incomplete");
+          updateDocsRelanceState(value ? "complete" : "incomplete", "");
         }
       }catch(e){
         forceDossierCheckbox.checked = !value;
@@ -1952,6 +1993,7 @@ function setDossierPill(status){
         }
         if(data?.dossier_status){
           setDossierPill(data.dossier_status);
+          updateDocsRelanceState(data.dossier_status, data.docs_relance_auto_planned_date || "");
         }
         return data;
       }
