@@ -185,6 +185,24 @@
   .dashboard-card--dirigeant{ background:#ffedd5; color:#c2410c; }
   .dashboard-card--vae{ background:#ffedd5; color:#c2410c; }
   .dashboard-card--a3p{ background:#dcfce7; color:#15803d; }
+  .session-name-editable{
+    cursor:text;
+    border-radius:6px;
+    padding:2px 4px;
+    margin:-2px -4px;
+    transition:background .2s ease;
+  }
+  .session-name-editable:hover{ background:#eef2ff; }
+  .session-name-input{
+    width:min(100%, 360px);
+    font-size:18px;
+    font-weight:900;
+    border:1px solid #cbd5e1;
+    border-radius:8px;
+    padding:4px 8px;
+    outline:none;
+  }
+  .session-name-input:focus{ border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
   .vtc-check-upload{
     display:flex;
     justify-content:center;
@@ -407,7 +425,12 @@
   <div class="card session-card session-card--{{ s.status_key }} training-{{ s.training_type_class }}">
     <div class="card-row">
       <div>
-        <div class="card-title">{{ s.name }}</div>
+        <div class="card-title {% if not is_read_only %}session-name-editable{% endif %}"
+             {% if not is_read_only %}
+             data-inline-session-name="{{ s.id }}"
+             data-session-name="{{ s.name }}"
+             title="Cliquer pour modifier le nom"
+             {% endif %}>{{ s.name }}</div>
         <div class="session-tags">
           <span class="pill pill-training">{{ "CHAUFFEUR VTC" if (s.training_type or "")|upper == "VTC" else s.training_type }}</span>
           <span class="pill pill-status pill-status--{{ s.status_key }}">{{ s.status_label }}</span>
@@ -1111,6 +1134,75 @@
     }finally{
       btn.disabled = false;
     }
+  });
+
+  // inline rename session
+  document.querySelectorAll("[data-inline-session-name]").forEach((titleEl)=>{
+    titleEl.addEventListener("click", ()=>{
+      if(titleEl.querySelector("input")) return;
+
+      const sessionId = titleEl.getAttribute("data-inline-session-name");
+      const previousName = titleEl.getAttribute("data-session-name") || titleEl.textContent.trim();
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "session-name-input";
+      input.value = previousName;
+
+      const stopEdit = (nextName = previousName)=>{
+        titleEl.textContent = nextName;
+        titleEl.setAttribute("data-session-name", nextName);
+      };
+
+      const cancelEdit = ()=> stopEdit(previousName);
+
+      const saveEdit = async ()=>{
+        const nextName = (input.value || "").trim();
+        if(!nextName){
+          alert("Le nom de la session est obligatoire");
+          input.focus();
+          return;
+        }
+        if(nextName === previousName){
+          stopEdit(previousName);
+          return;
+        }
+        input.disabled = true;
+        try{
+          const r = await fetch(`/api/sessions/${sessionId}/update`, {
+            method:"POST",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({ name: nextName })
+          });
+          const res = await r.json();
+          if(!r.ok || !res.ok){
+            alert("Impossible de modifier le nom de la session");
+            cancelEdit();
+            return;
+          }
+          stopEdit(nextName);
+        }catch(e){
+          alert("Erreur réseau");
+          cancelEdit();
+        }
+      };
+
+      input.addEventListener("keydown", (event)=>{
+        if(event.key === "Enter"){
+          event.preventDefault();
+          saveEdit();
+        }
+        if(event.key === "Escape"){
+          event.preventDefault();
+          cancelEdit();
+        }
+      });
+      input.addEventListener("blur", saveEdit, { once:true });
+
+      titleEl.textContent = "";
+      titleEl.appendChild(input);
+      input.focus();
+      input.select();
+    });
   });
 
   // delete session
