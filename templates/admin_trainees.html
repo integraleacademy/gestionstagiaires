@@ -709,13 +709,6 @@ tr.row-todo td{
     el.setAttribute("aria-hidden", "true");
   }
 
-  // (optionnel) fermer en cliquant sur le fond
-  document.querySelectorAll(".modal-backdrop").forEach(bg=>{
-    bg.addEventListener("click", (e)=>{
-      if(e.target === bg) closeModal(bg.id);
-    });
-  });
-
   const btnBulkTestFr = document.getElementById("btnBulkTestFr");
   btnBulkTestFr?.addEventListener("click", ()=>{
     openModal("bulkTestFrModal");

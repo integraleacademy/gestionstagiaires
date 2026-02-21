@@ -299,20 +299,14 @@
       const finish = (ok)=>{
         yesBtn.removeEventListener("click", onYes);
         noBtn.removeEventListener("click", onNo);
-        modal.removeEventListener("click", onBackdropClick);
-        document.removeEventListener("keydown", onEsc);
         closeModal("mailSmsConfirmModal");
         resolve(ok);
       };
       const onYes = ()=>finish(true);
       const onNo = ()=>finish(false);
-      const onBackdropClick = (e)=>{ if(e.target === modal) finish(false); };
-      const onEsc = (e)=>{ if(e.key === "Escape") finish(false); };
 
       yesBtn.addEventListener("click", onYes);
       noBtn.addEventListener("click", onNo);
-      modal.addEventListener("click", onBackdropClick);
-      document.addEventListener("keydown", onEsc);
       openModal("mailSmsConfirmModal");
     });
   }
@@ -332,11 +326,6 @@
     if(closeBtn){
       closeModal(closeBtn.getAttribute("data-close-modal"));
       return;
-    }
-
-    const backdrop = e.target.closest?.(".modal-backdrop");
-    if(backdrop && e.target === backdrop){
-      closeModal(backdrop.id);
     }
   });
 
