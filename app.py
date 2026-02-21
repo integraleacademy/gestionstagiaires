@@ -200,13 +200,17 @@ def history_datetime(value: str) -> str:
     normalized = s.replace("Z", "+00:00")
     try:
         dt = datetime.datetime.fromisoformat(normalized)
-        return dt.strftime("%d/%m/%Y %H:%M")
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
+        dt = dt.astimezone(ZoneInfo("Europe/Paris"))
+        return dt.strftime("%d/%m/%Y %Hh%M")
     except Exception:
         pass
     for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
         try:
             dt = datetime.datetime.strptime(s[:26], fmt)
-            return dt.strftime("%d/%m/%Y %H:%M")
+            dt = dt.replace(tzinfo=datetime.timezone.utc).astimezone(ZoneInfo("Europe/Paris"))
+            return dt.strftime("%d/%m/%Y %Hh%M")
         except Exception:
             pass
     return fr_date(s)
@@ -2053,6 +2057,32 @@ def _history_sort_key(value: str) -> float:
     return 0.0
 
 
+def _history_kind_from_text(raw: str) -> str:
+    source = (raw or "").upper()
+    if "SMS" in source:
+        return "sms"
+    if "MAIL" in source or "EMAIL" in source:
+        return "mail"
+    if "APPEL" in source or "RÉPONSE SECRÉTAIRE" in source or "REPONSE SECRETAIRE" in source:
+        return "appel"
+    if "RELANCE" in source:
+        return "relance"
+    return "action"
+
+
+def append_trainee_history_event(trainee: Dict[str, Any], label: str, details: str = "", kind: str = "action", at: Optional[str] = None) -> None:
+    history = trainee.get("activity_history")
+    if not isinstance(history, list):
+        history = []
+    history.insert(0, {
+        "label": (label or "Action").strip(),
+        "details": (details or "").strip(),
+        "kind": (kind or "action").strip().lower(),
+        "at": (at or _now_iso()).strip(),
+    })
+    trainee["activity_history"] = history[:1000]
+
+
 def build_trainee_history_entries(trainee: Dict[str, Any]) -> List[Dict[str, str]]:
     entries: List[Dict[str, str]] = []
 
@@ -2086,28 +2116,56 @@ def build_trainee_history_entries(trainee: Dict[str, Any]) -> List[Dict[str, str
         ("cnaps_pre_relance_last_sent_at", "Relance PRE envoyée", "relance"),
         ("elearning_link_sent_at", "Lien e-learning envoyé", "mail"),
         ("vtc_cm_reminder_sent_at", "Relance identifiants VTC envoyée", "relance"),
+        ("public_last_login_at", "Connexion espace stagiaire", "action"),
+        ("etiquette_word_downloaded_at", "Étiquette Word téléchargée", "action"),
+        ("created_at", "Dossier créé", "action"),
     ]
     for field_name, label, kind in field_events:
         _add(kind, label, trainee.get(field_name) or "")
+
+    for field_name, value in trainee.items():
+        if not (isinstance(field_name, str) and field_name.endswith("_at") and isinstance(value, str)):
+            continue
+        if field_name in {x[0] for x in field_events}:
+            continue
+        if not value.strip():
+            continue
+        auto_label = field_name[:-3].replace("_", " ").strip().capitalize()
+        _add(_history_kind_from_text(field_name), auto_label, value)
 
     for followup in (trainee.get("phone_followups") or []):
         event_type = (followup.get("type") or "Suivi").strip()
         details = (followup.get("details") or "").strip()
         comment = (followup.get("comment") or "").strip()
-
-        source_text = f"{event_type} {details}".upper()
-        kind = "action"
-        if "SMS" in source_text:
-            kind = "sms"
-        elif "MAIL" in source_text:
-            kind = "mail"
-        elif "APPEL" in source_text or "RÉPONSE SECRÉTAIRE" in source_text or "REPONSE SECRETAIRE" in source_text:
-            kind = "appel"
-        elif "RELANCE" in source_text:
-            kind = "relance"
-
         full_details = " · ".join([chunk for chunk in (details, comment) if chunk])
-        _add(kind, event_type, followup.get("at") or "", full_details)
+        _add(_history_kind_from_text(f"{event_type} {details}"), event_type, followup.get("at") or "", full_details)
+
+    for doc in (trainee.get("documents") or []):
+        label = (doc.get("label") or "Document").strip()
+        status = (doc.get("status") or "").strip()
+        comment = (doc.get("comment") or "").strip()
+        files = [x for x in (doc.get("files") or []) if x]
+        if not files and (doc.get("file") or "").strip():
+            files = [(doc.get("file") or "").strip()]
+        details = []
+        if status:
+            details.append(f"Statut actuel : {status}")
+        if files:
+            details.append(f"Fichiers : {len(files)}")
+        if comment:
+            details.append(f"Commentaire : {comment}")
+        if details:
+            _add("action", f"Document · {label}", trainee.get("updated_at") or trainee.get("created_at") or "", " · ".join(details))
+
+    for item in (trainee.get("activity_history") or []):
+        if not isinstance(item, dict):
+            continue
+        _add(
+            (item.get("kind") or "action").strip().lower(),
+            (item.get("label") or "Action").strip(),
+            (item.get("at") or "").strip(),
+            (item.get("details") or "").strip(),
+        )
 
     entries.sort(key=lambda item: _history_sort_key(item.get("at") or ""), reverse=True)
     return entries
@@ -5909,6 +5967,7 @@ def api_send_cnaps_pre_relance(session_id: str, trainee_id: str):
 
     t["cnaps_pre_relance_last_sent_at"] = _now_iso()
     t["updated_at"] = _now_iso()
+    append_trainee_history_event(t, "Relance CNAPS PRE", f"Mail: {'oui' if email_ok else 'non'} · SMS: {'oui' if sms_ok else 'non'}", "relance", t["cnaps_pre_relance_last_sent_at"])
 
     first_name = (t.get("first_name") or "").strip()
     last_name = (t.get("last_name") or "").strip()
@@ -6732,6 +6791,7 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
             break
 
     t["updated_at"] = _now_iso()
+    append_trainee_history_event(t, "Document ajouté", f"{doc_key} · fichier ajouté", "action")
 
     # ✅ recalcul dossier_status
     t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
@@ -6798,6 +6858,7 @@ def admin_delete_doc_file(session_id: str, trainee_id: str, doc_key: str):
     # on garde le commentaire (pratique), ou tu peux le vider si tu préfères
 
     t["updated_at"] = _now_iso()
+    append_trainee_history_event(t, "Document supprimé", f"{doc_key} · {len(tokens)} fichier(s) supprimé(s)", "action")
 
     # recalcul dossier_status
     t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
@@ -7178,6 +7239,7 @@ def admin_send_access(session_id: str, trainee_id: str):
         brevo_send_sms(t.get("phone", ""), sms)
 
     t["access_sent_at"] = _now_iso()
+    append_trainee_history_event(t, "Accès espace stagiaire envoyé", "Mail et SMS envoyés", "mail", t["access_sent_at"])
     s["trainees"] = trainees
     save_data(data)
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
@@ -7284,6 +7346,7 @@ def admin_convention_unsigned_notify(session_id: str, trainee_id: str):
 
     t["convention_unsigned_notified_at"] = _now_iso()
     t["updated_at"] = _now_iso()
+    append_trainee_history_event(t, "Relance convention non signée", "Mail + SMS", "relance", t["convention_unsigned_notified_at"])
 
     s["trainees"] = trainees
     save_data(data)
@@ -7504,7 +7567,7 @@ def admin_test_fr_notify(session_id: str, trainee_id: str):
     t["test_fr_deadline"] = deadline
     t[payload["stamp_field"]] = now
     t["updated_at"] = now
-
+    append_trainee_history_event(t, "Test de français envoyé", f"Code : {code} · Date limite : {fr_date(deadline) or deadline}", "mail", now)
 
     s["trainees"] = trainees
     save_data(data)
@@ -7539,6 +7602,7 @@ def admin_test_fr_relance(session_id: str, trainee_id: str):
     t["test_fr_deadline"] = deadline
     t[payload["stamp_field"]] = now
     t["updated_at"] = now
+    append_trainee_history_event(t, "Relance test de français", f"Code : {code} · Date limite : {fr_date(deadline) or deadline}", "relance", now)
 
     add_notification(
         data,
@@ -7590,6 +7654,7 @@ def admin_test_fr_echec(session_id: str, trainee_id: str):
     t[payload["stamp_field"]] = now
     t["test_fr_last_failed_at"] = now
     t["updated_at"] = now
+    append_trainee_history_event(t, "Échec test de français", f"Nouveau lien envoyé · Date limite : {fr_date(deadline) or deadline}", "relance", now)
 
     add_notification(
         data,
@@ -7939,6 +8004,7 @@ def admin_docs_relance(session_id: str, trainee_id: str):
 
     t["docs_last_relance_at"] = _now_iso()
     t["updated_at"] = _now_iso()
+    append_trainee_history_event(t, "Relance dossier envoyée", "Mail + SMS", "relance", t["docs_last_relance_at"])
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
@@ -8030,6 +8096,10 @@ def api_docs_update(session_id: str, trainee_id: str):
             break
 
     t["updated_at"] = _now_iso()
+    if field == "status":
+        append_trainee_history_event(t, "Statut document modifié", f"{doc_key} → {value}", "action")
+    elif field == "comment":
+        append_trainee_history_event(t, "Commentaire document modifié", f"{doc_key}", "action")
 
     # ✅ Synchronisation automatique du statut dossier
     training_type = _session_get(s, "training_type", "")
