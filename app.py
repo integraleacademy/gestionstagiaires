@@ -5951,6 +5951,12 @@ def api_update_session(session_id: str):
         return jsonify({"ok": False, "error": "session_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
+    if "name" in payload:
+        next_name = (payload.get("name") or "").strip()
+        if not next_name:
+            return jsonify({"ok": False, "error": "missing_name"}), 400
+        s["name"] = next_name
+
     for key in (
         "date_start",
         "date_end",
