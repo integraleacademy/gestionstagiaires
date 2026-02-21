@@ -907,7 +907,7 @@
                     onclick="document.getElementById('financementRejectModal').classList.add('show');document.getElementById('financementRejectModal').setAttribute('aria-hidden','false');">
               Prélèvement rejeté
             </button>
-            <button class="btn {% if trainee.financement_pending_notification_sent_at %}btn-secondary{% else %}btn-outline{% endif %}"
+            <button class="btn {% if trainee.financement_pending_notification_sent_at %}btn-disabled-muted{% else %}btn-outline{% endif %}"
                     type="button"
                     id="btnSendFinancementPending"
                     {% if trainee.financement_pending_notification_sent_at %}disabled{% endif %}>
@@ -918,7 +918,7 @@
         <div id="financementRejectedNote" class="hint" style="margin-top:8px;{% if not trainee.financement_rejected_note %}display:none;{% endif %}">
           {{ trainee.financement_rejected_note or "⚠️ Prélèvement rejeté" }}
         </div>
-        <div id="financementPendingSentAt" class="hint" style="margin-top:4px;{% if not trainee.financement_pending_notification_sent_at %}display:none;{% endif %}">
+        <div id="financementPendingSentAt" class="hint" style="margin-top:4px;{% if not trainee.financement_pending_notification_sent_at or fs == 'validated' %}display:none;{% endif %}">
           🟧 Prélèvement en attente envoyé le :
           <strong>{% if trainee.financement_pending_notification_sent_at %}{{ trainee.financement_pending_notification_sent_at[:10]|frdate }}{% endif %}</strong>
         </div>
@@ -1798,7 +1798,7 @@ function updateDocsRelanceState(status, plannedDateIso){
         }
 
         btnSendFinancementPending.classList.remove("btn-outline");
-        btnSendFinancementPending.classList.add("btn-secondary");
+        btnSendFinancementPending.classList.add("btn-disabled-muted");
 
         if(financementPendingSentAt){
           const dateText = data.sent_at_fr || "";
