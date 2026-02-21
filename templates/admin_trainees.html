@@ -97,7 +97,7 @@
     {% endif %}
     <a class="btn btn-outline" id="btnPrintTrainees" href="{{ url_for('admin_trainees_print', session_id=session.id, **request.args) }}" target="_blank" rel="noopener">🖨️ Imprimer la liste</a>
     {% if not is_read_only %}
-      {% if not show_vae and not is_dirigeant %}
+      {% if not is_vtc and not show_vae and not is_dirigeant %}
       <button class="btn btn-outline" id="btnBulkSst">⬇️ Télécharger les SST en masse</button>
       <input id="bulkSstInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
       {% endif %}
