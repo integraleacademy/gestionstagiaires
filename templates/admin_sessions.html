@@ -165,6 +165,26 @@
   .filter-btn--vtc{ background:#f3e8ff; color:#7e22ce; }
   .filter-btn--status{ background:#e5e7eb; color:#374151; }
   .filter-btn--all{ background:#cbd5f5; color:#1e1b4b; }
+  .dashboard-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+    gap:10px;
+    margin-top:12px;
+  }
+  .dashboard-card{
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    padding:12px;
+    color:#111827;
+    background:#f8fafc;
+  }
+  .dashboard-card__label{ font-size:12px; font-weight:800; opacity:.9; }
+  .dashboard-card__count{ font-size:28px; font-weight:900; margin-top:4px; }
+  .dashboard-card--aps{ background:#dbeafe; color:#1d4ed8; }
+  .dashboard-card--vtc{ background:#f3e8ff; color:#7e22ce; }
+  .dashboard-card--dirigeant{ background:#ffedd5; color:#c2410c; }
+  .dashboard-card--vae{ background:#ffedd5; color:#c2410c; }
+  .dashboard-card--a3p{ background:#dcfce7; color:#15803d; }
   .vtc-check-upload{
     display:flex;
     justify-content:center;
@@ -327,6 +347,38 @@
     <span class="muted" id="docsToControlCount">Chargement…</span>
   </div>
 
+</div>
+
+<div class="card" style="margin-bottom:12px;">
+  <div class="card-row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div>
+      <div class="card-title">Tableau de bord stagiaires {{ dashboard_year }}</div>
+      <div class="muted">Comptage automatique du 01/01/{{ dashboard_year }} au 31/12/{{ dashboard_year }}.</div>
+    </div>
+  </div>
+
+  <div class="dashboard-grid" aria-label="Tableau de bord annuel des stagiaires">
+    <div class="dashboard-card dashboard-card--aps">
+      <div class="dashboard-card__label">APS</div>
+      <div class="dashboard-card__count">{{ yearly_training_counts.APS or 0 }}</div>
+    </div>
+    <div class="dashboard-card dashboard-card--vtc">
+      <div class="dashboard-card__label">VTC</div>
+      <div class="dashboard-card__count">{{ yearly_training_counts.VTC or 0 }}</div>
+    </div>
+    <div class="dashboard-card dashboard-card--dirigeant">
+      <div class="dashboard-card__label">DIRIGEANT</div>
+      <div class="dashboard-card__count">{{ yearly_training_counts.DIRIGEANT or 0 }}</div>
+    </div>
+    <div class="dashboard-card dashboard-card--vae">
+      <div class="dashboard-card__label">VAE</div>
+      <div class="dashboard-card__count">{{ yearly_training_counts.VAE or 0 }}</div>
+    </div>
+    <div class="dashboard-card dashboard-card--a3p">
+      <div class="dashboard-card__label">A3P</div>
+      <div class="dashboard-card__count">{{ yearly_training_counts.A3P or 0 }}</div>
+    </div>
+  </div>
 </div>
 
 <div class="card" style="margin-bottom:12px;">
