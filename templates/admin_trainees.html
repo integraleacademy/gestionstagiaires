@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
 {% set read_only_attr = "disabled" if is_read_only else "" %}
+{% set is_vtc_header = "VTC" in (session.training_type or "")|upper %}
 {% set vtc_theory_exam_date = session.exam_theory_date or session.exam_date %}
 {% set vtc_practice_exam_date = session.exam_practice_date or session.exam_date %}
+{% set vtc_practice_training_date = session.practice_training_date or session.exam_practice_date or session.exam_date %}
 
 <div class="breadcrumbs">
   <a href="{{ url_for('admin_sessions', **request.args) }}">← Retour sessions</a>
@@ -30,6 +32,20 @@
       <div class="stat-title">Stagiaires</div>
       <div class="stat-value">{{ stats.total }}</div>
     </div>
+    {% if is_vtc_header %}
+    <div class="stat">
+      <div class="stat-title">Examen théorique</div>
+      <div class="stat-value">{{ vtc_theory_exam_date|frdate }}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-title">Formation pratique</div>
+      <div class="stat-value">{{ vtc_practice_training_date|frdate }}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-title">Examen pratique</div>
+      <div class="stat-value">{{ vtc_practice_exam_date|frdate }}</div>
+    </div>
+    {% else %}
     <div class="stat">
       <div class="stat-title">Conformes</div>
       <div class="stat-value">{{ stats.conform_count }}</div>
@@ -48,6 +64,7 @@
       <div class="stat-title">Session</div>
       <div class="stat-value">{{ "Conforme ✅" if stats.session_is_conform else "Non conforme ❌" }}</div>
     </div>
+    {% endif %}
   </div>
 </div>
 
