@@ -1839,15 +1839,15 @@ def _send_docs_relance_reminders(data: Dict[str, Any]) -> bool:
             training_type = _session_get(session_obj, "training_type", "")
             dossier_complete = dossier_is_complete_total(trainee, training_type)
 
-            if trainee.get("docs_relance_auto_planned_date") != planned_date_iso:
-                trainee["docs_relance_auto_planned_date"] = planned_date_iso
-                changed = True
-
             if dossier_complete:
                 if trainee.get("docs_relance_auto_planned_date"):
                     trainee["docs_relance_auto_planned_date"] = ""
                     changed = True
                 continue
+
+            if trainee.get("docs_relance_auto_planned_date") != planned_date_iso:
+                trainee["docs_relance_auto_planned_date"] = planned_date_iso
+                changed = True
 
             if not planned_date or today < planned_date:
                 continue
