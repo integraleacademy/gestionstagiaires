@@ -5745,11 +5745,9 @@ def admin_trainees(session_id: str):
     show_vae = (session_view["training_type"] == "DIRIGEANT VAE")
     if show_vae:
         for t in trainees:
-            view = vae_status_view(t.get("vae_status") or t.get("vae_status_label"))
-            t["vae_status"] = view["key"]
-            t["vae_status_label"] = view["label"]
             if not isinstance(t.get("vae_action_dates"), dict):
                 t["vae_action_dates"] = {}
+            _sync_vae_status_with_actions(t)
 
     # persist normalized trainees back into storage
     s["trainees"] = trainees
@@ -6221,6 +6219,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
     }
 
     previous_vae_status = vae_status_view(t.get("vae_status"))["key"]
+    vae_fields_changed = any(k in payload for k in ("vae_status", "vae_status_label", "vae_action_dates", "vae_jury_date"))
 
     send_vae_notification = True if payload.get("send_vae_notification", True) in (True, "true", "1", 1, "yes", "on") else False
     send_exam_fees_notification = True if payload.get("send_exam_fees_notification", True) in (True, "true", "1", 1, "yes", "on") else False
@@ -6266,8 +6265,11 @@ def api_update_trainee(session_id: str, trainee_id: str):
         view = vae_status_view(requested_vae)
         t["vae_status"] = view["key"]
         t["vae_status_label"] = view["label"]
-        if view["key"] != previous_vae_status and send_vae_notification:
-            _notify_vae_status_change(t, view["key"])
+
+    _sync_vae_status_with_actions(t)
+    current_vae_status = vae_status_view(t.get("vae_status"))["key"]
+    if vae_fields_changed and current_vae_status != previous_vae_status and send_vae_notification:
+        _notify_vae_status_change(t, current_vae_status)
 
     if (payload.get("financement_status") or "").strip() == "validated":
         t["financement_rejected_note"] = ""
@@ -8639,6 +8641,40 @@ VAE_STATUS_STEPS = {
     "certified": {"label": "Diplôme obtenu", "pill": "green"},
 }
 
+VAE_ACTION_STATUS_ORDER = [
+    ("livret_1_received", "livret_1_analysis"),
+    ("livret_1_validated", "livret_1_validated"),
+    ("financement_validated", "livret_2_todo"),
+    ("livret_2_received", "livret_2_analysis"),
+    ("livret_2_validated", "livret_2_validated"),
+    ("financement_l2_validated", "financement_l2_validated"),
+    ("jury_date", "jury"),
+    ("diplome_obtenu", "certified"),
+]
+VAE_STATUS_RANK = {key: idx for idx, key in enumerate(VAE_STATUS_STEPS.keys())}
+
+
+def _infer_vae_status_from_action_dates(action_dates: Any) -> Optional[str]:
+    if not isinstance(action_dates, dict):
+        return None
+    inferred = None
+    for action_key, status_key in VAE_ACTION_STATUS_ORDER:
+        if action_dates.get(action_key):
+            inferred = status_key
+    return inferred
+
+
+def _sync_vae_status_with_actions(trainee: Dict[str, Any]) -> None:
+    """Maintient un statut VAE cohérent avec la dernière action validée."""
+    current_key = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))["key"]
+    inferred_key = _infer_vae_status_from_action_dates(trainee.get("vae_action_dates"))
+    chosen_key = current_key
+    if inferred_key is not None and VAE_STATUS_RANK.get(inferred_key, -1) > VAE_STATUS_RANK.get(current_key, -1):
+        chosen_key = inferred_key
+    view = vae_status_view(chosen_key)
+    trainee["vae_status"] = view["key"]
+    trainee["vae_status_label"] = view["label"]
+
 
 def vae_status_view(status_key: Optional[str]) -> Dict[str, str]:
     key = (status_key or "").strip()
@@ -9773,10 +9809,9 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     show_vae = (training_type == "DIRIGEANT VAE")
     vae_steps = [{"key": k, "label": v["label"], "pill": v["pill"]} for k, v in VAE_STATUS_STEPS.items()]
     vae_dossier = _vae_find_latest_for_trainee(str(t.get('id') or '')) if show_vae else None
-    t["vae_status"] = vae_status_view(t.get("vae_status") or t.get("vae_status_label"))["key"]
-    t["vae_status_label"] = vae_status_view(t.get("vae_status"))["label"]
     if not isinstance(t.get("vae_action_dates"), dict):
         t["vae_action_dates"] = {}
+    _sync_vae_status_with_actions(t)
     ensure_vae_relances_state(t)
     refresh_vae_relance_schedule(t)
     _refresh_vtc_cm_reminder_schedule(t)
