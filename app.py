@@ -2313,8 +2313,11 @@ def build_trainee_history_entries(trainee: Dict[str, Any]) -> List[Dict[str, str
     for field_name, label, kind in field_events:
         _add(kind, label, trainee.get(field_name) or "")
 
+    auto_history_excluded_fields = {"updated_at"}
     for field_name, value in trainee.items():
         if not (isinstance(field_name, str) and field_name.endswith("_at") and isinstance(value, str)):
+            continue
+        if field_name in auto_history_excluded_fields:
             continue
         if field_name in {x[0] for x in field_events}:
             continue
@@ -2334,6 +2337,12 @@ def build_trainee_history_entries(trainee: Dict[str, Any]) -> List[Dict[str, str
         label = (doc.get("label") or "Document").strip()
         status = (doc.get("status") or "").strip()
         comment = (doc.get("comment") or "").strip()
+        doc_updated_at = (
+            (doc.get("updated_at") or "").strip()
+            or (doc.get("status_updated_at") or "").strip()
+            or (doc.get("comment_updated_at") or "").strip()
+            or (doc.get("files_updated_at") or "").strip()
+        )
         files = [x for x in (doc.get("files") or []) if x]
         if not files and (doc.get("file") or "").strip():
             files = [(doc.get("file") or "").strip()]
@@ -2344,8 +2353,8 @@ def build_trainee_history_entries(trainee: Dict[str, Any]) -> List[Dict[str, str
             details.append(f"Fichiers : {len(files)}")
         if comment:
             details.append(f"Commentaire : {comment}")
-        if details:
-            _add("action", f"Document · {label}", trainee.get("updated_at") or trainee.get("created_at") or "", " · ".join(details))
+        if details and doc_updated_at:
+            _add("action", f"Document · {label}", doc_updated_at, " · ".join(details))
 
     for item in (trainee.get("activity_history") or []):
         if not isinstance(item, dict):
@@ -7066,6 +7075,8 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
 
             d["files"] = cur_files
             d["file"] = cur_files[0] if cur_files else ""
+            d["files_updated_at"] = _now_iso()
+            d["updated_at"] = d["files_updated_at"]
 
             cur = (d.get("status") or "").strip().upper()
             if cur in ("", "NON DÉPOSÉ", "NON DEPOSE", "NON_DEPOSE"):
@@ -7137,6 +7148,8 @@ def admin_delete_doc_file(session_id: str, trainee_id: str, doc_key: str):
     remaining = [x for x in existing_files if x not in tokens]
     target["files"] = remaining
     target["file"] = remaining[0] if remaining else ""
+    target["files_updated_at"] = _now_iso()
+    target["updated_at"] = target["files_updated_at"]
     if not remaining:
         target["status"] = "NON DÉPOSÉ"
     # on garde le commentaire (pratique), ou tu peux le vider si tu préfères
@@ -8377,6 +8390,12 @@ def api_docs_update(session_id: str, trainee_id: str):
     for d in docs:
         if d.get("key") == doc_key:
             d[field] = value
+            doc_now = _now_iso()
+            if field == "status":
+                d["status_updated_at"] = doc_now
+            elif field == "comment":
+                d["comment_updated_at"] = doc_now
+            d["updated_at"] = doc_now
             break
 
     t["updated_at"] = _now_iso()
