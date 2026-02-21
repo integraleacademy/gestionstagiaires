@@ -5174,6 +5174,7 @@ def admin_trainees(session_id: str):
     stats = compute_stats(s)
     show_hosting = (session_view["training_type"] == "A3P")
     is_vtc = ("VTC" in (session_view["training_type"] or "").upper())
+    is_dirigeant = ("DIRIGEANT" in (session_view["training_type"] or "").upper())
 
     # ✅ docs fin de formation par stagiaire (pour surlignage + n/3 + étiquettes)
     for t in trainees:
@@ -5210,6 +5211,7 @@ def admin_trainees(session_id: str):
         show_hosting=show_hosting,
         show_vae=show_vae,
         is_vtc=is_vtc,
+        is_dirigeant=is_dirigeant,
         enums=ENUMS,
     )
 
