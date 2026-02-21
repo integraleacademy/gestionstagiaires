@@ -883,10 +883,20 @@
                     onclick="document.getElementById('financementRejectModal').classList.add('show');document.getElementById('financementRejectModal').setAttribute('aria-hidden','false');">
               Prélèvement rejeté
             </button>
+            <button class="btn {% if trainee.financement_pending_notification_sent_at %}btn-secondary{% else %}btn-outline{% endif %}"
+                    type="button"
+                    id="btnSendFinancementPending"
+                    {% if trainee.financement_pending_notification_sent_at %}disabled{% endif %}>
+              Prélèvement en attente
+            </button>
           </div>
         {% endif %}
         <div id="financementRejectedNote" class="hint" style="margin-top:8px;{% if not trainee.financement_rejected_note %}display:none;{% endif %}">
           {{ trainee.financement_rejected_note or "⚠️ Prélèvement rejeté" }}
+        </div>
+        <div id="financementPendingSentAt" class="hint" style="margin-top:4px;{% if not trainee.financement_pending_notification_sent_at %}display:none;{% endif %}">
+          🟧 Prélèvement en attente envoyé le :
+          <strong>{% if trainee.financement_pending_notification_sent_at %}{{ trainee.financement_pending_notification_sent_at[:10]|frdate }}{% endif %}</strong>
         </div>
         {% set financement_ns = namespace(new_date=None) %}
         {% for req in trainee.financement_rejected_requests or [] %}
@@ -1681,6 +1691,8 @@ function setDossierPill(status){
   }
 
   const btnOpenFinancementReject = document.getElementById("btnOpenFinancementReject");
+  const btnSendFinancementPending = document.getElementById("btnSendFinancementPending");
+  const financementPendingSentAt = document.getElementById("financementPendingSentAt");
   const financementRejectForm = document.getElementById("financementRejectForm");
   const financementRejectAmount = document.getElementById("financementRejectAmount");
   const financementRejectDate = document.getElementById("financementRejectDate");
@@ -1705,6 +1717,40 @@ function setDossierPill(status){
 
   if(btnOpenFinancementReject){
     btnOpenFinancementReject.addEventListener("click", ()=>openModal("financementRejectModal"));
+  }
+
+  if(btnSendFinancementPending){
+    btnSendFinancementPending.addEventListener("click", async ()=>{
+      if(btnSendFinancementPending.disabled) return;
+      if(!await window.confirmMailSmsSend?.()) return;
+      btnSendFinancementPending.disabled = true;
+      try{
+        const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/financement-en-attente/send`, {
+          method: "POST",
+          headers: {"Content-Type":"application/json"}
+        });
+        const data = await res.json().catch(()=> ({}));
+        if(!res.ok || data.ok === false){
+          throw new Error(data.error || "send_failed");
+        }
+
+        btnSendFinancementPending.classList.remove("btn-outline");
+        btnSendFinancementPending.classList.add("btn-secondary");
+
+        if(financementPendingSentAt){
+          const dateText = data.sent_at_fr || "";
+          financementPendingSentAt.innerHTML = `🟧 Prélèvement en attente envoyé le : <strong>${dateText}</strong>`;
+          financementPendingSentAt.style.display = "block";
+        }
+
+        const emailMsg = data.email_ok ? "Mail envoyé." : "Mail non envoyé (adresse manquante).";
+        const smsMsg = data.sms_ok ? "SMS envoyé." : "SMS non envoyé (numéro manquant).";
+        alert(`Prélèvement en attente : ${emailMsg} ${smsMsg}`);
+      }catch(e){
+        alert("Erreur lors de l'envoi du mail/SMS de prélèvement en attente.");
+        btnSendFinancementPending.disabled = false;
+      }
+    });
   }
 
   if(financementRejectForm){
