@@ -551,7 +551,34 @@
 {% if "VTC" in (session.training_type or "")|upper %}
   {% set vtc_theory_date = session.exam_theory_date or session.exam_date %}
   {% set vtc_practice_training_date = session.practice_training_date or session.exam_practice_date or session.exam_date %}
-  <div class="card" style="margin-top:12px;">
+  <!-- ===================== -->
+  <!-- VISIBILITÉ ESPACE STAGIAIRE -->
+  <!-- ===================== -->
+  {% if is_vtc %}
+  <div class="card" style="grid-column:1 / -1;margin-top:16px;">
+    <div style="font-weight:900;">E-learning candidat</div>
+    <div class="hint" style="margin-top:6px;">
+      Saisissez le lien d'accès à la formation théorique e-learning du stagiaire.
+      Dès qu'un lien est renseigné, un email et un SMS sont envoyés automatiquement.
+    </div>
+    <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">
+      <label class="label" for="editElearningLink">Lien e-learning</label>
+      <input id="editElearningLink"
+             type="url"
+             value="{{ trainee.elearning_link or '' }}"
+             placeholder="https://..."
+             style="width:100%;max-width:840px;"
+             {{ read_only_attr }}>
+      <div id="elearningSaveHint" class="hint" style="margin-top:0;{% if not trainee.elearning_link_sent_at %}display:none;{% endif %}">
+        ✅ Notification e-learning envoyée le <strong>{{ trainee.elearning_link_sent_at|frdatetime }}</strong>
+        {% if trainee.elearning_link_email_ok %}<span style="margin-left:8px;">📧 Email envoyé</span>{% endif %}
+        {% if trainee.elearning_link_sms_ok %}<span style="margin-left:8px;">📱 SMS envoyé</span>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card" style="margin-top:12px;border:1px solid #cbd5e1;">
     <div style="font-weight:900;">STATUT VTC</div>
     <div class="hint" style="margin-top:6px;">Actions de suivi VTC réservées à cette fiche stagiaire.</div>
 
@@ -689,33 +716,6 @@
     </div>
   </details>
 
-{% endif %}
-
-<!-- ===================== -->
-<!-- VISIBILITÉ ESPACE STAGIAIRE -->
-<!-- ===================== -->
-{% if is_vtc %}
-<div class="card" style="grid-column:1 / -1;">
-  <div style="font-weight:900;">E-learning candidat</div>
-  <div class="hint" style="margin-top:6px;">
-    Saisissez le lien d'accès à la formation théorique e-learning du stagiaire.
-    Dès qu'un lien est renseigné, un email et un SMS sont envoyés automatiquement.
-  </div>
-  <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px;">
-    <label class="label" for="editElearningLink">Lien e-learning</label>
-    <input id="editElearningLink"
-           type="url"
-           value="{{ trainee.elearning_link or '' }}"
-           placeholder="https://..."
-           style="width:100%;max-width:840px;"
-           {{ read_only_attr }}>
-    <div id="elearningSaveHint" class="hint" style="margin-top:0;{% if not trainee.elearning_link_sent_at %}display:none;{% endif %}">
-      ✅ Notification e-learning envoyée le <strong>{{ trainee.elearning_link_sent_at|frdatetime }}</strong>
-      {% if trainee.elearning_link_email_ok %}<span style="margin-left:8px;">📧 Email envoyé</span>{% endif %}
-      {% if trainee.elearning_link_sms_ok %}<span style="margin-left:8px;">📱 SMS envoyé</span>{% endif %}
-    </div>
-  </div>
-</div>
 {% endif %}
 
 {% if not show_vae %}
