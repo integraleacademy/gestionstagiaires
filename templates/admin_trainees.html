@@ -81,7 +81,7 @@
     {% endif %}
     <a class="btn btn-outline" id="btnPrintTrainees" href="{{ url_for('admin_trainees_print', session_id=session.id, **request.args) }}" target="_blank" rel="noopener">🖨️ Imprimer la liste</a>
     {% if not is_read_only %}
-      {% if not show_vae and not is_vtc %}
+      {% if not show_vae and not is_dirigeant %}
       <button class="btn btn-outline" id="btnBulkSst">⬇️ Télécharger les SST en masse</button>
       <input id="bulkSstInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
       {% endif %}
@@ -90,11 +90,10 @@
         <button class="btn btn-outline" id="btnBulkDiplome">⬇️ Télécharger les Diplômes en masse</button>
         <input id="bulkDiplomeInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
 
-        <button class="btn btn-outline" id="btnBulkAttestation">⬇️ Télécharger les Attestations en masse</button>
-        <input id="bulkAttestationInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
-      {% endif %}
-      {% if not show_vae and not is_vtc %}
-        <button class="btn btn-outline" id="btnBulkTestFr">🔔 Notifier test de français en masse</button>
+      <button class="btn btn-outline" id="btnBulkAttestation">⬇️ Télécharger les Attestations en masse</button>
+      <input id="bulkAttestationInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+      {% if not show_vae and not is_dirigeant %}
+      <button class="btn btn-outline" id="btnBulkTestFr">🔔 Notifier test de français en masse</button>
       {% endif %}
       <button class="btn btn-primary" id="btnOpenCreateTrainee">+ Ajouter un stagiaire</button>
     {% endif %}
