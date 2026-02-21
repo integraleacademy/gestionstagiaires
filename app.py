@@ -2969,17 +2969,24 @@ def _map_hosting_to_enum(v: Optional[str]) -> str:
 # =========================
 
 def trainee_is_conform(t: Dict[str, Any], training_type: str) -> bool:
+    tt = (training_type or "").strip().upper()
+
+    if t.get("dossier_status") != "complete":
+        return False
+
+    # Pour les formations dirigeant (hors VAE), la conformité de session
+    # doit suivre l'état du dossier complet affiché en back-office.
+    if "DIRIGEANT" in tt and tt != "DIRIGEANT VAE":
+        return True
+
     if t.get("convention_status") != "signed":
         return False
     if t.get("test_fr_status") != "validated":
         return False
-    if t.get("dossier_status") != "complete":
-        return False
     if t.get("financement_status") != "validated":
         return False
-    if training_type == "DIRIGEANT VAE":
-        if t.get("vae_status") != "validated":
-            return False
+    if tt == "DIRIGEANT VAE" and t.get("vae_status") != "validated":
+        return False
     return True
 
 
