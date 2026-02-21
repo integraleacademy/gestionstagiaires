@@ -4476,7 +4476,17 @@ def admin_sessions():
         if session_start and dashboard_start <= session_start <= dashboard_end:
             dashboard_label = _dashboard_training_label(_session_get(s, "training_type", ""))
             if dashboard_label:
-                yearly_training_counts[dashboard_label] += len(_session_trainees_list(s))
+                trainees_for_dashboard = _session_trainees_list(s)
+                if dashboard_label == "VAE":
+                    vae_certified_total = 0
+                    for trainee in trainees_for_dashboard:
+                        vae_status_key = (trainee.get("vae_status") or "").strip().lower()
+                        vae_status_label = (trainee.get("vae_status_label") or "").strip().lower()
+                        if vae_status_key == "certified" or "certification obtenue" in vae_status_label:
+                            vae_certified_total += 1
+                    yearly_training_counts[dashboard_label] += vae_certified_total
+                else:
+                    yearly_training_counts[dashboard_label] += len(trainees_for_dashboard)
 
         if bool(s.get("archived")):
             continue
