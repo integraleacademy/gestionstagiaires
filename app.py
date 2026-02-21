@@ -5104,6 +5104,7 @@ def api_secretariat_prelevement_non_valide_result(notification_id: str):
     if outcome == "CALLED" and not comment:
         return jsonify({"ok": False, "error": "comment_required"}), 400
     if outcome == "CALLED" and called_resolution not in (
+        "✅ La personne va valider le mandat de prélèvement",
         "La personne va valider le mandat de prélèvement",
         "Autre",
     ):
