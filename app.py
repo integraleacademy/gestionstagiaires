@@ -4142,7 +4142,46 @@ def public_vae_desp_submit():
 def admin_sessions():
     data = load_data()
     out_sessions = []
+    current_year = datetime.date.today().year
+    dashboard_start = datetime.date(current_year, 1, 1)
+    dashboard_end = datetime.date(current_year, 12, 31)
+    yearly_training_counts = {
+        "APS": 0,
+        "VTC": 0,
+        "DIRIGEANT": 0,
+        "VAE": 0,
+        "A3P": 0,
+    }
+
+    def _dashboard_training_label(training_type: str) -> Optional[str]:
+        raw = (training_type or "").strip().upper()
+        if raw.startswith("APS"):
+            return "APS"
+        if raw.startswith("A3P"):
+            return "A3P"
+        if "VTC" in raw:
+            return "VTC"
+        if raw.startswith("DIRIGEANT") and "VAE" in raw:
+            return "VAE"
+        if raw.startswith("DIRIGEANT"):
+            return "DIRIGEANT"
+        if "VAE" in raw:
+            return "VAE"
+        return None
+
     for s in data.get("sessions", []):
+        try:
+            session_start = datetime.datetime.strptime(
+                (_session_get(s, "date_start", "") or "")[:10], "%Y-%m-%d"
+            ).date()
+        except (ValueError, TypeError):
+            session_start = None
+
+        if session_start and dashboard_start <= session_start <= dashboard_end:
+            dashboard_label = _dashboard_training_label(_session_get(s, "training_type", ""))
+            if dashboard_label:
+                yearly_training_counts[dashboard_label] += len(_session_trainees_list(s))
+
         if bool(s.get("archived")):
             continue
 
@@ -4250,6 +4289,8 @@ def admin_sessions():
         "admin_sessions.html",
         sessions=out_sessions,
         formation_types=FORMATION_TYPES,
+        dashboard_year=current_year,
+        yearly_training_counts=yearly_training_counts,
     )
 
 
