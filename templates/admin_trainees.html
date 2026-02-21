@@ -54,12 +54,10 @@
       <div class="stat-title">Non conformes</div>
       <div class="stat-value">{{ stats.non_conform_count }}</div>
     </div>
-    {% if not show_vae %}
     <div class="stat">
       <div class="stat-title">CNAPS acceptés</div>
       <div class="stat-value">{{ stats.cnaps_accepted_count }}</div>
     </div>
-    {% endif %}
     <div class="stat">
       <div class="stat-title">Session</div>
       <div class="stat-value">{{ "Conforme ✅" if stats.session_is_conform else "Non conforme ❌" }}</div>
@@ -88,22 +86,31 @@
         <option value="certified">Certification obtenue</option>
       </select>
     {% endif %}
+    {% if is_vtc %}
+      <label for="vtcTheoryFilter" class="muted" style="font-weight:700;">Filtre théorie</label>
+      <select id="vtcTheoryFilter" class="sel" style="min-width:220px;">
+        <option value="all">Tous</option>
+        <option value="ok">Théorie OK uniquement</option>
+      </select>
+    {% endif %}
     <a class="btn btn-outline" id="btnPrintTrainees" href="{{ url_for('admin_trainees_print', session_id=session.id, **request.args) }}" target="_blank" rel="noopener">🖨️ Imprimer la liste</a>
     {% if not is_read_only %}
-      {% if not show_vae %}
+      {% if not show_vae and not is_dirigeant %}
       <button class="btn btn-outline" id="btnBulkSst">⬇️ Télécharger les SST en masse</button>
       <input id="bulkSstInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
       {% endif %}
 
-      <button class="btn btn-outline" id="btnBulkDiplome">⬇️ Télécharger les Diplômes en masse</button>
-      <input id="bulkDiplomeInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+      {% if not is_vtc %}
+        <button class="btn btn-outline" id="btnBulkDiplome">⬇️ Télécharger les Diplômes en masse</button>
+        <input id="bulkDiplomeInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
 
       <button class="btn btn-outline" id="btnBulkAttestation">⬇️ Télécharger les Attestations en masse</button>
       <input id="bulkAttestationInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
-      {% if not show_vae %}
+      {% if not show_vae and not is_dirigeant %}
       <button class="btn btn-outline" id="btnBulkTestFr">🔔 Notifier test de français en masse</button>
       {% endif %}
       <button class="btn btn-primary" id="btnOpenCreateTrainee">+ Ajouter un stagiaire</button>
+    {% endif %}
     {% endif %}
   </div>
 </div>
@@ -147,6 +154,7 @@
     data-last-name="{{ t.last_name or '' }}"
     data-first-name="{{ t.first_name or '' }}"
     data-vae-status="{{ t.vae_status or 'livret_1_todo' }}"
+data-vtc-theory-ok="{{ '1' if (t.vtc_theory_result != 'non_admissible' and t.vtc_theory_exam_sent_at) else '0' }}"
 data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}"
   data-has-diplome="{{ '1' if (t.get('deliverables', {}).get('diplome')) else '0' }}"
   data-has-attestation="{{ '1' if (t.get('deliverables', {}).get('attestation_fin_formation')) else '0' }}">
@@ -279,7 +287,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         <td>{{ "🟢" if t.exam_fees_paid else "🔴" }}</td>
         <td>{{ "🟢" if (t.elearning_link or "")|trim else "🔴" }}</td>
         <td>{{ "🟢" if (t.vtc_book_sent_at or "")|trim else "🔴" }}</td>
-        <td>
+        <td title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">
           {% if t.vtc_theory_result == "non_admissible" %}
             <span title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">🔴</span>
           {% elif t.vtc_theory_exam_sent_at %}
@@ -298,7 +306,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           </select>
         </td>
         <td>{{ session.practice_training_date|frdate }}</td>
-        <td>
+        <td title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">
           {% if t.vtc_practice_result == "failed" %}
             <span title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">🔴</span>
           {% elif t.vtc_practice_result == "success" or t.vtc_practice_exam_sent_at %}
@@ -725,13 +733,6 @@ tr.row-todo td{
     el.classList.remove("show");
     el.setAttribute("aria-hidden", "true");
   }
-
-  // (optionnel) fermer en cliquant sur le fond
-  document.querySelectorAll(".modal-backdrop").forEach(bg=>{
-    bg.addEventListener("click", (e)=>{
-      if(e.target === bg) closeModal(bg.id);
-    });
-  });
 
   const btnBulkTestFr = document.getElementById("btnBulkTestFr");
   btnBulkTestFr?.addEventListener("click", ()=>{
@@ -1165,15 +1166,20 @@ bulkAttestationInput?.addEventListener("change", async ()=>{
   });
 }
 
-function applyVaeStatusFilter(){
-  const filter = document.getElementById("vaeStatusFilter");
-  if(!filter) return;
-  const selected = filter.value || "all";
+function applyRowFilters(){
+  const vaeFilter = document.getElementById("vaeStatusFilter");
+  const vtcTheoryFilter = document.getElementById("vtcTheoryFilter");
+  const selectedVae = vaeFilter?.value || "all";
+  const selectedTheory = vtcTheoryFilter?.value || "all";
 
   document.querySelectorAll("tr[data-trainee-id]").forEach(tr => {
-    const rowStatus = tr.getAttribute("data-vae-status") || "livret_1_todo";
-    const shouldShow = selected === "all" || rowStatus === selected;
-    tr.style.display = shouldShow ? "" : "none";
+    const rowVaeStatus = tr.getAttribute("data-vae-status") || "livret_1_todo";
+    const rowTheoryOk = tr.getAttribute("data-vtc-theory-ok") === "1";
+
+    const matchVae = selectedVae === "all" || rowVaeStatus === selectedVae;
+    const matchTheory = selectedTheory === "all" || rowTheoryOk;
+
+    tr.style.display = (matchVae && matchTheory) ? "" : "none";
   });
 }
 
@@ -1405,7 +1411,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
 
         if(field === "vae_status"){
           tr.setAttribute("data-vae-status", value || "livret_1_todo");
-          applyVaeStatusFilter();
+          applyRowFilters();
         }
 
         try{
@@ -1516,9 +1522,15 @@ renderDocBadges();
 
 const vaeStatusFilter = document.getElementById("vaeStatusFilter");
 if(vaeStatusFilter){
-  vaeStatusFilter.addEventListener("change", applyVaeStatusFilter);
-  applyVaeStatusFilter();
+  vaeStatusFilter.addEventListener("change", applyRowFilters);
 }
+
+const vtcTheoryFilter = document.getElementById("vtcTheoryFilter");
+if(vtcTheoryFilter){
+  vtcTheoryFilter.addEventListener("change", applyRowFilters);
+}
+
+applyRowFilters();
 
 
   

@@ -289,7 +289,7 @@
 
   <div style="display:flex;gap:10px;flex-wrap:wrap;">
     <button class="btn btn-outline" id="btnOpenCnaps">CONTACTER LE CNAPS</button>
-    <a class="btn btn-outline" href="{{ url_for('admin_secretariat') }}">Gestion secrétariat</a>
+    <a class="btn btn-primary" href="{{ url_for('admin_secretariat') }}">Gestion secrétariat</a>
     {% if not is_read_only %}
       <button class="btn btn-outline" id="btnOpenVtcCheck">Check VTC théorie</button>
       <button class="btn btn-outline" id="btnOpenVtcPracticeCheck">Check VTC pratique</button>
