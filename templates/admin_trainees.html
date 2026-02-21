@@ -31,20 +31,7 @@
       <div class="stat-title">Stagiaires</div>
       <div class="stat-value">{{ stats.total }}</div>
     </div>
-    {% if is_vtc %}
-    <div class="stat">
-      <div class="stat-title">Examen théorique</div>
-      <div class="stat-value">{{ vtc_theory_exam_date|frdate }}</div>
-    </div>
-    <div class="stat">
-      <div class="stat-title">Formation pratique</div>
-      <div class="stat-value">{{ vtc_practice_training_date|frdate }}</div>
-    </div>
-    <div class="stat">
-      <div class="stat-title">Examen pratique</div>
-      <div class="stat-value">{{ vtc_practice_exam_date|frdate }}</div>
-    </div>
-    {% else %}
+    {% if not show_vae %}
     <div class="stat">
       <div class="stat-title">Conformes</div>
       <div class="stat-value">{{ stats.conform_count }}</div>
@@ -53,12 +40,10 @@
       <div class="stat-title">Non conformes</div>
       <div class="stat-value">{{ stats.non_conform_count }}</div>
     </div>
-    {% if not show_vae and not is_dirigeant %}
     <div class="stat">
       <div class="stat-title">CNAPS acceptés</div>
       <div class="stat-value">{{ stats.cnaps_accepted_count }}</div>
     </div>
-    {% endif %}
     <div class="stat">
       <div class="stat-title">Session</div>
       <div class="stat-value">{{ "Conforme ✅" if stats.session_is_conform else "Non conforme ❌" }}</div>
