@@ -1600,6 +1600,40 @@ def _send_vtc_credentials_reminder(data: Dict[str, Any], session_obj: Dict[str, 
     return bool(email_ok or sms_ok or copy_email_ok)
 
 
+def _is_vtc_cm_reminder_auto_disabled(trainee: Dict[str, Any]) -> bool:
+    return bool(
+        trainee.get("vtc_cm_reminder_auto_disabled")
+        or (trainee.get("vtc_cm_reminder_auto_disabled_at") or "").strip()
+    )
+
+
+def _compute_vtc_cm_reminder_schedule(trainee: Dict[str, Any]) -> Optional[datetime.datetime]:
+    if _is_vtc_cm_reminder_auto_disabled(trainee):
+        return None
+    if (trainee.get("vtc_cm_login") or "").strip() and (trainee.get("vtc_cm_password") or "").strip():
+        return None
+    if (trainee.get("vtc_cm_submitted_at") or "").strip():
+        return None
+    if (trainee.get("vtc_cm_reminder_sent_at") or "").strip():
+        return None
+
+    created_at = _parse_iso_datetime(trainee.get("created_at") or "")
+    if not created_at:
+        return None
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=datetime.timezone.utc)
+
+    return created_at + datetime.timedelta(days=7)
+
+
+def _refresh_vtc_cm_reminder_schedule(trainee: Dict[str, Any]) -> None:
+    due_at = _compute_vtc_cm_reminder_schedule(trainee)
+    if due_at is None:
+        trainee.pop("vtc_cm_reminder_scheduled_for", None)
+        return
+    trainee["vtc_cm_reminder_scheduled_for"] = due_at.astimezone(datetime.timezone.utc).isoformat()
+
+
 def _send_vtc_credentials_missing_reminders(data: Dict[str, Any]) -> bool:
     changed = False
     now_utc = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
@@ -1615,6 +1649,10 @@ def _send_vtc_credentials_missing_reminders(data: Dict[str, Any]) -> bool:
 
         trainees = _session_trainees_list(session_obj)
         for trainee in trainees:
+            _refresh_vtc_cm_reminder_schedule(trainee)
+
+            if _is_vtc_cm_reminder_auto_disabled(trainee):
+                continue
             if (trainee.get("vtc_cm_login") or "").strip() and (trainee.get("vtc_cm_password") or "").strip():
                 continue
             if (trainee.get("vtc_cm_submitted_at") or "").strip():
@@ -1633,6 +1671,7 @@ def _send_vtc_credentials_missing_reminders(data: Dict[str, Any]) -> bool:
                 continue
 
             _send_vtc_credentials_reminder(data, session_obj, trainee, "Relance automatique J+7")
+            _refresh_vtc_cm_reminder_schedule(trainee)
             changed = True
 
         session_obj["trainees"] = trainees
@@ -5616,6 +5655,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vtc_cm_login",
         "vtc_cm_password",
         "vtc_cm_submitted_at",
+        "vtc_cm_reminder_auto_disabled",
+        "vtc_cm_reminder_auto_disabled_at",
         "exam_fees_paid",
         "elearning_link",
         "vtc_book_sent_at",
@@ -5684,7 +5725,17 @@ def api_update_trainee(session_id: str, trainee_id: str):
     if (payload.get("financement_status") or "").strip() == "validated":
         t["financement_rejected_note"] = ""
         t["financement_new_date_seen"] = False
-        t["comment"] = _remove_admin_comment_flag(t.get("comment", ""), "⚠️ Prélèvement rejeté")
+
+    if (
+        "vtc_cm_login" in payload
+        or "vtc_cm_password" in payload
+        or "vtc_cm_submitted_at" in payload
+        or "vtc_cm_reminder_auto_disabled" in payload
+        or "vtc_cm_reminder_auto_disabled_at" in payload
+    ):
+        _refresh_vtc_cm_reminder_schedule(t)
+
+    t["comment"] = _remove_admin_comment_flag(t.get("comment", ""), "⚠️ Prélèvement rejeté")
 
     if isinstance(cnaps_remote_history, list):
         merge_cnaps_history_entries(t, _normalize_cnaps_remote_history(cnaps_remote_history))
@@ -7202,11 +7253,45 @@ def admin_vtc_cmar_relance(session_id: str, trainee_id: str):
         abort(404)
 
     _send_vtc_credentials_reminder(data, s, t, "Relance manuelle CMAR (admin)")
+    t["vtc_cm_reminder_auto_disabled"] = True
+    t["vtc_cm_reminder_auto_disabled_at"] = _now_iso()
+    _refresh_vtc_cm_reminder_schedule(t)
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     save_data(data)
 
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/vtc-cmar-reminder-auto")
+@admin_login_required
+@admin_write_required
+def admin_vtc_cmar_reminder_auto(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    enabled = True if (request.form.get("enabled", "1") or "").strip() in ("1", "true", "on", "yes") else False
+    if enabled:
+        t["vtc_cm_reminder_auto_disabled"] = False
+        t["vtc_cm_reminder_auto_disabled_at"] = ""
+    else:
+        t["vtc_cm_reminder_auto_disabled"] = True
+        t["vtc_cm_reminder_auto_disabled_at"] = _now_iso()
+
+    _refresh_vtc_cm_reminder_schedule(t)
+    t["updated_at"] = _now_iso()
+
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 # =========================
@@ -9206,6 +9291,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         t["vae_action_dates"] = {}
     ensure_vae_relances_state(t)
     refresh_vae_relance_schedule(t)
+    _refresh_vtc_cm_reminder_schedule(t)
 
     # ✅ s'assure que no_permis est bien un bool
     t["no_permis"] = bool(t.get("no_permis"))
