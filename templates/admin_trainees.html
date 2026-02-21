@@ -4,7 +4,7 @@
 {% set is_vtc_header = "VTC" in (session.training_type or "")|upper %}
 {% set vtc_theory_exam_date = session.exam_theory_date or session.exam_date %}
 {% set vtc_practice_exam_date = session.exam_practice_date or session.exam_date %}
-{% set vtc_practice_training_date = session.practice_training_date or session.exam_practice_date or session.exam_date %}
+{% set is_dirigeant_session = is_dirigeant or ("DIRIGEANT" in (session.training_type or "")|upper) or ("DIRIGEANT" in (session.name or "")|upper) %}
 
 <div class="breadcrumbs">
   <a href="{{ url_for('admin_sessions', **request.args) }}">← Retour sessions</a>
@@ -54,6 +54,7 @@
       <div class="stat-title">Non conformes</div>
       <div class="stat-value">{{ stats.non_conform_count }}</div>
     </div>
+    {% if not show_vae and not is_dirigeant_session %}
     <div class="stat">
       <div class="stat-title">CNAPS acceptés</div>
       <div class="stat-value">{{ stats.cnaps_accepted_count }}</div>
@@ -131,10 +132,10 @@
         <th>Financement</th>
         {% if show_vae %}<th>VAE</th>{% endif %}
         {% if show_vae %}<th>Suivi transmission</th>{% endif %}
-        {% if not is_vtc and not show_vae and not is_dirigeant %}<th>Test Français</th>{% endif %}
+        {% if not is_vtc and not show_vae and not is_dirigeant_session %}<th>Test Français</th>{% endif %}
         {% if not is_vtc %}<th>Dossier</th>{% endif %}
         {% if not is_vtc %}<th>Dossier complet</th>{% endif %}
-        {% if not is_vtc and not show_vae and not is_dirigeant %}<th>CNAPS</th>{% endif %}
+        {% if not is_vtc and not show_vae and not is_dirigeant_session %}<th>CNAPS</th>{% endif %}
         {% if is_vtc %}<th>Inscription CMAR</th>{% endif %}
         {% if is_vtc %}<th>E-learning</th>{% endif %}
         {% if is_vtc %}<th>Livre</th>{% endif %}
@@ -239,7 +240,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 </td>
 {% endif %}
 
-{% if not is_vtc and not show_vae and not is_dirigeant %}
+{% if not is_vtc and not show_vae and not is_dirigeant_session %}
 <td>
   <select class="status sel status-dot" data-field="test_fr_status" {{ read_only_attr }}>
     <option value="soon" {% if t.test_fr_status=="soon" or not t.test_fr_status %}selected{% endif %}>🟠</option>
@@ -274,7 +275,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         </td>
         {% endif %}
 
-        {% if not is_vtc and not show_vae and not is_dirigeant %}
+        {% if not is_vtc and not show_vae and not is_dirigeant_session %}
         <td>
           <div class="inline">
             <span class="cnaps" data-cnaps>{{ t.cnaps or "INCONNU" }}</span>
