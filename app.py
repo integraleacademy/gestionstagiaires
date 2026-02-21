@@ -200,13 +200,17 @@ def history_datetime(value: str) -> str:
     normalized = s.replace("Z", "+00:00")
     try:
         dt = datetime.datetime.fromisoformat(normalized)
-        return dt.strftime("%d/%m/%Y %H:%M")
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
+        dt = dt.astimezone(ZoneInfo("Europe/Paris"))
+        return dt.strftime("%d/%m/%Y %Hh%M")
     except Exception:
         pass
     for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
         try:
             dt = datetime.datetime.strptime(s[:26], fmt)
-            return dt.strftime("%d/%m/%Y %H:%M")
+            dt = dt.replace(tzinfo=datetime.timezone.utc).astimezone(ZoneInfo("Europe/Paris"))
+            return dt.strftime("%d/%m/%Y %Hh%M")
         except Exception:
             pass
     return fr_date(s)
@@ -1600,6 +1604,40 @@ def _send_vtc_credentials_reminder(data: Dict[str, Any], session_obj: Dict[str, 
     return bool(email_ok or sms_ok or copy_email_ok)
 
 
+def _is_vtc_cm_reminder_auto_disabled(trainee: Dict[str, Any]) -> bool:
+    return bool(
+        trainee.get("vtc_cm_reminder_auto_disabled")
+        or (trainee.get("vtc_cm_reminder_auto_disabled_at") or "").strip()
+    )
+
+
+def _compute_vtc_cm_reminder_schedule(trainee: Dict[str, Any]) -> Optional[datetime.datetime]:
+    if _is_vtc_cm_reminder_auto_disabled(trainee):
+        return None
+    if (trainee.get("vtc_cm_login") or "").strip() and (trainee.get("vtc_cm_password") or "").strip():
+        return None
+    if (trainee.get("vtc_cm_submitted_at") or "").strip():
+        return None
+    if (trainee.get("vtc_cm_reminder_sent_at") or "").strip():
+        return None
+
+    created_at = _parse_iso_datetime(trainee.get("created_at") or "")
+    if not created_at:
+        return None
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=datetime.timezone.utc)
+
+    return created_at + datetime.timedelta(days=7)
+
+
+def _refresh_vtc_cm_reminder_schedule(trainee: Dict[str, Any]) -> None:
+    due_at = _compute_vtc_cm_reminder_schedule(trainee)
+    if due_at is None:
+        trainee.pop("vtc_cm_reminder_scheduled_for", None)
+        return
+    trainee["vtc_cm_reminder_scheduled_for"] = due_at.astimezone(datetime.timezone.utc).isoformat()
+
+
 def _send_vtc_credentials_missing_reminders(data: Dict[str, Any]) -> bool:
     changed = False
     now_utc = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
@@ -1615,6 +1653,10 @@ def _send_vtc_credentials_missing_reminders(data: Dict[str, Any]) -> bool:
 
         trainees = _session_trainees_list(session_obj)
         for trainee in trainees:
+            _refresh_vtc_cm_reminder_schedule(trainee)
+
+            if _is_vtc_cm_reminder_auto_disabled(trainee):
+                continue
             if (trainee.get("vtc_cm_login") or "").strip() and (trainee.get("vtc_cm_password") or "").strip():
                 continue
             if (trainee.get("vtc_cm_submitted_at") or "").strip():
@@ -1633,6 +1675,385 @@ def _send_vtc_credentials_missing_reminders(data: Dict[str, Any]) -> bool:
                 continue
 
             _send_vtc_credentials_reminder(data, session_obj, trainee, "Relance automatique J+7")
+            _refresh_vtc_cm_reminder_schedule(trainee)
+            changed = True
+
+        session_obj["trainees"] = trainees
+        session_obj.pop("stagiaires", None)
+
+    return changed
+
+
+def _session_start_date(session_obj: Dict[str, Any]) -> Optional[datetime.date]:
+    raw = (_session_get(session_obj, "date_start", "") or "").strip()
+    if not raw:
+        return None
+    try:
+        return datetime.datetime.strptime(raw[:10], "%Y-%m-%d").date()
+    except Exception:
+        return None
+
+
+def _docs_relance_planned_date(session_obj: Dict[str, Any]) -> Optional[datetime.date]:
+    start_date = _session_start_date(session_obj)
+    if not start_date:
+        return None
+    return start_date - datetime.timedelta(days=15)
+
+
+def _send_docs_relance_message(
+    data: Dict[str, Any],
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    *,
+    source: str,
+) -> Dict[str, Any]:
+    link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{trainee.get('public_token','')}"
+    training_type = _session_get(session_obj, "training_type", "")
+    ensure_documents_schema_for_trainee(trainee, training_type)
+
+    docs_details = docs_summary_text(
+        trainee,
+        allowed_statuses={
+            "A CONTRÔLER",
+            "A CONTROLER",
+            "NON CONFORME",
+            "NON_CONFORME",
+            "NON DÉPOSÉ",
+            "NON DEPOSE",
+            "NON_DEPOSE",
+        },
+    )
+    infos_details = infos_missing_text(trainee)
+
+    formation_type = formation_label(_session_get(session_obj, "training_type", ""))
+    dstart = fr_date(_session_get(session_obj, "date_start", ""))
+    dend = fr_date(_session_get(session_obj, "date_end", ""))
+
+    first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
+
+    subject = "Relance : Dossier Formation incomplet"
+
+    html = mail_layout(f"""
+      <h2 style="text-align:center;color:#b91c1c">⏰ Relance – Votre Dossier Formation est incomplet</h2>
+
+      <p>Bonjour <strong>{first_name}</strong>,</p>
+
+      <p>
+        Nous revenons vers vous concernant votre inscription en formation
+        <strong>{formation_type}</strong> (du <strong>{dstart}</strong> au <strong>{dend}</strong>).
+      </p>
+
+      <p>
+        À ce jour, votre dossier est INCOMPLET (éléments manquants et/ou à corriger).
+        Merci de déposer les éléments nécessaires dès que possible via votre espace stagiaire.
+      </p>
+
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px;margin:16px 0">
+        <p style="margin:0 0 10px 0"><strong>📌 Votre dossier détaillé :</strong></p>
+       <pre style="white-space:pre-wrap;background:#fff;border:1px solid #fee2e2;padding:10px;border-radius:10px;margin:0">{docs_details or "Aucun document en attente."}</pre>
+
+    <p style="margin:14px 0 10px 0"><strong>🧾 Informations à compléter :</strong></p>
+    <pre style="white-space:pre-wrap;background:#fff;border:1px solid #fee2e2;padding:10px;border-radius:10px;margin:0">{infos_details or "Aucune information manquante."}</pre>
+
+        <p style="margin:12px 0 0 0">
+          <strong>📍 Informations à compléter et Dépôt des documents :</strong><br>
+          <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
+        </p>
+
+        <p style="margin:10px 0 0 0;color:#b91c1c;font-weight:bold">
+          ⚠️ Nous vous remercions de bien vouloir compléter votre dossier dès que possible !
+        </p>
+      </div>
+
+      <p style="margin-top:22px">
+        Si vous avez la moindre difficulté, contactez-nous au <strong>04 22 47 07 68</strong>.
+      </p>
+
+      <p style="margin-top:22px">
+        Merci par avance,<br>
+        <strong>Clément VAILLANT</strong><br>
+        Directeur Intégrale Academy
+      </p>
+
+      <p style="text-align:center;margin-top:18px">
+        <a href="{link}"
+           style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+          👉 Accéder à mon espace stagiaire
+        </a>
+      </p>
+    """)
+
+    sms = (
+        f"Intégrale Academy ⏰ Relance : Bonjour {trainee.get('first_name','')}, "
+        f"Nous revenons vers vous au sujet de votre formation {formation_type}. A ce jour votre Dossier Formation est INCOMPLET. Votre formation approche, et pour un meilleur suivi de votre inscription, nous vous remercions de bien vouloir compléter votre dossier dès que possible. "
+        f"Pour rappel, votre dossier doit être COMPLET au plus tard 10 jours avant votre entrée en formation. Vous pouvez compléter votre dossier en cliquant ici : {link} "
+        f"Besoin d’aide ? 04 22 47 07 68"
+    )
+
+    email_ok = brevo_send_email(trainee.get("email", ""), subject, html)
+    sms_ok = brevo_send_sms(trainee.get("phone", ""), sms)
+
+    sent_at = _now_iso()
+    trainee["docs_last_relance_at"] = sent_at
+    trainee["updated_at"] = sent_at
+    trainee["docs_relance_auto_planned_date"] = ""
+    if source == "auto":
+        trainee["docs_relance_auto_sent_at"] = sent_at
+
+    trainee_display_name = _format_trainee_name(trainee.get("first_name", ""), trainee.get("last_name", ""))
+    formation_label_text = formation_label(_session_get(session_obj, "training_type", ""))
+    add_notification(
+        data,
+        "notifications_phone_relances",
+        f"{trainee_display_name} • {formation_label_text}",
+        meta={
+            "first_name": (trainee.get("first_name") or "").strip(),
+            "last_name": (trainee.get("last_name") or "").strip(),
+            "training": formation_label_text,
+            "phone": (trainee.get("phone") or "").strip(),
+            "email": (trainee.get("email") or "").strip(),
+            "session_id": session_obj.get("id"),
+            "trainee_id": trainee.get("id"),
+            "call_status": "À appeler",
+            "no_answer_count": 0,
+            "source": f"docs_relance_{source}",
+        },
+    )
+
+    return {"email_ok": bool(email_ok), "sms_ok": bool(sms_ok)}
+
+
+def _send_docs_relance_reminders(data: Dict[str, Any]) -> bool:
+    changed = False
+    today = datetime.date.today()
+
+    for session_obj in (data.get("sessions") or []):
+        if session_obj.get("archived"):
+            continue
+        planned_date = _docs_relance_planned_date(session_obj)
+        planned_date_iso = planned_date.isoformat() if planned_date else ""
+
+        trainees = _session_trainees_list(session_obj)
+        for trainee in trainees:
+            training_type = _session_get(session_obj, "training_type", "")
+            dossier_complete = dossier_is_complete_total(trainee, training_type)
+
+            if trainee.get("docs_relance_auto_planned_date") != planned_date_iso:
+                trainee["docs_relance_auto_planned_date"] = planned_date_iso
+                changed = True
+
+            if dossier_complete:
+                if trainee.get("docs_relance_auto_planned_date"):
+                    trainee["docs_relance_auto_planned_date"] = ""
+                    changed = True
+                continue
+
+            if not planned_date or today < planned_date:
+                continue
+            if (trainee.get("docs_relance_auto_sent_at") or "").strip():
+                continue
+
+            _send_docs_relance_message(data, session_obj, trainee, source="auto")
+            changed = True
+
+        session_obj["trainees"] = trainees
+        session_obj.pop("stagiaires", None)
+
+    return changed
+
+
+def _session_start_date(session_obj: Dict[str, Any]) -> Optional[datetime.date]:
+    raw = (_session_get(session_obj, "date_start", "") or "").strip()
+    if not raw:
+        return None
+    try:
+        return datetime.datetime.strptime(raw[:10], "%Y-%m-%d").date()
+    except Exception:
+        return None
+
+
+def _docs_relance_planned_date(session_obj: Dict[str, Any]) -> Optional[datetime.date]:
+    if not _docs_relance_auto_enabled(session_obj):
+        return None
+    start_date = _session_start_date(session_obj)
+    if not start_date:
+        return None
+    return start_date - datetime.timedelta(days=15)
+
+
+def _docs_relance_auto_enabled(session_obj: Dict[str, Any]) -> bool:
+    training_type = (_session_get(session_obj, "training_type", "") or "").strip().upper()
+    if training_type == "DIRIGEANT VAE":
+        return False
+    if "VTC" in training_type:
+        return False
+    return True
+
+
+def _send_docs_relance_message(
+    data: Dict[str, Any],
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    *,
+    source: str,
+) -> Dict[str, Any]:
+    link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{trainee.get('public_token','')}"
+    training_type = _session_get(session_obj, "training_type", "")
+    ensure_documents_schema_for_trainee(trainee, training_type)
+
+    docs_details = docs_summary_text(
+        trainee,
+        allowed_statuses={
+            "A CONTRÔLER",
+            "A CONTROLER",
+            "NON CONFORME",
+            "NON_CONFORME",
+            "NON DÉPOSÉ",
+            "NON DEPOSE",
+            "NON_DEPOSE",
+        },
+    )
+    infos_details = infos_missing_text(trainee)
+
+    formation_type = formation_label(_session_get(session_obj, "training_type", ""))
+    dstart = fr_date(_session_get(session_obj, "date_start", ""))
+    dend = fr_date(_session_get(session_obj, "date_end", ""))
+
+    first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
+
+    subject = "Relance : Dossier Formation incomplet"
+
+    html = mail_layout(f"""
+      <h2 style="text-align:center;color:#b91c1c">⏰ Relance – Votre Dossier Formation est incomplet</h2>
+
+      <p>Bonjour <strong>{first_name}</strong>,</p>
+
+      <p>
+        Nous revenons vers vous concernant votre inscription en formation
+        <strong>{formation_type}</strong> (du <strong>{dstart}</strong> au <strong>{dend}</strong>).
+      </p>
+
+      <p>
+        À ce jour, votre dossier est INCOMPLET (éléments manquants et/ou à corriger).
+        Merci de déposer les éléments nécessaires dès que possible via votre espace stagiaire.
+      </p>
+
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px;margin:16px 0">
+        <p style="margin:0 0 10px 0"><strong>📌 Votre dossier détaillé :</strong></p>
+       <pre style="white-space:pre-wrap;background:#fff;border:1px solid #fee2e2;padding:10px;border-radius:10px;margin:0">{docs_details or "Aucun document en attente."}</pre>
+
+    <p style="margin:14px 0 10px 0"><strong>🧾 Informations à compléter :</strong></p>
+    <pre style="white-space:pre-wrap;background:#fff;border:1px solid #fee2e2;padding:10px;border-radius:10px;margin:0">{infos_details or "Aucune information manquante."}</pre>
+
+        <p style="margin:12px 0 0 0">
+          <strong>📍 Informations à compléter et Dépôt des documents :</strong><br>
+          <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
+        </p>
+
+        <p style="margin:10px 0 0 0;color:#b91c1c;font-weight:bold">
+          ⚠️ Nous vous remercions de bien vouloir compléter votre dossier dès que possible !
+        </p>
+      </div>
+
+      <p style="margin-top:22px">
+        Si vous avez la moindre difficulté, contactez-nous au <strong>04 22 47 07 68</strong>.
+      </p>
+
+      <p style="margin-top:22px">
+        Merci par avance,<br>
+        <strong>Clément VAILLANT</strong><br>
+        Directeur Intégrale Academy
+      </p>
+
+      <p style="text-align:center;margin-top:18px">
+        <a href="{link}"
+           style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+          👉 Accéder à mon espace stagiaire
+        </a>
+      </p>
+    """)
+
+    sms = (
+        f"Intégrale Academy ⏰ Relance : Bonjour {trainee.get('first_name','')}, "
+        f"Nous revenons vers vous au sujet de votre formation {formation_type}. A ce jour votre Dossier Formation est INCOMPLET. Votre formation approche, et pour un meilleur suivi de votre inscription, nous vous remercions de bien vouloir compléter votre dossier dès que possible. "
+        f"Pour rappel, votre dossier doit être COMPLET au plus tard 10 jours avant votre entrée en formation. Vous pouvez compléter votre dossier en cliquant ici : {link} "
+        f"Besoin d’aide ? 04 22 47 07 68"
+    )
+
+    email_ok = brevo_send_email(trainee.get("email", ""), subject, html)
+    sms_ok = brevo_send_sms(trainee.get("phone", ""), sms)
+
+    sent_at = _now_iso()
+    trainee["docs_last_relance_at"] = sent_at
+    trainee["updated_at"] = sent_at
+    trainee["docs_relance_auto_planned_date"] = ""
+    if source == "auto":
+        trainee["docs_relance_auto_sent_at"] = sent_at
+
+    trainee_display_name = _format_trainee_name(trainee.get("first_name", ""), trainee.get("last_name", ""))
+    formation_label_text = formation_label(_session_get(session_obj, "training_type", ""))
+    add_notification(
+        data,
+        "notifications_phone_relances",
+        f"{trainee_display_name} • {formation_label_text}",
+        meta={
+            "first_name": (trainee.get("first_name") or "").strip(),
+            "last_name": (trainee.get("last_name") or "").strip(),
+            "training": formation_label_text,
+            "phone": (trainee.get("phone") or "").strip(),
+            "email": (trainee.get("email") or "").strip(),
+            "session_id": session_obj.get("id"),
+            "trainee_id": trainee.get("id"),
+            "call_status": "À appeler",
+            "no_answer_count": 0,
+            "source": f"docs_relance_{source}",
+        },
+    )
+
+    return {"email_ok": bool(email_ok), "sms_ok": bool(sms_ok)}
+
+
+def _send_docs_relance_reminders(data: Dict[str, Any]) -> bool:
+    changed = False
+    today = datetime.date.today()
+
+    for session_obj in (data.get("sessions") or []):
+        if session_obj.get("archived"):
+            continue
+        if not _docs_relance_auto_enabled(session_obj):
+            trainees = _session_trainees_list(session_obj)
+            for trainee in trainees:
+                if trainee.get("docs_relance_auto_planned_date"):
+                    trainee["docs_relance_auto_planned_date"] = ""
+                    changed = True
+            session_obj["trainees"] = trainees
+            session_obj.pop("stagiaires", None)
+            continue
+        planned_date = _docs_relance_planned_date(session_obj)
+        planned_date_iso = planned_date.isoformat() if planned_date else ""
+
+        trainees = _session_trainees_list(session_obj)
+        for trainee in trainees:
+            training_type = _session_get(session_obj, "training_type", "")
+            dossier_complete = dossier_is_complete_total(trainee, training_type)
+
+            if trainee.get("docs_relance_auto_planned_date") != planned_date_iso:
+                trainee["docs_relance_auto_planned_date"] = planned_date_iso
+                changed = True
+
+            if dossier_complete:
+                if trainee.get("docs_relance_auto_planned_date"):
+                    trainee["docs_relance_auto_planned_date"] = ""
+                    changed = True
+                continue
+
+            if not planned_date or today < planned_date:
+                continue
+            if (trainee.get("docs_relance_auto_sent_at") or "").strip():
+                continue
+
+            _send_docs_relance_message(data, session_obj, trainee, source="auto")
             changed = True
 
         session_obj["trainees"] = trainees
@@ -1808,6 +2229,7 @@ def load_data() -> Dict[str, Any]:
             "notifications_edof": [],
             "notifications_financement_refuse": [],
             "notifications_prelevements": [],
+            "notifications_prelevement_non_valides": [],
             "notifications_phone_relances": [],
             "notifications_vae_relances": [],
             "notifications_cnaps_pre_relances": [],
@@ -1841,6 +2263,9 @@ def load_data() -> Dict[str, Any]:
         if "notifications_prelevements" not in data:
             data["notifications_prelevements"] = []
             changed = True
+        if "notifications_prelevement_non_valides" not in data:
+            data["notifications_prelevement_non_valides"] = []
+            changed = True
         if "notifications_financement_refuse" not in data:
             data["notifications_financement_refuse"] = []
             changed = True
@@ -1872,6 +2297,9 @@ def load_data() -> Dict[str, Any]:
         if _send_vae_relance_reminders(data):
             changed = True
 
+        if _send_docs_relance_reminders(data):
+            changed = True
+
         if _inject_vtc_exam_results_notifications(data):
             changed = True
 
@@ -1893,6 +2321,7 @@ def load_data() -> Dict[str, Any]:
             "notifications_edof": [],
             "notifications_financement_refuse": [],
             "notifications_prelevements": [],
+            "notifications_prelevement_non_valides": [],
             "notifications_phone_relances": [],
             "notifications_vae_relances": [],
             "notifications_cnaps_pre_relances": [],
@@ -1921,6 +2350,7 @@ def add_notification(data: Dict[str, Any], bucket: str, label: str, meta: Option
         "notifications_edof": "EDOF",
         "notifications_financement_refuse": "FTR",
         "notifications_prelevements": "PREL",
+        "notifications_prelevement_non_valides": "PNV",
         "notifications_phone_relances": "REL",
         "notifications_vae_relances": "RVE",
         "notifications_cnaps_pre_relances": "PRE",
@@ -1945,6 +2375,7 @@ def _notifications_bucket_key(bucket: str) -> Optional[str]:
         "edof": "notifications_edof",
         "financement_refuse": "notifications_financement_refuse",
         "prelevements": "notifications_prelevements",
+        "prelevements_non_valides": "notifications_prelevement_non_valides",
         "relances": "notifications_phone_relances",
         "vae_relances": "notifications_vae_relances",
         "cnaps_pre": "notifications_cnaps_pre_relances",
@@ -2000,6 +2431,7 @@ def _secretariat_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
         "edof": _with_created_fr(list(data.get("notifications_edof", [])), "edof"),
         "financement_refuse": _with_created_fr(list(data.get("notifications_financement_refuse", [])), "financement_refuse"),
         "prelevements": _with_created_fr(list(data.get("notifications_prelevements", [])), "prelevements"),
+        "prelevements_non_valides": _with_created_fr(list(data.get("notifications_prelevement_non_valides", [])), "prelevements_non_valides"),
         "relances": _with_created_fr(list(data.get("notifications_phone_relances", [])), "relances"),
         "vae_relances": _with_created_fr(list(data.get("notifications_vae_relances", [])), "vae_relances"),
         "cnaps_pre": _with_created_fr(list(data.get("notifications_cnaps_pre_relances", [])), "cnaps_pre"),
@@ -2053,6 +2485,32 @@ def _history_sort_key(value: str) -> float:
     return 0.0
 
 
+def _history_kind_from_text(raw: str) -> str:
+    source = (raw or "").upper()
+    if "SMS" in source:
+        return "sms"
+    if "MAIL" in source or "EMAIL" in source:
+        return "mail"
+    if "APPEL" in source or "RÉPONSE SECRÉTAIRE" in source or "REPONSE SECRETAIRE" in source:
+        return "appel"
+    if "RELANCE" in source:
+        return "relance"
+    return "action"
+
+
+def append_trainee_history_event(trainee: Dict[str, Any], label: str, details: str = "", kind: str = "action", at: Optional[str] = None) -> None:
+    history = trainee.get("activity_history")
+    if not isinstance(history, list):
+        history = []
+    history.insert(0, {
+        "label": (label or "Action").strip(),
+        "details": (details or "").strip(),
+        "kind": (kind or "action").strip().lower(),
+        "at": (at or _now_iso()).strip(),
+    })
+    trainee["activity_history"] = history[:1000]
+
+
 def build_trainee_history_entries(trainee: Dict[str, Any]) -> List[Dict[str, str]]:
     entries: List[Dict[str, str]] = []
 
@@ -2086,28 +2544,56 @@ def build_trainee_history_entries(trainee: Dict[str, Any]) -> List[Dict[str, str
         ("cnaps_pre_relance_last_sent_at", "Relance PRE envoyée", "relance"),
         ("elearning_link_sent_at", "Lien e-learning envoyé", "mail"),
         ("vtc_cm_reminder_sent_at", "Relance identifiants VTC envoyée", "relance"),
+        ("public_last_login_at", "Connexion espace stagiaire", "action"),
+        ("etiquette_word_downloaded_at", "Étiquette Word téléchargée", "action"),
+        ("created_at", "Dossier créé", "action"),
     ]
     for field_name, label, kind in field_events:
         _add(kind, label, trainee.get(field_name) or "")
+
+    for field_name, value in trainee.items():
+        if not (isinstance(field_name, str) and field_name.endswith("_at") and isinstance(value, str)):
+            continue
+        if field_name in {x[0] for x in field_events}:
+            continue
+        if not value.strip():
+            continue
+        auto_label = field_name[:-3].replace("_", " ").strip().capitalize()
+        _add(_history_kind_from_text(field_name), auto_label, value)
 
     for followup in (trainee.get("phone_followups") or []):
         event_type = (followup.get("type") or "Suivi").strip()
         details = (followup.get("details") or "").strip()
         comment = (followup.get("comment") or "").strip()
-
-        source_text = f"{event_type} {details}".upper()
-        kind = "action"
-        if "SMS" in source_text:
-            kind = "sms"
-        elif "MAIL" in source_text:
-            kind = "mail"
-        elif "APPEL" in source_text or "RÉPONSE SECRÉTAIRE" in source_text or "REPONSE SECRETAIRE" in source_text:
-            kind = "appel"
-        elif "RELANCE" in source_text:
-            kind = "relance"
-
         full_details = " · ".join([chunk for chunk in (details, comment) if chunk])
-        _add(kind, event_type, followup.get("at") or "", full_details)
+        _add(_history_kind_from_text(f"{event_type} {details}"), event_type, followup.get("at") or "", full_details)
+
+    for doc in (trainee.get("documents") or []):
+        label = (doc.get("label") or "Document").strip()
+        status = (doc.get("status") or "").strip()
+        comment = (doc.get("comment") or "").strip()
+        files = [x for x in (doc.get("files") or []) if x]
+        if not files and (doc.get("file") or "").strip():
+            files = [(doc.get("file") or "").strip()]
+        details = []
+        if status:
+            details.append(f"Statut actuel : {status}")
+        if files:
+            details.append(f"Fichiers : {len(files)}")
+        if comment:
+            details.append(f"Commentaire : {comment}")
+        if details:
+            _add("action", f"Document · {label}", trainee.get("updated_at") or trainee.get("created_at") or "", " · ".join(details))
+
+    for item in (trainee.get("activity_history") or []):
+        if not isinstance(item, dict):
+            continue
+        _add(
+            (item.get("kind") or "action").strip().lower(),
+            (item.get("label") or "Action").strip(),
+            (item.get("at") or "").strip(),
+            (item.get("details") or "").strip(),
+        )
 
     entries.sort(key=lambda item: _history_sort_key(item.get("at") or ""), reverse=True)
     return entries
@@ -4124,6 +4610,7 @@ def admin_secretariat():
         edof_notifications=notifications["edof"],
         financement_refuse_notifications=notifications["financement_refuse"],
         prelevement_notifications=notifications["prelevements"],
+        prelevement_non_valide_notifications=notifications["prelevements_non_valides"],
         phone_notifications=notifications["relances"],
         vae_relance_notifications=notifications["vae_relances"],
         cnaps_pre_notifications=notifications["cnaps_pre"],
@@ -4604,8 +5091,11 @@ def api_secretariat_relance_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
     comment = (payload.get("comment") or "").strip()
+    called_resolution = (payload.get("called_resolution") or "").strip()
     if outcome not in ("CALLED", "NO_ANSWER"):
         return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+    if outcome == "CALLED" and not comment:
+        return jsonify({"ok": False, "error": "comment_required"}), 400
 
     data = load_data()
     notification = next(
@@ -4655,6 +5145,8 @@ def api_secretariat_relance_result(notification_id: str):
     notification_meta = notification.setdefault("meta", {})
     notification_meta["call_status"] = display
     notification_meta["no_answer_count"] = no_answer_count
+    if called_resolution:
+        notification_meta["called_resolution"] = called_resolution
     if comment:
         notification_meta["last_comment"] = comment
 
@@ -4678,6 +5170,7 @@ def api_secretariat_relance_result(notification_id: str):
             "session_id": s.get("id") if s else None,
             "trainee_id": t.get("id") if t else None,
             "comment": comment,
+            "called_resolution": called_resolution,
             "call_status": display,
         },
     )
@@ -4708,8 +5201,11 @@ def api_secretariat_cnaps_pre_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
     comment = (payload.get("comment") or "").strip()
+    called_resolution = (payload.get("called_resolution") or "").strip()
     if outcome not in ("CALLED", "NO_ANSWER"):
         return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+    if outcome == "CALLED" and not comment:
+        return jsonify({"ok": False, "error": "comment_required"}), 400
 
     data = load_data()
     notification = next(
@@ -4738,6 +5234,8 @@ def api_secretariat_cnaps_pre_result(notification_id: str):
 
     notification_meta["call_status"] = display
     notification_meta["no_answer_count"] = no_answer_count
+    if called_resolution:
+        notification_meta["called_resolution"] = called_resolution
     if comment:
         notification_meta["last_comment"] = comment
 
@@ -4761,6 +5259,7 @@ def api_secretariat_cnaps_pre_result(notification_id: str):
             "session_id": notification_meta.get("session_id"),
             "trainee_id": notification_meta.get("trainee_id"),
             "comment": comment,
+            "called_resolution": called_resolution,
             "call_status": display,
         },
     )
@@ -4781,8 +5280,16 @@ def api_secretariat_financement_refuse_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
     comment = (payload.get("comment") or "").strip()
+    called_resolution = (payload.get("called_resolution") or "").strip()
     if outcome not in ("CALLED", "NO_ANSWER"):
         return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+    if outcome == "CALLED" and not comment:
+        return jsonify({"ok": False, "error": "comment_required"}), 400
+    if outcome == "CALLED" and called_resolution not in (
+        "La personne souhaite poursuivre son projet de formation",
+        "La personne renonce à son projet de formation",
+    ):
+        return jsonify({"ok": False, "error": "called_resolution_required"}), 400
 
     data = load_data()
     notification = next(
@@ -4811,6 +5318,8 @@ def api_secretariat_financement_refuse_result(notification_id: str):
 
     notification_meta["call_status"] = display
     notification_meta["no_answer_count"] = no_answer_count
+    if called_resolution:
+        notification_meta["called_resolution"] = called_resolution
     if comment:
         notification_meta["last_comment"] = comment
 
@@ -4834,6 +5343,7 @@ def api_secretariat_financement_refuse_result(notification_id: str):
             "session_id": notification_meta.get("session_id"),
             "trainee_id": notification_meta.get("trainee_id"),
             "comment": comment,
+            "called_resolution": called_resolution,
             "call_status": display,
         },
     )
@@ -4854,8 +5364,16 @@ def api_secretariat_edof_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
     comment = (payload.get("comment") or "").strip()
+    called_resolution = (payload.get("called_resolution") or "").strip()
     if outcome not in ("CALLED", "NO_ANSWER"):
         return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+    if outcome == "CALLED" and not comment:
+        return jsonify({"ok": False, "error": "comment_required"}), 400
+    if outcome == "CALLED" and called_resolution not in (
+        "Un RDV téléphonique a été fixé pour finaliser l'inscription",
+        "Autre",
+    ):
+        return jsonify({"ok": False, "error": "called_resolution_required"}), 400
 
     data = load_data()
     notification = next(
@@ -4884,6 +5402,8 @@ def api_secretariat_edof_result(notification_id: str):
 
     notification_meta["call_status"] = display
     notification_meta["no_answer_count"] = no_answer_count
+    if called_resolution:
+        notification_meta["called_resolution"] = called_resolution
     if comment:
         notification_meta["last_comment"] = comment
 
@@ -4907,6 +5427,7 @@ def api_secretariat_edof_result(notification_id: str):
             "session_id": notification_meta.get("session_id"),
             "trainee_id": notification_meta.get("trainee_id"),
             "comment": comment,
+            "called_resolution": called_resolution,
             "call_status": display,
         },
     )
@@ -4927,8 +5448,11 @@ def api_secretariat_test_fr_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
     comment = (payload.get("comment") or "").strip()
+    called_resolution = (payload.get("called_resolution") or "").strip()
     if outcome not in ("CALLED", "NO_ANSWER"):
         return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+    if outcome == "CALLED" and not comment:
+        return jsonify({"ok": False, "error": "comment_required"}), 400
 
     data = load_data()
     notification = next(
@@ -4957,6 +5481,8 @@ def api_secretariat_test_fr_result(notification_id: str):
 
     notification_meta["call_status"] = display
     notification_meta["no_answer_count"] = no_answer_count
+    if called_resolution:
+        notification_meta["called_resolution"] = called_resolution
     if comment:
         notification_meta["last_comment"] = comment
 
@@ -4980,6 +5506,7 @@ def api_secretariat_test_fr_result(notification_id: str):
             "session_id": notification_meta.get("session_id"),
             "trainee_id": notification_meta.get("trainee_id"),
             "comment": comment,
+            "called_resolution": called_resolution,
             "call_status": display,
         },
     )
@@ -5000,8 +5527,11 @@ def api_secretariat_convention_unsigned_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
     comment = (payload.get("comment") or "").strip()
+    called_resolution = (payload.get("called_resolution") or "").strip()
     if outcome not in ("CALLED", "NO_ANSWER"):
         return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+    if outcome == "CALLED" and not comment:
+        return jsonify({"ok": False, "error": "comment_required"}), 400
 
     data = load_data()
     notification = next(
@@ -5030,6 +5560,8 @@ def api_secretariat_convention_unsigned_result(notification_id: str):
 
     notification_meta["call_status"] = display
     notification_meta["no_answer_count"] = no_answer_count
+    if called_resolution:
+        notification_meta["called_resolution"] = called_resolution
     if comment:
         notification_meta["last_comment"] = comment
 
@@ -5053,6 +5585,7 @@ def api_secretariat_convention_unsigned_result(notification_id: str):
             "session_id": notification_meta.get("session_id"),
             "trainee_id": notification_meta.get("trainee_id"),
             "comment": comment,
+            "called_resolution": called_resolution,
             "call_status": display,
         },
     )
@@ -5225,6 +5758,7 @@ def admin_trainees(session_id: str):
     stats = compute_stats(s)
     show_hosting = (session_view["training_type"] == "A3P")
     is_vtc = ("VTC" in (session_view["training_type"] or "").upper())
+    is_dirigeant = ("DIRIGEANT" in (session_view["training_type"] or "").upper())
 
     # ✅ docs fin de formation par stagiaire (pour surlignage + n/3 + étiquettes)
     for t in trainees:
@@ -5261,6 +5795,7 @@ def admin_trainees(session_id: str):
         show_hosting=show_hosting,
         show_vae=show_vae,
         is_vtc=is_vtc,
+        is_dirigeant=is_dirigeant,
         enums=ENUMS,
     )
 
@@ -5667,6 +6202,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vtc_cm_login",
         "vtc_cm_password",
         "vtc_cm_submitted_at",
+        "vtc_cm_reminder_auto_disabled",
+        "vtc_cm_reminder_auto_disabled_at",
         "exam_fees_paid",
         "elearning_link",
         "vtc_book_sent_at",
@@ -5735,7 +6272,17 @@ def api_update_trainee(session_id: str, trainee_id: str):
     if (payload.get("financement_status") or "").strip() == "validated":
         t["financement_rejected_note"] = ""
         t["financement_new_date_seen"] = False
-        t["comment"] = _remove_admin_comment_flag(t.get("comment", ""), "⚠️ Prélèvement rejeté")
+
+    if (
+        "vtc_cm_login" in payload
+        or "vtc_cm_password" in payload
+        or "vtc_cm_submitted_at" in payload
+        or "vtc_cm_reminder_auto_disabled" in payload
+        or "vtc_cm_reminder_auto_disabled_at" in payload
+    ):
+        _refresh_vtc_cm_reminder_schedule(t)
+
+    t["comment"] = _remove_admin_comment_flag(t.get("comment", ""), "⚠️ Prélèvement rejeté")
 
     if isinstance(cnaps_remote_history, list):
         merge_cnaps_history_entries(t, _normalize_cnaps_remote_history(cnaps_remote_history))
@@ -5812,12 +6359,18 @@ def api_update_trainee(session_id: str, trainee_id: str):
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     training_type = _session_get(s, "training_type", "")
-    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+    dossier_complete = dossier_is_complete_total(t, training_type)
+    t["dossier_status"] = "complete" if dossier_complete else "incomplete"
+    planned = _docs_relance_planned_date(s)
+    t["docs_relance_auto_planned_date"] = "" if dossier_complete else (planned.isoformat() if planned else "")
+    if dossier_complete:
+        t["docs_relance_auto_sent_at"] = ""
     save_data(data)
     return jsonify({
         "ok": True,
         "dossier_status": t.get("dossier_status"),
         "force_dossier_complete": bool(t.get("force_dossier_complete")),
+        "docs_relance_auto_planned_date": t.get("docs_relance_auto_planned_date") or "",
         "elearning_link_sent_at": t.get("elearning_link_sent_at") or "",
         "elearning_link_email_ok": bool(t.get("elearning_link_email_ok")),
         "elearning_link_sms_ok": bool(t.get("elearning_link_sms_ok")),
@@ -5960,6 +6513,7 @@ def api_send_cnaps_pre_relance(session_id: str, trainee_id: str):
 
     t["cnaps_pre_relance_last_sent_at"] = _now_iso()
     t["updated_at"] = _now_iso()
+    append_trainee_history_event(t, "Relance CNAPS PRE", f"Mail: {'oui' if email_ok else 'non'} · SMS: {'oui' if sms_ok else 'non'}", "relance", t["cnaps_pre_relance_last_sent_at"])
 
     first_name = (t.get("first_name") or "").strip()
     last_name = (t.get("last_name") or "").strip()
@@ -6783,6 +7337,7 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
             break
 
     t["updated_at"] = _now_iso()
+    append_trainee_history_event(t, "Document ajouté", f"{doc_key} · fichier ajouté", "action")
 
     # ✅ recalcul dossier_status
     t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
@@ -6849,6 +7404,7 @@ def admin_delete_doc_file(session_id: str, trainee_id: str, doc_key: str):
     # on garde le commentaire (pratique), ou tu peux le vider si tu préfères
 
     t["updated_at"] = _now_iso()
+    append_trainee_history_event(t, "Document supprimé", f"{doc_key} · {len(tokens)} fichier(s) supprimé(s)", "action")
 
     # recalcul dossier_status
     t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
@@ -7229,6 +7785,7 @@ def admin_send_access(session_id: str, trainee_id: str):
         brevo_send_sms(t.get("phone", ""), sms)
 
     t["access_sent_at"] = _now_iso()
+    append_trainee_history_event(t, "Accès espace stagiaire envoyé", "Mail et SMS envoyés", "mail", t["access_sent_at"])
     s["trainees"] = trainees
     save_data(data)
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
@@ -7253,11 +7810,45 @@ def admin_vtc_cmar_relance(session_id: str, trainee_id: str):
         abort(404)
 
     _send_vtc_credentials_reminder(data, s, t, "Relance manuelle CMAR (admin)")
+    t["vtc_cm_reminder_auto_disabled"] = True
+    t["vtc_cm_reminder_auto_disabled_at"] = _now_iso()
+    _refresh_vtc_cm_reminder_schedule(t)
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     save_data(data)
 
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/vtc-cmar-reminder-auto")
+@admin_login_required
+@admin_write_required
+def admin_vtc_cmar_reminder_auto(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    enabled = True if (request.form.get("enabled", "1") or "").strip() in ("1", "true", "on", "yes") else False
+    if enabled:
+        t["vtc_cm_reminder_auto_disabled"] = False
+        t["vtc_cm_reminder_auto_disabled_at"] = ""
+    else:
+        t["vtc_cm_reminder_auto_disabled"] = True
+        t["vtc_cm_reminder_auto_disabled_at"] = _now_iso()
+
+    _refresh_vtc_cm_reminder_schedule(t)
+    t["updated_at"] = _now_iso()
+
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 # =========================
@@ -7335,6 +7926,7 @@ def admin_convention_unsigned_notify(session_id: str, trainee_id: str):
 
     t["convention_unsigned_notified_at"] = _now_iso()
     t["updated_at"] = _now_iso()
+    append_trainee_history_event(t, "Relance convention non signée", "Mail + SMS", "relance", t["convention_unsigned_notified_at"])
 
     s["trainees"] = trainees
     save_data(data)
@@ -7555,7 +8147,7 @@ def admin_test_fr_notify(session_id: str, trainee_id: str):
     t["test_fr_deadline"] = deadline
     t[payload["stamp_field"]] = now
     t["updated_at"] = now
-
+    append_trainee_history_event(t, "Test de français envoyé", f"Code : {code} · Date limite : {fr_date(deadline) or deadline}", "mail", now)
 
     s["trainees"] = trainees
     save_data(data)
@@ -7590,6 +8182,7 @@ def admin_test_fr_relance(session_id: str, trainee_id: str):
     t["test_fr_deadline"] = deadline
     t[payload["stamp_field"]] = now
     t["updated_at"] = now
+    append_trainee_history_event(t, "Relance test de français", f"Code : {code} · Date limite : {fr_date(deadline) or deadline}", "relance", now)
 
     add_notification(
         data,
@@ -7641,6 +8234,7 @@ def admin_test_fr_echec(session_id: str, trainee_id: str):
     t[payload["stamp_field"]] = now
     t["test_fr_last_failed_at"] = now
     t["updated_at"] = now
+    append_trainee_history_event(t, "Échec test de français", f"Nouveau lien envoyé · Date limite : {fr_date(deadline) or deadline}", "relance", now)
 
     add_notification(
         data,
@@ -7902,94 +8496,7 @@ def admin_docs_relance(session_id: str, trainee_id: str):
     if not t:
         abort(404)
 
-    link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
-    training_type = _session_get(s, "training_type", "")
-    ensure_documents_schema_for_trainee(t, training_type)
-    
-    docs_details = docs_summary_text(
-        t,
-        allowed_statuses={
-            "A CONTRÔLER",
-            "A CONTROLER",
-            "NON CONFORME",
-            "NON_CONFORME",
-            "NON DÉPOSÉ",
-            "NON DEPOSE",
-            "NON_DEPOSE",
-        },
-    )
-    infos_details = infos_missing_text(t)
-
-    formation_type = formation_label(_session_get(s, "training_type", ""))
-    dstart = fr_date(_session_get(s, "date_start", ""))
-    dend = fr_date(_session_get(s, "date_end", ""))
-
-    first_name = (t.get("first_name") or "").strip() or "Madame, Monsieur"
-
-    subject = "Relance : Dossier Formation incomplet"
-
-    html = mail_layout(f"""
-      <h2 style="text-align:center;color:#b91c1c">⏰ Relance – Votre Dossier Formation est incomplet</h2>
-
-      <p>Bonjour <strong>{first_name}</strong>,</p>
-
-      <p>
-        Nous revenons vers vous concernant votre inscription en formation
-        <strong>{formation_type}</strong> (du <strong>{dstart}</strong> au <strong>{dend}</strong>).
-      </p>
-
-      <p>
-        À ce jour, votre dossier est INCOMPLET (éléments manquants et/ou à corriger).
-        Merci de déposer les éléments nécessaires dès que possible via votre espace stagiaire.
-      </p>
-
-      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px;margin:16px 0">
-        <p style="margin:0 0 10px 0"><strong>📌 Votre dossier détaillé :</strong></p>
-       <pre style="white-space:pre-wrap;background:#fff;border:1px solid #fee2e2;padding:10px;border-radius:10px;margin:0">{docs_details or "Aucun document en attente."}</pre>
-
-    <p style="margin:14px 0 10px 0"><strong>🧾 Informations à compléter :</strong></p>
-    <pre style="white-space:pre-wrap;background:#fff;border:1px solid #fee2e2;padding:10px;border-radius:10px;margin:0">{infos_details or "Aucune information manquante."}</pre>
-
-        <p style="margin:12px 0 0 0">
-          <strong>📍 Informations à compléter et Dépôt des documents :</strong><br>
-          <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
-        </p>
-
-        <p style="margin:10px 0 0 0;color:#b91c1c;font-weight:bold">
-          ⚠️ Nous vous remercions de bien vouloir compléter votre dossier dès que possible !
-        </p>
-      </div>
-
-      <p style="margin-top:22px">
-        Si vous avez la moindre difficulté, contactez-nous au <strong>04 22 47 07 68</strong>.
-      </p>
-
-      <p style="margin-top:22px">
-        Merci par avance,<br>
-        <strong>Clément VAILLANT</strong><br>
-        Directeur Intégrale Academy
-      </p>
-
-      <p style="text-align:center;margin-top:18px">
-        <a href="{link}"
-           style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
-          👉 Accéder à mon espace stagiaire
-        </a>
-      </p>
-    """)
-
-    sms = (
-        f"Intégrale Academy ⏰ Relance : Bonjour {t.get('first_name','')}, "
-        f"Nous revenons vers vous au sujet de votre formation {formation_type}. A ce jour votre Dossier Formation est INCOMPLET. Votre formation approche, et pour un meilleur suivi de votre inscription, nous vous remercions de bien vouloir compléter votre dossier dès que possible. "
-        f"Pour rappel, votre dossier doit être COMPLET au plus tard 10 jours avant votre entrée en formation. Vous pouvez compléter votre dossier en cliquant ici : {link} "
-        f"Besoin d’aide ? 04 22 47 07 68"
-    )
-
-    brevo_send_email(t.get("email", ""), subject, html)
-    brevo_send_sms(t.get("phone", ""), sms)
-
-    t["docs_last_relance_at"] = _now_iso()
-    t["updated_at"] = _now_iso()
+    _send_docs_relance_message(data, s, t, source="manual")
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
@@ -8081,10 +8588,19 @@ def api_docs_update(session_id: str, trainee_id: str):
             break
 
     t["updated_at"] = _now_iso()
+    if field == "status":
+        append_trainee_history_event(t, "Statut document modifié", f"{doc_key} → {value}", "action")
+    elif field == "comment":
+        append_trainee_history_event(t, "Commentaire document modifié", f"{doc_key}", "action")
 
     # ✅ Synchronisation automatique du statut dossier
     training_type = _session_get(s, "training_type", "")
-    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+    dossier_complete = dossier_is_complete_total(t, training_type)
+    t["dossier_status"] = "complete" if dossier_complete else "incomplete"
+    planned = _docs_relance_planned_date(s)
+    t["docs_relance_auto_planned_date"] = "" if dossier_complete else (planned.isoformat() if planned else "")
+    if dossier_complete:
+        t["docs_relance_auto_sent_at"] = ""
 
     # ✅ PERSISTENCE (sinon ça se perd au refresh)
     s["trainees"] = trainees
@@ -8093,8 +8609,9 @@ def api_docs_update(session_id: str, trainee_id: str):
 
     return jsonify({
         "ok": True,
-        "dossier_is_complete": dossier_is_complete_total(t, training_type),
-        "dossier_status": t["dossier_status"]
+        "dossier_is_complete": dossier_complete,
+        "dossier_status": t["dossier_status"],
+        "docs_relance_auto_planned_date": t.get("docs_relance_auto_planned_date") or "",
     })
 
 # =========================
@@ -8987,7 +9504,12 @@ def public_vtc_credentials(token: str):
       <p><strong>Login :</strong> {login}</p>
       <p><strong>Mot de passe :</strong> {password}</p>
     """)
-    brevo_send_email("clement@integraleacademy.com", subject, html)
+    brevo_send_email(
+        "clement@integraleacademy.com",
+        subject,
+        html,
+        cc_emails=["elsaduq83@gmail.com"],
+    )
 
     return jsonify({"ok": True})
 
@@ -9257,6 +9779,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         t["vae_action_dates"] = {}
     ensure_vae_relances_state(t)
     refresh_vae_relance_schedule(t)
+    _refresh_vtc_cm_reminder_schedule(t)
 
     # ✅ s'assure que no_permis est bien un bool
     t["no_permis"] = bool(t.get("no_permis"))
@@ -9267,6 +9790,10 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     # ✅ dossier_status cohérent avec les docs requis
     dossier_complete = dossier_is_complete_total(t, training_type)
     t["dossier_status"] = "complete" if dossier_complete else "incomplete"
+    planned_relance_date = _docs_relance_planned_date(s)
+    t["docs_relance_auto_planned_date"] = "" if dossier_complete else (planned_relance_date.isoformat() if planned_relance_date else "")
+    if dossier_complete:
+        t["docs_relance_auto_sent_at"] = ""
     t["updated_at"] = _now_iso()
     ensure_cnaps_history(t)
 
@@ -9308,6 +9835,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         PUBLIC_STUDENT_PORTAL_BASE=PUBLIC_STUDENT_PORTAL_BASE,
         fr_date=fr_date,
         brevo_no_credit_notice=brevo_no_credit_notice,
+        docs_relance_planned_fr=fr_date(t.get("docs_relance_auto_planned_date") or ""),
     )
 
 
@@ -10128,8 +10656,11 @@ def api_secretariat_vae_relance_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
     comment = (payload.get("comment") or "").strip()
+    called_resolution = (payload.get("called_resolution") or "").strip()
     if outcome not in ("CALLED", "NO_ANSWER"):
         return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+    if outcome == "CALLED" and not comment:
+        return jsonify({"ok": False, "error": "comment_required"}), 400
 
     data = load_data()
     notification = next(
@@ -10216,6 +10747,42 @@ def _remove_admin_comment_flag(current: str, flag_text: str) -> str:
         return ""
     kept = [line for line in current.splitlines() if line.strip() != flag_text]
     return "\n".join(kept).strip()
+
+def _send_prelevement_pending_validation_messages(trainee: dict, session: dict) -> Tuple[bool, bool]:
+    first_name = (trainee.get("first_name") or "").strip()
+    last_name = (trainee.get("last_name") or "").strip()
+    email = (trainee.get("email") or "").strip()
+    phone = (trainee.get("phone") or "").strip()
+    training_name = formation_label(_session_get(session, "training_type", "") or session.get("name") or "formation")
+
+    subject = "Prélèvement en attente - validation du mandat"
+    html = mail_layout(f"""
+      <p>Bonjour,</p>
+
+      <p>Je me permets de revenir vers vous concernant votre formation <strong>{training_name}</strong>.</p>
+
+      <p>A ce jour, vous n'avez pas encore validé le mandat de prélèvement que nous vous avons envoyé.
+      Vous serait-il possible svp de valider le mandat de prélèvement afin que nous puissions valider votre inscription ?
+      Si vous n'avez pas reçu le lien (depuis notre banque QONTO) ou si vous rencontrez des difficultés,
+      vous pouvez nous contacter au 04 22 47 07 68.</p>
+
+      <p>Je vous remercie par avance,<br>Clément VAILLANT</p>
+    """)
+    email_ok = brevo_send_email(email, subject, html) if email else False
+
+    sms = (
+        "Bonjour, "
+        f"Je me permets de revenir vers vous concernant votre formation {training_name}. "
+        "A ce jour, vous n'avez pas encore validé le mandat de prélèvement que nous vous avons envoyé. "
+        "Vous serait-il possible svp de valider le mandat de prélèvement afin que nous puissions valider votre inscription ? "
+        "Si vous n'avez pas reçu le lien (depuis notre banque QONTO) ou si vous rencontrez des difficultés, "
+        "vous pouvez nous contacter au 04 22 47 07 68. "
+        "Je vous remercie par avance, Clément VAILLANT"
+    ).strip()
+    sms_ok = brevo_send_sms(phone, sms) if phone else False
+
+    return bool(email_ok), bool(sms_ok)
+
 
 def _send_prelevement_new_date_email(
     trainee: dict,
@@ -10385,6 +10952,7 @@ def api_financement_rejet_send(session_id: str, trainee_id: str):
             "secretariat_token": secretariat_token,
         },
     )
+    t.setdefault("financement_pending_notification_sent_at", "")
 
     s["trainees"] = _session_trainees_list(s)
     s.pop("stagiaires", None)
@@ -10397,6 +10965,55 @@ def api_financement_rejet_send(session_id: str, trainee_id: str):
         "reply_url": reply_url,
         "note": t.get("financement_rejected_note"),
         "comment": t.get("comment", ""),
+    })
+
+
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/financement-en-attente/send")
+@admin_login_required
+@admin_write_required
+def api_financement_pending_send(session_id: str, trainee_id: str):
+    data = load_data()
+    s, t = _find_session_and_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "not_found"}), 404
+
+    already_sent_at = (t.get("financement_pending_notification_sent_at") or "").strip()
+    if already_sent_at:
+        return jsonify({"ok": False, "error": "already_sent", "sent_at": already_sent_at}), 400
+
+    email_ok, sms_ok = _send_prelevement_pending_validation_messages(t, s)
+
+    sent_at = _now_iso()
+    t["financement_pending_notification_sent_at"] = sent_at
+
+    first_name = (t.get("first_name") or "").strip()
+    last_name = (t.get("last_name") or "").strip()
+    training_name = formation_label(_session_get(s, "training_type", "") or s.get("name") or "formation")
+
+    add_notification(
+        data,
+        "notifications_prelevement_non_valides",
+        f"{first_name} {last_name} • {training_name}",
+        meta={
+            "first_name": first_name,
+            "last_name": last_name,
+            "training": training_name,
+            "session_id": s.get("id"),
+            "trainee_id": t.get("id"),
+            "sent_at": sent_at,
+        },
+    )
+
+    s["trainees"] = _session_trainees_list(s)
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return jsonify({
+        "ok": True,
+        "email_ok": bool(email_ok),
+        "sms_ok": bool(sms_ok),
+        "sent_at": sent_at,
+        "sent_at_fr": fr_date(sent_at[:10]) if sent_at else "",
     })
 
 
