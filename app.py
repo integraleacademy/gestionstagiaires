@@ -8936,7 +8936,12 @@ def public_vtc_credentials(token: str):
       <p><strong>Login :</strong> {login}</p>
       <p><strong>Mot de passe :</strong> {password}</p>
     """)
-    brevo_send_email("clement@integraleacademy.com", subject, html)
+    brevo_send_email(
+        "clement@integraleacademy.com",
+        subject,
+        html,
+        cc_emails=["elsaduq83@gmail.com"],
+    )
 
     return jsonify({"ok": True})
 
