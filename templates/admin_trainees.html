@@ -107,10 +107,10 @@
         <th>Financement</th>
         {% if show_vae %}<th>VAE</th>{% endif %}
         {% if show_vae %}<th>Suivi transmission</th>{% endif %}
-        {% if not is_vtc and not show_vae %}<th>Test Français</th>{% endif %}
+        {% if not is_vtc and not show_vae and not is_dirigeant %}<th>Test Français</th>{% endif %}
         {% if not is_vtc %}<th>Dossier</th>{% endif %}
         {% if not is_vtc %}<th>Dossier complet</th>{% endif %}
-        {% if not is_vtc and not show_vae %}<th>CNAPS</th>{% endif %}
+        {% if not is_vtc and not show_vae and not is_dirigeant %}<th>CNAPS</th>{% endif %}
         {% if is_vtc %}<th>Inscription CMAR</th>{% endif %}
         {% if is_vtc %}<th>E-learning</th>{% endif %}
         {% if is_vtc %}<th>Livre</th>{% endif %}
@@ -214,7 +214,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 </td>
 {% endif %}
 
-{% if not is_vtc and not show_vae %}
+{% if not is_vtc and not show_vae and not is_dirigeant %}
 <td>
   <select class="status sel status-dot" data-field="test_fr_status" {{ read_only_attr }}>
     <option value="soon" {% if t.test_fr_status=="soon" or not t.test_fr_status %}selected{% endif %}>🟠</option>
@@ -249,7 +249,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         </td>
         {% endif %}
 
-        {% if not is_vtc and not show_vae %}
+        {% if not is_vtc and not show_vae and not is_dirigeant %}
         <td>
           <div class="inline">
             <span class="cnaps" data-cnaps>{{ t.cnaps or "INCONNU" }}</span>
