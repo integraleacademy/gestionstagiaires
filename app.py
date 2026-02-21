@@ -4553,8 +4553,11 @@ def api_secretariat_relance_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
     comment = (payload.get("comment") or "").strip()
+    called_resolution = (payload.get("called_resolution") or "").strip()
     if outcome not in ("CALLED", "NO_ANSWER"):
         return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+    if outcome == "CALLED" and not comment:
+        return jsonify({"ok": False, "error": "comment_required"}), 400
 
     data = load_data()
     notification = next(
@@ -4604,6 +4607,8 @@ def api_secretariat_relance_result(notification_id: str):
     notification_meta = notification.setdefault("meta", {})
     notification_meta["call_status"] = display
     notification_meta["no_answer_count"] = no_answer_count
+    if called_resolution:
+        notification_meta["called_resolution"] = called_resolution
     if comment:
         notification_meta["last_comment"] = comment
 
@@ -4627,6 +4632,7 @@ def api_secretariat_relance_result(notification_id: str):
             "session_id": s.get("id") if s else None,
             "trainee_id": t.get("id") if t else None,
             "comment": comment,
+            "called_resolution": called_resolution,
             "call_status": display,
         },
     )
@@ -4657,8 +4663,11 @@ def api_secretariat_cnaps_pre_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
     comment = (payload.get("comment") or "").strip()
+    called_resolution = (payload.get("called_resolution") or "").strip()
     if outcome not in ("CALLED", "NO_ANSWER"):
         return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+    if outcome == "CALLED" and not comment:
+        return jsonify({"ok": False, "error": "comment_required"}), 400
 
     data = load_data()
     notification = next(
@@ -4687,6 +4696,8 @@ def api_secretariat_cnaps_pre_result(notification_id: str):
 
     notification_meta["call_status"] = display
     notification_meta["no_answer_count"] = no_answer_count
+    if called_resolution:
+        notification_meta["called_resolution"] = called_resolution
     if comment:
         notification_meta["last_comment"] = comment
 
@@ -4710,6 +4721,7 @@ def api_secretariat_cnaps_pre_result(notification_id: str):
             "session_id": notification_meta.get("session_id"),
             "trainee_id": notification_meta.get("trainee_id"),
             "comment": comment,
+            "called_resolution": called_resolution,
             "call_status": display,
         },
     )
@@ -4730,8 +4742,16 @@ def api_secretariat_financement_refuse_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
     comment = (payload.get("comment") or "").strip()
+    called_resolution = (payload.get("called_resolution") or "").strip()
     if outcome not in ("CALLED", "NO_ANSWER"):
         return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+    if outcome == "CALLED" and not comment:
+        return jsonify({"ok": False, "error": "comment_required"}), 400
+    if outcome == "CALLED" and called_resolution not in (
+        "La personne souhaite poursuivre son projet de formation",
+        "La personne renonce à son projet de formation",
+    ):
+        return jsonify({"ok": False, "error": "called_resolution_required"}), 400
 
     data = load_data()
     notification = next(
@@ -4760,6 +4780,8 @@ def api_secretariat_financement_refuse_result(notification_id: str):
 
     notification_meta["call_status"] = display
     notification_meta["no_answer_count"] = no_answer_count
+    if called_resolution:
+        notification_meta["called_resolution"] = called_resolution
     if comment:
         notification_meta["last_comment"] = comment
 
@@ -4783,6 +4805,7 @@ def api_secretariat_financement_refuse_result(notification_id: str):
             "session_id": notification_meta.get("session_id"),
             "trainee_id": notification_meta.get("trainee_id"),
             "comment": comment,
+            "called_resolution": called_resolution,
             "call_status": display,
         },
     )
@@ -4803,8 +4826,16 @@ def api_secretariat_edof_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
     comment = (payload.get("comment") or "").strip()
+    called_resolution = (payload.get("called_resolution") or "").strip()
     if outcome not in ("CALLED", "NO_ANSWER"):
         return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+    if outcome == "CALLED" and not comment:
+        return jsonify({"ok": False, "error": "comment_required"}), 400
+    if outcome == "CALLED" and called_resolution not in (
+        "Un RDV téléphonique a été fixé pour finaliser l'inscription",
+        "Autre",
+    ):
+        return jsonify({"ok": False, "error": "called_resolution_required"}), 400
 
     data = load_data()
     notification = next(
@@ -4833,6 +4864,8 @@ def api_secretariat_edof_result(notification_id: str):
 
     notification_meta["call_status"] = display
     notification_meta["no_answer_count"] = no_answer_count
+    if called_resolution:
+        notification_meta["called_resolution"] = called_resolution
     if comment:
         notification_meta["last_comment"] = comment
 
@@ -4856,6 +4889,7 @@ def api_secretariat_edof_result(notification_id: str):
             "session_id": notification_meta.get("session_id"),
             "trainee_id": notification_meta.get("trainee_id"),
             "comment": comment,
+            "called_resolution": called_resolution,
             "call_status": display,
         },
     )
@@ -4876,8 +4910,11 @@ def api_secretariat_test_fr_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
     comment = (payload.get("comment") or "").strip()
+    called_resolution = (payload.get("called_resolution") or "").strip()
     if outcome not in ("CALLED", "NO_ANSWER"):
         return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+    if outcome == "CALLED" and not comment:
+        return jsonify({"ok": False, "error": "comment_required"}), 400
 
     data = load_data()
     notification = next(
@@ -4906,6 +4943,8 @@ def api_secretariat_test_fr_result(notification_id: str):
 
     notification_meta["call_status"] = display
     notification_meta["no_answer_count"] = no_answer_count
+    if called_resolution:
+        notification_meta["called_resolution"] = called_resolution
     if comment:
         notification_meta["last_comment"] = comment
 
@@ -4929,6 +4968,7 @@ def api_secretariat_test_fr_result(notification_id: str):
             "session_id": notification_meta.get("session_id"),
             "trainee_id": notification_meta.get("trainee_id"),
             "comment": comment,
+            "called_resolution": called_resolution,
             "call_status": display,
         },
     )
@@ -4949,8 +4989,11 @@ def api_secretariat_convention_unsigned_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
     comment = (payload.get("comment") or "").strip()
+    called_resolution = (payload.get("called_resolution") or "").strip()
     if outcome not in ("CALLED", "NO_ANSWER"):
         return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+    if outcome == "CALLED" and not comment:
+        return jsonify({"ok": False, "error": "comment_required"}), 400
 
     data = load_data()
     notification = next(
@@ -4979,6 +5022,8 @@ def api_secretariat_convention_unsigned_result(notification_id: str):
 
     notification_meta["call_status"] = display
     notification_meta["no_answer_count"] = no_answer_count
+    if called_resolution:
+        notification_meta["called_resolution"] = called_resolution
     if comment:
         notification_meta["last_comment"] = comment
 
@@ -5002,6 +5047,7 @@ def api_secretariat_convention_unsigned_result(notification_id: str):
             "session_id": notification_meta.get("session_id"),
             "trainee_id": notification_meta.get("trainee_id"),
             "comment": comment,
+            "called_resolution": called_resolution,
             "call_status": display,
         },
     )
@@ -10077,8 +10123,11 @@ def api_secretariat_vae_relance_result(notification_id: str):
     payload = request.get_json(silent=True) or {}
     outcome = (payload.get("outcome") or "").strip().upper()
     comment = (payload.get("comment") or "").strip()
+    called_resolution = (payload.get("called_resolution") or "").strip()
     if outcome not in ("CALLED", "NO_ANSWER"):
         return jsonify({"ok": False, "error": "invalid_outcome"}), 400
+    if outcome == "CALLED" and not comment:
+        return jsonify({"ok": False, "error": "comment_required"}), 400
 
     data = load_data()
     notification = next(
