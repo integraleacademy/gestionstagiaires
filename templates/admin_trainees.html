@@ -30,6 +30,7 @@
       <div class="stat-title">Stagiaires</div>
       <div class="stat-value">{{ stats.total }}</div>
     </div>
+    {% if not show_vae %}
     <div class="stat">
       <div class="stat-title">Conformes</div>
       <div class="stat-value">{{ stats.conform_count }}</div>
@@ -38,16 +39,15 @@
       <div class="stat-title">Non conformes</div>
       <div class="stat-value">{{ stats.non_conform_count }}</div>
     </div>
-    {% if not show_vae %}
     <div class="stat">
       <div class="stat-title">CNAPS acceptés</div>
       <div class="stat-value">{{ stats.cnaps_accepted_count }}</div>
     </div>
-    {% endif %}
     <div class="stat">
       <div class="stat-title">Session</div>
       <div class="stat-value">{{ "Conforme ✅" if stats.session_is_conform else "Non conforme ❌" }}</div>
     </div>
+    {% endif %}
   </div>
 </div>
 
