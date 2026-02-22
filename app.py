@@ -4457,6 +4457,15 @@ def admin_sessions():
         "A3P": 0,
     }
 
+    def _parse_iso_date(raw_value: Any) -> Optional[datetime.date]:
+        raw = (raw_value or "").strip()
+        if not raw:
+            return None
+        try:
+            return datetime.datetime.strptime(raw[:10], "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            return None
+
     def _dashboard_training_label(training_type: str) -> Optional[str]:
         raw = (training_type or "").strip().upper()
         if raw.startswith("APS"):
@@ -4474,27 +4483,28 @@ def admin_sessions():
         return None
 
     for s in data.get("sessions", []):
-        try:
-            session_start = datetime.datetime.strptime(
-                (_session_get(s, "date_start", "") or "")[:10], "%Y-%m-%d"
-            ).date()
-        except (ValueError, TypeError):
-            session_start = None
+        session_start = _parse_iso_date(_session_get(s, "date_start", ""))
+        dashboard_label = _dashboard_training_label(_session_get(s, "training_type", ""))
+        if dashboard_label:
+            trainees_for_dashboard = _session_trainees_list(s)
+            for trainee in trainees_for_dashboard:
+                trainee_created_at = _parse_iso_date(trainee.get("created_at"))
+                in_dashboard_year = False
+                if trainee_created_at:
+                    in_dashboard_year = dashboard_start <= trainee_created_at <= dashboard_end
+                elif session_start:
+                    in_dashboard_year = dashboard_start <= session_start <= dashboard_end
 
-        if session_start and dashboard_start <= session_start <= dashboard_end:
-            dashboard_label = _dashboard_training_label(_session_get(s, "training_type", ""))
-            if dashboard_label:
-                trainees_for_dashboard = _session_trainees_list(s)
+                if not in_dashboard_year:
+                    continue
+
                 if dashboard_label == "VAE":
-                    vae_certified_total = 0
-                    for trainee in trainees_for_dashboard:
-                        vae_status_key = (trainee.get("vae_status") or "").strip().lower()
-                        vae_status_label = (trainee.get("vae_status_label") or "").strip().lower()
-                        if vae_status_key == "certified" or "certification obtenue" in vae_status_label:
-                            vae_certified_total += 1
-                    yearly_training_counts[dashboard_label] += vae_certified_total
+                    vae_status_key = (trainee.get("vae_status") or "").strip().lower()
+                    vae_status_label = (trainee.get("vae_status_label") or "").strip().lower()
+                    if vae_status_key == "certified" or "certification obtenue" in vae_status_label:
+                        yearly_training_counts[dashboard_label] += 1
                 else:
-                    yearly_training_counts[dashboard_label] += len(trainees_for_dashboard)
+                    yearly_training_counts[dashboard_label] += 1
 
         if bool(s.get("archived")):
             continue
