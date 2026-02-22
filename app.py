@@ -9416,6 +9416,52 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
 
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/deliverables/<kind>/delete")
+@admin_login_required
+@admin_write_required
+def admin_delete_deliverable(session_id: str, trainee_id: str, kind: str):
+    if kind not in DELIVERABLE_LABELS:
+        abort(404)
+
+    data = load_data()
+    _force_backup_snapshot(DATA_FILE)
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    deliverables = t.get("deliverables") or {}
+    token = (deliverables.get(kind) or "").strip()
+
+    if token:
+        try:
+            fp = _detokenize_path(token)
+            if os.path.exists(fp):
+                os.remove(fp)
+        except Exception:
+            pass
+
+    deliverables[kind] = ""
+    t["deliverables"] = deliverables
+    t["updated_at"] = _now_iso()
+    append_trainee_history_event(
+        t,
+        "Document fin de formation supprimé",
+        DELIVERABLE_LABELS[kind],
+        "action",
+    )
+
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
 def find_session_and_trainee_by_token(data: Dict[str, Any], token: str):
     token = (token or "").strip()
     if not token:
