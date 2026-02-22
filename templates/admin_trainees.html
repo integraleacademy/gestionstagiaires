@@ -4,6 +4,7 @@
 {% set is_vtc_header = "VTC" in (session.training_type or "")|upper %}
 {% set vtc_theory_exam_date = session.exam_theory_date or session.exam_date %}
 {% set vtc_practice_exam_date = session.exam_practice_date or session.exam_date %}
+{% set vtc_practice_training_date = session.practice_training_date %}
 {% set is_dirigeant_session = is_dirigeant or ("DIRIGEANT" in (session.training_type or "")|upper) or ("DIRIGEANT" in (session.name or "")|upper) %}
 
 <div class="breadcrumbs">
@@ -19,6 +20,7 @@
       <span>Formation : <strong>{{ session.date_start|frdate }}</strong> → <strong>{{ session.date_end|frdate }}</strong></span>
       {% if "VTC" in (session.training_type or "")|upper %}
         <span>Examen théorique : <strong>{{ vtc_theory_exam_date|frdate }}</strong></span>
+        <span>Formation pratique : <strong>{{ vtc_practice_training_date|frdate }}</strong></span>
         <span>Examen pratique : <strong>{{ vtc_practice_exam_date|frdate }}</strong></span>
       {% else %}
         <span>Examen : <strong>{{ session.exam_date|frdate }}</strong></span>
