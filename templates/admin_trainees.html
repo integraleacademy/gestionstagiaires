@@ -896,6 +896,8 @@ bulkSstInput?.addEventListener("change", async ()=>{
 
   if(!files.length) return;
 
+  const sendNotifications = window.confirm("Envoyer automatiquement les notifications email + SMS aux stagiaires concernés ?");
+
   // petit garde-fou
   const allowed = ["application/pdf","image/jpeg","image/png"];
   const bad = files.filter(f => !allowed.includes(f.type) && !f.name.toLowerCase().endsWith(".pdf"));
@@ -909,6 +911,7 @@ bulkSstInput?.addEventListener("change", async ()=>{
 
   try{
     const fd = new FormData();
+    fd.append("send_notifications", sendNotifications ? "1" : "0");
     files.forEach(f => fd.append("files", f));
 
     const r = await fetch(`/api/sessions/${sessionId}/sst/bulk_upload`, {
@@ -981,6 +984,8 @@ bulkDiplomeInput?.addEventListener("change", async ()=>{
   const files = [...bulkDiplomeInput.files || []];
   if(!files.length) return;
 
+  const sendNotifications = window.confirm("Envoyer automatiquement les notifications email + SMS aux stagiaires concernés ?");
+
   const allowed = ["application/pdf","image/jpeg","image/png"];
   const bad = files.filter(f => !allowed.includes(f.type) && !f.name.toLowerCase().endsWith(".pdf"));
   if(bad.length){
@@ -993,6 +998,7 @@ bulkDiplomeInput?.addEventListener("change", async ()=>{
 
   try{
     const fd = new FormData();
+    fd.append("send_notifications", sendNotifications ? "1" : "0");
     files.forEach(f => fd.append("files", f));
 
     const r = await fetch(`/api/sessions/${sessionId}/diplome/bulk_upload`, {
@@ -1057,6 +1063,8 @@ bulkAttestationInput?.addEventListener("change", async ()=>{
   const files = [...bulkAttestationInput.files || []];
   if(!files.length) return;
 
+  const sendNotifications = window.confirm("Envoyer automatiquement les notifications email + SMS aux stagiaires concernés ?");
+
   const allowed = ["application/pdf","image/jpeg","image/png"];
   const bad = files.filter(f => !allowed.includes(f.type) && !f.name.toLowerCase().endsWith(".pdf"));
   if(bad.length){
@@ -1069,6 +1077,7 @@ bulkAttestationInput?.addEventListener("change", async ()=>{
 
   try{
     const fd = new FormData();
+    fd.append("send_notifications", sendNotifications ? "1" : "0");
     files.forEach(f => fd.append("files", f));
 
     const r = await fetch(`/api/sessions/${sessionId}/attestation/bulk_upload`, {

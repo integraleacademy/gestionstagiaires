@@ -482,7 +482,7 @@ def brevo_send_sms(phone: str, message: str) -> bool:
         "recipient": phone,
         "content": message,
         "type": "transactional",
-        "unicodeEnabled": True, 
+        "unicodeEnabled": True,
     }
     if sms_sender:
         payload["sender"] = sms_sender  # ex: "INTEGRALE"
@@ -3524,7 +3524,7 @@ def required_docs_are_deposited(trainee: Dict[str, Any], training_type: str) -> 
 
     return True
 
-    
+
 import re
 
 def infos_is_complete(t: Dict[str, Any]) -> bool:
@@ -4526,7 +4526,7 @@ def admin_sessions():
         cmar_registered_total = sum(
             1 for t in trainees if bool((t.get("vtc_cm_submitted_at") or "").strip())
         )
-        
+
         total_total = len(trainees)
         dossier_complete_total = 0
         for t in trainees:
@@ -5831,12 +5831,12 @@ def admin_trainees(session_id: str):
         # hosting only for A3P
         if session_view["training_type"] == "A3P":
             email = (t.get("email") or "").strip().lower()
-        
+
             hb = fetch_hebergement_status(email) if email else None
-        
+
             # ✅ règle anti-bug : on ne downgrade JAMAIS "reserved"
             current = (t.get("hosting_status") or "unknown").strip().lower()
-        
+
             if hb == "reserved":
                 t["hosting_status"] = "reserved"
             elif current == "reserved":
@@ -5946,7 +5946,7 @@ def api_create_session():
         "practice_training_date": practice_training_date,
         "created_at": _now_iso(),
         "trainees": [],
-        "archived": False, 
+        "archived": False,
     }
     data["sessions"].insert(0, s)
     save_data(data)
@@ -6291,10 +6291,10 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vae_jury_date",
         "vae_action_dates",
         "cnaps",
-        "no_permis", 
+        "no_permis",
         "public_hide_infos",
         "public_hide_docs",
-        "public_hide_suivi", 
+        "public_hide_suivi",
         "public_hide_popup",
         "last_name",
         "first_name",
@@ -7213,7 +7213,7 @@ def public_trainee_login(token: str):
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       <title>Accès espace stagiaire</title>
-    
+
 <style>
   *, *::before, *::after {{
     box-sizing: border-box;
@@ -7322,26 +7322,26 @@ def public_trainee_login(token: str):
 </style>
 
     </head>
-    
+
     <body>
       <div class="card">
-    
+
         <!-- 🔰 LOGO -->
         <img src="/static/logo-integrale.png" class="logo" alt="Intégrale Academy">
-    
+
         <h2>Accès à votre espace stagiaire</h2>
         <p>Veuillez saisir votre nom de famille et votre date de naissance pour continuer.</p>
-    
+
         <form method="post" action="/espace/{token}/login">
           <label>Nom de famille</label>
           <input name="last_name" autocomplete="family-name" required>
-    
+
           <label>Date de naissance</label>
           <input name="birth" inputmode="numeric" placeholder="JJMMYYYY" required>
-    
+
           <button class="btn">Se connecter</button>
         </form>
-    
+
         <div class="hint">Format demandé : <strong>JJMMYYYY</strong> (ex : 16091993)</div>
       </div>
     </body>
@@ -8505,7 +8505,7 @@ def admin_docs_notify(session_id: str, trainee_id: str):
     save_data(data)
 
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
-    
+
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/docs/nonconform/notify")
 @admin_login_required
 @admin_write_required
@@ -9498,7 +9498,7 @@ def public_trainee_space(token):
         dossier_ok=dossier_is_complete_total(t, training_type),
         vae_required_docs_deposited=required_docs_are_deposited(t, training_type),
     )
-    
+
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/identity-photo/upload")
 @admin_login_required
@@ -11824,6 +11824,8 @@ def api_sst_bulk_upload(session_id: str):
     if not files:
         return jsonify({"ok": False, "error": "no_files"}), 400
 
+    send_notifications = (request.form.get("send_notifications", "1") or "1").strip().lower() not in {"0", "false", "no", "non", "off"}
+
     trainees = _session_trainees_list(s)
 
     received = 0
@@ -11858,7 +11860,7 @@ def api_sst_bulk_upload(session_id: str):
         if existing:
             failed.append({"filename": original_name, "reason": "déjà un SST existant (non remplacé)"})
             continue
- 
+
 
         try:
             # ✅ sécurité : remet le curseur au début (selon navigateur / proxy ça évite des fichiers vides)
@@ -11887,81 +11889,82 @@ def api_sst_bulk_upload(session_id: str):
         trainee["updated_at"] = _now_iso()
 
           # ✅ Envoi mail + SMS (comme l'import manuel deliverables)
-        try:
-            link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{trainee.get('public_token','')}"
-            label = DELIVERABLE_LABELS["carte_sst"]
-        
-            first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
-            formation_type = formation_label(_session_get(s, "training_type", ""))
-            dstart = fr_date(_session_get(s, "date_start", ""))
-            dend = fr_date(_session_get(s, "date_end", ""))
-        
-            extra_line = (
-                "🩺 Votre carte SST est disponible sur votre espace en ligne. "
-                "Nous vous remettrons également un exemplaire papier en main propre "
-                "(attention : aucun duplicata ne sera délivré). "
-                "Conservez-la précieusement, elle peut être demandée par un employeur."
-            )
-        
-            subject = f"{label} disponible – Intégrale Academy"  # ✅ FIX ICI
-        
-            html = mail_layout(f"""
-              <h2 style="text-align:center">✅ {label} disponible</h2>
-        
-              <p>Bonjour <strong>{first_name}</strong>,</p>
-        
-              <p>
-                Nous avons le plaisir de vous informer que votre <strong>{label}</strong>
-                est désormais disponible dans votre espace stagiaire.
-              </p>
-        
-              <p style='margin-top:10px;font-weight:700'>{extra_line}</p>
-        
-              <div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:16px 0">
-                <p style="margin:0 0 10px 0">
-                  <strong>📌 Formation :</strong> {formation_type}
-                  {" — <strong>Dates :</strong> " + dstart + " au " + dend if (dstart or dend) else ""}
-                </p>
-        
-                <p style="margin:0">
-                  <strong>📍 Accéder à votre espace stagiaire :</strong><br>
-                  <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
-                </p>
-              </div>
-        
-              <p style="text-align:center;margin-top:18px">
-                <a href="{link}"
-                   style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;
-                          text-decoration:none;font-weight:bold">
-                  👉 Accéder à mon espace stagiaire
-                </a>
-              </p>
-        
-              <p style="margin-top:22px">
-                Pour toute question, vous pouvez nous contacter au <strong>04 22 47 07 68</strong>.
-              </p>
-        
-              <p style="margin-top:22px">
-                Bien cordialement,<br>
-                <strong>Clément VAILLANT</strong><br>
-                Directeur Intégrale Academy
-              </p>
-            """)
-        
-            sms_name = (trainee.get("first_name") or "").strip()
-            sms = (
-                f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
-                f"Votre {label} est disponible sur votre Espace Stagiaire : {link} "
-                f"A bientôt, la Team Intégrale Academy"
-            )
-        
-            if (trainee.get("email") or "").strip():
-                brevo_send_email(trainee.get("email",""), subject, html)
-            if (trainee.get("phone") or "").strip():
-                brevo_send_sms(trainee.get("phone",""), sms)
-        
-        except Exception as e:
-            print("=== BULK SST: erreur envoi mail/sms ===", repr(e))
+        if send_notifications:
+            try:
+                link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{trainee.get('public_token','')}"
+                label = DELIVERABLE_LABELS["carte_sst"]
+
+                first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
+                formation_type = formation_label(_session_get(s, "training_type", ""))
+                dstart = fr_date(_session_get(s, "date_start", ""))
+                dend = fr_date(_session_get(s, "date_end", ""))
+
+                extra_line = (
+                    "🩺 Votre carte SST est disponible sur votre espace en ligne. "
+                    "Nous vous remettrons également un exemplaire papier en main propre "
+                    "(attention : aucun duplicata ne sera délivré). "
+                    "Conservez-la précieusement, elle peut être demandée par un employeur."
+                )
+
+                subject = f"{label} disponible – Intégrale Academy"  # ✅ FIX ICI
+
+                html = mail_layout(f"""
+                  <h2 style="text-align:center">✅ {label} disponible</h2>
+
+                  <p>Bonjour <strong>{first_name}</strong>,</p>
+
+                  <p>
+                    Nous avons le plaisir de vous informer que votre <strong>{label}</strong>
+                    est désormais disponible dans votre espace stagiaire.
+                  </p>
+
+                  <p style='margin-top:10px;font-weight:700'>{extra_line}</p>
+
+                  <div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:16px 0">
+                    <p style="margin:0 0 10px 0">
+                      <strong>📌 Formation :</strong> {formation_type}
+                      {" — <strong>Dates :</strong> " + dstart + " au " + dend if (dstart or dend) else ""}
+                    </p>
+
+                    <p style="margin:0">
+                      <strong>📍 Accéder à votre espace stagiaire :</strong><br>
+                      <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
+                    </p>
+                  </div>
+
+                  <p style="text-align:center;margin-top:18px">
+                    <a href="{link}"
+                       style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;
+                              text-decoration:none;font-weight:bold">
+                      👉 Accéder à mon espace stagiaire
+                    </a>
+                  </p>
+
+                  <p style="margin-top:22px">
+                    Pour toute question, vous pouvez nous contacter au <strong>04 22 47 07 68</strong>.
+                  </p>
+
+                  <p style="margin-top:22px">
+                    Bien cordialement,<br>
+                    <strong>Clément VAILLANT</strong><br>
+                    Directeur Intégrale Academy
+                  </p>
+                """)
+
+                sms_name = (trainee.get("first_name") or "").strip()
+                sms = (
+                    f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
+                    f"Votre {label} est disponible sur votre Espace Stagiaire : {link} "
+                    f"A bientôt, la Team Intégrale Academy"
+                )
+
+                if (trainee.get("email") or "").strip():
+                    brevo_send_email(trainee.get("email",""), subject, html)
+                if (trainee.get("phone") or "").strip():
+                    brevo_send_sms(trainee.get("phone",""), sms)
+
+            except Exception as e:
+                print("=== BULK SST: erreur envoi mail/sms ===", repr(e))
 
 
 
@@ -11981,7 +11984,8 @@ def api_sst_bulk_upload(session_id: str):
         "received": received,
         "added_count": len(added),
         "added": added,
-        "failed": failed
+        "failed": failed,
+        "send_notifications": send_notifications
     })
 
 
@@ -11999,6 +12003,8 @@ def api_diplome_bulk_upload(session_id: str):
     files = request.files.getlist("files")
     if not files:
         return jsonify({"ok": False, "error": "no_files"}), 400
+
+    send_notifications = (request.form.get("send_notifications", "1") or "1").strip().lower() not in {"0", "false", "no", "non", "off"}
 
     trainees = _session_trainees_list(s)
 
@@ -12053,166 +12059,167 @@ def api_diplome_bulk_upload(session_id: str):
         trainee["updated_at"] = _now_iso()
 
         # ✅ Envoi mail + SMS (mail enrichi + CNAPS + avis Google)
-        try:
-            link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{trainee.get('public_token','')}"
-            label = DELIVERABLE_LABELS["diplome"]
+        if send_notifications:
+            try:
+                link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{trainee.get('public_token','')}"
+                label = DELIVERABLE_LABELS["diplome"]
 
-            first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
-            subject = f"{label} disponible – Intégrale Academy"
+                first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
+                subject = f"{label} disponible – Intégrale Academy"
 
-            # --- Détection type formation (APS / A3P / Dirigeant) ---
-            formation_type = formation_label(_session_get(s, "training_type", ""))
-            ft = (formation_type or "").lower()
+                # --- Détection type formation (APS / A3P / Dirigeant) ---
+                formation_type = formation_label(_session_get(s, "training_type", ""))
+                ft = (formation_type or "").lower()
 
-            cnaps_title = ""
-            cnaps_html = ""
+                cnaps_title = ""
+                cnaps_html = ""
 
-            if "aps" in ft:
-                cnaps_title = "📌 Carte professionnelle : aucune démarche"
-                cnaps_html = """
-                  <p style="margin:0">
-                    <strong>Vous n'avez aucune démarche à effectuer pour votre carte professionnelle.</strong>
-                    Votre diplôme a été automatiquement transmis au CNAPS qui procède actuellement à une enquête administrative.
-                    Dès que l'enquête sera terminée, vous recevrez votre carte professionnelle directement chez vous par courrier postal.
-                  </p>
-                  <p style="margin:10px 0 0 0">
-                    <strong>Pour rappel :</strong> vous ne pouvez pas exercer la profession tant que vous n'avez pas reçu votre carte professionnelle.
-                  </p>
-                """
-            elif "a3p" in ft:
-                cnaps_title = "📌 Carte professionnelle : démarche à effectuer sur Téléservices CNAPS"
-                cnaps_html = """
-                  <p style="margin:0">
-                    Vous pouvez à présent procéder à la demande de carte professionnelle depuis l'espace Téléservices du CNAPS.
-                  </p>
-                  <ul style="margin:10px 0 0 18px; padding:0; line-height:1.6">
-                    <li>Si vous êtes déjà agent de sécurité : cliquez sur <strong>"Ma demande concerne une extension de carte professionnelle"</strong>.</li>
-                    <li>Si vous n'êtes pas agent de sécurité : cliquez sur <strong>"Ma demande concerne une carte professionnelle"</strong>.</li>
-                    <li>Dans les deux cas, complétez la rubrique <strong>"J'ai un NUB"</strong> en indiquant :
-                      <strong>votre NOM</strong> (uniquement votre nom, pas votre prénom) et votre <strong>NUB</strong>
-                      (les <strong>7 derniers chiffres</strong> de votre numéro d'autorisation préalable ou de votre carte professionnelle).
-                    </li>
-                    <li>Suivez les étapes et téléchargez les pièces justificatives :
-                      <strong>pièce d'identité</strong>, <strong>justificatif de domicile</strong> de moins de 3 mois, et <strong>votre diplôme</strong>.
-                    </li>
-                  </ul>
-                  <p style="margin:12px 0 0 0">
-                    <a href="https://depot-teleservices-cnaps.interieur.gouv.fr/"
-                       style="color:#1f8f4a;text-decoration:none;font-weight:800">
-                      👉 Cliquez ici pour demander votre carte professionnelle
-                    </a>
-                  </p>
-                """
-            elif "dirigeant" in ft:
-                cnaps_title = "📌 Agrément dirigeant : démarche à effectuer"
-                cnaps_html = """
-                  <p style="margin:0">
-                    Vous pouvez à présent procéder à votre demande d'agrément dirigeant directement depuis le site internet du CNAPS
-                    en complétant le formulaire en cliquant ici :
-                  </p>
-                  <p style="margin:12px 0 0 0">
-                    <a href="https://www.cnaps.interieur.gouv.fr/Demarches-en-ligne/Vous-etes-un-particulier/Diriger-une-entreprise-de-securite-privee-un-organisme-de-formation-un-service-interne-de-securite/Diriger-un-organisme-de-formation-une-entreprise-de-securite-privee-un-service-interne-de-securite"
-                       style="color:#1f8f4a;text-decoration:none;font-weight:800">
-                      👉 Faire ma demande d'agrément dirigeant
-                    </a>
-                  </p>
-                """
+                if "aps" in ft:
+                    cnaps_title = "📌 Carte professionnelle : aucune démarche"
+                    cnaps_html = """
+                      <p style="margin:0">
+                        <strong>Vous n'avez aucune démarche à effectuer pour votre carte professionnelle.</strong>
+                        Votre diplôme a été automatiquement transmis au CNAPS qui procède actuellement à une enquête administrative.
+                        Dès que l'enquête sera terminée, vous recevrez votre carte professionnelle directement chez vous par courrier postal.
+                      </p>
+                      <p style="margin:10px 0 0 0">
+                        <strong>Pour rappel :</strong> vous ne pouvez pas exercer la profession tant que vous n'avez pas reçu votre carte professionnelle.
+                      </p>
+                    """
+                elif "a3p" in ft:
+                    cnaps_title = "📌 Carte professionnelle : démarche à effectuer sur Téléservices CNAPS"
+                    cnaps_html = """
+                      <p style="margin:0">
+                        Vous pouvez à présent procéder à la demande de carte professionnelle depuis l'espace Téléservices du CNAPS.
+                      </p>
+                      <ul style="margin:10px 0 0 18px; padding:0; line-height:1.6">
+                        <li>Si vous êtes déjà agent de sécurité : cliquez sur <strong>"Ma demande concerne une extension de carte professionnelle"</strong>.</li>
+                        <li>Si vous n'êtes pas agent de sécurité : cliquez sur <strong>"Ma demande concerne une carte professionnelle"</strong>.</li>
+                        <li>Dans les deux cas, complétez la rubrique <strong>"J'ai un NUB"</strong> en indiquant :
+                          <strong>votre NOM</strong> (uniquement votre nom, pas votre prénom) et votre <strong>NUB</strong>
+                          (les <strong>7 derniers chiffres</strong> de votre numéro d'autorisation préalable ou de votre carte professionnelle).
+                        </li>
+                        <li>Suivez les étapes et téléchargez les pièces justificatives :
+                          <strong>pièce d'identité</strong>, <strong>justificatif de domicile</strong> de moins de 3 mois, et <strong>votre diplôme</strong>.
+                        </li>
+                      </ul>
+                      <p style="margin:12px 0 0 0">
+                        <a href="https://depot-teleservices-cnaps.interieur.gouv.fr/"
+                           style="color:#1f8f4a;text-decoration:none;font-weight:800">
+                          👉 Cliquez ici pour demander votre carte professionnelle
+                        </a>
+                      </p>
+                    """
+                elif "dirigeant" in ft:
+                    cnaps_title = "📌 Agrément dirigeant : démarche à effectuer"
+                    cnaps_html = """
+                      <p style="margin:0">
+                        Vous pouvez à présent procéder à votre demande d'agrément dirigeant directement depuis le site internet du CNAPS
+                        en complétant le formulaire en cliquant ici :
+                      </p>
+                      <p style="margin:12px 0 0 0">
+                        <a href="https://www.cnaps.interieur.gouv.fr/Demarches-en-ligne/Vous-etes-un-particulier/Diriger-une-entreprise-de-securite-privee-un-organisme-de-formation-un-service-interne-de-securite/Diriger-un-organisme-de-formation-une-entreprise-de-securite-privee-un-service-interne-de-securite"
+                           style="color:#1f8f4a;text-decoration:none;font-weight:800">
+                          👉 Faire ma demande d'agrément dirigeant
+                        </a>
+                      </p>
+                    """
 
-            cnaps_block = ""
-            if cnaps_html:
-                cnaps_block = f"""
-                  <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:14px;padding:14px;margin:16px 0">
-                    <div style="font-weight:900;margin:0 0 8px 0">{cnaps_title}</div>
-                    <div style="color:#111827;line-height:1.6">{cnaps_html}</div>
+                cnaps_block = ""
+                if cnaps_html:
+                    cnaps_block = f"""
+                      <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:14px;padding:14px;margin:16px 0">
+                        <div style="font-weight:900;margin:0 0 8px 0">{cnaps_title}</div>
+                        <div style="color:#111827;line-height:1.6">{cnaps_html}</div>
+                      </div>
+                    """
+
+                # --- Bloc Avis Google (convaincant, pro, court) ---
+                avis_block = """
+                  <div style="background:#ecfdf5;border:1px solid #bbf7d0;border-radius:14px;padding:14px;margin:18px 0">
+                    <div style="font-weight:900;margin:0 0 8px 0">⭐ Un avis Google, ça nous aide énormément</div>
+                    <div style="color:#065f46;line-height:1.6">
+                      Si la formation vous a été utile, pouvez-vous prendre <strong>1 minute</strong> pour laisser un avis ?
+                      Ça aide les futurs stagiaires à choisir une école sérieuse, et ça nous permet d’améliorer encore notre accompagnement.
+                    </div>
+                    <div style="text-align:center;margin-top:12px">
+                      <a href="https://g.page/r/CZ0Ug-feyXjHEAE"
+                         style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;
+                                text-decoration:none;font-weight:900">
+                        👉 Laisser un avis Google
+                      </a>
+                    </div>
                   </div>
                 """
 
-            # --- Bloc Avis Google (convaincant, pro, court) ---
-            avis_block = """
-              <div style="background:#ecfdf5;border:1px solid #bbf7d0;border-radius:14px;padding:14px;margin:18px 0">
-                <div style="font-weight:900;margin:0 0 8px 0">⭐ Un avis Google, ça nous aide énormément</div>
-                <div style="color:#065f46;line-height:1.6">
-                  Si la formation vous a été utile, pouvez-vous prendre <strong>1 minute</strong> pour laisser un avis ?
-                  Ça aide les futurs stagiaires à choisir une école sérieuse, et ça nous permet d’améliorer encore notre accompagnement.
-                </div>
-                <div style="text-align:center;margin-top:12px">
-                  <a href="https://g.page/r/CZ0Ug-feyXjHEAE"
-                     style="display:inline-block;background:#1f8f4a;color:white;padding:10px 14px;border-radius:10px;
-                            text-decoration:none;font-weight:900">
-                    👉 Laisser un avis Google
-                  </a>
-                </div>
-              </div>
-            """
+                html = mail_layout(f"""
+                  <h2 style="text-align:center">✅ {label} disponible</h2>
 
-            html = mail_layout(f"""
-              <h2 style="text-align:center">✅ {label} disponible</h2>
+                  <p>Bonjour <strong>{first_name}</strong>,</p>
 
-              <p>Bonjour <strong>{first_name}</strong>,</p>
+                  <p style="margin-top:10px;font-weight:800">
+                    🎉 Félicitations ! Votre diplôme est maintenant disponible dans votre espace stagiaire.
+                  </p>
 
-              <p style="margin-top:10px;font-weight:800">
-                🎉 Félicitations ! Votre diplôme est maintenant disponible dans votre espace stagiaire.
-              </p>
+                  <div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:16px 0">
+                    <p style="margin:0 0 10px 0">
+                      <strong>📌 Formation :</strong> {formation_type}
+                    </p>
 
-              <div style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:16px 0">
-                <p style="margin:0 0 10px 0">
-                  <strong>📌 Formation :</strong> {formation_type}
-                </p>
+                    <p style="margin:0">
+                      <strong>📍 Accéder à votre espace stagiaire :</strong><br>
+                      <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
+                    </p>
+                  </div>
 
-                <p style="margin:0">
-                  <strong>📍 Accéder à votre espace stagiaire :</strong><br>
-                  <a href="{link}" style="color:#1f8f4a;text-decoration:none;font-weight:bold">{link}</a>
-                </p>
-              </div>
+                  <p style="text-align:center;margin-top:18px">
+                    <a href="{link}"
+                       style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;
+                              text-decoration:none;font-weight:bold">
+                      👉 Accéder à mon espace stagiaire
+                    </a>
+                  </p>
 
-              <p style="text-align:center;margin-top:18px">
-                <a href="{link}"
-                   style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;
-                          text-decoration:none;font-weight:bold">
-                  👉 Accéder à mon espace stagiaire
-                </a>
-              </p>
+                  {cnaps_block}
 
-              {cnaps_block}
+                  {avis_block}
 
-              {avis_block}
+                  <p style="margin-top:18px">
+                    Pour toute question, vous pouvez nous contacter au <strong>04 22 47 07 68</strong>.
+                  </p>
 
-              <p style="margin-top:18px">
-                Pour toute question, vous pouvez nous contacter au <strong>04 22 47 07 68</strong>.
-              </p>
+                  <p style="margin-top:18px">
+                    Bien cordialement,<br>
+                    <strong>Clément VAILLANT</strong><br>
+                    Directeur Intégrale Academy
+                  </p>
 
-              <p style="margin-top:18px">
-                Bien cordialement,<br>
-                <strong>Clément VAILLANT</strong><br>
-                Directeur Intégrale Academy
-              </p>
+                  <hr style="margin:26px 0;border:none;border-top:1px solid #e5e7eb">
 
-              <hr style="margin:26px 0;border:none;border-top:1px solid #e5e7eb">
+                  <p style="font-size:12px;color:#6b7280;text-align:center;line-height:1.6">
+                    © Intégrale Academy — Merci de votre confiance 💛<br>
+                    54 chemin du Carreou 83480 PUGET SUR ARGENS / 142 rue de Rivoli 75001 PARIS<br>
+                    <a href="https://www.integraleacademy.com"
+                       style="color:#1f8f4a;text-decoration:none;font-weight:bold">
+                      integraleacademy.com
+                    </a>
+                  </p>
+                """)
 
-              <p style="font-size:12px;color:#6b7280;text-align:center;line-height:1.6">
-                © Intégrale Academy — Merci de votre confiance 💛<br>
-                54 chemin du Carreou 83480 PUGET SUR ARGENS / 142 rue de Rivoli 75001 PARIS<br>
-                <a href="https://www.integraleacademy.com"
-                   style="color:#1f8f4a;text-decoration:none;font-weight:bold">
-                  integraleacademy.com
-                </a>
-              </p>
-            """)
+                sms_name = (trainee.get("first_name") or "").strip()
+                sms = (
+                    f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
+                    f"votre {label} est disponible sur votre espace : {link} "
+                    f"(Aide : 04 22 47 07 68)"
+                )
 
-            sms_name = (trainee.get("first_name") or "").strip()
-            sms = (
-                f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
-                f"votre {label} est disponible sur votre espace : {link} "
-                f"(Aide : 04 22 47 07 68)"
-            )
+                if (trainee.get("email") or "").strip():
+                    brevo_send_email(trainee.get("email", ""), subject, html)
+                if (trainee.get("phone") or "").strip():
+                    brevo_send_sms(trainee.get("phone", ""), sms)
 
-            if (trainee.get("email") or "").strip():
-                brevo_send_email(trainee.get("email", ""), subject, html)
-            if (trainee.get("phone") or "").strip():
-                brevo_send_sms(trainee.get("phone", ""), sms)
-
-        except Exception as e:
-            print("=== BULK DIPLOME: erreur envoi mail/sms ===", repr(e))
+            except Exception as e:
+                print("=== BULK DIPLOME: erreur envoi mail/sms ===", repr(e))
 
         added.append({
             "filename": original_name,
@@ -12224,7 +12231,7 @@ def api_diplome_bulk_upload(session_id: str):
     s.pop("stagiaires", None)
     save_data(data)
 
-    return jsonify({"ok": True, "received": received, "added_count": len(added), "added": added, "failed": failed})
+    return jsonify({"ok": True, "received": received, "added_count": len(added), "added": added, "failed": failed, "send_notifications": send_notifications})
 
 @app.post("/api/sessions/<session_id>/attestation/bulk_upload")
 @admin_login_required
@@ -12240,6 +12247,8 @@ def api_attestation_bulk_upload(session_id: str):
     files = request.files.getlist("files")
     if not files:
         return jsonify({"ok": False, "error": "no_files"}), 400
+
+    send_notifications = (request.form.get("send_notifications", "1") or "1").strip().lower() not in {"0", "false", "no", "non", "off"}
 
     trainees = _session_trainees_list(s)
 
@@ -12294,37 +12303,38 @@ def api_attestation_bulk_upload(session_id: str):
         trainee["updated_at"] = _now_iso()
 
         # ✅ mail + sms
-        try:
-            link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{trainee.get('public_token','')}"
-            label = DELIVERABLE_LABELS["attestation_fin_formation"]
+        if send_notifications:
+            try:
+                link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{trainee.get('public_token','')}"
+                label = DELIVERABLE_LABELS["attestation_fin_formation"]
 
-            first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
-            subject = f"{label} disponible – Intégrale Academy"
+                first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
+                subject = f"{label} disponible – Intégrale Academy"
 
-            html = mail_layout(f"""
-              <h2 style="text-align:center">✅ {label} disponible</h2>
-              <p>Bonjour <strong>{first_name}</strong>,</p>
-              <p>📄 Votre attestation de fin de formation est disponible dans votre espace stagiaire.</p>
-              <p style="text-align:center;margin-top:18px">
-                <a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
-                  👉 Accéder à mon espace stagiaire
-                </a>
-              </p>
-            """)
+                html = mail_layout(f"""
+                  <h2 style="text-align:center">✅ {label} disponible</h2>
+                  <p>Bonjour <strong>{first_name}</strong>,</p>
+                  <p>📄 Votre attestation de fin de formation est disponible dans votre espace stagiaire.</p>
+                  <p style="text-align:center;margin-top:18px">
+                    <a href="{link}" style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+                      👉 Accéder à mon espace stagiaire
+                    </a>
+                  </p>
+                """)
 
-            sms_name = (trainee.get("first_name") or "").strip()
-            sms = (
-                f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
-                f"Votre {label} est disponible sur votre Espace Stagiaire : {link} A bientôt, la Team Intégrale Academy"
-            )
+                sms_name = (trainee.get("first_name") or "").strip()
+                sms = (
+                    f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
+                    f"Votre {label} est disponible sur votre Espace Stagiaire : {link} A bientôt, la Team Intégrale Academy"
+                )
 
-            if (trainee.get("email") or "").strip():
-                brevo_send_email(trainee.get("email",""), subject, html)
-            if (trainee.get("phone") or "").strip():
-                brevo_send_sms(trainee.get("phone",""), sms)
+                if (trainee.get("email") or "").strip():
+                    brevo_send_email(trainee.get("email",""), subject, html)
+                if (trainee.get("phone") or "").strip():
+                    brevo_send_sms(trainee.get("phone",""), sms)
 
-        except Exception as e:
-            print("=== BULK ATTESTATION: erreur envoi mail/sms ===", repr(e))
+            except Exception as e:
+                print("=== BULK ATTESTATION: erreur envoi mail/sms ===", repr(e))
 
         added.append({
             "filename": original_name,
