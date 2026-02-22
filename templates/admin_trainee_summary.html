@@ -1,7 +1,13 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <a href="{{ url_for('admin_trainees', session_id=session.id) }}">← Retour stagiaires</a>
+  <style>
+    @media print {
+      .summary-no-print {
+        display: none !important;
+      }
+    }
+  </style>
 
   <div class="page-head" style="margin-top:10px; align-items:flex-start;">
     <div>
