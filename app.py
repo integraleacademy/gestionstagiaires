@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional, List, Iterable, Tuple, Set
 from functools import wraps
 from zoneinfo import ZoneInfo
 from flask import session
-from PIL import Image
+from PIL import Image, ImageOps
 import tempfile
 from docx.shared import Inches
 
