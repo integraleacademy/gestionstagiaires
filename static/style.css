@@ -1262,6 +1262,12 @@ input[type="file"]{
 .training-badge--green{background:#dcfce7;color:#166534;border-color:#86efac;}
 .training-badge--gray{background:#e5e7eb;color:#374151;border-color:#d1d5db;}
 
+.summary-created-at{
+  font-size:14px;
+  font-weight:700;
+  color:#475569;
+}
+
 @media (max-width: 720px){
   .summary-head-right{
     align-items:stretch;
@@ -1272,5 +1278,8 @@ input[type="file"]{
     width:100%;
     font-size:22px;
     padding:14px 20px;
+  }
+  .summary-created-at{
+    text-align:center;
   }
 }
