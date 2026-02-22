@@ -1484,7 +1484,17 @@
           <td>{% if item.file %}<span class="pill pill-green">Importé</span>{% else %}—{% endif %}</td>
           <td class="mono">
             {% if item.file %}
-              <a href="{{ url_for('admin_view_upload', path=item.file_token) }}" target="_blank">📎 Voir</a>
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <a href="{{ url_for('admin_view_upload', path=item.file_token) }}" target="_blank">📎 Voir</a>
+                {% if not is_read_only %}
+                  <form method="post"
+                        action="{{ url_for('admin_delete_deliverable', session_id=session.id, trainee_id=trainee.id, kind=item.key) }}"
+                        onsubmit="return confirm('Supprimer ce document ?');"
+                        style="display:inline;">
+                    <button class="btn btn-danger" type="submit" style="padding:6px 10px;">🗑️ Supprimer</button>
+                  </form>
+                {% endif %}
+              </div>
             {% else %}
               —
             {% endif %}
