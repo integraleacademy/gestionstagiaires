@@ -3,14 +3,18 @@
 {% block content %}
   <a href="{{ url_for('admin_trainees', session_id=session.id) }}">← Retour stagiaires</a>
 
-  <div class="page-head" style="margin-top:10px;">
+  <div class="page-head" style="margin-top:10px; align-items:flex-start;">
     <div>
       <h1 style="margin:0;">Récapitulatif du stagiaire</h1>
       <div class="hint">Le stagiaire a bien été créé et ajouté à la session.</div>
     </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      <a class="btn btn-outline" href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=trainee.id) }}">Ouvrir la fiche stagiaire</a>
-      <a class="btn btn-primary" href="{{ url_for('admin_trainees', session_id=session.id) }}">Retour à la liste</a>
+    <div class="summary-head-right">
+      <div class="training-badge training-badge--{{ summary_training_badge.color }}">{{ summary_training_badge.label }}</div>
+      <div class="summary-created-at">Dossier créé le {{ trainee.created_at|frdate or "—" }}</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+        <a class="btn btn-outline" href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=trainee.id) }}">Ouvrir la fiche stagiaire</a>
+        <a class="btn btn-primary" href="{{ url_for('admin_trainees', session_id=session.id) }}">Retour à la liste</a>
+      </div>
     </div>
   </div>
 
