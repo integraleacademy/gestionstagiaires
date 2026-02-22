@@ -11664,16 +11664,28 @@ def _build_vae_parchemin_pdf(base_pdf_bytes: bytes, photo_path: str) -> bytes:
     c = canvas.Canvas(packet, pagesize=(width, height))
 
     with Image.open(photo_path) as im:
-        rgb = im.convert("RGB")
+        corrected = ImageOps.exif_transpose(im)
+        rgb = corrected.convert("RGB")
         img_reader = ImageReader(rgb)
         iw, ih = rgb.size
         if iw > 0 and ih > 0:
-            scale = min((box_w - 2 * padding) / iw, (box_h - 2 * padding) / ih)
+            target_w = max(1, box_w - 2 * padding)
+            target_h = max(1, box_h - 2 * padding)
+
+            # On remplit toute la case photo comme en CSS `object-fit: cover`
+            # pour éviter les bandes blanches quand le ratio diffère.
+            scale = max(target_w / iw, target_h / ih)
             draw_w = max(1, iw * scale)
             draw_h = max(1, ih * scale)
-            draw_x = box_x + (box_w - draw_w) / 2
-            draw_y = box_y + (box_h - draw_h) / 2
+            draw_x = box_x + padding + (target_w - draw_w) / 2
+            draw_y = box_y + padding + (target_h - draw_h) / 2
+
+            c.saveState()
+            clip_path = c.beginPath()
+            clip_path.rect(box_x + padding, box_y + padding, target_w, target_h)
+            c.clipPath(clip_path, stroke=0, fill=0)
             c.drawImage(img_reader, draw_x, draw_y, draw_w, draw_h, preserveAspectRatio=True, mask='auto')
+            c.restoreState()
 
     c.save()
     packet.seek(0)
