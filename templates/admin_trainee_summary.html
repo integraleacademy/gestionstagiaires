@@ -1,7 +1,15 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <a href="{{ url_for('admin_trainees', session_id=session.id) }}">← Retour stagiaires</a>
+  <style>
+    @media print {
+      .summary-no-print {
+        display: none !important;
+      }
+    }
+  </style>
+
+  <a class="summary-no-print" href="{{ url_for('admin_trainees', session_id=session.id) }}">← Retour stagiaires</a>
 
   <div class="page-head" style="margin-top:10px; align-items:flex-start;">
     <div>
@@ -10,7 +18,7 @@
     </div>
     <div class="summary-head-right">
       <div class="training-badge training-badge--{{ summary_training_badge.color }}">{{ summary_training_badge.label }}</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+      <div class="summary-no-print" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
         <a class="btn btn-outline" href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=trainee.id) }}">Ouvrir la fiche stagiaire</a>
         <a class="btn btn-primary" href="{{ url_for('admin_trainees', session_id=session.id) }}">Retour à la liste</a>
       </div>
