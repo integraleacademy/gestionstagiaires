@@ -55,7 +55,8 @@ WEB_PUSH_VAPID_PUBLIC_KEY = os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY", "").stri
 WEB_PUSH_VAPID_PRIVATE_KEY = os.environ.get("WEB_PUSH_VAPID_PRIVATE_KEY", "").strip()
 WEB_PUSH_VAPID_CLAIMS_SUB = os.environ.get("WEB_PUSH_VAPID_CLAIMS_SUB", "mailto:admin@example.com").strip()
 WEB_PUSH_LIBRARY_AVAILABLE = importlib.util.find_spec("pywebpush") is not None
-
+PYPDF_LIBRARY_AVAILABLE = importlib.util.find_spec("pypdf") is not None
+REPORTLAB_LIBRARY_AVAILABLE = importlib.util.find_spec("reportlab") is not None
 
 
 @app.get("/service-worker.js")
@@ -7150,7 +7151,7 @@ def _token_belongs_to_trainee(t: dict, file_token: str) -> bool:
 
     # Deliverables (diplôme / SST / attestation)
     dv = t.get("deliverables") or {}
-    for k in ("diplome", "carte_sst", "attestation_fin_formation", "attestation_recevabilite"):
+    for k in ("diplome", "carte_sst", "attestation_fin_formation", "attestation_recevabilite", "parchemin"):
         if (dv.get(k) or "").strip() == file_token:
             return True
 
@@ -8735,6 +8736,7 @@ DELIVERABLE_LABELS = {
     "diplome": "Diplôme",
     "attestation_fin_formation": "Attestation fin de formation",
     "attestation_recevabilite": "Attestation de recevabilité VAE",
+    "parchemin": "Parchemin VAE",
 }
 
 DELIVERABLE_REQUIRED_KEYS = ["diplome", "carte_sst", "attestation_fin_formation"]
@@ -11593,6 +11595,207 @@ def _match_trainee_from_filename(trainees: list, filename: str):
     if len(hits) == 0:
         return None, "nom/prénom non trouvés dans le fichier"
     return None, "plusieurs stagiaires correspondent (homonyme)"
+
+def _extract_pdf_text(pdf_bytes: bytes) -> str:
+    if not pdf_bytes or not PYPDF_LIBRARY_AVAILABLE:
+        return ""
+    try:
+        from pypdf import PdfReader
+        reader = PdfReader(BytesIO(pdf_bytes))
+    except Exception:
+        return ""
+
+    pages = []
+    for page in reader.pages:
+        try:
+            pages.append(page.extract_text() or "")
+        except Exception:
+            continue
+    return "\n".join(pages)
+
+
+def _match_trainee_from_parchemin_pdf(trainees: list, file_bytes: bytes):
+    text = _norm_name(_extract_pdf_text(file_bytes))
+    if not text:
+        return None, "texte PDF illisible"
+
+    hits = []
+    for t in trainees:
+        ln = _norm_name(t.get("last_name", ""))
+        fnm = _norm_name(t.get("first_name", ""))
+        if not ln or not fnm:
+            continue
+        if ln in text and fnm in text:
+            hits.append(t)
+
+    if len(hits) == 1:
+        return hits[0], None
+    if len(hits) == 0:
+        return None, "nom/prénom non trouvés dans le parchemin"
+    return None, "plusieurs stagiaires correspondent (homonyme)"
+
+
+def _build_vae_parchemin_pdf(base_pdf_bytes: bytes, photo_path: str) -> bytes:
+    if not base_pdf_bytes:
+        raise ValueError("parchemin_source_introuvable")
+    if not (PYPDF_LIBRARY_AVAILABLE and REPORTLAB_LIBRARY_AVAILABLE):
+        raise ValueError("libs_pdf_non_disponibles")
+
+    from pypdf import PdfReader, PdfWriter
+    from reportlab.lib.utils import ImageReader
+    from reportlab.pdfgen import canvas
+
+    reader = PdfReader(BytesIO(base_pdf_bytes))
+    if not reader.pages:
+        raise ValueError("parchemin_pdf_vide")
+
+    first_page = reader.pages[0]
+    width = float(first_page.mediabox.width)
+    height = float(first_page.mediabox.height)
+
+    # zone photo observée sur le template fourni
+    box_w = width * 0.105
+    box_h = height * 0.195
+    box_x = width * 0.836
+    box_y = height * 0.711
+    padding = 4
+
+    packet = BytesIO()
+    c = canvas.Canvas(packet, pagesize=(width, height))
+
+    with Image.open(photo_path) as im:
+        rgb = im.convert("RGB")
+        img_reader = ImageReader(rgb)
+        iw, ih = rgb.size
+        if iw > 0 and ih > 0:
+            scale = min((box_w - 2 * padding) / iw, (box_h - 2 * padding) / ih)
+            draw_w = max(1, iw * scale)
+            draw_h = max(1, ih * scale)
+            draw_x = box_x + (box_w - draw_w) / 2
+            draw_y = box_y + (box_h - draw_h) / 2
+            c.drawImage(img_reader, draw_x, draw_y, draw_w, draw_h, preserveAspectRatio=True, mask='auto')
+
+    c.save()
+    packet.seek(0)
+
+    overlay_reader = PdfReader(packet)
+    overlay_page = overlay_reader.pages[0]
+    first_page.merge_page(overlay_page)
+
+    out = BytesIO()
+    writer = PdfWriter()
+    for page in reader.pages:
+        writer.add_page(page)
+    writer.write(out)
+    return out.getvalue()
+
+
+def _store_parchemin_generated_pdf(session_id: str, trainee_id: str, pdf_bytes: bytes) -> str:
+    base = trainee_upload_dir(session_id, trainee_id)
+    target_dir = os.path.join(base, "deliverables")
+    os.makedirs(target_dir, exist_ok=True)
+    name = uuid.uuid4().hex[:10] + ".pdf"
+    path = os.path.join(target_dir, name)
+    with open(path, "wb") as f:
+        f.write(pdf_bytes)
+    return path
+
+
+@app.post("/api/sessions/<session_id>/parchemin/bulk_upload")
+@admin_login_required
+@admin_write_required
+def api_parchemin_bulk_upload(session_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+
+    training_type = (_session_get(s, "training_type", "") or "").strip().upper()
+    if training_type != "DIRIGEANT VAE":
+        return jsonify({"ok": False, "error": "parchemin_reserved_for_vae"}), 400
+
+    if not (PYPDF_LIBRARY_AVAILABLE and REPORTLAB_LIBRARY_AVAILABLE):
+        return jsonify({"ok": False, "error": "missing_pdf_dependencies"}), 503
+
+    files = request.files.getlist("files")
+    if not files:
+        return jsonify({"ok": False, "error": "no_files"}), 400
+
+    trainees = _session_trainees_list(s)
+    received = 0
+    added = []
+    failed = []
+
+    for f in files:
+        if not f or not f.filename:
+            continue
+
+        received += 1
+        original_name = f.filename
+        ext = _safe_ext(original_name)
+        if ext != ".pdf":
+            failed.append({"filename": original_name, "reason": "format invalide (PDF uniquement)"})
+            continue
+
+        try:
+            try:
+                f.stream.seek(0)
+            except Exception:
+                pass
+            pdf_bytes = f.read() or b""
+        except Exception:
+            failed.append({"filename": original_name, "reason": "lecture impossible"})
+            continue
+
+        trainee, reason = _match_trainee_from_parchemin_pdf(trainees, pdf_bytes)
+        if not trainee:
+            failed.append({"filename": original_name, "reason": reason or "non rattaché"})
+            continue
+
+        trainee_id = trainee.get("id") or trainee.get("trainee_id") or trainee.get("personal_id")
+        if not trainee_id:
+            failed.append({"filename": original_name, "reason": "trainee_id introuvable"})
+            continue
+
+        existing = ((trainee.get("deliverables") or {}).get("parchemin") or "").strip()
+        if existing:
+            failed.append({"filename": original_name, "reason": "parchemin déjà existant (non remplacé)"})
+            continue
+
+        photo_token = (trainee.get("identity_photo") or "").strip()
+        if not photo_token:
+            failed.append({"filename": original_name, "reason": "photo d'identité absente sur la fiche stagiaire"})
+            continue
+
+        photo_path = _detokenize_path(photo_token)
+        if not os.path.exists(photo_path):
+            failed.append({"filename": original_name, "reason": "photo d'identité introuvable"})
+            continue
+
+        try:
+            final_pdf = _build_vae_parchemin_pdf(pdf_bytes, photo_path)
+            final_path = _store_parchemin_generated_pdf(session_id, trainee_id, final_pdf)
+            token = _tokenize_path(final_path)
+        except Exception as e:
+            failed.append({"filename": original_name, "reason": f"génération parchemin impossible: {str(e)}"})
+            continue
+
+        trainee.setdefault("deliverables", {})
+        trainee["deliverables"]["parchemin"] = token
+        trainee["updated_at"] = _now_iso()
+
+        added.append({
+            "filename": original_name,
+            "trainee_id": trainee_id,
+            "trainee_name": f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip()
+        })
+
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return jsonify({"ok": True, "received": received, "added_count": len(added), "added": added, "failed": failed})
+
 
 @app.post("/api/sessions/<session_id>/sst/bulk_upload")
 @admin_login_required

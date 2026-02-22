@@ -110,6 +110,10 @@
 
       <button class="btn btn-outline" id="btnBulkAttestation">⬇️ Télécharger les Attestations en masse</button>
       <input id="bulkAttestationInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+      {% if show_vae %}
+      <button class="btn btn-outline" id="btnBulkParchemin">📜 Parchemin</button>
+      <input id="bulkParcheminInput" type="file" multiple accept=".pdf" style="display:none">
+      {% endif %}
       {% if not show_vae and not is_dirigeant %}
       <button class="btn btn-outline" id="btnBulkTestFr">🔔 Notifier test de français en masse</button>
       {% endif %}
@@ -565,6 +569,33 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 
     <div class="modal-foot">
       <button class="btn" data-close-modal="bulkDiplomeResultModal">OK</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODALE RESULTAT IMPORT PARCHEMIN -->
+<div class="modal-backdrop" id="bulkParcheminResultModal" aria-hidden="true">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-head">
+      <div class="modal-title">Import Parchemins terminé</div>
+      <button class="icon-btn" data-close-modal="bulkParcheminResultModal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="hint" id="bulkParcheminSummary" style="margin-bottom:10px;"></div>
+
+      <div id="bulkParcheminFailuresWrap" style="display:none;">
+        <div style="font-weight:900;margin-bottom:6px;">Fichiers non rattachés</div>
+        <div class="hint" style="margin-bottom:8px;">
+          (Nom/prénom introuvables dans le parchemin, photo manquante, PDF illisible ou document déjà existant)
+        </div>
+        <ul id="bulkParcheminFailures" style="margin:0;padding-left:18px;"></ul>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" data-close-modal="bulkParcheminResultModal">OK</button>
     </div>
   </div>
 </div>
@@ -1087,6 +1118,80 @@ bulkAttestationInput?.addEventListener("change", async ()=>{
   }
 });
 
+// =========================
+// Bulk Parchemin upload (VAE)
+// =========================
+const btnBulkParchemin = document.getElementById("btnBulkParchemin");
+const bulkParcheminInput = document.getElementById("bulkParcheminInput");
+
+btnBulkParchemin?.addEventListener("click", ()=>{
+  bulkParcheminInput.value = "";
+  bulkParcheminInput.click();
+});
+
+bulkParcheminInput?.addEventListener("change", async ()=>{
+  const files = [...bulkParcheminInput.files || []];
+  if(!files.length) return;
+
+  const bad = files.filter(f => !f.name.toLowerCase().endsWith(".pdf"));
+  if(bad.length){
+    alert("Seuls les fichiers PDF sont acceptés pour le parchemin.");
+    return;
+  }
+
+  btnBulkParchemin.disabled = true;
+  btnBulkParchemin.textContent = "Import en cours...";
+
+  try{
+    const fd = new FormData();
+    files.forEach(f => fd.append("files", f));
+
+    const r = await fetch(`/api/sessions/${sessionId}/parchemin/bulk_upload`, {
+      method: "POST",
+      body: fd
+    });
+
+    const res = await r.json();
+
+    if(!r.ok || !res.ok){
+      alert("Erreur import Parchemin : " + (res.error || "unknown"));
+      return;
+    }
+
+    const summary = document.getElementById("bulkParcheminSummary");
+    const wrap = document.getElementById("bulkParcheminFailuresWrap");
+    const ul = document.getElementById("bulkParcheminFailures");
+
+    const received = (res.received ?? res.total ?? files.length);
+    const added = res.added_count ?? 0;
+    const failed = res.failed || [];
+
+    if(summary){
+      summary.innerHTML = `<strong>${added} fichiers ajoutés</strong> sur <strong>${received}</strong> reçus.`;
+    }
+
+    if(ul) ul.innerHTML = "";
+    if(failed.length){
+      if(wrap) wrap.style.display = "block";
+      failed.forEach(it=>{
+        const li = document.createElement("li");
+        li.textContent = `${it.filename}${it.reason ? " — " + it.reason : ""}`;
+        ul.appendChild(li);
+      });
+    }else{
+      if(wrap) wrap.style.display = "none";
+    }
+
+    openModal("bulkParcheminResultModal");
+    setTimeout(()=>window.location.reload(), 800);
+
+  }catch(e){
+    alert("Erreur réseau pendant l'import Parchemins");
+  }finally{
+    btnBulkParchemin.disabled = false;
+    btnBulkParchemin.textContent = "📜 Parchemin";
+  }
+});
 
 
   // =========================
