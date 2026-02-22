@@ -1234,3 +1234,43 @@ input[type="file"]{
     animation: none;
   }
 }
+
+.summary-head-right{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:14px;
+}
+.training-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:220px;
+  padding:16px 28px;
+  border-radius:16px;
+  font-weight:900;
+  font-size:28px;
+  line-height:1;
+  letter-spacing:.8px;
+  text-transform:uppercase;
+  border:2px solid transparent;
+  box-shadow:0 12px 22px rgba(15,23,42,.10);
+}
+.training-badge--orange{background:#ffedd5;color:#c2410c;border-color:#fdba74;}
+.training-badge--blue{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd;}
+.training-badge--purple{background:#ede9fe;color:#6d28d9;border-color:#c4b5fd;}
+.training-badge--green{background:#dcfce7;color:#166534;border-color:#86efac;}
+.training-badge--gray{background:#e5e7eb;color:#374151;border-color:#d1d5db;}
+
+@media (max-width: 720px){
+  .summary-head-right{
+    align-items:stretch;
+    width:100%;
+  }
+  .training-badge{
+    min-width:0;
+    width:100%;
+    font-size:22px;
+    padding:14px 20px;
+  }
+}
