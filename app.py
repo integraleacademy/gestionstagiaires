@@ -10113,6 +10113,19 @@ def admin_trainee_summary(session_id: str, trainee_id: str):
         "date_end": _session_get(s, "date_end", ""),
     }
 
+    training_type_key = (_session_get(s, "training_type", "") or "").strip().upper()
+    summary_training_badge = {"label": "FORMATION", "color": "gray"}
+    if "VAE" in training_type_key:
+        summary_training_badge = {"label": "VAE", "color": "orange"}
+    elif "DIRIGEANT" in training_type_key:
+        summary_training_badge = {"label": "DIRIGEANT", "color": "orange"}
+    elif "APS" in training_type_key:
+        summary_training_badge = {"label": "APS", "color": "blue"}
+    elif "VTC" in training_type_key:
+        summary_training_badge = {"label": "VTC", "color": "purple"}
+    elif "A3P" in training_type_key:
+        summary_training_badge = {"label": "A3P", "color": "green"}
+
     return render_template(
         "admin_trainee_summary.html",
         session=session_view,
@@ -10120,6 +10133,7 @@ def admin_trainee_summary(session_id: str, trainee_id: str):
         training_name=training_name or "Formation",
         formation_dates=formation_dates,
         is_vtc=("VTC" in (_session_get(s, "training_type", "") or "").upper()),
+        summary_training_badge=summary_training_badge,
     )
 
 

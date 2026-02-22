@@ -1234,3 +1234,28 @@ input[type="file"]{
     animation: none;
   }
 }
+
+.summary-head-right{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:10px;
+}
+.training-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:110px;
+  padding:8px 14px;
+  border-radius:12px;
+  font-weight:900;
+  font-size:14px;
+  letter-spacing:.4px;
+  text-transform:uppercase;
+  border:1px solid transparent;
+}
+.training-badge--orange{background:#ffedd5;color:#c2410c;border-color:#fdba74;}
+.training-badge--blue{background:#dbeafe;color:#1d4ed8;border-color:#93c5fd;}
+.training-badge--purple{background:#ede9fe;color:#6d28d9;border-color:#c4b5fd;}
+.training-badge--green{background:#dcfce7;color:#166534;border-color:#86efac;}
+.training-badge--gray{background:#e5e7eb;color:#374151;border-color:#d1d5db;}
