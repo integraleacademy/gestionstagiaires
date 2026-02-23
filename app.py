@@ -11779,6 +11779,8 @@ def api_parchemin_bulk_upload(session_id: str):
     if not files:
         return jsonify({"ok": False, "error": "no_files"}), 400
 
+    send_notifications = (request.form.get("send_notifications", "1") or "1").strip().lower() not in {"0", "false", "no", "non", "off"}
+
     trainees = _session_trainees_list(s)
     received = 0
     added = []
@@ -11842,6 +11844,60 @@ def api_parchemin_bulk_upload(session_id: str):
         trainee["deliverables"]["parchemin"] = token
         trainee["updated_at"] = _now_iso()
 
+        if send_notifications:
+            try:
+                link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{trainee.get('public_token','')}"
+                label = DELIVERABLE_LABELS["parchemin"]
+                first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
+                formation_type = formation_label(_session_get(s, "training_type", ""))
+                dstart = fr_date(_session_get(s, "date_start", ""))
+                dend = fr_date(_session_get(s, "date_end", ""))
+
+                subject = f"{label} disponible – Intégrale Academy"
+                html = mail_layout(f"""
+                  <h2 style=\"text-align:center\">✅ {label} disponible</h2>
+
+                  <p>Bonjour <strong>{first_name}</strong>,</p>
+
+                  <p>
+                    Nous avons le plaisir de vous informer que votre <strong>{label}</strong>
+                    est désormais disponible dans votre espace stagiaire.
+                  </p>
+
+                  <div style=\"background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:16px 0\">
+                    <p style=\"margin:0 0 10px 0\">
+                      <strong>📌 Formation :</strong> {formation_type}
+                      {" — <strong>Dates :</strong> " + dstart + " au " + dend if (dstart or dend) else ""}
+                    </p>
+
+                    <p style=\"margin:0\">
+                      <strong>📍 Accéder à votre espace stagiaire :</strong><br>
+                      <a href=\"{link}\" style=\"color:#1f8f4a;text-decoration:none;font-weight:bold\">{link}</a>
+                    </p>
+                  </div>
+
+                  <p style=\"text-align:center;margin-top:18px\">
+                    <a href=\"{link}\"
+                       style=\"display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;
+                              text-decoration:none;font-weight:bold\">
+                      👉 Accéder à mon espace stagiaire
+                    </a>
+                  </p>
+                """)
+
+                sms_name = (trainee.get("first_name") or "").strip()
+                sms = (
+                    f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}\n"
+                    f"Votre {label} est disponible sur votre espace :\n"
+                    f"{link}\n"
+                    f"A bientôt, la Team Intégrale Academy"
+                )
+
+                brevo_send_email(trainee.get("email", ""), subject, html)
+                brevo_send_sms(trainee.get("phone", ""), sms)
+            except Exception:
+                pass
+
         added.append({
             "filename": original_name,
             "trainee_id": trainee_id,
@@ -11852,7 +11908,14 @@ def api_parchemin_bulk_upload(session_id: str):
     s.pop("stagiaires", None)
     save_data(data)
 
-    return jsonify({"ok": True, "received": received, "added_count": len(added), "added": added, "failed": failed})
+    return jsonify({
+        "ok": True,
+        "received": received,
+        "added_count": len(added),
+        "added": added,
+        "failed": failed,
+        "send_notifications": send_notifications,
+    })
 
 
 @app.post("/api/sessions/<session_id>/sst/bulk_upload")
