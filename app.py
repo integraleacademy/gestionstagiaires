@@ -7,6 +7,7 @@ import datetime
 import html
 import unicodedata
 import threading
+import shutil
 import importlib.util
 from typing import Dict, Any, Optional, List, Iterable, Tuple, Set
 from functools import wraps
@@ -227,8 +228,22 @@ app.add_template_filter(fr_datetime, "frdatetime")
 # =========================
 # Persistent disk (Render)
 # =========================
-PERSIST_DIR = os.environ.get("PERSIST_DIR", "/data")
-os.makedirs(PERSIST_DIR, exist_ok=True)
+def _resolve_persist_dir() -> str:
+    configured = (os.environ.get("PERSIST_DIR") or "").strip()
+    if configured:
+        os.makedirs(configured, exist_ok=True)
+        return configured
+
+    for candidate in ("/var/data", "/data"):
+        try:
+            os.makedirs(candidate, exist_ok=True)
+            return candidate
+        except Exception:
+            continue
+    return "/data"
+
+
+PERSIST_DIR = _resolve_persist_dir()
 DATA_FILE = os.path.join(PERSIST_DIR, "data.json")
 
 BACKUP_DIR = os.path.join(PERSIST_DIR, "backups")
@@ -300,6 +315,38 @@ def _write_json_with_backups(path: str, payload: Dict[str, Any], lock: threading
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
         os.replace(tmp, path)
+
+
+def _restore_latest_backup(path: str) -> bool:
+    base_name = os.path.basename(path)
+    prefix = base_name.replace(".", "_")
+
+    try:
+        names = sorted(
+            [
+                name
+                for name in os.listdir(BACKUP_DIR)
+                if name.startswith(prefix + ".") and name.endswith(".json")
+            ],
+            reverse=True,
+        )
+    except Exception:
+        return False
+
+    for name in names:
+        backup_path = os.path.join(BACKUP_DIR, name)
+        if not os.path.isfile(backup_path):
+            continue
+        try:
+            with open(backup_path, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+            if not isinstance(loaded, dict):
+                continue
+            shutil.copyfile(backup_path, path)
+            return True
+        except Exception:
+            continue
+    return False
 
 
 # =========================
@@ -2325,6 +2372,9 @@ def load_data() -> Dict[str, Any]:
 
 
     except Exception:
+        if _restore_latest_backup(DATA_FILE):
+            return load_data()
+
         try:
             backup = DATA_FILE + ".corrupt." + str(int(datetime.datetime.utcnow().timestamp()))
             os.replace(DATA_FILE, backup)
