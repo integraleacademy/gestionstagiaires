@@ -1716,6 +1716,102 @@ def build_vtc_credentials_reminder_sms(first_name: str, form_link: str) -> str:
     )
 
 
+def build_vtc_credentials_invalid_email(first_name: str, form_link: str) -> Tuple[str, str]:
+    first_name = (first_name or "").strip()
+    greeting = f"Bonjour <strong>{first_name}</strong>," if first_name else "Bonjour,"
+    subject = "Identifiants ExamenT3P erronés"
+
+    html = mail_layout(f"""
+      <h2 style="text-align:center;color:#1d4ed8">Identifiants ExamenT3P erronés</h2>
+      <p>{greeting}</p>
+      <p>
+        Les identifiants que vous nous avez transmis pour accéder à votre compte
+        <strong>ExamenT3P (Chambre des métiers)</strong> sont erronés.
+      </p>
+      <p>
+        Nous vous invitons à vérifier et à saisir de nouveau vos identifiants dans votre
+        <strong>Espace Stagiaire</strong> en cliquant ci-dessous :
+      </p>
+      <p style="text-align:center;margin:18px 0;">
+        <a href="{form_link}"
+           style="display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold">
+          👉 Accéder à mon Espace Stagiaire
+        </a>
+      </p>
+      <p>
+        À réception, nous pourrons procéder au paiement des frais d'examen.
+      </p>
+      <p>
+        Merci pour votre compréhension.
+      </p>
+      <p style="margin-top:18px;">
+        <strong>Clément VAILLANT</strong><br>
+        Directeur Intégrale Academy
+      </p>
+    """)
+    return subject, html
+
+
+def build_vtc_credentials_invalid_sms(first_name: str, form_link: str) -> str:
+    first_name = (first_name or "").strip()
+    greeting = f"Bonjour {first_name}, " if first_name else "Bonjour, "
+    return (
+        "Intégrale Academy "
+        f"{greeting}les identifiants ExamenT3P (Chambre des métiers) transmis sont erronés. "
+        "Merci de vérifier et ressaisir vos identifiants dans votre Espace Stagiaire : "
+        f"{form_link} "
+        "A réception, nous pourrons procéder au paiement des frais d'examen. "
+        "Clément VAILLANT - Directeur Intégrale Academy"
+    )
+
+
+def _send_vtc_credentials_invalid_notification(data: Dict[str, Any], session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> bool:
+    link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{(trainee.get('public_token') or '').strip()}"
+    first_name = (trainee.get("first_name") or "").strip()
+    subject, html_content = build_vtc_credentials_invalid_email(first_name, link)
+
+    trainee_email = (trainee.get("email") or "").strip()
+    trainee_phone = (trainee.get("phone") or "").strip()
+
+    email_ok = brevo_send_email(
+        trainee_email,
+        subject,
+        html_content,
+        cc_emails=["clement@integraleacademy.com"],
+    ) if trainee_email else False
+    sms_ok = brevo_send_sms(trainee_phone, build_vtc_credentials_invalid_sms(first_name, link)) if trainee_phone else False
+
+    trainee["vtc_cm_login"] = ""
+    trainee["vtc_cm_password"] = ""
+    trainee["vtc_cm_submitted_at"] = ""
+    trainee["updated_at"] = _now_iso()
+
+    phone_followups = trainee.get("phone_followups")
+    if not isinstance(phone_followups, list):
+        phone_followups = []
+    phone_followups.insert(0, {
+        "type": "VTC IDENTIFIANTS ERRONÉS",
+        "details": "Demande de ressaisie envoyée (identifiants ExamenT3P erronés).",
+        "at": _now_iso(),
+        "status": "ENVOYÉE",
+        "comment": "Mail + SMS envoyés et identifiants ExamenT3P réinitialisés.",
+    })
+    trainee["phone_followups"] = phone_followups
+
+    trainee_display_name = _format_trainee_name(trainee.get("first_name", ""), trainee.get("last_name", ""))
+    add_admin_notification(
+        data,
+        f"🔵 Demande de nouveaux identifiants ExamenT3P envoyée à {trainee_display_name}",
+        meta={
+            "type": "vtc_credentials_invalid",
+            "session_id": session_obj.get("id"),
+            "trainee_id": trainee.get("id"),
+        },
+    )
+
+    return bool(email_ok or sms_ok)
+
+
 def _send_vtc_credentials_reminder(data: Dict[str, Any], session_obj: Dict[str, Any], trainee: Dict[str, Any], details: str) -> bool:
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{(trainee.get('public_token') or '').strip()}"
     first_name = (trainee.get("first_name") or "").strip()
@@ -8173,6 +8269,32 @@ def admin_vtc_cmar_reminder_auto(session_id: str, trainee_id: str):
 
     _refresh_vtc_cm_reminder_schedule(t)
     t["updated_at"] = _now_iso()
+
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/vtc-cmar-identifiants-errones")
+@admin_login_required
+@admin_write_required
+def admin_vtc_cmar_identifiants_errones(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    training_type = (_session_get(s, "training_type", "") or "").upper()
+    if "VTC" not in training_type:
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    _send_vtc_credentials_invalid_notification(data, s, t)
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
