@@ -7,6 +7,7 @@ import datetime
 import html
 import unicodedata
 import threading
+import shutil
 import importlib.util
 from typing import Dict, Any, Optional, List, Iterable, Tuple, Set
 from functools import wraps
@@ -228,28 +229,21 @@ app.add_template_filter(fr_datetime, "frdatetime")
 # Persistent disk (Render)
 # =========================
 def _resolve_persist_dir() -> str:
-    env_path = (os.environ.get("PERSIST_DIR") or "").strip()
-    if env_path:
-        return env_path
+    configured = (os.environ.get("PERSIST_DIR") or "").strip()
+    if configured:
+        os.makedirs(configured, exist_ok=True)
+        return configured
 
-    # Render monte généralement le disque persistant sur /var/data.
-    # On garde /data en fallback pour rétrocompatibilité locale.
-    candidates = ["/var/data", "/data"]
-
-    # Priorité au chemin qui contient déjà nos fichiers.
-    for candidate in candidates:
-        if os.path.exists(os.path.join(candidate, "data.json")):
+    for candidate in ("/var/data", "/data"):
+        try:
+            os.makedirs(candidate, exist_ok=True)
             return candidate
-
-    for candidate in candidates:
-        if os.path.isdir(candidate):
-            return candidate
-
-    return "/var/data"
+        except Exception:
+            continue
+    return "/data"
 
 
 PERSIST_DIR = _resolve_persist_dir()
-os.makedirs(PERSIST_DIR, exist_ok=True)
 DATA_FILE = os.path.join(PERSIST_DIR, "data.json")
 
 BACKUP_DIR = os.path.join(PERSIST_DIR, "backups")
@@ -324,63 +318,36 @@ def _write_json_with_backups(path: str, payload: Dict[str, Any], lock: threading
         os.replace(tmp, path)
 
 
-def _load_json_file(path: str) -> Optional[Dict[str, Any]]:
+def _restore_latest_backup(path: str) -> bool:
+    base_name = os.path.basename(path)
+    prefix = base_name.replace(".", "_")
+
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            payload = json.load(f)
-        if isinstance(payload, dict):
-            return payload
+        names = sorted(
+            [
+                name
+                for name in os.listdir(BACKUP_DIR)
+                if name.startswith(prefix + ".") and name.endswith(".json")
+            ],
+            reverse=True,
+        )
     except Exception:
-        return None
-    return None
+        return False
 
-
-def _is_probably_empty_payload(data: Dict[str, Any]) -> bool:
-    keys = [
-        "sessions",
-        "positioning_tests",
-        "notifications_edof",
-        "notifications_financement_refuse",
-        "notifications_prelevements",
-        "notifications_prelevement_non_valides",
-        "notifications_phone_relances",
-        "notifications_vae_relances",
-        "notifications_cnaps_pre_relances",
-        "notifications_test_fr",
-        "notifications_convention_unsigned",
-        "notifications_admin",
-    ]
-    for key in keys:
-        if isinstance(data.get(key), list) and len(data.get(key) or []) > 0:
-            return False
-    return True
-
-
-def _restore_data_from_backups_if_possible() -> Optional[Dict[str, Any]]:
-    prefix = "data_json"
-    candidates: List[Tuple[float, str]] = []
-    try:
-        for name in os.listdir(BACKUP_DIR):
-            if not name.startswith(prefix) or not name.endswith(".json"):
-                continue
-            path = os.path.join(BACKUP_DIR, name)
-            if not os.path.isfile(path):
-                continue
-            candidates.append((os.path.getmtime(path), path))
-    except Exception:
-        return None
-
-    for _, backup_path in sorted(candidates, key=lambda x: x[0], reverse=True):
-        payload = _load_json_file(backup_path)
-        if not payload or _is_probably_empty_payload(payload):
+    for name in names:
+        backup_path = os.path.join(BACKUP_DIR, name)
+        if not os.path.isfile(backup_path):
             continue
         try:
-            _write_json_with_backups(DATA_FILE, payload, _data_lock)
-            app.logger.warning("data.json restored from backup: %s", backup_path)
-            return payload
+            with open(backup_path, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+            if not isinstance(loaded, dict):
+                continue
+            shutil.copyfile(backup_path, path)
+            return True
         except Exception:
             continue
-    return None
+    return False
 
 
 # =========================
@@ -2426,9 +2393,31 @@ def load_data() -> Dict[str, Any]:
             save_data(data)
 
     except Exception:
-        app.logger.exception("load_data post-processing error")
+        if _restore_latest_backup(DATA_FILE):
+            return load_data()
 
-    return data
+        try:
+            backup = DATA_FILE + ".corrupt." + str(int(datetime.datetime.utcnow().timestamp()))
+            os.replace(DATA_FILE, backup)
+        except Exception:
+            pass
+        base = {
+            "sessions": [],
+            "positioning_tests": [],
+            "notifications_edof": [],
+            "notifications_financement_refuse": [],
+            "notifications_prelevements": [],
+            "notifications_prelevement_non_valides": [],
+            "notifications_phone_relances": [],
+            "notifications_vae_relances": [],
+            "notifications_cnaps_pre_relances": [],
+            "notifications_test_fr": [],
+            "notifications_convention_unsigned": [],
+            "notifications_admin": [],
+            "admin_push_subscriptions": [],
+        }
+        save_data(base)
+        return base
 
 
 
