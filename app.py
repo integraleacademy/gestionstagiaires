@@ -15,6 +15,8 @@ from flask import session
 from PIL import Image, ImageOps
 import tempfile
 from docx.shared import Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
 
 import requests
 from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file, flash, has_request_context
@@ -7833,11 +7835,21 @@ def _insert_label_photo(doc: Document, placeholder: str, photo_path: str, width_
         if placeholder not in full:
             return False
 
-        # vide le paragraphe
-        for run in p.runs:
-            run.text = ""
+        # vide complètement le paragraphe (texte + éventuels résidus XML)
+        p_elm = p._element
+        for child in list(p_elm):
+            if child.tag == qn("w:r"):
+                p_elm.remove(child)
 
-        # insère l'image recadrée au bon ratio, donc pas de déformation
+        # centre réellement l'image dans l'encadré
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.paragraph_format.left_indent = None
+        p.paragraph_format.right_indent = None
+        p.paragraph_format.first_line_indent = None
+        p.paragraph_format.space_before = None
+        p.paragraph_format.space_after = None
+
+        # insère l'image recadrée au bon ratio, donc sans déformation
         r = p.add_run()
         r.add_picture(prepared, width=width, height=height)
         return True
@@ -11699,12 +11711,12 @@ def _build_vae_parchemin_pdf(base_pdf_bytes: bytes, photo_path: str) -> bytes:
     width = float(first_page.mediabox.width)
     height = float(first_page.mediabox.height)
 
-    # zone photo observée sur le template fourni
-    box_w = width * 0.105
-    box_h = height * 0.195
-    box_x = width * 0.836
-    box_y = height * 0.711
-    padding = 4
+    # Zone photo du parchemin PDF (calée sur le gabarit actuel).
+    # Ajustée pour éviter la bande blanche à droite observée en sortie.
+    box_w = width * 0.111
+    box_h = height * 0.198
+    box_x = width * 0.833
+    box_y = height * 0.708
 
     packet = BytesIO()
     c = canvas.Canvas(packet, pagesize=(width, height))
@@ -11715,20 +11727,20 @@ def _build_vae_parchemin_pdf(base_pdf_bytes: bytes, photo_path: str) -> bytes:
         img_reader = ImageReader(rgb)
         iw, ih = rgb.size
         if iw > 0 and ih > 0:
-            target_w = max(1, box_w - 2 * padding)
-            target_h = max(1, box_h - 2 * padding)
+            target_w = max(1, box_w)
+            target_h = max(1, box_h)
 
             # On remplit toute la case photo comme en CSS `object-fit: cover`
             # pour éviter les bandes blanches quand le ratio diffère.
             scale = max(target_w / iw, target_h / ih)
             draw_w = max(1, iw * scale)
             draw_h = max(1, ih * scale)
-            draw_x = box_x + padding + (target_w - draw_w) / 2
-            draw_y = box_y + padding + (target_h - draw_h) / 2
+            draw_x = box_x + (target_w - draw_w) / 2
+            draw_y = box_y + (target_h - draw_h) / 2
 
             c.saveState()
             clip_path = c.beginPath()
-            clip_path.rect(box_x + padding, box_y + padding, target_w, target_h)
+            clip_path.rect(box_x, box_y, target_w, target_h)
             c.clipPath(clip_path, stroke=0, fill=0)
             c.drawImage(img_reader, draw_x, draw_y, draw_w, draw_h, preserveAspectRatio=True, mask='auto')
             c.restoreState()
