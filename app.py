@@ -11699,12 +11699,23 @@ def _build_vae_parchemin_pdf(base_pdf_bytes: bytes, photo_path: str) -> bytes:
     width = float(first_page.mediabox.width)
     height = float(first_page.mediabox.height)
 
-    # zone photo observée sur le template fourni
+    # Zone photo du parchemin PDF.
+    # On applique un "bleed" (débord) pour masquer totalement
+    # le blanc + le cadre noir visibles sur le côté droit.
     box_w = width * 0.105
     box_h = height * 0.195
     box_x = width * 0.836
     box_y = height * 0.711
-    padding = 4
+
+    # Décalage vers la droite + débord autour du cadre imprimé.
+    box_x += width * 0.010
+    bleed_x = width * 0.006
+    bleed_y = height * 0.004
+
+    clip_x = box_x - bleed_x
+    clip_y = box_y - bleed_y
+    clip_w = box_w + (2 * bleed_x)
+    clip_h = box_h + (2 * bleed_y)
 
     packet = BytesIO()
     c = canvas.Canvas(packet, pagesize=(width, height))
@@ -11715,20 +11726,19 @@ def _build_vae_parchemin_pdf(base_pdf_bytes: bytes, photo_path: str) -> bytes:
         img_reader = ImageReader(rgb)
         iw, ih = rgb.size
         if iw > 0 and ih > 0:
-            target_w = max(1, box_w - 2 * padding)
-            target_h = max(1, box_h - 2 * padding)
+            target_w = max(1, clip_w)
+            target_h = max(1, clip_h)
 
-            # On remplit toute la case photo comme en CSS `object-fit: cover`
-            # pour éviter les bandes blanches quand le ratio diffère.
+            # Remplissage total (cover) de la zone clippée, sans déformation.
             scale = max(target_w / iw, target_h / ih)
             draw_w = max(1, iw * scale)
             draw_h = max(1, ih * scale)
-            draw_x = box_x + padding + (target_w - draw_w) / 2
-            draw_y = box_y + padding + (target_h - draw_h) / 2
+            draw_x = clip_x + (target_w - draw_w) / 2
+            draw_y = clip_y + (target_h - draw_h) / 2
 
             c.saveState()
             clip_path = c.beginPath()
-            clip_path.rect(box_x + padding, box_y + padding, target_w, target_h)
+            clip_path.rect(clip_x, clip_y, target_w, target_h)
             c.clipPath(clip_path, stroke=0, fill=0)
             c.drawImage(img_reader, draw_x, draw_y, draw_w, draw_h, preserveAspectRatio=True, mask='auto')
             c.restoreState()
