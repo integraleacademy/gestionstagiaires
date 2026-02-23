@@ -229,18 +229,9 @@ app.add_template_filter(fr_datetime, "frdatetime")
 # Persistent disk (Render)
 # =========================
 def _resolve_persist_dir() -> str:
-    configured = (os.environ.get("PERSIST_DIR") or "").strip()
-    if configured:
-        os.makedirs(configured, exist_ok=True)
-        return configured
-
-    for candidate in ("/var/data", "/data"):
-        try:
-            os.makedirs(candidate, exist_ok=True)
-            return candidate
-        except Exception:
-            continue
-    return "/data"
+    persist_dir = "/data"
+    os.makedirs(persist_dir, exist_ok=True)
+    return persist_dir
 
 
 PERSIST_DIR = _resolve_persist_dir()
@@ -254,6 +245,7 @@ AUTO_RESTORE_FROM_BACKUP = (os.environ.get("AUTO_RESTORE_FROM_BACKUP", "1") or "
 
 _data_lock = threading.RLock()
 _last_backup_times: Dict[str, float] = {}
+_storage_startup_logged = False
 
 UPLOADS_DIR = os.path.join(PERSIST_DIR, "uploads")
 os.makedirs(UPLOADS_DIR, exist_ok=True)
@@ -315,7 +307,107 @@ def _write_json_with_backups(path: str, payload: Dict[str, Any], lock: threading
         tmp = path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
         os.replace(tmp, path)
+        try:
+            dir_fd = os.open(os.path.dirname(path) or ".", os.O_DIRECTORY)
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
+        except Exception:
+            pass
+
+
+def _iter_corrupt_candidates(path: str) -> Iterable[str]:
+    parent = os.path.dirname(path) or "."
+    base_name = os.path.basename(path)
+    prefix = base_name + ".corrupt."
+    try:
+        names = sorted(
+            [name for name in os.listdir(parent) if name.startswith(prefix)],
+            reverse=True,
+        )
+    except Exception:
+        return []
+    return [os.path.join(parent, name) for name in names]
+
+
+def _load_valid_json_payload(path: str) -> Optional[Dict[str, Any]]:
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            loaded = json.load(f)
+        if isinstance(loaded, dict):
+            return loaded
+    except Exception:
+        return None
+    return None
+
+
+def _recover_data_file(path: str) -> Optional[str]:
+    recovery_sources: List[str] = []
+    base_name = os.path.basename(path)
+    backup_prefix = base_name.replace(".", "_") + "."
+    try:
+        backup_names = sorted(
+            [
+                name
+                for name in os.listdir(BACKUP_DIR)
+                if name.startswith(backup_prefix) and name.endswith(".json")
+            ],
+            reverse=True,
+        )
+        recovery_sources.extend(os.path.join(BACKUP_DIR, name) for name in backup_names)
+    except Exception:
+        pass
+
+    recovery_sources.extend(_iter_corrupt_candidates(path))
+
+    for source in recovery_sources:
+        if not os.path.isfile(source):
+            continue
+        loaded = _load_valid_json_payload(source)
+        if loaded is None:
+            continue
+        try:
+            shutil.copyfile(source, path)
+            app.logger.warning("Recovered data.json from %s", source)
+            return source
+        except Exception:
+            continue
+    return None
+
+
+def _count_loaded_objects(data: Dict[str, Any]) -> Tuple[int, int]:
+    sessions = data.get("sessions")
+    sessions_count = len(sessions) if isinstance(sessions, list) else 0
+    trainees_count = 0
+    if isinstance(sessions, list):
+        for session_item in sessions:
+            if isinstance(session_item, dict):
+                trainees = session_item.get("trainees")
+                if isinstance(trainees, list):
+                    trainees_count += len(trainees)
+    return trainees_count, sessions_count
+
+
+def _log_storage_state(data: Optional[Dict[str, Any]] = None) -> None:
+    global _storage_startup_logged
+    if _storage_startup_logged:
+        return
+    exists = os.path.exists(DATA_FILE)
+    size = os.path.getsize(DATA_FILE) if exists else 0
+    trainees_count, sessions_count = _count_loaded_objects(data or {})
+    app.logger.info(
+        "Storage startup path=%s exists=%s size=%sB stagiaires=%s sessions=%s",
+        DATA_FILE,
+        exists,
+        size,
+        trainees_count,
+        sessions_count,
+    )
+    _storage_startup_logged = True
 
 
 def _restore_latest_backup(path: str) -> bool:
@@ -2317,32 +2409,26 @@ def _empty_data_payload() -> Dict[str, Any]:
 
 def load_data() -> Dict[str, Any]:
     if not os.path.exists(DATA_FILE):
-        if AUTO_RESTORE_FROM_BACKUP:
-            restored = _restore_data_from_backups_if_possible()
-            if restored is not None:
-                return restored
+        recovered_from = _recover_data_file(DATA_FILE)
+        if recovered_from:
+            loaded = _load_valid_json_payload(DATA_FILE)
+            if loaded is not None:
+                _log_storage_state(loaded)
+                return loaded
         base = _empty_data_payload()
-        save_data(base)
+        _log_storage_state(base)
         return base
 
-    try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        if not isinstance(data, dict):
-            raise ValueError("data.json payload must be a dict")
-    except Exception:
-        try:
-            backup = DATA_FILE + ".corrupt." + str(int(datetime.datetime.utcnow().timestamp()))
-            os.replace(DATA_FILE, backup)
-        except Exception:
-            pass
-        if AUTO_RESTORE_FROM_BACKUP:
-            restored = _restore_data_from_backups_if_possible()
-            if restored is not None:
-                return restored
-        base = _empty_data_payload()
-        save_data(base)
-        return base
+    data = _load_valid_json_payload(DATA_FILE)
+    if data is None:
+        recovered_from = _recover_data_file(DATA_FILE)
+        if recovered_from:
+            data = _load_valid_json_payload(DATA_FILE)
+        if data is None:
+            app.logger.error("Unable to read %s and no valid recovery source found", DATA_FILE)
+            base = _empty_data_payload()
+            _log_storage_state(base)
+            return base
 
     # Les post-traitements ne doivent jamais vider la base en cas d'erreur.
     changed = False
@@ -2408,32 +2494,9 @@ def load_data() -> Dict[str, Any]:
             save_data(data)
 
     except Exception:
-        if _restore_latest_backup(DATA_FILE):
-            return load_data()
+        app.logger.exception("Post-processing failed for %s; returning current in-memory data without reset", DATA_FILE)
 
-        try:
-            backup = DATA_FILE + ".corrupt." + str(int(datetime.datetime.utcnow().timestamp()))
-            os.replace(DATA_FILE, backup)
-        except Exception:
-            pass
-        base = {
-            "sessions": [],
-            "positioning_tests": [],
-            "notifications_edof": [],
-            "notifications_financement_refuse": [],
-            "notifications_prelevements": [],
-            "notifications_prelevement_non_valides": [],
-            "notifications_phone_relances": [],
-            "notifications_vae_relances": [],
-            "notifications_cnaps_pre_relances": [],
-            "notifications_test_fr": [],
-            "notifications_convention_unsigned": [],
-            "notifications_admin": [],
-            "admin_push_subscriptions": [],
-        }
-        save_data(base)
-        return base
-
+    _log_storage_state(data)
     return data
 
 
@@ -7140,6 +7203,23 @@ def health():
         "backup_dir": BACKUP_DIR,
         "backups_count": len(backup_files),
         "backup_retention": BACKUP_RETENTION,
+    })
+
+
+@app.get("/health/storage")
+def health_storage():
+    exists = os.path.exists(DATA_FILE)
+    stat_result = os.stat(DATA_FILE) if exists else None
+    data = load_data()
+    trainees_count, sessions_count = _count_loaded_objects(data)
+    return jsonify({
+        "ok": True,
+        "data_path": DATA_FILE,
+        "exists": exists,
+        "size": stat_result.st_size if stat_result else 0,
+        "mtime": int(stat_result.st_mtime) if stat_result else None,
+        "count_stagiaires": trainees_count,
+        "count_sessions": sessions_count,
     })
 
 
