@@ -11704,6 +11704,9 @@ def _build_vae_parchemin_pdf(base_pdf_bytes: bytes, photo_path: str) -> bytes:
     box_h = height * 0.195
     box_x = width * 0.836
     box_y = height * 0.711
+    # Ajustement fin demandé : décale légèrement la photo vers la droite
+    # pour supprimer le filet blanc visible sur le bord droit du cadre.
+    box_x += width * 0.004
     padding = 4
 
     packet = BytesIO()
