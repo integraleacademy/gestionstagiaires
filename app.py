@@ -6322,12 +6322,12 @@ def api_create_trainee(session_id: str):
         if "VTC" in (training_type or "").upper():
             subject, html = build_vtc_onboarding_email(first_name, link)
             sms = build_vtc_onboarding_sms(first_name, link)
-            email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
+            email_ok = brevo_send_email(email, subject, html, trainee=t) if email else False
             sms_ok = brevo_send_sms(phone, sms) if phone else False
         elif (training_type or "") == "DIRIGEANT VAE":
             subject, html, sms = build_dirigeant_vae_onboarding_email_sms(first_name, link)
 
-            email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
+            email_ok = brevo_send_email(email, subject, html, trainee=t) if email else False
             sms_ok = brevo_send_sms(phone, sms) if phone else False
         else:
             formation_type = formation_label(training_type)
@@ -6403,7 +6403,7 @@ def api_create_trainee(session_id: str):
                 f"Pour toute demande d'assistance vous pouvez nous contacter au 04 22 47 07 68."
             )
 
-            email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
+            email_ok = brevo_send_email(email, subject, html, trainee=t) if email else False
             sms_ok = brevo_send_sms(phone, sms) if phone else False
 
         t["access_sent_at"] = _now_iso()
