@@ -9272,6 +9272,8 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
 
     token = _tokenize_path(stored)
 
+    send_notifications = (request.form.get("send_notifications", "1") or "1").strip().lower() not in {"0", "false", "no", "non", "off"}
+
     t.setdefault("deliverables", {})
     t["deliverables"][kind] = token
     t["updated_at"] = _now_iso()
@@ -9449,7 +9451,7 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
         f"A bientôt, la Team Intégrale Academy"
 )
 
-    if kind != "attestation_recevabilite":
+    if send_notifications and kind != "attestation_recevabilite":
         brevo_send_email(t.get("email", ""), subject, html, trainee=t)
         brevo_send_sms(t.get("phone", ""), sms)
 
