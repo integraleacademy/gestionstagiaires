@@ -11745,12 +11745,15 @@ def _build_vae_parchemin_pdf(base_pdf_bytes: bytes, photo_path: str) -> bytes:
     width = float(first_page.mediabox.width)
     height = float(first_page.mediabox.height)
 
-    # Zone photo du parchemin PDF (calée sur le gabarit actuel).
-    # Ajustée pour éviter la bande blanche à droite observée en sortie.
-    box_w = width * 0.111
-    box_h = height * 0.198
-    box_x = width * 0.833
-    box_y = height * 0.708
+    # zone photo observée sur le template fourni
+    box_w = width * 0.105
+    box_h = height * 0.195
+    box_x = width * 0.836
+    box_y = height * 0.711
+    # Ajustement fin demandé : décale légèrement la photo vers la droite
+    # pour supprimer le filet blanc visible sur le bord droit du cadre.
+    box_x += width * 0.004
+    padding = 4
 
     packet = BytesIO()
     c = canvas.Canvas(packet, pagesize=(width, height))
