@@ -227,28 +227,7 @@ app.add_template_filter(fr_datetime, "frdatetime")
 # =========================
 # Persistent disk (Render)
 # =========================
-def _resolve_persist_dir() -> str:
-    env_path = (os.environ.get("PERSIST_DIR") or "").strip()
-    if env_path:
-        return env_path
-
-    # Render monte généralement le disque persistant sur /var/data.
-    # On garde /data en fallback pour rétrocompatibilité locale.
-    candidates = ["/var/data", "/data"]
-
-    # Priorité au chemin qui contient déjà nos fichiers.
-    for candidate in candidates:
-        if os.path.exists(os.path.join(candidate, "data.json")):
-            return candidate
-
-    for candidate in candidates:
-        if os.path.isdir(candidate):
-            return candidate
-
-    return "/var/data"
-
-
-PERSIST_DIR = _resolve_persist_dir()
+PERSIST_DIR = os.environ.get("PERSIST_DIR", "/data")
 os.makedirs(PERSIST_DIR, exist_ok=True)
 DATA_FILE = os.path.join(PERSIST_DIR, "data.json")
 
@@ -2257,47 +2236,32 @@ def ensure_cnaps_history(t: Dict[str, Any]) -> None:
         record_cnaps_status_change(t, current_status)
 
 
-def _empty_data_payload() -> Dict[str, Any]:
-    return {
-        "sessions": [],
-        "positioning_tests": [],
-        "notifications_edof": [],
-        "notifications_financement_refuse": [],
-        "notifications_prelevements": [],
-        "notifications_prelevement_non_valides": [],
-        "notifications_phone_relances": [],
-        "notifications_vae_relances": [],
-        "notifications_cnaps_pre_relances": [],
-        "notifications_test_fr": [],
-        "notifications_convention_unsigned": [],
-        "notifications_admin": [],
-        "admin_push_subscriptions": [],
-    }
-
-
 def load_data() -> Dict[str, Any]:
     if not os.path.exists(DATA_FILE):
-        base = _empty_data_payload()
+        base = {
+            "sessions": [],
+            "positioning_tests": [],
+            "notifications_edof": [],
+            "notifications_financement_refuse": [],
+            "notifications_prelevements": [],
+            "notifications_prelevement_non_valides": [],
+            "notifications_phone_relances": [],
+            "notifications_vae_relances": [],
+            "notifications_cnaps_pre_relances": [],
+            "notifications_test_fr": [],
+            "notifications_convention_unsigned": [],
+            "notifications_admin": [],
+            "admin_push_subscriptions": [],
+        }
         save_data(base)
         return base
-
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-    except Exception:
-        try:
-            backup = DATA_FILE + ".corrupt." + str(int(datetime.datetime.utcnow().timestamp()))
-            os.replace(DATA_FILE, backup)
-        except Exception:
-            pass
-        base = _empty_data_payload()
-        save_data(base)
-        return base
 
-    # Les post-traitements ne doivent jamais vider la base en cas d'erreur.
-    changed = False
-    try:
         # ✅ Assure que tous les stagiaires ont un public_token
+        changed = False
+
         if ensure_public_tokens(data):
             changed = True
 
@@ -2357,10 +2321,32 @@ def load_data() -> Dict[str, Any]:
         if changed:
             save_data(data)
 
-    except Exception:
-        app.logger.exception("load_data post-processing error")
+        return data
 
-    return data
+
+    except Exception:
+        try:
+            backup = DATA_FILE + ".corrupt." + str(int(datetime.datetime.utcnow().timestamp()))
+            os.replace(DATA_FILE, backup)
+        except Exception:
+            pass
+        base = {
+            "sessions": [],
+            "positioning_tests": [],
+            "notifications_edof": [],
+            "notifications_financement_refuse": [],
+            "notifications_prelevements": [],
+            "notifications_prelevement_non_valides": [],
+            "notifications_phone_relances": [],
+            "notifications_vae_relances": [],
+            "notifications_cnaps_pre_relances": [],
+            "notifications_test_fr": [],
+            "notifications_convention_unsigned": [],
+            "notifications_admin": [],
+            "admin_push_subscriptions": [],
+        }
+        save_data(base)
+        return base
 
 
 
@@ -9286,8 +9272,6 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
 
     token = _tokenize_path(stored)
 
-    send_notifications = (request.form.get("send_notifications", "1") or "1").strip().lower() not in {"0", "false", "no", "non", "off"}
-
     t.setdefault("deliverables", {})
     t["deliverables"][kind] = token
     if kind == "parchemin" and ((_session_get(s, "training_type", "") or "").strip().upper() == "DIRIGEANT VAE"):
@@ -9471,7 +9455,7 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
         f"A bientôt, la Team Intégrale Academy"
 )
 
-    if send_notifications and kind != "attestation_recevabilite":
+    if kind != "attestation_recevabilite":
         brevo_send_email(t.get("email", ""), subject, html, trainee=t)
         brevo_send_sms(t.get("phone", ""), sms)
 
