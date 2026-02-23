@@ -15,6 +15,7 @@ from flask import session
 from PIL import Image, ImageOps
 import tempfile
 from docx.shared import Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 import requests
 from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file, flash, has_request_context
@@ -7836,6 +7837,9 @@ def _insert_label_photo(doc: Document, placeholder: str, photo_path: str, width_
         # vide le paragraphe
         for run in p.runs:
             run.text = ""
+
+        # centre la photo dans son encadré
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
         # insère l'image recadrée au bon ratio, donc pas de déformation
         r = p.add_run()
