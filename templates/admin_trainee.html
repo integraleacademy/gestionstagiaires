@@ -2324,7 +2324,14 @@ function updateDocsRelanceState(status, plannedDateIso){
       if(form.dataset.confirmedMailSms === "true") return;
       e.preventDefault();
       const ok = await window.confirmMailSmsSend?.();
-      if(!ok) return;
+      let sendNotificationsInput = form.querySelector('input[name="send_notifications"]');
+      if(!sendNotificationsInput){
+        sendNotificationsInput = document.createElement('input');
+        sendNotificationsInput.type = 'hidden';
+        sendNotificationsInput.name = 'send_notifications';
+        form.appendChild(sendNotificationsInput);
+      }
+      sendNotificationsInput.value = ok ? '1' : '0';
       form.dataset.confirmedMailSms = "true";
       form.requestSubmit?.();
       setTimeout(()=>{ delete form.dataset.confirmedMailSms; }, 0);
