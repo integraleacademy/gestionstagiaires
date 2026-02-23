@@ -2328,6 +2328,8 @@ def load_data() -> Dict[str, Any]:
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError("data.json payload must be a dict")
     except Exception:
         try:
             backup = DATA_FILE + ".corrupt." + str(int(datetime.datetime.utcnow().timestamp()))
@@ -2432,7 +2434,7 @@ def load_data() -> Dict[str, Any]:
         save_data(base)
         return base
 
-
+    return data
 
 
 def save_data(data: Dict[str, Any]) -> None:
