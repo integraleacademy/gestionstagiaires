@@ -350,6 +350,19 @@ def _restore_latest_backup(path: str) -> bool:
     return False
 
 
+def _restore_data_from_backups_if_possible() -> Optional[Dict[str, Any]]:
+    if not _restore_latest_backup(DATA_FILE):
+        return None
+    try:
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            loaded = json.load(f)
+        if isinstance(loaded, dict):
+            return loaded
+    except Exception:
+        return None
+    return None
+
+
 # =========================
 # Brevo (Sendinblue) config
 # =========================
@@ -2315,6 +2328,8 @@ def load_data() -> Dict[str, Any]:
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError("data.json payload must be a dict")
     except Exception:
         try:
             backup = DATA_FILE + ".corrupt." + str(int(datetime.datetime.utcnow().timestamp()))
@@ -2419,7 +2434,7 @@ def load_data() -> Dict[str, Any]:
         save_data(base)
         return base
 
-
+    return data
 
 
 def save_data(data: Dict[str, Any]) -> None:
@@ -9059,7 +9074,7 @@ def _send_vae_relance_message(data: Dict[str, Any], session_obj: Dict[str, Any],
         "Si vous rencontrez des difficultés, contactez-nous au 04 22 47 07 68."
     )
 
-    email_ok = brevo_send_email(email, cfg["subject"], html, trainee=t) if email else False
+    email_ok = brevo_send_email(email, cfg["subject"], html, trainee=trainee) if email else False
     sms_ok = brevo_send_sms(phone, sms) if phone else False
     sent_at = _now_iso()
 
