@@ -1148,7 +1148,6 @@ bulkParcheminInput?.addEventListener("change", async ()=>{
   }else{
     sendNotifications = window.confirm("Voulez-vous envoyer le mail / SMS ?");
   }
-  if(!sendNotifications) return;
 
   const bad = files.filter(f => !f.name.toLowerCase().endsWith(".pdf"));
   if(bad.length){
