@@ -729,14 +729,10 @@
       <form method="post" action="{{ url_for('admin_vtc_cmar_relance', session_id=session.id, trainee_id=trainee.id) }}" style="margin-top:6px;" data-mail-sms-confirm="true">
         <button class="btn {% if trainee.vtc_cm_reminder_sent_at %}btn-primary{% else %}btn-outline{% endif %} btn-uniform" type="submit">🔁 Envoyer maintenant</button>
       </form>
+      <form method="post" action="{{ url_for('admin_vtc_cmar_identifiants_errones', session_id=session.id, trainee_id=trainee.id) }}" style="margin-top:6px;" data-mail-sms-confirm="true">
+        <button class="btn btn-primary btn-uniform" type="submit">Identifiants erronés</button>
+      </form>
       {% endif %}
-      <div style="margin-top:6px;">
-        <a class="btn btn-outline btn-uniform"
-           href="{{ url_for('admin_vtc_cm_autologin', session_id=session.id, trainee_id=trainee.id) }}"
-           target="_blank" rel="noopener">
-          🔐 Connexion auto exament3p.fr
-        </a>
-      </div>
     </div>
     <div style="margin-top:12px;">
       <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
