@@ -227,7 +227,28 @@ app.add_template_filter(fr_datetime, "frdatetime")
 # =========================
 # Persistent disk (Render)
 # =========================
-PERSIST_DIR = os.environ.get("PERSIST_DIR", "/data")
+def _resolve_persist_dir() -> str:
+    env_path = (os.environ.get("PERSIST_DIR") or "").strip()
+    if env_path:
+        return env_path
+
+    # Render monte généralement le disque persistant sur /var/data.
+    # On garde /data en fallback pour rétrocompatibilité locale.
+    candidates = ["/var/data", "/data"]
+
+    # Priorité au chemin qui contient déjà nos fichiers.
+    for candidate in candidates:
+        if os.path.exists(os.path.join(candidate, "data.json")):
+            return candidate
+
+    for candidate in candidates:
+        if os.path.isdir(candidate):
+            return candidate
+
+    return "/var/data"
+
+
+PERSIST_DIR = _resolve_persist_dir()
 os.makedirs(PERSIST_DIR, exist_ok=True)
 DATA_FILE = os.path.join(PERSIST_DIR, "data.json")
 
@@ -235,6 +256,7 @@ BACKUP_DIR = os.path.join(PERSIST_DIR, "backups")
 os.makedirs(BACKUP_DIR, exist_ok=True)
 BACKUP_RETENTION = int(os.environ.get("BACKUP_RETENTION", "120"))
 BACKUP_MIN_INTERVAL_SECONDS = int(os.environ.get("BACKUP_MIN_INTERVAL_SECONDS", "300"))
+AUTO_RESTORE_FROM_BACKUP = (os.environ.get("AUTO_RESTORE_FROM_BACKUP", "1") or "").strip().lower() in {"1", "true", "yes", "on"}
 
 _data_lock = threading.RLock()
 _last_backup_times: Dict[str, float] = {}
@@ -300,6 +322,65 @@ def _write_json_with_backups(path: str, payload: Dict[str, Any], lock: threading
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
         os.replace(tmp, path)
+
+
+def _load_json_file(path: str) -> Optional[Dict[str, Any]]:
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+        if isinstance(payload, dict):
+            return payload
+    except Exception:
+        return None
+    return None
+
+
+def _is_probably_empty_payload(data: Dict[str, Any]) -> bool:
+    keys = [
+        "sessions",
+        "positioning_tests",
+        "notifications_edof",
+        "notifications_financement_refuse",
+        "notifications_prelevements",
+        "notifications_prelevement_non_valides",
+        "notifications_phone_relances",
+        "notifications_vae_relances",
+        "notifications_cnaps_pre_relances",
+        "notifications_test_fr",
+        "notifications_convention_unsigned",
+        "notifications_admin",
+    ]
+    for key in keys:
+        if isinstance(data.get(key), list) and len(data.get(key) or []) > 0:
+            return False
+    return True
+
+
+def _restore_data_from_backups_if_possible() -> Optional[Dict[str, Any]]:
+    prefix = "data_json"
+    candidates: List[Tuple[float, str]] = []
+    try:
+        for name in os.listdir(BACKUP_DIR):
+            if not name.startswith(prefix) or not name.endswith(".json"):
+                continue
+            path = os.path.join(BACKUP_DIR, name)
+            if not os.path.isfile(path):
+                continue
+            candidates.append((os.path.getmtime(path), path))
+    except Exception:
+        return None
+
+    for _, backup_path in sorted(candidates, key=lambda x: x[0], reverse=True):
+        payload = _load_json_file(backup_path)
+        if not payload or _is_probably_empty_payload(payload):
+            continue
+        try:
+            _write_json_with_backups(DATA_FILE, payload, _data_lock)
+            app.logger.warning("data.json restored from backup: %s", backup_path)
+            return payload
+        except Exception:
+            continue
+    return None
 
 
 # =========================
@@ -2236,32 +2317,55 @@ def ensure_cnaps_history(t: Dict[str, Any]) -> None:
         record_cnaps_status_change(t, current_status)
 
 
+def _empty_data_payload() -> Dict[str, Any]:
+    return {
+        "sessions": [],
+        "positioning_tests": [],
+        "notifications_edof": [],
+        "notifications_financement_refuse": [],
+        "notifications_prelevements": [],
+        "notifications_prelevement_non_valides": [],
+        "notifications_phone_relances": [],
+        "notifications_vae_relances": [],
+        "notifications_cnaps_pre_relances": [],
+        "notifications_test_fr": [],
+        "notifications_convention_unsigned": [],
+        "notifications_admin": [],
+        "admin_push_subscriptions": [],
+    }
+
+
 def load_data() -> Dict[str, Any]:
     if not os.path.exists(DATA_FILE):
-        base = {
-            "sessions": [],
-            "positioning_tests": [],
-            "notifications_edof": [],
-            "notifications_financement_refuse": [],
-            "notifications_prelevements": [],
-            "notifications_prelevement_non_valides": [],
-            "notifications_phone_relances": [],
-            "notifications_vae_relances": [],
-            "notifications_cnaps_pre_relances": [],
-            "notifications_test_fr": [],
-            "notifications_convention_unsigned": [],
-            "notifications_admin": [],
-            "admin_push_subscriptions": [],
-        }
+        if AUTO_RESTORE_FROM_BACKUP:
+            restored = _restore_data_from_backups_if_possible()
+            if restored is not None:
+                return restored
+        base = _empty_data_payload()
         save_data(base)
         return base
+
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
+    except Exception:
+        try:
+            backup = DATA_FILE + ".corrupt." + str(int(datetime.datetime.utcnow().timestamp()))
+            os.replace(DATA_FILE, backup)
+        except Exception:
+            pass
+        if AUTO_RESTORE_FROM_BACKUP:
+            restored = _restore_data_from_backups_if_possible()
+            if restored is not None:
+                return restored
+        base = _empty_data_payload()
+        save_data(base)
+        return base
 
+    # Les post-traitements ne doivent jamais vider la base en cas d'erreur.
+    changed = False
+    try:
         # ✅ Assure que tous les stagiaires ont un public_token
-        changed = False
-
         if ensure_public_tokens(data):
             changed = True
 
@@ -2321,32 +2425,10 @@ def load_data() -> Dict[str, Any]:
         if changed:
             save_data(data)
 
-        return data
-
-
     except Exception:
-        try:
-            backup = DATA_FILE + ".corrupt." + str(int(datetime.datetime.utcnow().timestamp()))
-            os.replace(DATA_FILE, backup)
-        except Exception:
-            pass
-        base = {
-            "sessions": [],
-            "positioning_tests": [],
-            "notifications_edof": [],
-            "notifications_financement_refuse": [],
-            "notifications_prelevements": [],
-            "notifications_prelevement_non_valides": [],
-            "notifications_phone_relances": [],
-            "notifications_vae_relances": [],
-            "notifications_cnaps_pre_relances": [],
-            "notifications_test_fr": [],
-            "notifications_convention_unsigned": [],
-            "notifications_admin": [],
-            "admin_push_subscriptions": [],
-        }
-        save_data(base)
-        return base
+        app.logger.exception("load_data post-processing error")
+
+    return data
 
 
 
