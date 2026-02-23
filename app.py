@@ -15,6 +15,8 @@ from flask import session
 from PIL import Image, ImageOps
 import tempfile
 from docx.shared import Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
 
 import requests
 from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file, flash, has_request_context
@@ -225,7 +227,28 @@ app.add_template_filter(fr_datetime, "frdatetime")
 # =========================
 # Persistent disk (Render)
 # =========================
-PERSIST_DIR = os.environ.get("PERSIST_DIR", "/data")
+def _resolve_persist_dir() -> str:
+    env_path = (os.environ.get("PERSIST_DIR") or "").strip()
+    if env_path:
+        return env_path
+
+    # Render monte généralement le disque persistant sur /var/data.
+    # On garde /data en fallback pour rétrocompatibilité locale.
+    candidates = ["/var/data", "/data"]
+
+    # Priorité au chemin qui contient déjà nos fichiers.
+    for candidate in candidates:
+        if os.path.exists(os.path.join(candidate, "data.json")):
+            return candidate
+
+    for candidate in candidates:
+        if os.path.isdir(candidate):
+            return candidate
+
+    return "/var/data"
+
+
+PERSIST_DIR = _resolve_persist_dir()
 os.makedirs(PERSIST_DIR, exist_ok=True)
 DATA_FILE = os.path.join(PERSIST_DIR, "data.json")
 
@@ -233,6 +256,7 @@ BACKUP_DIR = os.path.join(PERSIST_DIR, "backups")
 os.makedirs(BACKUP_DIR, exist_ok=True)
 BACKUP_RETENTION = int(os.environ.get("BACKUP_RETENTION", "120"))
 BACKUP_MIN_INTERVAL_SECONDS = int(os.environ.get("BACKUP_MIN_INTERVAL_SECONDS", "300"))
+AUTO_RESTORE_FROM_BACKUP = (os.environ.get("AUTO_RESTORE_FROM_BACKUP", "1") or "").strip().lower() in {"1", "true", "yes", "on"}
 
 _data_lock = threading.RLock()
 _last_backup_times: Dict[str, float] = {}
@@ -298,6 +322,65 @@ def _write_json_with_backups(path: str, payload: Dict[str, Any], lock: threading
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
         os.replace(tmp, path)
+
+
+def _load_json_file(path: str) -> Optional[Dict[str, Any]]:
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+        if isinstance(payload, dict):
+            return payload
+    except Exception:
+        return None
+    return None
+
+
+def _is_probably_empty_payload(data: Dict[str, Any]) -> bool:
+    keys = [
+        "sessions",
+        "positioning_tests",
+        "notifications_edof",
+        "notifications_financement_refuse",
+        "notifications_prelevements",
+        "notifications_prelevement_non_valides",
+        "notifications_phone_relances",
+        "notifications_vae_relances",
+        "notifications_cnaps_pre_relances",
+        "notifications_test_fr",
+        "notifications_convention_unsigned",
+        "notifications_admin",
+    ]
+    for key in keys:
+        if isinstance(data.get(key), list) and len(data.get(key) or []) > 0:
+            return False
+    return True
+
+
+def _restore_data_from_backups_if_possible() -> Optional[Dict[str, Any]]:
+    prefix = "data_json"
+    candidates: List[Tuple[float, str]] = []
+    try:
+        for name in os.listdir(BACKUP_DIR):
+            if not name.startswith(prefix) or not name.endswith(".json"):
+                continue
+            path = os.path.join(BACKUP_DIR, name)
+            if not os.path.isfile(path):
+                continue
+            candidates.append((os.path.getmtime(path), path))
+    except Exception:
+        return None
+
+    for _, backup_path in sorted(candidates, key=lambda x: x[0], reverse=True):
+        payload = _load_json_file(backup_path)
+        if not payload or _is_probably_empty_payload(payload):
+            continue
+        try:
+            _write_json_with_backups(DATA_FILE, payload, _data_lock)
+            app.logger.warning("data.json restored from backup: %s", backup_path)
+            return payload
+        except Exception:
+            continue
+    return None
 
 
 # =========================
@@ -423,6 +506,7 @@ def brevo_send_email(
     subject: str,
     html: str,
     cc_emails: Optional[List[str]] = None,
+    trainee: Optional[Dict[str, Any]] = None,
 ) -> bool:
     if not BREVO_API_KEY or not to_email:
         return False
@@ -455,6 +539,17 @@ def brevo_send_email(
         print("[EMAIL] status=", r.status_code)
         print("[EMAIL] response=", r.text)
         ok = r.status_code in (200, 201, 202)
+        if ok and isinstance(trainee, dict):
+            sent_history = trainee.get("sent_email_history")
+            if not isinstance(sent_history, list):
+                sent_history = []
+            sent_history.insert(0, {
+                "to_email": (to_email or "").strip(),
+                "subject": (subject or "").strip(),
+                "html": html or "",
+                "sent_at": _now_iso(),
+            })
+            trainee["sent_email_history"] = sent_history[:200]
         if (not ok) and _brevo_no_credit_detected(r.text):
             _register_brevo_no_credit("email", to_email, r.text)
         return ok
@@ -544,7 +639,7 @@ def notify_elearning_access_available(trainee: Dict[str, Any], session_obj: Dict
         f"Connectez vous à votre Espace Stagiaire pour suivre votre formation : {access_link}"
     )
 
-    email_ok = brevo_send_email((trainee.get("email") or "").strip(), subject, html)
+    email_ok = brevo_send_email((trainee.get("email") or "").strip(), subject, html, trainee=trainee)
     sms_ok = brevo_send_sms((trainee.get("phone") or "").strip(), sms)
     return {"email_ok": bool(email_ok), "sms_ok": bool(sms_ok)}
 
@@ -1293,7 +1388,7 @@ def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dic
     subject, html = build_vtc_practice_convocation_email(first_name, practice_training_date)
     sms = build_vtc_practice_convocation_sms(first_name, practice_training_date)
 
-    email_ok = brevo_send_email(email, subject, html) if (send_email and email) else False
+    email_ok = brevo_send_email(email, subject, html, trainee=trainee) if (send_email and email) else False
     sms_ok = brevo_send_sms(phone, sms) if phone else False
 
     trainee["vtc_theory_exam_sent_at"] = _now_iso()
@@ -1321,7 +1416,7 @@ def _send_vtc_practice_exam_success_notification(session_obj: Dict[str, Any], tr
     subject, html = build_vtc_practice_exam_success_email(first_name, practice_exam_date)
     sms = build_vtc_practice_exam_success_sms(first_name, practice_exam_date)
 
-    email_ok = brevo_send_email(email, subject, html) if email else False
+    email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
     sms_ok = brevo_send_sms(phone, sms) if phone else False
 
     trainee["vtc_practice_result"] = "success"
@@ -1792,7 +1887,7 @@ def _send_docs_relance_message(
         f"Besoin d’aide ? 04 22 47 07 68"
     )
 
-    email_ok = brevo_send_email(trainee.get("email", ""), subject, html)
+    email_ok = brevo_send_email(trainee.get("email", ""), subject, html, trainee=trainee)
     sms_ok = brevo_send_sms(trainee.get("phone", ""), sms)
 
     sent_at = _now_iso()
@@ -1982,7 +2077,7 @@ def _send_docs_relance_message(
         f"Besoin d’aide ? 04 22 47 07 68"
     )
 
-    email_ok = brevo_send_email(trainee.get("email", ""), subject, html)
+    email_ok = brevo_send_email(trainee.get("email", ""), subject, html, trainee=trainee)
     sms_ok = brevo_send_sms(trainee.get("phone", ""), sms)
 
     sent_at = _now_iso()
@@ -2222,32 +2317,55 @@ def ensure_cnaps_history(t: Dict[str, Any]) -> None:
         record_cnaps_status_change(t, current_status)
 
 
+def _empty_data_payload() -> Dict[str, Any]:
+    return {
+        "sessions": [],
+        "positioning_tests": [],
+        "notifications_edof": [],
+        "notifications_financement_refuse": [],
+        "notifications_prelevements": [],
+        "notifications_prelevement_non_valides": [],
+        "notifications_phone_relances": [],
+        "notifications_vae_relances": [],
+        "notifications_cnaps_pre_relances": [],
+        "notifications_test_fr": [],
+        "notifications_convention_unsigned": [],
+        "notifications_admin": [],
+        "admin_push_subscriptions": [],
+    }
+
+
 def load_data() -> Dict[str, Any]:
     if not os.path.exists(DATA_FILE):
-        base = {
-            "sessions": [],
-            "positioning_tests": [],
-            "notifications_edof": [],
-            "notifications_financement_refuse": [],
-            "notifications_prelevements": [],
-            "notifications_prelevement_non_valides": [],
-            "notifications_phone_relances": [],
-            "notifications_vae_relances": [],
-            "notifications_cnaps_pre_relances": [],
-            "notifications_test_fr": [],
-            "notifications_convention_unsigned": [],
-            "notifications_admin": [],
-            "admin_push_subscriptions": [],
-        }
+        if AUTO_RESTORE_FROM_BACKUP:
+            restored = _restore_data_from_backups_if_possible()
+            if restored is not None:
+                return restored
+        base = _empty_data_payload()
         save_data(base)
         return base
+
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
+    except Exception:
+        try:
+            backup = DATA_FILE + ".corrupt." + str(int(datetime.datetime.utcnow().timestamp()))
+            os.replace(DATA_FILE, backup)
+        except Exception:
+            pass
+        if AUTO_RESTORE_FROM_BACKUP:
+            restored = _restore_data_from_backups_if_possible()
+            if restored is not None:
+                return restored
+        base = _empty_data_payload()
+        save_data(base)
+        return base
 
+    # Les post-traitements ne doivent jamais vider la base en cas d'erreur.
+    changed = False
+    try:
         # ✅ Assure que tous les stagiaires ont un public_token
-        changed = False
-
         if ensure_public_tokens(data):
             changed = True
 
@@ -2307,32 +2425,10 @@ def load_data() -> Dict[str, Any]:
         if changed:
             save_data(data)
 
-        return data
-
-
     except Exception:
-        try:
-            backup = DATA_FILE + ".corrupt." + str(int(datetime.datetime.utcnow().timestamp()))
-            os.replace(DATA_FILE, backup)
-        except Exception:
-            pass
-        base = {
-            "sessions": [],
-            "positioning_tests": [],
-            "notifications_edof": [],
-            "notifications_financement_refuse": [],
-            "notifications_prelevements": [],
-            "notifications_prelevement_non_valides": [],
-            "notifications_phone_relances": [],
-            "notifications_vae_relances": [],
-            "notifications_cnaps_pre_relances": [],
-            "notifications_test_fr": [],
-            "notifications_convention_unsigned": [],
-            "notifications_admin": [],
-            "admin_push_subscriptions": [],
-        }
-        save_data(base)
-        return base
+        app.logger.exception("load_data post-processing error")
+
+    return data
 
 
 
@@ -2597,6 +2693,26 @@ def build_trainee_history_entries(trainee: Dict[str, Any]) -> List[Dict[str, str
         )
 
     entries.sort(key=lambda item: _history_sort_key(item.get("at") or ""), reverse=True)
+    return entries
+
+
+def build_trainee_email_history_entries(trainee: Dict[str, Any]) -> List[Dict[str, str]]:
+    entries: List[Dict[str, str]] = []
+    for item in (trainee.get("sent_email_history") or []):
+        if not isinstance(item, dict):
+            continue
+        sent_at = (item.get("sent_at") or "").strip()
+        if not sent_at:
+            continue
+        entries.append({
+            "to_email": (item.get("to_email") or "").strip(),
+            "subject": (item.get("subject") or "(Sans objet)").strip(),
+            "html": item.get("html") or "",
+            "sent_at": sent_at,
+            "sent_date": fr_date(sent_at),
+        })
+
+    entries.sort(key=lambda item: _history_sort_key(item.get("sent_at") or ""), reverse=True)
     return entries
 
 
@@ -4429,7 +4545,7 @@ def public_vae_desp_submit():
 
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}"
     subject, html, sms = build_dirigeant_vae_onboarding_email_sms(first_name, link)
-    email_ok = brevo_send_email(email, subject, html) if email else False
+    email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
     sms_ok = brevo_send_sms(phone, sms) if phone else False
 
     return jsonify(
@@ -4836,7 +4952,7 @@ def admin_edof_submit():
       <p>Clément VAILLANT<br>Directeur Intégrale Academy</p>
     """)
 
-    email_ok = brevo_send_email(email, user_subject, user_html)
+    email_ok = brevo_send_email(email, user_subject, user_html, trainee=t)
 
     sms = (
         f"Bonjour {first_name},\n"
@@ -4906,7 +5022,7 @@ def admin_financement_refuse_submit():
         "La Team Intégrale Academy"
     ).strip()
 
-    email_ok = brevo_send_email(email, user_subject, user_html)
+    email_ok = brevo_send_email(email, user_subject, user_html, trainee=t)
     sms_ok = brevo_send_sms(phone, sms)
 
     data = load_data()
@@ -6139,12 +6255,12 @@ def api_create_trainee(session_id: str):
         if "VTC" in (training_type or "").upper():
             subject, html = build_vtc_onboarding_email(first_name, link)
             sms = build_vtc_onboarding_sms(first_name, link)
-            email_ok = brevo_send_email(email, subject, html) if email else False
+            email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
             sms_ok = brevo_send_sms(phone, sms) if phone else False
         elif (training_type or "") == "DIRIGEANT VAE":
             subject, html, sms = build_dirigeant_vae_onboarding_email_sms(first_name, link)
 
-            email_ok = brevo_send_email(email, subject, html) if email else False
+            email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
             sms_ok = brevo_send_sms(phone, sms) if phone else False
         else:
             formation_type = formation_label(training_type)
@@ -6220,7 +6336,7 @@ def api_create_trainee(session_id: str):
                 f"Pour toute demande d'assistance vous pouvez nous contacter au 04 22 47 07 68."
             )
 
-            email_ok = brevo_send_email(email, subject, html) if email else False
+            email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
             sms_ok = brevo_send_sms(phone, sms) if phone else False
 
         t["access_sent_at"] = _now_iso()
@@ -7833,11 +7949,21 @@ def _insert_label_photo(doc: Document, placeholder: str, photo_path: str, width_
         if placeholder not in full:
             return False
 
-        # vide le paragraphe
-        for run in p.runs:
-            run.text = ""
+        # vide complètement le paragraphe (texte + éventuels résidus XML)
+        p_elm = p._element
+        for child in list(p_elm):
+            if child.tag == qn("w:r"):
+                p_elm.remove(child)
 
-        # insère l'image recadrée au bon ratio, donc pas de déformation
+        # centre réellement l'image dans l'encadré
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.paragraph_format.left_indent = None
+        p.paragraph_format.right_indent = None
+        p.paragraph_format.first_line_indent = None
+        p.paragraph_format.space_before = None
+        p.paragraph_format.space_after = None
+
+        # insère l'image recadrée au bon ratio, donc sans déformation
         r = p.add_run()
         r.add_picture(prepared, width=width, height=height)
         return True
@@ -7881,7 +8007,7 @@ def admin_send_access(session_id: str, trainee_id: str):
         first_name = t.get("first_name", "")
         subject, html = build_vtc_onboarding_email(first_name, link)
         sms = build_vtc_onboarding_sms(first_name, link)
-        brevo_send_email(t.get("email", ""), subject, html)
+        brevo_send_email(t.get("email", ""), subject, html, trainee=t)
         brevo_send_sms(t.get("phone", ""), sms)
     else:
         subject = "Accès à votre espace stagiaire – Intégrale Academy"
@@ -7895,7 +8021,7 @@ def admin_send_access(session_id: str, trainee_id: str):
           </p>
         """)
         sms = f"Intégrale Academy : votre espace stagiaire est disponible : {link}"
-        brevo_send_email(t.get("email", ""), subject, html)
+        brevo_send_email(t.get("email", ""), subject, html, trainee=t)
         brevo_send_sms(t.get("phone", ""), sms)
 
     t["access_sent_at"] = _now_iso()
@@ -8016,7 +8142,7 @@ def admin_convention_unsigned_notify(session_id: str, trainee_id: str):
         "Nous vous remercions de bien vouloir procéder à la signature de ce document. Besoin d'aide ? 04 22 47 07 68."
     )
 
-    brevo_send_email(t.get("email", ""), subject, html)
+    brevo_send_email(t.get("email", ""), subject, html, trainee=t)
     brevo_send_sms(t.get("phone", ""), sms)
 
     full_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
@@ -8252,7 +8378,7 @@ def admin_test_fr_notify(session_id: str, trainee_id: str):
         abort(404)
 
     payload = _build_test_fr_payload(t, s, code, deadline, "notify")
-    brevo_send_email(t.get("email",""), payload["subject"], payload["html"])
+    brevo_send_email(t.get("email",""), payload["subject"], payload["html"], trainee=t)
     brevo_send_sms(t.get("phone",""), payload["sms"])
 
     now = _now_iso()
@@ -8287,7 +8413,7 @@ def admin_test_fr_relance(session_id: str, trainee_id: str):
         abort(404)
 
     payload = _build_test_fr_payload(t, s, code, deadline, "relance")
-    brevo_send_email(t.get("email", ""), payload["subject"], payload["html"])
+    brevo_send_email(t.get("email", ""), payload["subject"], payload["html"], trainee=t)
     brevo_send_sms(t.get("phone", ""), payload["sms"])
 
     now = _now_iso()
@@ -8338,7 +8464,7 @@ def admin_test_fr_echec(session_id: str, trainee_id: str):
         abort(404)
 
     payload = _build_test_fr_payload(t, s, code, deadline, "failure")
-    brevo_send_email(t.get("email", ""), payload["subject"], payload["html"])
+    brevo_send_email(t.get("email", ""), payload["subject"], payload["html"], trainee=t)
     brevo_send_sms(t.get("phone", ""), payload["sms"])
 
     now = _now_iso()
@@ -8494,7 +8620,7 @@ def admin_docs_notify(session_id: str, trainee_id: str):
         f"Besoin d’aide ? 04 22 47 07 68"
     )
 
-    brevo_send_email(t.get("email", ""), subject, html)
+    brevo_send_email(t.get("email", ""), subject, html, trainee=t)
     brevo_send_sms(t.get("phone", ""), sms)
 
     t["docs_notified_at"] = _now_iso()
@@ -8944,7 +9070,7 @@ def _send_vae_relance_message(data: Dict[str, Any], session_obj: Dict[str, Any],
         "Si vous rencontrez des difficultés, contactez-nous au 04 22 47 07 68."
     )
 
-    email_ok = brevo_send_email(email, cfg["subject"], html) if email else False
+    email_ok = brevo_send_email(email, cfg["subject"], html, trainee=t) if email else False
     sms_ok = brevo_send_sms(phone, sms) if phone else False
     sent_at = _now_iso()
 
@@ -9406,7 +9532,7 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
 )
 
     if kind != "attestation_recevabilite":
-        brevo_send_email(t.get("email", ""), subject, html)
+        brevo_send_email(t.get("email", ""), subject, html, trainee=t)
         brevo_send_sms(t.get("phone", ""), sms)
 
     # ✅ persistance
@@ -9997,6 +10123,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     save_data(data)
 
     trainee_history = build_trainee_history_entries(t)
+    trainee_email_history = build_trainee_email_history_entries(t)
     transfer_sessions = []
     for sess in data.get("sessions", []):
         sid = str(sess.get("id") or "").strip()
@@ -10025,6 +10152,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         deliverables_view=deliverables_view,
         default_training_price=default_price,
         trainee_history=trainee_history,
+        trainee_email_history=trainee_email_history,
         transfer_sessions=transfer_sessions,
         PUBLIC_STUDENT_PORTAL_BASE=PUBLIC_STUDENT_PORTAL_BASE,
         fr_date=fr_date,
@@ -10976,7 +11104,7 @@ def _send_prelevement_pending_validation_messages(trainee: dict, session: dict) 
 
       <p>Je vous remercie par avance,<br>Clément VAILLANT</p>
     """)
-    email_ok = brevo_send_email(email, subject, html) if email else False
+    email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
 
     sms = (
         "Bonjour, "
@@ -11099,7 +11227,7 @@ def api_financement_rejet_send(session_id: str, trainee_id: str):
       <p>Clément VAILLANT<br>Directeur Intégrale Academy</p>
     """)
 
-    email_ok = brevo_send_email(email, subject, html) if email else False
+    email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
 
     dstart = fr_date(_session_get(s, "date_start", ""))
     dend = fr_date(_session_get(s, "date_end", ""))
@@ -11699,7 +11827,9 @@ def _build_vae_parchemin_pdf(base_pdf_bytes: bytes, photo_path: str) -> bytes:
     width = float(first_page.mediabox.width)
     height = float(first_page.mediabox.height)
 
-    # zone photo observée sur le template fourni
+    # Zone photo du parchemin PDF.
+    # On applique un "bleed" (débord) pour masquer totalement
+    # le blanc + le cadre noir visibles sur le côté droit.
     box_w = width * 0.105
     box_h = height * 0.195
     box_x = width * 0.836
@@ -11718,20 +11848,19 @@ def _build_vae_parchemin_pdf(base_pdf_bytes: bytes, photo_path: str) -> bytes:
         img_reader = ImageReader(rgb)
         iw, ih = rgb.size
         if iw > 0 and ih > 0:
-            target_w = max(1, box_w - 2 * padding)
-            target_h = max(1, box_h - 2 * padding)
+            target_w = max(1, clip_w)
+            target_h = max(1, clip_h)
 
-            # On remplit toute la case photo comme en CSS `object-fit: cover`
-            # pour éviter les bandes blanches quand le ratio diffère.
+            # Remplissage total (cover) de la zone clippée, sans déformation.
             scale = max(target_w / iw, target_h / ih)
             draw_w = max(1, iw * scale)
             draw_h = max(1, ih * scale)
-            draw_x = box_x + padding + (target_w - draw_w) / 2
-            draw_y = box_y + padding + (target_h - draw_h) / 2
+            draw_x = clip_x + (target_w - draw_w) / 2
+            draw_y = clip_y + (target_h - draw_h) / 2
 
             c.saveState()
             clip_path = c.beginPath()
-            clip_path.rect(box_x + padding, box_y + padding, target_w, target_h)
+            clip_path.rect(clip_x, clip_y, target_w, target_h)
             c.clipPath(clip_path, stroke=0, fill=0)
             c.drawImage(img_reader, draw_x, draw_y, draw_w, draw_h, preserveAspectRatio=True, mask='auto')
             c.restoreState()
@@ -11781,6 +11910,8 @@ def api_parchemin_bulk_upload(session_id: str):
     files = request.files.getlist("files")
     if not files:
         return jsonify({"ok": False, "error": "no_files"}), 400
+
+    send_notifications = (request.form.get("send_notifications", "1") or "1").strip().lower() not in {"0", "false", "no", "non", "off"}
 
     trainees = _session_trainees_list(s)
     received = 0
@@ -11845,6 +11976,60 @@ def api_parchemin_bulk_upload(session_id: str):
         trainee["deliverables"]["parchemin"] = token
         trainee["updated_at"] = _now_iso()
 
+        if send_notifications:
+            try:
+                link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{trainee.get('public_token','')}"
+                label = DELIVERABLE_LABELS["parchemin"]
+                first_name = (trainee.get("first_name") or "").strip() or "Madame, Monsieur"
+                formation_type = formation_label(_session_get(s, "training_type", ""))
+                dstart = fr_date(_session_get(s, "date_start", ""))
+                dend = fr_date(_session_get(s, "date_end", ""))
+
+                subject = f"{label} disponible – Intégrale Academy"
+                html = mail_layout(f"""
+                  <h2 style=\"text-align:center\">✅ {label} disponible</h2>
+
+                  <p>Bonjour <strong>{first_name}</strong>,</p>
+
+                  <p>
+                    Nous avons le plaisir de vous informer que votre <strong>{label}</strong>
+                    est désormais disponible dans votre espace stagiaire.
+                  </p>
+
+                  <div style=\"background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:16px 0\">
+                    <p style=\"margin:0 0 10px 0\">
+                      <strong>📌 Formation :</strong> {formation_type}
+                      {" — <strong>Dates :</strong> " + dstart + " au " + dend if (dstart or dend) else ""}
+                    </p>
+
+                    <p style=\"margin:0\">
+                      <strong>📍 Accéder à votre espace stagiaire :</strong><br>
+                      <a href=\"{link}\" style=\"color:#1f8f4a;text-decoration:none;font-weight:bold\">{link}</a>
+                    </p>
+                  </div>
+
+                  <p style=\"text-align:center;margin-top:18px\">
+                    <a href=\"{link}\"
+                       style=\"display:inline-block;background:#1f8f4a;color:white;padding:12px 18px;border-radius:10px;
+                              text-decoration:none;font-weight:bold\">
+                      👉 Accéder à mon espace stagiaire
+                    </a>
+                  </p>
+                """)
+
+                sms_name = (trainee.get("first_name") or "").strip()
+                sms = (
+                    f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}\n"
+                    f"Votre {label} est disponible sur votre espace :\n"
+                    f"{link}\n"
+                    f"A bientôt, la Team Intégrale Academy"
+                )
+
+                brevo_send_email(trainee.get("email", ""), subject, html, trainee=trainee)
+                brevo_send_sms(trainee.get("phone", ""), sms)
+            except Exception:
+                pass
+
         added.append({
             "filename": original_name,
             "trainee_id": trainee_id,
@@ -11855,7 +12040,14 @@ def api_parchemin_bulk_upload(session_id: str):
     s.pop("stagiaires", None)
     save_data(data)
 
-    return jsonify({"ok": True, "received": received, "added_count": len(added), "added": added, "failed": failed})
+    return jsonify({
+        "ok": True,
+        "received": received,
+        "added_count": len(added),
+        "added": added,
+        "failed": failed,
+        "send_notifications": send_notifications,
+    })
 
 
 @app.post("/api/sessions/<session_id>/sst/bulk_upload")
@@ -12263,7 +12455,7 @@ def api_diplome_bulk_upload(session_id: str):
                 )
 
                 if (trainee.get("email") or "").strip():
-                    brevo_send_email(trainee.get("email", ""), subject, html)
+                    brevo_send_email(trainee.get("email", ""), subject, html, trainee=trainee)
                 if (trainee.get("phone") or "").strip():
                     brevo_send_sms(trainee.get("phone", ""), sms)
 

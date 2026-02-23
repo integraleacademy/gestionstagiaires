@@ -18,9 +18,10 @@ python app.py
 - `WEB_PUSH_VAPID_PUBLIC_KEY` (clé publique VAPID pour Web Push)
 - `WEB_PUSH_VAPID_PRIVATE_KEY` (clé privée VAPID pour Web Push)
 - `WEB_PUSH_VAPID_CLAIMS_SUB` (optionnel, ex: `mailto:contact@ton-domaine.com`)
-- `PERSIST_DIR` (par défaut `/data`)
+- `PERSIST_DIR` (par défaut auto: `/var/data` puis `/data`)
 - `BACKUP_RETENTION` (optionnel, nombre de snapshots conservés, défaut `120`)
 - `BACKUP_MIN_INTERVAL_SECONDS` (optionnel, fréquence mini entre snapshots automatiques, défaut `300`)
+- `AUTO_RESTORE_FROM_BACKUP` (optionnel, défaut `1`) : en cas de `data.json` manquant/corrompu, tente une restauration automatique depuis `PERSIST_DIR/backups`.
 
 ## Module VAE DESP
 

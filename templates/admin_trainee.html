@@ -83,7 +83,7 @@
         📞 RELANCE TEL
       </button>
       <button class="btn btn-outline btn-uniform" type="button" onclick="openModal('historyModal')">
-        📜 Historique
+        📜 Historique mails
       </button>
       {% if is_vtc %}
         <button class="btn {% if trainee.vtc_book_sent_at %}btn-disabled-muted{% else %}btn-outline{% endif %} btn-uniform"
@@ -1164,32 +1164,64 @@
 </details>
 
 <div class="modal-backdrop" id="historyModal" aria-hidden="true">
-  <div class="modal" style="max-width:760px;">
+  <div class="modal" style="max-width:860px;">
     <div class="modal-head">
-      <div class="modal-title">Historique complet des échanges</div>
+      <div class="modal-title">Historique complet des mails envoyés</div>
       <button class="icon-btn" type="button" data-close-modal="historyModal">✕</button>
     </div>
     <div class="modal-body" style="max-height:65vh;overflow:auto;">
-      {% if trainee_history %}
+      {% if trainee_email_history %}
         <div style="display:flex;flex-direction:column;gap:10px;">
-          {% for item in trainee_history %}
+          {% for item in trainee_email_history %}
             <div style="border:1px solid #e5e7eb;border-radius:12px;padding:10px;background:#fff;">
-              <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
-                <div style="font-weight:800;">{{ item.emoji }} {{ item.label }}</div>
-                <div class="hint" style="white-space:nowrap;">{{ item.at_display }}</div>
+              <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+                <div>
+                  <div style="font-weight:800;">📧 {{ item.subject }}</div>
+                  {% if item.to_email %}
+                    <div class="hint" style="margin-top:4px;">Destinataire : {{ item.to_email }}</div>
+                  {% endif %}
+                </div>
+                <div class="hint" style="white-space:nowrap;">{{ item.sent_date }}</div>
               </div>
-              {% if item.details %}
-                <div style="margin-top:6px;white-space:pre-wrap;">{{ item.details }}</div>
-              {% endif %}
+              <div style="margin-top:8px;display:flex;justify-content:flex-end;">
+                <button
+                  class="btn btn-outline"
+                  type="button"
+                  data-open-email-preview
+                  data-email-subject="{{ item.subject|e }}"
+                  data-email-date="{{ item.sent_date|e }}"
+                  data-email-html="{{ item.html|e }}"
+                >
+                  👁️ Voir le mail HTML
+                </button>
+              </div>
             </div>
           {% endfor %}
         </div>
       {% else %}
-        <div class="hint">Aucun historique pour le moment.</div>
+        <div class="hint">Aucun mail enregistré pour le moment.</div>
       {% endif %}
     </div>
     <div class="modal-foot">
       <button class="btn" type="button" data-close-modal="historyModal">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="emailHtmlPreviewModal" aria-hidden="true">
+  <div class="modal" style="max-width:980px;">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">Aperçu du mail envoyé</div>
+        <div class="hint" id="emailHtmlPreviewMeta"></div>
+      </div>
+      <button class="icon-btn" type="button" data-close-modal="emailHtmlPreviewModal">✕</button>
+    </div>
+    <div class="modal-body" style="max-height:72vh;overflow:auto;">
+      <iframe id="emailHtmlPreviewFrame" title="Aperçu HTML du mail" style="width:100%;min-height:62vh;border:1px solid #e5e7eb;border-radius:10px;background:#fff;"></iframe>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" type="button" data-close-modal="emailHtmlPreviewModal">Fermer</button>
     </div>
   </div>
 </div>
@@ -1439,32 +1471,32 @@
   </div>
 
   {% if not is_read_only %}
-    <form class="upload-form" method="post" enctype="multipart/form-data"
+    <form class="upload-form" method="post" enctype="multipart/form-data" data-mail-sms-confirm="true"
           action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='diplome') }}">
       <input type="file" name="file" required>
       <button class="btn btn-primary" type="submit">⬆️ Importer diplôme</button>
     </form>
 
-    <form class="upload-form" method="post" enctype="multipart/form-data"
+    <form class="upload-form" method="post" enctype="multipart/form-data" data-mail-sms-confirm="true"
           action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='attestation_fin_formation') }}">
       <input type="file" name="file" required>
       <button class="btn btn-primary" type="submit">⬆️ Importer attestation fin de formation</button>
     </form>
 
-    <form class="upload-form" method="post" enctype="multipart/form-data"
+    <form class="upload-form" method="post" enctype="multipart/form-data" data-mail-sms-confirm="true"
           action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='carte_sst') }}">
       <input type="file" name="file" required>
       <button class="btn btn-primary" type="submit">⬆️ Importer carte SST</button>
     </form>
 
     {% if show_vae %}
-    <form class="upload-form" method="post" enctype="multipart/form-data"
+    <form class="upload-form" method="post" enctype="multipart/form-data" data-mail-sms-confirm="true"
           action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='attestation_recevabilite') }}">
       <input type="file" name="file" required>
       <button class="btn btn-primary" type="submit">⬆️ Importer attestation de recevabilité</button>
     </form>
 
-    <form class="upload-form" method="post" enctype="multipart/form-data"
+    <form class="upload-form" method="post" enctype="multipart/form-data" data-mail-sms-confirm="true"
           action="{{ url_for('admin_upload_deliverable', session_id=session.id, trainee_id=trainee.id, kind='parchemin') }}">
       <input type="file" name="file" accept=".pdf" required>
       <button class="btn btn-primary" type="submit">⬆️ Importer parchemin</button>
@@ -1771,6 +1803,20 @@ function updateDocsRelanceState(status, plannedDateIso){
     b.addEventListener("click", ()=>{
       const id = b.getAttribute("data-close-modal");
       closeModal(id);
+    });
+  });
+
+  document.querySelectorAll("[data-open-email-preview]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const iframe = document.getElementById("emailHtmlPreviewFrame");
+      const meta = document.getElementById("emailHtmlPreviewMeta");
+      if(!iframe || !meta) return;
+      const subject = btn.getAttribute("data-email-subject") || "(Sans objet)";
+      const sentDate = btn.getAttribute("data-email-date") || "";
+      const html = btn.getAttribute("data-email-html") || "";
+      meta.textContent = `${subject}${sentDate ? " · " + sentDate : ""}`;
+      iframe.srcdoc = html;
+      openModal("emailHtmlPreviewModal");
     });
   });
 
@@ -2278,7 +2324,14 @@ function updateDocsRelanceState(status, plannedDateIso){
       if(form.dataset.confirmedMailSms === "true") return;
       e.preventDefault();
       const ok = await window.confirmMailSmsSend?.();
-      if(!ok) return;
+      let sendNotificationsInput = form.querySelector('input[name="send_notifications"]');
+      if(!sendNotificationsInput){
+        sendNotificationsInput = document.createElement('input');
+        sendNotificationsInput.type = 'hidden';
+        sendNotificationsInput.name = 'send_notifications';
+        form.appendChild(sendNotificationsInput);
+      }
+      sendNotificationsInput.value = ok ? '1' : '0';
       form.dataset.confirmedMailSms = "true";
       form.requestSubmit?.();
       setTimeout(()=>{ delete form.dataset.confirmedMailSms; }, 0);
