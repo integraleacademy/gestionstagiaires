@@ -21,6 +21,7 @@ python app.py
 - `PERSIST_DIR` (par défaut auto: `/var/data` puis `/data`)
 - `BACKUP_RETENTION` (optionnel, nombre de snapshots conservés, défaut `120`)
 - `BACKUP_MIN_INTERVAL_SECONDS` (optionnel, fréquence mini entre snapshots automatiques, défaut `300`)
+- `AUTO_RESTORE_FROM_BACKUP` (optionnel, défaut `1`) : en cas de `data.json` manquant/corrompu, tente une restauration automatique depuis `PERSIST_DIR/backups`.
 
 ## Module VAE DESP
 

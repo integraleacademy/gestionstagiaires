@@ -250,6 +250,7 @@ BACKUP_DIR = os.path.join(PERSIST_DIR, "backups")
 os.makedirs(BACKUP_DIR, exist_ok=True)
 BACKUP_RETENTION = int(os.environ.get("BACKUP_RETENTION", "120"))
 BACKUP_MIN_INTERVAL_SECONDS = int(os.environ.get("BACKUP_MIN_INTERVAL_SECONDS", "300"))
+AUTO_RESTORE_FROM_BACKUP = (os.environ.get("AUTO_RESTORE_FROM_BACKUP", "1") or "").strip().lower() in {"1", "true", "yes", "on"}
 
 _data_lock = threading.RLock()
 _last_backup_times: Dict[str, float] = {}
@@ -2283,32 +2284,55 @@ def ensure_cnaps_history(t: Dict[str, Any]) -> None:
         record_cnaps_status_change(t, current_status)
 
 
+def _empty_data_payload() -> Dict[str, Any]:
+    return {
+        "sessions": [],
+        "positioning_tests": [],
+        "notifications_edof": [],
+        "notifications_financement_refuse": [],
+        "notifications_prelevements": [],
+        "notifications_prelevement_non_valides": [],
+        "notifications_phone_relances": [],
+        "notifications_vae_relances": [],
+        "notifications_cnaps_pre_relances": [],
+        "notifications_test_fr": [],
+        "notifications_convention_unsigned": [],
+        "notifications_admin": [],
+        "admin_push_subscriptions": [],
+    }
+
+
 def load_data() -> Dict[str, Any]:
     if not os.path.exists(DATA_FILE):
-        base = {
-            "sessions": [],
-            "positioning_tests": [],
-            "notifications_edof": [],
-            "notifications_financement_refuse": [],
-            "notifications_prelevements": [],
-            "notifications_prelevement_non_valides": [],
-            "notifications_phone_relances": [],
-            "notifications_vae_relances": [],
-            "notifications_cnaps_pre_relances": [],
-            "notifications_test_fr": [],
-            "notifications_convention_unsigned": [],
-            "notifications_admin": [],
-            "admin_push_subscriptions": [],
-        }
+        if AUTO_RESTORE_FROM_BACKUP:
+            restored = _restore_data_from_backups_if_possible()
+            if restored is not None:
+                return restored
+        base = _empty_data_payload()
         save_data(base)
         return base
+
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
+    except Exception:
+        try:
+            backup = DATA_FILE + ".corrupt." + str(int(datetime.datetime.utcnow().timestamp()))
+            os.replace(DATA_FILE, backup)
+        except Exception:
+            pass
+        if AUTO_RESTORE_FROM_BACKUP:
+            restored = _restore_data_from_backups_if_possible()
+            if restored is not None:
+                return restored
+        base = _empty_data_payload()
+        save_data(base)
+        return base
 
+    # Les post-traitements ne doivent jamais vider la base en cas d'erreur.
+    changed = False
+    try:
         # ✅ Assure que tous les stagiaires ont un public_token
-        changed = False
-
         if ensure_public_tokens(data):
             changed = True
 
@@ -2367,9 +2391,6 @@ def load_data() -> Dict[str, Any]:
 
         if changed:
             save_data(data)
-
-        return data
-
 
     except Exception:
         if _restore_latest_backup(DATA_FILE):
@@ -11802,16 +11823,10 @@ def _build_vae_parchemin_pdf(base_pdf_bytes: bytes, photo_path: str) -> bytes:
     box_h = height * 0.195
     box_x = width * 0.836
     box_y = height * 0.711
-
-    # Décalage vers la droite + débord autour du cadre imprimé.
-    box_x += width * 0.010
-    bleed_x = width * 0.006
-    bleed_y = height * 0.004
-
-    clip_x = box_x - bleed_x
-    clip_y = box_y - bleed_y
-    clip_w = box_w + (2 * bleed_x)
-    clip_h = box_h + (2 * bleed_y)
+    # Ajustement fin demandé : décale légèrement la photo vers la droite
+    # pour supprimer le filet blanc visible sur le bord droit du cadre.
+    box_x += width * 0.004
+    padding = 4
 
     packet = BytesIO()
     c = canvas.Canvas(packet, pagesize=(width, height))
