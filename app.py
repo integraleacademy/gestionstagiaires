@@ -9274,6 +9274,12 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
 
     t.setdefault("deliverables", {})
     t["deliverables"][kind] = token
+    if kind == "parchemin" and ((_session_get(s, "training_type", "") or "").strip().upper() == "DIRIGEANT VAE"):
+        if not isinstance(t.get("vae_action_dates"), dict):
+            t["vae_action_dates"] = {}
+        if not t["vae_action_dates"].get("diplome_obtenu"):
+            t["vae_action_dates"]["diplome_obtenu"] = datetime.date.today().strftime("%d/%m/%Y")
+        _sync_vae_status_with_actions(t)
     t["updated_at"] = _now_iso()
 
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{t.get('public_token','')}"
@@ -11898,6 +11904,12 @@ def api_parchemin_bulk_upload(session_id: str):
 
         trainee.setdefault("deliverables", {})
         trainee["deliverables"]["parchemin"] = token
+        if training_type == "DIRIGEANT VAE":
+            if not isinstance(trainee.get("vae_action_dates"), dict):
+                trainee["vae_action_dates"] = {}
+            if not trainee["vae_action_dates"].get("diplome_obtenu"):
+                trainee["vae_action_dates"]["diplome_obtenu"] = datetime.date.today().strftime("%d/%m/%Y")
+            _sync_vae_status_with_actions(trainee)
         trainee["updated_at"] = _now_iso()
 
         if send_notifications:
