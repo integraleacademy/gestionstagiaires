@@ -11834,16 +11834,10 @@ def _build_vae_parchemin_pdf(base_pdf_bytes: bytes, photo_path: str) -> bytes:
     box_h = height * 0.195
     box_x = width * 0.836
     box_y = height * 0.711
-
-    # Décalage vers la droite + débord autour du cadre imprimé.
-    box_x += width * 0.010
-    bleed_x = width * 0.006
-    bleed_y = height * 0.004
-
-    clip_x = box_x - bleed_x
-    clip_y = box_y - bleed_y
-    clip_w = box_w + (2 * bleed_x)
-    clip_h = box_h + (2 * bleed_y)
+    # Ajustement fin demandé : décale légèrement la photo vers la droite
+    # pour supprimer le filet blanc visible sur le bord droit du cadre.
+    box_x += width * 0.004
+    padding = 4
 
     packet = BytesIO()
     c = canvas.Canvas(packet, pagesize=(width, height))
