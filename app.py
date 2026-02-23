@@ -11922,6 +11922,10 @@ def _build_vae_parchemin_pdf(base_pdf_bytes: bytes, photo_path: str) -> bytes:
     # pour supprimer le filet blanc visible sur le bord droit du cadre.
     box_x += width * 0.004
     padding = 4
+    clip_x = box_x - padding
+    clip_y = box_y - padding
+    clip_w = box_w + (padding * 2)
+    clip_h = box_h + (padding * 2)
 
     packet = BytesIO()
     c = canvas.Canvas(packet, pagesize=(width, height))
