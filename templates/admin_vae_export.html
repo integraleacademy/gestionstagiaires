@@ -246,5 +246,6 @@
       <p class="small muted">Identifiant dossier: {{ dossier.id }} — Statut: {{ dossier.statut_dossier or 'brouillon' }}</p>
     </section>
   </main>
+  {% include "_mail_sent_badge.html" %}
 </body>
 </html>

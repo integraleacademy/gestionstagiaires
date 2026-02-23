@@ -102,6 +102,7 @@ def inject_read_only():
             admin_notifications = _admin_notifications_payload(load_data())
         except Exception:
             admin_notifications = {"notifications": [], "unresolved_total": 0}
+    mail_sent_notice = bool(session.pop("_mail_sent_notice", False))
     return {
         "is_admin_logged_in": bool(session.get("admin_logged_in")),
         "is_read_only": session.get("admin_role") == "viewer",
@@ -109,6 +110,7 @@ def inject_read_only():
         "admin_unresolved_total": admin_notifications["unresolved_total"],
         "admin_can_access_notifications": _admin_can_view_notifications(),
         "admin_can_manage_notifications": _admin_can_manage_notifications(),
+        "global_mail_sent_notice": mail_sent_notice,
     }
 
 @app.get("/admin/login")
@@ -611,6 +613,8 @@ def brevo_send_email(
         print("[EMAIL] status=", r.status_code)
         print("[EMAIL] response=", r.text)
         ok = r.status_code in (200, 201, 202)
+        if ok and has_request_context():
+            session["_mail_sent_notice"] = True
         if ok and isinstance(trainee, dict):
             sent_history = trainee.get("sent_email_history")
             if not isinstance(sent_history, list):
