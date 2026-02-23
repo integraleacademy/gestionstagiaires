@@ -1142,6 +1142,13 @@ bulkParcheminInput?.addEventListener("change", async ()=>{
   const files = [...bulkParcheminInput.files || []];
   if(!files.length) return;
 
+  let sendNotifications = true;
+  if(typeof window.confirmMailSmsSend === "function"){
+    sendNotifications = await window.confirmMailSmsSend();
+  }else{
+    sendNotifications = window.confirm("Voulez-vous envoyer le mail / SMS ?");
+  }
+
   const bad = files.filter(f => !f.name.toLowerCase().endsWith(".pdf"));
   if(bad.length){
     alert("Seuls les fichiers PDF sont acceptés pour le parchemin.");
@@ -1153,6 +1160,7 @@ bulkParcheminInput?.addEventListener("change", async ()=>{
 
   try{
     const fd = new FormData();
+    fd.append("send_notifications", sendNotifications ? "1" : "0");
     files.forEach(f => fd.append("files", f));
 
     const r = await fetch(`/api/sessions/${sessionId}/parchemin/bulk_upload`, {
