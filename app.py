@@ -424,6 +424,7 @@ def brevo_send_email(
     subject: str,
     html: str,
     cc_emails: Optional[List[str]] = None,
+    trainee: Optional[Dict[str, Any]] = None,
 ) -> bool:
     if not BREVO_API_KEY or not to_email:
         return False
@@ -456,6 +457,17 @@ def brevo_send_email(
         print("[EMAIL] status=", r.status_code)
         print("[EMAIL] response=", r.text)
         ok = r.status_code in (200, 201, 202)
+        if ok and isinstance(trainee, dict):
+            sent_history = trainee.get("sent_email_history")
+            if not isinstance(sent_history, list):
+                sent_history = []
+            sent_history.insert(0, {
+                "to_email": (to_email or "").strip(),
+                "subject": (subject or "").strip(),
+                "html": html or "",
+                "sent_at": _now_iso(),
+            })
+            trainee["sent_email_history"] = sent_history[:200]
         if (not ok) and _brevo_no_credit_detected(r.text):
             _register_brevo_no_credit("email", to_email, r.text)
         return ok
@@ -545,7 +557,7 @@ def notify_elearning_access_available(trainee: Dict[str, Any], session_obj: Dict
         f"Connectez vous à votre Espace Stagiaire pour suivre votre formation : {access_link}"
     )
 
-    email_ok = brevo_send_email((trainee.get("email") or "").strip(), subject, html)
+    email_ok = brevo_send_email((trainee.get("email") or "").strip(), subject, html, trainee=trainee)
     sms_ok = brevo_send_sms((trainee.get("phone") or "").strip(), sms)
     return {"email_ok": bool(email_ok), "sms_ok": bool(sms_ok)}
 
@@ -1294,7 +1306,7 @@ def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dic
     subject, html = build_vtc_practice_convocation_email(first_name, practice_training_date)
     sms = build_vtc_practice_convocation_sms(first_name, practice_training_date)
 
-    email_ok = brevo_send_email(email, subject, html) if (send_email and email) else False
+    email_ok = brevo_send_email(email, subject, html, trainee=trainee) if (send_email and email) else False
     sms_ok = brevo_send_sms(phone, sms) if phone else False
 
     trainee["vtc_theory_exam_sent_at"] = _now_iso()
@@ -1322,7 +1334,7 @@ def _send_vtc_practice_exam_success_notification(session_obj: Dict[str, Any], tr
     subject, html = build_vtc_practice_exam_success_email(first_name, practice_exam_date)
     sms = build_vtc_practice_exam_success_sms(first_name, practice_exam_date)
 
-    email_ok = brevo_send_email(email, subject, html) if email else False
+    email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
     sms_ok = brevo_send_sms(phone, sms) if phone else False
 
     trainee["vtc_practice_result"] = "success"
@@ -1793,7 +1805,7 @@ def _send_docs_relance_message(
         f"Besoin d’aide ? 04 22 47 07 68"
     )
 
-    email_ok = brevo_send_email(trainee.get("email", ""), subject, html)
+    email_ok = brevo_send_email(trainee.get("email", ""), subject, html, trainee=trainee)
     sms_ok = brevo_send_sms(trainee.get("phone", ""), sms)
 
     sent_at = _now_iso()
@@ -1983,7 +1995,7 @@ def _send_docs_relance_message(
         f"Besoin d’aide ? 04 22 47 07 68"
     )
 
-    email_ok = brevo_send_email(trainee.get("email", ""), subject, html)
+    email_ok = brevo_send_email(trainee.get("email", ""), subject, html, trainee=trainee)
     sms_ok = brevo_send_sms(trainee.get("phone", ""), sms)
 
     sent_at = _now_iso()
@@ -2598,6 +2610,26 @@ def build_trainee_history_entries(trainee: Dict[str, Any]) -> List[Dict[str, str
         )
 
     entries.sort(key=lambda item: _history_sort_key(item.get("at") or ""), reverse=True)
+    return entries
+
+
+def build_trainee_email_history_entries(trainee: Dict[str, Any]) -> List[Dict[str, str]]:
+    entries: List[Dict[str, str]] = []
+    for item in (trainee.get("sent_email_history") or []):
+        if not isinstance(item, dict):
+            continue
+        sent_at = (item.get("sent_at") or "").strip()
+        if not sent_at:
+            continue
+        entries.append({
+            "to_email": (item.get("to_email") or "").strip(),
+            "subject": (item.get("subject") or "(Sans objet)").strip(),
+            "html": item.get("html") or "",
+            "sent_at": sent_at,
+            "sent_date": fr_date(sent_at),
+        })
+
+    entries.sort(key=lambda item: _history_sort_key(item.get("sent_at") or ""), reverse=True)
     return entries
 
 
@@ -4430,7 +4462,7 @@ def public_vae_desp_submit():
 
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}"
     subject, html, sms = build_dirigeant_vae_onboarding_email_sms(first_name, link)
-    email_ok = brevo_send_email(email, subject, html) if email else False
+    email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
     sms_ok = brevo_send_sms(phone, sms) if phone else False
 
     return jsonify(
@@ -4837,7 +4869,7 @@ def admin_edof_submit():
       <p>Clément VAILLANT<br>Directeur Intégrale Academy</p>
     """)
 
-    email_ok = brevo_send_email(email, user_subject, user_html)
+    email_ok = brevo_send_email(email, user_subject, user_html, trainee=t)
 
     sms = (
         f"Bonjour {first_name},\n"
@@ -4907,7 +4939,7 @@ def admin_financement_refuse_submit():
         "La Team Intégrale Academy"
     ).strip()
 
-    email_ok = brevo_send_email(email, user_subject, user_html)
+    email_ok = brevo_send_email(email, user_subject, user_html, trainee=t)
     sms_ok = brevo_send_sms(phone, sms)
 
     data = load_data()
@@ -6140,12 +6172,12 @@ def api_create_trainee(session_id: str):
         if "VTC" in (training_type or "").upper():
             subject, html = build_vtc_onboarding_email(first_name, link)
             sms = build_vtc_onboarding_sms(first_name, link)
-            email_ok = brevo_send_email(email, subject, html) if email else False
+            email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
             sms_ok = brevo_send_sms(phone, sms) if phone else False
         elif (training_type or "") == "DIRIGEANT VAE":
             subject, html, sms = build_dirigeant_vae_onboarding_email_sms(first_name, link)
 
-            email_ok = brevo_send_email(email, subject, html) if email else False
+            email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
             sms_ok = brevo_send_sms(phone, sms) if phone else False
         else:
             formation_type = formation_label(training_type)
@@ -6221,7 +6253,7 @@ def api_create_trainee(session_id: str):
                 f"Pour toute demande d'assistance vous pouvez nous contacter au 04 22 47 07 68."
             )
 
-            email_ok = brevo_send_email(email, subject, html) if email else False
+            email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
             sms_ok = brevo_send_sms(phone, sms) if phone else False
 
         t["access_sent_at"] = _now_iso()
@@ -7885,7 +7917,7 @@ def admin_send_access(session_id: str, trainee_id: str):
         first_name = t.get("first_name", "")
         subject, html = build_vtc_onboarding_email(first_name, link)
         sms = build_vtc_onboarding_sms(first_name, link)
-        brevo_send_email(t.get("email", ""), subject, html)
+        brevo_send_email(t.get("email", ""), subject, html, trainee=t)
         brevo_send_sms(t.get("phone", ""), sms)
     else:
         subject = "Accès à votre espace stagiaire – Intégrale Academy"
@@ -7899,7 +7931,7 @@ def admin_send_access(session_id: str, trainee_id: str):
           </p>
         """)
         sms = f"Intégrale Academy : votre espace stagiaire est disponible : {link}"
-        brevo_send_email(t.get("email", ""), subject, html)
+        brevo_send_email(t.get("email", ""), subject, html, trainee=t)
         brevo_send_sms(t.get("phone", ""), sms)
 
     t["access_sent_at"] = _now_iso()
@@ -8020,7 +8052,7 @@ def admin_convention_unsigned_notify(session_id: str, trainee_id: str):
         "Nous vous remercions de bien vouloir procéder à la signature de ce document. Besoin d'aide ? 04 22 47 07 68."
     )
 
-    brevo_send_email(t.get("email", ""), subject, html)
+    brevo_send_email(t.get("email", ""), subject, html, trainee=t)
     brevo_send_sms(t.get("phone", ""), sms)
 
     full_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
@@ -8256,7 +8288,7 @@ def admin_test_fr_notify(session_id: str, trainee_id: str):
         abort(404)
 
     payload = _build_test_fr_payload(t, s, code, deadline, "notify")
-    brevo_send_email(t.get("email",""), payload["subject"], payload["html"])
+    brevo_send_email(t.get("email",""), payload["subject"], payload["html"], trainee=t)
     brevo_send_sms(t.get("phone",""), payload["sms"])
 
     now = _now_iso()
@@ -8291,7 +8323,7 @@ def admin_test_fr_relance(session_id: str, trainee_id: str):
         abort(404)
 
     payload = _build_test_fr_payload(t, s, code, deadline, "relance")
-    brevo_send_email(t.get("email", ""), payload["subject"], payload["html"])
+    brevo_send_email(t.get("email", ""), payload["subject"], payload["html"], trainee=t)
     brevo_send_sms(t.get("phone", ""), payload["sms"])
 
     now = _now_iso()
@@ -8342,7 +8374,7 @@ def admin_test_fr_echec(session_id: str, trainee_id: str):
         abort(404)
 
     payload = _build_test_fr_payload(t, s, code, deadline, "failure")
-    brevo_send_email(t.get("email", ""), payload["subject"], payload["html"])
+    brevo_send_email(t.get("email", ""), payload["subject"], payload["html"], trainee=t)
     brevo_send_sms(t.get("phone", ""), payload["sms"])
 
     now = _now_iso()
@@ -8498,7 +8530,7 @@ def admin_docs_notify(session_id: str, trainee_id: str):
         f"Besoin d’aide ? 04 22 47 07 68"
     )
 
-    brevo_send_email(t.get("email", ""), subject, html)
+    brevo_send_email(t.get("email", ""), subject, html, trainee=t)
     brevo_send_sms(t.get("phone", ""), sms)
 
     t["docs_notified_at"] = _now_iso()
@@ -8948,7 +8980,7 @@ def _send_vae_relance_message(data: Dict[str, Any], session_obj: Dict[str, Any],
         "Si vous rencontrez des difficultés, contactez-nous au 04 22 47 07 68."
     )
 
-    email_ok = brevo_send_email(email, cfg["subject"], html) if email else False
+    email_ok = brevo_send_email(email, cfg["subject"], html, trainee=t) if email else False
     sms_ok = brevo_send_sms(phone, sms) if phone else False
     sent_at = _now_iso()
 
@@ -9410,7 +9442,7 @@ def admin_upload_deliverable(session_id: str, trainee_id: str, kind: str):
 )
 
     if kind != "attestation_recevabilite":
-        brevo_send_email(t.get("email", ""), subject, html)
+        brevo_send_email(t.get("email", ""), subject, html, trainee=t)
         brevo_send_sms(t.get("phone", ""), sms)
 
     # ✅ persistance
@@ -10001,6 +10033,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     save_data(data)
 
     trainee_history = build_trainee_history_entries(t)
+    trainee_email_history = build_trainee_email_history_entries(t)
     transfer_sessions = []
     for sess in data.get("sessions", []):
         sid = str(sess.get("id") or "").strip()
@@ -10029,6 +10062,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         deliverables_view=deliverables_view,
         default_training_price=default_price,
         trainee_history=trainee_history,
+        trainee_email_history=trainee_email_history,
         transfer_sessions=transfer_sessions,
         PUBLIC_STUDENT_PORTAL_BASE=PUBLIC_STUDENT_PORTAL_BASE,
         fr_date=fr_date,
@@ -10980,7 +11014,7 @@ def _send_prelevement_pending_validation_messages(trainee: dict, session: dict) 
 
       <p>Je vous remercie par avance,<br>Clément VAILLANT</p>
     """)
-    email_ok = brevo_send_email(email, subject, html) if email else False
+    email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
 
     sms = (
         "Bonjour, "
@@ -11103,7 +11137,7 @@ def api_financement_rejet_send(session_id: str, trainee_id: str):
       <p>Clément VAILLANT<br>Directeur Intégrale Academy</p>
     """)
 
-    email_ok = brevo_send_email(email, subject, html) if email else False
+    email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
 
     dstart = fr_date(_session_get(s, "date_start", ""))
     dend = fr_date(_session_get(s, "date_end", ""))
@@ -11897,7 +11931,7 @@ def api_parchemin_bulk_upload(session_id: str):
                     f"A bientôt, la Team Intégrale Academy"
                 )
 
-                brevo_send_email(trainee.get("email", ""), subject, html)
+                brevo_send_email(trainee.get("email", ""), subject, html, trainee=trainee)
                 brevo_send_sms(trainee.get("phone", ""), sms)
             except Exception:
                 pass
@@ -12327,7 +12361,7 @@ def api_diplome_bulk_upload(session_id: str):
                 )
 
                 if (trainee.get("email") or "").strip():
-                    brevo_send_email(trainee.get("email", ""), subject, html)
+                    brevo_send_email(trainee.get("email", ""), subject, html, trainee=trainee)
                 if (trainee.get("phone") or "").strip():
                     brevo_send_sms(trainee.get("phone", ""), sms)
 
