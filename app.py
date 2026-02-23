@@ -227,8 +227,22 @@ app.add_template_filter(fr_datetime, "frdatetime")
 # =========================
 # Persistent disk (Render)
 # =========================
-PERSIST_DIR = os.environ.get("PERSIST_DIR", "/data")
-os.makedirs(PERSIST_DIR, exist_ok=True)
+def _resolve_persist_dir() -> str:
+    configured = (os.environ.get("PERSIST_DIR") or "").strip()
+    if configured:
+        os.makedirs(configured, exist_ok=True)
+        return configured
+
+    for candidate in ("/var/data", "/data"):
+        try:
+            os.makedirs(candidate, exist_ok=True)
+            return candidate
+        except Exception:
+            continue
+    return "/data"
+
+
+PERSIST_DIR = _resolve_persist_dir()
 DATA_FILE = os.path.join(PERSIST_DIR, "data.json")
 
 BACKUP_DIR = os.path.join(PERSIST_DIR, "backups")
