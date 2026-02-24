@@ -1778,6 +1778,7 @@ def _send_vtc_credentials_invalid_notification(data: Dict[str, Any], session_obj
         subject,
         html_content,
         cc_emails=["clement@integraleacademy.com"],
+        trainee=trainee,
     ) if trainee_email else False
     sms_ok = brevo_send_sms(trainee_phone, build_vtc_credentials_invalid_sms(first_name, link)) if trainee_phone else False
 
@@ -1825,6 +1826,7 @@ def _send_vtc_credentials_reminder(data: Dict[str, Any], session_obj: Dict[str, 
         subject,
         html_content,
         cc_emails=["clement@integraleacademy.com"],
+        trainee=trainee,
     ) if trainee_email else False
     sms_ok = brevo_send_sms(trainee_phone, build_vtc_credentials_reminder_sms(first_name, link)) if trainee_phone else False
 
@@ -6723,7 +6725,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
             """)
             if send_exam_fees_notification:
                 if email:
-                    brevo_send_email(email, subject, html)
+                    brevo_send_email(email, subject, html, trainee=t)
                 if phone:
                     sms_prefix = f"Bonjour {t.get('first_name','').strip()}, " if (t.get("first_name") or "").strip() else "Bonjour, "
                     sms = f"{sms_prefix}{message}"
@@ -6832,7 +6834,7 @@ def api_admin_pre_reception(session_id: str, trainee_id: str):
         <p>Bien cordialement,<br>Intégrale Academy</p>
     """)
 
-    email_ok = brevo_send_email(email, "Votre numéro d’autorisation CNAPS (PRE)", html) if email else False
+    email_ok = brevo_send_email(email, "Votre numéro d’autorisation CNAPS (PRE)", html, trainee=t) if email else False
 
     return jsonify({"ok": True, "pre_number": pre, "email_ok": bool(email_ok)})
 
@@ -6905,7 +6907,7 @@ def api_send_cnaps_pre_relance(session_id: str, trainee_id: str):
 
     email = (t.get("email") or "").strip()
     phone = (t.get("phone") or "").strip()
-    email_ok = brevo_send_email(email, "Relance documents CNAPS Ministère de l'intérieur", html) if email else False
+    email_ok = brevo_send_email(email, "Relance documents CNAPS Ministère de l'intérieur", html, trainee=t) if email else False
     sms_ok = brevo_send_sms(phone, sms) if phone else False
 
     t["cnaps_pre_relance_last_sent_at"] = _now_iso()
@@ -8733,7 +8735,7 @@ def admin_test_fr_notify_bulk(session_id: str):
         if can_send:
             sent += 1
         if email:
-            brevo_send_email(email, payload["subject"], payload["html"])
+            brevo_send_email(email, payload["subject"], payload["html"], trainee=t)
         if phone:
             brevo_send_sms(phone, payload["sms"])
 
@@ -8921,7 +8923,7 @@ def admin_docs_nonconform_notify(session_id: str, trainee_id: str):
         f"Aide : 04 22 47 07 68"
     )
 
-    brevo_send_email(t.get("email",""), subject, html)
+    brevo_send_email(t.get("email",""), subject, html, trainee=t)
     brevo_send_sms(t.get("phone",""), sms)
 
     t["docs_last_nonconform_notified_at"] = _now_iso()
@@ -9486,7 +9488,7 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
         print(f"[VAE][EMAIL] aucun email stagiaire, envoi ignoré: trainee_id={trainee_id!r} status={status_key!r}")
         return
 
-    email_ok = brevo_send_email(email, subject, html)
+    email_ok = brevo_send_email(email, subject, html, trainee=t)
     sms_ok = False
     if status_key == "livret_2_todo":
         sms_name = (t.get("first_name") or "").strip()
@@ -12414,7 +12416,7 @@ def api_sst_bulk_upload(session_id: str):
                 )
 
                 if (trainee.get("email") or "").strip():
-                    brevo_send_email(trainee.get("email",""), subject, html)
+                    brevo_send_email(trainee.get("email",""), subject, html, trainee=trainee)
                 if (trainee.get("phone") or "").strip():
                     brevo_send_sms(trainee.get("phone",""), sms)
 
@@ -12784,7 +12786,7 @@ def api_attestation_bulk_upload(session_id: str):
                 )
 
                 if (trainee.get("email") or "").strip():
-                    brevo_send_email(trainee.get("email",""), subject, html)
+                    brevo_send_email(trainee.get("email",""), subject, html, trainee=trainee)
                 if (trainee.get("phone") or "").strip():
                     brevo_send_sms(trainee.get("phone",""), sms)
 
