@@ -6081,7 +6081,9 @@ def admin_trainees(session_id: str):
 
     trainees = _session_trainees_list(s)
 
-    # refresh CNAPS (best-effort) using last_name/first_name
+    auto_refresh_external = (request.args.get("refresh_external") or "").strip() == "1"
+
+    # normalize trainees (and optionally refresh external statuses)
     for t in trainees:
         ln = normalize_last_name(t.get("last_name") or "")
         fn = normalize_first_name(t.get("first_name") or "")
@@ -6094,9 +6096,7 @@ def admin_trainees(session_id: str):
         current_cnaps = t.get("cnaps") or ""
 
         # ✅ si déjà validé manuellement, on ne touche pas
-        if _normalize_cnaps_status(current_cnaps) == "CARTE PROFESSIONNELLE OK":
-            pass
-        else:
+        if _normalize_cnaps_status(current_cnaps) != "CARTE PROFESSIONNELLE OK" and auto_refresh_external:
             if ln and fn:
                 cn = fetch_cnaps_status_by_name(ln, fn)
 
@@ -6117,7 +6117,7 @@ def admin_trainees(session_id: str):
         if session_view["training_type"] == "A3P":
             email = (t.get("email") or "").strip().lower()
 
-            hb = fetch_hebergement_status(email) if email else None
+            hb = fetch_hebergement_status(email) if (email and auto_refresh_external) else None
 
             # ✅ règle anti-bug : on ne downgrade JAMAIS "reserved"
             current = (t.get("hosting_status") or "unknown").strip().lower()
