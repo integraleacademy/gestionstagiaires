@@ -472,6 +472,17 @@ select.status-dot.status-pill{
 .status-pill.is-unknown{ background: var(--neutral); color:#0f172a; }
 .status-pill.is-reserved{ background: var(--green); color:#fff; }
 
+.status-pill.is-a_creer{ background:#dc2626; color:#fff; }
+.status-pill.is-cree{ background:#f97316; color:#111; }
+.status-pill.is-valide{ background:#16a34a; color:#fff; }
+.status-pill.is-transmis{ background:#64748b; color:#fff; }
+.status-pill.is-enregistre{ background:#f97316; color:#111; }
+.status-pill.is-en_instruction{ background:#facc15; color:#111; }
+.status-pill.is-accepte{ background:#16a34a; color:#fff; }
+.status-pill.is-refuse{ background:#0f172a; color:#fff; }
+.status-pill.is-dossier_a_fournir{ background:#dc2626; color:#fff; }
+.status-pill.is-carte_professionnelle_ok{ background:#16a34a; color:#fff; }
+
 /* =========================
    MODAL
    ========================= */

@@ -2377,6 +2377,108 @@ def _birth_to_ddmmyyyy(value: str) -> str:
 
     return ""
 
+
+def generate_dracar_password(last_name: str, birth_date: str) -> str:
+    """Mot de passe DRACAR = Nom (1ère lettre majuscule + reste minuscule) + DDMMYYYY + @."""
+    normalized = _norm_lastname(last_name)
+    if not normalized:
+        return ""
+    ddmmyyyy = _birth_to_ddmmyyyy(birth_date)
+    if not ddmmyyyy:
+        return ""
+    pretty_name = normalized[0].upper() + normalized[1:].lower()
+    return f"{pretty_name}{ddmmyyyy}@"
+
+
+def _cnaps_training_name_for_message(session_data: Dict[str, Any]) -> str:
+    training_type = (_session_get(session_data, "training_type", "") or "").strip().upper()
+    if training_type.startswith("APS"):
+        return "Agent de sécurité privée"
+    if training_type.startswith("A3P"):
+        return "Agent de protection physique des personnes"
+    return formation_label(_session_get(session_data, "training_type", "") or session_data.get("name") or "formation")
+
+
+def notify_cnaps_space_created(trainee: Dict[str, Any], session_data: Dict[str, Any]) -> Dict[str, bool]:
+    email = (trainee.get("email") or "").strip()
+    phone = (trainee.get("phone") or "").strip()
+    training_name = _cnaps_training_name_for_message(session_data)
+
+    subject = "Votre espace particulier CNAPS a été créé"
+    html = mail_layout(f"""
+      <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;padding:24px;">
+        <p style="margin:0 0 14px 0;">Bonjour,</p>
+        <p style="margin:0 0 14px 0;line-height:1.6;">
+          Je me permets de revenir vers vous concernant la formation
+          <strong>{training_name}</strong>.
+        </p>
+        <p style="margin:0 0 14px 0;line-height:1.6;">
+          Je vous informe que nous venons de créer votre <strong>Espace Particulier CNAPS</strong>.
+          Afin que nous puissions déposer votre dossier auprès du CNAPS (Ministère de l'intérieur)
+          dans les plus brefs délais, nous vous demandons de bien vouloir <strong>valider votre compte</strong>
+          dès que possible via le lien que vous avez reçu par mail de la part du CNAPS DRACAR ULTIMATE.
+        </p>
+        <div style="margin:14px 0;padding:12px 14px;border-radius:12px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-weight:700;">
+          ⚠️ Attention, le lien expire dans un délai de 12 heures.
+        </div>
+        <p style="margin:16px 0 0 0;line-height:1.6;">Nous vous remercions par avance,</p>
+        <p style="margin:8px 0 0 0;line-height:1.5;">
+          <strong>Clément VAILLANT</strong><br>
+          Directeur Intégrale Academy
+        </p>
+      </div>
+    """)
+
+    sms = (
+        "Intégrale Academy : votre Espace Particulier CNAPS vient d'etre cree. "
+        "Merci de valider votre compte rapidement via l'email CNAPS DRACAR ULTIMATE (lien valable 12h)."
+    )
+    email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
+    sms_ok = brevo_send_sms(phone, sms) if phone else False
+    return {"email_ok": bool(email_ok), "sms_ok": bool(sms_ok)}
+
+
+def notify_cnaps_transmitted(trainee: Dict[str, Any], session_data: Dict[str, Any]) -> bool:
+    email = (trainee.get("email") or "").strip()
+    if not email:
+        return False
+
+    training_name = _cnaps_training_name_for_message(session_data)
+    login = email
+    password = generate_dracar_password(trainee.get("last_name", ""), trainee.get("birth_date", ""))
+    login_line = login or "Non renseigné"
+    password_line = password or "Non généré (nom/date de naissance manquant)"
+    cnaps_link = "https://espace-usagers.cnaps.interieur.gouv.fr/usager/app/accueil"
+
+    subject = "Votre dossier CNAPS a été transmis"
+    html = mail_layout(f"""
+      <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;padding:24px;">
+        <p style="margin:0 0 14px 0;">Bonjour,</p>
+        <p style="margin:0 0 14px 0;line-height:1.6;">
+          Je me permets de revenir vers vous concernant la formation <strong>{training_name}</strong>.
+        </p>
+        <p style="margin:0 0 14px 0;line-height:1.6;">
+          Vous pouvez suivre l'état d'avancement de votre dossier depuis votre Espace Particulier CNAPS.
+        </p>
+        <div style="margin:12px 0 16px 0;padding:12px 14px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;">
+          <p style="margin:0 0 8px 0;"><strong>Login :</strong> {login_line}</p>
+          <p style="margin:0;"><strong>Mot de passe :</strong> {password_line}</p>
+        </div>
+        <p style="margin:0 0 14px 0;line-height:1.6;">Connectez-vous à votre Espace Particulier :</p>
+        <p style="margin:0 0 4px 0;">
+          <a href="{cnaps_link}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:10px 16px;border-radius:10px;font-weight:700;">
+            Accéder à mon Espace Particulier CNAPS
+          </a>
+        </p>
+        <p style="margin:16px 0 0 0;line-height:1.6;">Nous vous souhaitons une agréable journée,</p>
+        <p style="margin:8px 0 0 0;line-height:1.5;">
+          <strong>Clément VAILLANT</strong><br>
+          Directeur Intégrale Academy
+        </p>
+      </div>
+    """)
+    return bool(brevo_send_email(email, subject, html, trainee=trainee))
+
 def _public_is_authed(token: str) -> bool:
     # ✅ si admin connecté, on bypass toujours
     if session.get("admin_logged_in"):
@@ -6113,6 +6215,9 @@ def admin_trainees(session_id: str):
             t["cnaps"] = "INCONNU"
             record_cnaps_status_change(t, t["cnaps"])
 
+        if (t.get("cnaps_space_status") or "").strip() not in {"a_creer", "cree", "valide"}:
+            t["cnaps_space_status"] = "a_creer"
+
         # hosting only for A3P
         if session_view["training_type"] == "A3P":
             email = (t.get("email") or "").strip().lower()
@@ -6186,6 +6291,7 @@ def admin_trainees(session_id: str):
         is_vtc=is_vtc,
         is_dirigeant=is_dirigeant,
         enums=ENUMS,
+        generate_dracar_password=generate_dracar_password,
     )
 
 
@@ -6373,6 +6479,7 @@ def api_create_trainee(session_id: str):
         "city": city,
         "comment": "",
         "cnaps": "CARTE PROFESSIONNELLE OK" if carte_pro_ok else "INCONNU",
+        "cnaps_space_status": "a_creer",
         "convention_status": "soon",
         "test_fr_status": "soon",
         "dossier_status": "incomplete",
@@ -6557,6 +6664,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
     was_exam_fees_paid = bool(t.get("exam_fees_paid"))
     previous_elearning_link = (t.get("elearning_link") or "").strip()
     previous_cnaps_status = (t.get("cnaps") or "").strip()
+    previous_cnaps_space_status = (t.get("cnaps_space_status") or "a_creer").strip()
 
     # Your template uses:
     # - convention_status, test_fr_status, dossier_status, financement_status, vae_status, comment, cnaps
@@ -6576,6 +6684,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vae_jury_date",
         "vae_action_dates",
         "cnaps",
+        "cnaps_space_status",
         "no_permis",
         "public_hide_infos",
         "public_hide_docs",
@@ -6706,6 +6815,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
                     "comment": (t.get("comment") or "").strip(),
                 },
             )
+            if normalized_new == "TRANSMIS":
+                notify_cnaps_transmitted(t, s)
 
     if "exam_fees_paid" in payload:
         now_paid = bool(t.get("exam_fees_paid"))
@@ -6749,6 +6860,13 @@ def api_update_trainee(session_id: str, trainee_id: str):
         t["elearning_link_sent_at"] = ""
         t["elearning_link_email_ok"] = False
         t["elearning_link_sms_ok"] = False
+
+    current_cnaps_space_status = (t.get("cnaps_space_status") or "").strip()
+    if current_cnaps_space_status not in {"a_creer", "cree", "valide"}:
+        t["cnaps_space_status"] = "a_creer"
+        current_cnaps_space_status = "a_creer"
+    if "cnaps_space_status" in payload and current_cnaps_space_status == "cree" and previous_cnaps_space_status != "cree":
+        notify_cnaps_space_created(t, s)
 
     if (_session_get(s, "training_type", "") or "").strip().upper() == "DIRIGEANT VAE":
         ensure_vae_relances_state(t)
