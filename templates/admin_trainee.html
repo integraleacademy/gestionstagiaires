@@ -17,14 +17,8 @@
     animation: docsPendingPulse 1.2s ease-in-out infinite;
   }
   .btn-docs-ok{
-    background:#16a34a !important;
-    border-color:#16a34a !important;
-    color:#fff !important;
-    animation:none !important;
-  }
-  .btn-docs-nonconform{
-    background:#dc2626 !important;
-    border-color:#dc2626 !important;
+    background:#9ca3af !important;
+    border-color:#9ca3af !important;
     color:#fff !important;
     animation:none !important;
   }
@@ -2172,7 +2166,6 @@ function updateDocsRelanceState(status, plannedDateIso){
         let hasToControl = false;
         let hasTrackableDoc = false;
         let allConforme = true;
-        let hasNonConforme = false;
 
         rows.forEach((tr)=>{
           const sel = tr.querySelector("select.sel-doc");
@@ -2182,21 +2175,15 @@ function updateDocsRelanceState(status, plannedDateIso){
           if(status === "A CONTRÔLER" || status === "A CONTROLER"){
             hasToControl = true;
           }
-          if(status === "NON CONFORME"){
-            hasNonConforme = true;
-          }
           if(status !== "CONFORME"){
             allConforme = false;
           }
         });
 
-        docsBtn.classList.remove("btn-outline", "btn-docs-pending", "btn-docs-ok", "btn-docs-idle", "btn-docs-nonconform");
+        docsBtn.classList.remove("btn-outline", "btn-docs-pending", "btn-docs-ok", "btn-docs-idle");
 
         if(hasToControl){
           docsBtn.classList.add("btn-docs-pending");
-          docsBtn.textContent = "📁 Mes documents";
-        }else if(hasNonConforme){
-          docsBtn.classList.add("btn-docs-nonconform");
           docsBtn.textContent = "📁 Mes documents";
         }else if(hasTrackableDoc && allConforme){
           docsBtn.classList.add("btn-docs-ok");
