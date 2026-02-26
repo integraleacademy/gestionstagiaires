@@ -2115,9 +2115,10 @@ function updateDocsRelanceState(status, plannedDateIso){
   }
 
   // Autosave documents
-  document.addEventListener("DOMContentLoaded", ()=>{
+  function initDocsAutosave(){
     const docsTable = document.getElementById("docsTable");
-    if(docsTable){
+    if(docsTable && !docsTable.dataset.autosaveBound){
+      docsTable.dataset.autosaveBound = "1";
       const sessionId = docsTable.getAttribute("data-session-id");
       const traineeId = docsTable.getAttribute("data-trainee-id");
 
@@ -2255,7 +2256,13 @@ function updateDocsRelanceState(status, plannedDateIso){
         });
       }
     }
-  });
+  }
+
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", initDocsAutosave);
+  }else{
+    initDocsAutosave();
+  }
 
   // Refresh CNAPS
   async function cnapsLookup(nom, prenom){
