@@ -3947,6 +3947,27 @@ def required_docs_are_deposited(trainee: Dict[str, Any], training_type: str) -> 
 
 import re
 
+PRE_CAR_PATTERNS = (
+    re.compile(r"^(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11}$"),
+    re.compile(r"^\d{4}-\d{7}-(PRE|CAR)-[A-Z]{2}-\d{7}$"),
+)
+
+
+def _normalize_pre_car(value: str) -> str:
+    normalized = (value or "").strip().upper().replace(" ", "")
+    compact = re.sub(r"[^A-Z0-9]", "", normalized)
+
+    m = re.match(r"^(\d{4})(\d{7})(PRE|CAR)([A-Z]{2})(\d{7})$", compact)
+    if m:
+        return f"{m.group(1)}-{m.group(2)}-{m.group(3)}-{m.group(4)}-{m.group(5)}"
+
+    return normalized
+
+
+def _is_valid_pre_car(value: str) -> bool:
+    normalized = _normalize_pre_car(value)
+    return any(pattern.match(normalized) for pattern in PRE_CAR_PATTERNS)
+
 def infos_is_complete(t: Dict[str, Any]) -> bool:
     # Champs obligatoires
     required = [
@@ -3968,8 +3989,7 @@ def infos_is_complete(t: Dict[str, Any]) -> bool:
         return False
 
     # PRE/CAR : format strict PRE-013-2029-07-25-20240908920 ou CAR-013-2029-07-25-20240908920
-    pre = (t.get("pre_number") or "").strip().upper().replace(" ", "")
-    if not re.match(r"^(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11}$", pre):
+    if not _is_valid_pre_car(t.get("pre_number") or ""):
         return False
 
     return True
@@ -6940,8 +6960,8 @@ def api_admin_pre_reception(session_id: str, trainee_id: str):
     if not pre_raw:
         return jsonify({"ok": False, "error": "missing_pre"}), 400
 
-    pre = pre_raw.upper().replace(" ", "")
-    if not re.match(r"^(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11}$", pre):
+    pre = _normalize_pre_car(pre_raw)
+    if not _is_valid_pre_car(pre):
         return jsonify({"ok": False, "error": "invalid_pre"}), 400
 
     t["pre_number"] = pre
@@ -8056,10 +8076,10 @@ def infos_missing_text(trainee: dict) -> str:
 
     # --- PRE/CAR ---
     pre_raw = (trainee.get("pre_number") or "").strip()
-    pre = pre_raw.upper().replace(" ", "")
+    pre = _normalize_pre_car(pre_raw)
     if not pre_raw:
         missing.append("- Numéro PRE / CAR")
-    elif not re.match(r"^(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11}$", pre):
+    elif not _is_valid_pre_car(pre):
         missing.append("- Numéro PRE / CAR (format invalide)")
 
     return "\n".join(missing)

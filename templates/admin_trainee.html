@@ -1945,13 +1945,12 @@ function updateDocsRelanceState(status, plannedDateIso){
     raw = (raw || "").toString().toUpperCase().replace(/\s+/g, "");
     raw = raw.replace(/[^A-Z0-9-]/g, "");
 
-    const limitTo25 = (value) => {
+    const limitTo = (value, maxChars = 25) => {
       let out = "";
       let count = 0;
       for (const ch of value) {
-        const isDash = ch === "-";
-        if (!isDash) {
-          if (count >= 25) break;
+        if (ch !== "-") {
+          if (count >= maxChars) break;
           count += 1;
         }
         out += ch;
@@ -1959,51 +1958,58 @@ function updateDocsRelanceState(status, plannedDateIso){
       return out;
     };
 
-    let prefix = "";
-    if (raw.startsWith("PRE")) prefix = "PRE";
-    else if (raw.startsWith("CAR")) prefix = "CAR";
+    const compact = raw.replace(/[^A-Z0-9]/g, "");
 
-    if (!prefix) return limitTo25(raw.replace(/[^A-Z0-9-]/g, ""));
+    if (compact.startsWith("PRE") || compact.startsWith("CAR")) {
+      const prefix = compact.startsWith("PRE") ? "PRE" : "CAR";
+      let digits = compact.slice(3).replace(/\D/g, "");
+      let out = prefix;
 
-    const afterPrefix = raw.slice(3);
-    let hasDep = false;
-    if (afterPrefix.startsWith("-")) {
-      const firstSegment = afterPrefix.slice(1).split("-")[0];
-      if (/^\d{3}$/.test(firstSegment)) hasDep = true;
+      let hasDep = false;
+      if (raw.startsWith(prefix + "-")) {
+        const firstSegment = raw.slice(prefix.length + 1).split("-")[0];
+        if (/^\d{3}$/.test(firstSegment)) hasDep = true;
+      }
+      if (!hasDep && digits.length > 19) hasDep = true;
+
+      if (hasDep) {
+        digits = digits.slice(0, 22);
+        const dep = digits.slice(0, 3);
+        const y = digits.slice(3, 7);
+        const m = digits.slice(7, 9);
+        const d = digits.slice(9, 11);
+        const last = digits.slice(11, 22);
+        if (dep) out += "-" + dep;
+        if (y) out += "-" + y;
+        if (m) out += "-" + m;
+        if (d) out += "-" + d;
+        if (last) out += "-" + last;
+      } else {
+        digits = digits.slice(0, 19);
+        const y = digits.slice(0, 4);
+        const m = digits.slice(4, 6);
+        const d = digits.slice(6, 8);
+        const last = digits.slice(8, 19);
+        if (y) out += "-" + y;
+        if (m) out += "-" + m;
+        if (d) out += "-" + d;
+        if (last) out += "-" + last;
+      }
+      return limitTo(out, 25);
     }
 
-    let digits = afterPrefix.replace(/\D/g, "");
-    if (!hasDep && digits.length > 19) hasDep = true;
+    const year = compact.match(/^\d{0,4}/)?.[0] || "";
+    let rest = compact.slice(year.length);
+    const dossier = rest.match(/^\d{0,7}/)?.[0] || "";
+    rest = rest.slice(dossier.length);
+    const type = rest.match(/^[A-Z]{0,3}/)?.[0] || "";
+    rest = rest.slice(type.length);
+    const region = rest.match(/^[A-Z]{0,2}/)?.[0] || "";
+    rest = rest.slice(region.length);
+    const serial = (rest.match(/^\d{0,7}/)?.[0] || "");
 
-    let out = prefix;
-    if (hasDep) {
-      digits = digits.slice(0, 3 + 4 + 2 + 2 + 11);
-      const dep  = digits.slice(0, 3);
-      const y    = digits.slice(3, 7);
-      const m    = digits.slice(7, 9);
-      const d    = digits.slice(9, 11);
-      const last = digits.slice(11);
-
-      if (dep)  out += "-" + dep;
-      if (y)    out += "-" + y;
-      if (m)    out += "-" + m;
-      if (d)    out += "-" + d;
-      if (last) out += "-" + last;
-      return limitTo25(out);
-    }
-
-    digits = digits.slice(0, 4 + 2 + 2 + 11);
-    const y    = digits.slice(0, 4);
-    const m    = digits.slice(4, 6);
-    const d    = digits.slice(6, 8);
-    const last = digits.slice(8);
-
-    if (y)    out += "-" + y;
-    if (m)    out += "-" + m;
-    if (d)    out += "-" + d;
-    if (last) out += "-" + last;
-
-    return limitTo25(out);
+    const grouped = [year, dossier, type, region, serial].filter(Boolean);
+    return limitTo(grouped.join("-"), 23);
   }
 
   function normalizePRE(s){
@@ -2011,7 +2017,7 @@ function updateDocsRelanceState(status, plannedDateIso){
   }
 
   function isValidPRE(v){
-    return /^(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}$/.test(v);
+    return /^(?:(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}|\d{4}-\d{7}-(PRE|CAR)-[A-Z]{2}-\d{7})$/.test(v);
   }
 
   document.addEventListener("DOMContentLoaded", ()=>{
@@ -2040,7 +2046,7 @@ function updateDocsRelanceState(status, plannedDateIso){
 
       const normalized = normalizePRE(preReceptionInput.value || "");
       if(!isValidPRE(normalized)){
-        alert("Numéro PRE/CAR invalide. Format attendu : PRE-083-2025-12-01-20250000000 ou PRE-2025-12-01-20250000000");
+        alert("Numéro PRE/CAR invalide. Formats attendus : PRE-083-2025-12-01-20250000000, PRE-2025-12-01-20250000000 ou 2026-0000860-PRE-SH-1050078");
         return;
       }
 
@@ -2721,7 +2727,7 @@ if(traineeComment){
       missing.push("- Numéro PRE / CAR");
     } else {
       const pre = pre_number_raw.toUpperCase().replace(/\s+/g,"");
-      const ok = /^(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}$/.test(pre);
+      const ok = /^(?:(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}|\d{4}-\d{7}-(PRE|CAR)-[A-Z]{2}-\d{7})$/.test(pre);
       if(!ok) missing.push("- Numéro PRE / CAR (format invalide)");
     }
 

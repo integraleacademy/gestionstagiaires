@@ -2360,7 +2360,7 @@ function isValidSecu(digits){
 function isValidPRE(v){
   if(!v) return false;
   const normalized = normalizePRE(v);
-  return /^(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11}$/.test(normalized);
+  return /^(?:(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11}|\d{4}-\d{7}-(PRE|CAR)-[A-Z]{2}-\d{7})$/.test(normalized);
 }
 
 function applyFormatting(){
@@ -2638,24 +2638,57 @@ function formatPreCarDisplay(raw){
   raw = (raw || "").toString().toUpperCase().replace(/\s+/g, "");
   raw = raw.replace(/[^A-Z0-9-]/g, "");
 
-  const prefix = raw.startsWith("PRE") ? "PRE" : (raw.startsWith("CAR") ? "CAR" : "");
-  if(!prefix) return raw;
+  const compact = raw.replace(/[^A-Z0-9]/g, "");
 
-  const digits = raw.slice(prefix.length).replace(/\D/g, "").slice(0, 22);
-  const dep = digits.slice(0, 3);
-  const yyyy = digits.slice(3, 7);
-  const mm = digits.slice(7, 9);
-  const dd = digits.slice(9, 11);
-  const serial = digits.slice(11, 22);
+  if(compact.startsWith("PRE") || compact.startsWith("CAR")){
+    const prefix = compact.startsWith("PRE") ? "PRE" : "CAR";
+    let digits = compact.slice(3).replace(/\D/g, "");
 
-  const grouped = [];
-  if(dep) grouped.push(dep);
-  if(yyyy) grouped.push(yyyy);
-  if(mm) grouped.push(mm);
-  if(dd) grouped.push(dd);
-  if(serial) grouped.push(serial);
+    let hasDep = false;
+    if(raw.startsWith(prefix + "-")){
+      const firstSegment = raw.slice(prefix.length + 1).split("-")[0] || "";
+      if(/^\d{3}$/.test(firstSegment)) hasDep = true;
+    }
+    if(!hasDep && digits.length > 19) hasDep = true;
 
-  return [prefix, ...grouped].join("-");
+    const grouped = [];
+    if(hasDep){
+      digits = digits.slice(0, 22);
+      const dep = digits.slice(0, 3);
+      const yyyy = digits.slice(3, 7);
+      const mm = digits.slice(7, 9);
+      const dd = digits.slice(9, 11);
+      const serial = digits.slice(11, 22);
+      if(dep) grouped.push(dep);
+      if(yyyy) grouped.push(yyyy);
+      if(mm) grouped.push(mm);
+      if(dd) grouped.push(dd);
+      if(serial) grouped.push(serial);
+    } else {
+      digits = digits.slice(0, 19);
+      const yyyy = digits.slice(0, 4);
+      const mm = digits.slice(4, 6);
+      const dd = digits.slice(6, 8);
+      const serial = digits.slice(8, 19);
+      if(yyyy) grouped.push(yyyy);
+      if(mm) grouped.push(mm);
+      if(dd) grouped.push(dd);
+      if(serial) grouped.push(serial);
+    }
+    return [prefix, ...grouped].join("-");
+  }
+
+  const year = compact.match(/^\d{0,4}/)?.[0] || "";
+  let rest = compact.slice(year.length);
+  const dossier = rest.match(/^\d{0,7}/)?.[0] || "";
+  rest = rest.slice(dossier.length);
+  const type = rest.match(/^[A-Z]{0,3}/)?.[0] || "";
+  rest = rest.slice(type.length);
+  const region = rest.match(/^[A-Z]{0,2}/)?.[0] || "";
+  rest = rest.slice(region.length);
+  const serial = rest.match(/^\d{0,7}/)?.[0] || "";
+
+  return [year, dossier, type, region, serial].filter(Boolean).join("-");
 }
 
 function normalizePRE(s){
