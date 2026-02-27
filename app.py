@@ -542,6 +542,14 @@ def _sync_cnapsv3_notifications_to_secretariat(data: Dict[str, Any]) -> bool:
         label = f"{label_name} • Notification Compte CNAPS à valider" if label_name else "Notification Compte CNAPS à valider"
         created_at = str(item.get("updated_at") or "").strip() or _now_iso()
 
+        phone = str(
+            item.get("phone")
+            or item.get("telephone")
+            or item.get("tel")
+            or item.get("mobile")
+            or ""
+        ).strip()
+
         bucket.insert(0, {
             "id": _notification_id("CPV3"),
             "label": label,
@@ -550,6 +558,7 @@ def _sync_cnapsv3_notifications_to_secretariat(data: Dict[str, Any]) -> bool:
             "meta": {
                 "first_name": first_name,
                 "last_name": last_name,
+                "phone": phone,
                 "call_status": "À appeler",
                 "no_answer_count": 0,
                 "cnapsv3_request_id": request_id,
