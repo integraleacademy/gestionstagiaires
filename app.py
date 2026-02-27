@@ -3954,7 +3954,14 @@ PRE_CAR_PATTERNS = (
 
 
 def _normalize_pre_car(value: str) -> str:
-    return (value or "").strip().upper().replace(" ", "")
+    normalized = (value or "").strip().upper().replace(" ", "")
+    compact = re.sub(r"[^A-Z0-9]", "", normalized)
+
+    m = re.match(r"^(\d{4})(\d{7})(PRE|CAR)([A-Z]{2})(\d{7})$", compact)
+    if m:
+        return f"{m.group(1)}-{m.group(2)}-{m.group(3)}-{m.group(4)}-{m.group(5)}"
+
+    return normalized
 
 
 def _is_valid_pre_car(value: str) -> bool:
