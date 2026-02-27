@@ -501,6 +501,10 @@ def _cnapsv3_notifications_endpoint() -> str:
 
 
 def _sync_cnapsv3_notifications_to_secretariat(data: Dict[str, Any]) -> bool:
+    def _is_cnaps_space_validated(value: Any) -> bool:
+        normalized = _normalize_status(str(value or ""))
+        return normalized.startswith("VALIDE")
+
     endpoint = _cnapsv3_notifications_endpoint()
     if not endpoint:
         return False
@@ -521,19 +525,47 @@ def _sync_cnapsv3_notifications_to_secretariat(data: Dict[str, Any]) -> bool:
         return False
 
     bucket = data.setdefault("notifications_cnaps_pre_relances", [])
+
+    incoming_by_id = {}
+    for item in incoming:
+        if not isinstance(item, dict):
+            continue
+        request_id = str(item.get("request_id") or "").strip()
+        if not request_id:
+            continue
+        incoming_by_id[request_id] = item
+
+    incoming_ids = set(incoming_by_id.keys())
+
+    # Le endpoint CNAPSV3 représente la source de vérité des dossiers à afficher.
+    # On purge les notifications CNAPSV3 locales qui ne sont plus remontées (ex: dossier validé).
+    filtered_bucket = []
+    for item in bucket:
+        if not isinstance(item, dict):
+            continue
+        meta = item.get("meta") or {}
+        request_id = str((meta.get("cnapsv3_request_id") if isinstance(meta, dict) else "") or "").strip()
+        if request_id:
+            if request_id not in incoming_ids:
+                continue
+            if _is_cnaps_space_validated(incoming_by_id.get(request_id, {}).get("espace_cnaps")):
+                continue
+        filtered_bucket.append(item)
+
+    changed = len(filtered_bucket) != len(bucket)
+    bucket[:] = filtered_bucket
+
     known_ids = {
         str((item.get("meta") or {}).get("cnapsv3_request_id") or "").strip()
         for item in bucket
         if isinstance(item, dict)
     }
 
-    changed = False
-    for item in incoming:
-        if not isinstance(item, dict):
+    for request_id, item in incoming_by_id.items():
+        if _is_cnaps_space_validated(item.get("espace_cnaps")):
             continue
 
-        request_id = str(item.get("request_id") or "").strip()
-        if not request_id or request_id in known_ids:
+        if request_id in known_ids:
             continue
 
         first_name = str(item.get("prenom") or "").strip()
@@ -2774,6 +2806,11 @@ def _secretariat_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
     def _with_created_fr(items: List[Dict[str, Any]], bucket: str) -> List[Dict[str, Any]]:
         out = []
         for item in items:
+            if bucket == "cnaps_pre":
+                meta = item.get("meta") or {}
+                cnaps_space = (meta.get("cnapsv3_espace_cnaps") if isinstance(meta, dict) else "") or ""
+                if _normalize_status(str(cnaps_space)).startswith("VALIDE"):
+                    continue
             cloned = dict(item)
             cloned["created_fr"] = fr_datetime(item.get("created_at") or "")
             if bucket == "test_fr":
