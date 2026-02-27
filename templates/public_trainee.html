@@ -850,6 +850,14 @@
         {{ pill_for('cnaps', trainee.cnaps) }}
       </div>
 
+      {% set cnaps_upper = (trainee.cnaps or '')|trim|upper %}
+      {% if is_security_training and cnaps_upper in ['INCONNU', 'UNKNOWN', ''] %}
+      <div class="hint">
+        <strong>IMPORTANT :</strong> Veuillez déposer votre dossier CNAPS en cliquant ici :
+        <a class="btn outline small" target="_blank" rel="noopener" href="https://cnapsv3.onrender.com/public-form">https://cnapsv3.onrender.com/public-form</a>
+      </div>
+      {% endif %}
+
       <div class="docrow">
         <div class="docmeta"><div class="label">Test de français</div></div>
         {{ pill_for('test_fr', trainee.test_fr_status) }}
