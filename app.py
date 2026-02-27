@@ -2998,13 +2998,17 @@ def _admin_notification_details(data: Dict[str, Any], item: Dict[str, Any]) -> L
     if period:
         details.append(period)
 
+    called_resolution = (meta.get("called_resolution") or "").strip()
+    if called_resolution:
+        details.append(f"Résultat : {called_resolution}")
+
     comment = (meta.get("comment") or meta.get("last_comment") or "").strip()
     if comment:
         details.append(f"Commentaire : {comment}")
 
     call_status = (meta.get("call_status") or "").strip()
-    if call_status and "appel" in call_status.lower():
-        details.append(call_status)
+    if call_status:
+        details.append(f"Statut d'appel : {call_status}")
 
     return details
 
@@ -5738,8 +5742,9 @@ def api_secretariat_cnaps_pre_result(notification_id: str):
         notification_meta.get("last_name", ""),
     )
     call_icon = "🟢" if outcome == "CALLED" else ({1: "🟡", 2: "🟠", 3: "🔴"}.get(no_answer_count, "🟡"))
+    called_resolution_suffix = f" ({called_resolution})" if outcome == "CALLED" and called_resolution else ""
     call_label = (
-        f"{call_icon}Relance PRE CNAPS {trainee_display_name} - personne appelée"
+        f"{call_icon}Relance PRE CNAPS {trainee_display_name} - personne appelée{called_resolution_suffix}"
         if outcome == "CALLED"
         else f"{call_icon}Relance PRE CNAPS {trainee_display_name} - {display}"
     )
