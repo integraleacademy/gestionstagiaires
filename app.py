@@ -5684,7 +5684,12 @@ def api_secretariat_cnaps_pre_result(notification_id: str):
     called_resolution = (payload.get("called_resolution") or "").strip()
     if outcome not in ("CALLED", "NO_ANSWER"):
         return jsonify({"ok": False, "error": "invalid_outcome"}), 400
-    if outcome == "CALLED" and not comment:
+    if outcome == "CALLED" and called_resolution not in (
+        "Le compte CNAPS a été validé",
+        "Autre",
+    ):
+        return jsonify({"ok": False, "error": "called_resolution_required"}), 400
+    if outcome == "CALLED" and called_resolution == "Autre" and not comment:
         return jsonify({"ok": False, "error": "comment_required"}), 400
 
     data = load_data()
