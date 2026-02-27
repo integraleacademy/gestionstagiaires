@@ -3168,7 +3168,7 @@ if(btnVtcTheoryExam){
       const r = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/vtc-theory-exam/send`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ send_email: !!sendMail }),
+        body: JSON.stringify({ send_notifications: !!sendMail }),
       });
       const data = await r.json();
       if(!r.ok || !data.ok){

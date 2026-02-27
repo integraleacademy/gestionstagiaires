@@ -1147,7 +1147,7 @@ def _build_pdf_search_haystacks(file_bytes: bytes) -> Tuple[str, str]:
     return alnum_only, digits_only
 
 
-def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any], send_email: bool = True) -> Dict[str, Any]:
+def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any], send_notifications: bool = True) -> Dict[str, Any]:
     practice_training_date = (
         _session_get(session_obj, "practice_training_date", "")
         or _session_get(session_obj, "exam_practice_date", "")
@@ -1576,7 +1576,7 @@ def _extract_vtc_exam_results(file_name: str, file_bytes: bytes) -> Dict[str, An
     }
 
 
-def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any], send_email: bool = True) -> Dict[str, Any]:
+def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any], send_notifications: bool = True) -> Dict[str, Any]:
     practice_training_date = (
         _session_get(session_obj, "practice_training_date", "")
         or _session_get(session_obj, "exam_practice_date", "")
@@ -1590,8 +1590,8 @@ def _send_vtc_theory_exam_notification(session_obj: Dict[str, Any], trainee: Dic
     subject, html = build_vtc_practice_convocation_email(first_name, practice_training_date)
     sms = build_vtc_practice_convocation_sms(first_name, practice_training_date)
 
-    email_ok = brevo_send_email(email, subject, html, trainee=trainee) if (send_email and email) else False
-    sms_ok = brevo_send_sms(phone, sms) if phone else False
+    email_ok = brevo_send_email(email, subject, html, trainee=trainee) if (send_notifications and email) else False
+    sms_ok = brevo_send_sms(phone, sms) if (send_notifications and phone) else False
 
     trainee["vtc_theory_exam_sent_at"] = _now_iso()
     trainee["vtc_theory_exam_email_ok"] = bool(email_ok)
@@ -7112,9 +7112,10 @@ def api_send_vtc_theory_exam(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "trainee_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
-    send_email = payload.get("send_email", True) in (True, "true", "1", 1, "yes", "on")
+    send_notifications_raw = payload.get("send_notifications", payload.get("send_email", True))
+    send_notifications = send_notifications_raw in (True, "true", "1", 1, "yes", "on")
 
-    result = _send_vtc_theory_exam_notification(s, t, send_email=send_email)
+    result = _send_vtc_theory_exam_notification(s, t, send_notifications=send_notifications)
     _add_vtc_practice_convocation_notification(data, s, t)
 
     s["trainees"] = trainees
@@ -7372,7 +7373,7 @@ def api_vtc_check_notify():
             else:
                 trainee["vtc_theory_result"] = "admissible"
                 trainee["vtc_theory_result_label"] = "admissible"
-                _send_vtc_theory_exam_notification(sess, trainee, send_email=True)
+                _send_vtc_theory_exam_notification(sess, trainee, send_notifications=True)
                 _add_vtc_practice_convocation_notification(data, sess, trainee)
             sent += 1
 
