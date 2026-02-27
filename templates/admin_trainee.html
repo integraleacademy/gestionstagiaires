@@ -2011,7 +2011,7 @@ function updateDocsRelanceState(status, plannedDateIso){
   }
 
   function isValidPRE(v){
-    return /^(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}$/.test(v);
+    return /^(?:(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}|\d{4}-\d{7}-(PRE|CAR)-[A-Z]{2}-\d{7})$/.test(v);
   }
 
   document.addEventListener("DOMContentLoaded", ()=>{
@@ -2040,7 +2040,7 @@ function updateDocsRelanceState(status, plannedDateIso){
 
       const normalized = normalizePRE(preReceptionInput.value || "");
       if(!isValidPRE(normalized)){
-        alert("Numéro PRE/CAR invalide. Format attendu : PRE-083-2025-12-01-20250000000 ou PRE-2025-12-01-20250000000");
+        alert("Numéro PRE/CAR invalide. Formats attendus : PRE-083-2025-12-01-20250000000, PRE-2025-12-01-20250000000 ou 2026-0000860-PRE-SH-1050078");
         return;
       }
 
@@ -2721,7 +2721,7 @@ if(traineeComment){
       missing.push("- Numéro PRE / CAR");
     } else {
       const pre = pre_number_raw.toUpperCase().replace(/\s+/g,"");
-      const ok = /^(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}$/.test(pre);
+      const ok = /^(?:(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}|\d{4}-\d{7}-(PRE|CAR)-[A-Z]{2}-\d{7})$/.test(pre);
       if(!ok) missing.push("- Numéro PRE / CAR (format invalide)");
     }
 
