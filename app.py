@@ -7075,7 +7075,8 @@ def api_send_vtc_theory_exam(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "trainee_not_found"}), 404
 
     payload = request.get_json(silent=True) or {}
-    send_notifications = payload.get("send_notifications", True) in (True, "true", "1", 1, "yes", "on")
+    send_notifications_raw = payload.get("send_notifications", payload.get("send_email", True))
+    send_notifications = send_notifications_raw in (True, "true", "1", 1, "yes", "on")
 
     result = _send_vtc_theory_exam_notification(s, t, send_notifications=send_notifications)
     _add_vtc_practice_convocation_notification(data, s, t)
