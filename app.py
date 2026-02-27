@@ -26,6 +26,7 @@ import zipfile
 from io import BytesIO
 from docx import Document
 import xml.etree.ElementTree as ET
+from urllib.parse import urlparse, urljoin
 
 
 app = Flask(__name__)
@@ -464,6 +465,7 @@ BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 BREVO_SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL", "ecole@integraleacademy.com")
 BREVO_SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "Intégrale Academy")
 CNAPS_LOOKUP_ENDPOINT = os.environ.get("CNAPS_LOOKUP_ENDPOINT", "")
+CNAPSV3_NOTIFICATIONS_ENDPOINT = os.environ.get("CNAPSV3_NOTIFICATIONS_ENDPOINT", "")
 
 PUBLIC_STUDENT_PORTAL_BASE = os.environ.get(
     "PUBLIC_STUDENT_PORTAL_BASE",
@@ -478,6 +480,89 @@ PUBLIC_BASE_URL = os.environ.get(
 
 CNAPS_STATUS_ENDPOINT = os.environ.get("CNAPS_STATUS_ENDPOINT", "")
 HEBERGEMENT_STATUS_ENDPOINT = os.environ.get("HEBERGEMENT_STATUS_ENDPOINT", "")
+
+
+def _cnapsv3_notifications_endpoint() -> str:
+    endpoint = (CNAPSV3_NOTIFICATIONS_ENDPOINT or "").strip()
+    if endpoint:
+        return endpoint
+
+    lookup = (CNAPS_LOOKUP_ENDPOINT or "").strip()
+    if not lookup:
+        return ""
+
+    try:
+        parsed = urlparse(lookup)
+        if not parsed.scheme or not parsed.netloc:
+            return ""
+        return urljoin(f"{parsed.scheme}://{parsed.netloc}", "/notifications_espace_cnaps_a_valider.json")
+    except Exception:
+        return ""
+
+
+def _sync_cnapsv3_notifications_to_secretariat(data: Dict[str, Any]) -> bool:
+    endpoint = _cnapsv3_notifications_endpoint()
+    if not endpoint:
+        return False
+
+    try:
+        response = requests.get(endpoint, timeout=10)
+        response.raise_for_status()
+        payload = response.json() or {}
+    except Exception:
+        app.logger.exception("Impossible de récupérer les notifications CNAPSV3 (%s)", endpoint)
+        return False
+
+    if not payload.get("ok"):
+        return False
+
+    incoming = payload.get("notifications") or []
+    if not isinstance(incoming, list):
+        return False
+
+    bucket = data.setdefault("notifications_cnaps_pre_relances", [])
+    known_ids = {
+        str((item.get("meta") or {}).get("cnapsv3_request_id") or "").strip()
+        for item in bucket
+        if isinstance(item, dict)
+    }
+
+    changed = False
+    for item in incoming:
+        if not isinstance(item, dict):
+            continue
+
+        request_id = str(item.get("request_id") or "").strip()
+        if not request_id or request_id in known_ids:
+            continue
+
+        first_name = str(item.get("prenom") or "").strip()
+        last_name = str(item.get("nom") or "").strip()
+        label_name = _format_trainee_name(first_name, last_name)
+        label = f"{label_name} • Notification Compte CNAPS à valider" if label_name else "Notification Compte CNAPS à valider"
+        created_at = str(item.get("updated_at") or "").strip() or _now_iso()
+
+        bucket.insert(0, {
+            "id": _notification_id("CPV3"),
+            "label": label,
+            "created_at": created_at,
+            "done": False,
+            "meta": {
+                "first_name": first_name,
+                "last_name": last_name,
+                "call_status": "À appeler",
+                "no_answer_count": 0,
+                "cnapsv3_request_id": request_id,
+                "cnapsv3_espace_cnaps": str(item.get("espace_cnaps") or "").strip(),
+                "cnapsv3_title": str(item.get("title") or "").strip(),
+                "cnapsv3_message": str(item.get("message") or "").strip(),
+                "cnapsv3_updated_at": str(item.get("updated_at") or "").strip(),
+            },
+        })
+        known_ids.add(request_id)
+        changed = True
+
+    return changed
 
 BREVO_NO_CREDIT_MARKERS = (
     "not enough credits",
@@ -4907,6 +4992,8 @@ def admin_sessions():
 @app.get("/admin/gestion-secretariat")
 def admin_secretariat():
     data = load_data()
+    if _sync_cnapsv3_notifications_to_secretariat(data):
+        save_data(data)
     payload = _secretariat_notifications_payload(data)
     notifications = payload["notifications"]
     return render_template(
@@ -4928,6 +5015,8 @@ def admin_secretariat():
 @app.get("/api/secretariat/notifications")
 def api_secretariat_notifications():
     data = load_data()
+    if _sync_cnapsv3_notifications_to_secretariat(data):
+        save_data(data)
     payload = _secretariat_notifications_payload(data)
     return jsonify({"ok": True, **payload})
 
