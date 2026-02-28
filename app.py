@@ -5280,7 +5280,7 @@ def admin_edof_submit():
       <p>Clément VAILLANT<br>Directeur Intégrale Academy</p>
     """)
 
-    email_ok = brevo_send_email(email, user_subject, user_html, trainee=t)
+    email_ok = brevo_send_email(email, user_subject, user_html)
 
     sms = (
         f"Bonjour {first_name},\n"
@@ -5350,7 +5350,7 @@ def admin_financement_refuse_submit():
         "La Team Intégrale Academy"
     ).strip()
 
-    email_ok = brevo_send_email(email, user_subject, user_html, trainee=t)
+    email_ok = brevo_send_email(email, user_subject, user_html)
     sms_ok = brevo_send_sms(phone, sms)
 
     data = load_data()
