@@ -306,7 +306,7 @@
   <h1 style="margin:0">Sessions</h1>
 
   <div style="display:flex;gap:10px;flex-wrap:wrap;">
-    <button class="btn btn-outline" id="btnOpenCnaps">CONTACTER LE CNAPS</button>
+    <a class="btn btn-blue" id="btnDracar" href="https://espace-usagers.cnaps.interieur.gouv.fr/usager/app/accueil" target="_blank" rel="noopener noreferrer">DRACAR</a>
     <a class="btn btn-primary" href="{{ url_for('admin_secretariat') }}">Gestion secrétariat</a>
     {% if not is_read_only %}
       <button class="btn btn-outline" id="btnOpenVtcCheck">Check VTC théorie</button>
@@ -1747,11 +1747,6 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
       if(list) list.textContent = "Erreur réseau.";
     }
   }
-
-  document.getElementById("btnOpenCnaps")?.addEventListener("click", async ()=>{
-    openModal("cnapsModal");
-    await loadCnapsSessions();
-  });
 
   const vtcCheckState = {
     mode: "theory",

@@ -101,18 +101,6 @@
           L2 transmis scotia
         </button>
       {% endif %}
-      {% if not is_vtc and not show_vae and not is_dirigeant %}
-        {% set cnaps_full_name = ((trainee.first_name or "Prénom") ~ " " ~ (trainee.last_name or "NOM"))|trim %}
-        {% set cnaps_birth_date = (trainee.birth_date|frdate or "DD/MM/YYYY") %}
-        {% set cnaps_body = "Bonjour,\n\nJe me permets de revenir vers nous concernant la demande d'autorisation préalable de " ~ cnaps_full_name ~ " né le " ~ cnaps_birth_date ~ ".\n\nLe suivi en ligne indique que la demande a été acceptée, mais cette personne n'a pas reçu le courrier officiel de notification par courrier postal et nous ne disposons donc pas de son numéro PRE nécessaire à son entrée en formation.\n\nVous serait-il possible svp de me communiquer le numéro PRE ?\n\nJe vous remercie par avance pour votre aide et je vous souhaite une agréable journée,\n\nBien cordialement,\n\nClément VAILLANT\nDirecteur Intégrale Sécurité Formations" %}
-        <a class="btn btn-outline btn-uniform"
-           id="btnCnapsContact"
-           data-session-id="{{ session.id }}"
-           data-trainee-id="{{ trainee.id }}"
-           href="mailto:?bcc=jenny.tarallo@interieur.gouv.fr,cnaps-dt-sud@interieur.gouv.fr&subject={{ 'Demande de numéro PRE'|urlencode }}&body={{ cnaps_body|urlencode }}">
-          ✉️ Contacter le CNAPS
-        </a>
-      {% endif %}
       {% if not is_read_only %}
         <button class="btn btn-outline btn-uniform" type="button" onclick="openModal('transferTraineeModal')">
           🔁 Transfert
@@ -329,15 +317,11 @@
           <div class="hint" style="margin-top:6px;">
             Historique CNAPS :
             {% for entry in cnaps_history %}
-              <span style="display:inline-block;margin-right:10px;">
-                {% if entry.kind == "pre_request" %}
-                  <span style="color:var(--orange);font-weight:600;">
-                    Demande de numéro PRE faite au CNAPS le {{ entry.date|frdate }}
-                  </span>
-                {% else %}
+              {% if entry.kind != "pre_request" %}
+                <span style="display:inline-block;margin-right:10px;">
                   {{ entry.status|upper }} · {{ entry.date|frdatetime }}
-                {% endif %}
-              </span>
+                </span>
+              {% endif %}
             {% endfor %}
           </div>
         {% endif %}
