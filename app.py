@@ -7075,6 +7075,7 @@ def api_send_cnaps_pre_relance(session_id: str, trainee_id: str):
     email_ok = brevo_send_email(email, "Relance documents CNAPS Ministère de l'intérieur", html, trainee=t) if email else False
     sms_ok = brevo_send_sms(phone, sms) if phone else False
 
+    record_cnaps_pre_request(t)
     t["cnaps_pre_relance_last_sent_at"] = _now_iso()
     t["updated_at"] = _now_iso()
     append_trainee_history_event(t, "Relance CNAPS PRE", f"Mail: {'oui' if email_ok else 'non'} · SMS: {'oui' if sms_ok else 'non'}", "relance", t["cnaps_pre_relance_last_sent_at"])
