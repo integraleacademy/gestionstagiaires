@@ -2010,6 +2010,8 @@ def _is_vtc_cm_reminder_auto_disabled(trainee: Dict[str, Any]) -> bool:
 def _compute_vtc_cm_reminder_schedule(trainee: Dict[str, Any]) -> Optional[datetime.datetime]:
     if _is_vtc_cm_reminder_auto_disabled(trainee):
         return None
+    if bool(trainee.get("exam_fees_paid")):
+        return None
     if (trainee.get("vtc_cm_login") or "").strip() and (trainee.get("vtc_cm_password") or "").strip():
         return None
     if (trainee.get("vtc_cm_submitted_at") or "").strip():
@@ -6876,6 +6878,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
         now_paid = bool(t.get("exam_fees_paid"))
         if now_paid and not was_exam_fees_paid:
             t["exam_fees_paid_at"] = _now_iso()
+            t["vtc_cm_reminder_auto_disabled"] = True
+            t["vtc_cm_reminder_auto_disabled_at"] = _now_iso()
             trainee_name = f"{t.get('first_name','').strip()} {t.get('last_name','').strip()}".strip()
             session_name = _session_get(s, "name", "")
             email = (t.get("email") or "").strip()
@@ -6897,6 +6901,9 @@ def api_update_trainee(session_id: str, trainee_id: str):
                     brevo_send_sms(phone, sms)
         elif not now_paid:
             t["exam_fees_paid_at"] = ""
+
+    if "exam_fees_paid" in payload:
+        _refresh_vtc_cm_reminder_schedule(t)
 
     elearning_notifications = {"email_ok": False, "sms_ok": False}
     now_elearning_link = (t.get("elearning_link") or "").strip()
@@ -8429,7 +8436,7 @@ def admin_vtc_cmar_reminder_auto(session_id: str, trainee_id: str):
         abort(404)
 
     enabled = True if (request.form.get("enabled", "1") or "").strip() in ("1", "true", "on", "yes") else False
-    if enabled:
+    if enabled and not bool(t.get("exam_fees_paid")):
         t["vtc_cm_reminder_auto_disabled"] = False
         t["vtc_cm_reminder_auto_disabled_at"] = ""
     else:
