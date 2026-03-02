@@ -1464,7 +1464,23 @@ id="upload_{{ d.key }}"
           {% endif %}
         {% endif %}
         {% set livret2_count = ns_livret2.tokens|length %}
-        <p class="muted">Le dossier 2 est à envoyer par courrier postal, accompagné de toutes les pièces justificatives, à Intégrale Academy - Service VAE - 650 route d'Aumont 15130 ARPAJON SUR CERE.</p>
+        <div style="margin:10px 0;padding:12px;border:1px solid #f59e0b;border-radius:10px;background:#fff7ed;">
+          <p style="margin:0 0 8px 0;font-weight:800;color:#7c2d12;">📌 Comment faire pour l'étape 4 ?</p>
+          <ol style="margin:0;padding-left:20px;line-height:1.6;">
+            <li>
+              <strong>Compléter le Livret 2 :</strong>
+              <p class="vae-step-action" style="margin:8px 0 0 0;">
+                <a class="btn" href="/static/vae_livret_2.pdf" target="_blank" rel="noopener" style="background:#2563eb;border-color:#2563eb;color:#fff;">
+                  📥 Télécharger le Livret 2 à compléter
+                </a>
+              </p>
+            </li>
+            <li>
+              <strong>Renvoyer le Livret 2 :</strong> Par courrier postal, accompagné de toutes les pièces justificatives, à
+              <strong>Intégrale Academy - Service VAE - 650 route d'Aumont 15130 ARPAJON SUR CERE</strong>.
+            </li>
+          </ol>
+        </div>
         {% if vae_done_until >= 4 %}
           <p class="oktag">Étape terminée</p>
           {% if livret2_count %}
@@ -1478,17 +1494,6 @@ id="upload_{{ d.key }}"
                 </li>
               {% endfor %}
             </ul>
-          {% endif %}
-        {% elif vae_current_step == 4 and vae_done_until < 4 %}
-          <p><a href="/static/vae_livret_2.pdf" target="_blank" rel="noopener">Téléchargez le Livret 2 A COMPLETER en cliquant ici</a></p>
-          <form class="upload-form" id="upload_livret_2" action="/espace/{{ token_safe }}/documents/livret_2/upload" method="post" enctype="multipart/form-data">
-            <input id="livret2_files_input" type="file" name="files" multiple accept="application/pdf,image/jpeg,image/png">
-            <button class="btn small" type="submit">Déposer mon Livret 2</button>
-            <div class="uploading-msg muted" style="display:none;">Envoi en cours… merci de patienter.</div>
-          </form>
-          <div id="livret2_files_summary" class="muted" style="margin-top:4px;">Aucun fichier sélectionné.</div>
-          {% if livret2_count %}
-            <p class="muted">{{ livret2_count }} fichier(s) Livret 2 déjà déposé(s).</p>
           {% endif %}
         {% endif %}
       </div>
@@ -2544,36 +2549,6 @@ window.addEventListener("DOMContentLoaded", ()=>{
   });
 });
 
-window.addEventListener("DOMContentLoaded", ()=>{
-  const input = document.getElementById("livret2_files_input");
-  const summary = document.getElementById("livret2_files_summary");
-  if(!input || !summary) return;
-
-  const dataTransfer = new DataTransfer();
-  const updateSummary = () => {
-    const files = dataTransfer.files ? Array.from(dataTransfer.files) : [];
-    if(!files.length){
-      summary.textContent = "Aucun fichier sélectionné.";
-      return;
-    }
-    const count = files.length;
-    summary.textContent = `${count} fichier${count > 1 ? "s" : ""} sélectionné${count > 1 ? "s" : ""} : ${files.map((f)=>f.name).join(", ")}`;
-  };
-
-  input.addEventListener("change", () => {
-    if(input.files){
-      for(const f of input.files){
-        const exists = Array.from(dataTransfer.files).some((existing) => existing.name === f.name && existing.size === f.size);
-        if(!exists){
-          dataTransfer.items.add(f);
-        }
-      }
-      input.files = dataTransfer.files;
-    }
-    updateSummary();
-  });
-  updateSummary();
-});
 
   // ====== UX upload : cacher input + bouton dès submit ======
 window.addEventListener("DOMContentLoaded", () => {
