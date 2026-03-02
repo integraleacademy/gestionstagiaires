@@ -3962,6 +3962,11 @@ PRE_CAR_PATTERNS = (
     re.compile(r"^\d{4}-\d{7}-(PRE|CAR)-[A-Z]{2}-\d{7}$"),
 )
 
+CNAPS_PRE_IN_TEXT_PATTERN = re.compile(
+    r"(?:\b(?:PRE|CAR)\b[\s:\-]*)?((?:\d{4}[\s\-]?\d{7}[\s\-]?(?:PRE|CAR)[\s\-]?[A-Z]{2}[\s\-]?\d{7})|(?:(?:PRE|CAR)[\s\-]?(?:\d{3}[\s\-]?)?\d{4}[\s\-]?\d{2}[\s\-]?\d{2}[\s\-]?\d{11}))",
+    re.IGNORECASE,
+)
+
 
 def _normalize_pre_car(value: str) -> str:
     normalized = (value or "").strip().upper().replace(" ", "")
@@ -3977,6 +3982,107 @@ def _normalize_pre_car(value: str) -> str:
 def _is_valid_pre_car(value: str) -> bool:
     normalized = _normalize_pre_car(value)
     return any(pattern.match(normalized) for pattern in PRE_CAR_PATTERNS)
+
+
+def _normalize_person_name(value: str) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    cleaned = unicodedata.normalize("NFD", raw)
+    cleaned = "".join(ch for ch in cleaned if unicodedata.category(ch) != "Mn")
+    cleaned = re.sub(r"[^A-Za-z\-\s]", " ", cleaned)
+    return " ".join(cleaned.upper().split())
+
+
+def _extract_pre_from_text(raw_text: str) -> str:
+    if not raw_text:
+        return ""
+    for match in CNAPS_PRE_IN_TEXT_PATTERN.finditer(raw_text.upper()):
+        candidate = _normalize_pre_car(match.group(1) or "")
+        if _is_valid_pre_car(candidate):
+            return candidate
+    return ""
+
+
+def _extract_name_from_cnaps_text(raw_text: str) -> Tuple[str, str]:
+    if not raw_text:
+        return "", ""
+
+    text = raw_text.replace("\r", "\n")
+    compact = re.sub(r"\s+", " ", text)
+
+    patterns = [
+        re.compile(r"\bNOM\s*[:\-]\s*([A-Za-zÀ-ÖØ-öø-ÿ\-\s']{2,})\b"),
+        re.compile(r"\bPR[ÉE]NOM\s*[:\-]\s*([A-Za-zÀ-ÖØ-öø-ÿ\-\s']{2,})\b"),
+    ]
+
+    last_name = ""
+    first_name = ""
+    for pat in patterns:
+        m = pat.search(compact)
+        if not m:
+            continue
+        value = " ".join((m.group(1) or "").strip().split())
+        if "PR" in pat.pattern:
+            first_name = value
+        else:
+            last_name = value
+
+    if last_name and first_name:
+        return _normalize_person_name(last_name), _normalize_person_name(first_name)
+
+    # Cas CNAPS fréquent: "Mickaël BOUCHEZ" (prénom puis nom en majuscules)
+    cap_name = re.search(
+        r"\b([A-Za-zÀ-ÖØ-öø-ÿ\-']{2,})\s+([A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ\-']{1,})\b",
+        compact,
+    )
+    if cap_name:
+        return _normalize_person_name(cap_name.group(2)), _normalize_person_name(cap_name.group(1))
+
+    fallback = re.search(
+        r"\b(?:M\.?|MME|MONSIEUR|MADAME)\s+([A-Za-zÀ-ÖØ-öø-ÿ\-']{2,})\s+([A-Za-zÀ-ÖØ-öø-ÿ\-']{2,})\b",
+        compact,
+        re.IGNORECASE,
+    )
+    if fallback:
+        a = _normalize_person_name(fallback.group(1))
+        b = _normalize_person_name(fallback.group(2))
+        # On privilégie NOM, PRENOM ; la résolution backend testera aussi l'ordre inversé.
+        return a, b
+
+    return "", ""
+
+
+def _find_cnaps_trainee_match(
+    trainees_index: Dict[Tuple[str, str], List[Dict[str, Any]]],
+    trainees_by_last_name: Dict[str, List[Dict[str, Any]]],
+    last_name: str,
+    first_name: str,
+) -> Optional[Dict[str, Any]]:
+    direct = trainees_index.get((last_name, first_name)) or []
+    if direct:
+        return direct[0]
+
+    swapped = trainees_index.get((first_name, last_name)) or []
+    if swapped:
+        return swapped[0]
+
+    # Fallback demandé métier: recherche uniquement par NOM.
+    # Si plusieurs stagiaires partagent le même nom, on préfère quand même
+    # celui qui matche le prénom si l'information existe, sinon le premier.
+    by_last_name = trainees_by_last_name.get(last_name) or []
+    if not by_last_name:
+        return None
+
+    normalized_first = _normalize_person_name(first_name)
+    if normalized_first:
+        for entry in by_last_name:
+            trainee = entry.get("trainee") or {}
+            trainee_first = _normalize_person_name(trainee.get("first_name", ""))
+            if trainee_first == normalized_first:
+                return entry
+
+    return by_last_name[0]
 
 def infos_is_complete(t: Dict[str, Any]) -> bool:
     # Champs obligatoires
@@ -11164,6 +11270,103 @@ def api_cnaps_pre_request():
         save_data(data)
 
     return jsonify({"ok": True, "updated": updated})
+
+
+@app.post("/api/cnaps/import-pre")
+@admin_login_required
+def api_cnaps_import_pre():
+    files = request.files.getlist("files")
+    if not files:
+        single = request.files.get("file")
+        if single:
+            files = [single]
+
+    valid_files = [f for f in files if f and (f.filename or "").lower().endswith(".pdf")]
+    if not valid_files:
+        return jsonify({"ok": False, "error": "missing_pdf"}), 400
+
+    data = load_data()
+    trainees_index: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+    trainees_by_last_name: Dict[str, List[Dict[str, Any]]] = {}
+
+    for sess in data.get("sessions", []):
+        if bool(sess.get("archived")):
+            continue
+        trainees = _session_trainees_list(sess)
+        for trainee in trainees:
+            key = (
+                _normalize_person_name(trainee.get("last_name", "")),
+                _normalize_person_name(trainee.get("first_name", "")),
+            )
+            if not key[0] or not key[1]:
+                continue
+            entry = {
+                "session": sess,
+                "trainee": trainee,
+            }
+            trainees_index.setdefault(key, []).append(entry)
+            trainees_by_last_name.setdefault(key[0], []).append(entry)
+
+    matches = []
+    unmatched = []
+
+    for file in valid_files:
+        name = (file.filename or "document.pdf").strip() or "document.pdf"
+        file_bytes = file.read() or b""
+        text = _extract_pdf_text(file_bytes)
+        if not text:
+            unmatched.append({"file_name": name, "reason": "pdf_unreadable"})
+            continue
+
+        pre_number = _extract_pre_from_text(text)
+        last_name, first_name = _extract_name_from_cnaps_text(text)
+        if not (last_name and first_name and pre_number):
+            unmatched.append({
+                "file_name": name,
+                "reason": "missing_fields",
+                "extracted": {
+                    "last_name": last_name,
+                    "first_name": first_name,
+                    "pre_number": pre_number,
+                },
+            })
+            continue
+
+        entry = _find_cnaps_trainee_match(trainees_index, trainees_by_last_name, last_name, first_name)
+        if not entry:
+            unmatched.append({
+                "file_name": name,
+                "reason": "not_found",
+                "extracted": {
+                    "last_name": last_name,
+                    "first_name": first_name,
+                    "pre_number": pre_number,
+                },
+            })
+            continue
+
+        session_obj = entry["session"]
+        trainee = entry["trainee"]
+        matches.append({
+            "file_name": name,
+            "last_name": trainee.get("last_name", ""),
+            "first_name": trainee.get("first_name", ""),
+            "pre_number": pre_number,
+            "formation": formation_label(_session_get(session_obj, "training_type", "")),
+            "training_dates": {
+                "start": fr_date(_session_get(session_obj, "date_start", "")),
+                "end": fr_date(_session_get(session_obj, "date_end", "")),
+            },
+            "session_id": session_obj.get("id"),
+            "trainee_id": trainee.get("id"),
+        })
+
+    return jsonify({
+        "ok": True,
+        "matches": matches,
+        "unmatched": unmatched,
+        "count": len(matches),
+    })
 
 
 @app.get("/admin/sessions/archived")
