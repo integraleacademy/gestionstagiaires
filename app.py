@@ -1845,18 +1845,25 @@ def build_vtc_credentials_reminder_sms(first_name: str, form_link: str) -> str:
 def build_vtc_credentials_invalid_email(first_name: str, form_link: str) -> Tuple[str, str]:
     first_name = (first_name or "").strip()
     greeting = f"Bonjour <strong>{first_name}</strong>," if first_name else "Bonjour,"
-    subject = "Identifiants ExamenT3P erronés"
+    subject = "Connexion ExamenT3P impossible"
 
     html = mail_layout(f"""
-      <h2 style="text-align:center;color:#1d4ed8">Identifiants ExamenT3P erronés</h2>
+      <h2 style="text-align:center;color:#1d4ed8">Connexion ExamenT3P impossible</h2>
       <p>{greeting}</p>
       <p>
-        Les identifiants que vous nous avez transmis pour accéder à votre compte
-        <strong>ExamenT3P (Chambre des métiers)</strong> sont erronés.
+        Nous ne pouvons pas nous connecter à votre compte
+        <strong>ExamenT3P (Chambre des métiers)</strong>.
       </p>
       <p>
-        Nous vous invitons à vérifier et à saisir de nouveau vos identifiants dans votre
-        <strong>Espace Stagiaire</strong> en cliquant ci-dessous :
+        Cela peut être dû à l'une des deux raisons suivantes :
+      </p>
+      <ul style="margin:0 0 16px 18px;padding:0;">
+        <li>Le login ou le mot de passe transmis n'est pas correct.</li>
+        <li>Votre compte n'a pas encore été activé (activation via le lien reçu par email de la Chambre des métiers).</li>
+      </ul>
+      <p>
+        Merci de vérifier ces deux points puis de saisir à nouveau vos identifiants dans votre
+        <strong>Espace Stagiaire</strong> :
       </p>
       <p style="text-align:center;margin:18px 0;">
         <a href="{form_link}"
@@ -1883,8 +1890,9 @@ def build_vtc_credentials_invalid_sms(first_name: str, form_link: str) -> str:
     greeting = f"Bonjour {first_name}, " if first_name else "Bonjour, "
     return (
         "Intégrale Academy "
-        f"{greeting}les identifiants ExamenT3P (Chambre des métiers) transmis sont erronés. "
-        "Merci de vérifier et ressaisir vos identifiants dans votre Espace Stagiaire : "
+        f"{greeting}nous ne pouvons pas nous connecter à votre compte ExamenT3P (Chambre des métiers). "
+        "Cause possible: identifiants incorrects ou compte non activé (lien reçu par email de la Chambre des métiers). "
+        "Merci de vérifier puis ressaisir vos identifiants dans votre Espace Stagiaire : "
         f"{form_link} "
         "A réception, nous pourrons procéder au paiement des frais d'examen. "
         "Clément VAILLANT - Directeur Intégrale Academy"
