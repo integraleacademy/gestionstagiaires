@@ -1464,6 +1464,7 @@ id="upload_{{ d.key }}"
           {% endif %}
         {% endif %}
         {% set livret2_count = ns_livret2.tokens|length %}
+        <p class="muted">Le dossier 2 est à envoyer par courrier postal, accompagné de toutes les pièces justificatives, à Intégrale Academy - Service VAE - 650 route d'Aumont 15130 ARPAJON SUR CERE.</p>
         {% if vae_done_until >= 4 %}
           <p class="oktag">Étape terminée</p>
           {% if livret2_count %}
