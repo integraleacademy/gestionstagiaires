@@ -4031,15 +4031,40 @@ def _extract_name_from_cnaps_text(raw_text: str) -> Tuple[str, str]:
     if last_name and first_name:
         return _normalize_person_name(last_name), _normalize_person_name(first_name)
 
+    # Cas CNAPS fréquent: "Mickaël BOUCHEZ" (prénom puis nom en majuscules)
+    cap_name = re.search(
+        r"\b([A-Za-zÀ-ÖØ-öø-ÿ\-']{2,})\s+([A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ\-']{1,})\b",
+        compact,
+    )
+    if cap_name:
+        return _normalize_person_name(cap_name.group(2)), _normalize_person_name(cap_name.group(1))
+
     fallback = re.search(
         r"\b(?:M\.?|MME|MONSIEUR|MADAME)\s+([A-Za-zÀ-ÖØ-öø-ÿ\-']{2,})\s+([A-Za-zÀ-ÖØ-öø-ÿ\-']{2,})\b",
         compact,
         re.IGNORECASE,
     )
     if fallback:
-        return _normalize_person_name(fallback.group(1)), _normalize_person_name(fallback.group(2))
+        a = _normalize_person_name(fallback.group(1))
+        b = _normalize_person_name(fallback.group(2))
+        # On privilégie NOM, PRENOM ; la résolution backend testera aussi l'ordre inversé.
+        return a, b
 
     return "", ""
+
+
+def _find_cnaps_trainee_match(
+    trainees_index: Dict[Tuple[str, str], List[Dict[str, Any]]],
+    last_name: str,
+    first_name: str,
+) -> Optional[Dict[str, Any]]:
+    direct = trainees_index.get((last_name, first_name)) or []
+    if direct:
+        return direct[0]
+    swapped = trainees_index.get((first_name, last_name)) or []
+    if swapped:
+        return swapped[0]
+    return None
 
 def infos_is_complete(t: Dict[str, Any]) -> bool:
     # Champs obligatoires
@@ -11243,7 +11268,7 @@ def api_cnaps_import_pre():
         return jsonify({"ok": False, "error": "missing_pdf"}), 400
 
     data = load_data()
-    trainees_index: Dict[Tuple[str, str], Dict[str, Any]] = {}
+    trainees_index: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
 
     for sess in data.get("sessions", []):
         if bool(sess.get("archived")):
@@ -11256,10 +11281,10 @@ def api_cnaps_import_pre():
             )
             if not key[0] or not key[1]:
                 continue
-            trainees_index[key] = {
+            trainees_index.setdefault(key, []).append({
                 "session": sess,
                 "trainee": trainee,
-            }
+            })
 
     matches = []
     unmatched = []
@@ -11286,7 +11311,7 @@ def api_cnaps_import_pre():
             })
             continue
 
-        entry = trainees_index.get((last_name, first_name))
+        entry = _find_cnaps_trainee_match(trainees_index, last_name, first_name)
         if not entry:
             unmatched.append({
                 "file_name": name,
