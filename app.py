@@ -4055,16 +4055,34 @@ def _extract_name_from_cnaps_text(raw_text: str) -> Tuple[str, str]:
 
 def _find_cnaps_trainee_match(
     trainees_index: Dict[Tuple[str, str], List[Dict[str, Any]]],
+    trainees_by_last_name: Dict[str, List[Dict[str, Any]]],
     last_name: str,
     first_name: str,
 ) -> Optional[Dict[str, Any]]:
     direct = trainees_index.get((last_name, first_name)) or []
     if direct:
         return direct[0]
+
     swapped = trainees_index.get((first_name, last_name)) or []
     if swapped:
         return swapped[0]
-    return None
+
+    # Fallback demandé métier: recherche uniquement par NOM.
+    # Si plusieurs stagiaires partagent le même nom, on préfère quand même
+    # celui qui matche le prénom si l'information existe, sinon le premier.
+    by_last_name = trainees_by_last_name.get(last_name) or []
+    if not by_last_name:
+        return None
+
+    normalized_first = _normalize_person_name(first_name)
+    if normalized_first:
+        for entry in by_last_name:
+            trainee = entry.get("trainee") or {}
+            trainee_first = _normalize_person_name(trainee.get("first_name", ""))
+            if trainee_first == normalized_first:
+                return entry
+
+    return by_last_name[0]
 
 def infos_is_complete(t: Dict[str, Any]) -> bool:
     # Champs obligatoires
@@ -11269,6 +11287,7 @@ def api_cnaps_import_pre():
 
     data = load_data()
     trainees_index: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+    trainees_by_last_name: Dict[str, List[Dict[str, Any]]] = {}
 
     for sess in data.get("sessions", []):
         if bool(sess.get("archived")):
@@ -11281,10 +11300,12 @@ def api_cnaps_import_pre():
             )
             if not key[0] or not key[1]:
                 continue
-            trainees_index.setdefault(key, []).append({
+            entry = {
                 "session": sess,
                 "trainee": trainee,
-            })
+            }
+            trainees_index.setdefault(key, []).append(entry)
+            trainees_by_last_name.setdefault(key[0], []).append(entry)
 
     matches = []
     unmatched = []
@@ -11311,7 +11332,7 @@ def api_cnaps_import_pre():
             })
             continue
 
-        entry = _find_cnaps_trainee_match(trainees_index, last_name, first_name)
+        entry = _find_cnaps_trainee_match(trainees_index, trainees_by_last_name, last_name, first_name)
         if not entry:
             unmatched.append({
                 "file_name": name,
