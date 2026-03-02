@@ -1851,7 +1851,7 @@ def build_vtc_credentials_invalid_email(first_name: str, form_link: str) -> Tupl
       <h2 style="text-align:center;color:#1d4ed8">Connexion ExamenT3P impossible</h2>
       <p>{greeting}</p>
       <p>
-        Nous ne pouvons pas nous connecter à votre compte
+        Je me permets de revenir vers vous concernant votre formation Chauffeur VTC. Nous ne pouvons pas nous connecter à votre compte
         <strong>ExamenT3P (Chambre des métiers)</strong>.
       </p>
       <p>
@@ -1872,7 +1872,7 @@ def build_vtc_credentials_invalid_email(first_name: str, form_link: str) -> Tupl
         </a>
       </p>
       <p>
-        À réception, nous pourrons procéder au paiement des frais d'examen.
+        À réception, nous pourrons procéder au paiement des frais d'examen. Si vous avez besoin d'aide, vous pouvez nous contacter au 04 22 47 07 68. 
       </p>
       <p>
         Merci pour votre compréhension.
@@ -1889,8 +1889,8 @@ def build_vtc_credentials_invalid_sms(first_name: str, form_link: str) -> str:
     first_name = (first_name or "").strip()
     greeting = f"Bonjour {first_name}, " if first_name else "Bonjour, "
     return (
-        "Intégrale Academy "
-        f"{greeting}nous ne pouvons pas nous connecter à votre compte ExamenT3P (Chambre des métiers). "
+        "Intégrale Academy - Formation Chauffeur VTC "
+        f"{greeting}Nous ne pouvons pas nous connecter à votre compte ExamenT3P (Chambre des métiers). "
         "Cause possible: identifiants incorrects ou compte non activé (lien reçu par email de la Chambre des métiers). "
         "Merci de vérifier puis ressaisir vos identifiants dans votre Espace Stagiaire : "
         f"{form_link} "
