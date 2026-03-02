@@ -127,6 +127,9 @@
   }
   .cnaps-item strong{ display:block; }
   .cnaps-item span{ color:#6b7280; font-size:12px; }
+  .cnaps-item-main{ flex:1; }
+  .cnaps-item-actions{ margin-left:auto; display:flex; align-items:center; }
+  .cnaps-merge-btn[disabled]{ background:#9ca3af; border-color:#9ca3af; cursor:not-allowed; }
   .cnaps-search{
     width:100%;
     padding:8px 10px;
@@ -2017,6 +2020,105 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
     }
   });
 
+  function escapeHtml(value){
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function findCnapsImportedFile(match, files){
+    const idx = Number(match?.source_index);
+    if(Number.isInteger(idx) && idx >= 0 && idx < files.length){
+      return files[idx];
+    }
+    const targetName = (match?.file_name || "").trim();
+    if(!targetName) return null;
+    return files.find(f => (f?.name || "").trim() === targetName) || null;
+  }
+
+  function renderCnapsImportResults(matches, unmatched, files){
+    const status = document.getElementById("cnapsImportStatus");
+    const results = document.getElementById("cnapsImportResults");
+    if(!results) return;
+
+    const unmatchedHtml = unmatched.length ? `
+      <div class="hint" style="margin:12px 0 4px 0;"><strong>Fichiers non associés (${unmatched.length})</strong></div>
+      ${unmatched.map(item => `<div class="cnaps-search-empty">${escapeHtml(item.file_name || "Fichier")} • ${escapeHtml(item.reason || "inconnu")}</div>`).join("")}
+    ` : "";
+
+    if(!matches.length){
+      results.innerHTML = `<div class="cnaps-search-empty">Aucune correspondance trouvée.</div>${unmatchedHtml}`;
+      return;
+    }
+
+    const matchHtml = matches.map((item, idx) => {
+      const alreadyMerged = !!item.already_merged;
+      const buttonLabel = alreadyMerged ? "Fusionné" : "Fusionner";
+      return `
+        <div class="cnaps-item" style="display:flex;">
+          <div class="cnaps-item-main">
+            <strong>${escapeHtml((item.last_name || "").toUpperCase())} ${escapeHtml(item.first_name || "")}</strong>
+            <span>PRE: ${escapeHtml(item.pre_number || "—")}</span><br>
+            <span>Dates de formation: ${escapeHtml(item.training_dates?.start || "—")} → ${escapeHtml(item.training_dates?.end || "—")}</span><br>
+            <span>Formation: ${escapeHtml(item.formation || "—")}</span>
+          </div>
+          <div class="cnaps-item-actions">
+            <button type="button" class="btn btn-primary cnaps-merge-btn" data-match-index="${idx}" ${alreadyMerged ? "disabled" : ""}>${buttonLabel}</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    results.innerHTML = matchHtml + unmatchedHtml;
+
+    results.querySelectorAll(".cnaps-merge-btn").forEach(btn => {
+      btn.addEventListener("click", async ()=>{
+        const matchIndex = Number(btn.dataset.matchIndex);
+        const item = matches[matchIndex];
+        if(!item || item.already_merged) return;
+
+        const ok = window.confirm(`Confirmer la fusion pour ${item.first_name || ""} ${(item.last_name || "").toUpperCase()} ?\n\nCela va écraser le PRE/CAR et le document CNAPS existants.`);
+        if(!ok) return;
+
+        const sourceFile = findCnapsImportedFile(item, files);
+        if(!sourceFile){
+          if(status) status.textContent = "Impossible de retrouver le PDF source pour cette correspondance.";
+          return;
+        }
+
+        const fdMerge = new FormData();
+        fdMerge.append("session_id", item.session_id || "");
+        fdMerge.append("trainee_id", item.trainee_id || "");
+        fdMerge.append("pre_number", item.pre_number || "");
+        fdMerge.append("file", sourceFile);
+
+        btn.disabled = true;
+        if(status) status.textContent = "Fusion en cours…";
+
+        try{
+          const rMerge = await fetch("/api/cnaps/import-pre/merge", { method:"POST", body: fdMerge });
+          const resMerge = await rMerge.json();
+          if(!rMerge.ok || !resMerge.ok){
+            btn.disabled = false;
+            if(status) status.textContent = "Erreur pendant la fusion.";
+            return;
+          }
+
+          item.already_merged = true;
+          btn.textContent = "Fusionné";
+          btn.disabled = true;
+          if(status) status.textContent = `Fusion effectuée pour ${item.first_name || ""} ${(item.last_name || "").toUpperCase()}.`;
+        }catch(e){
+          btn.disabled = false;
+          if(status) status.textContent = "Erreur réseau pendant la fusion.";
+        }
+      });
+    });
+  }
+
   document.getElementById("btnOpenCnapsImport")?.addEventListener("click", ()=>{
     const status = document.getElementById("cnapsImportStatus");
     const results = document.getElementById("cnapsImportResults");
@@ -2058,21 +2160,7 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
       const unmatched = res.unmatched || [];
       if(status) status.textContent = `${matches.length} correspondance(s) trouvée(s).`;
 
-      const matchHtml = matches.length ? matches.map(item => `
-        <div class="cnaps-item" style="display:block;">
-          <strong>${(item.last_name || "").toUpperCase()} ${(item.first_name || "")}</strong>
-          <span>PRE: ${item.pre_number || "—"}</span><br>
-          <span>Dates de formation: ${(item.training_dates?.start || "—")} → ${(item.training_dates?.end || "—")}</span><br>
-          <span>Formation: ${item.formation || "—"}</span>
-        </div>
-      `).join("") : `<div class="cnaps-search-empty">Aucune correspondance trouvée.</div>`;
-
-      const unmatchedHtml = unmatched.length ? `
-        <div class="hint" style="margin:12px 0 4px 0;"><strong>Fichiers non associés (${unmatched.length})</strong></div>
-        ${unmatched.map(item => `<div class="cnaps-search-empty">${item.file_name || "Fichier"} • ${item.reason || "inconnu"}</div>`).join("")}
-      ` : "";
-
-      if(results) results.innerHTML = matchHtml + unmatchedHtml;
+      renderCnapsImportResults(matches, unmatched, files);
     }catch(e){
       if(status) status.textContent = "Erreur réseau.";
     }finally{
