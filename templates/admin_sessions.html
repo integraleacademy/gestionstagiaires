@@ -308,6 +308,7 @@
   <div style="display:flex;gap:10px;flex-wrap:wrap;">
     <a class="btn btn-blue" id="btnDracar" href="https://espace-usagers.cnaps.interieur.gouv.fr/usager/app/accueil" target="_blank" rel="noopener noreferrer">DRACAR</a>
     <button class="btn btn-outline" id="btnAurillac">AURILLAC</button>
+    <button class="btn btn-outline" id="btnOpenCnapsImport">CNAPS</button>
     <a class="btn btn-primary" href="{{ url_for('admin_secretariat') }}">Gestion secrétariat</a>
     {% if not is_read_only %}
       <button class="btn btn-outline" id="btnOpenVtcCheck">Check VTC théorie</button>
@@ -793,6 +794,31 @@
 
     <div class="modal-foot">
       <button class="btn" data-close-modal="aurillacModal">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE IMPORT CNAPS PRE -->
+<div class="modal-backdrop" id="cnapsImportModal" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Import PRE CNAPS</div>
+      <button class="icon-btn" data-close-modal="cnapsImportModal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <label>
+        <div class="label">Fichiers PDF CNAPS</div>
+        <input id="cnapsImportFiles" type="file" accept="application/pdf,.pdf" multiple>
+      </label>
+      <div class="hint" style="margin-top:8px;">Le système lit nom, prénom et numéro PRE/CAR dans les PDF puis cherche le stagiaire correspondant.</div>
+      <div id="cnapsImportStatus" class="muted" style="margin-top:10px;"></div>
+      <div id="cnapsImportResults" class="cnaps-list" style="margin-top:12px;"></div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" data-close-modal="cnapsImportModal">Fermer</button>
+      <button class="btn btn-primary" id="btnCnapsImportRun">Analyser</button>
     </div>
   </div>
 </div>
@@ -1984,6 +2010,69 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
         return;
       }
       if(status) status.textContent = `${res.sent || 0} admissible(s) notifié(s) • ${res.non_admissible_marked || 0} non admissible(s) marqué(s) en échec • ${res.skipped_already_notified || 0} notification(s) déjà envoyée(s) ignorée(s).`;
+    }catch(e){
+      if(status) status.textContent = "Erreur réseau.";
+    }finally{
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById("btnOpenCnapsImport")?.addEventListener("click", ()=>{
+    const status = document.getElementById("cnapsImportStatus");
+    const results = document.getElementById("cnapsImportResults");
+    const filesInput = document.getElementById("cnapsImportFiles");
+    if(status) status.textContent = "";
+    if(results) results.innerHTML = "";
+    if(filesInput) filesInput.value = "";
+    openModal("cnapsImportModal");
+  });
+
+  document.getElementById("btnCnapsImportRun")?.addEventListener("click", async ()=>{
+    const input = document.getElementById("cnapsImportFiles");
+    const status = document.getElementById("cnapsImportStatus");
+    const results = document.getElementById("cnapsImportResults");
+    const btn = document.getElementById("btnCnapsImportRun");
+    const files = Array.from(input?.files || []);
+
+    if(!files.length){
+      if(status) status.textContent = "Choisis au moins un fichier PDF.";
+      return;
+    }
+
+    const fd = new FormData();
+    files.forEach(file => fd.append("files", file));
+
+    btn.disabled = true;
+    if(status) status.textContent = "Analyse en cours…";
+    if(results) results.innerHTML = "";
+
+    try{
+      const r = await fetch("/api/cnaps/import-pre", { method:"POST", body: fd });
+      const res = await r.json();
+      if(!r.ok || !res.ok){
+        if(status) status.textContent = "Impossible de lire les fichiers.";
+        return;
+      }
+
+      const matches = res.matches || [];
+      const unmatched = res.unmatched || [];
+      if(status) status.textContent = `${matches.length} correspondance(s) trouvée(s).`;
+
+      const matchHtml = matches.length ? matches.map(item => `
+        <div class="cnaps-item" style="display:block;">
+          <strong>${(item.last_name || "").toUpperCase()} ${(item.first_name || "")}</strong>
+          <span>PRE: ${item.pre_number || "—"}</span><br>
+          <span>Dates de formation: ${(item.training_dates?.start || "—")} → ${(item.training_dates?.end || "—")}</span><br>
+          <span>Formation: ${item.formation || "—"}</span>
+        </div>
+      `).join("") : `<div class="cnaps-search-empty">Aucune correspondance trouvée.</div>`;
+
+      const unmatchedHtml = unmatched.length ? `
+        <div class="hint" style="margin:12px 0 4px 0;"><strong>Fichiers non associés (${unmatched.length})</strong></div>
+        ${unmatched.map(item => `<div class="cnaps-search-empty">${item.file_name || "Fichier"} • ${item.reason || "inconnu"}</div>`).join("")}
+      ` : "";
+
+      if(results) results.innerHTML = matchHtml + unmatchedHtml;
     }catch(e){
       if(status) status.textContent = "Erreur réseau.";
     }finally{
