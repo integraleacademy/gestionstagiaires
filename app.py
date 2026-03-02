@@ -4004,6 +4004,24 @@ def _extract_pre_from_text(raw_text: str) -> str:
     return ""
 
 
+def _extract_pre_from_compact_text(compact_text: str) -> str:
+    if not compact_text:
+        return ""
+
+    upper = re.sub(r"[^A-Z0-9]", "", compact_text.upper())
+    for pat in (
+        re.compile(r"(\d{4}\d{7}(?:PRE|CAR)[A-Z]{2}\d{7})"),
+        re.compile(r"((?:PRE|CAR)(?:\d{3})?\d{4}\d{2}\d{2}\d{11})"),
+    ):
+        m = pat.search(upper)
+        if not m:
+            continue
+        candidate = _normalize_pre_car(m.group(1) or "")
+        if _is_valid_pre_car(candidate):
+            return candidate
+    return ""
+
+
 def _extract_name_from_cnaps_text(raw_text: str) -> Tuple[str, str]:
     if not raw_text:
         return "", ""
@@ -4083,6 +4101,37 @@ def _find_cnaps_trainee_match(
                 return entry
 
     return by_last_name[0]
+
+
+def _find_cnaps_trainee_match_in_text(
+    trainees_by_last_name: Dict[str, List[Dict[str, Any]]],
+    raw_text: str,
+    first_name: str = "",
+) -> Optional[Dict[str, Any]]:
+    haystack = re.sub(r"[^A-Z]", "", _normalize_person_name(raw_text))
+    if not haystack:
+        return None
+
+    candidates: List[Dict[str, Any]] = []
+    for last_name, entries in trainees_by_last_name.items():
+        last_compact = re.sub(r"[^A-Z]", "", last_name)
+        if not last_compact:
+            continue
+        if last_compact in haystack:
+            candidates.extend(entries)
+
+    if not candidates:
+        return None
+
+    normalized_first = _normalize_person_name(first_name)
+    if normalized_first:
+        for entry in candidates:
+            trainee = entry.get("trainee") or {}
+            trainee_first = _normalize_person_name(trainee.get("first_name", ""))
+            if trainee_first == normalized_first:
+                return entry
+
+    return candidates[0]
 
 def infos_is_complete(t: Dict[str, Any]) -> bool:
     # Champs obligatoires
@@ -11314,16 +11363,31 @@ def api_cnaps_import_pre():
         name = (file.filename or "document.pdf").strip() or "document.pdf"
         file_bytes = file.read() or b""
         text = _extract_pdf_text(file_bytes)
-        if not text:
+        alnum_haystack, _ = _build_pdf_search_haystacks(file_bytes)
+        combined_text = (text or "") + "\n" + (alnum_haystack or "")
+
+        if not text and not alnum_haystack:
             unmatched.append({"file_name": name, "reason": "pdf_unreadable"})
             continue
 
         pre_number = _extract_pre_from_text(text)
+        if not pre_number:
+            pre_number = _extract_pre_from_compact_text(alnum_haystack)
+
         last_name, first_name = _extract_name_from_cnaps_text(text)
-        if not (last_name and first_name and pre_number):
+        if not (last_name and first_name):
+            text_entry = _find_cnaps_trainee_match_in_text(trainees_by_last_name, combined_text, first_name)
+            if text_entry:
+                trainee_guess = text_entry.get("trainee") or {}
+                if not last_name:
+                    last_name = _normalize_person_name(trainee_guess.get("last_name", ""))
+                if not first_name:
+                    first_name = _normalize_person_name(trainee_guess.get("first_name", ""))
+
+        if not pre_number:
             unmatched.append({
                 "file_name": name,
-                "reason": "missing_fields",
+                "reason": "missing_pre",
                 "extracted": {
                     "last_name": last_name,
                     "first_name": first_name,
@@ -11333,6 +11397,8 @@ def api_cnaps_import_pre():
             continue
 
         entry = _find_cnaps_trainee_match(trainees_index, trainees_by_last_name, last_name, first_name)
+        if not entry:
+            entry = _find_cnaps_trainee_match_in_text(trainees_by_last_name, combined_text, first_name)
         if not entry:
             unmatched.append({
                 "file_name": name,
