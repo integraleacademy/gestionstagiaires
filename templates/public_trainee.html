@@ -1464,12 +1464,18 @@ id="upload_{{ d.key }}"
           {% endif %}
         {% endif %}
         {% set livret2_count = ns_livret2.tokens|length %}
-        <div style="margin:10px 0;padding:10px 12px;border:1px solid #f59e0b;border-radius:10px;background:#fff7ed;">
-          <p style="margin:0 0 6px 0;font-weight:800;color:#7c2d12;">📮 Envoi postal obligatoire</p>
-          <p style="margin:0;line-height:1.5;">
-            Le dossier 2 est à envoyer par courrier postal, accompagné de toutes les pièces justificatives, à
-            <strong>Intégrale Academy - Service VAE - 650 route d'Aumont 15130 ARPAJON SUR CERE</strong>.
-          </p>
+        <div style="margin:10px 0;padding:12px;border:1px solid #f59e0b;border-radius:10px;background:#fff7ed;">
+          <p style="margin:0 0 8px 0;font-weight:800;color:#7c2d12;">📌 Comment faire pour l'étape 4 ?</p>
+          <ol style="margin:0;padding-left:20px;line-height:1.6;">
+            <li>
+              <strong>Compléter le Livret 2 :</strong>
+              <a href="/static/vae_livret_2.pdf" target="_blank" rel="noopener">téléchargez le Livret 2 en cliquant ici</a>.
+            </li>
+            <li>
+              <strong>Renvoyer le Livret 2 :</strong> envoyez le dossier 2 par courrier postal, accompagné de toutes les pièces justificatives, à
+              <strong>Intégrale Academy - Service VAE - 650 route d'Aumont 15130 ARPAJON SUR CERE</strong>.
+            </li>
+          </ol>
         </div>
         {% if vae_done_until >= 4 %}
           <p class="oktag">Étape terminée</p>
