@@ -1469,7 +1469,11 @@ id="upload_{{ d.key }}"
           <ol style="margin:0;padding-left:20px;line-height:1.6;">
             <li>
               <strong>Compléter le Livret 2 :</strong>
-              <a href="/static/vae_livret_2.pdf" target="_blank" rel="noopener">téléchargez le Livret 2 en cliquant ici</a>.
+              <p class="vae-step-action" style="margin:8px 0 0 0;">
+                <a class="btn" href="/static/vae_livret_2.pdf" target="_blank" rel="noopener" style="background:#2563eb;border-color:#2563eb;color:#fff;">
+                  📥 Télécharger le Livret 2 à compléter
+                </a>
+              </p>
             </li>
             <li>
               <strong>Renvoyer le Livret 2 :</strong> envoyez le dossier 2 par courrier postal, accompagné de toutes les pièces justificatives, à
@@ -1491,12 +1495,6 @@ id="upload_{{ d.key }}"
               {% endfor %}
             </ul>
           {% endif %}
-        {% elif vae_current_step == 4 and vae_done_until < 4 %}
-          <p class="vae-step-action">
-            <a class="btn" href="/static/vae_livret_2.pdf" target="_blank" rel="noopener" style="background:#2563eb;border-color:#2563eb;color:#fff;">
-              📥 Télécharger le Livret 2 A COMPLETER
-            </a>
-          </p>
         {% endif %}
       </div>
 
