@@ -5115,6 +5115,30 @@ def api_admin_push_config():
     })
 
 
+@app.get("/api/admin/aurillac-note")
+@admin_login_required
+def api_admin_aurillac_note_get():
+    data = load_data()
+    note = str((data.get("admin") or {}).get("aurillac_note") or "")
+    return jsonify({"ok": True, "note": note})
+
+
+@app.post("/api/admin/aurillac-note")
+@admin_login_required
+@admin_write_required
+def api_admin_aurillac_note_save():
+    payload = request.get_json(silent=True) or {}
+    note = str(payload.get("note") or "")
+    data = load_data()
+    admin = data.get("admin")
+    if not isinstance(admin, dict):
+        admin = {}
+        data["admin"] = admin
+    admin["aurillac_note"] = note
+    save_data(data)
+    return jsonify({"ok": True, "note": note})
+
+
 @app.post("/api/admin/push/subscribe")
 @admin_login_required
 @admin_write_required
