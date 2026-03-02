@@ -307,6 +307,7 @@
 
   <div style="display:flex;gap:10px;flex-wrap:wrap;">
     <a class="btn btn-blue" id="btnDracar" href="https://espace-usagers.cnaps.interieur.gouv.fr/usager/app/accueil" target="_blank" rel="noopener noreferrer">DRACAR</a>
+    <button class="btn btn-outline" id="btnAurillac">AURILLAC</button>
     <a class="btn btn-primary" href="{{ url_for('admin_secretariat') }}">Gestion secrétariat</a>
     {% if not is_read_only %}
       <button class="btn btn-outline" id="btnOpenVtcCheck">Check VTC théorie</button>
@@ -774,6 +775,28 @@
   </div>
 </div>
 
+<!-- MODALE AURILLAC -->
+<div class="modal-backdrop" id="aurillacModal" aria-hidden="true">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-head">
+      <div class="modal-title">AURILLAC</div>
+      <button class="icon-btn" data-close-modal="aurillacModal">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <label>
+        <div class="label">Texte</div>
+        <textarea id="aurillacNoteInput" rows="10" placeholder="Écris ici…" style="width:100%;"></textarea>
+      </label>
+      <div class="muted" id="aurillacStatus" style="margin-top:8px;">Chargement…</div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn" data-close-modal="aurillacModal">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODALE CHECK VTC -->
 <div class="modal-backdrop" id="vtcCheckModal" aria-hidden="true">
   <div class="modal">
@@ -805,6 +828,94 @@
 
 <script>
   const availableSessionsForCreate = {{ sessions|tojson }};
+  const aurillacState = {
+    loaded: false,
+    loading: false,
+    saving: false,
+    saveTimer: null,
+    lastSavedValue: "",
+  };
+
+  function setAurillacStatus(message, isError){
+    const status = document.getElementById("aurillacStatus");
+    if(!status) return;
+    status.textContent = message || "";
+    status.style.color = isError ? "#b91c1c" : "";
+  }
+
+  async function loadAurillacNote(){
+    if(aurillacState.loaded || aurillacState.loading) return;
+    aurillacState.loading = true;
+    setAurillacStatus("Chargement…");
+    try{
+      const r = await fetch("/api/admin/aurillac-note");
+      const res = await r.json();
+      if(!r.ok || !res.ok){
+        setAurillacStatus("Impossible de charger la note.", true);
+        return;
+      }
+      const value = String(res.note || "");
+      const input = document.getElementById("aurillacNoteInput");
+      if(input) input.value = value;
+      aurillacState.lastSavedValue = value;
+      aurillacState.loaded = true;
+      setAurillacStatus("Saisie enregistrée automatiquement.");
+    }catch(e){
+      setAurillacStatus("Erreur réseau pendant le chargement.", true);
+    }finally{
+      aurillacState.loading = false;
+    }
+  }
+
+  async function saveAurillacNote(){
+    const input = document.getElementById("aurillacNoteInput");
+    if(!input) return;
+    const value = input.value || "";
+    if(value === aurillacState.lastSavedValue || aurillacState.saving) return;
+    aurillacState.saving = true;
+    setAurillacStatus("Enregistrement…");
+    try{
+      const r = await fetch("/api/admin/aurillac-note", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ note: value }),
+      });
+      const res = await r.json();
+      if(!r.ok || !res.ok){
+        setAurillacStatus("Échec de l'enregistrement.", true);
+        return;
+      }
+      aurillacState.lastSavedValue = String(res.note || "");
+      setAurillacStatus("Enregistré automatiquement ✅");
+    }catch(e){
+      setAurillacStatus("Erreur réseau pendant l'enregistrement.", true);
+    }finally{
+      aurillacState.saving = false;
+    }
+  }
+
+  function scheduleAurillacSave(){
+    if(aurillacState.saveTimer){
+      clearTimeout(aurillacState.saveTimer);
+    }
+    aurillacState.saveTimer = setTimeout(()=>{
+      saveAurillacNote();
+    }, 500);
+  }
+
+  document.getElementById("btnAurillac")?.addEventListener("click", async ()=>{
+    openModal("aurillacModal");
+    await loadAurillacNote();
+  });
+
+  document.getElementById("aurillacNoteInput")?.addEventListener("input", ()=>{
+    setAurillacStatus("Modification en cours…");
+    scheduleAurillacSave();
+  });
+
+  document.getElementById("aurillacNoteInput")?.addEventListener("blur", ()=>{
+    saveAurillacNote();
+  });
 
   function normalizeTrainingChoice(value){
     const v = (value || "").trim().toUpperCase();
