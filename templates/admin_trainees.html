@@ -157,6 +157,8 @@
 
     <tbody>
       {% for t in trainees %}
+{% set vtc_book_address_complete = (t.address or "")|trim and (t.zip_code or "")|trim and (t.city or "")|trim %}
+{% set vtc_book_pending_ready = is_vtc and (not (t.vtc_book_sent_at or "")|trim) and vtc_book_address_complete %}
 <tr class="row {% if t.comment %}row-warning{% endif %}"
     data-trainee-id="{{ t.id }}"
     data-last-name="{{ t.last_name or '' }}"
@@ -294,7 +296,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         {% if is_vtc %}
         <td>{{ "🟢" if t.exam_fees_paid else "🔴" }}</td>
         <td>{{ "🟢" if (t.elearning_link or "")|trim else "🔴" }}</td>
-        <td>{{ "🟢" if (t.vtc_book_sent_at or "")|trim else "🔴" }}</td>
+        <td><span class="{% if vtc_book_pending_ready %}blink-alert{% endif %}">{{ "🟢" if (t.vtc_book_sent_at or "")|trim else "🔴" }}</span></td>
         <td title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">
           {% if t.vtc_theory_result == "non_admissible" %}
             <span title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">🔴</span>
@@ -667,6 +669,19 @@ tr.row-todo td{
 .badge-doc.miss{
   border-color:#fecaca;
   background:#fff1f2;
+}
+
+.blink-alert{
+  display:inline-block;
+  animation: blink-alert 1s steps(2, start) infinite;
+}
+
+@keyframes blink-alert{
+  to { opacity: .2; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .blink-alert{ animation: none; }
 }
 
 #traineesTable .vae-status-select.status-pill{
