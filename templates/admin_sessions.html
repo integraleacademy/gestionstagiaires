@@ -851,7 +851,9 @@
       </div>
 
       <div class="vtc-check-upload">
-        <input id="vtcCheckFile" type="file" accept="application/pdf,.pdf,.xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+        <input id="vtcCheckFile" class="cnaps-file-input" type="file" accept="application/pdf,.pdf,.xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+        <label for="vtcCheckFile" class="cnaps-file-btn">Sélect. fichiers</label>
+        <span id="vtcCheckFileText" class="cnaps-file-text">Aucun fichier choisi</span>
         <button class="btn btn-primary" id="btnVtcCheckImport">IMPORTER</button>
       </div>
 
@@ -1979,11 +1981,13 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
     const list = document.getElementById("vtcCheckList");
     const notifyBtn = document.getElementById("btnVtcCheckNotify");
     const fileInput = document.getElementById("vtcCheckFile");
+    const fileText = document.getElementById("vtcCheckFileText");
     const modalTitle = document.getElementById("vtcCheckModalTitle");
     if(status) status.textContent = "";
     if(list) list.innerHTML = "";
     if(notifyBtn) notifyBtn.style.display = "none";
     if(fileInput) fileInput.value = "";
+    if(fileText) fileText.textContent = "Aucun fichier choisi";
     if(modalTitle) modalTitle.textContent = mode === "practice" ? "Check VTC pratique" : "Check VTC théorie";
     openModal("vtcCheckModal");
   }
@@ -1994,6 +1998,15 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
 
   document.getElementById("btnOpenVtcPracticeCheck")?.addEventListener("click", ()=>{
     resetVtcCheckModal("practice");
+  });
+
+  document.getElementById("vtcCheckFile")?.addEventListener("change", (e)=>{
+    const fileText = document.getElementById("vtcCheckFileText");
+    const count = e.target?.files?.length || 0;
+    if(!fileText) return;
+    fileText.textContent = count
+      ? `${count} fichier${count > 1 ? "s" : ""} sélectionné${count > 1 ? "s" : ""}`
+      : "Aucun fichier choisi";
   });
 
   document.getElementById("btnVtcCheckImport")?.addEventListener("click", async ()=>{
