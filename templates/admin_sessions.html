@@ -2303,6 +2303,17 @@ Le document sera associé automatiquement si ce stagiaire est ajouté plus tard.
 
       const matches = res.matches || [];
       const unmatched = res.unmatched || [];
+      const alreadyImportedCount = matches.filter(item => !!item.already_merged).length;
+
+      if(alreadyImportedCount > 0){
+        const shouldContinueImport = window.confirm("Vous avez déjà importé ce document. Souhaitez vous l'importer quand même ?");
+        if(!shouldContinueImport){
+          if(status) status.textContent = "Import annulé.";
+          if(results) results.innerHTML = "";
+          return;
+        }
+      }
+
       if(status) status.textContent = `${matches.length} fichier(s) analysé(s) avec PRE détecté(s).`;
 
       renderCnapsImportResults(matches, unmatched, files);
