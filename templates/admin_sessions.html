@@ -654,6 +654,8 @@
     </div>
 
     <div class="modal-foot">
+      <button class="btn btn-orange" id="btnImportTraineeInfosFromSessions" type="button" style="margin-right:auto;">Importer infos</button>
+      <input id="importTraineeInfosFromSessionsInput" type="file" accept="image/*" style="display:none;">
       <button class="btn" data-close-modal="createTraineeFromSessionsModal">Annuler</button>
       <button class="btn btn-primary" id="btnCreateTraineeFromSessions">Sauvegarder</button>
     </div>
@@ -1011,9 +1013,31 @@
     const b1 = document.getElementById("btnCreateTraineeFromSessions");
     const b2 = document.getElementById("btnCreateFromSessionsNoSend");
     const b3 = document.getElementById("btnCreateFromSessionsAndSend");
+    const b4 = document.getElementById("btnImportTraineeInfosFromSessions");
     if(b1) b1.disabled = disabled;
     if(b2) b2.disabled = disabled;
     if(b3) b3.disabled = disabled;
+    if(b4) b4.disabled = disabled;
+  }
+
+  function applyImportedTraineeFieldsFromSessions(fields){
+    if(!fields || typeof fields !== "object") return;
+    const map = {
+      last_name: "sessionTLastName",
+      first_name: "sessionTFirstName",
+      birth_date: "sessionTBirthDate",
+      birth_city: "sessionTBirthPlace",
+      email: "sessionTEmail",
+      phone: "sessionTPhone",
+      address: "sessionTAddress",
+      zip_code: "sessionTZipCode",
+      city: "sessionTCity"
+    };
+    Object.entries(map).forEach(([key, inputId])=>{
+      const el = document.getElementById(inputId);
+      const value = (fields[key] || "").toString().trim();
+      if(el && value) el.value = value;
+    });
   }
 
   async function createTraineeFromSessions(send_access){
@@ -1145,6 +1169,48 @@
   document.getElementById("btnCreateFromSessionsAndSend")?.addEventListener("click", async ()=>{
     if(!await window.confirmMailSmsSend?.()) return;
     await createTraineeFromSessions(true);
+  });
+
+  const importFromSessionsBtn = document.getElementById("btnImportTraineeInfosFromSessions");
+  const importFromSessionsInput = document.getElementById("importTraineeInfosFromSessionsInput");
+
+  importFromSessionsBtn?.addEventListener("click", ()=>{
+    if(importFromSessionsInput) importFromSessionsInput.click();
+  });
+
+  importFromSessionsInput?.addEventListener("change", async ()=>{
+    const file = importFromSessionsInput.files?.[0];
+    if(!file) return;
+
+    const fd = new FormData();
+    fd.append("file", file);
+
+    const originalLabel = importFromSessionsBtn?.textContent || "Importer infos";
+    if(importFromSessionsBtn){
+      importFromSessionsBtn.disabled = true;
+      importFromSessionsBtn.textContent = "Import en cours...";
+    }
+
+    try{
+      const r = await fetch("/api/trainees/import_from_image", {
+        method: "POST",
+        body: fd
+      });
+      const res = await r.json();
+      if(!r.ok || !res?.ok){
+        alert("Impossible d'importer les infos depuis l'image.");
+        return;
+      }
+      applyImportedTraineeFieldsFromSessions(res.fields || {});
+    }catch(e){
+      alert("Erreur réseau pendant l'import.");
+    }finally{
+      if(importFromSessionsBtn){
+        importFromSessionsBtn.disabled = false;
+        importFromSessionsBtn.textContent = originalLabel;
+      }
+      importFromSessionsInput.value = "";
+    }
   });
 
   function toggleExamFields(){

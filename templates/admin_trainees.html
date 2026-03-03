@@ -491,6 +491,8 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
     </div>
 
     <div class="modal-foot">
+      <button class="btn btn-orange" id="btnImportTraineeInfos" type="button" style="margin-right:auto;">Importer infos</button>
+      <input id="importTraineeInfosInput" type="file" accept="image/*" style="display:none;">
       <button class="btn" data-close-modal="createTraineeModal">Annuler</button>
       <button class="btn btn-primary" id="btnCreateTrainee">Sauvegarder</button>
     </div>
@@ -1372,9 +1374,31 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     const b1 = document.getElementById("btnCreateTrainee");
     const b2 = document.getElementById("btnCreateNoSend");
     const b3 = document.getElementById("btnCreateAndSend");
+    const b4 = document.getElementById("btnImportTraineeInfos");
     if(b1) b1.disabled = disabled;
     if(b2) b2.disabled = disabled;
     if(b3) b3.disabled = disabled;
+    if(b4) b4.disabled = disabled;
+  }
+
+  function applyImportedTraineeFields(fields){
+    if(!fields || typeof fields !== "object") return;
+    const map = {
+      last_name: "tLastName",
+      first_name: "tFirstName",
+      birth_date: "tBirthDate",
+      birth_city: "tBirthPlace",
+      email: "tEmail",
+      phone: "tPhone",
+      address: "tAddress",
+      zip_code: "tZipCode",
+      city: "tCity"
+    };
+    Object.entries(map).forEach(([key, inputId])=>{
+      const el = document.getElementById(inputId);
+      const value = (fields[key] || "").toString().trim();
+      if(el && value) el.value = value;
+    });
   }
 
   async function createTrainee(send_access){
@@ -1473,6 +1497,48 @@ document.querySelectorAll("select.sel").forEach(sel=>{
   document.getElementById("btnCreateAndSend")?.addEventListener("click", async ()=>{
     if(!await window.confirmMailSmsSend?.()) return;
     await createTrainee(true);
+  });
+
+  const importBtn = document.getElementById("btnImportTraineeInfos");
+  const importInput = document.getElementById("importTraineeInfosInput");
+
+  importBtn?.addEventListener("click", ()=>{
+    if(importInput) importInput.click();
+  });
+
+  importInput?.addEventListener("change", async ()=>{
+    const file = importInput.files?.[0];
+    if(!file) return;
+
+    const fd = new FormData();
+    fd.append("file", file);
+
+    const originalLabel = importBtn?.textContent || "Importer infos";
+    if(importBtn){
+      importBtn.disabled = true;
+      importBtn.textContent = "Import en cours...";
+    }
+
+    try{
+      const r = await fetch("/api/trainees/import_from_image", {
+        method: "POST",
+        body: fd
+      });
+      const res = await r.json();
+      if(!r.ok || !res?.ok){
+        alert("Impossible d'importer les infos depuis l'image.");
+        return;
+      }
+      applyImportedTraineeFields(res.fields || {});
+    }catch(e){
+      alert("Erreur réseau pendant l'import.");
+    }finally{
+      if(importBtn){
+        importBtn.disabled = false;
+        importBtn.textContent = originalLabel;
+      }
+      importInput.value = "";
+    }
   });
 
   // =========================
