@@ -243,9 +243,12 @@ DATA_FILE = os.path.join(PERSIST_DIR, "data.json")
 
 BACKUP_DIR = os.path.join(PERSIST_DIR, "backups")
 os.makedirs(BACKUP_DIR, exist_ok=True)
+TRASH_DIR = os.path.join(PERSIST_DIR, "trash")
+os.makedirs(TRASH_DIR, exist_ok=True)
 BACKUP_RETENTION = int(os.environ.get("BACKUP_RETENTION", "120"))
 BACKUP_MIN_INTERVAL_SECONDS = int(os.environ.get("BACKUP_MIN_INTERVAL_SECONDS", "300"))
 AUTO_RESTORE_FROM_BACKUP = (os.environ.get("AUTO_RESTORE_FROM_BACKUP", "1") or "").strip().lower() in {"1", "true", "yes", "on"}
+BACKUP_SNAPSHOT_BEFORE_SAVE = (os.environ.get("BACKUP_SNAPSHOT_BEFORE_SAVE", "1") or "").strip().lower() in {"1", "true", "yes", "on"}
 
 _data_lock = threading.RLock()
 _last_backup_times: Dict[str, float] = {}
@@ -295,6 +298,11 @@ def _write_json_with_backups(path: str, payload: Dict[str, Any], lock: threading
         base_name = os.path.basename(path)
         prefix = base_name.replace(".", "_")
 
+        # Snapshot systématique avant écriture pour éviter toute fenêtre de perte
+        # de données entre deux backups périodiques.
+        if BACKUP_SNAPSHOT_BEFORE_SAVE:
+            _force_backup_snapshot(path)
+
         if os.path.exists(path):
             last = _last_backup_times.get(path, 0)
             if now_ts - last >= BACKUP_MIN_INTERVAL_SECONDS:
@@ -320,6 +328,33 @@ def _write_json_with_backups(path: str, payload: Dict[str, Any], lock: threading
                 os.fsync(dir_fd)
             finally:
                 os.close(dir_fd)
+        except Exception:
+            pass
+
+
+def _safe_remove_file(path: str) -> None:
+    """Déplace le fichier vers la corbeille interne avant suppression logique."""
+    if not path:
+        return
+    if not os.path.exists(path) or not os.path.isfile(path):
+        return
+
+    stamp = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    parent_hint = os.path.basename(os.path.dirname(path) or "root")
+    base_name = os.path.basename(path)
+    target_name = f"{stamp}_{parent_hint}_{base_name}"
+    target_path = os.path.join(TRASH_DIR, target_name)
+
+    if os.path.exists(target_path):
+        unique = uuid.uuid4().hex[:8]
+        target_path = os.path.join(TRASH_DIR, f"{stamp}_{parent_hint}_{unique}_{base_name}")
+
+    try:
+        os.replace(path, target_path)
+    except Exception:
+        # Dernier recours : suppression classique si le move échoue.
+        try:
+            os.remove(path)
         except Exception:
             pass
 
@@ -8432,7 +8467,7 @@ def admin_delete_doc_file(session_id: str, trainee_id: str, doc_key: str):
         try:
             fp = _detokenize_path(tok)
             if os.path.exists(fp):
-                os.remove(fp)
+                _safe_remove_file(fp)
         except Exception:
             pass
 
@@ -10405,7 +10440,7 @@ def admin_delete_deliverable(session_id: str, trainee_id: str, kind: str):
         try:
             fp = _detokenize_path(token)
             if os.path.exists(fp):
-                os.remove(fp)
+                _safe_remove_file(fp)
         except Exception:
             pass
 
@@ -14047,7 +14082,7 @@ def api_vae_experience_doc_delete(dossier_id: str, doc_id: str):
         try:
             fp = _detokenize_path(token)
             if os.path.exists(fp):
-                os.remove(fp)
+                _safe_remove_file(fp)
         except Exception:
             pass
 
