@@ -698,6 +698,126 @@ def normalize_first_name(value: str) -> str:
     return lowered.title()
 
 
+def _ocr_extract_text_from_image(file_bytes: bytes, filename: str, content_type: str = "") -> str:
+    api_key = (os.environ.get("OCR_SPACE_API_KEY") or "helloworld").strip()
+    if not file_bytes:
+        return ""
+
+    files = {
+        "file": (filename or "upload.png", file_bytes, content_type or "application/octet-stream")
+    }
+    payload = {
+        "language": "fre",
+        "isOverlayRequired": "false",
+        "OCREngine": "2",
+        "scale": "true",
+    }
+    try:
+        response = requests.post(
+            "https://api.ocr.space/parse/image",
+            data=payload,
+            files=files,
+            headers={"apikey": api_key},
+            timeout=30,
+        )
+        data = response.json()
+    except Exception:
+        return ""
+
+    parsed_results = data.get("ParsedResults") or []
+    if not isinstance(parsed_results, list):
+        return ""
+
+    chunks: List[str] = []
+    for item in parsed_results:
+        if not isinstance(item, dict):
+            continue
+        text = (item.get("ParsedText") or "").strip()
+        if text:
+            chunks.append(text)
+    return "\n".join(chunks).strip()
+
+
+def _extract_trainee_fields_from_ocr_text(raw_text: str) -> Dict[str, str]:
+    text = (raw_text or "").replace("\r", "\n")
+    text = re.sub(r"[ \t]+", " ", text)
+    lines = [line.strip() for line in text.split("\n") if line.strip()]
+
+    def _value_after_label(label_regex: str) -> str:
+        pattern = re.compile(label_regex, flags=re.IGNORECASE)
+        for idx, line in enumerate(lines):
+            if pattern.search(line):
+                suffix = pattern.sub("", line).strip(" :\t")
+                if suffix:
+                    return suffix
+                if idx + 1 < len(lines):
+                    return lines[idx + 1].strip()
+        return ""
+
+    def _find_phone() -> str:
+        m = re.search(r"(?:\+33|0)\s*[1-9](?:[\s\.-]*\d{2}){4}", text)
+        if not m:
+            return ""
+        return normalize_phone_fr(m.group(0))
+
+    def _parse_birth_date_to_iso(value: str) -> str:
+        v = (value or "").strip()
+        if not v:
+            return ""
+        for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d"):
+            try:
+                return datetime.datetime.strptime(v, fmt).strftime("%Y-%m-%d")
+            except Exception:
+                pass
+        return ""
+
+    birth_date_raw = _value_after_label(r"date\s+de\s+naissance")
+    address_raw = _value_after_label(r"adresse\s+postale|adresse")
+
+    first_name = ""
+    last_name = ""
+    for line in lines:
+        clean = re.sub(r"\s+", " ", line).strip()
+        upper = clean.upper()
+        if upper in {
+            "INFORMATIONS BIOGRAPHIQUES",
+            "COORDONNÉES",
+            "COORDONNEES",
+            "CIVILITÉ",
+            "CIVILITE",
+        }:
+            continue
+        if any(token in upper for token in ("DATE DE NAISSANCE", "LIEU DE NAISSANCE", "ADRESSE", "COURRIEL", "TÉLÉPHONE", "TELEPHONE")):
+            continue
+        parts = [p for p in clean.split(" ") if p]
+        if len(parts) >= 2 and all(len(p) >= 2 for p in parts[:2]):
+            first_name = normalize_first_name(parts[0])
+            last_name = normalize_last_name(" ".join(parts[1:]))
+            break
+
+    zip_code = ""
+    city = ""
+    if address_raw:
+        compact = re.sub(r"\s+", " ", address_raw).strip()
+        m_zip_city = re.search(r"\b(\d{5})\b\s+([A-Za-zÀ-ÿ\- ]+)$", compact)
+        if m_zip_city:
+            zip_code = m_zip_city.group(1)
+            city = normalize_first_name(m_zip_city.group(2).strip())
+
+    mail_match = re.search(r"[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}", text, flags=re.IGNORECASE)
+    return {
+        "last_name": last_name,
+        "first_name": first_name,
+        "birth_date": _parse_birth_date_to_iso(birth_date_raw),
+        "birth_city": _value_after_label(r"lieu\s+de\s+naissance"),
+        "email": (mail_match.group(0).strip() if mail_match else ""),
+        "phone": _find_phone(),
+        "address": address_raw,
+        "zip_code": zip_code,
+        "city": city,
+    }
+
+
 
 import base64
 
@@ -6883,6 +7003,32 @@ def api_create_trainee(session_id: str):
         "public_link": link,
         "summary_url": url_for("admin_trainee_summary", session_id=session_id, trainee_id=trainee_id)
     })
+
+
+@app.post("/api/trainees/import_from_image")
+@admin_login_required
+@admin_write_required
+def api_import_trainee_from_image():
+    f = request.files.get("file")
+    if not f:
+        return jsonify({"ok": False, "error": "missing_file"}), 400
+
+    filename = (f.filename or "import.png").strip()
+    lower = filename.lower()
+    allowed = (".png", ".jpg", ".jpeg", ".webp", ".bmp")
+    if not lower.endswith(allowed):
+        return jsonify({"ok": False, "error": "invalid_file_type"}), 400
+
+    file_bytes = f.read()
+    if not file_bytes:
+        return jsonify({"ok": False, "error": "empty_file"}), 400
+
+    text = _ocr_extract_text_from_image(file_bytes, filename, f.mimetype or "")
+    if not text:
+        return jsonify({"ok": False, "error": "ocr_failed"}), 422
+
+    extracted = _extract_trainee_fields_from_ocr_text(text)
+    return jsonify({"ok": True, "fields": extracted})
 
 
 
