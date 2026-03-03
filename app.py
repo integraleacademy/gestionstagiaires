@@ -3,6 +3,7 @@ import json
 import uuid
 import re
 import zlib
+import hashlib
 import datetime
 import html
 import unicodedata
@@ -4133,6 +4134,106 @@ def _find_cnaps_trainee_match_in_text(
 
     return candidates[0]
 
+
+def _cnaps_pending_imports(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    pending = data.get("cnaps_pending_imports")
+    if not isinstance(pending, list):
+        pending = []
+        data["cnaps_pending_imports"] = pending
+    return pending
+
+
+def _store_cnaps_pending_pdf(file_bytes: bytes, original_filename: str) -> str:
+    target_dir = os.path.join(UPLOADS_DIR, "cnaps_pending")
+    os.makedirs(target_dir, exist_ok=True)
+
+    ext = _safe_ext(original_filename or "") or ".pdf"
+    if ext != ".pdf":
+        ext = ".pdf"
+
+    filename = f"{uuid.uuid4().hex[:10]}{ext}"
+    full_path = os.path.join(target_dir, filename)
+    with open(full_path, "wb") as f:
+        f.write(file_bytes or b"")
+    return _tokenize_path(full_path)
+
+
+def _attach_cnaps_to_trainee(
+    trainee: Dict[str, Any],
+    training_type: str,
+    pre_number: str,
+    file_token: str,
+    history_label: str,
+) -> None:
+    ensure_documents_schema_for_trainee(trainee, training_type)
+
+    trainee["pre_number"] = pre_number
+
+    docs = trainee.get("documents") or []
+    cnaps_doc = next((d for d in docs if d.get("key") == "cnaps_doc"), None)
+    if not cnaps_doc:
+        cnaps_doc = {
+            "key": "cnaps_doc",
+            "label": "Autorisation CNAPS ou Carte professionnelle CNAPS (en cours de validité)",
+            "accept": "application/pdf",
+            "file": "",
+            "files": [],
+            "status": "NON DÉPOSÉ",
+            "comment": "",
+        }
+        docs.append(cnaps_doc)
+        trainee["documents"] = docs
+
+    cnaps_doc["files"] = [file_token]
+    cnaps_doc["file"] = file_token
+    cnaps_doc["status"] = "A CONTRÔLER"
+
+    trainee["updated_at"] = _now_iso()
+    trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, training_type) else "incomplete"
+    append_trainee_history_event(trainee, history_label, f"PRE/CAR : {pre_number}", "action")
+
+
+def _apply_pending_cnaps_imports_for_trainee(data: Dict[str, Any], session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> int:
+    pending = _cnaps_pending_imports(data)
+    if not pending:
+        return 0
+
+    trainee_last = _normalize_person_name(trainee.get("last_name", ""))
+    trainee_first = _normalize_person_name(trainee.get("first_name", ""))
+    if not trainee_last or not trainee_first:
+        return 0
+
+    applied = 0
+    remaining = []
+    for item in pending:
+        item_last = _normalize_person_name(item.get("last_name", ""))
+        item_first = _normalize_person_name(item.get("first_name", ""))
+        same_order = (item_last == trainee_last and item_first == trainee_first)
+        swapped_order = (item_last == trainee_first and item_first == trainee_last)
+        if not (same_order or swapped_order):
+            remaining.append(item)
+            continue
+
+        pre_number = _normalize_pre_car(item.get("pre_number", ""))
+        file_token = (item.get("file_token") or "").strip()
+        if not file_token or not _is_valid_pre_car(pre_number):
+            remaining.append(item)
+            continue
+
+        _attach_cnaps_to_trainee(
+            trainee,
+            _session_get(session_obj, "training_type", ""),
+            pre_number,
+            file_token,
+            "Import PRE CNAPS auto-associé",
+        )
+        trainee["cnaps_import_merged_once"] = True
+        trainee["cnaps_import_merged_at"] = _now_iso()
+        applied += 1
+
+    data["cnaps_pending_imports"] = remaining
+    return applied
+
 def infos_is_complete(t: Dict[str, Any]) -> bool:
     # Champs obligatoires
     required = [
@@ -6766,6 +6867,9 @@ def api_create_trainee(session_id: str):
 
     trainees = _session_trainees_list(s)
     trainees.insert(0, t)
+
+    _apply_pending_cnaps_imports_for_trainee(data, s, t)
+
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     save_data(data)
@@ -11400,14 +11504,22 @@ def api_cnaps_import_pre():
         if not entry:
             entry = _find_cnaps_trainee_match_in_text(trainees_by_last_name, combined_text, first_name)
         if not entry:
-            unmatched.append({
+            matches.append({
+                "source_index": file_index,
                 "file_name": name,
-                "reason": "not_found",
-                "extracted": {
-                    "last_name": last_name,
-                    "first_name": first_name,
-                    "pre_number": pre_number,
+                "last_name": last_name,
+                "first_name": first_name,
+                "pre_number": pre_number,
+                "formation": "",
+                "training_dates": {
+                    "start": "",
+                    "end": "",
                 },
+                "session_id": "",
+                "trainee_id": "",
+                "match_found": False,
+                "already_merged": False,
+                "already_saved": False,
             })
             continue
 
@@ -11426,7 +11538,9 @@ def api_cnaps_import_pre():
             },
             "session_id": session_obj.get("id"),
             "trainee_id": trainee.get("id"),
+            "match_found": True,
             "already_merged": bool(trainee.get("cnaps_import_merged_once")),
+            "already_saved": False,
         })
 
     return jsonify({
@@ -11468,47 +11582,67 @@ def api_cnaps_import_pre_merge():
         return jsonify({"ok": False, "error": "trainee_not_found"}), 404
 
     training_type = _session_get(s, "training_type", "")
-    ensure_documents_schema_for_trainee(t, training_type)
-
-    t["pre_number"] = pre_number
-
     stored = _store_file(session_id, trainee_id, "documents", uploaded)
     token = _tokenize_path(stored)
 
-    docs = t.get("documents") or []
-    cnaps_doc = None
-    for d in docs:
-        if d.get("key") == "cnaps_doc":
-            cnaps_doc = d
-            break
-    if not cnaps_doc:
-        cnaps_doc = {
-            "key": "cnaps_doc",
-            "label": "Autorisation CNAPS ou Carte professionnelle CNAPS (en cours de validité)",
-            "accept": "application/pdf",
-            "file": "",
-            "files": [],
-            "status": "NON DÉPOSÉ",
-            "comment": "",
-        }
-        docs.append(cnaps_doc)
-        t["documents"] = docs
-
-    cnaps_doc["files"] = [token]
-    cnaps_doc["file"] = token
-    cnaps_doc["status"] = "A CONTRÔLER"
-
+    _attach_cnaps_to_trainee(t, training_type, pre_number, token, "Import PRE CNAPS fusionné")
     t["cnaps_import_merged_once"] = True
     t["cnaps_import_merged_at"] = _now_iso()
-    t["updated_at"] = _now_iso()
-    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
-    append_trainee_history_event(t, "Import PRE CNAPS fusionné", f"PRE/CAR : {pre_number}", "action")
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     save_data(data)
 
     return jsonify({"ok": True, "pre_number": pre_number})
+
+
+@app.post("/api/cnaps/import-pre/save")
+@admin_login_required
+@admin_write_required
+def api_cnaps_import_pre_save():
+    pre_raw = (request.form.get("pre_number") or "").strip()
+    last_name = _normalize_person_name(request.form.get("last_name") or "")
+    first_name = _normalize_person_name(request.form.get("first_name") or "")
+    uploaded = request.files.get("file")
+
+    if not uploaded or not uploaded.filename:
+        return jsonify({"ok": False, "error": "missing_file"}), 400
+    if not (uploaded.filename or "").lower().endswith(".pdf"):
+        return jsonify({"ok": False, "error": "invalid_file"}), 400
+
+    pre_number = _normalize_pre_car(pre_raw)
+    if not _is_valid_pre_car(pre_number):
+        return jsonify({"ok": False, "error": "invalid_pre"}), 400
+
+    if not last_name or not first_name:
+        return jsonify({"ok": False, "error": "missing_name"}), 400
+
+    data = load_data()
+    pending = _cnaps_pending_imports(data)
+
+    file_bytes = uploaded.read() or b""
+    if not file_bytes:
+        return jsonify({"ok": False, "error": "empty_file"}), 400
+
+    digest = hashlib.sha1(file_bytes).hexdigest()
+    duplicate = next((x for x in pending if (x.get("sha1") or "") == digest), None)
+    if duplicate:
+        return jsonify({"ok": True, "saved": True, "already_saved": True})
+
+    token = _store_cnaps_pending_pdf(file_bytes, uploaded.filename or "document.pdf")
+    pending.append({
+        "id": "CPN-" + uuid.uuid4().hex[:10].upper(),
+        "last_name": last_name,
+        "first_name": first_name,
+        "pre_number": pre_number,
+        "file_name": (uploaded.filename or "document.pdf").strip() or "document.pdf",
+        "file_token": token,
+        "sha1": digest,
+        "created_at": _now_iso(),
+    })
+    save_data(data)
+
+    return jsonify({"ok": True, "saved": True, "already_saved": False})
 
 
 @app.get("/admin/sessions/archived")

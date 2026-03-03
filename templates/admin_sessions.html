@@ -2055,18 +2055,22 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
     }
 
     const matchHtml = matches.map((item, idx) => {
+      const matchFound = item.match_found !== false;
       const alreadyMerged = !!item.already_merged;
-      const buttonLabel = alreadyMerged ? "Fusionné" : "Fusionner";
+      const alreadySaved = !!item.already_saved;
+      const buttonLabel = matchFound ? (alreadyMerged ? "Fusionné" : "Fusionner") : (alreadySaved ? "Enregistré" : "Enregistrer");
+      const buttonClass = matchFound ? "btn btn-primary cnaps-merge-btn" : "btn btn-outline cnaps-save-btn";
+      const buttonDisabled = matchFound ? alreadyMerged : alreadySaved;
       return `
         <div class="cnaps-item" style="display:flex;">
           <div class="cnaps-item-main">
             <strong>${escapeHtml((item.last_name || "").toUpperCase())} ${escapeHtml(item.first_name || "")}</strong>
             <span>PRE: ${escapeHtml(item.pre_number || "—")}</span><br>
             <span>Dates de formation: ${escapeHtml(item.training_dates?.start || "—")} → ${escapeHtml(item.training_dates?.end || "—")}</span><br>
-            <span>Formation: ${escapeHtml(item.formation || "—")}</span>
+            <span>Formation: ${escapeHtml(item.formation || (matchFound ? "—" : "Stagiaire introuvable pour le moment"))}</span>
           </div>
           <div class="cnaps-item-actions">
-            <button type="button" class="btn btn-primary cnaps-merge-btn" data-match-index="${idx}" ${alreadyMerged ? "disabled" : ""}>${buttonLabel}</button>
+            <button type="button" class="${buttonClass}" data-match-index="${idx}" ${buttonDisabled ? "disabled" : ""}>${buttonLabel}</button>
           </div>
         </div>
       `;
@@ -2080,7 +2084,9 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
         const item = matches[matchIndex];
         if(!item || item.already_merged) return;
 
-        const ok = window.confirm(`Confirmer la fusion pour ${item.first_name || ""} ${(item.last_name || "").toUpperCase()} ?\n\nCela va écraser le PRE/CAR et le document CNAPS existants.`);
+        const ok = window.confirm(`Confirmer la fusion pour ${item.first_name || ""} ${(item.last_name || "").toUpperCase()} ?
+
+Cela va écraser le PRE/CAR et le document CNAPS existants.`);
         if(!ok) return;
 
         const sourceFile = findCnapsImportedFile(item, files);
@@ -2117,7 +2123,54 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
         }
       });
     });
+
+    results.querySelectorAll(".cnaps-save-btn").forEach(btn => {
+      btn.addEventListener("click", async ()=>{
+        const matchIndex = Number(btn.dataset.matchIndex);
+        const item = matches[matchIndex];
+        if(!item || item.already_saved) return;
+
+        const sourceFile = findCnapsImportedFile(item, files);
+        if(!sourceFile){
+          if(status) status.textContent = "Impossible de retrouver le PDF source pour cet enregistrement.";
+          return;
+        }
+
+        const ok = window.confirm(`Enregistrer ${item.first_name || ""} ${(item.last_name || "").toUpperCase()} en attente ?
+
+Le document sera associé automatiquement si ce stagiaire est ajouté plus tard.`);
+        if(!ok) return;
+
+        const fdSave = new FormData();
+        fdSave.append("last_name", item.last_name || "");
+        fdSave.append("first_name", item.first_name || "");
+        fdSave.append("pre_number", item.pre_number || "");
+        fdSave.append("file", sourceFile);
+
+        btn.disabled = true;
+        if(status) status.textContent = "Enregistrement en cours…";
+
+        try{
+          const rSave = await fetch("/api/cnaps/import-pre/save", { method:"POST", body: fdSave });
+          const resSave = await rSave.json();
+          if(!rSave.ok || !resSave.ok){
+            btn.disabled = false;
+            if(status) status.textContent = "Erreur pendant l'enregistrement.";
+            return;
+          }
+
+          item.already_saved = true;
+          btn.textContent = "Enregistré";
+          btn.disabled = true;
+          if(status) status.textContent = `Enregistrement effectué pour ${item.first_name || ""} ${(item.last_name || "").toUpperCase()}.`;
+        }catch(e){
+          btn.disabled = false;
+          if(status) status.textContent = "Erreur réseau pendant l'enregistrement.";
+        }
+      });
+    });
   }
+
 
   document.getElementById("btnOpenCnapsImport")?.addEventListener("click", ()=>{
     const status = document.getElementById("cnapsImportStatus");
@@ -2158,7 +2211,7 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
 
       const matches = res.matches || [];
       const unmatched = res.unmatched || [];
-      if(status) status.textContent = `${matches.length} correspondance(s) trouvée(s).`;
+      if(status) status.textContent = `${matches.length} fichier(s) analysé(s) avec PRE détecté(s).`;
 
       renderCnapsImportResults(matches, unmatched, files);
     }catch(e){
