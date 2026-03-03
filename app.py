@@ -11634,6 +11634,12 @@ def api_cnaps_import_pre():
         return jsonify({"ok": False, "error": "missing_pdf"}), 400
 
     data = load_data()
+    pending = _cnaps_pending_imports(data)
+    pending_hashes = {
+        (item.get("sha1") or "").strip().lower()
+        for item in pending
+        if (item.get("sha1") or "").strip()
+    }
     trainees_index: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
     trainees_by_last_name: Dict[str, List[Dict[str, Any]]] = {}
 
@@ -11661,6 +11667,8 @@ def api_cnaps_import_pre():
     for file_index, file in enumerate(valid_files):
         name = (file.filename or "document.pdf").strip() or "document.pdf"
         file_bytes = file.read() or b""
+        digest = hashlib.sha1(file_bytes).hexdigest() if file_bytes else ""
+        already_saved = bool(digest and digest in pending_hashes)
         text = _extract_pdf_text(file_bytes)
         alnum_haystack, _ = _build_pdf_search_haystacks(file_bytes)
         combined_text = (text or "") + "\n" + (alnum_haystack or "")
@@ -11714,7 +11722,7 @@ def api_cnaps_import_pre():
                 "trainee_id": "",
                 "match_found": False,
                 "already_merged": False,
-                "already_saved": False,
+                "already_saved": already_saved,
             })
             continue
 
@@ -11735,7 +11743,7 @@ def api_cnaps_import_pre():
             "trainee_id": trainee.get("id"),
             "match_found": True,
             "already_merged": bool(trainee.get("cnaps_import_merged_once")),
-            "already_saved": False,
+            "already_saved": already_saved,
         })
 
     return jsonify({
@@ -11868,6 +11876,45 @@ def admin_cnaps_pending_imports():
         "admin_cnaps_pending_imports.html",
         pending_items=pending_items,
     )
+
+
+@app.post("/api/cnaps/import-pre/pending/<pending_id>/delete")
+@admin_login_required
+@admin_write_required
+def api_cnaps_pending_import_delete(pending_id: str):
+    target_id = (pending_id or "").strip()
+    if not target_id:
+        return jsonify({"ok": False, "error": "missing_id"}), 400
+
+    data = load_data()
+    pending = _cnaps_pending_imports(data)
+
+    removed_item = None
+    remaining = []
+    for item in pending:
+        if not removed_item and (item.get("id") or "").strip() == target_id:
+            removed_item = item
+            continue
+        remaining.append(item)
+
+    if not removed_item:
+        return jsonify({"ok": False, "error": "not_found"}), 404
+
+    data["cnaps_pending_imports"] = remaining
+
+    removed_token = (removed_item.get("file_token") or "").strip()
+    if removed_token:
+        still_used = any((x.get("file_token") or "").strip() == removed_token for x in remaining)
+        if not still_used:
+            try:
+                file_path = _detokenize_path(removed_token)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+            except Exception:
+                pass
+
+    save_data(data)
+    return jsonify({"ok": True, "deleted": True})
 
 
 @app.get("/admin/sessions/archived")
