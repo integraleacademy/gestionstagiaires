@@ -2796,6 +2796,7 @@ def _empty_data_payload() -> Dict[str, Any]:
         "notifications_cnaps_pre_relances": [],
         "notifications_test_fr": [],
         "notifications_convention_unsigned": [],
+        "notifications_vtc_books": [],
         "notifications_admin": [],
         "admin_push_subscriptions": [],
     }
@@ -2865,6 +2866,9 @@ def load_data() -> Dict[str, Any]:
         if "notifications_convention_unsigned" not in data:
             data["notifications_convention_unsigned"] = []
             changed = True
+        if "notifications_vtc_books" not in data:
+            data["notifications_vtc_books"] = []
+            changed = True
         if "notifications_admin" not in data:
             data["notifications_admin"] = []
             changed = True
@@ -2883,6 +2887,13 @@ def load_data() -> Dict[str, Any]:
 
         if _inject_vtc_exam_results_notifications(data):
             changed = True
+
+        for session_obj in (data.get("sessions") or []):
+            if "VTC" not in ((_session_get(session_obj, "training_type", "") or "").upper()):
+                continue
+            for trainee in _session_trainees_list(session_obj):
+                if _sync_vtc_book_notification(data, session_obj, trainee):
+                    changed = True
 
         if changed:
             save_data(data)
@@ -2914,6 +2925,7 @@ def add_notification(data: Dict[str, Any], bucket: str, label: str, meta: Option
         "notifications_cnaps_pre_relances": "PRE",
         "notifications_test_fr": "TFR",
         "notifications_convention_unsigned": "CNS",
+        "notifications_vtc_books": "VTB",
         "notifications_admin": "ADM",
     }
     entry = {
@@ -2939,7 +2951,81 @@ def _notifications_bucket_key(bucket: str) -> Optional[str]:
         "cnaps_pre": "notifications_cnaps_pre_relances",
         "test_fr": "notifications_test_fr",
         "convention_unsigned": "notifications_convention_unsigned",
+        "vtc_books": "notifications_vtc_books",
     }.get(bucket)
+
+
+def _is_vtc_book_address_complete(trainee: Dict[str, Any]) -> bool:
+    return bool((trainee.get("address") or "").strip() and (trainee.get("zip_code") or "").strip() and (trainee.get("city") or "").strip())
+
+
+def _sync_vtc_book_notification(data: Dict[str, Any], session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> bool:
+    notifications = data.setdefault("notifications_vtc_books", [])
+    session_id = (session_obj.get("id") or "").strip()
+    trainee_id = (trainee.get("id") or "").strip()
+    if not session_id or not trainee_id:
+        return False
+
+    trainee_name = _format_trainee_name(trainee.get("first_name", ""), trainee.get("last_name", ""))
+    should_notify = _is_vtc_book_address_complete(trainee) and not (trainee.get("vtc_book_sent_at") or "").strip()
+    changed = False
+
+    entry = next(
+        (
+            item
+            for item in notifications
+            if (item.get("meta") or {}).get("session_id") == session_id
+            and (item.get("meta") or {}).get("trainee_id") == trainee_id
+        ),
+        None,
+    )
+
+    if should_notify:
+        if entry is None:
+            add_notification(
+                data,
+                "notifications_vtc_books",
+                f"📚 Livre à envoyer — {trainee_name}",
+                meta={
+                    "session_id": session_id,
+                    "trainee_id": trainee_id,
+                    "first_name": (trainee.get("first_name") or "").strip(),
+                    "last_name": (trainee.get("last_name") or "").strip(),
+                    "address": (trainee.get("address") or "").strip(),
+                    "zip_code": (trainee.get("zip_code") or "").strip(),
+                    "city": (trainee.get("city") or "").strip(),
+                },
+            )
+            changed = True
+        else:
+            if entry.get("done"):
+                entry["done"] = False
+                entry["done_at"] = ""
+                changed = True
+            meta = entry.setdefault("meta", {})
+            refreshed_meta = {
+                "session_id": session_id,
+                "trainee_id": trainee_id,
+                "first_name": (trainee.get("first_name") or "").strip(),
+                "last_name": (trainee.get("last_name") or "").strip(),
+                "address": (trainee.get("address") or "").strip(),
+                "zip_code": (trainee.get("zip_code") or "").strip(),
+                "city": (trainee.get("city") or "").strip(),
+            }
+            for key, value in refreshed_meta.items():
+                if meta.get(key) != value:
+                    meta[key] = value
+                    changed = True
+            expected_label = f"📚 Livre à envoyer — {trainee_name}"
+            if entry.get("label") != expected_label:
+                entry["label"] = expected_label
+                changed = True
+    elif entry is not None and not entry.get("done"):
+        entry["done"] = True
+        entry["done_at"] = _now_iso()
+        changed = True
+
+    return changed
 
 
 def _secretariat_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
@@ -3000,6 +3086,7 @@ def _secretariat_notifications_payload(data: Dict[str, Any]) -> Dict[str, Any]:
         "cnaps_pre": _with_created_fr(list(data.get("notifications_cnaps_pre_relances", [])), "cnaps_pre"),
         "test_fr": _with_created_fr(list(data.get("notifications_test_fr", [])), "test_fr"),
         "convention_unsigned": _with_created_fr(list(data.get("notifications_convention_unsigned", [])), "convention_unsigned"),
+        "vtc_books": _with_created_fr(list(data.get("notifications_vtc_books", [])), "vtc_books"),
     }
     unresolved_total = 0
     for items in notifications.values():
@@ -5512,6 +5599,7 @@ def admin_secretariat():
         cnaps_pre_notifications=notifications["cnaps_pre"],
         test_fr_notifications=notifications["test_fr"],
         convention_unsigned_notifications=notifications["convention_unsigned"],
+        vtc_book_notifications=notifications["vtc_books"],
         unresolved_total=payload["unresolved_total"],
         secretariat_read_only=False,
     )
@@ -7275,6 +7363,11 @@ def api_update_trainee(session_id: str, trainee_id: str):
     send_exam_fees_notification = True if payload.get("send_exam_fees_notification", True) in (True, "true", "1", 1, "yes", "on") else False
     send_elearning_notification = True if payload.get("send_elearning_notification", True) in (True, "true", "1", 1, "yes", "on") else False
 
+    if "vtc_book_sent_at" in payload:
+        vtc_book_sent_payload = payload.get("vtc_book_sent_at")
+        if isinstance(vtc_book_sent_payload, str) and vtc_book_sent_payload.strip() and not _is_vtc_book_address_complete(t):
+            return jsonify({"ok": False, "error": "vtc_book_address_incomplete"}), 400
+
     for k, v in payload.items():
         if k in ("send_vae_notification", "send_exam_fees_notification", "send_elearning_notification"):
             continue
@@ -7422,6 +7515,9 @@ def api_update_trainee(session_id: str, trainee_id: str):
     t["docs_relance_auto_planned_date"] = "" if dossier_complete else (planned.isoformat() if planned else "")
     if dossier_complete:
         t["docs_relance_auto_sent_at"] = ""
+
+    if "VTC" in ((_session_get(s, "training_type", "") or "").upper()):
+        _sync_vtc_book_notification(data, s, t)
     save_data(data)
     return jsonify({
         "ok": True,
