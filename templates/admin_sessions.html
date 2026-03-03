@@ -808,8 +808,11 @@
 <!-- MODALE IMPORT CNAPS PRE -->
 <div class="modal-backdrop" id="cnapsImportModal" aria-hidden="true">
   <div class="modal">
-    <div class="modal-head">
-      <div class="modal-title">Import PRE CNAPS</div>
+    <div class="modal-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div class="modal-title">Import PRE CNAPS</div>
+        <a class="btn btn-outline" href="{{ url_for('admin_cnaps_pending_imports') }}">En attente</a>
+      </div>
       <button class="icon-btn" data-close-modal="cnapsImportModal">✕</button>
     </div>
 

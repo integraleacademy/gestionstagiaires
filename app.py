@@ -11805,6 +11805,36 @@ def api_cnaps_import_pre_save():
     return jsonify({"ok": True, "saved": True, "already_saved": False})
 
 
+@app.get("/admin/cnaps/import-pre/pending")
+@admin_login_required
+def admin_cnaps_pending_imports():
+    data = load_data()
+    pending = _cnaps_pending_imports(data)
+    pending_items = []
+
+    for item in pending:
+        file_token = (item.get("file_token") or "").strip()
+        file_exists = bool(file_token and os.path.exists(_detokenize_path(file_token)))
+        pending_items.append({
+            "id": (item.get("id") or "").strip(),
+            "last_name": (item.get("last_name") or "").strip(),
+            "first_name": (item.get("first_name") or "").strip(),
+            "pre_number": (item.get("pre_number") or "").strip(),
+            "file_name": (item.get("file_name") or "").strip() or "document.pdf",
+            "file_token": file_token,
+            "file_url": url_for("admin_view_upload", path=file_token) if file_token else "",
+            "created_at": (item.get("created_at") or "").strip(),
+            "file_exists": file_exists,
+        })
+
+    pending_items.sort(key=lambda x: x.get("created_at") or "", reverse=True)
+
+    return render_template(
+        "admin_cnaps_pending_imports.html",
+        pending_items=pending_items,
+    )
+
+
 @app.get("/admin/sessions/archived")
 @admin_login_required
 def admin_sessions_archived():
