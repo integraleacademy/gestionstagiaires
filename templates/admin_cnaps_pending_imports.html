@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+  <h1 style="margin:0;">CNAPS • Enregistrements en attente de fusion</h1>
+  <a class="btn btn-outline" href="{{ url_for('admin_sessions') }}">← Retour sessions</a>
+</div>
+
+<div class="card" style="margin-top:12px;">
+  <div class="card-row" style="justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+    <div class="muted">
+      {{ pending_items|length }} élément(s) enregistré(s) mais pas encore fusionné(s).
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:12px;overflow:auto;">
+  {% if pending_items %}
+    <table class="table" style="min-width:900px;">
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>Prénom</th>
+          <th>PRE/CAR</th>
+          <th>Fichier</th>
+          <th>Date enregistrement</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in pending_items %}
+          <tr>
+            <td>{{ item.last_name }}</td>
+            <td>{{ item.first_name }}</td>
+            <td>{{ item.pre_number }}</td>
+            <td>{{ item.file_name }}</td>
+            <td>{{ item.created_at[:19].replace('T', ' ') if item.created_at else '—' }}</td>
+            <td>
+              {% if item.file_url and item.file_exists %}
+                <a class="btn btn-outline" href="{{ item.file_url }}" target="_blank" rel="noopener noreferrer">Voir le PDF</a>
+              {% else %}
+                <span class="muted">Fichier introuvable</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="muted">Aucun enregistrement en attente pour le moment.</div>
+  {% endif %}
+</div>
+{% endblock %}
