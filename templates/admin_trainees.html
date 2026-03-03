@@ -851,50 +851,72 @@ tr.row-todo td{
   });
 
 
+  async function refreshCnapsForRow(tr, { silent = false } = {}) {
+    if (!tr) return;
+
+    const traineeId = tr.getAttribute("data-trainee-id");
+    const nom = tr.getAttribute("data-last-name")?.trim()
+      || tr.querySelector("td:nth-child(1)")?.textContent.trim()
+      || "";
+    const prenom = tr.getAttribute("data-first-name")?.trim()
+      || tr.querySelector("td:nth-child(2)")?.textContent.trim()
+      || "";
+
+    if (!traineeId || !nom || !prenom) {
+      if (!silent) alert("Nom / prénom introuvables");
+      return;
+    }
+
+    const span = tr.querySelector("[data-cnaps]");
+    const currentStatus = (span?.textContent || "").trim().toUpperCase();
+    if (silent && currentStatus === "CARTE PROFESSIONNELLE OK") {
+      return;
+    }
+
+    try {
+      const res = await cnapsLookup(nom, prenom);
+      const statut = (res.statut_cnaps || "INCONNU").toUpperCase();
+
+      if (span) {
+        span.textContent = statut;
+        applyCnapsBadge(span);
+      }
+
+      await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cnaps: statut })
+      });
+    } catch (err) {
+      if (!silent) alert("Erreur CNAPS");
+    }
+  }
+
   document.querySelectorAll("[data-refresh]").forEach(btn => {
     btn.addEventListener("click", async (e) => {
       e.preventDefault();
-
       const tr = btn.closest("tr");
-      const traineeId = tr.getAttribute("data-trainee-id");
-
-      const nom = tr.getAttribute("data-last-name")?.trim()
-        || tr.querySelector("td:nth-child(1)")?.textContent.trim()
-        || "";
-      const prenom = tr.getAttribute("data-first-name")?.trim()
-        || tr.querySelector("td:nth-child(2)")?.textContent.trim()
-        || "";
-
-      if (!traineeId || !nom || !prenom) {
-        alert("Nom / prénom introuvables");
-        return;
-      }
-
       btn.disabled = true;
-
       try {
-        const res = await cnapsLookup(nom, prenom);
-        const statut = (res.statut_cnaps || "INCONNU").toUpperCase();
-
-        const span = tr.querySelector("[data-cnaps]");
-        if (span){
-          span.textContent = statut;
-          applyCnapsBadge(span); // ✅ recolor instant
-        }
-
-        await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
-          method: "POST",
-          headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({ cnaps: statut })
-        });
-
-      } catch (err) {
-        alert("Erreur CNAPS");
+        await refreshCnapsForRow(tr, { silent: false });
       } finally {
         btn.disabled = false;
       }
     });
   });
+
+  async function autoRefreshCnapsStatuses() {
+    const rows = Array.from(document.querySelectorAll("tr[data-trainee-id]"));
+    for (const tr of rows) {
+      await refreshCnapsForRow(tr, { silent: true });
+    }
+  }
+
+  // Mise à jour automatique initiale + toutes les 5 minutes
+  setTimeout(() => {
+    autoRefreshCnapsStatuses();
+    setInterval(autoRefreshCnapsStatuses, 5 * 60 * 1000);
+  }, 1200);
 
   // =========================
 // Bulk SST upload
