@@ -23,7 +23,7 @@
           <th>PRE/CAR</th>
           <th>Fichier</th>
           <th>Date enregistrement</th>
-          <th>Action</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -35,11 +35,14 @@
             <td>{{ item.file_name }}</td>
             <td>{{ item.created_at[:19].replace('T', ' ') if item.created_at else '—' }}</td>
             <td>
-              {% if item.file_url and item.file_exists %}
-                <a class="btn btn-outline" href="{{ item.file_url }}" target="_blank" rel="noopener noreferrer">Voir le PDF</a>
-              {% else %}
-                <span class="muted">Fichier introuvable</span>
-              {% endif %}
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                {% if item.file_url and item.file_exists %}
+                  <a class="btn btn-outline" href="{{ item.file_url }}" target="_blank" rel="noopener noreferrer">Voir le PDF</a>
+                {% else %}
+                  <span class="muted">Fichier introuvable</span>
+                {% endif %}
+                <button type="button" class="btn btn-danger" data-cnaps-pending-delete="{{ item.id }}">Supprimer</button>
+              </div>
             </td>
           </tr>
         {% endfor %}
@@ -49,4 +52,42 @@
     <div class="muted">Aucun enregistrement en attente pour le moment.</div>
   {% endif %}
 </div>
+{% endblock %}
+
+
+{% block scripts %}
+{{ super() }}
+<script>
+  document.querySelectorAll('[data-cnaps-pending-delete]').forEach((btn)=>{
+    btn.addEventListener('click', async ()=>{
+      const pendingId = btn.dataset.cnapsPendingDelete;
+      if(!pendingId) return;
+
+      const ok = window.confirm('Supprimer cette ligne de la liste en attente ?');
+      if(!ok) return;
+
+      const oldLabel = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Suppression…';
+
+      try{
+        const r = await fetch(`/api/cnaps/import-pre/pending/${encodeURIComponent(pendingId)}/delete`, { method:'POST' });
+        const res = await r.json();
+        if(!r.ok || !res.ok){
+          alert('Erreur pendant la suppression.');
+          btn.disabled = false;
+          btn.textContent = oldLabel;
+          return;
+        }
+        const row = btn.closest('tr');
+        if(row) row.remove();
+        window.location.reload();
+      }catch(e){
+        alert('Erreur réseau pendant la suppression.');
+        btn.disabled = false;
+        btn.textContent = oldLabel;
+      }
+    });
+  });
+</script>
 {% endblock %}
