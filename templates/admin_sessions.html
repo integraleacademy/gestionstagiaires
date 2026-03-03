@@ -2149,6 +2149,7 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
       const buttonLabel = matchFound ? (alreadyMerged ? "Fusionné" : "Fusionner") : "Enregistrer";
       const buttonClass = matchFound ? "btn btn-primary cnaps-merge-btn" : "btn btn-outline cnaps-save-btn";
       const buttonDisabled = matchFound ? alreadyMerged : alreadySaved;
+      const buttonStateClass = buttonDisabled ? "btn-disabled-muted" : "";
       const alreadySavedHint = (!matchFound && alreadySaved)
         ? `<div class="hint" style="margin-top:6px;color:#6b7280;">Document déjà importé</div>`
         : "";
@@ -2165,7 +2166,7 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
             <span>Formation: ${escapeHtml(item.formation || (matchFound ? "—" : "Stagiaire introuvable pour le moment"))}</span>
           </div>
           <div class="cnaps-item-actions">
-            <button type="button" class="${buttonClass}" data-match-index="${idx}" ${buttonDisabled ? "disabled" : ""}>${buttonLabel}</button>
+            <button type="button" class="${buttonClass} ${buttonStateClass}" data-match-index="${idx}" ${buttonDisabled ? "disabled" : ""}>${buttonLabel}</button>
             ${alreadySavedHint}
           </div>
         </div>
@@ -2278,6 +2279,7 @@ Le document sera associé automatiquement si ce stagiaire est ajouté plus tard.
           item.already_saved = true;
           btn.textContent = "Enregistré";
           btn.disabled = true;
+          btn.classList.add("btn-disabled-muted");
           if(status) status.textContent = `Enregistrement effectué pour ${firstName} ${lastName.toUpperCase()}.`;
         }catch(e){
           btn.disabled = false;
