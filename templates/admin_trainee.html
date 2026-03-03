@@ -8,6 +8,7 @@
 {% set training_type_label = "CHAUFFEUR VTC" if (session.training_type or "")|upper == "VTC" else session.training_type %}
 {% set vae_action_dates = trainee.vae_action_dates or {} %}
 {% set vtc_book_sent_at = trainee.vtc_book_sent_at or "" %}
+{% set vtc_book_address_complete = (trainee.address or "")|trim and (trainee.zip_code or "")|trim and (trainee.city or "")|trim %}
 
 <style>
   .btn-docs-pending{
@@ -37,6 +38,9 @@
     border-color: rgba(124,58,237,.35) !important;
     color:#fff !important;
     box-shadow: 0 14px 26px rgba(124,58,237,.18);
+  }
+  .btn-vtc-book-ready{
+    animation: docsPendingPulse 1.2s ease-in-out infinite;
   }
 </style>
 
@@ -86,10 +90,10 @@
         📜 Historique mails
       </button>
       {% if is_vtc %}
-        <button class="btn {% if trainee.vtc_book_sent_at %}btn-disabled-muted{% else %}btn-outline{% endif %} btn-uniform"
+        <button class="btn {% if trainee.vtc_book_sent_at %}btn-disabled-muted{% elif vtc_book_address_complete %}btn-orange btn-vtc-book-ready{% else %}btn-disabled-muted{% endif %} btn-uniform"
                 type="button"
                 id="btnOpenBookModal"
-                {% if trainee.vtc_book_sent_at or is_read_only %}disabled{% endif %}>
+                {% if trainee.vtc_book_sent_at or is_read_only or not vtc_book_address_complete %}disabled{% endif %}>
           📚 Livre VTC
         </button>
       {% endif %}
@@ -2990,6 +2994,7 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
         btnBookSent.textContent = "Livre envoyé";
         if(btnOpenBookModal){
           btnOpenBookModal.disabled = true;
+          btnOpenBookModal.classList.remove("btn-orange", "btn-vtc-book-ready");
           btnOpenBookModal.classList.add("btn-disabled-muted");
         }
       }catch(e){
