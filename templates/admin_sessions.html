@@ -130,6 +130,8 @@
   .cnaps-item-main{ flex:1; }
   .cnaps-item-actions{ margin-left:auto; display:flex; align-items:center; }
   .cnaps-merge-btn[disabled]{ background:#9ca3af; border-color:#9ca3af; cursor:not-allowed; }
+  .cnaps-inline-fields{ display:flex; gap:8px; margin:6px 0 4px 0; flex-wrap:wrap; }
+  .cnaps-inline-input{ min-width:150px; padding:6px 8px; border:1px solid #d1d5db; border-radius:8px; font-size:13px; }
   .cnaps-search{
     width:100%;
     padding:8px 10px;
@@ -2128,9 +2130,13 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
       const buttonClass = matchFound ? "btn btn-primary cnaps-merge-btn" : "btn btn-outline cnaps-save-btn";
       const buttonDisabled = matchFound ? alreadyMerged : alreadySaved;
       return `
-        <div class="cnaps-item" style="display:flex;">
+        <div class="cnaps-item" style="display:flex;" data-cnaps-row="${idx}">
           <div class="cnaps-item-main">
-            <strong>${escapeHtml((item.last_name || "").toUpperCase())} ${escapeHtml(item.first_name || "")}</strong>
+            <strong>${escapeHtml(item.file_name || "Document PDF")}</strong>
+            <div class="cnaps-inline-fields">
+              <input class="cnaps-inline-input" data-field="last_name" value="${escapeHtml(item.last_name || "")}" placeholder="Nom">
+              <input class="cnaps-inline-input" data-field="first_name" value="${escapeHtml(item.first_name || "")}" placeholder="Prénom">
+            </div>
             <span>PRE: ${escapeHtml(item.pre_number || "—")}</span><br>
             <span>Dates de formation: ${escapeHtml(item.training_dates?.start || "—")} → ${escapeHtml(item.training_dates?.end || "—")}</span><br>
             <span>Formation: ${escapeHtml(item.formation || (matchFound ? "—" : "Stagiaire introuvable pour le moment"))}</span>
@@ -2143,6 +2149,19 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
     }).join("");
 
     results.innerHTML = matchHtml + unmatchedHtml;
+
+    results.querySelectorAll("[data-cnaps-row]").forEach(row => {
+      const idx = Number(row.dataset.cnapsRow);
+      const item = matches[idx];
+      if(!item) return;
+      row.querySelectorAll(".cnaps-inline-input").forEach(input => {
+        input.addEventListener("input", ()=>{
+          const field = input.dataset.field;
+          if(field === "last_name") item.last_name = (input.value || "").trim();
+          if(field === "first_name") item.first_name = (input.value || "").trim();
+        });
+      });
+    });
 
     results.querySelectorAll(".cnaps-merge-btn").forEach(btn => {
       btn.addEventListener("click", async ()=>{
@@ -2196,20 +2215,27 @@ Cela va écraser le PRE/CAR et le document CNAPS existants.`);
         const item = matches[matchIndex];
         if(!item || item.already_saved) return;
 
+        const lastName = (item.last_name || "").trim();
+        const firstName = (item.first_name || "").trim();
+        if(!lastName || !firstName){
+          if(status) status.textContent = "Renseigne le nom et le prénom avant d'enregistrer.";
+          return;
+        }
+
         const sourceFile = findCnapsImportedFile(item, files);
         if(!sourceFile){
           if(status) status.textContent = "Impossible de retrouver le PDF source pour cet enregistrement.";
           return;
         }
 
-        const ok = window.confirm(`Enregistrer ${item.first_name || ""} ${(item.last_name || "").toUpperCase()} en attente ?
+        const ok = window.confirm(`Enregistrer ${firstName} ${lastName.toUpperCase()} en attente ?
 
 Le document sera associé automatiquement si ce stagiaire est ajouté plus tard.`);
         if(!ok) return;
 
         const fdSave = new FormData();
-        fdSave.append("last_name", item.last_name || "");
-        fdSave.append("first_name", item.first_name || "");
+        fdSave.append("last_name", lastName);
+        fdSave.append("first_name", firstName);
         fdSave.append("pre_number", item.pre_number || "");
         fdSave.append("file", sourceFile);
 
@@ -2228,7 +2254,7 @@ Le document sera associé automatiquement si ce stagiaire est ajouté plus tard.
           item.already_saved = true;
           btn.textContent = "Enregistré";
           btn.disabled = true;
-          if(status) status.textContent = `Enregistrement effectué pour ${item.first_name || ""} ${(item.last_name || "").toUpperCase()}.`;
+          if(status) status.textContent = `Enregistrement effectué pour ${firstName} ${lastName.toUpperCase()}.`;
         }catch(e){
           btn.disabled = false;
           if(status) status.textContent = "Erreur réseau pendant l'enregistrement.";
