@@ -1028,6 +1028,61 @@ input[type="file"]{
   padding: 0 !important;
 }
 
+.cnaps-file-picker{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.cnaps-file-input{
+  position:absolute;
+  width:1px;
+  height:1px;
+  padding:0;
+  margin:-1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+  white-space:nowrap;
+  border:0;
+}
+
+.cnaps-file-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:38px;
+  padding:0 16px;
+  border-radius:999px;
+  border:1px solid #0f766e;
+  background:linear-gradient(135deg, #14b8a6 0%, #0ea5e9 100%);
+  color:#fff;
+  font-weight:800;
+  letter-spacing:.01em;
+  cursor:pointer;
+  box-shadow:0 8px 18px rgba(14,165,233,.25);
+  transition:transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+
+.cnaps-file-btn:hover{
+  filter:brightness(1.03);
+  box-shadow:0 10px 22px rgba(14,165,233,.3);
+}
+
+.cnaps-file-btn:active{
+  transform:translateY(1px);
+}
+
+.cnaps-file-input:focus-visible + .cnaps-file-btn{
+  outline:3px solid rgba(14,165,233,.35);
+  outline-offset:2px;
+}
+
+.cnaps-file-text{
+  color:var(--muted);
+  font-weight:600;
+}
+
 /* bloc checkbox + texte collés */
 .chk-inline{
   display:inline-flex;

@@ -816,7 +816,11 @@
     <div class="modal-body">
       <label>
         <div class="label">Fichiers PDF CNAPS</div>
-        <input id="cnapsImportFiles" type="file" accept="application/pdf,.pdf" multiple>
+        <div class="cnaps-file-picker">
+          <input id="cnapsImportFiles" class="cnaps-file-input" type="file" accept="application/pdf,.pdf" multiple>
+          <label for="cnapsImportFiles" class="cnaps-file-btn">Sélect. fichiers</label>
+          <span id="cnapsImportFilesText" class="cnaps-file-text">Aucun fichier choisi</span>
+        </div>
       </label>
       <div class="hint" style="margin-top:8px;">Le système lit nom, prénom et numéro PRE/CAR dans les PDF puis cherche le stagiaire correspondant.</div>
       <div id="cnapsImportStatus" class="muted" style="margin-top:10px;"></div>
@@ -844,7 +848,9 @@
       </div>
 
       <div class="vtc-check-upload">
-        <input id="vtcCheckFile" type="file" accept="application/pdf,.pdf,.xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+        <input id="vtcCheckFile" class="cnaps-file-input" type="file" accept="application/pdf,.pdf,.xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+        <label for="vtcCheckFile" class="cnaps-file-btn">Sélect. fichiers</label>
+        <span id="vtcCheckFileText" class="cnaps-file-text">Aucun fichier choisi</span>
         <button class="btn btn-primary" id="btnVtcCheckImport">IMPORTER</button>
       </div>
 
@@ -1972,11 +1978,13 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
     const list = document.getElementById("vtcCheckList");
     const notifyBtn = document.getElementById("btnVtcCheckNotify");
     const fileInput = document.getElementById("vtcCheckFile");
+    const fileText = document.getElementById("vtcCheckFileText");
     const modalTitle = document.getElementById("vtcCheckModalTitle");
     if(status) status.textContent = "";
     if(list) list.innerHTML = "";
     if(notifyBtn) notifyBtn.style.display = "none";
     if(fileInput) fileInput.value = "";
+    if(fileText) fileText.textContent = "Aucun fichier choisi";
     if(modalTitle) modalTitle.textContent = mode === "practice" ? "Check VTC pratique" : "Check VTC théorie";
     openModal("vtcCheckModal");
   }
@@ -1987,6 +1995,15 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
 
   document.getElementById("btnOpenVtcPracticeCheck")?.addEventListener("click", ()=>{
     resetVtcCheckModal("practice");
+  });
+
+  document.getElementById("vtcCheckFile")?.addEventListener("change", (e)=>{
+    const fileText = document.getElementById("vtcCheckFileText");
+    const count = e.target?.files?.length || 0;
+    if(!fileText) return;
+    fileText.textContent = count
+      ? `${count} fichier${count > 1 ? "s" : ""} sélectionné${count > 1 ? "s" : ""}`
+      : "Aucun fichier choisi";
   });
 
   document.getElementById("btnVtcCheckImport")?.addEventListener("click", async ()=>{
@@ -2268,10 +2285,21 @@ Le document sera associé automatiquement si ce stagiaire est ajouté plus tard.
     const status = document.getElementById("cnapsImportStatus");
     const results = document.getElementById("cnapsImportResults");
     const filesInput = document.getElementById("cnapsImportFiles");
+    const filesText = document.getElementById("cnapsImportFilesText");
     if(status) status.textContent = "";
     if(results) results.innerHTML = "";
     if(filesInput) filesInput.value = "";
+    if(filesText) filesText.textContent = "Aucun fichier choisi";
     openModal("cnapsImportModal");
+  });
+
+  document.getElementById("cnapsImportFiles")?.addEventListener("change", (e)=>{
+    const filesText = document.getElementById("cnapsImportFilesText");
+    const count = e.target?.files?.length || 0;
+    if(!filesText) return;
+    filesText.textContent = count
+      ? `${count} fichier${count > 1 ? "s" : ""} sélectionné${count > 1 ? "s" : ""}`
+      : "Aucun fichier choisi";
   });
 
   document.getElementById("btnCnapsImportRun")?.addEventListener("click", async ()=>{
