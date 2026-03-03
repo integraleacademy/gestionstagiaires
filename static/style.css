@@ -207,6 +207,16 @@ h2{margin:0;font-size:20px;color:var(--text)}
   opacity:.75;
 }
 
+
+.cnaps-save-btn-imported{
+  background:#f3f4f6;
+  border-color:#d1d5db;
+  color:#6b7280;
+  box-shadow:none;
+  cursor:not-allowed;
+  opacity:.75;
+}
+
 /* =========================
    SESSION HEADER
    ========================= */
