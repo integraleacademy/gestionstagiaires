@@ -5652,13 +5652,27 @@ def scotia_upload_attestation(session_id: str, trainee_id: str):
         return redirect(url_for('scotia_dashboard'))
 
     token = _tokenize_path(stored)
+    previous_status = vae_status_view(t.get("vae_status") or t.get("vae_status_label"))["key"]
+
     t.setdefault('deliverables', {})
     t['deliverables']['attestation_recevabilite'] = token
+    if not isinstance(t.get("vae_action_dates"), dict):
+        t["vae_action_dates"] = {}
+    if not t["vae_action_dates"].get("livret_1_validated"):
+        t["vae_action_dates"]["livret_1_validated"] = fr_date(datetime.datetime.utcnow().strftime("%Y-%m-%d"))
+
+    livret1_validated_view = vae_status_view("livret_1_validated")
+    t["vae_status"] = livret1_validated_view["key"]
+    t["vae_status_label"] = livret1_validated_view["label"]
     t['updated_at'] = _now_iso()
 
     s['trainees'] = trainees
     s.pop('stagiaires', None)
     save_data(data)
+
+    if previous_status != livret1_validated_view["key"]:
+        _notify_vae_status_change(t, livret1_validated_view["key"])
+
     return redirect(url_for('scotia_dashboard'))
 
 
@@ -10649,7 +10663,19 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
 
     email_ok = brevo_send_email(email, subject, html, trainee=t)
     sms_ok = False
-    if status_key == "livret_2_todo":
+    if status_key == "livret_1_validated":
+        sms_name = (t.get("first_name") or "").strip()
+        sms = (
+            f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
+            "Votre livret 1 a été validé 🎉 "
+            "Réservez votre RDV téléphonique pour finaliser financement + convention VAE : "
+            f"{booking_url} "
+            "et récupérez votre attestation de recevabilité sur votre espace candidat : "
+            f"{space_url}"
+        )
+        phone = (t.get("phone") or "").strip()
+        sms_ok = brevo_send_sms(phone, sms) if phone else False
+    elif status_key == "livret_2_todo":
         sms_name = (t.get("first_name") or "").strip()
         sms = (
             f"Intégrale Academy ✅ {sms_name + ', ' if sms_name else ''}"
@@ -10670,7 +10696,7 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
         "details": f"Mail VAE - {status_label}",
         "comment": (
             f"Objet : {subject} · Mail {'confirmé' if email_ok else 'tenté'}"
-            + (f" · SMS {'confirmé' if sms_ok else 'tenté'}" if status_key == "livret_2_todo" else "")
+            + (f" · SMS {'confirmé' if sms_ok else 'tenté'}" if status_key in {"livret_1_validated", "livret_2_todo"} else "")
         ),
         "at": sent_at,
     })
