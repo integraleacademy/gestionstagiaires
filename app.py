@@ -5503,7 +5503,8 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "vae_dossier_id": str((latest_vae or {}).get("id") or ""),
                 "vae_justificatifs": vae_justificatifs,
             })
-    items.sort(key=lambda x: ((x.get("scotia_processed_at") or "9999-99-99"), (x.get("last_name") or "").upper()))
+    items.sort(key=lambda x: (x.get("last_name") or "").upper())
+    items.sort(key=lambda x: x.get("vae_sent_at") or "", reverse=True)
     return items
 
 
