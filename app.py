@@ -16,7 +16,7 @@ from zoneinfo import ZoneInfo
 from flask import session
 from PIL import Image, ImageOps
 import tempfile
-from docx.shared import Inches
+from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.ns import qn
 
@@ -8765,17 +8765,10 @@ def _replace_in_docx(doc: Document, replacements: dict) -> None:
     for table in doc.tables:
         replace_in_table(table)
 
-    # En-têtes / pieds de page
-    for section in doc.sections:
-        for p in section.header.paragraphs:
-            replace_in_paragraph(p)
-        for table in section.header.tables:
-            replace_in_table(table)
-
-        for p in section.footer.paragraphs:
-            replace_in_paragraph(p)
-        for table in section.footer.tables:
-            replace_in_table(table)
+    # ⚠️ Ne pas parcourir systématiquement section.header/footer ici.
+    # Avec python-docx, le simple accès à ces propriétés peut créer des
+    # parties header/footer absentes du template, et modifier la mise en page
+    # (cas observé sur les étiquettes Word qui basculaient à 2 pages).
 
 
 def _etiquette_template_name(training_type: str) -> Optional[str]:
@@ -8818,9 +8811,35 @@ def _build_etiquette_docx_bytes(session_obj: Dict[str, Any], trainee: Dict[str, 
     else:
         _replace_in_docx(doc, {"{{PHOTO}}": ""})
 
+    _shrink_docx_trailing_empty_paragraphs(doc)
+
     buf = BytesIO()
     doc.save(buf)
     return buf.getvalue()
+
+
+def _shrink_docx_trailing_empty_paragraphs(doc: Document) -> None:
+    """
+    Les modèles d'étiquette remplissent quasiment toute la page.
+    Word impose un paragraphe final après un tableau ; s'il garde sa mise en
+    forme par défaut, il peut provoquer une 2e page vide après sauvegarde.
+    """
+    for paragraph in reversed(doc.paragraphs):
+        if paragraph.text.strip():
+            break
+
+        paragraph.paragraph_format.space_before = Pt(0)
+        paragraph.paragraph_format.space_after = Pt(0)
+        paragraph.paragraph_format.line_spacing = 1
+        paragraph.paragraph_format.left_indent = Pt(0)
+        paragraph.paragraph_format.right_indent = Pt(0)
+        paragraph.paragraph_format.first_line_indent = Pt(0)
+
+        if not paragraph.runs:
+            paragraph.add_run("")
+        for run in paragraph.runs:
+            run.text = ""
+            run.font.size = Pt(1)
 
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/etiquette.docx")
