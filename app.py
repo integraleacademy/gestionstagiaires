@@ -201,12 +201,18 @@ def scotia_login_post():
     password = (request.form.get("password") or "").strip()
     next_url = request.form.get("next") or url_for("scotia_dashboard")
 
-    if not (SCOTIA_USER and SCOTIA_PASSWORD):
-        abort(500, "SCOTIA_USER/SCOTIA_PASSWORD non configurés")
+    admin_ok = bool(ADMIN_USER and ADMIN_PASSWORD and username == ADMIN_USER and password == ADMIN_PASSWORD)
+    scotia_ok = bool(SCOTIA_USER and SCOTIA_PASSWORD and username == SCOTIA_USER and password == SCOTIA_PASSWORD)
 
-    if username == SCOTIA_USER and password == SCOTIA_PASSWORD:
+    if not (SCOTIA_USER and SCOTIA_PASSWORD) and not (ADMIN_USER and ADMIN_PASSWORD):
+        abort(500, "SCOTIA_USER/SCOTIA_PASSWORD ou ADMIN_USER/ADMIN_PASSWORD non configurés")
+
+    if scotia_ok or admin_ok:
         session.clear()
         session["scotia_logged_in"] = True
+        if admin_ok:
+            session["admin_logged_in"] = True
+            session["admin_role"] = "admin"
         session.permanent = True
         return redirect(next_url)
 
