@@ -5,6 +5,7 @@
 {% set pre_reception_open = request.args.get("pre_reception") %}
 {% set is_vtc = "VTC" in (session.training_type or "")|upper %}
 {% set is_dirigeant = "DIRIGEANT" in (session.training_type or "")|upper %}
+{% set is_aps_or_a3p = "APS" in (session.training_type or "")|upper or "A3P" in (session.training_type or "")|upper %}
 {% set training_type_label = "CHAUFFEUR VTC" if (session.training_type or "")|upper == "VTC" else session.training_type %}
 {% set vae_action_dates = trainee.vae_action_dates or {} %}
 {% set vtc_book_sent_at = trainee.vtc_book_sent_at or "" %}
@@ -104,6 +105,18 @@
         <button class="btn {% if vae_action_dates.get('livret_2_transmitted_scotia') %}btn-disabled-muted{% else %}btn-blue{% endif %} btn-uniform" type="button" onclick="setVaeAction('livret_2_transmitted_scotia')" {% if vae_action_dates.get('livret_2_transmitted_scotia') %}disabled{% endif %} {{ read_only_attr }}>
           L2 transmis scotia
         </button>
+      {% endif %}
+      {% if is_aps_or_a3p %}
+        {% set cnaps_full_name = ((trainee.first_name or "Prénom") ~ " " ~ (trainee.last_name or "NOM"))|trim %}
+        {% set cnaps_birth_date = (trainee.birth_date|frdate or "DD/MM/YYYY") %}
+        {% set cnaps_body = "Bonjour,\n\nJe me permets de revenir vers nous concernant la demande d'autorisation préalable de " ~ cnaps_full_name ~ " né le " ~ cnaps_birth_date ~ ".\n\nLe suivi en ligne indique que la demande a été acceptée, mais cette personne n'a pas reçu le courrier officiel de notification par courrier postal et nous ne disposons donc pas de son numéro PRE nécessaire à son entrée en formation.\n\nVous serait-il possible svp de me communiquer le numéro PRE ?\n\nJe vous remercie par avance pour votre aide et je vous souhaite une agréable journée,\n\nBien cordialement,\n\nClément VAILLANT\nDirecteur Intégrale Sécurité Formations" %}
+        <a class="btn btn-outline btn-uniform"
+           id="btnCnapsContact"
+           data-session-id="{{ session.id }}"
+           data-trainee-id="{{ trainee.id }}"
+           href="mailto:?bcc=jenny.tarallo@interieur.gouv.fr,cnaps-dt-sud@interieur.gouv.fr&subject={{ 'Demande de numéro PRE'|urlencode }}&body={{ cnaps_body|urlencode }}">
+          ✉️ Contacter le CNAPS
+        </a>
       {% endif %}
       {% if not is_read_only %}
         <button class="btn btn-outline btn-uniform" type="button" onclick="openModal('transferTraineeModal')">
