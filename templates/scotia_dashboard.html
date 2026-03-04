@@ -6,7 +6,11 @@
   <title>SCOTIA - Dossiers à traiter</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <style>
-    .scotia-item--processed{ opacity:1; }
+    .scotia-item--processed{
+      opacity:1 !important;
+      filter:none !important;
+      pointer-events:auto !important;
+    }
     .btn-danger-solid{
       background:#b91c1c;
       color:#fff;
