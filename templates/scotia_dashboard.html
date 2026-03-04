@@ -11,11 +11,11 @@
       filter:grayscale(1);
       background:#f3f4f6;
     }
-    .scotia-item--processed .scotia-item-actions :is(button,input,.btn-upload-attestation):not(.btn-delete-person){
+    .scotia-item--processed .scotia-item-actions :is(button,input,.btn-upload-attestation):not(.btn-delete-person):not(.btn-upload-attestation){
       pointer-events:none;
       opacity:.55;
     }
-    .scotia-item--processed .scotia-item-actions .btn-delete-person{
+    .scotia-item--processed .scotia-item-actions :is(.btn-delete-person,.btn-upload-attestation){
       pointer-events:auto;
       opacity:1;
     }
@@ -112,8 +112,8 @@
               <button type="button" class="btn btn-danger-solid {% if it.scotia_status == 'non_recevable' %}is-active{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','non_recevable')" {% if item_processed %}disabled{% endif %}>Non recevable</button>
 
               <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/attestation/upload" style="display:flex;gap:6px;align-items:center;">
-                <input id="attestation-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="file" required style="display:none;" onchange="submitAttestationForm(this)" {% if item_processed %}disabled{% endif %}>
-                <button class="btn btn-outline btn-upload-attestation" type="button" onclick="triggerAttestationUpload('{{ it.session_id }}','{{ it.trainee_id }}')" {% if item_processed %}disabled{% endif %}>Téléverser attestation</button>
+                <input id="attestation-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="file" required style="display:none;" onchange="submitAttestationForm(this)">
+                <button class="btn btn-outline btn-upload-attestation" type="button" onclick="triggerAttestationUpload('{{ it.session_id }}','{{ it.trainee_id }}')">Téléverser attestation</button>
               </form>
 
               {% if it.deliverables.attestation_recevabilite %}
