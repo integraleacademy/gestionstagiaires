@@ -83,6 +83,10 @@
               {% if it.deliverables.attestation_recevabilite %}
                 <a class="btn btn-outline" href="/scotia/uploads/{{ it.deliverables.attestation_recevabilite }}" target="_blank">Voir attestation</a>
               {% endif %}
+
+              <form method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/delete" onsubmit="return confirm('Supprimer définitivement cette personne de la session ?');">
+                <button class="btn" style="background:#7f1d1d;color:#fff;border-color:#7f1d1d;" type="submit">Supprimer personne</button>
+              </form>
             </div>
           </div>
           {% endfor %}
@@ -107,6 +111,30 @@ async function setDecision(sessionId, traineeId, decision){
     return;
   }
   window.location.reload();
+}
+
+async function saveComment(sessionId, traineeId){
+  const input = document.getElementById(`comment-input-${sessionId}-${traineeId}`);
+  const display = document.getElementById(`comment-display-${sessionId}-${traineeId}`);
+  if(!input || !display) return;
+  const comment = (input.value || '').trim();
+  if(!comment){
+    alert('Veuillez saisir un commentaire');
+    return;
+  }
+
+  const res = await fetch(`/api/scotia/sessions/${sessionId}/stagiaires/${traineeId}/comment`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({comment})
+  });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok || data.ok === false){
+    alert('Erreur lors de l\'ajout du commentaire');
+    return;
+  }
+  display.textContent = data.comment || comment;
+  input.value = '';
 }
 </script>
 </body>
