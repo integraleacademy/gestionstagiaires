@@ -7,9 +7,11 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <style>
     .scotia-item--processed{
+      background:#f3f4f6;
+    }
+    .scotia-item--processed .scotia-item-content{
       opacity:.65;
       filter:grayscale(1);
-      background:#f3f4f6;
     }
     .scotia-item--processed .scotia-item-actions :is(button,input,.btn-upload-attestation):not(.btn-delete-person):not(.btn-upload-attestation){
       pointer-events:none;
@@ -56,6 +58,7 @@
         <div style="display:grid;gap:12px;">
           {% for it in items %}
           <div class="card scotia-item {% if it.scotia_status in ['recevable', 'non_recevable'] %}scotia-item--processed{% endif %}" style="border:1px solid #e5e7eb;">
+            <div class="scotia-item-content">
             <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
               <div>
                 <div style="font-weight:700;font-size:18px;">{{ it.first_name }} {{ it.last_name }}</div>
@@ -64,7 +67,7 @@
               </div>
               <div>
                 {% if it.scotia_status == 'recevable' %}
-                  <span class="badge" style="background:#dcfce7;color:#166534;">Recevable</span>
+                  <span class="badge" style="background:#dcfce7;color:#166534;">Recevable ✅</span>
                 {% elif it.scotia_status == 'non_recevable' %}
                   <span class="badge" style="background:#fee2e2;color:#991b1b;">Non recevable</span>
                 {% else %}
@@ -106,6 +109,7 @@
             </div>
             {% endif %}
 
+            </div>
             <div class="scotia-item-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
               {% set item_processed = it.scotia_status in ['recevable', 'non_recevable'] %}
               <button type="button" class="btn btn-primary {% if it.scotia_status == 'recevable' %}is-active{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','recevable')" {% if item_processed %}disabled{% endif %}>Recevable</button>
@@ -113,7 +117,7 @@
 
               <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/attestation/upload" style="display:flex;gap:6px;align-items:center;">
                 <input id="attestation-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="file" required style="display:none;" onchange="submitAttestationForm(this)">
-                <button class="btn btn-outline btn-upload-attestation" type="button" onclick="triggerAttestationUpload('{{ it.session_id }}','{{ it.trainee_id }}')">Téléverser attestation</button>
+                <button class="btn btn-primary btn-upload-attestation" type="button" onclick="triggerAttestationUpload('{{ it.session_id }}','{{ it.trainee_id }}')">Téléverser attestation</button>
               </form>
 
               {% if it.deliverables.attestation_recevabilite %}
@@ -121,7 +125,7 @@
               {% endif %}
 
               <form method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/delete" onsubmit="return confirm('Supprimer définitivement cette personne de la session ?');">
-                <button class="btn btn-delete-person" style="background:#7f1d1d;color:#fff;border-color:#7f1d1d;" type="submit">Supprimer personne</button>
+                <button class="btn btn-delete-person btn-danger-solid" type="submit">Supprimer personne</button>
               </form>
             </div>
           </div>
