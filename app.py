@@ -5511,8 +5511,17 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "vae_dossier_id": str((latest_vae or {}).get("id") or ""),
                 "vae_justificatifs": vae_justificatifs,
             })
-    items.sort(key=lambda x: (x.get("last_name") or "").upper())
-    items.sort(key=lambda x: x.get("vae_sent_at") or "", reverse=True)
+    def _scotia_sort_key(item: Dict[str, Any]):
+        sent_at_raw = item.get("vae_sent_at") or ""
+        parsed_dt = _parse_iso_datetime(sent_at_raw)
+        sent_at_ts = parsed_dt.timestamp() if parsed_dt else 0
+        return (
+            sent_at_ts,
+            (item.get("last_name") or "").upper(),
+            (item.get("first_name") or "").upper(),
+        )
+
+    items.sort(key=_scotia_sort_key, reverse=True)
     return items
 
 
