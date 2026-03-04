@@ -5653,6 +5653,7 @@ def scotia_upload_attestation(session_id: str, trainee_id: str):
 
     token = _tokenize_path(stored)
     previous_status = vae_status_view(t.get("vae_status") or t.get("vae_status_label"))["key"]
+    previous_attestation_token = str(((t.get("deliverables") or {}).get("attestation_recevabilite") or "")).strip()
 
     t.setdefault('deliverables', {})
     t['deliverables']['attestation_recevabilite'] = token
@@ -5670,7 +5671,8 @@ def scotia_upload_attestation(session_id: str, trainee_id: str):
     s.pop('stagiaires', None)
     save_data(data)
 
-    if previous_status != livret1_validated_view["key"]:
+    should_notify = previous_status != livret1_validated_view["key"] or (not previous_attestation_token and bool(token))
+    if should_notify:
         _notify_vae_status_change(t, livret1_validated_view["key"])
 
     return redirect(url_for('scotia_dashboard'))
