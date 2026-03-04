@@ -21,6 +21,14 @@
     .scotia-item-actions .btn-danger-solid.is-active{
       box-shadow:0 0 0 3px rgba(185,28,28,.26);
     }
+    .doc-open-link{
+      color:#1d4ed8;
+      font-weight:700;
+      text-decoration:none;
+    }
+    .doc-open-link:hover,.doc-open-link:focus{
+      text-decoration:underline;
+    }
   </style>
 </head>
 <body>
@@ -59,17 +67,32 @@
                 {% for d in it.documents %}
                   {% set file_tokens = d.file_tokens if d.file_tokens is defined else (d.files or []) %}
                   {% if d.file %}
-                    <li>{{ d.label or d.key }} — <a href="/scotia/uploads/{{ d.file }}" target="_blank">ouvrir</a></li>
+                    <li>{{ d.label or d.key }} — <a class="doc-open-link" href="/scotia/uploads/{{ d.file }}" target="_blank">ouvrir</a></li>
                   {% elif file_tokens %}
                     <li>{{ d.label or d.key }}
                       {% for f in file_tokens %}
-                        <a href="/scotia/uploads/{{ f }}" target="_blank">fichier {{ loop.index }}</a>{% if not loop.last %}, {% endif %}
+                        <a class="doc-open-link" href="/scotia/uploads/{{ f }}" target="_blank">ouvrir</a>{% if not loop.last %}, {% endif %}
                       {% endfor %}
                     </li>
                   {% endif %}
                 {% endfor %}
               </ul>
             </div>
+
+            {% if it.vae_dossier_id or it.candidate_sheet_available or it.vae_justificatifs %}
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0;">
+              {% if it.vae_dossier_id %}
+                <a class="btn btn-outline" href="/scotia/vae/{{ it.vae_dossier_id }}" target="_blank" rel="noopener">Voir dossier de faisabilité VAE</a>
+              {% endif %}
+              {% if it.candidate_sheet_available %}
+                <a class="btn btn-outline" href="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/candidate-sheet" target="_blank" rel="noopener">Voir fiche candidat complétée</a>
+              {% endif %}
+              {% for j in it.vae_justificatifs %}
+                {% set jid = (j.get('id') if j is mapping else '') %}
+                <a class="btn btn-outline" href="/scotia/vae/{{ it.vae_dossier_id }}/justificatifs/{{ jid }}" target="_blank" rel="noopener">Justificatif {{ loop.index }}</a>
+              {% endfor %}
+            </div>
+            {% endif %}
 
             <div class="scotia-item-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
               <button type="button" class="btn btn-primary {% if it.scotia_status == 'recevable' %}is-active{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','recevable')">Recevable</button>

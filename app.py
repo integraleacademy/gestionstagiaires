@@ -5672,11 +5672,24 @@ def scotia_vae_dossier(dossier_id: str):
     if not dossier:
         abort(404)
 
+    statut_labels = {
+        "brouillon": "Brouillon",
+        "soumis": "Soumis",
+        "recevable": "Recevable",
+        "refuse": "Refusé",
+    }
+    decision_labels = {
+        "faisable": "Faisable",
+        "faisable_complements": "Faisable avec compléments",
+        "non_faisable": "Non faisable",
+    }
+
     return render_template(
-        'vae_wizard.html',
+        'admin_vae_export.html',
         dossier=dossier,
-        dossier_json=json.dumps(dossier, ensure_ascii=False),
-        admin_edit_mode=False,
+        statut_labels=statut_labels,
+        decision_labels=decision_labels,
+        annex_pages=1,
     )
 
 
