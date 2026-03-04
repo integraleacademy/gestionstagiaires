@@ -10,6 +10,7 @@ import unicodedata
 import threading
 import shutil
 import importlib.util
+from copy import deepcopy
 from typing import Dict, Any, Optional, List, Iterable, Tuple, Set
 from functools import wraps
 from zoneinfo import ZoneInfo
@@ -8791,7 +8792,7 @@ def _etiquette_template_name(training_type: str) -> Optional[str]:
     return template_map.get((training_type or "").strip().upper())
 
 
-def _build_etiquette_docx_bytes(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> bytes:
+def _build_etiquette_document(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Document:
     training_type = (_session_get(session_obj, "training_type", "") or "").strip().upper()
     template_name = _etiquette_template_name(training_type)
     if not template_name:
@@ -8818,6 +8819,11 @@ def _build_etiquette_docx_bytes(session_obj: Dict[str, Any], trainee: Dict[str, 
     else:
         _replace_in_docx(doc, {"{{PHOTO}}": ""})
 
+    return doc
+
+
+def _build_etiquette_docx_bytes(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> bytes:
+    doc = _build_etiquette_document(session_obj, trainee)
     buf = BytesIO()
     doc.save(buf)
     return buf.getvalue()
@@ -8852,9 +8858,9 @@ def admin_etiquette_docx(session_id: str, trainee_id: str):
     )
 
 
-@app.get("/admin/sessions/<session_id>/stagiaires/etiquettes-word.zip")
+@app.get("/admin/sessions/<session_id>/stagiaires/etiquettes-word.docx")
 @admin_login_required
-def admin_etiquettes_word_zip(session_id: str):
+def admin_etiquettes_word_docx(session_id: str):
     data = load_data()
     s = find_session(data, session_id)
     if not s:
@@ -8864,26 +8870,44 @@ def admin_etiquettes_word_zip(session_id: str):
     if not trainees:
         abort(400, "Aucun stagiaire dans cette session.")
 
-    archive_buffer = BytesIO()
+    combined_doc = None
     now = _now_iso()
-    with zipfile.ZipFile(archive_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        for trainee in trainees:
-            trainee_id = (trainee.get("id") or "").strip()
-            if not trainee_id:
-                continue
-            safe_last_name = re.sub(r"[^A-Za-z0-9_-]+", "_", (trainee.get("last_name") or "").strip())
-            safe_first_name = re.sub(r"[^A-Za-z0-9_-]+", "_", (trainee.get("first_name") or "").strip())
-            doc_name = f"etiquette_{safe_last_name}_{safe_first_name}_{trainee_id}.docx"
-            zf.writestr(doc_name, _build_etiquette_docx_bytes(s, trainee))
-            trainee["etiquette_word_downloaded_at"] = now
+    exported_count = 0
+    for trainee in trainees:
+        trainee_id = (trainee.get("id") or "").strip()
+        if not trainee_id:
+            continue
+
+        trainee_doc = _build_etiquette_document(s, trainee)
+        if combined_doc is None:
+            combined_doc = trainee_doc
+        else:
+            combined_doc.add_page_break()
+            for element in trainee_doc.element.body:
+                if element.tag.endswith("}sectPr"):
+                    continue
+                combined_doc.element.body.append(deepcopy(element))
+
+        trainee["etiquette_word_downloaded_at"] = now
+        exported_count += 1
+
+    if combined_doc is None or exported_count == 0:
+        abort(400, "Aucun stagiaire exportable dans cette session.")
 
     s["trainees"] = trainees
     save_data(data)
 
-    archive_buffer.seek(0)
+    file_buffer = BytesIO()
+    combined_doc.save(file_buffer)
+    file_buffer.seek(0)
     session_name = re.sub(r"[^A-Za-z0-9_-]+", "_", (_session_get(s, "name", "") or "session").strip())
-    archive_name = f"etiquettes_word_{session_name}.zip"
-    return send_file(archive_buffer, as_attachment=True, download_name=archive_name, mimetype="application/zip")
+    file_name = f"etiquettes_word_{session_name}.docx"
+    return send_file(
+        file_buffer,
+        as_attachment=True,
+        download_name=file_name,
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
 
 def _prepare_photo_for_label(src_path: str, target_ratio: float) -> str:
     """

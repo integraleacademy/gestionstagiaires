@@ -99,7 +99,7 @@
     {% endif %}
     <a class="btn btn-outline" id="btnPrintTrainees" href="{{ url_for('admin_trainees_print', session_id=session.id, **request.args) }}" target="_blank" rel="noopener">🖨️ Imprimer la liste</a>
     <a class="btn btn-outline" id="btnWordLabels"
-       href="{{ url_for('admin_etiquettes_word_zip', session_id=session.id) }}"
+       href="{{ url_for('admin_etiquettes_word_docx', session_id=session.id) }}"
        title="Télécharger toutes les étiquettes Word de la session">🏷️ Étiquettes WORD</a>
     {% if not is_read_only %}
       {% if not is_vtc and not show_vae and not is_dirigeant %}
