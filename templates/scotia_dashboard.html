@@ -11,9 +11,13 @@
       filter:grayscale(1);
       background:#f3f4f6;
     }
-    .scotia-item--processed .scotia-item-actions :is(button,input,.btn-upload-attestation){
+    .scotia-item--processed .scotia-item-actions :is(button,input,.btn-upload-attestation):not(.btn-delete-person){
       pointer-events:none;
       opacity:.55;
+    }
+    .scotia-item--processed .scotia-item-actions .btn-delete-person{
+      pointer-events:auto;
+      opacity:1;
     }
     .btn-danger-solid{
       background:#b91c1c;
@@ -117,7 +121,7 @@
               {% endif %}
 
               <form method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/delete" onsubmit="return confirm('Supprimer définitivement cette personne de la session ?');">
-                <button class="btn" style="background:#7f1d1d;color:#fff;border-color:#7f1d1d;" type="submit">Supprimer personne</button>
+                <button class="btn btn-delete-person" style="background:#7f1d1d;color:#fff;border-color:#7f1d1d;" type="submit">Supprimer personne</button>
               </form>
             </div>
           </div>
