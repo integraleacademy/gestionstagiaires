@@ -54,6 +54,8 @@ ADMIN_USER = os.environ.get("ADMIN_USER", "")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 SECRETARY_USER = os.environ.get("SECRETARY_USER", "")
 SECRETARY_PASSWORD = os.environ.get("SECRETARY_PASSWORD", "")
+SCOTIA_USER = os.environ.get("SCOTIA_USER", "")
+SCOTIA_PASSWORD = os.environ.get("SCOTIA_PASSWORD", "")
 SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "30"))
 ADMIN_PUSH_TITLE = os.environ.get("ADMIN_PUSH_TITLE", "Intégrale Academy")
 WEB_PUSH_VAPID_PUBLIC_KEY = os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY", "").strip()
@@ -93,6 +95,14 @@ def admin_write_required(view):
     def wrapped(*args, **kwargs):
         if session.get("admin_role") == "viewer":
             abort(403)
+        return view(*args, **kwargs)
+    return wrapped
+
+def scotia_login_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not session.get("scotia_logged_in"):
+            return redirect(url_for("scotia_login", next=request.path))
         return view(*args, **kwargs)
     return wrapped
 
@@ -166,6 +176,46 @@ def admin_login_post():
             return redirect(next_url)
 
     return redirect(url_for("admin_login", next=next_url))
+
+
+@app.get("/scotia/login")
+def scotia_login():
+    next_url = request.args.get("next") or url_for("scotia_dashboard")
+    return f"""
+    <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Connexion SCOTIA</title></head>
+    <body style="font-family:Arial,sans-serif;max-width:420px;margin:60px auto;padding:20px">
+      <h2>Connexion SCOTIA</h2>
+      <form method="post" action="/scotia/login">
+        <input type="hidden" name="next" value="{next_url}">
+        <div style="margin:10px 0"><label>Identifiant</label><br><input name="username" autocomplete="username" style="width:100%;padding:10px"></div>
+        <div style="margin:10px 0"><label>Mot de passe</label><br><input name="password" type="password" autocomplete="current-password" style="width:100%;padding:10px"></div>
+        <button style="padding:10px 14px">Se connecter</button>
+      </form>
+    </body></html>
+    """
+
+@app.post("/scotia/login")
+def scotia_login_post():
+    username = (request.form.get("username") or "").strip()
+    password = (request.form.get("password") or "").strip()
+    next_url = request.form.get("next") or url_for("scotia_dashboard")
+
+    if not (SCOTIA_USER and SCOTIA_PASSWORD):
+        abort(500, "SCOTIA_USER/SCOTIA_PASSWORD non configurés")
+
+    if username == SCOTIA_USER and password == SCOTIA_PASSWORD:
+        session.clear()
+        session["scotia_logged_in"] = True
+        session.permanent = True
+        return redirect(next_url)
+
+    return redirect(url_for("scotia_login", next=next_url))
+
+@app.get("/scotia/logout")
+def scotia_logout():
+    session.clear()
+    return redirect(url_for("scotia_login"))
 
 @app.get("/admin/logout")
 def admin_logout():
@@ -5402,6 +5452,150 @@ def public_vae_desp_submit():
             "redirect_url": url_for("public_vae_desp_confirmation", token=public_token),
         }
     )
+
+
+
+
+def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    items: List[Dict[str, Any]] = []
+    for s in data.get("sessions", []):
+        if bool(s.get("archived")):
+            continue
+        training_type = (_session_get(s, "training_type", "") or "").strip().upper()
+        if "VAE" not in training_type:
+            continue
+        for t in _session_trainees_list(s):
+            action_dates = t.get("vae_action_dates") if isinstance(t.get("vae_action_dates"), dict) else {}
+            if not action_dates.get("livret_1_transmitted_scotia"):
+                continue
+            docs_view = []
+            for d in (t.get("documents") or []):
+                token = (d.get("file") or "").strip()
+                files = d.get("files") if isinstance(d.get("files"), list) else []
+                file_tokens = [x for x in files if isinstance(x, str) and x.strip()]
+                if token and token not in file_tokens:
+                    file_tokens.insert(0, token)
+                docs_view.append({
+                    "key": d.get("key"),
+                    "label": d.get("label") or d.get("key"),
+                    "file": token,
+                    "file_tokens": file_tokens,
+                })
+
+            items.append({
+                "session_id": str(s.get("id") or ""),
+                "session_name": _session_get(s, "name", ""),
+                "trainee_id": str(t.get("id") or ""),
+                "first_name": (t.get("first_name") or "").strip(),
+                "last_name": (t.get("last_name") or "").strip(),
+                "email": (t.get("email") or "").strip(),
+                "phone": (t.get("phone") or "").strip(),
+                "vae_sent_at": action_dates.get("livret_1_transmitted_scotia") or "",
+                "scotia_status": (t.get("scotia_status") or "").strip(),
+                "scotia_processed_at": (t.get("scotia_processed_at") or "").strip(),
+                "scotia_comment": (t.get("scotia_comment") or "").strip(),
+                "documents": docs_view,
+                "deliverables": t.get("deliverables") or {},
+            })
+    items.sort(key=lambda x: ((x.get("scotia_processed_at") or "9999-99-99"), (x.get("last_name") or "").upper()))
+    return items
+
+
+def _find_session_trainee(data: Dict[str, Any], session_id: str, trainee_id: str):
+    s = find_session(data, session_id)
+    if not s:
+        return None, None, None
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if str(x.get("id") or "") == str(trainee_id)), None)
+    return s, trainees, t
+
+
+@app.get('/scotia')
+@scotia_login_required
+def scotia_dashboard():
+    data = load_data()
+    items = _all_scotia_items(data)
+    return render_template('scotia_dashboard.html', items=items)
+
+
+@app.get('/scotia/uploads/<path:file_token>')
+@scotia_login_required
+def scotia_download_file(file_token: str):
+    data = load_data()
+    for s in data.get("sessions", []):
+        for t in _session_trainees_list(s):
+            if _token_belongs_to_trainee(t, file_token):
+                full = _detokenize_path(file_token)
+                if not os.path.exists(full):
+                    abort(404)
+                return send_file(full, as_attachment=False)
+    abort(403)
+
+
+@app.post('/api/scotia/sessions/<session_id>/stagiaires/<trainee_id>/decision')
+@scotia_login_required
+def api_scotia_decision(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+
+    payload = request.get_json(silent=True) or {}
+    decision = (payload.get('decision') or '').strip().lower()
+    if decision not in {'recevable', 'non_recevable'}:
+        return jsonify({"ok": False, "error": "invalid_decision"}), 400
+
+    t['scotia_status'] = decision
+    t['scotia_comment'] = (payload.get('comment') or '').strip()
+    t['scotia_processed_at'] = _now_iso()
+    t['updated_at'] = _now_iso()
+
+    trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
+    label = f"📄 Décision SCOTIA: {trainee_display_name} - {'recevable' if decision == 'recevable' else 'non recevable'}"
+    add_admin_notification(
+        data,
+        label,
+        {
+            "kind": "scotia_decision",
+            "session_id": str(s.get("id") or ""),
+            "session_name": _session_get(s, "name", ""),
+            "trainee_id": str(t.get("id") or ""),
+            "decision": decision,
+        },
+    )
+
+    s['trainees'] = trainees
+    s.pop('stagiaires', None)
+    save_data(data)
+    return jsonify({"ok": True})
+
+
+@app.post('/scotia/sessions/<session_id>/stagiaires/<trainee_id>/attestation/upload')
+@scotia_login_required
+def scotia_upload_attestation(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        abort(404)
+
+    f = request.files.get('file')
+    if not f or not f.filename:
+        return redirect(url_for('scotia_dashboard'))
+
+    try:
+        stored = _store_file(session_id, trainee_id, 'deliverables', f)
+    except Exception:
+        return redirect(url_for('scotia_dashboard'))
+
+    token = _tokenize_path(stored)
+    t.setdefault('deliverables', {})
+    t['deliverables']['attestation_recevabilite'] = token
+    t['updated_at'] = _now_iso()
+
+    s['trainees'] = trainees
+    s.pop('stagiaires', None)
+    save_data(data)
+    return redirect(url_for('scotia_dashboard'))
 
 
 @app.get("/admin/sessions")
