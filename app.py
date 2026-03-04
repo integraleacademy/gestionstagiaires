@@ -5471,6 +5471,8 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
         if "VAE" not in training_type:
             continue
         for t in _session_trainees_list(s):
+            if bool(t.get("scotia_hidden")):
+                continue
             action_dates = t.get("vae_action_dates") if isinstance(t.get("vae_action_dates"), dict) else {}
             if not action_dates.get("livret_1_transmitted_scotia"):
                 continue
@@ -5609,16 +5611,15 @@ def api_scotia_comment(session_id: str, trainee_id: str):
 @scotia_login_required
 def scotia_delete_trainee(session_id: str, trainee_id: str):
     data = load_data()
-    s = find_session(data, session_id)
-    if not s:
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
         abort(404)
 
-    trainees = _session_trainees_list(s)
-    kept = [x for x in trainees if str(x.get('id') or '') != str(trainee_id)]
-    if len(kept) == len(trainees):
-        abort(404)
+    t['scotia_hidden'] = True
+    t['scotia_hidden_at'] = _now_iso()
+    t['updated_at'] = _now_iso()
 
-    s['trainees'] = kept
+    s['trainees'] = trainees
     s.pop('stagiaires', None)
     save_data(data)
     return redirect(url_for('scotia_dashboard'))
