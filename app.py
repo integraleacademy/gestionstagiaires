@@ -8778,7 +8778,53 @@ def _replace_in_docx(doc: Document, replacements: dict) -> None:
             replace_in_table(table)
 
 
+def _etiquette_template_name(training_type: str) -> Optional[str]:
+    template_map = {
+        "A3P": "etiquette_a3p.docx",
+        "APS": "etiquette_aps.docx",
+        "CHAUFFEUR VTC": "etiquette_vtc.docx",
+        "VTC": "etiquette_vtc.docx",
+        "DIRIGEANT": "etiquette_dirigeant.docx",
+        "DIRIGEANT INITIAL": "etiquette_dirigeant_initial.docx",
+        "DIRIGEANT VAE": "etiquette_dirigeant.docx",
+    }
+    return template_map.get((training_type or "").strip().upper())
+
+
+def _build_etiquette_docx_bytes(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> bytes:
+    training_type = (_session_get(session_obj, "training_type", "") or "").strip().upper()
+    template_name = _etiquette_template_name(training_type)
+    if not template_name:
+        abort(400, f"Aucun modèle Word prévu pour la formation : {training_type}")
+
+    template_path = os.path.join("templates_word", template_name)
+    if not os.path.exists(template_path):
+        abort(500, f"Fichier Word manquant : {template_name} (dans /templates_word)")
+
+    doc = Document(template_path)
+    replacements = {
+        "{{NOM}}": (trainee.get("last_name", "") or "").upper(),
+        "{{PRENOM}}": (trainee.get("first_name", "") or "").upper(),
+        "{{FORMATION}}": _session_get(session_obj, "name", ""),
+        "{{TYPE_FORMATION}}": training_type,
+        "{{DATES}}": f"{fr_date(_session_get(session_obj,'date_start',''))} → {fr_date(_session_get(session_obj,'date_end',''))}",
+    }
+    _replace_in_docx(doc, replacements)
+
+    photo_token = (trainee.get("identity_photo") or "").strip()
+    if photo_token:
+        photo_path = _detokenize_path(photo_token)
+        _insert_label_photo(doc, "{{PHOTO}}", photo_path, width_cm=5.41, height_cm=6.41)
+    else:
+        _replace_in_docx(doc, {"{{PHOTO}}": ""})
+
+    buf = BytesIO()
+    doc.save(buf)
+    return buf.getvalue()
+
+
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/etiquette.docx")
+@admin_login_required
 def admin_etiquette_docx(session_id: str, trainee_id: str):
     data = load_data()
     s = find_session(data, session_id)
@@ -8790,53 +8836,7 @@ def admin_etiquette_docx(session_id: str, trainee_id: str):
     if not t:
         abort(404)
 
-    # 1) Choix du modèle Word selon le type de formation
-    training_type = (_session_get(s, "training_type", "") or "").strip().upper()
-
-    TEMPLATE_MAP = {
-        "A3P": "etiquette_a3p.docx",
-        "APS": "etiquette_aps.docx",
-        "CHAUFFEUR VTC": "etiquette_vtc.docx",
-        "VTC": "etiquette_vtc.docx",
-        "DIRIGEANT": "etiquette_dirigeant.docx",
-        "DIRIGEANT INITIAL": "etiquette_dirigeant_initial.docx",
-        "DIRIGEANT VAE": "etiquette_dirigeant.docx",
-    }
-
-    template_name = TEMPLATE_MAP.get(training_type)
-    if not template_name:
-        abort(400, f"Aucun modèle Word prévu pour la formation : {training_type}")
-
-    template_path = os.path.join("templates_word", template_name)
-    if not os.path.exists(template_path):
-        abort(500, f"Fichier Word manquant : {template_name} (dans /templates_word)")
-
-    # 2) Ouvrir le modèle
-    doc = Document(template_path)
-
-    # 3) Remplacements
-    replacements = {
-        "{{NOM}}": (t.get("last_name", "") or "").upper(),
-        "{{PRENOM}}": (t.get("first_name", "") or "").upper(),
-        "{{FORMATION}}": _session_get(s, "name", ""),
-        "{{TYPE_FORMATION}}": training_type,
-        "{{DATES}}": f"{fr_date(_session_get(s,'date_start',''))} → {fr_date(_session_get(s,'date_end',''))}",
-    }
-
-    _replace_in_docx(doc, replacements)
-
-    # ✅ Photo identité dans l'étiquette (même taille, sans déformation)
-    photo_token = (t.get("identity_photo") or "").strip()
-    if photo_token:
-        photo_path = _detokenize_path(photo_token)
-        _insert_label_photo(doc, "{{PHOTO}}", photo_path, width_cm=5.41, height_cm=6.41)
-    else:
-        # si pas de photo, on enlève le placeholder
-        _replace_in_docx(doc, {"{{PHOTO}}": ""})
-
-    # 4) Télécharger
-    buf = BytesIO()
-    doc.save(buf)
+    buf = BytesIO(_build_etiquette_docx_bytes(s, t))
     buf.seek(0)
 
     t["etiquette_word_downloaded_at"] = _now_iso()
@@ -8850,6 +8850,40 @@ def admin_etiquette_docx(session_id: str, trainee_id: str):
         download_name=filename,
         mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/etiquettes-word.zip")
+@admin_login_required
+def admin_etiquettes_word_zip(session_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    if not trainees:
+        abort(400, "Aucun stagiaire dans cette session.")
+
+    archive_buffer = BytesIO()
+    now = _now_iso()
+    with zipfile.ZipFile(archive_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for trainee in trainees:
+            trainee_id = (trainee.get("id") or "").strip()
+            if not trainee_id:
+                continue
+            safe_last_name = re.sub(r"[^A-Za-z0-9_-]+", "_", (trainee.get("last_name") or "").strip())
+            safe_first_name = re.sub(r"[^A-Za-z0-9_-]+", "_", (trainee.get("first_name") or "").strip())
+            doc_name = f"etiquette_{safe_last_name}_{safe_first_name}_{trainee_id}.docx"
+            zf.writestr(doc_name, _build_etiquette_docx_bytes(s, trainee))
+            trainee["etiquette_word_downloaded_at"] = now
+
+    s["trainees"] = trainees
+    save_data(data)
+
+    archive_buffer.seek(0)
+    session_name = re.sub(r"[^A-Za-z0-9_-]+", "_", (_session_get(s, "name", "") or "session").strip())
+    archive_name = f"etiquettes_word_{session_name}.zip"
+    return send_file(archive_buffer, as_attachment=True, download_name=archive_name, mimetype="application/zip")
 
 def _prepare_photo_for_label(src_path: str, target_ratio: float) -> str:
     """
