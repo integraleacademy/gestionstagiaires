@@ -7,9 +7,13 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <style>
     .scotia-item--processed{
-      opacity:1 !important;
-      filter:none !important;
-      pointer-events:auto !important;
+      opacity:.65;
+      filter:grayscale(1);
+      background:#f3f4f6;
+    }
+    .scotia-item--processed .scotia-item-actions :is(button,input,.btn-upload-attestation){
+      pointer-events:none;
+      opacity:.55;
     }
     .btn-danger-solid{
       background:#b91c1c;
@@ -99,12 +103,13 @@
             {% endif %}
 
             <div class="scotia-item-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-              <button type="button" class="btn btn-primary {% if it.scotia_status == 'recevable' %}is-active{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','recevable')">Recevable</button>
-              <button type="button" class="btn btn-danger-solid {% if it.scotia_status == 'non_recevable' %}is-active{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','non_recevable')">Non recevable</button>
+              {% set item_processed = it.scotia_status in ['recevable', 'non_recevable'] %}
+              <button type="button" class="btn btn-primary {% if it.scotia_status == 'recevable' %}is-active{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','recevable')" {% if item_processed %}disabled{% endif %}>Recevable</button>
+              <button type="button" class="btn btn-danger-solid {% if it.scotia_status == 'non_recevable' %}is-active{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','non_recevable')" {% if item_processed %}disabled{% endif %}>Non recevable</button>
 
               <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/attestation/upload" style="display:flex;gap:6px;align-items:center;">
-                <input type="file" name="file" required>
-                <button class="btn btn-outline" type="submit">Téléverser attestation</button>
+                <input id="attestation-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="file" required style="display:none;" onchange="submitAttestationForm(this)" {% if item_processed %}disabled{% endif %}>
+                <button class="btn btn-outline btn-upload-attestation" type="button" onclick="triggerAttestationUpload('{{ it.session_id }}','{{ it.trainee_id }}')" {% if item_processed %}disabled{% endif %}>Téléverser attestation</button>
               </form>
 
               {% if it.deliverables.attestation_recevabilite %}
@@ -125,6 +130,19 @@
   </div>
 
 <script>
+function triggerAttestationUpload(sessionId, traineeId){
+  const input = document.getElementById(`attestation-file-${sessionId}-${traineeId}`);
+  if(!input || input.disabled) return;
+  input.click();
+}
+
+function submitAttestationForm(input){
+  if(!input || !input.files || !input.files.length) return;
+  const form = input.closest('form');
+  if(!form) return;
+  form.submit();
+}
+
 async function setDecision(sessionId, traineeId, decision){
   const comment = window.prompt('Commentaire (optionnel)') || '';
   const res = await fetch(`/api/scotia/sessions/${sessionId}/stagiaires/${traineeId}/decision`, {
