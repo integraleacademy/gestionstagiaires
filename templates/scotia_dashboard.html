@@ -5,6 +5,23 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>SCOTIA - Dossiers à traiter</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .scotia-item--processed{ opacity:1; }
+    .btn-danger-solid{
+      background:#b91c1c;
+      color:#fff;
+      border-color:#b91c1c;
+      box-shadow: 0 14px 26px rgba(185,28,28,.18);
+    }
+    .btn-danger-solid:hover{ border-color:#991b1b; }
+    .scotia-item-actions .btn.is-active{
+      box-shadow:0 0 0 3px rgba(37,99,235,.22);
+      transform:none;
+    }
+    .scotia-item-actions .btn-danger-solid.is-active{
+      box-shadow:0 0 0 3px rgba(185,28,28,.26);
+    }
+  </style>
 </head>
 <body>
   <div class="container" style="max-width:1200px;margin:24px auto;">
@@ -18,7 +35,7 @@
       {% if items %}
         <div style="display:grid;gap:12px;">
           {% for it in items %}
-          <div class="card" style="border:1px solid #e5e7eb;">
+          <div class="card scotia-item {% if it.scotia_status in ['recevable', 'non_recevable'] %}scotia-item--processed{% endif %}" style="border:1px solid #e5e7eb;">
             <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
               <div>
                 <div style="font-weight:700;font-size:18px;">{{ it.first_name }} {{ it.last_name }}</div>
@@ -54,9 +71,9 @@
               </ul>
             </div>
 
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-              <button class="btn btn-primary" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','recevable')">Recevable</button>
-              <button class="btn" style="background:#b91c1c;color:#fff;border-color:#b91c1c;" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','non_recevable')">Non recevable</button>
+            <div class="scotia-item-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              <button type="button" class="btn btn-primary {% if it.scotia_status == 'recevable' %}is-active{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','recevable')">Recevable</button>
+              <button type="button" class="btn btn-danger-solid {% if it.scotia_status == 'non_recevable' %}is-active{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','non_recevable')">Non recevable</button>
 
               <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/attestation/upload" style="display:flex;gap:6px;align-items:center;">
                 <input type="file" name="file" required>
