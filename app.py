@@ -7861,7 +7861,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
             "- VAE Dirigeant d'entreprise de sécurité privée"
         )
         html = mail_layout(f"""
-          <p>Nom prénom, etc : <strong>{trainee_display_name}</strong>.</p>
+          <p><strong>{trainee_display_name}</strong>.</p>
           <p>Une nouvelle demande de recevabilité a été déposée pour {trainee_display_name} - VAE Dirigeant d'entreprise de sécurité privée.</p>
           <p style=\"text-align:center;margin:18px 0;\">
             <a href=\"{dossier_url}\" style=\"display:inline-block;background:#1f8f4a;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 18px;border-radius:8px;\">Consulter le dossier</a>
