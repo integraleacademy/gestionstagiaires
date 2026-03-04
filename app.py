@@ -5474,7 +5474,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
             if bool(t.get("scotia_hidden")):
                 continue
             action_dates = t.get("vae_action_dates") if isinstance(t.get("vae_action_dates"), dict) else {}
-            if not action_dates.get("livret_1_transmitted_scotia"):
+            if not action_dates.get("livret_2_transmitted_scotia"):
                 continue
             docs_view = []
             for d in (t.get("documents") or []):
@@ -5501,7 +5501,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "last_name": (t.get("last_name") or "").strip(),
                 "email": (t.get("email") or "").strip(),
                 "phone": (t.get("phone") or "").strip(),
-                "vae_sent_at": action_dates.get("livret_1_transmitted_scotia") or "",
+                "vae_sent_at": action_dates.get("livret_2_transmitted_scotia") or "",
                 "scotia_status": (t.get("scotia_status") or "").strip(),
                 "scotia_processed_at": (t.get("scotia_processed_at") or "").strip(),
                 "scotia_comment": (t.get("scotia_comment") or "").strip(),
