@@ -8765,17 +8765,10 @@ def _replace_in_docx(doc: Document, replacements: dict) -> None:
     for table in doc.tables:
         replace_in_table(table)
 
-    # En-têtes / pieds de page
-    for section in doc.sections:
-        for p in section.header.paragraphs:
-            replace_in_paragraph(p)
-        for table in section.header.tables:
-            replace_in_table(table)
-
-        for p in section.footer.paragraphs:
-            replace_in_paragraph(p)
-        for table in section.footer.tables:
-            replace_in_table(table)
+    # ⚠️ Ne pas parcourir systématiquement section.header/footer ici.
+    # Avec python-docx, le simple accès à ces propriétés peut créer des
+    # parties header/footer absentes du template, et modifier la mise en page
+    # (cas observé sur les étiquettes Word qui basculaient à 2 pages).
 
 
 def _etiquette_template_name(training_type: str) -> Optional[str]:
