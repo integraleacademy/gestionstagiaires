@@ -7626,6 +7626,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
     was_exam_fees_paid = bool(t.get("exam_fees_paid"))
     previous_elearning_link = (t.get("elearning_link") or "").strip()
     previous_cnaps_status = (t.get("cnaps") or "").strip()
+    previous_vae_action_dates = t.get("vae_action_dates") if isinstance(t.get("vae_action_dates"), dict) else {}
 
     # Your template uses:
     # - convention_status, test_fr_status, dossier_status, financement_status, vae_status, comment, cnaps
@@ -7832,6 +7833,27 @@ def api_update_trainee(session_id: str, trainee_id: str):
     if (_session_get(s, "training_type", "") or "").strip().upper() == "DIRIGEANT VAE":
         ensure_vae_relances_state(t)
         refresh_vae_relance_schedule(t)
+
+    current_vae_action_dates = t.get("vae_action_dates") if isinstance(t.get("vae_action_dates"), dict) else {}
+    livret_1_transmitted_now = bool(current_vae_action_dates.get("livret_1_transmitted_scotia"))
+    livret_1_transmitted_before = bool(previous_vae_action_dates.get("livret_1_transmitted_scotia"))
+    if livret_1_transmitted_now and not livret_1_transmitted_before:
+        first_name = (t.get("first_name") or "").strip()
+        last_name = (t.get("last_name") or "").strip()
+        trainee_display_name = _format_trainee_name(first_name, last_name)
+        dossier_url = f"{PUBLIC_BASE_URL.rstrip('/')}/scotia"
+        subject = (
+            f"Nouvelle demande de recevabilité déposée pour {trainee_display_name} "
+            "- VAE Dirigeant d'entreprise de sécurité privée"
+        )
+        html = mail_layout(f"""
+          <p>Nom prénom, etc : <strong>{trainee_display_name}</strong>.</p>
+          <p>Une nouvelle demande de recevabilité a été déposée pour {trainee_display_name} - VAE Dirigeant d'entreprise de sécurité privée.</p>
+          <p style=\"text-align:center;margin:18px 0;\">
+            <a href=\"{dossier_url}\" style=\"display:inline-block;background:#1f8f4a;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 18px;border-radius:8px;\">Consulter le dossier</a>
+          </p>
+        """)
+        brevo_send_email("clement.annecy@gmail.com", subject, html, trainee=t)
 
     t["updated_at"] = _now_iso()
     s["trainees"] = trainees
