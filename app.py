@@ -5482,6 +5482,9 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                     "file_tokens": file_tokens,
                 })
 
+            latest_vae = _vae_find_latest_for_trainee(str(t.get("id") or ""))
+            vae_justificatifs = latest_vae.get("justificatifs_experience") if isinstance(latest_vae, dict) and isinstance(latest_vae.get("justificatifs_experience"), list) else []
+
             items.append({
                 "session_id": str(s.get("id") or ""),
                 "session_name": _session_get(s, "name", ""),
@@ -5496,6 +5499,9 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "scotia_comment": (t.get("scotia_comment") or "").strip(),
                 "documents": docs_view,
                 "deliverables": t.get("deliverables") or {},
+                "candidate_sheet_available": bool(t.get("candidate_sheet_saved_at") or t.get("candidate_sheet")),
+                "vae_dossier_id": str((latest_vae or {}).get("id") or ""),
+                "vae_justificatifs": vae_justificatifs,
             })
     items.sort(key=lambda x: ((x.get("scotia_processed_at") or "9999-99-99"), (x.get("last_name") or "").upper()))
     return items
@@ -5570,6 +5576,47 @@ def api_scotia_decision(session_id: str, trainee_id: str):
     return jsonify({"ok": True})
 
 
+@app.post('/api/scotia/sessions/<session_id>/stagiaires/<trainee_id>/comment')
+@scotia_login_required
+def api_scotia_comment(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+
+    payload = request.get_json(silent=True) or {}
+    comment = (payload.get('comment') or '').strip()
+    if not comment:
+        return jsonify({"ok": False, "error": "missing_comment"}), 400
+
+    t['scotia_comment'] = comment
+    t['updated_at'] = _now_iso()
+
+    s['trainees'] = trainees
+    s.pop('stagiaires', None)
+    save_data(data)
+    return jsonify({"ok": True, "comment": comment})
+
+
+@app.post('/scotia/sessions/<session_id>/stagiaires/<trainee_id>/delete')
+@scotia_login_required
+def scotia_delete_trainee(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    kept = [x for x in trainees if str(x.get('id') or '') != str(trainee_id)]
+    if len(kept) == len(trainees):
+        abort(404)
+
+    s['trainees'] = kept
+    s.pop('stagiaires', None)
+    save_data(data)
+    return redirect(url_for('scotia_dashboard'))
+
+
 @app.post('/scotia/sessions/<session_id>/stagiaires/<trainee_id>/attestation/upload')
 @scotia_login_required
 def scotia_upload_attestation(session_id: str, trainee_id: str):
@@ -5596,6 +5643,63 @@ def scotia_upload_attestation(session_id: str, trainee_id: str):
     s.pop('stagiaires', None)
     save_data(data)
     return redirect(url_for('scotia_dashboard'))
+
+
+@app.get('/scotia/sessions/<session_id>/stagiaires/<trainee_id>/candidate-sheet')
+@scotia_login_required
+def scotia_candidate_sheet(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        abort(404)
+    if not (t.get("candidate_sheet_saved_at") or t.get("candidate_sheet")):
+        abort(404)
+
+    candidate_data = _build_candidate_sheet_data(s, t)
+    return render_template(
+        "admin_trainee_candidate_sheet.html",
+        session=s,
+        trainee=t,
+        candidate=candidate_data,
+    )
+
+
+@app.get('/scotia/vae/<dossier_id>')
+@scotia_login_required
+def scotia_vae_dossier(dossier_id: str):
+    data = _vae_load_all()
+    dossier = _vae_find_dossier(data, dossier_id)
+    if not dossier:
+        abort(404)
+
+    return render_template(
+        'vae_wizard.html',
+        dossier=dossier,
+        dossier_json=json.dumps(dossier, ensure_ascii=False),
+        admin_edit_mode=False,
+    )
+
+
+@app.get('/scotia/vae/<dossier_id>/justificatifs/<doc_id>')
+@scotia_login_required
+def scotia_vae_justificatif_download(dossier_id: str, doc_id: str):
+    data = _vae_load_all()
+    dossier = _vae_find_dossier(data, dossier_id)
+    if not dossier:
+        abort(404)
+
+    justificatifs = dossier.get('justificatifs_experience') if isinstance(dossier.get('justificatifs_experience'), list) else []
+    entry = next((x for x in justificatifs if str((x or {}).get('id') or '') == str(doc_id)), None)
+    if not entry:
+        abort(404)
+
+    token = str((entry or {}).get('token') or '').strip()
+    if not token:
+        abort(404)
+    fp = _detokenize_path(token)
+    if not os.path.exists(fp):
+        abort(404)
+    return send_file(fp, as_attachment=False)
 
 
 @app.get("/admin/sessions")

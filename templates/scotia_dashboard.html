@@ -54,6 +54,29 @@
               </ul>
             </div>
 
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;">
+              {% if it.vae_dossier_id %}
+                <a class="btn btn-outline" href="/scotia/vae/{{ it.vae_dossier_id }}" target="_blank" rel="noopener">Voir dossier de faisabilité VAE</a>
+              {% endif %}
+              {% if it.candidate_sheet_available %}
+                <a class="btn btn-outline" href="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/candidate-sheet" target="_blank" rel="noopener">Voir fiche candidat complétée</a>
+              {% endif %}
+              {% if it.vae_dossier_id and it.vae_justificatifs %}
+                {% for justif in it.vae_justificatifs %}
+                  <a class="btn btn-outline" href="/scotia/vae/{{ it.vae_dossier_id }}/justificatifs/{{ justif.id }}" target="_blank" rel="noopener">Justificatif {{ loop.index }}</a>
+                {% endfor %}
+              {% endif %}
+            </div>
+
+            <div style="margin-top:10px;padding:10px;border:1px solid #e5e7eb;border-radius:10px;background:#f8fafc;">
+              <div style="font-weight:700;margin-bottom:6px;">Commentaire SCOTIA</div>
+              <div id="comment-display-{{ it.session_id }}-{{ it.trainee_id }}" class="muted" style="margin-bottom:8px;">{{ it.scotia_comment or 'Aucun commentaire' }}</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <input id="comment-input-{{ it.session_id }}-{{ it.trainee_id }}" type="text" placeholder="Ajouter un commentaire" style="min-width:280px;flex:1;padding:8px;border:1px solid #d1d5db;border-radius:8px;">
+                <button class="btn btn-outline" type="button" onclick="saveComment('{{ it.session_id }}','{{ it.trainee_id }}')">Ajouter commentaire</button>
+              </div>
+            </div>
+
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
               <button class="btn btn-primary" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','recevable')">Recevable</button>
               <button class="btn" style="background:#b91c1c;color:#fff;border-color:#b91c1c;" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','non_recevable')">Non recevable</button>
@@ -66,6 +89,10 @@
               {% if it.deliverables.attestation_recevabilite %}
                 <a class="btn btn-outline" href="/scotia/uploads/{{ it.deliverables.attestation_recevabilite }}" target="_blank">Voir attestation</a>
               {% endif %}
+
+              <form method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/delete" onsubmit="return confirm('Supprimer définitivement cette personne de la session ?');">
+                <button class="btn" style="background:#7f1d1d;color:#fff;border-color:#7f1d1d;" type="submit">Supprimer personne</button>
+              </form>
             </div>
           </div>
           {% endfor %}
@@ -90,6 +117,30 @@ async function setDecision(sessionId, traineeId, decision){
     return;
   }
   window.location.reload();
+}
+
+async function saveComment(sessionId, traineeId){
+  const input = document.getElementById(`comment-input-${sessionId}-${traineeId}`);
+  const display = document.getElementById(`comment-display-${sessionId}-${traineeId}`);
+  if(!input || !display) return;
+  const comment = (input.value || '').trim();
+  if(!comment){
+    alert('Veuillez saisir un commentaire');
+    return;
+  }
+
+  const res = await fetch(`/api/scotia/sessions/${sessionId}/stagiaires/${traineeId}/comment`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({comment})
+  });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok || data.ok === false){
+    alert('Erreur lors de l\'ajout du commentaire');
+    return;
+  }
+  display.textContent = data.comment || comment;
+  input.value = '';
 }
 </script>
 </body>
