@@ -22,6 +22,8 @@ python app.py
 - `BACKUP_RETENTION` (optionnel, nombre de snapshots conservés, défaut `120`)
 - `BACKUP_MIN_INTERVAL_SECONDS` (optionnel, fréquence mini entre snapshots automatiques, défaut `300`)
 - `AUTO_RESTORE_FROM_BACKUP` (optionnel, défaut `1`) : en cas de `data.json` manquant/corrompu, tente une restauration automatique depuis `PERSIST_DIR/backups`.
+- `CNAPSV3_BASE_URL` (optionnel, défaut `https://cnapsv3.onrender.com`)
+- `GESTIONSTAGIAIRE_SYNC_TOKEN` (obligatoire pour synchroniser le statut CNAPS vers cnapsv3)
 
 ## Module VAE DESP
 
@@ -53,3 +55,22 @@ Les dossiers VAE sont persistés dans `data_vae.json` dans `PERSIST_DIR`.
 - Autorise les notifications quand iOS le demande.
 
 > Sans les clés VAPID (`WEB_PUSH_VAPID_PUBLIC_KEY` / `WEB_PUSH_VAPID_PRIVATE_KEY`), le bouton restera désactivé côté interface.
+
+
+## Intégration cnapsv3 (sync ACCEPTÉ)
+
+Lorsqu'une entrée CNAPS PRE est enregistrée et devient visible dans `/admin/cnaps/import-pre/pending`, gestionstagiaires déclenche un `POST` vers:
+
+- `${CNAPSV3_BASE_URL}/integrations/gestionstagiaire/cnaps/accept`
+
+Payload envoyé:
+
+- prioritaire: `{"request_id": "..."}`
+- sinon fallback: `{"dossier_id": "..."}`
+
+Headers envoyés:
+
+- `Content-Type: application/json`
+- `Authorization: Bearer ${GESTIONSTAGIAIRE_SYNC_TOKEN}`
+
+En cas d'erreur réseau/timeout, l'appel est retenté automatiquement (3 tentatives, backoff 1s/2s/4s).
