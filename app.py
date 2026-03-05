@@ -5700,11 +5700,17 @@ def scotia_candidate_sheet(session_id: str, trainee_id: str):
         abort(404)
 
     candidate_data = _build_candidate_sheet_data(s, t)
+    photo_url = ""
+    photo_token = (t.get("identity_photo") or "").strip()
+    if photo_token:
+        photo_url = url_for("scotia_download_file", file_token=photo_token)
+
     return render_template(
         "admin_trainee_candidate_sheet.html",
         session=s,
         trainee=t,
         candidate=candidate_data,
+        photo_url=photo_url,
     )
 
 
