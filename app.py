@@ -5613,8 +5613,6 @@ def api_scotia_comment(session_id: str, trainee_id: str):
 
     payload = request.get_json(silent=True) or {}
     comment = (payload.get('comment') or '').strip()
-    if not comment:
-        return jsonify({"ok": False, "error": "missing_comment"}), 400
 
     t['scotia_comment'] = comment
     t['updated_at'] = _now_iso()

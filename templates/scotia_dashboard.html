@@ -41,6 +41,33 @@
       font-size:13px;
       color:#4b5563;
     }
+    .scotia-comment-wrap{
+      margin-top:10px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      width:100%;
+    }
+    .scotia-comment-label{
+      font-size:13px;
+      font-weight:700;
+      color:#374151;
+    }
+    .scotia-comment-input{
+      width:100%;
+      min-height:82px;
+      resize:vertical;
+      border:1px solid #d1d5db;
+      border-radius:10px;
+      padding:10px 12px;
+      font:inherit;
+      line-height:1.35;
+    }
+    .scotia-comment-status{
+      font-size:12px;
+      color:#6b7280;
+      min-height:16px;
+    }
   </style>
 </head>
 <body>
@@ -130,6 +157,18 @@
               <form method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/delete" onsubmit="return confirm('Supprimer définitivement cette personne de la session ?');">
                 <button class="btn btn-delete-person btn-danger-solid" type="submit">Supprimer personne</button>
               </form>
+
+              <div class="scotia-comment-wrap">
+                <label class="scotia-comment-label" for="comment-input-{{ it.session_id }}-{{ it.trainee_id }}">Commentaire SCOTIA</label>
+                <textarea
+                  id="comment-input-{{ it.session_id }}-{{ it.trainee_id }}"
+                  class="scotia-comment-input"
+                  placeholder="Saisir un commentaire..."
+                  data-session-id="{{ it.session_id }}"
+                  data-trainee-id="{{ it.trainee_id }}"
+                >{{ it.scotia_comment }}</textarea>
+                <div id="comment-status-{{ it.session_id }}-{{ it.trainee_id }}" class="scotia-comment-status"></div>
+              </div>
             </div>
           </div>
           {% endfor %}
@@ -155,7 +194,8 @@ function submitAttestationForm(input){
 }
 
 async function setDecision(sessionId, traineeId, decision){
-  const comment = window.prompt('Commentaire (optionnel)') || '';
+  const commentInput = document.getElementById(`comment-input-${sessionId}-${traineeId}`);
+  const comment = (commentInput?.value || '').trim();
   const res = await fetch(`/api/scotia/sessions/${sessionId}/stagiaires/${traineeId}/decision`, {
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -169,16 +209,25 @@ async function setDecision(sessionId, traineeId, decision){
   window.location.reload();
 }
 
+const _commentSaveTimers = new Map();
+const _commentLastSavedValues = new Map();
+
+function setCommentStatus(sessionId, traineeId, message){
+  const status = document.getElementById(`comment-status-${sessionId}-${traineeId}`);
+  if(status) status.textContent = message || '';
+}
+
 async function saveComment(sessionId, traineeId){
   const input = document.getElementById(`comment-input-${sessionId}-${traineeId}`);
-  const display = document.getElementById(`comment-display-${sessionId}-${traineeId}`);
-  if(!input || !display) return;
+  if(!input) return;
   const comment = (input.value || '').trim();
-  if(!comment){
-    alert('Veuillez saisir un commentaire');
+  const key = `${sessionId}-${traineeId}`;
+  if(_commentLastSavedValues.get(key) === comment){
+    setCommentStatus(sessionId, traineeId, '');
     return;
   }
 
+  setCommentStatus(sessionId, traineeId, 'Enregistrement...');
   const res = await fetch(`/api/scotia/sessions/${sessionId}/stagiaires/${traineeId}/comment`, {
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -186,12 +235,38 @@ async function saveComment(sessionId, traineeId){
   });
   const data = await res.json().catch(()=>({}));
   if(!res.ok || data.ok === false){
-    alert('Erreur lors de l\'ajout du commentaire');
+    setCommentStatus(sessionId, traineeId, 'Erreur lors de l\'enregistrement');
     return;
   }
-  display.textContent = data.comment || comment;
-  input.value = '';
+  _commentLastSavedValues.set(key, (data.comment || '').trim());
+  setCommentStatus(sessionId, traineeId, 'Commentaire enregistré');
 }
+
+function queueCommentAutosave(sessionId, traineeId){
+  const key = `${sessionId}-${traineeId}`;
+  if(_commentSaveTimers.has(key)){
+    window.clearTimeout(_commentSaveTimers.get(key));
+  }
+  setCommentStatus(sessionId, traineeId, 'Modification en attente...');
+  const timer = window.setTimeout(()=>{
+    saveComment(sessionId, traineeId);
+    _commentSaveTimers.delete(key);
+  }, 700);
+  _commentSaveTimers.set(key, timer);
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.querySelectorAll('.scotia-comment-input').forEach((input)=>{
+    const sessionId = input.dataset.sessionId;
+    const traineeId = input.dataset.traineeId;
+    if(!sessionId || !traineeId) return;
+    const key = `${sessionId}-${traineeId}`;
+    _commentLastSavedValues.set(key, (input.value || '').trim());
+
+    input.addEventListener('input', ()=> queueCommentAutosave(sessionId, traineeId));
+    input.addEventListener('blur', ()=> saveComment(sessionId, traineeId));
+  });
+});
 </script>
 </body>
 </html>
