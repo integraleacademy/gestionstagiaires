@@ -501,11 +501,29 @@
     <a class="btn btn-outline" href="{{ url_for('admin_trainee_candidate_sheet', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener">Voir fiche candidat</a>
   </div>
   {% set vae_docs = trainee.documents or [] %}
-  {% set vae_doc_keys = ['livret_2', 'id', 'justif_dom', 'diplome'] %}
+  {% set vae_doc_keys = ['livret_2', 'id', 'justif_dom', 'diplome', 'highest_diploma'] %}
   {% set vae_support_docs = [] %}
   {% for d in vae_docs %}
     {% if d.key in vae_doc_keys %}
-      {% set tokens = d.file_tokens or ([d.file] if d.file else []) %}
+      {% set ns_tokens = namespace(items=[]) %}
+      {% if d.file_tokens is defined and d.file_tokens is sequence and d.file_tokens is not string %}
+        {% for ft in d.file_tokens %}
+          {% if ft and ft not in ns_tokens.items %}
+            {% set _ = ns_tokens.items.append(ft) %}
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+      {% if d.files is defined and d.files is sequence and d.files is not string %}
+        {% for ft in d.files %}
+          {% if ft and ft not in ns_tokens.items %}
+            {% set _ = ns_tokens.items.append(ft) %}
+          {% endif %}
+        {% endfor %}
+      {% endif %}
+      {% if d.file and d.file not in ns_tokens.items %}
+        {% set _ = ns_tokens.items.insert(0, d.file) %}
+      {% endif %}
+      {% set tokens = ns_tokens.items %}
       {% if tokens %}
         {% set _ = vae_support_docs.append({'label': d.label, 'key': d.key, 'tokens': tokens}) %}
       {% endif %}
