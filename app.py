@@ -4357,11 +4357,11 @@ import re
 
 PRE_CAR_PATTERNS = (
     re.compile(r"^(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11}$"),
-    re.compile(r"^\d{4}-\d{7}-(PRE|CAR)-[A-Z]{2}-\d{7}$"),
+    re.compile(r"^\d{4}-\d{7}-(PRE|CAR)-[A-Z0-9]{2}-\d{7}$"),
 )
 
 CNAPS_PRE_IN_TEXT_PATTERN = re.compile(
-    r"(?:\b(?:PRE|CAR)\b[\s:\-]*)?((?:\d{4}[\s\-]?\d{7}[\s\-]?(?:PRE|CAR)[\s\-]?[A-Z]{2}[\s\-]?\d{7})|(?:(?:PRE|CAR)[\s\-]?(?:\d{3}[\s\-]?)?\d{4}[\s\-]?\d{2}[\s\-]?\d{2}[\s\-]?\d{11}))",
+    r"(?:\b(?:PRE|CAR)\b[\s:\-]*)?((?:\d{4}[\s\-]?\d{7}[\s\-]?(?:PRE|CAR)[\s\-]?[A-Z0-9]{2}[\s\-]?\d{7})|(?:(?:PRE|CAR)[\s\-]?(?:\d{3}[\s\-]?)?\d{4}[\s\-]?\d{2}[\s\-]?\d{2}[\s\-]?\d{11}))",
     re.IGNORECASE,
 )
 
@@ -4370,7 +4370,7 @@ def _normalize_pre_car(value: str) -> str:
     normalized = (value or "").strip().upper().replace(" ", "")
     compact = re.sub(r"[^A-Z0-9]", "", normalized)
 
-    m = re.match(r"^(\d{4})(\d{7})(PRE|CAR)([A-Z]{2})(\d{7})$", compact)
+    m = re.match(r"^(\d{4})(\d{7})(PRE|CAR)([A-Z0-9]{2})(\d{7})$", compact)
     if m:
         return f"{m.group(1)}-{m.group(2)}-{m.group(3)}-{m.group(4)}-{m.group(5)}"
 
@@ -4408,7 +4408,7 @@ def _extract_pre_from_compact_text(compact_text: str) -> str:
 
     upper = re.sub(r"[^A-Z0-9]", "", compact_text.upper())
     for pat in (
-        re.compile(r"(\d{4}\d{7}(?:PRE|CAR)[A-Z]{2}\d{7})"),
+        re.compile(r"(\d{4}\d{7}(?:PRE|CAR)[A-Z0-9]{2}\d{7})"),
         re.compile(r"((?:PRE|CAR)(?:\d{3})?\d{4}\d{2}\d{2}\d{11})"),
     ):
         m = pat.search(upper)

@@ -190,7 +190,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   <a class="trainee-link"
      href="/admin/sessions/{{ session.id }}/stagiaires/{{ t.id }}"
      style="text-decoration:none;">
-    {{ t.first_name or "" }}
+    {{ t.first_name or "" }}{% if not is_vtc and (t.identity_photo or "")|trim %} 📷{% endif %}
   </a>
 </td>
 

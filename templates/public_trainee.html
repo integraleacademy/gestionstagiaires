@@ -930,7 +930,7 @@
   {{ field("Numéro PRE ou CAR (numéro d'autorisation préalable CNAPS qui commence par PRE ou numéro de carte professionnelle CNAPS qui commence par CAR)",
            "pre_number",
            trainee.pre_number,
-           "Ex : PRE-013-2029-07-25-20240908920 ou CAR-013-2029-07-25-20240908920") }}
+           "Ex : PRE-013-2029-07-25-20240908920, CAR-013-2029-07-25-20240908920 ou 2026-0002805-PRE-3P-1050370") }}
 {% endif %}
 
 {# Date de naissance (type date) #}
@@ -2372,7 +2372,7 @@ function isValidSecu(digits){
 function isValidPRE(v){
   if(!v) return false;
   const normalized = normalizePRE(v);
-  return /^(?:(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11}|\d{4}-\d{7}-(PRE|CAR)-[A-Z]{2}-\d{7})$/.test(normalized);
+  return /^(?:(PRE|CAR)-\d{3}-\d{4}-\d{2}-\d{2}-\d{11}|\d{4}-\d{7}-(PRE|CAR)-[A-Z0-9]{2}-\d{7})$/.test(normalized);
 }
 
 function applyFormatting(){
@@ -2666,7 +2666,7 @@ function formatPreCarDisplay(raw){
   rest = rest.slice(dossier.length);
   const type = rest.match(/^[A-Z]{0,3}/)?.[0] || "";
   rest = rest.slice(type.length);
-  const region = rest.match(/^[A-Z]{0,2}/)?.[0] || "";
+  const region = rest.match(/^[A-Z0-9]{0,2}/)?.[0] || "";
   rest = rest.slice(region.length);
   const serial = rest.match(/^\d{0,7}/)?.[0] || "";
 
