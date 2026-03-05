@@ -10,6 +10,7 @@ import unicodedata
 import threading
 import shutil
 import importlib.util
+import time
 from typing import Dict, Any, Optional, List, Iterable, Tuple, Set
 from functools import wraps
 from zoneinfo import ZoneInfo
@@ -561,6 +562,8 @@ BREVO_SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL", "ecole@integraleacadem
 BREVO_SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "Intégrale Academy")
 CNAPS_LOOKUP_ENDPOINT = os.environ.get("CNAPS_LOOKUP_ENDPOINT", "")
 CNAPSV3_NOTIFICATIONS_ENDPOINT = os.environ.get("CNAPSV3_NOTIFICATIONS_ENDPOINT", "")
+CNAPSV3_BASE_URL = os.environ.get("CNAPSV3_BASE_URL", "https://cnapsv3.onrender.com").strip().rstrip("/")
+GESTIONSTAGIAIRE_SYNC_TOKEN = os.environ.get("GESTIONSTAGIAIRE_SYNC_TOKEN", "").strip()
 
 PUBLIC_STUDENT_PORTAL_BASE = os.environ.get(
     "PUBLIC_STUDENT_PORTAL_BASE",
@@ -593,6 +596,87 @@ def _cnapsv3_notifications_endpoint() -> str:
         return urljoin(f"{parsed.scheme}://{parsed.netloc}", "/notifications_espace_cnaps_a_valider.json")
     except Exception:
         return ""
+
+
+def _cnapsv3_accept_endpoint() -> str:
+    base_url = (CNAPSV3_BASE_URL or "").strip().rstrip("/")
+    if not base_url:
+        return ""
+    return f"{base_url}/integrations/gestionstagiaire/cnaps/accept"
+
+
+def sync_cnapsv3_accept_status(
+    request_id: Optional[str] = None,
+    dossier_id: Optional[str] = None,
+    *,
+    post_func=requests.post,
+    sleep_func=time.sleep,
+) -> bool:
+    request_id_value = str(request_id or "").strip()
+    dossier_id_value = str(dossier_id or "").strip()
+
+    if not request_id_value and not dossier_id_value:
+        app.logger.warning("[CNAPSV3_SYNC] Aucun identifiant fourni (request_id/dossier_id)")
+        return False
+
+    endpoint = _cnapsv3_accept_endpoint()
+    if not endpoint:
+        app.logger.error("[CNAPSV3_SYNC] CNAPSV3_BASE_URL non configuré")
+        return False
+
+    if not GESTIONSTAGIAIRE_SYNC_TOKEN:
+        app.logger.error("[CNAPSV3_SYNC] GESTIONSTAGIAIRE_SYNC_TOKEN manquant")
+        return False
+
+    payload: Dict[str, Any]
+    if request_id_value:
+        payload = {"request_id": request_id_value}
+    else:
+        payload = {"dossier_id": dossier_id_value}
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {GESTIONSTAGIAIRE_SYNC_TOKEN}",
+    }
+
+    backoff_seconds = [1, 2, 4]
+    for attempt, delay in enumerate(backoff_seconds, start=1):
+        try:
+            response = post_func(endpoint, headers=headers, json=payload, timeout=8)
+        except requests.RequestException as exc:
+            app.logger.warning(
+                "[CNAPSV3_SYNC] Erreur réseau tentative=%s/%s payload=%s error=%s",
+                attempt,
+                len(backoff_seconds),
+                payload,
+                exc,
+            )
+            if attempt < len(backoff_seconds):
+                sleep_func(delay)
+                continue
+            return False
+
+        if response.status_code == 200:
+            app.logger.info("[CNAPSV3_SYNC] Succès synchronisation payload=%s", payload)
+            return True
+        if response.status_code == 401:
+            app.logger.error("[CNAPSV3_SYNC] Token invalide (401) payload=%s", payload)
+            return False
+        if response.status_code == 404:
+            app.logger.error("[CNAPSV3_SYNC] Dossier/requête introuvable (404) payload=%s", payload)
+            return False
+        if response.status_code == 400:
+            app.logger.error("[CNAPSV3_SYNC] Payload invalide (400) payload=%s", payload)
+            return False
+
+        app.logger.warning(
+            "[CNAPSV3_SYNC] Réponse inattendue status=%s payload=%s",
+            response.status_code,
+            payload,
+        )
+        return False
+
+    return False
 
 
 def _sync_cnapsv3_notifications_to_secretariat(data: Dict[str, Any]) -> bool:
@@ -3911,8 +3995,6 @@ def fetch_cnaps_status_by_name(nom: str, prenom: str) -> Optional[str]:
     return lookup.get("status")
 
 
-import time
-
 def fetch_hebergement_status(email: str) -> Optional[str]:
     if not HEBERGEMENT_STATUS_ENDPOINT:
         return None
@@ -4470,6 +4552,35 @@ def _cnaps_pending_imports(data: Dict[str, Any]) -> List[Dict[str, Any]]:
         pending = []
         data["cnaps_pending_imports"] = pending
     return pending
+
+
+def _find_cnapsv3_identifier_for_pending(data: Dict[str, Any], last_name: str, first_name: str) -> Dict[str, str]:
+    target_last = _normalize_person_name(last_name or "")
+    target_first = _normalize_person_name(first_name or "")
+    if not target_last or not target_first:
+        return {"request_id": "", "dossier_id": ""}
+
+    bucket = data.get("notifications_cnaps_pre_relances") or []
+    if not isinstance(bucket, list):
+        return {"request_id": "", "dossier_id": ""}
+
+    for item in bucket:
+        if not isinstance(item, dict):
+            continue
+        meta = item.get("meta") or {}
+        if not isinstance(meta, dict):
+            continue
+
+        first = _normalize_person_name(meta.get("first_name") or "")
+        last = _normalize_person_name(meta.get("last_name") or "")
+        if first != target_first or last != target_last:
+            continue
+
+        request_id = str(meta.get("cnapsv3_request_id") or "").strip()
+        dossier_id = str(meta.get("cnapsv3_dossier_id") or "").strip()
+        return {"request_id": request_id, "dossier_id": dossier_id}
+
+    return {"request_id": "", "dossier_id": ""}
 
 
 def _store_cnaps_pending_pdf(file_bytes: bytes, original_filename: str) -> str:
@@ -12430,6 +12541,10 @@ def api_cnaps_import_pre_save():
         return jsonify({"ok": True, "saved": True, "already_saved": True})
 
     token = _store_cnaps_pending_pdf(file_bytes, uploaded.filename or "document.pdf")
+    identifiers = _find_cnapsv3_identifier_for_pending(data, last_name, first_name)
+    request_id = identifiers.get("request_id") or ""
+    dossier_id = identifiers.get("dossier_id") or ""
+
     pending.append({
         "id": "CPN-" + uuid.uuid4().hex[:10].upper(),
         "last_name": last_name,
@@ -12439,10 +12554,14 @@ def api_cnaps_import_pre_save():
         "file_token": token,
         "sha1": digest,
         "created_at": _now_iso(),
+        "cnapsv3_request_id": request_id,
+        "cnapsv3_dossier_id": dossier_id,
     })
     save_data(data)
 
-    return jsonify({"ok": True, "saved": True, "already_saved": False})
+    sync_ok = sync_cnapsv3_accept_status(request_id=request_id, dossier_id=dossier_id)
+
+    return jsonify({"ok": True, "saved": True, "already_saved": False, "cnapsv3_sync_ok": sync_ok})
 
 
 @app.get("/admin/cnaps/import-pre/pending")
