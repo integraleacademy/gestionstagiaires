@@ -8845,6 +8845,8 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
 
     # ✅ s'assure que la liste de documents correspond à la formation (et supprime dom)
     ensure_documents_schema_for_trainee(t, training_type)
+    if (training_type or "").strip().upper() == "DIRIGEANT VAE":
+        _ensure_livret2_document_entry(t)
 
     # ✅ refuse les doc_key inconnus pour cette formation
     if doc_key not in allowed_doc_keys_for_training(training_type):
@@ -11472,6 +11474,8 @@ def admin_trainee_page(session_id: str, trainee_id: str):
 
     # ✅ IMPORTANT : on impose la liste de documents selon la formation (et supprime dom)
     ensure_documents_schema_for_trainee(t, training_type)
+    if (training_type or "").strip().upper() == "DIRIGEANT VAE":
+        _ensure_livret2_document_entry(t)
 
     # ✅ deliverables
     t.setdefault("deliverables", {})
