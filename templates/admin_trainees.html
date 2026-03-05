@@ -175,7 +175,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   <a class="trainee-link"
      href="/admin/sessions/{{ session.id }}/stagiaires/{{ t.id }}"
      style="text-decoration:none;">
-    {% if t.public_has_logged_in %}🛜 {% endif %}{{ t.last_name or "" }}
+    {% if not is_vtc and (t.identity_photo or "")|trim %}📷 {% endif %}{% if t.public_has_logged_in %}🛜 {% endif %}{{ t.last_name or "" }}
   </a>
   {% if not is_vtc and not show_vae %}
   <div class="doc-badges"
