@@ -5493,7 +5493,8 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
             livret_2_sent_at = (action_dates.get("livret_2_transmitted_scotia") or t.get("livret_2_transmitted_scotia") or t.get("livret_2_transmitted_scotia_at") or "").strip()
             attestation_recevabilite_imported_at = (action_dates.get("attestation_recevabilite_imported_at") or "").strip()
             sent_at = livret_2_sent_at or livret_1_sent_at
-            if not sent_at:
+            force_scotia_visibility = bool(t.get("scotia_force_visible"))
+            if not sent_at and not force_scotia_visibility:
                 continue
             deliverables = t.get("deliverables") or {}
             has_attestation_recevabilite = bool((deliverables.get("attestation_recevabilite") or "").strip())
@@ -5525,6 +5526,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "email": (t.get("email") or "").strip(),
                 "phone": (t.get("phone") or "").strip(),
                 "vae_sent_at": sent_at,
+                "scotia_force_visible": force_scotia_visibility,
                 "scotia_status": (t.get("scotia_status") or "").strip(),
                 "scotia_processed_at": (t.get("scotia_processed_at") or "").strip(),
                 "scotia_comment": (t.get("scotia_comment") or "").strip(),
@@ -7695,6 +7697,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "public_hide_infos",
         "public_hide_docs",
         "public_hide_suivi",
+        "scotia_force_visible",
         "public_hide_popup",
         "last_name",
         "first_name",

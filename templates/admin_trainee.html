@@ -404,6 +404,14 @@
       <span><strong>Masquer Suivi dossier</strong></span>
     </label>
 
+    <label style="display:flex;align-items:center;gap:8px;">
+      <input type="checkbox"
+             id="chkScotiaForceVisible"
+             {% if trainee.scotia_force_visible %}checked{% endif %}
+             {{ read_only_attr }}>
+      <span><strong>Visibilité page Scotia</strong></span>
+    </label>
+
 
   </div>
 </div>
@@ -3089,6 +3097,17 @@ if(chkHideDocs){
   });
 }
 
+const chkScotiaForceVisible = document.getElementById("chkScotiaForceVisible");
+if(chkScotiaForceVisible){
+  chkScotiaForceVisible.addEventListener("change", async ()=>{
+    try{
+      await updateTrainee({ scotia_force_visible: chkScotiaForceVisible.checked });
+      window.location.reload();
+    }catch(e){
+      alert("Erreur sauvegarde visibilité page Scotia");
+    }
+  });
+}
 
 
   const chkHideSuivi = document.getElementById("public_hide_suivi");
