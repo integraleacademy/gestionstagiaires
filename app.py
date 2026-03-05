@@ -103,6 +103,8 @@ def scotia_login_required(view):
     def wrapped(*args, **kwargs):
         if not session.get("scotia_logged_in"):
             return redirect(url_for("scotia_login", next=request.path))
+        # Garde le cookie Scotia persistant tant que l'utilisateur reste actif.
+        session.permanent = True
         return view(*args, **kwargs)
     return wrapped
 
@@ -213,6 +215,7 @@ def scotia_login_post():
         if admin_ok:
             session["admin_logged_in"] = True
             session["admin_role"] = "admin"
+        # Cookie de session persistant (durée définie par SESSION_DAYS).
         session.permanent = True
         return redirect(next_url)
 
