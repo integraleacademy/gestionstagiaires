@@ -2049,7 +2049,7 @@ function updateDocsRelanceState(status, plannedDateIso){
     rest = rest.slice(dossier.length);
     const type = rest.match(/^[A-Z]{0,3}/)?.[0] || "";
     rest = rest.slice(type.length);
-    const region = rest.match(/^[A-Z]{0,2}/)?.[0] || "";
+    const region = rest.match(/^[A-Z0-9]{0,2}/)?.[0] || "";
     rest = rest.slice(region.length);
     const serial = (rest.match(/^\d{0,7}/)?.[0] || "");
 
@@ -2062,7 +2062,7 @@ function updateDocsRelanceState(status, plannedDateIso){
   }
 
   function isValidPRE(v){
-    return /^(?:(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}|\d{4}-\d{7}-(PRE|CAR)-[A-Z]{2}-\d{7})$/.test(v);
+    return /^(?:(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}|\d{4}-\d{7}-(PRE|CAR)-[A-Z0-9]{2}-\d{7})$/.test(v);
   }
 
   document.addEventListener("DOMContentLoaded", ()=>{
@@ -2091,7 +2091,7 @@ function updateDocsRelanceState(status, plannedDateIso){
 
       const normalized = normalizePRE(preReceptionInput.value || "");
       if(!isValidPRE(normalized)){
-        alert("Numéro PRE/CAR invalide. Formats attendus : PRE-083-2025-12-01-20250000000, PRE-2025-12-01-20250000000 ou 2026-0000860-PRE-SH-1050078");
+        alert("Numéro PRE/CAR invalide. Formats attendus : PRE-083-2025-12-01-20250000000, PRE-2025-12-01-20250000000 ou 2026-0002805-PRE-3P-1050370");
         return;
       }
 
@@ -2783,7 +2783,7 @@ if(traineeComment){
       missing.push("- Numéro PRE / CAR");
     } else {
       const pre = pre_number_raw.toUpperCase().replace(/\s+/g,"");
-      const ok = /^(?:(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}|\d{4}-\d{7}-(PRE|CAR)-[A-Z]{2}-\d{7})$/.test(pre);
+      const ok = /^(?:(PRE|CAR)-(?:\d{3}-)?\d{4}-\d{2}-\d{2}-\d{11,}|\d{4}-\d{7}-(PRE|CAR)-[A-Z0-9]{2}-\d{7})$/.test(pre);
       if(!ok) missing.push("- Numéro PRE / CAR (format invalide)");
     }
 
