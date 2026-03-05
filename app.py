@@ -8887,6 +8887,30 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
     t["updated_at"] = _now_iso()
     append_trainee_history_event(t, "Document ajouté", f"{doc_key} · fichier ajouté", "action")
 
+    if doc_key == "livret_2":
+        if not isinstance(t.get("vae_action_dates"), dict):
+            t["vae_action_dates"] = {}
+        t["vae_action_dates"]["livret_2_received"] = datetime.date.today().strftime("%d/%m/%Y")
+
+        view = vae_status_view("livret_2_analysis")
+        previous_status = (t.get("vae_status") or "").strip()
+        t["vae_status"] = view["key"]
+        t["vae_status_label"] = view["label"]
+
+        if previous_status != view["key"]:
+            _notify_vae_status_change(t, "livret_2_analysis")
+
+        trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
+        add_admin_notification(
+            data,
+            f"VAE Livret 2️⃣ Importé pour {trainee_display_name}",
+            meta={
+                "type": "vae_livret_2_upload_admin",
+                "session_id": s.get("id"),
+                "trainee_id": t.get("id"),
+            },
+        )
+
     # ✅ recalcul dossier_status
     t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
 
