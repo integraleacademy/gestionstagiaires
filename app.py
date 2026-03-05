@@ -12691,11 +12691,19 @@ def api_cnaps_import_pre_save():
 
     save_data(data)
 
+    cnapsv3_match_found = bool(request_id or dossier_id)
+
     sync_ok = False
-    if request_id or dossier_id:
+    if cnapsv3_match_found:
         sync_ok = sync_cnapsv3_accept_status(request_id=request_id, dossier_id=dossier_id)
 
-    return jsonify({"ok": True, "saved": True, "already_saved": False, "cnapsv3_sync_ok": sync_ok})
+    return jsonify({
+        "ok": True,
+        "saved": True,
+        "already_saved": False,
+        "cnapsv3_sync_ok": sync_ok,
+        "cnapsv3_match_found": cnapsv3_match_found,
+    })
 
 
 @app.get("/admin/cnaps/import-pre/pending")

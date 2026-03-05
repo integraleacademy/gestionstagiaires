@@ -2282,7 +2282,12 @@ Le document sera associé automatiquement si ce stagiaire est ajouté plus tard.
           btn.textContent = "Enregistré";
           btn.disabled = true;
           btn.classList.add("btn-disabled-muted");
-          if(status) status.textContent = `Enregistrement effectué pour ${firstName} ${lastName.toUpperCase()}.`;
+          if(status){
+            const matchStatusText = resSave.cnapsv3_match_found
+              ? " • Rapprochement CNAPS OK ✅"
+              : " • Rapprochement CNAPS introuvable";
+            status.textContent = `Enregistrement effectué pour ${firstName} ${lastName.toUpperCase()}.${matchStatusText}`;
+          }
         }catch(e){
           btn.disabled = false;
           if(status) status.textContent = "Erreur réseau pendant l'enregistrement.";
