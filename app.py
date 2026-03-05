@@ -2948,6 +2948,20 @@ def load_data() -> Dict[str, Any]:
             changed = True
 
         for session_obj in (data.get("sessions") or []):
+            for trainee in _session_trainees_list(session_obj):
+                if not isinstance(trainee.get("vae_action_dates"), dict):
+                    trainee["vae_action_dates"] = {}
+                    changed = True
+                action_dates = trainee["vae_action_dates"]
+                for action_key in ("livret_1_transmitted_scotia", "livret_2_transmitted_scotia"):
+                    if action_dates.get(action_key):
+                        continue
+                    legacy_value = trainee.get(action_key) or trainee.get(f"{action_key}_at") or ""
+                    legacy_date = str(legacy_value).strip()
+                    if legacy_date:
+                        action_dates[action_key] = legacy_date
+                        changed = True
+
             if "VTC" not in ((_session_get(session_obj, "training_type", "") or "").upper()):
                 continue
             for trainee in _session_trainees_list(session_obj):
@@ -5477,8 +5491,8 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
             if bool(t.get("scotia_hidden")):
                 continue
             action_dates = t.get("vae_action_dates") if isinstance(t.get("vae_action_dates"), dict) else {}
-            livret_1_sent_at = action_dates.get("livret_1_transmitted_scotia") or ""
-            livret_2_sent_at = action_dates.get("livret_2_transmitted_scotia") or ""
+            livret_1_sent_at = (action_dates.get("livret_1_transmitted_scotia") or t.get("livret_1_transmitted_scotia") or t.get("livret_1_transmitted_scotia_at") or "").strip()
+            livret_2_sent_at = (action_dates.get("livret_2_transmitted_scotia") or t.get("livret_2_transmitted_scotia") or t.get("livret_2_transmitted_scotia_at") or "").strip()
             attestation_recevabilite_imported_at = (action_dates.get("attestation_recevabilite_imported_at") or "").strip()
             sent_at = livret_2_sent_at or livret_1_sent_at
             if not sent_at:
