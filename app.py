@@ -6580,15 +6580,15 @@ def api_secretariat_relance_result(notification_id: str):
     if not notification:
         return jsonify({"ok": False, "error": "notification_not_found"}), 404
 
-    followup_id = ((notification.get("meta") or {}).get("followup_id") or "").strip()
-    if not followup_id:
-        return jsonify({"ok": False, "error": "followup_not_found"}), 404
+    notification_meta = notification.setdefault("meta", {})
+    followup_id = (notification_meta.get("followup_id") or "").strip()
+    s = t = entry = None
+    if followup_id:
+        s, t, entry = _find_phone_followup_entry(data, followup_id)
 
-    s, t, entry = _find_phone_followup_entry(data, followup_id)
-    if not s or not t or not entry:
-        return jsonify({"ok": False, "error": "followup_not_found"}), 404
-
-    previous_no_answer = _parse_no_answer_count(entry.get("no_answer_count"))
+    previous_no_answer = _parse_no_answer_count(
+        entry.get("no_answer_count") if entry else notification_meta.get("no_answer_count")
+    )
     if outcome == "NO_ANSWER":
         no_answer_count = min(3, previous_no_answer + 1)
         detail = "❌ Pas pu joindre"
@@ -6602,22 +6602,22 @@ def api_secretariat_relance_result(notification_id: str):
         detail = "✅ Appelé"
         display = "Personne jointe"
 
-    t.setdefault("phone_followups", [])
-    t["phone_followups"].insert(0, {
-        "id": "PHN-REP-" + uuid.uuid4().hex[:8].upper(),
-        "type": "RÉPONSE SECRÉTAIRE",
-        "at": _now_iso(),
-        "details": detail,
-        "comment": comment,
-        "ref": entry.get("id", ""),
-    })
+    if t and entry:
+        t.setdefault("phone_followups", [])
+        t["phone_followups"].insert(0, {
+            "id": "PHN-REP-" + uuid.uuid4().hex[:8].upper(),
+            "type": "RÉPONSE SECRÉTAIRE",
+            "at": _now_iso(),
+            "details": detail,
+            "comment": comment,
+            "ref": entry.get("id", ""),
+        })
 
-    entry["status"] = "DONE" if outcome == "CALLED" else "PENDING"
-    entry["done_at"] = _now_iso() if outcome == "CALLED" else ""
-    entry["done_outcome"] = outcome
-    entry["no_answer_count"] = no_answer_count
+        entry["status"] = "DONE" if outcome == "CALLED" else "PENDING"
+        entry["done_at"] = _now_iso() if outcome == "CALLED" else ""
+        entry["done_outcome"] = outcome
+        entry["no_answer_count"] = no_answer_count
 
-    notification_meta = notification.setdefault("meta", {})
     notification_meta["call_status"] = display
     notification_meta["no_answer_count"] = no_answer_count
     if called_resolution:
@@ -6642,8 +6642,8 @@ def api_secretariat_relance_result(notification_id: str):
             "type": "relance_call_result",
             "outcome": outcome,
             "no_answer_count": no_answer_count,
-            "session_id": s.get("id") if s else None,
-            "trainee_id": t.get("id") if t else None,
+            "session_id": (s.get("id") if s else notification_meta.get("session_id")),
+            "trainee_id": (t.get("id") if t else notification_meta.get("trainee_id")),
             "comment": comment,
             "called_resolution": called_resolution,
             "call_status": display,
@@ -6657,8 +6657,9 @@ def api_secretariat_relance_result(notification_id: str):
         notification["done"] = no_answer_count >= 3
         notification["done_at"] = _now_iso() if notification["done"] else ""
 
-    s["trainees"] = _session_trainees_list(s)
-    s.pop("stagiaires", None)
+    if s:
+        s["trainees"] = _session_trainees_list(s)
+        s.pop("stagiaires", None)
     save_data(data)
 
     refreshed_payload = _secretariat_notifications_payload(data)
