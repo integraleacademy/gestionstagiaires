@@ -35,6 +35,12 @@
     .doc-open-link:hover,.doc-open-link:focus{
       text-decoration:underline;
     }
+    .attestation-imported-note{
+      width:100%;
+      margin:2px 0 0;
+      font-size:13px;
+      color:#4b5563;
+    }
   </style>
 </head>
 <body>
@@ -104,16 +110,21 @@
             </div>
             <div class="scotia-item-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
               {% set item_processed = it.scotia_status in ['recevable', 'non_recevable'] %}
+              {% set has_attestation_recevabilite = (it.deliverables.attestation_recevabilite or '')|trim %}
               <button type="button" class="btn btn-primary {% if it.scotia_status == 'recevable' %}is-active{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','recevable')" {% if item_processed %}disabled{% endif %}>Recevable</button>
               <button type="button" class="btn btn-danger-solid {% if it.scotia_status == 'non_recevable' %}is-active{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','non_recevable')" {% if item_processed %}disabled{% endif %}>Non recevable</button>
 
               <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/attestation/upload" style="display:flex;gap:6px;align-items:center;">
-                <input id="attestation-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="file" required style="display:none;" onchange="submitAttestationForm(this)">
-                <button class="btn btn-primary btn-upload-attestation" type="button" onclick="triggerAttestationUpload('{{ it.session_id }}','{{ it.trainee_id }}')">Téléverser attestation</button>
+                <input id="attestation-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="file" required style="display:none;" onchange="submitAttestationForm(this)" {% if has_attestation_recevabilite %}disabled{% endif %}>
+                <button class="btn {% if has_attestation_recevabilite %}btn-disabled-muted{% else %}btn-primary{% endif %} btn-upload-attestation" type="button" onclick="triggerAttestationUpload('{{ it.session_id }}','{{ it.trainee_id }}')" {% if has_attestation_recevabilite %}disabled{% endif %}>Téléverser attestation</button>
               </form>
 
-              {% if it.deliverables.attestation_recevabilite %}
+              {% if has_attestation_recevabilite %}
                 <a class="btn btn-outline" href="/scotia/uploads/{{ it.deliverables.attestation_recevabilite }}" target="_blank">Voir attestation</a>
+              {% endif %}
+
+              {% if has_attestation_recevabilite %}
+                <p class="attestation-imported-note">attestation de recevabilité importée le {{ it.attestation_recevabilite_imported_at or 'date inconnue' }}</p>
               {% endif %}
 
               <form method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/delete" onsubmit="return confirm('Supprimer définitivement cette personne de la session ?');">

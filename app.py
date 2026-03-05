@@ -5476,9 +5476,14 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
             action_dates = t.get("vae_action_dates") if isinstance(t.get("vae_action_dates"), dict) else {}
             livret_1_sent_at = action_dates.get("livret_1_transmitted_scotia") or ""
             livret_2_sent_at = action_dates.get("livret_2_transmitted_scotia") or ""
+            attestation_recevabilite_imported_at = (action_dates.get("attestation_recevabilite_imported_at") or "").strip()
             sent_at = livret_2_sent_at or livret_1_sent_at
             if not sent_at:
                 continue
+            deliverables = t.get("deliverables") or {}
+            has_attestation_recevabilite = bool((deliverables.get("attestation_recevabilite") or "").strip())
+            if has_attestation_recevabilite and not attestation_recevabilite_imported_at:
+                attestation_recevabilite_imported_at = (action_dates.get("livret_1_validated") or "").strip()
             docs_view = []
             for d in (t.get("documents") or []):
                 token = (d.get("file") or "").strip()
@@ -5509,7 +5514,8 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "scotia_processed_at": (t.get("scotia_processed_at") or "").strip(),
                 "scotia_comment": (t.get("scotia_comment") or "").strip(),
                 "documents": docs_view,
-                "deliverables": t.get("deliverables") or {},
+                "deliverables": deliverables,
+                "attestation_recevabilite_imported_at": attestation_recevabilite_imported_at,
                 "candidate_sheet_available": bool(t.get("candidate_sheet_saved_at") or t.get("candidate_sheet")),
                 "vae_dossier_id": str((latest_vae or {}).get("id") or ""),
                 "vae_justificatifs": vae_justificatifs,
@@ -5662,6 +5668,7 @@ def scotia_upload_attestation(session_id: str, trainee_id: str):
     t['deliverables']['attestation_recevabilite'] = token
     if not isinstance(t.get("vae_action_dates"), dict):
         t["vae_action_dates"] = {}
+    t["vae_action_dates"]["attestation_recevabilite_imported_at"] = fr_date(datetime.datetime.utcnow().strftime("%Y-%m-%d"))
     if not t["vae_action_dates"].get("livret_1_validated"):
         t["vae_action_dates"]["livret_1_validated"] = fr_date(datetime.datetime.utcnow().strftime("%Y-%m-%d"))
 
