@@ -2543,6 +2543,10 @@ function updateDocsRelanceState(status, plannedDateIso){
       if(!res.ok || data.ok === false){
         throw new Error('save_failed');
       }
+      if(!isReset && (actionKey === "livret_1_transmitted_scotia" || actionKey === "livret_2_transmitted_scotia")){
+        window.location.href = "/scotia";
+        return;
+      }
       window.location.reload();
     }catch(e){
       vaeActionRequestInFlight = false;
