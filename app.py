@@ -7904,7 +7904,13 @@ def api_update_trainee(session_id: str, trainee_id: str):
             <a href=\"{dossier_url}\" style=\"display:inline-block;background:#1f8f4a;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 18px;border-radius:8px;\">Consulter le dossier</a>
           </p>
         """)
-        brevo_send_email("clement.annecy@gmail.com", subject, html, trainee=t)
+        brevo_send_email(
+            "scotiaformation@gmail.com",
+            subject,
+            html,
+            cc_emails=["clement@integraleacademy.com"],
+            trainee=t,
+        )
 
     t["updated_at"] = _now_iso()
     s["trainees"] = trainees
