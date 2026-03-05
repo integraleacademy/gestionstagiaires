@@ -5480,20 +5480,23 @@ def public_vae_desp_submit():
 
 
 def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _is_truthy(value: Any) -> bool:
+        return value in (True, "true", "1", 1, "yes", "on", "True")
+
     items: List[Dict[str, Any]] = []
     for s in data.get("sessions", []):
         training_type = (_session_get(s, "training_type", "") or "").strip().upper()
         if "VAE" not in training_type:
             continue
         for t in _session_trainees_list(s):
-            if bool(t.get("scotia_hidden")):
+            if _is_truthy(t.get("scotia_hidden")):
                 continue
             action_dates = t.get("vae_action_dates") if isinstance(t.get("vae_action_dates"), dict) else {}
             livret_1_sent_at = (action_dates.get("livret_1_transmitted_scotia") or t.get("livret_1_transmitted_scotia") or t.get("livret_1_transmitted_scotia_at") or "").strip()
             livret_2_sent_at = (action_dates.get("livret_2_transmitted_scotia") or t.get("livret_2_transmitted_scotia") or t.get("livret_2_transmitted_scotia_at") or "").strip()
             attestation_recevabilite_imported_at = (action_dates.get("attestation_recevabilite_imported_at") or "").strip()
             sent_at = livret_2_sent_at or livret_1_sent_at
-            force_scotia_visibility = bool(t.get("scotia_force_visible"))
+            force_scotia_visibility = _is_truthy(t.get("scotia_force_visible"))
             if not sent_at and not force_scotia_visibility:
                 continue
             deliverables = t.get("deliverables") or {}
