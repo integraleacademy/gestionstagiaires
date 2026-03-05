@@ -605,6 +605,99 @@ def _cnapsv3_accept_endpoint() -> str:
     return f"{base_url}/integrations/gestionstagiaire/cnaps/accept"
 
 
+def _cnapsv3_lookup_endpoint() -> str:
+    base_url = (CNAPSV3_BASE_URL or "").strip().rstrip("/")
+    if not base_url:
+        return ""
+    return f"{base_url}/integrations/gestionstagiaire/cnaps/lookup"
+
+
+def sync_cnapsv3_lookup_identifier(
+    first_name: str,
+    last_name: str,
+    email: Optional[str] = None,
+    *,
+    post_func=requests.post,
+    sleep_func=time.sleep,
+) -> Optional[Dict[str, str]]:
+    first_name_value = str(first_name or "").strip()
+    last_name_value = str(last_name or "").strip()
+    if not first_name_value or not last_name_value:
+        app.logger.warning("[CNAPSV3_LOOKUP] first_name/last_name manquants")
+        return None
+
+    endpoint = _cnapsv3_lookup_endpoint()
+    if not endpoint:
+        app.logger.error("[CNAPSV3_LOOKUP] CNAPSV3_BASE_URL non configuré")
+        return None
+
+    if not GESTIONSTAGIAIRE_SYNC_TOKEN:
+        app.logger.error("[CNAPSV3_LOOKUP] GESTIONSTAGIAIRE_SYNC_TOKEN manquant")
+        return None
+
+    payload: Dict[str, Any] = {
+        "first_name": first_name_value,
+        "last_name": last_name_value,
+    }
+    email_value = str(email or "").strip()
+    if email_value:
+        payload["email"] = email_value
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {GESTIONSTAGIAIRE_SYNC_TOKEN}",
+    }
+
+    backoff_seconds = [1, 2, 4]
+    for attempt, delay in enumerate(backoff_seconds, start=1):
+        try:
+            response = post_func(endpoint, headers=headers, json=payload, timeout=8)
+        except requests.RequestException as exc:
+            app.logger.warning(
+                "[CNAPSV3_LOOKUP] Erreur réseau tentative=%s/%s payload=%s error=%s",
+                attempt,
+                len(backoff_seconds),
+                payload,
+                exc,
+            )
+            if attempt < len(backoff_seconds):
+                sleep_func(delay)
+                continue
+            return None
+
+        if response.status_code == 200:
+            body = response.json() if hasattr(response, "json") else {}
+            if not isinstance(body, dict):
+                body = {}
+            identifiers = {
+                "request_id": str(body.get("request_id") or "").strip(),
+                "dossier_id": str(body.get("dossier_id") or "").strip(),
+            }
+            if not identifiers["request_id"] and not identifiers["dossier_id"]:
+                app.logger.warning("[CNAPSV3_LOOKUP] succès sans identifiant payload=%s", payload)
+                return None
+            app.logger.info("[CNAPSV3_LOOKUP] succès payload=%s", payload)
+            return identifiers
+        if response.status_code == 401:
+            app.logger.error("[CNAPSV3_LOOKUP] 401 payload=%s", payload)
+            return None
+        if response.status_code == 404:
+            app.logger.info("[CNAPSV3_LOOKUP] notfound payload=%s", payload)
+            return None
+        if response.status_code == 409:
+            app.logger.info("[CNAPSV3_LOOKUP] ambiguous payload=%s", payload)
+            return None
+
+        app.logger.warning(
+            "[CNAPSV3_LOOKUP] Réponse inattendue status=%s payload=%s",
+            response.status_code,
+            payload,
+        )
+        return None
+
+    return None
+
+
 def sync_cnapsv3_accept_status(
     request_id: Optional[str] = None,
     dossier_id: Optional[str] = None,
@@ -4581,6 +4674,24 @@ def _find_cnapsv3_identifier_for_pending(data: Dict[str, Any], last_name: str, f
         return {"request_id": request_id, "dossier_id": dossier_id}
 
     return {"request_id": "", "dossier_id": ""}
+
+
+def _find_pending_trainee_email(data: Dict[str, Any], last_name: str, first_name: str) -> str:
+    target_last = _normalize_person_name(last_name or "")
+    target_first = _normalize_person_name(first_name or "")
+    if not target_last or not target_first:
+        return ""
+
+    for session_obj in data.get("sessions", []):
+        trainees = _session_trainees_list(session_obj)
+        for trainee in trainees:
+            trainee_last = _normalize_person_name(trainee.get("last_name", ""))
+            trainee_first = _normalize_person_name(trainee.get("first_name", ""))
+            if trainee_last != target_last or trainee_first != target_first:
+                continue
+            return str(trainee.get("email") or "").strip()
+
+    return ""
 
 
 def _store_cnaps_pending_pdf(file_bytes: bytes, original_filename: str) -> str:
@@ -12545,7 +12656,7 @@ def api_cnaps_import_pre_save():
     request_id = identifiers.get("request_id") or ""
     dossier_id = identifiers.get("dossier_id") or ""
 
-    pending.append({
+    pending_item = {
         "id": "CPN-" + uuid.uuid4().hex[:10].upper(),
         "last_name": last_name,
         "first_name": first_name,
@@ -12556,10 +12667,33 @@ def api_cnaps_import_pre_save():
         "created_at": _now_iso(),
         "cnapsv3_request_id": request_id,
         "cnapsv3_dossier_id": dossier_id,
-    })
+    }
+    pending.append(pending_item)
+
+    if not request_id and not dossier_id:
+        email = _find_pending_trainee_email(data, last_name, first_name)
+        lookup_identifiers = sync_cnapsv3_lookup_identifier(
+            first_name=first_name,
+            last_name=last_name,
+            email=email or None,
+        )
+        if lookup_identifiers:
+            request_id = str(lookup_identifiers.get("request_id") or "").strip()
+            dossier_id = str(lookup_identifiers.get("dossier_id") or "").strip()
+            pending_item["cnapsv3_request_id"] = request_id
+            pending_item["cnapsv3_dossier_id"] = dossier_id
+        else:
+            app.logger.info(
+                "[CNAPSV3_SYNC] Accept ignoré: aucun identifiant trouvé après lookup first_name=%s last_name=%s",
+                first_name,
+                last_name,
+            )
+
     save_data(data)
 
-    sync_ok = sync_cnapsv3_accept_status(request_id=request_id, dossier_id=dossier_id)
+    sync_ok = False
+    if request_id or dossier_id:
+        sync_ok = sync_cnapsv3_accept_status(request_id=request_id, dossier_id=dossier_id)
 
     return jsonify({"ok": True, "saved": True, "already_saved": False, "cnapsv3_sync_ok": sync_ok})
 
