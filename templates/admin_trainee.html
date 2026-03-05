@@ -2439,7 +2439,11 @@ function updateDocsRelanceState(status, plannedDateIso){
 
 
   // VAE (actions dédiées DIRIGEANT VAE)
+  let vaeActionRequestInFlight = false;
   window.setVaeAction = async function setVaeAction(actionKey){
+    if(vaeActionRequestInFlight){
+      return;
+    }
     const payload = {};
     const currentVaeActionDates = {{ (trainee.vae_action_dates or {})|tojson }};
     const isReset = !!currentVaeActionDates[actionKey];
@@ -2519,6 +2523,8 @@ function updateDocsRelanceState(status, plannedDateIso){
       };
     }
 
+    vaeActionRequestInFlight = true;
+
     let sendVaeNotification = !isReset;
     if(statusesSendingMail.includes(payload.vae_status)){
       sendVaeNotification = await window.confirmMailSmsSend?.();
@@ -2539,6 +2545,7 @@ function updateDocsRelanceState(status, plannedDateIso){
       }
       window.location.reload();
     }catch(e){
+      vaeActionRequestInFlight = false;
       alert("Erreur mise à jour statut VAE");
     }
   }
