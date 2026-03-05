@@ -5482,8 +5482,6 @@ def public_vae_desp_submit():
 def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     items: List[Dict[str, Any]] = []
     for s in data.get("sessions", []):
-        if bool(s.get("archived")):
-            continue
         training_type = (_session_get(s, "training_type", "") or "").strip().upper()
         if "VAE" not in training_type:
             continue
