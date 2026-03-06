@@ -569,6 +569,8 @@
 
   <div style="margin-top:12px;padding-top:12px;border-top:1px dashed #e5e7eb;">
     <div style="font-weight:800;">Dossier n°2 & pièces justificatives</div>
+    {% set livret2_doc = (vae_support_docs | selectattr('key', 'equalto', 'livret_2') | list | first) if vae_support_docs else None %}
+    {% set livret2_token = livret2_doc.tokens[0] if livret2_doc and livret2_doc.tokens else None %}
     {% if not is_read_only %}
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
         <form method="post" enctype="multipart/form-data"
@@ -577,6 +579,9 @@
           <input type="file" name="file" required>
           <button class="btn btn-primary" type="submit">Importer dossier n°2</button>
         </form>
+        {% if livret2_token %}
+          <a class="btn btn-outline" href="{{ url_for('admin_view_upload', path=livret2_token) }}" target="_blank" rel="noopener">Consulter le Livret 2</a>
+        {% endif %}
       </div>
     {% endif %}
     {% if vae_support_docs %}
