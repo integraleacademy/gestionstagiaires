@@ -12748,6 +12748,7 @@ def admin_cnaps_pending_imports():
             "id": (item.get("id") or "").strip(),
             "last_name": (item.get("last_name") or "").strip(),
             "first_name": (item.get("first_name") or "").strip(),
+            "email": (item.get("email") or "").strip(),
             "pre_number": (item.get("pre_number") or "").strip(),
             "file_name": (item.get("file_name") or "").strip() or "document.pdf",
             "file_token": file_token,

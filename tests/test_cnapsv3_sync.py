@@ -233,6 +233,53 @@ class CnapsImportPreSaveLookupTests(unittest.TestCase):
             self.assertEqual(called["accept"], 0)
 
 
+class CnapsPendingImportsAdminPageTests(unittest.TestCase):
+    def setUp(self):
+        self.client = gestion_app.app.test_client()
+        self.original_load_data = gestion_app.load_data
+        self.original_render_template = gestion_app.render_template
+
+    def tearDown(self):
+        gestion_app.load_data = self.original_load_data
+        gestion_app.render_template = self.original_render_template
+
+    def test_pending_items_include_email_field(self):
+        data = {
+            "cnaps_pending_imports": [
+                {
+                    "id": "P1",
+                    "last_name": "DOE",
+                    "first_name": "JOHN",
+                    "email": "john.v3@example.com",
+                    "pre_number": "PRE-123",
+                    "file_name": "doc.pdf",
+                    "file_token": "",
+                    "created_at": "2026-01-01T10:00:00",
+                }
+            ]
+        }
+
+        gestion_app.load_data = lambda: data
+        captured = {}
+
+        def fake_render(template_name, **context):
+            captured["template"] = template_name
+            captured["context"] = context
+            return "ok"
+
+        gestion_app.render_template = fake_render
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        response = self.client.get("/admin/cnaps/import-pre/pending")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(captured["template"], "admin_cnaps_pending_imports.html")
+        self.assertEqual(captured["context"]["pending_items"][0]["email"], "john.v3@example.com")
+
+
 class AdminLivret2UploadTests(unittest.TestCase):
     def setUp(self):
         self.client = gestion_app.app.test_client()
