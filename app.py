@@ -12053,8 +12053,11 @@ def _build_candidate_sheet_data(session_data: Dict[str, Any], trainee_data: Dict
             return " ".join(raw[i:i + 2] for i in range(0, len(raw), 2))
         return str(value or "").strip()
 
+    training_type = (_session_get(session_data, "training_type", "") or "").strip().upper()
+    default_formation_type = "FORMATION INITIALE" if training_type == "DIRIGEANT INITIAL" else "Validation des acquis de l'expérience (VAE)"
+
     payload = {
-        "formation_type": "Validation des acquis de l'expérience (VAE)",
+        "formation_type": default_formation_type,
         "date_entree_stage": fr_date(_session_get(session_data, "date_start", "")) or "",
         "situation": pick(candidat.get("statut")),
         "company": pick(trainee_data.get("company_name"), trainee_data.get("employer"), trainee_data.get("entreprise")),
