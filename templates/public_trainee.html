@@ -1464,7 +1464,7 @@ id="upload_{{ d.key }}"
           {% endif %}
         {% endif %}
         {% set livret2_count = ns_livret2.tokens|length %}
-        {% if vae_current_step >= 4 or vae_done_until >= 4 %}
+        {% if vae_current_step == 4 and vae_done_until < 4 %}
           <div style="margin:10px 0;padding:12px;border:1px solid #f59e0b;border-radius:10px;background:#fff7ed;">
             <p style="margin:0 0 8px 0;font-weight:800;color:#7c2d12;">📌 Comment faire pour l'étape 4 ?</p>
             <ol style="margin:0;padding-left:20px;line-height:1.6;">
