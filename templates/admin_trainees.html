@@ -267,10 +267,19 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 
         {% if not is_vtc %}
         <td>
-          <select class="status sel status-dot" data-field="dossier_status" {{ read_only_attr }}>
-            <option value="complete" {% if t.dossier_status=="complete" %}selected{% endif %}>🟢</option>
-            <option value="incomplete" {% if t.dossier_status=="incomplete" %}selected{% endif %}>🔴</option>
-          </select>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <select class="status sel status-dot" data-field="dossier_status" {{ read_only_attr }}>
+              <option value="complete" {% if t.dossier_status=="complete" %}selected{% endif %}>🟢</option>
+              <option value="incomplete" {% if t.dossier_status=="incomplete" %}selected{% endif %}>🔴</option>
+            </select>
+            {% if is_adef and t.dossier_status=="complete" %}
+              <a href="{{ url_for('admin_trainee_adef_sheet', session_id=session.id, trainee_id=t.id) }}"
+                 target="_blank"
+                 rel="noopener"
+                 title="Ouvrir la fiche ADEF"
+                 style="text-decoration:none;font-size:18px;">📃</a>
+            {% endif %}
+          </div>
         </td>
         {% endif %}
 

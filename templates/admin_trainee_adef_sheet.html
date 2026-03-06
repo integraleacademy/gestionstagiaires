@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fiche ADEF - {{ (trainee.last_name or "")|upper }} {{ trainee.first_name or "" }}</title>
+  <style>
+    :root{--ink:#0f172a;--muted:#475569;--brand:#0b3b8f;--card:#ffffff;--line:#dbe2f8;--bg:#f3f6fc}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+    .page{max-width:900px;margin:20px auto;padding:22px;background:var(--card);border-radius:16px;box-shadow:0 10px 30px rgba(15,23,42,.08)}
+    .toolbar{display:flex;justify-content:flex-end;margin-bottom:12px}
+    .btn{border:1px solid #cbd5e1;background:#fff;border-radius:10px;padding:8px 14px;font-weight:700;cursor:pointer}
+    .header{display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:2px solid var(--line);padding-bottom:14px;margin-bottom:16px}
+    .title h1{margin:0;font-size:30px;color:var(--brand);letter-spacing:.4px}
+    .title p{margin:3px 0 0;color:var(--muted)}
+    .logo{width:180px;height:auto;object-fit:contain}
+    .grid{display:grid;grid-template-columns:1fr;gap:10px}
+    .row{display:grid;grid-template-columns:320px 1fr;gap:12px;padding:10px;border-radius:10px;background:#f8faff;border:1px solid var(--line)}
+    .label{font-weight:700;color:#1e3a8a}
+    .value{font-weight:500;min-height:20px}
+    @media (max-width: 760px){.row{grid-template-columns:1fr}.logo{width:130px}.title h1{font-size:24px}}
+    @media print{
+      @page{size:A4;margin:8mm}
+      body{background:#fff}
+      .page{max-width:none;margin:0;padding:0;border-radius:0;box-shadow:none}
+      .toolbar{display:none}
+      .row{break-inside:avoid}
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="toolbar"><button class="btn" onclick="window.print()">🖨️ Imprimer</button></div>
+
+    <div class="header">
+      <div class="title">
+        <h1>Fiche ADEF</h1>
+        <p>{{ session.name }} — {{ session.training_type }}</p>
+      </div>
+      <img class="logo" src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy">
+    </div>
+
+    <div class="grid">
+      <div class="row"><div class="label">Numéro de sécurité sociale</div><div class="value">{{ adef.social_security_number or "—" }}</div></div>
+      <div class="row"><div class="label">Nationalité + Pays de naissance</div><div class="value">{{ adef.nationality_birth_country or "—" }}</div></div>
+      <div class="row"><div class="label">Sexe</div><div class="value">{{ adef.sex or "—" }}</div></div>
+      <div class="row"><div class="label">Année de naissance</div><div class="value">{{ adef.birth_year or "—" }}</div></div>
+      <div class="row"><div class="label">Mois de naissance</div><div class="value">{{ adef.birth_month or "—" }}</div></div>
+      <div class="row"><div class="label">Civilité</div><div class="value">{{ adef.civility or "—" }}</div></div>
+      <div class="row"><div class="label">Nom</div><div class="value">{{ adef.last_name or "—" }}</div></div>
+      <div class="row"><div class="label">Prénom</div><div class="value">{{ adef.first_name or "—" }}</div></div>
+      <div class="row"><div class="label">Date de naissance</div><div class="value">{{ adef.birth_date or "—" }}</div></div>
+      <div class="row"><div class="label">Ville de naissance + Pays de naissance</div><div class="value">{{ adef.birth_city_country or "—" }}</div></div>
+      <div class="row"><div class="label">Nationalité</div><div class="value">{{ adef.nationality or "—" }}</div></div>
+      <div class="row"><div class="label">Adresse postale</div><div class="value">{{ adef.address or "—" }}</div></div>
+      <div class="row"><div class="label">Code postal</div><div class="value">{{ adef.zip_code or "—" }}</div></div>
+      <div class="row"><div class="label">Ville</div><div class="value">{{ adef.city or "—" }}</div></div>
+      <div class="row"><div class="label">Numéro PRE ou CAR</div><div class="value">{{ adef.pre_or_car or "—" }}</div></div>
+    </div>
+  </div>
+  {% include "_mail_sent_badge.html" %}
+</body>
+</html>
