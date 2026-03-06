@@ -5732,6 +5732,10 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 continue
             deliverables = t.get("deliverables") or {}
             has_attestation_recevabilite = bool((deliverables.get("attestation_recevabilite") or "").strip())
+            livret_2_token = (deliverables.get("livret_2") or "").strip()
+            livret_2_imported_at = (action_dates.get("livret_2_imported_at") or "").strip()
+            if livret_2_token and not livret_2_imported_at:
+                livret_2_imported_at = (action_dates.get("livret_2_received") or "").strip()
             if has_attestation_recevabilite and not attestation_recevabilite_imported_at:
                 attestation_recevabilite_imported_at = (action_dates.get("livret_1_validated") or "").strip()
             docs_view = []
@@ -5767,6 +5771,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "documents": docs_view,
                 "deliverables": deliverables,
                 "attestation_recevabilite_imported_at": attestation_recevabilite_imported_at,
+                "livret_2_imported_at": livret_2_imported_at,
                 "candidate_sheet_available": bool(t.get("candidate_sheet_saved_at") or t.get("candidate_sheet")),
                 "vae_dossier_id": str((latest_vae or {}).get("id") or ""),
                 "vae_justificatifs": vae_justificatifs,
@@ -5934,6 +5939,49 @@ def scotia_upload_attestation(session_id: str, trainee_id: str):
     if should_notify:
         _notify_vae_status_change(t, livret1_validated_view["key"])
 
+    return redirect(url_for('scotia_dashboard'))
+
+
+@app.post('/scotia/sessions/<session_id>/stagiaires/<trainee_id>/livret2/upload')
+@scotia_login_required
+def scotia_upload_livret2(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        abort(404)
+
+    if (t.get("scotia_status") or "").strip() != "recevable":
+        return redirect(url_for('scotia_dashboard'))
+
+    f = request.files.get('file')
+    if not f or not f.filename:
+        return redirect(url_for('scotia_dashboard'))
+
+    ext = os.path.splitext(f.filename)[1].lower()
+    if ext != ".pdf":
+        return redirect(url_for('scotia_dashboard'))
+
+    try:
+        stored = _store_file(session_id, trainee_id, 'deliverables', f)
+    except Exception:
+        return redirect(url_for('scotia_dashboard'))
+
+    token = _tokenize_path(stored)
+    t.setdefault('deliverables', {})
+    t['deliverables']['livret_2'] = token
+
+    if not isinstance(t.get("vae_action_dates"), dict):
+        t["vae_action_dates"] = {}
+    today_fr = fr_date(datetime.datetime.utcnow().strftime("%Y-%m-%d"))
+    t["vae_action_dates"]["livret_2_imported_at"] = today_fr
+    if not t["vae_action_dates"].get("livret_2_received"):
+        t["vae_action_dates"]["livret_2_received"] = today_fr
+
+    t['updated_at'] = _now_iso()
+
+    s['trainees'] = trainees
+    s.pop('stagiaires', None)
+    save_data(data)
     return redirect(url_for('scotia_dashboard'))
 
 
@@ -8848,7 +8896,7 @@ def _token_belongs_to_trainee(t: dict, file_token: str) -> bool:
 
     # Deliverables (diplôme / SST / attestation)
     dv = t.get("deliverables") or {}
-    for k in ("diplome", "carte_sst", "attestation_fin_formation", "attestation_recevabilite", "parchemin"):
+    for k in ("diplome", "carte_sst", "attestation_fin_formation", "attestation_recevabilite", "livret_2", "parchemin"):
         if (dv.get(k) or "").strip() == file_token:
             return True
 
