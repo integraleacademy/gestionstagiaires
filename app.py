@@ -562,6 +562,7 @@ BREVO_SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL", "ecole@integraleacadem
 BREVO_SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "Intégrale Academy")
 CNAPS_LOOKUP_ENDPOINT = os.environ.get("CNAPS_LOOKUP_ENDPOINT", "")
 CNAPSV3_NOTIFICATIONS_ENDPOINT = os.environ.get("CNAPSV3_NOTIFICATIONS_ENDPOINT", "")
+CNAPSV3_API_BASE_URL = os.environ.get("CNAPSV3_API_BASE_URL", "").strip().rstrip("/")
 CNAPSV3_BASE_URL = os.environ.get("CNAPSV3_BASE_URL", "https://cnapsv3.onrender.com").strip().rstrip("/")
 GESTIONSTAGIAIRE_SYNC_TOKEN = os.environ.get("GESTIONSTAGIAIRE_SYNC_TOKEN", "").strip()
 
@@ -599,17 +600,69 @@ def _cnapsv3_notifications_endpoint() -> str:
 
 
 def _cnapsv3_accept_endpoint() -> str:
-    base_url = (CNAPSV3_BASE_URL or "").strip().rstrip("/")
+    base_url = (CNAPSV3_API_BASE_URL or CNAPSV3_BASE_URL or "").strip().rstrip("/")
     if not base_url:
         return ""
     return f"{base_url}/integrations/gestionstagiaire/cnaps/accept"
 
 
 def _cnapsv3_lookup_endpoint() -> str:
-    base_url = (CNAPSV3_BASE_URL or "").strip().rstrip("/")
+    base_url = (CNAPSV3_API_BASE_URL or CNAPSV3_BASE_URL or "").strip().rstrip("/")
     if not base_url:
         return ""
     return f"{base_url}/integrations/gestionstagiaire/cnaps/lookup"
+
+
+def _cnapsv3_recherche_mail_endpoint() -> str:
+    base_url = (CNAPSV3_API_BASE_URL or CNAPSV3_BASE_URL or "").strip().rstrip("/")
+    if not base_url:
+        return ""
+    return f"{base_url}/api/recherche-mail"
+
+
+def fetch_cnapsv3_mail_for_pending(last_name: str, first_name: str, *, get_func=requests.get) -> Dict[str, Any]:
+    nom = _normalize_person_name(last_name or "")
+    prenom = _normalize_person_name(first_name or "")
+    endpoint = _cnapsv3_recherche_mail_endpoint()
+
+    if not nom or not prenom:
+        app.logger.warning("[CNAPSV3_MAIL] nom/prénom manquants nom=%s prenom=%s", nom, prenom)
+        return {"status": "invalid_name", "mail": "", "response": None}
+
+    if not endpoint:
+        app.logger.error("[CNAPSV3_MAIL] CNAPSV3_API_BASE_URL/CNAPSV3_BASE_URL non configuré")
+        return {"status": "not_configured", "mail": "", "response": None}
+
+    params = {"nom": nom, "prenom": prenom}
+    app.logger.info("[CNAPSV3_MAIL] Requête envoyée nom=%s prenom=%s endpoint=%s", nom, prenom, endpoint)
+
+    try:
+        response = get_func(endpoint, params=params, timeout=6)
+    except requests.RequestException as exc:
+        app.logger.error("[CNAPSV3_MAIL] Erreur réseau nom=%s prenom=%s error=%s", nom, prenom, exc)
+        return {"status": "network_error", "mail": "", "response": None}
+
+    body: Dict[str, Any] = {}
+    try:
+        maybe_body = response.json()
+        if isinstance(maybe_body, dict):
+            body = maybe_body
+    except Exception:
+        body = {}
+
+    app.logger.info("[CNAPSV3_MAIL] Réponse reçue status=%s body=%s", response.status_code, body)
+
+    mail = str(body.get("mail") or body.get("email") or "").strip()
+
+    if response.status_code == 200:
+        if mail:
+            return {"status": "ok", "mail": mail, "response": body}
+        return {"status": "found_no_mail", "mail": "", "response": body}
+
+    if response.status_code == 404:
+        return {"status": "not_found", "mail": "", "response": body}
+
+    return {"status": "http_error", "mail": "", "response": body}
 
 
 def sync_cnapsv3_lookup_identifier(
@@ -12796,12 +12849,13 @@ def api_cnaps_import_pre_save():
     }
     pending.append(pending_item)
 
+    trainee_email = _find_pending_trainee_email(data, last_name, first_name)
+
     if not request_id and not dossier_id:
-        email = _find_pending_trainee_email(data, last_name, first_name)
         lookup_identifiers = sync_cnapsv3_lookup_identifier(
             first_name=first_name,
             last_name=last_name,
-            email=email or None,
+            email=trainee_email or None,
         )
         if lookup_identifiers:
             request_id = str(lookup_identifiers.get("request_id") or "").strip()
@@ -12818,15 +12872,47 @@ def api_cnaps_import_pre_save():
                 last_name,
             )
 
+    mail_lookup = fetch_cnapsv3_mail_for_pending(last_name, first_name)
+    cnapsv3_mail = str(mail_lookup.get("mail") or "").strip()
+    if cnapsv3_mail:
+        pending_item["email"] = cnapsv3_mail
+
+    mail_injected = False
+    if cnapsv3_mail:
+        for session_obj in data.get("sessions", []):
+            trainees = _session_trainees_list(session_obj)
+            for trainee in trainees:
+                trainee_last = _normalize_person_name(trainee.get("last_name", ""))
+                trainee_first = _normalize_person_name(trainee.get("first_name", ""))
+                if trainee_last != last_name or trainee_first != first_name:
+                    continue
+                existing_email = str(trainee.get("email") or "").strip()
+                if existing_email:
+                    app.logger.info(
+                        "[CNAPSV3_MAIL] Email déjà présent, non remplacé trainee_id=%s email=%s",
+                        trainee.get("id"),
+                        existing_email,
+                    )
+                    continue
+                trainee["email"] = cnapsv3_mail
+                app.logger.info(
+                    "[CNAPSV3_MAIL] Email injecté trainee_id=%s email=%s",
+                    trainee.get("id"),
+                    cnapsv3_mail,
+                )
+                mail_injected = True
+            session_obj["trainees"] = trainees
+            session_obj.pop("stagiaires", None)
+
     if not pending_item.get("email"):
-        pending_item["email"] = _find_pending_trainee_email(data, last_name, first_name)
+        pending_item["email"] = trainee_email
 
     save_data(data)
 
-    cnapsv3_match_found = bool(request_id or dossier_id)
+    cnapsv3_match_found = bool(request_id or dossier_id) or mail_lookup.get("status") in ("ok", "found_no_mail")
 
     sync_ok = False
-    if cnapsv3_match_found:
+    if request_id or dossier_id:
         sync_ok = sync_cnapsv3_accept_status(request_id=request_id, dossier_id=dossier_id)
 
     return jsonify({
@@ -12835,6 +12921,9 @@ def api_cnaps_import_pre_save():
         "already_saved": False,
         "cnapsv3_sync_ok": sync_ok,
         "cnapsv3_match_found": cnapsv3_match_found,
+        "cnapsv3_mail_lookup_status": mail_lookup.get("status"),
+        "cnapsv3_mail": cnapsv3_mail,
+        "mail_injected": mail_injected,
     })
 
 
