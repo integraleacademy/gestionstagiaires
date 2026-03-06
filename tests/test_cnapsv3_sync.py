@@ -336,5 +336,100 @@ class AdminLivret2UploadTests(unittest.TestCase):
         self.assertEqual(doc['files'][0], 'uploads/S1/T1/documents/livret2.zip')
 
 
+class TestFrImportTests(unittest.TestCase):
+    def setUp(self):
+        self.client = gestion_app.app.test_client()
+        self.original_load_data = gestion_app.load_data
+        self.original_save_data = gestion_app.save_data
+        self.original_store_file = gestion_app._store_file
+
+    def tearDown(self):
+        gestion_app.load_data = self.original_load_data
+        gestion_app.save_data = self.original_save_data
+        gestion_app._store_file = self.original_store_file
+
+    def _login_admin(self):
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+    def test_import_test_fr_pdf_sets_validated_status(self):
+        self._login_admin()
+        data = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "training_type": "APS",
+                    "trainees": [{"id": "T1", "first_name": "John", "last_name": "Doe"}],
+                }
+            ]
+        }
+        gestion_app.load_data = lambda: data
+        gestion_app.save_data = lambda _: None
+
+        stored_path = gestion_app.os.path.join(
+            gestion_app.PERSIST_DIR,
+            "uploads",
+            "S1",
+            "T1",
+            "test_fr",
+            "test_fr.pdf",
+        )
+
+        def fake_store_file(*_args, **_kwargs):
+            gestion_app.os.makedirs(gestion_app.os.path.dirname(stored_path), exist_ok=True)
+            with open(stored_path, "wb") as f:
+                f.write(b"%PDF-1.4 test")
+            return stored_path
+
+        gestion_app._store_file = fake_store_file
+
+        response = self.client.post(
+            "/admin/sessions/S1/stagiaires/T1/test-fr/import",
+            data={"file": (io.BytesIO(b"%PDF-1.4 fake"), "test_francais.pdf")},
+            content_type="multipart/form-data",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        trainee = data["sessions"][0]["trainees"][0]
+        self.assertEqual(trainee.get("test_fr_status"), "validated")
+        self.assertTrue((trainee.get("test_fr_file_token") or "").endswith("test_fr.pdf"))
+        self.assertTrue(trainee.get("test_fr_imported_at"))
+
+    def test_docs_zip_includes_imported_test_fr_pdf(self):
+        self._login_admin()
+        test_token = "uploads/test_fr/john_doe_test.pdf"
+        full_path = gestion_app.os.path.join(gestion_app.PERSIST_DIR, test_token)
+        gestion_app.os.makedirs(gestion_app.os.path.dirname(full_path), exist_ok=True)
+        with open(full_path, "wb") as f:
+            f.write(b"%PDF-1.4 zip")
+
+        data = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "training_type": "APS",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "first_name": "John",
+                            "last_name": "Doe",
+                            "documents": [],
+                            "test_fr_file_token": test_token,
+                        }
+                    ],
+                }
+            ]
+        }
+        gestion_app.load_data = lambda: data
+        gestion_app.save_data = lambda _: None
+
+        response = self.client.get("/admin/sessions/S1/stagiaires/T1/documents.zip")
+
+        self.assertEqual(response.status_code, 200)
+        zf = gestion_app.zipfile.ZipFile(io.BytesIO(response.data))
+        self.assertIn("Test de français John Doe.pdf", zf.namelist())
+
+
 if __name__ == "__main__":
     unittest.main()
