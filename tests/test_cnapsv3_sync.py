@@ -81,7 +81,17 @@ class CnapsSyncTests(unittest.TestCase):
             sleep_func=lambda *_: None,
         )
 
-        self.assertEqual(out, {"request_id": "REQ-1", "dossier_id": ""})
+        self.assertEqual(out, {"request_id": "REQ-1", "dossier_id": "", "email": ""})
+
+    def test_lookup_success_returns_identifiers_and_email(self):
+        out = gestion_app.sync_cnapsv3_lookup_identifier(
+            "John",
+            "Doe",
+            post_func=lambda *args, **kwargs: DummyResponse(200, {"dossier_id": "DOS-1", "email": "john.v3@example.com"}),
+            sleep_func=lambda *_: None,
+        )
+
+        self.assertEqual(out, {"request_id": "", "dossier_id": "DOS-1", "email": "john.v3@example.com"})
 
     def test_lookup_404_returns_none(self):
         out = gestion_app.sync_cnapsv3_lookup_identifier(
@@ -195,6 +205,20 @@ class CnapsImportPreSaveLookupTests(unittest.TestCase):
         self.assertEqual(len(accept_args), 1)
         self.assertEqual(accept_args[0]["request_id"], "REQ-200")
         self.assertEqual(self.data["cnaps_pending_imports"][0]["cnapsv3_request_id"], "REQ-200")
+
+    def test_lookup_email_is_saved_in_pending_item(self):
+        self._install_common_stubs()
+
+        gestion_app.sync_cnapsv3_lookup_identifier = lambda *_, **__: {
+            "request_id": "REQ-200",
+            "dossier_id": "",
+            "email": "john.v3@example.com",
+        }
+        gestion_app.sync_cnapsv3_accept_status = lambda **kwargs: True
+
+        response = self._post_save()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.data["cnaps_pending_imports"][0]["email"], "john.v3@example.com")
 
     def test_lookup_409_or_404_does_not_trigger_accept(self):
         for lookup_result in (None, None):
