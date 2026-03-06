@@ -8793,7 +8793,7 @@ from werkzeug.utils import secure_filename
 # =========================
 # Upload helpers
 # =========================
-ALLOWED_EXT = {".pdf",".png",".jpg",".jpeg",".doc",".docx",".webp"}
+ALLOWED_EXT = {".pdf", ".png", ".jpg", ".jpeg", ".doc", ".docx", ".webp", ".zip"}
 
 def _safe_ext(filename: str) -> str:
     return os.path.splitext(filename)[1].lower()
@@ -9118,27 +9118,37 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
     token = _tokenize_path(stored)
 
     docs = t.get("documents") or []
-    for d in docs:
-        if d.get("key") == doc_key:
-            cur_files = d.get("files")
-            if not isinstance(cur_files, list):
-                cur_files = []
+    target_doc = next((d for d in docs if isinstance(d, dict) and d.get("key") == doc_key), None)
+    if target_doc is None:
+        target_doc = {
+            "key": doc_key,
+            "label": doc_key.replace("_", " ").title(),
+            "accept": "",
+            "status": "NON DÉPOSÉ",
+            "comment": "",
+            "file": "",
+            "files": [],
+        }
+        docs.append(target_doc)
 
-            old = (d.get("file") or "").strip()
-            if old and old not in cur_files:
-                cur_files.append(old)
+    cur_files = target_doc.get("files")
+    if not isinstance(cur_files, list):
+        cur_files = []
 
-            cur_files.append(token)
+    old = (target_doc.get("file") or "").strip()
+    if old and old not in cur_files:
+        cur_files.append(old)
 
-            d["files"] = cur_files
-            d["file"] = cur_files[0] if cur_files else ""
+    cur_files.append(token)
 
-            cur = (d.get("status") or "").strip().upper()
-            if cur in ("", "NON DÉPOSÉ", "NON DEPOSE", "NON_DEPOSE"):
-                d["status"] = "A CONTRÔLER"
-            if d.get("status") == "A CONTROLER":
-                d["status"] = "A CONTRÔLER"
-            break
+    target_doc["files"] = [x for x in cur_files if x]
+    target_doc["file"] = target_doc["files"][0] if target_doc["files"] else ""
+
+    cur = (target_doc.get("status") or "").strip().upper()
+    if cur in ("", "NON DÉPOSÉ", "NON DEPOSE", "NON_DEPOSE"):
+        target_doc["status"] = "A CONTRÔLER"
+    if target_doc.get("status") == "A CONTROLER":
+        target_doc["status"] = "A CONTRÔLER"
 
     t["updated_at"] = _now_iso()
     append_trainee_history_event(t, "Document ajouté", f"{doc_key} · fichier ajouté", "action")
