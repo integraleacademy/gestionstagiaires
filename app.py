@@ -672,6 +672,7 @@ def sync_cnapsv3_lookup_identifier(
             identifiers = {
                 "request_id": str(body.get("request_id") or "").strip(),
                 "dossier_id": str(body.get("dossier_id") or "").strip(),
+                "email": str(body.get("email") or "").strip(),
             }
             if not identifiers["request_id"] and not identifiers["dossier_id"]:
                 app.logger.warning("[CNAPSV3_LOOKUP] succès sans identifiant payload=%s", payload)
@@ -12687,6 +12688,7 @@ def api_cnaps_import_pre_save():
         "created_at": _now_iso(),
         "cnapsv3_request_id": request_id,
         "cnapsv3_dossier_id": dossier_id,
+        "email": "",
     }
     pending.append(pending_item)
 
@@ -12700,14 +12702,20 @@ def api_cnaps_import_pre_save():
         if lookup_identifiers:
             request_id = str(lookup_identifiers.get("request_id") or "").strip()
             dossier_id = str(lookup_identifiers.get("dossier_id") or "").strip()
+            cnapsv3_email = str(lookup_identifiers.get("email") or "").strip()
             pending_item["cnapsv3_request_id"] = request_id
             pending_item["cnapsv3_dossier_id"] = dossier_id
+            if cnapsv3_email:
+                pending_item["email"] = cnapsv3_email
         else:
             app.logger.info(
                 "[CNAPSV3_SYNC] Accept ignoré: aucun identifiant trouvé après lookup first_name=%s last_name=%s",
                 first_name,
                 last_name,
             )
+
+    if not pending_item.get("email"):
+        pending_item["email"] = _find_pending_trainee_email(data, last_name, first_name)
 
     save_data(data)
 
