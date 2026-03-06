@@ -4293,6 +4293,11 @@ def required_docs_for_training(training_type: str) -> List[Dict[str, Any]]:
 def _is_dirigeant_candidate_sheet_training(training_type: str) -> bool:
     return (training_type or "").strip().upper() in {"DIRIGEANT INITIAL", "DIRIGEANT VAE"}
 
+
+def _is_adef_training(training_type: str) -> bool:
+    tt = (training_type or "").strip().upper()
+    return "A3P" in tt or "APS" in tt
+
 def ensure_documents_schema_for_trainee(t: Dict[str, Any], training_type: str) -> bool:
     """
     S'assure que t["documents"] contient tous les docs requis pour la formation,
@@ -7559,6 +7564,7 @@ def admin_trainees(session_id: str):
         is_vtc=is_vtc,
         is_dirigeant=is_dirigeant,
         enums=ENUMS,
+        is_adef=_is_adef_training(session_view["training_type"]),
     )
 
 
@@ -12134,6 +12140,70 @@ def admin_trainee_summary(session_id: str, trainee_id: str):
         formation_dates=formation_dates,
         is_vtc=("VTC" in (_session_get(s, "training_type", "") or "").upper()),
         summary_training_badge=summary_training_badge,
+    )
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/fiche-adef")
+@admin_login_required
+def admin_trainee_adef_sheet(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    training_type = _session_get(s, "training_type", "")
+    if not _is_adef_training(training_type):
+        abort(404)
+
+    if (t.get("dossier_status") or "").strip().lower() != "complete":
+        abort(404)
+
+    def pick(*values: Any) -> str:
+        for value in values:
+            txt = str(value or "").strip()
+            if txt:
+                return txt
+        return ""
+
+    birth_date_value = pick(t.get("birth_date"))
+    birth_year = ""
+    birth_month = ""
+    if birth_date_value:
+        try:
+            dt = datetime.strptime(birth_date_value, "%Y-%m-%d")
+            birth_year = str(dt.year)
+            birth_month = f"{dt.month:02d}"
+        except Exception:
+            pass
+
+    adef_data = {
+        "social_security_number": pick(t.get("carte_vitale"), t.get("social_security_number"), t.get("ssn"), t.get("num_secu")),
+        "nationality_birth_country": " - ".join([v for v in [pick(t.get("nationality")), pick(t.get("birth_country"))] if v]),
+        "sex": pick(t.get("sex"), t.get("gender")),
+        "birth_year": birth_year,
+        "birth_month": birth_month,
+        "civility": pick(t.get("civility"), t.get("civilite"), t.get("title")),
+        "last_name": pick(t.get("last_name")),
+        "first_name": pick(t.get("first_name")),
+        "birth_date": fr_date(birth_date_value) or birth_date_value,
+        "birth_city_country": " - ".join([v for v in [pick(t.get("birth_city")), pick(t.get("birth_country"))] if v]),
+        "nationality": pick(t.get("nationality")),
+        "address": pick(t.get("address")),
+        "zip_code": pick(t.get("zip_code")),
+        "city": pick(t.get("city")),
+        "pre_or_car": pick(t.get("pre_number")),
+    }
+
+    return render_template(
+        "admin_trainee_adef_sheet.html",
+        session=s,
+        trainee=t,
+        adef=adef_data,
     )
 
 
