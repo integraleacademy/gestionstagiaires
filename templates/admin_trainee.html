@@ -105,6 +105,13 @@
         <button class="btn {% if vae_action_dates.get('livret_2_transmitted_scotia') %}btn-disabled-muted{% else %}btn-blue{% endif %} btn-uniform" type="button" onclick="setVaeAction('livret_2_transmitted_scotia')" {% if vae_action_dates.get('livret_2_transmitted_scotia') %}disabled{% endif %} {{ read_only_attr }}>
           L2 transmis scotia
         </button>
+        <button class="btn {% if trainee.scotia_force_visible %}btn-primary{% else %}btn-blue{% endif %} btn-uniform"
+                type="button"
+                onclick="propulseScotia()"
+                {% if trainee.scotia_force_visible %}disabled{% endif %}
+                {{ read_only_attr }}>
+          Propulser SCOTIA
+        </button>
       {% endif %}
       {% if is_aps_or_a3p %}
         {% set cnaps_full_name = ((trainee.first_name or "Prénom") ~ " " ~ (trainee.last_name or "NOM"))|trim %}
@@ -2590,6 +2597,26 @@ function updateDocsRelanceState(status, plannedDateIso){
     }catch(e){
       vaeActionRequestInFlight = false;
       alert("Erreur mise à jour statut VAE");
+    }
+  }
+
+  window.propulseScotia = async function propulseScotia(){
+    try{
+      const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+          scotia_force_visible: true,
+          send_vae_notification: false,
+        })
+      });
+      const data = await res.json().catch(()=>({}));
+      if(!res.ok || data.ok === false){
+        throw new Error("save_failed");
+      }
+      window.location.href = "/scotia";
+    }catch(e){
+      alert("Erreur lors de la propulsion vers SCOTIA");
     }
   }
 
