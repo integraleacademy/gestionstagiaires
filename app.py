@@ -9243,6 +9243,48 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
 
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/test-fr/import")
+@admin_login_required
+@admin_write_required
+def admin_import_test_fr_pdf(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    training_type = (s.get("training_type") or "").upper()
+    if "APS" not in training_type and "A3P" not in training_type:
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    uploaded = request.files.get("file")
+    if not uploaded or not uploaded.filename:
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    if not (uploaded.filename or "").lower().endswith(".pdf"):
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    try:
+        stored = _store_file(session_id, trainee_id, "test_fr", uploaded)
+    except Exception:
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    t["test_fr_file_token"] = _tokenize_path(stored)
+    t["test_fr_imported_at"] = datetime.date.today().strftime("%Y-%m-%d")
+    t["test_fr_status"] = "validated"
+    t["updated_at"] = _now_iso()
+
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/documents/<doc_key>/delete")
 @admin_login_required
 @admin_write_required
@@ -10535,6 +10577,14 @@ def admin_docs_zip(session_id: str, trainee_id: str):
                 # ✅ si plusieurs fichiers: suffixe _1, _2...
                 arc = (base + ext) if len(tokens) == 1 else (f"{base}_{i}{ext}")
                 z.write(fp, arcname=arc)
+
+        test_fr_token = (t.get("test_fr_file_token") or "").strip()
+        if test_fr_token:
+            test_fr_fp = _detokenize_path(test_fr_token)
+            if os.path.exists(test_fr_fp):
+                prenom = (t.get("first_name") or "").strip()
+                nom = (t.get("last_name") or "").strip()
+                z.write(test_fr_fp, arcname=f"Test de français {prenom} {nom}".strip() + ".pdf")
 
     buf.seek(0)
     zipname = f"Documents_{t.get('first_name','')}_{t.get('last_name','')}.zip".replace(" ", "_")

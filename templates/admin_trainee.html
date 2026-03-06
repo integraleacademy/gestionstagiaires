@@ -897,6 +897,23 @@
         <div class="hint" style="margin-top:6px;">Échéance : <strong>{{ trainee.test_fr_deadline }}</strong></div>
       {% endif %}
 
+      {% if is_aps_or_a3p %}
+        <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          {% if trainee.test_fr_file_token %}
+            <a class="btn btn-outline" href="{{ url_for('admin_view_upload', path=trainee.test_fr_file_token) }}" target="_blank" rel="noopener">Consulter le test de français</a>
+          {% elif not is_read_only %}
+            <form method="post" action="{{ url_for('admin_import_test_fr_pdf', session_id=session.id, trainee_id=trainee.id) }}" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <input type="file" name="file" accept="application/pdf" required>
+              <button class="btn btn-primary" type="submit">Importer Test de français</button>
+            </form>
+          {% endif %}
+        </div>
+
+        {% if trainee.test_fr_imported_at %}
+          <div class="hint" style="margin-top:6px;">Test de français importé le <strong>{{ trainee.test_fr_imported_at|frdate }}</strong></div>
+        {% endif %}
+      {% endif %}
+
       {% if not is_read_only %}
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
           <button class="btn btn-primary" type="button" onclick="openTestModal('notify')">🔔 Notifier test de français</button>
