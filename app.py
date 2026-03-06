@@ -4250,6 +4250,13 @@ REQUIRED_DOCS = {
         {"key": "certif_med", "label": "Certificat médical (-3 mois)", "accept": "application/pdf"},
         {"key": "assurance_rc", "label": "Attestation d’assurance responsabilité civile", "accept": "application/pdf"},
     ],
+    "DIRIGEANT_CANDIDATE_SHEET": [
+        {
+            "key": "candidate_info_sheet",
+            "label": "Fiche de renseignement candidat à compléter",
+            "accept": "application/pdf,image/jpeg,image/png",
+        },
+    ],
     "DIRIGEANT_VAE_ONLY": [
         {
             "key": "cv",
@@ -4259,11 +4266,6 @@ REQUIRED_DOCS = {
         {
             "key": "highest_diploma",
             "label": "Diplôme le plus élevé",
-            "accept": "application/pdf,image/jpeg,image/png",
-        },
-        {
-            "key": "candidate_info_sheet",
-            "label": "Fiche de renseignement candidat à compléter",
             "accept": "application/pdf,image/jpeg,image/png",
         },
     ],
@@ -4280,9 +4282,15 @@ def required_docs_for_training(training_type: str) -> List[Dict[str, Any]]:
 
     if tt == "A3P":
         docs += list(REQUIRED_DOCS["A3P_ONLY"])
+    if tt in {"DIRIGEANT INITIAL", "DIRIGEANT VAE"}:
+        docs += list(REQUIRED_DOCS["DIRIGEANT_CANDIDATE_SHEET"])
     if tt == "DIRIGEANT VAE":
         docs += list(REQUIRED_DOCS["DIRIGEANT_VAE_ONLY"])
     return docs
+
+
+def _is_dirigeant_candidate_sheet_training(training_type: str) -> bool:
+    return (training_type or "").strip().upper() in {"DIRIGEANT INITIAL", "DIRIGEANT VAE"}
 
 def ensure_documents_schema_for_trainee(t: Dict[str, Any], training_type: str) -> bool:
     """
@@ -11695,7 +11703,7 @@ def public_candidate_sheet_validate(token: str):
         return redirect(url_for("public_trainee_login", token=token))
 
     training_type = _session_get(s, "training_type", "")
-    if (training_type or "").strip().upper() != "DIRIGEANT VAE":
+    if not _is_dirigeant_candidate_sheet_training(training_type):
         return redirect(url_for("public_trainee_space", token=token))
 
     ensure_documents_schema_for_trainee(t, training_type)
@@ -11783,6 +11791,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         })
 
     show_vae = (training_type == "DIRIGEANT VAE")
+    show_candidate_sheet = _is_dirigeant_candidate_sheet_training(training_type)
     vae_steps = [{"key": k, "label": v["label"], "pill": v["pill"]} for k, v in VAE_STATUS_STEPS.items()]
     vae_dossier = _vae_find_latest_for_trainee(str(t.get('id') or '')) if show_vae else None
     if not isinstance(t.get("vae_action_dates"), dict):
@@ -11836,6 +11845,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         session=session_view,
         trainee=t,
         show_vae=show_vae,
+        show_candidate_sheet=show_candidate_sheet,
         vae_steps=vae_steps,
         vae_dossier=vae_dossier,
         vae_relances=(t.get("vae_relances") or {}),
@@ -12084,7 +12094,7 @@ def public_trainee_candidate_sheet_save(token: str):
         return redirect(url_for("public_trainee_login", token=token))
 
     training_type = (_session_get(s, "training_type", "") or "").strip().upper()
-    if training_type != "DIRIGEANT VAE":
+    if not _is_dirigeant_candidate_sheet_training(training_type):
         abort(404)
 
     base_sheet = _build_candidate_sheet_data(s, t)
@@ -12117,7 +12127,7 @@ def public_trainee_candidate_sheet(token: str):
         return redirect(url_for("public_trainee_login", token=token))
 
     training_type = (_session_get(s, "training_type", "") or "").strip().upper()
-    if training_type != "DIRIGEANT VAE":
+    if not _is_dirigeant_candidate_sheet_training(training_type):
         abort(404)
 
     photo_url = ""
@@ -12147,7 +12157,7 @@ def admin_trainee_candidate_sheet(session_id: str, trainee_id: str):
         abort(404)
 
     training_type = (_session_get(s, "training_type", "") or "").strip().upper()
-    if training_type != "DIRIGEANT VAE":
+    if not _is_dirigeant_candidate_sheet_training(training_type):
         abort(404)
 
     photo_url = ""
@@ -12187,7 +12197,7 @@ def admin_trainee_candidate_sheet_edit(session_id: str, trainee_id: str):
         abort(404)
 
     training_type = (_session_get(s, "training_type", "") or "").strip().upper()
-    if training_type != "DIRIGEANT VAE":
+    if not _is_dirigeant_candidate_sheet_training(training_type):
         abort(404)
 
     photo_url = ""
@@ -12218,7 +12228,7 @@ def admin_trainee_candidate_sheet_save(session_id: str, trainee_id: str):
         abort(404)
 
     training_type = (_session_get(s, "training_type", "") or "").strip().upper()
-    if training_type != "DIRIGEANT VAE":
+    if not _is_dirigeant_candidate_sheet_training(training_type):
         abort(404)
 
     base_sheet = _build_candidate_sheet_data(s, t)
