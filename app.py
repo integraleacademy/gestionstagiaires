@@ -12182,7 +12182,7 @@ def admin_trainee_adef_sheet(session_id: str, trainee_id: str):
             pass
 
     adef_data = {
-        "social_security_number": pick(t.get("social_security_number"), t.get("ssn"), t.get("num_secu")),
+        "social_security_number": pick(t.get("carte_vitale"), t.get("social_security_number"), t.get("ssn"), t.get("num_secu")),
         "nationality_birth_country": " - ".join([v for v in [pick(t.get("nationality")), pick(t.get("birth_country"))] if v]),
         "sex": pick(t.get("sex"), t.get("gender")),
         "birth_year": birth_year,
