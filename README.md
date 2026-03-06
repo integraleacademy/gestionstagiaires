@@ -22,7 +22,6 @@ python app.py
 - `BACKUP_RETENTION` (optionnel, nombre de snapshots conservés, défaut `120`)
 - `BACKUP_MIN_INTERVAL_SECONDS` (optionnel, fréquence mini entre snapshots automatiques, défaut `300`)
 - `AUTO_RESTORE_FROM_BACKUP` (optionnel, défaut `1`) : en cas de `data.json` manquant/corrompu, tente une restauration automatique depuis `PERSIST_DIR/backups`.
-- `CNAPSV3_API_BASE_URL` (optionnel, prioritaire sur `CNAPSV3_BASE_URL`, défaut `https://cnapsv3.onrender.com`)
 - `CNAPSV3_BASE_URL` (optionnel, défaut `https://cnapsv3.onrender.com`)
 - `GESTIONSTAGIAIRE_SYNC_TOKEN` (obligatoire pour synchroniser le statut CNAPS vers cnapsv3)
 

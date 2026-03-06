@@ -112,48 +112,6 @@ class CnapsSyncTests(unittest.TestCase):
         self.assertIsNone(out)
 
 
-class CnapsMailLookupTests(unittest.TestCase):
-    def setUp(self):
-        self.original_base = gestion_app.CNAPSV3_BASE_URL
-        self.original_api_base = gestion_app.CNAPSV3_API_BASE_URL
-        gestion_app.CNAPSV3_BASE_URL = "https://cnapsv3.onrender.com"
-        gestion_app.CNAPSV3_API_BASE_URL = ""
-
-    def tearDown(self):
-        gestion_app.CNAPSV3_BASE_URL = self.original_base
-        gestion_app.CNAPSV3_API_BASE_URL = self.original_api_base
-
-    def test_mail_lookup_returns_mail_on_200(self):
-        result = gestion_app.fetch_cnapsv3_mail_for_pending(
-            "Doe",
-            "John",
-            get_func=lambda *args, **kwargs: DummyResponse(200, {"mail": "john@example.com"}),
-        )
-
-        self.assertEqual(result["status"], "ok")
-        self.assertEqual(result["mail"], "john@example.com")
-
-    def test_mail_lookup_returns_found_no_mail_when_missing_mail(self):
-        result = gestion_app.fetch_cnapsv3_mail_for_pending(
-            "Doe",
-            "John",
-            get_func=lambda *args, **kwargs: DummyResponse(200, {"found": True}),
-        )
-
-        self.assertEqual(result["status"], "found_no_mail")
-        self.assertEqual(result["mail"], "")
-
-    def test_mail_lookup_returns_not_found_on_404(self):
-        result = gestion_app.fetch_cnapsv3_mail_for_pending(
-            "Doe",
-            "John",
-            get_func=lambda *args, **kwargs: DummyResponse(404, {}),
-        )
-
-        self.assertEqual(result["status"], "not_found")
-
-
-
 class CnapsImportPreSaveLookupTests(unittest.TestCase):
     def setUp(self):
         self.client = gestion_app.app.test_client()
@@ -163,7 +121,6 @@ class CnapsImportPreSaveLookupTests(unittest.TestCase):
         self.original_find_identifier = gestion_app._find_cnapsv3_identifier_for_pending
         self.original_lookup = gestion_app.sync_cnapsv3_lookup_identifier
         self.original_accept = gestion_app.sync_cnapsv3_accept_status
-        self.original_fetch_mail = gestion_app.fetch_cnapsv3_mail_for_pending
 
     def tearDown(self):
         gestion_app.load_data = self.original_load_data
@@ -172,7 +129,6 @@ class CnapsImportPreSaveLookupTests(unittest.TestCase):
         gestion_app._find_cnapsv3_identifier_for_pending = self.original_find_identifier
         gestion_app.sync_cnapsv3_lookup_identifier = self.original_lookup
         gestion_app.sync_cnapsv3_accept_status = self.original_accept
-        gestion_app.fetch_cnapsv3_mail_for_pending = self.original_fetch_mail
 
     def _post_save(self):
         with self.client.session_transaction() as sess:
@@ -206,7 +162,6 @@ class CnapsImportPreSaveLookupTests(unittest.TestCase):
         gestion_app.save_data = lambda data: None
         gestion_app._store_cnaps_pending_pdf = lambda *_: "uploads/cnaps_pending/doc.pdf"
         gestion_app._find_cnapsv3_identifier_for_pending = lambda *_: {"request_id": "", "dossier_id": ""}
-        gestion_app.fetch_cnapsv3_mail_for_pending = lambda *_, **__: {"status": "not_found", "mail": "", "response": {}}
 
     def test_when_missing_identifier_lookup_is_called(self):
         self._install_common_stubs()
@@ -276,46 +231,6 @@ class CnapsImportPreSaveLookupTests(unittest.TestCase):
             response = self._post_save()
             self.assertEqual(response.status_code, 200)
             self.assertEqual(called["accept"], 0)
-
-
-    def test_cnaps_mail_is_injected_only_when_trainee_email_empty(self):
-        self._install_common_stubs()
-        self.data["sessions"][0]["trainees"][0]["email"] = ""
-
-        gestion_app.fetch_cnapsv3_mail_for_pending = lambda *_, **__: {
-            "status": "ok",
-            "mail": "john.cnaps@example.com",
-            "response": {"mail": "john.cnaps@example.com"},
-        }
-        gestion_app.sync_cnapsv3_accept_status = lambda **kwargs: True
-
-        response = self._post_save()
-        payload = response.get_json()
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(payload["cnapsv3_mail_lookup_status"], "ok")
-        self.assertEqual(payload["cnapsv3_mail"], "john.cnaps@example.com")
-        self.assertTrue(payload["mail_injected"])
-        self.assertEqual(self.data["sessions"][0]["trainees"][0]["email"], "john.cnaps@example.com")
-
-    def test_cnaps_mail_does_not_override_existing_email(self):
-        self._install_common_stubs()
-
-        gestion_app.fetch_cnapsv3_mail_for_pending = lambda *_, **__: {
-            "status": "ok",
-            "mail": "john.cnaps@example.com",
-            "response": {"mail": "john.cnaps@example.com"},
-        }
-        gestion_app.sync_cnapsv3_accept_status = lambda **kwargs: True
-
-        response = self._post_save()
-        payload = response.get_json()
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(payload["cnapsv3_mail_lookup_status"], "ok")
-        self.assertFalse(payload["mail_injected"])
-        self.assertEqual(self.data["sessions"][0]["trainees"][0]["email"], "john@example.com")
-
 
 
 class CnapsPendingImportsAdminPageTests(unittest.TestCase):
