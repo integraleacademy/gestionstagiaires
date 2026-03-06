@@ -144,6 +144,18 @@
     font-size:12px;
   }
 
+  .cnaps-match-badge{
+    margin-top:6px;
+    display:inline-flex;
+    align-items:center;
+    border-radius:999px;
+    padding:3px 8px;
+    font-size:11px;
+    font-weight:700;
+  }
+  .cnaps-match-badge.ok{ background:#dcfce7; color:#166534; border:1px solid #86efac; }
+  .cnaps-match-badge.ko{ background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
+
   .session-filter-bar{
     display:flex;
     flex-wrap:wrap;
@@ -2147,7 +2159,7 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
       const matchFound = item.match_found !== false;
       const alreadyMerged = !!item.already_merged;
       const alreadySaved = !!item.already_saved;
-      const buttonLabel = matchFound ? (alreadyMerged ? "Fusionné" : "Fusionner") : "Enregistrer";
+      const buttonLabel = matchFound ? (alreadyMerged ? "Fusionné" : "Fusionner") : "ENREGISTRER";
       const saveButtonStateClass = (!matchFound && alreadySaved) ? "cnaps-save-btn-imported" : "";
       const buttonClass = matchFound ? "btn btn-primary cnaps-merge-btn" : `btn btn-outline cnaps-save-btn ${saveButtonStateClass}`.trim();
       const buttonDisabled = matchFound ? alreadyMerged : alreadySaved;
@@ -2169,6 +2181,7 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
           </div>
           <div class="cnaps-item-actions">
             <button type="button" class="${buttonClass} ${buttonStateClass}" data-match-index="${idx}" ${buttonDisabled ? "disabled aria-disabled=\"true\"" : ""}>${buttonLabel}</button>
+            <div class="cnaps-save-feedback" data-feedback-index="${idx}"></div>
             ${alreadySavedHint}
           </div>
         </div>
@@ -2282,11 +2295,24 @@ Le document sera associé automatiquement si ce stagiaire est ajouté plus tard.
           btn.textContent = "Enregistré";
           btn.disabled = true;
           btn.classList.add("btn-disabled-muted");
+          const feedbackNode = results?.querySelector(`[data-feedback-index="${matchIndex}"]`);
+          const lookupStatus = String(resSave.cnapsv3_mail_lookup_status || "");
+          let matchMessage = "Aucun rapprochement CNAPS trouvé";
+          let badgeClass = "ko";
+
+          if(lookupStatus === "ok" && resSave.cnapsv3_mail){
+            matchMessage = `Rapprochement CNAPS OK ✅ – mail récupéré : ${resSave.cnapsv3_mail}`;
+            badgeClass = "ok";
+          }else if(lookupStatus === "found_no_mail"){
+            matchMessage = "Rapprochement CNAPS trouvé, mais aucun mail renseigné";
+          }
+
+          if(feedbackNode){
+            feedbackNode.innerHTML = `<span class="cnaps-match-badge ${badgeClass}">${badgeClass === "ok" ? "Rapprochement CNAPS OK ✅" : "Aucun rapprochement"}</span>`;
+          }
+
           if(status){
-            const matchStatusText = resSave.cnapsv3_match_found
-              ? " • Rapprochement CNAPS OK ✅"
-              : " • Rapprochement CNAPS introuvable";
-            status.textContent = `Enregistrement effectué pour ${firstName} ${lastName.toUpperCase()}.${matchStatusText}`;
+            status.textContent = `Enregistrement effectué pour ${firstName} ${lastName.toUpperCase()}. ${matchMessage}`;
           }
         }catch(e){
           btn.disabled = false;
