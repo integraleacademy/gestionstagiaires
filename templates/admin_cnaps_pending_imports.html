@@ -15,11 +15,12 @@
 
 <div class="card" style="margin-top:12px;overflow:auto;">
   {% if pending_items %}
-    <table class="table" style="min-width:900px;">
+    <table class="table" style="min-width:1040px;">
       <thead>
         <tr>
           <th>Nom</th>
           <th>Prénom</th>
+          <th>Email</th>
           <th>PRE/CAR</th>
           <th>Fichier</th>
           <th>Date enregistrement</th>
@@ -31,6 +32,7 @@
           <tr>
             <td>{{ item.last_name }}</td>
             <td>{{ item.first_name }}</td>
+            <td>{{ item.email or "—" }}</td>
             <td>{{ item.pre_number }}</td>
             <td>{{ item.file_name }}</td>
             <td>{{ item.created_at[:19].replace('T', ' ') if item.created_at else '—' }}</td>
