@@ -209,5 +209,61 @@ class CnapsImportPreSaveLookupTests(unittest.TestCase):
             self.assertEqual(called["accept"], 0)
 
 
+class AdminLivret2UploadTests(unittest.TestCase):
+    def setUp(self):
+        self.client = gestion_app.app.test_client()
+        self.original_load_data = gestion_app.load_data
+        self.original_save_data = gestion_app.save_data
+        self.original_store_file = gestion_app._store_file
+
+    def tearDown(self):
+        gestion_app.load_data = self.original_load_data
+        gestion_app.save_data = self.original_save_data
+        gestion_app._store_file = self.original_store_file
+
+    def test_zip_extension_is_allowed(self):
+        self.assertIn('.zip', gestion_app.ALLOWED_EXT)
+
+    def test_upload_livret2_creates_entry_when_missing(self):
+        payload = {
+            'sessions': [
+                {
+                    'id': 'S1',
+                    'training_type': 'DIRIGEANT VAE',
+                    'trainees': [
+                        {
+                            'id': 'T1',
+                            'first_name': 'Jean',
+                            'last_name': 'Dupont',
+                            'documents': [],
+                        }
+                    ],
+                }
+            ]
+        }
+
+        gestion_app.load_data = lambda: payload
+        gestion_app.save_data = lambda data: None
+        gestion_app._store_file = lambda *args, **kwargs: f"{gestion_app.PERSIST_DIR}/uploads/S1/T1/documents/livret2.zip"
+
+        with self.client.session_transaction() as sess:
+            sess['admin_logged_in'] = True
+            sess['admin_role'] = 'admin'
+
+        response = self.client.post(
+            '/admin/sessions/S1/stagiaires/T1/documents/livret_2/upload',
+            data={'file': (io.BytesIO(b'PK\x03\x04fakezip'), 'livret2.zip')},
+            content_type='multipart/form-data',
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        trainee = payload['sessions'][0]['trainees'][0]
+        doc = next((d for d in trainee.get('documents', []) if d.get('key') == 'livret_2'), None)
+        self.assertIsNotNone(doc)
+        self.assertTrue(doc.get('files'))
+        self.assertEqual(doc['files'][0], 'uploads/S1/T1/documents/livret2.zip')
+
+
 if __name__ == "__main__":
     unittest.main()
