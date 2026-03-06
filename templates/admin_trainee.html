@@ -110,7 +110,7 @@
                 onclick="propulseScotia()"
                 {% if trainee.scotia_force_visible %}disabled{% endif %}
                 {{ read_only_attr }}>
-          Propulser SCOTIA
+          PROPULSER SCOTIA
         </button>
       {% endif %}
       {% if is_aps_or_a3p %}
@@ -438,7 +438,16 @@
       <div style="font-weight:900;">STATUT VAE</div>
       <div class="hint" style="margin-top:4px;">Le changement de statut peut envoyer automatiquement un email et un SMS selon l'étape.</div>
     </div>
-    <span class="pill">{{ trainee.vae_status_label or "—" }}</span>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+      <button class="btn {% if trainee.scotia_force_visible %}btn-primary{% else %}btn-blue{% endif %}"
+              type="button"
+              onclick="propulseScotia()"
+              {% if trainee.scotia_force_visible %}disabled{% endif %}
+              {{ read_only_attr }}>
+        PROPULSER SCOTIA
+      </button>
+      <span class="pill">{{ trainee.vae_status_label or "—" }}</span>
+    </div>
   </div>
 
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:12px;">
