@@ -5717,8 +5717,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     items: List[Dict[str, Any]] = []
     for s in data.get("sessions", []):
         training_type = (_session_get(s, "training_type", "") or "").strip().upper()
-        if "VAE" not in training_type:
-            continue
+        session_is_vae = "VAE" in training_type
         for t in _session_trainees_list(s):
             if _is_truthy(t.get("scotia_hidden")):
                 continue
@@ -5728,6 +5727,10 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
             attestation_recevabilite_imported_at = (action_dates.get("attestation_recevabilite_imported_at") or "").strip()
             sent_at = livret_2_sent_at or livret_1_sent_at
             force_scotia_visibility = _is_truthy(t.get("scotia_force_visible"))
+            # Les sessions non-VAE n'alimentent pas Scotia par défaut,
+            # sauf en cas de propulsion manuelle depuis l'admin stagiaire.
+            if not session_is_vae and not force_scotia_visibility:
+                continue
             if not sent_at and not force_scotia_visibility:
                 continue
             deliverables = t.get("deliverables") or {}
