@@ -8700,14 +8700,18 @@ def api_vtc_check_notify():
             if trainee.get(sent_key):
                 skipped_already_notified += 1
                 continue
-            if mode == "practice":
-                _send_vtc_practice_exam_success_notification(sess, trainee)
-            else:
-                trainee["vtc_theory_result"] = "admissible"
-                trainee["vtc_theory_result_label"] = "admissible"
-                _send_vtc_theory_exam_notification(sess, trainee, send_notifications=True)
-                _add_vtc_practice_convocation_notification(data, sess, trainee)
-            sent += 1
+            try:
+                if mode == "practice":
+                    _send_vtc_practice_exam_success_notification(sess, trainee)
+                else:
+                    trainee["vtc_theory_result"] = "admissible"
+                    trainee["vtc_theory_result_label"] = "admissible"
+                    _send_vtc_theory_exam_notification(sess, trainee, send_notifications=True)
+                    _add_vtc_practice_convocation_notification(data, sess, trainee)
+                sent += 1
+            except Exception:
+                failed += 1
+                continue
 
         sess["trainees"] = trainees
         sess.pop("stagiaires", None)
