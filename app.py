@@ -1518,10 +1518,10 @@ def _extract_cmar_identifiers_from_pdf(file_bytes: bytes) -> List[str]:
 
 def _build_pdf_search_haystacks(file_bytes: bytes) -> Tuple[str, str]:
     """
-    Retourne 2 haystacks:
-    - alnum_only: contenu PDF réduit à A-Z0-9
-    - digits_only: contenu PDF réduit à 0-9
-    Permet un matching robuste même si l'extraction tokenisée rate un format.
+    Retourne 2 haystacks tokenisés (avec séparateurs espaces):
+    - alnum_only: tokens A-Z0-9 séparés par espaces
+    - digits_only: tokens 0-9 séparés par espaces
+    Permet un matching robuste sans faux positifs par concaténation.
     """
     if not file_bytes:
         return "", ""
@@ -1537,8 +1537,8 @@ def _build_pdf_search_haystacks(file_bytes: bytes) -> Tuple[str, str]:
                 pass
 
     merged = "\n".join(chunk.decode("latin-1", errors="ignore") for chunk in chunks).upper()
-    alnum_only = re.sub(r"[^A-Z0-9]", "", merged)
-    digits_only = re.sub(r"[^0-9]", "", merged)
+    alnum_only = " " + " ".join(t for t in re.split(r"[^A-Z0-9]+", merged) if t) + " "
+    digits_only = " " + " ".join(t for t in re.split(r"[^0-9]+", merged) if t) + " "
     return alnum_only, digits_only
 
 
@@ -1722,10 +1722,10 @@ def _extract_cmar_identifiers_from_pdf(file_bytes: bytes) -> List[str]:
 
 def _build_pdf_search_haystacks(file_bytes: bytes) -> Tuple[str, str]:
     """
-    Retourne 2 haystacks:
-    - alnum_only: contenu PDF réduit à A-Z0-9
-    - digits_only: contenu PDF réduit à 0-9
-    Permet un matching robuste même si l'extraction tokenisée rate un format.
+    Retourne 2 haystacks tokenisés (avec séparateurs espaces):
+    - alnum_only: tokens A-Z0-9 séparés par espaces
+    - digits_only: tokens 0-9 séparés par espaces
+    Permet un matching robuste sans faux positifs par concaténation.
     """
     if not file_bytes:
         return "", ""
@@ -1741,8 +1741,8 @@ def _build_pdf_search_haystacks(file_bytes: bytes) -> Tuple[str, str]:
                 pass
 
     merged = "\n".join(chunk.decode("latin-1", errors="ignore") for chunk in chunks).upper()
-    alnum_only = re.sub(r"[^A-Z0-9]", "", merged)
-    digits_only = re.sub(r"[^0-9]", "", merged)
+    alnum_only = " " + " ".join(t for t in re.split(r"[^A-Z0-9]+", merged) if t) + " "
+    digits_only = " " + " ".join(t for t in re.split(r"[^0-9]+", merged) if t) + " "
     return alnum_only, digits_only
 
 
@@ -1750,9 +1750,9 @@ def _build_pdf_search_haystacks(file_bytes: bytes) -> Tuple[str, str]:
 
 def _build_excel_search_haystacks(file_name: str, file_bytes: bytes) -> Tuple[str, str]:
     """
-    Retourne 2 haystacks pour CSV/XLSX:
-    - alnum_only: contenu réduit à A-Z0-9
-    - digits_only: contenu réduit à 0-9
+    Retourne 2 haystacks tokenisés pour CSV/XLSX:
+    - alnum_only: tokens A-Z0-9 séparés par espaces
+    - digits_only: tokens 0-9 séparés par espaces
     """
     name = (file_name or "").lower().strip()
     if not file_bytes:
@@ -1804,8 +1804,8 @@ def _build_excel_search_haystacks(file_name: str, file_bytes: bytes) -> Tuple[st
             return "", ""
 
     merged = "\n".join(texts).upper()
-    alnum_only = re.sub(r"[^A-Z0-9]", "", merged)
-    digits_only = re.sub(r"[^0-9]", "", merged)
+    alnum_only = " " + " ".join(t for t in re.split(r"[^A-Z0-9]+", merged) if t) + " "
+    digits_only = " " + " ".join(t for t in re.split(r"[^0-9]+", merged) if t) + " "
     return alnum_only, digits_only
 
 
@@ -8534,9 +8534,9 @@ def api_vtc_check_import():
 
             cmar_digits = re.sub(r"\D", "", cmar_id)
             cmar_digits_stripped = cmar_digits.lstrip("0") or "0"
-            fallback_alnum_match = bool(file_alnum and cmar_id in file_alnum)
+            fallback_alnum_match = bool(file_alnum and f" {cmar_id} " in file_alnum)
             fallback_digits_match = bool(cmar_digits and len(cmar_digits) >= CMAR_MIN_IDENTIFIER_DIGITS and file_digits and (
-                cmar_digits in file_digits or (len(cmar_digits_stripped) >= CMAR_MIN_IDENTIFIER_DIGITS and cmar_digits_stripped in file_digits)
+                f" {cmar_digits} " in file_digits or (len(cmar_digits_stripped) >= CMAR_MIN_IDENTIFIER_DIGITS and f" {cmar_digits_stripped} " in file_digits)
             ))
 
             if not (token_match or fallback_alnum_match or fallback_digits_match):
