@@ -2022,6 +2022,7 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
     if(status) status.textContent = "";
     if(list) list.innerHTML = "";
     if(notifyBtn) notifyBtn.style.display = "none";
+    if(notifyBtn) notifyBtn.textContent = "Notifier";
     if(fileInput) fileInput.value = "";
     if(fileText) fileText.textContent = "Aucun fichier choisi";
     if(modalTitle) modalTitle.textContent = mode === "practice" ? "Check VTC pratique" : "Check VTC théorie";
@@ -2105,7 +2106,12 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
 
           list.innerHTML = admissibleHtml + nonAdmissibleHtml;
         }
-        if(notifyBtn) notifyBtn.style.display = vtcCheckState.admissibleMatches.length ? "inline-flex" : "none";
+        if(notifyBtn){
+          const hasAdmissible = vtcCheckState.admissibleMatches.length > 0;
+          const hasNonAdmissible = vtcCheckState.nonAdmissibleMatches.length > 0;
+          notifyBtn.style.display = (hasAdmissible || hasNonAdmissible) ? "inline-flex" : "none";
+          notifyBtn.textContent = (!hasAdmissible && hasNonAdmissible) ? "Enregistrer" : "Notifier";
+        }
       }
     }catch(e){
       if(status) status.textContent = "Erreur réseau.";
@@ -2117,8 +2123,8 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
   document.getElementById("btnVtcCheckNotify")?.addEventListener("click", async ()=>{
     const status = document.getElementById("vtcCheckStatus");
     const btn = document.getElementById("btnVtcCheckNotify");
-    if(!vtcCheckState.admissibleMatches.length){
-      if(status) status.textContent = "Aucun stagiaire admissible à notifier.";
+    if(!vtcCheckState.matches.length){
+      if(status) status.textContent = "Aucun résultat à enregistrer.";
       return;
     }
 
