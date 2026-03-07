@@ -1320,6 +1320,8 @@ def build_vtc_practice_exam_success_sms(first_name: str, practice_exam_date: str
     )
 
 
+CMAR_MIN_IDENTIFIER_DIGITS = 5
+
 def _normalize_cmar_identifier(value: str) -> str:
     raw = (value or "").strip().upper()
     if not raw:
@@ -1498,17 +1500,17 @@ def _extract_cmar_identifiers_from_pdf(file_bytes: bytes) -> List[str]:
             continue
         if normalized.startswith("CMAR"):
             normalized = normalized[4:]
-        if normalized.isdigit() and len(normalized) < 6:
+        if normalized.isdigit() and len(normalized) < CMAR_MIN_IDENTIFIER_DIGITS:
             continue
         if normalized.isdigit() and len(normalized) > 20:
             continue
-        if any(ch.isdigit() for ch in normalized) and len(normalized) >= 6:
+        if any(ch.isdigit() for ch in normalized) and len(normalized) >= CMAR_MIN_IDENTIFIER_DIGITS:
             candidates.add(normalized)
 
     # fallback : capture les suites numériques même si le PDF met des séparateurs/NULL
     compact_digits = re.sub(r"[^0-9]", " ", content)
     for token in compact_digits.split():
-        if 6 <= len(token) <= 20:
+        if CMAR_MIN_IDENTIFIER_DIGITS <= len(token) <= 20:
             candidates.add(token)
 
     return sorted(candidates)
@@ -1702,17 +1704,17 @@ def _extract_cmar_identifiers_from_pdf(file_bytes: bytes) -> List[str]:
             continue
         if normalized.startswith("CMAR"):
             normalized = normalized[4:]
-        if normalized.isdigit() and len(normalized) < 6:
+        if normalized.isdigit() and len(normalized) < CMAR_MIN_IDENTIFIER_DIGITS:
             continue
         if normalized.isdigit() and len(normalized) > 20:
             continue
-        if any(ch.isdigit() for ch in normalized) and len(normalized) >= 6:
+        if any(ch.isdigit() for ch in normalized) and len(normalized) >= CMAR_MIN_IDENTIFIER_DIGITS:
             candidates.add(normalized)
 
     # fallback : capture les suites numériques même si le PDF met des séparateurs/NULL
     compact_digits = re.sub(r"[^0-9]", " ", content)
     for token in compact_digits.split():
-        if 6 <= len(token) <= 20:
+        if CMAR_MIN_IDENTIFIER_DIGITS <= len(token) <= 20:
             candidates.add(token)
 
     return sorted(candidates)
@@ -1819,11 +1821,11 @@ def _extract_cmar_identifiers_from_excel(file_name: str, file_bytes: bytes) -> L
             normalized = _normalize_cmar_identifier(token)
             if normalized.startswith("CMAR"):
                 normalized = normalized[4:]
-            if any(ch.isdigit() for ch in normalized) and len(normalized) >= 6:
+            if any(ch.isdigit() for ch in normalized) and len(normalized) >= CMAR_MIN_IDENTIFIER_DIGITS:
                 out.add(normalized)
         digits = re.sub(r"[^0-9]", " ", txt)
         for token in digits.split():
-            if 6 <= len(token) <= 20:
+            if CMAR_MIN_IDENTIFIER_DIGITS <= len(token) <= 20:
                 out.add(token)
         return sorted(out)
 
@@ -8529,8 +8531,8 @@ def api_vtc_check_import():
             cmar_digits = re.sub(r"\D", "", cmar_id)
             cmar_digits_stripped = cmar_digits.lstrip("0") or "0"
             fallback_alnum_match = bool(file_alnum and cmar_id in file_alnum)
-            fallback_digits_match = bool(cmar_digits and len(cmar_digits) >= 6 and file_digits and (
-                cmar_digits in file_digits or (len(cmar_digits_stripped) >= 6 and cmar_digits_stripped in file_digits)
+            fallback_digits_match = bool(cmar_digits and len(cmar_digits) >= CMAR_MIN_IDENTIFIER_DIGITS and file_digits and (
+                cmar_digits in file_digits or (len(cmar_digits_stripped) >= CMAR_MIN_IDENTIFIER_DIGITS and cmar_digits_stripped in file_digits)
             ))
 
             if not (token_match or fallback_alnum_match or fallback_digits_match):
