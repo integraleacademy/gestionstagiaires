@@ -2938,22 +2938,31 @@ VTC_EXAM_RESULTS_NOTIFICATION_SCHEDULE = [
 ]
 
 
+def _admin_notification_schedule_key(meta: Optional[Dict[str, Any]]) -> str:
+    payload = meta or {}
+    kind = str(payload.get("kind") or "").strip()
+    scheduled_at = str(payload.get("scheduled_at") or "").strip()
+    if not kind or not scheduled_at:
+        return ""
+    return f"{kind}|{scheduled_at}"
+
+
 def _inject_vtc_exam_results_notifications(data: Dict[str, Any]) -> bool:
     paris_tz = ZoneInfo("Europe/Paris")
     now_paris = datetime.datetime.now(paris_tz)
     notifications = data.setdefault("notifications_admin", [])
+    dismissed_keys = set(data.setdefault("notifications_admin_dismissed_schedule_keys", []))
     existing_keys = {
-        (
-            ((item.get("meta") or {}).get("kind") or "").strip(),
-            ((item.get("meta") or {}).get("scheduled_at") or "").strip(),
-        )
+        _admin_notification_schedule_key(item.get("meta"))
         for item in notifications
+        if _admin_notification_schedule_key(item.get("meta"))
     }
+    existing_keys |= dismissed_keys
 
     changed = False
     for label, schedule_at in VTC_EXAM_RESULTS_NOTIFICATION_SCHEDULE:
         schedule_paris = datetime.datetime.fromisoformat(schedule_at).replace(tzinfo=paris_tz)
-        key = ("vtc_exam_results_download", schedule_at)
+        key = _admin_notification_schedule_key({"kind": "vtc_exam_results_download", "scheduled_at": schedule_at})
         if now_paris < schedule_paris or key in existing_keys:
             continue
         add_admin_notification(
@@ -3041,6 +3050,7 @@ def _empty_data_payload() -> Dict[str, Any]:
         "notifications_convention_unsigned": [],
         "notifications_vtc_books": [],
         "notifications_admin": [],
+        "notifications_admin_dismissed_schedule_keys": [],
         "admin_push_subscriptions": [],
     }
 
@@ -3117,6 +3127,10 @@ def load_data() -> Dict[str, Any]:
             changed = True
         if "admin_push_subscriptions" not in data:
             data["admin_push_subscriptions"] = []
+            changed = True
+
+        if not isinstance(data.get("notifications_admin_dismissed_schedule_keys"), list):
+            data["notifications_admin_dismissed_schedule_keys"] = []
             changed = True
 
         if _send_vtc_credentials_missing_reminders(data):
@@ -6412,6 +6426,12 @@ def api_admin_notification_delete(notification_id: str):
     entry = next((item for item in notifications if item.get("id") == notification_id), None)
     if not entry:
         return jsonify({"ok": False, "error": "notification_not_found"}), 404
+
+    schedule_key = _admin_notification_schedule_key(entry.get("meta"))
+    if schedule_key:
+        dismissed_keys = data.setdefault("notifications_admin_dismissed_schedule_keys", [])
+        if schedule_key not in dismissed_keys:
+            dismissed_keys.append(schedule_key)
 
     data["notifications_admin"] = [item for item in notifications if item.get("id") != notification_id]
     save_data(data)
