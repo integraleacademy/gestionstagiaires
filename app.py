@@ -8643,19 +8643,57 @@ def api_vtc_check_notify():
 
     for item in items:
         session_id = str(item.get("session_id") or "").strip()
+        session_name = str(item.get("session_name") or "").strip()
         trainee_id = str(item.get("trainee_id") or "").strip()
-        if not session_id or not trainee_id:
+        cmar_id = _canonical_cmar_identifier(item.get("cmar_id") or "")
+        if not trainee_id and not cmar_id:
             failed += 1
             continue
 
-        sess = find_session(data, session_id)
+        sess = None
+        if session_id:
+            sess = find_session(data, session_id)
+            if not sess:
+                sess = next((s for s in data.get("sessions", []) if str(s.get("id") or "").strip() == session_id), None)
+
         if not sess:
-            sess = next((s for s in data.get("sessions", []) if str(s.get("id") or "").strip() == session_id), None)
+            candidate_sessions = []
+            for candidate in data.get("sessions", []):
+                trainees_in_candidate = _session_trainees_list(candidate)
+                trainee_match = next(
+                    (
+                        x
+                        for x in trainees_in_candidate
+                        if (trainee_id and str(x.get("id") or "").strip() == trainee_id)
+                        or (cmar_id and _canonical_cmar_identifier(x.get("vtc_cmar_id") or "") == cmar_id)
+                    ),
+                    None,
+                )
+                if trainee_match:
+                    candidate_sessions.append(candidate)
+
+            if session_name:
+                named_matches = [s for s in candidate_sessions if str(s.get("name") or "").strip() == session_name]
+                if len(named_matches) == 1:
+                    sess = named_matches[0]
+            if not sess and len(candidate_sessions) == 1:
+                sess = candidate_sessions[0]
+
         if not sess:
             failed += 1
             continue
+
         trainees = _session_trainees_list(sess)
-        trainee = next((x for x in trainees if str(x.get("id") or "").strip() == trainee_id), None)
+        trainee = next((x for x in trainees if trainee_id and str(x.get("id") or "").strip() == trainee_id), None)
+        if not trainee and cmar_id:
+            trainee = next(
+                (
+                    x
+                    for x in trainees
+                    if _canonical_cmar_identifier(x.get("vtc_cmar_id") or "") == cmar_id
+                ),
+                None,
+            )
         if not trainee:
             failed += 1
             continue
