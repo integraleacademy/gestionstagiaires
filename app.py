@@ -1320,7 +1320,7 @@ def build_vtc_practice_exam_success_sms(first_name: str, practice_exam_date: str
     )
 
 
-CMAR_MIN_IDENTIFIER_DIGITS = 5
+CMAR_MIN_IDENTIFIER_DIGITS = 3
 
 def _normalize_cmar_identifier(value: str) -> str:
     raw = (value or "").strip().upper()
