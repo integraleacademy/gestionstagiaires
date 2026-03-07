@@ -176,6 +176,33 @@
     gap:10px;
     margin-top:12px;
   }
+  .dashboard-total-card{
+    margin-top:14px;
+    border-radius:16px;
+    padding:16px 18px;
+    border:1px solid #c7d2fe;
+    background:linear-gradient(135deg, #1d4ed8 0%, #7c3aed 58%, #0ea5e9 100%);
+    color:#fff;
+    box-shadow:0 14px 28px rgba(37, 99, 235, .28);
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .dashboard-total-card__label{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    font-weight:800;
+    opacity:.92;
+  }
+  .dashboard-total-card__count{
+    font-size:44px;
+    font-weight:900;
+    line-height:1;
+    margin-top:4px;
+  }
   .dashboard-card{
     border:1px solid #e5e7eb;
     border-radius:12px;
@@ -376,6 +403,7 @@
 </div>
 
 <div class="card" style="margin-bottom:12px;">
+  {% set yearly_total = (yearly_training_counts.APS or 0) + (yearly_training_counts.VTC or 0) + (yearly_training_counts.DIRIGEANT or 0) + (yearly_training_counts.VAE or 0) + (yearly_training_counts.A3P or 0) %}
   <div class="card-row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
     <div>
       <div class="card-title">Tableau de bord stagiaires {{ dashboard_year }}</div>
@@ -403,6 +431,13 @@
     <div class="dashboard-card dashboard-card--a3p">
       <div class="dashboard-card__label">A3P</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.A3P or 0 }}</div>
+    </div>
+  </div>
+
+  <div class="dashboard-total-card" aria-label="Total stagiaires annuel toutes formations">
+    <div>
+      <div class="dashboard-total-card__label">TOTAL STAGIAIRES</div>
+      <div class="dashboard-total-card__count">{{ yearly_total }}</div>
     </div>
   </div>
 </div>
