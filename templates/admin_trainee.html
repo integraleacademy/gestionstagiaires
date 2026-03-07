@@ -678,6 +678,12 @@
       {% if not is_read_only %}
       <button class="btn btn-outline btn-uniform"
               type="button"
+              id="btnVtcTheoryRetake"
+              style="{% if trainee.vtc_theory_result != 'non_admissible' %}display:none;{% endif %}">
+        Repassage théorie
+      </button>
+      <button class="btn btn-outline btn-uniform"
+              type="button"
               id="btnVtcTheoryExamUndo"
               style="{% if not trainee.vtc_theory_exam_sent_at %}display:none;{% endif %}">
         ↩️ Dévalider
@@ -719,9 +725,11 @@
     </div>
 
     <div id="vtcStatusHint" class="hint" style="margin-top:8px;
-      {% if not trainee.vtc_theory_exam_sent_at and not trainee.vtc_practice_convocation_sent_at and not trainee.vtc_practice_exam_sent_at and trainee.vtc_theory_result != "non_admissible" and trainee.vtc_practice_result != "non_admissible" %}display:none;{% endif %}">
+      {% if not trainee.vtc_theory_exam_sent_at and not trainee.vtc_practice_convocation_sent_at and not trainee.vtc_practice_exam_sent_at and trainee.vtc_theory_result != "non_admissible" and trainee.vtc_theory_result_label != "repassage examen théorique" and trainee.vtc_practice_result != "non_admissible" %}display:none;{% endif %}">
       {% if trainee.vtc_theory_result == "non_admissible" %}
         <div>❌ Échec examen théorique</div>
+      {% elif trainee.vtc_theory_result_label == "repassage examen théorique" %}
+        <div>🟡 Repassage examen théorique</div>
       {% endif %}
       {% if trainee.vtc_theory_exam_sent_at %}
         ✅ Examen théorique validé le <strong>{{ trainee.vtc_theory_exam_sent_at|frdatetime }}</strong>
@@ -3224,6 +3232,7 @@ if(chkExamFeesPaid){
 }
 
 const btnVtcTheoryExam = document.getElementById("btnVtcTheoryExam");
+const btnVtcTheoryRetake = document.getElementById("btnVtcTheoryRetake");
 const btnVtcTheoryExamUndo = document.getElementById("btnVtcTheoryExamUndo");
 const btnVtcPracticeConvocation = document.getElementById("btnVtcPracticeConvocation");
 const btnVtcPracticeConvocationUndo = document.getElementById("btnVtcPracticeConvocationUndo");
@@ -3248,7 +3257,8 @@ const vtcStatusState = {
   failures: {
     theory: {{ 'true' if trainee.vtc_theory_result == 'non_admissible' else 'false' }},
     practice: {{ 'true' if trainee.vtc_practice_result == 'non_admissible' else 'false' }},
-  }
+  },
+  retakeTheory: {{ 'true' if trainee.vtc_theory_result_label == 'repassage examen théorique' else 'false' }},
 };
 
 const setStepValidatedUi = (btn, undoBtn, isValidated) => {
@@ -3266,11 +3276,15 @@ const renderVtcStatus = () => {
   setStepValidatedUi(btnVtcTheoryExam, btnVtcTheoryExamUndo, vtcStatusState.theory.sentAt);
   setStepValidatedUi(btnVtcPracticeConvocation, btnVtcPracticeConvocationUndo, vtcStatusState.practiceConvocation.sentAt);
   setStepValidatedUi(btnVtcPracticeExamSuccess, btnVtcPracticeExamSuccessUndo, vtcStatusState.practiceExam.sentAt);
+  if(btnVtcTheoryRetake){
+    btnVtcTheoryRetake.style.display = vtcStatusState.failures.theory ? "" : "none";
+  }
 
   if(!vtcStatusHint) return;
 
   const lines = [];
   if(vtcStatusState.failures.theory) lines.push("<div>❌ Échec examen théorique</div>");
+  else if(vtcStatusState.retakeTheory) lines.push("<div>🟡 Repassage examen théorique</div>");
 
   if(vtcStatusState.theory.sentAt){
     const emailFlag = vtcStatusState.theory.emailOk ? '<span style="margin-left:8px;">📧 Email envoyé</span>' : '<span style="margin-left:8px;">📧 Email non envoyé</span>';
@@ -3318,10 +3332,33 @@ if(btnVtcTheoryExam){
       vtcStatusState.theory.sentAt = true;
       vtcStatusState.theory.emailOk = !!data.email_ok;
       vtcStatusState.theory.smsOk = !!data.sms_ok;
+      vtcStatusState.retakeTheory = false;
       renderVtcStatus();
     }catch(e){
       btnVtcTheoryExam.disabled = false;
       alert("Erreur lors de l'envoi de la convocation formation pratique.");
+    }
+  });
+}
+
+if(btnVtcTheoryRetake){
+  btnVtcTheoryRetake.addEventListener("click", async ()=>{
+    const ok = window.confirm("Passer en statut \"Repassage examen théorique\" ?");
+    if(!ok) return;
+    try{
+      btnVtcTheoryRetake.disabled = true;
+      const res = await updateTrainee({
+        vtc_theory_result: "",
+        vtc_theory_result_label: "repassage examen théorique",
+      });
+      if(!res || res.ok === false) throw new Error("save_failed");
+      vtcStatusState.failures.theory = false;
+      vtcStatusState.retakeTheory = true;
+      renderVtcStatus();
+    }catch(e){
+      alert("Erreur lors du passage en repassage théorie.");
+    }finally{
+      btnVtcTheoryRetake.disabled = false;
     }
   });
 }
