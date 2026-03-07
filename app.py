@@ -8049,6 +8049,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vtc_theory_exam_sent_at",
         "vtc_theory_exam_email_ok",
         "vtc_theory_exam_sms_ok",
+        "vtc_theory_result",
+        "vtc_theory_result_label",
         "vtc_practice_convocation_sent_at",
         "vtc_practice_result",
         "vtc_practice_result_label",

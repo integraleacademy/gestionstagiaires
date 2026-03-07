@@ -332,6 +332,8 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         <td title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">
           {% if t.vtc_theory_result == "non_admissible" %}
             <span title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">🔴</span>
+          {% elif t.vtc_theory_result_label == "repassage examen théorique" %}
+            <span title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }} - Repassage examen théorique">🟡</span>
           {% elif t.vtc_theory_exam_sent_at %}
             <span title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">🟢</span>
           {% else %}
