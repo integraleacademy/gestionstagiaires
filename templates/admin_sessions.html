@@ -203,12 +203,6 @@
     line-height:1;
     margin-top:4px;
   }
-  .dashboard-total-card__formula{
-    font-size:13px;
-    font-weight:700;
-    opacity:.95;
-    text-align:right;
-  }
   .dashboard-card{
     border:1px solid #e5e7eb;
     border-radius:12px;
@@ -442,11 +436,8 @@
 
   <div class="dashboard-total-card" aria-label="Total stagiaires annuel toutes formations">
     <div>
-      <div class="dashboard-total-card__label">Total stagiaires (APS + VTC + Dirigeant + VAE + A3P)</div>
+      <div class="dashboard-total-card__label">TOTAL STAGIAIRES</div>
       <div class="dashboard-total-card__count">{{ yearly_total }}</div>
-    </div>
-    <div class="dashboard-total-card__formula">
-      APS {{ yearly_training_counts.APS or 0 }} + VTC {{ yearly_training_counts.VTC or 0 }} + DIRIGEANT {{ yearly_training_counts.DIRIGEANT or 0 }} + VAE {{ yearly_training_counts.VAE or 0 }} + A3P {{ yearly_training_counts.A3P or 0 }}
     </div>
   </div>
 </div>
