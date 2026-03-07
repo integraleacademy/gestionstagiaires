@@ -6170,8 +6170,10 @@ def admin_sessions():
         public_logged_in_total = sum(
             1 for t in trainees if bool(t.get("public_has_logged_in"))
         )
+        # Le compteur "Inscriptions CMAR" doit suivre l'état affiché dans la colonne
+        # "Inscription CMAR" de la liste stagiaires VTC (basé sur exam_fees_paid).
         cmar_registered_total = sum(
-            1 for t in trainees if bool((t.get("vtc_cm_submitted_at") or "").strip())
+            1 for t in trainees if bool(t.get("exam_fees_paid"))
         )
 
         total_total = len(trainees)
