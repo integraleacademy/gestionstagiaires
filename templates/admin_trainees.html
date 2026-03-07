@@ -306,9 +306,29 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         {% endif %}
 
         {% if is_vtc %}
-        <td>{{ "🟢" if t.exam_fees_paid else "🔴" }}</td>
-        <td>{{ "🟢" if (t.elearning_link or "")|trim else "🔴" }}</td>
-        <td><span class="{% if vtc_book_pending_ready %}blink-alert{% endif %}">{{ "🟢" if (t.vtc_book_sent_at or "")|trim else "🔴" }}</span></td>
+        {% set vtc_cmar_ok = t.exam_fees_paid or t.vtc_cmar_manual_ok %}
+        {% set vtc_elearning_ok = ((t.elearning_link or "")|trim) or t.vtc_elearning_manual_ok %}
+        {% set vtc_book_ok = ((t.vtc_book_sent_at or "")|trim) or t.vtc_book_manual_ok %}
+        <td>
+          <select class="status sel status-dot" data-field="vtc_cmar_manual_ok" {{ read_only_attr }}>
+            <option value="false" {% if not vtc_cmar_ok %}selected{% endif %}>🔴</option>
+            <option value="true" {% if vtc_cmar_ok %}selected{% endif %}>🟢</option>
+          </select>
+        </td>
+        <td>
+          <select class="status sel status-dot" data-field="vtc_elearning_manual_ok" {{ read_only_attr }}>
+            <option value="false" {% if not vtc_elearning_ok %}selected{% endif %}>🔴</option>
+            <option value="true" {% if vtc_elearning_ok %}selected{% endif %}>🟢</option>
+          </select>
+        </td>
+        <td>
+          <span class="{% if vtc_book_pending_ready %}blink-alert{% endif %}">
+            <select class="status sel status-dot" data-field="vtc_book_manual_ok" {{ read_only_attr }}>
+              <option value="false" {% if not vtc_book_ok %}selected{% endif %}>🔴</option>
+              <option value="true" {% if vtc_book_ok %}selected{% endif %}>🟢</option>
+            </select>
+          </span>
+        </td>
         <td title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">
           {% if t.vtc_theory_result == "non_admissible" %}
             <span title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">🔴</span>
