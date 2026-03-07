@@ -8664,7 +8664,8 @@ def api_vtc_check_notify():
     for item in items:
         session_id = str(item.get("session_id") or "").strip()
         trainee_id = str(item.get("trainee_id") or "").strip()
-        if not session_id or not trainee_id:
+        cmar_id = _canonical_cmar_identifier(item.get("cmar_id") or "")
+        if not session_id or (not trainee_id and not cmar_id):
             failed += 1
             continue
 
@@ -8676,6 +8677,16 @@ def api_vtc_check_notify():
             continue
         trainees = _session_trainees_list(sess)
         trainee = next((x for x in trainees if str(x.get("id") or "").strip() == trainee_id), None)
+        if not trainee:
+            if cmar_id:
+                trainee = next(
+                    (
+                        x
+                        for x in trainees
+                        if _canonical_cmar_identifier(x.get("vtc_cmar_id") or "") == cmar_id
+                    ),
+                    None,
+                )
         if not trainee:
             failed += 1
             continue
