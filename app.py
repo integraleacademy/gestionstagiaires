@@ -7801,12 +7801,15 @@ def api_create_trainee(session_id: str):
         "vtc_cm_reminder_sms_ok": False,
         "vtc_cm_reminder_copy_email_ok": False,
         "exam_fees_paid": False,
+        "vtc_cmar_manual_ok": False,
         "exam_fees_paid_at": "",
         "elearning_link": "",
+        "vtc_elearning_manual_ok": False,
         "elearning_link_sent_at": "",
         "elearning_link_email_ok": False,
         "elearning_link_sms_ok": False,
         "vtc_book_sent_at": "",
+        "vtc_book_manual_ok": False,
         "vtc_real_training_dates": vtc_real_training_dates,
         "documents": [],
         "created_at": _now_iso(),
@@ -8038,8 +8041,11 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vtc_cm_reminder_auto_disabled",
         "vtc_cm_reminder_auto_disabled_at",
         "exam_fees_paid",
+        "vtc_cmar_manual_ok",
         "elearning_link",
+        "vtc_elearning_manual_ok",
         "vtc_book_sent_at",
+        "vtc_book_manual_ok",
         "vtc_theory_exam_sent_at",
         "vtc_theory_exam_email_ok",
         "vtc_theory_exam_sms_ok",
@@ -8072,7 +8078,19 @@ def api_update_trainee(session_id: str, trainee_id: str):
             continue
 
         # bools
-        if k in ("no_permis", "public_hide_infos", "public_hide_docs", "public_hide_suivi", "public_hide_popup", "force_dossier_complete", "financement_new_date_seen", "exam_fees_paid"):
+        if k in (
+            "no_permis",
+            "public_hide_infos",
+            "public_hide_docs",
+            "public_hide_suivi",
+            "public_hide_popup",
+            "force_dossier_complete",
+            "financement_new_date_seen",
+            "exam_fees_paid",
+            "vtc_cmar_manual_ok",
+            "vtc_elearning_manual_ok",
+            "vtc_book_manual_ok",
+        ):
             t[k] = True if v in (True, "true", "1", 1, "yes", "on") else False
             continue
 
