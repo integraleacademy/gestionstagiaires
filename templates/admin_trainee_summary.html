@@ -56,6 +56,13 @@
         <div><strong>Montant CPF :</strong> {{ trainee.cpf_amount or "—" }}</div>
         <div><strong>Montant financement personnel :</strong> {{ trainee.personal_amount or "—" }}</div>
         <div><strong>Montant autre :</strong> {{ trainee.other_amount or "—" }}</div>
+
+        <div style="margin-top:12px;padding:12px;border:2px solid #1e293b;border-radius:10px;background:#f8fafc;">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#475569;">Total (prix de la formation)</div>
+          <div style="font-size:24px;font-weight:900;line-height:1.2;color:#0f172a;">
+            {% if summary_training_price %}{{ summary_training_price }} €{% else %}—{% endif %}
+          </div>
+        </div>
       </div>
     </div>
   </div>

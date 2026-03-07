@@ -12107,6 +12107,8 @@ def admin_trainee_summary(session_id: str, trainee_id: str):
         abort(404)
 
     training_name = (s.get("name") or "").strip() or formation_label(_session_get(s, "training_type", ""))
+    training_type = _session_get(s, "training_type", "")
+    default_price = default_training_price(training_type)
     dstart = fr_date(_session_get(s, "date_start", ""))
     dend = fr_date(_session_get(s, "date_end", ""))
     formation_dates = f"Du {dstart} au {dend}" if dstart and dend else "Dates à confirmer"
@@ -12114,12 +12116,12 @@ def admin_trainee_summary(session_id: str, trainee_id: str):
     session_view = {
         "id": s.get("id"),
         "name": _session_get(s, "name", ""),
-        "training_type": _session_get(s, "training_type", ""),
+        "training_type": training_type,
         "date_start": _session_get(s, "date_start", ""),
         "date_end": _session_get(s, "date_end", ""),
     }
 
-    training_type_key = (_session_get(s, "training_type", "") or "").strip().upper()
+    training_type_key = (training_type or "").strip().upper()
     summary_training_badge = {"label": "FORMATION", "color": "gray"}
     if "VAE" in training_type_key:
         summary_training_badge = {"label": "VAE", "color": "orange"}
@@ -12140,6 +12142,7 @@ def admin_trainee_summary(session_id: str, trainee_id: str):
         formation_dates=formation_dates,
         is_vtc=("VTC" in (_session_get(s, "training_type", "") or "").upper()),
         summary_training_badge=summary_training_badge,
+        summary_training_price=t.get("training_price") or default_price,
     )
 
 
