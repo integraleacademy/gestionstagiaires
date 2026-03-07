@@ -2080,22 +2080,27 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
 
       if(vtcCheckState.matches.length){
         if(list){
+          const useAdmisWording = vtcCheckState.mode === "practice";
+          const okLabel = useAdmisWording ? "✅ ADMIS" : "✅ ADMISSIBLE";
+          const koLabel = useAdmisWording ? "❌ NON ADMIS" : "❌ NON ADMISSIBLE";
+          const okGroupLabel = useAdmisWording ? "Admis" : "Admissibles";
+          const koGroupLabel = useAdmisWording ? "Non admis" : "Non admissibles";
           const renderItem = (it, isAdmissible) => {
             const full = `${(it.last_name || "").toUpperCase()} ${(it.first_name || "")}`.trim();
             const importedSuffix = it.already_imported ? " • 📥 DÉJÀ IMPORTÉ" : "";
             return `
               <div class="vtc-check-item">
                 <strong>${full || "—"}</strong>
-                <span>${it.session_name || "Session"} • CMAR: ${it.cmar_id || "—"} • ${isAdmissible ? "✅ ADMISSIBLE" : "❌ NON ADMISSIBLE"}${importedSuffix}</span>
+                <span>${it.session_name || "Session"} • CMAR: ${it.cmar_id || "—"} • ${isAdmissible ? okLabel : koLabel}${importedSuffix}</span>
               </div>
             `;
           };
 
           const admissibleHtml = vtcCheckState.admissibleMatches.length
-            ? `<div class="hint" style="margin:8px 0 4px 0;"><strong>Admissibles (${vtcCheckState.admissibleMatches.length})</strong></div>${vtcCheckState.admissibleMatches.map(it => renderItem(it, true)).join("")}`
+            ? `<div class="hint" style="margin:8px 0 4px 0;"><strong>${okGroupLabel} (${vtcCheckState.admissibleMatches.length})</strong></div>${vtcCheckState.admissibleMatches.map(it => renderItem(it, true)).join("")}`
             : "";
           const nonAdmissibleHtml = vtcCheckState.nonAdmissibleMatches.length
-            ? `<div class="hint" style="margin:12px 0 4px 0;"><strong>Non admissibles (${vtcCheckState.nonAdmissibleMatches.length})</strong></div>${vtcCheckState.nonAdmissibleMatches.map(it => renderItem(it, false)).join("")}`
+            ? `<div class="hint" style="margin:12px 0 4px 0;"><strong>${koGroupLabel} (${vtcCheckState.nonAdmissibleMatches.length})</strong></div>${vtcCheckState.nonAdmissibleMatches.map(it => renderItem(it, false)).join("")}`
             : "";
 
           list.innerHTML = admissibleHtml + nonAdmissibleHtml;
