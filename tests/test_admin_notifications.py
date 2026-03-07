@@ -202,6 +202,68 @@ class VtcCheckNotifyApiTests(unittest.TestCase):
         self.assertEqual(payload["failed"], 0)
         self.assertEqual(saved["called"], 1)
 
+    def test_notify_falls_back_to_session_lookup_when_session_id_missing(self):
+        data = {
+            "sessions": [
+                {
+                    "id": "",
+                    "name": "Session VTC Janvier",
+                    "training_type": "VTC",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "first_name": "Jeremy",
+                            "last_name": "Cauvin",
+                            "email": "jeremy@example.com",
+                            "phone": "0600000001",
+                            "vtc_cmar_id": "00000955",
+                        }
+                    ],
+                }
+            ]
+        }
+
+        gestion_app.load_data = lambda: data
+        saved = {"called": 0}
+
+        def fake_save_data(_data):
+            saved["called"] += 1
+
+        def fake_send(_session, trainee):
+            trainee["vtc_practice_exam_sent_at"] = "2026-01-01T00:00:00Z"
+            trainee["vtc_practice_result"] = "success"
+            trainee["vtc_practice_result_label"] = "réussite examen pratique"
+            return {"email_ok": True, "sms_ok": True, "sent_at": trainee["vtc_practice_exam_sent_at"]}
+
+        gestion_app.save_data = fake_save_data
+        gestion_app._send_vtc_practice_exam_success_notification = fake_send
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        response = self.client.post(
+            "/api/vtc/check/notify?mode=practice",
+            json={
+                "items": [
+                    {
+                        "session_id": "",
+                        "session_name": "Session VTC Janvier",
+                        "trainee_id": "T1",
+                        "cmar_id": "00000955",
+                        "status": "admissible",
+                    }
+                ]
+            },
+        )
+        payload = response.get_json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["sent"], 1)
+        self.assertEqual(payload["failed"], 0)
+        self.assertEqual(saved["called"], 1)
+
     def test_notify_handles_send_errors_without_network_failure(self):
         data = {
             "sessions": [
