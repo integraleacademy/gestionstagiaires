@@ -8650,10 +8650,12 @@ def api_vtc_check_notify():
 
         sess = find_session(data, session_id)
         if not sess:
+            sess = next((s for s in data.get("sessions", []) if str(s.get("id") or "").strip() == session_id), None)
+        if not sess:
             failed += 1
             continue
         trainees = _session_trainees_list(sess)
-        trainee = next((x for x in trainees if x.get("id") == trainee_id), None)
+        trainee = next((x for x in trainees if str(x.get("id") or "").strip() == trainee_id), None)
         if not trainee:
             failed += 1
             continue
