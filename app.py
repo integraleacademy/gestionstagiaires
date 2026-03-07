@@ -1888,6 +1888,10 @@ def _extract_vtc_exam_results(file_name: str, file_bytes: bytes) -> Dict[str, An
 
     def _status_from_text(text: str) -> str:
         txt = (text or "").upper()
+        if "NON ADMIS" in txt:
+            return "non_admissible"
+        if "ADMIS" in txt:
+            return "admissible"
         if "NON ADMISSIBLE" in txt:
             return "non_admissible"
         if "ADMISSIBLE" in txt:
