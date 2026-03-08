@@ -178,6 +178,7 @@
   }
   .dashboard-total-card{
     margin-top:14px;
+    width:100%;
     border-radius:16px;
     padding:16px 18px;
     border:1px solid #c7d2fe;
@@ -189,6 +190,12 @@
     align-items:flex-end;
     gap:12px;
     flex-wrap:wrap;
+    text-align:left;
+    cursor:pointer;
+    font:inherit;
+  }
+  .dashboard-total-card.is-active{
+    box-shadow:0 0 0 3px rgba(99,102,241,.45), 0 14px 28px rgba(37, 99, 235, .28);
   }
   .dashboard-total-card__label{
     font-size:12px;
@@ -209,6 +216,18 @@
     padding:12px;
     color:#111827;
     background:#f8fafc;
+  }
+  .dashboard-card[data-dashboard-filter]{
+    cursor:pointer;
+    transition:transform .1s ease, box-shadow .2s ease;
+  }
+  .dashboard-card[data-dashboard-filter]:hover{
+    transform:translateY(-1px);
+    box-shadow:0 10px 20px rgba(15,23,42,.12);
+  }
+  .dashboard-card.is-active{
+    box-shadow:0 0 0 3px rgba(15,23,42,.18);
+    border-color:rgba(15,23,42,.35);
   }
   .dashboard-card__label{ font-size:12px; font-weight:800; opacity:.9; }
   .dashboard-card__count{ font-size:28px; font-weight:900; margin-top:4px; }
@@ -412,34 +431,34 @@
   </div>
 
   <div class="dashboard-grid" aria-label="Tableau de bord annuel des stagiaires">
-    <div class="dashboard-card dashboard-card--aps">
+    <button type="button" class="dashboard-card dashboard-card--aps" data-dashboard-filter="aps" aria-label="Afficher uniquement les formations APS">
       <div class="dashboard-card__label">APS</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.APS or 0 }}</div>
-    </div>
-    <div class="dashboard-card dashboard-card--vtc">
+    </button>
+    <button type="button" class="dashboard-card dashboard-card--vtc" data-dashboard-filter="vtc" aria-label="Afficher uniquement les formations VTC">
       <div class="dashboard-card__label">VTC</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.VTC or 0 }}</div>
-    </div>
-    <div class="dashboard-card dashboard-card--dirigeant">
+    </button>
+    <button type="button" class="dashboard-card dashboard-card--dirigeant" data-dashboard-filter="dirigeant" aria-label="Afficher uniquement les formations dirigeant">
       <div class="dashboard-card__label">DIRIGEANT</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.DIRIGEANT or 0 }}</div>
-    </div>
-    <div class="dashboard-card dashboard-card--vae">
+    </button>
+    <button type="button" class="dashboard-card dashboard-card--vae" data-dashboard-filter="vae" aria-label="Afficher uniquement les formations VAE">
       <div class="dashboard-card__label">VAE</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.VAE or 0 }}</div>
-    </div>
-    <div class="dashboard-card dashboard-card--a3p">
+    </button>
+    <button type="button" class="dashboard-card dashboard-card--a3p" data-dashboard-filter="a3p" aria-label="Afficher uniquement les formations A3P">
       <div class="dashboard-card__label">A3P</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.A3P or 0 }}</div>
-    </div>
+    </button>
   </div>
 
-  <div class="dashboard-total-card" aria-label="Total stagiaires annuel toutes formations">
+  <button type="button" class="dashboard-total-card" data-dashboard-reset="true" aria-label="Afficher toutes les formations">
     <div>
       <div class="dashboard-total-card__label">TOTAL STAGIAIRES</div>
       <div class="dashboard-total-card__count">{{ yearly_total }}</div>
     </div>
-  </div>
+  </button>
 </div>
 
 <div class="card" style="margin-bottom:12px;">
@@ -1620,7 +1639,9 @@
     const cards = Array.from(document.querySelectorAll(".session-card"));
     const filterButtons = Array.from(document.querySelectorAll("[data-filter-group]"));
     const resetButton = document.querySelector("[data-filter-reset]");
-    if(cards.length === 0 || (filterButtons.length === 0 && !resetButton)) return;
+    const dashboardFilterCards = Array.from(document.querySelectorAll("[data-dashboard-filter]"));
+    const dashboardResetButton = document.querySelector("[data-dashboard-reset]");
+    if(cards.length === 0 || (filterButtons.length === 0 && !resetButton && dashboardFilterCards.length === 0 && !dashboardResetButton)) return;
 
     const filterState = {
       training: null,
@@ -1642,8 +1663,17 @@
         const isActive = filterState[group] === value;
         btn.classList.toggle("is-active", isActive);
       });
+
+      dashboardFilterCards.forEach(card => {
+        const value = card.dataset.dashboardFilter;
+        card.classList.toggle("is-active", !!value && filterState.training === value);
+      });
+
       if(resetButton){
         resetButton.classList.toggle("is-active", !filterState.training && !filterState.status);
+      }
+      if(dashboardResetButton){
+        dashboardResetButton.classList.toggle("is-active", !filterState.training && !filterState.status);
       }
     }
 
@@ -1658,12 +1688,25 @@
       });
     });
 
-    resetButton?.addEventListener("click", ()=>{
+    dashboardFilterCards.forEach(card => {
+      card.addEventListener("click", ()=>{
+        const value = card.dataset.dashboardFilter;
+        if(!value) return;
+        filterState.training = (filterState.training === value) ? null : value;
+        setActiveButtons();
+        applyFilters();
+      });
+    });
+
+    function resetAllFilters(){
       filterState.training = null;
       filterState.status = null;
       setActiveButtons();
       applyFilters();
-    });
+    }
+
+    resetButton?.addEventListener("click", resetAllFilters);
+    dashboardResetButton?.addEventListener("click", resetAllFilters);
 
     setActiveButtons();
   })();
