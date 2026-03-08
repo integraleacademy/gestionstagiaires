@@ -1298,7 +1298,7 @@ def build_vtc_practice_convocation_sms(first_name: str, practice_training_date: 
 def build_vtc_practice_exam_success_email(first_name: str, practice_exam_date: str) -> Tuple[str, str]:
     first_name = (first_name or "").strip()
     greeting = f"Bonjour <strong>{first_name}</strong>," if first_name else "Bonjour,"
-    practice_exam_date_fr = format_fr_date(practice_exam_date)
+    practice_exam_date_fr = fr_date(practice_exam_date)
     subject = "Félicitations 🎉 Réussite à l'examen pratique VTC"
 
     html = mail_layout(f"""
@@ -1313,7 +1313,7 @@ def build_vtc_practice_exam_success_email(first_name: str, practice_exam_date: s
 def build_vtc_practice_exam_success_sms(first_name: str, practice_exam_date: str) -> str:
     first_name = (first_name or "").strip()
     greeting = f"Bonjour {first_name}, " if first_name else "Bonjour, "
-    practice_exam_date_fr = format_fr_date(practice_exam_date)
+    practice_exam_date_fr = fr_date(practice_exam_date)
     return (
         f"{greeting}félicitations pour votre réussite à l'examen pratique VTC du {practice_exam_date_fr}. "
         "Intégrale Academy reste disponible pour la suite de votre dossier."
