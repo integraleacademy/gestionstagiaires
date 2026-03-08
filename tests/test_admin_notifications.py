@@ -324,3 +324,14 @@ class VtcCheckNotifyApiTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class VtcPracticeExamTemplateTests(unittest.TestCase):
+    def test_practice_exam_success_templates_format_exam_date(self):
+        subject, html = gestion_app.build_vtc_practice_exam_success_email("Maxime", "2026-02-23")
+        sms = gestion_app.build_vtc_practice_exam_success_sms("Maxime", "2026-02-23")
+
+        self.assertIn("Félicitations", subject)
+        self.assertIn("23/02/2026", html)
+        self.assertIn("23/02/2026", sms)
+
