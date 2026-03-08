@@ -2153,8 +2153,8 @@ document.querySelectorAll("[data-archive-session]").forEach(btn=>{
         const useAdmisWording = vtcCheckState.mode === "practice";
         const okWord = useAdmisWording ? "admis" : "admissible(s)";
         const koWord = useAdmisWording ? "non admis" : "non admissible(s)";
-        const failedPart = (res.failed || 0) ? ` • ${res.failed || 0} en échec(s)` : "";
-        status.textContent = `${res.sent || 0} ${okWord} notifié(s) • ${res.non_admissible_marked || 0} ${koWord} marqué(s) en échec • ${res.skipped_already_notified || 0} notification(s) déjà envoyée(s) ignorée(s)${failedPart}.`;
+        const failedPart = (res.failed || 0) ? ` • ${res.failed || 0} erreur(s) technique(s)` : "";
+        status.textContent = `${res.sent || 0} ${okWord} notifié(s) • ${res.non_admissible_marked || 0} ${koWord} marqué(s) en échec • ${res.skipped_already_marked || 0} déjà marqué(s) en échec ignoré(s) • ${res.skipped_already_notified || 0} notification(s) déjà envoyée(s) ignorée(s)${failedPart}.`;
       }
     }catch(e){
       if(status) status.textContent = "Erreur réseau.";
