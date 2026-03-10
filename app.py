@@ -971,44 +971,125 @@ def normalize_first_name(value: str) -> str:
     return lowered.title()
 
 
-def _ocr_extract_text_from_image(file_bytes: bytes, filename: str, content_type: str = "") -> str:
+def _ocr_extract_text_from_image(file_bytes: bytes, filename: str, content_type: str = "") -> Tuple[str, str]:
     api_key = (os.environ.get("OCR_SPACE_API_KEY") or "helloworld").strip()
     if not file_bytes:
-        return ""
+        return "", "empty_file"
 
-    files = {
-        "file": (filename or "upload.png", file_bytes, content_type or "application/octet-stream")
-    }
-    payload = {
-        "language": "fre",
-        "isOverlayRequired": "false",
-        "OCREngine": "2",
-        "scale": "true",
-    }
-    try:
-        response = requests.post(
-            "https://api.ocr.space/parse/image",
-            data=payload,
-            files=files,
-            headers={"apikey": api_key},
-            timeout=30,
-        )
-        data = response.json()
-    except Exception:
-        return ""
+    def _build_ocr_variants(original_bytes: bytes) -> List[Tuple[bytes, str, str]]:
+        variants: List[Tuple[bytes, str, str]] = [
+            (original_bytes, filename or "upload.png", content_type or "application/octet-stream")
+        ]
+        try:
+            with Image.open(BytesIO(original_bytes)) as img:
+                prepared = ImageOps.exif_transpose(img)
+                grayscale = ImageOps.grayscale(prepared)
+                boosted = ImageOps.autocontrast(grayscale)
+                out = BytesIO()
+                boosted.save(out, format="PNG", optimize=True)
+                variants.append((out.getvalue(), "upload-preprocessed.png", "image/png"))
+        except Exception:
+            pass
+        return variants
 
-    parsed_results = data.get("ParsedResults") or []
-    if not isinstance(parsed_results, list):
-        return ""
+    last_error = "ocr_failed"
+    for file_variant, file_name_variant, content_type_variant in _build_ocr_variants(file_bytes):
+        files = {
+            "file": (file_name_variant, file_variant, content_type_variant)
+        }
+        for engine in ("2", "1"):
+            payload = {
+                "language": "fre",
+                "isOverlayRequired": "false",
+                "OCREngine": engine,
+                "scale": "true",
+            }
+            try:
+                response = requests.post(
+                    "https://api.ocr.space/parse/image",
+                    data=payload,
+                    files=files,
+                    headers={"apikey": api_key},
+                    timeout=30,
+                )
+                data = response.json()
+            except requests.Timeout:
+                last_error = "ocr_timeout"
+                continue
+            except Exception:
+                last_error = "ocr_unreachable"
+                continue
 
-    chunks: List[str] = []
-    for item in parsed_results:
-        if not isinstance(item, dict):
+            error_message = data.get("ErrorMessage")
+            if isinstance(error_message, list):
+                error_message = " ".join(str(x) for x in error_message if x)
+            if error_message:
+                last_error = str(error_message).strip() or "ocr_failed"
+
+            parsed_results = data.get("ParsedResults") or []
+            if not isinstance(parsed_results, list):
+                continue
+
+            chunks: List[str] = []
+            for item in parsed_results:
+                if not isinstance(item, dict):
+                    continue
+                text = (item.get("ParsedText") or "").strip()
+                if text:
+                    chunks.append(text)
+
+            parsed_text = "\n".join(chunks).strip()
+            if parsed_text:
+                return parsed_text, ""
+
+    return "", last_error
+
+
+def _normalized_token(value: str) -> str:
+    lowered = (value or "").strip().lower()
+    normalized = unicodedata.normalize("NFKD", lowered)
+    return "".join(ch for ch in normalized if not unicodedata.combining(ch))
+
+
+def _is_likely_section_header(value: str) -> bool:
+    token = _normalized_token(value)
+    blocked_contains = (
+        "informations biographiques",
+        "coordonnees",
+        "coordoonnees",
+        "civilite",
+        "niveau de formation",
+        "niveau d'etudes",
+        "date de naissance",
+        "lieu de naissance",
+        "adresse",
+        "courriel",
+        "telephone",
+    )
+    return any(part in token for part in blocked_contains)
+
+
+def _extract_name_from_ocr_lines(lines: List[str]) -> Tuple[str, str]:
+    for idx, line in enumerate(lines):
+        clean = re.sub(r"\s+", " ", line).strip(" :\t")
+        if not clean:
             continue
-        text = (item.get("ParsedText") or "").strip()
-        if text:
-            chunks.append(text)
-    return "\n".join(chunks).strip()
+        if _is_likely_section_header(clean):
+            continue
+        if idx > 0 and _is_likely_section_header(lines[idx - 1]):
+            continue
+
+        parts = [p for p in clean.split(" ") if p]
+        if len(parts) != 2:
+            continue
+        if not all(re.search(r"[A-Za-zÀ-ÿ]", p) for p in parts):
+            continue
+        if any(any(ch.isdigit() for ch in p) for p in parts):
+            continue
+
+        return normalize_first_name(parts[0]), normalize_last_name(parts[1])
+
+    return "", ""
 
 
 def _extract_trainee_fields_from_ocr_text(raw_text: str) -> Dict[str, str]:
@@ -1047,26 +1128,7 @@ def _extract_trainee_fields_from_ocr_text(raw_text: str) -> Dict[str, str]:
     birth_date_raw = _value_after_label(r"date\s+de\s+naissance")
     address_raw = _value_after_label(r"adresse\s+postale|adresse")
 
-    first_name = ""
-    last_name = ""
-    for line in lines:
-        clean = re.sub(r"\s+", " ", line).strip()
-        upper = clean.upper()
-        if upper in {
-            "INFORMATIONS BIOGRAPHIQUES",
-            "COORDONNÉES",
-            "COORDONNEES",
-            "CIVILITÉ",
-            "CIVILITE",
-        }:
-            continue
-        if any(token in upper for token in ("DATE DE NAISSANCE", "LIEU DE NAISSANCE", "ADRESSE", "COURRIEL", "TÉLÉPHONE", "TELEPHONE")):
-            continue
-        parts = [p for p in clean.split(" ") if p]
-        if len(parts) >= 2 and all(len(p) >= 2 for p in parts[:2]):
-            first_name = normalize_first_name(parts[0])
-            last_name = normalize_last_name(" ".join(parts[1:]))
-            break
+    first_name, last_name = _extract_name_from_ocr_lines(lines)
 
     zip_code = ""
     city = ""
@@ -7962,9 +8024,9 @@ def api_import_trainee_from_image():
     if not file_bytes:
         return jsonify({"ok": False, "error": "empty_file"}), 400
 
-    text = _ocr_extract_text_from_image(file_bytes, filename, f.mimetype or "")
+    text, ocr_error = _ocr_extract_text_from_image(file_bytes, filename, f.mimetype or "")
     if not text:
-        return jsonify({"ok": False, "error": "ocr_failed"}), 422
+        return jsonify({"ok": False, "error": "ocr_failed", "detail": ocr_error}), 422
 
     extracted = _extract_trainee_fields_from_ocr_text(text)
     return jsonify({"ok": True, "fields": extracted})
