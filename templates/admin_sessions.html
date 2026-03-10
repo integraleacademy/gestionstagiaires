@@ -1260,9 +1260,12 @@
         method: "POST",
         body: fd
       });
-      const res = await r.json();
+      const res = await r.json().catch(()=> ({}));
       if(!r.ok || !res?.ok){
-        alert("Impossible d'importer les infos depuis l'image.");
+        const detail = (res?.detail || res?.error || "").toString().trim();
+        alert(detail
+          ? `Impossible d'importer les infos depuis l'image (${detail}).`
+          : "Impossible d'importer les infos depuis l'image.");
         return;
       }
       applyImportedTraineeFieldsFromSessions(res.fields || {});
