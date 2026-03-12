@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Export AFC</title>
+  <style>
+    body{font-family:Arial,sans-serif;padding:24px;color:#111}
+    h1{margin:0 0 12px}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th,td{border:1px solid #d1d5db;padding:6px 8px;vertical-align:top}
+    th{background:#eef2ff}
+    .toolbar{margin-bottom:12px}
+    @media print {.toolbar{display:none}}
+  </style>
+</head>
+<body>
+  <div class="toolbar"><button onclick="window.print()">Imprimer</button></div>
+  <h1>Export Gestion AFC</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Identifiant FT</th><th>Nom</th><th>Prénom</th><th>Statut CNAPS</th><th>Décision</th><th>Motif de refus</th><th>Complément refus</th>
+        <th>Formation technique</th><th>Remise à niveau</th><th>Soutien personnalisé</th><th>PAF</th><th>TOTAL DES HEURES</th><th>Dates de formation</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in candidates %}
+      {% set modules = c.modules or {} %}
+      {% set total = (modules.formation_technique or 0) + (modules.remise_niveau or 0) + (modules.soutien_personnalise or 0) + (modules.paf or 0) %}
+      <tr>
+        <td>{{ c.identifiant_ft or '' }}</td>
+        <td>{{ c.nom or '' }}</td>
+        <td>{{ c.prenom or '' }}</td>
+        <td>{{ c.cnaps_status or 'INCONNU' }}</td>
+        <td>{{ c.decision or '' }}</td>
+        <td>{{ c.motif_refus or '' }}</td>
+        <td>{{ c.complement_refus_autre if (c.complement_refus or '') == 'Autre' else (c.complement_refus or '') }}</td>
+        <td>{{ modules.formation_technique or 0 }}</td>
+        <td>{{ modules.remise_niveau or 0 }}</td>
+        <td>{{ modules.soutien_personnalise or 0 }}</td>
+        <td>{{ modules.paf or 0 }}</td>
+        <td>{{ total }}</td>
+        <td>{{ c.dates_formation or afc.dates_formation or '' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+    <h1 style="margin:0;">Gestion des AFC</h1>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" id="btnAddCandidate">Ajouter un candidat</button>
+      <a class="btn btn-outline" href="{{ url_for('admin_afc_export') }}" target="_blank" rel="noopener">Export</a>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:12px;">
+  <h3>Modèles de mails</h3>
+  <label>Mail candidat retenu</label>
+  <textarea id="tmplRetained" rows="10" style="width:100%;">{{ afc.mail_templates.retained }}</textarea>
+  <label style="margin-top:10px;display:block;">Mail candidat non retenu (variables: {{'{{motif_refus}}'}} {{'{{complement_refus}}'}})</label>
+  <textarea id="tmplRejected" rows="10" style="width:100%;">{{ afc.mail_templates.rejected }}</textarea>
+  <button class="btn" id="btnSaveTemplates" style="margin-top:8px;">Sauvegarder modèles</button>
+</div>
+
+<div class="card" style="margin-top:12px;overflow:auto;">
+  <table class="table" id="afcTable">
+    <thead>
+      <tr>
+        <th>Nom</th><th>Prénom</th><th>Mail</th><th>Téléphone</th><th>Décision</th><th>Statut notification</th><th>Statut CNAPS</th><th>Fiche candidat</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in candidates %}
+      <tr data-id="{{ c.id }}">
+        <td>{{ c.nom }}</td>
+        <td>{{ c.prenom }}</td>
+        <td><input data-field="email" value="{{ c.email or '' }}"></td>
+        <td><input data-field="telephone" value="{{ c.telephone or '' }}"></td>
+        <td>{{ '🟢Retenue' if (c.decision or '')|upper == 'RETENU' else 'Non retenue🔴' }}</td>
+        <td>{{ '🟢Envoyée' if (c.notification_status or '')|upper == 'ENVOYEE' else 'Non envoyée🔴' }}</td>
+        <td>{{ c.cnaps_status or 'INCONNU' }}</td>
+        <td><a class="btn btn-outline" href="{{ url_for('admin_afc_candidate_sheet', candidate_id=c.id) }}">Fiche candidat</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="modal-backdrop" id="candidateModal" aria-hidden="true">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-head"><div class="modal-title">Ajouter un candidat</div></div>
+    <div class="modal-body">
+      <input id="newNom" placeholder="Nom" style="width:100%;margin-bottom:6px;">
+      <input id="newPrenom" placeholder="Prénom" style="width:100%;margin-bottom:6px;">
+      <input id="newMail" placeholder="Mail" style="width:100%;margin-bottom:6px;">
+      <input id="newTel" placeholder="Téléphone" style="width:100%;margin-bottom:6px;">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="closeCandidateModal">Annuler</button>
+      <button class="btn btn-primary" id="saveCandidateBtn">VALIDER</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const modal = document.getElementById('candidateModal');
+const newNom = document.getElementById('newNom');
+const newPrenom = document.getElementById('newPrenom');
+const newMail = document.getElementById('newMail');
+const newTel = document.getElementById('newTel');
+
+function openModal(){ modal.classList.add('show'); modal.setAttribute('aria-hidden','false'); }
+function closeModal(){ modal.classList.remove('show'); modal.setAttribute('aria-hidden','true'); }
+
+document.getElementById('btnAddCandidate').addEventListener('click', openModal);
+document.getElementById('closeCandidateModal').addEventListener('click', closeModal);
+modal.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
+
+document.getElementById('saveCandidateBtn').addEventListener('click', async ()=>{
+  const payload = {
+    nom: (newNom.value || '').trim(),
+    prenom: (newPrenom.value || '').trim(),
+    email: (newMail.value || '').trim(),
+    telephone: (newTel.value || '').trim(),
+  };
+  const r = await fetch('/api/admin/afc/candidates',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  });
+  if(r.ok){
+    closeModal();
+    location.reload();
+    return;
+  }
+  const body = await r.json().catch(()=>({}));
+  alert(body.error || 'Erreur création candidat');
+});
+
+document.querySelectorAll('#afcTable tbody tr input').forEach((input)=>{
+  input.addEventListener('change', async (e)=>{
+    const tr = e.target.closest('tr');
+    const payload = {}; payload[e.target.dataset.field] = e.target.value;
+    const res = await fetch(`/api/admin/afc/candidates/${tr.dataset.id}`,{
+      method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)
+    });
+    if(!res.ok) alert('Erreur sauvegarde');
+  });
+});
+
+document.getElementById('btnSaveTemplates').addEventListener('click', async ()=>{
+  const retained = document.getElementById('tmplRetained').value;
+  const rejected = document.getElementById('tmplRejected').value;
+  await fetch('/api/admin/afc/mail-templates',{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({retained,rejected})
+  });
+  alert('Modèles sauvegardés');
+});
+</script>
+{% endblock %}

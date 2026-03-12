@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <h1 style="margin:0;">Fiche candidat AFC</h1>
+    <a class="btn btn-outline" href="{{ url_for('admin_afc') }}">← Retour</a>
+  </div>
+</div>
+
+<div class="card" style="margin-top:12px;">
+  <div style="display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:8px;">
+    <label>Identifiant France Travail <input id="identifiant_ft" value="{{ candidate.identifiant_ft or '' }}"></label>
+    <label>Nom <input id="nom" value="{{ candidate.nom or '' }}"></label>
+    <label>Prénom <input id="prenom" value="{{ candidate.prenom or '' }}"></label>
+    <label>Mail <input id="email" value="{{ candidate.email or '' }}"></label>
+    <label>Téléphone <input id="telephone" value="{{ candidate.telephone or '' }}"></label>
+  </div>
+</div>
+
+<div class="card" style="margin-top:12px;">
+  <h3>Décision candidat</h3>
+  <label>Décision
+    <select id="decision">
+      <option value="">-- Choisir --</option>
+      <option value="RETENU" {% if (candidate.decision or '')|upper == 'RETENU' %}selected{% endif %}>RETENU</option>
+      <option value="NON RETENU" {% if (candidate.decision or '')|upper == 'NON RETENU' %}selected{% endif %}>NON RETENU</option>
+    </select>
+  </label>
+
+  <div id="refusalBox" style="display:none;margin-top:8px;">
+    <label>Motif de refus
+      <select id="motif_refus">
+        <option value="">-- Choisir --</option>
+        {% for reason in refusal_reasons %}
+        <option value="{{ reason }}" {% if candidate.motif_refus == reason %}selected{% endif %}>{{ reason }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label style="display:block;margin-top:8px;">Complément refus
+      <select id="complement_refus">
+        <option value="">-- Choisir --</option>
+        {% for complement in refusal_complements %}
+        <option value="{{ complement }}" {% if candidate.complement_refus == complement %}selected{% endif %}>{{ complement }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <textarea id="complement_refus_autre" rows="3" style="width:100%;margin-top:8px;display:none;" placeholder="Précisez le complément refus">{{ candidate.complement_refus_autre or '' }}</textarea>
+  </div>
+
+  <button class="btn btn-primary" id="btnNotify" style="display:none;margin-top:10px;">NOTIFIER LE CANDIDAT</button>
+  <button class="btn" id="btnSave" style="margin-top:10px;">Enregistrer</button>
+</div>
+
+<div class="card" style="margin-top:12px;">
+  <h3>Modules AFC</h3>
+  {% set modules = candidate.modules or {} %}
+  <div style="display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:8px;">
+    <label>Formation technique <input id="mft" type="number" step="0.5" value="{{ modules.formation_technique or 0 }}"></label>
+    <label>Remise à niveau <input id="mrn" type="number" step="0.5" value="{{ modules.remise_niveau or 0 }}"></label>
+    <label>Soutien personnalisé <input id="msp" type="number" step="0.5" value="{{ modules.soutien_personnalise or 0 }}"></label>
+    <label>PAF <input id="mpaf" type="number" step="0.5" value="{{ modules.paf or 0 }}"></label>
+  </div>
+  <div style="margin-top:8px;font-weight:700;">TOTAL DES HEURES : <span id="hoursTotal">0</span></div>
+  <label style="display:block;margin-top:8px;">Dates de formation
+    <textarea id="dates_formation" rows="3" style="width:100%;">{{ candidate.dates_formation or '' }}</textarea>
+  </label>
+</div>
+
+<script>
+const candidateId = "{{ candidate.id }}";
+const decision = document.getElementById('decision');
+const refusalBox = document.getElementById('refusalBox');
+const btnNotify = document.getElementById('btnNotify');
+const complement = document.getElementById('complement_refus');
+const autre = document.getElementById('complement_refus_autre');
+
+function refreshUI(){
+  const nonRetenu = decision.value === 'NON RETENU';
+  refusalBox.style.display = nonRetenu ? 'block' : 'none';
+  btnNotify.style.display = (decision.value === 'RETENU' || decision.value === 'NON RETENU') ? 'inline-flex' : 'none';
+  autre.style.display = complement.value === 'Autre' ? 'block' : 'none';
+}
+
+function updateTotal(){
+  const ids=['mft','mrn','msp','mpaf'];
+  const total = ids.map(id=>Number(document.getElementById(id).value || 0)).reduce((a,b)=>a+b,0);
+  document.getElementById('hoursTotal').textContent = total.toFixed(1).replace('.0','');
+}
+
+refreshUI();
+updateTotal();
+decision.addEventListener('change', refreshUI);
+complement.addEventListener('change', refreshUI);
+['mft','mrn','msp','mpaf'].forEach(id=>document.getElementById(id).addEventListener('input', updateTotal));
+
+async function saveCandidate(){
+  const payload = {
+    identifiant_ft: document.getElementById('identifiant_ft').value,
+    nom: document.getElementById('nom').value,
+    prenom: document.getElementById('prenom').value,
+    email: document.getElementById('email').value,
+    telephone: document.getElementById('telephone').value,
+    decision: document.getElementById('decision').value,
+    motif_refus: document.getElementById('motif_refus').value,
+    complement_refus: document.getElementById('complement_refus').value,
+    complement_refus_autre: document.getElementById('complement_refus_autre').value,
+    dates_formation: document.getElementById('dates_formation').value,
+    modules: {
+      formation_technique: document.getElementById('mft').value,
+      remise_niveau: document.getElementById('mrn').value,
+      soutien_personnalise: document.getElementById('msp').value,
+      paf: document.getElementById('mpaf').value,
+    }
+  };
+  const r = await fetch(`/api/admin/afc/candidates/${candidateId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  if(!r.ok) {
+    alert('Erreur sauvegarde');
+    return false;
+  }
+  return true;
+}
+
+document.getElementById('btnSave').onclick = async ()=>{
+  const ok = await saveCandidate();
+  if(ok) alert('Candidat enregistré');
+};
+
+document.getElementById('btnNotify').onclick = async ()=>{
+  const saved = await saveCandidate();
+  if(!saved) return;
+  const r = await fetch(`/api/admin/afc/candidates/${candidateId}/notify`,{method:'POST'});
+  if(r.ok) alert('Notification envoyée'); else alert('Erreur envoi notification');
+};
+</script>
+{% endblock %}
