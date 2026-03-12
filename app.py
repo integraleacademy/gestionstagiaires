@@ -6537,9 +6537,13 @@ def api_admin_afc_update_candidate(candidate_id: str):
     for field in (
         "identifiant_ft", "nom", "prenom", "email", "telephone", "decision",
         "motif_refus", "complement_refus", "complement_refus_autre", "dates_formation",
+        "cnaps_status",
     ):
         if field in payload:
-            candidate[field] = str(payload.get(field) or "").strip()
+            value = str(payload.get(field) or "").strip()
+            if field == "cnaps_status":
+                value = value.upper()
+            candidate[field] = value
 
     if "decision" in payload and (candidate.get("decision") or "").strip().upper() == "RETENU":
         candidate["motif_refus"] = ""
@@ -6562,6 +6566,22 @@ def api_admin_afc_update_candidate(candidate_id: str):
 
     save_data(data)
     return jsonify({"ok": True, "candidate": candidate})
+
+
+@app.post("/api/admin/afc/candidates/<candidate_id>/delete")
+def api_admin_afc_delete_candidate(candidate_id: str):
+    data = load_data()
+    bucket = _afc_bucket(data)
+    candidates = bucket.get("candidates") or []
+    before = len(candidates)
+    bucket["candidates"] = [
+        c for c in candidates
+        if str(c.get("id") or "") != str(candidate_id or "")
+    ]
+    deleted = len(bucket["candidates"]) != before
+    if deleted:
+        save_data(data)
+    return jsonify({"ok": True, "deleted": deleted})
 
 
 @app.post("/api/admin/afc/candidates/<candidate_id>/notify")

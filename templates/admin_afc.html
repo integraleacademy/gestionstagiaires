@@ -1,5 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+  .afc-table-wrap{
+    width: calc(100vw - 28px);
+    margin-left: calc(50% - 50vw + 14px);
+  }
+  .afc-actions{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .afc-cnaps-wrap{display:flex;align-items:center;gap:8px;}
+</style>
+
 <div class="card">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
     <h1 style="margin:0;">Gestion des AFC</h1>
@@ -19,11 +32,11 @@
   <button class="btn" id="btnSaveTemplates" style="margin-top:8px;">Sauvegarder modèles</button>
 </div>
 
-<div class="card" style="margin-top:12px;overflow:auto;">
+<div class="card afc-table-wrap" style="margin-top:12px;overflow:auto;">
   <table class="table" id="afcTable">
     <thead>
       <tr>
-        <th>Nom</th><th>Prénom</th><th>Mail</th><th>Téléphone</th><th>Décision</th><th>Statut notification</th><th>Statut CNAPS</th><th>Fiche candidat</th>
+        <th>Nom</th><th>Prénom</th><th>Mail</th><th>Téléphone</th><th>Décision</th><th>Statut notification</th><th>Statut CNAPS</th><th>Fiche candidat</th><th>Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -35,8 +48,16 @@
         <td><input data-field="telephone" value="{{ c.telephone or '' }}"></td>
         <td>{{ '🟢Retenue' if (c.decision or '')|upper == 'RETENU' else 'Non retenue🔴' }}</td>
         <td>{{ '🟢Envoyée' if (c.notification_status or '')|upper == 'ENVOYEE' else 'Non envoyée🔴' }}</td>
-        <td>{{ c.cnaps_status or 'INCONNU' }}</td>
+        <td>
+          <div class="afc-cnaps-wrap">
+            <span class="cnaps" data-cnaps>{{ c.cnaps_status or 'INCONNU' }}</span>
+            <button class="mini-btn" data-refresh-cnaps type="button">↻</button>
+          </div>
+        </td>
         <td><a class="btn btn-outline" href="{{ url_for('admin_afc_candidate_sheet', candidate_id=c.id) }}">Fiche candidat</a></td>
+        <td>
+          <button type="button" class="btn btn-outline" data-delete-candidate>Supprimer</button>
+        </td>
       </tr>
       {% endfor %}
     </tbody>
@@ -68,6 +89,49 @@ const newTel = document.getElementById('newTel');
 
 function openModal(){ modal.classList.add('show'); modal.setAttribute('aria-hidden','false'); }
 function closeModal(){ modal.classList.remove('show'); modal.setAttribute('aria-hidden','true'); }
+
+function cnapsClassFromText(txt){
+  const t = (txt || '').toUpperCase();
+  if(t.includes('TRANSM')) return 'cnaps-transmis';
+  if(t.includes('ENREG'))  return 'cnaps-enregistre';
+  if(t.includes('INSTRU')) return 'cnaps-instruction';
+  if(t.includes('ACCEPT')) return 'cnaps-accepte';
+  if(t.includes('REFUS'))  return 'cnaps-refuse';
+  if(t.includes('DOC'))    return 'cnaps-docs';
+  if(t.includes('CARTE PROFESSIONNELLE OK')) return 'cnaps-accepte';
+  return 'cnaps-inconnu';
+}
+
+function applyCnapsBadge(span){
+  if(!span) return;
+  span.classList.add('cnaps');
+  [...span.classList].forEach((c)=>{
+    if(c.startsWith('cnaps-')) span.classList.remove(c);
+  });
+  span.classList.add(cnapsClassFromText(span.textContent));
+}
+
+async function refreshCnapsForRow(tr){
+  const nom = (tr.children[0]?.textContent || '').trim();
+  const prenom = (tr.children[1]?.textContent || '').trim();
+  if(!nom || !prenom) return;
+
+  const r = await fetch(`/api/cnaps_lookup?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}`);
+  if(!r.ok) throw new Error('lookup_failed');
+  const body = await r.json();
+  const status = (body.statut_cnaps || 'INCONNU').toUpperCase();
+
+  const upd = await fetch(`/api/admin/afc/candidates/${tr.dataset.id}`,{
+    method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({cnaps_status: status})
+  });
+  if(!upd.ok) throw new Error('save_failed');
+
+  const span = tr.querySelector('[data-cnaps]');
+  span.textContent = status;
+  applyCnapsBadge(span);
+}
 
 document.getElementById('btnAddCandidate').addEventListener('click', openModal);
 document.getElementById('closeCandidateModal').addEventListener('click', closeModal);
@@ -105,6 +169,31 @@ document.querySelectorAll('#afcTable tbody tr input').forEach((input)=>{
   });
 });
 
+document.querySelectorAll('[data-refresh-cnaps]').forEach((btn)=>{
+  btn.addEventListener('click', async (e)=>{
+    const tr = e.currentTarget.closest('tr');
+    try{
+      await refreshCnapsForRow(tr);
+    }catch(_err){
+      alert('Erreur CNAPS');
+    }
+  });
+});
+
+document.querySelectorAll('[data-delete-candidate]').forEach((btn)=>{
+  btn.addEventListener('click', async (e)=>{
+    const tr = e.currentTarget.closest('tr');
+    const fullName = `${(tr.children[1]?.textContent || '').trim()} ${(tr.children[0]?.textContent || '').trim()}`.trim();
+    if(!confirm(`Supprimer le candidat ${fullName} ?`)) return;
+    const res = await fetch(`/api/admin/afc/candidates/${tr.dataset.id}/delete`, { method:'POST' });
+    if(!res.ok){
+      alert('Erreur suppression');
+      return;
+    }
+    tr.remove();
+  });
+});
+
 document.getElementById('btnSaveTemplates').addEventListener('click', async ()=>{
   const retained = document.getElementById('tmplRetained').value;
   const rejected = document.getElementById('tmplRejected').value;
@@ -113,5 +202,7 @@ document.getElementById('btnSaveTemplates').addEventListener('click', async ()=>
   });
   alert('Modèles sauvegardés');
 });
+
+document.querySelectorAll('[data-cnaps]').forEach((span) => applyCnapsBadge(span));
 </script>
 {% endblock %}
