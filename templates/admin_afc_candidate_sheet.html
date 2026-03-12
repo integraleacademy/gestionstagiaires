@@ -5,6 +5,11 @@
     <h1 style="margin:0;">Fiche candidat AFC</h1>
     <a class="btn btn-outline" href="{{ url_for('admin_afc') }}">← Retour</a>
   </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+    <a class="btn btn-outline" href="#decisionCard">Décision</a>
+    <a class="btn btn-outline" href="#modulesCard">Modules AFC</a>
+    <a class="btn btn-outline" href="#testsCard">Résultats des tests</a>
+  </div>
 </div>
 
 <div class="card" style="margin-top:12px;">
@@ -17,7 +22,7 @@
   </div>
 </div>
 
-<div class="card" style="margin-top:12px;">
+<div class="card" id="decisionCard" style="margin-top:12px;scroll-margin-top:80px;">
   <h3>Décision candidat</h3>
   <label>Décision
     <select id="decision">
@@ -54,7 +59,7 @@
   <button class="btn" id="btnSave" style="margin-top:10px;">Enregistrer</button>
 </div>
 
-<div class="card" style="margin-top:12px;">
+<div class="card" id="modulesCard" style="margin-top:12px;scroll-margin-top:80px;">
   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
     <h3 style="margin:0;">Modules AFC</h3>
     <button class="btn btn-outline" id="btnModulesDefault" type="button">Par défaut</button>
@@ -72,7 +77,7 @@
   </label>
 </div>
 
-<div class="card" style="margin-top:12px;">
+<div class="card" id="testsCard" style="margin-top:12px;scroll-margin-top:80px;">
   <h3>Résultats des tests</h3>
   <label style="display:flex;align-items:center;gap:8px;">
     <input id="test_francais_reussi" type="checkbox" {% if candidate.test_francais_reussi %}checked{% endif %}>
@@ -83,6 +88,16 @@
   <label style="display:block;margin-top:8px;">Note au test de positionnement
     <input type="text" value="{% if positioning_score is not none %}{{ positioning_score }}/20{% else %}Non renseignée{% endif %}" readonly>
   </label>
+
+  <div style="margin-top:8px;">
+    <div style="font-weight:600;margin-bottom:6px;">Statut CNAPS</div>
+    <span class="cnaps" id="cnapsStatusBadge">{{ candidate.cnaps_status or 'INCONNU' }}</span>
+  </div>
+
+  <label style="display:block;margin-top:10px;">Commentaire résultats des tests
+    <textarea id="test_results_comment" rows="4" style="width:100%;" placeholder="Ajouter un commentaire...">{{ candidate.test_results_comment or '' }}</textarea>
+  </label>
+  <div id="commentSaveStatus" style="display:none;margin-top:6px;font-size:13px;color:#475569;"></div>
 </div>
 
 <script>
@@ -95,8 +110,34 @@ const complement = document.getElementById('complement_refus');
 const autre = document.getElementById('complement_refus_autre');
 const testFrancaisReussi = document.getElementById('test_francais_reussi');
 const testFrStatus = document.getElementById('testFrStatus');
+const cnapsStatusBadge = document.getElementById('cnapsStatusBadge');
+const testResultsComment = document.getElementById('test_results_comment');
+const commentSaveStatus = document.getElementById('commentSaveStatus');
 let notificationSentAt = "{{ candidate.notification_sent_at or '' }}";
 let savingTestFr = false;
+let commentSaveTimer = null;
+let savingComment = false;
+
+function cnapsClassFromText(txt){
+  const t = (txt || '').toUpperCase();
+  if(t.includes('TRANSM')) return 'cnaps-transmis';
+  if(t.includes('ENREG'))  return 'cnaps-enregistre';
+  if(t.includes('INSTRU')) return 'cnaps-instruction';
+  if(t.includes('ACCEPT')) return 'cnaps-accepte';
+  if(t.includes('REFUS'))  return 'cnaps-refuse';
+  if(t.includes('DOC'))    return 'cnaps-docs';
+  if(t.includes('CARTE PROFESSIONNELLE OK')) return 'cnaps-accepte';
+  return 'cnaps-inconnu';
+}
+
+function applyCnapsBadge(span){
+  if(!span) return;
+  span.classList.add('cnaps');
+  [...span.classList].forEach((c)=>{
+    if(c.startsWith('cnaps-')) span.classList.remove(c);
+  });
+  span.classList.add(cnapsClassFromText(span.textContent));
+}
 
 function formatNotificationDate(value){
   if(!value) return '';
@@ -142,6 +183,7 @@ function updateTotal(){
 
 refreshUI();
 updateTotal();
+applyCnapsBadge(cnapsStatusBadge);
 decision.addEventListener('change', refreshUI);
 complement.addEventListener('change', refreshUI);
 testFrancaisReussi.addEventListener('change', refreshUI);
@@ -161,6 +203,37 @@ testFrancaisReussi.addEventListener('change', async ()=>{
   }
 });
 ['mft','mrn','msp','mpaf'].forEach(id=>document.getElementById(id).addEventListener('input', updateTotal));
+
+async function saveTestResultsComment(){
+  if(savingComment) return;
+  savingComment = true;
+  commentSaveStatus.style.display = 'block';
+  commentSaveStatus.textContent = 'Sauvegarde...';
+  try {
+    const r = await fetch(`/api/admin/afc/candidates/${candidateId}`,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({test_results_comment: testResultsComment.value})
+    });
+    if(!r.ok){
+      commentSaveStatus.textContent = 'Erreur de sauvegarde';
+      return;
+    }
+    commentSaveStatus.textContent = 'Commentaire sauvegardé automatiquement';
+    setTimeout(()=>{
+      commentSaveStatus.style.display = 'none';
+    }, 1600);
+  } finally {
+    savingComment = false;
+  }
+}
+
+testResultsComment.addEventListener('input', ()=>{
+  if(commentSaveTimer) clearTimeout(commentSaveTimer);
+  commentSaveTimer = setTimeout(()=>{
+    saveTestResultsComment();
+  }, 500);
+});
 
 document.getElementById('btnModulesDefault').addEventListener('click', ()=>{
   document.getElementById('mft').value = 273;
@@ -183,6 +256,7 @@ async function saveCandidate(){
     complement_refus_autre: document.getElementById('complement_refus_autre').value,
     dates_formation: document.getElementById('dates_formation').value,
     test_francais_reussi: testFrancaisReussi.checked,
+    test_results_comment: testResultsComment.value,
     modules: {
       formation_technique: document.getElementById('mft').value,
       remise_niveau: document.getElementById('mrn').value,
