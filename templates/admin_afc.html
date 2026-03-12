@@ -32,6 +32,7 @@
     <h1 style="margin:0;">Gestion des AFC</h1>
     <div style="display:flex;gap:8px;">
       <button class="btn btn-primary" id="btnAddCandidate">Ajouter un candidat</button>
+      <button class="btn btn-orange" id="btnImportCandidates" type="button">Importer</button>
       <a class="btn btn-outline" href="{{ url_for('admin_afc_export') }}" target="_blank" rel="noopener">Export</a>
     </div>
   </div>
@@ -100,6 +101,7 @@
     </tbody>
   </table>
 </div>
+<input type="file" id="afcImportInput" accept="image/png,image/jpeg,image/webp,image/bmp" style="display:none;">
 
 <div class="modal-backdrop" id="candidateModal" aria-hidden="true">
   <div class="modal" style="max-width:520px;">
@@ -125,6 +127,8 @@ const newNom = document.getElementById('newNom');
 const newPrenom = document.getElementById('newPrenom');
 const newMail = document.getElementById('newMail');
 const newTel = document.getElementById('newTel');
+const btnImportCandidates = document.getElementById('btnImportCandidates');
+const afcImportInput = document.getElementById('afcImportInput');
 
 function openModal(){ modal.classList.add('show'); modal.setAttribute('aria-hidden','false'); }
 function closeModal(){ modal.classList.remove('show'); modal.setAttribute('aria-hidden','true'); }
@@ -176,6 +180,47 @@ async function refreshCnapsForRow(tr){
   span.textContent = status;
   applyCnapsBadge(span);
 }
+
+
+
+btnImportCandidates.addEventListener('click', ()=>{
+  afcImportInput.value = '';
+  afcImportInput.click();
+});
+
+afcImportInput.addEventListener('change', async ()=>{
+  const file = afcImportInput.files && afcImportInput.files[0];
+  if(!file) return;
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try{
+    const res = await fetch('/api/admin/afc/import-from-image', {
+      method:'POST',
+      body: formData
+    });
+    const body = await res.json().catch(()=>({}));
+    if(!res.ok || !body.ok){
+      const code = body.error || 'import_failed';
+      if(code === 'no_candidate_found'){
+        alert('Aucun candidat détecté dans cette image.');
+      }else if(code === 'ocr_failed'){
+        alert('Impossible de lire l'image (OCR). Réessayez avec une capture plus nette.');
+      }else{
+        alert('Erreur import: ' + code);
+      }
+      return;
+    }
+
+    alert(`Import terminé : ${body.imported_count || 0} ajouté(s), ${body.skipped_count || 0} ignoré(s) (doublons).`);
+    if((body.imported_count || 0) > 0){
+      location.reload();
+    }
+  }catch(_err){
+    alert('Erreur import image');
+  }
+});
 
 document.getElementById('btnAddCandidate').addEventListener('click', openModal);
 document.getElementById('closeCandidateModal').addEventListener('click', closeModal);

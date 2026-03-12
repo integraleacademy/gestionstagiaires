@@ -1153,6 +1153,127 @@ def _extract_trainee_fields_from_ocr_text(raw_text: str) -> Dict[str, str]:
     }
 
 
+def _extract_afc_candidates_from_ocr_text(raw_text: str) -> List[Dict[str, str]]:
+    text = (raw_text or "").replace("\r", "\n")
+    text = re.sub(r"[ \t]+", " ", text)
+    lines = [re.sub(r"^[^\w@+]*", "", line).strip(" :\t") for line in text.split("\n")]
+    lines = [line for line in lines if line]
+
+    if not lines:
+        return []
+
+    ident_re = re.compile(r"\b\d{5,8}[A-Z]\s*-\s*\d{3}\b", flags=re.IGNORECASE)
+    email_re = re.compile(r"[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}", flags=re.IGNORECASE)
+    phone_re = re.compile(r"(?:\+33|0)\s*[1-9](?:[\s\.-]*\d{2}){4}")
+
+    start_indices: List[int] = []
+    for idx, line in enumerate(lines):
+        if ident_re.search(line):
+            start_indices.append(idx)
+
+    if not start_indices:
+        for idx, line in enumerate(lines):
+            if email_re.search(line):
+                start_indices.append(max(0, idx - 2))
+
+    if not start_indices:
+        return []
+
+    start_indices = sorted(set(start_indices))
+    candidates: List[Dict[str, str]] = []
+
+    for block_idx, start in enumerate(start_indices):
+        end = start_indices[block_idx + 1] if block_idx + 1 < len(start_indices) else len(lines)
+        block = lines[start:end]
+        if not block:
+            continue
+
+        block_text = "\n".join(block)
+        ident_match = ident_re.search(block_text)
+        email_match = email_re.search(block_text)
+        phone_match = phone_re.search(block_text)
+
+        identifiant_ft = ""
+        if ident_match:
+            identifiant_ft = re.sub(r"\s+", " ", ident_match.group(0).upper()).replace(" -", " -").replace("- ", "- ").strip()
+
+        ignored_tokens = (
+            "candidats",
+            "details de la candidature",
+            "détails de la candidature",
+            "var (",
+            "@",
+        )
+        name_line = ""
+        for line in block:
+            lowered = _normalized_token(line)
+            if any(token in lowered for token in ignored_tokens):
+                continue
+            if ident_re.search(line) or email_re.search(line) or phone_re.search(line):
+                continue
+            if sum(ch.isalpha() for ch in line) < 4:
+                continue
+            if len(line.split()) < 2:
+                continue
+            name_line = re.sub(r"\s+", " ", line).strip()
+            break
+
+        if not name_line and not (email_match or phone_match or ident_match):
+            continue
+
+        nom = ""
+        prenom = ""
+        if name_line:
+            parts = [p for p in name_line.split(" ") if p]
+            if len(parts) >= 2:
+                last_parts: List[str] = []
+                first_parts: List[str] = []
+                switched = False
+                for part in parts:
+                    alpha_chars = [c for c in part if c.isalpha()]
+                    is_upper_word = bool(alpha_chars) and all(c.isupper() for c in alpha_chars)
+                    if not switched and is_upper_word:
+                        last_parts.append(part)
+                        continue
+                    switched = True
+                    first_parts.append(part)
+
+                if not first_parts:
+                    nom = normalize_last_name(parts[-1])
+                    prenom = normalize_first_name(" ".join(parts[:-1]))
+                else:
+                    nom = normalize_last_name(" ".join(last_parts)) if last_parts else normalize_last_name(parts[-1])
+                    prenom = normalize_first_name(" ".join(first_parts)) if first_parts else normalize_first_name(parts[0])
+
+        if not nom and not prenom:
+            continue
+
+        candidates.append({
+            "identifiant_ft": identifiant_ft,
+            "nom": nom,
+            "prenom": prenom,
+            "email": (email_match.group(0).strip() if email_match else ""),
+            "telephone": (format_phone_fr_for_display(phone_match.group(0)) if phone_match else ""),
+        })
+
+    return candidates
+
+
+def _afc_candidate_dedup_key(candidate: Dict[str, Any]) -> str:
+    identifiant_ft = re.sub(r"\s+", "", str(candidate.get("identifiant_ft") or "").upper())
+    if identifiant_ft:
+        return "identifiant_ft:" + identifiant_ft
+
+    email = str(candidate.get("email") or "").strip().lower()
+    if email:
+        return "email:" + email
+
+    nom = normalize_last_name(str(candidate.get("nom") or ""))
+    prenom = normalize_first_name(str(candidate.get("prenom") or ""))
+    telephone = "".join(ch for ch in str(candidate.get("telephone") or "") if ch.isdigit())
+    return f"name_phone:{nom}|{prenom}|{telephone}"
+
+
 
 import base64
 
@@ -6529,6 +6650,88 @@ def api_admin_afc_create_candidate():
     bucket["candidates"].append(candidate)
     save_data(data)
     return jsonify({"ok": True, "candidate": candidate})
+
+
+@app.post("/api/admin/afc/import-from-image")
+def api_admin_afc_import_from_image():
+    f = request.files.get("file")
+    if not f:
+        return jsonify({"ok": False, "error": "missing_file"}), 400
+
+    filename = (f.filename or "import.png").strip()
+    lower = filename.lower()
+    allowed = (".png", ".jpg", ".jpeg", ".webp", ".bmp")
+    if not lower.endswith(allowed):
+        return jsonify({"ok": False, "error": "invalid_file_type"}), 400
+
+    file_bytes = f.read()
+    if not file_bytes:
+        return jsonify({"ok": False, "error": "empty_file"}), 400
+
+    text, ocr_error = _ocr_extract_text_from_image(file_bytes, filename, f.mimetype or "")
+    if not text:
+        return jsonify({"ok": False, "error": "ocr_failed", "detail": ocr_error}), 422
+
+    parsed_candidates = _extract_afc_candidates_from_ocr_text(text)
+    if not parsed_candidates:
+        return jsonify({"ok": False, "error": "no_candidate_found"}), 422
+
+    data = load_data()
+    bucket = _afc_bucket(data)
+    existing = bucket.get("candidates") or []
+    existing_keys = {_afc_candidate_dedup_key(candidate) for candidate in existing}
+
+    imported: List[Dict[str, Any]] = []
+    skipped_count = 0
+    for parsed in parsed_candidates:
+        dedup_key = _afc_candidate_dedup_key(parsed)
+        if dedup_key in existing_keys:
+            skipped_count += 1
+            continue
+
+        nom = str(parsed.get("nom") or "").strip()
+        prenom = str(parsed.get("prenom") or "").strip()
+        if not nom or not prenom:
+            skipped_count += 1
+            continue
+
+        candidate = {
+            "id": "AFC-" + uuid.uuid4().hex[:8].upper(),
+            "identifiant_ft": str(parsed.get("identifiant_ft") or "").strip(),
+            "nom": nom,
+            "prenom": prenom,
+            "email": str(parsed.get("email") or "").strip(),
+            "telephone": str(parsed.get("telephone") or "").strip(),
+            "decision": "",
+            "notification_status": "NON ENVOYEE",
+            "cnaps_status": fetch_cnaps_status_by_name(nom, prenom) or "INCONNU",
+            "motif_refus": "",
+            "complement_refus": "",
+            "complement_refus_autre": "",
+            "modules": {
+                "formation_technique": 0,
+                "remise_niveau": 0,
+                "soutien_personnalise": 0,
+                "paf": 0,
+            },
+            "dates_formation": "",
+            "test_francais_reussi": False,
+            "created_at": _now_iso(),
+        }
+        existing.append(candidate)
+        existing_keys.add(dedup_key)
+        imported.append(candidate)
+
+    if imported:
+        save_data(data)
+
+    return jsonify({
+        "ok": True,
+        "imported": imported,
+        "imported_count": len(imported),
+        "skipped_count": skipped_count,
+        "parsed_count": len(parsed_candidates),
+    })
 
 
 @app.post("/api/admin/afc/mail-templates")
