@@ -55,7 +55,10 @@
 </div>
 
 <div class="card" style="margin-top:12px;">
-  <h3>Modules AFC</h3>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+    <h3 style="margin:0;">Modules AFC</h3>
+    <button class="btn btn-outline" id="btnModulesDefault" type="button">Par défaut</button>
+  </div>
   {% set modules = candidate.modules or {} %}
   <div style="display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:8px;">
     <label>Formation technique <input id="mft" type="number" step="0.5" value="{{ modules.formation_technique or 0 }}"></label>
@@ -158,6 +161,14 @@ testFrancaisReussi.addEventListener('change', async ()=>{
   }
 });
 ['mft','mrn','msp','mpaf'].forEach(id=>document.getElementById(id).addEventListener('input', updateTotal));
+
+document.getElementById('btnModulesDefault').addEventListener('click', ()=>{
+  document.getElementById('mft').value = 273;
+  document.getElementById('mrn').value = 54;
+  document.getElementById('mpaf').value = 21;
+  document.getElementById('msp').value = 45;
+  updateTotal();
+});
 
 async function saveCandidate(){
   const payload = {
