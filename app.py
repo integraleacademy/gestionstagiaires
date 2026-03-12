@@ -13981,7 +13981,7 @@ def api_financement_rejet_send(session_id: str, trainee_id: str):
       <p>Clément VAILLANT<br>Directeur Intégrale Academy</p>
     """)
 
-    email_ok = brevo_send_email(email, subject, html, trainee=trainee) if email else False
+    email_ok = brevo_send_email(email, subject, html, trainee=t) if email else False
 
     dstart = fr_date(_session_get(s, "date_start", ""))
     dend = fr_date(_session_get(s, "date_end", ""))
