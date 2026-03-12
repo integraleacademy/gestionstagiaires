@@ -6657,6 +6657,7 @@ def api_admin_afc_create_candidate():
         },
         "dates_formation": "",
         "test_francais_reussi": False,
+        "test_results_comment": "",
         "created_at": _now_iso(),
     }
     bucket["candidates"].append(candidate)
@@ -6728,6 +6729,7 @@ def api_admin_afc_import_from_image():
             },
             "dates_formation": "",
             "test_francais_reussi": False,
+            "test_results_comment": "",
             "created_at": _now_iso(),
         }
         existing.append(candidate)
@@ -6789,7 +6791,7 @@ def api_admin_afc_update_candidate(candidate_id: str):
     for field in (
         "identifiant_ft", "nom", "prenom", "email", "telephone", "decision",
         "motif_refus", "complement_refus", "complement_refus_autre", "dates_formation",
-        "cnaps_status", "notification_status",
+        "cnaps_status", "notification_status", "test_results_comment",
     ):
         if field in payload:
             value = str(payload.get(field) or "").strip()
@@ -6880,6 +6882,7 @@ def admin_afc_candidate_sheet(candidate_id: str):
     if not candidate:
         abort(404)
     candidate.setdefault("test_francais_reussi", False)
+    candidate.setdefault("test_results_comment", "")
     positioning_score = _afc_find_latest_positioning_score(candidate, list(data.get("positioning_tests") or []))
     return render_template(
         "admin_afc_candidate_sheet.html",
