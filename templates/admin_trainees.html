@@ -97,6 +97,7 @@
         <option value="ok">Théorie OK uniquement</option>
       </select>
     {% endif %}
+    <button class="btn btn-outline" id="btnCollectMails" type="button">📋 Récup mail</button>
     <a class="btn btn-outline" id="btnPrintTrainees" href="{{ url_for('admin_trainees_print', session_id=session.id, **request.args) }}" target="_blank" rel="noopener">🖨️ Imprimer la liste</a>
     <a class="btn btn-outline" id="btnWordLabels"
        href="{{ url_for('admin_etiquettes_word_zip', session_id=session.id) }}"
@@ -823,6 +824,29 @@ tr.row-todo td{
   const btnBulkTestFr = document.getElementById("btnBulkTestFr");
   btnBulkTestFr?.addEventListener("click", ()=>{
     openModal("bulkTestFrModal");
+  });
+
+  const btnCollectMails = document.getElementById("btnCollectMails");
+  btnCollectMails?.addEventListener("click", async ()=>{
+    const mailInputs = Array.from(document.querySelectorAll("#traineesTable input[data-field='email']"));
+    const mails = Array.from(new Set(mailInputs
+      .map((input)=> (input.value || "").trim())
+      .filter((mail)=> mail.length > 0)
+    ));
+
+    if (!mails.length) {
+      alert("Aucune adresse mail trouvée pour cette session.");
+      return;
+    }
+
+    const mailsText = mails.join("; ");
+
+    try {
+      await navigator.clipboard.writeText(mailsText);
+      alert(`${mails.length} adresse(s) mail copiée(s) dans le presse-papiers.`);
+    } catch (error) {
+      window.prompt("Copiez les adresses mails :", mailsText);
+    }
   });
 
   const bulkTestFrForm = document.getElementById("bulkTestFrForm");
