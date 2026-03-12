@@ -4,17 +4,45 @@
   <meta charset="utf-8">
   <title>Export AFC</title>
   <style>
-    body{font-family:Arial,sans-serif;padding:24px;color:#111}
-    h1{margin:0 0 12px}
+    :root{
+      --border:#cbd5e1;
+      --header-bg:#e0e7ff;
+      --row-alt:#f8fafc;
+      --text:#0f172a;
+      --ok-bg:#dcfce7;
+      --ok-text:#166534;
+      --ko-bg:#fee2e2;
+      --ko-text:#991b1b;
+      --pending-bg:#fef3c7;
+      --pending-text:#92400e;
+    }
+    *{box-sizing:border-box}
+    body{font-family:Arial,sans-serif;padding:24px;color:var(--text);background:#f1f5f9}
+    h1{margin:0 0 14px;font-size:36px;color:#111827;letter-spacing:.2px}
+    .sheet{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 8px 24px rgba(15,23,42,.08)}
     table{width:100%;border-collapse:collapse;font-size:12px}
-    th,td{border:1px solid #d1d5db;padding:6px 8px;vertical-align:top}
-    th{background:#eef2ff}
+    th,td{border:1px solid var(--border);padding:7px 8px;vertical-align:top}
+    th{background:var(--header-bg);text-transform:uppercase;font-size:10px;letter-spacing:.3px}
+    tbody tr:nth-child(even) td{background:var(--row-alt)}
     .toolbar{margin-bottom:12px}
-    @media print {.toolbar{display:none}}
+    .decision-retenu{background:var(--ok-bg)!important;color:var(--ok-text);font-weight:700}
+    .decision-non-retenu{background:var(--ko-bg)!important;color:var(--ko-text);font-weight:700}
+    .decision-autre{background:var(--pending-bg)!important;color:var(--pending-text);font-weight:700}
+    .cnaps-accepte{background:var(--ok-bg)!important;color:var(--ok-text);font-weight:700}
+    .cnaps-refuse{background:var(--ko-bg)!important;color:var(--ko-text);font-weight:700}
+    @media print {
+      .toolbar{display:none}
+      body{padding:0;background:#fff}
+      .sheet{border:none;border-radius:0;padding:0;box-shadow:none}
+    }
+    @media print {
+      *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    }
   </style>
 </head>
 <body>
   <div class="toolbar"><button onclick="window.print()">Imprimer</button></div>
+  <div class="sheet">
   <h1>Export Gestion AFC</h1>
   <table>
     <thead>
@@ -27,12 +55,14 @@
       {% for c in candidates %}
       {% set modules = c.modules or {} %}
       {% set total = (modules.formation_technique or 0) + (modules.remise_niveau or 0) + (modules.soutien_personnalise or 0) + (modules.paf or 0) %}
+      {% set decision = (c.decision or '')|upper %}
+      {% set cnaps = (c.cnaps_status or 'INCONNU')|upper %}
       <tr>
         <td>{{ c.identifiant_ft or '' }}</td>
         <td>{{ c.nom or '' }}</td>
         <td>{{ c.prenom or '' }}</td>
-        <td>{{ c.cnaps_status or 'INCONNU' }}</td>
-        <td>{{ c.decision or '' }}</td>
+        <td class="{% if cnaps == 'ACCEPTÉ' or cnaps == 'ACCEPTE' %}cnaps-accepte{% elif cnaps == 'REFUSÉ' or cnaps == 'REFUSE' %}cnaps-refuse{% endif %}">{{ c.cnaps_status or 'INCONNU' }}</td>
+        <td class="{% if decision == 'RETENU' %}decision-retenu{% elif decision == 'NON RETENU' %}decision-non-retenu{% elif decision %}decision-autre{% endif %}">{{ c.decision or '' }}</td>
         <td>{{ c.motif_refus or '' }}</td>
         <td>{{ c.complement_refus_autre if (c.complement_refus or '') == 'Autre' else (c.complement_refus or '') }}</td>
         <td>{{ modules.formation_technique or 0 }}</td>
@@ -45,5 +75,6 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
 </body>
 </html>
