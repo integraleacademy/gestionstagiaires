@@ -82,6 +82,20 @@ Var (83)
         self.assertEqual(candidates[0]["telephone"], "07 44 16 67 86")
 
 
+class AfcEmailNormalizationTests(unittest.TestCase):
+    def test_removes_leading_separator_in_local_part(self):
+        candidate = gestion_app._extract_afc_candidates_from_ocr_text(
+            "5988355G - 032\nCHABAUD David\n_chabauddavid313@gmail.com"
+        )[0]
+
+        self.assertEqual(candidate["email"], "chabauddavid313@gmail.com")
+
+    def test_dedup_key_uses_normalized_email(self):
+        dedup_key = gestion_app._afc_candidate_dedup_key({"email": "_test.user@gmail.com"})
+
+        self.assertEqual(dedup_key, "email:test.user@gmail.com")
+
+
 class AfcImageImportApiTests(unittest.TestCase):
     def setUp(self):
         self.client = gestion_app.app.test_client()

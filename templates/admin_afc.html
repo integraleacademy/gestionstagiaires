@@ -67,8 +67,8 @@
     <tbody>
       {% for c in candidates %}
       <tr data-id="{{ c.id }}">
-        <td>{{ c.nom }}</td>
-        <td>{{ c.prenom }}</td>
+        <td><input data-field="nom" value="{{ c.nom }}"></td>
+        <td><input data-field="prenom" value="{{ c.prenom }}"></td>
         <td><input data-field="email" value="{{ c.email or '' }}"></td>
         <td><input data-field="telephone" value="{{ c.telephone or '' }}"></td>
         <td>
@@ -160,8 +160,8 @@ function applyCnapsBadge(span){
 }
 
 async function refreshCnapsForRow(tr){
-  const nom = (tr.children[0]?.textContent || '').trim();
-  const prenom = (tr.children[1]?.textContent || '').trim();
+  const nom = getCandidateFieldValue(tr, 'nom');
+  const prenom = getCandidateFieldValue(tr, 'prenom');
   if(!nom || !prenom) return;
 
   const r = await fetch(`/api/cnaps_lookup?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}`);
@@ -179,6 +179,11 @@ async function refreshCnapsForRow(tr){
   const span = tr.querySelector('[data-cnaps]');
   span.textContent = status;
   applyCnapsBadge(span);
+}
+
+function getCandidateFieldValue(tr, field){
+  const input = tr.querySelector(`input[data-field="${field}"]`);
+  return (input?.value || '').trim();
 }
 
 
@@ -273,7 +278,7 @@ document.querySelectorAll('[data-refresh-cnaps]').forEach((btn)=>{
 document.querySelectorAll('[data-delete-candidate]').forEach((btn)=>{
   btn.addEventListener('click', async (e)=>{
     const tr = e.currentTarget.closest('tr');
-    const fullName = `${(tr.children[1]?.textContent || '').trim()} ${(tr.children[0]?.textContent || '').trim()}`.trim();
+    const fullName = `${getCandidateFieldValue(tr, 'prenom')} ${getCandidateFieldValue(tr, 'nom')}`.trim();
     if(!confirm(`Supprimer le candidat ${fullName} ?`)) return;
     const res = await fetch(`/api/admin/afc/candidates/${tr.dataset.id}/delete`, { method:'POST' });
     if(!res.ok){

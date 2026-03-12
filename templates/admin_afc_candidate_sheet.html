@@ -241,6 +241,8 @@ document.getElementById('btnModulesDefault').addEventListener('click', ()=>{
   document.getElementById('mpaf').value = 21;
   document.getElementById('msp').value = 45;
   updateTotal();
+  const ok = await saveCandidate();
+  if(ok) alert('Modules par défaut appliqués et enregistrés');
 });
 
 async function saveCandidate(){

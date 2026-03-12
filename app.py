@@ -1252,7 +1252,7 @@ def _extract_afc_candidates_from_ocr_text(raw_text: str) -> List[Dict[str, str]]
             "identifiant_ft": identifiant_ft,
             "nom": nom,
             "prenom": prenom,
-            "email": (email_match.group(0).strip() if email_match else ""),
+            "email": (_normalize_afc_email(email_match.group(0)) if email_match else ""),
             "telephone": (format_phone_fr_for_display(phone_match.group(0)) if phone_match else ""),
         })
 
@@ -1264,7 +1264,7 @@ def _afc_candidate_dedup_key(candidate: Dict[str, Any]) -> str:
     if identifiant_ft:
         return "identifiant_ft:" + identifiant_ft
 
-    email = str(candidate.get("email") or "").strip().lower()
+    email = _normalize_afc_email(candidate.get("email")).lower()
     if email:
         return "email:" + email
 
@@ -1272,6 +1272,18 @@ def _afc_candidate_dedup_key(candidate: Dict[str, Any]) -> str:
     prenom = normalize_first_name(str(candidate.get("prenom") or ""))
     telephone = "".join(ch for ch in str(candidate.get("telephone") or "") if ch.isdigit())
     return f"name_phone:{nom}|{prenom}|{telephone}"
+
+
+def _normalize_afc_email(raw_email: Any) -> str:
+    value = str(raw_email or "").strip()
+    if "@" not in value:
+        return value
+
+    local, domain = value.split("@", 1)
+    local = local.lstrip(" _.-")
+    domain = domain.lstrip(" _.-")
+    normalized = f"{local}@{domain}".strip()
+    return normalized
 
 
 
