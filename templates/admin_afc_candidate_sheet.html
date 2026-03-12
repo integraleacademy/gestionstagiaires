@@ -162,12 +162,14 @@ testFrancaisReussi.addEventListener('change', async ()=>{
 });
 ['mft','mrn','msp','mpaf'].forEach(id=>document.getElementById(id).addEventListener('input', updateTotal));
 
-document.getElementById('btnModulesDefault').addEventListener('click', ()=>{
+document.getElementById('btnModulesDefault').addEventListener('click', async ()=>{
   document.getElementById('mft').value = 273;
   document.getElementById('mrn').value = 54;
   document.getElementById('mpaf').value = 21;
   document.getElementById('msp').value = 45;
   updateTotal();
+  const ok = await saveCandidate();
+  if(ok) alert('Modules par défaut appliqués et enregistrés');
 });
 
 async function saveCandidate(){
