@@ -69,6 +69,19 @@
   </label>
 </div>
 
+<div class="card" style="margin-top:12px;">
+  <h3>Résultats des tests</h3>
+  <label style="display:flex;align-items:center;gap:8px;">
+    <input id="test_francais_reussi" type="checkbox" {% if candidate.test_francais_reussi %}checked{% endif %}>
+    Test de français
+    <span id="testFrStatus" style="display:{% if candidate.test_francais_reussi %}inline{% else %}none{% endif %};color:#16a34a;font-weight:700;">test de français réussi</span>
+  </label>
+
+  <label style="display:block;margin-top:8px;">Note au test de positionnement
+    <input type="text" value="{% if positioning_score is not none %}{{ positioning_score }}/20{% else %}Non renseignée{% endif %}" readonly>
+  </label>
+</div>
+
 <script>
 const candidateId = "{{ candidate.id }}";
 const decision = document.getElementById('decision');
@@ -77,6 +90,8 @@ const btnNotify = document.getElementById('btnNotify');
 const notifyStatus = document.getElementById('notifyStatus');
 const complement = document.getElementById('complement_refus');
 const autre = document.getElementById('complement_refus_autre');
+const testFrancaisReussi = document.getElementById('test_francais_reussi');
+const testFrStatus = document.getElementById('testFrStatus');
 let notificationSentAt = "{{ candidate.notification_sent_at or '' }}";
 
 function formatNotificationDate(value){
@@ -98,6 +113,8 @@ function refreshUI(){
   refusalBox.style.display = nonRetenu ? 'block' : 'none';
   btnNotify.style.display = (decision.value === 'RETENU' || decision.value === 'NON RETENU') ? 'inline-flex' : 'none';
   autre.style.display = complement.value === 'Autre' ? 'block' : 'none';
+
+  testFrStatus.style.display = testFrancaisReussi.checked ? 'inline' : 'none';
 
   const formattedDate = formatNotificationDate(notificationSentAt);
   if(formattedDate){
@@ -123,6 +140,7 @@ refreshUI();
 updateTotal();
 decision.addEventListener('change', refreshUI);
 complement.addEventListener('change', refreshUI);
+testFrancaisReussi.addEventListener('change', refreshUI);
 ['mft','mrn','msp','mpaf'].forEach(id=>document.getElementById(id).addEventListener('input', updateTotal));
 
 async function saveCandidate(){
@@ -137,6 +155,7 @@ async function saveCandidate(){
     complement_refus: document.getElementById('complement_refus').value,
     complement_refus_autre: document.getElementById('complement_refus_autre').value,
     dates_formation: document.getElementById('dates_formation').value,
+    test_francais_reussi: testFrancaisReussi.checked,
     modules: {
       formation_technique: document.getElementById('mft').value,
       remise_niveau: document.getElementById('mrn').value,
