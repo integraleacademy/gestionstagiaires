@@ -11,6 +11,20 @@
     gap:8px;
   }
   .afc-cnaps-wrap{display:flex;align-items:center;gap:8px;}
+  .afc-toggle{
+    border:1px solid #d6dce5;
+    background:#fff;
+    border-radius:999px;
+    padding:4px 10px;
+    font-weight:700;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .afc-toggle.on{
+    border-color:#0ca15a;
+    color:#0a8f50;
+    background:#eaf9f1;
+  }
 </style>
 
 <div class="card">
@@ -56,9 +70,21 @@
         <td>{{ c.prenom }}</td>
         <td><input data-field="email" value="{{ c.email or '' }}"></td>
         <td><input data-field="telephone" value="{{ c.telephone or '' }}"></td>
-        <td>{{ '🟢Retenue' if (c.decision or '')|upper == 'RETENU' else 'Non retenue🔴' }}</td>
-        <td>{{ '🟢' if c.test_francais_reussi else '🔴' }}</td>
-        <td>{{ '🟢Envoyée' if (c.notification_status or '')|upper == 'ENVOYEE' else 'Non envoyée🔴' }}</td>
+        <td>
+          <button type="button" class="afc-toggle {{ 'on' if (c.decision or '')|upper == 'RETENU' else '' }}" data-toggle-decision>
+            {{ '🟢 Retenue' if (c.decision or '')|upper == 'RETENU' else '🔴 Non retenue' }}
+          </button>
+        </td>
+        <td>
+          <button type="button" class="afc-toggle {{ 'on' if c.test_francais_reussi else '' }}" data-toggle-fr>
+            {{ '🟢 Réussi' if c.test_francais_reussi else '🔴 Non réussi' }}
+          </button>
+        </td>
+        <td>
+          <button type="button" class="afc-toggle {{ 'on' if (c.notification_status or '')|upper == 'ENVOYEE' else '' }}" data-toggle-notification>
+            {{ '🟢 Envoyée' if (c.notification_status or '')|upper == 'ENVOYEE' else '🔴 Non envoyée' }}
+          </button>
+        </td>
         <td>
           <div class="afc-cnaps-wrap">
             <span class="cnaps" data-cnaps>{{ c.cnaps_status or 'INCONNU' }}</span>
@@ -210,6 +236,63 @@ document.querySelectorAll('[data-delete-candidate]').forEach((btn)=>{
       return;
     }
     tr.remove();
+  });
+});
+
+async function patchCandidate(tr, payload){
+  const res = await fetch(`/api/admin/afc/candidates/${tr.dataset.id}`, {
+    method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  });
+  if(!res.ok) throw new Error('save_failed');
+}
+
+document.querySelectorAll('[data-toggle-decision]').forEach((btn)=>{
+  btn.addEventListener('click', async (e)=>{
+    const target = e.currentTarget;
+    const tr = target.closest('tr');
+    const enabled = target.classList.contains('on');
+    const decision = enabled ? 'NON RETENU' : 'RETENU';
+    try{
+      await patchCandidate(tr, { decision });
+      target.classList.toggle('on', !enabled);
+      target.textContent = !enabled ? '🟢 Retenue' : '🔴 Non retenue';
+    }catch(_err){
+      alert('Erreur sauvegarde décision');
+    }
+  });
+});
+
+document.querySelectorAll('[data-toggle-fr]').forEach((btn)=>{
+  btn.addEventListener('click', async (e)=>{
+    const target = e.currentTarget;
+    const tr = target.closest('tr');
+    const enabled = target.classList.contains('on');
+    const test_francais_reussi = !enabled;
+    try{
+      await patchCandidate(tr, { test_francais_reussi });
+      target.classList.toggle('on', test_francais_reussi);
+      target.textContent = test_francais_reussi ? '🟢 Réussi' : '🔴 Non réussi';
+    }catch(_err){
+      alert('Erreur sauvegarde test de français');
+    }
+  });
+});
+
+document.querySelectorAll('[data-toggle-notification]').forEach((btn)=>{
+  btn.addEventListener('click', async (e)=>{
+    const target = e.currentTarget;
+    const tr = target.closest('tr');
+    const enabled = target.classList.contains('on');
+    const notification_status = enabled ? 'NON ENVOYEE' : 'ENVOYEE';
+    try{
+      await patchCandidate(tr, { notification_status });
+      target.classList.toggle('on', !enabled);
+      target.textContent = !enabled ? '🟢 Envoyée' : '🔴 Non envoyée';
+    }catch(_err){
+      alert('Erreur sauvegarde notification');
+    }
   });
 });
 

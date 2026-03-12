@@ -6571,11 +6571,11 @@ def api_admin_afc_update_candidate(candidate_id: str):
     for field in (
         "identifiant_ft", "nom", "prenom", "email", "telephone", "decision",
         "motif_refus", "complement_refus", "complement_refus_autre", "dates_formation",
-        "cnaps_status",
+        "cnaps_status", "notification_status",
     ):
         if field in payload:
             value = str(payload.get(field) or "").strip()
-            if field == "cnaps_status":
+            if field in {"cnaps_status", "decision", "notification_status"}:
                 value = value.upper()
             candidate[field] = value
 
