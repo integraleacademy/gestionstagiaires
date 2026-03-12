@@ -43,7 +43,7 @@
   </table>
 </div>
 
-<div class="modal-backdrop" id="candidateModal" style="display:none;">
+<div class="modal-backdrop" id="candidateModal" aria-hidden="true">
   <div class="modal" style="max-width:520px;">
     <div class="modal-head"><div class="modal-title">Ajouter un candidat</div></div>
     <div class="modal-body">
@@ -66,9 +66,12 @@ const newPrenom = document.getElementById('newPrenom');
 const newMail = document.getElementById('newMail');
 const newTel = document.getElementById('newTel');
 
-document.getElementById('btnAddCandidate').addEventListener('click', ()=>{ modal.style.display='flex'; });
-document.getElementById('closeCandidateModal').addEventListener('click', ()=>{ modal.style.display='none'; });
-modal.addEventListener('click', (e)=>{ if(e.target === modal) modal.style.display='none'; });
+function openModal(){ modal.classList.add('show'); modal.setAttribute('aria-hidden','false'); }
+function closeModal(){ modal.classList.remove('show'); modal.setAttribute('aria-hidden','true'); }
+
+document.getElementById('btnAddCandidate').addEventListener('click', openModal);
+document.getElementById('closeCandidateModal').addEventListener('click', closeModal);
+modal.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
 
 document.getElementById('saveCandidateBtn').addEventListener('click', async ()=>{
   const payload = {
@@ -83,6 +86,7 @@ document.getElementById('saveCandidateBtn').addEventListener('click', async ()=>
     body:JSON.stringify(payload)
   });
   if(r.ok){
+    closeModal();
     location.reload();
     return;
   }
