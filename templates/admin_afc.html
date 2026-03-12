@@ -11,12 +11,22 @@
 </div>
 
 <div class="card" style="margin-top:12px;">
-  <h3>Modèles de mails</h3>
-  <label>Mail candidat retenu</label>
-  <textarea id="tmplRetained" rows="10" style="width:100%;">{{ afc.mail_templates.retained }}</textarea>
-  <label style="margin-top:10px;display:block;">Mail candidat non retenu (variables: {{'{{motif_refus}}'}} {{'{{complement_refus}}'}})</label>
-  <textarea id="tmplRejected" rows="10" style="width:100%;">{{ afc.mail_templates.rejected }}</textarea>
-  <button class="btn" id="btnSaveTemplates" style="margin-top:8px;">Sauvegarder modèles</button>
+  <button
+    class="btn btn-outline"
+    id="btnToggleTemplates"
+    type="button"
+    aria-expanded="false"
+    style="margin-bottom:8px;"
+  >
+    Modèles de mails
+  </button>
+  <div id="mailTemplatesPanel" style="display:none;">
+    <label>Mail candidat retenu</label>
+    <textarea id="tmplRetained" rows="10" style="width:100%;">{{ afc.mail_templates.retained }}</textarea>
+    <label style="margin-top:10px;display:block;">Mail candidat non retenu (variables: {{'{{motif_refus}}'}} {{'{{complement_refus}}'}})</label>
+    <textarea id="tmplRejected" rows="10" style="width:100%;">{{ afc.mail_templates.rejected }}</textarea>
+    <button class="btn" id="btnSaveTemplates" style="margin-top:8px;">Sauvegarder modèles</button>
+  </div>
 </div>
 
 <div class="card" style="margin-top:12px;overflow:auto;">
@@ -61,6 +71,8 @@
 
 <script>
 const modal = document.getElementById('candidateModal');
+const btnToggleTemplates = document.getElementById('btnToggleTemplates');
+const mailTemplatesPanel = document.getElementById('mailTemplatesPanel');
 const newNom = document.getElementById('newNom');
 const newPrenom = document.getElementById('newPrenom');
 const newMail = document.getElementById('newMail');
@@ -68,9 +80,15 @@ const newTel = document.getElementById('newTel');
 
 function openModal(){ modal.classList.add('show'); modal.setAttribute('aria-hidden','false'); }
 function closeModal(){ modal.classList.remove('show'); modal.setAttribute('aria-hidden','true'); }
+function toggleMailTemplates(){
+  const isVisible = mailTemplatesPanel.style.display !== 'none';
+  mailTemplatesPanel.style.display = isVisible ? 'none' : 'block';
+  btnToggleTemplates.setAttribute('aria-expanded', String(!isVisible));
+}
 
 document.getElementById('btnAddCandidate').addEventListener('click', openModal);
 document.getElementById('closeCandidateModal').addEventListener('click', closeModal);
+btnToggleTemplates.addEventListener('click', toggleMailTemplates);
 modal.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
 
 document.getElementById('saveCandidateBtn').addEventListener('click', async ()=>{
