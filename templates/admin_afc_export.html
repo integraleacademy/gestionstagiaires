@@ -18,20 +18,31 @@
     }
     *{box-sizing:border-box}
     body{font-family:Arial,sans-serif;padding:24px;color:var(--text);background:#f1f5f9}
-    h1{margin:0 0 14px;font-size:36px;color:#111827;letter-spacing:.2px}
-    .sheet{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 8px 24px rgba(15,23,42,.08)}
+    h1{margin:0;font-size:36px;color:#111827;letter-spacing:.2px}
+    .sheet{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:0 8px 24px rgba(15,23,42,.08)}
+    .sheet-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #e2e8f0}
+    .brand{display:flex;align-items:center;gap:12px}
+    .brand img{height:54px;width:auto;object-fit:contain}
+    .title-tools{display:flex;flex-direction:column;gap:8px;min-width:320px;max-width:640px;width:100%}
+    .title-tools label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#334155}
+    .title-tools input{border:1px solid #cbd5e1;border-radius:8px;padding:10px 12px;font-size:16px;font-weight:700;color:#0f172a;outline:none;transition:border-color .2s,box-shadow .2s}
+    .title-tools input:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.15)}
+    .save-state{font-size:12px;color:#475569;min-height:16px}
     table{width:100%;border-collapse:collapse;font-size:12px}
     th,td{border:1px solid var(--border);padding:7px 8px;vertical-align:top}
     th{background:var(--header-bg);text-transform:uppercase;font-size:10px;letter-spacing:.3px}
     tbody tr:nth-child(even) td{background:var(--row-alt)}
-    .toolbar{margin-bottom:12px}
+    .toolbar{margin-bottom:12px;display:flex;align-items:center;gap:10px}
+    .toolbar button{border:1px solid #94a3b8;background:#fff;color:#0f172a;border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer}
+    .toolbar button:hover{background:#f8fafc}
     .decision-retenu{background:var(--ok-bg)!important;color:var(--ok-text);font-weight:700}
     .decision-non-retenu{background:var(--ko-bg)!important;color:var(--ko-text);font-weight:700}
     .decision-autre{background:var(--pending-bg)!important;color:var(--pending-text);font-weight:700}
     .cnaps-accepte{background:var(--ok-bg)!important;color:var(--ok-text);font-weight:700}
     .cnaps-refuse{background:var(--ko-bg)!important;color:var(--ko-text);font-weight:700}
     @media print {
-      .toolbar{display:none}
+      .toolbar,.title-tools label,.title-tools input,.save-state{display:none}
+      .sheet-header{border-bottom:none;padding-bottom:0;margin-bottom:8px}
       body{padding:0;background:#fff}
       .sheet{border:none;border-radius:0;padding:0;box-shadow:none}
     }
@@ -43,7 +54,17 @@
 <body>
   <div class="toolbar"><button onclick="window.print()">Imprimer</button></div>
   <div class="sheet">
-  <h1>Export Gestion AFC</h1>
+    <div class="sheet-header">
+      <div class="brand">
+        <img src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Logo Intégrale Academy">
+      </div>
+      <div class="title-tools">
+        <label for="export-title-input">Titre de l'export</label>
+        <input id="export-title-input" type="text" value="{{ afc.export_title or 'Export Gestion AFC' }}" maxlength="120" placeholder="Ex: Export Gestion AFC - Session Avril">
+        <div id="save-state" class="save-state">Saisie enregistrée automatiquement</div>
+      </div>
+    </div>
+  <h1 id="export-title">{{ afc.export_title or 'Export Gestion AFC' }}</h1>
   <table>
     <thead>
       <tr>
@@ -76,5 +97,59 @@
     </tbody>
   </table>
   </div>
+  <script>
+    (function(){
+      const titleInput = document.getElementById('export-title-input');
+      const titleHeading = document.getElementById('export-title');
+      const saveState = document.getElementById('save-state');
+      if(!titleInput || !titleHeading){
+        return;
+      }
+
+      let timer = null;
+      let lastSavedValue = titleInput.value.trim();
+
+      const setState = (msg, isError = false) => {
+        if(!saveState){
+          return;
+        }
+        saveState.textContent = msg;
+        saveState.style.color = isError ? '#b91c1c' : '#475569';
+      };
+
+      const saveTitle = async (titleValue) => {
+        try {
+          const res = await fetch('/api/admin/afc/modules', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ export_title: titleValue })
+          });
+          if(!res.ok){
+            throw new Error('save_failed');
+          }
+          lastSavedValue = titleValue;
+          setState('Titre sauvegardé');
+        } catch(e){
+          setState('Erreur de sauvegarde, réessayez', true);
+        }
+      };
+
+      titleInput.addEventListener('input', () => {
+        const currentValue = titleInput.value.trim() || 'Export Gestion AFC';
+        titleHeading.textContent = currentValue;
+        setState('Sauvegarde en cours...');
+        if(timer){
+          clearTimeout(timer);
+        }
+        timer = setTimeout(() => {
+          if(currentValue === lastSavedValue){
+            setState('Aucune modification à sauvegarder');
+            return;
+          }
+          saveTitle(currentValue);
+        }, 500);
+      });
+    })();
+  </script>
 </body>
 </html>
