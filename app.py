@@ -3100,6 +3100,7 @@ def ensure_cnaps_history(t: Dict[str, Any]) -> None:
 def _empty_data_payload() -> Dict[str, Any]:
     return {
         "sessions": [],
+        "afc": {},
         "positioning_tests": [],
         "notifications_edof": [],
         "notifications_financement_refuse": [],
@@ -3153,6 +3154,9 @@ def load_data() -> Dict[str, Any]:
 
         if "positioning_tests" not in data:
             data["positioning_tests"] = []
+            changed = True
+        if not isinstance(data.get("afc"), dict):
+            data["afc"] = {}
             changed = True
         if "notifications_edof" not in data:
             data["notifications_edof"] = []
@@ -4246,6 +4250,66 @@ def fetch_hebergement_status(email: str) -> Optional[str]:
 # =========================
 
 FORMATION_TYPES = ["APS", "A3P", "DIRIGEANT initial", "DIRIGEANT VAE", "SSIAP 1", "CHEF DE POSTE", "VTC"]
+AFC_DECISION_OPTIONS = ["RETENU", "NON RETENU"]
+AFC_REFUSAL_REASONS = [
+    "Pré-requis insuffisant : besoin d'une pré-qualification (compétences professionnelles)",
+    "Pré-requis insuffisant : besoin d'une remise à niveau (connaissances de base)",
+    "Ne réponds pas à 1 ou plusieurs critères de sélection mentionnés dans la fiche",
+    "N'a pas produit les justificatifs requis",
+    "Représentation du métier insuffisante",
+    "Inaptitude médicale",
+    "Échec aux épreuves de sélection",
+    "Indisponibilité du candidat",
+    "Carte séjour",
+    "Rémunération",
+    "Refus du DE",
+    "Critère propre au financeur (par ex. Public non prioritaire)",
+    "Retenu, non entré faute de places",
+    "Retour à l'emploi du candidat",
+    "Entrée du candidat sur une autre formation ou une autre mesure emploi",
+    "Absence au RDV (entretien individuel, tests)",
+    "Non retenu, plus de places disponibles sur la session",
+]
+AFC_REFUSAL_COMPLEMENTS = [
+    "Les documents pour la demande CNAPS n'ont pas été envoyés",
+    "La demande CNAPS est en cours",
+    "Autre",
+]
+AFC_DEFAULT_MAIL_TEMPLATE_RETAINED = """Bonjour,
+
+Je me permets de revenir vers vous concernant la formation Agent de sécurité privée (APS) + Agent de sécurité incendie (SSIAP 1) financée par France Travail qui débutera le 1er avril 2026.
+
+Suite à la réunion d'information à laquelle vous avez participé, j'ai le plaisir de vous informer que votre dossier a été retenu.
+
+Je vous remercie de bien vouloir compléter ce formulaire dès que possible afin que nous puissions valider votre inscription : https://forms.gle/wVrjafNCyCxaUXNZ6
+
+Vous recevrez prochainement par mail le contrat de formation que vous devrez signer (signature électronique). Vous recevrez ensuite votre convocation avec toutes les informations (dates, horaires, documents à apporter etc.).
+
+N'hésitez pas à nous contacter au 04 22 47 07 68 pour tous renseignements complémentaires,
+
+Je reste à votre disposition pour tous renseignements complémentaires,
+Je vous souhaite une excellente journée,
+
+Clément VAILLANT - Intégrale Academy"""
+AFC_DEFAULT_MAIL_TEMPLATE_REJECTED = """Bonjour,
+
+Je me permets de revenir vers vous concernant la formation Agent de sécurité privée (APS) + Agent de sécurité incendie (SSIAP 1) financée par France Travail.
+
+Suite à la réunion d'information à laquelle vous avez participé, j'ai le regret de vous informer que votre dossier n'a pas été retenu pour le motif suivant :
+
+{{motif_refus}} {{complement_refus}}
+
+Je peux en revanche vous proposer une solution alternative si vous avez des fonds sur votre Compte Personnel de Formation (CPF) : nous organisons une formation Agent de prévention et de sécurité (APS) du 5 janvier au 6 février 2026 si vous souhaitez vous inscrire avec votre CPF ?
+
+Si vous souhaitez vous inscrire pour la formation du 5 janvier au 6 février 2026, vous devez créer votre Identité Numérique la Poste (en ligne ou dans un bureau de poste), et réserver un RDV téléphonique en cliquant ici afin que puissions procéder à votre inscription : https://calendly.com/integraleacademy/aps
+
+Il n'y aura malheureusement pas de session financée par France Travail avant avril 2026.
+
+Je reste à votre disposition pour tous renseignements complémentaires,
+Je vous souhaite une excellente journée,
+
+Clément VAILLANT - Intégrale Academy"""
+
 FORMATION_PRICE_DEFAULTS = {
     "A3P": 4200,
     "APS": 1650,
@@ -6328,6 +6392,236 @@ def admin_sessions():
         dashboard_year=current_year,
         yearly_training_counts=yearly_training_counts,
     )
+
+
+
+def _afc_bucket(data: Dict[str, Any]) -> Dict[str, Any]:
+    bucket = data.setdefault("afc", {})
+    if not isinstance(bucket.get("candidates"), list):
+        bucket["candidates"] = []
+    if not isinstance(bucket.get("mail_templates"), dict):
+        bucket["mail_templates"] = {}
+    mt = bucket["mail_templates"]
+    if not (mt.get("retained") or "").strip():
+        mt["retained"] = AFC_DEFAULT_MAIL_TEMPLATE_RETAINED
+    if not (mt.get("rejected") or "").strip():
+        mt["rejected"] = AFC_DEFAULT_MAIL_TEMPLATE_REJECTED
+    if not isinstance(bucket.get("modules"), dict):
+        bucket["modules"] = {}
+    modules = bucket["modules"]
+    for key in ("formation_technique", "remise_niveau", "soutien_personnalise", "paf"):
+        modules.setdefault(key, 0)
+    bucket.setdefault("dates_formation", "")
+    return bucket
+
+
+def _afc_render_mail_template(template: str, candidate: Dict[str, Any]) -> str:
+    values = {
+        "nom": (candidate.get("nom") or "").strip(),
+        "prenom": (candidate.get("prenom") or "").strip(),
+        "motif_refus": (candidate.get("motif_refus") or "").strip(),
+        "complement_refus": (
+            (candidate.get("complement_refus_autre") or "").strip()
+            if (candidate.get("complement_refus") or "").strip().lower() == "autre"
+            else (candidate.get("complement_refus") or "").strip()
+        ),
+    }
+    content = str(template or "")
+    for key, value in values.items():
+        content = content.replace("{{" + key + "}}", value)
+    return content
+
+
+@app.get("/admin/afc")
+def admin_afc():
+    data = load_data()
+    bucket = _afc_bucket(data)
+    candidates = bucket.get("candidates", [])
+    changed = False
+    for candidate in candidates:
+        if not (candidate.get("cnaps_status") or "").strip():
+            cnaps_status = fetch_cnaps_status_by_name(candidate.get("nom") or "", candidate.get("prenom") or "")
+            if cnaps_status:
+                candidate["cnaps_status"] = cnaps_status
+                changed = True
+    if changed:
+        save_data(data)
+    retained = [c for c in candidates if (c.get("decision") or "").strip().upper() == "RETENU"]
+    others = [c for c in candidates if (c.get("decision") or "").strip().upper() != "RETENU"]
+    ordered_candidates = retained + others
+    return render_template(
+        "admin_afc.html",
+        afc=bucket,
+        candidates=ordered_candidates,
+        refusal_reasons=AFC_REFUSAL_REASONS,
+        refusal_complements=AFC_REFUSAL_COMPLEMENTS,
+    )
+
+
+@app.post("/api/admin/afc/candidates")
+def api_admin_afc_create_candidate():
+    data = load_data()
+    bucket = _afc_bucket(data)
+    payload = request.get_json(silent=True) or {}
+    nom = str(payload.get("nom") or "").strip()
+    prenom = str(payload.get("prenom") or "").strip()
+    email = str(payload.get("email") or "").strip()
+    telephone = str(payload.get("telephone") or "").strip()
+    if not nom or not prenom:
+        return jsonify({"ok": False, "error": "Nom et prénom obligatoires"}), 400
+    candidate = {
+        "id": "AFC-" + uuid.uuid4().hex[:8].upper(),
+        "identifiant_ft": str(payload.get("identifiant_ft") or "").strip(),
+        "nom": nom,
+        "prenom": prenom,
+        "email": email,
+        "telephone": telephone,
+        "decision": "",
+        "notification_status": "NON ENVOYEE",
+        "cnaps_status": fetch_cnaps_status_by_name(nom, prenom) or "INCONNU",
+        "motif_refus": "",
+        "complement_refus": "",
+        "complement_refus_autre": "",
+        "modules": {
+            "formation_technique": 0,
+            "remise_niveau": 0,
+            "soutien_personnalise": 0,
+            "paf": 0,
+        },
+        "dates_formation": "",
+        "created_at": _now_iso(),
+    }
+    bucket["candidates"].append(candidate)
+    save_data(data)
+    return jsonify({"ok": True, "candidate": candidate})
+
+
+@app.post("/api/admin/afc/mail-templates")
+def api_admin_afc_save_mail_templates():
+    data = load_data()
+    bucket = _afc_bucket(data)
+    payload = request.get_json(silent=True) or {}
+    templates = bucket["mail_templates"]
+    templates["retained"] = str(payload.get("retained") or "").strip() or AFC_DEFAULT_MAIL_TEMPLATE_RETAINED
+    templates["rejected"] = str(payload.get("rejected") or "").strip() or AFC_DEFAULT_MAIL_TEMPLATE_REJECTED
+    save_data(data)
+    return jsonify({"ok": True})
+
+
+@app.post("/api/admin/afc/modules")
+def api_admin_afc_save_modules():
+    data = load_data()
+    bucket = _afc_bucket(data)
+    payload = request.get_json(silent=True) or {}
+    modules = bucket["modules"]
+    for key in ("formation_technique", "remise_niveau", "soutien_personnalise", "paf"):
+        raw = payload.get(key, modules.get(key, 0))
+        try:
+            modules[key] = float(raw or 0)
+        except (ValueError, TypeError):
+            modules[key] = 0
+    bucket["dates_formation"] = str(payload.get("dates_formation") or "").strip()
+    save_data(data)
+    return jsonify({"ok": True})
+
+
+@app.patch("/api/admin/afc/candidates/<candidate_id>")
+def api_admin_afc_update_candidate(candidate_id: str):
+    data = load_data()
+    bucket = _afc_bucket(data)
+    candidate = next((c for c in bucket["candidates"] if str(c.get("id") or "") == candidate_id), None)
+    if not candidate:
+        return jsonify({"ok": False, "error": "Candidat introuvable"}), 404
+
+    payload = request.get_json(silent=True) or {}
+    for field in (
+        "identifiant_ft", "nom", "prenom", "email", "telephone", "decision",
+        "motif_refus", "complement_refus", "complement_refus_autre", "dates_formation",
+    ):
+        if field in payload:
+            candidate[field] = str(payload.get(field) or "").strip()
+
+    if "decision" in payload and (candidate.get("decision") or "").strip().upper() == "RETENU":
+        candidate["motif_refus"] = ""
+        candidate["complement_refus"] = ""
+        candidate["complement_refus_autre"] = ""
+
+    if any(k in payload for k in ("nom", "prenom")):
+        cnaps_status = fetch_cnaps_status_by_name(candidate.get("nom") or "", candidate.get("prenom") or "")
+        if cnaps_status:
+            candidate["cnaps_status"] = cnaps_status
+
+    modules = candidate.setdefault("modules", {})
+    if isinstance(payload.get("modules"), dict):
+        for key in ("formation_technique", "remise_niveau", "soutien_personnalise", "paf"):
+            raw = payload["modules"].get(key, modules.get(key, 0))
+            try:
+                modules[key] = float(raw or 0)
+            except (ValueError, TypeError):
+                modules[key] = 0
+
+    save_data(data)
+    return jsonify({"ok": True, "candidate": candidate})
+
+
+@app.post("/api/admin/afc/candidates/<candidate_id>/notify")
+def api_admin_afc_notify_candidate(candidate_id: str):
+    data = load_data()
+    bucket = _afc_bucket(data)
+    candidate = next((c for c in bucket["candidates"] if str(c.get("id") or "") == candidate_id), None)
+    if not candidate:
+        return jsonify({"ok": False, "error": "Candidat introuvable"}), 404
+
+    to_email = (candidate.get("email") or "").strip()
+    if not to_email:
+        return jsonify({"ok": False, "error": "Email manquant"}), 400
+
+    decision = (candidate.get("decision") or "").strip().upper()
+    templates = bucket.get("mail_templates") or {}
+    if decision == "RETENU":
+        subject = "Formation APS/SSIAP 1 - Dossier retenu"
+        template = templates.get("retained") or AFC_DEFAULT_MAIL_TEMPLATE_RETAINED
+    else:
+        subject = "Formation APS/SSIAP 1 - Dossier non retenu"
+        template = templates.get("rejected") or AFC_DEFAULT_MAIL_TEMPLATE_REJECTED
+
+    raw_content = _afc_render_mail_template(template, candidate)
+    html = mail_layout("<p>" + "</p><p>".join([line for line in raw_content.splitlines() if line.strip()]) + "</p>")
+    ok = brevo_send_email(to_email, subject, html)
+    if not ok:
+        return jsonify({"ok": False, "error": "Échec envoi email"}), 500
+
+    candidate["notification_status"] = "ENVOYEE"
+    candidate["notification_sent_at"] = _now_iso()
+    save_data(data)
+    return jsonify({"ok": True})
+
+
+@app.get("/admin/afc/candidates/<candidate_id>")
+def admin_afc_candidate_sheet(candidate_id: str):
+    data = load_data()
+    bucket = _afc_bucket(data)
+    candidate = next((c for c in bucket["candidates"] if str(c.get("id") or "") == candidate_id), None)
+    if not candidate:
+        abort(404)
+    return render_template(
+        "admin_afc_candidate_sheet.html",
+        candidate=candidate,
+        refusal_reasons=AFC_REFUSAL_REASONS,
+        refusal_complements=AFC_REFUSAL_COMPLEMENTS,
+    )
+
+
+@app.get("/admin/afc/export")
+def admin_afc_export():
+    data = load_data()
+    bucket = _afc_bucket(data)
+    candidates = bucket.get("candidates", [])
+    retained = [c for c in candidates if (c.get("decision") or "").strip().upper() == "RETENU"]
+    others = [c for c in candidates if (c.get("decision") or "").strip().upper() != "RETENU"]
+    ordered_candidates = retained + others
+    return render_template("admin_afc_export.html", afc=bucket, candidates=ordered_candidates)
+
 
 
 @app.get("/admin/gestion-secretariat")
