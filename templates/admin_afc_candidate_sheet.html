@@ -93,6 +93,7 @@ const autre = document.getElementById('complement_refus_autre');
 const testFrancaisReussi = document.getElementById('test_francais_reussi');
 const testFrStatus = document.getElementById('testFrStatus');
 let notificationSentAt = "{{ candidate.notification_sent_at or '' }}";
+let savingTestFr = false;
 
 function formatNotificationDate(value){
   if(!value) return '';
@@ -141,6 +142,21 @@ updateTotal();
 decision.addEventListener('change', refreshUI);
 complement.addEventListener('change', refreshUI);
 testFrancaisReussi.addEventListener('change', refreshUI);
+testFrancaisReussi.addEventListener('change', async ()=>{
+  if(savingTestFr) return;
+  const previousValue = !testFrancaisReussi.checked;
+  savingTestFr = true;
+  try {
+    const ok = await saveCandidate();
+    if(!ok){
+      testFrancaisReussi.checked = previousValue;
+      refreshUI();
+      return;
+    }
+  } finally {
+    savingTestFr = false;
+  }
+});
 ['mft','mrn','msp','mpaf'].forEach(id=>document.getElementById(id).addEventListener('input', updateTotal));
 
 async function saveCandidate(){
