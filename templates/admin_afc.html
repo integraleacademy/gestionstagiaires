@@ -46,7 +46,7 @@
   <table class="table" id="afcTable">
     <thead>
       <tr>
-        <th>Nom</th><th>Prénom</th><th>Mail</th><th>Téléphone</th><th>Décision</th><th>Statut notification</th><th>Statut CNAPS</th><th>Fiche candidat</th><th>Actions</th>
+        <th>Nom</th><th>Prénom</th><th>Mail</th><th>Téléphone</th><th>Décision</th><th>Test de français</th><th>Statut notification</th><th>Statut CNAPS</th><th>Fiche candidat</th><th>Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -57,6 +57,7 @@
         <td><input data-field="email" value="{{ c.email or '' }}"></td>
         <td><input data-field="telephone" value="{{ c.telephone or '' }}"></td>
         <td>{{ '🟢Retenue' if (c.decision or '')|upper == 'RETENU' else 'Non retenue🔴' }}</td>
+        <td>{{ '🟢' if c.test_francais_reussi else '🔴' }}</td>
         <td>{{ '🟢Envoyée' if (c.notification_status or '')|upper == 'ENVOYEE' else 'Non envoyée🔴' }}</td>
         <td>
           <div class="afc-cnaps-wrap">
