@@ -6432,6 +6432,39 @@ def _afc_render_mail_template(template: str, candidate: Dict[str, Any]) -> str:
     return content
 
 
+def _afc_find_latest_positioning_score(candidate: Dict[str, Any], positioning_tests: List[Dict[str, Any]]) -> Optional[float]:
+    candidate_email = str(candidate.get("email") or "").strip().lower()
+    candidate_last_name = normalize_last_name(candidate.get("nom") or "")
+    candidate_first_name = normalize_first_name(candidate.get("prenom") or "")
+
+    matches: List[Dict[str, Any]] = []
+    for entry in positioning_tests:
+        contact = entry.get("contact") or {}
+        email = str(contact.get("email") or "").strip().lower()
+        last_name = normalize_last_name(contact.get("last_name") or "")
+        first_name = normalize_first_name(contact.get("first_name") or "")
+
+        email_match = bool(candidate_email and email and email == candidate_email)
+        name_match = bool(
+            candidate_last_name
+            and candidate_first_name
+            and last_name == candidate_last_name
+            and first_name == candidate_first_name
+        )
+        if email_match or name_match:
+            matches.append(entry)
+
+    if not matches:
+        return None
+
+    matches.sort(key=lambda e: str(e.get("created_at") or ""), reverse=True)
+    latest = matches[0]
+    try:
+        return float(latest.get("score_over_20") or 0)
+    except (ValueError, TypeError):
+        return None
+
+
 @app.get("/admin/afc")
 def admin_afc():
     data = load_data()
@@ -6489,6 +6522,7 @@ def api_admin_afc_create_candidate():
             "paf": 0,
         },
         "dates_formation": "",
+        "test_francais_reussi": False,
         "created_at": _now_iso(),
     }
     bucket["candidates"].append(candidate)
@@ -6564,6 +6598,9 @@ def api_admin_afc_update_candidate(candidate_id: str):
             except (ValueError, TypeError):
                 modules[key] = 0
 
+    if "test_francais_reussi" in payload:
+        candidate["test_francais_reussi"] = bool(payload.get("test_francais_reussi"))
+
     save_data(data)
     return jsonify({"ok": True, "candidate": candidate})
 
@@ -6624,9 +6661,12 @@ def admin_afc_candidate_sheet(candidate_id: str):
     candidate = next((c for c in bucket["candidates"] if str(c.get("id") or "") == candidate_id), None)
     if not candidate:
         abort(404)
+    candidate.setdefault("test_francais_reussi", False)
+    positioning_score = _afc_find_latest_positioning_score(candidate, list(data.get("positioning_tests") or []))
     return render_template(
         "admin_afc_candidate_sheet.html",
         candidate=candidate,
+        positioning_score=positioning_score,
         refusal_reasons=AFC_REFUSAL_REASONS,
         refusal_complements=AFC_REFUSAL_COMPLEMENTS,
     )
