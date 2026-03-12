@@ -6614,7 +6614,7 @@ def api_admin_afc_notify_candidate(candidate_id: str):
     candidate["notification_status"] = "ENVOYEE"
     candidate["notification_sent_at"] = _now_iso()
     save_data(data)
-    return jsonify({"ok": True})
+    return jsonify({"ok": True, "notification_sent_at": candidate.get("notification_sent_at")})
 
 
 @app.get("/admin/afc/candidates/<candidate_id>")

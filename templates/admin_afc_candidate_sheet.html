@@ -50,6 +50,7 @@
   </div>
 
   <button class="btn btn-primary" id="btnNotify" style="display:none;margin-top:10px;">NOTIFIER LE CANDIDAT</button>
+  <div id="notifyStatus" style="display:none;margin-top:8px;font-size:14px;color:#475569;font-weight:600;"></div>
   <button class="btn" id="btnSave" style="margin-top:10px;">Enregistrer</button>
 </div>
 
@@ -73,14 +74,43 @@ const candidateId = "{{ candidate.id }}";
 const decision = document.getElementById('decision');
 const refusalBox = document.getElementById('refusalBox');
 const btnNotify = document.getElementById('btnNotify');
+const notifyStatus = document.getElementById('notifyStatus');
 const complement = document.getElementById('complement_refus');
 const autre = document.getElementById('complement_refus_autre');
+let notificationSentAt = "{{ candidate.notification_sent_at or '' }}";
+
+function formatNotificationDate(value){
+  if(!value) return '';
+  const date = new Date(value);
+  if(!Number.isNaN(date.getTime())){
+    return date.toLocaleDateString('fr-FR');
+  }
+  const clean = String(value).trim().slice(0,10);
+  const parts = clean.split('-');
+  if(parts.length === 3){
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return '';
+}
 
 function refreshUI(){
   const nonRetenu = decision.value === 'NON RETENU';
   refusalBox.style.display = nonRetenu ? 'block' : 'none';
   btnNotify.style.display = (decision.value === 'RETENU' || decision.value === 'NON RETENU') ? 'inline-flex' : 'none';
   autre.style.display = complement.value === 'Autre' ? 'block' : 'none';
+
+  const formattedDate = formatNotificationDate(notificationSentAt);
+  if(formattedDate){
+    btnNotify.classList.remove('btn-primary');
+    btnNotify.classList.add('btn-orange');
+    notifyStatus.textContent = `Candidat notifié le ${formattedDate}`;
+    notifyStatus.style.display = 'block';
+  } else {
+    btnNotify.classList.remove('btn-orange');
+    btnNotify.classList.add('btn-primary');
+    notifyStatus.textContent = '';
+    notifyStatus.style.display = 'none';
+  }
 }
 
 function updateTotal(){
@@ -131,7 +161,14 @@ document.getElementById('btnNotify').onclick = async ()=>{
   const saved = await saveCandidate();
   if(!saved) return;
   const r = await fetch(`/api/admin/afc/candidates/${candidateId}/notify`,{method:'POST'});
-  if(r.ok) alert('Notification envoyée'); else alert('Erreur envoi notification');
+  if(r.ok) {
+    const payload = await r.json();
+    notificationSentAt = payload.notification_sent_at || new Date().toISOString();
+    refreshUI();
+    alert('Notification envoyée');
+  } else {
+    alert('Erreur envoi notification');
+  }
 };
 </script>
 {% endblock %}
