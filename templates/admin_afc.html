@@ -206,7 +206,7 @@ afcImportInput.addEventListener('change', async ()=>{
       if(code === 'no_candidate_found'){
         alert('Aucun candidat détecté dans cette image.');
       }else if(code === 'ocr_failed'){
-        alert('Impossible de lire l'image (OCR). Réessayez avec une capture plus nette.');
+        alert("Impossible de lire l'image (OCR). Réessayez avec une capture plus nette.");
       }else{
         alert('Erreur import: ' + code);
       }
