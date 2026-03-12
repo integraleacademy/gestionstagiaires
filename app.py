@@ -6412,6 +6412,7 @@ def _afc_bucket(data: Dict[str, Any]) -> Dict[str, Any]:
     for key in ("formation_technique", "remise_niveau", "soutien_personnalise", "paf"):
         modules.setdefault(key, 0)
     bucket.setdefault("dates_formation", "")
+    bucket.setdefault("export_title", "Export Gestion AFC")
     return bucket
 
 
@@ -6555,6 +6556,8 @@ def api_admin_afc_save_modules():
         except (ValueError, TypeError):
             modules[key] = 0
     bucket["dates_formation"] = str(payload.get("dates_formation") or "").strip()
+    if "export_title" in payload:
+        bucket["export_title"] = str(payload.get("export_title") or "").strip() or "Export Gestion AFC"
     save_data(data)
     return jsonify({"ok": True})
 
