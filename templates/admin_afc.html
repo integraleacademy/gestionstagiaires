@@ -119,17 +119,19 @@
         <td><input data-field="telephone" value="{{ c.telephone or '' }}"></td>
         <td>
           <button type="button" class="afc-toggle {{ 'on' if (c.decision or '')|upper == 'RETENU' else '' }}" data-toggle-decision>
-            {{ '🟢 Retenue' if (c.decision or '')|upper == 'RETENU' else '🔴 Non retenue' }}
+            {% set decision_status = (c.decision or '')|upper %}
+            {{ '🟢 Retenue' if decision_status == 'RETENU' else ('🔴 Non retenue' if decision_status else '🟡 En attente') }}
           </button>
         </td>
         <td>
-          <button type="button" class="afc-toggle {{ 'on' if c.test_francais_reussi else '' }}" data-toggle-fr>
-            {{ '🟢 Réussi' if c.test_francais_reussi else '🔴 Non réussi' }}
+          <button type="button" class="afc-toggle {{ 'on' if c.test_francais_reussi is sameas true else '' }}" data-toggle-fr>
+            {% if c.test_francais_reussi is sameas true %}🟢 Réussi{% elif c.test_francais_reussi is sameas false %}🔴 Non réussi{% else %}🟡 En attente{% endif %}
           </button>
         </td>
         <td>
           <button type="button" class="afc-toggle {{ 'on' if (c.notification_status or '')|upper == 'ENVOYEE' else '' }}" data-toggle-notification>
-            {{ '🟢 Envoyée' if (c.notification_status or '')|upper == 'ENVOYEE' else '🔴 Non envoyée' }}
+            {% set notification_status = (c.notification_status or '')|upper %}
+            {{ '🟢 Envoyée' if notification_status == 'ENVOYEE' else ('🔴 Non envoyée' if notification_status else '🟡 En attente') }}
           </button>
         </td>
         <td>
