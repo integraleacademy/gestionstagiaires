@@ -6532,6 +6532,10 @@ def _afc_bucket(data: Dict[str, Any]) -> Dict[str, Any]:
     bucket = data.setdefault("afc", {})
     if not isinstance(bucket.get("candidates"), list):
         bucket["candidates"] = []
+    for candidate in bucket["candidates"]:
+        if isinstance(candidate, dict):
+            candidate.setdefault("presence_afc", False)
+            candidate.setdefault("date_icop", "")
     if not isinstance(bucket.get("mail_templates"), dict):
         bucket["mail_templates"] = {}
     mt = bucket["mail_templates"]
@@ -6658,6 +6662,7 @@ def api_admin_afc_create_candidate():
         "dates_formation": "",
         "test_francais_reussi": None,
         "presence_afc": False,
+        "date_icop": "",
         "test_results_comment": "",
         "created_at": _now_iso(),
     }
@@ -6731,6 +6736,7 @@ def api_admin_afc_import_from_image():
             "dates_formation": "",
             "test_francais_reussi": None,
             "presence_afc": False,
+            "date_icop": "",
             "test_results_comment": "",
             "created_at": _now_iso(),
         }
@@ -6794,6 +6800,7 @@ def api_admin_afc_update_candidate(candidate_id: str):
         "identifiant_ft", "nom", "prenom", "email", "telephone", "decision",
         "motif_refus", "complement_refus", "complement_refus_autre", "dates_formation",
         "cnaps_status", "notification_status", "test_results_comment",
+        "date_icop",
     ):
         if field in payload:
             value = str(payload.get(field) or "").strip()

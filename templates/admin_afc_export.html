@@ -68,7 +68,7 @@
   <table>
     <thead>
       <tr>
-        <th>Présence / Absence</th><th>Identifiant FT</th><th>Nom</th><th>Prénom</th><th>Statut CNAPS</th><th>Test de français</th><th>Décision</th><th>Motif de refus</th><th>Complément refus</th>
+        <th>Présence ICOP</th><th>Date ICOP</th><th>Identifiant FT</th><th>Nom</th><th>Prénom</th><th>Statut CNAPS</th><th>Test de français</th><th>Décision</th><th>Motif de refus</th><th>Complément refus</th>
         <th>Formation technique</th><th>Remise à niveau</th><th>Soutien personnalisé</th><th>PAF</th><th>TOTAL DES HEURES</th><th>Dates de formation</th>
       </tr>
     </thead>
@@ -80,6 +80,7 @@
       {% set cnaps = (c.cnaps_status or 'INCONNU')|upper %}
       <tr>
         <td>{{ '🟢 Présent' if c.presence_afc else '🔴 Absent' }}</td>
+        <td>{{ c.date_icop or '' }}</td>
         <td>{{ c.identifiant_ft or '' }}</td>
         <td>{{ c.nom or '' }}</td>
         <td>{{ c.prenom or '' }}</td>
