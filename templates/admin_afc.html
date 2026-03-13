@@ -102,7 +102,7 @@
   <table class="table afc-table" id="afcTable">
     <thead>
       <tr>
-        <th>Présence AFC</th><th>Nom</th><th>Prénom</th><th>Mail</th><th>Téléphone</th><th>Décision</th><th>Test de français</th><th>Statut notification</th><th>Statut CNAPS</th><th>Fiche candidat</th><th>Actions</th>
+        <th>Présence ICOP</th><th>Date ICOP</th><th>Nom</th><th>Prénom</th><th>Mail</th><th>Téléphone</th><th>Décision</th><th>Test de français</th><th>Statut notification</th><th>Statut CNAPS</th><th>Fiche candidat</th><th>Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -113,6 +113,7 @@
             {{ '🟢 Présent' if c.presence_afc else '🔴 Absent' }}
           </button>
         </td>
+        <td><input data-field="date_icop" type="date" value="{{ c.date_icop or '' }}"></td>
         <td><input data-field="nom" value="{{ c.nom }}"></td>
         <td><input data-field="prenom" value="{{ c.prenom }}"></td>
         <td><input data-field="email" value="{{ c.email or '' }}"></td>
@@ -273,6 +274,7 @@ function applyAfcFilters(){
       getCandidateFieldValue(tr, 'prenom'),
       getCandidateFieldValue(tr, 'email'),
       getCandidateFieldValue(tr, 'telephone'),
+      getCandidateFieldValue(tr, 'date_icop'),
     ].join(' ').toLowerCase();
 
     const searchOk = !search || searchableParts.includes(search);
@@ -447,7 +449,7 @@ document.querySelectorAll('[data-toggle-presence]').forEach((btn)=>{
       target.textContent = presence_afc ? '🟢 Présent' : '🔴 Absent';
       applyAfcFilters();
     }catch(_err){
-      alert('Erreur sauvegarde présence AFC');
+      alert('Erreur sauvegarde présence ICOP');
     }
   });
 });

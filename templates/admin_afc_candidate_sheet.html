@@ -82,8 +82,12 @@
   <h3>Résultats des tests</h3>
   <label style="display:flex;align-items:center;gap:8px;">
     <input id="presence_afc" type="checkbox" {% if candidate.presence_afc %}checked{% endif %}>
-    Présence AFC
+    Présence ICOP
     <span id="presenceAfcStatus" style="font-weight:700;color:{% if candidate.presence_afc %}#16a34a{% else %}#dc2626{% endif %};">{{ '🟢 Présent' if candidate.presence_afc else '🔴 Absent' }}</span>
+  </label>
+
+  <label style="display:block;margin-top:8px;">Date ICOP
+    <input id="date_icop" type="date" value="{{ candidate.date_icop or '' }}">
   </label>
 
   <label style="display:flex;align-items:center;gap:8px;margin-top:8px;">
@@ -164,6 +168,7 @@ const autre = document.getElementById('complement_refus_autre');
 const presenceAfc = document.getElementById('presence_afc');
 const presenceAfcStatus = document.getElementById('presenceAfcStatus');
 const testFrancaisReussi = document.getElementById('test_francais_reussi');
+const dateIcop = document.getElementById('date_icop');
 const testFrStatus = document.getElementById('testFrStatus');
 const cnapsStatusBadge = document.getElementById('cnapsStatusBadge');
 const testResultsComment = document.getElementById('test_results_comment');
@@ -341,6 +346,10 @@ applyCnapsBadge(cnapsStatusBadge);
 decision.addEventListener('change', refreshUI);
 complement.addEventListener('change', refreshUI);
 presenceAfc.addEventListener('change', refreshUI);
+dateIcop.addEventListener('change', async ()=>{
+  const ok = await saveCandidate();
+  if(!ok) alert('Erreur sauvegarde date ICOP');
+});
 testFrancaisReussi.addEventListener('change', refreshUI);
 presenceAfc.addEventListener('change', async ()=>{
   if(savingPresenceAfc) return;
@@ -429,6 +438,7 @@ async function saveCandidate(){
     dates_formation: document.getElementById('dates_formation').value,
     test_francais_reussi: testFrancaisReussi.checked,
     presence_afc: presenceAfc.checked,
+    date_icop: dateIcop.value,
     test_results_comment: testResultsComment.value,
     modules: {
       formation_technique: document.getElementById('mft').value,
