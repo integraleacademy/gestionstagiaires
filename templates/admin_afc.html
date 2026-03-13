@@ -71,6 +71,20 @@
     background:#fff;
   }
   .afc-filters input{min-width:260px;}
+  .afc-quick-filter-btn{
+    border:1px solid #d6dce5;
+    background:#fff;
+    border-radius:8px;
+    padding:0 12px;
+    min-height:36px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .afc-quick-filter-btn.active{
+    border-color:#0ca15a;
+    color:#0a8f50;
+    background:#eaf9f1;
+  }
   .afc-count{
     margin-left:auto;
     font-size:14px;
@@ -135,6 +149,8 @@
     </select>
     <select id="afcPresenceFilter">
       <option value="all">Présence : Tous</option>
+      <option value="a_convoquer">Présence : À convoquer</option>
+      <option value="convoque">Présence : Convoqués</option>
       <option value="present">Présence : Présents</option>
       <option value="absent">Présence : Absents</option>
     </select>
@@ -143,6 +159,14 @@
       <option value="passed">Test français : Réussi</option>
       <option value="failed">Test français : Non réussi</option>
     </select>
+    <select id="afcCnapsFilter">
+      <option value="all">Statut CNAPS : Tous</option>
+      <option value="accepte">Statut CNAPS : Accepté</option>
+      <option value="refuse">Statut CNAPS : Refusé</option>
+      <option value="en_cours">Statut CNAPS : En cours</option>
+      <option value="inconnu">Statut CNAPS : Inconnu</option>
+    </select>
+    <button id="afcGoodProfilesFilter" class="afc-quick-filter-btn" type="button">Bons profils</button>
     <span class="afc-count" id="afcCandidateCount" aria-live="polite"></span>
   </div>
 </div>
@@ -156,7 +180,7 @@
     </thead>
     <tbody>
       {% for c in candidates %}
-      <tr data-id="{{ c.id }}" class="{{ 'afc-row-enrolled' if c.enrolled_at else '' }}">
+      <tr data-id="{{ c.id }}" data-has-positioning-test="{{ '1' if c.has_positioning_test else '0' }}" class="{{ 'afc-row-enrolled' if c.enrolled_at else '' }}">
         <td>
           {% set presence_status = (c.presence_afc_status or ('PRESENT' if c.presence_afc else 'A_CONVOQUER'))|upper %}
           <select data-field="presence_afc_status">
@@ -235,6 +259,9 @@ const afcSearchInput = document.getElementById('afcSearchInput');
 const afcDecisionFilter = document.getElementById('afcDecisionFilter');
 const afcPresenceFilter = document.getElementById('afcPresenceFilter');
 const afcFrenchFilter = document.getElementById('afcFrenchFilter');
+const afcCnapsFilter = document.getElementById('afcCnapsFilter');
+const afcGoodProfilesFilter = document.getElementById('afcGoodProfilesFilter');
+let goodProfilesOnly = false;
 
 function openModal(){ modal.classList.add('show'); modal.setAttribute('aria-hidden','false'); }
 function closeModal(){ modal.classList.remove('show'); modal.setAttribute('aria-hidden','true'); }
@@ -285,6 +312,7 @@ async function refreshCnapsForRow(tr){
   const span = tr.querySelector('[data-cnaps]');
   span.textContent = status;
   applyCnapsBadge(span);
+  applyAfcFilters();
 }
 
 function getCandidateFieldValue(tr, field){
@@ -300,12 +328,41 @@ function rowMatchesDecisionFilter(tr, filter){
   return true;
 }
 
+function rowPresenceStatus(tr){
+  const select = tr.querySelector('select[data-field="presence_afc_status"]');
+  return (select?.value || '').toUpperCase();
+}
+
 function rowMatchesPresenceFilter(tr, filter){
   if(filter === 'all') return true;
-  const isPresent = tr.querySelector('[data-toggle-presence]')?.classList.contains('on');
-  if(filter === 'present') return !!isPresent;
-  if(filter === 'absent') return !isPresent;
+  const status = rowPresenceStatus(tr);
+  if(filter === 'present') return status === 'PRESENT';
+  if(filter === 'absent') return status === 'ABSENT';
+  if(filter === 'convoque') return status === 'CONVOQUE';
+  if(filter === 'a_convoquer') return status === 'A_CONVOQUER';
   return true;
+}
+
+function cnapsStatusGroup(tr){
+  const txt = (tr.querySelector('[data-cnaps]')?.textContent || '').trim().toUpperCase();
+  if(!txt || txt === 'INCONNU') return 'inconnu';
+  if(txt.includes('ACCEPT') || txt.includes('CARTE PROFESSIONNELLE OK')) return 'accepte';
+  if(txt.includes('REFUS')) return 'refuse';
+  return 'en_cours';
+}
+
+function rowMatchesCnapsFilter(tr, filter){
+  if(filter === 'all') return true;
+  return cnapsStatusGroup(tr) === filter;
+}
+
+function rowMatchesGoodProfilesFilter(tr){
+  if(!goodProfilesOnly) return true;
+  const presenceOk = rowPresenceStatus(tr) === 'PRESENT';
+  const frenchOk = tr.querySelector('[data-toggle-fr]')?.classList.contains('on');
+  const cnapsOk = cnapsStatusGroup(tr) === 'accepte';
+  const hasPositioningTest = tr.dataset.hasPositioningTest === '1';
+  return presenceOk && frenchOk && cnapsOk && hasPositioningTest;
 }
 
 function rowMatchesFrenchFilter(tr, filter){
@@ -321,6 +378,7 @@ function applyAfcFilters(){
   const decisionFilter = afcDecisionFilter.value;
   const presenceFilter = afcPresenceFilter.value;
   const frenchFilter = afcFrenchFilter.value;
+  const cnapsFilter = afcCnapsFilter.value;
 
   document.querySelectorAll('#afcTable tbody tr').forEach((tr)=>{
     const searchableParts = [
@@ -334,8 +392,10 @@ function applyAfcFilters(){
     const decisionOk = rowMatchesDecisionFilter(tr, decisionFilter);
     const presenceOk = rowMatchesPresenceFilter(tr, presenceFilter);
     const frenchOk = rowMatchesFrenchFilter(tr, frenchFilter);
+    const cnapsOk = rowMatchesCnapsFilter(tr, cnapsFilter);
+    const goodProfileOk = rowMatchesGoodProfilesFilter(tr);
 
-    tr.style.display = searchOk && decisionOk && presenceOk && frenchOk ? '' : 'none';
+    tr.style.display = searchOk && decisionOk && presenceOk && frenchOk && cnapsOk && goodProfileOk ? '' : 'none';
   });
 
   updateCandidateCount();
@@ -591,6 +651,12 @@ afcSearchInput.addEventListener('input', applyAfcFilters);
 afcDecisionFilter.addEventListener('change', applyAfcFilters);
 afcPresenceFilter.addEventListener('change', applyAfcFilters);
 afcFrenchFilter.addEventListener('change', applyAfcFilters);
+afcCnapsFilter.addEventListener('change', applyAfcFilters);
+afcGoodProfilesFilter.addEventListener('click', ()=>{
+  goodProfilesOnly = !goodProfilesOnly;
+  afcGoodProfilesFilter.classList.toggle('active', goodProfilesOnly);
+  applyAfcFilters();
+});
 applyAfcFilters();
 </script>
 {% endblock %}

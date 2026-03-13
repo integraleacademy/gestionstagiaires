@@ -6695,6 +6695,7 @@ def admin_afc():
     data = load_data()
     bucket = _afc_bucket(data)
     candidates = bucket.get("candidates", [])
+    positioning_tests = list(data.get("positioning_tests") or [])
     changed = False
     for candidate in candidates:
         candidate.setdefault("cnaps_priority", False)
@@ -6712,6 +6713,7 @@ def admin_afc():
         if candidate.get("cnaps_priority") and (candidate.get("cnaps_status") or "").strip().upper() != "ACCEPTE":
             candidate["cnaps_status"] = "ACCEPTE"
             changed = True
+        candidate["has_positioning_test"] = _afc_find_latest_positioning_score(candidate, positioning_tests) is not None
     if changed:
         save_data(data)
     prioritized = [c for c in candidates if c.get("cnaps_priority")]
