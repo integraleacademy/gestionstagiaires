@@ -118,22 +118,23 @@
 
 
 <div class="modal-backdrop" id="enrollModal" aria-hidden="true">
-  <div class="modal" style="max-width:520px;">
+  <div class="modal" style="max-width:860px;">
     <div class="modal-head">
       <div class="modal-title">Ajouter un stagiaire</div>
-      <button class="icon-btn" id="closeEnrollModalTop" type="button">✕</button>
+      <button class="icon-btn" type="button" data-close-modal="enrollModal">✕</button>
     </div>
     <div class="modal-body">
+      <label style="margin-bottom:14px;display:block;">
+        <div class="label">Session</div>
+        <select id="enrollSessionId">
+          <option value="">-- Choisir une session --</option>
+          {% for s in sessions %}
+          <option value="{{ s.id }}">{{ s.name or 'Session' }}{% if s.training_type %} ({{ s.training_type }}){% endif %}</option>
+          {% endfor %}
+        </select>
+      </label>
+
       <div class="form-grid">
-        <label>
-          <div class="label">Session</div>
-          <select id="enrollSessionId">
-            <option value="">-- Choisir une session --</option>
-            {% for s in sessions %}
-            <option value="{{ s.id }}">{{ s.training_type or 'Formation' }} — {{ s.city or 'Ville non renseignée' }}{% if s.date_start %} ({{ s.date_start }}){% endif %}</option>
-            {% endfor %}
-          </select>
-        </label>
         <label>
           <div class="label">Nom</div>
           <input id="enrollLastName" type="text" placeholder="Nom">
@@ -143,6 +144,14 @@
           <input id="enrollFirstName" type="text" placeholder="Prénom">
         </label>
         <label>
+          <div class="label">Date de naissance (facultatif)</div>
+          <input id="enrollBirthDate" type="date">
+        </label>
+        <label>
+          <div class="label">Lieu de naissance (facultatif)</div>
+          <input id="enrollBirthPlace" type="text" placeholder="Ville de naissance">
+        </label>
+        <label>
           <div class="label">Adresse mail</div>
           <input id="enrollEmail" type="email" placeholder="email@exemple.com">
         </label>
@@ -150,13 +159,41 @@
           <div class="label">Téléphone</div>
           <input id="enrollPhone" type="tel" placeholder="+33600000000">
         </label>
+        <label>
+          <div class="label">Adresse postale</div>
+          <input id="enrollAddress" type="text" placeholder="Adresse postale">
+        </label>
+        <label>
+          <div class="label">Code postal actuel (facultatif)</div>
+          <input id="enrollZipCode" type="text" placeholder="Code postal">
+        </label>
+        <label>
+          <div class="label">Ville actuelle (facultatif)</div>
+          <input id="enrollCity" type="text" placeholder="Ville actuelle">
+        </label>
+        <label>
+          <div class="label">Montant CPF</div>
+          <input id="enrollCpfAmount" type="number" min="0" step="0.01" placeholder="0.00">
+        </label>
+        <label>
+          <div class="label">Montant financement personnel</div>
+          <input id="enrollPersonalAmount" type="number" min="0" step="0.01" placeholder="0.00">
+        </label>
+        <label>
+          <div class="label">Montant autre financement</div>
+          <input id="enrollOtherAmount" type="number" min="0" step="0.01" placeholder="0.00">
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+          <input id="enrollCarteProOk" type="checkbox" style="width:18px;height:18px;">
+          <div class="label" style="margin:0;">Carte professionnelle (CNAPS) déjà OK</div>
+        </label>
       </div>
       {% if not sessions %}
       <div class="hint" style="margin-top:10px;color:#b45309;">Aucune session active disponible.</div>
       {% endif %}
     </div>
     <div class="modal-foot">
-      <button class="btn" id="closeEnrollModal" type="button">Annuler</button>
+      <button class="btn" type="button" data-close-modal="enrollModal">Annuler</button>
       <button class="btn btn-primary" id="saveEnrollBtn" type="button">Sauvegarder</button>
     </div>
   </div>
@@ -179,14 +216,21 @@ const testResultsComment = document.getElementById('test_results_comment');
 const commentSaveStatus = document.getElementById('commentSaveStatus');
 const enrollModal = document.getElementById('enrollModal');
 const btnOpenEnrollModal = document.getElementById('btnOpenEnrollModal');
-const closeEnrollModal = document.getElementById('closeEnrollModal');
-const closeEnrollModalTop = document.getElementById('closeEnrollModalTop');
 const saveEnrollBtn = document.getElementById('saveEnrollBtn');
 const enrollSessionId = document.getElementById('enrollSessionId');
 const enrollLastName = document.getElementById('enrollLastName');
 const enrollFirstName = document.getElementById('enrollFirstName');
+const enrollBirthDate = document.getElementById('enrollBirthDate');
+const enrollBirthPlace = document.getElementById('enrollBirthPlace');
 const enrollEmail = document.getElementById('enrollEmail');
 const enrollPhone = document.getElementById('enrollPhone');
+const enrollAddress = document.getElementById('enrollAddress');
+const enrollZipCode = document.getElementById('enrollZipCode');
+const enrollCity = document.getElementById('enrollCity');
+const enrollCpfAmount = document.getElementById('enrollCpfAmount');
+const enrollPersonalAmount = document.getElementById('enrollPersonalAmount');
+const enrollOtherAmount = document.getElementById('enrollOtherAmount');
+const enrollCarteProOk = document.getElementById('enrollCarteProOk');
 let notificationSentAt = "{{ candidate.notification_sent_at or '' }}";
 let savingPresenceAfc = false;
 let savingTestFr = false;
@@ -196,12 +240,6 @@ let savingEnroll = false;
 
 if(btnOpenEnrollModal){
   btnOpenEnrollModal.addEventListener('click', openEnrollModal);
-}
-if(closeEnrollModal){
-  closeEnrollModal.addEventListener('click', closeEnrollModalFn);
-}
-if(closeEnrollModalTop){
-  closeEnrollModalTop.addEventListener('click', closeEnrollModalFn);
 }
 if(saveEnrollBtn){
   saveEnrollBtn.addEventListener('click', createTraineeFromAfcCandidate);
@@ -225,14 +263,21 @@ function openEnrollModal(){
   enrollFirstName.value = (document.getElementById('prenom').value || '').trim();
   enrollEmail.value = (document.getElementById('email').value || '').trim();
   enrollPhone.value = (document.getElementById('telephone').value || '').trim();
-  enrollModal.classList.add('show');
-  enrollModal.setAttribute('aria-hidden','false');
+  enrollBirthDate.value = '';
+  enrollBirthPlace.value = '';
+  enrollAddress.value = '';
+  enrollZipCode.value = '';
+  enrollCity.value = '';
+  enrollCpfAmount.value = '';
+  enrollPersonalAmount.value = '';
+  enrollOtherAmount.value = '';
+  enrollCarteProOk.checked = false;
+  openModal('enrollModal');
 }
 
 function closeEnrollModalFn(){
   if(!enrollModal) return;
-  enrollModal.classList.remove('show');
-  enrollModal.setAttribute('aria-hidden','true');
+  closeModal('enrollModal');
 }
 
 async function createTraineeFromAfcCandidate(){
@@ -240,8 +285,17 @@ async function createTraineeFromAfcCandidate(){
   const sessionId = (enrollSessionId?.value || '').trim();
   const last_name = (enrollLastName?.value || '').trim();
   const first_name = (enrollFirstName?.value || '').trim();
+  const birth_date = (enrollBirthDate?.value || '').trim();
+  const birth_city = (enrollBirthPlace?.value || '').trim();
   const email = (enrollEmail?.value || '').trim();
   const phone = (enrollPhone?.value || '').trim();
+  const address = (enrollAddress?.value || '').trim();
+  const zip_code = (enrollZipCode?.value || '').trim();
+  const city = (enrollCity?.value || '').trim();
+  const cpf_amount = (enrollCpfAmount?.value || '').trim();
+  const personal_amount = (enrollPersonalAmount?.value || '').trim();
+  const other_amount = (enrollOtherAmount?.value || '').trim();
+  const carte_pro_ok = !!enrollCarteProOk?.checked;
 
   if(!sessionId){
     alert('Choisis une session');
@@ -261,8 +315,17 @@ async function createTraineeFromAfcCandidate(){
       body: JSON.stringify({
         last_name,
         first_name,
+        birth_date,
+        birth_city,
         email,
         phone,
+        address,
+        zip_code,
+        city,
+        cpf_amount,
+        personal_amount,
+        other_amount,
+        carte_pro_ok,
         send_access: false
       })
     });
