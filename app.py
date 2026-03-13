@@ -9768,6 +9768,37 @@ def api_positioning_test_delete(test_id: str):
     return jsonify({"ok": True, "deleted": len(entries) - len(new_entries)})
 
 
+@app.post("/api/test-positionnement/<test_id>/contact")
+@admin_login_required
+@admin_write_required
+def api_positioning_test_update_contact(test_id: str):
+    payload = request.get_json(silent=True) or {}
+    last_name = normalize_last_name(payload.get("last_name") or "")
+    first_name = normalize_first_name(payload.get("first_name") or "")
+
+    if not last_name or not first_name:
+        return jsonify({"ok": False, "error": "missing_name_fields"}), 400
+
+    data = load_data()
+    entry = next((e for e in data.get("positioning_tests", []) if e.get("id") == test_id), None)
+    if not entry:
+        return jsonify({"ok": False, "error": "not_found"}), 404
+
+    contact = entry.setdefault("contact", {})
+    contact["last_name"] = last_name
+    contact["first_name"] = first_name
+    entry["updated_at"] = _now_iso()
+
+    save_data(data)
+    return jsonify({
+        "ok": True,
+        "contact": {
+            "last_name": contact.get("last_name") or "",
+            "first_name": contact.get("first_name") or "",
+        },
+    })
+
+
 @app.post("/api/test-positionnement/delete_all")
 @admin_login_required
 @admin_write_required
