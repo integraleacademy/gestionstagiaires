@@ -19,6 +19,7 @@ from PIL import Image, ImageOps
 import tempfile
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
 import requests
@@ -10650,6 +10651,7 @@ def _build_etiquette_docx_bytes(session_obj: Dict[str, Any], trainee: Dict[str, 
         "{{DATES}}": f"{fr_date(_session_get(session_obj,'date_start',''))} → {fr_date(_session_get(session_obj,'date_end',''))}",
     }
     _replace_in_docx(doc, replacements)
+    _enforce_etiquette_paper_source(doc)
 
     photo_token = (trainee.get("identity_photo") or "").strip()
     if photo_token:
@@ -10663,6 +10665,27 @@ def _build_etiquette_docx_bytes(session_obj: Dict[str, Any], trainee: Dict[str, 
     buf = BytesIO()
     doc.save(buf)
     return buf.getvalue()
+
+
+def _enforce_etiquette_paper_source(doc: Document) -> None:
+    """
+    Force la source papier Word en mode "étiquette" afin que l'impression
+    cible le bac latéral par défaut quand l'imprimante est configurée ainsi.
+    """
+    # Valeur utilisée dans les modèles Word d'étiquette actuels.
+    # On l'applique explicitement à chaque section pour éviter toute perte
+    # de ce réglage lors de la génération python-docx.
+    etiquette_tray_code = "261"
+
+    for section in doc.sections:
+        sect_pr = section._sectPr
+        paper_src_nodes = sect_pr.xpath("./w:paperSrc")
+        paper_src = paper_src_nodes[0] if paper_src_nodes else None
+        if paper_src is None:
+            paper_src = OxmlElement("w:paperSrc")
+            sect_pr.append(paper_src)
+        paper_src.set(qn("w:first"), etiquette_tray_code)
+        paper_src.set(qn("w:other"), etiquette_tray_code)
 
 
 def _shrink_docx_trailing_empty_paragraphs(doc: Document) -> None:
