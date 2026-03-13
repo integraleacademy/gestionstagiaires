@@ -71,6 +71,12 @@
     background:#fff;
   }
   .afc-filters input{min-width:260px;}
+  .afc-count{
+    margin-left:auto;
+    font-size:14px;
+    font-weight:700;
+    color:#334155;
+  }
 </style>
 
 <div class="card">
@@ -129,6 +135,7 @@
       <option value="passed">Test français : Réussi</option>
       <option value="failed">Test français : Non réussi</option>
     </select>
+    <span class="afc-count" id="afcCandidateCount" aria-live="polite"></span>
   </div>
 </div>
 
@@ -321,6 +328,19 @@ function applyAfcFilters(){
 
     tr.style.display = searchOk && decisionOk && presenceOk && frenchOk ? '' : 'none';
   });
+
+  updateCandidateCount();
+}
+
+function updateCandidateCount(){
+  const rows = [...document.querySelectorAll('#afcTable tbody tr')];
+  const total = rows.length;
+  const visible = rows.filter((row)=> row.style.display !== 'none').length;
+  const label = visible === total
+    ? `Total candidats : ${total}`
+    : `${visible} affiché(s) / ${total} candidat(s)`;
+  const counter = document.getElementById('afcCandidateCount');
+  if(counter) counter.textContent = label;
 }
 
 
@@ -445,6 +465,7 @@ document.querySelectorAll('[data-delete-candidate]').forEach((btn)=>{
       return;
     }
     tr.remove();
+    applyAfcFilters();
   });
 });
 
