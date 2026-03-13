@@ -6,6 +6,7 @@
     <a class="btn btn-outline" href="{{ url_for('admin_afc') }}">← Retour</a>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+    <button class="btn btn-primary" id="btnOpenEnrollModal" type="button">Inscrire</button>
     <a class="btn btn-outline" href="#decisionCard">Décision</a>
     <a class="btn btn-outline" href="#modulesCard">Modules AFC</a>
     <a class="btn btn-outline" href="#testsCard">Résultats des tests</a>
@@ -80,6 +81,12 @@
 <div class="card" id="testsCard" style="margin-top:12px;scroll-margin-top:80px;">
   <h3>Résultats des tests</h3>
   <label style="display:flex;align-items:center;gap:8px;">
+    <input id="presence_afc" type="checkbox" {% if candidate.presence_afc %}checked{% endif %}>
+    Présence AFC
+    <span id="presenceAfcStatus" style="font-weight:700;color:{% if candidate.presence_afc %}#16a34a{% else %}#dc2626{% endif %};">{{ '🟢 Présent' if candidate.presence_afc else '🔴 Absent' }}</span>
+  </label>
+
+  <label style="display:flex;align-items:center;gap:8px;margin-top:8px;">
     <input id="test_francais_reussi" type="checkbox" {% if candidate.test_francais_reussi %}checked{% endif %}>
     Test de français
     <span id="testFrStatus" style="display:{% if candidate.test_francais_reussi %}inline{% else %}none{% endif %};color:#16a34a;font-weight:700;">test de français réussi</span>
@@ -100,6 +107,52 @@
   <div id="commentSaveStatus" style="display:none;margin-top:6px;font-size:13px;color:#475569;"></div>
 </div>
 
+
+<div class="modal-backdrop" id="enrollModal" aria-hidden="true">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-head">
+      <div class="modal-title">Ajouter un stagiaire</div>
+      <button class="icon-btn" id="closeEnrollModalTop" type="button">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <label>
+          <div class="label">Session</div>
+          <select id="enrollSessionId">
+            <option value="">-- Choisir une session --</option>
+            {% for s in sessions %}
+            <option value="{{ s.id }}">{{ s.training_type or 'Formation' }} — {{ s.city or 'Ville non renseignée' }}{% if s.date_start %} ({{ s.date_start }}){% endif %}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          <div class="label">Nom</div>
+          <input id="enrollLastName" type="text" placeholder="Nom">
+        </label>
+        <label>
+          <div class="label">Prénom</div>
+          <input id="enrollFirstName" type="text" placeholder="Prénom">
+        </label>
+        <label>
+          <div class="label">Adresse mail</div>
+          <input id="enrollEmail" type="email" placeholder="email@exemple.com">
+        </label>
+        <label>
+          <div class="label">Téléphone</div>
+          <input id="enrollPhone" type="tel" placeholder="+33600000000">
+        </label>
+      </div>
+      {% if not sessions %}
+      <div class="hint" style="margin-top:10px;color:#b45309;">Aucune session active disponible.</div>
+      {% endif %}
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="closeEnrollModal" type="button">Annuler</button>
+      <button class="btn btn-primary" id="saveEnrollBtn" type="button">Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const candidateId = "{{ candidate.id }}";
 const decision = document.getElementById('decision');
@@ -108,15 +161,89 @@ const btnNotify = document.getElementById('btnNotify');
 const notifyStatus = document.getElementById('notifyStatus');
 const complement = document.getElementById('complement_refus');
 const autre = document.getElementById('complement_refus_autre');
+const presenceAfc = document.getElementById('presence_afc');
+const presenceAfcStatus = document.getElementById('presenceAfcStatus');
 const testFrancaisReussi = document.getElementById('test_francais_reussi');
 const testFrStatus = document.getElementById('testFrStatus');
 const cnapsStatusBadge = document.getElementById('cnapsStatusBadge');
 const testResultsComment = document.getElementById('test_results_comment');
 const commentSaveStatus = document.getElementById('commentSaveStatus');
+const enrollModal = document.getElementById('enrollModal');
+const btnOpenEnrollModal = document.getElementById('btnOpenEnrollModal');
+const closeEnrollModal = document.getElementById('closeEnrollModal');
+const closeEnrollModalTop = document.getElementById('closeEnrollModalTop');
+const saveEnrollBtn = document.getElementById('saveEnrollBtn');
+const enrollSessionId = document.getElementById('enrollSessionId');
+const enrollLastName = document.getElementById('enrollLastName');
+const enrollFirstName = document.getElementById('enrollFirstName');
+const enrollEmail = document.getElementById('enrollEmail');
+const enrollPhone = document.getElementById('enrollPhone');
 let notificationSentAt = "{{ candidate.notification_sent_at or '' }}";
+let savingPresenceAfc = false;
 let savingTestFr = false;
 let commentSaveTimer = null;
 let savingComment = false;
+let savingEnroll = false;
+
+function openEnrollModal(){
+  if(!enrollModal) return;
+  enrollLastName.value = (document.getElementById('nom').value || '').trim();
+  enrollFirstName.value = (document.getElementById('prenom').value || '').trim();
+  enrollEmail.value = (document.getElementById('email').value || '').trim();
+  enrollPhone.value = (document.getElementById('telephone').value || '').trim();
+  enrollModal.classList.add('show');
+  enrollModal.setAttribute('aria-hidden','false');
+}
+
+function closeEnrollModalFn(){
+  if(!enrollModal) return;
+  enrollModal.classList.remove('show');
+  enrollModal.setAttribute('aria-hidden','true');
+}
+
+async function createTraineeFromAfcCandidate(){
+  if(savingEnroll) return;
+  const sessionId = (enrollSessionId?.value || '').trim();
+  const last_name = (enrollLastName?.value || '').trim();
+  const first_name = (enrollFirstName?.value || '').trim();
+  const email = (enrollEmail?.value || '').trim();
+  const phone = (enrollPhone?.value || '').trim();
+
+  if(!sessionId){
+    alert('Choisis une session');
+    return;
+  }
+  if(!last_name || !first_name){
+    alert('Nom + prénom obligatoires');
+    return;
+  }
+
+  savingEnroll = true;
+  if(saveEnrollBtn) saveEnrollBtn.disabled = true;
+  try{
+    const r = await fetch(`/api/sessions/${sessionId}/trainees/create`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        last_name,
+        first_name,
+        email,
+        phone,
+        send_access: false
+      })
+    });
+    const body = await r.json().catch(()=>({}));
+    if(!r.ok || !body.ok){
+      alert('Erreur ajout stagiaire');
+      return;
+    }
+    closeEnrollModalFn();
+    alert('Stagiaire inscrit avec succès');
+  } finally {
+    savingEnroll = false;
+    if(saveEnrollBtn) saveEnrollBtn.disabled = false;
+  }
+}
 
 function cnapsClassFromText(txt){
   const t = (txt || '').toUpperCase();
@@ -160,6 +287,8 @@ function refreshUI(){
   autre.style.display = complement.value === 'Autre' ? 'block' : 'none';
 
   testFrStatus.style.display = testFrancaisReussi.checked ? 'inline' : 'none';
+  presenceAfcStatus.textContent = presenceAfc.checked ? '🟢 Présent' : '🔴 Absent';
+  presenceAfcStatus.style.color = presenceAfc.checked ? '#16a34a' : '#dc2626';
 
   const formattedDate = formatNotificationDate(notificationSentAt);
   if(formattedDate){
@@ -186,7 +315,23 @@ updateTotal();
 applyCnapsBadge(cnapsStatusBadge);
 decision.addEventListener('change', refreshUI);
 complement.addEventListener('change', refreshUI);
+presenceAfc.addEventListener('change', refreshUI);
 testFrancaisReussi.addEventListener('change', refreshUI);
+presenceAfc.addEventListener('change', async ()=>{
+  if(savingPresenceAfc) return;
+  const previousValue = !presenceAfc.checked;
+  savingPresenceAfc = true;
+  try {
+    const ok = await saveCandidate();
+    if(!ok){
+      presenceAfc.checked = previousValue;
+      refreshUI();
+      return;
+    }
+  } finally {
+    savingPresenceAfc = false;
+  }
+});
 testFrancaisReussi.addEventListener('change', async ()=>{
   if(savingTestFr) return;
   const previousValue = !testFrancaisReussi.checked;
@@ -258,6 +403,7 @@ async function saveCandidate(){
     complement_refus_autre: document.getElementById('complement_refus_autre').value,
     dates_formation: document.getElementById('dates_formation').value,
     test_francais_reussi: testFrancaisReussi.checked,
+    presence_afc: presenceAfc.checked,
     test_results_comment: testResultsComment.value,
     modules: {
       formation_technique: document.getElementById('mft').value,

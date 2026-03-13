@@ -32,6 +32,7 @@
     <h1 style="margin:0;">Gestion des AFC</h1>
     <div style="display:flex;gap:8px;">
       <button class="btn btn-primary" id="btnAddCandidate">Ajouter un candidat</button>
+      <button class="btn" id="btnNotifyPending" type="button">Notifier tous les candidats</button>
       <button class="btn btn-orange" id="btnImportCandidates" type="button">Importer</button>
       <a class="btn btn-outline" href="{{ url_for('admin_afc_export') }}" target="_blank" rel="noopener">Export</a>
     </div>
@@ -61,12 +62,17 @@
   <table class="table" id="afcTable">
     <thead>
       <tr>
-        <th>Nom</th><th>Prénom</th><th>Mail</th><th>Téléphone</th><th>Décision</th><th>Test de français</th><th>Statut notification</th><th>Statut CNAPS</th><th>Fiche candidat</th><th>Actions</th>
+        <th>Présence AFC</th><th>Nom</th><th>Prénom</th><th>Mail</th><th>Téléphone</th><th>Décision</th><th>Test de français</th><th>Statut notification</th><th>Statut CNAPS</th><th>Fiche candidat</th><th>Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for c in candidates %}
       <tr data-id="{{ c.id }}">
+        <td>
+          <button type="button" class="afc-toggle {{ 'on' if c.presence_afc else '' }}" data-toggle-presence>
+            {{ '🟢 Présent' if c.presence_afc else '🔴 Absent' }}
+          </button>
+        </td>
         <td><input data-field="nom" value="{{ c.nom }}"></td>
         <td><input data-field="prenom" value="{{ c.prenom }}"></td>
         <td><input data-field="email" value="{{ c.email or '' }}"></td>
@@ -128,6 +134,7 @@ const newPrenom = document.getElementById('newPrenom');
 const newMail = document.getElementById('newMail');
 const newTel = document.getElementById('newTel');
 const btnImportCandidates = document.getElementById('btnImportCandidates');
+const btnNotifyPending = document.getElementById('btnNotifyPending');
 const afcImportInput = document.getElementById('afcImportInput');
 
 function openModal(){ modal.classList.add('show'); modal.setAttribute('aria-hidden','false'); }
@@ -191,6 +198,27 @@ function getCandidateFieldValue(tr, field){
 btnImportCandidates.addEventListener('click', ()=>{
   afcImportInput.value = '';
   afcImportInput.click();
+});
+
+btnNotifyPending.addEventListener('click', async ()=>{
+  if(!confirm('Envoyer la notification à tous les candidats "non envoyée" ?')) return;
+  btnNotifyPending.disabled = true;
+  try{
+    const res = await fetch('/api/admin/afc/candidates/notify-pending', { method:'POST' });
+    const body = await res.json().catch(()=>({}));
+    if(!res.ok || !body.ok){
+      alert('Erreur envoi des notifications');
+      return;
+    }
+    alert(`Notifications envoyées: ${body.notified || 0}. Ignorés: ${body.skipped || 0}. Échecs: ${body.failed || 0}.`);
+    if((body.notified || 0) > 0){
+      location.reload();
+    }
+  }catch(_err){
+    alert('Erreur envoi des notifications');
+  }finally{
+    btnNotifyPending.disabled = false;
+  }
 });
 
 afcImportInput.addEventListener('change', async ()=>{
@@ -310,6 +338,22 @@ document.querySelectorAll('[data-toggle-decision]').forEach((btn)=>{
       target.textContent = !enabled ? '🟢 Retenue' : '🔴 Non retenue';
     }catch(_err){
       alert('Erreur sauvegarde décision');
+    }
+  });
+});
+
+document.querySelectorAll('[data-toggle-presence]').forEach((btn)=>{
+  btn.addEventListener('click', async (e)=>{
+    const target = e.currentTarget;
+    const tr = target.closest('tr');
+    const enabled = target.classList.contains('on');
+    const presence_afc = !enabled;
+    try{
+      await patchCandidate(tr, { presence_afc });
+      target.classList.toggle('on', presence_afc);
+      target.textContent = presence_afc ? '🟢 Présent' : '🔴 Absent';
+    }catch(_err){
+      alert('Erreur sauvegarde présence AFC');
     }
   });
 });

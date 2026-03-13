@@ -150,3 +150,92 @@ class AfcImageImportApiTests(unittest.TestCase):
         self.assertEqual(len(data["afc"]["candidates"]), 2)
 
 
+class AfcBulkNotifyApiTests(unittest.TestCase):
+    def setUp(self):
+        self.client = gestion_app.app.test_client()
+        self.original_load_data = gestion_app.load_data
+        self.original_save_data = gestion_app.save_data
+        self.original_brevo_send_email = gestion_app.brevo_send_email
+
+    def tearDown(self):
+        gestion_app.load_data = self.original_load_data
+        gestion_app.save_data = self.original_save_data
+        gestion_app.brevo_send_email = self.original_brevo_send_email
+
+    def test_notify_pending_skips_already_sent_and_updates_pending(self):
+        data = {
+            "afc": {
+                "mail_templates": {
+                    "retained": "Bonjour {{prenom}}",
+                    "rejected": "Au revoir {{prenom}}",
+                },
+                "candidates": [
+                    {
+                        "id": "AFC-1",
+                        "email": "sent@example.com",
+                        "prenom": "Deja",
+                        "decision": "RETENU",
+                        "notification_status": "ENVOYEE",
+                    },
+                    {
+                        "id": "AFC-2",
+                        "email": "pending@example.com",
+                        "prenom": "Nouveau",
+                        "decision": "RETENU",
+                        "notification_status": "NON ENVOYEE",
+                    },
+                ],
+            }
+        }
+        saved = {"count": 0}
+        sent = []
+        gestion_app.load_data = lambda: data
+        gestion_app.save_data = lambda payload: saved.__setitem__("count", saved["count"] + 1)
+        gestion_app.brevo_send_email = lambda to_email, *_: sent.append(to_email) or True
+
+        response = self.client.post("/api/admin/afc/candidates/notify-pending")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["notified"], 1)
+        self.assertEqual(payload["skipped"], 1)
+        self.assertEqual(payload["failed"], 0)
+        self.assertEqual(sent, ["pending@example.com"])
+        self.assertEqual(saved["count"], 1)
+        self.assertEqual(data["afc"]["candidates"][1]["notification_status"], "ENVOYEE")
+        self.assertTrue(data["afc"]["candidates"][1].get("notification_sent_at"))
+
+    def test_notify_pending_counts_failures_without_saving(self):
+        data = {
+            "afc": {
+                "mail_templates": {
+                    "retained": "Bonjour {{prenom}}",
+                    "rejected": "Au revoir {{prenom}}",
+                },
+                "candidates": [
+                    {
+                        "id": "AFC-1",
+                        "email": "",
+                        "prenom": "SansMail",
+                        "decision": "NON RETENU",
+                        "notification_status": "NON ENVOYEE",
+                    }
+                ],
+            }
+        }
+        saved = {"count": 0}
+        gestion_app.load_data = lambda: data
+        gestion_app.save_data = lambda payload: saved.__setitem__("count", saved["count"] + 1)
+        gestion_app.brevo_send_email = lambda *_: True
+
+        response = self.client.post("/api/admin/afc/candidates/notify-pending")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["notified"], 0)
+        self.assertEqual(payload["skipped"], 0)
+        self.assertEqual(payload["failed"], 1)
+        self.assertEqual(saved["count"], 0)
+
