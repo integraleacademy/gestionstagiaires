@@ -73,6 +73,7 @@
     <label>PAF <input id="mpaf" type="number" step="0.5" value="{{ modules.paf or 0 }}"></label>
   </div>
   <div style="margin-top:8px;font-weight:700;">TOTAL DES HEURES : <span id="hoursTotal">0</span></div>
+  <div id="modulesSaveStatus" style="display:none;margin-top:6px;font-size:13px;color:#475569;"></div>
   <label style="display:block;margin-top:8px;">Dates de formation
     <textarea id="dates_formation" rows="3" style="width:100%;">{{ candidate.dates_formation or '' }}</textarea>
   </label>
@@ -214,6 +215,8 @@ const testFrStatus = document.getElementById('testFrStatus');
 const cnapsStatusBadge = document.getElementById('cnapsStatusBadge');
 const testResultsComment = document.getElementById('test_results_comment');
 const commentSaveStatus = document.getElementById('commentSaveStatus');
+const modulesSaveStatus = document.getElementById('modulesSaveStatus');
+const datesFormation = document.getElementById('dates_formation');
 const enrollModal = document.getElementById('enrollModal');
 const btnOpenEnrollModal = document.getElementById('btnOpenEnrollModal');
 const saveEnrollBtn = document.getElementById('saveEnrollBtn');
@@ -236,6 +239,8 @@ let savingPresenceAfc = false;
 let savingTestFr = false;
 let commentSaveTimer = null;
 let savingComment = false;
+let modulesSaveTimer = null;
+let savingModules = false;
 let savingEnroll = false;
 
 if(btnOpenEnrollModal){
@@ -442,7 +447,35 @@ testFrancaisReussi.addEventListener('change', async ()=>{
     savingTestFr = false;
   }
 });
-['mft','mrn','msp','mpaf'].forEach(id=>document.getElementById(id).addEventListener('input', updateTotal));
+function scheduleModulesAutosave(){
+  if(modulesSaveTimer) clearTimeout(modulesSaveTimer);
+  modulesSaveStatus.style.display = 'block';
+  modulesSaveStatus.textContent = 'Modifications en attente...';
+  modulesSaveTimer = setTimeout(async ()=>{
+    if(savingModules) return;
+    savingModules = true;
+    modulesSaveStatus.textContent = 'Sauvegarde...';
+    try {
+      const ok = await saveCandidate();
+      modulesSaveStatus.textContent = ok ? 'Modules sauvegardés automatiquement' : 'Erreur de sauvegarde';
+      if(ok){
+        setTimeout(()=>{
+          modulesSaveStatus.style.display = 'none';
+        }, 1600);
+      }
+    } finally {
+      savingModules = false;
+    }
+  }, 600);
+}
+
+['mft','mrn','msp','mpaf'].forEach((id)=>{
+  document.getElementById(id).addEventListener('input', ()=>{
+    updateTotal();
+    scheduleModulesAutosave();
+  });
+});
+datesFormation.addEventListener('input', scheduleModulesAutosave);
 
 async function saveTestResultsComment(){
   if(savingComment) return;
