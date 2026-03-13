@@ -4408,6 +4408,53 @@ AFC_REFUSAL_COMPLEMENTS = [
     "La demande CNAPS est en cours",
     "Autre",
 ]
+AFC_PRESENCE_STATUS_OPTIONS = ["A_CONVOQUER", "CONVOQUE", "PRESENT", "ABSENT"]
+AFC_PRESENCE_STATUS_LABELS = {
+    "A_CONVOQUER": "🟠 A convoquer",
+    "CONVOQUE": "🔵 Convoqué",
+    "PRESENT": "🟢 Présent",
+    "ABSENT": "🔴 Absent",
+}
+AFC_DEFAULT_CONVOCATION_EMAIL_SUBJECT = "Convocation AFC APS + SSIAP 1"
+AFC_DEFAULT_CONVOCATION_EMAIL_TEMPLATE = """Bonjour,
+
+Je me permets de revenir vers vous concernant la formation Agent de sécurité privée + Agent de sécurité incendie (SSIAP 1) financée par France Travail.
+
+Je vous confirme que nous avons RDV le :
+- Mercredi 11 février 2026
+- De 08h30 à 12h00
+- Dans nos locaux Intégrale Sécurité Formations, 54 chemin du Carreou, 83480 PUGET SUR ARGENS.
+
+Afin que nous puissions envoyer au Ministère de l'intérieur (CNAPS) une demande d'autorisation préalable d'entrée en formation (enquête administrative, vérification des antécédents judiciaires), nous vous remercions de bien vouloir nous faire parvenir, DES QUE POSSIBLE ET AVANT NOTRE RDV, les documents listé ci-dessous.
+
+Envoyez vos documents en cliquant ici. Les envois par mail ne sont pas acceptés.
+
+➡️ Une copie LISIBLE de votre pièce d'identité (carte d'identité ou passeport - le permis de conduire n'est pas accepté)
+➡️ Un justificatif de domicile de MOINS DE 3 MOIS (pas de facture de téléphone, uniquement : facture d'eau, d'électricité, de gaz, ou quittance de loyer).
+
+➡️ Si vous êtes hébergé, vous devez joindre la pièce d'identité de l'hébergeant et une attestation d'hébergement en utilisant ce modèle : https://www.service-public.fr/simulateur/calcul/AttestationHebergement
+
+Envoyez vos documents en cliquant ici. Les envois par mail ne sont pas acceptés.
+
+Je reste à votre disposition pour tous renseignements complémentaires,
+Je vous souhaite une excellente journée,
+
+Clément VAILLANT - Intégrale Academy"""
+AFC_DEFAULT_CONVOCATION_SMS_TEMPLATE = """Bonjour,
+
+Je me permets de revenir vers vous concernant la formation Agent de sécurité privée + Agent de sécurité incendie (SSIAP 1) financée par France Travail.
+
+Je vous confirme que nous avons RDV le :
+
+- Mercredi 11 février 2026
+
+- De 08h30 à 12h00
+
+- Dans nos locaux Intégrale Sécurité Formations, 54 chemin du Carreou, 83480 PUGET SUR ARGENS.
+
+Nous vous remercions de bien vouloir compléter DES QUE POSSIBLE ET AVANT NOTRE RDV, le formulaire en cliquant ici : https://cnapsv5-1.onrender.com/
+
+Clément VAILLANT - Intégrale Sécurité Formations (04 22 47 07 68)"""
 AFC_DEFAULT_MAIL_TEMPLATE_RETAINED = """Bonjour,
 
 Je me permets de revenir vers vous concernant la formation Agent de sécurité privée (APS) + Agent de sécurité incendie (SSIAP 1) financée par France Travail qui débutera le 1er avril 2026.
@@ -6532,6 +6579,10 @@ def _afc_bucket(data: Dict[str, Any]) -> Dict[str, Any]:
     bucket = data.setdefault("afc", {})
     if not isinstance(bucket.get("candidates"), list):
         bucket["candidates"] = []
+    for candidate in bucket["candidates"]:
+        if isinstance(candidate, dict):
+            candidate.setdefault("presence_afc", False)
+            candidate.setdefault("date_icop", "")
     if not isinstance(bucket.get("mail_templates"), dict):
         bucket["mail_templates"] = {}
     mt = bucket["mail_templates"]
@@ -6539,6 +6590,12 @@ def _afc_bucket(data: Dict[str, Any]) -> Dict[str, Any]:
         mt["retained"] = AFC_DEFAULT_MAIL_TEMPLATE_RETAINED
     if not (mt.get("rejected") or "").strip():
         mt["rejected"] = AFC_DEFAULT_MAIL_TEMPLATE_REJECTED
+    if not (mt.get("convocation_subject") or "").strip():
+        mt["convocation_subject"] = AFC_DEFAULT_CONVOCATION_EMAIL_SUBJECT
+    if not (mt.get("convocation_email") or "").strip():
+        mt["convocation_email"] = AFC_DEFAULT_CONVOCATION_EMAIL_TEMPLATE
+    if not (mt.get("convocation_sms") or "").strip():
+        mt["convocation_sms"] = AFC_DEFAULT_CONVOCATION_SMS_TEMPLATE
     if not isinstance(bucket.get("modules"), dict):
         bucket["modules"] = {}
     modules = bucket["modules"]
@@ -6546,6 +6603,21 @@ def _afc_bucket(data: Dict[str, Any]) -> Dict[str, Any]:
         modules.setdefault(key, 0)
     bucket.setdefault("dates_formation", "")
     bucket.setdefault("export_title", "Export Gestion AFC")
+
+    changed = False
+    for candidate in bucket["candidates"]:
+        if "presence_afc_status" not in candidate:
+            if bool(candidate.get("presence_afc")):
+                candidate["presence_afc_status"] = "PRESENT"
+            else:
+                candidate["presence_afc_status"] = "A_CONVOQUER"
+            changed = True
+        status = str(candidate.get("presence_afc_status") or "").strip().upper()
+        if status not in AFC_PRESENCE_STATUS_OPTIONS:
+            candidate["presence_afc_status"] = "A_CONVOQUER"
+            changed = True
+    if changed:
+        save_data(data)
     return bucket
 
 
@@ -6620,6 +6692,7 @@ def admin_afc():
         "admin_afc.html",
         afc=bucket,
         candidates=ordered_candidates,
+        afc_presence_status_labels=AFC_PRESENCE_STATUS_LABELS,
         refusal_reasons=AFC_REFUSAL_REASONS,
         refusal_complements=AFC_REFUSAL_COMPLEMENTS,
     )
@@ -6644,7 +6717,7 @@ def api_admin_afc_create_candidate():
         "email": email,
         "telephone": telephone,
         "decision": "",
-        "notification_status": "NON ENVOYEE",
+        "notification_status": "",
         "cnaps_status": fetch_cnaps_status_by_name(nom, prenom) or "INCONNU",
         "motif_refus": "",
         "complement_refus": "",
@@ -6656,8 +6729,9 @@ def api_admin_afc_create_candidate():
             "paf": 0,
         },
         "dates_formation": "",
-        "test_francais_reussi": False,
+        "test_francais_reussi": None,
         "presence_afc": False,
+        "presence_afc_status": "A_CONVOQUER",
         "test_results_comment": "",
         "created_at": _now_iso(),
     }
@@ -6717,7 +6791,7 @@ def api_admin_afc_import_from_image():
             "email": str(parsed.get("email") or "").strip(),
             "telephone": str(parsed.get("telephone") or "").strip(),
             "decision": "",
-            "notification_status": "NON ENVOYEE",
+            "notification_status": "",
             "cnaps_status": fetch_cnaps_status_by_name(nom, prenom) or "INCONNU",
             "motif_refus": "",
             "complement_refus": "",
@@ -6729,8 +6803,9 @@ def api_admin_afc_import_from_image():
                 "paf": 0,
             },
             "dates_formation": "",
-            "test_francais_reussi": False,
+            "test_francais_reussi": None,
             "presence_afc": False,
+            "presence_afc_status": "A_CONVOQUER",
             "test_results_comment": "",
             "created_at": _now_iso(),
         }
@@ -6758,6 +6833,9 @@ def api_admin_afc_save_mail_templates():
     templates = bucket["mail_templates"]
     templates["retained"] = str(payload.get("retained") or "").strip() or AFC_DEFAULT_MAIL_TEMPLATE_RETAINED
     templates["rejected"] = str(payload.get("rejected") or "").strip() or AFC_DEFAULT_MAIL_TEMPLATE_REJECTED
+    templates["convocation_subject"] = str(payload.get("convocation_subject") or "").strip() or AFC_DEFAULT_CONVOCATION_EMAIL_SUBJECT
+    templates["convocation_email"] = str(payload.get("convocation_email") or "").strip() or AFC_DEFAULT_CONVOCATION_EMAIL_TEMPLATE
+    templates["convocation_sms"] = str(payload.get("convocation_sms") or "").strip() or AFC_DEFAULT_CONVOCATION_SMS_TEMPLATE
     save_data(data)
     return jsonify({"ok": True})
 
@@ -6794,6 +6872,7 @@ def api_admin_afc_update_candidate(candidate_id: str):
         "identifiant_ft", "nom", "prenom", "email", "telephone", "decision",
         "motif_refus", "complement_refus", "complement_refus_autre", "dates_formation",
         "cnaps_status", "notification_status", "test_results_comment",
+        "date_icop",
     ):
         if field in payload:
             value = str(payload.get(field) or "").strip()
@@ -6825,6 +6904,18 @@ def api_admin_afc_update_candidate(candidate_id: str):
 
     if "presence_afc" in payload:
         candidate["presence_afc"] = bool(payload.get("presence_afc"))
+
+    if "presence_afc_status" in payload:
+        old_status = str(candidate.get("presence_afc_status") or "").strip().upper()
+        new_status = str(payload.get("presence_afc_status") or "").strip().upper()
+        if new_status not in AFC_PRESENCE_STATUS_OPTIONS:
+            return jsonify({"ok": False, "error": "Statut présence AFC invalide"}), 400
+        candidate["presence_afc_status"] = new_status
+        candidate["presence_afc"] = new_status == "PRESENT"
+        if old_status != "CONVOQUE" and new_status == "CONVOQUE":
+            ok, result = _send_afc_convocation_notification(bucket, candidate)
+            if not ok:
+                return jsonify({"ok": False, "error": result}), 500
 
     save_data(data)
     return jsonify({"ok": True, "candidate": candidate})
@@ -6890,6 +6981,41 @@ def _send_afc_candidate_notification(bucket: dict, candidate: dict) -> tuple[boo
     return True, ""
 
 
+def _send_afc_convocation_notification(bucket: dict, candidate: dict) -> tuple[bool, str]:
+    templates = bucket.get("mail_templates") or {}
+
+    email = (candidate.get("email") or "").strip()
+    phone = (candidate.get("telephone") or "").strip()
+    if not email and not phone:
+        return False, "Email et téléphone manquants"
+
+    subject = (templates.get("convocation_subject") or "").strip() or AFC_DEFAULT_CONVOCATION_EMAIL_SUBJECT
+    raw_mail = _afc_render_mail_template(
+        (templates.get("convocation_email") or "").strip() or AFC_DEFAULT_CONVOCATION_EMAIL_TEMPLATE,
+        candidate,
+    )
+    raw_sms = _afc_render_mail_template(
+        (templates.get("convocation_sms") or "").strip() or AFC_DEFAULT_CONVOCATION_SMS_TEMPLATE,
+        candidate,
+    )
+
+    email_ok = True
+    if email:
+        html = mail_layout("<p>" + "</p><p>".join([line for line in raw_mail.splitlines() if line.strip()]) + "</p>")
+        email_ok = brevo_send_email(email, subject, html)
+
+    sms_ok = True
+    if phone:
+        sms_ok = brevo_send_sms(phone, raw_sms)
+
+    candidate["convocation_email_sent_at"] = _now_iso() if email_ok and email else ""
+    candidate["convocation_sms_sent_at"] = _now_iso() if sms_ok and phone else ""
+
+    if (email and not email_ok) or (phone and not sms_ok):
+        return False, "Échec envoi convocation"
+    return True, ""
+
+
 @app.post("/api/admin/afc/candidates/notify-pending")
 def api_admin_afc_notify_pending_candidates():
     data = load_data()
@@ -6925,7 +7051,7 @@ def admin_afc_candidate_sheet(candidate_id: str):
     candidate = next((c for c in bucket["candidates"] if str(c.get("id") or "") == candidate_id), None)
     if not candidate:
         abort(404)
-    candidate.setdefault("test_francais_reussi", False)
+    candidate.setdefault("test_francais_reussi", None)
     candidate.setdefault("test_results_comment", "")
     positioning_score = _afc_find_latest_positioning_score(candidate, list(data.get("positioning_tests") or []))
     return render_template(

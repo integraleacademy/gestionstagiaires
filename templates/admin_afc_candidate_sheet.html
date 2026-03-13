@@ -80,10 +80,19 @@
 
 <div class="card" id="testsCard" style="margin-top:12px;scroll-margin-top:80px;">
   <h3>Résultats des tests</h3>
-  <label style="display:flex;align-items:center;gap:8px;">
-    <input id="presence_afc" type="checkbox" {% if candidate.presence_afc %}checked{% endif %}>
+  {% set presence_status = (candidate.presence_afc_status or ('PRESENT' if candidate.presence_afc else 'A_CONVOQUER'))|upper %}
+  <label style="display:block;">
     Présence AFC
-    <span id="presenceAfcStatus" style="font-weight:700;color:{% if candidate.presence_afc %}#16a34a{% else %}#dc2626{% endif %};">{{ '🟢 Présent' if candidate.presence_afc else '🔴 Absent' }}</span>
+    <select id="presence_afc_status">
+      <option value="A_CONVOQUER" {% if presence_status == 'A_CONVOQUER' %}selected{% endif %}>🟠 A convoquer</option>
+      <option value="CONVOQUE" {% if presence_status == 'CONVOQUE' %}selected{% endif %}>🔵 Convoqué</option>
+      <option value="PRESENT" {% if presence_status == 'PRESENT' %}selected{% endif %}>🟢 Présent</option>
+      <option value="ABSENT" {% if presence_status == 'ABSENT' %}selected{% endif %}>🔴 Absent</option>
+    </select>
+  </label>
+
+  <label style="display:block;margin-top:8px;">Date ICOP
+    <input id="date_icop" type="date" value="{{ candidate.date_icop or '' }}">
   </label>
 
   <label style="display:flex;align-items:center;gap:8px;margin-top:8px;">
@@ -161,9 +170,9 @@ const btnNotify = document.getElementById('btnNotify');
 const notifyStatus = document.getElementById('notifyStatus');
 const complement = document.getElementById('complement_refus');
 const autre = document.getElementById('complement_refus_autre');
-const presenceAfc = document.getElementById('presence_afc');
-const presenceAfcStatus = document.getElementById('presenceAfcStatus');
+const presenceAfcStatusSelect = document.getElementById('presence_afc_status');
 const testFrancaisReussi = document.getElementById('test_francais_reussi');
+const dateIcop = document.getElementById('date_icop');
 const testFrStatus = document.getElementById('testFrStatus');
 const cnapsStatusBadge = document.getElementById('cnapsStatusBadge');
 const testResultsComment = document.getElementById('test_results_comment');
@@ -184,6 +193,31 @@ let savingTestFr = false;
 let commentSaveTimer = null;
 let savingComment = false;
 let savingEnroll = false;
+
+if(btnOpenEnrollModal){
+  btnOpenEnrollModal.addEventListener('click', openEnrollModal);
+}
+if(closeEnrollModal){
+  closeEnrollModal.addEventListener('click', closeEnrollModalFn);
+}
+if(closeEnrollModalTop){
+  closeEnrollModalTop.addEventListener('click', closeEnrollModalFn);
+}
+if(saveEnrollBtn){
+  saveEnrollBtn.addEventListener('click', createTraineeFromAfcCandidate);
+}
+if(enrollModal){
+  enrollModal.addEventListener('click', (event)=>{
+    if(event.target === enrollModal){
+      closeEnrollModalFn();
+    }
+  });
+}
+document.addEventListener('keydown', (event)=>{
+  if(event.key === 'Escape' && enrollModal?.classList.contains('show')){
+    closeEnrollModalFn();
+  }
+});
 
 function openEnrollModal(){
   if(!enrollModal) return;
@@ -287,9 +321,6 @@ function refreshUI(){
   autre.style.display = complement.value === 'Autre' ? 'block' : 'none';
 
   testFrStatus.style.display = testFrancaisReussi.checked ? 'inline' : 'none';
-  presenceAfcStatus.textContent = presenceAfc.checked ? '🟢 Présent' : '🔴 Absent';
-  presenceAfcStatus.style.color = presenceAfc.checked ? '#16a34a' : '#dc2626';
-
   const formattedDate = formatNotificationDate(notificationSentAt);
   if(formattedDate){
     btnNotify.classList.remove('btn-primary');
@@ -315,23 +346,24 @@ updateTotal();
 applyCnapsBadge(cnapsStatusBadge);
 decision.addEventListener('change', refreshUI);
 complement.addEventListener('change', refreshUI);
-presenceAfc.addEventListener('change', refreshUI);
 testFrancaisReussi.addEventListener('change', refreshUI);
-presenceAfc.addEventListener('change', async ()=>{
+presenceAfcStatusSelect.addEventListener('change', async ()=>{
   if(savingPresenceAfc) return;
-  const previousValue = !presenceAfc.checked;
+  const previousValue = presenceAfcStatusSelect.dataset.previousValue || 'A_CONVOQUER';
   savingPresenceAfc = true;
   try {
     const ok = await saveCandidate();
     if(!ok){
-      presenceAfc.checked = previousValue;
+      presenceAfcStatusSelect.value = previousValue;
       refreshUI();
       return;
     }
+    presenceAfcStatusSelect.dataset.previousValue = presenceAfcStatusSelect.value;
   } finally {
     savingPresenceAfc = false;
   }
 });
+presenceAfcStatusSelect.dataset.previousValue = presenceAfcStatusSelect.value;
 testFrancaisReussi.addEventListener('change', async ()=>{
   if(savingTestFr) return;
   const previousValue = !testFrancaisReussi.checked;
@@ -403,7 +435,7 @@ async function saveCandidate(){
     complement_refus_autre: document.getElementById('complement_refus_autre').value,
     dates_formation: document.getElementById('dates_formation').value,
     test_francais_reussi: testFrancaisReussi.checked,
-    presence_afc: presenceAfc.checked,
+    presence_afc_status: presenceAfcStatusSelect.value,
     test_results_comment: testResultsComment.value,
     modules: {
       formation_technique: document.getElementById('mft').value,

@@ -68,7 +68,7 @@
   <table>
     <thead>
       <tr>
-        <th>Identifiant FT</th><th>Nom</th><th>Prénom</th><th>Statut CNAPS</th><th>Décision</th><th>Motif de refus</th><th>Complément refus</th>
+        <th>Présence ICOP</th><th>Date ICOP</th><th>Identifiant FT</th><th>Nom</th><th>Prénom</th><th>Statut CNAPS</th><th>Test de français</th><th>Décision</th><th>Motif de refus</th><th>Complément refus</th>
         <th>Formation technique</th><th>Remise à niveau</th><th>Soutien personnalisé</th><th>PAF</th><th>TOTAL DES HEURES</th><th>Dates de formation</th>
       </tr>
     </thead>
@@ -79,10 +79,18 @@
       {% set decision = (c.decision or '')|upper %}
       {% set cnaps = (c.cnaps_status or 'INCONNU')|upper %}
       <tr>
+        {% set presence_status = (c.presence_afc_status or ('PRESENT' if c.presence_afc else 'A_CONVOQUER'))|upper %}
+        <td>
+          {% if presence_status == 'A_CONVOQUER' %}🟠 A convoquer
+          {% elif presence_status == 'CONVOQUE' %}🔵 Convoqué
+          {% elif presence_status == 'PRESENT' %}🟢 Présent
+          {% else %}🔴 Absent{% endif %}
+        </td>
         <td>{{ c.identifiant_ft or '' }}</td>
         <td>{{ c.nom or '' }}</td>
         <td>{{ c.prenom or '' }}</td>
         <td class="{% if cnaps == 'ACCEPTÉ' or cnaps == 'ACCEPTE' %}cnaps-accepte{% elif cnaps == 'REFUSÉ' or cnaps == 'REFUSE' %}cnaps-refuse{% endif %}">{{ c.cnaps_status or 'INCONNU' }}</td>
+        <td>{{ '🟢 Réussi' if c.test_francais_reussi else '🔴 Non réussi' }}</td>
         <td class="{% if decision == 'RETENU' %}decision-retenu{% elif decision == 'NON RETENU' %}decision-non-retenu{% elif decision %}decision-autre{% endif %}">{{ c.decision or '' }}</td>
         <td>{{ c.motif_refus or '' }}</td>
         <td>{{ c.complement_refus_autre if (c.complement_refus or '') == 'Autre' else (c.complement_refus or '') }}</td>
