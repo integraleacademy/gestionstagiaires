@@ -4292,10 +4292,23 @@ def fetch_cnaps_lookup_by_name(nom: str, prenom: str) -> Optional[Dict[str, Any]
         if r.status_code != 200:
             return None
         data = r.json()
-        status = data.get("statut_cnaps") or data.get("status")
+        payload = data if isinstance(data, dict) else {}
+        nested_payload = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+        status = (
+            payload.get("statut_cnaps")
+            or payload.get("status")
+            or payload.get("statut")
+            or payload.get("cnaps_status")
+            or nested_payload.get("statut_cnaps")
+            or nested_payload.get("status")
+            or nested_payload.get("statut")
+            or nested_payload.get("cnaps_status")
+        )
         return {
             "status": str(status or "").strip() or "INCONNU",
-            "statut_cnaps_history": _normalize_cnaps_remote_history(data.get("statut_cnaps_history")),
+            "statut_cnaps_history": _normalize_cnaps_remote_history(
+                payload.get("statut_cnaps_history") or nested_payload.get("statut_cnaps_history")
+            ),
         }
     except Exception:
         return None

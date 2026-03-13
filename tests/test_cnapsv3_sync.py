@@ -112,6 +112,39 @@ class CnapsSyncTests(unittest.TestCase):
         self.assertIsNone(out)
 
 
+class CnapsLookupByNameParsingTests(unittest.TestCase):
+    def setUp(self):
+        self.original_endpoint = gestion_app.CNAPS_LOOKUP_ENDPOINT
+        self.original_get = gestion_app.requests.get
+        gestion_app.CNAPS_LOOKUP_ENDPOINT = "https://cnaps.example/api"
+
+    def tearDown(self):
+        gestion_app.CNAPS_LOOKUP_ENDPOINT = self.original_endpoint
+        gestion_app.requests.get = self.original_get
+
+    def test_accept_status_from_cnaps_status_field(self):
+        def fake_get(url, params, timeout):
+            self.assertEqual(url, "https://cnaps.example/api")
+            self.assertEqual(params, {"nom": "LAM ALAM", "prenom": "MOUSTAPHA"})
+            return DummyResponse(200, {"cnaps_status": "ACCEPTÉ"})
+
+        gestion_app.requests.get = fake_get
+        out = gestion_app.fetch_cnaps_lookup_by_name("Lam Alam", "Moustapha")
+
+        self.assertIsNotNone(out)
+        self.assertEqual(out["status"], "ACCEPTÉ")
+
+    def test_accept_status_from_nested_data_payload(self):
+        def fake_get(url, params, timeout):
+            return DummyResponse(200, {"data": {"status": "ACCEPTE"}})
+
+        gestion_app.requests.get = fake_get
+        out = gestion_app.fetch_cnaps_lookup_by_name("Lam Alam", "Moustapha")
+
+        self.assertIsNotNone(out)
+        self.assertEqual(out["status"], "ACCEPTE")
+
+
 class CnapsImportPreSaveLookupTests(unittest.TestCase):
     def setUp(self):
         self.client = gestion_app.app.test_client()
