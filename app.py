@@ -8560,6 +8560,7 @@ def api_create_trainee(session_id: str):
     other_amount = (payload.get("other_amount") or "").strip()
     carte_pro_ok = bool(payload.get("carte_pro_ok"))
     vtc_real_training_dates = (payload.get("vtc_real_training_dates") or "").strip()
+    afc_candidate_id = (payload.get("afc_candidate_id") or "").strip()
 
     # ✅ nouveau : choisir si on envoie l'accès tout de suite
     send_access = payload.get("send_access", True)
@@ -8634,6 +8635,17 @@ def api_create_trainee(session_id: str):
 
     trainees = _session_trainees_list(s)
     trainees.insert(0, t)
+
+    enrolled_at = ""
+    if afc_candidate_id:
+        afc_bucket = _afc_bucket(data)
+        afc_candidate = next(
+            (candidate for candidate in (afc_bucket.get("candidates") or []) if str(candidate.get("id") or "") == afc_candidate_id),
+            None,
+        )
+        if afc_candidate is not None:
+            enrolled_at = str(afc_candidate.get("enrolled_at") or "").strip() or _now_iso()
+            afc_candidate["enrolled_at"] = enrolled_at
 
     _apply_pending_cnaps_imports_for_trainee(data, s, t)
 
@@ -8749,6 +8761,7 @@ def api_create_trainee(session_id: str):
     return jsonify({
         "ok": True,
         "id": trainee_id,
+        "afc_enrolled_at": enrolled_at,
         "access_email_ok": email_ok,
         "access_sms_ok": sms_ok,
         "public_link": link,

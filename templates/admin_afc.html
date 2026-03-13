@@ -77,6 +77,10 @@
     font-weight:700;
     color:#334155;
   }
+
+  .afc-row-enrolled td{
+    background:#ecfdf3;
+  }
 </style>
 
 <div class="card">
@@ -148,7 +152,7 @@
     </thead>
     <tbody>
       {% for c in candidates %}
-      <tr data-id="{{ c.id }}">
+      <tr data-id="{{ c.id }}" class="{{ 'afc-row-enrolled' if c.enrolled_at else '' }}">
         <td>
           {% set presence_status = (c.presence_afc_status or ('PRESENT' if c.presence_afc else 'A_CONVOQUER'))|upper %}
           <select data-field="presence_afc_status">

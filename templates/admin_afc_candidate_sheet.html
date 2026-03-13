@@ -5,8 +5,11 @@
     <h1 style="margin:0;">Fiche candidat AFC</h1>
     <a class="btn btn-outline" href="{{ url_for('admin_afc') }}">← Retour</a>
   </div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-    <button class="btn btn-primary" id="btnOpenEnrollModal" type="button">Inscrire</button>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:flex-start;">
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <button class="btn btn-primary" id="btnOpenEnrollModal" type="button">Inscrire</button>
+      <div id="enrollStatus" style="display:none;font-size:14px;color:#475569;font-weight:600;"></div>
+    </div>
     <a class="btn btn-outline" href="#decisionCard">Décision</a>
     <a class="btn btn-outline" href="#modulesCard">Modules AFC</a>
     <a class="btn btn-outline" href="#testsCard">Résultats des tests</a>
@@ -242,6 +245,7 @@ let savingComment = false;
 let modulesSaveTimer = null;
 let savingModules = false;
 let savingEnroll = false;
+let enrolledAt = "{{ candidate.enrolled_at or "" }}";
 
 if(btnOpenEnrollModal){
   btnOpenEnrollModal.addEventListener('click', openEnrollModal);
@@ -331,7 +335,8 @@ async function createTraineeFromAfcCandidate(){
         personal_amount,
         other_amount,
         carte_pro_ok,
-        send_access: false
+        send_access: false,
+        afc_candidate_id: candidateId
       })
     });
     const body = await r.json().catch(()=>({}));
@@ -339,11 +344,33 @@ async function createTraineeFromAfcCandidate(){
       alert('Erreur ajout stagiaire');
       return;
     }
+    enrolledAt = body.afc_enrolled_at || new Date().toISOString();
+    refreshEnrollUI();
     closeEnrollModalFn();
-    alert('Stagiaire inscrit avec succès');
   } finally {
     savingEnroll = false;
     if(saveEnrollBtn) saveEnrollBtn.disabled = false;
+  }
+}
+
+
+function refreshEnrollUI(){
+  const enrollStatus = document.getElementById('enrollStatus');
+  const formattedDate = formatNotificationDate(enrolledAt);
+  if(formattedDate){
+    btnOpenEnrollModal.classList.remove('btn-primary');
+    btnOpenEnrollModal.classList.add('btn-orange');
+    if(enrollStatus){
+      enrollStatus.textContent = `Candidat inscrit le ${formattedDate}`;
+      enrollStatus.style.display = 'block';
+    }
+  } else {
+    btnOpenEnrollModal.classList.remove('btn-orange');
+    btnOpenEnrollModal.classList.add('btn-primary');
+    if(enrollStatus){
+      enrollStatus.textContent = '';
+      enrollStatus.style.display = 'none';
+    }
   }
 }
 
@@ -410,6 +437,7 @@ function updateTotal(){
 }
 
 refreshUI();
+refreshEnrollUI();
 updateTotal();
 applyCnapsBadge(cnapsStatusBadge);
 decision.addEventListener('change', refreshUI);
