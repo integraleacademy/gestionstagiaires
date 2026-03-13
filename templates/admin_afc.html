@@ -107,8 +107,30 @@
   </div>
 </div>
 
-<div class="table-wrap full-bleed afc-table-wrap" style="margin-top:12px;overflow:auto;">
-  <table class="table afc-table" id="afcTable">
+<div class="card" style="margin-top:12px;">
+  <div class="afc-filters">
+    <strong style="font-size:14px;color:#334155;">Recherche & filtres</strong>
+    <input type="search" id="afcSearchInput" placeholder="Rechercher un candidat (nom, prénom, mail, téléphone)">
+    <select id="afcDecisionFilter">
+      <option value="all">Décision : Tous</option>
+      <option value="retained">Décision : Retenus</option>
+      <option value="not_retained">Décision : Non retenus</option>
+    </select>
+    <select id="afcPresenceFilter">
+      <option value="all">Présence : Tous</option>
+      <option value="present">Présence : Présents</option>
+      <option value="absent">Présence : Absents</option>
+    </select>
+    <select id="afcFrenchFilter">
+      <option value="all">Test français : Tous</option>
+      <option value="passed">Test français : Réussi</option>
+      <option value="failed">Test français : Non réussi</option>
+    </select>
+  </div>
+</div>
+
+<div class="card afc-table-wrap" style="margin-top:12px;overflow:auto;">
+  <table class="table" id="afcTable">
     <thead>
       <tr>
         <th>Présence ICOP</th><th>Date ICOP</th><th>Nom</th><th>Prénom</th><th>Mail</th><th>Téléphone</th><th>Décision</th><th>Test de français</th><th>Statut notification</th><th>Statut CNAPS</th><th>Fiche candidat</th><th>Actions</th>
@@ -263,8 +285,7 @@ function rowMatchesDecisionFilter(tr, filter){
 
 function rowMatchesPresenceFilter(tr, filter){
   if(filter === 'all') return true;
-  const status = (tr.querySelector('select[data-field="presence_afc_status"]')?.value || '').toUpperCase();
-  const isPresent = status === 'PRESENT';
+  const isPresent = tr.querySelector('[data-toggle-presence]')?.classList.contains('on');
   if(filter === 'present') return !!isPresent;
   if(filter === 'absent') return !isPresent;
   return true;
@@ -290,7 +311,6 @@ function applyAfcFilters(){
       getCandidateFieldValue(tr, 'prenom'),
       getCandidateFieldValue(tr, 'email'),
       getCandidateFieldValue(tr, 'telephone'),
-      getCandidateFieldValue(tr, 'date_icop'),
     ].join(' ').toLowerCase();
 
     const searchOk = !search || searchableParts.includes(search);
@@ -459,8 +479,9 @@ document.querySelectorAll('select[data-field="presence_afc_status"]').forEach((s
     const previous = e.currentTarget.dataset.previousValue || 'A_CONVOQUER';
     const presence_afc_status = (e.currentTarget.value || '').toUpperCase();
     try{
-      await patchCandidate(tr, { presence_afc_status });
-      e.currentTarget.dataset.previousValue = presence_afc_status;
+      await patchCandidate(tr, { presence_afc });
+      target.classList.toggle('on', presence_afc);
+      target.textContent = presence_afc ? '🟢 Présent' : '🔴 Absent';
       applyAfcFilters();
     }catch(_err){
       e.currentTarget.value = previous;
