@@ -10789,6 +10789,7 @@ def admin_etiquette_print_page(session_id: str, trainee_id: str):
         checklist=aps_checklist if "APS" in training_type else [],
         photo_url=photo_url,
         back_url=url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
+        docx_url=url_for("admin_etiquette_docx", session_id=session_id, trainee_id=trainee_id),
     )
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/etiquette.docx")
 @admin_login_required
