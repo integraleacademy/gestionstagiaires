@@ -6978,6 +6978,17 @@ def api_admin_afc_delete_candidate(candidate_id: str):
     return jsonify({"ok": True, "deleted": deleted})
 
 
+@app.post("/api/admin/afc/candidates/delete-all")
+def api_admin_afc_delete_all_candidates():
+    data = load_data()
+    bucket = _afc_bucket(data)
+    deleted = len(bucket.get("candidates") or [])
+    bucket["candidates"] = []
+    if deleted:
+        save_data(data)
+    return jsonify({"ok": True, "deleted": deleted})
+
+
 @app.post("/api/admin/afc/candidates/<candidate_id>/notify")
 def api_admin_afc_notify_candidate(candidate_id: str):
     data = load_data()
