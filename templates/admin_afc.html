@@ -90,6 +90,7 @@
   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
     <h1 style="margin:0;">Gestion des AFC</h1>
     <div style="display:flex;gap:8px;">
+      <button class="btn btn-danger" id="btnDeleteAllCandidates" type="button">Supprimer toutes les lignes</button>
       <button class="btn btn-primary" id="btnAddCandidate">Ajouter un candidat</button>
       <button class="btn" id="btnNotifyPending" type="button">Notifier tous les candidats</button>
       <button class="btn btn-orange" id="btnImportCandidates" type="button">Importer</button>
@@ -226,6 +227,7 @@ const newNom = document.getElementById('newNom');
 const newPrenom = document.getElementById('newPrenom');
 const newMail = document.getElementById('newMail');
 const newTel = document.getElementById('newTel');
+const btnDeleteAllCandidates = document.getElementById('btnDeleteAllCandidates');
 const btnImportCandidates = document.getElementById('btnImportCandidates');
 const btnNotifyPending = document.getElementById('btnNotifyPending');
 const afcImportInput = document.getElementById('afcImportInput');
@@ -375,6 +377,26 @@ btnNotifyPending.addEventListener('click', async ()=>{
     alert('Erreur envoi des notifications');
   }finally{
     btnNotifyPending.disabled = false;
+  }
+});
+
+btnDeleteAllCandidates.addEventListener('click', async ()=>{
+  if(!confirm('Supprimer toutes les lignes de Gestion des AFC ?')) return;
+  btnDeleteAllCandidates.disabled = true;
+  try{
+    const res = await fetch('/api/admin/afc/candidates/delete-all', { method:'POST' });
+    const body = await res.json().catch(()=>({}));
+    if(!res.ok || !body.ok){
+      alert('Erreur suppression globale');
+      return;
+    }
+    alert(`Suppression terminée : ${body.deleted || 0} ligne(s) supprimée(s).`);
+    document.querySelectorAll('#afcTable tbody tr').forEach((tr)=> tr.remove());
+    applyAfcFilters();
+  }catch(_err){
+    alert('Erreur suppression globale');
+  }finally{
+    btnDeleteAllCandidates.disabled = false;
   }
 });
 
