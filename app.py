@@ -6657,6 +6657,7 @@ def api_admin_afc_create_candidate():
         },
         "dates_formation": "",
         "test_francais_reussi": False,
+        "presence_afc": False,
         "test_results_comment": "",
         "created_at": _now_iso(),
     }
@@ -6729,6 +6730,7 @@ def api_admin_afc_import_from_image():
             },
             "dates_formation": "",
             "test_francais_reussi": False,
+            "presence_afc": False,
             "test_results_comment": "",
             "created_at": _now_iso(),
         }
@@ -6820,6 +6822,9 @@ def api_admin_afc_update_candidate(candidate_id: str):
 
     if "test_francais_reussi" in payload:
         candidate["test_francais_reussi"] = bool(payload.get("test_francais_reussi"))
+
+    if "presence_afc" in payload:
+        candidate["presence_afc"] = bool(payload.get("presence_afc"))
 
     save_data(data)
     return jsonify({"ok": True, "candidate": candidate})
