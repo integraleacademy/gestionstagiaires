@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Étiquette A4 - {{ trainee_name }}</title>
+  <style>
+    :root{
+      --a4-width: 210mm;
+      --a4-height: 297mm;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      background:#d1d5db;
+      font-family: Arial, Helvetica, sans-serif;
+      color:#000;
+    }
+    .print-toolbar{
+      position:sticky;
+      top:0;
+      z-index:10;
+      display:flex;
+      justify-content:center;
+      gap:10px;
+      padding:10px;
+      background:#111827;
+    }
+    .btn{
+      border:none;
+      border-radius:8px;
+      padding:10px 16px;
+      color:#fff;
+      cursor:pointer;
+      font-weight:700;
+    }
+    .btn-print{ background:#2563eb; }
+    .btn-back{ background:#374151; text-decoration:none; display:inline-flex; align-items:center; }
+
+    .sheet{
+      width:var(--a4-width);
+      min-height:var(--a4-height);
+      margin:14px auto;
+      background:#fff;
+      padding:22mm 24mm 18mm 24mm;
+    }
+
+    .label-grid{ display:flex; gap:28mm; align-items:flex-start; }
+
+    .photo-wrap{ width:68mm; }
+    .photo-box{
+      width:58mm;
+      height:76mm;
+      border:1px solid #111;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+      background:#f3f4f6;
+    }
+    .photo-box img{ width:100%; height:100%; object-fit:cover; }
+    .photo-name{
+      margin-top:3mm;
+      font-size:10mm;
+      font-style:italic;
+      text-transform:uppercase;
+    }
+
+    .content-wrap{ width:88mm; padding-top:0mm; }
+    .logo{ width:26mm; display:block; margin:0 auto 8mm auto; }
+    .trainee-name{ text-align:center; font-weight:800; font-size:6.5mm; text-transform:uppercase; margin:0; }
+    .formation{ text-align:center; font-weight:800; font-size:6.5mm; text-transform:uppercase; margin:1mm 0 0 0; }
+    .formation span{ background:#14f0ee; padding:0 1mm; }
+    .dates{ text-align:center; font-weight:700; font-size:4.3mm; margin-top:1mm; }
+
+    .checklist{
+      margin:10mm 0 0 0;
+      padding:0;
+      list-style:none;
+      font-size:4.0mm;
+      line-height:1.7;
+    }
+    .checklist li{ display:flex; align-items:flex-start; gap:4mm; }
+    .checklist li::before{ content:"○"; line-height:1; }
+
+    @media print {
+      @page { size: A4 portrait; margin: 0; }
+      body{ background:#fff; }
+      .print-toolbar{ display:none; }
+      .sheet{ margin:0; width:210mm; min-height:297mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-toolbar">
+    <a class="btn btn-back" href="{{ back_url }}">← Retour stagiaire</a>
+    <button class="btn btn-print" type="button" onclick="window.print()">🖨️ Imprimer</button>
+  </div>
+
+  <main class="sheet">
+    <section class="label-grid">
+      <div class="photo-wrap">
+        <div class="photo-box">
+          {% if photo_url %}
+            <img src="{{ photo_url }}" alt="Photo identité">
+          {% endif %}
+        </div>
+        <div class="photo-name">{{ trainee_name }}</div>
+      </div>
+
+      <div class="content-wrap">
+        <img class="logo" src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy">
+        <p class="trainee-name">{{ trainee_name }}</p>
+        <p class="formation"><span>{{ formation_label }}</span></p>
+        <div class="dates">{{ date_range }}</div>
+
+        <ul class="checklist">
+          {% for item in checklist %}
+            <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

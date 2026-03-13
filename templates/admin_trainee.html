@@ -358,8 +358,8 @@
 <a class="btn btn-outline btn-uniform btn-admin-trainee-side-action {% if trainee.etiquette_word_downloaded_at %}btn-word-downloaded{% endif %}"
    id="btnEtiquetteWord"
    data-downloaded="{{ '1' if trainee.etiquette_word_downloaded_at else '0' }}"
-   href="{{ url_for('admin_etiquette_docx', session_id=session.id, trainee_id=trainee.id) }}"
-   title="{% if trainee.etiquette_word_downloaded_at %}Déjà téléchargée le {{ trainee.etiquette_word_downloaded_at|frdatetime }}{% else %}Télécharger l'étiquette Word{% endif %}">
+   href="{{ url_for('admin_etiquette_print_page', session_id=session.id, trainee_id=trainee.id) }}"
+   title="{% if trainee.etiquette_word_downloaded_at %}Déjà ouverte le {{ trainee.etiquette_word_downloaded_at|frdatetime }}{% else %}Ouvrir l'étiquette A4 à imprimer{% endif %}">
   🖨️ Etiquette WORD
 </a>
 <a class="btn btn-outline btn-uniform btn-admin-trainee-side-action"
@@ -3479,7 +3479,7 @@ const btnEtiquetteWord = document.getElementById("btnEtiquetteWord");
 if(btnEtiquetteWord){
   btnEtiquetteWord.addEventListener("click", (e)=>{
     if(btnEtiquetteWord.dataset.downloaded !== "1") return;
-    const ok = window.confirm("Vous avez déjà téléchargé l'étiquette WORD, voulez-vous continuer ?");
+    const ok = window.confirm("Vous avez déjà ouvert l'étiquette WORD, voulez-vous continuer ?");
     if(!ok){
       e.preventDefault();
     }
