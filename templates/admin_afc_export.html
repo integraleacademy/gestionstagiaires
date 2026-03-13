@@ -86,6 +86,7 @@
           {% elif presence_status == 'PRESENT' %}🟢 Présent
           {% else %}🔴 Absent{% endif %}
         </td>
+        <td>{{ c.date_icop or '' }}</td>
         <td>{{ c.identifiant_ft or '' }}</td>
         <td>{{ c.nom or '' }}</td>
         <td>{{ c.prenom or '' }}</td>
