@@ -380,12 +380,6 @@ testResultsComment.addEventListener('input', ()=>{
   }, 500);
 });
 
-btnOpenEnrollModal?.addEventListener('click', openEnrollModal);
-closeEnrollModal?.addEventListener('click', closeEnrollModalFn);
-closeEnrollModalTop?.addEventListener('click', closeEnrollModalFn);
-enrollModal?.addEventListener('click', (e)=>{ if(e.target === enrollModal) closeEnrollModalFn(); });
-saveEnrollBtn?.addEventListener('click', createTraineeFromAfcCandidate);
-
 document.getElementById('btnModulesDefault').addEventListener('click', async ()=>{
   document.getElementById('mft').value = 273;
   document.getElementById('mrn').value = 54;
