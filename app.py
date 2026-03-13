@@ -4590,6 +4590,8 @@ REQUIRED_DOCS = {
             "label": "CV",
             "accept": "application/pdf,image/jpeg,image/png",
         },
+    ],
+    "DIRIGEANT_DIPLOMA": [
         {
             "key": "highest_diploma",
             "label": "Diplôme le plus élevé",
@@ -4611,6 +4613,8 @@ def required_docs_for_training(training_type: str) -> List[Dict[str, Any]]:
         docs += list(REQUIRED_DOCS["A3P_ONLY"])
     if tt in {"DIRIGEANT INITIAL", "DIRIGEANT VAE"}:
         docs += list(REQUIRED_DOCS["DIRIGEANT_CANDIDATE_SHEET"])
+    if tt.startswith("DIRIGEANT"):
+        docs += list(REQUIRED_DOCS["DIRIGEANT_DIPLOMA"])
     if tt == "DIRIGEANT VAE":
         docs += list(REQUIRED_DOCS["DIRIGEANT_VAE_ONLY"])
     return docs
