@@ -91,6 +91,10 @@
     </select>
   </label>
 
+  <label style="display:block;margin-top:8px;">Date ICOP
+    <input id="date_icop" type="date" value="{{ candidate.date_icop or '' }}">
+  </label>
+
   <label style="display:flex;align-items:center;gap:8px;margin-top:8px;">
     <input id="test_francais_reussi" type="checkbox" {% if candidate.test_francais_reussi %}checked{% endif %}>
     Test de français
@@ -168,6 +172,7 @@ const complement = document.getElementById('complement_refus');
 const autre = document.getElementById('complement_refus_autre');
 const presenceAfcStatusSelect = document.getElementById('presence_afc_status');
 const testFrancaisReussi = document.getElementById('test_francais_reussi');
+const dateIcop = document.getElementById('date_icop');
 const testFrStatus = document.getElementById('testFrStatus');
 const cnapsStatusBadge = document.getElementById('cnapsStatusBadge');
 const testResultsComment = document.getElementById('test_results_comment');
