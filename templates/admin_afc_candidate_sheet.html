@@ -185,6 +185,31 @@ let commentSaveTimer = null;
 let savingComment = false;
 let savingEnroll = false;
 
+if(btnOpenEnrollModal){
+  btnOpenEnrollModal.addEventListener('click', openEnrollModal);
+}
+if(closeEnrollModal){
+  closeEnrollModal.addEventListener('click', closeEnrollModalFn);
+}
+if(closeEnrollModalTop){
+  closeEnrollModalTop.addEventListener('click', closeEnrollModalFn);
+}
+if(saveEnrollBtn){
+  saveEnrollBtn.addEventListener('click', createTraineeFromAfcCandidate);
+}
+if(enrollModal){
+  enrollModal.addEventListener('click', (event)=>{
+    if(event.target === enrollModal){
+      closeEnrollModalFn();
+    }
+  });
+}
+document.addEventListener('keydown', (event)=>{
+  if(event.key === 'Escape' && enrollModal?.classList.contains('show')){
+    closeEnrollModalFn();
+  }
+});
+
 function openEnrollModal(){
   if(!enrollModal) return;
   enrollLastName.value = (document.getElementById('nom').value || '').trim();
