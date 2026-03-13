@@ -12,7 +12,7 @@
   }
   .afc-table{
     width: 100%;
-    min-width: 1750px;
+    min-width: 1450px;
     table-layout: auto;
   }
   .afc-table th,
@@ -111,7 +111,7 @@
   <table class="table afc-table" id="afcTable">
     <thead>
       <tr>
-        <th>Présence ICOP</th><th>Date ICOP</th><th>Nom</th><th>Prénom</th><th>Mail</th><th>Téléphone</th><th>Décision</th><th>Test de français</th><th>Statut notification</th><th>Statut CNAPS</th><th>Fiche candidat</th><th>Actions</th>
+        <th>Présence ICOP</th><th>Date ICOP</th><th>Nom</th><th>Prénom</th><th>Décision</th><th>Test de français</th><th>Statut notification</th><th>Statut CNAPS</th><th>Fiche candidat</th><th>Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -129,8 +129,6 @@
         <td><input data-field="date_icop" type="date" value="{{ c.date_icop or '' }}"></td>
         <td><input data-field="nom" value="{{ c.nom }}"></td>
         <td><input data-field="prenom" value="{{ c.prenom }}"></td>
-        <td><input data-field="email" value="{{ c.email or '' }}"></td>
-        <td><input data-field="telephone" value="{{ c.telephone or '' }}"></td>
         <td>
           <button type="button" class="afc-toggle {{ 'on' if (c.decision or '')|upper == 'RETENU' else '' }}" data-toggle-decision>
             {% set decision_status = (c.decision or '')|upper %}
