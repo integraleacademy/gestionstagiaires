@@ -2,8 +2,32 @@
 {% block content %}
 <style>
   .afc-table-wrap{
-    width: calc(100vw - 28px);
-    margin-left: calc(50% - 50vw + 14px);
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+    overflow-x: auto;
+  }
+  .afc-table{
+    width: 100%;
+    min-width: 1750px;
+    table-layout: auto;
+  }
+  .afc-table th,
+  .afc-table td{
+    white-space: nowrap;
+  }
+  .afc-table td:nth-child(2),
+  .afc-table td:nth-child(3),
+  .afc-table td:nth-child(4){
+    min-width: 220px;
+  }
+  .afc-table td:nth-child(5){
+    min-width: 170px;
+  }
+  .afc-table td input{
+    width: 100%;
+    min-width: 180px;
+    max-width: 100%;
   }
   .afc-actions{
     display:flex;
@@ -59,7 +83,7 @@
 </div>
 
 <div class="card afc-table-wrap" style="margin-top:12px;overflow:auto;">
-  <table class="table" id="afcTable">
+  <table class="table afc-table" id="afcTable">
     <thead>
       <tr>
         <th>Présence AFC</th><th>Nom</th><th>Prénom</th><th>Mail</th><th>Téléphone</th><th>Décision</th><th>Test de français</th><th>Statut notification</th><th>Statut CNAPS</th><th>Fiche candidat</th><th>Actions</th>
