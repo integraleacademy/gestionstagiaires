@@ -4416,6 +4416,7 @@ AFC_REFUSAL_REASONS = [
     "Absence au RDV (entretien individuel, tests)",
     "Non retenu, plus de places disponibles sur la session",
 ]
+AFC_ABSENCE_REFUSAL_REASON = "Absence au RDV (entretien individuel, tests)"
 AFC_REFUSAL_COMPLEMENTS = [
     "Les documents pour la demande CNAPS n'ont pas été envoyés",
     "La demande CNAPS est en cours",
@@ -6952,6 +6953,14 @@ def api_admin_afc_update_candidate(candidate_id: str):
             return jsonify({"ok": False, "error": "Statut présence AFC invalide"}), 400
         candidate["presence_afc_status"] = new_status
         candidate["presence_afc"] = new_status == "PRESENT"
+        if new_status == "ABSENT":
+            candidate["decision"] = "NON RETENU"
+            candidate["test_francais_reussi"] = False
+            candidate["motif_refus"] = AFC_ABSENCE_REFUSAL_REASON
+            candidate["complement_refus"] = ""
+            candidate["complement_refus_autre"] = ""
+            if (candidate.get("notification_status") or "").strip().upper() != "ENVOYEE":
+                _send_afc_candidate_notification(bucket, candidate)
         if old_status != "CONVOQUE" and new_status == "CONVOQUE":
             ok, result = _send_afc_convocation_notification(bucket, candidate)
             if not ok:
