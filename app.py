@@ -10734,6 +10734,63 @@ def _shrink_docx_trailing_empty_paragraphs(doc: Document) -> None:
             run.font.size = Pt(1)
 
 
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/etiquette")
+@admin_login_required
+def admin_etiquette_print_page(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        abort(404)
+
+    training_type = (_session_get(s, "training_type", "") or "").strip().upper()
+    formation_map = {
+        "APS": "FORMATION TFP APS",
+        "A3P": "FORMATION A3P",
+        "VTC": "FORMATION CHAUFFEUR VTC",
+        "CHAUFFEUR VTC": "FORMATION CHAUFFEUR VTC",
+        "DIRIGEANT": "FORMATION DIRIGEANT",
+        "DIRIGEANT INITIAL": "FORMATION DIRIGEANT INITIAL",
+        "DIRIGEANT VAE": "FORMATION DIRIGEANT VAE",
+    }
+
+    aps_checklist = [
+        "Contrat de formation signé",
+        "Pièce d’identité",
+        "Carte vitale",
+        "Photo d’identité",
+        "Autorisation préalable CNAPS",
+        "Fiche CNIL signée",
+        "Test de français",
+        "SST à jour",
+        "Dossier examen",
+    ]
+
+    photo_url = ""
+    photo_token = (t.get("identity_photo") or "").strip()
+    if photo_token:
+        photo_url = url_for("admin_view_upload", path=photo_token)
+
+    t["etiquette_word_downloaded_at"] = _now_iso()
+    s["trainees"] = trainees
+    save_data(data)
+
+    return render_template(
+        "admin_etiquette_print.html",
+        trainee_name=f"{(t.get('last_name') or '').upper()} {(t.get('first_name') or '').upper()}".strip(),
+        formation_label=formation_map.get(training_type, f"FORMATION {training_type}".strip()),
+        date_range=f"{fr_date(_session_get(s,'date_start',''))} → {fr_date(_session_get(s,'date_end',''))}",
+        checklist=aps_checklist if "APS" in training_type else [],
+        photo_url=photo_url,
+        back_url=url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
+        docx_url=url_for("admin_etiquette_docx", session_id=session_id, trainee_id=trainee_id),
+    )
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/etiquette.docx")
 @admin_login_required
 def admin_etiquette_docx(session_id: str, trainee_id: str):
