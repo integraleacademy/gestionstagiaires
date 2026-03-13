@@ -6878,6 +6878,7 @@ def api_admin_afc_notify_candidate(candidate_id: str):
 def admin_afc_candidate_sheet(candidate_id: str):
     data = load_data()
     bucket = _afc_bucket(data)
+    sessions = [s for s in (data.get("sessions") or []) if not s.get("archived")]
     candidate = next((c for c in bucket["candidates"] if str(c.get("id") or "") == candidate_id), None)
     if not candidate:
         abort(404)
@@ -6887,6 +6888,7 @@ def admin_afc_candidate_sheet(candidate_id: str):
     return render_template(
         "admin_afc_candidate_sheet.html",
         candidate=candidate,
+        sessions=sessions,
         positioning_score=positioning_score,
         refusal_reasons=AFC_REFUSAL_REASONS,
         refusal_complements=AFC_REFUSAL_COMPLEMENTS,
