@@ -90,13 +90,19 @@
     aria-expanded="false"
     style="margin-bottom:8px;"
   >
-    Modèles de mails
+    Modèles de mail
   </button>
   <div id="mailTemplatesPanel" style="display:none;">
     <label>Mail candidat retenu</label>
     <textarea id="tmplRetained" rows="10" style="width:100%;">{{ afc.mail_templates.retained }}</textarea>
     <label style="margin-top:10px;display:block;">Mail candidat non retenu (variables: {{'{{motif_refus}}'}} {{'{{complement_refus}}'}})</label>
     <textarea id="tmplRejected" rows="10" style="width:100%;">{{ afc.mail_templates.rejected }}</textarea>
+    <label style="margin-top:10px;display:block;">Objet mail convocation</label>
+    <input id="tmplConvocationSubject" type="text" style="width:100%;" value="{{ afc.mail_templates.convocation_subject }}">
+    <label style="margin-top:10px;display:block;">Mail convocation (envoyé automatiquement au passage à "Convoqué")</label>
+    <textarea id="tmplConvocationEmail" rows="10" style="width:100%;">{{ afc.mail_templates.convocation_email }}</textarea>
+    <label style="margin-top:10px;display:block;">SMS convocation (envoyé automatiquement au passage à "Convoqué")</label>
+    <textarea id="tmplConvocationSms" rows="8" style="width:100%;">{{ afc.mail_templates.convocation_sms }}</textarea>
     <button class="btn" id="btnSaveTemplates" style="margin-top:8px;">Sauvegarder modèles</button>
   </div>
 </div>
@@ -112,9 +118,13 @@
       {% for c in candidates %}
       <tr data-id="{{ c.id }}">
         <td>
-          <button type="button" class="afc-toggle {{ 'on' if c.presence_afc else '' }}" data-toggle-presence>
-            {{ '🟢 Présent' if c.presence_afc else '🔴 Absent' }}
-          </button>
+          {% set presence_status = (c.presence_afc_status or ('PRESENT' if c.presence_afc else 'A_CONVOQUER'))|upper %}
+          <select data-field="presence_afc_status">
+            <option value="A_CONVOQUER" {% if presence_status == 'A_CONVOQUER' %}selected{% endif %}>{{ afc_presence_status_labels['A_CONVOQUER'] }}</option>
+            <option value="CONVOQUE" {% if presence_status == 'CONVOQUE' %}selected{% endif %}>{{ afc_presence_status_labels['CONVOQUE'] }}</option>
+            <option value="PRESENT" {% if presence_status == 'PRESENT' %}selected{% endif %}>{{ afc_presence_status_labels['PRESENT'] }}</option>
+            <option value="ABSENT" {% if presence_status == 'ABSENT' %}selected{% endif %}>{{ afc_presence_status_labels['ABSENT'] }}</option>
+          </select>
         </td>
         <td><input data-field="date_icop" type="date" value="{{ c.date_icop or '' }}"></td>
         <td><input data-field="nom" value="{{ c.nom }}"></td>
@@ -253,7 +263,8 @@ function rowMatchesDecisionFilter(tr, filter){
 
 function rowMatchesPresenceFilter(tr, filter){
   if(filter === 'all') return true;
-  const isPresent = tr.querySelector('[data-toggle-presence]')?.classList.contains('on');
+  const status = (tr.querySelector('select[data-field="presence_afc_status"]')?.value || '').toUpperCase();
+  const isPresent = status === 'PRESENT';
   if(filter === 'present') return !!isPresent;
   if(filter === 'absent') return !isPresent;
   return true;
@@ -442,21 +453,21 @@ document.querySelectorAll('[data-toggle-decision]').forEach((btn)=>{
   });
 });
 
-document.querySelectorAll('[data-toggle-presence]').forEach((btn)=>{
-  btn.addEventListener('click', async (e)=>{
-    const target = e.currentTarget;
-    const tr = target.closest('tr');
-    const enabled = target.classList.contains('on');
-    const presence_afc = !enabled;
+document.querySelectorAll('select[data-field="presence_afc_status"]').forEach((select)=>{
+  select.addEventListener('change', async (e)=>{
+    const tr = e.currentTarget.closest('tr');
+    const previous = e.currentTarget.dataset.previousValue || 'A_CONVOQUER';
+    const presence_afc_status = (e.currentTarget.value || '').toUpperCase();
     try{
-      await patchCandidate(tr, { presence_afc });
-      target.classList.toggle('on', presence_afc);
-      target.textContent = presence_afc ? '🟢 Présent' : '🔴 Absent';
+      await patchCandidate(tr, { presence_afc_status });
+      e.currentTarget.dataset.previousValue = presence_afc_status;
       applyAfcFilters();
     }catch(_err){
-      alert('Erreur sauvegarde présence ICOP');
+      e.currentTarget.value = previous;
+      alert('Erreur sauvegarde présence AFC');
     }
   });
+  select.dataset.previousValue = select.value;
 });
 
 document.querySelectorAll('[data-toggle-fr]').forEach((btn)=>{
@@ -495,8 +506,11 @@ document.querySelectorAll('[data-toggle-notification]').forEach((btn)=>{
 document.getElementById('btnSaveTemplates').addEventListener('click', async ()=>{
   const retained = document.getElementById('tmplRetained').value;
   const rejected = document.getElementById('tmplRejected').value;
+  const convocation_subject = document.getElementById('tmplConvocationSubject').value;
+  const convocation_email = document.getElementById('tmplConvocationEmail').value;
+  const convocation_sms = document.getElementById('tmplConvocationSms').value;
   await fetch('/api/admin/afc/mail-templates',{
-    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({retained,rejected})
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({retained,rejected,convocation_subject,convocation_email,convocation_sms})
   });
   alert('Modèles sauvegardés');
 });

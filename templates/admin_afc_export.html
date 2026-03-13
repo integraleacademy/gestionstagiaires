@@ -79,8 +79,13 @@
       {% set decision = (c.decision or '')|upper %}
       {% set cnaps = (c.cnaps_status or 'INCONNU')|upper %}
       <tr>
-        <td>{{ '🟢 Présent' if c.presence_afc else '🔴 Absent' }}</td>
-        <td>{{ c.date_icop or '' }}</td>
+        {% set presence_status = (c.presence_afc_status or ('PRESENT' if c.presence_afc else 'A_CONVOQUER'))|upper %}
+        <td>
+          {% if presence_status == 'A_CONVOQUER' %}🟠 A convoquer
+          {% elif presence_status == 'CONVOQUE' %}🔵 Convoqué
+          {% elif presence_status == 'PRESENT' %}🟢 Présent
+          {% else %}🔴 Absent{% endif %}
+        </td>
         <td>{{ c.identifiant_ft or '' }}</td>
         <td>{{ c.nom or '' }}</td>
         <td>{{ c.prenom or '' }}</td>
