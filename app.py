@@ -9666,24 +9666,89 @@ def api_cnaps_lookup():
     })
 
 
+
 # =========================
 # Health
 # =========================
 
+def _backups_for_path(path: str) -> List[str]:
+    base_name = os.path.basename(path)
+    prefix = base_name.replace(".", "_") + "."
+    try:
+        names = sorted(
+            [
+                name
+                for name in os.listdir(BACKUP_DIR)
+                if name.startswith(prefix) and name.endswith(".json")
+            ],
+            reverse=True,
+        )
+    except Exception:
+        return []
+    return names
+
+
+def _storage_file_health(path: str, required_list_key: Optional[str] = None) -> Dict[str, Any]:
+    exists = os.path.exists(path)
+    stat_result = os.stat(path) if exists else None
+    loaded = _load_valid_json_payload(path) if exists else None
+    backups = _backups_for_path(path)
+
+    required_key_ok = None
+    if required_list_key:
+        required_key_ok = isinstance((loaded or {}).get(required_list_key), list) if isinstance(loaded, dict) else False
+
+    recoverable = False
+    for backup_name in backups:
+        backup_path = os.path.join(BACKUP_DIR, backup_name)
+        backup_loaded = _load_valid_json_payload(backup_path)
+        if isinstance(backup_loaded, dict):
+            recoverable = True
+            break
+
+    return {
+        "path": path,
+        "exists": exists,
+        "size": stat_result.st_size if stat_result else 0,
+        "mtime": int(stat_result.st_mtime) if stat_result else None,
+        "valid_json": isinstance(loaded, dict),
+        "required_key": required_list_key,
+        "required_key_ok": required_key_ok,
+        "backups_count": len(backups),
+        "recoverable_from_backup": recoverable,
+    }
+
+
 @app.get("/api/health")
 def health():
-    backup_files = []
-    try:
-        backup_files = [n for n in os.listdir(BACKUP_DIR) if n.endswith(".json")]
-    except Exception:
-        backup_files = []
+    data_health = _storage_file_health(DATA_FILE, required_list_key="sessions")
+    vae_health = _storage_file_health(VAE_DATA_FILE, required_list_key="dossiers")
     return jsonify({
         "ok": True,
         "data_file": DATA_FILE,
         "vae_data_file": VAE_DATA_FILE,
         "backup_dir": BACKUP_DIR,
-        "backups_count": len(backup_files),
+        "backups_count": data_health["backups_count"] + vae_health["backups_count"],
         "backup_retention": BACKUP_RETENTION,
+        "files": {
+            "data": data_health,
+            "vae": vae_health,
+        },
+    })
+
+
+@app.get("/api/health/storage-integrity")
+def health_storage_integrity():
+    data_health = _storage_file_health(DATA_FILE, required_list_key="sessions")
+    vae_health = _storage_file_health(VAE_DATA_FILE, required_list_key="dossiers")
+    return jsonify({
+        "ok": True,
+        "data": data_health,
+        "vae": vae_health,
+        "uploads_dir": {
+            "path": UPLOADS_DIR,
+            "exists": os.path.isdir(UPLOADS_DIR),
+        },
     })
 
 
@@ -15823,6 +15888,13 @@ def _vae_default_dossier(dossier_id: Optional[str] = None) -> Dict[str, Any]:
 def _vae_load_all() -> Dict[str, Any]:
     with _vae_lock:
         if not os.path.exists(VAE_DATA_FILE):
+            recovered_from = _recover_data_file(VAE_DATA_FILE)
+            if recovered_from:
+                recovered = _load_valid_json_payload(VAE_DATA_FILE)
+                if isinstance(recovered, dict):
+                    if "dossiers" not in recovered or not isinstance(recovered["dossiers"], list):
+                        recovered["dossiers"] = []
+                    return recovered
             data = {"dossiers": []}
             _vae_save_all(data)
             return data
@@ -15840,6 +15912,15 @@ def _vae_load_all() -> Dict[str, Any]:
                 os.replace(VAE_DATA_FILE, backup)
             except Exception:
                 pass
+
+            recovered_from = _recover_data_file(VAE_DATA_FILE)
+            if recovered_from:
+                recovered = _load_valid_json_payload(VAE_DATA_FILE)
+                if isinstance(recovered, dict):
+                    if "dossiers" not in recovered or not isinstance(recovered["dossiers"], list):
+                        recovered["dossiers"] = []
+                    return recovered
+
             data = {"dossiers": []}
             _vae_save_all(data)
             return data
