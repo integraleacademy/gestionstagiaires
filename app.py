@@ -6644,7 +6644,7 @@ def api_admin_afc_create_candidate():
         "email": email,
         "telephone": telephone,
         "decision": "",
-        "notification_status": "NON ENVOYEE",
+        "notification_status": "",
         "cnaps_status": fetch_cnaps_status_by_name(nom, prenom) or "INCONNU",
         "motif_refus": "",
         "complement_refus": "",
@@ -6656,7 +6656,7 @@ def api_admin_afc_create_candidate():
             "paf": 0,
         },
         "dates_formation": "",
-        "test_francais_reussi": False,
+        "test_francais_reussi": None,
         "presence_afc": False,
         "test_results_comment": "",
         "created_at": _now_iso(),
@@ -6717,7 +6717,7 @@ def api_admin_afc_import_from_image():
             "email": str(parsed.get("email") or "").strip(),
             "telephone": str(parsed.get("telephone") or "").strip(),
             "decision": "",
-            "notification_status": "NON ENVOYEE",
+            "notification_status": "",
             "cnaps_status": fetch_cnaps_status_by_name(nom, prenom) or "INCONNU",
             "motif_refus": "",
             "complement_refus": "",
@@ -6729,7 +6729,7 @@ def api_admin_afc_import_from_image():
                 "paf": 0,
             },
             "dates_formation": "",
-            "test_francais_reussi": False,
+            "test_francais_reussi": None,
             "presence_afc": False,
             "test_results_comment": "",
             "created_at": _now_iso(),
@@ -6925,7 +6925,7 @@ def admin_afc_candidate_sheet(candidate_id: str):
     candidate = next((c for c in bucket["candidates"] if str(c.get("id") or "") == candidate_id), None)
     if not candidate:
         abort(404)
-    candidate.setdefault("test_francais_reussi", False)
+    candidate.setdefault("test_francais_reussi", None)
     candidate.setdefault("test_results_comment", "")
     positioning_score = _afc_find_latest_positioning_score(candidate, list(data.get("positioning_tests") or []))
     return render_template(
