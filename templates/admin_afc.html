@@ -480,9 +480,8 @@ document.querySelectorAll('select[data-field="presence_afc_status"]').forEach((s
     const previous = e.currentTarget.dataset.previousValue || 'A_CONVOQUER';
     const presence_afc_status = (e.currentTarget.value || '').toUpperCase();
     try{
-      await patchCandidate(tr, { presence_afc });
-      target.classList.toggle('on', presence_afc);
-      target.textContent = presence_afc ? '🟢 Présent' : '🔴 Absent';
+      await patchCandidate(tr, { presence_afc_status });
+      e.currentTarget.dataset.previousValue = presence_afc_status;
       applyAfcFilters();
     }catch(_err){
       e.currentTarget.value = previous;
