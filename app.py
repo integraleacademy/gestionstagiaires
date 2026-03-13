@@ -6854,9 +6854,21 @@ def api_admin_afc_notify_candidate(candidate_id: str):
     if not candidate:
         return jsonify({"ok": False, "error": "Candidat introuvable"}), 404
 
+    ok, result = _send_afc_candidate_notification(bucket, candidate)
+    if not ok:
+        status = 400 if result == "Email manquant" else 500
+        return jsonify({"ok": False, "error": result}), status
+
+    save_data(data)
+    return jsonify({"ok": True, "notification_sent_at": candidate.get("notification_sent_at")})
+
+
+def _send_afc_candidate_notification(bucket: dict, candidate: dict) -> tuple[bool, str]:
+    """Envoie la notification AFC pour un candidat et met à jour son statut."""
+
     to_email = (candidate.get("email") or "").strip()
     if not to_email:
-        return jsonify({"ok": False, "error": "Email manquant"}), 400
+        return False, "Email manquant"
 
     decision = (candidate.get("decision") or "").strip().upper()
     templates = bucket.get("mail_templates") or {}
@@ -6871,12 +6883,38 @@ def api_admin_afc_notify_candidate(candidate_id: str):
     html = mail_layout("<p>" + "</p><p>".join([line for line in raw_content.splitlines() if line.strip()]) + "</p>")
     ok = brevo_send_email(to_email, subject, html)
     if not ok:
-        return jsonify({"ok": False, "error": "Échec envoi email"}), 500
+        return False, "Échec envoi email"
 
     candidate["notification_status"] = "ENVOYEE"
     candidate["notification_sent_at"] = _now_iso()
-    save_data(data)
-    return jsonify({"ok": True, "notification_sent_at": candidate.get("notification_sent_at")})
+    return True, ""
+
+
+@app.post("/api/admin/afc/candidates/notify-pending")
+def api_admin_afc_notify_pending_candidates():
+    data = load_data()
+    bucket = _afc_bucket(data)
+    candidates = bucket.get("candidates") or []
+
+    notified = 0
+    skipped = 0
+    failed = 0
+    for candidate in candidates:
+        status = (candidate.get("notification_status") or "").strip().upper()
+        if status == "ENVOYEE":
+            skipped += 1
+            continue
+
+        ok, _ = _send_afc_candidate_notification(bucket, candidate)
+        if ok:
+            notified += 1
+        else:
+            failed += 1
+
+    if notified:
+        save_data(data)
+
+    return jsonify({"ok": True, "notified": notified, "skipped": skipped, "failed": failed})
 
 
 @app.get("/admin/afc/candidates/<candidate_id>")

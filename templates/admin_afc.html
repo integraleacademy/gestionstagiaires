@@ -32,6 +32,7 @@
     <h1 style="margin:0;">Gestion des AFC</h1>
     <div style="display:flex;gap:8px;">
       <button class="btn btn-primary" id="btnAddCandidate">Ajouter un candidat</button>
+      <button class="btn" id="btnNotifyPending" type="button">Notifier tous les candidats</button>
       <button class="btn btn-orange" id="btnImportCandidates" type="button">Importer</button>
       <a class="btn btn-outline" href="{{ url_for('admin_afc_export') }}" target="_blank" rel="noopener">Export</a>
     </div>
@@ -133,6 +134,7 @@ const newPrenom = document.getElementById('newPrenom');
 const newMail = document.getElementById('newMail');
 const newTel = document.getElementById('newTel');
 const btnImportCandidates = document.getElementById('btnImportCandidates');
+const btnNotifyPending = document.getElementById('btnNotifyPending');
 const afcImportInput = document.getElementById('afcImportInput');
 
 function openModal(){ modal.classList.add('show'); modal.setAttribute('aria-hidden','false'); }
@@ -196,6 +198,27 @@ function getCandidateFieldValue(tr, field){
 btnImportCandidates.addEventListener('click', ()=>{
   afcImportInput.value = '';
   afcImportInput.click();
+});
+
+btnNotifyPending.addEventListener('click', async ()=>{
+  if(!confirm('Envoyer la notification à tous les candidats "non envoyée" ?')) return;
+  btnNotifyPending.disabled = true;
+  try{
+    const res = await fetch('/api/admin/afc/candidates/notify-pending', { method:'POST' });
+    const body = await res.json().catch(()=>({}));
+    if(!res.ok || !body.ok){
+      alert('Erreur envoi des notifications');
+      return;
+    }
+    alert(`Notifications envoyées: ${body.notified || 0}. Ignorés: ${body.skipped || 0}. Échecs: ${body.failed || 0}.`);
+    if((body.notified || 0) > 0){
+      location.reload();
+    }
+  }catch(_err){
+    alert('Erreur envoi des notifications');
+  }finally{
+    btnNotifyPending.disabled = false;
+  }
 });
 
 afcImportInput.addEventListener('change', async ()=>{
