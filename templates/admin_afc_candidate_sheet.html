@@ -114,6 +114,12 @@
     <span class="cnaps" id="cnapsStatusBadge">{{ candidate.cnaps_status or 'INCONNU' }}</span>
   </div>
 
+  <label style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+    <input id="cnaps_priority" type="checkbox" {% if candidate.cnaps_priority %}checked{% endif %}>
+    CNAPS
+    <span style="font-size:13px;color:#475569;">(force automatiquement le statut à accepté et prioritaire)</span>
+  </label>
+
   <label style="display:block;margin-top:10px;">Commentaire résultats des tests
     <textarea id="test_results_comment" rows="4" style="width:100%;" placeholder="Ajouter un commentaire...">{{ candidate.test_results_comment or '' }}</textarea>
   </label>
@@ -216,6 +222,7 @@ const testFrancaisReussi = document.getElementById('test_francais_reussi');
 const dateIcop = document.getElementById('date_icop');
 const testFrStatus = document.getElementById('testFrStatus');
 const cnapsStatusBadge = document.getElementById('cnapsStatusBadge');
+const cnapsPriority = document.getElementById('cnaps_priority');
 const testResultsComment = document.getElementById('test_results_comment');
 const commentSaveStatus = document.getElementById('commentSaveStatus');
 const modulesSaveStatus = document.getElementById('modulesSaveStatus');
@@ -439,6 +446,9 @@ function updateTotal(){
 refreshUI();
 refreshEnrollUI();
 updateTotal();
+if(cnapsPriority?.checked){
+  cnapsStatusBadge.textContent = 'ACCEPTE';
+}
 applyCnapsBadge(cnapsStatusBadge);
 decision.addEventListener('change', refreshUI);
 complement.addEventListener('change', refreshUI);
@@ -473,6 +483,22 @@ testFrancaisReussi.addEventListener('change', async ()=>{
     }
   } finally {
     savingTestFr = false;
+  }
+});
+cnapsPriority.addEventListener('change', async ()=>{
+  const previousValue = !cnapsPriority.checked;
+  const previousStatus = cnapsStatusBadge.textContent;
+  if(cnapsPriority.checked){
+    cnapsStatusBadge.textContent = 'ACCEPTE';
+    decision.value = 'RETENU';
+    refreshUI();
+    applyCnapsBadge(cnapsStatusBadge);
+  }
+  const ok = await saveCandidate();
+  if(!ok){
+    cnapsPriority.checked = previousValue;
+    cnapsStatusBadge.textContent = previousStatus;
+    applyCnapsBadge(cnapsStatusBadge);
   }
 });
 function scheduleModulesAutosave(){
@@ -559,6 +585,7 @@ async function saveCandidate(){
     complement_refus_autre: document.getElementById('complement_refus_autre').value,
     dates_formation: document.getElementById('dates_formation').value,
     test_francais_reussi: testFrancaisReussi.checked,
+    cnaps_priority: cnapsPriority.checked,
     presence_afc_status: presenceAfcStatusSelect.value,
     test_results_comment: testResultsComment.value,
     modules: {
