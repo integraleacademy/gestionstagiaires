@@ -7035,6 +7035,11 @@ def api_admin_afc_notify_pending_candidates():
             skipped += 1
             continue
 
+        decision = (candidate.get("decision") or "").strip().upper()
+        if decision in {"", "EN ATTENTE", "EN_ATTENTE", "ATTENTE"}:
+            skipped += 1
+            continue
+
         ok, _ = _send_afc_candidate_notification(bucket, candidate)
         if ok:
             notified += 1
