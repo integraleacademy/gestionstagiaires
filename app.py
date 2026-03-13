@@ -6682,16 +6682,28 @@ def admin_afc():
     candidates = bucket.get("candidates", [])
     changed = False
     for candidate in candidates:
+        candidate.setdefault("cnaps_priority", False)
+        if candidate.get("cnaps_priority"):
+            candidate["cnaps_status"] = "ACCEPTE"
+            candidate["decision"] = "RETENU"
+            candidate["motif_refus"] = ""
+            candidate["complement_refus"] = ""
+            candidate["complement_refus_autre"] = ""
         if not (candidate.get("cnaps_status") or "").strip():
             cnaps_status = fetch_cnaps_status_by_name(candidate.get("nom") or "", candidate.get("prenom") or "")
             if cnaps_status:
                 candidate["cnaps_status"] = cnaps_status
                 changed = True
+        if candidate.get("cnaps_priority") and (candidate.get("cnaps_status") or "").strip().upper() != "ACCEPTE":
+            candidate["cnaps_status"] = "ACCEPTE"
+            changed = True
     if changed:
         save_data(data)
-    retained = [c for c in candidates if (c.get("decision") or "").strip().upper() == "RETENU"]
-    others = [c for c in candidates if (c.get("decision") or "").strip().upper() != "RETENU"]
-    ordered_candidates = retained + others
+    prioritized = [c for c in candidates if c.get("cnaps_priority")]
+    non_prioritized = [c for c in candidates if not c.get("cnaps_priority")]
+    retained = [c for c in non_prioritized if (c.get("decision") or "").strip().upper() == "RETENU"]
+    others = [c for c in non_prioritized if (c.get("decision") or "").strip().upper() != "RETENU"]
+    ordered_candidates = prioritized + retained + others
     return render_template(
         "admin_afc.html",
         afc=bucket,
@@ -6734,6 +6746,7 @@ def api_admin_afc_create_candidate():
         },
         "dates_formation": "",
         "test_francais_reussi": None,
+        "cnaps_priority": False,
         "presence_afc": False,
         "presence_afc_status": "A_CONVOQUER",
         "test_results_comment": "",
@@ -6808,6 +6821,7 @@ def api_admin_afc_import_from_image():
             },
             "dates_formation": "",
             "test_francais_reussi": None,
+            "cnaps_priority": False,
             "presence_afc": False,
             "presence_afc_status": "A_CONVOQUER",
             "test_results_comment": "",
@@ -6889,7 +6903,7 @@ def api_admin_afc_update_candidate(candidate_id: str):
         candidate["complement_refus"] = ""
         candidate["complement_refus_autre"] = ""
 
-    if any(k in payload for k in ("nom", "prenom")):
+    if any(k in payload for k in ("nom", "prenom")) and not candidate.get("cnaps_priority"):
         cnaps_status = fetch_cnaps_status_by_name(candidate.get("nom") or "", candidate.get("prenom") or "")
         if cnaps_status:
             candidate["cnaps_status"] = cnaps_status
@@ -6905,6 +6919,15 @@ def api_admin_afc_update_candidate(candidate_id: str):
 
     if "test_francais_reussi" in payload:
         candidate["test_francais_reussi"] = bool(payload.get("test_francais_reussi"))
+
+    if "cnaps_priority" in payload:
+        candidate["cnaps_priority"] = bool(payload.get("cnaps_priority"))
+        if candidate["cnaps_priority"]:
+            candidate["cnaps_status"] = "ACCEPTE"
+            candidate["decision"] = "RETENU"
+            candidate["motif_refus"] = ""
+            candidate["complement_refus"] = ""
+            candidate["complement_refus_autre"] = ""
 
     if "presence_afc" in payload:
         candidate["presence_afc"] = bool(payload.get("presence_afc"))
@@ -7056,6 +7079,13 @@ def admin_afc_candidate_sheet(candidate_id: str):
     if not candidate:
         abort(404)
     candidate.setdefault("test_francais_reussi", None)
+    candidate.setdefault("cnaps_priority", False)
+    if candidate.get("cnaps_priority"):
+        candidate["cnaps_status"] = "ACCEPTE"
+        candidate["decision"] = "RETENU"
+        candidate["motif_refus"] = ""
+        candidate["complement_refus"] = ""
+        candidate["complement_refus_autre"] = ""
     candidate.setdefault("test_results_comment", "")
     positioning_score = _afc_find_latest_positioning_score(candidate, list(data.get("positioning_tests") or []))
     return render_template(
@@ -7073,9 +7103,11 @@ def admin_afc_export():
     data = load_data()
     bucket = _afc_bucket(data)
     candidates = bucket.get("candidates", [])
-    retained = [c for c in candidates if (c.get("decision") or "").strip().upper() == "RETENU"]
-    others = [c for c in candidates if (c.get("decision") or "").strip().upper() != "RETENU"]
-    ordered_candidates = retained + others
+    prioritized = [c for c in candidates if c.get("cnaps_priority")]
+    non_prioritized = [c for c in candidates if not c.get("cnaps_priority")]
+    retained = [c for c in non_prioritized if (c.get("decision") or "").strip().upper() == "RETENU"]
+    others = [c for c in non_prioritized if (c.get("decision") or "").strip().upper() != "RETENU"]
+    ordered_candidates = prioritized + retained + others
     return render_template("admin_afc_export.html", afc=bucket, candidates=ordered_candidates)
 
 
