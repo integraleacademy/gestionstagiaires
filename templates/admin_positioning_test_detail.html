@@ -51,6 +51,30 @@
   .test-detail .meta-value{
     font-weight:700;
   }
+  .test-detail .meta-input{
+    width:100%;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:8px 10px;
+    font:inherit;
+    font-weight:700;
+    color:var(--text);
+    background:#fff;
+  }
+  .test-detail .meta-input:focus{
+    outline:none;
+    border-color:#1f4cd6;
+    box-shadow:0 0 0 3px rgba(31,76,214,.12);
+  }
+  .test-detail .save-status{
+    margin-top:8px;
+    font-size:12px;
+    color:var(--muted);
+    min-height:18px;
+  }
+  .test-detail .save-status.error{
+    color:#b91c1c;
+  }
 </style>
 
 <div class="test-detail">
@@ -70,11 +94,11 @@
       </div>
       <div class="meta-item">
         <div class="meta-label">Nom</div>
-        <div class="meta-value">{{ entry.contact.last_name }}</div>
+        <input class="meta-input" type="text" id="contactLastName" value="{{ entry.contact.last_name|e }}" autocomplete="family-name">
       </div>
       <div class="meta-item">
         <div class="meta-label">Prénom</div>
-        <div class="meta-value">{{ entry.contact.first_name }}</div>
+        <input class="meta-input" type="text" id="contactFirstName" value="{{ entry.contact.first_name|e }}" autocomplete="given-name">
       </div>
       <div class="meta-item">
         <div class="meta-label">Mail</div>
@@ -90,6 +114,7 @@
       </div>
     </div>
   </div>
+  <div class="save-status" id="contactSaveStatus"></div>
 
   {% for section in sections %}
   <div class="card" style="margin-top:16px;">
@@ -120,5 +145,70 @@
   </div>
   {% endfor %}
 </div>
+
+
+<script>
+  (function(){
+    const lastNameInput = document.getElementById("contactLastName");
+    const firstNameInput = document.getElementById("contactFirstName");
+    const statusEl = document.getElementById("contactSaveStatus");
+    const testId = {{ entry.id|tojson }};
+    let saveTimer = null;
+    let inFlight = false;
+
+    if(!lastNameInput || !firstNameInput || !statusEl || !testId){
+      return;
+    }
+
+    const setStatus = (text, isError=false) => {
+      statusEl.textContent = text;
+      statusEl.classList.toggle("error", !!isError);
+    };
+
+    async function saveContact(){
+      if(inFlight){
+        return;
+      }
+      const payload = {
+        last_name: lastNameInput.value,
+        first_name: firstNameInput.value,
+      };
+      if(!payload.last_name.trim() || !payload.first_name.trim()){
+        setStatus("Nom et prénom sont requis.", true);
+        return;
+      }
+
+      inFlight = true;
+      setStatus("Enregistrement…");
+      try{
+        const response = await fetch(`/api/test-positionnement/${encodeURIComponent(testId)}/contact`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        if(!response.ok || !data.ok){
+          throw new Error(data.error || "save_failed");
+        }
+        lastNameInput.value = data.contact?.last_name || "";
+        firstNameInput.value = data.contact?.first_name || "";
+        setStatus("Enregistré automatiquement.");
+      } catch (error){
+        setStatus("Impossible d’enregistrer automatiquement.", true);
+      } finally {
+        inFlight = false;
+      }
+    }
+
+    function scheduleSave(){
+      setStatus("Modifications en attente…");
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveContact, 500);
+    }
+
+    lastNameInput.addEventListener("input", scheduleSave);
+    firstNameInput.addEventListener("input", scheduleSave);
+  })();
+</script>
 
 {% endblock %}
