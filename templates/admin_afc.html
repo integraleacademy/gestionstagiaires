@@ -25,6 +25,22 @@
     color:#0a8f50;
     background:#eaf9f1;
   }
+  .afc-filters{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    align-items:center;
+    margin-bottom:10px;
+  }
+  .afc-filters input,
+  .afc-filters select{
+    min-height:36px;
+    border:1px solid #d6dce5;
+    border-radius:8px;
+    padding:0 10px;
+    background:#fff;
+  }
+  .afc-filters input{min-width:260px;}
 </style>
 
 <div class="card">
@@ -55,6 +71,28 @@
     <label style="margin-top:10px;display:block;">Mail candidat non retenu (variables: {{'{{motif_refus}}'}} {{'{{complement_refus}}'}})</label>
     <textarea id="tmplRejected" rows="10" style="width:100%;">{{ afc.mail_templates.rejected }}</textarea>
     <button class="btn" id="btnSaveTemplates" style="margin-top:8px;">Sauvegarder modèles</button>
+  </div>
+</div>
+
+<div class="card" style="margin-top:12px;">
+  <div class="afc-filters">
+    <strong style="font-size:14px;color:#334155;">Recherche & filtres</strong>
+    <input type="search" id="afcSearchInput" placeholder="Rechercher un candidat (nom, prénom, mail, téléphone)">
+    <select id="afcDecisionFilter">
+      <option value="all">Décision : Tous</option>
+      <option value="retained">Décision : Retenus</option>
+      <option value="not_retained">Décision : Non retenus</option>
+    </select>
+    <select id="afcPresenceFilter">
+      <option value="all">Présence : Tous</option>
+      <option value="present">Présence : Présents</option>
+      <option value="absent">Présence : Absents</option>
+    </select>
+    <select id="afcFrenchFilter">
+      <option value="all">Test français : Tous</option>
+      <option value="passed">Test français : Réussi</option>
+      <option value="failed">Test français : Non réussi</option>
+    </select>
   </div>
 </div>
 
@@ -136,6 +174,10 @@ const newTel = document.getElementById('newTel');
 const btnImportCandidates = document.getElementById('btnImportCandidates');
 const btnNotifyPending = document.getElementById('btnNotifyPending');
 const afcImportInput = document.getElementById('afcImportInput');
+const afcSearchInput = document.getElementById('afcSearchInput');
+const afcDecisionFilter = document.getElementById('afcDecisionFilter');
+const afcPresenceFilter = document.getElementById('afcPresenceFilter');
+const afcFrenchFilter = document.getElementById('afcFrenchFilter');
 
 function openModal(){ modal.classList.add('show'); modal.setAttribute('aria-hidden','false'); }
 function closeModal(){ modal.classList.remove('show'); modal.setAttribute('aria-hidden','true'); }
@@ -191,6 +233,53 @@ async function refreshCnapsForRow(tr){
 function getCandidateFieldValue(tr, field){
   const input = tr.querySelector(`input[data-field="${field}"]`);
   return (input?.value || '').trim();
+}
+
+function rowMatchesDecisionFilter(tr, filter){
+  if(filter === 'all') return true;
+  const isRetained = tr.querySelector('[data-toggle-decision]')?.classList.contains('on');
+  if(filter === 'retained') return !!isRetained;
+  if(filter === 'not_retained') return !isRetained;
+  return true;
+}
+
+function rowMatchesPresenceFilter(tr, filter){
+  if(filter === 'all') return true;
+  const isPresent = tr.querySelector('[data-toggle-presence]')?.classList.contains('on');
+  if(filter === 'present') return !!isPresent;
+  if(filter === 'absent') return !isPresent;
+  return true;
+}
+
+function rowMatchesFrenchFilter(tr, filter){
+  if(filter === 'all') return true;
+  const passed = tr.querySelector('[data-toggle-fr]')?.classList.contains('on');
+  if(filter === 'passed') return !!passed;
+  if(filter === 'failed') return !passed;
+  return true;
+}
+
+function applyAfcFilters(){
+  const search = (afcSearchInput.value || '').trim().toLowerCase();
+  const decisionFilter = afcDecisionFilter.value;
+  const presenceFilter = afcPresenceFilter.value;
+  const frenchFilter = afcFrenchFilter.value;
+
+  document.querySelectorAll('#afcTable tbody tr').forEach((tr)=>{
+    const searchableParts = [
+      getCandidateFieldValue(tr, 'nom'),
+      getCandidateFieldValue(tr, 'prenom'),
+      getCandidateFieldValue(tr, 'email'),
+      getCandidateFieldValue(tr, 'telephone'),
+    ].join(' ').toLowerCase();
+
+    const searchOk = !search || searchableParts.includes(search);
+    const decisionOk = rowMatchesDecisionFilter(tr, decisionFilter);
+    const presenceOk = rowMatchesPresenceFilter(tr, presenceFilter);
+    const frenchOk = rowMatchesFrenchFilter(tr, frenchFilter);
+
+    tr.style.display = searchOk && decisionOk && presenceOk && frenchOk ? '' : 'none';
+  });
 }
 
 
@@ -282,6 +371,7 @@ document.getElementById('saveCandidateBtn').addEventListener('click', async ()=>
 });
 
 document.querySelectorAll('#afcTable tbody tr input').forEach((input)=>{
+  input.addEventListener('input', applyAfcFilters);
   input.addEventListener('change', async (e)=>{
     const tr = e.target.closest('tr');
     const payload = {}; payload[e.target.dataset.field] = e.target.value;
@@ -336,6 +426,7 @@ document.querySelectorAll('[data-toggle-decision]').forEach((btn)=>{
       await patchCandidate(tr, { decision });
       target.classList.toggle('on', !enabled);
       target.textContent = !enabled ? '🟢 Retenue' : '🔴 Non retenue';
+      applyAfcFilters();
     }catch(_err){
       alert('Erreur sauvegarde décision');
     }
@@ -352,6 +443,7 @@ document.querySelectorAll('[data-toggle-presence]').forEach((btn)=>{
       await patchCandidate(tr, { presence_afc });
       target.classList.toggle('on', presence_afc);
       target.textContent = presence_afc ? '🟢 Présent' : '🔴 Absent';
+      applyAfcFilters();
     }catch(_err){
       alert('Erreur sauvegarde présence AFC');
     }
@@ -368,6 +460,7 @@ document.querySelectorAll('[data-toggle-fr]').forEach((btn)=>{
       await patchCandidate(tr, { test_francais_reussi });
       target.classList.toggle('on', test_francais_reussi);
       target.textContent = test_francais_reussi ? '🟢 Réussi' : '🔴 Non réussi';
+      applyAfcFilters();
     }catch(_err){
       alert('Erreur sauvegarde test de français');
     }
@@ -400,5 +493,10 @@ document.getElementById('btnSaveTemplates').addEventListener('click', async ()=>
 });
 
 document.querySelectorAll('[data-cnaps]').forEach((span) => applyCnapsBadge(span));
+afcSearchInput.addEventListener('input', applyAfcFilters);
+afcDecisionFilter.addEventListener('change', applyAfcFilters);
+afcPresenceFilter.addEventListener('change', applyAfcFilters);
+afcFrenchFilter.addEventListener('change', applyAfcFilters);
+applyAfcFilters();
 </script>
 {% endblock %}
