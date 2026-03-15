@@ -160,10 +160,13 @@
                 <div class="muted">Session: {{ it.session_name }} · L1 transmis: {{ it.vae_sent_at }}</div>
                 <div class="muted">{{ it.email }} · {{ it.phone }}</div>
               </div>
-              <div>
+              <div style="display:flex;align-items:center;gap:8px;">
                 {% set has_livret_2 = (it.deliverables.livret_2 or '')|trim %}
                 {% if it.scotia_status == 'recevable' and not has_livret_2 %}
-                  <span class="badge" style="background:#f3f4f6;color:#374151;">Livret 2 non déposé</span>
+                  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+                    <span class="badge" style="background:#dcfce7;color:#166534;">Recevable ✅</span>
+                    <span class="badge" style="background:#f3f4f6;color:#374151;">Livret 2 non déposé</span>
+                  </div>
                 {% elif it.scotia_status == 'recevable' and has_livret_2 %}
                   <button type="button" class="btn btn-pending-animated" disabled>Livret 2 à traiter</button>
                 {% elif it.scotia_status == 'non_recevable' %}
