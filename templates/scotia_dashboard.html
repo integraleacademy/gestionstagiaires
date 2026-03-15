@@ -9,9 +9,62 @@
     .scotia-item--processed{
       background:#f3f4f6;
     }
-    .scotia-item--processed .scotia-item-content{
+    .scotia-item--processed .scotia-item-panel{
       opacity:.65;
       filter:grayscale(1);
+    }
+    .scotia-item-accordion{
+      border:1px solid #e5e7eb;
+      border-radius:14px;
+      background:#fff;
+      overflow:hidden;
+    }
+    .scotia-item-toggle{
+      list-style:none;
+      cursor:pointer;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      padding:14px 16px;
+    }
+    .scotia-item-toggle::-webkit-details-marker{ display:none; }
+    .scotia-item-toggle-main{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+    .scotia-item-toggle-name{
+      font-weight:700;
+      font-size:18px;
+      color:#111827;
+    }
+    .scotia-item-chevron{
+      width:28px;
+      height:28px;
+      min-width:28px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:999px;
+      background:#eef2ff;
+      color:#1d4ed8;
+      font-size:14px;
+      transition:transform .22s ease, background-color .22s ease;
+      transform:rotate(0deg);
+    }
+    .scotia-item-accordion[open] .scotia-item-chevron{
+      transform:rotate(90deg);
+      background:#dbeafe;
+    }
+    .scotia-item-panel{
+      padding:0 16px 14px;
+      border-top:1px solid #e5e7eb;
+      animation:scotiaPanelReveal .22s ease;
+    }
+    @keyframes scotiaPanelReveal{
+      from{ opacity:0; transform:translateY(-4px); }
+      to{ opacity:1; transform:translateY(0); }
     }
     .btn-danger-solid{
       background:#b91c1c;
@@ -100,11 +153,10 @@
       {% if items %}
         <div style="display:grid;gap:12px;">
           {% for it in items %}
-          <div class="card scotia-item {% if it.scotia_status in ['recevable', 'non_recevable'] %}scotia-item--processed{% endif %}" style="border:1px solid #e5e7eb;">
-            <div class="scotia-item-content">
-            <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
-              <div>
-                <div style="font-weight:700;font-size:18px;">{{ it.first_name }} {{ it.last_name }}</div>
+          <details class="scotia-item-accordion scotia-item {% if it.scotia_status in ['recevable', 'non_recevable'] %}scotia-item--processed{% endif %}">
+            <summary class="scotia-item-toggle">
+              <div class="scotia-item-toggle-main">
+                <div class="scotia-item-toggle-name">{{ it.first_name }} {{ it.last_name }}</div>
                 <div class="muted">Session: {{ it.session_name }} · L1 transmis: {{ it.vae_sent_at }}</div>
                 <div class="muted">{{ it.email }} · {{ it.phone }}</div>
               </div>
@@ -116,9 +168,11 @@
                 {% else %}
                   <button type="button" class="btn btn-pending-animated" disabled>En attente</button>
                 {% endif %}
+                <span class="scotia-item-chevron" aria-hidden="true">▶</span>
               </div>
-            </div>
+            </summary>
 
+            <div class="scotia-item-panel">
             <div style="margin-top:10px;">
               <strong>Documents :</strong>
               <ul>
@@ -201,7 +255,7 @@
                 <div id="comment-status-{{ it.session_id }}-{{ it.trainee_id }}" class="scotia-comment-status"></div>
               </div>
             </div>
-          </div>
+          </details>
           {% endfor %}
         </div>
       {% else %}
