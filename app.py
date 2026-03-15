@@ -6132,6 +6132,13 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     def _scotia_sort_key(item: Dict[str, Any]):
         sent_at_raw = item.get("vae_sent_at") or ""
         parsed_dt = _parse_iso_datetime(sent_at_raw)
+        if not parsed_dt and sent_at_raw:
+            for fmt in ("%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M", "%d/%m/%Y"):
+                try:
+                    parsed_dt = datetime.datetime.strptime(sent_at_raw, fmt)
+                    break
+                except Exception:
+                    continue
         sent_at_ts = parsed_dt.timestamp() if parsed_dt else 0
         return (
             sent_at_ts,
