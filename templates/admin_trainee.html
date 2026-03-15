@@ -105,13 +105,6 @@
         <button class="btn {% if vae_action_dates.get('livret_2_transmitted_scotia') %}btn-disabled-muted{% else %}btn-blue{% endif %} btn-uniform" type="button" onclick="setVaeAction('livret_2_transmitted_scotia')" {% if vae_action_dates.get('livret_2_transmitted_scotia') %}disabled{% endif %} {{ read_only_attr }}>
           L2 transmis scotia
         </button>
-        <button class="btn {% if trainee.scotia_force_visible %}btn-primary{% else %}btn-blue{% endif %} btn-uniform"
-                type="button"
-                onclick="propulseScotia()"
-                {% if trainee.scotia_force_visible %}disabled{% endif %}
-                {{ read_only_attr }}>
-          PROPULSER SCOTIA
-        </button>
       {% endif %}
       {% if is_aps_or_a3p %}
         {% set cnaps_full_name = ((trainee.first_name or "Prénom") ~ " " ~ (trainee.last_name or "NOM"))|trim %}
@@ -439,13 +432,6 @@
       <div class="hint" style="margin-top:4px;">Le changement de statut peut envoyer automatiquement un email et un SMS selon l'étape.</div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
-      <button class="btn {% if trainee.scotia_force_visible %}btn-primary{% else %}btn-blue{% endif %}"
-              type="button"
-              onclick="propulseScotia()"
-              {% if trainee.scotia_force_visible %}disabled{% endif %}
-              {{ read_only_attr }}>
-        PROPULSER SCOTIA
-      </button>
       <span class="pill">{{ trainee.vae_status_label or "—" }}</span>
     </div>
   </div>
@@ -529,39 +515,10 @@
 
 
 <div class="card" style="grid-column:1 / -1; margin-top:12px; border-left:4px solid #22c55e;">
-  {% set vae_docs = trainee.documents or [] %}
-  {% set vae_doc_keys = ['livret_2', 'id', 'justif_dom', 'diplome', 'highest_diploma'] %}
-  {% set vae_support_docs = [] %}
-  {% for d in vae_docs %}
-    {% if d.key in vae_doc_keys %}
-      {% set ns_tokens = namespace(items=[]) %}
-      {% if d.file_tokens is defined and d.file_tokens is sequence and d.file_tokens is not string %}
-        {% for ft in d.file_tokens %}
-          {% if ft and ft not in ns_tokens.items %}
-            {% set _ = ns_tokens.items.append(ft) %}
-          {% endif %}
-        {% endfor %}
-      {% endif %}
-      {% if d.files is defined and d.files is sequence and d.files is not string %}
-        {% for ft in d.files %}
-          {% if ft and ft not in ns_tokens.items %}
-            {% set _ = ns_tokens.items.append(ft) %}
-          {% endif %}
-        {% endfor %}
-      {% endif %}
-      {% if d.file and d.file not in ns_tokens.items %}
-        {% set _ = ns_tokens.items.insert(0, d.file) %}
-      {% endif %}
-      {% set tokens = ns_tokens.items %}
-      {% if tokens %}
-        {% set _ = vae_support_docs.append({'label': d.label, 'key': d.key, 'tokens': tokens}) %}
-      {% endif %}
-    {% endif %}
-  {% endfor %}
   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
     <div>
       <div style="font-weight:900;">DOSSIER DE FAISABILITÉ VAE</div>
-      <div class="hint" style="margin-top:4px;">Consultation du livret 1 soumis par le candidat, du dossier n°2 et des pièces justificatives.</div>
+      <div class="hint" style="margin-top:4px;">Consultation du livret 1 soumis par le candidat.</div>
     </div>
     {% if vae_dossier %}
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -583,53 +540,6 @@
     {% endif %}
   </div>
 
-  <div style="margin-top:12px;padding-top:12px;border-top:1px dashed #e5e7eb;">
-    <div style="font-weight:800;">Dossier n°2 & pièces justificatives</div>
-    {% set livret2_doc = (vae_support_docs | selectattr('key', 'equalto', 'livret_2') | list | first) if vae_support_docs else None %}
-    {% if not livret2_doc and vae_support_docs %}
-      {% set livret2_doc = vae_support_docs | selectattr('key', 'equalto', 'livret2') | list | first %}
-    {% endif %}
-    {% set livret2_token = livret2_doc.tokens[0] if livret2_doc and livret2_doc.tokens else None %}
-    {% if not is_read_only %}
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
-        <form method="post" enctype="multipart/form-data"
-              action="{{ url_for('admin_upload_doc_file', session_id=session.id, trainee_id=trainee.id, doc_key='livret_2') }}"
-              style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <input type="file" name="file" required>
-          <button class="btn btn-primary" type="submit">Importer dossier n°2</button>
-        </form>
-        {% if livret2_token %}
-          <a class="btn btn-outline" href="{{ url_for('admin_view_upload', path=livret2_token) }}" target="_blank" rel="noopener">Consulter le Livret 2</a>
-        {% endif %}
-      </div>
-    {% endif %}
-    {% if vae_support_docs %}
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
-        {% for doc in vae_support_docs %}
-          <div>
-            <div class="hint" style="margin-bottom:4px;">{{ doc.label }}</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              {% for ft in doc.tokens %}
-                <a class="btn btn-outline" href="{{ url_for('admin_view_upload', path=ft) }}" target="_blank" rel="noopener">
-                  📎 Voir fichier {% if doc.tokens|length > 1 %}{{ loop.index }}{% endif %}
-                </a>
-              {% endfor %}
-            </div>
-            {% if not is_read_only and doc.key != 'livret_2' %}
-              <form method="post" enctype="multipart/form-data"
-                    action="{{ url_for('admin_upload_doc_file', session_id=session.id, trainee_id=trainee.id, doc_key=doc.key) }}"
-                    style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;">
-                <input type="file" name="file" required>
-                <button class="btn btn-outline" type="submit">Ajouter un fichier</button>
-              </form>
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="hint" style="margin-top:6px;">Aucun dossier n°2 ou pièce justificative déposé pour ce stagiaire.</div>
-    {% endif %}
-  </div>
 </div>
 {% endif %}
 
@@ -1455,7 +1365,7 @@
           </tr>
         </thead>
         <tbody>
-          {% for d in (trainee.documents or []) %}
+          {% for d in (trainee.documents or []) if not (show_vae and d.key == "livret_2") %}
           {% set has_file = (d.file_tokens and d.file_tokens|length > 0) or (d.file and d.file|length > 0) %}
           {% set candidate_sheet_saved = d.key == "candidate_info_sheet" and (trainee.candidate_sheet_saved_at or trainee.candidate_sheet) %}
           {% set has_status_source = has_file or candidate_sheet_saved %}
