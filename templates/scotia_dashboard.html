@@ -217,6 +217,7 @@
               {% set item_processed = it.scotia_status in ['recevable', 'non_recevable'] %}
               {% set has_attestation_recevabilite = (it.deliverables.attestation_recevabilite or '')|trim %}
               {% set has_livret_2 = (it.deliverables.livret_2 or '')|trim %}
+              {% set has_prerequis_interview_sheet = (it.prerequis_interview_sheet or '')|trim %}
               <button type="button" class="btn btn-primary {% if it.scotia_status == 'recevable' %}is-active{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','recevable')" {% if item_processed %}disabled{% endif %}>Recevable</button>
               <button type="button" class="btn btn-danger-solid {% if it.scotia_status == 'non_recevable' %}is-active{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','non_recevable')" {% if item_processed %}disabled{% endif %}>Non recevable</button>
 
@@ -230,6 +231,10 @@
               {% if has_livret_2 %}
                 <a class="btn btn-outline" href="/scotia/uploads/{{ it.deliverables.livret_2 }}" target="_blank">Consulter le Livret 2</a>
                 <p class="attestation-imported-note">Livret 2 importé le {{ it.livret_2_imported_at or 'date inconnue' }}</p>
+              {% endif %}
+
+              {% if has_prerequis_interview_sheet %}
+                <a class="btn btn-outline" href="/scotia/uploads/{{ it.prerequis_interview_sheet }}" target="_blank">Consulter fiche d'entretien pré-requis</a>
               {% endif %}
 
               <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/attestation/upload" style="display:flex;gap:6px;align-items:center;">
