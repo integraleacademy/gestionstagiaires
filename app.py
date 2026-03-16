@@ -4613,9 +4613,16 @@ REQUIRED_DOCS = {
             "accept": "application/pdf,image/jpeg,image/png",
         },
     ],
+    "DIRIGEANT_NO_BAC_PREREQUIS": [
+        {
+            "key": "prerequis_interview_sheet",
+            "label": "Fiche d'entretien pré-requis",
+            "accept": "application/pdf,image/jpeg,image/png",
+        },
+    ],
 }
 
-def required_docs_for_training(training_type: str) -> List[Dict[str, Any]]:
+def required_docs_for_training(training_type: str, trainee: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     tt = (training_type or "").strip().upper()
     docs = list(REQUIRED_DOCS["COMMON"])
 
@@ -4630,6 +4637,8 @@ def required_docs_for_training(training_type: str) -> List[Dict[str, Any]]:
         docs += list(REQUIRED_DOCS["DIRIGEANT_CANDIDATE_SHEET"])
     if tt.startswith("DIRIGEANT"):
         docs += list(REQUIRED_DOCS["DIRIGEANT_DIPLOMA"])
+        if bool((trainee or {}).get("no_bac_diploma")):
+            docs += list(REQUIRED_DOCS["DIRIGEANT_NO_BAC_PREREQUIS"])
     if tt == "DIRIGEANT VAE":
         docs += list(REQUIRED_DOCS["DIRIGEANT_VAE_ONLY"])
     return docs
@@ -4648,7 +4657,7 @@ def ensure_documents_schema_for_trainee(t: Dict[str, Any], training_type: str) -
     S'assure que t["documents"] contient tous les docs requis pour la formation,
     sans écraser fichiers/statuts existants. Supprime l'ancien doc 'dom' (domicile).
     """
-    required = required_docs_for_training(training_type)
+    required = required_docs_for_training(training_type, t)
     existing = t.get("documents") or []
     changed = False
 
@@ -4727,8 +4736,8 @@ def _ensure_livret2_document_entry(t: Dict[str, Any]) -> Dict[str, Any]:
     docs.append(livret2_doc)
     return livret2_doc
 
-def allowed_doc_keys_for_training(training_type: str) -> set:
-    keys = {d["key"] for d in required_docs_for_training(training_type)}
+def allowed_doc_keys_for_training(training_type: str, trainee: Optional[Dict[str, Any]] = None) -> set:
+    keys = {d["key"] for d in required_docs_for_training(training_type, trainee)}
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
         keys.add("livret_2")
     return keys
@@ -4747,7 +4756,7 @@ def dossier_is_complete(trainee: Dict[str, Any], training_type: str) -> bool:
     tt = (training_type or "").strip().upper()
     no_permis = bool(trainee.get("no_permis"))  # checkbox "je n'ai pas le permis"
 
-    for rd in required_docs_for_training(training_type):
+    for rd in required_docs_for_training(training_type, trainee):
         k = rd["key"]
 
         # permis optionnel si no_permis
@@ -4775,7 +4784,7 @@ def required_docs_are_deposited(trainee: Dict[str, Any], training_type: str) -> 
     tt = (training_type or "").strip().upper()
     no_permis = bool(trainee.get("no_permis"))
 
-    for rd in required_docs_for_training(training_type):
+    for rd in required_docs_for_training(training_type, trainee):
         k = rd["key"]
 
         if tt == "A3P" and k == "permis" and no_permis:
@@ -5999,6 +6008,7 @@ def public_vae_desp_submit():
         "hosting_status": "",
         "public_token": public_token,
         "no_permis": False,
+        "no_bac_diploma": False,
         "force_dossier_complete": False,
         "vtc_cm_login": "",
         "vtc_cm_password": "",
@@ -8685,6 +8695,7 @@ def api_create_trainee(session_id: str):
         "hosting_status": "unknown" if show_hosting else "",
         "public_token": public_token,
         "no_permis": False,
+        "no_bac_diploma": False,
         "force_dossier_complete": False,
         "vtc_cm_login": "",
         "vtc_cm_password": "",
@@ -8922,6 +8933,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vae_action_dates",
         "cnaps",
         "no_permis",
+        "no_bac_diploma",
         "public_hide_infos",
         "public_hide_docs",
         "public_hide_suivi",
@@ -8987,6 +8999,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         # bools
         if k in (
             "no_permis",
+            "no_bac_diploma",
             "public_hide_infos",
             "public_hide_docs",
             "public_hide_suivi",
@@ -10272,7 +10285,7 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
         _ensure_livret2_document_entry(t)
 
     # ✅ refuse les doc_key inconnus pour cette formation
-    if doc_key not in allowed_doc_keys_for_training(training_type):
+    if doc_key not in allowed_doc_keys_for_training(training_type, t):
         return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
     f = request.files.get("file")
@@ -10416,7 +10429,7 @@ def admin_delete_doc_file(session_id: str, trainee_id: str, doc_key: str):
     ensure_documents_schema_for_trainee(t, training_type)
 
     # sécurité: n'accepte que les doc_key requis
-    if doc_key not in allowed_doc_keys_for_training(training_type):
+    if doc_key not in allowed_doc_keys_for_training(training_type, t):
         return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
     docs = t.get("documents") or []
@@ -12846,7 +12859,7 @@ def public_doc_upload(token: str, doc_key: str):
         _ensure_livret2_document_entry(t)
 
     # ✅ doc_key doit être dans la liste requise
-    if doc_key not in allowed_doc_keys_for_training(training_type):
+    if doc_key not in allowed_doc_keys_for_training(training_type, t):
         return redirect(url_for("public_trainee_space", token=token))
 
     # ✅ retrouver la config du doc (accept)
@@ -13101,8 +13114,9 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     refresh_vae_relance_schedule(t)
     _refresh_vtc_cm_reminder_schedule(t)
 
-    # ✅ s'assure que no_permis est bien un bool
+    # ✅ s'assure que les booléens dossiers sont cohérents
     t["no_permis"] = bool(t.get("no_permis"))
+    t["no_bac_diploma"] = bool(t.get("no_bac_diploma"))
     t["force_dossier_complete"] = bool(t.get("force_dossier_complete"))
     if not (str(t.get("training_price") or "").strip()) and default_price is not None:
         t["training_price"] = default_price

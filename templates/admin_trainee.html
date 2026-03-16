@@ -5,6 +5,7 @@
 {% set pre_reception_open = request.args.get("pre_reception") %}
 {% set is_vtc = "VTC" in (session.training_type or "")|upper %}
 {% set is_dirigeant = "DIRIGEANT" in (session.training_type or "")|upper %}
+{% set show_no_bac_toggle = is_dirigeant %}
 {% set is_aps_or_a3p = "APS" in (session.training_type or "")|upper or "A3P" in (session.training_type or "")|upper %}
 {% set training_type_label = "CHAUFFEUR VTC" if (session.training_type or "")|upper == "VTC" else session.training_type %}
 {% set vae_action_dates = trainee.vae_action_dates or {} %}
@@ -1371,6 +1372,18 @@
           {% set has_status_source = has_file or candidate_sheet_saved %}
           {% set cur = (d.status or ("A CONTRÔLER" if has_status_source else "NON DÉPOSÉ")) %}
 
+          {% if show_no_bac_toggle and d.key == "highest_diploma" %}
+          <tr>
+            <td colspan="4" style="padding:10px 12px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;">
+              <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;">
+                <input type="checkbox" id="chkNoBacDiploma" {% if trainee.no_bac_diploma %}checked{% endif %} {{ read_only_attr }}>
+                <span>Ce stagiaire n'a pas de diplôme niveau bac</span>
+              </label>
+              <div class="hint" style="margin-top:4px;">En cochant cette case, le document « Fiche d'entretien pré-requis » devient importable.</div>
+            </td>
+          </tr>
+          {% endif %}
+
           <tr data-doc-key="{{ d.key }}">
             <td style="font-weight:800;">{{ d.label }}</td>
 
@@ -2673,6 +2686,21 @@ if(chkNoPermis){
   });
 }
 
+const chkNoBacDiploma = document.getElementById("chkNoBacDiploma");
+if(chkNoBacDiploma){
+  chkNoBacDiploma.addEventListener("change", async ()=>{
+    try{
+      await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ no_bac_diploma: chkNoBacDiploma.checked })
+      });
+      window.location.reload();
+    }catch(e){
+      alert("Erreur sauvegarde diplôme");
+    }
+  });
+}
 
 
   // =========================
