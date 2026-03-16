@@ -6102,12 +6102,15 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
             if has_attestation_recevabilite and not attestation_recevabilite_imported_at:
                 attestation_recevabilite_imported_at = (action_dates.get("livret_1_validated") or "").strip()
             docs_view = []
+            prerequis_interview_sheet_token = ""
             for d in (t.get("documents") or []):
                 token = (d.get("file") or "").strip()
                 files = d.get("files") if isinstance(d.get("files"), list) else []
                 file_tokens = [x for x in files if isinstance(x, str) and x.strip()]
                 if token and token not in file_tokens:
                     file_tokens.insert(0, token)
+                if not prerequis_interview_sheet_token and d.get("key") == "prerequis_interview_sheet":
+                    prerequis_interview_sheet_token = file_tokens[0] if file_tokens else token
                 docs_view.append({
                     "key": d.get("key"),
                     "label": d.get("label") or d.get("key"),
@@ -6132,6 +6135,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "scotia_processed_at": (t.get("scotia_processed_at") or "").strip(),
                 "scotia_comment": (t.get("scotia_comment") or "").strip(),
                 "documents": docs_view,
+                "prerequis_interview_sheet": prerequis_interview_sheet_token,
                 "deliverables": deliverables,
                 "attestation_recevabilite_imported_at": attestation_recevabilite_imported_at,
                 "livret_2_imported_at": livret_2_imported_at,
