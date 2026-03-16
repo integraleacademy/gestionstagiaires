@@ -1089,7 +1089,7 @@
 
   <div class="docs-stack">
 
-  {% for d in (trainee.documents or []) if not (is_dirigeant_vae and d.key == "livret_2") %}
+  {% for d in (trainee.documents or []) if not (is_dirigeant_vae and d.key == "livret_2") and d.key != "prerequis_interview_sheet" %}
 {% set ns = namespace(file_tokens=[]) %}
 {% if d.files is defined and d.files is sequence %}
   {% for f in d.files %}
