@@ -1437,6 +1437,7 @@
     {% for ft in (d.file_tokens or []) %}
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
         <a href="{{ url_for('admin_view_upload', path=ft) }}" target="_blank">📎 Voir fichier {{ loop.index }}</a>
+        <a href="{{ url_for('admin_download_upload', path=ft) }}">⬇️ Télécharger</a>
 
         {% if not is_read_only %}
           <form method="post"
