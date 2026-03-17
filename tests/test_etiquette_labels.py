@@ -50,9 +50,9 @@ class EtiquetteLabelsTests(unittest.TestCase):
             self.assertIn("Convention de VAE signée", vae_html)
             self.assertIn("Attestation de recevabilité", vae_html)
             self.assertIn("FORMATION DESP", vae_html)
-            self.assertIn("EN VAE", vae_html)
+            self.assertIn("FORMATION DESP VAE", vae_html)
 
-    def test_print_page_uses_desp_label_for_dirigeant_initial_and_expected_color(self):
+    def test_print_page_uses_desp_label_for_dirigeant_initial_and_expected_highlight(self):
         fake_data = {
             "sessions": [
                 {
@@ -76,7 +76,8 @@ class EtiquetteLabelsTests(unittest.TestCase):
             html = resp.get_data(as_text=True)
             self.assertIn("FORMATION DESP", html)
             self.assertNotIn("FORMATION DIRIGEANT INITIAL", html)
-            self.assertIn("background:#8f9400", html)
+            self.assertIn("color:#fff", html)
+            self.assertIn("background:#dc2626", html)
 
 
 if __name__ == "__main__":
