@@ -10788,9 +10788,9 @@ def admin_etiquette_print_page(session_id: str, trainee_id: str):
         "A3P": "FORMATION A3P",
         "VTC": "FORMATION CHAUFFEUR VTC",
         "CHAUFFEUR VTC": "FORMATION CHAUFFEUR VTC",
-        "DIRIGEANT": "FORMATION DIRIGEANT",
-        "DIRIGEANT INITIAL": "FORMATION DIRIGEANT INITIAL",
-        "DIRIGEANT VAE": "FORMATION DESP",
+        "DIRIGEANT": "FORMATION DESP",
+        "DIRIGEANT INITIAL": "FORMATION DESP",
+        "DIRIGEANT VAE": "FORMATION DESP VAE",
     }
 
     checklist_map = {
@@ -10865,11 +10865,16 @@ def admin_etiquette_print_page(session_id: str, trainee_id: str):
     s["trainees"] = trainees
     save_data(data)
 
+    formation_label_text = formation_map.get(training_type, f"FORMATION {training_type}".strip())
+    if "DIRIGEANT" in training_type and "VAE" in training_type:
+        formation_label_text = "FORMATION DESP VAE"
+    elif "DIRIGEANT" in training_type:
+        formation_label_text = "FORMATION DESP"
+
     return render_template(
         "admin_etiquette_print.html",
         trainee_name=f"{(t.get('last_name') or '').upper()} {(t.get('first_name') or '').upper()}".strip(),
-        formation_label=formation_map.get(training_type, f"FORMATION {training_type}".strip()),
-        formation_extra_label="EN VAE" if training_type == "DIRIGEANT VAE" else "",
+        formation_label=formation_label_text,
         date_range=f"{fr_date(_session_get(s,'date_start',''))} → {fr_date(_session_get(s,'date_end',''))}",
         checklist=checklist_map.get(training_type, []),
         photo_url=photo_url,
