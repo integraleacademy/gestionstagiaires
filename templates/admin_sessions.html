@@ -485,7 +485,7 @@
 
 <div class="grid cards" id="sessionsGrid">
   {% for s in sessions %}
-  <div class="card session-card session-card--{{ s.status_key }} training-{{ s.training_type_class }}">
+  <div class="card session-card session-card--{{ s.status_key }} training-{{ s.training_type_class }}{% if 'VAE' in (s.training_type or '')|upper %} training-vae{% endif %}" data-session-training-type="{{ (s.training_type or '')|upper }}">
     <div class="card-row">
       <div>
         <div class="card-title {% if not is_read_only %}session-name-editable{% endif %}"
@@ -1696,6 +1696,17 @@
       card.addEventListener("click", ()=>{
         const value = card.dataset.dashboardFilter;
         if(!value) return;
+
+        if(value === "vae"){
+          const vaeTraineesLink = document.querySelector(
+            ".session-card[data-session-training-type*='VAE'] .card-actions a[href*='/stagiaires']"
+          );
+          if(vaeTraineesLink?.href){
+            window.location.href = vaeTraineesLink.href;
+            return;
+          }
+        }
+
         filterState.training = (filterState.training === value) ? null : value;
         setActiveButtons();
         applyFilters();
