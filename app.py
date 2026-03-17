@@ -993,12 +993,23 @@ def _ocr_extract_text_from_image(file_bytes: bytes, filename: str, content_type:
             pass
         return variants
 
+    # Render/Gunicorn tue le worker après ~30s. On borne strictement la durée
+    # de cette fonction pour éviter un redémarrage du process en pleine requête.
+    started_at = time.monotonic()
+    max_total_seconds = 20.0
     last_error = "ocr_failed"
     for file_variant, file_name_variant, content_type_variant in _build_ocr_variants(file_bytes):
+        if (time.monotonic() - started_at) >= max_total_seconds:
+            return "", "ocr_timeout"
+
         files = {
             "file": (file_name_variant, file_variant, content_type_variant)
         }
         for engine in ("2", "1"):
+            remaining = max_total_seconds - (time.monotonic() - started_at)
+            if remaining <= 0:
+                return "", "ocr_timeout"
+
             payload = {
                 "language": "fre",
                 "isOverlayRequired": "false",
@@ -1011,7 +1022,7 @@ def _ocr_extract_text_from_image(file_bytes: bytes, filename: str, content_type:
                     data=payload,
                     files=files,
                     headers={"apikey": api_key},
-                    timeout=30,
+                    timeout=min(8.0, max(2.0, remaining)),
                 )
                 data = response.json()
             except requests.Timeout:
