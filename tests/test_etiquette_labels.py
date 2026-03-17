@@ -50,6 +50,32 @@ class EtiquetteLabelsTests(unittest.TestCase):
             self.assertIn("Convention de VAE signée", vae_html)
             self.assertIn("Attestation de recevabilité", vae_html)
 
+    def test_print_page_uses_desp_label_for_dirigeant_initial_and_expected_color(self):
+        fake_data = {
+            "sessions": [
+                {
+                    "id": "S3",
+                    "name": "Formation dirigeant",
+                    "training_type": "DIRIGEANT initial",
+                    "date_start": "2026-03-09",
+                    "date_end": "2026-04-24",
+                    "trainees": [{"id": "T3", "last_name": "Koita", "first_name": "Manoury"}],
+                },
+            ]
+        }
+
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data), patch.object(gestion_app, "save_data"):
+            resp = client.get("/admin/sessions/S3/stagiaires/T3/etiquette")
+            self.assertEqual(resp.status_code, 200)
+            html = resp.get_data(as_text=True)
+            self.assertIn("FORMATION DESP", html)
+            self.assertNotIn("FORMATION DIRIGEANT INITIAL", html)
+            self.assertIn("background:#8f9400", html)
+
 
 if __name__ == "__main__":
     unittest.main()
