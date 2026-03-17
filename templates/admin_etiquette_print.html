@@ -93,6 +93,27 @@
     .formation{ text-align:center; font-weight:800; font-size:5.7mm; text-transform:uppercase; margin:1mm 0 0 0; white-space:nowrap; }
     .formation span,
     .formation-extra span{ color:#dc2626; }
+    .formation.formation-desp span{
+      color:#fff;
+      background:#8b5e3c;
+      padding:0 1.2mm;
+      border-radius:1mm;
+      display:inline-block;
+    }
+    .formation.formation-aps span{
+      color:#111827;
+      background:#7dd3fc;
+      padding:0 1.2mm;
+      border-radius:1mm;
+      display:inline-block;
+    }
+    .formation.formation-a3p span{
+      color:#111827;
+      background:#fde047;
+      padding:0 1.2mm;
+      border-radius:1mm;
+      display:inline-block;
+    }
     .formation.formation-desp-vae span{
       color:#fff;
       background:#dc2626;
@@ -111,6 +132,10 @@
     }
     .checklist li{ display:flex; align-items:flex-start; gap:4mm; }
     .checklist li::before{ content:"○"; line-height:1; }
+    .checklist.checklist-compact{
+      margin-top:6mm;
+      line-height:1.45;
+    }
 
     @media print {
       @page { size: A4 portrait; margin: 0; }
@@ -149,13 +174,13 @@
       <div class="content-wrap">
         <img class="logo" src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy">
         <p class="trainee-name">{{ trainee_name }}</p>
-        <p class="formation{% if formation_extra_label %} formation-vae{% endif %}{% if formation_label == 'FORMATION DESP VAE' %} formation-desp-vae{% endif %}"><span>{{ formation_label }}</span></p>
+        <p class="formation{% if formation_extra_label %} formation-vae{% endif %}{% if formation_label == 'FORMATION DESP' %} formation-desp{% elif formation_label == 'FORMATION TFP APS' %} formation-aps{% elif formation_label == 'FORMATION A3P' %} formation-a3p{% elif formation_label == 'FORMATION DESP VAE' %} formation-desp-vae{% endif %}"><span>{{ formation_label }}</span></p>
         {% if formation_extra_label %}
           <p class="formation-extra"><span>{{ formation_extra_label }}</span></p>
         {% endif %}
         <div class="dates">{{ date_range }}</div>
 
-        <ul class="checklist">
+        <ul class="checklist{% if formation_label in ['FORMATION DESP', 'FORMATION A3P'] %} checklist-compact{% endif %}">
           {% for item in checklist %}
             <li>{{ item }}</li>
           {% endfor %}
