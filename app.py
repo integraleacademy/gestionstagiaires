@@ -4790,6 +4790,11 @@ def required_docs_are_deposited(trainee: Dict[str, Any], training_type: str) -> 
         if tt == "A3P" and k == "permis" and no_permis:
             continue
 
+        # En parcours DIRIGEANT VAE, la fiche d'entretien pré-requis ne doit
+        # pas bloquer le déverrouillage de l'étape 1 (livret 1) côté public.
+        if tt == "DIRIGEANT VAE" and k == "prerequis_interview_sheet":
+            continue
+
         d = by_key.get(k)
         if not d:
             return False
