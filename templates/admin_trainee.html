@@ -1355,6 +1355,16 @@
       <div class="hint" id="docsRelancePlannedHint" style="display:none;">⏰ Relance stagiaire prévue le : <strong id="docsRelancePlannedDate"></strong></div>
     {% endif %}
 
+    {% if show_no_bac_toggle %}
+      <div style="margin-top:10px;padding:10px 12px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;">
+        <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;">
+          <input type="checkbox" id="chkNoBacDiploma" {% if trainee.no_bac_diploma %}checked{% endif %} {{ read_only_attr }}>
+          <span>Ce stagiaire n'a pas de diplôme niveau bac</span>
+        </label>
+        <div class="hint" style="margin-top:4px;">En cochant cette case, le document « Fiche d'entretien pré-requis » devient importable.</div>
+      </div>
+    {% endif %}
+
     <div class="table-wrap" style="margin-top:10px;">
       <table class="table" id="docsTable" data-session-id="{{ session.id }}" data-trainee-id="{{ trainee.id }}">
         <thead>
@@ -1371,18 +1381,6 @@
           {% set candidate_sheet_saved = d.key == "candidate_info_sheet" and (trainee.candidate_sheet_saved_at or trainee.candidate_sheet) %}
           {% set has_status_source = has_file or candidate_sheet_saved %}
           {% set cur = (d.status or ("A CONTRÔLER" if has_status_source else "NON DÉPOSÉ")) %}
-
-          {% if show_no_bac_toggle and d.key == "highest_diploma" %}
-          <tr>
-            <td colspan="4" style="padding:10px 12px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;">
-              <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;">
-                <input type="checkbox" id="chkNoBacDiploma" {% if trainee.no_bac_diploma %}checked{% endif %} {{ read_only_attr }}>
-                <span>Ce stagiaire n'a pas de diplôme niveau bac</span>
-              </label>
-              <div class="hint" style="margin-top:4px;">En cochant cette case, le document « Fiche d'entretien pré-requis » devient importable.</div>
-            </td>
-          </tr>
-          {% endif %}
 
           <tr data-doc-key="{{ d.key }}">
             <td style="font-weight:800;">{{ d.label }}</td>
