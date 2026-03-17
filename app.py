@@ -10018,6 +10018,15 @@ def admin_view_upload(path: str):
     # simple serve
     return send_file(full, as_attachment=False)
 
+
+@app.get("/admin/uploads/<path:path>/download")
+@admin_login_required
+def admin_download_upload(path: str):
+    full = _detokenize_path(path)
+    if not os.path.exists(full):
+        abort(404)
+    return send_file(full, as_attachment=True)
+
 def _token_belongs_to_trainee(t: dict, file_token: str) -> bool:
     file_token = (file_token or "").strip()
     if not file_token:
