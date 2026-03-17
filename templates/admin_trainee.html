@@ -1451,10 +1451,28 @@
     {% endfor %}
 
     <span class="hint">(déjà uploadé)</span>
+
+    {% if d.key == "prerequis_interview_sheet" and not is_read_only %}
+      <form method="post"
+            action="{{ url_for('admin_upload_doc_file', session_id=session.id, trainee_id=trainee.id, doc_key=d.key) }}"
+            enctype="multipart/form-data"
+            style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input type="file" name="file" accept="{{ d.accept or '' }}" required>
+        <button class="btn btn-outline" type="submit">⬆️ Importer</button>
+      </form>
+    {% endif %}
   </div>
 {% else %}
   {% if d.key == "candidate_info_sheet" and cur != "NON DÉPOSÉ" %}
     <span class="pill pill-green">📎 Fichier déjà envoyé</span>
+  {% elif d.key == "prerequis_interview_sheet" and not is_read_only %}
+    <form method="post"
+          action="{{ url_for('admin_upload_doc_file', session_id=session.id, trainee_id=trainee.id, doc_key=d.key) }}"
+          enctype="multipart/form-data"
+          style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <input type="file" name="file" accept="{{ d.accept or '' }}" required>
+      <button class="btn btn-primary" type="submit">⬆️ Importer</button>
+    </form>
   {% else %}
     <span class="hint">Aucun fichier</span>
   {% endif %}
