@@ -88,10 +88,11 @@
     .trainee-name{ text-align:center; font-weight:800; font-size:6.1mm; text-transform:uppercase; margin:0; white-space:nowrap; }
     .formation{ text-align:center; font-weight:800; font-size:5.7mm; text-transform:uppercase; margin:1mm 0 0 0; white-space:nowrap; }
     .formation span,
-    .formation-extra span{
+    .formation-extra span{ color:#dc2626; }
+    .formation.formation-desp-vae span{
       color:#fff;
-      background:#38bdf8;
-      padding:0 1.5mm;
+      background:#dc2626;
+      padding:0 1.2mm;
       border-radius:1mm;
       display:inline-block;
     }
@@ -144,7 +145,7 @@
       <div class="content-wrap">
         <img class="logo" src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy">
         <p class="trainee-name">{{ trainee_name }}</p>
-        <p class="formation{% if formation_extra_label %} formation-vae{% endif %}{% if 'A3P' in formation_label %} formation-highlight-a3p{% endif %}"><span>{{ formation_label }}</span></p>
+        <p class="formation{% if formation_extra_label %} formation-vae{% endif %}{% if formation_label == 'FORMATION DESP VAE' %} formation-desp-vae{% endif %}"><span>{{ formation_label }}</span></p>
         {% if formation_extra_label %}
           <p class="formation-extra"><span>{{ formation_extra_label }}</span></p>
         {% endif %}
