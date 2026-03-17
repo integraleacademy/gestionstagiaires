@@ -77,8 +77,49 @@ class EtiquetteLabelsTests(unittest.TestCase):
             self.assertIn("FORMATION DESP", html)
             self.assertNotIn("FORMATION DIRIGEANT INITIAL", html)
             self.assertIn("color:#fff", html)
-            self.assertIn("background:#dc2626", html)
+            self.assertIn("background:#8b5e3c", html)
 
+
+
+    def test_print_page_applies_training_specific_colors(self):
+        fake_data = {
+            "sessions": [
+                {
+                    "id": "S4",
+                    "name": "Formation aps",
+                    "training_type": "APS",
+                    "date_start": "2026-04-01",
+                    "date_end": "2026-06-26",
+                    "trainees": [{"id": "T4", "last_name": "Oufqih", "first_name": "Yannis"}],
+                },
+                {
+                    "id": "S5",
+                    "name": "Formation a3p",
+                    "training_type": "A3P",
+                    "date_start": "2026-09-01",
+                    "date_end": "2026-10-27",
+                    "trainees": [{"id": "T5", "last_name": "Urbanik", "first_name": "Anthony"}],
+                },
+            ]
+        }
+
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data), patch.object(gestion_app, "save_data"):
+            aps_resp = client.get("/admin/sessions/S4/stagiaires/T4/etiquette")
+            self.assertEqual(aps_resp.status_code, 200)
+            aps_html = aps_resp.get_data(as_text=True)
+            self.assertIn("FORMATION TFP APS", aps_html)
+            self.assertIn("background:#7dd3fc", aps_html)
+
+            a3p_resp = client.get("/admin/sessions/S5/stagiaires/T5/etiquette")
+            self.assertEqual(a3p_resp.status_code, 200)
+            a3p_html = a3p_resp.get_data(as_text=True)
+            self.assertIn("FORMATION A3P", a3p_html)
+            self.assertIn("background:#fde047", a3p_html)
+            self.assertIn("checklist-compact", a3p_html)
 
 if __name__ == "__main__":
     unittest.main()
