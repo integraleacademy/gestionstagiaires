@@ -49,6 +49,8 @@ class EtiquetteLabelsTests(unittest.TestCase):
             vae_html = vae_resp.get_data(as_text=True)
             self.assertIn("Convention de VAE signée", vae_html)
             self.assertIn("Attestation de recevabilité", vae_html)
+            self.assertIn("FORMATION DESP", vae_html)
+            self.assertIn("EN VAE", vae_html)
 
 
 if __name__ == "__main__":
