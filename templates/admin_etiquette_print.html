@@ -132,7 +132,10 @@
       <div class="content-wrap">
         <img class="logo" src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy">
         <p class="trainee-name">{{ trainee_name }}</p>
-        <p class="formation"><span>{{ formation_label }}</span></p>
+        <p class="formation{% if formation_extra_label %} formation-vae{% endif %}"><span>{{ formation_label }}</span></p>
+        {% if formation_extra_label %}
+          <p class="formation-extra"><span>{{ formation_extra_label }}</span></p>
+        {% endif %}
         <div class="dates">{{ date_range }}</div>
 
         <ul class="checklist">
