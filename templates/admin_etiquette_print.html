@@ -62,7 +62,7 @@
 
     .label-grid{ display:flex; gap:28mm; align-items:flex-start; }
 
-    .photo-wrap{ width:68mm; }
+    .photo-wrap{ width:58mm; }
     .photo-box{
       width:58mm;
       height:76mm;
@@ -80,27 +80,32 @@
       font-style:italic;
       text-transform:uppercase;
       white-space:nowrap;
+      text-align:center;
     }
 
-    .content-wrap{ width:88mm; padding-top:0mm; }
-    .logo{ width:26mm; display:block; margin:0 auto 8mm auto; }
+    .content-wrap{ width:88mm; margin-top:-2mm; }
+    .logo{ width:26mm; display:block; margin:0 auto 6mm auto; }
     .trainee-name{ text-align:center; font-weight:800; font-size:6.1mm; text-transform:uppercase; margin:0; white-space:nowrap; }
     .formation{ text-align:center; font-weight:800; font-size:5.7mm; text-transform:uppercase; margin:1mm 0 0 0; white-space:nowrap; }
     .formation span{ background:#8f9400; color:#fff; padding:0 1mm; }
     .dates{ text-align:center; font-weight:700; font-size:4.3mm; margin-top:1mm; }
 
     .checklist{
-      margin:10mm 0 0 0;
+      margin:8mm 0 0 0;
       padding:0;
       list-style:none;
       font-size:4.0mm;
-      line-height:1.7;
+      line-height:1.55;
     }
     .checklist li{ display:flex; align-items:flex-start; gap:4mm; }
     .checklist li::before{ content:"○"; line-height:1; }
 
     @media print {
       @page { size: A4 portrait; margin: 0; }
+      *{
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
       body{ background:#fff; }
       .print-toolbar{ display:none; }
       .sheet{ margin:0; width:210mm; min-height:297mm; }
