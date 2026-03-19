@@ -222,6 +222,43 @@
 .public-wrap .docs-stack .doctag{
   margin-top:6px;
 }
+.public-wrap .docs-stack .doc-format-box{
+  margin-top:8px;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid #bfdbfe;
+  background:linear-gradient(135deg,#eff6ff 0%,#ffffff 100%);
+}
+.public-wrap .docs-stack .doc-format-title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-weight:800;
+  color:#1d4ed8;
+  margin-bottom:8px;
+}
+.public-wrap .docs-stack .doc-format-list{
+  margin:0;
+  padding-left:18px;
+  color:#334155;
+}
+.public-wrap .docs-stack .doc-format-list li + li{
+  margin-top:4px;
+}
+.public-wrap .docs-stack .upload-selection-feedback{
+  display:none;
+  width:100%;
+  margin-top:8px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid #fecaca;
+  background:#fff1f2;
+  color:#b91c1c;
+  font-weight:700;
+}
+.public-wrap .docs-stack .upload-selection-feedback.show{
+  display:block;
+}
 
 /* le form upload respire */
 .public-wrap .docs-stack .upload-form{
@@ -1132,6 +1169,28 @@
     {% elif "image/" in accept %}
       {% set hint = "JPEG ou PNG" %}
     {% endif %}
+    {% set format_examples = [] %}
+    {% if d.key == "id" %}
+      {% set format_examples = [
+        "Format accepté : PDF uniquement.",
+        "Carte d’identité ou titre de séjour : recto + verso obligatoires.",
+        "Vous pouvez envoyer 1 PDF complet ou 2 PDF séparés (recto puis verso).",
+        "Passeport : envoyez un PDF lisible de la page d’identité."
+      ] %}
+    {% elif d.key == "photo" %}
+      {% set format_examples = [
+        "Format accepté : JPEG ou PNG.",
+        "Photo nette, de face, visage bien visible.",
+        "Fond uni / neutre, sans filtre, sans capture d’écran.",
+        "Cette photo pourra apparaître sur votre diplôme."
+      ] %}
+    {% elif d.key != "candidate_info_sheet" %}
+      {% set format_examples = [
+        "Format accepté : " ~ hint ~ ".",
+        "Le document doit être complet, lisible et non coupé.",
+        "Si besoin, scannez ou exportez votre document dans le bon format avant l’envoi."
+      ] %}
+    {% endif %}
 
 <div class="docrow {{ row_cls }}" id="doc_{{ d.key }}">
       <div class="docmeta">
@@ -1186,6 +1245,16 @@
         
         {% if d.key != "candidate_info_sheet" %}
           <div class="muted">{{ hint }}</div>
+          {% if format_examples %}
+            <div class="doc-format-box">
+              <div class="doc-format-title">📄 Format à respecter avant de déposer</div>
+              <ul class="doc-format-list">
+                {% for item in format_examples %}
+                  <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
         {% endif %}
 
 {% if not has_file and not (d.key == "permis" and trainee.no_permis) and d.key != "candidate_info_sheet" %}
@@ -1212,7 +1281,8 @@
 id="upload_{{ d.key }}"
   action="/espace/{{ token_safe }}/documents/{{ d.key }}/upload"
   method="post"
-  enctype="multipart/form-data">
+  enctype="multipart/form-data"
+  data-accept-label="{{ hint }}">
 
 {% if d.key == "id" %}
   <div class="muted" style="font-weight:900;color:#111;margin-bottom:6px;">
@@ -1244,6 +1314,7 @@ id="upload_{{ d.key }}"
 <button class="btn small upload-cta" type="submit">
   {% if d.key == "livret_2" %}Déposer mon Livret 2{% elif can_replace %}Remplacer{% elif d.key == "id" and has_file %}Ajouter un autre{% else %}Déposer{% endif %}
 </button>
+<div class="upload-selection-feedback" aria-live="polite"></div>
 
 <div class="uploading-msg" style="display:none;margin-top:8px;font-weight:900;">
   ⏳ Envoi en cours…
@@ -2553,14 +2624,67 @@ window.addEventListener("DOMContentLoaded", ()=>{
 
   // ====== UX upload : cacher input + bouton dès submit ======
 window.addEventListener("DOMContentLoaded", () => {
+  const getAllowedExtensions = (accept) => {
+    const normalized = (accept || "").toLowerCase();
+    const allowed = new Set();
+    if (normalized.includes("application/pdf")) allowed.add("pdf");
+    if (normalized.includes("image/")) {
+      ["jpg", "jpeg", "png", "webp"].forEach((ext) => allowed.add(ext));
+    }
+    return allowed;
+  };
+
+  const getSelectionError = (form, input) => {
+    if (!input || !input.files || !input.files.length) return "";
+    const allowed = getAllowedExtensions(input.getAttribute("accept") || "");
+    if (!allowed.size) return "";
+    const invalid = Array.from(input.files).filter((file) => {
+      const parts = (file.name || "").toLowerCase().split(".");
+      const ext = parts.length > 1 ? parts.pop() : "";
+      return !allowed.has(ext);
+    });
+    if (!invalid.length) return "";
+
+    const acceptLabel = form.dataset.acceptLabel || "le format demandé";
+    const invalidNames = invalid.map((file) => file.name).join(", ");
+    return `Format refusé : ${invalidNames}. Merci d'envoyer ${acceptLabel.toLowerCase()} pour ce document.`;
+  };
+
+  const setSelectionFeedback = (form, message) => {
+    const feedback = form.querySelector(".upload-selection-feedback");
+    const input = form.querySelector('input[type="file"]');
+    if (feedback) {
+      feedback.textContent = message || "";
+      feedback.classList.toggle("show", !!message);
+    }
+    if (input) {
+      input.setCustomValidity(message || "");
+      input.reportValidity();
+    }
+  };
+
   document.querySelectorAll("form.upload-form").forEach(form => {
+    const fileInput = form.querySelector('input[type="file"]');
+    if (fileInput) {
+      fileInput.addEventListener("change", () => {
+        setSelectionFeedback(form, getSelectionError(form, fileInput));
+      });
+    }
+
     form.addEventListener("submit", (e) => {
+      const message = getSelectionError(form, fileInput);
+      if (message) {
+        e.preventDefault();
+        setSelectionFeedback(form, message);
+        return;
+      }
+      setSelectionFeedback(form, "");
+
       // Si on est sur un form avec confirmation (photo/id) et que pas confirmé, on ne masque rien
       if ((form.id === "upload_photo" || form.id === "upload_id") && form.dataset.confirmed !== "1") {
         return;
       }
 
-      const fileInput = form.querySelector('input[type="file"]');
       const btn = form.querySelector('button[type="submit"]');
       if (fileInput) fileInput.style.display = "none";
       if (btn) btn.style.display = "none";
