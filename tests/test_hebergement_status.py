@@ -1,0 +1,180 @@
+import unittest
+
+import app as gestion_app
+
+
+class DummyResponse:
+    def __init__(self, status_code, body=None):
+        self.status_code = status_code
+        self._body = body if body is not None else {}
+        self.text = str(body)
+
+    def json(self):
+        return self._body
+
+
+class HebergementStatusLookupTests(unittest.TestCase):
+    def setUp(self):
+        self.original_endpoint = gestion_app.HEBERGEMENT_STATUS_ENDPOINT
+        self.original_get = gestion_app.requests.get
+        gestion_app.HEBERGEMENT_STATUS_ENDPOINT = "https://assistance.example/lookup_hebergement.json"
+
+    def tearDown(self):
+        gestion_app.HEBERGEMENT_STATUS_ENDPOINT = self.original_endpoint
+        gestion_app.requests.get = self.original_get
+
+    def test_returns_reserved_for_explicit_reserved_flag(self):
+        gestion_app.requests.get = lambda *args, **kwargs: DummyResponse(200, {"reserved": True})
+
+        out = gestion_app.fetch_hebergement_status("charles.debouvry@gmail.com")
+
+        self.assertEqual(out, "reserved")
+
+    def test_returns_reserved_when_matching_record_is_nested(self):
+        gestion_app.requests.get = lambda *args, **kwargs: DummyResponse(
+            200,
+            {
+                "items": [
+                    {
+                        "nom": "DEBOUVRY",
+                        "prenom": "Charles",
+                        "email": "charles.debouvry@gmail.com",
+                        "session": "Du 30 mars au 2 juin 2026",
+                        "mode": "Espèces",
+                    }
+                ]
+            },
+        )
+
+        out = gestion_app.fetch_hebergement_status("charles.debouvry@gmail.com")
+
+        self.assertEqual(out, "reserved")
+
+    def test_returns_reserved_when_name_and_session_match_even_without_email_match(self):
+        gestion_app.requests.get = lambda *args, **kwargs: DummyResponse(
+            200,
+            {
+                "items": [
+                    {
+                        "nom": "DEBOUVRY",
+                        "prenom": "Charles",
+                        "mail": "charles.debouvry+autre@gmail.com",
+                        "session": "Du 30 mars au 2 juin 2026",
+                        "mode_paiement": "",
+                    }
+                ]
+            },
+        )
+
+        out = gestion_app.fetch_hebergement_status(
+            "charles.debouvry@gmail.com",
+            last_name="DEBOUVRY",
+            first_name="Charles",
+            session_date_start="2026-03-30",
+            session_date_end="2026-06-02",
+        )
+
+        self.assertEqual(out, "reserved")
+
+    def test_lookup_sends_mail_name_and_session_params_for_assistance_backend(self):
+        captured = {}
+
+        def fake_get(_url, params, timeout):
+            captured["params"] = params
+            return DummyResponse(200, {"status": "inconnu"})
+
+        gestion_app.requests.get = fake_get
+
+        gestion_app.fetch_hebergement_status(
+            "charles.debouvry@gmail.com",
+            last_name="DEBOUVRY",
+            first_name="Charles",
+            session_date_start="2026-03-30",
+            session_date_end="2026-06-02",
+        )
+
+        self.assertEqual(captured["params"]["email"], "charles.debouvry@gmail.com")
+        self.assertEqual(captured["params"]["mail"], "charles.debouvry@gmail.com")
+        self.assertEqual(captured["params"]["nom"], "DEBOUVRY")
+        self.assertEqual(captured["params"]["prenom"], "Charles")
+        self.assertEqual(captured["params"]["session"], "Du 30 mars au 2 juin 2026")
+
+    def test_keeps_unknown_when_lookup_payload_has_no_reservation(self):
+        gestion_app.requests.get = lambda *args, **kwargs: DummyResponse(200, {"status": "inconnu"})
+
+        out = gestion_app.fetch_hebergement_status("charles.debouvry@gmail.com")
+
+        self.assertIsNone(out)
+
+
+class RefreshExternalApiTests(unittest.TestCase):
+    def setUp(self):
+        self.client = gestion_app.app.test_client()
+        self.original_load_data = gestion_app.load_data
+        self.original_save_data = gestion_app.save_data
+        self.original_cnaps_lookup = gestion_app.fetch_cnaps_status_by_name
+        self.original_hebergement_lookup = gestion_app.fetch_hebergement_status
+
+    def tearDown(self):
+        gestion_app.load_data = self.original_load_data
+        gestion_app.save_data = self.original_save_data
+        gestion_app.fetch_cnaps_status_by_name = self.original_cnaps_lookup
+        gestion_app.fetch_hebergement_status = self.original_hebergement_lookup
+
+    def test_refresh_external_updates_cnaps_and_hosting_for_a3p(self):
+        data = {
+            "sessions": [
+                {
+                    "id": "S-A3P",
+                    "name": "A3P MARS 2026",
+                    "training_type": "A3P",
+                    "date_start": "2026-03-30",
+                    "date_end": "2026-06-02",
+                    "trainees": [
+                        {
+                            "id": "T-CHARLES",
+                            "last_name": "DEBOUVRY",
+                            "first_name": "Charles",
+                            "email": "charles.debouvry@gmail.com",
+                            "cnaps": "INCONNU",
+                            "hosting_status": "unknown",
+                        }
+                    ],
+                }
+            ]
+        }
+        saved = {"count": 0}
+        seen = {}
+
+        gestion_app.load_data = lambda: data
+        gestion_app.save_data = lambda payload: saved.__setitem__("count", saved["count"] + 1)
+        gestion_app.fetch_cnaps_status_by_name = lambda *_: "ACCEPTÉ"
+
+        def fake_hebergement_lookup(email, **kwargs):
+            seen["email"] = email
+            seen["kwargs"] = kwargs
+            return "reserved"
+
+        gestion_app.fetch_hebergement_status = fake_hebergement_lookup
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        response = self.client.post("/api/sessions/S-A3P/stagiaires/T-CHARLES/refresh-external")
+        payload = response.get_json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["cnaps_status"], "ACCEPTÉ")
+        self.assertEqual(payload["hosting_status"], "reserved")
+        self.assertEqual(data["sessions"][0]["trainees"][0]["hosting_status"], "reserved")
+        self.assertEqual(saved["count"], 1)
+        self.assertEqual(seen["email"], "charles.debouvry@gmail.com")
+        self.assertEqual(seen["kwargs"]["last_name"], "DEBOUVRY")
+        self.assertEqual(seen["kwargs"]["first_name"], "Charles")
+        self.assertEqual(seen["kwargs"]["session_name"], "A3P MARS 2026")
+
+
+if __name__ == "__main__":
+    unittest.main()
