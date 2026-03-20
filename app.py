@@ -4333,12 +4333,26 @@ def fetch_cnaps_status_by_name(nom: str, prenom: str) -> Optional[str]:
     return lookup.get("status")
 
 
-def fetch_hebergement_status(email: str) -> Optional[str]:
+def fetch_hebergement_status(
+    email: str,
+    *,
+    last_name: str = "",
+    first_name: str = "",
+    session_name: str = "",
+    session_date_start: str = "",
+    session_date_end: str = "",
+) -> Optional[str]:
     if not HEBERGEMENT_STATUS_ENDPOINT:
         return None
 
     email = (email or "").strip().lower()
-    if not email:
+    last_name = normalize_last_name(last_name or "")
+    first_name = normalize_first_name(first_name or "")
+    session_name = (session_name or "").strip()
+    session_date_start = (session_date_start or "").strip()
+    session_date_end = (session_date_end or "").strip()
+
+    if not any((email, last_name, first_name, session_name, session_date_start, session_date_end)):
         return None
 
     def _is_truthy(v) -> bool:
@@ -4353,11 +4367,184 @@ def fetch_hebergement_status(email: str) -> Optional[str]:
     def _norm(s: str) -> str:
         return (s or "").strip().lower().replace("é", "e").replace("è", "e").replace("ê", "e")
 
+    def _norm_token(s: str) -> str:
+        s = _norm(s)
+        return "".join(ch for ch in s if ch.isalnum())
+
+    def _format_fr_date_long(date_str: str, *, include_year: bool = True) -> str:
+        try:
+            dt = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            return ""
+        months = {
+            1: "janvier",
+            2: "février",
+            3: "mars",
+            4: "avril",
+            5: "mai",
+            6: "juin",
+            7: "juillet",
+            8: "août",
+            9: "septembre",
+            10: "octobre",
+            11: "novembre",
+            12: "décembre",
+        }
+        day = str(dt.day)
+        month = months.get(dt.month, "")
+        if include_year:
+            return f"{day} {month} {dt.year}".strip()
+        return f"{day} {month}".strip()
+
+    def _session_candidates() -> set[str]:
+        candidates = set()
+        if session_name:
+            candidates.add(_norm_token(session_name))
+        if session_date_start and session_date_end:
+            start_dt = ""
+            end_dt = ""
+            try:
+                start_dt = datetime.datetime.strptime(session_date_start, "%Y-%m-%d").strftime("%d/%m/%Y")
+                end_dt = datetime.datetime.strptime(session_date_end, "%Y-%m-%d").strftime("%d/%m/%Y")
+            except ValueError:
+                pass
+            if start_dt and end_dt:
+                candidates.add(_norm_token(f"{start_dt} {end_dt}"))
+                candidates.add(_norm_token(f"du {start_dt} au {end_dt}"))
+
+            long_start = _format_fr_date_long(session_date_start, include_year=False)
+            long_end = _format_fr_date_long(session_date_end, include_year=True)
+            if long_start and long_end:
+                candidates.add(_norm_token(f"du {long_start} au {long_end}"))
+                candidates.add(_norm_token(f"{long_start} {long_end}"))
+
+        return {candidate for candidate in candidates if candidate}
+
+    def _preferred_session_label() -> str:
+        if session_name:
+            return session_name
+        if session_date_start and session_date_end:
+            long_start = _format_fr_date_long(session_date_start, include_year=False)
+            long_end = _format_fr_date_long(session_date_end, include_year=True)
+            if long_start and long_end:
+                return f"Du {long_start} au {long_end}"
+            try:
+                start_dt = datetime.datetime.strptime(session_date_start, "%Y-%m-%d").strftime("%d/%m/%Y")
+                end_dt = datetime.datetime.strptime(session_date_end, "%Y-%m-%d").strftime("%d/%m/%Y")
+                return f"Du {start_dt} au {end_dt}"
+            except ValueError:
+                return ""
+        return ""
+
+    session_candidates = _session_candidates()
+    preferred_session_label = _preferred_session_label()
+    expected_last_name = _norm_token(last_name)
+    expected_first_name = _norm_token(first_name)
+
+    def _is_reserved_value(value: Any) -> bool:
+        if _is_truthy(value):
+            return True
+        if not isinstance(value, str):
+            return False
+        return _norm(value) in (
+            "reserved",
+            "reserve",
+            "reserver",
+            "reservee",
+            "reservee ",
+            "ok",
+            "oui",
+        )
+
+    def _looks_like_hosting_record(payload: Any) -> bool:
+        if not isinstance(payload, dict):
+            return False
+        record_keys = {
+            "nom",
+            "prenom",
+            "email",
+            "session",
+            "paiement",
+            "date_paiement",
+            "mode",
+            "mode_paiement",
+            "cle",
+            "clé",
+            "etat_cle",
+            "état clé",
+        }
+        return any(k in payload for k in record_keys)
+
+    def _record_matches(payload: Dict[str, Any]) -> bool:
+        if not isinstance(payload, dict):
+            return False
+
+        record_email = (payload.get("email") or payload.get("mail") or "").strip().lower()
+        record_last_name = _norm_token(payload.get("nom") or payload.get("last_name") or "")
+        record_first_name = _norm_token(payload.get("prenom") or payload.get("first_name") or "")
+        record_session = _norm_token(payload.get("session") or payload.get("session_name") or "")
+
+        if email and record_email and record_email == email:
+            return True
+
+        name_matches = (
+            expected_last_name
+            and expected_first_name
+            and record_last_name == expected_last_name
+            and record_first_name == expected_first_name
+        )
+        if name_matches and (not session_candidates or record_session in session_candidates):
+            return True
+
+        return False
+
+    def _payload_contains_reservation(payload: Any) -> bool:
+        if isinstance(payload, list):
+            return any(_payload_contains_reservation(item) for item in payload)
+
+        if not isinstance(payload, dict):
+            return False
+
+        for key in ("reserved", "is_reserved", "booking_reserved", "hebergement_reserved"):
+            if _is_reserved_value(payload.get(key)):
+                return True
+
+        for key in (
+            "status",
+            "hosting_status",
+            "hebergement",
+            "value",
+            "result",
+            "reservation_status",
+            "booking_status",
+            "statut",
+        ):
+            if _is_reserved_value(payload.get(key)):
+                return True
+
+        if _looks_like_hosting_record(payload) and _record_matches(payload):
+            return True
+
+        return any(_payload_contains_reservation(value) for value in payload.values())
+
     for attempt in range(2):
         try:
+            params = {}
+            if email:
+                params["email"] = email
+                params["mail"] = email
+            if last_name:
+                params["nom"] = last_name
+                params["last_name"] = last_name
+            if first_name:
+                params["prenom"] = first_name
+                params["first_name"] = first_name
+            if preferred_session_label:
+                params["session"] = preferred_session_label
+
             r = requests.get(
                 HEBERGEMENT_STATUS_ENDPOINT,
-                params={"email": email},
+                params=params,
                 timeout=8
             )
 
@@ -4370,28 +4557,10 @@ def fetch_hebergement_status(email: str) -> Optional[str]:
             data = r.json()
             print("[HEBERGEMENT] json=", data)
 
-            # 1) cas idéal : bool clair
-            if _is_truthy(data.get("reserved")):
+            if _payload_contains_reservation(data):
                 return "reserved"
 
-            # 2) cas fréquent : champ texte
-            candidates = [
-                data.get("status"),
-                data.get("hosting_status"),
-                data.get("hebergement"),
-                data.get("value"),
-                data.get("result"),
-            ]
-            for c in candidates:
-                if isinstance(c, str):
-                    cc = _norm(c)
-                    if cc in ("reserved", "reserve", "reserver", "reservé", "reservee", "ok", "oui"):
-                        return "reserved"
-                    if cc in ("unknown", "inconnu", "non", "no", "false"):
-                        # on ne downgrade pas agressivement
-                        return None
-
-            # 3) si rien de concluant -> on ne touche pas l'existant
+            # si rien de concluant -> on ne touche pas l'existant
             return None
 
         except Exception as e:
@@ -8445,7 +8614,17 @@ def admin_trainees(session_id: str):
         if session_view["training_type"] == "A3P":
             email = (t.get("email") or "").strip().lower()
 
-            hb = fetch_hebergement_status(email) if (email and auto_refresh_external) else None
+            hb = (
+                fetch_hebergement_status(
+                    email,
+                    last_name=ln,
+                    first_name=fn,
+                    session_name=session_view["name"],
+                    session_date_start=session_view["date_start"],
+                    session_date_end=session_view["date_end"],
+                )
+                if auto_refresh_external else None
+            )
 
             # ✅ règle anti-bug : on ne downgrade JAMAIS "reserved"
             current = (t.get("hosting_status") or "unknown").strip().lower()
