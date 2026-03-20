@@ -4353,6 +4353,69 @@ def fetch_hebergement_status(email: str) -> Optional[str]:
     def _norm(s: str) -> str:
         return (s or "").strip().lower().replace("é", "e").replace("è", "e").replace("ê", "e")
 
+    def _is_reserved_value(value: Any) -> bool:
+        if _is_truthy(value):
+            return True
+        if not isinstance(value, str):
+            return False
+        return _norm(value) in (
+            "reserved",
+            "reserve",
+            "reserver",
+            "reservee",
+            "reservee ",
+            "ok",
+            "oui",
+        )
+
+    def _looks_like_hosting_record(payload: Any) -> bool:
+        if not isinstance(payload, dict):
+            return False
+        record_keys = {
+            "nom",
+            "prenom",
+            "email",
+            "session",
+            "paiement",
+            "date_paiement",
+            "mode",
+            "cle",
+            "clé",
+            "etat_cle",
+            "état clé",
+        }
+        return any(k in payload for k in record_keys)
+
+    def _payload_contains_reservation(payload: Any) -> bool:
+        if isinstance(payload, list):
+            return any(_payload_contains_reservation(item) for item in payload)
+
+        if not isinstance(payload, dict):
+            return False
+
+        for key in ("reserved", "is_reserved", "booking_reserved", "hebergement_reserved"):
+            if _is_reserved_value(payload.get(key)):
+                return True
+
+        for key in (
+            "status",
+            "hosting_status",
+            "hebergement",
+            "value",
+            "result",
+            "reservation_status",
+            "booking_status",
+            "statut",
+        ):
+            if _is_reserved_value(payload.get(key)):
+                return True
+
+        record_email = (payload.get("email") or payload.get("mail") or "").strip().lower()
+        if record_email == email and _looks_like_hosting_record(payload):
+            return True
+
+        return any(_payload_contains_reservation(value) for value in payload.values())
+
     for attempt in range(2):
         try:
             r = requests.get(
@@ -4370,28 +4433,10 @@ def fetch_hebergement_status(email: str) -> Optional[str]:
             data = r.json()
             print("[HEBERGEMENT] json=", data)
 
-            # 1) cas idéal : bool clair
-            if _is_truthy(data.get("reserved")):
+            if _payload_contains_reservation(data):
                 return "reserved"
 
-            # 2) cas fréquent : champ texte
-            candidates = [
-                data.get("status"),
-                data.get("hosting_status"),
-                data.get("hebergement"),
-                data.get("value"),
-                data.get("result"),
-            ]
-            for c in candidates:
-                if isinstance(c, str):
-                    cc = _norm(c)
-                    if cc in ("reserved", "reserve", "reserver", "reservé", "reservee", "ok", "oui"):
-                        return "reserved"
-                    if cc in ("unknown", "inconnu", "non", "no", "false"):
-                        # on ne downgrade pas agressivement
-                        return None
-
-            # 3) si rien de concluant -> on ne touche pas l'existant
+            # si rien de concluant -> on ne touche pas l'existant
             return None
 
         except Exception as e:
