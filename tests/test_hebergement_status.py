@@ -76,6 +76,81 @@ class HebergementStatusLookupTests(unittest.TestCase):
 
         self.assertEqual(out, "reserved")
 
+    def test_email_match_has_priority_with_normalized_email(self):
+        gestion_app.requests.get = lambda *args, **kwargs: DummyResponse(
+            200,
+            {
+                "items": [
+                    {
+                        "nom": "Autre",
+                        "prenom": "Personne",
+                        "email": "  Charles.Debouvry@GMAIL.com  ",
+                        "session": "Session différente",
+                    }
+                ]
+            },
+        )
+
+        out = gestion_app.fetch_hebergement_status(
+            " charles.debouvry@gmail.com ",
+            last_name="DEBOUVRY",
+            first_name="Charles",
+            session_name="Du 30 mars au 2 juin 2026",
+        )
+
+        self.assertEqual(out, "reserved")
+
+    def test_does_not_match_on_name_only_when_session_differs(self):
+        gestion_app.requests.get = lambda *args, **kwargs: DummyResponse(
+            200,
+            {
+                "items": [
+                    {
+                        "nom": "  débouvry ",
+                        "prenom": "charles",
+                        "mail": "charles.debouvry+autre@gmail.com",
+                        "session": "Du 1 avril au 3 juin 2026",
+                    }
+                ]
+            },
+        )
+
+        out = gestion_app.fetch_hebergement_status(
+            "charles.debouvry@gmail.com",
+            last_name=" DEBOUVRY ",
+            first_name=" Charles ",
+            session_date_start="2026-03-30",
+            session_date_end="2026-06-02",
+        )
+
+        self.assertIsNone(out)
+
+    def test_session_date_fallback_handles_iso_and_extra_spaces(self):
+        gestion_app.requests.get = lambda *args, **kwargs: DummyResponse(
+            200,
+            {
+                "items": [
+                    {
+                        "nom": "débouvry",
+                        "prenom": "  charles  ",
+                        "mail": "charles.debouvry+autre@gmail.com",
+                        "date_start": "2026-03-30",
+                        "date_end": "2026-06-02",
+                    }
+                ]
+            },
+        )
+
+        out = gestion_app.fetch_hebergement_status(
+            "charles.debouvry@gmail.com",
+            last_name=" DÉBOUVRY ",
+            first_name="  Charles ",
+            session_date_start="2026-03-30",
+            session_date_end="2026-06-02",
+        )
+
+        self.assertEqual(out, "reserved")
+
     def test_lookup_sends_mail_name_and_session_params_for_assistance_backend(self):
         captured = {}
 
