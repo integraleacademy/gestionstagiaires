@@ -909,7 +909,7 @@ tr.row-todo td{
   });
 
 
-  async function refreshCnapsForRow(tr, { silent = false } = {}) {
+  async function refreshExternalForRow(tr, { silent = false } = {}) {
     if (!tr) return;
 
     const traineeId = tr.getAttribute("data-trainee-id");
@@ -925,28 +925,33 @@ tr.row-todo td{
       return;
     }
 
-    const span = tr.querySelector("[data-cnaps]");
-    const currentStatus = (span?.textContent || "").trim().toUpperCase();
-    if (silent && currentStatus === "CARTE PROFESSIONNELLE OK") {
+    const cnapsSpan = tr.querySelector("[data-cnaps]");
+    const hostingSpan = tr.querySelector("[data-hosting]");
+    const currentStatus = (cnapsSpan?.textContent || "").trim().toUpperCase();
+    const currentHosting = (hostingSpan?.textContent || "").trim().toUpperCase();
+    if (silent && currentStatus === "CARTE PROFESSIONNELLE OK" && (!hostingSpan || currentHosting === "RÉSERVÉ")) {
       return;
     }
 
     try {
-      const res = await cnapsLookup(nom, prenom);
-      const statut = (res.statut_cnaps || "INCONNU").toUpperCase();
-
-      if (span) {
-        span.textContent = statut;
-        applyCnapsBadge(span);
-      }
-
-      await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
+      const resp = await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/refresh-external`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cnaps: statut })
+        headers: { "Content-Type": "application/json" }
       });
+      const res = await resp.json();
+      if (!resp.ok || !res?.ok) throw new Error(res?.error || "refresh_failed");
+
+      const statut = (res.cnaps_status || "INCONNU").toUpperCase();
+      if (cnapsSpan) {
+        cnapsSpan.textContent = statut;
+        applyCnapsBadge(cnapsSpan);
+      }
+      if (hostingSpan) {
+        hostingSpan.textContent = (res.hosting_status === "reserved") ? "réservé" : "inconnu";
+        applyHostingBadge(hostingSpan);
+      }
     } catch (err) {
-      if (!silent) alert("Erreur CNAPS");
+      if (!silent) alert("Erreur rafraîchissement statuts externes");
     }
   }
 
@@ -956,24 +961,24 @@ tr.row-todo td{
       const tr = btn.closest("tr");
       btn.disabled = true;
       try {
-        await refreshCnapsForRow(tr, { silent: false });
+        await refreshExternalForRow(tr, { silent: false });
       } finally {
         btn.disabled = false;
       }
     });
   });
 
-  async function autoRefreshCnapsStatuses() {
+  async function autoRefreshExternalStatuses() {
     const rows = Array.from(document.querySelectorAll("tr[data-trainee-id]"));
     for (const tr of rows) {
-      await refreshCnapsForRow(tr, { silent: true });
+      await refreshExternalForRow(tr, { silent: true });
     }
   }
 
   // Mise à jour automatique initiale + toutes les 5 minutes
   setTimeout(() => {
-    autoRefreshCnapsStatuses();
-    setInterval(autoRefreshCnapsStatuses, 5 * 60 * 1000);
+    autoRefreshExternalStatuses();
+    setInterval(autoRefreshExternalStatuses, 5 * 60 * 1000);
   }, 1200);
 
   // =========================

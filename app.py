@@ -9391,6 +9391,75 @@ def api_update_trainee(session_id: str, trainee_id: str):
     })
 
 
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/refresh-external")
+@admin_login_required
+@admin_write_required
+def api_refresh_trainee_external(session_id: str, trainee_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+
+    ln = normalize_last_name(t.get("last_name") or "")
+    fn = normalize_first_name(t.get("first_name") or "")
+    if ln:
+        t["last_name"] = ln
+    if fn:
+        t["first_name"] = fn
+
+    current_cnaps = (t.get("cnaps") or "").strip() or "INCONNU"
+    if ln and fn:
+        cn = fetch_cnaps_status_by_name(ln, fn)
+        if cn:
+            cn_u = str(cn).strip().upper()
+            if cn_u not in ("INCONNU", "UNKNOWN", ""):
+                if _normalize_cnaps_status(cn_u) != _normalize_cnaps_status(current_cnaps):
+                    t["cnaps"] = cn_u
+                    record_cnaps_status_change(t, cn_u)
+                else:
+                    t["cnaps"] = current_cnaps
+            else:
+                t["cnaps"] = current_cnaps
+        else:
+            t["cnaps"] = current_cnaps
+    else:
+        t["cnaps"] = current_cnaps
+
+    training_type = _session_get(s, "training_type", "")
+    if training_type == "A3P":
+        hb = fetch_hebergement_status(
+            (t.get("email") or "").strip().lower(),
+            last_name=ln,
+            first_name=fn,
+            session_name=_session_get(s, "name", ""),
+            session_date_start=_session_get(s, "date_start", ""),
+            session_date_end=_session_get(s, "date_end", ""),
+        )
+        current_hosting = (t.get("hosting_status") or "unknown").strip().lower() or "unknown"
+        if hb == "reserved" or current_hosting == "reserved":
+            t["hosting_status"] = "reserved"
+        else:
+            t["hosting_status"] = current_hosting
+    else:
+        t.pop("hosting_status", None)
+
+    t["updated_at"] = _now_iso()
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return jsonify({
+        "ok": True,
+        "cnaps_status": t.get("cnaps") or "INCONNU",
+        "hosting_status": (t.get("hosting_status") or "unknown") if training_type == "A3P" else "",
+    })
+
+
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/pre-reception")
 @admin_login_required
 @admin_write_required
