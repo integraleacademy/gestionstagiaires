@@ -4482,7 +4482,6 @@ def fetch_hebergement_status(
         return ""
 
     session_candidates = _session_candidates()
-    preferred_session_label = _preferred_session_label()
     expected_last_name = _normalize_matching_token(last_name)
     expected_first_name = _normalize_matching_token(first_name)
     expected_session_dates = _extract_normalized_dates(
@@ -4673,22 +4672,26 @@ def fetch_hebergement_status(
 
     for attempt in range(2):
         try:
-            params = {}
             if email:
-                params["email"] = email
-                params["mail"] = email
-            if last_name:
-                params["nom"] = last_name
-                params["last_name"] = last_name
-            if first_name:
-                params["prenom"] = first_name
-                params["first_name"] = first_name
-            if preferred_session_label:
-                params["session"] = preferred_session_label
+                params = {"email": email}
+            elif last_name and first_name:
+                params = {"nom": last_name, "prenom": first_name}
+            else:
+                app.logger.warning("[HEBERGEMENT] lookup ignoré: paramètres insuffisants")
+                _debug_log(
+                    "lookup annulé: aucun paramètre valide",
+                    trainee_email=email,
+                    trainee_last_name=expected_last_name,
+                    trainee_first_name=expected_first_name,
+                )
+                return None
+
+            final_url = requests.Request("GET", HEBERGEMENT_STATUS_ENDPOINT, params=params).prepare().url or HEBERGEMENT_STATUS_ENDPOINT
+            app.logger.info("[HEBERGEMENT] final_url=%s", final_url)
+            _debug_log("url finale appelée", final_url=final_url)
 
             r = requests.get(
-                HEBERGEMENT_STATUS_ENDPOINT,
-                params=params,
+                final_url,
                 timeout=8
             )
 
@@ -4701,14 +4704,23 @@ def fetch_hebergement_status(
             data = r.json()
             app.logger.info("[HEBERGEMENT] json=%s", data)
             _debug_log(
+                "réponse brute plateforme hébergement",
+                raw_response=data,
+            )
+            _debug_log(
                 "requête de lookup envoyée",
                 params=params,
+                final_url=final_url,
                 trainee_email=email,
                 trainee_last_name=expected_last_name,
                 trainee_first_name=expected_first_name,
                 trainee_session_candidates=sorted(session_candidates),
                 trainee_session_dates=sorted(expected_session_dates),
             )
+
+            if isinstance(data, dict) and data.get("reserved") is True:
+                _debug_log("réservation détectée via reserved=true", final_url=final_url)
+                return "reserved"
 
             if _payload_contains_reservation(data):
                 _debug_log("réservation détectée côté hébergement", payload_type=type(data).__name__)
@@ -4723,6 +4735,29 @@ def fetch_hebergement_status(
             time.sleep(0.3)
 
     return None
+
+
+def _is_charles_debouvry_debug_target(*, email: str = "", last_name: str = "", first_name: str = "") -> bool:
+    normalized_email = (email or "").strip().lower()
+    normalized_last_name = _normalized_token(normalize_last_name(last_name or ""))
+    normalized_first_name = _normalized_token(normalize_first_name(first_name or ""))
+    return (
+        normalized_email == "charles.debouvry@gmail.com"
+        or (
+            normalized_last_name == _normalized_token("DEBOUVRY")
+            and normalized_first_name == _normalized_token("Charles")
+        )
+    )
+
+
+def _log_charles_hebergement_trace(scope: str, message: str, **kwargs: Any) -> None:
+    if not _is_charles_debouvry_debug_target(
+        email=str(kwargs.get("email") or ""),
+        last_name=str(kwargs.get("last_name") or ""),
+        first_name=str(kwargs.get("first_name") or ""),
+    ):
+        return
+    app.logger.info("[HEBERGEMENT][TRACE][Charles Debouvry][%s] %s | %s", scope, message, kwargs)
 
 
 
@@ -8739,6 +8774,7 @@ def admin_trainees(session_id: str):
     for t in trainees:
         ln = normalize_last_name(t.get("last_name") or "")
         fn = normalize_first_name(t.get("first_name") or "")
+        email = (t.get("email") or "").strip().lower()
 
         if ln:
             t["last_name"] = ln
@@ -8767,10 +8803,35 @@ def admin_trainees(session_id: str):
 
         # hosting only for A3P
         if session_view["training_type"] == "A3P":
-            email = (t.get("email") or "").strip().lower()
+            # ✅ règle anti-bug : on ne downgrade JAMAIS "reserved"
+            current = (t.get("hosting_status") or "unknown").strip().lower()
+            should_refresh_hosting = current != "reserved"
+            _log_charles_hebergement_trace(
+                "admin_trainees",
+                "état local avant rendu",
+                email=email,
+                last_name=ln,
+                first_name=fn,
+                session_name=session_view["name"],
+                session_date_start=session_view["date_start"],
+                session_date_end=session_view["date_end"],
+                current_hosting_status=current,
+                auto_refresh_external=auto_refresh_external,
+                should_refresh_hosting_on_render=should_refresh_hosting,
+            )
 
-            hb = (
-                fetch_hebergement_status(
+            if should_refresh_hosting:
+                _log_charles_hebergement_trace(
+                    "admin_trainees",
+                    "appel fetch_hebergement_status depuis le rendu serveur",
+                    email=email,
+                    last_name=ln,
+                    first_name=fn,
+                    session_name=session_view["name"],
+                    session_date_start=session_view["date_start"],
+                    session_date_end=session_view["date_end"],
+                )
+                hb = fetch_hebergement_status(
                     email,
                     last_name=ln,
                     first_name=fn,
@@ -8778,11 +8839,32 @@ def admin_trainees(session_id: str):
                     session_date_start=session_view["date_start"],
                     session_date_end=session_view["date_end"],
                 )
-                if auto_refresh_external else None
-            )
+            else:
+                hb = None
+                _log_charles_hebergement_trace(
+                    "admin_trainees",
+                    "fetch_hebergement_status non appelé au rendu serveur",
+                    email=email,
+                    last_name=ln,
+                    first_name=fn,
+                    session_name=session_view["name"],
+                    session_date_start=session_view["date_start"],
+                    session_date_end=session_view["date_end"],
+                    reason="status_local_deja_reserved",
+                )
 
-            # ✅ règle anti-bug : on ne downgrade JAMAIS "reserved"
-            current = (t.get("hosting_status") or "unknown").strip().lower()
+            _log_charles_hebergement_trace(
+                "admin_trainees",
+                "résultat fetch_hebergement_status au rendu serveur",
+                email=email,
+                last_name=ln,
+                first_name=fn,
+                session_name=session_view["name"],
+                session_date_start=session_view["date_start"],
+                session_date_end=session_view["date_end"],
+                fetch_result=hb,
+                current_hosting_status=current,
+            )
 
             if hb == "reserved":
                 t["hosting_status"] = "reserved"
@@ -8792,6 +8874,17 @@ def admin_trainees(session_id: str):
             else:
                 # sinon on garde l'ancien si on n'a pas mieux
                 t["hosting_status"] = current if current else "unknown"
+            _log_charles_hebergement_trace(
+                "admin_trainees",
+                "valeur finale sauvegardée avant template",
+                email=email,
+                last_name=ln,
+                first_name=fn,
+                session_name=session_view["name"],
+                session_date_start=session_view["date_start"],
+                session_date_end=session_view["date_end"],
+                final_hosting_status=t.get("hosting_status"),
+            )
         else:
             t.pop("hosting_status", None)
 
@@ -8834,6 +8927,21 @@ def admin_trainees(session_id: str):
         if t["has_diplome"]:
             badges.append("DIPLÔME")
         t["badges"] = badges
+
+    for t in trainees:
+        if session_view["training_type"] != "A3P":
+            continue
+        _log_charles_hebergement_trace(
+            "admin_trainees",
+            "valeur envoyée au template",
+            email=(t.get("email") or "").strip().lower(),
+            last_name=t.get("last_name") or "",
+            first_name=t.get("first_name") or "",
+            session_name=session_view["name"],
+            session_date_start=session_view["date_start"],
+            session_date_end=session_view["date_end"],
+            template_hosting_status=t.get("hosting_status"),
+        )
 
 
 
@@ -9566,6 +9674,7 @@ def api_refresh_trainee_external(session_id: str, trainee_id: str):
         t["last_name"] = ln
     if fn:
         t["first_name"] = fn
+    email = (t.get("email") or "").strip().lower()
 
     current_cnaps = (t.get("cnaps") or "").strip() or "INCONNU"
     if ln and fn:
@@ -9587,19 +9696,63 @@ def api_refresh_trainee_external(session_id: str, trainee_id: str):
 
     training_type = _session_get(s, "training_type", "")
     if training_type == "A3P":
-        hb = fetch_hebergement_status(
-            (t.get("email") or "").strip().lower(),
+        current_hosting = (t.get("hosting_status") or "unknown").strip().lower() or "unknown"
+        _log_charles_hebergement_trace(
+            "api_refresh_trainee_external",
+            "état local avant refresh API",
+            email=email,
+            last_name=ln,
+            first_name=fn,
+            session_name=_session_get(s, "name", ""),
+            session_date_start=_session_get(s, "date_start", ""),
+            session_date_end=_session_get(s, "date_end", ""),
+            current_hosting_status=current_hosting,
+        )
+        _log_charles_hebergement_trace(
+            "api_refresh_trainee_external",
+            "appel fetch_hebergement_status depuis l'API",
+            email=email,
             last_name=ln,
             first_name=fn,
             session_name=_session_get(s, "name", ""),
             session_date_start=_session_get(s, "date_start", ""),
             session_date_end=_session_get(s, "date_end", ""),
         )
-        current_hosting = (t.get("hosting_status") or "unknown").strip().lower() or "unknown"
+        hb = fetch_hebergement_status(
+            email,
+            last_name=ln,
+            first_name=fn,
+            session_name=_session_get(s, "name", ""),
+            session_date_start=_session_get(s, "date_start", ""),
+            session_date_end=_session_get(s, "date_end", ""),
+        )
+        _log_charles_hebergement_trace(
+            "api_refresh_trainee_external",
+            "résultat fetch_hebergement_status depuis l'API",
+            email=email,
+            last_name=ln,
+            first_name=fn,
+            session_name=_session_get(s, "name", ""),
+            session_date_start=_session_get(s, "date_start", ""),
+            session_date_end=_session_get(s, "date_end", ""),
+            fetch_result=hb,
+            current_hosting_status=current_hosting,
+        )
         if hb == "reserved" or current_hosting == "reserved":
             t["hosting_status"] = "reserved"
         else:
             t["hosting_status"] = current_hosting
+        _log_charles_hebergement_trace(
+            "api_refresh_trainee_external",
+            "valeur finale sauvegardée après refresh API",
+            email=email,
+            last_name=ln,
+            first_name=fn,
+            session_name=_session_get(s, "name", ""),
+            session_date_start=_session_get(s, "date_start", ""),
+            session_date_end=_session_get(s, "date_end", ""),
+            final_hosting_status=t.get("hosting_status"),
+        )
     else:
         t.pop("hosting_status", None)
 
@@ -9608,11 +9761,23 @@ def api_refresh_trainee_external(session_id: str, trainee_id: str):
     s.pop("stagiaires", None)
     save_data(data)
 
-    return jsonify({
+    response_payload = {
         "ok": True,
         "cnaps_status": t.get("cnaps") or "INCONNU",
         "hosting_status": (t.get("hosting_status") or "unknown") if training_type == "A3P" else "",
-    })
+    }
+    _log_charles_hebergement_trace(
+        "api_refresh_trainee_external",
+        "payload final renvoyé au front",
+        email=email,
+        last_name=ln,
+        first_name=fn,
+        session_name=_session_get(s, "name", ""),
+        session_date_start=_session_get(s, "date_start", ""),
+        session_date_end=_session_get(s, "date_end", ""),
+        response_payload=response_payload,
+    )
+    return jsonify(response_payload)
 
 
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/pre-reception")
