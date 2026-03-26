@@ -103,6 +103,11 @@
     <a class="btn btn-outline" id="btnWordLabels"
        href="{{ url_for('admin_etiquettes_word_zip', session_id=session.id) }}"
        title="Télécharger toutes les étiquettes Word de la session">🏷️ Étiquettes WORD</a>
+    {% if is_a3p_header %}
+    <a class="btn btn-outline" id="btnTshirtList"
+       href="{{ url_for('admin_tshirt_list', session_id=session.id, **request.args) }}"
+       target="_blank" rel="noopener">👕 Liste t-shirts</a>
+    {% endif %}
     {% if not is_read_only %}
       {% if not is_vtc and not show_vae and not is_dirigeant %}
       <button class="btn btn-outline" id="btnBulkSst">⬇️ Télécharger les SST en masse</button>
