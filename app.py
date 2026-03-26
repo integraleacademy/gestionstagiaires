@@ -1139,6 +1139,29 @@ def _extract_trainee_fields_from_ocr_text(raw_text: str) -> Dict[str, str]:
         token = _normalized_token(value)
         return token in known_labels
 
+    def _first_value_after_labels(
+        label_tokens: Tuple[str, ...],
+        max_lookahead: int = 4,
+        forbidden_tokens: Optional[set] = None,
+    ) -> str:
+        forbidden_tokens = forbidden_tokens or set()
+        for idx, line in enumerate(lines):
+            token = _normalized_token(line)
+            if token not in label_tokens:
+                continue
+            for offset in range(1, max_lookahead + 1):
+                if idx + offset >= len(lines):
+                    break
+                candidate = _clean_ocr_value(lines[idx + offset].strip())
+                if not candidate:
+                    continue
+                if _is_non_renseigne(candidate) or _looks_like_label(candidate):
+                    continue
+                if _normalized_token(candidate) in forbidden_tokens:
+                    continue
+                return candidate
+        return ""
+
     def _value_after_label(label_regex: str) -> str:
         pattern = re.compile(label_regex, flags=re.IGNORECASE)
         for idx, line in enumerate(lines):
@@ -1176,15 +1199,32 @@ def _extract_trainee_fields_from_ocr_text(raw_text: str) -> Dict[str, str]:
                 pass
         return ""
 
-    birth_date_raw = _value_after_label(r"\bdate\s+de\s+naissance\b")
+    birth_date_raw = _first_value_after_labels(("date de naissance",)) or _value_after_label(r"\bdate\s+de\s+naissance\b")
     address_raw = _value_after_label(r"adresse\s+postale|adresse")
-    first_name = normalize_first_name(_value_after_label(r"\bpr[eé]nom\b"))
-    last_name = normalize_last_name(_value_after_label(r"\bnom\s+de\s+famille\b|\bnom\b"))
+    first_name_raw = _first_value_after_labels(("prenom",)) or _value_after_label(r"\bpr[eé]nom\b")
+    last_name_raw = _first_value_after_labels(("nom de famille", "nom")) or _value_after_label(r"\bnom\s+de\s+famille\b|\bnom\b")
+    if any(ch.isdigit() for ch in first_name_raw):
+        first_name_raw = ""
+    if any(ch.isdigit() for ch in last_name_raw):
+        last_name_raw = ""
+    first_name = normalize_first_name(first_name_raw)
+    last_name = normalize_last_name(last_name_raw)
 
     if _normalized_token(last_name) in {"prenom", "prenom :"}:
         last_name = ""
     if _normalized_token(first_name) in {"nom", "nom de famille"}:
         first_name = ""
+    if first_name and last_name and _normalized_token(first_name) == _normalized_token(last_name):
+        alt_first_name = _first_value_after_labels(
+            ("prenom",),
+            max_lookahead=6,
+            forbidden_tokens={_normalized_token(last_name)},
+        )
+        if any(ch.isdigit() for ch in alt_first_name):
+            alt_first_name = ""
+        alt_first_name = normalize_first_name(alt_first_name)
+        if alt_first_name and _normalized_token(alt_first_name) != _normalized_token(last_name):
+            first_name = alt_first_name
 
     if not first_name or not last_name:
         extracted_first_name, extracted_last_name = _extract_name_from_ocr_lines(lines)
@@ -1204,7 +1244,7 @@ def _extract_trainee_fields_from_ocr_text(raw_text: str) -> Dict[str, str]:
             city = normalize_first_name(m_zip_city.group(2).strip())
         address_raw = compact
 
-    birth_city = _value_after_label(r"\blieu\s+de\s+naissance\b")
+    birth_city = _first_value_after_labels(("lieu de naissance",)) or _value_after_label(r"\blieu\s+de\s+naissance\b")
     if birth_city and re.match(r"^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$", birth_city):
         if not _parse_birth_date_to_iso(birth_date_raw):
             birth_date_raw = birth_city

@@ -114,6 +114,25 @@ fa 71 Traverse De la chapelle 83550 VIDAUBAN
         self.assertEqual(fields["birth_city"], "")
         self.assertEqual(fields["address"], "71 Traverse De la chapelle 83550 VIDAUBAN")
 
+    def test_uses_next_prenom_candidate_when_first_equals_last_name(self):
+        ocr_text = """
+Nom de famille
+INES
+Prénom
+INES
+Angelique
+Date de naissance
+26/09/1992
+Lieu de naissance
+Beuvry (62)
+""".strip()
+
+        fields = gestion_app._extract_trainee_fields_from_ocr_text(ocr_text)
+
+        self.assertEqual(fields["last_name"], "INES")
+        self.assertEqual(fields["first_name"], "Angelique")
+        self.assertEqual(fields["birth_city"], "Beuvry (62)")
+
 
 if __name__ == "__main__":
     unittest.main()
