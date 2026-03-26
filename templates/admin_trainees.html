@@ -100,9 +100,6 @@
     {% endif %}
     <button class="btn btn-outline" id="btnCollectMails" type="button">📋 Récup mail</button>
     <a class="btn btn-outline" id="btnPrintTrainees" href="{{ url_for('admin_trainees_print', session_id=session.id, **request.args) }}" target="_blank" rel="noopener">🖨️ Imprimer la liste</a>
-    {% if is_a3p_header %}
-    <a class="btn btn-outline" href="{{ url_for('admin_tshirt_list', session_id=session.id) }}">👕 Liste t-shirt</a>
-    {% endif %}
     <a class="btn btn-outline" id="btnWordLabels"
        href="{{ url_for('admin_etiquettes_word_zip', session_id=session.id) }}"
        title="Télécharger toutes les étiquettes Word de la session">🏷️ Étiquettes WORD</a>
