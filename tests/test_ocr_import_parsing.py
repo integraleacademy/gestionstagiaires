@@ -133,6 +133,27 @@ Beuvry (62)
         self.assertEqual(fields["first_name"], "Angelique")
         self.assertEqual(fields["birth_city"], "Beuvry (62)")
 
+    def test_handles_two_column_order_without_using_second_name_label(self):
+        ocr_text = """
+Nom de famille
+Prénom
+INES
+Deuxième prénom
+Angelique
+Troisième prénom
+Date de naissance
+Lieu de naissance
+26/09/1992
+Beuvry (62)
+""".strip()
+
+        fields = gestion_app._extract_trainee_fields_from_ocr_text(ocr_text)
+
+        self.assertEqual(fields["last_name"], "INES")
+        self.assertEqual(fields["first_name"], "Angelique")
+        self.assertEqual(fields["birth_date"], "1992-09-26")
+        self.assertEqual(fields["birth_city"], "Beuvry (62)")
+
 
 if __name__ == "__main__":
     unittest.main()
