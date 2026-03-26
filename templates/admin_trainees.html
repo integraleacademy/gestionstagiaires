@@ -2,7 +2,7 @@
 {% block content %}
 {% set read_only_attr = "disabled" if is_read_only else "" %}
 {% set is_vtc_header = "VTC" in (session.training_type or "")|upper %}
-{% set is_a3p_header = (session.training_type or "")|upper == "A3P" %}
+{% set is_a3p_header = ("A3P" in (session.training_type or "")|upper) or ("A3P" in (session.name or "")|upper) %}
 {% set vtc_theory_exam_date = session.exam_theory_date or session.exam_date %}
 {% set vtc_practice_exam_date = session.exam_practice_date or session.exam_date %}
 {% set vtc_practice_training_date = session.practice_training_date %}
