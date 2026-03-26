@@ -537,6 +537,9 @@
 
 <div class="card-actions">
   <a class="btn" href="{{ url_for('admin_trainees', session_id=s.id, **request.args) }}">Voir les stagiaires</a>
+  {% if (s.training_type or "")|upper == "A3P" %}
+  <a class="btn btn-outline" href="{{ url_for('admin_tshirt_list', session_id=s.id) }}">Liste t-shirt</a>
+  {% endif %}
 
 
   {% if not is_read_only %}
