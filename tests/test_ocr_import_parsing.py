@@ -89,6 +89,31 @@ Beuvry (62)
         self.assertEqual(fields["zip_code"], "83550")
         self.assertEqual(fields["city"], "Vidauban")
 
+    def test_does_not_confuse_nom_with_prenom_and_cleans_prefix_noise(self):
+        ocr_text = """
+Nom de famille
+PRÉNOM
+Prénom
+• Ines
+Date de naissance
+Lieu de naissance
+• 26/09/1992
+Email
+angievoyage@gmail.com
+Téléphone portable
++33666842042
+Adresse
+fa 71 Traverse De la chapelle 83550 VIDAUBAN
+""".strip()
+
+        fields = gestion_app._extract_trainee_fields_from_ocr_text(ocr_text)
+
+        self.assertNotEqual(fields["last_name"], "PRÉNOM")
+        self.assertEqual(fields["first_name"], "Ines")
+        self.assertEqual(fields["birth_date"], "1992-09-26")
+        self.assertEqual(fields["birth_city"], "")
+        self.assertEqual(fields["address"], "71 Traverse De la chapelle 83550 VIDAUBAN")
+
 
 if __name__ == "__main__":
     unittest.main()
