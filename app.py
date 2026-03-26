@@ -23,7 +23,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
 import requests
-from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file, flash, has_request_context
+from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file, flash, has_request_context, make_response
 
 import zipfile
 from io import BytesIO
@@ -6987,13 +6987,16 @@ def admin_sessions():
             "jury_absent": jury_counts["absent"],
         })
 
-    return render_template(
+    response = make_response(render_template(
         "admin_sessions.html",
         sessions=out_sessions,
         formation_types=FORMATION_TYPES,
         dashboard_year=current_year,
         yearly_training_counts=yearly_training_counts,
-    )
+    ))
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
 
 
 
