@@ -1111,11 +1111,14 @@ def _extract_trainee_fields_from_ocr_text(raw_text: str) -> Dict[str, str]:
     non_renseigne_tokens = {"non renseigne", "non renseigné", "non renseignée"}
 
     def _is_non_renseigne(value: str) -> bool:
-        return _normalized_token(value) in non_renseigne_tokens
+        token = _normalized_token(value)
+        if token in non_renseigne_tokens:
+            return True
+        return "non renseigne" in token
 
     def _clean_ocr_value(value: str) -> str:
         cleaned = (value or "").strip()
-        cleaned = re.sub(r"^[•·●▪◦\-\–—\.,:;|/\\()\[\]{}_*+~`'\"“”‘’]+", "", cleaned).strip()
+        cleaned = re.sub(r"^[#•·●▪◦\-\–—\.,:;|/\\()\[\]{}_*+~`'\"“”‘’]+", "", cleaned).strip()
         cleaned = re.sub(r"\s+", " ", cleaned).strip()
         return cleaned
 
