@@ -1108,19 +1108,58 @@ def _extract_trainee_fields_from_ocr_text(raw_text: str) -> Dict[str, str]:
     text = (raw_text or "").replace("\r", "\n")
     text = re.sub(r"[ \t]+", " ", text)
     lines = [line.strip() for line in text.split("\n") if line.strip()]
+    non_renseigne_tokens = {"non renseigne", "non renseigné", "non renseignée"}
+
+    def _is_non_renseigne(value: str) -> bool:
+        return _normalized_token(value) in non_renseigne_tokens
+
+    def _clean_ocr_value(value: str) -> str:
+        cleaned = (value or "").strip()
+        cleaned = re.sub(r"^[•·●▪◦\-\–—\.,:;|/\\()\[\]{}_*+~`'\"“”‘’]+", "", cleaned).strip()
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        return cleaned
+
+    known_labels = (
+        "civilite",
+        "nom de famille",
+        "nom",
+        "prenom",
+        "date de naissance",
+        "lieu de naissance",
+        "adresse",
+        "adresse postale",
+        "email",
+        "courriel",
+        "telephone",
+        "telephone portable",
+        "telephone mobile",
+    )
+
+    def _looks_like_label(value: str) -> bool:
+        token = _normalized_token(value)
+        return token in known_labels
 
     def _value_after_label(label_regex: str) -> str:
         pattern = re.compile(label_regex, flags=re.IGNORECASE)
         for idx, line in enumerate(lines):
             if pattern.search(line):
-                suffix = pattern.sub("", line).strip(" :\t")
-                if suffix:
+                suffix = _clean_ocr_value(pattern.sub("", line).strip(" :\t"))
+                if suffix and not _is_non_renseigne(suffix) and not _looks_like_label(suffix):
                     return suffix
-                if idx + 1 < len(lines):
-                    return lines[idx + 1].strip()
+                for offset in (1, 2, 3):
+                    if idx + offset >= len(lines):
+                        break
+                    candidate = _clean_ocr_value(lines[idx + offset].strip())
+                    if not _is_non_renseigne(candidate) and not _looks_like_label(candidate):
+                        return candidate
         return ""
 
     def _find_phone() -> str:
+        labeled_phone = _value_after_label(r"telephone\s+portable|telephone\s+mobile|telephone")
+        if labeled_phone:
+            m_labeled = re.search(r"(?:\+33|0)\s*[1-9](?:[\s\.-]*\d{2}){4}", labeled_phone)
+            if m_labeled:
+                return normalize_phone_fr(m_labeled.group(0))
         m = re.search(r"(?:\+33|0)\s*[1-9](?:[\s\.-]*\d{2}){4}", text)
         if not m:
             return ""
@@ -1137,27 +1176,52 @@ def _extract_trainee_fields_from_ocr_text(raw_text: str) -> Dict[str, str]:
                 pass
         return ""
 
-    birth_date_raw = _value_after_label(r"date\s+de\s+naissance")
+    birth_date_raw = _value_after_label(r"\bdate\s+de\s+naissance\b")
     address_raw = _value_after_label(r"adresse\s+postale|adresse")
+    first_name = normalize_first_name(_value_after_label(r"\bpr[eé]nom\b"))
+    last_name = normalize_last_name(_value_after_label(r"\bnom\s+de\s+famille\b|\bnom\b"))
 
-    first_name, last_name = _extract_name_from_ocr_lines(lines)
+    if _normalized_token(last_name) in {"prenom", "prenom :"}:
+        last_name = ""
+    if _normalized_token(first_name) in {"nom", "nom de famille"}:
+        first_name = ""
+
+    if not first_name or not last_name:
+        extracted_first_name, extracted_last_name = _extract_name_from_ocr_lines(lines)
+        if not first_name:
+            first_name = extracted_first_name
+        if not last_name:
+            last_name = extracted_last_name
 
     zip_code = ""
     city = ""
     if address_raw:
         compact = re.sub(r"\s+", " ", address_raw).strip()
+        compact = re.sub(r"^[A-Za-z]{1,2}\s+(?=\d)", "", compact)
         m_zip_city = re.search(r"\b(\d{5})\b\s+([A-Za-zÀ-ÿ\- ]+)$", compact)
         if m_zip_city:
             zip_code = m_zip_city.group(1)
             city = normalize_first_name(m_zip_city.group(2).strip())
+        address_raw = compact
 
-    mail_match = re.search(r"[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}", text, flags=re.IGNORECASE)
+    birth_city = _value_after_label(r"\blieu\s+de\s+naissance\b")
+    if birth_city and re.match(r"^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$", birth_city):
+        if not _parse_birth_date_to_iso(birth_date_raw):
+            birth_date_raw = birth_city
+        birth_city = ""
+
+    email_from_label = _value_after_label(r"courriel|email|e-?mail")
+    email_match = re.search(
+        r"[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}",
+        email_from_label or text,
+        flags=re.IGNORECASE,
+    )
     return {
         "last_name": last_name,
         "first_name": first_name,
         "birth_date": _parse_birth_date_to_iso(birth_date_raw),
-        "birth_city": _value_after_label(r"lieu\s+de\s+naissance"),
-        "email": (mail_match.group(0).strip() if mail_match else ""),
+        "birth_city": birth_city,
+        "email": (email_match.group(0).strip() if email_match else ""),
         "phone": _find_phone(),
         "address": address_raw,
         "zip_code": zip_code,
