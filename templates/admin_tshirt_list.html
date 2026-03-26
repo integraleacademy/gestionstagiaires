@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="margin-bottom:12px;">
+  <h1 style="margin:0;">Liste t-shirt — {{ session.name }}</h1>
+  <div class="muted" style="margin-top:6px;">
+    Formation {{ session.training_type }} · du {{ session.date_start|frdate }} au {{ session.date_end|frdate }}
+  </div>
+  <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+    <a class="btn btn-outline" href="{{ url_for('admin_sessions') }}">← Retour sessions</a>
+    <button class="btn" type="button" onclick="window.print()">Imprimer</button>
+  </div>
+</div>
+
+<div class="card">
+  <table style="width:100%;border-collapse:collapse;">
+    <thead>
+      <tr style="text-align:left;border-bottom:1px solid #e5e7eb;">
+        <th style="padding:8px;">Nom</th>
+        <th style="padding:8px;">Prénom</th>
+        <th style="padding:8px;">Taille</th>
+        <th style="padding:8px;">Email</th>
+        <th style="padding:8px;">Téléphone</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in trainees %}
+      <tr style="border-bottom:1px solid #f3f4f6;">
+        <td style="padding:8px;">{{ t.last_name }}</td>
+        <td style="padding:8px;">{{ t.first_name }}</td>
+        <td style="padding:8px;font-weight:800;">{{ t.tshirt_size or "—" }}</td>
+        <td style="padding:8px;">{{ t.email or "—" }}</td>
+        <td style="padding:8px;">{{ t.phone or "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

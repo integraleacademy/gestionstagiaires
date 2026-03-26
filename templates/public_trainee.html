@@ -999,6 +999,22 @@
            "nationality",
            trainee.nationality,
            "Ex : Française") }}
+{% if "A3P" in tt %}
+<div class="field" style="border-left:4px solid {{ '#16a34a' if (trainee.tshirt_size or '')|upper in ['S','M','L','XL','XXL'] else '#dc2626' }};padding-left:10px;">
+  <label class="label">Taille de t-shirt</label>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <select id="tshirt_size" style="flex:1;min-width:0;">
+      <option value="">Sélectionner une taille</option>
+      {% for size in ["S","M","L","XL","XXL"] %}
+      <option value="{{ size }}" {% if (trainee.tshirt_size or '')|upper == size %}selected{% endif %}>{{ size }}</option>
+      {% endfor %}
+    </select>
+    <span id="ok_tshirt_size" class="saved show" style="min-width:110px;text-align:right;{% if (trainee.tshirt_size or '')|upper in ['S','M','L','XL','XXL'] %}color:#16a34a;{% else %}color:#dc2626;{% endif %}">
+      {% if (trainee.tshirt_size or '')|upper in ['S','M','L','XL','XXL'] %}✅{% else %}⚠️ À compléter{% endif %}
+    </span>
+  </div>
+</div>
+{% endif %}
 
   {{ field("Adresse postale",
            "address",
@@ -2054,6 +2070,7 @@ function closeUploadSuccessModal(event) {
   const infosAreComplete = () => {
     const fieldsToCheck = ["carte_vitale","birth_date","birth_city","birth_country","nationality","address","zip_code","city"];
     if (document.getElementById("pre_number")) fieldsToCheck.push("pre_number");
+    if (document.getElementById("tshirt_size")) fieldsToCheck.push("tshirt_size");
     return !fieldsToCheck.some((id) => {
       const statusEl = document.getElementById(`ok_${id}`);
       return statusEl && (statusEl.textContent || "").includes("À compléter");
@@ -2316,6 +2333,7 @@ function setFieldState(inputId){
       const birth_city    = document.getElementById("birth_city")?.value || "";
       const birth_country = document.getElementById("birth_country")?.value || "";
       const nationality   = document.getElementById("nationality")?.value || "";
+      const tshirt_size   = document.getElementById("tshirt_size")?.value || "";
 
       const address       = document.getElementById("address")?.value || "";
       const zip_code      = document.getElementById("zip_code")?.value || "";
@@ -2327,6 +2345,7 @@ function setFieldState(inputId){
         body: JSON.stringify({
           carte_vitale, pre_number,
           birth_date, birth_city, birth_country, nationality,
+          tshirt_size,
           address, zip_code, city
         })
       });
@@ -2343,6 +2362,7 @@ function setFieldState(inputId){
         setFieldStateValidated("birth_city");
         setFieldStateValidated("birth_country");
         setFieldStateValidated("nationality");
+        setFieldStateValidated("tshirt_size");
         setFieldStateValidated("address");
         setFieldStateValidated("zip_code");
         setFieldStateValidated("city");
@@ -2357,6 +2377,7 @@ function setFieldState(inputId){
   [
   "carte_vitale",
   "birth_date","birth_city","birth_country","nationality",
+  "tshirt_size",
   "address","zip_code","city"
 ].forEach(id=>{
   const el = document.getElementById(id);
@@ -2414,6 +2435,7 @@ if(preEl){
   setFieldStateValidated("birth_city");
   setFieldStateValidated("birth_country");
   setFieldStateValidated("nationality");
+  setFieldStateValidated("tshirt_size");
   setFieldStateValidated("address");
   setFieldStateValidated("zip_code");
   setFieldStateValidated("city");
@@ -2476,6 +2498,9 @@ function setFieldStateValidated(inputId){
   }
   if(inputId === "pre_number"){
     valid = isValidPRE(normalizePRE(raw));
+  }
+  if(inputId === "tshirt_size"){
+    valid = ["S","M","L","XL","XXL"].includes(raw.toUpperCase());
   }
 
   if(valid){

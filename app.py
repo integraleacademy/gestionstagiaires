@@ -23,7 +23,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
 import requests
-from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file, flash, has_request_context
+from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file, flash, has_request_context, make_response
 
 import zipfile
 from io import BytesIO
@@ -2736,7 +2736,7 @@ def _send_docs_relance_message(
             "NON_DEPOSE",
         },
     )
-    infos_details = infos_missing_text(trainee)
+    infos_details = infos_missing_text(trainee, training_type)
 
     formation_type = formation_label(_session_get(session_obj, "training_type", ""))
     dstart = fr_date(_session_get(session_obj, "date_start", ""))
@@ -2926,7 +2926,7 @@ def _send_docs_relance_message(
             "NON_DEPOSE",
         },
     )
-    infos_details = infos_missing_text(trainee)
+    infos_details = infos_missing_text(trainee, training_type)
 
     formation_type = formation_label(_session_get(session_obj, "training_type", ""))
     dstart = fr_date(_session_get(session_obj, "date_start", ""))
@@ -4767,6 +4767,7 @@ def _log_charles_hebergement_trace(scope: str, message: str, **kwargs: Any) -> N
 # =========================
 
 FORMATION_TYPES = ["APS", "A3P", "DIRIGEANT initial", "DIRIGEANT VAE", "SSIAP 1", "CHEF DE POSTE", "VTC"]
+TSHIRT_SIZES = {"S", "M", "L", "XL", "XXL"}
 AFC_DECISION_OPTIONS = ["RETENU", "NON RETENU"]
 AFC_REFUSAL_REASONS = [
     "Pré-requis insuffisant : besoin d'une pré-qualification (compétences professionnelles)",
@@ -5589,7 +5590,12 @@ def infos_is_complete_for_training(t: Dict[str, Any], training_type: str) -> boo
         return infos_is_complete_without_pre(t)
 
     if tt != "DIRIGEANT VAE":
-        return infos_is_complete(t)
+        base_complete = infos_is_complete(t)
+        if not base_complete:
+            return False
+        if tt == "A3P":
+            return (t.get("tshirt_size") or "").strip().upper() in TSHIRT_SIZES
+        return True
 
     # Si les champs standards sont tous OK, on est complet aussi.
     if infos_is_complete(t):
@@ -6382,6 +6388,7 @@ def public_vae_desp_submit():
         "vae_status": "soon",
         "hosting_status": "",
         "public_token": public_token,
+        "tshirt_size": "",
         "no_permis": False,
         "no_bac_diploma": False,
         "force_dossier_complete": False,
@@ -6980,13 +6987,16 @@ def admin_sessions():
             "jury_absent": jury_counts["absent"],
         })
 
-    return render_template(
+    response = make_response(render_template(
         "admin_sessions.html",
         sessions=out_sessions,
         formation_types=FORMATION_TYPES,
         dashboard_year=current_year,
         yearly_training_counts=yearly_training_counts,
-    )
+    ))
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
 
 
 
@@ -8744,6 +8754,51 @@ def admin_trainees_print(session_id: str):
     )
 
 
+@app.get("/admin/sessions/<session_id>/tshirt-list")
+@admin_login_required
+def admin_tshirt_list(session_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        abort(404)
+
+    training_type = (_session_get(s, "training_type", "") or "").strip().upper()
+    if training_type != "A3P":
+        return redirect(url_for("admin_trainees", session_id=session_id))
+
+    session_view = {
+        "id": s.get("id"),
+        "name": _session_get(s, "name", ""),
+        "training_type": _session_get(s, "training_type", ""),
+        "date_start": _session_get(s, "date_start", ""),
+        "date_end": _session_get(s, "date_end", ""),
+    }
+
+    trainees = _session_trainees_list(s)
+    trainees_out = []
+    for t in trainees:
+        tshirt_size = (t.get("tshirt_size") or "").strip().upper()
+        trainees_out.append({
+            "last_name": normalize_last_name(t.get("last_name") or ""),
+            "first_name": normalize_first_name(t.get("first_name") or ""),
+            "email": (t.get("email") or "").strip(),
+            "phone": format_phone_fr_for_display((t.get("phone") or "").strip()),
+            "tshirt_size": tshirt_size if tshirt_size in TSHIRT_SIZES else "",
+        })
+
+    trainees_out.sort(key=lambda t: (
+        (t.get("tshirt_size") or "ZZZ"),
+        (t.get("last_name") or "").upper(),
+        (t.get("first_name") or "").upper(),
+    ))
+
+    return render_template(
+        "admin_tshirt_list.html",
+        session=session_view,
+        trainees=trainees_out,
+    )
+
+
 @app.get("/admin/sessions/<session_id>/trainees")
 @admin_login_required
 def admin_trainees(session_id: str):
@@ -9156,6 +9211,7 @@ def api_create_trainee(session_id: str):
         "vae_status": "soon" if show_vae else "",
         "hosting_status": "unknown" if show_hosting else "",
         "public_token": public_token,
+        "tshirt_size": "",
         "no_permis": False,
         "no_bac_diploma": False,
         "force_dossier_complete": False,
@@ -11122,7 +11178,7 @@ def docs_summary_text(
 
 import re
 
-def infos_missing_text(trainee: dict) -> str:
+def infos_missing_text(trainee: dict, training_type: str = "") -> str:
     """
     Retourne une liste texte des infos à compléter (ou invalides),
     exactement comme dans l'espace stagiaire (Infos à compléter).
@@ -11158,6 +11214,12 @@ def infos_missing_text(trainee: dict) -> str:
         missing.append("- Numéro PRE / CAR")
     elif not _is_valid_pre_car(pre):
         missing.append("- Numéro PRE / CAR (format invalide)")
+
+    tt = (training_type or "").strip().upper()
+    if tt == "A3P":
+        tshirt_size = (trainee.get("tshirt_size") or "").strip().upper()
+        if tshirt_size not in TSHIRT_SIZES:
+            missing.append("- Taille de t-shirt")
 
     return "\n".join(missing)
 
@@ -13390,6 +13452,7 @@ def public_infos_update(token: str):
     allowed = {
         "carte_vitale",
         "pre_number",
+        "tshirt_size",
         "birth_date",
         "birth_city",
         "birth_country",
@@ -13409,6 +13472,11 @@ def public_infos_update(token: str):
         # no_permis = bool
         if k == "no_permis":
             t["no_permis"] = bool(v)
+            continue
+        if k == "tshirt_size":
+            size = str(v or "").strip().upper()
+            if size in TSHIRT_SIZES:
+                t["tshirt_size"] = size
             continue
 
         # strings : on n'écrase PAS avec vide
@@ -14896,7 +14964,7 @@ def phone_missing_details_text(t: Dict[str, Any], training_type: str) -> str:
 
     docs_txt = "\n".join(docs_lines) if docs_lines else "- Aucun (selon statuts actuels)"
 
-    infos_txt = infos_missing_text(t) or "- Aucune"
+    infos_txt = infos_missing_text(t, training_type) or "- Aucune"
 
     return (
         "📄 Documents incomplets :\n"
