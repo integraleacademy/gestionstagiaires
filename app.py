@@ -1108,19 +1108,30 @@ def _extract_trainee_fields_from_ocr_text(raw_text: str) -> Dict[str, str]:
     text = (raw_text or "").replace("\r", "\n")
     text = re.sub(r"[ \t]+", " ", text)
     lines = [line.strip() for line in text.split("\n") if line.strip()]
+    non_renseigne_tokens = {"non renseigne", "non renseigné", "non renseignée"}
+
+    def _is_non_renseigne(value: str) -> bool:
+        return _normalized_token(value) in non_renseigne_tokens
 
     def _value_after_label(label_regex: str) -> str:
         pattern = re.compile(label_regex, flags=re.IGNORECASE)
         for idx, line in enumerate(lines):
             if pattern.search(line):
                 suffix = pattern.sub("", line).strip(" :\t")
-                if suffix:
+                if suffix and not _is_non_renseigne(suffix):
                     return suffix
                 if idx + 1 < len(lines):
-                    return lines[idx + 1].strip()
+                    candidate = lines[idx + 1].strip()
+                    if not _is_non_renseigne(candidate):
+                        return candidate
         return ""
 
     def _find_phone() -> str:
+        labeled_phone = _value_after_label(r"telephone\s+portable|telephone\s+mobile|telephone")
+        if labeled_phone:
+            m_labeled = re.search(r"(?:\+33|0)\s*[1-9](?:[\s\.-]*\d{2}){4}", labeled_phone)
+            if m_labeled:
+                return normalize_phone_fr(m_labeled.group(0))
         m = re.search(r"(?:\+33|0)\s*[1-9](?:[\s\.-]*\d{2}){4}", text)
         if not m:
             return ""
@@ -1139,8 +1150,15 @@ def _extract_trainee_fields_from_ocr_text(raw_text: str) -> Dict[str, str]:
 
     birth_date_raw = _value_after_label(r"date\s+de\s+naissance")
     address_raw = _value_after_label(r"adresse\s+postale|adresse")
+    first_name = normalize_first_name(_value_after_label(r"prenom|prénom"))
+    last_name = normalize_last_name(_value_after_label(r"nom\s+de\s+famille|nom"))
 
-    first_name, last_name = _extract_name_from_ocr_lines(lines)
+    if not first_name or not last_name:
+        extracted_first_name, extracted_last_name = _extract_name_from_ocr_lines(lines)
+        if not first_name:
+            first_name = extracted_first_name
+        if not last_name:
+            last_name = extracted_last_name
 
     zip_code = ""
     city = ""
@@ -1151,13 +1169,18 @@ def _extract_trainee_fields_from_ocr_text(raw_text: str) -> Dict[str, str]:
             zip_code = m_zip_city.group(1)
             city = normalize_first_name(m_zip_city.group(2).strip())
 
-    mail_match = re.search(r"[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}", text, flags=re.IGNORECASE)
+    email_from_label = _value_after_label(r"courriel|email|e-?mail")
+    email_match = re.search(
+        r"[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}",
+        email_from_label or text,
+        flags=re.IGNORECASE,
+    )
     return {
         "last_name": last_name,
         "first_name": first_name,
         "birth_date": _parse_birth_date_to_iso(birth_date_raw),
         "birth_city": _value_after_label(r"lieu\s+de\s+naissance"),
-        "email": (mail_match.group(0).strip() if mail_match else ""),
+        "email": (email_match.group(0).strip() if email_match else ""),
         "phone": _find_phone(),
         "address": address_raw,
         "zip_code": zip_code,

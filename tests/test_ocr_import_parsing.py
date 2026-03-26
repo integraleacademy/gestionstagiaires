@@ -51,6 +51,44 @@ CAP BEP
         self.assertEqual(fields["first_name"], "")
         self.assertEqual(fields["last_name"], "")
 
+    def test_extracts_fields_from_admin_profile_screenshot_like_text(self):
+        ocr_text = """
+Apprenant
+VIDAUBAN (83550)
+Civilité
+Madame
+Nom de famille
+INES
+Prénom
+Angelique
+Deuxième prénom
+Non renseigné
+Email
+angievoyage@gmail.com
+Téléphone portable
+0666842042
+Adresse
+71 Traverse De la chapelle 83550 VIDAUBAN
+Nom de naissance
+Non renseigné
+Date de naissance
+26/09/1992
+Lieu de naissance
+Beuvry (62)
+""".strip()
+
+        fields = gestion_app._extract_trainee_fields_from_ocr_text(ocr_text)
+
+        self.assertEqual(fields["first_name"], "Angelique")
+        self.assertEqual(fields["last_name"], "INES")
+        self.assertEqual(fields["birth_date"], "1992-09-26")
+        self.assertEqual(fields["birth_city"], "Beuvry (62)")
+        self.assertEqual(fields["email"], "angievoyage@gmail.com")
+        self.assertEqual(fields["phone"], "+33666842042")
+        self.assertEqual(fields["address"], "71 Traverse De la chapelle 83550 VIDAUBAN")
+        self.assertEqual(fields["zip_code"], "83550")
+        self.assertEqual(fields["city"], "Vidauban")
+
 
 if __name__ == "__main__":
     unittest.main()
@@ -238,4 +276,3 @@ class AfcBulkNotifyApiTests(unittest.TestCase):
         self.assertEqual(payload["skipped"], 0)
         self.assertEqual(payload["failed"], 1)
         self.assertEqual(saved["count"], 0)
-
