@@ -1137,7 +1137,15 @@ def _extract_trainee_fields_from_ocr_text(raw_text: str) -> Dict[str, str]:
 
     def _looks_like_label(value: str) -> bool:
         token = _normalized_token(value)
-        return token in known_labels
+        if token in known_labels:
+            return True
+        if re.match(r"^(deuxieme|troisieme|quatrieme)\s+prenom$", token):
+            return True
+        if token.startswith("prenom "):
+            return True
+        if token.endswith(" prenom"):
+            return True
+        return False
 
     def _first_value_after_labels(
         label_tokens: Tuple[str, ...],
@@ -1199,10 +1207,10 @@ def _extract_trainee_fields_from_ocr_text(raw_text: str) -> Dict[str, str]:
                 pass
         return ""
 
-    birth_date_raw = _first_value_after_labels(("date de naissance",)) or _value_after_label(r"\bdate\s+de\s+naissance\b")
+    birth_date_raw = _first_value_after_labels(("date de naissance",), max_lookahead=8) or _value_after_label(r"^\s*date\s+de\s+naissance\b")
     address_raw = _value_after_label(r"adresse\s+postale|adresse")
-    first_name_raw = _first_value_after_labels(("prenom",)) or _value_after_label(r"\bpr[eé]nom\b")
-    last_name_raw = _first_value_after_labels(("nom de famille", "nom")) or _value_after_label(r"\bnom\s+de\s+famille\b|\bnom\b")
+    first_name_raw = _first_value_after_labels(("prenom",), max_lookahead=8) or _value_after_label(r"^\s*pr[eé]nom\b")
+    last_name_raw = _first_value_after_labels(("nom de famille", "nom"), max_lookahead=8) or _value_after_label(r"^\s*nom\s+de\s+famille\b|^\s*nom\b")
     if any(ch.isdigit() for ch in first_name_raw):
         first_name_raw = ""
     if any(ch.isdigit() for ch in last_name_raw):
@@ -1244,11 +1252,25 @@ def _extract_trainee_fields_from_ocr_text(raw_text: str) -> Dict[str, str]:
             city = normalize_first_name(m_zip_city.group(2).strip())
         address_raw = compact
 
-    birth_city = _first_value_after_labels(("lieu de naissance",)) or _value_after_label(r"\blieu\s+de\s+naissance\b")
+    birth_city = _first_value_after_labels(("lieu de naissance",), max_lookahead=8) or _value_after_label(r"^\s*lieu\s+de\s+naissance\b")
+    if birth_city and ("@" in birth_city or _looks_like_label(birth_city)):
+        birth_city = ""
     if birth_city and re.match(r"^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$", birth_city):
         if not _parse_birth_date_to_iso(birth_date_raw):
             birth_date_raw = birth_city
-        birth_city = ""
+        alternative_birth_city = _first_value_after_labels(
+            ("lieu de naissance",),
+            max_lookahead=12,
+            forbidden_tokens={_normalized_token(birth_city)},
+        )
+        if (
+            re.match(r"^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}$", alternative_birth_city or "")
+            or "@" in (alternative_birth_city or "")
+            or _looks_like_label(alternative_birth_city or "")
+        ):
+            birth_city = ""
+        else:
+            birth_city = alternative_birth_city
 
     email_from_label = _value_after_label(r"courriel|email|e-?mail")
     email_match = re.search(
