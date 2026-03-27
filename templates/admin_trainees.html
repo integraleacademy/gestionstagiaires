@@ -110,15 +110,15 @@
     {% endif %}
     {% if not is_read_only %}
       {% if not is_vtc and not show_vae and not is_dirigeant %}
-      <button class="btn btn-outline" id="btnBulkSst">⬇️ Télécharger les SST en masse</button>
+      <button class="btn btn-outline" id="btnBulkSst">⬇️ importer les SST en masse</button>
       <input id="bulkSstInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
       {% endif %}
 
       {% if not is_vtc %}
-        <button class="btn btn-outline" id="btnBulkDiplome">⬇️ Télécharger les Diplômes en masse</button>
+        <button class="btn btn-outline" id="btnBulkDiplome">⬇️ Importer les diplômes en masse</button>
         <input id="bulkDiplomeInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
 
-      <button class="btn btn-outline" id="btnBulkAttestation">⬇️ Télécharger les Attestations en masse</button>
+      <button class="btn btn-outline" id="btnBulkAttestation">⬇️ Importer les attestations en masse</button>
       <input id="bulkAttestationInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
       {% if show_vae %}
       <button class="btn btn-outline" id="btnBulkParchemin">📜 Parchemin</button>
@@ -1073,7 +1073,7 @@ bulkSstInput?.addEventListener("change", async ()=>{
     alert("Erreur réseau pendant l'import SST");
   }finally{
     btnBulkSst.disabled = false;
-    btnBulkSst.textContent = "⬇️ Télécharger les SST en masse";
+    btnBulkSst.textContent = "⬇️ importer les SST en masse";
   }
 });
 
@@ -1152,7 +1152,7 @@ bulkDiplomeInput?.addEventListener("change", async ()=>{
     alert("Erreur réseau pendant l'import Diplômes");
   }finally{
     btnBulkDiplome.disabled = false;
-    btnBulkDiplome.textContent = "⬇️ Télécharger les Diplômes en masse";
+    btnBulkDiplome.textContent = "⬇️ Importer les diplômes en masse";
   }
 });
 
@@ -1231,7 +1231,7 @@ bulkAttestationInput?.addEventListener("change", async ()=>{
     alert("Erreur réseau pendant l'import Attestations");
   }finally{
     btnBulkAttestation.disabled = false;
-    btnBulkAttestation.textContent = "⬇️ Télécharger les Attestations en masse";
+    btnBulkAttestation.textContent = "⬇️ Importer les attestations en masse";
   }
 });
 
