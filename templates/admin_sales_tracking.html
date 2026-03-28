@@ -31,6 +31,22 @@
 .month-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px;box-shadow:0 10px 24px rgba(15,23,42,.06);}
 .month-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
 .month-name{font-size:20px;font-weight:900;margin:0;color:#0f172a;}
+.training-annual{background:#fff;border:1px solid #dbeafe;border-radius:18px;padding:14px;box-shadow:0 12px 28px rgba(37,99,235,.1);}
+.training-annual-head{display:flex;justify-content:space-between;align-items:flex-end;gap:8px;flex-wrap:wrap;}
+.training-annual-title{margin:0;font-size:22px;font-weight:900;color:#1e3a8a;}
+.training-annual-sub{color:#475569;font-size:13px;}
+.training-annual-grid{margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;}
+.training-annual-card{border:1px solid #e2e8f0;background:linear-gradient(160deg,#f8fafc 0%,#eff6ff 100%);border-radius:14px;padding:12px;position:relative;overflow:hidden;}
+.training-annual-card::after{content:"";position:absolute;top:-35%;right:-25%;width:120px;height:120px;background:radial-gradient(circle,rgba(37,99,235,.16),rgba(37,99,235,0));pointer-events:none;}
+.training-annual-card-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;}
+.training-rank{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;border-radius:999px;background:#1d4ed8;color:#fff;font-size:12px;font-weight:900;}
+.training-annual-name{margin:0;font-size:14px;font-weight:900;color:#0f172a;}
+.training-annual-revenue{font-size:28px;font-weight:900;line-height:1.1;margin-top:8px;color:#0f172a;}
+.training-annual-meta{margin-top:4px;color:#475569;font-size:13px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.training-share{margin-top:9px;}
+.training-share-rail{height:8px;background:#dbeafe;border-radius:999px;overflow:hidden;}
+.training-share-fill{height:100%;background:linear-gradient(90deg,#2563eb,#7c3aed);border-radius:999px;}
+.training-empty{border:1px dashed #cbd5e1;border-radius:12px;padding:12px;color:#64748b;font-size:13px;background:#f8fafc;margin-top:10px;}
 .training-list{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
 .training-row{border:1px solid #e2e8f0;border-radius:12px;padding:10px;background:#f8fafc;}
 .training-row strong{color:#0f172a;}
@@ -129,6 +145,41 @@
       <span id="saveFeedback" class="helper" style="margin-left:8px;"></span>
     </div>
   </div>
+
+  <section class="training-annual">
+    <div class="training-annual-head">
+      <div>
+        <h2 class="training-annual-title">CA annuel par formation</h2>
+        <div class="training-annual-sub">Vue rapide des formations qui génèrent le plus de chiffre d’affaires en {{ selected_year }}.</div>
+      </div>
+      <div class="helper"><span id="annualTrainingsCount">{{ annual_trainings|length }}</span> formation(s) active(s)</div>
+    </div>
+    <div id="annualTrainingGrid" class="training-annual-grid">
+      {% if annual_trainings %}
+        {% for training in annual_trainings %}
+          <article class="training-annual-card">
+            <div class="training-annual-card-head">
+              <h3 class="training-annual-name">{{ training.label }}</h3>
+              <span class="training-rank">#{{ loop.index }}</span>
+            </div>
+            <div class="training-annual-revenue" data-euro="{{ training.revenue }}">{{ training.revenue }}</div>
+            <div class="training-annual-meta">
+              <span>{{ training.inscriptions }} inscription(s)</span>
+              <span>Panier moyen : <strong data-euro="{{ training.training_price }}">{{ training.training_price }}</strong></span>
+            </div>
+            <div class="training-share">
+              <div class="training-share-rail">
+                <div class="training-share-fill" style="width: {{ [training.revenue_ratio * 100, 100]|min }}%;"></div>
+              </div>
+              <div class="helper" style="margin-top:4px;">{{ (training.revenue_ratio * 100)|round(1) }}% du CA annuel</div>
+            </div>
+          </article>
+        {% endfor %}
+      {% else %}
+        <div class="training-empty">Aucune vente enregistrée sur {{ selected_year }} pour l’instant.</div>
+      {% endif %}
+    </div>
+  </section>
 
   <div id="monthGrid" class="month-grid">
     {% for month in monthly_rows %}
@@ -247,6 +298,8 @@
   const saveBtn = document.getElementById('saveObjectivesBtn');
   const feedback = document.getElementById('saveFeedback');
   const monthGrid = document.getElementById('monthGrid');
+  const annualTrainingGrid = document.getElementById('annualTrainingGrid');
+  const annualTrainingsCount = document.getElementById('annualTrainingsCount');
 
   const parseIntSafe = (raw) => {
     const cleaned = String(raw || '').replace(/[^\d]/g, '');
@@ -311,6 +364,27 @@
     `;
   };
 
+  const annualTrainingCardHtml = (training, index) => {
+    const revenueRatioPct = Math.max(0, Math.min(100, Number(training.revenue_ratio || 0) * 100));
+    return `
+      <article class="training-annual-card">
+        <div class="training-annual-card-head">
+          <h3 class="training-annual-name">${training.label || 'AUTRE'}</h3>
+          <span class="training-rank">#${index + 1}</span>
+        </div>
+        <div class="training-annual-revenue" data-euro="${training.revenue || 0}">${training.revenue || 0}</div>
+        <div class="training-annual-meta">
+          <span>${training.inscriptions || 0} inscription(s)</span>
+          <span>Panier moyen : <strong data-euro="${training.training_price || 0}">${training.training_price || 0}</strong></span>
+        </div>
+        <div class="training-share">
+          <div class="training-share-rail"><div class="training-share-fill" style="width:${revenueRatioPct}%;"></div></div>
+          <div class="helper" style="margin-top:4px;">${revenueRatioPct.toFixed(1)}% du CA annuel</div>
+        </div>
+      </article>
+    `;
+  };
+
   const refreshView = (payload) => {
     document.getElementById('todayRevenue')?.setAttribute('data-euro', payload.today_revenue || 0);
     document.getElementById('todayCount').textContent = `${payload.today_inscriptions || 0} inscription(s)`;
@@ -326,6 +400,15 @@
 
     const months = Array.isArray(payload.monthly_rows) ? payload.monthly_rows : [];
     monthGrid.innerHTML = months.map(monthCardHtml).join('');
+    const annualTrainings = Array.isArray(payload.annual_trainings) ? payload.annual_trainings : [];
+    if (annualTrainingsCount) {
+      annualTrainingsCount.textContent = String(annualTrainings.length);
+    }
+    if (annualTrainingGrid) {
+      annualTrainingGrid.innerHTML = annualTrainings.length
+        ? annualTrainings.map((training, index) => annualTrainingCardHtml(training, index)).join('')
+        : '<div class="training-empty">Aucune vente enregistrée sur cette année pour l’instant.</div>';
+    }
     objectiveInputs = bindObjectiveInputNormalization();
     fmtEuroNodes();
   };

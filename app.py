@@ -7246,6 +7246,7 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
     week_revenue = 0
     week_inscriptions = 0
     sale_markers: List[str] = []
+    annual_trainings_map: Dict[str, Dict[str, Any]] = {}
 
     for session in data.get("sessions", []):
         if bool(session.get("exclude_from_sales_tracking")):
@@ -7306,6 +7307,17 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
             if training_metrics.get("training_price", 0) <= 0 and training_price > 0:
                 training_metrics["training_price"] = training_price
 
+            annual_training_metrics = annual_trainings_map.setdefault(training_label, {
+                "label": training_label,
+                "inscriptions": 0,
+                "training_price": training_price,
+                "revenue": 0,
+            })
+            annual_training_metrics["inscriptions"] += 1
+            annual_training_metrics["revenue"] += training_price
+            if annual_training_metrics.get("training_price", 0) <= 0 and training_price > 0:
+                annual_training_metrics["training_price"] = training_price
+
     objectives = data.get("sales_tracking", {}).get("objectives", {})
     year_objectives = objectives.get(str(selected_year), {}) if isinstance(objectives, dict) else {}
     annual_objective = _parse_positive_int(year_objectives.get("annual") if isinstance(year_objectives, dict) else 0)
@@ -7326,6 +7338,14 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
     annual_revenue = sum(month["revenue"] for month in monthly_rows)
     annual_inscriptions = sum(month["inscriptions"] for month in monthly_rows)
     annual_progress_ratio = (annual_revenue / annual_objective) if annual_objective > 0 else 0
+    annual_trainings = sorted(
+        annual_trainings_map.values(),
+        key=lambda row: row["revenue"],
+        reverse=True,
+    )
+    for training_row in annual_trainings:
+        revenue_value = float(training_row.get("revenue") or 0)
+        training_row["revenue_ratio"] = (revenue_value / annual_revenue) if annual_revenue > 0 else 0
 
     return {
         "selected_year": selected_year,
@@ -7333,6 +7353,7 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
         "annual_revenue": annual_revenue,
         "annual_inscriptions": annual_inscriptions,
         "annual_progress_ratio": annual_progress_ratio,
+        "annual_trainings": annual_trainings,
         "monthly_rows": monthly_rows,
         "today_revenue": today_revenue,
         "today_inscriptions": today_inscriptions,
