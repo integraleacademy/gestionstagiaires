@@ -7114,6 +7114,7 @@ def admin_sessions():
             "jury_pending": jury_counts["pending"],
             "jury_present": jury_counts["present"],
             "jury_absent": jury_counts["absent"],
+            "exclude_from_sales_tracking": bool(s.get("exclude_from_sales_tracking")),
         })
 
     response = make_response(render_template(
@@ -7247,6 +7248,8 @@ def admin_sales_tracking():
         })
 
     for session in data.get("sessions", []):
+        if bool(session.get("exclude_from_sales_tracking")):
+            continue
         trainees = _session_trainees_list(session)
         training_type_raw = _session_get(session, "training_type", "")
         training_label = _sales_training_label(training_type_raw)
@@ -9405,6 +9408,7 @@ def api_create_session():
     exam_theory_date = (payload.get("exam_theory_date") or "").strip()
     exam_practice_date = (payload.get("exam_practice_date") or "").strip()
     practice_training_date = (payload.get("practice_training_date") or "").strip()
+    exclude_from_sales_tracking = bool(payload.get("exclude_from_sales_tracking"))
 
     if not name or not training_type:
         return jsonify({"ok": False, "error": "missing_name_or_training_type"}), 400
@@ -9420,6 +9424,7 @@ def api_create_session():
         "exam_theory_date": exam_theory_date,
         "exam_practice_date": exam_practice_date,
         "practice_training_date": practice_training_date,
+        "exclude_from_sales_tracking": exclude_from_sales_tracking,
         "created_at": _now_iso(),
         "trainees": [],
         "archived": False,
@@ -9456,6 +9461,9 @@ def api_update_session(session_id: str):
     ):
         if key in payload:
             s[key] = (payload.get(key) or "").strip()
+
+    if "exclude_from_sales_tracking" in payload:
+        s["exclude_from_sales_tracking"] = bool(payload.get("exclude_from_sales_tracking"))
 
     s["updated_at"] = _now_iso()
     save_data(data)
