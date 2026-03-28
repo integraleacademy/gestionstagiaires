@@ -7188,6 +7188,21 @@ def _parse_positive_int(raw_value: Any) -> int:
     return max(parsed, 0)
 
 
+def _parse_flexible_date(raw_value: Any) -> Optional[datetime.date]:
+    raw = str(raw_value or "").strip()
+    if not raw:
+        return None
+    parsed_dt = _parse_iso_datetime(raw)
+    if parsed_dt:
+        return parsed_dt.date()
+    for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d"):
+        try:
+            return datetime.datetime.strptime(raw[:10], fmt).date()
+        except (ValueError, TypeError):
+            continue
+    return None
+
+
 def _sales_training_unit_price(training_type: str, training_label: str) -> int:
     label_key = (training_label or "").strip().upper()
     type_key = (training_type or "").strip().upper()
@@ -7237,16 +7252,22 @@ def admin_sales_tracking():
         training_label = _sales_training_label(training_type_raw)
         unit_price = _sales_training_unit_price(training_type_raw, training_label)
         for trainee in trainees:
-            created_at = _parse_iso_datetime(trainee.get("created_at") or "")
-            if not created_at:
-                continue
-            if created_at.year != selected_year:
-                continue
+            anchor_date = _parse_flexible_date(trainee.get("created_at") or "")
             if training_label == "DIRIGEANT VAE":
                 vae_status_key = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))["key"]
                 if vae_status_key != "certified":
                     continue
-            month_index = created_at.month
+                action_dates = trainee.get("vae_action_dates") if isinstance(trainee.get("vae_action_dates"), dict) else {}
+                anchor_date = _parse_flexible_date(action_dates.get("diplome_obtenu"))
+                if not anchor_date:
+                    continue
+
+            if not anchor_date:
+                continue
+            if anchor_date.year != selected_year:
+                continue
+
+            month_index = anchor_date.month
             if month_index < 1 or month_index > 12:
                 continue
 
