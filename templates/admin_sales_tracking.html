@@ -39,23 +39,27 @@
 .helper{font-size:12px;color:#64748b;}
 .celebration-emoji{position:fixed;inset:0;display:none;align-items:center;justify-content:center;pointer-events:none;z-index:1002;}
 .celebration-emoji.is-visible{display:flex;}
-.celebration-emoji span{font-size:clamp(88px,15vw,180px);filter:drop-shadow(0 12px 22px rgba(15,23,42,.4));animation:megaPop 1.5s ease;}
+.celebration-emoji span{font-size:clamp(88px,15vw,180px);filter:drop-shadow(0 12px 22px rgba(15,23,42,.4));animation:megaFloat 1.8s ease-in-out infinite;}
 .sale-alert{position:fixed;inset:0;z-index:1001;display:none;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.2),rgba(15,23,42,.84) 55%);}
 .sale-alert.is-visible{display:flex;animation:alertFade .35s ease;}
 .sale-alert-card{position:relative;max-width:620px;width:min(92vw,620px);border-radius:24px;padding:28px 24px;text-align:center;color:#fff;background:linear-gradient(145deg,#2563eb 0%,#7c3aed 45%,#db2777 100%);box-shadow:0 24px 70px rgba(15,23,42,.55);animation:cardIn .45s cubic-bezier(.2,.9,.25,1.15);}
-.sale-alert-title{font-size:clamp(34px,6vw,58px);font-weight:900;line-height:1.05;margin:0;}
+.sale-alert-title{font-size:clamp(34px,6vw,58px);font-weight:900;line-height:1.05;margin:0;animation:titlePulse 1.15s ease-in-out infinite;}
 .sale-alert-sub{font-size:16px;opacity:.95;margin:10px 0 0;}
 .sale-alert-btn{margin-top:18px;border:none;background:#fff;color:#be185d;border-radius:999px;padding:12px 22px;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 10px 28px rgba(15,23,42,.3);}
 @keyframes alertFade{from{opacity:0}to{opacity:1}}
-@keyframes megaPop{
-  0%{transform:scale(.2) rotate(-20deg);opacity:0;}
-  35%{transform:scale(1.2) rotate(10deg);opacity:1;}
-  70%{transform:scale(.95) rotate(-4deg);opacity:1;}
-  100%{transform:scale(1) rotate(0);opacity:0;}
+@keyframes megaFloat{
+  0%{transform:scale(.92) translateY(10px) rotate(-8deg);opacity:.72;}
+  50%{transform:scale(1.08) translateY(-6px) rotate(8deg);opacity:1;}
+  100%{transform:scale(.92) translateY(10px) rotate(-8deg);opacity:.72;}
 }
 @keyframes cardIn{
   0%{transform:translateY(18px) scale(.92);opacity:0;}
   100%{transform:translateY(0) scale(1);opacity:1;}
+}
+@keyframes titlePulse{
+  0%{transform:scale(1);text-shadow:0 0 0 rgba(255,255,255,0);}
+  50%{transform:scale(1.03);text-shadow:0 0 18px rgba(255,255,255,.35);}
+  100%{transform:scale(1);text-shadow:0 0 0 rgba(255,255,255,0);}
 }
 </style>
 
@@ -187,20 +191,33 @@
   const saleAlertTitle = document.getElementById('saleAlertTitle');
   let knownSalesSignature = {{ sales_signature|tojson }};
   let knownSalesCount = Number({{ sales_count }});
+  let pendingSalesCount = 0;
+  let celebrationTimeoutId = null;
+  let isCelebrationActive = false;
+
+  const formatSalesTitle = (count) => {
+    const safeCount = Math.max(1, Number(count) || 1);
+    return `${safeCount} nouvelle${safeCount > 1 ? 's' : ''} vente${safeCount > 1 ? 's' : ''}`;
+  };
 
   const triggerSingleCelebration = () => {
     if (!celebrationEmoji) return;
-    celebrationEmoji.classList.remove('is-visible');
-    // force reflow pour rejouer l'animation
-    void celebrationEmoji.offsetWidth;
+    if (isCelebrationActive) return;
+    isCelebrationActive = true;
     celebrationEmoji.classList.add('is-visible');
-    setTimeout(() => celebrationEmoji.classList.remove('is-visible'), 1500);
+    if (celebrationTimeoutId) {
+      clearTimeout(celebrationTimeoutId);
+    }
+    celebrationTimeoutId = setTimeout(() => {
+      celebrationEmoji.classList.remove('is-visible');
+      isCelebrationActive = false;
+      showSaleOverlay();
+    }, 10000);
   };
 
-  const showSaleOverlay = (newSalesCount) => {
+  const showSaleOverlay = () => {
     if (!saleAlert || !saleAlertTitle) return;
-    const safeCount = Math.max(1, Number(newSalesCount) || 1);
-    saleAlertTitle.textContent = `${safeCount} nouvelle${safeCount > 1 ? 's' : ''} vente${safeCount > 1 ? 's' : ''}`;
+    saleAlertTitle.textContent = formatSalesTitle(pendingSalesCount || 1);
     saleAlert.classList.add('is-visible');
     document.body.style.overflow = 'hidden';
   };
@@ -209,6 +226,16 @@
     if (!saleAlert) return;
     saleAlert.classList.remove('is-visible');
     document.body.style.overflow = '';
+    pendingSalesCount = 0;
+  };
+
+  const handleNewSales = (newSales) => {
+    pendingSalesCount += Math.max(1, Number(newSales) || 1);
+    if (saleAlert?.classList.contains('is-visible')) {
+      saleAlertTitle.textContent = formatSalesTitle(pendingSalesCount);
+      return;
+    }
+    triggerSingleCelebration();
   };
 
   saleAlertClose?.addEventListener('click', hideSaleOverlay);
@@ -343,8 +370,7 @@
       const nextSalesCount = Number(payload.sales_count || 0);
       if (nextSignature && knownSalesSignature && nextSignature !== knownSalesSignature) {
         const newSales = Math.max(1, nextSalesCount - knownSalesCount);
-        triggerSingleCelebration();
-        showSaleOverlay(newSales);
+        handleNewSales(newSales);
       }
       knownSalesSignature = nextSignature || knownSalesSignature;
       knownSalesCount = Number.isFinite(nextSalesCount) ? nextSalesCount : knownSalesCount;
