@@ -80,11 +80,11 @@
 </style>
 
 <div class="sales-page">
-  <div id="celebrationEmoji" class="celebration-emoji" aria-hidden="true"><span>🎉</span></div>
+  <div id="celebrationEmoji" class="celebration-emoji" aria-hidden="true"><span id="celebrationEmojiGlyph">🎉</span></div>
   <div id="saleAlert" class="sale-alert" role="status" aria-live="polite">
     <div class="sale-alert-card">
       <h2 id="saleAlertTitle" class="sale-alert-title">1 nouvelle vente</h2>
-      <p class="sale-alert-sub">Bravo l’équipe, continuez comme ça 🚀</p>
+      <p id="saleAlertSub" class="sale-alert-sub">Bravo l’équipe, continuez comme ça 🚀</p>
       <button id="saleAlertClose" class="sale-alert-btn" type="button">Top ❤️</button>
     </div>
   </div>
@@ -237,24 +237,47 @@
   const selectedYear = {{ selected_year }};
   const dataEndpoint = '{{ url_for("admin_sales_tracking_data") }}?year={{ selected_year }}';
   const celebrationEmoji = document.getElementById('celebrationEmoji');
+  const celebrationEmojiGlyph = document.getElementById('celebrationEmojiGlyph');
   const saleAlert = document.getElementById('saleAlert');
   const saleAlertClose = document.getElementById('saleAlertClose');
   const saleAlertTitle = document.getElementById('saleAlertTitle');
+  const saleAlertSub = document.getElementById('saleAlertSub');
   let knownSalesSignature = {{ sales_signature|tojson }};
   let knownSalesCount = Number({{ sales_count }});
-  let pendingSalesCount = 0;
+  let pendingSalesDelta = 0;
   let celebrationTimeoutId = null;
   let isCelebrationActive = false;
 
-  const formatSalesTitle = (count) => {
-    const safeCount = Math.max(1, Number(count) || 1);
+  const formatSalesTitle = (delta) => {
+    const safeDelta = Number(delta) || 0;
+    const safeCount = Math.max(1, Math.abs(safeDelta));
+    if (safeDelta < 0) {
+      return `${safeCount} vente${safeCount > 1 ? 's' : ''} annulée${safeCount > 1 ? 's' : ''}`;
+    }
     return `${safeCount} nouvelle${safeCount > 1 ? 's' : ''} vente${safeCount > 1 ? 's' : ''}`;
   };
 
-  const triggerSingleCelebration = () => {
+  const saleAlertSubtitle = (delta) => {
+    if ((Number(delta) || 0) < 0) {
+      return 'Aïe… une vente a été annulée 😭';
+    }
+    return 'Bravo l’équipe, continuez comme ça 🚀';
+  };
+
+  const saleAlertButtonText = (delta) => {
+    if ((Number(delta) || 0) < 0) {
+      return 'Vu 😭';
+    }
+    return 'Top ❤️';
+  };
+
+  const triggerSingleCelebration = (isCancel = false) => {
     if (!celebrationEmoji) return;
     if (isCelebrationActive) return;
     isCelebrationActive = true;
+    if (celebrationEmojiGlyph) {
+      celebrationEmojiGlyph.textContent = isCancel ? '😭' : '🎉';
+    }
     celebrationEmoji.classList.add('is-visible');
     if (celebrationTimeoutId) {
       clearTimeout(celebrationTimeoutId);
@@ -268,7 +291,13 @@
 
   const showSaleOverlay = () => {
     if (!saleAlert || !saleAlertTitle) return;
-    saleAlertTitle.textContent = formatSalesTitle(pendingSalesCount || 1);
+    saleAlertTitle.textContent = formatSalesTitle(pendingSalesDelta || 1);
+    if (saleAlertSub) {
+      saleAlertSub.textContent = saleAlertSubtitle(pendingSalesDelta);
+    }
+    if (saleAlertClose) {
+      saleAlertClose.textContent = saleAlertButtonText(pendingSalesDelta);
+    }
     saleAlert.classList.add('is-visible');
     document.body.style.overflow = 'hidden';
   };
@@ -277,16 +306,24 @@
     if (!saleAlert) return;
     saleAlert.classList.remove('is-visible');
     document.body.style.overflow = '';
-    pendingSalesCount = 0;
+    pendingSalesDelta = 0;
   };
 
-  const handleNewSales = (newSales) => {
-    pendingSalesCount += Math.max(1, Number(newSales) || 1);
+  const handleSalesDiff = (salesDiff) => {
+    const safeDiff = Number(salesDiff) || 0;
+    if (!safeDiff) return;
+    pendingSalesDelta += safeDiff;
     if (saleAlert?.classList.contains('is-visible')) {
-      saleAlertTitle.textContent = formatSalesTitle(pendingSalesCount);
+      saleAlertTitle.textContent = formatSalesTitle(pendingSalesDelta || 1);
+      if (saleAlertSub) {
+        saleAlertSub.textContent = saleAlertSubtitle(pendingSalesDelta);
+      }
+      if (saleAlertClose) {
+        saleAlertClose.textContent = saleAlertButtonText(pendingSalesDelta);
+      }
       return;
     }
-    triggerSingleCelebration();
+    triggerSingleCelebration(safeDiff < 0);
   };
 
   saleAlertClose?.addEventListener('click', hideSaleOverlay);
@@ -452,8 +489,8 @@
       const nextSignature = String(payload.sales_signature || '');
       const nextSalesCount = Number(payload.sales_count || 0);
       if (nextSignature && knownSalesSignature && nextSignature !== knownSalesSignature) {
-        const newSales = Math.max(1, nextSalesCount - knownSalesCount);
-        handleNewSales(newSales);
+        const salesDiff = nextSalesCount - knownSalesCount;
+        handleSalesDiff(salesDiff);
       }
       knownSalesSignature = nextSignature || knownSalesSignature;
       knownSalesCount = Number.isFinite(nextSalesCount) ? nextSalesCount : knownSalesCount;
