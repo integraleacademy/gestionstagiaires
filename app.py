@@ -7129,6 +7129,198 @@ def admin_sessions():
 
 
 
+
+SALES_TRACKING_MONTH_LABELS = [
+    "Janvier",
+    "Février",
+    "Mars",
+    "Avril",
+    "Mai",
+    "Juin",
+    "Juillet",
+    "Août",
+    "Septembre",
+    "Octobre",
+    "Novembre",
+    "Décembre",
+]
+
+
+def _sales_tracking_bucket(data: Dict[str, Any]) -> Dict[str, Any]:
+    bucket = data.setdefault("sales_tracking", {})
+    if not isinstance(bucket, dict):
+        bucket = {}
+        data["sales_tracking"] = bucket
+    objectives = bucket.setdefault("objectives", {})
+    if not isinstance(objectives, dict):
+        bucket["objectives"] = {}
+    return bucket
+
+
+def _sales_training_label(training_type: str) -> str:
+    raw = (training_type or "").strip().upper()
+    if raw.startswith("APS"):
+        return "APS"
+    if raw.startswith("A3P"):
+        return "A3P"
+    if "VTC" in raw:
+        return "VTC"
+    if raw.startswith("DIRIGEANT") and "VAE" in raw:
+        return "DIRIGEANT VAE"
+    if raw.startswith("DIRIGEANT"):
+        return "DIRIGEANT"
+    return (training_type or "AUTRE").strip() or "AUTRE"
+
+
+def _parse_positive_int(raw_value: Any) -> int:
+    text = str(raw_value or "").strip()
+    if not text:
+        return 0
+    cleaned = re.sub(r"[^\d]", "", text)
+    if not cleaned:
+        return 0
+    try:
+        parsed = int(cleaned)
+    except (ValueError, TypeError):
+        return 0
+    return max(parsed, 0)
+
+
+@app.get("/admin/suivi-ventes")
+@admin_login_required
+def admin_sales_tracking():
+    data = load_data()
+    _sales_tracking_bucket(data)
+    today = datetime.date.today()
+    requested_year = str(request.args.get("year") or "").strip()
+    try:
+        selected_year = int(requested_year) if requested_year else today.year
+    except (TypeError, ValueError):
+        selected_year = today.year
+    selected_year = max(2020, min(2100, selected_year))
+
+    monthly_rows: List[Dict[str, Any]] = []
+    for month_index, month_name in enumerate(SALES_TRACKING_MONTH_LABELS, start=1):
+        monthly_rows.append({
+            "month_index": month_index,
+            "month_name": month_name,
+            "inscriptions": 0,
+            "revenue": 0,
+            "trainings": {},
+            "objective": 0,
+        })
+
+    for session in data.get("sessions", []):
+        trainees = _session_trainees_list(session)
+        training_type_raw = _session_get(session, "training_type", "")
+        training_label = _sales_training_label(training_type_raw)
+        default_price = default_training_price(training_type_raw) or 0
+        for trainee in trainees:
+            created_at = _parse_iso_datetime(trainee.get("created_at") or "")
+            if not created_at:
+                continue
+            if created_at.year != selected_year:
+                continue
+            month_index = created_at.month
+            if month_index < 1 or month_index > 12:
+                continue
+
+            training_price = _parse_positive_int(trainee.get("training_price"))
+            if training_price <= 0:
+                training_price = default_price
+
+            month_row = monthly_rows[month_index - 1]
+            month_row["inscriptions"] += 1
+            month_row["revenue"] += training_price
+
+            training_metrics = month_row["trainings"].setdefault(training_label, {
+                "label": training_label,
+                "inscriptions": 0,
+                "training_price": training_price,
+                "revenue": 0,
+            })
+            training_metrics["inscriptions"] += 1
+            training_metrics["revenue"] += training_price
+            if training_metrics.get("training_price", 0) <= 0 and training_price > 0:
+                training_metrics["training_price"] = training_price
+
+    objectives = data.get("sales_tracking", {}).get("objectives", {})
+    year_objectives = objectives.get(str(selected_year), {}) if isinstance(objectives, dict) else {}
+    annual_objective = _parse_positive_int(year_objectives.get("annual") if isinstance(year_objectives, dict) else 0)
+    monthly_objectives = year_objectives.get("months", {}) if isinstance(year_objectives, dict) else {}
+    if not isinstance(monthly_objectives, dict):
+        monthly_objectives = {}
+
+    for month_row in monthly_rows:
+        month_row["objective"] = _parse_positive_int(monthly_objectives.get(str(month_row["month_index"])))
+        trainings_sorted = sorted(
+            month_row["trainings"].values(),
+            key=lambda row: row["revenue"],
+            reverse=True,
+        )
+        month_row["trainings"] = trainings_sorted
+        objective_value = month_row["objective"]
+        progress_ratio = (month_row["revenue"] / objective_value) if objective_value > 0 else 0
+        month_row["progress_ratio"] = progress_ratio
+
+    annual_revenue = sum(month["revenue"] for month in monthly_rows)
+    annual_inscriptions = sum(month["inscriptions"] for month in monthly_rows)
+    annual_progress_ratio = (annual_revenue / annual_objective) if annual_objective > 0 else 0
+
+    return render_template(
+        "admin_sales_tracking.html",
+        selected_year=selected_year,
+        annual_objective=annual_objective,
+        annual_revenue=annual_revenue,
+        annual_inscriptions=annual_inscriptions,
+        annual_progress_ratio=annual_progress_ratio,
+        monthly_rows=monthly_rows,
+    )
+
+
+@app.post("/admin/suivi-ventes/objectifs")
+@admin_login_required
+def admin_sales_tracking_save_objectives():
+    payload = request.get_json(silent=True) or {}
+    try:
+        year = int(payload.get("year"))
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "invalid_year"}), 400
+
+    if year < 2020 or year > 2100:
+        return jsonify({"ok": False, "error": "invalid_year"}), 400
+
+    annual_objective = _parse_positive_int(payload.get("annual_objective"))
+    monthly_payload = payload.get("monthly_objectives", {})
+    if not isinstance(monthly_payload, dict):
+        monthly_payload = {}
+
+    monthly_objectives: Dict[str, int] = {}
+    for month_idx in range(1, 13):
+        monthly_objectives[str(month_idx)] = _parse_positive_int(monthly_payload.get(str(month_idx), 0))
+
+    data = load_data()
+    bucket = _sales_tracking_bucket(data)
+    objectives = bucket.setdefault("objectives", {})
+    if not isinstance(objectives, dict):
+        objectives = {}
+        bucket["objectives"] = objectives
+    objectives[str(year)] = {
+        "annual": annual_objective,
+        "months": monthly_objectives,
+        "updated_at": _now_iso(),
+    }
+    save_data(data)
+
+    return jsonify({
+        "ok": True,
+        "year": year,
+        "annual_objective": annual_objective,
+        "monthly_objectives": monthly_objectives,
+    })
+
+
+
 def _afc_bucket(data: Dict[str, Any]) -> Dict[str, Any]:
     bucket = data.setdefault("afc", {})
     if not isinstance(bucket.get("candidates"), list):
