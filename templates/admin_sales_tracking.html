@@ -6,6 +6,15 @@
 .sales-hero-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
 .sales-title{font-size:28px;font-weight:900;color:#1e3a8a;margin:0;}
 .sales-sub{color:#334155;margin-top:4px;}
+.sales-flash-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px;}
+.flash-kpi{position:relative;overflow:hidden;border-radius:16px;padding:14px;color:#fff;box-shadow:0 12px 28px rgba(15,23,42,.22);}
+.flash-kpi::after{content:"";position:absolute;inset:-30%;background:radial-gradient(circle,rgba(255,255,255,.25) 0,rgba(255,255,255,0) 62%);pointer-events:none;}
+.flash-kpi--today{background:linear-gradient(120deg,#2563eb 0%,#1d4ed8 100%);}
+.flash-kpi--yesterday{background:linear-gradient(120deg,#9333ea 0%,#7c3aed 100%);}
+.flash-kpi--week{background:linear-gradient(120deg,#0f766e 0%,#0d9488 100%);}
+.flash-label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;opacity:.9;font-weight:800;}
+.flash-value{font-size:30px;font-weight:900;line-height:1.1;margin-top:4px;}
+.flash-helper{font-size:13px;opacity:.95;margin-top:4px;}
 .sales-hero-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px;}
 .kpi{background:#fff;border:1px solid #dbeafe;border-radius:14px;padding:12px;}
 .kpi-label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;font-weight:800;}
@@ -28,14 +37,46 @@
 .training-meta{font-size:13px;color:#334155;margin-top:4px;display:flex;gap:10px;flex-wrap:wrap;}
 .month-empty{border:1px dashed #cbd5e1;border-radius:12px;padding:12px;color:#64748b;font-size:13px;background:#f8fafc;margin-top:10px;}
 .helper{font-size:12px;color:#64748b;}
+.celebration-emoji{position:fixed;inset:0;display:none;align-items:center;justify-content:center;pointer-events:none;z-index:1002;}
+.celebration-emoji.is-visible{display:flex;}
+.celebration-emoji span{font-size:clamp(88px,15vw,180px);filter:drop-shadow(0 12px 22px rgba(15,23,42,.4));animation:megaFloat 1.8s ease-in-out infinite;}
+.sale-alert{position:fixed;inset:0;z-index:1001;display:none;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.2),rgba(15,23,42,.84) 55%);}
+.sale-alert.is-visible{display:flex;animation:alertFade .35s ease;}
+.sale-alert-card{position:relative;max-width:620px;width:min(92vw,620px);border-radius:24px;padding:28px 24px;text-align:center;color:#fff;background:linear-gradient(145deg,#2563eb 0%,#7c3aed 45%,#db2777 100%);box-shadow:0 24px 70px rgba(15,23,42,.55);animation:cardIn .45s cubic-bezier(.2,.9,.25,1.15);}
+.sale-alert-title{font-size:clamp(34px,6vw,58px);font-weight:900;line-height:1.05;margin:0;animation:titlePulse 1.15s ease-in-out infinite;}
+.sale-alert-sub{font-size:16px;opacity:.95;margin:10px 0 0;}
+.sale-alert-btn{margin-top:18px;border:none;background:#fff;color:#be185d;border-radius:999px;padding:12px 22px;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 10px 28px rgba(15,23,42,.3);}
+@keyframes alertFade{from{opacity:0}to{opacity:1}}
+@keyframes megaFloat{
+  0%{transform:scale(.92) translateY(10px) rotate(-8deg);opacity:.72;}
+  50%{transform:scale(1.08) translateY(-6px) rotate(8deg);opacity:1;}
+  100%{transform:scale(.92) translateY(10px) rotate(-8deg);opacity:.72;}
+}
+@keyframes cardIn{
+  0%{transform:translateY(18px) scale(.92);opacity:0;}
+  100%{transform:translateY(0) scale(1);opacity:1;}
+}
+@keyframes titlePulse{
+  0%{transform:scale(1);text-shadow:0 0 0 rgba(255,255,255,0);}
+  50%{transform:scale(1.03);text-shadow:0 0 18px rgba(255,255,255,.35);}
+  100%{transform:scale(1);text-shadow:0 0 0 rgba(255,255,255,0);}
+}
 </style>
 
 <div class="sales-page">
+  <div id="celebrationEmoji" class="celebration-emoji" aria-hidden="true"><span>🎉</span></div>
+  <div id="saleAlert" class="sale-alert" role="status" aria-live="polite">
+    <div class="sale-alert-card">
+      <h2 id="saleAlertTitle" class="sale-alert-title">1 nouvelle vente</h2>
+      <p class="sale-alert-sub">Bravo l’équipe, continuez comme ça 🚀</p>
+      <button id="saleAlertClose" class="sale-alert-btn" type="button">Top ❤️</button>
+    </div>
+  </div>
   <div class="sales-hero">
     <div class="sales-hero-top">
       <div>
         <h1 class="sales-title">Suivi des ventes {{ selected_year }}</h1>
-        <div class="sales-sub">Analyse mensuelle des inscriptions et du chiffre d'affaires : date de création de fiche pour les formations classiques, et date « diplôme obtenu » pour la VAE.</div>
+        <div class="sales-sub">Analyse mensuelle des inscriptions et du chiffre d'affaires, avec rafraîchissement automatique en direct.</div>
       </div>
       <div class="sales-controls">
         <a href="{{ url_for('admin_sessions') }}" class="btn btn-outline">← Retour sessions</a>
@@ -43,6 +84,24 @@
           <input class="sales-input" name="year" type="number" min="2020" max="2100" value="{{ selected_year }}">
           <button class="sales-btn sales-btn--ghost" type="submit">Changer d'année</button>
         </form>
+      </div>
+    </div>
+
+    <div class="sales-flash-kpis">
+      <div class="flash-kpi flash-kpi--today">
+        <div class="flash-label">Ventes du jour</div>
+        <div id="todayRevenue" class="flash-value" data-euro="{{ today_revenue }}">{{ today_revenue }}</div>
+        <div id="todayCount" class="flash-helper">{{ today_inscriptions }} inscription(s)</div>
+      </div>
+      <div class="flash-kpi flash-kpi--yesterday">
+        <div class="flash-label">Ventes de la veille</div>
+        <div id="yesterdayRevenue" class="flash-value" data-euro="{{ yesterday_revenue }}">{{ yesterday_revenue }}</div>
+        <div id="yesterdayCount" class="flash-helper">{{ yesterday_inscriptions }} inscription(s)</div>
+      </div>
+      <div class="flash-kpi flash-kpi--week">
+        <div class="flash-label">Ventes de la semaine</div>
+        <div id="weekRevenue" class="flash-value" data-euro="{{ week_revenue }}">{{ week_revenue }}</div>
+        <div id="weekCount" class="flash-helper">{{ week_inscriptions }} inscription(s)</div>
       </div>
     </div>
 
@@ -54,14 +113,14 @@
       </div>
       <div class="kpi">
         <div class="kpi-label">CA annuel atteint</div>
-        <div class="kpi-value" data-euro="{{ annual_revenue }}">{{ annual_revenue }}</div>
-        <div class="helper">{{ annual_inscriptions }} inscriptions</div>
+        <div id="annualRevenue" class="kpi-value" data-euro="{{ annual_revenue }}">{{ annual_revenue }}</div>
+        <div id="annualCount" class="helper">{{ annual_inscriptions }} inscriptions</div>
       </div>
       <div class="kpi">
         <div class="kpi-label">Progression annuelle</div>
-        <div class="kpi-value">{{ (annual_progress_ratio * 100)|round(1) }}%</div>
+        <div id="annualProgressValue" class="kpi-value">{{ (annual_progress_ratio * 100)|round(1) }}%</div>
         <div class="progress-wrap">
-          <div class="progress-rail"><div class="progress-fill" style="width: {{ [annual_progress_ratio * 100, 100]|min }}%;"></div></div>
+          <div class="progress-rail"><div id="annualProgressFill" class="progress-fill" style="width: {{ [annual_progress_ratio * 100, 100]|min }}%;"></div></div>
         </div>
       </div>
     </div>
@@ -71,7 +130,7 @@
     </div>
   </div>
 
-  <div class="month-grid">
+  <div id="monthGrid" class="month-grid">
     {% for month in monthly_rows %}
       <section class="month-card">
         <div class="month-head">
@@ -118,15 +177,76 @@
 <script>
 (function(){
   const euroFmt = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
-  document.querySelectorAll('[data-euro]').forEach((node) => {
+  const fmtEuroNodes = (root = document) => root.querySelectorAll('[data-euro]').forEach((node) => {
     const value = Number(node.getAttribute('data-euro') || '0');
     node.textContent = euroFmt.format(Number.isFinite(value) ? value : 0);
+  });
+  fmtEuroNodes();
+
+  const selectedYear = {{ selected_year }};
+  const dataEndpoint = '{{ url_for("admin_sales_tracking_data") }}?year={{ selected_year }}';
+  const celebrationEmoji = document.getElementById('celebrationEmoji');
+  const saleAlert = document.getElementById('saleAlert');
+  const saleAlertClose = document.getElementById('saleAlertClose');
+  const saleAlertTitle = document.getElementById('saleAlertTitle');
+  let knownSalesSignature = {{ sales_signature|tojson }};
+  let knownSalesCount = Number({{ sales_count }});
+  let pendingSalesCount = 0;
+  let celebrationTimeoutId = null;
+  let isCelebrationActive = false;
+
+  const formatSalesTitle = (count) => {
+    const safeCount = Math.max(1, Number(count) || 1);
+    return `${safeCount} nouvelle${safeCount > 1 ? 's' : ''} vente${safeCount > 1 ? 's' : ''}`;
+  };
+
+  const triggerSingleCelebration = () => {
+    if (!celebrationEmoji) return;
+    if (isCelebrationActive) return;
+    isCelebrationActive = true;
+    celebrationEmoji.classList.add('is-visible');
+    if (celebrationTimeoutId) {
+      clearTimeout(celebrationTimeoutId);
+    }
+    celebrationTimeoutId = setTimeout(() => {
+      celebrationEmoji.classList.remove('is-visible');
+      isCelebrationActive = false;
+      showSaleOverlay();
+    }, 10000);
+  };
+
+  const showSaleOverlay = () => {
+    if (!saleAlert || !saleAlertTitle) return;
+    saleAlertTitle.textContent = formatSalesTitle(pendingSalesCount || 1);
+    saleAlert.classList.add('is-visible');
+    document.body.style.overflow = 'hidden';
+  };
+
+  const hideSaleOverlay = () => {
+    if (!saleAlert) return;
+    saleAlert.classList.remove('is-visible');
+    document.body.style.overflow = '';
+    pendingSalesCount = 0;
+  };
+
+  const handleNewSales = (newSales) => {
+    pendingSalesCount += Math.max(1, Number(newSales) || 1);
+    if (saleAlert?.classList.contains('is-visible')) {
+      saleAlertTitle.textContent = formatSalesTitle(pendingSalesCount);
+      return;
+    }
+    triggerSingleCelebration();
+  };
+
+  saleAlertClose?.addEventListener('click', hideSaleOverlay);
+  saleAlert?.addEventListener('click', (event) => {
+    if (event.target === saleAlert) hideSaleOverlay();
   });
 
   const annualInput = document.getElementById('annualObjective');
   const saveBtn = document.getElementById('saveObjectivesBtn');
   const feedback = document.getElementById('saveFeedback');
-  const objectiveInputs = Array.from(document.querySelectorAll('.month-objective'));
+  const monthGrid = document.getElementById('monthGrid');
 
   const parseIntSafe = (raw) => {
     const cleaned = String(raw || '').replace(/[^\d]/g, '');
@@ -139,9 +259,76 @@
     input.value = String(parseIntSafe(input.value));
   };
 
-  [annualInput, ...objectiveInputs].forEach((input) => {
-    input?.addEventListener('blur', () => normalizeInput(input));
-  });
+  const bindObjectiveInputNormalization = () => {
+    const objectiveInputs = Array.from(document.querySelectorAll('.month-objective'));
+    [annualInput, ...objectiveInputs].forEach((input) => {
+      input?.addEventListener('blur', () => normalizeInput(input));
+    });
+    return objectiveInputs;
+  };
+
+  let objectiveInputs = bindObjectiveInputNormalization();
+
+  const monthCardHtml = (month) => {
+    const progressPct = Math.max(0, Math.min(100, (Number(month.progress_ratio || 0) * 100)));
+    const trainings = Array.isArray(month.trainings) ? month.trainings : [];
+    return `
+      <section class="month-card">
+        <div class="month-head">
+          <div>
+            <h2 class="month-name">${month.month_name} ${selectedYear}</h2>
+            <div class="helper">${month.inscriptions || 0} inscriptions · <strong data-euro="${month.revenue || 0}">${month.revenue || 0}</strong> de CA</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
+          <label class="helper" for="objective-${month.month_index}">Objectif (€)</label>
+          <input id="objective-${month.month_index}" class="sales-input month-objective" data-month="${month.month_index}" type="text" inputmode="numeric" value="${month.objective || 0}" style="max-width:160px;">
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-rail"><div class="progress-fill" style="width:${progressPct}%;"></div></div>
+          <div class="progress-meta">
+            <span>${(Number(month.progress_ratio || 0) * 100).toFixed(1)}% de l'objectif</span>
+            <span data-euro="${month.revenue || 0}">${month.revenue || 0}</span>
+          </div>
+        </div>
+        ${
+          trainings.length
+            ? `<div class="training-list">
+                ${trainings.map((training) => `
+                  <article class="training-row">
+                    <strong>${training.label || 'AUTRE'}</strong>
+                    <div class="training-meta">
+                      <span>${training.inscriptions || 0} inscription(s)</span>
+                      <span>Tarif : <span data-euro="${training.training_price || 0}">${training.training_price || 0}</span></span>
+                      <span>CA : <strong data-euro="${training.revenue || 0}">${training.revenue || 0}</strong></span>
+                    </div>
+                  </article>
+                `).join('')}
+              </div>`
+            : '<div class="month-empty">Aucune inscription enregistrée ce mois-ci.</div>'
+        }
+      </section>
+    `;
+  };
+
+  const refreshView = (payload) => {
+    document.getElementById('todayRevenue')?.setAttribute('data-euro', payload.today_revenue || 0);
+    document.getElementById('todayCount').textContent = `${payload.today_inscriptions || 0} inscription(s)`;
+    document.getElementById('yesterdayRevenue')?.setAttribute('data-euro', payload.yesterday_revenue || 0);
+    document.getElementById('yesterdayCount').textContent = `${payload.yesterday_inscriptions || 0} inscription(s)`;
+    document.getElementById('weekRevenue')?.setAttribute('data-euro', payload.week_revenue || 0);
+    document.getElementById('weekCount').textContent = `${payload.week_inscriptions || 0} inscription(s)`;
+    document.getElementById('annualRevenue')?.setAttribute('data-euro', payload.annual_revenue || 0);
+    document.getElementById('annualCount').textContent = `${payload.annual_inscriptions || 0} inscriptions`;
+    const annualProgressPct = (Number(payload.annual_progress_ratio || 0) * 100);
+    document.getElementById('annualProgressValue').textContent = `${annualProgressPct.toFixed(1)}%`;
+    document.getElementById('annualProgressFill').style.width = `${Math.max(0, Math.min(100, annualProgressPct))}%`;
+
+    const months = Array.isArray(payload.monthly_rows) ? payload.monthly_rows : [];
+    monthGrid.innerHTML = months.map(monthCardHtml).join('');
+    objectiveInputs = bindObjectiveInputNormalization();
+    fmtEuroNodes();
+  };
 
   saveBtn?.addEventListener('click', async () => {
     feedback.textContent = 'Enregistrement…';
@@ -165,11 +352,36 @@
         throw new Error(payload.error || 'save_failed');
       }
       feedback.textContent = '✅ Objectifs enregistrés.';
-      setTimeout(() => { window.location.reload(); }, 300);
+      setTimeout(() => { feedback.textContent = ''; }, 1600);
+      await pollSalesData();
     } catch (err) {
       feedback.textContent = '❌ Impossible d’enregistrer les objectifs.';
     }
   });
+
+  const pollSalesData = async () => {
+    try {
+      const response = await fetch(dataEndpoint, { headers: { 'Accept': 'application/json' } });
+      if (!response.ok) return;
+      const payload = await response.json();
+      if (!payload.ok) return;
+
+      const nextSignature = String(payload.sales_signature || '');
+      const nextSalesCount = Number(payload.sales_count || 0);
+      if (nextSignature && knownSalesSignature && nextSignature !== knownSalesSignature) {
+        const newSales = Math.max(1, nextSalesCount - knownSalesCount);
+        handleNewSales(newSales);
+      }
+      knownSalesSignature = nextSignature || knownSalesSignature;
+      knownSalesCount = Number.isFinite(nextSalesCount) ? nextSalesCount : knownSalesCount;
+      refreshView(payload);
+    } catch (_err) {
+      // mode silencieux: la page continue d'afficher les dernières données connues
+    }
+  };
+
+  setInterval(pollSalesData, 12000);
+  pollSalesData();
 })();
 </script>
 {% endblock %}
