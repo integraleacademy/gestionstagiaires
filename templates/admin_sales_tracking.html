@@ -39,6 +39,13 @@
 .helper{font-size:12px;color:#64748b;}
 .confetti-layer{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:1000;}
 .confetti{position:absolute;top:-20px;font-size:28px;opacity:.92;animation:fall 2.7s linear forwards;}
+.sale-alert{position:fixed;inset:0;z-index:1001;display:none;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.2),rgba(15,23,42,.84) 55%);}
+.sale-alert.is-visible{display:flex;animation:alertFade .35s ease;}
+.sale-alert-card{position:relative;max-width:620px;width:min(92vw,620px);border-radius:24px;padding:28px 24px;text-align:center;color:#fff;background:linear-gradient(145deg,#2563eb 0%,#7c3aed 45%,#db2777 100%);box-shadow:0 24px 70px rgba(15,23,42,.55);}
+.sale-alert-title{font-size:clamp(34px,6vw,58px);font-weight:900;line-height:1.05;margin:0;}
+.sale-alert-sub{font-size:16px;opacity:.95;margin:10px 0 0;}
+.sale-alert-btn{margin-top:18px;border:none;background:#fff;color:#be185d;border-radius:999px;padding:12px 22px;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 10px 28px rgba(15,23,42,.3);}
+@keyframes alertFade{from{opacity:0}to{opacity:1}}
 @keyframes fall{
   0%{transform:translate3d(0,0,0) rotate(0deg);}
   100%{transform:translate3d(var(--x,0px),115vh,0) rotate(540deg);opacity:0;}
@@ -47,6 +54,13 @@
 
 <div class="sales-page">
   <div id="confettiLayer" class="confetti-layer" aria-hidden="true"></div>
+  <div id="saleAlert" class="sale-alert" role="status" aria-live="polite">
+    <div class="sale-alert-card">
+      <h2 id="saleAlertTitle" class="sale-alert-title">1 nouvelle vente</h2>
+      <p class="sale-alert-sub">Bravo l’équipe, continuez comme ça 🚀</p>
+      <button id="saleAlertClose" class="sale-alert-btn" type="button">Top ❤️</button>
+    </div>
+  </div>
   <div class="sales-hero">
     <div class="sales-hero-top">
       <div>
@@ -161,7 +175,11 @@
   const selectedYear = {{ selected_year }};
   const dataEndpoint = '{{ url_for("admin_sales_tracking_data") }}?year={{ selected_year }}';
   const confettiLayer = document.getElementById('confettiLayer');
+  const saleAlert = document.getElementById('saleAlert');
+  const saleAlertClose = document.getElementById('saleAlertClose');
+  const saleAlertTitle = document.getElementById('saleAlertTitle');
   let knownSalesSignature = {{ sales_signature|tojson }};
+  let knownSalesCount = Number({{ sales_count }});
 
   const triggerConfetti = () => {
     if (!confettiLayer) return;
@@ -177,6 +195,25 @@
       setTimeout(() => el.remove(), 3000);
     }
   };
+
+  const showSaleOverlay = (newSalesCount) => {
+    if (!saleAlert || !saleAlertTitle) return;
+    const safeCount = Math.max(1, Number(newSalesCount) || 1);
+    saleAlertTitle.textContent = `${safeCount} nouvelle${safeCount > 1 ? 's' : ''} vente${safeCount > 1 ? 's' : ''}`;
+    saleAlert.classList.add('is-visible');
+    document.body.style.overflow = 'hidden';
+  };
+
+  const hideSaleOverlay = () => {
+    if (!saleAlert) return;
+    saleAlert.classList.remove('is-visible');
+    document.body.style.overflow = '';
+  };
+
+  saleAlertClose?.addEventListener('click', hideSaleOverlay);
+  saleAlert?.addEventListener('click', (event) => {
+    if (event.target === saleAlert) hideSaleOverlay();
+  });
 
   const annualInput = document.getElementById('annualObjective');
   const saveBtn = document.getElementById('saveObjectivesBtn');
@@ -302,10 +339,14 @@
       if (!payload.ok) return;
 
       const nextSignature = String(payload.sales_signature || '');
+      const nextSalesCount = Number(payload.sales_count || 0);
       if (nextSignature && knownSalesSignature && nextSignature !== knownSalesSignature) {
+        const newSales = Math.max(1, nextSalesCount - knownSalesCount);
         triggerConfetti();
+        showSaleOverlay(newSales);
       }
       knownSalesSignature = nextSignature || knownSalesSignature;
+      knownSalesCount = Number.isFinite(nextSalesCount) ? nextSalesCount : knownSalesCount;
       refreshView(payload);
     } catch (_err) {
       // mode silencieux: la page continue d'afficher les dernières données connues

@@ -7343,6 +7343,7 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
         "today_iso": today.isoformat(),
         "yesterday_iso": yesterday.isoformat(),
         "week_start_iso": week_start.isoformat(),
+        "sales_count": len(sale_markers),
         "sales_signature": "|".join(sorted(sale_markers)),
     }
 
