@@ -7223,18 +7223,10 @@ def _sales_training_unit_price(training_type: str, training_label: str) -> int:
     return default_training_price(training_type) or 0
 
 
-@app.get("/admin/suivi-ventes")
-@admin_login_required
-def admin_sales_tracking():
-    data = load_data()
-    _sales_tracking_bucket(data)
+def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> Dict[str, Any]:
     today = datetime.date.today()
-    requested_year = str(request.args.get("year") or "").strip()
-    try:
-        selected_year = int(requested_year) if requested_year else today.year
-    except (TypeError, ValueError):
-        selected_year = today.year
-    selected_year = max(2020, min(2100, selected_year))
+    yesterday = today - datetime.timedelta(days=1)
+    week_start = today - datetime.timedelta(days=today.weekday())
 
     monthly_rows: List[Dict[str, Any]] = []
     for month_index, month_name in enumerate(SALES_TRACKING_MONTH_LABELS, start=1):
@@ -7247,6 +7239,14 @@ def admin_sales_tracking():
             "objective": 0,
         })
 
+    today_revenue = 0
+    today_inscriptions = 0
+    yesterday_revenue = 0
+    yesterday_inscriptions = 0
+    week_revenue = 0
+    week_inscriptions = 0
+    sale_markers: List[str] = []
+
     for session in data.get("sessions", []):
         if bool(session.get("exclude_from_sales_tracking")):
             continue
@@ -7254,6 +7254,8 @@ def admin_sales_tracking():
         training_type_raw = _session_get(session, "training_type", "")
         training_label = _sales_training_label(training_type_raw)
         unit_price = _sales_training_unit_price(training_type_raw, training_label)
+        session_id = str(session.get("id") or "")
+
         for trainee in trainees:
             anchor_date = _parse_flexible_date(trainee.get("created_at") or "")
             if training_label == "DIRIGEANT VAE":
@@ -7267,14 +7269,27 @@ def admin_sales_tracking():
 
             if not anchor_date:
                 continue
+
+            training_price = unit_price if unit_price > 0 else _parse_positive_int(trainee.get("training_price"))
+            trainee_ref = str(trainee.get("id") or trainee.get("email") or trainee.get("nom") or trainee.get("name") or "")
+            sale_markers.append(f"{session_id}|{trainee_ref}|{anchor_date.isoformat()}|{training_price}")
+
+            if anchor_date == today:
+                today_revenue += training_price
+                today_inscriptions += 1
+            if anchor_date == yesterday:
+                yesterday_revenue += training_price
+                yesterday_inscriptions += 1
+            if week_start <= anchor_date <= today:
+                week_revenue += training_price
+                week_inscriptions += 1
+
             if anchor_date.year != selected_year:
                 continue
 
             month_index = anchor_date.month
             if month_index < 1 or month_index > 12:
                 continue
-
-            training_price = unit_price if unit_price > 0 else _parse_positive_int(trainee.get("training_price"))
 
             month_row = monthly_rows[month_index - 1]
             month_row["inscriptions"] += 1
@@ -7300,29 +7315,75 @@ def admin_sales_tracking():
 
     for month_row in monthly_rows:
         month_row["objective"] = _parse_positive_int(monthly_objectives.get(str(month_row["month_index"])))
-        trainings_sorted = sorted(
+        month_row["trainings"] = sorted(
             month_row["trainings"].values(),
             key=lambda row: row["revenue"],
             reverse=True,
         )
-        month_row["trainings"] = trainings_sorted
         objective_value = month_row["objective"]
-        progress_ratio = (month_row["revenue"] / objective_value) if objective_value > 0 else 0
-        month_row["progress_ratio"] = progress_ratio
+        month_row["progress_ratio"] = (month_row["revenue"] / objective_value) if objective_value > 0 else 0
 
     annual_revenue = sum(month["revenue"] for month in monthly_rows)
     annual_inscriptions = sum(month["inscriptions"] for month in monthly_rows)
     annual_progress_ratio = (annual_revenue / annual_objective) if annual_objective > 0 else 0
 
+    return {
+        "selected_year": selected_year,
+        "annual_objective": annual_objective,
+        "annual_revenue": annual_revenue,
+        "annual_inscriptions": annual_inscriptions,
+        "annual_progress_ratio": annual_progress_ratio,
+        "monthly_rows": monthly_rows,
+        "today_revenue": today_revenue,
+        "today_inscriptions": today_inscriptions,
+        "yesterday_revenue": yesterday_revenue,
+        "yesterday_inscriptions": yesterday_inscriptions,
+        "week_revenue": week_revenue,
+        "week_inscriptions": week_inscriptions,
+        "today_iso": today.isoformat(),
+        "yesterday_iso": yesterday.isoformat(),
+        "week_start_iso": week_start.isoformat(),
+        "sales_signature": "|".join(sorted(sale_markers)),
+    }
+
+
+@app.get("/admin/suivi-ventes")
+@admin_login_required
+def admin_sales_tracking():
+    data = load_data()
+    _sales_tracking_bucket(data)
+    today = datetime.date.today()
+    requested_year = str(request.args.get("year") or "").strip()
+    try:
+        selected_year = int(requested_year) if requested_year else today.year
+    except (TypeError, ValueError):
+        selected_year = today.year
+    selected_year = max(2020, min(2100, selected_year))
+    metrics = _build_sales_tracking_metrics(data, selected_year)
+
     return render_template(
         "admin_sales_tracking.html",
-        selected_year=selected_year,
-        annual_objective=annual_objective,
-        annual_revenue=annual_revenue,
-        annual_inscriptions=annual_inscriptions,
-        annual_progress_ratio=annual_progress_ratio,
-        monthly_rows=monthly_rows,
+        **metrics,
     )
+
+
+@app.get("/admin/suivi-ventes/data")
+@admin_login_required
+def admin_sales_tracking_data():
+    data = load_data()
+    _sales_tracking_bucket(data)
+    today = datetime.date.today()
+    requested_year = str(request.args.get("year") or "").strip()
+    try:
+        selected_year = int(requested_year) if requested_year else today.year
+    except (TypeError, ValueError):
+        selected_year = today.year
+    selected_year = max(2020, min(2100, selected_year))
+
+    return jsonify({
+        "ok": True,
+        **_build_sales_tracking_metrics(data, selected_year),
+    })
 
 
 @app.post("/admin/suivi-ventes/objectifs")
