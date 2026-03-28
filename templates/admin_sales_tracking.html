@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.sales-page{display:flex;flex-direction:column;gap:14px;}
+.sales-hero{border:1px solid #dbeafe;background:linear-gradient(120deg,#eff6ff 0%,#ede9fe 45%,#ecfeff 100%);border-radius:18px;padding:16px;box-shadow:0 12px 26px rgba(37,99,235,.12);}
+.sales-hero-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+.sales-title{font-size:28px;font-weight:900;color:#1e3a8a;margin:0;}
+.sales-sub{color:#334155;margin-top:4px;}
+.sales-hero-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px;}
+.kpi{background:#fff;border:1px solid #dbeafe;border-radius:14px;padding:12px;}
+.kpi-label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;font-weight:800;}
+.kpi-value{font-size:30px;font-weight:900;color:#0f172a;line-height:1.1;margin-top:4px;}
+.sales-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.sales-input{padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;font:inherit;}
+.sales-btn{border:1px solid #2563eb;background:#2563eb;color:#fff;border-radius:10px;padding:10px 14px;font-weight:800;cursor:pointer;}
+.sales-btn--ghost{background:#fff;color:#1d4ed8;}
+.progress-wrap{margin-top:10px;}
+.progress-rail{width:100%;height:12px;background:#e2e8f0;border-radius:999px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,#ef4444 0%,#f59e0b 45%,#22c55e 100%);border-radius:999px;transition:width .25s ease;}
+.progress-meta{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#475569;margin-top:6px;}
+.month-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;}
+.month-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px;box-shadow:0 10px 24px rgba(15,23,42,.06);}
+.month-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+.month-name{font-size:20px;font-weight:900;margin:0;color:#0f172a;}
+.training-list{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
+.training-row{border:1px solid #e2e8f0;border-radius:12px;padding:10px;background:#f8fafc;}
+.training-row strong{color:#0f172a;}
+.training-meta{font-size:13px;color:#334155;margin-top:4px;display:flex;gap:10px;flex-wrap:wrap;}
+.month-empty{border:1px dashed #cbd5e1;border-radius:12px;padding:12px;color:#64748b;font-size:13px;background:#f8fafc;margin-top:10px;}
+.helper{font-size:12px;color:#64748b;}
+</style>
+
+<div class="sales-page">
+  <div class="sales-hero">
+    <div class="sales-hero-top">
+      <div>
+        <h1 class="sales-title">Suivi des ventes {{ selected_year }}</h1>
+        <div class="sales-sub">Analyse mensuelle des inscriptions et du chiffre d'affaires, basée sur la date de création des fiches stagiaires.</div>
+      </div>
+      <div class="sales-controls">
+        <a href="{{ url_for('admin_sessions') }}" class="btn btn-outline">← Retour sessions</a>
+        <form method="get" action="{{ url_for('admin_sales_tracking') }}" style="display:flex;gap:8px;align-items:center;">
+          <input class="sales-input" name="year" type="number" min="2020" max="2100" value="{{ selected_year }}">
+          <button class="sales-btn sales-btn--ghost" type="submit">Changer d'année</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="sales-hero-metrics">
+      <div class="kpi">
+        <div class="kpi-label">Objectif annuel (€)</div>
+        <input id="annualObjective" class="sales-input" type="text" inputmode="numeric" value="{{ annual_objective }}" style="width:100%;margin-top:8px;">
+        <div class="helper" style="margin-top:6px;">Tu peux fixer un objectif annuel puis des objectifs par mois.</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">CA annuel atteint</div>
+        <div class="kpi-value" data-euro="{{ annual_revenue }}">{{ annual_revenue }}</div>
+        <div class="helper">{{ annual_inscriptions }} inscriptions</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Progression annuelle</div>
+        <div class="kpi-value">{{ (annual_progress_ratio * 100)|round(1) }}%</div>
+        <div class="progress-wrap">
+          <div class="progress-rail"><div class="progress-fill" style="width: {{ [annual_progress_ratio * 100, 100]|min }}%;"></div></div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:12px;">
+      <button id="saveObjectivesBtn" class="sales-btn">Enregistrer les objectifs</button>
+      <span id="saveFeedback" class="helper" style="margin-left:8px;"></span>
+    </div>
+  </div>
+
+  <div class="month-grid">
+    {% for month in monthly_rows %}
+      <section class="month-card">
+        <div class="month-head">
+          <div>
+            <h2 class="month-name">{{ month.month_name }} {{ selected_year }}</h2>
+            <div class="helper">{{ month.inscriptions }} inscriptions · <strong data-euro="{{ month.revenue }}">{{ month.revenue }}</strong> de CA</div>
+          </div>
+        </div>
+
+        <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
+          <label class="helper" for="objective-{{ month.month_index }}">Objectif (€)</label>
+          <input id="objective-{{ month.month_index }}" class="sales-input month-objective" data-month="{{ month.month_index }}" type="text" inputmode="numeric" value="{{ month.objective }}" style="max-width:160px;">
+        </div>
+
+        <div class="progress-wrap">
+          <div class="progress-rail"><div class="progress-fill" style="width: {{ [month.progress_ratio * 100, 100]|min }}%;"></div></div>
+          <div class="progress-meta">
+            <span>{{ (month.progress_ratio * 100)|round(1) }}% de l'objectif</span>
+            <span data-euro="{{ month.revenue }}">{{ month.revenue }}</span>
+          </div>
+        </div>
+
+        {% if month.trainings %}
+          <div class="training-list">
+            {% for training in month.trainings %}
+              <article class="training-row">
+                <strong>{{ training.label }}</strong>
+                <div class="training-meta">
+                  <span>{{ training.inscriptions }} inscription(s)</span>
+                  <span>Tarif : <span data-euro="{{ training.training_price }}">{{ training.training_price }}</span></span>
+                  <span>CA : <strong data-euro="{{ training.revenue }}">{{ training.revenue }}</strong></span>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="month-empty">Aucune inscription enregistrée ce mois-ci.</div>
+        {% endif %}
+      </section>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+(function(){
+  const euroFmt = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+  document.querySelectorAll('[data-euro]').forEach((node) => {
+    const value = Number(node.getAttribute('data-euro') || '0');
+    node.textContent = euroFmt.format(Number.isFinite(value) ? value : 0);
+  });
+
+  const annualInput = document.getElementById('annualObjective');
+  const saveBtn = document.getElementById('saveObjectivesBtn');
+  const feedback = document.getElementById('saveFeedback');
+  const objectiveInputs = Array.from(document.querySelectorAll('.month-objective'));
+
+  const parseIntSafe = (raw) => {
+    const cleaned = String(raw || '').replace(/[^\d]/g, '');
+    if (!cleaned) return 0;
+    const val = Number.parseInt(cleaned, 10);
+    return Number.isFinite(val) ? val : 0;
+  };
+
+  const normalizeInput = (input) => {
+    input.value = String(parseIntSafe(input.value));
+  };
+
+  [annualInput, ...objectiveInputs].forEach((input) => {
+    input?.addEventListener('blur', () => normalizeInput(input));
+  });
+
+  saveBtn?.addEventListener('click', async () => {
+    feedback.textContent = 'Enregistrement…';
+    const monthlyObjectives = {};
+    objectiveInputs.forEach((input) => {
+      monthlyObjectives[String(input.dataset.month || '')] = parseIntSafe(input.value);
+    });
+
+    try {
+      const response = await fetch('{{ url_for("admin_sales_tracking_save_objectives") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          year: {{ selected_year }},
+          annual_objective: parseIntSafe(annualInput?.value),
+          monthly_objectives: monthlyObjectives,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error || 'save_failed');
+      }
+      feedback.textContent = '✅ Objectifs enregistrés.';
+      setTimeout(() => { window.location.reload(); }, 300);
+    } catch (err) {
+      feedback.textContent = '❌ Impossible d’enregistrer les objectifs.';
+    }
+  });
+})();
+</script>
+{% endblock %}
