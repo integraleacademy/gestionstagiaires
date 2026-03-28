@@ -37,23 +37,30 @@
 .training-meta{font-size:13px;color:#334155;margin-top:4px;display:flex;gap:10px;flex-wrap:wrap;}
 .month-empty{border:1px dashed #cbd5e1;border-radius:12px;padding:12px;color:#64748b;font-size:13px;background:#f8fafc;margin-top:10px;}
 .helper{font-size:12px;color:#64748b;}
-.confetti-layer{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:1000;}
-.confetti{position:absolute;top:-20px;font-size:28px;opacity:.92;animation:fall 2.7s linear forwards;}
+.celebration-emoji{position:fixed;inset:0;display:none;align-items:center;justify-content:center;pointer-events:none;z-index:1002;}
+.celebration-emoji.is-visible{display:flex;}
+.celebration-emoji span{font-size:clamp(88px,15vw,180px);filter:drop-shadow(0 12px 22px rgba(15,23,42,.4));animation:megaPop 1.5s ease;}
 .sale-alert{position:fixed;inset:0;z-index:1001;display:none;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.2),rgba(15,23,42,.84) 55%);}
 .sale-alert.is-visible{display:flex;animation:alertFade .35s ease;}
-.sale-alert-card{position:relative;max-width:620px;width:min(92vw,620px);border-radius:24px;padding:28px 24px;text-align:center;color:#fff;background:linear-gradient(145deg,#2563eb 0%,#7c3aed 45%,#db2777 100%);box-shadow:0 24px 70px rgba(15,23,42,.55);}
+.sale-alert-card{position:relative;max-width:620px;width:min(92vw,620px);border-radius:24px;padding:28px 24px;text-align:center;color:#fff;background:linear-gradient(145deg,#2563eb 0%,#7c3aed 45%,#db2777 100%);box-shadow:0 24px 70px rgba(15,23,42,.55);animation:cardIn .45s cubic-bezier(.2,.9,.25,1.15);}
 .sale-alert-title{font-size:clamp(34px,6vw,58px);font-weight:900;line-height:1.05;margin:0;}
 .sale-alert-sub{font-size:16px;opacity:.95;margin:10px 0 0;}
 .sale-alert-btn{margin-top:18px;border:none;background:#fff;color:#be185d;border-radius:999px;padding:12px 22px;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 10px 28px rgba(15,23,42,.3);}
 @keyframes alertFade{from{opacity:0}to{opacity:1}}
-@keyframes fall{
-  0%{transform:translate3d(0,0,0) rotate(0deg);}
-  100%{transform:translate3d(var(--x,0px),115vh,0) rotate(540deg);opacity:0;}
+@keyframes megaPop{
+  0%{transform:scale(.2) rotate(-20deg);opacity:0;}
+  35%{transform:scale(1.2) rotate(10deg);opacity:1;}
+  70%{transform:scale(.95) rotate(-4deg);opacity:1;}
+  100%{transform:scale(1) rotate(0);opacity:0;}
+}
+@keyframes cardIn{
+  0%{transform:translateY(18px) scale(.92);opacity:0;}
+  100%{transform:translateY(0) scale(1);opacity:1;}
 }
 </style>
 
 <div class="sales-page">
-  <div id="confettiLayer" class="confetti-layer" aria-hidden="true"></div>
+  <div id="celebrationEmoji" class="celebration-emoji" aria-hidden="true"><span>🎉</span></div>
   <div id="saleAlert" class="sale-alert" role="status" aria-live="polite">
     <div class="sale-alert-card">
       <h2 id="saleAlertTitle" class="sale-alert-title">1 nouvelle vente</h2>
@@ -174,26 +181,20 @@
 
   const selectedYear = {{ selected_year }};
   const dataEndpoint = '{{ url_for("admin_sales_tracking_data") }}?year={{ selected_year }}';
-  const confettiLayer = document.getElementById('confettiLayer');
+  const celebrationEmoji = document.getElementById('celebrationEmoji');
   const saleAlert = document.getElementById('saleAlert');
   const saleAlertClose = document.getElementById('saleAlertClose');
   const saleAlertTitle = document.getElementById('saleAlertTitle');
   let knownSalesSignature = {{ sales_signature|tojson }};
   let knownSalesCount = Number({{ sales_count }});
 
-  const triggerConfetti = () => {
-    if (!confettiLayer) return;
-    const pieces = 60;
-    for (let i = 0; i < pieces; i += 1) {
-      const el = document.createElement('span');
-      el.className = 'confetti';
-      el.textContent = '🎉';
-      el.style.left = `${Math.random() * 100}%`;
-      el.style.animationDelay = `${Math.random() * 0.45}s`;
-      el.style.setProperty('--x', `${(Math.random() - 0.5) * 260}px`);
-      confettiLayer.appendChild(el);
-      setTimeout(() => el.remove(), 3000);
-    }
+  const triggerSingleCelebration = () => {
+    if (!celebrationEmoji) return;
+    celebrationEmoji.classList.remove('is-visible');
+    // force reflow pour rejouer l'animation
+    void celebrationEmoji.offsetWidth;
+    celebrationEmoji.classList.add('is-visible');
+    setTimeout(() => celebrationEmoji.classList.remove('is-visible'), 1500);
   };
 
   const showSaleOverlay = (newSalesCount) => {
@@ -342,7 +343,7 @@
       const nextSalesCount = Number(payload.sales_count || 0);
       if (nextSignature && knownSalesSignature && nextSignature !== knownSalesSignature) {
         const newSales = Math.max(1, nextSalesCount - knownSalesCount);
-        triggerConfetti();
+        triggerSingleCelebration();
         showSaleOverlay(newSales);
       }
       knownSalesSignature = nextSignature || knownSalesSignature;
