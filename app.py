@@ -5008,7 +5008,7 @@ Clément VAILLANT - Intégrale Academy"""
 FORMATION_PRICE_DEFAULTS = {
     "A3P": 4200,
     "APS": 1650,
-    "VTC": 1600,
+    "VTC": 1500,
     "DIRIGEANT INITIAL": 4300,
     "DIRIGEANT VAE": 3800,
 }
@@ -7165,6 +7165,8 @@ def _sales_training_label(training_type: str) -> str:
         return "A3P"
     if "VTC" in raw:
         return "VTC"
+    if raw.startswith("DIRIGEANT") and "INITIAL" in raw:
+        return "DIRIGEANT INITIAL"
     if raw.startswith("DIRIGEANT") and "VAE" in raw:
         return "DIRIGEANT VAE"
     if raw.startswith("DIRIGEANT"):
@@ -7184,6 +7186,25 @@ def _parse_positive_int(raw_value: Any) -> int:
     except (ValueError, TypeError):
         return 0
     return max(parsed, 0)
+
+
+def _sales_training_unit_price(training_type: str, training_label: str) -> int:
+    label_key = (training_label or "").strip().upper()
+    type_key = (training_type or "").strip().upper()
+    price_map = {
+        "APS": 1650,
+        "A3P": 4200,
+        "DIRIGEANT INITIAL": 4300,
+        "DIRIGEANT": 4300,
+        "DIRIGEANT VAE": 3800,
+        "VTC": 1500,
+        "CHAUFFEUR VTC": 1500,
+    }
+    if label_key in price_map:
+        return price_map[label_key]
+    if type_key in price_map:
+        return price_map[type_key]
+    return default_training_price(training_type) or 0
 
 
 @app.get("/admin/suivi-ventes")
@@ -7214,20 +7235,22 @@ def admin_sales_tracking():
         trainees = _session_trainees_list(session)
         training_type_raw = _session_get(session, "training_type", "")
         training_label = _sales_training_label(training_type_raw)
-        default_price = default_training_price(training_type_raw) or 0
+        unit_price = _sales_training_unit_price(training_type_raw, training_label)
         for trainee in trainees:
             created_at = _parse_iso_datetime(trainee.get("created_at") or "")
             if not created_at:
                 continue
             if created_at.year != selected_year:
                 continue
+            if training_label == "DIRIGEANT VAE":
+                vae_status_key = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))["key"]
+                if vae_status_key != "certified":
+                    continue
             month_index = created_at.month
             if month_index < 1 or month_index > 12:
                 continue
 
-            training_price = _parse_positive_int(trainee.get("training_price"))
-            if training_price <= 0:
-                training_price = default_price
+            training_price = unit_price if unit_price > 0 else _parse_positive_int(trainee.get("training_price"))
 
             month_row = monthly_rows[month_index - 1]
             month_row["inscriptions"] += 1
