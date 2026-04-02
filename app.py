@@ -10073,7 +10073,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
             email = (t.get("email") or "").strip()
             phone = (t.get("phone") or "").strip()
             subject = "Frais d'examen réglés"
-            message = "Nous venons de payer les frais d'examen, la Chambre des métiers vous enverra prochainement votre convocation."
+            message = ("Nous venons de procéder au paiement de vos frais d’examen.\n"
+                       "La Chambre des Métiers vous adressera prochainement votre convocation, sous réserve que l’ensemble des documents ait bien été déposé sur votre espace https://www.exament3p.fr/ et qu’ils soient conformes.")
             html = mail_layout(f"""
               <h2>Frais d'examen réglés</h2>
               <p>{message}</p>
