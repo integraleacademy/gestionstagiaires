@@ -278,6 +278,45 @@
   .vtc-credentials-card{
     border:2px solid #e5e7eb;
   }
+  .vtc-important-notice{
+    grid-column:1/-1;
+    border:2px solid #fdba74;
+    border-radius:18px;
+    padding:18px;
+    background:linear-gradient(135deg,#fff7ed 0%,#ffffff 55%,#fffbeb 100%);
+    box-shadow:0 12px 24px rgba(249,115,22,.12);
+  }
+  .vtc-important-notice h2{
+    margin:0 0 10px 0;
+    font-size:22px;
+    color:#9a3412;
+  }
+  .vtc-important-notice p{
+    margin:0;
+    color:#7c2d12;
+    font-size:16px;
+    line-height:1.55;
+    font-weight:700;
+  }
+  .vtc-important-notice .btn{
+    margin-top:14px;
+    background:linear-gradient(135deg,#16a34a,#15803d);
+    border-color:#15803d;
+  }
+  .vtc-important-notice.is-acknowledged{
+    border-color:#bbf7d0;
+    background:linear-gradient(135deg,#ecfdf5,#ffffff);
+    box-shadow:0 8px 16px rgba(22,163,74,.12);
+  }
+  .vtc-important-notice-status{
+    display:none;
+    margin-top:10px;
+    font-weight:900;
+    color:#166534;
+  }
+  .vtc-important-notice.is-acknowledged .vtc-important-notice-status{
+    display:block;
+  }
 
   .elearning-card{
     grid-column:1/-1;
@@ -749,6 +788,18 @@
   {% endif %}
 
   <div class="public-grid">
+    {% if show_vtc %}
+      <div class="vtc-important-notice" id="vtcImportantNotice">
+        <h2>⚠️ Information importante — Examen VTC</h2>
+        <p>
+          Attention, pensez à vérifier que votre dossier auprès de la Chambre des Métiers (
+          <a href="https://www.exament3p.fr/" target="_blank" rel="noopener">https://www.exament3p.fr/</a>) est bien complet avant la date de clôture des inscriptions à l’examen.
+          À défaut, votre inscription ne pourra pas être validée par les services de l’État et vous ne pourrez pas participer au prochain examen prévu.
+        </p>
+        <button type="button" id="vtcImportantNoticeAckBtn" class="btn">✅ J'ai compris</button>
+        <div class="vtc-important-notice-status">✅ Merci, c'est bien noté.</div>
+      </div>
+    {% endif %}
 
     {% if is_vtc_training %}
       {% set elearning_link = (trainee.elearning_link or '')|trim %}
@@ -2028,6 +2079,8 @@ function closeUploadSuccessModal(event) {
   const token = "{{ token_safe }}";
 
   const vtcReady = document.getElementById("vtcCmReady");
+  const vtcImportantNotice = document.getElementById("vtcImportantNotice");
+  const vtcImportantNoticeAckBtn = document.getElementById("vtcImportantNoticeAckBtn");
   const vtcPanel = document.getElementById("vtcCredentialsPanel");
   const vtcCta = document.getElementById("vtcCta");
   const vtcLoginInput = document.getElementById("vtcLogin");
@@ -2132,6 +2185,14 @@ function closeUploadSuccessModal(event) {
     if (vtcCta) vtcCta.classList.toggle("is-hidden", hasCompleteCreds || isVtcCredentialsSubmitted());
   };
 
+  const vtcNoticeStorageKey = token ? `vtcNoticeAck:${token}` : "vtcNoticeAck";
+  const syncVtcImportantNoticeState = (isAcknowledged) => {
+    if (!vtcImportantNotice || !vtcImportantNoticeAckBtn) return;
+    vtcImportantNotice.classList.toggle("is-acknowledged", !!isAcknowledged);
+    vtcImportantNoticeAckBtn.disabled = !!isAcknowledged;
+    vtcImportantNoticeAckBtn.textContent = isAcknowledged ? "✅ J'ai compris (confirmé)" : "✅ J'ai compris";
+  };
+
   if (vtcReady) {
     vtcReady.addEventListener("change", () => {
       syncVtcPanel();
@@ -2152,6 +2213,15 @@ function closeUploadSuccessModal(event) {
         documentsDetails.open = false;
       }
       updateDocumentsWarning();
+    });
+  }
+
+  if (vtcImportantNotice && vtcImportantNoticeAckBtn) {
+    const wasAcknowledged = window.localStorage.getItem(vtcNoticeStorageKey) === "1";
+    syncVtcImportantNoticeState(wasAcknowledged);
+    vtcImportantNoticeAckBtn.addEventListener("click", () => {
+      window.localStorage.setItem(vtcNoticeStorageKey, "1");
+      syncVtcImportantNoticeState(true);
     });
   }
 
