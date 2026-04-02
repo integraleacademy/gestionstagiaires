@@ -1133,7 +1133,8 @@
         </div>
         {% if trainee.exam_fees_paid %}
           <div class="vtc-status-item">
-            ✅ <span class="vtc-status-date">{{ trainee.exam_fees_paid_at|frdate or "DD/MM/YYYY" }}</span> : Nous venons de payer les frais d'examen, la Chambre des métiers vous enverra prochainement votre convocation.
+            ✅ <span class="vtc-status-date">{{ trainee.exam_fees_paid_at|frdate or "DD/MM/YYYY" }}</span> : Nous venons de procéder au paiement de vos frais d’examen.<br>
+La Chambre des Métiers vous adressera prochainement votre convocation, sous réserve que l’ensemble des documents ait bien été déposé sur votre espace https://www.exament3p.fr/ et qu’ils soient conformes.
           </div>
         {% endif %}
       </div>
