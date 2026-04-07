@@ -6905,6 +6905,63 @@ def scotia_upload_livret2(session_id: str, trainee_id: str):
     return redirect(url_for('scotia_dashboard'))
 
 
+@app.post('/scotia/sessions/<session_id>/stagiaires/<trainee_id>/resend-mail/<livret_key>')
+@scotia_login_required
+def scotia_resend_mail(session_id: str, trainee_id: str, livret_key: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return redirect(url_for('scotia_dashboard'))
+
+    trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
+    session_label = _session_get(s, "name", "") or _session_get(s, "title", "") or session_id
+    livret_key = (livret_key or "").strip().lower()
+
+    if livret_key == "livret-1":
+        subject = (
+            f"Nouvelle demande de recevabilité déposée pour {trainee_display_name} "
+            "- VAE Dirigeant d'entreprise de sécurité privée"
+        )
+        dossier_url = f"{PUBLIC_BASE_URL.rstrip('/')}/scotia"
+        html = mail_layout(f"""
+          <h2 style="margin:0 0 12px 0;color:#0f172a;">🔄 Renvoi - Livret 1</h2>
+          <p>Le signalement de dépôt du livret 1 vient d'être renvoyé depuis l'espace SCOTIA.</p>
+          <p><strong>Stagiaire :</strong> {trainee_display_name or "—"}</p>
+          <p><strong>Session :</strong> {session_label}</p>
+          <p style=\"text-align:center;margin:18px 0;\">
+            <a href=\"{dossier_url}\" style=\"display:inline-block;background:#1f8f4a;color:#ffffff;text-decoration:none;font-weight:700;padding:12px 18px;border-radius:8px;\">Consulter le dossier</a>
+          </p>
+        """)
+        brevo_send_email(
+            "scotiaformation@gmail.com",
+            subject,
+            html,
+            cc_emails=["clement@integraleacademy.com"],
+            trainee=t,
+        )
+    elif livret_key == "livret-2":
+        today_fr = fr_date(datetime.datetime.utcnow().strftime("%Y-%m-%d"))
+        subject = "Nouveau Livret 2 déposé (SCOTIA)"
+        html = mail_layout(f"""
+        <h2 style="margin:0 0 12px 0;color:#0f172a;">🔄 Renvoi - Livret 2</h2>
+        <p>L'alerte de dépôt du livret 2 vient d'être renvoyée depuis l'espace SCOTIA.</p>
+        <p><strong>Stagiaire :</strong> {trainee_display_name or "—"}</p>
+        <p><strong>Email :</strong> {(t.get("email") or "").strip() or "—"}</p>
+        <p><strong>Téléphone :</strong> {(t.get("phone") or "").strip() or "—"}</p>
+        <p><strong>Session :</strong> {session_label}</p>
+        <p><strong>Date :</strong> {today_fr}</p>
+        """)
+        brevo_send_email(
+            "scotiaformation@gmail.com",
+            subject,
+            html,
+            cc_emails=["clement@integraleacademy.com"],
+            trainee=t,
+        )
+
+    return redirect(url_for('scotia_dashboard'))
+
+
 @app.get('/scotia/sessions/<session_id>/stagiaires/<trainee_id>/candidate-sheet')
 @scotia_login_required
 def scotia_candidate_sheet(session_id: str, trainee_id: str):
