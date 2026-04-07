@@ -6645,6 +6645,8 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "scotia_status": (t.get("scotia_status") or "").strip(),
                 "scotia_processed_at": (t.get("scotia_processed_at") or "").strip(),
                 "scotia_comment": (t.get("scotia_comment") or "").strip(),
+                "scotia_livret_2_status": (t.get("scotia_livret_2_status") or "").strip(),
+                "scotia_livret_2_processed_at": (t.get("scotia_livret_2_processed_at") or "").strip(),
                 "documents": docs_view,
                 "prerequis_interview_sheet": prerequis_interview_sheet_token,
                 "deliverables": deliverables,
@@ -6716,27 +6718,41 @@ def api_scotia_decision(session_id: str, trainee_id: str):
 
     payload = request.get_json(silent=True) or {}
     decision = (payload.get('decision') or '').strip().lower()
-    if decision not in {'recevable', 'non_recevable'}:
+    if decision not in {'recevable', 'non_recevable', 'livret_2_ok', 'livret_2_review'}:
         return jsonify({"ok": False, "error": "invalid_decision"}), 400
 
-    t['scotia_status'] = decision
-    t['scotia_comment'] = (payload.get('comment') or '').strip()
-    t['scotia_processed_at'] = _now_iso()
-    t['updated_at'] = _now_iso()
+    now_iso = _now_iso()
 
-    trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
-    label = f"📄 Décision SCOTIA: {trainee_display_name} - {'recevable' if decision == 'recevable' else 'non recevable'}"
-    add_admin_notification(
-        data,
-        label,
-        {
-            "kind": "scotia_decision",
-            "session_id": str(s.get("id") or ""),
-            "session_name": _session_get(s, "name", ""),
-            "trainee_id": str(t.get("id") or ""),
-            "decision": decision,
-        },
-    )
+    if decision in {'recevable', 'non_recevable'}:
+        t['scotia_status'] = decision
+        t['scotia_comment'] = (payload.get('comment') or '').strip()
+        t['scotia_processed_at'] = now_iso
+        if decision == 'non_recevable':
+            t['scotia_livret_2_status'] = ''
+            t['scotia_livret_2_processed_at'] = ''
+
+        trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
+        label = f"📄 Décision SCOTIA: {trainee_display_name} - {'recevable' if decision == 'recevable' else 'non recevable'}"
+        add_admin_notification(
+            data,
+            label,
+            {
+                "kind": "scotia_decision",
+                "session_id": str(s.get("id") or ""),
+                "session_name": _session_get(s, "name", ""),
+                "trainee_id": str(t.get("id") or ""),
+                "decision": decision,
+            },
+        )
+    else:
+        current_status = (t.get('scotia_status') or '').strip()
+        has_livret_2 = bool(((t.get('deliverables') or {}).get('livret_2') or '').strip())
+        if current_status != 'recevable' or not has_livret_2:
+            return jsonify({"ok": False, "error": "livret_2_not_ready"}), 400
+        t['scotia_livret_2_status'] = decision
+        t['scotia_livret_2_processed_at'] = now_iso
+
+    t['updated_at'] = now_iso
 
     s['trainees'] = trainees
     s.pop('stagiaires', None)

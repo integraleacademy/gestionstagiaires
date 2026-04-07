@@ -168,7 +168,13 @@
                     <span class="badge" style="background:#f3f4f6;color:#374151;">Livret 2 non déposé</span>
                   </div>
                 {% elif it.scotia_status == 'recevable' and has_livret_2 %}
-                  <button type="button" class="btn btn-pending-animated" disabled>Livret 2 à traiter</button>
+                  {% if it.scotia_livret_2_status == 'livret_2_ok' %}
+                    <span class="badge" style="background:#dcfce7;color:#166534;">Livret 2 OK ✅</span>
+                  {% elif it.scotia_livret_2_status == 'livret_2_review' %}
+                    <span class="badge" style="background:#fef3c7;color:#92400e;">Livret 2 à revoir</span>
+                  {% else %}
+                    <button type="button" class="btn btn-pending-animated" disabled>Livret 2 à traiter</button>
+                  {% endif %}
                 {% elif it.scotia_status == 'non_recevable' %}
                   <span class="badge" style="background:#fee2e2;color:#991b1b;">Non recevable</span>
                 {% else %}
@@ -231,6 +237,10 @@
               {% if has_livret_2 %}
                 <a class="btn btn-outline" href="/scotia/uploads/{{ it.deliverables.livret_2 }}" target="_blank">Consulter le Livret 2</a>
                 <p class="attestation-imported-note">Livret 2 importé le {{ it.livret_2_imported_at or 'date inconnue' }}</p>
+                {% if it.scotia_status == 'recevable' %}
+                  <button type="button" class="btn btn-primary {% if it.scotia_livret_2_status == 'livret_2_ok' %}is-active{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','livret_2_ok')">Livret 2 OK</button>
+                  <button type="button" class="btn btn-danger-solid {% if it.scotia_livret_2_status == 'livret_2_review' %}is-active{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','livret_2_review')">Livret 2 à revoir</button>
+                {% endif %}
               {% endif %}
 
               {% if has_prerequis_interview_sheet %}
