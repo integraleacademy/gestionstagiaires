@@ -94,6 +94,28 @@
       font-size:13px;
       color:#4b5563;
     }
+    .scotia-subpanel{
+      border:1px solid #e5e7eb;
+      border-radius:12px;
+      padding:10px;
+      background:#f9fafb;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      min-width:280px;
+      flex:1 1 420px;
+    }
+    .scotia-subpanel-title{
+      margin:0;
+      font-size:14px;
+      color:#111827;
+    }
+    .scotia-subpanel-actions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
     .scotia-comment-wrap{
       margin-top:10px;
       display:flex;
@@ -168,7 +190,13 @@
                     <span class="badge" style="background:#f3f4f6;color:#374151;">Livret 2 non déposé</span>
                   </div>
                 {% elif it.scotia_status == 'recevable' and has_livret_2 %}
-                  <button type="button" class="btn btn-pending-animated" disabled>Livret 2 à traiter</button>
+                  {% if it.scotia_livret_2_status == 'livret_2_ok' %}
+                    <span class="badge" style="background:#dcfce7;color:#166534;">Livret 2 OK ✅</span>
+                  {% elif it.scotia_livret_2_status == 'livret_2_review' %}
+                    <span class="badge" style="background:#fef3c7;color:#92400e;">Livret 2 à revoir</span>
+                  {% else %}
+                    <button type="button" class="btn btn-pending-animated" disabled>Livret 2 à traiter</button>
+                  {% endif %}
                 {% elif it.scotia_status == 'non_recevable' %}
                   <span class="badge" style="background:#fee2e2;color:#991b1b;">Non recevable</span>
                 {% else %}
@@ -213,41 +241,55 @@
             {% endif %}
 
             </div>
-            <div class="scotia-item-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-              {% set item_processed = it.scotia_status in ['recevable', 'non_recevable'] %}
+            <div class="scotia-item-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:stretch;">
+              {% set livret_1_processed = it.scotia_status in ['recevable', 'non_recevable'] %}
+              {% set livret_1_is_recevable = it.scotia_status == 'recevable' %}
+              {% set livret_1_is_non_recevable = it.scotia_status == 'non_recevable' %}
               {% set has_attestation_recevabilite = (it.deliverables.attestation_recevabilite or '')|trim %}
               {% set has_livret_2 = (it.deliverables.livret_2 or '')|trim %}
               {% set has_prerequis_interview_sheet = (it.prerequis_interview_sheet or '')|trim %}
-              <button type="button" class="btn btn-primary {% if it.scotia_status == 'recevable' %}is-active{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','recevable')" {% if item_processed %}disabled{% endif %}>Recevable</button>
-              <button type="button" class="btn btn-danger-solid {% if it.scotia_status == 'non_recevable' %}is-active{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','non_recevable')" {% if item_processed %}disabled{% endif %}>Non recevable</button>
+              {% set livret_2_processed = it.scotia_livret_2_status in ['livret_2_ok', 'livret_2_review'] %}
+              {% set livret_2_is_ok = it.scotia_livret_2_status == 'livret_2_ok' %}
+              {% set livret_2_is_review = it.scotia_livret_2_status == 'livret_2_review' %}
 
-              {% if it.scotia_status == 'recevable' %}
-              <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/livret2/upload" style="display:flex;gap:6px;align-items:center;">
-                <input id="livret2-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="file" accept="application/pdf,.pdf" required style="display:none;" onchange="submitLivret2Form(this)" {% if has_livret_2 %}disabled{% endif %}>
-                <button class="btn {% if has_livret_2 %}btn-disabled-muted{% else %}btn-primary{% endif %}" type="button" onclick="triggerLivret2Upload('{{ it.session_id }}','{{ it.trainee_id }}')" {% if has_livret_2 %}disabled{% endif %}>Importer Livret 2</button>
-              </form>
-              {% endif %}
+              <div class="scotia-subpanel">
+                <h4 class="scotia-subpanel-title">Livret 1</h4>
+                <div class="scotia-subpanel-actions">
+                  <button type="button" class="btn {% if livret_1_is_recevable %}btn-primary is-active{% elif livret_1_processed %}btn-disabled-muted{% else %}btn-primary{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','recevable')" {% if livret_1_processed %}disabled{% endif %}>Recevable</button>
+                  <button type="button" class="btn {% if livret_1_is_non_recevable %}btn-danger-solid is-active{% elif livret_1_processed %}btn-disabled-muted{% else %}btn-danger-solid{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','non_recevable')" {% if livret_1_processed %}disabled{% endif %}>Non recevable</button>
+                  <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/attestation/upload" style="display:flex;gap:6px;align-items:center;">
+                    <input id="attestation-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="file" required style="display:none;" onchange="submitAttestationForm(this)" {% if has_attestation_recevabilite %}disabled{% endif %}>
+                    <button class="btn {% if has_attestation_recevabilite %}btn-disabled-muted{% else %}btn-primary{% endif %} btn-upload-attestation" type="button" onclick="triggerAttestationUpload('{{ it.session_id }}','{{ it.trainee_id }}')" {% if has_attestation_recevabilite %}disabled{% endif %}>Téléverser attestation</button>
+                  </form>
+                  {% if has_attestation_recevabilite %}
+                    <a class="btn btn-outline" href="/scotia/uploads/{{ it.deliverables.attestation_recevabilite }}" target="_blank">Voir attestation</a>
+                  {% endif %}
+                </div>
+                {% if has_attestation_recevabilite %}
+                  <p class="attestation-imported-note">attestation de recevabilité importée le {{ it.attestation_recevabilite_imported_at or 'date inconnue' }}</p>
+                {% endif %}
+              </div>
 
-              {% if has_livret_2 %}
-                <a class="btn btn-outline" href="/scotia/uploads/{{ it.deliverables.livret_2 }}" target="_blank">Consulter le Livret 2</a>
-                <p class="attestation-imported-note">Livret 2 importé le {{ it.livret_2_imported_at or 'date inconnue' }}</p>
-              {% endif %}
+              <div class="scotia-subpanel">
+                <h4 class="scotia-subpanel-title">Livret 2</h4>
+                <div class="scotia-subpanel-actions">
+                  <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/livret2/upload" style="display:flex;gap:6px;align-items:center;">
+                    <input id="livret2-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="file" accept="application/pdf,.pdf" required style="display:none;" onchange="submitLivret2Form(this)" {% if has_livret_2 or it.scotia_status != 'recevable' %}disabled{% endif %}>
+                    <button class="btn {% if has_livret_2 or it.scotia_status != 'recevable' %}btn-disabled-muted{% else %}btn-primary{% endif %}" type="button" onclick="triggerLivret2Upload('{{ it.session_id }}','{{ it.trainee_id }}')" {% if has_livret_2 or it.scotia_status != 'recevable' %}disabled{% endif %}>Importer Livret 2</button>
+                  </form>
+                  {% if has_livret_2 %}
+                    <a class="btn btn-outline" href="/scotia/uploads/{{ it.deliverables.livret_2 }}" target="_blank">Consulter le Livret 2</a>
+                  {% endif %}
+                  <button type="button" class="btn {% if livret_2_is_ok %}btn-primary is-active{% elif livret_2_processed or not has_livret_2 or it.scotia_status != 'recevable' %}btn-disabled-muted{% else %}btn-primary{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','livret_2_ok')" {% if livret_2_processed or not has_livret_2 or it.scotia_status != 'recevable' %}disabled{% endif %}>Livret 2 OK</button>
+                  <button type="button" class="btn {% if livret_2_is_review %}btn-danger-solid is-active{% elif livret_2_processed or not has_livret_2 or it.scotia_status != 'recevable' %}btn-disabled-muted{% else %}btn-danger-solid{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','livret_2_review')" {% if livret_2_processed or not has_livret_2 or it.scotia_status != 'recevable' %}disabled{% endif %}>Livret 2 à revoir</button>
+                </div>
+                {% if has_livret_2 %}
+                  <p class="attestation-imported-note">Livret 2 importé le {{ it.livret_2_imported_at or 'date inconnue' }}</p>
+                {% endif %}
+              </div>
 
               {% if has_prerequis_interview_sheet %}
                 <a class="btn btn-outline" href="/scotia/uploads/{{ it.prerequis_interview_sheet }}" target="_blank">Consulter fiche d'entretien pré-requis</a>
-              {% endif %}
-
-              <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/attestation/upload" style="display:flex;gap:6px;align-items:center;">
-                <input id="attestation-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="file" required style="display:none;" onchange="submitAttestationForm(this)" {% if has_attestation_recevabilite %}disabled{% endif %}>
-                <button class="btn {% if has_attestation_recevabilite %}btn-disabled-muted{% else %}btn-primary{% endif %} btn-upload-attestation" type="button" onclick="triggerAttestationUpload('{{ it.session_id }}','{{ it.trainee_id }}')" {% if has_attestation_recevabilite %}disabled{% endif %}>Téléverser attestation</button>
-              </form>
-
-              {% if has_attestation_recevabilite %}
-                <a class="btn btn-outline" href="/scotia/uploads/{{ it.deliverables.attestation_recevabilite }}" target="_blank">Voir attestation</a>
-              {% endif %}
-
-              {% if has_attestation_recevabilite %}
-                <p class="attestation-imported-note">attestation de recevabilité importée le {{ it.attestation_recevabilite_imported_at or 'date inconnue' }}</p>
               {% endif %}
 
               <form method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/delete" onsubmit="return confirm('Supprimer définitivement cette personne de la session ?');">
