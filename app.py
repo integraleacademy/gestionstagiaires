@@ -6883,6 +6883,25 @@ def scotia_upload_livret2(session_id: str, trainee_id: str):
     s['trainees'] = trainees
     s.pop('stagiaires', None)
     save_data(data)
+
+    trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
+    subject = "Nouveau Livret 2 déposé (SCOTIA)"
+    html = mail_layout(f"""
+    <h2 style="margin:0 0 12px 0;color:#0f172a;">📥 Nouveau Livret 2 déposé</h2>
+    <p>Un Livret 2 vient d'être déposé depuis l'espace SCOTIA.</p>
+    <p><strong>Stagiaire :</strong> {trainee_display_name or "—"}</p>
+    <p><strong>Email :</strong> {(t.get("email") or "").strip() or "—"}</p>
+    <p><strong>Téléphone :</strong> {(t.get("phone") or "").strip() or "—"}</p>
+    <p><strong>Session :</strong> {s.get("name") or s.get("title") or session_id}</p>
+    <p><strong>Date :</strong> {today_fr}</p>
+    """)
+    brevo_send_email(
+        "scotiaformation@gmail.com",
+        subject,
+        html,
+        cc_emails=["clement@integraleacademy.com"],
+        trainee=t,
+    )
     return redirect(url_for('scotia_dashboard'))
 
 
