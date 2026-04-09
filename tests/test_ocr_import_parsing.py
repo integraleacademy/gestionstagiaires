@@ -204,6 +204,31 @@ Var (83)
         self.assertEqual(candidates[0]["telephone"], "07 44 16 67 86")
 
 
+class CnapsPdfNameExtractionTests(unittest.TestCase):
+    def test_extracts_name_from_cnaps_phrase_with_par_and_nee(self):
+        cnaps_text = """
+Vu la demande présentée le 27 mars 2026 par Franck PLET, né(e) le 16/02/1970 à Versailles
+en vue d'obtenir une autorisation préalable d’entrée en formation.
+""".strip()
+
+        last_name, first_name = gestion_app._extract_name_from_cnaps_text(cnaps_text)
+
+        self.assertEqual(last_name, "PLET")
+        self.assertEqual(first_name, "FRANCK")
+
+    def test_prefers_name_from_sentence_containing_numero(self):
+        cnaps_text = """
+Ce brouillon mentionne est délivrée à Ines Angelique, né(e) le 26/09/1992.
+Article 1 : Une autorisation préalable comportant le numéro 2026-0024376-PRE-SH-1055859
+est délivrée à Franck PLET, né(e) le 16/02/1970 à Versailles.
+""".strip()
+
+        last_name, first_name = gestion_app._extract_name_from_cnaps_text(cnaps_text)
+
+        self.assertEqual(last_name, "PLET")
+        self.assertEqual(first_name, "FRANCK")
+
+
 class AfcEmailNormalizationTests(unittest.TestCase):
     def test_removes_leading_separator_in_local_part(self):
         candidate = gestion_app._extract_afc_candidates_from_ocr_text(
@@ -270,6 +295,62 @@ class AfcImageImportApiTests(unittest.TestCase):
         self.assertEqual(payload["skipped_count"], 1)
         self.assertEqual(saved["count"], 1)
         self.assertEqual(len(data["afc"]["candidates"]), 2)
+
+
+class CnapsImportPreApiMatchingTests(unittest.TestCase):
+    def setUp(self):
+        self.client = gestion_app.app.test_client()
+        self.original_load_data = gestion_app.load_data
+        self.original_extract_pdf_text = gestion_app._extract_pdf_text
+        self.original_build_haystacks = gestion_app._build_pdf_search_haystacks
+        self.original_extract_pre = gestion_app._extract_pre_from_text
+        self.original_extract_name = gestion_app._extract_name_from_cnaps_text
+
+    def tearDown(self):
+        gestion_app.load_data = self.original_load_data
+        gestion_app._extract_pdf_text = self.original_extract_pdf_text
+        gestion_app._build_pdf_search_haystacks = self.original_build_haystacks
+        gestion_app._extract_pre_from_text = self.original_extract_pre
+        gestion_app._extract_name_from_cnaps_text = self.original_extract_name
+
+    def test_does_not_override_explicit_extracted_name_with_text_fallback(self):
+        data = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "archived": False,
+                    "training_type": "VTC",
+                    "date_start": "2026-03-07",
+                    "date_end": "2026-05-04",
+                    "trainees": [
+                        {"id": "T1", "last_name": "INES", "first_name": "Angelique"},
+                    ],
+                }
+            ],
+            "cnaps_pending_imports": [],
+        }
+        gestion_app.load_data = lambda: data
+        gestion_app._extract_pdf_text = lambda *_: "contenu pdf"
+        gestion_app._build_pdf_search_haystacks = lambda *_: (" INES ANGELIQUE ", "")
+        gestion_app._extract_pre_from_text = lambda *_: "2026-0024376-PRE-SH-1055859"
+        gestion_app._extract_name_from_cnaps_text = lambda *_: ("PLET", "FRANCK")
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+
+        response = self.client.post(
+            "/api/cnaps/import-pre",
+            data={"file": (io.BytesIO(b"%PDF-1.4 fake"), "agrement.pdf")},
+            content_type="multipart/form-data",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["count"], 1)
+        self.assertFalse(payload["matches"][0]["match_found"])
+        self.assertEqual(payload["matches"][0]["last_name"], "PLET")
+        self.assertEqual(payload["matches"][0]["first_name"], "FRANCK")
 
 
 class AfcBulkNotifyApiTests(unittest.TestCase):
