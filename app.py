@@ -5393,6 +5393,21 @@ def _extract_name_from_cnaps_text(raw_text: str) -> Tuple[str, str]:
     text = raw_text.replace("\r", "\n")
     compact = re.sub(r"\s+", " ", text)
 
+    # Cas le plus fiable: "numéro <PRE/CAR> est délivrée à Prénom NOM..."
+    # (présent en Article 1 des décisions CNAPS).
+    delivery_with_number_match = re.search(
+        r"num[ée]ro\s+[A-Z0-9\-\s]{8,}\s+est\s+d[ée]livr[ée]e?\s+[àa]\s+([^,;\n]+?)(?:,\s*n[ée]\(e\)|\s+n[ée]\(e\)|,\s+pour\b|\s+pour\b|[.;])",
+        compact,
+        re.IGNORECASE,
+    )
+    if delivery_with_number_match:
+        name_block = " ".join((delivery_with_number_match.group(1) or "").strip().split())
+        tokens = re.findall(r"[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ\-']*", name_block)
+        if len(tokens) >= 2:
+            first_name = tokens[0]
+            last_name = " ".join(tokens[1:])
+            return _normalize_person_name(last_name), _normalize_person_name(first_name)
+
     # Cas métier observé : "... est délivrée à Prénom NOM, né(e)..."
     delivery_match = re.search(
         r"est\s+d[ée]livr[ée]e?\s+[àa]\s+([^,;\n]+?)(?:,\s*n[ée]\(e\)|\s+n[ée]\(e\)|,\s+pour\b|\s+pour\b|[.;])",
@@ -5401,6 +5416,20 @@ def _extract_name_from_cnaps_text(raw_text: str) -> Tuple[str, str]:
     )
     if delivery_match:
         name_block = " ".join((delivery_match.group(1) or "").strip().split())
+        tokens = re.findall(r"[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ\-']*", name_block)
+        if len(tokens) >= 2:
+            first_name = tokens[0]
+            last_name = " ".join(tokens[1:])
+            return _normalize_person_name(last_name), _normalize_person_name(first_name)
+
+    # Variante observée: "... demande présentée ... par Prénom NOM, né(e)..."
+    requested_by_match = re.search(
+        r"\bpar\s+([^,;\n]+?)(?:,\s*n[ée]\(e\)|\s+n[ée]\(e\)|,\s+en\s+vue\b|\s+en\s+vue\b|[.;])",
+        compact,
+        re.IGNORECASE,
+    )
+    if requested_by_match:
+        name_block = " ".join((requested_by_match.group(1) or "").strip().split())
         tokens = re.findall(r"[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ\-']*", name_block)
         if len(tokens) >= 2:
             first_name = tokens[0]
