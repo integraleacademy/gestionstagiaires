@@ -204,6 +204,19 @@ Var (83)
         self.assertEqual(candidates[0]["telephone"], "07 44 16 67 86")
 
 
+class CnapsPdfNameExtractionTests(unittest.TestCase):
+    def test_extracts_name_from_cnaps_phrase_with_par_and_nee(self):
+        cnaps_text = """
+Vu la demande présentée le 27 mars 2026 par Franck PLET, né(e) le 16/02/1970 à Versailles
+en vue d'obtenir une autorisation préalable d’entrée en formation.
+""".strip()
+
+        last_name, first_name = gestion_app._extract_name_from_cnaps_text(cnaps_text)
+
+        self.assertEqual(last_name, "PLET")
+        self.assertEqual(first_name, "FRANCK")
+
+
 class AfcEmailNormalizationTests(unittest.TestCase):
     def test_removes_leading_separator_in_local_part(self):
         candidate = gestion_app._extract_afc_candidates_from_ocr_text(

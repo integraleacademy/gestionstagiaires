@@ -5407,6 +5407,20 @@ def _extract_name_from_cnaps_text(raw_text: str) -> Tuple[str, str]:
             last_name = " ".join(tokens[1:])
             return _normalize_person_name(last_name), _normalize_person_name(first_name)
 
+    # Variante observée: "... demande présentée ... par Prénom NOM, né(e)..."
+    requested_by_match = re.search(
+        r"\bpar\s+([^,;\n]+?)(?:,\s*n[ée]\(e\)|\s+n[ée]\(e\)|,\s+en\s+vue\b|\s+en\s+vue\b|[.;])",
+        compact,
+        re.IGNORECASE,
+    )
+    if requested_by_match:
+        name_block = " ".join((requested_by_match.group(1) or "").strip().split())
+        tokens = re.findall(r"[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ\-']*", name_block)
+        if len(tokens) >= 2:
+            first_name = tokens[0]
+            last_name = " ".join(tokens[1:])
+            return _normalize_person_name(last_name), _normalize_person_name(first_name)
+
     patterns = [
         re.compile(r"\bNOM\s*[:\-]\s*([A-Za-zÀ-ÖØ-öø-ÿ\-\s']{2,})\b"),
         re.compile(r"\bPR[ÉE]NOM\s*[:\-]\s*([A-Za-zÀ-ÖØ-öø-ÿ\-\s']{2,})\b"),
