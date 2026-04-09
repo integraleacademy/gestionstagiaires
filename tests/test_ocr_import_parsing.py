@@ -297,6 +297,62 @@ class AfcImageImportApiTests(unittest.TestCase):
         self.assertEqual(len(data["afc"]["candidates"]), 2)
 
 
+class CnapsImportPreApiMatchingTests(unittest.TestCase):
+    def setUp(self):
+        self.client = gestion_app.app.test_client()
+        self.original_load_data = gestion_app.load_data
+        self.original_extract_pdf_text = gestion_app._extract_pdf_text
+        self.original_build_haystacks = gestion_app._build_pdf_search_haystacks
+        self.original_extract_pre = gestion_app._extract_pre_from_text
+        self.original_extract_name = gestion_app._extract_name_from_cnaps_text
+
+    def tearDown(self):
+        gestion_app.load_data = self.original_load_data
+        gestion_app._extract_pdf_text = self.original_extract_pdf_text
+        gestion_app._build_pdf_search_haystacks = self.original_build_haystacks
+        gestion_app._extract_pre_from_text = self.original_extract_pre
+        gestion_app._extract_name_from_cnaps_text = self.original_extract_name
+
+    def test_does_not_override_explicit_extracted_name_with_text_fallback(self):
+        data = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "archived": False,
+                    "training_type": "VTC",
+                    "date_start": "2026-03-07",
+                    "date_end": "2026-05-04",
+                    "trainees": [
+                        {"id": "T1", "last_name": "INES", "first_name": "Angelique"},
+                    ],
+                }
+            ],
+            "cnaps_pending_imports": [],
+        }
+        gestion_app.load_data = lambda: data
+        gestion_app._extract_pdf_text = lambda *_: "contenu pdf"
+        gestion_app._build_pdf_search_haystacks = lambda *_: (" INES ANGELIQUE ", "")
+        gestion_app._extract_pre_from_text = lambda *_: "2026-0024376-PRE-SH-1055859"
+        gestion_app._extract_name_from_cnaps_text = lambda *_: ("PLET", "FRANCK")
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+
+        response = self.client.post(
+            "/api/cnaps/import-pre",
+            data={"file": (io.BytesIO(b"%PDF-1.4 fake"), "agrement.pdf")},
+            content_type="multipart/form-data",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["count"], 1)
+        self.assertFalse(payload["matches"][0]["match_found"])
+        self.assertEqual(payload["matches"][0]["last_name"], "PLET")
+        self.assertEqual(payload["matches"][0]["first_name"], "FRANCK")
+
+
 class AfcBulkNotifyApiTests(unittest.TestCase):
     def setUp(self):
         self.client = gestion_app.app.test_client()

@@ -5515,16 +5515,17 @@ def _find_cnaps_trainee_match_in_text(
     raw_text: str,
     first_name: str = "",
 ) -> Optional[Dict[str, Any]]:
-    haystack = re.sub(r"[^A-Z]", "", _normalize_person_name(raw_text))
-    if not haystack:
+    normalized_text = _normalize_person_name(raw_text)
+    if not normalized_text:
         return None
 
+    haystack = f" {normalized_text} "
     candidates: List[Dict[str, Any]] = []
     for last_name, entries in trainees_by_last_name.items():
-        last_compact = re.sub(r"[^A-Z]", "", last_name)
-        if not last_compact:
+        last_clean = _normalize_person_name(last_name)
+        if not last_clean:
             continue
-        if last_compact in haystack:
+        if f" {last_clean} " in haystack:
             candidates.extend(entries)
 
     if not candidates:
@@ -5538,7 +5539,11 @@ def _find_cnaps_trainee_match_in_text(
             if trainee_first == normalized_first:
                 return entry
 
-    return candidates[0]
+    if len(candidates) == 1:
+        return candidates[0]
+
+    # Ambigu sans prénom fiable: on refuse l'auto-association.
+    return None
 
 
 def _cnaps_pending_imports(data: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -15217,7 +15222,7 @@ def api_cnaps_import_pre():
             continue
 
         entry = _find_cnaps_trainee_match(trainees_index, trainees_by_last_name, last_name, first_name)
-        if not entry:
+        if not entry and not (last_name and first_name):
             entry = _find_cnaps_trainee_match_in_text(trainees_by_last_name, combined_text, first_name)
         if not entry:
             matches.append({
