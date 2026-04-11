@@ -12100,22 +12100,40 @@ def admin_etiquette_print_page(session_id: str, trainee_id: str):
         if isinstance(d, dict)
     }
     checklist_doc_key_map = {
+        "Pièce d’identité": "id",
+        "Photo d’identité": "photo",
+        "Carte vitale": "carte_vitale_doc",
+        "Autorisation préalable CNAPS": "cnaps_doc",
+        "Certificat médical de moins de 3 mois": "certif_med",
+        "Permis de conduire valide": "permis",
+        "Attestation d’assurance responsabilité civile": "assurance_rc",
         "Passeport OU Carte d’identité recto/verso OU Titre de séjour": "id",
         "Photo d’identité officielle": "photo",
-        "Carte vitale": "carte_vitale_doc",
         "Fiche de renseignement candidat": "candidate_info_sheet",
         "Diplôme le plus élevé": "highest_diploma",
         "Fiche d'entretien des pré-requis": "prerequis_interview_sheet",
         "attestation sur l’honneur de prise en compte de l’examen desp": "attestation_honneur_examen_desp",
         "CV": "cv",
+        "Attestation de recevabilité": "attestation_recevabilite",
+        "Fiche candidat": "candidate_info_sheet",
+    }
+    checklist_status_map = {
+        "Contrat de formation signé": (t.get("convention_status") or "").strip().lower() == "signed",
+        "Convention de VAE signée": (t.get("convention_status") or "").strip().lower() == "signed",
+        "Test de français": (t.get("test_fr_status") or "").strip().lower() == "validated",
     }
     checklist = []
     for item in checklist_map.get(training_type, []):
         doc_key = checklist_doc_key_map.get(item)
-        status = ""
-        if doc_key:
+        checked = False
+        if doc_key == "attestation_recevabilite":
+            checked = bool(((t.get("deliverables") or {}).get("attestation_recevabilite") or "").strip())
+        elif doc_key:
             status = ((docs_by_key.get(doc_key) or {}).get("status") or "").strip().upper()
-        checklist.append({"label": item, "checked": status == "CONFORME"})
+            checked = status == "CONFORME"
+        elif item in checklist_status_map:
+            checked = checklist_status_map[item]
+        checklist.append({"label": item, "checked": checked})
 
     return render_template(
         "admin_etiquette_print.html",
