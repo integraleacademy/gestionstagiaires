@@ -12055,7 +12055,7 @@ def admin_etiquette_print_page(session_id: str, trainee_id: str):
             "Fiche de renseignement candidat",
             "Diplôme le plus élevé",
             "Fiche d'entretien des pré-requis",
-            "attestation sur l’honneur de prise en compte de l’examen desp",
+            "Attestation sur l’honneur de prise en compte de l’examen DESP",
             "CV",
         ],
         "DIRIGEANT INITIAL": [
@@ -12065,7 +12065,7 @@ def admin_etiquette_print_page(session_id: str, trainee_id: str):
             "Fiche de renseignement candidat",
             "Diplôme le plus élevé",
             "Fiche d'entretien des pré-requis",
-            "attestation sur l’honneur de prise en compte de l’examen desp",
+            "Attestation sur l’honneur de prise en compte de l’examen DESP",
             "CV",
         ],
         "DIRIGEANT VAE": [
@@ -12112,7 +12112,7 @@ def admin_etiquette_print_page(session_id: str, trainee_id: str):
         "Fiche de renseignement candidat": "candidate_info_sheet",
         "Diplôme le plus élevé": "highest_diploma",
         "Fiche d'entretien des pré-requis": "prerequis_interview_sheet",
-        "attestation sur l’honneur de prise en compte de l’examen desp": "attestation_honneur_examen_desp",
+        "Attestation sur l’honneur de prise en compte de l’examen DESP": "attestation_honneur_examen_desp",
         "CV": "cv",
         "Attestation de recevabilité": "attestation_recevabilite",
         "Fiche candidat": "candidate_info_sheet",
