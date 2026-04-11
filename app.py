@@ -12055,7 +12055,7 @@ def admin_etiquette_print_page(session_id: str, trainee_id: str):
             "Fiche de renseignement candidat",
             "Diplôme le plus élevé",
             "Fiche d'entretien des pré-requis",
-            "ATTESTATION SUR L’HONNEUR DE PRISE EN COMPTE DE L’EXAMEN DESP",
+            "attestation sur l’honneur de prise en compte de l’examen desp",
             "CV",
         ],
         "DIRIGEANT INITIAL": [
@@ -12065,7 +12065,7 @@ def admin_etiquette_print_page(session_id: str, trainee_id: str):
             "Fiche de renseignement candidat",
             "Diplôme le plus élevé",
             "Fiche d'entretien des pré-requis",
-            "ATTESTATION SUR L’HONNEUR DE PRISE EN COMPTE DE L’EXAMEN DESP",
+            "attestation sur l’honneur de prise en compte de l’examen desp",
             "CV",
         ],
         "DIRIGEANT VAE": [
@@ -12106,7 +12106,7 @@ def admin_etiquette_print_page(session_id: str, trainee_id: str):
         "Fiche de renseignement candidat": "candidate_info_sheet",
         "Diplôme le plus élevé": "highest_diploma",
         "Fiche d'entretien des pré-requis": "prerequis_interview_sheet",
-        "ATTESTATION SUR L’HONNEUR DE PRISE EN COMPTE DE L’EXAMEN DESP": "attestation_honneur_examen_desp",
+        "attestation sur l’honneur de prise en compte de l’examen desp": "attestation_honneur_examen_desp",
         "CV": "cv",
     }
     checklist = []
