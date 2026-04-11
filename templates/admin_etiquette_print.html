@@ -130,8 +130,8 @@
       font-size:4.0mm;
       line-height:1.55;
     }
-    .checklist li{ display:flex; align-items:flex-start; gap:4mm; }
-    .checklist li::before{ content:"○"; line-height:1; }
+    .checklist li{ display:flex; align-items:flex-start; gap:2mm; }
+    .checklist-prefix{ width:6mm; flex:0 0 6mm; text-align:center; line-height:1.15; }
     .checklist.checklist-compact{
       margin-top:6mm;
       line-height:1.45;
@@ -182,7 +182,7 @@
 
         <ul class="checklist{% if formation_label in ['FORMATION DESP', 'FORMATION A3P'] %} checklist-compact{% endif %}">
           {% for item in checklist %}
-            <li>{{ item }}</li>
+            <li><span class="checklist-prefix">{{ "✔️" if item.checked else "○" }}</span><span>{{ item.label }}</span></li>
           {% endfor %}
         </ul>
       </div>
