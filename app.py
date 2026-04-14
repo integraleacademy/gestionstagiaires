@@ -7168,6 +7168,13 @@ def admin_sessions():
                 cash_payment_total += float(str(t.get("cash_payment_amount") or "").replace(",", ".").strip() or "0")
             except (TypeError, ValueError):
                 continue
+        cash_payment_alert_key = f"{cash_payment_trainees}:{round(cash_payment_total, 2):.2f}"
+        cash_payment_alert_dismissed_key = (s.get("cash_payment_alert_dismissed_key") or "").strip()
+        show_cash_payment_alert = (
+            cash_payment_trainees > 0
+            and cash_payment_total > 0
+            and cash_payment_alert_key != cash_payment_alert_dismissed_key
+        )
 
         total_total = len(trainees)
         dossier_complete_total = 0
@@ -7245,6 +7252,8 @@ def admin_sessions():
             "cmar_registered_total": cmar_registered_total,
             "cash_payment_total": round(cash_payment_total, 2),
             "cash_payment_trainees": cash_payment_trainees,
+            "show_cash_payment_alert": show_cash_payment_alert,
+            "cash_payment_alert_key": cash_payment_alert_key,
             "status_label": status_label,
             "status_key": status_key,
             "training_type_class": training_type_class,
@@ -9685,6 +9694,8 @@ def api_update_session(session_id: str):
 
     if "exclude_from_sales_tracking" in payload:
         s["exclude_from_sales_tracking"] = bool(payload.get("exclude_from_sales_tracking"))
+    if "cash_payment_alert_dismissed_key" in payload:
+        s["cash_payment_alert_dismissed_key"] = (payload.get("cash_payment_alert_dismissed_key") or "").strip()
 
     s["updated_at"] = _now_iso()
     save_data(data)
