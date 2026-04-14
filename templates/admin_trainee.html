@@ -1005,6 +1005,24 @@
             <div id="paymentDiffLine" class="hint"></div>
           </div>
         </div>
+
+        <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px;">
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input id="cashPaymentEnabled" type="checkbox" {% if trainee.cash_payment_enabled %}checked{% endif %} {{ read_only_attr }}>
+            <span style="font-weight:800;">Paiement en espèces</span>
+          </label>
+          <div id="cashPaymentAmountWrap" style="{% if not trainee.cash_payment_enabled %}display:none;{% endif %};max-width:260px;">
+            <div class="label">Montant réglé en espèces</div>
+            <input id="cashPaymentAmount"
+                   type="number"
+                   min="0"
+                   step="0.01"
+                   value="{{ trainee.cash_payment_amount or '' }}"
+                   placeholder="Ex : 300"
+                   {{ read_only_attr }}>
+            <div id="cashPaymentHint" class="hint" style="margin-top:4px;"></div>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -1685,6 +1703,10 @@ if(financementDetails){
   const personalAmount = document.getElementById("personalAmount");
   const otherAmount = document.getElementById("otherAmount");
   const trainingPrice = document.getElementById("trainingPrice");
+  const cashPaymentEnabled = document.getElementById("cashPaymentEnabled");
+  const cashPaymentAmount = document.getElementById("cashPaymentAmount");
+  const cashPaymentAmountWrap = document.getElementById("cashPaymentAmountWrap");
+  const cashPaymentHint = document.getElementById("cashPaymentHint");
   const totalLine = document.getElementById("paymentTotalLine");
   const diffLine = document.getElementById("paymentDiffLine");
   const isReadOnly = financementDetails.getAttribute("data-read-only") === "1";
@@ -1755,13 +1777,47 @@ if(financementDetails){
   setupAutosave(personalAmount, "personal_amount");
   setupAutosave(otherAmount, "other_amount");
   setupAutosave(trainingPrice, "training_price");
+  setupAutosave(cashPaymentAmount, "cash_payment_amount");
+
+  const renderCashPaymentState = () => {
+    if(!cashPaymentEnabled) return;
+    if(cashPaymentAmountWrap){
+      cashPaymentAmountWrap.style.display = cashPaymentEnabled.checked ? "block" : "none";
+    }
+    if(cashPaymentHint){
+      const amount = parseAmount(cashPaymentAmount?.value);
+      if(cashPaymentEnabled.checked && amount <= 0){
+        cashPaymentHint.textContent = "Renseigne le montant qui sera réglé en espèces.";
+        cashPaymentHint.style.color = "#dc2626";
+      }else if(cashPaymentEnabled.checked){
+        cashPaymentHint.textContent = `${formatEuros(amount)} € seront ajoutés dans les commentaires.`;
+        cashPaymentHint.style.color = "#16a34a";
+      }else{
+        cashPaymentHint.textContent = "";
+      }
+    }
+  };
+
+  if(cashPaymentEnabled && !isReadOnly){
+    cashPaymentEnabled.addEventListener("change", async ()=>{
+      renderCashPaymentState();
+      try{
+        await updateTrainee({ cash_payment_enabled: cashPaymentEnabled.checked });
+      }catch(e){
+        console.error("Erreur sauvegarde paiement espèces");
+      }
+    });
+  }
 
   [cpfAmount, personalAmount, otherAmount, trainingPrice].forEach((input)=>{
     if(!input) return;
     input.addEventListener("change", renderTotals);
   });
+  cashPaymentAmount?.addEventListener("input", renderCashPaymentState);
+  cashPaymentAmount?.addEventListener("change", renderCashPaymentState);
 
   renderTotals();
+  renderCashPaymentState();
 }
 
   function toClassSafe(s){
