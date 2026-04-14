@@ -543,6 +543,11 @@
       <div class="muted" style="margin-top:4px;">
         🛜 {{ s.public_logged_in_total or 0 }}/{{ s.total }}
       </div>
+      {% if (s.cash_payment_trainees or 0) > 0 %}
+      <div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;font-weight:800;">
+        ⚠️ Espèces à récupérer : {{ s.cash_payment_trainees }} stagiaire(s) — {{ "%.2f"|format(s.cash_payment_total or 0)|replace(".", ",") }} €
+      </div>
+      {% endif %}
     </div>
 
     <div class="docs-progress">
