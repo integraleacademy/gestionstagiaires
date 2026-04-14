@@ -7158,6 +7158,16 @@ def admin_sessions():
         cmar_registered_total = sum(
             1 for t in trainees if bool(t.get("exam_fees_paid"))
         )
+        cash_payment_total = 0.0
+        cash_payment_trainees = 0
+        for t in trainees:
+            if not t.get("cash_payment_enabled"):
+                continue
+            cash_payment_trainees += 1
+            try:
+                cash_payment_total += float(str(t.get("cash_payment_amount") or "").replace(",", ".").strip() or "0")
+            except (TypeError, ValueError):
+                continue
 
         total_total = len(trainees)
         dossier_complete_total = 0
@@ -7233,6 +7243,8 @@ def admin_sessions():
             "deliverables_total": total_total,
             "public_logged_in_total": public_logged_in_total,
             "cmar_registered_total": cmar_registered_total,
+            "cash_payment_total": round(cash_payment_total, 2),
+            "cash_payment_trainees": cash_payment_trainees,
             "status_label": status_label,
             "status_key": status_key,
             "training_type_class": training_type_class,
@@ -10027,6 +10039,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vae_status",
         "comment",
         "financement_comment",
+        "cash_payment_enabled",
+        "cash_payment_amount",
         "financement_new_date_seen",
         "vae_status_label",
         "vae_jury_date",
@@ -10106,6 +10120,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
             "public_hide_popup",
             "force_dossier_complete",
             "financement_new_date_seen",
+            "cash_payment_enabled",
             "exam_fees_paid",
             "vtc_cmar_manual_ok",
             "vtc_elearning_manual_ok",
@@ -10163,6 +10178,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         _refresh_vtc_cm_reminder_schedule(t)
 
     t["comment"] = _remove_admin_comment_flag(t.get("comment", ""), "⚠️ Prélèvement rejeté")
+    _sync_cash_payment_comment_flags(t)
 
     if isinstance(cnaps_remote_history, list):
         merge_cnaps_history_entries(t, _normalize_cnaps_remote_history(cnaps_remote_history))
@@ -15852,6 +15868,29 @@ def _remove_admin_comment_flag(current: str, flag_text: str) -> str:
         return ""
     kept = [line for line in current.splitlines() if line.strip() != flag_text]
     return "\n".join(kept).strip()
+
+def _cash_payment_flag_text(raw_amount: Any) -> str:
+    try:
+        amount = float(str(raw_amount or "").replace(",", ".").strip())
+    except (TypeError, ValueError):
+        amount = 0.0
+    if amount <= 0:
+        return ""
+    pretty = f"{amount:.2f}".rstrip("0").rstrip(".")
+    return f"{pretty} euros vont être réglés en espèces."
+
+def _sync_cash_payment_comment_flags(trainee: dict) -> None:
+    cash_flag_prefix = "euros vont être réglés en espèces."
+    for key in ("financement_comment", "comment"):
+        current_value = (trainee.get(key) or "").strip()
+        kept_lines = [line for line in current_value.splitlines() if cash_flag_prefix not in line]
+        trainee[key] = "\n".join(kept_lines).strip()
+
+    is_cash_payment = bool(trainee.get("cash_payment_enabled"))
+    cash_flag = _cash_payment_flag_text(trainee.get("cash_payment_amount"))
+    if is_cash_payment and cash_flag:
+        trainee["financement_comment"] = _append_admin_comment_flag(trainee.get("financement_comment", ""), cash_flag)
+        trainee["comment"] = _append_admin_comment_flag(trainee.get("comment", ""), cash_flag)
 
 def _send_prelevement_pending_validation_messages(trainee: dict, session: dict) -> Tuple[bool, bool]:
     first_name = (trainee.get("first_name") or "").strip()
