@@ -9463,6 +9463,7 @@ def admin_trainees(session_id: str):
     }
 
     trainees = _session_trainees_list(s)
+    training_type = session_view["training_type"]
 
     auto_refresh_external = (request.args.get("refresh_external") or "").strip() == "1"
 
@@ -9476,6 +9477,10 @@ def admin_trainees(session_id: str):
             t["last_name"] = ln
         if fn:
             t["first_name"] = fn
+
+        _sync_trainee_afc_medical_requirement(t, session_view["name"])
+        ensure_documents_schema_for_trainee(t, training_type)
+        t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
 
         current_cnaps = t.get("cnaps") or ""
 
