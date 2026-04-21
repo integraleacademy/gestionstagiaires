@@ -9458,6 +9458,7 @@ def admin_trainees(session_id: str):
         "exam_theory_date": _session_get(s, "exam_theory_date", ""),
         "exam_practice_date": _session_get(s, "exam_practice_date", ""),
         "practice_training_date": _session_get(s, "practice_training_date", ""),
+        "ssiap_exam_date": _session_get(s, "ssiap_exam_date", ""),
         "prospects_comment": _session_get(s, "prospects_comment", ""),
     }
 
@@ -9680,6 +9681,7 @@ def api_create_session():
     exam_theory_date = (payload.get("exam_theory_date") or "").strip()
     exam_practice_date = (payload.get("exam_practice_date") or "").strip()
     practice_training_date = (payload.get("practice_training_date") or "").strip()
+    ssiap_exam_date = (payload.get("ssiap_exam_date") or "").strip()
     exclude_from_sales_tracking = bool(payload.get("exclude_from_sales_tracking"))
 
     if not name or not training_type:
@@ -9696,6 +9698,7 @@ def api_create_session():
         "exam_theory_date": exam_theory_date,
         "exam_practice_date": exam_practice_date,
         "practice_training_date": practice_training_date,
+        "ssiap_exam_date": ssiap_exam_date,
         "exclude_from_sales_tracking": exclude_from_sales_tracking,
         "created_at": _now_iso(),
         "trainees": [],
@@ -9729,6 +9732,7 @@ def api_update_session(session_id: str):
         "exam_theory_date",
         "exam_practice_date",
         "practice_training_date",
+        "ssiap_exam_date",
         "prospects_comment",
     ):
         if key in payload:
@@ -14076,7 +14080,7 @@ def public_trainee_space(token):
     s.pop("stagiaires", None)
     save_data(data)
 
-    ssiap_exam_date = str(t.get("ssiap_exam_date") or "").strip()
+    ssiap_exam_date = str(_session_get(s, "ssiap_exam_date", "") or "").strip() or str(t.get("ssiap_exam_date") or "").strip()
     ssiap_medical_from_date = _subtract_months(ssiap_exam_date, 3) if ssiap_exam_date else ""
 
     return render_template(
@@ -14480,6 +14484,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         "exam_theory_date": _session_get(s, "exam_theory_date", ""),
         "exam_practice_date": _session_get(s, "exam_practice_date", ""),
         "practice_training_date": _session_get(s, "practice_training_date", ""),
+        "ssiap_exam_date": _session_get(s, "ssiap_exam_date", ""),
     }
 
     trainees = _session_trainees_list(s)
