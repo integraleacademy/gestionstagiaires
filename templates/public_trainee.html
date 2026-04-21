@@ -1623,14 +1623,14 @@ id="upload_{{ d.key }}"
         {% set livret2_count = ns_livret2.tokens|length %}
         {% if vae_current_step == 4 and vae_done_until < 4 %}
           <div style="margin:10px 0;padding:12px;border:1px solid #f59e0b;border-radius:10px;background:#fff7ed;">
-            <p style="margin:0 0 8px 0;font-weight:800;color:#7c2d12;">📌 Comment faire pour l'étape 4 ?</p>
             <ol style="margin:0;padding-left:20px;line-height:1.6;">
               <li>
                 <p style="margin:0 0 10px 0;">
-                  <a class="btn outline small" href="/static/vae_livret_2.pdf" target="_blank" rel="noopener">Téléchargez le livret 2 à compléter</a>
+                  <a class="btn outline small" href="/static/L2remplissable" target="_blank" rel="noopener">Téléchargez le livret 2 à compléter</a>
                 </p>
                 <strong>Compléter le Livret 2 :</strong>
                 <p style="margin:8px 0 0 0;">Vous pouvez vous aider du modèle de Livret 2 <a href="/static/modele.pdf" target="_blank" rel="noopener">en cliquant ici</a>.</p>
+                <p style="margin:8px 0 0 0;">Consultez aussi le <a href="/static/guide" target="_blank" rel="noopener">Guide d’accompagnement au remplissage du dossier de faisabilité VAE</a>.</p>
               </li>
               <li>
                 <strong>Renvoyer le Livret 2 :</strong> Par courrier postal, accompagné de toutes les pièces justificatives, à
