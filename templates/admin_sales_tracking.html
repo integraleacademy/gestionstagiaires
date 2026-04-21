@@ -359,6 +359,22 @@
 
   let objectiveInputs = bindObjectiveInputNormalization();
 
+  const syncMonthlyObjectivesFromAnnual = () => {
+    const annualValue = parseIntSafe(annualInput?.value);
+    const monthlyValue = Math.round(annualValue / 12);
+    objectiveInputs.forEach((input) => {
+      if (!input) return;
+      input.value = String(monthlyValue);
+    });
+  };
+
+  const handleAnnualObjectiveChange = () => {
+    normalizeInput(annualInput);
+    syncMonthlyObjectivesFromAnnual();
+  };
+
+  annualInput?.addEventListener('input', handleAnnualObjectiveChange);
+
   const monthCardHtml = (month) => {
     const progressPct = Math.max(0, Math.min(100, (Number(month.progress_ratio || 0) * 100)));
     const trainings = Array.isArray(month.trainings) ? month.trainings : [];
@@ -447,6 +463,8 @@
         : '<div class="training-empty">Aucune vente enregistrée sur cette année pour l’instant.</div>';
     }
     objectiveInputs = bindObjectiveInputNormalization();
+    annualInput?.removeEventListener('input', handleAnnualObjectiveChange);
+    annualInput?.addEventListener('input', handleAnnualObjectiveChange);
     fmtEuroNodes();
   };
 
