@@ -358,6 +358,64 @@ class AdminTraineesPageHostingTests(unittest.TestCase):
         self.assertEqual(data["sessions"][0]["trainees"][0]["hosting_status"], "reserved")
         self.assertEqual(rendered["context"]["trainees"][0]["hosting_status"], "reserved")
 
+    def test_admin_trainees_marks_dossier_incomplete_for_afc_when_ssiap_medical_is_missing(self):
+        data = {
+            "sessions": [
+                {
+                    "id": "S-APS-AFC",
+                    "name": "APS AFC AVRIL 2026",
+                    "training_type": "APS",
+                    "trainees": [
+                        {
+                            "id": "T-1",
+                            "last_name": "DUPONT",
+                            "first_name": "Alice",
+                            "dossier_status": "complete",
+                            "birth_date": "1990-01-01",
+                            "birth_city": "Paris",
+                            "birth_country": "France",
+                            "nationality": "Française",
+                            "address": "1 rue de test",
+                            "zip_code": "75001",
+                            "city": "Paris",
+                            "carte_vitale": "123456789012345",
+                            "pre_number": "PRE-013-2029-07-25-20240908920",
+                            "documents": [
+                                {"key": "id", "status": "CONFORME", "file": "id.pdf", "files": ["id.pdf"]},
+                                {"key": "photo", "status": "CONFORME", "file": "photo.png", "files": ["photo.png"]},
+                                {"key": "carte_vitale_doc", "status": "CONFORME", "file": "vitale.pdf", "files": ["vitale.pdf"]},
+                                {"key": "cnaps_doc", "status": "CONFORME", "file": "cnaps.pdf", "files": ["cnaps.pdf"]},
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+        rendered = {}
+
+        def fake_render(template_name, **context):
+            rendered["template_name"] = template_name
+            rendered["context"] = context
+            return "ok"
+
+        gestion_app.load_data = lambda: data
+        gestion_app.save_data = lambda payload: None
+        gestion_app.render_template = fake_render
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        response = self.client.get("/admin/sessions/S-APS-AFC/trainees")
+
+        self.assertEqual(response.status_code, 200)
+        trainee = data["sessions"][0]["trainees"][0]
+        self.assertTrue(trainee["afc_medical_required"])
+        self.assertEqual(trainee["dossier_status"], "incomplete")
+        doc_keys = [doc.get("key") for doc in trainee.get("documents", [])]
+        self.assertIn("certificat_medical_ssiap_afc", doc_keys)
+        self.assertEqual(rendered["context"]["trainees"][0]["dossier_status"], "incomplete")
+
 
 if __name__ == "__main__":
     unittest.main()

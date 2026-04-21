@@ -133,6 +133,20 @@
   </div>
 </div>
 
+{% if "AFC" in (session.name or "")|upper %}
+<div class="card" style="margin-top:10px;">
+  <div class="label">Date d'examen SSIAP (commune à toute la session AFC)</div>
+  <input id="sessionSsiapExamDate"
+         type="date"
+         value="{{ session.ssiap_exam_date or '' }}"
+         style="max-width:240px;"
+         {{ read_only_attr }}>
+  <div class="hint" style="margin-top:6px;">
+    Cette date est utilisée dans l'espace public pour calculer la date minimale du certificat médical (-3 mois).
+  </div>
+</div>
+{% endif %}
+
 <div class="table-wrap full-bleed">
   <table class="table" id="traineesTable"
          data-session-id="{{ session.id }}"
@@ -809,6 +823,21 @@ tr.row-todo td{
           console.error(error);
         }
       }, 400);
+    });
+  }
+
+  const sessionSsiapExamDate = document.getElementById("sessionSsiapExamDate");
+  if (sessionSsiapExamDate) {
+    let ssiapExamTimer = null;
+    sessionSsiapExamDate.addEventListener("input", () => {
+      clearTimeout(ssiapExamTimer);
+      ssiapExamTimer = setTimeout(async () => {
+        try {
+          await saveSessionField("ssiap_exam_date", sessionSsiapExamDate.value || "");
+        } catch (error) {
+          console.error(error);
+        }
+      }, 300);
     });
   }
 

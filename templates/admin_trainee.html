@@ -270,6 +270,16 @@
                  style="border:none;background:transparent;padding:0;outline:none;min-width:150px;"
                  {{ read_only_attr }}>
         </span>
+        {% if "AFC" in (session.name or "")|upper %}
+        <span class="mono">
+          Examen SSIAP :
+          <input id="editSsiapExamDate"
+                 type="date"
+                 value="{{ trainee.ssiap_exam_date or '' }}"
+                 style="border:none;background:transparent;padding:0;outline:none;"
+                 {{ read_only_attr }}>
+        </span>
+        {% endif %}
         {% if is_vtc %}
         <span class="mono">
           Identifiant CMAR :
@@ -3025,6 +3035,10 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
   setupContactAutosave({
     inputId: "editPhone",
     field: "phone"
+  });
+  setupContactAutosave({
+    inputId: "editSsiapExamDate",
+    field: "ssiap_exam_date"
   });
   setupContactAutosave({
     inputId: "editVtcCmarId",
