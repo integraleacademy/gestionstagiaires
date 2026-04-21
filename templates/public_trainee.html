@@ -1299,6 +1299,7 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
           {% if ssiap_exam_date and ssiap_medical_from_date %}
             <div class="doctag pending" style="margin-top:8px;">
               ⚠️ Le certificat médical doit être daté de moins de 3 mois le jour de votre examen SSIAP.
+              Votre examen SSIAP se déroulera le {{ ssiap_exam_date|frdate }}.
               Vous pourrez donc vous rendre chez le médecin à compter du {{ ssiap_medical_from_date|frdate }}.
             </div>
           {% else %}
