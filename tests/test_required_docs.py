@@ -40,6 +40,14 @@ class RequiredDocsForDirigeantTests(unittest.TestCase):
 
         self.assertTrue(gestion_app.required_docs_are_deposited(trainee, "DIRIGEANT VAE"))
 
+    def test_afc_session_adds_ssiap_medical_certificate(self):
+        trainee = {"afc_medical_required": True}
+        keys = [doc.get("key") for doc in gestion_app.required_docs_for_training("APS", trainee)]
+        self.assertIn("certificat_medical_ssiap_afc", keys)
+
+    def test_subtract_months_for_ssiap_window(self):
+        self.assertEqual(gestion_app._subtract_months("2026-07-15", 3), "2026-04-15")
+
 
 if __name__ == "__main__":
     unittest.main()

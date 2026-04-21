@@ -1288,6 +1288,25 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
             <div class="doctag pending" style="margin-top:8px;">⏳ Document déposé — en attente de contrôle</div>
           {% endif %}
         {% endif %}
+        {% if d.key == "certificat_medical_ssiap_afc" %}
+          <div class="doc-format-box">
+            <div class="doc-format-title">📥 Modèle obligatoire</div>
+            <ul class="doc-format-list">
+              <li>Téléchargez le modèle, faites-le compléter par votre médecin, puis déposez-le ici.</li>
+              <li><a href="{{ url_for('static', filename='certificat.pdf') }}" target="_blank" rel="noopener">Télécharger le modèle du certificat médical</a></li>
+            </ul>
+          </div>
+          {% if ssiap_exam_date and ssiap_medical_from_date %}
+            <div class="doctag pending" style="margin-top:8px;">
+              ⚠️ Le certificat médical doit être daté de moins de 3 mois le jour de votre examen SSIAP.
+              Vous pourrez donc vous rendre chez le médecin à compter du {{ ssiap_medical_from_date|frdate }}.
+            </div>
+          {% else %}
+            <div class="doctag pending" style="margin-top:8px;">
+              ⚠️ Le certificat médical doit être daté de moins de 3 mois le jour de votre examen SSIAP.
+            </div>
+          {% endif %}
+        {% endif %}
         {% if d.key == "permis" %}
   <label style="margin-top:8px;display:flex;align-items:center;gap:8px;font-weight:800;">
     <input
