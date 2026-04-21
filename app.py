@@ -6613,6 +6613,7 @@ def public_vae_desp_submit():
         "created_at": _now_iso(),
         "phone_followups": [],
         "public_hide_popup": False,
+        "ssiap_exam_date": "",
     }
 
     _sync_trainee_afc_medical_requirement(trainee, _session_get(target_session, "name", ""))
@@ -9887,6 +9888,7 @@ def api_create_trainee(session_id: str):
         "created_at": _now_iso(),
         "phone_followups": [],
         "public_hide_popup": False,
+        "ssiap_exam_date": "",
     }
 
     _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""))
@@ -10119,6 +10121,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "personal_amount",
         "other_amount",
         "birth_city",
+        "ssiap_exam_date",
         "address",
         "zip_code",
         "city",
@@ -14595,6 +14598,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         fr_date=fr_date,
         brevo_no_credit_notice=brevo_no_credit_notice,
         docs_relance_planned_fr=fr_date(t.get("docs_relance_auto_planned_date") or ""),
+        ssiap_medical_from_date=fr_date(_subtract_months(t.get("ssiap_exam_date") or "", 3)),
     )
 
 
