@@ -5,6 +5,7 @@ import re
 import zlib
 import hashlib
 import datetime
+import calendar
 import html
 import unicodedata
 import threading
@@ -5092,6 +5093,13 @@ REQUIRED_DOCS = {
         {"key": "certif_med", "label": "Certificat médical (-3 mois)", "accept": "application/pdf"},
         {"key": "assurance_rc", "label": "Attestation d’assurance responsabilité civile", "accept": "application/pdf"},
     ],
+    "AFC_SSIAP_MEDICAL_CERT": [
+        {
+            "key": "certificat_medical_ssiap_afc",
+            "label": "Certificat médical de moins de 3 mois",
+            "accept": "application/pdf,image/jpeg,image/png",
+        },
+    ],
     "DIRIGEANT_CANDIDATE_SHEET": [
         {
             "key": "candidate_info_sheet",
@@ -5122,6 +5130,36 @@ REQUIRED_DOCS = {
     ],
 }
 
+
+def _session_has_afc_marker(session_name: str) -> bool:
+    return "AFC" in (session_name or "").upper()
+
+
+def _sync_trainee_afc_medical_requirement(trainee: Dict[str, Any], session_name: str) -> bool:
+    required = _session_has_afc_marker(session_name)
+    trainee["afc_medical_required"] = required
+    return required
+
+
+def _trainee_requires_afc_medical_cert(trainee: Optional[Dict[str, Any]]) -> bool:
+    if not isinstance(trainee, dict):
+        return False
+    if bool(trainee.get("afc_medical_required")):
+        return True
+    return _session_has_afc_marker(str(trainee.get("session_name") or ""))
+
+
+def _subtract_months(iso_date: str, months: int) -> str:
+    try:
+        source = datetime.date.fromisoformat(str(iso_date or "").strip())
+    except Exception:
+        return ""
+    month_index = source.month - months
+    year = source.year + (month_index - 1) // 12
+    month = (month_index - 1) % 12 + 1
+    day = min(source.day, calendar.monthrange(year, month)[1])
+    return datetime.date(year, month, day).isoformat()
+
 def required_docs_for_training(training_type: str, trainee: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
     tt = (training_type or "").strip().upper()
     docs = list(REQUIRED_DOCS["COMMON"])
@@ -5141,6 +5179,8 @@ def required_docs_for_training(training_type: str, trainee: Optional[Dict[str, A
             docs += list(REQUIRED_DOCS["DIRIGEANT_NO_BAC_PREREQUIS"])
     if tt == "DIRIGEANT VAE":
         docs += list(REQUIRED_DOCS["DIRIGEANT_VAE_ONLY"])
+    if _trainee_requires_afc_medical_cert(trainee):
+        docs += list(REQUIRED_DOCS["AFC_SSIAP_MEDICAL_CERT"])
     return docs
 
 
@@ -6573,8 +6613,10 @@ def public_vae_desp_submit():
         "created_at": _now_iso(),
         "phone_followups": [],
         "public_hide_popup": False,
+        "ssiap_exam_date": "",
     }
 
+    _sync_trainee_afc_medical_requirement(trainee, _session_get(target_session, "name", ""))
     ensure_documents_schema_for_trainee(trainee, training_type)
     trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, training_type) else "incomplete"
 
@@ -9842,8 +9884,10 @@ def api_create_trainee(session_id: str):
         "created_at": _now_iso(),
         "phone_followups": [],
         "public_hide_popup": False,
+        "ssiap_exam_date": "",
     }
 
+    _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""))
     ensure_documents_schema_for_trainee(t, training_type)
     t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
 
@@ -10073,6 +10117,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "personal_amount",
         "other_amount",
         "birth_city",
+        "ssiap_exam_date",
         "address",
         "zip_code",
         "city",
@@ -14006,6 +14051,7 @@ def public_trainee_space(token):
         _mark_public_login(data, s, t)
 
     training_type = _session_get(s, "training_type", "")
+    _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""))
 
     # ✅ aligne la liste des docs requis
     ensure_documents_schema_for_trainee(t, training_type)
@@ -14030,6 +14076,9 @@ def public_trainee_space(token):
     s.pop("stagiaires", None)
     save_data(data)
 
+    ssiap_exam_date = str(t.get("ssiap_exam_date") or "").strip()
+    ssiap_medical_from_date = _subtract_months(ssiap_exam_date, 3) if ssiap_exam_date else ""
+
     return render_template(
         "public_trainee.html",
         session=s,
@@ -14040,6 +14089,8 @@ def public_trainee_space(token):
         show_vtc=show_vtc,
         dossier_ok=dossier_is_complete_total(t, training_type),
         vae_required_docs_deposited=required_docs_are_deposited(t, training_type),
+        ssiap_exam_date=ssiap_exam_date,
+        ssiap_medical_from_date=ssiap_medical_from_date,
     )
 
 
@@ -14221,6 +14272,7 @@ def public_doc_upload(token: str, doc_key: str):
         abort(404)
 
     training_type = _session_get(s, "training_type", "")
+    _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""))
     ensure_documents_schema_for_trainee(t, training_type)
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
         _ensure_livret2_document_entry(t)
@@ -14436,6 +14488,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         abort(404)
 
     training_type = session_view["training_type"]
+    _sync_trainee_afc_medical_requirement(t, session_view["name"])
     default_price = default_training_price(training_type)
 
     # ✅ IMPORTANT : on impose la liste de documents selon la formation (et supprime dom)
@@ -14540,6 +14593,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         fr_date=fr_date,
         brevo_no_credit_notice=brevo_no_credit_notice,
         docs_relance_planned_fr=fr_date(t.get("docs_relance_auto_planned_date") or ""),
+        ssiap_medical_from_date=fr_date(_subtract_months(t.get("ssiap_exam_date") or "", 3)),
     )
 
 
