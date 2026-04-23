@@ -13681,12 +13681,28 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
         """)
     elif status_key == "certified":
         subject = "Félicitations : diplôme VAE obtenu 🎓"
+        google_review_block = """
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin:16px 0">
+          <p style="margin:0 0 8px 0;font-weight:900">⭐ Un petit service (1 minute)</p>
+          <p style="margin:0;color:#374151;line-height:1.55">
+            Si la formation vous a été utile, votre avis aide énormément les futurs stagiaires à choisir une école sérieuse
+            et nous permet d’améliorer encore notre accompagnement.
+          </p>
+          <p style="margin:12px 0 0 0;text-align:center">
+            <a href="https://g.page/r/CZ0Ug-feyXjHEAE"
+               style="display:inline-block;background:#f59e0b;color:#111827;padding:12px 16px;border-radius:10px;text-decoration:none;font-weight:900">
+              👉 Laisser un avis Google
+            </a>
+          </p>
+        </div>
+        """
         html = mail_layout(f"""
         <h2 style=\"margin:0 0 12px 0;color:#0f172a;text-align:center;\">🎉 Diplôme obtenu</h2>
         <p>Bonjour <strong>{first_name}</strong>,</p>
         <p>Félicitations ! Nous avons le plaisir de vous confirmer que vous avez obtenu votre diplôme dans le cadre de votre VAE Dirigeant d'entreprise de sécurité privée (DESP).</p>
         <p>Votre diplôme est désormais disponible dans votre espace candidat.</p>
         <p style=\"margin-top:18px;text-align:center;\"><a href=\"{space_url}\" style=\"{primary_btn}\">Accéder à mon espace candidat</a></p>
+        {google_review_block}
         <p>Nous vous souhaitons une excellente continuation,<br><strong>La Team Intégrale Academy</strong></p>
         """)
 

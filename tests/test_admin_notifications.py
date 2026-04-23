@@ -367,6 +367,7 @@ class VaeStatusNotificationTests(unittest.TestCase):
         self.assertEqual(sent_payload["to_email"], "alice@example.com")
         self.assertIn("diplôme", sent_payload["subject"].lower())
         self.assertIn("Diplôme obtenu", sent_payload["html_content"])
+        self.assertIn("Laisser un avis Google", sent_payload["html_content"])
         self.assertEqual(sent_payload["trainee_id"], "T1")
         self.assertEqual(len(trainee["phone_followups"]), 1)
         self.assertIn("Mail VAE - Diplôme obtenu", trainee["phone_followups"][0]["details"])
