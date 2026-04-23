@@ -335,3 +335,38 @@ class VtcPracticeExamTemplateTests(unittest.TestCase):
         self.assertIn("23/02/2026", html)
         self.assertIn("23/02/2026", sms)
 
+
+class VaeStatusNotificationTests(unittest.TestCase):
+    def setUp(self):
+        self.original_send_email = gestion_app.brevo_send_email
+
+    def tearDown(self):
+        gestion_app.brevo_send_email = self.original_send_email
+
+    def test_certified_status_sends_email_notification(self):
+        sent_payload = {}
+
+        def fake_send_email(to_email, subject, html_content, **kwargs):
+            sent_payload["to_email"] = to_email
+            sent_payload["subject"] = subject
+            sent_payload["html_content"] = html_content
+            sent_payload["trainee_id"] = (kwargs.get("trainee") or {}).get("id")
+            return True
+
+        gestion_app.brevo_send_email = fake_send_email
+        trainee = {
+            "id": "T1",
+            "first_name": "Alice",
+            "email": "alice@example.com",
+            "public_link": "https://espace.exemple/espace/token",
+            "phone_followups": [],
+        }
+
+        gestion_app._notify_vae_status_change(trainee, "certified")
+
+        self.assertEqual(sent_payload["to_email"], "alice@example.com")
+        self.assertIn("diplôme", sent_payload["subject"].lower())
+        self.assertIn("Diplôme obtenu", sent_payload["html_content"])
+        self.assertEqual(sent_payload["trainee_id"], "T1")
+        self.assertEqual(len(trainee["phone_followups"]), 1)
+        self.assertIn("Mail VAE - Diplôme obtenu", trainee["phone_followups"][0]["details"])

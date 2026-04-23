@@ -13679,6 +13679,16 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
         <p>En attendant, n'hésitez pas à consulter votre espace candidat pour suivre votre dossier.</p>
         <p style=\"margin-top:18px;text-align:center;\"><a href=\"{space_url}\" style=\"{secondary_btn}\">Ouvrir mon espace candidat</a></p>
         """)
+    elif status_key == "certified":
+        subject = "Félicitations : diplôme VAE obtenu 🎓"
+        html = mail_layout(f"""
+        <h2 style=\"margin:0 0 12px 0;color:#0f172a;text-align:center;\">🎉 Diplôme obtenu</h2>
+        <p>Bonjour <strong>{first_name}</strong>,</p>
+        <p>Félicitations ! Nous avons le plaisir de vous confirmer que vous avez obtenu votre diplôme dans le cadre de votre VAE Dirigeant d'entreprise de sécurité privée (DESP).</p>
+        <p>Votre diplôme est désormais disponible dans votre espace candidat.</p>
+        <p style=\"margin-top:18px;text-align:center;\"><a href=\"{space_url}\" style=\"{primary_btn}\">Accéder à mon espace candidat</a></p>
+        <p>Nous vous souhaitons une excellente continuation,<br><strong>La Team Intégrale Academy</strong></p>
+        """)
 
     if not subject:
         print(f"[VAE][EMAIL] status inconnu, aucun envoi déclenché: status={status_key!r}")
