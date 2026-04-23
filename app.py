@@ -985,11 +985,36 @@ def _ocr_extract_text_from_image(file_bytes: bytes, filename: str, content_type:
         try:
             with Image.open(BytesIO(original_bytes)) as img:
                 prepared = ImageOps.exif_transpose(img)
+
+                processed_variants: List[Tuple[Image.Image, str]] = []
+
+                # Variante "fidèle" : niveaux de gris + autocontraste.
                 grayscale = ImageOps.grayscale(prepared)
                 boosted = ImageOps.autocontrast(grayscale)
-                out = BytesIO()
-                boosted.save(out, format="PNG", optimize=True)
-                variants.append((out.getvalue(), "upload-preprocessed.png", "image/png"))
+                processed_variants.append((boosted, "upload-preprocessed.png"))
+
+                # Variante "compressée" : réduit la taille des captures très grandes
+                # qui échouent parfois côté API OCR (timeouts / no text parsed).
+                max_edge = 1800
+                resized = boosted.copy()
+                longest_edge = max(resized.size) if resized.size else 0
+                if longest_edge > max_edge:
+                    ratio = max_edge / float(longest_edge)
+                    new_size = (
+                        max(1, int(resized.size[0] * ratio)),
+                        max(1, int(resized.size[1] * ratio)),
+                    )
+                    resized = resized.resize(new_size, Image.Resampling.LANCZOS)
+                processed_variants.append((resized, "upload-preprocessed-small.png"))
+
+                # Variante "binaire" : utile sur captures UI très contrastées.
+                thresholded = boosted.point(lambda p: 255 if p > 175 else 0)
+                processed_variants.append((thresholded, "upload-preprocessed-bw.png"))
+
+                for variant_img, variant_name in processed_variants:
+                    out = BytesIO()
+                    variant_img.save(out, format="PNG", optimize=True)
+                    variants.append((out.getvalue(), variant_name, "image/png"))
         except Exception:
             pass
         return variants
@@ -1036,8 +1061,14 @@ def _ocr_extract_text_from_image(file_bytes: bytes, filename: str, content_type:
             error_message = data.get("ErrorMessage")
             if isinstance(error_message, list):
                 error_message = " ".join(str(x) for x in error_message if x)
-            if error_message:
-                last_error = str(error_message).strip() or "ocr_failed"
+            error_details = data.get("ErrorDetails")
+            if isinstance(error_details, list):
+                error_details = " ".join(str(x) for x in error_details if x)
+            if error_message or error_details:
+                raw_error = " ".join(
+                    part for part in [str(error_message or "").strip(), str(error_details or "").strip()] if part
+                ).strip()
+                last_error = raw_error or "ocr_failed"
 
             parsed_results = data.get("ParsedResults") or []
             if not isinstance(parsed_results, list):
