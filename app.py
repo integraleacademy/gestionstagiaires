@@ -7245,6 +7245,8 @@ def admin_sessions():
         for t in trainees:
             if not t.get("cash_payment_enabled"):
                 continue
+            if bool(t.get("cash_payment_settled")):
+                continue
             try:
                 trainee_cash_amount = float(str(t.get("cash_payment_amount") or "").replace(",", ".").strip() or "0")
             except (TypeError, ValueError):
