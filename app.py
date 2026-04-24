@@ -10142,6 +10142,9 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "financement_comment",
         "cash_payment_enabled",
         "cash_payment_amount",
+        "cash_payment_settled",
+        "cash_payment_settled_date",
+        "cash_payment_settled_comment",
         "financement_new_date_seen",
         "vae_status_label",
         "vae_jury_date",
@@ -10223,6 +10226,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
             "force_dossier_complete",
             "financement_new_date_seen",
             "cash_payment_enabled",
+            "cash_payment_settled",
             "exam_fees_paid",
             "vtc_cmar_manual_ok",
             "vtc_elearning_manual_ok",
@@ -16007,7 +16011,12 @@ def _remove_admin_comment_flag(current: str, flag_text: str) -> str:
     kept = [line for line in current.splitlines() if line.strip() != flag_text]
     return "\n".join(kept).strip()
 
-def _cash_payment_flag_text(raw_amount: Any) -> str:
+def _cash_payment_flag_text(
+    raw_amount: Any,
+    is_settled: Any = False,
+    settled_date: Any = "",
+    settled_comment: Any = "",
+) -> str:
     try:
         amount = float(str(raw_amount or "").replace(",", ".").strip())
     except (TypeError, ValueError):
@@ -16015,17 +16024,38 @@ def _cash_payment_flag_text(raw_amount: Any) -> str:
     if amount <= 0:
         return ""
     pretty = f"{amount:.2f}".rstrip("0").rstrip(".")
-    return f"{pretty} euros vont être réglés en espèces."
+    if is_settled:
+        date_text = (str(settled_date or "").strip())
+        comment_text = (str(settled_comment or "").strip())
+        suffix = ""
+        if date_text:
+            suffix += f" le {date_text}"
+        if comment_text:
+            suffix += f" ({comment_text})"
+        return f"{pretty} euros réglés en espèces{suffix}."
+    return f"{pretty} euros à régler en espèces."
 
 def _sync_cash_payment_comment_flags(trainee: dict) -> None:
-    cash_flag_prefix = "euros vont être réglés en espèces."
+    cash_flag_markers = (
+        "euros vont être réglés en espèces.",
+        "euros à régler en espèces.",
+        "euros réglés en espèces",
+    )
     for key in ("financement_comment", "comment"):
         current_value = (trainee.get(key) or "").strip()
-        kept_lines = [line for line in current_value.splitlines() if cash_flag_prefix not in line]
+        kept_lines = [
+            line for line in current_value.splitlines()
+            if not any(marker in line for marker in cash_flag_markers)
+        ]
         trainee[key] = "\n".join(kept_lines).strip()
 
     is_cash_payment = bool(trainee.get("cash_payment_enabled"))
-    cash_flag = _cash_payment_flag_text(trainee.get("cash_payment_amount"))
+    cash_flag = _cash_payment_flag_text(
+        trainee.get("cash_payment_amount"),
+        trainee.get("cash_payment_settled"),
+        trainee.get("cash_payment_settled_date"),
+        trainee.get("cash_payment_settled_comment"),
+    )
     if is_cash_payment and cash_flag:
         trainee["financement_comment"] = _append_admin_comment_flag(trainee.get("financement_comment", ""), cash_flag)
         trainee["comment"] = _append_admin_comment_flag(trainee.get("comment", ""), cash_flag)
