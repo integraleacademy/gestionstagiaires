@@ -558,13 +558,6 @@
           </div>
           {% endif %}
         </div>
-        <button class="btn btn-outline"
-                type="button"
-                data-dismiss-cash-alert="{{ s.id }}"
-                data-cash-alert-key="{{ s.cash_payment_alert_key }}"
-                style="padding:4px 8px;min-height:auto;">
-          OK
-        </button>
       </div>
       {% endif %}
     </div>
@@ -1489,35 +1482,6 @@
         checkbox.checked = !checkbox.checked;
       }finally{
         checkbox.disabled = false;
-      }
-    });
-  });
-
-  document.querySelectorAll("[data-dismiss-cash-alert]").forEach((btn)=>{
-    btn.addEventListener("click", async ()=>{
-      const sessionId = btn.getAttribute("data-dismiss-cash-alert");
-      const alertKey = (btn.getAttribute("data-cash-alert-key") || "").trim();
-      if(!sessionId || !alertKey) return;
-
-      btn.disabled = true;
-      try{
-        const r = await fetch(`/api/sessions/${sessionId}/update`, {
-          method:"POST",
-          headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({
-            cash_payment_alert_dismissed_key: alertKey
-          })
-        });
-        const res = await r.json();
-        if(!r.ok || !res.ok){
-          alert("Impossible de masquer l'alerte espèces.");
-          btn.disabled = false;
-          return;
-        }
-        btn.closest("div")?.remove();
-      }catch(e){
-        alert("Erreur réseau");
-        btn.disabled = false;
       }
     });
   });
