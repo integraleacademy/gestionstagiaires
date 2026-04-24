@@ -7241,14 +7241,23 @@ def admin_sessions():
         )
         cash_payment_total = 0.0
         cash_payment_trainees = 0
+        cash_payment_items = []
         for t in trainees:
             if not t.get("cash_payment_enabled"):
                 continue
-            cash_payment_trainees += 1
             try:
-                cash_payment_total += float(str(t.get("cash_payment_amount") or "").replace(",", ".").strip() or "0")
+                trainee_cash_amount = float(str(t.get("cash_payment_amount") or "").replace(",", ".").strip() or "0")
             except (TypeError, ValueError):
+                trainee_cash_amount = 0.0
+            if trainee_cash_amount <= 0:
                 continue
+            cash_payment_trainees += 1
+            cash_payment_items.append({
+                "trainee_id": t.get("id"),
+                "trainee_name": _format_trainee_name(t.get("first_name", ""), t.get("last_name", "")),
+                "amount": round(trainee_cash_amount, 2),
+            })
+            cash_payment_total += trainee_cash_amount
         cash_payment_alert_key = f"{cash_payment_trainees}:{round(cash_payment_total, 2):.2f}"
         cash_payment_alert_dismissed_key = (s.get("cash_payment_alert_dismissed_key") or "").strip()
         show_cash_payment_alert = (
@@ -7333,6 +7342,7 @@ def admin_sessions():
             "cmar_registered_total": cmar_registered_total,
             "cash_payment_total": round(cash_payment_total, 2),
             "cash_payment_trainees": cash_payment_trainees,
+            "cash_payment_items": cash_payment_items,
             "show_cash_payment_alert": show_cash_payment_alert,
             "cash_payment_alert_key": cash_payment_alert_key,
             "status_label": status_label,
