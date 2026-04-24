@@ -545,7 +545,19 @@
       </div>
       {% if s.show_cash_payment_alert %}
       <div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;font-weight:800;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-        <span>⚠️ Espèces à récupérer : {{ s.cash_payment_trainees }} stagiaire(s) — {{ "%.2f"|format(s.cash_payment_total or 0)|replace(".", ",") }} €</span>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <span>⚠️ Espèces à récupérer : {{ s.cash_payment_trainees }} stagiaire(s) — {{ "%.2f"|format(s.cash_payment_total or 0)|replace(".", ",") }} €</span>
+          {% if s.cash_payment_items %}
+          <div style="display:flex;flex-wrap:wrap;gap:6px 10px;font-size:.95rem;">
+            {% for item in s.cash_payment_items %}
+            <a href="{{ url_for('admin_trainee_page', session_id=s.id, trainee_id=item.trainee_id) }}"
+               style="color:#9a3412;text-decoration:underline;">
+              {{ item.trainee_name }}
+            </a>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
         <button class="btn btn-outline"
                 type="button"
                 data-dismiss-cash-alert="{{ s.id }}"
