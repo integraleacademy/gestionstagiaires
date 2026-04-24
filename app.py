@@ -7245,6 +7245,8 @@ def admin_sessions():
         for t in trainees:
             if not t.get("cash_payment_enabled"):
                 continue
+            if bool(t.get("cash_payment_settled")):
+                continue
             try:
                 trainee_cash_amount = float(str(t.get("cash_payment_amount") or "").replace(",", ".").strip() or "0")
             except (TypeError, ValueError):
@@ -7259,11 +7261,9 @@ def admin_sessions():
             })
             cash_payment_total += trainee_cash_amount
         cash_payment_alert_key = f"{cash_payment_trainees}:{round(cash_payment_total, 2):.2f}"
-        cash_payment_alert_dismissed_key = (s.get("cash_payment_alert_dismissed_key") or "").strip()
         show_cash_payment_alert = (
             cash_payment_trainees > 0
             and cash_payment_total > 0
-            and cash_payment_alert_key != cash_payment_alert_dismissed_key
         )
 
         total_total = len(trainees)
