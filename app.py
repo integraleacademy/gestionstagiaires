@@ -7261,11 +7261,9 @@ def admin_sessions():
             })
             cash_payment_total += trainee_cash_amount
         cash_payment_alert_key = f"{cash_payment_trainees}:{round(cash_payment_total, 2):.2f}"
-        cash_payment_alert_dismissed_key = (s.get("cash_payment_alert_dismissed_key") or "").strip()
         show_cash_payment_alert = (
             cash_payment_trainees > 0
             and cash_payment_total > 0
-            and cash_payment_alert_key != cash_payment_alert_dismissed_key
         )
 
         total_total = len(trainees)

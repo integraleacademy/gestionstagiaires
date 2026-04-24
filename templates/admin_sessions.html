@@ -544,7 +544,7 @@
         🛜 {{ s.public_logged_in_total or 0 }}/{{ s.total }}
       </div>
       {% if s.show_cash_payment_alert %}
-      <div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;font-weight:800;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+      <div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;font-weight:800;">
         <div style="display:flex;flex-direction:column;gap:6px;">
           <span>⚠️ Espèces à récupérer : {{ s.cash_payment_trainees }} stagiaire(s) — {{ "%.2f"|format(s.cash_payment_total or 0)|replace(".", ",") }} €</span>
           {% if s.cash_payment_items %}
