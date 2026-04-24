@@ -973,6 +973,12 @@ def normalize_first_name(value: str) -> str:
     return lowered.title()
 
 
+def _trainee_alpha_sort_key(trainee: Dict[str, Any]) -> Tuple[str, str]:
+    last_name = _normalized_token(trainee.get("last_name") or "")
+    first_name = _normalized_token(trainee.get("first_name") or "")
+    return last_name, first_name
+
+
 def _ocr_extract_text_from_image(file_bytes: bytes, filename: str, content_type: str = "") -> Tuple[str, str]:
     api_key = (os.environ.get("OCR_SPACE_API_KEY") or "helloworld").strip()
     if not file_bytes:
@@ -9415,10 +9421,7 @@ def admin_trainees_print(session_id: str):
             "phone": format_phone_fr_for_display((t.get("phone") or "").strip()),
         })
 
-    printable_trainees.sort(key=lambda t: (
-        (t.get("last_name") or "").upper(),
-        (t.get("first_name") or "").upper(),
-    ))
+    printable_trainees.sort(key=_trainee_alpha_sort_key)
 
     return render_template(
         "admin_trainees_print.html",
@@ -9677,6 +9680,7 @@ def admin_trainees(session_id: str):
             template_hosting_status=t.get("hosting_status"),
         )
 
+    trainees.sort(key=_trainee_alpha_sort_key)
 
 
 
