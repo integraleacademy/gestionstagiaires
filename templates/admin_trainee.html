@@ -1968,7 +1968,8 @@ if(financementDetails){
         cashPaymentHint.textContent = `${formatEuros(paid)} € réglés en espèces${dateHint}.`;
         cashPaymentHint.style.color = "#16a34a";
       }else if(cashPaymentEnabled.checked){
-        cashPaymentHint.textContent = `${formatEuros(paid)} € versés / ${formatEuros(amount)} € à régler en espèces.`;
+        const remaining = Math.max(amount - paid, 0);
+        cashPaymentHint.textContent = `${formatEuros(remaining)} € restants à régler en espèces (${formatEuros(paid)} € versés).`;
         cashPaymentHint.style.color = "#d97706";
       }else{
         cashPaymentHint.textContent = "";
