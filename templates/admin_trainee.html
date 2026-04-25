@@ -1031,12 +1031,19 @@
                    value="{{ trainee.cash_payment_amount or '' }}"
                    placeholder="Ex : 300"
                    {{ read_only_attr }}>
+            <div id="cashPaymentInstallmentsWrap" style="display:flex;flex-direction:column;gap:8px;">
+              <div class="label">Versements en espèces</div>
+              <div id="cashPaymentInstallmentsList" style="display:flex;flex-direction:column;gap:8px;"></div>
+              {% if not is_read_only %}
+              <button type="button" class="btn btn-ghost" id="cashPaymentAddInstallmentBtn" style="width:max-content;">+ Ajouter un versement</button>
+              {% endif %}
+            </div>
             <label id="cashPaymentSettledWrap" style="display:flex;align-items:center;gap:8px;">
               <input id="cashPaymentSettled" type="checkbox" {% if trainee.cash_payment_settled %}checked{% endif %} {{ read_only_attr }}>
               <span style="font-weight:700;">OK réglé</span>
             </label>
             <div id="cashPaymentSettlementDetails"
-                 style="flex-direction:column;gap:8px;{% if trainee.cash_payment_settled %}display:flex;{% else %}display:none;{% endif %}">
+                 style="display:none;flex-direction:column;gap:8px;">
               <div>
                 <div class="label">Date de règlement</div>
                 <input id="cashPaymentSettledDate" type="date" value="{{ trainee.cash_payment_settled_date or '' }}" {{ read_only_attr }}>
@@ -1741,6 +1748,12 @@ if(financementDetails){
   const cashPaymentSettledDate = document.getElementById("cashPaymentSettledDate");
   const cashPaymentSettledComment = document.getElementById("cashPaymentSettledComment");
   const cashPaymentHint = document.getElementById("cashPaymentHint");
+  const cashPaymentInstallmentsList = document.getElementById("cashPaymentInstallmentsList");
+  const cashPaymentAddInstallmentBtn = document.getElementById("cashPaymentAddInstallmentBtn");
+  const rawCashPaymentInstallments = {{ (trainee.cash_payment_installments or [])|tojson }};
+  const initialCashPaymentInstallments = Array.isArray(rawCashPaymentInstallments)
+    ? rawCashPaymentInstallments
+    : [];
   const totalLine = document.getElementById("paymentTotalLine");
   const diffLine = document.getElementById("paymentDiffLine");
   const isReadOnly = financementDetails.getAttribute("data-read-only") === "1";
@@ -1752,6 +1765,10 @@ if(financementDetails){
     const n = parseFloat(normalized);
     return Number.isNaN(n) ? 0 : n;
   };
+  let cashPaymentInstallments = initialCashPaymentInstallments.map((item)=>({
+    amount: parseAmount(item?.amount),
+    date: (item?.date || "").toString().trim(),
+  }));
 
   const formatEuros = (value) => {
     const rounded = Math.round(value * 100) / 100;
@@ -1815,26 +1832,143 @@ if(financementDetails){
   setupAutosave(cashPaymentSettledDate, "cash_payment_settled_date");
   setupAutosave(cashPaymentSettledComment, "cash_payment_settled_comment");
 
+  const getCashInstallmentsTotal = () => {
+    return cashPaymentInstallments.reduce((sum, item)=> sum + parseAmount(item?.amount), 0);
+  };
+
+  const collectCashInstallmentsPayload = () => {
+    return cashPaymentInstallments
+      .map((item)=>({
+        amount: Math.round(parseAmount(item?.amount) * 100) / 100,
+        date: (item?.date || "").trim(),
+      }))
+      .filter((item)=> item.amount > 0 || item.date);
+  };
+
+  const syncCashSettledFromInstallments = async () => {
+    if(!cashPaymentEnabled?.checked || !cashPaymentSettled || !cashPaymentAmount) return;
+    const targetAmount = parseAmount(cashPaymentAmount.value);
+    const paidAmount = getCashInstallmentsTotal();
+    const isSettledFromInstallments = targetAmount > 0 && Math.abs(paidAmount - targetAmount) < 0.01;
+    const settledChanged = cashPaymentSettled.checked !== isSettledFromInstallments;
+    cashPaymentSettled.checked = isSettledFromInstallments;
+    if(cashPaymentSettledDate && isSettledFromInstallments){
+      const latestDate = cashPaymentInstallments
+        .map((item)=> (item?.date || "").trim())
+        .filter(Boolean)
+        .sort()
+        .slice(-1)[0] || "";
+      cashPaymentSettledDate.value = latestDate;
+    }else if(cashPaymentSettledDate && !isSettledFromInstallments){
+      cashPaymentSettledDate.value = "";
+    }
+    renderCashPaymentState();
+    if(!isReadOnly && (settledChanged || cashPaymentSettledDate)){
+      try{
+        await updateTrainee({
+          cash_payment_settled: cashPaymentSettled.checked,
+          cash_payment_settled_date: cashPaymentSettledDate?.value || "",
+        });
+      }catch(e){
+        console.error("Erreur synchronisation règlement espèces");
+      }
+    }
+  };
+
+  const saveCashInstallments = async () => {
+    if(isReadOnly) return;
+    try{
+      await updateTrainee({ cash_payment_installments: collectCashInstallmentsPayload() });
+      await syncCashSettledFromInstallments();
+    }catch(e){
+      console.error("Erreur sauvegarde versements espèces");
+    }
+  };
+
+  const renderCashInstallments = () => {
+    if(!cashPaymentInstallmentsList) return;
+    cashPaymentInstallmentsList.innerHTML = "";
+    cashPaymentInstallments.forEach((item, index)=>{
+      const row = document.createElement("div");
+      row.style.display = "grid";
+      row.style.gridTemplateColumns = isReadOnly ? "1fr 1fr" : "1fr 1fr auto";
+      row.style.gap = "8px";
+
+      const amountInput = document.createElement("input");
+      amountInput.type = "number";
+      amountInput.min = "0";
+      amountInput.step = "0.01";
+      amountInput.placeholder = "Montant";
+      amountInput.value = item.amount > 0 ? item.amount : "";
+      amountInput.disabled = isReadOnly;
+      amountInput.addEventListener("change", async ()=>{
+        cashPaymentInstallments[index].amount = parseAmount(amountInput.value);
+        await saveCashInstallments();
+      });
+
+      const dateInput = document.createElement("input");
+      dateInput.type = "date";
+      dateInput.value = item.date || "";
+      dateInput.disabled = isReadOnly;
+      dateInput.addEventListener("change", async ()=>{
+        cashPaymentInstallments[index].date = (dateInput.value || "").trim();
+        await saveCashInstallments();
+      });
+
+      row.appendChild(amountInput);
+      row.appendChild(dateInput);
+
+      if(!isReadOnly){
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "btn btn-ghost";
+        removeBtn.textContent = "Supprimer";
+        removeBtn.addEventListener("click", async ()=>{
+          cashPaymentInstallments.splice(index, 1);
+          renderCashInstallments();
+          await saveCashInstallments();
+        });
+        row.appendChild(removeBtn);
+      }
+
+      cashPaymentInstallmentsList.appendChild(row);
+    });
+    if(cashPaymentInstallments.length === 0){
+      const empty = document.createElement("div");
+      empty.className = "hint";
+      empty.textContent = "Aucun versement saisi.";
+      cashPaymentInstallmentsList.appendChild(empty);
+    }
+  };
+
+  if(cashPaymentAddInstallmentBtn && !isReadOnly){
+    cashPaymentAddInstallmentBtn.addEventListener("click", ()=>{
+      cashPaymentInstallments.push({ amount: 0, date: "" });
+      renderCashInstallments();
+    });
+  }
+
   const renderCashPaymentState = () => {
     if(!cashPaymentEnabled) return;
     if(cashPaymentAmountWrap){
       cashPaymentAmountWrap.style.display = cashPaymentEnabled.checked ? "flex" : "none";
     }
     if(cashPaymentSettlementDetails){
-      cashPaymentSettlementDetails.style.display = (cashPaymentEnabled.checked && cashPaymentSettled?.checked) ? "flex" : "none";
+      cashPaymentSettlementDetails.style.display = "none";
     }
     if(cashPaymentHint){
       const amount = parseAmount(cashPaymentAmount?.value);
+      const paid = getCashInstallmentsTotal();
       if(cashPaymentEnabled.checked && amount <= 0){
         cashPaymentHint.textContent = "Renseigne le montant qui sera réglé en espèces.";
         cashPaymentHint.style.color = "#dc2626";
       }else if(cashPaymentEnabled.checked && cashPaymentSettled?.checked){
         const settledDate = (cashPaymentSettledDate?.value || "").trim();
         const dateHint = settledDate ? ` le ${formatIsoDateFr(settledDate)}` : "";
-        cashPaymentHint.textContent = `${formatEuros(amount)} € réglés en espèces${dateHint}.`;
+        cashPaymentHint.textContent = `${formatEuros(paid)} € réglés en espèces${dateHint}.`;
         cashPaymentHint.style.color = "#16a34a";
       }else if(cashPaymentEnabled.checked){
-        cashPaymentHint.textContent = `${formatEuros(amount)} € à récupérer en espèces.`;
+        cashPaymentHint.textContent = `${formatEuros(paid)} € versés / ${formatEuros(amount)} € à régler en espèces.`;
         cashPaymentHint.style.color = "#d97706";
       }else{
         cashPaymentHint.textContent = "";
@@ -1876,9 +2010,13 @@ if(financementDetails){
     input.addEventListener("change", renderTotals);
   });
   cashPaymentAmount?.addEventListener("input", renderCashPaymentState);
-  cashPaymentAmount?.addEventListener("change", renderCashPaymentState);
+  cashPaymentAmount?.addEventListener("change", async ()=>{
+    renderCashPaymentState();
+    await syncCashSettledFromInstallments();
+  });
   cashPaymentSettledDate?.addEventListener("change", renderCashPaymentState);
 
+  renderCashInstallments();
   renderTotals();
   renderCashPaymentState();
 }

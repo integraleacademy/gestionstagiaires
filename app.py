@@ -10152,6 +10152,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "financement_comment",
         "cash_payment_enabled",
         "cash_payment_amount",
+        "cash_payment_installments",
         "cash_payment_settled",
         "cash_payment_settled_date",
         "cash_payment_settled_comment",
@@ -10223,6 +10224,23 @@ def api_update_trainee(session_id: str, trainee_id: str):
         if k in ("send_vae_notification", "send_exam_fees_notification", "send_elearning_notification"):
             continue
         if k not in allowed:
+            continue
+
+        if k == "cash_payment_installments":
+            normalized_installments = []
+            if isinstance(v, list):
+                for item in v:
+                    if not isinstance(item, dict):
+                        continue
+                    try:
+                        amount = float(str(item.get("amount") or "").replace(",", ".").strip() or "0")
+                    except (TypeError, ValueError):
+                        amount = 0.0
+                    normalized_installments.append({
+                        "amount": round(max(amount, 0.0), 2),
+                        "date": str(item.get("date") or "").strip(),
+                    })
+            t[k] = normalized_installments
             continue
 
         # bools
