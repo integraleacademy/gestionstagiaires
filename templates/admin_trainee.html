@@ -1043,7 +1043,7 @@
               <span style="font-weight:700;">OK réglé</span>
             </label>
             <div id="cashPaymentSettlementDetails"
-                 style="flex-direction:column;gap:8px;{% if trainee.cash_payment_settled %}display:flex;{% else %}display:none;{% endif %}">
+                 style="display:none;flex-direction:column;gap:8px;">
               <div>
                 <div class="label">Date de règlement</div>
                 <input id="cashPaymentSettledDate" type="date" value="{{ trainee.cash_payment_settled_date or '' }}" {{ read_only_attr }}>
@@ -1954,7 +1954,7 @@ if(financementDetails){
       cashPaymentAmountWrap.style.display = cashPaymentEnabled.checked ? "flex" : "none";
     }
     if(cashPaymentSettlementDetails){
-      cashPaymentSettlementDetails.style.display = (cashPaymentEnabled.checked && cashPaymentSettled?.checked) ? "flex" : "none";
+      cashPaymentSettlementDetails.style.display = "none";
     }
     if(cashPaymentHint){
       const amount = parseAmount(cashPaymentAmount?.value);
