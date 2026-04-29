@@ -9732,9 +9732,16 @@ def admin_trainees(session_id: str):
             template_hosting_status=t.get("hosting_status"),
         )
 
-    trainees.sort(key=_trainee_alpha_sort_key)
-
-
+    if show_vae:
+        trainees.sort(
+            key=lambda t: (
+                _parse_iso_datetime(t.get("created_at") or "") or datetime.datetime.min.replace(tzinfo=datetime.timezone.utc),
+                _trainee_alpha_sort_key(t),
+            ),
+            reverse=True,
+        )
+    else:
+        trainees.sort(key=_trainee_alpha_sort_key)
 
     return render_template(
         "admin_trainees.html",
