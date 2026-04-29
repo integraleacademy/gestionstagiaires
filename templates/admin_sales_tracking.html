@@ -337,19 +337,31 @@
     pendingSalesDelta = 0;
   };
 
-  const showSalesNamesModal = (title, names) => {
+  const showSalesNamesModal = (title, entries) => {
     if (!salesNamesModal || !salesNamesList) return;
-    const safeNames = Array.isArray(names) ? names : [];
-    if (!safeNames.length) return;
+    const safeEntries = Array.isArray(entries) ? entries : [];
+    if (!safeEntries.length) return;
     if (salesNamesTitle) {
       salesNamesTitle.textContent = title || 'Inscriptions';
     }
     if (salesNamesSub) {
-      salesNamesSub.textContent = `${safeNames.length} inscription(s)`;
+      salesNamesSub.textContent = `${safeEntries.length} inscription(s)`;
     }
-    salesNamesList.innerHTML = safeNames
-      .map((name) => `<li>${String(name || 'Stagiaire')}</li>`)
-      .join('');
+    salesNamesList.innerHTML = '';
+    safeEntries.forEach((entry) => {
+      const li = document.createElement('li');
+      const safeName = String(entry?.name || 'Stagiaire');
+      const safeUrl = String(entry?.url || '').trim();
+      if (safeUrl) {
+        const link = document.createElement('a');
+        link.href = safeUrl;
+        link.textContent = safeName;
+        li.appendChild(link);
+      } else {
+        li.textContent = safeName;
+      }
+      salesNamesList.appendChild(li);
+    });
     salesNamesModal.classList.add('is-visible');
     document.body.style.overflow = 'hidden';
   };
@@ -396,20 +408,20 @@
     { id: 'weekCount', key: 'week', label: 'Ventes de la semaine' },
   ];
 
-  const renderFlashCount = (containerId, count, names, label) => {
+  const renderFlashCount = (containerId, count, entries, label) => {
     const node = document.getElementById(containerId);
     if (!node) return;
     const safeCount = Number(count) || 0;
-    const safeNames = Array.isArray(names) ? names : [];
+    const safeEntries = Array.isArray(entries) ? entries : [];
     node.innerHTML = '';
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'flash-helper-count';
     btn.textContent = `${safeCount} inscription(s)`;
-    if (!safeCount || !safeNames.length) {
+    if (!safeCount || !safeEntries.length) {
       btn.disabled = true;
     } else {
-      btn.addEventListener('click', () => showSalesNamesModal(label, safeNames));
+      btn.addEventListener('click', () => showSalesNamesModal(label, safeEntries));
     }
     node.appendChild(btn);
   };
@@ -551,9 +563,9 @@
 
   flashPeriods.forEach(({ id, key, label }) => {
     const node = document.getElementById(id);
-    const names = salesNamesByPeriod[key] || [];
-    const initialCount = names.length;
-    renderFlashCount(id, initialCount, names, label);
+    const entries = salesNamesByPeriod[key] || [];
+    const initialCount = entries.length;
+    renderFlashCount(id, initialCount, entries, label);
     node?.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
         showSalesNamesModal(label, salesNamesByPeriod[key] || []);

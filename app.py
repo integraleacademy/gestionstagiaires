@@ -7482,6 +7482,17 @@ def _sales_trainee_display_name(trainee: Dict[str, Any]) -> str:
     return "Stagiaire"
 
 
+def _sales_trainee_item(trainee: Dict[str, Any], session_id: str) -> Dict[str, str]:
+    trainee_id = str(trainee.get("id") or "").strip()
+    trainee_url = ""
+    if session_id and trainee_id:
+        trainee_url = url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id)
+    return {
+        "name": _sales_trainee_display_name(trainee),
+        "url": trainee_url,
+    }
+
+
 def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> Dict[str, Any]:
     today = datetime.date.today()
     yesterday = today - datetime.timedelta(days=1)
@@ -7504,9 +7515,9 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
     yesterday_inscriptions = 0
     week_revenue = 0
     week_inscriptions = 0
-    today_sales_names: List[str] = []
-    yesterday_sales_names: List[str] = []
-    week_sales_names: List[str] = []
+    today_sales_names: List[Dict[str, str]] = []
+    yesterday_sales_names: List[Dict[str, str]] = []
+    week_sales_names: List[Dict[str, str]] = []
     sale_markers: List[str] = []
     annual_trainings_map: Dict[str, Dict[str, Any]] = {}
 
@@ -7536,20 +7547,20 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
             training_price = unit_price if unit_price > 0 else _parse_positive_int(trainee.get("training_price"))
             trainee_ref = str(trainee.get("id") or trainee.get("email") or trainee.get("nom") or trainee.get("name") or "")
             sale_markers.append(f"{session_id}|{trainee_ref}|{anchor_date.isoformat()}|{training_price}")
-            trainee_display_name = _sales_trainee_display_name(trainee)
+            trainee_item = _sales_trainee_item(trainee, session_id)
 
             if anchor_date == today:
                 today_revenue += training_price
                 today_inscriptions += 1
-                today_sales_names.append(trainee_display_name)
+                today_sales_names.append(trainee_item)
             if anchor_date == yesterday:
                 yesterday_revenue += training_price
                 yesterday_inscriptions += 1
-                yesterday_sales_names.append(trainee_display_name)
+                yesterday_sales_names.append(trainee_item)
             if week_start <= anchor_date <= today:
                 week_revenue += training_price
                 week_inscriptions += 1
-                week_sales_names.append(trainee_display_name)
+                week_sales_names.append(trainee_item)
 
             if anchor_date.year != selected_year:
                 continue
