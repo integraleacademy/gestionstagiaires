@@ -169,6 +169,7 @@
   .filter-btn--a3p{ background:#dcfce7; color:#15803d; }
   .filter-btn--vtc{ background:#f3e8ff; color:#7e22ce; }
   .filter-btn--status{ background:#e5e7eb; color:#374151; }
+  .filter-btn--cash{ background:#ffedd5; color:#9a3412; }
   .filter-btn--all{ background:#cbd5f5; color:#1e1b4b; }
   .dashboard-grid{
     display:grid;
@@ -498,6 +499,7 @@
     <button class="filter-btn filter-btn--status" data-filter-group="status" data-filter-value="ongoing">Afficher les formations en cours</button>
     <button class="filter-btn filter-btn--status" data-filter-group="status" data-filter-value="upcoming">Afficher les prochaines formations</button>
     <button class="filter-btn filter-btn--status" data-filter-group="status" data-filter-value="ended">Afficher les formations terminées</button>
+    <button class="filter-btn filter-btn--cash" data-filter-group="payment" data-filter-value="cash">Paiements en espèces</button>
     <button class="filter-btn filter-btn--all" data-filter-reset="true">Afficher toutes les formations</button>
   </div>
 </div>
@@ -505,7 +507,7 @@
 
 <div class="grid cards" id="sessionsGrid">
   {% for s in sessions %}
-  <div class="card session-card session-card--{{ s.status_key }} training-{{ s.training_type_class }}{% if 'VAE' in (s.training_type or '')|upper %} training-vae{% endif %}" data-session-training-type="{{ (s.training_type or '')|upper }}">
+  <div class="card session-card session-card--{{ s.status_key }} training-{{ s.training_type_class }}{% if 'VAE' in (s.training_type or '')|upper %} training-vae{% endif %}{% if s.show_cash_payment_alert %} has-cash-alert{% endif %}" data-session-training-type="{{ (s.training_type or '')|upper }}">
     <div class="card-row">
       <div>
         <div class="card-title {% if not is_read_only %}session-name-editable{% endif %}"
@@ -1724,13 +1726,15 @@
     const filterState = {
       training: null,
       status: null,
+      payment: null,
     };
 
     function applyFilters(){
       cards.forEach(card => {
         const matchTraining = !filterState.training || card.classList.contains(`training-${filterState.training}`);
         const matchStatus = !filterState.status || card.classList.contains(`session-card--${filterState.status}`);
-        card.style.display = (matchTraining && matchStatus) ? "" : "none";
+        const matchPayment = !filterState.payment || card.classList.contains("has-cash-alert");
+        card.style.display = (matchTraining && matchStatus && matchPayment) ? "" : "none";
       });
     }
 
@@ -1748,10 +1752,10 @@
       });
 
       if(resetButton){
-        resetButton.classList.toggle("is-active", !filterState.training && !filterState.status);
+        resetButton.classList.toggle("is-active", !filterState.training && !filterState.status && !filterState.payment);
       }
       if(dashboardResetButton){
-        dashboardResetButton.classList.toggle("is-active", !filterState.training && !filterState.status);
+        dashboardResetButton.classList.toggle("is-active", !filterState.training && !filterState.status && !filterState.payment);
       }
     }
 
@@ -1790,6 +1794,7 @@
     function resetAllFilters(){
       filterState.training = null;
       filterState.status = null;
+      filterState.payment = null;
       setActiveButtons();
       applyFilters();
     }
