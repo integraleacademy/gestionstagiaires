@@ -7461,6 +7461,38 @@ def _sales_training_unit_price(training_type: str, training_label: str) -> int:
     return default_training_price(training_type) or 0
 
 
+def _sales_trainee_display_name(trainee: Dict[str, Any]) -> str:
+    first_name = str(
+        trainee.get("first_name")
+        or trainee.get("prenom")
+        or ""
+    ).strip()
+    last_name = str(
+        trainee.get("last_name")
+        or trainee.get("nom")
+        or ""
+    ).strip()
+    display_name = _format_trainee_name(first_name, last_name)
+    if display_name:
+        return display_name
+
+    fallback_name = str(trainee.get("name") or "").strip()
+    if fallback_name:
+        return fallback_name
+    return "Stagiaire"
+
+
+def _sales_trainee_item(trainee: Dict[str, Any], session_id: str) -> Dict[str, str]:
+    trainee_id = str(trainee.get("id") or "").strip()
+    trainee_url = ""
+    if session_id and trainee_id:
+        trainee_url = url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id)
+    return {
+        "name": _sales_trainee_display_name(trainee),
+        "url": trainee_url,
+    }
+
+
 def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> Dict[str, Any]:
     today = datetime.date.today()
     yesterday = today - datetime.timedelta(days=1)
@@ -7483,6 +7515,9 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
     yesterday_inscriptions = 0
     week_revenue = 0
     week_inscriptions = 0
+    today_sales_names: List[Dict[str, str]] = []
+    yesterday_sales_names: List[Dict[str, str]] = []
+    week_sales_names: List[Dict[str, str]] = []
     sale_markers: List[str] = []
     annual_trainings_map: Dict[str, Dict[str, Any]] = {}
 
@@ -7512,16 +7547,20 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
             training_price = unit_price if unit_price > 0 else _parse_positive_int(trainee.get("training_price"))
             trainee_ref = str(trainee.get("id") or trainee.get("email") or trainee.get("nom") or trainee.get("name") or "")
             sale_markers.append(f"{session_id}|{trainee_ref}|{anchor_date.isoformat()}|{training_price}")
+            trainee_item = _sales_trainee_item(trainee, session_id)
 
             if anchor_date == today:
                 today_revenue += training_price
                 today_inscriptions += 1
+                today_sales_names.append(trainee_item)
             if anchor_date == yesterday:
                 yesterday_revenue += training_price
                 yesterday_inscriptions += 1
+                yesterday_sales_names.append(trainee_item)
             if week_start <= anchor_date <= today:
                 week_revenue += training_price
                 week_inscriptions += 1
+                week_sales_names.append(trainee_item)
 
             if anchor_date.year != selected_year:
                 continue
@@ -7595,10 +7634,13 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
         "monthly_rows": monthly_rows,
         "today_revenue": today_revenue,
         "today_inscriptions": today_inscriptions,
+        "today_sales_names": today_sales_names,
         "yesterday_revenue": yesterday_revenue,
         "yesterday_inscriptions": yesterday_inscriptions,
+        "yesterday_sales_names": yesterday_sales_names,
         "week_revenue": week_revenue,
         "week_inscriptions": week_inscriptions,
+        "week_sales_names": week_sales_names,
         "today_iso": today.isoformat(),
         "yesterday_iso": yesterday.isoformat(),
         "week_start_iso": week_start.isoformat(),

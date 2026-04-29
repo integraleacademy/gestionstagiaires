@@ -15,6 +15,8 @@
 .flash-label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;opacity:.9;font-weight:800;}
 .flash-value{font-size:30px;font-weight:900;line-height:1.1;margin-top:4px;}
 .flash-helper{font-size:13px;opacity:.95;margin-top:4px;}
+.flash-helper-count{all:unset;display:inline-flex;cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+.flash-helper-count[disabled]{cursor:default;text-decoration:none;opacity:.95;}
 .sales-hero-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px;}
 .kpi{background:#fff;border:1px solid #dbeafe;border-radius:14px;padding:12px;}
 .kpi-label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;font-weight:800;}
@@ -77,6 +79,14 @@
   50%{transform:scale(1.03);text-shadow:0 0 18px rgba(255,255,255,.35);}
   100%{transform:scale(1);text-shadow:0 0 0 rgba(255,255,255,0);}
 }
+.sales-names-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.55);z-index:1003;padding:18px;}
+.sales-names-modal.is-visible{display:flex;}
+.sales-names-dialog{width:min(520px,94vw);max-height:80vh;overflow:auto;background:#fff;border-radius:18px;padding:16px;border:1px solid #cbd5e1;box-shadow:0 20px 40px rgba(2,6,23,.35);}
+.sales-names-title{margin:0;color:#0f172a;font-size:20px;font-weight:900;}
+.sales-names-sub{margin-top:4px;font-size:13px;color:#475569;}
+.sales-names-list{margin:12px 0 0;padding-left:18px;color:#0f172a;}
+.sales-names-list li{margin-bottom:5px;}
+.sales-names-close{margin-top:14px;border:1px solid #cbd5e1;background:#f8fafc;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;}
 </style>
 
 <div class="sales-page">
@@ -86,6 +96,14 @@
       <h2 id="saleAlertTitle" class="sale-alert-title">1 nouvelle vente</h2>
       <p id="saleAlertSub" class="sale-alert-sub">Bravo l’équipe, continuez comme ça 🚀</p>
       <button id="saleAlertClose" class="sale-alert-btn" type="button">Top ❤️</button>
+    </div>
+  </div>
+  <div id="salesNamesModal" class="sales-names-modal" role="dialog" aria-modal="true" aria-labelledby="salesNamesTitle">
+    <div class="sales-names-dialog">
+      <h2 id="salesNamesTitle" class="sales-names-title">Inscriptions</h2>
+      <div id="salesNamesSub" class="sales-names-sub"></div>
+      <ol id="salesNamesList" class="sales-names-list"></ol>
+      <button id="salesNamesClose" class="sales-names-close" type="button">Fermer</button>
     </div>
   </div>
   <div class="sales-hero">
@@ -242,8 +260,18 @@
   const saleAlertClose = document.getElementById('saleAlertClose');
   const saleAlertTitle = document.getElementById('saleAlertTitle');
   const saleAlertSub = document.getElementById('saleAlertSub');
+  const salesNamesModal = document.getElementById('salesNamesModal');
+  const salesNamesTitle = document.getElementById('salesNamesTitle');
+  const salesNamesSub = document.getElementById('salesNamesSub');
+  const salesNamesList = document.getElementById('salesNamesList');
+  const salesNamesClose = document.getElementById('salesNamesClose');
   let knownSalesSignature = {{ sales_signature|tojson }};
   let knownSalesCount = Number({{ sales_count }});
+  let salesNamesByPeriod = {
+    today: {{ today_sales_names|tojson }},
+    yesterday: {{ yesterday_sales_names|tojson }},
+    week: {{ week_sales_names|tojson }},
+  };
   let pendingSalesDelta = 0;
   let celebrationTimeoutId = null;
   let isCelebrationActive = false;
@@ -309,6 +337,43 @@
     pendingSalesDelta = 0;
   };
 
+  const showSalesNamesModal = (title, entries) => {
+    if (!salesNamesModal || !salesNamesList) return;
+    const safeEntries = Array.isArray(entries) ? entries : [];
+    if (!safeEntries.length) return;
+    if (salesNamesTitle) {
+      salesNamesTitle.textContent = title || 'Inscriptions';
+    }
+    if (salesNamesSub) {
+      salesNamesSub.textContent = `${safeEntries.length} inscription(s)`;
+    }
+    salesNamesList.innerHTML = '';
+    safeEntries.forEach((entry) => {
+      const li = document.createElement('li');
+      const safeName = String(entry?.name || 'Stagiaire');
+      const safeUrl = String(entry?.url || '').trim();
+      if (safeUrl) {
+        const link = document.createElement('a');
+        link.href = safeUrl;
+        link.textContent = safeName;
+        li.appendChild(link);
+      } else {
+        li.textContent = safeName;
+      }
+      salesNamesList.appendChild(li);
+    });
+    salesNamesModal.classList.add('is-visible');
+    document.body.style.overflow = 'hidden';
+  };
+
+  const hideSalesNamesModal = () => {
+    if (!salesNamesModal) return;
+    salesNamesModal.classList.remove('is-visible');
+    if (!saleAlert?.classList.contains('is-visible')) {
+      document.body.style.overflow = '';
+    }
+  };
+
   const handleSalesDiff = (salesDiff) => {
     const safeDiff = Number(salesDiff) || 0;
     if (!safeDiff) return;
@@ -337,6 +402,29 @@
   const monthGrid = document.getElementById('monthGrid');
   const annualTrainingGrid = document.getElementById('annualTrainingGrid');
   const annualTrainingsCount = document.getElementById('annualTrainingsCount');
+  const flashPeriods = [
+    { id: 'todayCount', key: 'today', label: 'Ventes du jour' },
+    { id: 'yesterdayCount', key: 'yesterday', label: 'Ventes de la veille' },
+    { id: 'weekCount', key: 'week', label: 'Ventes de la semaine' },
+  ];
+
+  const renderFlashCount = (containerId, count, entries, label) => {
+    const node = document.getElementById(containerId);
+    if (!node) return;
+    const safeCount = Number(count) || 0;
+    const safeEntries = Array.isArray(entries) ? entries : [];
+    node.innerHTML = '';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'flash-helper-count';
+    btn.textContent = `${safeCount} inscription(s)`;
+    if (!safeCount || !safeEntries.length) {
+      btn.disabled = true;
+    } else {
+      btn.addEventListener('click', () => showSalesNamesModal(label, safeEntries));
+    }
+    node.appendChild(btn);
+  };
 
   const parseIntSafe = (raw) => {
     const cleaned = String(raw || '').replace(/[^\d]/g, '');
@@ -440,11 +528,16 @@
 
   const refreshView = (payload) => {
     document.getElementById('todayRevenue')?.setAttribute('data-euro', payload.today_revenue || 0);
-    document.getElementById('todayCount').textContent = `${payload.today_inscriptions || 0} inscription(s)`;
+    salesNamesByPeriod = {
+      today: Array.isArray(payload.today_sales_names) ? payload.today_sales_names : [],
+      yesterday: Array.isArray(payload.yesterday_sales_names) ? payload.yesterday_sales_names : [],
+      week: Array.isArray(payload.week_sales_names) ? payload.week_sales_names : [],
+    };
+    renderFlashCount('todayCount', payload.today_inscriptions || 0, salesNamesByPeriod.today, 'Ventes du jour');
     document.getElementById('yesterdayRevenue')?.setAttribute('data-euro', payload.yesterday_revenue || 0);
-    document.getElementById('yesterdayCount').textContent = `${payload.yesterday_inscriptions || 0} inscription(s)`;
+    renderFlashCount('yesterdayCount', payload.yesterday_inscriptions || 0, salesNamesByPeriod.yesterday, 'Ventes de la veille');
     document.getElementById('weekRevenue')?.setAttribute('data-euro', payload.week_revenue || 0);
-    document.getElementById('weekCount').textContent = `${payload.week_inscriptions || 0} inscription(s)`;
+    renderFlashCount('weekCount', payload.week_inscriptions || 0, salesNamesByPeriod.week, 'Ventes de la semaine');
     document.getElementById('annualRevenue')?.setAttribute('data-euro', payload.annual_revenue || 0);
     document.getElementById('annualCount').textContent = `${payload.annual_inscriptions || 0} inscriptions`;
     const annualProgressPct = (Number(payload.annual_progress_ratio || 0) * 100);
@@ -467,6 +560,22 @@
     annualInput?.addEventListener('input', handleAnnualObjectiveChange);
     fmtEuroNodes();
   };
+
+  flashPeriods.forEach(({ id, key, label }) => {
+    const node = document.getElementById(id);
+    const entries = salesNamesByPeriod[key] || [];
+    const initialCount = entries.length;
+    renderFlashCount(id, initialCount, entries, label);
+    node?.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        showSalesNamesModal(label, salesNamesByPeriod[key] || []);
+      }
+    });
+  });
+  salesNamesClose?.addEventListener('click', hideSalesNamesModal);
+  salesNamesModal?.addEventListener('click', (event) => {
+    if (event.target === salesNamesModal) hideSalesNamesModal();
+  });
 
   saveBtn?.addEventListener('click', async () => {
     feedback.textContent = 'Enregistrement…';
