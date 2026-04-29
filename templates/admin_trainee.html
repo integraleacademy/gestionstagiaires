@@ -3423,7 +3423,25 @@ if(chkExamFeesPaid){
   chkExamFeesPaid.addEventListener("change", async ()=>{
     try{
       let sendExamFeesNotification = false;
+      const isDirigeantVae = {{ 'true' if show_vae else 'false' }};
       if(chkExamFeesPaid.checked){
+        if(isDirigeantVae){
+          const currentCmarId = (document.getElementById("editVtcCmarId")?.value || "").trim();
+          const providedCmarId = window.prompt("Paiement des frais d'examen coché. Merci de saisir l'identifiant CMAR :", currentCmarId);
+          if(providedCmarId === null){
+            chkExamFeesPaid.checked = false;
+            return;
+          }
+          const normalizedCmarId = providedCmarId.trim();
+          if(!normalizedCmarId){
+            window.alert("L'identifiant CMAR est obligatoire pour valider le paiement des frais d'examen.");
+            chkExamFeesPaid.checked = false;
+            return;
+          }
+          const cmarInput = document.getElementById("editVtcCmarId");
+          if(cmarInput) cmarInput.value = normalizedCmarId;
+          await updateTrainee({ vtc_cmar_id: normalizedCmarId });
+        }
         sendExamFeesNotification = await window.confirmMailSmsSend?.();
       }
       await updateTrainee({
