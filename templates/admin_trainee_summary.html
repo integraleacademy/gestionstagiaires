@@ -117,6 +117,9 @@
       btn.addEventListener("click", async () => {
         const already = btn.dataset.alreadyPrinted === "1";
         if (!already) {
+          const now = new Date();
+          const todayLabel = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
+          applyPrinted(todayLabel);
           try {
             const resp = await fetch(btn.dataset.markUrl, { method: "POST" });
             if (resp.ok) {
