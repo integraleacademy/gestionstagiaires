@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+  <h1 style="margin:0">Demandes WeDoF CPF/EDOF</h1>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <a class="btn btn-outline" href="{{ url_for('admin_sessions') }}">← Retour aux sessions</a>
+    <span class="btn btn-violet" style="pointer-events:none;">Nouvelles demandes : {{ wedof_new_requests_count or 0 }}</span>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:12px;">
+  <div class="card-row" style="justify-content:space-between;align-items:center;">
+    <div>
+      <div class="card-title">Demandes WeDoF CPF/EDOF</div>
+      <div class="muted">Webhook URL: https://gestionstagiaires-r5no.onrender.com/api/webhooks/wedof</div>
+    </div>
+  </div>
+  <div style="overflow:auto;margin-top:10px;">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Event</th><th>Delivery ID</th><th>Statut</th><th>Nom</th><th>Prénom</th><th>Email</th><th>Réception</th><th>Détails</th><th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in wedof_webhooks %}
+          {% set p = item.payload or {} %}
+          <tr>
+            <td>{{ item.event or 'N/A' }}</td>
+            <td>{{ item.delivery_id or 'N/A' }}</td>
+            <td>{{ p.status or p.dossier_status or p.state or p.statut or item.event or 'N/A' }}</td>
+            <td>{{ p.last_name or p.lastname or p.nom or 'Non fourni' }}</td>
+            <td>{{ p.first_name or p.firstname or p.prenom or 'Non fourni' }}</td>
+            <td>{{ p.email or p.mail or 'Non fourni' }}</td>
+            <td>{{ item.received_at or 'N/A' }}</td>
+            <td>
+              <details>
+                <summary class="btn btn-outline" style="display:inline-block;cursor:pointer;">Voir JSON brut</summary>
+                <pre style="white-space:pre-wrap;max-width:700px;overflow:auto;background:#f8fafc;border:1px solid #e2e8f0;padding:8px;border-radius:8px;">{{ item.raw_payload or (item.payload|tojson(indent=2)) }}</pre>
+              </details>
+            </td>
+            <td>
+              {% if item.processed %}
+                <span class="badge-ok">Traité</span>
+              {% else %}
+                <form method="post" action="{{ url_for('admin_mark_wedof_treated', entry_id=item.id) }}">
+                  <button class="btn btn-outline" type="submit">Marquer comme traité</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="9" class="muted">Aucune demande WeDoF reçue.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
