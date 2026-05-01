@@ -7548,7 +7548,27 @@ def send_wedof_to_salesforce(entry_id: str):
     training_title = str(training.get("title") or folder_details.get("title") or "").strip()
     training_date = str(training.get("date") or folder_details.get("date") or "").strip()
     location = str(training.get("location") or folder_details.get("location") or "").strip()
-    origin = str(payload.get("source") or payload.get("origin") or folder_details.get("origin") or "").strip() or "Website"
+    origin = "Compte CPF"
+
+    def _map_training_type(raw_value: str) -> str:
+        value = (raw_value or "").strip().lower()
+        if not value:
+            return ""
+        if "vtc" in value or "chauffeur" in value:
+            return "CHAUFFEUR VTC"
+        if "a3p" in value:
+            return "A3P"
+        if "aps" in value:
+            return "APS"
+        if "dirigeant" in value or "desp" in value:
+            return "DIRIGEANT"
+        if "bts" in value:
+            return "BTS"
+        if "ssiap" in value:
+            return "SSIAP"
+        return ""
+
+    training_type = _map_training_type(training_title)
 
     summary = []
     if training_title:
@@ -7584,7 +7604,7 @@ def send_wedof_to_salesforce(entry_id: str):
         "lead_source": "Website",
         "industry": "Education",
         "description": " | ".join(summary) or "Demande WeDoF CPF/EDOF",
-        "00NSa00000G2PxB": training_title,
+        "00NSa00000G2PxB": training_type,
         "00NSa00000KDPOT": location,
         "00NSa00000KPDmX": origin,
         "00NSa00000GcKVx": str(entry.get("raw_payload") or "")[:3000],
