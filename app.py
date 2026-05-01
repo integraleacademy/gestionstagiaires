@@ -14956,34 +14956,43 @@ def admin_trainee_summary_print(session_id: str, trainee_id: str):
 @app.post("/api/stagiaires/<trainee_id>/mark-printed")
 @admin_login_required
 def api_mark_trainee_printed(trainee_id: str):
-    data = load_data()
-    app.logger.info("MARK PRINTED appelé pour stagiaire ID = %s", trainee_id)
-    target = None
-    source_bucket = ""
-    for s in data.get("sessions", []):
-        if isinstance(s.get("trainees"), list):
-            target = next((x for x in s.get("trainees", []) if str(x.get("id") or "") == str(trainee_id)), None)
-            if target:
-                source_bucket = "sessions[].trainees[]"
-        if not target and isinstance(s.get("stagiaires"), list):
-            target = next((x for x in s.get("stagiaires", []) if str(x.get("id") or "") == str(trainee_id)), None)
-            if target:
-                source_bucket = "sessions[].stagiaires[]"
-        if target:
-            break
+    try:
+        app.logger.info("MARK PRINTED START trainee_id=%s", trainee_id)
 
-    if not target:
-        return jsonify({"success": False, "error": "trainee_not_found"}), 404
+        data = load_data()
+        found = False
 
-    app.logger.info("MARK PRINTED before trainee_id=%s printed=%s printed_at=%s source=%s", trainee_id, target.get("printed"), target.get("printed_at"), source_bucket)
-    target["printed"] = True
-    target["printed_at"] = _now_iso()
-    target["summary_printed_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    save_data(data)
-    app.logger.info("MARK PRINTED after trainee_id=%s printed=%s printed_at=%s", trainee_id, target.get("printed"), target.get("printed_at"))
-    app.logger.info("printed = true sauvegardé dans fichier = %s (stagiaire=%s)", DATA_FILE, trainee_id)
-    app.logger.info("save_data() appelée pour stagiaire ID = %s", trainee_id)
-    return jsonify({"success": True, "printed_at": target["printed_at"]})
+        for s in data.get("sessions", []):
+            if isinstance(s.get("trainees"), list):
+                for t in s["trainees"]:
+                    if str(t.get("id")) == str(trainee_id):
+                        app.logger.info("FOUND in trainees[]")
+                        t["printed"] = True
+                        t["printed_at"] = _now_iso()
+                        found = True
+
+            if isinstance(s.get("stagiaires"), list):
+                for t in s["stagiaires"]:
+                    if str(t.get("id")) == str(trainee_id):
+                        app.logger.info("FOUND in stagiaires[]")
+                        t["printed"] = True
+                        t["printed_at"] = _now_iso()
+                        found = True
+
+        if not found:
+            app.logger.error("TRAINEE NOT FOUND %s", trainee_id)
+            return jsonify({"success": False, "error": "not found"}), 404
+
+        save_data(data)
+        app.logger.info("SAVE OK trainee_id=%s", trainee_id)
+
+        return jsonify({"success": True})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        app.logger.error("ERROR MARK PRINTED: %s", str(e))
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/fiche-adef")
