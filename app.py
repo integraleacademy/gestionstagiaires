@@ -3585,23 +3585,94 @@ def _save_wedof_webhooks(entries: List[Dict[str, Any]]) -> None:
 
 def _extract_wedof_payload_fields(payload: Dict[str, Any]) -> Dict[str, str]:
     flat = json.dumps(payload, ensure_ascii=False)
-    def pick(*keys: str) -> str:
-        for key in keys:
-            value = payload.get(key)
-            if isinstance(value, str) and value.strip():
-                return value.strip()
+    attendee = payload.get("attendee") if isinstance(payload.get("attendee"), dict) else {}
+    attendee_address = attendee.get("address") if isinstance(attendee.get("address"), dict) else {}
+    training = payload.get("trainingActionInfo") if isinstance(payload.get("trainingActionInfo"), dict) else {}
+
+    def to_text(value: Any) -> str:
+        if value is None:
+            return ""
+        text = str(value).strip()
+        return text
+
+    def pick(*values: Any) -> str:
+        for value in values:
+            text = to_text(value)
+            if text:
+                return text
         return ""
+
     return {
-        "wedof_case_id": pick("id", "dossier_id", "edof_id", "application_id"),
-        "first_name": pick("first_name", "firstname", "prenom"),
-        "last_name": pick("last_name", "lastname", "nom"),
-        "email": pick("email", "mail"),
-        "phone": pick("phone", "telephone", "tel"),
-        "training_title": pick("training_title", "formation", "formation_title", "intitule_formation"),
-        "status": pick("status", "dossier_status", "state", "statut"),
-        "training_date": pick("training_date", "date_formation", "start_date"),
+        "wedof_case_id": pick(payload.get("externalId"), payload.get("dataProviderId"), payload.get("id"), payload.get("folderId"), payload.get("registrationFolderId"), payload.get("registration_folder_id"), payload.get("resourceId"), payload.get("objectId"), payload.get("dossierId"), payload.get("dossier_id"), payload.get("edof_id"), payload.get("application_id")),
+        "first_name": pick(attendee.get("firstName"), payload.get("first_name"), payload.get("firstname"), payload.get("prenom")),
+        "last_name": pick(attendee.get("lastName"), payload.get("last_name"), payload.get("lastname"), payload.get("nom")),
+        "email": pick(attendee.get("email"), payload.get("email"), payload.get("mail")),
+        "phone": pick(attendee.get("phoneNumber"), payload.get("phone"), payload.get("telephone"), payload.get("tel")),
+        "full_address": pick(attendee.get("fullAddress")),
+        "city": pick(attendee_address.get("city")),
+        "zip_code": pick(attendee_address.get("zipCode")),
+        "date_of_birth": pick(attendee.get("dateOfBirth")),
+        "training_title": pick(training.get("title"), payload.get("training_title"), payload.get("formation"), payload.get("formation_title"), payload.get("intitule_formation")),
+        "status": pick(payload.get("state"), payload.get("status"), payload.get("dossier_status"), payload.get("statut")),
+        "external_link": pick(payload.get("externalLink")),
+        "training_date": pick(training.get("sessionStartDate"), payload.get("training_date"), payload.get("date_formation"), payload.get("start_date")),
+        "training_end_date": pick(training.get("sessionEndDate")),
+        "price_total_incl": pick(training.get("totalIncl")),
         "_raw": flat,
     }
+
+
+def _find_wedof_folder_id(payload: Any) -> str:
+    if not isinstance(payload, dict):
+        return ""
+    data_obj = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+    candidates = [
+        payload.get("id"),
+        payload.get("folderId"),
+        payload.get("registrationFolderId"),
+        payload.get("registration_folder_id"),
+        payload.get("resourceId"),
+        payload.get("objectId"),
+        payload.get("dossierId"),
+        data_obj.get("id"),
+        data_obj.get("folderId"),
+        data_obj.get("registrationFolderId"),
+    ]
+    for value in candidates:
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text:
+            return text
+    return ""
+
+
+def _fetch_wedof_folder_details(folder_id: str) -> Dict[str, Any]:
+    token = (os.environ.get("WEDOF_API_TOKEN") or "").strip()
+    if not folder_id or not token:
+        return {}
+
+    url_candidates = [
+        f"https://www.wedof.fr/api/registration-folders/{folder_id}",
+        f"https://api.wedof.fr/registration-folders/{folder_id}",
+        f"https://api.wedof.fr/api/registration-folders/{folder_id}",
+    ]
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json",
+    }
+
+    for url in url_candidates:
+        try:
+            app.logger.info("[WEDOF] appel API détail dossier = %s", url)
+            resp = requests.get(url, headers=headers, timeout=15)
+            body_preview = resp.text[:1200]
+            app.logger.info("[WEDOF] réponse API détail dossier = status=%s body=%s", resp.status_code, body_preview)
+            if resp.ok:
+                return resp.json() if resp.content else {}
+        except Exception:
+            app.logger.exception("[WEDOF] erreur appel API détail dossier url=%s", url)
+    return {}
 
 
 def _notification_id(prefix: str) -> str:
@@ -6584,7 +6655,7 @@ def find_session_by_name(data: Dict[str, Any], session_name: str) -> Optional[Di
 
 @app.get("/")
 def home():
-    return redirect(url_for("admin_sessions"))
+    return redirect(url_for("admin_wedof_requests"))
 
 
 @app.get("/test-positionnement")
@@ -7206,8 +7277,7 @@ def scotia_vae_justificatif_download(dossier_id: str, doc_id: str):
 @admin_login_required
 def admin_sessions():
     data = load_data()
-    wedof_webhooks = _load_wedof_webhooks()[:100]
-    wedof_new_requests_count = sum(1 for item in wedof_webhooks if not bool(item.get("processed")))
+    wedof_new_requests_count = sum(1 for item in _load_wedof_webhooks() if not bool(item.get("processed")))
     out_sessions = []
     current_year = datetime.date.today().year
     dashboard_start = datetime.date(current_year, 1, 1)
@@ -7412,12 +7482,24 @@ def admin_sessions():
         formation_types=FORMATION_TYPES,
         dashboard_year=current_year,
         yearly_training_counts=yearly_training_counts,
-        wedof_webhooks=wedof_webhooks,
         wedof_new_requests_count=wedof_new_requests_count,
     ))
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
     return response
+
+
+
+@app.get("/admin/wedof")
+@admin_login_required
+def admin_wedof_requests():
+    wedof_webhooks = _load_wedof_webhooks()[:100]
+    wedof_new_requests_count = sum(1 for item in wedof_webhooks if not bool(item.get("processed")))
+    return render_template(
+        "admin_wedof.html",
+        wedof_webhooks=wedof_webhooks,
+        wedof_new_requests_count=wedof_new_requests_count,
+    )
 
 @app.post("/admin/wedof/mark-treated/<entry_id>")
 @admin_login_required
@@ -7433,18 +7515,21 @@ def admin_mark_wedof_treated(entry_id: str):
             break
     if changed:
         _save_wedof_webhooks(entries)
-    return redirect(url_for("admin_sessions"))
+    return redirect(url_for("admin_wedof_requests"))
 
 @app.route("/api/webhooks/wedof", methods=["POST"])
 def wedof_webhook():
     event = (request.headers.get("X-Wedof-Event") or "").strip()
     signature = (request.headers.get("X-Wedof-Signature") or "").strip()
     delivery_id = (request.headers.get("X-Wedof-Delivery") or "").strip()
-    payload = request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True)
+    if payload is None:
+        payload = {}
     raw_body = request.get_data(cache=True) or b""
+    headers_map = {k: v for k, v in request.headers.items()}
 
-    app.logger.info("[WEDOF WEBHOOK] event reçu event=%s delivery=%s", event, delivery_id)
-    app.logger.info("[WEDOF WEBHOOK] payload reçu payload=%s", payload)
+    app.logger.info("[WEDOF] headers reçus = %s", headers_map)
+    app.logger.info("[WEDOF] payload brut reçu = %s", raw_body.decode("utf-8", errors="replace"))
 
     secret = (os.environ.get("WEDOF_WEBHOOK_SECRET") or "").encode("utf-8")
     sig_valid = False
@@ -7456,6 +7541,10 @@ def wedof_webhook():
         app.logger.warning("[WEDOF WEBHOOK] signature non vérifiée (secret ou signature manquant) signature=%s", signature)
 
     try:
+        folder_id = _find_wedof_folder_id(payload)
+        app.logger.info("[WEDOF] identifiant dossier trouvé = %s", folder_id or "(aucun)")
+        wedof_folder_details = _fetch_wedof_folder_details(folder_id) if folder_id else {}
+
         entries = _load_wedof_webhooks()
         entry = {
             "id": f"WEDOF-{uuid.uuid4().hex[:10].upper()}",
@@ -7463,6 +7552,10 @@ def wedof_webhook():
             "event": event,
             "delivery_id": delivery_id,
             "payload": payload,
+            "raw_payload": raw_body.decode("utf-8", errors="replace"),
+            "headers": headers_map,
+            "folder_id": folder_id,
+            "wedof_folder_details": wedof_folder_details,
             "processed": False,
             "signature": signature,
             "signature_valid": bool(sig_valid),
@@ -7470,8 +7563,17 @@ def wedof_webhook():
         entries.insert(0, entry)
         _save_wedof_webhooks(entries)
 
-        fields = _extract_wedof_payload_fields(payload if isinstance(payload, dict) else {})
-        if event.lower().startswith(("cpf", "edof", "dossier")) or fields.get("wedof_case_id"):
+        merged_payload = payload.copy() if isinstance(payload, dict) else {}
+        if isinstance(wedof_folder_details, dict):
+            merged_payload.update({k: v for k, v in wedof_folder_details.items() if k not in merged_payload})
+        fields = _extract_wedof_payload_fields(merged_payload if isinstance(merged_payload, dict) else {})
+        app.logger.info("[WEDOF MAPPING] nom = %s", fields.get("last_name") or "-")
+        app.logger.info("[WEDOF MAPPING] prenom = %s", fields.get("first_name") or "-")
+        app.logger.info("[WEDOF MAPPING] email = %s", fields.get("email") or "-")
+        app.logger.info("[WEDOF MAPPING] formation = %s", fields.get("training_title") or "-")
+        if folder_id and not fields.get("wedof_case_id"):
+            fields["wedof_case_id"] = folder_id
+        if event.lower().startswith(("cpf", "edof", "dossier", "registrationfolder")) or fields.get("wedof_case_id"):
             data = load_data()
             sessions = data.setdefault("sessions", [])
             wedof_session = next((s for s in sessions if s.get("id") == "wedof-cpf-edof"), None)
@@ -7488,7 +7590,7 @@ def wedof_webhook():
             match["email"] = fields.get("email") or match.get("email", "")
             match["phone"] = fields.get("phone") or match.get("phone", "")
             match["training_title"] = fields.get("training_title") or match.get("training_title", "")
-            match["wedof_status"] = fields.get("status") or match.get("wedof_status", "")
+            match["wedof_status"] = fields.get("status") or event or match.get("wedof_status", "")
             match["wedof_case_id"] = fields.get("wedof_case_id") or match.get("wedof_case_id", "")
             match["training_date"] = fields.get("training_date") or match.get("training_date", "")
             match["wedof_last_event"] = event
@@ -7501,6 +7603,7 @@ def wedof_webhook():
         app.logger.exception("[WEDOF WEBHOOK] erreur")
 
     return jsonify({"ok": True}), 200
+
 
 @app.get("/api/webhooks/wedof")
 def wedof_webhook_browser_check():
