@@ -4219,6 +4219,8 @@ def _session_trainees_list(s: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 def _convert_old_stagiaire_to_trainee(st: Dict[str, Any]) -> Dict[str, Any]:
     # best-effort mapping
+    printed_raw = st.get("printed")
+    printed_bool = printed_raw if isinstance(printed_raw, bool) else str(printed_raw or "").strip().lower() in {"1", "true", "yes", "oui"}
     return {
         "id": st.get("id") or ("TRN-" + uuid.uuid4().hex[:8].upper()),
         "personal_id": st.get("id") or "",
@@ -4240,7 +4242,7 @@ def _convert_old_stagiaire_to_trainee(st: Dict[str, Any]) -> Dict[str, Any]:
         "updated_at": st.get("updated_at") or "",
         "phone_followups": st.get("phone_followups") or [],
         "summary_printed_at": st.get("summary_printed_at") or "",
-        "printed": bool(st.get("printed")),
+        "printed": printed_bool,
         "printed_at": st.get("printed_at") or "",
     }
 
@@ -14948,6 +14950,7 @@ def admin_trainee_summary_print(session_id: str, trainee_id: str):
 @admin_login_required
 def api_mark_trainee_printed(trainee_id: str):
     data = load_data()
+    app.logger.info("MARK PRINTED appelé pour stagiaire ID = %s", trainee_id)
     target = None
     for s in data.get("sessions", []):
         if isinstance(s.get("trainees"), list):
@@ -14964,6 +14967,7 @@ def api_mark_trainee_printed(trainee_id: str):
     target["printed_at"] = _now_iso()
     target["summary_printed_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     save_data(data)
+    app.logger.info("printed = true sauvegardé dans fichier = %s (stagiaire=%s)", DATA_FILE, trainee_id)
     return jsonify({"success": True, "printed_at": target["printed_at"]})
 
 

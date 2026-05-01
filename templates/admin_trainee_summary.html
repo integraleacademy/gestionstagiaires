@@ -42,7 +42,7 @@
       <div class="training-badge training-badge--{{ summary_training_badge.color }}">{{ summary_training_badge.label }}</div>
       <div class="summary-created-at">Dossier créé le {{ trainee.created_at|frdate or "—" }}</div>
       <div class="summary-no-print" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
-        {% set is_printed = trainee.printed or trainee.summary_printed_at %}
+        {% set is_printed = trainee.printed %}
         <button
           type="button"
           id="btnPrintSummary"
@@ -56,6 +56,7 @@
         <div id="summaryPrintStatus" class="summary-print-status" {% if not is_printed %}hidden{% endif %}>
           Fiche imprimée le {{ trainee.printed_at|frdatetime or trainee.summary_printed_at|frdate or "—" }}
         </div>
+        <div class="summary-print-status">printed = {{ trainee.printed }}</div>
       </div>
     </div>
   </div>
