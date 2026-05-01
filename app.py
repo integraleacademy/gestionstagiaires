@@ -14917,6 +14917,20 @@ def admin_trainee_summary(session_id: str, trainee_id: str):
     )
 
 
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/summary/print")
+@admin_login_required
+def admin_trainee_summary_print(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+
+    printed_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    t["summary_printed_at"] = printed_date
+    save_data(data)
+    return jsonify({"ok": True, "printed_at": printed_date})
+
+
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/fiche-adef")
 @admin_login_required
 def admin_trainee_adef_sheet(session_id: str, trainee_id: str):
