@@ -45,8 +45,9 @@
         {% set is_printed = trainee.printed == true or trainee.printed == "true" %}
         <button
           type="button"
-          id="btnPrintSummary"
+          id="printBtn"
           class="btn btn-primary btn-print-summary {% if is_printed %}is-printed{% endif %}"
+          data-trainee-id="{{ trainee.id }}"
           data-mark-url="{{ url_for('api_mark_trainee_printed', trainee_id=trainee.id) }}"
           data-already-printed="{{ '1' if is_printed else '0' }}">
           {% if is_printed %}✅ Imprimé{% else %}🖨️ Imprimer{% endif %}
@@ -106,7 +107,7 @@
   </div>
   <script>
     (function(){
-      const btn = document.getElementById("btnPrintSummary");
+      const btn = document.getElementById("printBtn");
       const status = document.getElementById("summaryPrintStatus");
       if(!btn || !status) return;
 
@@ -118,15 +119,20 @@
         status.textContent = `Fiche imprimée le ${dateLabel}`;
       };
 
-      btn.addEventListener("click", async () => {
+      btn.addEventListener("click", async (event) => {
+        event.preventDefault();
+        const traineeId = btn.dataset.traineeId;
+        console.log("CLICK IMPRIMER", traineeId);
         const already = btn.dataset.alreadyPrinted === "1";
         if (!already) {
           const now = new Date();
           const todayLabel = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
           applyPrinted(todayLabel);
-          window.print();
           try {
-            const resp = await fetch(btn.dataset.markUrl, { method: "POST" });
+            const resp = await fetch(`/api/stagiaires/${traineeId}/mark-printed`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" }
+            });
             if (resp.ok) {
               const payload = await resp.json();
               if (payload && payload.success && payload.printed_at) {
@@ -136,6 +142,7 @@
               }
             }
           } catch (e) {}
+          window.print();
         } else {
           window.print();
         }
