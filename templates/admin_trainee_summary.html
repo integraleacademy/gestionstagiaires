@@ -121,7 +121,7 @@
           const todayLabel = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
           applyPrinted(todayLabel);
           try {
-            const resp = await fetch(btn.dataset.markUrl, { method: "POST" });
+            const resp = await fetch(btn.dataset.markUrl, { method: "POST", keepalive: true });
             if (resp.ok) {
               const payload = await resp.json();
               if (payload && payload.printed_at) {
