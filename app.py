@@ -7206,6 +7206,8 @@ def scotia_vae_justificatif_download(dossier_id: str, doc_id: str):
 @admin_login_required
 def admin_sessions():
     data = load_data()
+    wedof_webhooks = _load_wedof_webhooks()[:100]
+    wedof_new_requests_count = sum(1 for item in wedof_webhooks if not bool(item.get("processed")))
     out_sessions = []
     current_year = datetime.date.today().year
     dashboard_start = datetime.date(current_year, 1, 1)
@@ -7410,7 +7412,8 @@ def admin_sessions():
         formation_types=FORMATION_TYPES,
         dashboard_year=current_year,
         yearly_training_counts=yearly_training_counts,
-        wedof_webhooks=_load_wedof_webhooks()[:100],
+        wedof_webhooks=wedof_webhooks,
+        wedof_new_requests_count=wedof_new_requests_count,
     ))
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"

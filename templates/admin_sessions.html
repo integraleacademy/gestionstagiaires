@@ -32,6 +32,26 @@
     border-color:#15803d;
     color:#ffffff;
   }
+  .btn-violet{
+    background:linear-gradient(135deg, #7c3aed, #6d28d9);
+    border-color:#5b21b6;
+    color:#fff;
+    font-weight:800;
+  }
+  .btn-violet:hover{ filter:brightness(1.03); }
+  .cpf-badge-count{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:24px;
+    height:24px;
+    padding:0 8px;
+    border-radius:999px;
+    background:#ffffff;
+    color:#5b21b6;
+    font-weight:900;
+    margin-left:6px;
+  }
   .quick-convention-state.is-hidden{ display:none; }
   
   /* Modale plus large */
@@ -380,6 +400,10 @@
     <button class="btn btn-outline" id="btnOpenCnapsImport">CNAPS</button>
     <a class="btn btn-primary" href="{{ url_for('admin_secretariat') }}">Gestion secrétariat</a>
     <a class="btn btn-outline" href="{{ url_for('admin_afc') }}">AFC</a>
+    <a class="btn btn-violet" href="#wedof-cpf-requests">
+      Nouvelles demandes CPF
+      <span class="cpf-badge-count">{{ wedof_new_requests_count or 0 }}</span>
+    </a>
     <a class="btn btn-outline" href="{{ url_for('scotia_login') }}" target="_blank" rel="noopener">SCOTIA</a>
     {% if not is_read_only %}
       <button class="btn btn-outline" id="btnOpenVtcCheck">Check VTC théorie</button>
@@ -423,7 +447,7 @@
   </div>
 </div>
 
-<div class="card" style="margin-bottom:12px;">
+<div class="card" id="wedof-cpf-requests" style="margin-bottom:12px;">
   <div class="card-row" style="justify-content:space-between;align-items:center;">
     <div>
       <div class="card-title">Documents à contrôler</div>
