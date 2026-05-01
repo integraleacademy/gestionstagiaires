@@ -4,6 +4,7 @@ import uuid
 import re
 import zlib
 import hashlib
+import hmac
 import datetime
 import calendar
 import html
@@ -302,6 +303,7 @@ def _resolve_persist_dir() -> str:
 
 PERSIST_DIR = _resolve_persist_dir()
 DATA_FILE = os.path.join(PERSIST_DIR, "data.json")
+WEDOF_WEBHOOK_FILE = os.path.join(PERSIST_DIR, "wedof_webhooks.json")
 
 BACKUP_DIR = os.path.join(PERSIST_DIR, "backups")
 os.makedirs(BACKUP_DIR, exist_ok=True)
@@ -313,6 +315,7 @@ AUTO_RESTORE_FROM_BACKUP = (os.environ.get("AUTO_RESTORE_FROM_BACKUP", "1") or "
 BACKUP_SNAPSHOT_BEFORE_SAVE = (os.environ.get("BACKUP_SNAPSHOT_BEFORE_SAVE", "1") or "").strip().lower() in {"1", "true", "yes", "on"}
 
 _data_lock = threading.RLock()
+_wedof_webhook_lock = threading.RLock()
 _last_backup_times: Dict[str, float] = {}
 _storage_startup_logged = False
 
@@ -3558,6 +3561,47 @@ def load_data() -> Dict[str, Any]:
 
 def save_data(data: Dict[str, Any]) -> None:
     _write_json_with_backups(DATA_FILE, data, _data_lock)
+
+def _load_wedof_webhooks() -> List[Dict[str, Any]]:
+    if not os.path.exists(WEDOF_WEBHOOK_FILE):
+        return []
+    try:
+        with open(WEDOF_WEBHOOK_FILE, "r", encoding="utf-8") as f:
+            loaded = json.load(f)
+        if isinstance(loaded, list):
+            return loaded
+    except Exception:
+        app.logger.exception("[WEDOF WEBHOOK] erreur lecture historique")
+    return []
+
+def _save_wedof_webhooks(entries: List[Dict[str, Any]]) -> None:
+    with _wedof_webhook_lock:
+        tmp = WEDOF_WEBHOOK_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(entries, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, WEDOF_WEBHOOK_FILE)
+
+def _extract_wedof_payload_fields(payload: Dict[str, Any]) -> Dict[str, str]:
+    flat = json.dumps(payload, ensure_ascii=False)
+    def pick(*keys: str) -> str:
+        for key in keys:
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return ""
+    return {
+        "wedof_case_id": pick("id", "dossier_id", "edof_id", "application_id"),
+        "first_name": pick("first_name", "firstname", "prenom"),
+        "last_name": pick("last_name", "lastname", "nom"),
+        "email": pick("email", "mail"),
+        "phone": pick("phone", "telephone", "tel"),
+        "training_title": pick("training_title", "formation", "formation_title", "intitule_formation"),
+        "status": pick("status", "dossier_status", "state", "statut"),
+        "training_date": pick("training_date", "date_formation", "start_date"),
+        "_raw": flat,
+    }
 
 
 def _notification_id(prefix: str) -> str:
@@ -7366,11 +7410,94 @@ def admin_sessions():
         formation_types=FORMATION_TYPES,
         dashboard_year=current_year,
         yearly_training_counts=yearly_training_counts,
+        wedof_webhooks=_load_wedof_webhooks()[:100],
     ))
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
     return response
 
+@app.post("/admin/wedof/mark-treated/<entry_id>")
+@admin_login_required
+@admin_write_required
+def admin_mark_wedof_treated(entry_id: str):
+    entries = _load_wedof_webhooks()
+    changed = False
+    for item in entries:
+        if str(item.get("id") or "") == str(entry_id):
+            item["processed"] = True
+            item["processed_at"] = _now_iso()
+            changed = True
+            break
+    if changed:
+        _save_wedof_webhooks(entries)
+    return redirect(url_for("admin_sessions"))
+
+@app.route("/api/webhooks/wedof", methods=["POST"])
+def wedof_webhook():
+    event = (request.headers.get("X-Wedof-Event") or "").strip()
+    signature = (request.headers.get("X-Wedof-Signature") or "").strip()
+    delivery_id = (request.headers.get("X-Wedof-Delivery") or "").strip()
+    payload = request.get_json(silent=True) or {}
+    raw_body = request.get_data(cache=True) or b""
+
+    app.logger.info("[WEDOF WEBHOOK] event reçu event=%s delivery=%s", event, delivery_id)
+    app.logger.info("[WEDOF WEBHOOK] payload reçu payload=%s", payload)
+
+    secret = (os.environ.get("WEDOF_WEBHOOK_SECRET") or "").encode("utf-8")
+    sig_valid = False
+    if signature and secret:
+        computed = hmac.new(secret, raw_body, hashlib.sha256).hexdigest()
+        provided = signature.split("=", 1)[-1].strip()
+        sig_valid = hmac.compare_digest(computed, provided)
+    else:
+        app.logger.warning("[WEDOF WEBHOOK] signature non vérifiée (secret ou signature manquant) signature=%s", signature)
+
+    try:
+        entries = _load_wedof_webhooks()
+        entry = {
+            "id": f"WEDOF-{uuid.uuid4().hex[:10].upper()}",
+            "received_at": _now_iso(),
+            "event": event,
+            "delivery_id": delivery_id,
+            "payload": payload,
+            "processed": False,
+            "signature": signature,
+            "signature_valid": bool(sig_valid),
+        }
+        entries.insert(0, entry)
+        _save_wedof_webhooks(entries)
+
+        fields = _extract_wedof_payload_fields(payload if isinstance(payload, dict) else {})
+        if event.lower().startswith(("cpf", "edof", "dossier")) or fields.get("wedof_case_id"):
+            data = load_data()
+            sessions = data.setdefault("sessions", [])
+            wedof_session = next((s for s in sessions if s.get("id") == "wedof-cpf-edof"), None)
+            if wedof_session is None:
+                wedof_session = {"id": "wedof-cpf-edof", "name": "Leads WeDoF CPF/EDOF", "training_type": "CPF/EDOF", "trainees": []}
+                sessions.append(wedof_session)
+            trainees = _session_trainees_list(wedof_session)
+            match = next((t for t in trainees if (t.get("wedof_case_id") and t.get("wedof_case_id") == fields.get("wedof_case_id")) or (fields.get("email") and (t.get("email") or "").lower() == fields.get("email", "").lower())), None)
+            if match is None:
+                match = {"id": f"tr-{uuid.uuid4().hex[:12]}", "created_at": _now_iso()}
+                trainees.append(match)
+            match["last_name"] = fields.get("last_name") or match.get("last_name", "")
+            match["first_name"] = fields.get("first_name") or match.get("first_name", "")
+            match["email"] = fields.get("email") or match.get("email", "")
+            match["phone"] = fields.get("phone") or match.get("phone", "")
+            match["training_title"] = fields.get("training_title") or match.get("training_title", "")
+            match["wedof_status"] = fields.get("status") or match.get("wedof_status", "")
+            match["wedof_case_id"] = fields.get("wedof_case_id") or match.get("wedof_case_id", "")
+            match["training_date"] = fields.get("training_date") or match.get("training_date", "")
+            match["wedof_last_event"] = event
+            match["wedof_last_delivery_id"] = delivery_id
+            match["updated_at"] = _now_iso()
+            wedof_session["trainees"] = trainees
+            save_data(data)
+            app.logger.info("[WEDOF WEBHOOK] dossier créé/mis à jour case_id=%s email=%s", match.get("wedof_case_id"), match.get("email"))
+    except Exception:
+        app.logger.exception("[WEDOF WEBHOOK] erreur")
+
+    return jsonify({"ok": True}), 200
 
 
 

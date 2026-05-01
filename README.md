@@ -24,6 +24,13 @@ python app.py
 - `AUTO_RESTORE_FROM_BACKUP` (optionnel, défaut `1`) : en cas de `data.json` manquant/corrompu, tente une restauration automatique depuis `PERSIST_DIR/backups`.
 - `CNAPSV3_BASE_URL` (optionnel, défaut `https://cnapsv3.onrender.com`)
 - `GESTIONSTAGIAIRE_SYNC_TOKEN` (obligatoire pour synchroniser le statut CNAPS vers cnapsv3)
+- `WEDOF_WEBHOOK_SECRET` (optionnel au démarrage, secret de signature webhook WeDoF)
+
+## Intégration WeDoF CPF/EDOF
+
+- Endpoint webhook: `POST /api/webhooks/wedof`
+- URL Render à configurer côté WeDoF: `https://gestionstagiaires-r5no.onrender.com/api/webhooks/wedof`
+- Historique webhook persisté dans `PERSIST_DIR/wedof_webhooks.json`
 
 ## Module VAE DESP
 
