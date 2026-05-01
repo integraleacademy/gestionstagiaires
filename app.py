@@ -14881,6 +14881,13 @@ def admin_trainee_summary(session_id: str, trainee_id: str):
     t = next((x for x in trainees if x.get("id") == trainee_id), None)
     if not t:
         abort(404)
+    app.logger.info(
+        "SUMMARY LOAD trainee_id=%s source_file=%s printed=%s printed_at=%s",
+        trainee_id,
+        DATA_FILE,
+        t.get("printed"),
+        t.get("printed_at"),
+    )
 
     training_name = (s.get("name") or "").strip() or formation_label(_session_get(s, "training_type", ""))
     training_type = _session_get(s, "training_type", "")
@@ -14952,22 +14959,30 @@ def api_mark_trainee_printed(trainee_id: str):
     data = load_data()
     app.logger.info("MARK PRINTED appelé pour stagiaire ID = %s", trainee_id)
     target = None
+    source_bucket = ""
     for s in data.get("sessions", []):
         if isinstance(s.get("trainees"), list):
             target = next((x for x in s.get("trainees", []) if str(x.get("id") or "") == str(trainee_id)), None)
+            if target:
+                source_bucket = "sessions[].trainees[]"
         if not target and isinstance(s.get("stagiaires"), list):
             target = next((x for x in s.get("stagiaires", []) if str(x.get("id") or "") == str(trainee_id)), None)
+            if target:
+                source_bucket = "sessions[].stagiaires[]"
         if target:
             break
 
     if not target:
         return jsonify({"success": False, "error": "trainee_not_found"}), 404
 
+    app.logger.info("MARK PRINTED before trainee_id=%s printed=%s printed_at=%s source=%s", trainee_id, target.get("printed"), target.get("printed_at"), source_bucket)
     target["printed"] = True
     target["printed_at"] = _now_iso()
     target["summary_printed_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     save_data(data)
+    app.logger.info("MARK PRINTED after trainee_id=%s printed=%s printed_at=%s", trainee_id, target.get("printed"), target.get("printed_at"))
     app.logger.info("printed = true sauvegardé dans fichier = %s (stagiaire=%s)", DATA_FILE, trainee_id)
+    app.logger.info("save_data() appelée pour stagiaire ID = %s", trainee_id)
     return jsonify({"success": True, "printed_at": target["printed_at"]})
 
 
