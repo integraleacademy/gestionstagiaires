@@ -7536,9 +7536,6 @@ def send_wedof_to_salesforce(entry_id: str):
     entry = next((item for item in entries if str(item.get("id") or "") == str(entry_id)), None)
     if entry is None:
         return jsonify({"ok": False, "error": "Demande introuvable."}), 404
-    if bool(entry.get("salesforce_sent")):
-        return jsonify({"ok": True, "already_sent": True, "message": "Déjà envoyé vers Salesforce."}), 200
-
     payload = entry.get("payload") if isinstance(entry.get("payload"), dict) else {}
     attendee = payload.get("attendee") if isinstance(payload.get("attendee"), dict) else {}
     training = payload.get("trainingActionInfo") if isinstance(payload.get("trainingActionInfo"), dict) else {}
@@ -7601,8 +7598,14 @@ def send_wedof_to_salesforce(entry_id: str):
     now_iso = _now_iso()
     entry["salesforce_sent"] = True
     entry["salesforce_sent_at"] = now_iso
+    entry["salesforce_send_count"] = int(entry.get("salesforce_send_count") or 0) + 1
     _save_wedof_webhooks(entries)
-    return jsonify({"ok": True, "salesforce_sent": True, "salesforce_sent_at": now_iso}), 200
+    return jsonify({
+        "ok": True,
+        "salesforce_sent": True,
+        "salesforce_sent_at": now_iso,
+        "salesforce_send_count": entry["salesforce_send_count"],
+    }), 200
 
 @app.route("/api/webhooks/wedof", methods=["POST"])
 def wedof_webhook():
