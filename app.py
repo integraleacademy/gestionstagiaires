@@ -7528,6 +7528,147 @@ def admin_delete_wedof_entry(entry_id: str):
         _save_wedof_webhooks(filtered)
     return redirect(url_for("admin_wedof_requests"))
 
+@app.post("/api/send-to-salesforce/<entry_id>")
+@admin_login_required
+@admin_write_required
+def send_wedof_to_salesforce(entry_id: str):
+    entries = _load_wedof_webhooks()
+    entry = next((item for item in entries if str(item.get("id") or "") == str(entry_id)), None)
+    if entry is None:
+        return jsonify({"ok": False, "error": "Demande introuvable."}), 404
+    payload = entry.get("payload") if isinstance(entry.get("payload"), dict) else {}
+    attendee = payload.get("attendee") if isinstance(payload.get("attendee"), dict) else {}
+    training = payload.get("trainingActionInfo") if isinstance(payload.get("trainingActionInfo"), dict) else {}
+    folder_details = entry.get("wedof_folder_details") if isinstance(entry.get("wedof_folder_details"), dict) else {}
+
+    first_name = str(attendee.get("firstName") or "").strip()
+    last_name = str(attendee.get("lastName") or "").strip()
+    email = str(attendee.get("email") or "").strip()
+    phone = str(attendee.get("phoneNumber") or "").strip()
+    training_title = str(training.get("title") or folder_details.get("title") or "").strip()
+    training_date = str(training.get("date") or folder_details.get("date") or "").strip()
+    location = str(training.get("location") or folder_details.get("location") or "").strip()
+    origin = "Compte CPF"
+
+    def _map_training_type(raw_value: str) -> str:
+        value = (raw_value or "").strip().lower()
+        if not value:
+            return ""
+        if "vtc" in value or "chauffeur" in value:
+            return "CHAUFFEUR VTC"
+        if "a3p" in value:
+            return "A3P"
+        if "aps" in value:
+            return "APS"
+        if "dirigeant" in value or "desp" in value:
+            return "DIRIGEANT"
+        if "bts" in value:
+            return "BTS"
+        if "ssiap" in value:
+            return "SSIAP"
+        return ""
+
+    training_type = _map_training_type(training_title)
+
+    summary = []
+    if training_title:
+        summary.append(f"Formation: {training_title}")
+    if training_date:
+        summary.append(f"Date souhaitée: {training_date}")
+    if location:
+        summary.append(f"Lieu: {location}")
+    case_id = str(entry.get("folder_id") or payload.get("externalId") or "").strip()
+    if case_id:
+        summary.append(f"Dossier WeDoF: {case_id}")
+    if entry.get("event"):
+        summary.append(f"Événement: {entry.get('event')}")
+
+    if not last_name:
+        last_name = "Nom inconnu"
+    company = "Intégrale Academy"
+    if not company:
+        company = "Intégrale Academy"
+
+    salesforce_payload = {
+        "oid": "00DJ9000000PT9F",
+        "debug": "1",
+        "debugEmail": "ecole@integraleacademy.com",
+        "encoding": "UTF-8",
+        "retURL": "https://gestionstagiaires-r5no.onrender.com/admin/wedof",
+        "first_name": first_name,
+        "last_name": last_name,
+        "email": email,
+        "phone": phone,
+        "mobile": phone,
+        "company": company,
+        "lead_source": "Website",
+        "industry": "Education",
+        "description": " | ".join(summary) or "Demande WeDoF CPF/EDOF",
+        "00NSa00000G2PxB": training_type,
+        "00NSa00000KDPOT": location,
+        "00NSa00000KPDmX": origin,
+        "00NSa00000GcKVx": str(entry.get("raw_payload") or "")[:3000],
+        "00NSa00000GcKxN": training_date,
+    }
+    app.logger.info(
+        "[SALESFORCE] préparation envoi id=%s first_name=%s last_name=%s email=%s phone=%s company=%s lead_source=%s payload=%s",
+        entry_id,
+        salesforce_payload.get("first_name"),
+        salesforce_payload.get("last_name"),
+        salesforce_payload.get("email"),
+        salesforce_payload.get("phone"),
+        salesforce_payload.get("company"),
+        salesforce_payload.get("lead_source"),
+        salesforce_payload,
+    )
+
+    try:
+        sf_response = requests.post(
+            "https://webto.salesforce.com/servlet/servlet.WebToLead?encoding=UTF-8",
+            data=salesforce_payload,
+            timeout=20,
+        )
+    except Exception:
+        app.logger.exception("[SALESFORCE] erreur d'envoi Web-to-Lead")
+        return jsonify({"success": False, "salesforce_status": 0, "payload_sent": salesforce_payload, "salesforce_response_preview": "", "error": "Erreur réseau lors de l'envoi Salesforce."}), 502
+
+    response_preview = (sf_response.text or "")[:500]
+    app.logger.info(
+        "[SALESFORCE] réponse id=%s status=%s url=%s preview=%s",
+        entry_id,
+        sf_response.status_code,
+        sf_response.url,
+        response_preview,
+    )
+
+    has_required_contact = bool((email or "").strip() or (phone or "").strip())
+    minimum_payload_ok = bool((last_name or "").strip() and (company or "").strip() and has_required_contact)
+    success = bool(sf_response.status_code == 200 and minimum_payload_ok)
+
+    if not success:
+        return jsonify({
+            "success": False,
+            "salesforce_status": sf_response.status_code,
+            "payload_sent": salesforce_payload,
+            "salesforce_response_preview": response_preview,
+            "error": f"Salesforce a répondu {sf_response.status_code}. Vérifiez les champs obligatoires et la réponse.",
+        }), 502
+
+    now_iso = _now_iso()
+    entry["salesforce_sent"] = True
+    entry["salesforce_sent_at"] = now_iso
+    entry["salesforce_send_count"] = int(entry.get("salesforce_send_count") or 0) + 1
+    _save_wedof_webhooks(entries)
+    return jsonify({
+        "success": True,
+        "salesforce_status": sf_response.status_code,
+        "payload_sent": salesforce_payload,
+        "salesforce_response_preview": response_preview,
+        "salesforce_sent": True,
+        "salesforce_sent_at": now_iso,
+        "salesforce_send_count": entry["salesforce_send_count"],
+    }), 200
+
 @app.route("/api/webhooks/wedof", methods=["POST"])
 def wedof_webhook():
     event = (request.headers.get("X-Wedof-Event") or "").strip()
