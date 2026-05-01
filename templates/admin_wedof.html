@@ -35,16 +35,18 @@
             <td>{{ training.title or '-' }}</td>
             <td>
               <button
-                class="btn btn-blue"
+                class="btn {% if item.processed %}btn-outline{% else %}btn-blue{% endif %}"
                 type="button"
                 data-wedof-notify
+                data-entry-id="{{ item.id }}"
                 data-last-name="{{ attendee.lastName or '' }}"
                 data-first-name="{{ attendee.firstName or '' }}"
                 data-phone="{{ attendee.phoneNumber or '' }}"
                 data-email="{{ attendee.email or '' }}"
                 data-training="{{ training.title or '' }}"
                 style="margin-bottom:6px;"
-              >Notifier</button>
+                {% if item.processed %}disabled{% endif %}
+              >{% if item.processed %}Notifié ✅{% else %}Notifier{% endif %}</button>
               <div class="hint" data-wedof-feedback style="margin:6px 0 8px 0;"></div>
               <details style="margin-bottom:6px;">
                 <summary class="btn btn-outline" style="display:inline-block;cursor:pointer;">Voir JSON brut</summary>
@@ -99,6 +101,15 @@
       if(!res.ok || !data.ok){
         throw new Error(data.error || "Erreur lors de l’envoi.");
       }
+      return data;
+    }
+
+    async function markWedofTreated(entryId){
+      if(!entryId) return;
+      await fetch(`/admin/wedof/mark-treated/${entryId}`, {
+        method: "POST",
+        headers: {"X-Requested-With": "XMLHttpRequest"},
+      });
     }
 
     document.querySelectorAll("[data-wedof-notify]").forEach((btn)=>{
@@ -125,12 +136,23 @@
         if(feedback) feedback.textContent = "Envoi en cours…";
         btn.disabled = true;
         try{
-          await submitEdof(payload);
-          if(feedback) feedback.textContent = "Demande envoyée ✅";
+          const result = await submitEdof(payload);
+          await markWedofTreated(btn.dataset.entryId || "");
+
+          btn.disabled = true;
+          btn.classList.remove("btn-blue");
+          btn.classList.add("btn-outline");
+          btn.textContent = "Notifié ✅";
+
+          if(feedback){
+            const smsState = result.sms_ok ? "SMS ✅" : "SMS ⚠️";
+            const mailState = result.email_ok ? "Mail ✅" : "Mail ⚠️";
+            feedback.textContent = `Demande envoyée ✅ (${mailState} • ${smsState})`;
+          }
         }catch(err){
           if(feedback) feedback.textContent = err.message || "Erreur lors de l’envoi.";
         }finally{
-          btn.disabled = false;
+          if(!btn.textContent.includes("Notifié")) btn.disabled = false;
         }
       });
     });
