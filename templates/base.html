@@ -143,7 +143,7 @@
     {% block content %}{% endblock %}
   </div>
 
-  {% if is_admin_logged_in and (request.endpoint in ["admin_sessions", "admin_trainees", "admin_trainee_page"]) %}
+  {% if is_admin_logged_in and (request.endpoint in ["admin_sessions", "admin_trainees", "admin_trainee_page", "admin_wedof"]) %}
   <div class="modal-backdrop" id="financementRefuseModal" aria-hidden="true">
     <div class="modal" style="max-width:560px;">
       <div class="modal-head">
