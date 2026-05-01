@@ -7591,8 +7591,6 @@ def send_wedof_to_salesforce(entry_id: str):
 
     salesforce_payload = {
         "oid": "00DJ9000000PT9F",
-        "debug": "1",
-        "debugEmail": "ecole@integraleacademy.com",
         "encoding": "UTF-8",
         "retURL": "https://gestionstagiaires-r5no.onrender.com/admin/wedof",
         "first_name": first_name,
