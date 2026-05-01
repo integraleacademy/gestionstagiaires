@@ -178,8 +178,9 @@
         headers: {"X-Requested-With": "XMLHttpRequest"},
       });
       const data = await res.json().catch(()=>({}));
-      if(!res.ok || !data.ok){
-        throw new Error(data.error || "Erreur lors de l’envoi vers Salesforce.");
+      if(!res.ok || !data.success){
+        const exact = data.error || data.salesforce_response_preview || "Erreur lors de l’envoi vers Salesforce.";
+        throw new Error(exact);
       }
       return data;
     }

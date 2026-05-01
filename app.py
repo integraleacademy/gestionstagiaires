@@ -7563,15 +7563,24 @@ def send_wedof_to_salesforce(entry_id: str):
     if entry.get("event"):
         summary.append(f"Événement: {entry.get('event')}")
 
+    if not last_name:
+        last_name = "Nom inconnu"
+    company = "Intégrale Academy"
+    if not company:
+        company = "Intégrale Academy"
+
     salesforce_payload = {
         "oid": "00DJ9000000PT9F",
-        "retURL": "https://assistance-alw9.onrender.com",
+        "debug": "1",
+        "debugEmail": "ecole@integraleacademy.com",
+        "encoding": "UTF-8",
+        "retURL": "https://gestionstagiaires-r5no.onrender.com/admin/wedof",
         "first_name": first_name,
         "last_name": last_name,
         "email": email,
         "phone": phone,
         "mobile": phone,
-        "company": "Intégrale Academy",
+        "company": company,
         "lead_source": "Website",
         "industry": "Education",
         "description": " | ".join(summary) or "Demande WeDoF CPF/EDOF",
@@ -7581,19 +7590,49 @@ def send_wedof_to_salesforce(entry_id: str):
         "00NSa00000GcKVx": str(entry.get("raw_payload") or "")[:3000],
         "00NSa00000GcKxN": training_date,
     }
+    app.logger.info(
+        "[SALESFORCE] préparation envoi id=%s first_name=%s last_name=%s email=%s phone=%s company=%s lead_source=%s payload=%s",
+        entry_id,
+        salesforce_payload.get("first_name"),
+        salesforce_payload.get("last_name"),
+        salesforce_payload.get("email"),
+        salesforce_payload.get("phone"),
+        salesforce_payload.get("company"),
+        salesforce_payload.get("lead_source"),
+        salesforce_payload,
+    )
 
     try:
         sf_response = requests.post(
-            "https://webto.salesforce.com/servlet/servlet.WebToLead?encoding=UTF-8&orgId=00DJ9000000PT9F",
+            "https://webto.salesforce.com/servlet/servlet.WebToLead?encoding=UTF-8",
             data=salesforce_payload,
             timeout=20,
         )
     except Exception:
         app.logger.exception("[SALESFORCE] erreur d'envoi Web-to-Lead")
-        return jsonify({"ok": False, "error": "Erreur réseau lors de l'envoi Salesforce."}), 502
+        return jsonify({"success": False, "salesforce_status": 0, "payload_sent": salesforce_payload, "salesforce_response_preview": "", "error": "Erreur réseau lors de l'envoi Salesforce."}), 502
 
-    if sf_response.status_code != 200:
-        return jsonify({"ok": False, "error": f"Salesforce a répondu {sf_response.status_code}."}), 502
+    response_preview = (sf_response.text or "")[:500]
+    app.logger.info(
+        "[SALESFORCE] réponse id=%s status=%s url=%s preview=%s",
+        entry_id,
+        sf_response.status_code,
+        sf_response.url,
+        response_preview,
+    )
+
+    has_required_contact = bool((email or "").strip() or (phone or "").strip())
+    minimum_payload_ok = bool((last_name or "").strip() and (company or "").strip() and has_required_contact)
+    success = bool(sf_response.status_code == 200 and minimum_payload_ok)
+
+    if not success:
+        return jsonify({
+            "success": False,
+            "salesforce_status": sf_response.status_code,
+            "payload_sent": salesforce_payload,
+            "salesforce_response_preview": response_preview,
+            "error": f"Salesforce a répondu {sf_response.status_code}. Vérifiez les champs obligatoires et la réponse.",
+        }), 502
 
     now_iso = _now_iso()
     entry["salesforce_sent"] = True
@@ -7601,7 +7640,10 @@ def send_wedof_to_salesforce(entry_id: str):
     entry["salesforce_send_count"] = int(entry.get("salesforce_send_count") or 0) + 1
     _save_wedof_webhooks(entries)
     return jsonify({
-        "ok": True,
+        "success": True,
+        "salesforce_status": sf_response.status_code,
+        "payload_sent": salesforce_payload,
+        "salesforce_response_preview": response_preview,
         "salesforce_sent": True,
         "salesforce_sent_at": now_iso,
         "salesforce_send_count": entry["salesforce_send_count"],
