@@ -7517,6 +7517,17 @@ def admin_mark_wedof_treated(entry_id: str):
         _save_wedof_webhooks(entries)
     return redirect(url_for("admin_wedof_requests"))
 
+
+@app.post("/admin/wedof/delete/<entry_id>")
+@admin_login_required
+@admin_write_required
+def admin_delete_wedof_entry(entry_id: str):
+    entries = _load_wedof_webhooks()
+    filtered = [item for item in entries if str(item.get("id") or "") != str(entry_id)]
+    if len(filtered) != len(entries):
+        _save_wedof_webhooks(filtered)
+    return redirect(url_for("admin_wedof_requests"))
+
 @app.route("/api/webhooks/wedof", methods=["POST"])
 def wedof_webhook():
     event = (request.headers.get("X-Wedof-Event") or "").strip()

@@ -59,6 +59,9 @@
                   <button class="btn btn-outline" type="submit">Marquer comme traité</button>
                 </form>
               {% endif %}
+              <form method="post" action="{{ url_for('admin_delete_wedof_entry', entry_id=item.id) }}" onsubmit="return confirm('Supprimer cette demande WeDoF ?');" style="margin-top:6px;">
+                <button class="btn" type="submit" style="background:#dc2626;color:#fff;border-color:#dc2626;">Supprimer</button>
+              </form>
             </td>
           </tr>
         {% else %}
