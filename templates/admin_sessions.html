@@ -33,12 +33,26 @@
     color:#ffffff;
   }
   .btn-violet{
+    font-weight:800;
+  }
+  .btn-violet.is-idle{
+    background:#9ca3af;
+    border-color:#9ca3af;
+    color:#fff;
+  }
+  .btn-violet.is-has-request{
     background:linear-gradient(135deg, #7c3aed, #6d28d9);
     border-color:#5b21b6;
     color:#fff;
-    font-weight:800;
+    animation: pulseCpf 1.7s ease-in-out infinite;
+    box-shadow: 0 0 0 0 rgba(124,58,237,.35);
   }
-  .btn-violet:hover{ filter:brightness(1.03); }
+  .btn-violet.is-has-request:hover{ filter:brightness(1.03); }
+  @keyframes pulseCpf{
+    0%{ transform:scale(1); box-shadow:0 0 0 0 rgba(124,58,237,.35); }
+    70%{ transform:scale(1.02); box-shadow:0 0 0 12px rgba(124,58,237,0); }
+    100%{ transform:scale(1); box-shadow:0 0 0 0 rgba(124,58,237,0); }
+  }
   .cpf-badge-count{
     display:inline-flex;
     align-items:center;
@@ -400,8 +414,8 @@
     <button class="btn btn-outline" id="btnOpenCnapsImport">CNAPS</button>
     <a class="btn btn-primary" href="{{ url_for('admin_secretariat') }}">Gestion secrétariat</a>
     <a class="btn btn-outline" href="{{ url_for('admin_afc') }}">AFC</a>
-    <a class="btn btn-violet" href="{{ url_for('admin_wedof_requests') }}">
-      Demandes WeDoF CPF
+    <a class="btn btn-violet {% if (wedof_new_requests_count or 0) > 0 %}is-has-request{% else %}is-idle{% endif %}" href="{{ url_for('admin_wedof_requests') }}">
+      CPF
       <span class="cpf-badge-count">{{ wedof_new_requests_count or 0 }}</span>
     </a>
     <a class="btn btn-outline" href="{{ url_for('scotia_login') }}" target="_blank" rel="noopener">SCOTIA</a>
