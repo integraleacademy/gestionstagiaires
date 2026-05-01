@@ -42,18 +42,19 @@
       <div class="training-badge training-badge--{{ summary_training_badge.color }}">{{ summary_training_badge.label }}</div>
       <div class="summary-created-at">Dossier créé le {{ trainee.created_at|frdate or "—" }}</div>
       <div class="summary-no-print" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+        {% set is_printed = trainee.printed or trainee.summary_printed_at %}
         <button
           type="button"
           id="btnPrintSummary"
-          class="btn btn-primary btn-print-summary {% if trainee.summary_printed_at %}is-printed{% endif %}"
-          data-mark-url="{{ url_for('admin_trainee_summary_print', session_id=session.id, trainee_id=trainee.id) }}"
-          data-already-printed="{{ '1' if trainee.summary_printed_at else '0' }}">
-          🖨️ Imprimer
+          class="btn btn-primary btn-print-summary {% if is_printed %}is-printed{% endif %}"
+          data-mark-url="{{ url_for('api_mark_trainee_printed', trainee_id=trainee.id) }}"
+          data-already-printed="{{ '1' if is_printed else '0' }}">
+          {% if is_printed %}✅ Imprimé{% else %}🖨️ Imprimer{% endif %}
         </button>
         <a class="btn btn-outline" href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=trainee.id) }}">Ouvrir la fiche stagiaire</a>
         <a class="btn btn-primary" href="{{ url_for('admin_trainees', session_id=session.id) }}">Retour à la liste</a>
-        <div id="summaryPrintStatus" class="summary-print-status" {% if not trainee.summary_printed_at %}hidden{% endif %}>
-          Fiche imprimée le {{ trainee.summary_printed_at|frdate or "—" }}
+        <div id="summaryPrintStatus" class="summary-print-status" {% if not is_printed %}hidden{% endif %}>
+          Fiche imprimée le {{ trainee.printed_at|frdatetime or trainee.summary_printed_at|frdate or "—" }}
         </div>
       </div>
     </div>
@@ -110,6 +111,7 @@
       const applyPrinted = (dateLabel) => {
         btn.classList.add("is-printed");
         btn.dataset.alreadyPrinted = "1";
+        btn.textContent = "✅ Imprimé";
         status.hidden = false;
         status.textContent = `Fiche imprimée le ${dateLabel}`;
       };
@@ -120,18 +122,21 @@
           const now = new Date();
           const todayLabel = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
           applyPrinted(todayLabel);
+          window.print();
           try {
-            const resp = await fetch(btn.dataset.markUrl, { method: "POST", keepalive: true });
+            const resp = await fetch(btn.dataset.markUrl, { method: "POST" });
             if (resp.ok) {
               const payload = await resp.json();
-              if (payload && payload.printed_at) {
-                const [y,m,d] = String(payload.printed_at).split("-");
-                applyPrinted(`${d}/${m}/${y}`);
+              if (payload && payload.success && payload.printed_at) {
+                const dt = new Date(String(payload.printed_at));
+                const lbl = `${String(dt.getDate()).padStart(2, "0")}/${String(dt.getMonth() + 1).padStart(2, "0")}/${dt.getFullYear()}`;
+                applyPrinted(lbl);
               }
             }
           } catch (e) {}
+        } else {
+          window.print();
         }
-        window.print();
       });
     })();
   </script>

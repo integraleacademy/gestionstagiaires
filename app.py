@@ -4240,6 +4240,8 @@ def _convert_old_stagiaire_to_trainee(st: Dict[str, Any]) -> Dict[str, Any]:
         "updated_at": st.get("updated_at") or "",
         "phone_followups": st.get("phone_followups") or [],
         "summary_printed_at": st.get("summary_printed_at") or "",
+        "printed": bool(st.get("printed")),
+        "printed_at": st.get("printed_at") or "",
     }
 
 
@@ -14936,8 +14938,33 @@ def admin_trainee_summary_print(session_id: str, trainee_id: str):
 
     printed_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     t["summary_printed_at"] = printed_date
+    t["printed"] = True
+    t["printed_at"] = _now_iso()
     save_data(data)
     return jsonify({"ok": True, "printed_at": printed_date})
+
+
+@app.post("/api/stagiaires/<trainee_id>/mark-printed")
+@admin_login_required
+def api_mark_trainee_printed(trainee_id: str):
+    data = load_data()
+    target = None
+    for s in data.get("sessions", []):
+        if isinstance(s.get("trainees"), list):
+            target = next((x for x in s.get("trainees", []) if str(x.get("id") or "") == str(trainee_id)), None)
+        if not target and isinstance(s.get("stagiaires"), list):
+            target = next((x for x in s.get("stagiaires", []) if str(x.get("id") or "") == str(trainee_id)), None)
+        if target:
+            break
+
+    if not target:
+        return jsonify({"success": False, "error": "trainee_not_found"}), 404
+
+    target["printed"] = True
+    target["printed_at"] = _now_iso()
+    target["summary_printed_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    save_data(data)
+    return jsonify({"success": True, "printed_at": target["printed_at"]})
 
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/fiche-adef")
