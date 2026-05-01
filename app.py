@@ -3585,21 +3585,39 @@ def _save_wedof_webhooks(entries: List[Dict[str, Any]]) -> None:
 
 def _extract_wedof_payload_fields(payload: Dict[str, Any]) -> Dict[str, str]:
     flat = json.dumps(payload, ensure_ascii=False)
-    def pick(*keys: str) -> str:
-        for key in keys:
-            value = payload.get(key)
-            if isinstance(value, str) and value.strip():
-                return value.strip()
+    attendee = payload.get("attendee") if isinstance(payload.get("attendee"), dict) else {}
+    attendee_address = attendee.get("address") if isinstance(attendee.get("address"), dict) else {}
+    training = payload.get("trainingActionInfo") if isinstance(payload.get("trainingActionInfo"), dict) else {}
+
+    def to_text(value: Any) -> str:
+        if value is None:
+            return ""
+        text = str(value).strip()
+        return text
+
+    def pick(*values: Any) -> str:
+        for value in values:
+            text = to_text(value)
+            if text:
+                return text
         return ""
+
     return {
-        "wedof_case_id": pick("id", "folderId", "registrationFolderId", "registration_folder_id", "resourceId", "objectId", "dossierId", "dossier_id", "edof_id", "application_id"),
-        "first_name": pick("first_name", "firstname", "prenom"),
-        "last_name": pick("last_name", "lastname", "nom"),
-        "email": pick("email", "mail"),
-        "phone": pick("phone", "telephone", "tel"),
-        "training_title": pick("training_title", "formation", "formation_title", "intitule_formation"),
-        "status": pick("status", "dossier_status", "state", "statut"),
-        "training_date": pick("training_date", "date_formation", "start_date"),
+        "wedof_case_id": pick(payload.get("externalId"), payload.get("dataProviderId"), payload.get("id"), payload.get("folderId"), payload.get("registrationFolderId"), payload.get("registration_folder_id"), payload.get("resourceId"), payload.get("objectId"), payload.get("dossierId"), payload.get("dossier_id"), payload.get("edof_id"), payload.get("application_id")),
+        "first_name": pick(attendee.get("firstName"), payload.get("first_name"), payload.get("firstname"), payload.get("prenom")),
+        "last_name": pick(attendee.get("lastName"), payload.get("last_name"), payload.get("lastname"), payload.get("nom")),
+        "email": pick(attendee.get("email"), payload.get("email"), payload.get("mail")),
+        "phone": pick(attendee.get("phoneNumber"), payload.get("phone"), payload.get("telephone"), payload.get("tel")),
+        "full_address": pick(attendee.get("fullAddress")),
+        "city": pick(attendee_address.get("city")),
+        "zip_code": pick(attendee_address.get("zipCode")),
+        "date_of_birth": pick(attendee.get("dateOfBirth")),
+        "training_title": pick(training.get("title"), payload.get("training_title"), payload.get("formation"), payload.get("formation_title"), payload.get("intitule_formation")),
+        "status": pick(payload.get("state"), payload.get("status"), payload.get("dossier_status"), payload.get("statut")),
+        "external_link": pick(payload.get("externalLink")),
+        "training_date": pick(training.get("sessionStartDate"), payload.get("training_date"), payload.get("date_formation"), payload.get("start_date")),
+        "training_end_date": pick(training.get("sessionEndDate")),
+        "price_total_incl": pick(training.get("totalIncl")),
         "_raw": flat,
     }
 
@@ -7549,6 +7567,10 @@ def wedof_webhook():
         if isinstance(wedof_folder_details, dict):
             merged_payload.update({k: v for k, v in wedof_folder_details.items() if k not in merged_payload})
         fields = _extract_wedof_payload_fields(merged_payload if isinstance(merged_payload, dict) else {})
+        app.logger.info("[WEDOF MAPPING] nom = %s", fields.get("last_name") or "-")
+        app.logger.info("[WEDOF MAPPING] prenom = %s", fields.get("first_name") or "-")
+        app.logger.info("[WEDOF MAPPING] email = %s", fields.get("email") or "-")
+        app.logger.info("[WEDOF MAPPING] formation = %s", fields.get("training_title") or "-")
         if folder_id and not fields.get("wedof_case_id"):
             fields["wedof_case_id"] = folder_id
         if event.lower().startswith(("cpf", "edof", "dossier", "registrationfolder")) or fields.get("wedof_case_id"):
