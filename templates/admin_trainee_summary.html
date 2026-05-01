@@ -2,6 +2,30 @@
 
 {% block content %}
   <style>
+    .btn-print-summary{
+      background:#f97316;
+      border-color:#f97316;
+      color:#fff;
+      animation:pulsePrint 1.8s ease-in-out infinite;
+    }
+    .btn-print-summary:hover{background:#ea580c;border-color:#ea580c;}
+    .btn-print-summary.is-printed{
+      background:#94a3b8;
+      border-color:#94a3b8;
+      animation:none;
+      cursor:default;
+    }
+    .summary-print-status{
+      width:100%;
+      text-align:right;
+      font-size:13px;
+      color:#475569;
+      font-weight:700;
+    }
+    @keyframes pulsePrint{
+      0%,100%{transform:translateY(0);box-shadow:0 0 0 0 rgba(249,115,22,.4);}
+      50%{transform:translateY(-1px);box-shadow:0 0 0 8px rgba(249,115,22,0);}
+    }
     @media print {
       .summary-no-print {
         display: none !important;
@@ -18,8 +42,20 @@
       <div class="training-badge training-badge--{{ summary_training_badge.color }}">{{ summary_training_badge.label }}</div>
       <div class="summary-created-at">Dossier créé le {{ trainee.created_at|frdate or "—" }}</div>
       <div class="summary-no-print" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+        {% set is_printed = trainee.printed or trainee.summary_printed_at %}
+        <button
+          type="button"
+          id="btnPrintSummary"
+          class="btn btn-primary btn-print-summary {% if is_printed %}is-printed{% endif %}"
+          data-mark-url="{{ url_for('api_mark_trainee_printed', trainee_id=trainee.id) }}"
+          data-already-printed="{{ '1' if is_printed else '0' }}">
+          {% if is_printed %}✅ Imprimé{% else %}🖨️ Imprimer{% endif %}
+        </button>
         <a class="btn btn-outline" href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=trainee.id) }}">Ouvrir la fiche stagiaire</a>
         <a class="btn btn-primary" href="{{ url_for('admin_trainees', session_id=session.id) }}">Retour à la liste</a>
+        <div id="summaryPrintStatus" class="summary-print-status" {% if not is_printed %}hidden{% endif %}>
+          Fiche imprimée le {{ trainee.printed_at|frdatetime or trainee.summary_printed_at|frdate or "—" }}
+        </div>
       </div>
     </div>
   </div>
@@ -66,4 +102,42 @@
       </div>
     </div>
   </div>
+  <script>
+    (function(){
+      const btn = document.getElementById("btnPrintSummary");
+      const status = document.getElementById("summaryPrintStatus");
+      if(!btn || !status) return;
+
+      const applyPrinted = (dateLabel) => {
+        btn.classList.add("is-printed");
+        btn.dataset.alreadyPrinted = "1";
+        btn.textContent = "✅ Imprimé";
+        status.hidden = false;
+        status.textContent = `Fiche imprimée le ${dateLabel}`;
+      };
+
+      btn.addEventListener("click", async () => {
+        const already = btn.dataset.alreadyPrinted === "1";
+        if (!already) {
+          const now = new Date();
+          const todayLabel = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
+          applyPrinted(todayLabel);
+          window.print();
+          try {
+            const resp = await fetch(btn.dataset.markUrl, { method: "POST" });
+            if (resp.ok) {
+              const payload = await resp.json();
+              if (payload && payload.success && payload.printed_at) {
+                const dt = new Date(String(payload.printed_at));
+                const lbl = `${String(dt.getDate()).padStart(2, "0")}/${String(dt.getMonth() + 1).padStart(2, "0")}/${dt.getFullYear()}`;
+                applyPrinted(lbl);
+              }
+            }
+          } catch (e) {}
+        } else {
+          window.print();
+        }
+      });
+    })();
+  </script>
 {% endblock %}
