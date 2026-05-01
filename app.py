@@ -7502,6 +7502,13 @@ def wedof_webhook():
 
     return jsonify({"ok": True}), 200
 
+@app.get("/api/webhooks/wedof")
+def wedof_webhook_browser_check():
+    return (
+        "Webhook WeDoF actif ✅\n"
+        "Cette URL attend des requêtes POST envoyées par WeDoF."
+    ), 200, {"Content-Type": "text/plain; charset=utf-8"}
+
 
 
 SALES_TRACKING_MONTH_LABELS = [
