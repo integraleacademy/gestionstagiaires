@@ -366,10 +366,13 @@
    title="{% if trainee.etiquette_word_downloaded_at %}Déjà ouverte le {{ trainee.etiquette_word_downloaded_at|frdatetime }}{% else %}Ouvrir l'étiquette A4 à imprimer{% endif %}">
   🖨️ Etiquette WORD
 </a>
-<a class="btn btn-outline btn-uniform btn-admin-trainee-side-action"
+<a class="btn btn-outline btn-uniform btn-admin-trainee-side-action {% if trainee.printed or trainee.summary_printed_at %}btn-word-downloaded{% endif %}"
    href="{{ url_for('admin_trainee_summary', session_id=session.id, trainee_id=trainee.id) }}">
   📄 Fiche récap
 </a>
+{% if trainee.printed or trainee.summary_printed_at %}
+<div class="hint" style="margin-top:6px;">Fiche imprimée le {{ trainee.printed_at|frdatetime or trainee.summary_printed_at|frdate }}</div>
+{% endif %}
 
       <form method="post" action="{{ url_for('admin_send_access', session_id=session.id, trainee_id=trainee.id) }}" data-mail-sms-confirm="true">
   <button class="btn btn-primary btn-uniform btn-admin-trainee-side-action" type="submit">
