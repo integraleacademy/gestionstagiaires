@@ -484,6 +484,49 @@
 </div>
 
 <div class="card" style="margin-bottom:12px;">
+  <div class="card-row" style="justify-content:space-between;align-items:center;">
+    <div>
+      <div class="card-title">Demandes WeDoF CPF/EDOF</div>
+      <div class="muted">Webhook URL: https://gestionstagiaires-r5no.onrender.com/api/webhooks/wedof</div>
+    </div>
+  </div>
+  <div style="overflow:auto;margin-top:10px;">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Nom</th><th>Prénom</th><th>Email</th><th>Téléphone</th><th>Formation</th><th>Statut</th><th>Réception</th><th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in wedof_webhooks %}
+          {% set p = item.payload or {} %}
+          <tr>
+            <td>{{ p.last_name or p.lastname or p.nom or '-' }}</td>
+            <td>{{ p.first_name or p.firstname or p.prenom or '-' }}</td>
+            <td>{{ p.email or p.mail or '-' }}</td>
+            <td>{{ p.phone or p.telephone or p.tel or '-' }}</td>
+            <td>{{ p.training_title or p.formation or p.formation_title or p.intitule_formation or '-' }}</td>
+            <td>{{ p.status or p.dossier_status or p.state or p.statut or '-' }}</td>
+            <td>{{ item.received_at or '-' }}</td>
+            <td>
+              {% if item.processed %}
+                <span class="badge-ok">Traité</span>
+              {% else %}
+                <form method="post" action="{{ url_for('admin_mark_wedof_treated', entry_id=item.id) }}">
+                  <button class="btn btn-outline" type="submit">Marquer comme traité</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="8" class="muted">Aucune demande WeDoF reçue.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:12px;">
   <div class="card-row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
     <div>
       <div class="card-title">Filtres des sessions</div>
