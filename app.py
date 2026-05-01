@@ -4239,6 +4239,7 @@ def _convert_old_stagiaire_to_trainee(st: Dict[str, Any]) -> Dict[str, Any]:
         "created_at": st.get("created_at") or "",
         "updated_at": st.get("updated_at") or "",
         "phone_followups": st.get("phone_followups") or [],
+        "summary_printed_at": st.get("summary_printed_at") or "",
     }
 
 
@@ -14921,8 +14922,16 @@ def admin_trainee_summary(session_id: str, trainee_id: str):
 @admin_login_required
 def admin_trainee_summary_print(session_id: str, trainee_id: str):
     data = load_data()
-    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
-    if not s or not t:
+    s = find_session(data, session_id)
+    if not s:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+
+    t = None
+    if isinstance(s.get("trainees"), list):
+        t = next((x for x in s.get("trainees", []) if str(x.get("id") or "") == str(trainee_id)), None)
+    if not t and isinstance(s.get("stagiaires"), list):
+        t = next((x for x in s.get("stagiaires", []) if str(x.get("id") or "") == str(trainee_id)), None)
+    if not t:
         return jsonify({"ok": False, "error": "trainee_not_found"}), 404
 
     printed_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
