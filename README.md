@@ -25,6 +25,7 @@ python app.py
 - `CNAPSV3_BASE_URL` (optionnel, défaut `https://cnapsv3.onrender.com`)
 - `GESTIONSTAGIAIRE_SYNC_TOKEN` (obligatoire pour synchroniser le statut CNAPS vers cnapsv3)
 - `WEDOF_WEBHOOK_SECRET` (optionnel au démarrage, secret de signature webhook WeDoF)
+- `WEDOF_API_TOKEN` (token API WeDoF pour récupérer le détail complet d'un dossier)
 
 ## Intégration WeDoF CPF/EDOF
 
