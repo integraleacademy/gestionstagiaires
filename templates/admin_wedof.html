@@ -45,6 +45,7 @@
                 data-training="{{ training.title or '' }}"
                 style="margin-bottom:6px;"
               >Notifier</button>
+              <div class="hint" data-wedof-feedback style="margin:6px 0 8px 0;"></div>
               <details style="margin-bottom:6px;">
                 <summary class="btn btn-outline" style="display:inline-block;cursor:pointer;">Voir JSON brut</summary>
                 <pre style="white-space:pre-wrap;max-width:700px;overflow:auto;background:#f8fafc;border:1px solid #e2e8f0;padding:8px;border-radius:8px;">{{ item.raw_payload or (item.payload|tojson(indent=2)) }}</pre>
@@ -88,20 +89,49 @@
       return found ? found.value : "";
     }
 
+    async function submitEdof(payload){
+      const res = await fetch("/admin/edof/submit", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if(!res.ok || !data.ok){
+        throw new Error(data.error || "Erreur lors de l’envoi.");
+      }
+    }
+
     document.querySelectorAll("[data-wedof-notify]").forEach((btn)=>{
-      btn.addEventListener("click", ()=>{
-        const form = document.getElementById("edofForm");
-        if(!form) return;
+      btn.addEventListener("click", async ()=>{
+        const payload = {
+          last_name: btn.dataset.lastName || "",
+          first_name: btn.dataset.firstName || "",
+          phone: btn.dataset.phone || "",
+          email: btn.dataset.email || "",
+          training: guessTrainingValue(btn.dataset.training || ""),
+        };
+        const feedback = btn.parentElement?.querySelector("[data-wedof-feedback]");
 
-        form.elements["last_name"].value = btn.dataset.lastName || "";
-        form.elements["first_name"].value = btn.dataset.firstName || "";
-        form.elements["phone"].value = btn.dataset.phone || "";
-        form.elements["email"].value = btn.dataset.email || "";
-        form.elements["training"].value = guessTrainingValue(btn.dataset.training || "");
+        if(!payload.last_name || !payload.first_name || !payload.phone || !payload.email || !payload.training){
+          if(feedback) feedback.textContent = "Données incomplètes pour notifier automatiquement.";
+          return;
+        }
 
-        const feedback = document.getElementById("edofFeedback");
-        if(feedback) feedback.textContent = "";
-        openModal("edofModal");
+        if(typeof window.confirmMailSmsSend === "function"){
+          const ok = await window.confirmMailSmsSend();
+          if(!ok) return;
+        }
+
+        if(feedback) feedback.textContent = "Envoi en cours…";
+        btn.disabled = true;
+        try{
+          await submitEdof(payload);
+          if(feedback) feedback.textContent = "Demande envoyée ✅";
+        }catch(err){
+          if(feedback) feedback.textContent = err.message || "Erreur lors de l’envoi.";
+        }finally{
+          btn.disabled = false;
+        }
       });
     });
   })();
