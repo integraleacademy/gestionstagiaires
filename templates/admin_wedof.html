@@ -48,6 +48,18 @@
                 {% if item.processed %}disabled{% endif %}
               >{% if item.processed %}Notifié ✅{% else %}Notifier{% endif %}</button>
               <div class="hint" data-wedof-feedback style="margin:6px 0 8px 0;"></div>
+              <button
+                class="btn {% if item.salesforce_sent %}btn-outline{% else %}btn-violet{% endif %}"
+                type="button"
+                data-salesforce-send
+                data-entry-id="{{ item.id }}"
+                style="margin-bottom:6px;"
+              >{% if item.salesforce_sent %}Renvoyer Salesforce{% else %}Vers Salesforce{% endif %}</button>
+              {% if item.salesforce_sent_at %}
+                <div class="hint" style="margin:2px 0 8px 0;">
+                  Dernier envoi le {{ item.salesforce_sent_at }}{% if item.salesforce_send_count %} ({{ item.salesforce_send_count }} envoi{% if item.salesforce_send_count > 1 %}s{% endif %}){% endif %}
+                </div>
+              {% endif %}
               <details style="margin-bottom:6px;">
                 <summary class="btn btn-outline" style="display:inline-block;cursor:pointer;">Voir JSON brut</summary>
                 <pre style="white-space:pre-wrap;max-width:700px;overflow:auto;background:#f8fafc;border:1px solid #e2e8f0;padding:8px;border-radius:8px;">{{ item.raw_payload or (item.payload|tojson(indent=2)) }}</pre>
@@ -156,6 +168,39 @@
           if(feedback) feedback.textContent = err.message || "Erreur lors de l’envoi.";
         }finally{
           if(!btn.textContent.includes("Notifié")) btn.disabled = false;
+        }
+      });
+    });
+
+    async function sendToSalesforce(entryId){
+      const res = await fetch(`/api/send-to-salesforce/${entryId}`, {
+        method: "POST",
+        headers: {"X-Requested-With": "XMLHttpRequest"},
+      });
+      const data = await res.json().catch(()=>({}));
+      if(!res.ok || !data.ok){
+        throw new Error(data.error || "Erreur lors de l’envoi vers Salesforce.");
+      }
+      return data;
+    }
+
+    document.querySelectorAll("[data-salesforce-send]").forEach((btn)=>{
+      btn.addEventListener("click", async ()=>{
+        const entryId = btn.dataset.entryId || "";
+        const feedback = btn.parentElement?.querySelector("[data-wedof-feedback]");
+        if(!entryId) return;
+        if(btn.disabled) return;
+        btn.disabled = true;
+        if(feedback) feedback.textContent = "Envoi vers Salesforce…";
+        try{
+          await sendToSalesforce(entryId);
+          btn.classList.remove("btn-violet");
+          btn.classList.add("btn-outline");
+          btn.textContent = "Renvoyer Salesforce";
+          if(feedback) feedback.textContent = "Envoi Salesforce réussi ✅";
+        }catch(err){
+          if(feedback) feedback.textContent = err.message || "Erreur lors de l’envoi Salesforce.";
+          btn.disabled = false;
         }
       });
     });
