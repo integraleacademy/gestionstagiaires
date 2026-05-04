@@ -7489,6 +7489,33 @@ def admin_sessions():
     return response
 
 
+@app.get("/admin/sessions/conventions")
+@admin_login_required
+def admin_sessions_conventions():
+    data = load_data()
+    convention_rows = []
+
+    for sess in data.get("sessions", []):
+        if bool(sess.get("archived")):
+            continue
+        trainees = _session_trainees_list(sess)
+        for trainee in trainees:
+            convention_status = (trainee.get("convention_status") or "soon").strip().lower()
+            if convention_status not in {"soon", "signing"}:
+                continue
+            convention_rows.append({
+                "last_name": (trainee.get("last_name") or "").strip(),
+                "first_name": (trainee.get("first_name") or "").strip(),
+                "formation": formation_label(_session_get(sess, "training_type", "")),
+                "date_start": _session_get(sess, "date_start", ""),
+                "date_end": _session_get(sess, "date_end", ""),
+                "status_label": "Prochainement" if convention_status == "soon" else "En cours de signature",
+            })
+
+    convention_rows.sort(key=lambda row: ((row.get("last_name") or "").lower(), (row.get("first_name") or "").lower()))
+    return render_template("admin_sessions_conventions.html", rows=convention_rows)
+
+
 
 @app.get("/admin/wedof")
 @admin_login_required
