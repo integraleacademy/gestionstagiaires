@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .conventions-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .conventions-table{width:100%;border-collapse:collapse;background:#fff}
+  .conventions-table th,.conventions-table td{padding:10px;border:1px solid #e5e7eb;text-align:left;font-size:14px}
+  .conventions-table th{background:#f8fafc}
+  @media print {
+    .no-print{display:none !important}
+    .card{box-shadow:none;border:none;padding:0}
+    body{background:#fff}
+  }
+</style>
+
+<div class="card">
+  <div class="conventions-head">
+    <div>
+      <h1 style="margin:0">Conventions</h1>
+      <div class="muted">Statuts affichés : <strong>Prochainement</strong> et <strong>En cours de signature</strong>.</div>
+    </div>
+    <div class="no-print" style="display:flex;gap:8px;">
+      <a class="btn btn-outline" href="{{ url_for('admin_sessions') }}">← Sessions</a>
+      <button class="btn btn-primary" onclick="window.print()">Imprimer la liste</button>
+    </div>
+  </div>
+
+  <div style="overflow:auto;">
+    <table class="conventions-table">
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>Prénom</th>
+          <th>Formation</th>
+          <th>Début formation</th>
+          <th>Fin formation</th>
+          <th>Statut convention</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td>{{ row.last_name }}</td>
+            <td>{{ row.first_name }}</td>
+            <td>{{ row.formation }}</td>
+            <td>{{ row.date_start_label }}</td>
+            <td>{{ row.date_end_label }}</td>
+            <td>{{ row.status_label }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="6" class="muted">Aucune convention à afficher.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
