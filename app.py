@@ -7951,11 +7951,14 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
     for session in data.get("sessions", []):
         if bool(session.get("exclude_from_sales_tracking")):
             continue
-        trainees = _session_trainees_list(session)
+        session_id = str(session.get("id") or "")
         training_type_raw = _session_get(session, "training_type", "")
+        training_type_normalized = str(training_type_raw or "").strip().upper()
+        if session_id == "wedof-cpf-edof" or "CPF/EDOF" in training_type_normalized:
+            continue
+        trainees = _session_trainees_list(session)
         training_label = _sales_training_label(training_type_raw)
         unit_price = _sales_training_unit_price(training_type_raw, training_label)
-        session_id = str(session.get("id") or "")
 
         for trainee in trainees:
             anchor_date = _parse_flexible_date(trainee.get("created_at") or "")
