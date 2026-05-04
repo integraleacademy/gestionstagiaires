@@ -7507,8 +7507,8 @@ def admin_sessions_conventions():
                 "last_name": (trainee.get("last_name") or "").strip(),
                 "first_name": (trainee.get("first_name") or "").strip(),
                 "formation": formation_label(_session_get(sess, "training_type", "")),
-                "date_start": _session_get(sess, "date_start", ""),
-                "date_end": _session_get(sess, "date_end", ""),
+                "date_start_label": fr_date(_session_get(sess, "date_start", "")),
+                "date_end_label": fr_date(_session_get(sess, "date_end", "")),
                 "status_label": "Prochainement" if convention_status == "soon" else "En cours de signature",
             })
 
