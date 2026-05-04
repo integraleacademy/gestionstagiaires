@@ -7498,6 +7498,11 @@ def admin_sessions_conventions():
     for sess in data.get("sessions", []):
         if bool(sess.get("archived")):
             continue
+        training_type_raw = (_session_get(sess, "training_type", "") or "").strip().upper()
+        if "VAE" in training_type_raw:
+            continue
+        if "CPF/EDOF" in training_type_raw or sess.get("id") == "wedof-cpf-edof":
+            continue
         trainees = _session_trainees_list(sess)
         for trainee in trainees:
             convention_status = (trainee.get("convention_status") or "soon").strip().lower()
