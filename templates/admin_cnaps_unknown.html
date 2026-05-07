@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+  <div>
+    <h1 style="margin:0">CNAPS inconnu</h1>
+    <div class="muted" style="margin-top:6px;">
+      Liste des stagiaires des sessions actives dont le statut CNAPS est encore inconnu.
+      Dès qu’un statut CNAPS est renseigné, le stagiaire disparaît automatiquement de cette page.
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <a class="btn btn-outline" href="{{ url_for('admin_sessions') }}">← Retour sessions</a>
+  </div>
+</div>
+
+<div class="card" style="margin-top:12px;">
+  <div class="card-row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div>
+      <div class="card-title">{{ trainees|length }} stagiaire{% if trainees|length > 1 %}s{% endif %} avec CNAPS inconnu</div>
+      <div class="muted">Clique sur une fiche pour mettre à jour son statut CNAPS.</div>
+    </div>
+    <span class="cnaps cnaps-inconnu">INCONNU</span>
+  </div>
+</div>
+
+{% if trainees|length == 0 %}
+  <div class="card" style="margin-top:12px;color:var(--muted)">
+    Aucun stagiaire avec un statut CNAPS inconnu dans les sessions actives.
+  </div>
+{% else %}
+  <div class="card" style="margin-top:12px;overflow:auto;">
+    <table class="table" style="min-width:980px;">
+      <thead>
+        <tr>
+          <th>Stagiaire</th>
+          <th>Session</th>
+          <th>Formation</th>
+          <th>Dates</th>
+          <th>Naissance</th>
+          <th>Contact</th>
+          <th>Statut CNAPS</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in trainees %}
+          <tr>
+            <td>
+              <strong>{{ t.last_name }} {{ t.first_name }}</strong>
+            </td>
+            <td>
+              <a href="{{ t.session_url }}">{{ t.session_name }}</a>
+            </td>
+            <td>
+              <span class="pill">{{ "CHAUFFEUR VTC" if (t.training_type or "")|upper == "VTC" else t.training_type }}</span>
+            </td>
+            <td>
+              <strong>{{ t.date_start|frdate }}</strong> → <strong>{{ t.date_end|frdate }}</strong>
+            </td>
+            <td>{{ t.birth_date|frdate }}</td>
+            <td>
+              {% if t.email %}<div><a href="mailto:{{ t.email }}">{{ t.email }}</a></div>{% endif %}
+              {% if t.phone %}<div class="muted">{{ t.phone }}</div>{% endif %}
+              {% if not t.email and not t.phone %}<span class="muted">—</span>{% endif %}
+            </td>
+            <td><span class="cnaps cnaps-inconnu">{{ t.cnaps }}</span></td>
+            <td>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <a class="btn btn-primary" href="{{ t.admin_url }}">Ouvrir la fiche</a>
+                <a class="btn btn-outline" href="{{ t.session_url }}">Voir la session</a>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+
+{% endblock %}

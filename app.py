@@ -3379,6 +3379,53 @@ def _cnaps_is_accepted(value: Optional[str]) -> bool:
     return normalized.startswith("CARTE PROFESSIONNELLE OK")
 
 
+def _cnaps_status_is_unknown(value: Optional[str]) -> bool:
+    normalized = _normalize_cnaps_status(value)
+    return normalized in {"", "INCONNU", "UNKNOWN"}
+
+
+def _collect_cnaps_unknown_trainees(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    rows = []
+    for session_data in data.get("sessions", []):
+        if bool(session_data.get("archived")):
+            continue
+
+        session_id = session_data.get("id")
+        session_name = _session_get(session_data, "name", "")
+        training_type = _session_get(session_data, "training_type", "")
+        date_start = _session_get(session_data, "date_start", "")
+        date_end = _session_get(session_data, "date_end", "")
+
+        for trainee in _session_trainees_list(session_data):
+            if not _cnaps_status_is_unknown(trainee.get("cnaps")):
+                continue
+
+            trainee_id = trainee.get("id")
+            rows.append({
+                "session_id": session_id,
+                "session_name": session_name,
+                "training_type": training_type,
+                "date_start": date_start,
+                "date_end": date_end,
+                "trainee_id": trainee_id,
+                "first_name": normalize_first_name(trainee.get("first_name") or ""),
+                "last_name": normalize_last_name(trainee.get("last_name") or ""),
+                "birth_date": trainee.get("birth_date") or "",
+                "email": (trainee.get("email") or "").strip(),
+                "phone": format_phone_fr_for_display((trainee.get("phone") or "").strip()),
+                "cnaps": "INCONNU",
+                "admin_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
+                "session_url": url_for("admin_trainees", session_id=session_id),
+            })
+
+    rows.sort(key=lambda row: (
+        _normalized_token(row.get("last_name") or ""),
+        _normalized_token(row.get("first_name") or ""),
+        _normalized_token(row.get("session_name") or ""),
+    ))
+    return rows
+
+
 def record_cnaps_status_change(t: Dict[str, Any], new_status: Optional[str]) -> None:
     normalized = (new_status or "").strip()
     if not normalized:
@@ -7483,6 +7530,20 @@ def admin_sessions():
         dashboard_year=current_year,
         yearly_training_counts=yearly_training_counts,
         wedof_new_requests_count=wedof_new_requests_count,
+    ))
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
+
+
+@app.get("/admin/sessions/cnaps-inconnu")
+@admin_login_required
+def admin_cnaps_unknown():
+    data = load_data()
+    trainees = _collect_cnaps_unknown_trainees(data)
+    response = make_response(render_template(
+        "admin_cnaps_unknown.html",
+        trainees=trainees,
     ))
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
