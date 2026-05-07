@@ -1,11 +1,40 @@
 {% extends "base.html" %}
 {% block content %}
 
+<style>
+  .cnaps-unknown-table-wrap{
+    margin-top:12px;
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
+    padding:0 14px 14px;
+  }
+  .cnaps-unknown-table{
+    min-width:1400px !important;
+  }
+  .cnaps-unknown-table th,
+  .cnaps-unknown-table td{
+    padding:12px 14px !important;
+    vertical-align:top;
+  }
+  .cnaps-unknown-table th:nth-child(1),
+  .cnaps-unknown-table td:nth-child(1){ min-width:220px !important; }
+  .cnaps-unknown-table th:nth-child(2),
+  .cnaps-unknown-table td:nth-child(2){ min-width:240px !important; }
+  .cnaps-unknown-table th:nth-child(3),
+  .cnaps-unknown-table td:nth-child(3){ min-width:130px !important; max-width:none !important; }
+  .cnaps-unknown-table th:nth-child(4),
+  .cnaps-unknown-table td:nth-child(4){ min-width:210px !important; }
+  .cnaps-unknown-table th:nth-child(6),
+  .cnaps-unknown-table td:nth-child(6){ min-width:260px !important; max-width:none !important; }
+  .cnaps-unknown-table th:nth-child(8),
+  .cnaps-unknown-table td:nth-child(8){ min-width:260px !important; }
+</style>
+
 <div class="page-head" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
   <div>
     <h1 style="margin:0">CNAPS inconnu</h1>
     <div class="muted" style="margin-top:6px;">
-      Liste des stagiaires des sessions actives dont le statut CNAPS est encore inconnu.
+      Liste des stagiaires des sessions actives APS et A3P dont le statut CNAPS est encore inconnu.
       Dès qu’un statut CNAPS est renseigné, le stagiaire disparaît automatiquement de cette page.
     </div>
   </div>
@@ -27,11 +56,11 @@
 
 {% if trainees|length == 0 %}
   <div class="card" style="margin-top:12px;color:var(--muted)">
-    Aucun stagiaire avec un statut CNAPS inconnu dans les sessions actives.
+    Aucun stagiaire APS ou A3P avec un statut CNAPS inconnu dans les sessions actives.
   </div>
 {% else %}
-  <div class="card" style="margin-top:12px;overflow:auto;">
-    <table class="table" style="min-width:980px;">
+  <div class="table-wrap full-bleed cnaps-unknown-table-wrap">
+    <table class="table cnaps-unknown-table">
       <thead>
         <tr>
           <th>Stagiaire</th>
@@ -54,7 +83,7 @@
               <a href="{{ t.session_url }}">{{ t.session_name }}</a>
             </td>
             <td>
-              <span class="pill">{{ "CHAUFFEUR VTC" if (t.training_type or "")|upper == "VTC" else t.training_type }}</span>
+              <span class="pill">{{ t.training_type }}</span>
             </td>
             <td>
               <strong>{{ t.date_start|frdate }}</strong> → <strong>{{ t.date_end|frdate }}</strong>

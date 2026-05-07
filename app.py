@@ -3384,6 +3384,11 @@ def _cnaps_status_is_unknown(value: Optional[str]) -> bool:
     return normalized in {"", "INCONNU", "UNKNOWN"}
 
 
+def _cnaps_unknown_training_is_allowed(training_type: Optional[str]) -> bool:
+    normalized = (training_type or "").strip().upper()
+    return normalized.startswith("APS") or normalized.startswith("A3P")
+
+
 def _collect_cnaps_unknown_trainees(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     rows = []
     for session_data in data.get("sessions", []):
@@ -3393,6 +3398,8 @@ def _collect_cnaps_unknown_trainees(data: Dict[str, Any]) -> List[Dict[str, Any]
         session_id = session_data.get("id")
         session_name = _session_get(session_data, "name", "")
         training_type = _session_get(session_data, "training_type", "")
+        if not _cnaps_unknown_training_is_allowed(training_type):
+            continue
         date_start = _session_get(session_data, "date_start", "")
         date_end = _session_get(session_data, "date_end", "")
 
