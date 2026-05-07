@@ -55,13 +55,39 @@ class CnapsUnknownPageTests(unittest.TestCase):
                         }
                     ],
                 },
+                {
+                    "id": "S-DIRIGEANT",
+                    "name": "Dirigeant actif",
+                    "training_type": "DIRIGEANT initial",
+                    "trainees": [
+                        {
+                            "id": "T-DIRIGEANT",
+                            "first_name": "emma",
+                            "last_name": "leroy",
+                            "cnaps": "INCONNU",
+                        }
+                    ],
+                },
+                {
+                    "id": "S-A3P",
+                    "name": "A3P actif",
+                    "training_type": "A3P",
+                    "trainees": [
+                        {
+                            "id": "T-A3P",
+                            "first_name": "fatou",
+                            "last_name": "ndiaye",
+                            "cnaps": "INCONNU",
+                        }
+                    ],
+                },
             ]
         }
 
         with gestion_app.app.test_request_context("/admin/sessions/cnaps-inconnu"):
             rows = gestion_app._collect_cnaps_unknown_trainees(data)
 
-        self.assertEqual([row["trainee_id"] for row in rows], ["T-BLANK", "T-UNKNOWN"])
+        self.assertEqual([row["trainee_id"] for row in rows], ["T-BLANK", "T-UNKNOWN", "T-A3P"])
         self.assertTrue(all(row["cnaps"] == "INCONNU" for row in rows))
         self.assertTrue(all("/admin/sessions/" in row["admin_url"] for row in rows))
 
@@ -89,6 +115,21 @@ class CnapsUnknownPageTests(unittest.TestCase):
                             "cnaps": "ACCEPTÉ",
                         },
                     ],
+                },
+                {
+                    "id": "S2",
+                    "name": "Session VTC",
+                    "training_type": "VTC",
+                    "date_start": "2026-05-11",
+                    "date_end": "2026-05-12",
+                    "trainees": [
+                        {
+                            "id": "T3",
+                            "first_name": "Victor",
+                            "last_name": "Moreau",
+                            "cnaps": "INCONNU",
+                        },
+                    ],
                 }
             ],
             "notifications_admin": [],
@@ -107,3 +148,4 @@ class CnapsUnknownPageTests(unittest.TestCase):
         self.assertIn("MARTIN Alice", html)
         self.assertIn("alice@example.com", html)
         self.assertNotIn("BERNARD Claire", html)
+        self.assertNotIn("MOREAU Victor", html)
