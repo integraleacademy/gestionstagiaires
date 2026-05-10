@@ -76,6 +76,13 @@
 
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
     {% if show_vae %}
+      <label for="vaeNameSearch" class="muted vae-filter-label" style="font-weight:700;">Recherche VAE</label>
+      <input id="vaeNameSearch"
+             class="vae-name-search"
+             type="search"
+             placeholder="Nom ou prénom"
+             autocomplete="off"
+             aria-label="Rechercher un stagiaire VAE par nom ou prénom">
       <label for="vaeStatusFilter" class="muted vae-filter-label" style="font-weight:700;">Filtre statut VAE</label>
       <select id="vaeStatusFilter" class="sel vae-filter-select" style="min-width:280px;">
         <option value="all">Tous les statuts VAE</option>
@@ -794,6 +801,30 @@ tr.row-todo td{
   text-transform:none;
   letter-spacing:0;
 }
+
+.vae-name-search{
+  min-width:260px;
+  height:42px;
+  border:1px solid #cbd5e1;
+  border-radius:16px;
+  background:#fff;
+  padding:0 14px;
+  font:inherit;
+  font-weight:700;
+  color:#0f172a;
+  outline:none;
+  box-shadow:0 1px 2px rgba(15, 23, 42, .04);
+}
+
+.vae-name-search::placeholder{
+  color:#64748b;
+  font-weight:600;
+}
+
+.vae-name-search:focus{
+  border-color:#2563eb;
+  box-shadow:0 0 0 3px rgba(37, 99, 235, .14);
+}
  
 </style>
 
@@ -1429,20 +1460,33 @@ bulkParcheminInput?.addEventListener("change", async ()=>{
   });
 }
 
+function normalizeSearchText(value){
+  return (value || "")
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
 function applyRowFilters(){
   const vaeFilter = document.getElementById("vaeStatusFilter");
+  const vaeNameSearch = document.getElementById("vaeNameSearch");
   const vtcTheoryFilter = document.getElementById("vtcTheoryFilter");
   const selectedVae = vaeFilter?.value || "all";
   const selectedTheory = vtcTheoryFilter?.value || "all";
+  const searchedName = normalizeSearchText(vaeNameSearch?.value || "");
 
   document.querySelectorAll("tr[data-trainee-id]").forEach(tr => {
     const rowVaeStatus = tr.getAttribute("data-vae-status") || "livret_1_todo";
     const rowTheoryOk = tr.getAttribute("data-vtc-theory-ok") === "1";
+    const rowFullName = normalizeSearchText(`${tr.getAttribute("data-last-name") || ""} ${tr.getAttribute("data-first-name") || ""}`);
 
     const matchVae = selectedVae === "all" || rowVaeStatus === selectedVae;
     const matchTheory = selectedTheory === "all" || rowTheoryOk;
+    const matchName = !searchedName || rowFullName.includes(searchedName);
 
-    tr.style.display = (matchVae && matchTheory) ? "" : "none";
+    tr.style.display = (matchVae && matchTheory && matchName) ? "" : "none";
   });
 }
 
@@ -1853,6 +1897,11 @@ renderDocBadges();
 const vaeStatusFilter = document.getElementById("vaeStatusFilter");
 if(vaeStatusFilter){
   vaeStatusFilter.addEventListener("change", applyRowFilters);
+}
+
+const vaeNameSearch = document.getElementById("vaeNameSearch");
+if(vaeNameSearch){
+  vaeNameSearch.addEventListener("input", applyRowFilters);
 }
 
 const vtcTheoryFilter = document.getElementById("vtcTheoryFilter");
