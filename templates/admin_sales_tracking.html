@@ -38,7 +38,7 @@
 .training-annual-title{margin:0;font-size:22px;font-weight:900;color:#1e3a8a;}
 .training-annual-sub{color:#475569;font-size:13px;}
 .training-annual-grid{margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;}
-.training-annual-card{border:1px solid #e2e8f0;background:linear-gradient(160deg,#f8fafc 0%,#eff6ff 100%);border-radius:14px;padding:12px;position:relative;overflow:hidden;}
+.training-annual-card{border:1px solid #e2e8f0;background:linear-gradient(160deg,#f8fafc 0%,#eff6ff 100%);border-radius:14px;padding:12px;position:relative;}
 .training-annual-card::after{content:"";position:absolute;top:-35%;right:-25%;width:120px;height:120px;background:radial-gradient(circle,rgba(37,99,235,.16),rgba(37,99,235,0));pointer-events:none;}
 .training-annual-card-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;}
 .training-rank{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;border-radius:999px;background:#1d4ed8;color:#fff;font-size:12px;font-weight:900;}
@@ -50,8 +50,17 @@
 .training-share-fill{height:100%;background:linear-gradient(90deg,#2563eb,#7c3aed);border-radius:999px;}
 .training-empty{border:1px dashed #cbd5e1;border-radius:12px;padding:12px;color:#64748b;font-size:13px;background:#f8fafc;margin-top:10px;}
 .training-list{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
-.training-row{border:1px solid #e2e8f0;border-radius:12px;padding:10px;background:#f8fafc;}
+.training-row{border:1px solid #e2e8f0;border-radius:12px;padding:10px;background:#f8fafc;position:relative;}
+.training-row--hoverable{cursor:help;}
+.training-row--hoverable:hover,.training-row--hoverable:focus-within,.training-row--hoverable:focus{border-color:#93c5fd;box-shadow:0 12px 24px rgba(37,99,235,.14);}
 .training-row strong{color:#0f172a;}
+.training-hover{display:none;position:absolute;left:16px;right:16px;bottom:calc(100% + 8px);z-index:25;background:#0f172a;color:#fff;border-radius:14px;padding:10px 12px;box-shadow:0 18px 36px rgba(15,23,42,.3);font-size:13px;}
+.training-hover::after{content:"";position:absolute;left:22px;bottom:-8px;border-width:8px 8px 0 8px;border-style:solid;border-color:#0f172a transparent transparent transparent;}
+.training-row:hover .training-hover,.training-row:focus-within .training-hover,.training-row:focus .training-hover,.training-annual-card:hover .training-hover,.training-annual-card:focus-within .training-hover,.training-annual-card:focus .training-hover{display:block;}
+.training-hover-title{font-weight:900;margin-bottom:6px;}
+.training-hover-list{margin:0;padding-left:18px;max-height:180px;overflow:auto;}
+.training-hover-list li{margin:3px 0;}
+.training-hover a{color:#bfdbfe;text-decoration:underline;text-underline-offset:2px;}
 .training-meta{font-size:13px;color:#334155;margin-top:4px;display:flex;gap:10px;flex-wrap:wrap;}
 .month-empty{border:1px dashed #cbd5e1;border-radius:12px;padding:12px;color:#64748b;font-size:13px;background:#f8fafc;margin-top:10px;}
 .helper{font-size:12px;color:#64748b;}
@@ -175,7 +184,7 @@
     <div id="annualTrainingGrid" class="training-annual-grid">
       {% if annual_trainings %}
         {% for training in annual_trainings %}
-          <article class="training-annual-card">
+          <article class="training-annual-card{% if training.trainees %} training-row--hoverable{% endif %}"{% if training.trainees %} tabindex="0" aria-label="{{ training.label }} : {{ training.inscriptions }} inscription(s), survolez pour voir les stagiaires"{% endif %}>
             <div class="training-annual-card-head">
               <h3 class="training-annual-name">{{ training.label }}</h3>
               <span class="training-rank">#{{ loop.index }}</span>
@@ -191,6 +200,16 @@
               </div>
               <div class="helper" style="margin-top:4px;">{{ (training.revenue_ratio * 100)|round(1) }}% du CA annuel</div>
             </div>
+            {% if training.trainees %}
+              <div class="training-hover" role="tooltip">
+                <div class="training-hover-title">Stagiaires inscrits</div>
+                <ol class="training-hover-list">
+                  {% for trainee in training.trainees %}
+                    <li>{% if trainee.url %}<a href="{{ trainee.url }}">{{ trainee.name }}</a>{% else %}{{ trainee.name }}{% endif %}</li>
+                  {% endfor %}
+                </ol>
+              </div>
+            {% endif %}
           </article>
         {% endfor %}
       {% else %}
@@ -225,13 +244,23 @@
         {% if month.trainings %}
           <div class="training-list">
             {% for training in month.trainings %}
-              <article class="training-row">
+              <article class="training-row{% if training.trainees %} training-row--hoverable{% endif %}"{% if training.trainees %} tabindex="0" aria-label="{{ training.label }} : {{ training.inscriptions }} inscription(s), survolez pour voir les stagiaires"{% endif %}>
                 <strong>{{ training.label }}</strong>
                 <div class="training-meta">
                   <span>{{ training.inscriptions }} inscription(s)</span>
                   <span>Tarif : <span data-euro="{{ training.training_price }}">{{ training.training_price }}</span></span>
                   <span>CA : <strong data-euro="{{ training.revenue }}">{{ training.revenue }}</strong></span>
                 </div>
+                {% if training.trainees %}
+                  <div class="training-hover" role="tooltip">
+                    <div class="training-hover-title">Stagiaires inscrits</div>
+                    <ol class="training-hover-list">
+                      {% for trainee in training.trainees %}
+                        <li>{% if trainee.url %}<a href="{{ trainee.url }}">{{ trainee.name }}</a>{% else %}{{ trainee.name }}{% endif %}</li>
+                      {% endfor %}
+                    </ol>
+                  </div>
+                {% endif %}
               </article>
             {% endfor %}
           </div>
@@ -251,6 +280,40 @@
     node.textContent = euroFmt.format(Number.isFinite(value) ? value : 0);
   });
   fmtEuroNodes();
+
+  const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;',
+  }[char]));
+
+  const traineeHoverHtml = (training) => {
+    const trainees = Array.isArray(training?.trainees) ? training.trainees : [];
+    if (!trainees.length) return '';
+    const traineeItems = trainees.map((trainee) => {
+      const name = escapeHtml(trainee?.name || 'Stagiaire');
+      const url = String(trainee?.url || '').trim();
+      return `<li>${url ? `<a href="${escapeHtml(url)}">${name}</a>` : name}</li>`;
+    }).join('');
+    return `
+      <div class="training-hover" role="tooltip">
+        <div class="training-hover-title">Stagiaires inscrits</div>
+        <ol class="training-hover-list">${traineeItems}</ol>
+      </div>
+    `;
+  };
+
+  const hoverableAttributes = (training) => {
+    const trainees = Array.isArray(training?.trainees) ? training.trainees : [];
+    if (!trainees.length) return '';
+    const label = escapeHtml(training?.label || 'AUTRE');
+    const count = Number(training?.inscriptions || trainees.length || 0);
+    return ` tabindex="0" aria-label="${label} : ${count} inscription(s), survolez pour voir les stagiaires"`;
+  };
+
+  const hoverableClass = (training) => (Array.isArray(training?.trainees) && training.trainees.length ? ' training-row--hoverable' : '');
 
   const selectedYear = {{ selected_year }};
   const dataEndpoint = '{{ url_for("admin_sales_tracking_data") }}?year={{ selected_year }}';
@@ -489,13 +552,14 @@
           trainings.length
             ? `<div class="training-list">
                 ${trainings.map((training) => `
-                  <article class="training-row">
-                    <strong>${training.label || 'AUTRE'}</strong>
+                  <article class="training-row${hoverableClass(training)}"${hoverableAttributes(training)}>
+                    <strong>${escapeHtml(training.label || 'AUTRE')}</strong>
                     <div class="training-meta">
                       <span>${training.inscriptions || 0} inscription(s)</span>
                       <span>Tarif : <span data-euro="${training.training_price || 0}">${training.training_price || 0}</span></span>
                       <span>CA : <strong data-euro="${training.revenue || 0}">${training.revenue || 0}</strong></span>
                     </div>
+                    ${traineeHoverHtml(training)}
                   </article>
                 `).join('')}
               </div>`
@@ -508,9 +572,9 @@
   const annualTrainingCardHtml = (training, index) => {
     const revenueRatioPct = Math.max(0, Math.min(100, Number(training.revenue_ratio || 0) * 100));
     return `
-      <article class="training-annual-card">
+      <article class="training-annual-card${hoverableClass(training)}"${hoverableAttributes(training)}>
         <div class="training-annual-card-head">
-          <h3 class="training-annual-name">${training.label || 'AUTRE'}</h3>
+          <h3 class="training-annual-name">${escapeHtml(training.label || 'AUTRE')}</h3>
           <span class="training-rank">#${index + 1}</span>
         </div>
         <div class="training-annual-revenue" data-euro="${training.revenue || 0}">${training.revenue || 0}</div>
@@ -522,6 +586,7 @@
           <div class="training-share-rail"><div class="training-share-fill" style="width:${revenueRatioPct}%;"></div></div>
           <div class="helper" style="margin-top:4px;">${revenueRatioPct.toFixed(1)}% du CA annuel</div>
         </div>
+        ${traineeHoverHtml(training)}
       </article>
     `;
   };

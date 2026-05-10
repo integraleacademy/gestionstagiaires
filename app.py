@@ -8166,9 +8166,11 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
                 "inscriptions": 0,
                 "training_price": training_price,
                 "revenue": 0,
+                "trainees": [],
             })
             training_metrics["inscriptions"] += 1
             training_metrics["revenue"] += training_price
+            training_metrics.setdefault("trainees", []).append(trainee_item)
             if training_metrics.get("training_price", 0) <= 0 and training_price > 0:
                 training_metrics["training_price"] = training_price
 
@@ -8177,9 +8179,11 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
                 "inscriptions": 0,
                 "training_price": training_price,
                 "revenue": 0,
+                "trainees": [],
             })
             annual_training_metrics["inscriptions"] += 1
             annual_training_metrics["revenue"] += training_price
+            annual_training_metrics.setdefault("trainees", []).append(trainee_item)
             if annual_training_metrics.get("training_price", 0) <= 0 and training_price > 0:
                 annual_training_metrics["training_price"] = training_price
 
