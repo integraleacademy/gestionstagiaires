@@ -2435,6 +2435,85 @@ def mail_layout(inner_html: str) -> str:
     """
 
 
+VAE_ADMIN_NOTIFICATION_EMAIL = os.environ.get("VAE_ADMIN_NOTIFICATION_EMAIL", "cassandre@integraleacademy.com").strip()
+
+
+def _vae_admin_notification_name(trainee: Optional[Dict[str, Any]] = None, dossier: Optional[Dict[str, Any]] = None) -> str:
+    trainee = trainee if isinstance(trainee, dict) else {}
+    dossier = dossier if isinstance(dossier, dict) else {}
+    candidat = dossier.get("candidat") if isinstance(dossier.get("candidat"), dict) else {}
+
+    trainee_name = _format_trainee_name(trainee.get("first_name", ""), trainee.get("last_name", "")) if trainee else ""
+    if trainee_name:
+        return trainee_name
+
+    dossier_name = " ".join(
+        part.strip()
+        for part in [
+            str(candidat.get("prenoms") or ""),
+            str(candidat.get("nom_usage") or candidat.get("nom_naissance") or ""),
+        ]
+        if str(part or "").strip()
+    ).strip()
+    return dossier_name
+
+
+def _send_vae_admin_notification(
+    action: str,
+    *,
+    trainee: Optional[Dict[str, Any]] = None,
+    dossier: Optional[Dict[str, Any]] = None,
+    session_obj: Optional[Dict[str, Any]] = None,
+    details: Optional[Dict[str, Any]] = None,
+) -> bool:
+    """Envoie un email interne à Cassandre pour les événements importants VAE."""
+    if not VAE_ADMIN_NOTIFICATION_EMAIL:
+        return False
+
+    trainee = trainee if isinstance(trainee, dict) else {}
+    dossier = dossier if isinstance(dossier, dict) else {}
+    session_obj = session_obj if isinstance(session_obj, dict) else {}
+    details = details if isinstance(details, dict) else {}
+    candidat = dossier.get("candidat") if isinstance(dossier.get("candidat"), dict) else {}
+    meta = dossier.get("meta") if isinstance(dossier.get("meta"), dict) else {}
+
+    candidate_name = _vae_admin_notification_name(trainee, dossier) or "Candidat non renseigné"
+    candidate_email = (trainee.get("email") or candidat.get("email") or "").strip()
+    candidate_phone = (trainee.get("phone") or candidat.get("telephone") or "").strip()
+    subject = f"Notification VAE – {action}"
+
+    rows = [
+        ("Action", action),
+        ("Candidat", candidate_name),
+        ("Email candidat", candidate_email),
+        ("Téléphone candidat", candidate_phone),
+        ("Session", session_obj.get("name") or session_obj.get("session_name") or details.get("session_name") or ""),
+        ("ID session", session_obj.get("id") or meta.get("session_id") or details.get("session_id") or ""),
+        ("ID stagiaire", trainee.get("id") or meta.get("trainee_id") or details.get("trainee_id") or ""),
+        ("ID dossier VAE", dossier.get("id") or details.get("dossier_id") or ""),
+        ("Statut dossier", dossier.get("statut_dossier") or details.get("statut_dossier") or ""),
+    ]
+    for key, value in details.items():
+        if key in {"session_name", "session_id", "trainee_id", "dossier_id", "statut_dossier"}:
+            continue
+        label = str(key).replace("_", " ").strip().capitalize()
+        rows.append((label, value))
+
+    rendered_rows = "".join(
+        f"<tr><th style='text-align:left;padding:8px;border-bottom:1px solid #e5e7eb;width:180px'>{html.escape(str(label))}</th>"
+        f"<td style='padding:8px;border-bottom:1px solid #e5e7eb'>{html.escape(str(value or '—'))}</td></tr>"
+        for label, value in rows
+    )
+    html_body = mail_layout(f"""
+      <h2 style="margin:0 0 12px 0;color:#0f172a;text-align:center;">🔔 Notification VAE</h2>
+      <p>Une action concernant la VAE vient d'être effectuée.</p>
+      <table style="border-collapse:collapse;width:100%;background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">
+        {rendered_rows}
+      </table>
+    """)
+    return brevo_send_email(VAE_ADMIN_NOTIFICATION_EMAIL, subject, html_body)
+
+
 def build_vtc_onboarding_email(first_name: str, form_link: str) -> Tuple[str, str]:
     first_name = (first_name or "").strip()
     greeting = f"Bonjour <strong>{first_name}</strong>," if first_name else "Bonjour,"
@@ -6868,6 +6947,19 @@ def public_vae_desp_submit():
         },
     )
     save_data(data)
+
+    _send_vae_admin_notification(
+        "Nouvelle demande via le formulaire public VAE DESP",
+        trainee=trainee,
+        session_obj=target_session,
+        details={
+            "origine": "Formulaire public VAE DESP",
+            "date_naissance": birth_date,
+            "session_name": target_session.get("name") or "",
+            "session_id": target_session.get("id") or "",
+            "trainee_id": trainee_id,
+        },
+    )
 
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}"
     subject, html, sms = build_dirigeant_vae_onboarding_email_sms(first_name, link)
@@ -14132,6 +14224,18 @@ def _send_vae_relance_message(data: Dict[str, Any], session_obj: Dict[str, Any],
         },
     )
 
+    _send_vae_admin_notification(
+        "Relance VAE envoyée",
+        trainee=trainee,
+        session_obj=session_obj,
+        details={
+            "relance": cfg["label"],
+            "mode": "automatique" if mode == "auto" else "manuelle",
+            "email_ok": bool(email_ok),
+            "sms_ok": bool(sms_ok),
+        },
+    )
+
     add_notification(
         data,
         "notifications_vae_relances",
@@ -14325,6 +14429,17 @@ def _notify_vae_status_change(t: Dict[str, Any], status_key: str) -> None:
     if not subject:
         print(f"[VAE][EMAIL] status inconnu, aucun envoi déclenché: status={status_key!r}")
         return
+
+    _send_vae_admin_notification(
+        "Changement de statut VAE",
+        trainee=t,
+        details={
+            "nouveau_statut": vae_status_view(status_key)["label"],
+            "status_key": status_key,
+            "email_stagiaire_prevu": email or "",
+            "objet_email_stagiaire": subject,
+        },
+    )
 
     if not email:
         trainee_id = str(t.get("id") or "")
@@ -18612,6 +18727,16 @@ def api_vae_experience_docs_upload(dossier_id: str):
     dossier['justificatifs_experience'] = justificatifs
     dossier['updated_at'] = _now_iso_utc()
     _vae_save_all(data)
+
+    _send_vae_admin_notification(
+        "Ajout de justificatif(s) d'expérience VAE",
+        dossier=dossier,
+        details={
+            "nombre_fichiers": len(added),
+            "fichiers": ", ".join(str(item.get("name") or "") for item in added),
+        },
+    )
+
     return jsonify({"ok": True, "files": justificatifs, "added": added})
 
 @app.post('/api/vae/<dossier_id>/experience-docs/<doc_id>/delete')
@@ -18649,6 +18774,13 @@ def api_vae_experience_doc_delete(dossier_id: str, doc_id: str):
     dossier['justificatifs_experience'] = kept
     dossier['updated_at'] = _now_iso_utc()
     _vae_save_all(data)
+
+    _send_vae_admin_notification(
+        "Suppression d'un justificatif d'expérience VAE",
+        dossier=dossier,
+        details={"fichier": (deleted or {}).get("name") or ""},
+    )
+
     return jsonify({"ok": True, "files": kept})
 
 @app.get('/admin/vae/<dossier_id>/experience-docs.zip')
@@ -18707,6 +18839,15 @@ def _vae_create_and_redirect_for_trainee_token(trainee_token: str):
 
     data.setdefault("dossiers", []).insert(0, dossier)
     _vae_save_all(data)
+
+    _send_vae_admin_notification(
+        "Création d'un dossier VAE depuis l'espace candidat",
+        trainee=t if trainee_token and 't' in locals() else None,
+        dossier=dossier,
+        session_obj=s if trainee_token and 's' in locals() else None,
+        details={"origine": "Espace candidat"},
+    )
+
     return redirect(url_for('vae_wizard', token=dossier['id']))
 
 
@@ -18740,6 +18881,14 @@ def admin_create_vae_dossier(session_id: str, trainee_id: str):
 
     vae_data.setdefault("dossiers", []).insert(0, dossier)
     _vae_save_all(vae_data)
+
+    _send_vae_admin_notification(
+        "Création d'un dossier VAE par l'administration",
+        trainee=t,
+        dossier=dossier,
+        session_obj=s,
+        details={"origine": "Administration"},
+    )
 
     return redirect(url_for("vae_wizard", token=dossier["id"], admin_edit=1))
 
@@ -18874,6 +19023,16 @@ def api_vae_submit(dossier_id: str):
                 'vae_dossier_id': dossier_id,
             },
         )
+        _send_vae_admin_notification(
+            "Formulaire VAE soumis",
+            trainee=t,
+            dossier=dossier,
+            session_obj=s,
+            details={
+                "statut_vise": view['label'],
+                "date_reception_livret_1": t['vae_action_dates'].get('livret_1_received') or "",
+            },
+        )
         s['trainees'] = trainees
         s.pop('stagiaires', None)
         save_data(data_main)
@@ -18886,6 +19045,15 @@ def api_vae_submit(dossier_id: str):
                 f"trainee_id={current_trainee_id!r} status={view['key']!r}"
             )
     else:
+        _send_vae_admin_notification(
+            "Formulaire VAE soumis",
+            dossier=dossier,
+            details={
+                "avertissement": "Liaison session/stagiaire introuvable",
+                "session_id": session_id,
+                "trainee_id": trainee_id,
+            },
+        )
         print(
             f"[VAE][EMAIL] liaison session/stagiaire introuvable après soumission livret 1: "
             f"dossier_id={dossier_id!r} session_id={session_id!r} trainee_id={trainee_id!r}"
@@ -18925,6 +19093,8 @@ def admin_vae_detail(dossier_id: str):
         action = request.form.get('action', '').strip()
         redirect_endpoint = None
         redirect_kwargs = {}
+        notification_action = "Mise à jour dossier VAE"
+        notification_details = {"action_admin": action}
         if action == 'update_avis':
             avis = dossier.setdefault('avis_admin', {})
             avis['decision'] = request.form.get('decision', '').strip()
@@ -18934,6 +19104,12 @@ def admin_vae_detail(dossier_id: str):
             avis['telephone'] = request.form.get('telephone', '').strip()
             avis['organisme'] = request.form.get('organisme', '').strip()
             avis['date'] = request.form.get('date', '').strip()
+            notification_action = "Avis administratif VAE mis à jour"
+            notification_details.update({
+                "decision": avis['decision'],
+                "date_avis": avis['date'],
+                "accompagnateur": avis['nom_accompagnateur'],
+            })
             meta = dossier.get('meta') or {}
             session_id = str(meta.get('session_id') or '').strip()
             trainee_id = str(meta.get('trainee_id') or '').strip()
@@ -18942,10 +19118,13 @@ def admin_vae_detail(dossier_id: str):
                 redirect_kwargs = {'session_id': session_id, 'trainee_id': trainee_id}
         elif action == 'mark_recevable':
             dossier['statut_dossier'] = 'recevable'
+            notification_action = "Dossier VAE marqué recevable"
         elif action == 'mark_refuse':
             dossier['statut_dossier'] = 'refuse'
+            notification_action = "Dossier VAE marqué refusé"
         dossier['updated_at'] = _now_iso_utc()
         _vae_save_all(data)
+        _send_vae_admin_notification(notification_action, dossier=dossier, details=notification_details)
         if redirect_endpoint:
             return redirect(url_for(redirect_endpoint, **redirect_kwargs))
         return redirect(url_for('admin_vae_detail', dossier_id=dossier_id))
