@@ -502,7 +502,7 @@
       <div class="dashboard-card__label">DIRIGEANT</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.DIRIGEANT or 0 }}</div>
     </button>
-    <button type="button" class="dashboard-card dashboard-card--vae" data-dashboard-filter="vae" aria-label="Afficher uniquement les formations VAE">
+    <button type="button" class="dashboard-card dashboard-card--vae" data-dashboard-filter="vae" data-dashboard-url="https://gestionstagiaires-r5no.onrender.com/admin/sessions/7d8a231044/trainees" aria-label="Ouvrir directement la session VAE">
       <div class="dashboard-card__label">VAE</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.VAE or 0 }}</div>
     </button>
@@ -1816,14 +1816,10 @@
         const value = card.dataset.dashboardFilter;
         if(!value) return;
 
-        if(value === "vae"){
-          const vaeTraineesLink = document.querySelector(
-            ".session-card[data-session-training-type*='VAE'] .card-actions a[href*='/stagiaires']"
-          );
-          if(vaeTraineesLink?.href){
-            window.location.href = vaeTraineesLink.href;
-            return;
-          }
+        const dashboardUrl = card.dataset.dashboardUrl;
+        if(dashboardUrl){
+          window.location.href = dashboardUrl;
+          return;
         }
 
         filterState.training = (filterState.training === value) ? null : value;
