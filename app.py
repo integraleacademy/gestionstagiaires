@@ -4321,6 +4321,21 @@ def positioning_test_score(answers: Dict[str, Any]) -> Dict[str, Any]:
     return {"score": score, "total": total, "score_over_20": score_over_20}
 
 
+WEDOF_LEADS_SESSION_ID = "wedof-cpf-edof"
+WEDOF_LEADS_SESSION_NAME = "Leads WeDoF CPF/EDOF"
+
+
+def _is_wedof_leads_session(session_obj: Dict[str, Any]) -> bool:
+    session_id = str((session_obj or {}).get("id") or "").strip().lower()
+    session_name = str(_session_get(session_obj or {}, "name", "") or "").strip().lower()
+    training_type = str(_session_get(session_obj or {}, "training_type", "") or "").strip().upper()
+    return (
+        session_id == WEDOF_LEADS_SESSION_ID
+        or session_name == WEDOF_LEADS_SESSION_NAME.lower()
+        or "CPF/EDOF" in training_type
+    )
+
+
 def find_session(data: Dict[str, Any], session_id: str) -> Optional[Dict[str, Any]]:
     for s in data.get("sessions", []):
         if s.get("id") == session_id:
@@ -7371,6 +7386,9 @@ def admin_sessions():
         return None
 
     for s in data.get("sessions", []):
+        if _is_wedof_leads_session(s):
+            continue
+
         session_start = _parse_iso_date(_session_get(s, "date_start", ""))
         dashboard_label = _dashboard_training_label(_session_get(s, "training_type", ""))
         if dashboard_label:
@@ -7567,10 +7585,10 @@ def admin_sessions_conventions():
     for sess in data.get("sessions", []):
         if bool(sess.get("archived")):
             continue
+        if _is_wedof_leads_session(sess):
+            continue
         training_type_raw = (_session_get(sess, "training_type", "") or "").strip().upper()
         if "VAE" in training_type_raw:
-            continue
-        if "CPF/EDOF" in training_type_raw or sess.get("id") == "wedof-cpf-edof":
             continue
         trainees = _session_trainees_list(sess)
         for trainee in trainees:
@@ -7825,31 +7843,11 @@ def wedof_webhook():
         if folder_id and not fields.get("wedof_case_id"):
             fields["wedof_case_id"] = folder_id
         if event.lower().startswith(("cpf", "edof", "dossier", "registrationfolder")) or fields.get("wedof_case_id"):
-            data = load_data()
-            sessions = data.setdefault("sessions", [])
-            wedof_session = next((s for s in sessions if s.get("id") == "wedof-cpf-edof"), None)
-            if wedof_session is None:
-                wedof_session = {"id": "wedof-cpf-edof", "name": "Leads WeDoF CPF/EDOF", "training_type": "CPF/EDOF", "trainees": []}
-                sessions.append(wedof_session)
-            trainees = _session_trainees_list(wedof_session)
-            match = next((t for t in trainees if (t.get("wedof_case_id") and t.get("wedof_case_id") == fields.get("wedof_case_id")) or (fields.get("email") and (t.get("email") or "").lower() == fields.get("email", "").lower())), None)
-            if match is None:
-                match = {"id": f"tr-{uuid.uuid4().hex[:12]}", "created_at": _now_iso()}
-                trainees.append(match)
-            match["last_name"] = fields.get("last_name") or match.get("last_name", "")
-            match["first_name"] = fields.get("first_name") or match.get("first_name", "")
-            match["email"] = fields.get("email") or match.get("email", "")
-            match["phone"] = fields.get("phone") or match.get("phone", "")
-            match["training_title"] = fields.get("training_title") or match.get("training_title", "")
-            match["wedof_status"] = fields.get("status") or event or match.get("wedof_status", "")
-            match["wedof_case_id"] = fields.get("wedof_case_id") or match.get("wedof_case_id", "")
-            match["training_date"] = fields.get("training_date") or match.get("training_date", "")
-            match["wedof_last_event"] = event
-            match["wedof_last_delivery_id"] = delivery_id
-            match["updated_at"] = _now_iso()
-            wedof_session["trainees"] = trainees
-            save_data(data)
-            app.logger.info("[WEDOF WEBHOOK] dossier créé/mis à jour case_id=%s email=%s", match.get("wedof_case_id"), match.get("email"))
+            app.logger.info(
+                "[WEDOF WEBHOOK] dossier conservé uniquement dans /admin/wedof case_id=%s email=%s",
+                fields.get("wedof_case_id") or "-",
+                fields.get("email") or "-",
+            )
     except Exception:
         app.logger.exception("[WEDOF WEBHOOK] erreur")
 
@@ -8020,11 +8018,10 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
     for session in data.get("sessions", []):
         if bool(session.get("exclude_from_sales_tracking")):
             continue
+        if _is_wedof_leads_session(session):
+            continue
         session_id = str(session.get("id") or "")
         training_type_raw = _session_get(session, "training_type", "")
-        training_type_normalized = str(training_type_raw or "").strip().upper()
-        if session_id == "wedof-cpf-edof" or "CPF/EDOF" in training_type_normalized:
-            continue
         trainees = _session_trainees_list(session)
         training_label = _sales_training_label(training_type_raw)
         unit_price = _sales_training_unit_price(training_type_raw, training_label)
@@ -10032,6 +10029,8 @@ def admin_trainees(session_id: str):
     data = load_data()
     s = find_session(data, session_id)
     if not s:
+        abort(404)
+    if _is_wedof_leads_session(s):
         abort(404)
 
     # normalize session view
@@ -15121,6 +15120,8 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     s = find_session(data, session_id)
     if not s:
         abort(404)
+    if _is_wedof_leads_session(s):
+        abort(404)
 
     session_view = {
         "id": s.get("id"),
@@ -15788,6 +15789,8 @@ def api_docs_to_control():
     out = []
 
     for s in data.get("sessions", []):
+        if _is_wedof_leads_session(s):
+            continue
         session_id = s.get("id")
         session_name = _session_get(s, "name", "")
         training_type = _session_get(s, "training_type", "")
@@ -15831,6 +15834,8 @@ def public_docs_to_control():
     out = []
 
     for s in data.get("sessions", []):
+        if _is_wedof_leads_session(s):
+            continue
         session_id = s.get("id")
         session_name = _session_get(s, "name", "")
         training_type = _session_get(s, "training_type", "")
@@ -15882,6 +15887,8 @@ def api_trainees_search():
     out = []
 
     for s in data.get("sessions", []):
+        if _is_wedof_leads_session(s):
+            continue
         session_id = s.get("id")
         session_name = _session_get(s, "name", "")
         training_type = _session_get(s, "training_type", "")
@@ -15925,6 +15932,8 @@ def api_cnaps_trainees():
     sessions_out = []
     for s in data.get("sessions", []):
         if bool(s.get("archived")):
+            continue
+        if _is_wedof_leads_session(s):
             continue
         trainees = _session_trainees_list(s)
         sessions_out.append({
@@ -16332,6 +16341,8 @@ def admin_sessions_archived():
 
     for s in data.get("sessions", []):
         if not bool(s.get("archived")):
+            continue
+        if _is_wedof_leads_session(s):
             continue
 
         st = compute_stats(s)
