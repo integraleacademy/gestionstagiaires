@@ -369,6 +369,67 @@ class AdminLivret2UploadTests(unittest.TestCase):
         self.assertEqual(doc['files'][0], 'uploads/S1/T1/documents/livret2.zip')
 
 
+class ScotiaLivret2ResetTests(unittest.TestCase):
+    def setUp(self):
+        self.client = gestion_app.app.test_client()
+        self.original_load_data = gestion_app.load_data
+        self.original_save_data = gestion_app.save_data
+        self.original_safe_remove_file = gestion_app._safe_remove_file
+
+    def tearDown(self):
+        gestion_app.load_data = self.original_load_data
+        gestion_app.save_data = self.original_save_data
+        gestion_app._safe_remove_file = self.original_safe_remove_file
+
+    def test_reset_livret2_removes_file_status_and_dates(self):
+        payload = {
+            'sessions': [
+                {
+                    'id': 'S1',
+                    'training_type': 'DIRIGEANT VAE',
+                    'trainees': [
+                        {
+                            'id': 'T1',
+                            'first_name': 'Jean',
+                            'last_name': 'Dupont',
+                            'deliverables': {'livret_2': 'uploads/S1/T1/deliverables/livret2.pdf'},
+                            'scotia_livret_2_status': 'livret_2_review',
+                            'scotia_livret_2_processed_at': '2026-05-12T09:00:00',
+                            'vae_action_dates': {
+                                'livret_2_imported_at': '12/05/2026',
+                                'livret_2_received': '12/05/2026',
+                                'livret_1_validated': '10/05/2026',
+                            },
+                        }
+                    ],
+                }
+            ]
+        }
+        removed_paths = []
+        saved_payloads = []
+
+        gestion_app.load_data = lambda: payload
+        gestion_app.save_data = lambda data: saved_payloads.append(data)
+        gestion_app._safe_remove_file = lambda path: removed_paths.append(path)
+
+        with self.client.session_transaction() as sess:
+            sess['scotia_logged_in'] = True
+
+        response = self.client.post('/scotia/sessions/S1/stagiaires/T1/livret2/reset')
+
+        self.assertEqual(response.status_code, 302)
+        trainee = payload['sessions'][0]['trainees'][0]
+        self.assertNotIn('livret_2', trainee['deliverables'])
+        self.assertEqual(trainee['scotia_livret_2_status'], '')
+        self.assertEqual(trainee['scotia_livret_2_processed_at'], '')
+        self.assertNotIn('livret_2_imported_at', trainee['vae_action_dates'])
+        self.assertNotIn('livret_2_received', trainee['vae_action_dates'])
+        self.assertEqual(trainee['vae_action_dates']['livret_1_validated'], '10/05/2026')
+        self.assertEqual(len(removed_paths), 1)
+        self.assertTrue(removed_paths[0].endswith('uploads/S1/T1/deliverables/livret2.pdf'))
+        self.assertEqual(len(saved_payloads), 1)
+
+
 class TestFrImportTests(unittest.TestCase):
     def setUp(self):
         self.client = gestion_app.app.test_client()

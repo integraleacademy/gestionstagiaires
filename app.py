@@ -7302,6 +7302,43 @@ def scotia_upload_livret2(session_id: str, trainee_id: str):
     return redirect(url_for('scotia_dashboard'))
 
 
+@app.post('/scotia/sessions/<session_id>/stagiaires/<trainee_id>/livret2/reset')
+@scotia_login_required
+def scotia_reset_livret2(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        abort(404)
+
+    deliverables = t.get('deliverables')
+    if not isinstance(deliverables, dict):
+        deliverables = {}
+        t['deliverables'] = deliverables
+
+    livret_2_token = (deliverables.get('livret_2') or '').strip()
+    if livret_2_token:
+        try:
+            _safe_remove_file(_detokenize_path(livret_2_token))
+        except Exception:
+            pass
+
+    deliverables.pop('livret_2', None)
+    t['scotia_livret_2_status'] = ''
+    t['scotia_livret_2_processed_at'] = ''
+
+    action_dates = t.get('vae_action_dates')
+    if isinstance(action_dates, dict):
+        action_dates.pop('livret_2_imported_at', None)
+        action_dates.pop('livret_2_received', None)
+
+    t['updated_at'] = _now_iso()
+
+    s['trainees'] = trainees
+    s.pop('stagiaires', None)
+    save_data(data)
+    return redirect(url_for('scotia_dashboard'))
+
+
 @app.post('/scotia/sessions/<session_id>/stagiaires/<trainee_id>/resend-mail/<livret_key>')
 @scotia_login_required
 def scotia_resend_mail(session_id: str, trainee_id: str, livret_key: str):

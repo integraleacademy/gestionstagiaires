@@ -302,6 +302,9 @@
                   </form>
                   {% if has_livret_2 %}
                     <a class="btn btn-outline" href="/scotia/uploads/{{ it.deliverables.livret_2 }}" target="_blank">Consulter le Livret 2</a>
+                    <form method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/livret2/reset" onsubmit="return confirm('Retirer le Livret 2 importé et remettre son statut à zéro ?');">
+                      <button class="btn btn-outline" type="submit">Retirer Livret 2</button>
+                    </form>
                   {% endif %}
                   <button type="button" class="btn {% if livret_2_is_ok %}btn-primary is-active{% elif livret_2_processed or not has_livret_2 or it.scotia_status != 'recevable' %}btn-disabled-muted{% else %}btn-primary{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','livret_2_ok')" {% if livret_2_processed or not has_livret_2 or it.scotia_status != 'recevable' %}disabled{% endif %}>Livret 2 OK</button>
                   <button type="button" class="btn {% if livret_2_is_review %}btn-danger-solid is-active{% elif livret_2_processed or not has_livret_2 or it.scotia_status != 'recevable' %}btn-disabled-muted{% else %}btn-danger-solid{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','livret_2_review')" {% if livret_2_processed or not has_livret_2 or it.scotia_status != 'recevable' %}disabled{% endif %}>Livret 2 à revoir</button>
