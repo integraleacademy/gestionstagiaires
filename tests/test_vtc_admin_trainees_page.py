@@ -174,6 +174,10 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn('const matchPractice = selectedPractice === "all" || practiceStatus === selectedPractice;', html)
         self.assertIn("vtcPracticeFilter.addEventListener", html)
         self.assertIn('field === "vtc_cmar_manual_ok"', html)
+        self.assertIn('data-vtc-exam-status-select="theory"', html)
+        self.assertIn('data-vtc-exam-status-select="practice"', html)
+        self.assertIn('data-field="vtc_theory_status_manual"', html)
+        self.assertIn('data-field="vtc_practice_status_manual"', html)
         self.assertIn("En attente inscription examen", html)
         self.assertIn("En attente résultats examen", html)
         self.assertIn("En attente réussite théorie", html)
@@ -212,6 +216,29 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
             self.data["sessions"][0]["trainees"][1]["vtc_exam_center"],
             "nice",
         )
+
+    def test_vtc_exam_statuses_can_be_saved_manually(self):
+        response = self.client.post(
+            "/api/sessions/S-VTC/stagiaires/T-WAITING-THEORY/update",
+            json={
+                "vtc_theory_status_manual": "failed",
+                "vtc_practice_status_manual": "waiting_theory",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        trainee = self.data["sessions"][0]["trainees"][1]
+        self.assertEqual(trainee["vtc_theory_status_manual"], "failed")
+        self.assertEqual(trainee["vtc_practice_status_manual"], "waiting_theory")
+
+    def test_vtc_manual_exam_statuses_drive_stats(self):
+        self.data["sessions"][0]["trainees"][0]["vtc_theory_status_manual"] = "success"
+        self.data["sessions"][0]["trainees"][0]["vtc_practice_status_manual"] = "failed"
+
+        stats = gestion_app.compute_vtc_exam_stats(self.data["sessions"][0]["trainees"])
+
+        self.assertEqual(stats["theory_success"], 4)
+        self.assertEqual(stats["practice_failed"], 2)
 
     def test_sessions_filters_link_to_all_vtc_trainees(self):
         response = self.client.get("/admin/sessions")
