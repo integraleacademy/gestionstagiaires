@@ -372,6 +372,9 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
             <option value="false" {% if not vtc_cmar_ok %}selected{% endif %}>🔴</option>
             <option value="true" {% if vtc_cmar_ok %}selected{% endif %}>🟢</option>
           </select>
+          {% if not (t.vtc_cmar_id or "")|trim %}
+            <div class="vtc-cmar-alert" role="alert">Identifiant CMAR inconnu</div>
+          {% endif %}
         </td>
         <td>
           <select class="status sel status-dot" data-field="vtc_elearning_manual_ok" {{ read_only_attr }}>
@@ -784,6 +787,21 @@ tr.row-todo td{
 .vtc-status-yellow{ background:#fef3c7; color:#92400e; }
 .vtc-status-green{ background:#dcfce7; color:#166534; }
 .vtc-status-black{ background:#111827; color:#fff; }
+
+.vtc-cmar-alert{
+  display:inline-flex;
+  align-items:center;
+  margin-top:6px;
+  padding:5px 8px;
+  border-radius:10px;
+  background:#ffedd5;
+  color:#9a3412;
+  border:1px solid #fdba74;
+  font-size:11px;
+  font-weight:900;
+  line-height:1.2;
+  text-transform:uppercase;
+}
 
 .vtc-exam-center{
   display:flex;

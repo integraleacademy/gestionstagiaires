@@ -38,6 +38,7 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
                             "email": "bruno@example.test",
                             "phone": "0600000002",
                             "vtc_cmar_manual_ok": True,
+                            "vtc_cmar_id": "CMAR-12345",
                             "vtc_exam_center": "toulon",
                             "documents": [],
                         },
@@ -174,6 +175,8 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn("Echec examen théorique", html)
         self.assertIn("Echec examen pratique", html)
         self.assertIn("vtc-status-black", html)
+        self.assertIn("Identifiant CMAR inconnu", html)
+        self.assertEqual(html.count("Identifiant CMAR inconnu"), 5)
         self.assertIn('setVtcStatusLabel(tr.querySelector("[data-vtc-theory-label]"), "Echec examen théorique", "black")', html)
         self.assertIn('setVtcStatusLabel(tr.querySelector("[data-vtc-practice-label]"), "Echec examen pratique", "black")', html)
         self.assertNotIn("Date d'examen théorique : 10/06/2026\">🔴", html)
@@ -215,3 +218,4 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn('data-session-id="S-VTC"', html)
         self.assertIn('data-session-id="S-VTC-2"', html)
         self.assertIn('/admin/sessions/S-VTC-2/stagiaires/T-OTHER-VTC', html)
+        self.assertEqual(html.count("Identifiant CMAR inconnu"), 6)
