@@ -129,9 +129,21 @@
     {% endif %}
     {% if is_vtc %}
       <label for="vtcTheoryFilter" class="muted" style="font-weight:700;">Filtre théorie</label>
-      <select id="vtcTheoryFilter" class="sel" style="min-width:220px;">
-        <option value="all">Tous</option>
-        <option value="ok">Théorie OK uniquement</option>
+      <select id="vtcTheoryFilter" class="sel" style="min-width:260px;">
+        <option value="all">Tous les statuts théorie</option>
+        <option value="pending_registration">En attente inscription examen</option>
+        <option value="pending_results">En attente résultats examen</option>
+        <option value="success">Examen théorique réussi</option>
+        <option value="failed">Echec examen théorique</option>
+      </select>
+      <label for="vtcPracticeFilter" class="muted" style="font-weight:700;">Filtre pratique</label>
+      <select id="vtcPracticeFilter" class="sel" style="min-width:280px;">
+        <option value="all">Tous les statuts pratique</option>
+        <option value="pending_registration">En attente inscription examen</option>
+        <option value="waiting_theory">En attente réussite théorie</option>
+        <option value="pending_results">En attente résultats pratique</option>
+        <option value="success">Examen pratique réussi</option>
+        <option value="failed">Echec examen pratique</option>
       </select>
     {% endif %}
     <button class="btn btn-outline" id="btnCollectMails" type="button">📋 Récup mail</button>
@@ -1686,28 +1698,7 @@ function setVtcStatusLabel(label, text, color){
   label.classList.add(`vtc-status-${color}`);
 }
 
-function getVtcManualStatusMeta(mode, status){
-  const maps = {
-    theory: {
-      waiting_registration: ["En attente inscription examen", "red"],
-      waiting_result: ["En attente résultats examen", "yellow"],
-      success: ["Examen théorique réussi", "green"],
-      failed: ["Echec examen théorique", "black"]
-    },
-    practice: {
-      waiting_registration: ["En attente inscription examen", "red"],
-      waiting_theory: ["En attente réussite théorie", "yellow"],
-      waiting_result: ["En attente résultats pratique", "yellow"],
-      success: ["Examen pratique réussi", "green"],
-      failed: ["Echec examen pratique", "black"]
-    }
-  };
-  const meta = maps[mode]?.[status];
-  return meta ? { text: meta[0], color: meta[1] } : null;
-}
-
-function refreshVtcStatusLabels(tr){
-  if(!tr) return;
+function getVtcStatusValues(tr){
   const cmarOk = tr.getAttribute("data-vtc-cmar-ok") === "1";
   const theorySent = tr.getAttribute("data-vtc-theory-exam-sent") === "1";
   const theoryResult = (tr.getAttribute("data-vtc-theory-result") || "").toLowerCase();
@@ -1717,14 +1708,28 @@ function refreshVtcStatusLabels(tr){
   const practiceManual = (tr.getAttribute("data-vtc-practice-status-manual") || "").toLowerCase();
   const theoryFailed = theoryResult === "failed" || theoryResult === "non_admissible";
   const practiceFailed = practiceResult === "failed" || practiceResult === "non_admissible";
-  const theoryManualMeta = getVtcManualStatusMeta("theory", theoryManual);
-  const practiceManualMeta = getVtcManualStatusMeta("practice", practiceManual);
-  const theoryOk = theoryManual ? theoryManual === "success" : (theorySent && !theoryFailed);
-  const practiceOk = practiceManual ? practiceManual === "success" : (practiceSent || practiceResult === "success");
+  const theoryOk = theorySent && !theoryFailed;
+  const practiceOk = practiceSent || practiceResult === "success";
 
-  if(theoryManualMeta){
-    setVtcStatusLabel(tr.querySelector("[data-vtc-theory-label]"), theoryManualMeta.text, theoryManualMeta.color);
-  }else if(theoryFailed){
+  let theoryStatus = "pending_results";
+  if(theoryFailed) theoryStatus = "failed";
+  else if(!cmarOk) theoryStatus = "pending_registration";
+  else if(theoryOk) theoryStatus = "success";
+
+  let practiceStatus = "pending_results";
+  if(practiceFailed) practiceStatus = "failed";
+  else if(!cmarOk) practiceStatus = "pending_registration";
+  else if(practiceOk) practiceStatus = "success";
+  else if(!theoryOk) practiceStatus = "waiting_theory";
+
+  return { theoryStatus, practiceStatus, theoryFailed, practiceFailed, theoryOk, practiceOk, cmarOk };
+}
+
+function refreshVtcStatusLabels(tr){
+  if(!tr) return;
+  const { theoryFailed, practiceFailed, theoryOk, practiceOk, cmarOk } = getVtcStatusValues(tr);
+
+  if(theoryFailed){
     setVtcStatusLabel(tr.querySelector("[data-vtc-theory-label]"), "Echec examen théorique", "black");
   }else if(!cmarOk){
     setVtcStatusLabel(tr.querySelector("[data-vtc-theory-label]"), "En attente inscription examen", "red");
@@ -1759,20 +1764,23 @@ function applyRowFilters(){
   const vaeFilter = document.getElementById("vaeStatusFilter");
   const vaeNameSearch = document.getElementById("vaeNameSearch");
   const vtcTheoryFilter = document.getElementById("vtcTheoryFilter");
+  const vtcPracticeFilter = document.getElementById("vtcPracticeFilter");
   const selectedVae = vaeFilter?.value || "all";
   const selectedTheory = vtcTheoryFilter?.value || "all";
+  const selectedPractice = vtcPracticeFilter?.value || "all";
   const searchedName = normalizeSearchText(vaeNameSearch?.value || "");
 
   document.querySelectorAll("tr[data-trainee-id]").forEach(tr => {
     const rowVaeStatus = tr.getAttribute("data-vae-status") || "livret_1_todo";
-    const rowTheoryOk = tr.getAttribute("data-vtc-theory-ok") === "1";
+    const { theoryStatus, practiceStatus } = getVtcStatusValues(tr);
     const rowFullName = normalizeSearchText(`${tr.getAttribute("data-last-name") || ""} ${tr.getAttribute("data-first-name") || ""}`);
 
     const matchVae = selectedVae === "all" || rowVaeStatus === selectedVae;
-    const matchTheory = selectedTheory === "all" || rowTheoryOk;
+    const matchTheory = selectedTheory === "all" || theoryStatus === selectedTheory;
+    const matchPractice = selectedPractice === "all" || practiceStatus === selectedPractice;
     const matchName = !searchedName || rowFullName.includes(searchedName);
 
-    tr.style.display = (matchVae && matchTheory && matchName) ? "" : "none";
+    tr.style.display = (matchVae && matchTheory && matchPractice && matchName) ? "" : "none";
   });
 }
 
@@ -2084,6 +2092,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
           tr.setAttribute("data-vtc-cmar-manual-ok", manualOk ? "1" : "0");
           tr.setAttribute("data-vtc-cmar-ok", (manualOk || examFeesPaid) ? "1" : "0");
           refreshVtcStatusLabels(tr);
+          applyRowFilters();
         }
 
         try{
@@ -2105,6 +2114,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
             tr.setAttribute("data-vtc-cmar-manual-ok", previousVtcCmarManualOk);
             tr.setAttribute("data-vtc-cmar-ok", previousVtcCmarOk);
             refreshVtcStatusLabels(tr);
+            applyRowFilters();
           }
           applyStatusPill(sel);
           alert("Erreur sauvegarde");
@@ -2257,6 +2267,11 @@ if(vaeNameSearch){
 const vtcTheoryFilter = document.getElementById("vtcTheoryFilter");
 if(vtcTheoryFilter){
   vtcTheoryFilter.addEventListener("change", applyRowFilters);
+}
+
+const vtcPracticeFilter = document.getElementById("vtcPracticeFilter");
+if(vtcPracticeFilter){
+  vtcPracticeFilter.addEventListener("change", applyRowFilters);
 }
 
 applyRowFilters();
