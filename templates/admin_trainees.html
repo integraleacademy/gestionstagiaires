@@ -243,7 +243,8 @@
       {% for t in trainees %}
 {% set vtc_book_address_complete = (t.address or "")|trim and (t.zip_code or "")|trim and (t.city or "")|trim %}
 {% set vtc_book_pending_ready = is_vtc and (not (t.vtc_book_sent_at or "")|trim) and vtc_book_address_complete %}
-<tr class="row {% if t.comment %}row-warning{% endif %}"
+{% set vtc_exam_center = (t.vtc_exam_center or "")|trim|lower %}
+<tr class="row {% if t.comment %}row-warning{% endif %} {% if vtc_exam_center == 'nice' %}row-vtc-nice{% elif vtc_exam_center == 'toulon' %}row-vtc-toulon{% endif %}"
     data-trainee-id="{{ t.id }}"
     data-session-id="{{ t.source_session_id or session.id }}"
     data-last-name="{{ t.last_name or '' }}"
@@ -262,7 +263,7 @@ data-vtc-practice-status-manual="{{ t.vtc_practice_status_manual or '' }}"
 data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}"
   data-has-diplome="{{ '1' if (t.get('deliverables', {}).get('diplome')) else '0' }}"
   data-has-attestation="{{ '1' if (t.get('deliverables', {}).get('attestation_fin_formation')) else '0' }}"
-  data-vtc-exam-center="{{ t.vtc_exam_center or '' }}">
+  data-vtc-exam-center="{{ vtc_exam_center }}">
 {% if is_all_vtc %}
 <td class="col-session">
   <a class="trainee-link" href="{{ url_for('admin_trainees', session_id=t.source_session_id) }}" style="text-decoration:none;font-weight:800;">{{ t.source_session_name or 'Session VTC' }}</a>
@@ -437,7 +438,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
                      class="vtc-exam-center-checkbox"
                      data-field="vtc_exam_center"
                      value="nice"
-                     {% if t.vtc_exam_center == "nice" %}checked{% endif %}
+                     {% if vtc_exam_center == "nice" %}checked{% endif %}
                      {{ read_only_attr }}>
               <span>Nice</span>
             </label>
@@ -446,7 +447,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
                      class="vtc-exam-center-checkbox"
                      data-field="vtc_exam_center"
                      value="toulon"
-                     {% if t.vtc_exam_center == "toulon" %}checked{% endif %}
+                     {% if vtc_exam_center == "toulon" %}checked{% endif %}
                      {{ read_only_attr }}>
               <span>Toulon</span>
             </label>
@@ -1706,7 +1707,12 @@ bulkParcheminInput?.addEventListener("change", async ()=>{
 
   function recomputeRowHighlight(){
   document.querySelectorAll("tr[data-trainee-id]").forEach(tr=>{
-    const center = (tr.getAttribute("data-vtc-exam-center") || "").toLowerCase();
+    let center = (tr.getAttribute("data-vtc-exam-center") || "").trim().toLowerCase();
+    const checkedCenter = tr.querySelector("input.vtc-exam-center-checkbox:checked")?.value || "";
+    if(!center && checkedCenter){
+      center = checkedCenter.trim().toLowerCase();
+      tr.setAttribute("data-vtc-exam-center", center);
+    }
     const hasSst = tr.getAttribute("data-has-sst") === "1";
     const hasDiplome = tr.getAttribute("data-has-diplome") === "1";
     const hasAttestation = tr.getAttribute("data-has-attestation") === "1";
