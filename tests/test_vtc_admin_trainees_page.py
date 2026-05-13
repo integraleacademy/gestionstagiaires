@@ -39,7 +39,7 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
                             "phone": "0600000002",
                             "vtc_cmar_manual_ok": True,
                             "vtc_cmar_id": "CMAR-12345",
-                            "vtc_exam_center": "toulon",
+                            "vtc_exam_center": " Toulon ",
                             "documents": [],
                         },
                         {
@@ -160,6 +160,10 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn("Toulon = ligne bleue", html)
         self.assertIn('value="nice"', html)
         self.assertIn('value="toulon"', html)
+        self.assertIn('row-vtc-nice', html)
+        self.assertIn('row-vtc-toulon', html)
+        self.assertIn('data-vtc-exam-center="toulon"', html)
+        self.assertIn('value="toulon"\n                     checked', html)
         self.assertIn('data-vtc-cmar-ok="0"', html)
         self.assertIn('data-vtc-cmar-ok="1"', html)
         self.assertIn("data-vtc-theory-label", html)
