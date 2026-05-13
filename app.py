@@ -4612,16 +4612,35 @@ def compute_vtc_exam_stats(trainees: List[Dict[str, Any]]) -> Dict[str, int]:
     theory_success = sum(
         1
         for t in trainees
-        if t.get("vtc_theory_exam_sent_at") and t.get("vtc_theory_result") not in ("failed", "non_admissible")
+        if (t.get("vtc_theory_status_manual") == "success")
+        or (
+            not t.get("vtc_theory_status_manual")
+            and t.get("vtc_theory_exam_sent_at")
+            and t.get("vtc_theory_result") not in ("failed", "non_admissible")
+        )
     )
-    theory_failed = sum(1 for t in trainees if t.get("vtc_theory_result") in ("failed", "non_admissible"))
+    theory_failed = sum(
+        1
+        for t in trainees
+        if t.get("vtc_theory_status_manual") == "failed"
+        or (not t.get("vtc_theory_status_manual") and t.get("vtc_theory_result") in ("failed", "non_admissible"))
+    )
     practice_success = sum(
         1
         for t in trainees
-        if (t.get("vtc_practice_result") == "success" or t.get("vtc_practice_exam_sent_at"))
-        and t.get("vtc_practice_result") not in ("failed", "non_admissible")
+        if (t.get("vtc_practice_status_manual") == "success")
+        or (
+            not t.get("vtc_practice_status_manual")
+            and (t.get("vtc_practice_result") == "success" or t.get("vtc_practice_exam_sent_at"))
+            and t.get("vtc_practice_result") not in ("failed", "non_admissible")
+        )
     )
-    practice_failed = sum(1 for t in trainees if t.get("vtc_practice_result") in ("failed", "non_admissible"))
+    practice_failed = sum(
+        1
+        for t in trainees
+        if t.get("vtc_practice_status_manual") == "failed"
+        or (not t.get("vtc_practice_status_manual") and t.get("vtc_practice_result") in ("failed", "non_admissible"))
+    )
     cmar_ready = sum(1 for t in trainees if t.get("exam_fees_paid") or t.get("vtc_cmar_manual_ok"))
     convocation_sent = sum(1 for t in trainees if t.get("vtc_practice_convocation_sent_at"))
     return {
@@ -11151,9 +11170,11 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vtc_theory_exam_sms_ok",
         "vtc_theory_result",
         "vtc_theory_result_label",
+        "vtc_theory_status_manual",
         "vtc_practice_convocation_sent_at",
         "vtc_practice_result",
         "vtc_practice_result_label",
+        "vtc_practice_status_manual",
         "vtc_practice_exam_sent_at",
         "vtc_practice_exam_email_ok",
         "vtc_practice_exam_sms_ok",
@@ -11239,6 +11260,14 @@ def api_update_trainee(session_id: str, trainee_id: str):
             elif k == "vtc_exam_center":
                 normalized_center = v.strip().lower()
                 t[k] = normalized_center if normalized_center in ("nice", "toulon") else ""
+            elif k == "vtc_theory_status_manual":
+                normalized_status = v.strip().lower()
+                allowed_statuses = ("", "waiting_registration", "waiting_result", "success", "failed")
+                t[k] = normalized_status if normalized_status in allowed_statuses else ""
+            elif k == "vtc_practice_status_manual":
+                normalized_status = v.strip().lower()
+                allowed_statuses = ("", "waiting_registration", "waiting_theory", "waiting_result", "success", "failed")
+                t[k] = normalized_status if normalized_status in allowed_statuses else ""
             else:
                 t[k] = v.strip()
         else:

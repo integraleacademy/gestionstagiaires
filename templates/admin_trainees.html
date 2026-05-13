@@ -237,14 +237,16 @@
     data-last-name="{{ t.last_name or '' }}"
     data-first-name="{{ t.first_name or '' }}"
     data-vae-status="{{ t.vae_status or 'livret_1_todo' }}"
-data-vtc-theory-ok="{{ '1' if (t.vtc_theory_result != 'non_admissible' and t.vtc_theory_exam_sent_at) else '0' }}"
+data-vtc-theory-ok="{{ '1' if (t.vtc_theory_status_manual == 'success' or ((not t.vtc_theory_status_manual) and t.vtc_theory_result != 'non_admissible' and t.vtc_theory_exam_sent_at)) else '0' }}"
 data-vtc-exam-fees-paid="{{ '1' if t.exam_fees_paid else '0' }}"
 data-vtc-cmar-manual-ok="{{ '1' if t.vtc_cmar_manual_ok else '0' }}"
 data-vtc-cmar-ok="{{ '1' if (t.exam_fees_paid or t.vtc_cmar_manual_ok) else '0' }}"
 data-vtc-theory-exam-sent="{{ '1' if t.vtc_theory_exam_sent_at else '0' }}"
 data-vtc-theory-result="{{ t.vtc_theory_result or '' }}"
+data-vtc-theory-status-manual="{{ t.vtc_theory_status_manual or '' }}"
 data-vtc-practice-exam-sent="{{ '1' if t.vtc_practice_exam_sent_at else '0' }}"
 data-vtc-practice-result="{{ t.vtc_practice_result or '' }}"
+data-vtc-practice-status-manual="{{ t.vtc_practice_status_manual or '' }}"
 data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}"
   data-has-diplome="{{ '1' if (t.get('deliverables', {}).get('diplome')) else '0' }}"
   data-has-attestation="{{ '1' if (t.get('deliverables', {}).get('attestation_fin_formation')) else '0' }}"
@@ -438,16 +440,25 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
             </label>
           </div>
         </td>
-        <td title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">
-          {% if t.vtc_theory_result in ["failed", "non_admissible"] %}
-            <span class="vtc-status-label vtc-status-black" data-vtc-theory-label title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">Echec examen théorique</span>
-          {% elif not vtc_cmar_ok %}
-            <span class="vtc-status-label vtc-status-red" data-vtc-theory-label title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">En attente inscription examen</span>
-          {% elif t.vtc_theory_exam_sent_at %}
-            <span class="vtc-status-label vtc-status-green" data-vtc-theory-label title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">Examen théorique réussi</span>
+        <td class="vtc-status-cell" title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">
+          {% set vtc_theory_manual = t.vtc_theory_status_manual or '' %}
+          {% if vtc_theory_manual == "failed" or (not vtc_theory_manual and t.vtc_theory_result in ["failed", "non_admissible"]) %}
+            {% set vtc_theory_text = "Echec examen théorique" %}{% set vtc_theory_color = "black" %}
+          {% elif vtc_theory_manual == "waiting_registration" or (not vtc_theory_manual and not vtc_cmar_ok) %}
+            {% set vtc_theory_text = "En attente inscription examen" %}{% set vtc_theory_color = "red" %}
+          {% elif vtc_theory_manual == "success" or (not vtc_theory_manual and t.vtc_theory_exam_sent_at) %}
+            {% set vtc_theory_text = "Examen théorique réussi" %}{% set vtc_theory_color = "green" %}
           {% else %}
-            <span class="vtc-status-label vtc-status-yellow" data-vtc-theory-label title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">En attente résultats examen</span>
+            {% set vtc_theory_text = "En attente résultats examen" %}{% set vtc_theory_color = "yellow" %}
           {% endif %}
+          <button type="button" class="vtc-status-label vtc-status-{{ vtc_theory_color }}" data-vtc-theory-label data-vtc-exam-status-trigger="theory" title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }} — cliquer pour modifier" {{ read_only_attr }}>{{ vtc_theory_text }}</button>
+          <div class="vtc-status-menu" data-vtc-exam-status-menu="theory" hidden>
+            <button type="button" class="vtc-status-choice vtc-status-red" data-vtc-exam-status-choice="waiting_registration" data-field="vtc_theory_status_manual">En attente inscription</button>
+            <button type="button" class="vtc-status-choice vtc-status-yellow" data-vtc-exam-status-choice="waiting_result" data-field="vtc_theory_status_manual">En attente résultats</button>
+            <button type="button" class="vtc-status-choice vtc-status-green" data-vtc-exam-status-choice="success" data-field="vtc_theory_status_manual">Réussie</button>
+            <button type="button" class="vtc-status-choice vtc-status-black" data-vtc-exam-status-choice="failed" data-field="vtc_theory_status_manual">Échec</button>
+            {% if vtc_theory_manual %}<button type="button" class="vtc-status-reset" data-vtc-exam-status-choice="" data-field="vtc_theory_status_manual">Réinitialiser</button>{% endif %}
+          </div>
         </td>
         <td>
           <select class="status sel status-dot"
@@ -459,19 +470,29 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           </select>
         </td>
         <td>{{ session.practice_training_date|frdate }}</td>
-        <td title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">
-          {% set vtc_theory_ok = t.vtc_theory_exam_sent_at and t.vtc_theory_result not in ["failed", "non_admissible"] %}
-          {% if t.vtc_practice_result in ["failed", "non_admissible"] %}
-            <span class="vtc-status-label vtc-status-black" data-vtc-practice-label title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">Echec examen pratique</span>
-          {% elif not vtc_cmar_ok %}
-            <span class="vtc-status-label vtc-status-red" data-vtc-practice-label title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">En attente inscription examen</span>
-          {% elif t.vtc_practice_result == "success" or t.vtc_practice_exam_sent_at %}
-            <span class="vtc-status-label vtc-status-green" data-vtc-practice-label title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">Examen pratique réussi</span>
-          {% elif not vtc_theory_ok %}
-            <span class="vtc-status-label vtc-status-yellow" data-vtc-practice-label title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">En attente réussite théorie</span>
+        <td class="vtc-status-cell" title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">
+          {% set vtc_theory_ok = (t.vtc_theory_status_manual == "success") or ((not t.vtc_theory_status_manual) and t.vtc_theory_exam_sent_at and t.vtc_theory_result not in ["failed", "non_admissible"]) %}
+          {% set vtc_practice_manual = t.vtc_practice_status_manual or '' %}
+          {% if vtc_practice_manual == "failed" or (not vtc_practice_manual and t.vtc_practice_result in ["failed", "non_admissible"]) %}
+            {% set vtc_practice_text = "Echec examen pratique" %}{% set vtc_practice_color = "black" %}
+          {% elif vtc_practice_manual == "waiting_registration" or (not vtc_practice_manual and not vtc_cmar_ok) %}
+            {% set vtc_practice_text = "En attente inscription examen" %}{% set vtc_practice_color = "red" %}
+          {% elif vtc_practice_manual == "success" or (not vtc_practice_manual and (t.vtc_practice_result == "success" or t.vtc_practice_exam_sent_at)) %}
+            {% set vtc_practice_text = "Examen pratique réussi" %}{% set vtc_practice_color = "green" %}
+          {% elif vtc_practice_manual == "waiting_theory" or (not vtc_practice_manual and not vtc_theory_ok) %}
+            {% set vtc_practice_text = "En attente réussite théorie" %}{% set vtc_practice_color = "yellow" %}
           {% else %}
-            <span class="vtc-status-label vtc-status-yellow" data-vtc-practice-label title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">En attente résultats pratique</span>
+            {% set vtc_practice_text = "En attente résultats pratique" %}{% set vtc_practice_color = "yellow" %}
           {% endif %}
+          <button type="button" class="vtc-status-label vtc-status-{{ vtc_practice_color }}" data-vtc-practice-label data-vtc-exam-status-trigger="practice" title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }} — cliquer pour modifier" {{ read_only_attr }}>{{ vtc_practice_text }}</button>
+          <div class="vtc-status-menu" data-vtc-exam-status-menu="practice" hidden>
+            <button type="button" class="vtc-status-choice vtc-status-red" data-vtc-exam-status-choice="waiting_registration" data-field="vtc_practice_status_manual">En attente inscription</button>
+            <button type="button" class="vtc-status-choice vtc-status-yellow" data-vtc-exam-status-choice="waiting_theory" data-field="vtc_practice_status_manual">En attente théorie</button>
+            <button type="button" class="vtc-status-choice vtc-status-yellow" data-vtc-exam-status-choice="waiting_result" data-field="vtc_practice_status_manual">En attente résultats</button>
+            <button type="button" class="vtc-status-choice vtc-status-green" data-vtc-exam-status-choice="success" data-field="vtc_practice_status_manual">Réussie</button>
+            <button type="button" class="vtc-status-choice vtc-status-black" data-vtc-exam-status-choice="failed" data-field="vtc_practice_status_manual">Échec</button>
+            {% if vtc_practice_manual %}<button type="button" class="vtc-status-reset" data-vtc-exam-status-choice="" data-field="vtc_practice_status_manual">Réinitialiser</button>{% endif %}
+          </div>
         </td>
         {% endif %}
 
@@ -813,6 +834,57 @@ tr.row-todo td{
 .vtc-status-yellow{ background:#fef3c7; color:#92400e; }
 .vtc-status-green{ background:#dcfce7; color:#166534; }
 .vtc-status-black{ background:#111827; color:#fff; }
+
+.vtc-status-label{
+  cursor:pointer;
+}
+
+.vtc-status-label:disabled{
+  cursor:not-allowed;
+  opacity:.7;
+}
+
+.vtc-status-cell{
+  position:relative;
+}
+
+.vtc-status-menu[hidden]{
+  display:none;
+}
+
+.vtc-status-menu{
+  position:absolute;
+  z-index:30;
+  top:calc(100% - 2px);
+  left:8px;
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  min-width:190px;
+  padding:8px;
+  border:1px solid #cbd5e1;
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 14px 34px rgba(15,23,42,.18);
+}
+
+.vtc-status-choice,
+.vtc-status-reset{
+  border:1px solid rgba(15,23,42,.08);
+  border-radius:999px;
+  padding:7px 10px;
+  font-size:11px;
+  font-weight:900;
+  line-height:1.15;
+  text-align:center;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+
+.vtc-status-reset{
+  background:#f8fafc;
+  color:#475569;
+}
 
 .vtc-cmar-alert{
   display:inline-flex;
@@ -1613,6 +1685,12 @@ bulkParcheminInput?.addEventListener("change", async ()=>{
   // ✅ applique les couleurs au chargement
   applyAllColors();
 
+  document.addEventListener("click", ()=>{
+    document.querySelectorAll("[data-vtc-exam-status-menu]").forEach(menu=>{
+      menu.hidden = true;
+    });
+  });
+
 
   function recomputeRowHighlight(){
   document.querySelectorAll("tr[data-trainee-id]").forEach(tr=>{
@@ -1653,19 +1731,45 @@ function setVtcStatusLabel(label, text, color){
   label.classList.add(`vtc-status-${color}`);
 }
 
+function getVtcManualStatusMeta(mode, status){
+  const maps = {
+    theory: {
+      waiting_registration: ["En attente inscription examen", "red"],
+      waiting_result: ["En attente résultats examen", "yellow"],
+      success: ["Examen théorique réussi", "green"],
+      failed: ["Echec examen théorique", "black"]
+    },
+    practice: {
+      waiting_registration: ["En attente inscription examen", "red"],
+      waiting_theory: ["En attente réussite théorie", "yellow"],
+      waiting_result: ["En attente résultats pratique", "yellow"],
+      success: ["Examen pratique réussi", "green"],
+      failed: ["Echec examen pratique", "black"]
+    }
+  };
+  const meta = maps[mode]?.[status];
+  return meta ? { text: meta[0], color: meta[1] } : null;
+}
+
 function refreshVtcStatusLabels(tr){
   if(!tr) return;
   const cmarOk = tr.getAttribute("data-vtc-cmar-ok") === "1";
   const theorySent = tr.getAttribute("data-vtc-theory-exam-sent") === "1";
   const theoryResult = (tr.getAttribute("data-vtc-theory-result") || "").toLowerCase();
+  const theoryManual = (tr.getAttribute("data-vtc-theory-status-manual") || "").toLowerCase();
   const practiceSent = tr.getAttribute("data-vtc-practice-exam-sent") === "1";
   const practiceResult = (tr.getAttribute("data-vtc-practice-result") || "").toLowerCase();
+  const practiceManual = (tr.getAttribute("data-vtc-practice-status-manual") || "").toLowerCase();
   const theoryFailed = theoryResult === "failed" || theoryResult === "non_admissible";
   const practiceFailed = practiceResult === "failed" || practiceResult === "non_admissible";
-  const theoryOk = theorySent && !theoryFailed;
-  const practiceOk = practiceSent || practiceResult === "success";
+  const theoryManualMeta = getVtcManualStatusMeta("theory", theoryManual);
+  const practiceManualMeta = getVtcManualStatusMeta("practice", practiceManual);
+  const theoryOk = theoryManual ? theoryManual === "success" : (theorySent && !theoryFailed);
+  const practiceOk = practiceManual ? practiceManual === "success" : (practiceSent || practiceResult === "success");
 
-  if(theoryFailed){
+  if(theoryManualMeta){
+    setVtcStatusLabel(tr.querySelector("[data-vtc-theory-label]"), theoryManualMeta.text, theoryManualMeta.color);
+  }else if(theoryFailed){
     setVtcStatusLabel(tr.querySelector("[data-vtc-theory-label]"), "Echec examen théorique", "black");
   }else if(!cmarOk){
     setVtcStatusLabel(tr.querySelector("[data-vtc-theory-label]"), "En attente inscription examen", "red");
@@ -1675,7 +1779,9 @@ function refreshVtcStatusLabels(tr){
     setVtcStatusLabel(tr.querySelector("[data-vtc-theory-label]"), "En attente résultats examen", "yellow");
   }
 
-  if(practiceFailed){
+  if(practiceManualMeta){
+    setVtcStatusLabel(tr.querySelector("[data-vtc-practice-label]"), practiceManualMeta.text, practiceManualMeta.color);
+  }else if(practiceFailed){
     setVtcStatusLabel(tr.querySelector("[data-vtc-practice-label]"), "Echec examen pratique", "black");
   }else if(!cmarOk){
     setVtcStatusLabel(tr.querySelector("[data-vtc-practice-label]"), "En attente inscription examen", "red");
@@ -1686,6 +1792,8 @@ function refreshVtcStatusLabels(tr){
   }else{
     setVtcStatusLabel(tr.querySelector("[data-vtc-practice-label]"), "En attente résultats pratique", "yellow");
   }
+
+  tr.setAttribute("data-vtc-theory-ok", theoryOk ? "1" : "0");
 }
 
 function refreshAllVtcStatusLabels(){
@@ -2045,6 +2153,46 @@ document.querySelectorAll("select.sel").forEach(sel=>{
           }
           applyStatusPill(sel);
           alert("Erreur sauvegarde");
+        }
+      });
+    });
+
+    tr.querySelectorAll("[data-vtc-exam-status-trigger]").forEach(trigger=>{
+      trigger.addEventListener("click", (event)=>{
+        event.stopPropagation();
+        const mode = trigger.getAttribute("data-vtc-exam-status-trigger");
+        const menu = tr.querySelector(`[data-vtc-exam-status-menu="${mode}"]`);
+        if(!menu) return;
+        document.querySelectorAll("[data-vtc-exam-status-menu]").forEach(other=>{
+          if(other !== menu) other.hidden = true;
+        });
+        menu.hidden = !menu.hidden;
+      });
+    });
+
+    tr.querySelectorAll("[data-vtc-exam-status-choice]").forEach(choice=>{
+      choice.addEventListener("click", async (event)=>{
+        event.stopPropagation();
+        const menu = choice.closest("[data-vtc-exam-status-menu]");
+        const mode = menu?.getAttribute("data-vtc-exam-status-menu");
+        const field = choice.getAttribute("data-field");
+        if(!mode || !field) return;
+
+        const previousValue = tr.getAttribute(`data-vtc-${mode}-status-manual`) || "";
+        const value = choice.getAttribute("data-vtc-exam-status-choice") || "";
+
+        tr.setAttribute(`data-vtc-${mode}-status-manual`, value);
+        refreshVtcStatusLabels(tr);
+        applyRowFilters();
+        if(menu) menu.hidden = true;
+
+        try{
+          await saveField(traineeId, field, value, traineeSessionId);
+        }catch(e){
+          tr.setAttribute(`data-vtc-${mode}-status-manual`, previousValue);
+          refreshVtcStatusLabels(tr);
+          applyRowFilters();
+          alert("Erreur sauvegarde du statut VTC");
         }
       });
     });
