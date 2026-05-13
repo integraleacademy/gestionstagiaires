@@ -231,7 +231,19 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         trainee = self.data["sessions"][0]["trainees"][1]
         self.assertEqual(trainee["vtc_theory_status_manual"], "failed")
+        self.assertEqual(trainee["vtc_theory_result"], "non_admissible")
+        self.assertEqual(trainee["vtc_theory_exam_sent_at"], "")
         self.assertEqual(trainee["vtc_practice_status_manual"], "waiting_theory")
+        self.assertEqual(trainee["vtc_practice_result"], "")
+
+        refreshed = self.client.get("/admin/sessions/S-VTC/trainees")
+
+        self.assertEqual(refreshed.status_code, 200)
+        html = refreshed.get_data(as_text=True)
+        self.assertIn('data-vtc-theory-status-manual="failed"', html)
+        self.assertIn('data-vtc-practice-status-manual="waiting_theory"', html)
+        self.assertIn("Echec examen théorique</button>", html)
+        self.assertIn("En attente réussite théorie</button>", html)
 
     def test_vtc_manual_exam_statuses_drive_stats(self):
         self.data["sessions"][0]["trainees"][0]["vtc_theory_status_manual"] = "success"
