@@ -10548,6 +10548,87 @@ def admin_trainees(session_id: str):
     )
 
 
+@app.get("/admin/trainees/vtc")
+@admin_login_required
+def admin_vtc_trainees_all():
+    data = load_data()
+    all_trainees = []
+
+    for s in data.get("sessions", []):
+        if _is_wedof_leads_session(s) or bool(s.get("archived")):
+            continue
+        training_type = _session_get(s, "training_type", "")
+        if "VTC" not in (training_type or "").upper():
+            continue
+
+        session_name = _session_get(s, "name", "")
+        for t in _session_trainees_list(s):
+            ln = normalize_last_name(t.get("last_name") or "")
+            fn = normalize_first_name(t.get("first_name") or "")
+            if ln:
+                t["last_name"] = ln
+            if fn:
+                t["first_name"] = fn
+
+            ensure_documents_schema_for_trainee(t, training_type)
+            t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+
+            trainee_view = dict(t)
+            trainee_view["source_session_id"] = s.get("id")
+            trainee_view["source_session_name"] = session_name
+            trainee_view["source_session_date_start"] = _session_get(s, "date_start", "")
+            trainee_view["source_session_date_end"] = _session_get(s, "date_end", "")
+            all_trainees.append(trainee_view)
+
+    for t in all_trainees:
+        t.setdefault("deliverables", {})
+        d_done, d_total, d_ok = deliverables_progress(t)
+        t["deliverables_done"] = d_done
+        t["deliverables_total"] = d_total
+        t["deliverables_ok"] = d_ok
+        t["deliverables_text"] = f"{d_done}/{d_total}"
+        t["has_sst"] = bool((t.get("deliverables") or {}).get("carte_sst") or "")
+        t["has_attestation"] = bool((t.get("deliverables") or {}).get("attestation_fin_formation") or "")
+        t["has_diplome"] = bool((t.get("deliverables") or {}).get("diplome") or "")
+        t["badges"] = []
+
+    all_trainees.sort(key=lambda t: (
+        (t.get("last_name") or "").strip().upper(),
+        (t.get("first_name") or "").strip().upper(),
+        (t.get("source_session_name") or "").strip().upper(),
+    ))
+
+    session_view = {
+        "id": "__all_vtc__",
+        "name": "Tous les stagiaires VTC",
+        "training_type": "VTC",
+        "date_start": "",
+        "date_end": "",
+        "exam_date": "",
+        "exam_theory_date": "",
+        "exam_practice_date": "",
+        "practice_training_date": "",
+        "ssiap_exam_date": "",
+        "prospects_comment": "",
+    }
+    stats = compute_stats({"training_type": "VTC", "trainees": all_trainees})
+
+    save_data(data)
+    return render_template(
+        "admin_trainees.html",
+        session=session_view,
+        trainees=all_trainees,
+        stats=stats,
+        show_hosting=False,
+        show_vae=False,
+        is_vtc=True,
+        is_dirigeant=False,
+        enums=ENUMS,
+        is_adef=False,
+        all_vtc=True,
+    )
+
+
 # =========================
 # FICHE STAGIAIRE (HTML)
 # =========================

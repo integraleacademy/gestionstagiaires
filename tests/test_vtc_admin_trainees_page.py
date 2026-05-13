@@ -87,7 +87,53 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
                             "documents": [],
                         },
                     ],
-                }
+                },
+                {
+                    "id": "S-VTC-2",
+                    "name": "Session VTC 2",
+                    "training_type": "Chauffeur VTC",
+                    "date_start": "2026-07-01",
+                    "date_end": "2026-07-05",
+                    "trainees": [
+                        {
+                            "id": "T-OTHER-VTC",
+                            "last_name": "PETIT",
+                            "first_name": "Eva",
+                            "email": "eva@example.test",
+                            "phone": "0600000005",
+                            "documents": [],
+                        }
+                    ],
+                },
+                {
+                    "id": "S-APS",
+                    "name": "Session APS",
+                    "training_type": "APS",
+                    "trainees": [
+                        {
+                            "id": "T-APS",
+                            "last_name": "NONVTC",
+                            "first_name": "Noa",
+                            "email": "noa@example.test",
+                            "documents": [],
+                        }
+                    ],
+                },
+                {
+                    "id": "S-VTC-ARCHIVED",
+                    "name": "Session VTC archivée",
+                    "training_type": "VTC",
+                    "archived": True,
+                    "trainees": [
+                        {
+                            "id": "T-ARCHIVED",
+                            "last_name": "ARCHIVE",
+                            "first_name": "Anne",
+                            "email": "archive@example.test",
+                            "documents": [],
+                        }
+                    ],
+                },
             ]
         }
 
@@ -145,3 +191,27 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
             self.data["sessions"][0]["trainees"][1]["vtc_exam_center"],
             "nice",
         )
+
+    def test_sessions_filters_link_to_all_vtc_trainees(self):
+        response = self.client.get("/admin/sessions")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Voir tous les stagiaires VTC", html)
+        self.assertIn('href="/admin/trainees/vtc"', html)
+
+    def test_all_vtc_trainees_page_lists_active_vtc_sessions(self):
+        response = self.client.get("/admin/trainees/vtc")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Tous les stagiaires VTC", html)
+        self.assertIn("Session VTC", html)
+        self.assertIn("Session VTC 2", html)
+        self.assertIn("MARTIN", html)
+        self.assertIn("PETIT", html)
+        self.assertNotIn("NONVTC", html)
+        self.assertNotIn("ARCHIVE", html)
+        self.assertIn('data-session-id="S-VTC"', html)
+        self.assertIn('data-session-id="S-VTC-2"', html)
+        self.assertIn('/admin/sessions/S-VTC-2/stagiaires/T-OTHER-VTC', html)

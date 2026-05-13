@@ -7,6 +7,7 @@
 {% set vtc_practice_exam_date = session.exam_practice_date or session.exam_date %}
 {% set vtc_practice_training_date = session.practice_training_date %}
 {% set is_dirigeant_session = is_dirigeant or ("DIRIGEANT" in (session.training_type or "")|upper) or ("DIRIGEANT" in (session.name or "")|upper) %}
+{% set is_all_vtc = all_vtc|default(false) %}
 
 <div class="breadcrumbs">
   <a href="{{ url_for('admin_sessions', **request.args) }}">← Retour sessions</a>
@@ -20,9 +21,11 @@
       <span class="pill">{{ training_type_label }}</span>
       <span>Formation : <strong>{{ session.date_start|frdate }}</strong> → <strong>{{ session.date_end|frdate }}</strong></span>
       {% if "VTC" in (session.training_type or "")|upper %}
+        {% if not is_all_vtc %}
         <span>Examen théorique : <strong>{{ vtc_theory_exam_date|frdate }}</strong></span>
         <span>Formation pratique : <strong>{{ vtc_practice_training_date|frdate }}</strong></span>
         <span>Examen pratique : <strong>{{ vtc_practice_exam_date|frdate }}</strong></span>
+        {% endif %}
       {% else %}
         <span>Examen : <strong>{{ session.exam_date|frdate }}</strong></span>
       {% endif %}
@@ -35,7 +38,7 @@
       <div class="stat-title">Stagiaires</div>
       <div class="stat-value">{{ stats.total }}</div>
     </div>
-    {% if is_vtc_header %}
+    {% if is_vtc_header and not is_all_vtc %}
     <div class="stat">
       <div class="stat-title">Examen théorique</div>
       <div class="stat-value">{{ vtc_theory_exam_date|frdate }}</div>
@@ -106,22 +109,24 @@
       </select>
     {% endif %}
     <button class="btn btn-outline" id="btnCollectMails" type="button">📋 Récup mail</button>
+    {% if not is_all_vtc %}
     <a class="btn btn-outline" id="btnPrintTrainees" href="{{ url_for('admin_trainees_print', session_id=session.id, **request.args) }}" target="_blank" rel="noopener">🖨️ Imprimer la liste</a>
     <a class="btn btn-outline" id="btnWordLabels"
        href="{{ url_for('admin_etiquettes_word_zip', session_id=session.id) }}"
        title="Télécharger toutes les étiquettes Word de la session">🏷️ Étiquettes WORD</a>
+    {% endif %}
     {% if is_a3p_header %}
     <a class="btn btn-outline" id="btnTshirtList"
        href="{{ url_for('admin_tshirt_list', session_id=session.id, **request.args) }}"
        target="_blank" rel="noopener">👕 Liste t-shirts</a>
     {% endif %}
     {% if not is_read_only %}
-      {% if not is_vtc and not show_vae and not is_dirigeant %}
+      {% if not is_all_vtc and not is_vtc and not show_vae and not is_dirigeant %}
       <button class="btn btn-outline" id="btnBulkSst">⬇️ importer les SST en masse</button>
       <input id="bulkSstInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
       {% endif %}
 
-      {% if not is_vtc %}
+      {% if not is_all_vtc and not is_vtc %}
         <button class="btn btn-outline" id="btnBulkDiplome">⬇️ Importer les diplômes en masse</button>
         <input id="bulkDiplomeInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
 
@@ -169,6 +174,7 @@
          data-show-vae="{{ '1' if show_vae else '0' }}">
     <thead>
       <tr>
+        {% if is_all_vtc %}<th>Session</th>{% endif %}
         <th>Nom</th>
         <th>Prénom</th>
         <th>Mail</th>
@@ -201,6 +207,7 @@
 {% set vtc_book_pending_ready = is_vtc and (not (t.vtc_book_sent_at or "")|trim) and vtc_book_address_complete %}
 <tr class="row {% if t.comment %}row-warning{% endif %}"
     data-trainee-id="{{ t.id }}"
+    data-session-id="{{ t.source_session_id or session.id }}"
     data-last-name="{{ t.last_name or '' }}"
     data-first-name="{{ t.first_name or '' }}"
     data-vae-status="{{ t.vae_status or 'livret_1_todo' }}"
@@ -216,9 +223,15 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   data-has-diplome="{{ '1' if (t.get('deliverables', {}).get('diplome')) else '0' }}"
   data-has-attestation="{{ '1' if (t.get('deliverables', {}).get('attestation_fin_formation')) else '0' }}"
   data-vtc-exam-center="{{ t.vtc_exam_center or '' }}">
+{% if is_all_vtc %}
+<td>
+  <a class="trainee-link" href="{{ url_for('admin_trainees', session_id=t.source_session_id) }}" style="text-decoration:none;font-weight:800;">{{ t.source_session_name or 'Session VTC' }}</a>
+  <div class="muted">{{ t.source_session_date_start|frdate }} → {{ t.source_session_date_end|frdate }}</div>
+</td>
+{% endif %}
 <td>
   <a class="trainee-link"
-     href="/admin/sessions/{{ session.id }}/stagiaires/{{ t.id }}"
+     href="/admin/sessions/{{ t.source_session_id or session.id }}/stagiaires/{{ t.id }}"
      style="text-decoration:none;">
     {% if not is_vtc and (t.identity_photo or "")|trim %}📷 {% endif %}{% if t.public_has_logged_in %}🛜 {% endif %}{% if t.test_fr_file_token %}✏️ {% endif %}{{ t.last_name or "" }}
   </a>
@@ -233,7 +246,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 </td>
 <td>
   <a class="trainee-link"
-     href="/admin/sessions/{{ session.id }}/stagiaires/{{ t.id }}"
+     href="/admin/sessions/{{ t.source_session_id or session.id }}/stagiaires/{{ t.id }}"
      style="text-decoration:none;">
     {{ t.first_name or "" }}
   </a>
@@ -1114,7 +1127,8 @@ tr.row-todo td{
     }
 
     try {
-      const resp = await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/refresh-external`, {
+      const traineeSessionId = tr.getAttribute("data-session-id") || sessionId;
+      const resp = await fetch(`/api/sessions/${traineeSessionId}/stagiaires/${traineeId}/refresh-external`, {
         method: "POST",
         headers: { "Content-Type": "application/json" }
       });
@@ -1894,8 +1908,8 @@ document.querySelectorAll("select.sel").forEach(sel=>{
   // =========================
   let debounceTimers = {};
 
-  async function saveField(traineeId, field, value){
-    const res = await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
+  async function saveField(traineeId, field, value, traineeSessionId = sessionId){
+    const res = await fetch(`/api/sessions/${traineeSessionId}/stagiaires/${traineeId}/update`, {
       method:"POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ [field]: value })
@@ -1905,6 +1919,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
 
   document.querySelectorAll("tr[data-trainee-id]").forEach(tr=>{
     const traineeId = tr.getAttribute("data-trainee-id");
+    const traineeSessionId = tr.getAttribute("data-session-id") || sessionId;
 
   
 
@@ -1919,7 +1934,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       }
       forceDossier.addEventListener("change", async ()=>{
         try{
-          const data = await saveField(traineeId, "force_dossier_complete", forceDossier.checked);
+          const data = await saveField(traineeId, "force_dossier_complete", forceDossier.checked, traineeSessionId);
           dossierSelect.disabled = forceDossier.checked;
           if (data?.dossier_status) {
             dossierSelect.value = data.dossier_status;
@@ -1965,7 +1980,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
         }
 
         try{
-          const data = await saveField(traineeId, field, value);
+          const data = await saveField(traineeId, field, value, traineeSessionId);
           sel.setAttribute("data-current-value", value);
           if(field === "vtc_practice_convocation_sent_at"){
             sel.value = value ? "validated" : "pending";
@@ -2000,7 +2015,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
         practiceConvocationBtn.setAttribute("data-current-value", nextValue);
 
         try{
-          await saveField(traineeId, "vtc_practice_convocation_sent_at", nextValue);
+          await saveField(traineeId, "vtc_practice_convocation_sent_at", nextValue, traineeSessionId);
         }catch(e){
           practiceConvocationBtn.textContent = previousValue ? "🟢" : "🔴";
           practiceConvocationBtn.setAttribute("data-current-value", previousValue);
@@ -2021,7 +2036,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
         recomputeRowHighlight();
 
         try{
-          await saveField(traineeId, "vtc_exam_center", nextCenter);
+          await saveField(traineeId, "vtc_exam_center", nextCenter, traineeSessionId);
         }catch(e){
           tr.setAttribute("data-vtc-exam-center", previousCenter);
           tr.querySelectorAll("input.vtc-exam-center-checkbox").forEach(other=>{
@@ -2043,7 +2058,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
         if(debounceTimers[key]) clearTimeout(debounceTimers[key]);
         debounceTimers[key] = setTimeout(async ()=>{
           try{
-            await saveField(traineeId, field, value);
+            await saveField(traineeId, field, value, traineeSessionId);
           }catch(e){
             // silencieux
           }
@@ -2061,7 +2076,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
         if(debounceTimers[traineeId]) clearTimeout(debounceTimers[traineeId]);
         debounceTimers[traineeId] = setTimeout(async ()=>{
           try{
-            await saveField(traineeId, field, value);
+            await saveField(traineeId, field, value, traineeSessionId);
           }catch(e){
             // silencieux
           }
