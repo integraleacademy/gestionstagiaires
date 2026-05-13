@@ -166,17 +166,22 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn("data-vtc-practice-label", html)
         self.assertIn("function refreshVtcStatusLabels", html)
         self.assertIn('field === "vtc_cmar_manual_ok"', html)
+        self.assertIn('data-vtc-exam-status-trigger="theory"', html)
+        self.assertIn('data-vtc-exam-status-trigger="practice"', html)
+        self.assertIn('data-vtc-exam-status-menu="theory"', html)
+        self.assertIn('data-vtc-exam-status-menu="practice"', html)
+        self.assertIn('data-field="vtc_theory_status_manual"', html)
+        self.assertIn('data-field="vtc_practice_status_manual"', html)
+        self.assertIn('data-vtc-exam-status-choice="success"', html)
+        self.assertNotIn('>Auto</option>', html)
         self.assertIn("En attente inscription examen", html)
         self.assertIn("En attente résultats examen", html)
         self.assertIn("En attente réussite théorie", html)
         self.assertIn(
-            'class="vtc-status-label vtc-status-yellow" data-vtc-practice-label title="Date d\'examen pratique : 20/06/2026">En attente réussite théorie</span>',
+            'class="vtc-status-label vtc-status-yellow" data-vtc-practice-label data-vtc-exam-status-trigger="practice"',
             html,
         )
-        self.assertNotIn(
-            'class="vtc-status-label vtc-status-red" data-vtc-practice-label title="Date d\'examen pratique : 20/06/2026">En attente réussite théorie</span>',
-            html,
-        )
+        self.assertIn("En attente réussite théorie</button>", html)
         self.assertIn("Examen théorique réussi", html)
         self.assertIn("En attente résultats pratique", html)
         self.assertIn("Examen pratique réussi", html)
@@ -204,6 +209,41 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
             self.data["sessions"][0]["trainees"][1]["vtc_exam_center"],
             "nice",
         )
+
+    def test_vtc_exam_statuses_can_be_saved_manually(self):
+        response = self.client.post(
+            "/api/sessions/S-VTC/stagiaires/T-WAITING-THEORY/update",
+            json={
+                "vtc_theory_status_manual": "failed",
+                "vtc_practice_status_manual": "waiting_theory",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        trainee = self.data["sessions"][0]["trainees"][1]
+        self.assertEqual(trainee["vtc_theory_status_manual"], "failed")
+        self.assertEqual(trainee["vtc_theory_result"], "non_admissible")
+        self.assertEqual(trainee["vtc_theory_exam_sent_at"], "")
+        self.assertEqual(trainee["vtc_practice_status_manual"], "waiting_theory")
+        self.assertEqual(trainee["vtc_practice_result"], "")
+
+        refreshed = self.client.get("/admin/sessions/S-VTC/trainees")
+
+        self.assertEqual(refreshed.status_code, 200)
+        html = refreshed.get_data(as_text=True)
+        self.assertIn('data-vtc-theory-status-manual="failed"', html)
+        self.assertIn('data-vtc-practice-status-manual="waiting_theory"', html)
+        self.assertIn("Echec examen théorique</button>", html)
+        self.assertIn("En attente réussite théorie</button>", html)
+
+    def test_vtc_manual_exam_statuses_drive_stats(self):
+        self.data["sessions"][0]["trainees"][0]["vtc_theory_status_manual"] = "success"
+        self.data["sessions"][0]["trainees"][0]["vtc_practice_status_manual"] = "failed"
+
+        stats = gestion_app.compute_vtc_exam_stats(self.data["sessions"][0]["trainees"])
+
+        self.assertEqual(stats["theory_success"], 4)
+        self.assertEqual(stats["practice_failed"], 2)
 
     def test_sessions_filters_link_to_all_vtc_trainees(self):
         response = self.client.get("/admin/sessions")

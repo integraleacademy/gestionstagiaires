@@ -4606,22 +4606,76 @@ def normalize_sessions_schema(data: Dict[str, Any]) -> bool:
 
     return changed
 
+def _apply_vtc_manual_exam_status(trainee: Dict[str, Any], mode: str, status: str) -> None:
+    """Keep legacy VTC exam fields in sync with a manual admin status."""
+    normalized_status = (status or "").strip().lower()
+    now = _now_iso()
+
+    if mode == "theory":
+        if normalized_status == "success":
+            trainee["vtc_theory_result"] = "admissible"
+            trainee["vtc_theory_result_label"] = "admissible"
+            trainee["vtc_theory_exam_sent_at"] = trainee.get("vtc_theory_exam_sent_at") or now
+        elif normalized_status == "failed":
+            trainee["vtc_theory_result"] = "non_admissible"
+            trainee["vtc_theory_result_label"] = "échec examen théorique"
+            trainee["vtc_theory_failed_at"] = trainee.get("vtc_theory_failed_at") or now
+            trainee["vtc_theory_exam_sent_at"] = ""
+        elif normalized_status in ("waiting_registration", "waiting_result", ""):
+            trainee["vtc_theory_result"] = ""
+            trainee["vtc_theory_result_label"] = ""
+            trainee["vtc_theory_exam_sent_at"] = ""
+        return
+
+    if mode == "practice":
+        if normalized_status == "success":
+            trainee["vtc_practice_result"] = "success"
+            trainee["vtc_practice_result_label"] = "réussite examen pratique"
+            trainee["vtc_practice_exam_sent_at"] = trainee.get("vtc_practice_exam_sent_at") or now
+        elif normalized_status == "failed":
+            trainee["vtc_practice_result"] = "non_admissible"
+            trainee["vtc_practice_result_label"] = "échec examen pratique"
+            trainee["vtc_practice_failed_at"] = trainee.get("vtc_practice_failed_at") or now
+            trainee["vtc_practice_exam_sent_at"] = ""
+        elif normalized_status in ("waiting_registration", "waiting_theory", "waiting_result", ""):
+            trainee["vtc_practice_result"] = ""
+            trainee["vtc_practice_result_label"] = ""
+            trainee["vtc_practice_exam_sent_at"] = ""
 
 def compute_vtc_exam_stats(trainees: List[Dict[str, Any]]) -> Dict[str, int]:
     total = len(trainees)
     theory_success = sum(
         1
         for t in trainees
-        if t.get("vtc_theory_exam_sent_at") and t.get("vtc_theory_result") not in ("failed", "non_admissible")
+        if (t.get("vtc_theory_status_manual") == "success")
+        or (
+            not t.get("vtc_theory_status_manual")
+            and t.get("vtc_theory_exam_sent_at")
+            and t.get("vtc_theory_result") not in ("failed", "non_admissible")
+        )
     )
-    theory_failed = sum(1 for t in trainees if t.get("vtc_theory_result") in ("failed", "non_admissible"))
+    theory_failed = sum(
+        1
+        for t in trainees
+        if t.get("vtc_theory_status_manual") == "failed"
+        or (not t.get("vtc_theory_status_manual") and t.get("vtc_theory_result") in ("failed", "non_admissible"))
+    )
     practice_success = sum(
         1
         for t in trainees
-        if (t.get("vtc_practice_result") == "success" or t.get("vtc_practice_exam_sent_at"))
-        and t.get("vtc_practice_result") not in ("failed", "non_admissible")
+        if (t.get("vtc_practice_status_manual") == "success")
+        or (
+            not t.get("vtc_practice_status_manual")
+            and (t.get("vtc_practice_result") == "success" or t.get("vtc_practice_exam_sent_at"))
+            and t.get("vtc_practice_result") not in ("failed", "non_admissible")
+        )
     )
-    practice_failed = sum(1 for t in trainees if t.get("vtc_practice_result") in ("failed", "non_admissible"))
+    practice_failed = sum(
+        1
+        for t in trainees
+        if t.get("vtc_practice_status_manual") == "failed"
+        or (not t.get("vtc_practice_status_manual") and t.get("vtc_practice_result") in ("failed", "non_admissible"))
+    )
     cmar_ready = sum(1 for t in trainees if t.get("exam_fees_paid") or t.get("vtc_cmar_manual_ok"))
     convocation_sent = sum(1 for t in trainees if t.get("vtc_practice_convocation_sent_at"))
     return {
@@ -11151,9 +11205,11 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vtc_theory_exam_sms_ok",
         "vtc_theory_result",
         "vtc_theory_result_label",
+        "vtc_theory_status_manual",
         "vtc_practice_convocation_sent_at",
         "vtc_practice_result",
         "vtc_practice_result_label",
+        "vtc_practice_status_manual",
         "vtc_practice_exam_sent_at",
         "vtc_practice_exam_email_ok",
         "vtc_practice_exam_sms_ok",
@@ -11239,6 +11295,16 @@ def api_update_trainee(session_id: str, trainee_id: str):
             elif k == "vtc_exam_center":
                 normalized_center = v.strip().lower()
                 t[k] = normalized_center if normalized_center in ("nice", "toulon") else ""
+            elif k == "vtc_theory_status_manual":
+                normalized_status = v.strip().lower()
+                allowed_statuses = ("", "waiting_registration", "waiting_result", "success", "failed")
+                t[k] = normalized_status if normalized_status in allowed_statuses else ""
+                _apply_vtc_manual_exam_status(t, "theory", t[k])
+            elif k == "vtc_practice_status_manual":
+                normalized_status = v.strip().lower()
+                allowed_statuses = ("", "waiting_registration", "waiting_theory", "waiting_result", "success", "failed")
+                t[k] = normalized_status if normalized_status in allowed_statuses else ""
+                _apply_vtc_manual_exam_status(t, "practice", t[k])
             else:
                 t[k] = v.strip()
         else:
@@ -11397,6 +11463,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "elearning_link_sent_at": t.get("elearning_link_sent_at") or "",
         "elearning_link_email_ok": bool(t.get("elearning_link_email_ok")),
         "elearning_link_sms_ok": bool(t.get("elearning_link_sms_ok")),
+        "vtc_theory_status_manual": t.get("vtc_theory_status_manual") or "",
+        "vtc_practice_status_manual": t.get("vtc_practice_status_manual") or "",
     })
 
 
