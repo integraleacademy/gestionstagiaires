@@ -442,7 +442,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           {% elif t.vtc_practice_result == "success" or t.vtc_practice_exam_sent_at %}
             <span class="vtc-status-label vtc-status-green" data-vtc-practice-label title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">Examen pratique réussi</span>
           {% elif not vtc_theory_ok %}
-            <span class="vtc-status-label vtc-status-red" data-vtc-practice-label title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">En attente réussite théorie</span>
+            <span class="vtc-status-label vtc-status-yellow" data-vtc-practice-label title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">En attente réussite théorie</span>
           {% else %}
             <span class="vtc-status-label vtc-status-yellow" data-vtc-practice-label title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">En attente résultats pratique</span>
           {% endif %}
@@ -1656,7 +1656,7 @@ function refreshVtcStatusLabels(tr){
   }else if(practiceOk){
     setVtcStatusLabel(tr.querySelector("[data-vtc-practice-label]"), "Examen pratique réussi", "green");
   }else if(!theoryOk){
-    setVtcStatusLabel(tr.querySelector("[data-vtc-practice-label]"), "En attente réussite théorie", "red");
+    setVtcStatusLabel(tr.querySelector("[data-vtc-practice-label]"), "En attente réussite théorie", "yellow");
   }else{
     setVtcStatusLabel(tr.querySelector("[data-vtc-practice-label]"), "En attente résultats pratique", "yellow");
   }

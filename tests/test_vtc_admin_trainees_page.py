@@ -169,6 +169,14 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn("En attente inscription examen", html)
         self.assertIn("En attente résultats examen", html)
         self.assertIn("En attente réussite théorie", html)
+        self.assertIn(
+            'class="vtc-status-label vtc-status-yellow" data-vtc-practice-label title="Date d\'examen pratique : 20/06/2026">En attente réussite théorie</span>',
+            html,
+        )
+        self.assertNotIn(
+            'class="vtc-status-label vtc-status-red" data-vtc-practice-label title="Date d\'examen pratique : 20/06/2026">En attente réussite théorie</span>',
+            html,
+        )
         self.assertIn("Examen théorique réussi", html)
         self.assertIn("En attente résultats pratique", html)
         self.assertIn("Examen pratique réussi", html)
@@ -179,6 +187,8 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertEqual(html.count("Identifiant CMAR inconnu"), 5)
         self.assertIn('setVtcStatusLabel(tr.querySelector("[data-vtc-theory-label]"), "Echec examen théorique", "black")', html)
         self.assertIn('setVtcStatusLabel(tr.querySelector("[data-vtc-practice-label]"), "Echec examen pratique", "black")', html)
+        self.assertIn('setVtcStatusLabel(tr.querySelector("[data-vtc-practice-label]"), "En attente réussite théorie", "yellow")', html)
+        self.assertNotIn('setVtcStatusLabel(tr.querySelector("[data-vtc-practice-label]"), "En attente réussite théorie", "red")', html)
         self.assertNotIn("Date d'examen théorique : 10/06/2026\">🔴", html)
         self.assertNotIn("Date d'examen théorique : 10/06/2026\">🟡", html)
         self.assertNotIn("Date d'examen théorique : 10/06/2026\">🟢", html)
