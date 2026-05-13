@@ -64,6 +64,28 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
                             "vtc_practice_result": "success",
                             "documents": [],
                         },
+                        {
+                            "id": "T-THEORY-FAILED",
+                            "last_name": "SIMON",
+                            "first_name": "Eli",
+                            "email": "eli@example.test",
+                            "phone": "0600000005",
+                            "vtc_cmar_manual_ok": True,
+                            "vtc_theory_result": "non_admissible",
+                            "documents": [],
+                        },
+                        {
+                            "id": "T-PRACTICE-FAILED",
+                            "last_name": "MOREAU",
+                            "first_name": "Fran",
+                            "email": "fran@example.test",
+                            "phone": "0600000006",
+                            "vtc_cmar_manual_ok": True,
+                            "vtc_theory_exam_sent_at": "2026-06-11T08:00:00Z",
+                            "vtc_theory_result": "success",
+                            "vtc_practice_result": "non_admissible",
+                            "documents": [],
+                        },
                     ],
                 }
             ]
@@ -103,6 +125,11 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn("Examen théorique réussi", html)
         self.assertIn("En attente résultats pratique", html)
         self.assertIn("Examen pratique réussi", html)
+        self.assertIn("Echec examen théorique", html)
+        self.assertIn("Echec examen pratique", html)
+        self.assertIn("vtc-status-black", html)
+        self.assertIn('setVtcStatusLabel(tr.querySelector("[data-vtc-theory-label]"), "Echec examen théorique", "black")', html)
+        self.assertIn('setVtcStatusLabel(tr.querySelector("[data-vtc-practice-label]"), "Echec examen pratique", "black")', html)
         self.assertNotIn("Date d'examen théorique : 10/06/2026\">🔴", html)
         self.assertNotIn("Date d'examen théorique : 10/06/2026\">🟡", html)
         self.assertNotIn("Date d'examen théorique : 10/06/2026\">🟢", html)
