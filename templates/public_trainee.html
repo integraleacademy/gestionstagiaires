@@ -1359,7 +1359,11 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
         </div>
       {% endif %}
     {% else %}
-      <div class="doctag pending">⏳ Document déposé — en attente de contrôle</div>
+      {% if d.key == "complementary_documents" %}
+        <div class="doctag pending">📎 Documents complémentaires déposés</div>
+      {% else %}
+        <div class="doctag pending">⏳ Document déposé — en attente de contrôle</div>
+      {% endif %}
     {% endif %}
   {% endif %}
 {% endif %}
