@@ -10690,6 +10690,7 @@ def api_create_trainee(session_id: str):
         "elearning_link_sms_ok": False,
         "vtc_book_sent_at": "",
         "vtc_book_manual_ok": False,
+        "vtc_exam_center": "",
         "vtc_real_training_dates": vtc_real_training_dates,
         "documents": [],
         "created_at": _now_iso(),
@@ -10959,6 +10960,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vtc_practice_exam_sent_at",
         "vtc_practice_exam_email_ok",
         "vtc_practice_exam_sms_ok",
+        "vtc_exam_center",
         "vtc_real_training_dates",
 
     }
@@ -11037,6 +11039,9 @@ def api_update_trainee(session_id: str, trainee_id: str):
                 t[k] = normalize_first_name(v)
             elif k == "elearning_link":
                 t[k] = v.strip()
+            elif k == "vtc_exam_center":
+                normalized_center = v.strip().lower()
+                t[k] = normalized_center if normalized_center in ("nice", "toulon") else ""
             else:
                 t[k] = v.strip()
         else:
