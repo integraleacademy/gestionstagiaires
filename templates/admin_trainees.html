@@ -33,24 +33,50 @@
     </div>
   </div>
 
-  <div class="session-stats">
-    <div class="stat">
-      <div class="stat-title">Stagiaires</div>
-      <div class="stat-value">{{ stats.total }}</div>
+  <div class="session-stats {% if is_vtc_header %}session-stats-vtc{% endif %}">
+    <div class="stat stat-vtc stat-total">
+      <div class="stat-icon">👥</div>
+      <div>
+        <div class="stat-title">Stagiaires</div>
+        <div class="stat-value">{{ stats.total }}</div>
+      </div>
     </div>
-    {% if is_vtc_header and not is_all_vtc %}
-    <div class="stat">
-      <div class="stat-title">Examen théorique</div>
-      <div class="stat-value">{{ vtc_theory_exam_date|frdate }}</div>
-    </div>
-    <div class="stat">
-      <div class="stat-title">Formation pratique</div>
-      <div class="stat-value">{{ vtc_practice_training_date|frdate }}</div>
-    </div>
-    <div class="stat">
-      <div class="stat-title">Examen pratique</div>
-      <div class="stat-value">{{ vtc_practice_exam_date|frdate }}</div>
-    </div>
+    {% if is_vtc_header %}
+      {% set vtc_stats = stats.vtc or {} %}
+      <div class="stat stat-vtc stat-success">
+        <div class="stat-icon">🎓</div>
+        <div>
+          <div class="stat-title">Théorie réussie</div>
+          <div class="stat-value">{{ vtc_stats.theory_success or 0 }} / {{ stats.total }}</div>
+          <div class="stat-sub">{{ vtc_stats.theory_pending or 0 }} en attente · {{ vtc_stats.theory_failed or 0 }} échec</div>
+        </div>
+      </div>
+      <div class="stat stat-vtc stat-practice">
+        <div class="stat-icon">🚗</div>
+        <div>
+          <div class="stat-title">Pratique réussie</div>
+          <div class="stat-value">{{ vtc_stats.practice_success or 0 }} / {{ stats.total }}</div>
+          <div class="stat-sub">{{ vtc_stats.practice_pending or 0 }} en attente · {{ vtc_stats.practice_failed or 0 }} échec</div>
+        </div>
+      </div>
+      <div class="stat stat-vtc stat-cmar">
+        <div class="stat-icon">📝</div>
+        <div>
+          <div class="stat-title">Inscrits CMAR</div>
+          <div class="stat-value">{{ vtc_stats.cmar_ready or 0 }} / {{ stats.total }}</div>
+          <div class="stat-sub">{{ vtc_stats.convocation_sent or 0 }} convocations pratique</div>
+        </div>
+      </div>
+      {% if not is_all_vtc %}
+      <div class="stat stat-vtc stat-dates">
+        <div class="stat-icon">📅</div>
+        <div>
+          <div class="stat-title">Dates VTC</div>
+          <div class="stat-sub">Théorie {{ vtc_theory_exam_date|frdate }}</div>
+          <div class="stat-sub">Pratique {{ vtc_practice_exam_date|frdate }}</div>
+        </div>
+      </div>
+      {% endif %}
     {% else %}
     <div class="stat">
       <div class="stat-title">Conformes</div>
@@ -168,17 +194,17 @@
 {% endif %}
 
 <div class="table-wrap full-bleed">
-  <table class="table" id="traineesTable"
+  <table class="table trainees-table {% if is_all_vtc %}trainees-table--all-vtc{% endif %}" id="traineesTable"
          data-session-id="{{ session.id }}"
          data-show-hosting="{{ '1' if show_hosting else '0' }}"
          data-show-vae="{{ '1' if show_vae else '0' }}">
     <thead>
       <tr>
-        {% if is_all_vtc %}<th>Session</th>{% endif %}
-        <th>Nom</th>
-        <th>Prénom</th>
-        <th>Mail</th>
-        <th>Téléphone</th>
+        {% if is_all_vtc %}<th class="col-session">Session</th>{% endif %}
+        <th class="col-last-name">Nom</th>
+        <th class="col-first-name">Prénom</th>
+        <th class="col-email">Mail</th>
+        <th class="col-phone">Téléphone</th>
 
         <th>Convention</th>
         <th>Financement</th>
@@ -224,12 +250,12 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   data-has-attestation="{{ '1' if (t.get('deliverables', {}).get('attestation_fin_formation')) else '0' }}"
   data-vtc-exam-center="{{ t.vtc_exam_center or '' }}">
 {% if is_all_vtc %}
-<td>
+<td class="col-session">
   <a class="trainee-link" href="{{ url_for('admin_trainees', session_id=t.source_session_id) }}" style="text-decoration:none;font-weight:800;">{{ t.source_session_name or 'Session VTC' }}</a>
   <div class="muted">{{ t.source_session_date_start|frdate }} → {{ t.source_session_date_end|frdate }}</div>
 </td>
 {% endif %}
-<td>
+<td class="col-last-name">
   <a class="trainee-link"
      href="/admin/sessions/{{ t.source_session_id or session.id }}/stagiaires/{{ t.id }}"
      style="text-decoration:none;">
@@ -244,7 +270,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   </div>
   {% endif %}
 </td>
-<td>
+<td class="col-first-name">
   <a class="trainee-link"
      href="/admin/sessions/{{ t.source_session_id or session.id }}/stagiaires/{{ t.id }}"
      style="text-decoration:none;">
@@ -252,10 +278,10 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   </a>
 </td>
 
-        <td class="mono">
+        <td class="mono col-email">
           <input class="inline-edit" data-field="email" type="email" value="{{ t.email or '' }}" placeholder="email@exemple.com" style="width:100%;min-width:200px;" {{ read_only_attr }}>
         </td>
-        <td class="mono">
+        <td class="mono col-phone">
           <input class="inline-edit" data-field="phone" type="tel" value="{{ t.phone or '' }}" placeholder="+33600000000" style="width:100%;min-width:150px;" {{ read_only_attr }}>
         </td>
 

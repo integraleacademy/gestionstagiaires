@@ -4607,6 +4607,36 @@ def normalize_sessions_schema(data: Dict[str, Any]) -> bool:
     return changed
 
 
+def compute_vtc_exam_stats(trainees: List[Dict[str, Any]]) -> Dict[str, int]:
+    total = len(trainees)
+    theory_success = sum(
+        1
+        for t in trainees
+        if t.get("vtc_theory_exam_sent_at") and t.get("vtc_theory_result") not in ("failed", "non_admissible")
+    )
+    theory_failed = sum(1 for t in trainees if t.get("vtc_theory_result") in ("failed", "non_admissible"))
+    practice_success = sum(
+        1
+        for t in trainees
+        if (t.get("vtc_practice_result") == "success" or t.get("vtc_practice_exam_sent_at"))
+        and t.get("vtc_practice_result") not in ("failed", "non_admissible")
+    )
+    practice_failed = sum(1 for t in trainees if t.get("vtc_practice_result") in ("failed", "non_admissible"))
+    cmar_ready = sum(1 for t in trainees if t.get("exam_fees_paid") or t.get("vtc_cmar_manual_ok"))
+    convocation_sent = sum(1 for t in trainees if t.get("vtc_practice_convocation_sent_at"))
+    return {
+        "total": total,
+        "theory_success": theory_success,
+        "theory_failed": theory_failed,
+        "theory_pending": max(total - theory_success - theory_failed, 0),
+        "practice_success": practice_success,
+        "practice_failed": practice_failed,
+        "practice_pending": max(total - practice_success - practice_failed, 0),
+        "cmar_ready": cmar_ready,
+        "convocation_sent": convocation_sent,
+    }
+
+
 def compute_stats(session: Dict[str, Any]) -> Dict[str, Any]:
     training_type = _session_get(session, "training_type", "")
     trainees = _session_trainees_list(session)
@@ -4619,6 +4649,7 @@ def compute_stats(session: Dict[str, Any]) -> Dict[str, Any]:
         "non_conform_count": total - conform_count,
         "session_is_conform": (total > 0 and conform_count == total),
         "cnaps_accepted_count": cnaps_accepted_count,
+        "vtc": compute_vtc_exam_stats(trainees) if "VTC" in (training_type or "").upper() else {},
     }
 
 
