@@ -174,21 +174,22 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn('const matchPractice = selectedPractice === "all" || practiceStatus === selectedPractice;', html)
         self.assertIn("vtcPracticeFilter.addEventListener", html)
         self.assertIn('field === "vtc_cmar_manual_ok"', html)
-        self.assertIn('data-vtc-exam-status-select="theory"', html)
-        self.assertIn('data-vtc-exam-status-select="practice"', html)
+        self.assertIn('data-vtc-exam-status-trigger="theory"', html)
+        self.assertIn('data-vtc-exam-status-trigger="practice"', html)
+        self.assertIn('data-vtc-exam-status-menu="theory"', html)
+        self.assertIn('data-vtc-exam-status-menu="practice"', html)
         self.assertIn('data-field="vtc_theory_status_manual"', html)
         self.assertIn('data-field="vtc_practice_status_manual"', html)
+        self.assertIn('data-vtc-exam-status-choice="success"', html)
+        self.assertNotIn('>Auto</option>', html)
         self.assertIn("En attente inscription examen", html)
         self.assertIn("En attente résultats examen", html)
         self.assertIn("En attente réussite théorie", html)
         self.assertIn(
-            'class="vtc-status-label vtc-status-yellow" data-vtc-practice-label title="Date d\'examen pratique : 20/06/2026">En attente réussite théorie</span>',
+            'class="vtc-status-label vtc-status-yellow" data-vtc-practice-label data-vtc-exam-status-trigger="practice"',
             html,
         )
-        self.assertNotIn(
-            'class="vtc-status-label vtc-status-red" data-vtc-practice-label title="Date d\'examen pratique : 20/06/2026">En attente réussite théorie</span>',
-            html,
-        )
+        self.assertIn("En attente réussite théorie</button>", html)
         self.assertIn("Examen théorique réussi", html)
         self.assertIn("En attente résultats pratique", html)
         self.assertIn("Examen pratique réussi", html)
