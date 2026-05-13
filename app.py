@@ -5422,6 +5422,11 @@ REQUIRED_DOCS = {
             "accept": "application/pdf,image/jpeg,image/png",
         },
     ],
+    "DIRIGEANT_VAE_COMPLEMENT": {
+        "key": "complementary_documents",
+        "label": "Documents complémentaires demandés",
+        "accept": "application/pdf,image/jpeg,image/png",
+    },
     "DIRIGEANT_DIPLOMA": [
         {
             "key": "highest_diploma",
@@ -5543,6 +5548,28 @@ def ensure_documents_schema_for_trainee(t: Dict[str, Any], training_type: str) -
             })
             changed = True
 
+    complement_doc = by_key.get("complementary_documents")
+    if complement_doc:
+        if "files" not in complement_doc or not isinstance(complement_doc.get("files"), list):
+            complement_doc["files"] = []
+            changed = True
+        if "file" not in complement_doc:
+            complement_doc["file"] = ""
+            changed = True
+        if "status" not in complement_doc:
+            complement_doc["status"] = "NON DÉPOSÉ"
+            changed = True
+        if "comment" not in complement_doc:
+            complement_doc["comment"] = ""
+            changed = True
+        if "accept" not in complement_doc:
+            complement_doc["accept"] = REQUIRED_DOCS["DIRIGEANT_VAE_COMPLEMENT"].get("accept", "")
+            changed = True
+        if "label" not in complement_doc:
+            complement_doc["label"] = REQUIRED_DOCS["DIRIGEANT_VAE_COMPLEMENT"].get("label", "Documents complémentaires demandés")
+            changed = True
+        out.append(complement_doc)
+
     # 🔥 on vire dom (plus utilisé)
     if "dom" in by_key:
         changed = True
@@ -5584,10 +5611,45 @@ def _ensure_livret2_document_entry(t: Dict[str, Any]) -> Dict[str, Any]:
     docs.append(livret2_doc)
     return livret2_doc
 
+
+def _ensure_complementary_documents_entry(t: Dict[str, Any]) -> Dict[str, Any]:
+    """Garantit un emplacement public pour les documents complémentaires VAE."""
+    docs = t.get("documents")
+    if not isinstance(docs, list):
+        docs = []
+        t["documents"] = docs
+
+    existing = next((d for d in docs if isinstance(d, dict) and d.get("key") == "complementary_documents"), None)
+    cfg = REQUIRED_DOCS["DIRIGEANT_VAE_COMPLEMENT"]
+    if existing:
+        existing.setdefault("label", cfg["label"])
+        existing.setdefault("accept", cfg.get("accept", ""))
+        existing.setdefault("status", "NON DÉPOSÉ")
+        existing.setdefault("comment", "")
+        existing.setdefault("file", "")
+        if "files" not in existing or not isinstance(existing.get("files"), list):
+            existing["files"] = []
+        return existing
+
+    doc = {
+        "key": cfg["key"],
+        "label": cfg["label"],
+        "accept": cfg.get("accept", ""),
+        "status": "NON DÉPOSÉ",
+        "comment": "",
+        "file": "",
+        "files": [],
+    }
+    docs.append(doc)
+    return doc
+
+
 def allowed_doc_keys_for_training(training_type: str, trainee: Optional[Dict[str, Any]] = None) -> set:
     keys = {d["key"] for d in required_docs_for_training(training_type, trainee)}
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
         keys.add("livret_2")
+        if trainee and (trainee.get("scotia_status") or "").strip() == "complement_requested":
+            keys.add("complementary_documents")
     return keys
 
 def dossier_is_complete(trainee: Dict[str, Any], training_type: str) -> bool:
@@ -7115,21 +7177,34 @@ def api_scotia_decision(session_id: str, trainee_id: str):
 
     payload = request.get_json(silent=True) or {}
     decision = (payload.get('decision') or '').strip().lower()
-    if decision not in {'recevable', 'non_recevable', 'livret_2_ok', 'livret_2_review'}:
+    if decision not in {'recevable', 'non_recevable', 'complement_requested', 'livret_2_ok', 'livret_2_review'}:
         return jsonify({"ok": False, "error": "invalid_decision"}), 400
 
     now_iso = _now_iso()
 
-    if decision in {'recevable', 'non_recevable'}:
+    if decision in {'recevable', 'non_recevable', 'complement_requested'}:
         t['scotia_status'] = decision
         t['scotia_comment'] = (payload.get('comment') or '').strip()
         t['scotia_processed_at'] = now_iso
         if decision == 'non_recevable':
             t['scotia_livret_2_status'] = ''
             t['scotia_livret_2_processed_at'] = ''
+        if decision == 'complement_requested':
+            _ensure_complementary_documents_entry(t)
+            view = vae_status_view('complement_requested')
+            t['vae_status'] = view['key']
+            t['vae_status_label'] = view['label']
+            if not isinstance(t.get('vae_action_dates'), dict):
+                t['vae_action_dates'] = {}
+            t['vae_action_dates']['complement_requested_at'] = fr_date(datetime.datetime.utcnow().strftime("%Y-%m-%d"))
 
         trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
-        label = f"📄 Décision SCOTIA: {trainee_display_name} - {'recevable' if decision == 'recevable' else 'non recevable'}"
+        decision_labels = {
+            'recevable': 'recevable',
+            'non_recevable': 'non recevable',
+            'complement_requested': 'demande de complément en cours',
+        }
+        label = f"📄 Décision SCOTIA: {trainee_display_name} - {decision_labels.get(decision, decision)}"
         add_admin_notification(
             data,
             label,
@@ -12349,6 +12424,8 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
     ensure_documents_schema_for_trainee(t, training_type)
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
         _ensure_livret2_document_entry(t)
+        if (t.get("scotia_status") or "").strip() == "complement_requested":
+            _ensure_complementary_documents_entry(t)
 
     # ✅ refuse les doc_key inconnus pour cette formation
     if doc_key not in allowed_doc_keys_for_training(training_type, t):
@@ -12400,6 +12477,23 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
 
     t["updated_at"] = _now_iso()
     append_trainee_history_event(t, "Document ajouté", f"{doc_key} · fichier ajouté", "action")
+
+    if doc_key == "complementary_documents":
+        if not isinstance(t.get("vae_action_dates"), dict):
+            t["vae_action_dates"] = {}
+        t["vae_action_dates"]["complementary_documents_received"] = datetime.date.today().strftime("%d/%m/%Y")
+        target_doc["status"] = "A CONTRÔLER"
+        trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
+        add_admin_notification(
+            data,
+            f"VAE complément déposé par {trainee_display_name}",
+            meta={
+                "type": "vae_complementary_documents_upload",
+                "session_id": s.get("id"),
+                "trainee_id": t.get("id"),
+            },
+        )
+        save_data(data)
 
     if doc_key == "livret_2":
         if not isinstance(t.get("vae_action_dates"), dict):
@@ -14032,6 +14126,7 @@ DELIVERABLE_REQUIRED_KEYS = ["diplome", "carte_sst", "attestation_fin_formation"
 VAE_STATUS_STEPS = {
     "livret_1_todo": {"label": "Livret 1 à compléter", "pill": "orange"},
     "livret_1_analysis": {"label": "Livret 1 en cours d'analyse", "pill": "gray"},
+    "complement_requested": {"label": "Demande de complément en cours", "pill": "orange"},
     "livret_1_validated": {"label": "Livret 1 validé", "pill": "green"},
     "financement_validated": {"label": "Financement validé", "pill": "green"},
     "livret_2_todo": {"label": "Livret 2 à compléter", "pill": "orange"},
@@ -14864,6 +14959,8 @@ def public_trainee_space(token):
     ensure_documents_schema_for_trainee(t, training_type)
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
         _ensure_livret2_document_entry(t)
+        if (t.get("scotia_status") or "").strip() == "complement_requested":
+            _ensure_complementary_documents_entry(t)
 
     for d in (t.get("documents") or []):
         file_token = d.get("file") or ""
@@ -15083,6 +15180,8 @@ def public_doc_upload(token: str, doc_key: str):
     ensure_documents_schema_for_trainee(t, training_type)
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
         _ensure_livret2_document_entry(t)
+        if (t.get("scotia_status") or "").strip() == "complement_requested":
+            _ensure_complementary_documents_entry(t)
 
     # ✅ doc_key doit être dans la liste requise
     if doc_key not in allowed_doc_keys_for_training(training_type, t):
@@ -15162,7 +15261,7 @@ def public_doc_upload(token: str, doc_key: str):
             cur_status = (d.get("status") or "").strip().upper()
             if cur_status in ("NON CONFORME", "NON_CONFORME"):
                 cur_files = []
-            max_files = 2 if doc_key == "id" else (-1 if doc_key == "livret_2" else 1)
+            max_files = 2 if doc_key == "id" else (-1 if doc_key in {"livret_2", "complementary_documents"} else 1)
             if max_files < 0:
                 files_to_store = incoming_files
             else:
@@ -15201,6 +15300,23 @@ def public_doc_upload(token: str, doc_key: str):
     s["trainees"] = _session_trainees_list(s)
     s.pop("stagiaires", None)
     save_data(data)
+
+    if doc_key == "complementary_documents":
+        if not isinstance(t.get("vae_action_dates"), dict):
+            t["vae_action_dates"] = {}
+        t["vae_action_dates"]["complementary_documents_received"] = datetime.date.today().strftime("%d/%m/%Y")
+        target["status"] = "A CONTRÔLER"
+        trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
+        add_admin_notification(
+            data,
+            f"VAE complément déposé par {trainee_display_name}",
+            meta={
+                "type": "vae_complementary_documents_upload",
+                "session_id": s.get("id"),
+                "trainee_id": t.get("id"),
+            },
+        )
+        save_data(data)
 
     if doc_key == "livret_2":
         if not isinstance(t.get("vae_action_dates"), dict):
@@ -15305,6 +15421,8 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     ensure_documents_schema_for_trainee(t, training_type)
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
         _ensure_livret2_document_entry(t)
+        if (t.get("scotia_status") or "").strip() == "complement_requested":
+            _ensure_complementary_documents_entry(t)
 
     # ✅ deliverables
     t.setdefault("deliverables", {})
