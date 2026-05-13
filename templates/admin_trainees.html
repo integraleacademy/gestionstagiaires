@@ -1743,28 +1743,7 @@ function setVtcStatusLabel(label, text, color){
   label.classList.add(`vtc-status-${color}`);
 }
 
-function getVtcManualStatusMeta(mode, status){
-  const maps = {
-    theory: {
-      waiting_registration: ["En attente inscription examen", "red"],
-      waiting_result: ["En attente résultats examen", "yellow"],
-      success: ["Examen théorique réussi", "green"],
-      failed: ["Echec examen théorique", "black"]
-    },
-    practice: {
-      waiting_registration: ["En attente inscription examen", "red"],
-      waiting_theory: ["En attente réussite théorie", "yellow"],
-      waiting_result: ["En attente résultats pratique", "yellow"],
-      success: ["Examen pratique réussi", "green"],
-      failed: ["Echec examen pratique", "black"]
-    }
-  };
-  const meta = maps[mode]?.[status];
-  return meta ? { text: meta[0], color: meta[1] } : null;
-}
-
-function refreshVtcStatusLabels(tr){
-  if(!tr) return;
+function getVtcStatusValues(tr){
   const cmarOk = tr.getAttribute("data-vtc-cmar-ok") === "1";
   const theorySent = tr.getAttribute("data-vtc-theory-exam-sent") === "1";
   const theoryResult = (tr.getAttribute("data-vtc-theory-result") || "").toLowerCase();
@@ -1774,14 +1753,28 @@ function refreshVtcStatusLabels(tr){
   const practiceManual = (tr.getAttribute("data-vtc-practice-status-manual") || "").toLowerCase();
   const theoryFailed = theoryResult === "failed" || theoryResult === "non_admissible";
   const practiceFailed = practiceResult === "failed" || practiceResult === "non_admissible";
-  const theoryManualMeta = getVtcManualStatusMeta("theory", theoryManual);
-  const practiceManualMeta = getVtcManualStatusMeta("practice", practiceManual);
-  const theoryOk = theoryManual ? theoryManual === "success" : (theorySent && !theoryFailed);
-  const practiceOk = practiceManual ? practiceManual === "success" : (practiceSent || practiceResult === "success");
+  const theoryOk = theorySent && !theoryFailed;
+  const practiceOk = practiceSent || practiceResult === "success";
 
-  if(theoryManualMeta){
-    setVtcStatusLabel(tr.querySelector("[data-vtc-theory-label]"), theoryManualMeta.text, theoryManualMeta.color);
-  }else if(theoryFailed){
+  let theoryStatus = "pending_results";
+  if(theoryFailed) theoryStatus = "failed";
+  else if(!cmarOk) theoryStatus = "pending_registration";
+  else if(theoryOk) theoryStatus = "success";
+
+  let practiceStatus = "pending_results";
+  if(practiceFailed) practiceStatus = "failed";
+  else if(!cmarOk) practiceStatus = "pending_registration";
+  else if(practiceOk) practiceStatus = "success";
+  else if(!theoryOk) practiceStatus = "waiting_theory";
+
+  return { theoryStatus, practiceStatus, theoryFailed, practiceFailed, theoryOk, practiceOk, cmarOk };
+}
+
+function refreshVtcStatusLabels(tr){
+  if(!tr) return;
+  const { theoryFailed, practiceFailed, theoryOk, practiceOk, cmarOk } = getVtcStatusValues(tr);
+
+  if(theoryFailed){
     setVtcStatusLabel(tr.querySelector("[data-vtc-theory-label]"), "Echec examen théorique", "black");
   }else if(!cmarOk){
     setVtcStatusLabel(tr.querySelector("[data-vtc-theory-label]"), "En attente inscription examen", "red");
@@ -1836,7 +1829,21 @@ function applyRowFilters(){
   });
 }
 
+function bindImmediateRowFilters(){
+  document.addEventListener("change", event => {
+    if(event.target?.matches?.("#vaeStatusFilter, #vtcTheoryFilter, #vtcPracticeFilter")){
+      applyRowFilters();
+    }
+  });
 
+  document.addEventListener("input", event => {
+    if(event.target?.matches?.("#vaeNameSearch")){
+      applyRowFilters();
+    }
+  });
+}
+
+bindImmediateRowFilters();
 
 
 // au chargement
@@ -2322,26 +2329,6 @@ function renderDocBadges(){
 
   // au chargement
 renderDocBadges();
-
-const vaeStatusFilter = document.getElementById("vaeStatusFilter");
-if(vaeStatusFilter){
-  vaeStatusFilter.addEventListener("change", applyRowFilters);
-}
-
-const vaeNameSearch = document.getElementById("vaeNameSearch");
-if(vaeNameSearch){
-  vaeNameSearch.addEventListener("input", applyRowFilters);
-}
-
-const vtcTheoryFilter = document.getElementById("vtcTheoryFilter");
-if(vtcTheoryFilter){
-  vtcTheoryFilter.addEventListener("change", applyRowFilters);
-}
-
-const vtcPracticeFilter = document.getElementById("vtcPracticeFilter");
-if(vtcPracticeFilter){
-  vtcPracticeFilter.addEventListener("change", applyRowFilters);
-}
 
 applyRowFilters();
 
