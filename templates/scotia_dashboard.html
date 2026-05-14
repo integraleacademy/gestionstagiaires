@@ -3,390 +3,349 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>SCOTIA - Dossiers à traiter</title>
+  <title>SCOTIA - Pilotage VAE</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <style>
-    .scotia-item--processed{
-      background:#f3f4f6;
+    body.scotia-page{
+      background:
+        radial-gradient(900px 420px at 10% 0%, rgba(59,130,246,.18), transparent 62%),
+        radial-gradient(780px 420px at 88% 6%, rgba(249,115,22,.18), transparent 58%),
+        linear-gradient(180deg,#f8fbff 0%,#eef5ff 45%,#f8fafc 100%);
     }
-    .scotia-item--processed .scotia-item-panel{
-      opacity:.65;
-      filter:grayscale(1);
-    }
-    .scotia-item-accordion{
-      border:1px solid #e5e7eb;
-      border-radius:14px;
-      background:#fff;
+    .scotia-shell{max-width:1400px;margin:0 auto;padding:28px 18px 42px;}
+    .scotia-hero{
+      position:relative;
       overflow:hidden;
-    }
-    .scotia-item-toggle{
-      list-style:none;
-      cursor:pointer;
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      gap:12px;
-      padding:14px 16px;
-    }
-    .scotia-item-toggle::-webkit-details-marker{ display:none; }
-    .scotia-item-toggle-main{
-      display:flex;
-      flex-direction:column;
-      gap:2px;
-    }
-    .scotia-item-toggle-name{
-      font-weight:700;
-      font-size:18px;
-      color:#111827;
-    }
-    .scotia-item-chevron{
-      width:28px;
-      height:28px;
-      min-width:28px;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      border-radius:999px;
-      background:#eef2ff;
-      color:#1d4ed8;
-      font-size:14px;
-      transition:transform .22s ease, background-color .22s ease;
-      transform:rotate(0deg);
-    }
-    .scotia-item-accordion[open] .scotia-item-chevron{
-      transform:rotate(90deg);
-      background:#dbeafe;
-    }
-    .scotia-item-panel{
-      padding:0 16px 14px;
-      border-top:1px solid #e5e7eb;
-      animation:scotiaPanelReveal .22s ease;
-    }
-    @keyframes scotiaPanelReveal{
-      from{ opacity:0; transform:translateY(-4px); }
-      to{ opacity:1; transform:translateY(0); }
-    }
-    .btn-danger-solid{
-      background:#b91c1c;
+      border:1px solid rgba(148,163,184,.28);
+      border-radius:30px;
+      padding:28px;
       color:#fff;
-      border-color:#b91c1c;
-      box-shadow: 0 14px 26px rgba(185,28,28,.18);
+      background:
+        linear-gradient(135deg,rgba(15,23,42,.98),rgba(30,64,175,.92) 54%,rgba(14,165,233,.88));
+      box-shadow:0 26px 70px rgba(15,23,42,.18);
     }
-    .btn-danger-solid:hover{ border-color:#991b1b; }
-    .btn-complement-animated{
-      background:linear-gradient(135deg,#fb923c,#f97316);
-      color:#fff;
-      border-color:#ea580c;
-      box-shadow:0 10px 22px rgba(249,115,22,.30);
-      animation:complementPulse 1.35s ease-in-out infinite;
+    .scotia-hero::before,
+    .scotia-hero::after{content:"";position:absolute;border-radius:999px;filter:blur(1px);opacity:.75;pointer-events:none;}
+    .scotia-hero::before{width:280px;height:280px;right:-70px;top:-90px;background:rgba(251,146,60,.45);}
+    .scotia-hero::after{width:190px;height:190px;left:44%;bottom:-110px;background:rgba(34,197,94,.30);}
+    .scotia-hero-inner{position:relative;z-index:1;display:flex;justify-content:space-between;gap:24px;align-items:flex-start;flex-wrap:wrap;}
+    .scotia-kicker{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid rgba(255,255,255,.24);border-radius:999px;background:rgba(255,255,255,.12);font-size:12px;font-weight:1000;text-transform:uppercase;letter-spacing:.08em;}
+    .scotia-title{margin:12px 0 8px;font-size:clamp(34px,5vw,58px);line-height:.96;letter-spacing:-.05em;color:#fff;}
+    .scotia-subtitle{max-width:760px;margin:0;color:rgba(255,255,255,.82);font-size:17px;line-height:1.55;}
+    .scotia-hero-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end;}
+    .scotia-hero .btn{border-color:rgba(255,255,255,.24);}
+    .scotia-hero .btn-outline{background:rgba(255,255,255,.12);color:#fff;backdrop-filter:blur(10px);}
+    .scotia-stats{position:relative;z-index:2;display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:14px;margin-top:20px;}
+    .scotia-stat{
+      min-height:128px;
+      border:1px solid rgba(255,255,255,.20);
+      border-radius:22px;
+      padding:16px;
+      background:rgba(255,255,255,.13);
+      backdrop-filter:blur(14px);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.16);
     }
-    .btn-complement-animated:hover{ border-color:#c2410c; }
-    .btn-complement-animated.is-active{
-      animation:none;
-      box-shadow:0 0 0 3px rgba(249,115,22,.30);
-    }
-    @keyframes complementPulse{
-      0%,100%{ transform:translateY(0); box-shadow:0 0 0 0 rgba(249,115,22,.42),0 10px 22px rgba(249,115,22,.30); }
-      50%{ transform:translateY(-1px); box-shadow:0 0 0 8px rgba(249,115,22,0),0 14px 26px rgba(249,115,22,.34); }
-    }
-    .scotia-item-actions .btn.is-active{
-      box-shadow:0 0 0 3px rgba(37,99,235,.22);
-      transform:none;
-    }
-    .scotia-item-actions .btn-danger-solid.is-active{
-      box-shadow:0 0 0 3px rgba(185,28,28,.26);
-    }
-    .doc-open-link{
-      color:#1d4ed8;
-      font-weight:700;
-      text-decoration:none;
-    }
-    .doc-open-link:hover,.doc-open-link:focus{
-      text-decoration:underline;
-    }
-    .attestation-imported-note{
-      width:100%;
-      margin:2px 0 0;
-      font-size:13px;
-      color:#4b5563;
-    }
-    .scotia-subpanel{
-      border:1px solid #e5e7eb;
-      border-radius:12px;
-      padding:10px;
-      background:#f9fafb;
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-      min-width:280px;
-      flex:1 1 420px;
-    }
-    .scotia-subpanel-title{
-      margin:0;
-      font-size:14px;
-      color:#111827;
-    }
-    .scotia-subpanel-title-wrap{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:8px;
-    }
-    .btn-resend-mail{
-      min-width:30px;
-      height:30px;
-      padding:0 8px;
-      font-size:16px;
-      line-height:1;
-    }
-    .scotia-subpanel-actions{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      align-items:center;
-    }
-    .scotia-comment-wrap{
-      margin-top:10px;
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-      width:100%;
-    }
-    .scotia-comment-label{
-      font-size:13px;
-      font-weight:700;
-      color:#374151;
-    }
-    .scotia-comment-input{
-      width:100%;
-      min-height:82px;
-      resize:vertical;
-      border:1px solid #d1d5db;
-      border-radius:10px;
-      padding:10px 12px;
-      font:inherit;
-      line-height:1.35;
-    }
-    .scotia-comment-status{
-      font-size:12px;
-      color:#6b7280;
-      min-height:16px;
-    }
-
-    .btn-pending-animated{
-      background:linear-gradient(135deg,#fb923c,#f97316);
-      color:#fff;
-      border:1px solid #ea580c;
-      box-shadow:0 10px 22px rgba(249,115,22,.30);
-      animation:pendingPulse 1.6s ease-in-out infinite;
-      cursor:default;
-    }
-    .btn-pending-animated:hover,
-    .btn-pending-animated:focus{
-      transform:none;
-      box-shadow:0 10px 22px rgba(249,115,22,.30);
-    }
-    @keyframes pendingPulse{
-      0%,100%{ box-shadow:0 0 0 0 rgba(249,115,22,.44),0 10px 22px rgba(249,115,22,.30); }
-      50%{ box-shadow:0 0 0 8px rgba(249,115,22,0),0 10px 22px rgba(249,115,22,.30); }
-    }
+    .scotia-stat strong{display:block;font-size:34px;line-height:1;color:#fff;letter-spacing:-.04em;}
+    .scotia-stat span{display:block;margin-top:8px;color:rgba(255,255,255,.82);font-size:13px;font-weight:850;line-height:1.25;}
+    .scotia-stat small{display:inline-flex;margin-top:10px;padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.16);color:rgba(255,255,255,.86);font-size:11px;font-weight:900;}
+    .scotia-stat--orange{background:linear-gradient(135deg,rgba(249,115,22,.95),rgba(251,191,36,.58));}
+    .scotia-stat--blue{background:linear-gradient(135deg,rgba(37,99,235,.94),rgba(56,189,248,.50));}
+    .scotia-stat--green{background:linear-gradient(135deg,rgba(22,163,74,.94),rgba(74,222,128,.48));}
+    .scotia-stat--purple{background:linear-gradient(135deg,rgba(124,58,237,.92),rgba(216,180,254,.40));}
+    .scotia-stat--slate{background:linear-gradient(135deg,rgba(51,65,85,.92),rgba(148,163,184,.36));}
+    .scotia-workspace{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:18px;align-items:start;margin-top:18px;}
+    .scotia-board{border:1px solid rgba(148,163,184,.24);border-radius:26px;background:rgba(255,255,255,.82);box-shadow:0 20px 60px rgba(15,23,42,.08);padding:18px;backdrop-filter:blur(12px);}
+    .scotia-board-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+    .scotia-board-head h2{font-size:24px;letter-spacing:-.03em;}
+    .scotia-board-head p{margin:6px 0 0;color:#64748b;font-weight:650;}
+    .scotia-side{position:sticky;top:18px;display:grid;gap:14px;}
+    .scotia-help-card{border:1px solid rgba(148,163,184,.28);border-radius:24px;background:#fff;padding:16px;box-shadow:0 14px 40px rgba(15,23,42,.07);}
+    .scotia-help-card h3{margin:0 0 10px;font-size:16px;}
+    .scotia-steps{display:grid;gap:10px;margin:0;padding:0;list-style:none;}
+    .scotia-steps li{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start;color:#475569;font-size:13px;line-height:1.35;}
+    .scotia-step-dot{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:12px;background:#eff6ff;color:#1d4ed8;font-weight:1000;}
+    .scotia-list{display:grid;gap:14px;}
+    .scotia-item-accordion{border:1px solid rgba(148,163,184,.26);border-radius:24px;background:#fff;overflow:hidden;box-shadow:0 12px 35px rgba(15,23,42,.06);transition:.18s ease;}
+    .scotia-item-accordion:hover{transform:translateY(-2px);box-shadow:0 18px 48px rgba(15,23,42,.10);border-color:rgba(37,99,235,.24);}
+    .scotia-item--processed{background:linear-gradient(180deg,#fff,#f8fafc);}
+    .scotia-item--processed .scotia-item-panel{opacity:.86;}
+    .scotia-item-toggle{list-style:none;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;padding:18px;align-items:center;}
+    .scotia-item-toggle::-webkit-details-marker{display:none;}
+    .scotia-person{display:flex;gap:14px;align-items:center;min-width:0;}
+    .scotia-avatar{width:52px;height:52px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:19px;font-weight:1000;background:linear-gradient(135deg,#2563eb,#06b6d4);box-shadow:0 12px 24px rgba(37,99,235,.22);flex:0 0 auto;}
+    .scotia-item-toggle-name{font-weight:1000;font-size:19px;color:#0f172a;letter-spacing:-.02em;}
+    .scotia-meta-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:7px;}
+    .scotia-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #e2e8f0;border-radius:999px;background:#f8fafc;color:#475569;padding:6px 9px;font-size:12px;font-weight:850;max-width:100%;}
+    .scotia-chip--mail,.scotia-chip--phone{overflow-wrap:anywhere;}
+    .scotia-status-stack{display:flex;align-items:center;gap:10px;justify-content:flex-end;flex-wrap:wrap;}
+    .badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:8px 11px;font-weight:1000;font-size:12px;border:1px solid transparent;white-space:nowrap;}
+    .badge--success{background:#dcfce7;color:#166534;border-color:#86efac;}.badge--danger{background:#fee2e2;color:#991b1b;border-color:#fecaca;}.badge--warning{background:#ffedd5;color:#9a3412;border-color:#fdba74;}.badge--info{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe;}.badge--muted{background:#f1f5f9;color:#475569;border-color:#e2e8f0;}.badge--review{background:#fef3c7;color:#92400e;border-color:#fde68a;}
+    .scotia-item-chevron{width:34px;height:34px;min-width:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:14px;transition:.22s ease;transform:rotate(0deg);}
+    .scotia-item-accordion[open] .scotia-item-chevron{transform:rotate(90deg);background:#dbeafe;}
+    .scotia-item-panel{padding:0 18px 18px;border-top:1px solid #e2e8f0;animation:scotiaPanelReveal .22s ease;}
+    @keyframes scotiaPanelReveal{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+    .scotia-panel-grid{display:grid;grid-template-columns:minmax(280px,.9fr) minmax(360px,1.35fr);gap:16px;margin-top:16px;align-items:start;}
+    .scotia-doc-card,.scotia-action-zone{border:1px solid #e2e8f0;border-radius:20px;background:#f8fafc;padding:14px;}
+    .scotia-section-title{display:flex;align-items:center;gap:9px;margin:0 0 12px;font-size:15px;color:#0f172a;font-weight:1000;}
+    .scotia-section-title span{display:inline-flex;width:30px;height:30px;align-items:center;justify-content:center;border-radius:11px;background:#dbeafe;}
+    .scotia-doc-list{display:grid;gap:8px;margin:0;padding:0;list-style:none;}
+    .scotia-doc-list li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;color:#334155;font-weight:800;font-size:13px;}
+    .doc-open-link{color:#1d4ed8;font-weight:1000;text-decoration:none;white-space:nowrap;}.doc-open-link:hover,.doc-open-link:focus{text-decoration:underline;}
+    .scotia-quick-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+    .scotia-item-actions{display:grid;gap:12px;}
+    .scotia-subpanel{border:1px solid #e2e8f0;border-radius:18px;padding:13px;background:#fff;display:flex;flex-direction:column;gap:10px;}
+    .scotia-subpanel-title{margin:0;font-size:15px;color:#111827;font-weight:1000;}.scotia-subpanel-title-wrap{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+    .btn-resend-mail{min-width:34px;height:34px;padding:0 9px;font-size:16px;line-height:1;}
+    .scotia-subpanel-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+    .attestation-imported-note{width:100%;margin:0;font-size:13px;color:#64748b;font-weight:700;}
+    .scotia-comment-wrap{display:flex;flex-direction:column;gap:6px;width:100%;}.scotia-comment-label{font-size:13px;font-weight:1000;color:#374151;}.scotia-comment-input{width:100%;min-height:96px;resize:vertical;border:1px solid #cbd5e1;border-radius:14px;padding:11px 12px;font:inherit;line-height:1.35;background:#fff;}.scotia-comment-status{font-size:12px;color:#64748b;min-height:16px;}
+    .btn-danger-solid{background:#b91c1c;color:#fff;border-color:#b91c1c;box-shadow:0 14px 26px rgba(185,28,28,.18);}.btn-danger-solid:hover{border-color:#991b1b;}
+    .btn-complement-animated{background:linear-gradient(135deg,#fb923c,#f97316);color:#fff;border-color:#ea580c;box-shadow:0 10px 22px rgba(249,115,22,.30);animation:complementPulse 1.35s ease-in-out infinite;}.btn-complement-animated:hover{border-color:#c2410c;}.btn-complement-animated.is-active{animation:none;box-shadow:0 0 0 3px rgba(249,115,22,.30);}
+    @keyframes complementPulse{0%,100%{transform:translateY(0);box-shadow:0 0 0 0 rgba(249,115,22,.42),0 10px 22px rgba(249,115,22,.30);}50%{transform:translateY(-1px);box-shadow:0 0 0 8px rgba(249,115,22,0),0 14px 26px rgba(249,115,22,.34);}}
+    .scotia-item-actions .btn.is-active{box-shadow:0 0 0 3px rgba(37,99,235,.22);transform:none;}.scotia-item-actions .btn-danger-solid.is-active{box-shadow:0 0 0 3px rgba(185,28,28,.26);}
+    .btn-pending-animated{background:linear-gradient(135deg,#fb923c,#f97316);color:#fff;border:1px solid #ea580c;box-shadow:0 10px 22px rgba(249,115,22,.30);animation:pendingPulse 1.6s ease-in-out infinite;cursor:default;}.btn-pending-animated:hover,.btn-pending-animated:focus{transform:none;box-shadow:0 10px 22px rgba(249,115,22,.30);}
+    @keyframes pendingPulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,.44),0 10px 22px rgba(249,115,22,.30);}50%{box-shadow:0 0 0 8px rgba(249,115,22,0),0 10px 22px rgba(249,115,22,.30);}}
+    .scotia-empty{padding:42px 18px;text-align:center;border:1px dashed #cbd5e1;border-radius:22px;background:#f8fafc;color:#64748b;font-weight:800;}
+    @media (max-width:1150px){.scotia-stats{grid-template-columns:repeat(3,1fr);}.scotia-workspace{grid-template-columns:1fr;}.scotia-side{position:static;grid-template-columns:repeat(2,minmax(0,1fr));}.scotia-panel-grid{grid-template-columns:1fr;}}
+    @media (max-width:760px){.scotia-shell{padding:16px 10px 30px;}.scotia-hero{padding:20px;border-radius:24px;}.scotia-stats,.scotia-side{grid-template-columns:1fr;}.scotia-item-toggle{grid-template-columns:1fr;}.scotia-status-stack{justify-content:flex-start;}.scotia-person{align-items:flex-start;}.scotia-avatar{width:44px;height:44px;border-radius:15px;}.scotia-doc-list li{align-items:flex-start;flex-direction:column;}.scotia-subpanel-actions .btn,.scotia-subpanel-actions form{width:100%;}.scotia-subpanel-actions form .btn{width:100%;}}
   </style>
 </head>
-<body>
-  <div class="container" style="max-width:1200px;margin:24px auto;">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
-      <h1 style="margin:0;">SCOTIA</h1>
-      <a class="btn btn-outline" href="{{ url_for('scotia_logout') }}">Déconnexion</a>
-    </div>
+<body class="scotia-page">
+  {% set stats = namespace(total=items|length, l1_pending=0, complements=0, l2_missing=0, l2_pending=0, done=0) %}
+  {% for it in items %}
+    {% set has_livret_2_stat = (it.deliverables.livret_2 or '')|trim %}
+    {% if it.scotia_status in ['recevable', 'non_recevable'] %}
+      {% if it.scotia_status == 'recevable' and not has_livret_2_stat %}{% set stats.l2_missing = stats.l2_missing + 1 %}{% endif %}
+      {% if it.scotia_status == 'recevable' and has_livret_2_stat and it.scotia_livret_2_status not in ['livret_2_ok', 'livret_2_review'] %}{% set stats.l2_pending = stats.l2_pending + 1 %}{% endif %}
+      {% if it.scotia_status == 'non_recevable' or it.scotia_livret_2_status in ['livret_2_ok', 'livret_2_review'] %}{% set stats.done = stats.done + 1 %}{% endif %}
+    {% elif it.scotia_status == 'complement_requested' %}
+      {% set stats.complements = stats.complements + 1 %}
+    {% else %}
+      {% set stats.l1_pending = stats.l1_pending + 1 %}
+    {% endif %}
+  {% endfor %}
 
-    <div class="card">
-      <h2 style="margin-top:0;">A traiter</h2>
-      {% if items %}
-        <div style="display:grid;gap:12px;">
-          {% for it in items %}
-          <details class="scotia-item-accordion scotia-item {% if it.scotia_status in ['recevable', 'non_recevable'] %}scotia-item--processed{% endif %}">
-            <summary class="scotia-item-toggle">
-              <div class="scotia-item-toggle-main">
-                <div class="scotia-item-toggle-name">{{ it.first_name }} {{ it.last_name }}</div>
-                <div class="muted">Session: {{ it.session_name }} · L1 transmis: {{ it.vae_sent_at }}</div>
-                <div class="muted">{{ it.email }} · {{ it.phone }}</div>
-              </div>
-              <div style="display:flex;align-items:center;gap:8px;">
-                {% set has_livret_2 = (it.deliverables.livret_2 or '')|trim %}
-                {% if it.scotia_status == 'recevable' and not has_livret_2 %}
-                  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-                    <span class="badge" style="background:#dcfce7;color:#166534;">Recevable ✅</span>
-                    <span class="badge" style="background:#f3f4f6;color:#374151;">Livret 2 non déposé</span>
-                  </div>
-                {% elif it.scotia_status == 'recevable' and has_livret_2 %}
-                  {% if it.scotia_livret_2_status == 'livret_2_ok' %}
-                    <span class="badge" style="background:#dcfce7;color:#166534;">Livret 2 OK ✅</span>
-                  {% elif it.scotia_livret_2_status == 'livret_2_review' %}
-                    <span class="badge" style="background:#fef3c7;color:#92400e;">Livret 2 à revoir</span>
-                  {% else %}
-                    <button type="button" class="btn btn-pending-animated" disabled>Livret 2 à traiter</button>
-                  {% endif %}
-                {% elif it.scotia_status == 'non_recevable' %}
-                  <span class="badge" style="background:#fee2e2;color:#991b1b;">Non recevable</span>
-                {% elif it.scotia_status == 'complement_requested' %}
-                  <span class="badge" style="background:#ffedd5;color:#9a3412;">Demande de complément en cours</span>
-                {% else %}
-                  <button type="button" class="btn btn-pending-animated" disabled>A traiter</button>
-                {% endif %}
-                <span class="scotia-item-chevron" aria-hidden="true">▶</span>
-              </div>
-            </summary>
+  <main class="scotia-shell">
+    <section class="scotia-hero" aria-labelledby="scotia-title">
+      <div class="scotia-hero-inner">
+        <div>
+          <span class="scotia-kicker">✨ Espace partenaire SCOTIA</span>
+          <h1 id="scotia-title" class="scotia-title">Pilotage VAE</h1>
+          <p class="scotia-subtitle">Une vue claire pour prioriser les livrets, suivre les compléments, importer les attestations et gérer plusieurs dizaines de dossiers sans perdre le fil.</p>
+        </div>
+        <div class="scotia-hero-actions">
+          <a class="btn btn-outline" href="#dossiers-scotia">Voir les dossiers</a>
+          <a class="btn btn-outline" href="{{ url_for('scotia_logout') }}">Déconnexion</a>
+        </div>
+      </div>
 
-            <div class="scotia-item-panel">
-            <div style="margin-top:10px;">
-              <strong>Documents :</strong>
-              <ul>
-                {% for d in it.documents %}
-                  {% set file_tokens = d.file_tokens if d.file_tokens is defined else (d.files or []) %}
-                  {% if d.file %}
-                    <li>{{ d.label or d.key }} — <a class="doc-open-link" href="/scotia/uploads/{{ d.file }}" target="_blank">ouvrir</a></li>
-                  {% elif file_tokens %}
-                    <li>{{ d.label or d.key }}
-                      {% for f in file_tokens %}
-                        <a class="doc-open-link" href="/scotia/uploads/{{ f }}" target="_blank">ouvrir</a>{% if not loop.last %}, {% endif %}
-                      {% endfor %}
-                    </li>
-                  {% endif %}
-                {% endfor %}
-              </ul>
-            </div>
+      <div class="scotia-stats" aria-label="Statistiques SCOTIA">
+        <div class="scotia-stat scotia-stat--orange"><strong>{{ stats.l1_pending }}</strong><span>Livrets 1 à valider</span><small>Décision attendue</small></div>
+        <div class="scotia-stat scotia-stat--purple"><strong>{{ stats.complements }}</strong><span>Compléments demandés</span><small>Suivi candidat</small></div>
+        <div class="scotia-stat scotia-stat--blue"><strong>{{ stats.l2_missing }}</strong><span>Livrets 2 à déposer</span><small>Après recevabilité</small></div>
+        <div class="scotia-stat scotia-stat--green"><strong>{{ stats.l2_pending }}</strong><span>Livrets 2 à valider</span><small>Analyse SCOTIA</small></div>
+        <div class="scotia-stat scotia-stat--slate"><strong>{{ stats.total }}</strong><span>Dossiers actifs</span><small>{{ stats.done }} finalisés</small></div>
+      </div>
+    </section>
 
-            {% if it.vae_dossier_id or it.candidate_sheet_available or it.vae_justificatifs %}
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0;">
-              {% if it.vae_dossier_id %}
-                <a class="btn btn-outline" href="/scotia/vae/{{ it.vae_dossier_id }}" target="_blank" rel="noopener">Voir dossier de faisabilité VAE</a>
-              {% endif %}
-              {% if it.candidate_sheet_available %}
-                <a class="btn btn-outline" href="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/candidate-sheet" target="_blank" rel="noopener">Voir fiche candidat complétée</a>
-              {% endif %}
-              {% for j in it.vae_justificatifs %}
-                {% set jid = (j.get('id') if j is mapping else '') %}
-                <a class="btn btn-outline" href="/scotia/vae/{{ it.vae_dossier_id }}/justificatifs/{{ jid }}" target="_blank" rel="noopener">Justificatif {{ loop.index }}</a>
-              {% endfor %}
-            </div>
-            {% endif %}
+    <div class="scotia-workspace">
+      <section class="scotia-board" id="dossiers-scotia">
+        <div class="scotia-board-head">
+          <div>
+            <h2>A traiter en priorité</h2>
+            <p>Ouvrez une fiche pour consulter les documents, puis validez le Livret 1 ou le Livret 2.</p>
+          </div>
+          <span class="badge badge--info">{{ stats.total }} dossiers visibles</span>
+        </div>
 
-            </div>
-            <div class="scotia-item-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:stretch;">
+        {% if items %}
+          <div class="scotia-list">
+            {% for it in items %}
+              {% set has_livret_2 = (it.deliverables.livret_2 or '')|trim %}
               {% set livret_1_processed = it.scotia_status in ['recevable', 'non_recevable'] %}
               {% set livret_1_is_recevable = it.scotia_status == 'recevable' %}
               {% set livret_1_is_non_recevable = it.scotia_status == 'non_recevable' %}
               {% set livret_1_is_complement = it.scotia_status == 'complement_requested' %}
               {% set has_attestation_recevabilite = (it.deliverables.attestation_recevabilite or '')|trim %}
-              {% set has_livret_2 = (it.deliverables.livret_2 or '')|trim %}
               {% set has_prerequis_interview_sheet = (it.prerequis_interview_sheet or '')|trim %}
               {% set livret_2_processed = it.scotia_livret_2_status in ['livret_2_ok', 'livret_2_review'] %}
               {% set livret_2_is_ok = it.scotia_livret_2_status == 'livret_2_ok' %}
               {% set livret_2_is_review = it.scotia_livret_2_status == 'livret_2_review' %}
-
-              <div class="scotia-subpanel">
-                <div class="scotia-subpanel-title-wrap">
-                  <h4 class="scotia-subpanel-title">Livret 1</h4>
-                  <form method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/resend-mail/livret-1">
-                    <button type="submit" class="btn btn-outline btn-resend-mail" title="Renvoyer le mail Livret 1 à Scotia et Clément" aria-label="Renvoyer le mail Livret 1">🔄</button>
-                  </form>
-                </div>
-                <div class="scotia-subpanel-actions">
-                  <button type="button" class="btn {% if livret_1_is_recevable %}btn-primary is-active{% elif livret_1_processed %}btn-disabled-muted{% else %}btn-primary{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','recevable')" {% if livret_1_processed %}disabled{% endif %}>Recevable</button>
-                  <button type="button" class="btn {% if livret_1_is_non_recevable %}btn-danger-solid is-active{% elif livret_1_processed %}btn-disabled-muted{% else %}btn-danger-solid{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','non_recevable')" {% if livret_1_processed %}disabled{% endif %}>Non recevable</button>
-                  <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/attestation/upload" style="display:flex;gap:6px;align-items:center;">
-                    <input id="attestation-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="file" required style="display:none;" onchange="submitAttestationForm(this)" {% if has_attestation_recevabilite %}disabled{% endif %}>
-                    <button class="btn {% if has_attestation_recevabilite %}btn-disabled-muted{% else %}btn-primary{% endif %} btn-upload-attestation" type="button" onclick="triggerAttestationUpload('{{ it.session_id }}','{{ it.trainee_id }}')" {% if has_attestation_recevabilite %}disabled{% endif %}>Téléverser attestation</button>
-                  </form>
-                  <button type="button" class="btn {% if livret_1_is_complement %}btn-complement-animated is-active{% else %}btn-complement-animated{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','complement_requested')" {% if livret_1_is_complement or livret_1_processed %}disabled{% endif %}>Demander un complément</button>
-                  {% if has_attestation_recevabilite %}
-                    <a class="btn btn-outline" href="/scotia/uploads/{{ it.deliverables.attestation_recevabilite }}" target="_blank">Voir attestation</a>
-                  {% endif %}
-                </div>
-                {% if has_attestation_recevabilite %}
-                  <p class="attestation-imported-note">attestation de recevabilité importée le {{ it.attestation_recevabilite_imported_at or 'date inconnue' }}</p>
-                {% endif %}
-              </div>
-
-              <div class="scotia-subpanel">
-                <div class="scotia-subpanel-title-wrap">
-                  <h4 class="scotia-subpanel-title">Livret 2</h4>
-                  <form method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/resend-mail/livret-2">
-                    <button type="submit" class="btn btn-outline btn-resend-mail" title="Renvoyer le mail Livret 2 à Scotia et Clément" aria-label="Renvoyer le mail Livret 2">🔄</button>
-                  </form>
-                </div>
-                <div class="scotia-subpanel-actions">
-                  <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/livret2/upload" style="display:flex;gap:6px;align-items:center;">
-                    <input id="livret2-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="file" accept="application/pdf,.pdf" required style="display:none;" onchange="submitLivret2Form(this)" {% if has_livret_2 or it.scotia_status != 'recevable' %}disabled{% endif %}>
-                    <button class="btn {% if has_livret_2 or it.scotia_status != 'recevable' %}btn-disabled-muted{% else %}btn-primary{% endif %}" type="button" onclick="triggerLivret2Upload('{{ it.session_id }}','{{ it.trainee_id }}')" {% if has_livret_2 or it.scotia_status != 'recevable' %}disabled{% endif %}>Importer Livret 2</button>
-                  </form>
-                  {% if has_livret_2 %}
-                    <a class="btn btn-outline" href="/scotia/uploads/{{ it.deliverables.livret_2 }}" target="_blank">Consulter le Livret 2</a>
-                    <form method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/livret2/reset" onsubmit="return confirm('Retirer le Livret 2 importé et remettre son statut à zéro ?');">
-                      <button class="btn btn-outline" type="submit">Retirer Livret 2</button>
-                    </form>
-                  {% endif %}
-                  <button type="button" class="btn {% if livret_2_is_ok %}btn-primary is-active{% elif livret_2_processed or not has_livret_2 or it.scotia_status != 'recevable' %}btn-disabled-muted{% else %}btn-primary{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','livret_2_ok')" {% if livret_2_processed or not has_livret_2 or it.scotia_status != 'recevable' %}disabled{% endif %}>Livret 2 OK</button>
-                  <button type="button" class="btn {% if livret_2_is_review %}btn-danger-solid is-active{% elif livret_2_processed or not has_livret_2 or it.scotia_status != 'recevable' %}btn-disabled-muted{% else %}btn-danger-solid{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','livret_2_review')" {% if livret_2_processed or not has_livret_2 or it.scotia_status != 'recevable' %}disabled{% endif %}>Livret 2 à revoir</button>
-                </div>
-                {% if has_livret_2 %}
-                  <p class="attestation-imported-note">Livret 2 importé le {{ it.livret_2_imported_at or 'date inconnue' }}</p>
-                {% endif %}
-              </div>
-
               {% set complementary_documents = it.complementary_documents or [] %}
-              {% if livret_1_is_complement or complementary_documents %}
-              <div class="scotia-subpanel">
-                <div class="scotia-subpanel-title-wrap">
-                  <h4 class="scotia-subpanel-title">Documents complémentaires demandés</h4>
+              <details class="scotia-item-accordion scotia-item {% if it.scotia_status in ['recevable', 'non_recevable'] %}scotia-item--processed{% endif %}">
+                <summary class="scotia-item-toggle">
+                  <div class="scotia-person">
+                    <div class="scotia-avatar" aria-hidden="true">{{ (it.first_name[:1] ~ it.last_name[:1])|upper }}</div>
+                    <div class="scotia-item-toggle-main">
+                      <div class="scotia-item-toggle-name">{{ it.first_name }} {{ it.last_name }}</div>
+                      <div class="scotia-meta-row">
+                        <span class="scotia-chip">📚 {{ it.session_name }}</span>
+                        <span class="scotia-chip">📤 L1 transmis : {{ it.vae_sent_at or 'date inconnue' }}</span>
+                        {% if it.email %}<span class="scotia-chip scotia-chip--mail">✉️ {{ it.email }}</span>{% endif %}
+                        {% if it.phone %}<span class="scotia-chip scotia-chip--phone">📞 {{ it.phone }}</span>{% endif %}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="scotia-status-stack">
+                    {% if it.scotia_status == 'recevable' and not has_livret_2 %}
+                      <span class="badge badge--success">Recevable ✅</span>
+                      <span class="badge badge--muted">Livret 2 non déposé</span>
+                    {% elif it.scotia_status == 'recevable' and has_livret_2 %}
+                      {% if it.scotia_livret_2_status == 'livret_2_ok' %}
+                        <span class="badge badge--success">Livret 2 OK ✅</span>
+                      {% elif it.scotia_livret_2_status == 'livret_2_review' %}
+                        <span class="badge badge--review">Livret 2 à revoir</span>
+                      {% else %}
+                        <button type="button" class="btn btn-pending-animated" disabled>Livret 2 à traiter</button>
+                      {% endif %}
+                    {% elif it.scotia_status == 'non_recevable' %}
+                      <span class="badge badge--danger">Non recevable</span>
+                    {% elif it.scotia_status == 'complement_requested' %}
+                      <span class="badge badge--warning">Complément en cours</span>
+                    {% else %}
+                      <button type="button" class="btn btn-pending-animated" disabled>A traiter</button>
+                    {% endif %}
+                    <span class="scotia-item-chevron" aria-hidden="true">▶</span>
+                  </div>
+                </summary>
+
+                <div class="scotia-item-panel">
+                  <div class="scotia-panel-grid">
+                    <div class="scotia-doc-card">
+                      <h3 class="scotia-section-title"><span>📎</span> Documents du dossier</h3>
+                      <ul class="scotia-doc-list">
+                        {% for d in it.documents %}
+                          {% set file_tokens = d.file_tokens if d.file_tokens is defined else (d.files or []) %}
+                          {% if d.file %}
+                            <li><span>{{ d.label or d.key }}</span><a class="doc-open-link" href="/scotia/uploads/{{ d.file }}" target="_blank">ouvrir</a></li>
+                          {% elif file_tokens %}
+                            <li><span>{{ d.label or d.key }}</span><span>
+                              {% for f in file_tokens %}
+                                <a class="doc-open-link" href="/scotia/uploads/{{ f }}" target="_blank">ouvrir {{ loop.index }}</a>{% if not loop.last %} · {% endif %}
+                              {% endfor %}
+                            </span></li>
+                          {% endif %}
+                        {% endfor %}
+                      </ul>
+
+                      {% if it.vae_dossier_id or it.candidate_sheet_available or it.vae_justificatifs %}
+                      <div class="scotia-quick-links">
+                        {% if it.vae_dossier_id %}<a class="btn btn-outline" href="/scotia/vae/{{ it.vae_dossier_id }}" target="_blank" rel="noopener">Dossier faisabilité VAE</a>{% endif %}
+                        {% if it.candidate_sheet_available %}<a class="btn btn-outline" href="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/candidate-sheet" target="_blank" rel="noopener">Fiche candidat</a>{% endif %}
+                        {% for j in it.vae_justificatifs %}
+                          {% set jid = (j.get('id') if j is mapping else '') %}
+                          <a class="btn btn-outline" href="/scotia/vae/{{ it.vae_dossier_id }}/justificatifs/{{ jid }}" target="_blank" rel="noopener">Justificatif {{ loop.index }}</a>
+                        {% endfor %}
+                      </div>
+                      {% endif %}
+                    </div>
+
+                    <div class="scotia-action-zone">
+                      <h3 class="scotia-section-title"><span>⚡</span> Actions rapides</h3>
+                      <div class="scotia-item-actions">
+                        <div class="scotia-subpanel">
+                          <div class="scotia-subpanel-title-wrap">
+                            <h4 class="scotia-subpanel-title">1. Livret 1 — recevabilité</h4>
+                            <form method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/resend-mail/livret-1">
+                              <button type="submit" class="btn btn-outline btn-resend-mail" title="Renvoyer le mail Livret 1 à Scotia et Clément" aria-label="Renvoyer le mail Livret 1">🔄</button>
+                            </form>
+                          </div>
+                          <div class="scotia-subpanel-actions">
+                            <button type="button" class="btn {% if livret_1_is_recevable %}btn-primary is-active{% elif livret_1_processed %}btn-disabled-muted{% else %}btn-primary{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','recevable')" {% if livret_1_processed %}disabled{% endif %}>Recevable</button>
+                            <button type="button" class="btn {% if livret_1_is_non_recevable %}btn-danger-solid is-active{% elif livret_1_processed %}btn-disabled-muted{% else %}btn-danger-solid{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','non_recevable')" {% if livret_1_processed %}disabled{% endif %}>Non recevable</button>
+                            <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/attestation/upload" style="display:flex;gap:6px;align-items:center;">
+                              <input id="attestation-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="file" required style="display:none;" onchange="submitAttestationForm(this)" {% if has_attestation_recevabilite %}disabled{% endif %}>
+                              <button class="btn {% if has_attestation_recevabilite %}btn-disabled-muted{% else %}btn-primary{% endif %} btn-upload-attestation" type="button" onclick="triggerAttestationUpload('{{ it.session_id }}','{{ it.trainee_id }}')" {% if has_attestation_recevabilite %}disabled{% endif %}>Téléverser attestation</button>
+                            </form>
+                            <button type="button" class="btn {% if livret_1_is_complement %}btn-complement-animated is-active{% else %}btn-complement-animated{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','complement_requested')" {% if livret_1_is_complement or livret_1_processed %}disabled{% endif %}>Demander un complément</button>
+                            {% if has_attestation_recevabilite %}<a class="btn btn-outline" href="/scotia/uploads/{{ it.deliverables.attestation_recevabilite }}" target="_blank">Voir attestation</a>{% endif %}
+                          </div>
+                          {% if has_attestation_recevabilite %}<p class="attestation-imported-note">Attestation de recevabilité importée le {{ it.attestation_recevabilite_imported_at or 'date inconnue' }}</p>{% endif %}
+                        </div>
+
+                        <div class="scotia-subpanel">
+                          <div class="scotia-subpanel-title-wrap">
+                            <h4 class="scotia-subpanel-title">2. Livret 2 — dépôt et validation</h4>
+                            <form method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/resend-mail/livret-2">
+                              <button type="submit" class="btn btn-outline btn-resend-mail" title="Renvoyer le mail Livret 2 à Scotia et Clément" aria-label="Renvoyer le mail Livret 2">🔄</button>
+                            </form>
+                          </div>
+                          <div class="scotia-subpanel-actions">
+                            <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/livret2/upload" style="display:flex;gap:6px;align-items:center;">
+                              <input id="livret2-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="file" accept="application/pdf,.pdf" required style="display:none;" onchange="submitLivret2Form(this)" {% if has_livret_2 or it.scotia_status != 'recevable' %}disabled{% endif %}>
+                              <button class="btn {% if has_livret_2 or it.scotia_status != 'recevable' %}btn-disabled-muted{% else %}btn-primary{% endif %}" type="button" onclick="triggerLivret2Upload('{{ it.session_id }}','{{ it.trainee_id }}')" {% if has_livret_2 or it.scotia_status != 'recevable' %}disabled{% endif %}>Importer Livret 2</button>
+                            </form>
+                            {% if has_livret_2 %}
+                              <a class="btn btn-outline" href="/scotia/uploads/{{ it.deliverables.livret_2 }}" target="_blank">Consulter Livret 2</a>
+                              <form method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/livret2/reset" onsubmit="return confirm('Retirer le Livret 2 importé et remettre son statut à zéro ?');"><button class="btn btn-outline" type="submit">Retirer Livret 2</button></form>
+                            {% endif %}
+                            <button type="button" class="btn {% if livret_2_is_ok %}btn-primary is-active{% elif livret_2_processed or not has_livret_2 or it.scotia_status != 'recevable' %}btn-disabled-muted{% else %}btn-primary{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','livret_2_ok')" {% if livret_2_processed or not has_livret_2 or it.scotia_status != 'recevable' %}disabled{% endif %}>Livret 2 OK</button>
+                            <button type="button" class="btn {% if livret_2_is_review %}btn-danger-solid is-active{% elif livret_2_processed or not has_livret_2 or it.scotia_status != 'recevable' %}btn-disabled-muted{% else %}btn-danger-solid{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','livret_2_review')" {% if livret_2_processed or not has_livret_2 or it.scotia_status != 'recevable' %}disabled{% endif %}>Livret 2 à revoir</button>
+                          </div>
+                          {% if has_livret_2 %}<p class="attestation-imported-note">Livret 2 importé le {{ it.livret_2_imported_at or 'date inconnue' }}</p>{% endif %}
+                        </div>
+
+                        {% if livret_1_is_complement or complementary_documents %}
+                        <div class="scotia-subpanel">
+                          <div class="scotia-subpanel-title-wrap"><h4 class="scotia-subpanel-title">3. Compléments demandés</h4></div>
+                          <div class="scotia-subpanel-actions">
+                            <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/complements/upload" style="display:flex;gap:6px;align-items:center;">
+                              <input id="complementary-documents-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="files" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png,.webp" multiple required style="display:none;" onchange="submitComplementaryDocumentsForm(this)">
+                              <button class="btn btn-outline" type="button" onclick="triggerComplementaryDocumentsUpload('{{ it.session_id }}','{{ it.trainee_id }}')">Déposer compléments</button>
+                            </form>
+                            {% for token in complementary_documents %}<a class="btn btn-outline" href="/scotia/uploads/{{ token }}" target="_blank">Complément {{ loop.index }}</a>{% endfor %}
+                          </div>
+                          {% if complementary_documents %}<p class="attestation-imported-note" style="font-weight:900;color:#166534;">Documents complémentaires déposés</p>{% else %}<p class="attestation-imported-note">Déposez ici les documents complémentaires demandés.</p>{% endif %}
+                          {% if livret_1_is_complement %}
+                            <div class="scotia-comment-wrap">
+                              <label class="scotia-comment-label" for="comment-input-{{ it.session_id }}-{{ it.trainee_id }}">Commentaire SCOTIA</label>
+                              <textarea id="comment-input-{{ it.session_id }}-{{ it.trainee_id }}" class="scotia-comment-input" placeholder="Indiquez ici les éléments complémentaires attendus..." data-session-id="{{ it.session_id }}" data-trainee-id="{{ it.trainee_id }}">{{ it.scotia_comment }}</textarea>
+                              <div id="comment-status-{{ it.session_id }}-{{ it.trainee_id }}" class="scotia-comment-status"></div>
+                            </div>
+                          {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <div class="scotia-subpanel">
+                          <div class="scotia-subpanel-title-wrap"><h4 class="scotia-subpanel-title">Autres actions</h4></div>
+                          <div class="scotia-subpanel-actions">
+                            {% if has_prerequis_interview_sheet %}<a class="btn btn-outline" href="/scotia/uploads/{{ it.prerequis_interview_sheet }}" target="_blank">Fiche entretien pré-requis</a>{% endif %}
+                            <form method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/delete" onsubmit="return confirm('Supprimer définitivement cette personne de la session ?');"><button class="btn btn-delete-person btn-danger-solid" type="submit">Supprimer personne</button></form>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div class="scotia-subpanel-actions">
-                  <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/complements/upload" style="display:flex;gap:6px;align-items:center;">
-                    <input id="complementary-documents-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="files" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png,.webp" multiple required style="display:none;" onchange="submitComplementaryDocumentsForm(this)">
-                    <button class="btn btn-outline" type="button" onclick="triggerComplementaryDocumentsUpload('{{ it.session_id }}','{{ it.trainee_id }}')">Déposer documents complémentaires</button>
-                  </form>
-                  {% for token in complementary_documents %}
-                    <a class="btn btn-outline" href="/scotia/uploads/{{ token }}" target="_blank">Complément {{ loop.index }}</a>
-                  {% endfor %}
-                </div>
-                {% if complementary_documents %}
-                  <p class="attestation-imported-note" style="font-weight:700;color:#166534;">documents complémentaires déposés</p>
-                {% else %}
-                  <p class="attestation-imported-note">Déposez ici les documents complémentaires demandés.</p>
-                {% endif %}
-              </div>
-              {% endif %}
+              </details>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="scotia-empty">🎉 Aucun dossier à traiter pour le moment.</div>
+        {% endif %}
+      </section>
 
-              {% if has_prerequis_interview_sheet %}
-                <a class="btn btn-outline" href="/scotia/uploads/{{ it.prerequis_interview_sheet }}" target="_blank">Consulter fiche d'entretien pré-requis</a>
-              {% endif %}
-
-              <form method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/delete" onsubmit="return confirm('Supprimer définitivement cette personne de la session ?');">
-                <button class="btn btn-delete-person btn-danger-solid" type="submit">Supprimer personne</button>
-              </form>
-
-              {% if livret_1_is_complement %}
-              <div class="scotia-comment-wrap">
-                <label class="scotia-comment-label" for="comment-input-{{ it.session_id }}-{{ it.trainee_id }}">Commentaire SCOTIA</label>
-                <textarea
-                  id="comment-input-{{ it.session_id }}-{{ it.trainee_id }}"
-                  class="scotia-comment-input"
-                  placeholder="Indiquez ici les éléments complémentaires attendus..."
-                  data-session-id="{{ it.session_id }}"
-                  data-trainee-id="{{ it.trainee_id }}"
-                >{{ it.scotia_comment }}</textarea>
-                <div id="comment-status-{{ it.session_id }}-{{ it.trainee_id }}" class="scotia-comment-status"></div>
-              </div>
-              {% endif %}
-            </div>
-          </details>
-          {% endfor %}
+      <aside class="scotia-side" aria-label="Aide SCOTIA">
+        <div class="scotia-help-card">
+          <h3>Mode opératoire simple</h3>
+          <ol class="scotia-steps">
+            <li><span class="scotia-step-dot">1</span><span><strong>Livret 1</strong><br>Validez la recevabilité, refusez ou demandez un complément.</span></li>
+            <li><span class="scotia-step-dot">2</span><span><strong>Attestation</strong><br>Ajoutez l'attestation dès qu'elle est prête.</span></li>
+            <li><span class="scotia-step-dot">3</span><span><strong>Livret 2</strong><br>Importez le document puis marquez OK ou à revoir.</span></li>
+          </ol>
         </div>
-      {% else %}
-        <p class="muted">Aucun dossier à traiter.</p>
-      {% endif %}
+        <div class="scotia-help-card">
+          <h3>Légende des priorités</h3>
+          <div class="scotia-steps">
+            <div><span class="badge badge--warning">Complément</span></div>
+            <div><span class="badge badge--info">Livret 2 à valider</span></div>
+            <div><span class="badge badge--success">Validé</span></div>
+            <div><span class="badge badge--danger">Non recevable</span></div>
+          </div>
+        </div>
+      </aside>
     </div>
-  </div>
+  </main>
 
 <script>
 function triggerAttestationUpload(sessionId, traineeId){
