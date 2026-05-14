@@ -125,6 +125,11 @@
     .scotia-subpanel-title{margin:0;font-size:15px;color:#111827;font-weight:1000;}.scotia-subpanel-title-wrap{display:flex;align-items:center;justify-content:space-between;gap:8px;}
     .btn-resend-mail{min-width:34px;height:34px;padding:0 9px;font-size:16px;line-height:1;}
     .scotia-subpanel-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+    .complement-doc-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;border-radius:999px;background:#fff;box-shadow:0 8px 18px rgba(15,23,42,.06);}
+    .complement-doc-chip .btn{border:0;border-radius:999px;box-shadow:none;padding-right:6px;}
+    .complement-doc-delete-form{display:inline-flex;margin:0;}
+    .complement-doc-delete{width:24px;height:24px;border:0;border-radius:999px;background:#fee2e2;color:#991b1b;font-size:16px;font-weight:1000;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;margin-right:6px;transition:background .15s ease, transform .15s ease;}
+    .complement-doc-delete:hover,.complement-doc-delete:focus{background:#fecaca;transform:scale(1.06);}
     .attestation-imported-note{width:100%;margin:0;font-size:13px;color:#64748b;font-weight:700;}
     .scotia-comment-wrap{display:flex;flex-direction:column;gap:6px;width:100%;}.scotia-comment-label{font-size:13px;font-weight:1000;color:#374151;}.scotia-comment-input{width:100%;min-height:96px;resize:vertical;border:1px solid #cbd5e1;border-radius:14px;padding:11px 12px;font:inherit;line-height:1.35;background:#fff;}.scotia-comment-status{font-size:12px;color:#64748b;min-height:16px;}
     .btn-danger-solid{background:#b91c1c;color:#fff;border-color:#b91c1c;box-shadow:0 14px 26px rgba(185,28,28,.18);}.btn-danger-solid:hover{border-color:#991b1b;}
@@ -135,7 +140,7 @@
     @keyframes pendingPulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,.44),0 10px 22px rgba(249,115,22,.30);}50%{box-shadow:0 0 0 8px rgba(249,115,22,0),0 10px 22px rgba(249,115,22,.30);}}
     .scotia-empty{padding:42px 18px;text-align:center;border:1px dashed #cbd5e1;border-radius:22px;background:#f8fafc;color:#64748b;font-weight:800;}
     @media (max-width:1150px){.scotia-filter-groups{grid-template-columns:1fr;}.scotia-stats,.scotia-stats--actions,.scotia-stats--wide{grid-template-columns:repeat(3,1fr);}.scotia-workspace{grid-template-columns:1fr;}.scotia-side{position:static;grid-template-columns:repeat(2,minmax(0,1fr));}.scotia-panel-grid{grid-template-columns:1fr;}}
-    @media (max-width:760px){.scotia-shell{padding:16px 10px 30px;}.scotia-hero{padding:20px;border-radius:24px;}.scotia-stats,.scotia-stats--actions,.scotia-stats--wide,.scotia-active-row,.scotia-side{grid-template-columns:1fr;}.scotia-item-toggle{grid-template-columns:1fr;}.scotia-status-stack{justify-content:flex-start;}.scotia-person{align-items:flex-start;}.scotia-avatar{width:44px;height:44px;border-radius:15px;}.scotia-doc-list li{align-items:flex-start;flex-direction:column;}.scotia-subpanel-actions .btn,.scotia-subpanel-actions form{width:100%;}.scotia-subpanel-actions form .btn{width:100%;}}
+    @media (max-width:760px){.scotia-shell{padding:16px 10px 30px;}.scotia-hero{padding:20px;border-radius:24px;}.scotia-stats,.scotia-stats--actions,.scotia-stats--wide,.scotia-active-row,.scotia-side{grid-template-columns:1fr;}.scotia-item-toggle{grid-template-columns:1fr;}.scotia-status-stack{justify-content:flex-start;}.scotia-person{align-items:flex-start;}.scotia-avatar{width:44px;height:44px;border-radius:15px;}.scotia-doc-list li{align-items:flex-start;flex-direction:column;}.scotia-subpanel-actions .btn,.scotia-subpanel-actions form{width:100%;}.scotia-subpanel-actions form .btn{width:100%;}.scotia-subpanel-actions .complement-doc-chip{width:100%;justify-content:space-between;}.scotia-subpanel-actions .complement-doc-chip .btn{width:auto;}.scotia-subpanel-actions .complement-doc-delete-form{width:auto;}.scotia-subpanel-actions .complement-doc-delete-form .complement-doc-delete{width:24px;}}
   </style>
 </head>
 <body class="scotia-page">
@@ -363,7 +368,15 @@
                               <input id="complementary-documents-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="files" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png,.webp" multiple required style="display:none;" onchange="submitComplementaryDocumentsForm(this)">
                               <button class="btn btn-outline" type="button" onclick="triggerComplementaryDocumentsUpload('{{ it.session_id }}','{{ it.trainee_id }}')">Déposer compléments</button>
                             </form>
-                            {% for token in complementary_documents %}<a class="btn btn-outline" href="/scotia/uploads/{{ token }}" target="_blank">Complément {{ loop.index }}</a>{% endfor %}
+                            {% for token in complementary_documents %}
+                              <span class="complement-doc-chip">
+                                <a class="btn btn-outline" href="/scotia/uploads/{{ token }}" target="_blank">Complément {{ loop.index }}</a>
+                                <form class="complement-doc-delete-form" method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/complements/delete" onsubmit="return confirm('Supprimer ce document complémentaire ?');">
+                                  <input type="hidden" name="token" value="{{ token }}">
+                                  <button class="complement-doc-delete" type="submit" title="Supprimer le complément {{ loop.index }}" aria-label="Supprimer le complément {{ loop.index }}">×</button>
+                                </form>
+                              </span>
+                            {% endfor %}
                           </div>
                           {% if complementary_documents %}<p class="attestation-imported-note" style="font-weight:900;color:#166534;">Documents complémentaires déposés</p>{% else %}<p class="attestation-imported-note">Déposez ici les documents complémentaires demandés.</p>{% endif %}
                           {% if livret_1_is_complement %}
