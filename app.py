@@ -5543,6 +5543,25 @@ def ensure_documents_schema_for_trainee(t: Dict[str, Any], training_type: str) -
             })
             changed = True
 
+    complement_doc = by_key.get("complementary_documents")
+    if complement_doc:
+        legacy_tokens = []
+        legacy_files = complement_doc.get("files") if isinstance(complement_doc.get("files"), list) else []
+        legacy_tokens.extend(x for x in legacy_files if isinstance(x, str) and x.strip())
+        legacy_file = (complement_doc.get("file") or "").strip()
+        if legacy_file and legacy_file not in legacy_tokens:
+            legacy_tokens.insert(0, legacy_file)
+        if legacy_tokens:
+            current_tokens = t.get("scotia_complementary_documents")
+            if not isinstance(current_tokens, list):
+                current_tokens = []
+            for token in legacy_tokens:
+                if token not in current_tokens:
+                    current_tokens.append(token)
+            t["scotia_complementary_documents"] = current_tokens
+        # Ne jamais afficher cette entrée dans admin/public : elle est SCOTIA uniquement.
+        changed = True
+
     # 🔥 on vire dom (plus utilisé)
     if "dom" in by_key:
         changed = True
@@ -5583,6 +5602,28 @@ def _ensure_livret2_document_entry(t: Dict[str, Any]) -> Dict[str, Any]:
     }
     docs.append(livret2_doc)
     return livret2_doc
+
+
+def _ensure_complementary_documents_entry(t: Dict[str, Any]) -> List[str]:
+    """Garantit une liste privée SCOTIA pour les documents complémentaires VAE."""
+    tokens = t.get("scotia_complementary_documents")
+    if not isinstance(tokens, list):
+        tokens = []
+        t["scotia_complementary_documents"] = tokens
+
+    # Migration défensive d'une ancienne entrée documents, sans l'exposer admin/public.
+    docs = t.get("documents") if isinstance(t.get("documents"), list) else []
+    legacy_doc = next((d for d in docs if isinstance(d, dict) and d.get("key") == "complementary_documents"), None)
+    if legacy_doc:
+        legacy_files = legacy_doc.get("files") if isinstance(legacy_doc.get("files"), list) else []
+        for token in legacy_files:
+            if isinstance(token, str) and token.strip() and token not in tokens:
+                tokens.append(token)
+        legacy_file = (legacy_doc.get("file") or "").strip()
+        if legacy_file and legacy_file not in tokens:
+            tokens.insert(0, legacy_file)
+    return tokens
+
 
 def allowed_doc_keys_for_training(training_type: str, trainee: Optional[Dict[str, Any]] = None) -> set:
     keys = {d["key"] for d in required_docs_for_training(training_type, trainee)}
@@ -7011,6 +7052,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 attestation_recevabilite_imported_at = (action_dates.get("livret_1_validated") or "").strip()
             docs_view = []
             prerequis_interview_sheet_token = ""
+            complementary_document_tokens = _ensure_complementary_documents_entry(t)
             for d in (t.get("documents") or []):
                 token = (d.get("file") or "").strip()
                 files = d.get("files") if isinstance(d.get("files"), list) else []
@@ -7046,6 +7088,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "scotia_livret_2_processed_at": (t.get("scotia_livret_2_processed_at") or "").strip(),
                 "documents": docs_view,
                 "prerequis_interview_sheet": prerequis_interview_sheet_token,
+                "complementary_documents": complementary_document_tokens,
                 "deliverables": deliverables,
                 "attestation_recevabilite_imported_at": attestation_recevabilite_imported_at,
                 "livret_2_imported_at": livret_2_imported_at,
@@ -7097,7 +7140,8 @@ def scotia_download_file(file_token: str):
     data = load_data()
     for s in data.get("sessions", []):
         for t in _session_trainees_list(s):
-            if _token_belongs_to_trainee(t, file_token):
+            scotia_tokens = t.get("scotia_complementary_documents") if isinstance(t.get("scotia_complementary_documents"), list) else []
+            if _token_belongs_to_trainee(t, file_token) or file_token in [x for x in scotia_tokens if isinstance(x, str)]:
                 full = _detokenize_path(file_token)
                 if not os.path.exists(full):
                     abort(404)
@@ -7115,21 +7159,34 @@ def api_scotia_decision(session_id: str, trainee_id: str):
 
     payload = request.get_json(silent=True) or {}
     decision = (payload.get('decision') or '').strip().lower()
-    if decision not in {'recevable', 'non_recevable', 'livret_2_ok', 'livret_2_review'}:
+    if decision not in {'recevable', 'non_recevable', 'complement_requested', 'livret_2_ok', 'livret_2_review'}:
         return jsonify({"ok": False, "error": "invalid_decision"}), 400
 
     now_iso = _now_iso()
 
-    if decision in {'recevable', 'non_recevable'}:
+    if decision in {'recevable', 'non_recevable', 'complement_requested'}:
         t['scotia_status'] = decision
         t['scotia_comment'] = (payload.get('comment') or '').strip()
         t['scotia_processed_at'] = now_iso
         if decision == 'non_recevable':
             t['scotia_livret_2_status'] = ''
             t['scotia_livret_2_processed_at'] = ''
+        if decision == 'complement_requested':
+            _ensure_complementary_documents_entry(t)
+            view = vae_status_view('complement_requested')
+            t['vae_status'] = view['key']
+            t['vae_status_label'] = view['label']
+            if not isinstance(t.get('vae_action_dates'), dict):
+                t['vae_action_dates'] = {}
+            t['vae_action_dates']['complement_requested_at'] = fr_date(datetime.datetime.utcnow().strftime("%Y-%m-%d"))
 
         trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
-        label = f"📄 Décision SCOTIA: {trainee_display_name} - {'recevable' if decision == 'recevable' else 'non recevable'}"
+        decision_labels = {
+            'recevable': 'recevable',
+            'non_recevable': 'non recevable',
+            'complement_requested': 'demande de complément en cours',
+        }
+        label = f"📄 Décision SCOTIA: {trainee_display_name} - {decision_labels.get(decision, decision)}"
         add_admin_notification(
             data,
             label,
@@ -7192,6 +7249,82 @@ def scotia_delete_trainee(session_id: str, trainee_id: str):
     s['trainees'] = trainees
     s.pop('stagiaires', None)
     save_data(data)
+    return redirect(url_for('scotia_dashboard'))
+
+
+def _notify_scotia_complementary_documents(t: Dict[str, Any], s: Dict[str, Any], file_count: int, source_label: str) -> bool:
+    trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
+    session_name = _session_get(s, "name", "") or str(s.get("id") or "")
+    today_fr = fr_date(datetime.datetime.utcnow().strftime("%Y-%m-%d"))
+    comment = (t.get("scotia_comment") or "").strip()
+    comment_html = f"<p><strong>Commentaire SCOTIA :</strong><br>{html.escape(comment).replace(chr(10), '<br>')}</p>" if comment else ""
+    subject = "Documents complémentaires déposés (VAE)"
+    html_body = mail_layout(f"""
+    <h2 style="margin:0 0 12px 0;color:#0f172a;">📎 Documents complémentaires déposés</h2>
+    <p>Des documents complémentaires viennent d'être déposés depuis {html.escape(source_label)}.</p>
+    <p><strong>Stagiaire :</strong> {html.escape(trainee_display_name or "—")}</p>
+    <p><strong>Email :</strong> {html.escape((t.get("email") or "").strip() or "—")}</p>
+    <p><strong>Téléphone :</strong> {html.escape((t.get("phone") or "").strip() or "—")}</p>
+    <p><strong>Session :</strong> {html.escape(session_name or "—")}</p>
+    <p><strong>Nombre de fichier(s) :</strong> {file_count}</p>
+    <p><strong>Date :</strong> {today_fr}</p>
+    {comment_html}
+    """)
+    return brevo_send_email(
+        "scotiaformation@gmail.com",
+        subject,
+        html_body,
+        cc_emails=["clement@integraleacademy.com"],
+        trainee=t,
+    )
+
+
+def _append_complementary_documents(session_id: str, trainee_id: str, t: Dict[str, Any], incoming_files: List[Any], storage_area: str) -> int:
+    target = _ensure_complementary_documents_entry(t)
+    accepted_exts = {".pdf", ".jpg", ".jpeg", ".png", ".webp"}
+    files_to_store = [f for f in incoming_files if f and getattr(f, "filename", "")]
+    if not files_to_store:
+        return 0
+    for f in files_to_store:
+        if _safe_ext(f.filename) not in accepted_exts:
+            return 0
+
+    stored_count = 0
+    for f in files_to_store:
+        stored = _store_file(session_id, trainee_id, storage_area, f)
+        token = _tokenize_path(stored)
+        target.append(token)
+        stored_count += 1
+
+    t["scotia_complementary_documents"] = [x for x in target if x]
+    if not isinstance(t.get("vae_action_dates"), dict):
+        t["vae_action_dates"] = {}
+    t["vae_action_dates"]["complementary_documents_received"] = datetime.date.today().strftime("%d/%m/%Y")
+    t["updated_at"] = _now_iso()
+    return stored_count
+
+
+@app.post('/scotia/sessions/<session_id>/stagiaires/<trainee_id>/complements/upload')
+@scotia_login_required
+def scotia_upload_complementary_documents(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        abort(404)
+
+    if (t.get("scotia_status") or "").strip() != "complement_requested":
+        return redirect(url_for('scotia_dashboard'))
+
+    files = request.files.getlist('files') or request.files.getlist('file')
+    try:
+        stored_count = _append_complementary_documents(session_id, trainee_id, t, files, 'public_documents')
+    except Exception:
+        stored_count = 0
+    if stored_count:
+        s['trainees'] = trainees
+        s.pop('stagiaires', None)
+        save_data(data)
+        _notify_scotia_complementary_documents(t, s, stored_count, "l'espace SCOTIA")
     return redirect(url_for('scotia_dashboard'))
 
 
@@ -14032,6 +14165,7 @@ DELIVERABLE_REQUIRED_KEYS = ["diplome", "carte_sst", "attestation_fin_formation"
 VAE_STATUS_STEPS = {
     "livret_1_todo": {"label": "Livret 1 à compléter", "pill": "orange"},
     "livret_1_analysis": {"label": "Livret 1 en cours d'analyse", "pill": "gray"},
+    "complement_requested": {"label": "Demande de complément en cours", "pill": "orange"},
     "livret_1_validated": {"label": "Livret 1 validé", "pill": "green"},
     "financement_validated": {"label": "Financement validé", "pill": "green"},
     "livret_2_todo": {"label": "Livret 2 à compléter", "pill": "orange"},

@@ -73,6 +73,22 @@
       box-shadow: 0 14px 26px rgba(185,28,28,.18);
     }
     .btn-danger-solid:hover{ border-color:#991b1b; }
+    .btn-complement-animated{
+      background:linear-gradient(135deg,#fb923c,#f97316);
+      color:#fff;
+      border-color:#ea580c;
+      box-shadow:0 10px 22px rgba(249,115,22,.30);
+      animation:complementPulse 1.35s ease-in-out infinite;
+    }
+    .btn-complement-animated:hover{ border-color:#c2410c; }
+    .btn-complement-animated.is-active{
+      animation:none;
+      box-shadow:0 0 0 3px rgba(249,115,22,.30);
+    }
+    @keyframes complementPulse{
+      0%,100%{ transform:translateY(0); box-shadow:0 0 0 0 rgba(249,115,22,.42),0 10px 22px rgba(249,115,22,.30); }
+      50%{ transform:translateY(-1px); box-shadow:0 0 0 8px rgba(249,115,22,0),0 14px 26px rgba(249,115,22,.34); }
+    }
     .scotia-item-actions .btn.is-active{
       box-shadow:0 0 0 3px rgba(37,99,235,.22);
       transform:none;
@@ -212,6 +228,8 @@
                   {% endif %}
                 {% elif it.scotia_status == 'non_recevable' %}
                   <span class="badge" style="background:#fee2e2;color:#991b1b;">Non recevable</span>
+                {% elif it.scotia_status == 'complement_requested' %}
+                  <span class="badge" style="background:#ffedd5;color:#9a3412;">Demande de complément en cours</span>
                 {% else %}
                   <button type="button" class="btn btn-pending-animated" disabled>A traiter</button>
                 {% endif %}
@@ -258,6 +276,7 @@
               {% set livret_1_processed = it.scotia_status in ['recevable', 'non_recevable'] %}
               {% set livret_1_is_recevable = it.scotia_status == 'recevable' %}
               {% set livret_1_is_non_recevable = it.scotia_status == 'non_recevable' %}
+              {% set livret_1_is_complement = it.scotia_status == 'complement_requested' %}
               {% set has_attestation_recevabilite = (it.deliverables.attestation_recevabilite or '')|trim %}
               {% set has_livret_2 = (it.deliverables.livret_2 or '')|trim %}
               {% set has_prerequis_interview_sheet = (it.prerequis_interview_sheet or '')|trim %}
@@ -279,6 +298,7 @@
                     <input id="attestation-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="file" required style="display:none;" onchange="submitAttestationForm(this)" {% if has_attestation_recevabilite %}disabled{% endif %}>
                     <button class="btn {% if has_attestation_recevabilite %}btn-disabled-muted{% else %}btn-primary{% endif %} btn-upload-attestation" type="button" onclick="triggerAttestationUpload('{{ it.session_id }}','{{ it.trainee_id }}')" {% if has_attestation_recevabilite %}disabled{% endif %}>Téléverser attestation</button>
                   </form>
+                  <button type="button" class="btn {% if livret_1_is_complement %}btn-complement-animated is-active{% else %}btn-complement-animated{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','complement_requested')" {% if livret_1_is_complement or livret_1_processed %}disabled{% endif %}>Demander un complément</button>
                   {% if has_attestation_recevabilite %}
                     <a class="btn btn-outline" href="/scotia/uploads/{{ it.deliverables.attestation_recevabilite }}" target="_blank">Voir attestation</a>
                   {% endif %}
@@ -314,6 +334,29 @@
                 {% endif %}
               </div>
 
+              {% set complementary_documents = it.complementary_documents or [] %}
+              {% if livret_1_is_complement or complementary_documents %}
+              <div class="scotia-subpanel">
+                <div class="scotia-subpanel-title-wrap">
+                  <h4 class="scotia-subpanel-title">Documents complémentaires demandés</h4>
+                </div>
+                <div class="scotia-subpanel-actions">
+                  <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/complements/upload" style="display:flex;gap:6px;align-items:center;">
+                    <input id="complementary-documents-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="files" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png,.webp" multiple required style="display:none;" onchange="submitComplementaryDocumentsForm(this)">
+                    <button class="btn btn-outline" type="button" onclick="triggerComplementaryDocumentsUpload('{{ it.session_id }}','{{ it.trainee_id }}')">Déposer documents complémentaires</button>
+                  </form>
+                  {% for token in complementary_documents %}
+                    <a class="btn btn-outline" href="/scotia/uploads/{{ token }}" target="_blank">Complément {{ loop.index }}</a>
+                  {% endfor %}
+                </div>
+                {% if complementary_documents %}
+                  <p class="attestation-imported-note" style="font-weight:700;color:#166534;">documents complémentaires déposés</p>
+                {% else %}
+                  <p class="attestation-imported-note">Déposez ici les documents complémentaires demandés.</p>
+                {% endif %}
+              </div>
+              {% endif %}
+
               {% if has_prerequis_interview_sheet %}
                 <a class="btn btn-outline" href="/scotia/uploads/{{ it.prerequis_interview_sheet }}" target="_blank">Consulter fiche d'entretien pré-requis</a>
               {% endif %}
@@ -322,17 +365,19 @@
                 <button class="btn btn-delete-person btn-danger-solid" type="submit">Supprimer personne</button>
               </form>
 
+              {% if livret_1_is_complement %}
               <div class="scotia-comment-wrap">
                 <label class="scotia-comment-label" for="comment-input-{{ it.session_id }}-{{ it.trainee_id }}">Commentaire SCOTIA</label>
                 <textarea
                   id="comment-input-{{ it.session_id }}-{{ it.trainee_id }}"
                   class="scotia-comment-input"
-                  placeholder="Saisir un commentaire..."
+                  placeholder="Indiquez ici les éléments complémentaires attendus..."
                   data-session-id="{{ it.session_id }}"
                   data-trainee-id="{{ it.trainee_id }}"
                 >{{ it.scotia_comment }}</textarea>
                 <div id="comment-status-{{ it.session_id }}-{{ it.trainee_id }}" class="scotia-comment-status"></div>
               </div>
+              {% endif %}
             </div>
           </details>
           {% endfor %}
@@ -354,6 +399,29 @@ function triggerLivret2Upload(sessionId, traineeId){
   const input = document.getElementById(`livret2-file-${sessionId}-${traineeId}`);
   if(!input || input.disabled) return;
   input.click();
+}
+
+function triggerComplementaryDocumentsUpload(sessionId, traineeId){
+  const input = document.getElementById(`complementary-documents-file-${sessionId}-${traineeId}`);
+  if(!input || input.disabled) return;
+  input.click();
+}
+
+function submitComplementaryDocumentsForm(input){
+  if(!input || !input.files || !input.files.length) return;
+  const allowed = ['.pdf', '.jpg', '.jpeg', '.png', '.webp'];
+  const invalid = Array.from(input.files).some((file)=>{
+    const name = (file?.name || '').toLowerCase();
+    return !allowed.some((ext)=> name.endsWith(ext));
+  });
+  if(invalid){
+    alert('Veuillez importer uniquement des PDF ou des images.');
+    input.value = '';
+    return;
+  }
+  const form = input.closest('form');
+  if(!form) return;
+  form.submit();
 }
 
 function submitLivret2Form(input){

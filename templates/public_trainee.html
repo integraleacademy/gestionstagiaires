@@ -908,6 +908,7 @@
       {% set vae_map = {
         'livret_1_todo': {'label':'Livret 1 à compléter','cls':'orange'},
         'livret_1_analysis': {'label':"Livret 1 en cours d'analyse",'cls':'gray'},
+        'complement_requested': {'label':'Demande de complément en cours','cls':'orange'},
         'livret_2_todo': {'label':'Livret 2 à compléter','cls':'orange'},
         'livret_2_analysis': {'label':'Réception livret 2','cls':'gray'},
         'livret_2_validated': {'label':'Livret 2 validé','cls':'green'},
@@ -1526,6 +1527,7 @@ id="upload_{{ d.key }}"
   {% set vae_step_index_map = {
     'livret_1_todo': 0,
     'livret_1_analysis': 1,
+    'complement_requested': 1,
     'livret_1_validated': 2,
     'financement_validated': 3,
     'livret_2_todo': 3,
@@ -1542,6 +1544,7 @@ id="upload_{{ d.key }}"
   {% set vae_current_step_map = {
     'livret_1_todo': 1,
     'livret_1_analysis': 2,
+    'complement_requested': 2,
     'livret_1_validated': 3,
     'financement_validated': 4,
     'livret_2_todo': 4,
@@ -1580,6 +1583,14 @@ id="upload_{{ d.key }}"
         {% if vae_current_step == 2 and vae_done_until < 2 %}<div class="vae-step-current">Étape en cours</div>{% endif %}
         {% if vae_done_until >= 2 %}
           <p class="oktag">Étape terminée</p>
+        {% elif vae_key == 'complement_requested' %}
+          <p class="muted">La commission demande des documents complémentaires pour poursuivre l'analyse de votre dossier.</p>
+          {% if trainee.scotia_comment %}
+            <div class="doc-format-box" style="border-color:#fed7aa;background:#fff7ed;color:#7c2d12;">
+              <div class="doc-format-title">Commentaire SCOTIA</div>
+              <p style="margin:6px 0 0;white-space:pre-wrap;">{{ trainee.scotia_comment }}</p>
+            </div>
+          {% endif %}
         {% elif vae_current_step == 2 and vae_done_until < 2 %}
           <p class="muted">Nous avons bien reçu votre Livret 1. Il est actuellement en cours d'analyse par la commission. Si tout est conforme, vous recevrez prochainement votre attestation de recevabilité.</p>
         {% endif %}
