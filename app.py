@@ -5635,25 +5635,22 @@ def ensure_documents_schema_for_trainee(t: Dict[str, Any], training_type: str) -
 
     complement_doc = by_key.get("complementary_documents")
     if complement_doc:
-        if "files" not in complement_doc or not isinstance(complement_doc.get("files"), list):
-            complement_doc["files"] = []
-            changed = True
-        if "file" not in complement_doc:
-            complement_doc["file"] = ""
-            changed = True
-        if "status" not in complement_doc:
-            complement_doc["status"] = "NON DÉPOSÉ"
-            changed = True
-        if "comment" not in complement_doc:
-            complement_doc["comment"] = ""
-            changed = True
-        if "accept" not in complement_doc:
-            complement_doc["accept"] = REQUIRED_DOCS["DIRIGEANT_VAE_COMPLEMENT"].get("accept", "")
-            changed = True
-        if "label" not in complement_doc:
-            complement_doc["label"] = REQUIRED_DOCS["DIRIGEANT_VAE_COMPLEMENT"].get("label", "Documents complémentaires demandés")
-            changed = True
-        out.append(complement_doc)
+        legacy_tokens = []
+        legacy_files = complement_doc.get("files") if isinstance(complement_doc.get("files"), list) else []
+        legacy_tokens.extend(x for x in legacy_files if isinstance(x, str) and x.strip())
+        legacy_file = (complement_doc.get("file") or "").strip()
+        if legacy_file and legacy_file not in legacy_tokens:
+            legacy_tokens.insert(0, legacy_file)
+        if legacy_tokens:
+            current_tokens = t.get("scotia_complementary_documents")
+            if not isinstance(current_tokens, list):
+                current_tokens = []
+            for token in legacy_tokens:
+                if token not in current_tokens:
+                    current_tokens.append(token)
+            t["scotia_complementary_documents"] = current_tokens
+        # Ne jamais afficher cette entrée dans admin/public : elle est SCOTIA uniquement.
+        changed = True
 
     # 🔥 on vire dom (plus utilisé)
     if "dom" in by_key:
@@ -5697,36 +5694,25 @@ def _ensure_livret2_document_entry(t: Dict[str, Any]) -> Dict[str, Any]:
     return livret2_doc
 
 
-def _ensure_complementary_documents_entry(t: Dict[str, Any]) -> Dict[str, Any]:
-    """Garantit un emplacement public pour les documents complémentaires VAE."""
-    docs = t.get("documents")
-    if not isinstance(docs, list):
-        docs = []
-        t["documents"] = docs
+def _ensure_complementary_documents_entry(t: Dict[str, Any]) -> List[str]:
+    """Garantit une liste privée SCOTIA pour les documents complémentaires VAE."""
+    tokens = t.get("scotia_complementary_documents")
+    if not isinstance(tokens, list):
+        tokens = []
+        t["scotia_complementary_documents"] = tokens
 
-    existing = next((d for d in docs if isinstance(d, dict) and d.get("key") == "complementary_documents"), None)
-    cfg = REQUIRED_DOCS["DIRIGEANT_VAE_COMPLEMENT"]
-    if existing:
-        existing.setdefault("label", cfg["label"])
-        existing.setdefault("accept", cfg.get("accept", ""))
-        existing.setdefault("status", "NON DÉPOSÉ")
-        existing.setdefault("comment", "")
-        existing.setdefault("file", "")
-        if "files" not in existing or not isinstance(existing.get("files"), list):
-            existing["files"] = []
-        return existing
-
-    doc = {
-        "key": cfg["key"],
-        "label": cfg["label"],
-        "accept": cfg.get("accept", ""),
-        "status": "NON DÉPOSÉ",
-        "comment": "",
-        "file": "",
-        "files": [],
-    }
-    docs.append(doc)
-    return doc
+    # Migration défensive d'une ancienne entrée documents, sans l'exposer admin/public.
+    docs = t.get("documents") if isinstance(t.get("documents"), list) else []
+    legacy_doc = next((d for d in docs if isinstance(d, dict) and d.get("key") == "complementary_documents"), None)
+    if legacy_doc:
+        legacy_files = legacy_doc.get("files") if isinstance(legacy_doc.get("files"), list) else []
+        for token in legacy_files:
+            if isinstance(token, str) and token.strip() and token not in tokens:
+                tokens.append(token)
+        legacy_file = (legacy_doc.get("file") or "").strip()
+        if legacy_file and legacy_file not in tokens:
+            tokens.insert(0, legacy_file)
+    return tokens
 
 
 def allowed_doc_keys_for_training(training_type: str, trainee: Optional[Dict[str, Any]] = None) -> set:
@@ -7157,7 +7143,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 attestation_recevabilite_imported_at = (action_dates.get("livret_1_validated") or "").strip()
             docs_view = []
             prerequis_interview_sheet_token = ""
-            complementary_document_tokens = []
+            complementary_document_tokens = _ensure_complementary_documents_entry(t)
             for d in (t.get("documents") or []):
                 token = (d.get("file") or "").strip()
                 files = d.get("files") if isinstance(d.get("files"), list) else []
@@ -7247,7 +7233,8 @@ def scotia_download_file(file_token: str):
     data = load_data()
     for s in data.get("sessions", []):
         for t in _session_trainees_list(s):
-            if _token_belongs_to_trainee(t, file_token):
+            scotia_tokens = t.get("scotia_complementary_documents") if isinstance(t.get("scotia_complementary_documents"), list) else []
+            if _token_belongs_to_trainee(t, file_token) or file_token in [x for x in scotia_tokens if isinstance(x, str)]:
                 full = _detokenize_path(file_token)
                 if not os.path.exists(full):
                     abort(404)
@@ -7395,23 +7382,14 @@ def _append_complementary_documents(session_id: str, trainee_id: str, t: Dict[st
         if _safe_ext(f.filename) not in accepted_exts:
             return 0
 
-    cur_files = target.get("files")
-    if not isinstance(cur_files, list):
-        cur_files = []
-    old = (target.get("file") or "").strip()
-    if old and old not in cur_files:
-        cur_files.append(old)
-
     stored_count = 0
     for f in files_to_store:
         stored = _store_file(session_id, trainee_id, storage_area, f)
         token = _tokenize_path(stored)
-        cur_files.append(token)
+        target.append(token)
         stored_count += 1
 
-    target["files"] = [x for x in cur_files if x]
-    target["file"] = target["files"][0] if target["files"] else ""
-    target["status"] = "A CONTRÔLER"
+    t["scotia_complementary_documents"] = [x for x in target if x]
     if not isinstance(t.get("vae_action_dates"), dict):
         t["vae_action_dates"] = {}
     t["vae_action_dates"]["complementary_documents_received"] = datetime.date.today().strftime("%d/%m/%Y")
@@ -7426,6 +7404,9 @@ def scotia_upload_complementary_documents(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         abort(404)
+
+    if (t.get("scotia_status") or "").strip() != "complement_requested":
+        return redirect(url_for('scotia_dashboard'))
 
     files = request.files.getlist('files') or request.files.getlist('file')
     try:

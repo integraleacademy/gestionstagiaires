@@ -334,12 +334,13 @@
                 {% endif %}
               </div>
 
+              {% set complementary_documents = it.complementary_documents or [] %}
+              {% if livret_1_is_complement or complementary_documents %}
               <div class="scotia-subpanel">
                 <div class="scotia-subpanel-title-wrap">
-                  <h4 class="scotia-subpanel-title">Documents complémentaires</h4>
+                  <h4 class="scotia-subpanel-title">Documents complémentaires demandés</h4>
                 </div>
                 <div class="scotia-subpanel-actions">
-                  {% set complementary_documents = it.complementary_documents or [] %}
                   <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/complements/upload" style="display:flex;gap:6px;align-items:center;">
                     <input id="complementary-documents-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="files" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png,.webp" multiple required style="display:none;" onchange="submitComplementaryDocumentsForm(this)">
                     <button class="btn btn-outline" type="button" onclick="triggerComplementaryDocumentsUpload('{{ it.session_id }}','{{ it.trainee_id }}')">Déposer documents complémentaires</button>
@@ -351,9 +352,10 @@
                 {% if complementary_documents %}
                   <p class="attestation-imported-note" style="font-weight:700;color:#166534;">documents complémentaires déposés</p>
                 {% else %}
-                  <p class="attestation-imported-note">Vous pouvez ajouter des documents complémentaires à tout moment.</p>
+                  <p class="attestation-imported-note">Déposez ici les documents complémentaires demandés.</p>
                 {% endif %}
               </div>
+              {% endif %}
 
               {% if has_prerequis_interview_sheet %}
                 <a class="btn btn-outline" href="/scotia/uploads/{{ it.prerequis_interview_sheet }}" target="_blank">Consulter fiche d'entretien pré-requis</a>
