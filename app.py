@@ -7144,6 +7144,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
             docs_view = []
             prerequis_interview_sheet_token = ""
             complementary_document_tokens = _ensure_complementary_documents_entry(t)
+            added_document_groups = _ensure_scotia_added_documents_entry(t)
             for d in (t.get("documents") or []):
                 token = (d.get("file") or "").strip()
                 files = d.get("files") if isinstance(d.get("files"), list) else []
@@ -7184,6 +7185,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "documents": docs_view,
                 "prerequis_interview_sheet": prerequis_interview_sheet_token,
                 "complementary_documents": complementary_document_tokens,
+                "added_document_groups": added_document_groups,
                 "deliverables": deliverables,
                 "attestation_recevabilite_imported_at": attestation_recevabilite_imported_at,
                 "livret_2_imported_at": livret_2_imported_at,
@@ -7236,7 +7238,7 @@ def scotia_download_file(file_token: str):
     for s in data.get("sessions", []):
         for t in _session_trainees_list(s):
             scotia_tokens = t.get("scotia_complementary_documents") if isinstance(t.get("scotia_complementary_documents"), list) else []
-            if _token_belongs_to_trainee(t, file_token) or file_token in [x for x in scotia_tokens if isinstance(x, str)]:
+            if _token_belongs_to_trainee(t, file_token) or file_token in [x for x in scotia_tokens if isinstance(x, str)] or _scotia_added_document_token_exists(t, file_token):
                 full = _detokenize_path(file_token)
                 if not os.path.exists(full):
                     abort(404)
@@ -7399,6 +7401,95 @@ def _append_complementary_documents(session_id: str, trainee_id: str, t: Dict[st
     return stored_count
 
 
+def _ensure_scotia_added_documents_entry(t: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Garantit les groupes de documents ajoutés manuellement depuis SCOTIA."""
+    groups = t.get("scotia_added_documents")
+    if not isinstance(groups, list):
+        groups = []
+        t["scotia_added_documents"] = groups
+
+    cleaned_groups: List[Dict[str, Any]] = []
+    changed = False
+    for group in groups:
+        if not isinstance(group, dict):
+            changed = True
+            continue
+        date_label = (group.get("date") or "").strip()
+        files = group.get("files") if isinstance(group.get("files"), list) else []
+        tokens = [x.strip() for x in files if isinstance(x, str) and x.strip()]
+        if not date_label or not tokens:
+            changed = True
+            continue
+        cleaned_groups.append({"date": date_label, "files": tokens})
+        if cleaned_groups[-1] != group:
+            changed = True
+
+    if changed or cleaned_groups != groups:
+        t["scotia_added_documents"] = cleaned_groups
+    return cleaned_groups
+
+
+def _scotia_added_document_token_exists(t: Dict[str, Any], token: str) -> bool:
+    token = (token or "").strip()
+    if not token:
+        return False
+    for group in _ensure_scotia_added_documents_entry(t):
+        files = group.get("files") if isinstance(group.get("files"), list) else []
+        if token in [x for x in files if isinstance(x, str)]:
+            return True
+    return False
+
+
+def _append_scotia_added_documents(session_id: str, trainee_id: str, t: Dict[str, Any], incoming_files: List[Any]) -> int:
+    accepted_exts = {".pdf", ".jpg", ".jpeg", ".png", ".webp", ".doc", ".docx", ".zip"}
+    files_to_store = [f for f in incoming_files if f and getattr(f, "filename", "")]
+    if not files_to_store:
+        return 0
+    for f in files_to_store:
+        if _safe_ext(f.filename) not in accepted_exts:
+            return 0
+
+    today_label = datetime.date.today().strftime("%d/%m/%Y")
+    groups = _ensure_scotia_added_documents_entry(t)
+    target_group = next((g for g in groups if (g.get("date") or "").strip() == today_label), None)
+    if not target_group:
+        target_group = {"date": today_label, "files": []}
+        groups.insert(0, target_group)
+
+    stored_count = 0
+    for f in files_to_store:
+        stored = _store_file(session_id, trainee_id, "scotia_added_documents", f)
+        token = _tokenize_path(stored)
+        target_group.setdefault("files", []).append(token)
+        stored_count += 1
+
+    t["scotia_added_documents"] = groups
+    t["updated_at"] = _now_iso()
+    return stored_count
+
+
+def _remove_scotia_added_document_token(t: Dict[str, Any], token: str) -> bool:
+    token = (token or "").strip()
+    if not token:
+        return False
+
+    groups = _ensure_scotia_added_documents_entry(t)
+    removed = False
+    kept_groups: List[Dict[str, Any]] = []
+    for group in groups:
+        files = group.get("files") if isinstance(group.get("files"), list) else []
+        filtered_files = [x for x in files if not (isinstance(x, str) and x == token)]
+        if len(filtered_files) != len(files):
+            removed = True
+        if filtered_files:
+            kept_groups.append({"date": (group.get("date") or "").strip(), "files": filtered_files})
+
+    if removed:
+        t["scotia_added_documents"] = kept_groups
+        t["updated_at"] = _now_iso()
+    return removed
+
+
 def _remove_complementary_document_token(t: Dict[str, Any], token: str) -> bool:
     """Retire un document complémentaire des listes SCOTIA et historiques."""
     token = (token or "").strip()
@@ -7485,6 +7576,44 @@ def scotia_delete_complementary_document(session_id: str, trainee_id: str):
 
     token = (request.form.get('token') or '').strip()
     if token and _remove_complementary_document_token(t, token):
+        _safe_remove_file(_detokenize_path(token))
+        s['trainees'] = trainees
+        s.pop('stagiaires', None)
+        save_data(data)
+
+    return redirect(url_for('scotia_dashboard'))
+
+
+@app.post('/scotia/sessions/<session_id>/stagiaires/<trainee_id>/documents/upload')
+@scotia_login_required
+def scotia_upload_added_documents(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        abort(404)
+
+    files = request.files.getlist('files') or request.files.getlist('file')
+    try:
+        stored_count = _append_scotia_added_documents(session_id, trainee_id, t, files)
+    except Exception:
+        stored_count = 0
+    if stored_count:
+        s['trainees'] = trainees
+        s.pop('stagiaires', None)
+        save_data(data)
+    return redirect(url_for('scotia_dashboard'))
+
+
+@app.post('/scotia/sessions/<session_id>/stagiaires/<trainee_id>/documents/delete')
+@scotia_login_required
+def scotia_delete_added_document(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        abort(404)
+
+    token = (request.form.get('token') or '').strip()
+    if token and _remove_scotia_added_document_token(t, token):
         _safe_remove_file(_detokenize_path(token))
         s['trainees'] = trainees
         s.pop('stagiaires', None)
