@@ -191,7 +191,7 @@
           <div class="scotia-stats scotia-stats--actions">
             <button type="button" class="scotia-stat scotia-stat--orange" data-filter="l1-action" {% if stats.l1_pending == 0 %}disabled{% endif %}><strong>{{ stats.l1_pending }}</strong><span>Livrets 1 à valider</span><small>Voir les Livrets 1 à valider</small></button>
             <button type="button" class="scotia-stat scotia-stat--green" data-filter="l2-action" {% if stats.l2_pending == 0 %}disabled{% endif %}><strong>{{ stats.l2_pending }}</strong><span>Livrets 2 à valider</span><small>Voir les Livrets 2 à valider</small></button>
-            <button type="button" class="scotia-stat scotia-stat--red" data-filter="complement-docs" {% if stats.complement_docs == 0 %}disabled{% endif %}><strong>{{ stats.complement_docs }}</strong><span>Nouveaux documents déposés à consulter</span><small>Voir les dossiers</small></button>
+            <button type="button" class="scotia-stat scotia-stat--red" data-filter="complement-docs" {% if stats.complement_docs == 0 %}disabled{% endif %}><strong>{{ stats.complement_docs }}</strong><span>{% if stats.complement_docs == 1 %}complément de dossier à consulter{% else %}compléments de dossier à consulter{% endif %}</span><small>Voir les dossiers</small></button>
           </div>
         </section>
         <section class="scotia-filter-group" aria-label="Dossiers en attente">
@@ -277,7 +277,7 @@
                       <span class="badge badge--danger">Non recevable</span>
                     {% elif it.scotia_status == 'complement_requested' %}
                       {% if complementary_documents %}
-                        <span class="badge badge--warning">Nouveaux documents déposés à consulter</span>
+                        <span class="badge badge--warning">complément de dossier à consulter</span>
                       {% else %}
                         <span class="badge badge--warning">En attente documents complémentaires</span>
                       {% endif %}
