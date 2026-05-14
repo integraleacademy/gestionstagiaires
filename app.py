@@ -4606,6 +4606,90 @@ def normalize_sessions_schema(data: Dict[str, Any]) -> bool:
 
     return changed
 
+def _apply_vtc_manual_exam_status(trainee: Dict[str, Any], mode: str, status: str) -> None:
+    """Keep legacy VTC exam fields in sync with a manual admin status."""
+    normalized_status = (status or "").strip().lower()
+    now = _now_iso()
+
+    if mode == "theory":
+        if normalized_status == "success":
+            trainee["vtc_theory_result"] = "admissible"
+            trainee["vtc_theory_result_label"] = "admissible"
+            trainee["vtc_theory_exam_sent_at"] = trainee.get("vtc_theory_exam_sent_at") or now
+        elif normalized_status == "failed":
+            trainee["vtc_theory_result"] = "non_admissible"
+            trainee["vtc_theory_result_label"] = "échec examen théorique"
+            trainee["vtc_theory_failed_at"] = trainee.get("vtc_theory_failed_at") or now
+            trainee["vtc_theory_exam_sent_at"] = ""
+        elif normalized_status in ("waiting_registration", "waiting_result", ""):
+            trainee["vtc_theory_result"] = ""
+            trainee["vtc_theory_result_label"] = ""
+            trainee["vtc_theory_exam_sent_at"] = ""
+        return
+
+    if mode == "practice":
+        if normalized_status == "success":
+            trainee["vtc_practice_result"] = "success"
+            trainee["vtc_practice_result_label"] = "réussite examen pratique"
+            trainee["vtc_practice_exam_sent_at"] = trainee.get("vtc_practice_exam_sent_at") or now
+        elif normalized_status == "failed":
+            trainee["vtc_practice_result"] = "non_admissible"
+            trainee["vtc_practice_result_label"] = "échec examen pratique"
+            trainee["vtc_practice_failed_at"] = trainee.get("vtc_practice_failed_at") or now
+            trainee["vtc_practice_exam_sent_at"] = ""
+        elif normalized_status in ("waiting_registration", "waiting_theory", "waiting_result", ""):
+            trainee["vtc_practice_result"] = ""
+            trainee["vtc_practice_result_label"] = ""
+            trainee["vtc_practice_exam_sent_at"] = ""
+
+def compute_vtc_exam_stats(trainees: List[Dict[str, Any]]) -> Dict[str, int]:
+    total = len(trainees)
+    theory_success = sum(
+        1
+        for t in trainees
+        if (t.get("vtc_theory_status_manual") == "success")
+        or (
+            not t.get("vtc_theory_status_manual")
+            and t.get("vtc_theory_exam_sent_at")
+            and t.get("vtc_theory_result") not in ("failed", "non_admissible")
+        )
+    )
+    theory_failed = sum(
+        1
+        for t in trainees
+        if t.get("vtc_theory_status_manual") == "failed"
+        or (not t.get("vtc_theory_status_manual") and t.get("vtc_theory_result") in ("failed", "non_admissible"))
+    )
+    practice_success = sum(
+        1
+        for t in trainees
+        if (t.get("vtc_practice_status_manual") == "success")
+        or (
+            not t.get("vtc_practice_status_manual")
+            and (t.get("vtc_practice_result") == "success" or t.get("vtc_practice_exam_sent_at"))
+            and t.get("vtc_practice_result") not in ("failed", "non_admissible")
+        )
+    )
+    practice_failed = sum(
+        1
+        for t in trainees
+        if t.get("vtc_practice_status_manual") == "failed"
+        or (not t.get("vtc_practice_status_manual") and t.get("vtc_practice_result") in ("failed", "non_admissible"))
+    )
+    cmar_ready = sum(1 for t in trainees if t.get("exam_fees_paid") or t.get("vtc_cmar_manual_ok"))
+    convocation_sent = sum(1 for t in trainees if t.get("vtc_practice_convocation_sent_at"))
+    return {
+        "total": total,
+        "theory_success": theory_success,
+        "theory_failed": theory_failed,
+        "theory_pending": max(total - theory_success - theory_failed, 0),
+        "practice_success": practice_success,
+        "practice_failed": practice_failed,
+        "practice_pending": max(total - practice_success - practice_failed, 0),
+        "cmar_ready": cmar_ready,
+        "convocation_sent": convocation_sent,
+    }
+
 
 def compute_stats(session: Dict[str, Any]) -> Dict[str, Any]:
     training_type = _session_get(session, "training_type", "")
@@ -4619,6 +4703,7 @@ def compute_stats(session: Dict[str, Any]) -> Dict[str, Any]:
         "non_conform_count": total - conform_count,
         "session_is_conform": (total > 0 and conform_count == total),
         "cnaps_accepted_count": cnaps_accepted_count,
+        "vtc": compute_vtc_exam_stats(trainees) if "VTC" in (training_type or "").upper() else {},
     }
 
 
@@ -5422,6 +5507,11 @@ REQUIRED_DOCS = {
             "accept": "application/pdf,image/jpeg,image/png",
         },
     ],
+    "DIRIGEANT_VAE_COMPLEMENT": {
+        "key": "complementary_documents",
+        "label": "Documents complémentaires demandés",
+        "accept": "application/pdf,image/jpeg,image/png",
+    },
     "DIRIGEANT_DIPLOMA": [
         {
             "key": "highest_diploma",
@@ -5629,6 +5719,7 @@ def allowed_doc_keys_for_training(training_type: str, trainee: Optional[Dict[str
     keys = {d["key"] for d in required_docs_for_training(training_type, trainee)}
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
         keys.add("livret_2")
+        keys.add("complementary_documents")
     return keys
 
 def dossier_is_complete(trainee: Dict[str, Any], training_type: str) -> bool:
@@ -7061,6 +7152,8 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                     file_tokens.insert(0, token)
                 if not prerequis_interview_sheet_token and d.get("key") == "prerequis_interview_sheet":
                     prerequis_interview_sheet_token = file_tokens[0] if file_tokens else token
+                if d.get("key") == "complementary_documents":
+                    complementary_document_tokens = file_tokens
                 docs_view.append({
                     "key": d.get("key"),
                     "label": d.get("label") or d.get("key"),
@@ -10521,6 +10614,87 @@ def admin_trainees(session_id: str):
     )
 
 
+@app.get("/admin/trainees/vtc")
+@admin_login_required
+def admin_vtc_trainees_all():
+    data = load_data()
+    all_trainees = []
+
+    for s in data.get("sessions", []):
+        if _is_wedof_leads_session(s) or bool(s.get("archived")):
+            continue
+        training_type = _session_get(s, "training_type", "")
+        if "VTC" not in (training_type or "").upper():
+            continue
+
+        session_name = _session_get(s, "name", "")
+        for t in _session_trainees_list(s):
+            ln = normalize_last_name(t.get("last_name") or "")
+            fn = normalize_first_name(t.get("first_name") or "")
+            if ln:
+                t["last_name"] = ln
+            if fn:
+                t["first_name"] = fn
+
+            ensure_documents_schema_for_trainee(t, training_type)
+            t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+
+            trainee_view = dict(t)
+            trainee_view["source_session_id"] = s.get("id")
+            trainee_view["source_session_name"] = session_name
+            trainee_view["source_session_date_start"] = _session_get(s, "date_start", "")
+            trainee_view["source_session_date_end"] = _session_get(s, "date_end", "")
+            all_trainees.append(trainee_view)
+
+    for t in all_trainees:
+        t.setdefault("deliverables", {})
+        d_done, d_total, d_ok = deliverables_progress(t)
+        t["deliverables_done"] = d_done
+        t["deliverables_total"] = d_total
+        t["deliverables_ok"] = d_ok
+        t["deliverables_text"] = f"{d_done}/{d_total}"
+        t["has_sst"] = bool((t.get("deliverables") or {}).get("carte_sst") or "")
+        t["has_attestation"] = bool((t.get("deliverables") or {}).get("attestation_fin_formation") or "")
+        t["has_diplome"] = bool((t.get("deliverables") or {}).get("diplome") or "")
+        t["badges"] = []
+
+    all_trainees.sort(key=lambda t: (
+        (t.get("last_name") or "").strip().upper(),
+        (t.get("first_name") or "").strip().upper(),
+        (t.get("source_session_name") or "").strip().upper(),
+    ))
+
+    session_view = {
+        "id": "__all_vtc__",
+        "name": "Tous les stagiaires VTC",
+        "training_type": "VTC",
+        "date_start": "",
+        "date_end": "",
+        "exam_date": "",
+        "exam_theory_date": "",
+        "exam_practice_date": "",
+        "practice_training_date": "",
+        "ssiap_exam_date": "",
+        "prospects_comment": "",
+    }
+    stats = compute_stats({"training_type": "VTC", "trainees": all_trainees})
+
+    save_data(data)
+    return render_template(
+        "admin_trainees.html",
+        session=session_view,
+        trainees=all_trainees,
+        stats=stats,
+        show_hosting=False,
+        show_vae=False,
+        is_vtc=True,
+        is_dirigeant=False,
+        enums=ENUMS,
+        is_adef=False,
+        all_vtc=True,
+    )
+
+
 # =========================
 # FICHE STAGIAIRE (HTML)
 # =========================
@@ -10748,6 +10922,7 @@ def api_create_trainee(session_id: str):
         "elearning_link_sms_ok": False,
         "vtc_book_sent_at": "",
         "vtc_book_manual_ok": False,
+        "vtc_exam_center": "",
         "vtc_real_training_dates": vtc_real_training_dates,
         "documents": [],
         "created_at": _now_iso(),
@@ -11011,12 +11186,15 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vtc_theory_exam_sms_ok",
         "vtc_theory_result",
         "vtc_theory_result_label",
+        "vtc_theory_status_manual",
         "vtc_practice_convocation_sent_at",
         "vtc_practice_result",
         "vtc_practice_result_label",
+        "vtc_practice_status_manual",
         "vtc_practice_exam_sent_at",
         "vtc_practice_exam_email_ok",
         "vtc_practice_exam_sms_ok",
+        "vtc_exam_center",
         "vtc_real_training_dates",
 
     }
@@ -11095,6 +11273,19 @@ def api_update_trainee(session_id: str, trainee_id: str):
                 t[k] = normalize_first_name(v)
             elif k == "elearning_link":
                 t[k] = v.strip()
+            elif k == "vtc_exam_center":
+                normalized_center = v.strip().lower()
+                t[k] = normalized_center if normalized_center in ("nice", "toulon") else ""
+            elif k == "vtc_theory_status_manual":
+                normalized_status = v.strip().lower()
+                allowed_statuses = ("", "waiting_registration", "waiting_result", "success", "failed")
+                t[k] = normalized_status if normalized_status in allowed_statuses else ""
+                _apply_vtc_manual_exam_status(t, "theory", t[k])
+            elif k == "vtc_practice_status_manual":
+                normalized_status = v.strip().lower()
+                allowed_statuses = ("", "waiting_registration", "waiting_theory", "waiting_result", "success", "failed")
+                t[k] = normalized_status if normalized_status in allowed_statuses else ""
+                _apply_vtc_manual_exam_status(t, "practice", t[k])
             else:
                 t[k] = v.strip()
         else:
@@ -11253,6 +11444,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "elearning_link_sent_at": t.get("elearning_link_sent_at") or "",
         "elearning_link_email_ok": bool(t.get("elearning_link_email_ok")),
         "elearning_link_sms_ok": bool(t.get("elearning_link_sms_ok")),
+        "vtc_theory_status_manual": t.get("vtc_theory_status_manual") or "",
+        "vtc_practice_status_manual": t.get("vtc_practice_status_manual") or "",
     })
 
 
@@ -12482,6 +12675,7 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
     ensure_documents_schema_for_trainee(t, training_type)
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
         _ensure_livret2_document_entry(t)
+        _ensure_complementary_documents_entry(t)
 
     # ✅ refuse les doc_key inconnus pour cette formation
     if doc_key not in allowed_doc_keys_for_training(training_type, t):
@@ -12533,6 +12727,24 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
 
     t["updated_at"] = _now_iso()
     append_trainee_history_event(t, "Document ajouté", f"{doc_key} · fichier ajouté", "action")
+
+    if doc_key == "complementary_documents":
+        if not isinstance(t.get("vae_action_dates"), dict):
+            t["vae_action_dates"] = {}
+        t["vae_action_dates"]["complementary_documents_received"] = datetime.date.today().strftime("%d/%m/%Y")
+        target_doc["status"] = "A CONTRÔLER"
+        trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
+        add_admin_notification(
+            data,
+            f"VAE complément déposé par {trainee_display_name}",
+            meta={
+                "type": "vae_complementary_documents_upload",
+                "session_id": s.get("id"),
+                "trainee_id": t.get("id"),
+            },
+        )
+        _notify_scotia_complementary_documents(t, s, 1, "l'espace administrateur")
+        save_data(data)
 
     if doc_key == "livret_2":
         if not isinstance(t.get("vae_action_dates"), dict):
@@ -14998,6 +15210,7 @@ def public_trainee_space(token):
     ensure_documents_schema_for_trainee(t, training_type)
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
         _ensure_livret2_document_entry(t)
+        _ensure_complementary_documents_entry(t)
 
     for d in (t.get("documents") or []):
         file_token = d.get("file") or ""
@@ -15217,6 +15430,7 @@ def public_doc_upload(token: str, doc_key: str):
     ensure_documents_schema_for_trainee(t, training_type)
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
         _ensure_livret2_document_entry(t)
+        _ensure_complementary_documents_entry(t)
 
     # ✅ doc_key doit être dans la liste requise
     if doc_key not in allowed_doc_keys_for_training(training_type, t):
@@ -15296,7 +15510,7 @@ def public_doc_upload(token: str, doc_key: str):
             cur_status = (d.get("status") or "").strip().upper()
             if cur_status in ("NON CONFORME", "NON_CONFORME"):
                 cur_files = []
-            max_files = 2 if doc_key == "id" else (-1 if doc_key == "livret_2" else 1)
+            max_files = 2 if doc_key == "id" else (-1 if doc_key in {"livret_2", "complementary_documents"} else 1)
             if max_files < 0:
                 files_to_store = incoming_files
             else:
@@ -15335,6 +15549,24 @@ def public_doc_upload(token: str, doc_key: str):
     s["trainees"] = _session_trainees_list(s)
     s.pop("stagiaires", None)
     save_data(data)
+
+    if doc_key == "complementary_documents":
+        if not isinstance(t.get("vae_action_dates"), dict):
+            t["vae_action_dates"] = {}
+        t["vae_action_dates"]["complementary_documents_received"] = datetime.date.today().strftime("%d/%m/%Y")
+        target["status"] = "A CONTRÔLER"
+        trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
+        add_admin_notification(
+            data,
+            f"VAE complément déposé par {trainee_display_name}",
+            meta={
+                "type": "vae_complementary_documents_upload",
+                "session_id": s.get("id"),
+                "trainee_id": t.get("id"),
+            },
+        )
+        _notify_scotia_complementary_documents(t, s, len(files_to_store), "l'espace candidat")
+        save_data(data)
 
     if doc_key == "livret_2":
         if not isinstance(t.get("vae_action_dates"), dict):
@@ -15439,6 +15671,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     ensure_documents_schema_for_trainee(t, training_type)
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
         _ensure_livret2_document_entry(t)
+        _ensure_complementary_documents_entry(t)
 
     # ✅ deliverables
     t.setdefault("deliverables", {})

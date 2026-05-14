@@ -1350,3 +1350,91 @@ input[type="file"]{
     text-align:center;
   }
 }
+
+/* =========================
+   VTC dashboard cards + reliable trainee columns
+   ========================= */
+.session-stats.session-stats-vtc{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));
+  flex:1 1 520px;
+  min-width:320px;
+}
+.stat.stat-vtc{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+  color:#0f172a;
+  border:0;
+  box-shadow:0 12px 28px rgba(15,23,42,.10);
+  overflow:hidden;
+  position:relative;
+}
+.stat.stat-vtc::after{
+  content:"";
+  position:absolute;
+  inset:auto -24px -34px auto;
+  width:86px;
+  height:86px;
+  border-radius:999px;
+  background:rgba(255,255,255,.28);
+}
+.stat-icon{
+  display:grid;
+  place-items:center;
+  flex:0 0 38px;
+  width:38px;
+  height:38px;
+  border-radius:14px;
+  background:rgba(255,255,255,.62);
+  font-size:20px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.45);
+}
+.stat-vtc .stat-title{color:rgba(15,23,42,.68);font-size:11px;text-transform:uppercase;letter-spacing:.03em;}
+.stat-vtc .stat-value{font-size:21px;line-height:1;font-weight:1000;}
+.stat-sub{margin-top:4px;font-size:11px;font-weight:800;color:rgba(15,23,42,.64);}
+.stat-total{background:linear-gradient(135deg,#dbeafe,#eff6ff);}
+.stat-success{background:linear-gradient(135deg,#bbf7d0,#dcfce7);}
+.stat-practice{background:linear-gradient(135deg,#bfdbfe,#dbeafe);}
+.stat-cmar{background:linear-gradient(135deg,#fde68a,#fef3c7);}
+.stat-dates{background:linear-gradient(135deg,#e9d5ff,#f5d0fe);}
+
+/* The previous nth-child hiding broke the all-VTC page because the Session column
+   shifted indexes. Hide contact columns by semantic classes instead. */
+#traineesTable .col-email,
+#traineesTable .col-phone{
+  display:none !important;
+}
+
+#traineesTable .col-session,
+#traineesTable .col-last-name,
+#traineesTable .col-first-name{
+  font-weight:900;
+  background:inherit !important;
+}
+
+#traineesTable:not(.trainees-table--all-vtc) .col-last-name,
+#traineesTable:not(.trainees-table--all-vtc) .col-first-name,
+#traineesTable.trainees-table--all-vtc .col-session,
+#traineesTable.trainees-table--all-vtc .col-last-name,
+#traineesTable.trainees-table--all-vtc .col-first-name{
+  position:sticky;
+  z-index:60;
+}
+#traineesTable:not(.trainees-table--all-vtc) .col-last-name{left:0;min-width:200px !important;max-width:200px !important;}
+#traineesTable:not(.trainees-table--all-vtc) .col-first-name{left:200px;min-width:140px !important;max-width:140px !important;box-shadow:10px 0 14px rgba(2,6,23,.10);}
+#traineesTable.trainees-table--all-vtc .col-session{left:0;min-width:180px !important;max-width:180px !important;}
+#traineesTable.trainees-table--all-vtc .col-last-name{left:180px;min-width:126px !important;max-width:126px !important;}
+#traineesTable.trainees-table--all-vtc .col-first-name{left:306px;min-width:132px !important;max-width:132px !important;box-shadow:10px 0 14px rgba(2,6,23,.10);}
+#traineesTable thead .col-session,
+#traineesTable thead .col-last-name,
+#traineesTable thead .col-first-name{
+  z-index:220 !important;
+  background:#f8fafc !important;
+}
+#traineesTable .col-session,
+#traineesTable .col-last-name,
+#traineesTable .col-first-name{
+  display:table-cell !important;
+}

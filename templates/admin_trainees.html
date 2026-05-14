@@ -7,6 +7,7 @@
 {% set vtc_practice_exam_date = session.exam_practice_date or session.exam_date %}
 {% set vtc_practice_training_date = session.practice_training_date %}
 {% set is_dirigeant_session = is_dirigeant or ("DIRIGEANT" in (session.training_type or "")|upper) or ("DIRIGEANT" in (session.name or "")|upper) %}
+{% set is_all_vtc = all_vtc|default(false) %}
 
 <div class="breadcrumbs">
   <a href="{{ url_for('admin_sessions', **request.args) }}">← Retour sessions</a>
@@ -20,9 +21,11 @@
       <span class="pill">{{ training_type_label }}</span>
       <span>Formation : <strong>{{ session.date_start|frdate }}</strong> → <strong>{{ session.date_end|frdate }}</strong></span>
       {% if "VTC" in (session.training_type or "")|upper %}
+        {% if not is_all_vtc %}
         <span>Examen théorique : <strong>{{ vtc_theory_exam_date|frdate }}</strong></span>
         <span>Formation pratique : <strong>{{ vtc_practice_training_date|frdate }}</strong></span>
         <span>Examen pratique : <strong>{{ vtc_practice_exam_date|frdate }}</strong></span>
+        {% endif %}
       {% else %}
         <span>Examen : <strong>{{ session.exam_date|frdate }}</strong></span>
       {% endif %}
@@ -30,24 +33,50 @@
     </div>
   </div>
 
-  <div class="session-stats">
-    <div class="stat">
-      <div class="stat-title">Stagiaires</div>
-      <div class="stat-value">{{ stats.total }}</div>
+  <div class="session-stats {% if is_vtc_header %}session-stats-vtc{% endif %}">
+    <div class="stat stat-vtc stat-total">
+      <div class="stat-icon">👥</div>
+      <div>
+        <div class="stat-title">Stagiaires</div>
+        <div class="stat-value">{{ stats.total }}</div>
+      </div>
     </div>
     {% if is_vtc_header %}
-    <div class="stat">
-      <div class="stat-title">Examen théorique</div>
-      <div class="stat-value">{{ vtc_theory_exam_date|frdate }}</div>
-    </div>
-    <div class="stat">
-      <div class="stat-title">Formation pratique</div>
-      <div class="stat-value">{{ vtc_practice_training_date|frdate }}</div>
-    </div>
-    <div class="stat">
-      <div class="stat-title">Examen pratique</div>
-      <div class="stat-value">{{ vtc_practice_exam_date|frdate }}</div>
-    </div>
+      {% set vtc_stats = stats.vtc or {} %}
+      <div class="stat stat-vtc stat-success">
+        <div class="stat-icon">🎓</div>
+        <div>
+          <div class="stat-title">Théorie réussie</div>
+          <div class="stat-value">{{ vtc_stats.theory_success or 0 }} / {{ stats.total }}</div>
+          <div class="stat-sub">{{ vtc_stats.theory_pending or 0 }} en attente · {{ vtc_stats.theory_failed or 0 }} échec</div>
+        </div>
+      </div>
+      <div class="stat stat-vtc stat-practice">
+        <div class="stat-icon">🚗</div>
+        <div>
+          <div class="stat-title">Pratique réussie</div>
+          <div class="stat-value">{{ vtc_stats.practice_success or 0 }} / {{ stats.total }}</div>
+          <div class="stat-sub">{{ vtc_stats.practice_pending or 0 }} en attente · {{ vtc_stats.practice_failed or 0 }} échec</div>
+        </div>
+      </div>
+      <div class="stat stat-vtc stat-cmar">
+        <div class="stat-icon">📝</div>
+        <div>
+          <div class="stat-title">Inscrits CMAR</div>
+          <div class="stat-value">{{ vtc_stats.cmar_ready or 0 }} / {{ stats.total }}</div>
+          <div class="stat-sub">{{ vtc_stats.convocation_sent or 0 }} convocations pratique</div>
+        </div>
+      </div>
+      {% if not is_all_vtc %}
+      <div class="stat stat-vtc stat-dates">
+        <div class="stat-icon">📅</div>
+        <div>
+          <div class="stat-title">Dates VTC</div>
+          <div class="stat-sub">Théorie {{ vtc_theory_exam_date|frdate }}</div>
+          <div class="stat-sub">Pratique {{ vtc_practice_exam_date|frdate }}</div>
+        </div>
+      </div>
+      {% endif %}
     {% else %}
     <div class="stat">
       <div class="stat-title">Conformes</div>
@@ -100,28 +129,42 @@
     {% endif %}
     {% if is_vtc %}
       <label for="vtcTheoryFilter" class="muted" style="font-weight:700;">Filtre théorie</label>
-      <select id="vtcTheoryFilter" class="sel" style="min-width:220px;">
-        <option value="all">Tous</option>
-        <option value="ok">Théorie OK uniquement</option>
+      <select id="vtcTheoryFilter" class="sel" style="min-width:260px;">
+        <option value="all">Tous les statuts théorie</option>
+        <option value="pending_registration">En attente inscription examen</option>
+        <option value="pending_results">En attente résultats examen</option>
+        <option value="success">Examen théorique réussi</option>
+        <option value="failed">Echec examen théorique</option>
+      </select>
+      <label for="vtcPracticeFilter" class="muted" style="font-weight:700;">Filtre pratique</label>
+      <select id="vtcPracticeFilter" class="sel" style="min-width:280px;">
+        <option value="all">Tous les statuts pratique</option>
+        <option value="pending_registration">En attente inscription examen</option>
+        <option value="waiting_theory">En attente réussite théorie</option>
+        <option value="pending_results">En attente résultats pratique</option>
+        <option value="success">Examen pratique réussi</option>
+        <option value="failed">Echec examen pratique</option>
       </select>
     {% endif %}
     <button class="btn btn-outline" id="btnCollectMails" type="button">📋 Récup mail</button>
+    {% if not is_all_vtc %}
     <a class="btn btn-outline" id="btnPrintTrainees" href="{{ url_for('admin_trainees_print', session_id=session.id, **request.args) }}" target="_blank" rel="noopener">🖨️ Imprimer la liste</a>
     <a class="btn btn-outline" id="btnWordLabels"
        href="{{ url_for('admin_etiquettes_word_zip', session_id=session.id) }}"
        title="Télécharger toutes les étiquettes Word de la session">🏷️ Étiquettes WORD</a>
+    {% endif %}
     {% if is_a3p_header %}
     <a class="btn btn-outline" id="btnTshirtList"
        href="{{ url_for('admin_tshirt_list', session_id=session.id, **request.args) }}"
        target="_blank" rel="noopener">👕 Liste t-shirts</a>
     {% endif %}
     {% if not is_read_only %}
-      {% if not is_vtc and not show_vae and not is_dirigeant %}
+      {% if not is_all_vtc and not is_vtc and not show_vae and not is_dirigeant %}
       <button class="btn btn-outline" id="btnBulkSst">⬇️ importer les SST en masse</button>
       <input id="bulkSstInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
       {% endif %}
 
-      {% if not is_vtc %}
+      {% if not is_all_vtc and not is_vtc %}
         <button class="btn btn-outline" id="btnBulkDiplome">⬇️ Importer les diplômes en masse</button>
         <input id="bulkDiplomeInput" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" style="display:none">
 
@@ -154,17 +197,26 @@
 </div>
 {% endif %}
 
+{% if is_vtc %}
+<div class="vtc-exam-center-legend" aria-label="Légende des centres d'examen VTC">
+  <span class="vtc-legend-title">Légende centre examen :</span>
+  <span class="vtc-legend-item"><span class="vtc-legend-swatch vtc-legend-nice"></span>Nice = ligne verte</span>
+  <span class="vtc-legend-item"><span class="vtc-legend-swatch vtc-legend-toulon"></span>Toulon = ligne bleue</span>
+</div>
+{% endif %}
+
 <div class="table-wrap full-bleed">
-  <table class="table" id="traineesTable"
+  <table class="table trainees-table {% if is_all_vtc %}trainees-table--all-vtc{% endif %}" id="traineesTable"
          data-session-id="{{ session.id }}"
          data-show-hosting="{{ '1' if show_hosting else '0' }}"
          data-show-vae="{{ '1' if show_vae else '0' }}">
     <thead>
       <tr>
-        <th>Nom</th>
-        <th>Prénom</th>
-        <th>Mail</th>
-        <th>Téléphone</th>
+        {% if is_all_vtc %}<th class="col-session">Session</th>{% endif %}
+        <th class="col-last-name">Nom</th>
+        <th class="col-first-name">Prénom</th>
+        <th class="col-email">Mail</th>
+        <th class="col-phone">Téléphone</th>
 
         <th>Convention</th>
         <th>Financement</th>
@@ -177,6 +229,7 @@
         {% if is_vtc %}<th>Inscription CMAR</th>{% endif %}
         {% if is_vtc %}<th>E-learning</th>{% endif %}
         {% if is_vtc %}<th>Livre</th>{% endif %}
+        {% if is_vtc %}<th>Centre examen</th>{% endif %}
         {% if is_vtc %}<th>Théorie</th>{% endif %}
         {% if is_vtc %}<th>Convocation</th>{% endif %}
         {% if is_vtc %}<th>Date formation pratique</th>{% endif %}
@@ -190,18 +243,36 @@
       {% for t in trainees %}
 {% set vtc_book_address_complete = (t.address or "")|trim and (t.zip_code or "")|trim and (t.city or "")|trim %}
 {% set vtc_book_pending_ready = is_vtc and (not (t.vtc_book_sent_at or "")|trim) and vtc_book_address_complete %}
-<tr class="row {% if t.comment %}row-warning{% endif %}"
+{% set vtc_exam_center = (t.vtc_exam_center or "")|trim|lower %}
+<tr class="row {% if t.comment %}row-warning{% endif %} {% if vtc_exam_center == 'nice' %}row-vtc-nice{% elif vtc_exam_center == 'toulon' %}row-vtc-toulon{% endif %}"
     data-trainee-id="{{ t.id }}"
+    data-session-id="{{ t.source_session_id or session.id }}"
     data-last-name="{{ t.last_name or '' }}"
     data-first-name="{{ t.first_name or '' }}"
     data-vae-status="{{ t.vae_status or 'livret_1_todo' }}"
-data-vtc-theory-ok="{{ '1' if (t.vtc_theory_result != 'non_admissible' and t.vtc_theory_exam_sent_at) else '0' }}"
+data-vtc-theory-ok="{{ '1' if (t.vtc_theory_status_manual == 'success' or ((not t.vtc_theory_status_manual) and t.vtc_theory_result != 'non_admissible' and t.vtc_theory_exam_sent_at)) else '0' }}"
+data-vtc-exam-fees-paid="{{ '1' if t.exam_fees_paid else '0' }}"
+data-vtc-cmar-manual-ok="{{ '1' if t.vtc_cmar_manual_ok else '0' }}"
+data-vtc-cmar-ok="{{ '1' if (t.exam_fees_paid or t.vtc_cmar_manual_ok) else '0' }}"
+data-vtc-theory-exam-sent="{{ '1' if t.vtc_theory_exam_sent_at else '0' }}"
+data-vtc-theory-result="{{ t.vtc_theory_result or '' }}"
+data-vtc-theory-status-manual="{{ t.vtc_theory_status_manual or '' }}"
+data-vtc-practice-exam-sent="{{ '1' if t.vtc_practice_exam_sent_at else '0' }}"
+data-vtc-practice-result="{{ t.vtc_practice_result or '' }}"
+data-vtc-practice-status-manual="{{ t.vtc_practice_status_manual or '' }}"
 data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}"
   data-has-diplome="{{ '1' if (t.get('deliverables', {}).get('diplome')) else '0' }}"
-  data-has-attestation="{{ '1' if (t.get('deliverables', {}).get('attestation_fin_formation')) else '0' }}">
-<td>
+  data-has-attestation="{{ '1' if (t.get('deliverables', {}).get('attestation_fin_formation')) else '0' }}"
+  data-vtc-exam-center="{{ vtc_exam_center }}">
+{% if is_all_vtc %}
+<td class="col-session">
+  <a class="trainee-link" href="{{ url_for('admin_trainees', session_id=t.source_session_id) }}" style="text-decoration:none;font-weight:800;">{{ t.source_session_name or 'Session VTC' }}</a>
+  <div class="muted">{{ t.source_session_date_start|frdate }} → {{ t.source_session_date_end|frdate }}</div>
+</td>
+{% endif %}
+<td class="col-last-name">
   <a class="trainee-link"
-     href="/admin/sessions/{{ session.id }}/stagiaires/{{ t.id }}"
+     href="/admin/sessions/{{ t.source_session_id or session.id }}/stagiaires/{{ t.id }}"
      style="text-decoration:none;">
     {% if not is_vtc and (t.identity_photo or "")|trim %}📷 {% endif %}{% if t.public_has_logged_in %}🛜 {% endif %}{% if t.test_fr_file_token %}✏️ {% endif %}{{ t.last_name or "" }}
   </a>
@@ -214,18 +285,18 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   </div>
   {% endif %}
 </td>
-<td>
+<td class="col-first-name">
   <a class="trainee-link"
-     href="/admin/sessions/{{ session.id }}/stagiaires/{{ t.id }}"
+     href="/admin/sessions/{{ t.source_session_id or session.id }}/stagiaires/{{ t.id }}"
      style="text-decoration:none;">
     {{ t.first_name or "" }}
   </a>
 </td>
 
-        <td class="mono">
+        <td class="mono col-email">
           <input class="inline-edit" data-field="email" type="email" value="{{ t.email or '' }}" placeholder="email@exemple.com" style="width:100%;min-width:200px;" {{ read_only_attr }}>
         </td>
-        <td class="mono">
+        <td class="mono col-phone">
           <input class="inline-edit" data-field="phone" type="tel" value="{{ t.phone or '' }}" placeholder="+33600000000" style="width:100%;min-width:150px;" {{ read_only_attr }}>
         </td>
 
@@ -342,6 +413,9 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
             <option value="false" {% if not vtc_cmar_ok %}selected{% endif %}>🔴</option>
             <option value="true" {% if vtc_cmar_ok %}selected{% endif %}>🟢</option>
           </select>
+          {% if not (t.vtc_cmar_id or "")|trim %}
+            <div class="vtc-cmar-alert" role="alert">Identifiant CMAR inconnu</div>
+          {% endif %}
         </td>
         <td>
           <select class="status sel status-dot" data-field="vtc_elearning_manual_ok" {{ read_only_attr }}>
@@ -357,16 +431,47 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
             </select>
           </span>
         </td>
-        <td title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">
-          {% if t.vtc_theory_result == "non_admissible" %}
-            <span title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">🔴</span>
-          {% elif t.vtc_theory_result_label == "repassage examen théorique" %}
-            <span title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }} - Repassage examen théorique">🟡</span>
-          {% elif t.vtc_theory_exam_sent_at %}
-            <span title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">🟢</span>
+        <td>
+          <div class="vtc-exam-center" role="group" aria-label="Centre d'examen">
+            <label class="vtc-exam-center-option">
+              <input type="checkbox"
+                     class="vtc-exam-center-checkbox"
+                     data-field="vtc_exam_center"
+                     value="nice"
+                     {% if vtc_exam_center == "nice" %}checked{% endif %}
+                     {{ read_only_attr }}>
+              <span>Nice</span>
+            </label>
+            <label class="vtc-exam-center-option">
+              <input type="checkbox"
+                     class="vtc-exam-center-checkbox"
+                     data-field="vtc_exam_center"
+                     value="toulon"
+                     {% if vtc_exam_center == "toulon" %}checked{% endif %}
+                     {{ read_only_attr }}>
+              <span>Toulon</span>
+            </label>
+          </div>
+        </td>
+        <td class="vtc-status-cell" title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">
+          {% set vtc_theory_manual = t.vtc_theory_status_manual or '' %}
+          {% if vtc_theory_manual == "failed" or (not vtc_theory_manual and t.vtc_theory_result in ["failed", "non_admissible"]) %}
+            {% set vtc_theory_text = "Echec examen théorique" %}{% set vtc_theory_color = "black" %}
+          {% elif vtc_theory_manual == "waiting_registration" or (not vtc_theory_manual and not vtc_cmar_ok) %}
+            {% set vtc_theory_text = "En attente inscription examen" %}{% set vtc_theory_color = "red" %}
+          {% elif vtc_theory_manual == "success" or (not vtc_theory_manual and t.vtc_theory_exam_sent_at) %}
+            {% set vtc_theory_text = "Examen théorique réussi" %}{% set vtc_theory_color = "green" %}
           {% else %}
-            <span title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }}">🟡</span>
+            {% set vtc_theory_text = "En attente résultats examen" %}{% set vtc_theory_color = "yellow" %}
           {% endif %}
+          <button type="button" class="vtc-status-label vtc-status-{{ vtc_theory_color }}" data-vtc-theory-label data-vtc-exam-status-trigger="theory" title="Date d'examen théorique : {{ vtc_theory_exam_date|frdate }} — cliquer pour modifier" {{ read_only_attr }}>{{ vtc_theory_text }}</button>
+          <div class="vtc-status-menu" data-vtc-exam-status-menu="theory" hidden>
+            <button type="button" class="vtc-status-choice vtc-status-red" data-vtc-exam-status-choice="waiting_registration" data-field="vtc_theory_status_manual">En attente inscription</button>
+            <button type="button" class="vtc-status-choice vtc-status-yellow" data-vtc-exam-status-choice="waiting_result" data-field="vtc_theory_status_manual">En attente résultats</button>
+            <button type="button" class="vtc-status-choice vtc-status-green" data-vtc-exam-status-choice="success" data-field="vtc_theory_status_manual">Réussie</button>
+            <button type="button" class="vtc-status-choice vtc-status-black" data-vtc-exam-status-choice="failed" data-field="vtc_theory_status_manual">Échec</button>
+            {% if vtc_theory_manual %}<button type="button" class="vtc-status-reset" data-vtc-exam-status-choice="" data-field="vtc_theory_status_manual">Réinitialiser</button>{% endif %}
+          </div>
         </td>
         <td>
           <select class="status sel status-dot"
@@ -378,14 +483,29 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           </select>
         </td>
         <td>{{ session.practice_training_date|frdate }}</td>
-        <td title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">
-          {% if t.vtc_practice_result in ["failed", "non_admissible"] %}
-            <span title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">🔴</span>
-          {% elif t.vtc_practice_result == "success" or t.vtc_practice_exam_sent_at %}
-            <span title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">🟢</span>
+        <td class="vtc-status-cell" title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">
+          {% set vtc_theory_ok = (t.vtc_theory_status_manual == "success") or ((not t.vtc_theory_status_manual) and t.vtc_theory_exam_sent_at and t.vtc_theory_result not in ["failed", "non_admissible"]) %}
+          {% set vtc_practice_manual = t.vtc_practice_status_manual or '' %}
+          {% if vtc_practice_manual == "failed" or (not vtc_practice_manual and t.vtc_practice_result in ["failed", "non_admissible"]) %}
+            {% set vtc_practice_text = "Echec examen pratique" %}{% set vtc_practice_color = "black" %}
+          {% elif vtc_practice_manual == "waiting_registration" or (not vtc_practice_manual and not vtc_cmar_ok) %}
+            {% set vtc_practice_text = "En attente inscription examen" %}{% set vtc_practice_color = "red" %}
+          {% elif vtc_practice_manual == "success" or (not vtc_practice_manual and (t.vtc_practice_result == "success" or t.vtc_practice_exam_sent_at)) %}
+            {% set vtc_practice_text = "Examen pratique réussi" %}{% set vtc_practice_color = "green" %}
+          {% elif vtc_practice_manual == "waiting_theory" or (not vtc_practice_manual and not vtc_theory_ok) %}
+            {% set vtc_practice_text = "En attente réussite théorie" %}{% set vtc_practice_color = "yellow" %}
           {% else %}
-            <span title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }}">🟡</span>
+            {% set vtc_practice_text = "En attente résultats pratique" %}{% set vtc_practice_color = "yellow" %}
           {% endif %}
+          <button type="button" class="vtc-status-label vtc-status-{{ vtc_practice_color }}" data-vtc-practice-label data-vtc-exam-status-trigger="practice" title="Date d'examen pratique : {{ vtc_practice_exam_date|frdate }} — cliquer pour modifier" {{ read_only_attr }}>{{ vtc_practice_text }}</button>
+          <div class="vtc-status-menu" data-vtc-exam-status-menu="practice" hidden>
+            <button type="button" class="vtc-status-choice vtc-status-red" data-vtc-exam-status-choice="waiting_registration" data-field="vtc_practice_status_manual">En attente inscription</button>
+            <button type="button" class="vtc-status-choice vtc-status-yellow" data-vtc-exam-status-choice="waiting_theory" data-field="vtc_practice_status_manual">En attente théorie</button>
+            <button type="button" class="vtc-status-choice vtc-status-yellow" data-vtc-exam-status-choice="waiting_result" data-field="vtc_practice_status_manual">En attente résultats</button>
+            <button type="button" class="vtc-status-choice vtc-status-green" data-vtc-exam-status-choice="success" data-field="vtc_practice_status_manual">Réussie</button>
+            <button type="button" class="vtc-status-choice vtc-status-black" data-vtc-exam-status-choice="failed" data-field="vtc_practice_status_manual">Échec</button>
+            {% if vtc_practice_manual %}<button type="button" class="vtc-status-reset" data-vtc-exam-status-choice="" data-field="vtc_practice_status_manual">Réinitialiser</button>{% endif %}
+          </div>
         </td>
         {% endif %}
 
@@ -700,6 +820,142 @@ tr.row-todo td{
   background: #ffffff;   /* blanc */
 }
 
+#traineesTable tr.row-vtc-nice td{
+  background:#dcfce7 !important;
+}
+
+#traineesTable tr.row-vtc-toulon td{
+  background:#dbeafe !important;
+}
+
+.vtc-status-label{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  max-width:180px;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:900;
+  line-height:1.15;
+  text-align:center;
+  text-transform:uppercase;
+  border:1px solid rgba(15,23,42,.08);
+}
+
+.vtc-status-red{ background:#fee2e2; color:#991b1b; }
+.vtc-status-yellow{ background:#fef3c7; color:#92400e; }
+.vtc-status-green{ background:#dcfce7; color:#166534; }
+.vtc-status-black{ background:#111827; color:#fff; }
+
+.vtc-status-label{
+  cursor:pointer;
+}
+
+.vtc-status-label:disabled{
+  cursor:not-allowed;
+  opacity:.7;
+}
+
+.vtc-status-cell{
+  position:relative;
+}
+
+.vtc-status-menu[hidden]{
+  display:none;
+}
+
+.vtc-status-menu{
+  position:absolute;
+  z-index:30;
+  top:calc(100% - 2px);
+  left:8px;
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+  min-width:190px;
+  padding:8px;
+  border:1px solid #cbd5e1;
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 14px 34px rgba(15,23,42,.18);
+}
+
+.vtc-status-choice,
+.vtc-status-reset{
+  border:1px solid rgba(15,23,42,.08);
+  border-radius:999px;
+  padding:7px 10px;
+  font-size:11px;
+  font-weight:900;
+  line-height:1.15;
+  text-align:center;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+
+.vtc-status-reset{
+  background:#f8fafc;
+  color:#475569;
+}
+
+.vtc-cmar-alert{
+  display:inline-flex;
+  align-items:center;
+  margin-top:6px;
+  padding:5px 8px;
+  border-radius:10px;
+  background:#ffedd5;
+  color:#9a3412;
+  border:1px solid #fdba74;
+  font-size:11px;
+  font-weight:900;
+  line-height:1.2;
+  text-transform:uppercase;
+}
+
+.vtc-exam-center{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:92px;
+}
+
+.vtc-exam-center-option{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:12px;
+  font-weight:800;
+  color:#0f172a;
+  white-space:nowrap;
+}
+
+.vtc-exam-center-option input{
+  width:16px;
+  height:16px;
+  margin:0;
+}
+
+.vtc-exam-center-legend{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  margin:10px 0;
+  padding:10px 12px;
+  border:1px solid #e2e8f0;
+  border-radius:12px;
+  background:#fff;
+  font-size:13px;
+}
+
+.vtc-legend-title{ font-weight:900; }
+.vtc-legend-item{ display:inline-flex; align-items:center; gap:6px; font-weight:700; }
+.vtc-legend-swatch{ width:18px; height:18px; border-radius:6px; border:1px solid rgba(15,23,42,.12); }
+.vtc-legend-nice{ background:#dcfce7; }
+.vtc-legend-toulon{ background:#dbeafe; }
+
   tr.row-warning td{
     background: #fff1f2;   /* rose clair (commentaire) */
   }
@@ -1000,7 +1256,8 @@ tr.row-todo td{
     }
 
     try {
-      const resp = await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/refresh-external`, {
+      const traineeSessionId = tr.getAttribute("data-session-id") || sessionId;
+      const resp = await fetch(`/api/sessions/${traineeSessionId}/stagiaires/${traineeId}/refresh-external`, {
         method: "POST",
         headers: { "Content-Type": "application/json" }
       });
@@ -1441,21 +1698,37 @@ bulkParcheminInput?.addEventListener("change", async ()=>{
   // ✅ applique les couleurs au chargement
   applyAllColors();
 
+  document.addEventListener("click", ()=>{
+    document.querySelectorAll("[data-vtc-exam-status-menu]").forEach(menu=>{
+      menu.hidden = true;
+    });
+  });
+
 
   function recomputeRowHighlight(){
   document.querySelectorAll("tr[data-trainee-id]").forEach(tr=>{
+    let center = (tr.getAttribute("data-vtc-exam-center") || "").trim().toLowerCase();
+    const checkedCenter = tr.querySelector("input.vtc-exam-center-checkbox:checked")?.value || "";
+    if(!center && checkedCenter){
+      center = checkedCenter.trim().toLowerCase();
+      tr.setAttribute("data-vtc-exam-center", center);
+    }
     const hasSst = tr.getAttribute("data-has-sst") === "1";
     const hasDiplome = tr.getAttribute("data-has-diplome") === "1";
     const hasAttestation = tr.getAttribute("data-has-attestation") === "1";
 
     const ok = hasSst && hasDiplome && hasAttestation;
 
-    tr.classList.remove("row-ok","row-todo");
+    tr.classList.remove("row-ok","row-todo","row-vtc-nice","row-vtc-toulon");
 
-    if(ok){
+    if(center === "nice"){
+      tr.classList.add("row-vtc-nice");
+    }else if(center === "toulon"){
+      tr.classList.add("row-vtc-toulon");
+    }else if(ok){
       tr.classList.add("row-ok");      // ✅ vert basé sur les 3 docs
     }else{
-      tr.classList.add("row-todo");    // ✅ jaune si manque au moins 1 doc
+      tr.classList.add("row-todo");    // ✅ blanc si manque au moins 1 doc
     }
   });
 }
@@ -1469,31 +1742,125 @@ function normalizeSearchText(value){
     .trim();
 }
 
+function setVtcStatusLabel(label, text, color){
+  if(!label) return;
+  label.textContent = text;
+  label.classList.remove("vtc-status-red", "vtc-status-yellow", "vtc-status-green", "vtc-status-black");
+  label.classList.add(`vtc-status-${color}`);
+}
+
+function getVtcManualStatusMeta(mode, status){
+  const maps = {
+    theory: {
+      waiting_registration: ["En attente inscription examen", "red"],
+      waiting_result: ["En attente résultats examen", "yellow"],
+      success: ["Examen théorique réussi", "green"],
+      failed: ["Echec examen théorique", "black"]
+    },
+    practice: {
+      waiting_registration: ["En attente inscription examen", "red"],
+      waiting_theory: ["En attente réussite théorie", "yellow"],
+      waiting_result: ["En attente résultats pratique", "yellow"],
+      success: ["Examen pratique réussi", "green"],
+      failed: ["Echec examen pratique", "black"]
+    }
+  };
+  const meta = maps[mode]?.[status];
+  return meta ? { text: meta[0], color: meta[1] } : null;
+}
+
+function refreshVtcStatusLabels(tr){
+  if(!tr) return;
+  const cmarOk = tr.getAttribute("data-vtc-cmar-ok") === "1";
+  const theorySent = tr.getAttribute("data-vtc-theory-exam-sent") === "1";
+  const theoryResult = (tr.getAttribute("data-vtc-theory-result") || "").toLowerCase();
+  const theoryManual = (tr.getAttribute("data-vtc-theory-status-manual") || "").toLowerCase();
+  const practiceSent = tr.getAttribute("data-vtc-practice-exam-sent") === "1";
+  const practiceResult = (tr.getAttribute("data-vtc-practice-result") || "").toLowerCase();
+  const practiceManual = (tr.getAttribute("data-vtc-practice-status-manual") || "").toLowerCase();
+  const theoryFailed = theoryResult === "failed" || theoryResult === "non_admissible";
+  const practiceFailed = practiceResult === "failed" || practiceResult === "non_admissible";
+  const theoryManualMeta = getVtcManualStatusMeta("theory", theoryManual);
+  const practiceManualMeta = getVtcManualStatusMeta("practice", practiceManual);
+  const theoryOk = theoryManual ? theoryManual === "success" : (theorySent && !theoryFailed);
+  const practiceOk = practiceManual ? practiceManual === "success" : (practiceSent || practiceResult === "success");
+
+  if(theoryManualMeta){
+    setVtcStatusLabel(tr.querySelector("[data-vtc-theory-label]"), theoryManualMeta.text, theoryManualMeta.color);
+  }else if(theoryFailed){
+    setVtcStatusLabel(tr.querySelector("[data-vtc-theory-label]"), "Echec examen théorique", "black");
+  }else if(!cmarOk){
+    setVtcStatusLabel(tr.querySelector("[data-vtc-theory-label]"), "En attente inscription examen", "red");
+  }else if(theoryOk){
+    setVtcStatusLabel(tr.querySelector("[data-vtc-theory-label]"), "Examen théorique réussi", "green");
+  }else{
+    setVtcStatusLabel(tr.querySelector("[data-vtc-theory-label]"), "En attente résultats examen", "yellow");
+  }
+
+  if(practiceManualMeta){
+    setVtcStatusLabel(tr.querySelector("[data-vtc-practice-label]"), practiceManualMeta.text, practiceManualMeta.color);
+  }else if(practiceFailed){
+    setVtcStatusLabel(tr.querySelector("[data-vtc-practice-label]"), "Echec examen pratique", "black");
+  }else if(!cmarOk){
+    setVtcStatusLabel(tr.querySelector("[data-vtc-practice-label]"), "En attente inscription examen", "red");
+  }else if(practiceOk){
+    setVtcStatusLabel(tr.querySelector("[data-vtc-practice-label]"), "Examen pratique réussi", "green");
+  }else if(!theoryOk){
+    setVtcStatusLabel(tr.querySelector("[data-vtc-practice-label]"), "En attente réussite théorie", "yellow");
+  }else{
+    setVtcStatusLabel(tr.querySelector("[data-vtc-practice-label]"), "En attente résultats pratique", "yellow");
+  }
+
+  tr.setAttribute("data-vtc-theory-ok", theoryOk ? "1" : "0");
+}
+
+function refreshAllVtcStatusLabels(){
+  document.querySelectorAll("tr[data-trainee-id]").forEach(refreshVtcStatusLabels);
+}
+
 function applyRowFilters(){
   const vaeFilter = document.getElementById("vaeStatusFilter");
   const vaeNameSearch = document.getElementById("vaeNameSearch");
   const vtcTheoryFilter = document.getElementById("vtcTheoryFilter");
+  const vtcPracticeFilter = document.getElementById("vtcPracticeFilter");
   const selectedVae = vaeFilter?.value || "all";
   const selectedTheory = vtcTheoryFilter?.value || "all";
+  const selectedPractice = vtcPracticeFilter?.value || "all";
   const searchedName = normalizeSearchText(vaeNameSearch?.value || "");
 
   document.querySelectorAll("tr[data-trainee-id]").forEach(tr => {
     const rowVaeStatus = tr.getAttribute("data-vae-status") || "livret_1_todo";
-    const rowTheoryOk = tr.getAttribute("data-vtc-theory-ok") === "1";
+    const { theoryStatus, practiceStatus } = getVtcStatusValues(tr);
     const rowFullName = normalizeSearchText(`${tr.getAttribute("data-last-name") || ""} ${tr.getAttribute("data-first-name") || ""}`);
 
     const matchVae = selectedVae === "all" || rowVaeStatus === selectedVae;
-    const matchTheory = selectedTheory === "all" || rowTheoryOk;
+    const matchTheory = selectedTheory === "all" || theoryStatus === selectedTheory;
+    const matchPractice = selectedPractice === "all" || practiceStatus === selectedPractice;
     const matchName = !searchedName || rowFullName.includes(searchedName);
 
-    tr.style.display = (matchVae && matchTheory && matchName) ? "" : "none";
+    tr.style.display = (matchVae && matchTheory && matchPractice && matchName) ? "" : "none";
   });
 }
 
+function bindImmediateRowFilters(){
+  document.addEventListener("change", event => {
+    if(event.target?.matches?.("#vaeStatusFilter, #vtcTheoryFilter, #vtcPracticeFilter")){
+      applyRowFilters();
+    }
+  });
 
+  document.addEventListener("input", event => {
+    if(event.target?.matches?.("#vaeNameSearch")){
+      applyRowFilters();
+    }
+  });
+}
+
+bindImmediateRowFilters();
 
 
 // au chargement
+refreshAllVtcStatusLabels();
 recomputeRowHighlight();
 
 // à chaque changement de select, recalcul instant
@@ -1728,17 +2095,22 @@ document.querySelectorAll("select.sel").forEach(sel=>{
   // =========================
   let debounceTimers = {};
 
-  async function saveField(traineeId, field, value){
-    const res = await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
+  async function saveField(traineeId, field, value, traineeSessionId = sessionId){
+    const res = await fetch(`/api/sessions/${traineeSessionId}/stagiaires/${traineeId}/update`, {
       method:"POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({ [field]: value })
     });
-    return await res.json().catch(()=> ({}));
+    const data = await res.json().catch(()=> ({}));
+    if(!res.ok || data?.ok === false){
+      throw new Error(data?.error || `Erreur sauvegarde (${res.status})`);
+    }
+    return data;
   }
 
   document.querySelectorAll("tr[data-trainee-id]").forEach(tr=>{
     const traineeId = tr.getAttribute("data-trainee-id");
+    const traineeSessionId = tr.getAttribute("data-session-id") || sessionId;
 
   
 
@@ -1753,7 +2125,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       }
       forceDossier.addEventListener("change", async ()=>{
         try{
-          const data = await saveField(traineeId, "force_dossier_complete", forceDossier.checked);
+          const data = await saveField(traineeId, "force_dossier_complete", forceDossier.checked, traineeSessionId);
           dossierSelect.disabled = forceDossier.checked;
           if (data?.dossier_status) {
             dossierSelect.value = data.dossier_status;
@@ -1788,8 +2160,19 @@ document.querySelectorAll("select.sel").forEach(sel=>{
           applyRowFilters();
         }
 
+        const previousVtcCmarManualOk = tr.getAttribute("data-vtc-cmar-manual-ok") || "0";
+        const previousVtcCmarOk = tr.getAttribute("data-vtc-cmar-ok") || "0";
+        if(field === "vtc_cmar_manual_ok"){
+          const manualOk = value === "true";
+          const examFeesPaid = tr.getAttribute("data-vtc-exam-fees-paid") === "1";
+          tr.setAttribute("data-vtc-cmar-manual-ok", manualOk ? "1" : "0");
+          tr.setAttribute("data-vtc-cmar-ok", (manualOk || examFeesPaid) ? "1" : "0");
+          refreshVtcStatusLabels(tr);
+          applyRowFilters();
+        }
+
         try{
-          const data = await saveField(traineeId, field, value);
+          const data = await saveField(traineeId, field, value, traineeSessionId);
           sel.setAttribute("data-current-value", value);
           if(field === "vtc_practice_convocation_sent_at"){
             sel.value = value ? "validated" : "pending";
@@ -1803,8 +2186,54 @@ document.querySelectorAll("select.sel").forEach(sel=>{
           if(field === "vtc_practice_convocation_sent_at"){
             sel.value = previousSelectValue ? "validated" : "pending";
           }
+          if(field === "vtc_cmar_manual_ok"){
+            tr.setAttribute("data-vtc-cmar-manual-ok", previousVtcCmarManualOk);
+            tr.setAttribute("data-vtc-cmar-ok", previousVtcCmarOk);
+            refreshVtcStatusLabels(tr);
+            applyRowFilters();
+          }
           applyStatusPill(sel);
           alert("Erreur sauvegarde");
+        }
+      });
+    });
+
+    tr.querySelectorAll("[data-vtc-exam-status-trigger]").forEach(trigger=>{
+      trigger.addEventListener("click", (event)=>{
+        event.stopPropagation();
+        const mode = trigger.getAttribute("data-vtc-exam-status-trigger");
+        const menu = tr.querySelector(`[data-vtc-exam-status-menu="${mode}"]`);
+        if(!menu) return;
+        document.querySelectorAll("[data-vtc-exam-status-menu]").forEach(other=>{
+          if(other !== menu) other.hidden = true;
+        });
+        menu.hidden = !menu.hidden;
+      });
+    });
+
+    tr.querySelectorAll("[data-vtc-exam-status-choice]").forEach(choice=>{
+      choice.addEventListener("click", async (event)=>{
+        event.stopPropagation();
+        const menu = choice.closest("[data-vtc-exam-status-menu]");
+        const mode = menu?.getAttribute("data-vtc-exam-status-menu");
+        const field = choice.getAttribute("data-field");
+        if(!mode || !field) return;
+
+        const previousValue = tr.getAttribute(`data-vtc-${mode}-status-manual`) || "";
+        const value = choice.getAttribute("data-vtc-exam-status-choice") || "";
+
+        tr.setAttribute(`data-vtc-${mode}-status-manual`, value);
+        refreshVtcStatusLabels(tr);
+        applyRowFilters();
+        if(menu) menu.hidden = true;
+
+        try{
+          await saveField(traineeId, field, value, traineeSessionId);
+        }catch(e){
+          tr.setAttribute(`data-vtc-${mode}-status-manual`, previousValue);
+          refreshVtcStatusLabels(tr);
+          applyRowFilters();
+          alert("Erreur sauvegarde du statut VTC");
         }
       });
     });
@@ -1819,7 +2248,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
         practiceConvocationBtn.setAttribute("data-current-value", nextValue);
 
         try{
-          await saveField(traineeId, "vtc_practice_convocation_sent_at", nextValue);
+          await saveField(traineeId, "vtc_practice_convocation_sent_at", nextValue, traineeSessionId);
         }catch(e){
           practiceConvocationBtn.textContent = previousValue ? "🟢" : "🔴";
           practiceConvocationBtn.setAttribute("data-current-value", previousValue);
@@ -1827,6 +2256,30 @@ document.querySelectorAll("select.sel").forEach(sel=>{
         }
       });
     }
+
+    tr.querySelectorAll("input.vtc-exam-center-checkbox").forEach(checkbox=>{
+      checkbox.addEventListener("change", async ()=>{
+        const previousCenter = tr.getAttribute("data-vtc-exam-center") || "";
+        const nextCenter = checkbox.checked ? checkbox.value : "";
+
+        tr.querySelectorAll("input.vtc-exam-center-checkbox").forEach(other=>{
+          other.checked = checkbox.checked && other === checkbox;
+        });
+        tr.setAttribute("data-vtc-exam-center", nextCenter);
+        recomputeRowHighlight();
+
+        try{
+          await saveField(traineeId, "vtc_exam_center", nextCenter, traineeSessionId);
+        }catch(e){
+          tr.setAttribute("data-vtc-exam-center", previousCenter);
+          tr.querySelectorAll("input.vtc-exam-center-checkbox").forEach(other=>{
+            other.checked = other.value === previousCenter;
+          });
+          recomputeRowHighlight();
+          alert("Erreur sauvegarde du centre d'examen");
+        }
+      });
+    });
 
     // inline inputs autosave (email/tel)
     tr.querySelectorAll("input.inline-edit").forEach(input => {
@@ -1838,7 +2291,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
         if(debounceTimers[key]) clearTimeout(debounceTimers[key]);
         debounceTimers[key] = setTimeout(async ()=>{
           try{
-            await saveField(traineeId, field, value);
+            await saveField(traineeId, field, value, traineeSessionId);
           }catch(e){
             // silencieux
           }
@@ -1856,7 +2309,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
         if(debounceTimers[traineeId]) clearTimeout(debounceTimers[traineeId]);
         debounceTimers[traineeId] = setTimeout(async ()=>{
           try{
-            await saveField(traineeId, field, value);
+            await saveField(traineeId, field, value, traineeSessionId);
           }catch(e){
             // silencieux
           }
@@ -1893,21 +2346,6 @@ function renderDocBadges(){
 
   // au chargement
 renderDocBadges();
-
-const vaeStatusFilter = document.getElementById("vaeStatusFilter");
-if(vaeStatusFilter){
-  vaeStatusFilter.addEventListener("change", applyRowFilters);
-}
-
-const vaeNameSearch = document.getElementById("vaeNameSearch");
-if(vaeNameSearch){
-  vaeNameSearch.addEventListener("input", applyRowFilters);
-}
-
-const vtcTheoryFilter = document.getElementById("vtcTheoryFilter");
-if(vtcTheoryFilter){
-  vtcTheoryFilter.addEventListener("change", applyRowFilters);
-}
 
 applyRowFilters();
 

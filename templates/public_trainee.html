@@ -1215,9 +1215,9 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
 {% set has_submission = has_file or candidate_sheet_sent %}
   {% set can_replace = (has_file and up == "NON CONFORME") %}
   {% set is_pending_review = (has_submission and up != "CONFORME" and up != "NON CONFORME") %}
-  {% set max_files = 2 if d.key == "id" else (0 if d.key == "livret_2" else 1) %}
-  {% set can_add_more = (d.key == "livret_2") or ((file_tokens|length) < max_files) %}
-{% set show_upload = ((not has_file) or can_replace or (d.key == "livret_2" and can_add_more and not is_pending_review)) and not (d.key == "permis" and trainee.no_permis) %}
+  {% set max_files = 2 if d.key == "id" else (0 if d.key in ["livret_2", "complementary_documents"] else 1) %}
+  {% set can_add_more = (d.key in ["livret_2", "complementary_documents"]) or ((file_tokens|length) < max_files) %}
+{% set show_upload = ((not has_file) or can_replace or (d.key in ["livret_2", "complementary_documents"] and can_add_more and not is_pending_review)) and not (d.key == "permis" and trainee.no_permis) %}
 
     {% set row_cls = "missing" %}
     {% if has_submission %}
@@ -1359,7 +1359,11 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
         </div>
       {% endif %}
     {% else %}
-      <div class="doctag pending">⏳ Document déposé — en attente de contrôle</div>
+      {% if d.key == "complementary_documents" %}
+        <div class="doctag pending">📎 Documents complémentaires déposés</div>
+      {% else %}
+        <div class="doctag pending">⏳ Document déposé — en attente de contrôle</div>
+      {% endif %}
     {% endif %}
   {% endif %}
 {% endif %}
@@ -1386,7 +1390,7 @@ id="upload_{{ d.key }}"
   <div id="id_files_summary" class="muted" style="margin-top:4px;">Aucun fichier sélectionné.</div>
   <ul id="id_files_list" class="muted" style="margin:4px 0 0 18px;"></ul>
   <div class="muted" style="margin-top:4px;">Vous pouvez sélectionner 1 ou 2 fichiers avant de cliquer sur “Déposer”.</div>
-{% elif d.key == "livret_2" %}
+{% elif d.key in ["livret_2", "complementary_documents"] %}
   <input type="file"
          name="files"
          multiple
@@ -1400,7 +1404,7 @@ id="upload_{{ d.key }}"
 {% endif %}
 
 <button class="btn small upload-cta" type="submit">
-  {% if d.key == "livret_2" %}Déposer mon Livret 2{% elif can_replace %}Remplacer{% elif d.key == "id" and has_file %}Ajouter un autre{% else %}Déposer{% endif %}
+  {% if d.key == "livret_2" %}Déposer mon Livret 2{% elif d.key == "complementary_documents" %}Déposer un document complémentaire{% elif can_replace %}Remplacer{% elif d.key == "id" and has_file %}Ajouter un autre{% else %}Déposer{% endif %}
 </button>
 <div class="upload-selection-feedback" aria-live="polite"></div>
 
