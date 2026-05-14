@@ -136,6 +136,10 @@
     .complement-doc-delete{width:24px;height:24px;border:0;border-radius:999px;background:#fee2e2;color:#991b1b;font-size:16px;font-weight:1000;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;margin-right:6px;transition:background .15s ease, transform .15s ease;}
     .complement-doc-delete:hover,.complement-doc-delete:focus{background:#fecaca;transform:scale(1.06);}
     .attestation-imported-note{width:100%;margin:0;font-size:13px;color:#64748b;font-weight:700;}
+    .scotia-added-documents{display:grid;gap:10px;width:100%;}
+    .scotia-added-documents-group{border:1px solid #e2e8f0;border-radius:16px;background:#f8fafc;padding:10px;}
+    .scotia-added-documents-title{margin:0 0 8px;font-size:13px;font-weight:1000;color:#0f172a;}
+    .scotia-added-documents-files{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
     .scotia-comment-wrap{display:flex;flex-direction:column;gap:6px;width:100%;}.scotia-comment-label{font-size:13px;font-weight:1000;color:#374151;}.scotia-comment-input{width:100%;min-height:96px;resize:vertical;border:1px solid #cbd5e1;border-radius:14px;padding:11px 12px;font:inherit;line-height:1.35;background:#fff;}.scotia-comment-status{font-size:12px;color:#64748b;min-height:16px;}
     .btn-danger-solid{background:#b91c1c;color:#fff;border-color:#b91c1c;box-shadow:0 14px 26px rgba(185,28,28,.18);}.btn-danger-solid:hover{border-color:#991b1b;}
     .btn-complement-animated{background:linear-gradient(135deg,#fb923c,#f97316);color:#fff;border-color:#ea580c;box-shadow:0 10px 22px rgba(249,115,22,.30);animation:complementPulse 1.35s ease-in-out infinite;}.btn-complement-animated:hover{border-color:#c2410c;}.btn-complement-animated.is-active{animation:none;box-shadow:0 0 0 3px rgba(249,115,22,.30);}
@@ -233,6 +237,7 @@
               {% set livret_2_is_ok = it.scotia_livret_2_status == 'livret_2_ok' %}
               {% set livret_2_is_review = it.scotia_livret_2_status == 'livret_2_review' %}
               {% set complementary_documents = it.complementary_documents or [] %}
+              {% set added_document_groups = it.added_document_groups or [] %}
               {% if not livret_1_processed and not livret_1_is_complement %}
                 {% set scotia_category = 'l1-action' %}
               {% elif it.scotia_status == 'recevable' and has_livret_2 and not livret_2_processed %}
@@ -399,8 +404,32 @@
                         <div class="scotia-subpanel">
                           <div class="scotia-subpanel-title-wrap"><h4 class="scotia-subpanel-title">Autres actions</h4></div>
                           <div class="scotia-subpanel-actions">
+                            <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/documents/upload" style="display:flex;gap:6px;align-items:center;">
+                              <input id="added-documents-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="files" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.zip" multiple required style="display:none;" onchange="submitAddedDocumentsForm(this)">
+                              <button class="btn btn-outline" type="button" onclick="triggerAddedDocumentsUpload('{{ it.session_id }}','{{ it.trainee_id }}')">Ajouter documents</button>
+                            </form>
                             <form method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/delete" onsubmit="return confirm('Supprimer définitivement cette personne de la session ?');"><button class="btn btn-delete-person btn-danger-solid" type="submit">Supprimer personne</button></form>
                           </div>
+                          {% if added_document_groups %}
+                            <div class="scotia-added-documents">
+                              {% for group in added_document_groups %}
+                                <div class="scotia-added-documents-group">
+                                  <p class="scotia-added-documents-title">Documents ajoutés le {{ group.date }}</p>
+                                  <div class="scotia-added-documents-files">
+                                    {% for token in group.files %}
+                                      <span class="complement-doc-chip">
+                                        <a class="btn btn-outline" href="/scotia/uploads/{{ token }}" target="_blank">Document {{ loop.index }}</a>
+                                        <form class="complement-doc-delete-form" method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/documents/delete" onsubmit="return confirm('Supprimer ce document ajouté ?');">
+                                          <input type="hidden" name="token" value="{{ token }}">
+                                          <button class="complement-doc-delete" type="submit" title="Supprimer le document {{ loop.index }}" aria-label="Supprimer le document {{ loop.index }}">×</button>
+                                        </form>
+                                      </span>
+                                    {% endfor %}
+                                  </div>
+                                </div>
+                              {% endfor %}
+                            </div>
+                          {% endif %}
                         </div>
                       </div>
                     </div>
@@ -434,6 +463,29 @@ function triggerComplementaryDocumentsUpload(sessionId, traineeId){
   const input = document.getElementById(`complementary-documents-file-${sessionId}-${traineeId}`);
   if(!input || input.disabled) return;
   input.click();
+}
+
+function triggerAddedDocumentsUpload(sessionId, traineeId){
+  const input = document.getElementById(`added-documents-file-${sessionId}-${traineeId}`);
+  if(!input || input.disabled) return;
+  input.click();
+}
+
+function submitAddedDocumentsForm(input){
+  if(!input || !input.files || !input.files.length) return;
+  const allowed = ['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.doc', '.docx', '.zip'];
+  const invalid = Array.from(input.files).some((file)=>{
+    const name = (file?.name || '').toLowerCase();
+    return !allowed.some((ext)=> name.endsWith(ext));
+  });
+  if(invalid){
+    alert('Veuillez importer uniquement des documents PDF, Word, ZIP ou des images.');
+    input.value = '';
+    return;
+  }
+  const form = input.closest('form');
+  if(!form) return;
+  form.submit();
 }
 
 function submitComplementaryDocumentsForm(input){
