@@ -7397,6 +7397,58 @@ def _append_complementary_documents(session_id: str, trainee_id: str, t: Dict[st
     return stored_count
 
 
+def _remove_complementary_document_token(t: Dict[str, Any], token: str) -> bool:
+    """Retire un document complémentaire des listes SCOTIA et historiques."""
+    token = (token or "").strip()
+    if not token:
+        return False
+
+    removed = False
+
+    scotia_tokens = t.get("scotia_complementary_documents")
+    if isinstance(scotia_tokens, list):
+        filtered_scotia_tokens = [x for x in scotia_tokens if not (isinstance(x, str) and x == token)]
+        if len(filtered_scotia_tokens) != len(scotia_tokens):
+            t["scotia_complementary_documents"] = filtered_scotia_tokens
+            removed = True
+
+    docs = t.get("documents") if isinstance(t.get("documents"), list) else []
+    for doc in docs:
+        if not isinstance(doc, dict) or doc.get("key") != "complementary_documents":
+            continue
+
+        files = doc.get("files") if isinstance(doc.get("files"), list) else []
+        filtered_files = [x for x in files if not (isinstance(x, str) and x == token)]
+        if len(filtered_files) != len(files):
+            doc["files"] = filtered_files
+            removed = True
+
+        if (doc.get("file") or "").strip() == token:
+            doc["file"] = filtered_files[0] if filtered_files else ""
+            removed = True
+
+        if removed and not filtered_files and not (doc.get("file") or "").strip():
+            doc["status"] = "NON DÉPOSÉ"
+
+    if removed:
+        remaining = []
+        scotia_remaining = t.get("scotia_complementary_documents")
+        if isinstance(scotia_remaining, list):
+            remaining.extend([x for x in scotia_remaining if isinstance(x, str) and x.strip()])
+        for doc in docs:
+            if isinstance(doc, dict) and doc.get("key") == "complementary_documents":
+                doc_files = doc.get("files") if isinstance(doc.get("files"), list) else []
+                remaining.extend([x for x in doc_files if isinstance(x, str) and x.strip()])
+                doc_file = (doc.get("file") or "").strip()
+                if doc_file:
+                    remaining.append(doc_file)
+        if not remaining and isinstance(t.get("vae_action_dates"), dict):
+            t["vae_action_dates"].pop("complementary_documents_received", None)
+        t["updated_at"] = _now_iso()
+
+    return removed
+
+
 @app.post('/scotia/sessions/<session_id>/stagiaires/<trainee_id>/complements/upload')
 @scotia_login_required
 def scotia_upload_complementary_documents(session_id: str, trainee_id: str):
@@ -7418,6 +7470,24 @@ def scotia_upload_complementary_documents(session_id: str, trainee_id: str):
         s.pop('stagiaires', None)
         save_data(data)
         _notify_scotia_complementary_documents(t, s, stored_count, "l'espace SCOTIA")
+    return redirect(url_for('scotia_dashboard'))
+
+
+@app.post('/scotia/sessions/<session_id>/stagiaires/<trainee_id>/complements/delete')
+@scotia_login_required
+def scotia_delete_complementary_document(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        abort(404)
+
+    token = (request.form.get('token') or '').strip()
+    if token and _remove_complementary_document_token(t, token):
+        _safe_remove_file(_detokenize_path(token))
+        s['trainees'] = trainees
+        s.pop('stagiaires', None)
+        save_data(data)
+
     return redirect(url_for('scotia_dashboard'))
 
 
