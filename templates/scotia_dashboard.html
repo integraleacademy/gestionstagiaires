@@ -243,7 +243,8 @@
                       <div class="scotia-item-toggle-name">{{ it.first_name }} {{ it.last_name }}</div>
                       <div class="scotia-meta-row">
                         <span class="scotia-chip">📚 {{ it.session_name }}</span>
-                        <span class="scotia-chip">📤 L1 transmis : {{ it.vae_sent_at or 'date inconnue' }}</span>
+                        <span class="scotia-chip">📤 L1 transmis le : {{ it.livret_1_sent_at or 'date inconnue' }}</span>
+                        {% if it.livret_2_sent_at %}<span class="scotia-chip">📤 L2 transmis le : {{ it.livret_2_sent_at }}</span>{% endif %}
                         {% if it.email %}<span class="scotia-chip scotia-chip--mail">✉️ {{ it.email }}</span>{% endif %}
                         {% if it.phone %}<span class="scotia-chip scotia-chip--phone">📞 {{ it.phone }}</span>{% endif %}
                       </div>

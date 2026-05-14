@@ -7173,6 +7173,8 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "email": (t.get("email") or "").strip(),
                 "phone": (t.get("phone") or "").strip(),
                 "vae_sent_at": sent_at,
+                "livret_1_sent_at": livret_1_sent_at,
+                "livret_2_sent_at": livret_2_sent_at,
                 "scotia_force_visible": force_scotia_visibility,
                 "scotia_status": (t.get("scotia_status") or "").strip(),
                 "scotia_processed_at": (t.get("scotia_processed_at") or "").strip(),
