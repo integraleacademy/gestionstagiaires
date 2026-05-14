@@ -41,6 +41,7 @@
     .scotia-filter-group .scotia-filter-title h2{margin-bottom:0;}
     .scotia-filter-group h2{margin:0 0 10px;color:#fff;font-size:16px;letter-spacing:-.02em;}
     .scotia-action-bubble{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:6px 10px;background:#ef4444;color:#fff;font-size:12px;font-weight:1000;box-shadow:0 10px 24px rgba(239,68,68,.28);white-space:nowrap;}
+    .scotia-action-bubble--animated{animation:scotiaActionBubblePulse 1.6s ease-in-out infinite;}
     .scotia-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch;flex:1;}
     .scotia-stats--actions{grid-template-columns:repeat(3,minmax(0,1fr));}
     .scotia-stats--wide{grid-template-columns:repeat(2,minmax(0,1fr));}
@@ -66,8 +67,7 @@
     }
     .scotia-stat:hover,.scotia-stat.is-active{transform:translateY(-2px);box-shadow:0 18px 38px rgba(15,23,42,.22), inset 0 1px 0 rgba(255,255,255,.16);}
     .scotia-stat:disabled{cursor:not-allowed;opacity:.54;filter:grayscale(.75);transform:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.16);}
-    .scotia-stat--action:not(:disabled){animation:scotiaActionPulse 1.6s ease-in-out infinite;}
-    @keyframes scotiaActionPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.26), inset 0 1px 0 rgba(255,255,255,.16);}50%{box-shadow:0 0 0 9px rgba(255,255,255,0),0 18px 38px rgba(15,23,42,.20), inset 0 1px 0 rgba(255,255,255,.16);}}
+    @keyframes scotiaActionBubblePulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.34),0 10px 24px rgba(239,68,68,.28);transform:scale(1);}50%{box-shadow:0 0 0 9px rgba(239,68,68,0),0 14px 30px rgba(239,68,68,.38);transform:scale(1.04);}}
     .scotia-stat strong{display:block;font-size:34px;line-height:1;color:#fff;letter-spacing:-.04em;}
     .scotia-stat span{display:block;margin-top:8px;color:rgba(255,255,255,.82);font-size:13px;font-weight:850;line-height:1.25;}
     .scotia-stat small{display:inline-flex;margin-top:auto;padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.16);color:rgba(255,255,255,.86);font-size:11px;font-weight:900;}
@@ -185,12 +185,13 @@
         <section class="scotia-filter-group" aria-label="Actions à mener">
           <div class="scotia-filter-title">
             <h2>Actions à mener</h2>
-            <span class="scotia-action-bubble">{{ stats.l1_pending + stats.l2_pending + stats.complement_docs }} actions à mener</span>
+            {% set actions_total = stats.l1_pending + stats.l2_pending + stats.complement_docs %}
+            <span class="scotia-action-bubble {% if actions_total > 0 %}scotia-action-bubble--animated{% endif %}">{{ actions_total }} action{% if actions_total > 1 %}s{% endif %} à mener</span>
           </div>
           <div class="scotia-stats scotia-stats--actions">
-            <button type="button" class="scotia-stat scotia-stat--orange scotia-stat--action" data-filter="l1-action" {% if stats.l1_pending == 0 %}disabled{% endif %}><strong>{{ stats.l1_pending }}</strong><span>Livrets 1 à valider</span><small>Voir les Livrets 1 à valider</small></button>
-            <button type="button" class="scotia-stat scotia-stat--green scotia-stat--action" data-filter="l2-action" {% if stats.l2_pending == 0 %}disabled{% endif %}><strong>{{ stats.l2_pending }}</strong><span>Livrets 2 à valider</span><small>Voir les Livrets 2 à valider</small></button>
-            <button type="button" class="scotia-stat scotia-stat--red scotia-stat--action" data-filter="complement-docs" {% if stats.complement_docs == 0 %}disabled{% endif %}><strong>{{ stats.complement_docs }}</strong><span>Nouveaux documents déposés à consulter</span><small>Voir les dossiers</small></button>
+            <button type="button" class="scotia-stat scotia-stat--orange" data-filter="l1-action" {% if stats.l1_pending == 0 %}disabled{% endif %}><strong>{{ stats.l1_pending }}</strong><span>Livrets 1 à valider</span><small>Voir les Livrets 1 à valider</small></button>
+            <button type="button" class="scotia-stat scotia-stat--green" data-filter="l2-action" {% if stats.l2_pending == 0 %}disabled{% endif %}><strong>{{ stats.l2_pending }}</strong><span>Livrets 2 à valider</span><small>Voir les Livrets 2 à valider</small></button>
+            <button type="button" class="scotia-stat scotia-stat--red" data-filter="complement-docs" {% if stats.complement_docs == 0 %}disabled{% endif %}><strong>{{ stats.complement_docs }}</strong><span>Nouveaux documents déposés à consulter</span><small>Voir les dossiers</small></button>
           </div>
         </section>
         <section class="scotia-filter-group" aria-label="Dossiers en attente">
