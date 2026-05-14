@@ -35,16 +35,17 @@
     .scotia-hero-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end;}
     .scotia-hero .btn{border-color:rgba(255,255,255,.24);}
     .scotia-hero .btn-outline{background:rgba(255,255,255,.12);color:#fff;backdrop-filter:blur(10px);}
-    .scotia-filter-groups{position:relative;z-index:2;display:grid;grid-template-columns:1.05fr 1.45fr;gap:14px;margin-top:20px;}
-    .scotia-filter-group{border:1px solid rgba(255,255,255,.20);border-radius:24px;padding:14px;background:rgba(255,255,255,.10);backdrop-filter:blur(14px);}
+    .scotia-filter-groups{position:relative;z-index:2;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;margin-top:20px;align-items:stretch;}
+    .scotia-filter-group{border:1px solid rgba(255,255,255,.20);border-radius:24px;padding:14px;background:rgba(255,255,255,.10);backdrop-filter:blur(14px);display:flex;flex-direction:column;}
     .scotia-filter-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px;}
-    .scotia-filter-group h2{margin:0;color:#fff;font-size:16px;letter-spacing:-.02em;}
+    .scotia-filter-group .scotia-filter-title h2{margin-bottom:0;}
+    .scotia-filter-group h2{margin:0 0 10px;color:#fff;font-size:16px;letter-spacing:-.02em;}
     .scotia-action-bubble{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:6px 10px;background:#ef4444;color:#fff;font-size:12px;font-weight:1000;box-shadow:0 10px 24px rgba(239,68,68,.28);white-space:nowrap;}
-    .scotia-stats{display:grid;grid-template-columns:repeat(2,minmax(150px,1fr));gap:12px;}
-    .scotia-stats--actions{grid-template-columns:repeat(3,minmax(150px,1fr));}
-    .scotia-stats--wide{grid-template-columns:repeat(2,minmax(150px,1fr));}
+    .scotia-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch;flex:1;}
+    .scotia-stats--actions{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .scotia-stats--wide{grid-template-columns:repeat(2,minmax(0,1fr));}
     .scotia-filter-group--full{grid-column:1/-1;}
-    .scotia-active-row{display:grid;grid-template-columns:minmax(220px,360px);}
+    .scotia-active-row{display:grid;grid-template-columns:1fr;align-items:stretch;flex:1;}
     .scotia-stat{
       min-height:128px;
       border:1px solid rgba(255,255,255,.20);
@@ -54,6 +55,10 @@
       backdrop-filter:blur(14px);
       box-shadow:inset 0 1px 0 rgba(255,255,255,.16);
       text-align:left;
+      display:flex;
+      flex-direction:column;
+      align-items:flex-start;
+      justify-content:flex-start;
       cursor:pointer;
       transition:transform .16s ease, box-shadow .16s ease, opacity .16s ease;
       width:100%;
@@ -65,7 +70,7 @@
     @keyframes scotiaActionPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.26), inset 0 1px 0 rgba(255,255,255,.16);}50%{box-shadow:0 0 0 9px rgba(255,255,255,0),0 18px 38px rgba(15,23,42,.20), inset 0 1px 0 rgba(255,255,255,.16);}}
     .scotia-stat strong{display:block;font-size:34px;line-height:1;color:#fff;letter-spacing:-.04em;}
     .scotia-stat span{display:block;margin-top:8px;color:rgba(255,255,255,.82);font-size:13px;font-weight:850;line-height:1.25;}
-    .scotia-stat small{display:inline-flex;margin-top:10px;padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.16);color:rgba(255,255,255,.86);font-size:11px;font-weight:900;}
+    .scotia-stat small{display:inline-flex;margin-top:auto;padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.16);color:rgba(255,255,255,.86);font-size:11px;font-weight:900;}
     .scotia-stat--orange{background:linear-gradient(135deg,rgba(249,115,22,.95),rgba(251,191,36,.58));}
     .scotia-stat--blue{background:linear-gradient(135deg,rgba(37,99,235,.94),rgba(56,189,248,.50));}
     .scotia-stat--green{background:linear-gradient(135deg,rgba(22,163,74,.94),rgba(74,222,128,.48));}
@@ -134,7 +139,7 @@
     .btn-pending-animated{background:linear-gradient(135deg,#fb923c,#f97316);color:#fff;border:1px solid #ea580c;box-shadow:0 10px 22px rgba(249,115,22,.30);animation:pendingPulse 1.6s ease-in-out infinite;cursor:default;}.btn-pending-animated:hover,.btn-pending-animated:focus{transform:none;box-shadow:0 10px 22px rgba(249,115,22,.30);}
     @keyframes pendingPulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,.44),0 10px 22px rgba(249,115,22,.30);}50%{box-shadow:0 0 0 8px rgba(249,115,22,0),0 10px 22px rgba(249,115,22,.30);}}
     .scotia-empty{padding:42px 18px;text-align:center;border:1px dashed #cbd5e1;border-radius:22px;background:#f8fafc;color:#64748b;font-weight:800;}
-    @media (max-width:1150px){.scotia-filter-groups{grid-template-columns:1fr;}.scotia-stats,.scotia-stats--actions,.scotia-stats--wide{grid-template-columns:repeat(3,1fr);}.scotia-workspace{grid-template-columns:1fr;}.scotia-side{position:static;grid-template-columns:repeat(2,minmax(0,1fr));}.scotia-panel-grid{grid-template-columns:1fr;}}
+    @media (max-width:1150px){.scotia-filter-groups{grid-template-columns:1fr;}.scotia-stats,.scotia-stats--actions,.scotia-stats--wide{grid-template-columns:repeat(3,minmax(0,1fr));}.scotia-stats--wide{grid-template-columns:repeat(2,minmax(0,1fr));}.scotia-workspace{grid-template-columns:1fr;}.scotia-side{position:static;grid-template-columns:repeat(2,minmax(0,1fr));}.scotia-panel-grid{grid-template-columns:1fr;}}
     @media (max-width:760px){.scotia-shell{padding:16px 10px 30px;}.scotia-hero{padding:20px;border-radius:24px;}.scotia-stats,.scotia-stats--actions,.scotia-stats--wide,.scotia-active-row,.scotia-side{grid-template-columns:1fr;}.scotia-item-toggle{grid-template-columns:1fr;}.scotia-status-stack{justify-content:flex-start;}.scotia-person{align-items:flex-start;}.scotia-avatar{width:44px;height:44px;border-radius:15px;}.scotia-doc-list li{align-items:flex-start;flex-direction:column;}.scotia-subpanel-actions .btn,.scotia-subpanel-actions form{width:100%;}.scotia-subpanel-actions form .btn{width:100%;}}
   </style>
 </head>
