@@ -1,6 +1,8 @@
 import io
 import unittest
 
+from flask import render_template
+
 import app as gestion_app
 
 
@@ -367,6 +369,72 @@ class AdminLivret2UploadTests(unittest.TestCase):
         self.assertIsNotNone(doc)
         self.assertTrue(doc.get('files'))
         self.assertEqual(doc['files'][0], 'uploads/S1/T1/documents/livret2.zip')
+
+
+class ScotiaItemsTests(unittest.TestCase):
+    def test_all_scotia_items_exposes_livret_transmission_dates_separately(self):
+        payload = {
+            'sessions': [
+                {
+                    'id': 'S1',
+                    'name': 'VAE DESP 2026',
+                    'training_type': 'DIRIGEANT VAE',
+                    'trainees': [
+                        {
+                            'id': 'T1',
+                            'first_name': 'Jean',
+                            'last_name': 'Dupont',
+                            'vae_action_dates': {
+                                'livret_1_transmitted_scotia': '10/05/2026',
+                                'livret_2_transmitted_scotia': '12/05/2026',
+                            },
+                        }
+                    ],
+                }
+            ]
+        }
+
+        items = gestion_app._all_scotia_items(payload)
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]['livret_1_sent_at'], '10/05/2026')
+        self.assertEqual(items[0]['livret_2_sent_at'], '12/05/2026')
+        self.assertEqual(items[0]['vae_sent_at'], '12/05/2026')
+
+    def test_scotia_dashboard_displays_livret_2_transmission_date(self):
+        item = {
+            'session_id': 'S1',
+            'session_name': 'VAE DESP 2026',
+            'trainee_id': 'T1',
+            'first_name': 'Jean',
+            'last_name': 'Dupont',
+            'email': 'jean@example.com',
+            'phone': '0600000000',
+            'vae_sent_at': '12/05/2026',
+            'livret_1_sent_at': '10/05/2026',
+            'livret_2_sent_at': '12/05/2026',
+            'scotia_force_visible': False,
+            'scotia_status': 'recevable',
+            'scotia_processed_at': '',
+            'scotia_comment': '',
+            'scotia_livret_2_status': '',
+            'scotia_livret_2_processed_at': '',
+            'documents': [],
+            'prerequis_interview_sheet': '',
+            'complementary_documents': [],
+            'deliverables': {'livret_2': 'uploads/S1/T1/livret2.pdf'},
+            'attestation_recevabilite_imported_at': '',
+            'livret_2_imported_at': '',
+            'candidate_sheet_available': False,
+            'vae_dossier_id': '',
+            'vae_justificatifs': [],
+        }
+
+        with gestion_app.app.test_request_context('/scotia'):
+            html = render_template('scotia_dashboard.html', items=[item])
+
+        self.assertIn('L1 transmis le : 10/05/2026', html)
+        self.assertIn('L2 transmis le : 12/05/2026', html)
 
 
 class ScotiaLivret2ResetTests(unittest.TestCase):
