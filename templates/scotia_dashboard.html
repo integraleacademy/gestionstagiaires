@@ -37,7 +37,9 @@
     .scotia-hero .btn-outline{background:rgba(255,255,255,.12);color:#fff;backdrop-filter:blur(10px);}
     .scotia-filter-groups{position:relative;z-index:2;display:grid;grid-template-columns:1.05fr 1.45fr;gap:14px;margin-top:20px;}
     .scotia-filter-group{border:1px solid rgba(255,255,255,.20);border-radius:24px;padding:14px;background:rgba(255,255,255,.10);backdrop-filter:blur(14px);}
-    .scotia-filter-group h2{margin:0 0 10px;color:#fff;font-size:16px;letter-spacing:-.02em;}
+    .scotia-filter-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px;}
+    .scotia-filter-group h2{margin:0;color:#fff;font-size:16px;letter-spacing:-.02em;}
+    .scotia-action-bubble{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:6px 10px;background:#ef4444;color:#fff;font-size:12px;font-weight:1000;box-shadow:0 10px 24px rgba(239,68,68,.28);white-space:nowrap;}
     .scotia-stats{display:grid;grid-template-columns:repeat(2,minmax(150px,1fr));gap:12px;}
     .scotia-stats--wide{grid-template-columns:repeat(3,minmax(150px,1fr));}
     .scotia-stat{
@@ -66,7 +68,7 @@
     .scotia-stat--green{background:linear-gradient(135deg,rgba(22,163,74,.94),rgba(74,222,128,.48));}
     .scotia-stat--purple{background:linear-gradient(135deg,rgba(124,58,237,.92),rgba(216,180,254,.40));}
     .scotia-stat--slate{background:linear-gradient(135deg,rgba(51,65,85,.92),rgba(148,163,184,.36));}
-    .scotia-workspace{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:18px;align-items:start;margin-top:18px;}
+    .scotia-workspace{display:block;margin-top:18px;}
     .scotia-board{border:1px solid rgba(148,163,184,.24);border-radius:26px;background:rgba(255,255,255,.82);box-shadow:0 20px 60px rgba(15,23,42,.08);padding:18px;backdrop-filter:blur(12px);}
     .scotia-board-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
     .scotia-board-head h2{font-size:24px;letter-spacing:-.03em;}
@@ -162,18 +164,21 @@
 
       <div class="scotia-filter-groups" aria-label="Filtres SCOTIA">
         <section class="scotia-filter-group" aria-label="Actions à mener">
-          <h2>Actions à mener</h2>
+          <div class="scotia-filter-title">
+            <h2>Actions à mener</h2>
+            <span class="scotia-action-bubble">{{ stats.l1_pending + stats.l2_pending }} actions à mener</span>
+          </div>
           <div class="scotia-stats">
-            <button type="button" class="scotia-stat scotia-stat--orange scotia-stat--action" data-filter="l1-action" {% if stats.l1_pending == 0 %}disabled{% endif %}><strong>{{ stats.l1_pending }}</strong><span>Livrets 1 à valider</span><small>Décision attendue</small></button>
-            <button type="button" class="scotia-stat scotia-stat--green scotia-stat--action" data-filter="l2-action" {% if stats.l2_pending == 0 %}disabled{% endif %}><strong>{{ stats.l2_pending }}</strong><span>Livrets 2 à valider</span><small>Analyse SCOTIA</small></button>
+            <button type="button" class="scotia-stat scotia-stat--orange scotia-stat--action" data-filter="l1-action" {% if stats.l1_pending == 0 %}disabled{% endif %}><strong>{{ stats.l1_pending }}</strong><span>Livrets 1 à valider</span><small>Voir les Livrets 1 à valider</small></button>
+            <button type="button" class="scotia-stat scotia-stat--green scotia-stat--action" data-filter="l2-action" {% if stats.l2_pending == 0 %}disabled{% endif %}><strong>{{ stats.l2_pending }}</strong><span>Livrets 2 à valider</span><small>Voir les Livrets 2 à valider</small></button>
           </div>
         </section>
         <section class="scotia-filter-group" aria-label="Dossiers en attente et actifs">
           <h2>Dossiers en attente</h2>
           <div class="scotia-stats scotia-stats--wide">
-            <button type="button" class="scotia-stat scotia-stat--purple" data-filter="complements" {% if stats.complements == 0 %}disabled{% endif %}><strong>{{ stats.complements }}</strong><span>Compléments en cours</span><small>Suivi candidat</small></button>
-            <button type="button" class="scotia-stat scotia-stat--blue" data-filter="l2-waiting" {% if stats.l2_missing == 0 %}disabled{% endif %}><strong>{{ stats.l2_missing }}</strong><span>Livrets 2 en attente</span><small>Après recevabilité</small></button>
-            <button type="button" class="scotia-stat scotia-stat--slate" data-filter="all" {% if stats.total == 0 %}disabled{% endif %}><strong>{{ stats.total }}</strong><span>Dossiers actifs</span><small>{{ stats.done }} finalisés</small></button>
+            <button type="button" class="scotia-stat scotia-stat--purple" data-filter="complements" {% if stats.complements == 0 %}disabled{% endif %}><strong>{{ stats.complements }}</strong><span>Compléments en cours</span><small>Voir les dossiers</small></button>
+            <button type="button" class="scotia-stat scotia-stat--blue" data-filter="l2-waiting" {% if stats.l2_missing == 0 %}disabled{% endif %}><strong>{{ stats.l2_missing }}</strong><span>Livrets 2 en attente de dépôt</span><small>Voir les dossiers</small></button>
+            <button type="button" class="scotia-stat scotia-stat--slate" data-filter="all" {% if stats.total == 0 %}disabled{% endif %}><strong>{{ stats.total }}</strong><span>Dossiers actifs</span><small>Voir tous les dossiers</small></button>
           </div>
         </section>
       </div>
@@ -183,8 +188,7 @@
       <section class="scotia-board" id="dossiers-scotia">
         <div class="scotia-board-head">
           <div>
-            <h2>Dossiers triés par priorité</h2>
-            <p>Les actions à mener apparaissent en premier, puis les dossiers en attente. Les cartes du haut filtrent cette liste.</p>
+            <h2>Dossiers en cours</h2>
           </div>
           <span class="badge badge--info">{{ stats.total }} dossiers visibles</span>
         </div>
@@ -370,25 +374,6 @@
         {% endif %}
       </section>
 
-      <aside class="scotia-side" aria-label="Aide SCOTIA">
-        <div class="scotia-help-card">
-          <h3>Mode opératoire simple</h3>
-          <ol class="scotia-steps">
-            <li><span class="scotia-step-dot">1</span><span><strong>Livret 1</strong><br>Validez la recevabilité, refusez ou demandez un complément.</span></li>
-            <li><span class="scotia-step-dot">2</span><span><strong>Attestation</strong><br>Ajoutez l'attestation dès qu'elle est prête.</span></li>
-            <li><span class="scotia-step-dot">3</span><span><strong>Livret 2</strong><br>Importez le document puis marquez OK ou à revoir.</span></li>
-          </ol>
-        </div>
-        <div class="scotia-help-card">
-          <h3>Légende des priorités</h3>
-          <div class="scotia-steps">
-            <div><span class="badge badge--warning">Complément en cours</span></div>
-            <div><span class="badge badge--info">Livret 2 à valider</span></div>
-            <div><span class="badge badge--success">Validé</span></div>
-            <div><span class="badge badge--danger">Non recevable</span></div>
-          </div>
-        </div>
-      </aside>
     </div>
   </main>
 
