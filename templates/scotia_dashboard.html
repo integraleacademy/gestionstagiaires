@@ -41,7 +41,10 @@
     .scotia-filter-group h2{margin:0;color:#fff;font-size:16px;letter-spacing:-.02em;}
     .scotia-action-bubble{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:6px 10px;background:#ef4444;color:#fff;font-size:12px;font-weight:1000;box-shadow:0 10px 24px rgba(239,68,68,.28);white-space:nowrap;}
     .scotia-stats{display:grid;grid-template-columns:repeat(2,minmax(150px,1fr));gap:12px;}
-    .scotia-stats--wide{grid-template-columns:repeat(3,minmax(150px,1fr));}
+    .scotia-stats--actions{grid-template-columns:repeat(3,minmax(150px,1fr));}
+    .scotia-stats--wide{grid-template-columns:repeat(2,minmax(150px,1fr));}
+    .scotia-filter-group--full{grid-column:1/-1;}
+    .scotia-active-row{display:grid;grid-template-columns:minmax(220px,360px);}
     .scotia-stat{
       min-height:128px;
       border:1px solid rgba(255,255,255,.20);
@@ -68,6 +71,7 @@
     .scotia-stat--green{background:linear-gradient(135deg,rgba(22,163,74,.94),rgba(74,222,128,.48));}
     .scotia-stat--purple{background:linear-gradient(135deg,rgba(124,58,237,.92),rgba(216,180,254,.40));}
     .scotia-stat--slate{background:linear-gradient(135deg,rgba(51,65,85,.92),rgba(148,163,184,.36));}
+    .scotia-stat--red{background:linear-gradient(135deg,rgba(220,38,38,.96),rgba(251,113,133,.58));}
     .scotia-workspace{display:block;margin-top:18px;}
     .scotia-board{border:1px solid rgba(148,163,184,.24);border-radius:26px;background:rgba(255,255,255,.82);box-shadow:0 20px 60px rgba(15,23,42,.08);padding:18px;backdrop-filter:blur(12px);}
     .scotia-board-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
@@ -82,9 +86,10 @@
     .scotia-list{display:grid;gap:14px;}
     .scotia-item-accordion[data-category="l1-action"]{order:1;}
     .scotia-item-accordion[data-category="l2-action"]{order:2;}
-    .scotia-item-accordion[data-category="complements"]{order:3;}
-    .scotia-item-accordion[data-category="l2-waiting"]{order:4;}
-    .scotia-item-accordion[data-category="done"]{order:5;}
+    .scotia-item-accordion[data-category="complement-docs"]{order:3;}
+    .scotia-item-accordion[data-category="complements"]{order:4;}
+    .scotia-item-accordion[data-category="l2-waiting"]{order:5;}
+    .scotia-item-accordion[data-category="done"]{order:6;}
     .scotia-item-accordion.is-filter-hidden{display:none;}
     .scotia-filter-empty{display:none;padding:22px;text-align:center;border:1px dashed #cbd5e1;border-radius:18px;background:#f8fafc;color:#64748b;font-weight:900;}
     .scotia-filter-empty.is-visible{display:block;}
@@ -129,20 +134,25 @@
     .btn-pending-animated{background:linear-gradient(135deg,#fb923c,#f97316);color:#fff;border:1px solid #ea580c;box-shadow:0 10px 22px rgba(249,115,22,.30);animation:pendingPulse 1.6s ease-in-out infinite;cursor:default;}.btn-pending-animated:hover,.btn-pending-animated:focus{transform:none;box-shadow:0 10px 22px rgba(249,115,22,.30);}
     @keyframes pendingPulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,.44),0 10px 22px rgba(249,115,22,.30);}50%{box-shadow:0 0 0 8px rgba(249,115,22,0),0 10px 22px rgba(249,115,22,.30);}}
     .scotia-empty{padding:42px 18px;text-align:center;border:1px dashed #cbd5e1;border-radius:22px;background:#f8fafc;color:#64748b;font-weight:800;}
-    @media (max-width:1150px){.scotia-filter-groups{grid-template-columns:1fr;}.scotia-stats,.scotia-stats--wide{grid-template-columns:repeat(3,1fr);}.scotia-workspace{grid-template-columns:1fr;}.scotia-side{position:static;grid-template-columns:repeat(2,minmax(0,1fr));}.scotia-panel-grid{grid-template-columns:1fr;}}
-    @media (max-width:760px){.scotia-shell{padding:16px 10px 30px;}.scotia-hero{padding:20px;border-radius:24px;}.scotia-stats,.scotia-stats--wide,.scotia-side{grid-template-columns:1fr;}.scotia-item-toggle{grid-template-columns:1fr;}.scotia-status-stack{justify-content:flex-start;}.scotia-person{align-items:flex-start;}.scotia-avatar{width:44px;height:44px;border-radius:15px;}.scotia-doc-list li{align-items:flex-start;flex-direction:column;}.scotia-subpanel-actions .btn,.scotia-subpanel-actions form{width:100%;}.scotia-subpanel-actions form .btn{width:100%;}}
+    @media (max-width:1150px){.scotia-filter-groups{grid-template-columns:1fr;}.scotia-stats,.scotia-stats--actions,.scotia-stats--wide{grid-template-columns:repeat(3,1fr);}.scotia-workspace{grid-template-columns:1fr;}.scotia-side{position:static;grid-template-columns:repeat(2,minmax(0,1fr));}.scotia-panel-grid{grid-template-columns:1fr;}}
+    @media (max-width:760px){.scotia-shell{padding:16px 10px 30px;}.scotia-hero{padding:20px;border-radius:24px;}.scotia-stats,.scotia-stats--actions,.scotia-stats--wide,.scotia-active-row,.scotia-side{grid-template-columns:1fr;}.scotia-item-toggle{grid-template-columns:1fr;}.scotia-status-stack{justify-content:flex-start;}.scotia-person{align-items:flex-start;}.scotia-avatar{width:44px;height:44px;border-radius:15px;}.scotia-doc-list li{align-items:flex-start;flex-direction:column;}.scotia-subpanel-actions .btn,.scotia-subpanel-actions form{width:100%;}.scotia-subpanel-actions form .btn{width:100%;}}
   </style>
 </head>
 <body class="scotia-page">
-  {% set stats = namespace(total=items|length, l1_pending=0, complements=0, l2_missing=0, l2_pending=0, done=0) %}
+  {% set stats = namespace(total=items|length, l1_pending=0, complements=0, complement_docs=0, l2_missing=0, l2_pending=0, done=0) %}
   {% for it in items %}
     {% set has_livret_2_stat = (it.deliverables.livret_2 or '')|trim %}
+    {% set complementary_documents_stat = it.complementary_documents or [] %}
     {% if it.scotia_status in ['recevable', 'non_recevable'] %}
       {% if it.scotia_status == 'recevable' and not has_livret_2_stat %}{% set stats.l2_missing = stats.l2_missing + 1 %}{% endif %}
       {% if it.scotia_status == 'recevable' and has_livret_2_stat and it.scotia_livret_2_status not in ['livret_2_ok', 'livret_2_review'] %}{% set stats.l2_pending = stats.l2_pending + 1 %}{% endif %}
       {% if it.scotia_status == 'non_recevable' or it.scotia_livret_2_status in ['livret_2_ok', 'livret_2_review'] %}{% set stats.done = stats.done + 1 %}{% endif %}
     {% elif it.scotia_status == 'complement_requested' %}
-      {% set stats.complements = stats.complements + 1 %}
+      {% if complementary_documents_stat %}
+        {% set stats.complement_docs = stats.complement_docs + 1 %}
+      {% else %}
+        {% set stats.complements = stats.complements + 1 %}
+      {% endif %}
     {% else %}
       {% set stats.l1_pending = stats.l1_pending + 1 %}
     {% endif %}
@@ -154,7 +164,6 @@
         <div>
           <span class="scotia-kicker">✨ Espace partenaire SCOTIA</span>
           <h1 id="scotia-title" class="scotia-title">Pilotage VAE</h1>
-          <p class="scotia-subtitle">Une vue claire pour prioriser les livrets, suivre les compléments, importer les attestations et gérer plusieurs dizaines de dossiers sans perdre le fil.</p>
         </div>
         <div class="scotia-hero-actions">
           <a class="btn btn-outline" href="#dossiers-scotia">Voir les dossiers</a>
@@ -166,18 +175,23 @@
         <section class="scotia-filter-group" aria-label="Actions à mener">
           <div class="scotia-filter-title">
             <h2>Actions à mener</h2>
-            <span class="scotia-action-bubble">{{ stats.l1_pending + stats.l2_pending }} actions à mener</span>
+            <span class="scotia-action-bubble">{{ stats.l1_pending + stats.l2_pending + stats.complement_docs }} actions à mener</span>
           </div>
-          <div class="scotia-stats">
+          <div class="scotia-stats scotia-stats--actions">
             <button type="button" class="scotia-stat scotia-stat--orange scotia-stat--action" data-filter="l1-action" {% if stats.l1_pending == 0 %}disabled{% endif %}><strong>{{ stats.l1_pending }}</strong><span>Livrets 1 à valider</span><small>Voir les Livrets 1 à valider</small></button>
             <button type="button" class="scotia-stat scotia-stat--green scotia-stat--action" data-filter="l2-action" {% if stats.l2_pending == 0 %}disabled{% endif %}><strong>{{ stats.l2_pending }}</strong><span>Livrets 2 à valider</span><small>Voir les Livrets 2 à valider</small></button>
+            <button type="button" class="scotia-stat scotia-stat--red scotia-stat--action" data-filter="complement-docs" {% if stats.complement_docs == 0 %}disabled{% endif %}><strong>{{ stats.complement_docs }}</strong><span>Nouveaux documents déposés à consulter</span><small>Voir les dossiers</small></button>
           </div>
         </section>
-        <section class="scotia-filter-group" aria-label="Dossiers en attente et actifs">
+        <section class="scotia-filter-group" aria-label="Dossiers en attente">
           <h2>Dossiers en attente</h2>
           <div class="scotia-stats scotia-stats--wide">
-            <button type="button" class="scotia-stat scotia-stat--purple" data-filter="complements" {% if stats.complements == 0 %}disabled{% endif %}><strong>{{ stats.complements }}</strong><span>Compléments en cours</span><small>Voir les dossiers</small></button>
+            <button type="button" class="scotia-stat scotia-stat--purple" data-filter="complements" {% if stats.complements == 0 %}disabled{% endif %}><strong>{{ stats.complements }}</strong><span>En attente documents complémentaires</span><small>Voir les dossiers</small></button>
             <button type="button" class="scotia-stat scotia-stat--blue" data-filter="l2-waiting" {% if stats.l2_missing == 0 %}disabled{% endif %}><strong>{{ stats.l2_missing }}</strong><span>Livrets 2 en attente de dépôt</span><small>Voir les dossiers</small></button>
+          </div>
+        </section>
+        <section class="scotia-filter-group scotia-filter-group--full" aria-label="Dossiers actifs">
+          <div class="scotia-active-row">
             <button type="button" class="scotia-stat scotia-stat--slate" data-filter="all" {% if stats.total == 0 %}disabled{% endif %}><strong>{{ stats.total }}</strong><span>Dossiers actifs</span><small>Voir tous les dossiers</small></button>
           </div>
         </section>
@@ -212,6 +226,8 @@
                 {% set scotia_category = 'l1-action' %}
               {% elif it.scotia_status == 'recevable' and has_livret_2 and not livret_2_processed %}
                 {% set scotia_category = 'l2-action' %}
+              {% elif livret_1_is_complement and complementary_documents %}
+                {% set scotia_category = 'complement-docs' %}
               {% elif livret_1_is_complement %}
                 {% set scotia_category = 'complements' %}
               {% elif it.scotia_status == 'recevable' and not has_livret_2 %}
@@ -248,7 +264,11 @@
                     {% elif it.scotia_status == 'non_recevable' %}
                       <span class="badge badge--danger">Non recevable</span>
                     {% elif it.scotia_status == 'complement_requested' %}
-                      <span class="badge badge--warning">Complément en cours</span>
+                      {% if complementary_documents %}
+                        <span class="badge badge--warning">Nouveaux documents déposés à consulter</span>
+                      {% else %}
+                        <span class="badge badge--warning">En attente documents complémentaires</span>
+                      {% endif %}
                     {% else %}
                       <button type="button" class="btn btn-pending-animated" disabled>A traiter</button>
                     {% endif %}
@@ -337,7 +357,7 @@
 
                         {% if livret_1_is_complement or complementary_documents %}
                         <div class="scotia-subpanel">
-                          <div class="scotia-subpanel-title-wrap"><h4 class="scotia-subpanel-title">3. Compléments en cours</h4></div>
+                          <div class="scotia-subpanel-title-wrap"><h4 class="scotia-subpanel-title">3. Documents complémentaires</h4></div>
                           <div class="scotia-subpanel-actions">
                             <form method="post" enctype="multipart/form-data" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/complements/upload" style="display:flex;gap:6px;align-items:center;">
                               <input id="complementary-documents-file-{{ it.session_id }}-{{ it.trainee_id }}" type="file" name="files" accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png,.webp" multiple required style="display:none;" onchange="submitComplementaryDocumentsForm(this)">
