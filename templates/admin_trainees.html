@@ -2093,6 +2093,41 @@ function updateVaeDashboardPressedState(){
   });
 }
 
+function getVtcStatusValues(tr){
+  const cmarOk = tr.getAttribute("data-vtc-cmar-ok") === "1";
+  const theorySent = tr.getAttribute("data-vtc-theory-exam-sent") === "1";
+  const theoryResult = (tr.getAttribute("data-vtc-theory-result") || "").toLowerCase();
+  const theoryManual = (tr.getAttribute("data-vtc-theory-status-manual") || "").toLowerCase();
+  const practiceSent = tr.getAttribute("data-vtc-practice-exam-sent") === "1";
+  const practiceResult = (tr.getAttribute("data-vtc-practice-result") || "").toLowerCase();
+  const practiceManual = (tr.getAttribute("data-vtc-practice-status-manual") || "").toLowerCase();
+  const theoryFailed = theoryResult === "failed" || theoryResult === "non_admissible";
+  const practiceFailed = practiceResult === "failed" || practiceResult === "non_admissible";
+  const theoryOk = theoryManual ? theoryManual === "success" : (theorySent && !theoryFailed);
+
+  let theoryStatus = "pending_results";
+  if(theoryManual === "failed" || (!theoryManual && theoryFailed)){
+    theoryStatus = "failed";
+  }else if(theoryManual === "waiting_registration" || (!theoryManual && !cmarOk)){
+    theoryStatus = "pending_registration";
+  }else if(theoryManual === "success" || (!theoryManual && theorySent)){
+    theoryStatus = "success";
+  }
+
+  let practiceStatus = "pending_results";
+  if(practiceManual === "failed" || (!practiceManual && practiceFailed)){
+    practiceStatus = "failed";
+  }else if(practiceManual === "waiting_registration" || (!practiceManual && !cmarOk)){
+    practiceStatus = "pending_registration";
+  }else if(practiceManual === "success" || (!practiceManual && (practiceResult === "success" || practiceSent))){
+    practiceStatus = "success";
+  }else if(practiceManual === "waiting_theory" || (!practiceManual && !theoryOk)){
+    practiceStatus = "waiting_theory";
+  }
+
+  return { theoryStatus, practiceStatus };
+}
+
 function applyRowFilters(){
   const vaeFilter = document.getElementById("vaeStatusFilter");
   const vaeNameSearch = document.getElementById("vaeNameSearch");
