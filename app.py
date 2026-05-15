@@ -37,6 +37,16 @@ from urllib.parse import urlparse, urljoin
 app = Flask(__name__)
 
 
+@app.after_request
+def add_no_store_headers(response):
+    """Avoid serving stale admin/API data after autosaved changes."""
+    if request.path.startswith(("/admin", "/api/")):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
+
 @app.errorhandler(404)
 def page_not_found(error):
     if request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json":
