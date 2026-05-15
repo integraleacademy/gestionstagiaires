@@ -67,6 +67,10 @@
 .celebration-emoji{position:fixed;inset:0;display:none;align-items:center;justify-content:center;pointer-events:none;z-index:1002;}
 .celebration-emoji.is-visible{display:flex;}
 .celebration-emoji span{font-size:clamp(88px,15vw,180px);filter:drop-shadow(0 12px 22px rgba(15,23,42,.4));animation:megaFloat 1.8s ease-in-out infinite;}
+.fireworks-layer{position:fixed;inset:0;display:none;pointer-events:none;z-index:1000;overflow:hidden;background:radial-gradient(circle at 50% 25%,rgba(30,64,175,.12),rgba(15,23,42,0) 48%);}
+.fireworks-layer.is-visible{display:block;}
+.firework{position:absolute;left:var(--x);top:var(--y);width:8px;height:8px;border-radius:999px;background:#fff;box-shadow:0 0 16px rgba(255,255,255,.95);animation:fireworkCore 1.1s ease-out forwards;}
+.firework span{position:absolute;left:50%;top:50%;width:7px;height:7px;border-radius:999px;background:var(--c);box-shadow:0 0 12px var(--c);transform:translate(-50%,-50%) rotate(var(--angle)) translateX(0);animation:fireworkSpark 1.1s ease-out forwards;}
 .sale-alert{position:fixed;inset:0;z-index:1001;display:none;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.2),rgba(15,23,42,.84) 55%);}
 .sale-alert.is-visible{display:flex;animation:alertFade .35s ease;}
 .sale-alert-card{position:relative;max-width:620px;width:min(92vw,620px);border-radius:24px;padding:28px 24px;text-align:center;color:#fff;background:linear-gradient(145deg,#2563eb 0%,#7c3aed 45%,#db2777 100%);box-shadow:0 24px 70px rgba(15,23,42,.55);animation:cardIn .45s cubic-bezier(.2,.9,.25,1.15);}
@@ -74,6 +78,16 @@
 .sale-alert-sub{font-size:16px;opacity:.95;margin:10px 0 0;}
 .sale-alert-btn{margin-top:18px;border:none;background:#fff;color:#be185d;border-radius:999px;padding:12px 22px;font-size:18px;font-weight:900;cursor:pointer;box-shadow:0 10px 28px rgba(15,23,42,.3);}
 @keyframes alertFade{from{opacity:0}to{opacity:1}}
+@keyframes fireworkCore{
+  0%{transform:scale(.5);opacity:1;}
+  65%{transform:scale(1.4);opacity:.95;}
+  100%{transform:scale(.2);opacity:0;}
+}
+@keyframes fireworkSpark{
+  0%{opacity:1;transform:translate(-50%,-50%) rotate(var(--angle)) translateX(0) scale(1);}
+  78%{opacity:1;}
+  100%{opacity:0;transform:translate(-50%,-50%) rotate(var(--angle)) translateX(var(--distance)) scale(.35);}
+}
 @keyframes megaFloat{
   0%{transform:scale(.92) translateY(10px) rotate(-8deg);opacity:.72;}
   50%{transform:scale(1.08) translateY(-6px) rotate(8deg);opacity:1;}
@@ -99,6 +113,7 @@
 </style>
 
 <div class="sales-page">
+  <div id="fireworksLayer" class="fireworks-layer" aria-hidden="true"></div>
   <div id="celebrationEmoji" class="celebration-emoji" aria-hidden="true"><span id="celebrationEmojiGlyph">🎉</span></div>
   <div id="saleAlert" class="sale-alert" role="status" aria-live="polite">
     <div class="sale-alert-card">
@@ -317,6 +332,7 @@
 
   const selectedYear = {{ selected_year }};
   const dataEndpoint = '{{ url_for("admin_sales_tracking_data") }}?year={{ selected_year }}';
+  const fireworksLayer = document.getElementById('fireworksLayer');
   const celebrationEmoji = document.getElementById('celebrationEmoji');
   const celebrationEmojiGlyph = document.getElementById('celebrationEmojiGlyph');
   const saleAlert = document.getElementById('saleAlert');
@@ -337,7 +353,28 @@
   };
   let pendingSalesDelta = 0;
   let celebrationTimeoutId = null;
+  let fireworksTimeoutId = null;
   let isCelebrationActive = false;
+  const seenSignatureKey = `salesTrackingSeenSignature:${selectedYear}`;
+  const seenCountKey = `salesTrackingSeenCount:${selectedYear}`;
+
+  const getStoredValue = (key) => {
+    try {
+      return window.localStorage ? String(window.localStorage.getItem(key) || '') : '';
+    } catch (_err) {
+      return '';
+    }
+  };
+
+  const rememberCurrentSalesSnapshot = (signature = knownSalesSignature, count = knownSalesCount) => {
+    try {
+      if (!window.localStorage || !signature) return;
+      window.localStorage.setItem(seenSignatureKey, String(signature));
+      window.localStorage.setItem(seenCountKey, String(Number(count) || 0));
+    } catch (_err) {
+      // stockage navigateur indisponible : la célébration reste fonctionnelle pour la session courante
+    }
+  };
 
   const formatSalesTitle = (delta) => {
     const safeDelta = Number(delta) || 0;
@@ -362,10 +399,43 @@
     return 'Top ❤️';
   };
 
+  const launchFireworks = () => {
+    if (!fireworksLayer) return;
+    const colors = ['#facc15', '#fb7185', '#60a5fa', '#34d399', '#c084fc', '#f97316'];
+    fireworksLayer.innerHTML = '';
+    fireworksLayer.classList.add('is-visible');
+    for (let burstIndex = 0; burstIndex < 9; burstIndex += 1) {
+      const firework = document.createElement('div');
+      firework.className = 'firework';
+      firework.style.setProperty('--x', `${14 + Math.random() * 72}%`);
+      firework.style.setProperty('--y', `${12 + Math.random() * 46}%`);
+      firework.style.animationDelay = `${burstIndex * 0.13}s`;
+      for (let sparkIndex = 0; sparkIndex < 18; sparkIndex += 1) {
+        const spark = document.createElement('span');
+        spark.style.setProperty('--angle', `${(360 / 18) * sparkIndex}deg`);
+        spark.style.setProperty('--distance', `${70 + Math.random() * 85}px`);
+        spark.style.setProperty('--c', colors[(burstIndex + sparkIndex) % colors.length]);
+        spark.style.animationDelay = `${burstIndex * 0.13}s`;
+        firework.appendChild(spark);
+      }
+      fireworksLayer.appendChild(firework);
+    }
+    if (fireworksTimeoutId) {
+      clearTimeout(fireworksTimeoutId);
+    }
+    fireworksTimeoutId = setTimeout(() => {
+      fireworksLayer.classList.remove('is-visible');
+      fireworksLayer.innerHTML = '';
+    }, 3600);
+  };
+
   const triggerSingleCelebration = (isCancel = false) => {
     if (!celebrationEmoji) return;
     if (isCelebrationActive) return;
     isCelebrationActive = true;
+    if (!isCancel) {
+      launchFireworks();
+    }
     if (celebrationEmojiGlyph) {
       celebrationEmojiGlyph.textContent = isCancel ? '😭' : '🎉';
     }
@@ -377,7 +447,7 @@
       celebrationEmoji.classList.remove('is-visible');
       isCelebrationActive = false;
       showSaleOverlay();
-    }, 10000);
+    }, 1800);
   };
 
   const showSaleOverlay = () => {
@@ -683,6 +753,7 @@
       if (nextSignature && knownSalesSignature && nextSignature !== knownSalesSignature) {
         const salesDiff = nextSalesCount - knownSalesCount;
         handleSalesDiff(salesDiff);
+        rememberCurrentSalesSnapshot(nextSignature, nextSalesCount);
       }
       knownSalesSignature = nextSignature || knownSalesSignature;
       knownSalesCount = Number.isFinite(nextSalesCount) ? nextSalesCount : knownSalesCount;
@@ -692,6 +763,27 @@
     }
   };
 
+  const triggerInitialSalesCelebrationIfNeeded = () => {
+    if (!knownSalesSignature || knownSalesCount <= 0) {
+      return;
+    }
+    const storedSignature = getStoredValue(seenSignatureKey);
+    const storedCount = Number(getStoredValue(seenCountKey));
+    const todaySalesCount = salesNamesByPeriod.today.length;
+    const hasNewSnapshot = storedSignature && storedSignature !== knownSalesSignature;
+    const isFirstVisitWithTodaySale = !storedSignature && todaySalesCount > 0;
+    if (!hasNewSnapshot && !isFirstVisitWithTodaySale) {
+      rememberCurrentSalesSnapshot();
+      return;
+    }
+    const diff = hasNewSnapshot && Number.isFinite(storedCount) && storedCount > 0
+      ? knownSalesCount - storedCount
+      : Math.max(1, todaySalesCount);
+    handleSalesDiff(diff || 1);
+    rememberCurrentSalesSnapshot();
+  };
+
+  triggerInitialSalesCelebrationIfNeeded();
   setInterval(pollSalesData, 12000);
   pollSalesData();
 })();
