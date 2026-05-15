@@ -14747,12 +14747,24 @@ def _sync_vae_status_with_actions(trainee: Dict[str, Any]) -> None:
     trainee["vae_status_label"] = view["label"]
 
 
+def _normalize_vae_status_text(value: Any) -> str:
+    return " ".join(_normalized_token(str(value or "")).replace("_", " ").replace("-", " ").split())
+
+
 def vae_status_view(status_key: Optional[str]) -> Dict[str, str]:
     key = (status_key or "").strip()
     if key not in VAE_STATUS_STEPS:
-        normalized_label = key.casefold()
-        key = next(
-            (candidate_key for candidate_key, step in VAE_STATUS_STEPS.items() if step["label"].casefold() == normalized_label),
+        normalized_label = _normalize_vae_status_text(key)
+        legacy_aliases = {
+            "valide": "livret_1_validated",
+            "validated": "livret_1_validated",
+            "validation": "livret_1_validated",
+            "livret 1 valide": "livret_1_validated",
+            "financement valide": "financement_validated",
+            "livret 2 a completer": "livret_2_todo",
+        }
+        key = legacy_aliases.get(normalized_label) or next(
+            (candidate_key for candidate_key, step in VAE_STATUS_STEPS.items() if _normalize_vae_status_text(step["label"]) == normalized_label),
             "livret_1_todo",
         )
     step = VAE_STATUS_STEPS[key]

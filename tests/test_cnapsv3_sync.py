@@ -450,6 +450,55 @@ class ScotiaItemsTests(unittest.TestCase):
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0]['scotia_status'], 'recevable')
 
+    def test_all_scotia_items_includes_legacy_validated_vae_status_without_scotia_transmission(self):
+        payload = {
+            'sessions': [
+                {
+                    'id': 'S1',
+                    'name': 'VAE DESP 2026',
+                    'training_type': 'DIRIGEANT VAE',
+                    'trainees': [
+                        {
+                            'id': 'T1',
+                            'first_name': 'Jean',
+                            'last_name': 'Dupont',
+                            'vae_status': 'validated',
+                            'financement_status': 'validated',
+                        }
+                    ],
+                }
+            ]
+        }
+
+        items = gestion_app._all_scotia_items(payload)
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]['scotia_status'], 'recevable')
+
+    def test_all_scotia_items_includes_unaccented_livret_2_todo_label_without_scotia_transmission(self):
+        payload = {
+            'sessions': [
+                {
+                    'id': 'S1',
+                    'name': 'VAE DESP 2026',
+                    'training_type': 'DIRIGEANT VAE',
+                    'trainees': [
+                        {
+                            'id': 'T1',
+                            'first_name': 'Jean',
+                            'last_name': 'Dupont',
+                            'vae_status_label': 'Livret 2 a completer',
+                        }
+                    ],
+                }
+            ]
+        }
+
+        items = gestion_app._all_scotia_items(payload)
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]['scotia_status'], 'recevable')
+
     def test_scotia_dashboard_displays_livret_2_transmission_date(self):
         item = {
             'session_id': 'S1',
