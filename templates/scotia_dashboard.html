@@ -141,6 +141,14 @@
     .scotia-added-documents-title{margin:0 0 8px;font-size:13px;font-weight:1000;color:#0f172a;}
     .scotia-added-documents-files{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
     .scotia-comment-wrap{display:flex;flex-direction:column;gap:6px;width:100%;}.scotia-comment-label{font-size:13px;font-weight:1000;color:#374151;}.scotia-comment-input{width:100%;min-height:96px;resize:vertical;border:1px solid #cbd5e1;border-radius:14px;padding:11px 12px;font:inherit;line-height:1.35;background:#fff;}.scotia-comment-status{font-size:12px;color:#64748b;min-height:16px;}
+    .scotia-thread{display:flex;flex-direction:column;gap:10px;width:100%;border:1px solid #dbeafe;border-radius:18px;background:linear-gradient(180deg,#eff6ff,#fff);padding:12px;}
+    .scotia-thread-list{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;padding-right:2px;}
+    .scotia-thread-empty{margin:0;color:#64748b;font-size:13px;font-weight:800;text-align:center;border:1px dashed #cbd5e1;border-radius:14px;padding:12px;background:rgba(255,255,255,.72);}
+    .scotia-thread-message{border:1px solid #e2e8f0;border-radius:16px;background:#fff;padding:10px 12px;box-shadow:0 10px 22px rgba(15,23,42,.06);}
+    .scotia-thread-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:5px;font-size:12px;color:#64748b;font-weight:850;}
+    .scotia-thread-author{color:#0f172a;font-weight:1000;}.scotia-thread-date{color:#475569;}.scotia-thread-content{margin:0;color:#1f2937;font-size:14px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;}
+    .scotia-thread-form{display:flex;flex-direction:column;gap:8px;}.scotia-thread-input{width:100%;min-height:74px;resize:vertical;border:1px solid #bfdbfe;border-radius:14px;padding:10px 12px;font:inherit;line-height:1.35;background:#fff;}
+    .scotia-thread-form-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}.scotia-thread-status{font-size:12px;color:#64748b;font-weight:800;min-height:16px;}
     .btn-danger-solid{background:#b91c1c;color:#fff;border-color:#b91c1c;box-shadow:0 14px 26px rgba(185,28,28,.18);}.btn-danger-solid:hover{border-color:#991b1b;}
     .btn-complement-animated{background:linear-gradient(135deg,#fb923c,#f97316);color:#fff;border-color:#ea580c;box-shadow:0 10px 22px rgba(249,115,22,.30);animation:complementPulse 1.35s ease-in-out infinite;}.btn-complement-animated:hover{border-color:#c2410c;}.btn-complement-animated.is-active{animation:none;box-shadow:0 0 0 3px rgba(249,115,22,.30);}
     @keyframes complementPulse{0%,100%{transform:translateY(0);box-shadow:0 0 0 0 rgba(249,115,22,.42),0 10px 22px rgba(249,115,22,.30);}50%{transform:translateY(-1px);box-shadow:0 0 0 8px rgba(249,115,22,0),0 14px 26px rgba(249,115,22,.34);}}
@@ -430,6 +438,28 @@
                               {% endfor %}
                             </div>
                           {% endif %}
+                          <div class="scotia-thread" aria-label="Fil d'actualité du dossier">
+                            <div class="scotia-subpanel-title-wrap"><h5 class="scotia-subpanel-title">Fil actu / commentaires</h5></div>
+                            <div id="thread-list-{{ it.session_id }}-{{ it.trainee_id }}" class="scotia-thread-list">
+                              {% for comment in it.scotia_thread_comments or [] %}
+                                <article class="scotia-thread-message">
+                                  <div class="scotia-thread-meta">
+                                    <span class="scotia-thread-author">{{ comment.author_label }}</span>
+                                    <span class="scotia-thread-date">commentaire ajouté le {{ comment.created_at_label }} (heure française)</span>
+                                  </div>
+                                  <p class="scotia-thread-content">{{ comment.content }}</p>
+                                </article>
+                              {% endfor %}
+                              <p id="thread-empty-{{ it.session_id }}-{{ it.trainee_id }}" class="scotia-thread-empty" {% if it.scotia_thread_comments %}style="display:none;"{% endif %}>Aucun commentaire pour le moment.</p>
+                            </div>
+                            <div class="scotia-thread-form">
+                              <textarea id="thread-input-{{ it.session_id }}-{{ it.trainee_id }}" class="scotia-thread-input" maxlength="2000" placeholder="Ajouter une info au fil du dossier..." data-session-id="{{ it.session_id }}" data-trainee-id="{{ it.trainee_id }}"></textarea>
+                              <div class="scotia-thread-form-actions">
+                                <span id="thread-status-{{ it.session_id }}-{{ it.trainee_id }}" class="scotia-thread-status"></span>
+                                <button class="btn btn-primary" type="button" onclick="addThreadComment('{{ it.session_id }}','{{ it.trainee_id }}')">Ajouter commentaire</button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -586,6 +616,70 @@ function queueCommentAutosave(sessionId, traineeId){
     _commentSaveTimers.delete(key);
   }, 700);
   _commentSaveTimers.set(key, timer);
+}
+
+
+function setThreadStatus(sessionId, traineeId, message){
+  const status = document.getElementById(`thread-status-${sessionId}-${traineeId}`);
+  if(status) status.textContent = message || '';
+}
+
+function appendThreadComment(sessionId, traineeId, comment){
+  const list = document.getElementById(`thread-list-${sessionId}-${traineeId}`);
+  if(!list || !comment) return;
+  const empty = document.getElementById(`thread-empty-${sessionId}-${traineeId}`);
+  if(empty) empty.style.display = 'none';
+
+  const article = document.createElement('article');
+  article.className = 'scotia-thread-message';
+
+  const meta = document.createElement('div');
+  meta.className = 'scotia-thread-meta';
+
+  const author = document.createElement('span');
+  author.className = 'scotia-thread-author';
+  author.textContent = comment.author_label || 'Scotia';
+
+  const date = document.createElement('span');
+  date.className = 'scotia-thread-date';
+  date.textContent = `commentaire ajouté le ${comment.created_at_label || ''} (heure française)`;
+
+  const content = document.createElement('p');
+  content.className = 'scotia-thread-content';
+  content.textContent = comment.content || '';
+
+  meta.append(author, date);
+  article.append(meta, content);
+  list.appendChild(article);
+  list.scrollTop = list.scrollHeight;
+}
+
+async function addThreadComment(sessionId, traineeId){
+  const input = document.getElementById(`thread-input-${sessionId}-${traineeId}`);
+  if(!input) return;
+  const comment = (input.value || '').trim();
+  if(!comment){
+    setThreadStatus(sessionId, traineeId, 'Écrivez un commentaire avant de l’ajouter.');
+    return;
+  }
+
+  input.disabled = true;
+  setThreadStatus(sessionId, traineeId, 'Ajout du commentaire...');
+  const res = await fetch(`/api/scotia/sessions/${sessionId}/stagiaires/${traineeId}/thread-comments`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({comment})
+  });
+  const data = await res.json().catch(()=>({}));
+  input.disabled = false;
+  if(!res.ok || data.ok === false){
+    setThreadStatus(sessionId, traineeId, 'Erreur lors de l’ajout du commentaire');
+    return;
+  }
+  appendThreadComment(sessionId, traineeId, data.comment);
+  input.value = '';
+  input.focus();
+  setThreadStatus(sessionId, traineeId, 'Commentaire ajouté');
 }
 
 

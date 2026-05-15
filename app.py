@@ -60,6 +60,10 @@ SECRETARY_USER = os.environ.get("SECRETARY_USER", "")
 SECRETARY_PASSWORD = os.environ.get("SECRETARY_PASSWORD", "")
 SCOTIA_USER = os.environ.get("SCOTIA_USER", "")
 SCOTIA_PASSWORD = os.environ.get("SCOTIA_PASSWORD", "")
+SCOTIA_COMMENT_AUTHOR_LABELS = {
+    "clement@integraleacademy.com": "Intégrale Academy",
+    "scotiaformation@gmail.com": "Scotia",
+}
 SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "30"))
 ADMIN_PUSH_TITLE = os.environ.get("ADMIN_PUSH_TITLE", "Intégrale Academy")
 WEB_PUSH_VAPID_PUBLIC_KEY = os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY", "").strip()
@@ -216,6 +220,7 @@ def scotia_login_post():
     if scotia_ok or admin_ok:
         session.clear()
         session["scotia_logged_in"] = True
+        session["scotia_username"] = username.lower()
         if admin_ok:
             session["admin_logged_in"] = True
             session["admin_role"] = "admin"
@@ -7186,6 +7191,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "prerequis_interview_sheet": prerequis_interview_sheet_token,
                 "complementary_documents": complementary_document_tokens,
                 "added_document_groups": added_document_groups,
+                "scotia_thread_comments": _scotia_thread_comments_for_display(t),
                 "deliverables": deliverables,
                 "attestation_recevabilite_imported_at": attestation_recevabilite_imported_at,
                 "livret_2_imported_at": livret_2_imported_at,
@@ -7221,6 +7227,70 @@ def _find_session_trainee(data: Dict[str, Any], session_id: str, trainee_id: str
     trainees = _session_trainees_list(s)
     t = next((x for x in trainees if str(x.get("id") or "") == str(trainee_id)), None)
     return s, trainees, t
+
+
+def _scotia_comment_author_label(username: str) -> str:
+    normalized = (username or "").strip().lower()
+    if normalized in SCOTIA_COMMENT_AUTHOR_LABELS:
+        return SCOTIA_COMMENT_AUTHOR_LABELS[normalized]
+    return "Scotia"
+
+
+def _current_scotia_comment_author_label() -> str:
+    return _scotia_comment_author_label(str(session.get("scotia_username") or ""))
+
+
+def _format_scotia_comment_added_at(value: str) -> str:
+    s = (value or "").strip()
+    if not s:
+        return ""
+    normalized = s.replace("Z", "+00:00")
+    try:
+        dt = datetime.datetime.fromisoformat(normalized)
+    except Exception:
+        return history_datetime(s).replace(" ", " à ", 1)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=datetime.timezone.utc)
+    paris_dt = dt.astimezone(ZoneInfo("Europe/Paris"))
+    return paris_dt.strftime("%d/%m/%Y à %Hh%M")
+
+
+def _ensure_scotia_thread_comments_entry(t: Dict[str, Any]) -> List[Dict[str, Any]]:
+    comments = t.get("scotia_thread_comments")
+    if not isinstance(comments, list):
+        comments = []
+        t["scotia_thread_comments"] = comments
+        return comments
+
+    cleaned_comments: List[Dict[str, Any]] = []
+    for entry in comments:
+        if not isinstance(entry, dict):
+            continue
+        content = str(entry.get("content") or entry.get("comment") or "").strip()
+        if not content:
+            continue
+        created_at = str(entry.get("created_at") or entry.get("at") or "").strip() or _now_iso()
+        author_label = str(entry.get("author_label") or "").strip()
+        if not author_label:
+            author_label = _scotia_comment_author_label(str(entry.get("author_email") or entry.get("author") or ""))
+        cleaned_comments.append({
+            "content": content,
+            "author_label": author_label,
+            "created_at": created_at,
+        })
+    if len(cleaned_comments) != len(comments) or cleaned_comments != comments:
+        t["scotia_thread_comments"] = cleaned_comments
+    return t["scotia_thread_comments"]
+
+
+def _scotia_thread_comments_for_display(t: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [
+        {
+            **entry,
+            "created_at_label": _format_scotia_comment_added_at(str(entry.get("created_at") or "")),
+        }
+        for entry in _ensure_scotia_thread_comments_entry(t)
+    ]
 
 
 @app.get('/scotia')
@@ -7329,6 +7399,44 @@ def api_scotia_comment(session_id: str, trainee_id: str):
     s.pop('stagiaires', None)
     save_data(data)
     return jsonify({"ok": True, "comment": comment})
+
+
+@app.post('/api/scotia/sessions/<session_id>/stagiaires/<trainee_id>/thread-comments')
+@scotia_login_required
+def api_scotia_thread_comment(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+
+    payload = request.get_json(silent=True) or {}
+    content = (payload.get('comment') or payload.get('content') or '').strip()
+    if not content:
+        return jsonify({"ok": False, "error": "empty_comment"}), 400
+    if len(content) > 2000:
+        return jsonify({"ok": False, "error": "comment_too_long"}), 400
+
+    created_at = _now_iso()
+    entry = {
+        "content": content,
+        "author_label": _current_scotia_comment_author_label(),
+        "created_at": created_at,
+    }
+    comments = _ensure_scotia_thread_comments_entry(t)
+    comments.append(entry)
+    t['updated_at'] = created_at
+
+    s['trainees'] = trainees
+    s.pop('stagiaires', None)
+    save_data(data)
+
+    return jsonify({
+        "ok": True,
+        "comment": {
+            **entry,
+            "created_at_label": _format_scotia_comment_added_at(created_at),
+        },
+    })
 
 
 @app.post('/scotia/sessions/<session_id>/stagiaires/<trainee_id>/delete')
