@@ -7138,22 +7138,6 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
         training_type = (_session_get(s, "training_type", "") or "").strip().upper()
         session_is_vae = "VAE" in training_type
         for t in _session_trainees_list(s):
-            if _is_truthy(t.get("scotia_hidden")):
-                hidden_action_dates = t.get("vae_action_dates") if isinstance(t.get("vae_action_dates"), dict) else {}
-                if session_is_vae or hidden_action_dates or t.get("vae_status") or t.get("vae_status_label"):
-                    _scotia_log_visibility("warning", "excluded: scotia_hidden", {
-                        "session_id": str(s.get("id") or ""),
-                        "session_name": _session_get(s, "name", ""),
-                        "training_type": training_type,
-                        "session_is_vae": session_is_vae,
-                        "trainee_id": str(t.get("id") or ""),
-                        "trainee_name": _format_trainee_name(t.get("first_name", ""), t.get("last_name", "")),
-                        "raw_vae_status": t.get("vae_status") or "",
-                        "raw_vae_status_label": t.get("vae_status_label") or "",
-                        "action_dates_keys": sorted(str(k) for k, v in hidden_action_dates.items() if v),
-                        "scotia_hidden": True,
-                    })
-                continue
             action_dates = t.get("vae_action_dates") if isinstance(t.get("vae_action_dates"), dict) else {}
             livret_1_sent_at = (action_dates.get("livret_1_transmitted_scotia") or t.get("livret_1_transmitted_scotia") or t.get("livret_1_transmitted_scotia_at") or "").strip()
             livret_2_sent_at = (action_dates.get("livret_2_transmitted_scotia") or t.get("livret_2_transmitted_scotia") or t.get("livret_2_transmitted_scotia_at") or "").strip()
@@ -7194,6 +7178,9 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 or bool((raw_vae_status_label or "").strip())
                 or "VAE" in (_session_get(s, "name", "") or "").upper()
             )
+            if _is_truthy(t.get("scotia_hidden")) and not force_scotia_visibility and not livret_1_validated_or_later:
+                _scotia_log_visibility("warning", "excluded: scotia_hidden", visibility_payload)
+                continue
             # Les sessions non-VAE n'alimentent pas Scotia par défaut,
             # sauf en cas de propulsion manuelle depuis l'admin stagiaire.
             if not session_is_vae and not force_scotia_visibility:
@@ -7204,6 +7191,8 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 _scotia_log_visibility("warning", "excluded: no_transmission_no_force_no_validated_livret1", visibility_payload)
                 continue
             included_reason = "forced" if force_scotia_visibility else ("vae_status_livret_1_validated_or_later" if livret_1_validated_or_later and not sent_at else "scotia_transmission_date")
+            if _is_truthy(t.get("scotia_hidden")):
+                included_reason = f"{included_reason}_despite_scotia_hidden"
             _scotia_log_visibility("info", f"included: {included_reason}", visibility_payload)
             deliverables = t.get("deliverables") or {}
             has_attestation_recevabilite = bool((deliverables.get("attestation_recevabilite") or "").strip())
