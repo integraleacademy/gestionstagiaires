@@ -7151,6 +7151,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
             if inferred_vae_status_key is not None and VAE_STATUS_RANK.get(inferred_vae_status_key, -1) > VAE_STATUS_RANK.get(vae_status_key, -1):
                 vae_status_key = inferred_vae_status_key
             livret_1_validated_or_later = VAE_STATUS_RANK.get(vae_status_key, -1) >= VAE_STATUS_RANK["livret_1_validated"]
+            certified_vae = vae_status_key == "certified"
             visibility_payload = {
                 "session_id": str(s.get("id") or ""),
                 "session_name": _session_get(s, "name", ""),
@@ -7168,6 +7169,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "sent_at": sent_at,
                 "force_scotia_visibility": force_scotia_visibility,
                 "livret_1_validated_or_later": livret_1_validated_or_later,
+                "certified_vae": certified_vae,
                 "stored_scotia_status": (t.get("scotia_status") or "").strip(),
                 "scotia_hidden": _is_truthy(t.get("scotia_hidden")),
             }
@@ -7178,6 +7180,9 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 or bool((raw_vae_status_label or "").strip())
                 or "VAE" in (_session_get(s, "name", "") or "").upper()
             )
+            if certified_vae and not force_scotia_visibility:
+                _scotia_log_visibility("info", "excluded: certified_vae", visibility_payload)
+                continue
             if _is_truthy(t.get("scotia_hidden")) and not force_scotia_visibility and not livret_1_validated_or_later:
                 _scotia_log_visibility("warning", "excluded: scotia_hidden", visibility_payload)
                 continue
@@ -14803,6 +14808,9 @@ def vae_status_view(status_key: Optional[str]) -> Dict[str, str]:
             "livret 1 valide": "livret_1_validated",
             "financement valide": "financement_validated",
             "livret 2 a completer": "livret_2_todo",
+            "certification obtenue": "certified",
+            "certifie": "certified",
+            "certifiee": "certified",
         }
         key = legacy_aliases.get(normalized_label) or next(
             (candidate_key for candidate_key, step in VAE_STATUS_STEPS.items() if _normalize_vae_status_text(step["label"]) == normalized_label),

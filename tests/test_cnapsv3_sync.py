@@ -559,6 +559,82 @@ class ScotiaItemsTests(unittest.TestCase):
 
         self.assertEqual(items, [])
 
+    def test_all_scotia_items_excludes_certified_vae_status(self):
+        payload = {
+            'sessions': [
+                {
+                    'id': 'S1',
+                    'name': 'VAE DESP 2026',
+                    'training_type': 'DIRIGEANT VAE',
+                    'trainees': [
+                        {
+                            'id': 'T1',
+                            'first_name': 'Jean',
+                            'last_name': 'Dupont',
+                            'vae_status': 'certified',
+                        }
+                    ],
+                }
+            ]
+        }
+
+        items = gestion_app._all_scotia_items(payload)
+
+        self.assertEqual(items, [])
+
+    def test_all_scotia_items_excludes_certified_vae_inferred_from_action_dates(self):
+        payload = {
+            'sessions': [
+                {
+                    'id': 'S1',
+                    'name': 'VAE DESP 2026',
+                    'training_type': 'DIRIGEANT VAE',
+                    'trainees': [
+                        {
+                            'id': 'T1',
+                            'first_name': 'Jean',
+                            'last_name': 'Dupont',
+                            'vae_status': 'livret_2_todo',
+                            'vae_action_dates': {
+                                'livret_1_transmitted_scotia': '02/05/2026',
+                                'diplome_obtenu': '12/05/2026',
+                            },
+                        }
+                    ],
+                }
+            ]
+        }
+
+        items = gestion_app._all_scotia_items(payload)
+
+        self.assertEqual(items, [])
+
+    def test_all_scotia_items_excludes_certification_obtenue_label(self):
+        payload = {
+            'sessions': [
+                {
+                    'id': 'S1',
+                    'name': 'VAE DESP 2026',
+                    'training_type': 'DIRIGEANT VAE',
+                    'trainees': [
+                        {
+                            'id': 'T1',
+                            'first_name': 'Jean',
+                            'last_name': 'Dupont',
+                            'vae_status_label': 'Certification obtenue',
+                            'vae_action_dates': {
+                                'livret_1_transmitted_scotia': '02/05/2026',
+                            },
+                        }
+                    ],
+                }
+            ]
+        }
+
+        items = gestion_app._all_scotia_items(payload)
+
+        self.assertEqual(items, [])
+
     def test_scotia_dashboard_displays_livret_2_transmission_date(self):
         item = {
             'session_id': 'S1',
