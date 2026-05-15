@@ -7119,25 +7119,80 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     def _is_truthy(value: Any) -> bool:
         return value in (True, "true", "1", 1, "yes", "on", "True")
 
+    def _scotia_log_visibility(level: str, message: str, payload: Dict[str, Any]) -> None:
+        log = app.logger.warning if level == "warning" else app.logger.info
+        log("[SCOTIA_VISIBILITY] %s payload=%s", message, payload)
+
     items: List[Dict[str, Any]] = []
     for s in data.get("sessions", []):
         training_type = (_session_get(s, "training_type", "") or "").strip().upper()
         session_is_vae = "VAE" in training_type
         for t in _session_trainees_list(s):
-            if _is_truthy(t.get("scotia_hidden")):
-                continue
             action_dates = t.get("vae_action_dates") if isinstance(t.get("vae_action_dates"), dict) else {}
             livret_1_sent_at = (action_dates.get("livret_1_transmitted_scotia") or t.get("livret_1_transmitted_scotia") or t.get("livret_1_transmitted_scotia_at") or "").strip()
             livret_2_sent_at = (action_dates.get("livret_2_transmitted_scotia") or t.get("livret_2_transmitted_scotia") or t.get("livret_2_transmitted_scotia_at") or "").strip()
             attestation_recevabilite_imported_at = (action_dates.get("attestation_recevabilite_imported_at") or "").strip()
             sent_at = livret_2_sent_at or livret_1_sent_at
             force_scotia_visibility = _is_truthy(t.get("scotia_force_visible"))
+            stored_scotia_status = (t.get("scotia_status") or "").strip()
+            raw_vae_status = t.get("vae_status")
+            raw_vae_status_label = t.get("vae_status_label")
+            vae_status_key = vae_status_view(raw_vae_status or raw_vae_status_label)["key"]
+            inferred_vae_status_key = _infer_vae_status_from_action_dates(action_dates)
+            if inferred_vae_status_key is not None and VAE_STATUS_RANK.get(inferred_vae_status_key, -1) > VAE_STATUS_RANK.get(vae_status_key, -1):
+                vae_status_key = inferred_vae_status_key
+            livret_1_validated_or_later = VAE_STATUS_RANK.get(vae_status_key, -1) >= VAE_STATUS_RANK["livret_1_validated"]
+            certified_vae = vae_status_key == "certified"
+            visibility_payload = {
+                "session_id": str(s.get("id") or ""),
+                "session_name": _session_get(s, "name", ""),
+                "training_type": training_type,
+                "session_is_vae": session_is_vae,
+                "trainee_id": str(t.get("id") or ""),
+                "trainee_name": _format_trainee_name(t.get("first_name", ""), t.get("last_name", "")),
+                "raw_vae_status": raw_vae_status or "",
+                "raw_vae_status_label": raw_vae_status_label or "",
+                "effective_vae_status": vae_status_key,
+                "inferred_vae_status": inferred_vae_status_key or "",
+                "action_dates_keys": sorted(str(k) for k, v in action_dates.items() if v),
+                "livret_1_sent_at": livret_1_sent_at,
+                "livret_2_sent_at": livret_2_sent_at,
+                "sent_at": sent_at,
+                "force_scotia_visibility": force_scotia_visibility,
+                "livret_1_validated_or_later": livret_1_validated_or_later,
+                "certified_vae": certified_vae,
+                "stored_scotia_status": stored_scotia_status,
+                "scotia_hidden": _is_truthy(t.get("scotia_hidden")),
+            }
+            should_log_non_vae_exclusion = (
+                livret_1_validated_or_later
+                or bool(action_dates)
+                or bool((raw_vae_status or "").strip() and (raw_vae_status or "").strip() != "soon")
+                or bool((raw_vae_status_label or "").strip())
+                or "VAE" in (_session_get(s, "name", "") or "").upper()
+            )
+            if certified_vae:
+                _scotia_log_visibility("info", "excluded: certified_vae", visibility_payload)
+                continue
+            if stored_scotia_status == "non_recevable":
+                _scotia_log_visibility("info", "excluded: non_recevable", visibility_payload)
+                continue
+            if _is_truthy(t.get("scotia_hidden")) and not force_scotia_visibility and not sent_at and not livret_1_validated_or_later:
+                _scotia_log_visibility("warning", "excluded: scotia_hidden", visibility_payload)
+                continue
             # Les sessions non-VAE n'alimentent pas Scotia par défaut,
             # sauf en cas de propulsion manuelle depuis l'admin stagiaire.
             if not session_is_vae and not force_scotia_visibility:
+                if should_log_non_vae_exclusion:
+                    _scotia_log_visibility("warning", "excluded: session_not_vae", visibility_payload)
                 continue
-            if not sent_at and not force_scotia_visibility:
+            if not sent_at and not force_scotia_visibility and not livret_1_validated_or_later:
+                _scotia_log_visibility("warning", "excluded: no_transmission_no_force_no_validated_livret1", visibility_payload)
                 continue
+            included_reason = "forced" if force_scotia_visibility else ("vae_status_livret_1_validated_or_later" if livret_1_validated_or_later and not sent_at else "scotia_transmission_date")
+            if _is_truthy(t.get("scotia_hidden")):
+                included_reason = f"{included_reason}_despite_scotia_hidden"
+            _scotia_log_visibility("info", f"included: {included_reason}", visibility_payload)
             deliverables = t.get("deliverables") or {}
             has_attestation_recevabilite = bool((deliverables.get("attestation_recevabilite") or "").strip())
             livret_2_token = (deliverables.get("livret_2") or "").strip()
@@ -7182,7 +7237,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "livret_1_sent_at": livret_1_sent_at,
                 "livret_2_sent_at": livret_2_sent_at,
                 "scotia_force_visible": force_scotia_visibility,
-                "scotia_status": (t.get("scotia_status") or "").strip(),
+                "scotia_status": (stored_scotia_status or ("recevable" if livret_1_validated_or_later else "")).strip(),
                 "scotia_processed_at": (t.get("scotia_processed_at") or "").strip(),
                 "scotia_comment": (t.get("scotia_comment") or "").strip(),
                 "scotia_livret_2_status": (t.get("scotia_livret_2_status") or "").strip(),
@@ -14732,10 +14787,29 @@ def _sync_vae_status_with_actions(trainee: Dict[str, Any]) -> None:
     trainee["vae_status_label"] = view["label"]
 
 
+def _normalize_vae_status_text(value: Any) -> str:
+    return " ".join(_normalized_token(str(value or "")).replace("_", " ").replace("-", " ").split())
+
+
 def vae_status_view(status_key: Optional[str]) -> Dict[str, str]:
     key = (status_key or "").strip()
     if key not in VAE_STATUS_STEPS:
-        key = "livret_1_todo"
+        normalized_label = _normalize_vae_status_text(key)
+        legacy_aliases = {
+            "valide": "livret_1_validated",
+            "validated": "livret_1_validated",
+            "validation": "livret_1_validated",
+            "livret 1 valide": "livret_1_validated",
+            "financement valide": "financement_validated",
+            "livret 2 a completer": "livret_2_todo",
+            "certification obtenue": "certified",
+            "certifie": "certified",
+            "certifiee": "certified",
+        }
+        key = legacy_aliases.get(normalized_label) or next(
+            (candidate_key for candidate_key, step in VAE_STATUS_STEPS.items() if _normalize_vae_status_text(step["label"]) == normalized_label),
+            "livret_1_todo",
+        )
     step = VAE_STATUS_STEPS[key]
     return {"key": key, "label": step["label"], "pill": step["pill"]}
 
