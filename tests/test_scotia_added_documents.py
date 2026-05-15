@@ -48,5 +48,110 @@ class ScotiaAddedDocumentsTests(unittest.TestCase):
         self.assertEqual(trainee["scotia_added_documents"], [])
 
 
+class ScotiaThreadCommentsTests(unittest.TestCase):
+    def setUp(self):
+        self.client = gestion_app.app.test_client()
+        self.original_load_data = gestion_app.load_data
+        self.original_save_data = gestion_app.save_data
+        self.original_now_iso = gestion_app._now_iso
+
+    def tearDown(self):
+        gestion_app.load_data = self.original_load_data
+        gestion_app.save_data = self.original_save_data
+        gestion_app._now_iso = self.original_now_iso
+
+    def test_integrale_user_adds_thread_comment_with_french_time_label(self):
+        payload = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "training_type": "DIRIGEANT VAE",
+                    "trainees": [{"id": "T1", "first_name": "Jean", "last_name": "Dupont"}],
+                }
+            ]
+        }
+        saved_payloads = []
+        gestion_app.load_data = lambda: payload
+        gestion_app.save_data = lambda data: saved_payloads.append(data)
+        gestion_app._now_iso = lambda: "2026-05-15T06:59:00Z"
+
+        with self.client.session_transaction() as sess:
+            sess["scotia_logged_in"] = True
+            sess["scotia_username"] = "clement@integraleacademy.com"
+
+        response = self.client.post(
+            "/api/scotia/sessions/S1/stagiaires/T1/thread-comments",
+            json={"comment": "Information côté Intégrale"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertTrue(body["ok"])
+        self.assertEqual(body["comment"]["author_label"], "Intégrale Academy")
+        self.assertEqual(body["comment"]["created_at_label"], "15/05/2026 à 08h59")
+        trainee = payload["sessions"][0]["trainees"][0]
+        self.assertEqual(trainee["scotia_thread_comments"][0]["content"], "Information côté Intégrale")
+        self.assertEqual(trainee["scotia_thread_comments"][0]["author_label"], "Intégrale Academy")
+        self.assertEqual(len(saved_payloads), 1)
+
+    def test_scotia_user_adds_thread_comment_as_scotia(self):
+        payload = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "training_type": "DIRIGEANT VAE",
+                    "trainees": [{"id": "T1", "first_name": "Jean", "last_name": "Dupont"}],
+                }
+            ]
+        }
+        gestion_app.load_data = lambda: payload
+        gestion_app.save_data = lambda data: None
+        gestion_app._now_iso = lambda: "2026-05-15T06:59:00Z"
+
+        with self.client.session_transaction() as sess:
+            sess["scotia_logged_in"] = True
+            sess["scotia_username"] = "scotiaformation@gmail.com"
+
+        response = self.client.post(
+            "/api/scotia/sessions/S1/stagiaires/T1/thread-comments",
+            json={"comment": "Info Scotia"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertEqual(body["comment"]["author_label"], "Scotia")
+
+    def test_all_scotia_items_exposes_thread_comments_for_display(self):
+        payload = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "name": "VAE DESP 2026",
+                    "training_type": "DIRIGEANT VAE",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "first_name": "Jean",
+                            "last_name": "Dupont",
+                            "vae_action_dates": {"livret_1_transmitted_scotia": "15/05/2026"},
+                            "scotia_thread_comments": [
+                                {
+                                    "content": "Document vérifié",
+                                    "author_label": "Scotia",
+                                    "created_at": "2026-05-15T06:59:00Z",
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+
+        items = gestion_app._all_scotia_items(payload)
+
+        self.assertEqual(items[0]["scotia_thread_comments"][0]["content"], "Document vérifié")
+        self.assertEqual(items[0]["scotia_thread_comments"][0]["created_at_label"], "15/05/2026 à 08h59")
+
+
 if __name__ == "__main__":
     unittest.main()
