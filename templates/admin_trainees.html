@@ -183,6 +183,75 @@
   </div>
 </div>
 
+{% if show_vae %}
+<section class="vae-admin-dashboard" aria-label="Tableau de bord VAE">
+  <div class="vae-dashboard-hero">
+    <div>
+      <p class="vae-dashboard-kicker">Pilotage VAE</p>
+      <h3>Vue rapide des livrets et connexions</h3>
+      <p>Cliquez sur une tuile pour filtrer instantanément la liste des stagiaires concernés.</p>
+    </div>
+    <button type="button" class="vae-dashboard-reset" data-vae-dashboard-reset>Voir tous les stagiaires</button>
+  </div>
+
+  <div class="vae-dashboard-grid">
+    <button type="button" class="vae-dashboard-card card-l1-todo" data-vae-dashboard-filter="status:livret_1_todo" aria-pressed="false">
+      <span class="vae-card-icon">🧩</span>
+      <span class="vae-card-content">
+        <span class="vae-card-label">Livret 1 à compléter</span>
+        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_1_todo">0</strong>
+        <span class="vae-card-hint">Dossiers à relancer</span>
+      </span>
+    </button>
+
+    <button type="button" class="vae-dashboard-card card-l1-analysis" data-vae-dashboard-filter="status:livret_1_analysis" aria-pressed="false">
+      <span class="vae-card-icon">🔎</span>
+      <span class="vae-card-content">
+        <span class="vae-card-label">Livret 1 en analyse</span>
+        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_1_analysis">0</strong>
+        <span class="vae-card-hint">Analyse en cours</span>
+      </span>
+    </button>
+
+    <button type="button" class="vae-dashboard-card card-no-login" data-vae-dashboard-filter="no_login" aria-pressed="false">
+      <span class="vae-card-icon">📡</span>
+      <span class="vae-card-content">
+        <span class="vae-card-label">Jamais connectés</span>
+        <strong class="vae-card-count" data-vae-dashboard-count="no_login">0</strong>
+        <span class="vae-card-hint">Sans icône 🛜</span>
+      </span>
+    </button>
+
+    <button type="button" class="vae-dashboard-card card-l2-todo" data-vae-dashboard-filter="status:livret_2_todo" aria-pressed="false">
+      <span class="vae-card-icon">📘</span>
+      <span class="vae-card-content">
+        <span class="vae-card-label">Livret 2 à compléter</span>
+        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_2_todo">0</strong>
+        <span class="vae-card-hint">Suite du parcours</span>
+      </span>
+    </button>
+
+    <button type="button" class="vae-dashboard-card card-l2-analysis" data-vae-dashboard-filter="status:livret_2_analysis" aria-pressed="false">
+      <span class="vae-card-icon">🧪</span>
+      <span class="vae-card-content">
+        <span class="vae-card-label">Livret 2 en analyse</span>
+        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_2_analysis">0</strong>
+        <span class="vae-card-hint">À suivre de près</span>
+      </span>
+    </button>
+
+    <button type="button" class="vae-dashboard-card card-certified" data-vae-dashboard-filter="status:certified" aria-pressed="false">
+      <span class="vae-card-icon">🏆</span>
+      <span class="vae-card-content">
+        <span class="vae-card-label">Certifications obtenues</span>
+        <strong class="vae-card-count" data-vae-dashboard-count="status:certified">0</strong>
+        <span class="vae-card-hint">Parcours finalisés</span>
+      </span>
+    </button>
+  </div>
+</section>
+{% endif %}
+
 {% if "AFC" in (session.name or "")|upper %}
 <div class="card" style="margin-top:10px;">
   <div class="label">Date d'examen SSIAP (commune à toute la session AFC)</div>
@@ -250,6 +319,7 @@
     data-last-name="{{ t.last_name or '' }}"
     data-first-name="{{ t.first_name or '' }}"
     data-vae-status="{{ t.vae_status or 'livret_1_todo' }}"
+    data-public-has-logged-in="{{ '1' if t.public_has_logged_in else '0' }}"
 data-vtc-theory-ok="{{ '1' if (t.vtc_theory_status_manual == 'success' or ((not t.vtc_theory_status_manual) and t.vtc_theory_result != 'non_admissible' and t.vtc_theory_exam_sent_at)) else '0' }}"
 data-vtc-exam-fees-paid="{{ '1' if t.exam_fees_paid else '0' }}"
 data-vtc-cmar-manual-ok="{{ '1' if t.vtc_cmar_manual_ok else '0' }}"
@@ -1046,6 +1116,181 @@ tr.row-todo td{
   line-height:1.45;
 }
 
+
+.vae-admin-dashboard{
+  margin:18px 0 22px;
+  padding:18px;
+  border-radius:30px;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255,255,255,.92) 0 12%, transparent 13%),
+    linear-gradient(135deg, #eef2ff 0%, #fdf2f8 46%, #ecfeff 100%);
+  box-shadow:0 24px 60px rgba(79, 70, 229, .16), inset 0 1px 0 rgba(255,255,255,.75);
+  border:1px solid rgba(129, 140, 248, .25);
+  overflow:hidden;
+  position:relative;
+}
+
+.vae-admin-dashboard::before{
+  content:"";
+  position:absolute;
+  inset:-70px -60px auto auto;
+  width:220px;
+  height:220px;
+  background:radial-gradient(circle, rgba(244, 114, 182, .28), transparent 68%);
+  pointer-events:none;
+}
+
+.vae-dashboard-hero{
+  position:relative;
+  z-index:1;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  flex-wrap:wrap;
+  margin-bottom:16px;
+}
+
+.vae-dashboard-kicker{
+  display:inline-flex;
+  margin:0 0 6px;
+  padding:5px 12px;
+  border-radius:999px;
+  background:rgba(79, 70, 229, .12);
+  color:#4338ca;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  font-size:12px;
+}
+
+.vae-dashboard-hero h3{
+  margin:0;
+  color:#111827;
+  font-size:clamp(22px, 3vw, 32px);
+  line-height:1.05;
+}
+
+.vae-dashboard-hero p:not(.vae-dashboard-kicker){
+  margin:7px 0 0;
+  color:#475569;
+  font-weight:650;
+}
+
+.vae-dashboard-reset{
+  border:0;
+  border-radius:999px;
+  padding:12px 16px;
+  background:#0f172a;
+  color:#fff;
+  font-weight:900;
+  cursor:pointer;
+  box-shadow:0 12px 24px rgba(15, 23, 42, .22);
+  transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+.vae-dashboard-reset:hover{
+  transform:translateY(-2px);
+  background:#1e293b;
+  box-shadow:0 16px 30px rgba(15, 23, 42, .25);
+}
+
+.vae-dashboard-grid{
+  position:relative;
+  z-index:1;
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(210px, 1fr));
+  gap:14px;
+}
+
+.vae-dashboard-card{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  text-align:left;
+  border:0;
+  min-height:128px;
+  border-radius:26px;
+  padding:18px;
+  color:#fff;
+  cursor:pointer;
+  box-shadow:0 18px 34px rgba(30, 41, 59, .16);
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
+  transition:transform .15s ease, box-shadow .15s ease, filter .15s ease;
+}
+
+.vae-dashboard-card::after{
+  content:"";
+  position:absolute;
+  inset:auto -38px -52px auto;
+  width:140px;
+  height:140px;
+  border-radius:999px;
+  background:rgba(255,255,255,.22);
+  z-index:-1;
+}
+
+.vae-dashboard-card:hover,
+.vae-dashboard-card[aria-pressed="true"]{
+  transform:translateY(-4px) scale(1.01);
+  box-shadow:0 24px 42px rgba(30, 41, 59, .22);
+  filter:saturate(1.08);
+}
+
+.vae-dashboard-card[aria-pressed="true"]{
+  outline:4px solid rgba(15, 23, 42, .12);
+  outline-offset:3px;
+}
+
+.vae-card-icon{
+  display:grid;
+  place-items:center;
+  flex:0 0 56px;
+  width:56px;
+  height:56px;
+  border-radius:20px;
+  background:rgba(255,255,255,.24);
+  font-size:30px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.34);
+}
+
+.vae-card-content{
+  display:grid;
+  gap:3px;
+}
+
+.vae-card-label{
+  font-weight:900;
+  font-size:15px;
+  line-height:1.15;
+}
+
+.vae-card-count{
+  font-size:42px;
+  line-height:.95;
+  letter-spacing:-.05em;
+}
+
+.vae-card-hint{
+  font-weight:750;
+  opacity:.86;
+  font-size:13px;
+}
+
+.card-l1-todo{ background:linear-gradient(135deg, #fb7185, #f97316); }
+.card-l1-analysis{ background:linear-gradient(135deg, #8b5cf6, #2563eb); }
+.card-no-login{ background:linear-gradient(135deg, #06b6d4, #0f766e); }
+.card-l2-todo{ background:linear-gradient(135deg, #22c55e, #14b8a6); }
+.card-l2-analysis{ background:linear-gradient(135deg, #f59e0b, #d946ef); }
+.card-certified{ background:linear-gradient(135deg, #0f172a, #6366f1); }
+
+@media (max-width: 720px){
+  .vae-admin-dashboard{ padding:14px; border-radius:24px; }
+  .vae-dashboard-card{ min-height:112px; border-radius:22px; }
+}
+
 .vae-filter-label{
   white-space:nowrap;
 }
@@ -1818,6 +2063,71 @@ function refreshAllVtcStatusLabels(){
   document.querySelectorAll("tr[data-trainee-id]").forEach(refreshVtcStatusLabels);
 }
 
+let activeVaeDashboardFilter = "";
+
+function getVaeDashboardRows(){
+  return [...document.querySelectorAll('tr[data-trainee-id][data-vae-status]')];
+}
+
+function updateVaeDashboardCounts(){
+  const counts = { no_login: 0 };
+  getVaeDashboardRows().forEach(tr => {
+    const status = tr.getAttribute("data-vae-status") || "livret_1_todo";
+    counts[`status:${status}`] = (counts[`status:${status}`] || 0) + 1;
+    if(tr.getAttribute("data-public-has-logged-in") !== "1"){
+      counts.no_login += 1;
+    }
+  });
+
+  document.querySelectorAll("[data-vae-dashboard-count]").forEach(el => {
+    const key = el.getAttribute("data-vae-dashboard-count") || "";
+    el.textContent = counts[key] || 0;
+  });
+}
+
+function updateVaeDashboardPressedState(){
+  const selectedVae = document.getElementById("vaeStatusFilter")?.value || "all";
+  const selectedKey = activeVaeDashboardFilter || (selectedVae !== "all" ? `status:${selectedVae}` : "");
+  document.querySelectorAll("[data-vae-dashboard-filter]").forEach(card => {
+    card.setAttribute("aria-pressed", card.getAttribute("data-vae-dashboard-filter") === selectedKey ? "true" : "false");
+  });
+}
+
+function getVtcStatusValues(tr){
+  const cmarOk = tr.getAttribute("data-vtc-cmar-ok") === "1";
+  const theorySent = tr.getAttribute("data-vtc-theory-exam-sent") === "1";
+  const theoryResult = (tr.getAttribute("data-vtc-theory-result") || "").toLowerCase();
+  const theoryManual = (tr.getAttribute("data-vtc-theory-status-manual") || "").toLowerCase();
+  const practiceSent = tr.getAttribute("data-vtc-practice-exam-sent") === "1";
+  const practiceResult = (tr.getAttribute("data-vtc-practice-result") || "").toLowerCase();
+  const practiceManual = (tr.getAttribute("data-vtc-practice-status-manual") || "").toLowerCase();
+  const theoryFailed = theoryResult === "failed" || theoryResult === "non_admissible";
+  const practiceFailed = practiceResult === "failed" || practiceResult === "non_admissible";
+  const theoryOk = theoryManual ? theoryManual === "success" : (theorySent && !theoryFailed);
+
+  let theoryStatus = "pending_results";
+  if(theoryManual === "failed" || (!theoryManual && theoryFailed)){
+    theoryStatus = "failed";
+  }else if(theoryManual === "waiting_registration" || (!theoryManual && !cmarOk)){
+    theoryStatus = "pending_registration";
+  }else if(theoryManual === "success" || (!theoryManual && theorySent)){
+    theoryStatus = "success";
+  }
+
+  let practiceStatus = "pending_results";
+  if(practiceManual === "failed" || (!practiceManual && practiceFailed)){
+    practiceStatus = "failed";
+  }else if(practiceManual === "waiting_registration" || (!practiceManual && !cmarOk)){
+    practiceStatus = "pending_registration";
+  }else if(practiceManual === "success" || (!practiceManual && (practiceResult === "success" || practiceSent))){
+    practiceStatus = "success";
+  }else if(practiceManual === "waiting_theory" || (!practiceManual && !theoryOk)){
+    practiceStatus = "waiting_theory";
+  }
+
+  return { theoryStatus, practiceStatus };
+}
+
 function applyRowFilters(){
   const vaeFilter = document.getElementById("vaeStatusFilter");
   const vaeNameSearch = document.getElementById("vaeNameSearch");
@@ -1832,19 +2142,53 @@ function applyRowFilters(){
     const rowVaeStatus = tr.getAttribute("data-vae-status") || "livret_1_todo";
     const { theoryStatus, practiceStatus } = getVtcStatusValues(tr);
     const rowFullName = normalizeSearchText(`${tr.getAttribute("data-last-name") || ""} ${tr.getAttribute("data-first-name") || ""}`);
+    const hasLoggedIn = tr.getAttribute("data-public-has-logged-in") === "1";
 
     const matchVae = selectedVae === "all" || rowVaeStatus === selectedVae;
+    const matchDashboard = !activeVaeDashboardFilter || activeVaeDashboardFilter.startsWith("status:") || (activeVaeDashboardFilter === "no_login" && !hasLoggedIn);
     const matchTheory = selectedTheory === "all" || theoryStatus === selectedTheory;
     const matchPractice = selectedPractice === "all" || practiceStatus === selectedPractice;
     const matchName = !searchedName || rowFullName.includes(searchedName);
 
-    tr.style.display = (matchVae && matchTheory && matchPractice && matchName) ? "" : "none";
+    tr.style.display = (matchVae && matchDashboard && matchTheory && matchPractice && matchName) ? "" : "none";
+  });
+
+  updateVaeDashboardPressedState();
+}
+
+function bindVaeDashboardFilters(){
+  document.addEventListener("click", event => {
+    const card = event.target?.closest?.("[data-vae-dashboard-filter]");
+    if(card){
+      const filter = card.getAttribute("data-vae-dashboard-filter") || "";
+      const vaeFilter = document.getElementById("vaeStatusFilter");
+      activeVaeDashboardFilter = filter === activeVaeDashboardFilter ? "" : filter;
+      if(vaeFilter){
+        if(activeVaeDashboardFilter.startsWith("status:")){
+          vaeFilter.value = activeVaeDashboardFilter.slice("status:".length);
+        }else{
+          vaeFilter.value = "all";
+        }
+      }
+      applyRowFilters();
+      return;
+    }
+
+    if(event.target?.closest?.("[data-vae-dashboard-reset]")){
+      activeVaeDashboardFilter = "";
+      const vaeFilter = document.getElementById("vaeStatusFilter");
+      if(vaeFilter) vaeFilter.value = "all";
+      applyRowFilters();
+    }
   });
 }
 
 function bindImmediateRowFilters(){
   document.addEventListener("change", event => {
     if(event.target?.matches?.("#vaeStatusFilter, #vtcTheoryFilter, #vtcPracticeFilter")){
+      if(event.target?.matches?.("#vaeStatusFilter")){
+        activeVaeDashboardFilter = "";
+      }
       applyRowFilters();
     }
   });
@@ -1857,6 +2201,7 @@ function bindImmediateRowFilters(){
 }
 
 bindImmediateRowFilters();
+bindVaeDashboardFilters();
 
 
 // au chargement
@@ -2157,6 +2502,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
 
         if(field === "vae_status"){
           tr.setAttribute("data-vae-status", value || "livret_1_todo");
+          updateVaeDashboardCounts();
           applyRowFilters();
         }
 
@@ -2346,6 +2692,7 @@ function renderDocBadges(){
 
   // au chargement
 renderDocBadges();
+updateVaeDashboardCounts();
 
 applyRowFilters();
 
