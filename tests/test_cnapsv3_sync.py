@@ -532,7 +532,39 @@ class ScotiaItemsTests(unittest.TestCase):
         self.assertEqual(items[0]['trainee_id'], 'T1')
         self.assertEqual(items[0]['scotia_status'], 'recevable')
 
-    def test_all_scotia_items_keeps_hidden_for_non_validated_livret_1(self):
+    def test_all_scotia_items_includes_hidden_livret_1_analysis_when_transmitted_to_scotia(self):
+        payload = {
+            'sessions': [
+                {
+                    'id': 'S1',
+                    'name': 'VAE DESP 2026',
+                    'training_type': 'DIRIGEANT VAE',
+                    'trainees': [
+                        {
+                            'id': 'T1',
+                            'first_name': 'Michael',
+                            'last_name': 'BELLANGER',
+                            'vae_status': 'livret_1_analysis',
+                            'vae_status_label': "Livret 1 en cours d'analyse",
+                            'scotia_hidden': True,
+                            'vae_action_dates': {
+                                'livret_1_received': '14/03/2026',
+                                'livret_1_transmitted_scotia': '15/03/2026',
+                            },
+                        }
+                    ],
+                }
+            ]
+        }
+
+        items = gestion_app._all_scotia_items(payload)
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]['trainee_id'], 'T1')
+        self.assertEqual(items[0]['livret_1_sent_at'], '15/03/2026')
+        self.assertEqual(items[0]['scotia_status'], '')
+
+    def test_all_scotia_items_keeps_hidden_for_non_transmitted_non_validated_livret_1(self):
         payload = {
             'sessions': [
                 {
@@ -547,7 +579,7 @@ class ScotiaItemsTests(unittest.TestCase):
                             'vae_status': 'livret_1_analysis',
                             'scotia_hidden': True,
                             'vae_action_dates': {
-                                'livret_1_transmitted_scotia': '02/05/2026',
+                                'livret_1_received': '02/05/2026',
                             },
                         }
                     ],

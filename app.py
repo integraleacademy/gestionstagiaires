@@ -7183,7 +7183,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
             if certified_vae:
                 _scotia_log_visibility("info", "excluded: certified_vae", visibility_payload)
                 continue
-            if _is_truthy(t.get("scotia_hidden")) and not force_scotia_visibility and not livret_1_validated_or_later:
+            if _is_truthy(t.get("scotia_hidden")) and not force_scotia_visibility and not sent_at and not livret_1_validated_or_later:
                 _scotia_log_visibility("warning", "excluded: scotia_hidden", visibility_payload)
                 continue
             # Les sessions non-VAE n'alimentent pas Scotia par défaut,
