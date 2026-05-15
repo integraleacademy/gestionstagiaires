@@ -7132,11 +7132,16 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
             attestation_recevabilite_imported_at = (action_dates.get("attestation_recevabilite_imported_at") or "").strip()
             sent_at = livret_2_sent_at or livret_1_sent_at
             force_scotia_visibility = _is_truthy(t.get("scotia_force_visible"))
+            vae_status_key = vae_status_view(t.get("vae_status") or t.get("vae_status_label"))["key"]
+            inferred_vae_status_key = _infer_vae_status_from_action_dates(action_dates)
+            if inferred_vae_status_key is not None and VAE_STATUS_RANK.get(inferred_vae_status_key, -1) > VAE_STATUS_RANK.get(vae_status_key, -1):
+                vae_status_key = inferred_vae_status_key
+            livret_1_validated_or_later = VAE_STATUS_RANK.get(vae_status_key, -1) >= VAE_STATUS_RANK["livret_1_validated"]
             # Les sessions non-VAE n'alimentent pas Scotia par défaut,
             # sauf en cas de propulsion manuelle depuis l'admin stagiaire.
             if not session_is_vae and not force_scotia_visibility:
                 continue
-            if not sent_at and not force_scotia_visibility:
+            if not sent_at and not force_scotia_visibility and not livret_1_validated_or_later:
                 continue
             deliverables = t.get("deliverables") or {}
             has_attestation_recevabilite = bool((deliverables.get("attestation_recevabilite") or "").strip())
@@ -7182,7 +7187,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "livret_1_sent_at": livret_1_sent_at,
                 "livret_2_sent_at": livret_2_sent_at,
                 "scotia_force_visible": force_scotia_visibility,
-                "scotia_status": (t.get("scotia_status") or "").strip(),
+                "scotia_status": (t.get("scotia_status") or ("recevable" if livret_1_validated_or_later else "")).strip(),
                 "scotia_processed_at": (t.get("scotia_processed_at") or "").strip(),
                 "scotia_comment": (t.get("scotia_comment") or "").strip(),
                 "scotia_livret_2_status": (t.get("scotia_livret_2_status") or "").strip(),
@@ -14732,10 +14737,26 @@ def _sync_vae_status_with_actions(trainee: Dict[str, Any]) -> None:
     trainee["vae_status_label"] = view["label"]
 
 
+def _normalize_vae_status_text(value: Any) -> str:
+    return " ".join(_normalized_token(str(value or "")).replace("_", " ").replace("-", " ").split())
+
+
 def vae_status_view(status_key: Optional[str]) -> Dict[str, str]:
     key = (status_key or "").strip()
     if key not in VAE_STATUS_STEPS:
-        key = "livret_1_todo"
+        normalized_label = _normalize_vae_status_text(key)
+        legacy_aliases = {
+            "valide": "livret_1_validated",
+            "validated": "livret_1_validated",
+            "validation": "livret_1_validated",
+            "livret 1 valide": "livret_1_validated",
+            "financement valide": "financement_validated",
+            "livret 2 a completer": "livret_2_todo",
+        }
+        key = legacy_aliases.get(normalized_label) or next(
+            (candidate_key for candidate_key, step in VAE_STATUS_STEPS.items() if _normalize_vae_status_text(step["label"]) == normalized_label),
+            "livret_1_todo",
+        )
     step = VAE_STATUS_STEPS[key]
     return {"key": key, "label": step["label"], "pill": step["pill"]}
 
