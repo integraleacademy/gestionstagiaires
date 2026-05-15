@@ -728,6 +728,57 @@ class ScotiaItemsTests(unittest.TestCase):
 
         self.assertEqual(items, [])
 
+    def test_all_scotia_items_excludes_non_recevable_scotia_status(self):
+        payload = {
+            'sessions': [
+                {
+                    'id': 'S1',
+                    'name': 'VAE DESP 2026',
+                    'training_type': 'DIRIGEANT VAE',
+                    'trainees': [
+                        {
+                            'id': 'T1',
+                            'first_name': 'Jean',
+                            'last_name': 'Dupont',
+                            'vae_status': 'livret_1_analysis',
+                            'scotia_status': 'non_recevable',
+                            'vae_action_dates': {
+                                'livret_1_transmitted_scotia': '15/03/2026',
+                            },
+                        }
+                    ],
+                }
+            ]
+        }
+
+        items = gestion_app._all_scotia_items(payload)
+
+        self.assertEqual(items, [])
+
+    def test_all_scotia_items_excludes_non_recevable_even_when_livret_1_validated(self):
+        payload = {
+            'sessions': [
+                {
+                    'id': 'S1',
+                    'name': 'VAE DESP 2026',
+                    'training_type': 'DIRIGEANT VAE',
+                    'trainees': [
+                        {
+                            'id': 'T1',
+                            'first_name': 'Jean',
+                            'last_name': 'Dupont',
+                            'vae_status': 'livret_1_validated',
+                            'scotia_status': 'non_recevable',
+                        }
+                    ],
+                }
+            ]
+        }
+
+        items = gestion_app._all_scotia_items(payload)
+
+        self.assertEqual(items, [])
+
     def test_scotia_dashboard_displays_livret_2_transmission_date(self):
         item = {
             'session_id': 'S1',

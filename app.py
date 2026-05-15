@@ -7144,6 +7144,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
             attestation_recevabilite_imported_at = (action_dates.get("attestation_recevabilite_imported_at") or "").strip()
             sent_at = livret_2_sent_at or livret_1_sent_at
             force_scotia_visibility = _is_truthy(t.get("scotia_force_visible"))
+            stored_scotia_status = (t.get("scotia_status") or "").strip()
             raw_vae_status = t.get("vae_status")
             raw_vae_status_label = t.get("vae_status_label")
             vae_status_key = vae_status_view(raw_vae_status or raw_vae_status_label)["key"]
@@ -7170,7 +7171,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "force_scotia_visibility": force_scotia_visibility,
                 "livret_1_validated_or_later": livret_1_validated_or_later,
                 "certified_vae": certified_vae,
-                "stored_scotia_status": (t.get("scotia_status") or "").strip(),
+                "stored_scotia_status": stored_scotia_status,
                 "scotia_hidden": _is_truthy(t.get("scotia_hidden")),
             }
             should_log_non_vae_exclusion = (
@@ -7182,6 +7183,9 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
             )
             if certified_vae:
                 _scotia_log_visibility("info", "excluded: certified_vae", visibility_payload)
+                continue
+            if stored_scotia_status == "non_recevable":
+                _scotia_log_visibility("info", "excluded: non_recevable", visibility_payload)
                 continue
             if _is_truthy(t.get("scotia_hidden")) and not force_scotia_visibility and not sent_at and not livret_1_validated_or_later:
                 _scotia_log_visibility("warning", "excluded: scotia_hidden", visibility_payload)
@@ -7243,7 +7247,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "livret_1_sent_at": livret_1_sent_at,
                 "livret_2_sent_at": livret_2_sent_at,
                 "scotia_force_visible": force_scotia_visibility,
-                "scotia_status": (t.get("scotia_status") or ("recevable" if livret_1_validated_or_later else "")).strip(),
+                "scotia_status": (stored_scotia_status or ("recevable" if livret_1_validated_or_later else "")).strip(),
                 "scotia_processed_at": (t.get("scotia_processed_at") or "").strip(),
                 "scotia_comment": (t.get("scotia_comment") or "").strip(),
                 "scotia_livret_2_status": (t.get("scotia_livret_2_status") or "").strip(),
