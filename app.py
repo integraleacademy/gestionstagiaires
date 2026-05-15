@@ -7180,7 +7180,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 or bool((raw_vae_status_label or "").strip())
                 or "VAE" in (_session_get(s, "name", "") or "").upper()
             )
-            if certified_vae and not force_scotia_visibility:
+            if certified_vae:
                 _scotia_log_visibility("info", "excluded: certified_vae", visibility_payload)
                 continue
             if _is_truthy(t.get("scotia_hidden")) and not force_scotia_visibility and not livret_1_validated_or_later:
