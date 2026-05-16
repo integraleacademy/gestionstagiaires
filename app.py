@@ -7484,6 +7484,24 @@ def api_scotia_decision(session_id: str, trainee_id: str):
         t['scotia_livret_2_processed_at'] = now_iso
         t['scotia_livret_2_processed_at_label'] = now_paris_label
 
+        trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
+        decision_labels = {
+            'livret_2_ok': 'Livret 2 validé',
+            'livret_2_review': 'Livret 2 à revoir',
+        }
+        label = f"📄 Décision SCOTIA: {trainee_display_name} - {decision_labels.get(decision, decision)}"
+        add_admin_notification(
+            data,
+            label,
+            {
+                "kind": "scotia_livret_2_decision",
+                "session_id": str(s.get("id") or ""),
+                "session_name": _session_get(s, "name", ""),
+                "trainee_id": str(t.get("id") or ""),
+                "decision": decision,
+            },
+        )
+
     t['updated_at'] = now_iso
 
     s['trainees'] = trainees
