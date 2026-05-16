@@ -7125,7 +7125,7 @@ def public_vae_desp_submit():
 
 
 
-def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _all_scotia_items(data: Dict[str, Any], include_archived: bool = False) -> List[Dict[str, Any]]:
     def _is_truthy(value: Any) -> bool:
         return value in (True, "true", "1", 1, "yes", "on", "True")
 
@@ -7181,10 +7181,21 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 or bool((raw_vae_status_label or "").strip())
                 or "VAE" in (_session_get(s, "name", "") or "").upper()
             )
+            archive_category = ""
             if certified_vae:
+                archive_category = "certified"
+            elif stored_scotia_status == "non_recevable":
+                archive_category = "non-recevable"
+            elif (
+                stored_scotia_status == "recevable"
+                and (t.get("scotia_livret_2_status") or "").strip() == "livret_2_ok"
+            ) or vae_status_key == "livret_2_validated":
+                archive_category = "l2-validated"
+
+            if certified_vae and not include_archived:
                 _scotia_log_visibility("info", "excluded: certified_vae", visibility_payload)
                 continue
-            if stored_scotia_status == "non_recevable":
+            if stored_scotia_status == "non_recevable" and not include_archived:
                 _scotia_log_visibility("info", "excluded: non_recevable", visibility_payload)
                 continue
             if _is_truthy(t.get("scotia_hidden")) and not force_scotia_visibility and not sent_at and not livret_1_validated_or_later:
@@ -7196,7 +7207,7 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 if should_log_non_vae_exclusion:
                     _scotia_log_visibility("warning", "excluded: session_not_vae", visibility_payload)
                 continue
-            if not sent_at and not force_scotia_visibility and not livret_1_validated_or_later:
+            if not sent_at and not force_scotia_visibility and not livret_1_validated_or_later and not (include_archived and archive_category):
                 _scotia_log_visibility("warning", "excluded: no_transmission_no_force_no_validated_livret1", visibility_payload)
                 continue
             included_reason = "forced" if force_scotia_visibility else ("vae_status_livret_1_validated_or_later" if livret_1_validated_or_later and not sent_at else "scotia_transmission_date")
@@ -7263,6 +7274,10 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "candidate_sheet_available": bool(t.get("candidate_sheet_saved_at") or t.get("candidate_sheet")),
                 "vae_dossier_id": str((latest_vae or {}).get("id") or ""),
                 "vae_justificatifs": vae_justificatifs,
+                "vae_status_key": vae_status_key,
+                "vae_status_label": vae_status_view(vae_status_key)["label"],
+                "scotia_archive_category": archive_category,
+                "is_scotia_archive": bool(archive_category),
             })
     def _scotia_sort_key(item: Dict[str, Any]):
         sent_at_raw = item.get("vae_sent_at") or ""
@@ -7362,7 +7377,7 @@ def _scotia_thread_comments_for_display(t: Dict[str, Any]) -> List[Dict[str, Any
 @scotia_login_required
 def scotia_dashboard():
     data = load_data()
-    items = _all_scotia_items(data)
+    items = _all_scotia_items(data, include_archived=True)
     return render_template('scotia_dashboard.html', items=items)
 
 
