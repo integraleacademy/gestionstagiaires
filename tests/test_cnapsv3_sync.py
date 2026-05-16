@@ -1491,5 +1491,71 @@ class TestFrImportTests(unittest.TestCase):
         self.assertIn("Test de français John Doe.pdf", zf.namelist())
 
 
+class ScotiaDashboardFilterCategoryTests(unittest.TestCase):
+    def _base_item(self, **overrides):
+        item = {
+            'session_id': 'S1',
+            'session_name': 'VAE DESP 2026',
+            'trainee_id': 'T1',
+            'first_name': 'Jean',
+            'last_name': 'Dupont',
+            'email': '',
+            'phone': '',
+            'vae_sent_at': '12/05/2026',
+            'livret_1_sent_at': '10/05/2026',
+            'livret_2_sent_at': '',
+            'scotia_force_visible': False,
+            'scotia_status': 'complement_requested',
+            'scotia_processed_at': '',
+            'scotia_comment': '',
+            'scotia_livret_2_status': '',
+            'scotia_livret_2_processed_at': '',
+            'documents': [],
+            'prerequis_interview_sheet': '',
+            'complementary_documents': ['uploads/S1/T1/public_documents/complement.pdf'],
+            'complementary_documents_received_at': '16/05/2026 à 14h35',
+            'scotia_complementary_documents_review_status': '',
+            'scotia_complementary_documents_reviewed_at': '',
+            'added_document_groups': [],
+            'scotia_thread_comments': [],
+            'deliverables': {},
+            'attestation_recevabilite_imported_at': '',
+            'livret_2_imported_at': '',
+            'candidate_sheet_available': False,
+            'vae_dossier_id': '',
+            'vae_justificatifs': [],
+            'vae_status_key': 'complement_requested',
+            'vae_status_label': 'Demande de complément en cours',
+            'scotia_archive_category': '',
+            'is_scotia_archive': False,
+        }
+        item.update(overrides)
+        return item
+
+    def test_complement_documents_stat_matches_rendered_filter_category(self):
+        item = self._base_item()
+        item['scotia_dashboard_category'] = gestion_app._scotia_dashboard_category(item)
+
+        with gestion_app.app.test_request_context('/scotia'):
+            html = render_template('scotia_dashboard.html', items=[item])
+
+        self.assertEqual(item['scotia_dashboard_category'], 'complement-docs')
+        self.assertIn('<strong>1</strong><span>complément de dossier à consulter', html)
+        self.assertIn('data-filter="complement-docs"', html)
+        self.assertIn('data-category="complement-docs"', html)
+
+    def test_precomputed_dashboard_category_drives_count_and_dom_category(self):
+        item = self._base_item(
+            scotia_dashboard_category='complements',
+            scotia_complementary_documents_review_status='complement_documents_new_expected',
+        )
+
+        with gestion_app.app.test_request_context('/scotia'):
+            html = render_template('scotia_dashboard.html', items=[item])
+
+        self.assertIn('<strong>0</strong><span>compléments de dossier à consulter', html)
+        self.assertIn('<strong>1</strong><span>En attente documents complémentaires', html)
+        self.assertIn('data-category="complements"', html)
+
 if __name__ == "__main__":
     unittest.main()
