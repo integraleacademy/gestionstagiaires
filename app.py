@@ -5730,6 +5730,59 @@ def _ensure_complementary_documents_entry(t: Dict[str, Any]) -> List[str]:
     return tokens
 
 
+def _public_complementary_documents_upload_expected(t: Dict[str, Any]) -> bool:
+    return (
+        (t.get("scotia_status") or "").strip() == "complement_requested"
+        and (t.get("scotia_complementary_documents_review_status") or "").strip() == "complement_documents_new_expected"
+    )
+
+
+def _ensure_public_complementary_documents_upload_entry(t: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if not _public_complementary_documents_upload_expected(t):
+        return None
+
+    docs = t.get("documents")
+    if not isinstance(docs, list):
+        docs = []
+        t["documents"] = docs
+
+    entry = next((d for d in docs if isinstance(d, dict) and d.get("key") == "complementary_documents"), None)
+    if not isinstance(entry, dict):
+        entry = {
+            "key": "complementary_documents",
+            "label": REQUIRED_DOCS["DIRIGEANT_VAE_COMPLEMENT"]["label"],
+            "accept": REQUIRED_DOCS["DIRIGEANT_VAE_COMPLEMENT"].get("accept", ""),
+            "status": "A CONTRÔLER",
+            "comment": "",
+            "file": "",
+            "files": [],
+        }
+        docs.append(entry)
+
+    tokens = [x for x in _ensure_complementary_documents_entry(t) if isinstance(x, str) and x.strip()]
+    entry["files"] = tokens
+    entry["file"] = tokens[0] if tokens else ""
+    entry["status"] = "A CONTRÔLER" if tokens else "NON DÉPOSÉ"
+    entry.setdefault("comment", "")
+    entry["label"] = REQUIRED_DOCS["DIRIGEANT_VAE_COMPLEMENT"]["label"]
+    entry["accept"] = REQUIRED_DOCS["DIRIGEANT_VAE_COMPLEMENT"].get("accept", "")
+    return entry
+
+
+def _sync_complementary_document_tokens_from_document(t: Dict[str, Any], doc: Optional[Dict[str, Any]]) -> None:
+    if not isinstance(doc, dict):
+        return
+    tokens: List[str] = []
+    files = doc.get("files") if isinstance(doc.get("files"), list) else []
+    for token in files:
+        if isinstance(token, str) and token.strip() and token not in tokens:
+            tokens.append(token)
+    file_token = (doc.get("file") or "").strip()
+    if file_token and file_token not in tokens:
+        tokens.insert(0, file_token)
+    if tokens:
+        t["scotia_complementary_documents"] = tokens
+
 def allowed_doc_keys_for_training(training_type: str, trainee: Optional[Dict[str, Any]] = None) -> set:
     keys = {d["key"] for d in required_docs_for_training(training_type, trainee)}
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
@@ -7255,6 +7308,9 @@ def _all_scotia_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "documents": docs_view,
                 "prerequis_interview_sheet": prerequis_interview_sheet_token,
                 "complementary_documents": complementary_document_tokens,
+                "complementary_documents_received_at": (action_dates.get("complementary_documents_received") or "").strip(),
+                "scotia_complementary_documents_review_status": (t.get("scotia_complementary_documents_review_status") or "").strip(),
+                "scotia_complementary_documents_reviewed_at": (t.get("scotia_complementary_documents_reviewed_at_label") or _format_scotia_comment_added_at(t.get("scotia_complementary_documents_reviewed_at") or "")).strip(),
                 "added_document_groups": added_document_groups,
                 "scotia_thread_comments": _scotia_thread_comments_for_display(t),
                 "deliverables": deliverables,
@@ -7319,6 +7375,15 @@ def _format_scotia_comment_added_at(value: str) -> str:
     paris_dt = dt.astimezone(ZoneInfo("Europe/Paris"))
     return paris_dt.strftime("%d/%m/%Y à %Hh%M")
 
+
+def _now_paris_label() -> str:
+    return datetime.datetime.now(ZoneInfo("Europe/Paris")).strftime("%d/%m/%Y à %Hh%M")
+
+
+def _mark_complementary_documents_to_control(t: Dict[str, Any]) -> None:
+    t["scotia_complementary_documents_review_status"] = ""
+    t["scotia_complementary_documents_reviewed_at"] = ""
+    t["scotia_complementary_documents_reviewed_at_label"] = ""
 
 def _ensure_scotia_thread_comments_entry(t: Dict[str, Any]) -> List[Dict[str, Any]]:
     comments = t.get("scotia_thread_comments")
@@ -7391,26 +7456,32 @@ def api_scotia_decision(session_id: str, trainee_id: str):
 
     payload = request.get_json(silent=True) or {}
     decision = (payload.get('decision') or '').strip().lower()
-    if decision not in {'recevable', 'non_recevable', 'complement_requested', 'livret_2_ok', 'livret_2_review'}:
+    complement_review_decisions = {'complement_documents_conform', 'complement_documents_non_conform', 'complement_documents_new_expected'}
+    if decision not in {'recevable', 'non_recevable', 'complement_requested', 'livret_2_ok', 'livret_2_review', *complement_review_decisions}:
         return jsonify({"ok": False, "error": "invalid_decision"}), 400
 
     now_iso = _now_iso()
+    now_paris_label = _now_paris_label()
 
     if decision in {'recevable', 'non_recevable', 'complement_requested'}:
         t['scotia_status'] = decision
         t['scotia_comment'] = (payload.get('comment') or '').strip()
         t['scotia_processed_at'] = now_iso
+        t['scotia_processed_at_label'] = now_paris_label
+        if not isinstance(t.get('vae_action_dates'), dict):
+            t['vae_action_dates'] = {}
         if decision == 'non_recevable':
             t['scotia_livret_2_status'] = ''
             t['scotia_livret_2_processed_at'] = ''
         if decision == 'complement_requested':
             _ensure_complementary_documents_entry(t)
+            _mark_complementary_documents_to_control(t)
             view = vae_status_view('complement_requested')
             t['vae_status'] = view['key']
             t['vae_status_label'] = view['label']
-            if not isinstance(t.get('vae_action_dates'), dict):
-                t['vae_action_dates'] = {}
-            t['vae_action_dates']['complement_requested_at'] = fr_date(datetime.datetime.utcnow().strftime("%Y-%m-%d"))
+            t['vae_action_dates']['complement_requested_at'] = now_paris_label
+        else:
+            t['vae_action_dates'][f'{decision}_scotia_at'] = now_paris_label
 
         trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
         decision_labels = {
@@ -7430,6 +7501,33 @@ def api_scotia_decision(session_id: str, trainee_id: str):
                 "decision": decision,
             },
         )
+    elif decision in complement_review_decisions:
+        current_status = (t.get('scotia_status') or '').strip()
+        complementary_documents = _ensure_complementary_documents_entry(t)
+        if current_status != 'complement_requested' or not complementary_documents:
+            return jsonify({"ok": False, "error": "complement_documents_not_ready"}), 400
+
+        t['scotia_complementary_documents_review_status'] = decision
+        t['scotia_complementary_documents_reviewed_at'] = now_iso
+        t['scotia_complementary_documents_reviewed_at_label'] = now_paris_label
+        if not isinstance(t.get('vae_action_dates'), dict):
+            t['vae_action_dates'] = {}
+        t['vae_action_dates']['complementary_documents_reviewed_at'] = now_paris_label
+
+        if decision == 'complement_documents_new_expected':
+            t['scotia_status'] = 'complement_requested'
+            view = vae_status_view('complement_requested')
+            t['vae_status'] = view['key']
+            t['vae_status_label'] = view['label']
+            t['vae_action_dates']['complement_requested_at'] = now_paris_label
+        else:
+            t['scotia_status'] = ''
+            t['scotia_processed_at'] = ''
+            t['scotia_processed_at_label'] = ''
+            view = vae_status_view('livret_1_analysis')
+            t['vae_status'] = view['key']
+            t['vae_status_label'] = view['label']
+            t['vae_action_dates']['livret_1_analysis_at'] = now_paris_label
     else:
         current_status = (t.get('scotia_status') or '').strip()
         has_livret_2 = bool(((t.get('deliverables') or {}).get('livret_2') or '').strip())
@@ -7437,6 +7535,7 @@ def api_scotia_decision(session_id: str, trainee_id: str):
             return jsonify({"ok": False, "error": "livret_2_not_ready"}), 400
         t['scotia_livret_2_status'] = decision
         t['scotia_livret_2_processed_at'] = now_iso
+        t['scotia_livret_2_processed_at_label'] = now_paris_label
 
     t['updated_at'] = now_iso
 
@@ -7569,7 +7668,8 @@ def _append_complementary_documents(session_id: str, trainee_id: str, t: Dict[st
     t["scotia_complementary_documents"] = [x for x in target if x]
     if not isinstance(t.get("vae_action_dates"), dict):
         t["vae_action_dates"] = {}
-    t["vae_action_dates"]["complementary_documents_received"] = datetime.date.today().strftime("%d/%m/%Y")
+    t["vae_action_dates"]["complementary_documents_received"] = _now_paris_label()
+    _mark_complementary_documents_to_control(t)
     t["updated_at"] = _now_iso()
     return stored_count
 
@@ -7708,8 +7808,10 @@ def _remove_complementary_document_token(t: Dict[str, Any], token: str) -> bool:
                 doc_file = (doc.get("file") or "").strip()
                 if doc_file:
                     remaining.append(doc_file)
-        if not remaining and isinstance(t.get("vae_action_dates"), dict):
-            t["vae_action_dates"].pop("complementary_documents_received", None)
+        if not remaining:
+            _mark_complementary_documents_to_control(t)
+            if isinstance(t.get("vae_action_dates"), dict):
+                t["vae_action_dates"].pop("complementary_documents_received", None)
         t["updated_at"] = _now_iso()
 
     return removed
@@ -13105,8 +13207,10 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
     if doc_key == "complementary_documents":
         if not isinstance(t.get("vae_action_dates"), dict):
             t["vae_action_dates"] = {}
-        t["vae_action_dates"]["complementary_documents_received"] = datetime.date.today().strftime("%d/%m/%Y")
+        t["vae_action_dates"]["complementary_documents_received"] = _now_paris_label()
+        _mark_complementary_documents_to_control(t)
         target_doc["status"] = "A CONTRÔLER"
+        _sync_complementary_document_tokens_from_document(t, target_doc)
         trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
         add_admin_notification(
             data,
@@ -15604,6 +15708,7 @@ def public_trainee_space(token):
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
         _ensure_livret2_document_entry(t)
         _ensure_complementary_documents_entry(t)
+        _ensure_public_complementary_documents_upload_entry(t)
 
     for d in (t.get("documents") or []):
         file_token = d.get("file") or ""
@@ -15824,6 +15929,7 @@ def public_doc_upload(token: str, doc_key: str):
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
         _ensure_livret2_document_entry(t)
         _ensure_complementary_documents_entry(t)
+        _ensure_public_complementary_documents_upload_entry(t)
 
     # ✅ doc_key doit être dans la liste requise
     if doc_key not in allowed_doc_keys_for_training(training_type, t):
@@ -15946,8 +16052,10 @@ def public_doc_upload(token: str, doc_key: str):
     if doc_key == "complementary_documents":
         if not isinstance(t.get("vae_action_dates"), dict):
             t["vae_action_dates"] = {}
-        t["vae_action_dates"]["complementary_documents_received"] = datetime.date.today().strftime("%d/%m/%Y")
+        t["vae_action_dates"]["complementary_documents_received"] = _now_paris_label()
+        _mark_complementary_documents_to_control(t)
         target["status"] = "A CONTRÔLER"
+        _sync_complementary_document_tokens_from_document(t, target)
         trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
         add_admin_notification(
             data,

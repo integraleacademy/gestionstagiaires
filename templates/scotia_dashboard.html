@@ -154,6 +154,7 @@
     @keyframes complementPulse{0%,100%{transform:translateY(0);box-shadow:0 0 0 0 rgba(249,115,22,.42),0 10px 22px rgba(249,115,22,.30);}50%{transform:translateY(-1px);box-shadow:0 0 0 8px rgba(249,115,22,0),0 14px 26px rgba(249,115,22,.34);}}
     .scotia-item-actions .btn.is-active{box-shadow:0 0 0 3px rgba(37,99,235,.22);transform:none;}.scotia-item-actions .btn-danger-solid.is-active{box-shadow:0 0 0 3px rgba(185,28,28,.26);}
     .btn-pending-animated{background:linear-gradient(135deg,#fb923c,#f97316);color:#fff;border:1px solid #ea580c;box-shadow:0 10px 22px rgba(249,115,22,.30);animation:pendingPulse 1.6s ease-in-out infinite;cursor:default;}.btn-pending-animated:hover,.btn-pending-animated:focus{transform:none;box-shadow:0 10px 22px rgba(249,115,22,.30);}
+    .documents-control-alert{display:inline-flex;align-items:center;gap:8px;border:1px solid #ea580c;border-radius:999px;padding:9px 13px;background:linear-gradient(135deg,#fff7ed,#fed7aa);color:#9a3412;font-size:13px;font-weight:1000;box-shadow:0 10px 22px rgba(249,115,22,.20);animation:pendingPulse 1.35s ease-in-out infinite;white-space:nowrap;}
     @keyframes pendingPulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,.44),0 10px 22px rgba(249,115,22,.30);}50%{box-shadow:0 0 0 8px rgba(249,115,22,0),0 10px 22px rgba(249,115,22,.30);}}
     .scotia-empty{padding:42px 18px;text-align:center;border:1px dashed #cbd5e1;border-radius:22px;background:#f8fafc;color:#64748b;font-weight:800;}
     @media (max-width:1150px){.scotia-filter-groups{grid-template-columns:1fr;}.scotia-stats,.scotia-stats--actions,.scotia-stats--wide{grid-template-columns:repeat(3,minmax(0,1fr));}.scotia-stats--wide{grid-template-columns:repeat(2,minmax(0,1fr));}.scotia-workspace{grid-template-columns:1fr;}.scotia-side{position:static;grid-template-columns:repeat(2,minmax(0,1fr));}.scotia-panel-grid{grid-template-columns:1fr;}}
@@ -165,12 +166,13 @@
   {% for it in items %}
     {% set has_livret_2_stat = (it.deliverables.livret_2 or '')|trim %}
     {% set complementary_documents_stat = it.complementary_documents or [] %}
+    {% set complementary_documents_need_control_stat = complementary_documents_stat and it.scotia_complementary_documents_review_status != 'complement_documents_new_expected' %}
     {% if it.scotia_status in ['recevable', 'non_recevable'] %}
       {% if it.scotia_status == 'recevable' and not has_livret_2_stat %}{% set stats.l2_missing = stats.l2_missing + 1 %}{% endif %}
       {% if it.scotia_status == 'recevable' and has_livret_2_stat and it.scotia_livret_2_status not in ['livret_2_ok', 'livret_2_review'] %}{% set stats.l2_pending = stats.l2_pending + 1 %}{% endif %}
       {% if it.scotia_status == 'non_recevable' or it.scotia_livret_2_status in ['livret_2_ok', 'livret_2_review'] %}{% set stats.done = stats.done + 1 %}{% endif %}
     {% elif it.scotia_status == 'complement_requested' %}
-      {% if complementary_documents_stat %}
+      {% if complementary_documents_need_control_stat %}
         {% set stats.complement_docs = stats.complement_docs + 1 %}
       {% else %}
         {% set stats.complements = stats.complements + 1 %}
@@ -245,12 +247,13 @@
               {% set livret_2_is_ok = it.scotia_livret_2_status == 'livret_2_ok' %}
               {% set livret_2_is_review = it.scotia_livret_2_status == 'livret_2_review' %}
               {% set complementary_documents = it.complementary_documents or [] %}
+              {% set complementary_documents_need_control = livret_1_is_complement and complementary_documents and it.scotia_complementary_documents_review_status != 'complement_documents_new_expected' %}
               {% set added_document_groups = it.added_document_groups or [] %}
               {% if not livret_1_processed and not livret_1_is_complement %}
                 {% set scotia_category = 'l1-action' %}
               {% elif it.scotia_status == 'recevable' and has_livret_2 and not livret_2_processed %}
                 {% set scotia_category = 'l2-action' %}
-              {% elif livret_1_is_complement and complementary_documents %}
+              {% elif livret_1_is_complement and complementary_documents_need_control %}
                 {% set scotia_category = 'complement-docs' %}
               {% elif livret_1_is_complement %}
                 {% set scotia_category = 'complements' %}
@@ -289,7 +292,7 @@
                     {% elif it.scotia_status == 'non_recevable' %}
                       <span class="badge badge--danger">Non recevable</span>
                     {% elif it.scotia_status == 'complement_requested' %}
-                      {% if complementary_documents %}
+                      {% if complementary_documents_need_control %}
                         <span class="badge badge--warning">complément de dossier à consulter</span>
                       {% else %}
                         <span class="badge badge--warning">En attente documents complémentaires</span>
@@ -398,14 +401,19 @@
                               </span>
                             {% endfor %}
                           </div>
-                          {% if complementary_documents %}<p class="attestation-imported-note" style="font-weight:900;color:#166534;">Documents complémentaires déposés</p>{% else %}<p class="attestation-imported-note">Déposez ici les documents complémentaires demandés.</p>{% endif %}
-                          {% if livret_1_is_complement %}
-                            <div class="scotia-comment-wrap">
-                              <label class="scotia-comment-label" for="comment-input-{{ it.session_id }}-{{ it.trainee_id }}">Commentaire SCOTIA</label>
-                              <textarea id="comment-input-{{ it.session_id }}-{{ it.trainee_id }}" class="scotia-comment-input" placeholder="Indiquez ici les éléments complémentaires attendus..." data-session-id="{{ it.session_id }}" data-trainee-id="{{ it.trainee_id }}">{{ it.scotia_comment }}</textarea>
-                              <div id="comment-status-{{ it.session_id }}-{{ it.trainee_id }}" class="scotia-comment-status"></div>
-                            </div>
-                          {% endif %}
+                          {% if complementary_documents %}
+                            <p class="attestation-imported-note" style="font-weight:900;color:#166534;">Documents complémentaires déposés{% if it.complementary_documents_received_at %} le {{ it.complementary_documents_received_at }} (heure française){% endif %}</p>
+                            {% if complementary_documents_need_control %}
+                              <div class="scotia-subpanel-actions" style="margin-top:10px;">
+                                <span class="documents-control-alert">📎 Documents à contrôler</span>
+                                <button type="button" class="btn btn-primary" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','complement_documents_conform')">Conformes</button>
+                                <button type="button" class="btn btn-danger-solid" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','complement_documents_non_conform')">Non conforme</button>
+                                <button type="button" class="btn btn-complement-animated" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','complement_documents_new_expected')">Nouveaux compléments attendus</button>
+                              </div>
+                            {% elif it.scotia_complementary_documents_reviewed_at %}
+                              <p class="attestation-imported-note">Dernier contrôle enregistré le {{ it.scotia_complementary_documents_reviewed_at }} (heure française).</p>
+                            {% endif %}
+                          {% else %}<p class="attestation-imported-note">Déposez ici les documents complémentaires demandés.</p>{% endif %}
                         </div>
                         {% endif %}
 
