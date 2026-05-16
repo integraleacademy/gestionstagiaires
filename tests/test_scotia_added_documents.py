@@ -153,5 +153,68 @@ class ScotiaThreadCommentsTests(unittest.TestCase):
         self.assertEqual(items[0]["scotia_thread_comments"][0]["created_at_label"], "15/05/2026 à 08h59")
 
 
+class ScotiaDecisionTests(unittest.TestCase):
+    def setUp(self):
+        self.client = gestion_app.app.test_client()
+        self.original_load_data = gestion_app.load_data
+        self.original_save_data = gestion_app.save_data
+        self.original_now_iso = gestion_app._now_iso
+        self.original_notify_vae_status_change = gestion_app._notify_vae_status_change
+        self.data = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "name": "Session VAE",
+                    "training_type": "DIRIGEANT VAE",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "first_name": "Jean",
+                            "last_name": "Dupont",
+                            "email": "jean@example.test",
+                            "scotia_status": "recevable",
+                            "scotia_livret_2_status": "",
+                            "vae_status": "livret_2_analysis",
+                            "vae_status_label": "Réception livret 2",
+                            "deliverables": {"livret_2": "uploads/S1/T1/livret_2.pdf"},
+                            "vae_action_dates": {"livret_2_received": "15/05/2026"},
+                        }
+                    ],
+                }
+            ]
+        }
+        self.saved_payloads = []
+        self.notified_statuses = []
+        gestion_app.load_data = lambda: self.data
+        gestion_app.save_data = lambda data: self.saved_payloads.append(data)
+        gestion_app._now_iso = lambda: "2026-05-16T10:00:00Z"
+        gestion_app._notify_vae_status_change = lambda trainee, status: self.notified_statuses.append(status)
+        with self.client.session_transaction() as sess:
+            sess["scotia_logged_in"] = True
+            sess["scotia_username"] = "scotiaformation@gmail.com"
+
+    def tearDown(self):
+        gestion_app.load_data = self.original_load_data
+        gestion_app.save_data = self.original_save_data
+        gestion_app._now_iso = self.original_now_iso
+        gestion_app._notify_vae_status_change = self.original_notify_vae_status_change
+
+    def test_livret_2_ok_marks_vae_status_as_livret_2_validated(self):
+        response = self.client.post(
+            "/api/scotia/sessions/S1/stagiaires/T1/decision",
+            json={"decision": "livret_2_ok"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json(), {"ok": True})
+        trainee = self.data["sessions"][0]["trainees"][0]
+        self.assertEqual(trainee["scotia_livret_2_status"], "livret_2_ok")
+        self.assertEqual(trainee["vae_status"], "livret_2_validated")
+        self.assertEqual(trainee["vae_status_label"], "Livret 2 validé")
+        self.assertEqual(trainee["vae_action_dates"]["livret_2_validated"], "16/05/2026")
+        self.assertEqual(self.notified_statuses, ["livret_2_validated"])
+        self.assertEqual(len(self.saved_payloads), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
