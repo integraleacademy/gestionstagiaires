@@ -371,3 +371,64 @@ class VaeStatusNotificationTests(unittest.TestCase):
         self.assertEqual(sent_payload["trainee_id"], "T1")
         self.assertEqual(len(trainee["phone_followups"]), 1)
         self.assertIn("Mail VAE - Diplôme obtenu", trainee["phone_followups"][0]["details"])
+
+
+class ScotiaLivret2DecisionNotificationTests(unittest.TestCase):
+    def setUp(self):
+        self.client = gestion_app.app.test_client()
+        self.original_load_data = gestion_app.load_data
+        self.original_save_data = gestion_app.save_data
+
+    def tearDown(self):
+        gestion_app.load_data = self.original_load_data
+        gestion_app.save_data = self.original_save_data
+
+    def test_livret_2_ok_adds_admin_notification(self):
+        data = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "name": "Session VAE",
+                    "training_type": "DIRIGEANT VAE",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "first_name": "Alice",
+                            "last_name": "Durand",
+                            "email": "alice@example.com",
+                            "scotia_status": "recevable",
+                            "deliverables": {"livret_2": "uploads/S1/T1/livret2.pdf"},
+                        }
+                    ],
+                }
+            ],
+            "notifications_admin": [],
+        }
+        saved = {"called": 0}
+        gestion_app.load_data = lambda: data
+
+        def fake_save_data(_data):
+            saved["called"] += 1
+
+        gestion_app.save_data = fake_save_data
+
+        with self.client.session_transaction() as sess:
+            sess["scotia_logged_in"] = True
+
+        response = self.client.post(
+            "/api/scotia/sessions/S1/stagiaires/T1/decision",
+            json={"decision": "livret_2_ok"},
+        )
+        payload = response.get_json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["ok"])
+        self.assertEqual(saved["called"], 1)
+        trainee = data["sessions"][0]["trainees"][0]
+        self.assertEqual(trainee["scotia_livret_2_status"], "livret_2_ok")
+        self.assertEqual(len(data["notifications_admin"]), 1)
+        notification = data["notifications_admin"][0]
+        self.assertIn("Livret 2 validé", notification["label"])
+        self.assertIn("Alice DURAND", notification["label"])
+        self.assertEqual(notification["meta"]["kind"], "scotia_livret_2_decision")
+        self.assertEqual(notification["meta"]["decision"], "livret_2_ok")
