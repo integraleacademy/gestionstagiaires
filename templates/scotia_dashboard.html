@@ -77,6 +77,13 @@
     .scotia-stat--purple{background:linear-gradient(135deg,rgba(124,58,237,.92),rgba(216,180,254,.40));}
     .scotia-stat--slate{background:linear-gradient(135deg,rgba(51,65,85,.92),rgba(148,163,184,.36));}
     .scotia-stat--red{background:linear-gradient(135deg,rgba(220,38,38,.96),rgba(251,113,133,.58));}
+    .scotia-stat--teal{background:linear-gradient(135deg,rgba(13,148,136,.94),rgba(45,212,191,.48));}
+    .scotia-stat--gold{background:linear-gradient(135deg,rgba(202,138,4,.96),rgba(253,224,71,.50));}
+    .scotia-top-summary{position:relative;z-index:2;margin-top:20px;border:1px solid rgba(255,255,255,.22);border-radius:26px;padding:16px;background:rgba(255,255,255,.12);backdrop-filter:blur(14px);}
+    .scotia-top-summary-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+    .scotia-top-summary-head h2{margin:0;color:#fff;font-size:18px;letter-spacing:-.02em;}
+    .scotia-top-summary-head p{margin:4px 0 0;color:rgba(255,255,255,.74);font-size:13px;font-weight:750;}
+    .scotia-top-summary .scotia-stats{grid-template-columns:repeat(3,minmax(0,1fr));}
     .scotia-workspace{display:block;margin-top:18px;}
     .scotia-board{border:1px solid rgba(148,163,184,.24);border-radius:26px;background:rgba(255,255,255,.82);box-shadow:0 20px 60px rgba(15,23,42,.08);padding:18px;backdrop-filter:blur(12px);}
     .scotia-board-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
@@ -95,6 +102,7 @@
     .scotia-item-accordion[data-category="complements"]{order:4;}
     .scotia-item-accordion[data-category="l2-waiting"]{order:5;}
     .scotia-item-accordion[data-category="done"]{order:6;}
+    .scotia-item-accordion[data-category="l2-validated"],.scotia-item-accordion[data-category="certified"],.scotia-item-accordion[data-category="non-recevable"]{order:7;}
     .scotia-item-accordion.is-filter-hidden{display:none;}
     .scotia-filter-empty{display:none;padding:22px;text-align:center;border:1px dashed #cbd5e1;border-radius:18px;background:#f8fafc;color:#64748b;font-weight:900;}
     .scotia-filter-empty.is-visible{display:block;}
@@ -162,23 +170,31 @@
   </style>
 </head>
 <body class="scotia-page">
-  {% set stats = namespace(total=items|length, l1_pending=0, complements=0, complement_docs=0, l2_missing=0, l2_pending=0, done=0) %}
+  {% set stats = namespace(active_total=0, l1_pending=0, complements=0, complement_docs=0, l2_missing=0, l2_pending=0, l2_validated=0, certified=0, non_recevable=0) %}
   {% for it in items %}
+    {% set archive_category_stat = it.scotia_archive_category or '' %}
     {% set has_livret_2_stat = (it.deliverables.livret_2 or '')|trim %}
     {% set complementary_documents_stat = it.complementary_documents or [] %}
-    {% set complementary_documents_need_control_stat = complementary_documents_stat and it.scotia_complementary_documents_review_status != 'complement_documents_new_expected' %}
-    {% if it.scotia_status in ['recevable', 'non_recevable'] %}
-      {% if it.scotia_status == 'recevable' and not has_livret_2_stat %}{% set stats.l2_missing = stats.l2_missing + 1 %}{% endif %}
-      {% if it.scotia_status == 'recevable' and has_livret_2_stat and it.scotia_livret_2_status not in ['livret_2_ok', 'livret_2_review'] %}{% set stats.l2_pending = stats.l2_pending + 1 %}{% endif %}
-      {% if it.scotia_status == 'non_recevable' or it.scotia_livret_2_status in ['livret_2_ok', 'livret_2_review'] %}{% set stats.done = stats.done + 1 %}{% endif %}
-    {% elif it.scotia_status == 'complement_requested' %}
-      {% if complementary_documents_need_control_stat %}
-        {% set stats.complement_docs = stats.complement_docs + 1 %}
-      {% else %}
-        {% set stats.complements = stats.complements + 1 %}
-      {% endif %}
+    {% if archive_category_stat == 'l2-validated' %}
+      {% set stats.l2_validated = stats.l2_validated + 1 %}
+    {% elif archive_category_stat == 'certified' %}
+      {% set stats.certified = stats.certified + 1 %}
+    {% elif archive_category_stat == 'non-recevable' %}
+      {% set stats.non_recevable = stats.non_recevable + 1 %}
     {% else %}
-      {% set stats.l1_pending = stats.l1_pending + 1 %}
+      {% set stats.active_total = stats.active_total + 1 %}
+      {% if it.scotia_status in ['recevable', 'non_recevable'] %}
+        {% if it.scotia_status == 'recevable' and not has_livret_2_stat %}{% set stats.l2_missing = stats.l2_missing + 1 %}{% endif %}
+        {% if it.scotia_status == 'recevable' and has_livret_2_stat and it.scotia_livret_2_status not in ['livret_2_ok', 'livret_2_review'] %}{% set stats.l2_pending = stats.l2_pending + 1 %}{% endif %}
+      {% elif it.scotia_status == 'complement_requested' %}
+        {% if complementary_documents_stat %}
+          {% set stats.complement_docs = stats.complement_docs + 1 %}
+        {% else %}
+          {% set stats.complements = stats.complements + 1 %}
+        {% endif %}
+      {% else %}
+        {% set stats.l1_pending = stats.l1_pending + 1 %}
+      {% endif %}
     {% endif %}
   {% endfor %}
 
@@ -194,6 +210,20 @@
           <a class="btn btn-outline" href="{{ url_for('scotia_logout') }}">Déconnexion</a>
         </div>
       </div>
+
+      <section class="scotia-top-summary" aria-label="Résumé des dossiers finalisés">
+        <div class="scotia-top-summary-head">
+          <div>
+            <h2>Résumé des dossiers finalisés</h2>
+            <p>Cliquez sur une carte pour afficher les dossiers concernés.</p>
+          </div>
+        </div>
+        <div class="scotia-stats">
+          <button type="button" class="scotia-stat scotia-stat--teal" data-filter="l2-validated" {% if stats.l2_validated == 0 %}disabled{% endif %}><strong>{{ stats.l2_validated }}</strong><span>Livrets 2 validés</span><small>Voir les dossiers</small></button>
+          <button type="button" class="scotia-stat scotia-stat--gold" data-filter="certified" {% if stats.certified == 0 %}disabled{% endif %}><strong>{{ stats.certified }}</strong><span>Certifications / diplômes obtenus</span><small>Voir les dossiers</small></button>
+          <button type="button" class="scotia-stat scotia-stat--red" data-filter="non-recevable" {% if stats.non_recevable == 0 %}disabled{% endif %}><strong>{{ stats.non_recevable }}</strong><span>Non recevables</span><small>Voir les dossiers</small></button>
+        </div>
+      </section>
 
       <div class="scotia-filter-groups" aria-label="Filtres SCOTIA">
         <section class="scotia-filter-group" aria-label="Actions à mener">
@@ -217,7 +247,7 @@
         </section>
         <section class="scotia-filter-group scotia-filter-group--full" aria-label="Dossiers actifs">
           <div class="scotia-active-row">
-            <button type="button" class="scotia-stat scotia-stat--slate" data-filter="all" {% if stats.total == 0 %}disabled{% endif %}><strong>{{ stats.total }}</strong><span>Dossiers actifs</span><small>Voir tous les dossiers</small></button>
+            <button type="button" class="scotia-stat scotia-stat--slate" data-filter="active" {% if stats.active_total == 0 %}disabled{% endif %}><strong>{{ stats.active_total }}</strong><span>Dossiers actifs</span><small>Voir les dossiers actifs</small></button>
           </div>
         </section>
       </div>
@@ -229,7 +259,7 @@
           <div>
             <h2>Dossiers en cours</h2>
           </div>
-          <span class="badge badge--info">{{ stats.total }} dossiers visibles</span>
+          <span class="badge badge--info">{{ stats.active_total }} dossiers visibles</span>
         </div>
 
         {% if items %}
@@ -249,7 +279,9 @@
               {% set complementary_documents = it.complementary_documents or [] %}
               {% set complementary_documents_need_control = livret_1_is_complement and complementary_documents and it.scotia_complementary_documents_review_status != 'complement_documents_new_expected' %}
               {% set added_document_groups = it.added_document_groups or [] %}
-              {% if not livret_1_processed and not livret_1_is_complement %}
+              {% if it.scotia_archive_category %}
+                {% set scotia_category = it.scotia_archive_category %}
+              {% elif not livret_1_processed and not livret_1_is_complement %}
                 {% set scotia_category = 'l1-action' %}
               {% elif it.scotia_status == 'recevable' and has_livret_2 and not livret_2_processed %}
                 {% set scotia_category = 'l2-action' %}
@@ -278,7 +310,13 @@
                     </div>
                   </div>
                   <div class="scotia-status-stack">
-                    {% if it.scotia_status == 'recevable' and not has_livret_2 %}
+                    {% if it.scotia_archive_category == 'certified' %}
+                      <span class="badge badge--success">🎓 {{ it.vae_status_label or 'Diplôme obtenu' }}</span>
+                    {% elif it.scotia_archive_category == 'l2-validated' %}
+                      <span class="badge badge--success">✅ Livret 2 validé</span>
+                    {% elif it.scotia_archive_category == 'non-recevable' %}
+                      <span class="badge badge--danger">Non recevable</span>
+                    {% elif it.scotia_status == 'recevable' and not has_livret_2 %}
                       <span class="badge badge--success">Recevable ✅</span>
                       <span class="badge badge--muted">Livret 2 en attente</span>
                     {% elif it.scotia_status == 'recevable' and has_livret_2 %}
@@ -339,6 +377,18 @@
                     </div>
 
                     <div class="scotia-action-zone">
+                      {% if it.scotia_archive_category %}
+                        <h3 class="scotia-section-title"><span>✅</span> Dossier finalisé</h3>
+                        <div class="scotia-item-actions">
+                          <div class="scotia-subpanel">
+                            <div class="scotia-subpanel-title-wrap"><h4 class="scotia-subpanel-title">Statut du dossier</h4></div>
+                            <p class="attestation-imported-note" style="font-weight:900;color:#0f172a;">Ce dossier est affiché à titre de suivi depuis les compteurs du haut.</p>
+                            {% if it.scotia_archive_category == 'certified' %}<span class="badge badge--success">🎓 {{ it.vae_status_label or 'Diplôme obtenu' }}</span>{% endif %}
+                            {% if it.scotia_archive_category == 'l2-validated' %}<span class="badge badge--success">✅ Livret 2 validé</span>{% endif %}
+                            {% if it.scotia_archive_category == 'non-recevable' %}<span class="badge badge--danger">Non recevable</span>{% endif %}
+                          </div>
+                        </div>
+                      {% else %}
                       <h3 class="scotia-section-title"><span>⚡</span> Actions rapides</h3>
                       <div class="scotia-item-actions">
                         <div class="scotia-subpanel">
@@ -470,6 +520,7 @@
                           </div>
                         </div>
                       </div>
+                      {% endif %}
                     </div>
                   </div>
                 </div>
@@ -698,7 +749,8 @@ function setScotiaFilter(filter){
   let visibleCount = 0;
   items.forEach((item)=>{
     const category = item.dataset.category || '';
-    const visible = filter === 'all' || category === filter;
+    const archiveCategories = new Set(['l2-validated', 'certified', 'non-recevable']);
+    const visible = filter === 'all' || (filter === 'active' ? !archiveCategories.has(category) : category === filter);
     item.classList.toggle('is-filter-hidden', !visible);
     if(visible) visibleCount += 1;
   });
