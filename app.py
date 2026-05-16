@@ -5730,6 +5730,59 @@ def _ensure_complementary_documents_entry(t: Dict[str, Any]) -> List[str]:
     return tokens
 
 
+def _public_complementary_documents_upload_expected(t: Dict[str, Any]) -> bool:
+    return (
+        (t.get("scotia_status") or "").strip() == "complement_requested"
+        and (t.get("scotia_complementary_documents_review_status") or "").strip() == "complement_documents_new_expected"
+    )
+
+
+def _ensure_public_complementary_documents_upload_entry(t: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if not _public_complementary_documents_upload_expected(t):
+        return None
+
+    docs = t.get("documents")
+    if not isinstance(docs, list):
+        docs = []
+        t["documents"] = docs
+
+    entry = next((d for d in docs if isinstance(d, dict) and d.get("key") == "complementary_documents"), None)
+    if not isinstance(entry, dict):
+        entry = {
+            "key": "complementary_documents",
+            "label": REQUIRED_DOCS["DIRIGEANT_VAE_COMPLEMENT"]["label"],
+            "accept": REQUIRED_DOCS["DIRIGEANT_VAE_COMPLEMENT"].get("accept", ""),
+            "status": "A CONTRÔLER",
+            "comment": "",
+            "file": "",
+            "files": [],
+        }
+        docs.append(entry)
+
+    tokens = [x for x in _ensure_complementary_documents_entry(t) if isinstance(x, str) and x.strip()]
+    entry["files"] = tokens
+    entry["file"] = tokens[0] if tokens else ""
+    entry["status"] = "A CONTRÔLER" if tokens else "NON DÉPOSÉ"
+    entry.setdefault("comment", "")
+    entry["label"] = REQUIRED_DOCS["DIRIGEANT_VAE_COMPLEMENT"]["label"]
+    entry["accept"] = REQUIRED_DOCS["DIRIGEANT_VAE_COMPLEMENT"].get("accept", "")
+    return entry
+
+
+def _sync_complementary_document_tokens_from_document(t: Dict[str, Any], doc: Optional[Dict[str, Any]]) -> None:
+    if not isinstance(doc, dict):
+        return
+    tokens: List[str] = []
+    files = doc.get("files") if isinstance(doc.get("files"), list) else []
+    for token in files:
+        if isinstance(token, str) and token.strip() and token not in tokens:
+            tokens.append(token)
+    file_token = (doc.get("file") or "").strip()
+    if file_token and file_token not in tokens:
+        tokens.insert(0, file_token)
+    if tokens:
+        t["scotia_complementary_documents"] = tokens
+
 def allowed_doc_keys_for_training(training_type: str, trainee: Optional[Dict[str, Any]] = None) -> set:
     keys = {d["key"] for d in required_docs_for_training(training_type, trainee)}
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
@@ -7498,24 +7551,6 @@ def api_scotia_decision(session_id: str, trainee_id: str):
         t['scotia_livret_2_status'] = decision
         t['scotia_livret_2_processed_at'] = now_iso
         t['scotia_livret_2_processed_at_label'] = now_paris_label
-
-        trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
-        decision_labels = {
-            'livret_2_ok': 'Livret 2 validé',
-            'livret_2_review': 'Livret 2 à revoir',
-        }
-        label = f"📄 Décision SCOTIA: {trainee_display_name} - {decision_labels.get(decision, decision)}"
-        add_admin_notification(
-            data,
-            label,
-            {
-                "kind": "scotia_livret_2_decision",
-                "session_id": str(s.get("id") or ""),
-                "session_name": _session_get(s, "name", ""),
-                "trainee_id": str(t.get("id") or ""),
-                "decision": decision,
-            },
-        )
 
     t['updated_at'] = now_iso
 
@@ -13190,6 +13225,7 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
         t["vae_action_dates"]["complementary_documents_received"] = _now_paris_label()
         _mark_complementary_documents_to_control(t)
         target_doc["status"] = "A CONTRÔLER"
+        _sync_complementary_document_tokens_from_document(t, target_doc)
         trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
         add_admin_notification(
             data,
@@ -15687,6 +15723,7 @@ def public_trainee_space(token):
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
         _ensure_livret2_document_entry(t)
         _ensure_complementary_documents_entry(t)
+        _ensure_public_complementary_documents_upload_entry(t)
 
     for d in (t.get("documents") or []):
         file_token = d.get("file") or ""
@@ -15907,6 +15944,7 @@ def public_doc_upload(token: str, doc_key: str):
     if (training_type or "").strip().upper() == "DIRIGEANT VAE":
         _ensure_livret2_document_entry(t)
         _ensure_complementary_documents_entry(t)
+        _ensure_public_complementary_documents_upload_entry(t)
 
     # ✅ doc_key doit être dans la liste requise
     if doc_key not in allowed_doc_keys_for_training(training_type, t):
@@ -16032,6 +16070,7 @@ def public_doc_upload(token: str, doc_key: str):
         t["vae_action_dates"]["complementary_documents_received"] = _now_paris_label()
         _mark_complementary_documents_to_control(t)
         target["status"] = "A CONTRÔLER"
+        _sync_complementary_document_tokens_from_document(t, target)
         trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
         add_admin_notification(
             data,

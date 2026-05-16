@@ -1212,12 +1212,13 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
     {% set st = (d.status if d and d.status else ("NON DÉPOSÉ" if not has_file else "A CONTRÔLER")) %}
     {% set up = (st|string)|upper %}
 {% set candidate_sheet_sent = d.key == "candidate_info_sheet" and up not in ["NON DÉPOSÉ", "NON DEPOSE", ""] %}
+  {% set complementary_documents_new_expected = d.key == "complementary_documents" and trainee.scotia_complementary_documents_review_status == "complement_documents_new_expected" %}
 {% set has_submission = has_file or candidate_sheet_sent %}
   {% set can_replace = (has_file and up == "NON CONFORME") %}
   {% set is_pending_review = (has_submission and up != "CONFORME" and up != "NON CONFORME") %}
   {% set max_files = 2 if d.key == "id" else (0 if d.key in ["livret_2", "complementary_documents"] else 1) %}
   {% set can_add_more = (d.key in ["livret_2", "complementary_documents"]) or ((file_tokens|length) < max_files) %}
-{% set show_upload = ((not has_file) or can_replace or (d.key in ["livret_2", "complementary_documents"] and can_add_more and not is_pending_review)) and not (d.key == "permis" and trainee.no_permis) %}
+{% set show_upload = ((not has_file) or can_replace or complementary_documents_new_expected or (d.key in ["livret_2", "complementary_documents"] and can_add_more and not is_pending_review)) and not (d.key == "permis" and trainee.no_permis) %}
 
     {% set row_cls = "missing" %}
     {% if has_submission %}
@@ -1359,7 +1360,9 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
         </div>
       {% endif %}
     {% else %}
-      {% if d.key == "complementary_documents" %}
+      {% if complementary_documents_new_expected %}
+        <div class="doctag missing">📎 Nouveaux compléments attendus — déposez les nouveaux documents demandés</div>
+      {% elif d.key == "complementary_documents" %}
         <div class="doctag pending">📎 Documents complémentaires déposés</div>
       {% else %}
         <div class="doctag pending">⏳ Document déposé — en attente de contrôle</div>
