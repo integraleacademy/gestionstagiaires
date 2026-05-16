@@ -815,6 +815,310 @@ class ScotiaItemsTests(unittest.TestCase):
         self.assertIn('L1 transmis le : 10/05/2026', html)
         self.assertIn('L2 transmis le : 12/05/2026', html)
 
+    def test_all_scotia_items_can_include_archived_dashboard_items(self):
+        payload = {
+            'sessions': [
+                {
+                    'id': 'S1',
+                    'name': 'VAE DESP 2026',
+                    'training_type': 'DIRIGEANT VAE',
+                    'trainees': [
+                        {
+                            'id': 'T1',
+                            'first_name': 'Jean',
+                            'last_name': 'Valide',
+                            'scotia_status': 'recevable',
+                            'scotia_livret_2_status': 'livret_2_ok',
+                            'deliverables': {'livret_2': 'uploads/l2.pdf'},
+                            'vae_action_dates': {'livret_1_transmitted_scotia': '01/05/2026'},
+                        },
+                        {
+                            'id': 'T2',
+                            'first_name': 'Lea',
+                            'last_name': 'Diplome',
+                            'vae_status': 'certified',
+                        },
+                        {
+                            'id': 'T3',
+                            'first_name': 'Noe',
+                            'last_name': 'Refuse',
+                            'scotia_status': 'non_recevable',
+                            'vae_action_dates': {'livret_1_transmitted_scotia': '02/05/2026'},
+                        },
+                    ],
+                }
+            ]
+        }
+
+        items = gestion_app._all_scotia_items(payload, include_archived=True)
+
+        categories = {item['trainee_id']: item['scotia_archive_category'] for item in items}
+        self.assertEqual(categories['T1'], 'l2-validated')
+        self.assertEqual(categories['T2'], 'certified')
+        self.assertEqual(categories['T3'], 'non-recevable')
+
+    def test_scotia_dashboard_displays_archived_summary_cards(self):
+        items = [
+            {
+                'session_id': 'S1',
+                'session_name': 'VAE DESP 2026',
+                'trainee_id': 'T1',
+                'first_name': 'Jean',
+                'last_name': 'Valide',
+                'email': '',
+                'phone': '',
+                'vae_sent_at': '12/05/2026',
+                'livret_1_sent_at': '10/05/2026',
+                'livret_2_sent_at': '12/05/2026',
+                'scotia_force_visible': False,
+                'scotia_status': 'recevable',
+                'scotia_processed_at': '',
+                'scotia_comment': '',
+                'scotia_livret_2_status': 'livret_2_ok',
+                'scotia_livret_2_processed_at': '',
+                'documents': [],
+                'prerequis_interview_sheet': '',
+                'complementary_documents': [],
+                'added_document_groups': [],
+                'scotia_thread_comments': [],
+                'deliverables': {'livret_2': 'uploads/S1/T1/livret2.pdf'},
+                'attestation_recevabilite_imported_at': '',
+                'livret_2_imported_at': '',
+                'candidate_sheet_available': False,
+                'vae_dossier_id': '',
+                'vae_justificatifs': [],
+                'vae_status_key': 'livret_2_validated',
+                'vae_status_label': 'Livret 2 validé',
+                'scotia_archive_category': 'l2-validated',
+                'is_scotia_archive': True,
+            },
+            {
+                'session_id': 'S1',
+                'session_name': 'VAE DESP 2026',
+                'trainee_id': 'T2',
+                'first_name': 'Lea',
+                'last_name': 'Diplome',
+                'email': '',
+                'phone': '',
+                'vae_sent_at': '',
+                'livret_1_sent_at': '',
+                'livret_2_sent_at': '',
+                'scotia_force_visible': False,
+                'scotia_status': 'recevable',
+                'scotia_processed_at': '',
+                'scotia_comment': '',
+                'scotia_livret_2_status': '',
+                'scotia_livret_2_processed_at': '',
+                'documents': [],
+                'prerequis_interview_sheet': '',
+                'complementary_documents': [],
+                'added_document_groups': [],
+                'scotia_thread_comments': [],
+                'deliverables': {},
+                'attestation_recevabilite_imported_at': '',
+                'livret_2_imported_at': '',
+                'candidate_sheet_available': False,
+                'vae_dossier_id': '',
+                'vae_justificatifs': [],
+                'vae_status_key': 'certified',
+                'vae_status_label': 'Diplôme obtenu',
+                'scotia_archive_category': 'certified',
+                'is_scotia_archive': True,
+            },
+            {
+                'session_id': 'S1',
+                'session_name': 'VAE DESP 2026',
+                'trainee_id': 'T3',
+                'first_name': 'Noe',
+                'last_name': 'Refuse',
+                'email': '',
+                'phone': '',
+                'vae_sent_at': '',
+                'livret_1_sent_at': '',
+                'livret_2_sent_at': '',
+                'scotia_force_visible': False,
+                'scotia_status': 'non_recevable',
+                'scotia_processed_at': '',
+                'scotia_comment': '',
+                'scotia_livret_2_status': '',
+                'scotia_livret_2_processed_at': '',
+                'documents': [],
+                'prerequis_interview_sheet': '',
+                'complementary_documents': [],
+                'added_document_groups': [],
+                'scotia_thread_comments': [],
+                'deliverables': {},
+                'attestation_recevabilite_imported_at': '',
+                'livret_2_imported_at': '',
+                'candidate_sheet_available': False,
+                'vae_dossier_id': '',
+                'vae_justificatifs': [],
+                'vae_status_key': 'livret_1_analysis',
+                'vae_status_label': 'Livret 1 en cours d\'analyse',
+                'scotia_archive_category': 'non-recevable',
+                'is_scotia_archive': True,
+            },
+        ]
+
+        with gestion_app.app.test_request_context('/scotia'):
+            html = render_template('scotia_dashboard.html', items=items)
+
+        self.assertIn('Résumé des dossiers finalisés', html)
+        self.assertIn('Livrets 2 validés', html)
+        self.assertIn('Certifications / diplômes obtenus', html)
+        self.assertIn('Non recevables', html)
+        self.assertIn('data-filter="l2-validated"', html)
+        self.assertIn('data-filter="certified"', html)
+        self.assertIn('data-filter="non-recevable"', html)
+
+
+class ScotiaComplementDocumentsReviewTests(unittest.TestCase):
+    def setUp(self):
+        self.client = gestion_app.app.test_client()
+        self.original_load_data = gestion_app.load_data
+        self.original_save_data = gestion_app.save_data
+        self.original_now_iso = gestion_app._now_iso
+        self.original_now_paris_label = gestion_app._now_paris_label
+
+    def tearDown(self):
+        gestion_app.load_data = self.original_load_data
+        gestion_app.save_data = self.original_save_data
+        gestion_app._now_iso = self.original_now_iso
+        gestion_app._now_paris_label = self.original_now_paris_label
+
+    def _login_scotia(self):
+        with self.client.session_transaction() as sess:
+            sess['scotia_logged_in'] = True
+
+    def _payload(self):
+        return {
+            'sessions': [
+                {
+                    'id': 'S1',
+                    'name': 'VAE DESP 2026',
+                    'training_type': 'DIRIGEANT VAE',
+                    'trainees': [
+                        {
+                            'id': 'T1',
+                            'first_name': 'Jean',
+                            'last_name': 'Dupont',
+                            'scotia_status': 'complement_requested',
+                            'vae_status': 'complement_requested',
+                            'vae_status_label': 'Demande de complément en cours',
+                            'documents': [
+                                {
+                                    'key': 'complementary_documents',
+                                    'label': 'Documents complémentaires',
+                                    'file': 'uploads/S1/T1/public_documents/complement.pdf',
+                                    'files': ['uploads/S1/T1/public_documents/complement.pdf'],
+                                }
+                            ],
+                            'vae_action_dates': {
+                                'livret_1_transmitted_scotia': '10/05/2026',
+                                'complementary_documents_received': '16/05/2026 à 14h35',
+                            },
+                        }
+                    ],
+                }
+            ]
+        }
+
+    def test_complement_documents_conform_returns_to_livret_1_validation_with_french_timestamp(self):
+        payload = self._payload()
+        saved_payloads = []
+        gestion_app.load_data = lambda: payload
+        gestion_app.save_data = lambda data: saved_payloads.append(data)
+        gestion_app._now_iso = lambda: '2026-05-16T12:45:00Z'
+        gestion_app._now_paris_label = lambda: '16/05/2026 à 14h45'
+        self._login_scotia()
+
+        response = self.client.post(
+            '/api/scotia/sessions/S1/stagiaires/T1/decision',
+            json={'decision': 'complement_documents_conform'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        trainee = payload['sessions'][0]['trainees'][0]
+        self.assertEqual(trainee['scotia_status'], '')
+        self.assertEqual(trainee['vae_status'], 'livret_1_analysis')
+        self.assertEqual(trainee['scotia_complementary_documents_review_status'], 'complement_documents_conform')
+        self.assertEqual(trainee['scotia_complementary_documents_reviewed_at_label'], '16/05/2026 à 14h45')
+        self.assertEqual(trainee['vae_action_dates']['complementary_documents_reviewed_at'], '16/05/2026 à 14h45')
+        self.assertEqual(trainee['vae_action_dates']['livret_1_analysis_at'], '16/05/2026 à 14h45')
+        self.assertEqual(len(saved_payloads), 1)
+
+    def test_new_complement_expected_moves_back_to_waiting_bucket(self):
+        payload = self._payload()
+        gestion_app.load_data = lambda: payload
+        gestion_app.save_data = lambda data: None
+        gestion_app._now_iso = lambda: '2026-05-16T12:45:00Z'
+        gestion_app._now_paris_label = lambda: '16/05/2026 à 14h45'
+        self._login_scotia()
+
+        response = self.client.post(
+            '/api/scotia/sessions/S1/stagiaires/T1/decision',
+            json={'decision': 'complement_documents_new_expected'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        trainee = payload['sessions'][0]['trainees'][0]
+        self.assertEqual(trainee['scotia_status'], 'complement_requested')
+        self.assertEqual(trainee['scotia_complementary_documents_review_status'], 'complement_documents_new_expected')
+        self.assertEqual(trainee['vae_action_dates']['complement_requested_at'], '16/05/2026 à 14h45')
+
+        items = gestion_app._all_scotia_items(payload)
+        with gestion_app.app.test_request_context('/scotia'):
+            html = render_template('scotia_dashboard.html', items=items)
+
+        self.assertIn('En attente documents complémentaires', html)
+        self.assertNotIn('complément de dossier à consulter', html)
+        self.assertNotIn('Commentaire SCOTIA', html)
+
+    def test_scotia_dashboard_shows_control_buttons_without_scotia_comment(self):
+        item = {
+            'session_id': 'S1',
+            'session_name': 'VAE DESP 2026',
+            'trainee_id': 'T1',
+            'first_name': 'Jean',
+            'last_name': 'Dupont',
+            'email': '',
+            'phone': '',
+            'vae_sent_at': '12/05/2026',
+            'livret_1_sent_at': '10/05/2026',
+            'livret_2_sent_at': '',
+            'scotia_force_visible': False,
+            'scotia_status': 'complement_requested',
+            'scotia_processed_at': '',
+            'scotia_comment': 'Ancien commentaire',
+            'scotia_livret_2_status': '',
+            'scotia_livret_2_processed_at': '',
+            'documents': [],
+            'prerequis_interview_sheet': '',
+            'complementary_documents': ['uploads/S1/T1/public_documents/complement.pdf'],
+            'complementary_documents_received_at': '16/05/2026 à 14h35',
+            'scotia_complementary_documents_review_status': '',
+            'scotia_complementary_documents_reviewed_at': '',
+            'added_document_groups': [],
+            'scotia_thread_comments': [],
+            'deliverables': {},
+            'attestation_recevabilite_imported_at': '',
+            'livret_2_imported_at': '',
+            'candidate_sheet_available': False,
+            'vae_dossier_id': '',
+            'vae_justificatifs': [],
+        }
+
+        with gestion_app.app.test_request_context('/scotia'):
+            html = render_template('scotia_dashboard.html', items=[item])
+
+        self.assertIn('Documents à contrôler', html)
+        self.assertIn('Conformes', html)
+        self.assertIn('Non conforme', html)
+        self.assertIn('Nouveau complément attendu', html)
+        self.assertIn('16/05/2026 à 14h35 (heure française)', html)
+        self.assertNotIn('Commentaire SCOTIA', html)
+        self.assertNotIn('Ancien commentaire', html)
+
 
 class ScotiaComplementDocumentsReviewTests(unittest.TestCase):
     def setUp(self):
