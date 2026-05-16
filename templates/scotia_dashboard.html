@@ -172,21 +172,41 @@
 <body class="scotia-page">
   {% set stats = namespace(active_total=0, l1_pending=0, complements=0, complement_docs=0, l2_missing=0, l2_pending=0, l2_validated=0, certified=0, non_recevable=0) %}
   {% for it in items %}
-    {% set archive_category_stat = it.scotia_archive_category or '' %}
-    {% set has_livret_2_stat = (it.deliverables.livret_2 or '')|trim %}
-    {% set complementary_documents_stat = it.complementary_documents or [] %}
-    {% set complementary_documents_need_control_stat = complementary_documents_stat and it.scotia_complementary_documents_review_status != 'complement_documents_new_expected' %}
-    {% if it.scotia_status in ['recevable', 'non_recevable'] %}
-      {% if it.scotia_status == 'recevable' and not has_livret_2_stat %}{% set stats.l2_missing = stats.l2_missing + 1 %}{% endif %}
-      {% if it.scotia_status == 'recevable' and has_livret_2_stat and it.scotia_livret_2_status not in ['livret_2_ok', 'livret_2_review'] %}{% set stats.l2_pending = stats.l2_pending + 1 %}{% endif %}
-      {% if it.scotia_status == 'non_recevable' or it.scotia_livret_2_status in ['livret_2_ok', 'livret_2_review'] %}{% set stats.done = stats.done + 1 %}{% endif %}
-    {% elif it.scotia_status == 'complement_requested' %}
-      {% if complementary_documents_need_control_stat %}
-        {% set stats.complement_docs = stats.complement_docs + 1 %}
+    {% set dashboard_category_stat = it.scotia_dashboard_category if it.scotia_dashboard_category is defined and it.scotia_dashboard_category else '' %}
+    {% if not dashboard_category_stat %}
+      {% set archive_category_stat = it.scotia_archive_category or '' %}
+      {% set has_livret_2_stat = (it.deliverables.livret_2 or '')|trim %}
+      {% set livret_1_processed_stat = it.scotia_status in ['recevable', 'non_recevable'] %}
+      {% set livret_1_is_complement_stat = it.scotia_status == 'complement_requested' %}
+      {% set livret_2_processed_stat = it.scotia_livret_2_status in ['livret_2_ok', 'livret_2_review'] %}
+      {% set complementary_documents_stat = it.complementary_documents or [] %}
+      {% set complementary_documents_need_control_stat = livret_1_is_complement_stat and complementary_documents_stat and it.scotia_complementary_documents_review_status != 'complement_documents_new_expected' %}
+      {% if archive_category_stat %}
+        {% set dashboard_category_stat = archive_category_stat %}
+      {% elif not livret_1_processed_stat and not livret_1_is_complement_stat %}
+        {% set dashboard_category_stat = 'l1-action' %}
+      {% elif it.scotia_status == 'recevable' and has_livret_2_stat and not livret_2_processed_stat %}
+        {% set dashboard_category_stat = 'l2-action' %}
+      {% elif livret_1_is_complement_stat and complementary_documents_need_control_stat %}
+        {% set dashboard_category_stat = 'complement-docs' %}
+      {% elif livret_1_is_complement_stat %}
+        {% set dashboard_category_stat = 'complements' %}
+      {% elif it.scotia_status == 'recevable' and not has_livret_2_stat %}
+        {% set dashboard_category_stat = 'l2-waiting' %}
       {% else %}
-        {% set stats.l1_pending = stats.l1_pending + 1 %}
+        {% set dashboard_category_stat = 'done' %}
       {% endif %}
     {% endif %}
+
+    {% if dashboard_category_stat == 'l1-action' %}{% set stats.l1_pending = stats.l1_pending + 1 %}{% endif %}
+    {% if dashboard_category_stat == 'l2-action' %}{% set stats.l2_pending = stats.l2_pending + 1 %}{% endif %}
+    {% if dashboard_category_stat == 'complement-docs' %}{% set stats.complement_docs = stats.complement_docs + 1 %}{% endif %}
+    {% if dashboard_category_stat == 'complements' %}{% set stats.complements = stats.complements + 1 %}{% endif %}
+    {% if dashboard_category_stat == 'l2-waiting' %}{% set stats.l2_missing = stats.l2_missing + 1 %}{% endif %}
+    {% if dashboard_category_stat == 'l2-validated' %}{% set stats.l2_validated = stats.l2_validated + 1 %}{% endif %}
+    {% if dashboard_category_stat == 'certified' %}{% set stats.certified = stats.certified + 1 %}{% endif %}
+    {% if dashboard_category_stat == 'non-recevable' %}{% set stats.non_recevable = stats.non_recevable + 1 %}{% endif %}
+    {% if dashboard_category_stat in ['l1-action', 'l2-action', 'complement-docs', 'complements', 'l2-waiting'] %}{% set stats.active_total = stats.active_total + 1 %}{% endif %}
   {% endfor %}
 
   <main class="scotia-shell">
@@ -270,7 +290,9 @@
               {% set complementary_documents = it.complementary_documents or [] %}
               {% set complementary_documents_need_control = livret_1_is_complement and complementary_documents and it.scotia_complementary_documents_review_status != 'complement_documents_new_expected' %}
               {% set added_document_groups = it.added_document_groups or [] %}
-              {% if it.scotia_archive_category %}
+              {% if it.scotia_dashboard_category is defined and it.scotia_dashboard_category %}
+                {% set scotia_category = it.scotia_dashboard_category %}
+              {% elif it.scotia_archive_category %}
                 {% set scotia_category = it.scotia_archive_category %}
               {% elif not livret_1_processed and not livret_1_is_complement %}
                 {% set scotia_category = 'l1-action' %}

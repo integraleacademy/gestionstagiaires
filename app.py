@@ -7299,7 +7299,7 @@ def _all_scotia_items(data: Dict[str, Any], include_archived: bool = False) -> L
             latest_vae = _vae_find_latest_for_trainee(str(t.get("id") or ""))
             vae_justificatifs = latest_vae.get("justificatifs_experience") if isinstance(latest_vae, dict) and isinstance(latest_vae.get("justificatifs_experience"), list) else []
 
-            items.append({
+            item_data = {
                 "session_id": str(s.get("id") or ""),
                 "session_name": _session_get(s, "name", ""),
                 "trainee_id": str(t.get("id") or ""),
@@ -7334,7 +7334,9 @@ def _all_scotia_items(data: Dict[str, Any], include_archived: bool = False) -> L
                 "vae_status_label": vae_status_view(vae_status_key)["label"],
                 "scotia_archive_category": archive_category,
                 "is_scotia_archive": bool(archive_category),
-            })
+            }
+            item_data["scotia_dashboard_category"] = _scotia_dashboard_category(item_data)
+            items.append(item_data)
     def _scotia_sort_key(item: Dict[str, Any]):
         sent_at_raw = item.get("vae_sent_at") or ""
         parsed_dt = _parse_iso_datetime(sent_at_raw)
@@ -7437,6 +7439,40 @@ def _scotia_thread_comments_for_display(t: Dict[str, Any]) -> List[Dict[str, Any
         for entry in _ensure_scotia_thread_comments_entry(t)
     ]
 
+
+
+def _scotia_dashboard_category(item: Dict[str, Any]) -> str:
+    """Retourne la catégorie de filtre affichée pour une ligne du tableau SCOTIA."""
+    archive_category = (item.get("scotia_archive_category") or "").strip()
+    if archive_category:
+        return archive_category
+
+    deliverables = item.get("deliverables") if isinstance(item.get("deliverables"), dict) else {}
+    has_livret_2 = bool((deliverables.get("livret_2") or "").strip())
+    scotia_status = (item.get("scotia_status") or "").strip()
+    livret_1_processed = scotia_status in {"recevable", "non_recevable"}
+    livret_1_is_complement = scotia_status == "complement_requested"
+    livret_2_processed = (item.get("scotia_livret_2_status") or "").strip() in {"livret_2_ok", "livret_2_review"}
+    complementary_documents = item.get("complementary_documents")
+    has_complementary_documents = bool(complementary_documents)
+    complement_review_status = (item.get("scotia_complementary_documents_review_status") or "").strip()
+    complementary_documents_need_control = (
+        livret_1_is_complement
+        and has_complementary_documents
+        and complement_review_status != "complement_documents_new_expected"
+    )
+
+    if not livret_1_processed and not livret_1_is_complement:
+        return "l1-action"
+    if scotia_status == "recevable" and has_livret_2 and not livret_2_processed:
+        return "l2-action"
+    if livret_1_is_complement and complementary_documents_need_control:
+        return "complement-docs"
+    if livret_1_is_complement:
+        return "complements"
+    if scotia_status == "recevable" and not has_livret_2:
+        return "l2-waiting"
+    return "done"
 
 @app.get('/scotia')
 @scotia_login_required
@@ -7551,6 +7587,31 @@ def api_scotia_decision(session_id: str, trainee_id: str):
         t['scotia_livret_2_status'] = decision
         t['scotia_livret_2_processed_at'] = now_iso
         t['scotia_livret_2_processed_at_label'] = now_paris_label
+        if not isinstance(t.get('vae_action_dates'), dict):
+            t['vae_action_dates'] = {}
+        if decision == 'livret_2_ok':
+            view = vae_status_view('livret_2_validated')
+            t['vae_status'] = view['key']
+            t['vae_status_label'] = view['label']
+            t['vae_action_dates']['livret_2_validated'] = fr_date(now_iso[:10])
+            _notify_vae_status_change(t, view['key'])
+
+        trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
+        livret_2_decision_labels = {
+            'livret_2_ok': 'Livret 2 validé',
+            'livret_2_review': 'Livret 2 à revoir',
+        }
+        add_admin_notification(
+            data,
+            f"📘 Décision SCOTIA: {trainee_display_name} - {livret_2_decision_labels.get(decision, decision)}",
+            {
+                "kind": "scotia_livret_2_decision",
+                "session_id": str(s.get("id") or ""),
+                "session_name": _session_get(s, "name", ""),
+                "trainee_id": str(t.get("id") or ""),
+                "decision": decision,
+            },
+        )
 
     t['updated_at'] = now_iso
 
