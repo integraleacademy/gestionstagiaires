@@ -7437,6 +7437,17 @@ def api_scotia_decision(session_id: str, trainee_id: str):
             return jsonify({"ok": False, "error": "livret_2_not_ready"}), 400
         t['scotia_livret_2_status'] = decision
         t['scotia_livret_2_processed_at'] = now_iso
+        if decision == 'livret_2_ok':
+            previous_status = vae_status_view(t.get('vae_status') or t.get('vae_status_label'))['key']
+            view = vae_status_view('livret_2_validated')
+            t['vae_status'] = view['key']
+            t['vae_status_label'] = view['label']
+            if not isinstance(t.get('vae_action_dates'), dict):
+                t['vae_action_dates'] = {}
+            if not t['vae_action_dates'].get('livret_2_validated'):
+                t['vae_action_dates']['livret_2_validated'] = fr_date(datetime.datetime.utcnow().strftime('%Y-%m-%d'))
+            if previous_status != view['key']:
+                _notify_vae_status_change(t, view['key'])
 
     t['updated_at'] = now_iso
 
