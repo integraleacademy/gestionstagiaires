@@ -79,7 +79,7 @@
     .scotia-stat--red{background:linear-gradient(135deg,rgba(220,38,38,.96),rgba(251,113,133,.58));}
     .scotia-stat--teal{background:linear-gradient(135deg,rgba(13,148,136,.94),rgba(45,212,191,.48));}
     .scotia-stat--gold{background:linear-gradient(135deg,rgba(202,138,4,.96),rgba(253,224,71,.50));}
-    .scotia-top-summary{position:relative;z-index:2;margin-top:20px;border:1px solid rgba(255,255,255,.22);border-radius:26px;padding:16px;background:rgba(255,255,255,.12);backdrop-filter:blur(14px);}
+    .scotia-top-summary{grid-column:1/-1;position:relative;z-index:2;margin-top:0;border:1px solid rgba(255,255,255,.22);border-radius:26px;padding:16px;background:rgba(255,255,255,.12);backdrop-filter:blur(14px);}
     .scotia-top-summary-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
     .scotia-top-summary-head h2{margin:0;color:#fff;font-size:18px;letter-spacing:-.02em;}
     .scotia-top-summary-head p{margin:4px 0 0;color:rgba(255,255,255,.74);font-size:13px;font-weight:750;}
@@ -211,19 +211,6 @@
         </div>
       </div>
 
-      <section class="scotia-top-summary" aria-label="Résumé des dossiers finalisés">
-        <div class="scotia-top-summary-head">
-          <div>
-            <h2>Résumé des dossiers finalisés</h2>
-            <p>Cliquez sur une carte pour afficher les dossiers concernés.</p>
-          </div>
-        </div>
-        <div class="scotia-stats">
-          <button type="button" class="scotia-stat scotia-stat--teal" data-filter="l2-validated" {% if stats.l2_validated == 0 %}disabled{% endif %}><strong>{{ stats.l2_validated }}</strong><span>Livrets 2 validés</span><small>Voir les dossiers</small></button>
-          <button type="button" class="scotia-stat scotia-stat--gold" data-filter="certified" {% if stats.certified == 0 %}disabled{% endif %}><strong>{{ stats.certified }}</strong><span>Certifications / diplômes obtenus</span><small>Voir les dossiers</small></button>
-          <button type="button" class="scotia-stat scotia-stat--red" data-filter="non-recevable" {% if stats.non_recevable == 0 %}disabled{% endif %}><strong>{{ stats.non_recevable }}</strong><span>Non recevables</span><small>Voir les dossiers</small></button>
-        </div>
-      </section>
 
       <div class="scotia-filter-groups" aria-label="Filtres SCOTIA">
         <section class="scotia-filter-group" aria-label="Actions à mener">
@@ -248,6 +235,18 @@
         <section class="scotia-filter-group scotia-filter-group--full" aria-label="Dossiers actifs">
           <div class="scotia-active-row">
             <button type="button" class="scotia-stat scotia-stat--slate" data-filter="active" {% if stats.active_total == 0 %}disabled{% endif %}><strong>{{ stats.active_total }}</strong><span>Dossiers actifs</span><small>Voir les dossiers actifs</small></button>
+          </div>
+        </section>
+        <section class="scotia-top-summary" aria-label="Dossiers traités">
+          <div class="scotia-top-summary-head">
+            <div>
+              <h2>Dossiers traités</h2>
+            </div>
+          </div>
+          <div class="scotia-stats">
+            <button type="button" class="scotia-stat scotia-stat--teal" data-filter="l2-validated" {% if stats.l2_validated == 0 %}disabled{% endif %}><strong>{{ stats.l2_validated }}</strong><span>📘 Livrets 2 validés</span><small>Voir les dossiers</small></button>
+            <button type="button" class="scotia-stat scotia-stat--gold" data-filter="certified" {% if stats.certified == 0 %}disabled{% endif %}><strong>{{ stats.certified }}</strong><span>🎓 Certifiés</span><small>Voir les dossiers</small></button>
+            <button type="button" class="scotia-stat scotia-stat--red" data-filter="non-recevable" {% if stats.non_recevable == 0 %}disabled{% endif %}><strong>{{ stats.non_recevable }}</strong><span>⛔ Non recevables</span><small>Voir les dossiers</small></button>
           </div>
         </section>
       </div>
