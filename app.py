@@ -71,8 +71,9 @@ SECRETARY_USER = os.environ.get("SECRETARY_USER", "")
 SECRETARY_PASSWORD = os.environ.get("SECRETARY_PASSWORD", "")
 SCOTIA_USER = os.environ.get("SCOTIA_USER", "")
 SCOTIA_PASSWORD = os.environ.get("SCOTIA_PASSWORD", "")
+INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL = "clement@integraleacademy.com"
 SCOTIA_COMMENT_AUTHOR_LABELS = {
-    "clement@integraleacademy.com": "Intégrale Academy",
+    INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL: "Intégrale Academy",
     "scotiaformation@gmail.com": "Scotia",
 }
 SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "30"))
@@ -116,6 +117,28 @@ def admin_write_required(view):
             abort(403)
         return view(*args, **kwargs)
     return wrapped
+
+def _is_integrale_scotia_admin_session() -> bool:
+    """Return True when the active admin session belongs to Clément.
+
+    Older persistent admin sessions did not store the username, so we also trust
+    the configured admin account when it is Clément's account.
+    """
+    if not session.get("admin_logged_in") or session.get("admin_role") != "admin":
+        return False
+
+    admin_username = (session.get("admin_username") or "").strip().lower()
+    if admin_username:
+        return admin_username == INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL
+
+    return (ADMIN_USER or "").strip().lower() == INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL
+
+
+def _enable_scotia_session_for_integrale_admin() -> None:
+    session["scotia_logged_in"] = True
+    session["scotia_username"] = INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL
+    session.permanent = True
+
 
 def scotia_login_required(view):
     @wraps(view)
@@ -209,6 +232,7 @@ def admin_login_post():
     if username == ADMIN_USER and password == ADMIN_PASSWORD:
         session["admin_logged_in"] = True
         session["admin_role"] = "admin"
+        session["admin_username"] = username.lower()
         session.permanent = True  # ✅ cookie persistant
         return redirect(next_url)
 
@@ -216,6 +240,7 @@ def admin_login_post():
         if username == SECRETARY_USER and password == SECRETARY_PASSWORD:
             session["admin_logged_in"] = True
             session["admin_role"] = "viewer"
+            session["admin_username"] = username.lower()
             session.permanent = True
             return redirect(next_url)
 
@@ -225,6 +250,12 @@ def admin_login_post():
 @app.get("/scotia/login")
 def scotia_login():
     next_url = request.args.get("next") or url_for("scotia_dashboard")
+    if session.get("scotia_logged_in"):
+        session.permanent = True
+        return redirect(next_url)
+    if _is_integrale_scotia_admin_session():
+        _enable_scotia_session_for_integrale_admin()
+        return redirect(next_url)
     return f"""
     <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Connexion SCOTIA</title></head>
@@ -258,6 +289,7 @@ def scotia_login_post():
         if admin_ok:
             session["admin_logged_in"] = True
             session["admin_role"] = "admin"
+            session["admin_username"] = username.lower()
         # Cookie de session persistant (durée définie par SESSION_DAYS).
         session.permanent = True
         return redirect(next_url)
