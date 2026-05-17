@@ -60,6 +60,8 @@ class VaeAdminDashboardTests(unittest.TestCase):
         self.assertIn('const { theoryStatus, practiceStatus } = getVtcStatusValues(tr);', html)
         self.assertIn('activeVaeDashboardFilter = filter === activeVaeDashboardFilter ? "" : filter;', html)
         self.assertIn('activeVaeDashboardFilter === "no_login" && !hasLoggedIn', html)
+        self.assertIn("grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));", html)
+        self.assertIn("overflow:visible;", html)
 
 
 if __name__ == "__main__":
