@@ -524,7 +524,7 @@
                                     <span class="scotia-thread-author">{{ comment.author_label }}</span>
                                     <span class="scotia-thread-date">commentaire ajouté le {{ comment.created_at_label }} (heure française)</span>
                                     {% if comment.can_mark_read %}
-                                      <button class="scotia-thread-read-btn" type="button" onclick="markThreadCommentRead('{{ it.session_id }}','{{ it.trainee_id }}','{{ comment.id }}')" title="Marquer ce commentaire comme lu">✅</button>
+                                      <button class="scotia-thread-read-btn" type="button" onclick="markThreadCommentRead('{{ it.session_id }}','{{ it.trainee_id }}','{{ comment.id }}')" title="Marquer ce commentaire comme lu">✅ Marquer commentaire comme lu</button>
                                     {% endif %}
                                     {% if comment.read_at_label %}
                                       <span class="scotia-thread-read-label">Lu par {{ comment.read_by_label }} le {{ comment.read_at_label }}</span>
@@ -714,7 +714,7 @@ function renderThreadReadControls(meta, sessionId, traineeId, comment){
     button.className = 'scotia-thread-read-btn';
     button.type = 'button';
     button.title = 'Marquer ce commentaire comme lu';
-    button.textContent = '✅';
+    button.textContent = '✅ Marquer commentaire comme lu';
     button.addEventListener('click', ()=> markThreadCommentRead(sessionId, traineeId, comment.id));
     meta.appendChild(button);
   }
