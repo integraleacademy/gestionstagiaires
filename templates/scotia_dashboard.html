@@ -118,6 +118,8 @@
     .scotia-meta-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:7px;}
     .scotia-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #e2e8f0;border-radius:999px;background:#f8fafc;color:#475569;padding:6px 9px;font-size:12px;font-weight:850;max-width:100%;}
     .scotia-chip--mail,.scotia-chip--phone{overflow-wrap:anywhere;}
+    .scotia-thread-notification{display:inline-flex;align-items:center;gap:7px;border:1px solid #fecaca;border-radius:999px;background:#fee2e2;color:#991b1b;padding:7px 10px;font-size:12px;font-weight:1000;box-shadow:0 10px 20px rgba(239,68,68,.12);cursor:pointer;}
+    .scotia-thread-notification:hover{background:#fecaca;}
     .scotia-status-stack{display:flex;align-items:center;gap:10px;justify-content:flex-end;flex-wrap:wrap;}
     .badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:8px 11px;font-weight:1000;font-size:12px;border:1px solid transparent;white-space:nowrap;}
     .badge--success{background:#dcfce7;color:#166534;border-color:#86efac;}.badge--danger{background:#fee2e2;color:#991b1b;border-color:#fecaca;}.badge--warning{background:#ffedd5;color:#9a3412;border-color:#fdba74;}.badge--info{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe;}.badge--muted{background:#f1f5f9;color:#475569;border-color:#e2e8f0;}.badge--review{background:#fef3c7;color:#92400e;border-color:#fde68a;}
@@ -155,6 +157,9 @@
     .scotia-thread-message{border:1px solid #e2e8f0;border-radius:16px;background:#fff;padding:10px 12px;box-shadow:0 10px 22px rgba(15,23,42,.06);}
     .scotia-thread-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:5px;font-size:12px;color:#64748b;font-weight:850;}
     .scotia-thread-author{color:#0f172a;font-weight:1000;}.scotia-thread-date{color:#475569;}.scotia-thread-content{margin:0;color:#1f2937;font-size:14px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;}
+    .scotia-thread-read-btn{border:1px solid #bbf7d0;background:#dcfce7;color:#166534;border-radius:999px;padding:3px 7px;font-size:12px;font-weight:1000;cursor:pointer;line-height:1;}
+    .scotia-thread-read-btn:hover{background:#bbf7d0;}
+    .scotia-thread-read-label{display:inline-flex;align-items:center;border-radius:999px;background:#f0fdf4;color:#166534;padding:3px 8px;font-size:12px;font-weight:900;}
     .scotia-thread-form{display:flex;flex-direction:column;gap:8px;}.scotia-thread-input{width:100%;min-height:74px;resize:vertical;border:1px solid #bfdbfe;border-radius:14px;padding:10px 12px;font:inherit;line-height:1.35;background:#fff;}
     .scotia-thread-form-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}.scotia-thread-status{font-size:12px;color:#64748b;font-weight:800;min-height:16px;}
     .btn-danger-solid{background:#b91c1c;color:#fff;border-color:#b91c1c;box-shadow:0 14px 26px rgba(185,28,28,.18);}.btn-danger-solid:hover{border-color:#991b1b;}
@@ -319,6 +324,7 @@
                         {% if it.livret_2_sent_at %}<span class="scotia-chip">📤 L2 transmis le : {{ it.livret_2_sent_at }}</span>{% endif %}
                         {% if it.email %}<span class="scotia-chip scotia-chip--mail">✉️ {{ it.email }}</span>{% endif %}
                         {% if it.phone %}<span class="scotia-chip scotia-chip--phone">📞 {{ it.phone }}</span>{% endif %}
+                        {% if it.scotia_unread_thread_summary %}<button id="thread-notification-{{ it.session_id }}-{{ it.trainee_id }}" class="scotia-thread-notification" type="button" onclick="openThreadFromNotification(event, '{{ it.session_id }}', '{{ it.trainee_id }}')">💬 {{ it.scotia_unread_thread_summary.label }}</button>{% endif %}
                       </div>
                     </div>
                   </div>
@@ -513,10 +519,16 @@
                             <div class="scotia-subpanel-title-wrap"><h5 class="scotia-subpanel-title">Fil actu / commentaires</h5></div>
                             <div id="thread-list-{{ it.session_id }}-{{ it.trainee_id }}" class="scotia-thread-list">
                               {% for comment in it.scotia_thread_comments or [] %}
-                                <article class="scotia-thread-message">
+                                <article class="scotia-thread-message" id="thread-comment-{{ comment.id }}" data-comment-id="{{ comment.id }}">
                                   <div class="scotia-thread-meta">
                                     <span class="scotia-thread-author">{{ comment.author_label }}</span>
                                     <span class="scotia-thread-date">commentaire ajouté le {{ comment.created_at_label }} (heure française)</span>
+                                    {% if comment.can_mark_read %}
+                                      <button class="scotia-thread-read-btn" type="button" onclick="markThreadCommentRead('{{ it.session_id }}','{{ it.trainee_id }}','{{ comment.id }}')" title="Marquer ce commentaire comme lu">✅</button>
+                                    {% endif %}
+                                    {% if comment.read_at_label %}
+                                      <span class="scotia-thread-read-label">Lu par {{ comment.read_by_label }} le {{ comment.read_at_label }}</span>
+                                    {% endif %}
                                   </div>
                                   <p class="scotia-thread-content">{{ comment.content }}</p>
                                 </article>
@@ -696,6 +708,24 @@ function setThreadStatus(sessionId, traineeId, message){
   if(status) status.textContent = message || '';
 }
 
+function renderThreadReadControls(meta, sessionId, traineeId, comment){
+  if(comment?.can_mark_read && comment?.id){
+    const button = document.createElement('button');
+    button.className = 'scotia-thread-read-btn';
+    button.type = 'button';
+    button.title = 'Marquer ce commentaire comme lu';
+    button.textContent = '✅';
+    button.addEventListener('click', ()=> markThreadCommentRead(sessionId, traineeId, comment.id));
+    meta.appendChild(button);
+  }
+  if(comment?.read_at_label){
+    const read = document.createElement('span');
+    read.className = 'scotia-thread-read-label';
+    read.textContent = `Lu par ${comment.read_by_label || ''} le ${comment.read_at_label}`.trim();
+    meta.appendChild(read);
+  }
+}
+
 function appendThreadComment(sessionId, traineeId, comment){
   const list = document.getElementById(`thread-list-${sessionId}-${traineeId}`);
   if(!list || !comment) return;
@@ -704,6 +734,10 @@ function appendThreadComment(sessionId, traineeId, comment){
 
   const article = document.createElement('article');
   article.className = 'scotia-thread-message';
+  if(comment.id){
+    article.id = `thread-comment-${comment.id}`;
+    article.dataset.commentId = comment.id;
+  }
 
   const meta = document.createElement('div');
   meta.className = 'scotia-thread-meta';
@@ -721,9 +755,56 @@ function appendThreadComment(sessionId, traineeId, comment){
   content.textContent = comment.content || '';
 
   meta.append(author, date);
+  renderThreadReadControls(meta, sessionId, traineeId, comment);
   article.append(meta, content);
   list.appendChild(article);
   list.scrollTop = list.scrollHeight;
+}
+
+function openThreadFromNotification(event, sessionId, traineeId){
+  if(event){
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  const notification = document.getElementById(`thread-notification-${sessionId}-${traineeId}`);
+  const details = notification?.closest('details');
+  if(details) details.open = true;
+  window.setTimeout(()=>{
+    const thread = document.getElementById(`thread-list-${sessionId}-${traineeId}`);
+    if(thread){
+      thread.scrollIntoView({behavior:'smooth', block:'center'});
+      thread.scrollTop = thread.scrollHeight;
+    }
+  }, 50);
+}
+
+function updateThreadNotification(sessionId, traineeId, unreadSummary){
+  const notification = document.getElementById(`thread-notification-${sessionId}-${traineeId}`);
+  if(!notification) return;
+  if(unreadSummary && unreadSummary.label){
+    notification.textContent = `💬 ${unreadSummary.label}`;
+  }else{
+    notification.remove();
+  }
+}
+
+async function markThreadCommentRead(sessionId, traineeId, commentId){
+  if(!commentId) return;
+  setThreadStatus(sessionId, traineeId, 'Marquage comme lu...');
+  const res = await fetch(`/api/scotia/sessions/${sessionId}/stagiaires/${traineeId}/thread-comments/${commentId}/read`, { method:'POST' });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok || data.ok === false){
+    setThreadStatus(sessionId, traineeId, 'Erreur lors du marquage comme lu');
+    return;
+  }
+  const article = document.getElementById(`thread-comment-${commentId}`);
+  const meta = article?.querySelector('.scotia-thread-meta');
+  if(meta && data.comment){
+    meta.querySelectorAll('.scotia-thread-read-btn,.scotia-thread-read-label').forEach((node)=> node.remove());
+    renderThreadReadControls(meta, sessionId, traineeId, data.comment);
+  }
+  updateThreadNotification(sessionId, traineeId, data.unread_summary);
+  setThreadStatus(sessionId, traineeId, 'Commentaire marqué comme lu');
 }
 
 async function addThreadComment(sessionId, traineeId){

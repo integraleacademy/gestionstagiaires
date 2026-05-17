@@ -7392,6 +7392,7 @@ def _all_scotia_items(data: Dict[str, Any], include_archived: bool = False) -> L
                 "scotia_complementary_documents_reviewed_at": (t.get("scotia_complementary_documents_reviewed_at_label") or _format_scotia_comment_added_at(t.get("scotia_complementary_documents_reviewed_at") or "")).strip(),
                 "added_document_groups": added_document_groups,
                 "scotia_thread_comments": _scotia_thread_comments_for_display(t),
+                "scotia_unread_thread_summary": _scotia_unread_thread_summary(t),
                 "deliverables": deliverables,
                 "attestation_recevabilite_imported_at": attestation_recevabilite_imported_at,
                 "livret_2_imported_at": livret_2_imported_at,
@@ -7442,8 +7443,36 @@ def _scotia_comment_author_label(username: str) -> str:
     return "Scotia"
 
 
+def _scotia_comment_party_from_label(label: str) -> str:
+    normalized = unicodedata.normalize("NFKD", (label or "").strip().lower())
+    normalized = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    if "integrale" in normalized or "academy" in normalized:
+        return "integrale"
+    return "scotia"
+
+
+def _scotia_comment_party_label(party: str) -> str:
+    return "Intégrale Academy" if party == "integrale" else "SCOTIA"
+
+
 def _current_scotia_comment_author_label() -> str:
+    if session.get("admin_logged_in"):
+        return "Intégrale Academy"
     return _scotia_comment_author_label(str(session.get("scotia_username") or ""))
+
+
+def _current_scotia_comment_party() -> str:
+    if session.get("admin_logged_in"):
+        return "integrale"
+    return _scotia_comment_party_from_label(_current_scotia_comment_author_label())
+
+
+def _scotia_comment_can_mark_read(entry: Dict[str, Any]) -> bool:
+    if entry.get("read_at"):
+        return False
+    if session.get("admin_logged_in"):
+        return True
+    return str(entry.get("author_party") or "") != _current_scotia_comment_party()
 
 
 def _format_scotia_comment_added_at(value: str) -> str:
@@ -7470,6 +7499,26 @@ def _mark_complementary_documents_to_control(t: Dict[str, Any]) -> None:
     t["scotia_complementary_documents_reviewed_at"] = ""
     t["scotia_complementary_documents_reviewed_at_label"] = ""
 
+def _scotia_legacy_comment_id(content: str, author_label: str, created_at: str) -> str:
+    raw = f"{created_at}|{author_label}|{content}".encode("utf-8", errors="ignore")
+    return hashlib.sha1(raw).hexdigest()[:16]
+
+
+def _format_scotia_comment_read_at(value: str) -> str:
+    s = (value or "").strip()
+    if not s:
+        return ""
+    normalized = s.replace("Z", "+00:00")
+    try:
+        dt = datetime.datetime.fromisoformat(normalized)
+    except Exception:
+        return fr_date(s)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=datetime.timezone.utc)
+    paris_dt = dt.astimezone(ZoneInfo("Europe/Paris"))
+    return paris_dt.strftime("%d/%m/%Y")
+
+
 def _ensure_scotia_thread_comments_entry(t: Dict[str, Any]) -> List[Dict[str, Any]]:
     comments = t.get("scotia_thread_comments")
     if not isinstance(comments, list):
@@ -7488,11 +7537,24 @@ def _ensure_scotia_thread_comments_entry(t: Dict[str, Any]) -> List[Dict[str, An
         author_label = str(entry.get("author_label") or "").strip()
         if not author_label:
             author_label = _scotia_comment_author_label(str(entry.get("author_email") or entry.get("author") or ""))
-        cleaned_comments.append({
+        author_party = str(entry.get("author_party") or "").strip() or _scotia_comment_party_from_label(author_label)
+        comment_id = str(entry.get("id") or "").strip() or _scotia_legacy_comment_id(content, author_label, created_at)
+        cleaned_entry = {
+            "id": comment_id,
             "content": content,
             "author_label": author_label,
+            "author_party": author_party,
             "created_at": created_at,
-        })
+        }
+        read_at = str(entry.get("read_at") or "").strip()
+        if read_at:
+            read_by_party = str(entry.get("read_by_party") or "").strip() or ("integrale" if author_party == "scotia" else "scotia")
+            cleaned_entry.update({
+                "read_at": read_at,
+                "read_by_party": read_by_party,
+                "read_by_label": str(entry.get("read_by_label") or "").strip() or _scotia_comment_party_label(read_by_party),
+            })
+        cleaned_comments.append(cleaned_entry)
     if len(cleaned_comments) != len(comments) or cleaned_comments != comments:
         t["scotia_thread_comments"] = cleaned_comments
     return t["scotia_thread_comments"]
@@ -7503,10 +7565,28 @@ def _scotia_thread_comments_for_display(t: Dict[str, Any]) -> List[Dict[str, Any
         {
             **entry,
             "created_at_label": _format_scotia_comment_added_at(str(entry.get("created_at") or "")),
+            "read_at_label": _format_scotia_comment_read_at(str(entry.get("read_at") or "")),
+            "can_mark_read": _scotia_comment_can_mark_read(entry),
         }
         for entry in _ensure_scotia_thread_comments_entry(t)
     ]
 
+
+def _scotia_unread_thread_summary(t: Dict[str, Any]) -> Dict[str, Any]:
+    current_party = _current_scotia_comment_party()
+    unread = [
+        entry for entry in _ensure_scotia_thread_comments_entry(t)
+        if not entry.get("read_at") and str(entry.get("author_party") or "") != current_party
+    ]
+    if not unread:
+        return {}
+    author_party = str(unread[-1].get("author_party") or "scotia")
+    count = len(unread)
+    return {
+        "count": count,
+        "author_label": _scotia_comment_party_label(author_party),
+        "label": f"{count} message{'s' if count > 1 else ''} {_scotia_comment_party_label(author_party)} à consulter",
+    }
 
 
 def _scotia_dashboard_category(item: Dict[str, Any]) -> str:
@@ -7725,9 +7805,12 @@ def api_scotia_thread_comment(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "comment_too_long"}), 400
 
     created_at = _now_iso()
+    author_label = _current_scotia_comment_author_label()
     entry = {
+        "id": uuid.uuid4().hex,
         "content": content,
-        "author_label": _current_scotia_comment_author_label(),
+        "author_label": author_label,
+        "author_party": _scotia_comment_party_from_label(author_label),
         "created_at": created_at,
     }
     comments = _ensure_scotia_thread_comments_entry(t)
@@ -7743,7 +7826,55 @@ def api_scotia_thread_comment(session_id: str, trainee_id: str):
         "comment": {
             **entry,
             "created_at_label": _format_scotia_comment_added_at(created_at),
+            "can_mark_read": _scotia_comment_can_mark_read(entry),
         },
+    })
+
+
+@app.post('/api/scotia/sessions/<session_id>/stagiaires/<trainee_id>/thread-comments/<comment_id>/read')
+@scotia_login_required
+def api_scotia_thread_comment_read(session_id: str, trainee_id: str, comment_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+
+    comments = _ensure_scotia_thread_comments_entry(t)
+    entry = next((x for x in comments if str(x.get("id") or "") == str(comment_id)), None)
+    if not entry:
+        return jsonify({"ok": False, "error": "comment_not_found"}), 404
+    if entry.get("read_at"):
+        return jsonify({
+            "ok": True,
+            "comment": {
+                **entry,
+                "read_at_label": _format_scotia_comment_read_at(str(entry.get("read_at") or "")),
+                "can_mark_read": False,
+            },
+            "unread_summary": _scotia_unread_thread_summary(t),
+        })
+    if not _scotia_comment_can_mark_read(entry):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    read_at = _now_iso()
+    read_by_party = "integrale" if str(entry.get("author_party") or "") == "scotia" else "scotia"
+    entry["read_at"] = read_at
+    entry["read_by_party"] = read_by_party
+    entry["read_by_label"] = _scotia_comment_party_label(read_by_party)
+    t['updated_at'] = read_at
+
+    s['trainees'] = trainees
+    s.pop('stagiaires', None)
+    save_data(data)
+
+    return jsonify({
+        "ok": True,
+        "comment": {
+            **entry,
+            "read_at_label": _format_scotia_comment_read_at(read_at),
+            "can_mark_read": False,
+        },
+        "unread_summary": _scotia_unread_thread_summary(t),
     })
 
 
