@@ -366,29 +366,130 @@ app.add_template_filter(fr_datetime, "frdatetime")
 # =========================
 # Persistent disk (Render)
 # =========================
+def _storage_probe_json(path: str, required_list_key: Optional[str] = None) -> Tuple[bool, int]:
+    """Return whether a JSON storage file is structurally usable and its list size."""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            loaded = json.load(f)
+    except Exception:
+        return False, 0
+
+    if not isinstance(loaded, dict):
+        return False, 0
+    if not required_list_key:
+        return True, 0
+    bucket = loaded.get(required_list_key)
+    if not isinstance(bucket, list):
+        return False, 0
+    return True, len(bucket)
+
+
+def _persist_dir_data_score(path: str) -> int:
+    """Score an existing candidate by the production data it already contains.
+
+    Render services may have both /var/data and /data writable.  Choosing the
+    first writable path can hide the mounted disk and make the app look empty.
+    Prefer the candidate that already contains stagiaire/VAE data or backups.
+    """
+    if not path or not os.path.isdir(path):
+        return 0
+
+    score = 0
+    data_path = os.path.join(path, "data.json")
+    vae_path = os.path.join(path, "data_vae.json")
+    wedof_path = os.path.join(path, "wedof_webhooks.json")
+
+    if os.path.exists(data_path):
+        score += 20
+        valid, count = _storage_probe_json(data_path, "sessions")
+        if valid:
+            score += 1000 + min(count, 500)
+
+    if os.path.exists(vae_path):
+        score += 15
+        valid, count = _storage_probe_json(vae_path, "dossiers")
+        if valid:
+            score += 900 + min(count, 500)
+
+    if os.path.exists(wedof_path):
+        valid, count = _storage_probe_json(wedof_path)
+        if valid:
+            score += 50
+        else:
+            try:
+                with open(wedof_path, "r", encoding="utf-8") as f:
+                    loaded = json.load(f)
+                if isinstance(loaded, list):
+                    score += 50 + min(len(loaded), 200)
+            except Exception:
+                pass
+
+    backup_dir = os.path.join(path, "backups")
+    if os.path.isdir(backup_dir):
+        try:
+            names = os.listdir(backup_dir)
+        except Exception:
+            names = []
+        data_backups = [n for n in names if n.startswith("data_json.") and n.endswith(".json")]
+        vae_backups = [n for n in names if n.startswith("data_vae_json.") and n.endswith(".json")]
+        score += min(len(data_backups), 120) * 3
+        score += min(len(vae_backups), 120) * 2
+
+    uploads_dir = os.path.join(path, "uploads")
+    if os.path.isdir(uploads_dir):
+        try:
+            if any(os.scandir(uploads_dir)):
+                score += 25
+        except Exception:
+            pass
+
+    return score
+
+
+def _is_writable_directory(path: str) -> bool:
+    try:
+        os.makedirs(path, exist_ok=True)
+        test_path = os.path.join(path, ".write-test")
+        with open(test_path, "w", encoding="utf-8") as f:
+            f.write("ok")
+        os.remove(test_path)
+        return True
+    except Exception:
+        return False
+
+
 def _resolve_persist_dir() -> str:
     """Return the directory used for all mutable production data.
 
-    On Render this must point to a mounted persistent disk (usually /var/data
-    or /data).  The value can be forced with PERSIST_DIR so a deployment never
-    has to write business data into the ephemeral application checkout.
+    On Render this must point to the mounted persistent disk.  The value can be
+    forced with PERSIST_DIR.  Without PERSIST_DIR, both common Render mount
+    paths are probed and the one that already contains the business data wins.
     """
     configured = (os.environ.get("PERSIST_DIR") or "").strip()
-    candidates = [configured] if configured else ["/var/data", "/data"]
+    if configured:
+        if _is_writable_directory(configured):
+            return configured
+        raise RuntimeError(f"PERSIST_DIR configuré mais non accessible en écriture: {configured}")
+
+    candidates = ["/var/data", "/data"]
+    writable_candidates: List[Tuple[str, int]] = []
     last_error = None
-    for candidate in [x for x in candidates if x]:
+    for candidate in candidates:
         try:
-            os.makedirs(candidate, exist_ok=True)
-            test_path = os.path.join(candidate, ".write-test")
-            with open(test_path, "w", encoding="utf-8") as f:
-                f.write("ok")
-            os.remove(test_path)
-            return candidate
+            if _is_writable_directory(candidate):
+                writable_candidates.append((candidate, _persist_dir_data_score(candidate)))
         except Exception as exc:
             last_error = exc
             continue
-    raise RuntimeError(f"Aucun dossier persistant accessible parmi {candidates}: {last_error}")
 
+    if not writable_candidates:
+        raise RuntimeError(f"Aucun dossier persistant accessible parmi {candidates}: {last_error}")
+
+    best_candidate, best_score = max(writable_candidates, key=lambda item: item[1])
+    if best_score > 0:
+        return best_candidate
+
+    return writable_candidates[0][0]
 
 PERSIST_DIR = _resolve_persist_dir()
 DATA_FILE = os.path.join(PERSIST_DIR, "data.json")
