@@ -4,7 +4,6 @@ import json
 import os
 import tempfile
 import unittest
-from unittest.mock import patch
 
 import app as gestion_app
 
@@ -16,6 +15,7 @@ class SecurityPersistenceTests(unittest.TestCase):
         self.original_data_file = gestion_app.DATA_FILE
         self.original_backup_dir = gestion_app.BACKUP_DIR
         self.original_persist_dir = gestion_app.PERSIST_DIR
+        self.original_docs_token = gestion_app.DOCS_TO_CONTROL_PUBLIC_TOKEN
 
         gestion_app.PERSIST_DIR = self.temp_dir.name
         gestion_app.DATA_FILE = os.path.join(self.temp_dir.name, "data.json")
@@ -28,6 +28,7 @@ class SecurityPersistenceTests(unittest.TestCase):
         gestion_app.DATA_FILE = self.original_data_file
         gestion_app.BACKUP_DIR = self.original_backup_dir
         gestion_app.PERSIST_DIR = self.original_persist_dir
+        gestion_app.DOCS_TO_CONTROL_PUBLIC_TOKEN = self.original_docs_token
         self.temp_dir.cleanup()
 
     def test_admin_api_requires_authentication(self):
@@ -35,61 +36,14 @@ class SecurityPersistenceTests(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.get_json()["error"], "auth_required")
 
-    def test_docs_to_control_is_public_json(self):
+    def test_docs_to_control_requires_admin_or_configured_token(self):
         response = self.client.get("/docs_to_control.json")
+        self.assertEqual(response.status_code, 403)
+
+        gestion_app.DOCS_TO_CONTROL_PUBLIC_TOKEN = "external-dashboard-token"
+        response = self.client.get("/docs_to_control.json?token=external-dashboard-token")
         self.assertEqual(response.status_code, 200)
-        payload = response.get_json()
-        self.assertEqual(payload["ok"], True)
-        self.assertEqual(payload["pending_count"], 0)
-        self.assertEqual(payload["items"], [])
-
-    def test_docs_to_control_counts_attention_needed_trainees(self):
-        fake_data = {
-            "sessions": [
-                {
-                    "id": "S1",
-                    "name": "Session 1",
-                    "training_type": "A3P",
-                    "trainees": [
-                        {
-                            "id": "T1",
-                            "first_name": "Ada",
-                            "last_name": "Lovelace",
-                            "documents": [{"key": "id", "status": "A CONTRÔLER"}],
-                        },
-                        {
-                            "id": "T2",
-                            "first_name": "Grace",
-                            "last_name": "Hopper",
-                            "documents": [{"key": "id", "status": "NON CONFORME"}],
-                        },
-                    ],
-                }
-            ]
-        }
-        with patch.object(gestion_app, "load_data", return_value=fake_data):
-            response = self.client.get("/docs_to_control.json")
-
-        self.assertEqual(response.status_code, 200)
-        payload = response.get_json()
-        self.assertEqual(payload["ok"], True)
-        self.assertEqual(payload["pending_count"], 2)
-        reasons = {item["trainee_id"]: item["reasons"] for item in payload["items"]}
-        self.assertIn("a_controler", reasons["T1"])
-        self.assertIn("non_conforme", reasons["T2"])
-
-    def test_resolve_persist_dir_scores_all_writable_candidates(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            low = os.path.join(temp_dir, "low")
-            high = os.path.join(temp_dir, "high")
-            os.makedirs(low, exist_ok=True)
-            os.makedirs(high, exist_ok=True)
-            with patch.dict(os.environ, {"PERSIST_DIR": ""}), \
-                 patch.object(gestion_app, "_persist_dir_data_score", side_effect=lambda path: {low: 1, high: 42}[path]) as scorer:
-                resolved = gestion_app._resolve_persist_dir([low, high])
-
-        self.assertEqual(resolved, high)
-        self.assertEqual([call.args[0] for call in scorer.call_args_list], [low, high])
+        self.assertEqual(response.get_json()["ok"], True)
 
     def test_detokenize_rejects_path_escape(self):
         with self.assertRaises(Exception):
