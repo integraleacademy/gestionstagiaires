@@ -8551,6 +8551,151 @@ def admin_cnaps_unknown():
     return response
 
 
+
+def _cash_amount_value(raw_value: Any) -> float:
+    try:
+        return max(float(str(raw_value or "").replace(",", ".").strip() or "0"), 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _cash_installments_total(raw_installments: Any) -> float:
+    if not isinstance(raw_installments, list):
+        return 0.0
+    total = 0.0
+    for item in raw_installments:
+        if isinstance(item, dict):
+            total += _cash_amount_value(item.get("amount"))
+    return round(total, 2)
+
+
+def _cash_installments_dates(raw_installments: Any) -> List[str]:
+    if not isinstance(raw_installments, list):
+        return []
+    dates = []
+    for item in raw_installments:
+        if not isinstance(item, dict):
+            continue
+        date_value = str(item.get("date") or "").strip()
+        if date_value:
+            dates.append(date_value)
+    return sorted(dates)
+
+
+def _build_cash_payment_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
+    rows = []
+    stats = {
+        "people_total": 0,
+        "settled_total": 0,
+        "pending_total": 0,
+        "amount_total": 0.0,
+        "paid_total": 0.0,
+        "pending_amount": 0.0,
+    }
+
+    today = datetime.date.today()
+
+    for sess in data.get("sessions", []):
+        if _is_wedof_leads_session(sess):
+            continue
+        if bool(sess.get("archived")):
+            continue
+
+        date_start_raw = _session_get(sess, "date_start", "")
+        date_end_raw = _session_get(sess, "date_end", "")
+        try:
+            date_start = datetime.datetime.strptime(date_start_raw[:10], "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            date_start = None
+        try:
+            date_end = datetime.datetime.strptime(date_end_raw[:10], "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            date_end = None
+
+        if date_end and date_end < today:
+            session_status = "Terminée"
+            session_status_key = "ended"
+        elif date_start and date_start <= today:
+            session_status = "En cours"
+            session_status_key = "ongoing"
+        else:
+            session_status = "À venir"
+            session_status_key = "upcoming"
+
+        for trainee in _session_trainees_list(sess):
+            if not bool(trainee.get("cash_payment_enabled")):
+                continue
+
+            amount = _cash_amount_value(trainee.get("cash_payment_amount"))
+            installments = trainee.get("cash_payment_installments") or []
+            installments_total = _cash_installments_total(installments)
+            settlement_date = str(trainee.get("cash_payment_settled_date") or "").strip()
+            installment_dates = _cash_installments_dates(installments)
+            collected_date = settlement_date or (installment_dates[-1] if installment_dates else "")
+            is_settled = bool(trainee.get("cash_payment_settled"))
+
+            paid_amount = amount if is_settled and amount > 0 else min(installments_total, amount) if amount > 0 else installments_total
+            remaining_amount = max(amount - paid_amount, 0.0)
+            if amount > 0 and remaining_amount <= 0.009:
+                is_settled = True
+                remaining_amount = 0.0
+
+            row = {
+                "trainee_id": trainee.get("id"),
+                "last_name": (trainee.get("last_name") or "").strip(),
+                "first_name": (trainee.get("first_name") or "").strip(),
+                "email": (trainee.get("email") or "").strip(),
+                "phone": (trainee.get("phone") or "").strip(),
+                "session_id": sess.get("id"),
+                "session_name": _session_get(sess, "name", ""),
+                "training_type": _session_get(sess, "training_type", ""),
+                "date_start": date_start_raw,
+                "date_end": date_end_raw,
+                "session_status": session_status,
+                "session_status_key": session_status_key,
+                "amount": round(amount, 2),
+                "paid_amount": round(paid_amount, 2),
+                "remaining_amount": round(remaining_amount, 2),
+                "installments": installments if isinstance(installments, list) else [],
+                "installments_total": round(installments_total, 2),
+                "installments_count": len([i for i in installments if isinstance(i, dict)]),
+                "is_settled": is_settled,
+                "settled_date": settlement_date,
+                "settled_comment": (trainee.get("cash_payment_settled_comment") or "").strip(),
+                "collected_date": collected_date,
+                "comment": (trainee.get("financement_comment") or trainee.get("comment") or "").strip(),
+            }
+            rows.append(row)
+
+            stats["people_total"] += 1
+            stats["amount_total"] += amount
+            stats["paid_total"] += paid_amount
+            stats["pending_amount"] += remaining_amount
+            if is_settled:
+                stats["settled_total"] += 1
+            else:
+                stats["pending_total"] += 1
+
+    rows.sort(key=lambda item: (item["is_settled"], item["date_start"] or "9999-12-31", item["last_name"], item["first_name"]))
+    for key in ("amount_total", "paid_total", "pending_amount"):
+        stats[key] = round(stats[key], 2)
+    return {"rows": rows, "stats": stats}
+
+
+@app.get("/admin/sessions/paiement-especes")
+@admin_login_required
+def admin_cash_payments():
+    data = load_data()
+    dashboard = _build_cash_payment_dashboard(data)
+    response = make_response(render_template(
+        "admin_cash_payments.html",
+        rows=dashboard["rows"],
+        stats=dashboard["stats"],
+    ))
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
+
 @app.get("/admin/sessions/conventions")
 @admin_login_required
 def admin_sessions_conventions():
