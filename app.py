@@ -19,6 +19,7 @@ from zoneinfo import ZoneInfo
 from flask import session
 from PIL import Image, ImageOps
 import tempfile
+import fcntl
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
@@ -70,8 +71,9 @@ SECRETARY_USER = os.environ.get("SECRETARY_USER", "")
 SECRETARY_PASSWORD = os.environ.get("SECRETARY_PASSWORD", "")
 SCOTIA_USER = os.environ.get("SCOTIA_USER", "")
 SCOTIA_PASSWORD = os.environ.get("SCOTIA_PASSWORD", "")
+INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL = "clement@integraleacademy.com"
 SCOTIA_COMMENT_AUTHOR_LABELS = {
-    "clement@integraleacademy.com": "Intégrale Academy",
+    INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL: "Intégrale Academy",
     "scotiaformation@gmail.com": "Scotia",
 }
 SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "30"))
@@ -116,6 +118,28 @@ def admin_write_required(view):
         return view(*args, **kwargs)
     return wrapped
 
+def _is_integrale_scotia_admin_session() -> bool:
+    """Return True when the active admin session belongs to Clément.
+
+    Older persistent admin sessions did not store the username, so we also trust
+    the configured admin account when it is Clément's account.
+    """
+    if not session.get("admin_logged_in") or session.get("admin_role") != "admin":
+        return False
+
+    admin_username = (session.get("admin_username") or "").strip().lower()
+    if admin_username:
+        return admin_username == INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL
+
+    return (ADMIN_USER or "").strip().lower() == INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL
+
+
+def _enable_scotia_session_for_integrale_admin() -> None:
+    session["scotia_logged_in"] = True
+    session["scotia_username"] = INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL
+    session.permanent = True
+
+
 def scotia_login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
@@ -125,6 +149,29 @@ def scotia_login_required(view):
         session.permanent = True
         return view(*args, **kwargs)
     return wrapped
+
+@app.before_request
+def protect_sensitive_routes():
+    """Central safety net for sensitive admin/API routes.
+
+    Some legacy endpoints were missing explicit decorators.  This hook protects
+    whole sensitive namespaces without changing public candidate/VAE flows.
+    """
+    path = request.path or ""
+    if path.startswith("/admin/") and path != "/admin/login":
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login", next=request.full_path if request.query_string else path))
+
+    protected_api_prefixes = (
+        "/api/admin/",
+        "/api/secretariat/",
+        "/api/cnaps",
+    )
+    if path.startswith(protected_api_prefixes):
+        if not session.get("admin_logged_in"):
+            return jsonify({"ok": False, "error": "auth_required"}), 401
+        if request.method not in {"GET", "HEAD", "OPTIONS"} and session.get("admin_role") == "viewer":
+            return jsonify({"ok": False, "error": "read_only"}), 403
 
 @app.context_processor
 def inject_read_only():
@@ -185,6 +232,7 @@ def admin_login_post():
     if username == ADMIN_USER and password == ADMIN_PASSWORD:
         session["admin_logged_in"] = True
         session["admin_role"] = "admin"
+        session["admin_username"] = username.lower()
         session.permanent = True  # ✅ cookie persistant
         return redirect(next_url)
 
@@ -192,6 +240,7 @@ def admin_login_post():
         if username == SECRETARY_USER and password == SECRETARY_PASSWORD:
             session["admin_logged_in"] = True
             session["admin_role"] = "viewer"
+            session["admin_username"] = username.lower()
             session.permanent = True
             return redirect(next_url)
 
@@ -201,6 +250,12 @@ def admin_login_post():
 @app.get("/scotia/login")
 def scotia_login():
     next_url = request.args.get("next") or url_for("scotia_dashboard")
+    if session.get("scotia_logged_in"):
+        session.permanent = True
+        return redirect(next_url)
+    if _is_integrale_scotia_admin_session():
+        _enable_scotia_session_for_integrale_admin()
+        return redirect(next_url)
     return f"""
     <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Connexion SCOTIA</title></head>
@@ -234,6 +289,7 @@ def scotia_login_post():
         if admin_ok:
             session["admin_logged_in"] = True
             session["admin_role"] = "admin"
+            session["admin_username"] = username.lower()
         # Cookie de session persistant (durée définie par SESSION_DAYS).
         session.permanent = True
         return redirect(next_url)
@@ -311,9 +367,27 @@ app.add_template_filter(fr_datetime, "frdatetime")
 # Persistent disk (Render)
 # =========================
 def _resolve_persist_dir() -> str:
-    persist_dir = "/data"
-    os.makedirs(persist_dir, exist_ok=True)
-    return persist_dir
+    """Return the directory used for all mutable production data.
+
+    On Render this must point to a mounted persistent disk (usually /var/data
+    or /data).  The value can be forced with PERSIST_DIR so a deployment never
+    has to write business data into the ephemeral application checkout.
+    """
+    configured = (os.environ.get("PERSIST_DIR") or "").strip()
+    candidates = [configured] if configured else ["/var/data", "/data"]
+    last_error = None
+    for candidate in [x for x in candidates if x]:
+        try:
+            os.makedirs(candidate, exist_ok=True)
+            test_path = os.path.join(candidate, ".write-test")
+            with open(test_path, "w", encoding="utf-8") as f:
+                f.write("ok")
+            os.remove(test_path)
+            return candidate
+        except Exception as exc:
+            last_error = exc
+            continue
+    raise RuntimeError(f"Aucun dossier persistant accessible parmi {candidates}: {last_error}")
 
 
 PERSIST_DIR = _resolve_persist_dir()
@@ -328,6 +402,8 @@ BACKUP_RETENTION = int(os.environ.get("BACKUP_RETENTION", "120"))
 BACKUP_MIN_INTERVAL_SECONDS = int(os.environ.get("BACKUP_MIN_INTERVAL_SECONDS", "300"))
 AUTO_RESTORE_FROM_BACKUP = (os.environ.get("AUTO_RESTORE_FROM_BACKUP", "1") or "").strip().lower() in {"1", "true", "yes", "on"}
 BACKUP_SNAPSHOT_BEFORE_SAVE = (os.environ.get("BACKUP_SNAPSHOT_BEFORE_SAVE", "1") or "").strip().lower() in {"1", "true", "yes", "on"}
+DOCS_TO_CONTROL_PUBLIC_TOKEN = (os.environ.get("DOCS_TO_CONTROL_PUBLIC_TOKEN") or "").strip()
+MAX_JSON_BACKUP_BYTES = int(os.environ.get("MAX_JSON_BACKUP_BYTES", "52428800"))
 
 _data_lock = threading.RLock()
 _wedof_webhook_lock = threading.RLock()
@@ -357,60 +433,90 @@ def _cleanup_backups_for(prefix: str) -> None:
         pass
 
 
-def _force_backup_snapshot(path: str) -> None:
+def _json_backup_path(prefix: str, reason: str = "auto") -> str:
+    stamp = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%S.%fZ")
+    suffix = uuid.uuid4().hex[:8]
+    safe_reason = re.sub(r"[^a-zA-Z0-9_-]+", "-", reason or "auto")[:32]
+    return os.path.join(BACKUP_DIR, f"{prefix}.{stamp}.{safe_reason}.{suffix}.json")
+
+
+def _copy_file_durable(src_path: str, dst_path: str) -> None:
+    with open(src_path, "rb") as src, open(dst_path, "wb") as dst:
+        shutil.copyfileobj(src, dst)
+        dst.flush()
+        os.fsync(dst.fileno())
+
+
+def _force_backup_snapshot(path: str, reason: str = "manual") -> Optional[str]:
     base_name = os.path.basename(path)
     prefix = base_name.replace(".", "_")
     if not os.path.exists(path):
-        return
-    stamp = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
-    backup_path = os.path.join(BACKUP_DIR, f"{prefix}.manual.{stamp}.json")
+        return None
     try:
-        with open(path, "rb") as src, open(backup_path, "wb") as dst:
-            dst.write(src.read())
+        if os.path.getsize(path) > MAX_JSON_BACKUP_BYTES:
+            app.logger.warning("Backup skipped for %s: file larger than MAX_JSON_BACKUP_BYTES", path)
+            return None
+    except Exception:
+        pass
+    backup_path = _json_backup_path(prefix, reason)
+    try:
+        _copy_file_durable(path, backup_path)
         _cleanup_backups_for(prefix)
+        return backup_path
+    except Exception:
+        app.logger.exception("Unable to create JSON backup for %s", path)
+        return None
+
+
+def _fsync_parent_dir(path: str) -> None:
+    try:
+        dir_fd = os.open(os.path.dirname(path) or ".", os.O_DIRECTORY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
     except Exception:
         pass
 
 
-def _write_json_with_backups(path: str, payload: Dict[str, Any], lock: threading.RLock) -> None:
+def _write_json_with_backups(path: str, payload: Any, lock: threading.RLock) -> None:
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    lock_path = path + ".lock"
     with lock:
-        now_ts = datetime.datetime.utcnow().timestamp()
-        base_name = os.path.basename(path)
-        prefix = base_name.replace(".", "_")
-
-        # Snapshot systématique avant écriture pour éviter toute fenêtre de perte
-        # de données entre deux backups périodiques.
-        if BACKUP_SNAPSHOT_BEFORE_SAVE:
-            _force_backup_snapshot(path)
-
-        if os.path.exists(path):
-            last = _last_backup_times.get(path, 0)
-            if now_ts - last >= BACKUP_MIN_INTERVAL_SECONDS:
-                stamp = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
-                backup_path = os.path.join(BACKUP_DIR, f"{prefix}.{stamp}.json")
-                try:
-                    with open(path, "rb") as src, open(backup_path, "wb") as dst:
-                        dst.write(src.read())
-                    _last_backup_times[path] = now_ts
-                    _cleanup_backups_for(prefix)
-                except Exception:
-                    pass
-
-        tmp = path + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, path)
-        try:
-            dir_fd = os.open(os.path.dirname(path) or ".", os.O_DIRECTORY)
+        with open(lock_path, "a+", encoding="utf-8") as lock_file:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
             try:
-                os.fsync(dir_fd)
-            finally:
-                os.close(dir_fd)
-        except Exception:
-            pass
+                now_ts = datetime.datetime.utcnow().timestamp()
+                base_name = os.path.basename(path)
+                prefix = base_name.replace(".", "_")
 
+                # Snapshot systématique avant écriture pour éviter toute fenêtre de perte
+                # de données entre deux backups périodiques.
+                if BACKUP_SNAPSHOT_BEFORE_SAVE:
+                    _force_backup_snapshot(path, reason="before-save")
+
+                if os.path.exists(path):
+                    last = _last_backup_times.get(path, 0)
+                    if now_ts - last >= BACKUP_MIN_INTERVAL_SECONDS:
+                        if _force_backup_snapshot(path, reason="interval"):
+                            _last_backup_times[path] = now_ts
+
+                tmp = f"{path}.tmp.{os.getpid()}.{uuid.uuid4().hex}"
+                try:
+                    with open(tmp, "w", encoding="utf-8") as f:
+                        json.dump(payload, f, ensure_ascii=False, indent=2)
+                        f.flush()
+                        os.fsync(f.fileno())
+                    os.replace(tmp, path)
+                    _fsync_parent_dir(path)
+                finally:
+                    if os.path.exists(tmp):
+                        try:
+                            os.remove(tmp)
+                        except Exception:
+                            pass
+            finally:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 def _safe_remove_file(path: str) -> None:
     """Déplace le fichier vers la corbeille interne avant suppression logique."""
@@ -3724,13 +3830,7 @@ def _load_wedof_webhooks() -> List[Dict[str, Any]]:
     return []
 
 def _save_wedof_webhooks(entries: List[Dict[str, Any]]) -> None:
-    with _wedof_webhook_lock:
-        tmp = WEDOF_WEBHOOK_FILE + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(entries, f, ensure_ascii=False, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, WEDOF_WEBHOOK_FILE)
+    _write_json_with_backups(WEDOF_WEBHOOK_FILE, entries, _wedof_webhook_lock)
 
 def _extract_wedof_payload_fields(payload: Dict[str, Any]) -> Dict[str, str]:
     flat = json.dumps(payload, ensure_ascii=False)
@@ -7324,6 +7424,7 @@ def _all_scotia_items(data: Dict[str, Any], include_archived: bool = False) -> L
                 "scotia_complementary_documents_reviewed_at": (t.get("scotia_complementary_documents_reviewed_at_label") or _format_scotia_comment_added_at(t.get("scotia_complementary_documents_reviewed_at") or "")).strip(),
                 "added_document_groups": added_document_groups,
                 "scotia_thread_comments": _scotia_thread_comments_for_display(t),
+                "scotia_unread_thread_summary": _scotia_unread_thread_summary(t),
                 "deliverables": deliverables,
                 "attestation_recevabilite_imported_at": attestation_recevabilite_imported_at,
                 "livret_2_imported_at": livret_2_imported_at,
@@ -7374,8 +7475,36 @@ def _scotia_comment_author_label(username: str) -> str:
     return "Scotia"
 
 
+def _scotia_comment_party_from_label(label: str) -> str:
+    normalized = unicodedata.normalize("NFKD", (label or "").strip().lower())
+    normalized = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    if "integrale" in normalized or "academy" in normalized:
+        return "integrale"
+    return "scotia"
+
+
+def _scotia_comment_party_label(party: str) -> str:
+    return "Intégrale Academy" if party == "integrale" else "SCOTIA"
+
+
 def _current_scotia_comment_author_label() -> str:
+    if session.get("admin_logged_in"):
+        return "Intégrale Academy"
     return _scotia_comment_author_label(str(session.get("scotia_username") or ""))
+
+
+def _current_scotia_comment_party() -> str:
+    if session.get("admin_logged_in"):
+        return "integrale"
+    return _scotia_comment_party_from_label(_current_scotia_comment_author_label())
+
+
+def _scotia_comment_can_mark_read(entry: Dict[str, Any]) -> bool:
+    if entry.get("read_at"):
+        return False
+    if session.get("admin_logged_in"):
+        return True
+    return str(entry.get("author_party") or "") != _current_scotia_comment_party()
 
 
 def _format_scotia_comment_added_at(value: str) -> str:
@@ -7402,6 +7531,26 @@ def _mark_complementary_documents_to_control(t: Dict[str, Any]) -> None:
     t["scotia_complementary_documents_reviewed_at"] = ""
     t["scotia_complementary_documents_reviewed_at_label"] = ""
 
+def _scotia_legacy_comment_id(content: str, author_label: str, created_at: str) -> str:
+    raw = f"{created_at}|{author_label}|{content}".encode("utf-8", errors="ignore")
+    return hashlib.sha1(raw).hexdigest()[:16]
+
+
+def _format_scotia_comment_read_at(value: str) -> str:
+    s = (value or "").strip()
+    if not s:
+        return ""
+    normalized = s.replace("Z", "+00:00")
+    try:
+        dt = datetime.datetime.fromisoformat(normalized)
+    except Exception:
+        return fr_date(s)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=datetime.timezone.utc)
+    paris_dt = dt.astimezone(ZoneInfo("Europe/Paris"))
+    return paris_dt.strftime("%d/%m/%Y")
+
+
 def _ensure_scotia_thread_comments_entry(t: Dict[str, Any]) -> List[Dict[str, Any]]:
     comments = t.get("scotia_thread_comments")
     if not isinstance(comments, list):
@@ -7420,11 +7569,24 @@ def _ensure_scotia_thread_comments_entry(t: Dict[str, Any]) -> List[Dict[str, An
         author_label = str(entry.get("author_label") or "").strip()
         if not author_label:
             author_label = _scotia_comment_author_label(str(entry.get("author_email") or entry.get("author") or ""))
-        cleaned_comments.append({
+        author_party = str(entry.get("author_party") or "").strip() or _scotia_comment_party_from_label(author_label)
+        comment_id = str(entry.get("id") or "").strip() or _scotia_legacy_comment_id(content, author_label, created_at)
+        cleaned_entry = {
+            "id": comment_id,
             "content": content,
             "author_label": author_label,
+            "author_party": author_party,
             "created_at": created_at,
-        })
+        }
+        read_at = str(entry.get("read_at") or "").strip()
+        if read_at:
+            read_by_party = str(entry.get("read_by_party") or "").strip() or ("integrale" if author_party == "scotia" else "scotia")
+            cleaned_entry.update({
+                "read_at": read_at,
+                "read_by_party": read_by_party,
+                "read_by_label": str(entry.get("read_by_label") or "").strip() or _scotia_comment_party_label(read_by_party),
+            })
+        cleaned_comments.append(cleaned_entry)
     if len(cleaned_comments) != len(comments) or cleaned_comments != comments:
         t["scotia_thread_comments"] = cleaned_comments
     return t["scotia_thread_comments"]
@@ -7435,10 +7597,28 @@ def _scotia_thread_comments_for_display(t: Dict[str, Any]) -> List[Dict[str, Any
         {
             **entry,
             "created_at_label": _format_scotia_comment_added_at(str(entry.get("created_at") or "")),
+            "read_at_label": _format_scotia_comment_read_at(str(entry.get("read_at") or "")),
+            "can_mark_read": _scotia_comment_can_mark_read(entry),
         }
         for entry in _ensure_scotia_thread_comments_entry(t)
     ]
 
+
+def _scotia_unread_thread_summary(t: Dict[str, Any]) -> Dict[str, Any]:
+    current_party = _current_scotia_comment_party()
+    unread = [
+        entry for entry in _ensure_scotia_thread_comments_entry(t)
+        if not entry.get("read_at") and str(entry.get("author_party") or "") != current_party
+    ]
+    if not unread:
+        return {}
+    author_party = str(unread[-1].get("author_party") or "scotia")
+    count = len(unread)
+    return {
+        "count": count,
+        "author_label": _scotia_comment_party_label(author_party),
+        "label": f"{count} message{'s' if count > 1 else ''} {_scotia_comment_party_label(author_party)} à consulter",
+    }
 
 
 def _scotia_dashboard_category(item: Dict[str, Any]) -> str:
@@ -7657,9 +7837,12 @@ def api_scotia_thread_comment(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "comment_too_long"}), 400
 
     created_at = _now_iso()
+    author_label = _current_scotia_comment_author_label()
     entry = {
+        "id": uuid.uuid4().hex,
         "content": content,
-        "author_label": _current_scotia_comment_author_label(),
+        "author_label": author_label,
+        "author_party": _scotia_comment_party_from_label(author_label),
         "created_at": created_at,
     }
     comments = _ensure_scotia_thread_comments_entry(t)
@@ -7675,7 +7858,55 @@ def api_scotia_thread_comment(session_id: str, trainee_id: str):
         "comment": {
             **entry,
             "created_at_label": _format_scotia_comment_added_at(created_at),
+            "can_mark_read": _scotia_comment_can_mark_read(entry),
         },
+    })
+
+
+@app.post('/api/scotia/sessions/<session_id>/stagiaires/<trainee_id>/thread-comments/<comment_id>/read')
+@scotia_login_required
+def api_scotia_thread_comment_read(session_id: str, trainee_id: str, comment_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+
+    comments = _ensure_scotia_thread_comments_entry(t)
+    entry = next((x for x in comments if str(x.get("id") or "") == str(comment_id)), None)
+    if not entry:
+        return jsonify({"ok": False, "error": "comment_not_found"}), 404
+    if entry.get("read_at"):
+        return jsonify({
+            "ok": True,
+            "comment": {
+                **entry,
+                "read_at_label": _format_scotia_comment_read_at(str(entry.get("read_at") or "")),
+                "can_mark_read": False,
+            },
+            "unread_summary": _scotia_unread_thread_summary(t),
+        })
+    if not _scotia_comment_can_mark_read(entry):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    read_at = _now_iso()
+    read_by_party = "integrale" if str(entry.get("author_party") or "") == "scotia" else "scotia"
+    entry["read_at"] = read_at
+    entry["read_by_party"] = read_by_party
+    entry["read_by_label"] = _scotia_comment_party_label(read_by_party)
+    t['updated_at'] = read_at
+
+    s['trainees'] = trainees
+    s.pop('stagiaires', None)
+    save_data(data)
+
+    return jsonify({
+        "ok": True,
+        "comment": {
+            **entry,
+            "read_at_label": _format_scotia_comment_read_at(read_at),
+            "can_mark_read": False,
+        },
+        "unread_summary": _scotia_unread_thread_summary(t),
     })
 
 
@@ -8483,6 +8714,151 @@ def admin_cnaps_unknown():
     return response
 
 
+
+def _cash_amount_value(raw_value: Any) -> float:
+    try:
+        return max(float(str(raw_value or "").replace(",", ".").strip() or "0"), 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _cash_installments_total(raw_installments: Any) -> float:
+    if not isinstance(raw_installments, list):
+        return 0.0
+    total = 0.0
+    for item in raw_installments:
+        if isinstance(item, dict):
+            total += _cash_amount_value(item.get("amount"))
+    return round(total, 2)
+
+
+def _cash_installments_dates(raw_installments: Any) -> List[str]:
+    if not isinstance(raw_installments, list):
+        return []
+    dates = []
+    for item in raw_installments:
+        if not isinstance(item, dict):
+            continue
+        date_value = str(item.get("date") or "").strip()
+        if date_value:
+            dates.append(date_value)
+    return sorted(dates)
+
+
+def _build_cash_payment_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
+    rows = []
+    stats = {
+        "people_total": 0,
+        "settled_total": 0,
+        "pending_total": 0,
+        "amount_total": 0.0,
+        "paid_total": 0.0,
+        "pending_amount": 0.0,
+    }
+
+    today = datetime.date.today()
+
+    for sess in data.get("sessions", []):
+        if _is_wedof_leads_session(sess):
+            continue
+        if bool(sess.get("archived")):
+            continue
+
+        date_start_raw = _session_get(sess, "date_start", "")
+        date_end_raw = _session_get(sess, "date_end", "")
+        try:
+            date_start = datetime.datetime.strptime(date_start_raw[:10], "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            date_start = None
+        try:
+            date_end = datetime.datetime.strptime(date_end_raw[:10], "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            date_end = None
+
+        if date_end and date_end < today:
+            session_status = "Terminée"
+            session_status_key = "ended"
+        elif date_start and date_start <= today:
+            session_status = "En cours"
+            session_status_key = "ongoing"
+        else:
+            session_status = "À venir"
+            session_status_key = "upcoming"
+
+        for trainee in _session_trainees_list(sess):
+            if not bool(trainee.get("cash_payment_enabled")):
+                continue
+
+            amount = _cash_amount_value(trainee.get("cash_payment_amount"))
+            installments = trainee.get("cash_payment_installments") or []
+            installments_total = _cash_installments_total(installments)
+            settlement_date = str(trainee.get("cash_payment_settled_date") or "").strip()
+            installment_dates = _cash_installments_dates(installments)
+            collected_date = settlement_date or (installment_dates[-1] if installment_dates else "")
+            is_settled = bool(trainee.get("cash_payment_settled"))
+
+            paid_amount = amount if is_settled and amount > 0 else min(installments_total, amount) if amount > 0 else installments_total
+            remaining_amount = max(amount - paid_amount, 0.0)
+            if amount > 0 and remaining_amount <= 0.009:
+                is_settled = True
+                remaining_amount = 0.0
+
+            row = {
+                "trainee_id": trainee.get("id"),
+                "last_name": (trainee.get("last_name") or "").strip(),
+                "first_name": (trainee.get("first_name") or "").strip(),
+                "email": (trainee.get("email") or "").strip(),
+                "phone": (trainee.get("phone") or "").strip(),
+                "session_id": sess.get("id"),
+                "session_name": _session_get(sess, "name", ""),
+                "training_type": _session_get(sess, "training_type", ""),
+                "date_start": date_start_raw,
+                "date_end": date_end_raw,
+                "session_status": session_status,
+                "session_status_key": session_status_key,
+                "amount": round(amount, 2),
+                "paid_amount": round(paid_amount, 2),
+                "remaining_amount": round(remaining_amount, 2),
+                "installments": installments if isinstance(installments, list) else [],
+                "installments_total": round(installments_total, 2),
+                "installments_count": len([i for i in installments if isinstance(i, dict)]),
+                "is_settled": is_settled,
+                "settled_date": settlement_date,
+                "settled_comment": (trainee.get("cash_payment_settled_comment") or "").strip(),
+                "collected_date": collected_date,
+                "comment": (trainee.get("financement_comment") or trainee.get("comment") or "").strip(),
+            }
+            rows.append(row)
+
+            stats["people_total"] += 1
+            stats["amount_total"] += amount
+            stats["paid_total"] += paid_amount
+            stats["pending_amount"] += remaining_amount
+            if is_settled:
+                stats["settled_total"] += 1
+            else:
+                stats["pending_total"] += 1
+
+    rows.sort(key=lambda item: (item["is_settled"], item["date_start"] or "9999-12-31", item["last_name"], item["first_name"]))
+    for key in ("amount_total", "paid_total", "pending_amount"):
+        stats[key] = round(stats[key], 2)
+    return {"rows": rows, "stats": stats}
+
+
+@app.get("/admin/sessions/paiement-especes")
+@admin_login_required
+def admin_cash_payments():
+    data = load_data()
+    dashboard = _build_cash_payment_dashboard(data)
+    response = make_response(render_template(
+        "admin_cash_payments.html",
+        rows=dashboard["rows"],
+        stats=dashboard["stats"],
+    ))
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
+
 @app.get("/admin/sessions/conventions")
 @admin_login_required
 def admin_sessions_conventions():
@@ -8713,8 +9089,13 @@ def wedof_webhook():
         computed = hmac.new(secret, raw_body, hashlib.sha256).hexdigest()
         provided = signature.split("=", 1)[-1].strip()
         sig_valid = hmac.compare_digest(computed, provided)
+    elif secret:
+        app.logger.warning("[WEDOF WEBHOOK] signature manquante alors qu'un secret est configuré")
     else:
-        app.logger.warning("[WEDOF WEBHOOK] signature non vérifiée (secret ou signature manquant) signature=%s", signature)
+        app.logger.warning("[WEDOF WEBHOOK] signature non vérifiée: WEDOF_WEBHOOK_SECRET non configuré")
+
+    if secret and not sig_valid:
+        return jsonify({"ok": False, "error": "invalid_signature"}), 401
 
     try:
         folder_id = _find_wedof_folder_id(payload)
@@ -12937,8 +13318,12 @@ def _tokenize_path(path: str) -> str:
     return rel
 
 def _detokenize_path(token: str) -> str:
-    token = (token or "").replace("..","").lstrip("/").replace("\\","/")
-    return os.path.join(PERSIST_DIR, token)
+    token = (token or "").replace("\\", "/").lstrip("/")
+    candidate = os.path.realpath(os.path.join(PERSIST_DIR, token))
+    root = os.path.realpath(PERSIST_DIR)
+    if candidate != root and not candidate.startswith(root + os.sep):
+        abort(403)
+    return candidate
 
 @app.get("/admin/uploads/<path:path>")
 @admin_login_required
@@ -16930,6 +17315,11 @@ from flask import make_response
 
 @app.get("/docs_to_control.json")
 def public_docs_to_control():
+    supplied_token = (request.args.get("token") or request.headers.get("X-Docs-To-Control-Token") or "").strip()
+    public_token_ok = bool(DOCS_TO_CONTROL_PUBLIC_TOKEN and hmac.compare_digest(supplied_token, DOCS_TO_CONTROL_PUBLIC_TOKEN))
+    if not session.get("admin_logged_in") and not public_token_ok:
+        abort(403)
+
     data = load_data()
     out = []
 
@@ -16968,10 +17358,12 @@ def public_docs_to_control():
 
     resp = make_response(jsonify({"ok": True, "items": out, "count": len(out)}))
 
-    # ✅ autorise le fetch depuis ton dashboard (autre domaine)
-    resp.headers["Access-Control-Allow-Origin"] = "*"
-    resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-    resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    # CORS uniquement lorsque l'accès public est volontairement protégé par token.
+    if public_token_ok:
+        resp.headers["Access-Control-Allow-Origin"] = "*"
+        resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Docs-To-Control-Token"
+    return resp
 
     return resp
 
@@ -17425,7 +17817,7 @@ def api_cnaps_pending_import_delete(pending_id: str):
             try:
                 file_path = _detokenize_path(removed_token)
                 if os.path.exists(file_path):
-                    os.remove(file_path)
+                    _safe_remove_file(file_path)
             except Exception:
                 pass
 

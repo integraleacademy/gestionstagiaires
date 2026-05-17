@@ -5,10 +5,16 @@ import app as gestion_app
 
 class AdminNotificationScheduleTests(unittest.TestCase):
     def test_inject_skips_dismissed_schedule_keys(self):
-        key = "vtc_exam_results_download|2026-03-07T12:00:00"
+        dismissed_keys = [
+            gestion_app._admin_notification_schedule_key({
+                "kind": "vtc_exam_results_download",
+                "scheduled_at": schedule_at,
+            })
+            for _, schedule_at in gestion_app.VTC_EXAM_RESULTS_NOTIFICATION_SCHEDULE
+        ]
         data = {
             "notifications_admin": [],
-            "notifications_admin_dismissed_schedule_keys": [key],
+            "notifications_admin_dismissed_schedule_keys": dismissed_keys,
         }
 
         changed = gestion_app._inject_vtc_exam_results_notifications(data)

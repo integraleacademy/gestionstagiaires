@@ -1344,12 +1344,12 @@ tr.row-todo td{
 .vae-card-icon{
   display:grid;
   place-items:center;
-  flex:0 0 56px;
-  width:56px;
-  height:56px;
-  border-radius:20px;
+  flex:0 0 48px;
+  width:48px;
+  height:48px;
+  border-radius:18px;
   background:rgba(255,255,255,.24);
-  font-size:30px;
+  font-size:26px;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.34);
 }
 
@@ -1365,7 +1365,7 @@ tr.row-todo td{
 }
 
 .vae-card-count{
-  font-size:42px;
+  font-size:36px;
   line-height:.95;
   letter-spacing:-.05em;
 }
@@ -1389,7 +1389,11 @@ tr.row-todo td{
 
 @media (max-width: 720px){
   .vae-admin-dashboard{ padding:14px; border-radius:24px; }
-  .vae-dashboard-card{ min-height:112px; border-radius:22px; }
+  .vae-dashboard-grid{ grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; }
+  .vae-dashboard-card{ min-height:100px; border-radius:20px; padding:12px; }
+  .vae-card-icon{ flex-basis:42px; width:42px; height:42px; font-size:23px; border-radius:16px; }
+  .vae-card-count{ font-size:32px; }
+  .vae-card-label{ font-size:14px; }
 }
 
 .vae-filter-label{
