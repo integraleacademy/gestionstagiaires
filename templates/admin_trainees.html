@@ -204,12 +204,12 @@
       </span>
     </button>
 
-    <button type="button" class="vae-dashboard-card card-new-vae-request" data-vae-dashboard-filter="new_vae_request_48h" aria-pressed="false">
+    <button type="button" class="vae-dashboard-card card-new-vae-request" data-vae-dashboard-filter="new_vae_request_72h" aria-pressed="false">
       <span class="vae-card-icon">🆕</span>
       <span class="vae-card-content">
         <span class="vae-card-label">Nouvelles demandes VAE</span>
-        <strong class="vae-card-count" data-vae-dashboard-count="new_vae_request_48h">0</strong>
-        <span class="vae-card-hint">48 dernières heures</span>
+        <strong class="vae-card-count" data-vae-dashboard-count="new_vae_request_72h">0</strong>
+        <span class="vae-card-hint">72 dernières heures</span>
       </span>
     </button>
 
@@ -368,7 +368,7 @@
     data-first-name="{{ t.first_name or '' }}"
     data-vae-status="{{ t.vae_status or 'livret_1_todo' }}"
     data-public-has-logged-in="{{ '1' if t.public_has_logged_in else '0' }}"
-    data-vae-new-request-48h="{{ '1' if t.is_vae_new_request_48h else '0' }}"
+    data-vae-new-request-72h="{{ '1' if t.is_vae_new_request_72h else '0' }}"
     data-livret-1-transmitted-scotia="{{ '1' if livret_1_transmitted_scotia else '0' }}"
     data-scotia-status="{{ scotia_status }}"
 data-vtc-theory-ok="{{ '1' if (t.vtc_theory_status_manual == 'success' or ((not t.vtc_theory_status_manual) and t.vtc_theory_result != 'non_admissible' and t.vtc_theory_exam_sent_at)) else '0' }}"
@@ -2163,7 +2163,7 @@ function getVaeDashboardRows(){
 }
 
 function updateVaeDashboardCounts(){
-  const counts = { no_login: 0, new_vae_request_48h: 0, l1_pending_transmission: 0, non_recevable: 0 };
+  const counts = { no_login: 0, new_vae_request_72h: 0, l1_pending_transmission: 0, non_recevable: 0 };
   getVaeDashboardRows().forEach(tr => {
     const status = tr.getAttribute("data-vae-status") || "livret_1_todo";
     const livret1TransmittedScotia = tr.getAttribute("data-livret-1-transmitted-scotia") === "1";
@@ -2178,8 +2178,8 @@ function updateVaeDashboardCounts(){
     if(tr.getAttribute("data-public-has-logged-in") !== "1"){
       counts.no_login += 1;
     }
-    if(tr.getAttribute("data-vae-new-request-48h") === "1"){
-      counts.new_vae_request_48h += 1;
+    if(tr.getAttribute("data-vae-new-request-72h") === "1"){
+      counts.new_vae_request_72h += 1;
     }
   });
 
@@ -2261,13 +2261,13 @@ function applyRowFilters(){
     const hasLoggedIn = tr.getAttribute("data-public-has-logged-in") === "1";
     const livret1TransmittedScotia = tr.getAttribute("data-livret-1-transmitted-scotia") === "1";
     const scotiaStatus = tr.getAttribute("data-scotia-status") || "";
-    const isNewVaeRequest48h = tr.getAttribute("data-vae-new-request-48h") === "1";
+    const isNewVaeRequest72h = tr.getAttribute("data-vae-new-request-72h") === "1";
 
     const matchVae = selectedVae === "all" || rowVaeStatus === selectedVae;
     const matchDashboard = !activeVaeDashboardFilter
       || activeVaeDashboardFilter.startsWith("status:")
       || (activeVaeDashboardFilter === "no_login" && !hasLoggedIn)
-      || (activeVaeDashboardFilter === "new_vae_request_48h" && isNewVaeRequest48h)
+      || (activeVaeDashboardFilter === "new_vae_request_72h" && isNewVaeRequest72h)
       || (activeVaeDashboardFilter === "non_recevable" && scotiaStatus === "non_recevable")
       || (activeVaeDashboardFilter === "l1_pending_transmission" && rowVaeStatus === "livret_1_analysis" && !livret1TransmittedScotia);
     const matchTheory = selectedTheory === "all" || theoryStatus === selectedTheory;
@@ -2291,7 +2291,7 @@ function bindVaeDashboardFilters(){
       if(vaeFilter){
         if(activeVaeDashboardFilter.startsWith("status:")){
           vaeFilter.value = activeVaeDashboardFilter.slice("status:".length);
-        }else if(activeVaeDashboardFilter === "l1_pending_transmission" || activeVaeDashboardFilter === "non_recevable" || activeVaeDashboardFilter === "new_vae_request_48h"){
+        }else if(activeVaeDashboardFilter === "l1_pending_transmission" || activeVaeDashboardFilter === "non_recevable" || activeVaeDashboardFilter === "new_vae_request_72h"){
           vaeFilter.value = "all";
         }else{
           vaeFilter.value = "all";

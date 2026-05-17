@@ -11580,9 +11580,9 @@ def admin_trainees(session_id: str):
                 created_at = created_at.replace(tzinfo=datetime.timezone.utc)
             if created_at:
                 created_at = created_at.astimezone(datetime.timezone.utc)
-            t["is_vae_new_request_48h"] = bool(
+            t["is_vae_new_request_72h"] = bool(
                 created_at
-                and datetime.timedelta(0) <= (now_utc - created_at) <= datetime.timedelta(hours=48)
+                and datetime.timedelta(0) <= (now_utc - created_at) <= datetime.timedelta(hours=72)
             )
 
     # persist normalized trainees back into storage
