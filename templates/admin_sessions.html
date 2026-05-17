@@ -320,11 +320,18 @@
 
 
   .admin-actions{
+    --admin-action-button-width: 142px;
     display:flex;
     align-items:center;
     justify-content:flex-end;
     gap:10px;
     flex-wrap:wrap;
+  }
+  .admin-actions > .btn,
+  .admin-action-menu > summary{
+    width:var(--admin-action-button-width);
+    min-height:44px;
+    padding:10px 12px;
   }
   .admin-action-menu{
     position:relative;
@@ -491,7 +498,7 @@
     </a>
 
     <details class="admin-action-menu">
-      <summary class="btn btn-outline">🛡️ CNAPS</summary>
+      <summary class="btn btn-outline">👮‍♂️ CNAPS</summary>
       <div class="admin-action-panel">
         <div class="admin-action-section">CNAPS</div>
         <div class="admin-action-help">Accès regroupés pour éviter une barre d’actions trop chargée.</div>
@@ -521,8 +528,8 @@
       <div class="quick-create-wrap">
         <button class="btn btn-primary btn-plus" id="btnOpenCreateMenu" aria-label="Créer" aria-expanded="false">+</button>
         <div class="quick-create-menu" id="quickCreateMenu">
-          <button class="quick-create-option quick-create-option--session" id="btnOpenCreateSession">💼Nouvelle session</button>
-          <button class="quick-create-option quick-create-option--trainee" id="btnOpenCreateTraineeFromSessions">👨‍🎓Nouveau stagiaire</button>
+          <button class="quick-create-option quick-create-option--session" id="btnOpenCreateSession">💼 Nouvelle session</button>
+          <button class="quick-create-option quick-create-option--trainee" id="btnOpenCreateTraineeFromSessions">👨‍🎓 Nouveau stagiaire</button>
         </div>
       </div>
     {% endif %}
