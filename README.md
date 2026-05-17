@@ -26,7 +26,7 @@ python app.py
 - `GESTIONSTAGIAIRE_SYNC_TOKEN` (obligatoire pour synchroniser le statut CNAPS vers cnapsv3)
 - `WEDOF_WEBHOOK_SECRET` (recommandé : si défini, une signature invalide/manquante est refusée)
 - `WEDOF_API_TOKEN` (token API WeDoF pour récupérer le détail complet d'un dossier)
-- `DOCS_TO_CONTROL_PUBLIC_TOKEN` (optionnel : token requis pour exposer `/docs_to_control.json` à un dashboard externe sans session admin)
+- `/docs_to_control.json` est public et renvoie le compteur des dossiers stagiaires à traiter pour la plateforme principale.
 - `MAX_JSON_BACKUP_BYTES` (optionnel, défaut `52428800` : limite de taille d'un JSON sauvegardé automatiquement)
 
 ## Intégration WeDoF CPF/EDOF
