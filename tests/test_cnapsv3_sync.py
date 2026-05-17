@@ -965,7 +965,7 @@ class ScotiaItemsTests(unittest.TestCase):
 
         self.assertIn('Résumé des dossiers finalisés', html)
         self.assertIn('Livrets 2 validés', html)
-        self.assertIn('Certifications / diplômes obtenus', html)
+        self.assertIn('Certifiés', html)
         self.assertIn('Non recevables', html)
         self.assertIn('data-filter="l2-validated"', html)
         self.assertIn('data-filter="certified"', html)
