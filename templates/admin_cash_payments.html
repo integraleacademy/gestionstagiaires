@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block content %}
+{% macro money(value) -%}{{ "%.2f"|format(value or 0)|replace(".", ",") }} €{%- endmacro %}
+<script>document.body.classList.add("cash-payments-wide");</script>
+<style>
+  .cash-payments-wide .container{max-width:none;width:100%;padding-left:24px;padding-right:24px}
+  .cash-payments-wide .topbar-inner{max-width:none;width:100%;padding-left:24px;padding-right:24px}
+  .cash-page{width:100%}
+  .cash-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px}
+  .cash-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:16px}
+  .cash-kpi{position:relative;overflow:hidden;border-radius:22px;padding:18px;color:#fff;box-shadow:0 16px 34px rgba(15,23,42,.16)}
+  .cash-kpi:after{content:"";position:absolute;right:-28px;top:-34px;width:110px;height:110px;border-radius:999px;background:rgba(255,255,255,.18)}
+  .cash-kpi .label{font-size:13px;font-weight:800;opacity:.9;text-transform:uppercase;letter-spacing:.04em}
+  .cash-kpi .value{font-size:30px;font-weight:950;margin-top:8px;line-height:1}
+  .cash-kpi .sub{font-size:13px;opacity:.88;margin-top:8px;font-weight:700}
+  .cash-kpi--people{background:linear-gradient(135deg,#2563eb,#06b6d4)}
+  .cash-kpi--amount{background:linear-gradient(135deg,#f97316,#f59e0b)}
+  .cash-kpi--paid{background:linear-gradient(135deg,#16a34a,#22c55e)}
+  .cash-kpi--pending{background:linear-gradient(135deg,#dc2626,#f43f5e)}
+  .cash-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+  .cash-search{min-width:min(420px,100%);flex:1;border:1px solid #d1d5db;border-radius:14px;padding:11px 13px;font-weight:700;background:#fff}
+  .cash-filter{border:1px solid #e5e7eb;border-radius:999px;background:#fff;padding:9px 12px;font-weight:900;cursor:pointer;color:#374151}
+  .cash-filter.is-active{background:#111827;color:#fff;border-color:#111827;box-shadow:0 10px 20px rgba(17,24,39,.18)}
+  .cash-table-wrap{overflow:auto;border:1px solid #e5e7eb;border-radius:18px;background:#fff}
+  .cash-table{width:100%;border-collapse:collapse;min-width:1280px}
+  .cash-table th,.cash-table td{padding:12px;border-bottom:1px solid #edf2f7;text-align:left;vertical-align:top;font-size:13px}
+  .cash-table th{position:sticky;top:0;background:#f8fafc;color:#475569;text-transform:uppercase;font-size:11px;letter-spacing:.05em;z-index:1}
+  .cash-table tr:hover td{background:#ffffbf}
+  .person-name{font-weight:950;color:#111827;font-size:14px}
+  .person-sub{color:#64748b;margin-top:3px;line-height:1.35}
+  .cash-pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 10px;font-weight:900;font-size:12px;white-space:nowrap}
+  .cash-pill--ok{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+  .cash-pill--pending{background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}
+  .cash-pill--ended{background:#e5e7eb;color:#374151}
+  .cash-pill--ongoing{background:#dbeafe;color:#1d4ed8}
+  .cash-pill--upcoming{background:#f3e8ff;color:#7e22ce}
+  .money-main{font-weight:950;font-size:15px;color:#111827}
+  .money-paid{color:#15803d;font-weight:900}
+  .money-pending{color:#dc2626;font-weight:900}
+  .installments{display:flex;flex-direction:column;gap:5px;min-width:170px}
+  .installment{display:flex;justify-content:space-between;gap:10px;border:1px solid #e5e7eb;border-radius:10px;padding:6px 8px;background:#f8fafc}
+  .muted-small{color:#64748b;font-size:12px}
+  .comment-cell{max-width:260px;white-space:pre-wrap;color:#475569}
+  .empty-cash{text-align:center;padding:34px;color:#64748b;font-weight:800}
+  @media print{.no-print,.topbar{display:none!important}.card{box-shadow:none;border:none}.cash-table th{position:static}body{background:#fff}.cash-kpi{box-shadow:none}}
+</style>
+
+<div class="card cash-page">
+  <div class="cash-head">
+    <div>
+      <h1 style="margin:0">Paiement espèces</h1>
+      <div class="muted" style="margin-top:5px;">Toutes les personnes des sessions actives avec <strong>Paiement en espèces</strong> activé.</div>
+    </div>
+    <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a class="btn btn-outline" href="{{ url_for('admin_sessions') }}">← Sessions</a>
+      <button class="btn btn-primary" type="button" onclick="window.print()">Imprimer</button>
+    </div>
+  </div>
+
+  <div class="cash-kpis" aria-label="Statistiques paiements espèces">
+    <div class="cash-kpi cash-kpi--people">
+      <div class="label">Personnes</div>
+      <div class="value">{{ stats.people_total }}</div>
+      <div class="sub">{{ stats.settled_total }} réglée(s) · {{ stats.pending_total }} en attente</div>
+    </div>
+    <div class="cash-kpi cash-kpi--amount">
+      <div class="label">Total espèces</div>
+      <div class="value">{{ money(stats.amount_total) }}</div>
+      <div class="sub">Montant activé en espèces</div>
+    </div>
+    <div class="cash-kpi cash-kpi--paid">
+      <div class="label">Total réglé</div>
+      <div class="value">{{ money(stats.paid_total) }}</div>
+      <div class="sub">Versements récupérés / dossiers OK</div>
+    </div>
+    <div class="cash-kpi cash-kpi--pending">
+      <div class="label">En attente</div>
+      <div class="value">{{ money(stats.pending_amount) }}</div>
+      <div class="sub">Reste à récupérer</div>
+    </div>
+  </div>
+
+  <div class="cash-toolbar no-print">
+    <input class="cash-search" id="cashSearch" type="search" placeholder="Rechercher par nom, session, téléphone, email...">
+    <button class="cash-filter is-active" type="button" data-cash-filter="all">Tout</button>
+    <button class="cash-filter" type="button" data-cash-filter="pending">En attente</button>
+    <button class="cash-filter" type="button" data-cash-filter="settled">Réglés</button>
+  </div>
+
+  <div class="cash-table-wrap">
+    <table class="cash-table" id="cashTable">
+      <thead>
+        <tr>
+          <th>Personne</th>
+          <th>Session</th>
+          <th>Montant espèces</th>
+          <th>Déjà réglé</th>
+          <th>Reste</th>
+          <th>Statut</th>
+          <th>Versements</th>
+          <th>Récupération</th>
+          <th>Commentaire</th>
+          <th class="no-print">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr data-cash-row data-status="{{ 'settled' if row.is_settled else 'pending' }}" data-search="{{ (row.last_name ~ ' ' ~ row.first_name ~ ' ' ~ row.session_name ~ ' ' ~ row.training_type ~ ' ' ~ row.email ~ ' ' ~ row.phone)|lower }}">
+            <td>
+              <div class="person-name">{{ row.last_name }} {{ row.first_name }}</div>
+              <div class="person-sub">
+                {% if row.email %}{{ row.email }}{% endif %}
+                {% if row.phone %}<br>{{ row.phone }}{% endif %}
+              </div>
+            </td>
+            <td>
+              <strong>{{ row.session_name }}</strong>
+              <div class="muted-small">{{ "CHAUFFEUR VTC" if (row.training_type or "")|upper == "VTC" else row.training_type }}</div>
+              <div class="muted-small">{{ row.date_start|frdate }} → {{ row.date_end|frdate }}</div>
+              <span class="cash-pill cash-pill--{{ row.session_status_key }}">{{ row.session_status }}</span>
+            </td>
+            <td><span class="money-main">{{ money(row.amount) }}</span></td>
+            <td>
+              <span class="money-paid">{{ money(row.paid_amount) }}</span>
+              <div class="muted-small">{{ row.installments_count }} versement(s) saisi(s)</div>
+            </td>
+            <td><span class="money-pending">{{ money(row.remaining_amount) }}</span></td>
+            <td>
+              {% if row.is_settled %}
+                <span class="cash-pill cash-pill--ok">✅ Réglé</span>
+              {% else %}
+                <span class="cash-pill cash-pill--pending">⏳ En attente</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="installments">
+                {% for installment in row.installments %}
+                  {% if installment is mapping %}
+                    <div class="installment">
+                      <strong>{{ money(installment.amount) }}</strong>
+                      <span class="muted-small">{{ installment.date|frdate if installment.date else 'Date non saisie' }}</span>
+                    </div>
+                  {% endif %}
+                {% else %}
+                  <span class="muted-small">Aucun versement détaillé.</span>
+                {% endfor %}
+              </div>
+            </td>
+            <td>
+              {% if row.collected_date %}
+                <strong>{{ row.collected_date|frdate }}</strong>
+              {% else %}
+                <span class="muted-small">Non récupéré</span>
+              {% endif %}
+              {% if row.settled_comment %}<div class="muted-small">{{ row.settled_comment }}</div>{% endif %}
+            </td>
+            <td class="comment-cell">{{ row.comment or '—' }}</td>
+            <td class="no-print">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <a class="btn btn-outline" href="{{ url_for('admin_trainee_page', session_id=row.session_id, trainee_id=row.trainee_id) }}">Fiche</a>
+                <a class="btn btn-outline" href="{{ url_for('admin_trainees', session_id=row.session_id) }}">Session</a>
+              </div>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="10" class="empty-cash">Aucun paiement en espèces activé sur les sessions actives.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+(function(){
+  const search = document.getElementById('cashSearch');
+  const rows = Array.from(document.querySelectorAll('[data-cash-row]'));
+  const filters = Array.from(document.querySelectorAll('[data-cash-filter]'));
+  let currentFilter = 'all';
+
+  function applyFilters(){
+    const query = (search?.value || '').trim().toLowerCase();
+    rows.forEach((row)=>{
+      const matchesStatus = currentFilter === 'all' || row.dataset.status === currentFilter;
+      const matchesSearch = !query || (row.dataset.search || '').includes(query);
+      row.style.display = matchesStatus && matchesSearch ? '' : 'none';
+    });
+  }
+
+  if(search){ search.addEventListener('input', applyFilters); }
+  filters.forEach((btn)=>{
+    btn.addEventListener('click', ()=>{
+      currentFilter = btn.dataset.cashFilter || 'all';
+      filters.forEach((item)=> item.classList.toggle('is-active', item === btn));
+      applyFilters();
+    });
+  });
+})();
+</script>
+{% endblock %}
