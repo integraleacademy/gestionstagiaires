@@ -7576,12 +7576,13 @@ def _scotia_unread_thread_summary(t: Dict[str, Any]) -> Dict[str, Any]:
     current_party = _current_scotia_comment_party()
     unread = [
         entry for entry in _ensure_scotia_thread_comments_entry(t)
-        if not entry.get("read_at") and str(entry.get("author_party") or "") != current_party
+        if not entry.get("read_at")
+        and (session.get("admin_logged_in") or str(entry.get("author_party") or "") != current_party)
     ]
     if not unread:
         return {}
     author_party = str(unread[-1].get("author_party") or "scotia")
-    count = len(unread)
+    count = sum(1 for entry in unread if str(entry.get("author_party") or "") == author_party)
     return {
         "count": count,
         "author_label": _scotia_comment_party_label(author_party),

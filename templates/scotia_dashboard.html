@@ -157,7 +157,7 @@
     .scotia-thread-message{border:1px solid #e2e8f0;border-radius:16px;background:#fff;padding:10px 12px;box-shadow:0 10px 22px rgba(15,23,42,.06);}
     .scotia-thread-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:5px;font-size:12px;color:#64748b;font-weight:850;}
     .scotia-thread-author{color:#0f172a;font-weight:1000;}.scotia-thread-date{color:#475569;}.scotia-thread-content{margin:0;color:#1f2937;font-size:14px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;}
-    .scotia-thread-read-btn{border:1px solid #bbf7d0;background:#dcfce7;color:#166534;border-radius:999px;padding:3px 7px;font-size:12px;font-weight:1000;cursor:pointer;line-height:1;}
+    .scotia-thread-read-btn{display:inline-flex;align-items:center;gap:5px;border:1px solid #bbf7d0;background:#dcfce7;color:#166534;border-radius:999px;padding:4px 8px;font-size:12px;font-weight:1000;cursor:pointer;line-height:1;}
     .scotia-thread-read-btn:hover{background:#bbf7d0;}
     .scotia-thread-read-label{display:inline-flex;align-items:center;border-radius:999px;background:#f0fdf4;color:#166534;padding:3px 8px;font-size:12px;font-weight:900;}
     .scotia-thread-form{display:flex;flex-direction:column;gap:8px;}.scotia-thread-input{width:100%;min-height:74px;resize:vertical;border:1px solid #bfdbfe;border-radius:14px;padding:10px 12px;font:inherit;line-height:1.35;background:#fff;}
@@ -524,7 +524,7 @@
                                     <span class="scotia-thread-author">{{ comment.author_label }}</span>
                                     <span class="scotia-thread-date">commentaire ajouté le {{ comment.created_at_label }} (heure française)</span>
                                     {% if comment.can_mark_read %}
-                                      <button class="scotia-thread-read-btn" type="button" onclick="markThreadCommentRead('{{ it.session_id }}','{{ it.trainee_id }}','{{ comment.id }}')" title="Marquer ce commentaire comme lu">✅</button>
+                                      <button class="scotia-thread-read-btn" type="button" onclick="markThreadCommentRead('{{ it.session_id }}','{{ it.trainee_id }}','{{ comment.id }}')" title="Marquer ce commentaire comme lu">✅ <span>Marquer ce commentaire comme lu</span></button>
                                     {% endif %}
                                     {% if comment.read_at_label %}
                                       <span class="scotia-thread-read-label">Lu par {{ comment.read_by_label }} le {{ comment.read_at_label }}</span>
@@ -714,7 +714,7 @@ function renderThreadReadControls(meta, sessionId, traineeId, comment){
     button.className = 'scotia-thread-read-btn';
     button.type = 'button';
     button.title = 'Marquer ce commentaire comme lu';
-    button.textContent = '✅';
+    button.innerHTML = '<span aria-hidden="true">✅</span><span>Marquer ce commentaire comme lu</span>';
     button.addEventListener('click', ()=> markThreadCommentRead(sessionId, traineeId, comment.id));
     meta.appendChild(button);
   }
