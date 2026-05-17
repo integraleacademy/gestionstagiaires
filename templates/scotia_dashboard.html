@@ -252,12 +252,12 @@
         <section class="scotia-top-summary" aria-label="Dossiers traités">
           <div class="scotia-top-summary-head">
             <div>
-              <h2>Résumé des dossiers finalisés</h2>
+              <h2>Dossiers traités</h2>
             </div>
           </div>
           <div class="scotia-stats">
             <button type="button" class="scotia-stat scotia-stat--teal" data-filter="l2-validated" {% if stats.l2_validated == 0 %}disabled{% endif %}><strong>{{ stats.l2_validated }}</strong><span>📘 Livrets 2 validés</span><small>Voir les dossiers</small></button>
-            <button type="button" class="scotia-stat scotia-stat--gold" data-filter="certified" {% if stats.certified == 0 %}disabled{% endif %}><strong>{{ stats.certified }}</strong><span>🎓 Certifications / diplômes obtenus</span><small>Voir les dossiers</small></button>
+            <button type="button" class="scotia-stat scotia-stat--gold" data-filter="certified" {% if stats.certified == 0 %}disabled{% endif %}><strong>{{ stats.certified }}</strong><span>🎓 Certifiés</span><small>Voir les dossiers</small></button>
             <button type="button" class="scotia-stat scotia-stat--red" data-filter="non-recevable" {% if stats.non_recevable == 0 %}disabled{% endif %}><strong>{{ stats.non_recevable }}</strong><span>⛔ Non recevables</span><small>Voir les dossiers</small></button>
           </div>
         </section>
