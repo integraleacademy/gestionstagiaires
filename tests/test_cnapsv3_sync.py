@@ -963,7 +963,7 @@ class ScotiaItemsTests(unittest.TestCase):
         with gestion_app.app.test_request_context('/scotia'):
             html = render_template('scotia_dashboard.html', items=items)
 
-        self.assertIn('Résumé des dossiers finalisés', html)
+        self.assertIn('Dossiers traités', html)
         self.assertIn('Livrets 2 validés', html)
         self.assertIn('Certifiés', html)
         self.assertIn('Non recevables', html)
