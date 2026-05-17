@@ -158,8 +158,6 @@ def protect_sensitive_routes():
     whole sensitive namespaces without changing public candidate/VAE flows.
     """
     path = request.path or ""
-    if path == "/docs_to_control.json":
-        return None
     if path.startswith("/admin/") and path != "/admin/login":
         if not session.get("admin_logged_in"):
             return redirect(url_for("admin_login", next=request.full_path if request.query_string else path))
@@ -460,7 +458,7 @@ def _is_writable_directory(path: str) -> bool:
         return False
 
 
-def _resolve_persist_dir(candidates: Optional[List[str]] = None) -> str:
+def _resolve_persist_dir() -> str:
     """Return the directory used for all mutable production data.
 
     On Render this must point to the mounted persistent disk.  The value can be
@@ -473,7 +471,7 @@ def _resolve_persist_dir(candidates: Optional[List[str]] = None) -> str:
             return configured
         raise RuntimeError(f"PERSIST_DIR configuré mais non accessible en écriture: {configured}")
 
-    candidates = candidates or ["/var/data", "/data"]
+    candidates = ["/var/data", "/data"]
     writable_candidates: List[Tuple[str, int]] = []
     last_error = None
     for candidate in candidates:
@@ -505,6 +503,7 @@ BACKUP_RETENTION = int(os.environ.get("BACKUP_RETENTION", "120"))
 BACKUP_MIN_INTERVAL_SECONDS = int(os.environ.get("BACKUP_MIN_INTERVAL_SECONDS", "300"))
 AUTO_RESTORE_FROM_BACKUP = (os.environ.get("AUTO_RESTORE_FROM_BACKUP", "1") or "").strip().lower() in {"1", "true", "yes", "on"}
 BACKUP_SNAPSHOT_BEFORE_SAVE = (os.environ.get("BACKUP_SNAPSHOT_BEFORE_SAVE", "1") or "").strip().lower() in {"1", "true", "yes", "on"}
+DOCS_TO_CONTROL_PUBLIC_TOKEN = (os.environ.get("DOCS_TO_CONTROL_PUBLIC_TOKEN") or "").strip()
 MAX_JSON_BACKUP_BYTES = int(os.environ.get("MAX_JSON_BACKUP_BYTES", "52428800"))
 
 _data_lock = threading.RLock()
@@ -726,11 +725,14 @@ def _log_storage_state(data: Optional[Dict[str, Any]] = None) -> None:
     exists = os.path.exists(DATA_FILE)
     size = os.path.getsize(DATA_FILE) if exists else 0
     trainees_count, sessions_count = _count_loaded_objects(data or {})
-    app.logger.info("PERSIST_DIR choisi: %s", PERSIST_DIR)
-    app.logger.info("DATA_FILE utilisé: %s", DATA_FILE)
-    app.logger.info("Existence de data.json: %s (taille=%sB)", exists, size)
-    app.logger.info("Nombre de sessions chargées: %s", sessions_count)
-    app.logger.info("Nombre de stagiaires chargés: %s", trainees_count)
+    app.logger.info(
+        "Storage startup path=%s exists=%s size=%sB stagiaires=%s sessions=%s",
+        DATA_FILE,
+        exists,
+        size,
+        trainees_count,
+        sessions_count,
+    )
     _storage_startup_logged = True
 
 
@@ -17376,10 +17378,11 @@ def admin_trainee_candidate_sheet_save(session_id: str, trainee_id: str):
 
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#doc_candidate_info_sheet")
 
-def _docs_to_control_payload() -> Dict[str, Any]:
-    """Build the dashboard payload for stagiaire files needing attention."""
+@app.get("/api/docs_to_control")
+@admin_login_required
+def api_docs_to_control():
     data = load_data()
-    out: List[Dict[str, Any]] = []
+    out = []
 
     for s in data.get("sessions", []):
         if _is_wedof_leads_session(s):
@@ -17388,84 +17391,91 @@ def _docs_to_control_payload() -> Dict[str, Any]:
         session_name = _session_get(s, "name", "")
         training_type = _session_get(s, "training_type", "")
 
-        for t in _session_trainees_list(s):
-            # S'assure que les docs requis existent avant de décider si le dossier
-            # est incomplet/non conforme/à contrôler.
+        trainees = _session_trainees_list(s)
+
+        for t in trainees:
+            # s'assure que les docs requis existent (sinon liste vide => pas détecté)
             ensure_documents_schema_for_trainee(t, training_type)
 
             docs = t.get("documents") or []
-            to_control_count = 0
-            non_conforme_count = 0
-            missing_count = 0
+            pending = 0
             for d in docs:
-                if not isinstance(d, dict):
-                    continue
                 st = (d.get("status") or "").strip().upper()
-                if st in {"A CONTRÔLER", "A CONTROLER"}:
-                    to_control_count += 1
-                elif st == "NON CONFORME":
-                    non_conforme_count += 1
-                elif st in {"", "NON DÉPOSÉ", "NON DEPOSE"}:
-                    missing_count += 1
+                if st in ("A CONTRÔLER", "A CONTROLER"):
+                    pending += 1
 
-            dossier_complete = dossier_is_complete_total(t, training_type)
-            needs_attention = bool(to_control_count or non_conforme_count or not dossier_complete)
-            if not needs_attention:
-                continue
+            if pending > 0:
+                out.append({
+                    "session_id": session_id,
+                    "session_name": session_name,
+                    "training_type": training_type,
+                    "trainee_id": t.get("id"),
+                    "last_name": t.get("last_name", ""),
+                    "first_name": t.get("first_name", ""),
+                    "pending_count": pending,
+                    "admin_url": f"/admin/sessions/{session_id}/stagiaires/{t.get('id')}",
+                })
 
-            reasons: List[str] = []
-            if to_control_count:
-                reasons.append("a_controler")
-            if non_conforme_count:
-                reasons.append("non_conforme")
-            if not dossier_complete:
-                reasons.append("incomplet")
+    # tri: plus urgent d'abord (plus de docs à contrôler)
+    out.sort(key=lambda x: x.get("pending_count", 0), reverse=True)
 
-            out.append({
-                "session_id": session_id,
-                "session_name": session_name,
-                "training_type": training_type,
-                "trainee_id": t.get("id"),
-                "last_name": t.get("last_name", ""),
-                "first_name": t.get("first_name", ""),
-                "pending_count": to_control_count,
-                "to_control_count": to_control_count,
-                "non_conforme_count": non_conforme_count,
-                "missing_count": missing_count,
-                "dossier_complete": dossier_complete,
-                "reasons": reasons,
-                "admin_url": f"/admin/sessions/{session_id}/stagiaires/{t.get('id')}",
-            })
-
-    # Tri: d'abord les docs à contrôler, puis non conformes, puis dossiers incomplets.
-    out.sort(
-        key=lambda x: (
-            -int(x.get("to_control_count", 0) or 0),
-            -int(x.get("non_conforme_count", 0) or 0),
-            -int(x.get("missing_count", 0) or 0),
-            (x.get("last_name") or "").lower(),
-            (x.get("first_name") or "").lower(),
-        )
-    )
-    return {"ok": True, "pending_count": len(out), "items": out}
+    return jsonify({"ok": True, "items": out, "count": len(out)})
 
 
-@app.get("/api/docs_to_control")
-@admin_login_required
-def api_docs_to_control():
-    payload = _docs_to_control_payload()
-    payload["count"] = payload["pending_count"]
-    return jsonify(payload)
-
+from flask import make_response
 
 @app.get("/docs_to_control.json")
 def public_docs_to_control():
-    # Endpoint public consommé par la plateforme principale: pas de session admin
-    # obligatoire, et toujours un JSON valide au format attendu.
-    resp = make_response(jsonify(_docs_to_control_payload()))
-    resp.headers["Access-Control-Allow-Origin"] = "*"
-    resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-    resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    supplied_token = (request.args.get("token") or request.headers.get("X-Docs-To-Control-Token") or "").strip()
+    public_token_ok = bool(DOCS_TO_CONTROL_PUBLIC_TOKEN and hmac.compare_digest(supplied_token, DOCS_TO_CONTROL_PUBLIC_TOKEN))
+    if not session.get("admin_logged_in") and not public_token_ok:
+        abort(403)
+
+    data = load_data()
+    out = []
+
+    for s in data.get("sessions", []):
+        if _is_wedof_leads_session(s):
+            continue
+        session_id = s.get("id")
+        session_name = _session_get(s, "name", "")
+        training_type = _session_get(s, "training_type", "")
+
+        trainees = _session_trainees_list(s)
+
+        for t in trainees:
+            ensure_documents_schema_for_trainee(t, training_type)
+
+            docs = t.get("documents") or []
+            pending = 0
+            for d in docs:
+                st = (d.get("status") or "").strip().upper()
+                if st in ("A CONTRÔLER", "A CONTROLER"):
+                    pending += 1
+
+            if pending > 0:
+                out.append({
+                    "session_id": session_id,
+                    "session_name": session_name,
+                    "training_type": training_type,
+                    "trainee_id": t.get("id"),
+                    "last_name": t.get("last_name", ""),
+                    "first_name": t.get("first_name", ""),
+                    "pending_count": pending,
+                    "admin_url": f"/admin/sessions/{session_id}/stagiaires/{t.get('id')}",
+                })
+
+    out.sort(key=lambda x: x.get("pending_count", 0), reverse=True)
+
+    resp = make_response(jsonify({"ok": True, "items": out, "count": len(out)}))
+
+    # CORS uniquement lorsque l'accès public est volontairement protégé par token.
+    if public_token_ok:
+        resp.headers["Access-Control-Allow-Origin"] = "*"
+        resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Docs-To-Control-Token"
+    return resp
+
     return resp
 
 
