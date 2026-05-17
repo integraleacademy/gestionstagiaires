@@ -1241,10 +1241,11 @@ tr.row-todo td{
   position:relative;
   z-index:1;
   display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns:repeat(10, minmax(160px, 1fr));
   gap:12px;
-  overflow:visible;
-  padding:4px;
+  overflow-x:auto;
+  padding:4px 4px 10px;
+  scrollbar-width:thin;
 }
 
 .vae-dashboard-card{
@@ -1253,9 +1254,9 @@ tr.row-todo td{
   gap:14px;
   text-align:left;
   border:0;
-  min-height:104px;
-  border-radius:22px;
-  padding:13px;
+  min-height:116px;
+  border-radius:24px;
+  padding:15px;
   color:#fff;
   cursor:pointer;
   box-shadow:0 18px 34px rgba(30, 41, 59, .16);
@@ -1299,17 +1300,39 @@ tr.row-todo td{
 }
 
 .vae-dashboard-card.card-l1-pending.has-alert:not(:disabled){
-  animation:vae-pending-pulse 1.25s ease-in-out infinite;
+  animation:vae-pending-glow 2.4s ease-in-out infinite;
 }
 
-@keyframes vae-pending-pulse{
+.vae-dashboard-card.card-l1-pending.has-alert:not(:disabled) .vae-card-icon{
+  animation:vae-pending-icon 1.8s ease-in-out infinite;
+}
+
+@keyframes vae-pending-glow{
   0%, 100%{
-    transform:translateY(0) scale(1);
-    box-shadow:0 18px 34px rgba(180, 83, 9, .24), 0 0 0 0 rgba(249, 115, 22, .45);
+    box-shadow:
+      0 18px 34px rgba(30, 41, 59, .16),
+      inset 0 0 0 1px rgba(255,255,255,.18),
+      0 0 0 0 rgba(251, 146, 60, 0);
+    filter:saturate(1);
   }
   50%{
-    transform:translateY(-3px) scale(1.015);
-    box-shadow:0 26px 46px rgba(180, 83, 9, .32), 0 0 0 9px rgba(249, 115, 22, 0);
+    box-shadow:
+      0 22px 38px rgba(180, 83, 9, .26),
+      inset 0 0 0 2px rgba(255,255,255,.42),
+      0 0 0 7px rgba(251, 146, 60, .12);
+    filter:saturate(1.12);
+  }
+}
+
+@keyframes vae-pending-icon{
+  0%, 100%{
+    transform:rotate(0deg) scale(1);
+  }
+  45%{
+    transform:rotate(-4deg) scale(1.06);
+  }
+  70%{
+    transform:rotate(3deg) scale(1.02);
   }
 }
 
