@@ -19,6 +19,7 @@ from zoneinfo import ZoneInfo
 from flask import session
 from PIL import Image, ImageOps
 import tempfile
+import fcntl
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
@@ -125,6 +126,29 @@ def scotia_login_required(view):
         session.permanent = True
         return view(*args, **kwargs)
     return wrapped
+
+@app.before_request
+def protect_sensitive_routes():
+    """Central safety net for sensitive admin/API routes.
+
+    Some legacy endpoints were missing explicit decorators.  This hook protects
+    whole sensitive namespaces without changing public candidate/VAE flows.
+    """
+    path = request.path or ""
+    if path.startswith("/admin/") and path != "/admin/login":
+        if not session.get("admin_logged_in"):
+            return redirect(url_for("admin_login", next=request.full_path if request.query_string else path))
+
+    protected_api_prefixes = (
+        "/api/admin/",
+        "/api/secretariat/",
+        "/api/cnaps",
+    )
+    if path.startswith(protected_api_prefixes):
+        if not session.get("admin_logged_in"):
+            return jsonify({"ok": False, "error": "auth_required"}), 401
+        if request.method not in {"GET", "HEAD", "OPTIONS"} and session.get("admin_role") == "viewer":
+            return jsonify({"ok": False, "error": "read_only"}), 403
 
 @app.context_processor
 def inject_read_only():
@@ -311,9 +335,27 @@ app.add_template_filter(fr_datetime, "frdatetime")
 # Persistent disk (Render)
 # =========================
 def _resolve_persist_dir() -> str:
-    persist_dir = "/data"
-    os.makedirs(persist_dir, exist_ok=True)
-    return persist_dir
+    """Return the directory used for all mutable production data.
+
+    On Render this must point to a mounted persistent disk (usually /var/data
+    or /data).  The value can be forced with PERSIST_DIR so a deployment never
+    has to write business data into the ephemeral application checkout.
+    """
+    configured = (os.environ.get("PERSIST_DIR") or "").strip()
+    candidates = [configured] if configured else ["/var/data", "/data"]
+    last_error = None
+    for candidate in [x for x in candidates if x]:
+        try:
+            os.makedirs(candidate, exist_ok=True)
+            test_path = os.path.join(candidate, ".write-test")
+            with open(test_path, "w", encoding="utf-8") as f:
+                f.write("ok")
+            os.remove(test_path)
+            return candidate
+        except Exception as exc:
+            last_error = exc
+            continue
+    raise RuntimeError(f"Aucun dossier persistant accessible parmi {candidates}: {last_error}")
 
 
 PERSIST_DIR = _resolve_persist_dir()
@@ -328,6 +370,8 @@ BACKUP_RETENTION = int(os.environ.get("BACKUP_RETENTION", "120"))
 BACKUP_MIN_INTERVAL_SECONDS = int(os.environ.get("BACKUP_MIN_INTERVAL_SECONDS", "300"))
 AUTO_RESTORE_FROM_BACKUP = (os.environ.get("AUTO_RESTORE_FROM_BACKUP", "1") or "").strip().lower() in {"1", "true", "yes", "on"}
 BACKUP_SNAPSHOT_BEFORE_SAVE = (os.environ.get("BACKUP_SNAPSHOT_BEFORE_SAVE", "1") or "").strip().lower() in {"1", "true", "yes", "on"}
+DOCS_TO_CONTROL_PUBLIC_TOKEN = (os.environ.get("DOCS_TO_CONTROL_PUBLIC_TOKEN") or "").strip()
+MAX_JSON_BACKUP_BYTES = int(os.environ.get("MAX_JSON_BACKUP_BYTES", "52428800"))
 
 _data_lock = threading.RLock()
 _wedof_webhook_lock = threading.RLock()
@@ -357,60 +401,90 @@ def _cleanup_backups_for(prefix: str) -> None:
         pass
 
 
-def _force_backup_snapshot(path: str) -> None:
+def _json_backup_path(prefix: str, reason: str = "auto") -> str:
+    stamp = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%S.%fZ")
+    suffix = uuid.uuid4().hex[:8]
+    safe_reason = re.sub(r"[^a-zA-Z0-9_-]+", "-", reason or "auto")[:32]
+    return os.path.join(BACKUP_DIR, f"{prefix}.{stamp}.{safe_reason}.{suffix}.json")
+
+
+def _copy_file_durable(src_path: str, dst_path: str) -> None:
+    with open(src_path, "rb") as src, open(dst_path, "wb") as dst:
+        shutil.copyfileobj(src, dst)
+        dst.flush()
+        os.fsync(dst.fileno())
+
+
+def _force_backup_snapshot(path: str, reason: str = "manual") -> Optional[str]:
     base_name = os.path.basename(path)
     prefix = base_name.replace(".", "_")
     if not os.path.exists(path):
-        return
-    stamp = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
-    backup_path = os.path.join(BACKUP_DIR, f"{prefix}.manual.{stamp}.json")
+        return None
     try:
-        with open(path, "rb") as src, open(backup_path, "wb") as dst:
-            dst.write(src.read())
+        if os.path.getsize(path) > MAX_JSON_BACKUP_BYTES:
+            app.logger.warning("Backup skipped for %s: file larger than MAX_JSON_BACKUP_BYTES", path)
+            return None
+    except Exception:
+        pass
+    backup_path = _json_backup_path(prefix, reason)
+    try:
+        _copy_file_durable(path, backup_path)
         _cleanup_backups_for(prefix)
+        return backup_path
+    except Exception:
+        app.logger.exception("Unable to create JSON backup for %s", path)
+        return None
+
+
+def _fsync_parent_dir(path: str) -> None:
+    try:
+        dir_fd = os.open(os.path.dirname(path) or ".", os.O_DIRECTORY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
     except Exception:
         pass
 
 
-def _write_json_with_backups(path: str, payload: Dict[str, Any], lock: threading.RLock) -> None:
+def _write_json_with_backups(path: str, payload: Any, lock: threading.RLock) -> None:
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    lock_path = path + ".lock"
     with lock:
-        now_ts = datetime.datetime.utcnow().timestamp()
-        base_name = os.path.basename(path)
-        prefix = base_name.replace(".", "_")
-
-        # Snapshot systématique avant écriture pour éviter toute fenêtre de perte
-        # de données entre deux backups périodiques.
-        if BACKUP_SNAPSHOT_BEFORE_SAVE:
-            _force_backup_snapshot(path)
-
-        if os.path.exists(path):
-            last = _last_backup_times.get(path, 0)
-            if now_ts - last >= BACKUP_MIN_INTERVAL_SECONDS:
-                stamp = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
-                backup_path = os.path.join(BACKUP_DIR, f"{prefix}.{stamp}.json")
-                try:
-                    with open(path, "rb") as src, open(backup_path, "wb") as dst:
-                        dst.write(src.read())
-                    _last_backup_times[path] = now_ts
-                    _cleanup_backups_for(prefix)
-                except Exception:
-                    pass
-
-        tmp = path + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, path)
-        try:
-            dir_fd = os.open(os.path.dirname(path) or ".", os.O_DIRECTORY)
+        with open(lock_path, "a+", encoding="utf-8") as lock_file:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
             try:
-                os.fsync(dir_fd)
-            finally:
-                os.close(dir_fd)
-        except Exception:
-            pass
+                now_ts = datetime.datetime.utcnow().timestamp()
+                base_name = os.path.basename(path)
+                prefix = base_name.replace(".", "_")
 
+                # Snapshot systématique avant écriture pour éviter toute fenêtre de perte
+                # de données entre deux backups périodiques.
+                if BACKUP_SNAPSHOT_BEFORE_SAVE:
+                    _force_backup_snapshot(path, reason="before-save")
+
+                if os.path.exists(path):
+                    last = _last_backup_times.get(path, 0)
+                    if now_ts - last >= BACKUP_MIN_INTERVAL_SECONDS:
+                        if _force_backup_snapshot(path, reason="interval"):
+                            _last_backup_times[path] = now_ts
+
+                tmp = f"{path}.tmp.{os.getpid()}.{uuid.uuid4().hex}"
+                try:
+                    with open(tmp, "w", encoding="utf-8") as f:
+                        json.dump(payload, f, ensure_ascii=False, indent=2)
+                        f.flush()
+                        os.fsync(f.fileno())
+                    os.replace(tmp, path)
+                    _fsync_parent_dir(path)
+                finally:
+                    if os.path.exists(tmp):
+                        try:
+                            os.remove(tmp)
+                        except Exception:
+                            pass
+            finally:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 def _safe_remove_file(path: str) -> None:
     """Déplace le fichier vers la corbeille interne avant suppression logique."""
@@ -3724,13 +3798,7 @@ def _load_wedof_webhooks() -> List[Dict[str, Any]]:
     return []
 
 def _save_wedof_webhooks(entries: List[Dict[str, Any]]) -> None:
-    with _wedof_webhook_lock:
-        tmp = WEDOF_WEBHOOK_FILE + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(entries, f, ensure_ascii=False, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, WEDOF_WEBHOOK_FILE)
+    _write_json_with_backups(WEDOF_WEBHOOK_FILE, entries, _wedof_webhook_lock)
 
 def _extract_wedof_payload_fields(payload: Dict[str, Any]) -> Dict[str, str]:
     flat = json.dumps(payload, ensure_ascii=False)
@@ -8713,8 +8781,13 @@ def wedof_webhook():
         computed = hmac.new(secret, raw_body, hashlib.sha256).hexdigest()
         provided = signature.split("=", 1)[-1].strip()
         sig_valid = hmac.compare_digest(computed, provided)
+    elif secret:
+        app.logger.warning("[WEDOF WEBHOOK] signature manquante alors qu'un secret est configuré")
     else:
-        app.logger.warning("[WEDOF WEBHOOK] signature non vérifiée (secret ou signature manquant) signature=%s", signature)
+        app.logger.warning("[WEDOF WEBHOOK] signature non vérifiée: WEDOF_WEBHOOK_SECRET non configuré")
+
+    if secret and not sig_valid:
+        return jsonify({"ok": False, "error": "invalid_signature"}), 401
 
     try:
         folder_id = _find_wedof_folder_id(payload)
@@ -12937,8 +13010,12 @@ def _tokenize_path(path: str) -> str:
     return rel
 
 def _detokenize_path(token: str) -> str:
-    token = (token or "").replace("..","").lstrip("/").replace("\\","/")
-    return os.path.join(PERSIST_DIR, token)
+    token = (token or "").replace("\\", "/").lstrip("/")
+    candidate = os.path.realpath(os.path.join(PERSIST_DIR, token))
+    root = os.path.realpath(PERSIST_DIR)
+    if candidate != root and not candidate.startswith(root + os.sep):
+        abort(403)
+    return candidate
 
 @app.get("/admin/uploads/<path:path>")
 @admin_login_required
@@ -16930,6 +17007,11 @@ from flask import make_response
 
 @app.get("/docs_to_control.json")
 def public_docs_to_control():
+    supplied_token = (request.args.get("token") or request.headers.get("X-Docs-To-Control-Token") or "").strip()
+    public_token_ok = bool(DOCS_TO_CONTROL_PUBLIC_TOKEN and hmac.compare_digest(supplied_token, DOCS_TO_CONTROL_PUBLIC_TOKEN))
+    if not session.get("admin_logged_in") and not public_token_ok:
+        abort(403)
+
     data = load_data()
     out = []
 
@@ -16968,10 +17050,12 @@ def public_docs_to_control():
 
     resp = make_response(jsonify({"ok": True, "items": out, "count": len(out)}))
 
-    # ✅ autorise le fetch depuis ton dashboard (autre domaine)
-    resp.headers["Access-Control-Allow-Origin"] = "*"
-    resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-    resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    # CORS uniquement lorsque l'accès public est volontairement protégé par token.
+    if public_token_ok:
+        resp.headers["Access-Control-Allow-Origin"] = "*"
+        resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Docs-To-Control-Token"
+    return resp
 
     return resp
 
@@ -17425,7 +17509,7 @@ def api_cnaps_pending_import_delete(pending_id: str):
             try:
                 file_path = _detokenize_path(removed_token)
                 if os.path.exists(file_path):
-                    os.remove(file_path)
+                    _safe_remove_file(file_path)
             except Exception:
                 pass
 

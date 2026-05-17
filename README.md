@@ -24,8 +24,10 @@ python app.py
 - `AUTO_RESTORE_FROM_BACKUP` (optionnel, défaut `1`) : en cas de `data.json` manquant/corrompu, tente une restauration automatique depuis `PERSIST_DIR/backups`.
 - `CNAPSV3_BASE_URL` (optionnel, défaut `https://cnapsv3.onrender.com`)
 - `GESTIONSTAGIAIRE_SYNC_TOKEN` (obligatoire pour synchroniser le statut CNAPS vers cnapsv3)
-- `WEDOF_WEBHOOK_SECRET` (optionnel au démarrage, secret de signature webhook WeDoF)
+- `WEDOF_WEBHOOK_SECRET` (recommandé : si défini, une signature invalide/manquante est refusée)
 - `WEDOF_API_TOKEN` (token API WeDoF pour récupérer le détail complet d'un dossier)
+- `DOCS_TO_CONTROL_PUBLIC_TOKEN` (optionnel : token requis pour exposer `/docs_to_control.json` à un dashboard externe sans session admin)
+- `MAX_JSON_BACKUP_BYTES` (optionnel, défaut `52428800` : limite de taille d'un JSON sauvegardé automatiquement)
 
 ## Intégration WeDoF CPF/EDOF
 
@@ -49,10 +51,12 @@ Les dossiers VAE sont persistés dans `data_vae.json` dans `PERSIST_DIR`.
 
 ## Sauvegardes anti-perte de données
 
-- Chaque écriture de `data.json` et `data_vae.json` est atomique (`.tmp` puis `os.replace`).
-- Un snapshot JSON est créé automatiquement dans `PERSIST_DIR/backups` (au plus toutes les 5 minutes par défaut).
-- Les actions de suppression sensibles forcent un snapshot immédiat juste avant la suppression.
+- Chaque écriture de `data.json`, `data_vae.json` et `wedof_webhooks.json` est protégée par un verrou fichier inter-processus, écrite dans un fichier temporaire unique, synchronisée (`fsync`) puis remplacée par `os.replace`.
+- Un snapshot JSON est créé automatiquement dans `PERSIST_DIR/backups` avant les écritures et au plus toutes les 5 minutes par défaut pour les snapshots périodiques.
+- Les noms de sauvegardes incluent un timestamp précis et un suffixe aléatoire pour éviter qu'une sauvegarde écrase une autre version.
+- Les fichiers supprimés par les routes sensibles sont déplacés dans `PERSIST_DIR/trash` quand c'est possible.
 - L'endpoint `GET /api/health` expose le nombre de sauvegardes présentes pour vérification rapide.
+- Un rapport complet est disponible dans `SECURITY_AUDIT.md`.
 
 
 ## Notifications push iPhone (Safari)
