@@ -1,7 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
 {% macro money(value) -%}{{ "%.2f"|format(value or 0)|replace(".", ",") }} €{%- endmacro %}
+<script>document.body.classList.add("cash-payments-wide");</script>
 <style>
+  .cash-payments-wide .container{max-width:none;width:100%;padding-left:24px;padding-right:24px}
+  .cash-payments-wide .topbar-inner{max-width:none;width:100%;padding-left:24px;padding-right:24px}
+  .cash-page{width:100%}
   .cash-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px}
   .cash-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:16px}
   .cash-kpi{position:relative;overflow:hidden;border-radius:22px;padding:18px;color:#fff;box-shadow:0 16px 34px rgba(15,23,42,.16)}
@@ -41,7 +45,7 @@
   @media print{.no-print,.topbar{display:none!important}.card{box-shadow:none;border:none}.cash-table th{position:static}body{background:#fff}.cash-kpi{box-shadow:none}}
 </style>
 
-<div class="card">
+<div class="card cash-page">
   <div class="cash-head">
     <div>
       <h1 style="margin:0">Paiement espèces</h1>
