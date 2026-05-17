@@ -1,3 +1,4 @@
+import datetime
 import unittest
 
 import app as gestion_app
@@ -8,6 +9,9 @@ class VaeAdminDashboardTests(unittest.TestCase):
         self.client = gestion_app.app.test_client()
         self.original_load_data = gestion_app.load_data
         self.original_save_data = gestion_app.save_data
+        now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
+        recent_created_at = (now - datetime.timedelta(hours=12)).isoformat()
+        old_created_at = (now - datetime.timedelta(days=3)).isoformat()
         self.data = {
             "sessions": [
                 {
@@ -21,6 +25,7 @@ class VaeAdminDashboardTests(unittest.TestCase):
                             "first_name": "Alice",
                             "vae_status": "livret_1_todo",
                             "public_has_logged_in": False,
+                            "created_at": old_created_at,
                             "documents": [],
                         },
                         {
@@ -29,6 +34,7 @@ class VaeAdminDashboardTests(unittest.TestCase):
                             "first_name": "Bob",
                             "vae_status": "livret_1_analysis",
                             "public_has_logged_in": True,
+                            "created_at": recent_created_at,
                             "documents": [],
                         },
                     ],
@@ -54,12 +60,17 @@ class VaeAdminDashboardTests(unittest.TestCase):
         self.assertIn('class="vae-admin-dashboard"', html)
         self.assertIn('data-vae-dashboard-filter="status:livret_1_todo"', html)
         self.assertIn('data-vae-dashboard-filter="no_login"', html)
+        self.assertIn('data-vae-dashboard-filter="new_vae_request_48h"', html)
+        self.assertIn('data-vae-dashboard-count="new_vae_request_48h"', html)
         self.assertIn('data-public-has-logged-in="0"', html)
         self.assertIn('data-public-has-logged-in="1"', html)
+        self.assertIn('data-vae-new-request-48h="0"', html)
+        self.assertIn('data-vae-new-request-48h="1"', html)
         self.assertIn("function getVtcStatusValues(tr)", html)
         self.assertIn('const { theoryStatus, practiceStatus } = getVtcStatusValues(tr);', html)
         self.assertIn('activeVaeDashboardFilter = filter === activeVaeDashboardFilter ? "" : filter;', html)
         self.assertIn('activeVaeDashboardFilter === "no_login" && !hasLoggedIn', html)
+        self.assertIn('activeVaeDashboardFilter === "new_vae_request_48h" && isNewVaeRequest48h', html)
         self.assertIn("grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));", html)
         self.assertIn("overflow:visible;", html)
 

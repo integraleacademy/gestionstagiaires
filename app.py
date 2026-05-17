@@ -11469,10 +11469,20 @@ def admin_trainees(session_id: str):
 
     show_vae = (session_view["training_type"] == "DIRIGEANT VAE")
     if show_vae:
+        now_utc = datetime.datetime.now(datetime.timezone.utc)
         for t in trainees:
             if not isinstance(t.get("vae_action_dates"), dict):
                 t["vae_action_dates"] = {}
             _sync_vae_status_with_actions(t)
+            created_at = _parse_iso_datetime(t.get("created_at") or "")
+            if created_at and created_at.tzinfo is None:
+                created_at = created_at.replace(tzinfo=datetime.timezone.utc)
+            if created_at:
+                created_at = created_at.astimezone(datetime.timezone.utc)
+            t["is_vae_new_request_48h"] = bool(
+                created_at
+                and datetime.timedelta(0) <= (now_utc - created_at) <= datetime.timedelta(hours=48)
+            )
 
     # persist normalized trainees back into storage
     s["trainees"] = trainees
