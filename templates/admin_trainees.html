@@ -195,12 +195,30 @@
   </div>
 
   <div class="vae-dashboard-grid">
+    <button type="button" class="vae-dashboard-card card-no-login" data-vae-dashboard-filter="no_login" aria-pressed="false">
+      <span class="vae-card-icon">📡</span>
+      <span class="vae-card-content">
+        <span class="vae-card-label">Jamais connectés</span>
+        <strong class="vae-card-count" data-vae-dashboard-count="no_login">0</strong>
+        <span class="vae-card-hint">Sans icône 🛜</span>
+      </span>
+    </button>
+
     <button type="button" class="vae-dashboard-card card-l1-todo" data-vae-dashboard-filter="status:livret_1_todo" aria-pressed="false">
       <span class="vae-card-icon">🧩</span>
       <span class="vae-card-content">
         <span class="vae-card-label">Livret 1 à compléter</span>
         <strong class="vae-card-count" data-vae-dashboard-count="status:livret_1_todo">0</strong>
         <span class="vae-card-hint">Dossiers à relancer</span>
+      </span>
+    </button>
+
+    <button type="button" class="vae-dashboard-card card-l1-pending" data-vae-dashboard-filter="l1_pending_transmission" aria-pressed="false">
+      <span class="vae-card-icon">📨</span>
+      <span class="vae-card-content">
+        <span class="vae-card-label">Livret 1 en attente de transmission</span>
+        <strong class="vae-card-count" data-vae-dashboard-count="l1_pending_transmission">0</strong>
+        <span class="vae-card-hint">À transmettre à SCOTIA</span>
       </span>
     </button>
 
@@ -213,12 +231,21 @@
       </span>
     </button>
 
-    <button type="button" class="vae-dashboard-card card-no-login" data-vae-dashboard-filter="no_login" aria-pressed="false">
-      <span class="vae-card-icon">📡</span>
+    <button type="button" class="vae-dashboard-card card-l1-validated" data-vae-dashboard-filter="status:livret_1_validated" aria-pressed="false">
+      <span class="vae-card-icon">✅</span>
       <span class="vae-card-content">
-        <span class="vae-card-label">Jamais connectés</span>
-        <strong class="vae-card-count" data-vae-dashboard-count="no_login">0</strong>
-        <span class="vae-card-hint">Sans icône 🛜</span>
+        <span class="vae-card-label">Livret 1 validé</span>
+        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_1_validated">0</strong>
+        <span class="vae-card-hint">Recevabilité confirmée</span>
+      </span>
+    </button>
+
+    <button type="button" class="vae-dashboard-card card-non-recevable" data-vae-dashboard-filter="non_recevable" aria-pressed="false">
+      <span class="vae-card-icon">⛔</span>
+      <span class="vae-card-content">
+        <span class="vae-card-label">Non recevable</span>
+        <strong class="vae-card-count" data-vae-dashboard-count="non_recevable">0</strong>
+        <span class="vae-card-hint">Dossiers refusés</span>
       </span>
     </button>
 
@@ -234,9 +261,18 @@
     <button type="button" class="vae-dashboard-card card-l2-analysis" data-vae-dashboard-filter="status:livret_2_analysis" aria-pressed="false">
       <span class="vae-card-icon">🧪</span>
       <span class="vae-card-content">
-        <span class="vae-card-label">Livret 2 en analyse</span>
+        <span class="vae-card-label">Livret 2 en cours d'analyse</span>
         <strong class="vae-card-count" data-vae-dashboard-count="status:livret_2_analysis">0</strong>
         <span class="vae-card-hint">À suivre de près</span>
+      </span>
+    </button>
+
+    <button type="button" class="vae-dashboard-card card-l2-validated" data-vae-dashboard-filter="status:livret_2_validated" aria-pressed="false">
+      <span class="vae-card-icon">🌟</span>
+      <span class="vae-card-content">
+        <span class="vae-card-label">Livret 2 validé</span>
+        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_2_validated">0</strong>
+        <span class="vae-card-hint">Validation finale</span>
       </span>
     </button>
 
@@ -313,6 +349,9 @@
 {% set vtc_book_address_complete = (t.address or "")|trim and (t.zip_code or "")|trim and (t.city or "")|trim %}
 {% set vtc_book_pending_ready = is_vtc and (not (t.vtc_book_sent_at or "")|trim) and vtc_book_address_complete %}
 {% set vtc_exam_center = (t.vtc_exam_center or "")|trim|lower %}
+{% set vae_action_dates = t.vae_action_dates or {} %}
+{% set livret_1_transmitted_scotia = (vae_action_dates.get('livret_1_transmitted_scotia') or t.livret_1_transmitted_scotia or t.livret_1_transmitted_scotia_at or '')|trim %}
+{% set scotia_status = (t.scotia_status or '')|trim %}
 <tr class="row {% if t.comment %}row-warning{% endif %} {% if vtc_exam_center == 'nice' %}row-vtc-nice{% elif vtc_exam_center == 'toulon' %}row-vtc-toulon{% endif %}"
     data-trainee-id="{{ t.id }}"
     data-session-id="{{ t.source_session_id or session.id }}"
@@ -320,6 +359,8 @@
     data-first-name="{{ t.first_name or '' }}"
     data-vae-status="{{ t.vae_status or 'livret_1_todo' }}"
     data-public-has-logged-in="{{ '1' if t.public_has_logged_in else '0' }}"
+    data-livret-1-transmitted-scotia="{{ '1' if livret_1_transmitted_scotia else '0' }}"
+    data-scotia-status="{{ scotia_status }}"
 data-vtc-theory-ok="{{ '1' if (t.vtc_theory_status_manual == 'success' or ((not t.vtc_theory_status_manual) and t.vtc_theory_result != 'non_admissible' and t.vtc_theory_exam_sent_at)) else '0' }}"
 data-vtc-exam-fees-paid="{{ '1' if t.exam_fees_paid else '0' }}"
 data-vtc-cmar-manual-ok="{{ '1' if t.vtc_cmar_manual_ok else '0' }}"
@@ -1118,7 +1159,8 @@ tr.row-todo td{
 
 
 .vae-admin-dashboard{
-  margin:18px 0 22px;
+  width:calc(100vw - 28px);
+  margin:18px 0 22px calc(50% - 50vw + 14px);
   padding:18px;
   border-radius:30px;
   background:
@@ -1199,8 +1241,11 @@ tr.row-todo td{
   position:relative;
   z-index:1;
   display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(210px, 1fr));
-  gap:14px;
+  grid-template-columns:repeat(10, minmax(160px, 1fr));
+  gap:12px;
+  overflow-x:auto;
+  padding:4px 4px 10px;
+  scrollbar-width:thin;
 }
 
 .vae-dashboard-card{
@@ -1209,9 +1254,9 @@ tr.row-todo td{
   gap:14px;
   text-align:left;
   border:0;
-  min-height:128px;
-  border-radius:26px;
-  padding:18px;
+  min-height:116px;
+  border-radius:24px;
+  padding:15px;
   color:#fff;
   cursor:pointer;
   box-shadow:0 18px 34px rgba(30, 41, 59, .16);
@@ -1232,11 +1277,41 @@ tr.row-todo td{
   z-index:-1;
 }
 
-.vae-dashboard-card:hover,
-.vae-dashboard-card[aria-pressed="true"]{
+.vae-dashboard-card:hover:not(:disabled),
+.vae-dashboard-card[aria-pressed="true"]:not(:disabled){
   transform:translateY(-4px) scale(1.01);
   box-shadow:0 24px 42px rgba(30, 41, 59, .22);
   filter:saturate(1.08);
+}
+
+.vae-dashboard-card:disabled,
+.vae-dashboard-card.is-empty{
+  background:linear-gradient(135deg, #cbd5e1, #94a3b8) !important;
+  color:#f8fafc;
+  cursor:not-allowed;
+  opacity:.72;
+  box-shadow:0 10px 22px rgba(100, 116, 139, .16);
+  filter:grayscale(.65) saturate(.75);
+}
+
+.vae-dashboard-card:disabled .vae-card-icon,
+.vae-dashboard-card.is-empty .vae-card-icon{
+  background:rgba(255,255,255,.18);
+}
+
+.vae-dashboard-card.card-l1-pending.has-alert:not(:disabled){
+  animation:vae-pending-pulse 1.25s ease-in-out infinite;
+}
+
+@keyframes vae-pending-pulse{
+  0%, 100%{
+    transform:translateY(0) scale(1);
+    box-shadow:0 18px 34px rgba(180, 83, 9, .24), 0 0 0 0 rgba(249, 115, 22, .45);
+  }
+  50%{
+    transform:translateY(-3px) scale(1.015);
+    box-shadow:0 26px 46px rgba(180, 83, 9, .32), 0 0 0 9px rgba(249, 115, 22, 0);
+  }
 }
 
 .vae-dashboard-card[aria-pressed="true"]{
@@ -1281,9 +1356,13 @@ tr.row-todo td{
 
 .card-l1-todo{ background:linear-gradient(135deg, #fb7185, #f97316); }
 .card-l1-analysis{ background:linear-gradient(135deg, #8b5cf6, #2563eb); }
+.card-l1-pending{ background:linear-gradient(135deg, #f97316, #b45309); }
+.card-l1-validated{ background:linear-gradient(135deg, #16a34a, #15803d); }
+.card-non-recevable{ background:linear-gradient(135deg, #dc2626, #7f1d1d); }
 .card-no-login{ background:linear-gradient(135deg, #06b6d4, #0f766e); }
 .card-l2-todo{ background:linear-gradient(135deg, #22c55e, #14b8a6); }
 .card-l2-analysis{ background:linear-gradient(135deg, #f59e0b, #d946ef); }
+.card-l2-validated{ background:linear-gradient(135deg, #84cc16, #059669); }
 .card-certified{ background:linear-gradient(135deg, #0f172a, #6366f1); }
 
 @media (max-width: 720px){
@@ -2070,10 +2149,18 @@ function getVaeDashboardRows(){
 }
 
 function updateVaeDashboardCounts(){
-  const counts = { no_login: 0 };
+  const counts = { no_login: 0, l1_pending_transmission: 0, non_recevable: 0 };
   getVaeDashboardRows().forEach(tr => {
     const status = tr.getAttribute("data-vae-status") || "livret_1_todo";
+    const livret1TransmittedScotia = tr.getAttribute("data-livret-1-transmitted-scotia") === "1";
+    const scotiaStatus = tr.getAttribute("data-scotia-status") || "";
     counts[`status:${status}`] = (counts[`status:${status}`] || 0) + 1;
+    if(status === "livret_1_analysis" && !livret1TransmittedScotia){
+      counts.l1_pending_transmission += 1;
+    }
+    if(scotiaStatus === "non_recevable"){
+      counts.non_recevable += 1;
+    }
     if(tr.getAttribute("data-public-has-logged-in") !== "1"){
       counts.no_login += 1;
     }
@@ -2081,7 +2168,18 @@ function updateVaeDashboardCounts(){
 
   document.querySelectorAll("[data-vae-dashboard-count]").forEach(el => {
     const key = el.getAttribute("data-vae-dashboard-count") || "";
-    el.textContent = counts[key] || 0;
+    const count = counts[key] || 0;
+    const card = el.closest("[data-vae-dashboard-filter]");
+    el.textContent = count;
+    if(card){
+      card.disabled = count === 0;
+      card.setAttribute("aria-disabled", count === 0 ? "true" : "false");
+      card.classList.toggle("is-empty", count === 0);
+      card.classList.toggle("has-alert", key === "l1_pending_transmission" && count > 0);
+      if(count === 0){
+        card.setAttribute("aria-pressed", "false");
+      }
+    }
   });
 }
 
@@ -2089,7 +2187,8 @@ function updateVaeDashboardPressedState(){
   const selectedVae = document.getElementById("vaeStatusFilter")?.value || "all";
   const selectedKey = activeVaeDashboardFilter || (selectedVae !== "all" ? `status:${selectedVae}` : "");
   document.querySelectorAll("[data-vae-dashboard-filter]").forEach(card => {
-    card.setAttribute("aria-pressed", card.getAttribute("data-vae-dashboard-filter") === selectedKey ? "true" : "false");
+    const isPressed = !card.disabled && card.getAttribute("data-vae-dashboard-filter") === selectedKey;
+    card.setAttribute("aria-pressed", isPressed ? "true" : "false");
   });
 }
 
@@ -2143,9 +2242,15 @@ function applyRowFilters(){
     const { theoryStatus, practiceStatus } = getVtcStatusValues(tr);
     const rowFullName = normalizeSearchText(`${tr.getAttribute("data-last-name") || ""} ${tr.getAttribute("data-first-name") || ""}`);
     const hasLoggedIn = tr.getAttribute("data-public-has-logged-in") === "1";
+    const livret1TransmittedScotia = tr.getAttribute("data-livret-1-transmitted-scotia") === "1";
+    const scotiaStatus = tr.getAttribute("data-scotia-status") || "";
 
     const matchVae = selectedVae === "all" || rowVaeStatus === selectedVae;
-    const matchDashboard = !activeVaeDashboardFilter || activeVaeDashboardFilter.startsWith("status:") || (activeVaeDashboardFilter === "no_login" && !hasLoggedIn);
+    const matchDashboard = !activeVaeDashboardFilter
+      || activeVaeDashboardFilter.startsWith("status:")
+      || (activeVaeDashboardFilter === "no_login" && !hasLoggedIn)
+      || (activeVaeDashboardFilter === "non_recevable" && scotiaStatus === "non_recevable")
+      || (activeVaeDashboardFilter === "l1_pending_transmission" && rowVaeStatus === "livret_1_analysis" && !livret1TransmittedScotia);
     const matchTheory = selectedTheory === "all" || theoryStatus === selectedTheory;
     const matchPractice = selectedPractice === "all" || practiceStatus === selectedPractice;
     const matchName = !searchedName || rowFullName.includes(searchedName);
@@ -2160,12 +2265,15 @@ function bindVaeDashboardFilters(){
   document.addEventListener("click", event => {
     const card = event.target?.closest?.("[data-vae-dashboard-filter]");
     if(card){
+      if(card.disabled) return;
       const filter = card.getAttribute("data-vae-dashboard-filter") || "";
       const vaeFilter = document.getElementById("vaeStatusFilter");
       activeVaeDashboardFilter = filter === activeVaeDashboardFilter ? "" : filter;
       if(vaeFilter){
         if(activeVaeDashboardFilter.startsWith("status:")){
           vaeFilter.value = activeVaeDashboardFilter.slice("status:".length);
+        }else if(activeVaeDashboardFilter === "l1_pending_transmission" || activeVaeDashboardFilter === "non_recevable"){
+          vaeFilter.value = "all";
         }else{
           vaeFilter.value = "all";
         }
