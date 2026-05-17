@@ -195,21 +195,21 @@
   </div>
 
   <div class="vae-dashboard-grid">
+    <button type="button" class="vae-dashboard-card card-no-login" data-vae-dashboard-filter="no_login" aria-pressed="false">
+      <span class="vae-card-icon">📡</span>
+      <span class="vae-card-content">
+        <span class="vae-card-label">Jamais connectés</span>
+        <strong class="vae-card-count" data-vae-dashboard-count="no_login">0</strong>
+        <span class="vae-card-hint">Sans icône 🛜</span>
+      </span>
+    </button>
+
     <button type="button" class="vae-dashboard-card card-l1-todo" data-vae-dashboard-filter="status:livret_1_todo" aria-pressed="false">
       <span class="vae-card-icon">🧩</span>
       <span class="vae-card-content">
         <span class="vae-card-label">Livret 1 à compléter</span>
         <strong class="vae-card-count" data-vae-dashboard-count="status:livret_1_todo">0</strong>
         <span class="vae-card-hint">Dossiers à relancer</span>
-      </span>
-    </button>
-
-    <button type="button" class="vae-dashboard-card card-l1-analysis" data-vae-dashboard-filter="status:livret_1_analysis" aria-pressed="false">
-      <span class="vae-card-icon">🔎</span>
-      <span class="vae-card-content">
-        <span class="vae-card-label">Livret 1 en analyse</span>
-        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_1_analysis">0</strong>
-        <span class="vae-card-hint">Analyse en cours</span>
       </span>
     </button>
 
@@ -222,6 +222,15 @@
       </span>
     </button>
 
+    <button type="button" class="vae-dashboard-card card-l1-analysis" data-vae-dashboard-filter="status:livret_1_analysis" aria-pressed="false">
+      <span class="vae-card-icon">🔎</span>
+      <span class="vae-card-content">
+        <span class="vae-card-label">Livret 1 en analyse</span>
+        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_1_analysis">0</strong>
+        <span class="vae-card-hint">Analyse en cours</span>
+      </span>
+    </button>
+
     <button type="button" class="vae-dashboard-card card-l1-validated" data-vae-dashboard-filter="status:livret_1_validated" aria-pressed="false">
       <span class="vae-card-icon">✅</span>
       <span class="vae-card-content">
@@ -231,12 +240,12 @@
       </span>
     </button>
 
-    <button type="button" class="vae-dashboard-card card-no-login" data-vae-dashboard-filter="no_login" aria-pressed="false">
-      <span class="vae-card-icon">📡</span>
+    <button type="button" class="vae-dashboard-card card-non-recevable" data-vae-dashboard-filter="non_recevable" aria-pressed="false">
+      <span class="vae-card-icon">⛔</span>
       <span class="vae-card-content">
-        <span class="vae-card-label">Jamais connectés</span>
-        <strong class="vae-card-count" data-vae-dashboard-count="no_login">0</strong>
-        <span class="vae-card-hint">Sans icône 🛜</span>
+        <span class="vae-card-label">Non recevable</span>
+        <strong class="vae-card-count" data-vae-dashboard-count="non_recevable">0</strong>
+        <span class="vae-card-hint">Dossiers refusés</span>
       </span>
     </button>
 
@@ -252,7 +261,7 @@
     <button type="button" class="vae-dashboard-card card-l2-analysis" data-vae-dashboard-filter="status:livret_2_analysis" aria-pressed="false">
       <span class="vae-card-icon">🧪</span>
       <span class="vae-card-content">
-        <span class="vae-card-label">Livret 2 en analyse</span>
+        <span class="vae-card-label">Livret 2 en cours d'analyse</span>
         <strong class="vae-card-count" data-vae-dashboard-count="status:livret_2_analysis">0</strong>
         <span class="vae-card-hint">À suivre de près</span>
       </span>
@@ -342,6 +351,7 @@
 {% set vtc_exam_center = (t.vtc_exam_center or "")|trim|lower %}
 {% set vae_action_dates = t.vae_action_dates or {} %}
 {% set livret_1_transmitted_scotia = (vae_action_dates.get('livret_1_transmitted_scotia') or t.livret_1_transmitted_scotia or t.livret_1_transmitted_scotia_at or '')|trim %}
+{% set scotia_status = (t.scotia_status or '')|trim %}
 <tr class="row {% if t.comment %}row-warning{% endif %} {% if vtc_exam_center == 'nice' %}row-vtc-nice{% elif vtc_exam_center == 'toulon' %}row-vtc-toulon{% endif %}"
     data-trainee-id="{{ t.id }}"
     data-session-id="{{ t.source_session_id or session.id }}"
@@ -350,6 +360,7 @@
     data-vae-status="{{ t.vae_status or 'livret_1_todo' }}"
     data-public-has-logged-in="{{ '1' if t.public_has_logged_in else '0' }}"
     data-livret-1-transmitted-scotia="{{ '1' if livret_1_transmitted_scotia else '0' }}"
+    data-scotia-status="{{ scotia_status }}"
 data-vtc-theory-ok="{{ '1' if (t.vtc_theory_status_manual == 'success' or ((not t.vtc_theory_status_manual) and t.vtc_theory_result != 'non_admissible' and t.vtc_theory_exam_sent_at)) else '0' }}"
 data-vtc-exam-fees-paid="{{ '1' if t.exam_fees_paid else '0' }}"
 data-vtc-cmar-manual-ok="{{ '1' if t.vtc_cmar_manual_ok else '0' }}"
@@ -1230,7 +1241,7 @@ tr.row-todo td{
   position:relative;
   z-index:1;
   display:grid;
-  grid-template-columns:repeat(9, minmax(170px, 1fr));
+  grid-template-columns:repeat(10, minmax(160px, 1fr));
   gap:12px;
   overflow-x:auto;
   padding:4px 4px 10px;
@@ -1317,6 +1328,7 @@ tr.row-todo td{
 .card-l1-analysis{ background:linear-gradient(135deg, #8b5cf6, #2563eb); }
 .card-l1-pending{ background:linear-gradient(135deg, #f97316, #b45309); }
 .card-l1-validated{ background:linear-gradient(135deg, #16a34a, #15803d); }
+.card-non-recevable{ background:linear-gradient(135deg, #dc2626, #7f1d1d); }
 .card-no-login{ background:linear-gradient(135deg, #06b6d4, #0f766e); }
 .card-l2-todo{ background:linear-gradient(135deg, #22c55e, #14b8a6); }
 .card-l2-analysis{ background:linear-gradient(135deg, #f59e0b, #d946ef); }
@@ -2107,13 +2119,17 @@ function getVaeDashboardRows(){
 }
 
 function updateVaeDashboardCounts(){
-  const counts = { no_login: 0, l1_pending_transmission: 0 };
+  const counts = { no_login: 0, l1_pending_transmission: 0, non_recevable: 0 };
   getVaeDashboardRows().forEach(tr => {
     const status = tr.getAttribute("data-vae-status") || "livret_1_todo";
     const livret1TransmittedScotia = tr.getAttribute("data-livret-1-transmitted-scotia") === "1";
+    const scotiaStatus = tr.getAttribute("data-scotia-status") || "";
     counts[`status:${status}`] = (counts[`status:${status}`] || 0) + 1;
     if(status === "livret_1_analysis" && !livret1TransmittedScotia){
       counts.l1_pending_transmission += 1;
+    }
+    if(scotiaStatus === "non_recevable"){
+      counts.non_recevable += 1;
     }
     if(tr.getAttribute("data-public-has-logged-in") !== "1"){
       counts.no_login += 1;
@@ -2185,11 +2201,13 @@ function applyRowFilters(){
     const rowFullName = normalizeSearchText(`${tr.getAttribute("data-last-name") || ""} ${tr.getAttribute("data-first-name") || ""}`);
     const hasLoggedIn = tr.getAttribute("data-public-has-logged-in") === "1";
     const livret1TransmittedScotia = tr.getAttribute("data-livret-1-transmitted-scotia") === "1";
+    const scotiaStatus = tr.getAttribute("data-scotia-status") || "";
 
     const matchVae = selectedVae === "all" || rowVaeStatus === selectedVae;
     const matchDashboard = !activeVaeDashboardFilter
       || activeVaeDashboardFilter.startsWith("status:")
       || (activeVaeDashboardFilter === "no_login" && !hasLoggedIn)
+      || (activeVaeDashboardFilter === "non_recevable" && scotiaStatus === "non_recevable")
       || (activeVaeDashboardFilter === "l1_pending_transmission" && rowVaeStatus === "livret_1_analysis" && !livret1TransmittedScotia);
     const matchTheory = selectedTheory === "all" || theoryStatus === selectedTheory;
     const matchPractice = selectedPractice === "all" || practiceStatus === selectedPractice;
@@ -2211,7 +2229,7 @@ function bindVaeDashboardFilters(){
       if(vaeFilter){
         if(activeVaeDashboardFilter.startsWith("status:")){
           vaeFilter.value = activeVaeDashboardFilter.slice("status:".length);
-        }else if(activeVaeDashboardFilter === "l1_pending_transmission"){
+        }else if(activeVaeDashboardFilter === "l1_pending_transmission" || activeVaeDashboardFilter === "non_recevable"){
           vaeFilter.value = "all";
         }else{
           vaeFilter.value = "all";
