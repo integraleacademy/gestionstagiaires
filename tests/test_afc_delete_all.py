@@ -31,6 +31,10 @@ class AfcDeleteAllCandidatesTests(unittest.TestCase):
 
         gestion_app.save_data = fake_save_data
 
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
         response = self.client.post("/api/admin/afc/candidates/delete-all")
         body = response.get_json()
 

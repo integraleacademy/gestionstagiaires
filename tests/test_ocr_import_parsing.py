@@ -268,6 +268,7 @@ class AfcImageImportApiTests(unittest.TestCase):
                         "prenom": "Tidiane",
                         "email": "",
                         "telephone": "",
+                        "presence_afc_status": "A_CONVOQUER",
                     }
                 ]
             }
@@ -281,6 +282,10 @@ class AfcImageImportApiTests(unittest.TestCase):
             "5464627M - 032\nBENDJAMA Ilies\n06 01 08 57 99\nilies@example.com",
             "",
         )
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
 
         response = self.client.post(
             "/api/admin/afc/import-from-image",
@@ -379,6 +384,7 @@ class AfcBulkNotifyApiTests(unittest.TestCase):
                         "prenom": "Deja",
                         "decision": "RETENU",
                         "notification_status": "ENVOYEE",
+                        "presence_afc_status": "A_CONVOQUER",
                     },
                     {
                         "id": "AFC-2",
@@ -386,6 +392,7 @@ class AfcBulkNotifyApiTests(unittest.TestCase):
                         "prenom": "Nouveau",
                         "decision": "RETENU",
                         "notification_status": "NON ENVOYEE",
+                        "presence_afc_status": "A_CONVOQUER",
                     },
                 ],
             }
@@ -395,6 +402,10 @@ class AfcBulkNotifyApiTests(unittest.TestCase):
         gestion_app.load_data = lambda: data
         gestion_app.save_data = lambda payload: saved.__setitem__("count", saved["count"] + 1)
         gestion_app.brevo_send_email = lambda to_email, *_: sent.append(to_email) or True
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
 
         response = self.client.post("/api/admin/afc/candidates/notify-pending")
 
@@ -423,6 +434,7 @@ class AfcBulkNotifyApiTests(unittest.TestCase):
                         "prenom": "SansMail",
                         "decision": "NON RETENU",
                         "notification_status": "NON ENVOYEE",
+                        "presence_afc_status": "A_CONVOQUER",
                     }
                 ],
             }
@@ -431,6 +443,10 @@ class AfcBulkNotifyApiTests(unittest.TestCase):
         gestion_app.load_data = lambda: data
         gestion_app.save_data = lambda payload: saved.__setitem__("count", saved["count"] + 1)
         gestion_app.brevo_send_email = lambda *_: True
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
 
         response = self.client.post("/api/admin/afc/candidates/notify-pending")
 
