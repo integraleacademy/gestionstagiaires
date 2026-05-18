@@ -277,11 +277,11 @@
       </span>
     </button>
 
-    <button type="button" class="vae-dashboard-card card-l2-validated" data-vae-dashboard-filter="status:livret_2_validated" aria-pressed="false">
+    <button type="button" class="vae-dashboard-card card-l2-validated" data-vae-dashboard-filter="l2_validated" aria-pressed="false">
       <span class="vae-card-icon">🌟</span>
       <span class="vae-card-content">
         <span class="vae-card-label">Livret 2 validé</span>
-        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_2_validated">0</strong>
+        <strong class="vae-card-count" data-vae-dashboard-count="l2_validated">0</strong>
         <span class="vae-card-hint">Validation finale</span>
       </span>
     </button>
@@ -2171,6 +2171,9 @@ function updateVaeDashboardCounts(){
     const livret1TransmittedScotia = tr.getAttribute("data-livret-1-transmitted-scotia") === "1";
     const scotiaStatus = tr.getAttribute("data-scotia-status") || "";
     counts[`status:${status}`] = (counts[`status:${status}`] || 0) + 1;
+    if(status === "livret_2_validated" || status === "financement_l2_validated"){
+      counts.l2_validated = (counts.l2_validated || 0) + 1;
+    }
     if(status === "livret_1_analysis" && !livret1TransmittedScotia){
       counts.l1_pending_transmission += 1;
     }
@@ -2293,7 +2296,7 @@ function bindVaeDashboardFilters(){
       if(vaeFilter){
         if(activeVaeDashboardFilter.startsWith("status:")){
           vaeFilter.value = activeVaeDashboardFilter.slice("status:".length);
-        }else if(activeVaeDashboardFilter === "l1_pending_transmission" || activeVaeDashboardFilter === "non_recevable" || activeVaeDashboardFilter === "new_vae_request_72h"){
+        }else if(activeVaeDashboardFilter === "l1_pending_transmission" || activeVaeDashboardFilter === "non_recevable" || activeVaeDashboardFilter === "new_vae_request_72h" || activeVaeDashboardFilter === "l2_validated"){
           vaeFilter.value = "all";
         }else{
           vaeFilter.value = "all";
