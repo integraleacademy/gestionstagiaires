@@ -1557,5 +1557,21 @@ class ScotiaDashboardFilterCategoryTests(unittest.TestCase):
         self.assertIn('<strong>1</strong><span>En attente documents complémentaires', html)
         self.assertIn('data-category="complements"', html)
 
+    def test_livret_1_action_is_counted_in_actions_to_do(self):
+        item = self._base_item(
+            scotia_status='',
+            complementary_documents=[],
+            scotia_dashboard_category='l1-action',
+            vae_status_key='livret_1_analysis',
+            vae_status_label="Livret 1 en cours d'analyse",
+        )
+
+        with gestion_app.app.test_request_context('/scotia'):
+            html = render_template('scotia_dashboard.html', items=[item])
+
+        self.assertIn('<strong>1</strong><span>Livrets 1 à valider', html)
+        self.assertIn('1 action à mener', html)
+        self.assertIn('data-category="l1-action"', html)
+
 if __name__ == "__main__":
     unittest.main()
