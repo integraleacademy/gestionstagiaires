@@ -87,4 +87,7 @@ class AdminCashPaymentsTests(unittest.TestCase):
         self.assertIn("550,00 €", html)
         self.assertIn("350,00 €", html)
         self.assertIn("Reçu remis", html)
+        self.assertIn("@page{size:A4 landscape;margin:8mm}", html)
+        self.assertIn(".cash-table{width:100%!important;min-width:0!important;table-layout:fixed", html)
+        self.assertIn(".cash-table-wrap{overflow:visible!important", html)
         self.assertNotIn("ARCHIVE Anne", html)

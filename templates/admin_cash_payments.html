@@ -42,7 +42,42 @@
   .muted-small{color:#64748b;font-size:12px}
   .comment-cell{max-width:260px;white-space:pre-wrap;color:#475569}
   .empty-cash{text-align:center;padding:34px;color:#64748b;font-weight:800}
-  @media print{.no-print,.topbar{display:none!important}.card{box-shadow:none;border:none}.cash-table th{position:static}body{background:#fff}.cash-kpi{box-shadow:none}}
+  @media print{
+    @page{size:A4 landscape;margin:8mm}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    html,body{width:100%;margin:0!important;background:#fff;font-size:10px}
+    .no-print,.topbar{display:none!important}
+    .cash-payments-wide .container{width:100%!important;max-width:none!important;margin:0!important;padding:0!important}
+    .card,.cash-page{width:100%!important;margin:0!important;padding:0!important;box-shadow:none!important;border:none!important;border-radius:0!important}
+    .cash-head{margin-bottom:6px;gap:6px}
+    .cash-head h1{font-size:18px!important}
+    .cash-head .muted{font-size:10px!important}
+    .cash-kpis{grid-template-columns:repeat(4,1fr)!important;gap:5px;margin-bottom:6px}
+    .cash-kpi{box-shadow:none;border-radius:8px;padding:6px;min-height:0}
+    .cash-kpi:after{display:none}
+    .cash-kpi .label,.cash-kpi .sub{font-size:8px;margin-top:2px}
+    .cash-kpi .value{font-size:14px;margin-top:3px}
+    .cash-table-wrap{overflow:visible!important;border:0;border-radius:0;width:100%}
+    .cash-table{width:100%!important;min-width:0!important;table-layout:fixed;border-collapse:collapse}
+    .cash-table th,.cash-table td{padding:4px 3px;font-size:8.5px;line-height:1.18;word-break:break-word;overflow-wrap:anywhere;border-bottom:1px solid #dbe3ef}
+    .cash-table th{position:static;background:#f1f5f9!important;font-size:7.5px;letter-spacing:0}
+    .cash-table th:nth-child(1),.cash-table td:nth-child(1){width:15%}
+    .cash-table th:nth-child(2),.cash-table td:nth-child(2){width:16%}
+    .cash-table th:nth-child(3),.cash-table td:nth-child(3){width:9%}
+    .cash-table th:nth-child(4),.cash-table td:nth-child(4){width:9%}
+    .cash-table th:nth-child(5),.cash-table td:nth-child(5){width:8%}
+    .cash-table th:nth-child(6),.cash-table td:nth-child(6){width:9%}
+    .cash-table th:nth-child(7),.cash-table td:nth-child(7){width:15%}
+    .cash-table th:nth-child(8),.cash-table td:nth-child(8){width:9%}
+    .cash-table th:nth-child(9),.cash-table td:nth-child(9){width:10%}
+    .cash-table tr{break-inside:avoid;page-break-inside:avoid}
+    .person-name,.money-main{font-size:9px}
+    .person-sub,.muted-small{font-size:7.5px;line-height:1.15}
+    .cash-pill{white-space:normal;padding:2px 4px;font-size:7.5px;gap:2px}
+    .installments{min-width:0;gap:2px}
+    .installment{padding:2px 3px;border-radius:4px;gap:3px}
+    .comment-cell{max-width:none;white-space:pre-wrap}
+  }
 </style>
 
 <div class="card cash-page">
