@@ -47,6 +47,15 @@ class VaeAdminDashboardTests(unittest.TestCase):
                             "created_at": extended_recent_created_at,
                             "documents": [],
                         },
+                        {
+                            "id": "T-L2-FINANCING",
+                            "last_name": "DELTA",
+                            "first_name": "Diane",
+                            "vae_status": "financement_l2_validated",
+                            "public_has_logged_in": True,
+                            "created_at": old_created_at,
+                            "documents": [],
+                        },
                     ],
                 }
             ],
@@ -72,6 +81,9 @@ class VaeAdminDashboardTests(unittest.TestCase):
         self.assertIn('data-vae-dashboard-filter="no_login"', html)
         self.assertIn('data-vae-dashboard-filter="new_vae_request_72h"', html)
         self.assertIn('data-vae-dashboard-count="new_vae_request_72h"', html)
+        self.assertIn('data-vae-dashboard-filter="status:livret_2_validated"', html)
+        self.assertIn('data-vae-dashboard-count="status:livret_2_validated">1</strong>', html)
+        self.assertNotIn('data-vae-dashboard-count="l2_validated"', html)
         self.assertIn("72 dernières heures", html)
         self.assertNotIn("48 dernières heures", html)
         self.assertIn('data-public-has-logged-in="0"', html)
@@ -83,6 +95,9 @@ class VaeAdminDashboardTests(unittest.TestCase):
         self.assertIn('activeVaeDashboardFilter = filter === activeVaeDashboardFilter ? "" : filter;', html)
         self.assertIn('activeVaeDashboardFilter === "no_login" && !hasLoggedIn', html)
         self.assertIn('activeVaeDashboardFilter === "new_vae_request_72h" && isNewVaeRequest72h', html)
+        self.assertIn('function normalizeVaeDashboardStatus(status)', html)
+        self.assertIn('return "livret_2_validated";', html)
+        self.assertIn('selectedVae === "livret_2_validated" && isLivret2ValidatedDashboardStatus(rowVaeStatus)', html)
         self.assertIn("grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));", html)
         self.assertIn("overflow:visible;", html)
 

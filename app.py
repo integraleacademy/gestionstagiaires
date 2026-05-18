@@ -11575,8 +11575,15 @@ def admin_trainees(session_id: str):
             t.pop("hosting_status", None)
 
     show_vae = (session_view["training_type"] == "DIRIGEANT VAE")
+    vae_dashboard_counts = {}
     if show_vae:
         now_utc = datetime.datetime.now(datetime.timezone.utc)
+        vae_dashboard_counts = {
+            "no_login": 0,
+            "new_vae_request_72h": 0,
+            "l1_pending_transmission": 0,
+            "non_recevable": 0,
+        }
         for t in trainees:
             if not isinstance(t.get("vae_action_dates"), dict):
                 t["vae_action_dates"] = {}
@@ -11590,6 +11597,23 @@ def admin_trainees(session_id: str):
                 created_at
                 and datetime.timedelta(0) <= (now_utc - created_at) <= datetime.timedelta(hours=72)
             )
+
+            status_key = vae_status_view(t.get("vae_status") or t.get("vae_status_label"))["key"]
+            count_status_key = "livret_2_validated" if status_key == "financement_l2_validated" else status_key
+            count_key = f"status:{count_status_key}"
+            vae_dashboard_counts[count_key] = vae_dashboard_counts.get(count_key, 0) + 1
+            if status_key == "livret_1_analysis" and not (
+                t["vae_action_dates"].get("livret_1_transmitted_scotia")
+                or t.get("livret_1_transmitted_scotia")
+                or t.get("livret_1_transmitted_scotia_at")
+            ):
+                vae_dashboard_counts["l1_pending_transmission"] += 1
+            if (t.get("scotia_status") or "").strip() == "non_recevable":
+                vae_dashboard_counts["non_recevable"] += 1
+            if not t.get("public_has_logged_in"):
+                vae_dashboard_counts["no_login"] += 1
+            if t.get("is_vae_new_request_72h"):
+                vae_dashboard_counts["new_vae_request_72h"] += 1
 
     # persist normalized trainees back into storage
     s["trainees"] = trainees
@@ -11659,6 +11683,7 @@ def admin_trainees(session_id: str):
         show_vae=show_vae,
         is_vtc=is_vtc,
         is_dirigeant=is_dirigeant,
+        vae_dashboard_counts=vae_dashboard_counts,
         enums=ENUMS,
         is_adef=_is_adef_training(session_view["training_type"]),
     )
