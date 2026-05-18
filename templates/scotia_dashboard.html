@@ -43,7 +43,7 @@
     .scotia-action-bubble{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:6px 10px;background:#ef4444;color:#fff;font-size:12px;font-weight:1000;box-shadow:0 10px 24px rgba(239,68,68,.28);white-space:nowrap;}
     .scotia-action-bubble--animated{animation:scotiaActionBubblePulse 1.6s ease-in-out infinite;}
     .scotia-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch;flex:1;}
-    .scotia-stats--actions{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .scotia-stats--actions{grid-template-columns:repeat(4,minmax(0,1fr));}
     .scotia-stats--wide{grid-template-columns:repeat(2,minmax(0,1fr));}
     .scotia-filter-group--full{grid-column:1/-1;}
     .scotia-active-row{display:grid;grid-template-columns:1fr;align-items:stretch;flex:1;}
@@ -175,7 +175,7 @@
   </style>
 </head>
 <body class="scotia-page">
-  {% set stats = namespace(active_total=0, l1_pending=0, complements=0, complement_docs=0, l2_missing=0, l2_pending=0, l2_validated=0, certified=0, non_recevable=0, done=0) %}
+  {% set stats = namespace(active_total=0, l1_pending=0, complements=0, complement_docs=0, l2_missing=0, l2_pending=0, l2_validated=0, certified=0, non_recevable=0, done=0, unread_messages=0, unread_message_author_label='') %}
   {% for it in items %}
     {% set archive_category_stat = it.scotia_archive_category or '' %}
     {% set has_livret_2_stat = (it.deliverables.livret_2 or '')|trim %}
@@ -213,6 +213,12 @@
     {% if dashboard_category_stat == 'certified' %}{% set stats.certified = stats.certified + 1 %}{% endif %}
     {% if dashboard_category_stat == 'non-recevable' %}{% set stats.non_recevable = stats.non_recevable + 1 %}{% endif %}
     {% if dashboard_category_stat in ['l1-action', 'l2-action', 'complement-docs', 'complements', 'l2-waiting'] %}{% set stats.active_total = stats.active_total + 1 %}{% endif %}
+    {% if it.scotia_unread_thread_summary %}
+      {% set stats.unread_messages = stats.unread_messages + (it.scotia_unread_thread_summary.count or 0) %}
+      {% if not stats.unread_message_author_label and it.scotia_unread_thread_summary.author_label %}
+        {% set stats.unread_message_author_label = it.scotia_unread_thread_summary.author_label %}
+      {% endif %}
+    {% endif %}
   {% endfor %}
 
   <main class="scotia-shell">
@@ -233,13 +239,15 @@
         <section class="scotia-filter-group" aria-label="Actions à mener">
           <div class="scotia-filter-title">
             <h2>Actions à mener</h2>
-            {% set actions_total = stats.l1_pending + stats.l2_pending + stats.complement_docs %}
+            {% set actions_total = stats.l1_pending + stats.l2_pending + stats.complement_docs + stats.unread_messages %}
             <span class="scotia-action-bubble {% if actions_total > 0 %}scotia-action-bubble--animated{% endif %}">{{ actions_total }} action{% if actions_total > 1 %}s{% endif %} à mener</span>
           </div>
           <div class="scotia-stats scotia-stats--actions">
             <button type="button" class="scotia-stat scotia-stat--orange" data-filter="l1-action" {% if stats.l1_pending == 0 %}disabled{% endif %}><strong>{{ stats.l1_pending }}</strong><span>Livrets 1 à valider</span><small>Voir les Livrets 1 à valider</small></button>
             <button type="button" class="scotia-stat scotia-stat--green" data-filter="l2-action" {% if stats.l2_pending == 0 %}disabled{% endif %}><strong>{{ stats.l2_pending }}</strong><span>Livrets 2 à valider</span><small>Voir les Livrets 2 à valider</small></button>
             <button type="button" class="scotia-stat scotia-stat--red" data-filter="complement-docs" {% if stats.complement_docs == 0 %}disabled{% endif %}><strong>{{ stats.complement_docs }}</strong><span>{% if stats.complement_docs == 1 %}complément de dossier à consulter{% else %}compléments de dossier à consulter{% endif %}</span><small>Voir les dossiers</small></button>
+            {% set unread_message_author_label = 'Scotia' if stats.unread_message_author_label == 'SCOTIA' else (stats.unread_message_author_label or 'messages') %}
+            <button type="button" class="scotia-stat scotia-stat--teal" data-filter="messages" {% if stats.unread_messages == 0 %}disabled{% endif %}><strong>{{ stats.unread_messages }}</strong><span>{% if stats.unread_messages == 1 %}message {{ unread_message_author_label }} à consulter{% else %}messages {{ unread_message_author_label }} à consulter{% endif %}</span><small>Messages à consulter</small></button>
           </div>
         </section>
         <section class="scotia-filter-group" aria-label="Dossiers en attente">
@@ -312,7 +320,7 @@
               {% else %}
                 {% set scotia_category = 'done' %}
               {% endif %}
-              <details class="scotia-item-accordion scotia-item {% if it.scotia_status in ['recevable', 'non_recevable'] %}scotia-item--processed{% endif %}" data-category="{{ scotia_category }}">
+              <details class="scotia-item-accordion scotia-item {% if it.scotia_status in ['recevable', 'non_recevable'] %}scotia-item--processed{% endif %}" data-category="{{ scotia_category }}" data-unread-messages-count="{{ it.scotia_unread_thread_summary.count if it.scotia_unread_thread_summary else 0 }}">
                 <summary class="scotia-item-toggle">
                   <div class="scotia-person">
                     <div class="scotia-avatar" aria-hidden="true">{{ (it.first_name[:1] ~ it.last_name[:1])|upper }}</div>
@@ -780,6 +788,10 @@ function openThreadFromNotification(event, sessionId, traineeId){
 
 function updateThreadNotification(sessionId, traineeId, unreadSummary){
   const notification = document.getElementById(`thread-notification-${sessionId}-${traineeId}`);
+  const item = notification?.closest('.scotia-item-accordion') || document.querySelector(`.scotia-thread-input[data-session-id="${sessionId}"][data-trainee-id="${traineeId}"]`)?.closest('.scotia-item-accordion');
+  if(item){
+    item.dataset.unreadMessagesCount = unreadSummary && unreadSummary.count ? String(unreadSummary.count) : '0';
+  }
   if(!notification) return;
   if(unreadSummary && unreadSummary.label){
     notification.textContent = `💬 ${unreadSummary.label}`;
@@ -844,7 +856,8 @@ function setScotiaFilter(filter){
   items.forEach((item)=>{
     const category = item.dataset.category || '';
     const archiveCategories = new Set(['l2-validated', 'certified', 'non-recevable']);
-    const visible = filter === 'all' || (filter === 'active' ? !archiveCategories.has(category) : category === filter);
+    const unreadMessagesCount = Number.parseInt(item.dataset.unreadMessagesCount || '0', 10) || 0;
+    const visible = filter === 'all' || (filter === 'messages' ? unreadMessagesCount > 0 : (filter === 'active' ? !archiveCategories.has(category) : category === filter));
     item.classList.toggle('is-filter-hidden', !visible);
     if(visible) visibleCount += 1;
   });

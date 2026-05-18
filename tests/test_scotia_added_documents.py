@@ -152,6 +152,77 @@ class ScotiaThreadCommentsTests(unittest.TestCase):
         self.assertEqual(items[0]["scotia_thread_comments"][0]["content"], "Document vérifié")
         self.assertEqual(items[0]["scotia_thread_comments"][0]["created_at_label"], "15/05/2026 à 08h59")
 
+    def test_scotia_dashboard_counts_scotia_messages_for_integrale_user(self):
+        payload = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "name": "VAE DESP 2026",
+                    "training_type": "DIRIGEANT VAE",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "first_name": "Jean",
+                            "last_name": "Dupont",
+                            "vae_action_dates": {"livret_1_transmitted_scotia": "15/05/2026"},
+                            "scotia_thread_comments": [
+                                {"content": "Premier message", "author_label": "Scotia", "created_at": "2026-05-15T06:59:00Z"},
+                                {"content": "Message déjà lu", "author_label": "Scotia", "created_at": "2026-05-15T07:00:00Z", "read_at": "2026-05-15T08:00:00Z"},
+                                {"content": "Deuxième message", "author_label": "Scotia", "created_at": "2026-05-15T07:01:00Z"},
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+        gestion_app.load_data = lambda: payload
+
+        with self.client.session_transaction() as sess:
+            sess["scotia_logged_in"] = True
+            sess["scotia_username"] = "clement@integraleacademy.com"
+
+        response = self.client.get("/scotia")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Messages à consulter", html)
+        self.assertIn("<strong>2</strong><span>messages Scotia à consulter", html)
+        self.assertIn('data-filter="messages"', html)
+        self.assertIn('data-unread-messages-count="2"', html)
+
+    def test_scotia_dashboard_counts_integrale_messages_for_scotia_user(self):
+        payload = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "name": "VAE DESP 2026",
+                    "training_type": "DIRIGEANT VAE",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "first_name": "Jean",
+                            "last_name": "Dupont",
+                            "vae_action_dates": {"livret_1_transmitted_scotia": "15/05/2026"},
+                            "scotia_thread_comments": [
+                                {"content": "Info IA", "author_label": "Intégrale Academy", "created_at": "2026-05-15T06:59:00Z"},
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+        gestion_app.load_data = lambda: payload
+
+        with self.client.session_transaction() as sess:
+            sess["scotia_logged_in"] = True
+            sess["scotia_username"] = "scotiaformation@gmail.com"
+
+        response = self.client.get("/scotia")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("<strong>1</strong><span>message Intégrale Academy à consulter", html)
+
 
 class ScotiaDecisionTests(unittest.TestCase):
     def setUp(self):
