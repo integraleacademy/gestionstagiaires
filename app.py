@@ -7589,12 +7589,16 @@ def _scotia_comment_party_label(party: str) -> str:
 
 
 def _current_scotia_comment_author_label() -> str:
+    if not has_request_context():
+        return "Scotia"
     if session.get("admin_logged_in"):
         return "Intégrale Academy"
     return _scotia_comment_author_label(str(session.get("scotia_username") or ""))
 
 
 def _current_scotia_comment_party() -> str:
+    if not has_request_context():
+        return "scotia"
     if session.get("admin_logged_in"):
         return "integrale"
     return _scotia_comment_party_from_label(_current_scotia_comment_author_label())
@@ -7602,6 +7606,8 @@ def _current_scotia_comment_party() -> str:
 
 def _scotia_comment_can_mark_read(entry: Dict[str, Any]) -> bool:
     if entry.get("read_at"):
+        return False
+    if not has_request_context():
         return False
     if session.get("admin_logged_in"):
         return True
