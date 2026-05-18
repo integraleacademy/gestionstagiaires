@@ -200,7 +200,7 @@
       <span class="vae-card-icon">📡</span>
       <span class="vae-card-content">
         <span class="vae-card-label">Jamais connectés</span>
-        <strong class="vae-card-count" data-vae-dashboard-count="no_login">0</strong>
+        <strong class="vae-card-count" data-vae-dashboard-count="no_login">{{ vae_dashboard_counts.get('no_login', 0) }}</strong>
         <span class="vae-card-hint">Sans icône 🛜</span>
       </span>
     </button>
@@ -209,7 +209,7 @@
       <span class="vae-card-icon">🆕</span>
       <span class="vae-card-content">
         <span class="vae-card-label">Nouvelles demandes VAE</span>
-        <strong class="vae-card-count" data-vae-dashboard-count="new_vae_request_72h">0</strong>
+        <strong class="vae-card-count" data-vae-dashboard-count="new_vae_request_72h">{{ vae_dashboard_counts.get('new_vae_request_72h', 0) }}</strong>
         <span class="vae-card-hint">72 dernières heures</span>
       </span>
     </button>
@@ -218,7 +218,7 @@
       <span class="vae-card-icon">🧩</span>
       <span class="vae-card-content">
         <span class="vae-card-label">Livret 1 à compléter</span>
-        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_1_todo">0</strong>
+        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_1_todo">{{ vae_dashboard_counts.get('status:livret_1_todo', 0) }}</strong>
         <span class="vae-card-hint">Dossiers à relancer</span>
       </span>
     </button>
@@ -227,7 +227,7 @@
       <span class="vae-card-icon">📨</span>
       <span class="vae-card-content">
         <span class="vae-card-label">Livret 1 en attente de transmission</span>
-        <strong class="vae-card-count" data-vae-dashboard-count="l1_pending_transmission">0</strong>
+        <strong class="vae-card-count" data-vae-dashboard-count="l1_pending_transmission">{{ vae_dashboard_counts.get('l1_pending_transmission', 0) }}</strong>
         <span class="vae-card-hint">À transmettre à SCOTIA</span>
       </span>
     </button>
@@ -236,7 +236,7 @@
       <span class="vae-card-icon">🔎</span>
       <span class="vae-card-content">
         <span class="vae-card-label">Livret 1 en analyse</span>
-        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_1_analysis">0</strong>
+        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_1_analysis">{{ vae_dashboard_counts.get('status:livret_1_analysis', 0) }}</strong>
         <span class="vae-card-hint">Analyse en cours</span>
       </span>
     </button>
@@ -245,7 +245,7 @@
       <span class="vae-card-icon">✅</span>
       <span class="vae-card-content">
         <span class="vae-card-label">Livret 1 validé</span>
-        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_1_validated">0</strong>
+        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_1_validated">{{ vae_dashboard_counts.get('status:livret_1_validated', 0) }}</strong>
         <span class="vae-card-hint">Recevabilité confirmée</span>
       </span>
     </button>
@@ -254,7 +254,7 @@
       <span class="vae-card-icon">⛔</span>
       <span class="vae-card-content">
         <span class="vae-card-label">Non recevable</span>
-        <strong class="vae-card-count" data-vae-dashboard-count="non_recevable">0</strong>
+        <strong class="vae-card-count" data-vae-dashboard-count="non_recevable">{{ vae_dashboard_counts.get('non_recevable', 0) }}</strong>
         <span class="vae-card-hint">Dossiers refusés</span>
       </span>
     </button>
@@ -263,7 +263,7 @@
       <span class="vae-card-icon">📘</span>
       <span class="vae-card-content">
         <span class="vae-card-label">Livret 2 à compléter</span>
-        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_2_todo">0</strong>
+        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_2_todo">{{ vae_dashboard_counts.get('status:livret_2_todo', 0) }}</strong>
         <span class="vae-card-hint">Suite du parcours</span>
       </span>
     </button>
@@ -272,7 +272,7 @@
       <span class="vae-card-icon">🧪</span>
       <span class="vae-card-content">
         <span class="vae-card-label">Livret 2 en cours d'analyse</span>
-        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_2_analysis">0</strong>
+        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_2_analysis">{{ vae_dashboard_counts.get('status:livret_2_analysis', 0) }}</strong>
         <span class="vae-card-hint">À suivre de près</span>
       </span>
     </button>
@@ -281,7 +281,7 @@
       <span class="vae-card-icon">🌟</span>
       <span class="vae-card-content">
         <span class="vae-card-label">Livret 2 validé</span>
-        <strong class="vae-card-count" data-vae-dashboard-count="l2_validated">0</strong>
+        <strong class="vae-card-count" data-vae-dashboard-count="status:livret_2_validated">{{ vae_dashboard_counts.get('status:livret_2_validated', 0) }}</strong>
         <span class="vae-card-hint">Validation finale</span>
       </span>
     </button>
@@ -290,7 +290,7 @@
       <span class="vae-card-icon">🏆</span>
       <span class="vae-card-content">
         <span class="vae-card-label">Certifications obtenues</span>
-        <strong class="vae-card-count" data-vae-dashboard-count="status:certified">0</strong>
+        <strong class="vae-card-count" data-vae-dashboard-count="status:certified">{{ vae_dashboard_counts.get('status:certified', 0) }}</strong>
         <span class="vae-card-hint">Parcours finalisés</span>
       </span>
     </button>
@@ -2164,14 +2164,31 @@ function getVaeDashboardRows(){
   return [...document.querySelectorAll('tr[data-trainee-id][data-vae-status]')];
 }
 
+function normalizeVaeDashboardStatus(status){
+  const raw = (status || "").toString().trim();
+  const normalized = raw
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+  if(normalized === "financement l2 valide" || normalized === "financement l2 validated"){
+    return "livret_2_validated";
+  }
+  if(normalized === "livret 2 valide" || normalized === "livret 2 validated"){
+    return "livret_2_validated";
+  }
+  return raw || "livret_1_todo";
+}
+
 function isLivret2ValidatedDashboardStatus(status){
-  return status === "livret_2_validated" || status === "financement_l2_validated";
+  return normalizeVaeDashboardStatus(status) === "livret_2_validated";
 }
 
 function updateVaeDashboardCounts(){
   const counts = { no_login: 0, new_vae_request_72h: 0, l1_pending_transmission: 0, non_recevable: 0 };
   getVaeDashboardRows().forEach(tr => {
-    const status = tr.getAttribute("data-vae-status") || "livret_1_todo";
+    const status = normalizeVaeDashboardStatus(tr.getAttribute("data-vae-status") || "livret_1_todo");
     const livret1TransmittedScotia = tr.getAttribute("data-livret-1-transmitted-scotia") === "1";
     const scotiaStatus = tr.getAttribute("data-scotia-status") || "";
     counts[`status:${status}`] = (counts[`status:${status}`] || 0) + 1;
