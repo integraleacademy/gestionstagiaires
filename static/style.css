@@ -1438,3 +1438,28 @@ input[type="file"]{
 #traineesTable .col-first-name{
   display:table-cell !important;
 }
+
+/* Page stagiaires admin : utiliser toute la largeur disponible pour les tableaux larges. */
+.endpoint-admin-trainees .container{
+  max-width: none;
+  width: 100%;
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+.endpoint-admin-trainees .topbar-inner{
+  max-width: none;
+}
+
+.endpoint-admin-trainees .table-wrap.full-bleed{
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+@media (max-width: 720px){
+  .endpoint-admin-trainees .container{
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}

@@ -16,7 +16,7 @@
 
 </head>
 
-<body class="{% if is_read_only %}read-only{% endif %}">
+<body class="{% if is_read_only %}read-only {% endif %}{% if request.endpoint %}endpoint-{{ request.endpoint|replace('_', '-') }}{% endif %}">
   <style>
     .notif-wrap{ position:relative; }
     .notif-btn{
