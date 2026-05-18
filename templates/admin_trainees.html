@@ -117,6 +117,7 @@
         <option value="all">Tous les statuts VAE</option>
         <option value="livret_1_todo">Livret 1 à compléter</option>
         <option value="livret_1_analysis">Livret 1 en cours d'analyse</option>
+        <option value="non_recevable">Non recevable</option>
         <option value="livret_1_validated">Livret 1 validé</option>
         <option value="financement_validated">Financement validé</option>
         <option value="livret_2_todo">Livret 2 à compléter</option>
@@ -276,7 +277,7 @@
       </span>
     </button>
 
-    <button type="button" class="vae-dashboard-card card-l2-validated" data-vae-dashboard-filter="status:livret_2_validated" aria-pressed="false">
+    <button type="button" class="vae-dashboard-card card-l2-validated" data-vae-dashboard-filter="l2_validated" aria-pressed="false">
       <span class="vae-card-icon">🌟</span>
       <span class="vae-card-content">
         <span class="vae-card-label">Livret 2 validé</span>
@@ -447,6 +448,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   <select class="status sel vae-status-select" data-field="vae_status" {{ read_only_attr }} style="min-width:320px;">
     <option value="livret_1_todo" {% if t.vae_status=="livret_1_todo" or not t.vae_status %}selected{% endif %}>Livret 1 à compléter</option>
     <option value="livret_1_analysis" {% if t.vae_status=="livret_1_analysis" %}selected{% endif %}>Livret 1 en cours d'analyse</option>
+    <option value="non_recevable" {% if t.vae_status=="non_recevable" %}selected{% endif %}>Non recevable</option>
     <option value="livret_1_validated" {% if t.vae_status=="livret_1_validated" %}selected{% endif %}>Livret 1 validé</option>
     <option value="financement_validated" {% if t.vae_status=="financement_validated" %}selected{% endif %}>Financement validé</option>
     <option value="livret_2_todo" {% if t.vae_status=="livret_2_todo" %}selected{% endif %}>Livret 2 à compléter</option>
@@ -2199,10 +2201,13 @@ function updateVaeDashboardCounts(){
     const livret1TransmittedScotia = tr.getAttribute("data-livret-1-transmitted-scotia") === "1";
     const scotiaStatus = tr.getAttribute("data-scotia-status") || "";
     counts[`status:${status}`] = (counts[`status:${status}`] || 0) + 1;
+    if(status === "financement_l2_validated"){
+      counts["status:livret_2_validated"] = (counts["status:livret_2_validated"] || 0) + 1;
+    }
     if(status === "livret_1_analysis" && !livret1TransmittedScotia){
       counts.l1_pending_transmission += 1;
     }
-    if(scotiaStatus === "non_recevable"){
+    if(status === "non_recevable" || scotiaStatus === "non_recevable"){
       counts.non_recevable += 1;
     }
     if(tr.getAttribute("data-public-has-logged-in") !== "1"){
@@ -2301,7 +2306,7 @@ function applyRowFilters(){
       || (activeDashboardStatus && matchesVaeDashboardStatusFilter(activeDashboardStatus, rowVaeStatus))
       || (activeVaeDashboardFilter === "no_login" && !hasLoggedIn)
       || (activeVaeDashboardFilter === "new_vae_request_72h" && isNewVaeRequest72h)
-      || (activeVaeDashboardFilter === "non_recevable" && scotiaStatus === "non_recevable")
+      || (activeVaeDashboardFilter === "non_recevable" && (rowVaeStatus === "non_recevable" || scotiaStatus === "non_recevable"))
       || (activeVaeDashboardFilter === "l1_pending_transmission" && rowVaeStatus === "livret_1_analysis" && !livret1TransmittedScotia);
     const matchTheory = selectedTheory === "all" || theoryStatus === selectedTheory;
     const matchPractice = selectedPractice === "all" || practiceStatus === selectedPractice;
@@ -2324,7 +2329,7 @@ function bindVaeDashboardFilters(){
       if(vaeFilter){
         if(activeVaeDashboardFilter.startsWith("status:")){
           vaeFilter.value = activeVaeDashboardFilter.slice("status:".length);
-        }else if(activeVaeDashboardFilter === "l1_pending_transmission" || activeVaeDashboardFilter === "non_recevable" || activeVaeDashboardFilter === "new_vae_request_72h"){
+        }else if(activeVaeDashboardFilter === "l1_pending_transmission" || activeVaeDashboardFilter === "non_recevable" || activeVaeDashboardFilter === "new_vae_request_72h" || activeVaeDashboardFilter === "l2_validated"){
           vaeFilter.value = "all";
         }else{
           vaeFilter.value = "all";
