@@ -7811,6 +7811,9 @@ def api_scotia_decision(session_id: str, trainee_id: str):
         if decision == 'non_recevable':
             t['scotia_livret_2_status'] = ''
             t['scotia_livret_2_processed_at'] = ''
+            view = vae_status_view('non_recevable')
+            t['vae_status'] = view['key']
+            t['vae_status_label'] = view['label']
         if decision == 'complement_requested':
             _ensure_complementary_documents_entry(t)
             _mark_complementary_documents_to_control(t)
@@ -15433,6 +15436,7 @@ DELIVERABLE_REQUIRED_KEYS = ["diplome", "carte_sst", "attestation_fin_formation"
 VAE_STATUS_STEPS = {
     "livret_1_todo": {"label": "Livret 1 à compléter", "pill": "orange"},
     "livret_1_analysis": {"label": "Livret 1 en cours d'analyse", "pill": "gray"},
+    "non_recevable": {"label": "Non recevable", "pill": "red"},
     "complement_requested": {"label": "Demande de complément en cours", "pill": "orange"},
     "livret_1_validated": {"label": "Livret 1 validé", "pill": "green"},
     "financement_validated": {"label": "Financement validé", "pill": "green"},
@@ -15492,6 +15496,8 @@ def vae_status_view(status_key: Optional[str]) -> Dict[str, str]:
             "validated": "livret_1_validated",
             "validation": "livret_1_validated",
             "livret 1 valide": "livret_1_validated",
+            "non recevable": "non_recevable",
+            "non receivable": "non_recevable",
             "financement valide": "financement_validated",
             "livret 2 a completer": "livret_2_todo",
             "certification obtenue": "certified",
