@@ -1111,6 +1111,11 @@ class ScotiaComplementDocumentsReviewTests(unittest.TestCase):
         with gestion_app.app.test_request_context('/scotia'):
             html = render_template('scotia_dashboard.html', items=[item])
 
+        self.assertIn('Rechercher une personne', html)
+        self.assertIn('id="scotia-search-input"', html)
+        self.assertIn('placeholder="Nom ou prénom..."', html)
+        self.assertIn('data-search-name="Jean Dupont Dupont Jean"', html)
+        self.assertIn('applyScotiaFilters', html)
         self.assertIn('Documents à contrôler', html)
         self.assertIn('Conformes', html)
         self.assertIn('Non conforme', html)

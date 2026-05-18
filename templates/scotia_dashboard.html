@@ -89,6 +89,12 @@
     .scotia-board-head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
     .scotia-board-head h2{font-size:24px;letter-spacing:-.03em;}
     .scotia-board-head p{margin:6px 0 0;color:#64748b;font-weight:650;}
+    .scotia-board-actions{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;justify-content:flex-end;}
+    .scotia-search{display:grid;gap:6px;min-width:min(100%,320px);}
+    .scotia-search label{color:#475569;font-size:12px;font-weight:1000;text-transform:uppercase;letter-spacing:.08em;}
+    .scotia-search-input{width:100%;border:1px solid #cbd5e1;border-radius:16px;background:#fff;padding:12px 14px;font:inherit;font-weight:800;color:#0f172a;box-shadow:0 10px 28px rgba(15,23,42,.06);outline:none;transition:border-color .16s ease, box-shadow .16s ease;}
+    .scotia-search-input:focus{border-color:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.13),0 10px 28px rgba(15,23,42,.06);}
+    .scotia-search-input::placeholder{color:#94a3b8;font-weight:750;}
     .scotia-side{position:sticky;top:18px;display:grid;gap:14px;}
     .scotia-help-card{border:1px solid rgba(148,163,184,.28);border-radius:24px;background:#fff;padding:16px;box-shadow:0 14px 40px rgba(15,23,42,.07);}
     .scotia-help-card h3{margin:0 0 10px;font-size:16px;}
@@ -283,12 +289,18 @@
           <div>
             <h2>Dossiers en cours</h2>
           </div>
-          <span class="badge badge--info">{{ stats.active_total }} dossiers visibles</span>
+          <div class="scotia-board-actions">
+            <div class="scotia-search" role="search">
+              <label for="scotia-search-input">Rechercher une personne</label>
+              <input id="scotia-search-input" class="scotia-search-input" type="search" placeholder="Nom ou prénom..." autocomplete="off" aria-controls="scotia-list">
+            </div>
+            <span class="badge badge--info" id="scotia-visible-count">{{ stats.active_total }} dossiers visibles</span>
+          </div>
         </div>
 
         {% if items %}
-          <div class="scotia-filter-empty" id="scotia-filter-empty">Aucun dossier ne correspond à ce filtre.</div>
-          <div class="scotia-list">
+          <div class="scotia-filter-empty" id="scotia-filter-empty">Aucun dossier ne correspond à cette recherche ou à ce filtre.</div>
+          <div class="scotia-list" id="scotia-list">
             {% for it in items %}
               {% set has_livret_2 = (it.deliverables.livret_2 or '')|trim %}
               {% set livret_1_processed = it.scotia_status in ['recevable', 'non_recevable'] %}
@@ -320,7 +332,7 @@
               {% else %}
                 {% set scotia_category = 'done' %}
               {% endif %}
-              <details class="scotia-item-accordion scotia-item {% if it.scotia_status in ['recevable', 'non_recevable'] %}scotia-item--processed{% endif %}" data-category="{{ scotia_category }}" data-unread-messages-count="{{ it.scotia_unread_thread_summary.count if it.scotia_unread_thread_summary else 0 }}">
+              <details class="scotia-item-accordion scotia-item {% if it.scotia_status in ['recevable', 'non_recevable'] %}scotia-item--processed{% endif %}" data-category="{{ scotia_category }}" data-search-name="{{ (it.first_name ~ ' ' ~ it.last_name ~ ' ' ~ it.last_name ~ ' ' ~ it.first_name)|e }}" data-unread-messages-count="{{ it.scotia_unread_thread_summary.count if it.scotia_unread_thread_summary else 0 }}">
                 <summary class="scotia-item-toggle">
                   <div class="scotia-person">
                     <div class="scotia-avatar" aria-hidden="true">{{ (it.first_name[:1] ~ it.last_name[:1])|upper }}</div>
@@ -848,21 +860,57 @@ async function addThreadComment(sessionId, traineeId){
 }
 
 
-function setScotiaFilter(filter){
+let currentScotiaFilter = 'all';
+
+function normalizeScotiaSearch(value){
+  return (value || '')
+    .toString()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function scotiaCategoryMatches(item, filter){
+  const category = item.dataset.category || '';
+  const archiveCategories = new Set(['l2-validated', 'certified', 'non-recevable']);
+  const unreadMessagesCount = Number.parseInt(item.dataset.unreadMessagesCount || '0', 10) || 0;
+  if(filter === 'all') return true;
+  if(filter === 'messages') return unreadMessagesCount > 0;
+  if(filter === 'active') return !archiveCategories.has(category);
+  return category === filter;
+}
+
+function updateScotiaVisibleCount(visibleCount){
+  const counter = document.getElementById('scotia-visible-count');
+  if(!counter) return;
+  counter.textContent = `${visibleCount} dossier${visibleCount > 1 ? 's' : ''} visible${visibleCount > 1 ? 's' : ''}`;
+}
+
+function applyScotiaFilters(){
   const items = Array.from(document.querySelectorAll('.scotia-item-accordion[data-category]'));
   const buttons = Array.from(document.querySelectorAll('.scotia-stat[data-filter]'));
   const empty = document.getElementById('scotia-filter-empty');
+  const searchInput = document.getElementById('scotia-search-input');
+  const query = normalizeScotiaSearch(searchInput?.value || '');
   let visibleCount = 0;
+
   items.forEach((item)=>{
-    const category = item.dataset.category || '';
-    const archiveCategories = new Set(['l2-validated', 'certified', 'non-recevable']);
-    const unreadMessagesCount = Number.parseInt(item.dataset.unreadMessagesCount || '0', 10) || 0;
-    const visible = filter === 'all' || (filter === 'messages' ? unreadMessagesCount > 0 : (filter === 'active' ? !archiveCategories.has(category) : category === filter));
+    const searchableName = normalizeScotiaSearch(item.dataset.searchName || '');
+    const matchesSearch = !query || searchableName.includes(query);
+    const visible = scotiaCategoryMatches(item, currentScotiaFilter) && matchesSearch;
     item.classList.toggle('is-filter-hidden', !visible);
     if(visible) visibleCount += 1;
   });
-  buttons.forEach((button)=> button.classList.toggle('is-active', button.dataset.filter === filter));
+
+  buttons.forEach((button)=> button.classList.toggle('is-active', button.dataset.filter === currentScotiaFilter));
   if(empty) empty.classList.toggle('is-visible', visibleCount === 0);
+  updateScotiaVisibleCount(visibleCount);
+}
+
+function setScotiaFilter(filter){
+  currentScotiaFilter = filter || 'all';
+  applyScotiaFilters();
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -873,6 +921,12 @@ document.addEventListener('DOMContentLoaded', ()=>{
       document.getElementById('dossiers-scotia')?.scrollIntoView({behavior:'smooth', block:'start'});
     });
   });
+
+  const searchInput = document.getElementById('scotia-search-input');
+  if(searchInput){
+    searchInput.addEventListener('input', applyScotiaFilters);
+  }
+  applyScotiaFilters();
 
   document.querySelectorAll('.scotia-comment-input').forEach((input)=>{
     const sessionId = input.dataset.sessionId;
