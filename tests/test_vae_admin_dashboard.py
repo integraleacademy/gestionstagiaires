@@ -97,7 +97,9 @@ class VaeAdminDashboardTests(unittest.TestCase):
         self.assertIn('activeVaeDashboardFilter === "new_vae_request_72h" && isNewVaeRequest72h', html)
         self.assertIn('function normalizeVaeDashboardStatus(status)', html)
         self.assertIn('return "livret_2_validated";', html)
-        self.assertIn('selectedVae === "livret_2_validated" && isLivret2ValidatedDashboardStatus(rowVaeStatus)', html)
+        self.assertIn('function matchesVaeDashboardStatusFilter(filterStatus, rowStatus)', html)
+        self.assertIn('matchesVaeDashboardStatusFilter(activeDashboardStatus, rowVaeStatus)', html)
+        self.assertIn('selectedVae === "all" || matchesVaeDashboardStatusFilter(selectedVae, rowVaeStatus)', html)
         self.assertIn("grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));", html)
         self.assertIn("overflow:visible;", html)
 

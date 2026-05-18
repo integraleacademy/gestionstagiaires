@@ -2185,6 +2185,15 @@ function isLivret2ValidatedDashboardStatus(status){
   return normalizeVaeDashboardStatus(status) === "livret_2_validated";
 }
 
+function matchesVaeDashboardStatusFilter(filterStatus, rowStatus){
+  const normalizedFilter = normalizeVaeDashboardStatus(filterStatus);
+  const normalizedRow = normalizeVaeDashboardStatus(rowStatus);
+  if(normalizedFilter === "livret_2_validated"){
+    return normalizedRow === "livret_2_validated";
+  }
+  return normalizedRow === normalizedFilter;
+}
+
 function updateVaeDashboardCounts(){
   const counts = { no_login: 0, new_vae_request_72h: 0, l1_pending_transmission: 0, non_recevable: 0 };
   getVaeDashboardRows().forEach(tr => {
@@ -2289,11 +2298,12 @@ function applyRowFilters(){
     const scotiaStatus = tr.getAttribute("data-scotia-status") || "";
     const isNewVaeRequest72h = tr.getAttribute("data-vae-new-request-72h") === "1";
 
-    const matchVae = selectedVae === "all"
-      || rowVaeStatus === selectedVae
-      || (selectedVae === "livret_2_validated" && isLivret2ValidatedDashboardStatus(rowVaeStatus));
+    const activeDashboardStatus = activeVaeDashboardFilter.startsWith("status:")
+      ? activeVaeDashboardFilter.slice("status:".length)
+      : "";
+    const matchVae = selectedVae === "all" || matchesVaeDashboardStatusFilter(selectedVae, rowVaeStatus);
     const matchDashboard = !activeVaeDashboardFilter
-      || activeVaeDashboardFilter.startsWith("status:")
+      || (activeDashboardStatus && matchesVaeDashboardStatusFilter(activeDashboardStatus, rowVaeStatus))
       || (activeVaeDashboardFilter === "no_login" && !hasLoggedIn)
       || (activeVaeDashboardFilter === "new_vae_request_72h" && isNewVaeRequest72h)
       || (activeVaeDashboardFilter === "non_recevable" && (rowVaeStatus === "non_recevable" || scotiaStatus === "non_recevable"))
