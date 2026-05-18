@@ -121,6 +121,25 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
                     ],
                 },
                 {
+                    "id": "S-VAE",
+                    "name": "Session VAE",
+                    "training_type": "DIRIGEANT VAE",
+                    "date_start": "2026-08-01",
+                    "date_end": "2026-08-05",
+                    "trainees": [
+                        {
+                            "id": "T-VAE",
+                            "last_name": "REFUS",
+                            "first_name": "Nora",
+                            "email": "nora@example.test",
+                            "phone": "0600000007",
+                            "vae_status": "livret_1_analysis",
+                            "vae_action_dates": {},
+                            "documents": [],
+                        }
+                    ],
+                },
+                {
                     "id": "S-VTC-ARCHIVED",
                     "name": "Session VTC archivée",
                     "training_type": "VTC",
@@ -148,6 +167,38 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
     def tearDown(self):
         gestion_app.load_data = self.original_load_data
         gestion_app.save_data = self.original_save_data
+
+    def test_vae_admin_trainees_exposes_non_recevable_status_after_livret_1_analysis(self):
+        response = self.client.get("/admin/sessions/S-VAE/trainees")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertLess(
+            html.index("value=\"livret_1_analysis\">Livret 1 en cours d'analyse</option>"),
+            html.index('value="non_recevable">Non recevable</option>'),
+        )
+        self.assertLess(
+            html.index('value="non_recevable">Non recevable</option>'),
+            html.index('value="livret_1_validated">Livret 1 validé</option>'),
+        )
+        self.assertIn('status === "non_recevable" || scotiaStatus === "non_recevable"', html)
+
+        update = self.client.post(
+            "/api/sessions/S-VAE/stagiaires/T-VAE/update",
+            json={"vae_status": "non_recevable"},
+        )
+
+        trainee = self.data["sessions"][3]["trainees"][0]
+        self.assertEqual(update.status_code, 200)
+        self.assertEqual(trainee["vae_status"], "non_recevable")
+        self.assertEqual(trainee["vae_status_label"], "Non recevable")
+
+        refreshed = self.client.get("/admin/sessions/S-VAE/trainees")
+        refreshed_html = refreshed.get_data(as_text=True)
+        self.assertIn(
+            'value="non_recevable" selected>Non recevable</option>',
+            refreshed_html,
+        )
 
     def test_vtc_status_labels_and_exam_center_controls_render(self):
         response = self.client.get("/admin/sessions/S-VTC/trainees")
