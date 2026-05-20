@@ -2,7 +2,6 @@
 {% block content %}
 {% set read_only_attr = "disabled" if is_read_only else "" %}
 {% set is_vtc_header = "VTC" in (session.training_type or "")|upper %}
-{% set is_a3p_header = ("A3P" in (session.training_type or "")|upper) or ("A3P" in (session.name or "")|upper) %}
 {% set vtc_theory_exam_date = session.exam_theory_date or session.exam_date %}
 {% set vtc_practice_exam_date = session.exam_practice_date or session.exam_date %}
 {% set vtc_practice_training_date = session.practice_training_date %}
@@ -150,6 +149,7 @@
     <button class="btn btn-outline" id="btnCollectMails" type="button">📋 Récup mail</button>
     {% if not is_all_vtc %}
     <a class="btn btn-outline" id="btnPrintTrainees" href="{{ url_for('admin_trainees_print', session_id=session.id, **request.args) }}" target="_blank" rel="noopener">🖨️ Imprimer la liste</a>
+    <a class="btn btn-outline" href="{{ url_for('admin_tshirt_list', session_id=session.id) }}">👕 Liste t-shirt</a>
     <a class="btn btn-outline" id="btnWordLabels"
        href="{{ url_for('admin_etiquettes_word_zip', session_id=session.id) }}"
        title="Télécharger toutes les étiquettes Word de la session">🏷️ Étiquettes WORD</a>
