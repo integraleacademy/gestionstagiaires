@@ -9196,9 +9196,21 @@ def wedof_webhook():
     secret = (os.environ.get("WEDOF_WEBHOOK_SECRET") or "").encode("utf-8")
     sig_valid = False
     if signature and secret:
-        computed = hmac.new(secret, raw_body, hashlib.sha256).hexdigest()
-        provided = signature.split("=", 1)[-1].strip()
-        sig_valid = hmac.compare_digest(computed, provided)
+        computed_digest = hmac.new(secret, raw_body, hashlib.sha256).digest()
+        computed_hex = computed_digest.hex()
+        computed_b64 = base64.b64encode(computed_digest).decode("ascii")
+        computed_b64url = base64.urlsafe_b64encode(computed_digest).decode("ascii").rstrip("=")
+
+        provided = signature.split("=", 1)[-1].strip().strip('"').strip("'")
+        sig_valid = any(
+            hmac.compare_digest(candidate, provided)
+            for candidate in (
+                computed_hex,
+                computed_hex.upper(),
+                computed_b64,
+                computed_b64url,
+            )
+        )
     elif secret:
         app.logger.warning("[WEDOF WEBHOOK] signature manquante alors qu'un secret est configuré")
     else:
