@@ -119,6 +119,26 @@ class WedofWebhookSecurityTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(self.saved)
 
+    def test_missing_signature_header_is_accepted_for_wedof_compat(self):
+        response = self.client.post(
+            "/api/webhooks/wedof",
+            data=b'{"id":"x"}',
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.saved)
+
+    def test_secret_header_is_accepted(self):
+        response = self.client.post(
+            "/api/webhooks/wedof",
+            data=b'{"id":"x"}',
+            content_type="application/json",
+            headers={"X-Wedof-Secret": "secret"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.saved)
+
+
 
 
 if __name__ == "__main__":
