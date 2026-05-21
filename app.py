@@ -169,6 +169,7 @@ def protect_sensitive_routes():
     )
     if path.startswith(protected_api_prefixes):
         if not session.get("admin_logged_in"):
+            app.logger.warning("[SECURITY] blocked_by_global_guard path=%s", path)
             return jsonify({"ok": False, "error": "auth_required"}), 401
         if request.method not in {"GET", "HEAD", "OPTIONS"} and session.get("admin_role") == "viewer":
             return jsonify({"ok": False, "error": "read_only"}), 403
@@ -9193,14 +9194,16 @@ def wedof_webhook():
     wedof_headers = {
         k: v
         for k, v in headers_map.items()
-        if k.lower().startswith("x-wedof") or k.lower() in ("authorization", "x-webhook-secret")
+        if k.lower().startswith("x-wedof") or k.lower() in ("authorization", "x-webhook-secret", "x-api-key")
     }
-    app.logger.info("[WEDOF] headers wedof reçus = %s", wedof_headers)
+    app.logger.info("[WEDOF] headers wedof reçus (avant vérification) = %s", wedof_headers)
     app.logger.info("[WEDOF] payload brut reçu = %s", raw_body.decode("utf-8", errors="replace"))
 
     secret_raw = (os.environ.get("WEDOF_WEBHOOK_SECRET") or "")
     secret = secret_raw.encode("utf-8")
     sig_valid = False
+    rejection_reason = ""
+
     if signature and secret:
         computed_digest = hmac.new(secret, raw_body, hashlib.sha256).digest()
         computed_hex = computed_digest.hex()
@@ -9217,6 +9220,8 @@ def wedof_webhook():
                 computed_b64url,
             )
         )
+        if not sig_valid:
+            rejection_reason = "invalid_signature"
     elif secret:
         header_secret = (
             request.headers.get("X-Wedof-Secret")
@@ -9235,13 +9240,15 @@ def wedof_webhook():
             sig_valid = True
             app.logger.info("[WEDOF WEBHOOK] authentifié via Authorization Bearer")
         else:
-            app.logger.warning("[WEDOF WEBHOOK] aucun header de signature exploitable reçu; requête acceptée en mode compatibilité")
+            app.logger.warning("[WEDOF WEBHOOK] missing_signature: aucun header signature/secret exploitable; requête acceptée en mode compatibilité")
             sig_valid = True
     else:
-        app.logger.warning("[WEDOF WEBHOOK] signature non vérifiée: WEDOF_WEBHOOK_SECRET non configuré")
+        app.logger.warning("[WEDOF WEBHOOK] missing_secret: WEDOF_WEBHOOK_SECRET non configuré; webhook accepté")
+        sig_valid = True
 
-    if secret and not sig_valid:
-        return jsonify({"ok": False, "error": "invalid_signature"}), 401
+    if rejection_reason:
+        app.logger.warning("[WEDOF WEBHOOK] 401 reason=%s", rejection_reason)
+        return jsonify({"ok": False, "error": rejection_reason}), 401
 
     try:
         folder_id = _find_wedof_folder_id(payload)
