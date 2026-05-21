@@ -9201,14 +9201,14 @@ def wedof_webhook():
         computed_b64 = base64.b64encode(computed_digest).decode("ascii")
         computed_b64url = base64.urlsafe_b64encode(computed_digest).decode("ascii").rstrip("=")
 
-        provided = signature.split("=", 1)[-1].strip()
-        provided_norm = provided.lower()
+        provided = signature.split("=", 1)[-1].strip().strip('"').strip("'")
         sig_valid = any(
-            hmac.compare_digest(candidate, provided_norm)
+            hmac.compare_digest(candidate, provided)
             for candidate in (
-                computed_hex.lower(),
-                computed_b64.lower(),
-                computed_b64url.lower(),
+                computed_hex,
+                computed_hex.upper(),
+                computed_b64,
+                computed_b64url,
             )
         )
     elif secret:
