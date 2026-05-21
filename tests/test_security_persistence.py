@@ -145,6 +145,53 @@ class WedofWebhookSecurityTests(unittest.TestCase):
 
 
 
+    def test_valid_wedof_signature_base64_is_accepted(self):
+        import base64
+        body = b'{"id":"x"}'
+        digest = hmac.new(b"secret", body, hashlib.sha256).digest()
+        signature = base64.b64encode(digest).decode("ascii")
+        response = self.client.post(
+            "/api/webhooks/wedof",
+            data=body,
+            content_type="application/json",
+            headers={"X-Wedof-Signature": f"sha256={signature}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.saved)
+
+    def test_valid_wedof_signature_uppercase_hex_is_accepted(self):
+        body = b'{"id":"x"}'
+        signature = hmac.new(b"secret", body, hashlib.sha256).hexdigest().upper()
+        response = self.client.post(
+            "/api/webhooks/wedof",
+            data=body,
+            content_type="application/json",
+            headers={"X-Wedof-Signature": f"sha256={signature}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.saved)
+
+    def test_missing_signature_header_is_accepted_for_wedof_compat(self):
+        response = self.client.post(
+            "/api/webhooks/wedof",
+            data=b'{"id":"x"}',
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.saved)
+
+    def test_secret_header_is_accepted(self):
+        response = self.client.post(
+            "/api/webhooks/wedof",
+            data=b'{"id":"x"}',
+            content_type="application/json",
+            headers={"X-Wedof-Secret": "secret"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(self.saved)
+
+
+
 
 if __name__ == "__main__":
     unittest.main()
