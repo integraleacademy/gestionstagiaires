@@ -9202,7 +9202,6 @@ def wedof_webhook():
     secret_raw = (os.environ.get("WEDOF_WEBHOOK_SECRET") or "")
     secret = secret_raw.encode("utf-8")
     sig_valid = False
-    rejection_reason = ""
 
     if signature and secret:
         computed_digest = hmac.new(secret, raw_body, hashlib.sha256).digest()
@@ -9221,7 +9220,7 @@ def wedof_webhook():
             )
         )
         if not sig_valid:
-            rejection_reason = "invalid_signature"
+            app.logger.warning("[WEDOF WEBHOOK] invalid_signature: signature reçue mais non valide; webhook accepté temporairement")
     elif secret:
         header_secret = (
             request.headers.get("X-Wedof-Secret")
@@ -9246,9 +9245,6 @@ def wedof_webhook():
         app.logger.warning("[WEDOF WEBHOOK] missing_secret: WEDOF_WEBHOOK_SECRET non configuré; webhook accepté")
         sig_valid = True
 
-    if rejection_reason:
-        app.logger.warning("[WEDOF WEBHOOK] 401 reason=%s", rejection_reason)
-        return jsonify({"ok": False, "error": rejection_reason}), 401
 
     try:
         folder_id = _find_wedof_folder_id(payload)
@@ -9268,6 +9264,7 @@ def wedof_webhook():
             "wedof_folder_details": wedof_folder_details,
             "processed": False,
             "signature": signature,
+            "signature_present": bool(signature),
             "signature_valid": bool(sig_valid),
         }
         entries.insert(0, entry)
