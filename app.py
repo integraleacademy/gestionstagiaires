@@ -9465,6 +9465,8 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
         unit_price = _sales_training_unit_price(training_type_raw, training_label)
 
         for trainee in trainees:
+            if bool(trainee.get("exclude_from_sales_tracking")):
+                continue
             anchor_date = _parse_flexible_date(trainee.get("created_at") or "")
             if training_label == "DIRIGEANT VAE":
                 vae_status_key = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))["key"]
@@ -9478,7 +9480,11 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
             if not anchor_date:
                 continue
 
-            training_price = unit_price if unit_price > 0 else _parse_positive_int(trainee.get("training_price"))
+            adjusted_tracking_price = _parse_positive_int(trainee.get("sales_tracking_amount"))
+            if adjusted_tracking_price > 0:
+                training_price = adjusted_tracking_price
+            else:
+                training_price = unit_price if unit_price > 0 else _parse_positive_int(trainee.get("training_price"))
             trainee_ref = str(trainee.get("id") or trainee.get("email") or trainee.get("nom") or trainee.get("name") or "")
             sale_markers.append(f"{session_id}|{trainee_ref}|{anchor_date.isoformat()}|{training_price}")
             trainee_item = _sales_trainee_item(trainee, session_id)
@@ -12013,6 +12019,8 @@ def api_create_trainee(session_id: str):
         "dossier_status": "incomplete",
         "financement_status": "soon",
         "training_price": default_price if default_price is not None else "",
+        "exclude_from_sales_tracking": False,
+        "sales_tracking_amount": "",
         "cpf_amount": cpf_amount,
         "personal_amount": personal_amount,
         "other_amount": other_amount,
@@ -12279,6 +12287,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "email",
         "phone",
         "training_price",
+        "exclude_from_sales_tracking",
+        "sales_tracking_amount",
         "cpf_amount",
         "personal_amount",
         "other_amount",
@@ -12368,6 +12378,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
             "vtc_cmar_manual_ok",
             "vtc_elearning_manual_ok",
             "vtc_book_manual_ok",
+            "exclude_from_sales_tracking",
         ):
             t[k] = True if v in (True, "true", "1", 1, "yes", "on") else False
             continue
