@@ -7743,10 +7743,17 @@ def _scotia_dashboard_category(item: Dict[str, Any]) -> str:
     livret_2_processed = (item.get("scotia_livret_2_status") or "").strip() in {"livret_2_ok", "livret_2_review"}
     complementary_documents = item.get("complementary_documents")
     has_complementary_documents = bool(complementary_documents)
+    added_document_groups = item.get("added_document_groups") if isinstance(item.get("added_document_groups"), list) else []
+    has_added_documents = any(
+        isinstance(group, dict)
+        and isinstance(group.get("files"), list)
+        and any(isinstance(token, str) and token.strip() for token in group.get("files") or [])
+        for group in added_document_groups
+    )
     complement_review_status = (item.get("scotia_complementary_documents_review_status") or "").strip()
     complementary_documents_need_control = (
         livret_1_is_complement
-        and has_complementary_documents
+        and (has_complementary_documents or has_added_documents)
         and complement_review_status != "complement_documents_new_expected"
     )
 
