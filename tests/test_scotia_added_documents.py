@@ -37,6 +37,32 @@ class ScotiaAddedDocumentsTests(unittest.TestCase):
         self.assertEqual(len(trainee["scotia_added_documents"][0]["files"]), 1)
         self.assertTrue(gestion_app._scotia_added_document_token_exists(trainee, trainee["scotia_added_documents"][0]["files"][0]))
 
+    def test_added_documents_trigger_complement_documents_control_category(self):
+        payload = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "name": "VAE DESP 2026",
+                    "training_type": "DIRIGEANT VAE",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "first_name": "Jean",
+                            "last_name": "Dupont",
+                            "scotia_status": "complement_requested",
+                            "scotia_complementary_documents_review_status": "",
+                            "vae_action_dates": {"livret_1_transmitted_scotia": "15/05/2026"},
+                            "scotia_added_documents": [{"date": "26/05/2026", "files": ["token-added"]}],
+                        }
+                    ],
+                }
+            ]
+        }
+
+        items = gestion_app._all_scotia_items(payload)
+
+        self.assertEqual(items[0]["scotia_dashboard_category"], "complement-docs")
+
     def test_remove_scotia_added_document_deletes_empty_group(self):
         trainee = {}
         gestion_app._append_scotia_added_documents("S1", "T1", trainee, [self._file()])

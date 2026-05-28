@@ -189,7 +189,8 @@
     {% set livret_1_is_complement_stat = it.scotia_status == 'complement_requested' %}
     {% set livret_2_processed_stat = it.scotia_livret_2_status in ['livret_2_ok', 'livret_2_review'] %}
     {% set complementary_documents_stat = it.complementary_documents or [] %}
-    {% set complementary_documents_need_control_stat = livret_1_is_complement_stat and complementary_documents_stat and it.scotia_complementary_documents_review_status != 'complement_documents_new_expected' %}
+    {% set added_documents_need_control_stat = (it.added_document_groups or [])|length > 0 %}
+    {% set complementary_documents_need_control_stat = livret_1_is_complement_stat and (complementary_documents_stat or added_documents_need_control_stat) and it.scotia_complementary_documents_review_status != 'complement_documents_new_expected' %}
     {% if it.scotia_dashboard_category is defined and it.scotia_dashboard_category %}
       {% set dashboard_category_stat = it.scotia_dashboard_category %}
     {% elif archive_category_stat %}
@@ -312,8 +313,9 @@
               {% set livret_2_is_ok = it.scotia_livret_2_status == 'livret_2_ok' %}
               {% set livret_2_is_review = it.scotia_livret_2_status == 'livret_2_review' %}
               {% set complementary_documents = it.complementary_documents or [] %}
-              {% set complementary_documents_need_control = livret_1_is_complement and complementary_documents and it.scotia_complementary_documents_review_status != 'complement_documents_new_expected' %}
               {% set added_document_groups = it.added_document_groups or [] %}
+              {% set added_documents_need_control = added_document_groups|length > 0 %}
+              {% set complementary_documents_need_control = livret_1_is_complement and (complementary_documents or added_documents_need_control) and it.scotia_complementary_documents_review_status != 'complement_documents_new_expected' %}
               {% if it.scotia_dashboard_category is defined and it.scotia_dashboard_category %}
                 {% set scotia_category = it.scotia_dashboard_category %}
               {% elif it.scotia_archive_category %}
