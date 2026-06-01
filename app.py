@@ -8359,6 +8359,15 @@ def api_scotia_comment(session_id: str, trainee_id: str):
     t['scotia_comment'] = comment
     if comment:
         append_trainee_history_event(t, 'Commentaire laissé par SCOTIA', comment, 'action', now_iso)
+        if (_session_get(s, "training_type", "") or "").strip().upper() == "DIRIGEANT VAE":
+            _add_vae_live_notification(
+                s,
+                t,
+                "Commentaire SCOTIA",
+                actor="scotia",
+                details=comment,
+                kind="scotia_comment",
+            )
     t['updated_at'] = now_iso
 
     s['trainees'] = trainees
@@ -8457,13 +8466,15 @@ def api_admin_scotia_thread_comment(session_id: str, trainee_id: str):
 
     created_at = _now_iso()
     entry = _append_scotia_thread_comment(t, content, "Intégrale Academy", created_at, "admin")
-    email_ok = _send_scotia_thread_comment_notification(
-        s,
-        t,
-        content,
-        session_id=str(s.get("id") or session_id),
-        trainee_id=str(t.get("id") or trainee_id),
-    )
+    if (_session_get(s, "training_type", "") or "").strip().upper() == "DIRIGEANT VAE":
+        _add_vae_live_notification(
+            s,
+            t,
+            "Commentaire Intégrale",
+            actor="integrale",
+            details=content,
+            kind="integrale_thread_comment",
+        )
     t["updated_at"] = created_at
 
     s["trainees"] = trainees
@@ -8547,13 +8558,15 @@ def api_scotia_thread_comment(session_id: str, trainee_id: str):
     created_at = _now_iso()
     author_label = _current_scotia_comment_author_label()
     entry = _append_scotia_thread_comment(t, content, author_label, created_at, "scotia_dashboard")
-    email_ok = _send_scotia_thread_comment_notification(
-        s,
-        t,
-        content,
-        session_id=str(s.get("id") or session_id),
-        trainee_id=str(t.get("id") or trainee_id),
-    )
+    if (_session_get(s, "training_type", "") or "").strip().upper() == "DIRIGEANT VAE":
+        _add_vae_live_notification(
+            s,
+            t,
+            f"Commentaire {author_label}",
+            actor="scotia",
+            details=content,
+            kind="scotia_thread_comment",
+        )
     t['updated_at'] = created_at
 
     s['trainees'] = trainees

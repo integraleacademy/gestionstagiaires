@@ -502,3 +502,42 @@ class VaeLiveNotificationTests(unittest.TestCase):
         self.assertTrue(deleted["ok"])
         self.assertEqual(deleted["total"], 0)
         self.assertEqual(self.data["sessions"][0]["vae_live_notifications"], [])
+
+    def test_scotia_comment_adds_live_notification(self):
+        with self.client.session_transaction() as sess:
+            sess["scotia_logged_in"] = True
+            sess.pop("admin_logged_in", None)
+            sess.pop("admin_role", None)
+
+        response = self.client.post(
+            "/api/scotia/sessions/S1/stagiaires/T1/comment",
+            json={"comment": "Merci de vérifier la pièce d'identité."},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        live_items = self.data["sessions"][0]["vae_live_notifications"]
+        self.assertEqual(len(live_items), 1)
+        self.assertEqual(live_items[0]["label"], "Commentaire SCOTIA")
+        self.assertEqual(live_items[0]["actor"], "scotia")
+        self.assertEqual(live_items[0]["kind"], "scotia_comment")
+        self.assertIn("pièce d'identité", live_items[0]["details"])
+
+    def test_scotia_thread_comment_adds_live_notification(self):
+        with self.client.session_transaction() as sess:
+            sess["scotia_logged_in"] = True
+            sess["scotia_username"] = "scotiaformation@gmail.com"
+            sess.pop("admin_logged_in", None)
+            sess.pop("admin_role", None)
+
+        response = self.client.post(
+            "/api/scotia/sessions/S1/stagiaires/T1/thread-comments",
+            json={"content": "Document complémentaire bien reçu."},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        live_items = self.data["sessions"][0]["vae_live_notifications"]
+        self.assertEqual(len(live_items), 1)
+        self.assertEqual(live_items[0]["label"], "Commentaire Scotia")
+        self.assertEqual(live_items[0]["actor"], "scotia")
+        self.assertEqual(live_items[0]["kind"], "scotia_thread_comment")
+        self.assertIn("Document complémentaire", live_items[0]["details"])
