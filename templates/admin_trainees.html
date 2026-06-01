@@ -335,7 +335,7 @@
 
         <th>Convention</th>
         <th>Financement</th>
-        {% if show_vae %}<th>VAE</th>{% endif %}
+        {% if show_vae %}<th>VAE</th><th class="col-scotia-status">STATUT SCOTIA</th>{% endif %}
         {% if not is_vtc and not show_vae and not is_dirigeant_session %}<th>Test Français</th>{% endif %}
         {% if not is_vtc %}<th>Dossier</th>{% endif %}
         {% if not is_vtc %}<th>Dossier complet</th>{% endif %}
@@ -460,6 +460,13 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
     <option value="jury" {% if t.vae_status=="jury" %}selected{% endif %}>Passage devant le jury</option>
     <option value="certified" {% if t.vae_status=="certified" %}selected{% endif %}>Certification obtenue</option>
   </select>
+</td>
+<td class="col-scotia-status">
+  {% if t.scotia_admin_status and t.scotia_admin_status.label %}
+    <span class="scotia-admin-status scotia-admin-status--{{ t.scotia_admin_status.tone }}">{{ t.scotia_admin_status.label }}</span>
+  {% else %}
+    <span class="muted">—</span>
+  {% endif %}
 </td>
 {% endif %}
 

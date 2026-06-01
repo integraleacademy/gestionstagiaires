@@ -1463,3 +1463,37 @@ input[type="file"]{
     padding-right: 10px;
   }
 }
+
+/* Statut SCOTIA affiché dans la liste admin VAE */
+#traineesTable .col-scotia-status{
+  min-width: 230px;
+  max-width: 280px;
+}
+.scotia-admin-status{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:180px;
+  padding:7px 10px;
+  border-radius:999px;
+  font-size:11px;
+  line-height:1.15;
+  font-weight:1000;
+  letter-spacing:.02em;
+  text-transform:uppercase;
+  text-align:center;
+  box-shadow:0 8px 18px rgba(15,23,42,.10);
+}
+.scotia-admin-status--danger{
+  background:#dc2626;
+  color:#fff;
+}
+.scotia-admin-status--warning{
+  background:#f97316;
+  color:#fff7ed;
+}
+.scotia-admin-status--muted{
+  background:#e5e7eb;
+  color:#475569;
+  box-shadow:none;
+}
