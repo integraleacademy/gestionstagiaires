@@ -65,6 +65,41 @@ class VaeAdminDashboardTests(unittest.TestCase):
                             "created_at": old_created_at,
                             "documents": [],
                         },
+                        {
+                            "id": "T-SCOTIA-TODO",
+                            "last_name": "ECHO",
+                            "first_name": "Emma",
+                            "vae_status": "livret_1_analysis",
+                            "public_has_logged_in": True,
+                            "created_at": old_created_at,
+                            "vae_action_dates": {"livret_1_transmitted_scotia": "01/06/2026"},
+                            "scotia_status": "",
+                            "documents": [],
+                        },
+                        {
+                            "id": "T-SCOTIA-CONTROL",
+                            "last_name": "FOXTROT",
+                            "first_name": "Farah",
+                            "vae_status": "livret_1_analysis",
+                            "public_has_logged_in": True,
+                            "created_at": old_created_at,
+                            "vae_action_dates": {"livret_1_transmitted_scotia": "01/06/2026"},
+                            "scotia_status": "complement_requested",
+                            "scotia_added_documents": [{"date": "01/06/2026", "files": ["token-added"]}],
+                            "documents": [],
+                        },
+                        {
+                            "id": "T-SCOTIA-WAITING",
+                            "last_name": "GOLF",
+                            "first_name": "Gaëlle",
+                            "vae_status": "livret_1_analysis",
+                            "public_has_logged_in": True,
+                            "created_at": old_created_at,
+                            "vae_action_dates": {"livret_1_transmitted_scotia": "01/06/2026"},
+                            "scotia_status": "complement_requested",
+                            "scotia_complementary_documents_review_status": "complement_documents_new_expected",
+                            "documents": [],
+                        },
                     ],
                 }
             ],
@@ -112,6 +147,12 @@ class VaeAdminDashboardTests(unittest.TestCase):
         self.assertIn('selectedVae === "livret_2_validated" && isLivret2ValidatedDashboardStatus(rowVaeStatus)', html)
         self.assertIn("grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));", html)
         self.assertIn("overflow:visible;", html)
+        self.assertIn("STATUT SCOTIA", html)
+        self.assertIn("A TRAITER (Scotia)", html)
+        self.assertIn("COMPLEMENT DE DOSSIER A CONSULTER (Scotia)", html)
+        self.assertIn("EN ATTENTE DOCUMENTS COMPLEMENTAIRES", html)
+        self.assertIn("scotia-admin-status--danger", html)
+        self.assertIn("scotia-admin-status--warning", html)
 
 
 if __name__ == "__main__":

@@ -7820,6 +7820,49 @@ def _history_entry_to_admin_json(entry: Dict[str, str]) -> Dict[str, str]:
     }
 
 
+def _scotia_complementary_documents_need_control(item: Dict[str, Any]) -> bool:
+    """Indique si un dossier complémentaire SCOTIA déposé doit être consulté."""
+    scotia_status = (item.get("scotia_status") or "").strip()
+    if scotia_status != "complement_requested":
+        return False
+
+    complementary_documents = item.get("complementary_documents")
+    has_complementary_documents = bool(complementary_documents)
+    added_document_groups = item.get("added_document_groups") if isinstance(item.get("added_document_groups"), list) else []
+    has_added_documents = any(
+        isinstance(group, dict)
+        and isinstance(group.get("files"), list)
+        and any(isinstance(token, str) and token.strip() for token in group.get("files") or [])
+        for group in added_document_groups
+    )
+    complement_review_status = (item.get("scotia_complementary_documents_review_status") or "").strip()
+    return (
+        (has_complementary_documents or has_added_documents)
+        and complement_review_status != "complement_documents_new_expected"
+    )
+
+
+def _scotia_admin_status_badge(item: Dict[str, Any]) -> Dict[str, str]:
+    """Retourne le libellé/couleur du statut SCOTIA à afficher côté admin VAE."""
+    scotia_status = (item.get("scotia_status") or "").strip()
+    if scotia_status == "complement_requested":
+        if _scotia_complementary_documents_need_control(item):
+            return {
+                "label": "COMPLEMENT DE DOSSIER A CONSULTER (Scotia)",
+                "tone": "warning",
+            }
+        return {
+            "label": "EN ATTENTE DOCUMENTS COMPLEMENTAIRES",
+            "tone": "danger",
+        }
+    if not scotia_status:
+        return {
+            "label": "A TRAITER (Scotia)",
+            "tone": "danger",
+        }
+    return {}
+
+
 def _scotia_dashboard_category(item: Dict[str, Any]) -> str:
     """Retourne la catégorie de filtre affichée pour une ligne du tableau SCOTIA."""
     archive_category = (item.get("scotia_archive_category") or "").strip()
@@ -7832,21 +7875,7 @@ def _scotia_dashboard_category(item: Dict[str, Any]) -> str:
     livret_1_processed = scotia_status in {"recevable", "non_recevable"}
     livret_1_is_complement = scotia_status == "complement_requested"
     livret_2_processed = (item.get("scotia_livret_2_status") or "").strip() in {"livret_2_ok", "livret_2_review"}
-    complementary_documents = item.get("complementary_documents")
-    has_complementary_documents = bool(complementary_documents)
-    added_document_groups = item.get("added_document_groups") if isinstance(item.get("added_document_groups"), list) else []
-    has_added_documents = any(
-        isinstance(group, dict)
-        and isinstance(group.get("files"), list)
-        and any(isinstance(token, str) and token.strip() for token in group.get("files") or [])
-        for group in added_document_groups
-    )
-    complement_review_status = (item.get("scotia_complementary_documents_review_status") or "").strip()
-    complementary_documents_need_control = (
-        livret_1_is_complement
-        and (has_complementary_documents or has_added_documents)
-        and complement_review_status != "complement_documents_new_expected"
-    )
+    complementary_documents_need_control = _scotia_complementary_documents_need_control(item)
 
     if not livret_1_processed and not livret_1_is_complement:
         return "l1-action"
@@ -11884,6 +11913,14 @@ def admin_trainees(session_id: str):
                 vae_dashboard_counts["new_vae_request_72h"] += 1
             unread_summary = _scotia_unread_thread_summary(t)
             t["scotia_unread_thread_count"] = int(unread_summary.get("count") or 0) if unread_summary else 0
+
+        scotia_items_by_trainee = {
+            (str(item.get("session_id") or ""), str(item.get("trainee_id") or "")): item
+            for item in _all_scotia_items(data, include_archived=True)
+        }
+        for t in trainees:
+            key = (str(session_view["id"] or ""), str(t.get("id") or ""))
+            t["scotia_admin_status"] = _scotia_admin_status_badge(scotia_items_by_trainee.get(key) or {})
 
     # persist normalized trainees back into storage
     s["trainees"] = trainees
