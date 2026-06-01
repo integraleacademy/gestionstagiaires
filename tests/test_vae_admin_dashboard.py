@@ -156,6 +156,48 @@ class VaeAdminDashboardTests(unittest.TestCase):
         self.assertIn("scotia-admin-status--warning", html)
         self.assertIn("scotia-admin-status--muted", html)
 
+    def test_vae_history_is_limited_to_important_milestones(self):
+        trainee = self.data["sessions"][0]["trainees"][4]
+        trainee["activity_history"] = [
+            {
+                "label": "Dossier transmis à SCOTIA",
+                "details": "Livret 1",
+                "kind": "action",
+                "at": "2026-06-01T08:00:00Z",
+            },
+            {
+                "label": "Commentaire laissé par SCOTIA",
+                "details": "Un commentaire technique",
+                "kind": "action",
+                "at": "2026-06-01T09:00:00Z",
+            },
+            {
+                "label": "Relance Livret 1",
+                "details": "Mail",
+                "kind": "relance",
+                "at": "2026-06-01T10:00:00Z",
+            },
+        ]
+
+        response = self.client.get("/api/sessions/S-VAE-DASH/stagiaires/T-SCOTIA-TODO/history")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        labels = [item["label"] for item in payload["history"]]
+        self.assertIn("Livret 1 en attente de transmission", labels)
+        self.assertIn("Livret 1 en analyse (transmis à SCOTIA)", labels)
+        self.assertNotIn("Commentaire laissé par SCOTIA", labels)
+        self.assertNotIn("Relance Livret 1", labels)
+
+    def test_waiting_complement_scotia_status_uses_warning_tone(self):
+        badge = gestion_app._scotia_admin_status_badge({
+            "scotia_status": "complement_requested",
+            "scotia_complementary_documents_review_status": "complement_documents_new_expected",
+        })
+
+        self.assertEqual(badge["label"], "EN ATTENTE DOCUMENTS COMPLEMENTAIRES")
+        self.assertEqual(badge["tone"], "warning")
+
 
 if __name__ == "__main__":
     unittest.main()
