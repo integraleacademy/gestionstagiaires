@@ -1483,6 +1483,8 @@ tr.row-todo td{
 .history-item strong,.thread-item strong{ color:#0f172a; }
 .history-details,.thread-content{ margin-top:4px; color:#334155; white-space:pre-wrap; }
 .thread-meta{ display:flex; align-items:center; justify-content:space-between; gap:10px; color:#64748b; font-size:12px; }
+.thread-meta > span:last-child{ display:inline-flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+.thread-meta .mini-btn.danger{ border-color:#fecaca; background:#fee2e2; color:#991b1b; }
 .thread-item--scotia{ border-left:4px solid #2563eb; }
 .thread-item--integrale{ border-left:4px solid #16a34a; }
 .thread-reply-box{ display:block; margin-top:14px; }
@@ -1589,9 +1591,10 @@ body.vae-analysis-filter-active #traineesTable .col-comment{ display:none; }
     return comments.map(comment => {
       const party = comment.author_party === "integrale" ? "integrale" : "scotia";
       const readButton = comment.can_mark_read ? `<button type="button" class="mini-btn" data-thread-read="${escapeHtml(comment.id)}" data-session-id="${escapeHtml(traineeSessionId)}" data-trainee-id="${escapeHtml(traineeId)}">Marquer lu</button>` : "";
+      const deleteButton = comment.can_delete ? `<button type="button" class="mini-btn danger" data-thread-delete="${escapeHtml(comment.id)}" data-session-id="${escapeHtml(traineeSessionId)}" data-trainee-id="${escapeHtml(traineeId)}">Supprimer</button>` : "";
       return `
         <div class="thread-item thread-item--${party}">
-          <div class="thread-meta"><span><strong>${escapeHtml(comment.author_label || "SCOTIA")}</strong> · ${escapeHtml(comment.created_at_label || "")}</span>${readButton}</div>
+          <div class="thread-meta"><span><strong>${escapeHtml(comment.author_label || "SCOTIA")}</strong> · ${escapeHtml(comment.created_at_label || "")}</span><span>${readButton}${deleteButton}</span></div>
           <div class="thread-content">${escapeHtml(comment.content || "")}</div>
         </div>
       `;
@@ -1665,6 +1668,22 @@ body.vae-analysis-filter-active #traineesTable .col-comment{ display:none; }
       if(!response.ok || !data?.ok){
         alert(data?.error || "Erreur lecture commentaire");
         readBtn.disabled = false;
+        return;
+      }
+      if(activeThreadContext?.tr) await openThreadForRow(activeThreadContext.tr);
+    }
+    const deleteBtn = event.target?.closest?.("[data-thread-delete]");
+    if(deleteBtn){
+      if(!confirm("Supprimer ce commentaire du fil actu ?")) return;
+      deleteBtn.disabled = true;
+      const traineeSessionId = deleteBtn.getAttribute("data-session-id");
+      const traineeId = deleteBtn.getAttribute("data-trainee-id");
+      const commentId = deleteBtn.getAttribute("data-thread-delete");
+      const response = await fetch(`/api/sessions/${traineeSessionId}/stagiaires/${traineeId}/thread-comments/${commentId}`, { method:"DELETE" });
+      const data = await response.json();
+      if(!response.ok || !data?.ok){
+        alert(data?.error || "Erreur suppression commentaire");
+        deleteBtn.disabled = false;
         return;
       }
       if(activeThreadContext?.tr) await openThreadForRow(activeThreadContext.tr);

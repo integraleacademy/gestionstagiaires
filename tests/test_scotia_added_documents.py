@@ -250,6 +250,50 @@ class ScotiaThreadCommentsTests(unittest.TestCase):
         self.assertIn("<strong>1</strong><span>message Intégrale Academy à consulter", html)
 
 
+    def test_scotia_user_deletes_thread_comment(self):
+        payload = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "training_type": "DIRIGEANT VAE",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "first_name": "Jean",
+                            "last_name": "Dupont",
+                            "scotia_thread_comments": [
+                                {
+                                    "id": "C1",
+                                    "content": "Info à supprimer",
+                                    "author_label": "Scotia",
+                                    "author_party": "scotia",
+                                    "created_at": "2026-05-15T06:59:00Z",
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+        saved_payloads = []
+        gestion_app.load_data = lambda: payload
+        gestion_app.save_data = lambda data: saved_payloads.append(data)
+        gestion_app._now_iso = lambda: "2026-05-15T07:30:00Z"
+
+        with self.client.session_transaction() as sess:
+            sess["scotia_logged_in"] = True
+            sess["scotia_username"] = "scotiaformation@gmail.com"
+
+        response = self.client.delete("/api/scotia/sessions/S1/stagiaires/T1/thread-comments/C1")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertTrue(body["ok"])
+        trainee = payload["sessions"][0]["trainees"][0]
+        self.assertEqual(trainee["scotia_thread_comments"], [])
+        self.assertEqual(trainee["activity_history"][0]["label"], "Commentaire SCOTIA supprimé")
+        self.assertEqual(len(saved_payloads), 1)
+
 class ScotiaDecisionTests(unittest.TestCase):
     def setUp(self):
         self.client = gestion_app.app.test_client()
@@ -381,6 +425,17 @@ class AdminTraineeHistoryAndThreadTests(unittest.TestCase):
         self.assertEqual(trainee["activity_history"][0]["label"], "Commentaire laissé par Intégrale Academy")
         self.assertEqual(len(self.saved_payloads), 1)
 
+    def test_admin_deletes_thread_comment_and_updates_history(self):
+        response = self.client.delete("/api/sessions/S1/stagiaires/T1/thread-comments/C1")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertTrue(body["ok"])
+        trainee = self.payload["sessions"][0]["trainees"][0]
+        self.assertEqual(trainee["scotia_thread_comments"], [])
+        self.assertEqual(trainee["activity_history"][0]["label"], "Commentaire SCOTIA supprimé")
+        self.assertEqual(trainee["updated_at"], "2026-06-01T08:25:00Z")
+        self.assertEqual(len(self.saved_payloads), 1)
 
 
 if __name__ == "__main__":
