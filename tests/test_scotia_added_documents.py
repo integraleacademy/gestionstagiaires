@@ -80,11 +80,13 @@ class ScotiaThreadCommentsTests(unittest.TestCase):
         self.original_load_data = gestion_app.load_data
         self.original_save_data = gestion_app.save_data
         self.original_now_iso = gestion_app._now_iso
+        self.original_brevo_send_email = gestion_app.brevo_send_email
 
     def tearDown(self):
         gestion_app.load_data = self.original_load_data
         gestion_app.save_data = self.original_save_data
         gestion_app._now_iso = self.original_now_iso
+        gestion_app.brevo_send_email = self.original_brevo_send_email
 
     def test_integrale_user_adds_thread_comment_with_french_time_label(self):
         payload = {
@@ -208,6 +210,91 @@ class ScotiaThreadCommentsTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertIn('data-scotia-unread-count="0"', html)
         self.assertNotIn('class="thread-badge" aria-label="1 commentaire non lu">1</span>', html)
+
+
+    def test_admin_thread_comment_emails_scotia_with_cassandre_copy_and_dossier_link(self):
+        payload = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "name": "VAE DESP 2026",
+                    "training_type": "DIRIGEANT VAE",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "first_name": "Alice",
+                            "last_name": "Durand",
+                            "documents": [],
+                        }
+                    ],
+                }
+            ]
+        }
+        sent_emails = []
+        gestion_app.load_data = lambda: payload
+        gestion_app.save_data = lambda data: None
+        gestion_app._now_iso = lambda: "2026-06-01T07:25:00Z"
+        gestion_app.brevo_send_email = lambda to, subject, html, **kwargs: sent_emails.append(
+            {"to": to, "subject": subject, "html": html, "cc": kwargs.get("cc_emails") or []}
+        ) or True
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        response = self.client.post(
+            "/api/sessions/S1/stagiaires/T1/thread-comments",
+            json={"comment": "Merci de vérifier le bloc 2.\nPièce importante."},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertTrue(body["ok"])
+        self.assertTrue(body["email_ok"])
+        self.assertEqual(len(sent_emails), 1)
+        self.assertEqual(sent_emails[0]["to"], "scotiaformation@gmail.com")
+        self.assertEqual(sent_emails[0]["cc"], ["cassandre@integraleacademy.com"])
+        self.assertIn("Nouveau commentaire VAE", sent_emails[0]["subject"])
+        self.assertIn("DURAND Alice", sent_emails[0]["html"])
+        self.assertIn("1 nouveau commentaire concernant le dossier VAE", sent_emails[0]["html"])
+        self.assertIn("Merci de vérifier le bloc 2.<br>Pièce importante.", sent_emails[0]["html"])
+        self.assertIn("/scotia#dossier-S1-T1", sent_emails[0]["html"])
+
+    def test_scotia_thread_comment_also_emails_scotia_with_cassandre_copy(self):
+        payload = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "name": "VAE DESP 2026",
+                    "training_type": "DIRIGEANT VAE",
+                    "trainees": [{"id": "T1", "first_name": "Jean", "last_name": "Dupont"}],
+                }
+            ]
+        }
+        sent_emails = []
+        gestion_app.load_data = lambda: payload
+        gestion_app.save_data = lambda data: None
+        gestion_app._now_iso = lambda: "2026-06-01T07:25:00Z"
+        gestion_app.brevo_send_email = lambda to, subject, html, **kwargs: sent_emails.append(
+            {"to": to, "subject": subject, "html": html, "cc": kwargs.get("cc_emails") or []}
+        ) or True
+
+        with self.client.session_transaction() as sess:
+            sess["scotia_logged_in"] = True
+            sess["scotia_username"] = "scotiaformation@gmail.com"
+
+        response = self.client.post(
+            "/api/scotia/sessions/S1/stagiaires/T1/thread-comments",
+            json={"comment": "Commentaire directement depuis Scotia"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["email_ok"])
+        self.assertEqual(len(sent_emails), 1)
+        self.assertEqual(sent_emails[0]["to"], "scotiaformation@gmail.com")
+        self.assertEqual(sent_emails[0]["cc"], ["cassandre@integraleacademy.com"])
+        self.assertIn("DUPONT Jean", sent_emails[0]["html"])
+        self.assertIn("Commentaire directement depuis Scotia", sent_emails[0]["html"])
 
     def test_scotia_user_adds_thread_comment_as_scotia(self):
         payload = {
@@ -389,6 +476,7 @@ class ScotiaDecisionTests(unittest.TestCase):
         self.original_load_data = gestion_app.load_data
         self.original_save_data = gestion_app.save_data
         self.original_now_iso = gestion_app._now_iso
+        self.original_brevo_send_email = gestion_app.brevo_send_email
         self.original_notify_vae_status_change = gestion_app._notify_vae_status_change
         self.data = {
             "sessions": [
@@ -427,6 +515,7 @@ class ScotiaDecisionTests(unittest.TestCase):
         gestion_app.load_data = self.original_load_data
         gestion_app.save_data = self.original_save_data
         gestion_app._now_iso = self.original_now_iso
+        gestion_app.brevo_send_email = self.original_brevo_send_email
         gestion_app._notify_vae_status_change = self.original_notify_vae_status_change
 
     def test_livret_2_ok_marks_vae_status_as_livret_2_validated(self):
@@ -452,6 +541,7 @@ class AdminTraineeHistoryAndThreadTests(unittest.TestCase):
         self.original_load_data = gestion_app.load_data
         self.original_save_data = gestion_app.save_data
         self.original_now_iso = gestion_app._now_iso
+        self.original_brevo_send_email = gestion_app.brevo_send_email
         self.payload = {
             "sessions": [
                 {
@@ -488,6 +578,7 @@ class AdminTraineeHistoryAndThreadTests(unittest.TestCase):
         gestion_app.load_data = self.original_load_data
         gestion_app.save_data = self.original_save_data
         gestion_app._now_iso = self.original_now_iso
+        gestion_app.brevo_send_email = self.original_brevo_send_email
 
     def test_admin_history_endpoint_exposes_scotia_thread_and_unread_badge_count(self):
         response = self.client.get("/api/sessions/S1/stagiaires/T1/history")
