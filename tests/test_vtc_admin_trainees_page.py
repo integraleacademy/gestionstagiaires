@@ -168,6 +168,17 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         gestion_app.load_data = self.original_load_data
         gestion_app.save_data = self.original_save_data
 
+
+    def test_vae_admin_trainees_exposes_live_card_and_modal(self):
+        response = self.client.get("/admin/sessions/S-VAE/trainees")
+        html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('id="vaeLiveCard"', html)
+        self.assertIn('LIVE', html)
+        self.assertIn('id="vaeLiveModal"', html)
+        self.assertIn('/vae-live-notifications', html)
+
     def test_vae_admin_trainees_exposes_non_recevable_status_after_livret_1_analysis(self):
         response = self.client.get("/admin/sessions/S-VAE/trainees")
 
