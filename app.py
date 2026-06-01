@@ -32,7 +32,7 @@ import zipfile
 from io import BytesIO
 from docx import Document
 import xml.etree.ElementTree as ET
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin, quote
 
 
 app = Flask(__name__)
@@ -76,6 +76,7 @@ SCOTIA_COMMENT_AUTHOR_LABELS = {
     INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL: "Intégrale Academy",
     "scotiaformation@gmail.com": "Scotia",
 }
+SCOTIA_NOTIFICATION_EMAIL = os.environ.get("SCOTIA_NOTIFICATION_EMAIL", "scotiaformation@gmail.com").strip()
 SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "30"))
 ADMIN_PUSH_TITLE = os.environ.get("ADMIN_PUSH_TITLE", "Intégrale Academy")
 WEB_PUSH_VAPID_PUBLIC_KEY = os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY", "").strip()
@@ -7696,6 +7697,7 @@ def _all_scotia_items(data: Dict[str, Any], include_archived: bool = False) -> L
                 "session_id": str(s.get("id") or ""),
                 "session_name": _session_get(s, "name", ""),
                 "trainee_id": str(t.get("id") or ""),
+                "scotia_anchor": _scotia_dossier_anchor(str(s.get("id") or ""), str(t.get("id") or "")),
                 "first_name": (t.get("first_name") or "").strip(),
                 "last_name": (t.get("last_name") or "").strip(),
                 "email": (t.get("email") or "").strip(),
@@ -7929,6 +7931,68 @@ def _scotia_unread_thread_summary(t: Dict[str, Any]) -> Dict[str, Any]:
         "author_label": _scotia_comment_party_label(author_party),
         "label": f"{count} message{'s' if count > 1 else ''} {_scotia_comment_party_label(author_party)} à consulter",
     }
+
+
+def _scotia_dossier_anchor(session_id: str, trainee_id: str) -> str:
+    safe_session_id = quote(str(session_id or ""), safe="")
+    safe_trainee_id = quote(str(trainee_id or ""), safe="")
+    return f"dossier-{safe_session_id}-{safe_trainee_id}"
+
+
+def _scotia_dossier_url(session_id: str, trainee_id: str) -> str:
+    return f"{PUBLIC_BASE_URL.rstrip('/')}/scotia#{_scotia_dossier_anchor(session_id, trainee_id)}"
+
+
+def _scotia_comment_notification_name(trainee: Dict[str, Any]) -> str:
+    first_name = normalize_first_name(str(trainee.get("first_name") or "").strip())
+    last_name = normalize_last_name(str(trainee.get("last_name") or "").strip())
+    return " ".join(part for part in (last_name, first_name) if part).strip() or "ce candidat"
+
+
+def _send_scotia_thread_comment_notification(
+    session_obj: Dict[str, Any],
+    trainee: Dict[str, Any],
+    comment: str,
+    *,
+    session_id: str,
+    trainee_id: str,
+) -> bool:
+    if not SCOTIA_NOTIFICATION_EMAIL:
+        return False
+
+    candidate_name = _scotia_comment_notification_name(trainee)
+    dossier_url = _scotia_dossier_url(session_id, trainee_id)
+    escaped_comment = html.escape(comment or "").replace(chr(10), "<br>")
+    escaped_candidate = html.escape(candidate_name)
+    session_name = html.escape(str(_session_get(session_obj, "name", "") or session_obj.get("id") or "—"))
+    subject = f"Nouveau commentaire VAE – {candidate_name}"
+    html_body = mail_layout(f"""
+      <div style="background:linear-gradient(135deg,#0f172a 0%,#1d4ed8 52%,#16a34a 100%);border-radius:22px;padding:2px;margin:0 0 20px 0;box-shadow:0 18px 40px rgba(15,23,42,.18);">
+        <div style="background:#ffffff;border-radius:20px;padding:28px 24px;text-align:center;">
+          <div style="display:inline-block;background:#ecfdf5;color:#047857;border:1px solid #bbf7d0;border-radius:999px;padding:7px 13px;font-size:13px;font-weight:800;letter-spacing:.02em;margin-bottom:14px;">💬 Nouveau commentaire VAE</div>
+          <h1 style="margin:0;color:#0f172a;font-size:25px;line-height:1.22;">1 nouveau commentaire concernant le dossier VAE de<br><span style="color:#1d4ed8;">{escaped_candidate}</span>.</h1>
+          <p style="margin:12px 0 0 0;color:#64748b;font-size:14px;">Session : <strong style="color:#334155;">{session_name}</strong></p>
+        </div>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:18px;padding:20px;margin:18px 0;">
+        <p style="margin:0 0 10px 0;color:#0f172a;font-size:15px;font-weight:900;">Commentaire :</p>
+        <div style="background:#ffffff;border-left:5px solid #1d4ed8;border-radius:14px;padding:16px;color:#1e293b;font-size:15px;line-height:1.55;box-shadow:0 8px 22px rgba(15,23,42,.06);">{escaped_comment}</div>
+      </div>
+
+      <div style="text-align:center;margin:26px 0 8px 0;">
+        <a href="{dossier_url}" style="display:inline-block;background:linear-gradient(135deg,#16a34a,#1d4ed8);color:#ffffff;text-decoration:none;font-weight:900;padding:15px 24px;border-radius:999px;box-shadow:0 14px 28px rgba(29,78,216,.24);">Consultez le dossier en cliquant ici</a>
+      </div>
+      <p style="margin:14px 0 0 0;text-align:center;color:#64748b;font-size:12px;">Si le bouton ne s’ouvre pas, copiez ce lien :<br><a href="{dossier_url}" style="color:#1d4ed8;text-decoration:none;">{dossier_url}</a></p>
+    """)
+    cc_email = VAE_ADMIN_NOTIFICATION_EMAIL or "cassandre@integraleacademy.com"
+    return brevo_send_email(
+        SCOTIA_NOTIFICATION_EMAIL,
+        subject,
+        html_body,
+        cc_emails=[cc_email],
+        trainee=trainee,
+    )
 
 
 def _append_scotia_thread_comment(
@@ -8421,6 +8485,7 @@ def api_admin_scotia_thread_comment(session_id: str, trainee_id: str):
         "ok": True,
         "comment": _json_scotia_thread_comment(entry),
         "unread_summary": _scotia_unread_thread_summary(t),
+        "email_ok": email_ok,
     })
 
 
@@ -8513,6 +8578,7 @@ def api_scotia_thread_comment(session_id: str, trainee_id: str):
         "comment": {
             **_json_scotia_thread_comment(entry),
         },
+        "email_ok": email_ok,
     })
 
 
