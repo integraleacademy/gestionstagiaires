@@ -151,8 +151,10 @@ class VaeAdminDashboardTests(unittest.TestCase):
         self.assertIn("A TRAITER (Scotia)", html)
         self.assertIn("COMPLEMENT DE DOSSIER A CONSULTER (Scotia)", html)
         self.assertIn("EN ATTENTE DOCUMENTS COMPLEMENTAIRES", html)
+        self.assertIn("NON TRANSMIS", html)
         self.assertIn("scotia-admin-status--danger", html)
         self.assertIn("scotia-admin-status--warning", html)
+        self.assertIn("scotia-admin-status--muted", html)
 
 
 if __name__ == "__main__":

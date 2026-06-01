@@ -7842,8 +7842,14 @@ def _scotia_complementary_documents_need_control(item: Dict[str, Any]) -> bool:
     )
 
 
-def _scotia_admin_status_badge(item: Dict[str, Any]) -> Dict[str, str]:
+def _scotia_admin_status_badge(item: Optional[Dict[str, Any]]) -> Dict[str, str]:
     """Retourne le libellé/couleur du statut SCOTIA à afficher côté admin VAE."""
+    if item is None:
+        return {
+            "label": "NON TRANSMIS",
+            "tone": "muted",
+        }
+
     scotia_status = (item.get("scotia_status") or "").strip()
     if scotia_status == "complement_requested":
         if _scotia_complementary_documents_need_control(item):
@@ -11920,7 +11926,7 @@ def admin_trainees(session_id: str):
         }
         for t in trainees:
             key = (str(session_view["id"] or ""), str(t.get("id") or ""))
-            t["scotia_admin_status"] = _scotia_admin_status_badge(scotia_items_by_trainee.get(key) or {})
+            t["scotia_admin_status"] = _scotia_admin_status_badge(scotia_items_by_trainee.get(key))
 
     # persist normalized trainees back into storage
     s["trainees"] = trainees
