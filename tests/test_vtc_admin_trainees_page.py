@@ -178,6 +178,8 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn('LIVE', html)
         self.assertIn('id="vaeLiveModal"', html)
         self.assertIn('/vae-live-notifications', html)
+        self.assertIn('vaeLiveCard.disabled = total === 0', html)
+        self.assertIn('class="vae-live-content"', html)
 
     def test_vae_admin_trainees_exposes_non_recevable_status_after_livret_1_analysis(self):
         response = self.client.get("/admin/sessions/S-VAE/trainees")
