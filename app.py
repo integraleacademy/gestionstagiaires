@@ -11700,6 +11700,8 @@ def admin_trainees(session_id: str):
         ln = normalize_last_name(t.get("last_name") or "")
         fn = normalize_first_name(t.get("first_name") or "")
         email = (t.get("email") or "").strip().lower()
+        unread_summary = _scotia_unread_thread_summary(t)
+        t["scotia_unread_thread_count"] = int(unread_summary.get("count") or 0) if unread_summary else 0
 
         if ln:
             t["last_name"] = ln
