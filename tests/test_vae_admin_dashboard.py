@@ -61,6 +61,16 @@ class VaeAdminDashboardTests(unittest.TestCase):
                             "last_name": "DELTA",
                             "first_name": "Diane",
                             "vae_status": "financement_l2_validated",
+                            "vae_jury_date": "2026-06-20",
+                            "public_has_logged_in": True,
+                            "created_at": old_created_at,
+                            "documents": [],
+                        },
+                        {
+                            "id": "T-L2-VALIDATED",
+                            "last_name": "HOTEL",
+                            "first_name": "Hugo",
+                            "vae_status": "livret_2_validated",
                             "public_has_logged_in": True,
                             "created_at": old_created_at,
                             "documents": [],
@@ -126,7 +136,7 @@ class VaeAdminDashboardTests(unittest.TestCase):
         self.assertIn('data-vae-dashboard-filter="new_vae_request_72h"', html)
         self.assertIn('data-vae-dashboard-count="new_vae_request_72h"', html)
         self.assertIn('data-vae-dashboard-filter="status:livret_2_validated"', html)
-        self.assertIn('data-vae-dashboard-count="status:livret_2_validated">1</strong>', html)
+        self.assertIn('data-vae-dashboard-count="status:livret_2_validated">2</strong>', html)
         self.assertNotIn('data-vae-dashboard-count="l2_validated"', html)
         self.assertIn("72 dernières heures", html)
         self.assertNotIn("48 dernières heures", html)
@@ -148,6 +158,13 @@ class VaeAdminDashboardTests(unittest.TestCase):
         self.assertIn("grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));", html)
         self.assertIn("overflow:visible;", html)
         self.assertIn("STATUT SCOTIA", html)
+        self.assertIn("Statut examen", html)
+        self.assertIn("Date examen en attente", html)
+        self.assertIn("Date d’examen planifié", html)
+        self.assertIn('title="Date d’examen planifié : 20/06/2026"', html)
+        self.assertIn(".col-vae-exam-status{", html)
+        self.assertIn('body.vae-l2-validated-card-active .col-vae-exam-status', html)
+        self.assertIn('document.body.classList.toggle("vae-l2-validated-card-active", activeVaeDashboardFilter === "status:livret_2_validated");', html)
         self.assertIn("A TRAITER (Scotia)", html)
         self.assertIn("COMPLEMENT DE DOSSIER A CONSULTER (Scotia)", html)
         self.assertIn("EN ATTENTE DOCUMENTS COMPLEMENTAIRES", html)
