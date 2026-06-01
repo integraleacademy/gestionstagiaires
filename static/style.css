@@ -1492,6 +1492,10 @@ input[type="file"]{
   background:#facc15;
   color:#422006;
 }
+.scotia-admin-status--orange{
+  background:#f97316;
+  color:#fff;
+}
 .scotia-admin-status--muted{
   background:#e5e7eb;
   color:#475569;
