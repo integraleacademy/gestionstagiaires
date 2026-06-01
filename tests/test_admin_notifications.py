@@ -438,3 +438,67 @@ class ScotiaLivret2DecisionNotificationTests(unittest.TestCase):
         self.assertIn("Alice DURAND", notification["label"])
         self.assertEqual(notification["meta"]["kind"], "scotia_livret_2_decision")
         self.assertEqual(notification["meta"]["decision"], "livret_2_ok")
+
+
+class VaeLiveNotificationTests(unittest.TestCase):
+    def setUp(self):
+        self.client = gestion_app.app.test_client()
+        self.client.testing = True
+        self.data = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "name": "Session VAE",
+                    "training_type": "DIRIGEANT VAE",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "first_name": "Alice",
+                            "last_name": "Durand",
+                            "vae_status": "livret_1_todo",
+                            "vae_status_label": "Livret 1 à compléter",
+                            "vae_action_dates": {},
+                        }
+                    ],
+                    "vae_live_notifications": [],
+                }
+            ],
+            "notifications_admin": [],
+        }
+        self.original_load = gestion_app.load_data
+        self.original_save = gestion_app.save_data
+        gestion_app.load_data = lambda: self.data
+        gestion_app.save_data = lambda data: None
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+    def tearDown(self):
+        gestion_app.load_data = self.original_load
+        gestion_app.save_data = self.original_save
+
+    def test_admin_vae_status_change_adds_live_notification_and_can_mark_seen_delete(self):
+        response = self.client.post(
+            "/api/sessions/S1/stagiaires/T1/update",
+            json={"vae_status": "livret_1_validated", "send_vae_notification": False},
+        )
+        self.assertEqual(response.status_code, 200)
+        live_items = self.data["sessions"][0]["vae_live_notifications"]
+        self.assertEqual(len(live_items), 1)
+        self.assertEqual(live_items[0]["label"], "Livret 1 validé")
+        self.assertEqual(live_items[0]["actor"], "integrale")
+
+        listing = self.client.get("/api/sessions/S1/vae-live-notifications").get_json()
+        self.assertTrue(listing["ok"])
+        self.assertEqual(listing["unseen_total"], 1)
+
+        notif_id = live_items[0]["id"]
+        seen = self.client.post(f"/api/sessions/S1/vae-live-notifications/{notif_id}/seen").get_json()
+        self.assertTrue(seen["ok"])
+        self.assertEqual(seen["unseen_total"], 0)
+        self.assertTrue(self.data["sessions"][0]["vae_live_notifications"][0]["seen"])
+
+        deleted = self.client.delete(f"/api/sessions/S1/vae-live-notifications/{notif_id}").get_json()
+        self.assertTrue(deleted["ok"])
+        self.assertEqual(deleted["total"], 0)
+        self.assertEqual(self.data["sessions"][0]["vae_live_notifications"], [])
