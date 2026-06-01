@@ -4691,6 +4691,50 @@ def add_admin_notification(data: Dict[str, Any], label: str, meta: Optional[dict
     return entry
 
 
+def _vae_live_notifications(session_obj: Dict[str, Any]) -> List[Dict[str, Any]]:
+    notifications = session_obj.get("vae_live_notifications")
+    if not isinstance(notifications, list):
+        notifications = []
+        session_obj["vae_live_notifications"] = notifications
+    return notifications
+
+
+def _add_vae_live_notification(session_obj: Dict[str, Any], trainee: Dict[str, Any], label: str, actor: str = "integrale", details: str = "", kind: str = "vae_action") -> Dict[str, Any]:
+    notifications = _vae_live_notifications(session_obj)
+    entry = {
+        "id": _notification_id("LIVE"),
+        "label": (label or "Action VAE").strip(),
+        "details": (details or "").strip(),
+        "actor": (actor or "integrale").strip(),
+        "kind": (kind or "vae_action").strip(),
+        "created_at": _now_iso(),
+        "created_label": _now_paris_label(),
+        "seen": False,
+        "seen_at": "",
+        "trainee_id": str(trainee.get("id") or ""),
+        "first_name": trainee.get("first_name") or "",
+        "last_name": trainee.get("last_name") or "",
+    }
+    notifications.insert(0, entry)
+    session_obj["vae_live_notifications"] = notifications[:500]
+    return entry
+
+
+def _vae_live_notifications_payload(session_obj: Dict[str, Any]) -> Dict[str, Any]:
+    notifications = _vae_live_notifications(session_obj)
+    items = []
+    for item in notifications:
+        cloned = dict(item)
+        cloned["created_fr"] = item.get("created_label") or history_datetime(item.get("created_at") or "")
+        cloned["trainee_name"] = _format_trainee_name(item.get("first_name", ""), item.get("last_name", ""))
+        items.append(cloned)
+    return {
+        "notifications": items,
+        "unseen_total": sum(1 for item in notifications if not item.get("seen")),
+        "total": len(notifications),
+    }
+
+
 def _add_vtc_practice_convocation_notification(data: Dict[str, Any], session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> dict:
     first_name = trainee.get("first_name") or ""
     last_name = trainee.get("last_name") or ""
@@ -8136,6 +8180,14 @@ def api_scotia_decision(session_id: str, trainee_id: str):
                 "decision": decision,
             },
         )
+        _add_vae_live_notification(
+            s,
+            t,
+            decision_history_labels.get(decision, 'Décision SCOTIA'),
+            actor="scotia",
+            details=(payload.get('comment') or '').strip(),
+            kind=f"scotia_{decision}",
+        )
     elif decision in complement_review_decisions:
         current_status = (t.get('scotia_status') or '').strip()
         complementary_documents = _ensure_complementary_documents_entry(t)
@@ -8149,6 +8201,19 @@ def api_scotia_decision(session_id: str, trainee_id: str):
             t['vae_action_dates'] = {}
         t['vae_action_dates']['complementary_documents_reviewed_at'] = now_paris_label
         append_trainee_history_event(t, 'Analyse des documents complémentaires par SCOTIA', decision, 'action', now_iso)
+        complement_labels = {
+            'complement_documents_conform': 'Documents complémentaires conformes',
+            'complement_documents_non_conform': 'Documents complémentaires non conformes',
+            'complement_documents_new_expected': 'Nouvelle demande de documents complémentaires',
+        }
+        _add_vae_live_notification(
+            s,
+            t,
+            complement_labels.get(decision, 'Analyse des documents complémentaires'),
+            actor="scotia",
+            details=decision,
+            kind=f"scotia_{decision}",
+        )
 
         if decision == 'complement_documents_new_expected':
             t['scotia_status'] = 'complement_requested'
@@ -8198,6 +8263,14 @@ def api_scotia_decision(session_id: str, trainee_id: str):
                 "decision": decision,
             },
         )
+        _add_vae_live_notification(
+            s,
+            t,
+            livret_2_decision_labels.get(decision, 'Décision Livret 2'),
+            actor="scotia",
+            details=decision,
+            kind=f"scotia_{decision}",
+        )
 
     t['updated_at'] = now_iso
 
@@ -8228,6 +8301,59 @@ def api_scotia_comment(session_id: str, trainee_id: str):
     s.pop('stagiaires', None)
     save_data(data)
     return jsonify({"ok": True, "comment": comment})
+
+
+@app.get("/api/sessions/<session_id>/vae-live-notifications")
+@admin_login_required
+def api_vae_live_notifications(session_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+    payload = _vae_live_notifications_payload(s)
+    payload["ok"] = True
+    return jsonify(payload)
+
+
+@app.post("/api/sessions/<session_id>/vae-live-notifications/<notification_id>/seen")
+@admin_login_required
+@admin_write_required
+def api_vae_live_notification_seen(session_id: str, notification_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+    notifications = _vae_live_notifications(s)
+    entry = next((item for item in notifications if str(item.get("id") or "") == str(notification_id)), None)
+    if not entry:
+        return jsonify({"ok": False, "error": "notification_not_found"}), 404
+    entry["seen"] = True
+    entry["seen_at"] = entry.get("seen_at") or _now_iso()
+    save_data(data)
+    payload = _vae_live_notifications_payload(s)
+    payload["ok"] = True
+    payload["notification"] = dict(entry)
+    return jsonify(payload)
+
+
+@app.delete("/api/sessions/<session_id>/vae-live-notifications/<notification_id>")
+@admin_login_required
+@admin_write_required
+def api_vae_live_notification_delete(session_id: str, notification_id: str):
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+    before = len(_vae_live_notifications(s))
+    s["vae_live_notifications"] = [
+        item for item in _vae_live_notifications(s)
+        if str(item.get("id") or "") != str(notification_id)
+    ]
+    save_data(data)
+    payload = _vae_live_notifications_payload(s)
+    payload["ok"] = True
+    payload["deleted"] = len(s.get("vae_live_notifications") or []) != before
+    return jsonify(payload)
 
 
 @app.get("/api/sessions/<session_id>/stagiaires/<trainee_id>/history")
@@ -12841,8 +12967,20 @@ def api_update_trainee(session_id: str, trainee_id: str):
 
     _sync_vae_status_with_actions(t)
     current_vae_status = vae_status_view(t.get("vae_status"))["key"]
-    if vae_fields_changed and current_vae_status != previous_vae_status and send_vae_notification:
-        _notify_vae_status_change(t, current_vae_status)
+    if vae_fields_changed and current_vae_status != previous_vae_status:
+        if send_vae_notification:
+            _notify_vae_status_change(t, current_vae_status)
+        if (_session_get(s, "training_type", "") or "").strip().upper() == "DIRIGEANT VAE":
+            current_view = vae_status_view(current_vae_status)
+            previous_view = vae_status_view(previous_vae_status)
+            _add_vae_live_notification(
+                s,
+                t,
+                current_view["label"],
+                actor="integrale",
+                details=f"Ancien statut : {previous_view['label']}",
+                kind=f"integrale_{current_vae_status}",
+            )
 
     if (payload.get("financement_status") or "").strip() == "validated":
         t["financement_rejected_note"] = ""
@@ -12942,6 +13080,14 @@ def api_update_trainee(session_id: str, trainee_id: str):
     livret_1_transmitted_before = bool(previous_vae_action_dates.get("livret_1_transmitted_scotia"))
     if livret_1_transmitted_now and not livret_1_transmitted_before:
         append_trainee_history_event(t, "Dossier transmis à SCOTIA", "Livret 1", "action")
+        _add_vae_live_notification(
+            s,
+            t,
+            "Dossier transmis à SCOTIA",
+            actor="integrale",
+            details="Livret 1",
+            kind="integrale_livret_1_transmitted_scotia",
+        )
         first_name = (t.get("first_name") or "").strip()
         last_name = (t.get("last_name") or "").strip()
         trainee_display_name = _format_trainee_name(first_name, last_name)

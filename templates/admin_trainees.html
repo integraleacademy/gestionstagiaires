@@ -196,6 +196,15 @@
   </div>
 
   <div class="vae-dashboard-grid">
+    <button type="button" class="vae-dashboard-card vae-live-card" id="vaeLiveCard" aria-haspopup="dialog">
+      <span class="vae-live-ribbon">LIVE <span class="vae-live-waves" aria-hidden="true">◉</span></span>
+      <span class="vae-card-content">
+        <span class="vae-card-label">Notifications VAE</span>
+        <strong class="vae-card-count" id="vaeLiveUnseenCount">0</strong>
+        <span class="vae-card-hint">Actions Intégrale & SCOTIA</span>
+      </span>
+    </button>
+
     <button type="button" class="vae-dashboard-card card-no-login" data-vae-dashboard-filter="no_login" aria-pressed="false">
       <span class="vae-card-icon">📡</span>
       <span class="vae-card-content">
@@ -654,6 +663,24 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
     </tbody>
   </table>
 </div>
+
+
+{% if show_vae %}
+<div class="modal-backdrop" id="vaeLiveModal" aria-hidden="true">
+  <div class="modal vae-live-modal" role="dialog" aria-modal="true" aria-labelledby="vaeLiveModalTitle">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="vaeLiveModalTitle">LIVE VAE</div>
+        <div class="hint">Toutes les actions VAE effectuées par Intégrale ou SCOTIA.</div>
+      </div>
+      <button class="icon-btn" data-close-modal="vaeLiveModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="vae-live-list" id="vaeLiveList">Chargement...</div>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <div class="modal-backdrop" id="traineeHistoryModal" aria-hidden="true">
   <div class="modal trainee-history-modal">
@@ -1517,6 +1544,65 @@ tr.row-todo td{
 .col-history,.col-thread{ text-align:center; min-width:95px; }
 body.vae-analysis-filter-active #traineesTable .col-comment{ display:none; }
 
+.vae-live-card{
+  position:relative;
+  color:#fff;
+  border-color:#b91c1c;
+  background:linear-gradient(135deg,#ef4444 0%,#dc2626 54%,#991b1b 100%);
+  box-shadow:0 18px 38px rgba(220,38,38,.28);
+}
+.vae-live-card .vae-card-label,.vae-live-card .vae-card-hint,.vae-live-card .vae-card-count{ color:#fff; }
+.vae-live-card::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(120deg,transparent 0%,rgba(255,255,255,.22) 45%,transparent 70%);
+  transform:translateX(-120%);
+  animation:vaeLiveShine 2.5s ease-in-out infinite;
+}
+.vae-live-ribbon{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  align-self:flex-start;
+  padding:8px 16px 8px 18px;
+  min-width:116px;
+  clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%);
+  background:#ff0000;
+  color:#fff;
+  font-size:24px;
+  font-weight:1000;
+  letter-spacing:.04em;
+  text-shadow:0 2px 8px rgba(0,0,0,.28);
+  box-shadow:0 10px 22px rgba(127,29,29,.28);
+}
+.vae-live-waves{ font-size:18px; animation:vaeLivePulse 1.1s ease-in-out infinite; }
+.vae-live-card .vae-card-content{ margin-top:8px; }
+.vae-live-card.has-alert{ animation:vaeLiveGlow 1.4s ease-in-out infinite; }
+.vae-live-modal{ max-width:920px; width:min(920px,96vw); }
+.vae-live-list{ display:flex; flex-direction:column; gap:10px; max-height:64vh; overflow:auto; }
+.vae-live-item{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:12px;
+  align-items:center;
+  border:1px solid #fecaca;
+  border-left:6px solid #ef4444;
+  border-radius:16px;
+  background:#fff7ed;
+  padding:12px;
+}
+.vae-live-item.is-seen{ border-color:#bbf7d0; border-left-color:#16a34a; background:#dcfce7; }
+.vae-live-item-title{ font-weight:1000; color:#0f172a; }
+.vae-live-item-meta{ margin-top:4px; color:#64748b; font-size:12px; font-weight:700; }
+.vae-live-item-details{ margin-top:6px; color:#334155; white-space:pre-wrap; }
+.vae-live-actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.vae-live-actions .mini-btn.danger{ border-color:#fecaca; background:#fee2e2; color:#991b1b; }
+@keyframes vaeLiveShine{ 0%,45%{transform:translateX(-120%);} 75%,100%{transform:translateX(120%);} }
+@keyframes vaeLivePulse{ 0%,100%{transform:scale(1);opacity:.9;} 50%{transform:scale(1.28);opacity:1;} }
+@keyframes vaeLiveGlow{ 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.38),0 18px 38px rgba(220,38,38,.28);} 50%{box-shadow:0 0 0 10px rgba(239,68,68,0),0 20px 42px rgba(220,38,38,.38);} }
+
 </style>
 
 
@@ -1610,6 +1696,95 @@ body.vae-analysis-filter-active #traineesTable .col-comment{ display:none; }
       </div>
     `).join("");
   }
+
+  const vaeLiveCard = document.getElementById("vaeLiveCard");
+  const vaeLiveList = document.getElementById("vaeLiveList");
+  const vaeLiveUnseenCount = document.getElementById("vaeLiveUnseenCount");
+  let vaeLiveNotifications = [];
+
+  function updateVaeLiveBadge(unseenTotal){
+    if(!vaeLiveCard || !vaeLiveUnseenCount) return;
+    const count = Number(unseenTotal || 0);
+    vaeLiveUnseenCount.textContent = count.toString();
+    vaeLiveCard.classList.toggle("has-alert", count > 0);
+  }
+
+  function renderVaeLiveItems(items){
+    if(!vaeLiveList) return;
+    if(!items?.length){
+      vaeLiveList.innerHTML = '<div class="hint">Aucune notification LIVE pour le moment.</div>';
+      return;
+    }
+    vaeLiveList.innerHTML = items.map(item => {
+      const actor = item.actor === "scotia" ? "SCOTIA" : "Intégrale";
+      const traineeName = item.trainee_name || [item.first_name, item.last_name].filter(Boolean).join(" ") || "Stagiaire";
+      const seenButton = item.seen ? '<span class="pill" style="background:#bbf7d0;color:#166534;">Vu</span>' : `<button type="button" class="mini-btn" data-vae-live-seen="${escapeHtml(item.id)}">Vu</button>`;
+      return `
+        <div class="vae-live-item ${item.seen ? "is-seen" : ""}" data-vae-live-item="${escapeHtml(item.id)}">
+          <div>
+            <div class="vae-live-item-title">${escapeHtml(item.label || "Action VAE")}</div>
+            <div class="vae-live-item-meta">${escapeHtml(item.created_fr || "")} · ${escapeHtml(actor)} · ${escapeHtml(traineeName)}</div>
+            ${item.details ? `<div class="vae-live-item-details">${escapeHtml(item.details)}</div>` : ""}
+          </div>
+          <div class="vae-live-actions">
+            ${seenButton}
+            <button type="button" class="mini-btn danger" data-vae-live-delete="${escapeHtml(item.id)}">Supprimer</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  async function refreshVaeLiveNotifications(){
+    if(!vaeLiveCard) return;
+    try{
+      const response = await fetch(`/api/sessions/${sessionId}/vae-live-notifications`);
+      const data = await response.json();
+      if(!response.ok || !data?.ok) throw new Error(data?.error || "Erreur LIVE VAE");
+      vaeLiveNotifications = data.notifications || [];
+      updateVaeLiveBadge(data.unseen_total || 0);
+      renderVaeLiveItems(vaeLiveNotifications);
+    }catch(error){
+      console.error(error);
+      if(vaeLiveList) vaeLiveList.innerHTML = `<div class="warn-line">${escapeHtml(error.message || "Erreur de chargement")}</div>`;
+    }
+  }
+
+  if(vaeLiveCard){
+    vaeLiveCard.addEventListener("click", async () => {
+      openModal("vaeLiveModal");
+      await refreshVaeLiveNotifications();
+    });
+    refreshVaeLiveNotifications();
+  }
+
+  document.addEventListener("click", async event => {
+    const seenBtn = event.target?.closest?.("[data-vae-live-seen]");
+    if(seenBtn){
+      const id = seenBtn.getAttribute("data-vae-live-seen");
+      try{
+        const response = await fetch(`/api/sessions/${sessionId}/vae-live-notifications/${id}/seen`, { method:"POST" });
+        const data = await response.json();
+        if(!response.ok || !data?.ok) throw new Error(data?.error || "Erreur Vu");
+        vaeLiveNotifications = data.notifications || [];
+        updateVaeLiveBadge(data.unseen_total || 0);
+        renderVaeLiveItems(vaeLiveNotifications);
+      }catch(error){ alert(error.message || "Erreur Vu"); }
+      return;
+    }
+    const deleteBtn = event.target?.closest?.("[data-vae-live-delete]");
+    if(deleteBtn){
+      const id = deleteBtn.getAttribute("data-vae-live-delete");
+      try{
+        const response = await fetch(`/api/sessions/${sessionId}/vae-live-notifications/${id}`, { method:"DELETE" });
+        const data = await response.json();
+        if(!response.ok || !data?.ok) throw new Error(data?.error || "Erreur suppression");
+        vaeLiveNotifications = data.notifications || [];
+        updateVaeLiveBadge(data.unseen_total || 0);
+        renderVaeLiveItems(vaeLiveNotifications);
+      }catch(error){ alert(error.message || "Erreur suppression"); }
+    }
+  });
 
   function renderThreadItems(comments, traineeSessionId, traineeId){
     if(!comments?.length) return '<div class="hint">Aucun commentaire SCOTIA pour le moment.</div>';
