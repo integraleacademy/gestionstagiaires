@@ -335,7 +335,7 @@
 
         <th>Convention</th>
         <th>Financement</th>
-        {% if show_vae %}<th>VAE</th><th class="col-scotia-status">STATUT SCOTIA</th>{% endif %}
+        {% if show_vae %}<th>VAE</th><th class="col-scotia-status">STATUT SCOTIA</th><th class="col-vae-exam-status">Statut examen</th>{% endif %}
         {% if not is_vtc and not show_vae and not is_dirigeant_session %}<th>Test Français</th>{% endif %}
         {% if not is_vtc %}<th>Dossier</th>{% endif %}
         {% if not is_vtc %}<th>Dossier complet</th>{% endif %}
@@ -362,6 +362,7 @@
 {% set vtc_exam_center = (t.vtc_exam_center or "")|trim|lower %}
 {% set vae_action_dates = t.vae_action_dates or {} %}
 {% set livret_1_transmitted_scotia = (vae_action_dates.get('livret_1_transmitted_scotia') or t.livret_1_transmitted_scotia or t.livret_1_transmitted_scotia_at or '')|trim %}
+{% set vae_exam_date = (t.vae_jury_date or vae_action_dates.get('jury_date') or '')|trim %}
 {% set scotia_status = (t.scotia_status or '')|trim %}
 <tr class="row {% if t.comment %}row-warning{% endif %} {% if vtc_exam_center == 'nice' %}row-vtc-nice{% elif vtc_exam_center == 'toulon' %}row-vtc-toulon{% endif %}"
     data-trainee-id="{{ t.id }}"
@@ -466,6 +467,13 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
     <span class="scotia-admin-status scotia-admin-status--{{ t.scotia_admin_status.tone }}">{{ t.scotia_admin_status.label }}</span>
   {% else %}
     <span class="muted">—</span>
+  {% endif %}
+</td>
+<td class="col-vae-exam-status">
+  {% if vae_exam_date %}
+    <span class="vae-exam-status vae-exam-status--planned" title="Date d’examen planifié : {{ vae_exam_date|frdate }}">Date d’examen planifié</span>
+  {% else %}
+    <span class="vae-exam-status vae-exam-status--pending">Date examen en attente</span>
   {% endif %}
 </td>
 {% endif %}
@@ -1415,6 +1423,39 @@ tr.row-todo td{
 .card-l2-analysis{ background:linear-gradient(135deg, #f59e0b, #d946ef); }
 .card-l2-validated{ background:linear-gradient(135deg, #84cc16, #059669); }
 .card-certified{ background:linear-gradient(135deg, #0f172a, #6366f1); }
+
+.col-vae-exam-status{
+  display:none;
+  min-width:190px;
+}
+
+body.vae-l2-validated-card-active .col-vae-exam-status{
+  display:table-cell;
+}
+
+.vae-exam-status{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:999px;
+  padding:7px 10px;
+  color:#fff;
+  font-size:12px;
+  font-weight:950;
+  line-height:1.15;
+  text-transform:uppercase;
+  letter-spacing:.02em;
+  box-shadow:0 8px 18px rgba(15,23,42,.14);
+  white-space:nowrap;
+}
+
+.vae-exam-status--pending{
+  background:linear-gradient(135deg,#dc2626,#ef4444);
+}
+
+.vae-exam-status--planned{
+  background:linear-gradient(135deg,#16a34a,#22c55e);
+}
 
 @media (max-width: 720px){
   .vae-admin-dashboard{ padding:14px; border-radius:24px; }
@@ -2575,6 +2616,7 @@ function applyRowFilters(){
   });
 
   document.body.classList.toggle("vae-analysis-filter-active", activeVaeDashboardFilter === "status:livret_1_analysis");
+  document.body.classList.toggle("vae-l2-validated-card-active", activeVaeDashboardFilter === "status:livret_2_validated");
   updateVaeDashboardPressedState();
 }
 
