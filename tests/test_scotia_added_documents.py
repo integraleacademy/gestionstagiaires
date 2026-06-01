@@ -118,7 +118,96 @@ class ScotiaThreadCommentsTests(unittest.TestCase):
         trainee = payload["sessions"][0]["trainees"][0]
         self.assertEqual(trainee["scotia_thread_comments"][0]["content"], "Information côté Intégrale")
         self.assertEqual(trainee["scotia_thread_comments"][0]["author_label"], "Intégrale Academy")
+        self.assertEqual(trainee["scotia_thread_comments"][0]["source"], "scotia_dashboard")
         self.assertEqual(len(saved_payloads), 1)
+
+
+    def test_integrale_comment_from_scotia_page_still_notifies_admin_table(self):
+        payload = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "name": "VAE DESP 2026",
+                    "training_type": "DIRIGEANT VAE",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "first_name": "Aboubakr-Essedik",
+                            "last_name": "ZINI",
+                            "vae_status": "livret_1_analysis",
+                            "documents": [],
+                        }
+                    ],
+                }
+            ],
+            "notifications_admin": [],
+        }
+        gestion_app.load_data = lambda: payload
+        gestion_app.save_data = lambda data: None
+        gestion_app._now_iso = lambda: "2026-06-01T07:25:00Z"
+
+        with self.client.session_transaction() as sess:
+            sess["scotia_logged_in"] = True
+            sess["scotia_username"] = "clement@integraleacademy.com"
+
+        response = self.client.post(
+            "/api/scotia/sessions/S1/stagiaires/T1/thread-comments",
+            json={"comment": "Commentaire ajouté depuis la page SCOTIA"},
+        )
+        self.assertEqual(response.status_code, 200)
+
+        with self.client.session_transaction() as sess:
+            sess.clear()
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        response = self.client.get("/admin/sessions/S1/trainees")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('data-scotia-unread-count="1"', html)
+        self.assertIn('class="thread-badge" aria-label="1 commentaire non lu">1</span>', html)
+
+    def test_admin_reply_does_not_notify_admin_table(self):
+        payload = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "name": "VAE DESP 2026",
+                    "training_type": "DIRIGEANT VAE",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "first_name": "Aboubakr-Essedik",
+                            "last_name": "ZINI",
+                            "vae_status": "livret_1_analysis",
+                            "documents": [],
+                        }
+                    ],
+                }
+            ],
+            "notifications_admin": [],
+        }
+        gestion_app.load_data = lambda: payload
+        gestion_app.save_data = lambda data: None
+        gestion_app._now_iso = lambda: "2026-06-01T07:25:00Z"
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        response = self.client.post(
+            "/api/sessions/S1/stagiaires/T1/thread-comments",
+            json={"comment": "Réponse côté admin"},
+        )
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.get("/admin/sessions/S1/trainees")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('data-scotia-unread-count="0"', html)
+        self.assertNotIn('class="thread-badge" aria-label="1 commentaire non lu">1</span>', html)
 
     def test_scotia_user_adds_thread_comment_as_scotia(self):
         payload = {

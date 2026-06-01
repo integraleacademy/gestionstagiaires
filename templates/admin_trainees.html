@@ -633,8 +633,10 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           <button type="button" class="mini-btn history-btn" data-open-history>Historique</button>
         </td>
         <td class="col-thread">
-          <button type="button" class="mini-btn thread-btn" data-open-thread>Fil actu</button>
-          {% if t.scotia_unread_thread_count %}<span class="thread-badge">{{ t.scotia_unread_thread_count }}</span>{% endif %}
+          <button type="button" class="mini-btn thread-btn" data-open-thread>
+            <span>Fil actu</span>
+            {% if t.scotia_unread_thread_count %}<span class="thread-badge" aria-label="{{ t.scotia_unread_thread_count }} commentaire{{ 's' if t.scotia_unread_thread_count|int > 1 else '' }} non lu{{ 's' if t.scotia_unread_thread_count|int > 1 else '' }}">{{ t.scotia_unread_thread_count }}</span>{% endif %}
+          </button>
         </td>
         <td class="col-comment">
           <input class="comment" data-field="comment" value="{{ t.comment }}" placeholder="Ajouter un commentaire..." {{ read_only_attr }}>
@@ -1452,19 +1454,35 @@ tr.row-todo td{
   box-shadow:0 0 0 3px rgba(37, 99, 235, .14);
 }
  
+.thread-btn{
+  position:relative;
+  overflow:visible;
+}
+
 .thread-badge{
+  position:absolute;
+  top:-11px;
+  right:-11px;
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  min-width:18px;
-  height:18px;
-  margin-top:5px;
-  padding:0 5px;
+  min-width:20px;
+  height:20px;
+  padding:0 6px;
+  border:2px solid #fff;
   border-radius:999px;
   background:#dc2626;
   color:#fff;
   font-size:12px;
-  font-weight:900;
+  font-weight:1000;
+  line-height:1;
+  box-shadow:0 8px 18px rgba(220,38,38,.35);
+  animation:threadBadgePulse 1.35s ease-in-out infinite;
+}
+
+@keyframes threadBadgePulse{
+  0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(220,38,38,.42),0 8px 18px rgba(220,38,38,.35);}
+  50%{transform:scale(1.12);box-shadow:0 0 0 8px rgba(220,38,38,0),0 10px 22px rgba(220,38,38,.42);}
 }
 .history-list,.thread-list{
   display:flex;
@@ -1604,15 +1622,21 @@ body.vae-analysis-filter-active #traineesTable .col-comment{ display:none; }
   function updateThreadBadge(tr, count){
     if(!tr) return;
     tr.setAttribute("data-scotia-unread-count", String(count || 0));
+    const button = tr.querySelector(".col-thread .thread-btn");
     const cell = tr.querySelector(".col-thread");
-    let badge = cell?.querySelector(".thread-badge");
+    let badge = button?.querySelector(".thread-badge") || cell?.querySelector(".thread-badge");
     if(count > 0){
       if(!badge){
         badge = document.createElement("span");
         badge.className = "thread-badge";
-        cell?.appendChild(badge);
       }
       badge.textContent = String(count);
+      badge.setAttribute("aria-label", `${count} commentaire${count > 1 ? "s" : ""} non lu${count > 1 ? "s" : ""}`);
+      if(button && badge.parentElement !== button){
+        button.appendChild(badge);
+      }else if(!button && cell && badge.parentElement !== cell){
+        cell.appendChild(badge);
+      }
     }else{
       badge?.remove();
     }

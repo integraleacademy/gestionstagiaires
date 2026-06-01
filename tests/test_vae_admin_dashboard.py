@@ -28,6 +28,15 @@ class VaeAdminDashboardTests(unittest.TestCase):
                             "public_has_logged_in": False,
                             "created_at": old_created_at,
                             "documents": [],
+                            "scotia_thread_comments": [
+                                {
+                                    "id": "C-SCOTIA-1",
+                                    "content": "Merci de compléter ce point",
+                                    "author_label": "Scotia",
+                                    "author_party": "scotia",
+                                    "created_at": "2026-06-01T07:25:00Z",
+                                }
+                            ],
                         },
                         {
                             "id": "T-L1-ANALYSIS",
@@ -90,6 +99,9 @@ class VaeAdminDashboardTests(unittest.TestCase):
         self.assertIn('data-public-has-logged-in="1"', html)
         self.assertIn('data-vae-new-request-72h="0"', html)
         self.assertIn('data-vae-new-request-72h="1"', html)
+        self.assertIn('data-scotia-unread-count="1"', html)
+        self.assertIn('class="thread-badge" aria-label="1 commentaire non lu">1</span>', html)
+        self.assertIn('@keyframes threadBadgePulse', html)
         self.assertIn("function getVtcStatusValues(tr)", html)
         self.assertIn('const { theoryStatus, practiceStatus } = getVtcStatusValues(tr);', html)
         self.assertIn('activeVaeDashboardFilter = filter === activeVaeDashboardFilter ? "" : filter;', html)
