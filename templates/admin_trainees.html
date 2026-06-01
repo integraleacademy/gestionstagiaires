@@ -635,7 +635,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         <td class="col-thread">
           <button type="button" class="mini-btn thread-btn" data-open-thread>
             <span>Fil actu</span>
-            {% if t.scotia_unread_thread_count %}<span class="thread-badge" aria-label="{{ t.scotia_unread_thread_count }} commentaire{{ 's' if t.scotia_unread_thread_count|int > 1 else '' }} SCOTIA non lu{{ 's' if t.scotia_unread_thread_count|int > 1 else '' }}">{{ t.scotia_unread_thread_count }}</span>{% endif %}
+            {% if t.scotia_unread_thread_count %}<span class="thread-badge" aria-label="{{ t.scotia_unread_thread_count }} commentaire{{ 's' if t.scotia_unread_thread_count|int > 1 else '' }} non lu{{ 's' if t.scotia_unread_thread_count|int > 1 else '' }}">{{ t.scotia_unread_thread_count }}</span>{% endif %}
           </button>
         </td>
         <td class="col-comment">
@@ -1631,7 +1631,7 @@ body.vae-analysis-filter-active #traineesTable .col-comment{ display:none; }
         badge.className = "thread-badge";
       }
       badge.textContent = String(count);
-      badge.setAttribute("aria-label", `${count} commentaire${count > 1 ? "s" : ""} SCOTIA non lu${count > 1 ? "s" : ""}`);
+      badge.setAttribute("aria-label", `${count} commentaire${count > 1 ? "s" : ""} non lu${count > 1 ? "s" : ""}`);
       if(button && badge.parentElement !== button){
         button.appendChild(badge);
       }else if(!button && cell && badge.parentElement !== cell){

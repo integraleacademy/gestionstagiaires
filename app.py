@@ -7611,7 +7611,10 @@ def _scotia_comment_can_mark_read(entry: Dict[str, Any]) -> bool:
     if not has_request_context():
         return False
     if session.get("admin_logged_in"):
-        return str(entry.get("author_party") or "") != "integrale"
+        return (
+            str(entry.get("author_party") or "") != "integrale"
+            or str(entry.get("source") or "") == "scotia_dashboard"
+        )
     return str(entry.get("author_party") or "") != _current_scotia_comment_party()
 
 
@@ -7686,6 +7689,9 @@ def _ensure_scotia_thread_comments_entry(t: Dict[str, Any]) -> List[Dict[str, An
             "author_party": author_party,
             "created_at": created_at,
         }
+        source = str(entry.get("source") or "").strip()
+        if source:
+            cleaned_entry["source"] = source
         read_at = str(entry.get("read_at") or "").strip()
         if read_at:
             read_by_party = str(entry.get("read_by_party") or "").strip() or ("integrale" if author_party == "scotia" else "scotia")
@@ -7715,10 +7721,14 @@ def _scotia_thread_comments_for_display(t: Dict[str, Any]) -> List[Dict[str, Any
 
 def _scotia_unread_thread_summary(t: Dict[str, Any]) -> Dict[str, Any]:
     current_party = _current_scotia_comment_party()
-    unread = [
-        entry for entry in _ensure_scotia_thread_comments_entry(t)
-        if not entry.get("read_at") and str(entry.get("author_party") or "") != current_party
-    ]
+    unread = []
+    for entry in _ensure_scotia_thread_comments_entry(t):
+        if entry.get("read_at"):
+            continue
+        author_party = str(entry.get("author_party") or "")
+        source = str(entry.get("source") or "")
+        if author_party != current_party or (current_party == "integrale" and source == "scotia_dashboard"):
+            unread.append(entry)
     if not unread:
         return {}
     author_party = str(unread[-1].get("author_party") or "scotia")
@@ -7730,7 +7740,13 @@ def _scotia_unread_thread_summary(t: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _append_scotia_thread_comment(t: Dict[str, Any], content: str, author_label: str, created_at: str) -> Dict[str, Any]:
+def _append_scotia_thread_comment(
+    t: Dict[str, Any],
+    content: str,
+    author_label: str,
+    created_at: str,
+    source: str = "",
+) -> Dict[str, Any]:
     entry = {
         "id": uuid.uuid4().hex,
         "content": (content or "").strip(),
@@ -7738,6 +7754,8 @@ def _append_scotia_thread_comment(t: Dict[str, Any], content: str, author_label:
         "author_party": _scotia_comment_party_from_label(author_label),
         "created_at": created_at,
     }
+    if source:
+        entry["source"] = source
     comments = _ensure_scotia_thread_comments_entry(t)
     comments.append(entry)
     append_trainee_history_event(
@@ -7751,7 +7769,10 @@ def _append_scotia_thread_comment(t: Dict[str, Any], content: str, author_label:
 
 
 def _mark_scotia_thread_comment_read(t: Dict[str, Any], entry: Dict[str, Any], read_at: str) -> None:
-    read_by_party = "integrale" if str(entry.get("author_party") or "") == "scotia" else "scotia"
+    if has_request_context():
+        read_by_party = _current_scotia_comment_party()
+    else:
+        read_by_party = "integrale" if str(entry.get("author_party") or "") == "scotia" else "scotia"
     entry["read_at"] = read_at
     entry["read_by_party"] = read_by_party
     entry["read_by_label"] = _scotia_comment_party_label(read_by_party)
@@ -8061,7 +8082,7 @@ def api_admin_scotia_thread_comment(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "comment_too_long"}), 400
 
     created_at = _now_iso()
-    entry = _append_scotia_thread_comment(t, content, "Intégrale Academy", created_at)
+    entry = _append_scotia_thread_comment(t, content, "Intégrale Academy", created_at, "admin")
     t["updated_at"] = created_at
 
     s["trainees"] = trainees
@@ -8143,7 +8164,7 @@ def api_scotia_thread_comment(session_id: str, trainee_id: str):
 
     created_at = _now_iso()
     author_label = _current_scotia_comment_author_label()
-    entry = _append_scotia_thread_comment(t, content, author_label, created_at)
+    entry = _append_scotia_thread_comment(t, content, author_label, created_at, "scotia_dashboard")
     t['updated_at'] = created_at
 
     s['trainees'] = trainees

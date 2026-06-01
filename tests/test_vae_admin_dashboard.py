@@ -100,7 +100,7 @@ class VaeAdminDashboardTests(unittest.TestCase):
         self.assertIn('data-vae-new-request-72h="0"', html)
         self.assertIn('data-vae-new-request-72h="1"', html)
         self.assertIn('data-scotia-unread-count="1"', html)
-        self.assertIn('class="thread-badge" aria-label="1 commentaire SCOTIA non lu">1</span>', html)
+        self.assertIn('class="thread-badge" aria-label="1 commentaire non lu">1</span>', html)
         self.assertIn('@keyframes threadBadgePulse', html)
         self.assertIn("function getVtcStatusValues(tr)", html)
         self.assertIn('const { theoryStatus, practiceStatus } = getVtcStatusValues(tr);', html)
