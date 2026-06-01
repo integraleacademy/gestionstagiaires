@@ -313,5 +313,75 @@ class ScotiaDecisionTests(unittest.TestCase):
         self.assertEqual(len(self.saved_payloads), 1)
 
 
+class AdminTraineeHistoryAndThreadTests(unittest.TestCase):
+    def setUp(self):
+        self.client = gestion_app.app.test_client()
+        self.original_load_data = gestion_app.load_data
+        self.original_save_data = gestion_app.save_data
+        self.original_now_iso = gestion_app._now_iso
+        self.payload = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "training_type": "DIRIGEANT VAE",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "first_name": "Jean",
+                            "last_name": "Dupont",
+                            "scotia_thread_comments": [
+                                {
+                                    "id": "C1",
+                                    "content": "Merci de compléter ce point",
+                                    "author_label": "Scotia",
+                                    "author_party": "scotia",
+                                    "created_at": "2026-06-01T07:25:00Z",
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+        self.saved_payloads = []
+        gestion_app.load_data = lambda: self.payload
+        gestion_app.save_data = lambda data: self.saved_payloads.append(data)
+        gestion_app._now_iso = lambda: "2026-06-01T08:25:00Z"
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+    def tearDown(self):
+        gestion_app.load_data = self.original_load_data
+        gestion_app.save_data = self.original_save_data
+        gestion_app._now_iso = self.original_now_iso
+
+    def test_admin_history_endpoint_exposes_scotia_thread_and_unread_badge_count(self):
+        response = self.client.get("/api/sessions/S1/stagiaires/T1/history")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertTrue(body["ok"])
+        self.assertEqual(body["unread_summary"]["count"], 1)
+        self.assertEqual(body["comments"][0]["content"], "Merci de compléter ce point")
+        self.assertTrue(body["comments"][0]["can_mark_read"])
+
+    def test_admin_reply_is_added_to_thread_and_activity_history(self):
+        response = self.client.post(
+            "/api/sessions/S1/stagiaires/T1/thread-comments",
+            json={"comment": "Réponse Intégrale"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertTrue(body["ok"])
+        self.assertEqual(body["comment"]["author_label"], "Intégrale Academy")
+        trainee = self.payload["sessions"][0]["trainees"][0]
+        self.assertEqual(trainee["scotia_thread_comments"][-1]["content"], "Réponse Intégrale")
+        self.assertEqual(trainee["activity_history"][0]["label"], "Commentaire laissé par Intégrale Academy")
+        self.assertEqual(len(self.saved_payloads), 1)
+
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -336,7 +336,6 @@
         <th>Convention</th>
         <th>Financement</th>
         {% if show_vae %}<th>VAE</th>{% endif %}
-        {% if show_vae %}<th>Suivi transmission</th>{% endif %}
         {% if not is_vtc and not show_vae and not is_dirigeant_session %}<th>Test Français</th>{% endif %}
         {% if not is_vtc %}<th>Dossier</th>{% endif %}
         {% if not is_vtc %}<th>Dossier complet</th>{% endif %}
@@ -350,7 +349,9 @@
         {% if is_vtc %}<th>Date formation pratique</th>{% endif %}
         {% if is_vtc %}<th>Pratique</th>{% endif %}
         {% if show_hosting %}<th>Hébergement</th>{% endif %}
-        <th>Commentaire</th>
+        <th class="col-history">Historique</th>
+        <th class="col-thread">Fil actu</th>
+        <th class="col-comment">Commentaire</th>
       </tr>
     </thead>
 
@@ -372,6 +373,7 @@
     data-vae-new-request-72h="{{ '1' if t.is_vae_new_request_72h else '0' }}"
     data-livret-1-transmitted-scotia="{{ '1' if livret_1_transmitted_scotia else '0' }}"
     data-scotia-status="{{ scotia_status }}"
+    data-scotia-unread-count="{{ t.scotia_unread_thread_count or 0 }}"
 data-vtc-theory-ok="{{ '1' if (t.vtc_theory_status_manual == 'success' or ((not t.vtc_theory_status_manual) and t.vtc_theory_result != 'non_admissible' and t.vtc_theory_exam_sent_at)) else '0' }}"
 data-vtc-exam-fees-paid="{{ '1' if t.exam_fees_paid else '0' }}"
 data-vtc-cmar-manual-ok="{{ '1' if t.vtc_cmar_manual_ok else '0' }}"
@@ -458,19 +460,6 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
     <option value="jury" {% if t.vae_status=="jury" %}selected{% endif %}>Passage devant le jury</option>
     <option value="certified" {% if t.vae_status=="certified" %}selected{% endif %}>Certification obtenue</option>
   </select>
-</td>
-{% endif %}
-
-{% if show_vae %}
-<td>
-  {% set vae_action_dates = t.vae_action_dates or {} %}
-  {% if vae_action_dates.get('livret_2_transmitted_scotia') %}
-    🟢 Livret 2 transmis
-  {% elif vae_action_dates.get('livret_1_transmitted_scotia') %}
-    🟡 Livret 1 transmis
-  {% else %}
-    🟠 Aucune transmission
-  {% endif %}
 </td>
 {% endif %}
 
@@ -640,7 +629,14 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         </td>
         {% endif %}
 
-        <td>
+        <td class="col-history">
+          <button type="button" class="mini-btn history-btn" data-open-history>Historique</button>
+        </td>
+        <td class="col-thread">
+          <button type="button" class="mini-btn thread-btn" data-open-thread>Fil actu</button>
+          {% if t.scotia_unread_thread_count %}<span class="thread-badge">{{ t.scotia_unread_thread_count }}</span>{% endif %}
+        </td>
+        <td class="col-comment">
           <input class="comment" data-field="comment" value="{{ t.comment }}" placeholder="Ajouter un commentaire..." {{ read_only_attr }}>
         </td>
 
@@ -648,6 +644,40 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
       {% endfor %}
     </tbody>
   </table>
+</div>
+
+<div class="modal-backdrop" id="traineeHistoryModal" aria-hidden="true">
+  <div class="modal trainee-history-modal">
+    <div class="modal-head">
+      <div class="modal-title">Historique complet</div>
+      <button class="icon-btn" data-close-modal="traineeHistoryModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="hint" id="traineeHistoryName"></div>
+      <div class="history-list" id="traineeHistoryList">Chargement...</div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="traineeThreadModal" aria-hidden="true">
+  <div class="modal trainee-thread-modal">
+    <div class="modal-head">
+      <div class="modal-title">Fil actu SCOTIA</div>
+      <button class="icon-btn" data-close-modal="traineeThreadModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="hint" id="traineeThreadName"></div>
+      <div class="thread-list" id="traineeThreadList">Chargement...</div>
+      <label class="thread-reply-box">
+        <div class="label">Répondre à SCOTIA</div>
+        <textarea id="traineeThreadReply" rows="4" placeholder="Écrire une réponse..."></textarea>
+      </label>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" type="button" data-close-modal="traineeThreadModal">Fermer</button>
+      <button class="btn btn-primary" type="button" id="traineeThreadSend">Envoyer</button>
+    </div>
+  </div>
 </div>
 
 <div class="prospects-notes-wrap">
@@ -1422,6 +1452,44 @@ tr.row-todo td{
   box-shadow:0 0 0 3px rgba(37, 99, 235, .14);
 }
  
+.thread-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:18px;
+  height:18px;
+  margin-top:5px;
+  padding:0 5px;
+  border-radius:999px;
+  background:#dc2626;
+  color:#fff;
+  font-size:12px;
+  font-weight:900;
+}
+.history-list,.thread-list{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  max-height:58vh;
+  overflow:auto;
+  margin-top:12px;
+}
+.history-item,.thread-item{
+  border:1px solid #e2e8f0;
+  border-radius:14px;
+  background:#fff;
+  padding:10px 12px;
+}
+.history-item strong,.thread-item strong{ color:#0f172a; }
+.history-details,.thread-content{ margin-top:4px; color:#334155; white-space:pre-wrap; }
+.thread-meta{ display:flex; align-items:center; justify-content:space-between; gap:10px; color:#64748b; font-size:12px; }
+.thread-item--scotia{ border-left:4px solid #2563eb; }
+.thread-item--integrale{ border-left:4px solid #16a34a; }
+.thread-reply-box{ display:block; margin-top:14px; }
+.thread-reply-box textarea{ width:100%; resize:vertical; }
+.col-history,.col-thread{ text-align:center; min-width:95px; }
+body.vae-analysis-filter-active #traineesTable .col-comment{ display:none; }
+
 </style>
 
 
@@ -1482,6 +1550,153 @@ tr.row-todo td{
     el.classList.remove("show");
     el.setAttribute("aria-hidden", "true");
   }
+
+  let activeThreadContext = null;
+
+  document.addEventListener("click", event => {
+    const closeBtn = event.target?.closest?.("[data-close-modal]");
+    if(closeBtn){
+      closeModal(closeBtn.getAttribute("data-close-modal"));
+    }
+  });
+
+  function escapeHtml(value){
+    return (value || "").toString().replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[char] || char));
+  }
+
+  async function fetchTraineeHistory(tr){
+    const traineeId = tr?.getAttribute("data-trainee-id");
+    const traineeSessionId = tr?.getAttribute("data-session-id") || sessionId;
+    if(!traineeId) throw new Error("Stagiaire introuvable");
+    const response = await fetch(`/api/sessions/${traineeSessionId}/stagiaires/${traineeId}/history`);
+    const data = await response.json();
+    if(!response.ok || !data?.ok) throw new Error(data?.error || "Erreur historique");
+    return { data, traineeId, traineeSessionId };
+  }
+
+  function renderHistoryItems(items){
+    if(!items?.length) return '<div class="hint">Aucun historique pour le moment.</div>';
+    return items.map(item => `
+      <div class="history-item">
+        <div><strong>${escapeHtml(item.at_display || "Date inconnue")}</strong> : ${escapeHtml(item.label || "Action")}</div>
+        ${item.details ? `<div class="history-details">${escapeHtml(item.details)}</div>` : ""}
+      </div>
+    `).join("");
+  }
+
+  function renderThreadItems(comments, traineeSessionId, traineeId){
+    if(!comments?.length) return '<div class="hint">Aucun commentaire SCOTIA pour le moment.</div>';
+    return comments.map(comment => {
+      const party = comment.author_party === "integrale" ? "integrale" : "scotia";
+      const readButton = comment.can_mark_read ? `<button type="button" class="mini-btn" data-thread-read="${escapeHtml(comment.id)}" data-session-id="${escapeHtml(traineeSessionId)}" data-trainee-id="${escapeHtml(traineeId)}">Marquer lu</button>` : "";
+      return `
+        <div class="thread-item thread-item--${party}">
+          <div class="thread-meta"><span><strong>${escapeHtml(comment.author_label || "SCOTIA")}</strong> · ${escapeHtml(comment.created_at_label || "")}</span>${readButton}</div>
+          <div class="thread-content">${escapeHtml(comment.content || "")}</div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function updateThreadBadge(tr, count){
+    if(!tr) return;
+    tr.setAttribute("data-scotia-unread-count", String(count || 0));
+    const cell = tr.querySelector(".col-thread");
+    let badge = cell?.querySelector(".thread-badge");
+    if(count > 0){
+      if(!badge){
+        badge = document.createElement("span");
+        badge.className = "thread-badge";
+        cell?.appendChild(badge);
+      }
+      badge.textContent = String(count);
+    }else{
+      badge?.remove();
+    }
+  }
+
+  async function openHistoryForRow(tr){
+    document.getElementById("traineeHistoryName").textContent = `${tr.getAttribute("data-first-name") || ""} ${tr.getAttribute("data-last-name") || ""}`.trim();
+    document.getElementById("traineeHistoryList").innerHTML = "Chargement...";
+    openModal("traineeHistoryModal");
+    try{
+      const { data } = await fetchTraineeHistory(tr);
+      document.getElementById("traineeHistoryList").innerHTML = renderHistoryItems(data.history || []);
+    }catch(error){
+      document.getElementById("traineeHistoryList").innerHTML = `<div class="hint">${escapeHtml(error.message || "Erreur de chargement")}</div>`;
+    }
+  }
+
+  async function openThreadForRow(tr){
+    document.getElementById("traineeThreadName").textContent = `${tr.getAttribute("data-first-name") || ""} ${tr.getAttribute("data-last-name") || ""}`.trim();
+    document.getElementById("traineeThreadList").innerHTML = "Chargement...";
+    document.getElementById("traineeThreadReply").value = "";
+    openModal("traineeThreadModal");
+    try{
+      const { data, traineeId, traineeSessionId } = await fetchTraineeHistory(tr);
+      activeThreadContext = { tr, traineeId, traineeSessionId };
+      document.getElementById("traineeThreadList").innerHTML = renderThreadItems(data.comments || [], traineeSessionId, traineeId);
+      updateThreadBadge(tr, Number(data.unread_summary?.count || 0));
+    }catch(error){
+      activeThreadContext = null;
+      document.getElementById("traineeThreadList").innerHTML = `<div class="hint">${escapeHtml(error.message || "Erreur de chargement")}</div>`;
+    }
+  }
+
+  document.addEventListener("click", async event => {
+    const historyBtn = event.target?.closest?.("[data-open-history]");
+    if(historyBtn){
+      await openHistoryForRow(historyBtn.closest("tr"));
+      return;
+    }
+    const threadBtn = event.target?.closest?.("[data-open-thread]");
+    if(threadBtn){
+      await openThreadForRow(threadBtn.closest("tr"));
+      return;
+    }
+    const readBtn = event.target?.closest?.("[data-thread-read]");
+    if(readBtn){
+      readBtn.disabled = true;
+      const traineeSessionId = readBtn.getAttribute("data-session-id");
+      const traineeId = readBtn.getAttribute("data-trainee-id");
+      const commentId = readBtn.getAttribute("data-thread-read");
+      const response = await fetch(`/api/sessions/${traineeSessionId}/stagiaires/${traineeId}/thread-comments/${commentId}/read`, { method:"POST" });
+      const data = await response.json();
+      if(!response.ok || !data?.ok){
+        alert(data?.error || "Erreur lecture commentaire");
+        readBtn.disabled = false;
+        return;
+      }
+      if(activeThreadContext?.tr) await openThreadForRow(activeThreadContext.tr);
+    }
+  });
+
+  document.getElementById("traineeThreadSend")?.addEventListener("click", async () => {
+    if(!activeThreadContext) return;
+    const textarea = document.getElementById("traineeThreadReply");
+    const comment = (textarea.value || "").trim();
+    if(!comment){
+      alert("Écris une réponse avant d'envoyer.");
+      return;
+    }
+    const btn = document.getElementById("traineeThreadSend");
+    btn.disabled = true;
+    try{
+      const response = await fetch(`/api/sessions/${activeThreadContext.traineeSessionId}/stagiaires/${activeThreadContext.traineeId}/thread-comments`, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ comment })
+      });
+      const data = await response.json();
+      if(!response.ok || !data?.ok) throw new Error(data?.error || "Erreur envoi commentaire");
+      textarea.value = "";
+      await openThreadForRow(activeThreadContext.tr);
+    }catch(error){
+      alert(error.message || "Erreur envoi commentaire");
+    }finally{
+      btn.disabled = false;
+    }
+  });
 
   const btnBulkTestFr = document.getElementById("btnBulkTestFr");
   btnBulkTestFr?.addEventListener("click", ()=>{
@@ -2191,9 +2406,11 @@ function updateVaeDashboardCounts(){
     const status = normalizeVaeDashboardStatus(tr.getAttribute("data-vae-status") || "livret_1_todo");
     const livret1TransmittedScotia = tr.getAttribute("data-livret-1-transmitted-scotia") === "1";
     const scotiaStatus = tr.getAttribute("data-scotia-status") || "";
-    counts[`status:${status}`] = (counts[`status:${status}`] || 0) + 1;
-    if(status === "financement_l2_validated"){
-      counts["status:livret_2_validated"] = (counts["status:livret_2_validated"] || 0) + 1;
+    if(status !== "livret_1_analysis" || livret1TransmittedScotia){
+      counts[`status:${status}`] = (counts[`status:${status}`] || 0) + 1;
+      if(status === "financement_l2_validated"){
+        counts["status:livret_2_validated"] = (counts["status:livret_2_validated"] || 0) + 1;
+      }
     }
     if(status === "livret_1_analysis" && !livret1TransmittedScotia){
       counts.l1_pending_transmission += 1;
@@ -2292,8 +2509,10 @@ function applyRowFilters(){
     const matchVae = selectedVae === "all"
       || rowVaeStatus === selectedVae
       || (selectedVae === "livret_2_validated" && isLivret2ValidatedDashboardStatus(rowVaeStatus));
+    const dashboardStatus = activeVaeDashboardFilter.startsWith("status:") ? activeVaeDashboardFilter.slice("status:".length) : "";
     const matchDashboard = !activeVaeDashboardFilter
-      || activeVaeDashboardFilter.startsWith("status:")
+      || (dashboardStatus && rowVaeStatus === dashboardStatus && (dashboardStatus !== "livret_1_analysis" || livret1TransmittedScotia))
+      || (dashboardStatus === "livret_2_validated" && isLivret2ValidatedDashboardStatus(rowVaeStatus))
       || (activeVaeDashboardFilter === "no_login" && !hasLoggedIn)
       || (activeVaeDashboardFilter === "new_vae_request_72h" && isNewVaeRequest72h)
       || (activeVaeDashboardFilter === "non_recevable" && (rowVaeStatus === "non_recevable" || scotiaStatus === "non_recevable"))
@@ -2305,6 +2524,7 @@ function applyRowFilters(){
     tr.style.display = (matchVae && matchDashboard && matchTheory && matchPractice && matchName) ? "" : "none";
   });
 
+  document.body.classList.toggle("vae-analysis-filter-active", activeVaeDashboardFilter === "status:livret_1_analysis");
   updateVaeDashboardPressedState();
 }
 

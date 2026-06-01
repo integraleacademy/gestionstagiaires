@@ -7611,7 +7611,7 @@ def _scotia_comment_can_mark_read(entry: Dict[str, Any]) -> bool:
     if not has_request_context():
         return False
     if session.get("admin_logged_in"):
-        return True
+        return str(entry.get("author_party") or "") != "integrale"
     return str(entry.get("author_party") or "") != _current_scotia_comment_party()
 
 
@@ -7729,6 +7729,56 @@ def _scotia_unread_thread_summary(t: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _append_scotia_thread_comment(t: Dict[str, Any], content: str, author_label: str, created_at: str) -> Dict[str, Any]:
+    entry = {
+        "id": uuid.uuid4().hex,
+        "content": (content or "").strip(),
+        "author_label": author_label,
+        "author_party": _scotia_comment_party_from_label(author_label),
+        "created_at": created_at,
+    }
+    comments = _ensure_scotia_thread_comments_entry(t)
+    comments.append(entry)
+    append_trainee_history_event(
+        t,
+        f"Commentaire laissé par {author_label}",
+        entry["content"],
+        "action",
+        created_at,
+    )
+    return entry
+
+
+def _mark_scotia_thread_comment_read(t: Dict[str, Any], entry: Dict[str, Any], read_at: str) -> None:
+    read_by_party = "integrale" if str(entry.get("author_party") or "") == "scotia" else "scotia"
+    entry["read_at"] = read_at
+    entry["read_by_party"] = read_by_party
+    entry["read_by_label"] = _scotia_comment_party_label(read_by_party)
+    append_trainee_history_event(
+        t,
+        "Commentaire SCOTIA marqué comme lu",
+        str(entry.get("content") or ""),
+        "action",
+        read_at,
+    )
+
+
+def _json_scotia_thread_comment(entry: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        **entry,
+        "created_at_label": _format_scotia_comment_added_at(str(entry.get("created_at") or "")),
+        "read_at_label": _format_scotia_comment_read_at(str(entry.get("read_at") or "")),
+        "can_mark_read": _scotia_comment_can_mark_read(entry),
+    }
+
+
+def _history_entry_to_admin_json(entry: Dict[str, str]) -> Dict[str, str]:
+    return {
+        **entry,
+        "line": " - ".join([x for x in (entry.get("at_display") or "", entry.get("label") or "") if x]).strip(),
+    }
+
+
 def _scotia_dashboard_category(item: Dict[str, Any]) -> str:
     """Retourne la catégorie de filtre affichée pour une ligne du tableau SCOTIA."""
     archive_category = (item.get("scotia_archive_category") or "").strip()
@@ -7832,6 +7882,19 @@ def api_scotia_decision(session_id: str, trainee_id: str):
         else:
             t['vae_action_dates'][f'{decision}_scotia_at'] = now_paris_label
 
+        decision_history_labels = {
+            'recevable': 'Livret 1 validé par SCOTIA',
+            'non_recevable': 'Livret 1 refusé par SCOTIA',
+            'complement_requested': 'Complément demandé par SCOTIA',
+        }
+        append_trainee_history_event(
+            t,
+            decision_history_labels.get(decision, 'Décision SCOTIA'),
+            (payload.get('comment') or '').strip(),
+            'action',
+            now_iso,
+        )
+
         trainee_display_name = _format_trainee_name(t.get("first_name", ""), t.get("last_name", ""))
         decision_labels = {
             'recevable': 'recevable',
@@ -7862,6 +7925,7 @@ def api_scotia_decision(session_id: str, trainee_id: str):
         if not isinstance(t.get('vae_action_dates'), dict):
             t['vae_action_dates'] = {}
         t['vae_action_dates']['complementary_documents_reviewed_at'] = now_paris_label
+        append_trainee_history_event(t, 'Analyse des documents complémentaires par SCOTIA', decision, 'action', now_iso)
 
         if decision == 'complement_documents_new_expected':
             t['scotia_status'] = 'complement_requested'
@@ -7887,6 +7951,7 @@ def api_scotia_decision(session_id: str, trainee_id: str):
         t['scotia_livret_2_processed_at_label'] = now_paris_label
         if not isinstance(t.get('vae_action_dates'), dict):
             t['vae_action_dates'] = {}
+        append_trainee_history_event(t, 'Décision Livret 2 par SCOTIA', decision, 'action', now_iso)
         if decision == 'livret_2_ok':
             view = vae_status_view('livret_2_validated')
             t['vae_status'] = view['key']
@@ -7930,13 +7995,93 @@ def api_scotia_comment(session_id: str, trainee_id: str):
     payload = request.get_json(silent=True) or {}
     comment = (payload.get('comment') or '').strip()
 
+    now_iso = _now_iso()
     t['scotia_comment'] = comment
-    t['updated_at'] = _now_iso()
+    if comment:
+        append_trainee_history_event(t, 'Commentaire laissé par SCOTIA', comment, 'action', now_iso)
+    t['updated_at'] = now_iso
 
     s['trainees'] = trainees
     s.pop('stagiaires', None)
     save_data(data)
     return jsonify({"ok": True, "comment": comment})
+
+
+@app.get("/api/sessions/<session_id>/stagiaires/<trainee_id>/history")
+@admin_login_required
+def api_admin_trainee_history(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+
+    comments = _scotia_thread_comments_for_display(t)
+    return jsonify({
+        "ok": True,
+        "history": [_history_entry_to_admin_json(entry) for entry in build_trainee_history_entries(t)],
+        "comments": comments,
+        "unread_summary": _scotia_unread_thread_summary(t),
+    })
+
+
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/thread-comments")
+@admin_login_required
+@admin_write_required
+def api_admin_scotia_thread_comment(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+
+    payload = request.get_json(silent=True) or {}
+    content = (payload.get("comment") or payload.get("content") or "").strip()
+    if not content:
+        return jsonify({"ok": False, "error": "empty_comment"}), 400
+    if len(content) > 2000:
+        return jsonify({"ok": False, "error": "comment_too_long"}), 400
+
+    created_at = _now_iso()
+    entry = _append_scotia_thread_comment(t, content, "Intégrale Academy", created_at)
+    t["updated_at"] = created_at
+
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return jsonify({
+        "ok": True,
+        "comment": _json_scotia_thread_comment(entry),
+        "unread_summary": _scotia_unread_thread_summary(t),
+    })
+
+
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/thread-comments/<comment_id>/read")
+@admin_login_required
+@admin_write_required
+def api_admin_scotia_thread_comment_read(session_id: str, trainee_id: str, comment_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+
+    comments = _ensure_scotia_thread_comments_entry(t)
+    entry = next((x for x in comments if str(x.get("id") or "") == str(comment_id)), None)
+    if not entry:
+        return jsonify({"ok": False, "error": "comment_not_found"}), 404
+    if entry.get("read_at"):
+        return jsonify({"ok": True, "comment": _json_scotia_thread_comment(entry), "unread_summary": _scotia_unread_thread_summary(t)})
+    if not _scotia_comment_can_mark_read(entry):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    read_at = _now_iso()
+    _mark_scotia_thread_comment_read(t, entry, read_at)
+    t["updated_at"] = read_at
+
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return jsonify({"ok": True, "comment": _json_scotia_thread_comment(entry), "unread_summary": _scotia_unread_thread_summary(t)})
 
 
 @app.post('/api/scotia/sessions/<session_id>/stagiaires/<trainee_id>/thread-comments')
@@ -7956,15 +8101,7 @@ def api_scotia_thread_comment(session_id: str, trainee_id: str):
 
     created_at = _now_iso()
     author_label = _current_scotia_comment_author_label()
-    entry = {
-        "id": uuid.uuid4().hex,
-        "content": content,
-        "author_label": author_label,
-        "author_party": _scotia_comment_party_from_label(author_label),
-        "created_at": created_at,
-    }
-    comments = _ensure_scotia_thread_comments_entry(t)
-    comments.append(entry)
+    entry = _append_scotia_thread_comment(t, content, author_label, created_at)
     t['updated_at'] = created_at
 
     s['trainees'] = trainees
@@ -7974,9 +8111,7 @@ def api_scotia_thread_comment(session_id: str, trainee_id: str):
     return jsonify({
         "ok": True,
         "comment": {
-            **entry,
-            "created_at_label": _format_scotia_comment_added_at(created_at),
-            "can_mark_read": _scotia_comment_can_mark_read(entry),
+            **_json_scotia_thread_comment(entry),
         },
     })
 
@@ -8007,10 +8142,7 @@ def api_scotia_thread_comment_read(session_id: str, trainee_id: str, comment_id:
         return jsonify({"ok": False, "error": "forbidden"}), 403
 
     read_at = _now_iso()
-    read_by_party = "integrale" if str(entry.get("author_party") or "") == "scotia" else "scotia"
-    entry["read_at"] = read_at
-    entry["read_by_party"] = read_by_party
-    entry["read_by_label"] = _scotia_comment_party_label(read_by_party)
+    _mark_scotia_thread_comment_read(t, entry, read_at)
     t['updated_at'] = read_at
 
     s['trainees'] = trainees
@@ -11655,14 +11787,16 @@ def admin_trainees(session_id: str):
             )
 
             status_key = vae_status_view(t.get("vae_status") or t.get("vae_status_label"))["key"]
-            count_status_key = "livret_2_validated" if status_key == "financement_l2_validated" else status_key
-            count_key = f"status:{count_status_key}"
-            vae_dashboard_counts[count_key] = vae_dashboard_counts.get(count_key, 0) + 1
-            if status_key == "livret_1_analysis" and not (
+            livret_1_transmitted = bool(
                 t["vae_action_dates"].get("livret_1_transmitted_scotia")
                 or t.get("livret_1_transmitted_scotia")
                 or t.get("livret_1_transmitted_scotia_at")
-            ):
+            )
+            count_status_key = "livret_2_validated" if status_key == "financement_l2_validated" else status_key
+            if status_key != "livret_1_analysis" or livret_1_transmitted:
+                count_key = f"status:{count_status_key}"
+                vae_dashboard_counts[count_key] = vae_dashboard_counts.get(count_key, 0) + 1
+            if status_key == "livret_1_analysis" and not livret_1_transmitted:
                 vae_dashboard_counts["l1_pending_transmission"] += 1
             if (t.get("scotia_status") or "").strip() == "non_recevable":
                 vae_dashboard_counts["non_recevable"] += 1
@@ -11670,6 +11804,8 @@ def admin_trainees(session_id: str):
                 vae_dashboard_counts["no_login"] += 1
             if t.get("is_vae_new_request_72h"):
                 vae_dashboard_counts["new_vae_request_72h"] += 1
+            unread_summary = _scotia_unread_thread_summary(t)
+            t["scotia_unread_thread_count"] = int(unread_summary.get("count") or 0) if unread_summary else 0
 
     # persist normalized trainees back into storage
     s["trainees"] = trainees
@@ -12535,6 +12671,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
     livret_1_transmitted_now = bool(current_vae_action_dates.get("livret_1_transmitted_scotia"))
     livret_1_transmitted_before = bool(previous_vae_action_dates.get("livret_1_transmitted_scotia"))
     if livret_1_transmitted_now and not livret_1_transmitted_before:
+        append_trainee_history_event(t, "Dossier transmis à SCOTIA", "Livret 1", "action")
         first_name = (t.get("first_name") or "").strip()
         last_name = (t.get("last_name") or "").strip()
         trainee_display_name = _format_trainee_name(first_name, last_name)
@@ -20595,6 +20732,7 @@ def api_vae_submit(dossier_id: str):
             t['vae_action_dates'] = {}
         if not t['vae_action_dates'].get('livret_1_received'):
             t['vae_action_dates']['livret_1_received'] = fr_date(datetime.datetime.utcnow().strftime('%Y-%m-%d'))
+        append_trainee_history_event(t, "Dossier déposé par le candidat", "Livret 1 soumis", "action", _now_iso())
         trainee_display_name = _format_trainee_name(t.get('first_name', ''), t.get('last_name', ''))
         add_admin_notification(
             data_main,
