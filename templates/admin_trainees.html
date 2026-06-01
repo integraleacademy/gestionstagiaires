@@ -295,6 +295,15 @@
       </span>
     </button>
 
+    <button type="button" class="vae-dashboard-card card-jury" data-vae-dashboard-filter="status:jury" aria-pressed="false">
+      <span class="vae-card-icon">🎓</span>
+      <span class="vae-card-content">
+        <span class="vae-card-label">Examen à venir</span>
+        <strong class="vae-card-count" data-vae-dashboard-count="status:jury">{{ vae_dashboard_counts.get('status:jury', 0) }}</strong>
+        <span class="vae-card-hint">Passage devant le jury</span>
+      </span>
+    </button>
+
     <button type="button" class="vae-dashboard-card card-certified" data-vae-dashboard-filter="status:certified" aria-pressed="false">
       <span class="vae-card-icon">🏆</span>
       <span class="vae-card-content">
@@ -1449,6 +1458,7 @@ tr.row-todo td{
 .card-l2-todo{ background:linear-gradient(135deg, #22c55e, #14b8a6); }
 .card-l2-analysis{ background:linear-gradient(135deg, #f59e0b, #d946ef); }
 .card-l2-validated{ background:linear-gradient(135deg, #84cc16, #059669); }
+.card-jury{ background:linear-gradient(135deg, #0ea5e9, #4f46e5); }
 .card-certified{ background:linear-gradient(135deg, #0f172a, #6366f1); }
 
 .col-vae-exam-status{
