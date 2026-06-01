@@ -76,6 +76,15 @@ class VaeAdminDashboardTests(unittest.TestCase):
                             "documents": [],
                         },
                         {
+                            "id": "T-JURY",
+                            "last_name": "INDIA",
+                            "first_name": "Inès",
+                            "vae_status": "jury",
+                            "public_has_logged_in": True,
+                            "created_at": old_created_at,
+                            "documents": [],
+                        },
+                        {
                             "id": "T-SCOTIA-TODO",
                             "last_name": "ECHO",
                             "first_name": "Emma",
@@ -138,6 +147,11 @@ class VaeAdminDashboardTests(unittest.TestCase):
         self.assertIn('data-vae-dashboard-count="new_vae_request_72h"', html)
         self.assertIn('data-vae-dashboard-filter="status:livret_2_validated"', html)
         self.assertIn('data-vae-dashboard-count="status:livret_2_validated">2</strong>', html)
+        self.assertIn('data-vae-dashboard-filter="status:jury"', html)
+        self.assertIn('data-vae-dashboard-count="status:jury">1</strong>', html)
+        self.assertIn("Examen à venir", html)
+        self.assertIn("Passage devant le jury", html)
+        self.assertLess(html.index('data-vae-dashboard-filter="status:jury"'), html.index('data-vae-dashboard-filter="status:certified"'))
         self.assertNotIn('data-vae-dashboard-count="l2_validated"', html)
         self.assertIn("72 dernières heures", html)
         self.assertNotIn("48 dernières heures", html)
