@@ -165,6 +165,8 @@
     .scotia-thread-author{color:#0f172a;font-weight:1000;}.scotia-thread-date{color:#475569;}.scotia-thread-content{margin:0;color:#1f2937;font-size:14px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;}
     .scotia-thread-read-btn{border:1px solid #bbf7d0;background:#dcfce7;color:#166534;border-radius:999px;padding:3px 7px;font-size:12px;font-weight:1000;cursor:pointer;line-height:1;}
     .scotia-thread-read-btn:hover{background:#bbf7d0;}
+    .scotia-thread-delete-btn{border:1px solid #fecaca;background:#fee2e2;color:#991b1b;border-radius:999px;padding:3px 7px;font-size:12px;font-weight:1000;cursor:pointer;line-height:1;}
+    .scotia-thread-delete-btn:hover{background:#fecaca;}
     .scotia-thread-read-label{display:inline-flex;align-items:center;border-radius:999px;background:#f0fdf4;color:#166534;padding:3px 8px;font-size:12px;font-weight:900;}
     .scotia-thread-form{display:flex;flex-direction:column;gap:8px;}.scotia-thread-input{width:100%;min-height:74px;resize:vertical;border:1px solid #bfdbfe;border-radius:14px;padding:10px 12px;font:inherit;line-height:1.35;background:#fff;}
     .scotia-thread-form-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}.scotia-thread-status{font-size:12px;color:#64748b;font-weight:800;min-height:16px;}
@@ -439,6 +441,9 @@
                                       {% if comment.can_mark_read %}
                                         <button class="scotia-thread-read-btn" type="button" onclick="markThreadCommentRead('{{ it.session_id }}','{{ it.trainee_id }}','{{ comment.id }}')" title="Marquer ce commentaire comme lu">✅ Marquer commentaire comme lu</button>
                                       {% endif %}
+                                      {% if comment.can_delete %}
+                                        <button class="scotia-thread-delete-btn" type="button" onclick="deleteThreadComment('{{ it.session_id }}','{{ it.trainee_id }}','{{ comment.id }}')" title="Supprimer ce commentaire">🗑️ Supprimer</button>
+                                      {% endif %}
                                       {% if comment.read_at_label %}
                                         <span class="scotia-thread-read-label">Lu par {{ comment.read_by_label }} le {{ comment.read_at_label }}</span>
                                       {% endif %}
@@ -576,6 +581,9 @@
                                     <span class="scotia-thread-date">commentaire ajouté le {{ comment.created_at_label }} (heure française)</span>
                                     {% if comment.can_mark_read %}
                                       <button class="scotia-thread-read-btn" type="button" onclick="markThreadCommentRead('{{ it.session_id }}','{{ it.trainee_id }}','{{ comment.id }}')" title="Marquer ce commentaire comme lu">✅ Marquer commentaire comme lu</button>
+                                    {% endif %}
+                                    {% if comment.can_delete %}
+                                      <button class="scotia-thread-delete-btn" type="button" onclick="deleteThreadComment('{{ it.session_id }}','{{ it.trainee_id }}','{{ comment.id }}')" title="Supprimer ce commentaire">🗑️ Supprimer</button>
                                     {% endif %}
                                     {% if comment.read_at_label %}
                                       <span class="scotia-thread-read-label">Lu par {{ comment.read_by_label }} le {{ comment.read_at_label }}</span>
@@ -769,6 +777,15 @@ function renderThreadReadControls(meta, sessionId, traineeId, comment){
     button.addEventListener('click', ()=> markThreadCommentRead(sessionId, traineeId, comment.id));
     meta.appendChild(button);
   }
+  if(comment?.can_delete && comment?.id){
+    const button = document.createElement('button');
+    button.className = 'scotia-thread-delete-btn';
+    button.type = 'button';
+    button.title = 'Supprimer ce commentaire';
+    button.textContent = '🗑️ Supprimer';
+    button.addEventListener('click', ()=> deleteThreadComment(sessionId, traineeId, comment.id));
+    meta.appendChild(button);
+  }
   if(comment?.read_at_label){
     const read = document.createElement('span');
     read.className = 'scotia-thread-read-label';
@@ -841,6 +858,27 @@ function updateThreadNotification(sessionId, traineeId, unreadSummary){
   }else{
     notification.remove();
   }
+}
+
+async function deleteThreadComment(sessionId, traineeId, commentId){
+  if(!commentId) return;
+  if(!window.confirm('Supprimer ce commentaire du fil actu ?')) return;
+  setThreadStatus(sessionId, traineeId, 'Suppression du commentaire...');
+  const res = await fetch(`/api/scotia/sessions/${sessionId}/stagiaires/${traineeId}/thread-comments/${commentId}`, { method:'DELETE' });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok || data.ok === false){
+    setThreadStatus(sessionId, traineeId, 'Erreur lors de la suppression du commentaire');
+    return;
+  }
+  const article = document.getElementById(`thread-comment-${commentId}`);
+  const list = article?.closest('.scotia-thread-list');
+  article?.remove();
+  if(list && !list.querySelector('.scotia-thread-message')){
+    const empty = document.getElementById(`thread-empty-${sessionId}-${traineeId}`);
+    if(empty) empty.style.display = '';
+  }
+  updateThreadNotification(sessionId, traineeId, data.unread_summary);
+  setThreadStatus(sessionId, traineeId, 'Commentaire supprimé');
 }
 
 async function markThreadCommentRead(sessionId, traineeId, commentId){

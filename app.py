@@ -7707,6 +7707,7 @@ def _scotia_thread_comments_for_display(t: Dict[str, Any]) -> List[Dict[str, Any
             "created_at_label": _format_scotia_comment_added_at(str(entry.get("created_at") or "")),
             "read_at_label": _format_scotia_comment_read_at(str(entry.get("read_at") or "")),
             "can_mark_read": _scotia_comment_can_mark_read(entry),
+            "can_delete": has_request_context(),
         }
         for entry in _ensure_scotia_thread_comments_entry(t)
     ]
@@ -7763,12 +7764,31 @@ def _mark_scotia_thread_comment_read(t: Dict[str, Any], entry: Dict[str, Any], r
     )
 
 
+def _remove_scotia_thread_comment(t: Dict[str, Any], comment_id: str, deleted_at: str) -> bool:
+    comments = _ensure_scotia_thread_comments_entry(t)
+    target_id = str(comment_id or "").strip()
+    for index, entry in enumerate(comments):
+        if str(entry.get("id") or "") != target_id:
+            continue
+        removed = comments.pop(index)
+        append_trainee_history_event(
+            t,
+            "Commentaire SCOTIA supprimé",
+            str(removed.get("content") or ""),
+            "action",
+            deleted_at,
+        )
+        return True
+    return False
+
+
 def _json_scotia_thread_comment(entry: Dict[str, Any]) -> Dict[str, Any]:
     return {
         **entry,
         "created_at_label": _format_scotia_comment_added_at(str(entry.get("created_at") or "")),
         "read_at_label": _format_scotia_comment_read_at(str(entry.get("read_at") or "")),
         "can_mark_read": _scotia_comment_can_mark_read(entry),
+        "can_delete": has_request_context(),
     }
 
 
@@ -8084,6 +8104,28 @@ def api_admin_scotia_thread_comment_read(session_id: str, trainee_id: str, comme
     return jsonify({"ok": True, "comment": _json_scotia_thread_comment(entry), "unread_summary": _scotia_unread_thread_summary(t)})
 
 
+
+@app.delete("/api/sessions/<session_id>/stagiaires/<trainee_id>/thread-comments/<comment_id>")
+@admin_login_required
+@admin_write_required
+def api_admin_scotia_thread_comment_delete(session_id: str, trainee_id: str, comment_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+
+    deleted_at = _now_iso()
+    if not _remove_scotia_thread_comment(t, comment_id, deleted_at):
+        return jsonify({"ok": False, "error": "comment_not_found"}), 404
+
+    t["updated_at"] = deleted_at
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+
+    return jsonify({"ok": True, "unread_summary": _scotia_unread_thread_summary(t)})
+
+
 @app.post('/api/scotia/sessions/<session_id>/stagiaires/<trainee_id>/thread-comments')
 @scotia_login_required
 def api_scotia_thread_comment(session_id: str, trainee_id: str):
@@ -8131,11 +8173,7 @@ def api_scotia_thread_comment_read(session_id: str, trainee_id: str, comment_id:
     if entry.get("read_at"):
         return jsonify({
             "ok": True,
-            "comment": {
-                **entry,
-                "read_at_label": _format_scotia_comment_read_at(str(entry.get("read_at") or "")),
-                "can_mark_read": False,
-            },
+            "comment": _json_scotia_thread_comment(entry),
             "unread_summary": _scotia_unread_thread_summary(t),
         })
     if not _scotia_comment_can_mark_read(entry):
@@ -8151,13 +8189,30 @@ def api_scotia_thread_comment_read(session_id: str, trainee_id: str, comment_id:
 
     return jsonify({
         "ok": True,
-        "comment": {
-            **entry,
-            "read_at_label": _format_scotia_comment_read_at(read_at),
-            "can_mark_read": False,
-        },
+        "comment": _json_scotia_thread_comment(entry),
         "unread_summary": _scotia_unread_thread_summary(t),
     })
+
+
+
+@app.delete('/api/scotia/sessions/<session_id>/stagiaires/<trainee_id>/thread-comments/<comment_id>')
+@scotia_login_required
+def api_scotia_thread_comment_delete(session_id: str, trainee_id: str, comment_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+
+    deleted_at = _now_iso()
+    if not _remove_scotia_thread_comment(t, comment_id, deleted_at):
+        return jsonify({"ok": False, "error": "comment_not_found"}), 404
+
+    t['updated_at'] = deleted_at
+    s['trainees'] = trainees
+    s.pop('stagiaires', None)
+    save_data(data)
+
+    return jsonify({"ok": True, "unread_summary": _scotia_unread_thread_summary(t)})
 
 
 @app.post('/scotia/sessions/<session_id>/stagiaires/<trainee_id>/delete')
