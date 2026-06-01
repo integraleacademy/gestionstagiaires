@@ -4278,6 +4278,153 @@ def append_trainee_history_event(trainee: Dict[str, Any], label: str, details: s
     trainee["activity_history"] = history[:1000]
 
 
+
+VAE_IMPORTANT_HISTORY_STATUS_LABELS = {
+    "livret_1_todo": "Livret 1 en attente de transmission",
+    "livret_1_analysis": "Livret 1 en analyse (transmis à SCOTIA)",
+    "livret_1_validated": "Livret 1 validé",
+    "non_recevable": "Livret 1 non recevable",
+    "complement_requested": "En attente de documents complémentaires",
+    "complement_to_review": "Complément de dossier à consulter (SCOTIA)",
+    "livret_2_todo": "Livret 2 à compléter",
+    "livret_2_validated": "Livret 2 validé",
+    "certified": "Certification obtenue",
+}
+
+
+def _vae_history_normalized_date(value: Any) -> str:
+    """Retourne une date triable/affichable pour l'historique VAE condensé."""
+    s = str(value or "").strip()
+    if not s:
+        return ""
+    for fmt in ("%d/%m/%Y à %Hh%M", "%d/%m/%Y %Hh%M", "%d/%m/%Y"):
+        try:
+            return datetime.datetime.strptime(s, fmt).isoformat()
+        except Exception:
+            pass
+    return s
+
+
+def _vae_first_history_date(*values: Any) -> str:
+    for value in values:
+        normalized = _vae_history_normalized_date(value)
+        if normalized:
+            return normalized
+    return ""
+
+
+def _latest_activity_history_date(trainee: Dict[str, Any], label: str = "", details: str = "") -> str:
+    label_norm = _normalize_vae_status_text(label)
+    details_norm = _normalize_vae_status_text(details)
+    for item in (trainee.get("activity_history") or []):
+        if not isinstance(item, dict):
+            continue
+        item_label = _normalize_vae_status_text(item.get("label") or "")
+        item_details = _normalize_vae_status_text(item.get("details") or "")
+        label_matches = not label_norm or label_norm in item_label
+        details_matches = not details_norm or details_norm in item_details
+        if label_matches and details_matches:
+            return _vae_history_normalized_date(item.get("at") or "")
+    return ""
+
+
+def build_vae_important_history_entries(trainee: Dict[str, Any]) -> List[Dict[str, str]]:
+    """Historique VAE volontairement limité aux jalons métier utiles à l'admin."""
+    entries: List[Dict[str, str]] = []
+    seen_labels = set()
+    action_dates = trainee.get("vae_action_dates") if isinstance(trainee.get("vae_action_dates"), dict) else {}
+    status_key = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))["key"]
+    scotia_status = (trainee.get("scotia_status") or "").strip()
+    scotia_need_control = _scotia_complementary_documents_need_control(trainee)
+
+    def _add(status: str, at: str, details: str = "") -> None:
+        label = VAE_IMPORTANT_HISTORY_STATUS_LABELS.get(status, "")
+        if not label or label in seen_labels:
+            return
+        at = _vae_history_normalized_date(at)
+        if not at:
+            return
+        seen_labels.add(label)
+        entries.append({
+            "kind": "action",
+            "emoji": "📝",
+            "label": label,
+            "at": at,
+            "at_display": history_datetime(at),
+            "details": (details or "").strip(),
+        })
+
+    _add(
+        "livret_1_todo",
+        _vae_first_history_date(trainee.get("created_at"), action_dates.get("livret_1_todo_at")),
+    )
+
+    transmitted_at = _vae_first_history_date(
+        action_dates.get("livret_1_transmitted_scotia"),
+        trainee.get("livret_1_transmitted_scotia_at"),
+        _latest_activity_history_date(trainee, "Dossier transmis à SCOTIA", "Livret 1"),
+        action_dates.get("livret_1_received"),
+        action_dates.get("livret_1_analysis_at"),
+    )
+    if transmitted_at or status_key not in {"livret_1_todo"}:
+        _add("livret_1_analysis", transmitted_at or trainee.get("updated_at") or trainee.get("created_at"))
+
+    if scotia_status == "complement_requested" or status_key == "complement_requested":
+        _add(
+            "complement_requested",
+            _vae_first_history_date(action_dates.get("complement_requested_at"), trainee.get("scotia_processed_at")),
+        )
+    if scotia_need_control:
+        _add(
+            "complement_to_review",
+            _vae_first_history_date(
+                trainee.get("scotia_complementary_documents_received_at"),
+                trainee.get("updated_at"),
+                action_dates.get("complementary_documents_reviewed_at"),
+            ),
+        )
+
+    if scotia_status == "non_recevable" or status_key == "non_recevable":
+        _add(
+            "non_recevable",
+            _vae_first_history_date(action_dates.get("non_recevable_scotia_at"), trainee.get("scotia_processed_at")),
+        )
+
+    if scotia_status == "recevable" or status_key in {
+        "livret_1_validated",
+        "financement_validated",
+        "livret_2_todo",
+        "livret_2_analysis",
+        "livret_2_validated",
+        "financement_l2_validated",
+        "jury",
+        "certified",
+    }:
+        _add(
+            "livret_1_validated",
+            _vae_first_history_date(
+                action_dates.get("livret_1_validated"),
+                action_dates.get("recevable_scotia_at"),
+                trainee.get("scotia_processed_at"),
+            ),
+        )
+
+    if status_key in {"livret_2_todo", "livret_2_analysis", "livret_2_validated", "financement_l2_validated", "jury", "certified"}:
+        _add("livret_2_todo", _vae_first_history_date(action_dates.get("financement_validated"), trainee.get("updated_at")))
+
+    if status_key in {"livret_2_validated", "financement_l2_validated", "jury", "certified"} or (trainee.get("scotia_livret_2_status") or "").strip() == "livret_2_ok":
+        _add(
+            "livret_2_validated",
+            _vae_first_history_date(action_dates.get("livret_2_validated"), trainee.get("scotia_livret_2_processed_at")),
+        )
+
+    if status_key == "certified":
+        _add("certified", _vae_first_history_date(action_dates.get("diplome_obtenu"), trainee.get("updated_at")))
+
+    entries.sort(key=lambda item: _history_sort_key(item.get("at") or ""), reverse=True)
+    return entries
+
+
 def build_trainee_history_entries(trainee: Dict[str, Any]) -> List[Dict[str, str]]:
     entries: List[Dict[str, str]] = []
 
@@ -7859,7 +8006,7 @@ def _scotia_admin_status_badge(item: Optional[Dict[str, Any]]) -> Dict[str, str]
             }
         return {
             "label": "EN ATTENTE DOCUMENTS COMPLEMENTAIRES",
-            "tone": "danger",
+            "tone": "warning",
         }
     if not scotia_status:
         return {
@@ -8092,9 +8239,11 @@ def api_admin_trainee_history(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "trainee_not_found"}), 404
 
     comments = _scotia_thread_comments_for_display(t)
+    is_vae_session = (_session_get(s, "training_type", "") or "").strip().upper() == "DIRIGEANT VAE"
+    history_entries = build_vae_important_history_entries(t) if is_vae_session else build_trainee_history_entries(t)
     return jsonify({
         "ok": True,
-        "history": [_history_entry_to_admin_json(entry) for entry in build_trainee_history_entries(t)],
+        "history": [_history_entry_to_admin_json(entry) for entry in history_entries],
         "comments": comments,
         "unread_summary": _scotia_unread_thread_summary(t),
     })
