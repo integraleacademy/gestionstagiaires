@@ -86,6 +86,7 @@ class VaeAdminDashboardTests(unittest.TestCase):
                             "vae_action_dates": {"livret_1_transmitted_scotia": "01/06/2026"},
                             "scotia_status": "complement_requested",
                             "scotia_added_documents": [{"date": "01/06/2026", "files": ["token-added"]}],
+                            "complementary_documents": ["token-added"],
                             "documents": [],
                         },
                         {
@@ -154,6 +155,7 @@ class VaeAdminDashboardTests(unittest.TestCase):
         self.assertIn("NON TRANSMIS", html)
         self.assertIn("scotia-admin-status--danger", html)
         self.assertIn("scotia-admin-status--warning", html)
+        self.assertIn("scotia-admin-status--orange", html)
         self.assertIn("scotia-admin-status--muted", html)
 
     def test_vae_history_is_limited_to_important_milestones(self):
@@ -197,6 +199,15 @@ class VaeAdminDashboardTests(unittest.TestCase):
 
         self.assertEqual(badge["label"], "EN ATTENTE DOCUMENTS COMPLEMENTAIRES")
         self.assertEqual(badge["tone"], "warning")
+
+    def test_received_complement_scotia_status_uses_orange_tone(self):
+        badge = gestion_app._scotia_admin_status_badge({
+            "scotia_status": "complement_requested",
+            "complementary_documents": ["token-added"],
+        })
+
+        self.assertEqual(badge["label"], "COMPLEMENT DE DOSSIER A CONSULTER (Scotia)")
+        self.assertEqual(badge["tone"], "orange")
 
 
 if __name__ == "__main__":

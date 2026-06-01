@@ -8002,7 +8002,7 @@ def _scotia_admin_status_badge(item: Optional[Dict[str, Any]]) -> Dict[str, str]
         if _scotia_complementary_documents_need_control(item):
             return {
                 "label": "COMPLEMENT DE DOSSIER A CONSULTER (Scotia)",
-                "tone": "warning",
+                "tone": "orange",
             }
         return {
             "label": "EN ATTENTE DOCUMENTS COMPLEMENTAIRES",
