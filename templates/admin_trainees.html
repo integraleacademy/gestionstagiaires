@@ -351,12 +351,12 @@
         <th class="col-email">Mail</th>
         <th class="col-phone">Téléphone</th>
 
-        <th>Convention</th>
-        <th>Financement</th>
-        {% if show_vae %}<th>VAE</th><th class="col-scotia-status">STATUT SCOTIA</th><th class="col-vae-exam-status">Statut examen</th>{% endif %}
+        <th class="col-convention">Convention</th>
+        <th class="col-financement">Financement</th>
+        {% if show_vae %}<th class="col-vae-status">VAE</th><th class="col-scotia-status">STATUT SCOTIA</th><th class="col-vae-exam-status">Statut examen</th>{% endif %}
         {% if not is_vtc and not show_vae and not is_dirigeant_session %}<th>Test Français</th>{% endif %}
-        {% if not is_vtc %}<th>Dossier</th>{% endif %}
-        {% if not is_vtc %}<th>Dossier complet</th>{% endif %}
+        {% if not is_vtc %}<th class="col-dossier-status">Dossier</th>{% endif %}
+        {% if not is_vtc %}<th class="col-dossier-complete">Dossier complet</th>{% endif %}
         {% if not is_vtc and not show_vae and not is_dirigeant_session %}<th>CNAPS</th>{% endif %}
         {% if is_vtc %}<th>Inscription CMAR</th>{% endif %}
         {% if is_vtc %}<th>E-learning</th>{% endif %}
@@ -443,7 +443,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           <input class="inline-edit" data-field="phone" type="tel" value="{{ t.phone or '' }}" placeholder="+33600000000" style="width:100%;min-width:150px;" {{ read_only_attr }}>
         </td>
 
-        <td>
+        <td class="col-convention">
           <select class="status sel status-dot" data-field="convention_status" {{ read_only_attr }}>
             {% for v in enums.convention %}
               <option value="{{ v }}" {% if t.convention_status==v %}selected{% endif %}>
@@ -453,7 +453,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           </select>
         </td>
 
-        <td>
+        <td class="col-financement">
           <select class="status sel status-dot" data-field="financement_status" {{ read_only_attr }}>
             <option value="soon" {% if t.financement_status=="soon" %}selected{% endif %}>🟠</option>
             <option value="in_review" {% if t.financement_status=="in_review" %}selected{% endif %}>🟡</option>
@@ -465,7 +465,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         </td>
 
 {% if show_vae %}
-<td style="min-width:340px;">
+<td class="col-vae-status" style="min-width:340px;">
   <select class="status sel vae-status-select" data-field="vae_status" {{ read_only_attr }} style="min-width:320px;">
     <option value="livret_1_todo" {% if t.vae_status=="livret_1_todo" or not t.vae_status %}selected{% endif %}>Livret 1 à compléter</option>
     <option value="livret_1_analysis" {% if t.vae_status=="livret_1_analysis" %}selected{% endif %}>Livret 1 en cours d'analyse</option>
@@ -510,7 +510,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 
 
         {% if not is_vtc %}
-        <td>
+        <td class="col-dossier-status">
           <div style="display:flex;align-items:center;gap:8px;">
             <select class="status sel status-dot" data-field="dossier_status" {{ read_only_attr }}>
               <option value="complete" {% if t.dossier_status=="complete" %}selected{% endif %}>🟢</option>
@@ -528,7 +528,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         {% endif %}
 
         {% if not is_vtc %}
-        <td>
+        <td class="col-dossier-complete">
           <label class="inline" style="gap:6px;">
             <input type="checkbox"
                    class="force-dossier"
@@ -1593,7 +1593,95 @@ body.vae-l2-validated-card-active .col-vae-exam-status{
 .thread-reply-box{ display:block; margin-top:14px; }
 .thread-reply-box textarea{ width:100%; resize:vertical; }
 .col-history,.col-thread{ text-align:center; min-width:95px; }
-body.vae-analysis-filter-active #traineesTable .col-comment{ display:none; }
+body.vae-analysis-filter-active #traineesTable{
+  min-width:0 !important;
+  table-layout:fixed;
+}
+body.vae-analysis-filter-active #traineesTable .col-comment{
+  display:table-cell;
+  width:clamp(150px, 20vw, 260px);
+}
+body.vae-analysis-filter-active #traineesTable .col-convention,
+body.vae-analysis-filter-active #traineesTable .col-financement,
+body.vae-analysis-filter-active #traineesTable .col-dossier-status,
+body.vae-analysis-filter-active #traineesTable .col-dossier-complete,
+body.vae-analysis-filter-active #traineesTable .col-vae-exam-status{
+  display:none;
+}
+body.vae-analysis-filter-active #traineesTable:not(.trainees-table--all-vtc) .col-last-name{
+  left:0;
+  width:clamp(92px, 14vw, 170px) !important;
+  min-width:0 !important;
+  max-width:none !important;
+}
+body.vae-analysis-filter-active #traineesTable:not(.trainees-table--all-vtc) .col-first-name{
+  left:clamp(92px, 14vw, 170px);
+  width:clamp(82px, 12vw, 130px) !important;
+  min-width:0 !important;
+  max-width:none !important;
+}
+body.vae-analysis-filter-active #traineesTable .col-vae-status{
+  width:clamp(150px, 22vw, 260px);
+}
+body.vae-analysis-filter-active #traineesTable .col-vae-status,
+body.vae-analysis-filter-active #traineesTable .col-vae-status .vae-status-select{
+  min-width:0 !important;
+}
+body.vae-analysis-filter-active #traineesTable .col-scotia-status{
+  width:clamp(100px, 14vw, 180px);
+}
+body.vae-analysis-filter-active #traineesTable .col-history,
+body.vae-analysis-filter-active #traineesTable .col-thread{
+  width:76px;
+  min-width:0;
+}
+body.vae-analysis-filter-active #traineesTable th,
+body.vae-analysis-filter-active #traineesTable td{
+  padding:8px 6px !important;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+body.vae-analysis-filter-active #traineesTable input.comment{
+  width:100% !important;
+  min-width:0 !important;
+  max-width:none !important;
+  padding-left:8px;
+  padding-right:8px;
+}
+body.vae-analysis-filter-active #traineesTable .mini-btn{
+  padding:7px 8px;
+  font-size:11px;
+}
+@media (max-width: 720px){
+  body.vae-analysis-filter-active #traineesTable .col-scotia-status,
+  body.vae-analysis-filter-active #traineesTable .col-history{
+    display:none;
+  }
+  body.vae-analysis-filter-active #traineesTable .col-thread{ width:58px; }
+  body.vae-analysis-filter-active #traineesTable .col-thread .mini-btn span{ display:none; }
+  body.vae-analysis-filter-active #traineesTable .col-thread .mini-btn::before{ content:"Fil"; }
+}
+@media (max-width: 520px){
+  body.vae-analysis-filter-active #traineesTable .col-vae-status{ display:none; }
+  body.vae-analysis-filter-active #traineesTable:not(.trainees-table--all-vtc) .col-last-name{
+    width:70px !important;
+  }
+  body.vae-analysis-filter-active #traineesTable:not(.trainees-table--all-vtc) .col-first-name{
+    left:70px;
+    width:62px !important;
+  }
+  body.vae-analysis-filter-active #traineesTable .col-thread{ width:44px; }
+  body.vae-analysis-filter-active #traineesTable .col-comment{ width:auto; }
+  body.vae-analysis-filter-active #traineesTable th,
+  body.vae-analysis-filter-active #traineesTable td{
+    padding:6px 4px !important;
+    font-size:11px;
+  }
+  body.vae-analysis-filter-active #traineesTable input.comment{
+    padding:7px 6px;
+    font-size:11px;
+  }
+}
 
 .vae-live-card{
   position:relative;
