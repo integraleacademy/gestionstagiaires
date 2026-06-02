@@ -192,7 +192,7 @@
     {% set livret_2_processed_stat = it.scotia_livret_2_status in ['livret_2_ok', 'livret_2_review'] %}
     {% set complementary_documents_stat = it.complementary_documents or [] %}
     {% set added_documents_need_control_stat = (it.added_document_groups or [])|length > 0 %}
-    {% set complementary_documents_need_control_stat = livret_1_is_complement_stat and (complementary_documents_stat or added_documents_need_control_stat) and it.scotia_complementary_documents_review_status != 'complement_documents_new_expected' %}
+    {% set complementary_documents_need_control_stat = livret_1_is_complement_stat and (added_documents_need_control_stat or (complementary_documents_stat and it.scotia_complementary_documents_review_status != 'complement_documents_new_expected')) %}
     {% if it.scotia_dashboard_category is defined and it.scotia_dashboard_category %}
       {% set dashboard_category_stat = it.scotia_dashboard_category %}
     {% elif archive_category_stat %}
@@ -317,7 +317,7 @@
               {% set complementary_documents = it.complementary_documents or [] %}
               {% set added_document_groups = it.added_document_groups or [] %}
               {% set added_documents_need_control = added_document_groups|length > 0 %}
-              {% set complementary_documents_need_control = livret_1_is_complement and (complementary_documents or added_documents_need_control) and it.scotia_complementary_documents_review_status != 'complement_documents_new_expected' %}
+              {% set complementary_documents_need_control = livret_1_is_complement and (added_documents_need_control or (complementary_documents and it.scotia_complementary_documents_review_status != 'complement_documents_new_expected')) %}
               {% if it.scotia_dashboard_category is defined and it.scotia_dashboard_category %}
                 {% set scotia_category = it.scotia_dashboard_category %}
               {% elif it.scotia_archive_category %}
@@ -533,7 +533,9 @@
                                 <span class="documents-control-alert">📎 Documents à contrôler</span>
                                 <button type="button" class="btn btn-primary" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','complement_documents_conform')">Conformes</button>
                                 <button type="button" class="btn btn-danger-solid" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','complement_documents_non_conform')">Non conforme</button>
-                                <button type="button" class="btn btn-complement-animated" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','complement_documents_new_expected')">Nouveaux compléments attendus</button>
+                                {% if not added_documents_need_control %}
+                                  <button type="button" class="btn btn-complement-animated" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','complement_documents_new_expected')">Nouveaux compléments attendus</button>
+                                {% endif %}
                               </div>
                             {% elif it.scotia_complementary_documents_reviewed_at %}
                               <p class="attestation-imported-note">Dernier contrôle enregistré le {{ it.scotia_complementary_documents_reviewed_at }} (heure française).</p>
