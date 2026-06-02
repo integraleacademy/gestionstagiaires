@@ -8075,6 +8075,19 @@ def _history_entry_to_admin_json(entry: Dict[str, str]) -> Dict[str, str]:
     }
 
 
+def _scotia_has_added_documents(item: Dict[str, Any]) -> bool:
+    """Indique si des documents ont été ajoutés depuis le bloc « Autres actions »."""
+    added_document_groups = item.get("added_document_groups")
+    if not isinstance(added_document_groups, list):
+        added_document_groups = item.get("scotia_added_documents") if isinstance(item.get("scotia_added_documents"), list) else []
+    return any(
+        isinstance(group, dict)
+        and isinstance(group.get("files"), list)
+        and any(isinstance(token, str) and token.strip() for token in group.get("files") or [])
+        for group in added_document_groups
+    )
+
+
 def _scotia_complementary_documents_need_control(item: Dict[str, Any]) -> bool:
     """Indique si un dossier complémentaire SCOTIA déposé doit être consulté."""
     scotia_status = (item.get("scotia_status") or "").strip()
@@ -8083,13 +8096,7 @@ def _scotia_complementary_documents_need_control(item: Dict[str, Any]) -> bool:
 
     complementary_documents = item.get("complementary_documents")
     has_complementary_documents = bool(complementary_documents)
-    added_document_groups = item.get("added_document_groups") if isinstance(item.get("added_document_groups"), list) else []
-    has_added_documents = any(
-        isinstance(group, dict)
-        and isinstance(group.get("files"), list)
-        and any(isinstance(token, str) and token.strip() for token in group.get("files") or [])
-        for group in added_document_groups
-    )
+    has_added_documents = _scotia_has_added_documents(item)
     complement_review_status = (item.get("scotia_complementary_documents_review_status") or "").strip()
     return (
         (has_complementary_documents or has_added_documents)
@@ -8475,6 +8482,13 @@ def api_admin_scotia_thread_comment(session_id: str, trainee_id: str):
             details=content,
             kind="integrale_thread_comment",
         )
+    email_ok = _send_scotia_thread_comment_notification(
+        s,
+        t,
+        content,
+        session_id=session_id,
+        trainee_id=trainee_id,
+    )
     t["updated_at"] = created_at
 
     s["trainees"] = trainees
@@ -8567,6 +8581,13 @@ def api_scotia_thread_comment(session_id: str, trainee_id: str):
             details=content,
             kind="scotia_thread_comment",
         )
+    email_ok = _send_scotia_thread_comment_notification(
+        s,
+        t,
+        content,
+        session_id=session_id,
+        trainee_id=trainee_id,
+    )
     t['updated_at'] = created_at
 
     s['trainees'] = trainees
@@ -8773,6 +8794,8 @@ def _append_scotia_added_documents(session_id: str, trainee_id: str, t: Dict[str
         stored_count += 1
 
     t["scotia_added_documents"] = groups
+    if (t.get("scotia_status") or "").strip() == "complement_requested":
+        _mark_complementary_documents_to_control(t)
     t["updated_at"] = _now_iso()
     return stored_count
 
