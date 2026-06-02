@@ -183,7 +183,7 @@ class VaeAdminDashboardTests(unittest.TestCase):
         self.assertIn('document.body.classList.toggle("vae-l2-validated-card-active", activeVaeDashboardFilter === "status:livret_2_validated");', html)
         self.assertIn("A TRAITER (Scotia)", html)
         self.assertIn("COMPLEMENT DE DOSSIER A CONSULTER (Scotia)", html)
-        self.assertIn("EN ATTENTE DOCUMENTS COMPLEMENTAIRES", html)
+        self.assertIn("NOUVEAUX DOCUMENTS COMPLEMENTAIRES ATTENDUS", html)
         self.assertIn("NON TRANSMIS", html)
         self.assertIn("scotia-admin-status--danger", html)
         self.assertIn("scotia-admin-status--warning", html)
@@ -223,10 +223,18 @@ class VaeAdminDashboardTests(unittest.TestCase):
         self.assertNotIn("Commentaire laissé par SCOTIA", labels)
         self.assertNotIn("Relance Livret 1", labels)
 
-    def test_waiting_complement_scotia_status_uses_warning_tone(self):
+    def test_new_expected_complement_scotia_status_uses_warning_tone(self):
         badge = gestion_app._scotia_admin_status_badge({
             "scotia_status": "complement_requested",
             "scotia_complementary_documents_review_status": "complement_documents_new_expected",
+        })
+
+        self.assertEqual(badge["label"], "NOUVEAUX DOCUMENTS COMPLEMENTAIRES ATTENDUS")
+        self.assertEqual(badge["tone"], "warning")
+
+    def test_initial_complement_request_scotia_status_uses_generic_waiting_label(self):
+        badge = gestion_app._scotia_admin_status_badge({
+            "scotia_status": "complement_requested",
         })
 
         self.assertEqual(badge["label"], "EN ATTENTE DOCUMENTS COMPLEMENTAIRES")
