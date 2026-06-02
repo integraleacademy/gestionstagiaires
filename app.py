@@ -8112,12 +8112,6 @@ def _scotia_admin_status_badge(item: Optional[Dict[str, Any]]) -> Dict[str, str]
                 "label": "COMPLEMENT DE DOSSIER A CONSULTER (Scotia)",
                 "tone": "orange",
             }
-        complement_review_status = (item.get("scotia_complementary_documents_review_status") or "").strip()
-        if complement_review_status == "complement_documents_new_expected":
-            return {
-                "label": "NOUVEAUX DOCUMENTS COMPLEMENTAIRES ATTENDUS",
-                "tone": "warning",
-            }
         return {
             "label": "EN ATTENTE DOCUMENTS COMPLEMENTAIRES",
             "tone": "warning",

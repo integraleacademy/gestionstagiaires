@@ -374,8 +374,6 @@
                     {% elif it.scotia_status == 'complement_requested' %}
                       {% if complementary_documents_need_control %}
                         <span class="badge badge--warning">complément de dossier à consulter</span>
-                      {% elif it.scotia_complementary_documents_review_status == 'complement_documents_new_expected' %}
-                        <span class="badge badge--warning">Nouveaux compléments attendus</span>
                       {% else %}
                         <span class="badge badge--warning">En attente documents complémentaires</span>
                       {% endif %}
@@ -538,11 +536,7 @@
                                 <button type="button" class="btn btn-complement-animated" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','complement_documents_new_expected')">Nouveaux compléments attendus</button>
                               </div>
                             {% elif it.scotia_complementary_documents_reviewed_at %}
-                              {% if it.scotia_complementary_documents_review_status == 'complement_documents_new_expected' %}
-                                <p class="attestation-imported-note" style="font-weight:900;color:#92400e;">Dernier contrôle enregistré le {{ it.scotia_complementary_documents_reviewed_at }} (heure française) : de nouveaux compléments restent attendus.</p>
-                              {% else %}
-                                <p class="attestation-imported-note">Dernier contrôle enregistré le {{ it.scotia_complementary_documents_reviewed_at }} (heure française).</p>
-                              {% endif %}
+                              <p class="attestation-imported-note">Dernier contrôle enregistré le {{ it.scotia_complementary_documents_reviewed_at }} (heure française).</p>
                             {% endif %}
                           {% else %}<p class="attestation-imported-note">Déposez ici les documents complémentaires demandés.</p>{% endif %}
                         </div>
