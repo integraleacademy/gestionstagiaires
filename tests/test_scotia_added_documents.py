@@ -63,6 +63,30 @@ class ScotiaAddedDocumentsTests(unittest.TestCase):
 
         self.assertEqual(items[0]["scotia_dashboard_category"], "complement-docs")
 
+    def test_append_scotia_added_documents_resets_waiting_review_status(self):
+        trainee = {
+            "scotia_status": "complement_requested",
+            "scotia_complementary_documents_review_status": "complement_documents_new_expected",
+            "scotia_complementary_documents_reviewed_at": "2026-05-26T09:12:00Z",
+            "scotia_complementary_documents_reviewed_at_label": "26/05/2026 à 11h12",
+        }
+
+        stored_count = gestion_app._append_scotia_added_documents("S1", "T1", trainee, [self._file()])
+
+        self.assertEqual(stored_count, 1)
+        self.assertEqual(trainee["scotia_complementary_documents_review_status"], "")
+        self.assertEqual(trainee["scotia_complementary_documents_reviewed_at"], "")
+        self.assertEqual(trainee["scotia_complementary_documents_reviewed_at_label"], "")
+
+    def test_raw_scotia_added_documents_trigger_complement_documents_control(self):
+        trainee = {
+            "scotia_status": "complement_requested",
+            "scotia_complementary_documents_review_status": "",
+            "scotia_added_documents": [{"date": "26/05/2026", "files": ["token-added"]}],
+        }
+
+        self.assertTrue(gestion_app._scotia_complementary_documents_need_control(trainee))
+
     def test_remove_scotia_added_document_deletes_empty_group(self):
         trainee = {}
         gestion_app._append_scotia_added_documents("S1", "T1", trainee, [self._file()])
