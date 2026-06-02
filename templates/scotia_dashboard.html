@@ -533,7 +533,9 @@
                                 <span class="documents-control-alert">📎 Documents à contrôler</span>
                                 <button type="button" class="btn btn-primary" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','complement_documents_conform')">Conformes</button>
                                 <button type="button" class="btn btn-danger-solid" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','complement_documents_non_conform')">Non conforme</button>
-                                <button type="button" class="btn btn-complement-animated" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','complement_documents_new_expected')">Nouveaux compléments attendus</button>
+                                {% if not added_documents_need_control %}
+                                  <button type="button" class="btn btn-complement-animated" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','complement_documents_new_expected')">Nouveaux compléments attendus</button>
+                                {% endif %}
                               </div>
                             {% elif it.scotia_complementary_documents_reviewed_at %}
                               <p class="attestation-imported-note">Dernier contrôle enregistré le {{ it.scotia_complementary_documents_reviewed_at }} (heure française).</p>

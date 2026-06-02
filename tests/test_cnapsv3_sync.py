@@ -1570,6 +1570,21 @@ class ScotiaDashboardFilterCategoryTests(unittest.TestCase):
         self.assertIn('data-filter="complement-docs"', html)
         self.assertIn('data-category="complement-docs"', html)
 
+    def test_added_documents_hide_new_expected_button_in_control_actions(self):
+        item = self._base_item(
+            added_document_groups=[{'date': '26/05/2026', 'files': ['uploads/S1/T1/scotia_added_documents/document.pdf']}],
+        )
+        item['scotia_dashboard_category'] = gestion_app._scotia_dashboard_category(item)
+
+        with gestion_app.app.test_request_context('/scotia'):
+            html = render_template('scotia_dashboard.html', items=[item])
+
+        self.assertEqual(item['scotia_dashboard_category'], 'complement-docs')
+        self.assertIn('Documents à contrôler', html)
+        self.assertIn('Conformes', html)
+        self.assertIn('Non conforme', html)
+        self.assertNotIn('Nouveaux compléments attendus</button>', html)
+
     def test_precomputed_dashboard_category_drives_count_and_dom_category(self):
         item = self._base_item(
             scotia_dashboard_category='complements',
