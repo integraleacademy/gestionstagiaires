@@ -6124,11 +6124,16 @@ def _ensure_complementary_documents_entry(t: Dict[str, Any]) -> List[str]:
     return tokens
 
 
-def _public_complementary_documents_upload_expected(t: Dict[str, Any]) -> bool:
+def _scotia_complementary_documents_new_expected(t: Dict[str, Any]) -> bool:
     return (
         (t.get("scotia_status") or "").strip() == "complement_requested"
         and (t.get("scotia_complementary_documents_review_status") or "").strip() == "complement_documents_new_expected"
+        and not _scotia_has_added_documents(t)
     )
+
+
+def _public_complementary_documents_upload_expected(t: Dict[str, Any]) -> bool:
+    return _scotia_complementary_documents_new_expected(t)
 
 
 def _ensure_public_complementary_documents_upload_entry(t: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -8098,8 +8103,8 @@ def _scotia_complementary_documents_need_control(item: Dict[str, Any]) -> bool:
     has_complementary_documents = bool(complementary_documents)
     has_added_documents = _scotia_has_added_documents(item)
     complement_review_status = (item.get("scotia_complementary_documents_review_status") or "").strip()
-    return (
-        (has_complementary_documents or has_added_documents)
+    return has_added_documents or (
+        has_complementary_documents
         and complement_review_status != "complement_documents_new_expected"
     )
 

@@ -1212,7 +1212,8 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
     {% set st = (d.status if d and d.status else ("NON DÉPOSÉ" if not has_file else "A CONTRÔLER")) %}
     {% set up = (st|string)|upper %}
 {% set candidate_sheet_sent = d.key == "candidate_info_sheet" and up not in ["NON DÉPOSÉ", "NON DEPOSE", ""] %}
-  {% set complementary_documents_new_expected = d.key == "complementary_documents" and trainee.scotia_complementary_documents_review_status == "complement_documents_new_expected" %}
+  {% set scotia_added_documents = trainee.scotia_added_documents or [] %}
+  {% set complementary_documents_new_expected = d.key == "complementary_documents" and trainee.scotia_complementary_documents_review_status == "complement_documents_new_expected" and not scotia_added_documents %}
 {% set has_submission = has_file or candidate_sheet_sent %}
   {% set can_replace = (has_file and up == "NON CONFORME") %}
   {% set is_pending_review = (has_submission and up != "CONFORME" and up != "NON CONFORME") %}

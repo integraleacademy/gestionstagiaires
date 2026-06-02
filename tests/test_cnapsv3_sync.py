@@ -1251,6 +1251,27 @@ class ScotiaComplementDocumentsReviewTests(unittest.TestCase):
         self.assertIn('/espace/public-token/documents/complementary_documents/upload', html)
         self.assertIn('Déposer un document complémentaire', html)
 
+    def test_added_documents_hide_new_complement_expected_public_label(self):
+        payload = self._payload()
+        trainee = payload['sessions'][0]['trainees'][0]
+        trainee['scotia_complementary_documents_review_status'] = 'complement_documents_new_expected'
+        trainee['scotia_complementary_documents_reviewed_at_label'] = '16/05/2026 à 14h45'
+        trainee['scotia_added_documents'] = [{'date': '26/05/2026', 'files': ['uploads/S1/T1/scotia_added_documents/document.pdf']}]
+        gestion_app.load_data = lambda: payload
+        gestion_app.save_data = lambda data: None
+
+        with self.client.session_transaction() as sess:
+            sess['public_auth_public-token'] = True
+
+        response = self.client.get('/espace/public-token')
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertNotIn('Nouveaux compléments attendus', html)
+        self.assertNotIn('/espace/public-token/documents/complementary_documents/upload', html)
+        self.assertTrue(gestion_app._scotia_complementary_documents_need_control(trainee))
+        self.assertFalse(gestion_app._public_complementary_documents_upload_expected(trainee))
+
     def test_public_new_upload_after_new_complement_expected_moves_to_consult_bucket(self):
         payload = self._payload()
         trainee = payload['sessions'][0]['trainees'][0]
