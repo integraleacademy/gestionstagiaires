@@ -404,6 +404,9 @@
                         {% if has_prerequis_interview_sheet %}
                           <li><span>Fiche d'entretien pré-requis</span><a class="doc-open-link" href="/scotia/uploads/{{ it.prerequis_interview_sheet }}" target="_blank">ouvrir</a></li>
                         {% endif %}
+                        {% if has_livret_2 %}
+                          <li><span>Livret 2</span><span><a class="doc-open-link" href="/scotia/uploads/{{ it.deliverables.livret_2 }}" target="_blank" rel="noopener">voir</a> · <a class="doc-open-link" href="/scotia/uploads/{{ it.deliverables.livret_2 }}" download>Télécharger</a></span></li>
+                        {% endif %}
                       </ul>
 
                       {% if it.vae_dossier_id or it.candidate_sheet_available or it.vae_justificatifs %}
@@ -499,7 +502,8 @@
                               <button class="btn {% if has_livret_2 or it.scotia_status != 'recevable' %}btn-disabled-muted{% else %}btn-primary{% endif %}" type="button" onclick="triggerLivret2Upload('{{ it.session_id }}','{{ it.trainee_id }}')" {% if has_livret_2 or it.scotia_status != 'recevable' %}disabled{% endif %}>Importer Livret 2</button>
                             </form>
                             {% if has_livret_2 %}
-                              <a class="btn btn-outline" href="/scotia/uploads/{{ it.deliverables.livret_2 }}" target="_blank">Consulter Livret 2</a>
+                              <a class="btn btn-outline" href="/scotia/uploads/{{ it.deliverables.livret_2 }}" target="_blank" rel="noopener">Consulter Livret 2</a>
+                              <a class="btn btn-outline" href="/scotia/uploads/{{ it.deliverables.livret_2 }}" download>Télécharger Livret 2</a>
                               <form method="post" action="/scotia/sessions/{{ it.session_id }}/stagiaires/{{ it.trainee_id }}/livret2/reset" onsubmit="return confirm('Retirer le Livret 2 importé et remettre son statut à zéro ?');"><button class="btn btn-outline" type="submit">Retirer Livret 2</button></form>
                             {% endif %}
                             <button type="button" class="btn {% if livret_2_is_ok %}btn-primary is-active{% elif livret_2_processed or not has_livret_2 or it.scotia_status != 'recevable' %}btn-disabled-muted{% else %}btn-primary{% endif %}" onclick="setDecision('{{ it.session_id }}','{{ it.trainee_id }}','livret_2_ok')" {% if livret_2_processed or not has_livret_2 or it.scotia_status != 'recevable' %}disabled{% endif %}>Livret 2 OK</button>

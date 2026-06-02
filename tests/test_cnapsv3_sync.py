@@ -970,6 +970,9 @@ class ScotiaItemsTests(unittest.TestCase):
         self.assertIn('data-filter="l2-validated"', html)
         self.assertIn('data-filter="certified"', html)
         self.assertIn('data-filter="non-recevable"', html)
+        self.assertIn('<span>Livret 2</span>', html)
+        self.assertIn('href="/scotia/uploads/uploads/S1/T1/livret2.pdf" target="_blank" rel="noopener">voir</a>', html)
+        self.assertIn('href="/scotia/uploads/uploads/S1/T1/livret2.pdf" download>Télécharger</a>', html)
 
 
 class ScotiaComplementDocumentsReviewTests(unittest.TestCase):
