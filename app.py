@@ -95,6 +95,23 @@ def service_worker():
     response.headers["Service-Worker-Allowed"] = "/"
     return response
 
+@app.get("/espace/modeles/attestation-honneur-examen-desp.pdf")
+def public_dirigeant_initial_attestation_template():
+    template_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        "templates",
+        "static",
+        "attestation.pdf",
+    )
+    if not os.path.exists(template_path):
+        abort(404)
+    return send_file(
+        template_path,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name="attestation-honneur-examen-desp.pdf",
+    )
+
 app.config.update(
     SESSION_COOKIE_NAME="integrale_admin",
     SESSION_COOKIE_HTTPONLY=True,
@@ -5909,6 +5926,19 @@ REQUIRED_DOCS = {
             "accept": "application/pdf,image/jpeg,image/png",
         },
     ],
+    "DIRIGEANT_INITIAL_ONLY": [
+        {
+            "key": "cv",
+            "label": "CV à jour",
+            "accept": "application/pdf,image/jpeg,image/png",
+        },
+        {
+            "key": "desp_exam_sworn_statement",
+            "label": "ATTESTATION SUR L’HONNEUR DE PRISE EN COMPTE DE L’EXAMEN DESP",
+            "accept": "application/pdf,image/jpeg,image/png",
+            "template_url_endpoint": "public_dirigeant_initial_attestation_template",
+        },
+    ],
     "DIRIGEANT_VAE_ONLY": [
         {
             "key": "cv",
@@ -5984,6 +6014,8 @@ def required_docs_for_training(training_type: str, trainee: Optional[Dict[str, A
         docs += list(REQUIRED_DOCS["DIRIGEANT_DIPLOMA"])
         if bool((trainee or {}).get("no_bac_diploma")):
             docs += list(REQUIRED_DOCS["DIRIGEANT_NO_BAC_PREREQUIS"])
+    if tt == "DIRIGEANT INITIAL":
+        docs += list(REQUIRED_DOCS["DIRIGEANT_INITIAL_ONLY"])
     if tt == "DIRIGEANT VAE":
         docs += list(REQUIRED_DOCS["DIRIGEANT_VAE_ONLY"])
     if _trainee_requires_afc_medical_cert(trainee):
