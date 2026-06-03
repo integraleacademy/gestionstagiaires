@@ -1291,6 +1291,24 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
             <div class="doctag pending" style="margin-top:8px;">⏳ Document déposé — en attente de contrôle</div>
           {% endif %}
         {% endif %}
+        {% if d.key == "desp_exam_sworn_statement" %}
+          <div class="doc-format-box">
+            <div class="doc-format-title">📥 Modèle obligatoire</div>
+            <a
+              class="btn upload-cta"
+              href="{{ url_for('public_dirigeant_initial_attestation_template') }}"
+              download="attestation-honneur-examen-desp.pdf"
+              target="_blank"
+              rel="noopener"
+              style="margin:4px 0 10px;">
+              ⬇️ Télécharger le modèle PDF à compléter
+            </a>
+            <ul class="doc-format-list">
+              <li>Étape 1 : téléchargez le modèle PDF avec le bouton ci-dessus.</li>
+              <li>Étape 2 : complétez l’attestation, signez-la, puis déposez le document signé ici.</li>
+            </ul>
+          </div>
+        {% endif %}
         {% if d.key == "certificat_medical_ssiap_afc" %}
           <div class="doc-format-box">
             <div class="doc-format-title">📥 Modèle obligatoire</div>
