@@ -12,6 +12,19 @@ class RequiredDocsForDirigeantTests(unittest.TestCase):
 
         self.assertIn("highest_diploma", keys)
 
+    def test_dirigeant_initial_requires_updated_cv_and_desp_exam_sworn_statement(self):
+        docs = gestion_app.required_docs_for_training("DIRIGEANT INITIAL")
+        by_key = {doc.get("key"): doc for doc in docs}
+
+        self.assertIn("cv", by_key)
+        self.assertEqual(by_key["cv"].get("label"), "CV à jour")
+        self.assertIn("desp_exam_sworn_statement", by_key)
+
+    def test_dirigeant_vae_does_not_require_desp_exam_sworn_statement(self):
+        keys = self._doc_keys("DIRIGEANT VAE")
+
+        self.assertNotIn("desp_exam_sworn_statement", keys)
+
     def test_dirigeant_label_requires_highest_diploma(self):
         keys = self._doc_keys("DIRIGEANT")
 
