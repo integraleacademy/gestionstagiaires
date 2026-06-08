@@ -9308,6 +9308,7 @@ def admin_sessions():
         "DIRIGEANT": 0,
         "VAE": 0,
         "A3P": 0,
+        "SSIAP": 0,
     }
 
     def _parse_iso_date(raw_value: Any) -> Optional[datetime.date]:
@@ -9325,6 +9326,8 @@ def admin_sessions():
             return "APS"
         if raw.startswith("A3P"):
             return "A3P"
+        if raw.startswith("SSIAP"):
+            return "SSIAP"
         if "VTC" in raw:
             return "VTC"
         if raw.startswith("DIRIGEANT") and "VAE" in raw:
@@ -9458,6 +9461,8 @@ def admin_sessions():
             training_type_class = "aps"
         elif training_type_raw.startswith("A3P"):
             training_type_class = "a3p"
+        elif training_type_raw.startswith("SSIAP"):
+            training_type_class = "ssiap"
         elif "VTC" in training_type_raw:
             training_type_class = "vtc"
         elif training_type_raw.startswith("DIRIGEANT"):
