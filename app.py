@@ -12176,13 +12176,18 @@ def _reserve_ssiap_diploma_numbers(
 
             missing = []
             for trainee in selected_trainees:
+                missing_fields = []
                 if not (trainee.get("first_name") or "").strip() or not (trainee.get("last_name") or "").strip():
-                    missing.append(_ssiap_diploma_display_name(trainee) or str(trainee.get("id") or "Stagiaire sans nom"))
+                    missing_fields.append("nom ou prénom")
                 if not _diploma_date_fr(trainee.get("birth_date") or ""):
-                    missing.append(_ssiap_diploma_display_name(trainee) or str(trainee.get("id") or "Stagiaire sans nom"))
+                    missing_fields.append("date de naissance")
+                if not str(trainee.get("birth_city") or trainee.get("birth_place") or "").strip():
+                    missing_fields.append("lieu de naissance")
+                if missing_fields:
+                    trainee_name = _ssiap_diploma_display_name(trainee) or str(trainee.get("id") or "Stagiaire sans nom")
+                    missing.append(f"{trainee_name} ({', '.join(missing_fields)})")
             if missing:
-                names = ", ".join(dict.fromkeys(missing))
-                raise ValueError(f"Nom, prénom ou date de naissance manquant pour : {names}.")
+                raise ValueError(f"Informations manquantes pour : {'; '.join(missing)}.")
 
             diploma_number_counts: Dict[str, int] = {}
             for existing_session in data.get("sessions", []):
@@ -12209,6 +12214,7 @@ def _reserve_ssiap_diploma_numbers(
                 diploma_rows.append({
                     "name": _ssiap_diploma_display_name(trainee),
                     "birth_date": _diploma_date_fr(trainee.get("birth_date") or ""),
+                    "birth_place": str(trainee.get("birth_city") or trainee.get("birth_place") or "").strip(),
                     "exam_date": exam_date,
                     "number": diploma_number,
                 })
@@ -12241,13 +12247,14 @@ def _build_ssiap_diplomas_pdf(diplomas: List[Dict[str, str]]) -> BytesIO:
 
     for diploma in diplomas:
         pdf.drawImage(background, 0, 0, width=page_width, height=page_height, preserveAspectRatio=False)
-        # The coordinates start immediately after the printed labels in the JPG template.
-        _draw_fitted_pdf_text(pdf, diploma["exam_date"], 1460, page_height - 783, 300)
-        _draw_fitted_pdf_text(pdf, diploma["name"], 1090, page_height - 852, 650)
-        _draw_fitted_pdf_text(pdf, diploma["birth_date"], 1090, page_height - 889, 300)
-        _draw_fitted_pdf_text(pdf, diploma["name"], 1120, page_height - 1118, 650)
-        _draw_fitted_pdf_text(pdf, diploma["number"], 1120, page_height - 1157, 430)
-        _draw_fitted_pdf_text(pdf, diploma["exam_date"], 480, page_height - 1174, 300)
+        # Each baseline is aligned with its printed label and starts after the label's right edge.
+        _draw_fitted_pdf_text(pdf, diploma["exam_date"], 1460, page_height - 776, 300, 21)
+        _draw_fitted_pdf_text(pdf, diploma["name"], 1080, page_height - 846, 650, 21)
+        _draw_fitted_pdf_text(pdf, diploma["birth_date"], 1080, page_height - 883, 300, 21)
+        _draw_fitted_pdf_text(pdf, diploma["birth_place"], 1080, page_height - 921, 650, 21)
+        _draw_fitted_pdf_text(pdf, diploma["name"], 1120, page_height - 1108, 620, 21)
+        _draw_fitted_pdf_text(pdf, diploma["number"], 1170, page_height - 1145, 430, 21)
+        _draw_fitted_pdf_text(pdf, diploma["exam_date"], 480, page_height - 1171, 300, 21)
         pdf.showPage()
 
     pdf.save()

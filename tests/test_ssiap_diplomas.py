@@ -43,12 +43,13 @@ class SsiapDiplomaTests(unittest.TestCase):
             return json.load(source)
 
     @staticmethod
-    def _trainee(trainee_id, first_name, last_name, birth_date):
+    def _trainee(trainee_id, first_name, last_name, birth_date, birth_city="Paris"):
         return {
             "id": trainee_id,
             "first_name": first_name,
             "last_name": last_name,
             "birth_date": birth_date,
+            "birth_city": birth_city,
         }
 
     def test_generates_filled_multipage_pdf_and_persists_unique_numbers(self):
@@ -78,6 +79,7 @@ class SsiapDiplomaTests(unittest.TestCase):
         self.assertIn("30/06/2026", first_page_text)
         self.assertIn("Monsieur Jean DUPONT", first_page_text)
         self.assertIn("03/02/1990", first_page_text)
+        self.assertIn("Paris", first_page_text)
         self.assertIn("083-8323-1-2026-00001", first_page_text)
         self.assertIn("Monsieur Élise MARTIN", second_page_text)
         self.assertIn("083-8323-1-2026-00002", second_page_text)
@@ -99,6 +101,30 @@ class SsiapDiplomaTests(unittest.TestCase):
             "083-8323-1-2026-00001",
             "083-8323-1-2026-00002",
         ])
+
+    def test_pdf_fields_are_aligned_after_template_labels(self):
+        pdf = gestion_app._build_ssiap_diplomas_pdf([{
+            "exam_date": "28/10/2026",
+            "name": "Monsieur Clément VAILLANT",
+            "birth_date": "16/09/1993",
+            "birth_place": "PUGET-SUR-ARGENS",
+            "number": "083-8323-1-2026-00001",
+        }])
+        page = PdfReader(pdf).pages[0]
+        positions = []
+
+        def collect_position(text, _cm, text_matrix, _font, font_size):
+            value = text.strip()
+            if value:
+                positions.append((value, text_matrix[4], text_matrix[5], font_size))
+
+        page.extract_text(visitor_text=collect_position)
+
+        self.assertIn(("Monsieur Clément VAILLANT", 1080.0, 568.0, 21.0), positions)
+        self.assertIn(("16/09/1993", 1080.0, 531.0, 21.0), positions)
+        self.assertIn(("PUGET-SUR-ARGENS", 1080.0, 493.0, 21.0), positions)
+        self.assertIn(("Monsieur Clément VAILLANT", 1120.0, 306.0, 21.0), positions)
+        self.assertIn(("083-8323-1-2026-00001", 1170.0, 269.0, 21.0), positions)
 
     def test_sequence_continues_for_new_trainee_and_restarts_each_year(self):
         self._write_data({
@@ -173,7 +199,24 @@ class SsiapDiplomaTests(unittest.TestCase):
         response = self.client.post("/admin/sessions/S1/ssiap-diplomas")
 
         self.assertEqual(response.status_code, 400)
-        self.assertIn("date de naissance manquant", response.get_data(as_text=True))
+        self.assertIn("date de naissance", response.get_data(as_text=True))
+        self.assertNotIn("ssiap_diploma_number", self._read_data()["sessions"][0]["trainees"][0])
+
+    def test_rejects_generation_when_birth_place_is_missing(self):
+        self._write_data({
+            "sessions": [{
+                "id": "S1",
+                "name": "SSIAP 1",
+                "training_type": "SSIAP 1",
+                "exam_date": "2026-05-15",
+                "trainees": [self._trainee("T1", "Jean", "Dupont", "1990-02-03", "")],
+            }],
+        })
+
+        response = self.client.post("/admin/sessions/S1/ssiap-diplomas")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("lieu de naissance", response.get_data(as_text=True))
         self.assertNotIn("ssiap_diploma_number", self._read_data()["sessions"][0]["trainees"][0])
 
     def test_ssiap_admin_page_displays_generation_button(self):
