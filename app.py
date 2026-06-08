@@ -6233,8 +6233,8 @@ def _professional_experience_sheet_is_submitted(trainee: Dict[str, Any]) -> bool
 def _professional_experience_sheet_is_validated(trainee: Dict[str, Any]) -> bool:
     if not _professional_experience_sheet_is_submitted(trainee):
         return False
-    status = str(trainee["professional_experience_sheet"].get("status") or "").strip().lower()
-    return status == "validated"
+    status = str(trainee["professional_experience_sheet"].get("status") or "").strip().upper()
+    return status in {"CONFORME", "VALIDATED"}
 
 
 def dossier_is_complete(trainee: Dict[str, Any], training_type: str) -> bool:
@@ -17563,8 +17563,8 @@ def _professional_experience_sheet_payload(raw: Any, trainee: Dict[str, Any], se
     now = _now_iso()
     return {
         "id": str(existing.get("id") or uuid.uuid4().hex),
-        "status": "pending_review",
-        "status_label": "À contrôler",
+        "status": "A CONTRÔLER",
+        "status_label": "A CONTRÔLER",
         "last_name": str(trainee.get("last_name") or "").strip(),
         "first_name": str(trainee.get("first_name") or "").strip(),
         "training_name": str(_session_get(session_obj, "name", "") or _session_get(session_obj, "training_type", "") or "").strip(),
@@ -17743,26 +17743,31 @@ def admin_professional_experience_sheet_status(session_id: str, trainee_id: str)
     if not session_obj or not trainee or not sheet:
         return jsonify({"ok": False, "error": "sheet_not_found"}), 404
 
-    status = str((request.get_json(silent=True) or {}).get("status") or "").strip()
-    labels = {
-        "pending_review": "À contrôler",
-        "validated": "Validé",
-        "non_compliant": "Non conforme",
+    requested_status = str((request.get_json(silent=True) or {}).get("status") or "").strip()
+    status_aliases = {
+        "pending_review": "A CONTRÔLER",
+        "validated": "CONFORME",
+        "non_compliant": "NON CONFORME",
+        "A CONTROLER": "A CONTRÔLER",
+        "A CONTRÔLER": "A CONTRÔLER",
+        "CONFORME": "CONFORME",
+        "NON CONFORME": "NON CONFORME",
     }
-    if status not in labels:
+    status = status_aliases.get(requested_status)
+    if not status:
         return jsonify({"ok": False, "error": "invalid_status"}), 400
 
     sheet["status"] = status
-    sheet["status_label"] = labels[status]
-    sheet["reviewed_at"] = _now_iso() if status != "pending_review" else ""
+    sheet["status_label"] = status
+    sheet["reviewed_at"] = _now_iso() if status != "A CONTRÔLER" else ""
     trainee["updated_at"] = _now_iso()
     training_type = str(_session_get(session_obj, "training_type", "") or "")
     trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, training_type) else "incomplete"
-    append_trainee_history_event(trainee, "Statut fiche expérience modifié", labels[status], "action")
+    append_trainee_history_event(trainee, "Statut fiche expérience modifié", status, "action")
     session_obj["trainees"] = _session_trainees_list(session_obj)
     session_obj.pop("stagiaires", None)
     save_data(data)
-    return jsonify({"ok": True, "status": status, "status_label": labels[status]})
+    return jsonify({"ok": True, "status": status, "status_label": status})
 
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/fiche-experience-professionnelle")
