@@ -374,6 +374,9 @@ class SsiapDiplomaTests(unittest.TestCase):
         self.assertIn('/admin/sessions/S1/trainees/T3/ssiap-diploma', html)
         self.assertIn("👁️ Voir le diplôme", html)
         self.assertIn("Modifier infos diplôme", html)
+        self.assertIn("width:220px", html)
+        self.assertIn("width:200px", html)
+        self.assertIn('class="sel ssiap-exam-select ssiap-exam-pending_results"', html)
 
     def test_rejects_diploma_generation_for_non_certified_trainee(self):
         trainee = self._trainee("T1", "Jean", "Dupont", "1990-02-03")

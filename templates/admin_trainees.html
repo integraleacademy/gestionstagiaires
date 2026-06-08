@@ -1095,12 +1095,35 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 
 <style>
 
-.col-ssiap-exam{ min-width:180px; text-align:center; }
+#traineesTable .col-ssiap-exam{
+  width:220px;
+  min-width:220px;
+  max-width:220px;
+  text-align:center;
+}
 .col-ssiap-diploma{ min-width:210px; text-align:center; }
 .col-ssiap-diploma form{ margin:0; }
 .ssiap-diploma-actions{ display:flex; flex-direction:column; align-items:center; gap:6px; }
 .ssiap-diploma-btn,.ssiap-view-btn,.ssiap-edit-info-btn{ white-space:nowrap; text-decoration:none; }
-.ssiap-exam-select{ min-width:165px; font-weight:800; border-radius:999px; }
+.ssiap-exam-select{
+  display:block;
+  width:200px;
+  min-width:200px;
+  max-width:200px;
+  margin:0 auto;
+  padding:8px 34px 8px 12px;
+  border-radius:999px;
+  box-sizing:border-box;
+  font-size:12px;
+  font-weight:800;
+  line-height:1.2;
+  text-transform:none;
+  letter-spacing:0;
+  appearance:auto;
+  -webkit-appearance:menulist;
+  -moz-appearance:auto;
+  white-space:nowrap;
+}
 .ssiap-exam-pending_results{ background:#f1f5f9; color:#64748b; border-color:#cbd5e1; }
 .ssiap-exam-certified{ background:#dcfce7; color:#166534; border-color:#86efac; }
 .ssiap-exam-failed{ background:#fee2e2; color:#991b1b; border-color:#fca5a5; }
@@ -2740,6 +2763,12 @@ bulkParcheminInput?.addEventListener("change", async ()=>{
 
   function applyStatusPill(selectEl){
     if(!selectEl) return;
+    // Le statut SSIAP a son propre style et doit conserver sa flèche native ainsi
+    // qu'une largeur fixe suffisante pour afficher « En attente résultat ».
+    if(selectEl.classList.contains("ssiap-exam-select")){
+      selectEl.classList.remove("status-pill");
+      return;
+    }
     selectEl.classList.add("status-pill");
 
     [...selectEl.classList].forEach(c=>{
