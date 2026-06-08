@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/professional-experience.css') }}">
 {% set token_safe = token or trainee.public_token or '' %}
 
 <style>
@@ -1490,6 +1491,17 @@ id="upload_{{ d.key }}"
       </div>  <!-- ferme .docmeta -->
     </div>    <!-- ferme .docrow -->
   {% endfor %}
+  {% if show_vae %}
+  <button class="pro-sheet-launch{% if not trainee.professional_experience_sheet %} needs-attention{% else %} is-sent{% endif %}" type="button" data-pro-sheet-open>
+    <span class="pro-sheet-launch-icon" aria-hidden="true">✦</span>
+    <span class="pro-sheet-launch-copy">
+      <strong>Fiche expérience professionnelle</strong>
+      <small>{% if trainee.professional_experience_sheet %}Votre fiche a bien été transmise.{% else %}Obligatoire : complétez et transmettez votre parcours professionnel.{% endif %}</small>
+      <span class="pro-sheet-launch-status {% if trainee.professional_experience_sheet %}sent{% else %}required{% endif %}">{% if trainee.professional_experience_sheet %}Fichier envoyé{% else %}À compléter{% endif %}</span>
+    </span>
+    <span class="pro-sheet-launch-arrow" aria-hidden="true">→</span>
+  </button>
+  {% endif %}
   
 </div>
 {% if show_vae or is_security_training %}
@@ -1499,6 +1511,9 @@ id="upload_{{ d.key }}"
 </div>
 {% endif %}
 
+  {% endif %}
+  {% if show_vae %}
+    {% include "_professional_experience_sheet_modal.html" %}
   {% endif %}
     {% if not show_vtc and not is_dirigeant_vae %}
     <!-- Encadré 4 : diplômes et attestations -->
@@ -3016,9 +3031,5 @@ function normalizePRE(s){
   }
 })();
 </script>
-  
-
-
-
-
+{% if show_vae %}<script src="{{ url_for('static', filename='js/professional-experience.js') }}" defer></script>{% endif %}
 {% endblock %}
