@@ -63,6 +63,11 @@ class AdminSessionsSsiapTests(unittest.TestCase):
             html,
         )
         self.assertIn("training-ssiap", html)
+        self.assertIn(
+            '<button class="training-choice" data-training="SSIAP">SSIAP</button>',
+            html,
+        )
+        self.assertIn('if(v.startsWith("SSIAP")) return "SSIAP";', html)
         self.assertRegex(
             html,
             re.compile(
