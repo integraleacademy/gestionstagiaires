@@ -12379,6 +12379,57 @@ def admin_generate_ssiap_diplomas(session_id: str):
     )
 
 
+@app.get("/admin/sessions/<session_id>/trainees/<trainee_id>/ssiap-diploma")
+@admin_login_required
+def admin_view_ssiap_diploma(session_id: str, trainee_id: str):
+    if not REPORTLAB_LIBRARY_AVAILABLE or not os.path.exists(SSIAP_DIPLOMA_TEMPLATE):
+        abort(503, description="Le modèle ou le moteur PDF des diplômes est indisponible.")
+
+    data = load_data()
+    session_item = find_session(data, session_id)
+    if not session_item:
+        abort(404)
+
+    training_label = f"{_session_get(session_item, 'training_type', '')} {_session_get(session_item, 'name', '')}".upper()
+    if "SSIAP" not in training_label:
+        abort(404)
+
+    trainee = next((
+        item for item in _session_trainees_list(session_item)
+        if str(item.get("id") or "") == str(trainee_id)
+    ), None)
+    if not trainee:
+        abort(404)
+
+    diploma_number = str(trainee.get("ssiap_diploma_number") or "").strip()
+    if not SSIAP_DIPLOMA_NUMBER_RE.match(diploma_number):
+        abort(404)
+
+    exam_date = _diploma_date_fr(
+        str(_session_get(session_item, "ssiap_exam_date", "") or "").strip()
+        or str(_session_get(session_item, "exam_date", "") or "").strip()
+    )
+    birth_date = _diploma_date_fr(trainee.get("birth_date") or "")
+    birth_place = str(trainee.get("birth_city") or trainee.get("birth_place") or "").strip()
+    if not exam_date or not birth_date or not birth_place:
+        abort(400, description="Les informations nécessaires au diplôme sont incomplètes.")
+
+    diploma = {
+        "name": _ssiap_diploma_display_name(trainee),
+        "birth_date": birth_date,
+        "birth_place": birth_place,
+        "exam_date": exam_date,
+        "number": diploma_number,
+    }
+    trainee_name = re.sub(r"[^A-Za-z0-9_-]+", "-", diploma["name"]).strip("-") or "stagiaire"
+    return send_file(
+        _build_ssiap_diplomas_pdf([diploma]),
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"diplome-SSIAP-{trainee_name}-{exam_date[-4:]}.pdf",
+    )
+
+
 @app.post("/admin/sessions/<session_id>/trainees/<trainee_id>/ssiap-diploma")
 @admin_login_required
 @admin_write_required

@@ -684,10 +684,14 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         {% endif %}
         {% if is_ssiap_session and not is_read_only %}
         <td class="col-ssiap-diploma">
+          {% if t.ssiap_diploma_number %}
+          <a class="mini-btn ssiap-diploma-btn" href="{{ url_for('admin_view_ssiap_diploma', session_id=session.id, trainee_id=t.id) }}" target="_blank" rel="noopener" title="Voir le diplôme de {{ t.first_name or '' }} {{ t.last_name or '' }}">🎓 Voir le diplôme</a>
+          <div class="ssiap-diploma-number">{{ t.ssiap_diploma_number }}</div>
+          {% else %}
           <form method="post" action="{{ url_for('admin_generate_ssiap_diploma', session_id=session.id, trainee_id=t.id) }}" target="_blank">
             <button class="mini-btn ssiap-diploma-btn" type="submit" title="Générer uniquement le diplôme de {{ t.first_name or '' }} {{ t.last_name or '' }}">🎓 Générer</button>
           </form>
-          {% if t.ssiap_diploma_number %}<div class="ssiap-diploma-number">{{ t.ssiap_diploma_number }}</div>{% endif %}
+          {% endif %}
         </td>
         {% endif %}
         <td class="col-comment">
