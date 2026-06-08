@@ -1451,6 +1451,34 @@
           </tr>
         </thead>
         <tbody>
+          {% if show_vae %}
+          {% set professional_sheet = trainee.professional_experience_sheet or {} %}
+          <tr data-doc-key="professional_experience_sheet">
+            <td style="font-weight:800;">Fiche expérience professionnelle</td>
+            <td style="min-width:190px;">
+              {% if professional_sheet %}
+                <span class="pill pill-yellow">A CONTRÔLER</span>
+                <div class="hint" style="margin-top:6px;">Transmise le {{ professional_sheet.submitted_at|frdatetime }}</div>
+              {% else %}
+                <span class="pill pill-gray">NON DÉPOSÉ</span>
+                <div class="hint" style="margin-top:6px;">La fiche n’a pas encore été transmise.</div>
+              {% endif %}
+            </td>
+            <td>
+              <span class="hint">{% if professional_sheet %}Réponses disponibles ci-dessous.{% else %}Aucun commentaire{% endif %}</span>
+            </td>
+            <td class="mono" style="max-width:320px;">
+              {% if professional_sheet %}
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                  <a href="#professionalExperienceAdminDetails">👁️ Consulter</a>
+                  <a href="{{ url_for('admin_professional_experience_sheet_pdf', session_id=session.id, trainee_id=trainee.id) }}">⬇️ Télécharger le PDF</a>
+                </div>
+              {% else %}
+                <span class="hint">Aucun fichier</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endif %}
           {% for d in (trainee.documents or []) if not (show_vae and d.key == "livret_2") %}
           {% set has_file = (d.file_tokens and d.file_tokens|length > 0) or (d.file and d.file|length > 0) %}
           {% set candidate_sheet_saved = d.key == "candidate_info_sheet" and (trainee.candidate_sheet_saved_at or trainee.candidate_sheet) %}
@@ -1558,6 +1586,10 @@
         </tbody>
       </table>
     </div>
+
+    {% if show_vae %}
+      {% include "_admin_professional_experience_sheet.html" %}
+    {% endif %}
   </div>
 
 </details>
