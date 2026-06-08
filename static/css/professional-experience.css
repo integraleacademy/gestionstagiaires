@@ -13,3 +13,7 @@
 @keyframes proSheetAttention{0%,100%{box-shadow:0 10px 24px rgba(199,166,74,.16);transform:translateY(0)}50%{box-shadow:0 0 0 7px rgba(199,166,74,.18),0 16px 34px rgba(17,17,17,.22);transform:translateY(-2px)}}
 @keyframes proSheetIconPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
 @media(prefers-reduced-motion:reduce){.pro-sheet-launch.needs-attention,.pro-sheet-launch.needs-attention .pro-sheet-launch-icon{animation:none}}
+
+.pro-sheet-required-label{display:inline-flex;margin-left:7px;padding:3px 7px;border-radius:999px;background:#fff3cd;color:#765500;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;vertical-align:middle}
+.pro-sheet-launch:disabled{cursor:not-allowed;transform:none;opacity:.9}
+.pro-sheet-launch:disabled:hover{transform:none;box-shadow:0 10px 24px rgba(22,101,52,.13)}

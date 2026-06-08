@@ -6221,10 +6221,27 @@ def allowed_doc_keys_for_training(training_type: str, trainee: Optional[Dict[str
         keys.add("complementary_documents")
     return keys
 
+
+def _professional_experience_sheet_is_required(training_type: str) -> bool:
+    return "VAE" in (training_type or "").strip().upper()
+
+
+def _professional_experience_sheet_is_submitted(trainee: Dict[str, Any]) -> bool:
+    return isinstance(trainee.get("professional_experience_sheet"), dict) and bool(trainee["professional_experience_sheet"])
+
+
+def _professional_experience_sheet_is_validated(trainee: Dict[str, Any]) -> bool:
+    if not _professional_experience_sheet_is_submitted(trainee):
+        return False
+    status = str(trainee["professional_experience_sheet"].get("status") or "").strip().lower()
+    return status == "validated"
+
+
 def dossier_is_complete(trainee: Dict[str, Any], training_type: str) -> bool:
     """
     Complet si TOUS les docs requis sont CONFORME,
     sauf permis si trainee a coché no_permis=True (A3P).
+    La fiche d'expérience professionnelle est également requise et validée en VAE.
     """
     docs = trainee.get("documents") or []
     if not docs:
@@ -6249,6 +6266,9 @@ def dossier_is_complete(trainee: Dict[str, Any], training_type: str) -> bool:
         st = (d.get("status") or "").strip().upper()
         if st != "CONFORME":
             return False
+
+    if _professional_experience_sheet_is_required(training_type):
+        return _professional_experience_sheet_is_validated(trainee)
 
     return True
 
@@ -6294,6 +6314,9 @@ def required_docs_are_deposited(trainee: Dict[str, Any], training_type: str) -> 
         has_file = bool((d.get("file") or "").strip())
         if not (has_files or has_file):
             return False
+
+    if _professional_experience_sheet_is_required(training_type):
+        return _professional_experience_sheet_is_submitted(trainee)
 
     return True
 
@@ -17262,6 +17285,11 @@ def public_professional_experience_sheet_submit(token: str):
     training_type = str(_session_get(session_obj, "training_type", "") or "")
     if "VAE" not in training_type.upper():
         abort(404)
+    if _professional_experience_sheet_is_submitted(trainee):
+        return jsonify({
+            "ok": False,
+            "message": "Cette fiche a déjà été transmise et ne peut plus être modifiée.",
+        }), 409
 
     sheet, errors = _professional_experience_sheet_payload(request.get_json(silent=True), trainee, session_obj)
     if errors:
@@ -17269,6 +17297,7 @@ def public_professional_experience_sheet_submit(token: str):
 
     trainee["professional_experience_sheet"] = sheet
     trainee["updated_at"] = _now_iso()
+    trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, training_type) else "incomplete"
     session_obj["trainees"] = _session_trainees_list(session_obj)
     session_obj.pop("stagiaires", None)
     save_data(data)
@@ -17414,6 +17443,8 @@ def admin_professional_experience_sheet_status(session_id: str, trainee_id: str)
     sheet["status_label"] = labels[status]
     sheet["reviewed_at"] = _now_iso() if status != "pending_review" else ""
     trainee["updated_at"] = _now_iso()
+    training_type = str(_session_get(session_obj, "training_type", "") or "")
+    trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, training_type) else "incomplete"
     append_trainee_history_event(trainee, "Statut fiche expérience modifié", labels[status], "action")
     session_obj["trainees"] = _session_trainees_list(session_obj)
     session_obj.pop("stagiaires", None)
@@ -17485,6 +17516,8 @@ def admin_professional_experience_sheet_delete(session_id: str, trainee_id: str)
         abort(404)
     trainee.pop("professional_experience_sheet", None)
     trainee["updated_at"] = _now_iso()
+    training_type = str(_session_get(session_obj, "training_type", "") or "")
+    trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, training_type) else "incomplete"
     session_obj["trainees"] = _session_trainees_list(session_obj)
     session_obj.pop("stagiaires", None)
     save_data(data)

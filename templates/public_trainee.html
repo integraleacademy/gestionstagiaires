@@ -1492,14 +1492,14 @@ id="upload_{{ d.key }}"
     </div>    <!-- ferme .docrow -->
   {% endfor %}
   {% if show_vae %}
-  <button class="pro-sheet-launch{% if not trainee.professional_experience_sheet %} needs-attention{% else %} is-sent{% endif %}" type="button" data-pro-sheet-open>
+  <button class="pro-sheet-launch{% if not trainee.professional_experience_sheet %} needs-attention{% else %} is-sent{% endif %}" type="button"{% if trainee.professional_experience_sheet %} disabled aria-disabled="true"{% else %} data-pro-sheet-open{% endif %}>
     <span class="pro-sheet-launch-icon" aria-hidden="true">✦</span>
     <span class="pro-sheet-launch-copy">
-      <strong>Fiche expérience professionnelle</strong>
-      <small>{% if trainee.professional_experience_sheet %}Votre fiche a bien été transmise.{% else %}Obligatoire : complétez et transmettez votre parcours professionnel.{% endif %}</small>
+      <strong>Fiche expérience professionnelle <span class="pro-sheet-required-label">Obligatoire</span></strong>
+      <small>{% if trainee.professional_experience_sheet %}Votre fiche a bien été transmise. Elle ne peut plus être modifiée.{% else %}Complétez et transmettez votre parcours professionnel.{% endif %}</small>
       <span class="pro-sheet-launch-status {% if trainee.professional_experience_sheet %}sent{% else %}required{% endif %}">{% if trainee.professional_experience_sheet %}Fichier envoyé{% else %}À compléter{% endif %}</span>
     </span>
-    <span class="pro-sheet-launch-arrow" aria-hidden="true">→</span>
+    <span class="pro-sheet-launch-arrow" aria-hidden="true">{% if trainee.professional_experience_sheet %}✓{% else %}→{% endif %}</span>
   </button>
   {% endif %}
   
@@ -1512,7 +1512,7 @@ id="upload_{{ d.key }}"
 {% endif %}
 
   {% endif %}
-  {% if show_vae %}
+  {% if show_vae and not trainee.professional_experience_sheet %}
     {% include "_professional_experience_sheet_modal.html" %}
   {% endif %}
     {% if not show_vtc and not is_dirigeant_vae %}

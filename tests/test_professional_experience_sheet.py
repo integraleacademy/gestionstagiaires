@@ -74,7 +74,8 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
         launch = html.split('data-pro-sheet-open', 1)[1].split("</button>", 1)[0]
-        self.assertIn("Obligatoire : complétez et transmettez votre parcours professionnel.", launch)
+        self.assertIn("Obligatoire", launch)
+        self.assertIn("Complétez et transmettez votre parcours professionnel.", launch)
         self.assertIn("À compléter", launch)
         self.assertIn("needs-attention", html.split('data-pro-sheet-open', 1)[0].split("<button", 1)[-1])
         self.assertNotIn("À contrôler", launch)
@@ -144,6 +145,39 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 404)
 
+    def test_second_public_submission_is_rejected_without_overwriting_sheet(self):
+        self._authenticate_public()
+        first_payload = self._valid_payload()
+        self.client.post("/espace/public-token/fiche-experience-professionnelle", json=first_payload)
+
+        second_payload = self._valid_payload()
+        second_payload["last_certification"] = "Nouvelle valeur interdite"
+        response = self.client.post("/espace/public-token/fiche-experience-professionnelle", json=second_payload)
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("déjà été transmise", response.get_json()["message"])
+        sheet = self.payload["sessions"][0]["trainees"][0]["professional_experience_sheet"]
+        self.assertEqual(sheet["last_certification"], first_payload["last_certification"])
+
+    def test_sheet_is_mandatory_for_vae_document_completion(self):
+        trainee = self.payload["sessions"][0]["trainees"][0]
+        training_type = self.payload["sessions"][0]["training_type"]
+        gestion_app.ensure_documents_schema_for_trainee(trainee, training_type)
+        for document in trainee["documents"]:
+            document["status"] = "CONFORME"
+            document["file"] = "uploads/document.pdf"
+            document["files"] = ["uploads/document.pdf"]
+
+        self.assertFalse(gestion_app.required_docs_are_deposited(trainee, training_type))
+        self.assertFalse(gestion_app.dossier_is_complete(trainee, training_type))
+
+        trainee["professional_experience_sheet"] = {"status": "pending_review"}
+        self.assertTrue(gestion_app.required_docs_are_deposited(trainee, training_type))
+        self.assertFalse(gestion_app.dossier_is_complete(trainee, training_type))
+
+        trainee["professional_experience_sheet"]["status"] = "validated"
+        self.assertTrue(gestion_app.dossier_is_complete(trainee, training_type))
+
     def test_admin_page_displays_responses_and_pending_review_status(self):
         self._authenticate_public()
         self.client.post("/espace/public-token/fiche-experience-professionnelle", json=self._valid_payload())
@@ -158,9 +192,9 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         self.assertIn("A CONTRÔLER", row)
         self.assertIn("VALIDÉ", row)
         self.assertIn("NON CONFORME", row)
-        self.assertIn("À contrôler", row)
-        self.assertIn("Voir et imprimer la fiche", row)
-        self.assertNotIn("Télécharger le PDF", row)
+        self.assertIn("Télécharger le PDF", row)
+        self.assertNotIn("Consulter", row)
+        self.assertNotIn("Responsable sécurité", row)
 
     def test_public_page_shows_file_sent_after_submission(self):
         self._authenticate_public()
@@ -170,10 +204,15 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
-        launch = html.split('data-pro-sheet-open', 1)[1].split("</button>", 1)[0]
+        launch = html.split('class="pro-sheet-launch', 1)[1].split("</button>", 1)[0]
         self.assertIn("Fichier envoyé", launch)
+        self.assertIn("disabled", launch)
+        self.assertIn('aria-disabled="true"', launch)
+        self.assertIn("Elle ne peut plus être modifiée.", launch)
+        self.assertNotIn("data-pro-sheet-open", launch)
         self.assertNotIn("À contrôler", launch)
-        self.assertNotIn("needs-attention", html.split('data-pro-sheet-open', 1)[0].split("<button", 1)[-1])
+        self.assertNotIn("needs-attention", launch)
+        self.assertNotIn('id="professionalExperienceModal"', html)
 
     def test_admin_can_update_sheet_status(self):
         self._authenticate_public()
