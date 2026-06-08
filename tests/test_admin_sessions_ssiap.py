@@ -76,6 +76,41 @@ class AdminSessionsSsiapTests(unittest.TestCase):
             ),
         )
 
+    def test_ssiap_summary_displays_red_ssiap_1_badge(self):
+        fake_data = {
+            "sessions": [
+                {
+                    "id": "S-SSIAP",
+                    "name": "SSIAP 1 OCTOBRE 2026",
+                    "training_type": "SSIAP 1",
+                    "date_start": "2026-10-12",
+                    "date_end": "2026-10-27",
+                    "trainees": [
+                        {
+                            "id": "T-SSIAP-1",
+                            "last_name": "VAILLANT",
+                            "first_name": "Clement",
+                            "created_at": "2026-06-08",
+                        }
+                    ],
+                }
+            ]
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            response = self.client.get(
+                "/admin/sessions/S-SSIAP/stagiaires/T-SSIAP-1/summary"
+            )
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn(
+            'class="training-badge training-badge--red">SSIAP 1</div>', html
+        )
+        self.assertNotIn(
+            'class="training-badge training-badge--gray">FORMATION</div>', html
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
