@@ -367,8 +367,10 @@
         {% if is_vtc %}<th>Date formation pratique</th>{% endif %}
         {% if is_vtc %}<th>Pratique</th>{% endif %}
         {% if show_hosting %}<th>Hébergement</th>{% endif %}
+        {% if show_vae %}
         <th class="col-history">Historique</th>
         <th class="col-thread">Fil actu</th>
+        {% endif %}
         <th class="col-comment">Commentaire</th>
       </tr>
     </thead>
@@ -662,6 +664,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         </td>
         {% endif %}
 
+        {% if show_vae %}
         <td class="col-history">
           <button type="button" class="mini-btn history-btn" data-open-history>Historique</button>
         </td>
@@ -671,6 +674,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
             {% if t.scotia_unread_thread_count %}<span class="thread-badge" aria-label="{{ t.scotia_unread_thread_count }} commentaire{{ 's' if t.scotia_unread_thread_count|int > 1 else '' }} non lu{{ 's' if t.scotia_unread_thread_count|int > 1 else '' }}">{{ t.scotia_unread_thread_count }}</span>{% endif %}
           </button>
         </td>
+        {% endif %}
         <td class="col-comment">
           <input class="comment" data-field="comment" value="{{ t.comment }}" placeholder="Ajouter un commentaire..." {{ read_only_attr }}>
         </td>
