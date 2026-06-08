@@ -169,6 +169,30 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         gestion_app.save_data = self.original_save_data
 
 
+    def test_history_and_thread_columns_are_reserved_for_vae_sessions(self):
+        vae_response = self.client.get("/admin/sessions/S-VAE/trainees")
+        vtc_response = self.client.get("/admin/sessions/S-VTC/trainees")
+        aps_response = self.client.get("/admin/sessions/S-APS/trainees")
+
+        self.assertEqual(vae_response.status_code, 200)
+        self.assertEqual(vtc_response.status_code, 200)
+        self.assertEqual(aps_response.status_code, 200)
+
+        vae_html = vae_response.get_data(as_text=True)
+        self.assertIn('<th class="col-history">Historique</th>', vae_html)
+        self.assertIn('<th class="col-thread">Fil actu</th>', vae_html)
+        self.assertIn('class="mini-btn history-btn" data-open-history', vae_html)
+        self.assertIn('class="mini-btn thread-btn" data-open-thread', vae_html)
+
+        for html in (
+            vtc_response.get_data(as_text=True),
+            aps_response.get_data(as_text=True),
+        ):
+            self.assertNotIn('<th class="col-history">Historique</th>', html)
+            self.assertNotIn('<th class="col-thread">Fil actu</th>', html)
+            self.assertNotIn('class="mini-btn history-btn" data-open-history', html)
+            self.assertNotIn('class="mini-btn thread-btn" data-open-thread', html)
+
     def test_vae_admin_trainees_exposes_live_card_and_modal(self):
         response = self.client.get("/admin/sessions/S-VAE/trainees")
         html = response.get_data(as_text=True)
