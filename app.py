@@ -3341,7 +3341,7 @@ def _send_docs_relance_reminders(data: Dict[str, Any]) -> bool:
         trainees = _session_trainees_list(session_obj)
         for trainee in trainees:
             training_type = _session_get(session_obj, "training_type", "")
-            dossier_complete = dossier_is_complete_total(trainee, training_type)
+            dossier_complete = dossier_is_complete_total(trainee, training_type, _session_get(session_obj, "date_start", ""))
 
             if trainee.get("docs_relance_auto_planned_date") != planned_date_iso:
                 trainee["docs_relance_auto_planned_date"] = planned_date_iso
@@ -3540,7 +3540,7 @@ def _send_docs_relance_reminders(data: Dict[str, Any]) -> bool:
         trainees = _session_trainees_list(session_obj)
         for trainee in trainees:
             training_type = _session_get(session_obj, "training_type", "")
-            dossier_complete = dossier_is_complete_total(trainee, training_type)
+            dossier_complete = dossier_is_complete_total(trainee, training_type, _session_get(session_obj, "date_start", ""))
 
             if trainee.get("docs_relance_auto_planned_date") != planned_date_iso:
                 trainee["docs_relance_auto_planned_date"] = planned_date_iso
@@ -6222,19 +6222,20 @@ def allowed_doc_keys_for_training(training_type: str, trainee: Optional[Dict[str
     return keys
 
 
+PROFESSIONAL_EXPERIENCE_SHEET_START_DATE = datetime.date(2026, 6, 8)
+
+
 def _professional_experience_sheet_is_required(
     training_type: str,
-    trainee: Optional[Dict[str, Any]] = None,
+    training_start_date: Any = "",
 ) -> bool:
-    """Require the sheet for VAE and for dossiers created with the new rule."""
+    """Require the sheet for VAE or a formation starting after 8 June 2026."""
     if "VAE" in (training_type or "").strip().upper():
         return True
-    if not isinstance(trainee, dict):
+    start_datetime = _parse_iso_datetime(str(training_start_date or ""))
+    if not start_datetime:
         return False
-    return bool(
-        trainee.get("professional_experience_sheet_required")
-        or _professional_experience_sheet_is_submitted(trainee)
-    )
+    return start_datetime.date() > PROFESSIONAL_EXPERIENCE_SHEET_START_DATE
 
 
 def _professional_experience_sheet_is_submitted(trainee: Dict[str, Any]) -> bool:
@@ -6248,12 +6249,12 @@ def _professional_experience_sheet_is_validated(trainee: Dict[str, Any]) -> bool
     return status in {"CONFORME", "VALIDATED"}
 
 
-def dossier_is_complete(trainee: Dict[str, Any], training_type: str) -> bool:
+def dossier_is_complete(trainee: Dict[str, Any], training_type: str, training_start_date: Any = "") -> bool:
     """
     Complet si TOUS les docs requis sont CONFORME,
     sauf permis si trainee a coché no_permis=True (A3P).
     La fiche d'expérience professionnelle est également requise et validée
-    pour les parcours VAE et les nouveaux dossiers créés avec cette obligation.
+    pour les parcours VAE et les formations commençant après le 8 juin 2026.
     """
     docs = trainee.get("documents") or []
     if not docs:
@@ -6279,13 +6280,13 @@ def dossier_is_complete(trainee: Dict[str, Any], training_type: str) -> bool:
         if st != "CONFORME":
             return False
 
-    if _professional_experience_sheet_is_required(training_type, trainee):
+    if _professional_experience_sheet_is_required(training_type, training_start_date):
         return _professional_experience_sheet_is_validated(trainee)
 
     return True
 
 
-def required_docs_are_deposited(trainee: Dict[str, Any], training_type: str) -> bool:
+def required_docs_are_deposited(trainee: Dict[str, Any], training_type: str, training_start_date: Any = "") -> bool:
     """Vrai si tous les documents requis sont déposés (peu importe leur conformité)."""
     docs = trainee.get("documents") or []
     if not docs:
@@ -6327,7 +6328,7 @@ def required_docs_are_deposited(trainee: Dict[str, Any], training_type: str) -> 
         if not (has_files or has_file):
             return False
 
-    if _professional_experience_sheet_is_required(training_type, trainee):
+    if _professional_experience_sheet_is_required(training_type, training_start_date):
         return _professional_experience_sheet_is_submitted(trainee)
 
     return True
@@ -6636,6 +6637,7 @@ def _attach_cnaps_to_trainee(
     pre_number: str,
     file_token: str,
     history_label: str,
+    training_start_date: Any = "",
 ) -> None:
     ensure_documents_schema_for_trainee(trainee, training_type)
 
@@ -6661,7 +6663,7 @@ def _attach_cnaps_to_trainee(
     cnaps_doc["status"] = "A CONTRÔLER"
 
     trainee["updated_at"] = _now_iso()
-    trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, training_type) else "incomplete"
+    trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, training_type, training_start_date) else "incomplete"
     append_trainee_history_event(trainee, history_label, f"PRE/CAR : {pre_number}", "action")
 
 
@@ -6698,6 +6700,7 @@ def _apply_pending_cnaps_imports_for_trainee(data: Dict[str, Any], session_obj: 
             pre_number,
             file_token,
             "Import PRE CNAPS auto-associé",
+            _session_get(session_obj, "date_start", ""),
         )
         trainee["cnaps_import_merged_once"] = True
         trainee["cnaps_import_merged_at"] = _now_iso()
@@ -6793,12 +6796,12 @@ def infos_is_complete_for_training(t: Dict[str, Any], training_type: str) -> boo
     ]
     return all(str(sheet.get(k) or "").strip() for k in required_sheet_fields)
 
-def dossier_is_complete_total(trainee: Dict[str, Any], training_type: str) -> bool:
+def dossier_is_complete_total(trainee: Dict[str, Any], training_type: str, training_start_date: Any = "") -> bool:
     # ✅ complet seulement si infos OK + tous docs CONFORME
     # ✅ OU si forçage admin
     if trainee.get("force_dossier_complete"):
         return True
-    return infos_is_complete_for_training(trainee, training_type) and dossier_is_complete(trainee, training_type)
+    return infos_is_complete_for_training(trainee, training_type) and dossier_is_complete(trainee, training_type, training_start_date)
 
 
 # =========================
@@ -7593,7 +7596,7 @@ def public_vae_desp_submit():
 
     _sync_trainee_afc_medical_requirement(trainee, _session_get(target_session, "name", ""))
     ensure_documents_schema_for_trainee(trainee, training_type)
-    trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, training_type) else "incomplete"
+    trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, training_type, _session_get(target_session, "date_start", "")) else "incomplete"
 
     trainees = _session_trainees_list(target_session)
     trainees.insert(0, trainee)
@@ -9429,7 +9432,7 @@ def admin_sessions():
         total_total = len(trainees)
         dossier_complete_total = 0
         for t in trainees:
-            if dossier_is_complete_total(t, _session_get(s, "training_type", "")):
+            if dossier_is_complete_total(t, _session_get(s, "training_type", ""), _session_get(s, "date_start", "")):
                 dossier_complete_total += 1
         session_dossier_complete = (total_total > 0 and dossier_complete_total == total_total)
 
@@ -12737,7 +12740,7 @@ def admin_trainees(session_id: str):
 
         _sync_trainee_afc_medical_requirement(t, session_view["name"])
         ensure_documents_schema_for_trainee(t, training_type)
-        t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+        t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
 
         current_cnaps = t.get("cnaps") or ""
 
@@ -12996,7 +12999,7 @@ def admin_vtc_trainees_all():
                 t["first_name"] = fn
 
             ensure_documents_schema_for_trainee(t, training_type)
-            t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+            t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
 
             trainee_view = dict(t)
             trainee_view["source_session_id"] = s.get("id")
@@ -13295,7 +13298,7 @@ def api_create_trainee(session_id: str):
 
     _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""))
     ensure_documents_schema_for_trainee(t, training_type)
-    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
 
     trainees = _session_trainees_list(s)
     trainees.insert(0, t)
@@ -13817,7 +13820,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     training_type = _session_get(s, "training_type", "")
-    dossier_complete = dossier_is_complete_total(t, training_type)
+    dossier_complete = dossier_is_complete_total(t, training_type, _session_get(s, "date_start", ""))
     t["dossier_status"] = "complete" if dossier_complete else "incomplete"
     planned = _docs_relance_planned_date(s)
     t["docs_relance_auto_planned_date"] = "" if dossier_complete else (planned.isoformat() if planned else "")
@@ -13991,7 +13994,7 @@ def api_admin_pre_reception(session_id: str, trainee_id: str):
 
     t["pre_number"] = pre
     training_type = _session_get(s, "training_type", "")
-    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
     t["updated_at"] = _now_iso()
 
     s["trainees"] = trainees
@@ -15164,7 +15167,7 @@ def admin_upload_doc_file(session_id: str, trainee_id: str, doc_key: str):
         )
 
     # ✅ recalcul dossier_status
-    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
@@ -15273,7 +15276,7 @@ def admin_delete_doc_file(session_id: str, trainee_id: str, doc_key: str):
     append_trainee_history_event(t, "Document supprimé", f"{doc_key} · {len(tokens)} fichier(s) supprimé(s)", "action")
 
     # recalcul dossier_status
-    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
@@ -15432,7 +15435,7 @@ def admin_transfer_trainee(session_id: str, trainee_id: str):
 
     target_training_type = _session_get(target_session, "training_type", "")
     ensure_documents_schema_for_trainee(trainee, target_training_type)
-    trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, target_training_type) else "incomplete"
+    trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, target_training_type, _session_get(target_session, "date_start", "")) else "incomplete"
     trainee["updated_at"] = _now_iso()
 
     save_data(data)
@@ -16732,7 +16735,7 @@ def api_docs_update(session_id: str, trainee_id: str):
 
     # ✅ Synchronisation automatique du statut dossier
     training_type = _session_get(s, "training_type", "")
-    dossier_complete = dossier_is_complete_total(t, training_type)
+    dossier_complete = dossier_is_complete_total(t, training_type, _session_get(s, "date_start", ""))
     t["dossier_status"] = "complete" if dossier_complete else "incomplete"
     planned = _docs_relance_planned_date(s)
     t["docs_relance_auto_planned_date"] = "" if dossier_complete else (planned.isoformat() if planned else "")
@@ -17636,7 +17639,7 @@ def public_trainee_space(token):
 
     show_hosting = ((training_type or "").strip().upper() == "A3P")
     show_vae = ("VAE" in (training_type or "").upper())
-    show_professional_experience_sheet = _professional_experience_sheet_is_required(training_type, t)
+    show_professional_experience_sheet = _professional_experience_sheet_is_required(training_type, _session_get(s, "date_start", ""))
     show_vtc = ("VTC" in (training_type or "").upper())
 
     # ✅ persistance
@@ -17656,8 +17659,8 @@ def public_trainee_space(token):
         show_vae=show_vae,
         show_professional_experience_sheet=show_professional_experience_sheet,
         show_vtc=show_vtc,
-        dossier_ok=dossier_is_complete_total(t, training_type),
-        vae_required_docs_deposited=required_docs_are_deposited(t, training_type),
+        dossier_ok=dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")),
+        vae_required_docs_deposited=required_docs_are_deposited(t, training_type, _session_get(s, "date_start", "")),
         ssiap_exam_date=ssiap_exam_date,
         ssiap_medical_from_date=ssiap_medical_from_date,
     )
@@ -17804,7 +17807,7 @@ def public_professional_experience_sheet_submit(token: str):
         return jsonify({"ok": False, "message": "Votre session a expiré. Veuillez vous reconnecter."}), 401
 
     training_type = str(_session_get(session_obj, "training_type", "") or "")
-    if not _professional_experience_sheet_is_required(training_type, trainee):
+    if not _professional_experience_sheet_is_required(training_type, _session_get(session_obj, "date_start", "")):
         abort(404)
     if _professional_experience_sheet_is_submitted(trainee):
         return jsonify({
@@ -17818,7 +17821,7 @@ def public_professional_experience_sheet_submit(token: str):
 
     trainee["professional_experience_sheet"] = sheet
     trainee["updated_at"] = _now_iso()
-    trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, training_type) else "incomplete"
+    trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, training_type, _session_get(session_obj, "date_start", "")) else "incomplete"
     session_obj["trainees"] = _session_trainees_list(session_obj)
     session_obj.pop("stagiaires", None)
     save_data(data)
@@ -17970,7 +17973,7 @@ def admin_professional_experience_sheet_status(session_id: str, trainee_id: str)
     sheet["reviewed_at"] = _now_iso() if status != "A CONTRÔLER" else ""
     trainee["updated_at"] = _now_iso()
     training_type = str(_session_get(session_obj, "training_type", "") or "")
-    trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, training_type) else "incomplete"
+    trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, training_type, _session_get(session_obj, "date_start", "")) else "incomplete"
     append_trainee_history_event(trainee, "Statut fiche expérience modifié", status, "action")
     session_obj["trainees"] = _session_trainees_list(session_obj)
     session_obj.pop("stagiaires", None)
@@ -18043,7 +18046,7 @@ def admin_professional_experience_sheet_delete(session_id: str, trainee_id: str)
     trainee.pop("professional_experience_sheet", None)
     trainee["updated_at"] = _now_iso()
     training_type = str(_session_get(session_obj, "training_type", "") or "")
-    trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, training_type) else "incomplete"
+    trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, training_type, _session_get(session_obj, "date_start", "")) else "incomplete"
     session_obj["trainees"] = _session_trainees_list(session_obj)
     session_obj.pop("stagiaires", None)
     save_data(data)
@@ -18145,7 +18148,7 @@ def public_infos_update(token: str):
             t[k] = v
 
     training_type = _session_get(s, "training_type", "")
-    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
     t["updated_at"] = _now_iso()
 
     # ✅ IMPORTANT : persister la session normalisée comme ailleurs
@@ -18275,7 +18278,7 @@ def public_doc_upload(token: str, doc_key: str):
                         },
                     )
                 t["updated_at"] = _now_iso()
-                t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+                t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
                 s["trainees"] = _session_trainees_list(s)
                 s.pop("stagiaires", None)
                 save_data(data)
@@ -18347,7 +18350,7 @@ def public_doc_upload(token: str, doc_key: str):
             break
 
     t["updated_at"] = _now_iso()
-    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
 
     # ✅ persistance
     s["trainees"] = _session_trainees_list(s)
@@ -18427,7 +18430,7 @@ def public_candidate_sheet_validate(token: str):
             target["status"] = "A CONTRÔLER"
 
     t["updated_at"] = _now_iso()
-    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
 
     s["trainees"] = _session_trainees_list(s)
     s.pop("stagiaires", None)
@@ -18525,7 +18528,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         t["training_price"] = default_price
 
     # ✅ dossier_status cohérent avec les docs requis
-    dossier_complete = dossier_is_complete_total(t, training_type)
+    dossier_complete = dossier_is_complete_total(t, training_type, _session_get(s, "date_start", ""))
     t["dossier_status"] = "complete" if dossier_complete else "incomplete"
     planned_relance_date = _docs_relance_planned_date(s)
     t["docs_relance_auto_planned_date"] = "" if dossier_complete else (planned_relance_date.isoformat() if planned_relance_date else "")
@@ -18562,7 +18565,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         session=session_view,
         trainee=t,
         show_vae=show_vae,
-        show_professional_experience_sheet=_professional_experience_sheet_is_required(training_type, t),
+        show_professional_experience_sheet=_professional_experience_sheet_is_required(training_type, _session_get(s, "date_start", "")),
         show_candidate_sheet=show_candidate_sheet,
         vae_steps=vae_steps,
         vae_dossier=vae_dossier,
@@ -18969,7 +18972,7 @@ def public_trainee_candidate_sheet_save(token: str):
     ensure_documents_schema_for_trainee(t, training_type)
 
     t["updated_at"] = _now_iso()
-    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
 
     s["trainees"] = _session_trainees_list(s)
     s.pop("stagiaires", None)
@@ -19104,7 +19107,7 @@ def admin_trainee_candidate_sheet_save(session_id: str, trainee_id: str):
     ensure_documents_schema_for_trainee(t, training_type)
 
     t["updated_at"] = _now_iso()
-    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type) else "incomplete"
+    t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
@@ -19494,7 +19497,7 @@ def api_cnaps_import_pre_merge():
     stored = _store_file(session_id, trainee_id, "documents", uploaded)
     token = _tokenize_path(stored)
 
-    _attach_cnaps_to_trainee(t, training_type, pre_number, token, "Import PRE CNAPS fusionné")
+    _attach_cnaps_to_trainee(t, training_type, pre_number, token, "Import PRE CNAPS fusionné", _session_get(s, "date_start", ""))
     t["cnaps_import_merged_once"] = True
     t["cnaps_import_merged_at"] = _now_iso()
 
@@ -19685,7 +19688,7 @@ def admin_sessions_archived():
         st = compute_stats(s)
         trainees = _session_trainees_list(s)
         dossier_complete_total = sum(
-            1 for t in trainees if dossier_is_complete_total(t, _session_get(s, "training_type", ""))
+            1 for t in trainees if dossier_is_complete_total(t, _session_get(s, "training_type", ""), _session_get(s, "date_start", ""))
         )
         session_dossier_complete = (len(trainees) > 0 and dossier_complete_total == len(trainees))
         out_sessions.append({
@@ -22045,7 +22048,7 @@ def _vae_create_and_redirect_for_trainee_token(trainee_token: str):
         s, t = find_session_and_trainee_by_token(data_main, trainee_token)
         if s and t:
             training_type = _session_get(s, "training_type", "")
-            if not required_docs_are_deposited(t, training_type):
+            if not required_docs_are_deposited(t, training_type, _session_get(s, "date_start", "")):
                 abort(403)
             linked_trainee_id = str(t.get('id') or '')
             linked_session_id = str(s.get('id') or '')
