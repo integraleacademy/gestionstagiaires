@@ -18734,7 +18734,9 @@ def admin_trainee_summary(session_id: str, trainee_id: str):
 
     training_type_key = (training_type or "").strip().upper()
     summary_training_badge = {"label": "FORMATION", "color": "gray"}
-    if "VAE" in training_type_key:
+    if training_type_key.startswith("SSIAP"):
+        summary_training_badge = {"label": training_type_key, "color": "red"}
+    elif "VAE" in training_type_key:
         summary_training_badge = {"label": "VAE", "color": "orange"}
     elif "DIRIGEANT" in training_type_key:
         summary_training_badge = {"label": "DIRIGEANT", "color": "orange"}
