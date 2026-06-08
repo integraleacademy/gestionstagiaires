@@ -80,6 +80,61 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         self.assertIn("needs-attention", html.split('data-pro-sheet-open', 1)[0].split("<button", 1)[-1])
         self.assertNotIn("À contrôler", launch)
 
+    def test_public_page_shows_sheet_for_non_vae_training(self):
+        self.payload["sessions"][0]["name"] = "A3P Juin 2026"
+        self.payload["sessions"][0]["training_type"] = "A3P"
+        self._authenticate_public()
+
+        response = self.client.get("/espace/public-token")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Fiche expérience professionnelle", html)
+        self.assertIn("data-pro-sheet-open", html)
+        self.assertIn('id="professionalExperienceModal"', html)
+        self.assertIn("professional-experience.js", html)
+
+    def test_public_page_shows_sheet_for_vtc_training_even_when_documents_are_hidden(self):
+        self.payload["sessions"][0]["name"] = "VTC Juin 2026"
+        self.payload["sessions"][0]["training_type"] = "VTC"
+        self._authenticate_public()
+
+        response = self.client.get("/espace/public-token")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Fiche expérience professionnelle", html)
+        self.assertIn("data-pro-sheet-open", html)
+        self.assertIn('id="professionalExperienceModal"', html)
+
+    def test_non_vae_training_accepts_sheet_submission(self):
+        self.payload["sessions"][0]["name"] = "SSIAP 1 Juin 2026"
+        self.payload["sessions"][0]["training_type"] = "SSIAP 1"
+        self._authenticate_public()
+
+        response = self.client.post(
+            "/espace/public-token/fiche-experience-professionnelle",
+            json=self._valid_payload(),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        sheet = self.payload["sessions"][0]["trainees"][0]["professional_experience_sheet"]
+        self.assertEqual(sheet["training_type"], "SSIAP 1")
+        self.assertEqual(sheet["training_name"], "SSIAP 1 Juin 2026")
+
+    def test_admin_documents_show_sheet_for_non_vae_training(self):
+        self.payload["sessions"][0]["name"] = "SST Juin 2026"
+        self.payload["sessions"][0]["training_type"] = "SST"
+        self._authenticate_admin()
+
+        response = self.client.get("/admin/sessions/S1/stagiaires/T1")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        row = html.split('data-doc-key="professional_experience_sheet"', 1)[1].split("</tr>", 1)[0]
+        self.assertIn("Fiche expérience professionnelle", row)
+        self.assertIn("NON DÉPOSÉ", row)
+
     def test_admin_documents_show_sheet_as_not_deposited_before_submission(self):
         self._authenticate_admin()
 
@@ -137,13 +192,10 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         self.assertIn("certified", errors)
         self.assertNotIn("professional_experience_sheet", self.payload["sessions"][0]["trainees"][0])
 
-    def test_submission_is_restricted_to_vae_training(self):
-        self._authenticate_public()
-        self.payload["sessions"][0]["training_type"] = "APS"
-
-        response = self.client.post("/espace/public-token/fiche-experience-professionnelle", json=self._valid_payload())
-
-        self.assertEqual(response.status_code, 404)
+    def test_sheet_is_required_for_every_training_type(self):
+        for training_type in ("DIRIGEANT VAE", "APS", "A3P", "SSIAP 1", "SST", "VTC"):
+            with self.subTest(training_type=training_type):
+                self.assertTrue(gestion_app._professional_experience_sheet_is_required(training_type))
 
     def test_second_public_submission_is_rejected_without_overwriting_sheet(self):
         self._authenticate_public()

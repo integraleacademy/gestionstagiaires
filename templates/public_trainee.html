@@ -1491,7 +1491,16 @@ id="upload_{{ d.key }}"
       </div>  <!-- ferme .docmeta -->
     </div>    <!-- ferme .docrow -->
   {% endfor %}
-  {% if show_vae %}
+</div>
+{% if show_vae or is_security_training %}
+  </div>
+</details>
+{% else %}
+</div>
+{% endif %}
+
+  {% endif %}
+  {% if show_professional_experience_sheet %}
   <button class="pro-sheet-launch{% if not trainee.professional_experience_sheet %} needs-attention{% else %} is-sent{% endif %}" type="button"{% if trainee.professional_experience_sheet %} disabled aria-disabled="true"{% else %} data-pro-sheet-open{% endif %}>
     <span class="pro-sheet-launch-icon" aria-hidden="true">✦</span>
     <span class="pro-sheet-launch-copy">
@@ -1502,17 +1511,7 @@ id="upload_{{ d.key }}"
     <span class="pro-sheet-launch-arrow" aria-hidden="true">{% if trainee.professional_experience_sheet %}✓{% else %}→{% endif %}</span>
   </button>
   {% endif %}
-  
-</div>
-{% if show_vae or is_security_training %}
-  </div>
-</details>
-{% else %}
-</div>
-{% endif %}
-
-  {% endif %}
-  {% if show_vae and not trainee.professional_experience_sheet %}
+  {% if show_professional_experience_sheet and not trainee.professional_experience_sheet %}
     {% include "_professional_experience_sheet_modal.html" %}
   {% endif %}
     {% if not show_vtc and not is_dirigeant_vae %}
@@ -3031,5 +3030,5 @@ function normalizePRE(s){
   }
 })();
 </script>
-{% if show_vae %}<script src="{{ url_for('static', filename='js/professional-experience.js') }}" defer></script>{% endif %}
+{% if show_professional_experience_sheet %}<script src="{{ url_for('static', filename='js/professional-experience.js') }}" defer></script>{% endif %}
 {% endblock %}
