@@ -12136,7 +12136,9 @@ def _next_ssiap_diploma_sequence(data: Dict[str, Any], year: int) -> int:
     return highest + 1
 
 
-def _reserve_ssiap_diploma_numbers(session_id: str) -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
+def _reserve_ssiap_diploma_numbers(
+    session_id: str, trainee_id: Optional[str] = None
+) -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
     os.makedirs(os.path.dirname(SSIAP_DIPLOMA_LOCK_FILE) or ".", exist_ok=True)
     with open(SSIAP_DIPLOMA_LOCK_FILE, "a+", encoding="utf-8") as lock_file:
         fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
@@ -12163,15 +12165,29 @@ def _reserve_ssiap_diploma_numbers(session_id: str) -> Tuple[Dict[str, Any], Lis
             if not trainees:
                 raise ValueError("Aucun stagiaire dans cette session SSIAP.")
 
+            selected_trainees = trainees
+            if trainee_id is not None:
+                selected_trainees = [
+                    trainee for trainee in trainees
+                    if str(trainee.get("id") or "") == str(trainee_id)
+                ]
+                if not selected_trainees:
+                    raise LookupError("trainee_not_found")
+
             missing = []
-            for trainee in trainees:
+            for trainee in selected_trainees:
+                missing_fields = []
                 if not (trainee.get("first_name") or "").strip() or not (trainee.get("last_name") or "").strip():
-                    missing.append(_ssiap_diploma_display_name(trainee) or str(trainee.get("id") or "Stagiaire sans nom"))
+                    missing_fields.append("nom ou prénom")
                 if not _diploma_date_fr(trainee.get("birth_date") or ""):
-                    missing.append(_ssiap_diploma_display_name(trainee) or str(trainee.get("id") or "Stagiaire sans nom"))
+                    missing_fields.append("date de naissance")
+                if not str(trainee.get("birth_city") or trainee.get("birth_place") or "").strip():
+                    missing_fields.append("lieu de naissance")
+                if missing_fields:
+                    trainee_name = _ssiap_diploma_display_name(trainee) or str(trainee.get("id") or "Stagiaire sans nom")
+                    missing.append(f"{trainee_name} ({', '.join(missing_fields)})")
             if missing:
-                names = ", ".join(dict.fromkeys(missing))
-                raise ValueError(f"Nom, prénom ou date de naissance manquant pour : {names}.")
+                raise ValueError(f"Informations manquantes pour : {'; '.join(missing)}.")
 
             diploma_number_counts: Dict[str, int] = {}
             for existing_session in data.get("sessions", []):
@@ -12182,7 +12198,7 @@ def _reserve_ssiap_diploma_numbers(session_id: str) -> Tuple[Dict[str, Any], Lis
 
             next_sequence = _next_ssiap_diploma_sequence(data, year)
             diploma_rows = []
-            for trainee in trainees:
+            for trainee in selected_trainees:
                 diploma_number = str(trainee.get("ssiap_diploma_number") or "").strip()
                 match = SSIAP_DIPLOMA_NUMBER_RE.match(diploma_number)
                 if (
@@ -12198,6 +12214,7 @@ def _reserve_ssiap_diploma_numbers(session_id: str) -> Tuple[Dict[str, Any], Lis
                 diploma_rows.append({
                     "name": _ssiap_diploma_display_name(trainee),
                     "birth_date": _diploma_date_fr(trainee.get("birth_date") or ""),
+                    "birth_place": str(trainee.get("birth_city") or trainee.get("birth_place") or "").strip(),
                     "exam_date": exam_date,
                     "number": diploma_number,
                 })
@@ -12230,12 +12247,14 @@ def _build_ssiap_diplomas_pdf(diplomas: List[Dict[str, str]]) -> BytesIO:
 
     for diploma in diplomas:
         pdf.drawImage(background, 0, 0, width=page_width, height=page_height, preserveAspectRatio=False)
-        _draw_fitted_pdf_text(pdf, diploma["exam_date"], 1360, page_height - 783, 300)
-        _draw_fitted_pdf_text(pdf, diploma["name"], 1015, page_height - 852, 720)
-        _draw_fitted_pdf_text(pdf, diploma["birth_date"], 1015, page_height - 889, 300)
-        _draw_fitted_pdf_text(pdf, diploma["name"], 1050, page_height - 1118, 720)
-        _draw_fitted_pdf_text(pdf, diploma["number"], 1050, page_height - 1157, 430)
-        _draw_fitted_pdf_text(pdf, diploma["exam_date"], 400, page_height - 1174, 300)
+        # Each baseline is aligned with its printed label and starts after the label's right edge.
+        _draw_fitted_pdf_text(pdf, diploma["exam_date"], 1460, page_height - 776, 300, 21)
+        _draw_fitted_pdf_text(pdf, diploma["name"], 1080, page_height - 846, 650, 21)
+        _draw_fitted_pdf_text(pdf, diploma["birth_date"], 1080, page_height - 883, 300, 21)
+        _draw_fitted_pdf_text(pdf, diploma["birth_place"], 1080, page_height - 921, 650, 21)
+        _draw_fitted_pdf_text(pdf, diploma["name"], 1120, page_height - 1108, 620, 21)
+        _draw_fitted_pdf_text(pdf, diploma["number"], 1170, page_height - 1145, 430, 21)
+        _draw_fitted_pdf_text(pdf, diploma["exam_date"], 480, page_height - 1171, 300, 21)
         pdf.showPage()
 
     pdf.save()
@@ -12263,6 +12282,29 @@ def admin_generate_ssiap_diplomas(session_id: str):
         mimetype="application/pdf",
         as_attachment=True,
         download_name=f"diplomes-{session_name}-{year}.pdf",
+    )
+
+
+@app.post("/admin/sessions/<session_id>/trainees/<trainee_id>/ssiap-diploma")
+@admin_login_required
+@admin_write_required
+def admin_generate_ssiap_diploma(session_id: str, trainee_id: str):
+    if not REPORTLAB_LIBRARY_AVAILABLE or not os.path.exists(SSIAP_DIPLOMA_TEMPLATE):
+        abort(503, description="Le modèle ou le moteur PDF des diplômes est indisponible.")
+    try:
+        _session_item, diplomas = _reserve_ssiap_diploma_numbers(session_id, trainee_id)
+    except LookupError:
+        abort(404)
+    except ValueError as exc:
+        return str(exc), 400
+
+    diploma = diplomas[0]
+    trainee_name = re.sub(r"[^A-Za-z0-9_-]+", "-", diploma["name"]).strip("-") or "stagiaire"
+    return send_file(
+        _build_ssiap_diplomas_pdf(diplomas),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"diplome-SSIAP-{trainee_name}-{diploma['exam_date'][-4:]}.pdf",
     )
 
 
