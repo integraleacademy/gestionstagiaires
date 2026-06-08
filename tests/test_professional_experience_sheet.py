@@ -102,8 +102,8 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         body = response.get_json()
         self.assertEqual(body["message"], "Votre fiche expérience professionnelle a bien été transmise.")
         sheet = self.payload["sessions"][0]["trainees"][0]["professional_experience_sheet"]
-        self.assertEqual(sheet["status"], "pending_review")
-        self.assertEqual(sheet["status_label"], "À contrôler")
+        self.assertEqual(sheet["status"], "A CONTRÔLER")
+        self.assertEqual(sheet["status_label"], "A CONTRÔLER")
         self.assertEqual(sheet["last_name"], "Martin")
         self.assertEqual(sheet["experiences"][0]["work_time_percent"], 100.0)
         self.assertTrue(self.saved)
@@ -171,9 +171,12 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         self.assertFalse(gestion_app.required_docs_are_deposited(trainee, training_type))
         self.assertFalse(gestion_app.dossier_is_complete(trainee, training_type))
 
-        trainee["professional_experience_sheet"] = {"status": "pending_review"}
+        trainee["professional_experience_sheet"] = {"status": "A CONTRÔLER"}
         self.assertTrue(gestion_app.required_docs_are_deposited(trainee, training_type))
         self.assertFalse(gestion_app.dossier_is_complete(trainee, training_type))
+
+        trainee["professional_experience_sheet"]["status"] = "CONFORME"
+        self.assertTrue(gestion_app.dossier_is_complete(trainee, training_type))
 
         trainee["professional_experience_sheet"]["status"] = "validated"
         self.assertTrue(gestion_app.dossier_is_complete(trainee, training_type))
@@ -190,7 +193,7 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         row = html.split('data-doc-key="professional_experience_sheet"', 1)[1].split("</tr>", 1)[0]
         self.assertIn("Fiche expérience professionnelle", row)
         self.assertIn("A CONTRÔLER", row)
-        self.assertIn("VALIDÉ", row)
+        self.assertIn("CONFORME", row)
         self.assertIn("NON CONFORME", row)
         self.assertIn("Voir et imprimer la fiche", row)
         self.assertNotIn("Consulter", row)
@@ -223,14 +226,14 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
 
         response = self.client.post(
             "/api/sessions/S1/stagiaires/T1/fiche-experience-professionnelle/status",
-            json={"status": "validated"},
+            json={"status": "CONFORME"},
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json()["status_label"], "Validé")
+        self.assertEqual(response.get_json()["status_label"], "CONFORME")
         sheet = self.payload["sessions"][0]["trainees"][0]["professional_experience_sheet"]
-        self.assertEqual(sheet["status"], "validated")
-        self.assertEqual(sheet["status_label"], "Validé")
+        self.assertEqual(sheet["status"], "CONFORME")
+        self.assertEqual(sheet["status_label"], "CONFORME")
         self.assertEqual(sheet["reviewed_at"], "2026-06-08T10:30:00Z")
 
     def test_admin_can_open_printable_html_sheet(self):

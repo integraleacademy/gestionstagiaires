@@ -40,7 +40,7 @@ class RequiredDocsForDirigeantTests(unittest.TestCase):
         trainee = {
             "no_bac_diploma": True,
             "candidate_sheet_saved_at": "2026-01-01T10:00:00",
-            "professional_experience_sheet": {"status": "pending_review"},
+            "professional_experience_sheet": {"status": "A CONTRÔLER"},
             "documents": [
                 {"key": "id", "files": ["id.pdf"]},
                 {"key": "photo", "files": ["photo.png"]},
