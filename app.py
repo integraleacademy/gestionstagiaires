@@ -6222,8 +6222,19 @@ def allowed_doc_keys_for_training(training_type: str, trainee: Optional[Dict[str
     return keys
 
 
-def _professional_experience_sheet_is_required(training_type: str) -> bool:
-    return "VAE" in (training_type or "").strip().upper()
+def _professional_experience_sheet_is_required(
+    training_type: str,
+    trainee: Optional[Dict[str, Any]] = None,
+) -> bool:
+    """Require the sheet for VAE and for dossiers created with the new rule."""
+    if "VAE" in (training_type or "").strip().upper():
+        return True
+    if not isinstance(trainee, dict):
+        return False
+    return bool(
+        trainee.get("professional_experience_sheet_required")
+        or _professional_experience_sheet_is_submitted(trainee)
+    )
 
 
 def _professional_experience_sheet_is_submitted(trainee: Dict[str, Any]) -> bool:
@@ -6241,7 +6252,8 @@ def dossier_is_complete(trainee: Dict[str, Any], training_type: str) -> bool:
     """
     Complet si TOUS les docs requis sont CONFORME,
     sauf permis si trainee a coché no_permis=True (A3P).
-    La fiche d'expérience professionnelle est également requise et validée en VAE.
+    La fiche d'expérience professionnelle est également requise et validée
+    pour les parcours VAE et les nouveaux dossiers créés avec cette obligation.
     """
     docs = trainee.get("documents") or []
     if not docs:
@@ -6267,7 +6279,7 @@ def dossier_is_complete(trainee: Dict[str, Any], training_type: str) -> bool:
         if st != "CONFORME":
             return False
 
-    if _professional_experience_sheet_is_required(training_type):
+    if _professional_experience_sheet_is_required(training_type, trainee):
         return _professional_experience_sheet_is_validated(trainee)
 
     return True
@@ -6315,7 +6327,7 @@ def required_docs_are_deposited(trainee: Dict[str, Any], training_type: str) -> 
         if not (has_files or has_file):
             return False
 
-    if _professional_experience_sheet_is_required(training_type):
+    if _professional_experience_sheet_is_required(training_type, trainee):
         return _professional_experience_sheet_is_submitted(trainee)
 
     return True
@@ -7557,6 +7569,7 @@ def public_vae_desp_submit():
         "no_permis": False,
         "no_bac_diploma": False,
         "force_dossier_complete": False,
+        "professional_experience_sheet_required": True,
         "vtc_cm_login": "",
         "vtc_cm_password": "",
         "vtc_cm_submitted_at": "",
@@ -13242,6 +13255,7 @@ def api_create_trainee(session_id: str):
         "no_permis": False,
         "no_bac_diploma": False,
         "force_dossier_complete": False,
+        "professional_experience_sheet_required": True,
         "vtc_cm_login": "",
         "vtc_cm_password": "",
         "vtc_cm_submitted_at": "",
@@ -17611,6 +17625,7 @@ def public_trainee_space(token):
 
     show_hosting = ((training_type or "").strip().upper() == "A3P")
     show_vae = ("VAE" in (training_type or "").upper())
+    show_professional_experience_sheet = _professional_experience_sheet_is_required(training_type, t)
     show_vtc = ("VTC" in (training_type or "").upper())
 
     # ✅ persistance
@@ -17628,6 +17643,7 @@ def public_trainee_space(token):
         token=token,
         show_hosting=show_hosting,
         show_vae=show_vae,
+        show_professional_experience_sheet=show_professional_experience_sheet,
         show_vtc=show_vtc,
         dossier_ok=dossier_is_complete_total(t, training_type),
         vae_required_docs_deposited=required_docs_are_deposited(t, training_type),
@@ -17777,7 +17793,7 @@ def public_professional_experience_sheet_submit(token: str):
         return jsonify({"ok": False, "message": "Votre session a expiré. Veuillez vous reconnecter."}), 401
 
     training_type = str(_session_get(session_obj, "training_type", "") or "")
-    if "VAE" not in training_type.upper():
+    if not _professional_experience_sheet_is_required(training_type, trainee):
         abort(404)
     if _professional_experience_sheet_is_submitted(trainee):
         return jsonify({
@@ -18535,6 +18551,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         session=session_view,
         trainee=t,
         show_vae=show_vae,
+        show_professional_experience_sheet=_professional_experience_sheet_is_required(training_type, t),
         show_candidate_sheet=show_candidate_sheet,
         vae_steps=vae_steps,
         vae_dossier=vae_dossier,
