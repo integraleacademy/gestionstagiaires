@@ -201,6 +201,7 @@
   .filter-btn--aps{ background:#dbeafe; color:#1d4ed8; }
   .filter-btn--dirigeant{ background:#ffedd5; color:#9a3412; }
   .filter-btn--a3p{ background:#dcfce7; color:#15803d; }
+  .filter-btn--ssiap{ background:#fee2e2; color:#b91c1c; }
   .filter-btn--vtc{ background:#f3e8ff; color:#7e22ce; }
   .filter-btn--status{ background:#e5e7eb; color:#374151; }
   .filter-btn--cash{ background:#ffedd5; color:#9a3412; }
@@ -271,6 +272,7 @@
   .dashboard-card--dirigeant{ background:#ffedd5; color:#c2410c; }
   .dashboard-card--vae{ background:#ffedd5; color:#c2410c; }
   .dashboard-card--a3p{ background:#dcfce7; color:#15803d; }
+  .dashboard-card--ssiap{ background:#fee2e2; color:#b91c1c; }
   .session-name-editable{
     cursor:text;
     border-radius:6px;
@@ -580,7 +582,7 @@
 </div>
 
 <div class="card" style="margin-bottom:12px;">
-  {% set yearly_total = (yearly_training_counts.APS or 0) + (yearly_training_counts.VTC or 0) + (yearly_training_counts.DIRIGEANT or 0) + (yearly_training_counts.VAE or 0) + (yearly_training_counts.A3P or 0) %}
+  {% set yearly_total = (yearly_training_counts.APS or 0) + (yearly_training_counts.VTC or 0) + (yearly_training_counts.DIRIGEANT or 0) + (yearly_training_counts.VAE or 0) + (yearly_training_counts.A3P or 0) + (yearly_training_counts.SSIAP or 0) %}
   <div class="card-row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
     <div>
       <div class="card-title">Tableau de bord stagiaires {{ dashboard_year }}</div>
@@ -609,6 +611,10 @@
       <div class="dashboard-card__label">A3P</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.A3P or 0 }}</div>
     </button>
+    <button type="button" class="dashboard-card dashboard-card--ssiap" data-dashboard-filter="ssiap" aria-label="Afficher uniquement les formations SSIAP">
+      <div class="dashboard-card__label">SSIAP</div>
+      <div class="dashboard-card__count">{{ yearly_training_counts.SSIAP or 0 }}</div>
+    </button>
   </div>
 
   <button type="button" class="dashboard-total-card" data-dashboard-reset="true" aria-label="Afficher toutes les formations">
@@ -635,6 +641,7 @@
     <button class="filter-btn filter-btn--aps" data-filter-group="training" data-filter-value="aps">APS</button>
     <button class="filter-btn filter-btn--dirigeant" data-filter-group="training" data-filter-value="dirigeant">DIRIGEANT</button>
     <button class="filter-btn filter-btn--a3p" data-filter-group="training" data-filter-value="a3p">A3P</button>
+    <button class="filter-btn filter-btn--ssiap" data-filter-group="training" data-filter-value="ssiap">SSIAP</button>
     <button class="filter-btn filter-btn--vtc" data-filter-group="training" data-filter-value="vtc">VTC</button>
     <a class="filter-btn filter-btn--vtc" href="{{ url_for('admin_vtc_trainees_all') }}" style="text-decoration:none;display:inline-flex;align-items:center;">Voir tous les stagiaires VTC</a>
     <button class="filter-btn filter-btn--status" data-filter-group="status" data-filter-value="ongoing">Afficher les formations en cours</button>
