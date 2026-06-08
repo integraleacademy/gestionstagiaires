@@ -835,6 +835,7 @@
       <div class="training-chooser" id="trainingChooser">
         <button class="training-choice" data-training="APS">APS</button>
         <button class="training-choice" data-training="A3P">A3P</button>
+        <button class="training-choice" data-training="SSIAP">SSIAP</button>
         <button class="training-choice" data-training="DIRIGEANT initial">DIRIGEANT INITIAL</button>
         <button class="training-choice" data-training="DIRIGEANT VAE">VAE DIRIGEANT</button>
         <button class="training-choice" data-training="VTC">CHAUFFEUR VTC</button>
@@ -1104,6 +1105,7 @@
     const v = (value || "").trim().toUpperCase();
     if(v.startsWith("APS")) return "APS";
     if(v.startsWith("A3P")) return "A3P";
+    if(v.startsWith("SSIAP")) return "SSIAP";
     if(v.startsWith("DIRIGEANT INITIAL")) return "DIRIGEANT initial";
     if(v.startsWith("DIRIGEANT VAE") || v.startsWith("VAE DIRIGEANT")) return "DIRIGEANT VAE";
     if(v.includes("VTC") || v.includes("CHAUFFEUR VTC")) return "VTC";
