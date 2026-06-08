@@ -73,6 +73,10 @@ class SsiapDiplomaTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.mimetype, "application/pdf")
         self.assertIn("diplomes-SSIAP-1-juin-2026-2026.pdf", response.headers["Content-Disposition"])
+        self.assertEqual(json.loads(response.headers["X-SSIAP-Diploma-Numbers"]), {
+            "T1": "083-8323-1-2026-00001",
+            "T2": "083-8323-1-2026-00002",
+        })
 
         reader = PdfReader(BytesIO(response.data))
         self.assertEqual(len(reader.pages), 2)
@@ -293,6 +297,9 @@ class SsiapDiplomaTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.mimetype, "application/pdf")
         self.assertIn("diplome-SSIAP-Monsieur-Jean-DUPONT-2026.pdf", response.headers["Content-Disposition"])
+        self.assertEqual(json.loads(response.headers["X-SSIAP-Diploma-Numbers"]), {
+            "T1": "083-8323-1-2026-00001",
+        })
         reader = PdfReader(BytesIO(response.data))
         self.assertEqual(len(reader.pages), 1)
         page_text = reader.pages[0].extract_text()
@@ -369,6 +376,10 @@ class SsiapDiplomaTests(unittest.TestCase):
         self.assertNotIn(">CNAPS</th>", html)
         self.assertIn('id="btnGenerateSsiapDiplomas"', html)
         self.assertIn("Générer les diplômes certifiés", html)
+        self.assertIn('class="ssiap-diploma-generation-form"', html)
+        self.assertIn('data-ssiap-view-url="/admin/sessions/S1/trainees/T2/ssiap-diploma"', html)
+        self.assertIn('response.headers.get("X-SSIAP-Diploma-Numbers")', html)
+        self.assertIn("updateSsiapDiplomaDisplay(traineeId, number)", html)
         self.assertIn('/admin/sessions/S1/trainees/T2/ssiap-diploma', html)
         self.assertIn("🎓 Générer", html)
         self.assertIn('/admin/sessions/S1/trainees/T3/ssiap-diploma', html)
