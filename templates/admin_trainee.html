@@ -1459,17 +1459,18 @@
             <td style="font-weight:800;">Fiche expérience professionnelle</td>
             <td style="min-width:190px;">
               {% if professional_sheet %}
-                {% set professional_sheet_status = professional_sheet.status or 'pending_review' %}
+                {% set professional_sheet_raw_status = professional_sheet.status or 'A CONTRÔLER' %}
+                {% set professional_sheet_status = 'CONFORME' if professional_sheet_raw_status in ['CONFORME', 'validated'] else 'NON CONFORME' if professional_sheet_raw_status in ['NON CONFORME', 'non_compliant'] else 'A CONTRÔLER' %}
                 <select class="status professional-sheet-status"
                         data-update-url="{{ url_for('admin_professional_experience_sheet_status', session_id=session.id, trainee_id=trainee.id) }}"
                         {{ read_only_attr }}>
-                  <option value="pending_review" {% if professional_sheet_status == 'pending_review' %}selected{% endif %}>A CONTRÔLER</option>
-                  <option value="validated" {% if professional_sheet_status == 'validated' %}selected{% endif %}>VALIDÉ</option>
-                  <option value="non_compliant" {% if professional_sheet_status == 'non_compliant' %}selected{% endif %}>NON CONFORME</option>
+                  <option value="A CONTRÔLER" {% if professional_sheet_status == 'A CONTRÔLER' %}selected{% endif %}>A CONTRÔLER</option>
+                  <option value="CONFORME" {% if professional_sheet_status == 'CONFORME' %}selected{% endif %}>CONFORME</option>
+                  <option value="NON CONFORME" {% if professional_sheet_status == 'NON CONFORME' %}selected{% endif %}>NON CONFORME</option>
                 </select>
                 <div class="professional-sheet-status-summary" style="margin-top:8px;">
-                  <span class="pill professional-sheet-status-badge {% if professional_sheet_status == 'validated' %}pill-green{% elif professional_sheet_status == 'non_compliant' %}pill-red{% else %}pill-yellow{% endif %}">
-                    {{ professional_sheet.status_label or ('Validé' if professional_sheet_status == 'validated' else 'Non conforme' if professional_sheet_status == 'non_compliant' else 'À contrôler') }}
+                  <span class="pill professional-sheet-status-badge {% if professional_sheet_status == 'CONFORME' %}pill-green{% elif professional_sheet_status == 'NON CONFORME' %}pill-red{% else %}pill-yellow{% endif %}">
+                    {{ professional_sheet_status }}
                   </span>
                 </div>
                 <div class="hint professional-sheet-status-feedback" style="margin-top:6px;">Transmise le {{ professional_sheet.submitted_at|frdatetime }}</div>
@@ -2619,7 +2620,7 @@ function updateDocsRelanceState(status, plannedDateIso){
       if(professionalSheetStatus){
         professionalSheetStatus.setAttribute("data-prev-value", professionalSheetStatus.value);
         professionalSheetStatus.addEventListener("change", async ()=>{
-          const previousValue = professionalSheetStatus.getAttribute("data-prev-value") || "pending_review";
+          const previousValue = professionalSheetStatus.getAttribute("data-prev-value") || "A CONTRÔLER";
           professionalSheetStatus.disabled = true;
           try{
             const response = await fetch(professionalSheetStatus.dataset.updateUrl, {
@@ -2636,7 +2637,7 @@ function updateDocsRelanceState(status, plannedDateIso){
             if(badge){
               badge.textContent = result.status_label;
               badge.classList.remove("pill-yellow", "pill-green", "pill-red");
-              badge.classList.add(result.status === "validated" ? "pill-green" : result.status === "non_compliant" ? "pill-red" : "pill-yellow");
+              badge.classList.add(result.status === "CONFORME" ? "pill-green" : result.status === "NON CONFORME" ? "pill-red" : "pill-yellow");
             }
           }catch(error){
             professionalSheetStatus.value = previousValue;
