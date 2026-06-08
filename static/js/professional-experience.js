@@ -152,13 +152,20 @@
       const launchCopy = launch?.querySelector(".pro-sheet-launch-copy");
       launch?.classList.remove("needs-attention");
       launch?.classList.add("is-sent");
+      launch?.removeAttribute("data-pro-sheet-open");
+      if (launch) {
+        launch.disabled = true;
+        launch.setAttribute("aria-disabled", "true");
+      }
       const status = launchCopy?.querySelector(".pro-sheet-launch-status");
       if (status) {
         status.className = "pro-sheet-launch-status sent";
         status.textContent = "Fichier envoyé";
       }
       const launchHint = launchCopy?.querySelector("small");
-      if (launchHint) launchHint.textContent = "Votre fiche a bien été transmise.";
+      if (launchHint) launchHint.textContent = "Votre fiche a bien été transmise. Elle ne peut plus être modifiée.";
+      const launchArrow = launch?.querySelector(".pro-sheet-launch-arrow");
+      if (launchArrow) launchArrow.textContent = "✓";
       message.scrollIntoView({ behavior: "smooth", block: "center" });
     } catch (error) {
       message.className = "pro-sheet-message is-error";
