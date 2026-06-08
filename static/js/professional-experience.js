@@ -40,6 +40,8 @@
       const contract = card.querySelector('[data-field="contract_type"]:checked')?.value || "";
       const field = card.querySelector("[data-experience-show-when]");
       field?.classList.toggle("is-visible", contract === "other");
+      const otherInput = field?.querySelector('[data-field="contract_other"]');
+      if (otherInput) otherInput.required = contract === "other";
     });
   };
 
@@ -101,6 +103,16 @@
       if (input.value && (+input.value < 0 || +input.value > 100)) { setError(input, "Indiquez une valeur entre 0 et 100."); valid = false; }
     });
     experiences.querySelectorAll(".pro-sheet-experience").forEach(card => {
+      const contractField = card.querySelector('[data-field="contract_type"]');
+      const executiveField = card.querySelector('[data-field="executive_status"]');
+      if (!card.querySelector('[data-field="contract_type"]:checked')) {
+        setError(contractField, "Sélectionnez le type de contrat.");
+        valid = false;
+      }
+      if (!card.querySelector('[data-field="executive_status"]:checked')) {
+        setError(executiveField, "Sélectionnez le statut cadre.");
+        valid = false;
+      }
       if (card.querySelector('[data-field="contract_type"]:checked')?.value === "other") {
         const other = card.querySelector('[data-field="contract_other"]');
         if (!other.value.trim()) { setError(other, "Précisez le type de contrat."); valid = false; }
@@ -136,15 +148,17 @@
       if (!response.ok || !result.ok) throw new Error(result.message || "L’envoi de votre fiche a échoué. Veuillez réessayer.");
       message.className = "pro-sheet-message is-success";
       message.textContent = result.message;
-      const launchCopy = document.querySelector(".pro-sheet-launch-copy");
-      if (launchCopy && !launchCopy.querySelector(".pro-sheet-launch-status")) {
-        const status = document.createElement("span");
-        status.className = "pro-sheet-launch-status";
-        status.textContent = "À contrôler";
-        launchCopy.appendChild(status);
+      const launch = document.querySelector(".pro-sheet-launch");
+      const launchCopy = launch?.querySelector(".pro-sheet-launch-copy");
+      launch?.classList.remove("needs-attention");
+      launch?.classList.add("is-sent");
+      const status = launchCopy?.querySelector(".pro-sheet-launch-status");
+      if (status) {
+        status.className = "pro-sheet-launch-status sent";
+        status.textContent = "Fichier envoyé";
       }
       const launchHint = launchCopy?.querySelector("small");
-      if (launchHint) launchHint.textContent = "Fiche transmise · vous pouvez la mettre à jour si nécessaire.";
+      if (launchHint) launchHint.textContent = "Votre fiche a bien été transmise.";
       message.scrollIntoView({ behavior: "smooth", block: "center" });
     } catch (error) {
       message.className = "pro-sheet-message is-error";

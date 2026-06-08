@@ -17148,6 +17148,13 @@ def _professional_experience_sheet_payload(raw: Any, trainee: Dict[str, Any], se
     if qualification_level == "other" and not qualification_other:
         errors["qualification_other"] = "Précisez votre autre niveau."
 
+    qualification_since = str(payload.get("qualification_since") or "").strip()
+    last_certification = str(payload.get("last_certification") or "").strip()
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", qualification_since):
+        errors["qualification_since"] = "Renseignez la date d’obtention de votre niveau."
+    if not last_certification:
+        errors["last_certification"] = "Renseignez votre dernière certification obtenue."
+
     validation_name = str(payload.get("validation_name") or "").strip()
     validation_date = str(payload.get("validation_date") or "").strip()
     if not validation_name:
@@ -17168,19 +17175,33 @@ def _professional_experience_sheet_payload(raw: Any, trainee: Dict[str, Any], se
     allowed_executive = {"yes", "no", ""}
     for index, item in enumerate(raw_experiences[:5]):
         experience = item if isinstance(item, dict) else {}
+        job_title = str(experience.get("job_title") or "").strip()
+        company_name = str(experience.get("company_name") or "").strip()
+        start_date = str(experience.get("start_date") or "").strip()
+        end_date = str(experience.get("end_date") or "").strip()
         contract_type = str(experience.get("contract_type") or "").strip()
         executive_status = str(experience.get("executive_status") or "").strip()
         contract_other = str(experience.get("contract_other") or "").strip()
-        if contract_type not in allowed_contracts:
-            errors[f"experiences.{index}.contract_type"] = "Type de contrat invalide."
-        if executive_status not in allowed_executive:
-            errors[f"experiences.{index}.executive_status"] = "Statut cadre invalide."
+        if not job_title:
+            errors[f"experiences.{index}.job_title"] = "Renseignez l’intitulé du poste."
+        if not company_name:
+            errors[f"experiences.{index}.company_name"] = "Renseignez le nom de l’entreprise."
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", start_date):
+            errors[f"experiences.{index}.start_date"] = "Renseignez la date d’entrée."
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", end_date):
+            errors[f"experiences.{index}.end_date"] = "Renseignez la date de sortie."
+        if contract_type not in allowed_contracts or not contract_type:
+            errors[f"experiences.{index}.contract_type"] = "Sélectionnez le type de contrat."
+        if executive_status not in allowed_executive or not executive_status:
+            errors[f"experiences.{index}.executive_status"] = "Sélectionnez le statut cadre."
         if contract_type == "other" and not contract_other:
             errors[f"experiences.{index}.contract_other"] = "Précisez le type de contrat."
 
         work_time_raw = str(experience.get("work_time_percent") or "").strip()
         work_time: Optional[float] = None
-        if work_time_raw:
+        if not work_time_raw:
+            errors[f"experiences.{index}.work_time_percent"] = "Renseignez le temps de travail."
+        else:
             try:
                 work_time = float(work_time_raw.replace(",", "."))
                 if work_time < 0 or work_time > 100:
@@ -17189,10 +17210,10 @@ def _professional_experience_sheet_payload(raw: Any, trainee: Dict[str, Any], se
                 errors[f"experiences.{index}.work_time_percent"] = "Le temps de travail doit être compris entre 0 et 100 %."
 
         experiences.append({
-            "job_title": str(experience.get("job_title") or "").strip(),
-            "company_name": str(experience.get("company_name") or "").strip(),
-            "start_date": str(experience.get("start_date") or "").strip(),
-            "end_date": str(experience.get("end_date") or "").strip(),
+            "job_title": job_title,
+            "company_name": company_name,
+            "start_date": start_date,
+            "end_date": end_date,
             "work_time_percent": work_time,
             "contract_type": contract_type,
             "contract_other": contract_other if contract_type == "other" else "",
@@ -17216,8 +17237,8 @@ def _professional_experience_sheet_payload(raw: Any, trainee: Dict[str, Any], se
         "current_situation_other": current_situation_other if current_situation == "other" else "",
         "qualification_level": qualification_level,
         "qualification_other": qualification_other if qualification_level == "other" else "",
-        "qualification_since": str(payload.get("qualification_since") or "").strip(),
-        "last_certification": str(payload.get("last_certification") or "").strip(),
+        "qualification_since": qualification_since,
+        "last_certification": last_certification,
         "experiences": experiences,
         "validation_name": validation_name,
         "validation_date": validation_date,
@@ -17367,6 +17388,37 @@ def _professional_experience_sheet_pdf(sheet: Dict[str, Any]) -> BytesIO:
     doc.build(story, onFirstPage=draw_footer, onLaterPages=draw_footer)
     output.seek(0)
     return output
+
+
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/fiche-experience-professionnelle/status")
+@admin_login_required
+@admin_write_required
+def admin_professional_experience_sheet_status(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj = find_session(data, session_id)
+    trainee = next((item for item in _session_trainees_list(session_obj or {}) if str(item.get("id")) == trainee_id), None)
+    sheet = _professional_experience_sheet_for_trainee(trainee or {})
+    if not session_obj or not trainee or not sheet:
+        return jsonify({"ok": False, "error": "sheet_not_found"}), 404
+
+    status = str((request.get_json(silent=True) or {}).get("status") or "").strip()
+    labels = {
+        "pending_review": "À contrôler",
+        "validated": "Validé",
+        "non_compliant": "Non conforme",
+    }
+    if status not in labels:
+        return jsonify({"ok": False, "error": "invalid_status"}), 400
+
+    sheet["status"] = status
+    sheet["status_label"] = labels[status]
+    sheet["reviewed_at"] = _now_iso() if status != "pending_review" else ""
+    trainee["updated_at"] = _now_iso()
+    append_trainee_history_event(trainee, "Statut fiche expérience modifié", labels[status], "action")
+    session_obj["trainees"] = _session_trainees_list(session_obj)
+    session_obj.pop("stagiaires", None)
+    save_data(data)
+    return jsonify({"ok": True, "status": status, "status_label": labels[status]})
 
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/fiche-experience-professionnelle.pdf")

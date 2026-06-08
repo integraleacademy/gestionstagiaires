@@ -73,10 +73,11 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
-        launch = html.split('class="pro-sheet-launch"', 1)[1].split("</button>", 1)[0]
-        self.assertIn("Complétez et transmettez votre parcours professionnel.", launch)
+        launch = html.split('data-pro-sheet-open', 1)[1].split("</button>", 1)[0]
+        self.assertIn("Obligatoire : complétez et transmettez votre parcours professionnel.", launch)
+        self.assertIn("À compléter", launch)
+        self.assertIn("needs-attention", html.split('data-pro-sheet-open', 1)[0].split("<button", 1)[-1])
         self.assertNotIn("À contrôler", launch)
-        self.assertNotIn("pro-sheet-launch-status", launch)
 
     def test_admin_documents_show_sheet_as_not_deposited_before_submission(self):
         self._authenticate_admin()
@@ -109,13 +110,29 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
     def test_public_submission_validates_required_and_conditional_fields(self):
         self._authenticate_public()
         payload = self._valid_payload()
-        payload.update({"current_situation": "other", "current_situation_other": "", "certified": False})
+        payload.update({
+            "current_situation": "other",
+            "current_situation_other": "",
+            "qualification_since": "",
+            "last_certification": "",
+            "certified": False,
+        })
+        payload["experiences"] = [{}]
 
         response = self.client.post("/espace/public-token/fiche-experience-professionnelle", json=payload)
 
         self.assertEqual(response.status_code, 400)
         errors = response.get_json()["errors"]
         self.assertIn("current_situation_other", errors)
+        self.assertIn("qualification_since", errors)
+        self.assertIn("last_certification", errors)
+        self.assertIn("experiences.0.job_title", errors)
+        self.assertIn("experiences.0.company_name", errors)
+        self.assertIn("experiences.0.start_date", errors)
+        self.assertIn("experiences.0.end_date", errors)
+        self.assertIn("experiences.0.work_time_percent", errors)
+        self.assertIn("experiences.0.contract_type", errors)
+        self.assertIn("experiences.0.executive_status", errors)
         self.assertIn("certified", errors)
         self.assertNotIn("professional_experience_sheet", self.payload["sessions"][0]["trainees"][0])
 
@@ -139,9 +156,41 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         row = html.split('data-doc-key="professional_experience_sheet"', 1)[1].split("</tr>", 1)[0]
         self.assertIn("Fiche expérience professionnelle", row)
         self.assertIn("A CONTRÔLER", row)
-        self.assertIn("Consulter", row)
+        self.assertIn("VALIDÉ", row)
+        self.assertIn("NON CONFORME", row)
         self.assertIn("Télécharger le PDF", row)
-        self.assertIn("Responsable sécurité", html)
+        self.assertNotIn("Consulter", row)
+        self.assertNotIn("Responsable sécurité", html)
+
+    def test_public_page_shows_file_sent_after_submission(self):
+        self._authenticate_public()
+        self.client.post("/espace/public-token/fiche-experience-professionnelle", json=self._valid_payload())
+
+        response = self.client.get("/espace/public-token")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        launch = html.split('data-pro-sheet-open', 1)[1].split("</button>", 1)[0]
+        self.assertIn("Fichier envoyé", launch)
+        self.assertNotIn("À contrôler", launch)
+        self.assertNotIn("needs-attention", html.split('data-pro-sheet-open', 1)[0].split("<button", 1)[-1])
+
+    def test_admin_can_update_sheet_status(self):
+        self._authenticate_public()
+        self.client.post("/espace/public-token/fiche-experience-professionnelle", json=self._valid_payload())
+        self._authenticate_admin()
+
+        response = self.client.post(
+            "/api/sessions/S1/stagiaires/T1/fiche-experience-professionnelle/status",
+            json={"status": "validated"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["status_label"], "Validé")
+        sheet = self.payload["sessions"][0]["trainees"][0]["professional_experience_sheet"]
+        self.assertEqual(sheet["status"], "validated")
+        self.assertEqual(sheet["status_label"], "Validé")
+        self.assertEqual(sheet["reviewed_at"], "2026-06-08T10:30:00Z")
 
     def test_admin_can_download_generated_pdf(self):
         self._authenticate_public()

@@ -7,7 +7,7 @@
       <div>
         <span class="pro-sheet-eyebrow">Intégrale Academy · VAE</span>
         <h2 id="professionalExperienceTitle">Fiche expérience professionnelle</h2>
-        <p>Présentez votre parcours professionnel en quelques étapes.</p>
+        <p>Tous les champs marqués d’un * sont obligatoires pour transmettre la fiche.</p>
       </div>
       <button class="pro-sheet-close" type="button" data-pro-sheet-close aria-label="Fermer la fenêtre">×</button>
     </header>
@@ -59,8 +59,8 @@
           <small class="pro-sheet-error"></small>
         </label>
         <div class="pro-sheet-grid">
-          <label class="pro-sheet-field"><span>Depuis le</span><input type="date" name="qualification_since" value="{{ experience_sheet.qualification_since or '' }}"></label>
-          <label class="pro-sheet-field"><span>Nom de la dernière certification obtenue</span><input type="text" name="last_certification" value="{{ experience_sheet.last_certification or '' }}"></label>
+          <label class="pro-sheet-field"><span>Depuis le <strong>*</strong></span><input type="date" name="qualification_since" required value="{{ experience_sheet.qualification_since or '' }}"></label>
+          <label class="pro-sheet-field"><span>Nom de la dernière certification obtenue <strong>*</strong></span><input type="text" name="last_certification" required value="{{ experience_sheet.last_certification or '' }}"></label>
         </div>
       </section>
 
@@ -74,21 +74,21 @@
           <article class="pro-sheet-experience" data-experience-index="{{ loop.index0 }}">
             <div class="pro-sheet-experience-head"><h4>Expérience <span>{{ loop.index }}</span></h4><button type="button" class="pro-sheet-remove" aria-label="Supprimer cette expérience">Supprimer</button></div>
             <div class="pro-sheet-grid">
-              <label class="pro-sheet-field"><span>Intitulé du poste</span><input type="text" data-field="job_title" value="{{ experience.job_title or '' }}"></label>
-              <label class="pro-sheet-field"><span>Nom de l’entreprise</span><input type="text" data-field="company_name" value="{{ experience.company_name or '' }}"></label>
-              <label class="pro-sheet-field"><span>Date d’entrée</span><input type="date" data-field="start_date" value="{{ experience.start_date or '' }}"></label>
-              <label class="pro-sheet-field"><span>Date de sortie</span><input type="date" data-field="end_date" value="{{ experience.end_date or '' }}"></label>
-              <label class="pro-sheet-field"><span>Temps de travail</span><span class="pro-sheet-percent"><input type="number" data-field="work_time_percent" min="0" max="100" step="0.1" value="{{ experience.work_time_percent if experience.work_time_percent is not none else '' }}"><b>%</b></span><small class="pro-sheet-error"></small></label>
+              <label class="pro-sheet-field"><span>Intitulé du poste <strong>*</strong></span><input type="text" data-field="job_title" required value="{{ experience.job_title or '' }}"></label>
+              <label class="pro-sheet-field"><span>Nom de l’entreprise <strong>*</strong></span><input type="text" data-field="company_name" required value="{{ experience.company_name or '' }}"></label>
+              <label class="pro-sheet-field"><span>Date d’entrée <strong>*</strong></span><input type="date" data-field="start_date" required value="{{ experience.start_date or '' }}"></label>
+              <label class="pro-sheet-field"><span>Date de sortie <strong>*</strong></span><input type="date" data-field="end_date" required value="{{ experience.end_date or '' }}"></label>
+              <label class="pro-sheet-field"><span>Temps de travail <strong>*</strong></span><span class="pro-sheet-percent"><input type="number" data-field="work_time_percent" required min="0" max="100" step="0.1" value="{{ experience.work_time_percent if experience.work_time_percent is not none else '' }}"><b>%</b></span><small class="pro-sheet-error"></small></label>
             </div>
-            <fieldset class="pro-sheet-fieldset"><legend>Type de contrat</legend><div class="pro-sheet-options pro-sheet-options-compact">
+            <fieldset class="pro-sheet-fieldset"><legend>Type de contrat <strong>*</strong></legend><div class="pro-sheet-options pro-sheet-options-compact">
               {% for value, label in [('cdi', 'CDI'), ('cdd', 'CDD'), ('alternance', 'Alternance'), ('stage', 'Stage'), ('freelance', 'Freelance'), ('other', 'Autre')] %}
-              <label class="pro-sheet-choice"><input type="radio" data-field="contract_type" name="contract_type_{{ loop.index0 }}" value="{{ value }}" {% if experience.contract_type == value %}checked{% endif %}><span>{{ label }}</span></label>
+              <label class="pro-sheet-choice"><input type="radio" data-field="contract_type" required name="contract_type_{{ loop.index0 }}" value="{{ value }}" {% if experience.contract_type == value %}checked{% endif %}><span>{{ label }}</span></label>
               {% endfor %}
             </div></fieldset>
-            <label class="pro-sheet-field pro-sheet-conditional" data-experience-show-when="contract_type:other"><span>Préciser autre type de contrat</span><input type="text" data-field="contract_other" value="{{ experience.contract_other or '' }}"><small class="pro-sheet-error"></small></label>
-            <fieldset class="pro-sheet-fieldset"><legend>Statut cadre</legend><div class="pro-sheet-options pro-sheet-options-short">
-              <label class="pro-sheet-choice"><input type="radio" data-field="executive_status" name="executive_status_{{ loop.index0 }}" value="yes" {% if experience.executive_status == 'yes' %}checked{% endif %}><span>Oui</span></label>
-              <label class="pro-sheet-choice"><input type="radio" data-field="executive_status" name="executive_status_{{ loop.index0 }}" value="no" {% if experience.executive_status == 'no' %}checked{% endif %}><span>Non</span></label>
+            <label class="pro-sheet-field pro-sheet-conditional" data-experience-show-when="contract_type:other"><span>Préciser autre type de contrat <strong>*</strong></span><input type="text" data-field="contract_other" value="{{ experience.contract_other or '' }}"><small class="pro-sheet-error"></small></label>
+            <fieldset class="pro-sheet-fieldset"><legend>Statut cadre <strong>*</strong></legend><div class="pro-sheet-options pro-sheet-options-short">
+              <label class="pro-sheet-choice"><input type="radio" data-field="executive_status" required name="executive_status_{{ loop.index0 }}" value="yes" {% if experience.executive_status == 'yes' %}checked{% endif %}><span>Oui</span></label>
+              <label class="pro-sheet-choice"><input type="radio" data-field="executive_status" required name="executive_status_{{ loop.index0 }}" value="no" {% if experience.executive_status == 'no' %}checked{% endif %}><span>Non</span></label>
             </div></fieldset>
           </article>
           {% endfor %}
@@ -120,16 +120,16 @@
   <article class="pro-sheet-experience">
     <div class="pro-sheet-experience-head"><h4>Expérience <span></span></h4><button type="button" class="pro-sheet-remove" aria-label="Supprimer cette expérience">Supprimer</button></div>
     <div class="pro-sheet-grid">
-      <label class="pro-sheet-field"><span>Intitulé du poste</span><input type="text" data-field="job_title"></label>
-      <label class="pro-sheet-field"><span>Nom de l’entreprise</span><input type="text" data-field="company_name"></label>
-      <label class="pro-sheet-field"><span>Date d’entrée</span><input type="date" data-field="start_date"></label>
-      <label class="pro-sheet-field"><span>Date de sortie</span><input type="date" data-field="end_date"></label>
-      <label class="pro-sheet-field"><span>Temps de travail</span><span class="pro-sheet-percent"><input type="number" data-field="work_time_percent" min="0" max="100" step="0.1"><b>%</b></span><small class="pro-sheet-error"></small></label>
+      <label class="pro-sheet-field"><span>Intitulé du poste <strong>*</strong></span><input type="text" data-field="job_title" required></label>
+      <label class="pro-sheet-field"><span>Nom de l’entreprise <strong>*</strong></span><input type="text" data-field="company_name" required></label>
+      <label class="pro-sheet-field"><span>Date d’entrée <strong>*</strong></span><input type="date" data-field="start_date" required></label>
+      <label class="pro-sheet-field"><span>Date de sortie <strong>*</strong></span><input type="date" data-field="end_date" required></label>
+      <label class="pro-sheet-field"><span>Temps de travail <strong>*</strong></span><span class="pro-sheet-percent"><input type="number" data-field="work_time_percent" required min="0" max="100" step="0.1"><b>%</b></span><small class="pro-sheet-error"></small></label>
     </div>
-    <fieldset class="pro-sheet-fieldset"><legend>Type de contrat</legend><div class="pro-sheet-options pro-sheet-options-compact">
-      {% for value, label in [('cdi', 'CDI'), ('cdd', 'CDD'), ('alternance', 'Alternance'), ('stage', 'Stage'), ('freelance', 'Freelance'), ('other', 'Autre')] %}<label class="pro-sheet-choice"><input type="radio" data-field="contract_type" value="{{ value }}"><span>{{ label }}</span></label>{% endfor %}
+    <fieldset class="pro-sheet-fieldset"><legend>Type de contrat <strong>*</strong></legend><div class="pro-sheet-options pro-sheet-options-compact">
+      {% for value, label in [('cdi', 'CDI'), ('cdd', 'CDD'), ('alternance', 'Alternance'), ('stage', 'Stage'), ('freelance', 'Freelance'), ('other', 'Autre')] %}<label class="pro-sheet-choice"><input type="radio" data-field="contract_type" required value="{{ value }}"><span>{{ label }}</span></label>{% endfor %}
     </div></fieldset>
-    <label class="pro-sheet-field pro-sheet-conditional" data-experience-show-when="contract_type:other"><span>Préciser autre type de contrat</span><input type="text" data-field="contract_other"><small class="pro-sheet-error"></small></label>
-    <fieldset class="pro-sheet-fieldset"><legend>Statut cadre</legend><div class="pro-sheet-options pro-sheet-options-short"><label class="pro-sheet-choice"><input type="radio" data-field="executive_status" value="yes"><span>Oui</span></label><label class="pro-sheet-choice"><input type="radio" data-field="executive_status" value="no"><span>Non</span></label></div></fieldset>
+    <label class="pro-sheet-field pro-sheet-conditional" data-experience-show-when="contract_type:other"><span>Préciser autre type de contrat <strong>*</strong></span><input type="text" data-field="contract_other"><small class="pro-sheet-error"></small></label>
+    <fieldset class="pro-sheet-fieldset"><legend>Statut cadre <strong>*</strong></legend><div class="pro-sheet-options pro-sheet-options-short"><label class="pro-sheet-choice"><input type="radio" data-field="executive_status" required value="yes"><span>Oui</span></label><label class="pro-sheet-choice"><input type="radio" data-field="executive_status" required value="no"><span>Non</span></label></div></fieldset>
   </article>
 </template>
