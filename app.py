@@ -17421,19 +17421,57 @@ def admin_professional_experience_sheet_status(session_id: str, trainee_id: str)
     return jsonify({"ok": True, "status": status, "status_label": labels[status]})
 
 
-@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/fiche-experience-professionnelle.pdf")
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/fiche-experience-professionnelle")
 @admin_login_required
-def admin_professional_experience_sheet_pdf(session_id: str, trainee_id: str):
+def admin_professional_experience_sheet_print(session_id: str, trainee_id: str):
     data = load_data()
     session_obj = find_session(data, session_id)
     trainee = next((item for item in _session_trainees_list(session_obj or {}) if str(item.get("id")) == trainee_id), None)
     sheet = _professional_experience_sheet_for_trainee(trainee or {})
     if not session_obj or not trainee or not sheet:
         abort(404)
-    pdf = _professional_experience_sheet_pdf(sheet)
-    filename = f"fiche-experience-professionnelle-{trainee.get('first_name', '')}-{trainee.get('last_name', '')}.pdf"
-    filename = re.sub(r"[^A-Za-z0-9._-]+", "-", unicodedata.normalize("NFKD", filename).encode("ascii", "ignore").decode("ascii")).strip("-")
-    return send_file(pdf, mimetype="application/pdf", as_attachment=True, download_name=filename or "fiche-experience-professionnelle.pdf")
+
+    return render_template(
+        "admin_professional_experience_sheet_print.html",
+        session=session_obj,
+        trainee=trainee,
+        sheet=sheet,
+        situation_labels={
+            "training": "En formation",
+            "employed": "En emploi",
+            "job_seeker": "En recherche d’emploi",
+            "other": "Autre",
+        },
+        qualification_labels={
+            "none": "Sans diplôme",
+            "cap_bep": "CAP/BEP",
+            "bac": "Bac",
+            "bac_2": "Bac+2",
+            "bac_3": "Bac+3",
+            "bac_5": "Bac+5",
+            "doctorate": "Doctorat",
+            "other": "Autre",
+        },
+        contract_labels={
+            "cdi": "CDI",
+            "cdd": "CDD",
+            "alternance": "Alternance",
+            "stage": "Stage",
+            "freelance": "Freelance",
+            "other": "Autre",
+        },
+    )
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/fiche-experience-professionnelle.pdf")
+@admin_login_required
+def admin_professional_experience_sheet_pdf(session_id: str, trainee_id: str):
+    """Keep old bookmarked PDF URLs working while serving the printable HTML sheet."""
+    return redirect(url_for(
+        "admin_professional_experience_sheet_print",
+        session_id=session_id,
+        trainee_id=trainee_id,
+    ), code=302)
 
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/fiche-experience-professionnelle/delete")
