@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fiche expérience professionnelle — {{ sheet.first_name }} {{ sheet.last_name }}</title>
+  <style>
+    :root{--ink:#172033;--muted:#667085;--gold:#b59132;--gold-soft:#f8f2df;--paper:#fff;--line:#e6e8ec;--canvas:#eef1f5;--green:#166534;--green-bg:#dcfce7;--red:#991b1b;--red-bg:#fee2e2;--amber:#854d0e;--amber-bg:#fef3c7}
+    *{box-sizing:border-box} body{margin:0;background:var(--canvas);color:var(--ink);font-family:Inter,"Segoe UI",Arial,sans-serif;line-height:1.45}
+    .toolbar{position:sticky;top:0;z-index:10;display:flex;justify-content:center;gap:12px;padding:14px;background:rgba(23,32,51,.94);backdrop-filter:blur(10px)}
+    .toolbar a,.toolbar button{border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:10px 16px;background:transparent;color:#fff;font:700 14px inherit;text-decoration:none;cursor:pointer}.toolbar .primary{border-color:var(--gold);background:var(--gold);color:#17120a}
+    .sheet{width:min(210mm,calc(100% - 32px));min-height:297mm;margin:28px auto;padding:17mm 16mm 15mm;background:var(--paper);box-shadow:0 18px 55px rgba(23,32,51,.14)}
+    .header{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:start;padding-bottom:20px;border-bottom:2px solid var(--ink)}
+    .brand{display:flex;gap:14px;align-items:center}.brand img{width:64px;height:64px;object-fit:contain}.eyebrow{color:var(--gold);font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}.brand-name{margin-top:3px;font-size:13px;font-weight:800;color:var(--muted)}
+    h1{margin:22px 0 5px;font-family:Georgia,"Times New Roman",serif;font-size:30px;line-height:1.12;letter-spacing:-.02em}.subtitle{margin:0;color:var(--muted);font-size:14px}
+    .status{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:999px;font-size:11px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}.status:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}.status.pending_review{color:var(--amber);background:var(--amber-bg)}.status.validated{color:var(--green);background:var(--green-bg)}.status.non_compliant{color:var(--red);background:var(--red-bg)}
+    .identity{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:1px;margin:22px 0;background:var(--line);border:1px solid var(--line);border-radius:13px;overflow:hidden}.identity div{padding:13px 15px;background:#fafafa}.label{display:block;margin-bottom:4px;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.value{font-size:14px;font-weight:750}
+    section{margin-top:22px}h2{display:flex;align-items:center;gap:11px;margin:0 0 12px;font-size:16px}.number{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:var(--gold-soft);color:#795f1b;font-size:12px;font-weight:900}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{min-height:68px;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:#fff}.field.wide{grid-column:1/-1}.field .value{font-weight:650}
+    .experience{margin-top:12px;border:1px solid var(--line);border-radius:14px;overflow:hidden;break-inside:avoid}.experience-head{display:flex;justify-content:space-between;gap:12px;padding:12px 15px;background:var(--ink);color:#fff}.experience-head small{color:#d1d5db}.experience-body{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:1px;background:var(--line)}.experience-body .field{border:0;border-radius:0;min-height:64px}.experience-body .span-2{grid-column:span 2}
+    .validation{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px;border:1px solid #dec985;border-radius:14px;background:linear-gradient(135deg,#fffdf8,var(--gold-soft))}.certification{grid-column:1/-1;padding-top:11px;border-top:1px solid #dec985;font-size:13px;font-weight:700}.signature{min-height:86px;padding:13px;border:1px dashed #bd9d49;border-radius:10px;background:rgba(255,255,255,.72)}.signature strong{display:block;margin-top:7px;font:italic 25px "Segoe Script","Brush Script MT",cursive;color:#2c3444}
+    footer{display:flex;justify-content:space-between;gap:20px;margin-top:28px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:10px}
+    @media(max-width:720px){.sheet{width:100%;margin:0;padding:28px 20px;box-shadow:none}.header,.identity,.grid,.validation{grid-template-columns:1fr}.experience-body{grid-template-columns:1fr}.experience-body .span-2{grid-column:auto}.status{justify-self:start}.toolbar{position:relative}.identity{gap:1px}}
+    @page{size:A4;margin:11mm}
+    @media print{body{background:#fff}.toolbar{display:none}.sheet{width:auto;min-height:auto;margin:0;padding:0;box-shadow:none}.header{padding-bottom:14px}h1{font-size:26px;margin-top:15px}.identity{margin:15px 0}section{margin-top:15px}.experience{margin-top:8px}footer{margin-top:18px}.status{-webkit-print-color-adjust:exact;print-color-adjust:exact}.experience-head,.number,.validation,.identity div{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style>
+</head>
+<body>
+  <nav class="toolbar" aria-label="Actions de la fiche">
+    <a href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=trainee.id) }}">← Retour au dossier</a>
+    <button class="primary" type="button" onclick="window.print()">🖨 Imprimer la fiche</button>
+  </nav>
+  <main class="sheet">
+    <header class="header">
+      <div>
+        <div class="brand"><img src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Logo Intégrale Academy"><div><div class="eyebrow">Document candidat</div><div class="brand-name">Intégrale Academy</div></div></div>
+        <h1>Fiche expérience professionnelle</h1>
+        <p class="subtitle">Synthèse déclarative du parcours professionnel du candidat</p>
+      </div>
+      <span class="status {{ sheet.status or 'pending_review' }}">{{ sheet.status_label or ('Validé' if sheet.status == 'validated' else 'Non conforme' if sheet.status == 'non_compliant' else 'À contrôler') }}</span>
+    </header>
+
+    <div class="identity">
+      <div><span class="label">Nom</span><span class="value">{{ sheet.last_name or '—' }}</span></div>
+      <div><span class="label">Prénom</span><span class="value">{{ sheet.first_name or '—' }}</span></div>
+      <div><span class="label">Formation</span><span class="value">{{ sheet.training_name or '—' }}</span></div>
+    </div>
+
+    <section><h2><span class="number">01</span> Situation actuelle</h2><div class="grid">
+      <div class="field"><span class="label">Situation</span><span class="value">{{ situation_labels.get(sheet.current_situation, '—') }}{% if sheet.current_situation == 'other' and sheet.current_situation_other %} — {{ sheet.current_situation_other }}{% endif %}</span></div>
+      <div class="field"><span class="label">Fiche transmise le</span><span class="value">{{ sheet.submitted_at|frdatetime or '—' }}</span></div>
+    </div></section>
+
+    <section><h2><span class="number">02</span> Qualification</h2><div class="grid">
+      <div class="field"><span class="label">Niveau de qualification</span><span class="value">{{ qualification_labels.get(sheet.qualification_level, '—') }}{% if sheet.qualification_level == 'other' and sheet.qualification_other %} — {{ sheet.qualification_other }}{% endif %}</span></div>
+      <div class="field"><span class="label">Qualification obtenue depuis le</span><span class="value">{{ sheet.qualification_since|frdate if sheet.qualification_since else '—' }}</span></div>
+      <div class="field wide"><span class="label">Dernière certification obtenue</span><span class="value">{{ sheet.last_certification or '—' }}</span></div>
+    </div></section>
+
+    <section><h2><span class="number">03</span> Expériences professionnelles</h2>
+      {% for experience in sheet.experiences or [] %}<article class="experience">
+        <div class="experience-head"><strong>Expérience {{ loop.index }} · {{ experience.job_title or 'Poste non renseigné' }}</strong><small>{{ experience.start_date|frdate if experience.start_date else '—' }} → {{ experience.end_date|frdate if experience.end_date else '—' }}</small></div>
+        <div class="experience-body">
+          <div class="field span-2"><span class="label">Entreprise</span><span class="value">{{ experience.company_name or '—' }}</span></div>
+          <div class="field"><span class="label">Temps de travail</span><span class="value">{{ experience.work_time_percent if experience.work_time_percent is not none else '—' }}{% if experience.work_time_percent is not none %} %{% endif %}</span></div>
+          <div class="field"><span class="label">Type de contrat</span><span class="value">{{ contract_labels.get(experience.contract_type, '—') }}{% if experience.contract_type == 'other' and experience.contract_other %} — {{ experience.contract_other }}{% endif %}</span></div>
+          <div class="field"><span class="label">Statut cadre</span><span class="value">{% if experience.executive_status == 'yes' %}Oui{% elif experience.executive_status == 'no' %}Non{% else %}—{% endif %}</span></div>
+          <div class="field"><span class="label">Période</span><span class="value">{{ experience.start_date|frdate if experience.start_date else '—' }} au {{ experience.end_date|frdate if experience.end_date else '—' }}</span></div>
+        </div>
+      </article>{% else %}<div class="field"><span class="value">Aucune expérience renseignée.</span></div>{% endfor %}
+    </section>
+
+    <section><h2><span class="number">04</span> Validation du candidat</h2><div class="validation">
+      <div class="field"><span class="label">Nom et prénom</span><span class="value">{{ sheet.validation_name or '—' }}</span></div>
+      <div class="field"><span class="label">Date de validation</span><span class="value">{{ sheet.validation_date|frdate if sheet.validation_date else '—' }}</span></div>
+      <div class="certification">✓ Je certifie l’exactitude des informations renseignées dans cette fiche.</div>
+      <div class="signature"><span class="label">Signature</span><strong>{{ sheet.signature or sheet.validation_name or '—' }}</strong></div>
+    </div></section>
+
+    <footer><span>Fiche générée depuis le dossier stagiaire Intégrale Academy.</span><span>Référence : {{ sheet.id or '—' }}</span></footer>
+  </main>
+</body>
+</html>

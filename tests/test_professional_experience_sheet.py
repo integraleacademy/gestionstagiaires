@@ -231,17 +231,31 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         self.assertEqual(sheet["status_label"], "Validé")
         self.assertEqual(sheet["reviewed_at"], "2026-06-08T10:30:00Z")
 
-    def test_admin_can_download_generated_pdf(self):
+    def test_admin_can_open_printable_html_sheet(self):
+        self._authenticate_public()
+        self.client.post("/espace/public-token/fiche-experience-professionnelle", json=self._valid_payload())
+        self._authenticate_admin()
+
+        response = self.client.get("/admin/sessions/S1/stagiaires/T1/fiche-experience-professionnelle")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "text/html")
+        html = response.get_data(as_text=True)
+        self.assertIn("Fiche expérience professionnelle", html)
+        self.assertIn("Responsable sécurité", html)
+        self.assertIn("Entreprise Exemple", html)
+        self.assertIn("Imprimer la fiche", html)
+        self.assertIn("@media print", html)
+
+    def test_legacy_pdf_url_redirects_to_printable_html_sheet(self):
         self._authenticate_public()
         self.client.post("/espace/public-token/fiche-experience-professionnelle", json=self._valid_payload())
         self._authenticate_admin()
 
         response = self.client.get("/admin/sessions/S1/stagiaires/T1/fiche-experience-professionnelle.pdf")
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.mimetype, "application/pdf")
-        self.assertTrue(response.data.startswith(b"%PDF"))
-        self.assertIn("attachment", response.headers["Content-Disposition"])
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.headers["Location"].endswith("/fiche-experience-professionnelle"))
 
     def test_admin_can_delete_sheet(self):
         self._authenticate_public()
