@@ -17119,6 +17119,289 @@ def public_trainee_space(token):
     )
 
 
+
+def _professional_experience_sheet_for_trainee(trainee: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    sheet = trainee.get("professional_experience_sheet")
+    return sheet if isinstance(sheet, dict) else None
+
+
+def _professional_experience_sheet_payload(raw: Any, trainee: Dict[str, Any], session_obj: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], Dict[str, str]]:
+    """Validate and normalize the public VAE professional-experience form."""
+    payload = raw if isinstance(raw, dict) else {}
+    errors: Dict[str, str] = {}
+
+    current_situation = str(payload.get("current_situation") or "").strip()
+    allowed_situations = {"training", "employed", "job_seeker", "other"}
+    if current_situation not in allowed_situations:
+        errors["current_situation"] = "Sélectionnez votre situation actuelle."
+
+    current_situation_other = str(payload.get("current_situation_other") or "").strip()
+    if current_situation == "other" and not current_situation_other:
+        errors["current_situation_other"] = "Précisez votre autre situation."
+
+    qualification_level = str(payload.get("qualification_level") or "").strip()
+    allowed_qualifications = {"none", "cap_bep", "bac", "bac_2", "bac_3", "bac_5", "doctorate", "other"}
+    if qualification_level not in allowed_qualifications:
+        errors["qualification_level"] = "Sélectionnez votre niveau de qualification."
+
+    qualification_other = str(payload.get("qualification_other") or "").strip()
+    if qualification_level == "other" and not qualification_other:
+        errors["qualification_other"] = "Précisez votre autre niveau."
+
+    validation_name = str(payload.get("validation_name") or "").strip()
+    validation_date = str(payload.get("validation_date") or "").strip()
+    if not validation_name:
+        errors["validation_name"] = "Renseignez votre nom et prénom."
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", validation_date):
+        errors["validation_date"] = "Renseignez une date valide."
+    if payload.get("certified") is not True:
+        errors["certified"] = "Vous devez certifier l’exactitude des informations."
+
+    raw_experiences = payload.get("experiences")
+    if not isinstance(raw_experiences, list) or not raw_experiences:
+        raw_experiences = [{}]
+    if len(raw_experiences) > 5:
+        errors["experiences"] = "Vous pouvez renseigner au maximum 5 expériences."
+
+    experiences: List[Dict[str, Any]] = []
+    allowed_contracts = {"cdi", "cdd", "alternance", "stage", "freelance", "other", ""}
+    allowed_executive = {"yes", "no", ""}
+    for index, item in enumerate(raw_experiences[:5]):
+        experience = item if isinstance(item, dict) else {}
+        contract_type = str(experience.get("contract_type") or "").strip()
+        executive_status = str(experience.get("executive_status") or "").strip()
+        contract_other = str(experience.get("contract_other") or "").strip()
+        if contract_type not in allowed_contracts:
+            errors[f"experiences.{index}.contract_type"] = "Type de contrat invalide."
+        if executive_status not in allowed_executive:
+            errors[f"experiences.{index}.executive_status"] = "Statut cadre invalide."
+        if contract_type == "other" and not contract_other:
+            errors[f"experiences.{index}.contract_other"] = "Précisez le type de contrat."
+
+        work_time_raw = str(experience.get("work_time_percent") or "").strip()
+        work_time: Optional[float] = None
+        if work_time_raw:
+            try:
+                work_time = float(work_time_raw.replace(",", "."))
+                if work_time < 0 or work_time > 100:
+                    raise ValueError
+            except ValueError:
+                errors[f"experiences.{index}.work_time_percent"] = "Le temps de travail doit être compris entre 0 et 100 %."
+
+        experiences.append({
+            "job_title": str(experience.get("job_title") or "").strip(),
+            "company_name": str(experience.get("company_name") or "").strip(),
+            "start_date": str(experience.get("start_date") or "").strip(),
+            "end_date": str(experience.get("end_date") or "").strip(),
+            "work_time_percent": work_time,
+            "contract_type": contract_type,
+            "contract_other": contract_other if contract_type == "other" else "",
+            "executive_status": executive_status,
+        })
+
+    if errors:
+        return None, errors
+
+    existing = _professional_experience_sheet_for_trainee(trainee) or {}
+    now = _now_iso()
+    return {
+        "id": str(existing.get("id") or uuid.uuid4().hex),
+        "status": "pending_review",
+        "status_label": "À contrôler",
+        "last_name": str(trainee.get("last_name") or "").strip(),
+        "first_name": str(trainee.get("first_name") or "").strip(),
+        "training_name": str(_session_get(session_obj, "name", "") or _session_get(session_obj, "training_type", "") or "").strip(),
+        "training_type": str(_session_get(session_obj, "training_type", "") or "").strip(),
+        "current_situation": current_situation,
+        "current_situation_other": current_situation_other if current_situation == "other" else "",
+        "qualification_level": qualification_level,
+        "qualification_other": qualification_other if qualification_level == "other" else "",
+        "qualification_since": str(payload.get("qualification_since") or "").strip(),
+        "last_certification": str(payload.get("last_certification") or "").strip(),
+        "experiences": experiences,
+        "validation_name": validation_name,
+        "validation_date": validation_date,
+        "signature": validation_name,
+        "certified": True,
+        "created_at": str(existing.get("created_at") or now),
+        "submitted_at": now,
+        "updated_at": now,
+    }, {}
+
+
+@app.post("/espace/<token>/fiche-experience-professionnelle")
+def public_professional_experience_sheet_submit(token: str):
+    data = load_data()
+    session_obj, trainee = find_session_and_trainee_by_token(data, token)
+    if not session_obj or not trainee:
+        return jsonify({"ok": False, "message": "Dossier stagiaire introuvable."}), 404
+    if not _public_is_authed(token):
+        return jsonify({"ok": False, "message": "Votre session a expiré. Veuillez vous reconnecter."}), 401
+
+    training_type = str(_session_get(session_obj, "training_type", "") or "")
+    if "VAE" not in training_type.upper():
+        abort(404)
+
+    sheet, errors = _professional_experience_sheet_payload(request.get_json(silent=True), trainee, session_obj)
+    if errors:
+        return jsonify({"ok": False, "message": "Veuillez vérifier les champs obligatoires.", "errors": errors}), 400
+
+    trainee["professional_experience_sheet"] = sheet
+    trainee["updated_at"] = _now_iso()
+    session_obj["trainees"] = _session_trainees_list(session_obj)
+    session_obj.pop("stagiaires", None)
+    save_data(data)
+    return jsonify({
+        "ok": True,
+        "message": "Votre fiche expérience professionnelle a bien été transmise.",
+        "sheet": sheet,
+    })
+
+
+def _professional_experience_sheet_pdf(sheet: Dict[str, Any]) -> BytesIO:
+    if not REPORTLAB_LIBRARY_AVAILABLE:
+        abort(503, "La génération PDF est indisponible.")
+
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import mm
+    from reportlab.platypus import Image as PdfImage, KeepTogether, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+    output = BytesIO()
+    gold = colors.HexColor("#C7A64A")
+    black = colors.HexColor("#151515")
+    light_gold = colors.HexColor("#F8F3E5")
+    muted = colors.HexColor("#5B6470")
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name="SheetTitle", parent=styles["Title"], fontName="Helvetica-Bold", fontSize=17, leading=21, textColor=black, alignment=TA_CENTER, spaceAfter=8))
+    styles.add(ParagraphStyle(name="SectionTitle", parent=styles["Heading2"], fontName="Helvetica-Bold", fontSize=11, leading=14, textColor=black, backColor=light_gold, borderColor=gold, borderWidth=0.7, borderPadding=7, spaceBefore=8, spaceAfter=7))
+    styles.add(ParagraphStyle(name="BodySmall", parent=styles["BodyText"], fontName="Helvetica", fontSize=8.6, leading=11, textColor=black))
+    styles.add(ParagraphStyle(name="LabelSmall", parent=styles["BodyText"], fontName="Helvetica-Bold", fontSize=8.4, leading=11, textColor=muted))
+    styles.add(ParagraphStyle(name="Signature", parent=styles["BodyText"], fontName="Helvetica-Oblique", fontSize=16, leading=19, textColor=black))
+
+    def safe(value: Any) -> str:
+        return html.escape(str(value if value not in (None, "") else "—"))
+
+    situation_labels = {"training": "En formation", "employed": "En emploi", "job_seeker": "En recherche d’emploi", "other": "Autre"}
+    qualification_labels = {"none": "Sans diplôme", "cap_bep": "CAP/BEP", "bac": "Bac", "bac_2": "Bac+2", "bac_3": "Bac+3", "bac_5": "Bac+5", "doctorate": "Doctorat", "other": "Autre"}
+    contract_labels = {"cdi": "CDI", "cdd": "CDD", "alternance": "Alternance", "stage": "Stage", "freelance": "Freelance", "other": "Autre", "": "—"}
+    executive_labels = {"yes": "Oui", "no": "Non", "": "—"}
+
+    def value_table(rows: List[Tuple[str, Any]]) -> Table:
+        data_rows = [[Paragraph(safe(label), styles["LabelSmall"]), Paragraph(safe(value), styles["BodySmall"])] for label, value in rows]
+        table = Table(data_rows, colWidths=[58 * mm, 118 * mm], hAlign="LEFT")
+        table.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#F7F7F7")),
+            ("BOX", (0, 0), (-1, -1), 0.45, colors.HexColor("#D9D9D9")),
+            ("INNERGRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#E4E4E4")),
+            ("LEFTPADDING", (0, 0), (-1, -1), 7),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]))
+        return table
+
+    def draw_footer(canvas, doc):
+        canvas.saveState()
+        width, _ = A4
+        canvas.setStrokeColor(gold)
+        canvas.setLineWidth(0.8)
+        canvas.line(18 * mm, 18 * mm, width - 18 * mm, 18 * mm)
+        canvas.setFillColor(muted)
+        canvas.setFont("Helvetica", 6.8)
+        canvas.drawCentredString(width / 2, 13.5 * mm, "CFA Intégrale Academy - Intégrale Sécurité Formations")
+        canvas.drawCentredString(width / 2, 10 * mm, "54 chemin du Carreou, 83480 Puget-sur-Argens")
+        canvas.drawCentredString(width / 2, 6.5 * mm, "SIRET : 84089988400026  •  Numéro de déclaration d’activité : 93830600283")
+        canvas.setFillColor(colors.HexColor("#9A9A9A"))
+        canvas.drawRightString(width - 18 * mm, 6.5 * mm, f"Page {doc.page}")
+        canvas.restoreState()
+
+    doc = SimpleDocTemplate(output, pagesize=A4, rightMargin=17 * mm, leftMargin=17 * mm, topMargin=13 * mm, bottomMargin=24 * mm, title="Fiche expérience professionnelle")
+    story: List[Any] = []
+    logo_path = os.path.join(app.static_folder or "static", "logo-integrale.png")
+    if os.path.exists(logo_path):
+        logo = PdfImage(logo_path, width=44 * mm, height=18 * mm)
+        logo.hAlign = "CENTER"
+        story.extend([logo, Spacer(1, 3 * mm)])
+    story.extend([Paragraph("FICHE EXPÉRIENCE PROFESSIONNELLE", styles["SheetTitle"]), Spacer(1, 2 * mm)])
+
+    story.extend([Paragraph("1. Informations générales", styles["SectionTitle"]), value_table([
+        ("Nom", sheet.get("last_name")), ("Prénom", sheet.get("first_name")), ("Formation en cours", sheet.get("training_name")),
+    ])])
+    situation = situation_labels.get(str(sheet.get("current_situation") or ""), "—")
+    if sheet.get("current_situation") == "other":
+        situation = f"{situation} — {sheet.get('current_situation_other') or '—'}"
+    story.extend([Paragraph("2. Situation actuelle avant la formation", styles["SectionTitle"]), value_table([("Situation", situation)])])
+    qualification = qualification_labels.get(str(sheet.get("qualification_level") or ""), "—")
+    if sheet.get("qualification_level") == "other":
+        qualification = f"{qualification} — {sheet.get('qualification_other') or '—'}"
+    story.extend([Paragraph("3. Niveau de qualification actuel", styles["SectionTitle"]), value_table([
+        ("Niveau", qualification), ("Depuis le", fr_date(str(sheet.get("qualification_since") or ""))), ("Dernière certification obtenue", sheet.get("last_certification")),
+    ])])
+
+    story.append(Paragraph("4. Expériences professionnelles", styles["SectionTitle"]))
+    for index, experience in enumerate(sheet.get("experiences") or [{}], start=1):
+        contract = contract_labels.get(str(experience.get("contract_type") or ""), "—")
+        if experience.get("contract_type") == "other":
+            contract = f"{contract} — {experience.get('contract_other') or '—'}"
+        percent = experience.get("work_time_percent")
+        percent_label = "—" if percent in (None, "") else f"{percent:g} %"
+        block = [
+            Paragraph(f"Expérience {index}", ParagraphStyle(name=f"Experience{index}", parent=styles["Heading3"], fontName="Helvetica-Bold", fontSize=10, textColor=gold, spaceBefore=5, spaceAfter=4)),
+            value_table([
+                ("Intitulé du poste", experience.get("job_title")), ("Entreprise", experience.get("company_name")),
+                ("Période", f"{fr_date(str(experience.get('start_date') or '')) or '—'} au {fr_date(str(experience.get('end_date') or '')) or '—'}"),
+                ("Temps de travail", percent_label), ("Type de contrat", contract), ("Statut cadre", executive_labels.get(str(experience.get("executive_status") or ""), "—")),
+            ]),
+        ]
+        story.append(KeepTogether(block))
+
+    story.extend([
+        Paragraph("5. Validation", styles["SectionTitle"]),
+        value_table([("Nom / Prénom", sheet.get("validation_name")), ("Date", fr_date(str(sheet.get("validation_date") or ""))), ("Certification", "Je certifie l’exactitude des informations renseignées.")]),
+        Spacer(1, 4 * mm), Paragraph("Signature", styles["LabelSmall"]), Paragraph(safe(sheet.get("signature")), styles["Signature"]),
+    ])
+    doc.build(story, onFirstPage=draw_footer, onLaterPages=draw_footer)
+    output.seek(0)
+    return output
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/fiche-experience-professionnelle.pdf")
+@admin_login_required
+def admin_professional_experience_sheet_pdf(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj = find_session(data, session_id)
+    trainee = next((item for item in _session_trainees_list(session_obj or {}) if str(item.get("id")) == trainee_id), None)
+    sheet = _professional_experience_sheet_for_trainee(trainee or {})
+    if not session_obj or not trainee or not sheet:
+        abort(404)
+    pdf = _professional_experience_sheet_pdf(sheet)
+    filename = f"fiche-experience-professionnelle-{trainee.get('first_name', '')}-{trainee.get('last_name', '')}.pdf"
+    filename = re.sub(r"[^A-Za-z0-9._-]+", "-", unicodedata.normalize("NFKD", filename).encode("ascii", "ignore").decode("ascii")).strip("-")
+    return send_file(pdf, mimetype="application/pdf", as_attachment=True, download_name=filename or "fiche-experience-professionnelle.pdf")
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/fiche-experience-professionnelle/delete")
+@admin_login_required
+@admin_write_required
+def admin_professional_experience_sheet_delete(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj = find_session(data, session_id)
+    trainee = next((item for item in _session_trainees_list(session_obj or {}) if str(item.get("id")) == trainee_id), None)
+    if not session_obj or not trainee or not _professional_experience_sheet_for_trainee(trainee):
+        abort(404)
+    trainee.pop("professional_experience_sheet", None)
+    trainee["updated_at"] = _now_iso()
+    session_obj["trainees"] = _session_trainees_list(session_obj)
+    session_obj.pop("stagiaires", None)
+    save_data(data)
+    flash("La fiche expérience professionnelle a été supprimée.", "success")
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/identity-photo/upload")
 @admin_login_required
 @admin_write_required
