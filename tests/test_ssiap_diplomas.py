@@ -50,6 +50,7 @@ class SsiapDiplomaTests(unittest.TestCase):
             "last_name": last_name,
             "birth_date": birth_date,
             "birth_city": birth_city,
+            "birth_department": "75" if birth_city else "",
         }
 
     def test_generates_filled_multipage_pdf_and_persists_unique_numbers(self):
@@ -79,7 +80,7 @@ class SsiapDiplomaTests(unittest.TestCase):
         self.assertIn("30/06/2026", first_page_text)
         self.assertIn("Monsieur Jean DUPONT", first_page_text)
         self.assertIn("03/02/1990", first_page_text)
-        self.assertIn("Paris", first_page_text)
+        self.assertIn("Paris (75)", first_page_text)
         self.assertIn("083-8323-1-2026-00001", first_page_text)
         self.assertIn("Monsieur Élise MARTIN", second_page_text)
         self.assertIn("083-8323-1-2026-00002", second_page_text)
@@ -120,11 +121,60 @@ class SsiapDiplomaTests(unittest.TestCase):
 
         page.extract_text(visitor_text=collect_position)
 
+        self.assertIn(("28/10/2026", 1445.0, 638.0, 21.0), positions)
+        self.assertIn(("28/10/2026", 420.0, 243.0, 21.0), positions)
         self.assertIn(("Monsieur Clément VAILLANT", 1080.0, 568.0, 21.0), positions)
         self.assertIn(("16/09/1993", 1080.0, 531.0, 21.0), positions)
         self.assertIn(("PUGET-SUR-ARGENS", 1080.0, 493.0, 21.0), positions)
         self.assertIn(("Monsieur Clément VAILLANT", 1120.0, 306.0, 21.0), positions)
         self.assertIn(("083-8323-1-2026-00001", 1170.0, 269.0, 21.0), positions)
+
+    def test_birth_place_uses_existing_department_without_network_lookup(self):
+        trainee = {
+            "birth_city": "SALLANCHES",
+            "birth_department": "Haute-Savoie (74)",
+        }
+
+        with patch.object(gestion_app.requests, "get") as get_mock:
+            label = gestion_app._ssiap_birth_place_label(trainee)
+
+        self.assertEqual(label, "SALLANCHES (74)")
+        self.assertEqual(trainee["birth_department"], "74")
+        get_mock.assert_not_called()
+
+    def test_birth_place_finds_department_from_official_commune_api(self):
+        trainee = {"birth_city": "SALLANCHES"}
+        response = unittest.mock.Mock()
+        response.json.return_value = [{
+            "nom": "Sallanches",
+            "codeDepartement": "74",
+            "codesPostaux": ["74700"],
+        }]
+        gestion_app.SSIAP_BIRTH_DEPARTMENT_CACHE.clear()
+
+        with patch.object(gestion_app.requests, "get", return_value=response) as get_mock:
+            label = gestion_app._ssiap_birth_place_label(trainee)
+
+        self.assertEqual(label, "SALLANCHES (74)")
+        self.assertEqual(trainee["birth_department"], "74")
+        get_mock.assert_called_once_with(
+            "https://geo.api.gouv.fr/communes",
+            params={
+                "nom": "SALLANCHES",
+                "fields": "nom,codeDepartement,codesPostaux",
+                "boost": "population",
+            },
+            timeout=3,
+        )
+
+    def test_birth_place_keeps_foreign_city_without_french_lookup(self):
+        trainee = {"birth_city": "BRUXELLES", "birth_country": "Belgique"}
+
+        with patch.object(gestion_app.requests, "get") as get_mock:
+            label = gestion_app._ssiap_birth_place_label(trainee)
+
+        self.assertEqual(label, "BRUXELLES")
+        get_mock.assert_not_called()
 
     def test_sequence_continues_for_new_trainee_and_restarts_each_year(self):
         self._write_data({

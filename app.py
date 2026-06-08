@@ -12102,6 +12102,100 @@ SSIAP_DIPLOMA_TEMPLATE = os.path.join(
 )
 SSIAP_DIPLOMA_LOCK_FILE = os.path.join(PERSIST_DIR, "ssiap_diplomas.lock")
 SSIAP_DIPLOMA_NUMBER_RE = re.compile(r"^083-8323-1-(\d{4})-(\d{5})$")
+SSIAP_BIRTH_DEPARTMENT_CACHE: Dict[str, str] = {}
+
+
+def _normalize_department_code(value: Any) -> str:
+    raw = str(value or "").strip().upper()
+    if not raw:
+        return ""
+    parenthesized = re.search(r"\(([0-9]{2,3}|2A|2B)\)", raw)
+    if parenthesized:
+        return parenthesized.group(1)
+    exact = re.fullmatch(r"(?:D[ÉE]PARTEMENT\s*)?([0-9]{2,3}|2A|2B)", raw)
+    if exact:
+        return exact.group(1)
+    embedded = re.search(r"(?:^|[^0-9A-Z])(2A|2B|[0-9]{2,3})(?:$|[^0-9A-Z])", raw)
+    if embedded:
+        return embedded.group(1)
+    postal_code = re.fullmatch(r"(?:F-)?([0-9]{5})", raw)
+    if postal_code:
+        code = postal_code.group(1)
+        if code.startswith(("97", "98")):
+            return code[:3]
+        if not code.startswith("20"):
+            return code[:2]
+    return ""
+
+
+def _normalized_commune_name(value: Any) -> str:
+    normalized = unicodedata.normalize("NFKD", str(value or ""))
+    normalized = "".join(char for char in normalized if not unicodedata.combining(char))
+    return re.sub(r"[^A-Z0-9]+", " ", normalized.upper()).strip()
+
+
+def _lookup_birth_department_code(birth_city: str) -> str:
+    city = re.sub(r"\s*\(([0-9]{2,3}|2A|2B)\)\s*$", "", str(birth_city or "").strip(), flags=re.IGNORECASE)
+    cache_key = _normalized_commune_name(city)
+    if not cache_key:
+        return ""
+    if cache_key in SSIAP_BIRTH_DEPARTMENT_CACHE:
+        return SSIAP_BIRTH_DEPARTMENT_CACHE[cache_key]
+
+    department_code = ""
+    try:
+        response = requests.get(
+            "https://geo.api.gouv.fr/communes",
+            params={
+                "nom": city,
+                "fields": "nom,codeDepartement,codesPostaux",
+                "boost": "population",
+            },
+            timeout=3,
+        )
+        response.raise_for_status()
+        communes = response.json()
+        if isinstance(communes, list):
+            exact_matches = [
+                commune for commune in communes
+                if isinstance(commune, dict)
+                and _normalized_commune_name(commune.get("nom")) == cache_key
+            ]
+            candidates = exact_matches or [commune for commune in communes if isinstance(commune, dict)]
+            if candidates:
+                department_code = _normalize_department_code(candidates[0].get("codeDepartement"))
+    except (requests.RequestException, ValueError, TypeError):
+        department_code = ""
+
+    if department_code:
+        SSIAP_BIRTH_DEPARTMENT_CACHE[cache_key] = department_code
+    return department_code
+
+
+def _ssiap_birth_place_label(trainee: Dict[str, Any]) -> str:
+    birth_city = str(trainee.get("birth_city") or trainee.get("birth_place") or "").strip()
+    if not birth_city or re.search(r"\(([0-9]{2,3}|2A|2B)\)\s*$", birth_city, flags=re.IGNORECASE):
+        return birth_city
+
+    department_code = ""
+    for field in (
+        "birth_department",
+        "department",
+        "birth_postal_code",
+        "birth_zip_code",
+    ):
+        department_code = _normalize_department_code(trainee.get(field))
+        if department_code:
+            break
+
+    birth_country = str(trainee.get("birth_country") or "").strip()
+    if not department_code and (not birth_country or _normalized_commune_name(birth_country) in {"FRANCE", "FR"}):
+        department_code = _lookup_birth_department_code(birth_city)
+
+    if department_code:
+        trainee["birth_department"] = department_code
+        return f"{birth_city} ({department_code})"
+    return birth_city
 
 
 def _diploma_date_fr(value: str) -> str:
@@ -12214,7 +12308,7 @@ def _reserve_ssiap_diploma_numbers(
                 diploma_rows.append({
                     "name": _ssiap_diploma_display_name(trainee),
                     "birth_date": _diploma_date_fr(trainee.get("birth_date") or ""),
-                    "birth_place": str(trainee.get("birth_city") or trainee.get("birth_place") or "").strip(),
+                    "birth_place": _ssiap_birth_place_label(trainee),
                     "exam_date": exam_date,
                     "number": diploma_number,
                 })
@@ -12248,13 +12342,13 @@ def _build_ssiap_diplomas_pdf(diplomas: List[Dict[str, str]]) -> BytesIO:
     for diploma in diplomas:
         pdf.drawImage(background, 0, 0, width=page_width, height=page_height, preserveAspectRatio=False)
         # Each baseline is aligned with its printed label and starts after the label's right edge.
-        _draw_fitted_pdf_text(pdf, diploma["exam_date"], 1460, page_height - 776, 300, 21)
+        _draw_fitted_pdf_text(pdf, diploma["exam_date"], 1445, page_height - 776, 300, 21)
         _draw_fitted_pdf_text(pdf, diploma["name"], 1080, page_height - 846, 650, 21)
         _draw_fitted_pdf_text(pdf, diploma["birth_date"], 1080, page_height - 883, 300, 21)
         _draw_fitted_pdf_text(pdf, diploma["birth_place"], 1080, page_height - 921, 650, 21)
         _draw_fitted_pdf_text(pdf, diploma["name"], 1120, page_height - 1108, 620, 21)
         _draw_fitted_pdf_text(pdf, diploma["number"], 1170, page_height - 1145, 430, 21)
-        _draw_fitted_pdf_text(pdf, diploma["exam_date"], 480, page_height - 1171, 300, 21)
+        _draw_fitted_pdf_text(pdf, diploma["exam_date"], 420, page_height - 1171, 300, 21)
         pdf.showPage()
 
     pdf.save()
