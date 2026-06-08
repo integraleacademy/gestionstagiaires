@@ -8,6 +8,7 @@
 {% set vtc_practice_training_date = session.practice_training_date %}
 {% set is_dirigeant_session = is_dirigeant or ("DIRIGEANT" in (session.training_type or "")|upper) or ("DIRIGEANT" in (session.name or "")|upper) %}
 {% set is_all_vtc = all_vtc|default(false) %}
+{% set is_ssiap_session = "SSIAP" in ((session.training_type or "") ~ " " ~ (session.name or ""))|upper %}
 
 <div class="breadcrumbs">
   <a href="{{ url_for('admin_sessions', **request.args) }}">← Retour sessions</a>
@@ -150,7 +151,7 @@
     <button class="btn btn-outline" id="btnCollectMails" type="button">📋 Récup mail</button>
     {% if not is_all_vtc %}
     <a class="btn btn-outline" id="btnPrintTrainees" href="{{ url_for('admin_trainees_print', session_id=session.id, **request.args) }}" target="_blank" rel="noopener">🖨️ Imprimer la liste</a>
-    {% if "SSIAP" in ((session.training_type or "") ~ " " ~ (session.name or ""))|upper and not is_read_only %}
+    {% if is_ssiap_session and not is_read_only %}
     <form method="post" action="{{ url_for('admin_generate_ssiap_diplomas', session_id=session.id) }}" style="display:inline;" target="_blank">
       <button class="btn btn-primary" id="btnGenerateSsiapDiplomas" type="submit">🎓 Générer les diplômes</button>
     </form>
@@ -376,6 +377,7 @@
         <th class="col-history">Historique</th>
         <th class="col-thread">Fil actu</th>
         {% endif %}
+        {% if is_ssiap_session and not is_read_only %}<th class="col-ssiap-diploma">Diplôme</th>{% endif %}
         <th class="col-comment">Commentaire</th>
       </tr>
     </thead>
@@ -678,6 +680,14 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
             <span>Fil actu</span>
             {% if t.scotia_unread_thread_count %}<span class="thread-badge" aria-label="{{ t.scotia_unread_thread_count }} commentaire{{ 's' if t.scotia_unread_thread_count|int > 1 else '' }} non lu{{ 's' if t.scotia_unread_thread_count|int > 1 else '' }}">{{ t.scotia_unread_thread_count }}</span>{% endif %}
           </button>
+        </td>
+        {% endif %}
+        {% if is_ssiap_session and not is_read_only %}
+        <td class="col-ssiap-diploma">
+          <form method="post" action="{{ url_for('admin_generate_ssiap_diploma', session_id=session.id, trainee_id=t.id) }}" target="_blank">
+            <button class="mini-btn ssiap-diploma-btn" type="submit" title="Générer uniquement le diplôme de {{ t.first_name or '' }} {{ t.last_name or '' }}">🎓 Générer</button>
+          </form>
+          {% if t.ssiap_diploma_number %}<div class="ssiap-diploma-number">{{ t.ssiap_diploma_number }}</div>{% endif %}
         </td>
         {% endif %}
         <td class="col-comment">
@@ -1028,6 +1038,11 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 </div>
 
 <style>
+
+.col-ssiap-diploma{ min-width:170px; text-align:center; }
+.col-ssiap-diploma form{ margin:0; }
+.ssiap-diploma-btn{ white-space:nowrap; }
+.ssiap-diploma-number{ margin-top:5px; font-size:11px; color:#64748b; white-space:nowrap; }
   tr.row-ok td{
     background: #ecfdf5;   /* vert clair */
   }
