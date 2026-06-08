@@ -152,7 +152,7 @@
     {% if not is_all_vtc %}
     <a class="btn btn-outline" id="btnPrintTrainees" href="{{ url_for('admin_trainees_print', session_id=session.id, **request.args) }}" target="_blank" rel="noopener">🖨️ Imprimer la liste</a>
     {% if is_ssiap_session and not is_read_only and trainees|selectattr('ssiap_exam_status', 'equalto', 'certified')|list %}
-    <form method="post" action="{{ url_for('admin_generate_ssiap_diplomas', session_id=session.id) }}" style="display:inline;" target="_blank">
+    <form class="ssiap-diploma-generation-form" method="post" action="{{ url_for('admin_generate_ssiap_diplomas', session_id=session.id) }}" style="display:inline;" target="_blank">
       <button class="btn btn-primary" id="btnGenerateSsiapDiplomas" type="submit">🎓 Générer les diplômes certifiés</button>
     </form>
     {% endif %}
@@ -691,12 +691,12 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
             <option value="failed" {% if ssiap_exam_status == 'failed' %}selected{% endif %}>Ajourné</option>
           </select>
         </td>
-        <td class="col-ssiap-diploma">
+        <td class="col-ssiap-diploma" data-ssiap-view-url="{{ url_for('admin_view_ssiap_diploma', session_id=session.id, trainee_id=t.id) }}">
           <div class="ssiap-diploma-actions">
             {% if t.ssiap_diploma_number %}
               <a class="mini-btn ssiap-view-btn" href="{{ url_for('admin_view_ssiap_diploma', session_id=session.id, trainee_id=t.id) }}" target="_blank" rel="noopener">👁️ Voir le diplôme</a>
             {% elif ssiap_exam_status == 'certified' and not is_read_only %}
-              <form method="post" action="{{ url_for('admin_generate_ssiap_diploma', session_id=session.id, trainee_id=t.id) }}" target="_blank">
+              <form class="ssiap-diploma-generation-form" method="post" action="{{ url_for('admin_generate_ssiap_diploma', session_id=session.id, trainee_id=t.id) }}" target="_blank">
                 <button class="mini-btn ssiap-diploma-btn" type="submit" title="Générer uniquement le diplôme de {{ t.first_name or '' }} {{ t.last_name or '' }}">🎓 Générer</button>
               </form>
             {% endif %}
@@ -1981,6 +1981,82 @@ body.vae-analysis-filter-active #traineesTable .mini-btn{
     if(closeBtn){
       closeModal(closeBtn.getAttribute("data-close-modal"));
     }
+  });
+
+  function ssiapDownloadFilename(response){
+    const disposition = response.headers.get("Content-Disposition") || "";
+    const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if(utf8Match){
+      try { return decodeURIComponent(utf8Match[1]); } catch(_error) { return utf8Match[1]; }
+    }
+    const simpleMatch = disposition.match(/filename="?([^";]+)"?/i);
+    return simpleMatch ? simpleMatch[1] : "diplome-SSIAP.pdf";
+  }
+
+  function updateSsiapDiplomaDisplay(traineeId, diplomaNumber){
+    const row = Array.from(document.querySelectorAll("tr[data-trainee-id]")).find(
+      candidate => candidate.getAttribute("data-trainee-id") === String(traineeId)
+    );
+    const cell = row?.querySelector(".col-ssiap-diploma");
+    const actions = cell?.querySelector(".ssiap-diploma-actions");
+    if(!cell || !actions || !diplomaNumber) return;
+
+    const generationForm = actions.querySelector(".ssiap-diploma-generation-form");
+    let viewButton = actions.querySelector(".ssiap-view-btn");
+    if(!viewButton){
+      viewButton = document.createElement("a");
+      viewButton.className = "mini-btn ssiap-view-btn";
+      viewButton.href = cell.dataset.ssiapViewUrl || "#";
+      viewButton.target = "_blank";
+      viewButton.rel = "noopener";
+      viewButton.textContent = "👁️ Voir le diplôme";
+      if(generationForm) generationForm.replaceWith(viewButton);
+      else actions.prepend(viewButton);
+    }
+
+    let number = cell.querySelector(".ssiap-diploma-number");
+    if(!number){
+      number = document.createElement("div");
+      number.className = "ssiap-diploma-number";
+      cell.appendChild(number);
+    }
+    number.textContent = diplomaNumber;
+  }
+
+  document.querySelectorAll(".ssiap-diploma-generation-form").forEach(form => {
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const submitButton = form.querySelector('button[type="submit"]');
+      const originalText = submitButton?.textContent || "";
+      if(submitButton){
+        submitButton.disabled = true;
+        submitButton.textContent = "Génération…";
+      }
+      try {
+        const response = await fetch(form.action, { method: "POST" });
+        if(!response.ok) throw new Error((await response.text()) || `Erreur (${response.status})`);
+        const diplomaNumbers = JSON.parse(response.headers.get("X-SSIAP-Diploma-Numbers") || "{}");
+        const pdfBlob = await response.blob();
+        const downloadUrl = URL.createObjectURL(pdfBlob);
+        const downloadLink = document.createElement("a");
+        downloadLink.href = downloadUrl;
+        downloadLink.download = ssiapDownloadFilename(response);
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        downloadLink.remove();
+        window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+        Object.entries(diplomaNumbers).forEach(([traineeId, number]) => {
+          updateSsiapDiplomaDisplay(traineeId, number);
+        });
+      } catch(error) {
+        alert(error?.message || "Impossible de générer le diplôme.");
+      } finally {
+        if(submitButton && submitButton.isConnected){
+          submitButton.disabled = false;
+          submitButton.textContent = originalText;
+        }
+      }
+    });
   });
 
   document.querySelectorAll(".ssiap-edit-info-btn").forEach(button => {

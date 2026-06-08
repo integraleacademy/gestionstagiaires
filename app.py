@@ -12261,6 +12261,7 @@ def _ssiap_diploma_exam_date(session_item: Dict[str, Any], trainee: Dict[str, An
 
 def _ssiap_diploma_row(session_item: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
     return {
+        "trainee_id": str(trainee.get("id") or ""),
         "name": _ssiap_diploma_display_name(trainee),
         "birth_date": _diploma_date_fr(
             trainee.get("ssiap_diploma_birth_date") or trainee.get("birth_date") or ""
@@ -12567,12 +12568,17 @@ def admin_generate_ssiap_diplomas(session_id: str):
 
     year = diplomas[0]["exam_date"][-4:]
     session_name = re.sub(r"[^A-Za-z0-9_-]+", "-", str(_session_get(session_item, "name", "SSIAP") or "SSIAP")).strip("-")
-    return send_file(
+    response = send_file(
         _build_ssiap_diplomas_pdf(diplomas),
         mimetype="application/pdf",
         as_attachment=True,
         download_name=f"diplomes-{session_name}-{year}.pdf",
     )
+    response.headers["X-SSIAP-Diploma-Numbers"] = json.dumps(
+        {diploma["trainee_id"]: diploma["number"] for diploma in diplomas},
+        separators=(",", ":"),
+    )
+    return response
 
 
 @app.post("/admin/sessions/<session_id>/trainees/<trainee_id>/ssiap-diploma")
@@ -12590,12 +12596,17 @@ def admin_generate_ssiap_diploma(session_id: str, trainee_id: str):
 
     diploma = diplomas[0]
     trainee_name = re.sub(r"[^A-Za-z0-9_-]+", "-", diploma["name"]).strip("-") or "stagiaire"
-    return send_file(
+    response = send_file(
         _build_ssiap_diplomas_pdf(diplomas),
         mimetype="application/pdf",
         as_attachment=True,
         download_name=f"diplome-SSIAP-{trainee_name}-{diploma['exam_date'][-4:]}.pdf",
     )
+    response.headers["X-SSIAP-Diploma-Numbers"] = json.dumps(
+        {diploma["trainee_id"]: diploma["number"]},
+        separators=(",", ":"),
+    )
+    return response
 
 
 @app.get("/admin/sessions/<session_id>/trainees/print")
