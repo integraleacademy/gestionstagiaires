@@ -51,6 +51,7 @@ class SsiapDiplomaTests(unittest.TestCase):
             "birth_date": birth_date,
             "birth_city": birth_city,
             "birth_department": "75" if birth_city else "",
+            "ssiap_exam_status": "certified",
         }
 
     def test_generates_filled_multipage_pdf_and_persists_unique_numbers(self):
@@ -269,9 +270,14 @@ class SsiapDiplomaTests(unittest.TestCase):
         self.assertIn("lieu de naissance", response.get_data(as_text=True))
         self.assertNotIn("ssiap_diploma_number", self._read_data()["sessions"][0]["trainees"][0])
 
-    def test_ssiap_admin_page_displays_generation_or_view_button(self):
-        generated_trainee = self._trainee("T2", "Alice", "Martin", "1991-04-05")
-        generated_trainee["ssiap_diploma_number"] = "083-8323-1-2026-00002"
+    def test_ssiap_admin_page_displays_exam_statuses_and_diploma_actions(self):
+        pending = self._trainee("T1", "Jean", "Dupont", "1990-02-03")
+        pending["ssiap_exam_status"] = "pending_results"
+        certified = self._trainee("T2", "Alice", "Martin", "1991-04-05")
+        generated = self._trainee("T3", "Paul", "Durand", "1988-06-07")
+        generated["ssiap_diploma_number"] = "083-8323-1-2026-00002"
+        failed = self._trainee("T4", "Luc", "Petit", "1987-08-09")
+        failed["ssiap_exam_status"] = "failed"
         fake_data = {
             "sessions": [{
                 "id": "S1",
@@ -280,7 +286,7 @@ class SsiapDiplomaTests(unittest.TestCase):
                 "date_start": "2026-05-01",
                 "date_end": "2026-05-15",
                 "exam_date": "2026-05-16",
-                "trainees": [self._trainee("T1", "Jean", "Dupont", "1990-02-03")],
+                "trainees": [pending, certified, generated, failed],
             }],
         }
         with patch.object(gestion_app, "load_data", return_value=fake_data), patch.object(gestion_app, "save_data"):
@@ -288,11 +294,103 @@ class SsiapDiplomaTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
+        self.assertIn(">Examen</th>", html)
+        self.assertIn("En attente résultat", html)
+        self.assertIn("Certifié", html)
+        self.assertIn("Ajourné", html)
+        self.assertNotIn(">Test Français</th>", html)
+        self.assertNotIn(">CNAPS</th>", html)
         self.assertIn('id="btnGenerateSsiapDiplomas"', html)
-        self.assertIn('/admin/sessions/S1/ssiap-diplomas', html)
-        self.assertIn("Générer les diplômes", html)
-        self.assertIn('/admin/sessions/S1/trainees/T1/ssiap-diploma', html)
+        self.assertIn("Générer les diplômes certifiés", html)
+        self.assertIn('/admin/sessions/S1/trainees/T2/ssiap-diploma', html)
         self.assertIn("🎓 Générer", html)
+        self.assertIn('/admin/sessions/S1/trainees/T3/ssiap-diploma', html)
+        self.assertIn("👁️ Voir le diplôme", html)
+        self.assertIn("Modifier infos diplôme", html)
+        self.assertIn("width:220px", html)
+        self.assertIn("width:200px", html)
+        self.assertIn('class="sel ssiap-exam-select ssiap-exam-pending_results"', html)
+
+    def test_rejects_diploma_generation_for_non_certified_trainee(self):
+        trainee = self._trainee("T1", "Jean", "Dupont", "1990-02-03")
+        trainee["ssiap_exam_status"] = "failed"
+        self._write_data({
+            "sessions": [{
+                "id": "S1",
+                "name": "SSIAP 1",
+                "training_type": "SSIAP 1",
+                "exam_date": "2026-05-15",
+                "trainees": [trainee],
+            }],
+        })
+
+        response = self.client.post("/admin/sessions/S1/trainees/T1/ssiap-diploma")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("uniquement pour un stagiaire certifié", response.get_data(as_text=True))
+        self.assertNotIn("ssiap_diploma_number", self._read_data()["sessions"][0]["trainees"][0])
+
+    def test_views_an_existing_diploma_without_allocating_a_new_number(self):
+        trainee = self._trainee("T1", "Jean", "Dupont", "1990-02-03")
+        trainee["ssiap_diploma_number"] = "083-8323-1-2026-00004"
+        self._write_data({
+            "sessions": [{
+                "id": "S1",
+                "name": "SSIAP 1",
+                "training_type": "SSIAP 1",
+                "exam_date": "2026-05-15",
+                "trainees": [trainee],
+            }],
+        })
+
+        response = self.client.get("/admin/sessions/S1/trainees/T1/ssiap-diploma")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "application/pdf")
+        self.assertIn("inline", response.headers["Content-Disposition"])
+        page_text = PdfReader(BytesIO(response.data)).pages[0].extract_text()
+        self.assertIn("083-8323-1-2026-00004", page_text)
+        self.assertEqual(
+            self._read_data()["sessions"][0]["trainees"][0]["ssiap_diploma_number"],
+            "083-8323-1-2026-00004",
+        )
+
+    def test_updates_diploma_overrides_used_by_the_pdf(self):
+        trainee = self._trainee("T1", "Jean", "Dupont", "1990-02-03")
+        self._write_data({
+            "sessions": [{
+                "id": "S1",
+                "name": "SSIAP 1",
+                "training_type": "SSIAP 1",
+                "exam_date": "2026-05-15",
+                "trainees": [trainee],
+            }],
+        })
+
+        response = self.client.post(
+            "/admin/sessions/S1/trainees/T1/ssiap-diploma-info",
+            data={
+                "civility": "Madame",
+                "first_name": "Jeanne",
+                "last_name": "Durand",
+                "birth_date": "1992-09-08",
+                "birth_city": "Toulon",
+                "birth_department": "83",
+                "birth_country": "France",
+                "exam_date": "2026-06-20",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        saved = self._read_data()["sessions"][0]["trainees"][0]
+        self.assertEqual(saved["ssiap_diploma_first_name"], "Jeanne")
+        generated = self.client.post("/admin/sessions/S1/trainees/T1/ssiap-diploma")
+        self.assertEqual(generated.status_code, 200)
+        page_text = PdfReader(BytesIO(generated.data)).pages[0].extract_text()
+        self.assertIn("Madame Jeanne DURAND", page_text)
+        self.assertIn("08/09/1992", page_text)
+        self.assertIn("Toulon (83)", page_text)
+        self.assertIn("20/06/2026", page_text)
 
 
 if __name__ == "__main__":
