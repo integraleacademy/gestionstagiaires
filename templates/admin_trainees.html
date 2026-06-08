@@ -151,9 +151,9 @@
     <button class="btn btn-outline" id="btnCollectMails" type="button">📋 Récup mail</button>
     {% if not is_all_vtc %}
     <a class="btn btn-outline" id="btnPrintTrainees" href="{{ url_for('admin_trainees_print', session_id=session.id, **request.args) }}" target="_blank" rel="noopener">🖨️ Imprimer la liste</a>
-    {% if is_ssiap_session and not is_read_only %}
+    {% if is_ssiap_session and not is_read_only and trainees|selectattr('ssiap_exam_status', 'equalto', 'certified')|list %}
     <form method="post" action="{{ url_for('admin_generate_ssiap_diplomas', session_id=session.id) }}" style="display:inline;" target="_blank">
-      <button class="btn btn-primary" id="btnGenerateSsiapDiplomas" type="submit">🎓 Générer les diplômes</button>
+      <button class="btn btn-primary" id="btnGenerateSsiapDiplomas" type="submit">🎓 Générer les diplômes certifiés</button>
     </form>
     {% endif %}
     <a class="btn btn-outline" id="btnWordLabels"
@@ -360,10 +360,10 @@
         <th class="col-convention">Convention</th>
         <th class="col-financement">Financement</th>
         {% if show_vae %}<th class="col-vae-status">VAE</th><th class="col-scotia-status">STATUT SCOTIA</th><th class="col-vae-exam-status">Statut examen</th>{% endif %}
-        {% if not is_vtc and not show_vae and not is_dirigeant_session %}<th>Test Français</th>{% endif %}
+        {% if not is_vtc and not show_vae and not is_dirigeant_session and not is_ssiap_session %}<th>Test Français</th>{% endif %}
         {% if not is_vtc %}<th class="col-dossier-status">Dossier</th>{% endif %}
         {% if not is_vtc %}<th class="col-dossier-complete">Dossier complet</th>{% endif %}
-        {% if not is_vtc and not show_vae and not is_dirigeant_session %}<th>CNAPS</th>{% endif %}
+        {% if not is_vtc and not show_vae and not is_dirigeant_session and not is_ssiap_session %}<th>CNAPS</th>{% endif %}
         {% if is_vtc %}<th>Inscription CMAR</th>{% endif %}
         {% if is_vtc %}<th>E-learning</th>{% endif %}
         {% if is_vtc %}<th>Livre</th>{% endif %}
@@ -377,7 +377,7 @@
         <th class="col-history">Historique</th>
         <th class="col-thread">Fil actu</th>
         {% endif %}
-        {% if is_ssiap_session and not is_read_only %}<th class="col-ssiap-diploma">Diplôme</th>{% endif %}
+        {% if is_ssiap_session %}<th class="col-ssiap-exam">Examen</th><th class="col-ssiap-diploma">Diplôme</th>{% endif %}
         <th class="col-comment">Commentaire</th>
       </tr>
     </thead>
@@ -505,7 +505,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 </td>
 {% endif %}
 
-{% if not is_vtc and not show_vae and not is_dirigeant_session %}
+{% if not is_vtc and not show_vae and not is_dirigeant_session and not is_ssiap_session %}
 <td>
   <select class="status sel status-dot" data-field="test_fr_status" {{ read_only_attr }}>
     <option value="soon" {% if t.test_fr_status=="soon" or not t.test_fr_status %}selected{% endif %}>🟠</option>
@@ -549,7 +549,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         </td>
         {% endif %}
 
-        {% if not is_vtc and not show_vae and not is_dirigeant_session %}
+        {% if not is_vtc and not show_vae and not is_dirigeant_session and not is_ssiap_session %}
         <td>
           <div class="inline">
             <span class="cnaps" data-cnaps>{{ t.cnaps or "INCONNU" }}</span>
@@ -682,11 +682,37 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           </button>
         </td>
         {% endif %}
-        {% if is_ssiap_session and not is_read_only %}
+        {% if is_ssiap_session %}
+        {% set ssiap_exam_status = t.ssiap_exam_status or 'pending_results' %}
+        <td class="col-ssiap-exam">
+          <select class="sel ssiap-exam-select ssiap-exam-{{ ssiap_exam_status }}" data-field="ssiap_exam_status" {{ read_only_attr }}>
+            <option value="pending_results" {% if ssiap_exam_status == 'pending_results' %}selected{% endif %}>En attente résultat</option>
+            <option value="certified" {% if ssiap_exam_status == 'certified' %}selected{% endif %}>Certifié</option>
+            <option value="failed" {% if ssiap_exam_status == 'failed' %}selected{% endif %}>Ajourné</option>
+          </select>
+        </td>
         <td class="col-ssiap-diploma">
-          <form method="post" action="{{ url_for('admin_generate_ssiap_diploma', session_id=session.id, trainee_id=t.id) }}" target="_blank">
-            <button class="mini-btn ssiap-diploma-btn" type="submit" title="Générer uniquement le diplôme de {{ t.first_name or '' }} {{ t.last_name or '' }}">🎓 Générer</button>
-          </form>
+          <div class="ssiap-diploma-actions">
+            {% if t.ssiap_diploma_number %}
+              <a class="mini-btn ssiap-view-btn" href="{{ url_for('admin_view_ssiap_diploma', session_id=session.id, trainee_id=t.id) }}" target="_blank" rel="noopener">👁️ Voir le diplôme</a>
+            {% elif ssiap_exam_status == 'certified' and not is_read_only %}
+              <form method="post" action="{{ url_for('admin_generate_ssiap_diploma', session_id=session.id, trainee_id=t.id) }}" target="_blank">
+                <button class="mini-btn ssiap-diploma-btn" type="submit" title="Générer uniquement le diplôme de {{ t.first_name or '' }} {{ t.last_name or '' }}">🎓 Générer</button>
+              </form>
+            {% endif %}
+            {% if not is_read_only %}
+              <button class="mini-btn ssiap-edit-info-btn" type="button"
+                      data-ssiap-info-action="{{ url_for('admin_update_ssiap_diploma_info', session_id=session.id, trainee_id=t.id) }}"
+                      data-civility="{{ t.ssiap_diploma_civility or 'Monsieur' }}"
+                      data-first-name="{{ t.ssiap_diploma_first_name or t.first_name or '' }}"
+                      data-last-name="{{ t.ssiap_diploma_last_name or t.last_name or '' }}"
+                      data-birth-date="{{ t.ssiap_diploma_birth_date or t.birth_date or '' }}"
+                      data-birth-city="{{ t.ssiap_diploma_birth_city or t.birth_city or t.birth_place or '' }}"
+                      data-birth-department="{{ t.ssiap_diploma_birth_department or t.birth_department or '' }}"
+                      data-birth-country="{{ t.ssiap_diploma_birth_country or t.birth_country or '' }}"
+                      data-exam-date="{{ t.ssiap_diploma_exam_date or session.ssiap_exam_date or session.exam_date or '' }}">✏️ Modifier infos diplôme</button>
+            {% endif %}
+          </div>
           {% if t.ssiap_diploma_number %}<div class="ssiap-diploma-number">{{ t.ssiap_diploma_number }}</div>{% endif %}
         </td>
         {% endif %}
@@ -700,6 +726,36 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   </table>
 </div>
 
+
+{% if is_ssiap_session and not is_read_only %}
+<div class="modal-backdrop" id="ssiapDiplomaInfoModal" aria-hidden="true">
+  <div class="modal" style="max-width:720px" role="dialog" aria-modal="true" aria-labelledby="ssiapDiplomaInfoTitle">
+    <form id="ssiapDiplomaInfoForm" method="post">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title" id="ssiapDiplomaInfoTitle">Modifier les informations du diplôme</div>
+          <div class="hint">Ces valeurs remplacent les informations du dossier uniquement sur le diplôme SSIAP.</div>
+        </div>
+        <button class="icon-btn" type="button" data-close-modal="ssiapDiplomaInfoModal">✕</button>
+      </div>
+      <div class="modal-body ssiap-info-grid">
+        <label><span class="label">Civilité</span><select class="sel" name="civility" id="ssiapInfoCivility"><option>Monsieur</option><option>Madame</option></select></label>
+        <label><span class="label">Prénom</span><input name="first_name" id="ssiapInfoFirstName" required></label>
+        <label><span class="label">Nom</span><input name="last_name" id="ssiapInfoLastName" required></label>
+        <label><span class="label">Date de naissance</span><input type="date" name="birth_date" id="ssiapInfoBirthDate" required></label>
+        <label><span class="label">Ville de naissance</span><input name="birth_city" id="ssiapInfoBirthCity" required></label>
+        <label><span class="label">Département de naissance</span><input name="birth_department" id="ssiapInfoBirthDepartment" placeholder="Ex : 83"></label>
+        <label><span class="label">Pays de naissance</span><input name="birth_country" id="ssiapInfoBirthCountry" placeholder="France"></label>
+        <label><span class="label">Date d'examen</span><input type="date" name="exam_date" id="ssiapInfoExamDate" required></label>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" type="button" data-close-modal="ssiapDiplomaInfoModal">Annuler</button>
+        <button class="btn btn-primary" type="submit">Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
 
 {% if show_vae %}
 <div class="modal-backdrop" id="vaeLiveModal" aria-hidden="true">
@@ -1039,10 +1095,19 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 
 <style>
 
-.col-ssiap-diploma{ min-width:170px; text-align:center; }
+.col-ssiap-exam{ min-width:180px; text-align:center; }
+.col-ssiap-diploma{ min-width:210px; text-align:center; }
 .col-ssiap-diploma form{ margin:0; }
-.ssiap-diploma-btn{ white-space:nowrap; }
+.ssiap-diploma-actions{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+.ssiap-diploma-btn,.ssiap-view-btn,.ssiap-edit-info-btn{ white-space:nowrap; text-decoration:none; }
+.ssiap-exam-select{ min-width:165px; font-weight:800; border-radius:999px; }
+.ssiap-exam-pending_results{ background:#f1f5f9; color:#64748b; border-color:#cbd5e1; }
+.ssiap-exam-certified{ background:#dcfce7; color:#166534; border-color:#86efac; }
+.ssiap-exam-failed{ background:#fee2e2; color:#991b1b; border-color:#fca5a5; }
 .ssiap-diploma-number{ margin-top:5px; font-size:11px; color:#64748b; white-space:nowrap; }
+.ssiap-info-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.ssiap-info-grid label{ display:flex; flex-direction:column; gap:5px; }
+@media (max-width:700px){ .ssiap-info-grid{ grid-template-columns:1fr; } }
   tr.row-ok td{
     background: #ecfdf5;   /* vert clair */
   }
@@ -1893,6 +1958,30 @@ body.vae-analysis-filter-active #traineesTable .mini-btn{
     if(closeBtn){
       closeModal(closeBtn.getAttribute("data-close-modal"));
     }
+  });
+
+  document.querySelectorAll(".ssiap-edit-info-btn").forEach(button => {
+    button.addEventListener("click", () => {
+      const form = document.getElementById("ssiapDiplomaInfoForm");
+      if(!form) return;
+      form.action = button.dataset.ssiapInfoAction || "";
+      document.getElementById("ssiapInfoCivility").value = button.dataset.civility || "Monsieur";
+      document.getElementById("ssiapInfoFirstName").value = button.dataset.firstName || "";
+      document.getElementById("ssiapInfoLastName").value = button.dataset.lastName || "";
+      document.getElementById("ssiapInfoBirthDate").value = button.dataset.birthDate || "";
+      document.getElementById("ssiapInfoBirthCity").value = button.dataset.birthCity || "";
+      document.getElementById("ssiapInfoBirthDepartment").value = button.dataset.birthDepartment || "";
+      document.getElementById("ssiapInfoBirthCountry").value = button.dataset.birthCountry || "";
+      document.getElementById("ssiapInfoExamDate").value = button.dataset.examDate || "";
+      openModal("ssiapDiplomaInfoModal");
+    });
+  });
+
+  document.querySelectorAll(".ssiap-exam-select").forEach(select => {
+    select.addEventListener("change", () => {
+      select.classList.remove("ssiap-exam-pending_results", "ssiap-exam-certified", "ssiap-exam-failed");
+      select.classList.add(`ssiap-exam-${select.value}`);
+    });
   });
 
   function escapeHtml(value){
@@ -3353,6 +3442,10 @@ document.querySelectorAll("select.sel").forEach(sel=>{
           if (data?.dossier_status && dossierSelect) {
             dossierSelect.value = data.dossier_status;
             applyStatusPill(dossierSelect);
+          }
+          if(field === "ssiap_exam_status"){
+            window.location.reload();
+            return;
           }
           recomputeRowHighlight();
         }catch(e){

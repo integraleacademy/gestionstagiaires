@@ -12173,7 +12173,12 @@ def _lookup_birth_department_code(birth_city: str) -> str:
 
 
 def _ssiap_birth_place_label(trainee: Dict[str, Any]) -> str:
-    birth_city = str(trainee.get("birth_city") or trainee.get("birth_place") or "").strip()
+    birth_city = str(
+        trainee.get("ssiap_diploma_birth_city")
+        or trainee.get("birth_city")
+        or trainee.get("birth_place")
+        or ""
+    ).strip()
     if not birth_city or re.search(r"\(([0-9]{2,3}|2A|2B)\)\s*$", birth_city, flags=re.IGNORECASE):
         return birth_city
 
@@ -12184,11 +12189,16 @@ def _ssiap_birth_place_label(trainee: Dict[str, Any]) -> str:
         "birth_postal_code",
         "birth_zip_code",
     ):
-        department_code = _normalize_department_code(trainee.get(field))
+        department_value = trainee.get(field)
+        if field == "birth_department":
+            department_value = trainee.get("ssiap_diploma_birth_department") or department_value
+        department_code = _normalize_department_code(department_value)
         if department_code:
             break
 
-    birth_country = str(trainee.get("birth_country") or "").strip()
+    birth_country = str(
+        trainee.get("ssiap_diploma_birth_country") or trainee.get("birth_country") or ""
+    ).strip()
     if not department_code and (not birth_country or _normalized_commune_name(birth_country) in {"FRANCE", "FR"}):
         department_code = _lookup_birth_department_code(birth_city)
 
@@ -12208,10 +12218,44 @@ def _diploma_date_fr(value: str) -> str:
     return ""
 
 
+SSIAP_EXAM_STATUSES = {"pending_results", "certified", "failed"}
+
+
+def _ssiap_exam_status(trainee: Dict[str, Any]) -> str:
+    status = str(trainee.get("ssiap_exam_status") or "pending_results").strip().lower()
+    return status if status in SSIAP_EXAM_STATUSES else "pending_results"
+
+
 def _ssiap_diploma_display_name(trainee: Dict[str, Any]) -> str:
-    first_name = normalize_first_name(trainee.get("first_name") or "")
-    last_name = normalize_last_name(trainee.get("last_name") or "")
-    return f"Monsieur {first_name} {last_name}".strip()
+    civility = str(trainee.get("ssiap_diploma_civility") or "Monsieur").strip()
+    first_name = normalize_first_name(
+        trainee.get("ssiap_diploma_first_name") or trainee.get("first_name") or ""
+    )
+    last_name = normalize_last_name(
+        trainee.get("ssiap_diploma_last_name") or trainee.get("last_name") or ""
+    )
+    return " ".join(part for part in (civility, first_name, last_name) if part).strip()
+
+
+def _ssiap_diploma_exam_date(session_item: Dict[str, Any], trainee: Dict[str, Any]) -> str:
+    raw = (
+        str(trainee.get("ssiap_diploma_exam_date") or "").strip()
+        or str(_session_get(session_item, "ssiap_exam_date", "") or "").strip()
+        or str(_session_get(session_item, "exam_date", "") or "").strip()
+    )
+    return _diploma_date_fr(raw)
+
+
+def _ssiap_diploma_row(session_item: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
+    return {
+        "name": _ssiap_diploma_display_name(trainee),
+        "birth_date": _diploma_date_fr(
+            trainee.get("ssiap_diploma_birth_date") or trainee.get("birth_date") or ""
+        ),
+        "birth_place": _ssiap_birth_place_label(trainee),
+        "exam_date": _ssiap_diploma_exam_date(session_item, trainee),
+        "number": str(trainee.get("ssiap_diploma_number") or "").strip(),
+    }
 
 
 def _next_ssiap_diploma_sequence(data: Dict[str, Any], year: int) -> int:
@@ -12246,42 +12290,55 @@ def _reserve_ssiap_diploma_numbers(
             if "SSIAP" not in training_label:
                 raise ValueError("Cette action est réservée aux sessions SSIAP.")
 
-            exam_date_raw = (
-                str(_session_get(session_item, "ssiap_exam_date", "") or "").strip()
-                or str(_session_get(session_item, "exam_date", "") or "").strip()
-            )
-            exam_date = _diploma_date_fr(exam_date_raw)
-            if not exam_date:
-                raise ValueError("La date d'examen SSIAP doit être renseignée.")
-            year = int(exam_date[-4:])
-
             trainees = _session_trainees_list(session_item)
             if not trainees:
                 raise ValueError("Aucun stagiaire dans cette session SSIAP.")
 
-            selected_trainees = trainees
+            selected_trainees = [
+                trainee for trainee in trainees if _ssiap_exam_status(trainee) == "certified"
+            ]
             if trainee_id is not None:
-                selected_trainees = [
+                matching_trainees = [
                     trainee for trainee in trainees
                     if str(trainee.get("id") or "") == str(trainee_id)
                 ]
-                if not selected_trainees:
+                if not matching_trainees:
                     raise LookupError("trainee_not_found")
+                if _ssiap_exam_status(matching_trainees[0]) != "certified":
+                    raise ValueError("Le diplôme peut être généré uniquement pour un stagiaire certifié.")
+                selected_trainees = matching_trainees
+            if not selected_trainees:
+                raise ValueError("Aucun stagiaire certifié dans cette session SSIAP.")
 
+            exam_years = set()
             missing = []
             for trainee in selected_trainees:
                 missing_fields = []
-                if not (trainee.get("first_name") or "").strip() or not (trainee.get("last_name") or "").strip():
+                diploma_row = _ssiap_diploma_row(session_item, trainee)
+                diploma_first_name = str(
+                    trainee.get("ssiap_diploma_first_name") or trainee.get("first_name") or ""
+                ).strip()
+                diploma_last_name = str(
+                    trainee.get("ssiap_diploma_last_name") or trainee.get("last_name") or ""
+                ).strip()
+                if not diploma_first_name or not diploma_last_name:
                     missing_fields.append("nom ou prénom")
-                if not _diploma_date_fr(trainee.get("birth_date") or ""):
+                if not diploma_row["birth_date"]:
                     missing_fields.append("date de naissance")
-                if not str(trainee.get("birth_city") or trainee.get("birth_place") or "").strip():
+                if not diploma_row["birth_place"]:
                     missing_fields.append("lieu de naissance")
+                if not diploma_row["exam_date"]:
+                    missing_fields.append("date d'examen")
+                else:
+                    exam_years.add(int(diploma_row["exam_date"][-4:]))
                 if missing_fields:
                     trainee_name = _ssiap_diploma_display_name(trainee) or str(trainee.get("id") or "Stagiaire sans nom")
                     missing.append(f"{trainee_name} ({', '.join(missing_fields)})")
             if missing:
                 raise ValueError(f"Informations manquantes pour : {'; '.join(missing)}.")
+            if len(exam_years) != 1:
+                raise ValueError("Tous les diplômes générés en masse doivent avoir la même année d'examen.")
+            year = next(iter(exam_years))
 
             diploma_number_counts: Dict[str, int] = {}
             for existing_session in data.get("sessions", []):
@@ -12305,13 +12362,7 @@ def _reserve_ssiap_diploma_numbers(
                     trainee["ssiap_diploma_number"] = diploma_number
                     trainee["ssiap_diploma_issued_at"] = _now_iso()
 
-                diploma_rows.append({
-                    "name": _ssiap_diploma_display_name(trainee),
-                    "birth_date": _diploma_date_fr(trainee.get("birth_date") or ""),
-                    "birth_place": _ssiap_birth_place_label(trainee),
-                    "exam_date": exam_date,
-                    "number": diploma_number,
-                })
+                diploma_rows.append(_ssiap_diploma_row(session_item, trainee))
 
             session_item["trainees"] = trainees
             session_item.pop("stagiaires", None)
@@ -12354,6 +12405,86 @@ def _build_ssiap_diplomas_pdf(diplomas: List[Dict[str, str]]) -> BytesIO:
     pdf.save()
     output.seek(0)
     return output
+
+
+def _find_ssiap_trainee(session_id: str, trainee_id: str) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
+    data = load_data()
+    session_item = find_session(data, session_id)
+    if not session_item:
+        raise LookupError("session_not_found")
+    training_label = f"{_session_get(session_item, 'training_type', '')} {_session_get(session_item, 'name', '')}".upper()
+    if "SSIAP" not in training_label:
+        raise ValueError("Cette action est réservée aux sessions SSIAP.")
+    trainee = next(
+        (item for item in _session_trainees_list(session_item) if str(item.get("id") or "") == str(trainee_id)),
+        None,
+    )
+    if not trainee:
+        raise LookupError("trainee_not_found")
+    return data, session_item, trainee
+
+
+@app.get("/admin/sessions/<session_id>/trainees/<trainee_id>/ssiap-diploma")
+@admin_login_required
+def admin_view_ssiap_diploma(session_id: str, trainee_id: str):
+    if not REPORTLAB_LIBRARY_AVAILABLE or not os.path.exists(SSIAP_DIPLOMA_TEMPLATE):
+        abort(503, description="Le modèle ou le moteur PDF des diplômes est indisponible.")
+    try:
+        _data, session_item, trainee = _find_ssiap_trainee(session_id, trainee_id)
+    except LookupError:
+        abort(404)
+    except ValueError as exc:
+        return str(exc), 400
+    if not str(trainee.get("ssiap_diploma_number") or "").strip():
+        abort(404, description="Ce diplôme n'a pas encore été généré.")
+    diploma = _ssiap_diploma_row(session_item, trainee)
+    trainee_name = re.sub(r"[^A-Za-z0-9_-]+", "-", diploma["name"]).strip("-") or "stagiaire"
+    return send_file(
+        _build_ssiap_diplomas_pdf([diploma]),
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"diplome-SSIAP-{trainee_name}-{diploma['exam_date'][-4:]}.pdf",
+    )
+
+
+@app.post("/admin/sessions/<session_id>/trainees/<trainee_id>/ssiap-diploma-info")
+@admin_login_required
+@admin_write_required
+def admin_update_ssiap_diploma_info(session_id: str, trainee_id: str):
+    try:
+        data, session_item, trainee = _find_ssiap_trainee(session_id, trainee_id)
+    except LookupError:
+        abort(404)
+    except ValueError as exc:
+        return str(exc), 400
+
+    fields = {
+        "ssiap_diploma_civility": "civility",
+        "ssiap_diploma_first_name": "first_name",
+        "ssiap_diploma_last_name": "last_name",
+        "ssiap_diploma_birth_date": "birth_date",
+        "ssiap_diploma_birth_city": "birth_city",
+        "ssiap_diploma_birth_department": "birth_department",
+        "ssiap_diploma_birth_country": "birth_country",
+        "ssiap_diploma_exam_date": "exam_date",
+    }
+    for storage_key, form_key in fields.items():
+        value = str(request.form.get(form_key) or "").strip()
+        trainee[storage_key] = value
+
+    row = _ssiap_diploma_row(session_item, trainee)
+    if (
+        not trainee["ssiap_diploma_first_name"]
+        or not trainee["ssiap_diploma_last_name"]
+        or not row["birth_date"]
+        or not row["birth_place"]
+        or not row["exam_date"]
+    ):
+        return "Le nom, le prénom, la date et le lieu de naissance ainsi que la date d'examen sont obligatoires.", 400
+    session_item["trainees"] = _session_trainees_list(session_item)
+    session_item.pop("stagiaires", None)
+    save_data(data)
+    return redirect(url_for("admin_trainees", session_id=session_id))
 
 
 @app.post("/admin/sessions/<session_id>/ssiap-diplomas")
@@ -13322,6 +13453,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "other_amount",
         "birth_city",
         "ssiap_exam_date",
+        "ssiap_exam_status",
         "address",
         "zip_code",
         "city",
@@ -13371,6 +13503,10 @@ def api_update_trainee(session_id: str, trainee_id: str):
         if k in ("send_vae_notification", "send_exam_fees_notification", "send_elearning_notification"):
             continue
         if k not in allowed:
+            continue
+
+        if k == "ssiap_exam_status":
+            t[k] = _ssiap_exam_status({"ssiap_exam_status": v})
             continue
 
         if k == "cash_payment_installments":
