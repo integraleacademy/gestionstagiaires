@@ -269,7 +269,9 @@ class SsiapDiplomaTests(unittest.TestCase):
         self.assertIn("lieu de naissance", response.get_data(as_text=True))
         self.assertNotIn("ssiap_diploma_number", self._read_data()["sessions"][0]["trainees"][0])
 
-    def test_ssiap_admin_page_displays_generation_button(self):
+    def test_ssiap_admin_page_displays_generation_or_view_button(self):
+        generated_trainee = self._trainee("T2", "Alice", "Martin", "1991-04-05")
+        generated_trainee["ssiap_diploma_number"] = "083-8323-1-2026-00002"
         fake_data = {
             "sessions": [{
                 "id": "S1",

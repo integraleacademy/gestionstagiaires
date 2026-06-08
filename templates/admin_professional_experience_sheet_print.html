@@ -13,7 +13,7 @@
     .header{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:start;padding-bottom:20px;border-bottom:2px solid var(--ink)}
     .brand{display:flex;gap:14px;align-items:center}.brand img{width:64px;height:64px;object-fit:contain}.eyebrow{color:var(--gold);font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}.brand-name{margin-top:3px;font-size:13px;font-weight:800;color:var(--muted)}
     h1{margin:22px 0 5px;font-family:Georgia,"Times New Roman",serif;font-size:30px;line-height:1.12;letter-spacing:-.02em}.subtitle{margin:0;color:var(--muted);font-size:14px}
-    .status{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:999px;font-size:11px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}.status:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}.status.pending_review{color:var(--amber);background:var(--amber-bg)}.status.validated{color:var(--green);background:var(--green-bg)}.status.non_compliant{color:var(--red);background:var(--red-bg)}
+    .status{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:999px;font-size:11px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}.status:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}.status.a-controler{color:var(--amber);background:var(--amber-bg)}.status.conforme{color:var(--green);background:var(--green-bg)}.status.non-conforme{color:var(--red);background:var(--red-bg)}
     .identity{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:1px;margin:22px 0;background:var(--line);border:1px solid var(--line);border-radius:13px;overflow:hidden}.identity div{padding:13px 15px;background:#fafafa}.label{display:block;margin-bottom:4px;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.value{font-size:14px;font-weight:750}
     section{margin-top:22px}h2{display:flex;align-items:center;gap:11px;margin:0 0 12px;font-size:16px}.number{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:var(--gold-soft);color:#795f1b;font-size:12px;font-weight:900}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{min-height:68px;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:#fff}.field.wide{grid-column:1/-1}.field .value{font-weight:650}
@@ -46,6 +46,9 @@
   </style>
 </head>
 <body>
+  {% set sheet_raw_status = sheet.status or 'A CONTRÔLER' %}
+  {% set sheet_status = 'CONFORME' if sheet_raw_status in ['CONFORME', 'validated'] else 'NON CONFORME' if sheet_raw_status in ['NON CONFORME', 'non_compliant'] else 'A CONTRÔLER' %}
+  {% set sheet_status_class = 'conforme' if sheet_status == 'CONFORME' else 'non-conforme' if sheet_status == 'NON CONFORME' else 'a-controler' %}
   <nav class="toolbar" aria-label="Actions de la fiche">
     <a href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=trainee.id) }}">← Retour au dossier</a>
     <button class="primary" type="button" onclick="window.print()">🖨 Imprimer la fiche</button>
@@ -57,7 +60,7 @@
         <h1>Fiche expérience professionnelle</h1>
         <p class="subtitle">Synthèse déclarative du parcours professionnel du candidat</p>
       </div>
-      <span class="status {{ sheet.status or 'pending_review' }}">{{ sheet.status_label or ('Validé' if sheet.status == 'validated' else 'Non conforme' if sheet.status == 'non_compliant' else 'À contrôler') }}</span>
+      <span class="status {{ sheet_status_class }}">{{ sheet_status }}</span>
     </header>
 
     <div class="identity">
