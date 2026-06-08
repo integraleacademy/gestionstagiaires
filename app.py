@@ -12274,6 +12274,58 @@ def _next_ssiap_diploma_sequence(data: Dict[str, Any], year: int) -> int:
     return highest + 1
 
 
+def _release_deleted_ssiap_diploma_numbers(
+    data: Dict[str, Any], deleted_trainees: List[Dict[str, Any]]
+) -> None:
+    deleted_years = set()
+    for trainee in deleted_trainees:
+        match = SSIAP_DIPLOMA_NUMBER_RE.match(
+            str(trainee.get("ssiap_diploma_number") or "").strip()
+        )
+        if match:
+            deleted_years.add(int(match.group(1)))
+
+    if not deleted_years:
+        return
+
+    highest_by_year = {year: 0 for year in deleted_years}
+    for session_item in data.get("sessions", []):
+        for trainee in _session_trainees_list(session_item):
+            match = SSIAP_DIPLOMA_NUMBER_RE.match(
+                str(trainee.get("ssiap_diploma_number") or "").strip()
+            )
+            if not match:
+                continue
+            year = int(match.group(1))
+            if year in highest_by_year:
+                highest_by_year[year] = max(highest_by_year[year], int(match.group(2)))
+
+    sequences = data.setdefault("ssiap_diploma_sequences", {})
+    for year, highest in highest_by_year.items():
+        if highest:
+            sequences[str(year)] = highest
+        else:
+            sequences.pop(str(year), None)
+
+
+def _delete_trainee_from_session(
+    data: Dict[str, Any], session_item: Dict[str, Any], trainee_id: str
+) -> bool:
+    trainees = _session_trainees_list(session_item)
+    deleted_trainees = [
+        trainee for trainee in trainees if str(trainee.get("id") or "") == str(trainee_id)
+    ]
+    if not deleted_trainees:
+        return False
+
+    session_item["trainees"] = [
+        trainee for trainee in trainees if str(trainee.get("id") or "") != str(trainee_id)
+    ]
+    session_item.pop("stagiaires", None)
+    _release_deleted_ssiap_diploma_numbers(data, deleted_trainees)
+    return True
+
+
 def _reserve_ssiap_diploma_numbers(
     session_id: str, trainee_id: Optional[str] = None
 ) -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
@@ -14423,13 +14475,9 @@ def api_delete_trainee(session_id: str, trainee_id: str):
     if not s:
         return jsonify({"ok": False, "error": "session_not_found"}), 404
 
-    trainees = _session_trainees_list(s)
-    before = len(trainees)
-    trainees = [x for x in trainees if x.get("id") != trainee_id]
-    s["trainees"] = trainees
-    s.pop("stagiaires", None)
+    deleted = _delete_trainee_from_session(data, s, trainee_id)
     save_data(data)
-    return jsonify({"ok": True, "deleted": (len(trainees) != before)})
+    return jsonify({"ok": True, "deleted": deleted})
 
 
 # =========================
@@ -15314,10 +15362,7 @@ def admin_delete_trainee(session_id: str, trainee_id: str):
     s = find_session(data, session_id)
     if not s:
         abort(404)
-    trainees = _session_trainees_list(s)
-    trainees = [x for x in trainees if x.get("id") != trainee_id]
-    s["trainees"] = trainees
-    s.pop("stagiaires", None)
+    _delete_trainee_from_session(data, s, trainee_id)
     save_data(data)
     return redirect(url_for("admin_trainees", session_id=session_id))
 
