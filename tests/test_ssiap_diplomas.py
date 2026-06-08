@@ -177,6 +177,73 @@ class SsiapDiplomaTests(unittest.TestCase):
         self.assertEqual(label, "BRUXELLES")
         get_mock.assert_not_called()
 
+    def test_deleting_trainee_releases_sole_diploma_number_for_api_route(self):
+        self._assert_deleting_trainee_releases_sole_diploma_number(
+            "/api/sessions/S1/trainees/T1/delete"
+        )
+
+    def test_deleting_trainee_releases_sole_diploma_number_for_admin_route(self):
+        self._assert_deleting_trainee_releases_sole_diploma_number(
+            "/admin/sessions/S1/stagiaires/T1/delete"
+        )
+
+    def _assert_deleting_trainee_releases_sole_diploma_number(self, delete_url):
+        deleted_trainee = self._trainee("T1", "Jean", "Dupont", "1990-02-03")
+        deleted_trainee["ssiap_diploma_number"] = "083-8323-1-2026-00001"
+        self._write_data({
+            "ssiap_diploma_sequences": {"2026": 1},
+            "sessions": [{
+                "id": "S1",
+                "name": "SSIAP 1",
+                "training_type": "SSIAP 1",
+                "exam_date": "2026-06-30",
+                "trainees": [deleted_trainee],
+            }],
+        })
+
+        delete_response = self.client.post(delete_url)
+
+        self.assertIn(delete_response.status_code, (200, 302))
+        saved = self._read_data()
+        self.assertEqual(saved["sessions"][0]["trainees"], [])
+        self.assertNotIn("2026", saved["ssiap_diploma_sequences"])
+
+        saved["sessions"][0]["trainees"].append(
+            self._trainee("T2", "Paul", "Martin", "1991-04-05")
+        )
+        self._write_data(saved)
+
+        diploma_response = self.client.post("/admin/sessions/S1/ssiap-diplomas")
+
+        self.assertEqual(diploma_response.status_code, 200)
+        replacement = self._read_data()["sessions"][0]["trainees"][0]
+        self.assertEqual(
+            replacement["ssiap_diploma_number"],
+            "083-8323-1-2026-00001",
+        )
+
+    def test_deleting_highest_diploma_number_rewinds_sequence_to_remaining_number(self):
+        first = self._trainee("T1", "Jean", "Dupont", "1990-02-03")
+        first["ssiap_diploma_number"] = "083-8323-1-2026-00001"
+        second = self._trainee("T2", "Paul", "Martin", "1991-04-05")
+        second["ssiap_diploma_number"] = "083-8323-1-2026-00002"
+        self._write_data({
+            "ssiap_diploma_sequences": {"2026": 2},
+            "sessions": [{
+                "id": "S1",
+                "name": "SSIAP 1",
+                "training_type": "SSIAP 1",
+                "exam_date": "2026-06-30",
+                "trainees": [first, second],
+            }],
+        })
+
+        response = self.client.post("/api/sessions/S1/trainees/T2/delete")
+
+        self.assertEqual(response.status_code, 200)
+        saved = self._read_data()
+        self.assertEqual(saved["ssiap_diploma_sequences"]["2026"], 1)
+
     def test_sequence_continues_for_new_trainee_and_restarts_each_year(self):
         self._write_data({
             "ssiap_diploma_sequences": {"2026": 7},
