@@ -130,6 +130,35 @@ class SsiapDiplomaTests(unittest.TestCase):
         self.assertEqual(saved["sessions"][0]["trainees"][0]["ssiap_diploma_number"], "083-8323-1-2026-00008")
         self.assertEqual(saved["sessions"][1]["trainees"][0]["ssiap_diploma_number"], "083-8323-1-2027-00001")
 
+    def test_generates_only_selected_trainee_without_validating_other_rows(self):
+        self._write_data({
+            "sessions": [{
+                "id": "S1",
+                "name": "SSIAP 1",
+                "training_type": "SSIAP 1",
+                "exam_date": "2026-05-15",
+                "trainees": [
+                    self._trainee("T1", "Jean", "Dupont", "1990-02-03"),
+                    self._trainee("T2", "Paul", "Martin", ""),
+                ],
+            }],
+        })
+
+        response = self.client.post("/admin/sessions/S1/trainees/T1/ssiap-diploma")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "application/pdf")
+        self.assertIn("diplome-SSIAP-Monsieur-Jean-DUPONT-2026.pdf", response.headers["Content-Disposition"])
+        reader = PdfReader(BytesIO(response.data))
+        self.assertEqual(len(reader.pages), 1)
+        page_text = reader.pages[0].extract_text()
+        self.assertIn("Monsieur Jean DUPONT", page_text)
+        self.assertNotIn("Paul MARTIN", page_text)
+
+        trainees = self._read_data()["sessions"][0]["trainees"]
+        self.assertEqual(trainees[0]["ssiap_diploma_number"], "083-8323-1-2026-00001")
+        self.assertNotIn("ssiap_diploma_number", trainees[1])
+
     def test_rejects_generation_before_assigning_numbers_when_required_data_is_missing(self):
         self._write_data({
             "sessions": [{
@@ -156,7 +185,7 @@ class SsiapDiplomaTests(unittest.TestCase):
                 "date_start": "2026-05-01",
                 "date_end": "2026-05-15",
                 "exam_date": "2026-05-16",
-                "trainees": [],
+                "trainees": [self._trainee("T1", "Jean", "Dupont", "1990-02-03")],
             }],
         }
         with patch.object(gestion_app, "load_data", return_value=fake_data), patch.object(gestion_app, "save_data"):
@@ -167,6 +196,8 @@ class SsiapDiplomaTests(unittest.TestCase):
         self.assertIn('id="btnGenerateSsiapDiplomas"', html)
         self.assertIn('/admin/sessions/S1/ssiap-diplomas', html)
         self.assertIn("Générer les diplômes", html)
+        self.assertIn('/admin/sessions/S1/trainees/T1/ssiap-diploma', html)
+        self.assertIn("🎓 Générer", html)
 
 
 if __name__ == "__main__":
