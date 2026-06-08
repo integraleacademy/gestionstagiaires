@@ -136,8 +136,15 @@
       if (!response.ok || !result.ok) throw new Error(result.message || "L’envoi de votre fiche a échoué. Veuillez réessayer.");
       message.className = "pro-sheet-message is-success";
       message.textContent = result.message;
-      document.querySelector(".pro-sheet-launch-status")?.removeAttribute("hidden");
-      document.querySelector(".pro-sheet-launch-copy small").textContent = "Fiche transmise · vous pouvez la mettre à jour si nécessaire.";
+      const launchCopy = document.querySelector(".pro-sheet-launch-copy");
+      if (launchCopy && !launchCopy.querySelector(".pro-sheet-launch-status")) {
+        const status = document.createElement("span");
+        status.className = "pro-sheet-launch-status";
+        status.textContent = "À contrôler";
+        launchCopy.appendChild(status);
+      }
+      const launchHint = launchCopy?.querySelector("small");
+      if (launchHint) launchHint.textContent = "Fiche transmise · vous pouvez la mettre à jour si nécessaire.";
       message.scrollIntoView({ behavior: "smooth", block: "center" });
     } catch (error) {
       message.className = "pro-sheet-message is-error";

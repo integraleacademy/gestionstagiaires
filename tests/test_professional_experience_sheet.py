@@ -66,6 +66,31 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
             "certified": True,
         }
 
+    def test_public_page_does_not_show_pending_review_before_submission(self):
+        self._authenticate_public()
+
+        response = self.client.get("/espace/public-token")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        launch = html.split('class="pro-sheet-launch"', 1)[1].split("</button>", 1)[0]
+        self.assertIn("Complétez et transmettez votre parcours professionnel.", launch)
+        self.assertNotIn("À contrôler", launch)
+        self.assertNotIn("pro-sheet-launch-status", launch)
+
+    def test_admin_documents_show_sheet_as_not_deposited_before_submission(self):
+        self._authenticate_admin()
+
+        response = self.client.get("/admin/sessions/S1/stagiaires/T1")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        row = html.split('data-doc-key="professional_experience_sheet"', 1)[1].split("</tr>", 1)[0]
+        self.assertIn("Fiche expérience professionnelle", row)
+        self.assertIn("NON DÉPOSÉ", row)
+        self.assertNotIn("A CONTRÔLER", row)
+        self.assertIn("La fiche n’a pas encore été transmise.", row)
+
     def test_public_submission_saves_sheet_with_pending_review_status(self):
         self._authenticate_public()
 
@@ -111,10 +136,12 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
-        self.assertIn("Fiche expérience professionnelle", html)
-        self.assertIn("À contrôler", html)
+        row = html.split('data-doc-key="professional_experience_sheet"', 1)[1].split("</tr>", 1)[0]
+        self.assertIn("Fiche expérience professionnelle", row)
+        self.assertIn("A CONTRÔLER", row)
+        self.assertIn("Consulter", row)
+        self.assertIn("Télécharger le PDF", row)
         self.assertIn("Responsable sécurité", html)
-        self.assertIn("Télécharger le PDF", html)
 
     def test_admin_can_download_generated_pdf(self):
         self._authenticate_public()
