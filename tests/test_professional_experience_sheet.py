@@ -192,9 +192,11 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         self.assertIn("A CONTRÔLER", row)
         self.assertIn("VALIDÉ", row)
         self.assertIn("NON CONFORME", row)
-        self.assertIn("Télécharger le PDF", row)
+        self.assertIn("Voir et imprimer la fiche", row)
         self.assertNotIn("Consulter", row)
         self.assertNotIn("Responsable sécurité", row)
+        self.assertNotIn("Consulter les réponses", html)
+        self.assertEqual(html.count('data-doc-key="professional_experience_sheet"'), 1)
 
     def test_public_page_shows_file_sent_after_submission(self):
         self._authenticate_public()
@@ -245,7 +247,10 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         self.assertIn("Responsable sécurité", html)
         self.assertIn("Entreprise Exemple", html)
         self.assertIn("Imprimer la fiche", html)
-        self.assertIn("@media print", html)
+        self.assertIn("@page{size:A4 portrait;margin:7mm}", html)
+        self.assertIn("height:283mm", html)
+        self.assertIn("overflow:hidden", html)
+        self.assertIn("page-break-inside:avoid", html)
 
     def test_legacy_pdf_url_redirects_to_printable_html_sheet(self):
         self._authenticate_public()
