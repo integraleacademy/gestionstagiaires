@@ -150,6 +150,11 @@
     <button class="btn btn-outline" id="btnCollectMails" type="button">📋 Récup mail</button>
     {% if not is_all_vtc %}
     <a class="btn btn-outline" id="btnPrintTrainees" href="{{ url_for('admin_trainees_print', session_id=session.id, **request.args) }}" target="_blank" rel="noopener">🖨️ Imprimer la liste</a>
+    {% if "SSIAP" in ((session.training_type or "") ~ " " ~ (session.name or ""))|upper and not is_read_only %}
+    <form method="post" action="{{ url_for('admin_generate_ssiap_diplomas', session_id=session.id) }}" style="display:inline;" target="_blank">
+      <button class="btn btn-primary" id="btnGenerateSsiapDiplomas" type="submit">🎓 Générer les diplômes</button>
+    </form>
+    {% endif %}
     <a class="btn btn-outline" id="btnWordLabels"
        href="{{ url_for('admin_etiquettes_word_zip', session_id=session.id) }}"
        title="Télécharger toutes les étiquettes Word de la session">🏷️ Étiquettes WORD</a>

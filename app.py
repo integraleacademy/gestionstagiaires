@@ -12094,6 +12094,178 @@ def admin_positioning_test_detail(test_id: str):
 
 
 
+SSIAP_DIPLOMA_TEMPLATE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "templates",
+    "static",
+    "diplomes1.jpg",
+)
+SSIAP_DIPLOMA_LOCK_FILE = os.path.join(PERSIST_DIR, "ssiap_diplomas.lock")
+SSIAP_DIPLOMA_NUMBER_RE = re.compile(r"^083-8323-1-(\d{4})-(\d{5})$")
+
+
+def _diploma_date_fr(value: str) -> str:
+    raw = str(value or "").strip()
+    for date_format in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+        try:
+            return datetime.datetime.strptime(raw, date_format).strftime("%d/%m/%Y")
+        except ValueError:
+            continue
+    return ""
+
+
+def _ssiap_diploma_display_name(trainee: Dict[str, Any]) -> str:
+    first_name = normalize_first_name(trainee.get("first_name") or "")
+    last_name = normalize_last_name(trainee.get("last_name") or "")
+    return f"Monsieur {first_name} {last_name}".strip()
+
+
+def _next_ssiap_diploma_sequence(data: Dict[str, Any], year: int) -> int:
+    highest = 0
+    for session_item in data.get("sessions", []):
+        for trainee in _session_trainees_list(session_item):
+            match = SSIAP_DIPLOMA_NUMBER_RE.match(str(trainee.get("ssiap_diploma_number") or "").strip())
+            if match and int(match.group(1)) == year:
+                highest = max(highest, int(match.group(2)))
+
+    sequences = data.setdefault("ssiap_diploma_sequences", {})
+    try:
+        highest = max(highest, int(sequences.get(str(year)) or 0))
+    except (TypeError, ValueError):
+        pass
+    return highest + 1
+
+
+def _reserve_ssiap_diploma_numbers(session_id: str) -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
+    os.makedirs(os.path.dirname(SSIAP_DIPLOMA_LOCK_FILE) or ".", exist_ok=True)
+    with open(SSIAP_DIPLOMA_LOCK_FILE, "a+", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            data = load_data()
+            session_item = find_session(data, session_id)
+            if not session_item:
+                raise LookupError("session_not_found")
+
+            training_label = f"{_session_get(session_item, 'training_type', '')} {_session_get(session_item, 'name', '')}".upper()
+            if "SSIAP" not in training_label:
+                raise ValueError("Cette action est réservée aux sessions SSIAP.")
+
+            exam_date_raw = (
+                str(_session_get(session_item, "ssiap_exam_date", "") or "").strip()
+                or str(_session_get(session_item, "exam_date", "") or "").strip()
+            )
+            exam_date = _diploma_date_fr(exam_date_raw)
+            if not exam_date:
+                raise ValueError("La date d'examen SSIAP doit être renseignée.")
+            year = int(exam_date[-4:])
+
+            trainees = _session_trainees_list(session_item)
+            if not trainees:
+                raise ValueError("Aucun stagiaire dans cette session SSIAP.")
+
+            missing = []
+            for trainee in trainees:
+                if not (trainee.get("first_name") or "").strip() or not (trainee.get("last_name") or "").strip():
+                    missing.append(_ssiap_diploma_display_name(trainee) or str(trainee.get("id") or "Stagiaire sans nom"))
+                if not _diploma_date_fr(trainee.get("birth_date") or ""):
+                    missing.append(_ssiap_diploma_display_name(trainee) or str(trainee.get("id") or "Stagiaire sans nom"))
+            if missing:
+                names = ", ".join(dict.fromkeys(missing))
+                raise ValueError(f"Nom, prénom ou date de naissance manquant pour : {names}.")
+
+            diploma_number_counts: Dict[str, int] = {}
+            for existing_session in data.get("sessions", []):
+                for existing_trainee in _session_trainees_list(existing_session):
+                    existing_number = str(existing_trainee.get("ssiap_diploma_number") or "").strip()
+                    if existing_number:
+                        diploma_number_counts[existing_number] = diploma_number_counts.get(existing_number, 0) + 1
+
+            next_sequence = _next_ssiap_diploma_sequence(data, year)
+            diploma_rows = []
+            for trainee in trainees:
+                diploma_number = str(trainee.get("ssiap_diploma_number") or "").strip()
+                match = SSIAP_DIPLOMA_NUMBER_RE.match(diploma_number)
+                if (
+                    not match
+                    or int(match.group(1)) != year
+                    or diploma_number_counts.get(diploma_number, 0) > 1
+                ):
+                    diploma_number = f"083-8323-1-{year}-{next_sequence:05d}"
+                    next_sequence += 1
+                    trainee["ssiap_diploma_number"] = diploma_number
+                    trainee["ssiap_diploma_issued_at"] = _now_iso()
+
+                diploma_rows.append({
+                    "name": _ssiap_diploma_display_name(trainee),
+                    "birth_date": _diploma_date_fr(trainee.get("birth_date") or ""),
+                    "exam_date": exam_date,
+                    "number": diploma_number,
+                })
+
+            session_item["trainees"] = trainees
+            session_item.pop("stagiaires", None)
+            data.setdefault("ssiap_diploma_sequences", {})[str(year)] = next_sequence - 1
+            save_data(data)
+            return session_item, diploma_rows
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
+def _draw_fitted_pdf_text(pdf_canvas, text: str, x: float, y: float, max_width: float, font_size: float = 23) -> None:
+    size = font_size
+    while size > 15 and pdf_canvas.stringWidth(text, "Helvetica-Bold", size) > max_width:
+        size -= 1
+    pdf_canvas.setFont("Helvetica-Bold", size)
+    pdf_canvas.drawString(x, y, text)
+
+
+def _build_ssiap_diplomas_pdf(diplomas: List[Dict[str, str]]) -> BytesIO:
+    from reportlab.lib.utils import ImageReader
+    from reportlab.pdfgen import canvas
+
+    page_width, page_height = 2000, 1414
+    output = BytesIO()
+    pdf = canvas.Canvas(output, pagesize=(page_width, page_height), pageCompression=1)
+    background = ImageReader(SSIAP_DIPLOMA_TEMPLATE)
+
+    for diploma in diplomas:
+        pdf.drawImage(background, 0, 0, width=page_width, height=page_height, preserveAspectRatio=False)
+        _draw_fitted_pdf_text(pdf, diploma["exam_date"], 1360, page_height - 783, 300)
+        _draw_fitted_pdf_text(pdf, diploma["name"], 1015, page_height - 852, 720)
+        _draw_fitted_pdf_text(pdf, diploma["birth_date"], 1015, page_height - 889, 300)
+        _draw_fitted_pdf_text(pdf, diploma["name"], 1050, page_height - 1118, 720)
+        _draw_fitted_pdf_text(pdf, diploma["number"], 1050, page_height - 1157, 430)
+        _draw_fitted_pdf_text(pdf, diploma["exam_date"], 400, page_height - 1174, 300)
+        pdf.showPage()
+
+    pdf.save()
+    output.seek(0)
+    return output
+
+
+@app.post("/admin/sessions/<session_id>/ssiap-diplomas")
+@admin_login_required
+@admin_write_required
+def admin_generate_ssiap_diplomas(session_id: str):
+    if not REPORTLAB_LIBRARY_AVAILABLE or not os.path.exists(SSIAP_DIPLOMA_TEMPLATE):
+        abort(503, description="Le modèle ou le moteur PDF des diplômes est indisponible.")
+    try:
+        session_item, diplomas = _reserve_ssiap_diploma_numbers(session_id)
+    except LookupError:
+        abort(404)
+    except ValueError as exc:
+        return str(exc), 400
+
+    year = diplomas[0]["exam_date"][-4:]
+    session_name = re.sub(r"[^A-Za-z0-9_-]+", "-", str(_session_get(session_item, "name", "SSIAP") or "SSIAP")).strip("-")
+    return send_file(
+        _build_ssiap_diplomas_pdf(diplomas),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"diplomes-{session_name}-{year}.pdf",
+    )
+
+
 @app.get("/admin/sessions/<session_id>/trainees/print")
 @admin_login_required
 def admin_trainees_print(session_id: str):
