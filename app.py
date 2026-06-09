@@ -12242,9 +12242,20 @@ def _ssiap_exam_status(trainee: Dict[str, Any]) -> str:
     return status if status in SSIAP_EXAM_STATUSES else "pending_results"
 
 
+SSIAP_DIPLOMA_FIRST_NAME_ACCENTS = {
+    "clement": "Clément",
+}
+
+
+def _ssiap_diploma_first_name(value: Any) -> str:
+    first_name = normalize_first_name(str(value or ""))
+    accent_key = _normalized_token(first_name)
+    return SSIAP_DIPLOMA_FIRST_NAME_ACCENTS.get(accent_key, first_name)
+
+
 def _ssiap_diploma_display_name(trainee: Dict[str, Any]) -> str:
     civility = str(trainee.get("ssiap_diploma_civility") or "Monsieur").strip()
-    first_name = normalize_first_name(
+    first_name = _ssiap_diploma_first_name(
         trainee.get("ssiap_diploma_first_name") or trainee.get("first_name") or ""
     )
     last_name = normalize_last_name(
@@ -12595,6 +12606,8 @@ def admin_update_ssiap_diploma_info(session_id: str, trainee_id: str):
     }
     for storage_key, form_key in fields.items():
         value = str(request.form.get(form_key) or "").strip()
+        if storage_key == "ssiap_diploma_first_name":
+            value = _ssiap_diploma_first_name(value)
         trainee[storage_key] = value
 
     row = _ssiap_diploma_row(session_item, trainee)

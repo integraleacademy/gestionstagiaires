@@ -108,6 +108,35 @@ class SsiapDiplomaTests(unittest.TestCase):
             "083-8323-1-2026-00002",
         ])
 
+    def test_restores_clement_accent_in_generated_diploma_variables(self):
+        self._write_data({
+            "sessions": [{
+                "id": "S1",
+                "name": "SSIAP 1",
+                "training_type": "SSIAP 1",
+                "exam_date": "2026-10-28",
+                "trainees": [
+                    self._trainee("T1", "Clement", "Vaillant", "1993-09-16", "Sallanches"),
+                ],
+            }],
+        })
+
+        response = self.client.post("/admin/sessions/S1/ssiap-diplomas")
+
+        self.assertEqual(response.status_code, 200)
+        page_text = PdfReader(BytesIO(response.data)).pages[0].extract_text()
+        self.assertEqual(page_text.count("Monsieur Clément VAILLANT"), 2)
+        self.assertNotIn("Monsieur Clement VAILLANT", page_text)
+
+    def test_diploma_override_also_restores_clement_accent(self):
+        trainee = self._trainee("T1", "Jean", "Vaillant", "1993-09-16")
+        trainee["ssiap_diploma_first_name"] = "Clement"
+
+        self.assertEqual(
+            gestion_app._ssiap_diploma_display_name(trainee),
+            "Monsieur Clément VAILLANT",
+        )
+
     def test_pdf_fields_are_aligned_after_template_labels(self):
         pdf = gestion_app._build_ssiap_diplomas_pdf([{
             "exam_date": "28/10/2026",
@@ -491,7 +520,7 @@ class SsiapDiplomaTests(unittest.TestCase):
             "/admin/sessions/S1/trainees/T1/ssiap-diploma-info",
             data={
                 "civility": "Madame",
-                "first_name": "Jeanne",
+                "first_name": "Clement",
                 "last_name": "Durand",
                 "birth_date": "1992-09-08",
                 "birth_city": "Toulon",
@@ -503,11 +532,11 @@ class SsiapDiplomaTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         saved = self._read_data()["sessions"][0]["trainees"][0]
-        self.assertEqual(saved["ssiap_diploma_first_name"], "Jeanne")
+        self.assertEqual(saved["ssiap_diploma_first_name"], "Clément")
         generated = self.client.post("/admin/sessions/S1/trainees/T1/ssiap-diploma")
         self.assertEqual(generated.status_code, 200)
         page_text = PdfReader(BytesIO(generated.data)).pages[0].extract_text()
-        self.assertIn("Madame Jeanne DURAND", page_text)
+        self.assertIn("Madame Clément DURAND", page_text)
         self.assertIn("08/09/1992", page_text)
         self.assertIn("Toulon (83)", page_text)
         self.assertIn("20/06/2026", page_text)
