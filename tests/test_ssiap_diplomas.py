@@ -126,13 +126,55 @@ class SsiapDiplomaTests(unittest.TestCase):
 
         page.extract_text(visitor_text=collect_position)
 
-        self.assertIn(("28/10/2026", 1445.0, 643.0, 21.0), positions)
-        self.assertIn(("28/10/2026", 420.0, 248.0, 21.0), positions)
-        self.assertIn(("Monsieur Clément VAILLANT", 1080.0, 568.0, 21.0), positions)
-        self.assertIn(("16/09/1993", 1080.0, 531.0, 21.0), positions)
-        self.assertIn(("PUGET-SUR-ARGENS", 1080.0, 493.0, 21.0), positions)
-        self.assertIn(("Monsieur Clément VAILLANT", 1120.0, 306.0, 21.0), positions)
-        self.assertIn(("083-8323-1-2026-00001", 1170.0, 269.0, 21.0), positions)
+        path_operations = [
+            (operator, [float(value) for value in operands])
+            for operands, operator in page.get_contents().operations
+            if operator in {b"m", b"l", b"h", b"f", b"f*"}
+        ]
+        self.assertEqual(
+            path_operations,
+            [
+                (b"m", [530.3906, 516.551]),
+                (b"l", [533.3372, 516.551]),
+                (b"l", [537.1257, 513.1831]),
+                (b"l", [533.7581, 513.1831]),
+                (b"h", []),
+                (b"f*", []),
+            ],
+        )
+
+        page_width = float(page.mediabox.width)
+        page_height = float(page.mediabox.height)
+        self.assertAlmostEqual(page_width, 841.8898, places=3)
+        self.assertAlmostEqual(page_height, 595.2756, places=3)
+        self.assertGreater(page_width, page_height)
+
+        scale_x = page_width / 2000
+        scale_y = page_height / 1414
+        expected_positions = [
+            ("28/10/2026", 1445, 771, 21),
+            ("28/10/2026", 420, 1166, 21),
+            ("Monsieur Clément VAILLANT", 1080, 846, 21),
+            ("16/09/1993", 1080, 883, 21),
+            ("PUGET-SUR-ARGENS", 1080, 921, 21),
+            ("Monsieur Clément VAILLANT", 1120, 1108, 21),
+            ("083-8323-1-2026-00001", 1170, 1145, 21),
+        ]
+        for text, x, y_from_top, font_size in expected_positions:
+            expected = (
+                text,
+                x * scale_x,
+                page_height - (y_from_top * scale_y),
+                font_size * scale_y,
+            )
+            match = next(
+                position
+                for position in positions
+                if position[0] == text
+                and abs(position[1] - expected[1]) < 0.01
+                and abs(position[2] - expected[2]) < 0.01
+            )
+            self.assertAlmostEqual(match[3], expected[3], places=4)
 
     def test_birth_place_uses_existing_department_without_network_lookup(self):
         trainee = {
