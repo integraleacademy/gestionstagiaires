@@ -108,6 +108,35 @@ class SsiapDiplomaTests(unittest.TestCase):
             "083-8323-1-2026-00002",
         ])
 
+    def test_restores_clement_accent_in_generated_diploma_variables(self):
+        self._write_data({
+            "sessions": [{
+                "id": "S1",
+                "name": "SSIAP 1",
+                "training_type": "SSIAP 1",
+                "exam_date": "2026-10-28",
+                "trainees": [
+                    self._trainee("T1", "Clement", "Vaillant", "1993-09-16", "Sallanches"),
+                ],
+            }],
+        })
+
+        response = self.client.post("/admin/sessions/S1/ssiap-diplomas")
+
+        self.assertEqual(response.status_code, 200)
+        page_text = PdfReader(BytesIO(response.data)).pages[0].extract_text()
+        self.assertEqual(page_text.count("Monsieur Clément VAILLANT"), 2)
+        self.assertNotIn("Monsieur Clement VAILLANT", page_text)
+
+    def test_diploma_override_also_restores_clement_accent(self):
+        trainee = self._trainee("T1", "Jean", "Vaillant", "1993-09-16")
+        trainee["ssiap_diploma_first_name"] = "Clement"
+
+        self.assertEqual(
+            gestion_app._ssiap_diploma_display_name(trainee),
+            "Monsieur Clément VAILLANT",
+        )
+
     def test_pdf_fields_are_aligned_after_template_labels(self):
         pdf = gestion_app._build_ssiap_diplomas_pdf([{
             "exam_date": "28/10/2026",
@@ -126,13 +155,55 @@ class SsiapDiplomaTests(unittest.TestCase):
 
         page.extract_text(visitor_text=collect_position)
 
-        self.assertIn(("28/10/2026", 1445.0, 643.0, 21.0), positions)
-        self.assertIn(("28/10/2026", 420.0, 248.0, 21.0), positions)
-        self.assertIn(("Monsieur Clément VAILLANT", 1080.0, 568.0, 21.0), positions)
-        self.assertIn(("16/09/1993", 1080.0, 531.0, 21.0), positions)
-        self.assertIn(("PUGET-SUR-ARGENS", 1080.0, 493.0, 21.0), positions)
-        self.assertIn(("Monsieur Clément VAILLANT", 1120.0, 306.0, 21.0), positions)
-        self.assertIn(("083-8323-1-2026-00001", 1170.0, 269.0, 21.0), positions)
+        path_operations = [
+            (operator, [float(value) for value in operands])
+            for operands, operator in page.get_contents().operations
+            if operator in {b"m", b"l", b"h", b"f", b"f*"}
+        ]
+        self.assertEqual(
+            path_operations,
+            [
+                (b"m", [530.3906, 516.551]),
+                (b"l", [533.3372, 516.551]),
+                (b"l", [537.1257, 513.1831]),
+                (b"l", [533.7581, 513.1831]),
+                (b"h", []),
+                (b"f*", []),
+            ],
+        )
+
+        page_width = float(page.mediabox.width)
+        page_height = float(page.mediabox.height)
+        self.assertAlmostEqual(page_width, 841.8898, places=3)
+        self.assertAlmostEqual(page_height, 595.2756, places=3)
+        self.assertGreater(page_width, page_height)
+
+        scale_x = page_width / 2000
+        scale_y = page_height / 1414
+        expected_positions = [
+            ("28/10/2026", 1445, 771, 21),
+            ("28/10/2026", 420, 1166, 21),
+            ("Monsieur Clément VAILLANT", 1080, 846, 21),
+            ("16/09/1993", 1080, 883, 21),
+            ("PUGET-SUR-ARGENS", 1080, 921, 21),
+            ("Monsieur Clément VAILLANT", 1120, 1108, 21),
+            ("083-8323-1-2026-00001", 1170, 1145, 21),
+        ]
+        for text, x, y_from_top, font_size in expected_positions:
+            expected = (
+                text,
+                x * scale_x,
+                page_height - (y_from_top * scale_y),
+                font_size * scale_y,
+            )
+            match = next(
+                position
+                for position in positions
+                if position[0] == text
+                and abs(position[1] - expected[1]) < 0.01
+                and abs(position[2] - expected[2]) < 0.01
+            )
+            self.assertAlmostEqual(match[3], expected[3], places=4)
 
     def test_birth_place_uses_existing_department_without_network_lookup(self):
         trainee = {
@@ -449,7 +520,7 @@ class SsiapDiplomaTests(unittest.TestCase):
             "/admin/sessions/S1/trainees/T1/ssiap-diploma-info",
             data={
                 "civility": "Madame",
-                "first_name": "Jeanne",
+                "first_name": "Clement",
                 "last_name": "Durand",
                 "birth_date": "1992-09-08",
                 "birth_city": "Toulon",
@@ -461,11 +532,11 @@ class SsiapDiplomaTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         saved = self._read_data()["sessions"][0]["trainees"][0]
-        self.assertEqual(saved["ssiap_diploma_first_name"], "Jeanne")
+        self.assertEqual(saved["ssiap_diploma_first_name"], "Clément")
         generated = self.client.post("/admin/sessions/S1/trainees/T1/ssiap-diploma")
         self.assertEqual(generated.status_code, 200)
         page_text = PdfReader(BytesIO(generated.data)).pages[0].extract_text()
-        self.assertIn("Madame Jeanne DURAND", page_text)
+        self.assertIn("Madame Clément DURAND", page_text)
         self.assertIn("08/09/1992", page_text)
         self.assertIn("Toulon (83)", page_text)
         self.assertIn("20/06/2026", page_text)

@@ -12242,9 +12242,20 @@ def _ssiap_exam_status(trainee: Dict[str, Any]) -> str:
     return status if status in SSIAP_EXAM_STATUSES else "pending_results"
 
 
+SSIAP_DIPLOMA_FIRST_NAME_ACCENTS = {
+    "clement": "Clément",
+}
+
+
+def _ssiap_diploma_first_name(value: Any) -> str:
+    first_name = normalize_first_name(str(value or ""))
+    accent_key = _normalized_token(first_name)
+    return SSIAP_DIPLOMA_FIRST_NAME_ACCENTS.get(accent_key, first_name)
+
+
 def _ssiap_diploma_display_name(trainee: Dict[str, Any]) -> str:
     civility = str(trainee.get("ssiap_diploma_civility") or "Monsieur").strip()
-    first_name = normalize_first_name(
+    first_name = _ssiap_diploma_first_name(
         trainee.get("ssiap_diploma_first_name") or trainee.get("first_name") or ""
     )
     last_name = normalize_last_name(
@@ -12442,33 +12453,89 @@ def _reserve_ssiap_diploma_numbers(
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
 
 
-def _draw_fitted_pdf_text(pdf_canvas, text: str, x: float, y: float, max_width: float, font_size: float = 23) -> None:
+def _draw_fitted_pdf_text(
+    pdf_canvas,
+    text: str,
+    x: float,
+    y: float,
+    max_width: float,
+    font_size: float = 23,
+    min_font_size: float = 15,
+    font_size_step: float = 1,
+) -> None:
     size = font_size
-    while size > 15 and pdf_canvas.stringWidth(text, "Helvetica-Bold", size) > max_width:
-        size -= 1
+    while (
+        size > min_font_size
+        and pdf_canvas.stringWidth(text, "Helvetica-Bold", size) > max_width
+    ):
+        size = max(min_font_size, size - font_size_step)
     pdf_canvas.setFont("Helvetica-Bold", size)
     pdf_canvas.drawString(x, y, text)
 
 
 def _build_ssiap_diplomas_pdf(diplomas: List[Dict[str, str]]) -> BytesIO:
+    from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.utils import ImageReader
     from reportlab.pdfgen import canvas
 
-    page_width, page_height = 2000, 1414
+    template_width, template_height = 2000, 1414
+    page_width, page_height = landscape(A4)
+    scale_x = page_width / template_width
+    scale_y = page_height / template_height
     output = BytesIO()
     pdf = canvas.Canvas(output, pagesize=(page_width, page_height), pageCompression=1)
     background = ImageReader(SSIAP_DIPLOMA_TEMPLATE)
 
+    def draw_text(
+        text: str,
+        x: float,
+        y_from_top: float,
+        max_width: float,
+        font_size: float = 21,
+    ) -> None:
+        _draw_fitted_pdf_text(
+            pdf,
+            text,
+            x * scale_x,
+            page_height - (y_from_top * scale_y),
+            max_width * scale_x,
+            font_size * scale_y,
+            min_font_size=15 * scale_y,
+            font_size_step=scale_y,
+        )
+
+    def draw_missing_title_accent() -> None:
+        # The source image says “A PERSONNES”. Add the grave accent as a vector
+        # overlay so the diploma reads “À PERSONNES” without modifying the JPG.
+        accent = pdf.beginPath()
+        accent.moveTo(1260 * scale_x, page_height - (187 * scale_y))
+        accent.lineTo(1267 * scale_x, page_height - (187 * scale_y))
+        accent.lineTo(1276 * scale_x, page_height - (195 * scale_y))
+        accent.lineTo(1268 * scale_x, page_height - (195 * scale_y))
+        accent.close()
+        pdf.saveState()
+        pdf.setFillColorRGB(42 / 255, 42 / 255, 42 / 255)
+        pdf.drawPath(accent, fill=1, stroke=0)
+        pdf.restoreState()
+
     for diploma in diplomas:
-        pdf.drawImage(background, 0, 0, width=page_width, height=page_height, preserveAspectRatio=False)
-        # Each baseline is aligned with its printed label and starts after the label's right edge.
-        _draw_fitted_pdf_text(pdf, diploma["exam_date"], 1445, page_height - 771, 300, 21)
-        _draw_fitted_pdf_text(pdf, diploma["name"], 1080, page_height - 846, 650, 21)
-        _draw_fitted_pdf_text(pdf, diploma["birth_date"], 1080, page_height - 883, 300, 21)
-        _draw_fitted_pdf_text(pdf, diploma["birth_place"], 1080, page_height - 921, 650, 21)
-        _draw_fitted_pdf_text(pdf, diploma["name"], 1120, page_height - 1108, 620, 21)
-        _draw_fitted_pdf_text(pdf, diploma["number"], 1170, page_height - 1145, 430, 21)
-        _draw_fitted_pdf_text(pdf, diploma["exam_date"], 420, page_height - 1166, 300, 21)
+        pdf.drawImage(
+            background,
+            0,
+            0,
+            width=page_width,
+            height=page_height,
+            preserveAspectRatio=False,
+        )
+        draw_missing_title_accent()
+        # Coordinates are authored against the 2000 × 1414 template and scaled to physical A4 landscape.
+        draw_text(diploma["exam_date"], 1445, 771, 300)
+        draw_text(diploma["name"], 1080, 846, 650)
+        draw_text(diploma["birth_date"], 1080, 883, 300)
+        draw_text(diploma["birth_place"], 1080, 921, 650)
+        draw_text(diploma["name"], 1120, 1108, 620)
+        draw_text(diploma["number"], 1170, 1145, 430)
+        draw_text(diploma["exam_date"], 420, 1166, 300)
         pdf.showPage()
 
     pdf.save()
@@ -12539,6 +12606,8 @@ def admin_update_ssiap_diploma_info(session_id: str, trainee_id: str):
     }
     for storage_key, form_key in fields.items():
         value = str(request.form.get(form_key) or "").strip()
+        if storage_key == "ssiap_diploma_first_name":
+            value = _ssiap_diploma_first_name(value)
         trainee[storage_key] = value
 
     row = _ssiap_diploma_row(session_item, trainee)
