@@ -109,7 +109,7 @@ class YpareoRequestTests(unittest.TestCase):
         self.assertEqual(trainee["ypareo_id"], "YP-42")
         self.assertEqual(trainee["ypareo_erreur"], "")
         post.assert_called_once_with(
-            "https://ypareo.example/à-remplacer-par-la-route-swagger",
+            "https://ypareo.example/personne",
             headers={
                 "Authorization": "Bearer secret-token",
                 "Content-Type": "application/json",

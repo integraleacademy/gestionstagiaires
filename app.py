@@ -87,7 +87,7 @@ PYPDF_LIBRARY_AVAILABLE = importlib.util.find_spec("pypdf") is not None
 REPORTLAB_LIBRARY_AVAILABLE = importlib.util.find_spec("reportlab") is not None
 
 YPAREO_API_URL_DEFAULT = "https://api.ypareo-neo.com"
-YPAREO_APPRENANTS_ENDPOINT = "/à-remplacer-par-la-route-swagger"
+YPAREO_APPRENANTS_ENDPOINT = "/personne"
 YPAREO_REQUEST_TIMEOUT_SECONDS = 15
 
 
