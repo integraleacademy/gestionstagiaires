@@ -6,10 +6,11 @@ import app as gestion_app
 
 
 class FakeResponse:
-    def __init__(self, status_code=200, payload=None, text=""):
+    def __init__(self, status_code=200, payload=None, text="", headers=None):
         self.status_code = status_code
         self._payload = payload
         self.text = text
+        self.headers = headers or {}
         self.ok = 200 <= status_code < 400
 
     def json(self):
@@ -93,6 +94,22 @@ class YpareoPayloadTests(unittest.TestCase):
 
 
 class YpareoRequestTests(unittest.TestCase):
+    def test_headers_accept_raw_token(self):
+        with patch.dict(os.environ, {"YPAREO_API_TOKEN": " secret-token "}, clear=False):
+            self.assertEqual(gestion_app.ypareo_headers()["Authorization"], "Bearer secret-token")
+
+    def test_headers_do_not_duplicate_bearer_prefix_or_render_quotes(self):
+        with patch.dict(os.environ, {"YPAREO_API_TOKEN": '"Bearer secret-token"'}, clear=False):
+            self.assertEqual(gestion_app.ypareo_headers()["Authorization"], "Bearer secret-token")
+
+    def test_headers_remove_quotes_around_prefixed_token_value(self):
+        with patch.dict(os.environ, {"YPAREO_API_TOKEN": 'Bearer "secret-token"'}, clear=False):
+            self.assertEqual(gestion_app.ypareo_headers()["Authorization"], "Bearer secret-token")
+
+    def test_headers_remove_accidental_formatting_newlines(self):
+        with patch.dict(os.environ, {"YPAREO_API_TOKEN": "secret-\ntoken"}, clear=False):
+            self.assertEqual(gestion_app.ypareo_headers()["Authorization"], "Bearer secret-token")
+
     def test_creer_apprenant_posts_with_environment_configuration_and_saves_id(self):
         trainee = {"id": "T1", "last_name": "MARTIN", "first_name": "Alice"}
         response = FakeResponse(payload={"data": {"id": "YP-42"}})
@@ -118,6 +135,24 @@ class YpareoRequestTests(unittest.TestCase):
             json={"nom": "MARTIN", "nomNaissance": "MARTIN", "prenom": "Alice"},
             timeout=gestion_app.YPAREO_REQUEST_TIMEOUT_SECONDS,
         )
+
+    def test_creer_apprenant_records_actionable_401_error(self):
+        trainee = {"id": "T1", "last_name": "MARTIN", "first_name": "Alice"}
+        response = FakeResponse(
+            status_code=401,
+            headers={"WWW-Authenticate": 'Bearer realm="YPAREO"'},
+        )
+
+        with patch.dict(os.environ, {"YPAREO_API_TOKEN": 'Bearer "expired-token"'}, clear=False), patch.object(
+            gestion_app.requests, "post", return_value=response
+        ):
+            result = gestion_app.creer_apprenant_ypareo(trainee)
+
+        self.assertFalse(result)
+        self.assertEqual(trainee["ypareo_statut"], "Erreur")
+        self.assertIn("Authentification YPAREO refusée (HTTP 401)", trainee["ypareo_erreur"])
+        self.assertIn("YPAREO_API_TOKEN", trainee["ypareo_erreur"])
+        self.assertNotIn("expired-token", trainee["ypareo_erreur"])
 
     def test_creer_apprenant_records_api_error_without_deleting_local_data(self):
         trainee = {"id": "T1", "last_name": "MARTIN", "first_name": "Alice"}

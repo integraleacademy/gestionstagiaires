@@ -91,11 +91,29 @@ YPAREO_APPRENANTS_ENDPOINT = "/personne"
 YPAREO_REQUEST_TIMEOUT_SECONDS = 15
 
 
+def _ypareo_api_token() -> str:
+    """Normalize the secret copied into Render without ever logging it."""
+    token = (os.environ.get("YPAREO_API_TOKEN") or "").strip()
+
+    # Render values are sometimes pasted with surrounding quotes. Repeat the
+    # normalization so both ``"Bearer token"`` and ``Bearer "token"`` work.
+    for _ in range(3):
+        if len(token) >= 2 and token[0] == token[-1] and token[0] in {"'", '"'}:
+            token = token[1:-1].strip()
+            continue
+        if token.lower().startswith("bearer "):
+            token = token[7:].strip()
+            continue
+        break
+
+    # Authorization tokens cannot contain formatting whitespace/newlines.
+    return "".join(token.split())
+
+
 def ypareo_headers() -> Dict[str, str]:
     """Build YPAREO headers from Render-compatible environment variables."""
-    token = (os.environ.get("YPAREO_API_TOKEN") or "").strip()
     return {
-        "Authorization": f"Bearer {token}",
+        "Authorization": f"Bearer {_ypareo_api_token()}",
         "Content-Type": "application/json",
         "Accept": "application/json",
     }
@@ -207,6 +225,17 @@ def construire_payload_apprenant(stagiaire: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _ypareo_error_message(response: requests.Response) -> str:
+    if response.status_code == 401:
+        auth_hint = (response.headers.get("WWW-Authenticate") or "").strip()
+        message = (
+            "Authentification YPAREO refusée (HTTP 401). Vérifiez que "
+            "YPAREO_API_TOKEN contient un token actif autorisé pour l’API NEO "
+            "(la valeur peut être brute ou préfixée par Bearer)."
+        )
+        if auth_hint:
+            message += f" Réponse WWW-Authenticate : {auth_hint[:300]}"
+        return message
+
     try:
         body = response.json()
     except (ValueError, requests.JSONDecodeError):
@@ -229,7 +258,7 @@ def _ypareo_error_message(response: requests.Response) -> str:
 
 def creer_apprenant_ypareo(stagiaire: Dict[str, Any]) -> bool:
     """Create a learner in YPAREO and persist the result on the local dict."""
-    token = (os.environ.get("YPAREO_API_TOKEN") or "").strip()
+    token = _ypareo_api_token()
     if not token:
         message = "YPAREO_API_TOKEN non configuré"
         stagiaire["ypareo_statut"] = "Erreur"
@@ -249,6 +278,14 @@ def creer_apprenant_ypareo(stagiaire: Dict[str, Any]) -> bool:
             timeout=YPAREO_REQUEST_TIMEOUT_SECONDS,
         )
         if not response.ok:
+            app.logger.warning(
+                "[YPAREO] réponse refusée trainee_id=%s url=%s status=%s token_present=%s token_length=%s",
+                stagiaire.get("id") or "",
+                url,
+                response.status_code,
+                bool(token),
+                len(token),
+            )
             raise RuntimeError(_ypareo_error_message(response))
 
         try:
