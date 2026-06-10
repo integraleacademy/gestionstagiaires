@@ -86,6 +86,238 @@ WEB_PUSH_LIBRARY_AVAILABLE = importlib.util.find_spec("pywebpush") is not None
 PYPDF_LIBRARY_AVAILABLE = importlib.util.find_spec("pypdf") is not None
 REPORTLAB_LIBRARY_AVAILABLE = importlib.util.find_spec("reportlab") is not None
 
+YPAREO_API_URL_DEFAULT = "https://api.ypareo-neo.com"
+YPAREO_APPRENANTS_ENDPOINT = "/personne"
+YPAREO_REQUEST_TIMEOUT_SECONDS = 15
+
+
+def _ypareo_api_token() -> str:
+    """Normalize the secret copied into Render without ever logging it."""
+    token = (os.environ.get("YPAREO_API_TOKEN") or "").strip()
+
+    # Render values are sometimes pasted with surrounding quotes. Repeat the
+    # normalization so both ``"Bearer token"`` and ``Bearer "token"`` work.
+    for _ in range(3):
+        if len(token) >= 2 and token[0] == token[-1] and token[0] in {"'", '"'}:
+            token = token[1:-1].strip()
+            continue
+        if token.lower().startswith("bearer "):
+            token = token[7:].strip()
+            continue
+        break
+
+    # Authorization tokens cannot contain formatting whitespace/newlines.
+    return "".join(token.split())
+
+
+def ypareo_headers() -> Dict[str, str]:
+    """Build YPAREO headers from Render-compatible environment variables."""
+    return {
+        "Authorization": f"Bearer {_ypareo_api_token()}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+
+
+def nettoyer_payload(data: Any) -> Any:
+    """Recursively remove values that must not be sent to YPAREO."""
+    if isinstance(data, dict):
+        cleaned = {}
+        for key, value in data.items():
+            cleaned_value = nettoyer_payload(value)
+            if cleaned_value is None or cleaned_value == "" or cleaned_value == {} or cleaned_value == []:
+                continue
+            cleaned[key] = cleaned_value
+        return cleaned
+    if isinstance(data, (list, tuple)):
+        cleaned = []
+        for value in data:
+            cleaned_value = nettoyer_payload(value)
+            if cleaned_value is None or cleaned_value == "" or cleaned_value == {} or cleaned_value == []:
+                continue
+            cleaned.append(cleaned_value)
+        return cleaned
+    if isinstance(data, str):
+        return data.strip()
+    return data
+
+
+def _ypareo_existing_value(stagiaire: Dict[str, Any], *keys: str) -> Any:
+    """Return the first non-empty value already present under one of ``keys``."""
+    for key in keys:
+        if key not in stagiaire:
+            continue
+        value = stagiaire.get(key)
+        if value is None:
+            continue
+        if isinstance(value, str) and not value.strip():
+            continue
+        return value.strip() if isinstance(value, str) else value
+    return None
+
+
+def construire_payload_apprenant(stagiaire: Dict[str, Any]) -> Dict[str, Any]:
+    """Map only locally available trainee data to the YPAREO learner schema."""
+    nom = _ypareo_existing_value(stagiaire, "nom", "last_name")
+    prenom = _ypareo_existing_value(stagiaire, "prenom", "first_name")
+    email = _ypareo_existing_value(stagiaire, "email")
+    telephone = _ypareo_existing_value(stagiaire, "telephone", "phone")
+
+    adresse_source = stagiaire.get("adresse")
+    adresse_ligne1 = None
+    adresse_ligne2 = None
+    adresse_ligne3 = None
+    adresse_ligne4 = None
+    adresse_code_postal = None
+    adresse_ville = None
+    if isinstance(adresse_source, dict):
+        adresse_ligne1 = _ypareo_existing_value(adresse_source, "ligne1")
+        adresse_ligne2 = _ypareo_existing_value(adresse_source, "ligne2")
+        adresse_ligne3 = _ypareo_existing_value(adresse_source, "ligne3")
+        adresse_ligne4 = _ypareo_existing_value(adresse_source, "ligne4")
+        adresse_code_postal = _ypareo_existing_value(adresse_source, "codePostal", "code_postal")
+        adresse_ville = _ypareo_existing_value(adresse_source, "ville")
+    else:
+        adresse_ligne1 = _ypareo_existing_value(stagiaire, "adresse", "address")
+
+    adresse_ligne1 = adresse_ligne1 or _ypareo_existing_value(stagiaire, "address")
+    adresse_ligne2 = adresse_ligne2 or _ypareo_existing_value(stagiaire, "address_line2", "adresse_ligne2")
+    adresse_ligne3 = adresse_ligne3 or _ypareo_existing_value(stagiaire, "address_line3", "adresse_ligne3")
+    adresse_ligne4 = adresse_ligne4 or _ypareo_existing_value(stagiaire, "address_line4", "adresse_ligne4")
+    adresse_code_postal = adresse_code_postal or _ypareo_existing_value(stagiaire, "code_postal", "zip_code")
+    adresse_ville = adresse_ville or _ypareo_existing_value(stagiaire, "ville", "city")
+
+    adresse = nettoyer_payload({
+        "ligne1": adresse_ligne1,
+        "ligne2": adresse_ligne2,
+        "ligne3": adresse_ligne3,
+        "ligne4": adresse_ligne4,
+        "codePostal": adresse_code_postal,
+        "ville": adresse_ville,
+    })
+    if adresse:
+        adresse["paysAlpha"] = "FR"
+
+    payload = {
+        "adresse": adresse,
+        "dateNaissance": _ypareo_existing_value(stagiaire, "date_naissance", "birth_date"),
+        "emails": [{"adresse": email, "isDefault": True}] if email else [],
+        "nom": nom,
+        "nomNaissance": _ypareo_existing_value(stagiaire, "nom_naissance", "birth_name") or nom,
+        "prenom": prenom,
+        "telephones": [{
+            "indicatif": "+33",
+            "isDefaultAppel": True,
+            "isDefaultSms": True,
+            "numero": telephone,
+        }] if telephone else [],
+        "villeNaissance": _ypareo_existing_value(stagiaire, "ville_naissance", "birth_city"),
+        "codePostalNaissance": _ypareo_existing_value(stagiaire, "code_postal_naissance", "birth_zip_code"),
+        "departementNaissance": _ypareo_existing_value(stagiaire, "departement_naissance", "birth_department"),
+        "inseeCommuneNaissance": _ypareo_existing_value(stagiaire, "insee_commune_naissance"),
+        "numeroFranceTravail": _ypareo_existing_value(stagiaire, "numero_france_travail"),
+        "numeroINE": _ypareo_existing_value(stagiaire, "numero_ine"),
+        "idCivilite": _ypareo_existing_value(stagiaire, "id_civilite"),
+        "idNationalite": _ypareo_existing_value(stagiaire, "id_nationalite"),
+        "isRqth": _ypareo_existing_value(stagiaire, "is_rqth"),
+    }
+    return nettoyer_payload(payload)
+
+
+def _ypareo_error_message(response: requests.Response) -> str:
+    if response.status_code == 401:
+        auth_hint = (response.headers.get("WWW-Authenticate") or "").strip()
+        message = (
+            "Authentification YPAREO refusée (HTTP 401). Vérifiez que "
+            "YPAREO_API_TOKEN contient un token actif autorisé pour l’API NEO "
+            "(la valeur peut être brute ou préfixée par Bearer)."
+        )
+        if auth_hint:
+            message += f" Réponse WWW-Authenticate : {auth_hint[:300]}"
+        return message
+
+    try:
+        body = response.json()
+    except (ValueError, requests.JSONDecodeError):
+        body = None
+
+    if isinstance(body, dict):
+        for key in ("message", "error", "detail", "title"):
+            value = body.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        errors = body.get("errors")
+        if errors:
+            return json.dumps(errors, ensure_ascii=False)
+
+    text = (response.text or "").strip()
+    if text:
+        return text[:1000]
+    return f"Erreur HTTP {response.status_code}"
+
+
+def creer_apprenant_ypareo(stagiaire: Dict[str, Any]) -> bool:
+    """Create a learner in YPAREO and persist the result on the local dict."""
+    token = _ypareo_api_token()
+    if not token:
+        message = "YPAREO_API_TOKEN non configuré"
+        stagiaire["ypareo_statut"] = "Erreur"
+        stagiaire["ypareo_erreur"] = message
+        app.logger.error("[YPAREO] %s trainee_id=%s", message, stagiaire.get("id") or "")
+        return False
+
+    base_url = (os.environ.get("YPAREO_API_URL") or YPAREO_API_URL_DEFAULT).strip().rstrip("/")
+    url = f"{base_url}{YPAREO_APPRENANTS_ENDPOINT}"
+    payload = construire_payload_apprenant(stagiaire)
+
+    try:
+        response = requests.post(
+            url,
+            headers=ypareo_headers(),
+            json=payload,
+            timeout=YPAREO_REQUEST_TIMEOUT_SECONDS,
+        )
+        if not response.ok:
+            app.logger.warning(
+                "[YPAREO] réponse refusée trainee_id=%s url=%s status=%s token_present=%s token_length=%s",
+                stagiaire.get("id") or "",
+                url,
+                response.status_code,
+                bool(token),
+                len(token),
+            )
+            raise RuntimeError(_ypareo_error_message(response))
+
+        try:
+            response_data = response.json()
+        except (ValueError, requests.JSONDecodeError) as exc:
+            raise RuntimeError("Réponse YPAREO invalide (JSON attendu)") from exc
+
+        response_body = response_data.get("data") if isinstance(response_data, dict) else None
+        ypareo_id = response_body.get("id") if isinstance(response_body, dict) else None
+        if ypareo_id is None or str(ypareo_id).strip() == "":
+            raise RuntimeError("Réponse YPAREO sans identifiant apprenant")
+
+        stagiaire["ypareo_statut"] = "Créé"
+        stagiaire["ypareo_id"] = ypareo_id
+        stagiaire["ypareo_erreur"] = ""
+        app.logger.info(
+            "[YPAREO] apprenant créé trainee_id=%s ypareo_id=%s",
+            stagiaire.get("id") or "",
+            ypareo_id,
+        )
+        return True
+    except Exception as exc:
+        message = str(exc).strip() or "Erreur inconnue lors de l'envoi à YPAREO"
+        stagiaire["ypareo_statut"] = "Erreur"
+        stagiaire["ypareo_erreur"] = message[:1000]
+        app.logger.error(
+            "[YPAREO] échec création apprenant trainee_id=%s erreur=%s",
+            stagiaire.get("id") or "",
+            message,
+        )
+        return False
+
 
 @app.get("/service-worker.js")
 def service_worker():
@@ -4918,6 +5150,13 @@ def _convert_old_stagiaire_to_trainee(st: Dict[str, Any]) -> Dict[str, Any]:
         "first_name": st.get("prenom") or "",
         "email": st.get("email") or "",
         "phone": st.get("telephone") or "",
+        "birth_date": st.get("date_naissance") or st.get("birth_date") or "",
+        "birth_city": st.get("ville_naissance") or st.get("birth_city") or "",
+        "birth_department": st.get("departement_naissance") or st.get("birth_department") or "",
+        "address": st.get("adresse") or st.get("address") or "",
+        "zip_code": st.get("code_postal") or st.get("zip_code") or "",
+        "city": st.get("ville") or st.get("city") or "",
+        "nom_naissance": st.get("nom_naissance") or "",
         "comment": st.get("commentaire") or "",
         "cnaps": (st.get("cnaps") or "INCONNU"),
         "convention_status": _map_convention_to_enum(st.get("convention")),
@@ -4934,6 +5173,9 @@ def _convert_old_stagiaire_to_trainee(st: Dict[str, Any]) -> Dict[str, Any]:
         "summary_printed_at": st.get("summary_printed_at") or "",
         "printed": printed_bool,
         "printed_at": st.get("printed_at") or "",
+        "ypareo_statut": st.get("ypareo_statut") or "Non envoyé",
+        "ypareo_id": st.get("ypareo_id") or "",
+        "ypareo_erreur": st.get("ypareo_erreur") or "",
     }
 
 
@@ -13363,6 +13605,9 @@ def api_create_trainee(session_id: str):
         "phone_followups": [],
         "public_hide_popup": False,
         "ssiap_exam_date": "",
+        "ypareo_statut": "Non envoyé",
+        "ypareo_id": "",
+        "ypareo_erreur": "",
     }
 
     _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""))
@@ -13387,6 +13632,10 @@ def api_create_trainee(session_id: str):
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
+    save_data(data)
+
+    # L'inscription locale est déjà persistée : une panne YPAREO ne peut pas l'annuler.
+    creer_apprenant_ypareo(t)
     save_data(data)
 
     # ✅ ENVOI MAIL + SMS à la création (optionnel)
@@ -13503,6 +13752,30 @@ def api_create_trainee(session_id: str):
         "public_link": link,
         "summary_url": url_for("admin_trainee_summary", session_id=session_id, trainee_id=trainee_id)
     })
+
+
+@app.post("/admin/sessions/<session_id>/trainees/<trainee_id>/ypareo")
+@admin_login_required
+@admin_write_required
+def admin_send_trainee_to_ypareo(session_id: str, trainee_id: str):
+    data = load_data()
+    trainee_session = find_session(data, session_id)
+    if not trainee_session:
+        abort(404)
+
+    trainee = find_trainee(trainee_session, trainee_id)
+    if not trainee:
+        abort(404)
+
+    if creer_apprenant_ypareo(trainee):
+        flash("Stagiaire créé dans YPAREO.", "success")
+    else:
+        flash(f"Envoi YPAREO impossible : {trainee.get('ypareo_erreur') or 'erreur inconnue'}", "error")
+
+    trainee_session["trainees"] = _session_trainees_list(trainee_session)
+    trainee_session.pop("stagiaires", None)
+    save_data(data)
+    return redirect(url_for("admin_trainees", session_id=session_id))
 
 
 @app.post("/api/trainees/import_from_image")

@@ -28,6 +28,8 @@ python app.py
 - `WEDOF_API_TOKEN` (token API WeDoF pour récupérer le détail complet d'un dossier)
 - `DOCS_TO_CONTROL_PUBLIC_TOKEN` (optionnel : token requis pour exposer `/docs_to_control.json` à un dashboard externe sans session admin)
 - `MAX_JSON_BACKUP_BYTES` (optionnel, défaut `52428800` : limite de taille d'un JSON sauvegardé automatiquement)
+- `YPAREO_API_TOKEN` (obligatoire pour créer un apprenant dans YPAREO NEO ; accepter le token brut ou `Bearer <token>`, sans jamais le stocker dans le dépôt)
+- `YPAREO_API_URL` (optionnel, défaut `https://api.ypareo-neo.com`)
 
 ## Intégration WeDoF CPF/EDOF
 
