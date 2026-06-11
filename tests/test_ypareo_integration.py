@@ -274,6 +274,143 @@ class YpareoRequestTests(unittest.TestCase):
         post.assert_not_called()
 
 
+class YpareoCursusTests(unittest.TestCase):
+    def setUp(self):
+        gestion_app._clear_ypareo_access_token_cache()
+        self.session = {
+            "id": "S1",
+            "name": "APS Juillet 2026",
+            "training_type": "APS",
+            "date_start": "2026-07-01",
+        }
+        self.trainee = {"id": "T1", "ypareo_id": "YP-42"}
+
+    def tearDown(self):
+        gestion_app._clear_ypareo_access_token_cache()
+
+    def test_platform_training_names_and_requested_aliases_map_to_render_variables(self):
+        expected = {
+            "APS": "YPAREO_ID_FORMATION_APS",
+            "SSIAP": "YPAREO_ID_FORMATION_SSIAP1",
+            "SSIAP 1": "YPAREO_ID_FORMATION_SSIAP1",
+            "A3P": "YPAREO_ID_FORMATION_A3P",
+            "VTC": "YPAREO_ID_FORMATION_VTC",
+            "BTS MOS": "YPAREO_ID_FORMATION_BTS_MOS",
+            "BTS MCO": "YPAREO_ID_FORMATION_BTS_MCO",
+            "BTS NDRC": "YPAREO_ID_FORMATION_BTS_NDRC",
+            "BTS PI": "YPAREO_ID_FORMATION_BTS_PI",
+            "BTS CI": "YPAREO_ID_FORMATION_BTS_CI",
+            "DIRIGEANT initial": "YPAREO_ID_FORMATION_DSSP",
+            "DIRIGEANT VAE": "YPAREO_ID_FORMATION_DSSP",
+            "Dirigeant sécurité privée": "YPAREO_ID_FORMATION_DSSP",
+            "Dirigeant d’une entreprise de sécurité privée": "YPAREO_ID_FORMATION_DSSP",
+            "DSSP": "YPAREO_ID_FORMATION_DSSP",
+            "DO-ESP": "YPAREO_ID_FORMATION_DSSP",
+            "DOESP": "YPAREO_ID_FORMATION_DSSP",
+        }
+        for training_name, environment_name in expected.items():
+            with self.subTest(training_name=training_name):
+                self.assertEqual(
+                    gestion_app._ypareo_formation_environment_name(
+                        {"training_type": training_name, "name": f"Session {training_name}"}
+                    ),
+                    environment_name,
+                )
+
+    def test_cursus_payload_uses_session_and_render_configuration(self):
+        with patch.dict(os.environ, {
+            "YPAREO_ID_FORMATION_APS": "formation-uuid",
+            "YPAREO_ID_ORGANISME": "organisme-uuid",
+            "YPAREO_ID_STATUT_CURSUS": "statut-uuid",
+        }, clear=True):
+            payload, error = gestion_app.construire_payload_cursus(self.session)
+
+        self.assertIsNone(error)
+        self.assertEqual(payload, {
+            "dateDebutValiditeCertification": "2026-07-01",
+            "idFormation": "formation-uuid",
+            "idOrganisme": "organisme-uuid",
+            "idSituationAvantApprentissage": 1,
+            "nom": "APS Juillet 2026",
+            "idStatut": "statut-uuid",
+            "resultatCertification": 1,
+        })
+
+    def test_creer_cursus_posts_with_real_access_token_and_saves_response_id(self):
+        responses = [
+            FakeResponse(payload={"data": {"access_token": "real-access-token"}}),
+            FakeResponse(payload={"data": {"id": "CURSUS-9"}}),
+        ]
+        with patch.dict(os.environ, {
+            "YPAREO_AUTH_TOKEN": "initial-token",
+            "YPAREO_API_URL": "https://ypareo.example/",
+            "YPAREO_ID_FORMATION_APS": "formation-uuid",
+            "YPAREO_ID_ORGANISME": "organisme-uuid",
+            "YPAREO_ID_STATUT_CURSUS": "statut-uuid",
+        }, clear=True), patch.object(gestion_app.requests, "post", side_effect=responses) as post:
+            result = gestion_app.creer_cursus_ypareo("YP-42", self.trainee, self.session)
+
+        self.assertTrue(result)
+        self.assertEqual(self.trainee["ypareo_cursus_statut"], "Créé")
+        self.assertEqual(self.trainee["ypareo_cursus_id"], "CURSUS-9")
+        self.assertEqual(self.trainee["ypareo_cursus_erreur"], "")
+        self.assertEqual(post.call_args_list[1].args[0], "https://ypareo.example/personne/YP-42/cursus")
+        self.assertEqual(post.call_args_list[1].kwargs["headers"]["Authorization"], "Bearer real-access-token")
+
+    def test_missing_mapping_records_error_without_http_request(self):
+        with patch.dict(os.environ, {}, clear=True), patch.object(gestion_app.requests, "post") as post:
+            result = gestion_app.creer_cursus_ypareo(
+                "YP-42", self.trainee, {"training_type": "CHEF DE POSTE", "name": "Session chef"}
+            )
+
+        self.assertFalse(result)
+        self.assertEqual(self.trainee["ypareo_cursus_statut"], "Erreur")
+        self.assertEqual(self.trainee["ypareo_cursus_erreur"], gestion_app.YPAREO_FORMATION_NOT_LINKED_ERROR)
+        post.assert_not_called()
+
+    def test_missing_dssp_configuration_has_specific_error(self):
+        with patch.dict(os.environ, {}, clear=True):
+            result = gestion_app.creer_cursus_ypareo(
+                "YP-42", self.trainee, {"training_type": "DIRIGEANT VAE", "name": "VAE dirigeant"}
+            )
+
+        self.assertFalse(result)
+        self.assertEqual(self.trainee["ypareo_cursus_erreur"], gestion_app.YPAREO_DSSP_NOT_CONFIGURED_ERROR)
+
+    def test_api_failure_keeps_person_and_records_api_message(self):
+        responses = [
+            FakeResponse(payload={"token": "access-token"}),
+            FakeResponse(status_code=422, payload={"message": "Cursus invalide"}),
+        ]
+        with patch.dict(os.environ, {
+            "YPAREO_AUTH_TOKEN": "initial-token",
+            "YPAREO_ID_FORMATION_APS": "formation-uuid",
+        }, clear=True), patch.object(gestion_app.requests, "post", side_effect=responses):
+            result = gestion_app.creer_cursus_ypareo("YP-42", self.trainee, self.session)
+
+        self.assertFalse(result)
+        self.assertEqual(self.trainee["ypareo_id"], "YP-42")
+        self.assertEqual(self.trainee["ypareo_cursus_statut"], "Erreur")
+        self.assertEqual(self.trainee["ypareo_cursus_erreur"], "Cursus invalide")
+
+    def test_person_creation_automatically_creates_cursus(self):
+        responses = [
+            FakeResponse(payload={"token": "access-token"}),
+            FakeResponse(payload={"data": {"id": "YP-42"}}),
+            FakeResponse(payload={"data": {"id": "CURSUS-10"}}),
+        ]
+        trainee = {"id": "T1", "last_name": "MARTIN"}
+        with patch.dict(os.environ, {
+            "YPAREO_AUTH_TOKEN": "initial-token",
+            "YPAREO_ID_FORMATION_APS": "formation-uuid",
+        }, clear=True), patch.object(gestion_app.requests, "post", side_effect=responses):
+            result = gestion_app.creer_apprenant_ypareo(trainee, self.session)
+
+        self.assertTrue(result)
+        self.assertEqual(trainee["ypareo_id"], "YP-42")
+        self.assertEqual(trainee["ypareo_cursus_id"], "CURSUS-10")
+
+
 class YpareoAdminIntegrationTests(unittest.TestCase):
     def setUp(self):
         self.client = gestion_app.app.test_client()
@@ -313,7 +450,8 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         self.assertIn('/admin/sessions/S1/trainees/T1/ypareo', html)
 
     def test_manual_send_updates_and_persists_trainee(self):
-        def fake_send(trainee):
+        def fake_send(trainee, session_obj):
+            self.assertEqual(session_obj["id"], "S1")
             trainee["ypareo_statut"] = "Créé"
             trainee["ypareo_id"] = "YP-99"
             trainee["ypareo_erreur"] = ""
@@ -329,7 +467,8 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         save.assert_called_once_with(self.data)
 
     def test_new_local_trainee_is_kept_when_automatic_ypareo_send_fails(self):
-        def fake_failure(trainee):
+        def fake_failure(trainee, session_obj):
+            self.assertEqual(session_obj["id"], "S1")
             trainee["ypareo_statut"] = "Erreur"
             trainee["ypareo_erreur"] = "YPAREO indisponible"
             return False
@@ -347,8 +486,33 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         self.assertEqual(created["last_name"], "DURAND")
         self.assertEqual(created["ypareo_statut"], "Erreur")
         self.assertEqual(created["ypareo_erreur"], "YPAREO indisponible")
-        send.assert_called_once_with(created)
+        send.assert_called_once_with(created, self.data["sessions"][0])
         self.assertGreaterEqual(save.call_count, 2)
+
+    def test_manual_cursus_button_and_route_only_create_cursus(self):
+        trainee = self.data["sessions"][0]["trainees"][0]
+        trainee["ypareo_id"] = "YP-99"
+
+        def fake_cursus(id_personne, target, session_obj):
+            self.assertEqual(id_personne, "YP-99")
+            self.assertEqual(session_obj["id"], "S1")
+            target["ypareo_cursus_statut"] = "Créé"
+            target["ypareo_cursus_id"] = "CURSUS-99"
+            target["ypareo_cursus_erreur"] = ""
+            return True
+
+        with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
+            gestion_app, "save_data"
+        ) as save, patch.object(gestion_app, "creer_cursus_ypareo", side_effect=fake_cursus) as create:
+            page = self.client.get("/admin/sessions/S1/trainees")
+            save.reset_mock()
+            response = self.client.post("/admin/sessions/S1/trainees/T1/ypareo/cursus")
+
+        self.assertIn("Créer cursus YPAREO", page.get_data(as_text=True))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(trainee["ypareo_cursus_id"], "CURSUS-99")
+        create.assert_called_once()
+        save.assert_called_once_with(self.data)
 
 
 if __name__ == "__main__":
