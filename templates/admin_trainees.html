@@ -453,17 +453,36 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           <input class="inline-edit" data-field="phone" type="tel" value="{{ t.phone or '' }}" placeholder="+33600000000" style="width:100%;min-width:150px;" {{ read_only_attr }}>
         </td>
         {% set ypareo_statut = t.ypareo_statut or 'Non envoyé' %}
-        <td class="col-ypareo" title="{{ t.ypareo_erreur or '' }}">
-          <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start;min-width:145px;">
-            <span class="pill" style="background:{% if ypareo_statut == 'Créé' %}#dcfce7{% elif ypareo_statut == 'Erreur' %}#fee2e2{% else %}#f1f5f9{% endif %};color:{% if ypareo_statut == 'Créé' %}#166534{% elif ypareo_statut == 'Erreur' %}#991b1b{% else %}#475569{% endif %};">
-              {{ ypareo_statut }}
-            </span>
+        {% set ypareo_cursus_statut = t.ypareo_cursus_statut or 'Non envoyé' %}
+        <td class="col-ypareo">
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;min-width:210px;">
+            <div title="{{ t.ypareo_erreur or '' }}">
+              <small class="muted" style="display:block;font-weight:700;">Personne YPAREO</small>
+              <span class="pill" style="background:{% if ypareo_statut == 'Créé' %}#dcfce7{% elif ypareo_statut == 'Erreur' %}#fee2e2{% else %}#f1f5f9{% endif %};color:{% if ypareo_statut == 'Créé' %}#166534{% elif ypareo_statut == 'Erreur' %}#991b1b{% else %}#475569{% endif %};">
+                {{ ypareo_statut }}
+              </span>
+              {% if t.ypareo_erreur %}<small style="display:block;color:#991b1b;margin-top:3px;">{{ t.ypareo_erreur }}</small>{% endif %}
+              {% if t.ypareo_id %}<small class="muted" style="display:block;">ID : {{ t.ypareo_id }}</small>{% endif %}
+            </div>
+            <div title="{{ t.ypareo_cursus_erreur or '' }}">
+              <small class="muted" style="display:block;font-weight:700;">Cursus YPAREO</small>
+              <span class="pill" style="background:{% if ypareo_cursus_statut == 'Créé' %}#dcfce7{% elif ypareo_cursus_statut == 'Erreur' %}#fee2e2{% else %}#f1f5f9{% endif %};color:{% if ypareo_cursus_statut == 'Créé' %}#166534{% elif ypareo_cursus_statut == 'Erreur' %}#991b1b{% else %}#475569{% endif %};">
+                {{ ypareo_cursus_statut }}
+              </span>
+              {% if t.ypareo_cursus_erreur %}<small style="display:block;color:#991b1b;margin-top:3px;">{{ t.ypareo_cursus_erreur }}</small>{% endif %}
+              {% if t.ypareo_cursus_id %}<small class="muted" style="display:block;">ID : {{ t.ypareo_cursus_id }}</small>{% endif %}
+            </div>
             {% if not is_read_only %}
-            <form method="post" action="{{ url_for('admin_send_trainee_to_ypareo', session_id=t.source_session_id or session.id, trainee_id=t.id) }}">
-              <button class="mini-btn" type="submit">Envoyer vers YPAREO</button>
-            </form>
+              {% if not t.ypareo_id %}
+              <form method="post" action="{{ url_for('admin_send_trainee_to_ypareo', session_id=t.source_session_id or session.id, trainee_id=t.id) }}">
+                <button class="mini-btn" type="submit">Envoyer vers YPAREO</button>
+              </form>
+              {% else %}
+              <form method="post" action="{{ url_for('admin_create_trainee_ypareo_cursus', session_id=t.source_session_id or session.id, trainee_id=t.id) }}">
+                <button class="mini-btn" type="submit">Créer cursus YPAREO</button>
+              </form>
+              {% endif %}
             {% endif %}
-            {% if t.ypareo_id %}<small class="muted">ID : {{ t.ypareo_id }}</small>{% endif %}
           </div>
         </td>
 

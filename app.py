@@ -89,6 +89,7 @@ REPORTLAB_LIBRARY_AVAILABLE = importlib.util.find_spec("reportlab") is not None
 YPAREO_API_URL_DEFAULT = "https://api.ypareo-neo.com"
 YPAREO_AUTH_ENDPOINT = "/authenticate"
 YPAREO_APPRENANTS_ENDPOINT = "/personne"
+YPAREO_CURSUS_ENDPOINT = "/personne/{id_personne}/cursus"
 YPAREO_REQUEST_TIMEOUT_SECONDS = 15
 YPAREO_ACCESS_TOKEN_DEFAULT_TTL_SECONDS = 30 * 60
 YPAREO_AUTH_ERROR_MESSAGE = (
@@ -97,6 +98,11 @@ YPAREO_AUTH_ERROR_MESSAGE = (
 YPAREO_CREATION_ERROR_MESSAGE = (
     "Création YPAREO impossible : vérifier les données envoyées ou les droits API."
 )
+YPAREO_CURSUS_ERROR_MESSAGE = (
+    "Création du cursus YPAREO impossible : vérifier les données envoyées ou les droits API."
+)
+YPAREO_FORMATION_NOT_LINKED_ERROR = "Formation non liée à un idFormation YPAREO"
+YPAREO_DSSP_NOT_CONFIGURED_ERROR = "Formation DSSP / Dirigeant non configurée dans Render"
 _ypareo_access_token_cache: Dict[str, Any] = {
     "token": "",
     "expires_at": 0.0,
@@ -371,8 +377,191 @@ def construire_payload_apprenant(stagiaire: Dict[str, Any]) -> Dict[str, Any]:
     return nettoyer_payload(payload)
 
 
-def creer_apprenant_ypareo(stagiaire: Dict[str, Any]) -> bool:
-    """Create a learner in YPAREO without blocking its local creation on failure."""
+def _normaliser_formation_ypareo(value: Any) -> str:
+    """Normalize a local training label for tolerant YPAREO UUID matching."""
+    text = unicodedata.normalize("NFKD", str(value or ""))
+    text = "".join(character for character in text if not unicodedata.combining(character))
+    text = text.upper().replace("’", "'")
+    return re.sub(r"[^A-Z0-9]+", " ", text).strip()
+
+
+def _ypareo_formation_environment_name(session_obj: Dict[str, Any]) -> Optional[str]:
+    """Resolve the Render variable associated with the session's local training name."""
+    candidates = [
+        _session_get(session_obj, "training_type", ""),
+        _session_get(session_obj, "formation", ""),
+        _session_get(session_obj, "title", ""),
+        _session_get(session_obj, "nom", ""),
+        _session_get(session_obj, "name", ""),
+    ]
+    normalized_candidates = [_normaliser_formation_ypareo(value) for value in candidates if value]
+
+    for formation in normalized_candidates:
+        if any(marker in formation for marker in ("DIRIGEANT", "DSSP", "DO ESP", "DOESP")):
+            return "YPAREO_ID_FORMATION_DSSP"
+        if "BTS NDRC" in formation:
+            return "YPAREO_ID_FORMATION_BTS_NDRC"
+        if "BTS MOS" in formation:
+            return "YPAREO_ID_FORMATION_BTS_MOS"
+        if "BTS MCO" in formation:
+            return "YPAREO_ID_FORMATION_BTS_MCO"
+        if "BTS PI" in formation:
+            return "YPAREO_ID_FORMATION_BTS_PI"
+        if "BTS CI" in formation:
+            return "YPAREO_ID_FORMATION_BTS_CI"
+        if "SSIAP 1" in formation or "SSIAP1" in formation or formation == "SSIAP":
+            return "YPAREO_ID_FORMATION_SSIAP1"
+        if re.search(r"(^| )A3P($| )", formation):
+            return "YPAREO_ID_FORMATION_A3P"
+        if re.search(r"(^| )APS($| )", formation):
+            return "YPAREO_ID_FORMATION_APS"
+        if re.search(r"(^| )VTC($| )", formation):
+            return "YPAREO_ID_FORMATION_VTC"
+    return None
+
+
+def id_formation_ypareo(session_obj: Dict[str, Any]) -> Tuple[Optional[str], Optional[str]]:
+    """Return the configured YPAREO formation UUID and a precise mapping error."""
+    environment_name = _ypareo_formation_environment_name(session_obj)
+    if not environment_name:
+        return None, YPAREO_FORMATION_NOT_LINKED_ERROR
+
+    formation_id = _normalize_render_secret(os.environ.get(environment_name) or "")
+    if formation_id:
+        return formation_id, None
+    if environment_name == "YPAREO_ID_FORMATION_DSSP":
+        return None, YPAREO_DSSP_NOT_CONFIGURED_ERROR
+    return None, YPAREO_FORMATION_NOT_LINKED_ERROR
+
+
+def _ypareo_integer_setting(name: str, default: int) -> int:
+    raw_value = (os.environ.get(name) or str(default)).strip()
+    return int(raw_value)
+
+
+def construire_payload_cursus(session_obj: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    """Build a cursus payload from the local session and Render configuration."""
+    formation_id, mapping_error = id_formation_ypareo(session_obj)
+    if not formation_id:
+        return None, mapping_error
+
+    nom = _ypareo_existing_value(session_obj, "nom", "name", "title")
+    formation = _ypareo_existing_value(session_obj, "formation", "training_type")
+    payload = {
+        "dateDebutValiditeCertification": _ypareo_existing_value(
+            session_obj, "date_debut", "date_start", "start_date"
+        ),
+        "idFormation": formation_id,
+        "idOrganisme": _normalize_render_secret(os.environ.get("YPAREO_ID_ORGANISME") or ""),
+        "idSituationAvantApprentissage": _ypareo_integer_setting(
+            "YPAREO_ID_SITUATION_AVANT_APPRENTISSAGE", 1
+        ),
+        "nom": nom or formation,
+        "idStatut": _normalize_render_secret(os.environ.get("YPAREO_ID_STATUT_CURSUS") or ""),
+        "resultatCertification": _ypareo_integer_setting("YPAREO_RESULTAT_CERTIFICATION", 1),
+    }
+    return nettoyer_payload(payload), None
+
+
+def _ypareo_api_error_message(response: Any, fallback: str) -> str:
+    """Extract a useful API error without persisting the full response body."""
+    try:
+        response_data = response.json()
+    except (ValueError, requests.JSONDecodeError, AttributeError):
+        return fallback
+    if isinstance(response_data, dict):
+        for container in (response_data, response_data.get("data")):
+            if not isinstance(container, dict):
+                continue
+            for key in ("message", "error", "detail", "title"):
+                value = container.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()[:1000]
+    return fallback
+
+
+def creer_cursus_ypareo(
+    id_personne: Any, stagiaire: Dict[str, Any], session_obj: Dict[str, Any]
+) -> bool:
+    """Create only the cursus for an existing YPAREO person."""
+    try:
+        payload, mapping_error = construire_payload_cursus(session_obj)
+    except (TypeError, ValueError) as exc:
+        stagiaire["ypareo_cursus_statut"] = "Erreur"
+        stagiaire["ypareo_cursus_erreur"] = f"Configuration cursus YPAREO invalide : {exc}"[:1000]
+        stagiaire["ypareo_cursus_id"] = ""
+        return False
+    if not payload:
+        stagiaire["ypareo_cursus_statut"] = "Erreur"
+        stagiaire["ypareo_cursus_erreur"] = mapping_error or YPAREO_FORMATION_NOT_LINKED_ERROR
+        stagiaire["ypareo_cursus_id"] = ""
+        return False
+
+    cursus_path = _ypareo_endpoint("YPAREO_CURSUS_ENDPOINT", YPAREO_CURSUS_ENDPOINT).format(
+        id_personne=quote(str(id_personne), safe="")
+    )
+    cursus_url = f"{_ypareo_base_url()}{cursus_path}"
+    try:
+        access_token = get_ypareo_access_token()
+        response = None
+        for attempt in range(2):
+            response = requests.post(
+                cursus_url,
+                headers=ypareo_headers(access_token),
+                json=payload,
+                timeout=YPAREO_REQUEST_TIMEOUT_SECONDS,
+            )
+            if response.status_code != 401 or attempt == 1:
+                break
+            _clear_ypareo_access_token_cache()
+            access_token = get_ypareo_access_token()
+
+        if response is None or not response.ok:
+            raise RuntimeError(_ypareo_api_error_message(response, YPAREO_CURSUS_ERROR_MESSAGE))
+        try:
+            response_data = response.json()
+        except (ValueError, requests.JSONDecodeError) as exc:
+            raise RuntimeError(YPAREO_CURSUS_ERROR_MESSAGE) from exc
+        response_body = response_data.get("data") if isinstance(response_data, dict) else None
+        cursus_id = response_body.get("id") if isinstance(response_body, dict) else None
+        if cursus_id is None or str(cursus_id).strip() == "":
+            raise RuntimeError(YPAREO_CURSUS_ERROR_MESSAGE)
+
+        stagiaire["ypareo_cursus_statut"] = "Créé"
+        stagiaire["ypareo_cursus_id"] = cursus_id
+        stagiaire["ypareo_cursus_erreur"] = ""
+        app.logger.info(
+            "[YPAREO] cursus créé trainee_id=%s ypareo_id=%s cursus_id=%s",
+            stagiaire.get("id") or "", id_personne, cursus_id,
+        )
+        return True
+    except YpareoAuthenticationError as exc:
+        message = str(exc)
+    except requests.RequestException as exc:
+        app.logger.error(
+            "[YPAREO] appel cursus impossible trainee_id=%s erreur=%s",
+            stagiaire.get("id") or "", type(exc).__name__,
+        )
+        message = YPAREO_CURSUS_ERROR_MESSAGE
+    except (TypeError, ValueError) as exc:
+        message = f"Configuration cursus YPAREO invalide : {exc}"
+    except Exception as exc:
+        message = str(exc).strip() or YPAREO_CURSUS_ERROR_MESSAGE
+
+    stagiaire["ypareo_cursus_statut"] = "Erreur"
+    stagiaire["ypareo_cursus_erreur"] = message[:1000]
+    stagiaire["ypareo_cursus_id"] = ""
+    app.logger.error(
+        "[YPAREO] échec création cursus trainee_id=%s erreur=%s",
+        stagiaire.get("id") or "", message,
+    )
+    return False
+
+
+def creer_apprenant_ypareo(
+    stagiaire: Dict[str, Any], session_obj: Optional[Dict[str, Any]] = None
+) -> bool:
+    """Create a learner, then its cursus, without blocking local creation on failure."""
     payload = construire_payload_apprenant(stagiaire)
     personne_url = (
         f"{_ypareo_base_url()}"
@@ -384,9 +573,7 @@ def creer_apprenant_ypareo(stagiaire: Dict[str, Any]) -> bool:
         response = None
         for attempt in range(2):
             response = requests.post(
-                personne_url,
-                headers=ypareo_headers(access_token),
-                json=payload,
+                personne_url, headers=ypareo_headers(access_token), json=payload,
                 timeout=YPAREO_REQUEST_TIMEOUT_SECONDS,
             )
             if response.status_code != 401 or attempt == 1:
@@ -399,19 +586,11 @@ def creer_apprenant_ypareo(stagiaire: Dict[str, Any]) -> bool:
             access_token = get_ypareo_access_token()
 
         if response is None or not response.ok:
-            app.logger.warning(
-                "[YPAREO] création refusée trainee_id=%s url=%s status=%s",
-                stagiaire.get("id") or "",
-                personne_url,
-                response.status_code if response is not None else "inconnu",
-            )
             raise RuntimeError(YPAREO_CREATION_ERROR_MESSAGE)
-
         try:
             response_data = response.json()
         except (ValueError, requests.JSONDecodeError) as exc:
             raise RuntimeError(YPAREO_CREATION_ERROR_MESSAGE) from exc
-
         response_body = response_data.get("data") if isinstance(response_data, dict) else None
         ypareo_id = response_body.get("id") if isinstance(response_body, dict) else None
         if ypareo_id is None or str(ypareo_id).strip() == "":
@@ -422,17 +601,17 @@ def creer_apprenant_ypareo(stagiaire: Dict[str, Any]) -> bool:
         stagiaire["ypareo_erreur"] = ""
         app.logger.info(
             "[YPAREO] apprenant créé trainee_id=%s ypareo_id=%s",
-            stagiaire.get("id") or "",
-            ypareo_id,
+            stagiaire.get("id") or "", ypareo_id,
         )
+        if session_obj is not None:
+            creer_cursus_ypareo(ypareo_id, stagiaire, session_obj)
         return True
     except YpareoAuthenticationError as exc:
         message = str(exc)
     except requests.RequestException as exc:
         app.logger.error(
             "[YPAREO] appel de création impossible trainee_id=%s erreur=%s",
-            stagiaire.get("id") or "",
-            type(exc).__name__,
+            stagiaire.get("id") or "", type(exc).__name__,
         )
         message = YPAREO_CREATION_ERROR_MESSAGE
     except Exception as exc:
@@ -440,10 +619,12 @@ def creer_apprenant_ypareo(stagiaire: Dict[str, Any]) -> bool:
 
     stagiaire["ypareo_statut"] = "Erreur"
     stagiaire["ypareo_erreur"] = message[:1000]
+    if session_obj is not None:
+        stagiaire["ypareo_cursus_statut"] = "Non envoyé"
+        stagiaire["ypareo_cursus_erreur"] = ""
     app.logger.error(
         "[YPAREO] échec création apprenant trainee_id=%s erreur=%s",
-        stagiaire.get("id") or "",
-        message,
+        stagiaire.get("id") or "", message,
     )
     return False
 
@@ -13737,6 +13918,9 @@ def api_create_trainee(session_id: str):
         "ypareo_statut": "Non envoyé",
         "ypareo_id": "",
         "ypareo_erreur": "",
+        "ypareo_cursus_statut": "Non envoyé",
+        "ypareo_cursus_id": "",
+        "ypareo_cursus_erreur": "",
     }
 
     _sync_trainee_afc_medical_requirement(t, _session_get(s, "name", ""))
@@ -13764,7 +13948,7 @@ def api_create_trainee(session_id: str):
     save_data(data)
 
     # L'inscription locale est déjà persistée : une panne YPAREO ne peut pas l'annuler.
-    creer_apprenant_ypareo(t)
+    creer_apprenant_ypareo(t, s)
     save_data(data)
 
     # ✅ ENVOI MAIL + SMS à la création (optionnel)
@@ -13896,10 +14080,44 @@ def admin_send_trainee_to_ypareo(session_id: str, trainee_id: str):
     if not trainee:
         abort(404)
 
-    if creer_apprenant_ypareo(trainee):
-        flash("Stagiaire créé dans YPAREO.", "success")
+    if creer_apprenant_ypareo(trainee, trainee_session):
+        if trainee.get("ypareo_cursus_statut") == "Créé":
+            flash("Personne et cursus créés dans YPAREO.", "success")
+        else:
+            flash("Personne créée dans YPAREO, mais le cursus est en erreur.", "error")
     else:
         flash(f"Envoi YPAREO impossible : {trainee.get('ypareo_erreur') or 'erreur inconnue'}", "error")
+
+    trainee_session["trainees"] = _session_trainees_list(trainee_session)
+    trainee_session.pop("stagiaires", None)
+    save_data(data)
+    return redirect(url_for("admin_trainees", session_id=session_id))
+
+
+@app.post("/admin/sessions/<session_id>/trainees/<trainee_id>/ypareo/cursus")
+@admin_login_required
+@admin_write_required
+def admin_create_trainee_ypareo_cursus(session_id: str, trainee_id: str):
+    data = load_data()
+    trainee_session = find_session(data, session_id)
+    if not trainee_session:
+        abort(404)
+    trainee = find_trainee(trainee_session, trainee_id)
+    if not trainee:
+        abort(404)
+
+    id_personne = trainee.get("ypareo_id")
+    if not id_personne:
+        trainee["ypareo_cursus_statut"] = "Non envoyé"
+        trainee["ypareo_cursus_erreur"] = "La personne doit d'abord être créée dans YPAREO"
+        flash("Impossible de créer le cursus : personne YPAREO absente.", "error")
+    elif creer_cursus_ypareo(id_personne, trainee, trainee_session):
+        flash("Cursus créé dans YPAREO.", "success")
+    else:
+        flash(
+            f"Création du cursus YPAREO impossible : {trainee.get('ypareo_cursus_erreur') or 'erreur inconnue'}",
+            "error",
+        )
 
     trainee_session["trainees"] = _session_trainees_list(trainee_session)
     trainee_session.pop("stagiaires", None)
