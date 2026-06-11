@@ -87,36 +87,183 @@ PYPDF_LIBRARY_AVAILABLE = importlib.util.find_spec("pypdf") is not None
 REPORTLAB_LIBRARY_AVAILABLE = importlib.util.find_spec("reportlab") is not None
 
 YPAREO_API_URL_DEFAULT = "https://api.ypareo-neo.com"
+YPAREO_AUTH_ENDPOINT = "/authenticate"
 YPAREO_APPRENANTS_ENDPOINT = "/personne"
 YPAREO_REQUEST_TIMEOUT_SECONDS = 15
+YPAREO_ACCESS_TOKEN_DEFAULT_TTL_SECONDS = 30 * 60
+YPAREO_AUTH_ERROR_MESSAGE = (
+    "Authentification YPAREO impossible : vérifier le token initial YPAREO_AUTH_TOKEN."
+)
+YPAREO_CREATION_ERROR_MESSAGE = (
+    "Création YPAREO impossible : vérifier les données envoyées ou les droits API."
+)
+_ypareo_access_token_cache: Dict[str, Any] = {
+    "token": "",
+    "expires_at": 0.0,
+    "configuration_key": "",
+}
+_ypareo_access_token_lock = threading.Lock()
 
 
-def _ypareo_api_token() -> str:
-    """Normalize the secret copied into Render without ever logging it."""
-    token = (os.environ.get("YPAREO_API_TOKEN") or "").strip()
+class YpareoAuthenticationError(RuntimeError):
+    """Raised when the initial YPAREO token cannot produce an access token."""
 
-    # Render values are sometimes pasted with surrounding quotes. Repeat the
-    # normalization so both ``"Bearer token"`` and ``Bearer "token"`` work.
-    for _ in range(3):
-        if len(token) >= 2 and token[0] == token[-1] and token[0] in {"'", '"'}:
-            token = token[1:-1].strip()
-            continue
-        if token.lower().startswith("bearer "):
-            token = token[7:].strip()
+
+def _normalize_render_secret(value: str) -> str:
+    """Normalize a secret pasted in Render without exposing it in logs."""
+    secret = (value or "").strip()
+    for _ in range(2):
+        if len(secret) >= 2 and secret[0] == secret[-1] and secret[0] in {"'", '"'}:
+            secret = secret[1:-1].strip()
             continue
         break
-
-    # Authorization tokens cannot contain formatting whitespace/newlines.
-    return "".join(token.split())
+    return "".join(secret.splitlines()).strip()
 
 
-def ypareo_headers() -> Dict[str, str]:
-    """Build YPAREO headers from Render-compatible environment variables."""
+def _ypareo_auth_token() -> str:
+    return _normalize_render_secret(os.environ.get("YPAREO_AUTH_TOKEN") or "")
+
+
+def _ypareo_base_url() -> str:
+    return (os.environ.get("YPAREO_API_URL") or YPAREO_API_URL_DEFAULT).strip().rstrip("/")
+
+
+def _ypareo_endpoint(environment_name: str, default: str) -> str:
+    endpoint = (os.environ.get(environment_name) or default).strip()
+    return endpoint if endpoint.startswith("/") else f"/{endpoint}"
+
+
+def ypareo_headers(access_token: str) -> Dict[str, str]:
+    """Build headers for an authenticated YPAREO NEO API request."""
     return {
-        "Authorization": f"Bearer {_ypareo_api_token()}",
+        "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json",
         "Accept": "application/json",
     }
+
+
+def _ypareo_response_structure(value: Any) -> Any:
+    """Describe a response shape without logging any response values."""
+    if isinstance(value, dict):
+        return {str(key): _ypareo_response_structure(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return ["<items>"] if value else []
+    if value is None:
+        return "<null>"
+    return f"<{type(value).__name__}>"
+
+
+def _extract_ypareo_access_token(response_data: Any) -> str:
+    if not isinstance(response_data, dict):
+        return ""
+    candidates = [response_data.get("token"), response_data.get("access_token")]
+    nested_data = response_data.get("data")
+    if isinstance(nested_data, dict):
+        candidates.extend([nested_data.get("token"), nested_data.get("access_token")])
+    for candidate in candidates:
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()
+    return ""
+
+
+def _ypareo_access_token_ttl(response_data: Any) -> float:
+    """Read a supplied lifetime when available, otherwise cache for 30 minutes."""
+    containers = [response_data]
+    if isinstance(response_data, dict) and isinstance(response_data.get("data"), dict):
+        containers.append(response_data["data"])
+
+    for container in containers:
+        if not isinstance(container, dict):
+            continue
+        for key in ("expires_in", "expiresIn"):
+            try:
+                lifetime = float(container.get(key))
+            except (TypeError, ValueError):
+                continue
+            if lifetime > 0:
+                return lifetime
+        for key in ("expires_at", "expiresAt"):
+            value = container.get(key)
+            try:
+                expires_at = float(value)
+            except (TypeError, ValueError):
+                if not isinstance(value, str):
+                    continue
+                try:
+                    expires_at = datetime.datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+                except ValueError:
+                    continue
+            lifetime = expires_at - time.time()
+            if lifetime > 0:
+                return lifetime
+
+    return YPAREO_ACCESS_TOKEN_DEFAULT_TTL_SECONDS
+
+
+def _clear_ypareo_access_token_cache() -> None:
+    with _ypareo_access_token_lock:
+        _ypareo_access_token_cache.update(token="", expires_at=0.0, configuration_key="")
+
+
+def get_ypareo_access_token() -> str:
+    """Exchange the initial YPAREO token for a cached API access token."""
+    initial_token = _ypareo_auth_token()
+    if not initial_token:
+        app.logger.error("[YPAREO] YPAREO_AUTH_TOKEN non configuré")
+        raise YpareoAuthenticationError(YPAREO_AUTH_ERROR_MESSAGE)
+
+    auth_url = f"{_ypareo_base_url()}{_ypareo_endpoint('YPAREO_AUTH_ENDPOINT', YPAREO_AUTH_ENDPOINT)}"
+    configuration_key = hashlib.sha256(f"{auth_url}\0{initial_token}".encode("utf-8")).hexdigest()
+
+    with _ypareo_access_token_lock:
+        now = time.monotonic()
+        if (
+            _ypareo_access_token_cache["token"]
+            and _ypareo_access_token_cache["configuration_key"] == configuration_key
+            and now < _ypareo_access_token_cache["expires_at"]
+        ):
+            return str(_ypareo_access_token_cache["token"])
+
+        try:
+            response = requests.post(
+                auth_url,
+                headers={"Accept": "application/json", "Content-Type": "application/json"},
+                json={"token": initial_token},
+                timeout=YPAREO_REQUEST_TIMEOUT_SECONDS,
+            )
+            if not response.ok:
+                app.logger.warning(
+                    "[YPAREO] authentification refusée url=%s status=%s",
+                    auth_url,
+                    response.status_code,
+                )
+                raise YpareoAuthenticationError(YPAREO_AUTH_ERROR_MESSAGE)
+            try:
+                response_data = response.json()
+            except (ValueError, requests.JSONDecodeError) as exc:
+                app.logger.error("[YPAREO] réponse d'authentification invalide (JSON attendu)")
+                raise YpareoAuthenticationError(YPAREO_AUTH_ERROR_MESSAGE) from exc
+
+            access_token = _extract_ypareo_access_token(response_data)
+            if not access_token:
+                app.logger.error(
+                    "[YPAREO] réponse d'authentification sans token structure=%s",
+                    json.dumps(_ypareo_response_structure(response_data), ensure_ascii=False),
+                )
+                raise YpareoAuthenticationError(YPAREO_AUTH_ERROR_MESSAGE)
+
+            ttl = _ypareo_access_token_ttl(response_data)
+            _ypareo_access_token_cache.update(
+                token=access_token,
+                expires_at=time.monotonic() + ttl,
+                configuration_key=configuration_key,
+            )
+            return access_token
+        except YpareoAuthenticationError:
+            raise
+        except requests.RequestException as exc:
+            app.logger.error("[YPAREO] appel d'authentification impossible erreur=%s", type(exc).__name__)
+            raise YpareoAuthenticationError(YPAREO_AUTH_ERROR_MESSAGE) from exc
 
 
 def nettoyer_payload(data: Any) -> Any:
@@ -224,79 +371,51 @@ def construire_payload_apprenant(stagiaire: Dict[str, Any]) -> Dict[str, Any]:
     return nettoyer_payload(payload)
 
 
-def _ypareo_error_message(response: requests.Response) -> str:
-    if response.status_code == 401:
-        auth_hint = (response.headers.get("WWW-Authenticate") or "").strip()
-        message = (
-            "Authentification YPAREO refusée (HTTP 401). Vérifiez que "
-            "YPAREO_API_TOKEN contient un token actif autorisé pour l’API NEO "
-            "(la valeur peut être brute ou préfixée par Bearer)."
-        )
-        if auth_hint:
-            message += f" Réponse WWW-Authenticate : {auth_hint[:300]}"
-        return message
-
-    try:
-        body = response.json()
-    except (ValueError, requests.JSONDecodeError):
-        body = None
-
-    if isinstance(body, dict):
-        for key in ("message", "error", "detail", "title"):
-            value = body.get(key)
-            if isinstance(value, str) and value.strip():
-                return value.strip()
-        errors = body.get("errors")
-        if errors:
-            return json.dumps(errors, ensure_ascii=False)
-
-    text = (response.text or "").strip()
-    if text:
-        return text[:1000]
-    return f"Erreur HTTP {response.status_code}"
-
-
 def creer_apprenant_ypareo(stagiaire: Dict[str, Any]) -> bool:
-    """Create a learner in YPAREO and persist the result on the local dict."""
-    token = _ypareo_api_token()
-    if not token:
-        message = "YPAREO_API_TOKEN non configuré"
-        stagiaire["ypareo_statut"] = "Erreur"
-        stagiaire["ypareo_erreur"] = message
-        app.logger.error("[YPAREO] %s trainee_id=%s", message, stagiaire.get("id") or "")
-        return False
-
-    base_url = (os.environ.get("YPAREO_API_URL") or YPAREO_API_URL_DEFAULT).strip().rstrip("/")
-    url = f"{base_url}{YPAREO_APPRENANTS_ENDPOINT}"
+    """Create a learner in YPAREO without blocking its local creation on failure."""
     payload = construire_payload_apprenant(stagiaire)
+    personne_url = (
+        f"{_ypareo_base_url()}"
+        f"{_ypareo_endpoint('YPAREO_APPRENANTS_ENDPOINT', YPAREO_APPRENANTS_ENDPOINT)}"
+    )
 
     try:
-        response = requests.post(
-            url,
-            headers=ypareo_headers(),
-            json=payload,
-            timeout=YPAREO_REQUEST_TIMEOUT_SECONDS,
-        )
-        if not response.ok:
-            app.logger.warning(
-                "[YPAREO] réponse refusée trainee_id=%s url=%s status=%s token_present=%s token_length=%s",
-                stagiaire.get("id") or "",
-                url,
-                response.status_code,
-                bool(token),
-                len(token),
+        access_token = get_ypareo_access_token()
+        response = None
+        for attempt in range(2):
+            response = requests.post(
+                personne_url,
+                headers=ypareo_headers(access_token),
+                json=payload,
+                timeout=YPAREO_REQUEST_TIMEOUT_SECONDS,
             )
-            raise RuntimeError(_ypareo_error_message(response))
+            if response.status_code != 401 or attempt == 1:
+                break
+            app.logger.warning(
+                "[YPAREO] accès /personne refusé, renouvellement du token trainee_id=%s",
+                stagiaire.get("id") or "",
+            )
+            _clear_ypareo_access_token_cache()
+            access_token = get_ypareo_access_token()
+
+        if response is None or not response.ok:
+            app.logger.warning(
+                "[YPAREO] création refusée trainee_id=%s url=%s status=%s",
+                stagiaire.get("id") or "",
+                personne_url,
+                response.status_code if response is not None else "inconnu",
+            )
+            raise RuntimeError(YPAREO_CREATION_ERROR_MESSAGE)
 
         try:
             response_data = response.json()
         except (ValueError, requests.JSONDecodeError) as exc:
-            raise RuntimeError("Réponse YPAREO invalide (JSON attendu)") from exc
+            raise RuntimeError(YPAREO_CREATION_ERROR_MESSAGE) from exc
 
         response_body = response_data.get("data") if isinstance(response_data, dict) else None
         ypareo_id = response_body.get("id") if isinstance(response_body, dict) else None
         if ypareo_id is None or str(ypareo_id).strip() == "":
-            raise RuntimeError("Réponse YPAREO sans identifiant apprenant")
+            raise RuntimeError(YPAREO_CREATION_ERROR_MESSAGE)
 
         stagiaire["ypareo_statut"] = "Créé"
         stagiaire["ypareo_id"] = ypareo_id
@@ -307,16 +426,26 @@ def creer_apprenant_ypareo(stagiaire: Dict[str, Any]) -> bool:
             ypareo_id,
         )
         return True
-    except Exception as exc:
-        message = str(exc).strip() or "Erreur inconnue lors de l'envoi à YPAREO"
-        stagiaire["ypareo_statut"] = "Erreur"
-        stagiaire["ypareo_erreur"] = message[:1000]
+    except YpareoAuthenticationError as exc:
+        message = str(exc)
+    except requests.RequestException as exc:
         app.logger.error(
-            "[YPAREO] échec création apprenant trainee_id=%s erreur=%s",
+            "[YPAREO] appel de création impossible trainee_id=%s erreur=%s",
             stagiaire.get("id") or "",
-            message,
+            type(exc).__name__,
         )
-        return False
+        message = YPAREO_CREATION_ERROR_MESSAGE
+    except Exception as exc:
+        message = str(exc).strip() or YPAREO_CREATION_ERROR_MESSAGE
+
+    stagiaire["ypareo_statut"] = "Erreur"
+    stagiaire["ypareo_erreur"] = message[:1000]
+    app.logger.error(
+        "[YPAREO] échec création apprenant trainee_id=%s erreur=%s",
+        stagiaire.get("id") or "",
+        message,
+    )
+    return False
 
 
 @app.get("/service-worker.js")
