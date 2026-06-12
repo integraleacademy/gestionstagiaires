@@ -1604,6 +1604,8 @@ input[type="file"]{
 .ypareo-step__identifier span{color:#64748b;font-weight:700;}.ypareo-step__identifier strong{overflow-wrap:anywhere;color:#0f172a;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;}
 .ypareo-step__error{display:grid;gap:3px;margin-bottom:12px;padding:10px 12px;border:1px solid #fecdd3;border-radius:11px;background:#fff1f2;color:#9f1239;font-size:11px;line-height:1.4;overflow-wrap:anywhere;}
 .ypareo-step form{margin-top:auto;}
+.ypareo-hub__action{max-width:760px;margin:20px auto 0;}
+.ypareo-hub__action .ypareo-action{min-height:48px;font-size:13px;}
 .ypareo-action{display:flex;width:100%;min-height:42px;align-items:center;justify-content:center;gap:9px;padding:10px 14px;border:0;border-radius:11px;color:#fff;background:linear-gradient(135deg,#2563eb,#0891b2);box-shadow:0 9px 20px rgba(37,99,235,.2);font:inherit;font-size:12px;font-weight:850;cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,filter .18s ease;}
 .ypareo-action svg{width:18px;height:18px;}.ypareo-action:hover{transform:translateY(-1px);filter:saturate(1.08);box-shadow:0 12px 24px rgba(37,99,235,.27);}.ypareo-action:focus-visible{outline:3px solid rgba(37,99,235,.24);outline-offset:3px;}
 .ypareo-action--retry{color:#047857;border:1px solid #6ee7b7;background:rgba(236,253,245,.92);box-shadow:0 8px 18px rgba(5,150,105,.1);}.ypareo-action--retry:hover{box-shadow:0 11px 22px rgba(5,150,105,.16);}

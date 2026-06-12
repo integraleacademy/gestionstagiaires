@@ -449,22 +449,6 @@
       {% if trainee.ypareo_erreur %}
         <div class="ypareo-step__error"><strong>Échec de l'envoi</strong><span>{{ trainee.ypareo_erreur }}</span></div>
       {% endif %}
-      {% if not is_read_only and not trainee.ypareo_id and not ypareo_person_error %}
-        <form method="post" action="{{ url_for('admin_send_trainee_to_ypareo', session_id=session.id, trainee_id=trainee.id) }}">
-          <button class="ypareo-action" type="submit">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0-11 4 4m-4-4L8 8M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg>
-            Envoyer vers YPAREO
-          </button>
-        </form>
-      {% elif not is_read_only %}
-        <form method="post" action="{{ url_for('admin_resend_trainee_ypareo_person', session_id=session.id, trainee_id=trainee.id) }}">
-          <button class="ypareo-action ypareo-action--retry" type="submit">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
-            Relancer la création de la personne YPAREO
-          </button>
-          <p class="ypareo-action__hint">Crée une nouvelle personne YPAREO et réinitialise le cursus associé.</p>
-        </form>
-      {% endif %}
     </article>
 
     <div class="ypareo-flow__connector {% if ypareo_person_ok %}is-active{% endif %}" aria-hidden="true">
@@ -494,18 +478,25 @@
       {% if trainee.ypareo_cursus_erreur %}
         <div class="ypareo-step__error"><strong>Échec du cursus</strong><span>{{ trainee.ypareo_cursus_erreur }}</span></div>
       {% endif %}
-      {% if not is_read_only and trainee.ypareo_id and not trainee.ypareo_cursus_id %}
-        <form method="post" action="{{ url_for('admin_create_trainee_ypareo_cursus', session_id=session.id, trainee_id=trainee.id) }}">
-          <button class="ypareo-action" type="submit">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-            Créer le cursus YPAREO
-          </button>
-        </form>
-      {% elif not trainee.ypareo_id %}
-        <div class="ypareo-step__locked"><span aria-hidden="true">↳</span> Disponible après la création de la personne</div>
+      {% if not trainee.ypareo_cursus_id %}
+        <div class="ypareo-step__locked"><span aria-hidden="true">↳</span> Créé automatiquement avec la personne</div>
       {% endif %}
     </article>
   </div>
+  {% if not is_read_only %}
+    <form class="ypareo-hub__action" method="post" action="{{ url_for('admin_send_trainee_to_ypareo', session_id=session.id, trainee_id=trainee.id) }}">
+      <button class="ypareo-action{% if trainee.ypareo_id or ypareo_person_error or ypareo_course_error %} ypareo-action--retry{% endif %}" type="submit">
+        {% if trainee.ypareo_id or ypareo_person_error or ypareo_course_error %}
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
+          Relancer la création de la personne et du cursus YPAREO
+        {% else %}
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0-11 4 4m-4-4L8 8M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg>
+          Créer la personne et le cursus YPAREO
+        {% endif %}
+      </button>
+      <p class="ypareo-action__hint">Une seule action crée la fiche apprenant puis son inscription à la formation.</p>
+    </form>
+  {% endif %}
 </section>
 
 {% if show_vae %}

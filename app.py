@@ -14305,31 +14305,8 @@ def admin_send_trainee_to_ypareo(session_id: str, trainee_id: str):
 @admin_login_required
 @admin_write_required
 def admin_resend_trainee_ypareo_person(session_id: str, trainee_id: str):
-    """Create a fresh YPAREO person without automatically creating its cursus."""
-    data = load_data()
-    trainee_session = find_session(data, session_id)
-    if not trainee_session:
-        abort(404)
-
-    trainee = find_trainee(trainee_session, trainee_id)
-    if not trainee:
-        abort(404)
-
-    if creer_apprenant_ypareo(trainee):
-        trainee["ypareo_cursus_statut"] = "Non envoyé"
-        trainee["ypareo_cursus_id"] = ""
-        trainee["ypareo_cursus_erreur"] = ""
-        flash("Personne recréée dans YPAREO. Vous pouvez maintenant retenter le cursus.", "success")
-    else:
-        flash(
-            f"Création de la personne YPAREO impossible : {trainee.get('ypareo_erreur') or 'erreur inconnue'}",
-            "error",
-        )
-
-    trainee_session["trainees"] = _session_trainees_list(trainee_session)
-    trainee_session.pop("stagiaires", None)
-    save_data(data)
-    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+    """Keep the legacy person retry URL aligned with the complete YPAREO sync."""
+    return _admin_sync_trainee_to_ypareo(session_id, trainee_id)
 
 
 @app.post("/admin/sessions/<session_id>/trainees/<trainee_id>/ypareo/cursus")
