@@ -473,15 +473,9 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
               {% if t.ypareo_cursus_id %}<small class="muted" style="display:block;">ID : {{ t.ypareo_cursus_id }}</small>{% endif %}
             </div>
             {% if not is_read_only %}
-              {% if not t.ypareo_id %}
               <form method="post" class="ypareo-send-form" action="{{ url_for('admin_send_trainee_to_ypareo', session_id=t.source_session_id or session.id, trainee_id=t.id) }}">
-                <button class="mini-btn" type="submit">Envoyer vers YPAREO</button>
+                <button class="mini-btn" type="submit" title="Crée à nouveau la personne puis son cursus dans YPAREO">Synchroniser avec YPAREO</button>
               </form>
-              {% else %}
-              <form method="post" action="{{ url_for('admin_create_trainee_ypareo_cursus', session_id=t.source_session_id or session.id, trainee_id=t.id) }}">
-                <button class="mini-btn" type="submit">Créer cursus YPAREO</button>
-              </form>
-              {% endif %}
             {% endif %}
           </div>
         </td>
