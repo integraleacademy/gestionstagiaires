@@ -14246,7 +14246,7 @@ def api_create_trainee(session_id: str):
         "access_email_ok": email_ok,
         "access_sms_ok": sms_ok,
         "public_link": link,
-        "ypareo_url": url_for("admin_send_trainee_to_ypareo", session_id=session_id, trainee_id=trainee_id),
+        "trainee_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
         "summary_url": url_for("admin_trainee_summary", session_id=session_id, trainee_id=trainee_id)
     })
 
@@ -14293,7 +14293,7 @@ def admin_send_trainee_to_ypareo(session_id: str, trainee_id: str):
             "ypareo_cursus_id": trainee.get("ypareo_cursus_id") or "",
         }), 200 if success else 422
 
-    return redirect(url_for("admin_trainees", session_id=session_id))
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 
 @app.post("/admin/sessions/<session_id>/trainees/<trainee_id>/ypareo/cursus")
@@ -14324,7 +14324,7 @@ def admin_create_trainee_ypareo_cursus(session_id: str, trainee_id: str):
     trainee_session["trainees"] = _session_trainees_list(trainee_session)
     trainee_session.pop("stagiaires", None)
     save_data(data)
-    return redirect(url_for("admin_trainees", session_id=session_id))
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 
 @app.post("/api/trainees/import_from_image")

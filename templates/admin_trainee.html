@@ -398,6 +398,108 @@
 </div>
 {% endif %}
 
+{% set ypareo_person_status = trainee.ypareo_statut or 'Non envoyé' %}
+{% set ypareo_course_status = trainee.ypareo_cursus_statut or 'Non envoyé' %}
+{% set ypareo_person_ok = ypareo_person_status == 'Créé' %}
+{% set ypareo_course_ok = ypareo_course_status == 'Créé' %}
+{% set ypareo_person_error = ypareo_person_status == 'Erreur' %}
+{% set ypareo_course_error = ypareo_course_status == 'Erreur' %}
+<section class="ypareo-hub" aria-labelledby="ypareoHubTitle">
+  <div class="ypareo-hub__glow" aria-hidden="true"></div>
+  <header class="ypareo-hub__header">
+    <div class="ypareo-hub__brand">
+      <span class="ypareo-hub__logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" role="img"><path d="M12 3v12m0-12 4.5 4.5M12 3 7.5 7.5M5 13.5v4A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5v-4"/></svg>
+      </span>
+      <div>
+        <div class="ypareo-hub__eyebrow">Synchronisation administrative</div>
+        <h2 id="ypareoHubTitle">YPAREO <span>NEO</span></h2>
+        <p>Suivez et pilotez l'envoi de ce stagiaire sans surcharger la liste générale.</p>
+      </div>
+    </div>
+    <div class="ypareo-hub__summary {% if ypareo_person_ok and ypareo_course_ok %}is-complete{% elif ypareo_person_error or ypareo_course_error %}is-error{% else %}is-pending{% endif %}">
+      <span class="ypareo-hub__summary-dot"></span>
+      {% if ypareo_person_ok and ypareo_course_ok %}Synchronisation complète
+      {% elif ypareo_person_error or ypareo_course_error %}Action requise
+      {% else %}Synchronisation à finaliser{% endif %}
+    </div>
+  </header>
+
+  <div class="ypareo-flow">
+    <article class="ypareo-step {% if ypareo_person_ok %}is-complete{% elif ypareo_person_error %}is-error{% else %}is-pending{% endif %}">
+      <div class="ypareo-step__topline">
+        <span class="ypareo-step__number">01</span>
+        <span class="ypareo-status">
+          <span class="ypareo-status__dot"></span>{{ ypareo_person_status }}
+        </span>
+      </div>
+      <div class="ypareo-step__content">
+        <div class="ypareo-step__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5.5 20c.7-4.1 3-6.2 6.5-6.2s5.8 2.1 6.5 6.2"/></svg>
+        </div>
+        <div>
+          <div class="ypareo-step__label">Fiche apprenant</div>
+          <h3>Personne YPAREO</h3>
+          <p>Identité et coordonnées du stagiaire.</p>
+        </div>
+      </div>
+      {% if trainee.ypareo_id %}
+        <div class="ypareo-step__identifier"><span>ID personne</span><strong>{{ trainee.ypareo_id }}</strong></div>
+      {% endif %}
+      {% if trainee.ypareo_erreur %}
+        <div class="ypareo-step__error"><strong>Échec de l'envoi</strong><span>{{ trainee.ypareo_erreur }}</span></div>
+      {% endif %}
+      {% if not is_read_only and not trainee.ypareo_id %}
+        <form method="post" action="{{ url_for('admin_send_trainee_to_ypareo', session_id=session.id, trainee_id=trainee.id) }}">
+          <button class="ypareo-action" type="submit">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0-11 4 4m-4-4L8 8M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg>
+            Envoyer vers YPAREO
+          </button>
+        </form>
+      {% endif %}
+    </article>
+
+    <div class="ypareo-flow__connector {% if ypareo_person_ok %}is-active{% endif %}" aria-hidden="true">
+      <span></span><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
+    </div>
+
+    <article class="ypareo-step {% if ypareo_course_ok %}is-complete{% elif ypareo_course_error %}is-error{% else %}is-pending{% endif %}">
+      <div class="ypareo-step__topline">
+        <span class="ypareo-step__number">02</span>
+        <span class="ypareo-status">
+          <span class="ypareo-status__dot"></span>{{ ypareo_course_status }}
+        </span>
+      </div>
+      <div class="ypareo-step__content">
+        <div class="ypareo-step__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 7.5 12 4l8 3.5-8 3.5-8-3.5Z"/><path d="M7 9v5.5c2.8 2 7.2 2 10 0V9M20 8v6"/></svg>
+        </div>
+        <div>
+          <div class="ypareo-step__label">Inscription formation</div>
+          <h3>Cursus YPAREO</h3>
+          <p>Rattachement à la formation et à la session.</p>
+        </div>
+      </div>
+      {% if trainee.ypareo_cursus_id %}
+        <div class="ypareo-step__identifier"><span>ID cursus</span><strong>{{ trainee.ypareo_cursus_id }}</strong></div>
+      {% endif %}
+      {% if trainee.ypareo_cursus_erreur %}
+        <div class="ypareo-step__error"><strong>Échec du cursus</strong><span>{{ trainee.ypareo_cursus_erreur }}</span></div>
+      {% endif %}
+      {% if not is_read_only and trainee.ypareo_id and not trainee.ypareo_cursus_id %}
+        <form method="post" action="{{ url_for('admin_create_trainee_ypareo_cursus', session_id=session.id, trainee_id=trainee.id) }}">
+          <button class="ypareo-action" type="submit">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            Créer le cursus YPAREO
+          </button>
+        </form>
+      {% elif not trainee.ypareo_id %}
+        <div class="ypareo-step__locked"><span aria-hidden="true">↳</span> Disponible après la création de la personne</div>
+      {% endif %}
+    </article>
+  </div>
+</section>
+
 {% if show_vae %}
 <div class="card" style="grid-column:1 / -1; margin-top:12px;">
   <div style="font-weight:900;">Visibilité espace stagiaire</div>
