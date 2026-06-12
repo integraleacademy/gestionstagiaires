@@ -484,8 +484,8 @@
     </article>
   </div>
   {% if not is_read_only %}
-    <form class="ypareo-hub__action" method="post" action="{{ url_for('admin_send_trainee_to_ypareo', session_id=session.id, trainee_id=trainee.id) }}">
-      <button class="ypareo-action{% if trainee.ypareo_id or ypareo_person_error or ypareo_course_error %} ypareo-action--retry{% endif %}" type="submit">
+    <form id="ypareoSyncForm" class="ypareo-hub__action" method="post" action="{{ url_for('admin_send_trainee_to_ypareo', session_id=session.id, trainee_id=trainee.id) }}">
+      <button id="ypareoSyncButton" class="ypareo-action{% if trainee.ypareo_id or ypareo_person_error or ypareo_course_error %} ypareo-action--retry{% endif %}" type="submit">
         {% if trainee.ypareo_id or ypareo_person_error or ypareo_course_error %}
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
           Relancer la création de la personne et du cursus YPAREO
@@ -496,6 +496,19 @@
       </button>
       <p class="ypareo-action__hint">Une seule action crée la fiche apprenant puis son inscription à la formation.</p>
     </form>
+
+    <div id="ypareoSyncProgress" class="ypareo-sync-progress" role="dialog" aria-modal="true" aria-labelledby="ypareoSyncProgressTitle" aria-describedby="ypareoSyncProgressMessage" aria-hidden="true">
+      <div class="ypareo-sync-progress__panel" role="status" aria-live="polite">
+        <div class="ypareo-sync-progress__brand" aria-hidden="true">YP</div>
+        <div class="ypareo-sync-progress__spinner" aria-hidden="true"></div>
+        <h3 id="ypareoSyncProgressTitle">Transmission en cours vers YPAREO NEO</h3>
+        <p id="ypareoSyncProgressMessage">Création de la fiche apprenant et de son inscription à la formation…</p>
+        <div class="ypareo-sync-progress__steps" aria-hidden="true">
+          <span class="is-active">Personne</span><i></i><span>Cursus</span>
+        </div>
+        <small>Veuillez patienter et ne fermez pas cette page.</small>
+      </div>
+    </div>
   {% endif %}
 </section>
 
@@ -1873,6 +1886,22 @@
 
 
 <script>
+
+const ypareoSyncForm = document.getElementById("ypareoSyncForm");
+const ypareoSyncButton = document.getElementById("ypareoSyncButton");
+const ypareoSyncProgress = document.getElementById("ypareoSyncProgress");
+
+if(ypareoSyncForm && ypareoSyncProgress){
+  ypareoSyncForm.addEventListener("submit", ()=>{
+    ypareoSyncProgress.classList.add("is-visible");
+    ypareoSyncProgress.setAttribute("aria-hidden", "false");
+    document.body.classList.add("ypareo-sync-is-running");
+    if(ypareoSyncButton){
+      ypareoSyncButton.disabled = true;
+      ypareoSyncButton.setAttribute("aria-busy", "true");
+    }
+  });
+}
 
   // =========================
 // Financement comment autosave
