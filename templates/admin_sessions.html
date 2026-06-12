@@ -313,6 +313,36 @@
     font-size:12px;
     color:#475569;
   }
+  .aps-elearning-toggle{
+    margin-top:10px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    width:fit-content;
+    padding:9px 12px;
+    border:1px solid #c4b5fd;
+    border-radius:12px;
+    background:linear-gradient(135deg,#f5f3ff,#eef2ff);
+    color:#4338ca;
+    font-size:14px;
+    font-weight:900;
+    cursor:pointer;
+  }
+  .aps-elearning-toggle input[type="checkbox"]{
+    width:18px;
+    height:18px;
+    accent-color:#4f46e5;
+  }
+  .aps-elearning-toggle.is-saving{opacity:.65;}
+  .aps-elearning-note{
+    margin-top:8px;
+    padding:8px 10px;
+    border-radius:10px;
+    background:#eef2ff;
+    color:#4338ca;
+    font-size:13px;
+    font-weight:800;
+  }
   .vtc-check-upload{
     display:flex;
     justify-content:center;
@@ -733,8 +763,21 @@
                {% if s.exclude_from_sales_tracking %}checked{% endif %}>
         Exclure cette session du suivi des ventes
       </label>
-    {% elif s.exclude_from_sales_tracking %}
-      <div class="sales-tracking-note">🚫 Session exclue du suivi des ventes.</div>
+      {% if ((s.training_type or "")|upper).startswith("APS") %}
+        <label class="aps-elearning-toggle">
+          <input type="checkbox"
+                 data-aps-elearning-toggle="{{ s.id }}"
+                 {% if s.aps_elearning_enabled %}checked{% endif %}>
+          🎓 E-learning
+        </label>
+      {% endif %}
+    {% else %}
+      {% if s.exclude_from_sales_tracking %}
+        <div class="sales-tracking-note">🚫 Session exclue du suivi des ventes.</div>
+      {% endif %}
+      {% if ((s.training_type or "")|upper).startswith("APS") and s.aps_elearning_enabled %}
+        <div class="aps-elearning-note">🎓 E-learning activé</div>
+      {% endif %}
     {% endif %}
 
 <div class="card-actions">
@@ -749,8 +792,9 @@
             data-exam-date="{{ s.exam_date }}"
             data-exam-theory-date="{{ s.exam_theory_date }}"
             data-exam-practice-date="{{ s.exam_practice_date }}"
-            data-practice-training-date="{{ s.practice_training_date }}">
-      Modifier les dates
+            data-practice-training-date="{{ s.practice_training_date }}"
+            data-aps-elearning-enabled="{{ '1' if s.aps_elearning_enabled else '0' }}">
+      Modifier la session
     </button>
     <button class="btn btn-outline" data-archive-session="{{ s.id }}" aria-label="Archiver">📦</button>
 
@@ -816,6 +860,13 @@
         <label id="practiceTrainingField" style="display:none;">
           <div class="label">Date formation pratique</div>
           <input id="practiceTrainingDate" type="date">
+        </label>
+        <label id="apsElearningField" style="display:none;grid-column:1/-1;">
+          <span style="display:flex;align-items:center;gap:10px;font-weight:800;">
+            <input id="apsElearningEnabled" type="checkbox" style="width:auto;">
+            E-learning
+          </span>
+          <span class="hint">Une partie de cette formation APS se déroule en e-learning.</span>
         </label>
       </div>
     </div>
@@ -965,7 +1016,7 @@
 <div class="modal-backdrop" id="editSessionModal" aria-hidden="true">
   <div class="modal">
     <div class="modal-head">
-      <div class="modal-title">Modifier les dates</div>
+      <div class="modal-title">Modifier la session</div>
       <button class="icon-btn" data-close-modal="editSessionModal">✕</button>
     </div>
 
@@ -1001,6 +1052,13 @@
         <label id="editPracticeTrainingField" style="display:none;">
           <div class="label">Date formation pratique</div>
           <input id="editPracticeTrainingDate" type="date">
+        </label>
+        <label id="editApsElearningField" style="display:none;grid-column:1/-1;">
+          <span style="display:flex;align-items:center;gap:10px;font-weight:800;">
+            <input id="editApsElearningEnabled" type="checkbox" style="width:auto;">
+            E-learning
+          </span>
+          <span class="hint">Active les identifiants e-learning sur les fiches des stagiaires APS.</span>
         </label>
       </div>
     </div>
@@ -1409,12 +1467,16 @@
     const examTheoryField = document.getElementById("examTheoryField");
     const examPracticeField = document.getElementById("examPracticeField");
     const practiceTrainingField = document.getElementById("practiceTrainingField");
+    const apsElearningField = document.getElementById("apsElearningField");
     const isVtc = type.includes("VTC");
+    const isAps = type.startsWith("APS");
 
     if(examDateField) examDateField.style.display = isVtc ? "none" : "";
     if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
     if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
     if(practiceTrainingField) practiceTrainingField.style.display = isVtc ? "" : "none";
+    if(apsElearningField) apsElearningField.style.display = isAps ? "" : "none";
+    if(!isAps) document.getElementById("apsElearningEnabled").checked = false;
   }
 
   document.getElementById("sessionType")?.addEventListener("change", toggleExamFields);
@@ -1428,12 +1490,15 @@
     const examTheoryField = document.getElementById("editExamTheoryField");
     const examPracticeField = document.getElementById("editExamPracticeField");
     const practiceTrainingField = document.getElementById("editPracticeTrainingField");
+    const apsElearningField = document.getElementById("editApsElearningField");
     const isVtc = type.includes("VTC");
+    const isAps = type.startsWith("APS");
 
     if(examDateField) examDateField.style.display = isVtc ? "none" : "";
     if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
     if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
     if(practiceTrainingField) practiceTrainingField.style.display = isVtc ? "" : "none";
+    if(apsElearningField) apsElearningField.style.display = isAps ? "" : "none";
   }
 
   // create session
@@ -1446,6 +1511,7 @@
     const exam_theory_date = (document.getElementById("examTheoryDate")?.value || "").trim();
     const exam_practice_date = (document.getElementById("examPracticeDate")?.value || "").trim();
     const practice_training_date = (document.getElementById("practiceTrainingDate")?.value || "").trim();
+    const aps_elearning_enabled = !!document.getElementById("apsElearningEnabled")?.checked;
 
     if(!name || !training_type){
       alert("Nom + type de formation obligatoires");
@@ -1467,7 +1533,8 @@
           exam_date,
           exam_theory_date,
           exam_practice_date,
-          practice_training_date
+          practice_training_date,
+          aps_elearning_enabled
         })
       });
 
@@ -1497,6 +1564,7 @@
       document.getElementById("editExamTheoryDate").value = btn.getAttribute("data-exam-theory-date") || "";
       document.getElementById("editExamPracticeDate").value = btn.getAttribute("data-exam-practice-date") || "";
       document.getElementById("editPracticeTrainingDate").value = btn.getAttribute("data-practice-training-date") || "";
+      document.getElementById("editApsElearningEnabled").checked = btn.getAttribute("data-aps-elearning-enabled") === "1";
 
       toggleEditExamFields(trainingType);
       openModal("editSessionModal");
@@ -1518,7 +1586,8 @@
           exam_date: (document.getElementById("editExamDate").value || "").trim(),
           exam_theory_date: (document.getElementById("editExamTheoryDate").value || "").trim(),
           exam_practice_date: (document.getElementById("editExamPracticeDate").value || "").trim(),
-          practice_training_date: (document.getElementById("editPracticeTrainingDate").value || "").trim()
+          practice_training_date: (document.getElementById("editPracticeTrainingDate").value || "").trim(),
+          aps_elearning_enabled: !!document.getElementById("editApsElearningEnabled")?.checked
         })
       });
       const res = await r.json();
@@ -1558,6 +1627,37 @@
         checkbox.checked = !checkbox.checked;
       }finally{
         checkbox.disabled = false;
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-aps-elearning-toggle]").forEach((checkbox)=>{
+    checkbox.addEventListener("change", async ()=>{
+      const sessionId = checkbox.getAttribute("data-aps-elearning-toggle");
+      if(!sessionId) return;
+
+      const label = checkbox.closest(".aps-elearning-toggle");
+      checkbox.disabled = true;
+      label?.classList.add("is-saving");
+      try{
+        const r = await fetch(`/api/sessions/${sessionId}/update`, {
+          method:"POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({
+            aps_elearning_enabled: !!checkbox.checked
+          })
+        });
+        const res = await r.json();
+        if(!r.ok || !res.ok){
+          alert("Impossible de mettre à jour l’option e-learning pour cette session.");
+          checkbox.checked = !checkbox.checked;
+        }
+      }catch(e){
+        alert("Erreur réseau");
+        checkbox.checked = !checkbox.checked;
+      }finally{
+        checkbox.disabled = false;
+        label?.classList.remove("is-saving");
       }
     });
   });
