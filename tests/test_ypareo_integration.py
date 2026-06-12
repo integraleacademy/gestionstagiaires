@@ -581,6 +581,9 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         self.assertNotIn('setYpareoState(manual ? "loading" : "confirm")', html)
         self.assertNotIn('function startManualYpareoTransmission', html)
         self.assertIn('openYpareoConfirmation({url: form.action, continueUrl: window.location.href})', html)
+        self.assertNotIn('id="sendAccessModal"', html)
+        self.assertIn('await createTrainee(sendAccess)', html)
+        self.assertIn('closeModal("createTraineeModal")', html)
 
     def test_manual_send_updates_and_persists_trainee(self):
         def fake_send(trainee, session_obj):
