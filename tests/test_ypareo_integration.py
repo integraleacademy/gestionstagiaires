@@ -75,7 +75,7 @@ class YpareoPayloadTests(unittest.TestCase):
                     "indicatif": "+33",
                     "isDefaultAppel": True,
                     "isDefaultSms": True,
-                    "numero": "612345678",
+                    "numero": "0612345678",
                 }],
                 "villeNaissance": "Lyon",
                 "departementNaissance": "69",
@@ -678,7 +678,7 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
             for message in flashed_messages
         ))
 
-    def test_existing_ypareo_id_still_displays_complete_sync_button(self):
+    def test_existing_ypareo_id_displays_cursus_retry_on_trainee_detail(self):
         trainee = self.data["sessions"][0]["trainees"][0]
         trainee.update({
             "ypareo_id": "YP-DELETED",
@@ -690,26 +690,24 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
             gestion_app, "save_data"
         ):
-            response = self.client.get("/admin/sessions/S1/trainees")
+            response = self.client.get("/admin/sessions/S1/stagiaires/T1")
 
         html = response.get_data(as_text=True)
-        self.assertIn("Synchroniser avec YPAREO", html)
-        self.assertIn('action="/admin/sessions/S1/trainees/T1/ypareo"', html)
-        self.assertNotIn("Créer cursus YPAREO", html)
-        self.assertNotIn('action="/admin/sessions/S1/trainees/T1/ypareo/cursus"', html)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Créer le cursus YPAREO", html)
+        self.assertIn('action="/admin/sessions/S1/trainees/T1/ypareo/cursus"', html)
+        self.assertNotIn("Envoyer vers YPAREO", html)
 
-    def test_legacy_cursus_route_now_synchronizes_person_and_cursus(self):
+    def test_existing_ypareo_person_can_open_detail_and_create_cursus(self):
         trainee = self.data["sessions"][0]["trainees"][0]
-        trainee["ypareo_id"] = "YP-DELETED"
+        trainee["ypareo_id"] = "YP-EXISTING"
 
-        def fake_sync(target, session_obj):
-            self.assertEqual(target["ypareo_id"], "YP-DELETED")
+        def fake_cursus(id_personne, target, session_obj):
+            self.assertEqual(id_personne, "YP-EXISTING")
+            self.assertIs(target, trainee)
             self.assertEqual(session_obj["id"], "S1")
-            target["ypareo_statut"] = "Créé"
-            target["ypareo_id"] = "YP-NEW"
-            target["ypareo_erreur"] = ""
             target["ypareo_cursus_statut"] = "Créé"
-            target["ypareo_cursus_id"] = "CURSUS-NEW"
+            target["ypareo_cursus_id"] = "CURSUS-99"
             target["ypareo_cursus_erreur"] = ""
             return True
 
@@ -720,11 +718,14 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
             save.reset_mock()
             response = self.client.post("/admin/sessions/S1/trainees/T1/ypareo/cursus")
 
-        self.assertIn("Créer le cursus YPAREO", page.get_data(as_text=True))
+        page_html = page.get_data(as_text=True)
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("Créer le cursus YPAREO", page_html)
+        self.assertIn('action="/admin/sessions/S1/trainees/T1/ypareo/cursus"', page_html)
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response.headers["Location"].endswith("/admin/sessions/S1/stagiaires/T1"))
         self.assertEqual(trainee["ypareo_cursus_id"], "CURSUS-99")
-        create.assert_called_once()
+        create.assert_called_once_with("YP-EXISTING", trainee, self.data["sessions"][0])
         save.assert_called_once_with(self.data)
 
 
