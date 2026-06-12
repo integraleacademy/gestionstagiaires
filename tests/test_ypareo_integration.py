@@ -233,7 +233,10 @@ class YpareoRequestTests(unittest.TestCase):
 
         self.assertFalse(result)
         self.assertEqual(post.call_count, 4)
-        self.assertEqual(trainee["ypareo_erreur"], gestion_app.YPAREO_CREATION_ERROR_MESSAGE)
+        self.assertEqual(
+            trainee["ypareo_erreur"],
+            "Erreur YPAREO HTTP 401 : réponse API (réponse vide)",
+        )
 
     def test_authentication_failure_records_clear_admin_error(self):
         trainee = {"id": "T1", "last_name": "MARTIN"}
@@ -260,7 +263,42 @@ class YpareoRequestTests(unittest.TestCase):
         self.assertFalse(result)
         self.assertEqual(trainee["last_name"], "MARTIN")
         self.assertEqual(trainee["ypareo_statut"], "Erreur")
-        self.assertEqual(trainee["ypareo_erreur"], gestion_app.YPAREO_CREATION_ERROR_MESSAGE)
+        self.assertEqual(trainee["ypareo_erreur"], "Données invalides")
+
+    def test_personne_logs_complete_request_context_without_tokens(self):
+        trainee = {"id": "T-LOG", "last_name": "MARTIN", "first_name": "Alice"}
+        responses = [
+            FakeResponse(payload={"access_token": "secret-access-token"}),
+            FakeResponse(
+                status_code=422,
+                payload={"message": "Données invalides"},
+                text=(
+                    '{"message":"Données invalides","access_token":"secret-access-token",'
+                    '"Authorization":"Bearer secret-access-token",'
+                    '"YPAREO_AUTH_TOKEN":"initial-token"}'
+                ),
+            ),
+        ]
+        with patch.dict(
+            os.environ,
+            {"YPAREO_AUTH_TOKEN": "initial-token", "YPAREO_API_URL": "https://ypareo.example"},
+            clear=True,
+        ), patch.object(gestion_app.requests, "post", side_effect=responses), self.assertLogs(
+            gestion_app.app.logger, level="ERROR"
+        ) as logs:
+            result = gestion_app.creer_apprenant_ypareo(trainee)
+
+        self.assertFalse(result)
+        api_log = next(line for line in logs.output if "réponse API" in line)
+        self.assertIn('"operation": "POST /personne"', api_log)
+        self.assertIn('"url": "https://ypareo.example/personne"', api_log)
+        self.assertIn('"status_code": 422', api_log)
+        self.assertIn('"trainee_id": "T-LOG"', api_log)
+        self.assertIn('"payload": {"nom": "MARTIN"', api_log)
+        self.assertIn("Données invalides", api_log)
+        self.assertNotIn("initial-token", api_log)
+        self.assertNotIn("secret-access-token", api_log)
+        self.assertNotIn("Bearer secret-access-token", api_log)
 
     def test_missing_initial_token_is_recorded_without_http_request(self):
         trainee = {"id": "T1", "last_name": "MARTIN"}
@@ -356,6 +394,38 @@ class YpareoCursusTests(unittest.TestCase):
         self.assertEqual(self.trainee["ypareo_cursus_erreur"], "")
         self.assertEqual(post.call_args_list[1].args[0], "https://ypareo.example/personne/YP-42/cursus")
         self.assertEqual(post.call_args_list[1].kwargs["headers"]["Authorization"], "Bearer real-access-token")
+
+    def test_cursus_logs_complete_context_without_tokens(self):
+        responses = [
+            FakeResponse(payload={"token": "secret-access-token"}),
+            FakeResponse(
+                status_code=422,
+                payload={"message": "Cursus invalide"},
+                text='{ "detail": "Cursus invalide", "access_token": "secret-access-token" }',
+            ),
+        ]
+        with patch.dict(os.environ, {
+            "YPAREO_AUTH_TOKEN": "initial-token",
+            "YPAREO_API_URL": "https://ypareo.example",
+            "YPAREO_ID_FORMATION_APS": "formation-uuid",
+        }, clear=True), patch.object(
+            gestion_app.requests, "post", side_effect=responses
+        ), self.assertLogs(gestion_app.app.logger, level="ERROR") as logs:
+            result = gestion_app.creer_cursus_ypareo("YP-42", self.trainee, self.session)
+
+        self.assertFalse(result)
+        api_log = next(line for line in logs.output if "réponse API" in line)
+        self.assertIn('"operation": "POST /personne/{IdPersonne}/cursus"', api_log)
+        self.assertIn('"url": "https://ypareo.example/personne/YP-42/cursus"', api_log)
+        self.assertIn('"status_code": 422', api_log)
+        self.assertIn('"trainee_id": "T1"', api_log)
+        self.assertIn('"idPersonne": "YP-42"', api_log)
+        self.assertIn('"nom_formation": "APS"', api_log)
+        self.assertIn('"idFormation": "formation-uuid"', api_log)
+        self.assertIn('"payload": {', api_log)
+        self.assertIn("Cursus invalide", api_log)
+        self.assertNotIn("initial-token", api_log)
+        self.assertNotIn("secret-access-token", api_log)
 
     def test_missing_mapping_records_error_without_http_request(self):
         with patch.dict(os.environ, {}, clear=True), patch.object(gestion_app.requests, "post") as post:
@@ -488,6 +558,25 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         self.assertEqual(created["ypareo_erreur"], "YPAREO indisponible")
         send.assert_called_once_with(created, self.data["sessions"][0])
         self.assertGreaterEqual(save.call_count, 2)
+
+    def test_manual_send_flashes_real_ypareo_api_error(self):
+        def fake_failure(trainee, session_obj):
+            trainee["ypareo_statut"] = "Erreur"
+            trainee["ypareo_erreur"] = "Erreur YPAREO HTTP 422 : réponse API champ nom obligatoire"
+            return False
+
+        with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
+            gestion_app, "save_data"
+        ), patch.object(gestion_app, "creer_apprenant_ypareo", side_effect=fake_failure):
+            response = self.client.post("/admin/sessions/S1/trainees/T1/ypareo")
+
+        self.assertEqual(response.status_code, 302)
+        with self.client.session_transaction() as session:
+            flashed_messages = [message for _category, message in session.get("_flashes", [])]
+        self.assertTrue(any(
+            "Erreur YPAREO HTTP 422 : réponse API champ nom obligatoire" in message
+            for message in flashed_messages
+        ))
 
     def test_manual_cursus_button_and_route_only_create_cursus(self):
         trainee = self.data["sessions"][0]["trainees"][0]
