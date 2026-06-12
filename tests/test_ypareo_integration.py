@@ -391,23 +391,37 @@ class YpareoCursusTests(unittest.TestCase):
                     environment_name,
                 )
 
-    def test_cursus_payload_uses_session_and_render_configuration(self):
+    def test_cursus_payload_contains_only_required_initial_fields_by_default(self):
         with patch.dict(os.environ, {
             "YPAREO_ID_FORMATION_APS": "formation-uuid",
             "YPAREO_ID_ORGANISME": "organisme-uuid",
+            # Legacy settings must not add certification or status fields.
             "YPAREO_ID_STATUT_CURSUS": "statut-uuid",
+            "YPAREO_RESULTAT_CERTIFICATION": "1",
         }, clear=True):
             payload, error = gestion_app.construire_payload_cursus(self.session)
 
         self.assertIsNone(error)
         self.assertEqual(payload, {
-            "dateDebutValiditeCertification": "2026-07-01",
             "idFormation": "formation-uuid",
             "idOrganisme": "organisme-uuid",
-            "idSituationAvantApprentissage": 1,
             "nom": "APS Juillet 2026",
-            "idStatut": "statut-uuid",
-            "resultatCertification": 1,
+        })
+
+    def test_cursus_payload_optionally_adds_situation_before_apprenticeship(self):
+        with patch.dict(os.environ, {
+            "YPAREO_ID_FORMATION_APS": "formation-uuid",
+            "YPAREO_ID_ORGANISME": "organisme-uuid",
+            "YPAREO_ID_SITUATION_AVANT_APPRENTISSAGE": " 7 ",
+        }, clear=True):
+            payload, error = gestion_app.construire_payload_cursus(self.session)
+
+        self.assertIsNone(error)
+        self.assertEqual(payload, {
+            "idFormation": "formation-uuid",
+            "idOrganisme": "organisme-uuid",
+            "nom": "APS Juillet 2026",
+            "idSituationAvantApprentissage": 7,
         })
 
     def test_creer_cursus_posts_with_real_access_token_and_saves_response_id(self):
@@ -420,7 +434,6 @@ class YpareoCursusTests(unittest.TestCase):
             "YPAREO_API_URL": "https://ypareo.example/",
             "YPAREO_ID_FORMATION_APS": "formation-uuid",
             "YPAREO_ID_ORGANISME": "organisme-uuid",
-            "YPAREO_ID_STATUT_CURSUS": "statut-uuid",
         }, clear=True), patch.object(gestion_app.requests, "post", side_effect=responses) as post:
             result = gestion_app.creer_cursus_ypareo("YP-42", self.trainee, self.session)
 
@@ -430,6 +443,11 @@ class YpareoCursusTests(unittest.TestCase):
         self.assertEqual(self.trainee["ypareo_cursus_erreur"], "")
         self.assertEqual(post.call_args_list[1].args[0], "https://ypareo.example/personne/YP-42/cursus")
         self.assertEqual(post.call_args_list[1].kwargs["headers"]["Authorization"], "Bearer real-access-token")
+        self.assertEqual(post.call_args_list[1].kwargs["json"], {
+            "idFormation": "formation-uuid",
+            "idOrganisme": "organisme-uuid",
+            "nom": "APS Juillet 2026",
+        })
 
     def test_cursus_logs_complete_context_without_tokens(self):
         responses = [

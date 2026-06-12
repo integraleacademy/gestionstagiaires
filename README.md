@@ -32,11 +32,9 @@ python app.py
 - `YPAREO_AUTH_TOKEN` (obligatoire ; token initial fourni par YPAREO, utilisé uniquement par `/authenticate`)
 - `YPAREO_AUTH_ENDPOINT` (défaut `/authenticate`)
 - `YPAREO_APPRENANTS_ENDPOINT` (défaut `/personne`)
-- `YPAREO_CURSUS_ENDPOINT` (optionnel, défaut `/personne/{id_personne}/cursus`)
+- `YPAREO_CURSUS_ENDPOINT` (optionnel, défaut `/personne/{IdPersonne}/cursus`)
 - `YPAREO_ID_ORGANISME` (UUID de l’organisme envoyé lors de la création du cursus)
-- `YPAREO_ID_STATUT_CURSUS` (UUID du statut initial du cursus)
-- `YPAREO_ID_SITUATION_AVANT_APPRENTISSAGE` (optionnel, défaut `1`)
-- `YPAREO_RESULTAT_CERTIFICATION` (optionnel, défaut `1`)
+- `YPAREO_ID_SITUATION_AVANT_APPRENTISSAGE` (optionnel ; absent du payload cursus par défaut)
 - UUID de formation selon les sessions utilisées : `YPAREO_ID_FORMATION_APS`, `YPAREO_ID_FORMATION_SSIAP1`, `YPAREO_ID_FORMATION_A3P`, `YPAREO_ID_FORMATION_VTC`, `YPAREO_ID_FORMATION_BTS_MOS`, `YPAREO_ID_FORMATION_BTS_MCO`, `YPAREO_ID_FORMATION_BTS_NDRC`, `YPAREO_ID_FORMATION_BTS_PI`, `YPAREO_ID_FORMATION_BTS_CI` et `YPAREO_ID_FORMATION_DSSP`. Cette dernière couvre toutes les variantes Dirigeant, DSSP, DO-ESP et DOESP.
 
 ## Intégration WeDoF CPF/EDOF

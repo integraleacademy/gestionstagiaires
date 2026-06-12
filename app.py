@@ -454,13 +454,13 @@ def id_formation_ypareo(session_obj: Dict[str, Any]) -> Tuple[Optional[str], Opt
     return None, YPAREO_FORMATION_NOT_LINKED_ERROR
 
 
-def _ypareo_integer_setting(name: str, default: int) -> int:
-    raw_value = (os.environ.get(name) or str(default)).strip()
-    return int(raw_value)
+def _ypareo_optional_integer_setting(name: str) -> Optional[int]:
+    raw_value = _normalize_render_secret(os.environ.get(name) or "")
+    return int(raw_value) if raw_value else None
 
 
 def construire_payload_cursus(session_obj: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
-    """Build a cursus payload from the local session and Render configuration."""
+    """Build the minimal initial cursus payload accepted by YPAREO."""
     formation_id, mapping_error = id_formation_ypareo(session_obj)
     if not formation_id:
         return None, mapping_error
@@ -468,17 +468,12 @@ def construire_payload_cursus(session_obj: Dict[str, Any]) -> Tuple[Optional[Dic
     nom = _ypareo_existing_value(session_obj, "nom", "name", "title")
     formation = _ypareo_existing_value(session_obj, "formation", "training_type")
     payload = {
-        "dateDebutValiditeCertification": _ypareo_existing_value(
-            session_obj, "date_debut", "date_start", "start_date"
-        ),
         "idFormation": formation_id,
         "idOrganisme": _normalize_render_secret(os.environ.get("YPAREO_ID_ORGANISME") or ""),
-        "idSituationAvantApprentissage": _ypareo_integer_setting(
-            "YPAREO_ID_SITUATION_AVANT_APPRENTISSAGE", 1
-        ),
         "nom": nom or formation,
-        "idStatut": _normalize_render_secret(os.environ.get("YPAREO_ID_STATUT_CURSUS") or ""),
-        "resultatCertification": _ypareo_integer_setting("YPAREO_RESULTAT_CERTIFICATION", 1),
+        "idSituationAvantApprentissage": _ypareo_optional_integer_setting(
+            "YPAREO_ID_SITUATION_AVANT_APPRENTISSAGE"
+        ),
     }
     return nettoyer_payload(payload), None
 
