@@ -518,6 +518,18 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         self.assertIn("Erreur", html)
         self.assertIn("Envoyer vers YPAREO", html)
         self.assertIn('/admin/sessions/S1/trainees/T1/ypareo', html)
+        self.assertIn("Souhaitez-vous transmettre les données à YPAREO NEO ?", html)
+        self.assertIn("Données en cours de transmission vers YPAREO NEO", html)
+        self.assertIn("Données transférées vers YPAREO NEO avec succès", html)
+        self.assertIn('ypareoTransmissionAuthorized = false', html)
+        self.assertIn('if(!ypareoTransmissionAuthorized || ypareoTransmissionPending || !ypareoRequestUrl) return;', html)
+        self.assertIn('setYpareoState("confirm")', html)
+        self.assertNotIn('setYpareoState(manual ? "loading" : "confirm")', html)
+        self.assertNotIn('function startManualYpareoTransmission', html)
+        self.assertIn('openYpareoConfirmation({url: form.action, continueUrl: window.location.href})', html)
+        self.assertNotIn('id="sendAccessModal"', html)
+        self.assertIn('await createTrainee(sendAccess)', html)
+        self.assertIn('closeModal("createTraineeModal")', html)
 
     def test_manual_send_updates_and_persists_trainee(self):
         def fake_send(trainee, session_obj):
@@ -536,16 +548,10 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         self.assertEqual(self.data["sessions"][0]["trainees"][0]["ypareo_id"], "YP-99")
         save.assert_called_once_with(self.data)
 
-    def test_new_local_trainee_is_kept_when_automatic_ypareo_send_fails(self):
-        def fake_failure(trainee, session_obj):
-            self.assertEqual(session_obj["id"], "S1")
-            trainee["ypareo_statut"] = "Erreur"
-            trainee["ypareo_erreur"] = "YPAREO indisponible"
-            return False
-
+    def test_new_local_trainee_waits_for_ypareo_confirmation(self):
         with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
             gestion_app, "save_data"
-        ) as save, patch.object(gestion_app, "creer_apprenant_ypareo", side_effect=fake_failure) as send:
+        ) as save, patch.object(gestion_app, "creer_apprenant_ypareo") as send:
             response = self.client.post(
                 "/api/sessions/S1/trainees/create",
                 json={"last_name": "DURAND", "first_name": "Bob", "send_access": False},
@@ -553,11 +559,50 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         created = self.data["sessions"][0]["trainees"][0]
+        payload = response.get_json()
         self.assertEqual(created["last_name"], "DURAND")
-        self.assertEqual(created["ypareo_statut"], "Erreur")
-        self.assertEqual(created["ypareo_erreur"], "YPAREO indisponible")
-        send.assert_called_once_with(created, self.data["sessions"][0])
+        self.assertEqual(created["ypareo_statut"], "Non envoyé")
+        self.assertEqual(payload["ypareo_url"], f"/admin/sessions/S1/trainees/{created['id']}/ypareo")
+        send.assert_not_called()
         self.assertGreaterEqual(save.call_count, 2)
+
+    def test_manual_send_returns_json_success_for_modern_dialog(self):
+        def fake_send(trainee, _session_obj):
+            trainee["ypareo_statut"] = "Créé"
+            trainee["ypareo_id"] = "YP-99"
+            trainee["ypareo_erreur"] = ""
+            trainee["ypareo_cursus_statut"] = "Créé"
+            trainee["ypareo_cursus_id"] = "CURSUS-99"
+            trainee["ypareo_cursus_erreur"] = ""
+            return True
+
+        with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
+            gestion_app, "save_data"
+        ), patch.object(gestion_app, "creer_apprenant_ypareo", side_effect=fake_send):
+            response = self.client.post(
+                "/admin/sessions/S1/trainees/T1/ypareo",
+                headers={"Accept": "application/json"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["message"], "Données transférées vers YPAREO NEO avec succès")
+
+    def test_manual_send_returns_json_error_reason_for_modern_dialog(self):
+        def fake_failure(trainee, _session_obj):
+            trainee["ypareo_statut"] = "Erreur"
+            trainee["ypareo_erreur"] = "YPAREO indisponible"
+            return False
+
+        with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
+            gestion_app, "save_data"
+        ), patch.object(gestion_app, "creer_apprenant_ypareo", side_effect=fake_failure):
+            response = self.client.post(
+                "/admin/sessions/S1/trainees/T1/ypareo",
+                headers={"Accept": "application/json"},
+            )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.get_json()["error"], "YPAREO indisponible")
 
     def test_manual_send_flashes_real_ypareo_api_error(self):
         def fake_failure(trainee, session_obj):
