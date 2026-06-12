@@ -313,6 +313,36 @@
     font-size:12px;
     color:#475569;
   }
+  .aps-elearning-toggle{
+    margin-top:10px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    width:fit-content;
+    padding:9px 12px;
+    border:1px solid #c4b5fd;
+    border-radius:12px;
+    background:linear-gradient(135deg,#f5f3ff,#eef2ff);
+    color:#4338ca;
+    font-size:14px;
+    font-weight:900;
+    cursor:pointer;
+  }
+  .aps-elearning-toggle input[type="checkbox"]{
+    width:18px;
+    height:18px;
+    accent-color:#4f46e5;
+  }
+  .aps-elearning-toggle.is-saving{opacity:.65;}
+  .aps-elearning-note{
+    margin-top:8px;
+    padding:8px 10px;
+    border-radius:10px;
+    background:#eef2ff;
+    color:#4338ca;
+    font-size:13px;
+    font-weight:800;
+  }
   .vtc-check-upload{
     display:flex;
     justify-content:center;
@@ -733,8 +763,21 @@
                {% if s.exclude_from_sales_tracking %}checked{% endif %}>
         Exclure cette session du suivi des ventes
       </label>
-    {% elif s.exclude_from_sales_tracking %}
-      <div class="sales-tracking-note">🚫 Session exclue du suivi des ventes.</div>
+      {% if ((s.training_type or "")|upper).startswith("APS") %}
+        <label class="aps-elearning-toggle">
+          <input type="checkbox"
+                 data-aps-elearning-toggle="{{ s.id }}"
+                 {% if s.aps_elearning_enabled %}checked{% endif %}>
+          🎓 E-learning
+        </label>
+      {% endif %}
+    {% else %}
+      {% if s.exclude_from_sales_tracking %}
+        <div class="sales-tracking-note">🚫 Session exclue du suivi des ventes.</div>
+      {% endif %}
+      {% if ((s.training_type or "")|upper).startswith("APS") and s.aps_elearning_enabled %}
+        <div class="aps-elearning-note">🎓 E-learning activé</div>
+      {% endif %}
     {% endif %}
 
 <div class="card-actions">
@@ -1584,6 +1627,37 @@
         checkbox.checked = !checkbox.checked;
       }finally{
         checkbox.disabled = false;
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-aps-elearning-toggle]").forEach((checkbox)=>{
+    checkbox.addEventListener("change", async ()=>{
+      const sessionId = checkbox.getAttribute("data-aps-elearning-toggle");
+      if(!sessionId) return;
+
+      const label = checkbox.closest(".aps-elearning-toggle");
+      checkbox.disabled = true;
+      label?.classList.add("is-saving");
+      try{
+        const r = await fetch(`/api/sessions/${sessionId}/update`, {
+          method:"POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({
+            aps_elearning_enabled: !!checkbox.checked
+          })
+        });
+        const res = await r.json();
+        if(!r.ok || !res.ok){
+          alert("Impossible de mettre à jour l’option e-learning pour cette session.");
+          checkbox.checked = !checkbox.checked;
+        }
+      }catch(e){
+        alert("Erreur réseau");
+        checkbox.checked = !checkbox.checked;
+      }finally{
+        checkbox.disabled = false;
+        label?.classList.remove("is-saving");
       }
     });
   });

@@ -81,6 +81,36 @@ class ApsElearningTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(self.saved_data["sessions"][0]["aps_elearning_enabled"])
 
+    def test_admin_sessions_cards_show_direct_elearning_checkbox_only_for_aps(self):
+        self._admin_login()
+        data = self._data("2026-06-15")
+        data["sessions"].append(
+            {
+                "id": "S-VTC",
+                "name": "Session VTC",
+                "training_type": "VTC",
+                "date_start": "2026-06-15",
+                "date_end": "2026-06-20",
+                "aps_elearning_enabled": True,
+                "trainees": [],
+            }
+        )
+
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "_load_wedof_webhooks", return_value=[]
+        ):
+            response = self.client.get("/admin/sessions")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('data-aps-elearning-toggle="S-APS"', html)
+        self.assertNotIn('data-aps-elearning-toggle="S-VTC"', html)
+        self.assertRegex(
+            html,
+            r'data-aps-elearning-toggle="S-APS"\s+checked',
+        )
+        self.assertIn("🎓 E-learning", html)
+
     def test_admin_trainee_credentials_are_available_only_for_enabled_aps_session(self):
         self._admin_login()
         data = self._data("2026-06-15")
