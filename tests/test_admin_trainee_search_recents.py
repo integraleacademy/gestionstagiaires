@@ -1,0 +1,103 @@
+import unittest
+from unittest.mock import patch
+
+import app as gestion_app
+
+
+class AdminTraineeSearchRecentsTests(unittest.TestCase):
+    def setUp(self):
+        self.client = gestion_app.app.test_client()
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+
+        self.fake_data = {
+            "sessions": [
+                {
+                    "id": "S-1",
+                    "name": "APS Juin 2026",
+                    "training_type": "APS",
+                    "trainees": [
+                        {
+                            "id": f"T-{index}",
+                            "first_name": f"Prenom{index}",
+                            "last_name": f"Nom{index}",
+                            "created_at": f"2026-06-{index:02d}T10:00:00Z",
+                        }
+                        for index in range(1, 8)
+                    ],
+                },
+                {
+                    "id": "wedof-cpf-edof",
+                    "name": "Leads WeDoF CPF/EDOF",
+                    "training_type": "CPF/EDOF",
+                    "trainees": [
+                        {
+                            "id": "T-WEDOF",
+                            "first_name": "Lead",
+                            "last_name": "Recent",
+                            "created_at": "2026-06-12T10:00:00Z",
+                        }
+                    ],
+                },
+            ]
+        }
+
+    def test_empty_search_returns_five_latest_and_three_consulted(self):
+        with self.client.session_transaction() as sess:
+            sess[gestion_app.ADMIN_RECENT_TRAINEES_SESSION_KEY] = [
+                {"session_id": "S-1", "trainee_id": "T-2"},
+                {"session_id": "missing", "trainee_id": "missing"},
+                {"session_id": "S-1", "trainee_id": "T-6"},
+                {"session_id": "S-1", "trainee_id": "T-4"},
+            ]
+
+        with patch.object(gestion_app, "load_data", return_value=self.fake_data):
+            response = self.client.get("/api/trainees_search?q=")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(
+            [item["trainee_id"] for item in payload["latest_registered"]],
+            ["T-7", "T-6", "T-5", "T-4", "T-3"],
+        )
+        self.assertEqual(
+            [item["trainee_id"] for item in payload["recent_consulted"]],
+            ["T-2", "T-6", "T-4"],
+        )
+        self.assertNotIn("T-WEDOF", str(payload))
+
+    def test_remember_consultation_deduplicates_and_limits_history(self):
+        with gestion_app.app.test_request_context("/"):
+            gestion_app.session[gestion_app.ADMIN_RECENT_TRAINEES_SESSION_KEY] = [
+                {"session_id": "S-1", "trainee_id": "T-1"},
+                {"session_id": "S-1", "trainee_id": "T-2"},
+                {"session_id": "S-1", "trainee_id": "T-3"},
+            ]
+
+            gestion_app._remember_admin_trainee_consultation("S-1", "T-2")
+            gestion_app._remember_admin_trainee_consultation("S-1", "T-4")
+
+            self.assertEqual(
+                gestion_app.session[gestion_app.ADMIN_RECENT_TRAINEES_SESSION_KEY],
+                [
+                    {"session_id": "S-1", "trainee_id": "T-4"},
+                    {"session_id": "S-1", "trainee_id": "T-2"},
+                    {"session_id": "S-1", "trainee_id": "T-1"},
+                ],
+            )
+
+    def test_sessions_page_contains_focus_suggestion_sections(self):
+        with patch.object(gestion_app, "load_data", return_value={"sessions": []}), patch.object(
+            gestion_app, "_load_wedof_webhooks", return_value=[]
+        ):
+            response = self.client.get("/admin/sessions")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("5 derniers inscrits", html)
+        self.assertIn("3 derniers dossiers consultés", html)
+        self.assertIn('input.addEventListener("focus", loadResults)', html)
+
+
+if __name__ == "__main__":
+    unittest.main()
