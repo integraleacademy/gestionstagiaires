@@ -77,6 +77,67 @@ class WedofIsolationTests(unittest.TestCase):
         load_data.assert_not_called()
         save_data.assert_not_called()
 
+    def test_wedof_webhook_sends_to_salesforce_automatically_without_notifying(self):
+        salesforce_response = type(
+            "SalesforceResponse",
+            (),
+            {"status_code": 200, "text": "ok", "url": "https://webto.salesforce.com/lead"},
+        )()
+        payload = {
+            "externalId": "CPF-456",
+            "attendee": {
+                "firstName": "Sara",
+                "lastName": "Boukhari",
+                "email": "sara@example.com",
+                "phoneNumber": "0612345678",
+            },
+            "trainingActionInfo": {"title": "Formation dirigeant DESP"},
+        }
+
+        with patch.object(gestion_app, "_fetch_wedof_folder_details", return_value={}), \
+             patch.object(gestion_app, "_load_wedof_webhooks", return_value=[]), \
+             patch.object(gestion_app, "_save_wedof_webhooks") as save_wedof, \
+             patch.object(gestion_app.requests, "post", return_value=salesforce_response) as salesforce_post:
+            resp = self.client.post(
+                "/api/webhooks/wedof",
+                json=payload,
+                headers={"X-Wedof-Event": "cpf.created"},
+            )
+
+        self.assertEqual(resp.status_code, 200)
+        salesforce_post.assert_called_once()
+        saved_entry = save_wedof.call_args.args[0][0]
+        self.assertTrue(saved_entry["salesforce_sent"])
+        self.assertEqual(saved_entry["salesforce_send_count"], 1)
+        self.assertFalse(saved_entry["processed"])
+
+    def test_admin_wedof_keeps_notification_manual_and_shows_automatic_salesforce_status(self):
+        entry = {
+            "id": "WEDOF-TEST",
+            "payload": {
+                "attendee": {
+                    "firstName": "Sara",
+                    "lastName": "Boukhari",
+                    "email": "sara@example.com",
+                    "phoneNumber": "0612345678",
+                },
+                "trainingActionInfo": {"title": "Formation dirigeant DESP"},
+            },
+            "processed": False,
+            "salesforce_sent": True,
+            "salesforce_sent_at": "2026-06-12T10:00:00Z",
+            "salesforce_send_count": 1,
+        }
+
+        with patch.object(gestion_app, "_load_wedof_webhooks", return_value=[entry]):
+            response = self.client.get("/admin/wedof")
+
+        html = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(">Notifier</button>", html)
+        self.assertIn("Envoyé automatiquement à Salesforce", html)
+        self.assertIn("Renvoyer Salesforce", html)
+
 
 if __name__ == "__main__":
     unittest.main()
