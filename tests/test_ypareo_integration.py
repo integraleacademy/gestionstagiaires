@@ -106,9 +106,19 @@ class YpareoPayloadTests(unittest.TestCase):
                         "indicatif": "+33",
                         "isDefaultAppel": True,
                         "isDefaultSms": True,
-                        "numero": "749424742",
+                        "numero": "0749424742",
                     }],
                 )
+
+    def test_construire_payload_keeps_national_zero_for_rejected_ypareo_case(self):
+        payload = gestion_app.construire_payload_apprenant({"phone": "+33676171028"})
+
+        self.assertEqual(payload["telephones"][0]["numero"], "0676171028")
+
+    def test_construire_payload_omits_invalid_french_phone(self):
+        payload = gestion_app.construire_payload_apprenant({"phone": "12345"})
+
+        self.assertNotIn("telephones", payload)
 
     def test_construire_payload_omits_empty_contact_containers_and_fixed_values(self):
         payload = gestion_app.construire_payload_apprenant({"last_name": "DUPONT", "first_name": "Léa"})

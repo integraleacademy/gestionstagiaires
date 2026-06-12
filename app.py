@@ -310,7 +310,7 @@ def _ypareo_existing_value(stagiaire: Dict[str, Any], *keys: str) -> Any:
 
 
 def _normaliser_telephone_ypareo(value: Any) -> str:
-    """Return a French national number accepted alongside YPAREO's +33 prefix."""
+    """Return the 10-digit French national number expected by YPAREO."""
     if value is None:
         return ""
 
@@ -320,10 +320,11 @@ def _normaliser_telephone_ypareo(value: Any) -> str:
     elif telephone.startswith("0033"):
         telephone = telephone[4:]
 
-    if telephone.startswith("0"):
-        telephone = telephone[1:]
+    telephone = re.sub(r"\D", "", telephone)
+    if len(telephone) == 9 and not telephone.startswith("0"):
+        telephone = f"0{telephone}"
 
-    return re.sub(r"\D", "", telephone)
+    return telephone if re.fullmatch(r"0[1-9]\d{8}", telephone) else ""
 
 
 def construire_payload_apprenant(stagiaire: Dict[str, Any]) -> Dict[str, Any]:
