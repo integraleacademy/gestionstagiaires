@@ -1023,6 +1023,31 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   </div>
 </div>
 
+<!-- MODALE YPAREO NEO -->
+<div class="modal-backdrop ypareo-modal-backdrop" id="ypareoModal" aria-hidden="true">
+  <div class="modal ypareo-modal" role="dialog" aria-modal="true" aria-labelledby="ypareoModalTitle">
+    <div class="ypareo-modal-accent"></div>
+    <div class="modal-body ypareo-modal-body">
+      <div class="ypareo-status-icon" id="ypareoStatusIcon" aria-hidden="true">
+        <span class="ypareo-icon-cloud">⇧</span>
+      </div>
+      <div class="ypareo-state-copy">
+        <div class="ypareo-kicker">YPAREO NEO</div>
+        <h2 id="ypareoModalTitle">Souhaitez-vous transmettre les données à YPAREO NEO ?</h2>
+        <p id="ypareoModalMessage">Le stagiaire a bien été enregistré. Vous pouvez maintenant transmettre ses informations à YPAREO NEO.</p>
+        <div class="ypareo-error-detail" id="ypareoErrorDetail" hidden></div>
+      </div>
+    </div>
+    <div class="modal-foot ypareo-modal-actions" id="ypareoConfirmActions">
+      <button class="btn ypareo-btn-secondary" id="btnYpareoNo" type="button">Non, plus tard</button>
+      <button class="btn btn-primary ypareo-btn-primary" id="btnYpareoYes" type="button">Oui, transmettre</button>
+    </div>
+    <div class="modal-foot ypareo-modal-actions" id="ypareoResultActions" hidden>
+      <button class="btn btn-primary ypareo-btn-primary" id="btnYpareoContinue" type="button">Continuer</button>
+    </div>
+  </div>
+</div>
+
   <!-- MODALE RESULTAT IMPORT SST -->
 <div class="modal-backdrop" id="bulkSstResultModal" aria-hidden="true">
   <div class="modal" style="max-width:640px">
@@ -3451,6 +3476,91 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       : window.confirm("Voulez-vous envoyer le mail / SMS ?");
 
     await createTrainee(sendAccess);
+  });
+
+
+  const ypareoModal = document.getElementById("ypareoModal");
+  const ypareoTitle = document.getElementById("ypareoModalTitle");
+  const ypareoMessage = document.getElementById("ypareoModalMessage");
+  const ypareoError = document.getElementById("ypareoErrorDetail");
+  const ypareoConfirmActions = document.getElementById("ypareoConfirmActions");
+  const ypareoResultActions = document.getElementById("ypareoResultActions");
+  const ypareoYesButton = document.getElementById("btnYpareoYes");
+  let ypareoRequestUrl = "";
+  let ypareoContinueUrl = "";
+  let ypareoTransmissionAuthorized = false;
+  let ypareoTransmissionPending = false;
+
+  function setYpareoState(state, detail=""){
+    const panel = ypareoModal?.querySelector(".ypareo-modal");
+    panel?.classList.remove("is-loading", "is-success", "is-error");
+    if(state !== "confirm") panel?.classList.add(`is-${state}`);
+    ypareoError.hidden = state !== "error";
+    ypareoError.textContent = state === "error" ? detail : "";
+    ypareoConfirmActions.hidden = state !== "confirm";
+    ypareoResultActions.hidden = !["success", "error"].includes(state);
+    if(ypareoYesButton) ypareoYesButton.disabled = state !== "confirm";
+
+    if(state === "confirm"){
+      ypareoTitle.textContent = "Souhaitez-vous transmettre les données à YPAREO NEO ?";
+      ypareoMessage.textContent = "Le stagiaire a bien été enregistré. Vous pouvez maintenant transmettre ses informations à YPAREO NEO.";
+    }else if(state === "loading"){
+      ypareoTitle.textContent = "Données en cours de transmission vers YPAREO NEO";
+      ypareoMessage.textContent = "Merci de patienter quelques instants et de ne pas fermer cette fenêtre.";
+    }else if(state === "success"){
+      ypareoTitle.textContent = "Données transférées vers YPAREO NEO avec succès";
+      ypareoMessage.textContent = "La fiche du stagiaire et son cursus ont bien été synchronisés.";
+    }else{
+      ypareoTitle.textContent = "Échec de la transmission vers YPAREO NEO";
+      ypareoMessage.textContent = "Les données n’ont pas pu être entièrement transmises. Voici la raison communiquée :";
+    }
+  }
+
+  function openYpareoConfirmation({url, continueUrl}){
+    ypareoRequestUrl = url || "";
+    ypareoContinueUrl = continueUrl || window.location.href;
+    ypareoTransmissionAuthorized = false;
+    ypareoTransmissionPending = false;
+    setYpareoState("confirm");
+    openModal("ypareoModal");
+  }
+
+  async function transmitToYpareo(){
+    // Quel que soit le point d'entrée (création ou bouton manuel), l'autorisation
+    // ne passe à true qu'après le clic explicite sur « Oui, transmettre ».
+    if(!ypareoTransmissionAuthorized || ypareoTransmissionPending || !ypareoRequestUrl) return;
+    ypareoTransmissionPending = true;
+    setYpareoState("loading");
+    try{
+      const response = await fetch(ypareoRequestUrl, {
+        method: "POST",
+        headers: {"Accept": "application/json"}
+      });
+      const result = await response.json().catch(()=> ({}));
+      if(!response.ok || !result.ok){
+        setYpareoState("error", result.error || "Le serveur YPAREO NEO n’a pas fourni de détail supplémentaire.");
+        return;
+      }
+      setYpareoState("success");
+    }catch(error){
+      setYpareoState("error", "Impossible de contacter le serveur. Vérifiez la connexion puis réessayez.");
+    }finally{
+      ypareoTransmissionPending = false;
+    }
+  }
+
+  ypareoYesButton?.addEventListener("click", ()=>{
+    ypareoTransmissionAuthorized = true;
+    transmitToYpareo();
+  });
+  document.getElementById("btnYpareoNo")?.addEventListener("click", ()=>{ window.location.href = ypareoContinueUrl; });
+  document.getElementById("btnYpareoContinue")?.addEventListener("click", ()=>{ window.location.href = ypareoContinueUrl; });
+
+  document.querySelectorAll(".ypareo-send-form").forEach(form=>{
+    form.addEventListener("submit", event=>{
+      event.preventDefault();
+      openYpareoConfirmation({url: form.action, continueUrl: window.location.href});
+    });
   });
 
 
