@@ -1165,6 +1165,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   .ypareo-state-copy p{font-size:14px;line-height:1.65;color:#64748b;margin:12px 0 0;}
   .ypareo-error-detail{margin-top:14px;padding:12px 14px;border:1px solid #fecaca;border-radius:12px;background:#fff1f2;color:#9f1239;font-size:13px;line-height:1.5;overflow-wrap:anywhere;}
   .ypareo-modal-actions{padding:18px 30px 26px;border:0;background:#fff;gap:12px;}
+  .ypareo-modal-actions[hidden],.ypareo-error-detail[hidden]{display:none !important;}
   .ypareo-btn-primary,.ypareo-btn-secondary{min-height:44px;border-radius:12px;padding:10px 18px;font-weight:800;}
   .ypareo-btn-secondary{background:#f8fafc;border:1px solid #e2e8f0;color:#334155;}
   .ypareo-modal.is-loading .ypareo-status-icon{background:#eff6ff;}
@@ -3501,8 +3502,11 @@ document.querySelectorAll("select.sel").forEach(sel=>{
   const ypareoError = document.getElementById("ypareoErrorDetail");
   const ypareoConfirmActions = document.getElementById("ypareoConfirmActions");
   const ypareoResultActions = document.getElementById("ypareoResultActions");
+  const ypareoYesButton = document.getElementById("btnYpareoYes");
   let ypareoRequestUrl = "";
   let ypareoContinueUrl = "";
+  let ypareoTransmissionAuthorized = false;
+  let ypareoTransmissionPending = false;
 
   function setYpareoState(state, detail=""){
     const panel = ypareoModal?.querySelector(".ypareo-modal");
@@ -3512,6 +3516,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     ypareoError.textContent = state === "error" ? detail : "";
     ypareoConfirmActions.hidden = state !== "confirm";
     ypareoResultActions.hidden = !["success", "error"].includes(state);
+    if(ypareoYesButton) ypareoYesButton.disabled = state !== "confirm";
 
     if(state === "confirm"){
       ypareoTitle.textContent = "Souhaitez-vous transmettre les données à YPAREO NEO ?";
@@ -3528,16 +3533,29 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     }
   }
 
-  function openYpareoConfirmation({url, continueUrl, manual=false}){
+  function openYpareoConfirmation({url, continueUrl}){
     ypareoRequestUrl = url || "";
     ypareoContinueUrl = continueUrl || window.location.href;
-    setYpareoState(manual ? "loading" : "confirm");
+    ypareoTransmissionAuthorized = false;
+    ypareoTransmissionPending = false;
+    setYpareoState("confirm");
     openModal("ypareoModal");
-    if(manual) transmitToYpareo();
+  }
+
+  function startManualYpareoTransmission({url, continueUrl}){
+    ypareoRequestUrl = url || "";
+    ypareoContinueUrl = continueUrl || window.location.href;
+    ypareoTransmissionAuthorized = true;
+    ypareoTransmissionPending = false;
+    openModal("ypareoModal");
+    transmitToYpareo();
   }
 
   async function transmitToYpareo(){
-    if(!ypareoRequestUrl) return;
+    // Après une création, cette autorisation ne passe à true qu'au clic explicite
+    // sur « Oui, transmettre ». Cela empêche tout départ prématuré de la requête.
+    if(!ypareoTransmissionAuthorized || ypareoTransmissionPending || !ypareoRequestUrl) return;
+    ypareoTransmissionPending = true;
     setYpareoState("loading");
     try{
       const response = await fetch(ypareoRequestUrl, {
@@ -3552,17 +3570,22 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       setYpareoState("success");
     }catch(error){
       setYpareoState("error", "Impossible de contacter le serveur. Vérifiez la connexion puis réessayez.");
+    }finally{
+      ypareoTransmissionPending = false;
     }
   }
 
-  document.getElementById("btnYpareoYes")?.addEventListener("click", transmitToYpareo);
+  ypareoYesButton?.addEventListener("click", ()=>{
+    ypareoTransmissionAuthorized = true;
+    transmitToYpareo();
+  });
   document.getElementById("btnYpareoNo")?.addEventListener("click", ()=>{ window.location.href = ypareoContinueUrl; });
   document.getElementById("btnYpareoContinue")?.addEventListener("click", ()=>{ window.location.href = ypareoContinueUrl; });
 
   document.querySelectorAll(".ypareo-send-form").forEach(form=>{
     form.addEventListener("submit", event=>{
       event.preventDefault();
-      openYpareoConfirmation({url: form.action, continueUrl: window.location.href, manual: true});
+      startManualYpareoTransmission({url: form.action, continueUrl: window.location.href});
     });
   });
 

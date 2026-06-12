@@ -547,6 +547,10 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         self.assertIn("Souhaitez-vous transmettre les données à YPAREO NEO ?", html)
         self.assertIn("Données en cours de transmission vers YPAREO NEO", html)
         self.assertIn("Données transférées vers YPAREO NEO avec succès", html)
+        self.assertIn('ypareoTransmissionAuthorized = false', html)
+        self.assertIn('if(!ypareoTransmissionAuthorized || ypareoTransmissionPending || !ypareoRequestUrl) return;', html)
+        self.assertIn('setYpareoState("confirm")', html)
+        self.assertNotIn('setYpareoState(manual ? "loading" : "confirm")', html)
 
     def test_manual_send_updates_and_persists_trainee(self):
         def fake_send(trainee, session_obj):
