@@ -560,31 +560,29 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
             }]
         }
 
-    def test_admin_table_displays_status_and_manual_send_button(self):
+    def test_ypareo_controls_are_only_displayed_on_individual_trainee_page(self):
         with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
             gestion_app, "save_data"
         ):
-            response = self.client.get("/admin/sessions/S1/trainees")
+            list_response = self.client.get("/admin/sessions/S1/trainees")
+            detail_response = self.client.get("/admin/sessions/S1/stagiaires/T1")
 
-        html = response.get_data(as_text=True)
-        self.assertEqual(response.status_code, 200)
-        self.assertIn('<th class="col-ypareo">YPAREO</th>', html)
-        self.assertIn("Erreur", html)
-        self.assertIn("Synchroniser avec YPAREO", html)
-        self.assertIn('/admin/sessions/S1/trainees/T1/ypareo', html)
-        self.assertNotIn("Créer cursus YPAREO", html)
-        self.assertIn("Souhaitez-vous transmettre les données à YPAREO NEO ?", html)
-        self.assertIn("Données en cours de transmission vers YPAREO NEO", html)
-        self.assertIn("Données transférées vers YPAREO NEO avec succès", html)
-        self.assertIn('ypareoTransmissionAuthorized = false', html)
-        self.assertIn('if(!ypareoTransmissionAuthorized || ypareoTransmissionPending || !ypareoRequestUrl) return;', html)
-        self.assertIn('setYpareoState("confirm")', html)
-        self.assertNotIn('setYpareoState(manual ? "loading" : "confirm")', html)
-        self.assertNotIn('function startManualYpareoTransmission', html)
-        self.assertIn('openYpareoConfirmation({url: form.action, continueUrl: window.location.href})', html)
-        self.assertNotIn('id="sendAccessModal"', html)
-        self.assertIn('await createTrainee(sendAccess)', html)
-        self.assertIn('closeModal("createTraineeModal")', html)
+        list_html = list_response.get_data(as_text=True)
+        detail_html = detail_response.get_data(as_text=True)
+        self.assertEqual(list_response.status_code, 200)
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertNotIn("YPAREO", list_html)
+        self.assertNotIn("ypareo", list_html.lower())
+        self.assertIn('id="ypareoHubTitle"', detail_html)
+        self.assertIn("Synchronisation administrative", detail_html)
+        self.assertIn("Personne YPAREO", detail_html)
+        self.assertIn("Cursus YPAREO", detail_html)
+        self.assertIn("Erreur API", detail_html)
+        self.assertIn("Envoyer vers YPAREO", detail_html)
+        self.assertIn('/admin/sessions/S1/trainees/T1/ypareo', detail_html)
+        self.assertLess(detail_html.index('id="ypareoHubTitle"'), detail_html.index("Visibilité espace stagiaire"))
+        self.assertIn('await createTrainee(sendAccess)', list_html)
+        self.assertIn('window.location.href = res.trainee_url', list_html)
 
     def test_manual_send_updates_and_persists_trainee(self):
         def fake_send(trainee, session_obj):
@@ -600,10 +598,11 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
             response = self.client.post("/admin/sessions/S1/trainees/T1/ypareo")
 
         self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.headers["Location"].endswith("/admin/sessions/S1/stagiaires/T1"))
         self.assertEqual(self.data["sessions"][0]["trainees"][0]["ypareo_id"], "YP-99")
         save.assert_called_once_with(self.data)
 
-    def test_new_local_trainee_waits_for_ypareo_confirmation(self):
+    def test_new_local_trainee_opens_detail_before_manual_ypareo_send(self):
         with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
             gestion_app, "save_data"
         ) as save, patch.object(gestion_app, "creer_apprenant_ypareo") as send:
@@ -617,7 +616,8 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         payload = response.get_json()
         self.assertEqual(created["last_name"], "DURAND")
         self.assertEqual(created["ypareo_statut"], "Non envoyé")
-        self.assertEqual(payload["ypareo_url"], f"/admin/sessions/S1/trainees/{created['id']}/ypareo")
+        self.assertEqual(payload["trainee_url"], f"/admin/sessions/S1/stagiaires/{created['id']}")
+        self.assertNotIn("ypareo_url", payload)
         send.assert_not_called()
         self.assertGreaterEqual(save.call_count, 2)
 
@@ -715,15 +715,16 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
 
         with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
             gestion_app, "save_data"
-        ) as save, patch.object(
-            gestion_app, "creer_apprenant_ypareo", side_effect=fake_sync
-        ) as sync:
+        ) as save, patch.object(gestion_app, "creer_cursus_ypareo", side_effect=fake_cursus) as create:
+            page = self.client.get("/admin/sessions/S1/stagiaires/T1")
+            save.reset_mock()
             response = self.client.post("/admin/sessions/S1/trainees/T1/ypareo/cursus")
 
+        self.assertIn("Créer le cursus YPAREO", page.get_data(as_text=True))
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(trainee["ypareo_id"], "YP-NEW")
-        self.assertEqual(trainee["ypareo_cursus_id"], "CURSUS-NEW")
-        sync.assert_called_once_with(trainee, self.data["sessions"][0])
+        self.assertTrue(response.headers["Location"].endswith("/admin/sessions/S1/stagiaires/T1"))
+        self.assertEqual(trainee["ypareo_cursus_id"], "CURSUS-99")
+        create.assert_called_once()
         save.assert_called_once_with(self.data)
 
 
