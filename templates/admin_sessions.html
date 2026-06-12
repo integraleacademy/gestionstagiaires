@@ -1925,9 +1925,9 @@
       const latest = res.latest_registered || [];
       const recent = res.recent_consulted || [];
       inner.innerHTML = `
-        <div class="search-section-title">5 derniers inscrits</div>
+        <div class="search-section-title">2 derniers inscrits</div>
         ${latest.length ? latest.map(suggestionItem).join("") : '<div class="search-empty">Aucun stagiaire inscrit.</div>'}
-        <div class="search-section-title">3 derniers dossiers consultés</div>
+        <div class="search-section-title">2 derniers dossiers consultés</div>
         ${recent.length ? recent.map(suggestionItem).join("") : '<div class="search-empty">Aucun dossier consulté récemment.</div>'}
       `;
     }

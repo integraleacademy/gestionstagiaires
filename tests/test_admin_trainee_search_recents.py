@@ -42,7 +42,7 @@ class AdminTraineeSearchRecentsTests(unittest.TestCase):
             ]
         }
 
-    def test_empty_search_returns_five_latest_and_three_consulted(self):
+    def test_empty_search_returns_two_latest_and_two_consulted(self):
         with self.client.session_transaction() as sess:
             sess[gestion_app.ADMIN_RECENT_TRAINEES_SESSION_KEY] = [
                 {"session_id": "S-1", "trainee_id": "T-2"},
@@ -58,11 +58,11 @@ class AdminTraineeSearchRecentsTests(unittest.TestCase):
         payload = response.get_json()
         self.assertEqual(
             [item["trainee_id"] for item in payload["latest_registered"]],
-            ["T-7", "T-6", "T-5", "T-4", "T-3"],
+            ["T-7", "T-6"],
         )
         self.assertEqual(
             [item["trainee_id"] for item in payload["recent_consulted"]],
-            ["T-2", "T-6", "T-4"],
+            ["T-2", "T-6"],
         )
         self.assertNotIn("T-WEDOF", str(payload))
 
@@ -82,7 +82,6 @@ class AdminTraineeSearchRecentsTests(unittest.TestCase):
                 [
                     {"session_id": "S-1", "trainee_id": "T-4"},
                     {"session_id": "S-1", "trainee_id": "T-2"},
-                    {"session_id": "S-1", "trainee_id": "T-1"},
                 ],
             )
 
@@ -94,8 +93,8 @@ class AdminTraineeSearchRecentsTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
-        self.assertIn("5 derniers inscrits", html)
-        self.assertIn("3 derniers dossiers consultés", html)
+        self.assertIn("2 derniers inscrits", html)
+        self.assertIn("2 derniers dossiers consultés", html)
         self.assertIn('input.addEventListener("focus", loadResults)', html)
 
 

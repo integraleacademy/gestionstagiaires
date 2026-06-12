@@ -19910,10 +19910,11 @@ def public_docs_to_control():
 
 
 ADMIN_RECENT_TRAINEES_SESSION_KEY = "admin_recent_trainees"
+TRAINEE_SEARCH_RECENT_LIMIT = 2
 
 
 def _remember_admin_trainee_consultation(session_id: str, trainee_id: str) -> None:
-    """Conserve les trois dernières fiches ouvertes pour l'administrateur courant."""
+    """Conserve les dernières fiches ouvertes pour l'administrateur courant."""
     item = {"session_id": str(session_id), "trainee_id": str(trainee_id)}
     recent = session.get(ADMIN_RECENT_TRAINEES_SESSION_KEY) or []
     recent = [
@@ -19924,7 +19925,7 @@ def _remember_admin_trainee_consultation(session_id: str, trainee_id: str) -> No
             or str(entry.get("trainee_id")) != item["trainee_id"]
         )
     ]
-    session[ADMIN_RECENT_TRAINEES_SESSION_KEY] = [item, *recent][:3]
+    session[ADMIN_RECENT_TRAINEES_SESSION_KEY] = [item, *recent][:TRAINEE_SEARCH_RECENT_LIMIT]
     session.modified = True
 
 
@@ -19968,7 +19969,7 @@ def api_trainees_search():
             all_items,
             key=lambda item: str(item.get("created_at") or ""),
             reverse=True,
-        )[:5]
+        )[:TRAINEE_SEARCH_RECENT_LIMIT]
         recent_consulted = []
         for entry in session.get(ADMIN_RECENT_TRAINEES_SESSION_KEY) or []:
             if not isinstance(entry, dict):
@@ -19976,7 +19977,7 @@ def api_trainees_search():
             item = items_by_key.get((str(entry.get("session_id")), str(entry.get("trainee_id"))))
             if item:
                 recent_consulted.append(item)
-            if len(recent_consulted) == 3:
+            if len(recent_consulted) == TRAINEE_SEARCH_RECENT_LIMIT:
                 break
         return jsonify({
             "ok": True,
