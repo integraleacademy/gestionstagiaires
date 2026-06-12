@@ -10404,10 +10404,28 @@ def admin_sessions_conventions():
         if _is_wedof_leads_session(sess):
             continue
         training_type_raw = (_session_get(sess, "training_type", "") or "").strip().upper()
-        if "VAE" in training_type_raw:
-            continue
+        session_is_vae = "VAE" in training_type_raw
         trainees = _session_trainees_list(sess)
         for trainee in trainees:
+            if session_is_vae:
+                vae_status_key = vae_status_view(
+                    trainee.get("vae_status") or trainee.get("vae_status_label")
+                )["key"]
+                inferred_vae_status_key = _infer_vae_status_from_action_dates(
+                    trainee.get("vae_action_dates")
+                )
+                if (
+                    inferred_vae_status_key is not None
+                    and VAE_STATUS_RANK.get(inferred_vae_status_key, -1)
+                    > VAE_STATUS_RANK.get(vae_status_key, -1)
+                ):
+                    vae_status_key = inferred_vae_status_key
+                if (
+                    VAE_STATUS_RANK.get(vae_status_key, -1)
+                    < VAE_STATUS_RANK["financement_validated"]
+                ):
+                    continue
+
             convention_status = (trainee.get("convention_status") or "soon").strip().lower()
             if convention_status not in {"soon", "signing"}:
                 continue
