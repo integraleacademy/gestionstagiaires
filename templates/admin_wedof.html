@@ -54,10 +54,14 @@
                 data-salesforce-send
                 data-entry-id="{{ item.id }}"
                 style="margin-bottom:6px;"
-              >{% if item.salesforce_sent %}Renvoyer Salesforce{% else %}Vers Salesforce{% endif %}</button>
+              >{% if item.salesforce_sent %}Renvoyer Salesforce{% else %}Réessayer Salesforce{% endif %}</button>
               {% if item.salesforce_sent_at %}
                 <div class="hint" style="margin:2px 0 8px 0;">
-                  Dernier envoi le {{ item.salesforce_sent_at }}{% if item.salesforce_send_count %} ({{ item.salesforce_send_count }} envoi{% if item.salesforce_send_count > 1 %}s{% endif %}){% endif %}
+                  Envoyé automatiquement à Salesforce le {{ item.salesforce_sent_at }}{% if item.salesforce_send_count %} ({{ item.salesforce_send_count }} envoi{% if item.salesforce_send_count > 1 %}s{% endif %}){% endif %}
+                </div>
+              {% elif item.salesforce_last_error %}
+                <div class="hint" style="margin:2px 0 8px 0;color:#b91c1c;">
+                  Envoi automatique échoué : {{ item.salesforce_last_error }}
                 </div>
               {% endif %}
               <details style="margin-bottom:6px;">
