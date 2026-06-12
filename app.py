@@ -89,7 +89,7 @@ REPORTLAB_LIBRARY_AVAILABLE = importlib.util.find_spec("reportlab") is not None
 YPAREO_API_URL_DEFAULT = "https://api.ypareo-neo.com"
 YPAREO_AUTH_ENDPOINT = "/authenticate"
 YPAREO_APPRENANTS_ENDPOINT = "/personne"
-YPAREO_CURSUS_ENDPOINT = "/personne/{id_personne}/cursus"
+YPAREO_CURSUS_ENDPOINT = "/personne/{IdPersonne}/cursus"
 YPAREO_REQUEST_TIMEOUT_SECONDS = 15
 YPAREO_ACCESS_TOKEN_DEFAULT_TTL_SECONDS = 30 * 60
 YPAREO_AUTH_ERROR_MESSAGE = (
@@ -463,12 +463,90 @@ def construire_payload_cursus(session_obj: Dict[str, Any]) -> Tuple[Optional[Dic
     return nettoyer_payload(payload), None
 
 
-def _ypareo_api_error_message(response: Any, fallback: str) -> str:
-    """Extract a useful API error without persisting the full response body."""
+_YPAREO_SECRET_KEYS = {"token", "access_token", "ypareo_auth_token", "authorization"}
+_YPAREO_REDACTED_VALUE = "<masqué>"
+
+
+def _redact_ypareo_secrets(value: Any) -> Any:
+    """Return loggable YPAREO data with authentication secrets removed."""
+    if isinstance(value, dict):
+        redacted = {}
+        for key, item in value.items():
+            normalized_key = re.sub(r"[^a-z0-9]+", "_", str(key).lower()).strip("_")
+            redacted[str(key)] = (
+                _YPAREO_REDACTED_VALUE
+                if normalized_key in _YPAREO_SECRET_KEYS
+                else _redact_ypareo_secrets(item)
+            )
+        return redacted
+    if isinstance(value, list):
+        return [_redact_ypareo_secrets(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_redact_ypareo_secrets(item) for item in value)
+    return value
+
+
+def _ypareo_safe_response_text(response: Any, *secrets: str) -> str:
+    """Return the complete API body while masking token-like fields and known secrets."""
+    raw_text = str(getattr(response, "text", "") or "")
+    if not raw_text:
+        try:
+            response_data = response.json()
+            raw_text = "" if response_data is None else json.dumps(response_data, ensure_ascii=False)
+        except (ValueError, TypeError, requests.JSONDecodeError, AttributeError):
+            raw_text = ""
+
+    try:
+        parsed_body = json.loads(raw_text)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        safe_text = raw_text
+        secret_names = "|".join(re.escape(name) for name in sorted(_YPAREO_SECRET_KEYS, key=len, reverse=True))
+        safe_text = re.sub(
+            rf'(?i)((?:{secret_names})\s*[=:]\s*(?:Bearer\s+)?)[^\s,;]+',
+            rf"\1{_YPAREO_REDACTED_VALUE}",
+            safe_text,
+        )
+    else:
+        safe_text = json.dumps(_redact_ypareo_secrets(parsed_body), ensure_ascii=False)
+
+    known_secrets = {_ypareo_auth_token(), *[str(secret or "") for secret in secrets]}
+    for secret in sorted((item for item in known_secrets if item), key=len, reverse=True):
+        safe_text = safe_text.replace(secret, _YPAREO_REDACTED_VALUE)
+    return safe_text
+
+
+def _ypareo_log_api_response(
+    operation: str,
+    response: Any,
+    *,
+    url: str,
+    payload: Dict[str, Any],
+    trainee_id: Any,
+    access_token: str,
+    **context: Any,
+) -> None:
+    """Log a YPAREO response and request context without authentication material."""
+    details = {
+        "operation": operation,
+        "url": url,
+        "status_code": getattr(response, "status_code", None),
+        "response_text": _ypareo_safe_response_text(response, access_token),
+        "payload": _redact_ypareo_secrets(payload),
+        "trainee_id": trainee_id or "",
+        **_redact_ypareo_secrets(context),
+    }
+    log_method = app.logger.info if getattr(response, "ok", False) else app.logger.error
+    log_method("[YPAREO] réponse API %s", json.dumps(details, ensure_ascii=False, default=str))
+
+
+def _ypareo_api_error_message(response: Any, fallback: str, access_token: str = "") -> str:
+    """Extract a useful and secret-free API error for persistence and the admin UI."""
+    if response is None:
+        return fallback
     try:
         response_data = response.json()
     except (ValueError, requests.JSONDecodeError, AttributeError):
-        return fallback
+        response_data = None
     if isinstance(response_data, dict):
         for container in (response_data, response_data.get("data")):
             if not isinstance(container, dict):
@@ -476,8 +554,21 @@ def _ypareo_api_error_message(response: Any, fallback: str) -> str:
             for key in ("message", "error", "detail", "title"):
                 value = container.get(key)
                 if isinstance(value, str) and value.strip():
-                    return value.strip()[:1000]
-    return fallback
+                    safe_value = _ypareo_safe_response_text(
+                        type("YpareoErrorBody", (), {"text": value.strip()})(), access_token
+                    )
+                    return safe_value[:1000]
+
+    status_code = getattr(response, "status_code", "inconnu")
+    response_text = _ypareo_safe_response_text(response, access_token).strip() or "(réponse vide)"
+    return f"Erreur YPAREO HTTP {status_code} : réponse API {response_text}"[:1000]
+
+
+def _ypareo_detected_formation_name(session_obj: Dict[str, Any]) -> str:
+    """Return the local formation label used to resolve the YPAREO formation ID."""
+    return str(_ypareo_existing_value(
+        session_obj, "formation", "training_type", "title", "nom", "name"
+    ) or "")
 
 
 def creer_cursus_ypareo(
@@ -497,8 +588,9 @@ def creer_cursus_ypareo(
         stagiaire["ypareo_cursus_id"] = ""
         return False
 
+    quoted_id_personne = quote(str(id_personne), safe="")
     cursus_path = _ypareo_endpoint("YPAREO_CURSUS_ENDPOINT", YPAREO_CURSUS_ENDPOINT).format(
-        id_personne=quote(str(id_personne), safe="")
+        id_personne=quoted_id_personne, IdPersonne=quoted_id_personne
     )
     cursus_url = f"{_ypareo_base_url()}{cursus_path}"
     try:
@@ -511,21 +603,38 @@ def creer_cursus_ypareo(
                 json=payload,
                 timeout=YPAREO_REQUEST_TIMEOUT_SECONDS,
             )
+            _ypareo_log_api_response(
+                "POST /personne/{IdPersonne}/cursus",
+                response,
+                url=cursus_url,
+                payload=payload,
+                trainee_id=stagiaire.get("id"),
+                access_token=access_token,
+                idPersonne=id_personne,
+                nom_formation=_ypareo_detected_formation_name(session_obj),
+                idFormation=payload.get("idFormation", ""),
+            )
             if response.status_code != 401 or attempt == 1:
                 break
             _clear_ypareo_access_token_cache()
             access_token = get_ypareo_access_token()
 
         if response is None or not response.ok:
-            raise RuntimeError(_ypareo_api_error_message(response, YPAREO_CURSUS_ERROR_MESSAGE))
+            raise RuntimeError(
+                _ypareo_api_error_message(response, YPAREO_CURSUS_ERROR_MESSAGE, access_token)
+            )
         try:
             response_data = response.json()
         except (ValueError, requests.JSONDecodeError) as exc:
-            raise RuntimeError(YPAREO_CURSUS_ERROR_MESSAGE) from exc
+            raise RuntimeError(
+                _ypareo_api_error_message(response, YPAREO_CURSUS_ERROR_MESSAGE, access_token)
+            ) from exc
         response_body = response_data.get("data") if isinstance(response_data, dict) else None
         cursus_id = response_body.get("id") if isinstance(response_body, dict) else None
         if cursus_id is None or str(cursus_id).strip() == "":
-            raise RuntimeError(YPAREO_CURSUS_ERROR_MESSAGE)
+            raise RuntimeError(
+                _ypareo_api_error_message(response, YPAREO_CURSUS_ERROR_MESSAGE, access_token)
+            )
 
         stagiaire["ypareo_cursus_statut"] = "Créé"
         stagiaire["ypareo_cursus_id"] = cursus_id
@@ -539,8 +648,15 @@ def creer_cursus_ypareo(
         message = str(exc)
     except requests.RequestException as exc:
         app.logger.error(
-            "[YPAREO] appel cursus impossible trainee_id=%s erreur=%s",
-            stagiaire.get("id") or "", type(exc).__name__,
+            "[YPAREO] appel cursus impossible url=%s trainee_id=%s idPersonne=%s "
+            "nom_formation=%s idFormation=%s payload=%s erreur=%s",
+            cursus_url,
+            stagiaire.get("id") or "",
+            id_personne,
+            _ypareo_detected_formation_name(session_obj),
+            payload.get("idFormation", ""),
+            json.dumps(_redact_ypareo_secrets(payload), ensure_ascii=False, default=str),
+            type(exc).__name__,
         )
         message = YPAREO_CURSUS_ERROR_MESSAGE
     except (TypeError, ValueError) as exc:
@@ -576,6 +692,14 @@ def creer_apprenant_ypareo(
                 personne_url, headers=ypareo_headers(access_token), json=payload,
                 timeout=YPAREO_REQUEST_TIMEOUT_SECONDS,
             )
+            _ypareo_log_api_response(
+                "POST /personne",
+                response,
+                url=personne_url,
+                payload=payload,
+                trainee_id=stagiaire.get("id"),
+                access_token=access_token,
+            )
             if response.status_code != 401 or attempt == 1:
                 break
             app.logger.warning(
@@ -586,15 +710,21 @@ def creer_apprenant_ypareo(
             access_token = get_ypareo_access_token()
 
         if response is None or not response.ok:
-            raise RuntimeError(YPAREO_CREATION_ERROR_MESSAGE)
+            raise RuntimeError(
+                _ypareo_api_error_message(response, YPAREO_CREATION_ERROR_MESSAGE, access_token)
+            )
         try:
             response_data = response.json()
         except (ValueError, requests.JSONDecodeError) as exc:
-            raise RuntimeError(YPAREO_CREATION_ERROR_MESSAGE) from exc
+            raise RuntimeError(
+                _ypareo_api_error_message(response, YPAREO_CREATION_ERROR_MESSAGE, access_token)
+            ) from exc
         response_body = response_data.get("data") if isinstance(response_data, dict) else None
         ypareo_id = response_body.get("id") if isinstance(response_body, dict) else None
         if ypareo_id is None or str(ypareo_id).strip() == "":
-            raise RuntimeError(YPAREO_CREATION_ERROR_MESSAGE)
+            raise RuntimeError(
+                _ypareo_api_error_message(response, YPAREO_CREATION_ERROR_MESSAGE, access_token)
+            )
 
         stagiaire["ypareo_statut"] = "Créé"
         stagiaire["ypareo_id"] = ypareo_id
@@ -610,8 +740,11 @@ def creer_apprenant_ypareo(
         message = str(exc)
     except requests.RequestException as exc:
         app.logger.error(
-            "[YPAREO] appel de création impossible trainee_id=%s erreur=%s",
-            stagiaire.get("id") or "", type(exc).__name__,
+            "[YPAREO] appel de création impossible url=%s trainee_id=%s payload=%s erreur=%s",
+            personne_url,
+            stagiaire.get("id") or "",
+            json.dumps(_redact_ypareo_secrets(payload), ensure_ascii=False, default=str),
+            type(exc).__name__,
         )
         message = YPAREO_CREATION_ERROR_MESSAGE
     except Exception as exc:
