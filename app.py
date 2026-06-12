@@ -10217,6 +10217,7 @@ def admin_sessions():
             "jury_pending": jury_counts["pending"],
             "jury_present": jury_counts["present"],
             "jury_absent": jury_counts["absent"],
+            "aps_elearning_enabled": bool(s.get("aps_elearning_enabled")),
             "exclude_from_sales_tracking": bool(s.get("exclude_from_sales_tracking")),
         })
 
@@ -13540,6 +13541,7 @@ def admin_trainees(session_id: str):
         "exam_practice_date": _session_get(s, "exam_practice_date", ""),
         "practice_training_date": _session_get(s, "practice_training_date", ""),
         "ssiap_exam_date": _session_get(s, "ssiap_exam_date", ""),
+        "aps_elearning_enabled": bool(s.get("aps_elearning_enabled")),
         "prospects_comment": _session_get(s, "prospects_comment", ""),
     }
 
@@ -13907,6 +13909,7 @@ def api_create_session():
     practice_training_date = (payload.get("practice_training_date") or "").strip()
     ssiap_exam_date = (payload.get("ssiap_exam_date") or "").strip()
     exclude_from_sales_tracking = bool(payload.get("exclude_from_sales_tracking"))
+    aps_elearning_enabled = bool(payload.get("aps_elearning_enabled")) and training_type.upper().startswith("APS")
 
     if not name or not training_type:
         return jsonify({"ok": False, "error": "missing_name_or_training_type"}), 400
@@ -13923,6 +13926,7 @@ def api_create_session():
         "exam_practice_date": exam_practice_date,
         "practice_training_date": practice_training_date,
         "ssiap_exam_date": ssiap_exam_date,
+        "aps_elearning_enabled": aps_elearning_enabled,
         "exclude_from_sales_tracking": exclude_from_sales_tracking,
         "created_at": _now_iso(),
         "trainees": [],
@@ -13964,6 +13968,9 @@ def api_update_session(session_id: str):
 
     if "exclude_from_sales_tracking" in payload:
         s["exclude_from_sales_tracking"] = bool(payload.get("exclude_from_sales_tracking"))
+    if "aps_elearning_enabled" in payload:
+        training_type = (_session_get(s, "training_type", "") or "").strip().upper()
+        s["aps_elearning_enabled"] = bool(payload.get("aps_elearning_enabled")) and training_type.startswith("APS")
     if "cash_payment_alert_dismissed_key" in payload:
         s["cash_payment_alert_dismissed_key"] = (payload.get("cash_payment_alert_dismissed_key") or "").strip()
 
@@ -14486,6 +14493,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vtc_practice_exam_sms_ok",
         "vtc_exam_center",
         "vtc_real_training_dates",
+        "aps_elearning_login",
+        "aps_elearning_password",
 
     }
 
@@ -14495,6 +14504,10 @@ def api_update_trainee(session_id: str, trainee_id: str):
     send_vae_notification = True if payload.get("send_vae_notification", True) in (True, "true", "1", 1, "yes", "on") else False
     send_exam_fees_notification = True if payload.get("send_exam_fees_notification", True) in (True, "true", "1", 1, "yes", "on") else False
     send_elearning_notification = True if payload.get("send_elearning_notification", True) in (True, "true", "1", 1, "yes", "on") else False
+    aps_elearning_fields_enabled = (
+        (_session_get(s, "training_type", "") or "").strip().upper().startswith("APS")
+        and bool(s.get("aps_elearning_enabled"))
+    )
 
     if "vtc_book_sent_at" in payload:
         vtc_book_sent_payload = payload.get("vtc_book_sent_at")
@@ -14505,6 +14518,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
         if k in ("send_vae_notification", "send_exam_fees_notification", "send_elearning_notification"):
             continue
         if k not in allowed:
+            continue
+        if k in ("aps_elearning_login", "aps_elearning_password") and not aps_elearning_fields_enabled:
             continue
 
         if k == "ssiap_exam_status":
@@ -18563,6 +18578,14 @@ def public_trainee_space(token):
     show_vae = ("VAE" in (training_type or "").upper())
     show_professional_experience_sheet = _professional_experience_sheet_is_required(training_type, _session_get(s, "date_start", ""))
     show_vtc = ("VTC" in (training_type or "").upper())
+    is_aps_training = (training_type or "").strip().upper().startswith("APS")
+    aps_elearning_enabled = is_aps_training and bool(s.get("aps_elearning_enabled"))
+    aps_elearning_start_date = _session_start_date(s) if aps_elearning_enabled else None
+    aps_elearning_available = bool(
+        aps_elearning_enabled
+        and aps_elearning_start_date
+        and datetime.date.today() >= aps_elearning_start_date
+    )
 
     # ✅ persistance
     s["trainees"] = _session_trainees_list(s)
@@ -18581,6 +18604,8 @@ def public_trainee_space(token):
         show_vae=show_vae,
         show_professional_experience_sheet=show_professional_experience_sheet,
         show_vtc=show_vtc,
+        aps_elearning_enabled=aps_elearning_enabled,
+        aps_elearning_available=aps_elearning_available,
         dossier_ok=dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")),
         vae_required_docs_deposited=required_docs_are_deposited(t, training_type, _session_get(s, "date_start", "")),
         ssiap_exam_date=ssiap_exam_date,
@@ -19387,6 +19412,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         "exam_practice_date": _session_get(s, "exam_practice_date", ""),
         "practice_training_date": _session_get(s, "practice_training_date", ""),
         "ssiap_exam_date": _session_get(s, "ssiap_exam_date", ""),
+        "aps_elearning_enabled": bool(s.get("aps_elearning_enabled")),
     }
 
     trainees = _session_trainees_list(s)

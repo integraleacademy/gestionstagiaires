@@ -749,8 +749,9 @@
             data-exam-date="{{ s.exam_date }}"
             data-exam-theory-date="{{ s.exam_theory_date }}"
             data-exam-practice-date="{{ s.exam_practice_date }}"
-            data-practice-training-date="{{ s.practice_training_date }}">
-      Modifier les dates
+            data-practice-training-date="{{ s.practice_training_date }}"
+            data-aps-elearning-enabled="{{ '1' if s.aps_elearning_enabled else '0' }}">
+      Modifier la session
     </button>
     <button class="btn btn-outline" data-archive-session="{{ s.id }}" aria-label="Archiver">📦</button>
 
@@ -816,6 +817,13 @@
         <label id="practiceTrainingField" style="display:none;">
           <div class="label">Date formation pratique</div>
           <input id="practiceTrainingDate" type="date">
+        </label>
+        <label id="apsElearningField" style="display:none;grid-column:1/-1;">
+          <span style="display:flex;align-items:center;gap:10px;font-weight:800;">
+            <input id="apsElearningEnabled" type="checkbox" style="width:auto;">
+            E-learning
+          </span>
+          <span class="hint">Une partie de cette formation APS se déroule en e-learning.</span>
         </label>
       </div>
     </div>
@@ -965,7 +973,7 @@
 <div class="modal-backdrop" id="editSessionModal" aria-hidden="true">
   <div class="modal">
     <div class="modal-head">
-      <div class="modal-title">Modifier les dates</div>
+      <div class="modal-title">Modifier la session</div>
       <button class="icon-btn" data-close-modal="editSessionModal">✕</button>
     </div>
 
@@ -1001,6 +1009,13 @@
         <label id="editPracticeTrainingField" style="display:none;">
           <div class="label">Date formation pratique</div>
           <input id="editPracticeTrainingDate" type="date">
+        </label>
+        <label id="editApsElearningField" style="display:none;grid-column:1/-1;">
+          <span style="display:flex;align-items:center;gap:10px;font-weight:800;">
+            <input id="editApsElearningEnabled" type="checkbox" style="width:auto;">
+            E-learning
+          </span>
+          <span class="hint">Active les identifiants e-learning sur les fiches des stagiaires APS.</span>
         </label>
       </div>
     </div>
@@ -1409,12 +1424,16 @@
     const examTheoryField = document.getElementById("examTheoryField");
     const examPracticeField = document.getElementById("examPracticeField");
     const practiceTrainingField = document.getElementById("practiceTrainingField");
+    const apsElearningField = document.getElementById("apsElearningField");
     const isVtc = type.includes("VTC");
+    const isAps = type.startsWith("APS");
 
     if(examDateField) examDateField.style.display = isVtc ? "none" : "";
     if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
     if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
     if(practiceTrainingField) practiceTrainingField.style.display = isVtc ? "" : "none";
+    if(apsElearningField) apsElearningField.style.display = isAps ? "" : "none";
+    if(!isAps) document.getElementById("apsElearningEnabled").checked = false;
   }
 
   document.getElementById("sessionType")?.addEventListener("change", toggleExamFields);
@@ -1428,12 +1447,15 @@
     const examTheoryField = document.getElementById("editExamTheoryField");
     const examPracticeField = document.getElementById("editExamPracticeField");
     const practiceTrainingField = document.getElementById("editPracticeTrainingField");
+    const apsElearningField = document.getElementById("editApsElearningField");
     const isVtc = type.includes("VTC");
+    const isAps = type.startsWith("APS");
 
     if(examDateField) examDateField.style.display = isVtc ? "none" : "";
     if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
     if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
     if(practiceTrainingField) practiceTrainingField.style.display = isVtc ? "" : "none";
+    if(apsElearningField) apsElearningField.style.display = isAps ? "" : "none";
   }
 
   // create session
@@ -1446,6 +1468,7 @@
     const exam_theory_date = (document.getElementById("examTheoryDate")?.value || "").trim();
     const exam_practice_date = (document.getElementById("examPracticeDate")?.value || "").trim();
     const practice_training_date = (document.getElementById("practiceTrainingDate")?.value || "").trim();
+    const aps_elearning_enabled = !!document.getElementById("apsElearningEnabled")?.checked;
 
     if(!name || !training_type){
       alert("Nom + type de formation obligatoires");
@@ -1467,7 +1490,8 @@
           exam_date,
           exam_theory_date,
           exam_practice_date,
-          practice_training_date
+          practice_training_date,
+          aps_elearning_enabled
         })
       });
 
@@ -1497,6 +1521,7 @@
       document.getElementById("editExamTheoryDate").value = btn.getAttribute("data-exam-theory-date") || "";
       document.getElementById("editExamPracticeDate").value = btn.getAttribute("data-exam-practice-date") || "";
       document.getElementById("editPracticeTrainingDate").value = btn.getAttribute("data-practice-training-date") || "";
+      document.getElementById("editApsElearningEnabled").checked = btn.getAttribute("data-aps-elearning-enabled") === "1";
 
       toggleEditExamFields(trainingType);
       openModal("editSessionModal");
@@ -1518,7 +1543,8 @@
           exam_date: (document.getElementById("editExamDate").value || "").trim(),
           exam_theory_date: (document.getElementById("editExamTheoryDate").value || "").trim(),
           exam_practice_date: (document.getElementById("editExamPracticeDate").value || "").trim(),
-          practice_training_date: (document.getElementById("editPracticeTrainingDate").value || "").trim()
+          practice_training_date: (document.getElementById("editPracticeTrainingDate").value || "").trim(),
+          aps_elearning_enabled: !!document.getElementById("editApsElearningEnabled")?.checked
         })
       });
       const res = await r.json();
