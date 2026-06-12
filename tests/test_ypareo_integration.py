@@ -738,6 +738,33 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         self.assertIn("Créé automatiquement avec la personne", html)
         self.assertEqual(html.count('action="/admin/sessions/S1/trainees/T1/ypareo"'), 1)
 
+    def test_legacy_person_retry_also_recreates_person_and_cursus(self):
+        trainee = self.data["sessions"][0]["trainees"][0]
+
+        def fake_complete_creation(target, session_obj):
+            self.assertIs(target, trainee)
+            self.assertIs(session_obj, self.data["sessions"][0])
+            target["ypareo_id"] = "YP-LEGACY-NEW"
+            target["ypareo_statut"] = "Créé"
+            target["ypareo_erreur"] = ""
+            target["ypareo_cursus_statut"] = "Créé"
+            target["ypareo_cursus_id"] = "CURSUS-LEGACY-NEW"
+            target["ypareo_cursus_erreur"] = ""
+            return True
+
+        with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
+            gestion_app, "save_data"
+        ) as save, patch.object(
+            gestion_app, "creer_apprenant_ypareo", side_effect=fake_complete_creation
+        ) as create:
+            response = self.client.post("/admin/sessions/S1/trainees/T1/ypareo/personne")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(trainee["ypareo_id"], "YP-LEGACY-NEW")
+        self.assertEqual(trainee["ypareo_cursus_id"], "CURSUS-LEGACY-NEW")
+        create.assert_called_once_with(trainee, self.data["sessions"][0])
+        save.assert_called_once_with(self.data)
+
     def test_complete_retry_recreates_person_and_cursus_in_one_request(self):
         trainee = self.data["sessions"][0]["trainees"][0]
         trainee.update({
