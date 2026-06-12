@@ -14116,9 +14116,8 @@ def api_create_trainee(session_id: str):
     s.pop("stagiaires", None)
     save_data(data)
 
-    # L'inscription locale est déjà persistée : une panne YPAREO ne peut pas l'annuler.
-    creer_apprenant_ypareo(t, s)
-    save_data(data)
+    # La transmission YPAREO est proposée séparément dans l'interface après
+    # la création locale, afin de toujours demander l'accord de l'utilisateur.
 
     # ✅ ENVOI MAIL + SMS à la création (optionnel)
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}"
@@ -14232,6 +14231,7 @@ def api_create_trainee(session_id: str):
         "access_email_ok": email_ok,
         "access_sms_ok": sms_ok,
         "public_link": link,
+        "ypareo_url": url_for("admin_send_trainee_to_ypareo", session_id=session_id, trainee_id=trainee_id),
         "summary_url": url_for("admin_trainee_summary", session_id=session_id, trainee_id=trainee_id)
     })
 
@@ -14249,17 +14249,35 @@ def admin_send_trainee_to_ypareo(session_id: str, trainee_id: str):
     if not trainee:
         abort(404)
 
-    if creer_apprenant_ypareo(trainee, trainee_session):
-        if trainee.get("ypareo_cursus_statut") == "Créé":
-            flash("Personne et cursus créés dans YPAREO.", "success")
-        else:
-            flash("Personne créée dans YPAREO, mais le cursus est en erreur.", "error")
+    person_created = creer_apprenant_ypareo(trainee, trainee_session)
+    cursus_created = trainee.get("ypareo_cursus_statut") == "Créé"
+    success = bool(person_created and cursus_created)
+
+    if success:
+        message = "Données transférées vers YPAREO NEO avec succès"
+        flash(message, "success")
     else:
-        flash(f"Envoi YPAREO impossible : {trainee.get('ypareo_erreur') or 'erreur inconnue'}", "error")
+        reason = (
+            trainee.get("ypareo_cursus_erreur")
+            if person_created and not cursus_created
+            else trainee.get("ypareo_erreur")
+        ) or "Erreur inconnue lors de la transmission"
+        message = str(reason)
+        flash(f"Transmission vers YPAREO NEO impossible : {message}", "error")
 
     trainee_session["trainees"] = _session_trainees_list(trainee_session)
     trainee_session.pop("stagiaires", None)
     save_data(data)
+
+    if request.accept_mimetypes.best == "application/json":
+        return jsonify({
+            "ok": success,
+            "message": "Données transférées vers YPAREO NEO avec succès" if success else "",
+            "error": "" if success else message,
+            "ypareo_id": trainee.get("ypareo_id") or "",
+            "ypareo_cursus_id": trainee.get("ypareo_cursus_id") or "",
+        }), 200 if success else 422
+
     return redirect(url_for("admin_trainees", session_id=session_id))
 
 
