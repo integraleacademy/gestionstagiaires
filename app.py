@@ -10468,14 +10468,8 @@ def admin_delete_wedof_entry(entry_id: str):
         _save_wedof_webhooks(filtered)
     return redirect(url_for("admin_wedof_requests"))
 
-@app.post("/api/send-to-salesforce/<entry_id>")
-@admin_login_required
-@admin_write_required
-def send_wedof_to_salesforce(entry_id: str):
-    entries = _load_wedof_webhooks()
-    entry = next((item for item in entries if str(item.get("id") or "") == str(entry_id)), None)
-    if entry is None:
-        return jsonify({"ok": False, "error": "Demande introuvable."}), 404
+def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
+    entry_id = str(entry.get("id") or "")
     payload = entry.get("payload") if isinstance(entry.get("payload"), dict) else {}
     attendee = payload.get("attendee") if isinstance(payload.get("attendee"), dict) else {}
     training = payload.get("trainingActionInfo") if isinstance(payload.get("trainingActionInfo"), dict) else {}
@@ -10526,8 +10520,6 @@ def send_wedof_to_salesforce(entry_id: str):
     if not last_name:
         last_name = "Nom inconnu"
     company = "Intégrale Academy"
-    if not company:
-        company = "Intégrale Academy"
 
     salesforce_payload = {
         "oid": "00DJ9000000PT9F",
@@ -10548,6 +10540,23 @@ def send_wedof_to_salesforce(entry_id: str):
         "00NSa00000GcKVx": str(entry.get("raw_payload") or "")[:3000],
         "00NSa00000GcKxN": training_date,
     }
+    attempted_at = _now_iso()
+    entry["salesforce_last_attempt_at"] = attempted_at
+    entry.pop("salesforce_last_error", None)
+
+    has_required_contact = bool(email or phone)
+    if not has_required_contact:
+        error = "Email ou téléphone manquant : envoi Salesforce impossible."
+        entry["salesforce_last_error"] = error
+        app.logger.warning("[SALESFORCE] envoi ignoré id=%s: %s", entry_id, error)
+        return {
+            "success": False,
+            "salesforce_status": 0,
+            "payload_sent": salesforce_payload,
+            "salesforce_response_preview": "",
+            "error": error,
+        }, 422
+
     app.logger.info(
         "[SALESFORCE] préparation envoi id=%s first_name=%s last_name=%s email=%s phone=%s company=%s lead_source=%s payload=%s",
         entry_id,
@@ -10567,8 +10576,16 @@ def send_wedof_to_salesforce(entry_id: str):
             timeout=20,
         )
     except Exception:
+        error = "Erreur réseau lors de l'envoi Salesforce."
+        entry["salesforce_last_error"] = error
         app.logger.exception("[SALESFORCE] erreur d'envoi Web-to-Lead")
-        return jsonify({"success": False, "salesforce_status": 0, "payload_sent": salesforce_payload, "salesforce_response_preview": "", "error": "Erreur réseau lors de l'envoi Salesforce."}), 502
+        return {
+            "success": False,
+            "salesforce_status": 0,
+            "payload_sent": salesforce_payload,
+            "salesforce_response_preview": "",
+            "error": error,
+        }, 502
 
     response_preview = (sf_response.text or "")[:500]
     app.logger.info(
@@ -10579,33 +10596,44 @@ def send_wedof_to_salesforce(entry_id: str):
         response_preview,
     )
 
-    has_required_contact = bool((email or "").strip() or (phone or "").strip())
-    minimum_payload_ok = bool((last_name or "").strip() and (company or "").strip() and has_required_contact)
-    success = bool(sf_response.status_code == 200 and minimum_payload_ok)
-
-    if not success:
-        return jsonify({
+    if sf_response.status_code != 200:
+        error = f"Salesforce a répondu {sf_response.status_code}. Vérifiez les champs obligatoires et la réponse."
+        entry["salesforce_last_error"] = error
+        return {
             "success": False,
             "salesforce_status": sf_response.status_code,
             "payload_sent": salesforce_payload,
             "salesforce_response_preview": response_preview,
-            "error": f"Salesforce a répondu {sf_response.status_code}. Vérifiez les champs obligatoires et la réponse.",
-        }), 502
+            "error": error,
+        }, 502
 
-    now_iso = _now_iso()
     entry["salesforce_sent"] = True
-    entry["salesforce_sent_at"] = now_iso
+    entry["salesforce_sent_at"] = attempted_at
     entry["salesforce_send_count"] = int(entry.get("salesforce_send_count") or 0) + 1
-    _save_wedof_webhooks(entries)
-    return jsonify({
+    return {
         "success": True,
         "salesforce_status": sf_response.status_code,
         "payload_sent": salesforce_payload,
         "salesforce_response_preview": response_preview,
         "salesforce_sent": True,
-        "salesforce_sent_at": now_iso,
+        "salesforce_sent_at": attempted_at,
         "salesforce_send_count": entry["salesforce_send_count"],
-    }), 200
+    }, 200
+
+
+@app.post("/api/send-to-salesforce/<entry_id>")
+@admin_login_required
+@admin_write_required
+def send_wedof_to_salesforce(entry_id: str):
+    entries = _load_wedof_webhooks()
+    entry = next((item for item in entries if str(item.get("id") or "") == str(entry_id)), None)
+    if entry is None:
+        return jsonify({"ok": False, "error": "Demande introuvable."}), 404
+
+    result, status_code = _send_wedof_entry_to_salesforce(entry)
+    _save_wedof_webhooks(entries)
+    return jsonify(result), status_code
+
 
 @app.route("/api/webhooks/wedof", methods=["POST"])
 def wedof_webhook():
@@ -10695,6 +10723,14 @@ def wedof_webhook():
             "signature_valid": bool(sig_valid),
         }
         entries.insert(0, entry)
+        salesforce_result, salesforce_status = _send_wedof_entry_to_salesforce(entry)
+        if not salesforce_result.get("success"):
+            app.logger.warning(
+                "[WEDOF WEBHOOK] envoi Salesforce automatique échoué id=%s status=%s error=%s",
+                entry.get("id"),
+                salesforce_status,
+                salesforce_result.get("error") or "erreur inconnue",
+            )
         _save_wedof_webhooks(entries)
 
         merged_payload = payload.copy() if isinstance(payload, dict) else {}
@@ -14100,9 +14136,8 @@ def api_create_trainee(session_id: str):
     s.pop("stagiaires", None)
     save_data(data)
 
-    # L'inscription locale est déjà persistée : une panne YPAREO ne peut pas l'annuler.
-    creer_apprenant_ypareo(t, s)
-    save_data(data)
+    # La transmission YPAREO est proposée séparément dans l'interface après
+    # la création locale, afin de toujours demander l'accord de l'utilisateur.
 
     # ✅ ENVOI MAIL + SMS à la création (optionnel)
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}"
@@ -14216,6 +14251,7 @@ def api_create_trainee(session_id: str):
         "access_email_ok": email_ok,
         "access_sms_ok": sms_ok,
         "public_link": link,
+        "ypareo_url": url_for("admin_send_trainee_to_ypareo", session_id=session_id, trainee_id=trainee_id),
         "summary_url": url_for("admin_trainee_summary", session_id=session_id, trainee_id=trainee_id)
     })
 
@@ -14233,17 +14269,35 @@ def admin_send_trainee_to_ypareo(session_id: str, trainee_id: str):
     if not trainee:
         abort(404)
 
-    if creer_apprenant_ypareo(trainee, trainee_session):
-        if trainee.get("ypareo_cursus_statut") == "Créé":
-            flash("Personne et cursus créés dans YPAREO.", "success")
-        else:
-            flash("Personne créée dans YPAREO, mais le cursus est en erreur.", "error")
+    person_created = creer_apprenant_ypareo(trainee, trainee_session)
+    cursus_created = trainee.get("ypareo_cursus_statut") == "Créé"
+    success = bool(person_created and cursus_created)
+
+    if success:
+        message = "Données transférées vers YPAREO NEO avec succès"
+        flash(message, "success")
     else:
-        flash(f"Envoi YPAREO impossible : {trainee.get('ypareo_erreur') or 'erreur inconnue'}", "error")
+        reason = (
+            trainee.get("ypareo_cursus_erreur")
+            if person_created and not cursus_created
+            else trainee.get("ypareo_erreur")
+        ) or "Erreur inconnue lors de la transmission"
+        message = str(reason)
+        flash(f"Transmission vers YPAREO NEO impossible : {message}", "error")
 
     trainee_session["trainees"] = _session_trainees_list(trainee_session)
     trainee_session.pop("stagiaires", None)
     save_data(data)
+
+    if request.accept_mimetypes.best == "application/json":
+        return jsonify({
+            "ok": success,
+            "message": "Données transférées vers YPAREO NEO avec succès" if success else "",
+            "error": "" if success else message,
+            "ypareo_id": trainee.get("ypareo_id") or "",
+            "ypareo_cursus_id": trainee.get("ypareo_cursus_id") or "",
+        }), 200 if success else 422
+
     return redirect(url_for("admin_trainees", session_id=session_id))
 
 

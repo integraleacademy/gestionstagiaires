@@ -44,6 +44,8 @@ python app.py
 - Endpoint webhook: `POST /api/webhooks/wedof`
 - URL Render à configurer côté WeDoF: `https://gestionstagiaires-r5no.onrender.com/api/webhooks/wedof`
 - Historique webhook persisté dans `PERSIST_DIR/wedof_webhooks.json`
+- Chaque nouvelle demande exploitable est envoyée automatiquement à Salesforce lors de la réception du webhook. En cas d'échec, la demande reste enregistrée et l'interface admin permet de relancer l'envoi.
+- L'action **Notifier** (mail/SMS au candidat) reste volontairement manuelle dans l'interface admin.
 
 ## Module VAE DESP
 
