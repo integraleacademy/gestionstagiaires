@@ -75,7 +75,7 @@ class YpareoPayloadTests(unittest.TestCase):
                     "indicatif": "+33",
                     "isDefaultAppel": True,
                     "isDefaultSms": True,
-                    "numero": "0612345678",
+                    "numero": "612345678",
                 }],
                 "villeNaissance": "Lyon",
                 "departementNaissance": "69",
@@ -83,6 +83,32 @@ class YpareoPayloadTests(unittest.TestCase):
                 "isRqth": False,
             },
         )
+
+    def test_construire_payload_normalizes_french_phone_for_ypareo(self):
+        phone_numbers = [
+            "+33749424742",
+            "0033749424742",
+            "0749424742",
+            "07 49 42 47 42",
+            "07.49.42.47.42",
+            "07-49-42-47-42",
+            "(+33) 7 49 42 47 42",
+            "+33 (0)7 49 42 47 42",
+        ]
+
+        for phone_number in phone_numbers:
+            with self.subTest(phone_number=phone_number):
+                payload = gestion_app.construire_payload_apprenant({"phone": phone_number})
+
+                self.assertEqual(
+                    payload["telephones"],
+                    [{
+                        "indicatif": "+33",
+                        "isDefaultAppel": True,
+                        "isDefaultSms": True,
+                        "numero": "749424742",
+                    }],
+                )
 
     def test_construire_payload_omits_empty_contact_containers_and_fixed_values(self):
         payload = gestion_app.construire_payload_apprenant({"last_name": "DUPONT", "first_name": "Léa"})
