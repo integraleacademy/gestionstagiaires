@@ -3542,18 +3542,9 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     openModal("ypareoModal");
   }
 
-  function startManualYpareoTransmission({url, continueUrl}){
-    ypareoRequestUrl = url || "";
-    ypareoContinueUrl = continueUrl || window.location.href;
-    ypareoTransmissionAuthorized = true;
-    ypareoTransmissionPending = false;
-    openModal("ypareoModal");
-    transmitToYpareo();
-  }
-
   async function transmitToYpareo(){
-    // Après une création, cette autorisation ne passe à true qu'au clic explicite
-    // sur « Oui, transmettre ». Cela empêche tout départ prématuré de la requête.
+    // Quel que soit le point d'entrée (création ou bouton manuel), l'autorisation
+    // ne passe à true qu'après le clic explicite sur « Oui, transmettre ».
     if(!ypareoTransmissionAuthorized || ypareoTransmissionPending || !ypareoRequestUrl) return;
     ypareoTransmissionPending = true;
     setYpareoState("loading");
@@ -3585,7 +3576,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
   document.querySelectorAll(".ypareo-send-form").forEach(form=>{
     form.addEventListener("submit", event=>{
       event.preventDefault();
-      startManualYpareoTransmission({url: form.action, continueUrl: window.location.href});
+      openYpareoConfirmation({url: form.action, continueUrl: window.location.href});
     });
   });
 
