@@ -578,7 +578,7 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         self.assertIn("Personne YPAREO", detail_html)
         self.assertIn("Cursus YPAREO", detail_html)
         self.assertIn("Erreur API", detail_html)
-        self.assertIn("Relancer la création de la personne YPAREO", detail_html)
+        self.assertIn("Relancer la création de la personne et du cursus YPAREO", detail_html)
         self.assertIn('/admin/sessions/S1/trainees/T1/ypareo', detail_html)
         self.assertLess(detail_html.index('id="ypareoHubTitle"'), detail_html.index("Visibilité espace stagiaire"))
         self.assertIn('await createTrainee(sendAccess)', list_html)
@@ -678,7 +678,7 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
             for message in flashed_messages
         ))
 
-    def test_existing_ypareo_id_displays_cursus_retry_on_trainee_detail(self):
+    def test_existing_ypareo_error_displays_one_complete_retry_action(self):
         trainee = self.data["sessions"][0]["trainees"][0]
         trainee.update({
             "ypareo_id": "YP-DELETED",
@@ -694,13 +694,13 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
 
         html = response.get_data(as_text=True)
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Créer le cursus YPAREO", html)
-        self.assertIn('action="/admin/sessions/S1/trainees/T1/ypareo/cursus"', html)
-        self.assertIn("Relancer la création de la personne YPAREO", html)
-        self.assertIn("Crée une nouvelle personne YPAREO et réinitialise le cursus associé.", html)
-        self.assertIn('action="/admin/sessions/S1/trainees/T1/ypareo/personne"', html)
+        self.assertIn("Relancer la création de la personne et du cursus YPAREO", html)
+        self.assertIn("Une seule action crée la fiche apprenant puis son inscription à la formation.", html)
+        self.assertEqual(html.count('action="/admin/sessions/S1/trainees/T1/ypareo"'), 1)
+        self.assertNotIn('action="/admin/sessions/S1/trainees/T1/ypareo/personne"', html)
+        self.assertNotIn('action="/admin/sessions/S1/trainees/T1/ypareo/cursus"', html)
 
-    def test_person_retry_is_available_even_when_sync_is_complete(self):
+    def test_complete_sync_displays_one_complete_retry_action(self):
         trainee = self.data["sessions"][0]["trainees"][0]
         trainee.update({
             "ypareo_id": "YP-EXISTING",
@@ -719,10 +719,26 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertEqual(response.status_code, 200)
         self.assertIn("Synchronisation complète", html)
-        self.assertIn("Relancer la création de la personne YPAREO", html)
-        self.assertIn('action="/admin/sessions/S1/trainees/T1/ypareo/personne"', html)
+        self.assertIn("Relancer la création de la personne et du cursus YPAREO", html)
+        self.assertEqual(html.count('action="/admin/sessions/S1/trainees/T1/ypareo"'), 1)
 
-    def test_person_retry_recreates_only_person_and_resets_cursus(self):
+    def test_initial_sync_displays_one_person_and_cursus_creation_action(self):
+        trainee = self.data["sessions"][0]["trainees"][0]
+        trainee["ypareo_statut"] = "Non envoyé"
+        trainee["ypareo_erreur"] = ""
+
+        with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
+            gestion_app, "save_data"
+        ):
+            response = self.client.get("/admin/sessions/S1/stagiaires/T1")
+
+        html = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Créer la personne et le cursus YPAREO", html)
+        self.assertIn("Créé automatiquement avec la personne", html)
+        self.assertEqual(html.count('action="/admin/sessions/S1/trainees/T1/ypareo"'), 1)
+
+    def test_complete_retry_recreates_person_and_cursus_in_one_request(self):
         trainee = self.data["sessions"][0]["trainees"][0]
         trainee.update({
             "ypareo_id": "YP-DELETED",
@@ -732,58 +748,29 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
             "ypareo_cursus_erreur": "La personne n'existe plus dans YPAREO",
         })
 
-        def fake_person_creation(target, session_obj=None):
+        def fake_complete_creation(target, session_obj):
             self.assertIs(target, trainee)
-            self.assertIsNone(session_obj)
+            self.assertIs(session_obj, self.data["sessions"][0])
             target["ypareo_id"] = "YP-NEW"
             target["ypareo_statut"] = "Créé"
             target["ypareo_erreur"] = ""
-            return True
-
-        with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
-            gestion_app, "save_data"
-        ) as save, patch.object(
-            gestion_app, "creer_apprenant_ypareo", side_effect=fake_person_creation
-        ) as create:
-            response = self.client.post("/admin/sessions/S1/trainees/T1/ypareo/personne")
-
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(response.headers["Location"].endswith("/admin/sessions/S1/stagiaires/T1"))
-        self.assertEqual(trainee["ypareo_id"], "YP-NEW")
-        self.assertEqual(trainee["ypareo_cursus_statut"], "Non envoyé")
-        self.assertEqual(trainee["ypareo_cursus_id"], "")
-        self.assertEqual(trainee["ypareo_cursus_erreur"], "")
-        create.assert_called_once_with(trainee)
-        save.assert_called_once_with(self.data)
-
-    def test_existing_ypareo_person_can_open_detail_and_create_cursus(self):
-        trainee = self.data["sessions"][0]["trainees"][0]
-        trainee["ypareo_id"] = "YP-EXISTING"
-
-        def fake_cursus(id_personne, target, session_obj):
-            self.assertEqual(id_personne, "YP-EXISTING")
-            self.assertIs(target, trainee)
-            self.assertEqual(session_obj["id"], "S1")
             target["ypareo_cursus_statut"] = "Créé"
-            target["ypareo_cursus_id"] = "CURSUS-99"
+            target["ypareo_cursus_id"] = "CURSUS-NEW"
             target["ypareo_cursus_erreur"] = ""
             return True
 
         with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
             gestion_app, "save_data"
-        ) as save, patch.object(gestion_app, "creer_cursus_ypareo", side_effect=fake_cursus) as create:
-            page = self.client.get("/admin/sessions/S1/stagiaires/T1")
-            save.reset_mock()
-            response = self.client.post("/admin/sessions/S1/trainees/T1/ypareo/cursus")
+        ) as save, patch.object(
+            gestion_app, "creer_apprenant_ypareo", side_effect=fake_complete_creation
+        ) as create:
+            response = self.client.post("/admin/sessions/S1/trainees/T1/ypareo")
 
-        page_html = page.get_data(as_text=True)
-        self.assertEqual(page.status_code, 200)
-        self.assertIn("Créer le cursus YPAREO", page_html)
-        self.assertIn('action="/admin/sessions/S1/trainees/T1/ypareo/cursus"', page_html)
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response.headers["Location"].endswith("/admin/sessions/S1/stagiaires/T1"))
-        self.assertEqual(trainee["ypareo_cursus_id"], "CURSUS-99")
-        create.assert_called_once_with("YP-EXISTING", trainee, self.data["sessions"][0])
+        self.assertEqual(trainee["ypareo_id"], "YP-NEW")
+        self.assertEqual(trainee["ypareo_cursus_id"], "CURSUS-NEW")
+        create.assert_called_once_with(trainee, self.data["sessions"][0])
         save.assert_called_once_with(self.data)
 
 
