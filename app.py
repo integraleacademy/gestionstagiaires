@@ -14251,10 +14251,8 @@ def api_create_trainee(session_id: str):
     })
 
 
-@app.post("/admin/sessions/<session_id>/trainees/<trainee_id>/ypareo")
-@admin_login_required
-@admin_write_required
-def admin_send_trainee_to_ypareo(session_id: str, trainee_id: str):
+def _admin_sync_trainee_to_ypareo(session_id: str, trainee_id: str):
+    """Synchronize both the YPAREO person and cursus for a local trainee."""
     data = load_data()
     trainee_session = find_session(data, session_id)
     if not trainee_session:
@@ -14296,35 +14294,19 @@ def admin_send_trainee_to_ypareo(session_id: str, trainee_id: str):
     return redirect(url_for("admin_trainees", session_id=session_id))
 
 
+@app.post("/admin/sessions/<session_id>/trainees/<trainee_id>/ypareo")
+@admin_login_required
+@admin_write_required
+def admin_send_trainee_to_ypareo(session_id: str, trainee_id: str):
+    return _admin_sync_trainee_to_ypareo(session_id, trainee_id)
+
+
 @app.post("/admin/sessions/<session_id>/trainees/<trainee_id>/ypareo/cursus")
 @admin_login_required
 @admin_write_required
 def admin_create_trainee_ypareo_cursus(session_id: str, trainee_id: str):
-    data = load_data()
-    trainee_session = find_session(data, session_id)
-    if not trainee_session:
-        abort(404)
-    trainee = find_trainee(trainee_session, trainee_id)
-    if not trainee:
-        abort(404)
-
-    id_personne = trainee.get("ypareo_id")
-    if not id_personne:
-        trainee["ypareo_cursus_statut"] = "Non envoyé"
-        trainee["ypareo_cursus_erreur"] = "La personne doit d'abord être créée dans YPAREO"
-        flash("Impossible de créer le cursus : personne YPAREO absente.", "error")
-    elif creer_cursus_ypareo(id_personne, trainee, trainee_session):
-        flash("Cursus créé dans YPAREO.", "success")
-    else:
-        flash(
-            f"Création du cursus YPAREO impossible : {trainee.get('ypareo_cursus_erreur') or 'erreur inconnue'}",
-            "error",
-        )
-
-    trainee_session["trainees"] = _session_trainees_list(trainee_session)
-    trainee_session.pop("stagiaires", None)
-    save_data(data)
-    return redirect(url_for("admin_trainees", session_id=session_id))
+    """Keep the former cursus URL compatible while performing a complete sync."""
+    return _admin_sync_trainee_to_ypareo(session_id, trainee_id)
 
 
 @app.post("/api/trainees/import_from_image")

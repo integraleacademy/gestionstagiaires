@@ -570,8 +570,9 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('<th class="col-ypareo">YPAREO</th>', html)
         self.assertIn("Erreur", html)
-        self.assertIn("Envoyer vers YPAREO", html)
+        self.assertIn("Synchroniser avec YPAREO", html)
         self.assertIn('/admin/sessions/S1/trainees/T1/ypareo', html)
+        self.assertNotIn("Créer cursus YPAREO", html)
         self.assertIn("Souhaitez-vous transmettre les données à YPAREO NEO ?", html)
         self.assertIn("Données en cours de transmission vers YPAREO NEO", html)
         self.assertIn("Données transférées vers YPAREO NEO avec succès", html)
@@ -677,29 +678,52 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
             for message in flashed_messages
         ))
 
-    def test_manual_cursus_button_and_route_only_create_cursus(self):
+    def test_existing_ypareo_id_still_displays_complete_sync_button(self):
         trainee = self.data["sessions"][0]["trainees"][0]
-        trainee["ypareo_id"] = "YP-99"
+        trainee.update({
+            "ypareo_id": "YP-DELETED",
+            "ypareo_statut": "Créé",
+            "ypareo_cursus_statut": "Erreur",
+            "ypareo_cursus_erreur": "La personne n'existe plus dans YPAREO",
+        })
 
-        def fake_cursus(id_personne, target, session_obj):
-            self.assertEqual(id_personne, "YP-99")
+        with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
+            gestion_app, "save_data"
+        ):
+            response = self.client.get("/admin/sessions/S1/trainees")
+
+        html = response.get_data(as_text=True)
+        self.assertIn("Synchroniser avec YPAREO", html)
+        self.assertIn('action="/admin/sessions/S1/trainees/T1/ypareo"', html)
+        self.assertNotIn("Créer cursus YPAREO", html)
+        self.assertNotIn('action="/admin/sessions/S1/trainees/T1/ypareo/cursus"', html)
+
+    def test_legacy_cursus_route_now_synchronizes_person_and_cursus(self):
+        trainee = self.data["sessions"][0]["trainees"][0]
+        trainee["ypareo_id"] = "YP-DELETED"
+
+        def fake_sync(target, session_obj):
+            self.assertEqual(target["ypareo_id"], "YP-DELETED")
             self.assertEqual(session_obj["id"], "S1")
+            target["ypareo_statut"] = "Créé"
+            target["ypareo_id"] = "YP-NEW"
+            target["ypareo_erreur"] = ""
             target["ypareo_cursus_statut"] = "Créé"
-            target["ypareo_cursus_id"] = "CURSUS-99"
+            target["ypareo_cursus_id"] = "CURSUS-NEW"
             target["ypareo_cursus_erreur"] = ""
             return True
 
         with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
             gestion_app, "save_data"
-        ) as save, patch.object(gestion_app, "creer_cursus_ypareo", side_effect=fake_cursus) as create:
-            page = self.client.get("/admin/sessions/S1/trainees")
-            save.reset_mock()
+        ) as save, patch.object(
+            gestion_app, "creer_apprenant_ypareo", side_effect=fake_sync
+        ) as sync:
             response = self.client.post("/admin/sessions/S1/trainees/T1/ypareo/cursus")
 
-        self.assertIn("Créer cursus YPAREO", page.get_data(as_text=True))
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(trainee["ypareo_cursus_id"], "CURSUS-99")
-        create.assert_called_once()
+        self.assertEqual(trainee["ypareo_id"], "YP-NEW")
+        self.assertEqual(trainee["ypareo_cursus_id"], "CURSUS-NEW")
+        sync.assert_called_once_with(trainee, self.data["sessions"][0])
         save.assert_called_once_with(self.data)
 
 
