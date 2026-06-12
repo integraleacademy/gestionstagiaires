@@ -19161,6 +19161,8 @@ def admin_trainee_page(session_id: str, trainee_id: str):
     if not t:
         abort(404)
 
+    _remember_admin_trainee_consultation(session_id, trainee_id)
+
     training_type = session_view["training_type"]
     _sync_trainee_afc_medical_requirement(t, session_view["name"])
     default_price = default_training_price(training_type)
@@ -19907,52 +19909,96 @@ def public_docs_to_control():
     return resp
 
 
+ADMIN_RECENT_TRAINEES_SESSION_KEY = "admin_recent_trainees"
+TRAINEE_SEARCH_RECENT_LIMIT = 2
+
+
+def _remember_admin_trainee_consultation(session_id: str, trainee_id: str) -> None:
+    """Conserve les dernières fiches ouvertes pour l'administrateur courant."""
+    item = {"session_id": str(session_id), "trainee_id": str(trainee_id)}
+    recent = session.get(ADMIN_RECENT_TRAINEES_SESSION_KEY) or []
+    recent = [
+        entry for entry in recent
+        if isinstance(entry, dict)
+        and (
+            str(entry.get("session_id")) != item["session_id"]
+            or str(entry.get("trainee_id")) != item["trainee_id"]
+        )
+    ]
+    session[ADMIN_RECENT_TRAINEES_SESSION_KEY] = [item, *recent][:TRAINEE_SEARCH_RECENT_LIMIT]
+    session.modified = True
+
+
+def _trainee_search_item(s: dict, t: dict) -> dict:
+    session_id = s.get("id")
+    trainee_id = t.get("id")
+    return {
+        "session_id": session_id,
+        "session_name": _session_get(s, "name", ""),
+        "training_type": _session_get(s, "training_type", ""),
+        "trainee_id": trainee_id,
+        "first_name": (t.get("first_name") or "").strip(),
+        "last_name": (t.get("last_name") or "").strip(),
+        "created_at": t.get("created_at") or "",
+        "convention_status": t.get("convention_status") or "soon",
+        "convention_saisie_done": bool(t.get("convention_saisie_done")),
+        "convention_signed_done": bool(t.get("convention_signed_done")),
+        "test_fr_status": t.get("test_fr_status") or "soon",
+        "admin_url": f"/admin/sessions/{session_id}/stagiaires/{trainee_id}",
+    }
+
+
 @app.get("/api/trainees_search")
 @admin_login_required
 def api_trainees_search():
     q = (request.args.get("q") or "").strip().lower()
-    if not q or len(q) < 2:
-        return jsonify({"ok": True, "items": []})
-
     data = load_data()
-    out = []
+    all_items = []
+    items_by_key = {}
 
     for s in data.get("sessions", []):
         if _is_wedof_leads_session(s):
             continue
-        session_id = s.get("id")
-        session_name = _session_get(s, "name", "")
-        training_type = _session_get(s, "training_type", "")
+        for t in _session_trainees_list(s):
+            item = _trainee_search_item(s, t)
+            all_items.append(item)
+            items_by_key[(str(item["session_id"]), str(item["trainee_id"]))] = item
 
-        trainees = _session_trainees_list(s)
+    if len(q) < 2:
+        latest_registered = sorted(
+            all_items,
+            key=lambda item: str(item.get("created_at") or ""),
+            reverse=True,
+        )[:TRAINEE_SEARCH_RECENT_LIMIT]
+        recent_consulted = []
+        for entry in session.get(ADMIN_RECENT_TRAINEES_SESSION_KEY) or []:
+            if not isinstance(entry, dict):
+                continue
+            item = items_by_key.get((str(entry.get("session_id")), str(entry.get("trainee_id"))))
+            if item:
+                recent_consulted.append(item)
+            if len(recent_consulted) == TRAINEE_SEARCH_RECENT_LIMIT:
+                break
+        return jsonify({
+            "ok": True,
+            "items": [],
+            "latest_registered": latest_registered,
+            "recent_consulted": recent_consulted,
+        })
 
-        for t in trainees:
-            fn = (t.get("first_name") or "").strip()
-            ln = (t.get("last_name") or "").strip()
-            full = f"{fn} {ln}".strip().lower()
+    out = []
+    for item in all_items:
+        first_name = item["first_name"]
+        last_name = item["last_name"]
+        full_name = f"{first_name} {last_name}".strip().lower()
+        if q in full_name or q in first_name.lower() or q in last_name.lower():
+            out.append(item)
 
-            # match prénom/nom (contient)
-            if q in full or q in fn.lower() or q in ln.lower():
-                out.append({
-                    "session_id": session_id,
-                    "session_name": session_name,
-                    "training_type": training_type,
-                    "trainee_id": t.get("id"),
-                    "first_name": fn,
-                    "last_name": ln,
-                    "convention_status": t.get("convention_status") or "soon",
-                    "convention_saisie_done": bool(t.get("convention_saisie_done")),
-                    "convention_signed_done": bool(t.get("convention_signed_done")),
-                    "test_fr_status": t.get("test_fr_status") or "soon",
-                    "admin_url": f"/admin/sessions/{session_id}/stagiaires/{t.get('id')}",
-                })
-
-    # tri: nom puis prénom
-    out.sort(key=lambda x: ((x.get("last_name") or "").lower(), (x.get("first_name") or "").lower()))
-
-    # limite pour éviter des réponses énormes
+    out.sort(key=lambda item: (
+        (item.get("last_name") or "").lower(),
+        (item.get("first_name") or "").lower(),
+    ))
     out = out[:30]
-
     return jsonify({"ok": True, "items": out, "count": len(out)})
 
 
