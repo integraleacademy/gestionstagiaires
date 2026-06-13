@@ -588,7 +588,11 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         self.assertIn('await createTrainee(sendAccess)', list_html)
         self.assertIn('window.openYpareoTransmission({', list_html)
         self.assertIn('id="ypareoTransmissionModal"', list_html)
+        self.assertIn('id="ypareoCreationSyncProgress"', list_html)
         self.assertIn("Transmission en cours vers YPAREO NEO", list_html)
+        self.assertIn('<span class="is-active">Personne</span><i></i><span>Cursus</span>', list_html)
+        self.assertIn('form.method = "POST"', list_html)
+        self.assertIn("form.submit()", list_html)
 
     def test_manual_send_updates_and_persists_trainee(self):
         def fake_send(trainee, session_obj):
@@ -638,8 +642,10 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('window.openYpareoTransmission({', html)
         self.assertIn('id="ypareoTransmissionModal"', html)
+        self.assertIn('id="ypareoCreationSyncProgress"', html)
         self.assertIn("Transmission en cours vers YPAREO NEO", html)
-        self.assertIn('headers: {"Accept": "application/json"}', html)
+        self.assertIn('<span class="is-active">Personne</span><i></i><span>Cursus</span>', html)
+        self.assertIn('progress.classList.add("is-visible")', html)
 
     def test_manual_send_returns_json_success_for_modern_dialog(self):
         def fake_send(trainee, _session_obj):

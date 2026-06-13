@@ -262,16 +262,25 @@
           <div class="ypareo-kicker">YPAREO NEO</div>
           <h2 id="ypareoTransmissionTitle">Souhaitez-vous transmettre les données à YPAREO NEO&nbsp;?</h2>
           <p id="ypareoTransmissionMessage">Le stagiaire a bien été enregistré. Vous pouvez maintenant transmettre ses informations à YPAREO NEO.</p>
-          <div class="ypareo-error-detail" id="ypareoTransmissionError" hidden></div>
         </div>
       </div>
       <div class="modal-foot ypareo-modal-actions" id="ypareoTransmissionConfirmActions">
         <button class="btn ypareo-btn-secondary" id="ypareoTransmissionNo" type="button">Non, plus tard</button>
         <button class="btn btn-primary ypareo-btn-primary" id="ypareoTransmissionYes" type="button">Oui, transmettre</button>
       </div>
-      <div class="modal-foot ypareo-modal-actions" id="ypareoTransmissionResultActions" hidden>
-        <button class="btn btn-primary ypareo-btn-primary" id="ypareoTransmissionContinue" type="button">Continuer</button>
+    </div>
+  </div>
+
+  <div id="ypareoCreationSyncProgress" class="ypareo-sync-progress" role="dialog" aria-modal="true" aria-labelledby="ypareoCreationSyncProgressTitle" aria-describedby="ypareoCreationSyncProgressMessage" aria-hidden="true">
+    <div class="ypareo-sync-progress__panel" role="status" aria-live="polite">
+      <div class="ypareo-sync-progress__brand" aria-hidden="true">YP</div>
+      <div class="ypareo-sync-progress__spinner" aria-hidden="true"></div>
+      <h3 id="ypareoCreationSyncProgressTitle">Transmission en cours vers YPAREO NEO</h3>
+      <p id="ypareoCreationSyncProgressMessage">Création de la fiche apprenant et de son inscription à la formation…</p>
+      <div class="ypareo-sync-progress__steps" aria-hidden="true">
+        <span class="is-active">Personne</span><i></i><span>Cursus</span>
       </div>
+      <small>Veuillez patienter et ne fermez pas cette page.</small>
     </div>
   </div>
 
@@ -286,19 +295,9 @@
     .ypareo-kicker{font-size:11px;font-weight:900;letter-spacing:.16em;color:#2563eb;margin:2px 0 8px;}
     .ypareo-state-copy h2{font-size:22px;line-height:1.25;margin:0;color:#0f172a;}
     .ypareo-state-copy p{font-size:14px;line-height:1.65;color:#64748b;margin:12px 0 0;}
-    .ypareo-error-detail{margin-top:14px;padding:12px 14px;border:1px solid #fecaca;border-radius:12px;background:#fff1f2;color:#9f1239;font-size:13px;line-height:1.5;overflow-wrap:anywhere;}
     .ypareo-modal-actions{padding:18px 30px 26px;border:0;background:#fff;gap:12px;}
-    .ypareo-modal-actions[hidden],.ypareo-error-detail[hidden]{display:none !important;}
     .ypareo-btn-primary,.ypareo-btn-secondary{min-height:44px;border-radius:12px;padding:10px 18px;font-weight:800;}
     .ypareo-btn-secondary{background:#f8fafc;border:1px solid #e2e8f0;color:#334155;}
-    .ypareo-modal.is-loading .ypareo-status-icon{background:#eff6ff;}
-    .ypareo-modal.is-loading .ypareo-icon-cloud{width:30px;height:30px;border:3px solid #bfdbfe;border-top-color:#2563eb;border-radius:50%;font-size:0;animation:ypareoSpin .8s linear infinite;}
-    .ypareo-modal.is-success .ypareo-status-icon{background:#ecfdf5;color:#059669;}
-    .ypareo-modal.is-success .ypareo-icon-cloud,.ypareo-modal.is-error .ypareo-icon-cloud{font-size:0;}
-    .ypareo-modal.is-success .ypareo-icon-cloud::after{content:"✓";font-size:34px;}
-    .ypareo-modal.is-error .ypareo-status-icon{background:#fff1f2;color:#e11d48;}
-    .ypareo-modal.is-error .ypareo-icon-cloud::after{content:"!";font-size:34px;}
-    @keyframes ypareoSpin{to{transform:rotate(360deg)}}
     @media(max-width:600px){.ypareo-modal-body{padding:24px 20px 16px;gap:14px}.ypareo-status-icon{width:54px;height:54px;flex-basis:54px;border-radius:16px}.ypareo-state-copy h2{font-size:19px}.ypareo-modal-actions{padding:14px 20px 22px;flex-direction:column-reverse}.ypareo-modal-actions .btn{width:100%}}
   </style>
 
@@ -348,45 +347,15 @@
 
   function openYpareoTransmission({url, continueUrl}){
     const backdrop = document.getElementById("ypareoTransmissionModal");
-    const panel = backdrop?.querySelector(".ypareo-modal");
-    const title = document.getElementById("ypareoTransmissionTitle");
-    const message = document.getElementById("ypareoTransmissionMessage");
-    const errorDetail = document.getElementById("ypareoTransmissionError");
-    const confirmActions = document.getElementById("ypareoTransmissionConfirmActions");
-    const resultActions = document.getElementById("ypareoTransmissionResultActions");
     const yesButton = document.getElementById("ypareoTransmissionYes");
     const noButton = document.getElementById("ypareoTransmissionNo");
-    const continueButton = document.getElementById("ypareoTransmissionContinue");
+    const progress = document.getElementById("ypareoCreationSyncProgress");
     const destination = continueUrl || window.location.href;
-    let transmissionPending = false;
 
-    if(!backdrop || !panel || !title || !message || !errorDetail || !confirmActions || !resultActions || !yesButton || !noButton || !continueButton){
+    if(!backdrop || !yesButton || !noButton || !progress){
       window.location.href = destination;
       return;
     }
-
-    const setState = (state, detail="")=>{
-      panel.classList.remove("is-loading", "is-success", "is-error");
-      if(state !== "confirm") panel.classList.add(`is-${state}`);
-      errorDetail.hidden = state !== "error";
-      errorDetail.textContent = state === "error" ? detail : "";
-      confirmActions.hidden = state !== "confirm";
-      resultActions.hidden = !["success", "error"].includes(state);
-
-      if(state === "confirm"){
-        title.textContent = "Souhaitez-vous transmettre les données à YPAREO NEO ?";
-        message.textContent = "Le stagiaire a bien été enregistré. Vous pouvez maintenant transmettre ses informations à YPAREO NEO.";
-      }else if(state === "loading"){
-        title.textContent = "Transmission en cours vers YPAREO NEO";
-        message.textContent = "Merci de patienter quelques instants et de ne pas fermer cette fenêtre.";
-      }else if(state === "success"){
-        title.textContent = "Données transférées vers YPAREO NEO avec succès";
-        message.textContent = "La fiche du stagiaire et son cursus ont bien été synchronisés.";
-      }else{
-        title.textContent = "Échec de la transmission vers YPAREO NEO";
-        message.textContent = "Les données n’ont pas pu être entièrement transmises. Voici la raison communiquée :";
-      }
-    };
 
     const leave = ()=>{
       closeModal("ypareoTransmissionModal");
@@ -394,33 +363,23 @@
     };
 
     noButton.onclick = leave;
-    continueButton.onclick = leave;
-    yesButton.onclick = async ()=>{
-      if(transmissionPending || !url) return;
-      transmissionPending = true;
+    yesButton.onclick = ()=>{
+      if(!url) return;
       yesButton.disabled = true;
-      setState("loading");
-      try{
-        const response = await fetch(url, {
-          method: "POST",
-          headers: {"Accept": "application/json"}
-        });
-        const result = await response.json().catch(()=> ({}));
-        if(!response.ok || !result.ok){
-          setState("error", result.error || "Le serveur YPAREO NEO n’a pas fourni de détail supplémentaire.");
-          return;
-        }
-        setState("success");
-      }catch(error){
-        setState("error", "Impossible de contacter le serveur. Vérifiez la connexion puis réessayez.");
-      }finally{
-        transmissionPending = false;
-        yesButton.disabled = false;
-      }
+      closeModal("ypareoTransmissionModal");
+      progress.classList.add("is-visible");
+      progress.setAttribute("aria-hidden", "false");
+      document.body.classList.add("ypareo-sync-is-running");
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = url;
+      form.hidden = true;
+      document.body.appendChild(form);
+      form.submit();
     };
 
     yesButton.disabled = false;
-    setState("confirm");
     openModal("ypareoTransmissionModal");
   }
 
