@@ -3366,7 +3366,10 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       }
 
       closeModal("createTraineeModal");
-      await proposeYpareoTransmission(res);
+      window.openYpareoTransmission({
+        url: res.ypareo_url,
+        continueUrl: res.trainee_url || res.summary_url || window.location.href
+      });
     }catch(e){
       alert("Erreur réseau");
     }finally{

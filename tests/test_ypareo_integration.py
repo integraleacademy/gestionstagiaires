@@ -586,8 +586,9 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         self.assertIn('/admin/sessions/S1/trainees/T1/ypareo', detail_html)
         self.assertLess(detail_html.index('id="ypareoHubTitle"'), detail_html.index("Visibilité espace stagiaire"))
         self.assertIn('await createTrainee(sendAccess)', list_html)
-        self.assertIn('await proposeYpareoTransmission(res)', list_html)
-        self.assertIn("Souhaitez-vous transmettre ses données à YPAREO NEO maintenant ?", list_html)
+        self.assertIn('window.openYpareoTransmission({', list_html)
+        self.assertIn('id="ypareoTransmissionModal"', list_html)
+        self.assertIn("Transmission en cours vers YPAREO NEO", list_html)
 
     def test_manual_send_updates_and_persists_trainee(self):
         def fake_send(trainee, session_obj):
@@ -635,8 +636,9 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
 
         html = response.get_data(as_text=True)
         self.assertEqual(response.status_code, 200)
-        self.assertIn("proposeYpareoTransmissionFromSessions", html)
-        self.assertIn("Souhaitez-vous transmettre ses données à YPAREO NEO maintenant ?", html)
+        self.assertIn('window.openYpareoTransmission({', html)
+        self.assertIn('id="ypareoTransmissionModal"', html)
+        self.assertIn("Transmission en cours vers YPAREO NEO", html)
         self.assertIn('headers: {"Accept": "application/json"}', html)
 
     def test_manual_send_returns_json_success_for_modern_dialog(self):

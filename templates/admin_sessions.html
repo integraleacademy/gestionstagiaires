@@ -1339,7 +1339,10 @@
       }
       closeModal("sendAccessFromSessionsModal");
       closeModal("createTraineeFromSessionsModal");
-      await proposeYpareoTransmissionFromSessions(res);
+      window.openYpareoTransmission({
+        url: res.ypareo_url,
+        continueUrl: res.trainee_url || `/admin/sessions/${sessionId}/trainees`
+      });
     }catch(e){
       alert("Erreur réseau");
     }finally{
