@@ -571,8 +571,8 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         detail_html = detail_response.get_data(as_text=True)
         self.assertEqual(list_response.status_code, 200)
         self.assertEqual(detail_response.status_code, 200)
-        self.assertNotIn("YPAREO", list_html)
-        self.assertNotIn("ypareo", list_html.lower())
+        self.assertNotIn('id="ypareoHubTitle"', list_html)
+        self.assertNotIn("Synchronisation administrative", list_html)
         self.assertIn('id="ypareoHubTitle"', detail_html)
         self.assertIn("Synchronisation administrative", detail_html)
         self.assertIn("Personne YPAREO", detail_html)
@@ -586,7 +586,8 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         self.assertIn('/admin/sessions/S1/trainees/T1/ypareo', detail_html)
         self.assertLess(detail_html.index('id="ypareoHubTitle"'), detail_html.index("Visibilité espace stagiaire"))
         self.assertIn('await createTrainee(sendAccess)', list_html)
-        self.assertIn('window.location.href = res.trainee_url', list_html)
+        self.assertIn('await proposeYpareoTransmission(res)', list_html)
+        self.assertIn("Souhaitez-vous transmettre ses données à YPAREO NEO maintenant ?", list_html)
 
     def test_manual_send_updates_and_persists_trainee(self):
         def fake_send(trainee, session_obj):
@@ -621,9 +622,22 @@ class YpareoAdminIntegrationTests(unittest.TestCase):
         self.assertEqual(created["last_name"], "DURAND")
         self.assertEqual(created["ypareo_statut"], "Non envoyé")
         self.assertEqual(payload["trainee_url"], f"/admin/sessions/S1/stagiaires/{created['id']}")
-        self.assertNotIn("ypareo_url", payload)
+        self.assertEqual(
+            payload["ypareo_url"],
+            f"/admin/sessions/S1/trainees/{created['id']}/ypareo",
+        )
         send.assert_not_called()
         self.assertGreaterEqual(save.call_count, 2)
+
+    def test_sessions_page_proposes_ypareo_after_creating_a_trainee(self):
+        with patch.object(gestion_app, "load_data", return_value=self.data):
+            response = self.client.get("/admin/sessions")
+
+        html = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("proposeYpareoTransmissionFromSessions", html)
+        self.assertIn("Souhaitez-vous transmettre ses données à YPAREO NEO maintenant ?", html)
+        self.assertIn('headers: {"Accept": "application/json"}', html)
 
     def test_manual_send_returns_json_success_for_modern_dialog(self):
         def fake_send(trainee, _session_obj):
