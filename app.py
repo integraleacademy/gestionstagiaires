@@ -14272,6 +14272,7 @@ def api_create_trainee(session_id: str):
         "access_sms_ok": sms_ok,
         "public_link": link,
         "trainee_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
+        "ypareo_url": url_for("admin_send_trainee_to_ypareo", session_id=session_id, trainee_id=trainee_id),
         "summary_url": url_for("admin_trainee_summary", session_id=session_id, trainee_id=trainee_id)
     })
 
