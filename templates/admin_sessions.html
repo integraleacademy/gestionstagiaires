@@ -1285,6 +1285,33 @@
     });
   }
 
+  async function proposeYpareoTransmissionFromSessions(result){
+    const continueUrl = result.trainee_url || `/admin/sessions/${result.session_id || ""}/trainees`;
+    const shouldTransmit = window.confirm(
+      "Le stagiaire a bien été enregistré.\n\nSouhaitez-vous transmettre ses données à YPAREO NEO maintenant ?"
+    );
+    if(!shouldTransmit || !result.ypareo_url){
+      window.location.href = continueUrl;
+      return;
+    }
+
+    try{
+      const response = await fetch(result.ypareo_url, {
+        method: "POST",
+        headers: {"Accept": "application/json"}
+      });
+      const payload = await response.json().catch(()=> ({}));
+      if(response.ok && payload.ok){
+        alert("Données transférées vers YPAREO NEO avec succès.");
+      }else{
+        alert(`Transmission vers YPAREO NEO impossible : ${payload.error || "erreur inconnue"}`);
+      }
+    }catch(error){
+      alert("Transmission vers YPAREO NEO impossible : le serveur ne répond pas.");
+    }
+    window.location.href = continueUrl;
+  }
+
   async function createTraineeFromSessions(send_access){
     const payload = getTraineeCreatePayload();
     if(!payload.last_name || !payload.first_name){
