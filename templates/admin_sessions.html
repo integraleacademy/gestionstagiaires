@@ -1310,7 +1310,12 @@
         alert("Erreur ajout stagiaire");
         return;
       }
-      window.location.href = `/admin/sessions/${sessionId}/trainees`;
+      closeModal("sendAccessFromSessionsModal");
+      closeModal("createTraineeFromSessionsModal");
+      window.openYpareoTransmission({
+        url: res.ypareo_url,
+        continueUrl: res.trainee_url || `/admin/sessions/${sessionId}/trainees`
+      });
     }catch(e){
       alert("Erreur réseau");
     }finally{
