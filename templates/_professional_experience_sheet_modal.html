@@ -77,7 +77,7 @@
               <label class="pro-sheet-field"><span>Intitulé du poste <strong>*</strong></span><input type="text" data-field="job_title" required value="{{ experience.job_title or '' }}"></label>
               <label class="pro-sheet-field"><span>Nom de l’entreprise <strong>*</strong></span><input type="text" data-field="company_name" required value="{{ experience.company_name or '' }}"></label>
               <label class="pro-sheet-field"><span>Date d’entrée <strong>*</strong></span><input type="date" data-field="start_date" required value="{{ experience.start_date or '' }}"></label>
-              <label class="pro-sheet-field"><span>Date de sortie <strong>*</strong></span><input type="date" data-field="end_date" required value="{{ experience.end_date or '' }}"></label>
+              <label class="pro-sheet-field"><span>Date de sortie <small>(facultatif)</small></span><input type="date" data-field="end_date" value="{{ experience.end_date or '' }}"></label>
               <label class="pro-sheet-field"><span>Temps de travail <strong>*</strong></span><span class="pro-sheet-percent"><input type="number" data-field="work_time_percent" required min="0" max="100" step="0.1" value="{{ experience.work_time_percent if experience.work_time_percent is not none else '' }}"><b>%</b></span><small class="pro-sheet-error"></small></label>
             </div>
             <fieldset class="pro-sheet-fieldset"><legend>Type de contrat <strong>*</strong></legend><div class="pro-sheet-options pro-sheet-options-compact">
@@ -113,6 +113,18 @@
         <button class="pro-sheet-submit" type="submit"><span>Transmettre ma fiche</span><i aria-hidden="true">→</i></button>
       </footer>
     </form>
+    <div id="professionalExperienceSyncProgress" class="pro-sheet-sync-progress" role="dialog" aria-modal="true" aria-labelledby="professionalExperienceSyncTitle" aria-describedby="professionalExperienceSyncMessage" aria-hidden="true">
+      <div class="pro-sheet-sync-progress__panel" role="status" aria-live="polite">
+        <div class="pro-sheet-sync-progress__brand" aria-hidden="true">IA</div>
+        <div class="pro-sheet-sync-progress__spinner" aria-hidden="true"></div>
+        <h3 id="professionalExperienceSyncTitle">Fiche en cours de transmission</h3>
+        <p id="professionalExperienceSyncMessage">Nous sécurisons vos informations et transmettons votre fiche expérience professionnelle…</p>
+        <div class="pro-sheet-sync-progress__steps" aria-hidden="true">
+          <span class="is-active">Validation</span><i></i><span>Transmission</span>
+        </div>
+        <small>Veuillez patienter quelques instants.</small>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -123,7 +135,7 @@
       <label class="pro-sheet-field"><span>Intitulé du poste <strong>*</strong></span><input type="text" data-field="job_title" required></label>
       <label class="pro-sheet-field"><span>Nom de l’entreprise <strong>*</strong></span><input type="text" data-field="company_name" required></label>
       <label class="pro-sheet-field"><span>Date d’entrée <strong>*</strong></span><input type="date" data-field="start_date" required></label>
-      <label class="pro-sheet-field"><span>Date de sortie <strong>*</strong></span><input type="date" data-field="end_date" required></label>
+      <label class="pro-sheet-field"><span>Date de sortie <small>(facultatif)</small></span><input type="date" data-field="end_date"></label>
       <label class="pro-sheet-field"><span>Temps de travail <strong>*</strong></span><span class="pro-sheet-percent"><input type="number" data-field="work_time_percent" required min="0" max="100" step="0.1"><b>%</b></span><small class="pro-sheet-error"></small></label>
     </div>
     <fieldset class="pro-sheet-fieldset"><legend>Type de contrat <strong>*</strong></legend><div class="pro-sheet-options pro-sheet-options-compact">

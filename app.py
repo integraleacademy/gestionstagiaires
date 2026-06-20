@@ -18683,8 +18683,8 @@ def _professional_experience_sheet_payload(raw: Any, trainee: Dict[str, Any], se
             errors[f"experiences.{index}.company_name"] = "Renseignez le nom de l’entreprise."
         if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", start_date):
             errors[f"experiences.{index}.start_date"] = "Renseignez la date d’entrée."
-        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", end_date):
-            errors[f"experiences.{index}.end_date"] = "Renseignez la date de sortie."
+        if end_date and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", end_date):
+            errors[f"experiences.{index}.end_date"] = "Renseignez une date de sortie valide."
         if contract_type not in allowed_contracts or not contract_type:
             errors[f"experiences.{index}.contract_type"] = "Sélectionnez le type de contrat."
         if executive_status not in allowed_executive or not executive_status:
@@ -20189,6 +20189,10 @@ def _remember_admin_trainee_consultation(session_id: str, trainee_id: str) -> No
     session.modified = True
 
 
+def _is_vae_training_type(value: str) -> bool:
+    return "VAE" in (value or "").strip().upper()
+
+
 def _trainee_search_item(s: dict, t: dict) -> dict:
     session_id = s.get("id")
     trainee_id = t.get("id")
@@ -20226,7 +20230,7 @@ def api_trainees_search():
 
     if len(q) < 2:
         latest_registered = sorted(
-            all_items,
+            (item for item in all_items if not _is_vae_training_type(item.get("training_type"))),
             key=lambda item: str(item.get("created_at") or ""),
             reverse=True,
         )[:TRAINEE_SEARCH_RECENT_LIMIT]
@@ -23230,17 +23234,35 @@ def vae_wizard(token: str):
     if (dossier.get('statut_dossier') or '').strip().lower() == 'soumis' and not admin_edit_mode:
         return redirect(url_for('vae_success', token=token))
 
+    meta = dossier.get('meta') if isinstance(dossier.get('meta'), dict) else {}
+    save_later_url = ''
+    if admin_edit_mode:
+        session_id = str(meta.get('session_id') or '').strip()
+        trainee_id = str(meta.get('trainee_id') or '').strip()
+        if session_id and trainee_id:
+            save_later_url = url_for('admin_trainee_page', session_id=session_id, trainee_id=trainee_id)
+    else:
+        trainee_token = str(meta.get('trainee_token') or '').strip()
+        if trainee_token:
+            save_later_url = url_for('public_trainee_space', token=trainee_token)
+
     return render_template(
         'vae_wizard.html',
         dossier=dossier,
         dossier_json=json.dumps(dossier, ensure_ascii=False),
         admin_edit_mode=admin_edit_mode,
+        save_later_url=save_later_url,
     )
 
 @app.post('/api/vae/<dossier_id>/save')
 @app.patch('/api/vae/<dossier_id>/save')
 def api_vae_save(dossier_id: str):
-    payload = request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True)
+    if payload is None:
+        try:
+            payload = json.loads((request.get_data(as_text=True) or "{}").strip() or "{}")
+        except Exception:
+            payload = {}
     if not isinstance(payload, dict):
         return jsonify({"ok": False, "error": "invalid_payload"}), 400
 
