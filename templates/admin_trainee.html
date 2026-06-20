@@ -45,6 +45,103 @@
   .btn-vtc-book-ready{
     animation: docsPendingPulse 1.2s ease-in-out infinite;
   }
+  .vae-reset-confirm-backdrop{
+    backdrop-filter:blur(6px);
+    background:rgba(15,23,42,.64);
+  }
+  .vae-reset-confirm-modal{
+    position:relative;
+    max-width:620px;
+    border:0;
+    border-radius:26px;
+    overflow:hidden;
+    box-shadow:0 34px 90px rgba(15,23,42,.34);
+  }
+  .vae-reset-confirm-accent{
+    height:6px;
+    background:linear-gradient(90deg,#1d4ed8,#06b6d4,#22c55e);
+  }
+  .vae-reset-confirm-body{
+    display:flex;
+    gap:20px;
+    align-items:flex-start;
+    padding:30px 30px 18px;
+    background:
+      radial-gradient(circle at 10% 0%, rgba(59,130,246,.16), transparent 30%),
+      linear-gradient(135deg,#ffffff,#f8fafc);
+  }
+  .vae-reset-confirm-icon{
+    width:72px;
+    height:72px;
+    flex:0 0 72px;
+    border-radius:22px;
+    display:grid;
+    place-items:center;
+    background:linear-gradient(145deg,#dbeafe,#ecfeff);
+    color:#1d4ed8;
+    box-shadow:inset 0 0 0 1px rgba(37,99,235,.14), 0 16px 34px rgba(37,99,235,.14);
+    font-size:34px;
+  }
+  .vae-reset-confirm-kicker{
+    margin:3px 0 8px;
+    color:#2563eb;
+    font-size:11px;
+    font-weight:900;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+  }
+  .vae-reset-confirm-copy h2{
+    margin:0;
+    color:#0f172a;
+    font-size:23px;
+    line-height:1.25;
+  }
+  .vae-reset-confirm-copy p{
+    margin:12px 0 0;
+    color:#64748b;
+    font-size:14px;
+    line-height:1.65;
+  }
+  .vae-reset-confirm-warning{
+    margin-top:14px;
+    padding:11px 12px;
+    border:1px solid #fed7aa;
+    border-radius:14px;
+    background:#fff7ed;
+    color:#9a3412;
+    font-size:13px;
+    font-weight:800;
+  }
+  .vae-reset-confirm-actions{
+    justify-content:flex-end;
+    gap:12px;
+    padding:18px 30px 28px;
+    border:0;
+    background:#fff;
+  }
+  .vae-reset-confirm-actions .btn{
+    min-height:44px;
+    border-radius:12px;
+    padding:10px 18px;
+    font-weight:900;
+  }
+  .vae-reset-confirm-cancel{
+    background:#f8fafc !important;
+    border:1px solid #e2e8f0 !important;
+    color:#334155 !important;
+  }
+  .vae-reset-confirm-submit{
+    background:linear-gradient(135deg,#1d4ed8,#0ea5e9) !important;
+    border:0 !important;
+    box-shadow:0 14px 28px rgba(37,99,235,.24);
+  }
+  @media(max-width:640px){
+    .vae-reset-confirm-body{padding:24px 20px 16px;gap:14px;}
+    .vae-reset-confirm-icon{width:56px;height:56px;flex-basis:56px;border-radius:18px;font-size:26px;}
+    .vae-reset-confirm-copy h2{font-size:20px;}
+    .vae-reset-confirm-actions{padding:14px 20px 22px;flex-direction:column-reverse;}
+    .vae-reset-confirm-actions .btn{width:100%;}
+  }
 </style>
 
 <div class="breadcrumbs">
@@ -654,7 +751,7 @@
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <a class="btn btn-outline" href="{{ url_for('admin_vae_detail', dossier_id=vae_dossier.id) }}" target="_blank" rel="noopener">Avis recevabilité</a>
       <a class="btn btn-outline" href="{{ url_for('vae_wizard', token=vae_dossier.id, admin_edit=1) }}" target="_blank" rel="noopener">Modifier le formulaire</a>
-      <form method="post" action="{{ url_for('admin_reset_vae_dossier', session_id=session.id, trainee_id=trainee.id, dossier_id=vae_dossier.id) }}" style="margin:0;" onsubmit="return confirm('Confirmez-vous la réinitialisation du livret 1 ? Tout le contenu du dossier de faisabilité VAE et les justificatifs seront supprimés.');">
+      <form id="vaeResetDossierForm" method="post" action="{{ url_for('admin_reset_vae_dossier', session_id=session.id, trainee_id=trainee.id, dossier_id=vae_dossier.id) }}" style="margin:0;">
         <button class="btn btn-outline" type="submit">Réinitialiser le livret 1</button>
       </form>
       <a class="btn btn-primary" href="{{ url_for('admin_vae_export', dossier_id=vae_dossier.id) }}">Télécharger PDF</a>
@@ -673,6 +770,27 @@
     {% endif %}
   </div>
 
+</div>
+{% endif %}
+
+{% if show_vae and vae_dossier %}
+<div class="modal-backdrop vae-reset-confirm-backdrop" id="vaeResetConfirmModal" aria-hidden="true">
+  <div class="modal vae-reset-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="vaeResetConfirmTitle" aria-describedby="vaeResetConfirmMessage">
+    <div class="vae-reset-confirm-accent"></div>
+    <div class="vae-reset-confirm-body">
+      <div class="vae-reset-confirm-icon" aria-hidden="true">↺</div>
+      <div class="vae-reset-confirm-copy">
+        <div class="vae-reset-confirm-kicker">Dossier VAE · Livret 1</div>
+        <h2 id="vaeResetConfirmTitle">Confirmer la réinitialisation du livret 1&nbsp;?</h2>
+        <p id="vaeResetConfirmMessage">Le dossier de faisabilité VAE va être remis à zéro pour repartir sur une base propre.</p>
+        <div class="vae-reset-confirm-warning">Tout le contenu saisi et les justificatifs d’expérience seront définitivement supprimés.</div>
+      </div>
+    </div>
+    <div class="modal-foot vae-reset-confirm-actions">
+      <button class="btn vae-reset-confirm-cancel" type="button" id="vaeResetConfirmNo">Annuler</button>
+      <button class="btn btn-primary vae-reset-confirm-submit" type="button" id="vaeResetConfirmYes">Oui, réinitialiser</button>
+    </div>
+  </div>
 </div>
 {% endif %}
 
@@ -1920,6 +2038,43 @@
 
 
 <script>
+
+const vaeResetDossierForm = document.getElementById("vaeResetDossierForm");
+const vaeResetConfirmModal = document.getElementById("vaeResetConfirmModal");
+const vaeResetConfirmYes = document.getElementById("vaeResetConfirmYes");
+const vaeResetConfirmNo = document.getElementById("vaeResetConfirmNo");
+let vaeResetConfirmed = false;
+
+if(vaeResetDossierForm){
+  vaeResetDossierForm.addEventListener("submit", (event)=>{
+    if(vaeResetConfirmed) return;
+    event.preventDefault();
+    if(!vaeResetConfirmModal || !vaeResetConfirmYes || !vaeResetConfirmNo){
+      if(window.confirm("Confirmez-vous la réinitialisation du livret 1 ? Tout le contenu du dossier de faisabilité VAE et les justificatifs seront supprimés.")){
+        vaeResetConfirmed = true;
+        vaeResetDossierForm.submit();
+      }
+      return;
+    }
+    openModal("vaeResetConfirmModal");
+    vaeResetConfirmYes.focus();
+  });
+}
+
+if(vaeResetConfirmNo){
+  vaeResetConfirmNo.addEventListener("click", ()=>{
+    closeModal("vaeResetConfirmModal");
+  });
+}
+
+if(vaeResetConfirmYes && vaeResetDossierForm){
+  vaeResetConfirmYes.addEventListener("click", ()=>{
+    vaeResetConfirmed = true;
+    vaeResetConfirmYes.disabled = true;
+    vaeResetConfirmYes.textContent = "Réinitialisation…";
+    vaeResetDossierForm.submit();
+  });
+}
 
 const ypareoSyncForm = document.getElementById("ypareoSyncForm");
 const ypareoSyncButton = document.getElementById("ypareoSyncButton");
