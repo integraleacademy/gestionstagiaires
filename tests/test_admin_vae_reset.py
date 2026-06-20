@@ -24,8 +24,38 @@ class AdminVaeResetTests(unittest.TestCase):
                     "last_name": "REFUS",
                     "vae_status": "livret_1_analysis",
                     "vae_status_label": "Livret 1 en cours d'analyse",
-                    "vae_action_dates": {"livret_1_received": "20/06/2026"},
+                    "vae_action_dates": {
+                        "livret_1_received": "20/06/2026",
+                        "livret_1_validated": "21/06/2026",
+                        "financement_validated": "22/06/2026",
+                        "livret_2_received": "23/06/2026",
+                        "livret_2_validated": "24/06/2026",
+                        "financement_l2_validated": "25/06/2026",
+                        "jury_date": "26/06/2026",
+                        "diplome_obtenu": "27/06/2026",
+                        "livret_1_transmitted_scotia": "20/06/2026",
+                        "livret_2_transmitted_scotia": "23/06/2026",
+                    },
                     "vae_jury_date": "2026-07-01",
+                    "livret_1_transmitted_scotia_at": "2026-06-20T09:00:00Z",
+                    "livret_2_transmitted_scotia_at": "2026-06-23T09:00:00Z",
+                    "scotia_force_visible": True,
+                    "scotia_status": "recevable",
+                    "scotia_processed_at": "2026-06-21T09:00:00Z",
+                    "scotia_processed_at_label": "21/06/2026 à 09h00",
+                    "scotia_livret_2_status": "livret_2_ok",
+                    "scotia_livret_2_processed_at": "2026-06-24T09:00:00Z",
+                    "scotia_livret_2_processed_at_label": "24/06/2026 à 09h00",
+                    "scotia_complementary_documents_review_status": "complement_documents_new_expected",
+                    "scotia_complementary_documents_reviewed_at": "2026-06-22T09:00:00Z",
+                    "scotia_complementary_documents_reviewed_at_label": "22/06/2026 à 09h00",
+                    "scotia_complementary_documents_received_at": "2026-06-22T10:00:00Z",
+                    "scotia_added_documents": [{"date": "22/06/2026", "files": ["token-added"]}],
+                    "scotia_complementary_documents": ["token-comp"],
+                    "complementary_documents": ["token-comp"],
+                    "scotia_hidden": True,
+                    "scotia_hidden_at": "2026-06-21T10:00:00Z",
+                    "vae_relances_state": {"livret_1": {"sent_at": "2026-06-10T09:00:00Z"}},
                     "documents": [],
                 }],
             }],
@@ -92,7 +122,29 @@ class AdminVaeResetTests(unittest.TestCase):
         self.assertEqual(trainee["vae_status"], "livret_1_todo")
         self.assertEqual(trainee["vae_status_label"], "Livret 1 à compléter")
         self.assertEqual(trainee["vae_action_dates"], {})
-        self.assertNotIn("vae_jury_date", trainee)
+        self.assertFalse(trainee["scotia_force_visible"])
+        for key in (
+            "vae_jury_date",
+            "livret_1_transmitted_scotia_at",
+            "livret_2_transmitted_scotia_at",
+            "scotia_status",
+            "scotia_processed_at",
+            "scotia_processed_at_label",
+            "scotia_livret_2_status",
+            "scotia_livret_2_processed_at",
+            "scotia_livret_2_processed_at_label",
+            "scotia_complementary_documents_review_status",
+            "scotia_complementary_documents_reviewed_at",
+            "scotia_complementary_documents_reviewed_at_label",
+            "scotia_complementary_documents_received_at",
+            "scotia_added_documents",
+            "scotia_complementary_documents",
+            "complementary_documents",
+            "scotia_hidden",
+            "scotia_hidden_at",
+            "vae_relances_state",
+        ):
+            self.assertNotIn(key, trainee)
         self.assertEqual(trainee["activity_history"][0]["label"], "Livret 1 réinitialisé")
 
 

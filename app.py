@@ -23168,7 +23168,34 @@ def admin_reset_vae_dossier(session_id: str, trainee_id: str, dossier_id: str):
     t["vae_status"] = view["key"]
     t["vae_status_label"] = view["label"]
     t["vae_action_dates"] = {}
-    t.pop("vae_jury_date", None)
+
+    # Remise à zéro de toutes les étapes VAE affichées dans l'administration et SCOTIA.
+    # On conserve les informations d'identité du stagiaire, mais on efface les jalons,
+    # décisions, dates et indicateurs techniques liés au parcours VAE.
+    for key in (
+        "vae_jury_date",
+        "livret_1_transmitted_scotia_at",
+        "livret_2_transmitted_scotia_at",
+        "scotia_status",
+        "scotia_processed_at",
+        "scotia_processed_at_label",
+        "scotia_livret_2_status",
+        "scotia_livret_2_processed_at",
+        "scotia_livret_2_processed_at_label",
+        "scotia_complementary_documents_review_status",
+        "scotia_complementary_documents_reviewed_at",
+        "scotia_complementary_documents_reviewed_at_label",
+        "scotia_complementary_documents_received_at",
+        "scotia_added_documents",
+        "scotia_complementary_documents",
+        "complementary_documents",
+        "scotia_hidden",
+        "scotia_hidden_at",
+        "vae_relances_state",
+    ):
+        t.pop(key, None)
+    t["scotia_force_visible"] = False
+
     append_trainee_history_event(t, "Livret 1 réinitialisé", "Dossier de faisabilité VAE remis à zéro", "action", _now_iso())
     s["trainees"] = trainees
     s.pop("stagiaires", None)
