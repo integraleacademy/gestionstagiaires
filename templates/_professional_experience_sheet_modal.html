@@ -77,7 +77,7 @@
               <label class="pro-sheet-field"><span>Intitulé du poste <strong>*</strong></span><input type="text" data-field="job_title" required value="{{ experience.job_title or '' }}"></label>
               <label class="pro-sheet-field"><span>Nom de l’entreprise <strong>*</strong></span><input type="text" data-field="company_name" required value="{{ experience.company_name or '' }}"></label>
               <label class="pro-sheet-field"><span>Date d’entrée <strong>*</strong></span><input type="date" data-field="start_date" required value="{{ experience.start_date or '' }}"></label>
-              <label class="pro-sheet-field"><span>Date de sortie <strong>*</strong></span><input type="date" data-field="end_date" required value="{{ experience.end_date or '' }}"></label>
+              <label class="pro-sheet-field"><span>Date de sortie <small>(facultatif)</small></span><input type="date" data-field="end_date" value="{{ experience.end_date or '' }}"></label>
               <label class="pro-sheet-field"><span>Temps de travail <strong>*</strong></span><span class="pro-sheet-percent"><input type="number" data-field="work_time_percent" required min="0" max="100" step="0.1" value="{{ experience.work_time_percent if experience.work_time_percent is not none else '' }}"><b>%</b></span><small class="pro-sheet-error"></small></label>
             </div>
             <fieldset class="pro-sheet-fieldset"><legend>Type de contrat <strong>*</strong></legend><div class="pro-sheet-options pro-sheet-options-compact">
@@ -123,7 +123,7 @@
       <label class="pro-sheet-field"><span>Intitulé du poste <strong>*</strong></span><input type="text" data-field="job_title" required></label>
       <label class="pro-sheet-field"><span>Nom de l’entreprise <strong>*</strong></span><input type="text" data-field="company_name" required></label>
       <label class="pro-sheet-field"><span>Date d’entrée <strong>*</strong></span><input type="date" data-field="start_date" required></label>
-      <label class="pro-sheet-field"><span>Date de sortie <strong>*</strong></span><input type="date" data-field="end_date" required></label>
+      <label class="pro-sheet-field"><span>Date de sortie <small>(facultatif)</small></span><input type="date" data-field="end_date"></label>
       <label class="pro-sheet-field"><span>Temps de travail <strong>*</strong></span><span class="pro-sheet-percent"><input type="number" data-field="work_time_percent" required min="0" max="100" step="0.1"><b>%</b></span><small class="pro-sheet-error"></small></label>
     </div>
     <fieldset class="pro-sheet-fieldset"><legend>Type de contrat <strong>*</strong></legend><div class="pro-sheet-options pro-sheet-options-compact">
