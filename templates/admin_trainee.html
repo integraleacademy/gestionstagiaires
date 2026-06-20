@@ -654,6 +654,9 @@
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <a class="btn btn-outline" href="{{ url_for('admin_vae_detail', dossier_id=vae_dossier.id) }}" target="_blank" rel="noopener">Avis recevabilité</a>
       <a class="btn btn-outline" href="{{ url_for('vae_wizard', token=vae_dossier.id, admin_edit=1) }}" target="_blank" rel="noopener">Modifier le formulaire</a>
+      <form method="post" action="{{ url_for('admin_reset_vae_dossier', session_id=session.id, trainee_id=trainee.id, dossier_id=vae_dossier.id) }}" style="margin:0;" onsubmit="return confirm('Confirmez-vous la réinitialisation du livret 1 ? Tout le contenu du dossier de faisabilité VAE et les justificatifs seront supprimés.');">
+        <button class="btn btn-outline" type="submit">Réinitialiser le livret 1</button>
+      </form>
       <a class="btn btn-primary" href="{{ url_for('admin_vae_export', dossier_id=vae_dossier.id) }}">Télécharger PDF</a>
       {% if vae_dossier.justificatifs_experience %}
       <a class="btn btn-outline" href="{{ url_for('admin_vae_experience_docs_zip', dossier_id=vae_dossier.id) }}">Télécharger les justificatifs (ZIP)</a>

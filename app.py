@@ -23114,6 +23114,72 @@ def admin_create_vae_dossier(session_id: str, trainee_id: str):
 
     return redirect(url_for("vae_wizard", token=dossier["id"], admin_edit=1))
 
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/vae-dossier/<dossier_id>/reset")
+@admin_login_required
+def admin_reset_vae_dossier(session_id: str, trainee_id: str, dossier_id: str):
+    data_main = load_data()
+    s = find_session(data_main, session_id)
+    if not s:
+        abort(404)
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if str(x.get("id") or "") == str(trainee_id)), None)
+    if not t:
+        abort(404)
+
+    training_type = (_session_get(s, "training_type", "") or "").strip().upper()
+    if training_type != "DIRIGEANT VAE":
+        abort(404)
+
+    vae_data = _vae_load_all()
+    dossier = _vae_find_dossier(vae_data, dossier_id)
+    if not dossier:
+        abort(404)
+
+    meta = dossier.get("meta") if isinstance(dossier.get("meta"), dict) else {}
+    if str(meta.get("trainee_id") or "") != str(trainee_id) or str(meta.get("session_id") or "") != str(session_id):
+        abort(404)
+
+    for entry in dossier.get("justificatifs_experience") if isinstance(dossier.get("justificatifs_experience"), list) else []:
+        token = str((entry or {}).get("token") or "").strip()
+        if token:
+            try:
+                fp = _detokenize_path(token)
+                if os.path.exists(fp):
+                    _safe_remove_file(fp)
+            except Exception:
+                pass
+
+    reset_dossier = _vae_default_dossier(dossier_id)
+    reset_dossier["meta"] = dict(meta)
+    reset_dossier["created_at"] = dossier.get("created_at") or reset_dossier["created_at"]
+    reset_dossier["updated_at"] = _now_iso_utc()
+    dossier.clear()
+    dossier.update(reset_dossier)
+    _vae_save_all(vae_data)
+
+    view = vae_status_view("livret_1_todo")
+    t["vae_status"] = view["key"]
+    t["vae_status_label"] = view["label"]
+    t["vae_action_dates"] = {}
+    t.pop("vae_jury_date", None)
+    append_trainee_history_event(t, "Livret 1 réinitialisé", "Dossier de faisabilité VAE remis à zéro", "action", _now_iso())
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data_main)
+
+    _send_vae_admin_notification(
+        "Réinitialisation du livret 1 VAE",
+        trainee=t,
+        dossier=dossier,
+        session_obj=s,
+        details={"action_admin": "reset_livret_1"},
+    )
+
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
 @app.get('/vae/nouveau/<trainee_token>')
 def vae_new_for_trainee(trainee_token: str):
     return _vae_create_and_redirect_for_trainee_token(trainee_token)
