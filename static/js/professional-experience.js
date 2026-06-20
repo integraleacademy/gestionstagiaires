@@ -8,6 +8,7 @@
   const limit = document.getElementById("professionalExperienceLimit");
   const message = document.getElementById("professionalExperienceMessage");
   const signature = document.getElementById("professionalSignaturePreview");
+  const syncProgress = document.getElementById("professionalExperienceSyncProgress");
   let previouslyFocused = null;
 
   const open = () => {
@@ -17,7 +18,13 @@
     document.body.classList.add("pro-sheet-open");
     modal.querySelector(".pro-sheet-close")?.focus();
   };
+  const setSyncProgress = visible => {
+    syncProgress?.classList.toggle("is-visible", visible);
+    syncProgress?.setAttribute("aria-hidden", visible ? "false" : "true");
+    modal.classList.toggle("is-transmitting", visible);
+  };
   const close = () => {
+    setSyncProgress(false);
     modal.classList.remove("is-open");
     modal.setAttribute("aria-hidden", "true");
     document.body.classList.remove("pro-sheet-open");
@@ -135,6 +142,7 @@
     if (!validate()) return;
     const submit = form.querySelector('[type="submit"]');
     submit.disabled = true;
+    setSyncProgress(true);
     const payload = {
       current_situation: selected("current_situation"), current_situation_other: form.current_situation_other.value.trim(),
       qualification_level: selected("qualification_level"), qualification_other: form.qualification_other.value.trim(),
@@ -166,10 +174,11 @@
       if (launchHint) launchHint.textContent = "Votre fiche a bien été transmise. Elle ne peut plus être modifiée.";
       const launchArrow = launch?.querySelector(".pro-sheet-launch-arrow");
       if (launchArrow) launchArrow.textContent = "✓";
-      message.scrollIntoView({ behavior: "smooth", block: "center" });
+      window.setTimeout(close, 650);
     } catch (error) {
       message.className = "pro-sheet-message is-error";
       message.textContent = error.message || "L’envoi de votre fiche a échoué. Veuillez réessayer.";
+      setSyncProgress(false);
       message.scrollIntoView({ behavior: "smooth", block: "center" });
     } finally { submit.disabled = false; }
   });
