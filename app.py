@@ -20189,6 +20189,10 @@ def _remember_admin_trainee_consultation(session_id: str, trainee_id: str) -> No
     session.modified = True
 
 
+def _is_vae_training_type(value: str) -> bool:
+    return "VAE" in (value or "").strip().upper()
+
+
 def _trainee_search_item(s: dict, t: dict) -> dict:
     session_id = s.get("id")
     trainee_id = t.get("id")
@@ -20226,7 +20230,7 @@ def api_trainees_search():
 
     if len(q) < 2:
         latest_registered = sorted(
-            all_items,
+            (item for item in all_items if not _is_vae_training_type(item.get("training_type"))),
             key=lambda item: str(item.get("created_at") or ""),
             reverse=True,
         )[:TRAINEE_SEARCH_RECENT_LIMIT]

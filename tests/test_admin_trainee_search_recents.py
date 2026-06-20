@@ -27,6 +27,19 @@ class AdminTraineeSearchRecentsTests(unittest.TestCase):
                     ],
                 },
                 {
+                    "id": "S-VAE",
+                    "name": "VAE DESP 2026",
+                    "training_type": "DIRIGEANT VAE",
+                    "trainees": [
+                        {
+                            "id": "T-VAE",
+                            "first_name": "Vae",
+                            "last_name": "Recent",
+                            "created_at": "2026-06-20T10:00:00Z",
+                        }
+                    ],
+                },
+                {
                     "id": "wedof-cpf-edof",
                     "name": "Leads WeDoF CPF/EDOF",
                     "training_type": "CPF/EDOF",
@@ -65,6 +78,7 @@ class AdminTraineeSearchRecentsTests(unittest.TestCase):
             ["T-2", "T-6"],
         )
         self.assertNotIn("T-WEDOF", str(payload))
+        self.assertNotIn("T-VAE", [item["trainee_id"] for item in payload["latest_registered"]])
 
     def test_remember_consultation_deduplicates_and_limits_history(self):
         with gestion_app.app.test_request_context("/"):
