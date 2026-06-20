@@ -82,3 +82,14 @@ h3{margin:18px 0 8px;font-size:1.05rem}
 .submit-dossier-btn{display:block;margin:24px auto 0}
 
 .field-error{border:2px solid #dc2626 !important;box-shadow:0 0 0 1px #dc2626 inset}
+
+.vae-save-topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:18px 0 14px;padding:14px 16px;border:1px solid #dbeafe;border-radius:16px;background:linear-gradient(135deg,#eff6ff 0%,#f0fdf4 100%)}
+.vae-autosave-note{color:#166534;font-weight:700;font-size:.95rem}
+.save-later-btn{position:relative;overflow:hidden;background:linear-gradient(135deg,#0f766e 0%,#16a34a 52%,#84cc16 100%);color:#fff;border:0;border-radius:999px;padding:12px 20px;font-weight:900;letter-spacing:.01em;box-shadow:0 12px 24px rgba(22,163,74,.24),inset 0 1px 0 rgba(255,255,255,.32);transition:transform .18s ease,box-shadow .18s ease,filter .18s ease}
+.save-later-btn::after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,transparent 0%,rgba(255,255,255,.34) 45%,transparent 70%);transform:translateX(-120%);transition:transform .55s ease}
+.save-later-btn:hover{transform:translateY(-2px);filter:saturate(1.08);box-shadow:0 16px 30px rgba(22,163,74,.30),inset 0 1px 0 rgba(255,255,255,.38)}
+.save-later-btn:hover::after{transform:translateX(120%)}
+.save-later-btn:active{transform:translateY(0)}
+.vae-final-actions{display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap;margin:24px auto 0}
+.vae-final-actions .submit-dossier-btn{display:inline-block;margin:0}
+.save-later-btn--bottom{background:linear-gradient(135deg,#155e75 0%,#0f766e 45%,#22c55e 100%)}

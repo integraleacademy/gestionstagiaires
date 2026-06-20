@@ -23207,17 +23207,35 @@ def vae_wizard(token: str):
     if (dossier.get('statut_dossier') or '').strip().lower() == 'soumis' and not admin_edit_mode:
         return redirect(url_for('vae_success', token=token))
 
+    meta = dossier.get('meta') if isinstance(dossier.get('meta'), dict) else {}
+    save_later_url = ''
+    if admin_edit_mode:
+        session_id = str(meta.get('session_id') or '').strip()
+        trainee_id = str(meta.get('trainee_id') or '').strip()
+        if session_id and trainee_id:
+            save_later_url = url_for('admin_trainee_page', session_id=session_id, trainee_id=trainee_id)
+    else:
+        trainee_token = str(meta.get('trainee_token') or '').strip()
+        if trainee_token:
+            save_later_url = url_for('public_trainee_space', token=trainee_token)
+
     return render_template(
         'vae_wizard.html',
         dossier=dossier,
         dossier_json=json.dumps(dossier, ensure_ascii=False),
         admin_edit_mode=admin_edit_mode,
+        save_later_url=save_later_url,
     )
 
 @app.post('/api/vae/<dossier_id>/save')
 @app.patch('/api/vae/<dossier_id>/save')
 def api_vae_save(dossier_id: str):
-    payload = request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True)
+    if payload is None:
+        try:
+            payload = json.loads((request.get_data(as_text=True) or "{}").strip() or "{}")
+        except Exception:
+            payload = {}
     if not isinstance(payload, dict):
         return jsonify({"ok": False, "error": "invalid_payload"}), 400
 
