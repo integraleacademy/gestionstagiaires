@@ -3,6 +3,7 @@
   if (!container) return;
   const dossierId = container.dataset.vaeId;
   const adminEditMode = container.dataset.adminEdit === '1';
+  const saveLaterUrl = container.dataset.saveLaterUrl || '';
   const form = document.getElementById('vaeForm');
   const steps = [...document.querySelectorAll('.step')];
   const progress = document.getElementById('vaeProgress');
@@ -15,6 +16,9 @@
   const initial = window.__VAE_INITIAL__ || {};
   let current = 0;
   let experienceDocs = Array.isArray(initial.justificatifs_experience) ? [...initial.justificatifs_experience] : [];
+  let hasPendingChanges = false;
+  let changeVersion = 0;
+  let saveInFlight = null;
 
   const STEP_LABELS = {
     1: 'Nature de la demande',
@@ -119,22 +123,46 @@
     return payload;
   }
 
-  async function autosave() {
-    saveStatus.textContent = 'Sauvegarde…';
+  async function autosave({ silent = false } = {}) {
+    if (saveInFlight) return saveInFlight;
+    if (!silent) saveStatus.textContent = 'Sauvegarde…';
     const payload = getPayload();
-    const res = await fetch(`/api/vae/${dossierId}/save`, {
+    const versionToSave = changeVersion;
+    saveInFlight = fetch(`/api/vae/${dossierId}/save`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-    });
-    saveStatus.textContent = res.ok ? 'Sauvegardé' : 'Erreur de sauvegarde';
-    if (res.ok) setTimeout(() => (saveStatus.textContent = ''), 1200);
+    })
+      .then((res) => {
+        hasPendingChanges = !res.ok || changeVersion > versionToSave;
+        saveStatus.textContent = res.ok ? 'Sauvegardé automatiquement' : 'Erreur de sauvegarde';
+        if (res.ok) setTimeout(() => (saveStatus.textContent = ''), 1600);
+        return res;
+      })
+      .finally(() => {
+        saveInFlight = null;
+        if (hasPendingChanges) {
+          setTimeout(() => autosave({ silent: true }).catch(() => {}), 0);
+        }
+      });
+    return saveInFlight;
+  }
+
+  function autosaveNowWithBeacon() {
+    if (!hasPendingChanges || !navigator.sendBeacon) return;
+    try {
+      const blob = new Blob([JSON.stringify(getPayload())], { type: 'application/json' });
+      navigator.sendBeacon(`/api/vae/${dossierId}/save`, blob);
+      hasPendingChanges = false;
+    } catch (_) {}
   }
 
   let t;
   function autosaveDebounced() {
     clearTimeout(t);
-    t = setTimeout(() => autosave().catch(() => (saveStatus.textContent = 'Erreur de sauvegarde')), 450);
+    hasPendingChanges = true;
+    changeVersion += 1;
+    t = setTimeout(() => autosave().catch(() => { saveStatus.textContent = 'Erreur de sauvegarde'; }), 450);
   }
 
   function renderStep() {
@@ -453,6 +481,14 @@
       .join('');
   }
 
+  async function saveAndReturnLater() {
+    clearTimeout(t);
+    await autosave();
+    saveStatus.textContent = 'Dossier sauvegardé';
+    const target = saveLaterUrl || document.referrer || '/';
+    window.location.href = target;
+  }
+
   async function submitDossier() {
     if (adminEditMode) {
       errorsEl.innerHTML = '';
@@ -488,9 +524,22 @@
     renderStep();
   });
   document.getElementById('submitDossier').addEventListener('click', () => submitDossier().catch(() => {}));
+  document.querySelectorAll('[data-save-later]').forEach((btn) => {
+    btn.addEventListener('click', () => saveAndReturnLater().catch(() => { saveStatus.textContent = 'Erreur de sauvegarde'; }));
+  });
   document.getElementById('signDocument').addEventListener('click', signDocument);
 
-  form.querySelectorAll('input, select, textarea').forEach((el) => el.addEventListener('input', autosaveDebounced));
+  form.querySelectorAll('input, select, textarea').forEach((el) => {
+    el.addEventListener('input', autosaveDebounced);
+    el.addEventListener('change', autosaveDebounced);
+  });
+  window.addEventListener('beforeunload', autosaveNowWithBeacon);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') autosaveNowWithBeacon();
+  });
+  window.setInterval(() => {
+    if (hasPendingChanges) autosave({ silent: true }).catch(() => {});
+  }, 10000);
   if (experienceDocsInput) {
     experienceDocsInput.addEventListener('change', () => {
       const files = experienceDocsInput.files;
