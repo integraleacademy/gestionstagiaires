@@ -23055,6 +23055,22 @@ def _vae_create_and_redirect_for_trainee_token(trainee_token: str):
             linked_session_id = str(s.get('id') or '')
 
     data = _vae_load_all()
+
+    if linked_trainee_id:
+        existing_dossiers = [
+            d for d in data.get("dossiers", [])
+            if str((d.get("meta") or {}).get("trainee_id") or "") == linked_trainee_id
+        ]
+        existing_dossiers.sort(key=lambda d: d.get("updated_at") or d.get("created_at") or "", reverse=True)
+        for existing in existing_dossiers:
+            if (existing.get('statut_dossier') or '').strip().lower() != 'soumis':
+                meta = existing.setdefault('meta', {})
+                if trainee_token and not str(meta.get('trainee_token') or '').strip():
+                    meta['trainee_token'] = trainee_token
+                    existing['updated_at'] = _now_iso_utc()
+                    _vae_save_all(data)
+                return redirect(url_for('vae_wizard', token=existing['id']))
+
     dossier = _vae_default_dossier()
     dossier.setdefault('meta', {})['linkage_id'] = str(uuid.uuid4())
     if trainee_token:

@@ -17,7 +17,8 @@
   let current = 0;
   let experienceDocs = Array.isArray(initial.justificatifs_experience) ? [...initial.justificatifs_experience] : [];
   let hasPendingChanges = false;
-  let isSaving = false;
+  let changeVersion = 0;
+  let saveInFlight = null;
 
   const STEP_LABELS = {
     1: 'Nature de la demande',
@@ -123,22 +124,28 @@
   }
 
   async function autosave({ silent = false } = {}) {
-    if (isSaving) return;
-    isSaving = true;
+    if (saveInFlight) return saveInFlight;
     if (!silent) saveStatus.textContent = 'Sauvegarde…';
     const payload = getPayload();
-    try {
-      const res = await fetch(`/api/vae/${dossierId}/save`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+    const versionToSave = changeVersion;
+    saveInFlight = fetch(`/api/vae/${dossierId}/save`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then((res) => {
+        hasPendingChanges = !res.ok || changeVersion > versionToSave;
+        saveStatus.textContent = res.ok ? 'Sauvegardé automatiquement' : 'Erreur de sauvegarde';
+        if (res.ok) setTimeout(() => (saveStatus.textContent = ''), 1600);
+        return res;
+      })
+      .finally(() => {
+        saveInFlight = null;
+        if (hasPendingChanges) {
+          setTimeout(() => autosave({ silent: true }).catch(() => {}), 0);
+        }
       });
-      hasPendingChanges = !res.ok;
-      saveStatus.textContent = res.ok ? 'Sauvegardé automatiquement' : 'Erreur de sauvegarde';
-      if (res.ok) setTimeout(() => (saveStatus.textContent = ''), 1600);
-    } finally {
-      isSaving = false;
-    }
+    return saveInFlight;
   }
 
   function autosaveNowWithBeacon() {
@@ -154,6 +161,7 @@
   function autosaveDebounced() {
     clearTimeout(t);
     hasPendingChanges = true;
+    changeVersion += 1;
     t = setTimeout(() => autosave().catch(() => { saveStatus.textContent = 'Erreur de sauvegarde'; }), 450);
   }
 
