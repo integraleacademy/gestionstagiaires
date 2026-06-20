@@ -58,6 +58,16 @@ h3{margin:18px 0 8px;font-size:1.05rem}
 
 .step-auto-note{margin:6px 0 12px;padding:10px 12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;color:#1e3a8a;font-weight:600}
 
+.auto-filled-step h3{color:#6b7280}
+.auto-filled-step input:not([type="hidden"]),
+.auto-filled-step textarea{background:#f3f4f6;color:#6b7280;border-color:#d1d5db;cursor:not-allowed}
+.auto-filled-step input:not([type="hidden"]):focus,
+.auto-filled-step textarea:focus{outline:none;border-color:#d1d5db;box-shadow:none}
+.auto-filled-step input::placeholder,
+.auto-filled-step textarea::placeholder{color:#6b7280;opacity:1}
+.auto-filled-step .checkbox-grid label{color:#6b7280;cursor:not-allowed}
+.auto-filled-step .checkbox-grid input[type="radio"]{accent-color:#9ca3af;cursor:not-allowed}
+
 .experience-item-header{display:flex;justify-content:flex-end;margin-bottom:8px}
 .experience-add-btn{background:#2563eb;color:#fff;animation:pulseBlue 1.8s ease-in-out infinite;box-shadow:0 0 0 0 rgba(37,99,235,.45)}
 .experience-add-btn:hover{background:#1d4ed8}
