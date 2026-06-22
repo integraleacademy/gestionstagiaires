@@ -10397,7 +10397,16 @@ def admin_cash_payments():
 @admin_login_required
 def admin_sessions_conventions():
     data = load_data()
+    selected_formation = (request.args.get("formation") or "").strip().upper()
+    selected_status = (request.args.get("status") or "").strip().lower()
     convention_rows = []
+    formation_options_by_key = {}
+    status_options = [
+        {"key": "soon", "label": "Prochainement"},
+        {"key": "signing", "label": "En cours de signature"},
+    ]
+    if selected_status and selected_status not in {option["key"] for option in status_options}:
+        selected_status = ""
 
     for sess in data.get("sessions", []):
         if bool(sess.get("archived")):
@@ -10430,17 +10439,45 @@ def admin_sessions_conventions():
             convention_status = (trainee.get("convention_status") or "soon").strip().lower()
             if convention_status not in {"soon", "signing"}:
                 continue
+
+            training_type = _session_get(sess, "training_type", "")
+            formation_key = (training_type or "").strip().upper()
+            formation_display_label = formation_label(training_type)
+            if formation_key:
+                formation_options_by_key[formation_key] = formation_display_label
+
+            if selected_formation and formation_key != selected_formation:
+                continue
+            if selected_status and convention_status != selected_status:
+                continue
+
             convention_rows.append({
                 "last_name": (trainee.get("last_name") or "").strip(),
                 "first_name": (trainee.get("first_name") or "").strip(),
-                "formation": formation_label(_session_get(sess, "training_type", "")),
+                "formation": formation_display_label,
+                "formation_key": formation_key,
                 "date_start_label": fr_date(_session_get(sess, "date_start", "")),
                 "date_end_label": fr_date(_session_get(sess, "date_end", "")),
+                "status_key": convention_status,
                 "status_label": "Prochainement" if convention_status == "soon" else "En cours de signature",
             })
 
+    formation_options = [
+        {"key": key, "label": label}
+        for key, label in sorted(formation_options_by_key.items(), key=lambda item: item[1].lower())
+    ]
+    if selected_formation and selected_formation not in formation_options_by_key:
+        selected_formation = ""
+
     convention_rows.sort(key=lambda row: ((row.get("last_name") or "").lower(), (row.get("first_name") or "").lower()))
-    return render_template("admin_sessions_conventions.html", rows=convention_rows)
+    return render_template(
+        "admin_sessions_conventions.html",
+        rows=convention_rows,
+        formation_options=formation_options,
+        status_options=status_options,
+        selected_formation=selected_formation,
+        selected_status=selected_status,
+    )
 
 
 

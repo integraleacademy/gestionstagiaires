@@ -107,6 +107,39 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertIn("LIBELLE", html)
         self.assertIn("ACTION", html)
 
+    def test_conventions_can_filter_by_formation_and_status(self):
+        fake_data = {
+            "sessions": [
+                {
+                    "id": "S-APS",
+                    "training_type": "APS",
+                    "trainees": [
+                        {"last_name": "APS-SOON", "first_name": "Alice", "convention_status": "soon"},
+                        {"last_name": "APS-SIGNING", "first_name": "Bruno", "convention_status": "signing"},
+                    ],
+                },
+                {
+                    "id": "S-A3P",
+                    "training_type": "A3P",
+                    "trainees": [
+                        {"last_name": "A3P-SOON", "first_name": "Chloé", "convention_status": "soon"},
+                    ],
+                },
+            ]
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            response = self.client.get("/admin/sessions/conventions?formation=APS&status=signing")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("APS-SIGNING", html)
+        self.assertNotIn("APS-SOON", html)
+        self.assertNotIn("A3P-SOON", html)
+        self.assertIn('option value="APS" selected', html)
+        self.assertIn('option value="signing" selected', html)
+        self.assertIn("Réinitialiser", html)
+
 
 if __name__ == "__main__":
     unittest.main()
