@@ -13376,12 +13376,13 @@ def _build_ssiap_diplomas_pdf(diplomas: List[Dict[str, str]]) -> BytesIO:
         draw_missing_title_accent()
         photo_width = 35 * mm
         photo_height = 45 * mm
-        photo_margin = 12 * mm
+        photo_right_margin = 5 * mm
+        photo_top_margin = 12 * mm
         _draw_pdf_cover_image(
             pdf,
             str(diploma.get("photo_path") or ""),
-            page_width - photo_margin - photo_width,
-            page_height - photo_margin - photo_height,
+            page_width - photo_right_margin - photo_width,
+            page_height - photo_top_margin - photo_height,
             photo_width,
             photo_height,
         )

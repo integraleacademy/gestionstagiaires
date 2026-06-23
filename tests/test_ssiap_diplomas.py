@@ -174,7 +174,7 @@ class SsiapDiplomaTests(unittest.TestCase):
         self.assertEqual(called_path, photo_path)
         self.assertAlmostEqual(width, 35 * mm, places=4)
         self.assertAlmostEqual(height, 45 * mm, places=4)
-        self.assertAlmostEqual(x, page_width - (12 * mm) - (35 * mm), places=4)
+        self.assertAlmostEqual(x, page_width - (5 * mm) - (35 * mm), places=4)
         self.assertAlmostEqual(y, page_height - (12 * mm) - (45 * mm), places=4)
         page_text = page.extract_text()
         self.assertIn("28/10/2026", page_text)
