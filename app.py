@@ -13280,12 +13280,16 @@ def _draw_fitted_pdf_text(
 def _draw_pdf_cover_image(pdf_canvas, image_path: str, x: float, y: float, width: float, height: float) -> bool:
     if not image_path or not os.path.exists(image_path):
         return False
+    from reportlab.lib.utils import ImageReader
+
+    canvas_state_saved = False
     try:
         with Image.open(image_path) as source:
             image = ImageOps.exif_transpose(source).convert("RGB")
             image_width, image_height = image.size
             if image_width <= 0 or image_height <= 0:
                 return False
+            image_reader = ImageReader(image)
             scale = max(width / image_width, height / image_height)
             draw_width = image_width * scale
             draw_height = image_height * scale
@@ -13293,11 +13297,12 @@ def _draw_pdf_cover_image(pdf_canvas, image_path: str, x: float, y: float, width
             draw_y = y + (height - draw_height) / 2
 
             pdf_canvas.saveState()
+            canvas_state_saved = True
             clip_path = pdf_canvas.beginPath()
             clip_path.rect(x, y, width, height)
             pdf_canvas.clipPath(clip_path, stroke=0, fill=0)
             pdf_canvas.drawImage(
-                ImageReader(image),
+                image_reader,
                 draw_x,
                 draw_y,
                 width=draw_width,
@@ -13306,8 +13311,11 @@ def _draw_pdf_cover_image(pdf_canvas, image_path: str, x: float, y: float, width
                 mask="auto",
             )
             pdf_canvas.restoreState()
+            canvas_state_saved = False
             return True
     except Exception:
+        if canvas_state_saved:
+            pdf_canvas.restoreState()
         return False
 
 def _build_ssiap_diplomas_pdf(diplomas: List[Dict[str, str]]) -> BytesIO:

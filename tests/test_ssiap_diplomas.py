@@ -176,6 +176,10 @@ class SsiapDiplomaTests(unittest.TestCase):
         self.assertAlmostEqual(height, 45 * mm, places=4)
         self.assertAlmostEqual(x, page_width - (12 * mm) - (35 * mm), places=4)
         self.assertAlmostEqual(y, page_height - (12 * mm) - (45 * mm), places=4)
+        page_text = page.extract_text()
+        self.assertIn("28/10/2026", page_text)
+        self.assertIn("Monsieur Clément VAILLANT", page_text)
+        self.assertIn("083-8323-1-2026-00001", page_text)
 
     def test_pdf_fields_are_aligned_after_template_labels(self):
         pdf = gestion_app._build_ssiap_diplomas_pdf([{
