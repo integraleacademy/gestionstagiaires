@@ -13065,6 +13065,17 @@ def _ssiap_diploma_exam_date(session_item: Dict[str, Any], trainee: Dict[str, An
     return _diploma_date_fr(raw)
 
 
+def _ssiap_diploma_photo_path(trainee: Dict[str, Any]) -> str:
+    photo_token = str(trainee.get("identity_photo") or "").strip()
+    if not photo_token:
+        return ""
+    try:
+        photo_path = _detokenize_path(photo_token)
+    except Exception:
+        return ""
+    return photo_path if os.path.exists(photo_path) else ""
+
+
 def _ssiap_diploma_row(session_item: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
     return {
         "trainee_id": str(trainee.get("id") or ""),
@@ -13075,6 +13086,7 @@ def _ssiap_diploma_row(session_item: Dict[str, Any], trainee: Dict[str, Any]) ->
         "birth_place": _ssiap_birth_place_label(trainee),
         "exam_date": _ssiap_diploma_exam_date(session_item, trainee),
         "number": str(trainee.get("ssiap_diploma_number") or "").strip(),
+        "photo_path": _ssiap_diploma_photo_path(trainee),
     }
 
 
@@ -13265,8 +13277,42 @@ def _draw_fitted_pdf_text(
     pdf_canvas.drawString(x, y, text)
 
 
+def _draw_pdf_cover_image(pdf_canvas, image_path: str, x: float, y: float, width: float, height: float) -> bool:
+    if not image_path or not os.path.exists(image_path):
+        return False
+    try:
+        with Image.open(image_path) as source:
+            image = ImageOps.exif_transpose(source).convert("RGB")
+            image_width, image_height = image.size
+            if image_width <= 0 or image_height <= 0:
+                return False
+            scale = max(width / image_width, height / image_height)
+            draw_width = image_width * scale
+            draw_height = image_height * scale
+            draw_x = x + (width - draw_width) / 2
+            draw_y = y + (height - draw_height) / 2
+
+            pdf_canvas.saveState()
+            clip_path = pdf_canvas.beginPath()
+            clip_path.rect(x, y, width, height)
+            pdf_canvas.clipPath(clip_path, stroke=0, fill=0)
+            pdf_canvas.drawImage(
+                ImageReader(image),
+                draw_x,
+                draw_y,
+                width=draw_width,
+                height=draw_height,
+                preserveAspectRatio=True,
+                mask="auto",
+            )
+            pdf_canvas.restoreState()
+            return True
+    except Exception:
+        return False
+
 def _build_ssiap_diplomas_pdf(diplomas: List[Dict[str, str]]) -> BytesIO:
     from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.units import mm
     from reportlab.lib.utils import ImageReader
     from reportlab.pdfgen import canvas
 
@@ -13320,6 +13366,17 @@ def _build_ssiap_diplomas_pdf(diplomas: List[Dict[str, str]]) -> BytesIO:
             preserveAspectRatio=False,
         )
         draw_missing_title_accent()
+        photo_width = 35 * mm
+        photo_height = 45 * mm
+        photo_margin = 12 * mm
+        _draw_pdf_cover_image(
+            pdf,
+            str(diploma.get("photo_path") or ""),
+            page_width - photo_margin - photo_width,
+            page_height - photo_margin - photo_height,
+            photo_width,
+            photo_height,
+        )
         # Coordinates are authored against the 2000 × 1414 template and scaled to physical A4 landscape.
         draw_text(diploma["exam_date"], 1445, 771, 300)
         draw_text(diploma["name"], 1080, 846, 650)
