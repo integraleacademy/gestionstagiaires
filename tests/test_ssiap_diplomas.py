@@ -5,7 +5,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from PIL import Image
 from pypdf import PdfReader
+from reportlab.lib.units import mm
 
 import app as gestion_app
 
@@ -22,6 +24,7 @@ class SsiapDiplomaTests(unittest.TestCase):
         self.lock_file = os.path.join(self.temp_dir.name, "ssiap_diplomas.lock")
         self.patchers = [
             patch.object(gestion_app, "DATA_FILE", self.data_file),
+            patch.object(gestion_app, "PERSIST_DIR", self.temp_dir.name),
             patch.object(gestion_app, "SSIAP_DIPLOMA_LOCK_FILE", self.lock_file),
             patch.object(gestion_app, "BACKUP_SNAPSHOT_BEFORE_SAVE", False),
             patch.object(gestion_app, "BACKUP_MIN_INTERVAL_SECONDS", 10**9),
@@ -136,6 +139,47 @@ class SsiapDiplomaTests(unittest.TestCase):
             gestion_app._ssiap_diploma_display_name(trainee),
             "Monsieur Clément VAILLANT",
         )
+
+    def test_diploma_row_resolves_identity_photo_for_pdf(self):
+        photo_dir = os.path.join(self.temp_dir.name, "uploads", "S1", "T1")
+        os.makedirs(photo_dir, exist_ok=True)
+        photo_path = os.path.join(photo_dir, "identity.jpg")
+        Image.new("RGB", (70, 90), "#336699").save(photo_path)
+        trainee = self._trainee("T1", "jean", "dupont", "1990-02-03")
+        trainee["identity_photo"] = "uploads/S1/T1/identity.jpg"
+
+        row = gestion_app._ssiap_diploma_row({"exam_date": "2026-06-30"}, trainee)
+
+        self.assertEqual(row["photo_path"], photo_path)
+
+    def test_pdf_draws_identity_photo_at_official_size_in_top_right_corner(self):
+        photo_path = os.path.join(self.temp_dir.name, "identity.jpg")
+        Image.new("RGB", (70, 90), "#336699").save(photo_path)
+
+        with patch.object(gestion_app, "_draw_pdf_cover_image", wraps=gestion_app._draw_pdf_cover_image) as draw_mock:
+            pdf = gestion_app._build_ssiap_diplomas_pdf([{
+                "exam_date": "28/10/2026",
+                "name": "Monsieur Clément VAILLANT",
+                "birth_date": "16/09/1993",
+                "birth_place": "PUGET-SUR-ARGENS",
+                "number": "083-8323-1-2026-00001",
+                "photo_path": photo_path,
+            }])
+
+        page = PdfReader(pdf).pages[0]
+        page_width = float(page.mediabox.width)
+        page_height = float(page.mediabox.height)
+        draw_mock.assert_called_once()
+        _canvas, called_path, x, y, width, height = draw_mock.call_args.args
+        self.assertEqual(called_path, photo_path)
+        self.assertAlmostEqual(width, 35 * mm, places=4)
+        self.assertAlmostEqual(height, 45 * mm, places=4)
+        self.assertAlmostEqual(x, page_width - (12 * mm) - (35 * mm), places=4)
+        self.assertAlmostEqual(y, page_height - (12 * mm) - (45 * mm), places=4)
+        page_text = page.extract_text()
+        self.assertIn("28/10/2026", page_text)
+        self.assertIn("Monsieur Clément VAILLANT", page_text)
+        self.assertIn("083-8323-1-2026-00001", page_text)
 
     def test_pdf_fields_are_aligned_after_template_labels(self):
         pdf = gestion_app._build_ssiap_diplomas_pdf([{
