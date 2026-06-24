@@ -132,3 +132,53 @@ class ScotiaLivret2UploadTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         trainee = payload["sessions"][0]["trainees"][0]
         self.assertTrue(trainee["deliverables"]["livret_2"].endswith("uploads/S1/T1/deliverables/livret2.pdf"))
+
+    def test_livret2_upload_accepts_recevable_status_inferred_from_vae_status(self):
+        payload = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "name": "VAE DESP 2026",
+                    "training_type": "DIRIGEANT VAE",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "first_name": "Jean",
+                            "last_name": "Dupont",
+                            "vae_status": "livret_1_validated",
+                            "scotia_status": "",
+                            "deliverables": {},
+                            "vae_action_dates": {"livret_1_validated": "02/06/2026"},
+                        }
+                    ],
+                }
+            ]
+        }
+        saved_payloads = []
+
+        class FakeThread:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def start(self):
+                pass
+
+        gestion_app.load_data = lambda: payload
+        gestion_app.save_data = lambda data: saved_payloads.append(data)
+        gestion_app._store_file = lambda *_args, **_kwargs: "/tmp/uploads/S1/T1/deliverables/livret2.pdf"
+        gestion_app.threading.Thread = FakeThread
+
+        with self.client.session_transaction() as sess:
+            sess["scotia_logged_in"] = True
+
+        response = self.client.post(
+            "/scotia/sessions/S1/stagiaires/T1/livret2/upload",
+            data={"file": (io.BytesIO(b"%PDF-1.4 fake"), "livret2.pdf")},
+            content_type="multipart/form-data",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(len(saved_payloads), 1)
+        trainee = payload["sessions"][0]["trainees"][0]
+        self.assertEqual(trainee["scotia_status"], "recevable")
+        self.assertTrue(trainee["deliverables"]["livret_2"].endswith("uploads/S1/T1/deliverables/livret2.pdf"))
