@@ -9829,13 +9829,16 @@ def scotia_upload_livret2(session_id: str, trainee_id: str):
     <p><strong>Session :</strong> {s.get("name") or s.get("title") or session_id}</p>
     <p><strong>Date :</strong> {today_fr}</p>
     """)
-    brevo_send_email(
-        "scotiaformation@gmail.com",
-        subject,
-        html,
-        cc_emails=["clement@integraleacademy.com"],
-        trainee=t,
-    )
+    # L'envoi Brevo peut prendre plusieurs secondes (timeout réseau, API lente).
+    # Le fichier est déjà sauvegardé juste au-dessus : on déclenche donc l'alerte
+    # en arrière-plan afin que le bouton "Importer Livret 2" rende la main
+    # immédiatement et que l'utilisateur voie l'import sans rester bloqué.
+    threading.Thread(
+        target=brevo_send_email,
+        args=("scotiaformation@gmail.com", subject, html),
+        kwargs={"cc_emails": ["clement@integraleacademy.com"]},
+        daemon=True,
+    ).start()
     return redirect(url_for('scotia_dashboard'))
 
 
