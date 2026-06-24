@@ -36,6 +36,8 @@ from urllib.parse import urlparse, urljoin, quote
 
 
 app = Flask(__name__)
+MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
+app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
 
 
 @app.after_request
@@ -8933,6 +8935,17 @@ def _scotia_dashboard_category(item: Dict[str, Any]) -> str:
         return "l2-waiting"
     return "done"
 
+
+def _scotia_effective_status(t: Dict[str, Any]) -> str:
+    """Retourne le statut SCOTIA réellement affiché/autorisé pour un stagiaire."""
+    stored_status = (t.get("scotia_status") or "").strip()
+    if stored_status:
+        return stored_status
+    vae_status_key = vae_status_view(t.get("vae_status") or t.get("vae_status_label"))["key"]
+    if VAE_STATUS_RANK.get(vae_status_key, -1) >= VAE_STATUS_RANK["livret_1_validated"]:
+        return "recevable"
+    return ""
+
 @app.get('/scotia')
 @scotia_login_required
 def scotia_dashboard():
@@ -9077,10 +9090,12 @@ def api_scotia_decision(session_id: str, trainee_id: str):
             t['vae_status_label'] = view['label']
             t['vae_action_dates']['livret_1_analysis_at'] = now_paris_label
     else:
-        current_status = (t.get('scotia_status') or '').strip()
+        current_status = _scotia_effective_status(t)
         has_livret_2 = bool(((t.get('deliverables') or {}).get('livret_2') or '').strip())
         if current_status != 'recevable' or not has_livret_2:
             return jsonify({"ok": False, "error": "livret_2_not_ready"}), 400
+        if not (t.get('scotia_status') or '').strip():
+            t['scotia_status'] = 'recevable'
         t['scotia_livret_2_status'] = decision
         t['scotia_livret_2_processed_at'] = now_iso
         t['scotia_livret_2_processed_at_label'] = now_paris_label
@@ -9785,7 +9800,7 @@ def scotia_upload_livret2(session_id: str, trainee_id: str):
     if not s or not t:
         abort(404)
 
-    if (t.get("scotia_status") or "").strip() != "recevable":
+    if _scotia_effective_status(t) != "recevable":
         return redirect(url_for('scotia_dashboard'))
 
     f = request.files.get('file')
@@ -9804,6 +9819,8 @@ def scotia_upload_livret2(session_id: str, trainee_id: str):
     token = _tokenize_path(stored)
     t.setdefault('deliverables', {})
     t['deliverables']['livret_2'] = token
+    if not (t.get("scotia_status") or "").strip():
+        t["scotia_status"] = "recevable"
 
     if not isinstance(t.get("vae_action_dates"), dict):
         t["vae_action_dates"] = {}
@@ -9829,13 +9846,16 @@ def scotia_upload_livret2(session_id: str, trainee_id: str):
     <p><strong>Session :</strong> {s.get("name") or s.get("title") or session_id}</p>
     <p><strong>Date :</strong> {today_fr}</p>
     """)
-    brevo_send_email(
-        "scotiaformation@gmail.com",
-        subject,
-        html,
-        cc_emails=["clement@integraleacademy.com"],
-        trainee=t,
-    )
+    # L'envoi Brevo peut prendre plusieurs secondes (timeout réseau, API lente).
+    # Le fichier est déjà sauvegardé juste au-dessus : on déclenche donc l'alerte
+    # en arrière-plan afin que le bouton "Importer Livret 2" rende la main
+    # immédiatement et que l'utilisateur voie l'import sans rester bloqué.
+    threading.Thread(
+        target=brevo_send_email,
+        args=("scotiaformation@gmail.com", subject, html),
+        kwargs={"cc_emails": ["clement@integraleacademy.com"]},
+        daemon=True,
+    ).start()
     return redirect(url_for('scotia_dashboard'))
 
 
