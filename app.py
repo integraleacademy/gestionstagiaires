@@ -36,6 +36,8 @@ from urllib.parse import urlparse, urljoin, quote
 
 
 app = Flask(__name__)
+MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
+app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
 
 
 @app.after_request

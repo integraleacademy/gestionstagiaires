@@ -83,3 +83,52 @@ class ScotiaLivret2UploadTests(unittest.TestCase):
         self.assertEqual(len(started_threads), 1)
         self.assertIs(started_threads[0]["target"], gestion_app.brevo_send_email)
         self.assertTrue(started_threads[0]["daemon"])
+
+    def test_livret2_upload_accepts_files_up_to_ten_megabytes(self):
+        self.assertGreaterEqual(gestion_app.app.config["MAX_CONTENT_LENGTH"], 10 * 1024 * 1024)
+
+        payload = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "name": "VAE DESP 2026",
+                    "training_type": "DIRIGEANT VAE",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "first_name": "Jean",
+                            "last_name": "Dupont",
+                            "scotia_status": "recevable",
+                            "deliverables": {},
+                            "vae_action_dates": {},
+                        }
+                    ],
+                }
+            ]
+        }
+
+        class FakeThread:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def start(self):
+                pass
+
+        gestion_app.load_data = lambda: payload
+        gestion_app.save_data = lambda data: None
+        gestion_app._store_file = lambda *_args, **_kwargs: "/tmp/uploads/S1/T1/deliverables/livret2.pdf"
+        gestion_app.threading.Thread = FakeThread
+
+        with self.client.session_transaction() as sess:
+            sess["scotia_logged_in"] = True
+
+        six_megabytes = b"%PDF-1.4\n" + (b"0" * (6 * 1024 * 1024))
+        response = self.client.post(
+            "/scotia/sessions/S1/stagiaires/T1/livret2/upload",
+            data={"file": (io.BytesIO(six_megabytes), "livret2.pdf")},
+            content_type="multipart/form-data",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        trainee = payload["sessions"][0]["trainees"][0]
+        self.assertTrue(trainee["deliverables"]["livret_2"].endswith("uploads/S1/T1/deliverables/livret2.pdf"))
