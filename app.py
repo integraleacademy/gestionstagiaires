@@ -15905,6 +15905,54 @@ def public_download_file(token: str, file_token: str):
     return send_file(full, as_attachment=False)
 
 
+def _find_public_trainee_by_identity(data: Dict[str, Any], last_name: str, birth: str):
+    """Retourne le premier stagiaire correspondant au nom + date de naissance."""
+    expected_last = _norm_lastname(last_name)
+    expected_birth = _birth_to_ddmmyyyy(birth)
+    if not expected_last or not expected_birth:
+        return None, None
+
+    for session_obj in data.get("sessions", []) or []:
+        trainees = session_obj.get("trainees") or session_obj.get("stagiaires") or []
+        for trainee in trainees:
+            trainee_last = _norm_lastname(trainee.get("last_name", ""))
+            trainee_birth = _birth_to_ddmmyyyy(trainee.get("birth_date", ""))
+            trainee_token = (trainee.get("public_token") or trainee.get("token") or "").strip()
+            if trainee_token and trainee_last == expected_last and trainee_birth == expected_birth:
+                return session_obj, trainee
+    return None, None
+
+
+@app.get("/espacestagiaire")
+def public_trainee_global_login():
+    if session.get("admin_logged_in"):
+        return redirect(url_for("admin_sessions"))
+
+    return render_template(
+        "public_trainee_login.html",
+        action_url=url_for("public_trainee_global_login_post"),
+        error=(request.args.get("error") or "").strip() == "1",
+        last_name=request.args.get("last_name", ""),
+    )
+
+
+@app.post("/espacestagiaire")
+def public_trainee_global_login_post():
+    data = load_data()
+    last_in = (request.form.get("last_name") or "").strip()
+    birth_in = (request.form.get("birth") or "").strip()
+
+    session_obj, trainee = _find_public_trainee_by_identity(data, last_in, birth_in)
+    if not session_obj or not trainee:
+        return redirect(url_for("public_trainee_global_login", error="1", last_name=last_in))
+
+    token = (trainee.get("public_token") or trainee.get("token") or "").strip()
+    session[f"public_auth_{token}"] = True
+    session.permanent = True
+    _mark_public_login(data, session_obj, trainee)
+    return redirect(url_for("public_trainee_space", token=token))
+
+
 @app.get("/espace/<token>/login")
 def public_trainee_login(token: str):
     # ✅ si admin connecté, bypass
