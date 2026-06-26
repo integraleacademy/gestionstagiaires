@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Connexion espace stagiaire • Intégrale Academy</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo-integrale.png') }}">
+  <style>
+    :root{--ink:#0f172a;--muted:#64748b;--line:rgba(148,163,184,.28);--green:#15803d;--green2:#22c55e;--blue:#2563eb;--bg:#f8fafc;}
+    *{box-sizing:border-box} body{margin:0;min-height:100vh;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink);background:radial-gradient(circle at 12% 18%,rgba(34,197,94,.20),transparent 28%),radial-gradient(circle at 86% 14%,rgba(37,99,235,.18),transparent 30%),linear-gradient(135deg,#f8fafc 0%,#eef6ff 48%,#f0fdf4 100%);display:grid;place-items:center;padding:24px;overflow-x:hidden;}
+    .shell{width:min(1080px,100%);display:grid;grid-template-columns:1.05fr .95fr;gap:28px;align-items:stretch;}
+    .hero,.card{position:relative;border:1px solid var(--line);background:rgba(255,255,255,.76);box-shadow:0 24px 80px rgba(15,23,42,.13);backdrop-filter:blur(18px);border-radius:32px;overflow:hidden;}
+    .hero{padding:42px;min-height:560px;display:flex;flex-direction:column;justify-content:space-between;}
+    .hero:before{content:"";position:absolute;inset:auto -18% -24% 18%;height:310px;background:linear-gradient(135deg,rgba(34,197,94,.26),rgba(37,99,235,.18));border-radius:999px;filter:blur(6px);transform:rotate(-8deg)}
+    .brand{display:flex;align-items:center;gap:14px;position:relative;z-index:1}.brand img{height:74px;width:auto}.brand span{display:block;color:var(--muted);font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase}.brand strong{font-size:22px}
+    h1{position:relative;z-index:1;margin:44px 0 14px;font-size:clamp(38px,5vw,62px);line-height:.95;letter-spacing:-.06em}.lead{position:relative;z-index:1;margin:0;max-width:560px;color:#475569;font-size:18px;line-height:1.65;font-weight:600}
+    .features{position:relative;z-index:1;display:grid;gap:12px;margin-top:34px}.feature{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid rgba(226,232,240,.9);background:rgba(255,255,255,.68);border-radius:18px;font-weight:800;color:#334155}.dot{display:grid;place-items:center;flex:0 0 36px;height:36px;border-radius:12px;background:#ecfdf5;color:var(--green)}
+    .card{padding:36px;align-self:center}.badge{display:inline-flex;gap:8px;align-items:center;padding:8px 12px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-weight:900;font-size:12px;border:1px solid #bfdbfe}.card h2{margin:22px 0 8px;font-size:30px;letter-spacing:-.035em}.card p{margin:0 0 24px;color:var(--muted);font-weight:600;line-height:1.5}.alert{padding:13px 14px;border-radius:16px;background:#fff1f2;border:1px solid #fecdd3;color:#9f1239;font-weight:800;margin-bottom:16px}
+    label{display:block;margin:16px 0 8px;font-size:14px;font-weight:900;color:#1e293b}.input-wrap{position:relative}.input-wrap svg{position:absolute;left:15px;top:50%;transform:translateY(-50%);color:#94a3b8}.field{width:100%;height:54px;border:1px solid #dbe4ee;border-radius:17px;padding:0 16px 0 46px;background:#fff;color:#0f172a;font-size:16px;font-weight:800;outline:none;transition:.18s ease}.field:focus{border-color:rgba(34,197,94,.85);box-shadow:0 0 0 5px rgba(34,197,94,.13)}
+    .submit{width:100%;height:56px;border:0;border-radius:18px;margin-top:22px;background:linear-gradient(135deg,var(--green2),var(--green));color:#fff;font-size:16px;font-weight:950;cursor:pointer;box-shadow:0 18px 34px rgba(21,128,61,.28);transition:.18s ease}.submit:hover{transform:translateY(-1px);box-shadow:0 22px 42px rgba(21,128,61,.34)}.help{margin-top:18px;padding:14px;border-radius:18px;background:#f8fafc;border:1px solid #e2e8f0;color:#475569;font-size:13px;line-height:1.45}.help strong{color:#0f172a}
+    @media(max-width:860px){body{padding:14px}.shell{grid-template-columns:1fr}.hero{min-height:auto;padding:28px}.card{padding:26px;border-radius:26px}.features{display:none}.brand img{height:58px}h1{margin-top:30px}.lead{font-size:16px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero" aria-label="Présentation de l'espace stagiaire">
+      <div class="brand"><img src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy"><div><span>Espace public stagiaire</span><strong>Intégrale Academy</strong></div></div>
+      <div><h1>Vos documents et informations, simplement.</h1><p class="lead">Connectez-vous avec votre nom de famille et votre date de naissance pour retrouver votre espace stagiaire sécurisé.</p></div>
+      <div class="features"><div class="feature"><span class="dot">✓</span> Suivi de votre dossier de formation</div><div class="feature"><span class="dot">↥</span> Dépôt rapide des pièces demandées</div><div class="feature"><span class="dot">⌁</span> Accès adapté mobile, tablette et ordinateur</div></div>
+    </section>
+    <section class="card" aria-label="Formulaire de connexion">
+      <span class="badge">Connexion sécurisée</span>
+      <h2>Accéder à mon espace</h2>
+      <p>Saisissez les informations indiquées dans votre dossier stagiaire.</p>
+      {% if error %}<div class="alert" role="alert">Aucun espace stagiaire ne correspond à ces informations. Vérifiez votre nom et votre date de naissance.</div>{% endif %}
+      <form method="post" action="{{ action_url }}">
+        <label for="last_name">Nom de famille</label>
+        <div class="input-wrap"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/></svg><input class="field" id="last_name" name="last_name" autocomplete="family-name" placeholder="Ex : Dupont" required value="{{ last_name or '' }}"></div>
+        <label for="birth">Date de naissance</label>
+        <div class="input-wrap"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="2"/><path d="M16 3v4M8 3v4M3 11h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input class="field" id="birth" name="birth" inputmode="numeric" autocomplete="bday" placeholder="JJMMYYYY" required></div>
+        <button class="submit" type="submit">Se connecter</button>
+      </form>
+      <div class="help">Format conseillé : <strong>JJMMYYYY</strong> — exemple : <strong>16091993</strong>. Vous pouvez aussi saisir la date avec des séparateurs.</div>
+    </section>
+  </main>
+</body>
+</html>
