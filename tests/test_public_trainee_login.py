@@ -42,3 +42,67 @@ class PublicTraineeLoginTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("/espace/PUBLIC-TOKEN", response.headers["Location"])
+
+    def test_global_login_accepts_birth_name_alias(self):
+        self.data["sessions"][0]["trainees"][0]["last_name"] = "DUPONT"
+        self.data["sessions"][0]["trainees"][0]["nom_naissance"] = "BONELLO"
+        self.data["sessions"][0]["trainees"][0]["birth_date"] = "1979-10-29"
+
+        with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
+            gestion_app, "save_data"
+        ):
+            response = self.client.post(
+                "/espacestagiaire",
+                data={"last_name": "BONELLO", "birth": "29101979"},
+                follow_redirects=False,
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/espace/PUBLIC-TOKEN", response.headers["Location"])
+
+    def test_global_login_accepts_old_french_keys(self):
+        data = {
+            "sessions": [
+                {
+                    "id": "S1",
+                    "stagiaires": [
+                        {
+                            "id": "T1",
+                            "nom": "BONELLO",
+                            "prenom": "Alice",
+                            "date_naissance": "1979-10-29",
+                            "public_token": "PUBLIC-TOKEN",
+                        }
+                    ],
+                }
+            ]
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(
+            gestion_app, "save_data"
+        ):
+            response = self.client.post(
+                "/espacestagiaire",
+                data={"last_name": "BONELLO", "birth": "29101979"},
+                follow_redirects=False,
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/espace/PUBLIC-TOKEN", response.headers["Location"])
+
+    def test_token_login_accepts_same_identity_aliases_as_global_login(self):
+        self.data["sessions"][0]["trainees"][0]["last_name"] = "DUPONT"
+        self.data["sessions"][0]["trainees"][0]["nom_naissance"] = "BONELLO"
+        self.data["sessions"][0]["trainees"][0]["birth_date"] = "1979-10-29"
+
+        with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
+            gestion_app, "save_data"
+        ):
+            response = self.client.post(
+                "/espace/PUBLIC-TOKEN/login",
+                data={"last_name": "BONELLO", "birth": "29101979"},
+                follow_redirects=False,
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/espace/PUBLIC-TOKEN", response.headers["Location"])
