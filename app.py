@@ -4284,14 +4284,19 @@ def _birth_to_ddmmyyyy(value: str) -> str:
     if not v:
         return ""
 
-    # déjà au bon format
     digits = re.sub(r"\D+", "", v)
     if len(digits) == 8:
-        # peut être DDMMYYYY ou YYYYMMDD -> on tente de deviner
-        # si commence par 19/20 => probablement YYYYMMDD
-        if digits.startswith(("19", "20")):
-            return digits[6:8] + digits[4:6] + digits[0:4]  # DDMMYYYY
-        return digits  # DDMMYYYY
+        # La saisie publique attend JJMMYYYY. Certains jours (19, 20)
+        # commencent comme une année, donc ne pas deviner avec startswith(19/20).
+        # On valide d'abord JJMMYYYY, puis on accepte YYYYMMDD pour les dates
+        # stockées/importées sous forme compacte.
+        for fmt in ("%d%m%Y", "%Y%m%d"):
+            try:
+                dt = datetime.datetime.strptime(digits, fmt)
+                return dt.strftime("%d%m%Y")
+            except Exception:
+                pass
+        return ""
 
     # formats classiques
     for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
