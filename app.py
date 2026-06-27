@@ -4290,7 +4290,7 @@ def _birth_to_ddmmyyyy(value: str) -> str:
         # commencent comme une année, donc ne pas deviner avec startswith(19/20).
         # On valide d'abord JJMMYYYY, puis on accepte YYYYMMDD pour les dates
         # stockées/importées sous forme compacte.
-        for fmt in ("%d%m%Y", "%Y%m%d"):
+        for fmt in ("%d%m%Y", "%Y%m%d", "%m%d%Y"):
             try:
                 dt = datetime.datetime.strptime(digits, fmt)
                 return dt.strftime("%d%m%Y")
@@ -4299,7 +4299,7 @@ def _birth_to_ddmmyyyy(value: str) -> str:
         return ""
 
     # formats classiques
-    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d", "%m/%d/%Y", "%m-%d-%Y"):
         try:
             dt = datetime.datetime.strptime(v[:10], fmt)
             return dt.strftime("%d%m%Y")
@@ -15916,6 +15916,8 @@ def _public_trainee_last_names(trainee: Dict[str, Any]) -> set[str]:
         _norm_lastname(trainee.get("nom", "")),
         _norm_lastname(trainee.get("birth_name", "")),
         _norm_lastname(trainee.get("nom_naissance", "")),
+        _norm_lastname(trainee.get("nom_usage", "")),
+        _norm_lastname(trainee.get("name", "")),
     }
     return {name for name in names if name}
 
@@ -15924,6 +15926,10 @@ def _public_trainee_birth_dates(trainee: Dict[str, Any]) -> set[str]:
     dates = {
         _birth_to_ddmmyyyy(trainee.get("birth_date", "")),
         _birth_to_ddmmyyyy(trainee.get("date_naissance", "")),
+        _birth_to_ddmmyyyy(trainee.get("dateNaissance", "")),
+        _birth_to_ddmmyyyy(trainee.get("date_de_naissance", "")),
+        _birth_to_ddmmyyyy(trainee.get("birthdate", "")),
+        _birth_to_ddmmyyyy(trainee.get("dob", "")),
     }
     return {date for date in dates if date}
 

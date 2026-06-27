@@ -106,3 +106,36 @@ class PublicTraineeLoginTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("/espace/PUBLIC-TOKEN", response.headers["Location"])
+
+    def test_global_login_accepts_us_style_stored_birth_date(self):
+        self.data["sessions"][0]["trainees"][0]["last_name"] = "BONELLO"
+        self.data["sessions"][0]["trainees"][0]["birth_date"] = "10/29/1979"
+
+        with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
+            gestion_app, "save_data"
+        ):
+            response = self.client.post(
+                "/espacestagiaire",
+                data={"last_name": "bonello", "birth": "29101979"},
+                follow_redirects=False,
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/espace/PUBLIC-TOKEN", response.headers["Location"])
+
+    def test_global_login_accepts_alternate_birth_date_key(self):
+        del self.data["sessions"][0]["trainees"][0]["birth_date"]
+        self.data["sessions"][0]["trainees"][0]["last_name"] = "BONELLO"
+        self.data["sessions"][0]["trainees"][0]["dateNaissance"] = "1979-10-29"
+
+        with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
+            gestion_app, "save_data"
+        ):
+            response = self.client.post(
+                "/espacestagiaire",
+                data={"last_name": "BONELLO", "birth": "29/10/1979"},
+                follow_redirects=False,
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/espace/PUBLIC-TOKEN", response.headers["Location"])
