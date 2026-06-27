@@ -347,24 +347,46 @@
   .aps-elearning-card{
     grid-column:1/-1;
     overflow:hidden;
-    border:1px solid #c4b5fd;
-    background:linear-gradient(135deg,#312e81 0%,#4f46e5 45%,#7c3aed 100%);
-    color:#fff;
-    box-shadow:0 20px 45px rgba(79,70,229,.22);
+    position:relative;
+    display:flex;
+    gap:18px;
+    align-items:flex-start;
+    padding:22px;
+    border:1px solid #ddd6fe;
+    border-radius:22px;
+    background:linear-gradient(135deg,#ffffff 0%,#F7F5FF 100%);
+    color:#1f2937;
+    box-shadow:0 18px 42px rgba(79,70,229,.11),0 2px 8px rgba(15,23,42,.05);
   }
-  .aps-elearning-card h2{font-size:23px;margin:0;}
-  .aps-elearning-card .aps-elearning-subtitle{margin:7px 0 0;color:#e0e7ff;line-height:1.55;}
-  .aps-elearning-pending{margin-top:18px;padding:16px;border:1px solid rgba(255,255,255,.24);border-radius:14px;background:rgba(255,255,255,.12);font-weight:800;}
+  .aps-elearning-card:before{content:"";position:absolute;inset:0 0 auto;height:4px;background:linear-gradient(90deg,#7c3aed,#2563eb);}
+  .aps-elearning-icon{
+    flex:0 0 auto;
+    width:48px;
+    height:48px;
+    display:grid;
+    place-items:center;
+    border-radius:999px;
+    background:linear-gradient(135deg,#7c3aed 0%,#2563eb 100%);
+    color:#fff;
+    box-shadow:0 12px 24px rgba(79,70,229,.22);
+  }
+  .aps-elearning-icon svg{width:24px;height:24px;display:block;}
+  .aps-elearning-content{min-width:0;flex:1;}
+  .aps-elearning-card h2{font-size:23px;margin:0;color:#111827;letter-spacing:-.02em;}
+  .aps-elearning-card .aps-elearning-subtitle{max-width:760px;margin:7px 0 0;color:#4b5563;line-height:1.55;}
+  .aps-elearning-badge{display:inline-flex;align-items:center;margin-top:14px;padding:8px 12px;border:1px solid #c7d2fe;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:13px;font-weight:1000;box-shadow:0 6px 16px rgba(79,70,229,.08);}
+  .aps-elearning-note{max-width:840px;margin:14px 0 0;color:#374151;line-height:1.55;font-size:14px;}
+  .aps-elearning-pending{margin-top:14px;padding:12px 14px;border:1px solid #ddd6fe;border-radius:14px;background:rgba(255,255,255,.72);color:#4338ca;font-weight:850;}
   .aps-elearning-credentials{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px;}
-  .aps-elearning-credential{padding:14px;border-radius:14px;background:#fff;color:#111827;box-shadow:0 8px 20px rgba(15,23,42,.14);}
+  .aps-elearning-credential{padding:14px;border:1px solid #ede9fe;border-radius:14px;background:#fff;color:#111827;box-shadow:0 8px 20px rgba(15,23,42,.07);}
   .aps-elearning-credential-label{display:block;color:#6b7280;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px;}
   .aps-elearning-value-row{display:flex;align-items:center;gap:8px;}
   .aps-elearning-value{min-width:0;flex:1;font:800 15px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere;}
   .aps-elearning-copy{flex:0 0 auto;padding:8px 10px;border:1px solid #c7d2fe;border-radius:9px;background:#eef2ff;color:#3730a3;font-weight:900;cursor:pointer;}
   .aps-elearning-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:18px;}
-  .aps-elearning-actions .btn{background:#fff;color:#3730a3;border-color:#fff;font-weight:900;}
-  .aps-elearning-copy-status{color:#e0e7ff;font-weight:700;}
-  @media(max-width:680px){.aps-elearning-credentials{grid-template-columns:1fr;}}
+  .aps-elearning-actions .btn{background:#4f46e5;color:#fff;border-color:#4f46e5;font-weight:900;box-shadow:0 10px 22px rgba(79,70,229,.18);}
+  .aps-elearning-copy-status{color:#4338ca;font-weight:700;}
+  @media(max-width:680px){.aps-elearning-card{flex-direction:column;gap:12px;padding:18px;}.aps-elearning-icon{width:44px;height:44px;}.aps-elearning-credentials{grid-template-columns:1fr;}.aps-elearning-value-row{align-items:flex-start;flex-direction:column;}.aps-elearning-copy{width:100%;}}
   .vtc-cta{
     padding:14px 16px;
     border-radius:14px;
@@ -826,11 +848,21 @@
       {% set aps_login = (trainee.aps_elearning_login or '')|trim %}
       {% set aps_password = (trainee.aps_elearning_password or '')|trim %}
       <section class="card aps-elearning-card" aria-labelledby="apsElearningTitle">
-        <h2 id="apsElearningTitle">🎓 Votre espace e-learning APS</h2>
-        <p class="aps-elearning-subtitle">Retrouvez ici vos accès personnels à la plateforme de formation à distance.</p>
+        <div class="aps-elearning-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" role="img">
+            <path d="M5 6.5A2.5 2.5 0 0 1 7.5 4H19v13H7.5A2.5 2.5 0 0 0 5 19.5v-13Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M5 19.5A2.5 2.5 0 0 1 7.5 17H19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M9 8h6M9 11h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="aps-elearning-content">
+          <h2 id="apsElearningTitle">Espace e-learning APS</h2>
+          <p class="aps-elearning-subtitle">Vos accès personnels à la plateforme de formation à distance seront activés au démarrage de la formation.</p>
+          <div class="aps-elearning-badge">Accès disponible le {{ session.date_start|frdate }}</div>
+          <p class="aps-elearning-note">Vous pourrez suivre vos modules à distance avec vos identifiants personnels. Votre progression sera suivie pendant toute la formation.</p>
         {% if not aps_elearning_available %}
           <div class="aps-elearning-pending">
-            🔒 Votre espace e-learning sera accessible le {{ session.date_start|frdate }} (1er jour de formation).
+            Vos identifiants seront affichés ici le premier jour de formation.
           </div>
         {% elif aps_login and aps_password %}
           <div class="aps-elearning-credentials">
@@ -854,8 +886,9 @@
             <span class="aps-elearning-copy-status" id="apsElearningCopyStatus" role="status" aria-live="polite"></span>
           </div>
         {% else %}
-          <div class="aps-elearning-pending">⏳ Vos identifiants sont en cours de préparation. Ils apparaîtront ici dès qu’ils seront disponibles.</div>
+          <div class="aps-elearning-pending">Vos identifiants sont en cours de préparation. Ils apparaîtront ici dès qu’ils seront disponibles.</div>
         {% endif %}
+        </div>
       </section>
     {% endif %}
 

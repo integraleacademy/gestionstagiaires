@@ -181,7 +181,7 @@ class ApsElearningTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
-        self.assertIn(f"Votre espace e-learning sera accessible le {tomorrow.strftime('%d/%m/%Y')}", html)
+        self.assertIn(f"Accès disponible le {tomorrow.strftime('%d/%m/%Y')}", html)
         self.assertNotIn("alice.aps", html)
         self.assertNotIn("Secret-123", html)
         self.assertNotIn("Accéder au e-learning", html)
@@ -212,7 +212,7 @@ class ApsElearningTests(unittest.TestCase):
             ):
                 response = self.client.get("/espace/PUBLIC-TOKEN")
             html = response.get_data(as_text=True)
-            self.assertNotIn("Votre espace e-learning APS", html)
+            self.assertNotIn("Espace e-learning APS", html)
             self.assertNotIn("alice.aps", html)
             self.assertNotIn("Secret-123", html)
 
