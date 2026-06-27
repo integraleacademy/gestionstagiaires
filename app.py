@@ -4284,17 +4284,22 @@ def _birth_to_ddmmyyyy(value: str) -> str:
     if not v:
         return ""
 
-    # déjà au bon format
     digits = re.sub(r"\D+", "", v)
     if len(digits) == 8:
-        # peut être DDMMYYYY ou YYYYMMDD -> on tente de deviner
-        # si commence par 19/20 => probablement YYYYMMDD
-        if digits.startswith(("19", "20")):
-            return digits[6:8] + digits[4:6] + digits[0:4]  # DDMMYYYY
-        return digits  # DDMMYYYY
+        # La saisie publique attend JJMMYYYY. Certains jours (19, 20)
+        # commencent comme une année, donc ne pas deviner avec startswith(19/20).
+        # On valide d'abord JJMMYYYY, puis on accepte YYYYMMDD pour les dates
+        # stockées/importées sous forme compacte.
+        for fmt in ("%d%m%Y", "%Y%m%d", "%m%d%Y"):
+            try:
+                dt = datetime.datetime.strptime(digits, fmt)
+                return dt.strftime("%d%m%Y")
+            except Exception:
+                pass
+        return ""
 
     # formats classiques
-    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d", "%m/%d/%Y", "%m-%d-%Y"):
         try:
             dt = datetime.datetime.strptime(v[:10], fmt)
             return dt.strftime("%d%m%Y")
@@ -15905,20 +15910,47 @@ def public_download_file(token: str, file_token: str):
     return send_file(full, as_attachment=False)
 
 
-def _find_public_trainee_by_identity(data: Dict[str, Any], last_name: str, birth: str):
-    """Retourne le premier stagiaire correspondant au nom + date de naissance."""
+def _public_trainee_last_names(trainee: Dict[str, Any]) -> set[str]:
+    names = {
+        _norm_lastname(trainee.get("last_name", "")),
+        _norm_lastname(trainee.get("nom", "")),
+        _norm_lastname(trainee.get("birth_name", "")),
+        _norm_lastname(trainee.get("nom_naissance", "")),
+        _norm_lastname(trainee.get("nom_usage", "")),
+        _norm_lastname(trainee.get("name", "")),
+    }
+    return {name for name in names if name}
+
+
+def _public_trainee_birth_dates(trainee: Dict[str, Any]) -> set[str]:
+    dates = {
+        _birth_to_ddmmyyyy(trainee.get("birth_date", "")),
+        _birth_to_ddmmyyyy(trainee.get("date_naissance", "")),
+        _birth_to_ddmmyyyy(trainee.get("dateNaissance", "")),
+        _birth_to_ddmmyyyy(trainee.get("date_de_naissance", "")),
+        _birth_to_ddmmyyyy(trainee.get("birthdate", "")),
+        _birth_to_ddmmyyyy(trainee.get("dob", "")),
+    }
+    return {date for date in dates if date}
+
+
+def _public_trainee_identity_matches(trainee: Dict[str, Any], last_name: str, birth: str) -> bool:
     expected_last = _norm_lastname(last_name)
     expected_birth = _birth_to_ddmmyyyy(birth)
     if not expected_last or not expected_birth:
+        return False
+    return expected_last in _public_trainee_last_names(trainee) and expected_birth in _public_trainee_birth_dates(trainee)
+
+
+def _find_public_trainee_by_identity(data: Dict[str, Any], last_name: str, birth: str):
+    """Retourne le premier stagiaire correspondant au nom + date de naissance."""
+    if not _norm_lastname(last_name) or not _birth_to_ddmmyyyy(birth):
         return None, None
 
     for session_obj in data.get("sessions", []) or []:
-        trainees = session_obj.get("trainees") or session_obj.get("stagiaires") or []
-        for trainee in trainees:
-            trainee_last = _norm_lastname(trainee.get("last_name", ""))
-            trainee_birth = _birth_to_ddmmyyyy(trainee.get("birth_date", ""))
+        for trainee in _session_trainees_list(session_obj):
             trainee_token = (trainee.get("public_token") or trainee.get("token") or "").strip()
-            if trainee_token and trainee_last == expected_last and trainee_birth == expected_birth:
+            if trainee_token and _public_trainee_identity_matches(trainee, last_name, birth):
                 return session_obj, trainee
     return None, None
 
@@ -16129,14 +16161,6 @@ def public_trainee_login_post(token: str):
     last_in = (request.form.get("last_name") or "").strip()
     birth_in = (request.form.get("birth") or "").strip()
 
-    # normalisation saisies
-    last_in_norm = _norm_lastname(last_in)
-    birth_in_digits = re.sub(r"\D+", "", birth_in)  # doit donner 8 chiffres
-
-    # valeurs attendues
-    expected_last = _norm_lastname(t.get("last_name", ""))
-    expected_birth = _birth_to_ddmmyyyy(t.get("birth_date", ""))
-
     print("[PUBLIC LOGIN] token =", token)
     print("[PUBLIC LOGIN] trainee keys =", list(t.keys()))
     print("[PUBLIC LOGIN] raw last_name =", t.get("last_name"))
@@ -16144,11 +16168,7 @@ def public_trainee_login_post(token: str):
 
 
     # 🔒 contrôle strict
-    if not expected_last or not expected_birth:
-        # si les infos ne sont pas renseignées côté dossier, on refuse
-        return redirect(url_for("public_trainee_login", token=token, error="1"))
-
-    if last_in_norm == expected_last and birth_in_digits == expected_birth:
+    if _public_trainee_identity_matches(t, last_in, birth_in):
         session[f"public_auth_{token}"] = True
         session.permanent = True  # cookie persistant (comme admin)
         _mark_public_login(data, s, t)
