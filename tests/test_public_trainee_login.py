@@ -155,3 +155,43 @@ class PublicTraineeLoginTests(unittest.TestCase):
         self.assertIn("[PUBLIC_GLOBAL_LOGIN_FAIL]", output)
         self.assertIn("input_last_norm", output)
         self.assertIn("trainees_count", output)
+
+    def test_birth_to_ddmmyyyy_accepts_iso_and_single_digit_french(self):
+        self.assertEqual(gestion_app._birth_to_ddmmyyyy("2004-01-08"), "08012004")
+        self.assertEqual(gestion_app._birth_to_ddmmyyyy("08/01/2004"), "08012004")
+        self.assertEqual(gestion_app._birth_to_ddmmyyyy("08-01-2004"), "08012004")
+        self.assertEqual(gestion_app._birth_to_ddmmyyyy("8/1/2004"), "08012004")
+
+    def test_global_login_homonyms_different_birth_dates_redirects_right_trainee(self):
+        data = {
+            "sessions": [{"id": "S1", "trainees": [
+                {"id": "T1", "last_name": "BONELLO", "birth_date": "2004-01-08", "public_token": "TOKEN-0801"},
+                {"id": "T2", "last_name": "BONELLO", "birth_date": "2005-02-09", "public_token": "TOKEN-0902"},
+            ]}]
+        }
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(gestion_app, "save_data"):
+            response = self.client.post(
+                "/espacestagiaire",
+                data={"last_name": " bonello ", "birth": "08/01/2004"},
+                follow_redirects=False,
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/espace/TOKEN-0801", response.headers["Location"])
+
+    def test_global_login_duplicate_same_name_and_birth_shows_multiple_message(self):
+        data = {
+            "sessions": [{"id": "S1", "trainees": [
+                {"id": "T1", "last_name": "BONELLO", "birth_date": "2004-01-08", "public_token": "TOKEN-1"},
+                {"id": "T2", "last_name": "BONELLO", "birth_date": "08/01/2004", "public_token": "TOKEN-2"},
+            ]}]
+        }
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(gestion_app, "save_data"):
+            response = self.client.post(
+                "/espacestagiaire",
+                data={"last_name": "BONELLO", "birth": "08012004"},
+                follow_redirects=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Plusieurs dossiers correspondent", response.get_data(as_text=True))
