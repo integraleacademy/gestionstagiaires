@@ -168,24 +168,61 @@ def test_qonto_connection() -> Tuple[bool, int]:
     return response.ok, response.status_code
 
 
-def search_qonto_client(*_args, **_kwargs):
-    raise NotImplementedError("Recherche client Qonto prévue dans la phase suivante.")
+def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    if not _qonto_is_configured():
+        raise QontoConfigurationError("Qonto n’est pas connecté")
+    endpoint = path if path.startswith("/") else f"/{path}"
+    try:
+        response = requests.request(
+            method.upper(),
+            f"{_qonto_base_url()}{endpoint}",
+            headers=get_qonto_headers(),
+            json=payload if payload is not None else None,
+            params=params,
+            timeout=20,
+        )
+        if not response.ok:
+            detail = _sanitize_qonto_error(response.text[:1200])
+            raise RuntimeError(f"Qonto HTTP {response.status_code}: {detail}")
+        if not (response.text or "").strip():
+            return {}
+        return response.json()
+    except QontoConfigurationError:
+        raise
+    except Exception as exc:
+        raise RuntimeError(_sanitize_qonto_error(str(exc))) from exc
 
 
-def create_qonto_client(*_args, **_kwargs):
-    raise NotImplementedError("Création client Qonto prévue dans la phase suivante.")
+def search_qonto_client(criteria: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    email = (criteria.get("email") or "").strip()
+    name = (criteria.get("name") or criteria.get("client_name") or "").strip()
+    params = {"email": email} if email else ({"query": name} if name else {})
+    data = _qonto_request("GET", "/v2/clients", params=params)
+    clients = data.get("clients") or data.get("client_list") or data.get("items") or []
+    for client in clients if isinstance(clients, list) else []:
+        if email and (client.get("email") or "").strip().lower() == email.lower():
+            return client
+    return clients[0] if isinstance(clients, list) and clients else None
 
 
-def create_qonto_invoice(*_args, **_kwargs):
-    raise NotImplementedError("Création facture Qonto prévue dans la phase suivante.")
+def create_qonto_client(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return _qonto_request("POST", "/v2/clients", payload)
 
 
-def finalize_qonto_invoice(*_args, **_kwargs):
-    raise NotImplementedError("Finalisation facture Qonto prévue dans la phase suivante.")
+def create_qonto_invoice(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return _qonto_request("POST", "/v2/client_invoices", payload)
 
 
-def send_qonto_invoice(*_args, **_kwargs):
-    raise NotImplementedError("Envoi facture Qonto prévu dans la phase suivante.")
+def finalize_qonto_invoice(invoice_id: str) -> Dict[str, Any]:
+    return _qonto_request("POST", f"/v2/client_invoices/{quote(str(invoice_id), safe='')}/finalize")
+
+
+def send_qonto_invoice(invoice_id: str, email_payload: Dict[str, Any]) -> Dict[str, Any]:
+    return _qonto_request("POST", f"/v2/client_invoices/{quote(str(invoice_id), safe='')}/send", email_payload)
+
+
+def get_qonto_invoice(invoice_id: str) -> Dict[str, Any]:
+    return _qonto_request("GET", f"/v2/client_invoices/{quote(str(invoice_id), safe='')}")
 
 
 def mark_qonto_invoice_as_paid(*_args, **_kwargs):
@@ -20361,6 +20398,171 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         ssiap_medical_from_date=fr_date(_subtract_months(t.get("ssiap_exam_date") or "", 3)),
     )
 
+
+
+def _find_trainee_any_session(data: Dict[str, Any], trainee_id: str):
+    for sess in data.get("sessions", []):
+        trainees = _session_trainees_list(sess)
+        trainee = next((x for x in trainees if str(x.get("id") or "") == str(trainee_id)), None)
+        if trainee:
+            return sess, trainees, trainee
+    return None, None, None
+
+
+def _money(value: Any) -> float:
+    try:
+        return round(float(str(value or "0").replace(",", ".")), 2)
+    except Exception:
+        return 0.0
+
+
+def _qonto_invoice_state(trainee: Dict[str, Any]) -> Dict[str, Any]:
+    state = trainee.get("qonto_invoice") if isinstance(trainee.get("qonto_invoice"), dict) else {}
+    if not state:
+        state = {}
+        trainee["qonto_invoice"] = state
+    return state
+
+
+def _build_qonto_invoice_preview(sess: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, Any]:
+    training_name = (_session_get(sess, "name", "") or _session_get(sess, "training_type", "") or "Formation").strip()
+    start = (_session_get(sess, "date_start", "") or "")[:10]
+    end = (_session_get(sess, "date_end", "") or start)[:10]
+    issue = datetime.date.today()
+    due = issue + datetime.timedelta(days=30)
+    amount_ht = _money(trainee.get("sales_tracking_amount") or trainee.get("training_price") or default_training_price(_session_get(sess, "training_type", "")))
+    vat_rate = _money(trainee.get("qonto_vat_rate") or 20)
+    amount_tva = round(amount_ht * vat_rate / 100, 2)
+    amount_ttc = round(amount_ht + amount_tva, 2)
+    first = (trainee.get("first_name") or "").strip()
+    last = (trainee.get("last_name") or "").strip()
+    client = {
+        "type": (trainee.get("qonto_client_type") or "particulier"),
+        "first_name": first, "last_name": last, "name": f"{first} {last}".strip(),
+        "email": (trainee.get("email") or "").strip(), "phone": (trainee.get("phone") or "").strip(),
+        "address": (trainee.get("address") or "").strip(), "zip_code": (trainee.get("zip_code") or "").strip(),
+        "city": (trainee.get("city") or "").strip(), "country": "FR",
+        "company_name": (trainee.get("company_name") or trainee.get("qonto_company_name") or "").strip(),
+        "siret": (trainee.get("siret") or trainee.get("qonto_siret") or "").strip(),
+    }
+    label = f"Formation {training_name} - {first} {last} - du {fr_date(start)} au {fr_date(end)}".strip()
+    missing = []
+    if not client["email"]: missing.append("Email client manquant")
+    if not client["address"] or not client["zip_code"] or not client["city"]: missing.append("Adresse client manquante")
+    if amount_ht <= 0: missing.append("Montant de facture invalide")
+    return {
+        "client": client,
+        "formation": {"name": training_name},
+        "session": {"id": sess.get("id"), "name": _session_get(sess, "name", ""), "date_start": start, "date_end": end},
+        "invoice": {"label": label, "quantity": 1, "unit_price_ht": amount_ht, "vat_rate": vat_rate, "amount_ht": amount_ht, "amount_tva": amount_tva, "amount_ttc": amount_ttc, "currency": "EUR", "issue_date": issue.isoformat(), "due_date": due.isoformat(), "conditions": "Paiement à réception de facture. En cas de retard de paiement, des pénalités de retard pourront être appliquées conformément aux dispositions légales en vigueur."},
+        "missing_fields": missing,
+        "existing_invoice": _qonto_invoice_state(trainee),
+    }
+
+
+def _qonto_status_payload(trainee: Dict[str, Any]) -> Dict[str, Any]:
+    inv = _qonto_invoice_state(trainee)
+    status = inv.get("qonto_invoice_status") or ("draft" if inv.get("qonto_invoice_id") else "not_invoiced")
+    return {"ok": True, "status": status, "invoice": inv, "status_label": {"not_invoiced":"Non facturé","draft":"Brouillon Qonto","finalized":"Finalisée","sent":"Envoyée","paid":"Payée","error":"Erreur"}.get(status, status)}
+
+
+@app.get("/api/admin/trainees/<trainee_id>/qonto-invoice/preview")
+@admin_login_required
+def api_qonto_invoice_preview(trainee_id: str):
+    data = load_data(); sess, _, trainee = _find_trainee_any_session(data, trainee_id)
+    if not trainee: return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    return jsonify({"ok": True, **_build_qonto_invoice_preview(sess, trainee)})
+
+
+@app.get("/api/admin/trainees/<trainee_id>/qonto-invoice/status")
+@admin_login_required
+def api_qonto_invoice_status(trainee_id: str):
+    data = load_data(); sess, trainees, trainee = _find_trainee_any_session(data, trainee_id)
+    if not trainee: return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    inv = _qonto_invoice_state(trainee)
+    if inv.get("qonto_invoice_id") and _qonto_is_configured():
+        try:
+            remote = get_qonto_invoice(inv["qonto_invoice_id"])
+            invoice = remote.get("client_invoice") or remote.get("invoice") or remote
+            inv["qonto_invoice_status"] = invoice.get("status") or inv.get("qonto_invoice_status")
+            inv["qonto_invoice_url"] = invoice.get("public_url") or invoice.get("url") or inv.get("qonto_invoice_url")
+            sess["trainees"] = trainees; save_data(data)
+        except Exception as exc:
+            app.logger.warning("[QONTO] status sync failed: %s", _sanitize_qonto_error(str(exc)))
+    return jsonify(_qonto_status_payload(trainee))
+
+
+@app.post("/api/admin/trainees/<trainee_id>/qonto-invoice/create")
+@admin_login_required
+@admin_write_required
+def api_qonto_invoice_create(trainee_id: str):
+    data = load_data(); sess, trainees, trainee = _find_trainee_any_session(data, trainee_id)
+    if not trainee: return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    inv = _qonto_invoice_state(trainee)
+    if inv.get("qonto_invoice_id"): return jsonify({"ok": False, "error": "Facture déjà créée pour ce stagiaire", **_qonto_status_payload(trainee)}), 409
+    if not _qonto_is_configured(): return jsonify({"ok": False, "error": "Qonto n’est pas connecté"}), 400
+    payload = request.get_json(silent=True) or {}
+    client = payload.get("client") or {}; invoice = payload.get("invoice") or {}
+    missing = []
+    if not (client.get("email") or "").strip(): missing.append("Email client manquant")
+    if not (client.get("address") or "").strip() or not (client.get("zip_code") or "").strip() or not (client.get("city") or "").strip(): missing.append("Adresse client manquante")
+    if _money(invoice.get("unit_price_ht") or invoice.get("amount_ht")) <= 0: missing.append("Montant de facture invalide")
+    if missing: return jsonify({"ok": False, "error": ", ".join(missing), "missing_fields": missing}), 400
+    try:
+        q_client = search_qonto_client({"email": client.get("email"), "name": client.get("name")})
+        if not q_client:
+            q_client = create_qonto_client({"client": {"name": client.get("company_name") or client.get("name"), "first_name": client.get("first_name"), "last_name": client.get("last_name"), "email": client.get("email"), "phone": client.get("phone"), "currency": "EUR", "locale": "FR", "billing_address": {"street_address": client.get("address"), "zip_code": client.get("zip_code"), "city": client.get("city"), "country_code": "FR"}, "tax_identification_number": client.get("siret")}})
+        q_client_id = (q_client.get("client") or q_client).get("id")
+        if not q_client_id: raise RuntimeError("Impossible de créer le client Qonto")
+        start = (payload.get("session") or {}).get("date_start") or _session_get(sess, "date_start", "")[:10]
+        end = (payload.get("session") or {}).get("date_end") or _session_get(sess, "date_end", "")[:10]
+        q_inv = create_qonto_invoice({"client_invoice": {"client_id": q_client_id, "issue_date": invoice.get("issue_date"), "due_date": invoice.get("due_date"), "currency": "EUR", "performance_start_date": start, "performance_end_date": end, "status": "draft", "terms_and_conditions": invoice.get("conditions"), "items": [{"title": invoice.get("label"), "label": invoice.get("label"), "quantity": "1", "unit_price": str(invoice.get("unit_price_ht") or invoice.get("amount_ht")), "vat_rate": str(invoice.get("vat_rate") or 20), "total": str(invoice.get("amount_ht") or invoice.get("unit_price_ht"))}]}})
+        qi = q_inv.get("client_invoice") or q_inv.get("invoice") or q_inv
+        now = _now_iso(); inv.update({"id": inv.get("id") or str(uuid.uuid4()), "trainee_id": trainee_id, "qonto_client_id": q_client_id, "qonto_invoice_id": qi.get("id"), "qonto_invoice_number": qi.get("number") or qi.get("invoice_number") or "", "qonto_invoice_status": qi.get("status") or "draft", "qonto_invoice_url": qi.get("public_url") or qi.get("url") or "", "client_name": client.get("name"), "client_email": client.get("email"), "amount_ht": _money(invoice.get("amount_ht") or invoice.get("unit_price_ht")), "amount_tva": _money(invoice.get("amount_tva")), "amount_ttc": _money(invoice.get("amount_ttc")), "currency": "EUR", "issue_date": invoice.get("issue_date"), "due_date": invoice.get("due_date"), "created_at": now, "last_error": ""})
+        if not inv.get("qonto_invoice_id"): raise RuntimeError("Impossible de créer la facture Qonto")
+        sess["trainees"] = trainees; save_data(data)
+        return jsonify({"ok": True, "message": "Facture brouillon Qonto créée", **_qonto_status_payload(trainee)})
+    except Exception as exc:
+        app.logger.exception("[QONTO] create invoice failed: %s", _sanitize_qonto_error(str(exc)))
+        inv["qonto_invoice_status"] = "error"; inv["last_error"] = _sanitize_qonto_error(str(exc)); sess["trainees"] = trainees; save_data(data)
+        return jsonify({"ok": False, "error": "Impossible de créer la facture Qonto"}), 400
+
+
+@app.post("/api/admin/trainees/<trainee_id>/qonto-invoice/finalize")
+@admin_login_required
+@admin_write_required
+def api_qonto_invoice_finalize(trainee_id: str):
+    data = load_data(); sess, trainees, trainee = _find_trainee_any_session(data, trainee_id)
+    if not trainee: return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    inv = _qonto_invoice_state(trainee); invoice_id = inv.get("qonto_invoice_id")
+    if not invoice_id: return jsonify({"ok": False, "error": "Aucune facture Qonto liée"}), 400
+    try:
+        finalized = finalize_qonto_invoice(invoice_id); qi = finalized.get("client_invoice") or finalized.get("invoice") or finalized
+        inv["qonto_invoice_status"] = qi.get("status") or "finalized"; inv["finalized_at"] = _now_iso(); inv["last_error"] = ""; sess["trainees"] = trainees; save_data(data)
+        return jsonify({"ok": True, "message": "Facture finalisée", **_qonto_status_payload(trainee)})
+    except Exception as exc:
+        app.logger.exception("[QONTO] finalize failed: %s", _sanitize_qonto_error(str(exc))); inv["last_error"] = _sanitize_qonto_error(str(exc)); save_data(data)
+        return jsonify({"ok": False, "error": "Impossible de finaliser la facture"}), 400
+
+
+@app.post("/api/admin/trainees/<trainee_id>/qonto-invoice/send")
+@admin_login_required
+@admin_write_required
+def api_qonto_invoice_send(trainee_id: str):
+    data = load_data(); sess, trainees, trainee = _find_trainee_any_session(data, trainee_id)
+    if not trainee: return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    inv = _qonto_invoice_state(trainee); email = (inv.get("client_email") or trainee.get("email") or "").strip()
+    if (inv.get("qonto_invoice_status") or "") not in {"finalized", "sent"}: return jsonify({"ok": False, "error": "La facture doit être finalisée avant envoi"}), 400
+    if not email: return jsonify({"ok": False, "error": "Email client manquant"}), 400
+    training = (_session_get(sess, "name", "") or _session_get(sess, "training_type", "") or "Formation").strip()
+    full = f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip()
+    try:
+        send_qonto_invoice(inv.get("qonto_invoice_id"), {"email": email, "copy_to_self": True, "subject": f"Votre facture - Formation {training}", "body": f"Bonjour,\n\nVeuillez trouver votre facture concernant la formation {training} de {full}.\n\nCordialement,\nIntégrale Academy"})
+        inv["qonto_invoice_status"] = "sent"; inv["sent_at"] = _now_iso(); inv["last_error"] = ""; sess["trainees"] = trainees; save_data(data)
+        return jsonify({"ok": True, "message": "Facture envoyée", **_qonto_status_payload(trainee)})
+    except Exception as exc:
+        app.logger.exception("[QONTO] send failed: %s", _sanitize_qonto_error(str(exc))); inv["last_error"] = _sanitize_qonto_error(str(exc)); save_data(data)
+        return jsonify({"ok": False, "error": "Impossible d’envoyer la facture"}), 400
 
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-aps/send")
