@@ -14331,23 +14331,36 @@ def _add_aps_working_days(start_day: datetime.date, working_days: int) -> dateti
         current += datetime.timedelta(days=1)
 
 
-def _compute_aps_period_dates(date_start: str) -> Dict[str, str]:
-    raw = (date_start or "").strip()[:10]
+def calculateApsPeriods(sessionStartDate: str) -> Dict[str, str]:
+    raw = (sessionStartDate or "").strip()[:10]
     if not raw:
         return {}
     try:
         start = datetime.datetime.strptime(raw, "%Y-%m-%d").date()
     except (TypeError, ValueError):
         return {}
-    remote_start = _next_aps_working_day(start)
-    remote_end = _add_aps_working_days(remote_start, math.ceil(62 / 7))
-    in_person_start = _next_aps_working_day(remote_end + datetime.timedelta(days=1))
-    in_person_end = _add_aps_working_days(in_person_start, math.ceil(113 / 7))
+
+    distanciel_start = _next_aps_working_day(start)
+    distanciel_end = _add_aps_working_days(distanciel_start, math.ceil(62 / 7))
+    presentiel_start = _next_aps_working_day(distanciel_end + datetime.timedelta(days=1))
+    presentiel_end = _add_aps_working_days(presentiel_start, math.ceil(113 / 7))
     return {
-        "aps_remote_start": remote_start.isoformat(),
-        "aps_remote_end": remote_end.isoformat(),
-        "aps_in_person_start": in_person_start.isoformat(),
-        "aps_in_person_end": in_person_end.isoformat(),
+        "distancielStart": distanciel_start.isoformat(),
+        "distancielEnd": distanciel_end.isoformat(),
+        "presentielStart": presentiel_start.isoformat(),
+        "presentielEnd": presentiel_end.isoformat(),
+    }
+
+
+def _compute_aps_period_dates(date_start: str) -> Dict[str, str]:
+    periods = calculateApsPeriods(date_start)
+    if not periods:
+        return {}
+    return {
+        "aps_remote_start": periods["distancielStart"],
+        "aps_remote_end": periods["distancielEnd"],
+        "aps_in_person_start": periods["presentielStart"],
+        "aps_in_person_end": periods["presentielEnd"],
     }
 
 

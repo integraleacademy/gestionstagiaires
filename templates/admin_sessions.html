@@ -73,6 +73,39 @@
   }
   .quick-convention-state.is-hidden{ display:none; }
   
+
+  .aps-organisation{
+    grid-column:1/-1;
+    padding:14px;
+    border:1px solid #bfdbfe;
+    border-radius:16px;
+    background:linear-gradient(135deg,#eff6ff,#f8fafc);
+    color:#1e3a8a;
+  }
+  .aps-organisation__title{
+    font-weight:900;
+    margin-bottom:10px;
+    letter-spacing:.01em;
+  }
+  .aps-organisation__cards{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+  }
+  .aps-period-card{
+    padding:12px;
+    border:1px solid #dbeafe;
+    border-radius:14px;
+    background:#ffffff;
+    box-shadow:0 6px 16px rgba(30,64,175,.08);
+  }
+  .aps-period-card__label{ font-weight:900; color:#1d4ed8; }
+  .aps-period-card__hours{ margin-top:4px; font-weight:800; color:#334155; }
+  .aps-period-card__dates{ margin-top:8px; font-weight:900; color:#0f172a; }
+  @media (max-width: 720px){
+    .aps-organisation__cards{ grid-template-columns:1fr; }
+  }
+
   /* Modale plus large */
   .modal.modal-wide{
     width: min(1200px, 96vw);
@@ -849,7 +882,7 @@
           <input id="dateStart" type="date">
         </label>
 
-        <label>
+        <label id="dateEndField">
           <div class="label">Date fin</div>
           <input id="dateEnd" type="date">
         </label>
@@ -870,10 +903,20 @@
           <div class="label">Date formation pratique</div>
           <input id="practiceTrainingDate" type="date">
         </label>
-        <div id="apsComputedPeriodsField" class="hint" style="display:none;grid-column:1/-1;padding:10px 12px;border:1px solid #bfdbfe;border-radius:12px;background:#eff6ff;color:#1d4ed8;font-weight:800;">
-          Dates APS calculées automatiquement :<br>
-          Distanciel : <span id="apsRemotePreview">—</span><br>
-          Présentiel : <span id="apsInPersonPreview">—</span>
+        <div id="apsComputedPeriodsField" class="aps-organisation" style="display:none;">
+          <div class="aps-organisation__title">Organisation APS</div>
+          <div class="aps-organisation__cards">
+            <div class="aps-period-card" aria-live="polite">
+              <div class="aps-period-card__label">Distanciel</div>
+              <div class="aps-period-card__hours">62h e-learning</div>
+              <div class="aps-period-card__dates">Du <span id="apsRemoteStartPreview">—</span> au <span id="apsRemoteEndPreview">—</span></div>
+            </div>
+            <div class="aps-period-card" aria-live="polite">
+              <div class="aps-period-card__label">Présentiel</div>
+              <div class="aps-period-card__hours">113h en centre de formation</div>
+              <div class="aps-period-card__dates">Du <span id="apsInPersonStartPreview">—</span> au <span id="apsInPersonEndPreview">—</span></div>
+            </div>
+          </div>
         </div>
         <label id="apsElearningField" style="display:none;grid-column:1/-1;">
           <span style="display:flex;align-items:center;gap:10px;font-weight:800;">
@@ -1046,7 +1089,7 @@
           <input id="editDateStart" type="date">
         </label>
 
-        <label>
+        <label id="editDateEndField">
           <div class="label">Date fin</div>
           <input id="editDateEnd" type="date">
         </label>
@@ -1067,10 +1110,20 @@
           <div class="label">Date formation pratique</div>
           <input id="editPracticeTrainingDate" type="date">
         </label>
-        <div id="editApsComputedPeriodsField" class="hint" style="display:none;grid-column:1/-1;padding:10px 12px;border:1px solid #bfdbfe;border-radius:12px;background:#eff6ff;color:#1d4ed8;font-weight:800;">
-          Dates APS calculées automatiquement :<br>
-          Distanciel : <span id="editApsRemotePreview">—</span><br>
-          Présentiel : <span id="editApsInPersonPreview">—</span>
+        <div id="editApsComputedPeriodsField" class="aps-organisation" style="display:none;">
+          <div class="aps-organisation__title">Organisation APS</div>
+          <div class="aps-organisation__cards">
+            <div class="aps-period-card" aria-live="polite">
+              <div class="aps-period-card__label">Distanciel</div>
+              <div class="aps-period-card__hours">62h e-learning</div>
+              <div class="aps-period-card__dates">Du <span id="editApsRemoteStartPreview">—</span> au <span id="editApsRemoteEndPreview">—</span></div>
+            </div>
+            <div class="aps-period-card" aria-live="polite">
+              <div class="aps-period-card__label">Présentiel</div>
+              <div class="aps-period-card__hours">113h en centre de formation</div>
+              <div class="aps-period-card__dates">Du <span id="editApsInPersonStartPreview">—</span> au <span id="editApsInPersonEndPreview">—</span></div>
+            </div>
+          </div>
         </div>
         <label id="editApsElearningField" style="display:none;grid-column:1/-1;">
           <span style="display:flex;align-items:center;gap:10px;font-weight:800;">
@@ -1572,15 +1625,15 @@
     }
   }
 
-  function computeApsPeriods(startValue){
-    if(!startValue) return null;
-    const start = new Date(`${startValue}T00:00:00Z`);
+  function calculateApsPeriods(sessionStartDate){
+    if(!sessionStartDate) return null;
+    const start = new Date(`${sessionStartDate}T00:00:00Z`);
     if(Number.isNaN(start.getTime())) return null;
     const remoteStart = apsNextWorkingDay(start);
     const remoteEnd = apsAddWorkingDays(remoteStart, Math.ceil(62 / 7));
     const inPersonStart = apsNextWorkingDay(apsAddDays(remoteEnd, 1));
     const inPersonEnd = apsAddWorkingDays(inPersonStart, Math.ceil(113 / 7));
-    return {remoteStart, remoteEnd, inPersonStart, inPersonEnd};
+    return {distancielStart: remoteStart, distancielEnd: remoteEnd, presentielStart: inPersonStart, presentielEnd: inPersonEnd};
   }
 
   function formatApsPeriodDate(date){
@@ -1592,15 +1645,21 @@
     const isEdit = prefix === "edit";
     const type = ((isEdit ? document.getElementById("editSessionTrainingType") : document.getElementById("sessionType"))?.value || "").toUpperCase();
     const container = document.getElementById(isEdit ? "editApsComputedPeriodsField" : "apsComputedPeriodsField");
-    const remote = document.getElementById(isEdit ? "editApsRemotePreview" : "apsRemotePreview");
-    const inPerson = document.getElementById(isEdit ? "editApsInPersonPreview" : "apsInPersonPreview");
+    const dateEndField = document.getElementById(isEdit ? "editDateEndField" : "dateEndField");
+    const remoteStart = document.getElementById(isEdit ? "editApsRemoteStartPreview" : "apsRemoteStartPreview");
+    const remoteEnd = document.getElementById(isEdit ? "editApsRemoteEndPreview" : "apsRemoteEndPreview");
+    const inPersonStart = document.getElementById(isEdit ? "editApsInPersonStartPreview" : "apsInPersonStartPreview");
+    const inPersonEnd = document.getElementById(isEdit ? "editApsInPersonEndPreview" : "apsInPersonEndPreview");
     const startValue = (document.getElementById(isEdit ? "editDateStart" : "dateStart")?.value || "").trim();
     const isAps = type.startsWith("APS");
     if(container) container.style.display = isAps ? "" : "none";
+    if(dateEndField) dateEndField.style.display = isAps ? "none" : "";
     if(!isAps) return;
-    const periods = computeApsPeriods(startValue);
-    if(remote) remote.textContent = periods ? `${formatApsPeriodDate(periods.remoteStart)} → ${formatApsPeriodDate(periods.remoteEnd)}` : "—";
-    if(inPerson) inPerson.textContent = periods ? `${formatApsPeriodDate(periods.inPersonStart)} → ${formatApsPeriodDate(periods.inPersonEnd)}` : "—";
+    const periods = calculateApsPeriods(startValue);
+    if(remoteStart) remoteStart.textContent = periods ? formatApsPeriodDate(periods.distancielStart) : "—";
+    if(remoteEnd) remoteEnd.textContent = periods ? formatApsPeriodDate(periods.distancielEnd) : "—";
+    if(inPersonStart) inPersonStart.textContent = periods ? formatApsPeriodDate(periods.presentielStart) : "—";
+    if(inPersonEnd) inPersonEnd.textContent = periods ? formatApsPeriodDate(periods.presentielEnd) : "—";
   }
 
   function toggleExamFields(){
