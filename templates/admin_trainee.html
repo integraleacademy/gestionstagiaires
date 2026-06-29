@@ -826,8 +826,9 @@
     </div>
     <span id="apsConvocationBadge" class="aps-doc-badge {% if aps_convocation_sent %}aps-doc-badge--sent{% else %}aps-doc-badge--pending{% endif %}">{% if aps_convocation_sent %}Envoyé{% else %}En attente{% endif %}</span>
     <div class="aps-doc-actions">
+      <a class="btn btn-outline" id="btnPreviewApsConvocation" href="{{ url_for('admin_preview_aps_convocation', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener">Aperçu convocation</a>
       <button class="btn btn-primary" id="btnSendApsConvocation" type="button" {% if is_read_only %}disabled{% endif %}>{% if aps_convocation_sent %}Renvoyer{% else %}Envoyer la convocation{% endif %}</button>
-      <a class="btn btn-outline" id="btnViewApsConvocation" href="{{ url_for('admin_view_aps_convocation', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener" style="{% if not aps_convocation_sent %}display:none;{% endif %}">Voir la convocation</a>
+      <a class="btn btn-outline" id="btnViewApsConvocation" href="{{ url_for('admin_view_aps_convocation', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener" style="{% if not aps_convocation_sent %}display:none;{% endif %}">Voir la convocation envoyée</a>
     </div>
   </div>
   <div class="aps-doc-row">
