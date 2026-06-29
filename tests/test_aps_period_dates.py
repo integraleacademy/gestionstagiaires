@@ -15,6 +15,17 @@ class ApsPeriodDatesTests(unittest.TestCase):
             },
         )
 
+    def test_calculate_aps_periods_matches_expected_september_example(self):
+        self.assertEqual(
+            app.calculateApsPeriods("2026-09-07"),
+            {
+                "distancielStart": "2026-09-07",
+                "distancielEnd": "2026-09-17",
+                "presentielStart": "2026-09-18",
+                "presentielEnd": "2026-10-12",
+            },
+        )
+
     def test_sync_aps_period_dates_updates_global_session_dates(self):
         session = {"training_type": "APS", "date_start": "2026-07-08", "date_end": ""}
 
