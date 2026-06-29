@@ -3571,6 +3571,10 @@ if(conventionSelect){
     setLoading(createBtn,true);
     try{
       const payload = {client:{}, invoice:{}, save_billing_address:false}; new FormData(form).forEach((v,k)=>{ if(k === "save_billing_address"){ payload.save_billing_address = true; return; } const [root,key]=k.split('.'); if(payload[root]) payload[root][key]=v; });
+      payload.client.street_address = payload.client.street_address || payload.client.address || "";
+      payload.client.postal_code = payload.client.postal_code || payload.client.zip_code || "";
+      payload.client.country_code = (payload.client.country_code || payload.client.country || "FR").toUpperCase();
+      payload.client.country = (payload.client.country || payload.client.country_code || "FR").toUpperCase();
       const res = await fetch(`/api/admin/trainees/${encodeURIComponent(traineeId)}/qonto-invoice/create`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
       const data = await res.json(); if(!res.ok || !data.ok) throw new Error(data.error || "Impossible de créer la facture Qonto");
       renderStatus(data); closeModalLocal(); alert(data.message || "Facture brouillon Qonto créée");
