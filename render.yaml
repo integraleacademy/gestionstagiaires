@@ -9,6 +9,10 @@ services:
         sync: false
       - key: QONTO_SECRET_KEY
         sync: false
+      - key: QONTO_IBAN
+        sync: false
+      - key: QONTO_BENEFICIARY_NAME
+        value: INTEGRALE ACADEMY
       - key: QONTO_API_BASE_URL
         value: https://thirdparty.qonto.com
 
