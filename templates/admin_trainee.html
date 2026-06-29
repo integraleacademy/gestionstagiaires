@@ -828,6 +828,7 @@
     <div class="aps-doc-actions">
       <button class="btn btn-primary" id="btnSendApsConvocation" type="button" {% if is_read_only %}disabled{% endif %}>{% if aps_convocation_sent %}Renvoyer{% else %}Envoyer la convocation{% endif %}</button>
       <a class="btn btn-outline" id="btnViewApsConvocation" href="{{ url_for('admin_view_aps_convocation', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener" style="{% if not aps_convocation_sent %}display:none;{% endif %}">Voir la convocation</a>
+      <a class="btn btn-outline" id="btnDownloadApsConvocationDocx" href="{{ url_for('admin_download_aps_convocation_docx', session_id=session.id, trainee_id=trainee.id) }}" style="{% if not aps_convocation_sent %}display:none;{% endif %}">Télécharger le DOCX généré</a>
     </div>
   </div>
   <div class="aps-doc-row">
@@ -2095,6 +2096,7 @@ if(btnSendApsConvocation){
     const feedback = document.getElementById("apsConvocationFeedback");
     const badge = document.getElementById("apsConvocationBadge");
     const viewBtn = document.getElementById("btnViewApsConvocation");
+    const docxBtn = document.getElementById("btnDownloadApsConvocationDocx");
     const hint = document.getElementById("apsConvocationSentHint");
     const sentAt = document.getElementById("apsConvocationSentAt");
     const original = btnSendApsConvocation.textContent;
@@ -2109,6 +2111,7 @@ if(btnSendApsConvocation){
       if(sentAt) sentAt.textContent = data.sent_at_label || "à l’instant";
       if(hint) hint.style.display = "block";
       if(viewBtn){ viewBtn.style.display = "inline-flex"; viewBtn.href = (data.view_url || viewBtn.href) + "?t=" + Date.now(); }
+      if(docxBtn){ docxBtn.style.display = "inline-flex"; }
       btnSendApsConvocation.textContent = "Renvoyer";
       if(feedback){ feedback.className = "aps-doc-feedback aps-doc-feedback--success"; feedback.textContent = "Convocation envoyée avec succès."; }
     }catch(e){
