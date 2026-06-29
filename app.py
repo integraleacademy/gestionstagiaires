@@ -233,6 +233,10 @@ def create_qonto_client(payload: Dict[str, Any]) -> Dict[str, Any]:
     return _qonto_request("POST", "/v2/clients", payload)
 
 
+def update_qonto_client(client_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    return _qonto_request("PATCH", f"/v2/clients/{client_id}", payload)
+
+
 def create_qonto_invoice(payload: Dict[str, Any]) -> Dict[str, Any]:
     return _qonto_request("POST", "/v2/client_invoices", payload)
 
@@ -20393,7 +20397,7 @@ def _build_qonto_invoice_preview(sess: Dict[str, Any], trainee: Dict[str, Any]) 
 
 
 
-def validate_qonto_billing_address(client: Dict[str, Any]) -> Dict[str, str]:
+def build_qonto_billing_address_from_modal(client: Dict[str, Any]) -> Dict[str, str]:
     missing = []
 
     street_address = (client.get("street_address") or client.get("address") or "").strip()
@@ -20423,17 +20427,26 @@ def validate_qonto_billing_address(client: Dict[str, Any]) -> Dict[str, str]:
 
 def _qonto_billing_address_missing_fields(client: Dict[str, Any]) -> List[str]:
     try:
-        validate_qonto_billing_address(client)
+        build_qonto_billing_address_from_modal(client)
         return []
     except ValueError as exc:
         message = str(exc)
         return [part.strip() for part in message.split(":", 1)[1].split(",") if part.strip()] if ":" in message else []
 
 
-def _qonto_client_has_complete_billing_address(qonto_client: Dict[str, Any]) -> bool:
+def qonto_client_has_complete_billing_address(qonto_client: Dict[str, Any]) -> bool:
     client = qonto_client.get("client") if isinstance(qonto_client.get("client"), dict) else qonto_client
     billing = client.get("billing_address") if isinstance(client.get("billing_address"), dict) else {}
-    return all((billing.get(key) or client.get("address" if key == "street_address" else key) or "").strip() for key in ("street_address", "zip_code", "city", "country_code"))
+    return bool(
+        (billing.get("street_address") or client.get("address") or "").strip()
+        and (billing.get("zip_code") or client.get("zip_code") or "").strip()
+        and (billing.get("city") or client.get("city") or "").strip()
+        and (billing.get("country_code") or client.get("country_code") or "").strip()
+    )
+
+
+def _qonto_client_has_complete_billing_address(qonto_client: Dict[str, Any]) -> bool:
+    return qonto_client_has_complete_billing_address(qonto_client)
 
 def _qonto_status_payload(trainee: Dict[str, Any]) -> Dict[str, Any]:
     inv = _qonto_invoice_state(trainee)
@@ -20481,7 +20494,7 @@ def api_qonto_invoice_create(trainee_id: str):
     missing = []
     if not (client.get("email") or "").strip(): missing.append("email")
     try:
-        billing_address = validate_qonto_billing_address(client)
+        billing_address = build_qonto_billing_address_from_modal(client)
     except ValueError as exc:
         billing_message = str(exc)
         missing.extend(_qonto_billing_address_missing_fields(client))
@@ -20496,31 +20509,42 @@ def api_qonto_invoice_create(trainee_id: str):
         app.logger.warning("[QONTO] create invoice skipped trainee_id=%s missing_iban=true", trainee_id)
         return jsonify({"ok": False, "error": "IBAN Qonto manquant. Ajoutez QONTO_IBAN dans les variables Render."}), 400
     try:
+        app.logger.info(
+            "[QONTO] modal client address street=%s zip=%s city=%s country=%s",
+            client.get("address") or client.get("street_address"),
+            client.get("zip_code") or client.get("postal_code"),
+            client.get("city"),
+            client.get("country_code") or client.get("country"),
+        )
         q_client = search_qonto_client({"email": client.get("email"), "name": client.get("name")})
-        if q_client and not _qonto_client_has_complete_billing_address(q_client):
-            message = "Client Qonto existant incomplet : adresse de facturation manquante. Complétez le client dans Qonto ou modifiez l’adresse dans la modale."
-            return jsonify({"ok": False, "message": message, "error": message}), 400
-        if not q_client:
-            qonto_client_payload = {
-                "name": client.get("company_name") or client.get("name"),
-                "first_name": client.get("first_name"),
-                "last_name": client.get("last_name"),
-                "email": client.get("email"),
-                "phone": client.get("phone"),
-                "currency": "EUR",
-                "locale": "fr",
-                "billing_address": {
-                    "street_address": billing_address["street_address"],
-                    "zip_code": billing_address["zip_code"],
-                    "city": billing_address["city"],
-                    "country_code": "FR",
-                },
-                "address": billing_address["street_address"],
+        qonto_client_payload = {
+            "name": client.get("company_name") or client.get("name"),
+            "first_name": client.get("first_name"),
+            "last_name": client.get("last_name"),
+            "email": client.get("email"),
+            "phone": client.get("phone"),
+            "currency": "EUR",
+            "locale": "FR",
+            "billing_address": {
+                "street_address": billing_address["street_address"],
                 "zip_code": billing_address["zip_code"],
                 "city": billing_address["city"],
-                "country_code": "FR",
-                "tax_identification_number": client.get("siret"),
-            }
+                "country_code": billing_address["country_code"],
+            },
+            "address": billing_address["street_address"],
+            "zip_code": billing_address["zip_code"],
+            "city": billing_address["city"],
+            "country_code": billing_address["country_code"],
+            "tax_identification_number": client.get("siret"),
+        }
+        if q_client:
+            q_client_id = (q_client.get("client") or q_client).get("id")
+            if not q_client_id:
+                raise RuntimeError("Client Qonto existant introuvable")
+            if not qonto_client_has_complete_billing_address(q_client):
+                app.logger.info("[QONTO] Existing client incomplete, updating billing address client_id=%s", q_client_id)
+                q_client = update_qonto_client(q_client_id, qonto_client_payload) or q_client
+        else:
             q_client = create_qonto_client({"client": qonto_client_payload})
         q_client_id = (q_client.get("client") or q_client).get("id")
         if not q_client_id: raise RuntimeError("Impossible de créer le client Qonto")
