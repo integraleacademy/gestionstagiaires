@@ -19734,203 +19734,150 @@ def _format_long_fr_date(value: str) -> str:
         return value
 
 
-def _docx_replace_text(doc: Document, replacements: Dict[str, str]) -> None:
-    def replace_in_paragraph(paragraph):
-        full = "".join(run.text for run in paragraph.runs)
-        if not full:
-            return
-        updated = full
-        for key, value in replacements.items():
-            updated = updated.replace(key, value)
-        if updated != full:
-            for run in paragraph.runs:
-                run.text = ""
-            if paragraph.runs:
-                paragraph.runs[0].text = updated
-            else:
-                paragraph.add_run(updated)
-
-    for paragraph in _iter_docx_paragraphs(doc):
-        replace_in_paragraph(paragraph)
+def _aps_convocation_output_path(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> str:
+    safe_session_id = _safe_filename_part(session_id or _session_get(session_obj, "id", "session"))
+    safe_trainee_id = _safe_filename_part(trainee_id or trainee.get("id") or "stagiaire")
+    first_name = _safe_filename_part(trainee.get("first_name") or trainee.get("prenom") or "")
+    last_name = _safe_filename_part(trainee.get("last_name") or trainee.get("nom") or "")
+    filename = f"convocation_aps_{last_name}_{first_name}_{safe_trainee_id}.pdf"
+    return os.path.join(APS_CONVOCATION_DIR, safe_session_id, safe_trainee_id, filename)
 
 
-def _aps_convocation_template_path() -> str:
-    for folder in ("templates_word", "templaces_word"):
-        candidate = os.path.join(app.root_path, folder, "convocationaps.docx")
-        if os.path.exists(candidate):
-            return candidate
-    raise FileNotFoundError("Modèle Word introuvable : templates_word/convocationaps.docx")
+def _draw_aps_pdf_line(c, x: float, y: float, label: str, value: str) -> None:
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+
+    c.setFillColor(colors.HexColor("#374151"))
+    c.setFont("Helvetica-Bold", 9.5)
+    c.drawString(x, y, label)
+    c.setFont("Helvetica", 9.5)
+    c.drawString(x + 32 * mm, y, value or "Non renseigné")
 
 
-def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
-    required = [
-        (trainee.get("email"), "email du stagiaire manquant"),
-        (trainee.get("first_name"), "prénom du stagiaire manquant"),
-        (trainee.get("last_name"), "nom du stagiaire manquant"),
-        (_session_get(session_obj, "date_start", ""), "date de début de formation manquante"),
-        (_session_get(session_obj, "date_end", ""), "date de fin de formation manquante"),
-        (_session_get(session_obj, "exam_date", ""), "date d’examen manquante"),
+def generate_convocation_aps_pdf(session_obj: Dict[str, Any], trainee: Dict[str, Any], output_path: str) -> str:
+    """Generate a persistent APS convocation PDF directly with ReportLab."""
+    if not REPORTLAB_LIBRARY_AVAILABLE:
+        raise RuntimeError("La librairie Python reportlab n’est pas installée.")
+
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import mm
+    from reportlab.pdfgen import canvas
+    from reportlab.platypus import Frame, Paragraph
+
+    email = str(trainee.get("email") or "").strip()
+    if not email:
+        raise ValueError("Impossible d’envoyer la convocation : email du stagiaire manquant")
+
+    first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
+    last_name = str(trainee.get("last_name") or trainee.get("nom") or trainee.get("name") or "").strip().upper()
+    full_name = " ".join(part for part in [first_name, last_name] if part).strip() or "Stagiaire"
+    date_start_raw = str(_session_get(session_obj, "date_start", "") or session_obj.get("date_debut") or "").strip()
+    date_end_raw = str(_session_get(session_obj, "date_end", "") or session_obj.get("date_fin") or "").strip()
+    exam_date_raw = str(_session_get(session_obj, "exam_date", "") or session_obj.get("date_examen") or "").strip()
+    date_start = fr_date(date_start_raw)
+    date_end = fr_date(date_end_raw)
+    exam_date = fr_date(exam_date_raw)
+
+    if not date_start_raw:
+        raise ValueError("Impossible d’envoyer la convocation : date de début de formation manquante")
+    if not date_end_raw:
+        raise ValueError("Impossible d’envoyer la convocation : date de fin de formation manquante")
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    c = canvas.Canvas(output_path, pagesize=A4)
+    width, height = A4
+    margin_x = 22 * mm
+    y = height - 24 * mm
+
+    logo_paths = [
+        os.path.join(app.root_path, "static", "logo-integrale.png"),
+        os.path.join(app.root_path, "static", "logo.png"),
+        os.path.join(app.root_path, "static", "images", "logo-integrale.png"),
     ]
-    for value, message in required:
-        if not str(value or "").strip():
-            raise ValueError(f"Impossible d’envoyer la convocation : {message}")
-    training_name = _session_get(session_obj, "name", "") or _session_get(session_obj, "training_type", "") or "Formation APS"
-    return {"civility": str(trainee.get("civility") or trainee.get("civilite") or "").strip(), "first_name": str(trainee.get("first_name") or "").strip(), "last_name": str(trainee.get("last_name") or "").strip().upper(), "training_name": str(training_name).strip(), "date_start": str(_session_get(session_obj, "date_start", "")).strip(), "date_end": str(_session_get(session_obj, "date_end", "")).strip(), "exam_date": str(_session_get(session_obj, "exam_date", "")).strip(), "exam_time": str(_session_get(session_obj, "exam_time", "") or session_obj.get("heure_examen") or "08h00").strip() or "08h00", "convocation_time": str(_session_get(session_obj, "convocation_time", "") or session_obj.get("heure_convocation") or "08h30").strip() or "08h30", "center_name": APS_CONVOCATION_CENTER_NAME, "address": APS_CONVOCATION_CENTER_ADDRESS, "zip_code": APS_CONVOCATION_CENTER_ZIP, "city": APS_CONVOCATION_CENTER_CITY, "today": datetime.datetime.utcnow().strftime("%d/%m/%Y")}
+    for logo_path in logo_paths:
+        if os.path.exists(logo_path):
+            try:
+                c.drawImage(logo_path, margin_x, y - 18 * mm, width=42 * mm, preserveAspectRatio=True, mask="auto")
+                break
+            except Exception:
+                app.logger.warning("[CONVOCATION APS] Logo ignoré: %s", logo_path, exc_info=True)
 
+    c.setFillColor(colors.HexColor("#111827"))
+    c.setFont("Helvetica-Bold", 18)
+    c.drawRightString(width - margin_x, y - 3 * mm, "CONVOCATION À LA FORMATION")
+    c.setFont("Helvetica", 10)
+    c.setFillColor(colors.HexColor("#6B7280"))
+    c.drawRightString(width - margin_x, y - 11 * mm, "Agent de Prévention et de Sécurité (APS)")
+    y -= 42 * mm
 
-def _iter_docx_paragraphs(container):
-    for paragraph in getattr(container, "paragraphs", []):
-        yield paragraph
-    for table in getattr(container, "tables", []):
-        for row in table.rows:
-            for cell in row.cells:
-                yield from _iter_docx_paragraphs(cell)
-    for section in getattr(container, "sections", []):
-        yield from _iter_docx_paragraphs(section.header)
-        yield from _iter_docx_paragraphs(section.footer)
+    c.setFillColor(colors.HexColor("#F3F4F6"))
+    c.roundRect(margin_x, y - 44 * mm, width - 2 * margin_x, 44 * mm, 5 * mm, fill=1, stroke=0)
+    c.setFillColor(colors.HexColor("#111827"))
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(margin_x + 8 * mm, y - 11 * mm, "Informations de convocation")
+    _draw_aps_pdf_line(c, margin_x + 8 * mm, y - 21 * mm, "Stagiaire :", full_name)
+    _draw_aps_pdf_line(c, margin_x + 8 * mm, y - 29 * mm, "Formation :", "Agent de Prévention et de Sécurité (APS)")
+    _draw_aps_pdf_line(c, margin_x + 8 * mm, y - 37 * mm, "Période :", f"du {date_start} au {date_end}")
+    if exam_date:
+        c.setFillColor(colors.HexColor("#374151"))
+        c.setFont("Helvetica-Bold", 9.5)
+        c.drawRightString(width - margin_x - 38 * mm, y - 37 * mm, "Examen :")
+        c.setFont("Helvetica", 9.5)
+        c.drawRightString(width - margin_x - 8 * mm, y - 37 * mm, exam_date)
+    y -= 61 * mm
 
+    styles = getSampleStyleSheet()
+    body_style = ParagraphStyle(
+        "ConvocationApsBody",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=10.5,
+        leading=16,
+        textColor=colors.HexColor("#111827"),
+        spaceAfter=8,
+    )
+    texte = f"""
+    Madame, Monsieur,<br/><br/>
+    Nous revenons vers vous concernant votre formation
+    <b>Agent de Prévention et de Sécurité (APS)</b>, qui se déroulera
+    du <b>{date_start}</b> au <b>{date_end}</b> au sein de notre centre de formation.<br/><br/>
+    Vous êtes convoqué(e) à cette formation à l’adresse suivante :<br/>
+    <b>{APS_CONVOCATION_CENTER_NAME}</b><br/>
+    {APS_CONVOCATION_CENTER_ADDRESS}<br/>
+    {APS_CONVOCATION_CENTER_ZIP} {APS_CONVOCATION_CENTER_CITY}<br/><br/>
+    Nous vous remercions de vous présenter avec une pièce d’identité en cours de validité.
+    """
+    if exam_date:
+        texte += f"<br/><br/>Votre examen est prévu le <b>{exam_date}</b>, sous réserve du respect des conditions de présentation à l’examen."
+    texte += """
+    <br/><br/>Pour toute question, vous pouvez nous contacter au 04 22 47 07 68.
+    <br/><br/>Cordialement,<br/><b>La direction</b><br/>Intégrale Academy
+    """
+    frame = Frame(margin_x, 54 * mm, width - 2 * margin_x, y - 54 * mm, showBoundary=0)
+    frame.addFromList([Paragraph(texte, body_style)], c)
 
-def _docx_visible_text(doc: Document) -> str:
-    return "\n".join("".join(run.text for run in paragraph.runs) for paragraph in _iter_docx_paragraphs(doc))
+    c.setFont("Helvetica", 8)
+    c.setFillColor(colors.HexColor("#6B7280"))
+    c.drawCentredString(width / 2, 18 * mm, "Intégrale Academy — 54 chemin du Carreou, 83480 Puget-sur-Argens — 04 22 47 07 68")
+    c.save()
 
-
-def _find_unresolved_docx_variables(doc: Document) -> List[str]:
-    text = _docx_visible_text(doc)
-    patterns = sorted(set(re.findall(r"\[[^\]\n]{1,80}\]", text)))
-    return [p for p in patterns if p.startswith("[") and (":" in p or "'" in p or p in {"[AFs]", "[:AFs]", "[Nom]", "[Prenom]", "[NomCivilite]", "[Ligne1]", "[Ligne2]", "[Ligne3]", "[Ligne4]", "[CodePostal]", "[Ville]", "[NomPedagogique]", "[DateConvocation]", "[heureConvocation]", "[=TODAY()]", "[Libelle]"})]
-
-
-LIBREOFFICE_MISSING_MESSAGE = "LibreOffice n’est pas installé sur le serveur. La conversion Word vers PDF est impossible."
-
-
-def _find_libreoffice_binary() -> Optional[str]:
-    configured = (os.environ.get("LIBREOFFICE_PATH") or "").strip()
-    candidates = [configured] if configured else []
-    candidates.extend(["libreoffice", "soffice"])
-    for candidate in candidates:
-        if not candidate:
-            continue
-        if os.path.isabs(candidate) and os.path.exists(candidate) and os.access(candidate, os.X_OK):
-            return candidate
-        resolved = shutil.which(candidate)
-        if resolved:
-            return resolved
-    return None
-
-
-def _check_libreoffice_available() -> bool:
-    soffice = _find_libreoffice_binary()
-    if not soffice:
-        app.logger.error("[CONVOCATION APS] LibreOffice absent", extra={"stdout": "", "stderr": "", "error": "binary not found"})
-        raise RuntimeError(LIBREOFFICE_MISSING_MESSAGE)
-    try:
-        result = subprocess.run([soffice, "--version"], capture_output=True, text=True, timeout=15)
-    except Exception as exc:
-        app.logger.error("[CONVOCATION APS] LibreOffice absent stdout=%s stderr=%s error=%s", "", "", str(exc))
-        raise RuntimeError(LIBREOFFICE_MISSING_MESSAGE) from exc
-    if result.returncode != 0:
-        app.logger.error("[CONVOCATION APS] LibreOffice absent stdout=%s stderr=%s error=%s", result.stdout, result.stderr, f"code {result.returncode}")
-        raise RuntimeError(LIBREOFFICE_MISSING_MESSAGE)
-    app.logger.info("[CONVOCATION APS] LibreOffice disponible : %s", result.stdout.strip())
-    return True
-
-
-def _convert_docx_to_pdf_with_libreoffice(docx_path: str, output_dir: str) -> str:
-    if not docx_path or not os.path.exists(docx_path):
-        raise FileNotFoundError(f"Fichier DOCX introuvable : {docx_path}")
-    os.makedirs(output_dir, exist_ok=True)
-    soffice = _find_libreoffice_binary()
-    if not soffice:
-        raise RuntimeError(LIBREOFFICE_MISSING_MESSAGE)
-
-    libreoffice_args = [
-        "--headless",
-        "--nologo",
-        "--nofirststartwizard",
-        "--nodefault",
-        "--nolockcheck",
-        "--convert-to",
-        "pdf",
-        "--outdir",
-        output_dir,
-        docx_path,
-    ]
-    env = {**os.environ, "HOME": "/tmp", "TMPDIR": "/tmp"}
-    try:
-        result = subprocess.run([soffice, *libreoffice_args], capture_output=True, text=True, timeout=120, env=env)
-    except subprocess.TimeoutExpired as exc:
-        app.logger.error("[CONVOCATION APS] Erreur conversion LibreOffice docxPath=%s outputDir=%s stdout=%s stderr=%s error=%s", docx_path, output_dir, exc.stdout, exc.stderr, str(exc))
-        raise RuntimeError("Conversion Word vers PDF impossible avec LibreOffice : délai dépassé") from exc
-
-    expected_pdf = os.path.join(output_dir, os.path.splitext(os.path.basename(docx_path))[0] + ".pdf")
-    if result.returncode != 0:
-        app.logger.error("[CONVOCATION APS] Erreur conversion LibreOffice docxPath=%s outputDir=%s stdout=%s stderr=%s error=code %s", docx_path, output_dir, result.stdout, result.stderr, result.returncode)
-        raise RuntimeError(f"Conversion Word vers PDF impossible avec LibreOffice : {result.stderr or result.stdout or f'code {result.returncode}'}")
-    if not os.path.exists(expected_pdf):
-        app.logger.error("[CONVOCATION APS] PDF non généré docxPath=%s outputDir=%s expectedPdfPath=%s stdout=%s stderr=%s", docx_path, output_dir, expected_pdf, result.stdout, result.stderr)
-        raise RuntimeError(f"PDF non généré après conversion : {expected_pdf}")
-    if os.path.getsize(expected_pdf) <= 0:
-        app.logger.error("[CONVOCATION APS] PDF vide docxPath=%s outputDir=%s expectedPdfPath=%s stdout=%s stderr=%s", docx_path, output_dir, expected_pdf, result.stdout, result.stderr)
-        raise RuntimeError("Échec de conversion LibreOffice : le PDF généré est vide")
-    return expected_pdf
-
-
-def _generate_aps_convocation_from_docx_template(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
-    """Generate the filled APS DOCX from the official template, then convert it to PDF."""
-    ctx = _build_aps_convocation_context(session_obj, trainee)
-    template_path = _aps_convocation_template_path()
-    filename_base = f"convocation-aps-{_safe_filename_part(ctx['last_name'])}-{_safe_filename_part(ctx['first_name'])}-{_safe_filename_part(trainee.get('id'))}"
-    final_docx_path = os.path.join(APS_CONVOCATION_DIR, filename_base + ".docx")
-    final_pdf_path = os.path.join(APS_CONVOCATION_DIR, filename_base + ".pdf")
-    place = f"{ctx['center_name']} ({ctx['address']} - {ctx['zip_code']} {ctx['city']})"
-    date_range = f"du {fr_date(ctx['date_start'])} au {fr_date(ctx['date_end'])}"
-    replacements = {
-        "['NomCivilite][NomCivilite][:if]": ctx["civility"], "[NomCivilite]": ctx["civility"], "['NomCivilite]": ctx["civility"],
-        "['Prenom]": ctx["first_name"], "[Prenom]": ctx["first_name"], "['Nom]": ctx["last_name"], "[Nom]": ctx["last_name"],
-        "['NomPedagogique]": ctx["training_name"], "[NomPedagogique]": ctx["training_name"], "[Libelle]": ctx["training_name"],
-        "[DateConvocation]": fr_date(ctx["date_start"]), "[heureConvocation]": ctx["convocation_time"], "[=TODAY()]": ctx["today"],
-        "['CodePostal]": ctx["zip_code"], "[CodePostal]": ctx["zip_code"], "['Ville]": ctx["city"], "[Ville]": ctx["city"],
-        "['Ligne1]['Ligne1][:if]": ctx["address"], "['Ligne2]['Ligne2][:if]": "", "['Ligne3]['Ligne3][:if]": "", "['Ligne4]['Ligne4][:if]": "",
-        "['Ligne1]": ctx["address"], "[Ligne1]": ctx["address"], "['Ligne2]": "", "[Ligne2]": "", "['Ligne3]": "", "[Ligne3]": "", "['Ligne4]": "", "[Ligne4]": "",
-        "[AFs][Libelle]": ctx["training_name"], "[AFs]": "", "[:AFs]": "", "[:if]": "",
-        "[Nom][Nom}==2] ([Ligne1] - [CodePostal] [Ville])[:if]": place,
-        "12 août 2026": f"{fr_date(ctx['exam_date'])} à {ctx['exam_time']}", "12 août": fr_date(ctx["exam_date"]), "08h00": ctx["exam_time"],
-        "8 juillet": fr_date(ctx["date_start"]), "Du 8 au 20 juillet inclus": date_range, "Du 21 juillet au 11 août": date_range,
-    }
-    app.logger.info("[APS] Modèle Word utilisé=%s stagiaire=%s %s session=%s date_convocation=%s %s date_examen=%s %s", template_path, ctx["first_name"], ctx["last_name"], _session_get(session_obj, "id", ""), ctx["date_start"], ctx["convocation_time"], ctx["exam_date"], ctx["exam_time"])
-    doc = Document(template_path)
-    _docx_replace_text(doc, replacements)
-    unresolved = _find_unresolved_docx_variables(doc)
-    if unresolved:
-        app.logger.error("[APS] Variables non remplacées dans %s: %s", template_path, ", ".join(unresolved))
-        raise ValueError("Variables non remplacées dans le modèle APS : " + ", ".join(unresolved))
-
-    os.makedirs(APS_CONVOCATION_DIR, exist_ok=True)
-    tmpdir = os.path.join("/tmp", "convocations-aps", _safe_filename_part(session_id or _session_get(session_obj, "id", "session")), _safe_filename_part(trainee_id or trainee.get("id") or "stagiaire"), str(int(datetime.datetime.utcnow().timestamp() * 1000)))
-    os.makedirs(tmpdir, exist_ok=True)
-    filled_docx_path = os.path.join(tmpdir, "convocation-aps.docx")
-    doc.save(filled_docx_path)
-    _check_libreoffice_available()
-    pdf_tmp = _convert_docx_to_pdf_with_libreoffice(filled_docx_path, tmpdir)
-    shutil.copyfile(filled_docx_path, final_docx_path)
-    shutil.copyfile(pdf_tmp, final_pdf_path)
-
-    if not os.path.exists(final_pdf_path) or os.path.getsize(final_pdf_path) <= 0:
-        raise RuntimeError("Échec de génération : le PDF de convocation APS est introuvable ou vide")
-    app.logger.info("[APS] DOCX rempli archivé=%s PDF archivé=%s", final_docx_path, final_pdf_path)
-    return final_pdf_path, final_docx_path
+    if not os.path.exists(output_path) or os.path.getsize(output_path) <= 0:
+        raise RuntimeError("Le PDF de convocation APS n’a pas été généré.")
+    return output_path
 
 
 def _generate_aps_convocation_pdf(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> str:
-    pdf_path, _ = _generate_aps_convocation_from_docx_template(session_obj, trainee, session_id, trainee_id)
-    return pdf_path
+    return generate_convocation_aps_pdf(session_obj, trainee, _aps_convocation_output_path(session_obj, trainee, session_id, trainee_id))
 
-def _build_aps_convocation_email(first_name: str) -> Tuple[str, str]:
-    subject = "Votre convocation officielle APS – Intégrale Academy"
+def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end: str = "") -> Tuple[str, str]:
+    subject = "Convocation formation APS - Intégrale Academy"
+    period = f" qui se déroulera du {fr_date(date_start)} au {fr_date(date_end)}" if date_start and date_end else ""
     html_body = mail_layout(f"""
       <h2 style="margin:0 0 14px;color:#0f172a;">Bonjour {html.escape(first_name or "")},</h2>
-      <p>Nous vous confirmons votre inscription à la formation <strong>APS</strong>.</p>
-      <p>Vous trouverez en pièce jointe votre convocation officielle comprenant les informations importantes liées à votre formation, au e-learning, à l’examen, aux documents administratifs à déposer et aux informations pratiques d’accès au centre.</p>
+      <p>Nous revenons vers vous concernant votre formation <strong>Agent de Prévention et de Sécurité (APS)</strong>{period}.</p>
+      <p>Vous trouverez en pièce jointe votre convocation officielle.</p>
       <p style="font-weight:700;color:#0f172a;">Merci de lire attentivement l’ensemble du document.</p>
       <div style="text-align:center;margin:26px 0;"><a href="https://gestionstagiaires-r5no.onrender.com/espacestagiaire" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;font-weight:800;padding:13px 20px;border-radius:12px;">Accéder à mon espace stagiaire</a></div>
       <p>En cas de question, vous pouvez nous contacter au <strong>04 22 47 07 68</strong> ou par email à <a href="mailto:ecole@integraleacademy.com">ecole@integraleacademy.com</a>.</p>
@@ -20101,7 +20048,7 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         pdf_path = _generate_aps_convocation_pdf(s, t, session_id, trainee_id)
         with open(pdf_path, "rb") as fh:
             encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
-        subject, html_content = _build_aps_convocation_email(str(t.get("first_name") or ""))
+        subject, html_content = _build_aps_convocation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), _session_get(s, "date_end", ""))
         email_ok = brevo_send_email(
             str(t.get("email") or "").strip(),
             subject,
@@ -20111,11 +20058,15 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         )
         if not email_ok:
             raise RuntimeError("Impossible d’envoyer la convocation : échec d’envoi email")
+        abs_dir = os.path.abspath(APS_CONVOCATION_DIR)
+        abs_pdf_path = os.path.abspath(pdf_path)
+        if not abs_pdf_path.startswith(abs_dir + os.sep) or not os.path.exists(abs_pdf_path) or os.path.getsize(abs_pdf_path) <= 0:
+            raise RuntimeError("Le PDF de convocation APS n’est pas consultable depuis l’administration.")
         sent_at = _now_iso()
         t["convocation_aps_status"] = "sent"
         t["convocation_aps_sent_at"] = sent_at
         t["convocation_aps_pdf_path"] = pdf_path
-        t["convocation_aps_docx_path"] = os.path.splitext(pdf_path)[0] + ".docx"
+        t.pop("convocation_aps_docx_path", None)
         t["convocation_aps_view_url"] = url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id)
         t["convocation_aps_last_error"] = ""
         t["updated_at"] = sent_at
@@ -20124,7 +20075,7 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         save_data(data)
         return jsonify({"ok": True, "status": "sent", "sent_at": sent_at, "sent_at_label": fr_datetime(sent_at), "view_url": url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id)})
     except Exception as exc:
-        app.logger.error("[CONVOCATION APS] Envoi impossible sessionId=%s traineeId=%s error=%s", session_id, trainee_id, str(exc), exc_info=True)
+        app.logger.exception("[CONVOCATION APS] Envoi impossible")
         message = str(exc) or "Erreur inconnue pendant l’envoi de la convocation APS."
         t["convocation_aps_status"] = t.get("convocation_aps_status") or "pending"
         t["convocation_aps_last_error"] = message
@@ -20150,21 +20101,6 @@ def admin_view_aps_convocation(session_id: str, trainee_id: str):
     return send_file(abs_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(abs_path))
 
 
-@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-aps.docx")
-@admin_login_required
-def admin_download_aps_convocation_docx(session_id: str, trainee_id: str):
-    data = load_data()
-    s, _, t = _find_session_trainee(data, session_id, trainee_id)
-    if not s or not t or not _is_aps_session(s):
-        abort(404)
-    docx_path = str(t.get("convocation_aps_docx_path") or "")
-    if not docx_path and t.get("convocation_aps_pdf_path"):
-        docx_path = os.path.splitext(str(t.get("convocation_aps_pdf_path")))[0] + ".docx"
-    abs_dir = os.path.abspath(APS_CONVOCATION_DIR)
-    abs_path = os.path.abspath(docx_path) if docx_path else ""
-    if not abs_path.startswith(abs_dir + os.sep) or not os.path.exists(abs_path):
-        abort(404)
-    return send_file(abs_path, mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document", as_attachment=True, download_name=os.path.basename(abs_path))
 
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/vtc-cm-autologin")
