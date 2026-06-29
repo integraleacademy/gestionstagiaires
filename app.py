@@ -19800,7 +19800,7 @@ def _find_unresolved_docx_variables(doc: Document) -> List[str]:
     return [p for p in patterns if p.startswith("[") and (":" in p or "'" in p or p in {"[AFs]", "[:AFs]", "[Nom]", "[Prenom]", "[NomCivilite]", "[Ligne1]", "[Ligne2]", "[Ligne3]", "[Ligne4]", "[CodePostal]", "[Ville]", "[NomPedagogique]", "[DateConvocation]", "[heureConvocation]", "[=TODAY()]", "[Libelle]"})]
 
 
-LIBREOFFICE_MISSING_MESSAGE = "Erreur serveur : LibreOffice n’est pas installé. La conversion Word vers PDF est impossible."
+LIBREOFFICE_MISSING_MESSAGE = "LibreOffice n’est pas installé sur le serveur. La conversion Word vers PDF est impossible."
 
 
 def _find_libreoffice_binary() -> Optional[str]:
@@ -19818,27 +19818,64 @@ def _find_libreoffice_binary() -> Optional[str]:
     return None
 
 
+def _check_libreoffice_available() -> bool:
+    soffice = _find_libreoffice_binary()
+    if not soffice:
+        app.logger.error("[CONVOCATION APS] LibreOffice absent", extra={"stdout": "", "stderr": "", "error": "binary not found"})
+        raise RuntimeError(LIBREOFFICE_MISSING_MESSAGE)
+    try:
+        result = subprocess.run([soffice, "--version"], capture_output=True, text=True, timeout=15)
+    except Exception as exc:
+        app.logger.error("[CONVOCATION APS] LibreOffice absent stdout=%s stderr=%s error=%s", "", "", str(exc))
+        raise RuntimeError(LIBREOFFICE_MISSING_MESSAGE) from exc
+    if result.returncode != 0:
+        app.logger.error("[CONVOCATION APS] LibreOffice absent stdout=%s stderr=%s error=%s", result.stdout, result.stderr, f"code {result.returncode}")
+        raise RuntimeError(LIBREOFFICE_MISSING_MESSAGE)
+    app.logger.info("[CONVOCATION APS] LibreOffice disponible : %s", result.stdout.strip())
+    return True
+
+
 def _convert_docx_to_pdf_with_libreoffice(docx_path: str, output_dir: str) -> str:
+    if not docx_path or not os.path.exists(docx_path):
+        raise FileNotFoundError(f"Fichier DOCX introuvable : {docx_path}")
+    os.makedirs(output_dir, exist_ok=True)
     soffice = _find_libreoffice_binary()
     if not soffice:
         raise RuntimeError(LIBREOFFICE_MISSING_MESSAGE)
-    result = subprocess.run(
-        [soffice, "--headless", "--nologo", "--nofirststartwizard", "--convert-to", "pdf", "--outdir", output_dir, docx_path],
-        capture_output=True,
-        text=True,
-        timeout=90,
-    )
+
+    libreoffice_args = [
+        "--headless",
+        "--nologo",
+        "--nofirststartwizard",
+        "--nodefault",
+        "--nolockcheck",
+        "--convert-to",
+        "pdf",
+        "--outdir",
+        output_dir,
+        docx_path,
+    ]
+    env = {**os.environ, "HOME": "/tmp", "TMPDIR": "/tmp"}
+    try:
+        result = subprocess.run([soffice, *libreoffice_args], capture_output=True, text=True, timeout=120, env=env)
+    except subprocess.TimeoutExpired as exc:
+        app.logger.error("[CONVOCATION APS] Erreur conversion LibreOffice docxPath=%s outputDir=%s stdout=%s stderr=%s error=%s", docx_path, output_dir, exc.stdout, exc.stderr, str(exc))
+        raise RuntimeError("Conversion Word vers PDF impossible avec LibreOffice : délai dépassé") from exc
+
     expected_pdf = os.path.join(output_dir, os.path.splitext(os.path.basename(docx_path))[0] + ".pdf")
-    if result.returncode != 0 or not os.path.exists(expected_pdf):
-        app.logger.error("[APS] Conversion LibreOffice échouée stdout=%s stderr=%s", result.stdout, result.stderr)
-        raise RuntimeError("Échec de conversion LibreOffice de la convocation APS en PDF")
+    if result.returncode != 0:
+        app.logger.error("[CONVOCATION APS] Erreur conversion LibreOffice docxPath=%s outputDir=%s stdout=%s stderr=%s error=code %s", docx_path, output_dir, result.stdout, result.stderr, result.returncode)
+        raise RuntimeError(f"Conversion Word vers PDF impossible avec LibreOffice : {result.stderr or result.stdout or f'code {result.returncode}'}")
+    if not os.path.exists(expected_pdf):
+        app.logger.error("[CONVOCATION APS] PDF non généré docxPath=%s outputDir=%s expectedPdfPath=%s stdout=%s stderr=%s", docx_path, output_dir, expected_pdf, result.stdout, result.stderr)
+        raise RuntimeError(f"PDF non généré après conversion : {expected_pdf}")
     if os.path.getsize(expected_pdf) <= 0:
-        app.logger.error("[APS] Conversion LibreOffice vide stdout=%s stderr=%s", result.stdout, result.stderr)
+        app.logger.error("[CONVOCATION APS] PDF vide docxPath=%s outputDir=%s expectedPdfPath=%s stdout=%s stderr=%s", docx_path, output_dir, expected_pdf, result.stdout, result.stderr)
         raise RuntimeError("Échec de conversion LibreOffice : le PDF généré est vide")
     return expected_pdf
 
 
-def _generate_aps_convocation_from_docx_template(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Tuple[str, str]:
+def _generate_aps_convocation_from_docx_template(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
     """Generate the filled APS DOCX from the official template, then convert it to PDF."""
     ctx = _build_aps_convocation_context(session_obj, trainee)
     template_path = _aps_convocation_template_path()
@@ -19869,12 +19906,14 @@ def _generate_aps_convocation_from_docx_template(session_obj: Dict[str, Any], tr
         raise ValueError("Variables non remplacées dans le modèle APS : " + ", ".join(unresolved))
 
     os.makedirs(APS_CONVOCATION_DIR, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="convocation-aps-") as tmpdir:
-        filled_docx_path = os.path.join(tmpdir, filename_base + ".docx")
-        doc.save(filled_docx_path)
-        pdf_tmp = _convert_docx_to_pdf_with_libreoffice(filled_docx_path, tmpdir)
-        shutil.copyfile(filled_docx_path, final_docx_path)
-        shutil.copyfile(pdf_tmp, final_pdf_path)
+    tmpdir = os.path.join("/tmp", "convocations-aps", _safe_filename_part(session_id or _session_get(session_obj, "id", "session")), _safe_filename_part(trainee_id or trainee.get("id") or "stagiaire"), str(int(datetime.datetime.utcnow().timestamp() * 1000)))
+    os.makedirs(tmpdir, exist_ok=True)
+    filled_docx_path = os.path.join(tmpdir, "convocation-aps.docx")
+    doc.save(filled_docx_path)
+    _check_libreoffice_available()
+    pdf_tmp = _convert_docx_to_pdf_with_libreoffice(filled_docx_path, tmpdir)
+    shutil.copyfile(filled_docx_path, final_docx_path)
+    shutil.copyfile(pdf_tmp, final_pdf_path)
 
     if not os.path.exists(final_pdf_path) or os.path.getsize(final_pdf_path) <= 0:
         raise RuntimeError("Échec de génération : le PDF de convocation APS est introuvable ou vide")
@@ -19882,8 +19921,8 @@ def _generate_aps_convocation_from_docx_template(session_obj: Dict[str, Any], tr
     return final_pdf_path, final_docx_path
 
 
-def _generate_aps_convocation_pdf(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> str:
-    pdf_path, _ = _generate_aps_convocation_from_docx_template(session_obj, trainee)
+def _generate_aps_convocation_pdf(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> str:
+    pdf_path, _ = _generate_aps_convocation_from_docx_template(session_obj, trainee, session_id, trainee_id)
     return pdf_path
 
 def _build_aps_convocation_email(first_name: str) -> Tuple[str, str]:
@@ -20059,7 +20098,7 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
     if not _is_aps_session(s):
         return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
     try:
-        pdf_path = _generate_aps_convocation_pdf(s, t)
+        pdf_path = _generate_aps_convocation_pdf(s, t, session_id, trainee_id)
         with open(pdf_path, "rb") as fh:
             encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
         subject, html_content = _build_aps_convocation_email(str(t.get("first_name") or ""))
@@ -20085,7 +20124,8 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         save_data(data)
         return jsonify({"ok": True, "status": "sent", "sent_at": sent_at, "sent_at_label": fr_datetime(sent_at), "view_url": url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id)})
     except Exception as exc:
-        message = str(exc) or "Impossible d’envoyer la convocation"
+        app.logger.error("[CONVOCATION APS] Envoi impossible sessionId=%s traineeId=%s error=%s", session_id, trainee_id, str(exc), exc_info=True)
+        message = str(exc) or "Erreur inconnue pendant l’envoi de la convocation APS."
         t["convocation_aps_status"] = t.get("convocation_aps_status") or "pending"
         t["convocation_aps_last_error"] = message
         t["updated_at"] = _now_iso()
