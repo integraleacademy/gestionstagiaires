@@ -2117,7 +2117,6 @@ if(btnSendApsConvocation){
     }catch(e){
       btnSendApsConvocation.textContent = original;
       if(feedback){ feedback.className = "aps-doc-feedback aps-doc-feedback--error"; feedback.textContent = e.message || "Erreur lors de l’envoi de la convocation."; }
-      alert(e.message || "Erreur lors de l’envoi de la convocation.");
     }finally{
       btnSendApsConvocation.disabled = false;
     }
