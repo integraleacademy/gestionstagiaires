@@ -32,15 +32,16 @@
       <span class="badge">Connexion sécurisée</span>
       <h2>Accéder à mon espace</h2>
       <p>Saisissez les informations indiquées dans votre dossier stagiaire.</p>
-      {% if error %}<div class="alert" role="alert">Aucun espace stagiaire ne correspond à ces informations. Vérifiez votre nom et votre date de naissance.</div>{% endif %}
+      {% if multiple %}<div class="alert" role="alert">Plusieurs dossiers correspondent à ces informations. Merci de contacter Intégrale Academy au 04 22 47 07 68.</div>{% elif error %}<div class="alert" role="alert">Aucun dossier trouvé avec ces informations. Vérifiez votre nom et votre date de naissance, ou contactez Intégrale Academy.</div>{% endif %}
       <form method="post" action="{{ action_url }}">
         <label for="last_name">Nom de famille</label>
         <div class="input-wrap"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/></svg><input class="field" id="last_name" name="last_name" autocomplete="family-name" placeholder="Ex : Dupont" required value="{{ last_name or '' }}"></div>
         <label for="birth">Date de naissance</label>
         <div class="input-wrap"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="2"/><path d="M16 3v4M8 3v4M3 11h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input class="field" id="birth" name="birth" inputmode="numeric" autocomplete="bday" placeholder="JJMMYYYY" required></div>
+        <div class="help" style="margin-top:8px;padding:10px 14px;">Exemple : <strong>08/01/2004</strong></div>
         <button class="submit" type="submit">Se connecter</button>
       </form>
-      <div class="help">Format conseillé : <strong>JJMMYYYY</strong> — exemple : <strong>16091993</strong>. Vous pouvez aussi saisir la date avec des séparateurs.</div>
+      <div class="help">Formats acceptés : <strong>08/01/2004</strong>, <strong>08012004</strong>, <strong>08-01-2004</strong> ou <strong>2004-01-08</strong>.</div>
     </section>
   </main>
 </body>

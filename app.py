@@ -4277,34 +4277,56 @@ def _norm_lastname(s: str) -> str:
 
 def _birth_to_ddmmyyyy(value: str) -> str:
     """
-    Convertit une date stockée (ex: '1993-09-16' ou '16/09/1993' ou '16091993')
-    en 'DDMMYYYY'. Si impossible, renvoie ''.
+    Normalise une date de naissance en DDMMYYYY.
+
+    Formats acceptés :
+    - DD/MM/YYYY, D/M/YYYY
+    - DD-MM-YYYY, D-M-YYYY
+    - YYYY-MM-DD, YYYY-M-D
+    - DDMMYYYY (saisie publique compacte)
+    - YYYYMMDD (stockage/import compact)
+
+    Les zéros de tête du jour et du mois sont toujours conservés.
+    Si la date est absente ou invalide, renvoie une chaîne vide.
     """
-    v = (value or "").strip()
+    v = str(value or "").strip()
     if not v:
         return ""
 
-    digits = re.sub(r"\D+", "", v)
-    if len(digits) == 8:
-        # La saisie publique attend JJMMYYYY. Certains jours (19, 20)
-        # commencent comme une année, donc ne pas deviner avec startswith(19/20).
-        # On valide d'abord JJMMYYYY, puis on accepte YYYYMMDD pour les dates
-        # stockées/importées sous forme compacte.
-        for fmt in ("%d%m%Y", "%Y%m%d", "%m%d%Y"):
-            try:
-                dt = datetime.datetime.strptime(digits, fmt)
-                return dt.strftime("%d%m%Y")
-            except Exception:
-                pass
-        return ""
-
-    # formats classiques
-    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d", "%m/%d/%Y", "%m-%d-%Y"):
+    def _format_if_valid(day: str, month: str, year: str) -> str:
+        if not (day and month and year) or len(year) != 4:
+            return ""
         try:
-            dt = datetime.datetime.strptime(v[:10], fmt)
-            return dt.strftime("%d%m%Y")
-        except Exception:
-            pass
+            dt = datetime.datetime(int(year), int(month), int(day))
+        except (TypeError, ValueError):
+            return ""
+        return dt.strftime("%d%m%Y")
+
+    # Formats séparés explicites : pas de suppression des zéros, on reconstruit via datetime.
+    match = re.fullmatch(r"(\d{4})[/-](\d{1,2})[/-](\d{1,2})", v)
+    if match:
+        year, month, day = match.groups()
+        return _format_if_valid(day, month, year)
+
+    match = re.fullmatch(r"(\d{1,2})[/-](\d{1,2})[/-](\d{4})", v)
+    if match:
+        first, second, year = match.groups()
+        french = _format_if_valid(first, second, year)
+        if french:
+            return french
+        # Compatibilité avec d'anciens imports MM/DD/YYYY lorsque le format
+        # français est impossible (ex : 10/29/1979).
+        return _format_if_valid(second, first, year)
+
+    digits = re.fullmatch(r"\d{8}", v)
+    if digits:
+        # Le formulaire public utilise DDMMYYYY. On le privilégie pour éviter
+        # qu'un jour comme 19 soit interprété comme le début d'une année.
+        ddmmyyyy = _format_if_valid(v[0:2], v[2:4], v[4:8])
+        if ddmmyyyy:
+            return ddmmyyyy
+        # Stockages/imports compacts possibles en YYYYMMDD.
+        return _format_if_valid(v[6:8], v[4:6], v[0:4])
 
     return ""
 
@@ -15942,18 +15964,28 @@ def _public_trainee_identity_matches(trainee: Dict[str, Any], last_name: str, bi
     return expected_last in _public_trainee_last_names(trainee) and expected_birth in _public_trainee_birth_dates(trainee)
 
 
-def _find_public_trainee_by_identity(data: Dict[str, Any], last_name: str, birth: str):
-    """Retourne le premier stagiaire correspondant au nom + date de naissance."""
-    if not _norm_lastname(last_name) or not _birth_to_ddmmyyyy(birth):
-        return None, None
+def _find_public_trainee_matches_by_identity(data: Dict[str, Any], last_name: str, birth: str) -> list[tuple[Dict[str, Any], Dict[str, Any]]]:
+    """Retourne toutes les correspondances exactes nom normalisé + date normalisée."""
+    expected_last = _norm_lastname(last_name)
+    expected_birth = _birth_to_ddmmyyyy(birth)
+    if not expected_last or not expected_birth:
+        return []
 
+    matches: list[tuple[Dict[str, Any], Dict[str, Any]]] = []
     for session_obj in data.get("sessions", []) or []:
         for trainee in _session_trainees_list(session_obj):
             trainee_token = (trainee.get("public_token") or trainee.get("token") or "").strip()
             if trainee_token and _public_trainee_identity_matches(trainee, last_name, birth):
-                return session_obj, trainee
-    return None, None
+                matches.append((session_obj, trainee))
+    return matches
 
+
+def _find_public_trainee_by_identity(data: Dict[str, Any], last_name: str, birth: str):
+    """Retourne l'unique stagiaire correspondant au nom + date, sinon (None, None)."""
+    matches = _find_public_trainee_matches_by_identity(data, last_name, birth)
+    if len(matches) == 1:
+        return matches[0]
+    return None, None
 
 def _public_login_debug_summary(
     data: Dict[str, Any], last_name: str, birth: str, *, limit: int = 8
@@ -15967,6 +15999,10 @@ def _public_login_debug_summary(
         "trainees_count": 0,
         "name_matches_count": 0,
         "birth_matches_count": 0,
+        "name_birth_matches_count": 0,
+        "matched_trainee_id": "",
+        "matched_session_id": "",
+        "matched_token_present": False,
         "near_matches": [],
     }
 
@@ -15983,6 +16019,12 @@ def _public_login_debug_summary(
                 summary["name_matches_count"] += 1
             if birth_match:
                 summary["birth_matches_count"] += 1
+            if name_match and birth_match:
+                summary["name_birth_matches_count"] += 1
+                if not summary["matched_trainee_id"]:
+                    summary["matched_trainee_id"] = trainee.get("id") or ""
+                    summary["matched_session_id"] = session_id
+                    summary["matched_token_present"] = bool((trainee.get("public_token") or trainee.get("token") or "").strip())
             if name_match or birth_match:
                 if len(near_matches) < limit:
                     near_matches.append({
@@ -16013,6 +16055,7 @@ def public_trainee_global_login():
         "public_trainee_login.html",
         action_url=url_for("public_trainee_global_login_post"),
         error=(request.args.get("error") or "").strip() == "1",
+        multiple=(request.args.get("error") or "").strip() == "multiple",
         last_name=request.args.get("last_name", ""),
     )
 
@@ -16023,16 +16066,20 @@ def public_trainee_global_login_post():
     last_in = (request.form.get("last_name") or "").strip()
     birth_in = (request.form.get("birth") or "").strip()
 
-    session_obj, trainee = _find_public_trainee_by_identity(data, last_in, birth_in)
-    if not session_obj or not trainee:
+    matches = _find_public_trainee_matches_by_identity(data, last_in, birth_in)
+    if len(matches) != 1:
+        log_label = "PUBLIC_GLOBAL_LOGIN_AMBIGUOUS" if len(matches) > 1 else "PUBLIC_GLOBAL_LOGIN_FAIL"
         app.logger.warning(
-            "[PUBLIC_GLOBAL_LOGIN_FAIL] last_name=%r birth_input=%r debug=%s",
+            "[%s] last_name=%r birth_input=%r debug=%s",
+            log_label,
             last_in,
             birth_in,
             _public_login_debug_summary(data, last_in, birth_in),
         )
-        return redirect(url_for("public_trainee_global_login", error="1", last_name=last_in))
+        error_code = "multiple" if len(matches) > 1 else "1"
+        return redirect(url_for("public_trainee_global_login", error=error_code, last_name=last_in))
 
+    session_obj, trainee = matches[0]
     token = (trainee.get("public_token") or trainee.get("token") or "").strip()
     app.logger.info(
         "[PUBLIC_GLOBAL_LOGIN_OK] session_id=%s trainee_id=%s last_name=%r birth_norm=%s",
@@ -16197,11 +16244,12 @@ def public_trainee_login(token: str):
 
           <label>Date de naissance</label>
           <input name="birth" inputmode="numeric" placeholder="JJMMYYYY" required>
+          <div class="hint" style="margin-top:8px;">Exemple : <strong>08/01/2004</strong></div>
 
           <button class="btn">Se connecter</button>
         </form>
 
-        <div class="hint">Format demandé : <strong>JJMMYYYY</strong> (ex : 16091993)</div>
+        <div class="hint">Formats acceptés : <strong>08/01/2004</strong>, <strong>08012004</strong>, <strong>08-01-2004</strong> ou <strong>2004-01-08</strong>.</div>
       </div>
     </body>
     </html>
@@ -16223,11 +16271,12 @@ def public_trainee_login_post(token: str):
     last_in = (request.form.get("last_name") or "").strip()
     birth_in = (request.form.get("birth") or "").strip()
 
-    print("[PUBLIC LOGIN] token =", token)
-    print("[PUBLIC LOGIN] trainee keys =", list(t.keys()))
-    print("[PUBLIC LOGIN] raw last_name =", t.get("last_name"))
-    print("[PUBLIC LOGIN] raw birth_date =", t.get("birth_date"))
-
+    app.logger.debug(
+        "[PUBLIC_TOKEN_LOGIN_ATTEMPT] trainee_id=%s session_id=%s token_present=%s",
+        t.get("id") or "",
+        s.get("id") or s.get("name") or "",
+        bool(token),
+    )
 
     # 🔒 contrôle strict
     if _public_trainee_identity_matches(t, last_in, birth_in):
