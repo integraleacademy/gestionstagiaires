@@ -140,7 +140,7 @@ def _qonto_base_url() -> str:
 def get_qonto_invoice_iban():
     iban = os.getenv("QONTO_IBAN", "").strip().replace(" ", "").upper()
     if not iban:
-        raise ValueError("QONTO_IBAN manquant : impossible de créer une facture Qonto sans IBAN de paiement.")
+        raise ValueError("QONTO_IBAN manquant")
     return iban
 
 
@@ -20452,35 +20452,37 @@ def api_qonto_invoice_create(trainee_id: str):
         end = (payload.get("session") or {}).get("date_end") or _session_get(sess, "date_end", "")[:10]
         amount_ht = invoice.get("unit_price_ht") or invoice.get("amount_ht")
         app.logger.info(
-            "[QONTO] Creating client invoice trainee_id=%s client_id=%s amount_ht=%s has_iban=%s",
-            trainee_id,
+            "[QONTO] create invoice payload check client_id=%s has_iban=%s iban_last4=%s amount=%s",
             q_client_id,
+            bool(invoice_iban),
+            invoice_iban[-4:],
             invoice.get("amount_ht"),
-            bool(os.getenv("QONTO_IBAN")),
         )
-        q_inv = create_qonto_invoice({
-            "client_invoice": {
-                "client_id": q_client_id,
-                "issue_date": invoice.get("issue_date"),
-                "due_date": invoice.get("due_date"),
-                "currency": "EUR",
-                "payment_methods": {"iban": invoice_iban},
-                "performance_start_date": start,
-                "performance_end_date": end,
-                "status": "draft",
-                "terms_and_conditions": invoice.get("conditions"),
-                "items": [{
-                    "title": invoice.get("label"),
-                    "description": invoice.get("label"),
-                    "quantity": "1",
-                    "unit_price": {
-                        "value": str(amount_ht),
-                        "currency": "EUR",
-                    },
-                    "vat_rate": format_qonto_vat_rate(invoice.get("vat_rate") or 20),
-                }],
-            }
-        })
+        qonto_invoice_payload = {
+            "client_id": q_client_id,
+            "issue_date": invoice.get("issue_date"),
+            "due_date": invoice.get("due_date"),
+            "currency": "EUR",
+            "payment_methods": {"iban": invoice_iban},
+            "performance_start_date": start,
+            "performance_end_date": end,
+            "status": "draft",
+            "terms_and_conditions": invoice.get("conditions"),
+            "items": [{
+                "title": invoice.get("label"),
+                "description": invoice.get("label"),
+                "quantity": "1",
+                "unit_price": {
+                    "value": str(amount_ht),
+                    "currency": "EUR",
+                },
+                "vat_rate": format_qonto_vat_rate(invoice.get("vat_rate") or 20),
+            }],
+        }
+        safe_payload = dict(qonto_invoice_payload)
+        safe_payload["payment_methods"] = {"iban": "***" + invoice_iban[-4:]}
+        app.logger.info("[QONTO] invoice payload=%s", safe_payload)
+        q_inv = create_qonto_invoice(qonto_invoice_payload)
         qi = q_inv.get("client_invoice") or q_inv.get("invoice") or q_inv
         now = _now_iso(); inv.update({"id": inv.get("id") or str(uuid.uuid4()), "trainee_id": trainee_id, "qonto_client_id": q_client_id, "qonto_invoice_id": qi.get("id"), "qonto_invoice_number": qi.get("number") or qi.get("invoice_number") or "", "qonto_invoice_status": qi.get("status") or "draft", "qonto_invoice_url": qi.get("public_url") or qi.get("url") or "", "client_name": client.get("name"), "client_email": client.get("email"), "amount_ht": _money(invoice.get("amount_ht") or invoice.get("unit_price_ht")), "amount_tva": _money(invoice.get("amount_tva")), "amount_ttc": _money(invoice.get("amount_ttc")), "currency": "EUR", "issue_date": invoice.get("issue_date"), "due_date": invoice.get("due_date"), "created_at": now, "last_error": ""})
         if not inv.get("qonto_invoice_id"): raise RuntimeError("Impossible de créer la facture Qonto")
