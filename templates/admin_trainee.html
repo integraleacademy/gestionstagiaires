@@ -14,6 +14,21 @@
 {% set vtc_book_address_complete = (trainee.address or "")|trim and (trainee.zip_code or "")|trim and (trainee.city or "")|trim %}
 
 <style>
+
+  .aps-doc-card{grid-column:1 / -1;margin-top:16px;background:#fff;border:1px solid rgba(148,163,184,.28);border-radius:22px;box-shadow:0 18px 45px rgba(15,23,42,.08);padding:22px;}
+  .aps-doc-card__head{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .aps-doc-card__icon{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#eff6ff,#dbeafe);box-shadow:inset 0 0 0 1px rgba(37,99,235,.12);font-size:22px;}
+  .aps-doc-card__title{font-size:19px;font-weight:950;color:#0f172a;margin:0;}
+  .aps-doc-row{display:grid;grid-template-columns:minmax(180px,1fr) auto minmax(190px,auto);gap:12px;align-items:center;padding:14px 0;border-top:1px solid #eef2f7;}
+  .aps-doc-row__label{font-weight:850;color:#1f2937;}
+  .aps-doc-badge{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:6px 11px;font-size:12px;font-weight:950;}
+  .aps-doc-badge--pending{background:#fee2e2;color:#991b1b;border:1px solid #fecaca;}
+  .aps-doc-badge--sent{background:#dcfce7;color:#166534;border:1px solid #bbf7d0;}
+  .aps-doc-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
+  .aps-doc-feedback{margin-top:12px;padding:10px 12px;border-radius:14px;font-weight:800;display:none;}
+  .aps-doc-feedback--error{display:block;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;}
+  .aps-doc-feedback--success{display:block;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;}
+  @media (max-width:760px){.aps-doc-row{grid-template-columns:1fr}.aps-doc-actions{justify-content:flex-start}}
   .btn-docs-pending{
     background: var(--orange) !important;
     border-color: var(--orange) !important;
@@ -791,6 +806,41 @@
       <button class="btn btn-primary vae-reset-confirm-submit" type="button" id="vaeResetConfirmYes">Oui, réinitialiser</button>
     </div>
   </div>
+</div>
+{% endif %}
+
+
+{% if is_aps %}
+<div class="aps-doc-card" id="apsConvocationCard">
+  <div class="aps-doc-card__head">
+    <div class="aps-doc-card__icon" aria-hidden="true">📄</div>
+    <h2 class="aps-doc-card__title">Convocations et attestations</h2>
+  </div>
+  {% set aps_convocation_sent = (trainee.convocation_aps_status == 'sent' or trainee.convocation_aps_sent_at) %}
+  <div class="aps-doc-row">
+    <div>
+      <div class="aps-doc-row__label">Convocation</div>
+      <div class="hint" id="apsConvocationSentHint" style="margin-top:4px;{% if not aps_convocation_sent %}display:none;{% endif %}">
+        Convocation envoyée le <strong id="apsConvocationSentAt">{{ trainee.convocation_aps_sent_at|frdatetime }}</strong>
+      </div>
+    </div>
+    <span id="apsConvocationBadge" class="aps-doc-badge {% if aps_convocation_sent %}aps-doc-badge--sent{% else %}aps-doc-badge--pending{% endif %}">{% if aps_convocation_sent %}Envoyé{% else %}En attente{% endif %}</span>
+    <div class="aps-doc-actions">
+      <button class="btn btn-primary" id="btnSendApsConvocation" type="button" {% if is_read_only %}disabled{% endif %}>{% if aps_convocation_sent %}Renvoyer{% else %}Envoyer la convocation{% endif %}</button>
+      <a class="btn btn-outline" id="btnViewApsConvocation" href="{{ url_for('admin_view_aps_convocation', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener" style="{% if not aps_convocation_sent %}display:none;{% endif %}">Voir la convocation</a>
+    </div>
+  </div>
+  <div class="aps-doc-row">
+    <div class="aps-doc-row__label">Attestation entrée en formation</div>
+    <span class="aps-doc-badge aps-doc-badge--pending">En attente</span>
+    <div class="aps-doc-actions"><button class="btn btn-disabled-muted" type="button" disabled>Bientôt disponible</button></div>
+  </div>
+  <div class="aps-doc-row">
+    <div class="aps-doc-row__label">Attestation fin de formation</div>
+    <span class="aps-doc-badge aps-doc-badge--pending">En attente</span>
+    <div class="aps-doc-actions"><button class="btn btn-disabled-muted" type="button" disabled>Bientôt disponible</button></div>
+  </div>
+  <div id="apsConvocationFeedback" class="aps-doc-feedback{% if trainee.convocation_aps_last_error %} aps-doc-feedback--error{% endif %}">{{ trainee.convocation_aps_last_error or '' }}</div>
 </div>
 {% endif %}
 
@@ -2038,6 +2088,40 @@
 
 
 <script>
+const btnSendApsConvocation = document.getElementById("btnSendApsConvocation");
+if(btnSendApsConvocation){
+  btnSendApsConvocation.addEventListener("click", async ()=>{
+    if(btnSendApsConvocation.disabled) return;
+    const feedback = document.getElementById("apsConvocationFeedback");
+    const badge = document.getElementById("apsConvocationBadge");
+    const viewBtn = document.getElementById("btnViewApsConvocation");
+    const hint = document.getElementById("apsConvocationSentHint");
+    const sentAt = document.getElementById("apsConvocationSentAt");
+    const original = btnSendApsConvocation.textContent;
+    btnSendApsConvocation.disabled = true;
+    btnSendApsConvocation.textContent = "Envoi en cours...";
+    if(feedback){ feedback.className = "aps-doc-feedback"; feedback.textContent = ""; }
+    try{
+      const r = await fetch("{{ url_for('admin_send_aps_convocation', session_id=session.id, trainee_id=trainee.id) }}", {method:"POST", headers:{"Content-Type":"application/json"}});
+      const data = await r.json();
+      if(!r.ok || !data.ok) throw new Error(data.error || "Erreur lors de l’envoi de la convocation.");
+      if(badge){ badge.className = "aps-doc-badge aps-doc-badge--sent"; badge.textContent = "Envoyé"; }
+      if(sentAt) sentAt.textContent = data.sent_at_label || "à l’instant";
+      if(hint) hint.style.display = "block";
+      if(viewBtn){ viewBtn.style.display = "inline-flex"; viewBtn.href = (data.view_url || viewBtn.href) + "?t=" + Date.now(); }
+      btnSendApsConvocation.textContent = "Renvoyer";
+      if(feedback){ feedback.className = "aps-doc-feedback aps-doc-feedback--success"; feedback.textContent = "Convocation envoyée avec succès."; }
+    }catch(e){
+      btnSendApsConvocation.textContent = original;
+      if(feedback){ feedback.className = "aps-doc-feedback aps-doc-feedback--error"; feedback.textContent = e.message || "Erreur lors de l’envoi de la convocation."; }
+      alert(e.message || "Erreur lors de l’envoi de la convocation.");
+    }finally{
+      btnSendApsConvocation.disabled = false;
+    }
+  });
+}
+
+
 
 const vaeResetDossierForm = document.getElementById("vaeResetDossierForm");
 const vaeResetConfirmModal = document.getElementById("vaeResetConfirmModal");
@@ -3957,7 +4041,8 @@ const renderVtcStatus = () => {
 
   if(vtcStatusState.theory.sentAt){
     const emailFlag = vtcStatusState.theory.emailOk ? '<span style="margin-left:8px;">📧 Email envoyé</span>' : '<span style="margin-left:8px;">📧 Email non envoyé</span>';
-    const smsFlag = vtcStatusState.theory.smsOk ? '<span style="margin-left:8px;">📱 SMS envoyé</span>' : '<span style="margin-left:8px;">📱 SMS non envoyé</span>';
+
+const smsFlag = vtcStatusState.theory.smsOk ? '<span style="margin-left:8px;">📱 SMS envoyé</span>' : '<span style="margin-left:8px;">📱 SMS non envoyé</span>';
     lines.push(`✅ Examen théorique validé ${emailFlag}${smsFlag}`);
   }
 
