@@ -137,6 +137,30 @@ def _qonto_base_url() -> str:
     return (os.environ.get("QONTO_API_BASE_URL") or QONTO_API_BASE_URL_DEFAULT).strip().rstrip("/")
 
 
+def get_qonto_invoice_iban():
+    iban = os.getenv("QONTO_IBAN", "").strip().replace(" ", "").upper()
+    if not iban:
+        raise ValueError("QONTO_IBAN manquant : impossible de créer une facture Qonto sans IBAN de paiement.")
+    return iban
+
+
+def format_qonto_vat_rate(vat_rate):
+    try:
+        rate = float(vat_rate)
+    except Exception:
+        rate = 20.0
+
+    if rate > 1:
+        rate = rate / 100
+
+    return str(rate).rstrip("0").rstrip(".") if "." in str(rate) else str(rate)
+
+
+def _is_qonto_missing_iban_error(message: str) -> bool:
+    normalized = str(message or "").lower()
+    return "invalid_iban" in normalized or "iban is empty" in normalized or "qonto_iban manquant" in normalized
+
+
 def get_qonto_headers() -> Dict[str, str]:
     """Build Qonto API headers without Bearer, Basic or Base64 encoding."""
     return {
@@ -20509,6 +20533,11 @@ def api_qonto_invoice_create(trainee_id: str):
     if _money(invoice.get("unit_price_ht") or invoice.get("amount_ht")) <= 0: missing.append("Montant de facture invalide")
     if missing: return jsonify({"ok": False, "error": ", ".join(missing), "missing_fields": missing}), 400
     try:
+        invoice_iban = get_qonto_invoice_iban()
+    except ValueError:
+        app.logger.warning("[QONTO] create invoice skipped trainee_id=%s missing_iban=true", trainee_id)
+        return jsonify({"ok": False, "error": "IBAN Qonto manquant. Ajoutez QONTO_IBAN dans les variables Render."}), 400
+    try:
         q_client = search_qonto_client({"email": client.get("email"), "name": client.get("name")})
         if not q_client:
             q_client = create_qonto_client({"client": {"name": client.get("company_name") or client.get("name"), "first_name": client.get("first_name"), "last_name": client.get("last_name"), "email": client.get("email"), "phone": client.get("phone"), "currency": "EUR", "locale": "FR", "billing_address": {"street_address": client.get("address"), "zip_code": client.get("zip_code"), "city": client.get("city"), "country_code": "FR"}, "tax_identification_number": client.get("siret")}})
@@ -20516,15 +20545,48 @@ def api_qonto_invoice_create(trainee_id: str):
         if not q_client_id: raise RuntimeError("Impossible de créer le client Qonto")
         start = (payload.get("session") or {}).get("date_start") or _session_get(sess, "date_start", "")[:10]
         end = (payload.get("session") or {}).get("date_end") or _session_get(sess, "date_end", "")[:10]
-        q_inv = create_qonto_invoice({"client_invoice": {"client_id": q_client_id, "issue_date": invoice.get("issue_date"), "due_date": invoice.get("due_date"), "currency": "EUR", "performance_start_date": start, "performance_end_date": end, "status": "draft", "terms_and_conditions": invoice.get("conditions"), "items": [{"title": invoice.get("label"), "label": invoice.get("label"), "quantity": "1", "unit_price": str(invoice.get("unit_price_ht") or invoice.get("amount_ht")), "vat_rate": str(invoice.get("vat_rate") or 20), "total": str(invoice.get("amount_ht") or invoice.get("unit_price_ht"))}]}})
+        amount_ht = invoice.get("unit_price_ht") or invoice.get("amount_ht")
+        app.logger.info(
+            "[QONTO] Creating client invoice trainee_id=%s client_id=%s amount_ht=%s has_iban=%s",
+            trainee_id,
+            q_client_id,
+            invoice.get("amount_ht"),
+            bool(os.getenv("QONTO_IBAN")),
+        )
+        q_inv = create_qonto_invoice({
+            "client_invoice": {
+                "client_id": q_client_id,
+                "issue_date": invoice.get("issue_date"),
+                "due_date": invoice.get("due_date"),
+                "currency": "EUR",
+                "payment_methods": {"iban": invoice_iban},
+                "performance_start_date": start,
+                "performance_end_date": end,
+                "status": "draft",
+                "terms_and_conditions": invoice.get("conditions"),
+                "items": [{
+                    "title": invoice.get("label"),
+                    "description": invoice.get("label"),
+                    "quantity": "1",
+                    "unit_price": {
+                        "value": str(amount_ht),
+                        "currency": "EUR",
+                    },
+                    "vat_rate": format_qonto_vat_rate(invoice.get("vat_rate") or 20),
+                }],
+            }
+        })
         qi = q_inv.get("client_invoice") or q_inv.get("invoice") or q_inv
         now = _now_iso(); inv.update({"id": inv.get("id") or str(uuid.uuid4()), "trainee_id": trainee_id, "qonto_client_id": q_client_id, "qonto_invoice_id": qi.get("id"), "qonto_invoice_number": qi.get("number") or qi.get("invoice_number") or "", "qonto_invoice_status": qi.get("status") or "draft", "qonto_invoice_url": qi.get("public_url") or qi.get("url") or "", "client_name": client.get("name"), "client_email": client.get("email"), "amount_ht": _money(invoice.get("amount_ht") or invoice.get("unit_price_ht")), "amount_tva": _money(invoice.get("amount_tva")), "amount_ttc": _money(invoice.get("amount_ttc")), "currency": "EUR", "issue_date": invoice.get("issue_date"), "due_date": invoice.get("due_date"), "created_at": now, "last_error": ""})
         if not inv.get("qonto_invoice_id"): raise RuntimeError("Impossible de créer la facture Qonto")
         sess["trainees"] = trainees; save_data(data)
         return jsonify({"ok": True, "message": "Facture brouillon Qonto créée", **_qonto_status_payload(trainee)})
     except Exception as exc:
-        app.logger.exception("[QONTO] create invoice failed: %s", _sanitize_qonto_error(str(exc)))
-        inv["qonto_invoice_status"] = "error"; inv["last_error"] = _sanitize_qonto_error(str(exc)); sess["trainees"] = trainees; save_data(data)
+        sanitized_error = _sanitize_qonto_error(str(exc))
+        app.logger.exception("[QONTO] create invoice failed: %s", sanitized_error)
+        inv["qonto_invoice_status"] = "error"; inv["last_error"] = sanitized_error; sess["trainees"] = trainees; save_data(data)
+        if _is_qonto_missing_iban_error(sanitized_error):
+            return jsonify({"ok": False, "error": "Impossible de créer la facture Qonto : l’IBAN de paiement Qonto est manquant. Ajoutez QONTO_IBAN dans Render."}), 400
         return jsonify({"ok": False, "error": "Impossible de créer la facture Qonto"}), 400
 
 
