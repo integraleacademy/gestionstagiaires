@@ -107,6 +107,89 @@ YPAREO_CURSUS_ERROR_MESSAGE = (
 )
 YPAREO_FORMATION_NOT_LINKED_ERROR = "Formation non liée à un idFormation YPAREO"
 YPAREO_DSSP_NOT_CONFIGURED_ERROR = "Formation DSSP / Dirigeant non configurée dans Render"
+
+# =========================
+# Qonto integration (server-side only)
+# =========================
+QONTO_API_BASE_URL_DEFAULT = "https://thirdparty.qonto.com"
+QONTO_STATUS_OK_MESSAGE = "Qonto connecté"
+QONTO_STATUS_NOT_CONFIGURED_MESSAGE = "Qonto non configuré"
+QONTO_STATUS_FORBIDDEN_MESSAGE = "Identifiants Qonto invalides ou droits insuffisants"
+
+
+class QontoConfigurationError(RuntimeError):
+    """Raised when Qonto credentials are missing from server environment variables."""
+
+
+def _qonto_secret(value: str) -> str:
+    return _normalize_render_secret(value or "")
+
+
+def _qonto_login() -> str:
+    return _qonto_secret(os.environ.get("QONTO_LOGIN") or "")
+
+
+def _qonto_secret_key() -> str:
+    return _qonto_secret(os.environ.get("QONTO_SECRET_KEY") or "")
+
+
+def _qonto_base_url() -> str:
+    return (os.environ.get("QONTO_API_BASE_URL") or QONTO_API_BASE_URL_DEFAULT).strip().rstrip("/")
+
+
+def get_qonto_headers() -> Dict[str, str]:
+    """Build Qonto API headers without Bearer, Basic or Base64 encoding."""
+    return {
+        "Authorization": f"{_qonto_login()}:{_qonto_secret_key()}",
+        "Content-Type": "application/json",
+    }
+
+
+def _qonto_is_configured() -> bool:
+    return bool(_qonto_login() and _qonto_secret_key())
+
+
+def _sanitize_qonto_error(message: str) -> str:
+    sanitized = str(message or "")
+    for secret in (_qonto_login(), _qonto_secret_key()):
+        if secret:
+            sanitized = sanitized.replace(secret, "[masqué]")
+    return sanitized
+
+
+def test_qonto_connection() -> Tuple[bool, int]:
+    if not _qonto_is_configured():
+        raise QontoConfigurationError(QONTO_STATUS_NOT_CONFIGURED_MESSAGE)
+    response = requests.get(
+        f"{_qonto_base_url()}/v2/organization",
+        headers=get_qonto_headers(),
+        timeout=12,
+    )
+    return response.ok, response.status_code
+
+
+def search_qonto_client(*_args, **_kwargs):
+    raise NotImplementedError("Recherche client Qonto prévue dans la phase suivante.")
+
+
+def create_qonto_client(*_args, **_kwargs):
+    raise NotImplementedError("Création client Qonto prévue dans la phase suivante.")
+
+
+def create_qonto_invoice(*_args, **_kwargs):
+    raise NotImplementedError("Création facture Qonto prévue dans la phase suivante.")
+
+
+def finalize_qonto_invoice(*_args, **_kwargs):
+    raise NotImplementedError("Finalisation facture Qonto prévue dans la phase suivante.")
+
+
+def send_qonto_invoice(*_args, **_kwargs):
+    raise NotImplementedError("Envoi facture Qonto prévu dans la phase suivante.")
+
+
+def mark_qonto_invoice_as_paid(*_args, **_kwargs):
+    raise NotImplementedError("Marquage payé Qonto prévu plus tard.")
 _ypareo_access_token_cache: Dict[str, Any] = {
     "token": "",
     "expires_at": 0.0,
@@ -11801,6 +11884,60 @@ def admin_afc_export():
     ordered_candidates = prioritized + retained + others
     return render_template("admin_afc_export.html", afc=bucket, candidates=ordered_candidates)
 
+
+
+
+@app.get("/admin/reglages/qonto")
+@admin_login_required
+def admin_qonto_settings():
+    data = load_data()
+    qonto_settings = data.get("qonto_settings") if isinstance(data.get("qonto_settings"), dict) else {}
+    connected = bool(_qonto_is_configured())
+    message = "Configuration présente, testez la connexion Qonto." if connected else QONTO_STATUS_NOT_CONFIGURED_MESSAGE
+    last_success_at = str(qonto_settings.get("last_success_at") or "")
+    return render_template(
+        "admin_qonto_settings.html",
+        connected=False,
+        message=message,
+        last_success_fr=fr_datetime(last_success_at),
+    )
+
+
+@app.get("/api/qonto/status")
+@admin_login_required
+def api_qonto_status():
+    if not _qonto_is_configured():
+        return jsonify({"connected": False, "message": QONTO_STATUS_NOT_CONFIGURED_MESSAGE}), 200
+    try:
+        ok, status_code = test_qonto_connection()
+        if ok:
+            data = load_data()
+            qonto_settings = data.setdefault("qonto_settings", {})
+            now_iso = _now_iso()
+            qonto_settings["last_success_at"] = now_iso
+            save_data(data)
+            return jsonify({
+                "connected": True,
+                "message": QONTO_STATUS_OK_MESSAGE,
+                "last_success_at": now_iso,
+                "last_success_fr": fr_datetime(now_iso),
+            }), 200
+        if status_code in (401, 403):
+            return jsonify({"connected": False, "message": QONTO_STATUS_FORBIDDEN_MESSAGE}), 200
+        if status_code in (400, 422):
+            app.logger.warning("[QONTO] validation error while testing connection status=%s", status_code)
+            return jsonify({"connected": False, "message": "Erreur de validation Qonto pendant le test"}), 200
+        if 500 <= status_code:
+            app.logger.warning("[QONTO] server error while testing connection status=%s", status_code)
+            return jsonify({"connected": False, "message": "Erreur serveur Qonto"}), 200
+        app.logger.warning("[QONTO] unexpected status while testing connection status=%s", status_code)
+        return jsonify({"connected": False, "message": "Connexion Qonto impossible"}), 200
+    except requests.exceptions.RequestException as exc:
+        app.logger.warning("[QONTO] network error while testing connection: %s", _sanitize_qonto_error(str(exc)))
+        return jsonify({"connected": False, "message": "Erreur réseau pendant le test Qonto"}), 200
+    except Exception as exc:
+        app.logger.exception("[QONTO] unexpected status check error: %s", _sanitize_qonto_error(str(exc)))
+        return jsonify({"connected": False, "message": "Erreur inattendue pendant le test Qonto"}), 200
 
 
 @app.get("/admin/gestion-secretariat")

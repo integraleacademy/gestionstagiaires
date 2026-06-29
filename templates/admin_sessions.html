@@ -529,6 +529,7 @@
 
   <div class="admin-actions" aria-label="Actions sessions">
     <a class="btn btn-primary" href="{{ url_for('admin_secretariat') }}">📬 Secrétariat</a>
+    <a class="btn btn-outline" href="{{ url_for('admin_qonto_settings') }}">🧾 Réglages Qonto</a>
     <a class="btn btn-violet {% if (wedof_new_requests_count or 0) > 0 %}is-has-request{% else %}is-idle{% endif %}" href="{{ url_for('admin_wedof_requests') }}">
       CPF
       <span class="cpf-badge-count">{{ wedof_new_requests_count or 0 }}</span>

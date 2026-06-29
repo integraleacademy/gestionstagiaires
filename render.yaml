@@ -4,3 +4,11 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
+    envVars:
+      - key: QONTO_LOGIN
+        sync: false
+      - key: QONTO_SECRET_KEY
+        sync: false
+      - key: QONTO_API_BASE_URL
+        value: https://thirdparty.qonto.com
+
