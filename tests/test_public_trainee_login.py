@@ -139,3 +139,19 @@ class PublicTraineeLoginTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("/espace/PUBLIC-TOKEN", response.headers["Location"])
+
+    def test_global_login_failure_logs_debug_summary(self):
+        with patch.object(gestion_app, "load_data", return_value=self.data), patch.object(
+            gestion_app, "save_data"
+        ), self.assertLogs(gestion_app.app.logger.name, level="WARNING") as logs:
+            response = self.client.post(
+                "/espacestagiaire",
+                data={"last_name": "BONELLO", "birth": "01011970"},
+                follow_redirects=False,
+            )
+
+        self.assertEqual(response.status_code, 302)
+        output = "\n".join(logs.output)
+        self.assertIn("[PUBLIC_GLOBAL_LOGIN_FAIL]", output)
+        self.assertIn("input_last_norm", output)
+        self.assertIn("trainees_count", output)

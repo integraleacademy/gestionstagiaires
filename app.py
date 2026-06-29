@@ -15955,6 +15955,55 @@ def _find_public_trainee_by_identity(data: Dict[str, Any], last_name: str, birth
     return None, None
 
 
+def _public_login_debug_summary(
+    data: Dict[str, Any], last_name: str, birth: str, *, limit: int = 8
+) -> Dict[str, Any]:
+    expected_last = _norm_lastname(last_name)
+    expected_birth = _birth_to_ddmmyyyy(birth)
+    summary: Dict[str, Any] = {
+        "input_last_norm": expected_last,
+        "input_birth_norm": expected_birth,
+        "sessions_count": len(data.get("sessions", []) or []),
+        "trainees_count": 0,
+        "name_matches_count": 0,
+        "birth_matches_count": 0,
+        "near_matches": [],
+    }
+
+    near_matches = summary["near_matches"]
+    for session_obj in data.get("sessions", []) or []:
+        session_id = session_obj.get("id") or session_obj.get("name") or ""
+        for trainee in _session_trainees_list(session_obj):
+            summary["trainees_count"] += 1
+            names = sorted(_public_trainee_last_names(trainee))
+            dates = sorted(_public_trainee_birth_dates(trainee))
+            name_match = bool(expected_last and expected_last in names)
+            birth_match = bool(expected_birth and expected_birth in dates)
+            if name_match:
+                summary["name_matches_count"] += 1
+            if birth_match:
+                summary["birth_matches_count"] += 1
+            if name_match or birth_match:
+                if len(near_matches) < limit:
+                    near_matches.append({
+                        "session_id": session_id,
+                        "trainee_id": trainee.get("id") or "",
+                        "token_present": bool((trainee.get("public_token") or trainee.get("token") or "").strip()),
+                        "name_match": name_match,
+                        "birth_match": birth_match,
+                        "names_norm": names,
+                        "births_norm": dates,
+                        "raw_last_name": trainee.get("last_name") or trainee.get("nom") or "",
+                        "raw_birth_date": (
+                            trainee.get("birth_date")
+                            or trainee.get("date_naissance")
+                            or trainee.get("dateNaissance")
+                            or ""
+                        ),
+                    })
+    return summary
+
+
 @app.get("/espacestagiaire")
 def public_trainee_global_login():
     if session.get("admin_logged_in"):
@@ -15976,9 +16025,22 @@ def public_trainee_global_login_post():
 
     session_obj, trainee = _find_public_trainee_by_identity(data, last_in, birth_in)
     if not session_obj or not trainee:
+        app.logger.warning(
+            "[PUBLIC_GLOBAL_LOGIN_FAIL] last_name=%r birth_input=%r debug=%s",
+            last_in,
+            birth_in,
+            _public_login_debug_summary(data, last_in, birth_in),
+        )
         return redirect(url_for("public_trainee_global_login", error="1", last_name=last_in))
 
     token = (trainee.get("public_token") or trainee.get("token") or "").strip()
+    app.logger.info(
+        "[PUBLIC_GLOBAL_LOGIN_OK] session_id=%s trainee_id=%s last_name=%r birth_norm=%s",
+        session_obj.get("id") or session_obj.get("name") or "",
+        trainee.get("id") or "",
+        last_in,
+        _birth_to_ddmmyyyy(birth_in),
+    )
     session[f"public_auth_{token}"] = True
     session.permanent = True
     _mark_public_login(data, session_obj, trainee)
@@ -16174,6 +16236,18 @@ def public_trainee_login_post(token: str):
         _mark_public_login(data, s, t)
         return redirect(url_for("public_trainee_space", token=token))
 
+    app.logger.warning(
+        "[PUBLIC_TOKEN_LOGIN_FAIL] token=%s trainee_id=%s last_name=%r birth_input=%r debug=%s",
+        token,
+        t.get("id") or "",
+        last_in,
+        birth_in,
+        _public_login_debug_summary(
+            {"sessions": [{"id": s.get("id") or s.get("name") or "", "trainees": [t]}]},
+            last_in,
+            birth_in,
+        ),
+    )
     return redirect(url_for("public_trainee_login", token=token, error="1"))
 
 
