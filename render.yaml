@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: gestionstagiaires
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
