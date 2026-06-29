@@ -20010,6 +20010,7 @@ def generate_convocation_aps_pdf(session_obj: Dict[str, Any], trainee: Dict[str,
     c.setFillColor(colors.HexColor("#6B7280"))
     c.drawCentredString(width / 2, 18 * mm, "Intégrale Academy — 54 chemin du Carreou, 83480 Puget-sur-Argens — 04 22 47 07 68")
     c.save()
+    return output_path
 
 def _convert_docx_to_pdf_with_libreoffice(docx_path: str, output_dir: str) -> str:
     if not docx_path or not os.path.exists(docx_path):
@@ -20099,8 +20100,80 @@ def _generate_aps_convocation_from_docx_template(session_obj: Dict[str, Any], tr
     return final_pdf_path, final_docx_path
 
 
+def _aps_convocation_output_path(session_obj, trainee, session_id, trainee_id):
+    """
+    Retourne le chemin complet où enregistrer le PDF de convocation APS.
+    Crée le dossier si nécessaire.
+    """
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+
+    upload_root = None
+
+    try:
+        upload_root = app.config.get("UPLOAD_FOLDER")
+    except Exception:
+        upload_root = None
+
+    if not upload_root:
+        upload_root = os.environ.get("UPLOAD_FOLDER")
+
+    if not upload_root:
+        upload_root = os.path.join(base_dir, "uploads")
+
+    safe_session_id = secure_filename(str(session_id or "session"))
+    safe_trainee_id = secure_filename(str(trainee_id or "stagiaire"))
+
+    output_dir = os.path.join(
+        upload_root,
+        "convocations_aps",
+        safe_session_id,
+        safe_trainee_id
+    )
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    nom = ""
+    prenom = ""
+
+    if isinstance(trainee, dict):
+        nom = trainee.get("nom") or trainee.get("last_name") or trainee.get("name") or ""
+        prenom = trainee.get("prenom") or trainee.get("first_name") or ""
+    else:
+        nom = getattr(trainee, "nom", "") or getattr(trainee, "last_name", "") or getattr(trainee, "name", "")
+        prenom = getattr(trainee, "prenom", "") or getattr(trainee, "first_name", "")
+
+    full_name = secure_filename(f"{prenom}_{nom}".strip()) or safe_trainee_id
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    filename = f"convocation_aps_{full_name}_{timestamp}.pdf"
+
+    return os.path.join(output_dir, filename)
+
+
+def _aps_convocation_allowed_pdf_roots() -> List[str]:
+    roots = [APS_CONVOCATION_DIR]
+    upload_root = None
+    try:
+        upload_root = app.config.get("UPLOAD_FOLDER")
+    except Exception:
+        upload_root = None
+    if not upload_root:
+        upload_root = os.environ.get("UPLOAD_FOLDER")
+    if not upload_root:
+        upload_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+    roots.append(os.path.join(upload_root, "convocations_aps"))
+    return [os.path.abspath(root) for root in roots if root]
+
+
+def _aps_convocation_pdf_is_allowed(pdf_path: str) -> bool:
+    abs_pdf_path = os.path.abspath(pdf_path)
+    return any(abs_pdf_path.startswith(root + os.sep) for root in _aps_convocation_allowed_pdf_roots())
+
+
 def _generate_aps_convocation_pdf(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> str:
-    return generate_convocation_aps_pdf(session_obj, trainee, _aps_convocation_output_path(session_obj, trainee, session_id, trainee_id))
+    output_path = _aps_convocation_output_path(session_obj, trainee, session_id, trainee_id)
+    return generate_convocation_aps_pdf(session_obj, trainee, output_path)
 
 def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end: str = "") -> Tuple[str, str]:
     subject = "Convocation formation APS - Intégrale Academy"
@@ -20277,6 +20350,8 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
     try:
         pdf_path = _generate_aps_convocation_pdf(s, t, session_id, trainee_id)
+        if not os.path.exists(pdf_path):
+            raise Exception("Le PDF de convocation APS n’a pas été généré.")
         with open(pdf_path, "rb") as fh:
             encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
         subject, html_content = _build_aps_convocation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), _session_get(s, "date_end", ""))
@@ -20289,9 +20364,8 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         )
         if not email_ok:
             raise RuntimeError("Impossible d’envoyer la convocation : échec d’envoi email")
-        abs_dir = os.path.abspath(APS_CONVOCATION_DIR)
         abs_pdf_path = os.path.abspath(pdf_path)
-        if not abs_pdf_path.startswith(abs_dir + os.sep) or not os.path.exists(abs_pdf_path) or os.path.getsize(abs_pdf_path) <= 0:
+        if not _aps_convocation_pdf_is_allowed(abs_pdf_path) or not os.path.exists(abs_pdf_path) or os.path.getsize(abs_pdf_path) <= 0:
             raise RuntimeError("Le PDF de convocation APS n’est pas consultable depuis l’administration.")
         sent_at = _now_iso()
         t["convocation_aps_status"] = "sent"
@@ -20325,9 +20399,8 @@ def admin_view_aps_convocation(session_id: str, trainee_id: str):
     if not s or not t or not _is_aps_session(s):
         abort(404)
     pdf_path = str(t.get("convocation_aps_pdf_path") or "")
-    abs_dir = os.path.abspath(APS_CONVOCATION_DIR)
     abs_path = os.path.abspath(pdf_path) if pdf_path else ""
-    if not abs_path.startswith(abs_dir + os.sep) or not os.path.exists(abs_path):
+    if not abs_path or not _aps_convocation_pdf_is_allowed(abs_path) or not os.path.exists(abs_path):
         abort(404)
     return send_file(abs_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(abs_path))
 
