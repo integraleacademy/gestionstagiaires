@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Convocation APS - {{ ctx.full_name }}</title>
+<style>
+  @page { size: A4; margin: 10mm; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#f3f4f6; color:#171717; font-family: Arial, Helvetica, sans-serif; line-height:1.38; }
+  .page { width:190mm; min-height:277mm; margin:0 auto 10mm; padding:14mm; background:#fff; border:1px solid #e5e7eb; position:relative; overflow:hidden; page-break-after:always; }
+  .page:last-child { page-break-after:auto; }
+  .brand { display:flex; align-items:center; justify-content:space-between; gap:12mm; border-bottom:2px solid #c9a44c; padding-bottom:7mm; }
+  .brand img.logo { width:46mm; height:auto; object-fit:contain; }
+  .brand-title { text-align:right; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#6b5b2a; font-weight:800; }
+  h1 { font-size:30px; margin:14mm 0 5mm; color:#111; letter-spacing:.02em; }
+  h2 { font-size:19px; margin:0 0 6mm; color:#111; border-left:5px solid #c9a44c; padding-left:4mm; }
+  h3 { font-size:14px; margin:6mm 0 3mm; color:#111; }
+  p { margin:0 0 4mm; }
+  .gold { color:#b08a2b; } .muted { color:#666; } .small { font-size:11px; }
+  .hero { background:linear-gradient(135deg,#111 0%,#2a2415 62%,#c9a44c 160%); color:#fff; border-radius:18px; padding:14mm; margin-top:12mm; min-height:92mm; display:flex; flex-direction:column; justify-content:center; }
+  .hero h1 { color:#fff; margin:0 0 8mm; font-size:36px; }
+  .hero .pill { display:inline-block; width:max-content; border:1px solid rgba(255,255,255,.45); border-radius:999px; padding:2mm 5mm; font-weight:800; color:#f7e8b6; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:5mm; }
+  .box { border:1px solid #dbc47c; border-radius:12px; padding:5mm; background:#fffdf7; margin:4mm 0; }
+  .box.dark { background:#111; color:#fff; border-color:#111; }
+  .box.important { border-width:2px; background:#fff8df; }
+  table { width:100%; border-collapse:collapse; margin:4mm 0; font-size:12px; }
+  th { background:#111; color:#fff; text-align:left; padding:3mm; border:1px solid #111; }
+  td { padding:3mm; border:1px solid #ddd; vertical-align:top; }
+  tr:nth-child(even) td { background:#fafafa; }
+  ul { margin:2mm 0 4mm 6mm; padding-left:4mm; } li { margin:1.5mm 0; }
+  .footer { position:absolute; left:14mm; right:14mm; bottom:8mm; border-top:1px solid #d6c27a; padding-top:3mm; display:flex; justify-content:space-between; gap:6mm; font-size:10px; color:#555; }
+  .sign { margin-top:8mm; display:flex; justify-content:flex-end; }
+  .sign-card { width:70mm; min-height:34mm; border:1px solid #d6c27a; border-radius:10px; padding:4mm; text-align:center; }
+  .sign-card img { max-width:54mm; max-height:22mm; object-fit:contain; }
+  .map { width:100%; max-height:145mm; object-fit:contain; border:1px solid #ddd; border-radius:12px; margin-top:4mm; }
+  .no-break { break-inside:avoid; page-break-inside:avoid; }
+  @media print { body{background:#fff;} .page{margin:0; border:0; width:auto; min-height:277mm;} }
+</style>
+</head>
+<body>
+{% macro footer() -%}<div class="footer"><span>Intégrale Academy • Organisme de formation</span><span>Qualiopi • CNAPS • ADEF</span></div>{%- endmacro %}
+<section class="page cover">
+  <div class="brand">{% if ctx.logo_data_uri %}<img class="logo" src="{{ ctx.logo_data_uri }}" alt="Intégrale Academy">{% endif %}<div class="brand-title">Convocation officielle<br>Formation sécurité privée</div></div>
+  <div class="hero"><span class="pill">TFP APS • {{ ctx.duration_total }}</span><h1>Convocation APS</h1><p style="font-size:18px;"><strong>{{ ctx.full_name }}</strong></p><p>{{ ctx.training_name }}</p><p>{{ ctx.dates_full }}</p><p>{{ ctx.training_place }}</p></div>
+  <div class="grid" style="margin-top:10mm;"><div class="box"><strong>Date d’édition</strong><br>{{ ctx.today }}</div><div class="box"><strong>Espace stagiaire</strong><br><span class="small">{{ ctx.trainee_space_url }}</span></div></div>{{ footer() }}
+</section>
+<section class="page"><div class="brand">{% if ctx.logo_data_uri %}<img class="logo" src="{{ ctx.logo_data_uri }}" alt="Intégrale Academy">{% endif %}<div class="brand-title">Convocation en formation</div></div><h2>Convocation officielle en formation</h2><p>{{ ctx.civility }} {{ ctx.first_name }} {{ ctx.last_name }},</p><p>Vous êtes convoqué(e) à la formation <strong>{{ ctx.training_name }}</strong>, organisée par <strong>{{ ctx.center_name }}</strong>.</p><table><tr><th>Stagiaire</th><td>{{ ctx.full_name }}<br>{{ ctx.address }}<br>{{ ctx.zip_code }} {{ ctx.city }}</td></tr><tr><th>Dates complètes</th><td>{{ ctx.dates_full }}</td></tr><tr><th>Durée totale</th><td>{{ ctx.duration_total }} ({{ ctx.duration_elearning }} à distance + {{ ctx.duration_in_person }} en présentiel)</td></tr><tr><th>Lieu</th><td>{{ ctx.training_place }}</td></tr></table><div class="box important"><strong>Important :</strong> merci de vous présenter muni(e) d’une pièce d’identité en cours de validité et de tous les documents administratifs demandés.</div><div class="sign"><div class="sign-card">Direction Intégrale Academy{% if ctx.signature_data_uri %}<br><img src="{{ ctx.signature_data_uri }}" alt="Signature et cachet">{% else %}<br><br>Signature / cachet{% endif %}</div></div>{{ footer() }}</section>
+<section class="page"><div class="brand">{% if ctx.logo_data_uri %}<img class="logo" src="{{ ctx.logo_data_uri }}" alt="Intégrale Academy">{% endif %}<div class="brand-title">Modalités pédagogiques</div></div><h2>Modalités distanciel + présentiel</h2><div class="grid"><div class="box"><h3>Distanciel / e-learning</h3><p><strong>{{ ctx.dates_elearning }}</strong></p><p>Durée : {{ ctx.duration_elearning }}</p><p>Accès via l’espace stagiaire :<br><span class="small">{{ ctx.trainee_space_url }}</span></p></div><div class="box"><h3>Présentiel</h3><p><strong>{{ ctx.dates_in_person }}</strong></p><p>Durée : {{ ctx.duration_in_person }}</p><p>{{ ctx.training_place }}</p></div></div><table><tr><th>Modalité</th><th>Consignes</th></tr><tr><td>E-learning</td><td>Réaliser les modules dans les délais, conserver ses identifiants et prévenir l’école en cas de blocage.</td></tr><tr><td>Présentiel</td><td>Respecter les horaires, émarger chaque demi-journée et suivre les instructions du formateur.</td></tr></table><div class="box important">Toute absence ou retard peut compromettre la présentation à l’examen.</div>{{ footer() }}</section>
+<section class="page"><div class="brand">{% if ctx.logo_data_uri %}<img class="logo" src="{{ ctx.logo_data_uri }}" alt="Intégrale Academy">{% endif %}<div class="brand-title">Convocation examen</div></div><h2>Convocation officielle à l’examen</h2><p>Vous êtes convoqué(e) à l’examen APS selon les informations ci-dessous.</p><table><tr><th>Date examen</th><td>{{ ctx.exam_date|frdate }}</td></tr><tr><th>Heure examen</th><td>{{ ctx.exam_time }}</td></tr><tr><th>Lieu</th><td>{{ ctx.training_place }}</td></tr><tr><th>Documents obligatoires</th><td>Pièce d’identité originale en cours de validité, convocation, stylo, documents demandés par le centre.</td></tr></table><div class="box important"><strong>Rappel :</strong> la ponctualité est obligatoire. Aucun PDF de secours simplifié n’est utilisé : cette convocation est le document officiel généré depuis le template HTML APS.</div>{{ footer() }}</section>
+<section class="page"><div class="brand">{% if ctx.logo_data_uri %}<img class="logo" src="{{ ctx.logo_data_uri }}" alt="Intégrale Academy">{% endif %}<div class="brand-title">Documents administratifs</div></div><h2>Documents administratifs</h2><ul><li>Pièce d’identité recto/verso lisible et en cours de validité.</li><li>Autorisation préalable CNAPS ou carte professionnelle CNAPS si applicable.</li><li>Justificatifs demandés dans l’espace stagiaire.</li><li>Convocation et documents transmis par l’école.</li></ul><div class="box">Déposez et vérifiez vos documents depuis votre espace stagiaire :<br><strong>{{ ctx.trainee_space_url }}</strong></div><h2>Règles de vie en formation</h2><ul><li>Respect des horaires, des formateurs, des locaux et du matériel.</li><li>Tenue correcte et comportement professionnel exigés.</li><li>Téléphone en mode silencieux pendant les cours et évaluations.</li><li>Présence et émargement obligatoires.</li><li>Respect strict des consignes de sécurité.</li></ul>{{ footer() }}</section>
+<section class="page"><div class="brand">{% if ctx.logo_data_uri %}<img class="logo" src="{{ ctx.logo_data_uri }}" alt="Intégrale Academy">{% endif %}<div class="brand-title">Plan d’accès & parkings</div></div><h2>Plan d’accès & parkings</h2><p><strong>{{ ctx.center_name }}</strong><br>{{ ctx.center_address }}<br>{{ ctx.center_zip_code }} {{ ctx.center_city }}</p><div class="box"><strong>Accès :</strong> merci d’anticiper votre trajet et votre stationnement afin d’être présent(e) à l’heure de convocation.</div>{% if ctx.access_map_data_uri %}<img class="map" src="{{ ctx.access_map_data_uri }}" alt="Plan d’accès et parkings">{% else %}<div class="box"><strong>Plan d’accès :</strong> aucune image de plan n’est configurée sur le serveur. Les informations d’adresse ci-dessus restent valables.</div>{% endif %}<table><tr><th>Contact</th><td>04 22 47 07 68 • ecole@integraleacademy.com</td></tr><tr><th>Organisme</th><td>Intégrale Academy • Qualiopi / CNAPS / ADEF</td></tr></table>{{ footer() }}</section>
+</body>
+</html>

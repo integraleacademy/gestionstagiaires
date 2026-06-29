@@ -5,8 +5,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     NODE_ENV=production
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libreoffice \
-    libreoffice-writer \
     fontconfig \
     fonts-dejavu \
     fonts-liberation \
@@ -19,6 +17,7 @@ WORKDIR /app
 
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
+RUN playwright install --with-deps chromium
 
 COPY . .
 
