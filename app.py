@@ -20041,6 +20041,31 @@ def _aps_static_data_uri(filename: str) -> str:
         return f"data:{mime};base64," + base64.b64encode(fh.read()).decode("ascii")
 
 
+def _required_aps_static_data_uri(filename: str, label: str) -> str:
+    data_uri = _aps_static_data_uri(filename)
+    if not data_uri:
+        raise ValueError(f"Impossible de générer la convocation APS : asset obligatoire manquant ({label} : static/{filename})")
+    return data_uri
+
+
+
+
+def _required_aps_docx_asset_data_uri(media_name: str, label: str) -> str:
+    docx_path = os.path.join(app.root_path, "templates_word", "convocationaps.docx")
+    zip_member = f"word/media/{media_name}"
+    if not os.path.exists(docx_path):
+        raise ValueError(f"Impossible de générer la convocation APS : modèle Word obligatoire manquant (templates_word/convocationaps.docx)")
+    try:
+        with zipfile.ZipFile(docx_path) as zf:
+            data = zf.read(zip_member)
+    except KeyError as exc:
+        raise ValueError(f"Impossible de générer la convocation APS : asset obligatoire manquant dans le modèle Word ({label} : {zip_member})") from exc
+    except Exception as exc:
+        raise ValueError(f"Impossible de générer la convocation APS : lecture impossible du modèle Word ({label})") from exc
+    ext = os.path.splitext(media_name)[1].lower().lstrip(".") or "png"
+    mime = "image/svg+xml" if ext == "svg" else f"image/{'jpeg' if ext in {'jpg', 'jpeg'} else ext}"
+    return f"data:{mime};base64," + base64.b64encode(data).decode("ascii")
+
 def _find_optional_aps_asset(*names: str) -> str:
     roots = [app.static_folder or "static", os.path.join(app.root_path, "templates", "static")]
     for root in roots:
@@ -20103,9 +20128,11 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         "duration_in_person": "113 h",
         "today": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
         "trainee_space_url": trainee_space_url,
-        "logo_data_uri": _aps_static_data_uri("logo-integrale.png"),
-        "signature_data_uri": _find_optional_aps_asset("signature.png", "signature-integrale.png", "cachet.png", "cachet-signature.png"),
-        "access_map_data_uri": _find_optional_aps_asset("plan-acces.png", "plan-acces.jpg", "plan-acces-aps.png", "parking.png"),
+        "letterhead_data_uri": _required_aps_docx_asset_data_uri("image5.png", "en-tête et pied de page Intégrale Academy"),
+        "tfp_logo_data_uri": _required_aps_docx_asset_data_uri("image1.png", "logo TFP APS"),
+        "signature_data_uri": _required_aps_docx_asset_data_uri("image2.png", "signature Clément VAILLANT"),
+        "stamp_data_uri": _required_aps_docx_asset_data_uri("image3.png", "cachet Intégrale Academy"),
+        "access_map_data_uri": _required_aps_docx_asset_data_uri("image4.png", "plan d’accès et parkings"),
     }
     ctx.update({
         "full_name": f"{ctx['civility']} {ctx['first_name']} {ctx['last_name']}".strip(),
@@ -20136,11 +20163,18 @@ def _generate_aps_convocation_pdf(session_obj: Dict[str, Any], trainee: Dict[str
             browser = p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-dev-shm-usage"])
             page = browser.new_page(viewport={"width": 1240, "height": 1754}, device_scale_factor=1)
             page.set_content(html_content, wait_until="networkidle")
-            page.pdf(path=final_pdf_path, format="A4", print_background=True, margin={"top": "10mm", "right": "10mm", "bottom": "10mm", "left": "10mm"}, prefer_css_page_size=True)
+            page.pdf(
+                path=final_pdf_path,
+                format="A4",
+                print_background=True,
+                prefer_css_page_size=True,
+                display_header_footer=False,
+                margin={"top": "0", "right": "0", "bottom": "0", "left": "0"},
+            )
             browser.close()
     except Exception as exc:
         app.logger.exception("[CONVOCATION APS] Échec génération PDF HTML")
-        raise RuntimeError(f"Génération PDF APS impossible depuis le template HTML : {exc}") from exc
+        raise RuntimeError(f"Génération PDF APS impossible : {exc}") from exc
     if not os.path.exists(final_pdf_path) or os.path.getsize(final_pdf_path) <= 0:
         raise RuntimeError("Échec de génération : le PDF de convocation APS est introuvable ou vide")
     return final_pdf_path
