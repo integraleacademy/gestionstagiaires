@@ -1414,6 +1414,16 @@
             </span>
           </div>
           <div class="hint" style="margin-top:8px;">La facture est créée en brouillon : elle ne sera ni finalisée ni envoyée automatiquement.</div>
+          <div style="margin-top:12px;padding:12px;border:1px solid #dbeafe;border-radius:14px;background:#fff;">
+            <div style="font-weight:900;margin-bottom:8px;">Adresse de facturation utilisée pour Qonto</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;">
+              <div><div class="label">Adresse</div><div>{{ trainee.qonto_billing_address or trainee.address or '—' }}</div></div>
+              <div><div class="label">Code postal</div><div>{{ trainee.qonto_billing_zip_code or trainee.zip_code or '—' }}</div></div>
+              <div><div class="label">Ville</div><div>{{ trainee.qonto_billing_city or trainee.city or '—' }}</div></div>
+              <div><div class="label">Pays</div><div>{{ trainee.qonto_billing_country_code or 'FR' }}</div></div>
+            </div>
+            <div class="hint" style="margin-top:8px;">Si ces champs sont vides, complétez-les dans la modale avant de créer la facture.</div>
+          </div>
           <div class="qonto-actions">
             <button class="btn btn-primary" type="button" id="btnOpenQontoInvoice" {% if qonto_invoice.qonto_invoice_id or is_read_only %}disabled{% endif %}>
               {% if qonto_invoice.qonto_invoice_id %}Facture déjà créée{% else %}Générer facture Qonto{% endif %}
@@ -2086,6 +2096,7 @@
       <h3 style="margin:0;">Vérification avant création Qonto</h3>
       <button class="icon-btn" type="button" data-close-modal="qontoInvoiceModal">✕</button>
     </div>
+    <div id="qontoAddressRequiredMessage" class="qonto-error" style="margin-top:10px;display:none;">Complétez l’adresse de facturation avant de créer la facture Qonto.</div>
     <div id="qontoMissingFields" class="qonto-error" style="margin-top:10px;"></div>
     <form id="qontoInvoiceForm" style="margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
       <div><div class="label">Type de client</div><select name="client.type"><option value="particulier">Particulier</option><option value="entreprise">Entreprise</option><option value="financeur">Financeur</option><option value="opco">OPCO</option><option value="france_travail">France Travail</option></select></div>
@@ -2093,13 +2104,14 @@
       <div><div class="label">Nom / raison sociale facturée</div><input name="client.name" required></div><div><div class="label">Email *</div><input name="client.email" type="email" required></div>
       <div><div class="label">Téléphone</div><input name="client.phone"></div><div><div class="label">SIRET</div><input name="client.siret"></div>
       <div style="grid-column:1 / -1;"><div class="label">Adresse *</div><input name="client.address" required></div>
-      <div><div class="label">Code postal *</div><input name="client.zip_code" required></div><div><div class="label">Ville *</div><input name="client.city" required></div><div><div class="label">Pays</div><input name="client.country" value="FR"></div>
+      <div><div class="label">Code postal *</div><input name="client.zip_code" required></div><div><div class="label">Ville *</div><input name="client.city" required></div><div><div class="label">Pays *</div><input name="client.country" value="FR" required></div>
       <div style="grid-column:1 / -1;"><div class="label">Libellé</div><input name="invoice.label" required></div>
       <div><div class="label">Prix unitaire HT *</div><input name="invoice.unit_price_ht" type="number" min="0" step="0.01" required></div><div><div class="label">TVA %</div><input name="invoice.vat_rate" type="number" min="0" step="0.01"></div>
       <div><div class="label">Total HT</div><input name="invoice.amount_ht" type="number" step="0.01"></div><div><div class="label">TVA</div><input name="invoice.amount_tva" type="number" step="0.01"></div><div><div class="label">Total TTC</div><input name="invoice.amount_ttc" type="number" step="0.01"></div>
       <div><div class="label">Date d’émission</div><input name="invoice.issue_date" type="date"></div><div><div class="label">Date d’échéance</div><input name="invoice.due_date" type="date"></div>
       <div style="grid-column:1 / -1;"><div class="label">Conditions</div><textarea name="invoice.conditions" style="width:100%;min-height:90px;"></textarea></div>
-      <div style="grid-column:1 / -1;display:flex;justify-content:flex-end;gap:10px;"><button class="btn" type="button" data-close-modal="qontoInvoiceModal">Annuler</button><button class="btn btn-primary" type="submit" id="btnCreateQontoInvoice">Créer le brouillon Qonto</button></div>
+      <label style="grid-column:1 / -1;display:flex;align-items:center;gap:8px;font-weight:700;"><input type="checkbox" name="save_billing_address" value="1"> Enregistrer cette adresse sur la fiche stagiaire</label>
+      <div style="grid-column:1 / -1;display:flex;justify-content:flex-end;gap:10px;"><button class="btn" type="button" data-close-modal="qontoInvoiceModal">Annuler</button><button class="btn btn-primary" type="submit" id="btnCreateQontoInvoice">Créer la facture Qonto</button></div>
     </form>
   </div>
 </div>
@@ -3473,6 +3485,7 @@ if(conventionSelect){
   const modal = document.getElementById("qontoInvoiceModal");
   const form = document.getElementById("qontoInvoiceForm");
   const missingBox = document.getElementById("qontoMissingFields");
+  const addressRequiredMessage = document.getElementById("qontoAddressRequiredMessage");
   const openBtn = document.getElementById("btnOpenQontoInvoice");
   const createBtn = document.getElementById("btnCreateQontoInvoice");
   const finalizeBtn = document.getElementById("btnFinalizeQontoInvoice");
@@ -3502,13 +3515,31 @@ if(conventionSelect){
       historyEl.innerHTML = rows.map(r=>`<div>${r}</div>`).join("");
     }
   };
-  const highlightMissing = (messages=[]) => {
-    form?.querySelectorAll(".qonto-field-error").forEach(el=>el.classList.remove("qonto-field-error"));
-    if(missingBox) missingBox.textContent = messages.join(" · ");
-    if(messages.some(m=>m.toLowerCase().includes("email"))) form?.querySelector('[name="client.email"]')?.classList.add("qonto-field-error");
-    if(messages.some(m=>m.toLowerCase().includes("adresse"))){ ["client.address","client.zip_code","client.city"].forEach(n=>form?.querySelector(`[name="${n}"]`)?.classList.add("qonto-field-error")); }
-    if(messages.some(m=>m.toLowerCase().includes("montant"))) form?.querySelector('[name="invoice.unit_price_ht"]')?.classList.add("qonto-field-error");
+  const computeMissing = () => {
+    const missing = [];
+    if(!getVal("client.email")) missing.push("email");
+    if(!getVal("client.address")) missing.push("adresse");
+    if(!getVal("client.zip_code")) missing.push("code postal");
+    if(!getVal("client.city")) missing.push("ville");
+    if(!getVal("client.country")) missing.push("pays");
+    if(money(getVal("invoice.unit_price_ht"))<=0) missing.push("montant");
+    return missing;
   };
+  const highlightMissing = (messages=[]) => {
+    const normalized = messages.map(m=>(m||"").toString().toLowerCase());
+    form?.querySelectorAll(".qonto-field-error").forEach(el=>el.classList.remove("qonto-field-error"));
+    if(missingBox) missingBox.textContent = messages.length ? `Champs manquants : ${messages.join(" · ")}` : "";
+    if(addressRequiredMessage) addressRequiredMessage.style.display = normalized.some(m=>["adresse","code postal","ville","pays"].some(x=>m.includes(x))) ? "block" : "none";
+    const mark = (name) => form?.querySelector(`[name="${name}"]`)?.classList.add("qonto-field-error");
+    if(normalized.some(m=>m.includes("email"))) mark("client.email");
+    if(normalized.some(m=>m.includes("adresse"))) mark("client.address");
+    if(normalized.some(m=>m.includes("code postal"))) mark("client.zip_code");
+    if(normalized.some(m=>m.includes("ville"))) mark("client.city");
+    if(normalized.some(m=>m.includes("pays"))) mark("client.country");
+    if(normalized.some(m=>m.includes("montant"))) mark("invoice.unit_price_ht");
+    if(createBtn) createBtn.disabled = computeMissing().length > 0 || createBtn.dataset.loading === "1";
+  };
+  const refreshCreateButton = () => highlightMissing(computeMissing());
   openBtn?.addEventListener("click", async ()=>{
     if(openBtn.disabled) return; setLoading(openBtn,true);
     try{
@@ -3516,7 +3547,7 @@ if(conventionSelect){
       const data = await res.json(); if(!res.ok || !data.ok) throw new Error(data.error || "Preview impossible");
       Object.entries(data.client || {}).forEach(([k,v])=>setVal(`client.${k}`, v));
       Object.entries(data.invoice || {}).forEach(([k,v])=>setVal(`invoice.${k}`, v));
-      highlightMissing(data.missing_fields || []); openModalLocal();
+      highlightMissing(data.missing_fields || computeMissing()); openModalLocal(); refreshCreateButton();
     }catch(e){ alert(e.message || "Impossible de préparer la facture Qonto"); }
     finally{ setLoading(openBtn,false); }
   });
@@ -3531,19 +3562,20 @@ if(conventionSelect){
   form?.addEventListener("input", ()=>{
     const ht = money(getVal("invoice.unit_price_ht")); const rate = money(getVal("invoice.vat_rate"));
     setVal("invoice.amount_ht", ht); setVal("invoice.amount_tva", Math.round(ht*rate)/100); setVal("invoice.amount_ttc", Math.round((ht + ht*rate/100)*100)/100);
+    refreshCreateButton();
   });
   form?.addEventListener("submit", async (e)=>{
     e.preventDefault();
-    const missing=[]; if(!getVal("client.email")) missing.push("Email client manquant"); if(!getVal("client.address")||!getVal("client.zip_code")||!getVal("client.city")) missing.push("Adresse client manquante"); if(money(getVal("invoice.unit_price_ht"))<=0) missing.push("Montant de facture invalide");
+    const missing = computeMissing();
     highlightMissing(missing); if(missing.length) return;
     setLoading(createBtn,true);
     try{
-      const payload = {client:{}, invoice:{}}; new FormData(form).forEach((v,k)=>{ const [root,key]=k.split('.'); if(payload[root]) payload[root][key]=v; });
+      const payload = {client:{}, invoice:{}, save_billing_address:false}; new FormData(form).forEach((v,k)=>{ if(k === "save_billing_address"){ payload.save_billing_address = true; return; } const [root,key]=k.split('.'); if(payload[root]) payload[root][key]=v; });
       const res = await fetch(`/api/admin/trainees/${encodeURIComponent(traineeId)}/qonto-invoice/create`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
       const data = await res.json(); if(!res.ok || !data.ok) throw new Error(data.error || "Impossible de créer la facture Qonto");
       renderStatus(data); closeModalLocal(); alert(data.message || "Facture brouillon Qonto créée");
     }catch(e){ alert(e.message || "Impossible de créer la facture Qonto"); }
-    finally{ setLoading(createBtn,false); }
+    finally{ setLoading(createBtn,false); refreshCreateButton(); }
   });
   finalizeBtn?.addEventListener("click", async ()=>{
     if(finalizeBtn.disabled) return; if(!confirm("Attention, une facture finalisée ne pourra plus être modifiée facilement. Voulez-vous continuer ?")) return;

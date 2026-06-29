@@ -20369,16 +20369,19 @@ def _build_qonto_invoice_preview(sess: Dict[str, Any], trainee: Dict[str, Any]) 
         "type": (trainee.get("qonto_client_type") or "particulier"),
         "first_name": first, "last_name": last, "name": f"{first} {last}".strip(),
         "email": (trainee.get("email") or "").strip(), "phone": (trainee.get("phone") or "").strip(),
-        "address": (trainee.get("address") or "").strip(), "zip_code": (trainee.get("zip_code") or "").strip(),
-        "city": (trainee.get("city") or "").strip(), "country": "FR",
+        "address": (trainee.get("qonto_billing_address") or trainee.get("address") or "").strip(),
+        "zip_code": (trainee.get("qonto_billing_zip_code") or trainee.get("zip_code") or "").strip(),
+        "city": (trainee.get("qonto_billing_city") or trainee.get("city") or "").strip(),
+        "country": (trainee.get("qonto_billing_country_code") or "FR").strip().upper(),
+        "country_code": (trainee.get("qonto_billing_country_code") or "FR").strip().upper(),
         "company_name": (trainee.get("company_name") or trainee.get("qonto_company_name") or "").strip(),
         "siret": (trainee.get("siret") or trainee.get("qonto_siret") or "").strip(),
     }
     label = f"Formation {training_name} - {first} {last} - du {fr_date(start)} au {fr_date(end)}".strip()
     missing = []
-    if not client["email"]: missing.append("Email client manquant")
-    if not client["address"] or not client["zip_code"] or not client["city"]: missing.append("Adresse client manquante")
-    if amount_ht <= 0: missing.append("Montant de facture invalide")
+    if not client["email"]: missing.append("email")
+    missing.extend(_qonto_billing_address_missing_fields(client))
+    if amount_ht <= 0: missing.append("montant")
     return {
         "client": client,
         "formation": {"name": training_name},
@@ -20388,6 +20391,49 @@ def _build_qonto_invoice_preview(sess: Dict[str, Any], trainee: Dict[str, Any]) 
         "existing_invoice": _qonto_invoice_state(trainee),
     }
 
+
+
+def validate_qonto_billing_address(client: Dict[str, Any]) -> Dict[str, str]:
+    missing = []
+
+    street_address = (client.get("street_address") or client.get("address") or "").strip()
+    zip_code = (client.get("zip_code") or client.get("postal_code") or "").strip()
+    city = (client.get("city") or "").strip()
+    country_code = (client.get("country_code") or client.get("country") or "FR").strip().upper()
+
+    if not street_address:
+        missing.append("adresse")
+    if not zip_code:
+        missing.append("code postal")
+    if not city:
+        missing.append("ville")
+    if not country_code:
+        missing.append("pays")
+
+    if missing:
+        raise ValueError("Adresse de facturation incomplète : " + ", ".join(missing))
+
+    return {
+        "street_address": street_address,
+        "zip_code": zip_code,
+        "city": city,
+        "country_code": country_code,
+    }
+
+
+def _qonto_billing_address_missing_fields(client: Dict[str, Any]) -> List[str]:
+    try:
+        validate_qonto_billing_address(client)
+        return []
+    except ValueError as exc:
+        message = str(exc)
+        return [part.strip() for part in message.split(":", 1)[1].split(",") if part.strip()] if ":" in message else []
+
+
+def _qonto_client_has_complete_billing_address(qonto_client: Dict[str, Any]) -> bool:
+    client = qonto_client.get("client") if isinstance(qonto_client.get("client"), dict) else qonto_client
+    billing = client.get("billing_address") if isinstance(client.get("billing_address"), dict) else {}
+    return all((billing.get(key) or client.get("address" if key == "street_address" else key) or "").strip() for key in ("street_address", "zip_code", "city", "country_code"))
 
 def _qonto_status_payload(trainee: Dict[str, Any]) -> Dict[str, Any]:
     inv = _qonto_invoice_state(trainee)
@@ -20433,10 +20479,17 @@ def api_qonto_invoice_create(trainee_id: str):
     payload = request.get_json(silent=True) or {}
     client = payload.get("client") or {}; invoice = payload.get("invoice") or {}
     missing = []
-    if not (client.get("email") or "").strip(): missing.append("Email client manquant")
-    if not (client.get("address") or "").strip() or not (client.get("zip_code") or "").strip() or not (client.get("city") or "").strip(): missing.append("Adresse client manquante")
-    if _money(invoice.get("unit_price_ht") or invoice.get("amount_ht")) <= 0: missing.append("Montant de facture invalide")
-    if missing: return jsonify({"ok": False, "error": ", ".join(missing), "missing_fields": missing}), 400
+    if not (client.get("email") or "").strip(): missing.append("email")
+    try:
+        billing_address = validate_qonto_billing_address(client)
+    except ValueError as exc:
+        billing_message = str(exc)
+        missing.extend(_qonto_billing_address_missing_fields(client))
+        return jsonify({"ok": False, "message": billing_message, "error": billing_message, "missing_fields": missing}), 400
+    if _money(invoice.get("unit_price_ht") or invoice.get("amount_ht")) <= 0: missing.append("montant")
+    if missing:
+        message = "Champs obligatoires manquants : " + ", ".join(missing)
+        return jsonify({"ok": False, "message": message, "error": message, "missing_fields": missing}), 400
     try:
         invoice_iban = get_qonto_invoice_iban()
     except ValueError:
@@ -20444,8 +20497,31 @@ def api_qonto_invoice_create(trainee_id: str):
         return jsonify({"ok": False, "error": "IBAN Qonto manquant. Ajoutez QONTO_IBAN dans les variables Render."}), 400
     try:
         q_client = search_qonto_client({"email": client.get("email"), "name": client.get("name")})
+        if q_client and not _qonto_client_has_complete_billing_address(q_client):
+            message = "Client Qonto existant incomplet : adresse de facturation manquante. Complétez le client dans Qonto ou modifiez l’adresse dans la modale."
+            return jsonify({"ok": False, "message": message, "error": message}), 400
         if not q_client:
-            q_client = create_qonto_client({"client": {"name": client.get("company_name") or client.get("name"), "first_name": client.get("first_name"), "last_name": client.get("last_name"), "email": client.get("email"), "phone": client.get("phone"), "currency": "EUR", "locale": "FR", "billing_address": {"street_address": client.get("address"), "zip_code": client.get("zip_code"), "city": client.get("city"), "country_code": "FR"}, "tax_identification_number": client.get("siret")}})
+            qonto_client_payload = {
+                "name": client.get("company_name") or client.get("name"),
+                "first_name": client.get("first_name"),
+                "last_name": client.get("last_name"),
+                "email": client.get("email"),
+                "phone": client.get("phone"),
+                "currency": "EUR",
+                "locale": "fr",
+                "billing_address": {
+                    "street_address": billing_address["street_address"],
+                    "zip_code": billing_address["zip_code"],
+                    "city": billing_address["city"],
+                    "country_code": "FR",
+                },
+                "address": billing_address["street_address"],
+                "zip_code": billing_address["zip_code"],
+                "city": billing_address["city"],
+                "country_code": "FR",
+                "tax_identification_number": client.get("siret"),
+            }
+            q_client = create_qonto_client({"client": qonto_client_payload})
         q_client_id = (q_client.get("client") or q_client).get("id")
         if not q_client_id: raise RuntimeError("Impossible de créer le client Qonto")
         start = (payload.get("session") or {}).get("date_start") or _session_get(sess, "date_start", "")[:10]
@@ -20484,7 +20560,12 @@ def api_qonto_invoice_create(trainee_id: str):
         app.logger.info("[QONTO] invoice payload=%s", safe_payload)
         q_inv = create_qonto_invoice(qonto_invoice_payload)
         qi = q_inv.get("client_invoice") or q_inv.get("invoice") or q_inv
-        now = _now_iso(); inv.update({"id": inv.get("id") or str(uuid.uuid4()), "trainee_id": trainee_id, "qonto_client_id": q_client_id, "qonto_invoice_id": qi.get("id"), "qonto_invoice_number": qi.get("number") or qi.get("invoice_number") or "", "qonto_invoice_status": qi.get("status") or "draft", "qonto_invoice_url": qi.get("public_url") or qi.get("url") or "", "client_name": client.get("name"), "client_email": client.get("email"), "amount_ht": _money(invoice.get("amount_ht") or invoice.get("unit_price_ht")), "amount_tva": _money(invoice.get("amount_tva")), "amount_ttc": _money(invoice.get("amount_ttc")), "currency": "EUR", "issue_date": invoice.get("issue_date"), "due_date": invoice.get("due_date"), "created_at": now, "last_error": ""})
+        now = _now_iso(); inv.update({"id": inv.get("id") or str(uuid.uuid4()), "trainee_id": trainee_id, "qonto_client_id": q_client_id, "qonto_invoice_id": qi.get("id"), "qonto_invoice_number": qi.get("number") or qi.get("invoice_number") or "", "qonto_invoice_status": qi.get("status") or "draft", "qonto_invoice_url": qi.get("public_url") or qi.get("url") or "", "client_name": client.get("name"), "client_email": client.get("email"), "billing_address": dict(billing_address), "amount_ht": _money(invoice.get("amount_ht") or invoice.get("unit_price_ht")), "amount_tva": _money(invoice.get("amount_tva")), "amount_ttc": _money(invoice.get("amount_ttc")), "currency": "EUR", "issue_date": invoice.get("issue_date"), "due_date": invoice.get("due_date"), "created_at": now, "last_error": ""})
+        if payload.get("save_billing_address"):
+            trainee["address"] = billing_address["street_address"]
+            trainee["zip_code"] = billing_address["zip_code"]
+            trainee["city"] = billing_address["city"]
+            trainee["qonto_billing_country_code"] = billing_address["country_code"]
         if not inv.get("qonto_invoice_id"): raise RuntimeError("Impossible de créer la facture Qonto")
         sess["trainees"] = trainees; save_data(data)
         return jsonify({"ok": True, "message": "Facture brouillon Qonto créée", **_qonto_status_payload(trainee)})
