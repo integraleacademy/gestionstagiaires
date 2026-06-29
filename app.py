@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import datetime
 import calendar
+import math
 import html
 import unicodedata
 import threading
@@ -10223,6 +10224,7 @@ def admin_sessions():
 
         training_type_raw = (_session_get(s, "training_type", "") or "").strip().upper()
         if training_type_raw.startswith("APS"):
+            _sync_aps_period_dates(s)
             training_type_class = "aps"
         elif training_type_raw.startswith("A3P"):
             training_type_class = "a3p"
@@ -10245,6 +10247,10 @@ def admin_sessions():
             "exam_theory_date": _session_get(s, "exam_theory_date", ""),
             "exam_practice_date": _session_get(s, "exam_practice_date", ""),
             "practice_training_date": _session_get(s, "practice_training_date", ""),
+            "aps_remote_start": _session_get(s, "aps_remote_start", ""),
+            "aps_remote_end": _session_get(s, "aps_remote_end", ""),
+            "aps_in_person_start": _session_get(s, "aps_in_person_start", ""),
+            "aps_in_person_end": _session_get(s, "aps_in_person_end", ""),
             "total": st["total"],
             "session_is_conform": st["session_is_conform"],
             "session_dossier_complete": session_dossier_complete,
@@ -14040,6 +14046,96 @@ def admin_vtc_trainees_all():
 
 
 
+
+def _easter_date(year: int) -> datetime.date:
+    a = year % 19
+    b = year // 100
+    c = year % 100
+    d = b // 4
+    e = b % 4
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i = c // 4
+    k = c % 4
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    month = (h + l - 7 * m + 114) // 31
+    day = ((h + l - 7 * m + 114) % 31) + 1
+    return datetime.date(year, month, day)
+
+
+def _french_public_holidays(year: int) -> set[datetime.date]:
+    easter = _easter_date(year)
+    return {
+        datetime.date(year, 1, 1),
+        easter + datetime.timedelta(days=1),
+        datetime.date(year, 5, 1),
+        datetime.date(year, 5, 8),
+        easter + datetime.timedelta(days=39),
+        easter + datetime.timedelta(days=50),
+        datetime.date(year, 7, 14),
+        datetime.date(year, 8, 15),
+        datetime.date(year, 11, 1),
+        datetime.date(year, 11, 11),
+        datetime.date(year, 12, 25),
+    }
+
+
+def _is_aps_working_day(day: datetime.date) -> bool:
+    return day.weekday() < 5 and day not in _french_public_holidays(day.year)
+
+
+def _next_aps_working_day(day: datetime.date) -> datetime.date:
+    current = day
+    while not _is_aps_working_day(current):
+        current += datetime.timedelta(days=1)
+    return current
+
+
+def _add_aps_working_days(start_day: datetime.date, working_days: int) -> datetime.date:
+    current = _next_aps_working_day(start_day)
+    remaining = max(int(working_days or 1), 1)
+    while True:
+        if _is_aps_working_day(current):
+            remaining -= 1
+            if remaining <= 0:
+                return current
+        current += datetime.timedelta(days=1)
+
+
+def _compute_aps_period_dates(date_start: str) -> Dict[str, str]:
+    raw = (date_start or "").strip()[:10]
+    if not raw:
+        return {}
+    try:
+        start = datetime.datetime.strptime(raw, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return {}
+    remote_start = _next_aps_working_day(start)
+    remote_end = _add_aps_working_days(remote_start, math.ceil(62 / 7))
+    in_person_start = _next_aps_working_day(remote_end + datetime.timedelta(days=1))
+    in_person_end = _add_aps_working_days(in_person_start, math.ceil(113 / 7))
+    return {
+        "aps_remote_start": remote_start.isoformat(),
+        "aps_remote_end": remote_end.isoformat(),
+        "aps_in_person_start": in_person_start.isoformat(),
+        "aps_in_person_end": in_person_end.isoformat(),
+    }
+
+
+def _sync_aps_period_dates(session_obj: Dict[str, Any]) -> None:
+    training_type = (_session_get(session_obj, "training_type", "") or "").strip().upper()
+    if not training_type.startswith("APS"):
+        for key in ("aps_remote_start", "aps_remote_end", "aps_in_person_start", "aps_in_person_end"):
+            session_obj.pop(key, None)
+        return
+    periods = _compute_aps_period_dates(_session_get(session_obj, "date_start", ""))
+    if periods:
+        session_obj.update(periods)
+        session_obj["date_start"] = periods["aps_remote_start"]
+        session_obj["date_end"] = periods["aps_in_person_end"]
+
 # =========================
 # API - Sessions (used by your modal JS)
 # =========================
@@ -14084,6 +14180,7 @@ def api_create_session():
         "trainees": [],
         "archived": False,
     }
+    _sync_aps_period_dates(s)
     data["sessions"].insert(0, s)
     save_data(data)
     return jsonify({"ok": True, "id": session_id})
@@ -14126,6 +14223,7 @@ def api_update_session(session_id: str):
     if "cash_payment_alert_dismissed_key" in payload:
         s["cash_payment_alert_dismissed_key"] = (payload.get("cash_payment_alert_dismissed_key") or "").strip()
 
+    _sync_aps_period_dates(s)
     s["updated_at"] = _now_iso()
     save_data(data)
     return jsonify({"ok": True})
@@ -19734,13 +19832,63 @@ def _format_long_fr_date(value: str) -> str:
         return value
 
 
-def _aps_convocation_output_path(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> str:
-    safe_session_id = _safe_filename_part(session_id or _session_get(session_obj, "id", "session"))
-    safe_trainee_id = _safe_filename_part(trainee_id or trainee.get("id") or "stagiaire")
-    first_name = _safe_filename_part(trainee.get("first_name") or trainee.get("prenom") or "")
-    last_name = _safe_filename_part(trainee.get("last_name") or trainee.get("nom") or "")
-    filename = f"convocation_aps_{last_name}_{first_name}_{safe_trainee_id}.pdf"
-    return os.path.join(APS_CONVOCATION_DIR, safe_session_id, safe_trainee_id, filename)
+def _docx_replace_text(doc: Document, replacements: Dict[str, str]) -> None:
+    def replace_in_paragraph(paragraph):
+        full = "".join(run.text for run in paragraph.runs)
+        if not full:
+            return
+        updated = full
+        for key, value in replacements.items():
+            updated = updated.replace(key, value)
+        if updated != full:
+            for run in paragraph.runs:
+                run.text = ""
+            if paragraph.runs:
+                paragraph.runs[0].text = updated
+            else:
+                paragraph.add_run(updated)
+
+    for paragraph in _iter_docx_paragraphs(doc):
+        replace_in_paragraph(paragraph)
+
+
+def _aps_convocation_template_path() -> str:
+    for folder in ("templates_word", "templaces_word"):
+        candidate = os.path.join(app.root_path, folder, "convocationaps.docx")
+        if os.path.exists(candidate):
+            return candidate
+    raise FileNotFoundError("Modèle Word introuvable : templates_word/convocationaps.docx")
+
+
+def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
+    required = [
+        (trainee.get("email"), "email du stagiaire manquant"),
+        (trainee.get("first_name"), "prénom du stagiaire manquant"),
+        (trainee.get("last_name"), "nom du stagiaire manquant"),
+        (_session_get(session_obj, "date_start", ""), "date de début de formation manquante"),
+        (_session_get(session_obj, "date_end", ""), "date de fin de formation manquante"),
+        (_session_get(session_obj, "exam_date", ""), "date d’examen manquante"),
+    ]
+    for value, message in required:
+        if not str(value or "").strip():
+            raise ValueError(f"Impossible d’envoyer la convocation : {message}")
+    _sync_aps_period_dates(session_obj)
+    training_name = _session_get(session_obj, "name", "") or _session_get(session_obj, "training_type", "") or "Formation APS"
+    aps_in_person_start = str(_session_get(session_obj, "aps_in_person_start", "") or _session_get(session_obj, "date_start", "")).strip()
+    aps_in_person_end = str(_session_get(session_obj, "aps_in_person_end", "") or _session_get(session_obj, "date_end", "")).strip()
+    return {"civility": str(trainee.get("civility") or trainee.get("civilite") or "").strip(), "first_name": str(trainee.get("first_name") or "").strip(), "last_name": str(trainee.get("last_name") or "").strip().upper(), "training_name": str(training_name).strip(), "date_start": str(_session_get(session_obj, "date_start", "")).strip(), "date_end": str(_session_get(session_obj, "date_end", "")).strip(), "aps_remote_start": str(_session_get(session_obj, "aps_remote_start", "") or _session_get(session_obj, "date_start", "")).strip(), "aps_remote_end": str(_session_get(session_obj, "aps_remote_end", "") or _session_get(session_obj, "date_start", "")).strip(), "aps_in_person_start": aps_in_person_start, "aps_in_person_end": aps_in_person_end, "exam_date": str(_session_get(session_obj, "exam_date", "")).strip(), "exam_time": str(_session_get(session_obj, "exam_time", "") or session_obj.get("heure_examen") or "08h00").strip() or "08h00", "convocation_time": str(_session_get(session_obj, "convocation_time", "") or session_obj.get("heure_convocation") or "08h30").strip() or "08h30", "center_name": APS_CONVOCATION_CENTER_NAME, "address": APS_CONVOCATION_CENTER_ADDRESS, "zip_code": APS_CONVOCATION_CENTER_ZIP, "city": APS_CONVOCATION_CENTER_CITY, "today": datetime.datetime.utcnow().strftime("%d/%m/%Y")}
+
+
+def _iter_docx_paragraphs(container):
+    for paragraph in getattr(container, "paragraphs", []):
+        yield paragraph
+    for table in getattr(container, "tables", []):
+        for row in table.rows:
+            for cell in row.cells:
+                yield from _iter_docx_paragraphs(cell)
+    for section in getattr(container, "sections", []):
+        yield from _iter_docx_paragraphs(section.header)
+        yield from _iter_docx_paragraphs(section.footer)
 
 
 def _draw_aps_pdf_line(c, x: float, y: float, label: str, value: str) -> None:
@@ -19863,9 +20011,92 @@ def generate_convocation_aps_pdf(session_obj: Dict[str, Any], trainee: Dict[str,
     c.drawCentredString(width / 2, 18 * mm, "Intégrale Academy — 54 chemin du Carreou, 83480 Puget-sur-Argens — 04 22 47 07 68")
     c.save()
 
-    if not os.path.exists(output_path) or os.path.getsize(output_path) <= 0:
-        raise RuntimeError("Le PDF de convocation APS n’a pas été généré.")
-    return output_path
+def _convert_docx_to_pdf_with_libreoffice(docx_path: str, output_dir: str) -> str:
+    if not docx_path or not os.path.exists(docx_path):
+        raise FileNotFoundError(f"Fichier DOCX introuvable : {docx_path}")
+    os.makedirs(output_dir, exist_ok=True)
+    soffice = _find_libreoffice_binary()
+    if not soffice:
+        raise RuntimeError(LIBREOFFICE_MISSING_MESSAGE)
+
+    libreoffice_args = [
+        "--headless",
+        "--nologo",
+        "--nofirststartwizard",
+        "--nodefault",
+        "--nolockcheck",
+        "--convert-to",
+        "pdf",
+        "--outdir",
+        output_dir,
+        docx_path,
+    ]
+    env = {**os.environ, "HOME": "/tmp", "TMPDIR": "/tmp"}
+    try:
+        result = subprocess.run([soffice, *libreoffice_args], capture_output=True, text=True, timeout=120, env=env)
+    except subprocess.TimeoutExpired as exc:
+        app.logger.error("[CONVOCATION APS] Erreur conversion LibreOffice docxPath=%s outputDir=%s stdout=%s stderr=%s error=%s", docx_path, output_dir, exc.stdout, exc.stderr, str(exc))
+        raise RuntimeError("Conversion Word vers PDF impossible avec LibreOffice : délai dépassé") from exc
+
+    expected_pdf = os.path.join(output_dir, os.path.splitext(os.path.basename(docx_path))[0] + ".pdf")
+    if result.returncode != 0:
+        app.logger.error("[CONVOCATION APS] Erreur conversion LibreOffice docxPath=%s outputDir=%s stdout=%s stderr=%s error=code %s", docx_path, output_dir, result.stdout, result.stderr, result.returncode)
+        raise RuntimeError(f"Conversion Word vers PDF impossible avec LibreOffice : {result.stderr or result.stdout or f'code {result.returncode}'}")
+    if not os.path.exists(expected_pdf):
+        app.logger.error("[CONVOCATION APS] PDF non généré docxPath=%s outputDir=%s expectedPdfPath=%s stdout=%s stderr=%s", docx_path, output_dir, expected_pdf, result.stdout, result.stderr)
+        raise RuntimeError(f"PDF non généré après conversion : {expected_pdf}")
+    if os.path.getsize(expected_pdf) <= 0:
+        app.logger.error("[CONVOCATION APS] PDF vide docxPath=%s outputDir=%s expectedPdfPath=%s stdout=%s stderr=%s", docx_path, output_dir, expected_pdf, result.stdout, result.stderr)
+        raise RuntimeError("Échec de conversion LibreOffice : le PDF généré est vide")
+    return expected_pdf
+
+
+def _generate_aps_convocation_from_docx_template(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
+    """Generate the filled APS DOCX from the official template, then convert it to PDF."""
+    ctx = _build_aps_convocation_context(session_obj, trainee)
+    template_path = _aps_convocation_template_path()
+    filename_base = f"convocation-aps-{_safe_filename_part(ctx['last_name'])}-{_safe_filename_part(ctx['first_name'])}-{_safe_filename_part(trainee.get('id'))}"
+    final_docx_path = os.path.join(APS_CONVOCATION_DIR, filename_base + ".docx")
+    final_pdf_path = os.path.join(APS_CONVOCATION_DIR, filename_base + ".pdf")
+    place = f"{ctx['center_name']} ({ctx['address']} - {ctx['zip_code']} {ctx['city']})"
+    date_range = f"du {fr_date(ctx['date_start'])} au {fr_date(ctx['date_end'])}"
+    remote_date_range = f"du {fr_date(ctx['aps_remote_start'])} au {fr_date(ctx['aps_remote_end'])}"
+    in_person_date_range = f"du {fr_date(ctx['aps_in_person_start'])} au {fr_date(ctx['aps_in_person_end'])}"
+    replacements = {
+        "['NomCivilite][NomCivilite][:if]": ctx["civility"], "[NomCivilite]": ctx["civility"], "['NomCivilite]": ctx["civility"],
+        "['Prenom]": ctx["first_name"], "[Prenom]": ctx["first_name"], "['Nom]": ctx["last_name"], "[Nom]": ctx["last_name"],
+        "['NomPedagogique]": ctx["training_name"], "[NomPedagogique]": ctx["training_name"], "[Libelle]": ctx["training_name"],
+        "[DateConvocation]": fr_date(ctx["aps_in_person_start"]), "[heureConvocation]": ctx["convocation_time"], "[=TODAY()]": ctx["today"],
+        "['CodePostal]": ctx["zip_code"], "[CodePostal]": ctx["zip_code"], "['Ville]": ctx["city"], "[Ville]": ctx["city"],
+        "['Ligne1]['Ligne1][:if]": ctx["address"], "['Ligne2]['Ligne2][:if]": "", "['Ligne3]['Ligne3][:if]": "", "['Ligne4]['Ligne4][:if]": "",
+        "['Ligne1]": ctx["address"], "[Ligne1]": ctx["address"], "['Ligne2]": "", "[Ligne2]": "", "['Ligne3]": "", "[Ligne3]": "", "['Ligne4]": "", "[Ligne4]": "",
+        "[AFs][Libelle]": ctx["training_name"], "[AFs]": "", "[:AFs]": "", "[:if]": "",
+        "[Nom][Nom}==2] ([Ligne1] - [CodePostal] [Ville])[:if]": place,
+        "12 août 2026": f"{fr_date(ctx['exam_date'])} à {ctx['exam_time']}", "12 août": fr_date(ctx["exam_date"]), "08h00": ctx["exam_time"],
+        "8 juillet": fr_date(ctx["aps_remote_start"]), "Du 8 au 20 juillet inclus": remote_date_range, "Du 21 juillet au 11 août": in_person_date_range,
+    }
+    app.logger.info("[APS] Modèle Word utilisé=%s stagiaire=%s %s session=%s date_convocation=%s %s date_examen=%s %s", template_path, ctx["first_name"], ctx["last_name"], _session_get(session_obj, "id", ""), ctx["date_start"], ctx["convocation_time"], ctx["exam_date"], ctx["exam_time"])
+    doc = Document(template_path)
+    _docx_replace_text(doc, replacements)
+    unresolved = _find_unresolved_docx_variables(doc)
+    if unresolved:
+        app.logger.error("[APS] Variables non remplacées dans %s: %s", template_path, ", ".join(unresolved))
+        raise ValueError("Variables non remplacées dans le modèle APS : " + ", ".join(unresolved))
+
+    os.makedirs(APS_CONVOCATION_DIR, exist_ok=True)
+    tmpdir = os.path.join("/tmp", "convocations-aps", _safe_filename_part(session_id or _session_get(session_obj, "id", "session")), _safe_filename_part(trainee_id or trainee.get("id") or "stagiaire"), str(int(datetime.datetime.utcnow().timestamp() * 1000)))
+    os.makedirs(tmpdir, exist_ok=True)
+    filled_docx_path = os.path.join(tmpdir, "convocation-aps.docx")
+    doc.save(filled_docx_path)
+    _check_libreoffice_available()
+    pdf_tmp = _convert_docx_to_pdf_with_libreoffice(filled_docx_path, tmpdir)
+    shutil.copyfile(filled_docx_path, final_docx_path)
+    shutil.copyfile(pdf_tmp, final_pdf_path)
+
+    if not os.path.exists(final_pdf_path) or os.path.getsize(final_pdf_path) <= 0:
+        raise RuntimeError("Échec de génération : le PDF de convocation APS est introuvable ou vide")
+    app.logger.info("[APS] DOCX rempli archivé=%s PDF archivé=%s", final_docx_path, final_pdf_path)
+    return final_pdf_path, final_docx_path
 
 
 def _generate_aps_convocation_pdf(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> str:

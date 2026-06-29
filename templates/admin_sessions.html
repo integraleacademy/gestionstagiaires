@@ -711,6 +711,10 @@
 
     <div class="card-meta">
       <div>Formation : <strong>{{ s.date_start|frdate }}</strong> → <strong>{{ s.date_end|frdate }}</strong></div>
+      {% if ((s.training_type or "")|upper).startswith("APS") %}
+        <div>Distanciel : <strong>{{ s.aps_remote_start|frdate }}</strong> → <strong>{{ s.aps_remote_end|frdate }}</strong></div>
+        <div>Présentiel : <strong>{{ s.aps_in_person_start|frdate }}</strong> → <strong>{{ s.aps_in_person_end|frdate }}</strong></div>
+      {% endif %}
       {% if "VTC" in (s.training_type or "")|upper %}
         {% set theory_date = s.exam_theory_date or s.exam_date %}
         {% set practice_date = s.exam_practice_date or s.exam_date %}
@@ -793,6 +797,10 @@
             data-exam-theory-date="{{ s.exam_theory_date }}"
             data-exam-practice-date="{{ s.exam_practice_date }}"
             data-practice-training-date="{{ s.practice_training_date }}"
+            data-aps-remote-start="{{ s.aps_remote_start }}"
+            data-aps-remote-end="{{ s.aps_remote_end }}"
+            data-aps-in-person-start="{{ s.aps_in_person_start }}"
+            data-aps-in-person-end="{{ s.aps_in_person_end }}"
             data-aps-elearning-enabled="{{ '1' if s.aps_elearning_enabled else '0' }}">
       Modifier la session
     </button>
@@ -861,6 +869,11 @@
           <div class="label">Date formation pratique</div>
           <input id="practiceTrainingDate" type="date">
         </label>
+        <div id="apsComputedPeriodsField" class="hint" style="display:none;grid-column:1/-1;padding:10px 12px;border:1px solid #bfdbfe;border-radius:12px;background:#eff6ff;color:#1d4ed8;font-weight:800;">
+          Dates APS calculées automatiquement :<br>
+          Distanciel : <span id="apsRemotePreview">—</span><br>
+          Présentiel : <span id="apsInPersonPreview">—</span>
+        </div>
         <label id="apsElearningField" style="display:none;grid-column:1/-1;">
           <span style="display:flex;align-items:center;gap:10px;font-weight:800;">
             <input id="apsElearningEnabled" type="checkbox" style="width:auto;">
@@ -1053,6 +1066,11 @@
           <div class="label">Date formation pratique</div>
           <input id="editPracticeTrainingDate" type="date">
         </label>
+        <div id="editApsComputedPeriodsField" class="hint" style="display:none;grid-column:1/-1;padding:10px 12px;border:1px solid #bfdbfe;border-radius:12px;background:#eff6ff;color:#1d4ed8;font-weight:800;">
+          Dates APS calculées automatiquement :<br>
+          Distanciel : <span id="editApsRemotePreview">—</span><br>
+          Présentiel : <span id="editApsInPersonPreview">—</span>
+        </div>
         <label id="editApsElearningField" style="display:none;grid-column:1/-1;">
           <span style="display:flex;align-items:center;gap:10px;font-weight:800;">
             <input id="editApsElearningEnabled" type="checkbox" style="width:auto;">
@@ -1493,6 +1511,97 @@
     }
   });
 
+  function apsEasterDate(year){
+    const a = year % 19;
+    const b = Math.floor(year / 100);
+    const c = year % 100;
+    const d = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31);
+    const day = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(Date.UTC(year, month - 1, day));
+  }
+
+  function apsIsoDate(date){
+    return date.toISOString().slice(0, 10);
+  }
+
+  function apsAddDays(date, days){
+    const next = new Date(date.getTime());
+    next.setUTCDate(next.getUTCDate() + days);
+    return next;
+  }
+
+  function apsFrenchHolidays(year){
+    const easter = apsEasterDate(year);
+    return new Set([
+      `${year}-01-01`, apsIsoDate(apsAddDays(easter, 1)), `${year}-05-01`, `${year}-05-08`,
+      apsIsoDate(apsAddDays(easter, 39)), apsIsoDate(apsAddDays(easter, 50)), `${year}-07-14`,
+      `${year}-08-15`, `${year}-11-01`, `${year}-11-11`, `${year}-12-25`
+    ]);
+  }
+
+  function apsIsWorkingDay(date){
+    const day = date.getUTCDay();
+    return day >= 1 && day <= 5 && !apsFrenchHolidays(date.getUTCFullYear()).has(apsIsoDate(date));
+  }
+
+  function apsNextWorkingDay(date){
+    let current = new Date(date.getTime());
+    while(!apsIsWorkingDay(current)) current = apsAddDays(current, 1);
+    return current;
+  }
+
+  function apsAddWorkingDays(start, count){
+    let current = apsNextWorkingDay(start);
+    let remaining = Math.max(parseInt(count || 1, 10), 1);
+    while(true){
+      if(apsIsWorkingDay(current)){
+        remaining -= 1;
+        if(remaining <= 0) return current;
+      }
+      current = apsAddDays(current, 1);
+    }
+  }
+
+  function computeApsPeriods(startValue){
+    if(!startValue) return null;
+    const start = new Date(`${startValue}T00:00:00Z`);
+    if(Number.isNaN(start.getTime())) return null;
+    const remoteStart = apsNextWorkingDay(start);
+    const remoteEnd = apsAddWorkingDays(remoteStart, Math.ceil(62 / 7));
+    const inPersonStart = apsNextWorkingDay(apsAddDays(remoteEnd, 1));
+    const inPersonEnd = apsAddWorkingDays(inPersonStart, Math.ceil(113 / 7));
+    return {remoteStart, remoteEnd, inPersonStart, inPersonEnd};
+  }
+
+  function formatApsPeriodDate(date){
+    if(!date) return "—";
+    return date.toLocaleDateString("fr-FR", {timeZone:"UTC"});
+  }
+
+  function refreshApsPeriodPreview(prefix){
+    const isEdit = prefix === "edit";
+    const type = ((isEdit ? document.getElementById("editSessionTrainingType") : document.getElementById("sessionType"))?.value || "").toUpperCase();
+    const container = document.getElementById(isEdit ? "editApsComputedPeriodsField" : "apsComputedPeriodsField");
+    const remote = document.getElementById(isEdit ? "editApsRemotePreview" : "apsRemotePreview");
+    const inPerson = document.getElementById(isEdit ? "editApsInPersonPreview" : "apsInPersonPreview");
+    const startValue = (document.getElementById(isEdit ? "editDateStart" : "dateStart")?.value || "").trim();
+    const isAps = type.startsWith("APS");
+    if(container) container.style.display = isAps ? "" : "none";
+    if(!isAps) return;
+    const periods = computeApsPeriods(startValue);
+    if(remote) remote.textContent = periods ? `${formatApsPeriodDate(periods.remoteStart)} → ${formatApsPeriodDate(periods.remoteEnd)}` : "—";
+    if(inPerson) inPerson.textContent = periods ? `${formatApsPeriodDate(periods.inPersonStart)} → ${formatApsPeriodDate(periods.inPersonEnd)}` : "—";
+  }
+
   function toggleExamFields(){
     const type = (document.getElementById("sessionType")?.value || "").toUpperCase();
     const examDateField = document.getElementById("examDateField");
@@ -1508,10 +1617,12 @@
     if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
     if(practiceTrainingField) practiceTrainingField.style.display = isVtc ? "" : "none";
     if(apsElearningField) apsElearningField.style.display = isAps ? "" : "none";
+    refreshApsPeriodPreview("");
     if(!isAps) document.getElementById("apsElearningEnabled").checked = false;
   }
 
   document.getElementById("sessionType")?.addEventListener("change", toggleExamFields);
+  document.getElementById("dateStart")?.addEventListener("change", ()=> refreshApsPeriodPreview(""));
   toggleExamFields();
 
   let currentEditSessionId = null;
@@ -1531,6 +1642,7 @@
     if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
     if(practiceTrainingField) practiceTrainingField.style.display = isVtc ? "" : "none";
     if(apsElearningField) apsElearningField.style.display = isAps ? "" : "none";
+    refreshApsPeriodPreview("edit");
   }
 
   // create session
@@ -1598,10 +1710,13 @@
       document.getElementById("editPracticeTrainingDate").value = btn.getAttribute("data-practice-training-date") || "";
       document.getElementById("editApsElearningEnabled").checked = btn.getAttribute("data-aps-elearning-enabled") === "1";
 
+      refreshApsPeriodPreview("edit");
       toggleEditExamFields(trainingType);
       openModal("editSessionModal");
     });
   });
+
+  document.getElementById("editDateStart")?.addEventListener("change", ()=> refreshApsPeriodPreview("edit"));
 
   document.getElementById("btnUpdateSession")?.addEventListener("click", async ()=>{
     if(!currentEditSessionId) return;
