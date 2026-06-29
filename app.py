@@ -19848,18 +19848,84 @@ def _generate_aps_convocation_pdf(session_obj: Dict[str, Any], trainee: Dict[str
     pdf_path, _ = _generate_aps_convocation_from_docx_template(session_obj, trainee)
     return pdf_path
 
-def _build_aps_convocation_email(first_name: str) -> Tuple[str, str]:
+def _build_aps_convocation_email(first_name: str, date_start: str, date_end: str, student_space_link: str) -> Tuple[str, str]:
     subject = "Votre convocation officielle APS – Intégrale Academy"
-    html_body = mail_layout(f"""
-      <h2 style="margin:0 0 14px;color:#0f172a;">Bonjour {html.escape(first_name or "")},</h2>
-      <p>Nous vous confirmons votre inscription à la formation <strong>APS</strong>.</p>
-      <p>Vous trouverez en pièce jointe votre convocation officielle comprenant les informations importantes liées à votre formation, au e-learning, à l’examen, aux documents administratifs à déposer et aux informations pratiques d’accès au centre.</p>
-      <p style="font-weight:700;color:#0f172a;">Merci de lire attentivement l’ensemble du document.</p>
-      <div style="text-align:center;margin:26px 0;"><a href="https://gestionstagiaires-r5no.onrender.com/espacestagiaire" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;font-weight:800;padding:13px 20px;border-radius:12px;">Accéder à mon espace stagiaire</a></div>
-      <p>En cas de question, vous pouvez nous contacter au <strong>04 22 47 07 68</strong> ou par email à <a href="mailto:ecole@integraleacademy.com">ecole@integraleacademy.com</a>.</p>
-      <p>À très bientôt,</p>
-      <p style="margin-top:18px;"><strong>Intégrale Academy</strong><br>54 chemin du Carreou<br>83480 Puget-sur-Argens<br>04 22 47 07 68</p>
-    """)
+    first_name_esc = html.escape(first_name or "")
+    date_start_fr = fr_date(date_start)
+    date_end_fr = fr_date(date_end)
+    if not date_start_fr or not date_end_fr:
+        raise ValueError("Impossible d’envoyer la convocation : dates de session APS introuvables")
+    student_space_link = (student_space_link or PUBLIC_STUDENT_PORTAL_BASE or "").strip()
+    link_esc = html.escape(student_space_link, quote=True)
+    logo_src = f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png"
+    logo_src_esc = html.escape(logo_src, quote=True)
+
+    html_body = f"""
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="x-apple-disable-message-reformatting">
+    <title>{html.escape(subject)}</title>
+  </head>
+  <body style="margin:0;padding:0;background:#F4F7FB;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background:#F4F7FB;margin:0;padding:24px 12px;">
+      <tr>
+        <td align="center" style="padding:0;">
+          <table role="presentation" width="640" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 14px 34px rgba(15,23,42,0.10);">
+            <tr>
+              <td align="center" style="padding:30px 24px 34px;background:#0B1F3A;background-image:linear-gradient(135deg,#081A31 0%,#0B2E59 56%,#123E73 100%);">
+                <img src="{logo_src_esc}" width="170" alt="Intégrale Academy" style="display:block;width:170px;max-width:70%;height:auto;border:0;outline:none;text-decoration:none;margin:0 auto 22px;">
+                <div style="display:inline-block;background:#DBEAFE;color:#0B2E59;border-radius:999px;padding:8px 14px;font-size:12px;line-height:16px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;">Convocation officielle APS</div>
+                <h1 style="margin:18px 0 0;color:#ffffff;font-size:30px;line-height:36px;font-weight:800;text-align:center;">Votre convocation APS</h1>
+                <p style="margin:10px 0 0;color:#CFE0FF;font-size:15px;line-height:22px;text-align:center;">Toutes les informations importantes sont réunies dans le document joint.</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:34px 34px 12px;background:#ffffff;">
+                <p style="margin:0 0 18px;font-size:17px;line-height:27px;color:#0f172a;">Bonjour <strong>{first_name_esc}</strong>,</p>
+                <p style="margin:0 0 18px;font-size:16px;line-height:26px;color:#334155;">Nous revenons vers vous concernant votre formation <strong>Agent de Prévention et de Sécurité (APS)</strong> qui se déroulera du <strong>{html.escape(date_start_fr)}</strong> au <strong>{html.escape(date_end_fr)}</strong>.</p>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0;border-collapse:separate;border-spacing:0;">
+                  <tr>
+                    <td style="background:#F8FAFC;border:1px solid #E2E8F0;border-left:5px solid #2563EB;border-radius:16px;padding:18px 20px;">
+                      <p style="margin:0 0 8px;font-size:15px;line-height:23px;color:#0f172a;font-weight:800;">Document joint au format PDF</p>
+                      <p style="margin:0;font-size:15px;line-height:24px;color:#475569;">Votre convocation officielle est disponible en pièce jointe. Elle contient l’ensemble des informations importantes liées à votre formation : déroulement, accès au e-learning, documents administratifs à déposer, examen, horaires et informations pratiques d’accès au centre.</p>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:0 0 24px;font-size:16px;line-height:26px;color:#334155;">Merci de lire attentivement l’ensemble du document avant le début de la formation.</p>
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:28px auto 30px;">
+                  <tr>
+                    <td align="center" bgcolor="#2563EB" style="border-radius:14px;box-shadow:0 8px 18px rgba(37,99,235,0.28);">
+                      <a href="{link_esc}" target="_blank" style="display:inline-block;padding:15px 24px;font-size:16px;line-height:20px;font-weight:800;color:#ffffff;text-decoration:none;border-radius:14px;">Accéder à mon espace stagiaire</a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:0 0 18px;font-size:15px;line-height:25px;color:#475569;">En cas de question, vous pouvez nous contacter au <strong style="color:#0f172a;">04 22 47 07 68</strong> ou par email à <a href="mailto:ecole@integraleacademy.com" style="color:#2563EB;text-decoration:underline;">ecole@integraleacademy.com</a>.</p>
+                <p style="margin:0 0 4px;font-size:15px;line-height:25px;color:#475569;">À très bientôt,</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:10px 34px 30px;background:#ffffff;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#F8FAFC;border-radius:16px;border:1px solid #E2E8F0;">
+                  <tr>
+                    <td style="padding:18px 20px;text-align:center;">
+                      <p style="margin:0 0 6px;color:#0f172a;font-size:16px;line-height:22px;font-weight:800;">Intégrale Academy</p>
+                      <p style="margin:0;color:#64748b;font-size:14px;line-height:22px;">54 chemin du Carreou<br>83480 Puget-sur-Argens<br>04 22 47 07 68</p>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:18px 0 0;text-align:center;color:#94a3b8;font-size:12px;line-height:18px;">Ce message a été envoyé automatiquement depuis votre espace formation.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+"""
     return subject, html_body
 
 
@@ -20021,10 +20087,13 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
     if not _is_aps_session(s):
         return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
     try:
+        ctx = _build_aps_convocation_context(s, t)
+        public_token = str(t.get("public_token") or "").strip()
+        student_space_link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}" if public_token else PUBLIC_STUDENT_PORTAL_BASE.rstrip("/")
+        subject, html_content = _build_aps_convocation_email(ctx["first_name"], ctx["date_start"], ctx["date_end"], student_space_link)
         pdf_path = _generate_aps_convocation_pdf(s, t)
         with open(pdf_path, "rb") as fh:
             encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
-        subject, html_content = _build_aps_convocation_email(str(t.get("first_name") or ""))
         email_ok = brevo_send_email(
             str(t.get("email") or "").strip(),
             subject,
