@@ -72,3 +72,32 @@ export async function getQontoInvoice(invoiceId: string): Promise<Record<string,
 export async function markQontoInvoiceAsPaid(_invoiceId: string): Promise<never> {
   throw new Error("Qonto paid status synchronization is not implemented yet.");
 }
+
+export async function createClientIfNeeded(payload: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const existing = await searchQontoClient(payload);
+  return existing || createQontoClient(payload);
+}
+
+export async function createInvoiceDraft(payload: Record<string, unknown>): Promise<Record<string, unknown>> {
+  return createQontoInvoice({ ...payload, status: (payload.status as string) || "draft" });
+}
+
+export async function finalizeInvoiceIfNeeded(invoiceId: string, shouldFinalize = true): Promise<Record<string, unknown>> {
+  return shouldFinalize ? finalizeQontoInvoice(invoiceId) : getQontoInvoice(invoiceId);
+}
+
+export async function getInvoiceStatus(invoiceId: string): Promise<Record<string, unknown>> {
+  return getQontoInvoice(invoiceId);
+}
+
+export async function downloadInvoicePdf(invoiceId: string): Promise<Record<string, unknown>> {
+  return qontoJson(`/v2/client_invoices/${encodeURIComponent(invoiceId)}/download`, { method: "GET" });
+}
+
+export async function syncPaymentStatus(invoiceId: string): Promise<Record<string, unknown>> {
+  return getQontoInvoice(invoiceId);
+}
+
+export async function createCreditNote(invoiceId: string, payload: Record<string, unknown> = {}): Promise<Record<string, unknown>> {
+  return qontoJson(`/v2/client_invoices/${encodeURIComponent(invoiceId)}/credit_notes`, { method: "POST", body: JSON.stringify(payload) });
+}
