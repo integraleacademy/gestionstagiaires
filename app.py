@@ -7,7 +7,6 @@ import hashlib
 import hmac
 import datetime
 import calendar
-import math
 import html
 import unicodedata
 import threading
@@ -14414,29 +14413,58 @@ def _add_aps_working_days(start_day: datetime.date, working_days: int) -> dateti
         current += datetime.timedelta(days=1)
 
 
-def calculateApsPeriods(sessionStartDate: str) -> Dict[str, str]:
-    raw = (sessionStartDate or "").strip()[:10]
-    if not raw:
-        return {}
+def _add_aps_training_hours(start_day: datetime.date, total_hours: int, *, normal_day_hours: int = 7, max_day_hours: int = 8) -> tuple[datetime.date, int]:
+    current = _next_aps_working_day(start_day)
+    remaining = max(int(total_hours or 0), 0)
+    working_days = 0
+    while remaining > 0:
+        if _is_aps_working_day(current):
+            working_days += 1
+            if remaining <= max_day_hours:
+                return current, working_days
+            remaining -= normal_day_hours
+        current += datetime.timedelta(days=1)
+    return current, working_days
+
+
+def _parse_iso_date(raw: str) -> datetime.date | None:
+    value = (raw or "").strip()[:10]
+    if not value:
+        return None
     try:
-        start = datetime.datetime.strptime(raw, "%Y-%m-%d").date()
+        return datetime.datetime.strptime(value, "%Y-%m-%d").date()
     except (TypeError, ValueError):
+        return None
+
+
+def calculateApsPeriods(sessionStartDate: str, presentielStartDate: str = "") -> Dict[str, str]:
+    start = _parse_iso_date(sessionStartDate)
+    if not start:
         return {}
 
     distanciel_start = _next_aps_working_day(start)
-    distanciel_end = _add_aps_working_days(distanciel_start, math.ceil(62 / 7))
-    presentiel_start = _next_aps_working_day(distanciel_end + datetime.timedelta(days=1))
-    presentiel_end = _add_aps_working_days(presentiel_start, math.ceil(113 / 7))
+    distanciel_end, distanciel_days = _add_aps_training_hours(distanciel_start, 62)
+    requested_presentiel_start = _parse_iso_date(presentielStartDate)
+    presentiel_start = _next_aps_working_day(requested_presentiel_start or (distanciel_end + datetime.timedelta(days=1)))
+    if presentiel_start <= distanciel_end:
+        presentiel_start = _next_aps_working_day(distanciel_end + datetime.timedelta(days=1))
+    presentiel_end, presentiel_days = _add_aps_training_hours(presentiel_start, 113)
+    exam_date = _next_aps_working_day(presentiel_end + datetime.timedelta(days=1))
     return {
         "distancielStart": distanciel_start.isoformat(),
         "distancielEnd": distanciel_end.isoformat(),
+        "distancielHours": 62,
+        "distancielDays": distanciel_days,
         "presentielStart": presentiel_start.isoformat(),
         "presentielEnd": presentiel_end.isoformat(),
+        "presentielHours": 113,
+        "presentielDays": presentiel_days,
+        "examDate": exam_date.isoformat(),
     }
 
 
-def _compute_aps_period_dates(date_start: str) -> Dict[str, str]:
-    periods = calculateApsPeriods(date_start)
+def _compute_aps_period_dates(date_start: str, presentiel_start: str = "") -> Dict[str, str]:
+    periods = calculateApsPeriods(date_start, presentiel_start)
     if not periods:
         return {}
     return {
@@ -14444,20 +14472,30 @@ def _compute_aps_period_dates(date_start: str) -> Dict[str, str]:
         "aps_remote_end": periods["distancielEnd"],
         "aps_in_person_start": periods["presentielStart"],
         "aps_in_person_end": periods["presentielEnd"],
+        "aps_in_person_hours": periods["presentielHours"],
+        "aps_in_person_days": periods["presentielDays"],
+        "aps_computed_exam_date": periods["examDate"],
     }
 
 
 def _sync_aps_period_dates(session_obj: Dict[str, Any]) -> None:
     training_type = (_session_get(session_obj, "training_type", "") or "").strip().upper()
     if not training_type.startswith("APS"):
-        for key in ("aps_remote_start", "aps_remote_end", "aps_in_person_start", "aps_in_person_end"):
+        for key in ("aps_remote_start", "aps_remote_end", "aps_in_person_start", "aps_in_person_end", "aps_in_person_hours", "aps_in_person_days", "aps_computed_exam_date"):
             session_obj.pop(key, None)
         return
-    periods = _compute_aps_period_dates(_session_get(session_obj, "date_start", ""))
+    periods = _compute_aps_period_dates(
+        _session_get(session_obj, "date_start", ""),
+        _session_get(session_obj, "aps_in_person_start", ""),
+    )
     if periods:
         session_obj.update(periods)
         session_obj["date_start"] = periods["aps_remote_start"]
         session_obj["date_end"] = periods["aps_in_person_end"]
+        exam = _parse_iso_date(_session_get(session_obj, "exam_date", ""))
+        presentiel_end = _parse_iso_date(periods["aps_in_person_end"])
+        if not exam or (presentiel_end and presentiel_end >= exam):
+            session_obj["exam_date"] = periods["aps_computed_exam_date"]
 
 # =========================
 # API - Sessions (used by your modal JS)
@@ -14480,6 +14518,7 @@ def api_create_session():
     practice_training_date = (payload.get("practice_training_date") or "").strip()
     ssiap_exam_date = (payload.get("ssiap_exam_date") or "").strip()
     exclude_from_sales_tracking = bool(payload.get("exclude_from_sales_tracking"))
+    aps_in_person_start = (payload.get("aps_in_person_start") or "").strip()
     aps_elearning_enabled = bool(payload.get("aps_elearning_enabled")) and training_type.upper().startswith("APS")
 
     if not name or not training_type:
@@ -14497,6 +14536,7 @@ def api_create_session():
         "exam_practice_date": exam_practice_date,
         "practice_training_date": practice_training_date,
         "ssiap_exam_date": ssiap_exam_date,
+        "aps_in_person_start": aps_in_person_start,
         "aps_elearning_enabled": aps_elearning_enabled,
         "exclude_from_sales_tracking": exclude_from_sales_tracking,
         "created_at": _now_iso(),
@@ -14533,6 +14573,7 @@ def api_update_session(session_id: str):
         "exam_practice_date",
         "practice_training_date",
         "ssiap_exam_date",
+        "aps_in_person_start",
         "prospects_comment",
     ):
         if key in payload:
