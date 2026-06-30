@@ -115,6 +115,12 @@ QONTO_API_BASE_URL_DEFAULT = "https://thirdparty.qonto.com"
 QONTO_STATUS_OK_MESSAGE = "Qonto connecté"
 QONTO_STATUS_NOT_CONFIGURED_MESSAGE = "Qonto non configuré"
 QONTO_STATUS_FORBIDDEN_MESSAGE = "Identifiants Qonto invalides ou droits insuffisants"
+QONTO_WEBHOOK_SIGNATURE_HEADERS = (
+    "X-Qonto-Signature",
+    "Qonto-Signature",
+    "X-Hub-Signature-256",
+    "X-Signature",
+)
 
 
 class QontoConfigurationError(RuntimeError):
@@ -253,8 +259,85 @@ def get_qonto_invoice(invoice_id: str) -> Dict[str, Any]:
     return _qonto_request("GET", f"/v2/client_invoices/{quote(str(invoice_id), safe='')}")
 
 
-def mark_qonto_invoice_as_paid(*_args, **_kwargs):
-    raise NotImplementedError("Marquage payé Qonto prévu plus tard.")
+def _qonto_webhook_secret() -> str:
+    return _qonto_secret(os.environ.get("QONTO_WEBHOOK_SECRET") or os.environ.get("QONTO_WEBHOOK_SIGNATURE_SECRET") or "")
+
+
+def _normalize_qonto_amount(value: Any) -> float:
+    if isinstance(value, dict):
+        value = value.get("value") or value.get("amount") or 0
+    return _money(value)
+
+
+def _qonto_invoice_payload(data: Dict[str, Any]) -> Dict[str, Any]:
+    return data.get("client_invoice") if isinstance(data.get("client_invoice"), dict) else (data.get("invoice") if isinstance(data.get("invoice"), dict) else data)
+
+
+def _apply_qonto_invoice_status(inv: Dict[str, Any], invoice: Dict[str, Any]) -> None:
+    status = (invoice.get("status") or inv.get("qonto_invoice_status") or "").strip()
+    paid_at = invoice.get("paid_at") or inv.get("qonto_invoice_paid_at") or ""
+    amount_paid = invoice.get("amount_paid")
+    if amount_paid is None:
+        amount_paid = inv.get("qonto_invoice_amount_paid")
+    if status:
+        inv["qonto_invoice_status"] = status
+    inv["qonto_invoice_paid_at"] = paid_at or ""
+    inv["qonto_invoice_amount_paid"] = _normalize_qonto_amount(amount_paid)
+    if invoice.get("id"):
+        inv["qonto_invoice_id"] = invoice.get("id")
+    if invoice.get("number") or invoice.get("invoice_number"):
+        inv["qonto_invoice_number"] = invoice.get("number") or invoice.get("invoice_number") or ""
+    if invoice.get("public_url") or invoice.get("url"):
+        inv["qonto_invoice_url"] = invoice.get("public_url") or invoice.get("url") or inv.get("qonto_invoice_url")
+    inv["qonto_invoice_synced_at"] = _now_iso()
+    inv["last_error"] = ""
+
+
+def _find_trainee_by_qonto_invoice_id(data: Dict[str, Any], invoice_id: str):
+    needle = str(invoice_id or "").strip()
+    if not needle:
+        return None, None, None
+    for sess in data.get("sessions", []):
+        trainees = _session_trainees_list(sess)
+        for trainee in trainees:
+            inv = trainee.get("qonto_invoice") if isinstance(trainee.get("qonto_invoice"), dict) else {}
+            if str(inv.get("qonto_invoice_id") or "").strip() == needle:
+                return sess, trainees, trainee
+    return None, None, None
+
+
+def syncQontoInvoiceStatus(invoiceId: str) -> Optional[Dict[str, Any]]:
+    data = load_data()
+    sess, trainees, trainee = _find_trainee_by_qonto_invoice_id(data, invoiceId)
+    if not trainee:
+        return None
+    remote = get_qonto_invoice(invoiceId)
+    invoice = _qonto_invoice_payload(remote)
+    inv = _qonto_invoice_state(trainee)
+    _apply_qonto_invoice_status(inv, invoice)
+    sess["trainees"] = trainees
+    save_data(data)
+    return inv
+
+
+def _verify_qonto_webhook_signature(raw_body: bytes) -> bool:
+    secret = _qonto_webhook_secret()
+    if not secret:
+        return False
+    signatures = []
+    for header in QONTO_WEBHOOK_SIGNATURE_HEADERS:
+        value = (request.headers.get(header) or "").strip()
+        if value:
+            signatures.append(value)
+    if not signatures:
+        return False
+    digest = hmac.new(secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
+    candidates = {digest, f"sha256={digest}"}
+    return any(hmac.compare_digest(sig.strip().strip('"').strip("'"), candidate) for sig in signatures for candidate in candidates)
+
+
+def mark_qonto_invoice_as_paid(invoice_id: str):
+    return syncQontoInvoiceStatus(invoice_id)
 
 
 def build_qonto_phone(raw_phone):
@@ -20551,10 +20634,25 @@ def qonto_client_has_complete_billing_address(qonto_client: Dict[str, Any]) -> b
 def _qonto_client_has_complete_billing_address(qonto_client: Dict[str, Any]) -> bool:
     return qonto_client_has_complete_billing_address(qonto_client)
 
+def _qonto_status_label(status: str) -> str:
+    labels = {
+        "not_invoiced": "Non facturé",
+        "draft": "À encaisser",
+        "finalized": "À encaisser",
+        "sent": "À encaisser",
+        "unpaid": "Impayée",
+        "late": "Impayée",
+        "overdue": "Impayée",
+        "paid": "Payée",
+        "error": "Erreur",
+    }
+    return labels.get((status or "").strip(), status or "Non facturé")
+
+
 def _qonto_status_payload(trainee: Dict[str, Any]) -> Dict[str, Any]:
     inv = _qonto_invoice_state(trainee)
     status = inv.get("qonto_invoice_status") or ("draft" if inv.get("qonto_invoice_id") else "not_invoiced")
-    return {"ok": True, "status": status, "invoice": inv, "status_label": {"not_invoiced":"Non facturé","draft":"Brouillon Qonto","finalized":"Finalisée","sent":"Envoyée","paid":"Payée","error":"Erreur"}.get(status, status)}
+    return {"ok": True, "status": status, "invoice": inv, "status_label": _qonto_status_label(status)}
 
 
 @app.get("/api/admin/trainees/<trainee_id>/qonto-invoice/preview")
@@ -20575,8 +20673,7 @@ def api_qonto_invoice_status(trainee_id: str):
         try:
             remote = get_qonto_invoice(inv["qonto_invoice_id"])
             invoice = remote.get("client_invoice") or remote.get("invoice") or remote
-            inv["qonto_invoice_status"] = invoice.get("status") or inv.get("qonto_invoice_status")
-            inv["qonto_invoice_url"] = invoice.get("public_url") or invoice.get("url") or inv.get("qonto_invoice_url")
+            _apply_qonto_invoice_status(inv, invoice)
             sess["trainees"] = trainees; save_data(data)
         except Exception as exc:
             app.logger.warning("[QONTO] status sync failed: %s", _sanitize_qonto_error(str(exc)))
@@ -20678,7 +20775,7 @@ def api_qonto_invoice_create(trainee_id: str):
         app.logger.info("[QONTO] invoice payload=%s", safe_payload)
         q_inv = create_qonto_invoice(qonto_invoice_payload)
         qi = q_inv.get("client_invoice") or q_inv.get("invoice") or q_inv
-        now = _now_iso(); inv.update({"id": inv.get("id") or str(uuid.uuid4()), "trainee_id": trainee_id, "qonto_client_id": q_client_id, "qonto_invoice_id": qi.get("id"), "qonto_invoice_number": qi.get("number") or qi.get("invoice_number") or "", "qonto_invoice_status": qi.get("status") or "draft", "qonto_invoice_url": qi.get("public_url") or qi.get("url") or "", "client_name": client.get("name"), "client_email": client.get("email"), "billing_address": dict(billing_address), "amount_ht": _money(invoice.get("amount_ht") or invoice.get("unit_price_ht")), "amount_tva": _money(invoice.get("amount_tva")), "amount_ttc": _money(invoice.get("amount_ttc")), "currency": "EUR", "issue_date": invoice.get("issue_date"), "due_date": invoice.get("due_date"), "created_at": now, "last_error": ""})
+        now = _now_iso(); inv.update({"id": inv.get("id") or str(uuid.uuid4()), "trainee_id": trainee_id, "qonto_client_id": q_client_id, "qonto_invoice_id": qi.get("id"), "qonto_invoice_number": qi.get("number") or qi.get("invoice_number") or "", "qonto_invoice_status": qi.get("status") or "draft", "qonto_invoice_paid_at": qi.get("paid_at") or "", "qonto_invoice_amount_paid": _normalize_qonto_amount(qi.get("amount_paid")), "qonto_invoice_url": qi.get("public_url") or qi.get("url") or "", "client_name": client.get("name"), "client_email": client.get("email"), "billing_address": dict(billing_address), "amount_ht": _money(invoice.get("amount_ht") or invoice.get("unit_price_ht")), "amount_tva": _money(invoice.get("amount_tva")), "amount_ttc": _money(invoice.get("amount_ttc")), "currency": "EUR", "issue_date": invoice.get("issue_date"), "due_date": invoice.get("due_date"), "created_at": now, "last_error": ""})
         if payload.get("save_billing_address"):
             trainee["address"] = billing_address["street_address"]
             trainee["zip_code"] = billing_address["zip_code"]
@@ -20733,6 +20830,35 @@ def api_qonto_invoice_send(trainee_id: str):
     except Exception as exc:
         app.logger.exception("[QONTO] send failed: %s", _sanitize_qonto_error(str(exc))); inv["last_error"] = _sanitize_qonto_error(str(exc)); save_data(data)
         return jsonify({"ok": False, "error": "Impossible d’envoyer la facture"}), 400
+
+
+@app.post("/api/qonto/webhooks")
+def api_qonto_webhooks():
+    raw_body = request.get_data(cache=True)
+    if not _verify_qonto_webhook_signature(raw_body):
+        return jsonify({"ok": False, "error": "invalid_signature"}), 401
+    payload = request.get_json(silent=True) or {}
+    event = (payload.get("event") or payload.get("type") or "").strip()
+    if event and "client-invoices" not in event and "client_invoice" not in event:
+        return jsonify({"ok": True, "ignored": True})
+    item = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+    invoice_id = item.get("id") or item.get("qonto_invoice_id")
+    if not invoice_id:
+        return jsonify({"ok": False, "error": "missing_invoice_id"}), 400
+    data = load_data()
+    sess, trainees, trainee = _find_trainee_by_qonto_invoice_id(data, invoice_id)
+    if not trainee:
+        return jsonify({"ok": True, "updated": False, "reason": "invoice_not_found"}), 200
+    inv = _qonto_invoice_state(trainee)
+    _apply_qonto_invoice_status(inv, {
+        "id": invoice_id,
+        "status": item.get("status"),
+        "paid_at": item.get("paid_at"),
+        "amount_paid": item.get("amount_paid"),
+    })
+    sess["trainees"] = trainees
+    save_data(data)
+    return jsonify({"ok": True, "updated": True, "status": inv.get("qonto_invoice_status")})
 
 
 @app.get("/admin/trainee/<trainee_id>/convocation-aps/preview")
