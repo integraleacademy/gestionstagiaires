@@ -887,6 +887,11 @@
           <input id="dateEnd" type="date">
         </label>
 
+        <label id="apsInPersonStartField" style="display:none;">
+          <div class="label">Début présentiel APS</div>
+          <input id="apsInPersonStart" type="date">
+        </label>
+
         <label id="examDateField">
           <div class="label">Date d’examen</div>
           <input id="examDate" type="date">
@@ -1092,6 +1097,11 @@
         <label id="editDateEndField">
           <div class="label">Date fin</div>
           <input id="editDateEnd" type="date">
+        </label>
+
+        <label id="editApsInPersonStartField" style="display:none;">
+          <div class="label">Début présentiel APS</div>
+          <input id="editApsInPersonStart" type="date">
         </label>
 
         <label id="editExamDateField">
@@ -1625,14 +1635,29 @@
     }
   }
 
-  function calculateApsPeriods(sessionStartDate){
+  function apsAddTrainingHours(start, totalHours, normalDayHours = 7, maxDayHours = 8){
+    let current = apsNextWorkingDay(start);
+    let remaining = Math.max(parseInt(totalHours || 0, 10), 0);
+    while(remaining > 0){
+      if(apsIsWorkingDay(current)){
+        if(remaining <= maxDayHours) return current;
+        remaining -= normalDayHours;
+      }
+      current = apsAddDays(current, 1);
+    }
+    return current;
+  }
+
+  function calculateApsPeriods(sessionStartDate, presentielStartDate = ""){
     if(!sessionStartDate) return null;
     const start = new Date(`${sessionStartDate}T00:00:00Z`);
     if(Number.isNaN(start.getTime())) return null;
     const remoteStart = apsNextWorkingDay(start);
-    const remoteEnd = apsAddWorkingDays(remoteStart, Math.ceil(62 / 7));
-    const inPersonStart = apsNextWorkingDay(apsAddDays(remoteEnd, 1));
-    const inPersonEnd = apsAddWorkingDays(inPersonStart, Math.ceil(113 / 7));
+    const remoteEnd = apsAddTrainingHours(remoteStart, 62);
+    const requestedInPersonStart = presentielStartDate ? apsNextWorkingDay(new Date(`${presentielStartDate}T00:00:00Z`)) : null;
+    let inPersonStart = requestedInPersonStart && !Number.isNaN(requestedInPersonStart.getTime()) ? requestedInPersonStart : apsNextWorkingDay(apsAddDays(remoteEnd, 1));
+    if(inPersonStart <= remoteEnd) inPersonStart = apsNextWorkingDay(apsAddDays(remoteEnd, 1));
+    const inPersonEnd = apsAddTrainingHours(inPersonStart, 113);
     return {distancielStart: remoteStart, distancielEnd: remoteEnd, presentielStart: inPersonStart, presentielEnd: inPersonEnd};
   }
 
@@ -1651,11 +1676,12 @@
     const inPersonStart = document.getElementById(isEdit ? "editApsInPersonStartPreview" : "apsInPersonStartPreview");
     const inPersonEnd = document.getElementById(isEdit ? "editApsInPersonEndPreview" : "apsInPersonEndPreview");
     const startValue = (document.getElementById(isEdit ? "editDateStart" : "dateStart")?.value || "").trim();
+    const inPersonStartValue = (document.getElementById(isEdit ? "editApsInPersonStart" : "apsInPersonStart")?.value || "").trim();
     const isAps = type.startsWith("APS");
     if(container) container.style.display = isAps ? "" : "none";
     if(dateEndField) dateEndField.style.display = isAps ? "none" : "";
     if(!isAps) return;
-    const periods = calculateApsPeriods(startValue);
+    const periods = calculateApsPeriods(startValue, inPersonStartValue);
     if(remoteStart) remoteStart.textContent = periods ? formatApsPeriodDate(periods.distancielStart) : "—";
     if(remoteEnd) remoteEnd.textContent = periods ? formatApsPeriodDate(periods.distancielEnd) : "—";
     if(inPersonStart) inPersonStart.textContent = periods ? formatApsPeriodDate(periods.presentielStart) : "—";
@@ -1665,6 +1691,7 @@
   function toggleExamFields(){
     const type = (document.getElementById("sessionType")?.value || "").toUpperCase();
     const examDateField = document.getElementById("examDateField");
+    const apsInPersonStartField = document.getElementById("apsInPersonStartField");
     const examTheoryField = document.getElementById("examTheoryField");
     const examPracticeField = document.getElementById("examPracticeField");
     const practiceTrainingField = document.getElementById("practiceTrainingField");
@@ -1673,6 +1700,7 @@
     const isAps = type.startsWith("APS");
 
     if(examDateField) examDateField.style.display = isVtc ? "none" : "";
+    if(apsInPersonStartField) apsInPersonStartField.style.display = isAps ? "" : "none";
     if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
     if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
     if(practiceTrainingField) practiceTrainingField.style.display = isVtc ? "" : "none";
@@ -1690,6 +1718,7 @@
   function toggleEditExamFields(trainingType){
     const type = (trainingType || "").toUpperCase();
     const examDateField = document.getElementById("editExamDateField");
+    const apsInPersonStartField = document.getElementById("editApsInPersonStartField");
     const examTheoryField = document.getElementById("editExamTheoryField");
     const examPracticeField = document.getElementById("editExamPracticeField");
     const practiceTrainingField = document.getElementById("editPracticeTrainingField");
@@ -1698,6 +1727,7 @@
     const isAps = type.startsWith("APS");
 
     if(examDateField) examDateField.style.display = isVtc ? "none" : "";
+    if(apsInPersonStartField) apsInPersonStartField.style.display = isAps ? "" : "none";
     if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
     if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
     if(practiceTrainingField) practiceTrainingField.style.display = isVtc ? "" : "none";
@@ -1715,6 +1745,7 @@
     const exam_theory_date = (document.getElementById("examTheoryDate")?.value || "").trim();
     const exam_practice_date = (document.getElementById("examPracticeDate")?.value || "").trim();
     const practice_training_date = (document.getElementById("practiceTrainingDate")?.value || "").trim();
+    const aps_in_person_start = (document.getElementById("apsInPersonStart")?.value || "").trim();
     const aps_elearning_enabled = !!document.getElementById("apsElearningEnabled")?.checked;
 
     if(!name || !training_type){
@@ -1738,6 +1769,7 @@
           exam_theory_date,
           exam_practice_date,
           practice_training_date,
+          aps_in_person_start,
           aps_elearning_enabled
         })
       });
@@ -1768,6 +1800,7 @@
       document.getElementById("editExamTheoryDate").value = btn.getAttribute("data-exam-theory-date") || "";
       document.getElementById("editExamPracticeDate").value = btn.getAttribute("data-exam-practice-date") || "";
       document.getElementById("editPracticeTrainingDate").value = btn.getAttribute("data-practice-training-date") || "";
+      document.getElementById("editApsInPersonStart").value = btn.getAttribute("data-aps-in-person-start") || "";
       document.getElementById("editApsElearningEnabled").checked = btn.getAttribute("data-aps-elearning-enabled") === "1";
 
       refreshApsPeriodPreview("edit");
@@ -1777,6 +1810,8 @@
   });
 
   document.getElementById("editDateStart")?.addEventListener("change", ()=> refreshApsPeriodPreview("edit"));
+  document.getElementById("apsInPersonStart")?.addEventListener("change", ()=> refreshApsPeriodPreview("create"));
+  document.getElementById("editApsInPersonStart")?.addEventListener("change", ()=> refreshApsPeriodPreview("edit"));
 
   document.getElementById("btnUpdateSession")?.addEventListener("click", async ()=>{
     if(!currentEditSessionId) return;
@@ -1794,6 +1829,7 @@
           exam_theory_date: (document.getElementById("editExamTheoryDate").value || "").trim(),
           exam_practice_date: (document.getElementById("editExamPracticeDate").value || "").trim(),
           practice_training_date: (document.getElementById("editPracticeTrainingDate").value || "").trim(),
+          aps_in_person_start: (document.getElementById("editApsInPersonStart").value || "").trim(),
           aps_elearning_enabled: !!document.getElementById("editApsElearningEnabled")?.checked
         })
       });
