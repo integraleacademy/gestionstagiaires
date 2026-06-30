@@ -157,6 +157,110 @@
     .vae-reset-confirm-actions{padding:14px 20px 22px;flex-direction:column-reverse;}
     .vae-reset-confirm-actions .btn{width:100%;}
   }
+  .yousign-sync-progress{
+    position:fixed;
+    inset:0;
+    z-index:9999;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:22px;
+    background:
+      radial-gradient(circle at 50% 35%, rgba(139,92,246,.28), transparent 30%),
+      rgba(15,23,42,.68);
+    backdrop-filter:blur(8px);
+  }
+  .yousign-sync-progress.is-visible{display:flex;}
+  .yousign-sync-progress__panel{
+    position:relative;
+    width:min(520px,100%);
+    overflow:hidden;
+    border-radius:30px;
+    padding:34px 30px 30px;
+    text-align:center;
+    color:#0f172a;
+    background:
+      radial-gradient(circle at 20% 0%, rgba(216,180,254,.34), transparent 32%),
+      radial-gradient(circle at 100% 18%, rgba(96,165,250,.22), transparent 34%),
+      linear-gradient(145deg,#ffffff,#f8fafc);
+    border:1px solid rgba(255,255,255,.78);
+    box-shadow:0 38px 100px rgba(15,23,42,.38);
+  }
+  .yousign-sync-progress__panel::before{
+    content:"";
+    position:absolute;
+    inset:0 0 auto;
+    height:7px;
+    background:linear-gradient(90deg,#7c3aed,#2563eb,#06b6d4);
+  }
+  .yousign-sync-progress__brand{
+    width:78px;
+    height:78px;
+    margin:0 auto 16px;
+    border-radius:24px;
+    display:grid;
+    place-items:center;
+    color:#fff;
+    font-size:28px;
+    font-weight:950;
+    letter-spacing:-.04em;
+    background:linear-gradient(135deg,#7c3aed,#2563eb);
+    box-shadow:0 18px 44px rgba(124,58,237,.30);
+  }
+  .yousign-sync-progress__spinner{
+    width:42px;
+    height:42px;
+    margin:0 auto 14px;
+    border-radius:50%;
+    border:4px solid rgba(124,58,237,.16);
+    border-top-color:#7c3aed;
+    animation:yousignSpin .8s linear infinite;
+  }
+  .yousign-sync-progress__panel h3{
+    margin:0;
+    font-size:24px;
+    line-height:1.2;
+    font-weight:950;
+  }
+  .yousign-sync-progress__panel p{
+    margin:12px auto 0;
+    max-width:410px;
+    color:#64748b;
+    font-size:15px;
+    line-height:1.6;
+  }
+  .yousign-sync-progress__steps{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    margin:22px 0 12px;
+  }
+  .yousign-sync-progress__steps span{
+    border-radius:999px;
+    padding:7px 12px;
+    background:#f1f5f9;
+    color:#475569;
+    font-size:12px;
+    font-weight:900;
+  }
+  .yousign-sync-progress__steps span.is-active{
+    background:#ede9fe;
+    color:#5b21b6;
+  }
+  .yousign-sync-progress__steps i{
+    width:34px;
+    height:2px;
+    border-radius:999px;
+    background:linear-gradient(90deg,#a78bfa,#60a5fa);
+  }
+  .yousign-sync-progress__panel small{
+    display:block;
+    color:#94a3b8;
+    font-weight:800;
+  }
+  @keyframes yousignSpin{to{transform:rotate(360deg);}}
+  body.yousign-sync-is-running{overflow:hidden;}
 </style>
 
 <div class="breadcrumbs">
@@ -540,8 +644,8 @@
       {% endif %}
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-      <form method="post" action="{{ url_for('admin_create_convocation_signature', session_id=session.id, trainee_id=trainee.id) }}" style="margin:0;">
-        <button class="btn btn-primary" type="submit" {% if is_read_only %}disabled{% endif %}>
+      <form id="yousignSignatureForm" method="post" action="{{ url_for('admin_create_convocation_signature', session_id=session.id, trainee_id=trainee.id) }}" style="margin:0;">
+        <button id="yousignSignatureButton" class="btn btn-primary" type="submit" {% if is_read_only %}disabled{% endif %}>
           {% if conv_sig.signature_request_id and conv_sig.status in ["ongoing", "activated"] %}Réutiliser la demande Yousign{% elif conv_sig.signature_request_id %}Créer une nouvelle demande{% else %}Créer la demande Yousign{% endif %}
         </button>
       </form>
@@ -560,6 +664,20 @@
       {% endif %}
     </div>
   </div>
+  {% if not is_read_only %}
+    <div id="yousignSignatureProgress" class="yousign-sync-progress" role="dialog" aria-modal="true" aria-labelledby="yousignSignatureProgressTitle" aria-describedby="yousignSignatureProgressMessage" aria-hidden="true">
+      <div class="yousign-sync-progress__panel" role="status" aria-live="polite">
+        <div class="yousign-sync-progress__brand" aria-hidden="true">YS</div>
+        <div class="yousign-sync-progress__spinner" aria-hidden="true"></div>
+        <h3 id="yousignSignatureProgressTitle">Demande de signature</h3>
+        <p id="yousignSignatureProgressMessage">Création de la demande Yousign et préparation du lien de signature sécurisé…</p>
+        <div class="yousign-sync-progress__steps" aria-hidden="true">
+          <span class="is-active">Document</span><i></i><span>Yousign</span><i></i><span>E-mail</span>
+        </div>
+        <small>Veuillez patienter et ne fermez pas cette page.</small>
+      </div>
+    </div>
+  {% endif %}
 </div>
 {% endif %}
 
@@ -2266,6 +2384,22 @@ if(ypareoSyncForm && ypareoSyncProgress){
     if(ypareoSyncButton){
       ypareoSyncButton.disabled = true;
       ypareoSyncButton.setAttribute("aria-busy", "true");
+    }
+  });
+}
+
+const yousignSignatureForm = document.getElementById("yousignSignatureForm");
+const yousignSignatureButton = document.getElementById("yousignSignatureButton");
+const yousignSignatureProgress = document.getElementById("yousignSignatureProgress");
+
+if(yousignSignatureForm && yousignSignatureProgress){
+  yousignSignatureForm.addEventListener("submit", ()=>{
+    yousignSignatureProgress.classList.add("is-visible");
+    yousignSignatureProgress.setAttribute("aria-hidden", "false");
+    document.body.classList.add("yousign-sync-is-running");
+    if(yousignSignatureButton){
+      yousignSignatureButton.disabled = true;
+      yousignSignatureButton.setAttribute("aria-busy", "true");
     }
   });
 }
