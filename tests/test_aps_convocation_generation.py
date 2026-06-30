@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+import zipfile
 from unittest import mock
 
 import app
@@ -54,6 +55,10 @@ class ApsConvocationGenerationTests(unittest.TestCase):
             signature_request_call[2]["json"]["external_id"],
             "convocation_2ebec35a_TRN-2E16579A",
         )
+        document_call = next(call for call in calls if call[1].endswith("/documents"))
+        self.assertEqual(document_call[2]["data"].get("parse_anchors"), "true")
+        signer_call = next(call for call in calls if call[1].endswith("/signers"))
+        self.assertNotIn("fields", signer_call[2]["json"])
         self.assertEqual(state["external_id"], "convocation_2ebec35a_TRN-2E16579A")
         self.assertEqual(state["status"], "ongoing")
 
@@ -75,18 +80,19 @@ class ApsConvocationGenerationTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             template_path = os.path.join(tmpdir, "convocationaps.docx")
-            with open(template_path, "wb") as fh:
-                fh.write(b"official word template with only some placeholders")
+            with zipfile.ZipFile(template_path, "w") as zf:
+                zf.writestr("word/document.xml", "<w:document><w:body>{{prenom}} {{nom}} {{s1|signature|160|60}}</w:body></w:document>")
 
             output_dir = os.path.join(tmpdir, "generated")
 
             def fake_render(_template_path, output_docx_path, context):
-                self.assertEqual(_template_path, template_path)
+                self.assertNotEqual(_template_path, template_path)
                 self.assertEqual(context["prenom"], "Jean")
                 self.assertEqual(context["nom"], "DUPONT")
                 os.makedirs(os.path.dirname(output_docx_path), exist_ok=True)
-                with open(output_docx_path, "wb") as fh:
-                    fh.write(b"docx")
+                with zipfile.ZipFile(_template_path) as zin, zipfile.ZipFile(output_docx_path, "w") as zout:
+                    xml = zin.read("word/document.xml").decode("utf-8").replace("{{prenom}}", context["prenom"]).replace("{{nom}}", context["nom"])
+                    zout.writestr("word/document.xml", xml)
 
             def fake_run(command, check, capture_output, text, timeout):
                 self.assertTrue(check)
@@ -106,6 +112,31 @@ class ApsConvocationGenerationTests(unittest.TestCase):
 
         self.assertTrue(docx_path.endswith("convocation_aps_trainee-1.docx"))
         self.assertTrue(pdf_path.endswith("convocation_aps_trainee-1.pdf"))
+
+    def test_generation_fails_clearly_without_yousign_smart_anchor(self):
+        session = {
+            "id": "session-1",
+            "training_type": "APS",
+            "name": "Formation APS",
+            "date_start": "2026-07-08",
+            "date_end": "2026-08-12",
+            "exam_date": "2026-08-13",
+        }
+        trainee = {
+            "id": "trainee-1",
+            "email": "stagiaire@example.com",
+            "first_name": "Jean",
+            "last_name": "Dupont",
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            template_path = os.path.join(tmpdir, "convocationaps.docx")
+            with zipfile.ZipFile(template_path, "w") as zf:
+                zf.writestr("word/document.xml", "<w:document><w:body>{{prenom}} {{nom}}</w:body></w:document>")
+
+            with mock.patch.object(app, "_aps_template_path", return_value=template_path):
+                with self.assertRaisesRegex(RuntimeError, "Aucune zone de signature trouvée"):
+                    app._generate_aps_convocation_files(session, trainee, "session-1", "trainee-1")
 
 
 if __name__ == "__main__":

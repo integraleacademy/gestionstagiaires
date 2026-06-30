@@ -20359,6 +20359,72 @@ def _is_aps_session(session_obj: Dict[str, Any]) -> bool:
 # =========================
 YOUSIGN_BASE_URL_DEFAULT = "https://api-sandbox.yousign.app/v3"
 
+YOUSIGN_SMART_ANCHOR_PATTERN = re.compile(r"\{\{s\d+\|signature\|\d+\|\d+\}\}")
+YOUSIGN_SMART_ANCHOR_MISSING_MESSAGE = "Aucune zone de signature trouvée dans le modèle Word. Ajoutez {{s1|signature|160|60}} à l’endroit souhaité."
+YOUSIGN_SMART_ANCHOR_PLACEHOLDER_PREFIX = "__YOUSIGN_SMART_ANCHOR_"
+
+
+def _docx_xml_names(zf: zipfile.ZipFile) -> List[str]:
+    return [name for name in zf.namelist() if name.startswith("word/") and name.endswith(".xml")]
+
+
+def _docx_text_contains_yousign_smart_anchor(docx_path: str, signer_index: int = 1) -> bool:
+    expected_prefix = f"{{{{s{signer_index}|signature|"
+    try:
+        with zipfile.ZipFile(docx_path) as zf:
+            for name in _docx_xml_names(zf):
+                xml_text = zf.read(name).decode("utf-8", errors="ignore")
+                if expected_prefix in xml_text and YOUSIGN_SMART_ANCHOR_PATTERN.search(xml_text):
+                    return True
+                try:
+                    plain_text = "".join(ET.fromstring(xml_text).itertext())
+                    if expected_prefix in plain_text and YOUSIGN_SMART_ANCHOR_PATTERN.search(plain_text):
+                        return True
+                except Exception:
+                    pass
+    except zipfile.BadZipFile:
+        return False
+    return False
+
+
+def _rewrite_docx_xml(docx_path: str, rewrite) -> None:
+    tmp_path = docx_path + ".tmp"
+    with zipfile.ZipFile(docx_path, "r") as zin, zipfile.ZipFile(tmp_path, "w") as zout:
+        for item in zin.infolist():
+            data = zin.read(item.filename)
+            if item.filename.startswith("word/") and item.filename.endswith(".xml"):
+                text = data.decode("utf-8", errors="ignore")
+                data = rewrite(text).encode("utf-8")
+            zout.writestr(item, data)
+    os.replace(tmp_path, docx_path)
+
+
+def _protect_yousign_smart_anchors_in_docx(docx_path: str) -> Dict[str, str]:
+    replacements: Dict[str, str] = {}
+
+    def rewrite(xml_text: str) -> str:
+        def replace(match: re.Match) -> str:
+            anchor = match.group(0)
+            token = f"{YOUSIGN_SMART_ANCHOR_PLACEHOLDER_PREFIX}{len(replacements)}__"
+            replacements[token] = anchor
+            return token
+        return YOUSIGN_SMART_ANCHOR_PATTERN.sub(replace, xml_text)
+
+    _rewrite_docx_xml(docx_path, rewrite)
+    return replacements
+
+
+def _restore_yousign_smart_anchors_in_docx(docx_path: str, replacements: Dict[str, str]) -> None:
+    if not replacements:
+        return
+
+    def rewrite(xml_text: str) -> str:
+        for token, anchor in replacements.items():
+            xml_text = xml_text.replace(token, anchor)
+        return xml_text
+
+    _rewrite_docx_xml(docx_path, rewrite)
+
 
 def _yousign_base_url() -> str:
     base_url = (os.environ.get("YOUSIGN_BASE_URL") or YOUSIGN_BASE_URL_DEFAULT).strip().rstrip("/")
@@ -20534,7 +20600,7 @@ def create_yousign_convocation_signature(session_obj: Dict[str, Any], trainee: D
             "POST",
             f"/signature_requests/{signature_request_id}/documents",
             files={"file": (os.path.basename(pdf_path), fh, "application/pdf")},
-            data={"nature": "signable_document"},
+            data={"nature": "signable_document", "parse_anchors": "true"},
         )
     document_id = document.get("id")
     if not document_id:
@@ -20544,15 +20610,10 @@ def create_yousign_convocation_signature(session_obj: Dict[str, Any], trainee: D
         "info": {"first_name": first_name, "last_name": last_name, "email": email, "locale": "fr"},
         "signature_level": "electronic_signature",
         "signature_authentication_mode": "no_otp",
-        "fields": [{
-            "document_id": document_id,
-            "type": "signature",
-            "page": 1,
-            "width": 180,
-            "height": 60,
-            "x": 360,
-            "y": 720,
-        }],
+        # Les champs de signature sont créés par Yousign depuis les Smart Anchors
+        # présents dans le PDF (ex. {{s1|signature|160|60}}). Ne jamais ajouter ici
+        # un champ x/y/page de secours, sinon la signature serait dupliquée ou
+        # replacée par défaut sur la première page.
     })
     signer_id = signer.get("id")
     activated = _yousign_json("POST", f"/signature_requests/{signature_request_id}/activate", json={})
@@ -20767,12 +20828,27 @@ def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[s
     app.logger.info("[CONVOCATION APS] Modèle Word utilisé : %s", template_path)
     if not os.path.exists(template_path):
         raise FileNotFoundError("Modèle Word obligatoire manquant : gestionstagiaires/templates_word/convocationaps.docx")
+    if not _docx_text_contains_yousign_smart_anchor(template_path, signer_index=1):
+        raise RuntimeError(YOUSIGN_SMART_ANCHOR_MISSING_MESSAGE)
     context = _build_aps_convocation_context(session_obj, trainee)
     app.logger.info("[CONVOCATION APS] Données injectées : stagiaire=%s formation=%s période=%s examen=%s", context.get("nom_complet"), context.get("formation_nom"), context.get("periode_formation"), context.get("date_examen"))
     base = f"convocation_aps_{_safe_filename_part(trainee.get('id') or trainee_id)}"
     final_docx_path = os.path.join(APS_CONVOCATION_DIR, base + ".docx")
     final_pdf_path = os.path.join(APS_CONVOCATION_DIR, base + ".pdf")
-    _render_docx_with_python_template(template_path, final_docx_path, context)
+    protected_template_path = os.path.join(APS_CONVOCATION_DIR, base + "_template.docx")
+    os.makedirs(APS_CONVOCATION_DIR, exist_ok=True)
+    shutil.copyfile(template_path, protected_template_path)
+    anchor_replacements = _protect_yousign_smart_anchors_in_docx(protected_template_path)
+    try:
+        _render_docx_with_python_template(protected_template_path, final_docx_path, context)
+    finally:
+        try:
+            os.remove(protected_template_path)
+        except OSError:
+            pass
+    _restore_yousign_smart_anchors_in_docx(final_docx_path, anchor_replacements)
+    if not _docx_text_contains_yousign_smart_anchor(final_docx_path, signer_index=1):
+        raise RuntimeError(YOUSIGN_SMART_ANCHOR_MISSING_MESSAGE)
     app.logger.info("[CONVOCATION APS] DOCX final généré : %s", final_docx_path)
     if not os.path.exists(final_docx_path) or os.path.getsize(final_docx_path) <= 0:
         raise RuntimeError("Le DOCX final de convocation APS est introuvable ou vide.")
