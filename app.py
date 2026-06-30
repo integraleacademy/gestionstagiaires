@@ -20443,7 +20443,63 @@ def _extract_yousign_signature_link(payload: Dict[str, Any], signer_id: str = ""
     return ""
 
 
+def _aps_session_dates_label(session_obj: Dict[str, Any]) -> str:
+    date_start = fr_date(_session_get(session_obj, "date_start", ""))
+    date_end = fr_date(_session_get(session_obj, "date_end", ""))
+    if date_start and date_end and date_end != date_start:
+        return f"{date_start} au {date_end}"
+    return date_start or date_end or "—"
+
+
+def _build_yousign_signature_link_email(session_obj: Dict[str, Any], trainee: Dict[str, Any], signature_link: str) -> Tuple[str, str]:
+    first_name = str(trainee.get("first_name") or "").strip() or "Madame, Monsieur"
+    training_name = str(_session_get(session_obj, "name", "") or session_obj.get("training_name") or "Formation").strip() or "Formation"
+    dates_session = _aps_session_dates_label(session_obj)
+    subject = "Votre convocation de formation est à signer"
+    body = f"""Bonjour {first_name},
+
+Votre convocation de formation est prête.
+
+Merci de la signer électroniquement en cliquant sur le lien ci-dessous :
+
+{signature_link}
+
+Formation : {training_name}
+Session : {dates_session}
+
+Cordialement,
+
+Intégrale Academy
+54 chemin du Carreou
+83480 Puget-sur-Argens
+04 22 47 07 68"""
+    html_body = "<br>".join(html.escape(line) for line in body.splitlines())
+    return subject, html_body
+
+
+def send_yousign_signature_link_email(session_obj: Dict[str, Any], trainee: Dict[str, Any], signature_link: str) -> bool:
+    email = str(trainee.get("email") or "").strip()
+    if not email:
+        raise RuntimeError("Adresse e-mail stagiaire manquante, impossible d’envoyer le lien de signature.")
+    if not str(signature_link or "").strip():
+        raise RuntimeError("Lien de signature introuvable, impossible d’envoyer l’e-mail au stagiaire.")
+    subject, html_body = _build_yousign_signature_link_email(session_obj, trainee, signature_link)
+    ok = brevo_send_email(email, subject, html_body, trainee=trainee)
+    now = _now_iso()
+    state = _yousign_state(trainee)
+    if ok:
+        state["signature_email_sent_at"] = now
+        state["signature_email_last_error"] = ""
+    else:
+        state["signature_email_last_error"] = "Demande Yousign créée, mais l’e-mail n’a pas pu être envoyé."
+    trainee["updated_at"] = now
+    return ok
+
+
 def create_yousign_convocation_signature(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> Dict[str, Any]:
+    existing_state = _yousign_state(trainee)
+    if existing_state.get("signature_request_id") and existing_state.get("signature_link") and existing_state.get("status") in {"ongoing", "activated"}:
+        return existing_state
     if not _is_aps_session(session_obj):
         raise RuntimeError("La signature Yousign de convocation est réservée aux formations APS.")
     if not _yousign_is_configured():
@@ -20451,8 +20507,10 @@ def create_yousign_convocation_signature(session_obj: Dict[str, Any], trainee: D
     email = str(trainee.get("email") or "").strip()
     first_name = str(trainee.get("first_name") or "").strip()
     last_name = str(trainee.get("last_name") or "").strip()
-    if not email or not first_name or not last_name:
-        raise RuntimeError("Email, prénom et nom du stagiaire sont obligatoires pour créer la signature Yousign.")
+    if not email:
+        raise RuntimeError("Adresse e-mail stagiaire manquante, impossible d’envoyer le lien de signature.")
+    if not first_name or not last_name:
+        raise RuntimeError("Prénom et nom du stagiaire sont obligatoires pour créer la signature Yousign.")
 
     docx_path, pdf_path = _generate_aps_convocation_files(session_obj, trainee, session_id, trainee_id)
     if not os.path.exists(pdf_path) or os.path.getsize(pdf_path) <= 0:
@@ -22106,11 +22164,15 @@ def admin_create_convocation_signature(session_id: str, trainee_id: str):
         flash("Stagiaire introuvable.", "error")
         abort(404)
     try:
-        create_yousign_convocation_signature(s, t, session_id, trainee_id)
+        state = create_yousign_convocation_signature(s, t, session_id, trainee_id)
+        signature_link = str(state.get("signature_link") or "").strip()
+        if send_yousign_signature_link_email(s, t, signature_link):
+            flash("Demande Yousign créée et e-mail envoyé au stagiaire.", "success")
+        else:
+            flash("Demande Yousign créée, mais l’e-mail n’a pas pu être envoyé.", "error")
         s["trainees"] = trainees
         s.pop("stagiaires", None)
         save_data(data)
-        flash("Demande de signature Yousign créée. Le bouton est disponible dans l’espace stagiaire.", "success")
     except Exception as exc:
         message = _sanitize_yousign_error(str(exc))
         app.logger.exception("[YOUSIGN] create convocation signature failed trainee_id=%s error=%s", trainee_id, message)
@@ -22122,6 +22184,34 @@ def admin_create_convocation_signature(session_id: str, trainee_id: str):
         s.pop("stagiaires", None)
         save_data(data)
         flash(f"Signature convocation : {message}", "error")
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-signature/resend-email")
+@admin_login_required
+@admin_write_required
+def admin_resend_convocation_signature_email(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        flash("Stagiaire introuvable.", "error")
+        abort(404)
+    state = _yousign_state(t)
+    signature_link = str(state.get("signature_link") or "").strip()
+    try:
+        if send_yousign_signature_link_email(s, t, signature_link):
+            flash("E-mail de signature renvoyé au stagiaire.", "success")
+        else:
+            flash("Demande Yousign créée, mais l’e-mail n’a pas pu être envoyé.", "error")
+    except Exception as exc:
+        message = _sanitize_yousign_error(str(exc))
+        state["signature_email_last_error"] = message
+        state["last_error"] = message
+        t["updated_at"] = _now_iso()
+        flash(message, "error")
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 
