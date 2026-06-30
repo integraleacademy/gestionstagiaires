@@ -21,7 +21,7 @@ WORKDIR /app
 
 COPY requirements.txt package.json package-lock.json* ./
 RUN pip install --no-cache-dir -r requirements.txt
-RUN npm install --omit=dev
+RUN npm ci --omit=dev
 
 COPY . .
 

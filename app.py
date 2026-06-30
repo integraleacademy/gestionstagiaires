@@ -20318,12 +20318,15 @@ def _assert_docx_has_no_unresolved_variables(docx_path: str) -> None:
 
 
 def _render_docx_with_docxtemplater(template_path: str, output_docx_path: str, context: Dict[str, str]) -> None:
+    app_dir = os.path.dirname(os.path.abspath(__file__))
+    print("[CONVOCATION APS] cwd Python:", os.getcwd())
+    print("[CONVOCATION APS] app dir:", app_dir)
     script = """
 const fs = require('fs');
-console.log("cwd:", process.cwd());
+console.log("cwd node:", process.cwd());
 for (const dependencyName of ['pizzip', 'docxtemplater']) {
   try {
-    console.log(`${dependencyName}:`, require.resolve(dependencyName));
+    console.log(`${dependencyName} path:`, require.resolve(dependencyName));
   } catch (error) {
     console.error(`Dépendance manquante : pizzip/docxtemplater non installée sur le serveur. (${dependencyName})`);
     process.exit(2);
@@ -20343,7 +20346,13 @@ fs.writeFileSync(outputPath, doc.getZip().generate({ type: 'nodebuffer', compres
         json.dump(context, data_file, ensure_ascii=False)
         data_path = data_file.name
     try:
-        result = subprocess.run(["node", "-e", script, template_path, output_docx_path, data_path], capture_output=True, text=True, timeout=60)
+        result = subprocess.run(
+            ["node", "-e", script, template_path, output_docx_path, data_path],
+            cwd=app_dir,
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
     finally:
         try: os.unlink(data_path)
         except OSError: pass
