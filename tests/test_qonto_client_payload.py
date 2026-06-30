@@ -45,6 +45,16 @@ class QontoClientPayloadTests(unittest.TestCase):
             },
         )
 
+
+    def test_build_invoice_customer_uses_caisse_des_depots_for_cpf_variants(self):
+        for label in ["CPF", " cpf ", "Compte Personnel de Formation", "Mon Compte Formation"]:
+            customer = gestion_app.buildInvoiceCustomer(label, {"first_name": "Clement", "last_name": "VAILLANT"})
+            self.assertEqual(customer["name"], "Caisse des dépôts")
+            self.assertEqual(customer["organization"], "Mon Compte Formation")
+            self.assertEqual(customer["address"], "56 rue de Lille")
+            self.assertEqual(customer["zip_code"], "75356")
+            self.assertEqual(customer["city"], "Paris 07")
+
     def test_invalid_string_phone_safety_removes_field(self):
         payload = {"name": "Jean Dupont", "phone": "0665245271"}
 

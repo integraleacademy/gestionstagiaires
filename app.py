@@ -197,6 +197,10 @@ def test_qonto_connection() -> Tuple[bool, int]:
     return response.ok, response.status_code
 
 
+class QontoNotFoundError(RuntimeError):
+    pass
+
+
 def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     if not _qonto_is_configured():
         raise QontoConfigurationError("Qonto n’est pas connecté")
@@ -212,6 +216,8 @@ def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = N
         )
         if not response.ok:
             detail = _sanitize_qonto_error(response.text[:1200])
+            if response.status_code == 404:
+                raise QontoNotFoundError(f"Qonto HTTP 404: {detail}")
             raise RuntimeError(f"Qonto HTTP {response.status_code}: {detail}")
         if not (response.text or "").strip():
             return {}
@@ -20584,6 +20590,47 @@ def _qonto_invoice_state(trainee: Dict[str, Any]) -> Dict[str, Any]:
     return state
 
 
+CPF_QONTO_CUSTOMER = {
+    "name": "Caisse des dépôts",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "phone": "",
+    "address": "56 rue de Lille",
+    "zip_code": "75356",
+    "city": "Paris 07",
+    "country": "FR",
+    "country_code": "FR",
+    "company_name": "Caisse des dépôts",
+    "organization": "Mon Compte Formation",
+}
+
+def _normalize_financeur_type(value: Any) -> str:
+    normalized = unicodedata.normalize("NFKD", str(value or "")).encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"\s+", " ", normalized).strip().lower()
+
+def _is_cpf_financeur(value: Any) -> bool:
+    normalized = _normalize_financeur_type(value)
+    return normalized in {"cpf", "compte personnel de formation", "mon compte formation"} or "mon compte formation" in normalized
+
+def buildInvoiceCustomer(financeurType: Any, trainee: Dict[str, Any], session_data: Optional[Dict[str, Any]] = None, funding: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    if _is_cpf_financeur(financeurType):
+        return dict(CPF_QONTO_CUSTOMER)
+    first = (trainee.get("first_name") or trainee.get("traineeFirstName") or "").strip()
+    last = (trainee.get("last_name") or trainee.get("traineeLastName") or "").strip()
+    return {
+        "type": trainee.get("qonto_client_type") or "particulier",
+        "first_name": first, "last_name": last, "name": (trainee.get("clientName") or f"{first} {last}").strip(),
+        "email": (trainee.get("email") or trainee.get("traineeEmail") or "").strip(), "phone": (trainee.get("phone") or "").strip(),
+        "address": (trainee.get("qonto_billing_address") or trainee.get("clientAddress") or trainee.get("address") or "").strip(),
+        "zip_code": (trainee.get("qonto_billing_zip_code") or trainee.get("clientZipCode") or trainee.get("zip_code") or "").strip(),
+        "city": (trainee.get("qonto_billing_city") or trainee.get("clientCity") or trainee.get("city") or "").strip(),
+        "country": (trainee.get("qonto_billing_country_code") or "FR").strip().upper(),
+        "country_code": (trainee.get("qonto_billing_country_code") or "FR").strip().upper(),
+        "company_name": (trainee.get("company_name") or trainee.get("qonto_company_name") or "").strip(),
+        "siret": (trainee.get("siret") or trainee.get("qonto_siret") or "").strip(),
+    }
+
 def _build_qonto_invoice_preview(sess: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, Any]:
     training_name = (_session_get(sess, "name", "") or _session_get(sess, "training_type", "") or "Formation").strip()
     start = (_session_get(sess, "date_start", "") or "")[:10]
@@ -20596,18 +20643,7 @@ def _build_qonto_invoice_preview(sess: Dict[str, Any], trainee: Dict[str, Any]) 
     amount_ttc = round(amount_ht + amount_tva, 2)
     first = (trainee.get("first_name") or "").strip()
     last = (trainee.get("last_name") or "").strip()
-    client = {
-        "type": (trainee.get("qonto_client_type") or "particulier"),
-        "first_name": first, "last_name": last, "name": f"{first} {last}".strip(),
-        "email": (trainee.get("email") or "").strip(), "phone": (trainee.get("phone") or "").strip(),
-        "address": (trainee.get("qonto_billing_address") or trainee.get("address") or "").strip(),
-        "zip_code": (trainee.get("qonto_billing_zip_code") or trainee.get("zip_code") or "").strip(),
-        "city": (trainee.get("qonto_billing_city") or trainee.get("city") or "").strip(),
-        "country": (trainee.get("qonto_billing_country_code") or "FR").strip().upper(),
-        "country_code": (trainee.get("qonto_billing_country_code") or "FR").strip().upper(),
-        "company_name": (trainee.get("company_name") or trainee.get("qonto_company_name") or "").strip(),
-        "siret": (trainee.get("siret") or trainee.get("qonto_siret") or "").strip(),
-    }
+    client = buildInvoiceCustomer(trainee.get("financing_type") or trainee.get("funding_type") or "", trainee, sess, None)
     label = f"Formation {training_name} - {first} {last} - du {fr_date(start)} au {fr_date(end)}".strip()
     missing = []
     if not client["email"]: missing.append("email")
@@ -20809,7 +20845,7 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     'generationInProgress': bool(persisted.get('generationInProgress')), 'createdAt': persisted.get('createdAt') or _now_iso(),
                     'updatedAt': persisted.get('updatedAt') or _now_iso(), 'logs': persisted.get('logs') if isinstance(persisted.get('logs'), list) else [],
                     'traineeLastName': trainee.get('last_name') or '', 'traineeFirstName': trainee.get('first_name') or '',
-                    'traineeEmail': trainee.get('email') or '', 'clientName': persisted.get('clientName') or f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip(),
+                    'traineeEmail': trainee.get('email') or '', 'clientName': persisted.get('clientName') or buildInvoiceCustomer(financing['type'], trainee, sess, financing).get('name') or f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip(),
                     'clientAddress': trainee.get('qonto_billing_address') or trainee.get('address') or '', 'clientZipCode': trainee.get('zip_code') or '', 'clientCity': trainee.get('city') or '',
                     'formationName': training, 'sessionName': _session_get(sess, 'name', '') or training,
                     'dateStart': start.isoformat(), 'dateEnd': end.isoformat() if end else '', 'examDate': _session_get(sess, 'exam_date', '') or '',
@@ -20842,6 +20878,55 @@ def _find_billing_line(data: Dict[str, Any], line_id: str) -> Optional[Dict[str,
     return next((l for l in _billing_lines(data) if l.get('id') == line_id), None)
 
 
+def _reset_missing_qonto_invoice(line: Dict[str, Any]) -> None:
+    for key in (
+        'qontoInvoiceId', 'qonto_invoice_id', 'qontoStatus', 'qonto_status', 'invoiceNumber', 'invoice_number',
+        'qontoInvoiceNumber', 'invoiceDate', 'invoice_date', 'invoicePdfUrl', 'pdf_url', 'qontoPdfUrl',
+        'draftCreatedAt', 'invoiceGeneratedAt', 'invoiceDownloadedAt'
+    ):
+        line[key] = '' if key in line else line.get(key, '')
+    if (line.get('invoiceStatus') or '') in {'draft', 'generated'}:
+        line['invoiceStatus'] = 'not_generated'
+    if (line.get('paymentStatus') or '') in {'unpaid', 'unknown', 'paid'}:
+        line['paymentStatus'] = 'unknown'
+    if (line.get('sentAt') and (line.get('invoiceStatus') or '') == 'not_generated'):
+        line['sentAt'] = ''
+    line['generationInProgress'] = False
+    line['updatedAt'] = _now_iso()
+
+
+def _qonto_invoice_is_missing_error(exc: Exception) -> bool:
+    if isinstance(exc, QontoNotFoundError):
+        return True
+    msg = str(exc or '').lower()
+    return 'qonto http 404' in msg or 'not found' in msg or 'introuvable' in msg or 'deleted' in msg or 'supprim' in msg
+
+
+def _sync_billing_line_with_qonto(data: Dict[str, Any], line: Dict[str, Any]) -> Tuple[bool, str]:
+    invoice_id = (line.get('qontoInvoiceId') or line.get('qonto_invoice_id') or '').strip()
+    if not invoice_id:
+        return False, 'Aucune facture Qonto liée'
+    try:
+        remote = _qonto_invoice_payload(get_qonto_invoice(invoice_id))
+        line['paymentStatus'] = 'paid' if remote.get('paid_at') or remote.get('status') == 'paid' else ('unpaid' if remote.get('status') else 'unknown')
+        line['invoiceStatus'] = 'generated' if (remote.get('status') or '') in {'finalized', 'sent', 'paid'} else (line.get('invoiceStatus') or 'draft')
+        line['qontoInvoiceNumber'] = remote.get('number') or remote.get('invoice_number') or line.get('qontoInvoiceNumber') or ''
+        line['invoicePdfUrl'] = remote.get('public_url') or remote.get('url') or line.get('invoicePdfUrl') or ''
+        _billing_log(line, 'Facture Qonto synchronisée', 'success', line['paymentStatus'], invoice_id)
+        _save_billing_line(data, line)
+        return False, 'Synchronisée'
+    except Exception as exc:
+        if _qonto_invoice_is_missing_error(exc):
+            _billing_log(line, 'Facture Qonto supprimée ou introuvable, reset local effectué', 'success', _sanitize_qonto_error(str(exc)), invoice_id)
+            print(f"Facture Qonto supprimée ou introuvable, reset local effectué: {invoice_id}")
+            _reset_missing_qonto_invoice(line)
+            _save_billing_line(data, line)
+            return True, 'Facture Qonto supprimée ou introuvable, reset local effectué'
+        _billing_log(line, 'Erreur API synchronisation facture', 'error', _sanitize_qonto_error(str(exc)), invoice_id)
+        _save_billing_line(data, line)
+        raise
+
+
 @app.get('/admin/sessions/facturation')
 @admin_login_required
 def admin_sessions_billing():
@@ -20852,7 +20937,43 @@ def admin_sessions_billing():
 @admin_login_required
 def api_admin_billing_lines():
     data = load_data()
-    return jsonify({'ok': True, 'lines': _billing_lines(data), 'start_date': BILLING_START_DATE.isoformat()})
+    reset_count = 0
+    sync_warning = ''
+    if _qonto_is_configured():
+        for line in _billing_lines(data):
+            if line.get('qontoInvoiceId'):
+                try:
+                    did_reset, _ = _sync_billing_line_with_qonto(data, line)
+                    reset_count += 1 if did_reset else 0
+                except Exception:
+                    sync_warning = 'Synchronisation Qonto temporairement indisponible : les factures locales ont été conservées.'
+        if reset_count or sync_warning:
+            save_data(data)
+    return jsonify({'ok': True, 'lines': _billing_lines(data), 'start_date': BILLING_START_DATE.isoformat(), 'reset_count': reset_count, 'sync_warning': sync_warning})
+
+
+@app.post('/api/admin/invoicing/sync-qonto')
+@admin_login_required
+@admin_write_required
+def api_admin_invoicing_sync_qonto():
+    data = load_data()
+    reset_count = 0; synced_count = 0; errors = []
+    if not _qonto_is_configured():
+        return jsonify({'ok': False, 'message': 'Qonto n’est pas connecté'}), 400
+    for line in _billing_lines(data):
+        if not line.get('qontoInvoiceId'):
+            continue
+        try:
+            did_reset, _ = _sync_billing_line_with_qonto(data, line)
+            reset_count += 1 if did_reset else 0
+            synced_count += 0 if did_reset else 1
+        except Exception as exc:
+            errors.append({'id': line.get('id'), 'message': _sanitize_qonto_error(str(exc))})
+    save_data(data)
+    msg = f'Synchronisation terminée : {synced_count} facture(s) vérifiée(s), {reset_count} reset local effectué(s).'
+    if errors:
+        msg += ' Certaines factures ont été conservées car Qonto est temporairement indisponible.'
+    return jsonify({'ok': True, 'message': msg, 'lines': _billing_lines(data), 'reset_count': reset_count, 'synced_count': synced_count, 'errors': errors})
 
 
 @app.get('/api/admin/billing-lines/<line_id>/history')
@@ -20882,7 +21003,7 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any])
         current['generationInProgress'] = True; _save_billing_line(data, current); save_data(data)
         try:
             invoice_iban = get_qonto_invoice_iban()
-            client = {'name': current.get('clientName'), 'first_name': current.get('traineeFirstName'), 'last_name': current.get('traineeLastName'), 'email': current.get('traineeEmail'), 'address': current.get('clientAddress'), 'zip_code': current.get('clientZipCode'), 'city': current.get('clientCity'), 'country_code': 'FR'}
+            client = buildInvoiceCustomer(current.get('financingType') or current.get('financingLabel'), current, {'id': current.get('sessionId')}, current)
             billing_address = build_qonto_billing_address_from_modal(client)
             q_client = search_qonto_client({'email': client.get('email'), 'name': client.get('name')})
             if not q_client:
@@ -20940,12 +21061,11 @@ def api_admin_billing_sync_payment(line_id: str):
     if not line: return jsonify({'ok': False, 'error': 'Ligne introuvable'}), 404
     if not line.get('qontoInvoiceId'): return jsonify({'ok': False, 'error': 'Aucune facture Qonto liée'}), 400
     try:
-        remote = _qonto_invoice_payload(get_qonto_invoice(line['qontoInvoiceId']))
-        line['paymentStatus'] = 'paid' if remote.get('paid_at') or remote.get('status') == 'paid' else ('unpaid' if remote.get('status') else 'unknown')
-        _billing_log(line, 'Statut paiement synchronisé', 'success', line['paymentStatus'], line.get('qontoInvoiceId') or '')
-        _save_billing_line(data, line); save_data(data); return jsonify({'ok': True, 'line': line})
+        did_reset, message = _sync_billing_line_with_qonto(data, line)
+        save_data(data)
+        return jsonify({'ok': True, 'line': _find_billing_line(data, line_id) or line, 'reset': did_reset, 'message': message})
     except Exception as exc:
-        _billing_log(line, 'Erreur API synchronisation paiement', 'error', _sanitize_qonto_error(str(exc))); _save_billing_line(data, line); save_data(data); return jsonify({'ok': False, 'error': 'Synchronisation impossible'}), 400
+        save_data(data); return jsonify({'ok': False, 'error': 'Synchronisation impossible : facture conservée localement'}), 400
 
 
 @app.get('/api/admin/billing-lines/<line_id>/download-invoice')
