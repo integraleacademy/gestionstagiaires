@@ -5,19 +5,23 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     NODE_ENV=production
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    fontconfig \
+    libreoffice \
+    libreoffice-writer \
     fonts-dejavu \
     fonts-liberation \
+    fontconfig \
     fonts-noto-core \
     fonts-noto-cjk \
     ca-certificates \
+    nodejs \
+    npm \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY requirements.txt ./
+COPY requirements.txt package.json package-lock.json* ./
 RUN pip install --no-cache-dir -r requirements.txt
-RUN playwright install --with-deps chromium
+RUN npm install --omit=dev
 
 COPY . .
 

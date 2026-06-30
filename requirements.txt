@@ -8,4 +8,3 @@ pywebpush==2.3.0
 pypdf==5.2.0
 reportlab==4.2.5
 
-playwright==1.48.0
