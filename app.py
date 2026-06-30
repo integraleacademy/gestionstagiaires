@@ -20863,7 +20863,7 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any])
         return False, {'error': 'Génération déjà en cours pour cette ligne', 'message': 'Génération déjà en cours pour cette ligne'}
     try:
         current = _find_billing_line(data, line['id']) or line
-        if current.get('qontoInvoiceId') or current.get('invoiceStatus') == 'generated':
+        if current.get('qontoInvoiceId') or current.get('invoiceStatus') in {'generated', 'draft'}:
             _billing_log(current, 'Génération facture bloquée', 'ignored', 'Facture déjà existante', current.get('qontoInvoiceId') or '')
             _save_billing_line(data, current); save_data(data)
             return False, {'error': 'Facture déjà créée', 'message': 'Facture déjà créée', 'line': current, 'ignored': True}
@@ -20888,8 +20888,8 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any])
             q_payload = {'client_id': q_client_id, 'issue_date': datetime.date.today().isoformat(), 'due_date': (datetime.date.today()+datetime.timedelta(days=30)).isoformat(), 'currency': 'EUR', 'payment_methods': {'iban': invoice_iban}, 'performance_start_date': current.get('dateStart'), 'performance_end_date': current.get('dateEnd') or current.get('dateStart'), 'status': 'draft', 'terms_and_conditions': 'Paiement à réception de facture.', 'items': [{'title': current.get('description'), 'description': current.get('description'), 'quantity': '1', 'unit_price': {'value': str(amount_ht), 'currency': 'EUR'}, 'vat_rate': format_qonto_vat_rate(vat_rate)}]}
             q_inv = create_qonto_invoice(q_payload)
             qi = q_inv.get('client_invoice') or q_inv.get('invoice') or q_inv
-            current.update({'qontoClientId': q_client_id, 'qontoInvoiceId': qi.get('id'), 'qontoInvoiceNumber': qi.get('number') or qi.get('invoice_number') or '', 'invoiceStatus': 'generated' if qi.get('id') else 'draft', 'paymentStatus': 'paid' if (qi.get('status') == 'paid' or qi.get('paid_at')) else 'unpaid', 'invoiceGeneratedAt': _now_iso(), 'invoicePdfUrl': qi.get('public_url') or qi.get('url') or '', 'generationInProgress': False})
-            _billing_log(current, 'Facture générée dans Qonto', 'success', current.get('qontoInvoiceNumber') or '', current.get('qontoInvoiceId') or '')
+            current.update({'qontoClientId': q_client_id, 'qontoInvoiceId': qi.get('id'), 'qontoInvoiceNumber': qi.get('number') or qi.get('invoice_number') or '', 'invoiceStatus': 'draft' if qi.get('id') else 'not_generated', 'paymentStatus': 'paid' if (qi.get('status') == 'paid' or qi.get('paid_at')) else 'unpaid', 'invoiceGeneratedAt': _now_iso(), 'invoicePdfUrl': qi.get('public_url') or qi.get('url') or '', 'generationInProgress': False})
+            _billing_log(current, 'Facture brouillon créée dans Qonto', 'success', current.get('qontoInvoiceNumber') or '', current.get('qontoInvoiceId') or '')
             _save_billing_line(data, current); save_data(data)
             return True, {'line': current}
         except Exception as exc:
