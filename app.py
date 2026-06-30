@@ -2835,6 +2835,7 @@ def brevo_send_email(
     cc_emails: Optional[List[str]] = None,
     trainee: Optional[Dict[str, Any]] = None,
     attachments: Optional[List[Dict[str, str]]] = None,
+    text_content: str = "",
 ) -> bool:
     if not BREVO_API_KEY or not to_email:
         return False
@@ -2854,6 +2855,9 @@ def brevo_send_email(
         "subject": subject,
         "htmlContent": html,
     }
+
+    if text_content:
+        payload["textContent"] = text_content
 
     cc_list = [email for email in (cc_emails or []) if email]
     if cc_list:
@@ -20385,7 +20389,7 @@ def _is_aps_session(session_obj: Dict[str, Any]) -> bool:
 
 
 # =========================
-# Yousign sandbox integration (server-side only)
+# Yousign integration (server-side only)
 # =========================
 YOUSIGN_BASE_URL_DEFAULT = "https://api-sandbox.yousign.app/v3"
 
@@ -20456,10 +20460,23 @@ def _restore_yousign_smart_anchors_in_docx(docx_path: str, replacements: Dict[st
     _rewrite_docx_xml(docx_path, rewrite)
 
 
+def _is_production_environment() -> bool:
+    markers = (
+        os.environ.get("FLASK_ENV"),
+        os.environ.get("APP_ENV"),
+        os.environ.get("ENV"),
+        os.environ.get("RENDER_ENV"),
+    )
+    return any(str(value or "").strip().lower() == "production" for value in markers)
+
+
 def _yousign_base_url() -> str:
     base_url = (os.environ.get("YOUSIGN_BASE_URL") or YOUSIGN_BASE_URL_DEFAULT).strip().rstrip("/")
-    if "api-sandbox.yousign.app/v3" not in base_url:
-        raise RuntimeError("Configuration Yousign invalide : seule l’URL sandbox https://api-sandbox.yousign.app/v3 est autorisée.")
+    allowed_urls = {"https://api-sandbox.yousign.app/v3", "https://api.yousign.app/v3"}
+    if base_url not in allowed_urls:
+        raise RuntimeError("Configuration Yousign invalide : utilisez https://api.yousign.app/v3 en production ou https://api-sandbox.yousign.app/v3 en test.")
+    if _is_production_environment() and "api-sandbox.yousign.app" in base_url:
+        raise RuntimeError("Configuration Yousign invalide : l’URL sandbox est interdite en production.")
     return base_url
 
 
@@ -20717,31 +20734,72 @@ def run_convocation_signature_reminders() -> Dict[str, int]:
     return {"checked": len(due_ids), "sent": sent, "failed": failed}
 
 
-def _build_yousign_signature_link_email(session_obj: Dict[str, Any], trainee: Dict[str, Any], signature_link: str) -> Tuple[str, str]:
-    first_name = str(trainee.get("first_name") or "").strip() or "Madame, Monsieur"
-    training_name = str(_session_get(session_obj, "name", "") or session_obj.get("training_name") or "Formation").strip() or "Formation"
-    dates_session = _aps_session_dates_label(session_obj)
-    subject = "Votre convocation de formation est à signer"
-    body = f"""Bonjour {first_name},
+def build_signature_email_text(first_name: str, formation_label: str, dates_session: str, signature_url: str) -> str:
+    safe_first_name = str(first_name or "").strip() or "Madame, Monsieur"
+    safe_formation_label = str(formation_label or "").strip() or "Formation"
+    safe_dates_session = str(dates_session or "").strip() or "Dates à confirmer"
+    safe_signature_url = str(signature_url or "").strip()
+    return f"""Bonjour {safe_first_name},
 
 Votre convocation de formation est prête.
+Merci de la signer électroniquement avant le début de la formation.
 
-Merci de la signer électroniquement en cliquant sur le lien ci-dessous :
+Récapitulatif :
+- Formation : {safe_formation_label}
+- Session : {safe_dates_session}
+- Document : Convocation de formation
+- Signature : électronique sécurisée
 
-{signature_link}
+Signer ma convocation :
+{safe_signature_url}
 
-Formation : {training_name}
-Session : {dates_session}
-
-Cordialement,
+Ce lien est personnel. Merci de ne pas le transférer.
+Si le bouton ne fonctionne pas, copiez-collez le lien ci-dessus dans votre navigateur.
 
 Intégrale Academy
 54 chemin du Carreou
 83480 Puget-sur-Argens
 04 22 47 07 68"""
-    html_body = "<br>".join(html.escape(line) for line in body.splitlines())
-    return subject, html_body
 
+
+def build_signature_email_html(first_name: str, formation_label: str, dates_session: str, signature_url: str) -> str:
+    safe_first_name = html.escape(str(first_name or "").strip() or "Madame, Monsieur")
+    safe_formation_label = html.escape(str(formation_label or "").strip() or "Formation")
+    safe_dates_session = html.escape(str(dates_session or "").strip() or "Dates à confirmer")
+    safe_signature_url = html.escape(str(signature_url or "").strip(), quote=True)
+    return f'''<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Convocation de formation</title></head>
+<body style="margin:0;padding:0;background:#f3f6fa;font-family:Arial,Helvetica,sans-serif;color:#172033;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f3f6fa;margin:0;padding:24px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,0.08);">
+        <tr><td style="background:#0b2f5b;padding:28px 30px;color:#ffffff;"><div style="font-size:24px;font-weight:700;line-height:1.2;">Intégrale Academy</div><div style="font-size:15px;opacity:.92;margin-top:6px;line-height:1.4;">Convocation de formation</div></td></tr>
+        <tr><td style="padding:32px 30px 10px 30px;">
+          <p style="margin:0 0 16px 0;font-size:18px;line-height:1.5;">Bonjour {safe_first_name},</p>
+          <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">Votre convocation de formation est prête.</p>
+          <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#415166;">Merci de la signer électroniquement avant le début de la formation.</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f7faff;border:1px solid #dbeafe;border-radius:14px;margin:0 0 28px 0;"><tr><td style="padding:18px 20px;">
+            <p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Formation :</strong> {safe_formation_label}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Session :</strong> {safe_dates_session}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Document :</strong> Convocation de formation</p><p style="margin:0;font-size:15px;line-height:1.5;"><strong>Signature :</strong> électronique sécurisée</p>
+          </td></tr></table>
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 26px auto;"><tr><td bgcolor="#0b5ed7" style="border-radius:12px;text-align:center;"><a href="{safe_signature_url}" style="display:inline-block;padding:16px 28px;font-size:17px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;">Signer ma convocation</a></td></tr></table>
+          <p style="margin:0 0 10px 0;font-size:14px;line-height:1.6;color:#5b677a;">Ce lien est personnel. Merci de ne pas le transférer.</p><p style="margin:0 0 8px 0;font-size:13px;line-height:1.6;color:#6b7280;">Si le bouton ne fonctionne pas, copiez-collez le lien ci-dessous dans votre navigateur :</p><p style="margin:0 0 24px 0;font-size:12px;line-height:1.5;word-break:break-all;color:#4b5563;"><a href="{safe_signature_url}" style="color:#0b5ed7;text-decoration:underline;">{safe_signature_url}</a></p>
+        </td></tr><tr><td style="background:#f8fafc;border-top:1px solid #e5e7eb;padding:22px 30px;color:#64748b;font-size:13px;line-height:1.6;"><strong style="color:#334155;">Intégrale Academy</strong><br>54 chemin du Carreou<br>83480 Puget-sur-Argens<br>04 22 47 07 68</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>'''
+
+
+def _build_yousign_signature_link_email(session_obj: Dict[str, Any], trainee: Dict[str, Any], signature_link: str) -> Tuple[str, str, str]:
+    first_name = str(trainee.get("first_name") or "").strip() or "Madame, Monsieur"
+    training_name = str(_session_get(session_obj, "name", "") or session_obj.get("training_name") or "Formation").strip() or "Formation"
+    dates_session = _aps_session_dates_label(session_obj)
+    subject = f"Signature requise – Convocation {training_name}"
+    html_body = build_signature_email_html(first_name, training_name, dates_session, signature_link)
+    text_body = build_signature_email_text(first_name, training_name, dates_session, signature_link)
+    return subject, html_body, text_body
 
 def send_yousign_signature_link_email(session_obj: Dict[str, Any], trainee: Dict[str, Any], signature_link: str) -> bool:
     email = str(trainee.get("email") or "").strip()
@@ -20749,8 +20807,8 @@ def send_yousign_signature_link_email(session_obj: Dict[str, Any], trainee: Dict
         raise RuntimeError("Adresse e-mail stagiaire manquante, impossible d’envoyer le lien de signature.")
     if not str(signature_link or "").strip():
         raise RuntimeError("Lien de signature introuvable, impossible d’envoyer l’e-mail au stagiaire.")
-    subject, html_body = _build_yousign_signature_link_email(session_obj, trainee, signature_link)
-    ok = brevo_send_email(email, subject, html_body, trainee=trainee)
+    subject, html_body, text_body = _build_yousign_signature_link_email(session_obj, trainee, signature_link)
+    ok = brevo_send_email(email, subject, html_body, trainee=trainee, text_content=text_body)
     now = _now_iso()
     state = _yousign_state(trainee)
     if ok:
