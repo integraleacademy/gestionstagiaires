@@ -529,6 +529,12 @@
       {% if conv_sig.last_error %}
         <div class="hint" style="margin-top:8px;color:#991b1b;">{{ conv_sig.last_error }}</div>
       {% endif %}
+      {% if conv_sig.signature_email_last_error %}
+        <div class="hint" style="margin-top:8px;color:#991b1b;">{{ conv_sig.signature_email_last_error }}</div>
+      {% endif %}
+      {% if conv_sig.signature_email_sent_at %}
+        <div class="hint" style="margin-top:8px;">E-mail envoyé le {{ conv_sig.signature_email_sent_at|frdatetime }}</div>
+      {% endif %}
       {% if conv_sig.signature_request_id %}
         <div class="hint" style="margin-top:8px;">Demande Yousign : <span class="mono">{{ conv_sig.signature_request_id }}</span></div>
       {% endif %}
@@ -536,10 +542,14 @@
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
       <form method="post" action="{{ url_for('admin_create_convocation_signature', session_id=session.id, trainee_id=trainee.id) }}" style="margin:0;">
         <button class="btn btn-primary" type="submit" {% if is_read_only %}disabled{% endif %}>
-          {% if conv_sig.signature_request_id %}Recréer la demande{% else %}Créer la demande Yousign{% endif %}
+          {% if conv_sig.signature_request_id and conv_sig.status in ["ongoing", "activated"] %}Réutiliser la demande Yousign{% elif conv_sig.signature_request_id %}Créer une nouvelle demande{% else %}Créer la demande Yousign{% endif %}
         </button>
       </form>
       {% if conv_sig.signature_link and conv_sig.status != "signed" %}
+        <form method="post" action="{{ url_for('admin_resend_convocation_signature_email', session_id=session.id, trainee_id=trainee.id) }}" style="margin:0;">
+          <button class="btn btn-outline" type="submit" {% if is_read_only %}disabled{% endif %}>Renvoyer le lien de signature par e-mail</button>
+        </form>
+        <button class="btn btn-outline" type="button" data-copy-signature-link="{{ conv_sig.signature_link|e }}">Copier le lien de signature</button>
         <a class="btn btn-outline" href="{{ url_for('public_convocation_signature_redirect', token=trainee.public_token) }}" target="_blank" rel="noopener">Tester le bouton stagiaire</a>
       {% endif %}
       {% if conv_sig.signed_pdf_path %}
@@ -4460,5 +4470,21 @@ if(btnEtiquetteWord){
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('click', async (event) => {
+  const btn = event.target.closest('[data-copy-signature-link]');
+  if (!btn) return;
+  const link = btn.getAttribute('data-copy-signature-link') || '';
+  try {
+    await navigator.clipboard.writeText(link);
+    const previous = btn.textContent;
+    btn.textContent = 'Lien copié';
+    setTimeout(() => { btn.textContent = previous; }, 1800);
+  } catch (error) {
+    window.prompt('Copiez le lien de signature :', link);
+  }
+});
+</script>
 
 {% endblock %}
