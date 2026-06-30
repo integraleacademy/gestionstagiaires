@@ -1,9 +1,0 @@
-{
-  "scripts": {
-    "test": "echo \"No JS tests configured\""
-  },
-  "dependencies": {
-    "docxtemplater": "^3.65.3",
-    "pizzip": "^3.2.0"
-  }
-}
