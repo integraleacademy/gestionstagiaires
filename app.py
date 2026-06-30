@@ -37,6 +37,7 @@ from flask import Flask, request, redirect, url_for, jsonify, render_template, a
 import zipfile
 from io import BytesIO
 from docx import Document
+from pypdf import PdfReader
 import xml.etree.ElementTree as ET
 from urllib.parse import urlparse, urljoin, quote
 
@@ -14407,7 +14408,8 @@ def admin_trainees(session_id: str):
         t["deliverables_total"] = d_total
         t["deliverables_ok"] = d_ok
         t["deliverables_text"] = f"{d_done}/{d_total}"
-        t["convocation_signature_label"] = _convocation_signature_admin_label(t.get("convocation_signature") if isinstance(t.get("convocation_signature"), dict) else {})
+        t["convention_signature_label"] = _convention_signature_admin_label(_yousign_state(t))
+        t["convocation_signature_label"] = t["convention_signature_label"]
 
         # ✅ étiquettes ligne (admin_trainees.html)
         dv = t.get("deliverables") or {}
@@ -20371,7 +20373,9 @@ APS_CONVOCATION_CENTER_ZIP = "83480"
 APS_CONVOCATION_CENTER_CITY = "Puget-sur-Argens"
 APS_CONVOCATION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "convocations_aps")
 os.makedirs(APS_CONVOCATION_DIR, exist_ok=True)
-YOUSIGN_SIGNED_DIR = os.path.join(PERSIST_DIR, "generated_documents", "yousign_signed_convocations")
+YOUSIGN_CONVENTION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "conventions_aps")
+YOUSIGN_SIGNED_DIR = os.path.join(PERSIST_DIR, "generated_documents", "yousign_signed_conventions")
+os.makedirs(YOUSIGN_CONVENTION_DIR, exist_ok=True)
 os.makedirs(YOUSIGN_SIGNED_DIR, exist_ok=True)
 APS_CONVOCATION_VARIABLES = [
     "civilite", "prenom", "nom", "nom_complet", "adresse_ligne1", "adresse_ligne2",
@@ -20532,7 +20536,13 @@ def _yousign_json(method: str, path: str, **kwargs) -> Dict[str, Any]:
 
 
 def _yousign_state(trainee: Dict[str, Any]) -> Dict[str, Any]:
-    state = trainee.get("convocation_signature") if isinstance(trainee.get("convocation_signature"), dict) else {}
+    """Return the Yousign convention state, keeping legacy convocation data readable."""
+    state = trainee.get("convention_signature") if isinstance(trainee.get("convention_signature"), dict) else None
+    legacy_state = trainee.get("convocation_signature") if isinstance(trainee.get("convocation_signature"), dict) else None
+    if state is None:
+        state = legacy_state or {}
+    trainee["convention_signature"] = state
+    # Compatibility: old production records and older code paths still read this key.
     trainee["convocation_signature"] = state
     return state
 
@@ -20590,7 +20600,7 @@ def _yousign_signature_link_is_expired(state: Dict[str, Any]) -> bool:
     return bool(expires_at and expires_at <= datetime.datetime.utcnow())
 
 
-def _convocation_signature_admin_label(state: Dict[str, Any]) -> str:
+def _convention_signature_admin_label(state: Dict[str, Any]) -> str:
     if not state or not state.get("signature_request_id"):
         return "Non envoyée"
     if _is_yousign_signature_done(state):
@@ -20613,10 +20623,10 @@ def _build_yousign_signature_reminder_email(session_obj: Dict[str, Any], trainee
     first_name = str(trainee.get("first_name") or "").strip() or "Madame, Monsieur"
     training_name = str(_session_get(session_obj, "name", "") or session_obj.get("training_name") or "Formation").strip() or "Formation"
     dates_session = _aps_session_dates_label(session_obj)
-    subject = "Rappel - votre convocation de formation est à signer"
+    subject = "Rappel : votre convention de formation est en attente de signature"
     body = f"""Bonjour {first_name},
 
-Nous vous rappelons que votre convocation de formation est toujours en attente de signature.
+Nous vous rappelons que votre convention de formation est toujours en attente de signature.
 
 Merci de la signer électroniquement en cliquant sur le lien ci-dessous :
 
@@ -20625,7 +20635,7 @@ Merci de la signer électroniquement en cliquant sur le lien ci-dessous :
 Formation : {training_name}
 Session : {dates_session}
 
-Cette signature est nécessaire pour confirmer la bonne réception de votre convocation.
+Cette signature concerne votre convention de formation.
 
 Cordialement,
 
@@ -20641,7 +20651,7 @@ def _find_trainee_by_convocation_signature_id(data: Dict[str, Any], signature_id
     for sess in data.get("sessions", []):
         trainees = _session_trainees_list(sess)
         for trainee in trainees:
-            state = trainee.get("convocation_signature") if isinstance(trainee.get("convocation_signature"), dict) else {}
+            state = _yousign_state(trainee)
             if wanted in {str(trainee.get("id") or ""), str(state.get("signature_request_id") or ""), str(state.get("external_id") or "")}:
                 return sess, trainees, trainee, state
     return None, None, None, None
@@ -20656,13 +20666,13 @@ def send_convocation_signature_reminder(signature_id: str) -> Tuple[bool, str]:
     if _is_yousign_signature_done(state):
         state["next_reminder_at"] = ""
         save_data(data)
-        return False, "Convocation déjà signée, aucun rappel nécessaire."
+        return False, "Convention déjà signée, aucun rappel nécessaire."
     if _is_yousign_signature_stopped(state):
         state["next_reminder_at"] = ""
         save_data(data)
-        return False, "Convocation expirée, refusée ou en erreur."
+        return False, "Convention expirée, refusée ou en erreur."
     if not _is_yousign_signature_pending(state):
-        return False, "Convocation non en attente de signature."
+        return False, "Convention non en attente de signature."
     signature_link = str(state.get("signature_link") or "").strip()
     if not signature_link:
         return False, "Aucun lien de signature disponible."
@@ -20720,7 +20730,7 @@ def run_convocation_signature_reminders() -> Dict[str, int]:
     due_ids = []
     for sess in data.get("sessions", []):
         for trainee in _session_trainees_list(sess):
-            state = trainee.get("convocation_signature") if isinstance(trainee.get("convocation_signature"), dict) else {}
+            state = _yousign_state(trainee)
             due_at = _parse_iso_datetime(state.get("next_reminder_at"))
             if _is_yousign_signature_pending(state) and due_at and due_at <= now and int(state.get("reminder_count") or 0) < 3:
                 due_ids.append(str(trainee.get("id") or state.get("signature_request_id") or ""))
@@ -20741,16 +20751,16 @@ def build_signature_email_text(first_name: str, formation_label: str, dates_sess
     safe_signature_url = str(signature_url or "").strip()
     return f"""Bonjour {safe_first_name},
 
-Votre convocation de formation est prête.
-Merci de la signer électroniquement avant le début de la formation.
+Vous trouverez ci-dessous le lien sécurisé pour signer votre convention de formation.
+Merci de la signer dès que possible.
 
 Récapitulatif :
 - Formation : {safe_formation_label}
 - Session : {safe_dates_session}
-- Document : Convocation de formation
+- Document : Convention de formation
 - Signature : électronique sécurisée
 
-Signer ma convocation :
+Signer ma convention de formation :
 {safe_signature_url}
 
 Ce lien est personnel. Merci de ne pas le transférer.
@@ -20769,20 +20779,20 @@ def build_signature_email_html(first_name: str, formation_label: str, dates_sess
     safe_signature_url = html.escape(str(signature_url or "").strip(), quote=True)
     return f'''<!doctype html>
 <html lang="fr">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Convocation de formation</title></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Convention de formation</title></head>
 <body style="margin:0;padding:0;background:#f3f6fa;font-family:Arial,Helvetica,sans-serif;color:#172033;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f3f6fa;margin:0;padding:24px 12px;">
     <tr><td align="center">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,0.08);">
-        <tr><td style="background:#0b2f5b;padding:28px 30px;color:#ffffff;"><div style="font-size:24px;font-weight:700;line-height:1.2;">Intégrale Academy</div><div style="font-size:15px;opacity:.92;margin-top:6px;line-height:1.4;">Convocation de formation</div></td></tr>
+        <tr><td style="background:#0b2f5b;padding:28px 30px;color:#ffffff;"><div style="font-size:24px;font-weight:700;line-height:1.2;">Intégrale Academy</div><div style="font-size:15px;opacity:.92;margin-top:6px;line-height:1.4;">Convention de formation</div></td></tr>
         <tr><td style="padding:32px 30px 10px 30px;">
           <p style="margin:0 0 16px 0;font-size:18px;line-height:1.5;">Bonjour {safe_first_name},</p>
-          <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">Votre convocation de formation est prête.</p>
-          <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#415166;">Merci de la signer électroniquement avant le début de la formation.</p>
+          <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">Vous trouverez ci-dessous le lien sécurisé pour signer votre convention de formation.</p>
+          <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#415166;">Merci de la signer dès que possible.</p>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f7faff;border:1px solid #dbeafe;border-radius:14px;margin:0 0 28px 0;"><tr><td style="padding:18px 20px;">
-            <p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Formation :</strong> {safe_formation_label}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Session :</strong> {safe_dates_session}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Document :</strong> Convocation de formation</p><p style="margin:0;font-size:15px;line-height:1.5;"><strong>Signature :</strong> électronique sécurisée</p>
+            <p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Formation :</strong> {safe_formation_label}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Session :</strong> {safe_dates_session}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Document :</strong> Convention de formation</p><p style="margin:0;font-size:15px;line-height:1.5;"><strong>Signature :</strong> électronique sécurisée</p>
           </td></tr></table>
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 26px auto;"><tr><td bgcolor="#0b5ed7" style="border-radius:12px;text-align:center;"><a href="{safe_signature_url}" style="display:inline-block;padding:16px 28px;font-size:17px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;">Signer ma convocation</a></td></tr></table>
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 26px auto;"><tr><td bgcolor="#0b5ed7" style="border-radius:12px;text-align:center;"><a href="{safe_signature_url}" style="display:inline-block;padding:16px 28px;font-size:17px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;">Signer ma convention</a></td></tr></table>
           <p style="margin:0 0 10px 0;font-size:14px;line-height:1.6;color:#5b677a;">Ce lien est personnel. Merci de ne pas le transférer.</p><p style="margin:0 0 8px 0;font-size:13px;line-height:1.6;color:#6b7280;">Si le bouton ne fonctionne pas, copiez-collez le lien ci-dessous dans votre navigateur :</p><p style="margin:0 0 24px 0;font-size:12px;line-height:1.5;word-break:break-all;color:#4b5563;"><a href="{safe_signature_url}" style="color:#0b5ed7;text-decoration:underline;">{safe_signature_url}</a></p>
         </td></tr><tr><td style="background:#f8fafc;border-top:1px solid #e5e7eb;padding:22px 30px;color:#64748b;font-size:13px;line-height:1.6;"><strong style="color:#334155;">Intégrale Academy</strong><br>54 chemin du Carreou<br>83480 Puget-sur-Argens<br>04 22 47 07 68</td></tr>
       </table>
@@ -20796,7 +20806,7 @@ def _build_yousign_signature_link_email(session_obj: Dict[str, Any], trainee: Di
     first_name = str(trainee.get("first_name") or "").strip() or "Madame, Monsieur"
     training_name = str(_session_get(session_obj, "name", "") or session_obj.get("training_name") or "Formation").strip() or "Formation"
     dates_session = _aps_session_dates_label(session_obj)
-    subject = f"Signature requise – Convocation {training_name}"
+    subject = "Votre convention de formation est à signer"
     html_body = build_signature_email_html(first_name, training_name, dates_session, signature_link)
     text_body = build_signature_email_text(first_name, training_name, dates_session, signature_link)
     return subject, html_body, text_body
@@ -20820,12 +20830,12 @@ def send_yousign_signature_link_email(session_obj: Dict[str, Any], trainee: Dict
     return ok
 
 
-def create_yousign_convocation_signature(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> Dict[str, Any]:
+def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> Dict[str, Any]:
     existing_state = _yousign_state(trainee)
     if existing_state.get("signature_request_id") and existing_state.get("signature_link") and existing_state.get("status") in {"ongoing", "activated"}:
         return existing_state
     if not _is_aps_session(session_obj):
-        raise RuntimeError("La signature Yousign de convocation est réservée aux formations APS.")
+        raise RuntimeError("La signature Yousign de convention est réservée aux formations APS.")
     if not _yousign_is_configured():
         raise RuntimeError("Yousign Sandbox n’est pas configuré : vérifiez YOUSIGN_API_KEY et YOUSIGN_WEBHOOK_SECRET dans Render.")
     email = str(trainee.get("email") or "").strip()
@@ -20836,11 +20846,11 @@ def create_yousign_convocation_signature(session_obj: Dict[str, Any], trainee: D
     if not first_name or not last_name:
         raise RuntimeError("Prénom et nom du stagiaire sont obligatoires pour créer la signature Yousign.")
 
-    docx_path, pdf_path = _generate_aps_convocation_files(session_obj, trainee, session_id, trainee_id)
+    docx_path, pdf_path = _generate_aps_convention_files(session_obj, trainee, session_id, trainee_id)
     if not os.path.exists(pdf_path) or os.path.getsize(pdf_path) <= 0:
-        raise RuntimeError("Le PDF de convocation APS n’a pas été généré.")
+        raise RuntimeError("Le PDF de convention de formation APS n’a pas été généré.")
 
-    request_name = f"Convocation APS - {first_name} {last_name}".strip()
+    request_name = f"Convention APS - {first_name} {last_name}".strip()
     external_id = make_yousign_external_id(session_id, trainee_id)
     app.logger.info("[YOUSIGN] create signature request trainee_id=%s sandbox=true", trainee_id)
     signature_request = _yousign_json("POST", "/signature_requests", json={
@@ -20864,15 +20874,23 @@ def create_yousign_convocation_signature(session_obj: Dict[str, Any], trainee: D
     if not document_id:
         raise RuntimeError("Yousign n’a pas renvoyé d’identifiant de document.")
 
-    signer = _yousign_json("POST", f"/signature_requests/{signature_request_id}/signers", json={
+    signer_payload = {
         "info": {"first_name": first_name, "last_name": last_name, "email": email, "locale": "fr"},
         "signature_level": "electronic_signature",
         "signature_authentication_mode": "no_otp",
-        # Les champs de signature sont créés par Yousign depuis les Smart Anchors
-        # présents dans le PDF (ex. {{s1|signature|160|60}}). Ne jamais ajouter ici
-        # un champ x/y/page de secours, sinon la signature serait dupliquée ou
-        # replacée par défaut sur la première page.
-    })
+    }
+    if _docx_text_contains_yousign_smart_anchor(docx_path, signer_index=1):
+        # Les champs de signature sont créés par Yousign depuis les Smart Anchors.
+        pass
+    else:
+        signer_payload["fields"] = [{
+            "document_id": document_id,
+            "type": "signature",
+            "page": _pdf_page_count(pdf_path),
+            "x": 360,
+            "y": 650,
+        }]
+    signer = _yousign_json("POST", f"/signature_requests/{signature_request_id}/signers", json=signer_payload)
     signer_id = signer.get("id")
     activated = _yousign_json("POST", f"/signature_requests/{signature_request_id}/activate", json={})
     signature_link = _extract_yousign_signature_link(activated, signer_id) or _extract_yousign_signature_link(signer, signer_id)
@@ -20907,9 +20925,9 @@ def create_yousign_convocation_signature(session_obj: Dict[str, Any], trainee: D
         "reminder_3_sent_at": "",
         "last_email_error": "",
     })
-    trainee["convocation_aps_status"] = "signature_ongoing"
-    trainee["convocation_aps_pdf_path"] = pdf_path
-    trainee["convocation_aps_docx_path"] = docx_path
+    trainee["convention_aps_status"] = "signature_ongoing"
+    trainee["convention_aps_pdf_path"] = pdf_path
+    trainee["convention_aps_docx_path"] = docx_path
     trainee["updated_at"] = now
     app.logger.info("[YOUSIGN] signature request activated trainee_id=%s request_id=%s", trainee_id, signature_request_id)
     return state
@@ -20919,7 +20937,7 @@ def _find_trainee_by_yousign_request_id(data: Dict[str, Any], request_id: str):
     for sess in data.get("sessions", []):
         trainees = _session_trainees_list(sess)
         for trainee in trainees:
-            state = trainee.get("convocation_signature") if isinstance(trainee.get("convocation_signature"), dict) else {}
+            state = _yousign_state(trainee)
             if str(state.get("signature_request_id") or "") == str(request_id):
                 return sess, trainees, trainee
     return None, None, None
@@ -20927,12 +20945,19 @@ def _find_trainee_by_yousign_request_id(data: Dict[str, Any], request_id: str):
 
 def _download_yousign_signed_pdf(signature_request_id: str, trainee_id: str) -> str:
     response = _yousign_request("GET", f"/signature_requests/{signature_request_id}/documents/download", params={"version": "completed", "archive": "false"}, headers={"Accept": "application/pdf"})
-    path = os.path.join(YOUSIGN_SIGNED_DIR, f"convocation_signee_{_safe_filename_part(trainee_id)}.pdf")
+    path = os.path.join(YOUSIGN_SIGNED_DIR, f"convention_formation_aps_{_safe_filename_part(trainee_id)}_signee.pdf")
     with open(path, "wb") as fh:
         fh.write(response.content)
     if not os.path.exists(path) or os.path.getsize(path) <= 0:
         raise RuntimeError("Téléchargement du PDF signé Yousign vide.")
     return path
+
+
+def _pdf_page_count(pdf_path: str) -> int:
+    try:
+        return max(1, len(PdfReader(pdf_path).pages))
+    except Exception:
+        return 1
 
 
 def _verify_yousign_webhook_signature(raw_body: bytes) -> bool:
@@ -21141,6 +21166,55 @@ def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[s
 
 def _generate_aps_convocation_pdf(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> str:
     return _generate_aps_convocation_files(session_obj, trainee, session_id, trainee_id)[1]
+
+
+def _aps_convention_template_path() -> str:
+    return os.path.join(app.root_path, "templates_word", "conventionaps.docx")
+
+
+def _aps_convention_base_filename(trainee: Dict[str, Any], trainee_id: str = "") -> str:
+    last_name = _safe_filename_part(trainee.get("last_name") or trainee.get("nom") or trainee_id)
+    first_name = _safe_filename_part(trainee.get("first_name") or trainee.get("prenom") or "")
+    suffix = f"_{first_name}" if first_name else ""
+    return f"convention_formation_aps_{last_name}{suffix}"
+
+
+def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
+    """Generate the APS training convention used exclusively for Yousign."""
+    template_path = _aps_convention_template_path()
+    app.logger.info("[CONVENTION APS] Modèle Word utilisé : %s", template_path)
+    if not os.path.exists(template_path):
+        raise FileNotFoundError("Modèle Word obligatoire manquant : gestionstagiaires/templates_word/conventionaps.docx")
+    os.makedirs(YOUSIGN_CONVENTION_DIR, exist_ok=True)
+    base = _aps_convention_base_filename(trainee, trainee_id)
+    final_docx_path = os.path.join(YOUSIGN_CONVENTION_DIR, base + ".docx")
+    final_pdf_path = os.path.join(YOUSIGN_CONVENTION_DIR, base + ".pdf")
+    context: Dict[str, str] = {}
+    try:
+        doc = DocxTemplate(template_path) if DocxTemplate is not None else None
+        variables = sorted(doc.get_undeclared_template_variables()) if doc is not None else []
+    except Exception as exc:
+        app.logger.warning("[CONVENTION APS] Lecture des variables du modèle impossible, copie simple du modèle : %s", exc)
+        variables = []
+    if variables:
+        base_context = _build_aps_convocation_context(session_obj, trainee)
+        context = {key: str(base_context.get(key, "")) for key in variables}
+        _render_docx_with_python_template(template_path, final_docx_path, context)
+    else:
+        shutil.copyfile(template_path, final_docx_path)
+    if not os.path.exists(final_docx_path) or os.path.getsize(final_docx_path) <= 0:
+        raise RuntimeError("Le DOCX final de convention APS est introuvable ou vide.")
+    lo_binary = _find_libreoffice_binary()
+    command = [lo_binary, "--headless", "--convert-to", "pdf", "--outdir", YOUSIGN_CONVENTION_DIR, final_docx_path]
+    if os.path.exists(final_pdf_path):
+        os.remove(final_pdf_path)
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True, timeout=120)
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(f"Conversion LibreOffice impossible : {(exc.stderr or exc.stdout or '').strip()}") from exc
+    if not os.path.exists(final_pdf_path) or os.path.getsize(final_pdf_path) <= 0:
+        raise RuntimeError("Le PDF final de convention APS est introuvable ou vide après conversion LibreOffice.")
+    return final_docx_path, final_pdf_path
 
 
 def _aps_convocation_allowed_pdf_roots() -> List[str]:
@@ -22496,16 +22570,18 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
 
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-signature/create")
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/yousign")
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/signature/create")
 @admin_login_required
 @admin_write_required
-def admin_create_convocation_signature(session_id: str, trainee_id: str):
+def admin_create_convention_signature(session_id: str, trainee_id: str):
     data = load_data()
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         flash("Stagiaire introuvable.", "error")
         abort(404)
     try:
-        state = create_yousign_convocation_signature(s, t, session_id, trainee_id)
+        state = create_yousign_convention_signature(s, t, session_id, trainee_id)
         signature_link = str(state.get("signature_link") or "").strip()
         if send_yousign_signature_link_email(s, t, signature_link):
             flash("Demande Yousign créée et e-mail envoyé au stagiaire.", "success")
@@ -22516,7 +22592,7 @@ def admin_create_convocation_signature(session_id: str, trainee_id: str):
         save_data(data)
     except Exception as exc:
         message = _sanitize_yousign_error(str(exc))
-        app.logger.exception("[YOUSIGN] create convocation signature failed trainee_id=%s error=%s", trainee_id, message)
+        app.logger.exception("[YOUSIGN] create convention signature failed trainee_id=%s error=%s", trainee_id, message)
         state = _yousign_state(t)
         state["status"] = "error"
         state["last_error"] = message
@@ -22524,14 +22600,15 @@ def admin_create_convocation_signature(session_id: str, trainee_id: str):
         s["trainees"] = trainees
         s.pop("stagiaires", None)
         save_data(data)
-        flash(f"Signature convocation : {message}", "error")
+        flash(f"Signature convention : {message}", "error")
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-signature/resend-email")
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/signature/resend-email")
 @admin_login_required
 @admin_write_required
-def admin_resend_convocation_signature_email(session_id: str, trainee_id: str):
+def admin_resend_convention_signature_email(session_id: str, trainee_id: str):
     data = load_data()
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
@@ -22557,9 +22634,10 @@ def admin_resend_convocation_signature_email(session_id: str, trainee_id: str):
 
 
 @app.post("/admin/trainees/<trainee_id>/convocation-signature/send-reminder")
+@app.post("/admin/trainees/<trainee_id>/convention/signature/send-reminder")
 @admin_login_required
 @admin_write_required
-def admin_send_convocation_signature_reminder(trainee_id: str):
+def admin_send_convention_signature_reminder(trainee_id: str):
     ok, message = send_convocation_signature_reminder(trainee_id)
     flash(message, "success" if ok else "error")
     data = load_data()
@@ -22570,9 +22648,10 @@ def admin_send_convocation_signature_reminder(trainee_id: str):
 
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-signature/send-reminder")
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/signature/send-reminder")
 @admin_login_required
 @admin_write_required
-def admin_send_convocation_signature_reminder_for_session(session_id: str, trainee_id: str):
+def admin_send_convention_signature_reminder_for_session(session_id: str, trainee_id: str):
     ok, message = send_convocation_signature_reminder(trainee_id)
     flash(message, "success" if ok else "error")
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
@@ -22595,8 +22674,10 @@ def cli_send_convocation_signature_reminders():
 
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-signee.pdf")
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention-signee.pdf")
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/signed-pdf")
 @admin_login_required
-def admin_view_signed_convocation(session_id: str, trainee_id: str):
+def admin_view_signed_convention(session_id: str, trainee_id: str):
     data = load_data()
     s, _, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
@@ -22604,14 +22685,34 @@ def admin_view_signed_convocation(session_id: str, trainee_id: str):
     state = _yousign_state(t)
     pdf_path = str(state.get("signed_pdf_path") or "")
     abs_path = os.path.abspath(pdf_path) if pdf_path else ""
-    root = os.path.abspath(YOUSIGN_SIGNED_DIR)
+    roots = [
+        os.path.abspath(YOUSIGN_SIGNED_DIR),
+        os.path.abspath(os.path.join(PERSIST_DIR, "generated_documents", "yousign_signed_convocations")),
+    ]
+    if not abs_path or not any(abs_path.startswith(root + os.sep) for root in roots) or not os.path.exists(abs_path):
+        abort(404)
+    return send_file(abs_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(abs_path))
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/original-pdf")
+@admin_login_required
+def admin_view_original_convention(session_id: str, trainee_id: str):
+    data = load_data()
+    s, _, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        abort(404)
+    state = _yousign_state(t)
+    pdf_path = str(state.get("unsigned_pdf_path") or t.get("convention_aps_pdf_path") or "")
+    abs_path = os.path.abspath(pdf_path) if pdf_path else ""
+    root = os.path.abspath(YOUSIGN_CONVENTION_DIR)
     if not abs_path or not abs_path.startswith(root + os.sep) or not os.path.exists(abs_path):
         abort(404)
     return send_file(abs_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(abs_path))
 
 
 @app.get("/espace/<token>/convocation/signature")
-def public_convocation_signature_redirect(token: str):
+@app.get("/espace/<token>/convention/signature")
+def public_convention_signature_redirect(token: str):
     data = load_data()
     s, t = find_session_and_trainee_by_token(data, token)
     if not s or not t:
@@ -22621,7 +22722,7 @@ def public_convocation_signature_redirect(token: str):
     state = _yousign_state(t)
     link = str(state.get("signature_link") or "").strip()
     if not link or state.get("status") == "signed":
-        flash("Aucune convocation n’est en attente de signature.", "error")
+        flash("Aucune convention n’est en attente de signature.", "error")
         return redirect(url_for("public_trainee_space", token=token))
     app.logger.info("[YOUSIGN] public signature redirect trainee_id=%s", t.get("id"))
     return redirect(link)
@@ -22657,13 +22758,13 @@ def webhooks_yousign():
             "last_error": "",
             "last_event_id": payload.get("event_id") or "",
         })
-        trainee["convocation_aps_status"] = "signed"
-        trainee["convocation_aps_signed_at"] = now
+        trainee["convention_aps_status"] = "signed"
+        trainee["convention_aps_signed_at"] = now
         trainee["updated_at"] = now
         sess["trainees"] = trainees
         sess.pop("stagiaires", None)
         save_data(data)
-        app.logger.info("[YOUSIGN] convocation signed stored trainee_id=%s request_id=%s", trainee.get("id"), request_id)
+        app.logger.info("[YOUSIGN] convention signed stored trainee_id=%s request_id=%s", trainee.get("id"), request_id)
         return jsonify({"ok": True, "updated": True, "status": "signed"})
     except Exception as exc:
         message = _sanitize_yousign_error(str(exc))
