@@ -511,6 +511,48 @@
 </div>
 {% endif %}
 
+{% set conv_sig = trainee.convocation_signature or {} %}
+{% if is_aps %}
+<div class="card" style="grid-column:1 / -1; margin-top:12px; border-left:4px solid #2563eb;">
+  <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
+    <div>
+      <h2 style="margin:0 0 8px;">Signature convocation</h2>
+      {% if conv_sig.status == "signed" %}
+        <span class="pill green">✅ Signée{% if conv_sig.signed_at %} le {{ conv_sig.signed_at|frdatetime }}{% endif %}</span>
+      {% elif conv_sig.status in ["ongoing", "activated"] %}
+        <span class="pill blue">✍️ En attente de signature</span>
+      {% elif conv_sig.status in ["error", "download_error"] %}
+        <span class="pill red">Erreur</span>
+      {% else %}
+        <span class="pill gray">Non créée</span>
+      {% endif %}
+      {% if conv_sig.last_error %}
+        <div class="hint" style="margin-top:8px;color:#991b1b;">{{ conv_sig.last_error }}</div>
+      {% endif %}
+      {% if conv_sig.signature_request_id %}
+        <div class="hint" style="margin-top:8px;">Demande Yousign : <span class="mono">{{ conv_sig.signature_request_id }}</span></div>
+      {% endif %}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <form method="post" action="{{ url_for('admin_create_convocation_signature', session_id=session.id, trainee_id=trainee.id) }}" style="margin:0;">
+        <button class="btn btn-primary" type="submit" {% if is_read_only %}disabled{% endif %}>
+          {% if conv_sig.signature_request_id %}Recréer la demande{% else %}Créer la demande Yousign{% endif %}
+        </button>
+      </form>
+      {% if conv_sig.signature_link and conv_sig.status != "signed" %}
+        <a class="btn btn-outline" href="{{ url_for('public_convocation_signature_redirect', token=trainee.public_token) }}" target="_blank" rel="noopener">Tester le bouton stagiaire</a>
+      {% endif %}
+      {% if conv_sig.signed_pdf_path %}
+        <a class="btn btn-outline" href="{{ url_for('admin_view_signed_convocation', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener">Voir PDF signé</a>
+      {% endif %}
+      {% if trainee.convocation_aps_pdf_path %}
+        <a class="btn btn-outline" href="{{ url_for('admin_view_aps_convocation', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener">Voir PDF original</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {% set ypareo_person_status = trainee.ypareo_statut or 'Non envoyé' %}
 {% set ypareo_course_status = trainee.ypareo_cursus_statut or 'Non envoyé' %}
 {% set ypareo_person_ok = ypareo_person_status == 'Créé' %}

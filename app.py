@@ -20337,6 +20337,8 @@ APS_CONVOCATION_CENTER_ZIP = "83480"
 APS_CONVOCATION_CENTER_CITY = "Puget-sur-Argens"
 APS_CONVOCATION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "convocations_aps")
 os.makedirs(APS_CONVOCATION_DIR, exist_ok=True)
+YOUSIGN_SIGNED_DIR = os.path.join(PERSIST_DIR, "generated_documents", "yousign_signed_convocations")
+os.makedirs(YOUSIGN_SIGNED_DIR, exist_ok=True)
 APS_CONVOCATION_VARIABLES = [
     "civilite", "prenom", "nom", "nom_complet", "adresse_ligne1", "adresse_ligne2",
     "adresse_ligne3", "adresse_ligne4", "code_postal", "ville", "formation_nom",
@@ -20350,6 +20352,206 @@ APS_CONVOCATION_VARIABLES = [
 
 def _is_aps_session(session_obj: Dict[str, Any]) -> bool:
     return (_session_get(session_obj, "training_type", "") or "").strip().upper().startswith("APS")
+
+
+# =========================
+# Yousign sandbox integration (server-side only)
+# =========================
+YOUSIGN_BASE_URL_DEFAULT = "https://api-sandbox.yousign.app/v3"
+
+
+def _yousign_base_url() -> str:
+    base_url = (os.environ.get("YOUSIGN_BASE_URL") or YOUSIGN_BASE_URL_DEFAULT).strip().rstrip("/")
+    if "api-sandbox.yousign.app/v3" not in base_url:
+        raise RuntimeError("Configuration Yousign invalide : seule l’URL sandbox https://api-sandbox.yousign.app/v3 est autorisée.")
+    return base_url
+
+
+def _yousign_api_key() -> str:
+    return (os.environ.get("YOUSIGN_API_KEY") or "").strip()
+
+
+def _yousign_is_configured() -> bool:
+    return bool(_yousign_api_key() and (os.environ.get("YOUSIGN_WEBHOOK_SECRET") or "").strip())
+
+
+def _yousign_headers() -> Dict[str, str]:
+    api_key = _yousign_api_key()
+    if not api_key:
+        raise RuntimeError("Yousign n’est pas configuré : variable Render YOUSIGN_API_KEY manquante.")
+    _yousign_base_url()
+    return {"Authorization": f"Bearer {api_key}", "Accept": "application/json"}
+
+
+def _sanitize_yousign_error(message: Any) -> str:
+    text = str(message or "Erreur Yousign inconnue")
+    api_key = _yousign_api_key()
+    if api_key:
+        text = text.replace(api_key, "***")
+    text = re.sub(r"https://[^\\s\"'<>]+", "[lien masqué]", text)
+    return text[:800]
+
+
+def _yousign_request(method: str, path: str, **kwargs) -> requests.Response:
+    url = f"{_yousign_base_url()}/{path.lstrip('/')}"
+    headers = dict(_yousign_headers())
+    headers.update(kwargs.pop("headers", {}) or {})
+    response = requests.request(method.upper(), url, headers=headers, timeout=30, **kwargs)
+    if response.status_code >= 400:
+        try:
+            detail = response.json()
+        except Exception:
+            detail = response.text
+        raise RuntimeError(f"Erreur Yousign HTTP {response.status_code}: {_sanitize_yousign_error(detail)}")
+    return response
+
+
+def _yousign_json(method: str, path: str, **kwargs) -> Dict[str, Any]:
+    response = _yousign_request(method, path, **kwargs)
+    if not response.content:
+        return {}
+    return response.json()
+
+
+def _yousign_state(trainee: Dict[str, Any]) -> Dict[str, Any]:
+    state = trainee.get("convocation_signature") if isinstance(trainee.get("convocation_signature"), dict) else {}
+    trainee["convocation_signature"] = state
+    return state
+
+
+def _extract_yousign_signature_link(payload: Dict[str, Any], signer_id: str = "") -> str:
+    candidates = []
+    if isinstance(payload, dict):
+        candidates.append(payload)
+        candidates.extend(payload.get("signers") or [])
+    for item in candidates:
+        if not isinstance(item, dict):
+            continue
+        if signer_id and str(item.get("id") or "") not in {"", signer_id}:
+            continue
+        for key in ("signature_link", "signature_link_url", "signing_url", "signature_url"):
+            if item.get(key):
+                return str(item.get(key))
+        link = item.get("link") if isinstance(item.get("link"), dict) else {}
+        if link.get("url"):
+            return str(link.get("url"))
+    return ""
+
+
+def create_yousign_convocation_signature(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> Dict[str, Any]:
+    if not _is_aps_session(session_obj):
+        raise RuntimeError("La signature Yousign de convocation est réservée aux formations APS.")
+    if not _yousign_is_configured():
+        raise RuntimeError("Yousign Sandbox n’est pas configuré : vérifiez YOUSIGN_API_KEY et YOUSIGN_WEBHOOK_SECRET dans Render.")
+    email = str(trainee.get("email") or "").strip()
+    first_name = str(trainee.get("first_name") or "").strip()
+    last_name = str(trainee.get("last_name") or "").strip()
+    if not email or not first_name or not last_name:
+        raise RuntimeError("Email, prénom et nom du stagiaire sont obligatoires pour créer la signature Yousign.")
+
+    docx_path, pdf_path = _generate_aps_convocation_files(session_obj, trainee, session_id, trainee_id)
+    if not os.path.exists(pdf_path) or os.path.getsize(pdf_path) <= 0:
+        raise RuntimeError("Le PDF de convocation APS n’a pas été généré.")
+
+    request_name = f"Convocation APS - {first_name} {last_name}".strip()
+    external_id = f"convocation_aps:{session_id}:{trainee_id}"
+    app.logger.info("[YOUSIGN] create signature request trainee_id=%s sandbox=true", trainee_id)
+    signature_request = _yousign_json("POST", "/signature_requests", json={
+        "name": request_name,
+        "delivery_mode": "none",
+        "timezone": "Europe/Paris",
+        "external_id": external_id,
+    })
+    signature_request_id = signature_request.get("id")
+    if not signature_request_id:
+        raise RuntimeError("Yousign n’a pas renvoyé d’identifiant de demande de signature.")
+
+    with open(pdf_path, "rb") as fh:
+        document = _yousign_json(
+            "POST",
+            f"/signature_requests/{signature_request_id}/documents",
+            files={"file": (os.path.basename(pdf_path), fh, "application/pdf")},
+            data={"nature": "signable_document"},
+        )
+    document_id = document.get("id")
+    if not document_id:
+        raise RuntimeError("Yousign n’a pas renvoyé d’identifiant de document.")
+
+    signer = _yousign_json("POST", f"/signature_requests/{signature_request_id}/signers", json={
+        "info": {"first_name": first_name, "last_name": last_name, "email": email, "locale": "fr"},
+        "signature_level": "electronic_signature",
+        "signature_authentication_mode": "no_otp",
+        "fields": [{
+            "document_id": document_id,
+            "type": "signature",
+            "page": 1,
+            "width": 180,
+            "height": 60,
+            "x": 360,
+            "y": 720,
+        }],
+    })
+    signer_id = signer.get("id")
+    activated = _yousign_json("POST", f"/signature_requests/{signature_request_id}/activate", json={})
+    signature_link = _extract_yousign_signature_link(activated, signer_id) or _extract_yousign_signature_link(signer, signer_id)
+    if not signature_link and signer_id:
+        signer_fresh = _yousign_json("GET", f"/signature_requests/{signature_request_id}/signers/{signer_id}")
+        signature_link = _extract_yousign_signature_link(signer_fresh, signer_id)
+    if not signature_link:
+        raise RuntimeError("Demande Yousign créée, mais le lien de signature est introuvable. Vérifiez le mode de livraison Yousign.")
+
+    now = _now_iso()
+    state = _yousign_state(trainee)
+    state.update({
+        "status": "ongoing",
+        "signature_request_id": signature_request_id,
+        "document_id": document_id,
+        "signer_id": signer_id or "",
+        "signature_link": signature_link,
+        "signature_link_expires_at": activated.get("signature_link_expiration_date") or signer.get("signature_link_expiration_date") or "",
+        "unsigned_pdf_path": pdf_path,
+        "unsigned_docx_path": docx_path,
+        "created_at": now,
+        "activated_at": now,
+        "signed_at": "",
+        "signed_pdf_path": "",
+        "last_error": "",
+    })
+    trainee["convocation_aps_status"] = "signature_ongoing"
+    trainee["convocation_aps_pdf_path"] = pdf_path
+    trainee["convocation_aps_docx_path"] = docx_path
+    trainee["updated_at"] = now
+    app.logger.info("[YOUSIGN] signature request activated trainee_id=%s request_id=%s", trainee_id, signature_request_id)
+    return state
+
+
+def _find_trainee_by_yousign_request_id(data: Dict[str, Any], request_id: str):
+    for sess in data.get("sessions", []):
+        trainees = _session_trainees_list(sess)
+        for trainee in trainees:
+            state = trainee.get("convocation_signature") if isinstance(trainee.get("convocation_signature"), dict) else {}
+            if str(state.get("signature_request_id") or "") == str(request_id):
+                return sess, trainees, trainee
+    return None, None, None
+
+
+def _download_yousign_signed_pdf(signature_request_id: str, trainee_id: str) -> str:
+    response = _yousign_request("GET", f"/signature_requests/{signature_request_id}/documents/download", params={"version": "completed", "archive": "false"}, headers={"Accept": "application/pdf"})
+    path = os.path.join(YOUSIGN_SIGNED_DIR, f"convocation_signee_{_safe_filename_part(trainee_id)}.pdf")
+    with open(path, "wb") as fh:
+        fh.write(response.content)
+    if not os.path.exists(path) or os.path.getsize(path) <= 0:
+        raise RuntimeError("Téléchargement du PDF signé Yousign vide.")
+    return path
+
+
+def _verify_yousign_webhook_signature(raw_body: bytes) -> bool:
+    secret = (os.environ.get("YOUSIGN_WEBHOOK_SECRET") or "").strip()
+    signature = request.headers.get("x-yousign-signature-256", "")
+    if not secret or not signature:
+        return False
+    digest = hmac.new(secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(signature, f"sha256={digest}")
 
 
 def _safe_filename_part(value: Any) -> str:
@@ -21888,6 +22090,115 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         s.pop("stagiaires", None)
         save_data(data)
         return jsonify({"ok": False, "error": message}), 400
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-signature/create")
+@admin_login_required
+@admin_write_required
+def admin_create_convocation_signature(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        flash("Stagiaire introuvable.", "error")
+        abort(404)
+    try:
+        create_yousign_convocation_signature(s, t, session_id, trainee_id)
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        flash("Demande de signature Yousign créée. Le bouton est disponible dans l’espace stagiaire.", "success")
+    except Exception as exc:
+        message = _sanitize_yousign_error(str(exc))
+        app.logger.exception("[YOUSIGN] create convocation signature failed trainee_id=%s error=%s", trainee_id, message)
+        state = _yousign_state(t)
+        state["status"] = "error"
+        state["last_error"] = message
+        t["updated_at"] = _now_iso()
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        flash(f"Signature convocation : {message}", "error")
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-signee.pdf")
+@admin_login_required
+def admin_view_signed_convocation(session_id: str, trainee_id: str):
+    data = load_data()
+    s, _, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        abort(404)
+    state = _yousign_state(t)
+    pdf_path = str(state.get("signed_pdf_path") or "")
+    abs_path = os.path.abspath(pdf_path) if pdf_path else ""
+    root = os.path.abspath(YOUSIGN_SIGNED_DIR)
+    if not abs_path or not abs_path.startswith(root + os.sep) or not os.path.exists(abs_path):
+        abort(404)
+    return send_file(abs_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(abs_path))
+
+
+@app.get("/espace/<token>/convocation/signature")
+def public_convocation_signature_redirect(token: str):
+    data = load_data()
+    s, t = find_session_and_trainee_by_token(data, token)
+    if not s or not t:
+        abort(404)
+    if not _public_is_authed(token):
+        return redirect(url_for("public_trainee_login", token=token))
+    state = _yousign_state(t)
+    link = str(state.get("signature_link") or "").strip()
+    if not link or state.get("status") == "signed":
+        flash("Aucune convocation n’est en attente de signature.", "error")
+        return redirect(url_for("public_trainee_space", token=token))
+    app.logger.info("[YOUSIGN] public signature redirect trainee_id=%s", t.get("id"))
+    return redirect(link)
+
+
+@app.post("/webhooks/yousign")
+def webhooks_yousign():
+    raw_body = request.get_data(cache=True)
+    if not _verify_yousign_webhook_signature(raw_body):
+        app.logger.warning("[YOUSIGN] webhook invalid signature")
+        return jsonify({"ok": False, "error": "invalid_signature"}), 401
+    payload = request.get_json(silent=True) or {}
+    event_name = str(payload.get("event_name") or payload.get("event") or "").strip()
+    request_id = (((payload.get("data") or {}).get("signature_request") or {}).get("id") or "").strip()
+    if not request_id:
+        return jsonify({"ok": True, "ignored": True, "reason": "missing_signature_request_id"})
+    app.logger.info("[YOUSIGN] webhook received event=%s request_id=%s", event_name, request_id)
+    if event_name != "signature_request.done":
+        return jsonify({"ok": True, "ignored": True})
+    data = load_data()
+    sess, trainees, trainee = _find_trainee_by_yousign_request_id(data, request_id)
+    if not trainee:
+        return jsonify({"ok": True, "updated": False, "reason": "signature_request_not_found"})
+    state = _yousign_state(trainee)
+    try:
+        signed_path = _download_yousign_signed_pdf(request_id, str(trainee.get("id") or ""))
+        now = _now_iso()
+        state.update({
+            "status": "signed",
+            "signed_at": now,
+            "signed_pdf_path": signed_path,
+            "last_error": "",
+            "last_event_id": payload.get("event_id") or "",
+        })
+        trainee["convocation_aps_status"] = "signed"
+        trainee["convocation_aps_signed_at"] = now
+        trainee["updated_at"] = now
+        sess["trainees"] = trainees
+        sess.pop("stagiaires", None)
+        save_data(data)
+        app.logger.info("[YOUSIGN] convocation signed stored trainee_id=%s request_id=%s", trainee.get("id"), request_id)
+        return jsonify({"ok": True, "updated": True, "status": "signed"})
+    except Exception as exc:
+        message = _sanitize_yousign_error(str(exc))
+        app.logger.exception("[YOUSIGN] signed PDF download failed request_id=%s error=%s", request_id, message)
+        state["status"] = "download_error"
+        state["last_error"] = message
+        sess["trainees"] = trainees
+        save_data(data)
+        return jsonify({"ok": False, "error": "signed_pdf_download_failed"}), 500
 
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-aps.pdf")
