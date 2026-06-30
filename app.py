@@ -20172,6 +20172,13 @@ APS_CONVOCATION_CENTER_ZIP = "83480"
 APS_CONVOCATION_CENTER_CITY = "Puget-sur-Argens"
 APS_CONVOCATION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "convocations_aps")
 os.makedirs(APS_CONVOCATION_DIR, exist_ok=True)
+APS_CONVOCATION_VARIABLES = [
+    "civilite", "prenom", "nom", "nom_complet", "adresse_ligne1", "adresse_ligne2",
+    "adresse_ligne3", "adresse_ligne4", "code_postal", "ville", "formation_nom",
+    "nom_pedagogique", "date_convocation", "heure_convocation", "date_debut_formation",
+    "date_fin_formation", "periode_formation", "periode_elearning", "periode_presentiel",
+    "date_examen", "heure_examen", "date_jour", "lieu_formation", "espace_stagiaire_url",
+]
 
 
 def _is_aps_session(session_obj: Dict[str, Any]) -> bool:
@@ -20197,55 +20204,19 @@ def _format_long_fr_date(value: str) -> str:
 
 
 
-def _aps_static_data_uri(filename: str) -> str:
-    path = os.path.join(app.static_folder or "static", filename)
-    if not os.path.exists(path):
-        return ""
-    ext = os.path.splitext(filename)[1].lower().lstrip(".") or "png"
-    mime = "image/svg+xml" if ext == "svg" else f"image/{'jpeg' if ext in {'jpg', 'jpeg'} else ext}"
-    with open(path, "rb") as fh:
-        return f"data:{mime};base64," + base64.b64encode(fh.read()).decode("ascii")
+
+def _aps_template_path() -> str:
+    return os.path.join(app.root_path, "templates_word", "convocationaps.docx")
 
 
-def _required_aps_static_data_uri(filename: str, label: str) -> str:
-    data_uri = _aps_static_data_uri(filename)
-    if not data_uri:
-        raise ValueError(f"Impossible de générer la convocation APS : asset obligatoire manquant ({label} : static/{filename})")
-    return data_uri
-
-
-
-
-def _required_aps_docx_asset_data_uri(media_name: str, label: str) -> str:
-    docx_path = os.path.join(app.root_path, "templates_word", "convocationaps.docx")
-    zip_member = f"word/media/{media_name}"
-    if not os.path.exists(docx_path):
-        raise ValueError(f"Impossible de générer la convocation APS : modèle Word obligatoire manquant (templates_word/convocationaps.docx)")
-    try:
-        with zipfile.ZipFile(docx_path) as zf:
-            data = zf.read(zip_member)
-    except KeyError as exc:
-        raise ValueError(f"Impossible de générer la convocation APS : asset obligatoire manquant dans le modèle Word ({label} : {zip_member})") from exc
-    except Exception as exc:
-        raise ValueError(f"Impossible de générer la convocation APS : lecture impossible du modèle Word ({label})") from exc
-    ext = os.path.splitext(media_name)[1].lower().lstrip(".") or "png"
-    mime = "image/svg+xml" if ext == "svg" else f"image/{'jpeg' if ext in {'jpg', 'jpeg'} else ext}"
-    return f"data:{mime};base64," + base64.b64encode(data).decode("ascii")
-
-def _find_optional_aps_asset(*names: str) -> str:
-    roots = [app.static_folder or "static", os.path.join(app.root_path, "templates", "static")]
-    for root in roots:
-        for name in names:
-            candidate = os.path.join(root, name)
-            if os.path.exists(candidate):
-                rel = os.path.relpath(candidate, app.static_folder or "static") if candidate.startswith(app.static_folder or "static") else candidate
-                if candidate.startswith(app.static_folder or "static"):
-                    return _aps_static_data_uri(rel)
-                ext = os.path.splitext(candidate)[1].lower().lstrip(".") or "png"
-                mime = "image/svg+xml" if ext == "svg" else f"image/{'jpeg' if ext in {'jpg', 'jpeg'} else ext}"
-                with open(candidate, "rb") as fh:
-                    return f"data:{mime};base64," + base64.b64encode(fh.read()).decode("ascii")
-    return ""
+def _split_address_lines(address: str, max_lines: int = 4) -> List[str]:
+    raw_lines = [line.strip() for line in re.split(r"[\r\n]+", str(address or "")) if line.strip()]
+    if not raw_lines and address:
+        raw_lines = [str(address).strip()]
+    lines = raw_lines[:max_lines]
+    while len(lines) < max_lines:
+        lines.append("")
+    return lines
 
 
 def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
@@ -20260,90 +20231,142 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
     for value, message in required:
         if not str(value or "").strip():
             raise ValueError(f"Impossible de générer la convocation APS : {message}")
+
     _sync_aps_period_dates(session_obj)
-    training_name = _session_get(session_obj, "name", "") or _session_get(session_obj, "training_type", "") or "Formation APS"
+    first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
+    last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper()
+    civility = str(trainee.get("civility") or trainee.get("civilite") or "").strip()
+    full_name = f"{civility} {first_name} {last_name}".strip()
+    address_lines = _split_address_lines(str(trainee.get("address") or trainee.get("adresse") or "").strip())
+    zip_code = str(trainee.get("zip_code") or trainee.get("code_postal") or trainee.get("postal_code") or "").strip()
+    city = str(trainee.get("city") or trainee.get("ville") or "").strip().upper()
+    training_name = str(_session_get(session_obj, "name", "") or _session_get(session_obj, "training_type", "") or "Formation APS").strip()
     remote_start = str(_session_get(session_obj, "aps_remote_start", "") or _session_get(session_obj, "date_start", "")).strip()
     remote_end = str(_session_get(session_obj, "aps_remote_end", "") or remote_start).strip()
     in_person_start = str(_session_get(session_obj, "aps_in_person_start", "") or _session_get(session_obj, "date_start", "")).strip()
     in_person_end = str(_session_get(session_obj, "aps_in_person_end", "") or _session_get(session_obj, "date_end", "")).strip()
     public_token = (trainee.get("public_token") or trainee.get("token") or "").strip()
     trainee_space_url = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}" if public_token else f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espacestagiaire"
-    ctx = {
-        "civility": str(trainee.get("civility") or trainee.get("civilite") or "").strip(),
-        "first_name": str(trainee.get("first_name") or trainee.get("prenom") or "").strip(),
-        "last_name": str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper(),
-        "address": str(trainee.get("address") or trainee.get("adresse") or "").strip(),
-        "zip_code": str(trainee.get("zip_code") or trainee.get("code_postal") or trainee.get("postal_code") or "").strip(),
-        "city": str(trainee.get("city") or trainee.get("ville") or "").strip(),
-        "training_name": str(training_name).strip(),
-        "date_start": str(_session_get(session_obj, "date_start", "")).strip(),
-        "date_end": str(_session_get(session_obj, "date_end", "")).strip(),
-        "aps_remote_start": remote_start,
-        "aps_remote_end": remote_end,
-        "aps_in_person_start": in_person_start,
-        "aps_in_person_end": in_person_end,
-        "exam_date": str(_session_get(session_obj, "exam_date", "")).strip(),
-        "exam_time": str(_session_get(session_obj, "exam_time", "") or session_obj.get("heure_examen") or "08h00").strip() or "08h00",
-        "convocation_time": str(_session_get(session_obj, "convocation_time", "") or session_obj.get("heure_convocation") or "08h30").strip() or "08h30",
-        "center_name": APS_CONVOCATION_CENTER_NAME,
-        "center_address": APS_CONVOCATION_CENTER_ADDRESS,
-        "center_zip_code": APS_CONVOCATION_CENTER_ZIP,
-        "center_city": APS_CONVOCATION_CENTER_CITY,
-        "duration_total": "175 h",
-        "duration_elearning": "62 h",
-        "duration_in_person": "113 h",
-        "today": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
-        "trainee_space_url": trainee_space_url,
-        "letterhead_data_uri": _required_aps_docx_asset_data_uri("image5.png", "en-tête et pied de page Intégrale Academy"),
-        "tfp_logo_data_uri": _required_aps_docx_asset_data_uri("image1.png", "logo TFP APS"),
-        "signature_data_uri": _required_aps_docx_asset_data_uri("image2.png", "signature Clément VAILLANT"),
-        "stamp_data_uri": _required_aps_docx_asset_data_uri("image3.png", "cachet Intégrale Academy"),
-        "access_map_data_uri": _required_aps_docx_asset_data_uri("image4.png", "plan d’accès et parkings"),
+    date_start = str(_session_get(session_obj, "date_start", "")).strip()
+    date_end = str(_session_get(session_obj, "date_end", "")).strip()
+    exam_date = str(_session_get(session_obj, "exam_date", "")).strip()
+    convocation_time = str(_session_get(session_obj, "convocation_time", "") or session_obj.get("heure_convocation") or "08h30").strip() or "08h30"
+    exam_time = str(_session_get(session_obj, "exam_time", "") or session_obj.get("heure_examen") or "08h00").strip() or "08h00"
+    place = f"{APS_CONVOCATION_CENTER_NAME} - {APS_CONVOCATION_CENTER_ADDRESS} - {APS_CONVOCATION_CENTER_ZIP} {APS_CONVOCATION_CENTER_CITY}"
+    return {
+        "civilite": civility, "prenom": first_name, "nom": last_name, "nom_complet": full_name,
+        "adresse_ligne1": address_lines[0], "adresse_ligne2": address_lines[1], "adresse_ligne3": address_lines[2], "adresse_ligne4": address_lines[3],
+        "code_postal": zip_code, "ville": city, "formation_nom": training_name,
+        "nom_pedagogique": str(_session_get(session_obj, "nom_pedagogique", "") or training_name).strip(),
+        "date_convocation": fr_date(date_start), "heure_convocation": convocation_time,
+        "date_debut_formation": fr_date(date_start), "date_fin_formation": fr_date(date_end),
+        "periode_formation": f"du {fr_date(date_start)} au {fr_date(date_end)}",
+        "periode_elearning": f"du {fr_date(remote_start)} au {fr_date(remote_end)}",
+        "periode_presentiel": f"du {fr_date(in_person_start)} au {fr_date(in_person_end)}",
+        "date_examen": fr_date(exam_date), "heure_examen": exam_time,
+        "date_jour": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
+        "lieu_formation": place, "espace_stagiaire_url": trainee_space_url,
     }
-    ctx.update({
-        "full_name": f"{ctx['civility']} {ctx['first_name']} {ctx['last_name']}".strip(),
-        "dates_full": f"du {fr_date(ctx['date_start'])} au {fr_date(ctx['date_end'])}",
-        "dates_elearning": f"du {fr_date(ctx['aps_remote_start'])} au {fr_date(ctx['aps_remote_end'])}",
-        "dates_in_person": f"du {fr_date(ctx['aps_in_person_start'])} au {fr_date(ctx['aps_in_person_end'])}",
-        "training_place": f"{APS_CONVOCATION_CENTER_NAME} — {APS_CONVOCATION_CENTER_ADDRESS}, {APS_CONVOCATION_CENTER_ZIP} {APS_CONVOCATION_CENTER_CITY}",
-    })
-    return ctx
 
 
-def _render_aps_convocation_html(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> str:
-    return render_template("convocation_aps.html", ctx=_build_aps_convocation_context(session_obj, trainee))
+def _assert_aps_template_contains_expected_variables(template_path: str) -> None:
+    placeholders: Set[str] = set()
+    pattern = re.compile(r"\{\{\s*([^{}]+?)\s*\}\}")
+    with zipfile.ZipFile(template_path) as zf:
+        for name in zf.namelist():
+            if name.startswith("word/") and name.endswith(".xml"):
+                xml_text = zf.read(name).decode("utf-8", errors="ignore")
+                placeholders.update(match.strip() for match in pattern.findall(xml_text))
+                try:
+                    plain_text = "".join(ET.fromstring(xml_text).itertext())
+                    placeholders.update(match.strip() for match in pattern.findall(plain_text))
+                except Exception:
+                    pass
+    missing = [name for name in APS_CONVOCATION_VARIABLES if name not in placeholders]
+    if missing:
+        raise RuntimeError("Le modèle Word templates_word/convocationaps.docx ne contient pas toutes les variables APS attendues : " + ", ".join(missing))
+
+
+def _find_libreoffice_binary() -> str:
+    binary = shutil.which("libreoffice") or shutil.which("soffice")
+    if not binary:
+        raise RuntimeError("LibreOffice est introuvable sur le serveur : installez libreoffice ou soffice pour convertir la convocation APS en PDF.")
+    return binary
+
+
+def _assert_docx_has_no_unresolved_variables(docx_path: str) -> None:
+    unresolved: Set[str] = set()
+    pattern = re.compile(r"\{\{[^{}]+\}\}")
+    with zipfile.ZipFile(docx_path) as zf:
+        for name in zf.namelist():
+            if name.startswith("word/") and name.endswith(".xml"):
+                xml_text = zf.read(name).decode("utf-8", errors="ignore")
+                unresolved.update(pattern.findall(xml_text))
+                try:
+                    plain_text = "".join(ET.fromstring(xml_text).itertext())
+                    unresolved.update(pattern.findall(plain_text))
+                except Exception:
+                    pass
+    if unresolved:
+        raise RuntimeError("Variables non remplacées dans la convocation APS : " + ", ".join(sorted(unresolved)))
+
+
+def _render_docx_with_docxtemplater(template_path: str, output_docx_path: str, context: Dict[str, str]) -> None:
+    script = """
+const fs = require('fs');
+const PizZip = require('pizzip');
+const Docxtemplater = require('docxtemplater');
+const [templatePath, outputPath, dataPath] = process.argv.slice(2);
+const content = fs.readFileSync(templatePath, 'binary');
+const zip = new PizZip(content);
+const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+doc.render(JSON.parse(fs.readFileSync(dataPath, 'utf8')));
+fs.writeFileSync(outputPath, doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' }));
+"""
+    os.makedirs(os.path.dirname(output_docx_path), exist_ok=True)
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".json", delete=False) as data_file:
+        json.dump(context, data_file, ensure_ascii=False)
+        data_path = data_file.name
+    try:
+        result = subprocess.run(["node", "-e", script, template_path, output_docx_path, data_path], capture_output=True, text=True, timeout=60)
+    finally:
+        try: os.unlink(data_path)
+        except OSError: pass
+    if result.returncode != 0:
+        raise RuntimeError(f"Docxtemplater a échoué : {(result.stderr or result.stdout or '').strip()}")
+
+
+def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
+    template_path = _aps_template_path()
+    app.logger.info("[CONVOCATION APS] Modèle Word utilisé : %s", template_path)
+    if not os.path.exists(template_path):
+        raise FileNotFoundError("Modèle Word obligatoire manquant : gestionstagiaires/templates_word/convocationaps.docx")
+    _assert_aps_template_contains_expected_variables(template_path)
+    context = _build_aps_convocation_context(session_obj, trainee)
+    app.logger.info("[CONVOCATION APS] Données injectées : stagiaire=%s formation=%s période=%s examen=%s", context.get("nom_complet"), context.get("formation_nom"), context.get("periode_formation"), context.get("date_examen"))
+    base = f"convocation_aps_{_safe_filename_part(trainee.get('id') or trainee_id)}"
+    final_docx_path = os.path.join(APS_CONVOCATION_DIR, base + ".docx")
+    final_pdf_path = os.path.join(APS_CONVOCATION_DIR, base + ".pdf")
+    _render_docx_with_docxtemplater(template_path, final_docx_path, context)
+    app.logger.info("[CONVOCATION APS] DOCX final généré : %s", final_docx_path)
+    if not os.path.exists(final_docx_path) or os.path.getsize(final_docx_path) <= 0:
+        raise RuntimeError("Le DOCX final de convocation APS est introuvable ou vide.")
+    _assert_docx_has_no_unresolved_variables(final_docx_path)
+    lo_binary = _find_libreoffice_binary()
+    command = [lo_binary, "--headless", "--convert-to", "pdf", "--outdir", APS_CONVOCATION_DIR, final_docx_path]
+    app.logger.info("[CONVOCATION APS] Commande conversion : %s", " ".join(command))
+    if os.path.exists(final_pdf_path): os.remove(final_pdf_path)
+    result = subprocess.run(command, capture_output=True, text=True, timeout=120)
+    if result.returncode != 0:
+        raise RuntimeError(f"Conversion LibreOffice impossible : {(result.stderr or result.stdout or '').strip()}")
+    app.logger.info("[CONVOCATION APS] PDF final généré : %s", final_pdf_path)
+    if not os.path.exists(final_pdf_path) or os.path.getsize(final_pdf_path) <= 0:
+        raise RuntimeError("Le PDF final de convocation APS est introuvable ou vide après conversion LibreOffice.")
+    return final_docx_path, final_pdf_path
 
 
 def _generate_aps_convocation_pdf(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> str:
-    html_content = _render_aps_convocation_html(session_obj, trainee)
-    ctx = _build_aps_convocation_context(session_obj, trainee)
-    filename_base = f"convocation-aps-{_safe_filename_part(ctx['last_name'])}-{_safe_filename_part(ctx['first_name'])}-{_safe_filename_part(trainee.get('id') or trainee_id)}"
-    final_pdf_path = os.path.join(APS_CONVOCATION_DIR, filename_base + ".pdf")
-    os.makedirs(APS_CONVOCATION_DIR, exist_ok=True)
-    try:
-        from playwright.sync_api import sync_playwright
-    except Exception as exc:
-        raise RuntimeError("Génération PDF APS impossible : Playwright n’est pas installé sur le serveur.") from exc
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-dev-shm-usage"])
-            page = browser.new_page(viewport={"width": 1240, "height": 1754}, device_scale_factor=1)
-            page.set_content(html_content, wait_until="networkidle")
-            page.pdf(
-                path=final_pdf_path,
-                format="A4",
-                print_background=True,
-                prefer_css_page_size=True,
-                display_header_footer=False,
-                margin={"top": "0", "right": "0", "bottom": "0", "left": "0"},
-            )
-            browser.close()
-    except Exception as exc:
-        app.logger.exception("[CONVOCATION APS] Échec génération PDF HTML")
-        raise RuntimeError(f"Génération PDF APS impossible : {exc}") from exc
-    if not os.path.exists(final_pdf_path) or os.path.getsize(final_pdf_path) <= 0:
-        raise RuntimeError("Échec de génération : le PDF de convocation APS est introuvable ou vide")
-    return final_pdf_path
+    return _generate_aps_convocation_files(session_obj, trainee, session_id, trainee_id)[1]
 
 
 def _aps_convocation_allowed_pdf_roots() -> List[str]:
@@ -21167,7 +21190,8 @@ def admin_preview_aps_convocation_by_trainee(trainee_id: str):
     if not s or not t or not _is_aps_session(s):
         abort(404)
     try:
-        return _render_aps_convocation_html(s, t)
+        _, pdf_path = _generate_aps_convocation_files(s, t, "", trainee_id)
+        return send_file(pdf_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(pdf_path))
     except Exception as exc:
         app.logger.exception("[CONVOCATION APS] Aperçu impossible")
         return make_response(f"Aperçu convocation APS impossible : {html.escape(str(exc))}", 400)
@@ -21181,7 +21205,8 @@ def admin_preview_aps_convocation(session_id: str, trainee_id: str):
     if not s or not t or not _is_aps_session(s):
         abort(404)
     try:
-        return _render_aps_convocation_html(s, t)
+        _, pdf_path = _generate_aps_convocation_files(s, t, session_id, trainee_id)
+        return send_file(pdf_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(pdf_path))
     except Exception as exc:
         app.logger.exception("[CONVOCATION APS] Aperçu impossible")
         return make_response(f"Aperçu convocation APS impossible : {html.escape(str(exc))}", 400)
@@ -21198,7 +21223,7 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
     if not _is_aps_session(s):
         return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
     try:
-        pdf_path = _generate_aps_convocation_pdf(s, t, session_id, trainee_id)
+        docx_path, pdf_path = _generate_aps_convocation_files(s, t, session_id, trainee_id)
         if not os.path.exists(pdf_path):
             raise Exception("Le PDF de convocation APS n’a pas été généré.")
         with open(pdf_path, "rb") as fh:
@@ -21220,8 +21245,8 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         t["convocation_aps_status"] = "sent"
         t["convocation_aps_sent_at"] = sent_at
         t["convocation_aps_pdf_path"] = pdf_path
-        t.pop("convocation_aps_docx_path", None)
-        t["convocation_aps_generated_from"] = "html"
+        t["convocation_aps_docx_path"] = docx_path
+        t["convocation_aps_generated_from"] = "word"
         t["convocation_aps_view_url"] = url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id)
         t["convocation_aps_last_error"] = ""
         t["updated_at"] = sent_at
