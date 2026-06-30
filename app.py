@@ -20335,10 +20335,13 @@ def _assert_aps_template_contains_expected_variables(template_path: str) -> None
 
 
 def _find_libreoffice_binary() -> str:
-    binary = shutil.which("libreoffice") or shutil.which("soffice")
-    if not binary:
-        raise RuntimeError("LibreOffice est introuvable sur le serveur : installez libreoffice ou soffice pour convertir la convocation APS en PDF.")
-    return binary
+    for binary in ("libreoffice", "soffice"):
+        path = shutil.which(binary)
+        app.logger.info("[CONVOCATION APS] %s: %s", binary, path)
+        print(f"[CONVOCATION APS] {binary}: {path}", flush=True)
+        if path:
+            return path
+    raise RuntimeError("LibreOffice est introuvable sur le serveur : installez libreoffice ou soffice pour convertir la convocation APS en PDF.")
 
 
 def _assert_docx_has_no_unresolved_variables(docx_path: str) -> None:
@@ -20385,14 +20388,23 @@ def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[s
     app.logger.info("[CONVOCATION APS] DOCX final généré : %s", final_docx_path)
     if not os.path.exists(final_docx_path) or os.path.getsize(final_docx_path) <= 0:
         raise RuntimeError("Le DOCX final de convocation APS est introuvable ou vide.")
+    final_docx_size = os.path.getsize(final_docx_path)
+    app.logger.info("[CONVOCATION APS] Taille DOCX final : %s octets", final_docx_size)
     _assert_docx_has_no_unresolved_variables(final_docx_path)
     lo_binary = _find_libreoffice_binary()
-    command = [lo_binary, "--headless", "--convert-to", "pdf", "--outdir", APS_CONVOCATION_DIR, final_docx_path]
+    output_dir = APS_CONVOCATION_DIR
+    command = [lo_binary, "--headless", "--convert-to", "pdf", "--outdir", output_dir, final_docx_path]
+    app.logger.info("[CONVOCATION APS] Binaire LibreOffice trouvé : %s", lo_binary)
+    app.logger.info("[CONVOCATION APS] Chemin PDF attendu : %s", final_pdf_path)
     app.logger.info("[CONVOCATION APS] Commande conversion : %s", " ".join(command))
     if os.path.exists(final_pdf_path): os.remove(final_pdf_path)
-    result = subprocess.run(command, capture_output=True, text=True, timeout=120)
-    if result.returncode != 0:
-        raise RuntimeError(f"Conversion LibreOffice impossible : {(result.stderr or result.stdout or '').strip()}")
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True, timeout=120)
+    except subprocess.CalledProcessError as exc:
+        app.logger.error("[CONVOCATION APS] Conversion LibreOffice impossible (code %s)", exc.returncode)
+        app.logger.error("[CONVOCATION APS] stdout LibreOffice: %s", (exc.stdout or "").strip())
+        app.logger.error("[CONVOCATION APS] stderr LibreOffice: %s", (exc.stderr or "").strip())
+        raise RuntimeError(f"Conversion LibreOffice impossible : {(exc.stderr or exc.stdout or '').strip()}") from exc
     app.logger.info("[CONVOCATION APS] PDF final généré : %s", final_pdf_path)
     if not os.path.exists(final_pdf_path) or os.path.getsize(final_pdf_path) <= 0:
         raise RuntimeError("Le PDF final de convocation APS est introuvable ou vide après conversion LibreOffice.")
@@ -20610,7 +20622,7 @@ def _qonto_invoice_state(trainee: Dict[str, Any]) -> Dict[str, Any]:
     return state
 
 
-CPF_QONTO_CLIENT_NAME = "Caisse des dépôts"
+CPF_QONTO_CLIENT_NAME = "Caisse des dépôts - Mon Compte Formation"
 CPF_QONTO_SEARCH_NAMES = ["Caisse des dépôts - Mon Compte Formation", "Caisse des dépôts", "Mon Compte Formation"]
 CPF_QONTO_CLIENT = {
     "type": "company",
@@ -20644,7 +20656,7 @@ CPF_QONTO_CUSTOMER = {
     "phone": "",
     "address": "56 rue de Lille",
     "zip_code": "75356",
-    "city": "Paris",
+    "city": "Paris 07",
     "country": "FR",
     "country_code": "FR",
     "company_name": CPF_QONTO_CLIENT_NAME,
@@ -20672,11 +20684,16 @@ def is_cpf_billing_context(value: Any) -> bool:
 
 
 def get_or_create_cpf_qonto_client() -> Dict[str, Any]:
+    canonical_payload = dict(CPF_QONTO_CLIENT)
     for name in CPF_QONTO_SEARCH_NAMES:
         existing_client = find_qonto_client_by_name(name)
         if existing_client:
+            client = existing_client.get("client") or existing_client
+            client_id = client.get("id")
+            if client_id and (client.get("name") != CPF_QONTO_CLIENT_NAME or _qonto_client_kind(client) != "company"):
+                return update_qonto_client(client_id, canonical_payload)
             return existing_client
-    return create_qonto_client({"client": dict(CPF_QONTO_CLIENT)})
+    return create_qonto_client({"client": canonical_payload})
 
 def buildInvoiceCustomer(financeurType: Any, trainee: Dict[str, Any], session_data: Optional[Dict[str, Any]] = None, funding: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     if _is_cpf_financeur(financeurType):
@@ -20776,10 +20793,12 @@ def build_qonto_client_payload(invoice_line: Dict[str, Any], trainee: Optional[D
         billing_address = build_qonto_billing_address_from_modal({**client, **{"address": trainee.get("street_address") or trainee.get("address"), "zip_code": trainee.get("zip_code") or trainee.get("postal_code"), "city": trainee.get("city"), "country_code": trainee.get("country_code") or trainee.get("country")}})
         kind = _qonto_client_kind(client)
         if kind == "company" or client.get("company_name"):
-            payload = {"name": (client.get("company_name") or client.get("name") or "").strip()}
+            kind = "company"
+            payload = {"type": "company", "kind": "company", "name": (client.get("company_name") or client.get("name") or "").strip()}
         else:
-            payload = {"first_name": (client.get("first_name") or "").strip(), "last_name": (client.get("last_name") or "").strip(), "name": (client.get("name") or "").strip()}
-        payload.update({"email": (client.get("email") or "").strip() or None, "currency": "EUR", "locale": "FR", "address": billing_address["street_address"], "city": billing_address["city"], "zip_code": billing_address["zip_code"], "country_code": billing_address["country_code"], "billing_address": {"street_address": billing_address["street_address"], "city": billing_address["city"], "zip_code": billing_address["zip_code"], "country_code": billing_address["country_code"]}})
+            kind = "individual"
+            payload = {"type": "individual", "kind": "individual", "first_name": (client.get("first_name") or "").strip(), "last_name": (client.get("last_name") or "").strip(), "name": (client.get("name") or "").strip()}
+        payload.update({"email": (client.get("email") or "").strip() or None, "currency": "EUR", "locale": "FR", "address_line_1": billing_address["street_address"], "address": billing_address["street_address"], "city": billing_address["city"], "zip_code": billing_address["zip_code"], "country_code": billing_address["country_code"], "billing_address": {"street_address": billing_address["street_address"], "city": billing_address["city"], "zip_code": billing_address["zip_code"], "country_code": billing_address["country_code"]}})
         return {k: v for k, v in payload.items() if not (k in {"first_name", "last_name", "name"} and v is None)}
 
     line = invoice_line or {}
@@ -21141,7 +21160,10 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any])
             qonto_client_payload = build_qonto_client_payload(current, current, {'id': current.get('sessionId')}, current.get('financingType') or current.get('financingLabel'))
             validation_errors = validate_qonto_client_payload(qonto_client_payload, current if is_cpf else current.get('financingType'))
             if validation_errors:
-                message = 'Informations Qonto manquantes : merci de compléter les champs obligatoires avant création du brouillon.'
+                message = 'Qonto refuse la facture car les informations client sont incomplètes.'
+                current['generationInProgress'] = False
+                _billing_log(current, 'Validation locale client Qonto bloquée', 'error', message)
+                _save_billing_line(data, current); save_data(data)
                 return False, {'error': message, 'message': message, 'validation_errors': validation_errors, 'client': qonto_client_payload, 'line': current}
             if is_cpf:
                 q_client = get_or_create_cpf_qonto_client()
