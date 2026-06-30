@@ -972,6 +972,24 @@
       {% endif %}
     </div>
 
+    {% set conv_sig = trainee.convocation_signature or {} %}
+    {% if conv_sig.signature_link and conv_sig.status != 'signed' %}
+    <div class="card" style="border-left:4px solid #2563eb;">
+      <h2>Signature de votre convocation</h2>
+      <p class="muted" style="margin:0 0 12px;">
+        Votre convocation de formation est prête. Merci de la signer électroniquement.
+      </p>
+      <a class="btn" href="{{ url_for('public_convocation_signature_redirect', token=token_safe) }}" target="_blank" rel="noopener">
+        ✍️ Signer ma convocation
+      </a>
+    </div>
+    {% elif conv_sig.status == 'signed' %}
+    <div class="card" style="border-left:4px solid #16a34a;">
+      <h2>Signature de votre convocation</h2>
+      <span class="pill green">✅ Convocation signée</span>
+    </div>
+    {% endif %}
+
     <!-- Encadré 2 : suivi de dossier -->
   {% if not trainee.public_hide_suivi %}
     <div class="card">
