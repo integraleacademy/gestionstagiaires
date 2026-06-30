@@ -14,9 +14,22 @@ export function isQontoConfigured(): boolean {
   return Boolean((process.env.QONTO_LOGIN || "").trim() && (process.env.QONTO_SECRET_KEY || "").trim());
 }
 
+const INVALID_QONTO_CLIENT_SEARCH_MESSAGE = "Recherche client Qonto invalide : utiliser uniquement filter[name], filter[email], filter[tax_identification_number] ou filter[vat_number].";
+const INVALID_QONTO_SEARCH_MARKERS = ["queryfields", "query_fields", "QueryFields", "first_name last_name name email"];
+
+function containsInvalidQontoSearchMarker(value: unknown): boolean {
+  const serialized = typeof value === "string" ? value : JSON.stringify(value || {});
+  const lowered = serialized.toLowerCase();
+  return INVALID_QONTO_SEARCH_MARKERS.some((marker) => lowered.includes(marker.toLowerCase()));
+}
+
 async function qontoRequest(path: string, init: RequestInit = {}): Promise<Response> {
   const baseUrl = QONTO_API_BASE_URL.replace(/\/+$/, "");
   const endpoint = path.startsWith("/") ? path : `/${path}`;
+  if (containsInvalidQontoSearchMarker(endpoint) || containsInvalidQontoSearchMarker(init.body)) {
+    console.error("[QONTO] invalid client search blocked", { endpoint });
+    throw new Error(INVALID_QONTO_CLIENT_SEARCH_MESSAGE);
+  }
   return fetch(`${baseUrl}${endpoint}`, {
     ...init,
     headers: {
@@ -40,10 +53,19 @@ export async function testQontoConnection(): Promise<{ ok: boolean; status: numb
   return { ok: response.ok, status: response.status };
 }
 
+export async function findQontoClientByName(name: string): Promise<Record<string, unknown> | null> {
+  const normalizedName = String(name || "").trim();
+  const qs = normalizedName ? `?${new URLSearchParams({ "filter[name]": normalizedName }).toString()}` : "";
+  const data = await qontoJson<Record<string, unknown>>(`/v2/clients${qs}`, { method: "GET" });
+  const clients = (data.clients || data.items || []) as Record<string, unknown>[];
+  return Array.isArray(clients) && clients.length ? clients[0] : null;
+}
+
 export async function searchQontoClient(criteria: Record<string, unknown>): Promise<Record<string, unknown> | null> {
   const email = String(criteria.email || "").trim();
-  const query = email || String(criteria.name || criteria.client_name || "").trim();
-  const qs = query ? `?${new URLSearchParams(email ? { email } : { query }).toString()}` : "";
+  const name = String(criteria.name || criteria.client_name || "").trim();
+  const params = email ? { "filter[email]": email } : name ? { "filter[name]": name } : undefined;
+  const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
   const data = await qontoJson<Record<string, unknown>>(`/v2/clients${qs}`, { method: "GET" });
   const clients = (data.clients || data.items || []) as Record<string, unknown>[];
   return Array.isArray(clients) && clients.length ? clients[0] : null;
@@ -51,6 +73,26 @@ export async function searchQontoClient(criteria: Record<string, unknown>): Prom
 
 export async function createQontoClient(payload: Record<string, unknown>): Promise<Record<string, unknown>> {
   return qontoJson("/v2/clients", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export const CPF_QONTO_CLIENT = {
+  kind: "company",
+  name: "Caisse des dépôts",
+  email: null,
+  currency: "EUR",
+  locale: "FR",
+  billing_address: {
+    street_address: "56 rue de Lille",
+    city: "Paris",
+    zip_code: "75356",
+    country_code: "FR",
+  },
+};
+
+export async function getOrCreateCpfQontoClient(): Promise<Record<string, unknown>> {
+  const existingClient = await findQontoClientByName(CPF_QONTO_CLIENT.name);
+  if (existingClient) return existingClient;
+  return createQontoClient({ client: CPF_QONTO_CLIENT });
 }
 
 export async function createQontoInvoice(payload: Record<string, unknown>): Promise<Record<string, unknown>> {

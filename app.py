@@ -201,10 +201,26 @@ class QontoNotFoundError(RuntimeError):
     pass
 
 
+INVALID_QONTO_CLIENT_SEARCH_MESSAGE = "Recherche client Qonto invalide : utiliser uniquement filter[name], filter[email], filter[tax_identification_number] ou filter[vat_number]."
+INVALID_QONTO_SEARCH_MARKERS = ("queryfields", "query_fields", "QueryFields", "first_name last_name name email")
+
+
+def _contains_invalid_qonto_search_marker(value: Any) -> bool:
+    try:
+        serialized = json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value
+    except Exception:
+        serialized = str(value)
+    lowered = serialized.lower()
+    return any(marker.lower() in lowered for marker in INVALID_QONTO_SEARCH_MARKERS)
+
+
 def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     if not _qonto_is_configured():
         raise QontoConfigurationError("Qonto n’est pas connecté")
     endpoint = path if path.startswith("/") else f"/{path}"
+    if _contains_invalid_qonto_search_marker(endpoint) or _contains_invalid_qonto_search_marker(params) or _contains_invalid_qonto_search_marker(payload):
+        app.logger.error("[QONTO] invalid client search blocked path=%s params=%s", endpoint, params)
+        raise RuntimeError(INVALID_QONTO_CLIENT_SEARCH_MESSAGE)
     try:
         response = requests.request(
             method.upper(),
@@ -228,16 +244,31 @@ def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = N
         raise RuntimeError(_sanitize_qonto_error(str(exc))) from exc
 
 
+def _first_qonto_client(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    clients = data.get("clients") or data.get("client_list") or data.get("items") or []
+    return clients[0] if isinstance(clients, list) and clients else None
+
+
+def find_qonto_client_by_name(name: str) -> Optional[Dict[str, Any]]:
+    normalized_name = (name or "").strip()
+    if not normalized_name:
+        return None
+    data = _qonto_request("GET", "/v2/clients", params={"filter[name]": normalized_name})
+    return _first_qonto_client(data)
+
+
 def search_qonto_client(criteria: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     email = (criteria.get("email") or "").strip()
     name = (criteria.get("name") or criteria.get("client_name") or "").strip()
-    params = {"email": email} if email else ({"query": name} if name else {})
+    params = {"filter[email]": email} if email else ({"filter[name]": name} if name else {})
     data = _qonto_request("GET", "/v2/clients", params=params)
     clients = data.get("clients") or data.get("client_list") or data.get("items") or []
     for client in clients if isinstance(clients, list) else []:
         if email and (client.get("email") or "").strip().lower() == email.lower():
             return client
-    return clients[0] if isinstance(clients, list) and clients else None
+        if name and (client.get("name") or "").strip().lower() == name.lower():
+            return client
+    return _first_qonto_client(data)
 
 
 def create_qonto_client(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -20591,18 +20622,34 @@ def _qonto_invoice_state(trainee: Dict[str, Any]) -> Dict[str, Any]:
     return state
 
 
+CPF_QONTO_CLIENT_NAME = "Caisse des dépôts"
+CPF_QONTO_CLIENT = {
+    "kind": "company",
+    "name": CPF_QONTO_CLIENT_NAME,
+    "email": None,
+    "currency": "EUR",
+    "locale": "FR",
+    "billing_address": {
+        "street_address": "56 rue de Lille",
+        "city": "Paris",
+        "zip_code": "75356",
+        "country_code": "FR",
+    },
+}
 CPF_QONTO_CUSTOMER = {
-    "name": "Caisse des dépôts",
+    "type": "entreprise",
+    "kind": "company",
+    "name": CPF_QONTO_CLIENT_NAME,
     "first_name": "",
     "last_name": "",
     "email": "",
     "phone": "",
     "address": "56 rue de Lille",
     "zip_code": "75356",
-    "city": "Paris 07",
+    "city": "Paris",
     "country": "FR",
     "country_code": "FR",
-    "company_name": "Caisse des dépôts",
+    "company_name": CPF_QONTO_CLIENT_NAME,
     "organization": "Mon Compte Formation",
 }
 
@@ -20613,6 +20660,24 @@ def _normalize_financeur_type(value: Any) -> str:
 def _is_cpf_financeur(value: Any) -> bool:
     normalized = _normalize_financeur_type(value)
     return normalized in {"cpf", "compte personnel de formation", "mon compte formation"} or "mon compte formation" in normalized
+
+
+
+def is_cpf_billing_context(value: Any) -> bool:
+    if _is_cpf_financeur(value):
+        return True
+    if isinstance(value, dict):
+        for key in ("fundingType", "funding_type", "financingType", "financing_type", "financeur", "financingLabel", "typeFinanceur", "financeurName"):
+            if _is_cpf_financeur(value.get(key)):
+                return True
+    return False
+
+
+def get_or_create_cpf_qonto_client() -> Dict[str, Any]:
+    existing_client = find_qonto_client_by_name(CPF_QONTO_CLIENT_NAME)
+    if existing_client:
+        return existing_client
+    return create_qonto_client({"client": dict(CPF_QONTO_CLIENT)})
 
 def buildInvoiceCustomer(financeurType: Any, trainee: Dict[str, Any], session_data: Optional[Dict[str, Any]] = None, funding: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     if _is_cpf_financeur(financeurType):
@@ -21025,11 +21090,15 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any])
         current['generationInProgress'] = True; _save_billing_line(data, current); save_data(data)
         try:
             invoice_iban = get_qonto_invoice_iban()
-            client = buildInvoiceCustomer(current.get('financingType') or current.get('financingLabel'), current, {'id': current.get('sessionId')}, current)
-            billing_address = build_qonto_billing_address_from_modal(client)
-            q_client = search_qonto_client({'email': client.get('email'), 'name': client.get('name')})
-            if not q_client:
-                q_client = create_qonto_client({'client': remove_invalid_qonto_phone(build_qonto_client_payload(client, billing_address))})
+            is_cpf = is_cpf_billing_context(current)
+            client = buildInvoiceCustomer(current.get('financingType') or current.get('fundingType') or current.get('financeur') or current.get('financingLabel'), current, {'id': current.get('sessionId')}, current)
+            if is_cpf:
+                q_client = get_or_create_cpf_qonto_client()
+            else:
+                billing_address = build_qonto_billing_address_from_modal(client)
+                q_client = search_qonto_client({'email': client.get('email'), 'name': client.get('name')})
+                if not q_client:
+                    q_client = create_qonto_client({'client': remove_invalid_qonto_phone(build_qonto_client_payload(client, billing_address))})
             q_client_id = (q_client.get('client') or q_client).get('id')
             if not q_client_id:
                 raise RuntimeError('Client Qonto introuvable')
@@ -21044,7 +21113,7 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any])
             _save_billing_line(data, current); save_data(data)
             return True, {'line': current}
         except Exception as exc:
-            msg = _sanitize_qonto_error(str(exc)); current['generationInProgress'] = False; current['invoiceStatus'] = 'not_invoiced' if not current.get('qontoInvoiceId') else 'draft'; _billing_log(current, 'Erreur création facture Qonto', 'error', msg); _save_billing_line(data, current); save_data(data); return False, {'error': msg, 'message': f'Erreur Qonto : {msg}', 'line': current}
+            msg = _sanitize_qonto_error(str(exc)); current['generationInProgress'] = False; current['invoiceStatus'] = 'not_invoiced' if not current.get('qontoInvoiceId') else 'draft'; _billing_log(current, 'Erreur création facture Qonto', 'error', msg); _save_billing_line(data, current); save_data(data); return False, {'error': msg, 'message': ('Erreur Qonto CPF : impossible de créer ou retrouver le client Caisse des dépôts.' if is_cpf_billing_context(current) else f'Erreur Qonto : {msg}'), 'line': current}
     finally:
         lock.release()
 
@@ -21289,8 +21358,11 @@ def api_qonto_invoice_create(trainee_id: str):
     if not _qonto_is_configured(): return jsonify({"ok": False, "error": "Qonto n’est pas connecté"}), 400
     payload = request.get_json(silent=True) or {}
     client = payload.get("client") or {}; invoice = payload.get("invoice") or {}
+    is_cpf_invoice = is_cpf_billing_context(payload) or is_cpf_billing_context(trainee) or _is_cpf_financeur(client.get("name")) or (client.get("name") == CPF_QONTO_CLIENT_NAME)
+    if is_cpf_invoice:
+        client = dict(CPF_QONTO_CUSTOMER)
     missing = []
-    if not (client.get("email") or "").strip(): missing.append("email")
+    if not is_cpf_invoice and not (client.get("email") or "").strip(): missing.append("email")
     try:
         billing_address = build_qonto_billing_address_from_modal(client)
     except ValueError as exc:
@@ -21314,27 +21386,30 @@ def api_qonto_invoice_create(trainee_id: str):
             client.get("city"),
             client.get("country_code") or client.get("country"),
         )
-        q_client = search_qonto_client({"email": client.get("email"), "name": client.get("name")})
-        qonto_client_payload = remove_invalid_qonto_phone(build_qonto_client_payload(client, billing_address))
-        if q_client:
-            q_client_id = (q_client.get("client") or q_client).get("id")
-            if not q_client_id:
-                raise RuntimeError("Client Qonto existant introuvable")
-            if not qonto_client_has_complete_billing_address(q_client):
-                app.logger.info("[QONTO] Existing client incomplete, updating billing address client_id=%s", q_client_id)
+        if is_cpf_invoice:
+            q_client = get_or_create_cpf_qonto_client()
+        else:
+            q_client = search_qonto_client({"email": client.get("email"), "name": client.get("name")})
+            qonto_client_payload = remove_invalid_qonto_phone(build_qonto_client_payload(client, billing_address))
+            if q_client:
+                q_client_id = (q_client.get("client") or q_client).get("id")
+                if not q_client_id:
+                    raise RuntimeError("Client Qonto existant introuvable")
+                if not qonto_client_has_complete_billing_address(q_client):
+                    app.logger.info("[QONTO] Existing client incomplete, updating billing address client_id=%s", q_client_id)
+                    safe_payload = dict(qonto_client_payload)
+                    if "phone" in safe_payload:
+                        app.logger.warning("[QONTO] phone field present in client payload: %s", safe_payload["phone"])
+                    app.logger.info("[QONTO] update client payload keys=%s", list(qonto_client_payload.keys()))
+                    qonto_client_payload = remove_invalid_qonto_phone(qonto_client_payload)
+                    q_client = update_qonto_client(q_client_id, qonto_client_payload) or q_client
+            else:
                 safe_payload = dict(qonto_client_payload)
                 if "phone" in safe_payload:
                     app.logger.warning("[QONTO] phone field present in client payload: %s", safe_payload["phone"])
-                app.logger.info("[QONTO] update client payload keys=%s", list(qonto_client_payload.keys()))
+                app.logger.info("[QONTO] create client payload keys=%s", list(qonto_client_payload.keys()))
                 qonto_client_payload = remove_invalid_qonto_phone(qonto_client_payload)
-                q_client = update_qonto_client(q_client_id, qonto_client_payload) or q_client
-        else:
-            safe_payload = dict(qonto_client_payload)
-            if "phone" in safe_payload:
-                app.logger.warning("[QONTO] phone field present in client payload: %s", safe_payload["phone"])
-            app.logger.info("[QONTO] create client payload keys=%s", list(qonto_client_payload.keys()))
-            qonto_client_payload = remove_invalid_qonto_phone(qonto_client_payload)
-            q_client = create_qonto_client({"client": qonto_client_payload})
+                q_client = create_qonto_client({"client": qonto_client_payload})
         q_client_id = (q_client.get("client") or q_client).get("id")
         if not q_client_id: raise RuntimeError("Impossible de créer le client Qonto")
         start = (payload.get("session") or {}).get("date_start") or _session_get(sess, "date_start", "")[:10]
@@ -21390,6 +21465,8 @@ def api_qonto_invoice_create(trainee_id: str):
             return jsonify({"ok": False, "error": "Impossible de créer la facture Qonto : l’IBAN de paiement Qonto est manquant. Ajoutez QONTO_IBAN dans Render."}), 400
         if "phone" in sanitized_error.lower():
             return jsonify({"ok": False, "error": "Le téléphone client n’a pas été envoyé à Qonto car il n’est pas obligatoire."}), 400
+        if is_cpf_invoice:
+            return jsonify({"ok": False, "error": "Erreur Qonto CPF : impossible de créer ou retrouver le client Caisse des dépôts."}), 400
         return jsonify({"ok": False, "error": "Impossible de créer la facture Qonto"}), 400
 
 
