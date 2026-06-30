@@ -79,21 +79,56 @@ class QontoCpfClientTests(unittest.TestCase):
 
     def test_get_or_create_cpf_qonto_client_reuses_existing_client(self):
         original_find = gestion_app.find_qonto_client_by_name
+        original_find_tax = gestion_app.find_qonto_client_by_tax_identification_number
         original_create = gestion_app.create_qonto_client
-        gestion_app.find_qonto_client_by_name = lambda name: {"id": "existing", "name": name}
+        complete_cpf_client = {
+            "id": "existing",
+            "kind": "company",
+            "name": gestion_app.CPF_QONTO_CLIENT_NAME,
+            "tax_identification_number": gestion_app.CPF_QONTO_CLIENT_TAX_ID,
+            "billing_address": {"street_address": "56 rue de Lille", "zip_code": "75356", "city": "PARIS 07 SP", "country_code": "FR"},
+        }
+        gestion_app.find_qonto_client_by_tax_identification_number = lambda tax_id: complete_cpf_client
+        gestion_app.find_qonto_client_by_name = lambda name: self.fail("CPF tax-id search should run before name search")
         try:
             gestion_app.create_qonto_client = lambda payload: self.fail("CPF client should not be created when it exists")
             client = gestion_app.get_or_create_cpf_qonto_client()
         finally:
             gestion_app.find_qonto_client_by_name = original_find
+            gestion_app.find_qonto_client_by_tax_identification_number = original_find_tax
             gestion_app.create_qonto_client = original_create
 
         self.assertEqual(client["id"], "existing")
 
+    def test_get_or_create_cpf_qonto_client_updates_incomplete_existing_client(self):
+        original_find = gestion_app.find_qonto_client_by_name
+        original_find_tax = gestion_app.find_qonto_client_by_tax_identification_number
+        original_update = gestion_app.update_qonto_client
+        original_create = gestion_app.create_qonto_client
+        updated_payloads = []
+        gestion_app.find_qonto_client_by_tax_identification_number = lambda tax_id: None
+        gestion_app.find_qonto_client_by_name = lambda name: {"id": "existing", "kind": "individual", "name": gestion_app.CPF_QONTO_CLIENT_NAME}
+        gestion_app.update_qonto_client = lambda client_id, payload: updated_payloads.append((client_id, payload)) or {"client": {"id": client_id, **payload}}
+        try:
+            gestion_app.create_qonto_client = lambda payload: self.fail("CPF client should be updated, not duplicated")
+            client = gestion_app.get_or_create_cpf_qonto_client()
+        finally:
+            gestion_app.find_qonto_client_by_name = original_find
+            gestion_app.find_qonto_client_by_tax_identification_number = original_find_tax
+            gestion_app.update_qonto_client = original_update
+            gestion_app.create_qonto_client = original_create
+
+        self.assertEqual(client["client"]["id"], "existing")
+        self.assertEqual(updated_payloads[0][0], "existing")
+        self.assertEqual(updated_payloads[0][1]["kind"], "company")
+        self.assertEqual(updated_payloads[0][1]["tax_identification_number"], gestion_app.CPF_QONTO_CLIENT_TAX_ID)
+
     def test_get_or_create_cpf_qonto_client_creates_company_when_missing(self):
         created_payloads = []
         original_find = gestion_app.find_qonto_client_by_name
+        original_find_tax = gestion_app.find_qonto_client_by_tax_identification_number
         original_create = gestion_app.create_qonto_client
+        gestion_app.find_qonto_client_by_tax_identification_number = lambda tax_id: None
         gestion_app.find_qonto_client_by_name = lambda name: None
         def fake_create(payload):
             created_payloads.append(payload)
@@ -103,6 +138,7 @@ class QontoCpfClientTests(unittest.TestCase):
             client = gestion_app.get_or_create_cpf_qonto_client()
         finally:
             gestion_app.find_qonto_client_by_name = original_find
+            gestion_app.find_qonto_client_by_tax_identification_number = original_find_tax
             gestion_app.create_qonto_client = original_create
 
         self.assertEqual(client["client"]["id"], "created")

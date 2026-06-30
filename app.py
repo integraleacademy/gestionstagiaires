@@ -262,6 +262,14 @@ def find_qonto_client_by_name(name: str) -> Optional[Dict[str, Any]]:
     return _first_qonto_client(data)
 
 
+def find_qonto_client_by_tax_identification_number(tax_identification_number: str) -> Optional[Dict[str, Any]]:
+    normalized_tax_id = (tax_identification_number or "").strip()
+    if not normalized_tax_id:
+        return None
+    data = _qonto_request("GET", "/v2/clients", params={"filter[tax_identification_number]": normalized_tax_id})
+    return _first_qonto_client(data)
+
+
 def search_qonto_client(criteria: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     email = (criteria.get("email") or "").strip()
     name = (criteria.get("name") or criteria.get("client_name") or "").strip()
@@ -20726,17 +20734,40 @@ def is_cpf_billing_context(value: Any) -> bool:
     return False
 
 
+def _cpf_qonto_client_needs_canonical_update(client: Dict[str, Any]) -> bool:
+    return (
+        _qonto_client_kind(client) != "company"
+        or (client.get("name") or "") != CPF_QONTO_CLIENT_NAME
+        or (client.get("tax_identification_number") or "") != CPF_QONTO_CLIENT_TAX_ID
+        or not qonto_client_has_complete_billing_address(client)
+    )
+
+
+def _return_or_update_cpf_qonto_client(existing_client: Dict[str, Any], canonical_payload: Dict[str, Any]) -> Dict[str, Any]:
+    client = existing_client.get("client") or existing_client
+    client_id = client.get("id")
+    if not client_id:
+        return existing_client
+    if _cpf_qonto_client_needs_canonical_update(client):
+        return update_qonto_client(client_id, canonical_payload)
+    return existing_client
+
+
 def get_or_create_cpf_qonto_client() -> Dict[str, Any]:
     canonical_payload = _cpf_qonto_api_client_payload()
+    existing_client = find_qonto_client_by_tax_identification_number(CPF_QONTO_CLIENT_TAX_ID)
+    if existing_client:
+        return _return_or_update_cpf_qonto_client(existing_client, canonical_payload)
     for name in CPF_QONTO_SEARCH_NAMES:
         existing_client = find_qonto_client_by_name(name)
         if existing_client:
             client = existing_client.get("client") or existing_client
-            client_id = client.get("id")
-            if client_id and (client.get("name") == CPF_QONTO_CLIENT_NAME or client.get("tax_identification_number") == CPF_QONTO_CLIENT_TAX_ID):
-                return existing_client
-            if client_id and _qonto_client_kind(client) == "company":
-                return update_qonto_client(client_id, canonical_payload)
+            if client.get("id") and (
+                client.get("name") == CPF_QONTO_CLIENT_NAME
+                or client.get("tax_identification_number") == CPF_QONTO_CLIENT_TAX_ID
+                or _qonto_client_kind(client) == "company"
+            ):
+                return _return_or_update_cpf_qonto_client(existing_client, canonical_payload)
             return existing_client
     return create_qonto_client({"client": canonical_payload})
 
