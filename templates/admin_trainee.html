@@ -1401,44 +1401,16 @@
 
 
         <!-- FACTURATION QONTO -->
-        {% set qonto_invoice = trainee.qonto_invoice if trainee.qonto_invoice is mapping else {} %}
-        {% set qonto_status = qonto_invoice.qonto_invoice_status or ('draft' if qonto_invoice.qonto_invoice_id else 'not_invoiced') %}
-        <div class="qonto-invoice-card" id="qontoInvoiceCard" data-trainee-id="{{ trainee.id }}" data-status="{{ qonto_status }}">
+        <div class="qonto-invoice-card" id="qontoInvoiceCard" data-session-id="{{ session.id }}" data-trainee-id="{{ trainee.id }}" data-read-only="{{ '1' if is_read_only else '0' }}">
           <div class="qonto-invoice-head">
             <div>
               <div class="qonto-eyebrow">Facturation Qonto</div>
-              <div class="qonto-title">Créer et suivre la facture client</div>
+              <div class="qonto-title">Factures centralisées par financeur</div>
+              <div class="hint">Données chargées depuis la source backend unique utilisée par la page Facturation.</div>
             </div>
-            <span class="qonto-status" id="qontoInvoiceStatus">
-              {% if qonto_status == 'paid' %}Payée{% elif qonto_status in ['unpaid','late','overdue'] %}Impayée{% elif qonto_status in ['draft','finalized','sent'] %}À encaisser{% elif qonto_status == 'error' %}Erreur{% else %}Non facturé{% endif %}
-            </span>
+            <button class="btn btn-outline" type="button" id="btnSyncQontoTrainee">Synchroniser Qonto</button>
           </div>
-          <div class="hint" style="margin-top:8px;">La facture est créée en brouillon : elle ne sera ni finalisée ni envoyée automatiquement.</div>
-          <div style="margin-top:12px;padding:12px;border:1px solid #dbeafe;border-radius:14px;background:#fff;">
-            <div style="font-weight:900;margin-bottom:8px;">Adresse de facturation utilisée pour Qonto</div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;">
-              <div><div class="label">Adresse</div><div>{{ trainee.qonto_billing_address or trainee.address or '—' }}</div></div>
-              <div><div class="label">Code postal</div><div>{{ trainee.qonto_billing_zip_code or trainee.zip_code or '—' }}</div></div>
-              <div><div class="label">Ville</div><div>{{ trainee.qonto_billing_city or trainee.city or '—' }}</div></div>
-              <div><div class="label">Pays</div><div>{{ trainee.qonto_billing_country_code or 'FR' }}</div></div>
-            </div>
-            <div class="hint" style="margin-top:8px;">Si ces champs sont vides, complétez-les dans la modale avant de créer la facture.</div>
-          </div>
-          <div class="qonto-actions">
-            <button class="btn btn-primary" type="button" id="btnOpenQontoInvoice" {% if qonto_invoice.qonto_invoice_id or is_read_only %}disabled{% endif %}>
-              {% if qonto_invoice.qonto_invoice_id %}Facture déjà créée{% else %}Générer facture Qonto{% endif %}
-            </button>
-            <button class="btn btn-outline" type="button" id="btnFinalizeQontoInvoice" {% if not qonto_invoice.qonto_invoice_id or qonto_status in ['finalized','sent','paid'] or is_read_only %}disabled{% endif %}>Finaliser la facture</button>
-            <button class="btn btn-outline" type="button" id="btnSendQontoInvoice" {% if not qonto_invoice.qonto_invoice_id or qonto_status not in ['finalized','sent'] or is_read_only %}disabled{% endif %}>{% if qonto_status == 'sent' %}Renvoyer{% else %}Envoyer par Qonto{% endif %}</button>
-            {% if qonto_invoice.qonto_invoice_url %}<a class="btn btn-outline" id="btnViewQontoInvoice" href="{{ qonto_invoice.qonto_invoice_url }}" target="_blank" rel="noopener">Voir la facture</a>{% else %}<button class="btn btn-outline" type="button" id="btnViewQontoInvoice" disabled>Voir la facture</button>{% endif %}
-          </div>
-          <div class="qonto-history" id="qontoInvoiceHistory">
-            {% if qonto_invoice.created_at %}<div>facture créée le {{ qonto_invoice.created_at|frdatetime }}</div>{% endif %}
-            {% if qonto_invoice.finalized_at %}<div>facture finalisée le {{ qonto_invoice.finalized_at|frdatetime }}</div>{% endif %}
-            {% if qonto_invoice.sent_at %}<div>facture envoyée le {{ qonto_invoice.sent_at|frdatetime }}</div>{% endif %}
-            {% if qonto_invoice.qonto_invoice_status == 'paid' and qonto_invoice.qonto_invoice_paid_at %}<div>facture payée le {{ qonto_invoice.qonto_invoice_paid_at|frdatetime }}{% if qonto_invoice.qonto_invoice_amount_paid %} — {{ '%.2f'|format(qonto_invoice.qonto_invoice_amount_paid)|replace('.', ',') }} € encaissés{% endif %}</div>{% endif %}
-            {% if qonto_invoice.last_error %}<div class="qonto-error">dernière erreur : {{ qonto_invoice.last_error }}</div>{% endif %}
-          </div>
+          <div class="qonto-history" id="qontoInvoiceHistory"><div>Chargement des factures…</div></div>
         </div>
       </div>
 
@@ -3478,121 +3450,56 @@ if(conventionSelect){
 }
 
 // =========================
-// Facturation Qonto
+// Facturation Qonto centralisée
 (function(){
   const card = document.getElementById("qontoInvoiceCard");
   if(!card) return;
+  const sessionId = card.dataset.sessionId;
   const traineeId = card.dataset.traineeId;
-  const modal = document.getElementById("qontoInvoiceModal");
-  const form = document.getElementById("qontoInvoiceForm");
-  const missingBox = document.getElementById("qontoMissingFields");
-  const addressRequiredMessage = document.getElementById("qontoAddressRequiredMessage");
-  const openBtn = document.getElementById("btnOpenQontoInvoice");
-  const createBtn = document.getElementById("btnCreateQontoInvoice");
-  const finalizeBtn = document.getElementById("btnFinalizeQontoInvoice");
-  const sendBtn = document.getElementById("btnSendQontoInvoice");
-  const statusEl = document.getElementById("qontoInvoiceStatus");
-  const historyEl = document.getElementById("qontoInvoiceHistory");
-  const setLoading = (btn, loading) => { if(btn){ btn.disabled = loading || btn.dataset.locked === "1"; btn.dataset.loading = loading ? "1" : "0"; } };
-  const openModalLocal = () => { modal?.classList.add("show"); modal?.setAttribute("aria-hidden", "false"); };
-  const closeModalLocal = () => { modal?.classList.remove("show"); modal?.setAttribute("aria-hidden", "true"); };
-  modal?.querySelectorAll("[data-close-modal]").forEach(btn=>btn.addEventListener("click", closeModalLocal));
-  const setVal = (name, value) => { const el = form?.querySelector(`[name="${name}"]`); if(el) el.value = value ?? ""; };
-  const getVal = (name) => (form?.querySelector(`[name="${name}"]`)?.value || "").trim();
-  const money = (v) => { const n = parseFloat((v||"0").toString().replace(",",".")); return Number.isFinite(n) ? Math.round(n*100)/100 : 0; };
-  const renderStatus = (payload) => {
-    if(!payload) return;
-    if(statusEl) statusEl.textContent = payload.status_label || payload.status || "Non facturé";
-    const inv = payload.invoice || {};
-    if(openBtn && inv.qonto_invoice_id){ openBtn.textContent = "Facture déjà créée"; openBtn.disabled = true; openBtn.dataset.locked = "1"; }
-    if(finalizeBtn) finalizeBtn.disabled = !inv.qonto_invoice_id || ["finalized","sent","paid"].includes(inv.qonto_invoice_status);
-    if(sendBtn){ sendBtn.disabled = !inv.qonto_invoice_id || !["finalized","sent"].includes(inv.qonto_invoice_status); sendBtn.textContent = inv.qonto_invoice_status === "sent" ? "Renvoyer" : "Envoyer par Qonto"; }
-    if(historyEl){
-      const rows = [];
-      if(inv.created_at) rows.push(`facture créée le ${new Date(inv.created_at).toLocaleString("fr-FR")}`);
-      if(inv.finalized_at) rows.push(`facture finalisée le ${new Date(inv.finalized_at).toLocaleString("fr-FR")}`);
-      if(inv.sent_at) rows.push(`facture envoyée le ${new Date(inv.sent_at).toLocaleString("fr-FR")}`);
-      if(inv.qonto_invoice_status === "paid" && inv.qonto_invoice_paid_at){
-        const paidAmount = Number(inv.qonto_invoice_amount_paid || 0);
-        rows.push(`facture payée le ${new Date(inv.qonto_invoice_paid_at).toLocaleString("fr-FR")}${paidAmount ? ` — ${paidAmount.toLocaleString("fr-FR", {minimumFractionDigits:2, maximumFractionDigits:2})} € encaissés` : ""}`);
-      }
-      if(inv.last_error) rows.push(`<span class="qonto-error">dernière erreur : ${inv.last_error}</span>`);
-      historyEl.innerHTML = rows.map(r=>`<div>${r}</div>`).join("");
-    }
-  };
-  const computeMissing = () => {
-    const missing = [];
-    if(!getVal("client.email")) missing.push("email");
-    if(!getVal("client.address")) missing.push("adresse");
-    if(!getVal("client.zip_code")) missing.push("code postal");
-    if(!getVal("client.city")) missing.push("ville");
-    if(!getVal("client.country")) missing.push("pays");
-    if(money(getVal("invoice.unit_price_ht"))<=0) missing.push("montant");
-    return missing;
-  };
-  const highlightMissing = (messages=[]) => {
-    const normalized = messages.map(m=>(m||"").toString().toLowerCase());
-    form?.querySelectorAll(".qonto-field-error").forEach(el=>el.classList.remove("qonto-field-error"));
-    if(missingBox) missingBox.textContent = messages.length ? `Champs manquants : ${messages.join(" · ")}` : "";
-    if(addressRequiredMessage) addressRequiredMessage.style.display = normalized.some(m=>["adresse","code postal","ville","pays"].some(x=>m.includes(x))) ? "block" : "none";
-    const mark = (name) => form?.querySelector(`[name="${name}"]`)?.classList.add("qonto-field-error");
-    if(normalized.some(m=>m.includes("email"))) mark("client.email");
-    if(normalized.some(m=>m.includes("adresse"))) mark("client.address");
-    if(normalized.some(m=>m.includes("code postal"))) mark("client.zip_code");
-    if(normalized.some(m=>m.includes("ville"))) mark("client.city");
-    if(normalized.some(m=>m.includes("pays"))) mark("client.country");
-    if(normalized.some(m=>m.includes("montant"))) mark("invoice.unit_price_ht");
-    if(createBtn) createBtn.disabled = computeMissing().length > 0 || createBtn.dataset.loading === "1";
-  };
-  const refreshCreateButton = () => highlightMissing(computeMissing());
-  openBtn?.addEventListener("click", async ()=>{
-    if(openBtn.disabled) return; setLoading(openBtn,true);
+  const readOnly = card.dataset.readOnly === "1";
+  const box = document.getElementById("qontoInvoiceHistory");
+  const syncBtn = document.getElementById("btnSyncQontoTrainee");
+  const esc = v => String(v ?? "").replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const fmtMoney = n => new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(Number(n||0));
+  const label = s => ({paid:'Payée',sent:'Envoyée',finalized:'Facture finalisée',draft:'Brouillon créé',cancelled:'Non facturé',deleted:'Non facturé',not_invoiced:'Non facturé',not_generated:'Non facturé'}[s]||'Non facturé');
+  const cls = s => s==='paid'?'green':(['sent','finalized'].includes(s)?'blue':(s==='draft'?'orange':'gray'));
+  async function api(url, body){ const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}); const j=await r.json(); if(!r.ok||!j.ok) throw new Error(j.error||j.message||'Action impossible'); return j; }
+  async function load(){
+    const r = await fetch(`/api/billing/trainee/${encodeURIComponent(traineeId)}/session/${encodeURIComponent(sessionId)}`);
+    const j = await r.json();
+    if(!r.ok||!j.ok) throw new Error(j.error||'Chargement impossible');
+    render(j.lines||[]);
+  }
+  function render(lines){
+    if(!lines.length){ box.innerHTML = '<div><span class="qonto-status">Non facturé</span></div>'; return; }
+    box.innerHTML = lines.map(l=>{
+      const s = l.invoiceStatus || 'not_invoiced';
+      const has = !!(l.qontoInvoiceId || l.qontoDraftId);
+      const view = has ? `<a class="btn btn-outline" href="/api/admin/billing-lines/${encodeURIComponent(l.id)}/download-invoice" target="_blank" rel="noopener">Voir la facture</a>` : '';
+      const create = !has && !readOnly ? `<button class="btn btn-primary" data-create="${esc(l.id)}">Générer facture Qonto</button>` : '';
+      const finalize = has && s==='draft' && !readOnly ? `<button class="btn btn-outline" data-finalize="${esc(l.id)}">Finaliser la facture</button><button class="btn btn-outline" data-reset="${esc(l.id)}">Annuler le brouillon</button>` : '';
+      const send = has && ['finalized'].includes(s) && !readOnly ? `<button class="btn btn-outline" data-send="${esc(l.id)}">Envoyer par Qonto</button>` : '';
+      return `<div style="border:1px solid #dbeafe;border-radius:14px;padding:12px;background:#fff;margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;"><strong>${esc(l.financeurName||l.financingLabel||l.financingType)}</strong><span class="badge ${cls(s)}">${label(s)}</span></div>
+        <div class="hint">${fmtMoney(l.amountTTC||l.amount)} TTC · ${esc(l.qontoInvoiceNumber||l.qontoInvoiceId||l.qontoDraftId||'')}</div>
+        ${l.syncWarning?`<div class="qonto-error">${esc(l.syncWarning)}</div>`:''}
+        <div class="qonto-actions">${create}${finalize}${send}${view}</div>
+      </div>`;
+    }).join('');
+  }
+  box.addEventListener('click', async e=>{
+    const id = e.target.dataset.create || e.target.dataset.finalize || e.target.dataset.send || e.target.dataset.reset;
+    if(!id) return;
     try{
-      const res = await fetch(`/api/admin/trainees/${encodeURIComponent(traineeId)}/qonto-invoice/preview`);
-      const data = await res.json(); if(!res.ok || !data.ok) throw new Error(data.error || "Preview impossible");
-      Object.entries(data.client || {}).forEach(([k,v])=>setVal(`client.${k}`, v));
-      Object.entries(data.invoice || {}).forEach(([k,v])=>setVal(`invoice.${k}`, v));
-      highlightMissing(data.missing_fields || computeMissing()); openModalLocal(); refreshCreateButton();
-    }catch(e){ alert(e.message || "Impossible de préparer la facture Qonto"); }
-    finally{ setLoading(openBtn,false); }
+      if(e.target.dataset.create) await api('/api/billing/create-draft',{lineId:id,source:'admin_trainee'});
+      if(e.target.dataset.finalize) await api('/api/billing/finalize',{lineId:id,source:'admin_trainee'});
+      if(e.target.dataset.send) await api('/api/billing/send',{lineId:id,source:'admin_trainee'});
+      if(e.target.dataset.reset && confirm('Annuler/remettre à zéro ce brouillon ?')) await api('/api/billing/cancel-or-reset',{lineId:id,source:'admin_trainee'});
+      await load();
+    }catch(err){ alert(err.message||'Action impossible'); }
   });
-  const proRecoveryLine = "Indemnité forfaitaire pour frais de recouvrement : 40 €.";
-  form?.querySelector('[name="client.type"]')?.addEventListener("change", (e)=>{
-    const type = e.target.value; const conditions = form.querySelector('[name="invoice.conditions"]');
-    if(!conditions) return;
-    if(["entreprise","financeur","opco","france_travail"].includes(type) && !conditions.value.includes(proRecoveryLine)){
-      conditions.value = `${conditions.value.trim()}\n${proRecoveryLine}`.trim();
-    }
-  });
-  form?.addEventListener("input", ()=>{
-    const ht = money(getVal("invoice.unit_price_ht")); const rate = money(getVal("invoice.vat_rate"));
-    setVal("invoice.amount_ht", ht); setVal("invoice.amount_tva", Math.round(ht*rate)/100); setVal("invoice.amount_ttc", Math.round((ht + ht*rate/100)*100)/100);
-    refreshCreateButton();
-  });
-  form?.addEventListener("submit", async (e)=>{
-    e.preventDefault();
-    const missing = computeMissing();
-    highlightMissing(missing); if(missing.length) return;
-    setLoading(createBtn,true);
-    try{
-      const payload = {client:{}, invoice:{}, save_billing_address:false}; new FormData(form).forEach((v,k)=>{ if(k === "save_billing_address"){ payload.save_billing_address = true; return; } const [root,key]=k.split('.'); if(payload[root]) payload[root][key]=v; });
-      payload.client.street_address = payload.client.street_address || payload.client.address || "";
-      payload.client.postal_code = payload.client.postal_code || payload.client.zip_code || "";
-      payload.client.country_code = (payload.client.country_code || payload.client.country || "FR").toUpperCase();
-      payload.client.country = (payload.client.country || payload.client.country_code || "FR").toUpperCase();
-      const res = await fetch(`/api/admin/trainees/${encodeURIComponent(traineeId)}/qonto-invoice/create`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
-      const data = await res.json(); if(!res.ok || !data.ok) throw new Error(data.error || "Impossible de créer la facture Qonto");
-      renderStatus(data); closeModalLocal(); alert(data.message || "Facture brouillon Qonto créée");
-    }catch(e){ alert(e.message || "Impossible de créer la facture Qonto"); }
-    finally{ setLoading(createBtn,false); refreshCreateButton(); }
-  });
-  finalizeBtn?.addEventListener("click", async ()=>{
-    if(finalizeBtn.disabled) return; if(!confirm("Attention, une facture finalisée ne pourra plus être modifiée facilement. Voulez-vous continuer ?")) return;
-    setLoading(finalizeBtn,true); try{ const res=await fetch(`/api/admin/trainees/${encodeURIComponent(traineeId)}/qonto-invoice/finalize`,{method:"POST"}); const data=await res.json(); if(!res.ok||!data.ok) throw new Error(data.error); renderStatus(data); alert(data.message || "Facture finalisée"); }catch(e){ alert(e.message || "Impossible de finaliser la facture"); } finally{ setLoading(finalizeBtn,false); }
-  });
-  sendBtn?.addEventListener("click", async ()=>{
-    if(sendBtn.disabled) return; setLoading(sendBtn,true); try{ const res=await fetch(`/api/admin/trainees/${encodeURIComponent(traineeId)}/qonto-invoice/send`,{method:"POST"}); const data=await res.json(); if(!res.ok||!data.ok) throw new Error(data.error); renderStatus(data); alert(data.message || "Facture envoyée"); }catch(e){ alert(e.message || "Impossible d’envoyer la facture"); } finally{ setLoading(sendBtn,false); }
-  });
+  syncBtn?.addEventListener('click', async ()=>{ syncBtn.disabled=true; try{ const j=await api('/api/billing/sync-qonto',{traineeId,sessionId,source:'admin_trainee'}); await load(); alert(j.message||'Synchronisation terminée'); }catch(e){ alert(e.message||'Synchronisation Qonto impossible pour le moment'); } finally{ syncBtn.disabled=false; }});
+  load().catch(e=>{ box.innerHTML = `<div class="qonto-error">${esc(e.message)}</div>`; });
 })();
 
 // Financement status update
