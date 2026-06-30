@@ -20632,15 +20632,25 @@ def _qonto_invoice_state(trainee: Dict[str, Any]) -> Dict[str, Any]:
 
 
 CPF_QONTO_CLIENT_NAME = "Caisse des dépôts"
+CPF_QONTO_SEARCH_NAMES = ["Caisse des dépôts - Mon Compte Formation", "Caisse des dépôts", "Mon Compte Formation"]
 CPF_QONTO_CLIENT = {
+    "type": "company",
     "kind": "company",
     "name": CPF_QONTO_CLIENT_NAME,
     "email": None,
     "currency": "EUR",
     "locale": "FR",
+    "address_line_1": "56 rue de Lille",
+    "address_line_2": "Mon Compte Formation",
+    "address": "56 rue de Lille",
+    "city": "Paris 07",
+    "zip_code": "75356",
+    "country_code": "FR",
     "billing_address": {
         "street_address": "56 rue de Lille",
-        "city": "Paris",
+        "address_line_1": "56 rue de Lille",
+        "address_line_2": "Mon Compte Formation",
+        "city": "Paris 07",
         "zip_code": "75356",
         "country_code": "FR",
     },
@@ -20683,9 +20693,10 @@ def is_cpf_billing_context(value: Any) -> bool:
 
 
 def get_or_create_cpf_qonto_client() -> Dict[str, Any]:
-    existing_client = find_qonto_client_by_name(CPF_QONTO_CLIENT_NAME)
-    if existing_client:
-        return existing_client
+    for name in CPF_QONTO_SEARCH_NAMES:
+        existing_client = find_qonto_client_by_name(name)
+        if existing_client:
+            return existing_client
     return create_qonto_client({"client": dict(CPF_QONTO_CLIENT)})
 
 def buildInvoiceCustomer(financeurType: Any, trainee: Dict[str, Any], session_data: Optional[Dict[str, Any]] = None, funding: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -20763,30 +20774,78 @@ def build_qonto_billing_address_from_modal(client: Dict[str, Any]) -> Dict[str, 
     }
 
 
-def build_qonto_client_payload(client: Dict[str, Any], billing_address: Dict[str, str]) -> Dict[str, Any]:
-    client_name = client.get("company_name") or client.get("name")
-    first_name = client.get("first_name")
-    last_name = client.get("last_name")
-    client_email = client.get("email")
-    return {
-        "name": client_name,
-        "first_name": first_name,
-        "last_name": last_name,
-        "email": client_email,
-        "currency": "EUR",
-        "locale": "FR",
-        "address": billing_address["street_address"],
-        "city": billing_address["city"],
-        "zip_code": billing_address["zip_code"],
-        "country_code": "FR",
-        "billing_address": {
-            "street_address": billing_address["street_address"],
-            "city": billing_address["city"],
-            "zip_code": billing_address["zip_code"],
-            "country_code": "FR",
-        },
-    }
+def _qonto_client_kind(payload: Dict[str, Any]) -> str:
+    value = (payload.get("kind") or payload.get("type") or "").strip().lower()
+    if value in {"entreprise", "societe", "société", "company"}:
+        return "company"
+    if value in {"particulier", "individual", "personnel"}:
+        return "individual"
+    return value or "individual"
 
+
+def build_qonto_client_payload(invoice_line: Dict[str, Any], trainee: Optional[Dict[str, Any]] = None, session_data: Optional[Dict[str, Any]] = None, financeur: Any = None) -> Dict[str, Any]:
+    """Construit le client Qonto canonique (company/individual) avant toute création API.
+
+    Compatibilité historique : si le 2e argument ressemble à une adresse de facturation,
+    l'appel ancien build_qonto_client_payload(client, billing_address) reste supporté.
+    """
+    trainee = trainee or {}
+    session_data = session_data or {}
+    # Ancien appel : (client, billing_address)
+    if isinstance(trainee, dict) and ("street_address" in trainee or "postal_code" in trainee) and financeur is None:
+        client = invoice_line or {}
+        billing_address = build_qonto_billing_address_from_modal({**client, **{"address": trainee.get("street_address") or trainee.get("address"), "zip_code": trainee.get("zip_code") or trainee.get("postal_code"), "city": trainee.get("city"), "country_code": trainee.get("country_code") or trainee.get("country")}})
+        kind = _qonto_client_kind(client)
+        if kind == "company" or client.get("company_name"):
+            payload = {"name": (client.get("company_name") or client.get("name") or "").strip()}
+        else:
+            payload = {"first_name": (client.get("first_name") or "").strip(), "last_name": (client.get("last_name") or "").strip(), "name": (client.get("name") or "").strip()}
+        payload.update({"email": (client.get("email") or "").strip() or None, "currency": "EUR", "locale": "FR", "address": billing_address["street_address"], "city": billing_address["city"], "zip_code": billing_address["zip_code"], "country_code": billing_address["country_code"], "billing_address": {"street_address": billing_address["street_address"], "city": billing_address["city"], "zip_code": billing_address["zip_code"], "country_code": billing_address["country_code"]}})
+        return {k: v for k, v in payload.items() if not (k in {"first_name", "last_name", "name"} and v is None)}
+
+    line = invoice_line or {}
+    financeur_value = financeur or line.get("financingType") or line.get("typeFinanceur") or line.get("financeurName") or line.get("financingLabel") or trainee.get("financing_type") or trainee.get("funding_type")
+    if is_cpf_billing_context(financeur_value) or is_cpf_billing_context(line):
+        return dict(CPF_QONTO_CLIENT)
+    first = (line.get("traineeFirstName") or trainee.get("first_name") or line.get("first_name") or "").strip()
+    last = (line.get("traineeLastName") or trainee.get("last_name") or line.get("last_name") or "").strip()
+    email = (line.get("clientEmail") or line.get("traineeEmail") or trainee.get("email") or "").strip() or None
+    company_name = (line.get("companyName") or line.get("company_name") or trainee.get("company_name") or trainee.get("qonto_company_name") or line.get("clientName") or "").strip()
+    kind = "company" if (str(financeur_value or "").upper() not in {"PERSONNEL", "PERSONAL", "PARTICULIER"} and company_name and not f"{first} {last}".strip() == company_name) else "individual"
+    if str(financeur_value or "").upper() in {"ENTREPRISE", "COMPANY", "OPCO"}:
+        kind = "company"
+    address = (line.get("clientAddress") or line.get("address") or trainee.get("qonto_billing_address") or trainee.get("address") or "").strip()
+    zip_code = (line.get("clientZipCode") or line.get("zip_code") or trainee.get("zip_code") or "").strip()
+    city = (line.get("clientCity") or line.get("city") or trainee.get("city") or "").strip()
+    payload = {"type": kind, "kind": kind, "email": email, "currency": "EUR", "locale": "FR", "address_line_1": address, "address": address, "zip_code": zip_code, "city": city, "country_code": "FR", "billing_address": {"street_address": address, "city": city, "zip_code": zip_code, "country_code": "FR"}}
+    if kind == "company":
+        payload["name"] = company_name
+        tax = (line.get("siret") or trainee.get("siret") or trainee.get("qonto_siret") or "").strip()
+        if tax:
+            payload["tax_identification_number"] = tax
+    else:
+        payload["first_name"] = first
+        payload["last_name"] = last
+    return payload
+
+
+def validate_qonto_client_payload(client_payload: Dict[str, Any], financeur: Any = None) -> List[Dict[str, str]]:
+    errors: List[Dict[str, str]] = []
+    kind = _qonto_client_kind(client_payload)
+    if is_cpf_billing_context(financeur):
+        kind = "company"
+        for key, expected in (("name", CPF_QONTO_CLIENT_NAME), ("address_line_1", "56 rue de Lille"), ("zip_code", "75356"), ("city", "Paris 07"), ("country_code", "FR")):
+            if (client_payload.get(key) or "") != expected:
+                errors.append({"field": key, "label": key, "message": "CPF doit être facturé à Caisse des dépôts - Mon Compte Formation."})
+    if kind == "company":
+        for key, label in (("name", "Nom société"), ("address_line_1", "Adresse"), ("zip_code", "Code postal"), ("city", "Ville"), ("country_code", "Pays")):
+            if not (client_payload.get(key) or "").strip():
+                errors.append({"field": key, "label": label, "message": f"{label} obligatoire pour un client société."})
+    else:
+        for key, label in (("first_name", "Prénom"), ("last_name", "Nom")):
+            if not (client_payload.get(key) or "").strip():
+                errors.append({"field": key, "label": label, "message": f"{label} obligatoire pour un client particulier."})
+    return errors
 
 def remove_invalid_qonto_phone(payload: Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(payload.get("phone"), str):
@@ -21100,21 +21159,24 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any])
         try:
             invoice_iban = get_qonto_invoice_iban()
             is_cpf = is_cpf_billing_context(current)
-            client = buildInvoiceCustomer(current.get('financingType') or current.get('fundingType') or current.get('financeur') or current.get('financingLabel'), current, {'id': current.get('sessionId')}, current)
+            qonto_client_payload = build_qonto_client_payload(current, current, {'id': current.get('sessionId')}, current.get('financingType') or current.get('financingLabel'))
+            validation_errors = validate_qonto_client_payload(qonto_client_payload, current if is_cpf else current.get('financingType'))
+            if validation_errors:
+                message = 'Informations Qonto manquantes : merci de compléter les champs obligatoires avant création du brouillon.'
+                return False, {'error': message, 'message': message, 'validation_errors': validation_errors, 'client': qonto_client_payload, 'line': current}
             if is_cpf:
                 q_client = get_or_create_cpf_qonto_client()
             else:
-                billing_address = build_qonto_billing_address_from_modal(client)
-                q_client = search_qonto_client({'email': client.get('email'), 'name': client.get('name')})
+                q_client = search_qonto_client({'email': qonto_client_payload.get('email'), 'name': qonto_client_payload.get('name') or f"{qonto_client_payload.get('first_name','')} {qonto_client_payload.get('last_name','')}".strip()})
                 if not q_client:
-                    q_client = create_qonto_client({'client': remove_invalid_qonto_phone(build_qonto_client_payload(client, billing_address))})
+                    q_client = create_qonto_client({'client': remove_invalid_qonto_phone(qonto_client_payload)})
             q_client_id = (q_client.get('client') or q_client).get('id')
             if not q_client_id:
                 raise RuntimeError('Client Qonto introuvable')
             amount_ttc = _money(current.get('amount'))
             vat_rate = _money(current.get('vatRate'))
             amount_ht = round(amount_ttc / (1 + vat_rate / 100), 2) if vat_rate else amount_ttc
-            q_payload = {'client_id': q_client_id, 'issue_date': datetime.date.today().isoformat(), 'due_date': (datetime.date.today()+datetime.timedelta(days=30)).isoformat(), 'currency': 'EUR', 'payment_methods': {'iban': invoice_iban}, 'performance_start_date': current.get('dateStart'), 'performance_end_date': current.get('dateEnd') or current.get('dateStart'), 'status': 'draft', 'terms_and_conditions': 'Paiement à réception de facture.', 'items': [{'title': current.get('description'), 'description': current.get('description'), 'quantity': '1', 'unit_price': {'value': str(amount_ht), 'currency': 'EUR'}, 'vat_rate': format_qonto_vat_rate(vat_rate)}]}
+            q_payload = {'client_id': q_client_id, 'issue_date': datetime.date.today().isoformat(), 'due_date': (datetime.date.today()+datetime.timedelta(days=30)).isoformat(), 'currency': 'EUR', 'payment_methods': {'iban': invoice_iban}, 'performance_start_date': current.get('dateStart'), 'performance_end_date': current.get('dateEnd') or current.get('dateStart'), 'status': 'draft', 'terms_and_conditions': 'Paiement à réception de facture.', 'items': [{'title': f"Formation {current.get('formationName') or 'Formation'} - {current.get('traineeFirstName','')} {current.get('traineeLastName','')} - Session du {fr_date(current.get('dateStart'))} au {fr_date(current.get('dateEnd') or current.get('dateStart'))}", 'description': f"Formation {current.get('formationName') or 'Formation'} - {current.get('traineeFirstName','')} {current.get('traineeLastName','')} - Session du {fr_date(current.get('dateStart'))} au {fr_date(current.get('dateEnd') or current.get('dateStart'))}", 'quantity': '1', 'unit_price': {'value': str(amount_ht), 'currency': 'EUR'}, 'vat_rate': format_qonto_vat_rate(vat_rate)}]}
             q_inv = create_qonto_invoice(q_payload)
             qi = q_inv.get('client_invoice') or q_inv.get('invoice') or q_inv
             current.update({'qontoClientId': q_client_id, 'qontoCustomerId': q_client_id, 'qontoInvoiceId': qi.get('id'), 'qontoDraftId': qi.get('id'), 'qontoInvoiceNumber': qi.get('number') or qi.get('invoice_number') or '', 'invoiceStatus': 'draft' if qi.get('id') else 'not_invoiced', 'paymentStatus': 'paid' if (qi.get('status') == 'paid' or qi.get('paid_at')) else 'unpaid', 'invoiceGeneratedAt': _now_iso(), 'createdAt': current.get('createdAt') or _now_iso(), 'invoicePdfUrl': qi.get('public_url') or qi.get('url') or '', 'generationInProgress': False})
@@ -21189,6 +21251,44 @@ def _line_from_payload(data: Dict[str, Any], payload: Dict[str, Any]) -> Optiona
     candidates = [l for l in _billing_lines_for_trainee_session(data, tid, sid) if not ftype or l.get('financingType') == ftype]
     return candidates[0] if candidates else None
 
+
+
+
+def _billing_line_qonto_preview(line: Dict[str, Any]) -> Dict[str, Any]:
+    vat_rate = _money(line.get('vatRate'))
+    amount_ttc = _money(line.get('amount'))
+    amount_ht = round(amount_ttc / (1 + vat_rate / 100), 2) if vat_rate else amount_ttc
+    amount_tva = round(amount_ttc - amount_ht, 2)
+    label = f"Formation {line.get('formationName') or 'Formation'} - {line.get('traineeFirstName','')} {line.get('traineeLastName','')} - Session du {fr_date(line.get('dateStart'))} au {fr_date(line.get('dateEnd') or line.get('dateStart'))}"
+    client = build_qonto_client_payload(line, line, {'id': line.get('sessionId')}, line.get('financingType') or line.get('financingLabel'))
+    errors = validate_qonto_client_payload(client, line if is_cpf_billing_context(line) else line.get('financingType'))
+    return {
+        'line': line,
+        'client': client,
+        'validation_errors': errors,
+        'invoice': {
+            'trainee': f"{line.get('traineeFirstName','')} {line.get('traineeLastName','')}".strip(),
+            'session': line.get('sessionName') or line.get('sessionId'),
+            'formation': line.get('formationName'),
+            'financeur_type': line.get('financingType') or line.get('financingLabel'),
+            'amount_ht': amount_ht,
+            'vat_rate': vat_rate,
+            'amount_tva': amount_tva,
+            'amount_ttc': amount_ttc,
+            'currency': 'EUR',
+            'label': label,
+            'issue_date': datetime.date.today().isoformat(),
+            'due_date': (datetime.date.today() + datetime.timedelta(days=30)).isoformat(),
+        },
+    }
+
+
+@app.get('/api/billing/line/<line_id>/qonto-preview')
+@admin_login_required
+def api_billing_line_qonto_preview(line_id: str):
+    data = load_data(); line = _find_billing_line(data, line_id)
+    if not line: return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
+    return jsonify({'ok': True, **_billing_line_qonto_preview(line)})
 
 @app.post('/api/billing/create-draft')
 @admin_login_required
