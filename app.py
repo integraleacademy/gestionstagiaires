@@ -4764,6 +4764,32 @@ def _now_iso() -> str:
     return datetime.datetime.utcnow().isoformat() + "Z"
 
 
+def _parse_iso_datetime(raw_value: Any) -> Optional[datetime.datetime]:
+    raw = str(raw_value or "").strip()
+    if not raw:
+        return None
+    try:
+        if raw.endswith("Z"):
+            raw = raw[:-1] + "+00:00"
+        dt = datetime.datetime.fromisoformat(raw)
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+        return dt
+    except (TypeError, ValueError):
+        return None
+
+
+def _iso_from_dt(dt: datetime.datetime) -> str:
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+    return dt.replace(microsecond=0).isoformat() + "Z"
+
+
+def _add_days_iso(raw_value: Any, days: int) -> str:
+    base = _parse_iso_datetime(raw_value) or datetime.datetime.utcnow()
+    return _iso_from_dt(base + datetime.timedelta(days=days))
+
+
 VTC_EXAM_RESULTS_NOTIFICATION_SCHEDULE = [
     ("🚘Résultats examen pratique VTC à télécharger", "2026-03-07T12:00:00"),
     ("🚘Résultats examen pratique VTC à télécharger", "2026-05-07T12:00:00"),
@@ -14366,6 +14392,7 @@ def admin_trainees(session_id: str):
     stats = compute_stats(s)
     show_hosting = (session_view["training_type"] == "A3P")
     is_vtc = ("VTC" in (session_view["training_type"] or "").upper())
+    is_aps = _is_aps_session(session_view)
     is_dirigeant = ("DIRIGEANT" in (session_view["training_type"] or "").upper())
 
     # ✅ docs fin de formation par stagiaire (pour surlignage + n/3 + étiquettes)
@@ -14376,6 +14403,7 @@ def admin_trainees(session_id: str):
         t["deliverables_total"] = d_total
         t["deliverables_ok"] = d_ok
         t["deliverables_text"] = f"{d_done}/{d_total}"
+        t["convocation_signature_label"] = _convocation_signature_admin_label(t.get("convocation_signature") if isinstance(t.get("convocation_signature"), dict) else {})
 
         # ✅ étiquettes ligne (admin_trainees.html)
         dv = t.get("deliverables") or {}
@@ -14410,7 +14438,7 @@ def admin_trainees(session_id: str):
     if show_vae:
         trainees.sort(
             key=lambda t: (
-                _parse_iso_datetime(t.get("created_at") or "") or datetime.datetime.min.replace(tzinfo=datetime.timezone.utc),
+                _parse_iso_datetime(t.get("created_at") or "") or datetime.datetime.min,
                 _trainee_alpha_sort_key(t),
             ),
             reverse=True,
@@ -14426,6 +14454,7 @@ def admin_trainees(session_id: str):
         show_hosting=show_hosting,
         show_vae=show_vae,
         is_vtc=is_vtc,
+        is_aps=is_aps,
         is_dirigeant=is_dirigeant,
         vae_dashboard_counts=vae_dashboard_counts,
         enums=ENUMS,
@@ -14507,6 +14536,7 @@ def admin_vtc_trainees_all():
         show_hosting=False,
         show_vae=False,
         is_vtc=True,
+        is_aps=False,
         is_dirigeant=False,
         enums=ENUMS,
         is_adef=False,
@@ -20517,6 +20547,176 @@ def _aps_session_dates_label(session_obj: Dict[str, Any]) -> str:
     return date_start or date_end or "—"
 
 
+YOUSIGN_PENDING_STATUSES = {"ongoing", "activated", "pending", "en_attente", "en attente", "en attente de signature"}
+YOUSIGN_FINAL_STATUSES = {"done", "signed"}
+YOUSIGN_STOP_REMINDER_STATUSES = {"declined", "expired", "canceled", "cancelled", "error", "download_error"}
+
+
+def _normalize_yousign_status(status: Any) -> str:
+    return str(status or "").strip().lower().replace("-", "_")
+
+
+def _is_yousign_signature_pending(state: Dict[str, Any]) -> bool:
+    return _normalize_yousign_status(state.get("status")) in YOUSIGN_PENDING_STATUSES
+
+
+def _is_yousign_signature_done(state: Dict[str, Any]) -> bool:
+    return _normalize_yousign_status(state.get("status")) in YOUSIGN_FINAL_STATUSES
+
+
+def _is_yousign_signature_stopped(state: Dict[str, Any]) -> bool:
+    return _normalize_yousign_status(state.get("status")) in YOUSIGN_STOP_REMINDER_STATUSES
+
+
+def _yousign_signature_link_is_expired(state: Dict[str, Any]) -> bool:
+    expires_at = _parse_iso_datetime(state.get("signature_link_expires_at"))
+    return bool(expires_at and expires_at <= datetime.datetime.utcnow())
+
+
+def _convocation_signature_admin_label(state: Dict[str, Any]) -> str:
+    if not state or not state.get("signature_request_id"):
+        return "Non envoyée"
+    if _is_yousign_signature_done(state):
+        return "Signée"
+    if _is_yousign_signature_stopped(state) or _yousign_signature_link_is_expired(state):
+        return "Expirée / refusée / erreur"
+    if _is_yousign_signature_pending(state):
+        count = int(state.get("reminder_count") or 0)
+        if count >= 3:
+            return "Dernier rappel envoyé"
+        if count == 2:
+            return "Rappel 2 envoyé"
+        if count == 1:
+            return "Rappel 1 envoyé"
+        return "En attente de signature"
+    return "Non envoyée"
+
+
+def _build_yousign_signature_reminder_email(session_obj: Dict[str, Any], trainee: Dict[str, Any], signature_link: str) -> Tuple[str, str]:
+    first_name = str(trainee.get("first_name") or "").strip() or "Madame, Monsieur"
+    training_name = str(_session_get(session_obj, "name", "") or session_obj.get("training_name") or "Formation").strip() or "Formation"
+    dates_session = _aps_session_dates_label(session_obj)
+    subject = "Rappel - votre convocation de formation est à signer"
+    body = f"""Bonjour {first_name},
+
+Nous vous rappelons que votre convocation de formation est toujours en attente de signature.
+
+Merci de la signer électroniquement en cliquant sur le lien ci-dessous :
+
+{signature_link}
+
+Formation : {training_name}
+Session : {dates_session}
+
+Cette signature est nécessaire pour confirmer la bonne réception de votre convocation.
+
+Cordialement,
+
+Intégrale Academy
+54 chemin du Carreou
+83480 Puget-sur-Argens
+04 22 47 07 68"""
+    return subject, "<br>".join(html.escape(line) for line in body.splitlines())
+
+
+def _find_trainee_by_convocation_signature_id(data: Dict[str, Any], signature_id: str):
+    wanted = str(signature_id or "").strip()
+    for sess in data.get("sessions", []):
+        trainees = _session_trainees_list(sess)
+        for trainee in trainees:
+            state = trainee.get("convocation_signature") if isinstance(trainee.get("convocation_signature"), dict) else {}
+            if wanted in {str(trainee.get("id") or ""), str(state.get("signature_request_id") or ""), str(state.get("external_id") or "")}:
+                return sess, trainees, trainee, state
+    return None, None, None, None
+
+
+def send_convocation_signature_reminder(signature_id: str) -> Tuple[bool, str]:
+    data = load_data()
+    sess, trainees, trainee, state = _find_trainee_by_convocation_signature_id(data, signature_id)
+    if not trainee or not state:
+        return False, "Signature introuvable."
+    state = _yousign_state(trainee)
+    if _is_yousign_signature_done(state):
+        state["next_reminder_at"] = ""
+        save_data(data)
+        return False, "Convocation déjà signée, aucun rappel nécessaire."
+    if _is_yousign_signature_stopped(state):
+        state["next_reminder_at"] = ""
+        save_data(data)
+        return False, "Convocation expirée, refusée ou en erreur."
+    if not _is_yousign_signature_pending(state):
+        return False, "Convocation non en attente de signature."
+    signature_link = str(state.get("signature_link") or "").strip()
+    if not signature_link:
+        return False, "Aucun lien de signature disponible."
+    if _yousign_signature_link_is_expired(state):
+        state["status"] = "expired"
+        state["next_reminder_at"] = ""
+        state["last_email_error"] = "Lien de signature expiré : recréez une demande Yousign."
+        trainee["updated_at"] = _now_iso()
+        sess["trainees"] = trainees
+        sess.pop("stagiaires", None)
+        save_data(data)
+        return False, "Lien de signature expiré : recréez une demande Yousign."
+    if not str(trainee.get("email") or "").strip():
+        return False, "Adresse e-mail stagiaire manquante."
+    reminder_count = int(state.get("reminder_count") or 0)
+    if reminder_count >= 3:
+        state["next_reminder_at"] = ""
+        save_data(data)
+        return False, "Nombre maximal de rappels déjà atteint."
+    subject, html_body = _build_yousign_signature_reminder_email(sess, trainee, signature_link)
+    now = _now_iso()
+    try:
+        ok = brevo_send_email(str(trainee.get("email") or "").strip(), subject, html_body, trainee=trainee)
+        if not ok:
+            raise RuntimeError("Échec d’envoi e-mail")
+        new_count = reminder_count + 1
+        state["reminder_count"] = new_count
+        state["last_reminder_sent_at"] = now
+        state[f"reminder_{new_count}_sent_at"] = now
+        state["last_email_error"] = ""
+        if new_count == 1:
+            state["next_reminder_at"] = _add_days_iso(state.get("created_at") or now, 4)
+        elif new_count == 2:
+            state["next_reminder_at"] = _add_days_iso(state.get("created_at") or now, 7)
+        else:
+            state["next_reminder_at"] = ""
+        trainee["updated_at"] = now
+        sess["trainees"] = trainees
+        sess.pop("stagiaires", None)
+        save_data(data)
+        return True, "Rappel envoyé au stagiaire."
+    except Exception as exc:
+        message = _sanitize_yousign_error(str(exc) or "Échec d’envoi e-mail")
+        state["last_email_error"] = message
+        trainee["updated_at"] = now
+        sess["trainees"] = trainees
+        sess.pop("stagiaires", None)
+        save_data(data)
+        return False, message
+
+
+def run_convocation_signature_reminders() -> Dict[str, int]:
+    data = load_data()
+    now = datetime.datetime.utcnow()
+    due_ids = []
+    for sess in data.get("sessions", []):
+        for trainee in _session_trainees_list(sess):
+            state = trainee.get("convocation_signature") if isinstance(trainee.get("convocation_signature"), dict) else {}
+            due_at = _parse_iso_datetime(state.get("next_reminder_at"))
+            if _is_yousign_signature_pending(state) and due_at and due_at <= now and int(state.get("reminder_count") or 0) < 3:
+                due_ids.append(str(trainee.get("id") or state.get("signature_request_id") or ""))
+    sent = failed = 0
+    for signature_id in due_ids:
+        ok, _ = send_convocation_signature_reminder(signature_id)
+        if ok:
+            sent += 1
+        else:
+            failed += 1
+    return {"checked": len(due_ids), "sent": sent, "failed": failed}
+
+
 def _build_yousign_signature_link_email(session_obj: Dict[str, Any], trainee: Dict[str, Any], signature_link: str) -> Tuple[str, str]:
     first_name = str(trainee.get("first_name") or "").strip() or "Madame, Monsieur"
     training_name = str(_session_get(session_obj, "name", "") or session_obj.get("training_name") or "Formation").strip() or "Formation"
@@ -20641,6 +20841,13 @@ def create_yousign_convocation_signature(session_obj: Dict[str, Any], trainee: D
         "signed_at": "",
         "signed_pdf_path": "",
         "last_error": "",
+        "reminder_count": 0,
+        "last_reminder_sent_at": "",
+        "next_reminder_at": _add_days_iso(now, 2),
+        "reminder_1_sent_at": "",
+        "reminder_2_sent_at": "",
+        "reminder_3_sent_at": "",
+        "last_email_error": "",
     })
     trainee["convocation_aps_status"] = "signature_ongoing"
     trainee["convocation_aps_pdf_path"] = pdf_path
@@ -22291,6 +22498,44 @@ def admin_resend_convocation_signature_email(session_id: str, trainee_id: str):
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 
+@app.post("/admin/trainees/<trainee_id>/convocation-signature/send-reminder")
+@admin_login_required
+@admin_write_required
+def admin_send_convocation_signature_reminder(trainee_id: str):
+    ok, message = send_convocation_signature_reminder(trainee_id)
+    flash(message, "success" if ok else "error")
+    data = load_data()
+    sess, _, trainee, _ = _find_trainee_by_convocation_signature_id(data, trainee_id)
+    if sess and trainee:
+        return redirect(url_for("admin_trainee_page", session_id=sess.get("id"), trainee_id=trainee.get("id")))
+    return redirect(url_for("admin_sessions"))
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-signature/send-reminder")
+@admin_login_required
+@admin_write_required
+def admin_send_convocation_signature_reminder_for_session(session_id: str, trainee_id: str):
+    ok, message = send_convocation_signature_reminder(trainee_id)
+    flash(message, "success" if ok else "error")
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+
+@app.post("/internal/cron/convocation-signature-reminders")
+def internal_cron_convocation_signature_reminders():
+    expected = os.environ.get("CRON_SECRET", "").strip()
+    provided = (request.headers.get("X-Cron-Secret") or request.args.get("token") or "").strip()
+    if expected and not hmac.compare_digest(expected, provided):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    result = run_convocation_signature_reminders()
+    return jsonify({"ok": True, **result})
+
+
+@app.cli.command("send-convocation-signature-reminders")
+def cli_send_convocation_signature_reminders():
+    result = run_convocation_signature_reminders()
+    print(json.dumps(result, ensure_ascii=False))
+
+
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-signee.pdf")
 @admin_login_required
 def admin_view_signed_convocation(session_id: str, trainee_id: str):
@@ -22347,8 +22592,9 @@ def webhooks_yousign():
         signed_path = _download_yousign_signed_pdf(request_id, str(trainee.get("id") or ""))
         now = _now_iso()
         state.update({
-            "status": "signed",
+            "status": "done",
             "signed_at": now,
+            "next_reminder_at": "",
             "signed_pdf_path": signed_path,
             "last_error": "",
             "last_event_id": payload.get("event_id") or "",

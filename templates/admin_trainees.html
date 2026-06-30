@@ -363,6 +363,7 @@
         {% if not is_vtc %}<th class="col-dossier-status">Dossier</th>{% endif %}
         {% if not is_vtc %}<th class="col-dossier-complete">Dossier complet</th>{% endif %}
         {% if not is_vtc and not show_vae and not is_dirigeant_session and not is_ssiap_session %}<th>CNAPS</th>{% endif %}
+        {% if is_aps %}<th>Signature convocation</th>{% endif %}
         {% if is_vtc %}<th>Inscription CMAR</th>{% endif %}
         {% if is_vtc %}<th>E-learning</th>{% endif %}
         {% if is_vtc %}<th>Livre</th>{% endif %}
@@ -557,6 +558,11 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         </td>
         {% endif %}
 
+        {% if is_aps %}
+        <td>
+          <span class="pill {% if t.convocation_signature_label == 'Signée' %}green{% elif t.convocation_signature_label in ['Expirée / refusée / erreur', 'Non envoyée'] %}gray{% else %}blue{% endif %}">{{ t.convocation_signature_label }}</span>
+        </td>
+        {% endif %}
         {% if is_vtc %}
         {% set vtc_cmar_ok = t.exam_fees_paid or t.vtc_cmar_manual_ok %}
         {% set vtc_elearning_ok = ((t.elearning_link or "")|trim) or t.vtc_elearning_manual_ok %}

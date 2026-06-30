@@ -517,7 +517,7 @@
   <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
     <div>
       <h2 style="margin:0 0 8px;">Signature convocation</h2>
-      {% if conv_sig.status == "signed" %}
+      {% if conv_sig.status in ["signed", "done"] %}
         <span class="pill green">✅ Signée{% if conv_sig.signed_at %} le {{ conv_sig.signed_at|frdatetime }}{% endif %}</span>
       {% elif conv_sig.status in ["ongoing", "activated"] %}
         <span class="pill blue">✍️ En attente de signature</span>
@@ -535,6 +535,13 @@
       {% if conv_sig.signature_email_sent_at %}
         <div class="hint" style="margin-top:8px;">E-mail envoyé le {{ conv_sig.signature_email_sent_at|frdatetime }}</div>
       {% endif %}
+      <div class="hint" style="margin-top:8px;">Statut actuel : <strong>{{ conv_sig.status or "Non créée" }}</strong></div>
+      {% if conv_sig.created_at %}<div class="hint" style="margin-top:8px;">Demande créée le {{ conv_sig.created_at|frdatetime }}</div>{% endif %}
+      <div class="hint" style="margin-top:8px;">Rappels envoyés : <strong>{{ conv_sig.reminder_count or 0 }}/3</strong></div>
+      {% if conv_sig.last_reminder_sent_at %}<div class="hint" style="margin-top:8px;">Dernier rappel : {{ conv_sig.last_reminder_sent_at|frdatetime }}</div>{% endif %}
+      {% if conv_sig.next_reminder_at %}<div class="hint" style="margin-top:8px;">Prochain rappel : {{ conv_sig.next_reminder_at|frdatetime }}</div>{% endif %}
+      {% if conv_sig.last_email_error %}<div class="hint" style="margin-top:8px;color:#991b1b;">{{ conv_sig.last_email_error }}</div>{% endif %}
+      {% if conv_sig.signature_link_expires_at %}<div class="hint" style="margin-top:8px;">Expiration du lien : {{ conv_sig.signature_link_expires_at|frdatetime }}</div>{% endif %}
       {% if conv_sig.signature_request_id %}
         <div class="hint" style="margin-top:8px;">Demande Yousign : <span class="mono">{{ conv_sig.signature_request_id }}</span></div>
       {% endif %}
@@ -545,8 +552,8 @@
           {% if conv_sig.signature_request_id and conv_sig.status in ["ongoing", "activated"] %}Réutiliser la demande Yousign{% elif conv_sig.signature_request_id %}Créer une nouvelle demande{% else %}Créer la demande Yousign{% endif %}
         </button>
       </form>
-      {% if conv_sig.signature_link and conv_sig.status != "signed" %}
-        <form method="post" action="{{ url_for('admin_resend_convocation_signature_email', session_id=session.id, trainee_id=trainee.id) }}" style="margin:0;">
+      {% if conv_sig.signature_link and conv_sig.status not in ["signed", "done"] %}
+        <form method="post" action="{{ url_for('admin_send_convocation_signature_reminder_for_session', session_id=session.id, trainee_id=trainee.id) }}" style="margin:0;">
           <button class="btn btn-outline" type="submit" {% if is_read_only %}disabled{% endif %}>Renvoyer le lien de signature par e-mail</button>
         </form>
         <button class="btn btn-outline" type="button" data-copy-signature-link="{{ conv_sig.signature_link|e }}">Copier le lien de signature</button>
