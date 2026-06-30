@@ -26,6 +26,11 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
+try:
+    from docxtpl import DocxTemplate
+except ImportError:
+    DocxTemplate = None
+
 import requests
 from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file, flash, has_request_context, make_response
 
@@ -20215,6 +20220,8 @@ APS_CONVOCATION_VARIABLES = [
     "nom_pedagogique", "date_convocation", "heure_convocation", "date_debut_formation",
     "date_fin_formation", "periode_formation", "periode_elearning", "periode_presentiel",
     "date_examen", "heure_examen", "date_jour", "lieu_formation", "espace_stagiaire_url",
+    "h_elearning", "h_presentiel", "h_total", "duree_exam", "modalites_suivi",
+    "date_ouverture", "lieu_examen",
 ]
 
 
@@ -20302,7 +20309,10 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         "periode_presentiel": f"du {fr_date(in_person_start)} au {fr_date(in_person_end)}",
         "date_examen": fr_date(exam_date), "heure_examen": exam_time,
         "date_jour": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
-        "lieu_formation": place, "espace_stagiaire_url": trainee_space_url,
+        "lieu_formation": place, "lieu_examen": place, "espace_stagiaire_url": trainee_space_url,
+        "modalites_suivi": "Suivi pédagogique et administratif assuré par l’équipe Intégrale Academy.",
+        "date_ouverture": fr_date(remote_start),
+        "h_elearning": "62", "h_presentiel": "113", "h_total": "175", "duree_exam": "07h00",
     }
 
 
@@ -20348,47 +20358,16 @@ def _assert_docx_has_no_unresolved_variables(docx_path: str) -> None:
         raise RuntimeError("Variables non remplacées dans la convocation APS : " + ", ".join(sorted(unresolved)))
 
 
-def _render_docx_with_docxtemplater(template_path: str, output_docx_path: str, context: Dict[str, str]) -> None:
+def _render_docx_with_python_template(template_path: str, output_docx_path: str, context: Dict[str, str]) -> None:
+    if DocxTemplate is None:
+        raise RuntimeError("Dépendance Python manquante : docxtpl n’est pas installée. Vérifier requirements.txt et redéployer Render.")
     app_dir = os.path.dirname(os.path.abspath(__file__))
-    print("[CONVOCATION APS] cwd Python:", os.getcwd())
-    print("[CONVOCATION APS] app dir:", app_dir)
-    script = """
-const fs = require('fs');
-console.log("cwd node:", process.cwd());
-for (const dependencyName of ['pizzip', 'docxtemplater']) {
-  try {
-    console.log(`${dependencyName} path:`, require.resolve(dependencyName));
-  } catch (error) {
-    console.error(`Dépendance manquante : pizzip/docxtemplater non installée sur le serveur. (${dependencyName})`);
-    process.exit(2);
-  }
-}
-const PizZip = require('pizzip');
-const Docxtemplater = require('docxtemplater');
-const [templatePath, outputPath, dataPath] = process.argv.slice(2);
-const content = fs.readFileSync(templatePath, 'binary');
-const zip = new PizZip(content);
-const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
-doc.render(JSON.parse(fs.readFileSync(dataPath, 'utf8')));
-fs.writeFileSync(outputPath, doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' }));
-"""
+    app.logger.info("[CONVOCATION APS] cwd Python: %s", os.getcwd())
+    app.logger.info("[CONVOCATION APS] app dir: %s", app_dir)
     os.makedirs(os.path.dirname(output_docx_path), exist_ok=True)
-    with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".json", delete=False) as data_file:
-        json.dump(context, data_file, ensure_ascii=False)
-        data_path = data_file.name
-    try:
-        result = subprocess.run(
-            ["node", "-e", script, template_path, output_docx_path, data_path],
-            cwd=app_dir,
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-    finally:
-        try: os.unlink(data_path)
-        except OSError: pass
-    if result.returncode != 0:
-        raise RuntimeError(f"Docxtemplater a échoué : {(result.stderr or result.stdout or '').strip()}")
+    doc = DocxTemplate(template_path)
+    doc.render(context)
+    doc.save(output_docx_path)
 
 
 def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
@@ -20402,7 +20381,7 @@ def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[s
     base = f"convocation_aps_{_safe_filename_part(trainee.get('id') or trainee_id)}"
     final_docx_path = os.path.join(APS_CONVOCATION_DIR, base + ".docx")
     final_pdf_path = os.path.join(APS_CONVOCATION_DIR, base + ".pdf")
-    _render_docx_with_docxtemplater(template_path, final_docx_path, context)
+    _render_docx_with_python_template(template_path, final_docx_path, context)
     app.logger.info("[CONVOCATION APS] DOCX final généré : %s", final_docx_path)
     if not os.path.exists(final_docx_path) or os.path.getsize(final_docx_path) <= 0:
         raise RuntimeError("Le DOCX final de convocation APS est introuvable ou vide.")
