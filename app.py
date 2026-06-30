@@ -20696,6 +20696,263 @@ def _qonto_status_payload(trainee: Dict[str, Any]) -> Dict[str, Any]:
     return {"ok": True, "status": status, "invoice": inv, "status_label": _qonto_status_label(status)}
 
 
+
+# =========================
+# Admin billing / Qonto lines
+# =========================
+BILLING_START_DATE = datetime.date(2026, 6, 1)
+_billing_generation_locks: Dict[str, threading.Lock] = {}
+_billing_generation_locks_guard = threading.Lock()
+
+
+def _parse_date_safe(raw: Any) -> Optional[datetime.date]:
+    try:
+        return datetime.datetime.strptime(str(raw or '')[:10], '%Y-%m-%d').date()
+    except Exception:
+        return None
+
+
+def _billing_line_id(session_id: str, trainee_id: str, financing_type: str, financing_ref: str = '0') -> str:
+    raw = f"{session_id}|{trainee_id}|{financing_type.upper()}|{financing_ref or '0'}"
+    return 'bill_' + hashlib.sha1(raw.encode('utf-8')).hexdigest()[:24]
+
+
+def _billing_log(line: Dict[str, Any], action: str, result: str = 'success', message: str = '', qonto_id: str = '') -> None:
+    logs = line.get('logs') if isinstance(line.get('logs'), list) else []
+    logs.append({
+        'at': _now_iso(),
+        'action': action,
+        'user': session.get('admin_username') if has_request_context() else '',
+        'result': result,
+        'message': str(message or '')[:1000],
+        'qonto_id': qonto_id or line.get('qontoInvoiceId') or '',
+    })
+    line['logs'] = logs[-200:]
+
+
+def _financing_entries(trainee: Dict[str, Any]) -> List[Dict[str, Any]]:
+    entries = []
+    structured = trainee.get('financings') if isinstance(trainee.get('financings'), list) else []
+    for idx, item in enumerate(structured):
+        amount = _money(item.get('amount') or item.get('amount_ttc'))
+        ftype = str(item.get('type') or item.get('financing_type') or '').strip().upper()
+        if ftype and amount > 0:
+            entries.append({'type': ftype, 'label': item.get('label') or ftype, 'amount': amount, 'ref': item.get('id') or str(idx)})
+    legacy = [('CPF', trainee.get('cpf_amount')), ('PERSONNEL', trainee.get('personal_amount') or trainee.get('personal_financing_amount'))]
+    for ftype, raw in legacy:
+        amount = _money(raw)
+        if amount > 0:
+            entries.append({'type': ftype, 'label': 'Personnel' if ftype == 'PERSONNEL' else 'CPF', 'amount': amount, 'ref': 'legacy'})
+    return entries
+
+
+def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Optional[Dict[str, Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+    existing = existing or {}
+    out = []
+    for sess in sessions or []:
+        start = _parse_date_safe(_session_get(sess, 'date_start', ''))
+        end = _parse_date_safe(_session_get(sess, 'date_end', '')) or start
+        if not start or start < BILLING_START_DATE:
+            continue
+        session_id = str(sess.get('id') or '')
+        training = (_session_get(sess, 'training_type', '') or _session_get(sess, 'name', '') or '').strip()
+        if not session_id or not training:
+            continue
+        for trainee in _session_trainees_list(sess):
+            trainee_id = str(trainee.get('id') or '')
+            if not trainee_id or not (trainee.get('last_name') or trainee.get('first_name')):
+                continue
+            for financing in _financing_entries(trainee):
+                line_id = _billing_line_id(session_id, trainee_id, financing['type'], financing.get('ref'))
+                persisted = dict(existing.get(line_id) or {})
+                status = persisted.get('invoiceStatus') or 'not_generated'
+                line = {
+                    'id': line_id, 'traineeId': trainee_id, 'sessionId': session_id,
+                    'financingType': financing['type'], 'financingLabel': financing.get('label') or financing['type'],
+                    'financingRef': financing.get('ref') or '0', 'amount': financing['amount'], 'currency': 'EUR',
+                    'invoiceStatus': status, 'paymentStatus': persisted.get('paymentStatus') or 'unknown',
+                    'qontoInvoiceId': persisted.get('qontoInvoiceId'), 'qontoInvoiceNumber': persisted.get('qontoInvoiceNumber'),
+                    'qontoClientId': persisted.get('qontoClientId'), 'invoiceGeneratedAt': persisted.get('invoiceGeneratedAt'),
+                    'invoiceDownloadedAt': persisted.get('invoiceDownloadedAt'), 'invoicePdfUrl': persisted.get('invoicePdfUrl'),
+                    'creditNoteStatus': persisted.get('creditNoteStatus'), 'qontoCreditNoteId': persisted.get('qontoCreditNoteId'),
+                    'generationInProgress': bool(persisted.get('generationInProgress')), 'createdAt': persisted.get('createdAt') or _now_iso(),
+                    'updatedAt': persisted.get('updatedAt') or _now_iso(), 'logs': persisted.get('logs') if isinstance(persisted.get('logs'), list) else [],
+                    'traineeLastName': trainee.get('last_name') or '', 'traineeFirstName': trainee.get('first_name') or '',
+                    'traineeEmail': trainee.get('email') or '', 'clientName': persisted.get('clientName') or f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip(),
+                    'clientAddress': trainee.get('qonto_billing_address') or trainee.get('address') or '', 'clientZipCode': trainee.get('zip_code') or '', 'clientCity': trainee.get('city') or '',
+                    'formationName': training, 'sessionName': _session_get(sess, 'name', '') or training,
+                    'dateStart': start.isoformat(), 'dateEnd': end.isoformat() if end else '', 'examDate': _session_get(sess, 'exam_date', '') or '',
+                    'dateLabel': f"du {fr_date(start.isoformat())} au {fr_date((end or start).isoformat())}" + (f" — examen le {fr_date(_session_get(sess, 'exam_date', ''))}" if _session_get(sess, 'exam_date', '') else ''),
+                    'description': f"Formation {training} - {trainee.get('first_name','')} {trainee.get('last_name','')} - {financing.get('label') or financing['type']}",
+                    'vatRate': _money(trainee.get('qonto_vat_rate') if trainee.get('qonto_vat_rate') not in (None, '') else 0),
+                }
+                out.append(line)
+    return out
+
+
+def _billing_existing_map(data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    lines = data.get('billing_lines') if isinstance(data.get('billing_lines'), list) else []
+    return {str(line.get('id')): line for line in lines if isinstance(line, dict) and line.get('id')}
+
+
+def _billing_lines(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return buildBillingLinesFromSessions(data.get('sessions', []), _billing_existing_map(data))
+
+
+def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
+    all_map = _billing_existing_map(data)
+    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','financingRef','amount','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoInvoiceNumber','qontoClientId','invoiceGeneratedAt','invoiceDownloadedAt','invoicePdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','clientName')}
+    persisted['updatedAt'] = _now_iso()
+    all_map[line['id']] = persisted
+    data['billing_lines'] = list(all_map.values())
+
+
+def _find_billing_line(data: Dict[str, Any], line_id: str) -> Optional[Dict[str, Any]]:
+    return next((l for l in _billing_lines(data) if l.get('id') == line_id), None)
+
+
+@app.get('/admin/sessions/facturation')
+@admin_login_required
+def admin_sessions_billing():
+    return render_template('admin_sessions_billing.html')
+
+
+@app.get('/api/admin/billing-lines')
+@admin_login_required
+def api_admin_billing_lines():
+    data = load_data()
+    return jsonify({'ok': True, 'lines': _billing_lines(data), 'start_date': BILLING_START_DATE.isoformat()})
+
+
+@app.get('/api/admin/billing-lines/<line_id>/history')
+@admin_login_required
+def api_admin_billing_history(line_id: str):
+    line = _find_billing_line(load_data(), line_id)
+    if not line:
+        return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
+    return jsonify({'ok': True, 'logs': line.get('logs') or []})
+
+
+def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> Tuple[bool, Dict[str, Any]]:
+    with _billing_generation_locks_guard:
+        lock = _billing_generation_locks.setdefault(line['id'], threading.Lock())
+    if not lock.acquire(blocking=False):
+        return False, {'error': 'Génération déjà en cours pour cette ligne'}
+    try:
+        current = _find_billing_line(data, line['id']) or line
+        if current.get('qontoInvoiceId') or current.get('invoiceStatus') == 'generated':
+            _billing_log(current, 'Génération facture bloquée', 'ignored', 'Facture déjà existante', current.get('qontoInvoiceId') or '')
+            _save_billing_line(data, current); save_data(data)
+            return False, {'error': 'Facture déjà créée', 'line': current, 'ignored': True}
+        if not _qonto_is_configured():
+            _billing_log(current, 'Erreur création facture Qonto', 'error', 'Qonto non configuré')
+            _save_billing_line(data, current); save_data(data)
+            return False, {'error': 'Qonto n’est pas connecté', 'line': current}
+        current['generationInProgress'] = True; _save_billing_line(data, current); save_data(data)
+        try:
+            invoice_iban = get_qonto_invoice_iban()
+            client = {'name': current.get('clientName'), 'first_name': current.get('traineeFirstName'), 'last_name': current.get('traineeLastName'), 'email': current.get('traineeEmail'), 'address': current.get('clientAddress'), 'zip_code': current.get('clientZipCode'), 'city': current.get('clientCity'), 'country_code': 'FR'}
+            billing_address = build_qonto_billing_address_from_modal(client)
+            q_client = search_qonto_client({'email': client.get('email'), 'name': client.get('name')})
+            if not q_client:
+                q_client = create_qonto_client({'client': remove_invalid_qonto_phone(build_qonto_client_payload(client, billing_address))})
+            q_client_id = (q_client.get('client') or q_client).get('id')
+            if not q_client_id:
+                raise RuntimeError('Client Qonto introuvable')
+            amount_ttc = _money(current.get('amount'))
+            vat_rate = _money(current.get('vatRate'))
+            amount_ht = round(amount_ttc / (1 + vat_rate / 100), 2) if vat_rate else amount_ttc
+            q_payload = {'client_id': q_client_id, 'issue_date': datetime.date.today().isoformat(), 'due_date': (datetime.date.today()+datetime.timedelta(days=30)).isoformat(), 'currency': 'EUR', 'payment_methods': {'iban': invoice_iban}, 'performance_start_date': current.get('dateStart'), 'performance_end_date': current.get('dateEnd') or current.get('dateStart'), 'status': 'draft', 'terms_and_conditions': 'Paiement à réception de facture.', 'items': [{'title': current.get('description'), 'description': current.get('description'), 'quantity': '1', 'unit_price': {'value': str(amount_ht), 'currency': 'EUR'}, 'vat_rate': format_qonto_vat_rate(vat_rate)}]}
+            q_inv = create_qonto_invoice(q_payload)
+            qi = q_inv.get('client_invoice') or q_inv.get('invoice') or q_inv
+            current.update({'qontoClientId': q_client_id, 'qontoInvoiceId': qi.get('id'), 'qontoInvoiceNumber': qi.get('number') or qi.get('invoice_number') or '', 'invoiceStatus': 'generated' if qi.get('id') else 'draft', 'paymentStatus': 'paid' if (qi.get('status') == 'paid' or qi.get('paid_at')) else 'unpaid', 'invoiceGeneratedAt': _now_iso(), 'invoicePdfUrl': qi.get('public_url') or qi.get('url') or '', 'generationInProgress': False})
+            _billing_log(current, 'Facture générée dans Qonto', 'success', current.get('qontoInvoiceNumber') or '', current.get('qontoInvoiceId') or '')
+            _save_billing_line(data, current); save_data(data)
+            return True, {'line': current}
+        except Exception as exc:
+            msg = _sanitize_qonto_error(str(exc)); current['generationInProgress'] = False; current['invoiceStatus'] = 'not_generated' if not current.get('qontoInvoiceId') else 'draft'; _billing_log(current, 'Erreur création facture Qonto', 'error', msg); _save_billing_line(data, current); save_data(data); return False, {'error': msg, 'line': current}
+    finally:
+        lock.release()
+
+
+@app.post('/api/admin/billing-lines/<line_id>/generate-invoice')
+@admin_login_required
+@admin_write_required
+def api_admin_billing_generate(line_id: str):
+    data = load_data(); line = _find_billing_line(data, line_id)
+    if not line: return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
+    ok, result = _create_invoice_for_billing_line(data, line)
+    return jsonify({'ok': ok, **result}), (200 if ok else (409 if result.get('ignored') else 400))
+
+
+@app.post('/api/admin/billing-lines/bulk-generate')
+@admin_login_required
+@admin_write_required
+def api_admin_billing_bulk_generate():
+    ids = (request.get_json(silent=True) or {}).get('ids') or []
+    data = load_data(); summary = {'created': [], 'ignored': [], 'failed': []}
+    for line_id in ids:
+        line = _find_billing_line(data, str(line_id))
+        if not line: summary['failed'].append({'id': line_id, 'error': 'introuvable'}); continue
+        if line.get('qontoInvoiceId') or line.get('invoiceStatus') == 'generated': summary['ignored'].append(line); continue
+        ok, res = _create_invoice_for_billing_line(data, line)
+        summary['created' if ok else 'failed'].append(res.get('line') or {'id': line_id, 'error': res.get('error')})
+        data = load_data()
+    return jsonify({'ok': True, **summary})
+
+
+@app.post('/api/admin/billing-lines/<line_id>/sync-payment')
+@admin_login_required
+@admin_write_required
+def api_admin_billing_sync_payment(line_id: str):
+    data = load_data(); line = _find_billing_line(data, line_id)
+    if not line: return jsonify({'ok': False, 'error': 'Ligne introuvable'}), 404
+    if not line.get('qontoInvoiceId'): return jsonify({'ok': False, 'error': 'Aucune facture Qonto liée'}), 400
+    try:
+        remote = _qonto_invoice_payload(get_qonto_invoice(line['qontoInvoiceId']))
+        line['paymentStatus'] = 'paid' if remote.get('paid_at') or remote.get('status') == 'paid' else ('unpaid' if remote.get('status') else 'unknown')
+        _billing_log(line, 'Statut paiement synchronisé', 'success', line['paymentStatus'], line.get('qontoInvoiceId') or '')
+        _save_billing_line(data, line); save_data(data); return jsonify({'ok': True, 'line': line})
+    except Exception as exc:
+        _billing_log(line, 'Erreur API synchronisation paiement', 'error', _sanitize_qonto_error(str(exc))); _save_billing_line(data, line); save_data(data); return jsonify({'ok': False, 'error': 'Synchronisation impossible'}), 400
+
+
+@app.get('/api/admin/billing-lines/<line_id>/download-invoice')
+@admin_login_required
+def api_admin_billing_download(line_id: str):
+    data = load_data(); line = _find_billing_line(data, line_id)
+    if not line or not line.get('qontoInvoiceId'): return jsonify({'ok': False, 'error': 'Facture indisponible'}), 404
+    line['invoiceDownloadedAt'] = _now_iso(); _billing_log(line, 'PDF téléchargé', 'success'); _save_billing_line(data, line); save_data(data)
+    if line.get('invoicePdfUrl'): return redirect(line['invoicePdfUrl'])
+    return jsonify({'ok': True, 'message': 'PDF Qonto non exposé par l’API', 'qontoInvoiceId': line.get('qontoInvoiceId')})
+
+
+@app.post('/api/admin/billing-lines/bulk-download')
+@admin_login_required
+def api_admin_billing_bulk_download():
+    ids = (request.get_json(silent=True) or {}).get('ids') or []
+    data = load_data(); mem = BytesIO(); count = 0
+    with zipfile.ZipFile(mem, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for line_id in ids:
+            line = _find_billing_line(data, str(line_id))
+            if line and line.get('qontoInvoiceId'):
+                name = re.sub(r'[^A-Za-z0-9_.-]+', '_', f"FACTURE_{line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId')}_{line.get('traineeLastName')}_{line.get('traineeFirstName')}_{line.get('formationName')}.txt")
+                zf.writestr(name, line.get('invoicePdfUrl') or f"Facture Qonto: {line.get('qontoInvoiceId')}")
+                _billing_log(line, 'PDF téléchargé en masse', 'success'); _save_billing_line(data, line); count += 1
+    save_data(data); mem.seek(0)
+    return send_file(mem, mimetype='application/zip', as_attachment=True, download_name=f'factures_qonto_{count}.zip')
+
+
+@app.post('/api/admin/billing-lines/<line_id>/create-credit-note')
+@admin_login_required
+@admin_write_required
+def api_admin_billing_credit_note(line_id: str):
+    data = load_data(); line = _find_billing_line(data, line_id)
+    if not line or not line.get('qontoInvoiceId'): return jsonify({'ok': False, 'error': 'Un avoir nécessite une facture existante'}), 400
+    line['creditNoteStatus'] = 'requested'; _billing_log(line, 'Avoir généré', 'success', 'Demande enregistrée localement; création Qonto à connecter selon API disponible.', line.get('qontoInvoiceId') or '')
+    _save_billing_line(data, line); save_data(data); return jsonify({'ok': True, 'line': line})
+
+
 @app.get("/api/admin/trainees/<trainee_id>/qonto-invoice/preview")
 @admin_login_required
 def api_qonto_invoice_preview(trainee_id: str):
