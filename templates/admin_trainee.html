@@ -2328,6 +2328,7 @@ if(financementDetails){
       debounceMap[field] = setTimeout(async ()=>{
         try{
           await updateTrainee({ [field]: input.value });
+          window.dispatchEvent(new CustomEvent("qonto-billing-refresh", { detail: { field } }));
         }catch(e){
           console.error("Erreur sauvegarde financement", field);
         }
@@ -3459,6 +3460,9 @@ if(conventionSelect){
   const readOnly = card.dataset.readOnly === "1";
   const box = document.getElementById("qontoInvoiceHistory");
   const syncBtn = document.getElementById("btnSyncQontoTrainee");
+  let currentLines = [];
+  let currentLine = null;
+  let modalLoading = false;
   const esc = v => String(v ?? "").replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   const fmtMoney = n => new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(Number(n||0));
   const label = s => ({paid:'Payée',sent:'Envoyée',finalized:'Facture finalisée',draft:'Brouillon créé',cancelled:'Non facturé',deleted:'Non facturé',not_invoiced:'Non facturé',not_generated:'Non facturé'}[s]||'Non facturé');
@@ -3468,8 +3472,20 @@ if(conventionSelect){
     const r = await fetch(`/api/billing/trainee/${encodeURIComponent(traineeId)}/session/${encodeURIComponent(sessionId)}`);
     const j = await r.json();
     if(!r.ok||!j.ok) throw new Error(j.error||'Chargement impossible');
-    render(j.lines||[]);
+    currentLines = j.lines || [];
+    render(currentLines);
   }
+  window.refreshQontoInvoiceHistory = () => load().catch(e=>{ box.innerHTML = `<div class="qonto-error">${esc(e.message)}</div>`; });
+  window.addEventListener('qonto-billing-refresh', window.refreshQontoInvoiceHistory);
+  function paymentStatusLabel(status){return ({paid:'Payé',unpaid:'Non payé',unknown:'Inconnu',pending:'En attente'}[status]||status||'Inconnu');}
+  function closeBillingModal(){document.querySelectorAll('.billing-modal-overlay').forEach(m=>m.remove());currentLine=null;modalLoading=false;}
+  function modalMessage(text,type='error'){const msg=document.getElementById('modalMsg');if(!msg)return;msg.className=type==='success'?'billing-modal-success':'billing-modal-error';msg.textContent=text;}
+  function renderInvoiceModalContent(line, created=false){
+    const vat=Number(line.vatRate||0), totalTtc=Number(line.amountTTC||line.amount||0), totalHt=vat?totalTtc/(1+vat/100):totalTtc, totalTva=totalTtc-totalHt, hasInvoice=!!(line.qontoInvoiceId||line.qontoDraftId);
+    return `<div class="billing-modal-head"><div><h2>Vérification avant création Qonto</h2><div class="muted">Même workflow que la page Facturation : contrôle, puis création d’une facture Qonto en brouillon uniquement.</div><span class="billing-modal-step">Étape 1 · Récapitulatif</span></div><button class="billing-modal-close" type="button" data-modal-close aria-label="Fermer">✕</button></div>${hasInvoice?'<div class="billing-modal-existing">Une facture existe déjà pour cette ligne.</div>':''}<div class="billing-modal-summary"><p><strong>Stagiaire :</strong> ${esc(line.traineeFirstName)} ${esc(line.traineeLastName)}</p><p><strong>Formation :</strong> ${esc(line.formationName)}</p><p><strong>Session / nom pédagogique :</strong> ${esc(line.sessionName||line.formationName)}</p><p><strong>Dates :</strong> ${esc(line.dateLabel)}</p><p><strong>Financeur :</strong> ${esc(line.financeurName||line.financingLabel||line.financingType)}</p><p><strong>Montant exact de la ligne :</strong> ${fmtMoney(totalTtc)}</p><p><strong>Numéro facture :</strong> ${esc(line.qontoInvoiceNumber||line.qontoInvoiceId||line.qontoDraftId||'En attente')}</p><p><strong>Statut facture :</strong> ${label(line.invoiceStatus)}</p><p><strong>Statut paiement :</strong> ${paymentStatusLabel(line.paymentStatus)}</p></div><div class="billing-modal-grid"><div class="kv"><b>Total HT</b><br>${fmtMoney(totalHt)}</div><div class="kv"><b>TVA / exonération</b><br>${vat}% · ${fmtMoney(totalTva)}</div><div class="kv"><b>Total TTC</b><br>${fmtMoney(totalTtc)}</div><div class="kv"><b>Client</b><br>${esc(line.clientName||'')}</div></div><div id="modalMsg" class="${created?'billing-modal-success':''}">${created?'Brouillon créé. Vous pouvez maintenant consulter la facture ou synchroniser le paiement.':''}</div><div class="billing-modal-actions"><button type="button" class="btn btn-outline" data-modal-close>Fermer</button>${hasInvoice?`<a class="btn btn-outline" href="/api/admin/billing-lines/${encodeURIComponent(line.id)}/download-invoice" target="_blank" rel="noopener">Voir la facture</a>`:`<button type="button" class="btn btn-primary" id="confirmGenerate">Créer la facture en brouillon</button>`}</div>`;
+  }
+  function openGenerateInvoiceModal(line){currentLine=line;document.body.insertAdjacentHTML('beforeend',`<div class="billing-modal-overlay no-print" role="dialog" aria-modal="true"><div class="billing-modal">${renderInvoiceModalContent(line)}</div></div>`);document.querySelectorAll('[data-modal-close]').forEach(btn=>btn.onclick=closeBillingModal);const confirm=document.getElementById('confirmGenerate');if(confirm)confirm.onclick=createCurrentDraft;}
+  async function createCurrentDraft(){if(!currentLine||modalLoading)return;modalLoading=true;const btn=document.getElementById('confirmGenerate');if(btn){btn.disabled=true;btn.textContent='Création du brouillon...';}try{const data=await api('/api/billing/create-draft',{lineId:currentLine.id,source:'admin_trainee'});const updated=data.line||data;currentLine=updated;currentLines=currentLines.map(line=>line.id===updated.id?updated:line);render(currentLines);document.querySelector('.billing-modal').innerHTML=renderInvoiceModalContent(updated,true);document.querySelectorAll('[data-modal-close]').forEach(closeBtn=>closeBtn.onclick=closeBillingModal);}catch(err){modalMessage(err.message||'Erreur inconnue','error');if(btn){btn.disabled=false;btn.textContent='Créer la facture en brouillon';}}finally{modalLoading=false;}}
   function render(lines){
     if(!lines.length){ box.innerHTML = '<div><span class="qonto-status">Non facturé</span></div>'; return; }
     box.innerHTML = lines.map(l=>{
@@ -3491,7 +3507,7 @@ if(conventionSelect){
     const id = e.target.dataset.create || e.target.dataset.finalize || e.target.dataset.send || e.target.dataset.reset;
     if(!id) return;
     try{
-      if(e.target.dataset.create) await api('/api/billing/create-draft',{lineId:id,source:'admin_trainee'});
+      if(e.target.dataset.create){ const line = currentLines.find(l=>l.id===id); if(line) openGenerateInvoiceModal(line); return; }
       if(e.target.dataset.finalize) await api('/api/billing/finalize',{lineId:id,source:'admin_trainee'});
       if(e.target.dataset.send) await api('/api/billing/send',{lineId:id,source:'admin_trainee'});
       if(e.target.dataset.reset && confirm('Annuler/remettre à zéro ce brouillon ?')) await api('/api/billing/cancel-or-reset',{lineId:id,source:'admin_trainee'});
