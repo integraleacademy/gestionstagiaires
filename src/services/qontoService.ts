@@ -113,7 +113,7 @@ export async function createQontoClient(payload: Record<string, unknown>): Promi
 export const CPF_QONTO_CLIENT = {
   kind: "company",
   type: "company",
-  name: "Mon Compte Formation géré par la Caisse des Dépôts et Consignations",
+  name: "CAISSE DES DEPOTS",
   tax_identification_number: "18002002600019",
   billing_address: {
     street_address: "56 rue de Lille - Mon Compte Formation",
