@@ -72,7 +72,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(len(self.saved), 1)
 
 
-    def test_missing_qonto_billing_invoice_resets_local_line(self):
+    def test_missing_qonto_billing_invoice_marks_line_to_control(self):
         data = {
             "sessions": [{"id": "S1", "name": "APS NOVEMBRE 2026", "date_start": "2026-11-01", "date_end": "2026-11-05", "trainees": [{"id": "T1", "first_name": "Clement", "last_name": "VAILLANT", "cpf_amount": 1200}]}],
             "billing_lines": [{
@@ -88,13 +88,14 @@ class QontoInvoiceStatusTests(unittest.TestCase):
             did_reset, message = gestion_app._sync_billing_line_with_qonto(data, line)
 
         self.assertTrue(did_reset)
-        self.assertIn("reset local", message)
+        self.assertIn("à contrôler", message)
         saved_line = gestion_app._find_billing_line(data, data["billing_lines"][0]["id"])
         self.assertFalse(saved_line.get("qontoInvoiceId"))
         self.assertFalse(saved_line.get("qontoInvoiceNumber"))
         self.assertFalse(saved_line.get("invoiceGeneratedAt"))
-        self.assertEqual(saved_line["invoiceStatus"], "not_generated")
-        self.assertEqual(saved_line["paymentStatus"], "unknown")
+        self.assertEqual(saved_line["invoiceStatus"], "control")
+        self.assertEqual(saved_line["paymentStatus"], "control")
+        self.assertIn("introuvable", saved_line.get("syncWarning", ""))
 
     def test_qonto_webhook_rejects_invalid_signature(self):
         client = gestion_app.app.test_client()
