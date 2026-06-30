@@ -20860,17 +20860,17 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any])
     with _billing_generation_locks_guard:
         lock = _billing_generation_locks.setdefault(line['id'], threading.Lock())
     if not lock.acquire(blocking=False):
-        return False, {'error': 'Génération déjà en cours pour cette ligne'}
+        return False, {'error': 'Génération déjà en cours pour cette ligne', 'message': 'Génération déjà en cours pour cette ligne'}
     try:
         current = _find_billing_line(data, line['id']) or line
         if current.get('qontoInvoiceId') or current.get('invoiceStatus') == 'generated':
             _billing_log(current, 'Génération facture bloquée', 'ignored', 'Facture déjà existante', current.get('qontoInvoiceId') or '')
             _save_billing_line(data, current); save_data(data)
-            return False, {'error': 'Facture déjà créée', 'line': current, 'ignored': True}
+            return False, {'error': 'Facture déjà créée', 'message': 'Facture déjà créée', 'line': current, 'ignored': True}
         if not _qonto_is_configured():
             _billing_log(current, 'Erreur création facture Qonto', 'error', 'Qonto non configuré')
             _save_billing_line(data, current); save_data(data)
-            return False, {'error': 'Qonto n’est pas connecté', 'line': current}
+            return False, {'error': 'Qonto n’est pas connecté', 'message': 'Qonto n’est pas connecté : configurez les variables d’environnement Qonto avant de créer une facture.', 'line': current}
         current['generationInProgress'] = True; _save_billing_line(data, current); save_data(data)
         try:
             invoice_iban = get_qonto_invoice_iban()
@@ -20893,7 +20893,7 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any])
             _save_billing_line(data, current); save_data(data)
             return True, {'line': current}
         except Exception as exc:
-            msg = _sanitize_qonto_error(str(exc)); current['generationInProgress'] = False; current['invoiceStatus'] = 'not_generated' if not current.get('qontoInvoiceId') else 'draft'; _billing_log(current, 'Erreur création facture Qonto', 'error', msg); _save_billing_line(data, current); save_data(data); return False, {'error': msg, 'line': current}
+            msg = _sanitize_qonto_error(str(exc)); current['generationInProgress'] = False; current['invoiceStatus'] = 'not_generated' if not current.get('qontoInvoiceId') else 'draft'; _billing_log(current, 'Erreur création facture Qonto', 'error', msg); _save_billing_line(data, current); save_data(data); return False, {'error': msg, 'message': f'Erreur Qonto : {msg}', 'line': current}
     finally:
         lock.release()
 
@@ -20903,9 +20903,9 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any])
 @admin_write_required
 def api_admin_billing_generate(line_id: str):
     data = load_data(); line = _find_billing_line(data, line_id)
-    if not line: return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
+    if not line: return jsonify({'ok': False, 'success': False, 'error': 'Ligne de facturation introuvable', 'message': 'Ligne de facturation introuvable'}), 404
     ok, result = _create_invoice_for_billing_line(data, line)
-    return jsonify({'ok': ok, **result}), (200 if ok else (409 if result.get('ignored') else 400))
+    return jsonify({'ok': ok, 'success': ok, **result}), (200 if ok else (409 if result.get('ignored') else 400))
 
 
 @app.post('/api/admin/billing-lines/bulk-generate')
