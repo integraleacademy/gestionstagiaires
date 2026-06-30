@@ -973,7 +973,7 @@
     </div>
 
     {% set conv_sig = trainee.convocation_signature or {} %}
-    {% if conv_sig.signature_link and conv_sig.status != 'signed' %}
+    {% if conv_sig.signature_link and conv_sig.status not in ['signed', 'done'] %}
     <div class="card" style="border-left:4px solid #2563eb;">
       <h2>Signature de votre convocation</h2>
       <p class="muted" style="margin:0 0 12px;">
