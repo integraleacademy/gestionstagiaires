@@ -139,5 +139,44 @@ class ApsConvocationGenerationTests(unittest.TestCase):
                     app._generate_aps_convocation_files(session, trainee, "session-1", "trainee-1")
 
 
+class YousignSignatureEmailTests(unittest.TestCase):
+    def test_signature_email_html_escapes_values_and_uses_button(self):
+        html_body = app.build_signature_email_html(
+            "Jean <script>",
+            "APS & Sécurité",
+            "01/07/2026 au 05/07/2026",
+            "https://sign.example.test/?token=abc&name=<bad>",
+        )
+
+        self.assertIn("Signer ma convocation", html_body)
+        self.assertIn("Intégrale Academy", html_body)
+        self.assertIn("Formation :", html_body)
+        self.assertIn("Jean &lt;script&gt;", html_body)
+        self.assertIn("APS &amp; Sécurité", html_body)
+        self.assertNotIn("Jean <script>", html_body)
+        self.assertIn("https://sign.example.test/?token=abc&amp;name=&lt;bad&gt;", html_body)
+
+    def test_signature_email_send_uses_html_and_text_payload(self):
+        session = {"name": "Formation APS", "date_start": "2026-07-01", "date_end": "2026-07-05"}
+        trainee = {"id": "trainee-1", "email": "stagiaire@example.com", "first_name": "Jean"}
+        sent_payload = {}
+
+        def fake_post(_url, headers=None, json=None, timeout=None):
+            sent_payload.update(json or {})
+            return mock.Mock(status_code=202, text="{}")
+
+        with mock.patch.object(app, "BREVO_API_KEY", "key"), \
+             mock.patch.object(app.requests, "post", side_effect=fake_post):
+            ok = app.send_yousign_signature_link_email(session, trainee, "https://sign.example.test/sign")
+
+        self.assertTrue(ok)
+        self.assertEqual(sent_payload["sender"]["name"], "Intégrale Academy")
+        self.assertEqual(sent_payload["subject"], "Signature requise – Convocation Formation APS")
+        self.assertIn("htmlContent", sent_payload)
+        self.assertIn("textContent", sent_payload)
+        self.assertIn("Signer ma convocation", sent_payload["htmlContent"])
+        self.assertIn("https://sign.example.test/sign", sent_payload["textContent"])
+
+
 if __name__ == "__main__":
     unittest.main()
