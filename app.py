@@ -369,19 +369,26 @@ def search_qonto_client(criteria: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 
 def create_qonto_client(payload: Dict[str, Any]) -> Dict[str, Any]:
-    envelope = dict(payload or {})
-    client = envelope.get("client") if isinstance(envelope.get("client"), dict) else envelope
+    client = dict(payload or {})
+    # Qonto /v2/clients expects client fields at the JSON root: never wrap in
+    # {client: ...}, {data: ...} or JSON:API attributes envelopes.
+    if isinstance(client.get("client"), dict):
+        client = dict(client["client"])
+    elif isinstance(client.get("data"), dict):
+        data = client["data"]
+        client = dict(data.get("attributes") if isinstance(data.get("attributes"), dict) else data)
+
     kind = _qonto_client_kind(client)
     if kind == "company":
         if not (client.get("name") or "").strip():
             raise ValueError("Nom société obligatoire pour créer un client Qonto company")
         client.setdefault("currency", "EUR")
-        client.setdefault("locale", "fr")
+        client.setdefault("locale", "FR")
         billing = client.get("billing_address") if isinstance(client.get("billing_address"), dict) else {}
         for key in ("street_address", "city", "zip_code", "country_code"):
             if not (billing.get(key) or "").strip():
                 raise ValueError(f"Adresse de facturation Qonto incomplète : {key}")
-        for forbidden in ("first_name", "last_name", "displayType", "address_line_2"):
+        for forbidden in ("first_name", "last_name", "displayType", "address_line_2", "Société"):
             client.pop(forbidden, None)
         if isinstance(client.get("billing_address"), dict):
             client["billing_address"].pop("address_line_2", None)
@@ -389,8 +396,10 @@ def create_qonto_client(payload: Dict[str, Any]) -> Dict[str, Any]:
         for key in ("first_name", "last_name"):
             if not (client.get(key) or "").strip():
                 raise ValueError(f"{key} obligatoire pour créer un client Qonto individual")
-    cleaned_client = cleanQontoPayload(client)
-    cleaned_payload = {"client": cleaned_client} if "client" in envelope else cleaned_client
+
+    cleaned_payload = cleanQontoPayload(client)
+    app.logger.info("[QONTO CREATE CLIENT URL] %s", f"{_qonto_base_url()}/v2/clients")
+    app.logger.info("[QONTO CREATE CLIENT PAYLOAD] %s", json.dumps(cleaned_payload, ensure_ascii=False, indent=2))
     return _qonto_request("POST", "/v2/clients", cleaned_payload)
 
 
@@ -20751,7 +20760,7 @@ CPF_QONTO_CLIENT = {
         "country_code": "FR",
     },
     "currency": "EUR",
-    "locale": "fr",
+    "locale": "FR",
 }
 CPF_QONTO_CUSTOMER = {
     "type": "company",
@@ -20772,8 +20781,24 @@ CPF_QONTO_CUSTOMER = {
 def getCpfQontoClientDefaults() -> Dict[str, Any]:
     return dict(CPF_QONTO_CUSTOMER)
 
+def buildCpfQontoClientPayload() -> Dict[str, Any]:
+    return cleanQontoPayload({
+        "type": "company",
+        "kind": "company",
+        "name": CPF_QONTO_CLIENT_NAME,
+        "tax_identification_number": CPF_QONTO_CLIENT_TAX_ID,
+        "currency": "EUR",
+        "locale": "FR",
+        "billing_address": {
+            "street_address": "56 rue de Lille - Mon Compte Formation",
+            "city": "PARIS 07 SP",
+            "zip_code": "75356",
+            "country_code": "FR",
+        },
+    })
+
 def _cpf_qonto_api_client_payload() -> Dict[str, Any]:
-    return cleanQontoPayload(dict(CPF_QONTO_CLIENT))
+    return buildCpfQontoClientPayload()
 
 
 def _cpf_qonto_client_matches(client: Dict[str, Any]) -> bool:
@@ -20824,7 +20849,7 @@ def get_or_create_cpf_qonto_client() -> Dict[str, Any]:
     existing_client = find_qonto_client_by_name("Mon Compte Formation")
     if existing_client and _cpf_qonto_client_matches(existing_client):
         return existing_client
-    return create_qonto_client({"client": canonical_payload})
+    return create_qonto_client(canonical_payload)
 
 def buildInvoiceCustomer(financeurType: Any, trainee: Dict[str, Any], session_data: Optional[Dict[str, Any]] = None, funding: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     if _is_cpf_financeur(financeurType):
