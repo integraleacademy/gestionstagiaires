@@ -20745,7 +20745,7 @@ def _qonto_invoice_state(trainee: Dict[str, Any]) -> Dict[str, Any]:
     return state
 
 
-CPF_QONTO_CLIENT_NAME = "Mon Compte Formation géré par la Caisse des Dépôts et Consignations"
+CPF_QONTO_CLIENT_NAME = "CAISSE DES DEPOTS"
 CPF_QONTO_CLIENT_TAX_ID = "18002002600019"
 CPF_QONTO_SEARCH_NAMES = ["Mon Compte Formation"]
 CPF_QONTO_CLIENT = {
@@ -20992,7 +20992,7 @@ def validate_qonto_client_payload(client_payload: Dict[str, Any], financeur: Any
         cpf_expected = {"name": CPF_QONTO_CLIENT_NAME, "tax_identification_number": CPF_QONTO_CLIENT_TAX_ID}
         for key, expected in cpf_expected.items():
             if (client_payload.get(key) or "") != expected:
-                errors.append({"field": key, "label": key, "message": "CPF doit être facturé à Mon Compte Formation géré par la Caisse des Dépôts et Consignations."})
+                errors.append({"field": key, "label": key, "message": "CPF doit être facturé à CAISSE DES DEPOTS."})
     if kind == "company":
         billing = client_payload.get("billing_address") if isinstance(client_payload.get("billing_address"), dict) else {}
         required = (("name", "Nom société", client_payload.get("name")), ("address_line_1", "Adresse", client_payload.get("address_line_1") or billing.get("street_address")), ("zip_code", "Code postal", client_payload.get("zip_code") or billing.get("zip_code")), ("city", "Ville", client_payload.get("city") or billing.get("city")), ("country_code", "Pays", client_payload.get("country_code") or billing.get("country_code")))

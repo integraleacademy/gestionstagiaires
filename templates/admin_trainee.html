@@ -3465,7 +3465,7 @@ if(conventionSelect){
   let currentLine = null;
   let modalLoading = false;
   const esc = v => String(v ?? "").replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-  const CPF_QONTO_CLIENT={type:'company',displayType:'Société',name:'Mon Compte Formation géré par la Caisse des Dépôts et Consignations',email:'',addressLine1:'56 rue de Lille',addressLine2:'Mon Compte Formation',zipCode:'75356',city:'PARIS 07 SP',country:'FR',taxIdentificationNumber:'18002002600019',vatNumber:''};
+  const CPF_QONTO_CLIENT={type:'company',displayType:'Société',name:'CAISSE DES DEPOTS',email:'',addressLine1:'56 rue de Lille',addressLine2:'Mon Compte Formation',zipCode:'75356',city:'PARIS 07 SP',country:'FR',taxIdentificationNumber:'18002002600019',vatNumber:''};
   function isCpfQontoLine(line){const blob=[line?.financingType,line?.financeur,line?.financeurName,line?.financingLabel,line?.typeFinanceur].join(' ').toLowerCase();return /\bcpf\b|mon compte formation|caisse des d[ée]p[ôo]ts/.test(blob);}
   function getCpfQontoClientDefaults(){return {...CPF_QONTO_CLIENT};}
   const fmtMoney = n => new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(Number(n||0));
