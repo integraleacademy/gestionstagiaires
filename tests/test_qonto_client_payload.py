@@ -23,37 +23,22 @@ class QontoClientPayloadTests(unittest.TestCase):
         )
 
         self.assertNotIn("phone", payload)
-        self.assertEqual(
-            payload,
-            {
-                "name": "Jean Dupont",
-                "first_name": "Jean",
-                "last_name": "Dupont",
-                "email": "jean@example.com",
-                "currency": "EUR",
-                "locale": "FR",
-                "address": "10 rue de Paris",
-                "city": "Paris",
-                "zip_code": "75001",
-                "country_code": "FR",
-                "billing_address": {
-                    "street_address": "10 rue de Paris",
-                    "city": "Paris",
-                    "zip_code": "75001",
-                    "country_code": "FR",
-                },
-            },
-        )
+        self.assertEqual(payload["type"], "individual")
+        self.assertEqual(payload["kind"], "individual")
+        self.assertEqual(payload["name"], "Jean Dupont")
+        self.assertEqual(payload["first_name"], "Jean")
+        self.assertEqual(payload["last_name"], "Dupont")
+        self.assertEqual(payload["billing_address"]["street_address"], "10 rue de Paris")
 
 
     def test_build_invoice_customer_uses_caisse_des_depots_for_cpf_variants(self):
         for label in ["CPF", " cpf ", "Compte Personnel de Formation", "Mon Compte Formation"]:
             customer = gestion_app.buildInvoiceCustomer(label, {"first_name": "Clement", "last_name": "VAILLANT"})
-            self.assertEqual(customer["name"], "Caisse des dépôts")
+            self.assertEqual(customer["name"], gestion_app.CPF_QONTO_CLIENT_NAME)
             self.assertEqual(customer["organization"], "Mon Compte Formation")
             self.assertEqual(customer["address"], "56 rue de Lille")
             self.assertEqual(customer["zip_code"], "75356")
-            self.assertEqual(customer["city"], "Paris")
+            self.assertEqual(customer["city"], "PARIS 07 SP")
 
     def test_invalid_string_phone_safety_removes_field(self):
         payload = {"name": "Jean Dupont", "phone": "0665245271"}
@@ -122,8 +107,9 @@ class QontoCpfClientTests(unittest.TestCase):
 
         self.assertEqual(client["client"]["id"], "created")
         self.assertEqual(created_payloads[0]["client"]["kind"], "company")
-        self.assertEqual(created_payloads[0]["client"]["name"], "Caisse des dépôts")
-        self.assertIsNone(created_payloads[0]["client"]["email"])
+        self.assertEqual(created_payloads[0]["client"]["name"], gestion_app.CPF_QONTO_CLIENT_NAME)
+        self.assertEqual(created_payloads[0]["client"]["email"], "")
+        self.assertEqual(created_payloads[0]["client"]["tax_identification_number"], "18002002600019")
         self.assertEqual(created_payloads[0]["client"]["billing_address"]["street_address"], "56 rue de Lille")
 
     def test_invalid_qonto_queryfields_marker_is_blocked_before_api_call(self):

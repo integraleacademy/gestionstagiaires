@@ -76,18 +76,36 @@ export async function createQontoClient(payload: Record<string, unknown>): Promi
 }
 
 export const CPF_QONTO_CLIENT = {
+  type: "company",
   kind: "company",
-  name: "Caisse des dépôts",
-  email: null,
+  displayType: "Société",
+  name: "Mon Compte Formation géré par la Caisse des Dépôts et Consignations",
+  email: "",
+  addressLine1: "56 rue de Lille",
+  addressLine2: "Mon Compte Formation",
+  zipCode: "75356",
+  city: "PARIS 07 SP",
+  country: "FR",
+  country_code: "FR",
+  taxIdentificationNumber: "18002002600019",
+  tax_identification_number: "18002002600019",
+  vatNumber: "",
+  vat_number: "",
   currency: "EUR",
   locale: "FR",
   billing_address: {
     street_address: "56 rue de Lille",
-    city: "Paris",
+    address_line_2: "Mon Compte Formation",
+    city: "PARIS 07 SP",
     zip_code: "75356",
     country_code: "FR",
   },
 };
+
+export function getCpfQontoClientDefaults(): Record<string, unknown> {
+  return { ...CPF_QONTO_CLIENT };
+}
+
 
 export async function getOrCreateCpfQontoClient(): Promise<Record<string, unknown>> {
   const existingClient = await findQontoClientByName(CPF_QONTO_CLIENT.name);
