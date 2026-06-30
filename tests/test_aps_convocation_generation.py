@@ -7,6 +7,56 @@ import app
 
 
 class ApsConvocationGenerationTests(unittest.TestCase):
+    def test_yousign_external_id_uses_allowed_characters_without_colons(self):
+        external_id = app.make_yousign_external_id("2ebec35a:bad", "TRN-2E16579A/2026")
+
+        self.assertEqual(external_id, "convocation_2ebec35a_bad_TRN-2E16579A_2026")
+        self.assertNotIn(":", external_id)
+
+    def test_yousign_signature_request_payload_uses_sanitized_external_id(self):
+        session = {"id": "2ebec35a", "training_type": "APS", "name": "Formation APS"}
+        trainee = {
+            "id": "TRN-2E16579A",
+            "email": "stagiaire@example.com",
+            "first_name": "Jean",
+            "last_name": "Dupont",
+        }
+        calls = []
+
+        def fake_yousign_json(method, path, **kwargs):
+            calls.append((method, path, kwargs))
+            if method == "POST" and path == "/signature_requests":
+                return {"id": "sig-req-1"}
+            if path.endswith("/documents"):
+                return {"id": "doc-1"}
+            if path.endswith("/signers"):
+                return {"id": "signer-1", "signature_link": "https://example.test/sign"}
+            if path.endswith("/activate"):
+                return {"signature_link": "https://example.test/sign"}
+            return {}
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_path = os.path.join(tmpdir, "convocation.pdf")
+            docx_path = os.path.join(tmpdir, "convocation.docx")
+            with open(pdf_path, "wb") as fh:
+                fh.write(b"pdf")
+            with open(docx_path, "wb") as fh:
+                fh.write(b"docx")
+
+            with mock.patch.object(app, "_yousign_is_configured", return_value=True), \
+                 mock.patch.object(app, "_generate_aps_convocation_files", return_value=(docx_path, pdf_path)), \
+                 mock.patch.object(app, "_yousign_json", side_effect=fake_yousign_json):
+                state = app.create_yousign_convocation_signature(session, trainee, "2ebec35a", "TRN-2E16579A")
+
+        signature_request_call = calls[0]
+        self.assertEqual(signature_request_call[1], "/signature_requests")
+        self.assertEqual(
+            signature_request_call[2]["json"]["external_id"],
+            "convocation_2ebec35a_TRN-2E16579A",
+        )
+        self.assertEqual(state["external_id"], "convocation_2ebec35a_TRN-2E16579A")
+        self.assertEqual(state["status"], "ongoing")
+
     def test_generation_does_not_require_every_aps_variable_in_template(self):
         session = {
             "id": "session-1",

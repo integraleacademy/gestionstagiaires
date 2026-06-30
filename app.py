@@ -20392,6 +20392,11 @@ def _sanitize_yousign_error(message: Any) -> str:
     return text[:800]
 
 
+def make_yousign_external_id(session_id: str, trainee_id: str) -> str:
+    raw = f"convocation_{session_id}_{trainee_id}"
+    return re.sub(r"[^A-Za-z0-9_\-@.%+ ]", "_", raw)
+
+
 def _yousign_request(method: str, path: str, **kwargs) -> requests.Response:
     url = f"{_yousign_base_url()}/{path.lstrip('/')}"
     headers = dict(_yousign_headers())
@@ -20454,7 +20459,7 @@ def create_yousign_convocation_signature(session_obj: Dict[str, Any], trainee: D
         raise RuntimeError("Le PDF de convocation APS n’a pas été généré.")
 
     request_name = f"Convocation APS - {first_name} {last_name}".strip()
-    external_id = f"convocation_aps:{session_id}:{trainee_id}"
+    external_id = make_yousign_external_id(session_id, trainee_id)
     app.logger.info("[YOUSIGN] create signature request trainee_id=%s sandbox=true", trainee_id)
     signature_request = _yousign_json("POST", "/signature_requests", json={
         "name": request_name,
@@ -20505,6 +20510,7 @@ def create_yousign_convocation_signature(session_obj: Dict[str, Any], trainee: D
     state.update({
         "status": "ongoing",
         "signature_request_id": signature_request_id,
+        "external_id": external_id,
         "document_id": document_id,
         "signer_id": signer_id or "",
         "signature_link": signature_link,
