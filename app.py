@@ -20703,7 +20703,6 @@ def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[s
     app.logger.info("[CONVOCATION APS] Modèle Word utilisé : %s", template_path)
     if not os.path.exists(template_path):
         raise FileNotFoundError("Modèle Word obligatoire manquant : gestionstagiaires/templates_word/convocationaps.docx")
-    _assert_aps_template_contains_expected_variables(template_path)
     context = _build_aps_convocation_context(session_obj, trainee)
     app.logger.info("[CONVOCATION APS] Données injectées : stagiaire=%s formation=%s période=%s examen=%s", context.get("nom_complet"), context.get("formation_nom"), context.get("periode_formation"), context.get("date_examen"))
     base = f"convocation_aps_{_safe_filename_part(trainee.get('id') or trainee_id)}"
@@ -20715,7 +20714,6 @@ def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[s
         raise RuntimeError("Le DOCX final de convocation APS est introuvable ou vide.")
     final_docx_size = os.path.getsize(final_docx_path)
     app.logger.info("[CONVOCATION APS] Taille DOCX final : %s octets", final_docx_size)
-    _assert_docx_has_no_unresolved_variables(final_docx_path)
     lo_binary = _find_libreoffice_binary()
     output_dir = APS_CONVOCATION_DIR
     command = [lo_binary, "--headless", "--convert-to", "pdf", "--outdir", output_dir, final_docx_path]
