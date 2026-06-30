@@ -20335,10 +20335,13 @@ def _assert_aps_template_contains_expected_variables(template_path: str) -> None
 
 
 def _find_libreoffice_binary() -> str:
-    binary = shutil.which("libreoffice") or shutil.which("soffice")
-    if not binary:
-        raise RuntimeError("LibreOffice est introuvable sur le serveur : installez libreoffice ou soffice pour convertir la convocation APS en PDF.")
-    return binary
+    for binary in ("libreoffice", "soffice"):
+        path = shutil.which(binary)
+        app.logger.info("[CONVOCATION APS] %s: %s", binary, path)
+        print(f"[CONVOCATION APS] {binary}: {path}", flush=True)
+        if path:
+            return path
+    raise RuntimeError("LibreOffice est introuvable sur le serveur : installez libreoffice ou soffice pour convertir la convocation APS en PDF.")
 
 
 def _assert_docx_has_no_unresolved_variables(docx_path: str) -> None:
@@ -20385,14 +20388,23 @@ def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[s
     app.logger.info("[CONVOCATION APS] DOCX final généré : %s", final_docx_path)
     if not os.path.exists(final_docx_path) or os.path.getsize(final_docx_path) <= 0:
         raise RuntimeError("Le DOCX final de convocation APS est introuvable ou vide.")
+    final_docx_size = os.path.getsize(final_docx_path)
+    app.logger.info("[CONVOCATION APS] Taille DOCX final : %s octets", final_docx_size)
     _assert_docx_has_no_unresolved_variables(final_docx_path)
     lo_binary = _find_libreoffice_binary()
-    command = [lo_binary, "--headless", "--convert-to", "pdf", "--outdir", APS_CONVOCATION_DIR, final_docx_path]
+    output_dir = APS_CONVOCATION_DIR
+    command = [lo_binary, "--headless", "--convert-to", "pdf", "--outdir", output_dir, final_docx_path]
+    app.logger.info("[CONVOCATION APS] Binaire LibreOffice trouvé : %s", lo_binary)
+    app.logger.info("[CONVOCATION APS] Chemin PDF attendu : %s", final_pdf_path)
     app.logger.info("[CONVOCATION APS] Commande conversion : %s", " ".join(command))
     if os.path.exists(final_pdf_path): os.remove(final_pdf_path)
-    result = subprocess.run(command, capture_output=True, text=True, timeout=120)
-    if result.returncode != 0:
-        raise RuntimeError(f"Conversion LibreOffice impossible : {(result.stderr or result.stdout or '').strip()}")
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True, timeout=120)
+    except subprocess.CalledProcessError as exc:
+        app.logger.error("[CONVOCATION APS] Conversion LibreOffice impossible (code %s)", exc.returncode)
+        app.logger.error("[CONVOCATION APS] stdout LibreOffice: %s", (exc.stdout or "").strip())
+        app.logger.error("[CONVOCATION APS] stderr LibreOffice: %s", (exc.stderr or "").strip())
+        raise RuntimeError(f"Conversion LibreOffice impossible : {(exc.stderr or exc.stdout or '').strip()}") from exc
     app.logger.info("[CONVOCATION APS] PDF final généré : %s", final_pdf_path)
     if not os.path.exists(final_pdf_path) or os.path.getsize(final_pdf_path) <= 0:
         raise RuntimeError("Le PDF final de convocation APS est introuvable ou vide après conversion LibreOffice.")
