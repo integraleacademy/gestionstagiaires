@@ -715,9 +715,9 @@
     <a class="filter-btn filter-btn--vtc" href="{{ url_for('admin_vtc_trainees_all') }}" style="text-decoration:none;display:inline-flex;align-items:center;">Voir tous les stagiaires VTC</a>
     <button class="filter-btn filter-btn--status" data-filter-group="status" data-filter-value="ongoing">Afficher les formations en cours</button>
     <button class="filter-btn filter-btn--status" data-filter-group="status" data-filter-value="upcoming">Afficher les prochaines formations</button>
-    <button class="filter-btn filter-btn--status" data-filter-group="status" data-filter-value="ended">Afficher les formations terminées</button>
+    <button class="filter-btn filter-btn--status" data-ended-toggle="true">Afficher les sessions terminées</button>
     <button class="filter-btn filter-btn--cash" data-filter-group="payment" data-filter-value="cash">Paiements en espèces</button>
-    <button class="filter-btn filter-btn--all" data-filter-reset="true">Afficher toutes les formations</button>
+    <button class="filter-btn filter-btn--all" data-filter-reset="true">Réinitialiser les filtres</button>
   </div>
 </div>
 
@@ -2099,6 +2099,7 @@
   (function(){
     const cards = Array.from(document.querySelectorAll(".session-card"));
     const filterButtons = Array.from(document.querySelectorAll("[data-filter-group]"));
+    const endedToggleButton = document.querySelector("[data-ended-toggle]");
     const resetButton = document.querySelector("[data-filter-reset]");
     const dashboardFilterCards = Array.from(document.querySelectorAll("[data-dashboard-filter]"));
     const dashboardResetButton = document.querySelector("[data-dashboard-reset]");
@@ -2108,14 +2109,17 @@
       training: null,
       status: null,
       payment: null,
+      showEnded: false,
     };
 
     function applyFilters(){
       cards.forEach(card => {
+        const isEnded = card.classList.contains("session-card--ended");
         const matchTraining = !filterState.training || card.classList.contains(`training-${filterState.training}`);
         const matchStatus = !filterState.status || card.classList.contains(`session-card--${filterState.status}`);
         const matchPayment = !filterState.payment || card.classList.contains("has-cash-alert");
-        card.style.display = (matchTraining && matchStatus && matchPayment) ? "" : "none";
+        const matchEndedVisibility = filterState.showEnded || !isEnded;
+        card.style.display = (matchTraining && matchStatus && matchPayment && matchEndedVisibility) ? "" : "none";
       });
     }
 
@@ -2132,11 +2136,15 @@
         card.classList.toggle("is-active", !!value && filterState.training === value);
       });
 
+      if(endedToggleButton){
+        endedToggleButton.classList.toggle("is-active", filterState.showEnded);
+        endedToggleButton.textContent = filterState.showEnded ? "Masquer les sessions terminées" : "Afficher les sessions terminées";
+      }
       if(resetButton){
-        resetButton.classList.toggle("is-active", !filterState.training && !filterState.status && !filterState.payment);
+        resetButton.classList.toggle("is-active", !filterState.training && !filterState.status && !filterState.payment && !filterState.showEnded);
       }
       if(dashboardResetButton){
-        dashboardResetButton.classList.toggle("is-active", !filterState.training && !filterState.status && !filterState.payment);
+        dashboardResetButton.classList.toggle("is-active", !filterState.training && !filterState.status && !filterState.payment && !filterState.showEnded);
       }
     }
 
@@ -2172,14 +2180,22 @@
       filterState.training = null;
       filterState.status = null;
       filterState.payment = null;
+      filterState.showEnded = false;
       setActiveButtons();
       applyFilters();
     }
+
+    endedToggleButton?.addEventListener("click", ()=>{
+      filterState.showEnded = !filterState.showEnded;
+      setActiveButtons();
+      applyFilters();
+    });
 
     resetButton?.addEventListener("click", resetAllFilters);
     dashboardResetButton?.addEventListener("click", resetAllFilters);
 
     setActiveButtons();
+    applyFilters();
   })();
 
     // =========================
