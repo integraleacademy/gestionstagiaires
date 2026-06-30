@@ -3,11 +3,7 @@ const QONTO_API_BASE_URL = process.env.QONTO_API_BASE_URL || "https://thirdparty
 export function getQontoHeaders(): Record<string, string> {
   const login = (process.env.QONTO_LOGIN || "").trim();
   const secretKey = (process.env.QONTO_SECRET_KEY || "").trim();
-
-  return {
-    Authorization: `${login}:${secretKey}`,
-    "Content-Type": "application/json",
-  };
+  return { Authorization: `${login}:${secretKey}`, "Content-Type": "application/json" };
 }
 
 export function isQontoConfigured(): boolean {
@@ -17,26 +13,50 @@ export function isQontoConfigured(): boolean {
 const INVALID_QONTO_CLIENT_SEARCH_MESSAGE = "Recherche client Qonto invalide : utiliser uniquement filter[name], filter[email], filter[tax_identification_number] ou filter[vat_number].";
 const INVALID_QONTO_SEARCH_MARKERS = ["queryfields", "query_fields", "QueryFields", "first_name last_name name email"];
 
+export function cleanQontoPayload<T = unknown>(obj: T): T {
+  if (Array.isArray(obj)) return obj.map((v) => cleanQontoPayload(v)).filter((v) => v !== undefined && v !== null && v !== "" && !(typeof v === "object" && !Array.isArray(v) && Object.keys(v as object).length === 0)) as T;
+  if (obj && typeof obj === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      const cleaned = cleanQontoPayload(value);
+      if (cleaned === undefined || cleaned === null || cleaned === "") continue;
+      if (cleaned && typeof cleaned === "object" && !Array.isArray(cleaned) && Object.keys(cleaned as object).length === 0) continue;
+      out[key] = cleaned;
+    }
+    return out as T;
+  }
+  return obj;
+}
+
 function containsInvalidQontoSearchMarker(value: unknown): boolean {
   const serialized = typeof value === "string" ? value : JSON.stringify(value || {});
   const lowered = serialized.toLowerCase();
   return INVALID_QONTO_SEARCH_MARKERS.some((marker) => lowered.includes(marker.toLowerCase()));
 }
 
+function extractQontoMessage(body: string): string {
+  try {
+    const data = JSON.parse(body);
+    if (typeof data?.message === "string") return data.message;
+    if (typeof data?.error === "string") return data.error;
+    if (Array.isArray(data?.errors)) return data.errors.map((e: any) => e?.message || e?.detail || e?.code || String(e)).join("; ");
+  } catch (_) {}
+  return body;
+}
+
 async function qontoRequest(path: string, init: RequestInit = {}): Promise<Response> {
   const baseUrl = QONTO_API_BASE_URL.replace(/\/+$/, "");
   const endpoint = path.startsWith("/") ? path : `/${path}`;
-  if (containsInvalidQontoSearchMarker(endpoint) || containsInvalidQontoSearchMarker(init.body)) {
+  const cleanedBody = init.body && typeof init.body === "string" ? JSON.stringify(cleanQontoPayload(JSON.parse(init.body))) : init.body;
+  if (containsInvalidQontoSearchMarker(endpoint) || containsInvalidQontoSearchMarker(cleanedBody)) {
     console.error("[QONTO] invalid client search blocked", { endpoint });
     throw new Error(INVALID_QONTO_CLIENT_SEARCH_MESSAGE);
   }
-  return fetch(`${baseUrl}${endpoint}`, {
-    ...init,
-    headers: {
-      ...getQontoHeaders(),
-      ...(init.headers || {}),
-    },
-  });
+  const response = await fetch(`${baseUrl}${endpoint}`, { ...init, body: cleanedBody, headers: { ...getQontoHeaders(), ...(init.headers || {}) } });
+  const cloned = response.clone();
+  const body = await cloned.text().catch(() => "");
+  console.info("[QONTO] api_call", { method: init.method || "GET", url: `${baseUrl}${endpoint}`, payload: cleanedBody || null, status: response.status, trace_id: response.headers.get("x-qonto-trace-id") || response.headers.get("x-request-id") || "", body });
+  return response;
 }
 
 async function qontoJson<T = Record<string, unknown>>(path: string, init: RequestInit = {}): Promise<T> {
@@ -44,7 +64,7 @@ async function qontoJson<T = Record<string, unknown>>(path: string, init: Reques
   const response = await qontoRequest(path, init);
   const text = await response.text();
   const data = text ? JSON.parse(text) : {};
-  if (!response.ok) throw new Error(`Qonto HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`Qonto HTTP ${response.status}: ${extractQontoMessage(text)}`);
   return data as T;
 }
 
@@ -61,6 +81,15 @@ export async function findQontoClientByName(name: string): Promise<Record<string
   return Array.isArray(clients) && clients.length ? clients[0] : null;
 }
 
+export async function findQontoClientByTaxIdentificationNumber(taxId: string): Promise<Record<string, unknown> | null> {
+  const normalized = String(taxId || "").trim();
+  if (!normalized) return null;
+  const qs = `?${new URLSearchParams({ "filter[tax_identification_number]": normalized }).toString()}`;
+  const data = await qontoJson<Record<string, unknown>>(`/v2/clients${qs}`, { method: "GET" });
+  const clients = (data.clients || data.items || []) as Record<string, unknown>[];
+  return Array.isArray(clients) && clients.length ? clients[0] : null;
+}
+
 export async function searchQontoClient(criteria: Record<string, unknown>): Promise<Record<string, unknown> | null> {
   const email = String(criteria.email || "").trim();
   const name = String(criteria.name || criteria.client_name || "").trim();
@@ -72,34 +101,22 @@ export async function searchQontoClient(criteria: Record<string, unknown>): Prom
 }
 
 export async function createQontoClient(payload: Record<string, unknown>): Promise<Record<string, unknown>> {
-  return qontoJson("/v2/clients", { method: "POST", body: JSON.stringify(payload) });
+  return qontoJson("/v2/clients", { method: "POST", body: JSON.stringify(cleanQontoPayload(payload)) });
 }
 
 export const CPF_QONTO_CLIENT = {
-  type: "company",
   kind: "company",
-  displayType: "Société",
+  type: "company",
   name: "Mon Compte Formation géré par la Caisse des Dépôts et Consignations",
-  email: "",
-  addressLine1: "56 rue de Lille",
-  addressLine2: "Mon Compte Formation",
-  zipCode: "75356",
-  city: "PARIS 07 SP",
-  country: "FR",
-  country_code: "FR",
-  taxIdentificationNumber: "18002002600019",
   tax_identification_number: "18002002600019",
-  vatNumber: "",
-  vat_number: "",
-  currency: "EUR",
-  locale: "FR",
   billing_address: {
-    street_address: "56 rue de Lille",
-    address_line_2: "Mon Compte Formation",
+    street_address: "56 rue de Lille - Mon Compte Formation",
     city: "PARIS 07 SP",
     zip_code: "75356",
     country_code: "FR",
   },
+  currency: "EUR",
+  locale: "fr",
 };
 
 export function getCpfQontoClientDefaults(): Record<string, unknown> {
@@ -108,8 +125,10 @@ export function getCpfQontoClientDefaults(): Record<string, unknown> {
 
 
 export async function getOrCreateCpfQontoClient(): Promise<Record<string, unknown>> {
-  const existingClient = await findQontoClientByName(CPF_QONTO_CLIENT.name);
-  if (existingClient) return existingClient;
+  const taxClient = await findQontoClientByTaxIdentificationNumber(CPF_QONTO_CLIENT.tax_identification_number);
+  if (taxClient) return taxClient;
+  const nameClient = await findQontoClientByName("Mon Compte Formation");
+  if (nameClient) return nameClient;
   return createQontoClient({ client: CPF_QONTO_CLIENT });
 }
 
