@@ -101,7 +101,13 @@ export async function searchQontoClient(criteria: Record<string, unknown>): Prom
 }
 
 export async function createQontoClient(payload: Record<string, unknown>): Promise<Record<string, unknown>> {
-  return qontoJson("/v2/clients", { method: "POST", body: JSON.stringify(cleanQontoPayload(payload)) });
+  const envelope = { ...(payload || {}) };
+  const client = envelope.client && typeof envelope.client === "object" ? envelope.client as Record<string, unknown> : envelope;
+  const cleanedPayload = cleanQontoPayload(client);
+  const url = `${QONTO_API_BASE_URL.replace(/\/+$/, "")}/v2/clients`;
+  console.log("[QONTO CREATE CLIENT URL]", url);
+  console.log("[QONTO CREATE CLIENT PAYLOAD]", JSON.stringify(cleanedPayload, null, 2));
+  return qontoJson("/v2/clients", { method: "POST", body: JSON.stringify(cleanedPayload) });
 }
 
 export const CPF_QONTO_CLIENT = {
@@ -116,8 +122,12 @@ export const CPF_QONTO_CLIENT = {
     country_code: "FR",
   },
   currency: "EUR",
-  locale: "fr",
+  locale: "FR",
 };
+
+export function buildCpfQontoClientPayload(): Record<string, unknown> {
+  return cleanQontoPayload({ ...CPF_QONTO_CLIENT });
+}
 
 export function getCpfQontoClientDefaults(): Record<string, unknown> {
   return { ...CPF_QONTO_CLIENT };
@@ -129,7 +139,7 @@ export async function getOrCreateCpfQontoClient(): Promise<Record<string, unknow
   if (taxClient) return taxClient;
   const nameClient = await findQontoClientByName("Mon Compte Formation");
   if (nameClient) return nameClient;
-  return createQontoClient({ client: CPF_QONTO_CLIENT });
+  return createQontoClient(buildCpfQontoClientPayload());
 }
 
 export async function createQontoInvoice(payload: Record<string, unknown>): Promise<Record<string, unknown>> {

@@ -111,7 +111,7 @@ class QontoCpfClientTests(unittest.TestCase):
         gestion_app.update_qonto_client = lambda client_id, payload: self.fail("CPF invoice creation must not patch invalid legacy clients")
         created_payloads = []
         try:
-            gestion_app.create_qonto_client = lambda payload: created_payloads.append(payload) or {"client": {"id": "created", **payload["client"]}}
+            gestion_app.create_qonto_client = lambda payload: created_payloads.append(payload) or {"id": "created", **payload}
             client = gestion_app.get_or_create_cpf_qonto_client()
         finally:
             gestion_app.find_qonto_client_by_name = original_find
@@ -119,11 +119,11 @@ class QontoCpfClientTests(unittest.TestCase):
             gestion_app.update_qonto_client = original_update
             gestion_app.create_qonto_client = original_create
 
-        self.assertEqual(client["client"]["id"], "created")
+        self.assertEqual(client["id"], "created")
         self.assertEqual(updated_payloads, [])
-        self.assertNotIn("email", created_payloads[0]["client"])
-        self.assertNotIn("first_name", created_payloads[0]["client"])
-        self.assertEqual(created_payloads[0]["client"]["tax_identification_number"], gestion_app.CPF_QONTO_CLIENT_TAX_ID)
+        self.assertNotIn("email", created_payloads[0])
+        self.assertNotIn("first_name", created_payloads[0])
+        self.assertEqual(created_payloads[0]["tax_identification_number"], gestion_app.CPF_QONTO_CLIENT_TAX_ID)
 
     def test_get_or_create_cpf_qonto_client_creates_company_when_missing(self):
         created_payloads = []
@@ -144,14 +144,18 @@ class QontoCpfClientTests(unittest.TestCase):
             gestion_app.create_qonto_client = original_create
 
         self.assertEqual(client["client"]["id"], "created")
-        self.assertEqual(created_payloads[0]["client"]["kind"], "company")
-        self.assertEqual(created_payloads[0]["client"]["name"], gestion_app.CPF_QONTO_CLIENT_NAME)
-        self.assertNotIn("email", created_payloads[0]["client"])
-        self.assertNotIn("vat_number", created_payloads[0]["client"])
-        self.assertNotIn("first_name", created_payloads[0]["client"])
-        self.assertNotIn("last_name", created_payloads[0]["client"])
-        self.assertEqual(created_payloads[0]["client"]["tax_identification_number"], "18002002600019")
-        self.assertEqual(created_payloads[0]["client"]["billing_address"]["street_address"], "56 rue de Lille - Mon Compte Formation")
+        self.assertNotIn("client", created_payloads[0])
+        self.assertNotIn("data", created_payloads[0])
+        self.assertEqual(created_payloads[0]["kind"], "company")
+        self.assertEqual(created_payloads[0]["name"], gestion_app.CPF_QONTO_CLIENT_NAME)
+        self.assertEqual(created_payloads[0]["currency"], "EUR")
+        self.assertEqual(created_payloads[0]["locale"], "FR")
+        self.assertNotIn("email", created_payloads[0])
+        self.assertNotIn("vat_number", created_payloads[0])
+        self.assertNotIn("first_name", created_payloads[0])
+        self.assertNotIn("last_name", created_payloads[0])
+        self.assertEqual(created_payloads[0]["tax_identification_number"], "18002002600019")
+        self.assertEqual(created_payloads[0]["billing_address"]["street_address"], "56 rue de Lille - Mon Compte Formation")
 
     def test_invalid_qonto_queryfields_marker_is_blocked_before_api_call(self):
         original_configured = gestion_app._qonto_is_configured
