@@ -20314,6 +20314,14 @@ def _assert_docx_has_no_unresolved_variables(docx_path: str) -> None:
 def _render_docx_with_docxtemplater(template_path: str, output_docx_path: str, context: Dict[str, str]) -> None:
     script = """
 const fs = require('fs');
+for (const dependencyName of ['pizzip', 'docxtemplater']) {
+  try {
+    require.resolve(dependencyName);
+  } catch (error) {
+    console.error(`Dépendance manquante : pizzip/docxtemplater non installée sur le serveur. (${dependencyName})`);
+    process.exit(2);
+  }
+}
 const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater');
 const [templatePath, outputPath, dataPath] = process.argv.slice(2);
