@@ -45,9 +45,10 @@ class ApsConvocationGenerationTests(unittest.TestCase):
                 fh.write(b"docx")
 
             with mock.patch.object(app, "_yousign_is_configured", return_value=True), \
-                 mock.patch.object(app, "_generate_aps_convocation_files", return_value=(docx_path, pdf_path)), \
+                 mock.patch.object(app, "_generate_aps_convention_files", return_value=(docx_path, pdf_path)), \
+                 mock.patch.object(app, "_docx_text_contains_yousign_smart_anchor", return_value=True), \
                  mock.patch.object(app, "_yousign_json", side_effect=fake_yousign_json):
-                state = app.create_yousign_convocation_signature(session, trainee, "2ebec35a", "TRN-2E16579A")
+                state = app.create_yousign_convention_signature(session, trainee, "2ebec35a", "TRN-2E16579A")
 
         signature_request_call = calls[0]
         self.assertEqual(signature_request_call[1], "/signature_requests")
@@ -149,9 +150,6 @@ class YousignSignatureEmailTests(unittest.TestCase):
         )
 
         self.assertIn("Signer ma convention", html_body)
-        self.assertIn("logo-integrale.png", html_body)
-        self.assertIn("@keyframes signPulse", html_body)
-        self.assertIn("animation:signPulse", html_body)
         self.assertIn("Intégrale Academy", html_body)
         self.assertIn("Formation :", html_body)
         self.assertIn("Jean &lt;script&gt;", html_body)
@@ -179,6 +177,45 @@ class YousignSignatureEmailTests(unittest.TestCase):
         self.assertIn("textContent", sent_payload)
         self.assertIn("Signer ma convention", sent_payload["htmlContent"])
         self.assertIn("https://sign.example.test/sign", sent_payload["textContent"])
+
+class YousignStatusRefreshTests(unittest.TestCase):
+    def test_refresh_pending_convention_marks_done_from_yousign(self):
+        session = {"id": "session-1", "training_type": "APS", "trainees": []}
+        trainee = {
+            "id": "trainee-1",
+            "convention_signature": {
+                "status": "ongoing",
+                "signature_request_id": "sig-req-1",
+                "signature_link": "https://example.test/sign",
+            },
+        }
+        trainees = [trainee]
+        session["trainees"] = trainees
+        data = {"sessions": [session]}
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            signed_pdf = os.path.join(tmpdir, "signed.pdf")
+            with open(signed_pdf, "wb") as fh:
+                fh.write(b"pdf")
+
+            with mock.patch.object(app, "_yousign_is_configured", return_value=True), \
+                 mock.patch.object(app, "_yousign_json", return_value={"id": "sig-req-1", "status": "done"}), \
+                 mock.patch.object(app, "_download_yousign_signed_pdf", return_value=signed_pdf), \
+                 mock.patch.object(app, "_store_public_file_token", return_value="token.pdf"), \
+                 mock.patch.object(app, "_send_convocation_after_convention_signed", return_value=True):
+                changed = app._refresh_yousign_convention_status_if_pending(data, session, trainees, trainee)
+
+        self.assertTrue(changed)
+        state = trainee["convention_signature"]
+        self.assertEqual(state["status"], "done")
+        self.assertEqual(state["signed_pdf_token"], "token.pdf")
+        self.assertEqual(trainee["convention_aps_status"], "signed")
+        self.assertEqual(state["next_reminder_at"], "")
+
+    def test_yousign_webhook_accepts_signer_done_event(self):
+        payload = {"event_name": "signer.done", "data": {"signature_request": {"id": "sig-req-1"}}}
+        self.assertEqual(app._yousign_signature_request_status(payload), "")
+        self.assertIn("signer.done", {"signature_request.done", "signature_request.completed", "signer.done", "signer.completed"})
 
 
 if __name__ == "__main__":

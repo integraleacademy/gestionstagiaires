@@ -20610,6 +20610,19 @@ def _is_yousign_signature_done(state: Dict[str, Any]) -> bool:
     return _normalize_yousign_status(state.get("status")) in YOUSIGN_FINAL_STATUSES
 
 
+def _yousign_payload_signature_request(payload: Dict[str, Any]) -> Dict[str, Any]:
+    data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+    signature_request = data.get("signature_request") if isinstance(data.get("signature_request"), dict) else {}
+    if signature_request:
+        return signature_request
+    return payload if isinstance(payload, dict) else {}
+
+
+def _yousign_signature_request_status(payload: Dict[str, Any]) -> str:
+    signature_request = _yousign_payload_signature_request(payload)
+    return _normalize_yousign_status(signature_request.get("status"))
+
+
 def _is_yousign_signature_stopped(state: Dict[str, Any]) -> bool:
     return _normalize_yousign_status(state.get("status")) in YOUSIGN_STOP_REMINDER_STATUSES
 
@@ -20978,6 +20991,59 @@ def _download_yousign_signed_pdf(signature_request_id: str, trainee_id: str) -> 
     if not os.path.exists(path) or os.path.getsize(path) <= 0:
         raise RuntimeError("Téléchargement du PDF signé Yousign vide.")
     return path
+
+
+def _mark_yousign_convention_signed(data: Dict[str, Any], sess: Dict[str, Any], trainees: List[Dict[str, Any]], trainee: Dict[str, Any], request_id: str, event_id: str = "") -> None:
+    state = _yousign_state(trainee)
+    if _is_yousign_signature_done(state) and state.get("signed_pdf_path"):
+        return
+    signed_path = _download_yousign_signed_pdf(request_id, str(trainee.get("id") or ""))
+    now = _now_iso()
+    state.update({
+        "status": "done",
+        "signed_at": state.get("signed_at") or now,
+        "next_reminder_at": "",
+        "signed_pdf_path": signed_path,
+        "signed_pdf_token": _store_public_file_token(signed_path),
+        "last_error": "",
+        "last_event_id": event_id or state.get("last_event_id") or "",
+    })
+    trainee["convention_aps_status"] = "signed"
+    trainee["convention_aps_signed_at"] = state.get("signed_at") or now
+    try:
+        _send_convocation_after_convention_signed(sess, trainee, str(sess.get("id") or ""), str(trainee.get("id") or ""))
+    except Exception as conv_exc:
+        trainee["convocation_auto_last_error"] = str(conv_exc)
+        app.logger.exception("[CONVOCATION] automatic send after convention signature failed trainee_id=%s", trainee.get("id"))
+    trainee["updated_at"] = now
+    sess["trainees"] = trainees
+    sess.pop("stagiaires", None)
+
+
+def _refresh_yousign_convention_status_if_pending(data: Dict[str, Any], sess: Dict[str, Any], trainees: List[Dict[str, Any]], trainee: Dict[str, Any]) -> bool:
+    state = _yousign_state(trainee)
+    request_id = str(state.get("signature_request_id") or "").strip()
+    if not request_id or not _is_yousign_signature_pending(state) or not _yousign_is_configured():
+        return False
+    try:
+        signature_request = _yousign_json("GET", f"/signature_requests/{request_id}")
+    except Exception as exc:
+        state["last_status_sync_error"] = _sanitize_yousign_error(str(exc))
+        app.logger.warning("[YOUSIGN] status refresh failed request_id=%s error=%s", request_id, state["last_status_sync_error"])
+        return False
+    status = _yousign_signature_request_status(signature_request)
+    if not status:
+        return False
+    if status in YOUSIGN_FINAL_STATUSES:
+        _mark_yousign_convention_signed(data, sess, trainees, trainee, request_id)
+        return True
+    if status != _normalize_yousign_status(state.get("status")):
+        state["status"] = status
+        trainee["updated_at"] = _now_iso()
+        sess["trainees"] = trainees
+        sess.pop("stagiaires", None)
+        return True
+    return False
 
 
 def _pdf_page_count(pdf_path: str) -> int:
@@ -21409,6 +21475,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         t["docs_relance_auto_sent_at"] = ""
     t["updated_at"] = _now_iso()
     ensure_cnaps_history(t)
+    _refresh_yousign_convention_status_if_pending(data, s, trainees, t)
 
     # ✅ persistance
     s["trainees"] = trainees
@@ -22820,7 +22887,7 @@ def public_convention_signature_redirect(token: str):
         return redirect(url_for("public_trainee_login", token=token))
     state = _yousign_state(t)
     link = str(state.get("signature_link") or "").strip()
-    if not link or state.get("status") == "signed":
+    if not link or _is_yousign_signature_done(state):
         flash("Aucune convention n’est en attente de signature.", "error")
         return redirect(url_for("public_trainee_space", token=token))
     app.logger.info("[YOUSIGN] public signature redirect trainee_id=%s", t.get("id"))
@@ -22839,7 +22906,9 @@ def webhooks_yousign():
     if not request_id:
         return jsonify({"ok": True, "ignored": True, "reason": "missing_signature_request_id"})
     app.logger.info("[YOUSIGN] webhook received event=%s request_id=%s", event_name, request_id)
-    if event_name != "signature_request.done":
+    payload_status = _yousign_signature_request_status(payload)
+    done_events = {"signature_request.done", "signature_request.completed", "signer.done", "signer.completed"}
+    if event_name not in done_events and payload_status not in YOUSIGN_FINAL_STATUSES:
         return jsonify({"ok": True, "ignored": True})
     data = load_data()
     sess, trainees, trainee = _find_trainee_by_yousign_request_id(data, request_id)
@@ -22847,27 +22916,7 @@ def webhooks_yousign():
         return jsonify({"ok": True, "updated": False, "reason": "signature_request_not_found"})
     state = _yousign_state(trainee)
     try:
-        signed_path = _download_yousign_signed_pdf(request_id, str(trainee.get("id") or ""))
-        now = _now_iso()
-        state.update({
-            "status": "done",
-            "signed_at": now,
-            "next_reminder_at": "",
-            "signed_pdf_path": signed_path,
-            "signed_pdf_token": _store_public_file_token(signed_path),
-            "last_error": "",
-            "last_event_id": payload.get("event_id") or "",
-        })
-        trainee["convention_aps_status"] = "signed"
-        trainee["convention_aps_signed_at"] = now
-        try:
-            _send_convocation_after_convention_signed(sess, trainee, str(sess.get("id") or ""), str(trainee.get("id") or ""))
-        except Exception as conv_exc:
-            trainee["convocation_auto_last_error"] = str(conv_exc)
-            app.logger.exception("[CONVOCATION] automatic send after convention signature failed trainee_id=%s", trainee.get("id"))
-        trainee["updated_at"] = now
-        sess["trainees"] = trainees
-        sess.pop("stagiaires", None)
+        _mark_yousign_convention_signed(data, sess, trainees, trainee, request_id, str(payload.get("event_id") or ""))
         save_data(data)
         app.logger.info("[YOUSIGN] convention signed stored trainee_id=%s request_id=%s", trainee.get("id"), request_id)
         return jsonify({"ok": True, "updated": True, "status": "signed"})
