@@ -148,7 +148,10 @@ class YousignSignatureEmailTests(unittest.TestCase):
             "https://sign.example.test/?token=abc&name=<bad>",
         )
 
-        self.assertIn("Signer ma convocation", html_body)
+        self.assertIn("Signer ma convention", html_body)
+        self.assertIn("logo-integrale.png", html_body)
+        self.assertIn("@keyframes signPulse", html_body)
+        self.assertIn("animation:signPulse", html_body)
         self.assertIn("Intégrale Academy", html_body)
         self.assertIn("Formation :", html_body)
         self.assertIn("Jean &lt;script&gt;", html_body)
@@ -171,10 +174,10 @@ class YousignSignatureEmailTests(unittest.TestCase):
 
         self.assertTrue(ok)
         self.assertEqual(sent_payload["sender"]["name"], "Intégrale Academy")
-        self.assertEqual(sent_payload["subject"], "Signature requise – Convocation Formation APS")
+        self.assertEqual(sent_payload["subject"], "Votre convention de formation est à signer")
         self.assertIn("htmlContent", sent_payload)
         self.assertIn("textContent", sent_payload)
-        self.assertIn("Signer ma convocation", sent_payload["htmlContent"])
+        self.assertIn("Signer ma convention", sent_payload["htmlContent"])
         self.assertIn("https://sign.example.test/sign", sent_payload["textContent"])
 
 
