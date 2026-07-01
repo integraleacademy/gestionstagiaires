@@ -3290,32 +3290,15 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     });
   }
 
-  async function proposeYpareoTransmission(result){
-    const continueUrl = result.trainee_url || result.summary_url || window.location.href;
-    const shouldTransmit = window.confirm(
-      "Le stagiaire a bien été enregistré.\n\nSouhaitez-vous transmettre ses données à YPAREO NEO maintenant ?"
-    );
-    if(!shouldTransmit || !result.ypareo_url){
-      window.location.href = continueUrl;
+  function proposeConventionSignature(result){
+    if(window.openConventionSignaturePrompt){
+      window.openConventionSignaturePrompt(result);
       return;
     }
-
-    try{
-      const response = await fetch(result.ypareo_url, {
-        method: "POST",
-        headers: {"Accept": "application/json"}
-      });
-      const payload = await response.json().catch(()=> ({}));
-      if(response.ok && payload.ok){
-        alert("Données transférées vers YPAREO NEO avec succès.");
-      }else{
-        alert(`Transmission vers YPAREO NEO impossible : ${payload.error || "erreur inconnue"}`);
-      }
-    }catch(error){
-      alert("Transmission vers YPAREO NEO impossible : le serveur ne répond pas.");
-    }
-    window.location.href = continueUrl;
+    window.location.href = result.trainee_url || result.summary_url || window.location.href;
   }
+
+
 
   async function createTrainee(send_access){
     const {
@@ -3372,10 +3355,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       }
 
       closeModal("createTraineeModal");
-      window.openYpareoTransmission({
-        url: res.ypareo_url,
-        continueUrl: res.trainee_url || res.summary_url || window.location.href
-      });
+      proposeConventionSignature(res);
     }catch(e){
       alert("Erreur réseau");
     }finally{

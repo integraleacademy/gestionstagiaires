@@ -616,7 +616,7 @@
 {% endif %}
 
 {% set conv_sig = trainee.convention_signature or trainee.convocation_signature or {} %}
-{% if is_aps %}
+{% if not is_vae %}
 <div class="card" style="grid-column:1 / -1; margin-top:12px; border-left:4px solid #2563eb;">
   <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
     <div>

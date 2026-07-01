@@ -272,6 +272,59 @@
     </div>
   </div>
 
+  <div class="modal-backdrop ypareo-modal-backdrop" id="conventionSignatureModal" aria-hidden="true">
+    <div class="modal ypareo-modal convention-modal" role="dialog" aria-modal="true" aria-labelledby="conventionSignatureTitle">
+      <div class="ypareo-modal-accent convention-modal-accent"></div>
+      <div class="modal-body ypareo-modal-body convention-modal-body">
+        <div class="ypareo-status-icon convention-status-icon" aria-hidden="true">
+          <span class="ypareo-icon-cloud">✍</span>
+        </div>
+        <div class="ypareo-state-copy convention-state-copy">
+          <div class="ypareo-kicker">CONVENTION DE FORMATION</div>
+          <h2 id="conventionSignatureTitle">Envoyer la convention au stagiaire&nbsp;?</h2>
+          <p>Le stagiaire a bien été enregistré. Vérifiez le financement avant de créer la demande de signature Yousign.</p>
+          <div class="convention-financing-grid" aria-label="Vérification du financement">
+            <label>
+              <span>Montant de la formation</span>
+              <input id="conventionTrainingPrice" type="text" inputmode="decimal" placeholder="1650">
+            </label>
+            <label>
+              <span>CPF</span>
+              <input id="conventionCpfAmount" type="text" inputmode="decimal" placeholder="1000">
+            </label>
+            <label>
+              <span>Perso</span>
+              <input id="conventionPersonalAmount" type="text" inputmode="decimal" placeholder="650">
+            </label>
+            <label>
+              <span>Autre financement</span>
+              <input id="conventionOtherAmount" type="text" inputmode="decimal" placeholder="0">
+            </label>
+          </div>
+          <div class="convention-summary" id="conventionFundingSummary">Montant de la formation : — · CPF : — · Perso : —</div>
+          <div class="convention-error" id="conventionSignatureError" role="alert" hidden></div>
+        </div>
+      </div>
+      <div class="modal-foot ypareo-modal-actions" id="conventionSignatureActions">
+        <button class="btn ypareo-btn-secondary" id="conventionSignatureNo" type="button">Non, plus tard</button>
+        <button class="btn btn-primary ypareo-btn-primary" id="conventionSignatureYes" type="button">Valider et envoyer</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="conventionSignatureProgress" class="ypareo-sync-progress" role="dialog" aria-modal="true" aria-labelledby="conventionSignatureProgressTitle" aria-describedby="conventionSignatureProgressMessage" aria-hidden="true">
+    <div class="ypareo-sync-progress__panel" role="status" aria-live="polite">
+      <div class="ypareo-sync-progress__brand" aria-hidden="true">YS</div>
+      <div class="ypareo-sync-progress__spinner" aria-hidden="true"></div>
+      <h3 id="conventionSignatureProgressTitle">Envoi de la convention</h3>
+      <p id="conventionSignatureProgressMessage">Création de la demande Yousign et envoi du lien de signature…</p>
+      <div class="ypareo-sync-progress__steps" aria-hidden="true">
+        <span class="is-active">Financement</span><i></i><span>Yousign</span><i></i><span>E-mail</span>
+      </div>
+      <small>Veuillez patienter et ne fermez pas cette page.</small>
+    </div>
+  </div>
+
   <div id="ypareoCreationSyncProgress" class="ypareo-sync-progress" role="dialog" aria-modal="true" aria-labelledby="ypareoCreationSyncProgressTitle" aria-describedby="ypareoCreationSyncProgressMessage" aria-hidden="true">
     <div class="ypareo-sync-progress__panel" role="status" aria-live="polite">
       <div class="ypareo-sync-progress__brand" aria-hidden="true">YP</div>
@@ -299,7 +352,18 @@
     .ypareo-modal-actions{padding:18px 30px 26px;border:0;background:#fff;gap:12px;}
     .ypareo-btn-primary,.ypareo-btn-secondary{min-height:44px;border-radius:12px;padding:10px 18px;font-weight:800;}
     .ypareo-btn-secondary{background:#f8fafc;border:1px solid #e2e8f0;color:#334155;}
-    @media(max-width:600px){.ypareo-modal-body{padding:24px 20px 16px;gap:14px}.ypareo-status-icon{width:54px;height:54px;flex-basis:54px;border-radius:16px}.ypareo-state-copy h2{font-size:19px}.ypareo-modal-actions{padding:14px 20px 22px;flex-direction:column-reverse}.ypareo-modal-actions .btn{width:100%}}
+    .convention-modal-accent{background:linear-gradient(90deg,#7c3aed,#2563eb,#10b981);}
+    .convention-status-icon{background:linear-gradient(145deg,#ede9fe,#dbeafe);color:#7c3aed;}
+    .convention-modal{max-width:680px;}
+    .convention-state-copy{width:100%;}
+    .convention-financing-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px;}
+    .convention-financing-grid label{display:flex;flex-direction:column;gap:7px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:12px;}
+    .convention-financing-grid span{font-size:12px;font-weight:900;color:#475569;text-transform:uppercase;letter-spacing:.04em;}
+    .convention-financing-grid input{border:1px solid #cbd5e1;border-radius:12px;padding:11px 12px;font-weight:900;font-size:16px;color:#0f172a;background:#fff;outline:none;}
+    .convention-financing-grid input:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.14);}
+    .convention-summary{margin-top:12px;padding:12px 14px;border-radius:14px;background:#ecfdf5;border:1px solid #bbf7d0;color:#166534;font-weight:800;font-size:13px;line-height:1.45;}
+    .convention-error{margin-top:12px;padding:12px 14px;border-radius:14px;background:#fee2e2;border:1px solid #fecaca;color:#991b1b;font-weight:800;font-size:13px;}
+    @media(max-width:600px){.convention-financing-grid{grid-template-columns:1fr}.ypareo-modal-body{padding:24px 20px 16px;gap:14px}.ypareo-status-icon{width:54px;height:54px;flex-basis:54px;border-radius:16px}.ypareo-state-copy h2{font-size:19px}.ypareo-modal-actions{padding:14px 20px 22px;flex-direction:column-reverse}.ypareo-modal-actions .btn{width:100%}}
   </style>
 
 <script>
@@ -345,6 +409,107 @@
     el.style.display = "none"; // optionnel, mais safe
     document.body.style.overflow = "";
   }
+
+  function openConventionSignaturePrompt(result){
+    const destination = result?.trainee_url || result?.summary_url || window.location.href;
+    if(result?.is_vae){
+      window.location.href = destination;
+      return;
+    }
+
+    const modal = document.getElementById("conventionSignatureModal");
+    const yesButton = document.getElementById("conventionSignatureYes");
+    const noButton = document.getElementById("conventionSignatureNo");
+    const progress = document.getElementById("conventionSignatureProgress");
+    const errorBox = document.getElementById("conventionSignatureError");
+    const summary = document.getElementById("conventionFundingSummary");
+    const fields = {
+      training_price: document.getElementById("conventionTrainingPrice"),
+      cpf_amount: document.getElementById("conventionCpfAmount"),
+      personal_amount: document.getElementById("conventionPersonalAmount"),
+      other_amount: document.getElementById("conventionOtherAmount"),
+    };
+
+    if(!modal || !yesButton || !noButton || !progress || !result?.convention_signature_url){
+      window.location.href = destination;
+      return;
+    }
+
+    const moneyLabel = (value)=>{
+      const raw = (value || "").toString().trim();
+      return raw ? `${raw} €` : "0 €";
+    };
+    const refreshSummary = ()=>{
+      if(!summary) return;
+      summary.textContent = `Montant de la formation : ${moneyLabel(fields.training_price?.value)} · CPF : ${moneyLabel(fields.cpf_amount?.value)} · Perso : ${moneyLabel(fields.personal_amount?.value)}${fields.other_amount?.value ? ` · Autre : ${moneyLabel(fields.other_amount.value)}` : ""}`;
+    };
+    const showError = (message)=>{
+      if(!errorBox) return;
+      errorBox.textContent = message || "Envoi de la convention impossible.";
+      errorBox.hidden = false;
+    };
+    const hideError = ()=>{
+      if(!errorBox) return;
+      errorBox.textContent = "";
+      errorBox.hidden = true;
+    };
+    const leave = ()=>{
+      closeModal("conventionSignatureModal");
+      window.location.href = destination;
+    };
+
+    fields.training_price.value = result.training_price || "";
+    fields.cpf_amount.value = result.cpf_amount || "";
+    fields.personal_amount.value = result.personal_amount || "";
+    fields.other_amount.value = result.other_amount || "";
+    Object.values(fields).forEach((field)=>{
+      if(field) field.oninput = refreshSummary;
+    });
+    hideError();
+    refreshSummary();
+
+    noButton.onclick = leave;
+    yesButton.onclick = async ()=>{
+      hideError();
+      yesButton.disabled = true;
+      noButton.disabled = true;
+      closeModal("conventionSignatureModal");
+      progress.classList.add("is-visible");
+      progress.setAttribute("aria-hidden", "false");
+      document.body.classList.add("ypareo-sync-is-running");
+      try{
+        const response = await fetch(result.convention_signature_url, {
+          method: "POST",
+          headers: {"Content-Type":"application/json", "Accept":"application/json"},
+          body: JSON.stringify({
+            training_price: fields.training_price?.value || "",
+            cpf_amount: fields.cpf_amount?.value || "",
+            personal_amount: fields.personal_amount?.value || "",
+            other_amount: fields.other_amount?.value || "",
+          }),
+        });
+        const payload = await response.json().catch(()=> ({}));
+        if(!response.ok || !payload.ok){
+          throw new Error(payload.error || "erreur inconnue");
+        }
+        window.location.href = destination;
+      }catch(error){
+        progress.classList.remove("is-visible");
+        progress.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("ypareo-sync-is-running");
+        yesButton.disabled = false;
+        noButton.disabled = false;
+        showError(`Envoi de la convention impossible : ${error.message || "le serveur ne répond pas."}`);
+        openModal("conventionSignatureModal");
+      }
+    };
+
+    yesButton.disabled = false;
+    noButton.disabled = false;
+    openModal("conventionSignatureModal");
+  }
+
+  window.openConventionSignaturePrompt = openConventionSignaturePrompt;
 
   function openYpareoTransmission({url, continueUrl}){
     const backdrop = document.getElementById("ypareoTransmissionModal");
