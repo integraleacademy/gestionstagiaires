@@ -20796,14 +20796,21 @@ def build_signature_email_html(first_name: str, formation_label: str, dates_sess
     safe_formation_label = html.escape(str(formation_label or "").strip() or "Formation")
     safe_dates_session = html.escape(str(dates_session or "").strip() or "Dates à confirmer")
     safe_signature_url = html.escape(str(signature_url or "").strip(), quote=True)
+    safe_logo_url = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
     return f'''<!doctype html>
 <html lang="fr">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Convention de formation</title></head>
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Convention de formation</title>
+  <style>
+    @keyframes signPulse {{ 0% {{ transform:scale(1); box-shadow:0 0 0 0 rgba(11,94,215,.42); }} 70% {{ transform:scale(1.04); box-shadow:0 0 0 14px rgba(11,94,215,0); }} 100% {{ transform:scale(1); box-shadow:0 0 0 0 rgba(11,94,215,0); }} }}
+    .signature-button {{ animation:signPulse 1.8s ease-in-out infinite; }}
+  </style>
+</head>
 <body style="margin:0;padding:0;background:#f3f6fa;font-family:Arial,Helvetica,sans-serif;color:#172033;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f3f6fa;margin:0;padding:24px 12px;">
     <tr><td align="center">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,0.08);">
-        <tr><td style="background:#0b2f5b;padding:28px 30px;color:#ffffff;"><div style="font-size:24px;font-weight:700;line-height:1.2;">Intégrale Academy</div><div style="font-size:15px;opacity:.92;margin-top:6px;line-height:1.4;">Convention de formation</div></td></tr>
+        <tr><td style="background:#0b2f5b;padding:28px 30px;color:#ffffff;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td style="width:88px;padding-right:18px;vertical-align:middle;"><img src="{safe_logo_url}" width="74" alt="Logo Intégrale Academy" style="display:block;width:74px;height:auto;border:0;outline:none;text-decoration:none;background:#ffffff;border-radius:14px;padding:7px;"></td><td style="vertical-align:middle;"><div style="font-size:24px;font-weight:700;line-height:1.2;">Intégrale Academy</div><div style="font-size:15px;opacity:.92;margin-top:6px;line-height:1.4;">Convention de formation</div></td></tr></table></td></tr>
         <tr><td style="padding:32px 30px 10px 30px;">
           <p style="margin:0 0 16px 0;font-size:18px;line-height:1.5;">Bonjour {safe_first_name},</p>
           <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">Vous trouverez ci-dessous le lien sécurisé pour signer votre convention de formation.</p>
@@ -20811,7 +20818,7 @@ def build_signature_email_html(first_name: str, formation_label: str, dates_sess
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f7faff;border:1px solid #dbeafe;border-radius:14px;margin:0 0 28px 0;"><tr><td style="padding:18px 20px;">
             <p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Formation :</strong> {safe_formation_label}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Session :</strong> {safe_dates_session}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Document :</strong> Convention de formation</p><p style="margin:0;font-size:15px;line-height:1.5;"><strong>Signature :</strong> électronique sécurisée</p>
           </td></tr></table>
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 26px auto;"><tr><td bgcolor="#0b5ed7" style="border-radius:12px;text-align:center;"><a href="{safe_signature_url}" style="display:inline-block;padding:16px 28px;font-size:17px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;">Signer ma convention</a></td></tr></table>
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 26px auto;"><tr><td bgcolor="#0b5ed7" class="signature-button" style="border-radius:12px;text-align:center;box-shadow:0 10px 22px rgba(11,94,215,.25);animation:signPulse 1.8s ease-in-out infinite;"><a href="{safe_signature_url}" style="display:inline-block;padding:16px 28px;font-size:17px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;">Signer ma convention</a></td></tr></table>
           <p style="margin:0 0 10px 0;font-size:14px;line-height:1.6;color:#5b677a;">Ce lien est personnel. Merci de ne pas le transférer.</p><p style="margin:0 0 8px 0;font-size:13px;line-height:1.6;color:#6b7280;">Si le bouton ne fonctionne pas, copiez-collez le lien ci-dessous dans votre navigateur :</p><p style="margin:0 0 24px 0;font-size:12px;line-height:1.5;word-break:break-all;color:#4b5563;"><a href="{safe_signature_url}" style="color:#0b5ed7;text-decoration:underline;">{safe_signature_url}</a></p>
         </td></tr><tr><td style="background:#f8fafc;border-top:1px solid #e5e7eb;padding:22px 30px;color:#64748b;font-size:13px;line-height:1.6;"><strong style="color:#334155;">Intégrale Academy</strong><br>54 chemin du Carreou<br>83480 Puget-sur-Argens<br>04 22 47 07 68</td></tr>
       </table>
