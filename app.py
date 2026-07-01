@@ -21353,17 +21353,47 @@ def _aps_convocation_pdf_is_allowed(pdf_path: str) -> bool:
 
 def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end: str = "") -> Tuple[str, str]:
     subject = "Convocation formation APS - Intégrale Academy"
-    period = f" qui se déroulera du {fr_date(date_start)} au {fr_date(date_end)}" if date_start and date_end else ""
-    html_body = mail_layout(f"""
-      <h2 style="margin:0 0 14px;color:#0f172a;">Bonjour {html.escape(first_name or "")},</h2>
-      <p>Nous revenons vers vous concernant votre formation <strong>Agent de Prévention et de Sécurité (APS)</strong>{period}.</p>
-      <p>Vous trouverez en pièce jointe votre convocation officielle.</p>
-      <p style="font-weight:700;color:#0f172a;">Merci de lire attentivement l’ensemble du document.</p>
-      <div style="text-align:center;margin:26px 0;"><a href="https://gestionstagiaires-r5no.onrender.com/espacestagiaire" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;font-weight:800;padding:13px 20px;border-radius:12px;">Accéder à mon espace stagiaire</a></div>
-      <p>En cas de question, vous pouvez nous contacter au <strong>04 22 47 07 68</strong> ou par email à <a href="mailto:ecole@integraleacademy.com">ecole@integraleacademy.com</a>.</p>
-      <p>À très bientôt,</p>
-      <p style="margin-top:18px;"><strong>Intégrale Academy</strong><br>54 chemin du Carreou<br>83480 Puget-sur-Argens<br>04 22 47 07 68</p>
-    """)
+    safe_first_name = html.escape(str(first_name or "").strip() or "Madame, Monsieur")
+    safe_logo_url = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
+    safe_space_url = html.escape(f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espacestagiaire", quote=True)
+    period_label = ""
+    if date_start and date_end:
+        period_label = f"du {html.escape(fr_date(date_start))} au {html.escape(fr_date(date_end))}"
+
+    session_line = (
+        f'<p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Session :</strong> {period_label}</p>'
+        if period_label
+        else ""
+    )
+    period_sentence = f" qui se déroulera {period_label}" if period_label else ""
+
+    html_body = f'''<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Convocation formation APS</title>
+</head>
+<body style="margin:0;padding:0;background:#f3f6fa;font-family:Arial,Helvetica,sans-serif;color:#172033;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f3f6fa;margin:0;padding:24px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,0.08);">
+        <tr><td style="background:#0b2f5b;padding:28px 30px;color:#ffffff;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td style="width:88px;padding-right:18px;vertical-align:middle;"><img src="{safe_logo_url}" width="74" alt="Logo Intégrale Academy" style="display:block;width:74px;height:auto;border:0;outline:none;text-decoration:none;background:#ffffff;border-radius:14px;padding:7px;"></td><td style="vertical-align:middle;"><div style="font-size:24px;font-weight:700;line-height:1.2;">Intégrale Academy</div><div style="font-size:15px;opacity:.92;margin-top:6px;line-height:1.4;">Convocation formation APS</div></td></tr></table></td></tr>
+        <tr><td style="padding:32px 30px 10px 30px;">
+          <p style="margin:0 0 16px 0;font-size:18px;line-height:1.5;">Bonjour {safe_first_name},</p>
+          <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">Nous revenons vers vous concernant votre formation <strong>Agent de Prévention et de Sécurité (APS)</strong>{period_sentence}.</p>
+          <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#415166;">Vous trouverez en pièce jointe votre convocation officielle.</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f7faff;border:1px solid #dbeafe;border-radius:14px;margin:0 0 28px 0;"><tr><td style="padding:18px 20px;">
+            <p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Formation :</strong> Agent de Prévention et de Sécurité (APS)</p>{session_line}<p style="margin:0;font-size:15px;line-height:1.5;"><strong>Document :</strong> Convocation officielle en pièce jointe</p>
+          </td></tr></table>
+          <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;font-weight:700;color:#0f172a;">Merci de lire attentivement l’ensemble du document.</p>
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 26px auto;"><tr><td bgcolor="#0b5ed7" style="border-radius:12px;text-align:center;box-shadow:0 10px 22px rgba(11,94,215,.25);"><a href="{safe_space_url}" style="display:inline-block;padding:16px 28px;font-size:17px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;">Accéder à mon espace stagiaire</a></td></tr></table>
+          <p style="margin:0 0 10px 0;font-size:15px;line-height:1.6;">En cas de question, vous pouvez nous contacter au <strong>04 22 47 07 68</strong> ou par email à <a href="mailto:ecole@integraleacademy.com" style="color:#0b5ed7;text-decoration:underline;">ecole@integraleacademy.com</a>.</p>
+          <p style="margin:0 0 24px 0;font-size:15px;line-height:1.6;">À très bientôt,</p>
+        </td></tr><tr><td style="background:#f8fafc;border-top:1px solid #e5e7eb;padding:22px 30px;color:#64748b;font-size:13px;line-height:1.6;"><strong style="color:#334155;">Intégrale Academy</strong><br>54 chemin du Carreou<br>83480 Puget-sur-Argens<br>04 22 47 07 68</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>'''
     return subject, html_body
 
 

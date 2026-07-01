@@ -140,6 +140,26 @@ class ApsConvocationGenerationTests(unittest.TestCase):
                     app._generate_aps_convocation_files(session, trainee, "session-1", "trainee-1")
 
 
+
+class ApsConvocationEmailTests(unittest.TestCase):
+    def test_convocation_email_matches_convention_visual_style_and_escapes_values(self):
+        subject, html_body = app._build_aps_convocation_email(
+            "Jean <script>",
+            "2026-10-05",
+            "2026-11-11",
+        )
+
+        self.assertEqual(subject, "Convocation formation APS - Intégrale Academy")
+        self.assertIn("Convocation formation APS", html_body)
+        self.assertIn("background:#0b2f5b", html_body)
+        self.assertIn("box-shadow:0 8px 24px", html_body)
+        self.assertIn("background:#f7faff;border:1px solid #dbeafe", html_body)
+        self.assertIn("Accéder à mon espace stagiaire", html_body)
+        self.assertIn("Jean &lt;script&gt;", html_body)
+        self.assertNotIn("Jean <script>", html_body)
+        self.assertIn("du 05/10/2026 au 11/11/2026", html_body)
+        self.assertIn("Convocation officielle en pièce jointe", html_body)
+
 class YousignSignatureEmailTests(unittest.TestCase):
     def test_signature_email_html_escapes_values_and_uses_button(self):
         html_body = app.build_signature_email_html(
