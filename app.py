@@ -21428,6 +21428,84 @@ def _send_convocation_after_convention_signed(session_obj: Dict[str, Any], train
     return True
 
 
+
+def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> Dict[str, Any]:
+    """Centralise l'état documentaire automatisé affiché sur la fiche stagiaire."""
+    state = _yousign_state(trainee)
+    raw_status = _normalize_yousign_status(state.get("status"))
+    generated_at = state.get("created_at") or trainee.get("convention_aps_generated_at") or ""
+    sent_at = state.get("signature_email_sent_at") or state.get("activated_at") or ""
+    signed_at = state.get("signed_at") or trainee.get("convention_aps_signed_at") or ""
+    has_generated_convention = bool(state.get("unsigned_pdf_path") or trainee.get("convention_aps_pdf_path"))
+    has_signature_request = bool(state.get("signature_request_id"))
+    convention_error = state.get("last_error") or state.get("signature_email_last_error") or state.get("last_email_error") or state.get("last_status_sync_error") or ""
+    if raw_status in {"error", "download_error"}:
+        convention_status = "error"
+    elif raw_status in {"declined", "refused"}:
+        convention_status = "refused"
+    elif raw_status in {"expired", "canceled", "cancelled"} or _yousign_signature_link_is_expired(state):
+        convention_status = "expired"
+    elif _is_yousign_signature_done(state) or signed_at or trainee.get("convention_aps_status") == "signed":
+        convention_status = "signed"
+    elif has_signature_request and _is_yousign_signature_pending(state):
+        convention_status = "waiting_signature"
+    elif has_signature_request:
+        convention_status = "sent"
+    elif has_generated_convention:
+        convention_status = "generated"
+    else:
+        convention_status = "not_generated"
+
+    convention_signed = convention_status == "signed"
+    convocation_error = trainee.get("convocation_aps_last_error") or trainee.get("convocation_auto_last_error") or ""
+    if not convention_signed and convocation_error == "En attente de signature de la convention":
+        convocation_error = ""
+    convocation_generated_at = trainee.get("convocation_aps_generated_at") or ""
+    convocation_sent_at = trainee.get("convocation_aps_sent_at") or ""
+    has_convocation_file = bool(trainee.get("convocation_aps_pdf_path") or trainee.get("convocation_aps_docx_path"))
+    if convocation_error:
+        convocation_status = "error"
+    elif not convention_signed:
+        convocation_status = "blocked_waiting_convention"
+    elif convocation_sent_at or trainee.get("convocation_aps_status") == "sent":
+        convocation_status = "sent"
+    elif has_convocation_file:
+        convocation_status = "generated"
+    else:
+        convocation_status = "not_generated"
+
+    timeline = [
+        {"label": "Convention générée", "state": "complete" if has_generated_convention else ("error" if convention_status == "error" else "pending")},
+        {"label": "Convention envoyée", "state": "complete" if has_signature_request else ("error" if convention_status == "error" else "blocked")},
+        {"label": "Convention signée", "state": "complete" if convention_signed else ("error" if convention_status in {"error", "refused", "expired"} else "pending" if has_signature_request else "blocked")},
+        {"label": "Convocation envoyée", "state": "complete" if convocation_status == "sent" else ("error" if convocation_status == "error" else "blocked" if not convention_signed else "pending")},
+    ]
+    if convention_status == "error" or convocation_status == "error":
+        global_status = "error"
+    elif convention_signed and convocation_status == "sent":
+        global_status = "complete"
+    elif convention_status == "waiting_signature":
+        global_status = "in_progress"
+    elif convocation_status == "blocked_waiting_convention":
+        global_status = "blocked"
+    else:
+        global_status = "action_required"
+    return {
+        "global_status": global_status,
+        "convention": {
+            "status": convention_status, "generated_at": generated_at, "sent_at": sent_at, "signed_at": signed_at,
+            "recipient_email": trainee.get("email") or "", "signature_request_id": state.get("signature_request_id") or "",
+            "download_url": url_for("admin_view_signed_convention" if convention_signed and state.get("signed_pdf_path") else "admin_view_original_convention", session_id=session_id, trainee_id=trainee_id) if (has_generated_convention or state.get("signed_pdf_path")) else "",
+            "error": convention_error,
+        },
+        "convocation": {
+            "status": convocation_status, "generated_at": convocation_generated_at, "sent_at": convocation_sent_at,
+            "download_url": url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id) if has_convocation_file else "",
+            "error": convocation_error,
+        },
+        "timeline": timeline,
+    }
+
 # =========================
 # ✅ Remplace ta page JSON par une vraie page HTML
 # =========================
@@ -21570,6 +21648,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         PUBLIC_STUDENT_PORTAL_BASE=PUBLIC_STUDENT_PORTAL_BASE,
         fr_date=fr_date,
         brevo_no_credit_notice=brevo_no_credit_notice,
+        automation_status=_build_trainee_automation_status(s, t, session_id, trainee_id),
         docs_relance_planned_fr=fr_date(t.get("docs_relance_auto_planned_date") or ""),
         ssiap_medical_from_date=fr_date(_subtract_months(t.get("ssiap_exam_date") or "", 3)),
     )
@@ -22890,6 +22969,51 @@ def admin_preview_aps_convocation(session_id: str, trainee_id: str):
         return make_response(f"Aperçu convocation APS impossible : {html.escape(str(exc))}", 400)
 
 
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/automation/status")
+@admin_login_required
+def admin_trainee_automation_status(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    _refresh_yousign_convention_status_if_pending(data, s, trainees, t)
+    return jsonify({"ok": True, "automation_status": _build_trainee_automation_status(s, t, session_id, trainee_id)})
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/automation/convocation/generate")
+@admin_login_required
+@admin_write_required
+def admin_generate_aps_convocation_automation(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if not _is_aps_session(s):
+        return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
+    if not _is_yousign_signature_done(_yousign_state(t)):
+        return jsonify({"ok": False, "error": "En attente de signature de la convention"}), 400
+    try:
+        docx_path, pdf_path = _generate_aps_convocation_files(s, t, session_id, trainee_id)
+        now = _now_iso()
+        t["convocation_aps_status"] = t.get("convocation_aps_status") or "generated"
+        t["convocation_aps_generated_at"] = now
+        t["convocation_aps_pdf_path"] = pdf_path
+        t["convocation_aps_docx_path"] = docx_path
+        t["convocation_aps_last_error"] = ""
+        t["updated_at"] = now
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        return jsonify({"ok": True, "status": "generated", "view_url": url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id)})
+    except Exception as exc:
+        message = str(exc) or "Erreur inconnue pendant la génération de la convocation APS."
+        t["convocation_aps_last_error"] = message
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        return jsonify({"ok": False, "error": message}), 400
+
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-aps/send")
 @admin_login_required
 @admin_write_required
@@ -22900,6 +23024,8 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
     if not _is_aps_session(s):
         return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
+    if not _is_yousign_signature_done(_yousign_state(t)):
+        return jsonify({"ok": False, "error": "En attente de signature de la convention"}), 400
     try:
         docx_path, pdf_path = _generate_aps_convocation_files(s, t, session_id, trainee_id)
         if not os.path.exists(pdf_path):
