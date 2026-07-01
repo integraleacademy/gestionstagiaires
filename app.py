@@ -14690,13 +14690,20 @@ def _sync_aps_period_dates(session_obj: Dict[str, Any]) -> None:
         _session_get(session_obj, "aps_in_person_start", ""),
     )
     if periods:
+        manual_date_end = _parse_iso_date(_session_get(session_obj, "date_end", ""))
         session_obj.update(periods)
         session_obj["date_start"] = periods["aps_remote_start"]
-        session_obj["date_end"] = periods["aps_in_person_end"]
+        if manual_date_end:
+            session_obj["date_end"] = manual_date_end.isoformat()
+            session_obj["aps_in_person_end"] = manual_date_end.isoformat()
+        else:
+            session_obj["date_end"] = periods["aps_in_person_end"]
         exam = _parse_iso_date(_session_get(session_obj, "exam_date", ""))
-        presentiel_end = _parse_iso_date(periods["aps_in_person_end"])
+        presentiel_end = _parse_iso_date(_session_get(session_obj, "aps_in_person_end", ""))
+        computed_exam_date = _next_aps_working_day(presentiel_end + datetime.timedelta(days=1)).isoformat() if presentiel_end else periods["aps_computed_exam_date"]
+        session_obj["aps_computed_exam_date"] = computed_exam_date
         if not exam or (presentiel_end and presentiel_end >= exam):
-            session_obj["exam_date"] = periods["aps_computed_exam_date"]
+            session_obj["exam_date"] = computed_exam_date
 
 # =========================
 # API - Sessions (used by your modal JS)

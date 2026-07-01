@@ -1680,13 +1680,15 @@
     const inPersonStartValue = (document.getElementById(isEdit ? "editApsInPersonStart" : "apsInPersonStart")?.value || "").trim();
     const isAps = type.startsWith("APS");
     if(container) container.style.display = isAps ? "" : "none";
-    if(dateEndField) dateEndField.style.display = isAps ? "none" : "";
+    if(dateEndField) dateEndField.style.display = "";
     if(!isAps) return;
     const periods = calculateApsPeriods(startValue, inPersonStartValue);
+    const manualEndValue = (document.getElementById(isEdit ? "editDateEnd" : "dateEnd")?.value || "").trim();
+    const manualEnd = manualEndValue ? new Date(`${manualEndValue}T00:00:00Z`) : null;
     if(remoteStart) remoteStart.textContent = periods ? formatApsPeriodDate(periods.distancielStart) : "—";
     if(remoteEnd) remoteEnd.textContent = periods ? formatApsPeriodDate(periods.distancielEnd) : "—";
     if(inPersonStart) inPersonStart.textContent = periods ? formatApsPeriodDate(periods.presentielStart) : "—";
-    if(inPersonEnd) inPersonEnd.textContent = periods ? formatApsPeriodDate(periods.presentielEnd) : "—";
+    if(inPersonEnd) inPersonEnd.textContent = periods ? formatApsPeriodDate(manualEnd && !Number.isNaN(manualEnd.getTime()) ? manualEnd : periods.presentielEnd) : "—";
   }
 
   function toggleExamFields(){
@@ -1712,6 +1714,7 @@
 
   document.getElementById("sessionType")?.addEventListener("change", toggleExamFields);
   document.getElementById("dateStart")?.addEventListener("change", ()=> refreshApsPeriodPreview(""));
+  document.getElementById("dateEnd")?.addEventListener("change", ()=> refreshApsPeriodPreview(""));
   toggleExamFields();
 
   let currentEditSessionId = null;
@@ -1811,6 +1814,7 @@
   });
 
   document.getElementById("editDateStart")?.addEventListener("change", ()=> refreshApsPeriodPreview("edit"));
+  document.getElementById("editDateEnd")?.addEventListener("change", ()=> refreshApsPeriodPreview("edit"));
   document.getElementById("apsInPersonStart")?.addEventListener("change", ()=> refreshApsPeriodPreview("create"));
   document.getElementById("editApsInPersonStart")?.addEventListener("change", ()=> refreshApsPeriodPreview("edit"));
 
