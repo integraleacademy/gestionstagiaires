@@ -91,6 +91,22 @@ class ApsPeriodDatesTests(unittest.TestCase):
         self.assertEqual(session["aps_in_person_days"], 16)
         self.assertEqual(session["exam_date"], "2026-08-13")
 
+    def test_sync_aps_period_dates_preserves_manual_end_date(self):
+        session = {
+            "training_type": "APS",
+            "date_start": "2026-07-07",
+            "date_end": "2026-08-11",
+            "aps_in_person_start": "2026-07-21",
+            "exam_date": "2026-08-13",
+        }
+
+        app._sync_aps_period_dates(session)
+
+        self.assertEqual(session["date_end"], "2026-08-11")
+        self.assertEqual(session["aps_in_person_end"], "2026-08-11")
+        self.assertEqual(session["aps_computed_exam_date"], "2026-08-12")
+        self.assertEqual(session["exam_date"], "2026-08-13")
+
 
 if __name__ == "__main__":
     unittest.main()
