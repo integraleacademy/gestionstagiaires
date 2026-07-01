@@ -19,6 +19,8 @@
   .qonto-success{margin-top:12px;padding:12px 14px;border-radius:14px;background:#ecfdf5;color:#166534;border:1px solid #bbf7d0;font-weight:700;display:none;}
   .qonto-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;}
   .qonto-secure-list{margin:12px 0 0;padding-left:20px;color:#475569;}
+  .qonto-oauth-box{margin-top:18px;padding:16px;border:1px solid #bfdbfe;border-radius:16px;background:#eff6ff;}
+  .qonto-oauth-box strong{color:#1d4ed8;}
   @media(max-width:840px){.qonto-settings-head{flex-direction:column}.qonto-settings-body{grid-template-columns:1fr;padding:18px}.qonto-title h1{font-size:24px}}
 </style>
 
@@ -46,6 +48,11 @@
       <div id="qontoError" class="qonto-error" role="alert" aria-live="assertive"></div>
       <div class="qonto-actions">
         <button type="button" id="qontoTestBtn" class="btn btn-primary">Tester la connexion Qonto</button>
+        <a class="btn btn-outline" href="{{ url_for('admin_qonto_connect') }}">Connecter Qonto pour les prélèvements SEPA</a>
+      </div>
+      <div class="qonto-oauth-box">
+        <strong>OAuth prélèvements SEPA</strong>
+        <div id="qontoOauthMessage" class="qonto-muted" style="margin-top:6px;">Vérification du statut OAuth…</div>
       </div>
     </section>
 
@@ -54,7 +61,7 @@
       <p class="qonto-muted">Les identifiants Qonto restent uniquement dans les variables d’environnement Render et les appels API sont effectués côté backend.</p>
       <ul class="qonto-secure-list">
         <li>Aucun secret Qonto dans le JavaScript frontend.</li>
-        <li>Pas de Bearer, Basic ou Base64 dans l’en-tête Qonto.</li>
+        <li>Le Bearer OAuth est utilisé uniquement pour les routes SEPA Direct Debit.</li>
         <li>Les détails techniques restent dans les logs serveur masqués.</li>
       </ul>
     </aside>
@@ -82,6 +89,20 @@
     if (connected && payload.last_success_fr) lastSuccess.textContent = payload.last_success_fr;
   }
 
+  async function refreshOauthStatus(){
+    const oauthMessage = document.getElementById('qontoOauthMessage');
+    if (!oauthMessage) return;
+    try {
+      const res = await fetch('/api/qonto/oauth/status', {headers:{'Accept':'application/json'}});
+      const payload = await res.json();
+      oauthMessage.textContent = payload.connected ? '✅ OAuth Qonto connecté pour les prélèvements SEPA.' : (payload.message || 'Connexion Qonto OAuth requise pour programmer les prélèvements SEPA.');
+      oauthMessage.style.color = payload.connected ? '#166534' : '#991b1b';
+      oauthMessage.style.fontWeight = '800';
+    } catch (e) {
+      oauthMessage.textContent = 'Statut OAuth indisponible.';
+    }
+  }
+
   btn.addEventListener('click', async function(){
     btn.disabled = true;
     const originalText = btn.textContent;
@@ -99,6 +120,7 @@
       btn.textContent = originalText;
     }
   });
+  refreshOauthStatus();
 })();
 </script>
 {% endblock %}

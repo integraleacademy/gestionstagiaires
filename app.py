@@ -14,6 +14,7 @@ import shutil
 import importlib.util
 import time
 import subprocess
+import secrets
 from typing import Dict, Any, Optional, List, Iterable, Tuple, Set
 from functools import wraps
 from zoneinfo import ZoneInfo
@@ -39,7 +40,7 @@ from io import BytesIO
 from docx import Document
 from pypdf import PdfReader
 import xml.etree.ElementTree as ET
-from urllib.parse import urlparse, urljoin, quote
+from urllib.parse import urlparse, urljoin, quote, urlencode
 
 
 app = Flask(__name__)
@@ -127,6 +128,12 @@ QONTO_WEBHOOK_SIGNATURE_HEADERS = (
     "X-Signature",
 )
 
+QONTO_OAUTH_SCOPE = "offline_access client.read client.write client_invoice.write client_invoices.read sepa_direct_debit.read sepa_direct_debit.write webhook"
+QONTO_OAUTH_SANDBOX_BASE_URL = "https://oauth-sandbox.staging.qonto.co"
+QONTO_OAUTH_PRODUCTION_BASE_URL = "https://oauth.qonto.com"
+QONTO_OAUTH_REQUIRED_MESSAGE = "Connexion Qonto OAuth requise pour programmer les prélèvements SEPA."
+
+
 
 class QontoConfigurationError(RuntimeError):
     """Raised when Qonto credentials are missing from server environment variables."""
@@ -146,6 +153,38 @@ def _qonto_secret_key() -> str:
 
 def _qonto_base_url() -> str:
     return (os.environ.get("QONTO_API_BASE_URL") or QONTO_API_BASE_URL_DEFAULT).strip().rstrip("/")
+
+
+def _qonto_oauth_environment() -> str:
+    return (os.environ.get("QONTO_OAUTH_ENV") or os.environ.get("QONTO_ENV") or "sandbox").strip().lower()
+
+
+def _qonto_oauth_base_url() -> str:
+    configured = (os.environ.get("QONTO_OAUTH_BASE_URL") or "").strip().rstrip("/")
+    if configured:
+        return configured
+    return QONTO_OAUTH_PRODUCTION_BASE_URL if _qonto_oauth_environment() == "production" else QONTO_OAUTH_SANDBOX_BASE_URL
+
+
+def _qonto_oauth_client_id() -> str:
+    return _qonto_secret(os.environ.get("QONTO_OAUTH_CLIENT_ID") or os.environ.get("QONTO_CLIENT_ID") or "")
+
+
+def _qonto_oauth_client_secret() -> str:
+    return _qonto_secret(os.environ.get("QONTO_OAUTH_CLIENT_SECRET") or os.environ.get("QONTO_CLIENT_SECRET") or "")
+
+
+def _qonto_staging_token() -> str:
+    return _qonto_secret(os.environ.get("QONTO_STAGING_TOKEN") or os.environ.get("QONTO_OAUTH_STAGING_TOKEN") or "")
+
+
+def _qonto_oauth_redirect_uri() -> str:
+    configured = (os.environ.get("QONTO_OAUTH_REDIRECT_URI") or "").strip()
+    return configured or url_for("api_qonto_oauth_callback", _external=True)
+
+
+def _qonto_oauth_is_configured() -> bool:
+    return bool(_qonto_oauth_client_id() and _qonto_oauth_client_secret())
 
 
 def get_qonto_invoice_iban():
@@ -186,10 +225,83 @@ def _qonto_is_configured() -> bool:
 
 def _sanitize_qonto_error(message: str) -> str:
     sanitized = str(message or "")
-    for secret in (_qonto_login(), _qonto_secret_key()):
+    secrets_to_mask = [_qonto_login(), _qonto_secret_key(), _qonto_oauth_client_secret()]
+    if "load_data" in globals():
+        try:
+            data = load_data()
+            secrets_to_mask.extend([_qonto_oauth_access_token(data), _qonto_oauth_refresh_token(data)])
+        except Exception:
+            pass
+    for secret in secrets_to_mask:
         if secret:
             sanitized = sanitized.replace(secret, "[masqué]")
     return sanitized
+
+
+def _qonto_oauth_settings(data: Dict[str, Any]) -> Dict[str, Any]:
+    settings = data.setdefault("qonto_oauth", {})
+    if not isinstance(settings, dict):
+        data["qonto_oauth"] = {}
+        settings = data["qonto_oauth"]
+    return settings
+
+
+def _qonto_oauth_access_token(data: Dict[str, Any]) -> str:
+    return _qonto_secret((_qonto_oauth_settings(data).get("access_token") or ""))
+
+
+def _qonto_oauth_refresh_token(data: Dict[str, Any]) -> str:
+    return _qonto_secret((_qonto_oauth_settings(data).get("refresh_token") or ""))
+
+
+def _qonto_oauth_connected(data: Optional[Dict[str, Any]] = None) -> bool:
+    data = data or load_data()
+    settings = _qonto_oauth_settings(data)
+    return bool(settings.get("connected") and settings.get("access_token") and settings.get("refresh_token"))
+
+
+def _store_qonto_oauth_tokens(data: Dict[str, Any], token_payload: Dict[str, Any]) -> None:
+    settings = _qonto_oauth_settings(data)
+    now = int(time.time())
+    expires_in = int(token_payload.get("expires_in") or 3600)
+    settings.update({
+        "connected": True,
+        "access_token": token_payload.get("access_token") or settings.get("access_token") or "",
+        "refresh_token": token_payload.get("refresh_token") or settings.get("refresh_token") or "",
+        "token_type": token_payload.get("token_type") or "bearer",
+        "scope": token_payload.get("scope") or settings.get("scope") or "",
+        "expires_at": now + max(expires_in - 60, 60),
+        "updated_at": _now_iso(),
+        "environment": _qonto_oauth_environment(),
+    })
+    save_data(data)
+
+
+def _exchange_qonto_oauth_token(form_data: Dict[str, str]) -> Dict[str, Any]:
+    headers = {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"}
+    if _qonto_oauth_environment() != "production" and _qonto_staging_token():
+        headers["X-Qonto-Staging-Token"] = _qonto_staging_token()
+    response = requests.post(f"{_qonto_oauth_base_url()}/oauth2/token", headers=headers, data=form_data, timeout=20)
+    raw_body = response.text or ""
+    if not response.ok:
+        raise QontoApiError(response.status_code, _sanitize_qonto_error(raw_body), _qonto_response_trace_id(response, raw_body))
+    return response.json()
+
+
+def _qonto_oauth_bearer_token(data: Optional[Dict[str, Any]] = None) -> str:
+    data = data or load_data()
+    settings = _qonto_oauth_settings(data)
+    if not _qonto_oauth_connected(data):
+        raise QontoConfigurationError(QONTO_OAUTH_REQUIRED_MESSAGE)
+    if int(settings.get("expires_at") or 0) <= int(time.time()) + 60:
+        payload = _exchange_qonto_oauth_token({
+            "client_id": _qonto_oauth_client_id(),
+            "client_secret": _qonto_oauth_client_secret(),
+            "grant_type": "refresh_token",
+            "refresh_token": _qonto_oauth_refresh_token(data),
+        })
+        _store_qonto_oauth_tokens(data, payload)
+    return _qonto_oauth_access_token(data)
 
 
 def test_qonto_connection() -> Tuple[bool, int]:
@@ -312,7 +424,10 @@ def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = N
     prepared = requests.Request(method.upper(), url, params=params).prepare()
     called_url = prepared.url or url
     try:
-        response = requests.request(method.upper(), url, headers=get_qonto_headers(), json=cleaned_payload if cleaned_payload is not None else None, params=params, timeout=20)
+        headers = get_qonto_headers()
+        if endpoint.startswith("/v2/sepa/direct_debit"):
+            headers = {"Authorization": f"Bearer {_qonto_oauth_bearer_token()}", "Content-Type": "application/json"}
+        response = requests.request(method.upper(), url, headers=headers, json=cleaned_payload if cleaned_payload is not None else None, params=params, timeout=20)
         raw_body = response.text or ""
         trace_id = _qonto_response_trace_id(response, raw_body)
         app.logger.info("[QONTO] api_call method=%s url=%s payload=%s status=%s trace_id=%s body=%s", method.upper(), called_url, json.dumps(cleaned_payload, ensure_ascii=False) if cleaned_payload is not None else None, response.status_code, trace_id or "", raw_body[:4000])
@@ -12286,7 +12401,7 @@ def admin_qonto_settings():
     last_success_at = str(qonto_settings.get("last_success_at") or "")
     return render_template(
         "admin_qonto_settings.html",
-        connected=False,
+        connected=connected,
         message=message,
         last_success_fr=fr_datetime(last_success_at),
     )
@@ -12327,6 +12442,71 @@ def api_qonto_status():
     except Exception as exc:
         app.logger.exception("[QONTO] unexpected status check error: %s", _sanitize_qonto_error(str(exc)))
         return jsonify({"connected": False, "message": "Erreur inattendue pendant le test Qonto"}), 200
+
+
+
+@app.get("/admin/qonto/connect")
+@admin_login_required
+def admin_qonto_connect():
+    if not _qonto_oauth_is_configured():
+        flash("Variables OAuth Qonto manquantes : QONTO_OAUTH_CLIENT_ID et QONTO_OAUTH_CLIENT_SECRET.", "error")
+        return redirect(url_for("admin_qonto_settings"))
+    state = secrets.token_urlsafe(32)
+    session["qonto_oauth_state"] = state
+    params = {
+        "client_id": _qonto_oauth_client_id(),
+        "redirect_uri": _qonto_oauth_redirect_uri(),
+        "response_type": "code",
+        "scope": QONTO_OAUTH_SCOPE,
+        "state": state,
+    }
+    return redirect(f"{_qonto_oauth_base_url()}/oauth2/auth?{urlencode(params)}")
+
+
+@app.get("/api/qonto/oauth/callback")
+@admin_login_required
+def api_qonto_oauth_callback():
+    error = request.args.get("error")
+    if error:
+        flash(f"Connexion OAuth Qonto refusée : {error}", "error")
+        return redirect(url_for("admin_qonto_settings"))
+    state = request.args.get("state") or ""
+    expected_state = session.pop("qonto_oauth_state", "")
+    if not state or not expected_state or not hmac.compare_digest(state, expected_state):
+        abort(400)
+    code = request.args.get("code") or ""
+    if not code:
+        abort(400)
+    try:
+        payload = _exchange_qonto_oauth_token({
+            "client_id": _qonto_oauth_client_id(),
+            "client_secret": _qonto_oauth_client_secret(),
+            "grant_type": "authorization_code",
+            "redirect_uri": _qonto_oauth_redirect_uri(),
+            "code": code,
+        })
+        data = load_data()
+        _store_qonto_oauth_tokens(data, payload)
+        flash("Qonto OAuth connecté pour les prélèvements SEPA.", "success")
+    except Exception as exc:
+        app.logger.warning("[QONTO OAUTH] callback failed: %s", _sanitize_qonto_error(str(exc)))
+        flash("Connexion OAuth Qonto impossible. Vérifiez les variables sandbox Render et le redirect_uri.", "error")
+    return redirect(url_for("admin_qonto_settings"))
+
+
+@app.get("/api/qonto/oauth/status")
+@admin_login_required
+def api_qonto_oauth_status():
+    data = load_data()
+    settings = _qonto_oauth_settings(data)
+    return jsonify({
+        "connected": _qonto_oauth_connected(data),
+        "environment": settings.get("environment") or _qonto_oauth_environment(),
+        "scope": settings.get("scope") or "",
+        "expires_at": settings.get("expires_at") or None,
+        "updated_at": settings.get("updated_at") or "",
+        "message": "Qonto OAuth connecté" if _qonto_oauth_connected(data) else QONTO_OAUTH_REQUIRED_MESSAGE,
+    }), 200
 
 
 @app.get("/admin/gestion-secretariat")
@@ -22034,6 +22214,8 @@ def _setup_qonto_direct_debit_for_line(line: Dict[str, Any], payment_plan: Dict[
         line['paymentPlan'] = payment_plan
         line['paymentMode'] = 'cash'
         return
+    if not _qonto_oauth_connected():
+        raise QontoConfigurationError(QONTO_OAUTH_REQUIRED_MESSAGE)
     client_id = line.get('qontoClientId') or line.get('qontoCustomerId')
     if not client_id:
         raise RuntimeError('Client Qonto manquant pour créer le prélèvement SEPA')
