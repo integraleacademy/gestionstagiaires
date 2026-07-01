@@ -972,21 +972,35 @@
       {% endif %}
     </div>
 
-    {% set conv_sig = trainee.convocation_signature or {} %}
+    {% set conv_sig = trainee.convention_signature or trainee.convocation_signature or {} %}
     {% if conv_sig.signature_link and conv_sig.status not in ['signed', 'done'] %}
     <div class="card" style="border-left:4px solid #2563eb;">
-      <h2>Signature de votre convocation</h2>
+      <h2>Signature de votre convention</h2>
       <p class="muted" style="margin:0 0 12px;">
-        Votre convocation de formation est prête. Merci de la signer électroniquement.
+        Votre convention de formation est prête. Merci de la signer électroniquement.
       </p>
       <a class="btn" href="{{ url_for('public_convocation_signature_redirect', token=token_safe) }}" target="_blank" rel="noopener">
-        ✍️ Signer ma convocation
+        ✍️ Signer ma convention
       </a>
     </div>
-    {% elif conv_sig.status == 'signed' %}
+    {% elif conv_sig.status in ['signed', 'done'] %}
     <div class="card" style="border-left:4px solid #16a34a;">
-      <h2>Signature de votre convocation</h2>
-      <span class="pill green">✅ Convocation signée</span>
+      <h2>Signature de votre convention</h2>
+      <span class="pill green">✅ Convention signée</span>
+    </div>
+    {% endif %}
+
+    {% if conv_sig.signed_pdf_token or trainee.convocation_aps_pdf_token %}
+    <div class="card" style="border-left:4px solid #16a34a;">
+      <h2>Documents de formation</h2>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        {% if conv_sig.signed_pdf_token %}
+          <a class="btn" href="{{ url_for('public_download_file', token=token_safe, file_token=conv_sig.signed_pdf_token) }}" target="_blank" rel="noopener">📄 Voir ma convention signée</a>
+        {% endif %}
+        {% if trainee.convocation_aps_pdf_token %}
+          <a class="btn" href="{{ url_for('public_download_file', token=token_safe, file_token=trainee.convocation_aps_pdf_token) }}" target="_blank" rel="noopener">📄 Voir ma convocation</a>
+        {% endif %}
+      </div>
     </div>
     {% endif %}
 
