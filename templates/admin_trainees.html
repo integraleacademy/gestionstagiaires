@@ -3291,30 +3291,36 @@ document.querySelectorAll("select.sel").forEach(sel=>{
   }
 
   async function proposeConventionSignature(result){
-    const continueUrl = result.trainee_url || result.summary_url || window.location.href;
-    if(result.is_vae){ window.location.href = continueUrl; return; }
-    const shouldSend = window.confirm("Le stagiaire a bien été enregistré.\n\nSouhaitez-vous envoyer la convention de formation maintenant ?");
-    if(!shouldSend || !result.convention_signature_url){ window.location.href = continueUrl; return; }
-    const trainingPrice = window.prompt("Vérification du financement\n\nMontant de la formation", result.training_price || "");
-    if(trainingPrice === null){ window.location.href = continueUrl; return; }
-    const cpfAmount = window.prompt("Vérification du financement\n\nCPF", result.cpf_amount || "");
-    if(cpfAmount === null){ window.location.href = continueUrl; return; }
-    const personalAmount = window.prompt("Vérification du financement\n\nPerso", result.personal_amount || "");
-    if(personalAmount === null){ window.location.href = continueUrl; return; }
-    const otherAmount = window.prompt("Vérification du financement\n\nAutre financement", result.other_amount || "");
-    if(otherAmount === null){ window.location.href = continueUrl; return; }
-    const summary = `Montant de la formation : ${trainingPrice || "0"} €\nCPF : ${cpfAmount || "0"} €\nPerso : ${personalAmount || "0"} €${otherAmount ? `\nAutre : ${otherAmount} €` : ""}\n\nValider et envoyer la convention de formation ?`;
-    if(!window.confirm(summary)){ window.location.href = continueUrl; return; }
+    const continueUrl = result.trainee_url || result.summary_url || `/admin/sessions/${result.session_id || ""}/trainees`;
+    const continueAfterConvention = ()=>{
+      if(result.ypareo_url){ window.openYpareoTransmission({url: result.ypareo_url, continueUrl}); }
+      else{ window.location.href = continueUrl; }
+    };
+    if(result.is_vae){ continueAfterConvention(); return; }
+    const conventionPayload = await window.openConventionTransmission?.({
+      defaults: {
+        training_price: result.training_price || "",
+        cpf_amount: result.cpf_amount || "",
+        personal_amount: result.personal_amount || "",
+        other_amount: result.other_amount || ""
+      }
+    });
+    if(!conventionPayload || !result.convention_signature_url){ continueAfterConvention(); return; }
+    window.showConventionTransmissionProgress?.();
     try{
       const response = await fetch(result.convention_signature_url, {
         method: "POST", headers: {"Content-Type":"application/json", "Accept":"application/json"},
-        body: JSON.stringify({training_price: trainingPrice, cpf_amount: cpfAmount, personal_amount: personalAmount, other_amount: otherAmount})
+        body: JSON.stringify(conventionPayload)
       });
       const payload = await response.json().catch(()=> ({}));
+      window.hideConventionTransmissionProgress?.();
       if(response.ok && payload.ok){ alert(payload.email_ok ? "Convention envoyée au stagiaire pour signature." : "Demande créée, mais l’e-mail n’a pas pu être envoyé."); }
       else{ alert(`Envoi de la convention impossible : ${payload.error || "erreur inconnue"}`); }
-    }catch(error){ alert("Envoi de la convention impossible : le serveur ne répond pas."); }
-    window.location.href = continueUrl;
+    }catch(error){
+      window.hideConventionTransmissionProgress?.();
+      alert("Envoi de la convention impossible : le serveur ne répond pas.");
+    }
+    continueAfterConvention();
   }
 
 
