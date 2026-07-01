@@ -15095,7 +15095,13 @@ def api_create_trainee(session_id: str):
         "public_link": link,
         "trainee_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
         "ypareo_url": url_for("admin_send_trainee_to_ypareo", session_id=session_id, trainee_id=trainee_id),
-        "summary_url": url_for("admin_trainee_summary", session_id=session_id, trainee_id=trainee_id)
+        "summary_url": url_for("admin_trainee_summary", session_id=session_id, trainee_id=trainee_id),
+        "is_vae": bool(show_vae),
+        "training_price": t.get("training_price", ""),
+        "cpf_amount": t.get("cpf_amount", ""),
+        "personal_amount": t.get("personal_amount", ""),
+        "other_amount": t.get("other_amount", ""),
+        "convention_signature_url": url_for("api_create_convention_signature", session_id=session_id, trainee_id=trainee_id)
     })
 
 
@@ -16581,6 +16587,12 @@ def _token_belongs_to_trainee(t: dict, file_token: str) -> bool:
 
     # Photo identité (optionnel mais utile)
     if (t.get("identity_photo") or "").strip() == file_token:
+        return True
+
+    conv_sig = t.get("convention_signature") if isinstance(t.get("convention_signature"), dict) else {}
+    if (conv_sig.get("signed_pdf_token") or "").strip() == file_token:
+        return True
+    if (t.get("convocation_aps_pdf_token") or "").strip() == file_token:
         return True
 
     return False
@@ -20841,8 +20853,8 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
     existing_state = _yousign_state(trainee)
     if existing_state.get("signature_request_id") and existing_state.get("signature_link") and existing_state.get("status") in {"ongoing", "activated"}:
         return existing_state
-    if not _is_aps_session(session_obj):
-        raise RuntimeError("La signature Yousign de convention est réservée aux formations APS.")
+    if "VAE" in str(_session_get(session_obj, "training_type", "") or "").upper():
+        raise RuntimeError("La signature Yousign de convention n’est pas proposée pour les formations VAE.")
     if not _yousign_is_configured():
         raise RuntimeError("Yousign Sandbox n’est pas configuré : vérifiez YOUSIGN_API_KEY et YOUSIGN_WEBHOOK_SECRET dans Render.")
     email = str(trainee.get("email") or "").strip()
@@ -20855,9 +20867,10 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
 
     docx_path, pdf_path = _generate_aps_convention_files(session_obj, trainee, session_id, trainee_id)
     if not os.path.exists(pdf_path) or os.path.getsize(pdf_path) <= 0:
-        raise RuntimeError("Le PDF de convention de formation APS n’a pas été généré.")
+        raise RuntimeError("Le PDF de convention de formation n’a pas été généré.")
 
-    request_name = f"Convention APS - {first_name} {last_name}".strip()
+    training_label = str(_session_get(session_obj, "training_type", "") or _session_get(session_obj, "name", "") or "Formation").strip()
+    request_name = f"Convention formation - {training_label} - {first_name} {last_name}".strip()
     external_id = make_yousign_external_id(session_id, trainee_id)
     app.logger.info("[YOUSIGN] create signature request trainee_id=%s sandbox=true", trainee_id)
     signature_request = _yousign_json("POST", "/signature_requests", json={
@@ -21258,6 +21271,37 @@ def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end
       <p style="margin-top:18px;"><strong>Intégrale Academy</strong><br>54 chemin du Carreou<br>83480 Puget-sur-Argens<br>04 22 47 07 68</p>
     """)
     return subject, html_body
+
+
+def _store_public_file_token(path: str) -> str:
+    try:
+        return _tokenize_path(path)
+    except Exception:
+        return path
+
+
+def _send_convocation_after_convention_signed(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> bool:
+    """Generate, send by email, and expose the convocation once the convention is signed."""
+    if not _is_aps_session(session_obj):
+        trainee["convocation_auto_last_error"] = "Envoi automatique non configuré pour cette formation."
+        return False
+    if trainee.get("convocation_aps_sent_at"):
+        return True
+    docx_path, pdf_path = _generate_aps_convocation_files(session_obj, trainee, session_id, trainee_id)
+    with open(pdf_path, "rb") as fh:
+        encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
+    subject, html_content = _build_aps_convocation_email(str(trainee.get("first_name") or ""), _session_get(session_obj, "date_start", ""), _session_get(session_obj, "date_end", ""))
+    if not brevo_send_email(str(trainee.get("email") or "").strip(), subject, html_content, trainee=trainee, attachments=[{"name": os.path.basename(pdf_path), "content": encoded_pdf}]):
+        raise RuntimeError("Impossible d’envoyer la convocation : échec d’envoi email")
+    now = _now_iso()
+    trainee["convocation_aps_status"] = "sent"
+    trainee["convocation_aps_sent_at"] = now
+    trainee["convocation_aps_pdf_path"] = pdf_path
+    trainee["convocation_aps_docx_path"] = docx_path
+    trainee["convocation_aps_pdf_token"] = _store_public_file_token(pdf_path)
+    trainee["convocation_aps_last_error"] = ""
+    trainee["convocation_auto_last_error"] = ""
+    return True
 
 
 # =========================
@@ -22583,6 +22627,40 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": message}), 400
 
 
+
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/convention/signature/create")
+@admin_login_required
+@admin_write_required
+def api_create_convention_signature(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if "VAE" in str(_session_get(s, "training_type", "") or "").upper():
+        return jsonify({"ok": False, "error": "Convention non proposée pour les formations VAE"}), 400
+    payload = request.get_json(silent=True) or {}
+    for key in ("training_price", "cpf_amount", "personal_amount", "other_amount"):
+        if key in payload:
+            t[key] = str(payload.get(key) or "").strip()
+    try:
+        state = create_yousign_convention_signature(s, t, session_id, trainee_id)
+        signature_link = str(state.get("signature_link") or "").strip()
+        email_ok = send_yousign_signature_link_email(s, t, signature_link)
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        return jsonify({"ok": True, "email_ok": bool(email_ok), "status": state.get("status")})
+    except Exception as exc:
+        message = _sanitize_yousign_error(str(exc))
+        state = _yousign_state(t)
+        state["status"] = "error"
+        state["last_error"] = message
+        t["updated_at"] = _now_iso()
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        return jsonify({"ok": False, "error": message}), 400
+
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-signature/create")
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/yousign")
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/signature/create")
@@ -22769,11 +22847,17 @@ def webhooks_yousign():
             "signed_at": now,
             "next_reminder_at": "",
             "signed_pdf_path": signed_path,
+            "signed_pdf_token": _store_public_file_token(signed_path),
             "last_error": "",
             "last_event_id": payload.get("event_id") or "",
         })
         trainee["convention_aps_status"] = "signed"
         trainee["convention_aps_signed_at"] = now
+        try:
+            _send_convocation_after_convention_signed(sess, trainee, str(sess.get("id") or ""), str(trainee.get("id") or ""))
+        except Exception as conv_exc:
+            trainee["convocation_auto_last_error"] = str(conv_exc)
+            app.logger.exception("[CONVOCATION] automatic send after convention signature failed trainee_id=%s", trainee.get("id"))
         trainee["updated_at"] = now
         sess["trainees"] = trainees
         sess.pop("stagiaires", None)
