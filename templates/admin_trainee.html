@@ -15,6 +15,30 @@
 
 <style>
 
+
+  .automation-hub{position:relative;grid-column:1 / -1;margin-top:12px;padding:26px;overflow:hidden;border:1px solid rgba(124,58,237,.18);border-radius:24px;background:linear-gradient(135deg,rgba(250,245,255,.96),rgba(255,255,255,.98) 48%,rgba(255,247,237,.82));box-shadow:0 18px 44px rgba(88,28,135,.09),inset 0 1px 0 rgba(255,255,255,.9);}
+  .automation-hub__glow{position:absolute;top:-120px;right:-70px;width:310px;height:310px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(168,85,247,.18),rgba(249,115,22,.06) 46%,transparent 72%);}
+  .automation-hub__header{position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:22px;margin-bottom:22px;}
+  .automation-hub__brand{display:flex;align-items:center;gap:15px;min-width:0;}
+  .automation-hub__logo{display:grid;width:54px;height:54px;flex:0 0 54px;place-items:center;border-radius:17px;color:#fff;background:linear-gradient(145deg,#7c3aed,#f97316);box-shadow:0 12px 24px rgba(124,58,237,.22),inset 0 1px 0 rgba(255,255,255,.28);font-size:27px;}
+  .automation-hub__eyebrow{margin-bottom:3px;color:#7c3aed;font-size:10px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;}
+  .automation-hub h2{margin:0;color:#0f172a;font-size:23px;line-height:1.15;letter-spacing:-.03em;}
+  .automation-hub__brand p{margin:6px 0 0;color:#64748b;font-size:13px;line-height:1.45;}
+  .automation-badge{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;margin-top:4px;padding:8px 12px;border:1px solid #dbe4f0;border-radius:999px;background:rgba(255,255,255,.82);color:#475569;font-size:12px;font-weight:900;box-shadow:0 6px 16px rgba(15,23,42,.05);}
+  .automation-badge::before{content:"";width:8px;height:8px;border-radius:50%;background:#94a3b8;box-shadow:0 0 0 4px rgba(148,163,184,.13);}
+  .automation-badge--complete{color:#047857;border-color:#a7f3d0;background:#ecfdf5}.automation-badge--complete::before{background:#10b981;box-shadow:0 0 0 4px rgba(16,185,129,.14)}
+  .automation-badge--error{color:#be123c;border-color:#fecdd3;background:#fff1f2}.automation-badge--error::before{background:#f43f5e;box-shadow:0 0 0 4px rgba(244,63,94,.13)}
+  .automation-badge--waiting,.automation-badge--blocked,.automation-badge--action{color:#92400e;border-color:#fed7aa;background:#fff7ed}.automation-badge--waiting::before,.automation-badge--blocked::before,.automation-badge--action::before{background:#f97316;box-shadow:0 0 0 4px rgba(249,115,22,.13)}
+  .automation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+  .automation-card{display:flex;min-width:0;flex-direction:column;padding:20px;border:1px solid #e2e8f0;border-radius:20px;background:rgba(255,255,255,.9);box-shadow:0 10px 28px rgba(15,23,42,.055);}
+  .automation-card__head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}.automation-card h3{margin:0;color:#0f172a;font-size:18px}.automation-card p{margin:4px 0 0;color:#64748b;font-size:12px;line-height:1.45}
+  .automation-status{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:950;white-space:nowrap}.automation-status--complete{background:#dcfce7;color:#166534}.automation-status--error{background:#fee2e2;color:#991b1b}.automation-status--waiting{background:#fef3c7;color:#92400e}.automation-status--blocked{background:#e5e7eb;color:#475569}.automation-status--pending{background:#dbeafe;color:#1d4ed8}
+  .automation-meta{display:grid;gap:8px;margin:8px 0 14px}.automation-meta__row{display:flex;justify-content:space-between;gap:12px;padding:8px 10px;border:1px solid #eef2f7;border-radius:10px;background:#f8fafc;font-size:12px;min-width:0}.automation-meta__row span{color:#64748b;font-weight:800}.automation-meta__row strong{color:#0f172a;text-align:right;overflow-wrap:anywhere}
+  .automation-error{margin:2px 0 12px;padding:10px 12px;border:1px solid #fecaca;border-radius:12px;background:#fef2f2;color:#991b1b;font-size:12px;font-weight:800;overflow-wrap:anywhere}
+  .automation-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}.automation-actions .btn{min-height:38px}.automation-actions form{margin:0}.automation-actions .btn[disabled]{cursor:not-allowed;opacity:.62}
+  .automation-timeline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}.automation-timeline__step{min-width:0;padding:12px;border:1px solid #e2e8f0;border-radius:15px;background:rgba(255,255,255,.74);font-size:12px;font-weight:900;color:#475569}.automation-timeline__icon{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:999px;margin-bottom:7px;background:#e5e7eb}.automation-timeline__step.is-complete{border-color:#bbf7d0;color:#166534;background:#f0fdf4}.automation-timeline__step.is-pending{border-color:#fed7aa;color:#92400e;background:#fff7ed}.automation-timeline__step.is-error{border-color:#fecaca;color:#991b1b;background:#fef2f2}
+  @media(max-width:860px){.automation-hub__header{flex-direction:column}.automation-grid,.automation-timeline{grid-template-columns:1fr}.automation-meta__row{flex-direction:column;gap:3px}.automation-meta__row strong{text-align:left}}
+
   .aps-doc-card{grid-column:1 / -1;margin-top:16px;background:#fff;border:1px solid rgba(148,163,184,.28);border-radius:22px;box-shadow:0 18px 45px rgba(15,23,42,.08);padding:22px;}
   .aps-doc-card__head{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
   .aps-doc-card__icon{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#eff6ff,#dbeafe);box-shadow:inset 0 0 0 1px rgba(37,99,235,.12);font-size:22px;}
@@ -687,6 +711,54 @@
   {% endif %}
 </div>
 {% endif %}
+
+
+{% set auto = automation_status %}
+{% set auto_global = auto.global_status %}
+<section class="automation-hub" id="automationHub" aria-labelledby="automationHubTitle">
+  <div class="automation-hub__glow" aria-hidden="true"></div>
+  <header class="automation-hub__header">
+    <div class="automation-hub__brand"><span class="automation-hub__logo" aria-hidden="true">⚙️</span><div><div class="automation-hub__eyebrow">Suivi documentaire du stagiaire</div><h2 id="automationHubTitle">AUTOMATISATION</h2><p>Suivez l’envoi, la signature et la génération des documents du stagiaire.</p></div></div>
+    <div class="automation-badge automation-badge--{% if auto_global == 'complete' %}complete{% elif auto_global == 'error' %}error{% elif auto_global == 'in_progress' %}waiting{% elif auto_global == 'blocked' %}blocked{% else %}action{% endif %}">{% if auto_global == 'complete' %}Synchronisation complète{% elif auto_global == 'error' %}Erreur{% elif auto_global == 'in_progress' %}En attente{% elif auto_global == 'blocked' %}Bloqué{% else %}Action requise{% endif %}</div>
+  </header>
+  <div class="automation-grid">
+    {% set c = auto.convention %}
+    <article class="automation-card">
+      <div class="automation-card__head"><div><h3>Convention</h3><p>Document contractuel à faire signer.</p></div>
+        <span class="automation-status automation-status--{% if c.status == 'signed' %}complete{% elif c.status in ['error','refused','expired'] %}error{% elif c.status == 'waiting_signature' %}waiting{% elif c.status == 'not_generated' %}blocked{% else %}pending{% endif %}">{% if c.status == 'signed' %}Signée{% elif c.status == 'waiting_signature' %}En attente de signature{% elif c.status == 'sent' %}Envoyée{% elif c.status == 'generated' %}Générée{% elif c.status == 'not_generated' %}Non générée{% elif c.status == 'refused' %}Refusée{% elif c.status == 'expired' %}Expirée{% else %}Erreur{% endif %}</span></div>
+      <div class="automation-meta">
+        <div class="automation-meta__row"><span>Génération</span><strong>{% if c.generated_at %}{{ c.generated_at|frdatetime }}{% else %}Non générée{% endif %}</strong></div>
+        <div class="automation-meta__row"><span>Envoi</span><strong>{% if c.sent_at %}Envoyée le {{ c.sent_at|frdatetime }}{% else %}Non envoyée{% endif %}</strong></div>
+        <div class="automation-meta__row"><span>Signature</span><strong>{% if c.signed_at %}Signée le {{ c.signed_at|frdatetime }}{% else %}—{% endif %}</strong></div>
+        <div class="automation-meta__row"><span>Email destinataire</span><strong>{{ c.recipient_email or '—' }}</strong></div>
+        <div class="automation-meta__row"><span>ID Yousign</span><strong class="mono">{{ c.signature_request_id or '—' }}</strong></div>
+      </div>
+      {% if c.error %}<div class="automation-error">{{ c.error }}</div>{% endif %}
+      <div class="automation-actions">
+        <form class="automation-loading-form" method="post" action="{{ url_for('admin_create_convention_signature', session_id=session.id, trainee_id=trainee.id) }}"><button class="btn btn-primary" type="submit" {% if is_read_only or c.status == 'signed' %}disabled{% endif %}>{% if c.status == 'not_generated' %}Générer la convention{% elif c.status == 'generated' %}Envoyer pour signature{% elif c.status in ['waiting_signature','sent'] %}Voir le statut Yousign{% else %}Envoyer pour signature{% endif %}</button></form>
+        {% if c.status in ['waiting_signature','sent'] %}<form class="automation-loading-form" method="post" action="{{ url_for('admin_send_convention_signature_reminder_for_session', session_id=session.id, trainee_id=trainee.id) }}"><button class="btn btn-outline" type="submit" {% if is_read_only %}disabled{% endif %}>Relancer la signature</button></form>{% endif %}
+        {% if c.download_url %}<a class="btn btn-outline" href="{{ c.download_url }}" target="_blank" rel="noopener">Voir / Télécharger la convention</a>{% endif %}
+      </div>
+    </article>
+    {% set v = auto.convocation %}
+    <article class="automation-card">
+      <div class="automation-card__head"><div><h3>Convocation</h3><p>Document envoyé au stagiaire après validation de la convention.</p></div>
+        <span class="automation-status automation-status--{% if v.status == 'sent' %}complete{% elif v.status == 'error' %}error{% elif v.status == 'blocked_waiting_convention' %}blocked{% else %}pending{% endif %}">{% if v.status == 'blocked_waiting_convention' %}En attente de signature de la convention{% elif v.status == 'sent' %}Envoyée{% elif v.status == 'generated' %}Prête à envoyer{% elif v.status == 'not_generated' %}Prête à générer{% else %}Erreur{% endif %}</span></div>
+      <div class="automation-meta">
+        <div class="automation-meta__row"><span>État</span><strong>{% if v.status == 'blocked_waiting_convention' %}En attente de signature de la convention{% elif v.status == 'not_generated' %}Non générée{% elif v.status == 'generated' %}Générée{% elif v.status == 'sent' %}Envoyée le {{ v.sent_at|frdatetime }}{% else %}Erreur{% endif %}</strong></div>
+        <div class="automation-meta__row"><span>Génération</span><strong>{% if v.generated_at %}{{ v.generated_at|frdatetime }}{% else %}—{% endif %}</strong></div>
+        <div class="automation-meta__row"><span>Envoi</span><strong>{% if v.sent_at %}Envoyée le {{ v.sent_at|frdatetime }}{% else %}—{% endif %}</strong></div>
+      </div>
+      {% if v.error %}<div class="automation-error">{{ v.error }}</div>{% endif %}
+      <div class="automation-actions">
+        {% if is_aps %}<form class="automation-loading-form" method="post" action="{{ url_for('admin_generate_aps_convocation_automation', session_id=session.id, trainee_id=trainee.id) }}"><button class="btn btn-outline" type="submit" {% if is_read_only or v.status == 'blocked_waiting_convention' %}disabled title='En attente de signature de la convention'{% endif %}>Générer la convocation</button></form>
+        <button class="btn btn-primary" id="btnAutomationSendConvocation" type="button" {% if is_read_only or v.status == 'blocked_waiting_convention' %}disabled title='En attente de signature de la convention'{% endif %}>{% if v.status == 'sent' %}Renvoyer la convocation{% else %}Envoyer la convocation{% endif %}</button>{% endif %}
+        {% if v.download_url %}<a class="btn btn-outline" href="{{ v.download_url }}" target="_blank" rel="noopener">Télécharger la convocation</a>{% endif %}
+      </div>
+    </article>
+  </div>
+  <div class="automation-timeline" aria-label="Timeline automatisation">{% for step in auto.timeline %}<div class="automation-timeline__step is-{{ step.state }}"><span class="automation-timeline__icon">{% if step.state == 'complete' %}✓{% elif step.state == 'error' %}!{% elif step.state == 'pending' %}…{% else %}○{% endif %}</span><div>{{ loop.index }}. {{ step.label }}</div></div>{% endfor %}</div>
+</section>
 
 {% set ypareo_person_status = trainee.ypareo_statut or 'Non envoyé' %}
 {% set ypareo_course_status = trainee.ypareo_cursus_statut or 'Non envoyé' %}
@@ -2408,6 +2480,36 @@ if(yousignSignatureForm && yousignSignatureProgress){
       yousignSignatureButton.disabled = true;
       yousignSignatureButton.setAttribute("aria-busy", "true");
     }
+  });
+}
+
+
+document.querySelectorAll(".automation-loading-form").forEach((form)=>{
+  form.addEventListener("submit", async (event)=>{
+    const btn = form.querySelector("button");
+    if(btn){ btn.disabled = true; btn.setAttribute("aria-busy", "true"); btn.dataset.originalText = btn.textContent; btn.textContent = "Traitement…"; }
+    if(form.action.includes("/automation/")){
+      event.preventDefault();
+      try{
+        const response = await fetch(form.action, {method: "POST", headers: {"X-Requested-With": "fetch"}});
+        const result = await response.json().catch(()=>({ok:false,error:"Réponse serveur invalide."}));
+        if(!response.ok || !result.ok) throw new Error(result.error || "Action impossible.");
+        window.location.reload();
+      }catch(error){
+        alert(error.message || "Action impossible.");
+        if(btn){ btn.disabled = false; btn.removeAttribute("aria-busy"); btn.textContent = btn.dataset.originalText || "Réessayer"; }
+      }
+    }
+  });
+});
+const btnAutomationSendConvocation = document.getElementById("btnAutomationSendConvocation");
+const btnSendApsConvocationExisting = document.getElementById("btnSendApsConvocation");
+if(btnAutomationSendConvocation && btnSendApsConvocationExisting){
+  btnAutomationSendConvocation.addEventListener("click", ()=>{
+    btnAutomationSendConvocation.disabled = true;
+    btnAutomationSendConvocation.setAttribute("aria-busy", "true");
+    btnAutomationSendConvocation.textContent = "Envoi…";
+    btnSendApsConvocationExisting.click();
   });
 }
 
