@@ -396,12 +396,22 @@ def _qonto_oauth_bearer_token(data: Optional[Dict[str, Any]] = None) -> str:
     if not _qonto_oauth_connected(data):
         raise QontoConfigurationError(QONTO_OAUTH_REQUIRED_MESSAGE)
     if int(settings.get("expires_at") or 0) <= int(time.time()) + 60:
-        payload = _exchange_qonto_oauth_token({
-            "client_id": _qonto_oauth_client_id(),
-            "client_secret": _qonto_oauth_client_secret(),
-            "grant_type": "refresh_token",
-            "refresh_token": _qonto_oauth_refresh_token(data),
-        })
+        try:
+            payload = _exchange_qonto_oauth_token({
+                "client_id": _qonto_oauth_client_id(),
+                "client_secret": _qonto_oauth_client_secret(),
+                "grant_type": "refresh_token",
+                "refresh_token": _qonto_oauth_refresh_token(data),
+            })
+        except QontoApiError as exc:
+            error_text = f"{exc.body} {exc}".lower()
+            if exc.status_code == 400 and "invalid_grant" in error_text:
+                _reset_qonto_oauth_tokens(data)
+                save_data(data)
+                raise QontoConfigurationError(
+                    "Connexion Qonto OAuth expirée ou révoquée : reconnectez Qonto depuis Réglages > Qonto avant de programmer un prélèvement SEPA."
+                ) from exc
+            raise
         _store_qonto_oauth_tokens(data, payload)
     return _qonto_oauth_access_token(data)
 
