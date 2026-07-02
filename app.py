@@ -58,29 +58,31 @@ def add_no_store_headers(response):
     return response
 
 
+@app.get("/api/qonto/oauth/ping")
+def api_qonto_oauth_ping():
+    return jsonify({"ok": True, "route": "qonto_oauth_ping"})
+
+
 @app.get("/api/qonto/oauth/callback")
 def api_qonto_oauth_callback():
-    print("[QONTO OAUTH CALLBACK] called", {
-        "hasCode": bool(request.args.get("code")),
-        "hasState": bool(request.args.get("state")),
-        "error": request.args.get("error") or None,
-    })
+    app.logger.info("[QONTO OAUTH CALLBACK] route called")
     error = request.args.get("error")
     error_description = request.args.get("error_description") or request.args.get("error_message") or ""
+    code = request.args.get("code") or ""
+    app.logger.info("[QONTO OAUTH CALLBACK] has_code=%s", str(bool(code)).lower())
     if error:
         message = error_description or error
-        app.logger.warning("[QONTO OAUTH] callback error from Qonto status=%s message=%s", error, _sanitize_qonto_error(message))
+        app.logger.warning("[QONTO OAUTH CALLBACK] provider error status=%s message=%s", error, _sanitize_qonto_error(message))
         return redirect("/admin/qonto?oauth=error")
 
-    code = request.args.get("code") or ""
     if not code:
-        app.logger.warning("[QONTO OAUTH] callback missing authorization code")
-        return jsonify({"ok": False, "error": "Code OAuth Qonto absent"}), 400
+        app.logger.warning("[QONTO OAUTH CALLBACK] missing authorization code")
+        return redirect("/admin/qonto?oauth=error")
 
     state = request.args.get("state") or ""
     expected_state = session.pop("qonto_oauth_state", "")
     if expected_state and (not state or not hmac.compare_digest(state, expected_state)):
-        app.logger.warning("[QONTO OAUTH] callback state mismatch has_state=%s", bool(state))
+        app.logger.warning("[QONTO OAUTH CALLBACK] state mismatch has_state=%s", bool(state))
         return redirect("/admin/qonto?oauth=error")
 
     try:
@@ -91,9 +93,10 @@ def api_qonto_oauth_callback():
             "client_id": _qonto_oauth_client_id(),
             "client_secret": _qonto_oauth_client_secret(),
         })
+        app.logger.info("[QONTO OAUTH CALLBACK] token exchange status=success")
         data = load_data()
         app.logger.info(
-            "[QONTO OAUTH] token exchange succeeded has_access_token=%s has_refresh_token=%s expires_in=%s scope=%s",
+            "[QONTO OAUTH CALLBACK] token payload received has_access_token=%s has_refresh_token=%s expires_in=%s scope=%s",
             bool(payload.get("access_token")),
             bool(payload.get("refresh_token")),
             payload.get("expires_in"),
@@ -102,9 +105,9 @@ def api_qonto_oauth_callback():
         _store_qonto_oauth_tokens(data, payload)
         return redirect("/admin/qonto?oauth=success")
     except QontoApiError as exc:
-        app.logger.warning("[QONTO OAUTH] token exchange failed status=%s message=%s", getattr(exc, "status_code", "unknown"), _sanitize_qonto_error(str(exc)))
+        app.logger.warning("[QONTO OAUTH CALLBACK] token exchange status=%s message=%s", getattr(exc, "status_code", "unknown"), _sanitize_qonto_error(str(exc)))
     except Exception as exc:
-        app.logger.warning("[QONTO OAUTH] token exchange failed status=unknown message=%s", _sanitize_qonto_error(str(exc)))
+        app.logger.warning("[QONTO OAUTH CALLBACK] token exchange status=unknown message=%s", _sanitize_qonto_error(str(exc)))
     return redirect("/admin/qonto?oauth=error")
 
 
