@@ -29,15 +29,21 @@
   .automation-badge--complete{color:#047857;border-color:#a7f3d0;background:#ecfdf5}.automation-badge--complete::before{background:#10b981;box-shadow:0 0 0 4px rgba(16,185,129,.14)}
   .automation-badge--error{color:#be123c;border-color:#fecdd3;background:#fff1f2}.automation-badge--error::before{background:#f43f5e;box-shadow:0 0 0 4px rgba(244,63,94,.13)}
   .automation-badge--waiting,.automation-badge--blocked,.automation-badge--action{color:#92400e;border-color:#fed7aa;background:#fff7ed}.automation-badge--waiting::before,.automation-badge--blocked::before,.automation-badge--action::before{background:#f97316;box-shadow:0 0 0 4px rgba(249,115,22,.13)}
-  .automation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
-  .automation-card{display:flex;min-width:0;flex-direction:column;padding:20px;border:1px solid #e2e8f0;border-radius:20px;background:rgba(255,255,255,.9);box-shadow:0 10px 28px rgba(15,23,42,.055);}
-  .automation-card__head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}.automation-card h3{margin:0;color:#0f172a;font-size:18px}.automation-card p{margin:4px 0 0;color:#64748b;font-size:12px;line-height:1.45}
-  .automation-status{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:950;white-space:nowrap}.automation-status--complete{background:#dcfce7;color:#166534}.automation-status--error{background:#fee2e2;color:#991b1b}.automation-status--waiting{background:#fef3c7;color:#92400e}.automation-status--blocked{background:#e5e7eb;color:#475569}.automation-status--pending{background:#dbeafe;color:#1d4ed8}
-  .automation-meta{display:grid;gap:8px;margin:8px 0 14px}.automation-meta__row{display:flex;justify-content:space-between;gap:12px;padding:8px 10px;border:1px solid #eef2f7;border-radius:10px;background:#f8fafc;font-size:12px;min-width:0}.automation-meta__row span{color:#64748b;font-weight:800}.automation-meta__row strong{color:#0f172a;text-align:right;overflow-wrap:anywhere}
+  .automation-grid{display:grid;gap:10px;}
+  .automation-doc{position:relative;border:1px solid #e2e8f0;border-radius:18px;background:rgba(255,255,255,.92);box-shadow:0 8px 22px rgba(15,23,42,.045);overflow:hidden;}
+  .automation-doc__summary{display:grid;grid-template-columns:minmax(180px,1.15fr) minmax(180px,1fr) auto auto;align-items:center;gap:14px;padding:14px 16px;list-style:none;cursor:pointer;}
+  .automation-doc__summary::-webkit-details-marker{display:none}.automation-doc__summary::after{content:"⌄";display:grid;place-items:center;width:30px;height:30px;border-radius:999px;background:#f1f5f9;color:#475569;font-weight:950;transition:transform .18s ease;}
+  .automation-doc[open] .automation-doc__summary::after{transform:rotate(180deg)}
+  .automation-doc__title{min-width:0}.automation-doc__title h3{margin:0;color:#0f172a;font-size:17px;line-height:1.2}.automation-doc__title p{margin:4px 0 0;color:#64748b;font-size:12px;line-height:1.35}
+  .automation-doc__quick{display:flex;align-items:center;gap:8px;min-width:0;color:#475569;font-size:12px;font-weight:850;overflow-wrap:anywhere}.automation-doc__quick span{color:#64748b;font-weight:800}.automation-doc__quick strong{color:#0f172a}
+  .automation-status{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:950;white-space:nowrap}.automation-status--complete{background:#dcfce7;color:#166534}.automation-status--error{background:#fee2e2;color:#991b1b}.automation-status--waiting{background:#fef3c7;color:#92400e}.automation-status--blocked{background:#e5e7eb;color:#475569}.automation-status--pending{background:#dbeafe;color:#1d4ed8}.automation-status--muted{background:#f1f5f9;color:#64748b}
+  .automation-doc__body{border-top:1px solid #eef2f7;padding:0 16px 16px;}
+  .automation-meta{display:grid;gap:8px;margin:14px 0}.automation-meta__row{display:flex;justify-content:space-between;gap:12px;padding:8px 10px;border:1px solid #eef2f7;border-radius:10px;background:#f8fafc;font-size:12px;min-width:0}.automation-meta__row span{color:#64748b;font-weight:800}.automation-meta__row strong{color:#0f172a;text-align:right;overflow-wrap:anywhere}
   .automation-error{margin:2px 0 12px;padding:10px 12px;border:1px solid #fecaca;border-radius:12px;background:#fef2f2;color:#991b1b;font-size:12px;font-weight:800;overflow-wrap:anywhere}
-  .automation-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}.automation-actions .btn{min-height:38px}.automation-actions form{margin:0}.automation-actions .btn[disabled]{cursor:not-allowed;opacity:.62}
-  .automation-timeline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}.automation-timeline__step{min-width:0;padding:12px;border:1px solid #e2e8f0;border-radius:15px;background:rgba(255,255,255,.74);font-size:12px;font-weight:900;color:#475569}.automation-timeline__icon{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:999px;margin-bottom:7px;background:#e5e7eb}.automation-timeline__step.is-complete{border-color:#bbf7d0;color:#166534;background:#f0fdf4}.automation-timeline__step.is-pending{border-color:#fed7aa;color:#92400e;background:#fff7ed}.automation-timeline__step.is-error{border-color:#fecaca;color:#991b1b;background:#fef2f2}
-  @media(max-width:860px){.automation-hub__header{flex-direction:column}.automation-grid,.automation-timeline{grid-template-columns:1fr}.automation-meta__row{flex-direction:column;gap:3px}.automation-meta__row strong{text-align:left}}
+  .automation-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.automation-actions .btn{min-height:38px}.automation-actions form{margin:0}.automation-actions .btn[disabled]{cursor:not-allowed;opacity:.62}
+  .automation-placeholder{cursor:default}.automation-placeholder .automation-doc__summary{cursor:default}.automation-placeholder .automation-doc__summary::after{content:"Bientôt";width:auto;padding:0 10px;font-size:11px;color:#64748b}
+  .automation-timeline{display:none}
+  @media(max-width:860px){.automation-hub{padding:18px}.automation-hub__header{flex-direction:column;margin-bottom:14px}.automation-doc__summary{grid-template-columns:1fr;gap:8px}.automation-doc__summary::after{position:absolute;right:14px;top:14px}.automation-doc__quick{padding-right:38px}.automation-meta__row{flex-direction:column;gap:3px}.automation-meta__row strong{text-align:left}}
 
   .aps-doc-card{grid-column:1 / -1;margin-top:16px;background:#fff;border:1px solid rgba(148,163,184,.28);border-radius:22px;box-shadow:0 18px 45px rgba(15,23,42,.08);padding:22px;}
   .aps-doc-card__head{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
@@ -723,39 +729,66 @@
   </header>
   <div class="automation-grid">
     {% set c = auto.convention %}
-    <article class="automation-card">
-      <div class="automation-card__head"><div><h3>Convention</h3><p>Document contractuel à faire signer.</p></div>
-        <span class="automation-status automation-status--{% if c.status == 'signed' %}complete{% elif c.status in ['error','refused','expired'] %}error{% elif c.status == 'waiting_signature' %}waiting{% elif c.status == 'not_generated' %}blocked{% else %}pending{% endif %}">{% if c.status == 'signed' %}Signée{% elif c.status == 'waiting_signature' %}En attente de signature{% elif c.status == 'sent' %}Envoyée{% elif c.status == 'generated' %}Générée{% elif c.status == 'not_generated' %}Non générée{% elif c.status == 'refused' %}Refusée{% elif c.status == 'expired' %}Expirée{% else %}Erreur{% endif %}</span></div>
-      <div class="automation-meta">
-        <div class="automation-meta__row"><span>Génération</span><strong>{% if c.generated_at %}{{ c.generated_at|frdatetime }}{% else %}Non générée{% endif %}</strong></div>
-        <div class="automation-meta__row"><span>Envoi</span><strong>{% if c.sent_at %}Envoyée le {{ c.sent_at|frdatetime }}{% else %}Non envoyée{% endif %}</strong></div>
-        <div class="automation-meta__row"><span>Signature</span><strong>{% if c.signed_at %}Signée le {{ c.signed_at|frdatetime }}{% else %}—{% endif %}</strong></div>
-        <div class="automation-meta__row"><span>Email destinataire</span><strong>{{ c.recipient_email or '—' }}</strong></div>
-        <div class="automation-meta__row"><span>ID Yousign</span><strong class="mono">{{ c.signature_request_id or '—' }}</strong></div>
+    <details class="automation-doc">
+      <summary class="automation-doc__summary">
+        <div class="automation-doc__title"><h3>Convention</h3><p>Document contractuel à faire signer.</p></div>
+        <div class="automation-doc__quick"><span>Statut</span><strong>{% if c.status == 'signed' %}Signée{% elif c.status == 'waiting_signature' %}En attente de signature{% elif c.status == 'sent' %}Envoyée{% elif c.status == 'generated' %}Générée{% elif c.status == 'not_generated' %}Non générée{% elif c.status == 'refused' %}Refusée{% elif c.status == 'expired' %}Expirée{% else %}Erreur{% endif %}</strong></div>
+        <span class="automation-status automation-status--{% if c.status == 'signed' %}complete{% elif c.status in ['error','refused','expired'] %}error{% elif c.status == 'waiting_signature' %}waiting{% elif c.status == 'not_generated' %}blocked{% else %}pending{% endif %}">{% if c.status == 'signed' %}Signée{% elif c.status == 'waiting_signature' %}Signature attendue{% elif c.status == 'sent' %}Envoyée{% elif c.status == 'generated' %}Générée{% elif c.status == 'not_generated' %}Non générée{% elif c.status == 'refused' %}Refusée{% elif c.status == 'expired' %}Expirée{% else %}Erreur{% endif %}</span>
+      </summary>
+      <div class="automation-doc__body">
+        <div class="automation-meta">
+          <div class="automation-meta__row"><span>Génération</span><strong>{% if c.generated_at %}{{ c.generated_at|frdatetime }}{% else %}Non générée{% endif %}</strong></div>
+          <div class="automation-meta__row"><span>Envoi</span><strong>{% if c.sent_at %}Envoyée le {{ c.sent_at|frdatetime }}{% else %}Non envoyée{% endif %}</strong></div>
+          <div class="automation-meta__row"><span>Signature</span><strong>{% if c.signed_at %}Signée le {{ c.signed_at|frdatetime }}{% else %}—{% endif %}</strong></div>
+          <div class="automation-meta__row"><span>Email destinataire</span><strong>{{ c.recipient_email or '—' }}</strong></div>
+          <div class="automation-meta__row"><span>ID Yousign</span><strong class="mono">{{ c.signature_request_id or '—' }}</strong></div>
+        </div>
+        {% if c.error %}<div class="automation-error">{{ c.error }}</div>{% endif %}
+        <div class="automation-actions">
+          <form class="automation-loading-form" method="post" action="{{ url_for('admin_create_convention_signature', session_id=session.id, trainee_id=trainee.id) }}"><button class="btn btn-primary" type="submit" {% if is_read_only or c.status == 'signed' %}disabled{% endif %}>{% if c.status == 'not_generated' %}Générer la convention{% elif c.status == 'generated' %}Envoyer pour signature{% elif c.status in ['waiting_signature','sent'] %}Voir le statut Yousign{% else %}Envoyer pour signature{% endif %}</button></form>
+          {% if c.status in ['waiting_signature','sent'] %}<form class="automation-loading-form" method="post" action="{{ url_for('admin_send_convention_signature_reminder_for_session', session_id=session.id, trainee_id=trainee.id) }}"><button class="btn btn-outline" type="submit" {% if is_read_only %}disabled{% endif %}>Relancer la signature</button></form>{% endif %}
+          {% if c.download_url %}<a class="btn btn-outline" href="{{ c.download_url }}" target="_blank" rel="noopener">Voir / Télécharger la convention</a>{% endif %}
+        </div>
       </div>
-      {% if c.error %}<div class="automation-error">{{ c.error }}</div>{% endif %}
-      <div class="automation-actions">
-        <form class="automation-loading-form" method="post" action="{{ url_for('admin_create_convention_signature', session_id=session.id, trainee_id=trainee.id) }}"><button class="btn btn-primary" type="submit" {% if is_read_only or c.status == 'signed' %}disabled{% endif %}>{% if c.status == 'not_generated' %}Générer la convention{% elif c.status == 'generated' %}Envoyer pour signature{% elif c.status in ['waiting_signature','sent'] %}Voir le statut Yousign{% else %}Envoyer pour signature{% endif %}</button></form>
-        {% if c.status in ['waiting_signature','sent'] %}<form class="automation-loading-form" method="post" action="{{ url_for('admin_send_convention_signature_reminder_for_session', session_id=session.id, trainee_id=trainee.id) }}"><button class="btn btn-outline" type="submit" {% if is_read_only %}disabled{% endif %}>Relancer la signature</button></form>{% endif %}
-        {% if c.download_url %}<a class="btn btn-outline" href="{{ c.download_url }}" target="_blank" rel="noopener">Voir / Télécharger la convention</a>{% endif %}
-      </div>
-    </article>
+    </details>
+
     {% set v = auto.convocation %}
-    <article class="automation-card">
-      <div class="automation-card__head"><div><h3>Convocation</h3><p>Document envoyé au stagiaire après validation de la convention.</p></div>
-        <span class="automation-status automation-status--{% if v.status == 'sent' %}complete{% elif v.status == 'error' %}error{% elif v.status == 'blocked_waiting_convention' %}blocked{% else %}pending{% endif %}">{% if v.status == 'blocked_waiting_convention' %}En attente de signature de la convention{% elif v.status == 'sent' %}Envoyée{% elif v.status == 'generated' %}Prête à envoyer{% elif v.status == 'not_generated' %}Prête à générer{% else %}Erreur{% endif %}</span></div>
-      <div class="automation-meta">
-        <div class="automation-meta__row"><span>État</span><strong>{% if v.status == 'blocked_waiting_convention' %}En attente de signature de la convention{% elif v.status == 'not_generated' %}Non générée{% elif v.status == 'generated' %}Générée{% elif v.status == 'sent' %}Envoyée le {{ v.sent_at|frdatetime }}{% else %}Erreur{% endif %}</strong></div>
-        <div class="automation-meta__row"><span>Génération</span><strong>{% if v.generated_at %}{{ v.generated_at|frdatetime }}{% else %}—{% endif %}</strong></div>
-        <div class="automation-meta__row"><span>Envoi</span><strong>{% if v.sent_at %}Envoyée le {{ v.sent_at|frdatetime }}{% else %}—{% endif %}</strong></div>
+    <details class="automation-doc">
+      <summary class="automation-doc__summary">
+        <div class="automation-doc__title"><h3>Convocation</h3><p>Document envoyé après validation de la convention.</p></div>
+        <div class="automation-doc__quick"><span>Statut</span><strong>{% if v.status == 'blocked_waiting_convention' %}En attente de signature de la convention{% elif v.status == 'sent' %}Envoyée{% elif v.status == 'generated' %}Prête à envoyer{% elif v.status == 'not_generated' %}Prête à générer{% else %}Erreur{% endif %}</strong></div>
+        <span class="automation-status automation-status--{% if v.status == 'sent' %}complete{% elif v.status == 'error' %}error{% elif v.status == 'blocked_waiting_convention' %}blocked{% else %}pending{% endif %}">{% if v.status == 'blocked_waiting_convention' %}Bloquée{% elif v.status == 'sent' %}Envoyée{% elif v.status == 'generated' %}Prête{% elif v.status == 'not_generated' %}À générer{% else %}Erreur{% endif %}</span>
+      </summary>
+      <div class="automation-doc__body">
+        <div class="automation-meta">
+          <div class="automation-meta__row"><span>État</span><strong>{% if v.status == 'blocked_waiting_convention' %}En attente de signature de la convention{% elif v.status == 'not_generated' %}Non générée{% elif v.status == 'generated' %}Générée{% elif v.status == 'sent' %}Envoyée le {{ v.sent_at|frdatetime }}{% else %}Erreur{% endif %}</strong></div>
+          <div class="automation-meta__row"><span>Génération</span><strong>{% if v.generated_at %}{{ v.generated_at|frdatetime }}{% else %}—{% endif %}</strong></div>
+          <div class="automation-meta__row"><span>Envoi</span><strong>{% if v.sent_at %}Envoyée le {{ v.sent_at|frdatetime }}{% else %}—{% endif %}</strong></div>
+        </div>
+        {% if v.error %}<div class="automation-error">{{ v.error }}</div>{% endif %}
+        <div class="automation-actions">
+          {% if is_aps %}<form class="automation-loading-form" method="post" action="{{ url_for('admin_generate_aps_convocation_automation', session_id=session.id, trainee_id=trainee.id) }}"><button class="btn btn-outline" type="submit" {% if is_read_only or v.status == 'blocked_waiting_convention' %}disabled title='En attente de signature de la convention'{% endif %}>Générer la convocation</button></form>
+          <button class="btn btn-primary" id="btnAutomationSendConvocation" type="button" {% if is_read_only or v.status == 'blocked_waiting_convention' %}disabled title='En attente de signature de la convention'{% endif %}>{% if v.status == 'sent' %}Renvoyer la convocation{% else %}Envoyer la convocation{% endif %}</button>{% endif %}
+          {% if v.download_url %}<a class="btn btn-outline" href="{{ v.download_url }}" target="_blank" rel="noopener">Télécharger la convocation</a>{% endif %}
+        </div>
       </div>
-      {% if v.error %}<div class="automation-error">{{ v.error }}</div>{% endif %}
-      <div class="automation-actions">
-        {% if is_aps %}<form class="automation-loading-form" method="post" action="{{ url_for('admin_generate_aps_convocation_automation', session_id=session.id, trainee_id=trainee.id) }}"><button class="btn btn-outline" type="submit" {% if is_read_only or v.status == 'blocked_waiting_convention' %}disabled title='En attente de signature de la convention'{% endif %}>Générer la convocation</button></form>
-        <button class="btn btn-primary" id="btnAutomationSendConvocation" type="button" {% if is_read_only or v.status == 'blocked_waiting_convention' %}disabled title='En attente de signature de la convention'{% endif %}>{% if v.status == 'sent' %}Renvoyer la convocation{% else %}Envoyer la convocation{% endif %}</button>{% endif %}
-        {% if v.download_url %}<a class="btn btn-outline" href="{{ v.download_url }}" target="_blank" rel="noopener">Télécharger la convocation</a>{% endif %}
+    </details>
+
+    <div class="automation-doc automation-placeholder">
+      <div class="automation-doc__summary">
+        <div class="automation-doc__title"><h3>Attestation d'entrée en formation</h3><p>Configuration prévue prochainement.</p></div>
+        <div class="automation-doc__quick"><span>Statut</span><strong>À configurer</strong></div>
+        <span class="automation-status automation-status--muted">Plus tard</span>
       </div>
-    </article>
+    </div>
+
+    <div class="automation-doc automation-placeholder">
+      <div class="automation-doc__summary">
+        <div class="automation-doc__title"><h3>Attestation de fin de formation</h3><p>Configuration prévue prochainement.</p></div>
+        <div class="automation-doc__quick"><span>Statut</span><strong>À configurer</strong></div>
+        <span class="automation-status automation-status--muted">Plus tard</span>
+      </div>
+    </div>
   </div>
   <div class="automation-timeline" aria-label="Timeline automatisation">{% for step in auto.timeline %}<div class="automation-timeline__step is-{{ step.state }}"><span class="automation-timeline__icon">{% if step.state == 'complete' %}✓{% elif step.state == 'error' %}!{% elif step.state == 'pending' %}…{% else %}○{% endif %}</span><div>{{ loop.index }}. {{ step.label }}</div></div>{% endfor %}</div>
 </section>
