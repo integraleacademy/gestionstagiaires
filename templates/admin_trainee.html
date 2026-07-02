@@ -1300,6 +1300,7 @@
             <span class="finance-settings-pill">SaaS ready</span>
           </div>
           <div class="finance-edit-grid finance-edit-grid--cards">
+            <div class="finance-field finance-field-card finance-field-card--cpf"><div class="label">Montant CPF</div><input id="cpfAmount" type="number" min="0" step="0.01" value="{{ trainee.cpf_amount or '' }}" {{ read_only_attr }}><div class="hint">Montant CPF (suivi uniquement, sans facturation CPF)</div></div>
             <div class="finance-field finance-field-card finance-field-card--personal"><div class="label">Montant financement personnel</div><input id="personalAmount" type="number" min="0" step="0.01" value="{{ trainee.personal_amount or '' }}" {{ read_only_attr }}><div class="hint">Reste à charge stagiaire</div></div>
             <div class="finance-field finance-field-card finance-field-card--other"><div class="label">Montant autre</div><input id="otherAmount" type="number" min="0" step="0.01" value="{{ trainee.other_amount or '' }}" {{ read_only_attr }}><div class="hint">OPCO, entreprise, France Travail…</div></div>
           </div>
@@ -2215,9 +2216,10 @@ if(financementDetails){
 
   const renderTotals = () => {
     if(!totalLine) return;
+    const cpfVal = parseAmount(cpfAmount?.value);
     const personalVal = parseAmount(personalAmount?.value);
     const otherVal = parseAmount(otherAmount?.value);
-    const total = personalVal + otherVal;
+    const total = cpfVal + personalVal + otherVal;
 
     const priceRaw = parseAmount(trainingPrice?.value);
     const price = priceRaw > 0 ? priceRaw : computeDefaultPrice();
@@ -2248,6 +2250,7 @@ if(financementDetails){
     });
   };
 
+  setupAutosave(cpfAmount, "cpf_amount");
   setupAutosave(personalAmount, "personal_amount");
   setupAutosave(otherAmount, "other_amount");
   setupAutosave(trainingPrice, "training_price");
@@ -3484,8 +3487,8 @@ function updateDocsRelanceState(status, plannedDateIso){
     const parseMoneyValue=(value)=>{const n=parseFloat(String(value||'').replace(',','.').trim());return Number.isNaN(n)?0:n;};
     const defaultPrice=()=>{const details=document.getElementById('financementDetails');const dataDefault=parseMoneyValue(details?.dataset.defaultPrice);if(dataDefault>0)return dataDefault;const type=String(details?.dataset.trainingType||'').toUpperCase();if(type==='A3P')return 4200;if(type==='APS')return 1650;if(type==='DIRIGEANT INITIAL')return 4300;if(type==='DIRIGEANT VAE')return 3800;if(type.includes('VTC'))return 1600;return 0;};
     const prixFormation=parseMoneyValue(trainingPrice?.value)||defaultPrice();
-    const montantCpf=0, montantPersonnel=parseMoneyValue(personalAmount?.value), montantAutre=parseMoneyValue(otherAmount?.value);
-    const totalFinancement=montantPersonnel+montantAutre;
+    const montantCpf=parseMoneyValue(cpfAmount?.value), montantPersonnel=parseMoneyValue(personalAmount?.value), montantAutre=parseMoneyValue(otherAmount?.value);
+    const totalFinancement=montantCpf+montantPersonnel+montantAutre;
     const active=lines.filter(l=>!['cancelled','deleted'].includes(String(l.invoiceStatus||'')));
     const invoiced=active.filter(l=>!!(l.qontoInvoiceId||l.qontoDraftId));
     const totalFacture=invoiced.reduce((a,l)=>a+lineAmount(l),0);
@@ -3521,8 +3524,8 @@ function updateDocsRelanceState(status, plannedDateIso){
     const parseMoneyValue=(value)=>{const n=parseFloat(String(value||'').replace(',','.').trim());return Number.isNaN(n)?0:n;};
     const defaultPrice=()=>{const details=document.getElementById('financementDetails');const dataDefault=parseMoneyValue(details?.dataset.defaultPrice);if(dataDefault>0)return dataDefault;const type=String(details?.dataset.trainingType||'').toUpperCase();if(type==='A3P')return 4200;if(type==='APS')return 1650;if(type==='DIRIGEANT INITIAL')return 4300;if(type==='DIRIGEANT VAE')return 3800;if(type.includes('VTC'))return 1600;return 0;};
     const prixFormation=parseMoneyValue(trainingPrice?.value)||defaultPrice();
-    const montantCpf=0, montantPersonnel=parseMoneyValue(personalAmount?.value), montantAutre=parseMoneyValue(otherAmount?.value);
-    const totalFinancement=montantPersonnel+montantAutre;
+    const montantCpf=parseMoneyValue(cpfAmount?.value), montantPersonnel=parseMoneyValue(personalAmount?.value), montantAutre=parseMoneyValue(otherAmount?.value);
+    const totalFinancement=montantCpf+montantPersonnel+montantAutre;
     const active=lines.filter(l=>!['cancelled','deleted'].includes(String(l.invoiceStatus||'')));
     const invoiced=active.filter(l=>!!(l.qontoInvoiceId||l.qontoDraftId));
     const totalFacture=invoiced.reduce((a,l)=>a+lineAmount(l),0);
