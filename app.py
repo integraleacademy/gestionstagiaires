@@ -21779,12 +21779,12 @@ def _format_euro_amount(value: Any) -> str:
 
 
 def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
-    """Return the variable dictionary used to fill the immutable APS convention template.
+    """Return values allowed for APS convention ``{{ variable }}`` placeholders.
 
-    The convention must always be generated from templates_word/conventionaps.docx:
-    no paragraphs, articles, headers, footers, styles, tables, images, or fixed
-    texts are rebuilt or corrected by code.  This dictionary only provides
-    values for placeholders that already exist in the Word model.
+    The APS convention is immutable outside of explicit ``{{ nom_variable }}``
+    placeholders.  In particular, fixed legal text, article titles, tables,
+    styles, colours, images, headers and footers must never be rebuilt or
+    rewritten by application code.
     """
     first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
     last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper()
@@ -21796,11 +21796,7 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
     personal_amount = trainee.get("personal_amount")
     if personal_amount in (None, ""):
         personal_amount = training_price
-    values = {
-        "nom_organisme": "Intégrale Academy",
-        "forme_juridique": "SAS",
-        "code_naf": "8559A",
-        "numero_declaration_activite": "93830739683",
+    return {
         "nom_identite": full_name,
         "code_postal": zip_code,
         "ville": city,
@@ -21812,82 +21808,51 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
         "prenom": first_name,
         "ville_edition": "Puget-sur-Argens",
         "date_edition": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
-        "formation_conventions_debut": "",
-        "formation_conventions_fin": "",
-        "apprenants_debut": "",
-        "apprenants_fin": "",
-        "type_signature": "",
-        "is_signature_numerique": "",
-        "if_fin": "",
-        "sceau_de_confiance_debut": "",
-        "sceau_de_confiance_fin": "",
         "signature_stagiaire": "{{s1|signature|160|60}}",
-        "signature_stagiaire_fin": "",
-        "signature_organisme": "",
-        "signature_organisme_fin": "",
     }
-    aliases = {
-        "['Nom]": "nom_organisme",
-        "['FormeJuridique]": "forme_juridique",
-        "[OfNaf]": "code_naf",
-        "['NumeroDeclarationActivite]": "numero_declaration_activite",
-        "['NomIdentite]": "nom_identite",
-        "[CodePostal]": "code_postal",
-        "[Ville]": "ville",
-        "[DateMinActionFormation]": "date_debut",
-        "[DateMaxActionFormation]": "date_fin",
-        "[Code]": "code_rncp",
-        "['MontantTTC]": "montant_ttc",
-        "[Nom]": "nom",
-        "[Prenom]": "prenom",
-        "['Ville]": "ville_edition",
-        "['DateEdition]": "date_edition",
-        "[FormationConventions:]": "formation_conventions_debut",
-        "[:FormationConventions]": "formation_conventions_fin",
-        "[Apprenants:]": "apprenants_debut",
-        "[:Apprenants]": "apprenants_fin",
-        "[setTypeSignature]": "type_signature",
-        "[isSignatureNumerique]": "is_signature_numerique",
-        "[:if]": "if_fin",
-        "[sc_sceaudeconfiance]": "sceau_de_confiance_debut",
-        "[/sc_sceaudeconfiance]": "sceau_de_confiance_fin",
-        "[sc_sign1.signature]": "signature_stagiaire",
-        "[/sc_sign1.signature]": "signature_stagiaire_fin",
-        "[sc_sign2.signature]": "signature_organisme",
-        "[/sc_sign2.signature]": "signature_organisme_fin",
-    }
-    replacements = {f"{{{{ {key} }}}}": value for key, value in values.items()}
-    replacements.update({f"{{{{{key}}}}}": value for key, value in values.items()})
-    replacements.update({legacy_placeholder: values[value_key] for legacy_placeholder, value_key in aliases.items()})
-    return replacements
+
+
+def _sha256_file(path: str) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
 
 def _replace_docx_xml_placeholders(docx_path: str, replacements: Dict[str, str]) -> None:
-    """Fill placeholders in a copied DOCX without rebuilding the Word document.
+    """Replace only exact APS convention variables written as ``{{ name }}``.
 
-    Only text variable tokens are replaced in-place inside Word XML parts.  The
-    source template is never opened for writing, and fixed text is never matched
-    or rewritten.
+    No legacy placeholder syntax and no fixed literal text is matched.  A token
+    is replaced only when the DOCX XML contains exactly ``{{ variable_name }}``
+    (one space after ``{{`` and one space before ``}}``) and ``variable_name`` is
+    present in ``replacements``.
     """
+    allowed_tokens = {f"{{{{ {key} }}}}": str(value) for key, value in replacements.items()}
     tmp_path = docx_path + ".tmp"
     with zipfile.ZipFile(docx_path, "r") as zin, zipfile.ZipFile(tmp_path, "w") as zout:
         for item in zin.infolist():
             data = zin.read(item.filename)
             if item.filename.startswith("word/") and item.filename.endswith(".xml"):
                 xml_text = data.decode("utf-8", errors="ignore")
-                for placeholder, value in replacements.items():
-                    xml_text = xml_text.replace(escape(str(placeholder)), escape(str(value)))
-                    xml_text = xml_text.replace(str(placeholder), escape(str(value)))
+                for placeholder, value in allowed_tokens.items():
+                    xml_text = xml_text.replace(escape(placeholder), escape(value))
+                    xml_text = xml_text.replace(placeholder, escape(value))
                 data = xml_text.encode("utf-8")
             zout.writestr(item, data)
     os.replace(tmp_path, docx_path)
 
-
 def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
     """Generate the APS training convention used exclusively for Yousign."""
-    template_path = _aps_convention_template_path()
-    app.logger.info("[CONVENTION APS] Modèle Word utilisé : %s", template_path)
+    template_path = os.path.abspath(_aps_convention_template_path())
+    expected_template_path = os.path.abspath(os.path.join(app.root_path, "templates_word", "conventionaps.docx"))
+    if template_path != expected_template_path:
+        raise RuntimeError(f"Convention APS : template interdit ({template_path}). Seul {expected_template_path} est autorisé.")
     if not os.path.exists(template_path):
         raise FileNotFoundError("Modèle Word obligatoire manquant : gestionstagiaires/templates_word/conventionaps.docx")
+    template_size = os.path.getsize(template_path)
+    template_sha256 = _sha256_file(template_path)
+    app.logger.info("Convention APS template utilisé : %s taille=%s sha256=%s", template_path, template_size, template_sha256)
     os.makedirs(YOUSIGN_CONVENTION_DIR, exist_ok=True)
     base = _aps_convention_base_filename(trainee, trainee_id)
     final_docx_path = os.path.join(YOUSIGN_CONVENTION_DIR, base + ".docx")
