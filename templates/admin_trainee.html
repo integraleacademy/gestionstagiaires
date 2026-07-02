@@ -3412,11 +3412,24 @@ function updateDocsRelanceState(status, plannedDateIso){
     const hasSent = hasSigned || personalLines.some(l=>l.qonto_direct_debit_mandate_id || l.qontoMandateId || l.mandateId || (l.directDebitInstallments || []).length || pendingStatuses.has(String(l.qonto_mandate_status || l.qontoMandateStatus || l.mandateStatus || '').toLowerCase()));
     return {hasSent, hasSigned, statuses};
   }
+  function generatedCashPersonalInvoiceAmount(lines){
+    return lines
+      .filter(l=>{
+        const label = String([l.financingType,l.financingLabel,l.financeurName,l.financeur].join(' ')).toLowerCase();
+        const isPersonal = label.includes('personnel') || String(l.financingType || '').toUpperCase().includes('PERSONNEL');
+        const isCash = l.paymentMode !== 'sepa_direct_debit';
+        const hasInvoice = !!(l.qontoInvoiceId || l.qontoDraftId || l.invoiceGeneratedAt || ['draft','finalized','sent','paid'].includes(String(l.invoiceStatus || '').toLowerCase()));
+        const isActive = !['cancelled','deleted'].includes(String(l.invoiceStatus || '').toLowerCase());
+        return isPersonal && isCash && hasInvoice && isActive;
+      })
+      .reduce((total, line)=>total + lineAmount(line), 0);
+  }
   function financingValidationFrom(c, lines){
     if(financeValidationManualMode && financeValidationManualStatus === 'validated') return {label:'Financement validé', tone:'green', icon:'✓', manual:true};
     const epsilon = 0.01;
     if(c.montantCpf <= epsilon && c.montantPersonnel <= epsilon && c.montantAutre <= epsilon) return {label:'Financement à valider', tone:'gray', icon:'⌛'};
     if(c.montantPersonnel > epsilon){
+      if(generatedCashPersonalInvoiceAmount(lines) + epsilon >= c.montantPersonnel) return {label:'Financement validé', tone:'green', icon:'✓'};
       const mandate = mandateState(lines);
       if(mandate.hasSigned) return {label:'Financement validé', tone:'green', icon:'✓'};
       if(mandate.hasSent) return {label:'Mandat de prélèvement en cours de validation', tone:'orange', icon:'⚠'};
