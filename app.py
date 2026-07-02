@@ -21712,7 +21712,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     progress_percent = round((ready_documents / total_documents) * 100)
 
     convention_labels = {
-        "not_generated": ("Non générée", "file", "blocked", "blocked", "Générer la convention"),
+        "not_generated": ("Non générée", "file", "pending", "pending", "Générer la convention"),
         "generated": ("Générée", "file", "pending", "ready", "Envoyer pour signature"),
         "sent": ("Envoyée", "send", "pending", "pending", "Voir le statut Yousign"),
         "waiting_signature": ("Signature attendue", "hourglass", "waiting", "pending", "Voir le statut Yousign"),
