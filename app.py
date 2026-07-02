@@ -11265,86 +11265,129 @@ def admin_sessions_conventions():
     data = load_data()
     selected_formation = (request.args.get("formation") or "").strip().upper()
     selected_status = (request.args.get("status") or "").strip().lower()
+    selected_q = (request.args.get("q") or "").strip().lower()
     convention_rows = []
     formation_options_by_key = {}
     status_options = [
-        {"key": "soon", "label": "Prochainement"},
-        {"key": "signing", "label": "En cours de signature"},
+        {"key": "not_generated", "label": "À générer"},
+        {"key": "generated", "label": "Générée"},
+        {"key": "waiting_signature", "label": "En attente de signature"},
+        {"key": "sent", "label": "Envoyée"},
+        {"key": "signed", "label": "Signée"},
+        {"key": "expired", "label": "Expirée"},
+        {"key": "refused", "label": "Refusée"},
+        {"key": "error", "label": "Erreur"},
     ]
-    if selected_status and selected_status not in {option["key"] for option in status_options}:
+    valid_statuses = {option["key"] for option in status_options}
+    if selected_status and selected_status not in valid_statuses:
         selected_status = ""
 
+    stats = {"total": 0, "waiting_signature": 0, "signed": 0, "action_required": 0, "errors": 0, "downloadable": 0}
+    data_changed = False
+
     for sess in data.get("sessions", []):
-        if bool(sess.get("archived")):
+        if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
             continue
-        if _is_wedof_leads_session(sess):
+        session_id = str(sess.get("id") or "")
+        training_type = _session_get(sess, "training_type", "")
+        formation_key = (training_type or "").strip().upper()
+        formation_display_label = formation_label(training_type)
+        if formation_key:
+            formation_options_by_key[formation_key] = formation_display_label
+        if selected_formation and formation_key != selected_formation:
             continue
-        training_type_raw = (_session_get(sess, "training_type", "") or "").strip().upper()
-        session_is_vae = "VAE" in training_type_raw
+
         trainees = _session_trainees_list(sess)
         for trainee in trainees:
-            if session_is_vae:
-                vae_status_key = vae_status_view(
-                    trainee.get("vae_status") or trainee.get("vae_status_label")
-                )["key"]
-                inferred_vae_status_key = _infer_vae_status_from_action_dates(
-                    trainee.get("vae_action_dates")
-                )
-                if (
-                    inferred_vae_status_key is not None
-                    and VAE_STATUS_RANK.get(inferred_vae_status_key, -1)
-                    > VAE_STATUS_RANK.get(vae_status_key, -1)
-                ):
-                    vae_status_key = inferred_vae_status_key
-                if (
-                    VAE_STATUS_RANK.get(vae_status_key, -1)
-                    < VAE_STATUS_RANK["financement_validated"]
-                ):
-                    continue
-
-            convention_status = (trainee.get("convention_status") or "soon").strip().lower()
-            if convention_status not in {"soon", "signing"}:
+            trainee_id = str(trainee.get("id") or "")
+            if not trainee_id:
+                continue
+            state = _yousign_state(trainee)
+            if _refresh_yousign_convention_status_if_pending(data, sess, trainees, trainee):
+                data_changed = True
+                state = _yousign_state(trainee)
+            automation = _build_trainee_automation_status(sess, trainee, session_id, trainee_id)
+            convention = automation["convention"]
+            status_key = convention.get("status") or "not_generated"
+            if selected_status and status_key != selected_status:
                 continue
 
-            training_type = _session_get(sess, "training_type", "")
-            formation_key = (training_type or "").strip().upper()
-            formation_display_label = formation_label(training_type)
-            if formation_key:
-                formation_options_by_key[formation_key] = formation_display_label
-
-            if selected_formation and formation_key != selected_formation:
-                continue
-            if selected_status and convention_status != selected_status:
+            full_name = f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip()
+            searchable = " ".join([
+                full_name, str(trainee.get("email") or ""), formation_display_label,
+                str(state.get("signature_request_id") or ""), str(state.get("external_id") or ""),
+            ]).lower()
+            if selected_q and selected_q not in searchable:
                 continue
 
-            convention_rows.append({
+            signed_pdf = bool(state.get("signed_pdf_path"))
+            original_pdf = bool(state.get("unsigned_pdf_path") or trainee.get("convention_aps_pdf_path"))
+            is_problem = status_key in {"error", "expired", "refused"}
+            row = {
+                "session_id": session_id,
+                "trainee_id": trainee_id,
                 "last_name": (trainee.get("last_name") or "").strip(),
                 "first_name": (trainee.get("first_name") or "").strip(),
+                "email": (trainee.get("email") or "").strip(),
+                "phone": (trainee.get("phone") or trainee.get("telephone") or "").strip(),
                 "formation": formation_display_label,
                 "formation_key": formation_key,
                 "date_start_label": fr_date(_session_get(sess, "date_start", "")),
                 "date_end_label": fr_date(_session_get(sess, "date_end", "")),
-                "status_key": convention_status,
-                "status_label": "Prochainement" if convention_status == "soon" else "En cours de signature",
-            })
+                "status_key": status_key,
+                "status_label": convention.get("label") or _convention_signature_admin_label(state),
+                "status_tone": convention.get("tone") or ("error" if is_problem else "waiting" if status_key == "waiting_signature" else "complete" if status_key == "signed" else "pending"),
+                "signature_request_id": state.get("signature_request_id") or "",
+                "signature_link": state.get("signature_link") or "",
+                "created_at": state.get("created_at") or trainee.get("convention_aps_generated_at") or "",
+                "sent_at": convention.get("sent_at") or "",
+                "signed_at": convention.get("signed_at") or "",
+                "reminder_count": int(state.get("reminder_count") or 0),
+                "next_reminder_at": state.get("next_reminder_at") or "",
+                "error": convention.get("error") or "",
+                "trainee_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
+                "create_url": url_for("admin_create_convention_signature", session_id=session_id, trainee_id=trainee_id),
+                "reminder_url": url_for("admin_send_convention_signature_reminder_for_session", session_id=session_id, trainee_id=trainee_id),
+                "original_pdf_url": url_for("admin_view_original_convention", session_id=session_id, trainee_id=trainee_id) if original_pdf else "",
+                "signed_pdf_url": url_for("admin_view_signed_convention", session_id=session_id, trainee_id=trainee_id) if signed_pdf else "",
+                "download_url": convention.get("download_url") or "",
+                "can_send": status_key != "signed",
+                "can_remind": status_key in {"waiting_signature", "sent"} and bool(state.get("signature_link")),
+                "is_problem": is_problem,
+            }
+            convention_rows.append(row)
+            stats["total"] += 1
+            if status_key == "waiting_signature":
+                stats["waiting_signature"] += 1
+            if status_key == "signed":
+                stats["signed"] += 1
+            if status_key in {"not_generated", "generated", "expired", "refused"}:
+                stats["action_required"] += 1
+            if is_problem:
+                stats["errors"] += 1
+            if row["download_url"] or row["signed_pdf_url"] or row["original_pdf_url"]:
+                stats["downloadable"] += 1
 
-    formation_options = [
-        {"key": key, "label": label}
-        for key, label in sorted(formation_options_by_key.items(), key=lambda item: item[1].lower())
-    ]
+    if data_changed:
+        save_data(data)
+    formation_options = [{"key": key, "label": label} for key, label in sorted(formation_options_by_key.items(), key=lambda item: item[1].lower())]
     if selected_formation and selected_formation not in formation_options_by_key:
         selected_formation = ""
 
-    convention_rows.sort(key=lambda row: ((row.get("last_name") or "").lower(), (row.get("first_name") or "").lower()))
-    return render_template(
+    convention_rows.sort(key=lambda row: (row.get("status_key") != "waiting_signature", row.get("date_start_label") or "", (row.get("last_name") or "").lower(), (row.get("first_name") or "").lower()))
+    response = make_response(render_template(
         "admin_sessions_conventions.html",
         rows=convention_rows,
+        stats=stats,
         formation_options=formation_options,
         status_options=status_options,
         selected_formation=selected_formation,
         selected_status=selected_status,
-    )
-
+        selected_q=request.args.get("q") or "",
+    ))
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
 
 
 @app.get("/admin/wedof")
