@@ -92,6 +92,23 @@ class QontoOauthTests(unittest.TestCase):
         self.assertNotIn("login:api-secret", headers.values())
         self.assertEqual(data["qonto_oauth"]["refresh_token"], "new-refresh")
 
+
+    def test_invalid_grant_resets_oauth_tokens_and_asks_reconnect(self):
+        data = {"qonto_oauth": {"connected": True, "access_token": "old-token", "refresh_token": "expired-refresh", "expires_at": 1, "environment": "production"}}
+        saved = []
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data", side_effect=saved.append), \
+             patch.dict(os.environ, {"QONTO_OAUTH_CLIENT_ID": "cid", "QONTO_OAUTH_CLIENT_SECRET": "csecret", "QONTO_LOGIN": "login", "QONTO_SECRET_KEY": "api-secret"}, clear=False), \
+             patch.object(gestion_app, "_exchange_qonto_oauth_token", side_effect=gestion_app.QontoApiError(400, '{"error":"invalid_grant"}')):
+            with self.assertRaisesRegex(gestion_app.QontoConfigurationError, "reconnectez Qonto"):
+                gestion_app.list_qonto_direct_debit_mandates("client_123")
+
+        settings = data["qonto_oauth"]
+        self.assertFalse(settings["connected"])
+        self.assertNotIn("access_token", settings)
+        self.assertNotIn("refresh_token", settings)
+        self.assertTrue(saved)
+
     def test_sepa_setup_requires_oauth_connection_message(self):
         with patch.object(gestion_app, "load_data", return_value={"qonto_oauth": {}}):
             with self.assertRaisesRegex(gestion_app.QontoConfigurationError, gestion_app.QONTO_OAUTH_REQUIRED_MESSAGE):
