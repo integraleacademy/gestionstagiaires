@@ -110,6 +110,45 @@
 .sales-names-list{margin:12px 0 0;padding-left:18px;color:#0f172a;}
 .sales-names-list li{margin-bottom:5px;}
 .sales-names-close{margin-top:14px;border:1px solid #cbd5e1;background:#f8fafc;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;}
+
+:root{--sales-ink:#0f172a;--sales-muted:#64748b;--sales-blue:#2563eb;--sales-violet:#7c3aed;--sales-green:#16a34a;--sales-amber:#f59e0b;--sales-red:#dc2626;}
+.sales-page{gap:18px;background:linear-gradient(180deg,#f8fbff 0%,#ffffff 34%);margin:-10px;padding:10px;border-radius:24px;}
+.sales-command{position:relative;overflow:hidden;border:1px solid rgba(37,99,235,.18);background:radial-gradient(circle at 12% 8%,rgba(59,130,246,.22),transparent 32%),linear-gradient(135deg,#0f172a 0%,#1e3a8a 46%,#2563eb 100%);border-radius:28px;padding:22px;color:#fff;box-shadow:0 24px 60px rgba(15,23,42,.24);}
+.sales-command::after{content:"";position:absolute;right:-120px;top:-140px;width:360px;height:360px;background:radial-gradient(circle,rgba(255,255,255,.22),rgba(255,255,255,0) 65%);pointer-events:none;}
+.sales-command .sales-title{color:#fff;font-size:clamp(28px,4vw,44px);letter-spacing:-.04em;}
+.sales-command .sales-sub{color:rgba(255,255,255,.78);max-width:760px;font-size:15px;}
+.sales-command .btn,.sales-command .sales-input,.sales-command .sales-btn--ghost{box-shadow:0 10px 28px rgba(2,6,23,.18);}
+.sales-command .btn{background:rgba(255,255,255,.94);border-color:rgba(255,255,255,.7);color:#1e3a8a;}
+.sales-command .sales-btn--ghost{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.35);color:#fff;backdrop-filter:blur(10px);}
+.current-month-panel{position:relative;z-index:1;display:grid;grid-template-columns:minmax(280px,1.35fr) repeat(3,minmax(150px,.65fr));gap:14px;margin-top:18px;align-items:stretch;}
+.current-month-main,.current-month-mini{border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.12);border-radius:22px;padding:16px;backdrop-filter:blur(14px);box-shadow:inset 0 1px 0 rgba(255,255,255,.22);}
+.current-month-main{background:rgba(255,255,255,.16);}
+.current-eyebrow{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#bfdbfe;}
+.live-dot{width:9px;height:9px;border-radius:999px;background:#22c55e;box-shadow:0 0 0 7px rgba(34,197,94,.13);}
+.current-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-end;margin-top:12px;}
+.current-amount{font-size:clamp(38px,6vw,64px);font-weight:950;line-height:.95;letter-spacing:-.06em;}
+.current-goal{text-align:right;color:rgba(255,255,255,.76);font-size:13px;}
+.current-goal strong{display:block;color:#fff;font-size:20px;}
+.current-progress{margin-top:16px;}
+.current-rail{height:18px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden;border:1px solid rgba(255,255,255,.18);}
+.current-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#22c55e,#a3e635,#fde047);box-shadow:0 0 28px rgba(34,197,94,.38);transition:width .25s ease;}
+.current-meta{display:flex;justify-content:space-between;gap:12px;margin-top:8px;color:rgba(255,255,255,.82);font-size:13px;font-weight:700;}
+.current-status{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:8px 11px;margin-top:14px;font-size:13px;font-weight:900;background:rgba(255,255,255,.13);}
+.current-status--ahead{color:#bbf7d0;}.current-status--behind{color:#fed7aa;}.current-status--unset{color:#dbeafe;}
+.current-month-mini .mini-label{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.66);}
+.current-month-mini .mini-value{font-size:28px;font-weight:950;margin-top:9px;letter-spacing:-.04em;}
+.current-month-mini .mini-help{font-size:12px;color:rgba(255,255,255,.72);margin-top:4px;}
+.sales-section-title{display:flex;align-items:end;justify-content:space-between;gap:10px;margin:6px 2px -4px;}
+.sales-section-title h2{margin:0;color:#0f172a;font-size:22px;font-weight:950;letter-spacing:-.03em;}.sales-section-title p{margin:3px 0 0;color:#64748b;font-size:13px;}
+.month-grid{grid-template-columns:repeat(auto-fit,minmax(350px,1fr));}
+.month-card{border-radius:22px;border-color:#e5e7eb;box-shadow:0 16px 34px rgba(15,23,42,.07);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;}
+.month-card:hover{transform:translateY(-2px);box-shadow:0 22px 46px rgba(15,23,42,.1);border-color:#bfdbfe;}
+.month-card--current{border:2px solid #2563eb;background:linear-gradient(180deg,#eff6ff 0%,#fff 46%);box-shadow:0 22px 48px rgba(37,99,235,.16);}
+.month-badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.06em;padding:6px 9px;}
+.month-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}.month-kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:10px;}.month-kpi-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;font-weight:900;}.month-kpi-value{font-size:18px;font-weight:950;color:#0f172a;margin-top:3px;}
+@media(max-width:980px){.current-month-panel{grid-template-columns:1fr 1fr;}.current-month-main{grid-column:1/-1;}}
+@media(max-width:620px){.current-month-panel,.month-kpis{grid-template-columns:1fr;}.current-row{align-items:flex-start;flex-direction:column;}.current-goal{text-align:left;}}
+
 </style>
 
 <div class="sales-page">
@@ -130,62 +169,61 @@
       <button id="salesNamesClose" class="sales-names-close" type="button">Fermer</button>
     </div>
   </div>
-  <div class="sales-hero">
+  <div class="sales-command">
     <div class="sales-hero-top">
       <div>
         <h1 class="sales-title">Suivi des ventes {{ selected_year }}</h1>
-        <div class="sales-sub">Analyse mensuelle des inscriptions et du chiffre d'affaires, avec rafraîchissement automatique en direct.</div>
+        <div class="sales-sub">Tableau de bord commercial : priorité au mois en cours, progression vers l’objectif, rythme à tenir et ventes récentes.</div>
       </div>
       <div class="sales-controls">
         <a href="{{ url_for('admin_sessions') }}" class="btn btn-outline">← Retour sessions</a>
         <form method="get" action="{{ url_for('admin_sales_tracking') }}" style="display:flex;gap:8px;align-items:center;">
-          <input class="sales-input" name="year" type="number" min="2020" max="2100" value="{{ selected_year }}">
+          <input class="sales-input" name="year" type="number" min="2020" max="2100" value="{{ selected_year }}" aria-label="Année du suivi des ventes">
           <button class="sales-btn sales-btn--ghost" type="submit">Changer d'année</button>
         </form>
       </div>
     </div>
 
-    <div class="sales-flash-kpis">
-      <div class="flash-kpi flash-kpi--today">
-        <div class="flash-label">Ventes du jour</div>
-        <div id="todayRevenue" class="flash-value" data-euro="{{ today_revenue }}">{{ today_revenue }}</div>
-        <div id="todayCount" class="flash-helper">{{ today_inscriptions }} inscription(s)</div>
-      </div>
-      <div class="flash-kpi flash-kpi--yesterday">
-        <div class="flash-label">Ventes de la veille</div>
-        <div id="yesterdayRevenue" class="flash-value" data-euro="{{ yesterday_revenue }}">{{ yesterday_revenue }}</div>
-        <div id="yesterdayCount" class="flash-helper">{{ yesterday_inscriptions }} inscription(s)</div>
-      </div>
-      <div class="flash-kpi flash-kpi--week">
-        <div class="flash-label">Ventes de la semaine</div>
-        <div id="weekRevenue" class="flash-value" data-euro="{{ week_revenue }}">{{ week_revenue }}</div>
-        <div id="weekCount" class="flash-helper">{{ week_inscriptions }} inscription(s)</div>
-      </div>
+    <div class="current-month-panel" aria-label="Performance du mois en cours">
+      <section class="current-month-main">
+        <div class="current-eyebrow"><span class="live-dot" aria-hidden="true"></span> Mois en cours · {{ current_month_name }} {{ selected_year }}</div>
+        <div class="current-row">
+          <div>
+            <div id="currentMonthRevenue" class="current-amount" data-euro="{{ current_month_revenue }}">{{ current_month_revenue }}</div>
+            <div id="currentMonthCount" class="current-meta" style="justify-content:flex-start;">{{ current_month_inscriptions }} inscription(s) ce mois-ci</div>
+          </div>
+          <div class="current-goal">Objectif mensuel<strong id="currentMonthObjective" data-euro="{{ current_month_objective }}">{{ current_month_objective }}</strong></div>
+        </div>
+        <div class="current-progress">
+          <div class="current-rail"><div id="currentMonthProgressFill" class="current-fill" style="width: {{ [current_month_progress_ratio * 100, 100]|min }}%;"></div></div>
+          <div class="current-meta">
+            <span id="currentMonthProgressText">{{ (current_month_progress_ratio * 100)|round(1) }}% de l’objectif</span>
+            <span id="currentMonthRemaining" data-euro="{{ current_month_remaining }}">{{ current_month_remaining }}</span>
+          </div>
+        </div>
+        <div id="currentMonthStatus" class="current-status current-status--{{ current_month_status }}">
+          {% if current_month_status == 'ahead' %}✅ En avance sur le rythme du mois{% elif current_month_status == 'behind' %}⚠️ Retard estimé sur le rythme du mois{% else %}🎯 Définis un objectif mensuel pour suivre l’avancement{% endif %}
+        </div>
+      </section>
+      <div class="current-month-mini"><div class="mini-label">Reste à vendre</div><div id="currentMonthRemainingMini" class="mini-value" data-euro="{{ current_month_remaining }}">{{ current_month_remaining }}</div><div class="mini-help">Pour atteindre l’objectif</div></div>
+      <div class="current-month-mini"><div class="mini-label">Rythme nécessaire</div><div id="currentMonthDailyNeeded" class="mini-value" data-euro="{{ current_month_daily_needed }}">{{ current_month_daily_needed }}</div><div id="currentMonthDaysHelp" class="mini-help">par jour sur {{ current_month_days_remaining }} jour(s)</div></div>
+      <div class="current-month-mini"><div class="mini-label">Écart au rythme</div><div id="currentMonthPaceDelta" class="mini-value" data-euro="{{ current_month_pace_delta }}">{{ current_month_pace_delta }}</div><div class="mini-help">vs attendu à J+{{ current_month_days_elapsed }}</div></div>
     </div>
 
+    <div class="sales-flash-kpis">
+      <div class="flash-kpi flash-kpi--today"><div class="flash-label">Ventes du jour</div><div id="todayRevenue" class="flash-value" data-euro="{{ today_revenue }}">{{ today_revenue }}</div><div id="todayCount" class="flash-helper">{{ today_inscriptions }} inscription(s)</div></div>
+      <div class="flash-kpi flash-kpi--yesterday"><div class="flash-label">Ventes de la veille</div><div id="yesterdayRevenue" class="flash-value" data-euro="{{ yesterday_revenue }}">{{ yesterday_revenue }}</div><div id="yesterdayCount" class="flash-helper">{{ yesterday_inscriptions }} inscription(s)</div></div>
+      <div class="flash-kpi flash-kpi--week"><div class="flash-label">Ventes de la semaine</div><div id="weekRevenue" class="flash-value" data-euro="{{ week_revenue }}">{{ week_revenue }}</div><div id="weekCount" class="flash-helper">{{ week_inscriptions }} inscription(s)</div></div>
+    </div>
+  </div>
+
+  <div class="sales-hero">
     <div class="sales-hero-metrics">
-      <div class="kpi">
-        <div class="kpi-label">Objectif annuel (€)</div>
-        <input id="annualObjective" class="sales-input" type="text" inputmode="numeric" value="{{ annual_objective }}" style="width:100%;margin-top:8px;">
-        <div class="helper" style="margin-top:6px;">Tu peux fixer un objectif annuel puis des objectifs par mois.</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">CA annuel atteint</div>
-        <div id="annualRevenue" class="kpi-value" data-euro="{{ annual_revenue }}">{{ annual_revenue }}</div>
-        <div id="annualCount" class="helper">{{ annual_inscriptions }} inscriptions</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">Progression annuelle</div>
-        <div id="annualProgressValue" class="kpi-value">{{ (annual_progress_ratio * 100)|round(1) }}%</div>
-        <div class="progress-wrap">
-          <div class="progress-rail"><div id="annualProgressFill" class="progress-fill" style="width: {{ [annual_progress_ratio * 100, 100]|min }}%;"></div></div>
-        </div>
-      </div>
+      <div class="kpi"><div class="kpi-label">Objectif annuel (€)</div><input id="annualObjective" class="sales-input" type="text" inputmode="numeric" value="{{ annual_objective }}" style="width:100%;margin-top:8px;"><div class="helper" style="margin-top:6px;">Modifier l’annuel répartit automatiquement l’objectif sur les 12 mois.</div></div>
+      <div class="kpi"><div class="kpi-label">CA annuel atteint</div><div id="annualRevenue" class="kpi-value" data-euro="{{ annual_revenue }}">{{ annual_revenue }}</div><div id="annualCount" class="helper">{{ annual_inscriptions }} inscriptions</div></div>
+      <div class="kpi"><div class="kpi-label">Progression annuelle</div><div id="annualProgressValue" class="kpi-value">{{ (annual_progress_ratio * 100)|round(1) }}%</div><div class="progress-wrap"><div class="progress-rail"><div id="annualProgressFill" class="progress-fill" style="width: {{ [annual_progress_ratio * 100, 100]|min }}%;"></div></div></div></div>
     </div>
-    <div style="margin-top:12px;">
-      <button id="saveObjectivesBtn" class="sales-btn">Enregistrer les objectifs</button>
-      <span id="saveFeedback" class="helper" style="margin-left:8px;"></span>
-    </div>
+    <div style="margin-top:12px;"><button id="saveObjectivesBtn" class="sales-btn">Enregistrer les objectifs</button><span id="saveFeedback" class="helper" style="margin-left:8px;"></span></div>
   </div>
 
   <section class="training-annual">
@@ -233,12 +271,14 @@
     </div>
   </section>
 
+  <div class="sales-section-title"><div><h2>Détail mensuel</h2><p>Objectifs, progression et formations vendues mois par mois.</p></div></div>
   <div id="monthGrid" class="month-grid">
     {% for month in monthly_rows %}
-      <section class="month-card">
+      <section class="month-card{% if month.month_index == current_month_index and selected_year == today_iso[:4]|int %} month-card--current{% endif %}">
         <div class="month-head">
           <div>
             <h2 class="month-name">{{ month.month_name }} {{ selected_year }}</h2>
+            {% if month.month_index == current_month_index and selected_year == today_iso[:4]|int %}<span class="month-badge">En cours</span>{% endif %}
             <div class="helper">{{ month.inscriptions }} inscriptions · <strong data-euro="{{ month.revenue }}">{{ month.revenue }}</strong> de CA</div>
           </div>
         </div>
@@ -331,6 +371,8 @@
   const hoverableClass = (training) => (Array.isArray(training?.trainees) && training.trainees.length ? ' training-row--hoverable' : '');
 
   const selectedYear = {{ selected_year }};
+  const currentMonthIndex = Number({{ current_month_index }});
+  const isSelectedCurrentYear = selectedYear === Number(String({{ today_iso|tojson }}).slice(0, 4));
   const dataEndpoint = '{{ url_for("admin_sales_tracking_data") }}?year={{ selected_year }}';
   const fireworksLayer = document.getElementById('fireworksLayer');
   const celebrationEmoji = document.getElementById('celebrationEmoji');
@@ -599,11 +641,13 @@
   const monthCardHtml = (month) => {
     const progressPct = Math.max(0, Math.min(100, (Number(month.progress_ratio || 0) * 100)));
     const trainings = Array.isArray(month.trainings) ? month.trainings : [];
+    const isCurrentMonth = isSelectedCurrentYear && Number(month.month_index) === currentMonthIndex;
     return `
-      <section class="month-card">
+      <section class="month-card${isCurrentMonth ? ' month-card--current' : ''}">
         <div class="month-head">
           <div>
-            <h2 class="month-name">${month.month_name} ${selectedYear}</h2>
+            <h2 class="month-name">${escapeHtml(month.month_name || '')} ${selectedYear}</h2>
+            ${isCurrentMonth ? '<span class="month-badge">En cours</span>' : ''}
             <div class="helper">${month.inscriptions || 0} inscriptions · <strong data-euro="${month.revenue || 0}">${month.revenue || 0}</strong> de CA</div>
           </div>
         </div>
@@ -678,6 +722,28 @@
     const annualProgressPct = (Number(payload.annual_progress_ratio || 0) * 100);
     document.getElementById('annualProgressValue').textContent = `${annualProgressPct.toFixed(1)}%`;
     document.getElementById('annualProgressFill').style.width = `${Math.max(0, Math.min(100, annualProgressPct))}%`;
+
+    document.getElementById('currentMonthRevenue')?.setAttribute('data-euro', payload.current_month_revenue || 0);
+    document.getElementById('currentMonthObjective')?.setAttribute('data-euro', payload.current_month_objective || 0);
+    document.getElementById('currentMonthRemaining')?.setAttribute('data-euro', payload.current_month_remaining || 0);
+    document.getElementById('currentMonthRemainingMini')?.setAttribute('data-euro', payload.current_month_remaining || 0);
+    document.getElementById('currentMonthDailyNeeded')?.setAttribute('data-euro', payload.current_month_daily_needed || 0);
+    document.getElementById('currentMonthPaceDelta')?.setAttribute('data-euro', payload.current_month_pace_delta || 0);
+    const currentProgressPct = Number(payload.current_month_progress_ratio || 0) * 100;
+    const currentFill = document.getElementById('currentMonthProgressFill');
+    if (currentFill) currentFill.style.width = `${Math.max(0, Math.min(100, currentProgressPct))}%`;
+    const currentProgressText = document.getElementById('currentMonthProgressText');
+    if (currentProgressText) currentProgressText.textContent = `${currentProgressPct.toFixed(1)}% de l’objectif`;
+    const currentCount = document.getElementById('currentMonthCount');
+    if (currentCount) currentCount.textContent = `${payload.current_month_inscriptions || 0} inscription(s) ce mois-ci`;
+    const daysHelp = document.getElementById('currentMonthDaysHelp');
+    if (daysHelp) daysHelp.textContent = `par jour sur ${payload.current_month_days_remaining || 0} jour(s)`;
+    const statusNode = document.getElementById('currentMonthStatus');
+    if (statusNode) {
+      const status = String(payload.current_month_status || 'unset');
+      statusNode.className = `current-status current-status--${status}`;
+      statusNode.textContent = status === 'ahead' ? '✅ En avance sur le rythme du mois' : status === 'behind' ? '⚠️ Retard estimé sur le rythme du mois' : '🎯 Définis un objectif mensuel pour suivre l’avancement';
+    }
 
     const months = Array.isArray(payload.monthly_rows) ? payload.monthly_rows : [];
     monthGrid.innerHTML = months.map(monthCardHtml).join('');
