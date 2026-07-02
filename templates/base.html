@@ -278,6 +278,19 @@
     </div>
   </div>
 
+
+
+  <div class="modal-backdrop convention-result-backdrop" id="conventionResultModal" aria-hidden="true">
+    <div class="modal convention-result-modal" role="dialog" aria-modal="true" aria-labelledby="conventionResultTitle" aria-describedby="conventionResultMessage">
+      <div class="convention-result-modal__glow" aria-hidden="true"></div>
+      <div class="convention-result-modal__icon" id="conventionResultIcon" aria-hidden="true">✓</div>
+      <div class="convention-result-modal__kicker" id="conventionResultKicker">Transmission terminée</div>
+      <h2 id="conventionResultTitle">Convention envoyée</h2>
+      <p id="conventionResultMessage">Convention envoyée au stagiaire pour signature.</p>
+      <button class="btn btn-primary convention-result-modal__button" id="conventionResultClose" type="button">Continuer</button>
+    </div>
+  </div>
+
   <div id="conventionCreationSyncProgress" class="ypareo-sync-progress" role="dialog" aria-modal="true" aria-labelledby="conventionCreationSyncProgressTitle" aria-describedby="conventionCreationSyncProgressMessage" aria-hidden="true">
     <div class="ypareo-sync-progress__panel" role="status" aria-live="polite">
       <div class="ypareo-sync-progress__brand" aria-hidden="true">SIGN</div>
@@ -293,6 +306,17 @@
 
   <style>
 
+
+    .convention-result-backdrop{background:rgba(15,23,42,.58);backdrop-filter:blur(10px);}
+    .convention-result-modal{position:relative;max-width:440px;border:0;border-radius:28px;overflow:hidden;text-align:center;padding:34px 30px 28px;box-shadow:0 28px 90px rgba(15,23,42,.34);background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);}
+    .convention-result-modal__glow{position:absolute;inset:-90px -70px auto auto;width:220px;height:220px;border-radius:999px;background:radial-gradient(circle,rgba(34,197,94,.28),rgba(34,197,94,0) 68%);pointer-events:none;}
+    .convention-result-modal__icon{position:relative;display:grid;place-items:center;width:78px;height:78px;margin:0 auto 18px;border-radius:24px;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;font-size:38px;font-weight:950;box-shadow:0 18px 38px rgba(34,197,94,.34), inset 0 1px 0 rgba(255,255,255,.28);}
+    .convention-result-modal.is-warning .convention-result-modal__icon{background:linear-gradient(135deg,#f59e0b,#f97316);box-shadow:0 18px 38px rgba(249,115,22,.28), inset 0 1px 0 rgba(255,255,255,.28);}
+    .convention-result-modal.is-error .convention-result-modal__icon{background:linear-gradient(135deg,#ef4444,#e11d48);box-shadow:0 18px 38px rgba(225,29,72,.28), inset 0 1px 0 rgba(255,255,255,.28);}
+    .convention-result-modal__kicker{position:relative;margin-bottom:8px;font-size:12px;font-weight:950;letter-spacing:.14em;text-transform:uppercase;color:#64748b;}
+    .convention-result-modal h2{position:relative;margin:0;color:#0f172a;font-size:25px;line-height:1.2;font-weight:950;}
+    .convention-result-modal p{position:relative;margin:12px 0 24px;color:#475569;font-size:15px;line-height:1.65;}
+    .convention-result-modal__button{position:relative;min-width:150px;border-radius:999px;padding:12px 22px;font-weight:900;box-shadow:0 14px 30px rgba(37,99,235,.24);}
     .convention-modal-accent{background:linear-gradient(90deg,#7c3aed,#ec4899,#f97316);}
     .convention-status-icon{background:linear-gradient(145deg,#f5f3ff,#fff7ed);color:#7c3aed;}
     .convention-kicker{color:#7c3aed;}
@@ -422,9 +446,45 @@
     document.body.classList.remove("ypareo-sync-is-running");
   }
 
+
+  function showConventionResult({title, message, type = "success", buttonText = "Continuer"} = {}){
+    return new Promise((resolve)=>{
+      const backdrop = document.getElementById("conventionResultModal");
+      const modal = backdrop?.querySelector(".convention-result-modal");
+      const titleEl = document.getElementById("conventionResultTitle");
+      const messageEl = document.getElementById("conventionResultMessage");
+      const kickerEl = document.getElementById("conventionResultKicker");
+      const iconEl = document.getElementById("conventionResultIcon");
+      const closeBtn = document.getElementById("conventionResultClose");
+      if(!backdrop || !modal || !titleEl || !messageEl || !closeBtn){
+        window.alert(message || title || "Action terminée.");
+        resolve();
+        return;
+      }
+      const isError = type === "error";
+      const isWarning = type === "warning";
+      modal.classList.toggle("is-error", isError);
+      modal.classList.toggle("is-warning", isWarning);
+      titleEl.textContent = title || (isError ? "Action impossible" : "Convention envoyée");
+      messageEl.textContent = message || "Convention envoyée au stagiaire pour signature.";
+      kickerEl.textContent = isError ? "Transmission interrompue" : (isWarning ? "Signature créée" : "Transmission terminée");
+      iconEl.textContent = isError ? "!" : (isWarning ? "!" : "✓");
+      closeBtn.textContent = buttonText;
+      const finish = ()=>{
+        closeBtn.removeEventListener("click", finish);
+        closeModal("conventionResultModal");
+        resolve();
+      };
+      closeBtn.addEventListener("click", finish, {once:true});
+      openModal("conventionResultModal");
+      closeBtn.focus();
+    });
+  }
+
   window.openConventionTransmission = openConventionTransmission;
   window.showConventionTransmissionProgress = showConventionTransmissionProgress;
   window.hideConventionTransmissionProgress = hideConventionTransmissionProgress;
+  window.showConventionResult = showConventionResult;
 
 
   document.addEventListener("click", (e)=>{

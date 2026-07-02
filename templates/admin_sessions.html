@@ -1391,11 +1391,30 @@
       });
       const payload = await response.json().catch(()=> ({}));
       window.hideConventionTransmissionProgress?.();
-      if(response.ok && payload.ok){ alert(payload.email_ok ? "Convention envoyée au stagiaire pour signature." : "Demande créée, mais l’e-mail n’a pas pu être envoyé."); }
-      else{ alert(`Envoi de la convention impossible : ${payload.error || "erreur inconnue"}`); }
+      if(response.ok && payload.ok){
+        await (window.showConventionResult?.({
+          type: payload.email_ok ? "success" : "warning",
+          title: payload.email_ok ? "Convention envoyée" : "Demande créée",
+          message: payload.email_ok ? "Convention envoyée au stagiaire pour signature." : "La demande de signature est créée, mais l’e-mail n’a pas pu être envoyé.",
+          buttonText: "Voir le dossier"
+        }) || Promise.resolve(window.alert(payload.email_ok ? "Convention envoyée au stagiaire pour signature." : "Demande créée, mais l’e-mail n’a pas pu être envoyé.")));
+      }
+      else{
+        await (window.showConventionResult?.({
+          type: "error",
+          title: "Envoi impossible",
+          message: `Envoi de la convention impossible : ${payload.error || "erreur inconnue"}`,
+          buttonText: "Compris"
+        }) || Promise.resolve(window.alert(`Envoi de la convention impossible : ${payload.error || "erreur inconnue"}`)));
+      }
     }catch(error){
       window.hideConventionTransmissionProgress?.();
-      alert("Envoi de la convention impossible : le serveur ne répond pas.");
+      await (window.showConventionResult?.({
+        type: "error",
+        title: "Serveur indisponible",
+        message: "Envoi de la convention impossible : le serveur ne répond pas.",
+        buttonText: "Compris"
+      }) || Promise.resolve(window.alert("Envoi de la convention impossible : le serveur ne répond pas.")));
     }
     continueAfterConvention();
   }
