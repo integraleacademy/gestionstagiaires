@@ -318,7 +318,6 @@ def _docx_word_xml_text(path):
 def _docx_text_without_variables(path):
     xml = _docx_word_xml_text(path)
     xml = re.sub(r"\{\{[^{}]+\}\}", "", xml)
-    xml = re.sub(r"\[[^\]]+\]", "", xml)
     return re.sub(r"\s+", " ", xml)
 
 
@@ -331,7 +330,7 @@ def _file_sha256(path):
 
 
 class ApsConventionGenerationTests(unittest.TestCase):
-    def test_aps_convention_generation_uses_immutable_word_template_variables_only(self):
+    def test_aps_convention_generation_uses_only_production_word_template(self):
         session = {
             "id": "session-1",
             "training_type": "APS",
@@ -350,8 +349,12 @@ class ApsConventionGenerationTests(unittest.TestCase):
         }
 
         template_path = app._aps_convention_template_path()
+        self.assertEqual(
+            os.path.abspath(template_path),
+            os.path.abspath(os.path.join(app.app.root_path, "templates_word", "conventionaps.docx")),
+        )
         template_hash_before = _file_sha256(template_path)
-        template_sensitive_text = _docx_text_without_variables(template_path)
+        template_fixed_text = _docx_text_without_variables(template_path)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             def fake_run(command, check, capture_output, text, timeout):
@@ -362,38 +365,45 @@ class ApsConventionGenerationTests(unittest.TestCase):
 
             with mock.patch.object(app, "YOUSIGN_CONVENTION_DIR", tmpdir), \
                  mock.patch.object(app, "_find_libreoffice_binary", return_value="libreoffice"), \
-                 mock.patch.object(app.subprocess, "run", side_effect=fake_run):
+                 mock.patch.object(app, "_docx_text_contains_yousign_smart_anchor", return_value=True), \
+                 mock.patch.object(app.subprocess, "run", side_effect=fake_run), \
+                 self.assertLogs(app.app.logger.name, level="INFO") as logs:
                 docx_path, pdf_path = app._generate_aps_convention_files(session, trainee, "session-1", "trainee-1")
 
-            document = app.Document(docx_path)
-            generated_text = "\n".join(
-                [paragraph.text for paragraph in document.paragraphs]
-                + [cell.text for table in document.tables for row in table.rows for cell in row.cells]
-                + [paragraph.text for section in document.sections for paragraph in section.header.paragraphs]
-                + [paragraph.text for section in document.sections for paragraph in section.footer.paragraphs]
-            )
+            generated_fixed_text = _docx_text_without_variables(docx_path)
             generated_xml = _docx_word_xml_text(docx_path)
             pdf_exists = os.path.exists(pdf_path)
 
         self.assertEqual(template_hash_before, _file_sha256(template_path))
         self.assertTrue(pdf_exists)
-        self.assertIn("DUPONT Jean", generated_text)
-        self.assertIn("83480 PUGET-SUR-ARGENS", generated_text)
-        self.assertIn("du 08/07/2026 au 12/08/2026", generated_text)
-        self.assertIn("RNCP36648", generated_text)
-        self.assertIn("300 €", generated_text)
-        self.assertIn("{{s1|signature|160|60}}", generated_text)
-        self.assertNotRegex(generated_xml, r"\{\{\s*[A-Za-z0-9_.-]+\s*\}\}")
-        self.assertNotIn("[FormationConventions:]", generated_text)
-        self.assertNotIn("['NomIdentite]", generated_text)
-        self.assertIn("INTÉGRALE ACADEMY", generated_text)
-        self.assertIn("Déclaration d’activité n° 93830739683", generated_text)
-        self.assertIn("RÈGLEMENT INTÉRIEUR", generated_text)
-        self.assertIn("Conformément aux articles L6352-3 et L6352-4", generated_text)
-        self.assertIn("04 22 47 07 68", generated_text)
-        for sensitive_text in ("INTÉGRALE ACADEMY", "Conformément aux articles L6352-3 et L6352-4", "04 22 47 07 68"):
-            self.assertIn(sensitive_text, template_sensitive_text)
-            self.assertIn(sensitive_text, generated_text)
+        self.assertEqual(template_fixed_text, generated_fixed_text)
+        self.assertIn("INTÉGRALE ACADEMY", generated_fixed_text)
+        self.assertIn("Convention APS template utilisé :", "\n".join(logs.output))
+        self.assertIn(os.path.abspath(template_path), "\n".join(logs.output))
+        self.assertIn(f"sha256={template_hash_before}", "\n".join(logs.output))
+        self.assertNotRegex(generated_xml, r"Intégrale Academy SAS|93830739683")
+
+    def test_aps_convention_placeholder_replacement_preserves_fixed_text(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            docx_path = os.path.join(tmpdir, "convention.docx")
+            document = app.Document()
+            document.add_paragraph("Entre l’organisme de formation : INTÉGRALE ACADEMY")
+            document.add_paragraph("Déclaration d’activité n° 93830600283")
+            document.add_paragraph("Stagiaire : {{ nom_identite }}")
+            document.add_paragraph("Legacy interdit : ['Nom] ['NumeroDeclarationActivite]")
+            document.add_paragraph("Titre article fixe")
+            document.save(docx_path)
+
+            app._replace_docx_xml_placeholders(docx_path, {"nom_identite": "DUPONT Jean"})
+            generated_text = "\n".join(paragraph.text for paragraph in app.Document(docx_path).paragraphs)
+
+        self.assertIn("Entre l’organisme de formation : INTÉGRALE ACADEMY", generated_text)
+        self.assertIn("Déclaration d’activité n° 93830600283", generated_text)
+        self.assertIn("Stagiaire : DUPONT Jean", generated_text)
+        self.assertIn("Legacy interdit : ['Nom] ['NumeroDeclarationActivite]", generated_text)
+        self.assertIn("Titre article fixe", generated_text)
+        self.assertNotIn("Intégrale Academy SAS", generated_text)
+        self.assertNotIn("93830739683", generated_text)
 
 
 if __name__ == "__main__":
