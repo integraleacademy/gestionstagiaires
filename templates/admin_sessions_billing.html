@@ -15,7 +15,7 @@
 </style>
 <div class="admin-billing-page print-root">
   <div class="admin-billing-shell">
-    <div class="billing-head no-print"><div class="billing-title"><h1>Gestion des factures</h1><div class="muted">Facturation stagiaires à compter du 01/06/2026 · une ligne par financeur · synchronisation Qonto sécurisée.</div></div><div class="billing-head-actions"><a class="btn btn-outline" href="{{ url_for('admin_sessions') }}">← Sessions</a><button type="button" class="btn btn-outline" id="syncQontoBtn">Synchroniser Qonto</button><button type="button" class="btn btn-dark" id="printBtn">Imprimer la vue</button></div></div>
+    <div class="billing-head no-print"><div class="billing-title"><h1>Gestion des factures</h1><div class="muted">Facturation stagiaires à compter du 01/06/2026 · une ligne par financeur · synchronisation Qonto sécurisée.</div></div><div class="billing-head-actions"><a class="btn btn-outline" href="{{ url_for('admin_sessions') }}">← Sessions</a><a class="btn btn-primary" href="{{ url_for('admin_direct_debits') }}">Suivre les prélèvements</a><button type="button" class="btn btn-outline" id="syncQontoBtn">Synchroniser Qonto</button><button type="button" class="btn btn-dark" id="printBtn">Imprimer la vue</button></div></div>
     <div class="billing-head" style="display:none" id="printHeader"><div><h1>Gestion des factures</h1><div id="printMeta"></div><div id="printFilters" class="muted"></div></div></div>
     <div class="billing-stats-grid" id="stats"></div>
     <div class="billing-filters no-print">
