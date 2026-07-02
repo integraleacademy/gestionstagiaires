@@ -11715,6 +11715,22 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
     annual_revenue = sum(month["revenue"] for month in monthly_rows)
     annual_inscriptions = sum(month["inscriptions"] for month in monthly_rows)
     annual_progress_ratio = (annual_revenue / annual_objective) if annual_objective > 0 else 0
+
+    current_month_row = monthly_rows[today.month - 1] if selected_year == today.year else None
+    current_month_objective = _parse_positive_int(current_month_row.get("objective") if current_month_row else 0)
+    current_month_revenue = _parse_positive_int(current_month_row.get("revenue") if current_month_row else 0)
+    current_month_inscriptions = int(current_month_row.get("inscriptions") or 0) if current_month_row else 0
+    current_month_progress_ratio = (current_month_revenue / current_month_objective) if current_month_objective > 0 else 0
+    current_month_remaining = max(current_month_objective - current_month_revenue, 0) if current_month_objective > 0 else 0
+    _, days_in_current_month = calendar.monthrange(today.year, today.month)
+    elapsed_days = today.day
+    remaining_days = max(days_in_current_month - elapsed_days, 0)
+    current_month_expected_ratio = (elapsed_days / days_in_current_month) if days_in_current_month > 0 else 0
+    current_month_expected_revenue = round(current_month_objective * current_month_expected_ratio) if current_month_objective > 0 else 0
+    current_month_pace_delta = current_month_revenue - current_month_expected_revenue
+    current_month_daily_needed = round(current_month_remaining / max(remaining_days, 1)) if current_month_remaining > 0 else 0
+    current_month_status = "ahead" if current_month_objective > 0 and current_month_pace_delta >= 0 else "behind" if current_month_objective > 0 else "unset"
+
     annual_trainings = sorted(
         annual_trainings_map.values(),
         key=lambda row: row["revenue"],
@@ -11730,6 +11746,20 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
         "annual_revenue": annual_revenue,
         "annual_inscriptions": annual_inscriptions,
         "annual_progress_ratio": annual_progress_ratio,
+        "current_month_index": today.month,
+        "current_month_name": SALES_TRACKING_MONTH_LABELS[today.month - 1],
+        "current_month_revenue": current_month_revenue,
+        "current_month_objective": current_month_objective,
+        "current_month_inscriptions": current_month_inscriptions,
+        "current_month_progress_ratio": current_month_progress_ratio,
+        "current_month_remaining": current_month_remaining,
+        "current_month_days_elapsed": elapsed_days,
+        "current_month_days_total": days_in_current_month,
+        "current_month_days_remaining": remaining_days,
+        "current_month_expected_revenue": current_month_expected_revenue,
+        "current_month_pace_delta": current_month_pace_delta,
+        "current_month_daily_needed": current_month_daily_needed,
+        "current_month_status": current_month_status,
         "annual_trainings": annual_trainings,
         "monthly_rows": monthly_rows,
         "today_revenue": today_revenue,
