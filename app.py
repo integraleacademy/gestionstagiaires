@@ -15634,6 +15634,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "dossier_status",
         "force_dossier_complete",
         "financement_status",
+        "financing_validation_manual_mode",
+        "financing_validation_manual_status",
         "vae_status",
         "comment",
         "financement_comment",
