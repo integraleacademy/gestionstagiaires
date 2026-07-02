@@ -15,7 +15,7 @@
 
 <style>
 
-  .finance-dashboard{grid-column:1 / -1;position:relative;overflow:hidden;border:1px solid #dbe4f0;border-radius:30px;background:radial-gradient(circle at 0% 0%,rgba(37,99,235,.10),transparent 30%),linear-gradient(135deg,#f8fbff 0%,#fff 58%,#f8fafc 100%);box-shadow:0 28px 80px rgba(15,23,42,.12);padding:28px;}.finance-dashboard.is-hidden{display:none}.finance-dashboard__close{position:absolute;top:18px;right:18px;width:38px;height:38px;border:1px solid #dbe4f0;border-radius:14px;background:#fff;color:#64748b;font-size:22px;line-height:1;cursor:pointer;box-shadow:0 10px 22px rgba(15,23,42,.08)}.finance-dashboard__close:hover{color:#0f172a;border-color:#bfdbfe;background:#eff6ff}
+  .finance-dashboard{grid-column:1 / -1;position:relative;overflow:hidden;border:1px solid #dbe4f0;border-radius:30px;background:radial-gradient(circle at 0% 0%,rgba(37,99,235,.10),transparent 30%),linear-gradient(135deg,#f8fbff 0%,#fff 58%,#f8fafc 100%);box-shadow:0 28px 80px rgba(15,23,42,.12);padding:28px;}.finance-dashboard.is-hidden{display:none}.finance-dashboard__summary{list-style:none;cursor:pointer;font-weight:950;color:#0f172a;display:flex;justify-content:space-between;align-items:center;gap:14px}.finance-dashboard__summary::-webkit-details-marker{display:none}.finance-dashboard__summary::after{content:'⌄';display:grid;place-items:center;flex:0 0 auto;width:32px;height:32px;border-radius:12px;background:#eff6ff;color:#64748b}.finance-dashboard[open]>.finance-dashboard__summary{margin-bottom:18px}.finance-dashboard[open]>.finance-dashboard__summary::after{content:'⌃'}.finance-dashboard__summary-hint{margin-left:auto;color:#64748b;font-size:12px;font-weight:900}.finance-dashboard[open] .finance-dashboard__summary-hint{display:none}.finance-dashboard__close{position:absolute;top:18px;right:18px;width:38px;height:38px;border:1px solid #dbe4f0;border-radius:14px;background:#fff;color:#64748b;font-size:22px;line-height:1;cursor:pointer;box-shadow:0 10px 22px rgba(15,23,42,.08)}.finance-dashboard__close:hover{color:#0f172a;border-color:#bfdbfe;background:#eff6ff}
   .finance-dashboard__header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:20px}.finance-dashboard__kicker{font-size:11px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;color:#2563eb}.finance-dashboard__header h2{margin:4px 0 6px;color:#0f172a;font-size:27px;letter-spacing:-.04em}.finance-dashboard__subtitle{margin:0;color:#64748b;font-size:14px;line-height:1.5}.finance-save-indicator{display:inline-flex;align-items:center;gap:7px;margin-top:10px;padding:7px 10px;border-radius:999px;background:#f1f5f9;color:#64748b;font-size:12px;font-weight:900}.finance-save-indicator.is-saving{background:#eff6ff;color:#1d4ed8}.finance-save-indicator.is-saved{background:#dcfce7;color:#166534}.finance-save-indicator.is-error{background:#fee2e2;color:#991b1b}
   .finance-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}.finance-summary-card{position:relative;overflow:hidden;border:1px solid #e2e8f0;border-radius:24px;background:rgba(255,255,255,.92);padding:18px;box-shadow:0 14px 34px rgba(15,23,42,.07)}.finance-summary-card::before{content:'';position:absolute;inset:0 0 auto;height:4px;background:#cbd5e1}.finance-summary-card.is-green::before{background:#22c55e}.finance-summary-card.is-orange::before{background:#f97316}.finance-summary-card.is-red::before{background:#ef4444}.finance-summary-card.is-blue::before{background:#3b82f6}.finance-summary-card__top{display:flex;justify-content:space-between;gap:10px;align-items:center;color:#64748b;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}.finance-summary-card__icon{display:grid;place-items:center;width:32px;height:32px;border-radius:12px;background:#eff6ff;font-size:17px}.finance-summary-card__value{margin-top:14px;color:#0f172a;font-size:26px;font-weight:950;letter-spacing:-.05em}.finance-summary-card__meta{margin-top:8px;color:#64748b;font-size:12px;font-weight:800;line-height:1.35}
   .finance-badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:950;white-space:nowrap;border:1px solid transparent}.finance-badge--green{background:#dcfce7;color:#166534;border-color:#bbf7d0}.finance-badge--orange{background:#fff7ed;color:#c2410c;border-color:#fed7aa}.finance-badge--red{background:#fee2e2;color:#991b1b;border-color:#fecaca}.finance-badge--blue{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe}.finance-badge--gray{background:#f1f5f9;color:#475569;border-color:#e2e8f0}
@@ -1332,12 +1332,11 @@
   <!-- ===================== -->
   <!-- FINANCEMENT & FACTURATION -->
   <!-- ===================== -->
-  {% if is_vtc %}
-  <details class="finance-dashboard" id="conventionFinancementSection" open>
-    <summary style="cursor:pointer;font-weight:950;list-style:none;">Financement &amp; facturation</summary>
-  {% else %}
-  <div class="finance-dashboard" id="conventionFinancementSection">
-  {% endif %}
+  <details class="finance-dashboard" id="conventionFinancementSection">
+    <summary class="finance-dashboard__summary">
+      <span>Financement &amp; facturation</span>
+      <span class="finance-dashboard__summary-hint">Ouvrir le suivi financier</span>
+    </summary>
     <div id="financementDetails"
          data-training-type="{{ session.training_type }}"
          data-default-price="{{ default_training_price or '' }}"
@@ -1362,7 +1361,7 @@
         <div id="financeBreakdown" class="finance-list"></div>
       </section>
 
-      <details class="finance-detail-section" open>
+      <details class="finance-detail-section">
         <summary>Factures Qonto</summary>
         <div class="finance-detail-section__body"><div id="qontoInvoiceCard" data-session-id="{{ session.id }}" data-trainee-id="{{ trainee.id }}" data-read-only="{{ '1' if is_read_only else '0' }}"><div id="qontoInvoiceHistory" class="finance-list"><div class="finance-empty">Chargement des factures…</div></div></div></div>
       </details>
@@ -1405,7 +1404,7 @@
 
       <div class="finance-footer"><button class="btn btn-outline" type="button" data-finance-close>Fermer</button></div>
     </div>
-  {% if is_vtc %}</details>{% else %}</div>{% endif %}
+  </details>
 
   <!-- ===================== -->
 <!-- COMMENTAIRE (ADMIN)    -->
@@ -3868,11 +3867,18 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
 
   document.querySelectorAll("[data-finance-close]").forEach((btn)=>{
     btn.addEventListener("click", ()=>{
-      document.getElementById("conventionFinancementSection")?.classList.add("is-hidden");
+      const financeSection = document.getElementById("conventionFinancementSection");
+      if(financeSection){
+        financeSection.open = false;
+        financeSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     });
   });
   document.addEventListener("keydown", (event)=>{
-    if(event.key === "Escape") document.getElementById("conventionFinancementSection")?.classList.add("is-hidden");
+    if(event.key === "Escape"){
+      const financeSection = document.getElementById("conventionFinancementSection");
+      if(financeSection) financeSection.open = false;
+    }
   });
 
   document.querySelectorAll("[data-open-section]").forEach((btn)=>{
