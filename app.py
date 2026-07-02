@@ -21601,6 +21601,88 @@ def _aps_convention_base_filename(trainee: Dict[str, Any], trainee_id: str = "")
     return f"convention_formation_aps_{last_name}{suffix}"
 
 
+
+def _format_euro_amount(value: Any) -> str:
+    raw = str(value if value is not None else "").strip().replace(" ", "").replace(",", ".")
+    if not raw:
+        return "0 €"
+    try:
+        amount = float(raw)
+    except Exception:
+        return str(value).strip()
+    if amount.is_integer():
+        return f"{int(amount)} €"
+    return f"{amount:.2f}".replace(".", ",") + " €"
+
+
+def _aps_convention_template_values(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
+    first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
+    last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper()
+    full_name = f"{last_name} {first_name}".strip()
+    zip_code = str(trainee.get("zip_code") or trainee.get("code_postal") or trainee.get("postal_code") or "").strip()
+    city = str(trainee.get("city") or trainee.get("ville") or "").strip().upper()
+    training_type = str(_session_get(session_obj, "training_type", "") or "APS").strip()
+    training_price = trainee.get("training_price") or default_training_price(training_type) or 1650
+    personal_amount = trainee.get("personal_amount")
+    if personal_amount in (None, ""):
+        personal_amount = training_price
+    return {
+        "NomOrganisme": "Intégrale Academy",
+        "FormeJuridique": "SAS",
+        "OfNaf": "8559A",
+        "NumeroDeclarationActivite": "93830739683",
+        "NomIdentite": full_name,
+        "CodePostal": zip_code,
+        "Ville": city,
+        "DateMinActionFormation": fr_date(str(_session_get(session_obj, "date_start", ""))),
+        "DateMaxActionFormation": fr_date(str(_session_get(session_obj, "date_end", ""))),
+        "Code": "RNCP36648",
+        "MontantTTC": _format_euro_amount(personal_amount),
+        "Nom": last_name,
+        "Prenom": first_name,
+        "VilleEdition": "Puget-sur-Argens",
+        "DateEdition": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
+    }
+
+
+def _aps_convention_legacy_replacements(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
+    values = _aps_convention_template_values(session_obj, trainee)
+    return {
+        "['Nom]": values["NomOrganisme"],
+        "['FormeJuridique]": values["FormeJuridique"],
+        "[OfNaf]": values["OfNaf"],
+        "['NumeroDeclarationActivite]": values["NumeroDeclarationActivite"],
+        "['NomIdentite]": values["NomIdentite"],
+        "[CodePostal]": values["CodePostal"],
+        "[Ville]": values["Ville"],
+        "[DateMinActionFormation]": values["DateMinActionFormation"],
+        "[DateMaxActionFormation]": values["DateMaxActionFormation"],
+        "[Code]": values["Code"],
+        "['MontantTTC]": values["MontantTTC"],
+        "[Nom]": values["Nom"],
+        "[Prenom]": values["Prenom"],
+        "['Ville]": values["VilleEdition"],
+        "['DateEdition]": values["DateEdition"],
+    }
+
+
+def _replace_docx_xml_text(docx_path: str, replacements: Dict[str, str]) -> None:
+    if not replacements:
+        return
+    def xml_escape(value: str) -> str:
+        return (str(value or "")
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;"))
+
+    def rewrite(xml_text: str) -> str:
+        for token, value in replacements.items():
+            xml_text = xml_text.replace(token, xml_escape(value))
+        return xml_text
+
+    _rewrite_docx_xml(docx_path, rewrite)
+
+
 def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
     """Generate the APS training convention used exclusively for Yousign."""
     template_path = _aps_convention_template_path()
@@ -21620,10 +21702,12 @@ def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[st
         variables = []
     if variables:
         base_context = _build_aps_convocation_context(session_obj, trainee)
-        context = {key: str(base_context.get(key, "")) for key in variables}
+        convention_context = _aps_convention_template_values(session_obj, trainee)
+        context = {key: str(convention_context.get(key, base_context.get(key, ""))) for key in variables}
         _render_docx_with_python_template(template_path, final_docx_path, context)
     else:
         shutil.copyfile(template_path, final_docx_path)
+    _replace_docx_xml_text(final_docx_path, _aps_convention_legacy_replacements(session_obj, trainee))
     if not os.path.exists(final_docx_path) or os.path.getsize(final_docx_path) <= 0:
         raise RuntimeError("Le DOCX final de convention APS est introuvable ou vide.")
     lo_binary = _find_libreoffice_binary()
