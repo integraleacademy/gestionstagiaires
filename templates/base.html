@@ -252,40 +252,6 @@
     </div>
   </div>
 
-  <div class="modal-backdrop ypareo-modal-backdrop" id="ypareoTransmissionModal" aria-hidden="true">
-    <div class="modal ypareo-modal" role="dialog" aria-modal="true" aria-labelledby="ypareoTransmissionTitle">
-      <div class="ypareo-modal-accent"></div>
-      <div class="modal-body ypareo-modal-body">
-        <div class="ypareo-status-icon" aria-hidden="true">
-          <span class="ypareo-icon-cloud">⇧</span>
-        </div>
-        <div class="ypareo-state-copy">
-          <div class="ypareo-kicker">YPAREO NEO</div>
-          <h2 id="ypareoTransmissionTitle">Souhaitez-vous transmettre les données à YPAREO NEO&nbsp;?</h2>
-          <p id="ypareoTransmissionMessage">Le stagiaire a bien été enregistré. Vous pouvez maintenant transmettre ses informations à YPAREO NEO.</p>
-        </div>
-      </div>
-      <div class="modal-foot ypareo-modal-actions" id="ypareoTransmissionConfirmActions">
-        <button class="btn ypareo-btn-secondary" id="ypareoTransmissionNo" type="button">Non, plus tard</button>
-        <button class="btn btn-primary ypareo-btn-primary" id="ypareoTransmissionYes" type="button">Oui, transmettre</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="ypareoCreationSyncProgress" class="ypareo-sync-progress" role="dialog" aria-modal="true" aria-labelledby="ypareoCreationSyncProgressTitle" aria-describedby="ypareoCreationSyncProgressMessage" aria-hidden="true">
-    <div class="ypareo-sync-progress__panel" role="status" aria-live="polite">
-      <div class="ypareo-sync-progress__brand" aria-hidden="true">YP</div>
-      <div class="ypareo-sync-progress__spinner" aria-hidden="true"></div>
-      <h3 id="ypareoCreationSyncProgressTitle">Transmission en cours vers YPAREO NEO</h3>
-      <p id="ypareoCreationSyncProgressMessage">Création de la fiche apprenant et de son inscription à la formation…</p>
-      <div class="ypareo-sync-progress__steps" aria-hidden="true">
-        <span class="is-active">Personne</span><i></i><span>Cursus</span>
-      </div>
-      <small>Veuillez patienter et ne fermez pas cette page.</small>
-    </div>
-  </div>
-
-
   <div class="modal-backdrop ypareo-modal-backdrop" id="conventionTransmissionModal" aria-hidden="true">
     <div class="modal ypareo-modal convention-modal" role="dialog" aria-modal="true" aria-labelledby="conventionTransmissionTitle">
       <div class="ypareo-modal-accent convention-modal-accent"></div>
@@ -460,45 +426,6 @@
   window.showConventionTransmissionProgress = showConventionTransmissionProgress;
   window.hideConventionTransmissionProgress = hideConventionTransmissionProgress;
 
-  function openYpareoTransmission({url, continueUrl}){
-    const backdrop = document.getElementById("ypareoTransmissionModal");
-    const yesButton = document.getElementById("ypareoTransmissionYes");
-    const noButton = document.getElementById("ypareoTransmissionNo");
-    const progress = document.getElementById("ypareoCreationSyncProgress");
-    const destination = continueUrl || window.location.href;
-
-    if(!backdrop || !yesButton || !noButton || !progress){
-      window.location.href = destination;
-      return;
-    }
-
-    const leave = ()=>{
-      closeModal("ypareoTransmissionModal");
-      window.location.href = destination;
-    };
-
-    noButton.onclick = leave;
-    yesButton.onclick = ()=>{
-      if(!url) return;
-      yesButton.disabled = true;
-      closeModal("ypareoTransmissionModal");
-      progress.classList.add("is-visible");
-      progress.setAttribute("aria-hidden", "false");
-      document.body.classList.add("ypareo-sync-is-running");
-
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = url;
-      form.hidden = true;
-      document.body.appendChild(form);
-      form.submit();
-    };
-
-    yesButton.disabled = false;
-    openModal("ypareoTransmissionModal");
-  }
-
-  window.openYpareoTransmission = openYpareoTransmission;
 
   document.addEventListener("click", (e)=>{
     const closeBtn = e.target.closest?.("[data-close-modal]");

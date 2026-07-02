@@ -701,7 +701,7 @@ def _ypareo_endpoint(environment_name: str, default: str) -> str:
 
 
 def ypareo_headers(access_token: str) -> Dict[str, str]:
-    """Build headers for an authenticated YPAREO NEO API request."""
+    """Build headers for an authenticated API request."""
     return {
         "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json",
@@ -15179,9 +15179,6 @@ def api_create_trainee(session_id: str):
     s.pop("stagiaires", None)
     save_data(data)
 
-    # La transmission YPAREO est proposée séparément dans l'interface après
-    # la création locale, afin de toujours demander l'accord de l'utilisateur.
-
     # ✅ ENVOI MAIL + SMS à la création (optionnel)
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}"
 
@@ -15295,7 +15292,6 @@ def api_create_trainee(session_id: str):
         "access_sms_ok": sms_ok,
         "public_link": link,
         "trainee_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
-        "ypareo_url": url_for("admin_send_trainee_to_ypareo", session_id=session_id, trainee_id=trainee_id),
         "summary_url": url_for("admin_trainee_summary", session_id=session_id, trainee_id=trainee_id),
         "is_vae": bool(show_vae),
         "training_price": t.get("training_price", ""),
@@ -15306,92 +15302,16 @@ def api_create_trainee(session_id: str):
     })
 
 
-def _admin_sync_trainee_to_ypareo(session_id: str, trainee_id: str):
-    """Synchronize both the YPAREO person and cursus for a local trainee."""
-    data = load_data()
-    trainee_session = find_session(data, session_id)
-    if not trainee_session:
-        abort(404)
-
-    trainee = find_trainee(trainee_session, trainee_id)
-    if not trainee:
-        abort(404)
-
-    person_created = creer_apprenant_ypareo(trainee, trainee_session)
-    cursus_created = trainee.get("ypareo_cursus_statut") == "Créé"
-    success = bool(person_created and cursus_created)
-
-    if success:
-        message = "Données transférées vers YPAREO NEO avec succès"
-        flash(message, "success")
-    else:
-        reason = (
-            trainee.get("ypareo_cursus_erreur")
-            if person_created and not cursus_created
-            else trainee.get("ypareo_erreur")
-        ) or "Erreur inconnue lors de la transmission"
-        message = str(reason)
-        flash(f"Transmission vers YPAREO NEO impossible : {message}", "error")
-
-    trainee_session["trainees"] = _session_trainees_list(trainee_session)
-    trainee_session.pop("stagiaires", None)
-    save_data(data)
-
-    if request.accept_mimetypes.best == "application/json":
-        return jsonify({
-            "ok": success,
-            "message": "Données transférées vers YPAREO NEO avec succès" if success else "",
-            "error": "" if success else message,
-            "ypareo_id": trainee.get("ypareo_id") or "",
-            "ypareo_cursus_id": trainee.get("ypareo_cursus_id") or "",
-        }), 200 if success else 422
-
-    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
-
-
 @app.post("/admin/sessions/<session_id>/trainees/<trainee_id>/ypareo")
-@admin_login_required
-@admin_write_required
-def admin_send_trainee_to_ypareo(session_id: str, trainee_id: str):
-    return _admin_sync_trainee_to_ypareo(session_id, trainee_id)
-
-
 @app.post("/admin/sessions/<session_id>/trainees/<trainee_id>/ypareo/personne")
-@admin_login_required
-@admin_write_required
-def admin_resend_trainee_ypareo_person(session_id: str, trainee_id: str):
-    """Keep the legacy person retry URL aligned with the complete YPAREO sync."""
-    return _admin_sync_trainee_to_ypareo(session_id, trainee_id)
-
-
 @app.post("/admin/sessions/<session_id>/trainees/<trainee_id>/ypareo/cursus")
 @admin_login_required
 @admin_write_required
-def admin_create_trainee_ypareo_cursus(session_id: str, trainee_id: str):
-    data = load_data()
-    trainee_session = find_session(data, session_id)
-    if not trainee_session:
-        abort(404)
-    trainee = find_trainee(trainee_session, trainee_id)
-    if not trainee:
-        abort(404)
-
-    id_personne = trainee.get("ypareo_id")
-    if not id_personne:
-        trainee["ypareo_cursus_statut"] = "Non envoyé"
-        trainee["ypareo_cursus_erreur"] = "La personne doit d'abord être créée dans YPAREO"
-        flash("Impossible de créer le cursus : personne YPAREO absente.", "error")
-    elif creer_cursus_ypareo(id_personne, trainee, trainee_session):
-        flash("Cursus créé dans YPAREO.", "success")
-    else:
-        flash(
-            f"Création du cursus YPAREO impossible : {trainee.get('ypareo_cursus_erreur') or 'erreur inconnue'}",
-            "error",
-        )
-
-    trainee_session["trainees"] = _session_trainees_list(trainee_session)
-    trainee_session.pop("stagiaires", None)
-    save_data(data)
+def admin_ypareo_removed(session_id: str, trainee_id: str):
+    """Return a clear response for removed synchronization endpoints."""
+    if request.accept_mimetypes.best == "application/json":
+        return jsonify({"ok": False, "error": "Cette synchronisation a été retirée de la plateforme."}), 410
+    flash("Cette synchronisation a été retirée de la plateforme.", "error")
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 
