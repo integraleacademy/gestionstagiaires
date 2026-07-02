@@ -40,6 +40,7 @@ from io import BytesIO
 from docx import Document
 from pypdf import PdfReader
 import xml.etree.ElementTree as ET
+from xml.sax.saxutils import escape
 from urllib.parse import urlparse, urljoin, quote, urlencode
 
 
@@ -21747,6 +21748,27 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
         "[/sc_sign2.signature]": "",
     }
 
+def _replace_docx_xml_placeholders(docx_path: str, replacements: Dict[str, str]) -> None:
+    """Replace literal placeholders in a DOCX without rebuilding the document with Word APIs.
+
+    The APS convention template is provided as the authoritative Word file.  To
+    keep its layout, fields, styles, headers, and relationships intact, only the
+    XML text containing known placeholders is rewritten in-place inside the ZIP.
+    """
+    tmp_path = docx_path + ".tmp"
+    with zipfile.ZipFile(docx_path, "r") as zin, zipfile.ZipFile(tmp_path, "w") as zout:
+        for item in zin.infolist():
+            data = zin.read(item.filename)
+            if item.filename.startswith("word/") and item.filename.endswith(".xml"):
+                xml_text = data.decode("utf-8", errors="ignore")
+                for placeholder, value in replacements.items():
+                    xml_text = xml_text.replace(escape(str(placeholder)), escape(str(value)))
+                    xml_text = xml_text.replace(str(placeholder), escape(str(value)))
+                data = xml_text.encode("utf-8")
+            zout.writestr(item, data)
+    os.replace(tmp_path, docx_path)
+
+
 def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
     """Generate the APS training convention used exclusively for Yousign."""
     template_path = _aps_convention_template_path()
@@ -21757,22 +21779,8 @@ def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[st
     base = _aps_convention_base_filename(trainee, trainee_id)
     final_docx_path = os.path.join(YOUSIGN_CONVENTION_DIR, base + ".docx")
     final_pdf_path = os.path.join(YOUSIGN_CONVENTION_DIR, base + ".pdf")
-    context: Dict[str, str] = {}
-    try:
-        doc = DocxTemplate(template_path) if DocxTemplate is not None else None
-        variables = sorted(doc.get_undeclared_template_variables()) if doc is not None else []
-    except Exception as exc:
-        app.logger.warning("[CONVENTION APS] Lecture des variables du modèle impossible, copie simple du modèle : %s", exc)
-        variables = []
-    if variables:
-        base_context = _build_aps_convocation_context(session_obj, trainee)
-        context = {key: str(base_context.get(key, "")) for key in variables}
-        _render_docx_with_python_template(template_path, final_docx_path, context)
-    else:
-        shutil.copyfile(template_path, final_docx_path)
-    doc = Document(final_docx_path)
-    _replace_in_docx(doc, _aps_convention_replacements(session_obj, trainee))
-    doc.save(final_docx_path)
+    shutil.copyfile(template_path, final_docx_path)
+    _replace_docx_xml_placeholders(final_docx_path, _aps_convention_replacements(session_obj, trainee))
     if not _docx_text_contains_yousign_smart_anchor(final_docx_path, signer_index=1):
         raise RuntimeError(YOUSIGN_SMART_ANCHOR_MISSING_MESSAGE)
     if not os.path.exists(final_docx_path) or os.path.getsize(final_docx_path) <= 0:
