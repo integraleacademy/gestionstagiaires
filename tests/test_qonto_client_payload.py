@@ -221,6 +221,22 @@ class QontoCpfClientTests(unittest.TestCase):
         self.assertEqual(invoice_payloads[0]["client_id"], "cpf-client")
         self.assertEqual(invoice_payloads[0]["items"][0]["vat_rate"], gestion_app.format_qonto_vat_rate(0))
 
+    def test_qonto_invoice_label_expands_aps_training_name(self):
+        line = {
+            "formationName": "APS",
+            "traineeFirstName": "Clement",
+            "traineeLastName": "VAILLANT",
+            "dateStart": "2026-09-01",
+            "dateEnd": "2026-10-01",
+        }
+
+        label = gestion_app.qonto_invoice_item_label(line)
+
+        self.assertEqual(
+            label,
+            "Formation Agent de Prévention et de Sécurité (APS) - Clement VAILLANT - Session du 01/09/2026 au 01/10/2026",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
