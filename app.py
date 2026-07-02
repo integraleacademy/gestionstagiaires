@@ -21804,7 +21804,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         },
         "convocation": {
             "status": convocation_status, "label": v_label, "icon": v_icon, "icon_class": "automation-icon--hourglass" if v_icon == "hourglass" else "", "tone": v_tone, "card_tone": v_card_tone,
-            "can_generate": convention_signed, "can_send": convention_signed and convocation_status in {"generated", "sent"}, "block_reason": convocation_block_reason,
+            "can_generate": True, "can_send": convention_signed and convocation_status in {"generated", "sent"}, "block_reason": convocation_block_reason,
             "generated_at": convocation_generated_at, "sent_at": convocation_sent_at,
             "download_url": url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id) if has_convocation_file else "",
             "error": convocation_error,

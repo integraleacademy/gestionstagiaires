@@ -141,6 +141,20 @@ class ApsConvocationGenerationTests(unittest.TestCase):
 
 
 
+
+class ApsAutomationStatusTests(unittest.TestCase):
+    def test_convocation_can_be_generated_before_convention_exists(self):
+        session = {"id": "session-1", "training_type": "APS", "name": "Formation APS"}
+        trainee = {"id": "trainee-1", "first_name": "Jean", "last_name": "Dupont"}
+
+        with app.app.test_request_context():
+            status = app._build_trainee_automation_status(session, trainee, "session-1", "trainee-1")
+
+        self.assertEqual(status["convention"]["status"], "not_generated")
+        self.assertEqual(status["convocation"]["status"], "blocked_waiting_convention")
+        self.assertTrue(status["convocation"]["can_generate"])
+        self.assertFalse(status["convocation"]["can_send"])
+
 class ApsConvocationEmailTests(unittest.TestCase):
     def test_convocation_email_matches_convention_visual_style_and_escapes_values(self):
         subject, html_body = app._build_aps_convocation_email(
