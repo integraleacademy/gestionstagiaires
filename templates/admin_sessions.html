@@ -943,29 +943,34 @@
 
 <!-- MODALE CREATION STAGIAIRE (depuis sessions) -->
 <div class="modal-backdrop" id="createTraineeFromSessionsModal" aria-hidden="true">
-  <div class="modal" style="max-width:860px;">
-    <div class="modal-head">
-      <div class="modal-title">Ajouter un stagiaire</div>
+  <div class="modal trainee-create-modal trainee-create-modal-wide" style="max-width:860px;">
+    <div class="modal-head trainee-create-head">
+      <div>
+        <div class="modal-eyebrow">Nouveau dossier</div>
+        <div class="modal-title">Ajouter un stagiaire</div>
+      </div>
       <button class="icon-btn" data-close-modal="createTraineeFromSessionsModal">✕</button>
     </div>
 
-    <div class="modal-body">
-      <div class="label" style="margin-bottom:8px;">Formation</div>
-      <div class="training-chooser" id="trainingChooser">
+    <div class="modal-body trainee-create-body">
+      <div class="trainee-create-section">
+        <div class="label" style="margin-bottom:8px;">Formation</div>
+        <div class="training-chooser" id="trainingChooser">
         <button class="training-choice" data-training="APS">APS</button>
         <button class="training-choice" data-training="A3P">A3P</button>
         <button class="training-choice" data-training="SSIAP">SSIAP</button>
         <button class="training-choice" data-training="DIRIGEANT initial">DIRIGEANT INITIAL</button>
         <button class="training-choice" data-training="DIRIGEANT VAE">VAE DIRIGEANT</button>
         <button class="training-choice" data-training="VTC">CHAUFFEUR VTC</button>
+        </div>
       </div>
 
-      <label style="margin-bottom:14px;display:block;">
+      <label class="trainee-create-section" style="margin-bottom:14px;display:block;">
         <div class="label">Session</div>
         <select id="traineeTargetSession"></select>
       </label>
 
-      <div class="form-grid">
+      <div class="form-grid trainee-create-grid">
         <label>
           <div class="label">Nom</div>
           <input id="sessionTLastName" type="text" placeholder="Nom">
@@ -1006,15 +1011,15 @@
           <div class="label" style="font-weight:900;color:#f97316;">Dates réelles de formation VTC</div>
           <input id="sessionTVtcRealTrainingDates" type="text" placeholder="Ex : 10/05/2026 au 12/05/2026">
         </label>
-        <label style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+        <label class="trainee-create-check" style="display:flex;align-items:center;gap:10px;margin-top:8px;">
           <input id="sessionTCarteProOk" type="checkbox" style="width:18px;height:18px;">
           <div class="label" style="margin:0;">Carte professionnelle (CNAPS) déjà OK</div>
         </label>
       </div>
     </div>
 
-    <div class="modal-foot">
-      <button class="btn btn-orange" id="btnImportTraineeInfosFromSessions" type="button" style="margin-right:auto;">Importer infos</button>
+    <div class="modal-foot trainee-create-foot">
+      <button class="btn btn-orange trainee-import-btn" id="btnImportTraineeInfosFromSessions" type="button" style="margin-right:auto;">Importer infos</button>
       <input id="importTraineeInfosFromSessionsInput" type="file" accept="image/*" style="display:none;">
       <button class="btn" data-close-modal="createTraineeFromSessionsModal">Annuler</button>
       <button class="btn btn-primary" id="btnCreateTraineeFromSessions">Sauvegarder</button>

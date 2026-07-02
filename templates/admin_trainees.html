@@ -889,14 +889,17 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 
 <!-- MODALE CREATION STAGIAIRE -->
 <div class="modal-backdrop" id="createTraineeModal" aria-hidden="true">
-  <div class="modal">
-    <div class="modal-head">
-      <div class="modal-title">Ajouter un stagiaire</div>
+  <div class="modal trainee-create-modal">
+    <div class="modal-head trainee-create-head">
+      <div>
+        <div class="modal-eyebrow">Nouveau dossier</div>
+        <div class="modal-title">Ajouter un stagiaire</div>
+      </div>
       <button class="icon-btn" data-close-modal="createTraineeModal">✕</button>
     </div>
 
-    <div class="modal-body">
-      <div class="form-grid">
+    <div class="modal-body trainee-create-body">
+      <div class="form-grid trainee-create-grid">
         <label>
           <div class="label">Nom</div>
           <input id="tLastName" type="text" placeholder="Nom">
@@ -940,7 +943,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           <input id="tVtcRealTrainingDates" type="text" placeholder="Ex : 10/05/2026 au 12/05/2026">
         </label>
         {% endif %}
-        <label style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+        <label class="trainee-create-check" style="display:flex;align-items:center;gap:10px;margin-top:8px;">
   <input id="tCarteProOk" type="checkbox" style="width:18px;height:18px;">
   <div class="label" style="margin:0;">Carte professionnelle (CNAPS) déjà OK</div>
 </label>
@@ -948,8 +951,8 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
       </div>
     </div>
 
-    <div class="modal-foot">
-      <button class="btn btn-orange" id="btnImportTraineeInfos" type="button" style="margin-right:auto;">Importer infos</button>
+    <div class="modal-foot trainee-create-foot">
+      <button class="btn btn-orange trainee-import-btn" id="btnImportTraineeInfos" type="button" style="margin-right:auto;">Importer infos</button>
       <input id="importTraineeInfosInput" type="file" accept="image/*" style="display:none;">
       <button class="btn" data-close-modal="createTraineeModal">Annuler</button>
       <button class="btn btn-primary" id="btnCreateTrainee">Sauvegarder</button>
