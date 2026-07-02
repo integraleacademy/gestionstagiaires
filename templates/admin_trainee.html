@@ -3864,13 +3864,19 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
     }
   });
 
+  const financeSection = document.getElementById("conventionFinancementSection");
+  function resetFinanceSection(){
+    if(!financeSection) return;
+    financeSection.open = false;
+    financeSection.classList.add("is-hidden");
+  }
+  resetFinanceSection();
+  window.addEventListener("pageshow", resetFinanceSection);
+
   document.querySelectorAll("[data-finance-close]").forEach((btn)=>{
     btn.addEventListener("click", ()=>{
-      const financeSection = document.getElementById("conventionFinancementSection");
-      if(financeSection){
-        financeSection.open = false;
-        financeSection.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+      resetFinanceSection();
+      financeSection?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   });
   document.querySelectorAll("[data-open-section]").forEach((btn)=>{
