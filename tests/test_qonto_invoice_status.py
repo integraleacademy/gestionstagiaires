@@ -97,6 +97,48 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(saved_line["paymentStatus"], "control")
         self.assertIn("introuvable", saved_line.get("syncWarning", ""))
 
+    def test_billing_lines_keep_direct_debit_schedule_from_persisted_line(self):
+        line_id = gestion_app._billing_line_id("S1", "T1", "PERSONNEL", "legacy")
+        data = {
+            "sessions": [{
+                "id": "S1",
+                "name": "APS NOVEMBRE 2026",
+                "date_start": "2026-11-01",
+                "date_end": "2026-11-05",
+                "trainees": [{"id": "T1", "first_name": "Clement", "last_name": "VAILLANT", "personal_amount": 900}],
+            }],
+            "billing_lines": [{
+                "id": line_id,
+                "traineeId": "T1",
+                "sessionId": "S1",
+                "financingType": "PERSONNEL",
+                "financingRef": "legacy",
+                "amount": 900,
+                "invoiceStatus": "draft",
+                "paymentStatus": "unpaid",
+                "qontoInvoiceId": "inv_123",
+                "paymentMode": "sepa_direct_debit",
+                "paymentPlan": {"mode": "sepa_direct_debit", "installments": 3},
+                "directDebitInstallments": [
+                    {"date": "2026-07-10", "amount": 300, "status": "scheduled"},
+                    {"date": "2026-08-10", "amount": 300, "status": "scheduled"},
+                    {"date": "2026-09-10", "amount": 300, "status": "scheduled"},
+                ],
+                "qontoPaymentGlobalStatus": "Mandat à signer",
+                "qonto_direct_debit_mandate_id": "mandate_123",
+                "sign_url": "https://qonto.test/sign",
+                "mandateStatus": "pending",
+            }],
+        }
+
+        line = gestion_app._find_billing_line(data, line_id)
+
+        self.assertEqual(line["paymentMode"], "sepa_direct_debit")
+        self.assertEqual(line["paymentPlan"]["installments"], 3)
+        self.assertEqual(len(line["directDebitInstallments"]), 3)
+        self.assertEqual(line["qontoPaymentGlobalStatus"], "Mandat à signer")
+        self.assertEqual(line["qonto_direct_debit_mandate_id"], "mandate_123")
+
     def test_billing_invoice_download_streams_qonto_pdf_inline(self):
         line_id = gestion_app._billing_line_id("S1", "T1", "CPF", "legacy")
         data = {
