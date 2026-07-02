@@ -21113,7 +21113,7 @@ def build_signature_email_text(first_name: str, formation_label: str, dates_sess
     return f"""Bonjour {safe_first_name},
 
 Vous trouverez ci-dessous le lien sécurisé pour signer votre convention de formation.
-Merci de la signer dès que possible.
+Nous vous remercions de bien vouloir procéder à la signature électronique de ce document.
 
 Récapitulatif :
 - Formation : {safe_formation_label}
@@ -21156,7 +21156,7 @@ def build_signature_email_html(first_name: str, formation_label: str, dates_sess
         <tr><td style="padding:32px 30px 10px 30px;">
           <p style="margin:0 0 16px 0;font-size:18px;line-height:1.5;">Bonjour {safe_first_name},</p>
           <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">Vous trouverez ci-dessous le lien sécurisé pour signer votre convention de formation.</p>
-          <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#415166;">Merci de la signer dès que possible.</p>
+          <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#415166;">Nous vous remercions de bien vouloir procéder à la signature électronique de ce document.</p>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f7faff;border:1px solid #dbeafe;border-radius:14px;margin:0 0 28px 0;"><tr><td style="padding:18px 20px;">
             <p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Formation :</strong> {safe_formation_label}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Session :</strong> {safe_dates_session}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Document :</strong> Convention de formation</p><p style="margin:0;font-size:15px;line-height:1.5;"><strong>Signature :</strong> électronique sécurisée</p>
           </td></tr></table>
