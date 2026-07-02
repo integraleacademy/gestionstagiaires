@@ -22891,6 +22891,28 @@ def _financing_entries(trainee: Dict[str, Any]) -> List[Dict[str, Any]]:
     return entries
 
 
+def _legacy_trainee_qonto_invoice_candidate(trainee: Dict[str, Any], financing: Dict[str, Any], persisted: Dict[str, Any]) -> Dict[str, Any]:
+    """Return trainee-level Qonto invoice state when it belongs to this billing line.
+
+    Older admin-trainee invoice actions stored the Qonto invoice on the trainee
+    record only. The billing dashboard is line-based, so bridge that legacy state
+    onto the matching generated line when no line-level invoice is persisted yet.
+    """
+    if persisted.get('qontoInvoiceId') or persisted.get('qontoDraftId'):
+        return {}
+    inv = trainee.get('qonto_invoice') if isinstance(trainee.get('qonto_invoice'), dict) else {}
+    invoice_id = (inv.get('qonto_invoice_id') or inv.get('qontoInvoiceId') or '').strip()
+    if not invoice_id:
+        return {}
+    inv_amount = _money(inv.get('amount_ttc') or inv.get('amountTTC') or inv.get('amount'))
+    if inv_amount > 0 and abs(inv_amount - _money(financing.get('amount'))) > 0.01:
+        return {}
+    inv_financing = str(inv.get('financingType') or inv.get('typeFinanceur') or inv.get('financeur_type') or '').strip().upper()
+    if inv_financing and inv_financing != str(financing.get('type') or '').strip().upper():
+        return {}
+    return inv
+
+
 def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Optional[Dict[str, Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
     existing = existing or {}
     out = []
@@ -22910,6 +22932,22 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
             for financing in _financing_entries(trainee):
                 line_id = _billing_line_id(session_id, trainee_id, financing['type'], financing.get('ref'))
                 persisted = dict(existing.get(line_id) or {})
+                legacy_inv = _legacy_trainee_qonto_invoice_candidate(trainee, financing, persisted)
+                if legacy_inv:
+                    legacy_status = _normalize_billing_invoice_status(legacy_inv.get('qonto_invoice_status') or ('draft' if legacy_inv.get('qonto_invoice_id') else 'not_invoiced'))
+                    persisted.update({
+                        'qontoInvoiceId': legacy_inv.get('qonto_invoice_id') or legacy_inv.get('qontoInvoiceId') or '',
+                        'qontoDraftId': legacy_inv.get('qonto_invoice_id') or legacy_inv.get('qontoInvoiceId') or '',
+                        'qontoInvoiceNumber': legacy_inv.get('qonto_invoice_number') or legacy_inv.get('qontoInvoiceNumber') or '',
+                        'qontoClientId': legacy_inv.get('qonto_client_id') or legacy_inv.get('qontoClientId') or '',
+                        'qontoCustomerId': legacy_inv.get('qonto_client_id') or legacy_inv.get('qontoCustomerId') or '',
+                        'invoiceStatus': legacy_status,
+                        'paymentStatus': 'paid' if legacy_status == 'paid' or legacy_inv.get('qonto_invoice_paid_at') else 'unpaid',
+                        'invoiceGeneratedAt': legacy_inv.get('created_at') or legacy_inv.get('invoiceGeneratedAt') or _now_iso(),
+                        'paidAt': legacy_inv.get('qonto_invoice_paid_at') or '',
+                        'invoicePdfUrl': legacy_inv.get('qonto_invoice_url') or legacy_inv.get('invoicePdfUrl') or '',
+                        'clientName': legacy_inv.get('client_name') or legacy_inv.get('clientName') or persisted.get('clientName') or '',
+                    })
                 status = _normalize_billing_invoice_status(persisted.get('invoiceStatus') or 'not_invoiced')
                 line = {
                     'id': line_id, 'traineeId': trainee_id, 'sessionId': session_id,
