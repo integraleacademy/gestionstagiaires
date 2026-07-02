@@ -21779,6 +21779,13 @@ def _format_euro_amount(value: Any) -> str:
 
 
 def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
+    """Return the variable dictionary used to fill the immutable APS convention template.
+
+    The convention must always be generated from templates_word/conventionaps.docx:
+    no paragraphs, articles, headers, footers, styles, tables, images, or fixed
+    texts are rebuilt or corrected by code.  This dictionary only provides
+    values for placeholders that already exist in the Word model.
+    """
     first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
     last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper()
     full_name = f"{last_name} {first_name}".strip()
@@ -21789,44 +21796,77 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
     personal_amount = trainee.get("personal_amount")
     if personal_amount in (None, ""):
         personal_amount = training_price
-    edition_date = datetime.datetime.utcnow().strftime("%d/%m/%Y")
-    return {
-        "['Nom]": "Intégrale Academy",
-        "['FormeJuridique]": "SAS",
-        "[OfNaf]": "8559A",
-        "['NumeroDeclarationActivite]": "93830739683",
-        "['NomIdentite]": full_name,
-        "[CodePostal]": zip_code,
-        "[Ville]": city,
-        "[DateMinActionFormation]": fr_date(str(_session_get(session_obj, "date_start", ""))),
-        "[DateMaxActionFormation]": fr_date(str(_session_get(session_obj, "date_end", ""))),
-        "[Code]": "RNCP36648",
-        "['MontantTTC]": _format_euro_amount(personal_amount),
-        "[Nom]": last_name,
-        "[Prenom]": first_name,
-        "['Ville]": "Puget-sur-Argens",
-        "['DateEdition]": edition_date,
-        "[FormationConventions:]": "",
-        "[:FormationConventions]": "",
-        "[Apprenants:]": "",
-        "[:Apprenants]": "",
-        "[setTypeSignature]": "",
-        "[isSignatureNumerique]": "",
-        "[:if]": "",
-        "[sc_sceaudeconfiance]": "",
-        "[/sc_sceaudeconfiance]": "",
-        "[sc_sign1.signature]": "{{s1|signature|160|60}}",
-        "[/sc_sign1.signature]": "",
-        "[sc_sign2.signature]": "",
-        "[/sc_sign2.signature]": "",
+    values = {
+        "nom_organisme": "Intégrale Academy",
+        "forme_juridique": "SAS",
+        "code_naf": "8559A",
+        "numero_declaration_activite": "93830739683",
+        "nom_identite": full_name,
+        "code_postal": zip_code,
+        "ville": city,
+        "date_debut": fr_date(str(_session_get(session_obj, "date_start", ""))),
+        "date_fin": fr_date(str(_session_get(session_obj, "date_end", ""))),
+        "code_rncp": "RNCP36648",
+        "montant_ttc": _format_euro_amount(personal_amount),
+        "nom": last_name,
+        "prenom": first_name,
+        "ville_edition": "Puget-sur-Argens",
+        "date_edition": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
+        "formation_conventions_debut": "",
+        "formation_conventions_fin": "",
+        "apprenants_debut": "",
+        "apprenants_fin": "",
+        "type_signature": "",
+        "is_signature_numerique": "",
+        "if_fin": "",
+        "sceau_de_confiance_debut": "",
+        "sceau_de_confiance_fin": "",
+        "signature_stagiaire": "{{s1|signature|160|60}}",
+        "signature_stagiaire_fin": "",
+        "signature_organisme": "",
+        "signature_organisme_fin": "",
     }
+    aliases = {
+        "['Nom]": "nom_organisme",
+        "['FormeJuridique]": "forme_juridique",
+        "[OfNaf]": "code_naf",
+        "['NumeroDeclarationActivite]": "numero_declaration_activite",
+        "['NomIdentite]": "nom_identite",
+        "[CodePostal]": "code_postal",
+        "[Ville]": "ville",
+        "[DateMinActionFormation]": "date_debut",
+        "[DateMaxActionFormation]": "date_fin",
+        "[Code]": "code_rncp",
+        "['MontantTTC]": "montant_ttc",
+        "[Nom]": "nom",
+        "[Prenom]": "prenom",
+        "['Ville]": "ville_edition",
+        "['DateEdition]": "date_edition",
+        "[FormationConventions:]": "formation_conventions_debut",
+        "[:FormationConventions]": "formation_conventions_fin",
+        "[Apprenants:]": "apprenants_debut",
+        "[:Apprenants]": "apprenants_fin",
+        "[setTypeSignature]": "type_signature",
+        "[isSignatureNumerique]": "is_signature_numerique",
+        "[:if]": "if_fin",
+        "[sc_sceaudeconfiance]": "sceau_de_confiance_debut",
+        "[/sc_sceaudeconfiance]": "sceau_de_confiance_fin",
+        "[sc_sign1.signature]": "signature_stagiaire",
+        "[/sc_sign1.signature]": "signature_stagiaire_fin",
+        "[sc_sign2.signature]": "signature_organisme",
+        "[/sc_sign2.signature]": "signature_organisme_fin",
+    }
+    replacements = {f"{{{{ {key} }}}}": value for key, value in values.items()}
+    replacements.update({f"{{{{{key}}}}}": value for key, value in values.items()})
+    replacements.update({legacy_placeholder: values[value_key] for legacy_placeholder, value_key in aliases.items()})
+    return replacements
 
 def _replace_docx_xml_placeholders(docx_path: str, replacements: Dict[str, str]) -> None:
-    """Replace literal placeholders in a DOCX without rebuilding the document with Word APIs.
+    """Fill placeholders in a copied DOCX without rebuilding the Word document.
 
-    The APS convention template is provided as the authoritative Word file.  To
-    keep its layout, fields, styles, headers, and relationships intact, only the
-    XML text containing known placeholders is rewritten in-place inside the ZIP.
+    Only text variable tokens are replaced in-place inside Word XML parts.  The
+    source template is never opened for writing, and fixed text is never matched
+    or rewritten.
     """
     tmp_path = docx_path + ".tmp"
     with zipfile.ZipFile(docx_path, "r") as zin, zipfile.ZipFile(tmp_path, "w") as zout:

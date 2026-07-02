@@ -1,4 +1,6 @@
+import hashlib
 import os
+import re
 import tempfile
 import unittest
 import zipfile
@@ -304,8 +306,32 @@ class YousignStatusRefreshTests(unittest.TestCase):
         self.assertIn("signer.done", {"signature_request.done", "signature_request.completed", "signer.done", "signer.completed"})
 
 
+def _docx_word_xml_text(path):
+    with zipfile.ZipFile(path) as zf:
+        parts = [
+            name for name in zf.namelist()
+            if name.startswith("word/") and name.endswith(".xml")
+        ]
+        return "\n".join(zf.read(name).decode("utf-8", errors="ignore") for name in parts)
+
+
+def _docx_text_without_variables(path):
+    xml = _docx_word_xml_text(path)
+    xml = re.sub(r"\{\{[^{}]+\}\}", "", xml)
+    xml = re.sub(r"\[[^\]]+\]", "", xml)
+    return re.sub(r"\s+", " ", xml)
+
+
+def _file_sha256(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 class ApsConventionGenerationTests(unittest.TestCase):
-    def test_aps_convention_generation_uses_word_template_placeholders(self):
+    def test_aps_convention_generation_uses_immutable_word_template_variables_only(self):
         session = {
             "id": "session-1",
             "training_type": "APS",
@@ -323,6 +349,10 @@ class ApsConventionGenerationTests(unittest.TestCase):
             "personal_amount": "300",
         }
 
+        template_path = app._aps_convention_template_path()
+        template_hash_before = _file_sha256(template_path)
+        template_sensitive_text = _docx_text_without_variables(template_path)
+
         with tempfile.TemporaryDirectory() as tmpdir:
             def fake_run(command, check, capture_output, text, timeout):
                 pdf_path = os.path.splitext(command[-1])[0] + ".pdf"
@@ -339,10 +369,13 @@ class ApsConventionGenerationTests(unittest.TestCase):
             generated_text = "\n".join(
                 [paragraph.text for paragraph in document.paragraphs]
                 + [cell.text for table in document.tables for row in table.rows for cell in row.cells]
+                + [paragraph.text for section in document.sections for paragraph in section.header.paragraphs]
+                + [paragraph.text for section in document.sections for paragraph in section.footer.paragraphs]
             )
-
+            generated_xml = _docx_word_xml_text(docx_path)
             pdf_exists = os.path.exists(pdf_path)
 
+        self.assertEqual(template_hash_before, _file_sha256(template_path))
         self.assertTrue(pdf_exists)
         self.assertIn("DUPONT Jean", generated_text)
         self.assertIn("83480 PUGET-SUR-ARGENS", generated_text)
@@ -350,8 +383,17 @@ class ApsConventionGenerationTests(unittest.TestCase):
         self.assertIn("RNCP36648", generated_text)
         self.assertIn("300 €", generated_text)
         self.assertIn("{{s1|signature|160|60}}", generated_text)
+        self.assertNotRegex(generated_xml, r"\{\{\s*[A-Za-z0-9_.-]+\s*\}\}")
         self.assertNotIn("[FormationConventions:]", generated_text)
         self.assertNotIn("['NomIdentite]", generated_text)
+        self.assertIn("INTÉGRALE ACADEMY", generated_text)
+        self.assertIn("Déclaration d’activité n° 93830739683", generated_text)
+        self.assertIn("RÈGLEMENT INTÉRIEUR", generated_text)
+        self.assertIn("Conformément aux articles L6352-3 et L6352-4", generated_text)
+        self.assertIn("04 22 47 07 68", generated_text)
+        for sensitive_text in ("INTÉGRALE ACADEMY", "Conformément aux articles L6352-3 et L6352-4", "04 22 47 07 68"):
+            self.assertIn(sensitive_text, template_sensitive_text)
+            self.assertIn(sensitive_text, generated_text)
 
 
 if __name__ == "__main__":
