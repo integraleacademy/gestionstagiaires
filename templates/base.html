@@ -264,10 +264,10 @@
           <h2 id="conventionTransmissionTitle">Souhaitez-vous envoyer la convention maintenant&nbsp;?</h2>
           <p>Le stagiaire a bien été enregistré. Vérifiez les montants puis lancez l’envoi de la convention de formation pour signature électronique.</p>
           <div class="convention-finance-grid" aria-label="Montants de financement">
-            <label>Montant formation<input id="conventionTrainingPrice" type="number" step="0.01" min="0" inputmode="decimal"></label>
-            <label>CPF<input id="conventionCpfAmount" type="number" step="0.01" min="0" inputmode="decimal"></label>
-            <label>Perso<input id="conventionPersonalAmount" type="number" step="0.01" min="0" inputmode="decimal"></label>
-            <label>Autre financement<input id="conventionOtherAmount" type="number" step="0.01" min="0" inputmode="decimal"></label>
+            <label class="convention-finance-field convention-finance-field--formation">Montant formation<input id="conventionTrainingPrice" type="number" step="0.01" min="0" inputmode="decimal"></label>
+            <label class="convention-finance-field convention-finance-field--cpf">CPF<input id="conventionCpfAmount" type="number" step="0.01" min="0" inputmode="decimal"></label>
+            <label class="convention-finance-field convention-finance-field--personal">Perso<input id="conventionPersonalAmount" type="number" step="0.01" min="0" inputmode="decimal"></label>
+            <label class="convention-finance-field convention-finance-field--other">Autre financement<input id="conventionOtherAmount" type="number" step="0.01" min="0" inputmode="decimal"></label>
           </div>
         </div>
       </div>
@@ -317,13 +317,22 @@
     .convention-result-modal h2{position:relative;margin:0;color:#0f172a;font-size:25px;line-height:1.2;font-weight:950;}
     .convention-result-modal p{position:relative;margin:12px 0 24px;color:#475569;font-size:15px;line-height:1.65;}
     .convention-result-modal__button{position:relative;min-width:150px;border-radius:999px;padding:12px 22px;font-weight:900;box-shadow:0 14px 30px rgba(37,99,235,.24);}
-    .convention-modal-accent{background:linear-gradient(90deg,#7c3aed,#ec4899,#f97316);}
-    .convention-status-icon{background:linear-gradient(145deg,#f5f3ff,#fff7ed);color:#7c3aed;}
-    .convention-kicker{color:#7c3aed;}
-    .convention-finance-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px;}
-    .convention-finance-grid label{display:flex;flex-direction:column;gap:6px;color:#475569;font-size:12px;font-weight:850;}
-    .convention-finance-grid input{width:100%;border:1px solid #dbe4f0;border-radius:12px;background:#fff;padding:11px 12px;color:#0f172a;font:inherit;font-weight:750;box-shadow:inset 0 1px 2px rgba(15,23,42,.04);}
-    .convention-finance-grid input:focus{outline:3px solid rgba(124,58,237,.16);border-color:#a78bfa;}
+    .convention-modal{background:linear-gradient(180deg,#ffffff 0%,#fbfdff 100%);}
+    .convention-modal::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 92% 12%,rgba(37,99,235,.12),transparent 34%),radial-gradient(circle at 10% 92%,rgba(16,185,129,.13),transparent 30%);}
+    .convention-modal .convention-modal-accent{position:relative;height:4px;background:linear-gradient(90deg,#2563eb 0%,#06b6d4 42%,#10b981 100%);}
+    .convention-modal .convention-status-icon{background:linear-gradient(145deg,#dbeafe,#ecfeff);color:#2563eb;border:1px solid rgba(37,99,235,.16);box-shadow:0 16px 35px rgba(37,99,235,.13),inset 0 1px 0 rgba(255,255,255,.8);}
+    .convention-modal .convention-kicker{color:#2563eb;text-transform:uppercase;}
+    .convention-finance-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:20px;}
+    .convention-finance-field{--field-color:#2563eb;--field-bg:#eff6ff;display:flex;flex-direction:column;gap:7px;color:#334155;font-size:12px;font-weight:900;}
+    .convention-finance-field::before{content:"";width:34px;height:4px;border-radius:999px;background:var(--field-color);box-shadow:0 5px 14px color-mix(in srgb,var(--field-color) 28%,transparent);}
+    .convention-finance-field--formation{--field-color:#0f172a;--field-bg:#f8fafc;}
+    .convention-finance-field--cpf{--field-color:#2563eb;--field-bg:#eff6ff;color:#1d4ed8;}
+    .convention-finance-field--personal{--field-color:#16a34a;--field-bg:#f0fdf4;color:#166534;}
+    .convention-finance-field--other{--field-color:#f97316;--field-bg:#fff7ed;color:#9a3412;}
+    .convention-finance-grid input{width:100%;border:1px solid color-mix(in srgb,var(--field-color) 24%,#dbe4f0);border-radius:13px;background:linear-gradient(180deg,#fff,var(--field-bg));padding:11px 13px;color:#0f172a;font:inherit;font-weight:850;box-shadow:inset 0 1px 2px rgba(15,23,42,.04),0 8px 18px rgba(15,23,42,.04);transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;}
+    .convention-finance-grid input:focus{outline:3px solid color-mix(in srgb,var(--field-color) 18%,transparent);border-color:var(--field-color);box-shadow:0 12px 26px color-mix(in srgb,var(--field-color) 16%,transparent);transform:translateY(-1px);}
+    .convention-modal .ypareo-btn-primary{background:linear-gradient(135deg,#16a34a,#15803d);box-shadow:0 16px 34px rgba(22,163,74,.25);}
+    .convention-modal .ypareo-btn-secondary{box-shadow:0 10px 22px rgba(15,23,42,.06);}
     .ypareo-modal-backdrop{backdrop-filter:blur(5px);background:rgba(15,23,42,.62);}
     .ypareo-modal{position:relative;max-width:580px;border:0;border-radius:24px;box-shadow:0 30px 80px rgba(15,23,42,.3);overflow:hidden;}
     .ypareo-modal-accent{height:5px;background:linear-gradient(90deg,#2563eb,#06b6d4,#10b981);}
