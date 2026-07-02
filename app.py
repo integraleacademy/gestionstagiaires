@@ -22575,11 +22575,11 @@ def _financing_entries(trainee: Dict[str, Any]) -> List[Dict[str, Any]]:
         ftype = str(item.get('type') or item.get('financing_type') or '').strip().upper()
         if ftype and amount > 0:
             entries.append({'type': ftype, 'label': item.get('label') or ftype, 'amount': amount, 'ref': item.get('id') or str(idx)})
-    legacy = [('CPF', trainee.get('cpf_amount')), ('PERSONNEL', trainee.get('personal_amount') or trainee.get('personal_financing_amount'))]
+    legacy = [('CPF', trainee.get('cpf_amount')), ('PERSONNEL', trainee.get('personal_amount') or trainee.get('personal_financing_amount')), ('AUTRE', trainee.get('other_amount') or trainee.get('other_financing_amount'))]
     for ftype, raw in legacy:
         amount = _money(raw)
         if amount > 0:
-            entries.append({'type': ftype, 'label': 'Personnel' if ftype == 'PERSONNEL' else 'CPF', 'amount': amount, 'ref': 'legacy'})
+            entries.append({'type': ftype, 'label': 'Personnel' if ftype == 'PERSONNEL' else ('Autre financement' if ftype == 'AUTRE' else 'CPF'), 'amount': amount, 'ref': 'legacy'})
     return entries
 
 
