@@ -22429,14 +22429,89 @@ def _map_collection_status(status: Any) -> str:
     return {'pending': 'scheduled', 'declined': 'failed', 'rejected': 'failed', 'canceled': 'failed', 'completed': 'completed', 'returned': 'returned', 'refunded': 'refunded', 'on_hold': 'on_hold'}.get(value, value or 'scheduled')
 
 
+def _format_euro(value: Any) -> str:
+    return f"{_money(value):,.2f} €".replace(",", " ").replace(".", ",")
+
+
+def _qonto_mandate_schedule(line: Dict[str, Any]) -> List[Dict[str, Any]]:
+    installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
+    if installments:
+        return [item for item in installments if isinstance(item, dict)]
+    plan = line.get('paymentPlan') if isinstance(line.get('paymentPlan'), dict) else {}
+    schedule = plan.get('schedule') if isinstance(plan.get('schedule'), list) else []
+    return [item for item in schedule if isinstance(item, dict)]
+
+
+def _build_qonto_mandate_email_html(line: Dict[str, Any], sign_url: str) -> str:
+    first_name = html.escape(str(line.get('traineeFirstName') or '').strip() or 'Madame, Monsieur')
+    safe_sign_url = html.escape(sign_url, quote=True)
+    logo_url = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
+    formation = html.escape(str(line.get('formationName') or line.get('sessionName') or 'Formation').strip())
+    session_label = html.escape(str(line.get('dateLabel') or '').strip() or f"du {fr_date(line.get('dateStart'))} au {fr_date(line.get('dateEnd') or line.get('dateStart'))}")
+    invoice_ref = html.escape(str(line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId') or 'En cours de finalisation').strip())
+    schedule = _qonto_mandate_schedule(line)
+    total = sum(_money(item.get('amount')) for item in schedule) if schedule else _money(line.get('amountTTC') or line.get('amount'))
+    count = len(schedule) if schedule else int((line.get('paymentPlan') or {}).get('installments') or 1)
+    monthly = _money(schedule[0].get('amount')) if schedule else round(total / max(count, 1), 2)
+    row_parts = []
+    for idx, item in enumerate(schedule, start=1):
+        row_parts.append(
+            f'<tr><td style="padding:12px 14px;border-bottom:1px solid #e5e7eb;color:#334155;font-size:14px;">Échéance {idx}</td>'
+            f'<td style="padding:12px 14px;border-bottom:1px solid #e5e7eb;color:#334155;font-size:14px;text-align:center;">{html.escape(fr_date(str(item.get("date") or "")))}</td>'
+            f'<td style="padding:12px 14px;border-bottom:1px solid #e5e7eb;color:#0f172a;font-size:14px;font-weight:700;text-align:right;">{html.escape(_format_euro(item.get("amount")))}</td></tr>'
+        )
+    rows = ''.join(row_parts) or '<tr><td colspan="3" style="padding:14px;color:#64748b;font-size:14px;text-align:center;">Échéancier en cours de confirmation par notre équipe.</td></tr>'
+    return f"""<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Mandat SEPA</title>
+<style>@keyframes mandatePulse {{ 0% {{ transform:scale(1); box-shadow:0 0 0 0 rgba(212,163,64,.45); }} 70% {{ transform:scale(1.045); box-shadow:0 0 0 16px rgba(212,163,64,0); }} 100% {{ transform:scale(1); box-shadow:0 0 0 0 rgba(212,163,64,0); }} }} .mandate-button {{ animation:mandatePulse 1.7s ease-in-out infinite; }} @media (max-width:560px) {{ .summary-cell {{ display:block !important;width:100% !important;box-sizing:border-box !important; }} }}</style></head>
+<body style="margin:0;padding:0;background:#f3f6fa;font-family:Arial,Helvetica,sans-serif;color:#172033;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f3f6fa;margin:0;padding:24px 12px;"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:680px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 12px 32px rgba(15,23,42,0.10);">
+<tr><td style="background:linear-gradient(135deg,#0b2f5b 0%,#10233f 55%,#d4a340 100%);padding:30px;color:#ffffff;"><table role="presentation" width="100%"><tr><td style="width:92px;padding-right:18px;vertical-align:middle;"><img src="{logo_url}" width="76" alt="Intégrale Academy" style="display:block;width:76px;height:auto;border:0;background:#ffffff;border-radius:16px;padding:8px;"></td><td style="vertical-align:middle;"><div style="font-size:25px;font-weight:800;line-height:1.2;">Signature de votre mandat SEPA</div><div style="font-size:15px;opacity:.94;margin-top:7px;line-height:1.4;">Paiement sécurisé par prélèvement bancaire</div></td></tr></table></td></tr>
+<tr><td style="padding:32px 30px 8px 30px;"><p style="margin:0 0 14px 0;font-size:18px;line-height:1.5;">Bonjour {first_name},</p><p style="margin:0 0 20px 0;font-size:16px;line-height:1.65;color:#334155;">Votre règlement est prévu par prélèvement SEPA. Merci de signer votre mandat sécurisé afin de valider l’échéancier ci-dessous.</p>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px 0;"><tr><td class="summary-cell" width="33.33%" style="padding:8px;"><div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:16px;padding:16px;text-align:center;"><div style="font-size:12px;color:#9a3412;text-transform:uppercase;letter-spacing:.06em;font-weight:700;">Montant total</div><div style="font-size:22px;color:#0f172a;font-weight:800;margin-top:6px;">{html.escape(_format_euro(total))}</div></div></td><td class="summary-cell" width="33.33%" style="padding:8px;"><div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:16px;text-align:center;"><div style="font-size:12px;color:#475569;text-transform:uppercase;letter-spacing:.06em;font-weight:700;">Nombre d’échéances</div><div style="font-size:22px;color:#0f172a;font-weight:800;margin-top:6px;">{count}</div></div></td><td class="summary-cell" width="33.33%" style="padding:8px;"><div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:16px;padding:16px;text-align:center;"><div style="font-size:12px;color:#1d4ed8;text-transform:uppercase;letter-spacing:.06em;font-weight:700;">Montant / mois</div><div style="font-size:22px;color:#0f172a;font-weight:800;margin-top:6px;">{html.escape(_format_euro(monthly))}</div></div></td></tr></table>
+<div style="background:#f7faff;border:1px solid #dbeafe;border-radius:16px;padding:18px 20px;margin:0 0 24px 0;"><p style="margin:0 0 8px 0;font-size:15px;"><strong>Formation :</strong> {formation}</p><p style="margin:0 0 8px 0;font-size:15px;"><strong>Session :</strong> {session_label}</p><p style="margin:0;font-size:15px;"><strong>Référence facture :</strong> {invoice_ref}</p></div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;margin:0 0 28px 0;"><thead><tr><th align="left" style="background:#0b2f5b;color:#ffffff;padding:13px 14px;font-size:13px;">Échéance</th><th style="background:#0b2f5b;color:#ffffff;padding:13px 14px;font-size:13px;">Date</th><th align="right" style="background:#0b2f5b;color:#ffffff;padding:13px 14px;font-size:13px;">Montant</th></tr></thead><tbody>{rows}</tbody></table>
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 28px auto;"><tr><td bgcolor="#d4a340" class="mandate-button" style="border-radius:14px;text-align:center;box-shadow:0 12px 24px rgba(212,163,64,.30);animation:mandatePulse 1.7s ease-in-out infinite;"><a href="{safe_sign_url}" style="display:inline-block;padding:17px 30px;font-size:17px;font-weight:800;color:#10233f;text-decoration:none;border-radius:14px;">Signer le mandat de prélèvement</a></td></tr></table>
+<p style="margin:0 0 8px 0;font-size:14px;line-height:1.6;color:#5b677a;">Ce lien est personnel et sécurisé. Il permet uniquement d’autoriser les prélèvements liés à l’échéancier présenté.</p><p style="margin:0 0 24px 0;font-size:12px;line-height:1.5;word-break:break-all;color:#64748b;">Si le bouton ne fonctionne pas : <a href="{safe_sign_url}" style="color:#0b5ed7;text-decoration:underline;">{safe_sign_url}</a></p></td></tr>
+<tr><td style="background:#f8fafc;border-top:1px solid #e5e7eb;padding:22px 30px;color:#64748b;font-size:13px;line-height:1.6;"><strong style="color:#334155;">Intégrale Academy</strong><br>54 chemin du Carreou<br>83480 Puget-sur-Argens<br>04 22 47 07 68</td></tr></table></td></tr></table></body></html>"""
+
+
+def _build_qonto_mandate_email_text(line: Dict[str, Any], sign_url: str) -> str:
+    schedule = _qonto_mandate_schedule(line)
+    total = sum(_money(item.get('amount')) for item in schedule) if schedule else _money(line.get('amountTTC') or line.get('amount'))
+    count = len(schedule) if schedule else int((line.get('paymentPlan') or {}).get('installments') or 1)
+    monthly = _money(schedule[0].get('amount')) if schedule else round(total / max(count, 1), 2)
+    rows = "\n".join(f"- Échéance {idx}: {fr_date(str(item.get('date') or ''))} — {_format_euro(item.get('amount'))}" for idx, item in enumerate(schedule, start=1)) or "Échéancier en cours de confirmation."
+    return f"""Bonjour {str(line.get('traineeFirstName') or '').strip() or 'Madame, Monsieur'},
+
+Votre règlement est prévu par prélèvement SEPA.
+
+Récapitulatif :
+- Montant total : {_format_euro(total)}
+- Nombre d'échéances : {count}
+- Montant par mois : {_format_euro(monthly)}
+- Formation : {line.get('formationName') or line.get('sessionName') or 'Formation'}
+- Session : {line.get('dateLabel') or ''}
+
+Échéancier :
+{rows}
+
+Signer le mandat de prélèvement :
+{sign_url}
+
+Intégrale Academy
+54 chemin du Carreou
+83480 Puget-sur-Argens
+04 22 47 07 68"""
+
+
 def _send_qonto_mandate_link(line: Dict[str, Any]) -> bool:
     sign_url = (line.get('sign_url') or '').strip()
     email = (line.get('traineeEmail') or '').strip()
     if not sign_url or not email:
         return False
-    html_body = mail_layout(f"""<p>Bonjour,</p><p>Votre facture Qonto est prévue en prélèvement SEPA.</p><p><a href=\"{html.escape(sign_url)}\">Signer le mandat SEPA</a></p><p>Cordialement,<br>Intégrale Academy</p>""")
-    return brevo_send_email(email, 'Signature de votre mandat SEPA', html_body)
-
+    html_body = _build_qonto_mandate_email_html(line, sign_url)
+    text_body = _build_qonto_mandate_email_text(line, sign_url)
+    return brevo_send_email(email, 'Signature de votre mandat SEPA', html_body, text_content=text_body)
 
 def _setup_qonto_direct_debit_for_line(line: Dict[str, Any], payment_plan: Dict[str, Any]) -> None:
     if payment_plan.get('mode') != 'sepa_direct_debit':
@@ -22563,7 +22638,7 @@ def _billing_lines(data: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
     all_map = _billing_existing_map(data)
-    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning')}
+    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','sign_url','mandateStatus')}
     persisted['updatedAt'] = _now_iso()
     all_map[line['id']] = persisted
     data['billing_lines'] = list(all_map.values())
