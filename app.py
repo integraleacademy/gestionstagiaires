@@ -260,6 +260,39 @@ def _qonto_oauth_is_configured() -> bool:
     return bool(_qonto_oauth_client_id() and _qonto_oauth_client_secret())
 
 
+def mask_qonto_iban(iban: Any) -> str:
+    normalized = re.sub(r"\s+", "", str(iban or "")).upper()
+    if not normalized:
+        return ""
+    if len(normalized) <= 8:
+        return "*" * len(normalized)
+    return f"{normalized[:4]}********{normalized[-4:]}"
+
+
+def _qonto_bank_account_summary(account: Any) -> Dict[str, Any]:
+    account = account if isinstance(account, dict) else {}
+    return {
+        "id": account.get("id") or "",
+        "iban": mask_qonto_iban(account.get("iban") or account.get("IBAN")),
+        "name": account.get("name") or "",
+        "status": account.get("status") or "",
+        "main": bool(account.get("main") or account.get("is_main")),
+    }
+
+
+def get_qonto_organization_bank_accounts() -> Dict[str, Any]:
+    data = _qonto_request("GET", "/v2/organization")
+    organization = data.get("organization") if isinstance(data.get("organization"), dict) else data
+    bank_accounts = organization.get("bank_accounts") if isinstance(organization, dict) else []
+    if not isinstance(bank_accounts, list):
+        bank_accounts = []
+    return {
+        "organization": {
+            "id": organization.get("id") or "",
+            "name": organization.get("name") or "",
+        },
+        "bank_accounts": [_qonto_bank_account_summary(account) for account in bank_accounts],
+    }
 
 
 def get_qonto_bank_account_id() -> str:
@@ -12626,6 +12659,19 @@ def admin_qonto_settings():
         message=message,
         last_success_fr=fr_datetime(last_success_at),
     )
+
+
+@app.get("/api/admin/qonto/bank-accounts")
+@admin_login_required
+@admin_write_required
+def api_admin_qonto_bank_accounts():
+    if not _qonto_is_configured():
+        return jsonify({"ok": False, "error": "Qonto n’est pas connecté"}), 400
+    try:
+        return jsonify({"ok": True, **get_qonto_organization_bank_accounts()})
+    except Exception as exc:
+        app.logger.exception("[QONTO] bank accounts lookup failed: %s", _sanitize_qonto_error(str(exc)))
+        return jsonify({"ok": False, "error": format_qonto_error_for_front(exc)}), 502
 
 
 @app.get("/api/qonto/status")
