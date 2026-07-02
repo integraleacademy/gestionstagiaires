@@ -21636,7 +21636,7 @@ def _send_convocation_after_convention_signed(session_obj: Dict[str, Any], train
 
 
 def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> Dict[str, Any]:
-    """Centralise l'état documentaire automatisé affiché sur la fiche stagiaire."""
+    """Centralise l'état des documents automatisés affiché sur la fiche stagiaire."""
     state = _yousign_state(trainee)
     raw_status = _normalize_yousign_status(state.get("status"))
     generated_at = state.get("created_at") or trainee.get("convention_aps_generated_at") or ""
