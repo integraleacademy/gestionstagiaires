@@ -934,18 +934,6 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           <div class="label">Ville actuelle (facultatif)</div>
           <input id="tCity" type="text" placeholder="Ville actuelle">
         </label>
-        <label>
-          <div class="label">Montant CPF</div>
-          <input id="tCpfAmount" type="number" min="0" step="0.01" placeholder="0.00">
-        </label>
-        <label>
-          <div class="label">Montant financement personnel</div>
-          <input id="tPersonalAmount" type="number" min="0" step="0.01" placeholder="0.00">
-        </label>
-        <label>
-          <div class="label">Montant autre financement</div>
-          <input id="tOtherAmount" type="number" min="0" step="0.01" placeholder="0.00">
-        </label>
         {% if is_vtc %}
         <label style="grid-column:1/-1;">
           <div class="label" style="font-weight:900;color:#f97316;">Dates réelles de formation VTC</div>
@@ -3240,9 +3228,6 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     const address = (document.getElementById("tAddress").value || "").trim();
     const zip_code = (document.getElementById("tZipCode").value || "").trim();
     const city = (document.getElementById("tCity").value || "").trim();
-    const cpf_amount = (document.getElementById("tCpfAmount").value || "").trim();
-    const personal_amount = (document.getElementById("tPersonalAmount").value || "").trim();
-    const other_amount = (document.getElementById("tOtherAmount").value || "").trim();
     const vtc_real_training_dates = (document.getElementById("tVtcRealTrainingDates")?.value || "").trim();
     const carte_pro_ok = !!document.getElementById("tCarteProOk")?.checked;
     return {
@@ -3255,9 +3240,6 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       address,
       zip_code,
       city,
-      cpf_amount,
-      personal_amount,
-      other_amount,
       vtc_real_training_dates,
       carte_pro_ok
     };
@@ -3353,9 +3335,6 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       address,
       zip_code,
       city,
-      cpf_amount,
-      personal_amount,
-      other_amount,
       vtc_real_training_dates,
       carte_pro_ok
     } = readCreateForm();
@@ -3381,9 +3360,6 @@ document.querySelectorAll("select.sel").forEach(sel=>{
           address,
           zip_code,
           city,
-          cpf_amount,
-          personal_amount,
-          other_amount,
           vtc_real_training_dates,
           carte_pro_ok,
           send_access
