@@ -15,6 +15,14 @@
 
 <style>
 
+  .finance-dashboard{grid-column:1 / -1;position:relative;overflow:hidden;border:1px solid #dbe4f0;border-radius:30px;background:radial-gradient(circle at 0% 0%,rgba(37,99,235,.10),transparent 30%),linear-gradient(135deg,#f8fbff 0%,#fff 58%,#f8fafc 100%);box-shadow:0 28px 80px rgba(15,23,42,.12);padding:28px;}.finance-dashboard.is-hidden{display:none}.finance-dashboard__close{position:absolute;top:18px;right:18px;width:38px;height:38px;border:1px solid #dbe4f0;border-radius:14px;background:#fff;color:#64748b;font-size:22px;line-height:1;cursor:pointer;box-shadow:0 10px 22px rgba(15,23,42,.08)}.finance-dashboard__close:hover{color:#0f172a;border-color:#bfdbfe;background:#eff6ff}
+  .finance-dashboard__header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:20px}.finance-dashboard__kicker{font-size:11px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;color:#2563eb}.finance-dashboard__header h2{margin:4px 0 6px;color:#0f172a;font-size:27px;letter-spacing:-.04em}.finance-dashboard__subtitle{margin:0;color:#64748b;font-size:14px;line-height:1.5}.finance-save-indicator{display:inline-flex;align-items:center;gap:7px;margin-top:10px;padding:7px 10px;border-radius:999px;background:#f1f5f9;color:#64748b;font-size:12px;font-weight:900}.finance-save-indicator.is-saving{background:#eff6ff;color:#1d4ed8}.finance-save-indicator.is-saved{background:#dcfce7;color:#166534}.finance-save-indicator.is-error{background:#fee2e2;color:#991b1b}
+  .finance-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}.finance-summary-card{position:relative;overflow:hidden;border:1px solid #e2e8f0;border-radius:24px;background:rgba(255,255,255,.92);padding:18px;box-shadow:0 14px 34px rgba(15,23,42,.07)}.finance-summary-card::before{content:'';position:absolute;inset:0 0 auto;height:4px;background:#cbd5e1}.finance-summary-card.is-green::before{background:#22c55e}.finance-summary-card.is-orange::before{background:#f97316}.finance-summary-card.is-red::before{background:#ef4444}.finance-summary-card.is-blue::before{background:#3b82f6}.finance-summary-card__top{display:flex;justify-content:space-between;gap:10px;align-items:center;color:#64748b;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}.finance-summary-card__icon{display:grid;place-items:center;width:32px;height:32px;border-radius:12px;background:#eff6ff;font-size:17px}.finance-summary-card__value{margin-top:14px;color:#0f172a;font-size:26px;font-weight:950;letter-spacing:-.05em}.finance-summary-card__meta{margin-top:8px;color:#64748b;font-size:12px;font-weight:800;line-height:1.35}
+  .finance-badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:950;white-space:nowrap;border:1px solid transparent}.finance-badge--green{background:#dcfce7;color:#166534;border-color:#bbf7d0}.finance-badge--orange{background:#fff7ed;color:#c2410c;border-color:#fed7aa}.finance-badge--red{background:#fee2e2;color:#991b1b;border-color:#fecaca}.finance-badge--blue{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe}.finance-badge--gray{background:#f1f5f9;color:#475569;border-color:#e2e8f0}
+  .finance-progress-panel,.finance-section{border:1px solid #e2e8f0;border-radius:24px;background:rgba(255,255,255,.88);box-shadow:0 12px 30px rgba(15,23,42,.055);padding:18px;margin-top:18px}.finance-section__head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px}.finance-section__head h3{margin:0;color:#0f172a;font-size:17px}.finance-section__head p{margin:5px 0 0;color:#64748b;font-size:13px}.finance-progress-row{display:grid;grid-template-columns:130px 1fr 60px;gap:12px;align-items:center;margin:10px 0}.finance-progress-track{height:10px;border-radius:999px;background:#e7ecf7;overflow:hidden}.finance-progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#2563eb,#60a5fa)}.finance-progress-fill--green{background:linear-gradient(90deg,#16a34a,#86efac)}
+  .finance-detail-section{margin-top:18px;border:1px solid #e2e8f0;border-radius:24px;background:rgba(255,255,255,.78);overflow:hidden}.finance-detail-section>summary{list-style:none;cursor:pointer;padding:16px 18px;font-weight:950;color:#0f172a;display:flex;justify-content:space-between;align-items:center}.finance-detail-section>summary::-webkit-details-marker{display:none}.finance-detail-section>summary::after{content:'⌄';color:#64748b}.finance-detail-section[open]>summary::after{content:'⌃'}.finance-detail-section__body{border-top:1px solid #eef2f7;padding:18px}.finance-edit-grid{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:12px}.finance-edit-grid--wide{grid-template-columns:repeat(2,minmax(180px,1fr));margin-top:12px}.finance-field{min-width:0}.finance-field .label{margin-bottom:5px}.finance-field input,.finance-field textarea{width:100%}.finance-checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:12px}.finance-check{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc;font-weight:850;color:#334155}.finance-list{display:grid;gap:10px}.finance-line{display:grid;grid-template-columns:minmax(150px,1.2fr) repeat(4,minmax(95px,1fr)) auto;gap:10px;align-items:center;padding:12px;border:1px solid #e2e8f0;border-radius:16px;background:#fff}.finance-line strong{color:#0f172a}.finance-mini-label{display:block;color:#64748b;font-size:11px;font-weight:900;text-transform:uppercase}.finance-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.finance-footer{display:flex;justify-content:flex-end;margin-top:20px;padding-top:18px;border-top:1px solid #e2e8f0}.finance-empty{padding:18px;border:1px dashed #cbd5e1;border-radius:16px;background:#f8fafc;color:#64748b;font-weight:850}.finance-alert{display:flex;align-items:center;gap:10px;padding:13px 14px;border-radius:16px;border:1px solid #fed7aa;background:#fff7ed;color:#9a3412;font-weight:900}.finance-alert--orange{border-color:#fed7aa;background:#fff7ed;color:#9a3412}.finance-alert--red{border-color:#fecaca;background:#fef2f2;color:#991b1b}.finance-alert--green{border-color:#bbf7d0;background:#f0fdf4;color:#166534}.finance-alert + .finance-alert{margin-top:10px}
+  @media(max-width:1180px){.finance-summary-grid{grid-template-columns:repeat(2,1fr)}.finance-line{grid-template-columns:1fr 1fr}.finance-actions{grid-column:1 / -1}}@media(max-width:720px){.finance-dashboard{padding:16px}.finance-summary-grid,.finance-edit-grid,.finance-edit-grid--wide{grid-template-columns:1fr}.finance-progress-row{grid-template-columns:1fr}.finance-line{grid-template-columns:1fr}.finance-dashboard__header .btn{width:100%}}
+
 
   @keyframes fadeInUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
   @keyframes softPulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,.24)}50%{box-shadow:0 0 0 7px rgba(249,115,22,0)}}
@@ -1322,225 +1330,82 @@
   {% endif %}
 
   <!-- ===================== -->
-  <!-- CONVENTION & FINANCEMENT -->
+  <!-- FINANCEMENT & FACTURATION -->
   <!-- ===================== -->
   {% if is_vtc %}
-  <details class="card card--full" id="conventionFinancementSection">
-    <summary style="cursor:pointer;font-weight:900;">Convention &amp; Financement</summary>
+  <details class="finance-dashboard" id="conventionFinancementSection" open>
+    <summary style="cursor:pointer;font-weight:950;list-style:none;">Financement &amp; facturation</summary>
   {% else %}
-  <div class="card{% if is_vtc %} card--full{% endif %}" id="conventionFinancementSection">
+  <div class="finance-dashboard" id="conventionFinancementSection">
   {% endif %}
+    <div id="financementDetails"
+         data-training-type="{{ session.training_type }}"
+         data-default-price="{{ default_training_price or '' }}"
+         data-read-only="{{ '1' if is_read_only else '0' }}">
+      <button class="finance-dashboard__close" type="button" data-finance-close aria-label="Fermer">×</button>
+      <div class="finance-dashboard__header">
+        <div>
+          <div class="finance-dashboard__kicker">Suivi financier</div>
+          <h2>Financement &amp; facturation</h2>
+          <p class="finance-dashboard__subtitle">Suivi du financement, des factures Qonto et des paiements du stagiaire.</p>
+          <span id="financeSaveIndicator" class="finance-save-indicator">Sauvegardé</span>
+        </div>
+        <button class="btn btn-outline" type="button" id="btnSyncQontoTrainee">Synchroniser Qonto</button>
+      </div>
 
-    {% if not is_vtc %}
-    <div class="card-head">
-      <div>Convention & Financement</div>
+      <div id="financeSummaryCards" class="finance-summary-grid"></div>
+      <div id="financeAlerts" class="finance-section" style="display:none;"></div>
+      <div id="financeProgressPanel" class="finance-progress-panel"></div>
+
+      <section class="finance-section">
+        <div class="finance-section__head"><div><h3>Répartition du financement</h3></div></div>
+        <div id="financeBreakdown" class="finance-list"></div>
+      </section>
+
+      <details class="finance-detail-section" open>
+        <summary>Factures Qonto</summary>
+        <div class="finance-detail-section__body"><div id="qontoInvoiceCard" data-session-id="{{ session.id }}" data-trainee-id="{{ trainee.id }}" data-read-only="{{ '1' if is_read_only else '0' }}"><div id="qontoInvoiceHistory" class="finance-list"><div class="finance-empty">Chargement des factures…</div></div></div></div>
+      </details>
+
+      <details class="finance-detail-section">
+        <summary>Paiements reçus</summary>
+        <div class="finance-detail-section__body"><div id="financePayments" class="finance-list"></div></div>
+      </details>
+
+      <details class="finance-detail-section">
+        <summary>Échéancier / prélèvements</summary>
+        <div class="finance-detail-section__body"><div id="financeInstallments" class="finance-list"></div></div>
+      </details>
+
+      <details class="finance-detail-section">
+        <summary>Paramètres et champs modifiables</summary>
+        <div class="finance-detail-section__body">
+          <div class="finance-edit-grid">
+            <div class="finance-field"><div class="label">Montant CPF</div><input id="cpfAmount" type="number" min="0" step="0.01" value="{{ trainee.cpf_amount or '' }}" {{ read_only_attr }}></div>
+            <div class="finance-field"><div class="label">Montant financement personnel</div><input id="personalAmount" type="number" min="0" step="0.01" value="{{ trainee.personal_amount or '' }}" {{ read_only_attr }}></div>
+            <div class="finance-field"><div class="label">Montant autre</div><input id="otherAmount" type="number" min="0" step="0.01" value="{{ trainee.other_amount or '' }}" {{ read_only_attr }}></div>
+          </div>
+          <div class="finance-edit-grid finance-edit-grid--wide">
+            <div class="finance-field"><div class="label">Tarif formation</div><input id="trainingPrice" type="number" min="0" step="0.01" value="{{ trainee.training_price or default_training_price or '' }}" {{ read_only_attr }}><div class="hint">Tarif par défaut automatiquement repris si le champ est vide.</div></div>
+            <div class="finance-field"><div class="label">Ajustement suivi des ventes</div><input id="salesTrackingAmount" type="number" min="0" step="0.01" value="{{ trainee.sales_tracking_amount or '' }}" placeholder="Ex : 1350" {{ read_only_attr }}><div id="paymentTotalLine" class="hint" style="font-weight:900;margin-top:6px;"></div><div id="paymentDiffLine" class="hint"></div></div>
+          </div>
+          <div class="finance-field" style="margin-top:12px;"><div class="label">Commentaire financement</div><input id="financementComment" type="text" value="{{ trainee.financement_comment or '' }}" placeholder="Ex : France Travail en attente / OPCO validé / CPF…" {{ read_only_attr }}></div>
+          <div class="finance-checks">
+            <label class="finance-check"><input id="excludeFromSalesTracking" type="checkbox" {% if trainee.exclude_from_sales_tracking %}checked{% endif %} {{ read_only_attr }}> Exclure du suivi des ventes</label>
+            <label class="finance-check"><input id="cashPaymentEnabled" type="checkbox" {% if trainee.cash_payment_enabled %}checked{% endif %} {{ read_only_attr }}> Paiement en espèces</label>
+          </div>
+          <div id="cashPaymentAmountWrap" style="margin-top:12px;{% if trainee.cash_payment_enabled %}display:block;{% else %}display:none;{% endif %}">
+            <div class="finance-edit-grid finance-edit-grid--wide"><div class="finance-field"><div class="label">Montant à régler en espèces</div><input id="cashPaymentAmount" type="number" min="0" step="0.01" value="{{ trainee.cash_payment_amount or '' }}" placeholder="Ex : 300" {{ read_only_attr }}></div><label class="finance-check" style="align-self:end;"><input id="cashPaymentSettled" type="checkbox" {% if trainee.cash_payment_settled %}checked{% endif %} {{ read_only_attr }}> OK réglé</label></div>
+            <div id="cashPaymentSettlementDetails" class="finance-edit-grid finance-edit-grid--wide" style="display:none;margin-top:10px;"><div class="finance-field"><div class="label">Date de règlement</div><input id="cashPaymentSettledDate" type="date" value="{{ trainee.cash_payment_settled_date or '' }}" {{ read_only_attr }}></div><div class="finance-field"><div class="label">Commentaire</div><input id="cashPaymentSettledComment" type="text" value="{{ trainee.cash_payment_settled_comment or '' }}" {{ read_only_attr }}></div></div>
+            <div id="cashPaymentInstallmentsWrap" style="margin-top:10px;"><div class="label">Versements en espèces</div><div id="cashPaymentInstallmentsList" class="finance-list"></div>{% if not is_read_only %}<button type="button" class="btn btn-ghost" id="cashPaymentAddInstallmentBtn" style="margin-top:8px;">+ Ajouter un versement</button>{% endif %}</div>
+            <div id="cashPaymentHint" class="hint" style="margin-top:8px;"></div>
+          </div>
+        </div>
+      </details>
+
+      <div class="finance-footer"><button class="btn btn-outline" type="button" data-finance-close>Fermer</button></div>
     </div>
-    {% endif %}
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-
-      <!-- CONVENTION -->
-      <div>
-        <div style="font-weight:900;margin-bottom:6px;">Convention</div>
-        {% set cs = (trainee.convention_status or "soon") %}
-        <select id="conventionSelect" class="status-pill" style="margin-top:8px;" {{ read_only_attr }}>
-          <option value="soon" {% if cs=="soon" %}selected{% endif %}>PROCHAINEMENT</option>
-          <option value="signing" {% if cs=="signing" %}selected{% endif %}>EN COURS DE SIGNATURE</option>
-          <option value="signed" {% if cs=="signed" %}selected{% endif %}>SIGNÉE</option>
-        </select>
-        {% if not is_read_only %}
-          <form method="post"
-                action="{{ url_for('admin_convention_unsigned_notify', session_id=session.id, trainee_id=trainee.id) }}"
-                style="margin-top:10px;"
-                data-mail-sms-confirm="true">
-            <button class="btn btn-outline btn-uniform" type="submit">📩 Convention non signée</button>
-          </form>
-        {% endif %}
-        {% if trainee.convention_unsigned_notified_at %}
-          <div class="hint" style="margin-top:8px;">🟧 Notifié le : <strong>{{ trainee.convention_unsigned_notified_at|frdatetime }}</strong></div>
-        {% endif %}
-      </div>
-
-      <!-- FINANCEMENT -->
-      <div>
-        <div style="font-weight:900;margin-bottom:6px;">Financement</div>
-        {% set fs = (trainee.financement_status or "soon") %}
-        <select id="financementSelect" class="status-pill" style="margin-top:8px;" {{ read_only_attr }}>
-          <option value="soon" {% if fs=="soon" %}selected{% endif %}>PROCHAINEMENT</option>
-          <option value="in_review" {% if fs=="in_review" %}selected{% endif %}>EN COURS DE VALIDATION</option>
-          <option value="validated" {% if fs=="validated" %}selected{% endif %}>VALIDÉ</option>
-        </select>
-        {% if not is_read_only %}
-          <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;">
-            <button class="btn {% if trainee.financement_rejected_note %}btn-orange{% else %}btn-outline{% endif %}" type="button" id="btnOpenFinancementReject"
-                    onclick="document.getElementById('financementRejectModal').classList.add('show');document.getElementById('financementRejectModal').setAttribute('aria-hidden','false');">
-              Prélèvement rejeté
-            </button>
-            <button class="btn {% if trainee.financement_pending_notification_sent_at %}btn-disabled-muted{% else %}btn-outline{% endif %}"
-                    type="button"
-                    id="btnSendFinancementPending"
-                    {% if trainee.financement_pending_notification_sent_at %}disabled{% endif %}>
-              Prélèvement en attente
-            </button>
-          </div>
-        {% endif %}
-        <div id="financementRejectedNote" class="hint" style="margin-top:8px;{% if not trainee.financement_rejected_note %}display:none;{% endif %}">
-          {{ trainee.financement_rejected_note or "⚠️ Prélèvement rejeté" }}
-        </div>
-        <div id="financementPendingSentAt" class="hint" style="margin-top:4px;{% if not trainee.financement_pending_notification_sent_at or fs == 'validated' %}display:none;{% endif %}">
-          🟧 Prélèvement en attente envoyé le :
-          <strong>{% if trainee.financement_pending_notification_sent_at %}{{ trainee.financement_pending_notification_sent_at[:10]|frdate }}{% endif %}</strong>
-        </div>
-        {% set financement_ns = namespace(new_date=None) %}
-        {% for req in trainee.financement_rejected_requests or [] %}
-          {% if req.new_date and not financement_ns.new_date %}
-            {% set financement_ns.new_date = req.new_date %}
-          {% endif %}
-        {% endfor %}
-        {% if financement_ns.new_date and fs != "validated" %}
-          <div id="financementRejectedNewDate" class="hint" style="margin-top:4px;display:flex;align-items:center;gap:6px;">
-            👉 Un nouveau prélèvement a été proposé le {{ fr_date(financement_ns.new_date) or financement_ns.new_date }}
-            <button type="button" class="icon-btn" id="financementNewDateIndicator" {{ read_only_attr }}
-                    data-seen="{{ '1' if trainee.financement_new_date_seen else '0' }}"
-                    title="Marquer comme vu">
-              {% if trainee.financement_new_date_seen %}🟢{% else %}🔴{% endif %}
-            </button>
-          </div>
-        {% endif %}
-      </div>
-
-      <!-- COMMENTAIRE FINANCEMENT (pleine largeur dans la carte) -->
-      <div style="margin-top:10px;grid-column:1 / -1;">
-        <div class="label">Commentaire financement</div>
-        <input id="financementComment"
-               type="text"
-               value="{{ trainee.financement_comment or '' }}"
-               placeholder="Ex : France Travail en attente / OPCO validé / CPF…"
-               {{ read_only_attr }}>
-        <div class="hint">Sauvegarde automatique.</div>
-      </div>
-
-      <!-- DETAILS FINANCEMENT (pleine largeur dans la carte) -->
-      <div style="margin-top:16px;grid-column:1 / -1;" id="financementDetails"
-           data-training-type="{{ session.training_type }}"
-           data-default-price="{{ default_training_price or '' }}"
-           data-read-only="{{ '1' if is_read_only else '0' }}">
-        <div style="font-weight:900;margin-bottom:6px;">Détail du financement</div>
-        <div class="hint" style="margin-bottom:10px;">
-          Indiquez comment la formation a été payée. Le total se calcule automatiquement.
-        </div>
-
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
-          <div>
-            <div class="label">Montant CPF</div>
-            <input id="cpfAmount" type="number" min="0" step="0.01" value="{{ trainee.cpf_amount or '' }}" {{ read_only_attr }}>
-          </div>
-          <div>
-            <div class="label">Montant financement personnel</div>
-            <input id="personalAmount" type="number" min="0" step="0.01" value="{{ trainee.personal_amount or '' }}" {{ read_only_attr }}>
-          </div>
-          <div>
-            <div class="label">Montant autre</div>
-            <input id="otherAmount" type="number" min="0" step="0.01" value="{{ trainee.other_amount or '' }}" {{ read_only_attr }}>
-          </div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px;align-items:end;">
-          <div>
-            <div class="label">Tarif formation (modifiable)</div>
-            <input id="trainingPrice" type="number" min="0" step="0.01" value="{{ trainee.training_price or default_training_price or '' }}" {{ read_only_attr }}>
-            <div class="hint">Tarif par défaut : A3P 4200 € / APS 1650 € / VTC 1600 € / Dirigeant initial 4300 € / Dirigeant VAE 3800 €.</div>
-          </div>
-          <div>
-            <div class="label">TOTAL (calcul automatique)</div>
-            <div id="paymentTotalLine" style="font-weight:800;">—</div>
-            <div id="paymentDiffLine" class="hint"></div>
-          </div>
-        </div>
-        <div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;">
-          <label style="display:flex;align-items:center;gap:8px;">
-            <input id="excludeFromSalesTracking" type="checkbox" {% if trainee.exclude_from_sales_tracking %}checked{% endif %} {{ read_only_attr }}>
-            <span style="font-weight:700;">Exclure cette personne du suivi des ventes</span>
-          </label>
-          <div>
-            <div class="label">Ajuster le montant (suivi des ventes)</div>
-            <input id="salesTrackingAmount"
-                   type="number"
-                   min="0"
-                   step="0.01"
-                   value="{{ trainee.sales_tracking_amount or '' }}"
-                   placeholder="Ex : 1350"
-                   {{ read_only_attr }}>
-            <div class="hint">Laisser vide pour garder le tarif normal.</div>
-          </div>
-        </div>
-
-        <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px;">
-          <label style="display:flex;align-items:center;gap:8px;">
-            <input id="cashPaymentEnabled" type="checkbox" {% if trainee.cash_payment_enabled %}checked{% endif %} {{ read_only_attr }}>
-            <span style="font-weight:800;">Paiement en espèces</span>
-          </label>
-          <div id="cashPaymentAmountWrap"
-               style="max-width:420px;flex-direction:column;gap:8px;{% if trainee.cash_payment_enabled %}display:flex;{% else %}display:none;{% endif %}">
-            <div class="label">Montant à régler en espèces</div>
-            <input id="cashPaymentAmount"
-                   type="number"
-                   min="0"
-                   step="0.01"
-                   value="{{ trainee.cash_payment_amount or '' }}"
-                   placeholder="Ex : 300"
-                   {{ read_only_attr }}>
-            <div id="cashPaymentInstallmentsWrap" style="display:flex;flex-direction:column;gap:8px;">
-              <div class="label">Versements en espèces</div>
-              <div id="cashPaymentInstallmentsList" style="display:flex;flex-direction:column;gap:8px;"></div>
-              {% if not is_read_only %}
-              <button type="button" class="btn btn-ghost" id="cashPaymentAddInstallmentBtn" style="width:max-content;">+ Ajouter un versement</button>
-              {% endif %}
-            </div>
-            <label id="cashPaymentSettledWrap" style="display:flex;align-items:center;gap:8px;">
-              <input id="cashPaymentSettled" type="checkbox" {% if trainee.cash_payment_settled %}checked{% endif %} {{ read_only_attr }}>
-              <span style="font-weight:700;">OK réglé</span>
-            </label>
-            <div id="cashPaymentSettlementDetails"
-                 style="display:none;flex-direction:column;gap:8px;">
-              <div>
-                <div class="label">Date de règlement</div>
-                <input id="cashPaymentSettledDate" type="date" value="{{ trainee.cash_payment_settled_date or '' }}" {{ read_only_attr }}>
-              </div>
-              <div>
-                <div class="label">Commentaire (optionnel)</div>
-                <input id="cashPaymentSettledComment"
-                       type="text"
-                       value="{{ trainee.cash_payment_settled_comment or '' }}"
-                       placeholder="Ex : Réglé à l'accueil, reçu remis."
-                       {{ read_only_attr }}>
-              </div>
-            </div>
-            <div id="cashPaymentHint" class="hint" style="margin-top:4px;"></div>
-          </div>
-        </div>
-
-
-        <!-- FACTURATION QONTO -->
-        <div class="qonto-invoice-card" id="qontoInvoiceCard" data-session-id="{{ session.id }}" data-trainee-id="{{ trainee.id }}" data-read-only="{{ '1' if is_read_only else '0' }}">
-          <div class="qonto-invoice-head">
-            <div>
-              <div class="qonto-eyebrow">Facturation Qonto</div>
-              <div class="qonto-title">Factures centralisées par financeur</div>
-              <div class="hint">Données chargées depuis la source backend unique utilisée par la page Facturation.</div>
-            </div>
-            <button class="btn btn-outline" type="button" id="btnSyncQontoTrainee">Synchroniser Qonto</button>
-          </div>
-          <div class="qonto-history" id="qontoInvoiceHistory"><div>Chargement des factures…</div></div>
-        </div>
-      </div>
-
-    </div>
-  {% if is_vtc %}
-  </details>
-  {% else %}
-  </div>
-  {% endif %}
+  {% if is_vtc %}</details>{% else %}</div>{% endif %}
 
   <!-- ===================== -->
 <!-- COMMENTAIRE (ADMIN)    -->
@@ -2370,29 +2235,6 @@ if(btnAutomationSendConvocation && btnSendApsConvocationExisting){
 }
 
   // =========================
-// Financement comment autosave
-// =========================
-const financementComment = document.getElementById("financementComment");
-if(financementComment){
-  let t=null;
-  financementComment.addEventListener("input", ()=>{
-    if(t) clearTimeout(t);
-    t = setTimeout(async ()=>{
-      try{
-        await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
-          method:"POST",
-          headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({ financement_comment: financementComment.value })
-        });
-      }catch(e){
-        // pas de reload, on évite d'emmerder
-        console.log("Erreur sauvegarde commentaire financement");
-      }
-    }, 450);
-  });
-}
-
-// =========================
 // Financement details autosave + totals
 // =========================
 const financementDetails = document.getElementById("financementDetails");
@@ -2510,6 +2352,8 @@ if(financementDetails){
   const getCashInstallmentsTotal = () => {
     return cashPaymentInstallments.reduce((sum, item)=> sum + parseAmount(item?.amount), 0);
   };
+  window.getFinanceCashInstallmentsTotal = getCashInstallmentsTotal;
+  window.getFinanceCashInstallments = () => cashPaymentInstallments.map(item => ({...item}));
 
   const collectCashInstallmentsPayload = () => {
     return cashPaymentInstallments
@@ -3576,33 +3420,6 @@ function updateDocsRelanceState(status, plannedDateIso){
   }
 
   // =========================
-// Convention status update
-// =========================
-
-const conventionSelect = document.getElementById("conventionSelect");
-
-if(conventionSelect){
-  applyStatusPill(conventionSelect); // ✅ couleur au chargement
-
-  conventionSelect.addEventListener("change", async ()=>{
-    applyStatusPill(conventionSelect); // ✅ couleur immédiate
-
-    const value = conventionSelect.value;
-
-    try{
-      await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
-        method:"POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ convention_status: value })
-      });
-      window.location.reload();
-    }catch(e){
-      alert("Erreur sauvegarde convention");
-    }
-  });
-}
-
-// =========================
 // Facturation Qonto centralisée
 (function(){
   const card = document.getElementById("qontoInvoiceCard");
@@ -3620,6 +3437,14 @@ if(conventionSelect){
   function isCpfQontoLine(line){const blob=[line?.financingType,line?.financeur,line?.financeurName,line?.financingLabel,line?.typeFinanceur].join(' ').toLowerCase();return /\bcpf\b|mon compte formation|caisse des d[ée]p[ôo]ts/.test(blob);}
   function getCpfQontoClientDefaults(){return {...CPF_QONTO_CLIENT};}
   const fmtMoney = n => new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(Number(n||0));
+  const cpfAmount = document.getElementById('cpfAmount');
+  const personalAmount = document.getElementById('personalAmount');
+  const otherAmount = document.getElementById('otherAmount');
+  const trainingPrice = document.getElementById('trainingPrice');
+  const salesTrackingAmount = document.getElementById('salesTrackingAmount');
+  const cashPaymentEnabled = document.getElementById('cashPaymentEnabled');
+  const cashPaymentSettled = document.getElementById('cashPaymentSettled');
+  const cashPaymentAmount = document.getElementById('cashPaymentAmount');
   const label = s => ({paid:'Payée',sent:'Envoyée',finalized:'Facture finalisée',draft:'Brouillon créé',cancelled:'Non facturé',deleted:'Non facturé',not_invoiced:'Non facturé',not_generated:'Non facturé'}[s]||'Non facturé');
   const cls = s => s==='paid'?'green':(['sent','finalized'].includes(s)?'blue':(s==='draft'?'orange':'gray'));
   async function api(url, body){ const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}); const j=await r.json(); if(!r.ok||!j.ok) throw new Error(j.error||j.message||'Action impossible'); return j; }
@@ -3647,24 +3472,63 @@ if(conventionSelect){
   }
   function openGenerateInvoiceModal(line){currentLine=line;document.body.insertAdjacentHTML('beforeend',`<div class="billing-modal-overlay no-print" role="dialog" aria-modal="true"><div class="billing-modal">${renderInvoiceModalContent(line)}</div></div>`);document.querySelectorAll('[data-modal-close]').forEach(btn=>btn.onclick=closeBillingModal);const confirm=document.getElementById('confirmGenerate');if(confirm)confirm.onclick=createCurrentDraft; document.querySelectorAll('input[name=paymentMode],#installments,#firstDebitDate').forEach(el=>el.addEventListener('change',renderSchedulePreview)); renderSchedulePreview();}
   async function createCurrentDraft(){if(!currentLine||modalLoading)return;modalLoading=true;const btn=document.getElementById('confirmGenerate');if(btn){btn.disabled=true;btn.textContent='Création du brouillon...';}try{const data=await api('/api/billing/create-draft',{lineId:currentLine.id,source:'admin_trainee',paymentPlan:getPaymentPlanPayload()});const updated=data.line||data;currentLine=updated;currentLines=currentLines.map(line=>line.id===updated.id?updated:line);render(currentLines);document.querySelector('.billing-modal').innerHTML=renderInvoiceModalContent(updated,true);document.querySelectorAll('[data-modal-close]').forEach(closeBtn=>closeBtn.onclick=closeBillingModal);}catch(err){modalMessage(err.message||'Erreur inconnue','error');if(btn){btn.disabled=false;btn.textContent='Créer la facture en brouillon';}}finally{modalLoading=false;}}
+  function pct(value,total){return total>0?Math.max(0,Math.min(150,(Number(value||0)/total)*100)):0;}
+  function invoiceStatusLabel(line){const has=!!(line.qontoInvoiceId||line.qontoDraftId);if(!has)return 'Facture non générée';if(line.paymentStatus==='paid'||line.invoiceStatus==='paid')return 'Facture payée';if(line.paymentStatus==='unpaid'&&['sent','finalized'].includes(line.invoiceStatus))return 'Facture impayée';return ({sent:'Facture envoyée',finalized:'Facture générée',draft:'Brouillon',cancelled:'Annulée',control:'À contrôler'}[line.invoiceStatus]||'Facture générée');}
+  function invoiceBadge(line){const has=!!(line.qontoInvoiceId||line.qontoDraftId);if(!has)return 'red';if(line.invoiceStatus==='paid'||line.paymentStatus==='paid')return 'green';if(line.paymentStatus==='unpaid'&&['sent','finalized'].includes(line.invoiceStatus))return 'orange';if(['sent','finalized'].includes(line.invoiceStatus))return 'blue';if(line.invoiceStatus==='draft')return 'orange';return 'gray';}
+  function badge(text,tone){return `<span class="finance-badge finance-badge--${tone||'gray'}">${esc(text)}</span>`;}
+  function lineAmount(l){return Number(l.amountTTC||l.amount||0)}
+  function linePaid(l){return (l.paymentStatus==='paid'||l.invoiceStatus==='paid')?lineAmount(l):0}
+  function allInstallments(lines){return lines.flatMap(l=>(l.directDebitInstallments||[]).map((it,i)=>({...it,line:l,index:i,total:(l.directDebitInstallments||[]).length})));}
+  function statusFromRatio(value,total,labels){if(total<=0)return [labels.none,'gray'];if(value<=0)return [labels.zero,'gray'];if(value<total)return [labels.partial,'orange'];if(value===total)return [labels.done,'green'];return [labels.over,'red'];}
+  function computeFinance(lines){
+    const parseMoneyValue=(value)=>{const n=parseFloat(String(value||'').replace(',','.').trim());return Number.isNaN(n)?0:n;};
+    const defaultPrice=()=>{const details=document.getElementById('financementDetails');const dataDefault=parseMoneyValue(details?.dataset.defaultPrice);if(dataDefault>0)return dataDefault;const type=String(details?.dataset.trainingType||'').toUpperCase();if(type==='A3P')return 4200;if(type==='APS')return 1650;if(type==='DIRIGEANT INITIAL')return 4300;if(type==='DIRIGEANT VAE')return 3800;if(type.includes('VTC'))return 1600;return 0;};
+    const prixFormation=parseMoneyValue(trainingPrice?.value)||defaultPrice();
+    const montantCpf=parseMoneyValue(cpfAmount?.value), montantPersonnel=parseMoneyValue(personalAmount?.value), montantAutre=parseMoneyValue(otherAmount?.value);
+    const totalFinancement=montantCpf+montantPersonnel+montantAutre;
+    const active=lines.filter(l=>!['cancelled','deleted'].includes(String(l.invoiceStatus||'')));
+    const invoiced=active.filter(l=>!!(l.qontoInvoiceId||l.qontoDraftId));
+    const totalFacture=invoiced.reduce((a,l)=>a+lineAmount(l),0);
+    const qontoPaid=active.reduce((a,l)=>a+linePaid(l),0);
+    const cashInstallmentsTotal=window.getFinanceCashInstallmentsTotal?window.getFinanceCashInstallmentsTotal():0;
+    const cashPaid=(cashPaymentEnabled?.checked&&cashPaymentSettled?.checked)?parseMoneyValue(cashPaymentAmount?.value):cashInstallmentsTotal;
+    const totalPaye=qontoPaid+cashPaid;
+    const installments=allInstallments(lines);const paidStatuses=new Set(['completed','paid','succeeded','success']);const rejectStatuses=new Set(['failed','returned','rejected','refunded']);
+    const mensualitesPayees=installments.filter(i=>paidStatuses.has(String(i.status||'').toLowerCase())).length;
+    const nombreRejets=installments.filter(i=>rejectStatuses.has(String(i.status||'').toLowerCase())).length;
+    const upcoming=installments.filter(i=>!paidStatuses.has(String(i.status||'').toLowerCase())&&!rejectStatuses.has(String(i.status||'').toLowerCase())&&i.date).sort((a,b)=>String(a.date).localeCompare(String(b.date)))[0];
+    return {prixFormation,montantCpf,montantPersonnel,montantAutre,totalFinancement,totalFacture,totalPaye,resteAFacturer:prixFormation-totalFacture,resteAPayer:prixFormation-totalPaye,differenceFinancement:totalFinancement-prixFormation,progressFacturation:pct(totalFacture,prixFormation),progressPaiement:pct(totalPaye,prixFormation),installments,totalMensualites:installments.length,mensualitesPayees,mensualitesRestantes:Math.max(installments.length-mensualitesPayees,0),montantPreleve:installments.filter(i=>paidStatuses.has(String(i.status||'').toLowerCase())).reduce((a,i)=>a+Number(i.amount||0),0),montantRestantAPrelever:installments.filter(i=>!paidStatuses.has(String(i.status||'').toLowerCase())).reduce((a,i)=>a+Number(i.amount||0),0),prochaineEcheance:upcoming,nombreRejets};
+  }
+  function renderSummary(c){
+    const fact=statusFromRatio(c.totalFacture,c.prixFormation,{none:'Non facturé',zero:'Non facturé',partial:'Partiellement facturé',done:'Facturé',over:'Surfacturé'});
+    const pay=statusFromRatio(c.totalPaye,c.prixFormation,{none:'Non payé',zero:'Non payé',partial:'Paiement partiel',done:'Payé',over:'Trop-perçu'});
+    const inst=c.totalMensualites===0?['Aucun échéancier','gray']:(c.nombreRejets?['Rejet à traiter','red']:(c.mensualitesPayees===0?['En attente','orange']:(c.mensualitesPayees<c.totalMensualites?['En cours','blue']:['Terminé','green'])));
+    const adjusted=(parseFloat(String(salesTrackingAmount?.value||'').replace(',','.'))||0)>0;
+    const cards=[
+      {label:'Prix formation',icon:'€',value:fmtMoney(c.prixFormation),badge:adjusted?badge('Tarif ajusté','blue'):badge('Tarif standard','gray'),tone:adjusted?'blue':'gray',meta:'Montant de référence'},
+      {label:'Facturé',icon:'🧾',value:`${fmtMoney(c.totalFacture)} / ${fmtMoney(c.prixFormation)}`,badge:badge(fact[0],fact[1]),tone:fact[1],meta:`Reste à facturer : ${fmtMoney(Math.max(c.resteAFacturer,0))}`},
+      {label:'Payé',icon:'✓',value:`${fmtMoney(c.totalPaye)} / ${fmtMoney(c.prixFormation)}`,badge:badge(pay[0],pay[1]),tone:pay[1],meta:`Reste à payer : ${fmtMoney(Math.max(c.resteAPayer,0))}`},
+      {label:'Prélèvements',icon:'↻',value:`${c.mensualitesPayees}/${c.totalMensualites}`,badge:badge(inst[0],inst[1]),tone:inst[1],meta:c.prochaineEcheance?`Prochain : ${formatIsoDateFr(c.prochaineEcheance.date)} — ${fmtMoney(c.prochaineEcheance.amount)}`:'Aucune prochaine échéance'}
+    ];
+    document.getElementById('financeSummaryCards').innerHTML=cards.map(card=>`<div class="finance-summary-card is-${card.tone}"><div class="finance-summary-card__top"><span>${card.label}</span><span class="finance-summary-card__icon">${card.icon}</span></div><div class="finance-summary-card__value">${card.value}</div><div style="margin-top:10px">${card.badge}</div><div class="finance-summary-card__meta">${card.meta}</div></div>`).join('');
+    document.getElementById('financeProgressPanel').innerHTML=`<div class="finance-progress-row"><strong>Facturation</strong><div class="finance-progress-track"><div class="finance-progress-fill" style="width:${Math.min(c.progressFacturation,100)}%"></div></div><strong>${Math.round(c.progressFacturation)}%</strong></div><div class="finance-progress-row"><strong>Paiement</strong><div class="finance-progress-track"><div class="finance-progress-fill finance-progress-fill--green" style="width:${Math.min(c.progressPaiement,100)}%"></div></div><strong>${Math.round(c.progressPaiement)}%</strong></div>`;
+  }
+  function renderBreakdown(lines,c){const defs=[['CPF',c.montantCpf],['Personnel',c.montantPersonnel],['Autre financement',c.montantAutre]];document.getElementById('financeBreakdown').innerHTML=defs.map(([name,planned])=>{const related=lines.filter(l=>(l.financeurName||l.financingLabel||l.financingType||'').toLowerCase().includes(name.split(' ')[0].toLowerCase())||(name==='Personnel'&&String(l.financingType).includes('PERSONNEL'))||(name==='CPF'&&isCpfQontoLine(l))||(name.startsWith('Autre')&&String(l.financingType).includes('AUTRE')));const inv=related.filter(l=>l.qontoInvoiceId||l.qontoDraftId).reduce((a,l)=>a+lineAmount(l),0), paid=related.reduce((a,l)=>a+linePaid(l),0);const st=statusFromRatio(paid,planned,{none:'Non prévu',zero:'Non payé',partial:'Paiement partiel',done:'Payé',over:'Trop-perçu'});return `<div class="finance-line"><strong>${esc(name)}</strong><div><span class="finance-mini-label">Prévu</span>${fmtMoney(planned)}</div><div><span class="finance-mini-label">Facturé</span>${fmtMoney(inv)}</div><div><span class="finance-mini-label">Payé</span>${fmtMoney(paid)}</div><div><span class="finance-mini-label">Reste à payer</span>${fmtMoney(Math.max(planned-paid,0))}</div>${badge(st[0],st[1])}</div>`;}).join('');}
+  function renderAlerts(lines,c){const alerts=[];if(c.nombreRejets)alerts.push(['Un prélèvement a été rejeté. Action requise.','red','⚠️']);if(c.resteAPayer>0.01)alerts.push([`Reste ${fmtMoney(c.resteAPayer)} à encaisser.`,'orange','💳']);if(c.resteAPayer<=0.01&&c.prixFormation>0)alerts.push(['Formation intégralement payée.','green','✅']);lines.filter(l=>!(l.qontoInvoiceId||l.qontoDraftId)).forEach(l=>alerts.push([`Facture à générer pour ${esc(l.financeurName||l.financingLabel||l.financingType)}.`,'orange','🧾']));if(Math.abs(c.differenceFinancement)>=0.01)alerts.push([`Total financé ${c.differenceFinancement<0?'inférieur':'supérieur'} au prix formation de ${fmtMoney(Math.abs(c.differenceFinancement))}.`,'orange','ℹ️']);if(c.resteAPayer<-0.01)alerts.push([`Trop-perçu : ${fmtMoney(Math.abs(c.resteAPayer))}.`,'red','⚠️']);const box=document.getElementById('financeAlerts');box.style.display=alerts.length?'':'none';box.innerHTML=alerts.map(a=>`<div class="finance-alert finance-alert--${a[1]}"><strong>${a[2]}</strong><span>${a[0]}</span></div>`).join('');}
+  function renderPayments(lines,c){const rows=[];lines.forEach(l=>{if(linePaid(l)>0)rows.push({date:l.paidAt||l.updatedAt||'',amount:linePaid(l),mode:l.paymentMode==='sepa_direct_debit'?'prélèvement':'virement',status:'encaissé',invoice:l.qontoInvoiceNumber||l.qontoInvoiceId});});const cashItems=window.getFinanceCashInstallments?window.getFinanceCashInstallments():[];const cashTotal=window.getFinanceCashInstallmentsTotal?window.getFinanceCashInstallmentsTotal():0;if(cashPaymentEnabled?.checked&&cashTotal>0){cashItems.forEach(it=>rows.push({date:it.date,amount:it.amount,mode:'espèces',status:'encaissé',invoice:''}));}document.getElementById('financePayments').innerHTML=`<div class="finance-line"><strong>Total encaissé</strong><div>${fmtMoney(c.totalPaye)}</div><div><span class="finance-mini-label">Reste à payer</span>${fmtMoney(Math.max(c.resteAPayer,0))}</div><div><span class="finance-mini-label">Écart</span>${fmtMoney(c.totalPaye-c.prixFormation)}</div></div>`+(rows.length?rows.map(r=>`<div class="finance-line"><strong>${formatIsoDateFr(String(r.date).slice(0,10))||'Date inconnue'}</strong><div>${fmtMoney(r.amount)}</div><div>${esc(r.mode)}</div><div>${badge(r.status,'green')}</div><div>${esc(r.invoice||'—')}</div></div>`).join(''):'<div class="finance-empty">Aucun paiement enregistré pour le moment.</div>');}
+  function renderInstallments(c){document.getElementById('financeInstallments').innerHTML=c.totalMensualites?`<div class="finance-line"><strong>${c.mensualitesPayees} mensualités payées sur ${c.totalMensualites}</strong><div><span class="finance-mini-label">Prochaine mensualité</span>${c.prochaineEcheance?`${formatIsoDateFr(c.prochaineEcheance.date)} — ${fmtMoney(c.prochaineEcheance.amount)}`:'—'}</div><div><span class="finance-mini-label">Reste à prélever</span>${fmtMoney(c.montantRestantAPrelever)}</div></div>`+c.installments.map((it,i)=>{const st=String(it.status||'scheduled').toLowerCase();const tone=['completed','paid','succeeded'].includes(st)?'green':(['failed','returned','rejected'].includes(st)?'red':'orange');return `<div class="finance-line"><strong>${i+1}/${c.totalMensualites}</strong><div><span class="finance-mini-label">Date prévue</span>${formatIsoDateFr(it.date)||'—'}</div><div>${fmtMoney(it.amount)}</div><div>${badge(st==='scheduled'?'À venir':st,tone)}</div><div>${it.paidAt?formatIsoDateFr(String(it.paidAt).slice(0,10)):''} ${it.failureReason?`<span class="qonto-error">${esc(it.failureReason)}</span>`:''}</div></div>`;}).join(''):'<div class="finance-empty">Aucun échéancier enregistré.</div>';}
   function render(lines){
-    if(!lines.length){ box.innerHTML = '<div><span class="qonto-status">Non facturé</span></div>'; return; }
+    const c=computeFinance(lines); renderSummary(c); renderBreakdown(lines,c); renderAlerts(lines,c); renderPayments(lines,c); renderInstallments(c);
+    if(!lines.length){ box.innerHTML = '<div class="finance-empty">Aucune ligne de facturation disponible. Vérifiez les montants de financement.</div>'; return; }
     box.innerHTML = lines.map(l=>{
-      const s = l.invoiceStatus || 'not_invoiced';
       const has = !!(l.qontoInvoiceId || l.qontoDraftId);
       const view = has ? `<a class="btn btn-outline" href="/api/admin/billing-lines/${encodeURIComponent(l.id)}/download-invoice" target="_blank" rel="noopener">Voir la facture</a>` : '';
-      const create = !has && !readOnly ? `<button class="btn btn-primary" data-create="${esc(l.id)}">Générer facture Qonto</button>` : '';
-      const finalize = has && s==='draft' && !readOnly ? `<button class="btn btn-outline" data-finalize="${esc(l.id)}">Finaliser la facture</button><button class="btn btn-outline" data-reset="${esc(l.id)}">Annuler le brouillon</button>` : '';
-      const send = has && ['finalized'].includes(s) && !readOnly ? `<button class="btn btn-outline" data-send="${esc(l.id)}">Envoyer par Qonto</button>` : '';
-      const payLabel = l.paymentMode==='sepa_direct_debit' ? `Prélèvement ${(l.directDebitInstallments||[]).length}x` : 'Comptant';
-      const mandate = l.sign_url && !readOnly ? `<button class="btn btn-outline" data-mandate="${esc(l.id)}">Renvoyer le lien de mandat</button>` : '';
-      const schedule = l.paymentMode==='sepa_direct_debit' ? `<button class="btn btn-outline" data-schedule="${esc(l.id)}">Voir échéancier</button><button class="btn btn-outline" data-sync-line="${esc(l.id)}">Synchroniser Qonto</button>` : '';
-      return `<div style="border:1px solid #dbeafe;border-radius:14px;padding:12px;background:#fff;margin-top:10px;">
-        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;"><strong>${esc(l.financeurName||l.financingLabel||l.financingType)}</strong><span class="badge ${cls(s)}">${label(s)}</span></div>
-        <div class="hint">${fmtMoney(l.amountTTC||l.amount)} TTC · ${esc(l.qontoInvoiceNumber||l.qontoInvoiceId||l.qontoDraftId||'')} · Paiement : ${esc(payLabel)} · ${esc(l.qontoPaymentGlobalStatus||paymentStatusLabel(l.paymentStatus))}</div>
-        ${l.syncWarning?`<div class="qonto-error">${esc(l.syncWarning)}</div>`:''}
-        <div class="qonto-actions">${create}${finalize}${send}${view}${mandate}${schedule}</div>
-      </div>`;
+      const create = !has && !readOnly ? `<button class="btn btn-primary" data-create="${esc(l.id)}">Générer facture</button>` : '';
+      const sync = has && !readOnly ? `<button class="btn btn-outline" data-sync-line="${esc(l.id)}">Renvoyer / synchroniser</button>` : '';
+      const finalize = has && l.invoiceStatus==='draft' && !readOnly ? `<button class="btn btn-outline" data-finalize="${esc(l.id)}">Finaliser</button><button class="btn btn-outline" data-reset="${esc(l.id)}">Annuler le brouillon</button>` : '';
+      const send = has && ['finalized'].includes(l.invoiceStatus) && !readOnly ? `<button class="btn btn-outline" data-send="${esc(l.id)}">Envoyer par Qonto</button>` : '';
+      const schedule = l.paymentMode==='sepa_direct_debit' ? `<button class="btn btn-outline" data-schedule="${esc(l.id)}">Voir échéancier</button>` : '';
+      return `<div class="finance-line"><strong>${esc(l.financeurName||l.financingLabel||l.financingType)}</strong><div><span class="finance-mini-label">Facture</span>${esc(l.qontoInvoiceNumber||'—')}</div><div><span class="finance-mini-label">Montant TTC</span>${fmtMoney(lineAmount(l))}</div><div><span class="finance-mini-label">Création</span>${formatIsoDateFr(String(l.invoiceGeneratedAt||l.createdAt||'').slice(0,10))||'—'}</div><div><span class="finance-mini-label">Échéance</span>${formatIsoDateFr(String(l.dueDate||l.due_date||'').slice(0,10))||'—'}</div>${badge(invoiceStatusLabel(l),invoiceBadge(l))}<div class="finance-actions">${create}${view}${sync}${finalize}${send}${schedule}</div>${l.syncWarning?`<div class="qonto-error" style="grid-column:1/-1">${esc(l.syncWarning)}</div>`:''}</div>`;
     }).join('');
   }
   box.addEventListener('click', async e=>{
@@ -3961,24 +3825,44 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
     }
   });
 
+  document.querySelectorAll("[data-finance-close]").forEach((btn)=>{
+    btn.addEventListener("click", ()=>{
+      document.getElementById("conventionFinancementSection")?.classList.add("is-hidden");
+    });
+  });
+  document.addEventListener("keydown", (event)=>{
+    if(event.key === "Escape") document.getElementById("conventionFinancementSection")?.classList.add("is-hidden");
+  });
+
   document.querySelectorAll("[data-open-section]").forEach((btn)=>{
     btn.addEventListener("click", ()=>{
       const targetId = btn.getAttribute("data-open-section");
       if(!targetId) return;
       const target = document.getElementById(targetId);
       if(!target) return;
+      target.classList.remove("is-hidden");
       target.open = true;
       target.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   });
 
   async function updateTrainee(payload){
-  const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
-    method:"POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify(payload)
-  });
-  return res.json();
+  const saveIndicator = document.getElementById("financeSaveIndicator");
+  if(saveIndicator){ saveIndicator.textContent = "Sauvegarde en cours…"; saveIndicator.className = "finance-save-indicator is-saving"; }
+  try{
+    const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
+      method:"POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if(!res.ok || json.ok === false) throw new Error(json.error || json.message || "Erreur de sauvegarde");
+    if(saveIndicator){ saveIndicator.textContent = "Sauvegardé"; saveIndicator.className = "finance-save-indicator is-saved"; }
+    return json;
+  }catch(error){
+    if(saveIndicator){ saveIndicator.textContent = "Erreur de sauvegarde"; saveIndicator.className = "finance-save-indicator is-error"; }
+    throw error;
+  }
 }
 
   const contactDebounce = {};
