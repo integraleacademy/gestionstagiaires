@@ -60,7 +60,14 @@ def add_no_store_headers(response):
 
 @app.get("/api/qonto/oauth/ping")
 def api_qonto_oauth_ping():
+    app.logger.warning("[QONTO OAUTH PING] ROUTE CALLED")
     return jsonify({"ok": True, "route": "qonto_oauth_ping"})
+
+
+@app.before_request
+def debug_qonto_routes_once():
+    if request.path == "/api/qonto/oauth/ping":
+        app.logger.warning("[QONTO DEBUG] url_map=%s", app.url_map)
 
 
 @app.get("/api/qonto/oauth/callback")
@@ -185,7 +192,15 @@ QONTO_OAUTH_SCOPE = "offline_access client.read client.write client_invoice.writ
 QONTO_OAUTH_ENVIRONMENT = "production"
 QONTO_OAUTH_PRODUCTION_BASE_URL = "https://oauth.qonto.com"
 QONTO_OAUTH_REQUIRED_MESSAGE = "Connexion Qonto OAuth requise pour programmer les prélèvements SEPA."
-QONTO_OAUTH_REDIRECT_URI = "https://gestionstagiaires-r5no.onrender.com/api/qonto/oauth/callback"
+APP_BASE_URL = (
+    os.environ.get("APP_BASE_URL")
+    or os.environ.get("PUBLIC_BASE_URL")
+    or "https://gestionstagiaires-test-v2.onrender.com"
+).strip().rstrip("/")
+QONTO_OAUTH_REDIRECT_URI = (
+    os.environ.get("QONTO_OAUTH_REDIRECT_URI")
+    or f"{APP_BASE_URL}/api/qonto/oauth/callback"
+).strip()
 
 
 
@@ -237,8 +252,7 @@ def _qonto_staging_token() -> str:
 
 def _qonto_oauth_redirect_uri() -> str:
     # Qonto requires a byte-for-byte match with the redirect URI configured in
-    # the Developer Portal. Keep this production URI fixed unless the portal is
-    # updated at the same time.
+    # the Developer Portal and reused during the token exchange.
     return QONTO_OAUTH_REDIRECT_URI
 
 
@@ -1548,6 +1562,7 @@ def inject_read_only():
         "admin_can_access_notifications": _admin_can_view_notifications(),
         "admin_can_manage_notifications": _admin_can_manage_notifications(),
         "global_mail_sent_notice": mail_sent_notice,
+        "public_base_url": PUBLIC_BASE_URL.rstrip("/"),
     }
 
 @app.get("/admin/login")
@@ -2152,13 +2167,13 @@ GESTIONSTAGIAIRE_SYNC_TOKEN = os.environ.get("GESTIONSTAGIAIRE_SYNC_TOKEN", "").
 
 PUBLIC_STUDENT_PORTAL_BASE = os.environ.get(
     "PUBLIC_STUDENT_PORTAL_BASE",
-    "https://gestionstagiaires-r5no.onrender.com"
-)
+    APP_BASE_URL
+).strip().rstrip("/")
 
 PUBLIC_BASE_URL = os.environ.get(
     "PUBLIC_BASE_URL",
-    "https://gestionstagiaires-r5no.onrender.com"
-)
+    APP_BASE_URL
+).strip().rstrip("/")
 
 
 CNAPS_STATUS_ENDPOINT = os.environ.get("CNAPS_STATUS_ENDPOINT", "")
@@ -11305,7 +11320,7 @@ def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, An
     salesforce_payload = {
         "oid": "00DJ9000000PT9F",
         "encoding": "UTF-8",
-        "retURL": "https://gestionstagiaires-r5no.onrender.com/admin/wedof",
+        "retURL": f"{PUBLIC_BASE_URL.rstrip('/')}/admin/wedof",
         "first_name": first_name,
         "last_name": last_name,
         "email": email,

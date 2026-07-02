@@ -37,6 +37,10 @@ class QontoOAuthRoutesTest(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["Location"], "/admin/qonto?oauth=success")
         exchange.assert_called_once()
+        self.assertEqual(
+            exchange.call_args.args[0]["redirect_uri"],
+            gestion_app.QONTO_OAUTH_REDIRECT_URI,
+        )
         load_data.assert_called_once()
         self.assertEqual(saved["qonto_oauth"]["access_token"], "access-token")
         self.assertEqual(saved["qonto_oauth"]["refresh_token"], "refresh-token")
