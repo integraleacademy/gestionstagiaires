@@ -298,13 +298,11 @@
   <a href="{{ url_for('admin_trainees', session_id=session.id, **request.args) }}">← Retour stagiaires</a>
 </div>
 
-<section class="trainee-command-center">
-  <div class="trainee-command-center__bg" aria-hidden="true"></div>
-  <div class="trainee-command-center__main">
-    <div class="trainee-command-center__eyebrow">Dossier administratif · Gestion stagiaire</div>
+<div class="session-header">
+  <div>
     <h1>Fiche stagiaire</h1>
 
-    <div class="meta-line trainee-session-chips">
+    <div class="meta-line">
       <span class="pill">{{ training_type_label }}</span>
       <span>Session : <strong>{{ session.name }}</strong></span>
       <span>Formation : <strong>{{ session.date_start|frdate }}</strong> → <strong>{{ session.date_end|frdate }}</strong></span>
@@ -322,7 +320,7 @@
       {% endif %}
 
     </div>
-    <div class="meta-line trainee-action-bar" style="margin-top:8px;">
+    <div class="meta-line" style="margin-top:8px;">
       {% if not is_vtc and not show_vae and not is_dirigeant %}
         <a class="btn btn-outline btn-uniform"
            data-pre-reception
@@ -389,7 +387,7 @@
     {% endif %}
   </div>
 
-</section>
+</div>
 
 {% if not is_read_only %}
 <div class="modal-backdrop" id="transferTraineeModal" aria-hidden="true">
@@ -426,8 +424,7 @@
 </div>
 {% endif %}
 
-<section class="card trainee-profile-console" style="margin-top:12px;">
-  <div class="trainee-profile-console__orb" aria-hidden="true"></div>
+<div class="card" style="margin-top:12px;">
   <!-- LIGNE 1 : NOM + PHOTO CÔTE À CÔTE -->
   <div style="display:flex;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;">
     <div style="flex:1;min-width:320px;">
@@ -608,7 +605,7 @@
     </div>
 
     <!-- BOUTONS ACTIONS À DROITE -->
-    <aside class="admin-trainee-side-actions trainee-quick-actions" aria-label="Actions rapides stagiaire">
+    <div class="admin-trainee-side-actions">
 
 <a class="btn btn-outline btn-uniform btn-admin-trainee-side-action {% if trainee.etiquette_word_downloaded_at %}btn-word-downloaded{% endif %}"
    id="btnEtiquetteWord"
@@ -636,9 +633,9 @@
    target="_blank" rel="noopener">
   👁️ Espace stagiaire
 </a>
-    </aside>
+    </div>
   </div>
-</section>
+</div>
 
 {% if show_candidate_sheet %}
 <div class="card" style="grid-column:1 / -1; margin-top:12px; border-left:4px solid #22c55e;">
