@@ -269,6 +269,7 @@
             <label class="convention-finance-field convention-finance-field--personal">Perso<input id="conventionPersonalAmount" type="number" step="0.01" min="0" inputmode="decimal"></label>
             <label class="convention-finance-field convention-finance-field--other">Autre financement<input id="conventionOtherAmount" type="number" step="0.01" min="0" inputmode="decimal"></label>
           </div>
+          <div class="convention-finance-error" id="conventionFinanceError" role="alert" aria-live="polite" style="display:none;"></div>
         </div>
       </div>
       <div class="modal-foot ypareo-modal-actions" id="conventionTransmissionConfirmActions">
@@ -331,6 +332,8 @@
     .convention-finance-field--other{--field-color:#f97316;--field-bg:#fff7ed;color:#9a3412;}
     .convention-finance-grid input{width:100%;border:1px solid color-mix(in srgb,var(--field-color) 24%,#dbe4f0);border-radius:13px;background:linear-gradient(180deg,#fff,var(--field-bg));padding:11px 13px;color:#0f172a;font:inherit;font-weight:850;box-shadow:inset 0 1px 2px rgba(15,23,42,.04),0 8px 18px rgba(15,23,42,.04);transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;}
     .convention-finance-grid input:focus{outline:3px solid color-mix(in srgb,var(--field-color) 18%,transparent);border-color:var(--field-color);box-shadow:0 12px 26px color-mix(in srgb,var(--field-color) 16%,transparent);transform:translateY(-1px);}
+    .convention-finance-grid input.is-invalid{border-color:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.12),inset 0 1px 2px rgba(15,23,42,.04);}
+    .convention-finance-error{margin-top:12px;border:1px solid rgba(220,38,38,.22);border-radius:14px;background:#fef2f2;color:#991b1b;padding:10px 12px;font-size:13px;font-weight:800;line-height:1.35;}
     .convention-modal .ypareo-btn-primary{background:linear-gradient(135deg,#16a34a,#15803d);box-shadow:0 16px 34px rgba(22,163,74,.25);}
     .convention-modal .ypareo-btn-secondary{box-shadow:0 10px 22px rgba(15,23,42,.06);}
     .ypareo-modal-backdrop{backdrop-filter:blur(5px);background:rgba(15,23,42,.62);}
@@ -405,6 +408,7 @@
         personal_amount: document.getElementById("conventionPersonalAmount"),
         other_amount: document.getElementById("conventionOtherAmount")
       };
+      const errorEl = document.getElementById("conventionFinanceError");
       if(!modal || !yesButton || !noButton || Object.values(fields).some((el)=>!el)){
         resolve(null);
         return;
@@ -416,9 +420,32 @@
       fields.personal_amount.value = values.personal_amount || "";
       fields.other_amount.value = values.other_amount || "";
 
+      const parseAmount = (value)=>{
+        const normalized = String(value || "").replace(",", ".").trim();
+        const amount = Number.parseFloat(normalized);
+        return Number.isFinite(amount) ? amount : 0;
+      };
+      const formatAmount = (amount)=>new Intl.NumberFormat("fr-FR", {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(amount);
+      const clearFinanceError = ()=>{
+        if(errorEl){
+          errorEl.textContent = "";
+          errorEl.style.display = "none";
+        }
+        Object.values(fields).forEach((field)=>field.classList.remove("is-invalid"));
+      };
+      const showFinanceError = (message)=>{
+        if(errorEl){
+          errorEl.textContent = message;
+          errorEl.style.display = "block";
+        }else{
+          window.alert(message);
+        }
+        Object.values(fields).forEach((field)=>field.classList.add("is-invalid"));
+      };
       const cleanup = ()=>{
         yesButton.onclick = null;
         noButton.onclick = null;
+        Object.values(fields).forEach((field)=>field.removeEventListener("input", clearFinanceError));
       };
       const finish = (payload)=>{
         cleanup();
@@ -426,13 +453,25 @@
         resolve(payload);
       };
 
+      clearFinanceError();
+      Object.values(fields).forEach((field)=>field.addEventListener("input", clearFinanceError));
+
       noButton.onclick = ()=>finish(null);
-      yesButton.onclick = ()=>finish({
-        training_price: fields.training_price.value,
-        cpf_amount: fields.cpf_amount.value,
-        personal_amount: fields.personal_amount.value,
-        other_amount: fields.other_amount.value
-      });
+      yesButton.onclick = ()=>{
+        const trainingPrice = parseAmount(fields.training_price.value);
+        const financingTotal = parseAmount(fields.cpf_amount.value) + parseAmount(fields.personal_amount.value) + parseAmount(fields.other_amount.value);
+        if(Math.abs(financingTotal - trainingPrice) > 0.01){
+          const diff = trainingPrice - financingTotal;
+          showFinanceError(`Impossible de continuer : le total CPF + Perso + autre financement (${formatAmount(financingTotal)} €) doit être égal au montant de la formation (${formatAmount(trainingPrice)} €). Écart : ${formatAmount(diff)} €.`);
+          return;
+        }
+        finish({
+          training_price: fields.training_price.value,
+          cpf_amount: fields.cpf_amount.value,
+          personal_amount: fields.personal_amount.value,
+          other_amount: fields.other_amount.value
+        });
+      };
 
       yesButton.disabled = false;
       openModal("conventionTransmissionModal");
