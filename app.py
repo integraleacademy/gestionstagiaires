@@ -14728,6 +14728,7 @@ def admin_trainees(session_id: str):
         _sync_trainee_afc_medical_requirement(t, session_view["name"])
         ensure_documents_schema_for_trainee(t, training_type)
         t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
+        _sync_financement_status_from_manual_validation(t)
 
         current_cnaps = t.get("cnaps") or ""
 
@@ -15860,6 +15861,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         t["vae_status_label"] = view["label"]
 
     _sync_vae_status_with_actions(t)
+    _sync_financement_status_from_manual_validation(t)
     current_vae_status = vae_status_view(t.get("vae_status"))["key"]
     if vae_fields_changed and current_vae_status != previous_vae_status:
         if send_vae_notification:
@@ -19183,6 +19185,14 @@ def _sync_vae_status_with_actions(trainee: Dict[str, Any]) -> None:
 
 def _normalize_vae_status_text(value: Any) -> str:
     return " ".join(_normalized_token(str(value or "")).replace("_", " ").replace("-", " ").split())
+
+
+def _sync_financement_status_from_manual_validation(trainee: Dict[str, Any]) -> None:
+    """Aligne la pastille financement quand le statut financier manuel est validé."""
+    manual_mode = (trainee.get("financing_validation_manual_mode") or "").strip().lower()
+    manual_status = (trainee.get("financing_validation_manual_status") or "").strip().lower()
+    if manual_mode == "manual" and manual_status == "validated":
+        trainee["financement_status"] = "validated"
 
 
 def vae_status_view(status_key: Optional[str]) -> Dict[str, str]:
