@@ -1002,18 +1002,6 @@
           <div class="label">Ville actuelle (facultatif)</div>
           <input id="sessionTCity" type="text" placeholder="Ville actuelle">
         </label>
-        <label>
-          <div class="label">Montant CPF</div>
-          <input id="sessionTCpfAmount" type="number" min="0" step="0.01" placeholder="0.00">
-        </label>
-        <label>
-          <div class="label">Montant financement personnel</div>
-          <input id="sessionTPersonalAmount" type="number" min="0" step="0.01" placeholder="0.00">
-        </label>
-        <label>
-          <div class="label">Montant autre financement</div>
-          <input id="sessionTOtherAmount" type="number" min="0" step="0.01" placeholder="0.00">
-        </label>
         <label id="sessionVtcRealTrainingDatesField" style="grid-column:1/-1;display:none;">
           <div class="label" style="font-weight:900;color:#f97316;">Dates réelles de formation VTC</div>
           <input id="sessionTVtcRealTrainingDates" type="text" placeholder="Ex : 10/05/2026 au 12/05/2026">
@@ -1329,9 +1317,6 @@
       address: (document.getElementById("sessionTAddress")?.value || "").trim(),
       zip_code: (document.getElementById("sessionTZipCode")?.value || "").trim(),
       city: (document.getElementById("sessionTCity")?.value || "").trim(),
-      cpf_amount: (document.getElementById("sessionTCpfAmount")?.value || "").trim(),
-      personal_amount: (document.getElementById("sessionTPersonalAmount")?.value || "").trim(),
-      other_amount: (document.getElementById("sessionTOtherAmount")?.value || "").trim(),
       vtc_real_training_dates: (document.getElementById("sessionTVtcRealTrainingDates")?.value || "").trim(),
       carte_pro_ok: !!document.getElementById("sessionTCarteProOk")?.checked,
     };
