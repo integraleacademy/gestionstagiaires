@@ -200,6 +200,18 @@ class QontoInvoiceStatusTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 401)
 
+    def test_billing_lines_reuse_trainee_level_qonto_invoice(self):
+        data = {"sessions": [{"id": "S1", "training_type": "APS", "date_start": "2026-09-01", "date_end": "2026-10-01", "trainees": [{
+            "id": "T1", "first_name": "Clement", "last_name": "Vaillant", "personal_amount": 1,
+            "qonto_invoice": {"qonto_invoice_id": "inv_admin", "qonto_invoice_number": "F-ADMIN", "qonto_invoice_status": "finalized", "amount_ttc": 1, "created_at": "2026-06-30T10:00:00Z"}
+        }]}]}
+        lines = gestion_app._billing_lines(data)
+
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0]["qontoInvoiceId"], "inv_admin")
+        self.assertEqual(lines[0]["qontoInvoiceNumber"], "F-ADMIN")
+        self.assertEqual(lines[0]["invoiceStatus"], "finalized")
+        self.assertEqual(lines[0]["paymentStatus"], "unpaid")
 
 if __name__ == "__main__":
     unittest.main()
