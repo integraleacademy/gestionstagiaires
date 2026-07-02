@@ -293,5 +293,55 @@ class YousignStatusRefreshTests(unittest.TestCase):
         self.assertIn("signer.done", {"signature_request.done", "signature_request.completed", "signer.done", "signer.completed"})
 
 
+class ApsConventionGenerationTests(unittest.TestCase):
+    def test_aps_convention_generation_uses_word_template_placeholders(self):
+        session = {
+            "id": "session-1",
+            "training_type": "APS",
+            "name": "Formation APS",
+            "date_start": "2026-07-08",
+            "date_end": "2026-08-12",
+        }
+        trainee = {
+            "id": "trainee-1",
+            "email": "stagiaire@example.com",
+            "first_name": "Jean",
+            "last_name": "Dupont",
+            "zip_code": "83480",
+            "city": "Puget-sur-Argens",
+            "personal_amount": "300",
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            def fake_run(command, check, capture_output, text, timeout):
+                pdf_path = os.path.splitext(command[-1])[0] + ".pdf"
+                with open(pdf_path, "wb") as fh:
+                    fh.write(b"pdf")
+                return mock.Mock(returncode=0, stdout="", stderr="")
+
+            with mock.patch.object(app, "YOUSIGN_CONVENTION_DIR", tmpdir), \
+                 mock.patch.object(app, "_find_libreoffice_binary", return_value="libreoffice"), \
+                 mock.patch.object(app.subprocess, "run", side_effect=fake_run):
+                docx_path, pdf_path = app._generate_aps_convention_files(session, trainee, "session-1", "trainee-1")
+
+            document = app.Document(docx_path)
+            generated_text = "\n".join(
+                [paragraph.text for paragraph in document.paragraphs]
+                + [cell.text for table in document.tables for row in table.rows for cell in row.cells]
+            )
+
+            pdf_exists = os.path.exists(pdf_path)
+
+        self.assertTrue(pdf_exists)
+        self.assertIn("DUPONT Jean", generated_text)
+        self.assertIn("83480 PUGET-SUR-ARGENS", generated_text)
+        self.assertIn("du 08/07/2026 au 12/08/2026", generated_text)
+        self.assertIn("RNCP36648", generated_text)
+        self.assertIn("300 €", generated_text)
+        self.assertIn("{{s1|signature|160|60}}", generated_text)
+        self.assertNotIn("[FormationConventions:]", generated_text)
+        self.assertNotIn("['NomIdentite]", generated_text)
+
+
 if __name__ == "__main__":
     unittest.main()

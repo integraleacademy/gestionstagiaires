@@ -21644,6 +21644,63 @@ def _aps_convention_base_filename(trainee: Dict[str, Any], trainee_id: str = "")
     return f"convention_formation_aps_{last_name}{suffix}"
 
 
+
+def _format_euro_amount(value: Any) -> str:
+    raw = str(value if value is not None else "").strip().replace(" ", "").replace(",", ".")
+    if not raw:
+        return "0 €"
+    try:
+        amount = float(raw)
+    except Exception:
+        return str(value).strip()
+    if amount.is_integer():
+        return f"{int(amount)} €"
+    return f"{amount:.2f}".replace(".", ",") + " €"
+
+
+def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
+    first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
+    last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper()
+    full_name = f"{last_name} {first_name}".strip()
+    zip_code = str(trainee.get("zip_code") or trainee.get("code_postal") or trainee.get("postal_code") or "").strip()
+    city = str(trainee.get("city") or trainee.get("ville") or "").strip().upper()
+    training_type = str(_session_get(session_obj, "training_type", "") or "APS").strip()
+    training_price = trainee.get("training_price") or default_training_price(training_type) or 1650
+    personal_amount = trainee.get("personal_amount")
+    if personal_amount in (None, ""):
+        personal_amount = training_price
+    edition_date = datetime.datetime.utcnow().strftime("%d/%m/%Y")
+    return {
+        "['Nom]": "Intégrale Academy",
+        "['FormeJuridique]": "SAS",
+        "[OfNaf]": "8559A",
+        "['NumeroDeclarationActivite]": "93830739683",
+        "['NomIdentite]": full_name,
+        "[CodePostal]": zip_code,
+        "[Ville]": city,
+        "[DateMinActionFormation]": fr_date(str(_session_get(session_obj, "date_start", ""))),
+        "[DateMaxActionFormation]": fr_date(str(_session_get(session_obj, "date_end", ""))),
+        "[Code]": "RNCP36648",
+        "['MontantTTC]": _format_euro_amount(personal_amount),
+        "[Nom]": last_name,
+        "[Prenom]": first_name,
+        "['Ville]": "Puget-sur-Argens",
+        "['DateEdition]": edition_date,
+        "[FormationConventions:]": "",
+        "[:FormationConventions]": "",
+        "[Apprenants:]": "",
+        "[:Apprenants]": "",
+        "[setTypeSignature]": "",
+        "[isSignatureNumerique]": "",
+        "[:if]": "",
+        "[sc_sceaudeconfiance]": "",
+        "[/sc_sceaudeconfiance]": "",
+        "[sc_sign1.signature]": "{{s1|signature|160|60}}",
+        "[/sc_sign1.signature]": "",
+        "[sc_sign2.signature]": "",
+        "[/sc_sign2.signature]": "",
+    }
+
 def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
     """Generate the APS training convention used exclusively for Yousign."""
     template_path = _aps_convention_template_path()
@@ -21667,6 +21724,11 @@ def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[st
         _render_docx_with_python_template(template_path, final_docx_path, context)
     else:
         shutil.copyfile(template_path, final_docx_path)
+    doc = Document(final_docx_path)
+    _replace_in_docx(doc, _aps_convention_replacements(session_obj, trainee))
+    doc.save(final_docx_path)
+    if not _docx_text_contains_yousign_smart_anchor(final_docx_path, signer_index=1):
+        raise RuntimeError(YOUSIGN_SMART_ANCHOR_MISSING_MESSAGE)
     if not os.path.exists(final_docx_path) or os.path.getsize(final_docx_path) <= 0:
         raise RuntimeError("Le DOCX final de convention APS est introuvable ou vide.")
     lo_binary = _find_libreoffice_binary()
