@@ -21291,6 +21291,53 @@ def _download_yousign_signed_pdf(signature_request_id: str, trainee_id: str) -> 
     return path
 
 
+APS_CONVOCATION_AUTO_SEND_DELAY_SECONDS = 5 * 60
+_aps_convocation_auto_send_timers: Set[str] = set()
+_aps_convocation_auto_send_timers_lock = threading.Lock()
+
+
+def _send_scheduled_convocation_after_convention_signed(session_id: str, trainee_id: str) -> None:
+    data = load_data()
+    sess, trainees, trainee = _find_session_trainee(data, session_id, trainee_id)
+    if not sess or not trainee:
+        app.logger.warning("[CONVOCATION] scheduled send skipped: trainee not found session_id=%s trainee_id=%s", session_id, trainee_id)
+        return
+    try:
+        _send_convocation_after_convention_signed(sess, trainee, session_id, trainee_id)
+    except Exception as conv_exc:
+        trainee["convocation_auto_last_error"] = str(conv_exc)
+        app.logger.exception("[CONVOCATION] scheduled send after convention signature failed trainee_id=%s", trainee_id)
+    finally:
+        trainee["updated_at"] = _now_iso()
+        sess["trainees"] = trainees
+        sess.pop("stagiaires", None)
+        save_data(data)
+        key = f"{session_id}:{trainee_id}"
+        with _aps_convocation_auto_send_timers_lock:
+            _aps_convocation_auto_send_timers.discard(key)
+
+
+def _schedule_convocation_after_convention_signed(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> None:
+    """Planifie l’envoi automatique de la convocation 5 minutes après signature."""
+    if not _is_aps_session(session_obj) or trainee.get("convocation_aps_sent_at"):
+        return
+    key = f"{session_id}:{trainee_id}"
+    with _aps_convocation_auto_send_timers_lock:
+        if key in _aps_convocation_auto_send_timers:
+            return
+        _aps_convocation_auto_send_timers.add(key)
+    scheduled_at = datetime.datetime.utcnow() + datetime.timedelta(seconds=APS_CONVOCATION_AUTO_SEND_DELAY_SECONDS)
+    trainee["convocation_auto_scheduled_at"] = scheduled_at.replace(microsecond=0).isoformat() + "Z"
+    trainee["convocation_auto_last_error"] = ""
+    timer = threading.Timer(
+        APS_CONVOCATION_AUTO_SEND_DELAY_SECONDS,
+        _send_scheduled_convocation_after_convention_signed,
+        args=(session_id, trainee_id),
+    )
+    timer.daemon = True
+    timer.start()
+
+
 def _mark_yousign_convention_signed(data: Dict[str, Any], sess: Dict[str, Any], trainees: List[Dict[str, Any]], trainee: Dict[str, Any], request_id: str, event_id: str = "") -> None:
     state = _yousign_state(trainee)
     if _is_yousign_signature_done(state) and state.get("signed_pdf_path"):
@@ -21308,11 +21355,7 @@ def _mark_yousign_convention_signed(data: Dict[str, Any], sess: Dict[str, Any], 
     })
     trainee["convention_aps_status"] = "signed"
     trainee["convention_aps_signed_at"] = state.get("signed_at") or now
-    try:
-        _send_convocation_after_convention_signed(sess, trainee, str(sess.get("id") or ""), str(trainee.get("id") or ""))
-    except Exception as conv_exc:
-        trainee["convocation_auto_last_error"] = str(conv_exc)
-        app.logger.exception("[CONVOCATION] automatic send after convention signature failed trainee_id=%s", trainee.get("id"))
+    _schedule_convocation_after_convention_signed(sess, trainee, str(sess.get("id") or ""), str(trainee.get("id") or ""))
     trainee["updated_at"] = now
     sess["trainees"] = trainees
     sess.pop("stagiaires", None)
@@ -21656,6 +21699,7 @@ def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end
         <tr><td style="background:#0b2f5b;padding:28px 30px;color:#ffffff;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td style="width:88px;padding-right:18px;vertical-align:middle;"><img src="{safe_logo_url}" width="74" alt="Logo Intégrale Academy" style="display:block;width:74px;height:auto;border:0;outline:none;text-decoration:none;background:#ffffff;border-radius:14px;padding:7px;"></td><td style="vertical-align:middle;"><div style="font-size:24px;font-weight:700;line-height:1.2;">Intégrale Academy</div><div style="font-size:15px;opacity:.92;margin-top:6px;line-height:1.4;">Convocation formation APS</div></td></tr></table></td></tr>
         <tr><td style="padding:32px 30px 10px 30px;">
           <p style="margin:0 0 16px 0;font-size:18px;line-height:1.5;">Bonjour {safe_first_name},</p>
+          <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">Nous avons bien reçu votre Convention de formation signée et nous vous en remercions.</p>
           <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">Nous revenons vers vous concernant votre formation <strong>Agent de Prévention et de Sécurité (APS)</strong>{period_sentence}.</p>
           <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#415166;">Vous trouverez en pièce jointe votre convocation officielle.</p>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f7faff;border:1px solid #dbeafe;border-radius:14px;margin:0 0 28px 0;"><tr><td style="padding:18px 20px;">
