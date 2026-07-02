@@ -23146,6 +23146,12 @@ def admin_sessions_billing():
     return render_template('admin_sessions_billing.html')
 
 
+@app.get('/admin/billing/direct-debits')
+@admin_login_required
+def admin_direct_debits():
+    return render_template('admin_direct_debits.html')
+
+
 @app.get('/api/admin/billing-lines')
 @admin_login_required
 def api_admin_billing_lines():
