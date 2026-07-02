@@ -60,6 +60,7 @@ def add_no_store_headers(response):
 
 @app.get("/api/qonto/oauth/ping")
 def api_qonto_oauth_ping():
+    app.logger.info("[QONTO OAUTH PING] route called")
     return jsonify({"ok": True, "route": "qonto_oauth_ping"})
 
 
