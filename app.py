@@ -21226,9 +21226,16 @@ def build_signature_email_html(first_name: str, formation_label: str, dates_sess
 </html>'''
 
 
+def _signature_email_training_label(session_obj: Dict[str, Any]) -> str:
+    training_type = str(_session_get(session_obj, "training_type", "") or "").strip()
+    if training_type:
+        return formation_label(training_type) or training_type
+    return str(_session_get(session_obj, "name", "") or session_obj.get("training_name") or "Formation").strip() or "Formation"
+
+
 def _build_yousign_signature_link_email(session_obj: Dict[str, Any], trainee: Dict[str, Any], signature_link: str) -> Tuple[str, str, str]:
     first_name = str(trainee.get("first_name") or "").strip() or "Madame, Monsieur"
-    training_name = str(_session_get(session_obj, "name", "") or session_obj.get("training_name") or "Formation").strip() or "Formation"
+    training_name = _signature_email_training_label(session_obj)
     dates_session = _aps_session_dates_label(session_obj)
     subject = "Votre convention de formation est à signer"
     html_body = build_signature_email_html(first_name, training_name, dates_session, signature_link)
