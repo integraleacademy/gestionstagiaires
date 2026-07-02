@@ -18,7 +18,6 @@ class QontoOauthTests(unittest.TestCase):
         env = {
             "QONTO_OAUTH_CLIENT_ID": "client-id",
             "QONTO_OAUTH_CLIENT_SECRET": "client-secret",
-            "QONTO_OAUTH_REDIRECT_URI": "https://gestion.test/api/qonto/oauth/callback",
             "QONTO_OAUTH_ENV": "sandbox",
         }
         with patch.dict(os.environ, env, clear=False):
@@ -30,7 +29,7 @@ class QontoOauthTests(unittest.TestCase):
         self.assertEqual(f"{parsed.scheme}://{parsed.netloc}{parsed.path}", "https://oauth-sandbox.staging.qonto.co/oauth2/auth")
         qs = parse_qs(parsed.query)
         self.assertEqual(qs["client_id"], ["client-id"])
-        self.assertEqual(qs["redirect_uri"], ["https://gestion.test/api/qonto/oauth/callback"])
+        self.assertEqual(qs["redirect_uri"], [gestion_app.QONTO_OAUTH_REDIRECT_URI])
         self.assertEqual(qs["response_type"], ["code"])
         self.assertEqual(qs["scope"], [gestion_app.QONTO_OAUTH_SCOPE])
         self.assertTrue(qs.get("state", [""])[0])
@@ -46,6 +45,9 @@ class QontoOauthTests(unittest.TestCase):
         serialized = response.get_data(as_text=True)
         self.assertNotIn("access-secret", serialized)
         self.assertNotIn("refresh-secret", serialized)
+        self.assertTrue(payload["has_access_token"])
+        self.assertTrue(payload["has_refresh_token"])
+        self.assertEqual(payload["scopes"], gestion_app.QONTO_OAUTH_SCOPE.split())
 
     def test_sepa_request_uses_refreshed_oauth_bearer_header_only(self):
         data = {"qonto_oauth": {"connected": True, "access_token": "old-token", "refresh_token": "refresh-token", "expires_at": 1}}
