@@ -15537,6 +15537,7 @@ def api_create_trainee(session_id: str):
         t["access_sent_email_ok"] = False
         t["access_sent_sms_ok"] = False
 
+    _auto_send_convention_signature_if_needed(s, trainees, t, session_id, trainee_id, trigger="create_100_cpf")
     save_data(data)
 
     return jsonify({
@@ -15704,6 +15705,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
     }
 
     previous_vae_status = vae_status_view(t.get("vae_status"))["key"]
+    previous_financement_status = str(t.get("financement_status") or "").strip()
     vae_fields_changed = any(k in payload for k in ("vae_status", "vae_status_label", "vae_action_dates", "vae_jury_date"))
 
     send_vae_notification = True if payload.get("send_vae_notification", True) in (True, "true", "1", 1, "yes", "on") else False
@@ -15829,7 +15831,9 @@ def api_update_trainee(session_id: str, trainee_id: str):
                 kind=f"integrale_{current_vae_status}",
             )
 
-    if (payload.get("financement_status") or "").strip() == "validated":
+    financement_was_validated = previous_financement_status == "validated"
+    financement_validated_requested = (payload.get("financement_status") or "").strip() == "validated"
+    if financement_validated_requested:
         t["financement_rejected_note"] = ""
         t["financement_new_date_seen"] = False
 
@@ -15968,6 +15972,9 @@ def api_update_trainee(session_id: str, trainee_id: str):
     t["docs_relance_auto_planned_date"] = "" if dossier_complete else (planned.isoformat() if planned else "")
     if dossier_complete:
         t["docs_relance_auto_sent_at"] = ""
+
+    if financement_validated_requested and not financement_was_validated:
+        _auto_send_convention_signature_if_needed(s, trainees, t, session_id, trainee_id, trigger="financement_validated")
 
     if "VTC" in ((_session_get(s, "training_type", "") or "").upper()):
         _sync_vtc_book_notification(data, s, t)
@@ -21244,6 +21251,63 @@ def send_yousign_signature_link_email(session_obj: Dict[str, Any], trainee: Dict
     trainee["updated_at"] = now
     return ok
 
+
+
+def _is_trainee_financed_100_percent_cpf(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> bool:
+    """Return True when the CPF amount covers the full training price and no other amount is set."""
+    training_type = _session_get(session_obj, "training_type", "")
+    training_price = _money(trainee.get("training_price") or default_training_price(training_type))
+    cpf_amount = _money(trainee.get("cpf_amount"))
+    personal_amount = _money(trainee.get("personal_amount"))
+    other_amount = _money(trainee.get("other_amount"))
+    return training_price > 0 and cpf_amount >= training_price and personal_amount <= 0 and other_amount <= 0
+
+
+def _auto_send_convention_signature_if_needed(
+    session_obj: Dict[str, Any],
+    trainees: List[Dict[str, Any]],
+    trainee: Dict[str, Any],
+    session_id: str,
+    trainee_id: str,
+    *,
+    trigger: str,
+) -> bool:
+    """Create the Yousign convention and email it once when business rules allow it."""
+    if "VAE" in str(_session_get(session_obj, "training_type", "") or "").upper():
+        return False
+    state = _yousign_state(trainee)
+    if state.get("signature_request_id") or state.get("signature_email_sent_at"):
+        return False
+    if trigger == "create_100_cpf":
+        should_send = _is_trainee_financed_100_percent_cpf(session_obj, trainee)
+    elif trigger == "financement_validated":
+        should_send = not _is_trainee_financed_100_percent_cpf(session_obj, trainee)
+    else:
+        should_send = False
+    if not should_send:
+        return False
+    try:
+        state = create_yousign_convention_signature(session_obj, trainee, session_id, trainee_id)
+        signature_link = str(state.get("signature_link") or "").strip()
+        email_ok = send_yousign_signature_link_email(session_obj, trainee, signature_link)
+        trainee["convention_auto_sent_at"] = _now_iso()
+        trainee["convention_auto_trigger"] = trigger
+        trainee["convention_auto_email_ok"] = bool(email_ok)
+        trainee["convention_auto_last_error"] = ""
+        session_obj["trainees"] = trainees
+        session_obj.pop("stagiaires", None)
+        return True
+    except Exception as exc:
+        message = _sanitize_yousign_error(str(exc))
+        state = _yousign_state(trainee)
+        state["status"] = "error"
+        state["last_error"] = message
+        trainee["convention_auto_last_error"] = message
+        trainee["updated_at"] = _now_iso()
+        session_obj["trainees"] = trainees
+        session_obj.pop("stagiaires", None)
+        app.logger.exception("[YOUSIGN] auto convention signature failed trainee_id=%s trigger=%s error=%s", trainee_id, trigger, message)
+        return False
 
 def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> Dict[str, Any]:
     existing_state = _yousign_state(trainee)
