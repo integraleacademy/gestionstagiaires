@@ -1371,8 +1371,7 @@
   async function proposeConventionSignatureFromSessions(result){
     const continueUrl = result.trainee_url || result.summary_url || `/admin/sessions/${result.session_id || ""}/trainees`;
     const continueAfterConvention = ()=>{
-      if(result.ypareo_url){ window.openYpareoTransmission({url: result.ypareo_url, continueUrl}); }
-      else{ window.location.href = continueUrl; }
+      window.location.href = continueUrl;
     };
     if(result.is_vae){ continueAfterConvention(); return; }
     const conventionPayload = await window.openConventionTransmission?.({
