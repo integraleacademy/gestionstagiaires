@@ -21660,6 +21660,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         convention_status = "not_generated"
 
     convention_signed = convention_status == "signed"
+    convention_sent = convention_status in {"sent", "waiting_signature", "signed"}
     convocation_error = trainee.get("convocation_aps_last_error") or trainee.get("convocation_auto_last_error") or ""
     if not convention_signed and convocation_error == "En attente de signature de la convention":
         convocation_error = ""
@@ -21677,11 +21678,20 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     else:
         convocation_status = "not_generated"
 
+    if not has_generated_convention:
+        convocation_block_reason = "En attente de génération de la convention"
+    elif not convention_sent:
+        convocation_block_reason = "En attente d’envoi de la convention"
+    elif not convention_signed:
+        convocation_block_reason = "En attente signature convention"
+    else:
+        convocation_block_reason = ""
+
     timeline = [
-        {"label": "Convention générée", "state": "complete" if has_generated_convention else ("error" if convention_status == "error" else "pending")},
-        {"label": "Convention envoyée", "state": "complete" if has_signature_request else ("error" if convention_status == "error" else "blocked")},
-        {"label": "Convention signée", "state": "complete" if convention_signed else ("error" if convention_status in {"error", "refused", "expired"} else "pending" if has_signature_request else "blocked")},
-        {"label": "Convocation envoyée", "state": "complete" if convocation_status == "sent" else ("error" if convocation_status == "error" else "blocked" if not convention_signed else "pending")},
+        {"label": "Convention", "state": "complete" if has_generated_convention else ("error" if convention_status == "error" else "pending")},
+        {"label": "Signature", "state": "complete" if convention_signed else ("error" if convention_status in {"error", "refused", "expired"} else "pending" if has_signature_request else "blocked")},
+        {"label": "Convocation", "state": "complete" if convocation_status == "sent" else ("error" if convocation_status == "error" else "blocked" if not convention_signed else "pending")},
+        {"label": "Attestations", "state": "blocked" if not convention_signed else "pending"},
     ]
     if convention_status == "error" or convocation_status == "error":
         global_status = "error"
@@ -21693,18 +21703,59 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         global_status = "blocked"
     else:
         global_status = "action_required"
+    ready_documents = int(convention_signed) + int(convocation_status == "sent")
+    total_documents = 4
+    progress_percent = round((ready_documents / total_documents) * 100)
+
+    convention_labels = {
+        "not_generated": ("Non générée", "file", "blocked", "blocked", "Générer la convention"),
+        "generated": ("Générée", "file", "pending", "ready", "Envoyer pour signature"),
+        "sent": ("Envoyée", "send", "pending", "pending", "Voir le statut Yousign"),
+        "waiting_signature": ("Signature attendue", "hourglass", "waiting", "pending", "Voir le statut Yousign"),
+        "signed": ("Signée", "check", "complete", "done", "Convention signée"),
+        "refused": ("Refusée", "alert", "error", "blocked", "Créer une nouvelle demande"),
+        "expired": ("Expirée", "alert", "error", "blocked", "Créer une nouvelle demande"),
+        "error": ("Erreur", "alert", "error", "blocked", "Réessayer"),
+    }
+    c_label, c_icon, c_tone, c_card_tone, c_primary_action = convention_labels.get(convention_status, convention_labels["error"])
+    convocation_labels = {
+        "blocked_waiting_convention": (convocation_block_reason or "Bloquée", "hourglass" if has_signature_request else "lock", "blocked", "blocked"),
+        "not_generated": ("Prêt", "file", "pending", "ready"),
+        "generated": ("Générée", "file", "pending", "ready"),
+        "sent": ("Envoyée", "check", "complete", "done"),
+        "error": ("Erreur", "alert", "error", "blocked"),
+    }
+    v_label, v_icon, v_tone, v_card_tone = convocation_labels.get(convocation_status, convocation_labels["error"])
+
     return {
         "global_status": global_status,
+        "ready_documents": ready_documents,
+        "total_documents": total_documents,
+        "progress_percent": progress_percent,
         "convention": {
-            "status": convention_status, "generated_at": generated_at, "sent_at": sent_at, "signed_at": signed_at,
+            "status": convention_status, "label": c_label, "icon": c_icon, "icon_class": "automation-icon--hourglass" if c_icon == "hourglass" else "", "tone": c_tone, "card_tone": c_card_tone,
+            "primary_action": c_primary_action, "can_send": convention_status != "signed", "can_download": bool(has_generated_convention or state.get("signed_pdf_path")),
+            "generated_at": generated_at, "sent_at": sent_at, "signed_at": signed_at,
             "recipient_email": trainee.get("email") or "", "signature_request_id": state.get("signature_request_id") or "",
             "download_url": url_for("admin_view_signed_convention" if convention_signed and state.get("signed_pdf_path") else "admin_view_original_convention", session_id=session_id, trainee_id=trainee_id) if (has_generated_convention or state.get("signed_pdf_path")) else "",
             "error": convention_error,
+            "timeline_steps": [
+                {"label": "Générée", "value": generated_at or "Pas encore effectué", "state": "done" if generated_at else "blocked"},
+                {"label": "Envoyée", "value": sent_at or "Pas encore effectué", "state": "done" if sent_at else ("pending" if has_generated_convention else "blocked")},
+                {"label": "Signature", "value": ("Signée le " + signed_at) if signed_at else ("En attente de signature" if has_signature_request else "Pas encore effectué"), "state": "done" if signed_at else ("blocked" if convention_status in {"refused", "expired"} else "pending" if has_signature_request else "blocked")},
+            ],
         },
         "convocation": {
-            "status": convocation_status, "generated_at": convocation_generated_at, "sent_at": convocation_sent_at,
+            "status": convocation_status, "label": v_label, "icon": v_icon, "icon_class": "automation-icon--hourglass" if v_icon == "hourglass" else "", "tone": v_tone, "card_tone": v_card_tone,
+            "can_generate": convention_signed, "can_send": convention_signed and convocation_status in {"generated", "sent"}, "block_reason": convocation_block_reason,
+            "generated_at": convocation_generated_at, "sent_at": convocation_sent_at,
             "download_url": url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id) if has_convocation_file else "",
             "error": convocation_error,
+            "timeline_steps": [
+                {"label": "Convention validée", "value": "Signée" if convention_signed else (convocation_block_reason or "Pas encore effectué"), "state": "done" if convention_signed else "blocked"},
+                {"label": "Génération", "value": convocation_generated_at or "Pas encore effectué", "state": "done" if convocation_generated_at else ("pending" if convention_signed else "blocked")},
+                {"label": "Envoi", "value": ("Envoyée le " + convocation_sent_at) if convocation_sent_at else "Pas encore effectué", "state": "done" if convocation_sent_at else ("pending" if has_convocation_file else "blocked")},
+            ],
         },
         "timeline": timeline,
     }
