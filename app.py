@@ -1512,10 +1512,15 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=datetime.timedelta(days=SESSION_DAYS),
 )
 
+def _request_expects_json() -> bool:
+    return request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json"
+
 def admin_login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if not session.get("admin_logged_in"):
+            if _request_expects_json():
+                return jsonify({"ok": False, "error": "Session administrateur expirée. Reconnectez-vous."}), 401
             return redirect(url_for("admin_login", next=request.path))
         return view(*args, **kwargs)
     return wrapped
@@ -1524,6 +1529,8 @@ def admin_write_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if session.get("admin_role") == "viewer":
+            if _request_expects_json():
+                return jsonify({"ok": False, "error": "Droits insuffisants pour modifier ces données."}), 403
             abort(403)
         return view(*args, **kwargs)
     return wrapped
