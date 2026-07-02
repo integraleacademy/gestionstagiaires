@@ -14,11 +14,11 @@ class QontoOauthTests(unittest.TestCase):
             sess["admin_logged_in"] = True
             sess["admin_role"] = "admin"
 
-    def test_admin_connect_redirects_to_qonto_sandbox_with_secure_state_and_scope(self):
+    def test_admin_connect_redirects_to_qonto_production_with_secure_state_and_scope(self):
         env = {
             "QONTO_OAUTH_CLIENT_ID": "client-id",
             "QONTO_OAUTH_CLIENT_SECRET": "client-secret",
-            "QONTO_OAUTH_ENV": "sandbox",
+            "QONTO_OAUTH_ENV": "production",
         }
         with patch.dict(os.environ, env, clear=False):
             response = self.client.get("/admin/qonto/connect")
@@ -26,7 +26,7 @@ class QontoOauthTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         location = response.headers["Location"]
         parsed = urlparse(location)
-        self.assertEqual(f"{parsed.scheme}://{parsed.netloc}{parsed.path}", "https://oauth-sandbox.staging.qonto.co/oauth2/auth")
+        self.assertEqual(f"{parsed.scheme}://{parsed.netloc}{parsed.path}", "https://oauth.qonto.com/oauth2/auth")
         qs = parse_qs(parsed.query)
         self.assertEqual(qs["client_id"], ["client-id"])
         self.assertEqual(qs["redirect_uri"], [gestion_app.QONTO_OAUTH_REDIRECT_URI])
@@ -37,7 +37,7 @@ class QontoOauthTests(unittest.TestCase):
             self.assertEqual(sess["qonto_oauth_state"], qs["state"][0])
 
     def test_oauth_status_does_not_expose_tokens(self):
-        data = {"qonto_oauth": {"connected": True, "access_token": "access-secret", "refresh_token": "refresh-secret", "expires_at": 9999999999, "scope": gestion_app.QONTO_OAUTH_SCOPE}}
+        data = {"qonto_oauth": {"connected": True, "access_token": "access-secret", "refresh_token": "refresh-secret", "expires_at": 9999999999, "scope": gestion_app.QONTO_OAUTH_SCOPE, "environment": "production"}}
         with patch.object(gestion_app, "load_data", return_value=data):
             response = self.client.get("/api/qonto/oauth/status")
         payload = response.get_json()
@@ -48,9 +48,31 @@ class QontoOauthTests(unittest.TestCase):
         self.assertTrue(payload["has_access_token"])
         self.assertTrue(payload["has_refresh_token"])
         self.assertEqual(payload["scopes"], gestion_app.QONTO_OAUTH_SCOPE.split())
+        self.assertEqual(payload["message"], "OAuth Qonto : connecté production")
+
+    def test_oauth_status_flags_sandbox_token_as_incompatible(self):
+        data = {"qonto_oauth": {"connected": True, "refresh_token": "refresh-secret", "environment": "sandbox"}}
+        with patch.object(gestion_app, "load_data", return_value=data):
+            response = self.client.get("/api/qonto/oauth/status")
+        payload = response.get_json()
+        self.assertFalse(payload["connected"])
+        self.assertTrue(payload["incompatible"])
+        self.assertEqual(payload["message"], "OAuth Qonto : connecté sandbox, incompatible avec production")
+
+    def test_admin_reset_qonto_oauth_tokens_clears_sensitive_fields(self):
+        data = {"qonto_oauth": {"connected": True, "access_token": "access", "refresh_token": "refresh", "expires_at": 123, "scope": "a b", "scopes": ["a"], "environment": "sandbox"}}
+        saved = []
+        with patch.object(gestion_app, "load_data", return_value=data), patch.object(gestion_app, "save_data", side_effect=saved.append):
+            response = self.client.post("/admin/qonto/oauth/reset")
+        self.assertEqual(response.status_code, 302)
+        settings = data["qonto_oauth"]
+        for key in ("access_token", "refresh_token", "expires_at", "scope", "scopes", "environment"):
+            self.assertNotIn(key, settings)
+        self.assertFalse(settings["connected"])
+        self.assertTrue(saved)
 
     def test_sepa_request_uses_refreshed_oauth_bearer_header_only(self):
-        data = {"qonto_oauth": {"connected": True, "access_token": "old-token", "refresh_token": "refresh-token", "expires_at": 1}}
+        data = {"qonto_oauth": {"connected": True, "access_token": "old-token", "refresh_token": "refresh-token", "expires_at": 1, "environment": "production"}}
         saved = []
         token_response = {"access_token": "new-token", "refresh_token": "new-refresh", "expires_in": 3600, "token_type": "bearer"}
         with patch.object(gestion_app, "load_data", return_value=data), \
