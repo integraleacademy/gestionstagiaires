@@ -3356,6 +3356,8 @@ function updateDocsRelanceState(status, plannedDateIso){
   const financeValidationAutoBtn = document.getElementById('btnFinanceAutoMode');
   let financeValidationManualMode = financeValidationWrap?.dataset.manualMode === 'manual';
   let financeValidationManualStatus = financeValidationWrap?.dataset.manualStatus || '';
+  let currentFinancementStatus = {{ (trainee.financement_status or 'soon')|tojson }};
+  let financeStatusSyncInFlight = false;
   let currentLines = [];
   let currentLine = null;
   let modalLoading = false;
@@ -3438,6 +3440,14 @@ function updateDocsRelanceState(status, plannedDateIso){
     if(c.prixFormation > epsilon && c.montantCpf + epsilon >= c.prixFormation && c.montantPersonnel <= epsilon && c.montantAutre <= epsilon) return {label:'Financement validé', tone:'green', icon:'✓'};
     return {label:'Financement à valider', tone:'gray', icon:'⌛'};
   }
+  function syncFinancementStatusIfValidated(state){
+    if(state.tone !== 'green' || currentFinancementStatus === 'validated' || financeStatusSyncInFlight) return;
+    financeStatusSyncInFlight = true;
+    updateTrainee({financement_status:'validated'})
+      .then(()=>{ currentFinancementStatus = 'validated'; })
+      .catch((error)=>{ console.error('Synchronisation statut financement impossible', error); })
+      .finally(()=>{ financeStatusSyncInFlight = false; });
+  }
   function renderFinancingValidation(c, lines){
     if(!financeValidationStatus) return;
     const state = financingValidationFrom(c, lines);
@@ -3445,6 +3455,7 @@ function updateDocsRelanceState(status, plannedDateIso){
     financeValidationStatus.innerHTML = `<span class="finance-validation-status__icon">${esc(state.icon)}</span><span class="finance-validation-status__label">${esc(state.label)}</span>${state.manual?'<span class="finance-validation-status__manual">manuel</span>':''}`;
     financeValidationForceBtn?.toggleAttribute('disabled', state.manual);
     if(financeValidationAutoBtn) financeValidationAutoBtn.style.display = state.manual ? '' : 'none';
+    syncFinancementStatusIfValidated(state);
   }
   const isoToday=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10);};
   function addDays(date,days){const d=new Date(date+'T00:00:00');d.setDate(d.getDate()+days);return d.toISOString().slice(0,10);}
@@ -3623,9 +3634,10 @@ function updateDocsRelanceState(status, plannedDateIso){
   financeValidationForceBtn?.addEventListener('click', async ()=>{
     financeValidationForceBtn.disabled = true;
     try{
-      await updateTrainee({financing_validation_manual_mode:'manual', financing_validation_manual_status:'validated'});
+      await updateTrainee({financing_validation_manual_mode:'manual', financing_validation_manual_status:'validated', financement_status:'validated'});
       financeValidationManualMode = true;
       financeValidationManualStatus = 'validated';
+      currentFinancementStatus = 'validated';
       renderFinancingValidation(computeFinance(currentLines), currentLines);
     }catch(e){ alert(e.message || 'Forçage du statut impossible'); financeValidationForceBtn.disabled = false; }
   });
