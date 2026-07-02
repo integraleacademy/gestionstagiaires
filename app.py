@@ -129,7 +129,7 @@ QONTO_WEBHOOK_SIGNATURE_HEADERS = (
 )
 
 QONTO_OAUTH_SCOPE = "offline_access client.read client.write client_invoice.write client_invoices.read sepa_direct_debit.read sepa_direct_debit.write webhook"
-QONTO_OAUTH_SANDBOX_BASE_URL = "https://oauth-sandbox.staging.qonto.co"
+QONTO_OAUTH_ENVIRONMENT = "production"
 QONTO_OAUTH_PRODUCTION_BASE_URL = "https://oauth.qonto.com"
 QONTO_OAUTH_REQUIRED_MESSAGE = "Connexion Qonto OAuth requise pour programmer les prélèvements SEPA."
 QONTO_OAUTH_REDIRECT_URI = "https://gestionstagiaires-r5no.onrender.com/api/qonto/oauth/callback"
@@ -153,18 +153,21 @@ def _qonto_secret_key() -> str:
 
 
 def _qonto_base_url() -> str:
-    return (os.environ.get("QONTO_API_BASE_URL") or QONTO_API_BASE_URL_DEFAULT).strip().rstrip("/")
+    configured = (os.environ.get("QONTO_API_BASE_URL") or QONTO_API_BASE_URL_DEFAULT).strip().rstrip("/")
+    if "sandbox" in configured and "staging.qonto.co" in configured:
+        return QONTO_API_BASE_URL_DEFAULT
+    return configured
 
 
 def _qonto_oauth_environment() -> str:
-    return (os.environ.get("QONTO_OAUTH_ENV") or os.environ.get("QONTO_ENV") or "sandbox").strip().lower()
+    return QONTO_OAUTH_ENVIRONMENT
 
 
 def _qonto_oauth_base_url() -> str:
     configured = (os.environ.get("QONTO_OAUTH_BASE_URL") or "").strip().rstrip("/")
-    if configured:
+    if configured and not ("sandbox" in configured and "staging.qonto.co" in configured):
         return configured
-    return QONTO_OAUTH_PRODUCTION_BASE_URL if _qonto_oauth_environment() == "production" else QONTO_OAUTH_SANDBOX_BASE_URL
+    return QONTO_OAUTH_PRODUCTION_BASE_URL
 
 
 def _qonto_oauth_client_id() -> str:
@@ -257,10 +260,37 @@ def _qonto_oauth_refresh_token(data: Dict[str, Any]) -> str:
     return _qonto_secret((_qonto_oauth_settings(data).get("refresh_token") or ""))
 
 
+def _qonto_oauth_token_environment(data: Dict[str, Any]) -> str:
+    return str(_qonto_oauth_settings(data).get("environment") or "").strip().lower()
+
+
 def _qonto_oauth_connected(data: Optional[Dict[str, Any]] = None) -> bool:
     data = data or load_data()
     settings = _qonto_oauth_settings(data)
-    return bool(settings.get("refresh_token"))
+    return bool(settings.get("refresh_token")) and _qonto_oauth_token_environment(data) == _qonto_oauth_environment()
+
+
+def _qonto_oauth_has_incompatible_token(data: Optional[Dict[str, Any]] = None) -> bool:
+    data = data or load_data()
+    settings = _qonto_oauth_settings(data)
+    return bool(settings.get("refresh_token")) and _qonto_oauth_token_environment(data) not in ("", _qonto_oauth_environment())
+
+
+def _reset_qonto_oauth_tokens(data: Dict[str, Any]) -> None:
+    settings = _qonto_oauth_settings(data)
+    for key in ("access_token", "refresh_token", "expires_at", "scope", "scopes", "environment"):
+        settings.pop(key, None)
+    settings["connected"] = False
+    settings["updated_at"] = _now_iso()
+
+
+def _qonto_oauth_status_message(data: Optional[Dict[str, Any]] = None) -> str:
+    data = data or load_data()
+    if _qonto_oauth_connected(data):
+        return "OAuth Qonto : connecté production"
+    if _qonto_oauth_has_incompatible_token(data):
+        return "OAuth Qonto : connecté sandbox, incompatible avec production"
+    return "OAuth Qonto : non connecté"
 
 
 def _store_qonto_oauth_tokens(data: Dict[str, Any], token_payload: Dict[str, Any]) -> None:
@@ -285,8 +315,6 @@ def _store_qonto_oauth_tokens(data: Dict[str, Any], token_payload: Dict[str, Any
 
 def _exchange_qonto_oauth_token(form_data: Dict[str, str]) -> Dict[str, Any]:
     headers = {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"}
-    if _qonto_oauth_environment() != "production" and _qonto_staging_token():
-        headers["X-Qonto-Staging-Token"] = _qonto_staging_token()
     response = requests.post(f"{_qonto_oauth_base_url()}/oauth2/token", headers=headers, data=form_data, timeout=20)
     raw_body = response.text or ""
     if not response.ok:
@@ -12546,6 +12574,16 @@ def api_qonto_oauth_callback():
     return redirect(url_for("admin_qonto_settings"))
 
 
+@app.post("/admin/qonto/oauth/reset")
+@admin_login_required
+def admin_qonto_oauth_reset():
+    data = load_data()
+    _reset_qonto_oauth_tokens(data)
+    save_data(data)
+    flash("Connexion Qonto OAuth réinitialisée. Vous pouvez relancer une connexion production.", "success")
+    return redirect(url_for("admin_qonto_settings"))
+
+
 @app.get("/api/qonto/oauth/status")
 @admin_login_required
 def api_qonto_oauth_status():
@@ -12559,7 +12597,10 @@ def api_qonto_oauth_status():
         "has_refresh_token": bool(settings.get("refresh_token")),
         "expires_at": settings.get("expires_at") or None,
         "scopes": scope.split() if isinstance(scope, str) else list(scope or []),
-        "message": "Qonto OAuth connecté" if connected else QONTO_OAUTH_REQUIRED_MESSAGE,
+        "environment": settings.get("environment") or None,
+        "expected_environment": _qonto_oauth_environment(),
+        "incompatible": _qonto_oauth_has_incompatible_token(data),
+        "message": _qonto_oauth_status_message(data),
     }), 200
 
 
