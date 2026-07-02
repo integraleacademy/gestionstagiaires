@@ -22141,6 +22141,25 @@ def _qonto_client_kind(payload: Dict[str, Any]) -> str:
     return value or "individual"
 
 
+
+QONTO_FORMATION_FULL_NAMES = {
+    "aps": "Agent de Prévention et de Sécurité (APS)",
+}
+
+
+def qonto_formation_invoice_name(formation_name: Any) -> str:
+    raw = str(formation_name or "").strip()
+    if not raw:
+        return "Formation"
+    normalized = _normalize_financeur_type(raw)
+    return QONTO_FORMATION_FULL_NAMES.get(normalized, raw)
+
+
+def qonto_invoice_item_label(line: Dict[str, Any]) -> str:
+    formation = qonto_formation_invoice_name(line.get('formationName') or 'Formation')
+    trainee_name = f"{line.get('traineeFirstName','')} {line.get('traineeLastName','')}".strip()
+    return f"Formation {formation} - {trainee_name} - Session du {fr_date(line.get('dateStart'))} au {fr_date(line.get('dateEnd') or line.get('dateStart'))}"
+
 def build_qonto_client_payload(invoice_line: Dict[str, Any], trainee: Optional[Dict[str, Any]] = None, session_data: Optional[Dict[str, Any]] = None, financeur: Any = None) -> Dict[str, Any]:
     """Construit le client Qonto canonique (company/individual) avant toute création API.
 
@@ -22673,7 +22692,8 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
             amount_ttc = _money(current.get('amount'))
             vat_rate = 0.0 if is_cpf else _money(current.get('vatRate'))
             amount_ht = round(amount_ttc / (1 + vat_rate / 100), 2) if vat_rate else amount_ttc
-            q_payload = {'client_id': q_client_id, 'issue_date': datetime.date.today().isoformat(), 'due_date': (datetime.date.today()+datetime.timedelta(days=30)).isoformat(), 'currency': 'EUR', 'payment_methods': {'iban': invoice_iban}, 'performance_start_date': current.get('dateStart'), 'performance_end_date': current.get('dateEnd') or current.get('dateStart'), 'status': 'draft', 'terms_and_conditions': 'Paiement à réception de facture.', 'items': [{'title': f"Formation {current.get('formationName') or 'Formation'} - {current.get('traineeFirstName','')} {current.get('traineeLastName','')} - Session du {fr_date(current.get('dateStart'))} au {fr_date(current.get('dateEnd') or current.get('dateStart'))}", 'description': f"Formation {current.get('formationName') or 'Formation'} - {current.get('traineeFirstName','')} {current.get('traineeLastName','')} - Session du {fr_date(current.get('dateStart'))} au {fr_date(current.get('dateEnd') or current.get('dateStart'))}", 'quantity': '1', 'unit_price': {'value': str(amount_ht), 'currency': 'EUR'}, 'vat_rate': format_qonto_vat_rate(vat_rate)}]}
+            invoice_item_label = qonto_invoice_item_label(current)
+            q_payload = {'client_id': q_client_id, 'issue_date': datetime.date.today().isoformat(), 'due_date': (datetime.date.today()+datetime.timedelta(days=30)).isoformat(), 'currency': 'EUR', 'payment_methods': {'iban': invoice_iban}, 'performance_start_date': current.get('dateStart'), 'performance_end_date': current.get('dateEnd') or current.get('dateStart'), 'status': 'draft', 'terms_and_conditions': 'Paiement à réception de facture.', 'items': [{'title': invoice_item_label, 'description': invoice_item_label, 'quantity': '1', 'unit_price': {'value': str(amount_ht), 'currency': 'EUR'}, 'vat_rate': format_qonto_vat_rate(vat_rate)}]}
             q_inv = create_qonto_invoice(q_payload)
             qi = q_inv.get('client_invoice') or q_inv.get('invoice') or q_inv
             if is_cpf:
@@ -22761,7 +22781,7 @@ def _billing_line_qonto_preview(line: Dict[str, Any]) -> Dict[str, Any]:
     amount_ttc = _money(line.get('amount'))
     amount_ht = round(amount_ttc / (1 + vat_rate / 100), 2) if vat_rate else amount_ttc
     amount_tva = round(amount_ttc - amount_ht, 2)
-    label = f"Formation {line.get('formationName') or 'Formation'} - {line.get('traineeFirstName','')} {line.get('traineeLastName','')} - Session du {fr_date(line.get('dateStart'))} au {fr_date(line.get('dateEnd') or line.get('dateStart'))}"
+    label = qonto_invoice_item_label(line)
     client = build_qonto_client_payload(line, line, {'id': line.get('sessionId')}, line.get('financingType') or line.get('financingLabel'))
     errors = validate_qonto_client_payload(client, line if is_cpf_billing_context(line) else line.get('financingType'))
     return {
