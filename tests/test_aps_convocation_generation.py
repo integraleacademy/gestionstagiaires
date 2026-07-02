@@ -173,6 +173,7 @@ class ApsConvocationEmailTests(unittest.TestCase):
         self.assertNotIn("Jean <script>", html_body)
         self.assertIn("du 05/10/2026 au 11/11/2026", html_body)
         self.assertIn("Convocation officielle en pièce jointe", html_body)
+        self.assertIn("Nous avons bien reçu votre Convention de formation signée et nous vous en remercions.", html_body)
 
 class YousignSignatureEmailTests(unittest.TestCase):
     def test_signature_email_html_escapes_values_and_uses_button(self):
@@ -212,6 +213,45 @@ class YousignSignatureEmailTests(unittest.TestCase):
         self.assertIn("Signer ma convention", sent_payload["htmlContent"])
         self.assertIn("https://sign.example.test/sign", sent_payload["textContent"])
 
+class ApsConvocationSchedulingTests(unittest.TestCase):
+    def test_convention_signature_schedules_convocation_five_minutes_later(self):
+        session = {"id": "session-1", "training_type": "APS", "trainees": []}
+        trainee = {"id": "trainee-1", "convention_signature": {"status": "ongoing"}}
+        trainees = [trainee]
+        session["trainees"] = trainees
+        data = {"sessions": [session]}
+        started = []
+
+        class FakeTimer:
+            def __init__(self, delay, function, args=()):
+                self.delay = delay
+                self.function = function
+                self.args = args
+                self.daemon = False
+
+            def start(self):
+                started.append(self)
+
+        app._aps_convocation_auto_send_timers.clear()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            signed_pdf = os.path.join(tmpdir, "signed.pdf")
+            with open(signed_pdf, "wb") as fh:
+                fh.write(b"pdf")
+
+            with mock.patch.object(app, "_download_yousign_signed_pdf", return_value=signed_pdf), \
+                 mock.patch.object(app, "_store_public_file_token", return_value="token.pdf"), \
+                 mock.patch.object(app.threading, "Timer", FakeTimer):
+                app._mark_yousign_convention_signed(data, session, trainees, trainee, "sig-req-1")
+
+        self.assertEqual(len(started), 1)
+        self.assertEqual(started[0].delay, 5 * 60)
+        self.assertEqual(started[0].args, ("session-1", "trainee-1"))
+        self.assertTrue(started[0].daemon)
+        self.assertIn("convocation_auto_scheduled_at", trainee)
+        self.assertFalse(trainee.get("convocation_aps_sent_at"))
+        app._aps_convocation_auto_send_timers.clear()
+
+
 class YousignStatusRefreshTests(unittest.TestCase):
     def test_refresh_pending_convention_marks_done_from_yousign(self):
         session = {"id": "session-1", "training_type": "APS", "trainees": []}
@@ -227,6 +267,7 @@ class YousignStatusRefreshTests(unittest.TestCase):
         session["trainees"] = trainees
         data = {"sessions": [session]}
 
+        app._aps_convocation_auto_send_timers.clear()
         with tempfile.TemporaryDirectory() as tmpdir:
             signed_pdf = os.path.join(tmpdir, "signed.pdf")
             with open(signed_pdf, "wb") as fh:
