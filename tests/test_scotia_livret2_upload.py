@@ -84,8 +84,8 @@ class ScotiaLivret2UploadTests(unittest.TestCase):
         self.assertIs(started_threads[0]["target"], gestion_app.brevo_send_email)
         self.assertTrue(started_threads[0]["daemon"])
 
-    def test_livret2_upload_accepts_files_up_to_ten_megabytes(self):
-        self.assertGreaterEqual(gestion_app.app.config["MAX_CONTENT_LENGTH"], 10 * 1024 * 1024)
+    def test_livret2_upload_accepts_files_up_to_fifteen_megabytes(self):
+        self.assertGreaterEqual(gestion_app.app.config["MAX_CONTENT_LENGTH"], 15 * 1024 * 1024)
 
         payload = {
             "sessions": [
@@ -122,10 +122,10 @@ class ScotiaLivret2UploadTests(unittest.TestCase):
         with self.client.session_transaction() as sess:
             sess["scotia_logged_in"] = True
 
-        six_megabytes = b"%PDF-1.4\n" + (b"0" * (6 * 1024 * 1024))
+        fifteen_megabytes = b"%PDF-1.4\n" + (b"0" * (15 * 1024 * 1024))
         response = self.client.post(
             "/scotia/sessions/S1/stagiaires/T1/livret2/upload",
-            data={"file": (io.BytesIO(six_megabytes), "livret2.pdf")},
+            data={"file": (io.BytesIO(fifteen_megabytes), "livret2.pdf")},
             content_type="multipart/form-data",
         )
 
