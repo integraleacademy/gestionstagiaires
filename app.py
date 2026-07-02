@@ -21831,8 +21831,104 @@ def _format_euro_amount(value: Any) -> str:
     except Exception:
         return str(value).strip()
     if amount.is_integer():
-        return f"{int(amount)} €"
-    return f"{amount:.2f}".replace(".", ",") + " €"
+        return f"{int(amount):,}".replace(",", " ") + " €"
+    whole, decimals = f"{amount:,.2f}".split(".")
+    return whole.replace(",", " ") + "," + decimals + " €"
+
+
+APS_CONVENTION_VARIABLES = [
+    "civilite", "prenom", "nom", "nom_complet",
+    "email", "mail", "telephone",
+    "adresse", "adresse_ligne1", "adresse_ligne2", "adresse_ligne3", "adresse_ligne4", "code_postal", "ville",
+    "formation_nom", "nom_pedagogique",
+    "montant_formation", "montant_formation_eur", "montant_cpf", "montant_cpf_eur",
+    "montant_financement_personnel", "montant_financement_personnel_eur",
+    "montant_personnel", "montant_personnel_eur", "montant_autre", "montant_autre_eur",
+    "date_debut_formation", "date_fin_formation", "periode_formation", "periode_elearning", "periode_presentiel", "date_ouverture",
+    "h_elearning", "h_presentiel", "h_total",
+    "date_convocation", "heure_convocation", "date_examen", "heure_examen", "duree_exam",
+    "lieu_formation", "lieu_examen", "espace_stagiaire_url", "modalites_suivi", "date_jour",
+]
+
+
+def _first_non_empty(*values: Any, default: str = "") -> str:
+    for value in values:
+        if value not in (None, ""):
+            text = str(value).strip()
+            if text:
+                return text
+    return default
+
+
+def _plain_amount(value: Any) -> str:
+    raw = str(value if value is not None else "").strip().replace(" ", "").replace(",", ".")
+    if not raw:
+        return "0"
+    try:
+        amount = float(raw)
+    except Exception:
+        return str(value).strip()
+    if amount.is_integer():
+        return str(int(amount))
+    return f"{amount:.2f}".rstrip("0").rstrip(".").replace(".", ",")
+
+
+def _docx_replace_in_paragraph(paragraph: Any, replacements: Dict[str, str]) -> None:
+    if not paragraph.runs:
+        return
+    original = "".join(run.text for run in paragraph.runs)
+    replaced = original
+    for key, value in replacements.items():
+        replaced = re.sub(r"\{\{\s*" + re.escape(key) + r"\s*\}\}", str(value), replaced)
+    if replaced == original:
+        return
+    paragraph.runs[0].text = replaced
+    for run in paragraph.runs[1:]:
+        run.text = ""
+
+
+def _iter_docx_paragraphs(container: Any) -> Iterable[Any]:
+    for paragraph in getattr(container, "paragraphs", []):
+        yield paragraph
+    for table in getattr(container, "tables", []):
+        for row in table.rows:
+            for cell in row.cells:
+                yield from _iter_docx_paragraphs(cell)
+
+
+def _docx_business_placeholders(docx_path: str) -> List[str]:
+    found: List[str] = []
+    seen: Set[str] = set()
+    pattern = re.compile(r"\{\{[^{}]+\}\}")
+    try:
+        document = Document(docx_path)
+        containers: List[Any] = [document]
+        for section in document.sections:
+            containers.extend([section.header, section.footer, section.first_page_header, section.first_page_footer, section.even_page_header, section.even_page_footer])
+        for container in containers:
+            for paragraph in _iter_docx_paragraphs(container):
+                for match in pattern.findall(paragraph.text):
+                    if match not in seen:
+                        seen.add(match)
+                        found.append(match)
+    except Exception:
+        with zipfile.ZipFile(docx_path) as zf:
+            for name in _docx_xml_names(zf):
+                text = "".join(ET.fromstring(zf.read(name).decode("utf-8", errors="ignore")).itertext())
+                for match in pattern.findall(text):
+                    if match not in seen:
+                        seen.add(match)
+                        found.append(match)
+    return found
+
+
+def _assert_aps_convention_has_no_business_placeholders(docx_path: str) -> Tuple[List[str], List[str]]:
+    remaining = _docx_business_placeholders(docx_path)
+    anchors = [p for p in remaining if YOUSIGN_SMART_ANCHOR_PATTERN.fullmatch(p)]
+    business = [p for p in remaining if not YOUSIGN_SMART_ANCHOR_PATTERN.fullmatch(p)]
+    if business:
+        raise RuntimeError(f"Variables non remplacées dans la convention APS : {business}")
+    return remaining, anchors
 
 
 def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
@@ -21849,23 +21945,72 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
     zip_code = str(trainee.get("zip_code") or trainee.get("code_postal") or trainee.get("postal_code") or "").strip()
     city = str(trainee.get("city") or trainee.get("ville") or "").strip().upper()
     training_type = str(_session_get(session_obj, "training_type", "") or "APS").strip()
-    training_price = trainee.get("training_price") or default_training_price(training_type) or 1650
-    personal_amount = trainee.get("personal_amount")
+    formation_name = _first_non_empty(trainee.get("formation_nom"), trainee.get("training_name"), _session_get(session_obj, "name", ""), training_type, default="APS")
+    training_price = _first_non_empty(trainee.get("training_price"), trainee.get("montant_formation"), _session_get(session_obj, "training_price", ""), default=str(default_training_price(training_type) or 1650))
+    cpf_amount = _first_non_empty(trainee.get("cpf_amount"), trainee.get("montant_cpf"), default="0")
+    personal_amount = _first_non_empty(trainee.get("personal_amount"), trainee.get("montant_financement_personnel"), trainee.get("montant_personnel"), default="")
     if personal_amount in (None, ""):
         personal_amount = training_price
-    return {
-        "nom_identite": full_name,
+    other_amount = _first_non_empty(trainee.get("other_amount"), trainee.get("montant_autre"), default="0")
+    date_start = fr_date(str(_session_get(session_obj, "date_start", "")))
+    date_end = fr_date(str(_session_get(session_obj, "date_end", "")))
+    periode = f"du {date_start} au {date_end}" if date_start or date_end else ""
+    address = _first_non_empty(trainee.get("address"), trainee.get("adresse"))
+    replacements = {
+        "civilite": _first_non_empty(trainee.get("civilite"), trainee.get("gender"), default=""),
+        "prenom": first_name,
+        "nom": last_name,
+        "nom_complet": full_name,
+        "email": _first_non_empty(trainee.get("email"), trainee.get("mail")),
+        "mail": _first_non_empty(trainee.get("email"), trainee.get("mail")),
+        "telephone": _first_non_empty(trainee.get("phone"), trainee.get("telephone")),
+        "adresse": address,
+        "adresse_ligne1": _first_non_empty(trainee.get("adresse_ligne1"), address),
+        "adresse_ligne2": _first_non_empty(trainee.get("adresse_ligne2")),
+        "adresse_ligne3": _first_non_empty(trainee.get("adresse_ligne3")),
+        "adresse_ligne4": _first_non_empty(trainee.get("adresse_ligne4")),
         "code_postal": zip_code,
         "ville": city,
-        "date_debut": fr_date(str(_session_get(session_obj, "date_start", ""))),
-        "date_fin": fr_date(str(_session_get(session_obj, "date_end", ""))),
+        "formation_nom": formation_name,
+        "nom_pedagogique": _first_non_empty(trainee.get("nom_pedagogique"), _session_get(session_obj, "nom_pedagogique", ""), formation_name),
+        "montant_formation": _plain_amount(training_price),
+        "montant_formation_eur": _format_euro_amount(training_price),
+        "montant_cpf": _plain_amount(cpf_amount),
+        "montant_cpf_eur": _format_euro_amount(cpf_amount),
+        "montant_financement_personnel": _plain_amount(personal_amount),
+        "montant_financement_personnel_eur": _format_euro_amount(personal_amount),
+        "montant_personnel": _plain_amount(personal_amount),
+        "montant_personnel_eur": _format_euro_amount(personal_amount),
+        "montant_autre": _plain_amount(other_amount),
+        "montant_autre_eur": _format_euro_amount(other_amount),
+        "date_debut_formation": date_start,
+        "date_fin_formation": date_end,
+        "periode_formation": periode,
+        "periode_elearning": _first_non_empty(trainee.get("periode_elearning"), _session_get(session_obj, "periode_elearning", ""), periode),
+        "periode_presentiel": _first_non_empty(trainee.get("periode_presentiel"), _session_get(session_obj, "periode_presentiel", ""), periode),
+        "date_ouverture": fr_date(_first_non_empty(trainee.get("date_ouverture"), _session_get(session_obj, "date_ouverture", ""))),
+        "h_elearning": _first_non_empty(trainee.get("h_elearning"), _session_get(session_obj, "h_elearning", ""), default="0"),
+        "h_presentiel": _first_non_empty(trainee.get("h_presentiel"), _session_get(session_obj, "h_presentiel", ""), default="0"),
+        "h_total": _first_non_empty(trainee.get("h_total"), _session_get(session_obj, "h_total", ""), default="0"),
+        "date_convocation": fr_date(_first_non_empty(trainee.get("date_convocation"), _session_get(session_obj, "date_convocation", ""))),
+        "heure_convocation": _first_non_empty(trainee.get("heure_convocation"), _session_get(session_obj, "heure_convocation", "")),
+        "date_examen": fr_date(_first_non_empty(trainee.get("date_examen"), _session_get(session_obj, "exam_date", ""))),
+        "heure_examen": _first_non_empty(trainee.get("heure_examen"), _session_get(session_obj, "heure_examen", "")),
+        "duree_exam": _first_non_empty(trainee.get("duree_exam"), _session_get(session_obj, "duree_exam", "")),
+        "lieu_formation": _first_non_empty(trainee.get("lieu_formation"), _session_get(session_obj, "lieu_formation", ""), default="À préciser"),
+        "lieu_examen": _first_non_empty(trainee.get("lieu_examen"), _session_get(session_obj, "lieu_examen", ""), default="À préciser"),
+        "espace_stagiaire_url": _first_non_empty(trainee.get("espace_stagiaire_url"), trainee.get("public_url")),
+        "modalites_suivi": _first_non_empty(trainee.get("modalites_suivi"), _session_get(session_obj, "modalites_suivi", ""), default="À préciser"),
+        "date_jour": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
+        "nom_identite": full_name,
+        "date_debut": date_start,
+        "date_fin": date_end,
         "code_rncp": "RNCP36648",
         "montant_ttc": _format_euro_amount(personal_amount),
-        "nom": last_name,
-        "prenom": first_name,
         "ville_edition": "Puget-sur-Argens",
         "date_edition": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
     }
+    return {key: str(replacements.get(key) or "") for key in replacements}
 
 
 def _sha256_file(path: str) -> str:
@@ -21877,26 +22022,21 @@ def _sha256_file(path: str) -> str:
 
 
 def _replace_docx_xml_placeholders(docx_path: str, replacements: Dict[str, str]) -> None:
-    """Replace only exact APS convention variables written as ``{{ name }}``.
+    """Replace only known APS convention variables written as ``{{ name }}``.
 
     No legacy placeholder syntax and no fixed literal text is matched.  A token
-    is replaced only when the DOCX XML contains exactly ``{{ variable_name }}``
-    (one space after ``{{`` and one space before ``}}``) and ``variable_name`` is
-    present in ``replacements``.
+    is replaced only when the DOCX text contains a ``{{ variable_name }}``
+    placeholder whose ``variable_name`` is present in ``replacements``.  This
+    works even when Microsoft Word splits one placeholder across several runs.
     """
-    allowed_tokens = {f"{{{{ {key} }}}}": str(value) for key, value in replacements.items()}
-    tmp_path = docx_path + ".tmp"
-    with zipfile.ZipFile(docx_path, "r") as zin, zipfile.ZipFile(tmp_path, "w") as zout:
-        for item in zin.infolist():
-            data = zin.read(item.filename)
-            if item.filename.startswith("word/") and item.filename.endswith(".xml"):
-                xml_text = data.decode("utf-8", errors="ignore")
-                for placeholder, value in allowed_tokens.items():
-                    xml_text = xml_text.replace(escape(placeholder), escape(value))
-                    xml_text = xml_text.replace(placeholder, escape(value))
-                data = xml_text.encode("utf-8")
-            zout.writestr(item, data)
-    os.replace(tmp_path, docx_path)
+    document = Document(docx_path)
+    containers: List[Any] = [document]
+    for section in document.sections:
+        containers.extend([section.header, section.footer, section.first_page_header, section.first_page_footer, section.even_page_header, section.even_page_footer])
+    for container in containers:
+        for paragraph in _iter_docx_paragraphs(container):
+            _docx_replace_in_paragraph(paragraph, replacements)
+    document.save(docx_path)
 
 def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
     """Generate the APS training convention used exclusively for Yousign."""
@@ -21914,7 +22054,14 @@ def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[st
     final_docx_path = os.path.join(YOUSIGN_CONVENTION_DIR, base + ".docx")
     final_pdf_path = os.path.join(YOUSIGN_CONVENTION_DIR, base + ".pdf")
     shutil.copyfile(template_path, final_docx_path)
-    _replace_docx_xml_placeholders(final_docx_path, _aps_convention_replacements(session_obj, trainee))
+    replacements = _aps_convention_replacements(session_obj, trainee)
+    app.logger.info("Variables convention APS attendues : %s", APS_CONVENTION_VARIABLES)
+    app.logger.info("Variables convention APS remplacées : %s", sorted([key for key in APS_CONVENTION_VARIABLES if replacements.get(key)]))
+    app.logger.info("Variables convention APS sans valeur : %s", sorted([key for key in APS_CONVENTION_VARIABLES if not replacements.get(key)]))
+    _replace_docx_xml_placeholders(final_docx_path, replacements)
+    remaining_variables, detected_anchors = _assert_aps_convention_has_no_business_placeholders(final_docx_path)
+    app.logger.info("Variables restantes après remplacement : %s", remaining_variables)
+    app.logger.info("Ancres Yousign détectées : %s", detected_anchors)
     signature_anchors = _docx_yousign_smart_anchors(final_docx_path, signer_index=1)
     app.logger.info("Zones de signature détectées dans la convention APS : %s", signature_anchors)
     if not signature_anchors:

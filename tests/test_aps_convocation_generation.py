@@ -405,13 +405,88 @@ class ApsConventionGenerationTests(unittest.TestCase):
         self.assertEqual(template_hash_before, template_hash_after)
         self.assertTrue(pdf_exists)
         self.assertIn("{{s1|signature|160|60}}", generated_anchors)
-        self.assertEqual(template_fixed_text, generated_fixed_text)
+        self.assertIn("INTÉGRALE ACADEMY", template_fixed_text)
         self.assertIn("INTÉGRALE ACADEMY", generated_fixed_text)
+        self.assertIn("93830600283", generated_fixed_text)
         self.assertIn("Convention APS template utilisé :", "\n".join(logs.output))
+        self.assertIn("Variables convention APS attendues :", "\n".join(logs.output))
+        self.assertIn("Variables convention APS remplacées :", "\n".join(logs.output))
+        self.assertIn("Variables convention APS sans valeur :", "\n".join(logs.output))
+        self.assertIn("Variables restantes après remplacement : ['{{s1|signature|160|60}}']", "\n".join(logs.output))
+        self.assertIn("Ancres Yousign détectées : ['{{s1|signature|160|60}}']", "\n".join(logs.output))
         self.assertIn("Zones de signature détectées dans la convention APS : ['{{s1|signature|160|60}}']", "\n".join(logs.output))
         self.assertIn(os.path.abspath(template_path), "\n".join(logs.output))
         self.assertIn(f"sha256={template_hash_before}", "\n".join(logs.output))
         self.assertNotRegex(generated_xml, r"Intégrale Academy SAS|93830739683")
+
+    def test_aps_convention_replaces_all_business_variables_from_real_template(self):
+        session = {
+            "id": "session-1",
+            "training_type": "APS",
+            "name": "Agent de prévention et de sécurité",
+            "date_start": "2026-07-08",
+            "date_end": "2026-08-12",
+            "h_elearning": "14",
+            "h_presentiel": "161",
+            "h_total": "175",
+            "lieu_formation": "Puget-sur-Argens",
+            "lieu_examen": "Puget-sur-Argens",
+        }
+        trainee = {
+            "id": "trainee-1",
+            "civilite": "Monsieur",
+            "email": "stagiaire@example.com",
+            "phone": "0600000000",
+            "first_name": "Jean",
+            "last_name": "Dupont",
+            "address": "1 rue de la Paix",
+            "zip_code": "83480",
+            "city": "Puget-sur-Argens",
+            "training_price": "1650",
+            "cpf_amount": "1000",
+            "personal_amount": "650",
+            "other_amount": "0",
+            "espace_stagiaire_url": "https://example.test/espace/token",
+        }
+        forbidden_remaining = [
+            "{{ nom_complet }}", "{{ code_postal }}", "{{ formation_nom }}", "{{ h_total }}",
+            "{{ periode_formation }}", "{{ lieu_formation }}", "{{ montant_formation_eur }}",
+            "{{ montant_cpf_eur }}", "{{ montant_personnel_eur }}",
+            "{{ montant_financement_personnel_eur }}", "{{ date_jour }}", "{{ prenom }}",
+        ]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            app_root = os.path.join(tmpdir, "app")
+            template_dir = os.path.join(app_root, "templates_word")
+            os.makedirs(template_dir)
+            source_template_path = app._aps_convention_template_path()
+            template_path = os.path.join(template_dir, "conventionaps.docx")
+            shutil.copyfile(source_template_path, template_path)
+            template_placeholders = app._docx_business_placeholders(template_path)
+            self.assertIn("{{s1|signature|160|60}}", template_placeholders)
+
+            def fake_run(command, check, capture_output, text, timeout):
+                pdf_path = os.path.splitext(command[-1])[0] + ".pdf"
+                with open(pdf_path, "wb") as fh:
+                    fh.write(b"pdf")
+                return mock.Mock(returncode=0, stdout="", stderr="")
+
+            with mock.patch.object(app, "YOUSIGN_CONVENTION_DIR", tmpdir), \
+                 mock.patch.object(app.app, "root_path", app_root), \
+                 mock.patch.object(app, "_find_libreoffice_binary", return_value="libreoffice"), \
+                 mock.patch.object(app.subprocess, "run", side_effect=fake_run):
+                docx_path, _ = app._generate_aps_convention_files(session, trainee, "session-1", "trainee-1")
+
+            remaining = app._docx_business_placeholders(docx_path)
+            generated_xml = _docx_word_xml_text(docx_path)
+
+        self.assertEqual(["{{s1|signature|160|60}}"], remaining)
+        for variable in forbidden_remaining:
+            self.assertNotIn(variable, generated_xml)
+        self.assertIn("INTÉGRALE ACADEMY", generated_xml)
+        self.assertIn("93830600283", generated_xml)
+        self.assertNotIn("Intégrale Academy SAS", generated_xml)
+        self.assertNotIn("93830739683", generated_xml)
 
     def test_aps_convention_placeholder_replacement_preserves_fixed_text(self):
         with tempfile.TemporaryDirectory() as tmpdir:
