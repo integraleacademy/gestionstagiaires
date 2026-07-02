@@ -3633,13 +3633,20 @@ function updateDocsRelanceState(status, plannedDateIso){
   [cpfAmount, personalAmount, otherAmount, trainingPrice].forEach(input=>input?.addEventListener('input', ()=>{ const c=computeFinance(currentLines); renderFinancingValidation(c, currentLines); }));
   financeValidationForceBtn?.addEventListener('click', async ()=>{
     financeValidationForceBtn.disabled = true;
+    const originalLabel = financeValidationForceBtn.textContent;
+    financeValidationForceBtn.textContent = 'Validation…';
     try{
       await updateTrainee({financing_validation_manual_mode:'manual', financing_validation_manual_status:'validated', financement_status:'validated'});
       financeValidationManualMode = true;
       financeValidationManualStatus = 'validated';
       currentFinancementStatus = 'validated';
       renderFinancingValidation(computeFinance(currentLines), currentLines);
-    }catch(e){ alert(e.message || 'Forçage du statut impossible'); financeValidationForceBtn.disabled = false; }
+      financeValidationForceBtn.textContent = originalLabel;
+    }catch(e){
+      alert(e.message || 'Forçage du statut impossible');
+      financeValidationForceBtn.disabled = false;
+      financeValidationForceBtn.textContent = originalLabel;
+    }
   });
   financeValidationAutoBtn?.addEventListener('click', async ()=>{
     financeValidationAutoBtn.disabled = true;
