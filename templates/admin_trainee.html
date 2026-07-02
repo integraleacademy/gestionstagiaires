@@ -19,6 +19,7 @@
   .finance-dashboard__header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:20px}.finance-dashboard__actions{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}.finance-quick-invoice-btn{box-shadow:0 16px 32px rgba(37,99,235,.20);font-weight:950}.finance-quick-invoice-btn:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}.finance-dashboard__kicker{font-size:11px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;color:#2563eb}.finance-dashboard__header h2{margin:4px 0 6px;color:#0f172a;font-size:27px;letter-spacing:-.04em}.finance-dashboard__subtitle{margin:0;color:#64748b;font-size:14px;line-height:1.5}.finance-save-indicator{display:inline-flex;align-items:center;gap:7px;margin-top:10px;padding:7px 10px;border-radius:999px;background:#f1f5f9;color:#64748b;font-size:12px;font-weight:900}.finance-save-indicator.is-saving{background:#eff6ff;color:#1d4ed8}.finance-save-indicator.is-saved{background:#dcfce7;color:#166534}.finance-save-indicator.is-error{background:#fee2e2;color:#991b1b}
   .finance-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}.finance-summary-card{position:relative;overflow:hidden;border:1px solid #e2e8f0;border-radius:24px;background:rgba(255,255,255,.92);padding:18px;box-shadow:0 14px 34px rgba(15,23,42,.07)}.finance-summary-card::before{content:'';position:absolute;inset:0 0 auto;height:4px;background:#cbd5e1}.finance-summary-card.is-green::before{background:#22c55e}.finance-summary-card.is-orange::before{background:#f97316}.finance-summary-card.is-red::before{background:#ef4444}.finance-summary-card.is-blue::before{background:#3b82f6}.finance-summary-card__top{display:flex;justify-content:space-between;gap:10px;align-items:center;color:#64748b;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}.finance-summary-card__icon{display:grid;place-items:center;width:32px;height:32px;border-radius:12px;background:#eff6ff;font-size:17px}.finance-summary-card__value{margin-top:14px;color:#0f172a;font-size:26px;font-weight:950;letter-spacing:-.05em}.finance-summary-card__meta{margin-top:8px;color:#64748b;font-size:12px;font-weight:800;line-height:1.35}
   .finance-badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:950;white-space:nowrap;border:1px solid transparent}.finance-badge--green{background:#dcfce7;color:#166534;border-color:#bbf7d0}.finance-badge--orange{background:#fff7ed;color:#c2410c;border-color:#fed7aa}.finance-badge--red{background:#fee2e2;color:#991b1b;border-color:#fecaca}.finance-badge--blue{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe}.finance-badge--gray{background:#f1f5f9;color:#475569;border-color:#e2e8f0}
+  .finance-validation-status{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:9px 13px;border-radius:999px;border:1px solid #e2e8f0;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.08);font-size:12px;font-weight:950;white-space:nowrap}.finance-validation-status--gray{background:linear-gradient(135deg,#f8fafc,#f1f5f9);color:#475569;border-color:#cbd5e1}.finance-validation-status--orange{background:linear-gradient(135deg,#fff7ed,#ffedd5);color:#c2410c;border-color:#fdba74}.finance-validation-status--green{background:linear-gradient(135deg,#f0fdf4,#dcfce7);color:#166534;border-color:#86efac}.finance-validation-status__icon{display:grid;place-items:center;width:22px;height:22px;border-radius:999px;background:rgba(255,255,255,.72);box-shadow:inset 0 0 0 1px rgba(255,255,255,.65)}.finance-validation-status__manual{padding:3px 7px;border-radius:999px;background:rgba(15,23,42,.08);font-size:10px;text-transform:uppercase;letter-spacing:.06em}.finance-validation-admin{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.finance-validation-admin .btn{min-height:40px}
   .finance-progress-panel,.finance-section{border:1px solid #e2e8f0;border-radius:24px;background:rgba(255,255,255,.88);box-shadow:0 12px 30px rgba(15,23,42,.055);padding:18px;margin-top:18px}.finance-section__head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px}.finance-section__head h3{margin:0;color:#0f172a;font-size:17px}.finance-section__head p{margin:5px 0 0;color:#64748b;font-size:13px}.finance-progress-row{display:grid;grid-template-columns:130px 1fr 60px;gap:12px;align-items:center;margin:10px 0}.finance-progress-track{height:10px;border-radius:999px;background:#e7ecf7;overflow:hidden}.finance-progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#2563eb,#60a5fa)}.finance-progress-fill--green{background:linear-gradient(90deg,#16a34a,#86efac)}
   .finance-detail-section{margin-top:18px;border:1px solid #e2e8f0;border-radius:24px;background:rgba(255,255,255,.78);overflow:hidden}.finance-detail-section>summary{list-style:none;cursor:pointer;padding:16px 18px;font-weight:950;color:#0f172a;display:flex;justify-content:space-between;align-items:center}.finance-detail-section>summary::-webkit-details-marker{display:none}.finance-detail-section>summary::after{content:'⌄';color:#64748b}.finance-detail-section[open]>summary::after{content:'⌃'}.finance-detail-section__body{border-top:1px solid #eef2f7;padding:18px}.finance-edit-grid{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:12px}.finance-edit-grid--wide{grid-template-columns:repeat(2,minmax(180px,1fr));margin-top:12px}.finance-field{min-width:0}.finance-field .label{margin-bottom:5px}.finance-field input,.finance-field textarea{width:100%}.finance-checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:12px}.finance-check{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc;font-weight:850;color:#334155}.finance-list{display:grid;gap:10px}.finance-line{display:grid;grid-template-columns:minmax(150px,1.2fr) repeat(4,minmax(95px,1fr)) auto;gap:10px;align-items:center;padding:12px;border:1px solid #e2e8f0;border-radius:16px;background:#fff}.finance-line strong{color:#0f172a}.finance-mini-label{display:block;color:#64748b;font-size:11px;font-weight:900;text-transform:uppercase}.finance-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.finance-footer{display:flex;justify-content:flex-end;margin-top:20px;padding-top:18px;border-top:1px solid #e2e8f0}.finance-empty{padding:18px;border:1px dashed #cbd5e1;border-radius:16px;background:#f8fafc;color:#64748b;font-weight:850}.finance-alert{display:flex;align-items:center;gap:10px;padding:13px 14px;border-radius:16px;border:1px solid #fed7aa;background:#fff7ed;color:#9a3412;font-weight:900}.finance-alert--orange{border-color:#fed7aa;background:#fff7ed;color:#9a3412}.finance-alert--red{border-color:#fecaca;background:#fef2f2;color:#991b1b}.finance-alert--green{border-color:#bbf7d0;background:#f0fdf4;color:#166534}.finance-alert + .finance-alert{margin-top:10px}
 
@@ -1355,6 +1356,18 @@
             <button class="btn btn-primary finance-quick-invoice-btn" type="button" id="btnQuickGenerateInvoice" disabled>🧾 Générer une facture</button>
           {% endif %}
           <button class="btn btn-outline" type="button" id="btnSyncQontoTrainee">Synchroniser Qonto</button>
+          <div class="finance-validation-admin"
+               data-manual-mode="{{ trainee.financing_validation_manual_mode or '' }}"
+               data-manual-status="{{ trainee.financing_validation_manual_status or '' }}">
+            <button class="finance-validation-status finance-validation-status--gray" type="button" id="financeValidationStatus" title="Statut de validation du financement">
+              <span class="finance-validation-status__icon">⌛</span>
+              <span class="finance-validation-status__label">Financement à valider</span>
+            </button>
+            {% if not is_read_only %}
+              <button class="btn btn-outline" type="button" id="btnForceFinanceValidated">Forcer validé</button>
+              <button class="btn btn-ghost" type="button" id="btnFinanceAutoMode" style="display:none;">Revenir au calcul automatique</button>
+            {% endif %}
+          </div>
         </div>
       </div>
 
@@ -3450,6 +3463,12 @@ function updateDocsRelanceState(status, plannedDateIso){
   const box = document.getElementById("qontoInvoiceHistory");
   const syncBtn = document.getElementById("btnSyncQontoTrainee");
   const quickGenerateBtn = document.getElementById("btnQuickGenerateInvoice");
+  const financeValidationWrap = document.querySelector('.finance-validation-admin');
+  const financeValidationStatus = document.getElementById('financeValidationStatus');
+  const financeValidationForceBtn = document.getElementById('btnForceFinanceValidated');
+  const financeValidationAutoBtn = document.getElementById('btnFinanceAutoMode');
+  let financeValidationManualMode = financeValidationWrap?.dataset.manualMode === 'manual';
+  let financeValidationManualStatus = financeValidationWrap?.dataset.manualStatus || '';
   let currentLines = [];
   let currentLine = null;
   let modalLoading = false;
@@ -3497,6 +3516,36 @@ function updateDocsRelanceState(status, plannedDateIso){
   window.refreshQontoInvoiceHistory = () => load().catch(e=>{ box.innerHTML = `<div class="qonto-error">${esc(e.message)}</div>`; });
   window.addEventListener('qonto-billing-refresh', window.refreshQontoInvoiceHistory);
   function paymentStatusLabel(status){return ({paid:'Payé',partial:'Paiement partiel',failed:'Rejeté',unpaid:'Non payé',unknown:'Inconnu',pending:'En attente'}[status]||status||'Inconnu');}
+  function mandateState(lines){
+    const signedStatuses = new Set(['accepted','approved','signed','validated','active','completed','success','succeeded']);
+    const pendingStatuses = new Set(['pending','sent','created','waiting','waiting_signature','processing','in_progress']);
+    const personalLines = lines.filter(l=>String([l.financingType,l.financingLabel,l.financeurName,l.financeur].join(' ')).toLowerCase().includes('personnel') || l.paymentMode === 'sepa_direct_debit');
+    const statuses = personalLines.map(l=>String(l.qonto_mandate_status || l.qontoMandateStatus || l.mandateStatus || l.qontoPaymentGlobalStatus || '').toLowerCase());
+    const hasSigned = personalLines.some(l=>l.qonto_mandate_signed_at || l.mandateSignedAt || signedStatuses.has(String(l.qonto_mandate_status || l.qontoMandateStatus || l.mandateStatus || '').toLowerCase()));
+    const hasSent = hasSigned || personalLines.some(l=>l.qonto_direct_debit_mandate_id || l.qontoMandateId || l.mandateId || (l.directDebitInstallments || []).length || pendingStatuses.has(String(l.qonto_mandate_status || l.qontoMandateStatus || l.mandateStatus || '').toLowerCase()));
+    return {hasSent, hasSigned, statuses};
+  }
+  function financingValidationFrom(c, lines){
+    if(financeValidationManualMode && financeValidationManualStatus === 'validated') return {label:'Financement validé', tone:'green', icon:'✓', manual:true};
+    const epsilon = 0.01;
+    if(c.montantCpf <= epsilon && c.montantPersonnel <= epsilon && c.montantAutre <= epsilon) return {label:'Financement à valider', tone:'gray', icon:'⌛'};
+    if(c.montantPersonnel > epsilon){
+      const mandate = mandateState(lines);
+      if(mandate.hasSigned) return {label:'Financement validé', tone:'green', icon:'✓'};
+      if(mandate.hasSent) return {label:'Mandat de prélèvement en cours de validation', tone:'orange', icon:'⚠'};
+      return {label:'Financement à valider', tone:'gray', icon:'⌛'};
+    }
+    if(c.prixFormation > epsilon && c.montantCpf + epsilon >= c.prixFormation && c.montantPersonnel <= epsilon && c.montantAutre <= epsilon) return {label:'Financement validé', tone:'green', icon:'✓'};
+    return {label:'Financement à valider', tone:'gray', icon:'⌛'};
+  }
+  function renderFinancingValidation(c, lines){
+    if(!financeValidationStatus) return;
+    const state = financingValidationFrom(c, lines);
+    financeValidationStatus.className = `finance-validation-status finance-validation-status--${state.tone}`;
+    financeValidationStatus.innerHTML = `<span class="finance-validation-status__icon">${esc(state.icon)}</span><span class="finance-validation-status__label">${esc(state.label)}</span>${state.manual?'<span class="finance-validation-status__manual">manuel</span>':''}`;
+    financeValidationForceBtn?.toggleAttribute('disabled', state.manual);
+    if(financeValidationAutoBtn) financeValidationAutoBtn.style.display = state.manual ? '' : 'none';
+  }
   const isoToday=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10);};
   function addDays(date,days){const d=new Date(date+'T00:00:00');d.setDate(d.getDate()+days);return d.toISOString().slice(0,10);}
   function addMonths(date, months){const d=new Date(date+'T00:00:00'); const day=d.getDate(); d.setMonth(d.getMonth()+months); if(d.getDate()!==day)d.setDate(0); return d.toISOString().slice(0,10);}
@@ -3620,7 +3669,7 @@ function updateDocsRelanceState(status, plannedDateIso){
   function renderPayments(lines,c){const rows=[];lines.forEach(l=>{if(linePaid(l)>0)rows.push({date:l.paidAt||l.updatedAt||'',amount:linePaid(l),mode:l.paymentMode==='sepa_direct_debit'?'prélèvement':'virement',status:'encaissé',invoice:l.qontoInvoiceNumber||l.qontoInvoiceId});});const cashItems=window.getFinanceCashInstallments?window.getFinanceCashInstallments():[];const cashTotal=window.getFinanceCashInstallmentsTotal?window.getFinanceCashInstallmentsTotal():0;if(cashPaymentEnabled?.checked&&cashTotal>0){cashItems.forEach(it=>rows.push({date:it.date,amount:it.amount,mode:'espèces',status:'encaissé',invoice:''}));}document.getElementById('financePayments').innerHTML=`<div class="finance-line ${c.resteAPayer<=0.01&&c.prixFormation>0?'finance-line--paid':'finance-line--unpaid'}"><strong>Total encaissé</strong><div>${fmtMoney(c.totalPaye)}</div><div><span class="finance-mini-label">Reste à payer</span>${fmtMoney(Math.max(c.resteAPayer,0))}</div><div><span class="finance-mini-label">Écart</span>${fmtMoney(c.totalPaye-c.prixFormation)}</div></div>`+(rows.length?rows.map(r=>`<div class="finance-line"><strong>${formatIsoDateFr(String(r.date).slice(0,10))||'Date inconnue'}</strong><div>${fmtMoney(r.amount)}</div><div>${esc(r.mode)}</div><div>${badge(r.status,'green')}</div><div>${esc(r.invoice||'—')}</div></div>`).join(''):'<div class="finance-empty">Aucun paiement enregistré pour le moment.</div>');}
   function renderInstallments(c){document.getElementById('financeInstallments').innerHTML=c.totalMensualites?`<div class="finance-line"><strong>${c.mensualitesPayees} mensualités payées sur ${c.totalMensualites}</strong><div><span class="finance-mini-label">Prochaine mensualité</span>${c.prochaineEcheance?`${formatIsoDateFr(c.prochaineEcheance.date)} — ${fmtMoney(c.prochaineEcheance.amount)}`:'—'}</div><div><span class="finance-mini-label">Reste à prélever</span>${fmtMoney(c.montantRestantAPrelever)}</div></div>`+c.installments.map((it,i)=>{const st=String(it.status||'scheduled').toLowerCase();const tone=['completed','paid','succeeded'].includes(st)?'green':(['failed','returned','rejected'].includes(st)?'red':'orange');return `<div class="finance-line ${tone==='green'?'finance-line--paid':(tone==='red'?'finance-line--danger':'finance-line--unpaid')}"><strong>${i+1}/${c.totalMensualites}</strong><div><span class="finance-mini-label">Date prévue</span>${formatIsoDateFr(it.date)||'—'}</div><div>${fmtMoney(it.amount)}</div><div>${badge(st==='scheduled'?'À venir':st,tone)}</div><div>${it.paidAt?formatIsoDateFr(String(it.paidAt).slice(0,10)):''} ${it.failureReason?`<span class="qonto-error">${esc(it.failureReason)}</span>`:''}</div></div>`;}).join(''):'<div class="finance-empty">Aucun échéancier enregistré.</div>';}
   function render(lines){
-    const c=computeFinance(lines); renderSummary(c); renderBreakdown(lines,c); renderAlerts(lines,c); renderPayments(lines,c); renderInstallments(c);
+    const c=computeFinance(lines); renderFinancingValidation(c, lines); renderSummary(c); renderBreakdown(lines,c); renderAlerts(lines,c); renderPayments(lines,c); renderInstallments(c);
     if(!lines.length){ box.innerHTML = '<div class="finance-empty">Aucune ligne de facturation disponible. Vérifiez les montants de financement.</div>'; return; }
     box.innerHTML = lines.map(l=>{
       const has = !!(l.qontoInvoiceId || l.qontoDraftId);
@@ -3649,6 +3698,26 @@ function updateDocsRelanceState(status, plannedDateIso){
   });
   quickGenerateBtn?.addEventListener('click', ()=>{ const line=firstInvoiceToGenerate(); if(line) openGenerateInvoiceModal(line); });
   syncBtn?.addEventListener('click', async ()=>{ syncBtn.disabled=true; try{ const j=await api('/api/billing/sync-qonto',{traineeId,sessionId,source:'admin_trainee'}); await load(); alert(j.message||'Synchronisation terminée'); }catch(e){ alert(e.message||'Synchronisation Qonto impossible pour le moment'); } finally{ syncBtn.disabled=false; }});
+  [cpfAmount, personalAmount, otherAmount, trainingPrice].forEach(input=>input?.addEventListener('input', ()=>{ const c=computeFinance(currentLines); renderFinancingValidation(c, currentLines); }));
+  financeValidationForceBtn?.addEventListener('click', async ()=>{
+    financeValidationForceBtn.disabled = true;
+    try{
+      await updateTrainee({financing_validation_manual_mode:'manual', financing_validation_manual_status:'validated'});
+      financeValidationManualMode = true;
+      financeValidationManualStatus = 'validated';
+      renderFinancingValidation(computeFinance(currentLines), currentLines);
+    }catch(e){ alert(e.message || 'Forçage du statut impossible'); financeValidationForceBtn.disabled = false; }
+  });
+  financeValidationAutoBtn?.addEventListener('click', async ()=>{
+    financeValidationAutoBtn.disabled = true;
+    try{
+      await updateTrainee({financing_validation_manual_mode:'', financing_validation_manual_status:''});
+      financeValidationManualMode = false;
+      financeValidationManualStatus = '';
+      renderFinancingValidation(computeFinance(currentLines), currentLines);
+    }catch(e){ alert(e.message || 'Retour au calcul automatique impossible'); }
+    finally{ financeValidationAutoBtn.disabled = false; renderFinancingValidation(computeFinance(currentLines), currentLines); }
+  });
   load().catch(e=>{ box.innerHTML = `<div class="qonto-error">${esc(e.message)}</div>`; });
 })();
 
