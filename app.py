@@ -132,6 +132,7 @@ QONTO_OAUTH_SCOPE = "offline_access client.read client.write client_invoice.writ
 QONTO_OAUTH_SANDBOX_BASE_URL = "https://oauth-sandbox.staging.qonto.co"
 QONTO_OAUTH_PRODUCTION_BASE_URL = "https://oauth.qonto.com"
 QONTO_OAUTH_REQUIRED_MESSAGE = "Connexion Qonto OAuth requise pour programmer les prélèvements SEPA."
+QONTO_OAUTH_REDIRECT_URI = "https://gestionstagiaires-r5no.onrender.com/api/qonto/oauth/callback"
 
 
 
@@ -179,8 +180,10 @@ def _qonto_staging_token() -> str:
 
 
 def _qonto_oauth_redirect_uri() -> str:
-    configured = (os.environ.get("QONTO_OAUTH_REDIRECT_URI") or "").strip()
-    return configured or url_for("api_qonto_oauth_callback", _external=True)
+    # Qonto requires a byte-for-byte match with the redirect URI configured in
+    # the Developer Portal. Keep this production URI fixed unless the portal is
+    # updated at the same time.
+    return QONTO_OAUTH_REDIRECT_URI
 
 
 def _qonto_oauth_is_configured() -> bool:
@@ -257,20 +260,23 @@ def _qonto_oauth_refresh_token(data: Dict[str, Any]) -> str:
 def _qonto_oauth_connected(data: Optional[Dict[str, Any]] = None) -> bool:
     data = data or load_data()
     settings = _qonto_oauth_settings(data)
-    return bool(settings.get("connected") and settings.get("access_token") and settings.get("refresh_token"))
+    return bool(settings.get("refresh_token"))
 
 
 def _store_qonto_oauth_tokens(data: Dict[str, Any], token_payload: Dict[str, Any]) -> None:
     settings = _qonto_oauth_settings(data)
     now = int(time.time())
     expires_in = int(token_payload.get("expires_in") or 3600)
+    refresh_token = token_payload.get("refresh_token") or settings.get("refresh_token") or ""
+    access_token = token_payload.get("access_token") or settings.get("access_token") or ""
     settings.update({
-        "connected": True,
-        "access_token": token_payload.get("access_token") or settings.get("access_token") or "",
-        "refresh_token": token_payload.get("refresh_token") or settings.get("refresh_token") or "",
+        "connected": bool(refresh_token),
+        "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": token_payload.get("token_type") or "bearer",
         "scope": token_payload.get("scope") or settings.get("scope") or "",
         "expires_at": now + max(expires_in - 60, 60),
+        "created_at": settings.get("created_at") or _now_iso(),
         "updated_at": _now_iso(),
         "environment": _qonto_oauth_environment(),
     })
@@ -12448,6 +12454,7 @@ def api_qonto_status():
 @app.get("/admin/qonto/connect")
 @admin_login_required
 def admin_qonto_connect():
+    app.logger.info("[QONTO OAUTH] /admin/qonto/connect called")
     if not _qonto_oauth_is_configured():
         flash("Variables OAuth Qonto manquantes : QONTO_OAUTH_CLIENT_ID et QONTO_OAUTH_CLIENT_SECRET.", "error")
         return redirect(url_for("admin_qonto_settings"))
@@ -12460,21 +12467,28 @@ def admin_qonto_connect():
         "scope": QONTO_OAUTH_SCOPE,
         "state": state,
     }
-    return redirect(f"{_qonto_oauth_base_url()}/oauth2/auth?{urlencode(params)}")
+    authorization_url = f"{_qonto_oauth_base_url()}/oauth2/auth?{urlencode(params)}"
+    app.logger.info("[QONTO OAUTH] generated authorization_url=%s", authorization_url)
+    return redirect(authorization_url)
 
 
 @app.get("/api/qonto/oauth/callback")
 @admin_login_required
 def api_qonto_oauth_callback():
+    app.logger.info("[QONTO OAUTH] /api/qonto/oauth/callback called")
     error = request.args.get("error")
+    error_description = request.args.get("error_description") or request.args.get("error_message") or ""
     if error:
-        flash(f"Connexion OAuth Qonto refusée : {error}", "error")
+        message = error_description or error
+        app.logger.warning("[QONTO OAUTH] callback error from Qonto: %s", _sanitize_qonto_error(message))
+        flash(f"Connexion OAuth Qonto refusée : {message}", "error")
         return redirect(url_for("admin_qonto_settings"))
     state = request.args.get("state") or ""
     expected_state = session.pop("qonto_oauth_state", "")
     if not state or not expected_state or not hmac.compare_digest(state, expected_state):
         abort(400)
     code = request.args.get("code") or ""
+    app.logger.info("[QONTO OAUTH] callback code present=%s", bool(code))
     if not code:
         abort(400)
     try:
@@ -12486,11 +12500,19 @@ def api_qonto_oauth_callback():
             "code": code,
         })
         data = load_data()
+        app.logger.info(
+            "[QONTO OAUTH] token exchange succeeded has_access_token=%s has_refresh_token=%s expires_in=%s scope=%s",
+            bool(payload.get("access_token")),
+            bool(payload.get("refresh_token")),
+            payload.get("expires_in"),
+            payload.get("scope") or "",
+        )
         _store_qonto_oauth_tokens(data, payload)
         flash("Qonto OAuth connecté pour les prélèvements SEPA.", "success")
     except Exception as exc:
-        app.logger.warning("[QONTO OAUTH] callback failed: %s", _sanitize_qonto_error(str(exc)))
-        flash("Connexion OAuth Qonto impossible. Vérifiez les variables sandbox Render et le redirect_uri.", "error")
+        message = _sanitize_qonto_error(str(exc))
+        app.logger.warning("[QONTO OAUTH] token exchange failed: %s", message)
+        flash(f"Connexion OAuth Qonto impossible : {message}", "error")
     return redirect(url_for("admin_qonto_settings"))
 
 
@@ -12499,13 +12521,15 @@ def api_qonto_oauth_callback():
 def api_qonto_oauth_status():
     data = load_data()
     settings = _qonto_oauth_settings(data)
+    scope = settings.get("scope") or ""
+    connected = _qonto_oauth_connected(data)
     return jsonify({
-        "connected": _qonto_oauth_connected(data),
-        "environment": settings.get("environment") or _qonto_oauth_environment(),
-        "scope": settings.get("scope") or "",
+        "connected": connected,
+        "has_access_token": bool(settings.get("access_token")),
+        "has_refresh_token": bool(settings.get("refresh_token")),
         "expires_at": settings.get("expires_at") or None,
-        "updated_at": settings.get("updated_at") or "",
-        "message": "Qonto OAuth connecté" if _qonto_oauth_connected(data) else QONTO_OAUTH_REQUIRED_MESSAGE,
+        "scopes": scope.split() if isinstance(scope, str) else list(scope or []),
+        "message": "Qonto OAuth connecté" if connected else QONTO_OAUTH_REQUIRED_MESSAGE,
     }), 200
 
 
