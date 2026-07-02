@@ -742,7 +742,7 @@
   <div class="automation-timeline" aria-label="Étapes automatisation">{% for step in auto.timeline %}<div class="automation-timeline__step is-{{ step.state }}"><span class="automation-timeline__icon"><span class="automation-timeline__index">{{ loop.index }}</span>{% if step.state == 'complete' %}{{ automation_icon('check') }}{% elif step.state == 'error' %}{{ automation_icon('alert') }}{% elif step.state == 'blocked' %}{{ automation_icon('lock') }}{% else %}{{ automation_icon('hourglass','automation-icon--hourglass') }}{% endif %}</span><div>{{ step.label }}</div></div>{% endfor %}</div>
   <div class="automation-grid">
     {% set c = auto.convention %}
-    <details class="automation-card automation-doc automation-card--{{ c.card_tone|default('pending') }}"><summary class="automation-doc__summary"><span class="automation-card__icon">{{ automation_icon('file') }}</span><div class="automation-doc__title"><h3>Convention</h3><p>Document contractuel à générer, envoyer et faire signer.</p></div><span class="automation-status automation-status--{{ c.tone }}">{{ automation_icon(c.icon, c.icon_class|default('')) }}{{ c.label }}</span><div class="automation-doc__summary-action"><form class="automation-loading-form" method="post" action="{{ url_for('admin_create_convention_signature', session_id=session.id, trainee_id=trainee.id) }}" onclick="event.stopPropagation()"><button class="btn btn-primary" type="submit" {% if is_read_only or not c.can_send %}disabled{% endif %}>{{ c.primary_action }}</button></form></div></summary>
+    <details class="automation-card automation-doc automation-card--{{ c.card_tone|default('pending') }}"><summary class="automation-doc__summary"><span class="automation-card__icon">{{ automation_icon('file') }}</span><div class="automation-doc__title"><h3>Convention</h3><p>Document contractuel à générer, envoyer et faire signer.</p></div><span class="automation-status automation-status--{{ c.tone }}">{{ automation_icon(c.icon, c.icon_class|default('')) }}{{ c.label }}</span><div class="automation-doc__summary-action"><form class="automation-loading-form" data-convention-transmission-form="true" method="post" action="{{ url_for('admin_create_convention_signature', session_id=session.id, trainee_id=trainee.id) }}" onclick="event.stopPropagation()"><button class="btn btn-primary" type="submit" {% if is_read_only or not c.can_send %}disabled{% endif %}>{{ c.primary_action }}</button></form></div></summary>
       <div class="automation-card-details automation-doc__body"><div class="automation-meta">{% for step in c.timeline_steps %}<div class="automation-meta__row"><i class="automation-meta__dot automation-meta__dot--{{ step.state }}"></i><span>{{ step.label }}</span><strong>{{ step.value }}</strong></div>{% endfor %}<div class="automation-meta__row"><i class="automation-meta__dot"></i><span>Email destinataire</span><strong>{{ c.recipient_email or '—' }}</strong></div><div class="automation-meta__row"><i class="automation-meta__dot"></i><span>ID Yousign</span><strong class="mono">{{ c.signature_request_id or '—' }}</strong></div></div>{% if c.error %}<div class="automation-error">{{ c.error }}</div>{% endif %}<div class="automation-actions">{% if c.status in ['waiting_signature','sent'] %}<form class="automation-loading-form" method="post" action="{{ url_for('admin_send_convention_signature_reminder_for_session', session_id=session.id, trainee_id=trainee.id) }}"><button class="btn btn-outline" type="submit" {% if is_read_only %}disabled{% endif %}>Relancer la signature</button></form>{% endif %}{% if c.download_url %}<a class="btn btn-outline" href="{{ c.download_url }}" target="_blank" rel="noopener">Voir le document</a><a class="btn btn-outline" href="{{ c.download_url }}" target="_blank" rel="noopener">Télécharger</a>{% endif %}<button class="btn btn-outline" type="button" disabled title="Historique affiché ci-dessus">Voir l’historique</button></div></div>
     </details>
     {% set v = auto.convocation %}
@@ -2211,7 +2211,11 @@ if(yousignSignatureForm && yousignSignatureProgress){
 document.querySelectorAll(".automation-loading-form").forEach((form)=>{
   form.addEventListener("submit", async (event)=>{
     const btn = form.querySelector("button");
-    if(btn){ btn.disabled = true; btn.setAttribute("aria-busy", "true"); btn.dataset.originalText = btn.textContent; btn.textContent = "Traitement…"; }
+    const isConventionTransmission = form.dataset.conventionTransmissionForm === "true" || /\/convention\/(?:yousign|signature\/create)(?:$|[?#])/.test(form.action || "");
+    if(isConventionTransmission && typeof window.showConventionTransmissionProgress === "function"){
+      window.showConventionTransmissionProgress();
+    }
+    if(btn){ btn.disabled = true; btn.setAttribute("aria-busy", "true"); btn.dataset.originalText = btn.textContent; btn.textContent = isConventionTransmission ? "Transmission…" : "Traitement…"; }
     if(form.action.includes("/automation/")){
       event.preventDefault();
       try{
@@ -2220,6 +2224,9 @@ document.querySelectorAll(".automation-loading-form").forEach((form)=>{
         if(!response.ok || !result.ok) throw new Error(result.error || "Action impossible.");
         window.location.reload();
       }catch(error){
+        if(isConventionTransmission && typeof window.hideConventionTransmissionProgress === "function"){
+          window.hideConventionTransmissionProgress();
+        }
         alert(error.message || "Action impossible.");
         if(btn){ btn.disabled = false; btn.removeAttribute("aria-busy"); btn.textContent = btn.dataset.originalText || "Réessayer"; }
       }
