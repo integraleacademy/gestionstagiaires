@@ -1,6 +1,7 @@
 import hashlib
 import os
 import re
+import shutil
 import tempfile
 import unittest
 import zipfile
@@ -330,6 +331,20 @@ def _file_sha256(path):
 
 
 class ApsConventionGenerationTests(unittest.TestCase):
+    def test_yousign_signature_anchor_detection_accepts_pipe_format(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            template_path = os.path.join(tmpdir, "conventionaps.docx")
+            document = app.Document()
+            document.add_paragraph("Signature du contrat de formation")
+            document.add_paragraph("Pour le stagiaire")
+            document.add_paragraph("Signature")
+            document.add_paragraph("{{s1|signature|160|60}}")
+            document.save(template_path)
+
+            anchors = app._docx_yousign_smart_anchors(template_path, signer_index=1)
+
+        self.assertIn("{{s1|signature|160|60}}", anchors)
+
     def test_aps_convention_generation_uses_only_production_word_template(self):
         session = {
             "id": "session-1",
@@ -348,15 +363,26 @@ class ApsConventionGenerationTests(unittest.TestCase):
             "personal_amount": "300",
         }
 
-        template_path = app._aps_convention_template_path()
-        self.assertEqual(
-            os.path.abspath(template_path),
-            os.path.abspath(os.path.join(app.app.root_path, "templates_word", "conventionaps.docx")),
-        )
-        template_hash_before = _file_sha256(template_path)
-        template_fixed_text = _docx_text_without_variables(template_path)
-
         with tempfile.TemporaryDirectory() as tmpdir:
+            app_root = os.path.join(tmpdir, "app")
+            template_dir = os.path.join(app_root, "templates_word")
+            os.makedirs(template_dir)
+            source_template_path = app._aps_convention_template_path()
+            template_path = os.path.join(template_dir, "conventionaps.docx")
+            shutil.copyfile(source_template_path, template_path)
+            document = app.Document(template_path)
+            document.add_paragraph("Signature du contrat de formation")
+            document.add_paragraph("Pour le stagiaire")
+            document.add_paragraph("Signature")
+            document.add_paragraph("{{s1|signature|160|60}}")
+            document.save(template_path)
+            self.assertEqual(
+                os.path.abspath(template_path),
+                os.path.abspath(os.path.join(app_root, "templates_word", "conventionaps.docx")),
+            )
+            template_hash_before = _file_sha256(template_path)
+            template_fixed_text = _docx_text_without_variables(template_path)
+
             def fake_run(command, check, capture_output, text, timeout):
                 pdf_path = os.path.splitext(command[-1])[0] + ".pdf"
                 with open(pdf_path, "wb") as fh:
@@ -364,21 +390,25 @@ class ApsConventionGenerationTests(unittest.TestCase):
                 return mock.Mock(returncode=0, stdout="", stderr="")
 
             with mock.patch.object(app, "YOUSIGN_CONVENTION_DIR", tmpdir), \
+                 mock.patch.object(app.app, "root_path", app_root), \
                  mock.patch.object(app, "_find_libreoffice_binary", return_value="libreoffice"), \
-                 mock.patch.object(app, "_docx_text_contains_yousign_smart_anchor", return_value=True), \
                  mock.patch.object(app.subprocess, "run", side_effect=fake_run), \
                  self.assertLogs(app.app.logger.name, level="INFO") as logs:
                 docx_path, pdf_path = app._generate_aps_convention_files(session, trainee, "session-1", "trainee-1")
 
             generated_fixed_text = _docx_text_without_variables(docx_path)
             generated_xml = _docx_word_xml_text(docx_path)
+            generated_anchors = app._docx_yousign_smart_anchors(docx_path, signer_index=1)
             pdf_exists = os.path.exists(pdf_path)
+            template_hash_after = _file_sha256(template_path)
 
-        self.assertEqual(template_hash_before, _file_sha256(template_path))
+        self.assertEqual(template_hash_before, template_hash_after)
         self.assertTrue(pdf_exists)
+        self.assertIn("{{s1|signature|160|60}}", generated_anchors)
         self.assertEqual(template_fixed_text, generated_fixed_text)
         self.assertIn("INTÉGRALE ACADEMY", generated_fixed_text)
         self.assertIn("Convention APS template utilisé :", "\n".join(logs.output))
+        self.assertIn("Zones de signature détectées dans la convention APS : ['{{s1|signature|160|60}}']", "\n".join(logs.output))
         self.assertIn(os.path.abspath(template_path), "\n".join(logs.output))
         self.assertIn(f"sha256={template_hash_before}", "\n".join(logs.output))
         self.assertNotRegex(generated_xml, r"Intégrale Academy SAS|93830739683")
@@ -390,16 +420,20 @@ class ApsConventionGenerationTests(unittest.TestCase):
             document.add_paragraph("Entre l’organisme de formation : INTÉGRALE ACADEMY")
             document.add_paragraph("Déclaration d’activité n° 93830600283")
             document.add_paragraph("Stagiaire : {{ nom_identite }}")
+            document.add_paragraph("Signature : {{s1|signature|160|60}}")
             document.add_paragraph("Legacy interdit : ['Nom] ['NumeroDeclarationActivite]")
             document.add_paragraph("Titre article fixe")
             document.save(docx_path)
 
             app._replace_docx_xml_placeholders(docx_path, {"nom_identite": "DUPONT Jean"})
             generated_text = "\n".join(paragraph.text for paragraph in app.Document(docx_path).paragraphs)
+            generated_anchors = app._docx_yousign_smart_anchors(docx_path, signer_index=1)
 
         self.assertIn("Entre l’organisme de formation : INTÉGRALE ACADEMY", generated_text)
         self.assertIn("Déclaration d’activité n° 93830600283", generated_text)
         self.assertIn("Stagiaire : DUPONT Jean", generated_text)
+        self.assertIn("Signature : {{s1|signature|160|60}}", generated_text)
+        self.assertIn("{{s1|signature|160|60}}", generated_anchors)
         self.assertIn("Legacy interdit : ['Nom] ['NumeroDeclarationActivite]", generated_text)
         self.assertIn("Titre article fixe", generated_text)
         self.assertNotIn("Intégrale Academy SAS", generated_text)

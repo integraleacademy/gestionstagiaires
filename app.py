@@ -20801,7 +20801,7 @@ def _is_aps_session(session_obj: Dict[str, Any]) -> bool:
 # =========================
 YOUSIGN_BASE_URL_DEFAULT = "https://api-sandbox.yousign.app/v3"
 
-YOUSIGN_SMART_ANCHOR_PATTERN = re.compile(r"\{\{s\d+\|signature\|\d+\|\d+\}\}")
+YOUSIGN_SMART_ANCHOR_PATTERN = re.compile(r"\{\{\s*s(\d+)\|signature\|(\d+)\|(\d+)\s*\}\}")
 YOUSIGN_SMART_ANCHOR_MISSING_MESSAGE = "Aucune zone de signature trouvée dans le modèle Word. Ajoutez {{s1|signature|160|60}} à l’endroit souhaité."
 YOUSIGN_SMART_ANCHOR_PLACEHOLDER_PREFIX = "__YOUSIGN_SMART_ANCHOR_"
 
@@ -20810,23 +20810,37 @@ def _docx_xml_names(zf: zipfile.ZipFile) -> List[str]:
     return [name for name in zf.namelist() if name.startswith("word/") and name.endswith(".xml")]
 
 
-def _docx_text_contains_yousign_smart_anchor(docx_path: str, signer_index: int = 1) -> bool:
-    expected_prefix = f"{{{{s{signer_index}|signature|"
+def _docx_yousign_smart_anchors(docx_path: str, signer_index: Optional[int] = None) -> List[str]:
+    anchors: List[str] = []
+    seen = set()
+    expected_signer = str(signer_index) if signer_index is not None else ""
+
+    def collect(text: str) -> None:
+        for match in YOUSIGN_SMART_ANCHOR_PATTERN.finditer(text):
+            if expected_signer and match.group(1) != expected_signer:
+                continue
+            anchor = match.group(0)
+            if anchor not in seen:
+                seen.add(anchor)
+                anchors.append(anchor)
+
     try:
         with zipfile.ZipFile(docx_path) as zf:
             for name in _docx_xml_names(zf):
                 xml_text = zf.read(name).decode("utf-8", errors="ignore")
-                if expected_prefix in xml_text and YOUSIGN_SMART_ANCHOR_PATTERN.search(xml_text):
-                    return True
+                collect(xml_text)
                 try:
                     plain_text = "".join(ET.fromstring(xml_text).itertext())
-                    if expected_prefix in plain_text and YOUSIGN_SMART_ANCHOR_PATTERN.search(plain_text):
-                        return True
+                    collect(plain_text)
                 except Exception:
                     pass
     except zipfile.BadZipFile:
-        return False
-    return False
+        return []
+    return anchors
+
+
+def _docx_text_contains_yousign_smart_anchor(docx_path: str, signer_index: int = 1) -> bool:
+    return bool(_docx_yousign_smart_anchors(docx_path, signer_index=signer_index))
 
 
 def _rewrite_docx_xml(docx_path: str, rewrite) -> None:
@@ -21808,7 +21822,6 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
         "prenom": first_name,
         "ville_edition": "Puget-sur-Argens",
         "date_edition": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
-        "signature_stagiaire": "{{s1|signature|160|60}}",
     }
 
 
@@ -21859,7 +21872,9 @@ def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[st
     final_pdf_path = os.path.join(YOUSIGN_CONVENTION_DIR, base + ".pdf")
     shutil.copyfile(template_path, final_docx_path)
     _replace_docx_xml_placeholders(final_docx_path, _aps_convention_replacements(session_obj, trainee))
-    if not _docx_text_contains_yousign_smart_anchor(final_docx_path, signer_index=1):
+    signature_anchors = _docx_yousign_smart_anchors(final_docx_path, signer_index=1)
+    app.logger.info("Zones de signature détectées dans la convention APS : %s", signature_anchors)
+    if not signature_anchors:
         raise RuntimeError(YOUSIGN_SMART_ANCHOR_MISSING_MESSAGE)
     if not os.path.exists(final_docx_path) or os.path.getsize(final_docx_path) <= 0:
         raise RuntimeError("Le DOCX final de convention APS est introuvable ou vide.")
