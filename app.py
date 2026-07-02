@@ -643,6 +643,45 @@ def get_qonto_invoice(invoice_id: str) -> Dict[str, Any]:
 
 
 
+def _first_non_empty(mapping: Any, *keys: str) -> str:
+    if not isinstance(mapping, dict):
+        return ""
+    for key in keys:
+        value = mapping.get(key)
+        if value:
+            return str(value)
+    return ""
+
+def download_qonto_invoice_pdf(invoice_id: str) -> Tuple[bytes, str]:
+    if not _qonto_is_configured():
+        raise QontoConfigurationError("Qonto n’est pas connecté")
+    endpoint = f"/v2/client_invoices/{quote(str(invoice_id), safe='')}/download"
+    url = f"{_qonto_base_url()}{endpoint}"
+    response = requests.get(url, headers={**get_qonto_headers(), "Accept": "application/pdf,application/json"}, timeout=30)
+    content_type = response.headers.get("Content-Type", "")
+    raw_body = response.text if "json" in content_type.lower() or "text" in content_type.lower() else ""
+    trace_id = _qonto_response_trace_id(response, raw_body)
+    app.logger.info("[QONTO] api_call method=GET url=%s status=%s trace_id=%s content_type=%s", url, response.status_code, trace_id or "", content_type)
+    if not response.ok:
+        if response.status_code == 404:
+            raise QontoNotFoundError(response.status_code, raw_body or response.text[:500], trace_id)
+        raise QontoApiError(response.status_code, raw_body or response.text[:500], trace_id)
+    if response.content.startswith(b"%PDF") or "application/pdf" in content_type.lower():
+        return response.content, "application/pdf"
+    try:
+        payload = response.json()
+    except Exception as exc:
+        raise RuntimeError("La réponse Qonto ne contient pas de PDF exploitable") from exc
+    invoice = _qonto_invoice_payload(payload)
+    pdf_url = _first_non_empty(invoice, "public_url", "url", "file_url", "pdf_url", "download_url") or _first_non_empty(payload, "public_url", "url", "file_url", "pdf_url", "download_url")
+    if not pdf_url:
+        raise RuntimeError("PDF Qonto non exposé par l’API")
+    pdf_response = requests.get(str(pdf_url), timeout=30)
+    if not pdf_response.ok:
+        raise RuntimeError(f"Téléchargement PDF Qonto impossible ({pdf_response.status_code})")
+    return pdf_response.content, pdf_response.headers.get("Content-Type") or "application/pdf"
+
+
 def list_qonto_direct_debit_mandates(client_id: str) -> Dict[str, Any]:
     return _qonto_request("GET", "/v2/sepa/direct_debit_mandates", params={"client_id": client_id})
 
@@ -22987,9 +23026,19 @@ def api_admin_billing_sync_payment(line_id: str):
 def api_admin_billing_download(line_id: str):
     data = load_data(); line = _find_billing_line(data, line_id)
     if not line or not line.get('qontoInvoiceId'): return jsonify({'ok': False, 'error': 'Facture indisponible'}), 404
-    line['invoiceDownloadedAt'] = _now_iso(); _billing_log(line, 'PDF téléchargé', 'success'); _save_billing_line(data, line); save_data(data)
-    if line.get('invoicePdfUrl'): return redirect(line['invoicePdfUrl'])
-    return jsonify({'ok': True, 'message': 'PDF Qonto non exposé par l’API', 'qontoInvoiceId': line.get('qontoInvoiceId')})
+    try:
+        if line.get('invoicePdfUrl'):
+            line['invoiceDownloadedAt'] = _now_iso(); _billing_log(line, 'PDF téléchargé', 'success'); _save_billing_line(data, line); save_data(data)
+            return redirect(line['invoicePdfUrl'])
+        pdf_bytes, content_type = download_qonto_invoice_pdf(line['qontoInvoiceId'])
+        line['invoiceDownloadedAt'] = _now_iso(); _billing_log(line, 'PDF téléchargé', 'success'); _save_billing_line(data, line); save_data(data)
+        filename = re.sub(r'[^A-Za-z0-9_.-]+', '_', f"FACTURE_{line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId')}.pdf")
+        response = send_file(BytesIO(pdf_bytes), mimetype=content_type or 'application/pdf', as_attachment=False, download_name=filename)
+        response.headers['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+    except Exception as exc:
+        _billing_log(line, 'PDF téléchargé', 'error', _sanitize_qonto_error(str(exc)), line.get('qontoInvoiceId') or ''); _save_billing_line(data, line); save_data(data)
+        return jsonify({'ok': False, 'error': _sanitize_qonto_error(str(exc)), 'qontoInvoiceId': line.get('qontoInvoiceId')}), 502
 
 
 @app.post('/api/admin/billing-lines/bulk-download')
