@@ -31,11 +31,11 @@
   .automation-badge--waiting,.automation-badge--blocked,.automation-badge--action{color:#92400e;border-color:#fed7aa;background:#fff7ed}.automation-badge--waiting::before,.automation-badge--blocked::before,.automation-badge--action::before{background:#f97316;box-shadow:0 0 0 4px rgba(249,115,22,.13)}
   .automation-grid{display:grid;gap:10px;}
   .automation-doc{position:relative;border:1px solid #e2e8f0;border-radius:18px;background:rgba(255,255,255,.92);box-shadow:0 8px 22px rgba(15,23,42,.045);overflow:hidden;}
-  .automation-doc__summary{display:grid;grid-template-columns:minmax(180px,1.15fr) minmax(180px,1fr) auto auto;align-items:center;gap:14px;padding:14px 16px;list-style:none;cursor:pointer;}
+  .automation-doc__summary{display:grid;grid-template-columns:minmax(180px,1fr) auto auto auto;align-items:center;gap:14px;padding:14px 16px;list-style:none;cursor:pointer;}
   .automation-doc__summary::-webkit-details-marker{display:none}.automation-doc__summary::after{content:"⌄";display:grid;place-items:center;width:30px;height:30px;border-radius:999px;background:#f1f5f9;color:#475569;font-weight:950;transition:transform .18s ease;}
   .automation-doc[open] .automation-doc__summary::after{transform:rotate(180deg)}
   .automation-doc__title{min-width:0}.automation-doc__title h3{margin:0;color:#0f172a;font-size:17px;line-height:1.2}.automation-doc__title p{margin:4px 0 0;color:#64748b;font-size:12px;line-height:1.35}
-  .automation-doc__quick{display:flex;align-items:center;gap:8px;min-width:0;color:#475569;font-size:12px;font-weight:850;overflow-wrap:anywhere}.automation-doc__quick span{color:#64748b;font-weight:800}.automation-doc__quick strong{color:#0f172a}
+  .automation-doc__summary-action{display:flex;justify-content:flex-end;min-width:0}.automation-doc__summary-action form{margin:0}.automation-doc__summary-action .btn{min-height:34px;white-space:nowrap}
   .automation-status{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:950;white-space:nowrap}.automation-status--complete{background:#dcfce7;color:#166534}.automation-status--error{background:#fee2e2;color:#991b1b}.automation-status--waiting{background:#fef3c7;color:#92400e}.automation-status--blocked{background:#e5e7eb;color:#475569}.automation-status--pending{background:#dbeafe;color:#1d4ed8}.automation-status--muted{background:#f1f5f9;color:#64748b}
   .automation-doc__body{border-top:1px solid #eef2f7;padding:0 16px 16px;}
   .automation-meta{display:grid;gap:8px;margin:14px 0}.automation-meta__row{display:flex;justify-content:space-between;gap:12px;padding:8px 10px;border:1px solid #eef2f7;border-radius:10px;background:#f8fafc;font-size:12px;min-width:0}.automation-meta__row span{color:#64748b;font-weight:800}.automation-meta__row strong{color:#0f172a;text-align:right;overflow-wrap:anywhere}
@@ -43,7 +43,7 @@
   .automation-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.automation-actions .btn{min-height:38px}.automation-actions form{margin:0}.automation-actions .btn[disabled]{cursor:not-allowed;opacity:.62}
   .automation-placeholder{cursor:default}.automation-placeholder .automation-doc__summary{cursor:default}.automation-placeholder .automation-doc__summary::after{content:"Bientôt";width:auto;padding:0 10px;font-size:11px;color:#64748b}
   .automation-timeline{display:none}
-  @media(max-width:860px){.automation-hub{padding:18px}.automation-hub__header{flex-direction:column;margin-bottom:14px}.automation-doc__summary{grid-template-columns:1fr;gap:8px}.automation-doc__summary::after{position:absolute;right:14px;top:14px}.automation-doc__quick{padding-right:38px}.automation-meta__row{flex-direction:column;gap:3px}.automation-meta__row strong{text-align:left}}
+  @media(max-width:860px){.automation-hub{padding:18px}.automation-hub__header{flex-direction:column;margin-bottom:14px}.automation-doc__summary{grid-template-columns:1fr;gap:8px}.automation-doc__summary::after{position:absolute;right:14px;top:14px}.automation-doc__title{padding-right:38px}.automation-doc__summary-action{justify-content:flex-start}.automation-meta__row{flex-direction:column;gap:3px}.automation-meta__row strong{text-align:left}}
 
   .aps-doc-card{grid-column:1 / -1;margin-top:16px;background:#fff;border:1px solid rgba(148,163,184,.28);border-radius:22px;box-shadow:0 18px 45px rgba(15,23,42,.08);padding:22px;}
   .aps-doc-card__head{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
@@ -732,7 +732,9 @@
     <details class="automation-doc">
       <summary class="automation-doc__summary">
         <div class="automation-doc__title"><h3>Convention</h3><p>Document contractuel à faire signer.</p></div>
-        <div class="automation-doc__quick"><span>Statut</span><strong>{% if c.status == 'signed' %}Signée{% elif c.status == 'waiting_signature' %}En attente de signature{% elif c.status == 'sent' %}Envoyée{% elif c.status == 'generated' %}Générée{% elif c.status == 'not_generated' %}Non générée{% elif c.status == 'refused' %}Refusée{% elif c.status == 'expired' %}Expirée{% else %}Erreur{% endif %}</strong></div>
+        <div class="automation-doc__summary-action">
+          <form class="automation-loading-form" method="post" action="{{ url_for('admin_create_convention_signature', session_id=session.id, trainee_id=trainee.id) }}" onclick="event.stopPropagation()"><button class="btn btn-primary" type="submit" {% if is_read_only or c.status == 'signed' %}disabled{% endif %}>{% if c.status == 'not_generated' %}Générer la convention{% elif c.status == 'generated' %}Envoyer pour signature{% elif c.status in ['waiting_signature','sent'] %}Voir le statut Yousign{% else %}Envoyer pour signature{% endif %}</button></form>
+        </div>
         <span class="automation-status automation-status--{% if c.status == 'signed' %}complete{% elif c.status in ['error','refused','expired'] %}error{% elif c.status == 'waiting_signature' %}waiting{% elif c.status == 'not_generated' %}blocked{% else %}pending{% endif %}">{% if c.status == 'signed' %}Signée{% elif c.status == 'waiting_signature' %}Signature attendue{% elif c.status == 'sent' %}Envoyée{% elif c.status == 'generated' %}Générée{% elif c.status == 'not_generated' %}Non générée{% elif c.status == 'refused' %}Refusée{% elif c.status == 'expired' %}Expirée{% else %}Erreur{% endif %}</span>
       </summary>
       <div class="automation-doc__body">
@@ -745,7 +747,6 @@
         </div>
         {% if c.error %}<div class="automation-error">{{ c.error }}</div>{% endif %}
         <div class="automation-actions">
-          <form class="automation-loading-form" method="post" action="{{ url_for('admin_create_convention_signature', session_id=session.id, trainee_id=trainee.id) }}"><button class="btn btn-primary" type="submit" {% if is_read_only or c.status == 'signed' %}disabled{% endif %}>{% if c.status == 'not_generated' %}Générer la convention{% elif c.status == 'generated' %}Envoyer pour signature{% elif c.status in ['waiting_signature','sent'] %}Voir le statut Yousign{% else %}Envoyer pour signature{% endif %}</button></form>
           {% if c.status in ['waiting_signature','sent'] %}<form class="automation-loading-form" method="post" action="{{ url_for('admin_send_convention_signature_reminder_for_session', session_id=session.id, trainee_id=trainee.id) }}"><button class="btn btn-outline" type="submit" {% if is_read_only %}disabled{% endif %}>Relancer la signature</button></form>{% endif %}
           {% if c.download_url %}<a class="btn btn-outline" href="{{ c.download_url }}" target="_blank" rel="noopener">Voir / Télécharger la convention</a>{% endif %}
         </div>
@@ -756,8 +757,7 @@
     <details class="automation-doc">
       <summary class="automation-doc__summary">
         <div class="automation-doc__title"><h3>Convocation</h3><p>Document envoyé après validation de la convention.</p></div>
-        <div class="automation-doc__quick"><span>Statut</span><strong>{% if v.status == 'blocked_waiting_convention' %}En attente de signature de la convention{% elif v.status == 'sent' %}Envoyée{% elif v.status == 'generated' %}Prête à envoyer{% elif v.status == 'not_generated' %}Prête à générer{% else %}Erreur{% endif %}</strong></div>
-        <span class="automation-status automation-status--{% if v.status == 'sent' %}complete{% elif v.status == 'error' %}error{% elif v.status == 'blocked_waiting_convention' %}blocked{% else %}pending{% endif %}">{% if v.status == 'blocked_waiting_convention' %}Bloquée{% elif v.status == 'sent' %}Envoyée{% elif v.status == 'generated' %}Prête{% elif v.status == 'not_generated' %}À générer{% else %}Erreur{% endif %}</span>
+        <span class="automation-status automation-status--{% if v.status == 'sent' %}complete{% elif v.status == 'error' %}error{% elif v.status == 'blocked_waiting_convention' %}blocked{% else %}pending{% endif %}">{% if v.status == 'blocked_waiting_convention' %}En attente signature convention{% elif v.status == 'sent' %}Envoyée{% elif v.status == 'generated' %}Prête{% elif v.status == 'not_generated' %}À générer{% else %}Erreur{% endif %}</span>
       </summary>
       <div class="automation-doc__body">
         <div class="automation-meta">
@@ -777,7 +777,6 @@
     <div class="automation-doc automation-placeholder">
       <div class="automation-doc__summary">
         <div class="automation-doc__title"><h3>Attestation d'entrée en formation</h3><p>Configuration prévue prochainement.</p></div>
-        <div class="automation-doc__quick"><span>Statut</span><strong>À configurer</strong></div>
         <span class="automation-status automation-status--muted">Plus tard</span>
       </div>
     </div>
@@ -785,7 +784,6 @@
     <div class="automation-doc automation-placeholder">
       <div class="automation-doc__summary">
         <div class="automation-doc__title"><h3>Attestation de fin de formation</h3><p>Configuration prévue prochainement.</p></div>
-        <div class="automation-doc__quick"><span>Statut</span><strong>À configurer</strong></div>
         <span class="automation-status automation-status--muted">Plus tard</span>
       </div>
     </div>
