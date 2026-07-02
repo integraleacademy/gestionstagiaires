@@ -192,6 +192,17 @@ class YousignSignatureEmailTests(unittest.TestCase):
         self.assertNotIn("Jean <script>", html_body)
         self.assertIn("https://sign.example.test/?token=abc&amp;name=&lt;bad&gt;", html_body)
 
+    def test_signature_email_uses_long_training_label_from_training_type(self):
+        session = {"name": "APS TEST", "training_type": "APS", "date_start": "2026-09-01", "date_end": "2026-10-01"}
+        trainee = {"first_name": "Clement"}
+
+        _subject, html_body, text_body = app._build_yousign_signature_link_email(session, trainee, "https://sign.example.test/sign")
+
+        self.assertIn("Agent de Prévention et de Sécurité (APS)", html_body)
+        self.assertIn("Agent de Prévention et de Sécurité (APS)", text_body)
+        self.assertNotIn("APS TEST", html_body)
+        self.assertNotIn("APS TEST", text_body)
+
     def test_signature_email_send_uses_html_and_text_payload(self):
         session = {"name": "Formation APS", "date_start": "2026-07-01", "date_end": "2026-07-05"}
         trainee = {"id": "trainee-1", "email": "stagiaire@example.com", "first_name": "Jean"}
