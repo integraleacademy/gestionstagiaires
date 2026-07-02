@@ -1332,7 +1332,7 @@
   <!-- ===================== -->
   <!-- FINANCEMENT & FACTURATION -->
   <!-- ===================== -->
-  <details class="finance-dashboard" id="conventionFinancementSection">
+  <details class="finance-dashboard is-hidden" id="conventionFinancementSection">
     <summary class="finance-dashboard__summary">
       <span>Financement &amp; facturation</span>
       <span class="finance-dashboard__summary-hint">Ouvrir le suivi financier</span>
@@ -1341,7 +1341,6 @@
          data-training-type="{{ session.training_type }}"
          data-default-price="{{ default_training_price or '' }}"
          data-read-only="{{ '1' if is_read_only else '0' }}">
-      <button class="finance-dashboard__close" type="button" data-finance-close aria-label="Fermer">×</button>
       <div class="finance-dashboard__header">
         <div>
           <div class="finance-dashboard__kicker">Suivi financier</div>
@@ -3865,22 +3864,21 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
     }
   });
 
+  const financeSection = document.getElementById("conventionFinancementSection");
+  function resetFinanceSection(){
+    if(!financeSection) return;
+    financeSection.open = false;
+    financeSection.classList.add("is-hidden");
+  }
+  resetFinanceSection();
+  window.addEventListener("pageshow", resetFinanceSection);
+
   document.querySelectorAll("[data-finance-close]").forEach((btn)=>{
     btn.addEventListener("click", ()=>{
-      const financeSection = document.getElementById("conventionFinancementSection");
-      if(financeSection){
-        financeSection.open = false;
-        financeSection.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+      resetFinanceSection();
+      financeSection?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   });
-  document.addEventListener("keydown", (event)=>{
-    if(event.key === "Escape"){
-      const financeSection = document.getElementById("conventionFinancementSection");
-      if(financeSection) financeSection.open = false;
-    }
-  });
-
   document.querySelectorAll("[data-open-section]").forEach((btn)=>{
     btn.addEventListener("click", ()=>{
       const targetId = btn.getAttribute("data-open-section");
