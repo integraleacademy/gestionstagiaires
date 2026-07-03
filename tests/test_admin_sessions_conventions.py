@@ -107,6 +107,48 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertIn("LIBELLE", html)
         self.assertIn("ACTION", html)
 
+
+    def test_convention_history_dates_are_displayed_in_french_timezone(self):
+        fake_data = {
+            "sessions": [
+                {
+                    "id": "S-APS",
+                    "training_type": "APS",
+                    "date_start": "2026-09-01",
+                    "date_end": "2026-09-15",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "last_name": "DATES",
+                            "first_name": "Delphine",
+                            "email": "delphine@example.test",
+                            "convention_status": "signing",
+                            "convention_signature": {
+                                "signature_request_id": "sig-1",
+                                "signature_link": "https://sign.example.test/sig-1",
+                                "status": "ongoing",
+                                "created_at": "2026-07-03T09:50:32.129789Z",
+                                "signature_email_sent_at": "2026-07-03T09:51:00Z",
+                                "next_reminder_at": "2026-07-05T09:50:32Z",
+                                "reminder_count": 0,
+                            },
+                        }
+                    ],
+                }
+            ]
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            response = self.client.get("/admin/sessions/conventions")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Créée :</strong> 03/07/2026 à 11h50", html)
+        self.assertIn("Envoyée :</strong> 03/07/2026 à 11h51", html)
+        self.assertIn("prochaine 05/07/2026 à 11h50", html)
+        self.assertNotIn("2026-07-03T09:50:32", html)
+        self.assertNotIn("2026-07-05T09:50:32", html)
+
     def test_conventions_can_filter_by_formation_and_status(self):
         fake_data = {
             "sessions": [
