@@ -318,6 +318,32 @@ class ApsAutomationStatusTests(unittest.TestCase):
         self.assertTrue(status["convocation"]["can_generate"])
         self.assertFalse(status["convocation"]["can_send"])
 
+    def test_sent_convocation_without_generation_timestamp_is_displayed_as_generated(self):
+        session = {"id": "session-1", "training_type": "APS", "name": "Formation APS"}
+        trainee = {
+            "id": "trainee-1",
+            "first_name": "Jean",
+            "last_name": "Dupont",
+            "convocation_aps_status": "sent",
+            "convocation_aps_sent_at": "2026-07-03T08:13:43.852227Z",
+            "convocation_aps_pdf_path": "/tmp/convocation.pdf",
+            "convention_signature": {
+                "status": "done",
+                "created_at": "2026-07-03T08:00:00Z",
+                "sent_at": "2026-07-03T08:01:00Z",
+                "signed_at": "2026-07-03T08:10:00Z",
+            },
+        }
+
+        with app.app.test_request_context():
+            status = app._build_trainee_automation_status(session, trainee, "session-1", "trainee-1")
+
+        generation_step = status["convocation"]["timeline_steps"][1]
+        self.assertEqual(status["convocation"]["status"], "sent")
+        self.assertEqual(status["convocation"]["generated_at"], "2026-07-03T08:13:43.852227Z")
+        self.assertEqual(generation_step["value"], "2026-07-03T08:13:43.852227Z")
+        self.assertEqual(generation_step["state"], "done")
+
 class ApsConvocationEmailTests(unittest.TestCase):
     def test_convocation_email_matches_convention_visual_style_and_escapes_values(self):
         subject, html_body = app._build_aps_convocation_email(

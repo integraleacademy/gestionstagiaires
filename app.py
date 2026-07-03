@@ -22438,6 +22438,7 @@ def _send_convocation_after_convention_signed(session_obj: Dict[str, Any], train
         raise RuntimeError("Impossible d’envoyer la convocation : échec d’envoi email")
     now = _now_iso()
     trainee["convocation_aps_status"] = "sent"
+    trainee["convocation_aps_generated_at"] = trainee.get("convocation_aps_generated_at") or now
     trainee["convocation_aps_sent_at"] = now
     trainee["convocation_aps_pdf_path"] = pdf_path
     trainee["convocation_aps_docx_path"] = docx_path
@@ -22480,9 +22481,9 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     convocation_error = trainee.get("convocation_aps_last_error") or trainee.get("convocation_auto_last_error") or ""
     if not convention_signed and convocation_error == "En attente de signature de la convention":
         convocation_error = ""
-    convocation_generated_at = trainee.get("convocation_aps_generated_at") or ""
     convocation_sent_at = trainee.get("convocation_aps_sent_at") or ""
     has_convocation_file = bool(trainee.get("convocation_aps_pdf_path") or trainee.get("convocation_aps_docx_path"))
+    convocation_generated_at = trainee.get("convocation_aps_generated_at") or (convocation_sent_at if has_convocation_file else "")
     if convocation_error:
         convocation_status = "error"
     elif not convention_signed:
@@ -24452,6 +24453,7 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
             raise RuntimeError("Le PDF de convocation APS n’est pas consultable depuis l’administration.")
         sent_at = _now_iso()
         t["convocation_aps_status"] = "sent"
+        t["convocation_aps_generated_at"] = t.get("convocation_aps_generated_at") or sent_at
         t["convocation_aps_sent_at"] = sent_at
         t["convocation_aps_pdf_path"] = pdf_path
         t["convocation_aps_docx_path"] = docx_path
