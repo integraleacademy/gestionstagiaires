@@ -3189,6 +3189,13 @@ def _normalize_afc_email(raw_email: Any) -> str:
 
 import base64
 
+EMAIL_RECIPIENT_BLOCKLIST = {"clement@integraleacademy.com"}
+
+
+def _is_blocked_email_recipient(email: str) -> bool:
+    return (email or "").strip().lower() in EMAIL_RECIPIENT_BLOCKLIST
+
+
 def brevo_send_email(
     to_email: str,
     subject: str,
@@ -3198,7 +3205,11 @@ def brevo_send_email(
     attachments: Optional[List[Dict[str, str]]] = None,
     text_content: str = "",
 ) -> bool:
+    to_email = (to_email or "").strip()
     if not BREVO_API_KEY or not to_email:
+        return False
+    if _is_blocked_email_recipient(to_email):
+        print(f"[EMAIL] blocked recipient skipped: {to_email}")
         return False
 
     url = "https://api.brevo.com/v3/smtp/email"
@@ -3220,7 +3231,11 @@ def brevo_send_email(
     if text_content:
         payload["textContent"] = text_content
 
-    cc_list = [email for email in (cc_emails or []) if email]
+    cc_list = [
+        email.strip()
+        for email in (cc_emails or [])
+        if email and not _is_blocked_email_recipient(email)
+    ]
     if cc_list:
         payload["cc"] = [{"email": email} for email in cc_list]
 
