@@ -14727,6 +14727,7 @@ def admin_trainees(session_id: str):
 
         _sync_trainee_afc_medical_requirement(t, session_view["name"])
         ensure_documents_schema_for_trainee(t, training_type)
+        _sync_convention_status_from_yousign(t)
         t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
         _sync_financement_status_from_manual_validation(t)
 
@@ -21111,6 +21112,18 @@ def _is_yousign_signature_done(state: Dict[str, Any]) -> bool:
     return _normalize_yousign_status(state.get("status")) in YOUSIGN_FINAL_STATUSES
 
 
+def _sync_convention_status_from_yousign(trainee: Dict[str, Any]) -> bool:
+    """Keep the admin trainees convention dot aligned with the Yousign automation state."""
+    state = _yousign_state(trainee)
+    signed_at = state.get("signed_at") or trainee.get("convention_aps_signed_at") or ""
+    if not (_is_yousign_signature_done(state) or signed_at or trainee.get("convention_aps_status") == "signed"):
+        return False
+    if trainee.get("convention_status") == "signed":
+        return False
+    trainee["convention_status"] = "signed"
+    return True
+
+
 def _yousign_payload_signature_request(payload: Dict[str, Any]) -> Dict[str, Any]:
     data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
     signature_request = data.get("signature_request") if isinstance(data.get("signature_request"), dict) else {}
@@ -21672,6 +21685,7 @@ def _mark_yousign_convention_signed(data: Dict[str, Any], sess: Dict[str, Any], 
     })
     trainee["convention_aps_status"] = "signed"
     trainee["convention_aps_signed_at"] = state.get("signed_at") or now
+    _sync_convention_status_from_yousign(trainee)
     _schedule_convocation_after_convention_signed(sess, trainee, str(sess.get("id") or ""), str(trainee.get("id") or ""))
     trainee["updated_at"] = now
     sess["trainees"] = trainees
