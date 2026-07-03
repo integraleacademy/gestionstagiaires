@@ -1365,45 +1365,44 @@
       window.location.href = continueUrl;
     };
     if(result.is_vae){ continueAfterConvention(); return; }
+    const financingUrl = result.convention_financing_url || "";
+    const saveConventionFinancing = async (payload)=>{
+      if(!financingUrl) return;
+      const financingResponse = await fetch(financingUrl, {
+        method: "POST",
+        headers: {"Content-Type":"application/json", "Accept":"application/json"},
+        body: JSON.stringify(payload)
+      });
+      const financingPayload = await financingResponse.json().catch(()=>({}));
+      if(!financingResponse.ok || !financingPayload.ok){ throw new Error(financingPayload.error || "Sauvegarde des montants impossible."); }
+    };
+    const previewUrl = result.convention_preview_url || "";
     const conventionPayload = await window.openConventionTransmission?.({
       defaults: {
         training_price: result.training_price || "",
         cpf_amount: result.cpf_amount || "",
         personal_amount: result.personal_amount || "",
         other_amount: result.other_amount || ""
+      },
+      previewUrl,
+      onPreview: async (payload)=>{
+        await saveConventionFinancing(payload);
+        if(previewUrl){ await window.openConventionPreview?.(previewUrl); }
       }
     });
     if(!conventionPayload || !result.convention_signature_url){ continueAfterConvention(); return; }
-    const financingUrl = result.convention_financing_url || "";
-    if(financingUrl){
-      try{
-        const financingResponse = await fetch(financingUrl, {
-          method: "POST",
-          headers: {"Content-Type":"application/json", "Accept":"application/json"},
-          body: JSON.stringify(conventionPayload)
-        });
-        const financingPayload = await financingResponse.json().catch(()=>({}));
-        if(!financingResponse.ok || !financingPayload.ok){ throw new Error(financingPayload.error || "Sauvegarde des montants impossible."); }
-      }catch(error){
-        await (window.showConventionResult?.({
-          type: "error",
-          title: "Montants non sauvegardés",
-          message: error.message || "Impossible de sauvegarder les montants avant de générer l’aperçu de la convention.",
-          buttonText: "Compris"
-        }) || Promise.resolve(window.alert(error.message || "Impossible de sauvegarder les montants avant l’aperçu.")));
-        continueAfterConvention();
-        return;
-      }
+    try{
+      await saveConventionFinancing(conventionPayload);
+    }catch(error){
+      await (window.showConventionResult?.({
+        type: "error",
+        title: "Montants non sauvegardés",
+        message: error.message || "Impossible de sauvegarder les montants avant d’envoyer la convention.",
+        buttonText: "Compris"
+      }) || Promise.resolve(window.alert(error.message || "Impossible de sauvegarder les montants avant l’envoi.")));
+      continueAfterConvention();
+      return;
     }
-    const previewUrl = result.convention_preview_url || "";
-    if(previewUrl){ await window.openConventionPreview?.(previewUrl); }
-    const previewMessage = previewUrl
-      ? "La prévisualisation est fermée. Confirmer l’envoi Yousign maintenant ?"
-      : "Aucun aperçu n’est disponible pour cette convention. Confirmer tout de même l’envoi Yousign maintenant ?";
-    const previewOk = window.AppModal
-      ? await window.AppModal.confirm({type: previewUrl ? "info" : "warning", title: "Vérifier la convention avant envoi", message: previewMessage, primaryText: "Envoyer maintenant", secondaryText: "Annuler", tertiaryText: "Envoyer plus tard"})
-      : window.confirm(previewMessage);
-    if(!previewOk){ continueAfterConvention(); return; }
     window.showConventionTransmissionProgress?.();
     try{
       const response = await fetch(result.convention_signature_url, {
