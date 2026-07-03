@@ -1817,12 +1817,16 @@ def fr_datetime(value: str) -> str:
     normalized = s.replace("Z", "+00:00")
     try:
         dt = datetime.datetime.fromisoformat(normalized)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
+        dt = dt.astimezone(ZoneInfo("Europe/Paris"))
         return dt.strftime("%d/%m/%Y à %Hh%M")
     except Exception:
         pass
     for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
         try:
             dt = datetime.datetime.strptime(s[:26], fmt)
+            dt = dt.replace(tzinfo=datetime.timezone.utc).astimezone(ZoneInfo("Europe/Paris"))
             return dt.strftime("%d/%m/%Y à %Hh%M")
         except Exception:
             pass
@@ -22455,13 +22459,23 @@ def _send_convocation_after_convention_signed(session_obj: Dict[str, Any], train
 
 
 
+def _format_automation_datetime(value: Any) -> str:
+    """Affiche les horodatages d'automatisation au format français, heure de Paris."""
+    if not value:
+        return ""
+    return fr_datetime(str(value))
+
+
 def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> Dict[str, Any]:
     """Centralise l'état des documents automatisés affiché sur la fiche stagiaire."""
     state = _yousign_state(trainee)
     raw_status = _normalize_yousign_status(state.get("status"))
-    generated_at = state.get("created_at") or trainee.get("convention_aps_generated_at") or ""
-    sent_at = state.get("signature_email_sent_at") or state.get("activated_at") or ""
-    signed_at = state.get("signed_at") or trainee.get("convention_aps_signed_at") or ""
+    generated_at_raw = state.get("created_at") or trainee.get("convention_aps_generated_at") or ""
+    sent_at_raw = state.get("signature_email_sent_at") or state.get("activated_at") or ""
+    signed_at_raw = state.get("signed_at") or trainee.get("convention_aps_signed_at") or ""
+    generated_at = _format_automation_datetime(generated_at_raw)
+    sent_at = _format_automation_datetime(sent_at_raw)
+    signed_at = _format_automation_datetime(signed_at_raw)
     has_generated_convention = bool(state.get("unsigned_pdf_path") or trainee.get("convention_aps_pdf_path"))
     has_signature_request = bool(state.get("signature_request_id"))
     convention_error = state.get("last_error") or state.get("signature_email_last_error") or state.get("last_email_error") or state.get("last_status_sync_error") or ""
@@ -22487,9 +22501,11 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     convocation_error = trainee.get("convocation_aps_last_error") or trainee.get("convocation_auto_last_error") or ""
     if not convention_signed and convocation_error == "En attente de signature de la convention":
         convocation_error = ""
-    convocation_sent_at = trainee.get("convocation_aps_sent_at") or ""
+    convocation_sent_at_raw = trainee.get("convocation_aps_sent_at") or ""
+    convocation_sent_at = _format_automation_datetime(convocation_sent_at_raw)
     has_convocation_file = bool(trainee.get("convocation_aps_pdf_path") or trainee.get("convocation_aps_docx_path"))
-    convocation_generated_at = trainee.get("convocation_aps_generated_at") or (convocation_sent_at if has_convocation_file else "")
+    convocation_generated_at_raw = trainee.get("convocation_aps_generated_at") or (convocation_sent_at_raw if has_convocation_file else "")
+    convocation_generated_at = _format_automation_datetime(convocation_generated_at_raw)
     if convocation_error:
         convocation_status = "error"
     elif not convention_signed:
