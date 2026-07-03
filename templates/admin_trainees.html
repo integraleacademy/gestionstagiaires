@@ -3290,7 +3290,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       ? "La prévisualisation est fermée. Confirmer l’envoi Yousign maintenant ?"
       : "Aucun aperçu n’est disponible pour cette convention. Confirmer tout de même l’envoi Yousign maintenant ?";
     const previewOk = window.AppModal
-      ? await window.AppModal.confirm({type: previewUrl ? "info" : "warning", title: "Envoyer la convention", message: previewMessage, primaryText: "Envoyer maintenant", secondaryText: "Annuler"})
+      ? await window.AppModal.confirm({type: previewUrl ? "info" : "warning", title: "Envoyer la convention", message: previewMessage, primaryText: "Envoyer maintenant", secondaryText: "Annuler", tertiaryText: "Envoyer plus tard"})
       : window.confirm(previewMessage);
     if(!previewOk){ continueAfterConvention(); return; }
     window.showConventionTransmissionProgress?.();
