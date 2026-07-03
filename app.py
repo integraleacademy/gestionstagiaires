@@ -15709,6 +15709,7 @@ def api_create_trainee(session_id: str):
         "personal_amount": t.get("personal_amount", ""),
         "other_amount": t.get("other_amount", ""),
         "convention_preview_url": url_for("admin_preview_convention", session_id=session_id, trainee_id=trainee_id),
+        "convention_financing_url": url_for("api_update_convention_financing", session_id=session_id, trainee_id=trainee_id),
         "convention_signature_url": url_for("api_create_convention_signature", session_id=session_id, trainee_id=trainee_id)
     })
 
@@ -24926,6 +24927,33 @@ def admin_preview_convention(session_id: str, trainee_id: str):
     return send_file(abs_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(abs_path))
 
 
+CONVENTION_FINANCING_FIELDS = ("training_price", "cpf_amount", "personal_amount", "other_amount")
+
+
+def _apply_convention_financing_payload(trainee: Dict[str, Any], payload: Dict[str, Any]) -> None:
+    for key in CONVENTION_FINANCING_FIELDS:
+        if key in payload:
+            trainee[key] = str(payload.get(key) or "").strip()
+
+
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/convention/financing")
+@admin_login_required
+@admin_write_required
+def api_update_convention_financing(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if "VAE" in str(_session_get(s, "training_type", "") or "").upper():
+        return jsonify({"ok": False, "error": "Convention non proposée pour les formations VAE"}), 400
+    payload = request.get_json(silent=True) or {}
+    _apply_convention_financing_payload(t, payload)
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+    return jsonify({"ok": True})
+
+
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/convention/signature/create")
 @admin_login_required
 @admin_write_required
@@ -24937,9 +24965,7 @@ def api_create_convention_signature(session_id: str, trainee_id: str):
     if "VAE" in str(_session_get(s, "training_type", "") or "").upper():
         return jsonify({"ok": False, "error": "Convention non proposée pour les formations VAE"}), 400
     payload = request.get_json(silent=True) or {}
-    for key in ("training_price", "cpf_amount", "personal_amount", "other_amount"):
-        if key in payload:
-            t[key] = str(payload.get(key) or "").strip()
+    _apply_convention_financing_payload(t, payload)
     try:
         force_new = str(payload.get("force_new") or "").lower() in {"1", "true", "yes", "on"}
         state = create_yousign_convention_signature(s, t, session_id, trainee_id, force_new=force_new)
