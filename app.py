@@ -22421,7 +22421,7 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
     cpf_amount = _first_non_empty(trainee.get("cpf_amount"), trainee.get("montant_cpf"), default="0")
     personal_amount = _first_non_empty(trainee.get("personal_amount"), trainee.get("montant_financement_personnel"), trainee.get("montant_personnel"), default="")
     if personal_amount in (None, ""):
-        personal_amount = training_price
+        personal_amount = "0"
     other_amount = _first_non_empty(trainee.get("other_amount"), trainee.get("montant_autre"), default="0")
     date_start_raw = str(_session_get(session_obj, "date_start", "")).strip()
     date_end_raw = str(_session_get(session_obj, "date_end", "")).strip()
