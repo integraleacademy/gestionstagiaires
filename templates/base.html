@@ -292,6 +292,25 @@
     </div>
   </div>
 
+  <div class="modal-backdrop convention-preview-backdrop" id="conventionPreviewModal" aria-hidden="true">
+    <div class="modal convention-preview-modal" role="dialog" aria-modal="true" aria-labelledby="conventionPreviewTitle">
+      <div class="convention-preview-modal__head">
+        <div>
+          <div class="convention-preview-modal__kicker">Prévisualisation</div>
+          <h2 id="conventionPreviewTitle">Convention de formation</h2>
+          <p>Vérifiez le document avant de confirmer l’envoi pour signature électronique.</p>
+        </div>
+        <button class="icon-btn convention-preview-modal__x" id="conventionPreviewCloseIcon" type="button" aria-label="Fermer la prévisualisation">×</button>
+      </div>
+      <div class="convention-preview-modal__framewrap">
+        <iframe id="conventionPreviewFrame" class="convention-preview-modal__frame" title="Aperçu de la convention"></iframe>
+      </div>
+      <div class="modal-foot convention-preview-modal__actions">
+        <button class="btn btn-primary" id="conventionPreviewClose" type="button">Fermer la prévisualisation</button>
+      </div>
+    </div>
+  </div>
+
   <div id="conventionCreationSyncProgress" class="ypareo-sync-progress" role="dialog" aria-modal="true" aria-labelledby="conventionCreationSyncProgressTitle" aria-describedby="conventionCreationSyncProgressMessage" aria-hidden="true">
     <div class="ypareo-sync-progress__panel" role="status" aria-live="polite">
       <div class="ypareo-sync-progress__brand" aria-hidden="true">SIGN</div>
@@ -308,6 +327,19 @@
   <style>
 
 
+
+    .convention-preview-backdrop{background:rgba(15,23,42,.68);backdrop-filter:blur(9px);padding:22px;}
+    .convention-preview-modal{width:min(1120px,96vw);height:min(88vh,860px);display:flex;flex-direction:column;overflow:hidden;border:0;border-radius:26px;background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);box-shadow:0 30px 90px rgba(15,23,42,.36);}
+    .convention-preview-modal__head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:20px 22px 16px;border-bottom:1px solid #e2e8f0;background:linear-gradient(135deg,#eff6ff,#ffffff 58%,#ecfeff);}
+    .convention-preview-modal__kicker{margin-bottom:6px;color:#2563eb;font-size:11px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;}
+    .convention-preview-modal__head h2{margin:0;color:#0f172a;font-size:23px;line-height:1.2;font-weight:950;}
+    .convention-preview-modal__head p{margin:7px 0 0;color:#64748b;font-size:14px;line-height:1.45;}
+    .convention-preview-modal__x{flex:0 0 auto;font-size:26px;line-height:1;}
+    .convention-preview-modal__framewrap{min-height:0;flex:1;padding:14px;background:#e2e8f0;}
+    .convention-preview-modal__frame{width:100%;height:100%;border:1px solid #cbd5e1;border-radius:16px;background:#fff;box-shadow:inset 0 1px 2px rgba(15,23,42,.05);}
+    .convention-preview-modal__actions{justify-content:flex-end;padding:16px 22px;background:#fff;}
+    .convention-preview-modal__actions .btn{border-radius:999px;padding:12px 20px;font-weight:950;}
+    @media(max-width:700px){.convention-preview-backdrop{padding:10px}.convention-preview-modal{width:100%;height:92vh;border-radius:20px}.convention-preview-modal__head{padding:16px}.convention-preview-modal__head h2{font-size:20px}.convention-preview-modal__framewrap{padding:8px}.convention-preview-modal__actions{padding:12px 16px}.convention-preview-modal__actions .btn{width:100%;}}
     .convention-result-backdrop{background:rgba(15,23,42,.58);backdrop-filter:blur(10px);}
     .convention-result-modal{position:relative;max-width:440px;border:0;border-radius:28px;overflow:hidden;text-align:center;padding:34px 30px 28px;box-shadow:0 28px 90px rgba(15,23,42,.34);background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);}
     .convention-result-modal__glow{position:absolute;inset:-90px -70px auto auto;width:220px;height:220px;border-radius:999px;background:radial-gradient(circle,rgba(34,197,94,.28),rgba(34,197,94,0) 68%);pointer-events:none;}
@@ -478,6 +510,31 @@
     });
   }
 
+  function openConventionPreview(url){
+    return new Promise((resolve)=>{
+      const modal = document.getElementById("conventionPreviewModal");
+      const frame = document.getElementById("conventionPreviewFrame");
+      const closeButton = document.getElementById("conventionPreviewClose");
+      const closeIcon = document.getElementById("conventionPreviewCloseIcon");
+      if(!url || !modal || !frame || !closeButton || !closeIcon){
+        resolve(false);
+        return;
+      }
+      const finish = ()=>{
+        closeButton.removeEventListener("click", finish);
+        closeIcon.removeEventListener("click", finish);
+        frame.removeAttribute("src");
+        closeModal("conventionPreviewModal");
+        resolve(true);
+      };
+      closeButton.addEventListener("click", finish, {once:true});
+      closeIcon.addEventListener("click", finish, {once:true});
+      frame.src = url;
+      openModal("conventionPreviewModal");
+      closeButton.focus();
+    });
+  }
+
   function showConventionTransmissionProgress(){
     const progress = document.getElementById("conventionCreationSyncProgress");
     if(!progress) return;
@@ -529,6 +586,7 @@
     });
   }
 
+  window.openConventionPreview = openConventionPreview;
   window.openConventionTransmission = openConventionTransmission;
   window.showConventionTransmissionProgress = showConventionTransmissionProgress;
   window.hideConventionTransmissionProgress = hideConventionTransmissionProgress;
