@@ -2120,7 +2120,7 @@ document.addEventListener("submit", async (event)=>{
   if(previewUrl){ await window.openConventionPreview?.(previewUrl); }
   const message = "La prévisualisation est fermée. Confirmer l’envoi Yousign maintenant ?";
   const ok = window.AppModal
-    ? await window.AppModal.confirm({type:"info", title:"Vérifier la convention avant envoi", message, primaryText:"Envoyer maintenant", secondaryText:"Annuler"})
+    ? await window.AppModal.confirm({type:"info", title:"Vérifier la convention avant envoi", message, primaryText:"Envoyer maintenant", secondaryText:"Annuler", tertiaryText:"Envoyer plus tard"})
     : window.confirm(message);
   if(ok){
     form.dataset.conventionPreviewConfirmed = "1";
