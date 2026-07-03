@@ -11351,7 +11351,7 @@ def admin_sessions_conventions():
                 "original_pdf_url": url_for("admin_view_original_convention", session_id=session_id, trainee_id=trainee_id) if original_pdf else "",
                 "signed_pdf_url": url_for("admin_view_signed_convention", session_id=session_id, trainee_id=trainee_id) if signed_pdf else "",
                 "download_url": convention.get("download_url") or "",
-                "can_send": status_key != "signed",
+                "can_send": True,
                 "can_remind": status_key in {"waiting_signature", "sent"} and bool(state.get("signature_link")),
                 "is_problem": is_problem,
             }
@@ -20947,18 +20947,25 @@ def _is_production_environment() -> bool:
     return any(str(value or "").strip().lower() == "production" for value in markers)
 
 
-def _yousign_expected_environment() -> str:
+def _yousign_configured_environment() -> str:
     configured = (os.environ.get("YOUSIGN_ENV") or os.environ.get("YOUSIGN_ENVIRONMENT") or "").strip().lower()
     if configured in {"prod", "production", "live"}:
         return "production"
     if configured in {"sandbox", "test", "testing"}:
         return "sandbox"
+    return ""
+
+
+def _yousign_expected_environment() -> str:
+    configured_environment = _yousign_configured_environment()
+    if configured_environment:
+        return configured_environment
     api_key = _yousign_api_key().lower()
     if "sandbox" in api_key:
         return "sandbox"
     if "production" in api_key or "prod" in api_key or "live" in api_key:
         return "production"
-    return "production" if _is_production_environment() else "sandbox"
+    return "production" if _is_production_environment() else ""
 
 
 def _yousign_environment_from_base_url(base_url: str) -> str:
@@ -20972,7 +20979,7 @@ def _yousign_base_url() -> str:
         raise RuntimeError("Configuration Yousign invalide : utilisez https://api.yousign.app/v3 en production ou https://api-sandbox.yousign.app/v3 en test.")
     url_environment = _yousign_environment_from_base_url(base_url)
     expected_environment = _yousign_expected_environment()
-    if url_environment != expected_environment:
+    if expected_environment and url_environment != expected_environment:
         raise RuntimeError(f"Configuration Yousign invalide : l’URL API {base_url} ne correspond pas à l’environnement {expected_environment}.")
     if _is_production_environment() and url_environment == "sandbox":
         raise RuntimeError("Configuration Yousign invalide : l’URL sandbox est interdite en production.")
@@ -21434,10 +21441,48 @@ def _auto_send_convention_signature_if_needed(
         app.logger.exception("[YOUSIGN] auto convention signature failed trainee_id=%s trigger=%s error=%s", trainee_id, trigger, message)
         return False
 
-def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> Dict[str, Any]:
+def _archive_yousign_convention_state(trainee: Dict[str, Any], reason: str) -> None:
+    state = _yousign_state(trainee)
+    if not state.get("signature_request_id") and not state.get("unsigned_pdf_path") and not state.get("signed_pdf_path"):
+        return
+    archive = trainee.setdefault("convention_signature_history", [])
+    if isinstance(archive, list):
+        archived = dict(state)
+        archived["archived_at"] = _now_iso()
+        archived["archive_reason"] = reason
+        archive.append(archived)
+
+
+def _cancel_yousign_convention_signature(trainee: Dict[str, Any], reason: str = "other") -> None:
+    state = _yousign_state(trainee)
+    request_id = str(state.get("signature_request_id") or "").strip()
+    if request_id and _is_yousign_signature_pending(state) and _yousign_is_configured():
+        _yousign_json("POST", f"/signature_requests/{request_id}/cancel", json={
+            "reason": reason or "other",
+            "custom_note": "Annulation depuis la fiche stagiaire pour régénérer une nouvelle convention.",
+        })
+    _archive_yousign_convention_state(trainee, "canceled_for_regeneration")
+    now = _now_iso()
+    state.update({
+        "status": "canceled",
+        "canceled_at": now,
+        "cancel_reason": reason or "other",
+        "last_error": "",
+        "next_reminder_at": "",
+    })
+    trainee["convention_aps_status"] = "canceled"
+    trainee["updated_at"] = now
+
+
+def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str, force_new: bool = False) -> Dict[str, Any]:
     existing_state = _yousign_state(trainee)
-    if existing_state.get("signature_request_id") and existing_state.get("signature_link") and existing_state.get("status") in {"ongoing", "activated"}:
+    has_existing_request = bool(existing_state.get("signature_request_id"))
+    has_active_link = bool(existing_state.get("signature_link"))
+    existing_status = _normalize_yousign_status(existing_state.get("status"))
+    if has_existing_request and has_active_link and existing_status in {"ongoing", "activated"} and not force_new:
         return existing_state
+    if force_new and has_existing_request:
+        _cancel_yousign_convention_signature(trainee, "other")
     if "VAE" in str(_session_get(session_obj, "training_type", "") or "").upper():
         raise RuntimeError("La signature Yousign de convention n’est pas proposée pour les formations VAE.")
     if not _yousign_is_configured():
@@ -22353,7 +22398,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         "progress_percent": progress_percent,
         "convention": {
             "status": convention_status, "label": c_label, "icon": c_icon, "icon_class": "automation-icon--hourglass" if c_icon == "hourglass" else "", "tone": c_tone, "card_tone": c_card_tone,
-            "primary_action": c_primary_action, "can_send": convention_status != "signed", "can_download": bool(has_generated_convention or state.get("signed_pdf_path")),
+            "primary_action": c_primary_action, "can_send": True, "can_download": bool(has_generated_convention or state.get("signed_pdf_path")),
             "generated_at": generated_at, "sent_at": sent_at, "signed_at": signed_at,
             "recipient_email": trainee.get("email") or "", "signature_request_id": state.get("signature_request_id") or "",
             "download_url": url_for("admin_view_signed_convention" if convention_signed and state.get("signed_pdf_path") else "admin_view_original_convention", session_id=session_id, trainee_id=trainee_id) if (has_generated_convention or state.get("signed_pdf_path")) else "",
@@ -24294,7 +24339,8 @@ def api_create_convention_signature(session_id: str, trainee_id: str):
         if key in payload:
             t[key] = str(payload.get(key) or "").strip()
     try:
-        state = create_yousign_convention_signature(s, t, session_id, trainee_id)
+        force_new = str(payload.get("force_new") or "").lower() in {"1", "true", "yes", "on"}
+        state = create_yousign_convention_signature(s, t, session_id, trainee_id, force_new=force_new)
         signature_link = str(state.get("signature_link") or "").strip()
         email_ok = send_yousign_signature_link_email(s, t, signature_link)
         s["trainees"] = trainees
@@ -24324,7 +24370,7 @@ def admin_create_convention_signature(session_id: str, trainee_id: str):
         flash("Stagiaire introuvable.", "error")
         abort(404)
     try:
-        state = create_yousign_convention_signature(s, t, session_id, trainee_id)
+        state = create_yousign_convention_signature(s, t, session_id, trainee_id, force_new=bool(request.form.get("force_new")))
         signature_link = str(state.get("signature_link") or "").strip()
         if send_yousign_signature_link_email(s, t, signature_link):
             flash("Demande Yousign créée et e-mail envoyé au stagiaire.", "success")
