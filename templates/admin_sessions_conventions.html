@@ -83,8 +83,12 @@ document.addEventListener('submit', async event => {
   event.preventDefault();
   event.stopImmediatePropagation();
   const previewUrl = form.dataset.conventionPreviewUrl || '';
-  if(previewUrl){ await window.openConventionPreview?.(previewUrl); }
-  const message = 'La prévisualisation est fermée. Confirmer l’envoi Yousign maintenant ?';
+  const wantsPreviewMessage = 'Souhaitez-vous prévisualiser la convention avant l’envoi, ou envoyer directement la convention pour signature électronique ?';
+  const wantsPreview = window.AppModal
+    ? await window.AppModal.confirm({type:'info', title:'Prévisualisation de la convention', message:wantsPreviewMessage, primaryText:'Voir la prévisualisation', secondaryText:'Envoyer directement'})
+    : window.confirm(`${wantsPreviewMessage}\n\nOK : voir la prévisualisation\nAnnuler : envoyer directement`);
+  if(wantsPreview && previewUrl){ await window.openConventionPreview?.(previewUrl); }
+  const message = wantsPreview ? 'La prévisualisation est fermée. Confirmer l’envoi Yousign maintenant ?' : 'Confirmer l’envoi Yousign de la convention maintenant ?';
   const ok = window.AppModal
     ? await window.AppModal.confirm({type:'info', title:'Vérifier la convention avant envoi', message, primaryText:'Envoyer maintenant', secondaryText:'Annuler'})
     : window.confirm(message);
