@@ -447,7 +447,22 @@ class YousignStatusRefreshTests(unittest.TestCase):
         self.assertEqual(state["status"], "done")
         self.assertEqual(state["signed_pdf_token"], "token.pdf")
         self.assertEqual(trainee["convention_aps_status"], "signed")
+        self.assertEqual(trainee["convention_status"], "signed")
         self.assertEqual(state["next_reminder_at"], "")
+
+    def test_sync_convention_status_from_signed_yousign_state(self):
+        trainee = {
+            "convention_status": "soon",
+            "convention_signature": {
+                "status": "done",
+                "signature_request_id": "sig-req-1",
+            },
+        }
+
+        changed = app._sync_convention_status_from_yousign(trainee)
+
+        self.assertTrue(changed)
+        self.assertEqual(trainee["convention_status"], "signed")
 
     def test_yousign_webhook_accepts_signer_done_event(self):
         payload = {"event_name": "signer.done", "data": {"signature_request": {"id": "sig-req-1"}}}
