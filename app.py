@@ -21676,31 +21676,12 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
                 "date_time_format": "dd/MM/yyyy",
                 "show_timezone": False,
             })
-            fields.append({
-                "document_id": document_id,
-                "type": "signature_date",
-                "page": anchor["page"],
-                "x": anchor["x"],
-                "y": anchor["y"] + max(62, int(anchor["height"]) + 4),
-                "width": 90,
-                "height": 20,
-                "date_format": "dd/MM/yyyy",
-                "time_format": None,
-                "show_timezone": False,
-            })
         elif anchor.get("type") in {"date", "signature_date"}:
-            fields.append({
-                "document_id": document_id,
-                "type": "signature_date",
-                "page": anchor["page"],
-                "x": anchor["x"],
-                "y": anchor["y"],
-                "width": anchor["width"],
-                "height": anchor["height"],
-                "date_format": "dd/MM/yyyy",
-                "time_format": None,
-                "show_timezone": False,
-            })
+            # Yousign v3 no longer accepts a dedicated "signature_date" field type.
+            # The detailed signature field already carries the signing date through
+            # its date_time_format option, so date-only anchors are only cleaned from
+            # the PDF and must not be sent as signer fields.
+            continue
     if not fields:
         fields.append({
             "document_id": document_id,
