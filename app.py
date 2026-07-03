@@ -1817,12 +1817,16 @@ def fr_datetime(value: str) -> str:
     normalized = s.replace("Z", "+00:00")
     try:
         dt = datetime.datetime.fromisoformat(normalized)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
+        dt = dt.astimezone(ZoneInfo("Europe/Paris"))
         return dt.strftime("%d/%m/%Y à %Hh%M")
     except Exception:
         pass
     for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
         try:
             dt = datetime.datetime.strptime(s[:26], fmt)
+            dt = dt.replace(tzinfo=datetime.timezone.utc).astimezone(ZoneInfo("Europe/Paris"))
             return dt.strftime("%d/%m/%Y à %Hh%M")
         except Exception:
             pass
@@ -11354,15 +11358,16 @@ def admin_sessions_conventions():
                 "status_tone": convention.get("tone") or ("error" if is_problem else "waiting" if status_key == "waiting_signature" else "complete" if status_key == "signed" else "pending"),
                 "signature_request_id": state.get("signature_request_id") or "",
                 "signature_link": state.get("signature_link") or "",
-                "created_at": state.get("created_at") or trainee.get("convention_aps_generated_at") or "",
+                "created_at": _format_automation_datetime(state.get("created_at") or trainee.get("convention_aps_generated_at") or ""),
                 "sent_at": convention.get("sent_at") or "",
                 "signed_at": convention.get("signed_at") or "",
                 "reminder_count": int(state.get("reminder_count") or 0),
-                "next_reminder_at": state.get("next_reminder_at") or "",
+                "next_reminder_at": _format_automation_datetime(state.get("next_reminder_at") or ""),
                 "error": convention.get("error") or "",
                 "trainee_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
                 "create_url": url_for("admin_create_convention_signature", session_id=session_id, trainee_id=trainee_id),
                 "reminder_url": url_for("admin_send_convention_signature_reminder_for_session", session_id=session_id, trainee_id=trainee_id),
+                "preview_url": url_for("admin_preview_convention", session_id=session_id, trainee_id=trainee_id),
                 "original_pdf_url": url_for("admin_view_original_convention", session_id=session_id, trainee_id=trainee_id) if original_pdf else "",
                 "signed_pdf_url": url_for("admin_view_signed_convention", session_id=session_id, trainee_id=trainee_id) if signed_pdf else "",
                 "download_url": convention.get("download_url") or "",
@@ -21636,6 +21641,9 @@ def _cancel_yousign_convention_signature(trainee: Dict[str, Any], reason: str = 
         "next_reminder_at": "",
     })
     trainee["convention_aps_status"] = "canceled"
+    trainee["convention_aps_signed_at"] = ""
+    if trainee.get("convention_status") == "signed":
+        trainee["convention_status"] = "soon"
     trainee["updated_at"] = now
 
 
@@ -21716,31 +21724,12 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
                 "date_time_format": "dd/MM/yyyy",
                 "show_timezone": False,
             })
-            fields.append({
-                "document_id": document_id,
-                "type": "signature_date",
-                "page": anchor["page"],
-                "x": anchor["x"],
-                "y": anchor["y"] + max(62, int(anchor["height"]) + 4),
-                "width": 90,
-                "height": 20,
-                "date_format": "dd/MM/yyyy",
-                "time_format": None,
-                "show_timezone": False,
-            })
         elif anchor.get("type") in {"date", "signature_date"}:
-            fields.append({
-                "document_id": document_id,
-                "type": "signature_date",
-                "page": anchor["page"],
-                "x": anchor["x"],
-                "y": anchor["y"],
-                "width": anchor["width"],
-                "height": anchor["height"],
-                "date_format": "dd/MM/yyyy",
-                "time_format": None,
-                "show_timezone": False,
-            })
+            # Yousign v3 no longer accepts a dedicated "signature_date" field type.
+            # The detailed signature field already carries the signing date through
+            # its date_time_format option, so date-only anchors are only cleaned from
+            # the PDF and must not be sent as signer fields.
+            continue
     if not fields:
         fields.append({
             "document_id": document_id,
@@ -21798,6 +21787,9 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
         "last_email_error": "",
     })
     trainee["convention_aps_status"] = "signature_ongoing"
+    trainee["convention_aps_signed_at"] = ""
+    if trainee.get("convention_status") == "signed":
+        trainee["convention_status"] = "soon"
     trainee["convention_aps_pdf_path"] = yousign_pdf_path
     trainee["convention_aps_docx_path"] = docx_path
     trainee["updated_at"] = now
@@ -22497,6 +22489,7 @@ def _send_convocation_after_convention_signed(session_obj: Dict[str, Any], train
         raise RuntimeError("Impossible d’envoyer la convocation : échec d’envoi email")
     now = _now_iso()
     trainee["convocation_aps_status"] = "sent"
+    trainee["convocation_aps_generated_at"] = trainee.get("convocation_aps_generated_at") or now
     trainee["convocation_aps_sent_at"] = now
     trainee["convocation_aps_pdf_path"] = pdf_path
     trainee["convocation_aps_docx_path"] = docx_path
@@ -22507,13 +22500,23 @@ def _send_convocation_after_convention_signed(session_obj: Dict[str, Any], train
 
 
 
+def _format_automation_datetime(value: Any) -> str:
+    """Affiche les horodatages d'automatisation au format français, heure de Paris."""
+    if not value:
+        return ""
+    return fr_datetime(str(value))
+
+
 def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> Dict[str, Any]:
     """Centralise l'état des documents automatisés affiché sur la fiche stagiaire."""
     state = _yousign_state(trainee)
     raw_status = _normalize_yousign_status(state.get("status"))
-    generated_at = state.get("created_at") or trainee.get("convention_aps_generated_at") or ""
-    sent_at = state.get("signature_email_sent_at") or state.get("activated_at") or ""
-    signed_at = state.get("signed_at") or trainee.get("convention_aps_signed_at") or ""
+    generated_at_raw = state.get("created_at") or trainee.get("convention_aps_generated_at") or ""
+    sent_at_raw = state.get("signature_email_sent_at") or state.get("activated_at") or ""
+    signed_at_raw = state.get("signed_at") or trainee.get("convention_aps_signed_at") or ""
+    generated_at = _format_automation_datetime(generated_at_raw)
+    sent_at = _format_automation_datetime(sent_at_raw)
+    signed_at = _format_automation_datetime(signed_at_raw)
     has_generated_convention = bool(state.get("unsigned_pdf_path") or trainee.get("convention_aps_pdf_path"))
     has_signature_request = bool(state.get("signature_request_id"))
     convention_error = state.get("last_error") or state.get("signature_email_last_error") or state.get("last_email_error") or state.get("last_status_sync_error") or ""
@@ -22539,9 +22542,11 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     convocation_error = trainee.get("convocation_aps_last_error") or trainee.get("convocation_auto_last_error") or ""
     if not convention_signed and convocation_error == "En attente de signature de la convention":
         convocation_error = ""
-    convocation_generated_at = trainee.get("convocation_aps_generated_at") or ""
-    convocation_sent_at = trainee.get("convocation_aps_sent_at") or ""
+    convocation_sent_at_raw = trainee.get("convocation_aps_sent_at") or ""
+    convocation_sent_at = _format_automation_datetime(convocation_sent_at_raw)
     has_convocation_file = bool(trainee.get("convocation_aps_pdf_path") or trainee.get("convocation_aps_docx_path"))
+    convocation_generated_at_raw = trainee.get("convocation_aps_generated_at") or (convocation_sent_at_raw if has_convocation_file else "")
+    convocation_generated_at = _format_automation_datetime(convocation_generated_at_raw)
     if convocation_error:
         convocation_status = "error"
     elif not convention_signed:
@@ -24511,6 +24516,7 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
             raise RuntimeError("Le PDF de convocation APS n’est pas consultable depuis l’administration.")
         sent_at = _now_iso()
         t["convocation_aps_status"] = "sent"
+        t["convocation_aps_generated_at"] = t.get("convocation_aps_generated_at") or sent_at
         t["convocation_aps_sent_at"] = sent_at
         t["convocation_aps_pdf_path"] = pdf_path
         t["convocation_aps_docx_path"] = docx_path
@@ -24533,6 +24539,27 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         save_data(data)
         return jsonify({"ok": False, "error": message}), 400
 
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/preview")
+@admin_login_required
+def admin_preview_convention(session_id: str, trainee_id: str):
+    data = load_data()
+    s, _, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        abort(404)
+    if "VAE" in str(_session_get(s, "training_type", "") or "").upper():
+        abort(404)
+    try:
+        _, pdf_path = _generate_aps_convention_files(s, t, session_id, trainee_id)
+    except Exception as exc:
+        flash(f"Aperçu convention : {_sanitize_yousign_error(str(exc))}", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+    abs_path = os.path.abspath(pdf_path) if pdf_path else ""
+    root = os.path.abspath(YOUSIGN_CONVENTION_DIR)
+    if not abs_path or not abs_path.startswith(root + os.sep) or not os.path.exists(abs_path):
+        abort(404)
+    return send_file(abs_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(abs_path))
 
 
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/convention/signature/create")
