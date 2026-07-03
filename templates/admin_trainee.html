@@ -3633,7 +3633,7 @@ function updateDocsRelanceState(status, plannedDateIso){
   [cpfAmount, personalAmount, otherAmount, trainingPrice].forEach(input=>input?.addEventListener('input', ()=>{ const c=computeFinance(currentLines); renderFinancingValidation(c, currentLines); }));
   async function saveFinanceValidationOverride(payload){
     if(typeof updateTrainee === 'function') return updateTrainee(payload);
-    const response = await fetch(`/admin/sessions/${encodeURIComponent(sessionId)}/trainees/${encodeURIComponent(traineeId)}/update`,{
+    const response = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/stagiaires/${encodeURIComponent(traineeId)}/update`,{
       method:'POST',
       headers:{'Content-Type':'application/json','Accept':'application/json'},
       body:JSON.stringify(payload)
