@@ -20857,6 +20857,8 @@ YOUSIGN_BASE_URL_DEFAULT = "https://api-sandbox.yousign.app/v3"
 YOUSIGN_SMART_ANCHOR_PATTERN = re.compile(r"\{\{\s*s(\d+)\|signature\|(\d+)\|(\d+)\s*\}\}")
 YOUSIGN_SMART_ANCHOR_MISSING_MESSAGE = "Aucune zone de signature trouvée dans le modèle Word. Ajoutez {{s1|signature|160|60}} à l’endroit souhaité."
 YOUSIGN_SMART_ANCHOR_PLACEHOLDER_PREFIX = "__YOUSIGN_SMART_ANCHOR_"
+YOUSIGN_SMS_AUTHENTICATION_MODE = "otp_sms"
+YOUSIGN_SMS_PHONE_ERROR_MESSAGE = "Impossible d’envoyer la convention : numéro de téléphone manquant ou invalide pour l’authentification SMS Yousign."
 
 
 def _docx_xml_names(zf: zipfile.ZipFile) -> List[str]:
@@ -20945,14 +20947,40 @@ def _is_production_environment() -> bool:
     return any(str(value or "").strip().lower() == "production" for value in markers)
 
 
+def _yousign_expected_environment() -> str:
+    configured = (os.environ.get("YOUSIGN_ENV") or os.environ.get("YOUSIGN_ENVIRONMENT") or "").strip().lower()
+    if configured in {"prod", "production", "live"}:
+        return "production"
+    if configured in {"sandbox", "test", "testing"}:
+        return "sandbox"
+    api_key = _yousign_api_key().lower()
+    if "sandbox" in api_key:
+        return "sandbox"
+    if "production" in api_key or "prod" in api_key or "live" in api_key:
+        return "production"
+    return "production" if _is_production_environment() else "sandbox"
+
+
+def _yousign_environment_from_base_url(base_url: str) -> str:
+    return "sandbox" if "api-sandbox.yousign.app" in base_url else "production"
+
+
 def _yousign_base_url() -> str:
     base_url = (os.environ.get("YOUSIGN_BASE_URL") or YOUSIGN_BASE_URL_DEFAULT).strip().rstrip("/")
     allowed_urls = {"https://api-sandbox.yousign.app/v3", "https://api.yousign.app/v3"}
     if base_url not in allowed_urls:
         raise RuntimeError("Configuration Yousign invalide : utilisez https://api.yousign.app/v3 en production ou https://api-sandbox.yousign.app/v3 en test.")
-    if _is_production_environment() and "api-sandbox.yousign.app" in base_url:
+    url_environment = _yousign_environment_from_base_url(base_url)
+    expected_environment = _yousign_expected_environment()
+    if url_environment != expected_environment:
+        raise RuntimeError(f"Configuration Yousign invalide : l’URL API {base_url} ne correspond pas à l’environnement {expected_environment}.")
+    if _is_production_environment() and url_environment == "sandbox":
         raise RuntimeError("Configuration Yousign invalide : l’URL sandbox est interdite en production.")
     return base_url
+
+
+def _yousign_environment() -> str:
+    return _yousign_environment_from_base_url(_yousign_base_url())
 
 
 def _yousign_api_key() -> str:
@@ -20979,6 +21007,27 @@ def _sanitize_yousign_error(message: Any) -> str:
     text = re.sub(r"https://[^\\s\"'<>]+", "[lien masqué]", text)
     return text[:800]
 
+
+
+def _normalize_yousign_sms_phone(raw_phone: Any) -> str:
+    raw = str(raw_phone or "").strip()
+    if not raw:
+        return ""
+    compact = re.sub(r"[\s.()\-]", "", raw)
+    if compact.startswith("00"):
+        compact = "+" + compact[2:]
+    elif compact.startswith("0") and re.fullmatch(r"0[67]\d{8}", compact):
+        compact = "+33" + compact[1:]
+    if not re.fullmatch(r"\+[1-9]\d{7,14}", compact):
+        return ""
+    return compact
+
+
+def _mask_phone_for_logs(phone: Any) -> str:
+    value = str(phone or "")
+    if len(value) <= 5:
+        return "***" if value else ""
+    return f"{value[:3]}***{value[-2:]}"
 
 def make_yousign_external_id(session_id: str, trainee_id: str) -> str:
     raw = f"convocation_{session_id}_{trainee_id}"
@@ -21396,10 +21445,13 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
     email = str(trainee.get("email") or "").strip()
     first_name = str(trainee.get("first_name") or "").strip()
     last_name = str(trainee.get("last_name") or "").strip()
+    sms_phone = _normalize_yousign_sms_phone(trainee.get("phone"))
     if not email:
         raise RuntimeError("Adresse e-mail stagiaire manquante, impossible d’envoyer le lien de signature.")
     if not first_name or not last_name:
         raise RuntimeError("Prénom et nom du stagiaire sont obligatoires pour créer la signature Yousign.")
+    if not sms_phone:
+        raise RuntimeError(YOUSIGN_SMS_PHONE_ERROR_MESSAGE)
 
     docx_path, pdf_path = _generate_aps_convention_files(session_obj, trainee, session_id, trainee_id)
     if not os.path.exists(pdf_path) or os.path.getsize(pdf_path) <= 0:
@@ -21408,7 +21460,8 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
     training_label = str(_session_get(session_obj, "training_type", "") or _session_get(session_obj, "name", "") or "Formation").strip()
     request_name = f"Convention formation - {training_label} - {first_name} {last_name}".strip()
     external_id = make_yousign_external_id(session_id, trainee_id)
-    app.logger.info("[YOUSIGN] create signature request trainee_id=%s sandbox=true", trainee_id)
+    yousign_environment = _yousign_environment()
+    app.logger.info("[YOUSIGN] create signature request trainee_id=%s environment=%s", trainee_id, yousign_environment)
     signature_request = _yousign_json("POST", "/signature_requests", json={
         "name": request_name,
         "delivery_mode": "none",
@@ -21431,9 +21484,9 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
         raise RuntimeError("Yousign n’a pas renvoyé d’identifiant de document.")
 
     signer_payload = {
-        "info": {"first_name": first_name, "last_name": last_name, "email": email, "locale": "fr"},
+        "info": {"first_name": first_name, "last_name": last_name, "email": email, "phone_number": sms_phone, "locale": "fr"},
         "signature_level": "electronic_signature",
-        "signature_authentication_mode": "no_otp",
+        "signature_authentication_mode": YOUSIGN_SMS_AUTHENTICATION_MODE,
     }
     if _docx_text_contains_yousign_smart_anchor(docx_path, signer_index=1):
         # Les champs de signature sont créés par Yousign depuis les Smart Anchors.
@@ -21448,10 +21501,18 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
         }]
     signer = _yousign_json("POST", f"/signature_requests/{signature_request_id}/signers", json=signer_payload)
     signer_id = signer.get("id")
+    app.logger.info(
+        "[YOUSIGN] signer created signature_request_id=%s signer_id=%s signature_authentication_mode=%s phone=%s environment=%s",
+        signature_request_id, signer_id or "", signer_payload["signature_authentication_mode"], _mask_phone_for_logs(sms_phone), yousign_environment,
+    )
+    signer_fresh = _yousign_json("GET", f"/signature_requests/{signature_request_id}/signers/{signer_id}") if signer_id else {}
+    app.logger.info(
+        "[YOUSIGN] signer verification signature_request_id=%s signer_id=%s returned_signature_authentication_mode=%s environment=%s",
+        signature_request_id, signer_id or "", signer_fresh.get("signature_authentication_mode") or "", yousign_environment,
+    )
     activated = _yousign_json("POST", f"/signature_requests/{signature_request_id}/activate", json={})
     signature_link = _extract_yousign_signature_link(activated, signer_id) or _extract_yousign_signature_link(signer, signer_id)
     if not signature_link and signer_id:
-        signer_fresh = _yousign_json("GET", f"/signature_requests/{signature_request_id}/signers/{signer_id}")
         signature_link = _extract_yousign_signature_link(signer_fresh, signer_id)
     if not signature_link:
         raise RuntimeError("Demande Yousign créée, mais le lien de signature est introuvable. Vérifiez le mode de livraison Yousign.")

@@ -24,6 +24,7 @@ class ApsConvocationGenerationTests(unittest.TestCase):
             "email": "stagiaire@example.com",
             "first_name": "Jean",
             "last_name": "Dupont",
+            "phone": "06 12 34 56 78",
         }
         calls = []
 
@@ -33,8 +34,10 @@ class ApsConvocationGenerationTests(unittest.TestCase):
                 return {"id": "sig-req-1"}
             if path.endswith("/documents"):
                 return {"id": "doc-1"}
-            if path.endswith("/signers"):
+            if method == "POST" and path.endswith("/signers"):
                 return {"id": "signer-1", "signature_link": "https://example.test/sign"}
+            if method == "GET" and path.endswith("/signers/signer-1"):
+                return {"id": "signer-1", "signature_authentication_mode": "otp_sms", "signature_link": "https://example.test/sign"}
             if path.endswith("/activate"):
                 return {"signature_link": "https://example.test/sign"}
             return {}
@@ -63,8 +66,45 @@ class ApsConvocationGenerationTests(unittest.TestCase):
         self.assertEqual(document_call[2]["data"].get("parse_anchors"), "true")
         signer_call = next(call for call in calls if call[1].endswith("/signers"))
         self.assertNotIn("fields", signer_call[2]["json"])
+        self.assertEqual(signer_call[2]["json"]["signature_authentication_mode"], "otp_sms")
+        self.assertNotEqual(signer_call[2]["json"].get("signature_authentication_mode"), "no_otp")
+        self.assertEqual(signer_call[2]["json"]["info"]["phone_number"], "+33612345678")
+        self.assertTrue(any(call[0] == "GET" and call[1].endswith("/signers/signer-1") for call in calls))
         self.assertEqual(state["external_id"], "convocation_2ebec35a_TRN-2E16579A")
         self.assertEqual(state["status"], "ongoing")
+
+
+
+    def test_yousign_environment_url_must_match_configured_environment(self):
+        with mock.patch.dict(app.os.environ, {
+            "YOUSIGN_ENV": "production",
+            "YOUSIGN_BASE_URL": "https://api-sandbox.yousign.app/v3",
+        }, clear=False):
+            with self.assertRaisesRegex(RuntimeError, "ne correspond pas à l’environnement production"):
+                app._yousign_base_url()
+
+        with mock.patch.dict(app.os.environ, {
+            "YOUSIGN_ENV": "sandbox",
+            "YOUSIGN_BASE_URL": "https://api-sandbox.yousign.app/v3",
+        }, clear=False):
+            self.assertEqual(app._yousign_environment(), "sandbox")
+
+    def test_yousign_signature_creation_requires_valid_sms_phone(self):
+        session = {"id": "2ebec35a", "training_type": "APS", "name": "Formation APS"}
+        trainee = {
+            "id": "TRN-2E16579A",
+            "email": "stagiaire@example.com",
+            "first_name": "Jean",
+            "last_name": "Dupont",
+            "phone": "12345",
+        }
+
+        with mock.patch.object(app, "_yousign_is_configured", return_value=True), \
+             mock.patch.object(app, "_generate_aps_convention_files") as generate_files:
+            with self.assertRaisesRegex(RuntimeError, "numéro de téléphone manquant ou invalide"):
+                app.create_yousign_convention_signature(session, trainee, "2ebec35a", "TRN-2E16579A")
+
+        generate_files.assert_not_called()
 
     def test_generation_does_not_require_every_aps_variable_in_template(self):
         session = {
