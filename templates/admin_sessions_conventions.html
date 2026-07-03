@@ -57,7 +57,7 @@
             <td><div class="conv-id" title="{{ row.signature_request_id }}">{{ row.signature_request_id or 'Aucune demande' }}</div>{% if row.signature_link %}<button class="btn btn-outline no-print" type="button" data-copy-signature-link="{{ row.signature_link }}">Copier le lien</button>{% endif %}</td>
             <td><div class="conv-meta"><strong>Créée :</strong> {{ row.created_at or '—' }}</div><div class="conv-meta"><strong>Envoyée :</strong> {{ row.sent_at or '—' }}</div><div class="conv-meta"><strong>Signée :</strong> {{ row.signed_at or '—' }}</div><div class="conv-meta"><strong>Relances :</strong> {{ row.reminder_count }}{% if row.next_reminder_at %} · prochaine {{ row.next_reminder_at }}{% endif %}</div></td>
             <td><div class="conv-actions">{% if row.signed_pdf_url %}<a class="btn btn-primary" href="{{ row.signed_pdf_url }}" target="_blank" rel="noopener">PDF signé</a>{% endif %}{% if row.original_pdf_url %}<a class="btn btn-outline" href="{{ row.original_pdf_url }}" target="_blank" rel="noopener">Original</a>{% endif %}{% if not row.signed_pdf_url and not row.original_pdf_url %}<span class="conv-meta">Aucun PDF</span>{% endif %}</div></td>
-            <td class="no-print"><div class="conv-actions"><a class="btn btn-outline" href="{{ row.trainee_url }}">Fiche</a>{% if row.can_send %}<form method="post" action="{{ row.create_url }}">{% if row.status_key in ['waiting_signature','sent','signed'] %}<input type="hidden" name="force_new" value="1">{% endif %}<button class="btn btn-primary" type="submit">{% if row.status_key in ['waiting_signature','sent','signed'] %}Annuler et régénérer{% else %}Créer / renvoyer{% endif %}</button></form>{% endif %}{% if row.can_remind %}<form method="post" action="{{ row.reminder_url }}"><button class="btn btn-outline" type="submit">Relancer</button></form>{% endif %}</div></td>
+            <td class="no-print"><div class="conv-actions"><a class="btn btn-outline" href="{{ row.trainee_url }}">Fiche</a>{% if row.can_send %}<form method="post" action="{{ row.create_url }}"{% if row.status_key in ['waiting_signature','sent','signed'] %} data-yousign-force-new="true"{% endif %}>{% if row.status_key in ['waiting_signature','sent','signed'] %}<input type="hidden" name="force_new" value="1">{% endif %}<button class="btn btn-primary" type="submit">{% if row.status_key in ['waiting_signature','sent','signed'] %}Annuler et régénérer{% else %}Créer / renvoyer{% endif %}</button></form>{% endif %}{% if row.can_remind %}<form method="post" action="{{ row.reminder_url }}"><button class="btn btn-outline" type="submit">Relancer</button></form>{% endif %}</div></td>
           </tr>
         {% else %}
           <tr><td colspan="7"><div class="conv-empty">Aucune convention ne correspond aux filtres.</div></td></tr>
@@ -75,5 +75,20 @@ document.addEventListener('click', async event => {
   try { await navigator.clipboard.writeText(link); btn.textContent = 'Lien copié'; setTimeout(()=>btn.textContent='Copier le lien', 1800); }
   catch(e) { window.prompt('Copiez le lien de signature :', link); }
 });
+
+document.addEventListener('submit', async event => {
+  const form = event.target.closest('form[data-yousign-force-new="true"]');
+  if(!form || form.dataset.yousignRegenerateConfirmed === '1') return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  const message = 'Annuler la demande Yousign actuelle et générer une nouvelle convention ? L’ancienne signature ne sera plus considérée comme valide.';
+  const ok = window.AppModal
+    ? await window.AppModal.confirm({type:'warning', title:'Annuler et régénérer la convention', message, primaryText:'Annuler et régénérer', secondaryText:'Conserver'})
+    : window.confirm(message);
+  if(ok){
+    form.dataset.yousignRegenerateConfirmed = '1';
+    form.submit();
+  }
+}, true);
 </script>
 {% endblock %}
