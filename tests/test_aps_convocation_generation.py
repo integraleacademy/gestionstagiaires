@@ -73,6 +73,114 @@ class ApsConvocationGenerationTests(unittest.TestCase):
         self.assertEqual(state["external_id"], "convocation_2ebec35a_TRN-2E16579A")
         self.assertEqual(state["status"], "ongoing")
 
+    def test_force_new_cancels_pending_request_before_creating_another_one(self):
+        session = {"id": "2ebec35a", "training_type": "APS", "name": "Formation APS"}
+        trainee = {
+            "id": "TRN-2E16579A",
+            "email": "stagiaire@example.com",
+            "first_name": "Jean",
+            "last_name": "Dupont",
+            "phone": "06 12 34 56 78",
+            "convention_signature": {"status": "ongoing", "signature_request_id": "old-req", "signature_link": "https://old.test"},
+        }
+        calls = []
+
+        def fake_yousign_json(method, path, **kwargs):
+            calls.append((method, path, kwargs))
+            if path == "/signature_requests/old-req/cancel":
+                return {}
+            if method == "POST" and path == "/signature_requests":
+                return {"id": "new-req"}
+            if path.endswith("/documents"):
+                return {"id": "doc-1"}
+            if method == "POST" and path.endswith("/signers"):
+                return {"id": "signer-1", "signature_link": "https://new.test/sign"}
+            if method == "GET" and path.endswith("/signers/signer-1"):
+                return {"id": "signer-1", "signature_authentication_mode": "otp_sms", "signature_link": "https://new.test/sign"}
+            if path.endswith("/activate"):
+                return {"signature_link": "https://new.test/sign"}
+            return {}
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_path = os.path.join(tmpdir, "convention.pdf")
+            docx_path = os.path.join(tmpdir, "convention.docx")
+            with open(pdf_path, "wb") as fh:
+                fh.write(b"pdf")
+            with open(docx_path, "wb") as fh:
+                fh.write(b"docx")
+
+            with mock.patch.object(app, "_yousign_is_configured", return_value=True), \
+                 mock.patch.object(app, "_generate_aps_convention_files", return_value=(docx_path, pdf_path)), \
+                 mock.patch.object(app, "_docx_text_contains_yousign_smart_anchor", return_value=True), \
+                 mock.patch.object(app, "_yousign_json", side_effect=fake_yousign_json):
+                state = app.create_yousign_convention_signature(session, trainee, "2ebec35a", "TRN-2E16579A", force_new=True)
+
+        self.assertEqual(calls[0][1], "/signature_requests/old-req/cancel")
+        self.assertEqual(state["signature_request_id"], "new-req")
+        self.assertEqual(state["signature_link"], "https://new.test/sign")
+        self.assertEqual(trainee["convention_signature_history"][0]["signature_request_id"], "old-req")
+
+    def test_signed_convention_can_be_regenerated_from_automation_status(self):
+        session = {"id": "session-1", "training_type": "APS", "name": "Formation APS"}
+        trainee = {
+            "id": "trainee-1",
+            "first_name": "Jean",
+            "last_name": "Dupont",
+            "convention_signature": {"status": "done", "signature_request_id": "signed-req", "signed_at": "2026-07-01T10:00:00Z", "signed_pdf_path": "/tmp/signed.pdf"},
+            "convention_aps_status": "signed",
+        }
+
+        with app.app.test_request_context():
+            status = app._build_trainee_automation_status(session, trainee, "session-1", "trainee-1")
+
+        self.assertEqual(status["convention"]["status"], "signed")
+        self.assertTrue(status["convention"]["can_send"])
+
+    def test_force_new_archives_signed_request_before_creating_another_one(self):
+        session = {"id": "2ebec35a", "training_type": "APS", "name": "Formation APS"}
+        trainee = {
+            "id": "TRN-2E16579A",
+            "email": "stagiaire@example.com",
+            "first_name": "Jean",
+            "last_name": "Dupont",
+            "phone": "06 12 34 56 78",
+            "convention_signature": {"status": "done", "signature_request_id": "signed-req", "signed_at": "2026-07-01T10:00:00Z", "signed_pdf_path": "/tmp/signed.pdf"},
+            "convention_aps_status": "signed",
+        }
+        calls = []
+
+        def fake_yousign_json(method, path, **kwargs):
+            calls.append((method, path, kwargs))
+            if method == "POST" and path == "/signature_requests":
+                return {"id": "new-req"}
+            if path.endswith("/documents"):
+                return {"id": "doc-1"}
+            if method == "POST" and path.endswith("/signers"):
+                return {"id": "signer-1", "signature_link": "https://new.test/sign"}
+            if method == "GET" and path.endswith("/signers/signer-1"):
+                return {"id": "signer-1", "signature_authentication_mode": "otp_sms", "signature_link": "https://new.test/sign"}
+            if path.endswith("/activate"):
+                return {"signature_link": "https://new.test/sign"}
+            return {}
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_path = os.path.join(tmpdir, "convention.pdf")
+            docx_path = os.path.join(tmpdir, "convention.docx")
+            with open(pdf_path, "wb") as fh:
+                fh.write(b"pdf")
+            with open(docx_path, "wb") as fh:
+                fh.write(b"docx")
+
+            with mock.patch.object(app, "_yousign_is_configured", return_value=True), \
+                 mock.patch.object(app, "_generate_aps_convention_files", return_value=(docx_path, pdf_path)), \
+                 mock.patch.object(app, "_docx_text_contains_yousign_smart_anchor", return_value=True), \
+                 mock.patch.object(app, "_yousign_json", side_effect=fake_yousign_json):
+                state = app.create_yousign_convention_signature(session, trainee, "2ebec35a", "TRN-2E16579A", force_new=True)
+
+        self.assertFalse(any(call[1] == "/signature_requests/signed-req/cancel" for call in calls))
+        self.assertEqual(trainee["convention_signature_history"][0]["signature_request_id"], "signed-req")
+        self.assertEqual(state["signature_request_id"], "new-req")
+
 
 
     def test_yousign_environment_url_must_match_configured_environment(self):
