@@ -16055,6 +16055,46 @@ def api_update_trainee(session_id: str, trainee_id: str):
     })
 
 
+@app.post("/admin/sessions/<session_id>/trainees/<trainee_id>/finance/force-validated")
+@admin_login_required
+@admin_write_required
+def admin_force_financement_validated(session_id: str, trainee_id: str):
+    """Force le financement en validé, même si JavaScript ne peut pas appeler l'API JSON."""
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        if request.accept_mimetypes.best == "application/json":
+            return jsonify({"ok": False, "error": "session_not_found"}), 404
+        flash("Session introuvable.", "error")
+        return redirect(url_for("admin_sessions"))
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        if request.accept_mimetypes.best == "application/json":
+            return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+        flash("Stagiaire introuvable.", "error")
+        return redirect(url_for("admin_trainees", session_id=session_id))
+
+    was_validated = (t.get("financement_status") or "").strip() == "validated"
+    t["financing_validation_manual_mode"] = "manual"
+    t["financing_validation_manual_status"] = "validated"
+    t["financement_status"] = "validated"
+    t["financement_rejected_note"] = ""
+    t["financement_new_date_seen"] = False
+    t["updated_at"] = _now_iso()
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    if not was_validated:
+        _auto_send_convention_signature_if_needed(s, trainees, t, session_id, trainee_id, trigger="financement_validated")
+    save_data(data)
+
+    if request.accept_mimetypes.best == "application/json":
+        return jsonify({"ok": True, "financement_status": "validated"})
+    flash("Financement forcé en validé.", "success")
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#conventionFinancementSection")
+
+
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/refresh-external")
 @admin_login_required
 @admin_write_required

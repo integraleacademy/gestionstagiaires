@@ -43,6 +43,89 @@ class AdminFinancementStatusSyncTests(unittest.TestCase):
         self.assertIn('<option value="validated" selected>🟢</option>', html)
         self.assertEqual(fake_data["sessions"][0]["trainees"][0]["financement_status"], "validated")
 
+
+    def test_manual_validation_update_persists_for_cpf_plus_personal_financing(self):
+        fake_data = {
+            "sessions": [
+                {
+                    "id": "S-APS",
+                    "name": "APS TEST",
+                    "training_type": "APS",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "last_name": "VAILLANT",
+                            "first_name": "Clément",
+                            "financement_status": "soon",
+                            "cpf_amount": "1000",
+                            "personal_amount": "650",
+                            "training_price": "1650",
+                            "documents": [],
+                        }
+                    ],
+                }
+            ]
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data), patch.object(gestion_app, "save_data") as save_data:
+            response = self.client.post(
+                "/api/sessions/S-APS/stagiaires/T1/update",
+                json={
+                    "financing_validation_manual_mode": "manual",
+                    "financing_validation_manual_status": "validated",
+                    "financement_status": "validated",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["ok"])
+        trainee = fake_data["sessions"][0]["trainees"][0]
+        self.assertEqual(trainee["financing_validation_manual_mode"], "manual")
+        self.assertEqual(trainee["financing_validation_manual_status"], "validated")
+        self.assertEqual(trainee["financement_status"], "validated")
+        save_data.assert_called_once()
+
+
+    def test_force_financement_validated_route_works_without_javascript_for_cpf_plus_personal(self):
+        fake_data = {
+            "sessions": [
+                {
+                    "id": "S-APS",
+                    "name": "APS TEST",
+                    "training_type": "APS",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "last_name": "VAILLANT",
+                            "first_name": "Clément",
+                            "financement_status": "soon",
+                            "cpf_amount": "1000",
+                            "personal_amount": "650",
+                            "training_price": "1650",
+                            "documents": [],
+                        }
+                    ],
+                }
+            ]
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data), \
+             patch.object(gestion_app, "save_data") as save_data, \
+             patch.object(gestion_app, "_auto_send_convention_signature_if_needed") as auto_send:
+            response = self.client.post(
+                "/admin/sessions/S-APS/trainees/T1/finance/force-validated",
+                headers={"Accept": "application/json"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["ok"])
+        trainee = fake_data["sessions"][0]["trainees"][0]
+        self.assertEqual(trainee["financing_validation_manual_mode"], "manual")
+        self.assertEqual(trainee["financing_validation_manual_status"], "validated")
+        self.assertEqual(trainee["financement_status"], "validated")
+        save_data.assert_called_once()
+        auto_send.assert_called_once()
+
     def test_admin_trainee_finance_widget_syncs_validated_status(self):
         template = gestion_app.app.jinja_loader.get_source(
             gestion_app.app.jinja_env,
@@ -53,6 +136,14 @@ class AdminFinancementStatusSyncTests(unittest.TestCase):
         self.assertIn("updateTrainee({financement_status:'validated'})", template)
         self.assertIn("financing_validation_manual_status:'validated', financement_status:'validated'", template)
         self.assertIn("function saveFinanceValidationOverride(payload)", template)
+        self.assertIn("function applyFinancingValidationState(state)", template)
+        self.assertIn('id="financeForceValidatedForm"', template)
+        self.assertIn("admin_force_financement_validated", template)
+        self.assertIn("fetch(financeValidationForceForm.action", template)
+        self.assertIn("financeValidationWrap.dataset.manualMode = 'manual'", template)
+        self.assertIn("applyFinancingValidationState({label:'Financement validé', tone:'green', icon:'✓', manual:true})", template)
+        self.assertIn("/api/sessions/${encodeURIComponent(sessionId)}/stagiaires/${encodeURIComponent(traineeId)}/update", template)
+        self.assertNotIn("/admin/sessions/${encodeURIComponent(sessionId)}/trainees/${encodeURIComponent(traineeId)}/update", template)
         self.assertIn("setFinanceSaveIndicator('Financement validé','saved')", template)
 
 
