@@ -21596,6 +21596,9 @@ def _cancel_yousign_convention_signature(trainee: Dict[str, Any], reason: str = 
         "next_reminder_at": "",
     })
     trainee["convention_aps_status"] = "canceled"
+    trainee["convention_aps_signed_at"] = ""
+    if trainee.get("convention_status") == "signed":
+        trainee["convention_status"] = "soon"
     trainee["updated_at"] = now
 
 
@@ -21739,6 +21742,9 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
         "last_email_error": "",
     })
     trainee["convention_aps_status"] = "signature_ongoing"
+    trainee["convention_aps_signed_at"] = ""
+    if trainee.get("convention_status") == "signed":
+        trainee["convention_status"] = "soon"
     trainee["convention_aps_pdf_path"] = yousign_pdf_path
     trainee["convention_aps_docx_path"] = docx_path
     trainee["updated_at"] = now
