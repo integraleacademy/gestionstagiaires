@@ -3631,20 +3631,41 @@ function updateDocsRelanceState(status, plannedDateIso){
   quickGenerateBtn?.addEventListener('click', ()=>{ const line=firstInvoiceToGenerate(); if(line) openGenerateInvoiceModal(line); });
   syncBtn?.addEventListener('click', async ()=>{ syncBtn.disabled=true; try{ const j=await api('/api/billing/sync-qonto',{traineeId,sessionId,source:'admin_trainee'}); await load(); alert(j.message||'Synchronisation terminée'); }catch(e){ alert(e.message||'Synchronisation Qonto impossible pour le moment'); } finally{ syncBtn.disabled=false; }});
   [cpfAmount, personalAmount, otherAmount, trainingPrice].forEach(input=>input?.addEventListener('input', ()=>{ const c=computeFinance(currentLines); renderFinancingValidation(c, currentLines); }));
+  async function saveFinanceValidationOverride(payload){
+    if(typeof updateTrainee === 'function') return updateTrainee(payload);
+    const response = await fetch(`/admin/sessions/${encodeURIComponent(sessionId)}/trainees/${encodeURIComponent(traineeId)}/update`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    const result = await parseJsonResponse(response,'Sauvegarde du statut financement impossible');
+    if(!response.ok || !result.ok) throw new Error(result.error || result.message || 'Sauvegarde du statut financement impossible');
+    return result;
+  }
+  function setFinanceSaveIndicator(message, tone='saved'){
+    const indicator = document.getElementById('financeSaveIndicator');
+    if(!indicator) return;
+    indicator.textContent = message;
+    indicator.className = `finance-save-indicator is-${tone}`;
+  }
   financeValidationForceBtn?.addEventListener('click', async ()=>{
+    if(financeValidationForceBtn.disabled) return;
     financeValidationForceBtn.disabled = true;
     const originalLabel = financeValidationForceBtn.textContent;
     financeValidationForceBtn.textContent = 'Validation…';
+    setFinanceSaveIndicator('Validation du financement…','saving');
     try{
-      await updateTrainee({financing_validation_manual_mode:'manual', financing_validation_manual_status:'validated', financement_status:'validated'});
+      await saveFinanceValidationOverride({financing_validation_manual_mode:'manual', financing_validation_manual_status:'validated', financement_status:'validated'});
       financeValidationManualMode = true;
       financeValidationManualStatus = 'validated';
       currentFinancementStatus = 'validated';
       renderFinancingValidation(computeFinance(currentLines), currentLines);
-      financeValidationForceBtn.textContent = originalLabel;
+      setFinanceSaveIndicator('Financement validé','saved');
     }catch(e){
       alert(e.message || 'Forçage du statut impossible');
+      setFinanceSaveIndicator('Erreur de validation','error');
       financeValidationForceBtn.disabled = false;
+    }finally{
       financeValidationForceBtn.textContent = originalLabel;
     }
   });
