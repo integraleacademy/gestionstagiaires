@@ -53,6 +53,8 @@ class AdminFinancementStatusSyncTests(unittest.TestCase):
         self.assertIn("updateTrainee({financement_status:'validated'})", template)
         self.assertIn("financing_validation_manual_status:'validated', financement_status:'validated'", template)
         self.assertIn("function saveFinanceValidationOverride(payload)", template)
+        self.assertIn("/api/sessions/${encodeURIComponent(sessionId)}/stagiaires/${encodeURIComponent(traineeId)}/update", template)
+        self.assertNotIn("/admin/sessions/${encodeURIComponent(sessionId)}/trainees/${encodeURIComponent(traineeId)}/update", template)
         self.assertIn("setFinanceSaveIndicator('Financement validé','saved')", template)
 
 
