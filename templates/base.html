@@ -367,7 +367,7 @@
       const yesBtn = document.getElementById("mailSmsConfirmYesBtn");
       const noBtn = document.getElementById("mailSmsConfirmNoBtn");
       if(!modal || !yesBtn || !noBtn){
-        resolve(window.confirm("Voulez-vous envoyer le mail / SMS ?"));
+        window.AppModal ? window.AppModal.confirm({type:"info", title:"Envoyer les notifications", message:"Voulez-vous envoyer le mail / SMS ?", primaryText:"Envoyer", secondaryText:"Ne pas envoyer"}).then(resolve) : resolve(window.confirm("Voulez-vous envoyer le mail / SMS ?"));
         return;
       }
 
@@ -438,7 +438,7 @@
           errorEl.textContent = message;
           errorEl.style.display = "block";
         }else{
-          window.alert(message);
+          (window.AppModal ? window.AppModal.alert(message, {type:"warning", title:"Vérification requise"}) : window.alert(message));
         }
         Object.values(fields).forEach((field)=>field.classList.add("is-invalid"));
       };
@@ -505,7 +505,7 @@
       const iconEl = document.getElementById("conventionResultIcon");
       const closeBtn = document.getElementById("conventionResultClose");
       if(!backdrop || !modal || !titleEl || !messageEl || !closeBtn){
-        window.alert(message || title || "Action terminée.");
+        (window.AppModal ? window.AppModal.alert(message || title || "Action terminée.", {type, title}) : window.alert(message || title || "Action terminée."));
         resolve();
         return;
       }
@@ -688,7 +688,7 @@
         }
         refreshCount();
       }catch(_e){
-        alert("Erreur lors de la mise à jour de la notification.");
+        window.AppModal ? AppModal.alert("Erreur lors de la mise à jour de la notification.", {type:"danger", title:"Erreur"}) : alert("Erreur lors de la mise à jour de la notification.");
       }finally{
         actionBtn.disabled = false;
       }
@@ -698,6 +698,7 @@
   })();
 
 </script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
   {% block scripts %}{% endblock %}
   {% include "_mail_sent_badge.html" %}
 </body>
