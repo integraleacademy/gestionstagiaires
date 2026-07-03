@@ -53,6 +53,7 @@ class ApsConvocationGenerationTests(unittest.TestCase):
             with mock.patch.object(app, "_yousign_is_configured", return_value=True), \
                  mock.patch.object(app, "_generate_aps_convention_files", return_value=(docx_path, pdf_path)), \
                  mock.patch.object(app, "_docx_text_contains_yousign_smart_anchor", return_value=True), \
+                 mock.patch.object(app, "_prepare_yousign_pdf_and_fields", return_value=(pdf_path, [{"type": "signature", "page": 1, "x": 100, "y": 200, "width": 160, "height": 60}])), \
                  mock.patch.object(app, "_yousign_json", side_effect=fake_yousign_json):
                 state = app.create_yousign_convention_signature(session, trainee, "2ebec35a", "TRN-2E16579A")
 
@@ -63,9 +64,13 @@ class ApsConvocationGenerationTests(unittest.TestCase):
             "convocation_2ebec35a_TRN-2E16579A",
         )
         document_call = next(call for call in calls if call[1].endswith("/documents"))
-        self.assertEqual(document_call[2]["data"].get("parse_anchors"), "true")
+        self.assertEqual(document_call[2]["data"].get("parse_anchors"), "false")
         signer_call = next(call for call in calls if call[1].endswith("/signers"))
-        self.assertNotIn("fields", signer_call[2]["json"])
+        self.assertEqual(signer_call[2]["json"]["fields"][0]["type"], "signature")
+        self.assertEqual(signer_call[2]["json"]["fields"][0]["layout"], "detailed")
+        self.assertEqual(signer_call[2]["json"]["fields"][0]["date_time_format"], "dd/MM/yyyy")
+        self.assertEqual(signer_call[2]["json"]["fields"][1]["type"], "signature_date")
+        self.assertEqual(signer_call[2]["json"]["fields"][1]["date_format"], "dd/MM/yyyy")
         self.assertEqual(signer_call[2]["json"]["signature_authentication_mode"], "otp_sms")
         self.assertNotEqual(signer_call[2]["json"].get("signature_authentication_mode"), "no_otp")
         self.assertEqual(signer_call[2]["json"]["info"]["phone_number"], "+33612345678")
@@ -112,6 +117,7 @@ class ApsConvocationGenerationTests(unittest.TestCase):
             with mock.patch.object(app, "_yousign_is_configured", return_value=True), \
                  mock.patch.object(app, "_generate_aps_convention_files", return_value=(docx_path, pdf_path)), \
                  mock.patch.object(app, "_docx_text_contains_yousign_smart_anchor", return_value=True), \
+                 mock.patch.object(app, "_prepare_yousign_pdf_and_fields", return_value=(pdf_path, [{"type": "signature", "page": 1, "x": 100, "y": 200, "width": 160, "height": 60}])), \
                  mock.patch.object(app, "_yousign_json", side_effect=fake_yousign_json):
                 state = app.create_yousign_convention_signature(session, trainee, "2ebec35a", "TRN-2E16579A", force_new=True)
 
@@ -174,6 +180,7 @@ class ApsConvocationGenerationTests(unittest.TestCase):
             with mock.patch.object(app, "_yousign_is_configured", return_value=True), \
                  mock.patch.object(app, "_generate_aps_convention_files", return_value=(docx_path, pdf_path)), \
                  mock.patch.object(app, "_docx_text_contains_yousign_smart_anchor", return_value=True), \
+                 mock.patch.object(app, "_prepare_yousign_pdf_and_fields", return_value=(pdf_path, [{"type": "signature", "page": 1, "x": 100, "y": 200, "width": 160, "height": 60}])), \
                  mock.patch.object(app, "_yousign_json", side_effect=fake_yousign_json):
                 state = app.create_yousign_convention_signature(session, trainee, "2ebec35a", "TRN-2E16579A", force_new=True)
 
@@ -513,6 +520,23 @@ class ApsConventionGenerationTests(unittest.TestCase):
             anchors = app._docx_yousign_smart_anchors(template_path, signer_index=1)
 
         self.assertIn("{{s1|signature|160|60}}", anchors)
+
+    def test_yousign_pdf_is_cleaned_after_anchor_detection(self):
+        from reportlab.pdfgen import canvas
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_path = os.path.join(tmpdir, "anchor.pdf")
+            c = canvas.Canvas(pdf_path, pagesize=(595, 842))
+            c.drawString(100, 200, "{{s1|signature|160|60}}")
+            c.save()
+
+            clean_path, anchors = app._prepare_yousign_pdf_and_fields(pdf_path, signer_index=1)
+            clean_text = "\n".join(page.extract_text() or "" for page in app.PdfReader(clean_path).pages)
+
+        self.assertEqual(anchors[0]["type"], "signature")
+        self.assertEqual(anchors[0]["width"], 160)
+        self.assertEqual(anchors[0]["height"], 60)
+        self.assertNotIn("{{s1|signature|160|60}}", clean_text)
 
     def test_aps_convention_generation_uses_only_production_word_template(self):
         session = {

@@ -38,7 +38,7 @@ from flask import Flask, request, redirect, url_for, jsonify, render_template, a
 import zipfile
 from io import BytesIO
 from docx import Document
-from pypdf import PdfReader
+from pypdf import PdfReader, PdfWriter
 import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape
 from urllib.parse import urlparse, urljoin, quote, urlencode
@@ -20871,6 +20871,7 @@ def _is_aps_session(session_obj: Dict[str, Any]) -> bool:
 YOUSIGN_BASE_URL_DEFAULT = "https://api-sandbox.yousign.app/v3"
 
 YOUSIGN_SMART_ANCHOR_PATTERN = re.compile(r"\{\{\s*s(\d+)\|signature\|(\d+)\|(\d+)\s*\}\}")
+YOUSIGN_TECHNICAL_ANCHOR_PATTERN = re.compile(r"\{\{\s*s(\d+)\|([A-Za-z0-9_\-]+)\|([^{}]*)\}\}")
 YOUSIGN_SMART_ANCHOR_MISSING_MESSAGE = "Aucune zone de signature trouvée dans le modèle Word. Ajoutez {{s1|signature|160|60}} à l’endroit souhaité."
 YOUSIGN_SMART_ANCHOR_PLACEHOLDER_PREFIX = "__YOUSIGN_SMART_ANCHOR_"
 YOUSIGN_SMS_AUTHENTICATION_MODE = "otp_sms"
@@ -21076,6 +21077,102 @@ def _yousign_json(method: str, path: str, **kwargs) -> Dict[str, Any]:
     if not response.content:
         return {}
     return response.json()
+
+
+def _parse_yousign_anchor(anchor_text: str) -> Dict[str, Any]:
+    match = YOUSIGN_TECHNICAL_ANCHOR_PATTERN.fullmatch(str(anchor_text or "").strip())
+    if not match:
+        return {}
+    args = [part.strip() for part in (match.group(3) or "").split("|")]
+    width = int(args[0]) if len(args) >= 1 and args[0].isdigit() else 160
+    height = int(args[1]) if len(args) >= 2 and args[1].isdigit() else 60
+    return {"signer_index": int(match.group(1)), "type": match.group(2).strip().lower(), "width": width, "height": height}
+
+
+def _detect_yousign_pdf_anchors(pdf_path: str, signer_index: int = 1) -> List[Dict[str, Any]]:
+    """Detect Yousign technical tags in the generated PDF before cleaning it."""
+    anchors: List[Dict[str, Any]] = []
+    pattern = YOUSIGN_TECHNICAL_ANCHOR_PATTERN
+    reader = PdfReader(pdf_path)
+    for page_number, page in enumerate(reader.pages, start=1):
+        page_height = float(page.mediabox.height)
+
+        def visitor(text: str, cm: Any, tm: Any, font_dict: Any, font_size: Any) -> None:
+            if not text or "{{" not in text:
+                return
+            for match in pattern.finditer(text):
+                parsed = _parse_yousign_anchor(match.group(0))
+                if not parsed or parsed["signer_index"] != signer_index:
+                    continue
+                x = float(tm[4] if len(tm) > 4 else 0) + float(cm[4] if len(cm) > 4 else 0)
+                baseline_y = float(tm[5] if len(tm) > 5 else 0) + float(cm[5] if len(cm) > 5 else 0)
+                height = parsed["height"]
+                anchors.append({
+                    **parsed,
+                    "raw": match.group(0),
+                    "page": page_number,
+                    "x": max(0, int(round(x))),
+                    "pdf_y": max(0, float(baseline_y) - 2),
+                    "y": max(0, int(round(page_height - baseline_y - height))),
+                })
+
+        page.extract_text(visitor_text=visitor)
+    return anchors
+
+
+def _clean_yousign_pdf_anchors(pdf_path: str, anchors: List[Dict[str, Any]]) -> str:
+    """Create a clean PDF by masking every detected technical Yousign tag."""
+    if not anchors:
+        return pdf_path
+    from reportlab.pdfgen import canvas
+    from pypdf.generic import ContentStream, NameObject
+
+    clean_path = os.path.splitext(pdf_path)[0] + "_clean.pdf"
+    reader = PdfReader(pdf_path)
+    writer = PdfWriter()
+    anchors_by_page: Dict[int, List[Dict[str, Any]]] = {}
+    for anchor in anchors:
+        anchors_by_page.setdefault(int(anchor.get("page") or 1), []).append(anchor)
+    for page_number, page in enumerate(reader.pages, start=1):
+        page_width = float(page.mediabox.width)
+        page_height = float(page.mediabox.height)
+        packet = BytesIO()
+        overlay = canvas.Canvas(packet, pagesize=(page_width, page_height))
+        overlay.setFillColorRGB(1, 1, 1)
+        for anchor in anchors_by_page.get(page_number, []):
+            # Mask the visible marker text, not the future signature area.
+            text_width = max(80, min(page_width - float(anchor["x"]), len(anchor["raw"]) * 7))
+            overlay.rect(float(anchor["x"]) - 1, float(anchor["pdf_y"]) - 1, text_width + 2, 16, stroke=0, fill=1)
+        overlay.save()
+        packet.seek(0)
+        overlay_page = PdfReader(packet).pages[0]
+        page.merge_page(overlay_page)
+        raw_anchors = {str(anchor.get("raw") or "") for anchor in anchors_by_page.get(page_number, [])}
+        if raw_anchors:
+            try:
+                content = ContentStream(page.get_contents(), reader)
+                filtered_operations = []
+                for operands, operator in content.operations:
+                    operand_text = "".join(str(operand) for operand in operands)
+                    if any(raw_anchor and raw_anchor in operand_text for raw_anchor in raw_anchors):
+                        continue
+                    filtered_operations.append((operands, operator))
+                content.operations = filtered_operations
+                page[NameObject("/Contents")] = content
+            except Exception:
+                app.logger.warning("[YOUSIGN] impossible de retirer le texte d’ancre du flux PDF, masquage visuel conservé", exc_info=True)
+        writer.add_page(page)
+    with open(clean_path, "wb") as fh:
+        writer.write(fh)
+    return clean_path
+
+
+def _prepare_yousign_pdf_and_fields(pdf_path: str, signer_index: int = 1) -> Tuple[str, List[Dict[str, Any]]]:
+    anchors = _detect_yousign_pdf_anchors(pdf_path, signer_index=signer_index)
+    if not anchors:
+        return pdf_path, []
+    clean_path = _clean_yousign_pdf_anchors(pdf_path, anchors)
+    return clean_path, anchors
 
 
 def _yousign_state(trainee: Dict[str, Any]) -> Dict[str, Any]:
@@ -21529,6 +21626,9 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
     docx_path, pdf_path = _generate_aps_convention_files(session_obj, trainee, session_id, trainee_id)
     if not os.path.exists(pdf_path) or os.path.getsize(pdf_path) <= 0:
         raise RuntimeError("Le PDF de convention de formation n’a pas été généré.")
+    yousign_pdf_path, pdf_anchors = _prepare_yousign_pdf_and_fields(pdf_path, signer_index=1)
+    if not os.path.exists(yousign_pdf_path) or os.path.getsize(yousign_pdf_path) <= 0:
+        raise RuntimeError("Le PDF nettoyé pour Yousign n’a pas été généré.")
 
     training_label = str(_session_get(session_obj, "training_type", "") or _session_get(session_obj, "name", "") or "Formation").strip()
     request_name = f"Convention formation - {training_label} - {first_name} {last_name}".strip()
@@ -21545,12 +21645,12 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
     if not signature_request_id:
         raise RuntimeError("Yousign n’a pas renvoyé d’identifiant de demande de signature.")
 
-    with open(pdf_path, "rb") as fh:
+    with open(yousign_pdf_path, "rb") as fh:
         document = _yousign_json(
             "POST",
             f"/signature_requests/{signature_request_id}/documents",
-            files={"file": (os.path.basename(pdf_path), fh, "application/pdf")},
-            data={"nature": "signable_document", "parse_anchors": "true"},
+            files={"file": (os.path.basename(yousign_pdf_path), fh, "application/pdf")},
+            data={"nature": "signable_document", "parse_anchors": "false"},
         )
     document_id = document.get("id")
     if not document_id:
@@ -21561,17 +21661,58 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
         "signature_level": "electronic_signature",
         "signature_authentication_mode": YOUSIGN_SMS_AUTHENTICATION_MODE,
     }
-    if _docx_text_contains_yousign_smart_anchor(docx_path, signer_index=1):
-        # Les champs de signature sont créés par Yousign depuis les Smart Anchors.
-        pass
-    else:
-        signer_payload["fields"] = [{
+    fields: List[Dict[str, Any]] = []
+    for anchor in pdf_anchors:
+        if anchor.get("type") == "signature":
+            fields.append({
+                "document_id": document_id,
+                "type": "signature",
+                "page": anchor["page"],
+                "x": anchor["x"],
+                "y": anchor["y"],
+                "width": anchor["width"],
+                "height": max(80, int(anchor["height"])),
+                "layout": "detailed",
+                "date_time_format": "dd/MM/yyyy",
+                "show_timezone": False,
+            })
+            fields.append({
+                "document_id": document_id,
+                "type": "signature_date",
+                "page": anchor["page"],
+                "x": anchor["x"],
+                "y": anchor["y"] + max(62, int(anchor["height"]) + 4),
+                "width": 90,
+                "height": 20,
+                "date_format": "dd/MM/yyyy",
+                "time_format": None,
+                "show_timezone": False,
+            })
+        elif anchor.get("type") in {"date", "signature_date"}:
+            fields.append({
+                "document_id": document_id,
+                "type": "signature_date",
+                "page": anchor["page"],
+                "x": anchor["x"],
+                "y": anchor["y"],
+                "width": anchor["width"],
+                "height": anchor["height"],
+                "date_format": "dd/MM/yyyy",
+                "time_format": None,
+                "show_timezone": False,
+            })
+    if not fields:
+        fields.append({
             "document_id": document_id,
             "type": "signature",
-            "page": _pdf_page_count(pdf_path),
+            "page": _pdf_page_count(yousign_pdf_path),
             "x": 360,
             "y": 650,
-        }]
+            "layout": "detailed",
+            "date_time_format": "dd/MM/yyyy",
+            "show_timezone": False,
+        })
+    signer_payload["fields"] = fields
     signer = _yousign_json("POST", f"/signature_requests/{signature_request_id}/signers", json=signer_payload)
     signer_id = signer.get("id")
     app.logger.info(
@@ -21600,7 +21741,8 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
         "signer_id": signer_id or "",
         "signature_link": signature_link,
         "signature_link_expires_at": activated.get("signature_link_expiration_date") or signer.get("signature_link_expiration_date") or "",
-        "unsigned_pdf_path": pdf_path,
+        "unsigned_pdf_path": yousign_pdf_path,
+        "source_pdf_with_anchors_path": pdf_path,
         "unsigned_docx_path": docx_path,
         "created_at": now,
         "activated_at": now,
@@ -21616,7 +21758,7 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
         "last_email_error": "",
     })
     trainee["convention_aps_status"] = "signature_ongoing"
-    trainee["convention_aps_pdf_path"] = pdf_path
+    trainee["convention_aps_pdf_path"] = yousign_pdf_path
     trainee["convention_aps_docx_path"] = docx_path
     trainee["updated_at"] = now
     app.logger.info("[YOUSIGN] signature request activated trainee_id=%s request_id=%s", trainee_id, signature_request_id)
