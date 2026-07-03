@@ -725,126 +725,118 @@
 
 <div class="grid cards" id="sessionsGrid">
   {% for s in sessions %}
-  <div class="card session-card session-card--{{ s.status_key }} training-{{ s.training_type_class }}{% if 'VAE' in (s.training_type or '')|upper %} training-vae{% endif %}{% if s.show_cash_payment_alert %} has-cash-alert{% endif %}" data-session-training-type="{{ (s.training_type or '')|upper }}">
-    <div class="card-row">
-      <div>
-        <div class="card-title {% if not is_read_only %}session-name-editable{% endif %}"
+  {% set training_upper = (s.training_type or "")|upper %}
+  {% set is_aps = training_upper.startswith("APS") %}
+  {% set is_vtc = "VTC" in training_upper %}
+  {% set elearning_done = s.public_logged_in_total or 0 %}
+  {% set elearning_total = s.total or 0 %}
+  {% set docs_done = s.cmar_registered_total or 0 if is_vtc else s.deliverables_done or 0 %}
+  {% set docs_total = s.total if is_vtc else s.deliverables_total or 0 %}
+  <article class="card session-card session-card--{{ s.status_key }} training-{{ s.training_type_class }}{% if 'VAE' in training_upper %} training-vae{% endif %}{% if s.show_cash_payment_alert %} has-cash-alert session-card--alert{% endif %}" data-session-training-type="{{ training_upper }}">
+    <div class="session-card__header">
+      <div class="session-card__identity">
+        <h2 class="session-card__title {% if not is_read_only %}session-name-editable{% endif %}"
              {% if not is_read_only %}
              data-inline-session-name="{{ s.id }}"
              data-session-name="{{ s.name }}"
              title="Cliquer pour modifier le nom"
-             {% endif %}>{{ s.name }}</div>
-        <div class="session-tags">
-          <span class="pill pill-training">{{ "CHAUFFEUR VTC" if (s.training_type or "")|upper == "VTC" else s.training_type }}</span>
+             {% endif %}>{{ s.name }}</h2>
+        <div class="session-tags" aria-label="Type et statut de session">
+          <span class="pill pill-training">{{ "CHAUFFEUR VTC" if training_upper == "VTC" else s.training_type }}</span>
           <span class="pill pill-status pill-status--{{ s.status_key }}">{{ s.status_label }}</span>
+          {% if s.session_dossier_complete %}<span class="pill pill-complete">Dossier complet</span>{% endif %}
         </div>
       </div>
-      {% if s.session_dossier_complete %}
-      <div class="bigmark">✅</div>
-      {% endif %}
+      <div class="session-kpi session-kpi--trainees" aria-label="Nombre de stagiaires">
+        <span class="session-kpi__value">{{ s.total }}</span>
+        <span class="session-kpi__label">stagiaires</span>
+      </div>
     </div>
 
-    <div class="card-meta">
-      <div>Formation : <strong>{{ s.date_start|frdate }}</strong> → <strong>{{ s.date_end|frdate }}</strong></div>
-      {% if ((s.training_type or "")|upper).startswith("APS") %}
-        <div>Distanciel : <strong>{{ s.aps_remote_start|frdate }}</strong> → <strong>{{ s.aps_remote_end|frdate }}</strong></div>
-        <div>Présentiel : <strong>{{ s.aps_in_person_start|frdate }}</strong> → <strong>{{ s.aps_in_person_end|frdate }}</strong></div>
+    <div class="session-dates" aria-label="Dates clés de la session">
+      <div class="session-date-row">
+        <span class="session-date-row__icon" aria-hidden="true">📅</span>
+        <span class="session-date-row__label">Formation</span>
+        <strong>{{ s.date_start|frdate }} → {{ s.date_end|frdate }}</strong>
+      </div>
+      {% if is_aps %}
+      <div class="session-date-row">
+        <span class="session-date-row__icon" aria-hidden="true">💻</span>
+        <span class="session-date-row__label">Distanciel</span>
+        <strong>{{ s.aps_remote_start|frdate }} → {{ s.aps_remote_end|frdate }}</strong>
+      </div>
+      <div class="session-date-row">
+        <span class="session-date-row__icon" aria-hidden="true">🏫</span>
+        <span class="session-date-row__label">Présentiel</span>
+        <strong>{{ s.aps_in_person_start|frdate }} → {{ s.aps_in_person_end|frdate }}</strong>
+      </div>
       {% endif %}
-      {% if "VTC" in (s.training_type or "")|upper %}
+      {% if is_vtc %}
         {% set theory_date = s.exam_theory_date or s.exam_date %}
         {% set practice_date = s.exam_practice_date or s.exam_date %}
         {% set practice_training_date = s.practice_training_date %}
-        <div>Examen théorique : <strong>{{ theory_date|frdate }}</strong></div>
-        <div>Examen pratique : <strong>{{ practice_date|frdate }}</strong></div>
-        <div>Formation pratique : <strong>{{ practice_training_date|frdate }}</strong></div>
+      <div class="session-date-row"><span class="session-date-row__icon" aria-hidden="true">📝</span><span class="session-date-row__label">Examen théorique</span><strong>{{ theory_date|frdate }}</strong></div>
+      <div class="session-date-row"><span class="session-date-row__icon" aria-hidden="true">🚘</span><span class="session-date-row__label">Examen pratique</span><strong>{{ practice_date|frdate }}</strong></div>
+      <div class="session-date-row"><span class="session-date-row__icon" aria-hidden="true">🧭</span><span class="session-date-row__label">Formation pratique</span><strong>{{ practice_training_date|frdate }}</strong></div>
       {% else %}
-        <div>Examen : <strong>{{ s.exam_date|frdate }}</strong></div>
-      {% endif %}
-      <div class="trainees-highlight">
-        <span>Stagiaires</span>
-        <span class="trainees-count">{{ s.total }}</span>
-      </div>
-      <div class="muted" style="margin-top:4px;">
-        🛜 {{ s.public_logged_in_total or 0 }}/{{ s.total }}
-      </div>
-      {% if s.show_cash_payment_alert %}
-      <div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;font-weight:800;">
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <span>⚠️ Espèces à récupérer : {{ s.cash_payment_trainees }} stagiaire(s) — {{ "%.2f"|format(s.cash_payment_total or 0)|replace(".", ",") }} €</span>
-          {% if s.cash_payment_items %}
-          <div style="display:flex;flex-wrap:wrap;gap:6px 10px;font-size:.95rem;">
-            {% for item in s.cash_payment_items %}
-            <a href="{{ url_for('admin_trainee_page', session_id=s.id, trainee_id=item.trainee_id) }}"
-               style="color:#9a3412;text-decoration:underline;">
-              {{ item.trainee_name }}
-            </a>
-            {% endfor %}
-          </div>
-          {% endif %}
-        </div>
+      <div class="session-date-row">
+        <span class="session-date-row__icon session-date-row__icon--text" aria-hidden="true">EX</span>
+        <span class="session-date-row__label">Examen</span>
+        <strong>{{ s.exam_date|frdate }}</strong>
       </div>
       {% endif %}
     </div>
 
-    <div class="docs-progress">
-      {% if "VTC" in (s.training_type or "")|upper %}
-      Inscriptions CMAR :
-      <strong>{{ s.cmar_registered_total or 0 }}/{{ s.total }}</strong>
-      {% else %}
-      Docs fin de formation :
-      <strong>{{ s.deliverables_done or 0 }}/{{ s.deliverables_total or 0 }}</strong>
+    {% if s.show_cash_payment_alert %}
+    <div class="session-alert">
+      <strong>⚠️ Espèces à récupérer</strong>
+      <span>{{ s.cash_payment_trainees }} stagiaire(s) — {{ "%.2f"|format(s.cash_payment_total or 0)|replace(".", ",") }} €</span>
+      {% if s.cash_payment_items %}
+      <div class="session-alert__links">
+        {% for item in s.cash_payment_items %}
+        <a href="{{ url_for('admin_trainee_page', session_id=s.id, trainee_id=item.trainee_id) }}">{{ item.trainee_name }}</a>
+        {% endfor %}
+      </div>
       {% endif %}
     </div>
+    {% endif %}
+
+    <div class="session-metrics" aria-label="Indicateurs de session">
+      <div class="session-metric{% if s.total == 0 %} is-muted{% endif %}"><span class="session-metric__icon">👥</span><span class="session-metric__label">Stagiaires</span><strong>{{ s.total }}</strong></div>
+      <div class="session-metric is-elearning"><span class="session-metric__icon">🛜</span><span class="session-metric__label">Connexion Espace Stagiaire</span><strong>{{ elearning_done }}/{{ elearning_total }}</strong></div>
+      <div class="session-metric{% if docs_total and docs_done >= docs_total %} is-ok{% elif docs_total and docs_done < docs_total %} is-warn{% else %} is-muted{% endif %}"><span class="session-metric__icon">📄</span><span class="session-metric__label">{{ "Inscriptions CMAR" if is_vtc else "Docs fin de formation" }}</span><strong>{{ docs_done }}/{{ docs_total }}</strong></div>
+      <div class="session-metric{% if s.exclude_from_sales_tracking %} is-muted{% else %} is-ok{% endif %}"><span class="session-metric__icon">📈</span><span class="session-metric__label">Suivi ventes</span><strong>{{ "exclu" if s.exclude_from_sales_tracking else "inclus" }}</strong></div>
+    </div>
+
+    <div class="session-options">
     {% if not is_read_only %}
-      <label class="sales-tracking-toggle">
-        <input type="checkbox"
-               data-sales-tracking-exclude="{{ s.id }}"
-               {% if s.exclude_from_sales_tracking %}checked{% endif %}>
-        Exclure cette session du suivi des ventes
+      <label class="modern-switch">
+        <input type="checkbox" data-sales-tracking-exclude="{{ s.id }}" {% if s.exclude_from_sales_tracking %}checked{% endif %}>
+        <span class="modern-switch__control" aria-hidden="true"></span>
+        <span>Exclure du suivi ventes</span>
       </label>
-      {% if ((s.training_type or "")|upper).startswith("APS") %}
-        <label class="aps-elearning-toggle">
-          <input type="checkbox"
-                 data-aps-elearning-toggle="{{ s.id }}"
-                 {% if s.aps_elearning_enabled %}checked{% endif %}>
-          🎓 E-learning
+      {% if is_aps %}
+        <label class="modern-switch modern-switch--elearning">
+          <input type="checkbox" data-aps-elearning-toggle="{{ s.id }}" {% if s.aps_elearning_enabled %}checked{% endif %}>
+          <span class="modern-switch__control" aria-hidden="true"></span>
+          <span>🎓 E-learning</span>
         </label>
       {% endif %}
     {% else %}
-      {% if s.exclude_from_sales_tracking %}
-        <div class="sales-tracking-note">🚫 Session exclue du suivi des ventes.</div>
-      {% endif %}
-      {% if ((s.training_type or "")|upper).startswith("APS") and s.aps_elearning_enabled %}
-        <div class="aps-elearning-note">🎓 E-learning activé</div>
-      {% endif %}
+      {% if s.exclude_from_sales_tracking %}<div class="sales-tracking-note">Session exclue du suivi des ventes.</div>{% endif %}
+      {% if is_aps and s.aps_elearning_enabled %}<div class="aps-elearning-note">🎓 E-learning activé</div>{% endif %}
     {% endif %}
+    </div>
 
-<div class="card-actions">
-  <a class="btn" href="{{ url_for('admin_trainees', session_id=s.id, **request.args) }}">Voir les stagiaires</a>
-
-  {% if not is_read_only %}
-    <button class="btn btn-outline"
-            data-edit-session="{{ s.id }}"
-            data-training-type="{{ s.training_type }}"
-            data-date-start="{{ s.date_start }}"
-            data-date-end="{{ s.date_end }}"
-            data-exam-date="{{ s.exam_date }}"
-            data-exam-theory-date="{{ s.exam_theory_date }}"
-            data-exam-practice-date="{{ s.exam_practice_date }}"
-            data-practice-training-date="{{ s.practice_training_date }}"
-            data-aps-remote-start="{{ s.aps_remote_start }}"
-            data-aps-remote-end="{{ s.aps_remote_end }}"
-            data-aps-in-person-start="{{ s.aps_in_person_start }}"
-            data-aps-in-person-end="{{ s.aps_in_person_end }}"
-            data-aps-elearning-enabled="{{ '1' if s.aps_elearning_enabled else '0' }}">
-      Modifier la session
-    </button>
-    <button class="btn btn-outline" data-archive-session="{{ s.id }}" aria-label="Archiver">📦</button>
-
-    <button class="btn btn-danger" data-delete-session="{{ s.id }}" aria-label="Supprimer">🗑️</button>
-  {% endif %}
-</div>
-  </div>
+    <div class="card-actions session-actions">
+      <a class="btn session-action session-action--primary" href="{{ url_for('admin_trainees', session_id=s.id, **request.args) }}">👥 Voir les stagiaires</a>
+      {% if not is_read_only %}
+        <button class="btn btn-outline session-action" data-edit-session="{{ s.id }}" data-training-type="{{ s.training_type }}" data-date-start="{{ s.date_start }}" data-date-end="{{ s.date_end }}" data-exam-date="{{ s.exam_date }}" data-exam-theory-date="{{ s.exam_theory_date }}" data-exam-practice-date="{{ s.exam_practice_date }}" data-practice-training-date="{{ s.practice_training_date }}" data-aps-remote-start="{{ s.aps_remote_start }}" data-aps-remote-end="{{ s.aps_remote_end }}" data-aps-in-person-start="{{ s.aps_in_person_start }}" data-aps-in-person-end="{{ s.aps_in_person_end }}" data-aps-elearning-enabled="{{ '1' if s.aps_elearning_enabled else '0' }}">✏️ Modifier</button>
+        <button class="btn btn-outline session-action" data-archive-session="{{ s.id }}">📦 Archiver</button>
+        <button class="btn btn-danger session-action session-action--danger" data-delete-session="{{ s.id }}">🗑️ Supprimer</button>
+      {% endif %}
+    </div>
+  </article>
   {% endfor %}
 </div>
 
