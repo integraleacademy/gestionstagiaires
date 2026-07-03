@@ -11410,6 +11410,94 @@ def admin_sessions_conventions():
     return response
 
 
+
+def _automation_status_tone(status: str) -> str:
+    if status in {"signed", "sent", "complete"}:
+        return "complete"
+    if status in {"error", "refused", "expired"}:
+        return "error"
+    if status in {"waiting_signature", "sent", "in_progress"}:
+        return "waiting"
+    if status.startswith("blocked") or status == "blocked":
+        return "blocked"
+    return "pending"
+
+
+def _build_automations_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
+    rows = []
+    stats = {"trainees": 0, "complete": 0, "in_progress": 0, "blocked": 0, "errors": 0, "documents_ready": 0}
+    for sess in data.get("sessions", []) or []:
+        if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
+            continue
+        session_id = str(sess.get("id") or "")
+        if not session_id:
+            continue
+        formation = formation_label(_session_get(sess, "training_type", ""))
+        session_name = _session_get(sess, "name", "")
+        trainees = _session_trainees_list(sess)
+        for trainee in trainees:
+            trainee_id = str(trainee.get("id") or "")
+            if not trainee_id:
+                continue
+            automation = _build_trainee_automation_status(sess, trainee, session_id, trainee_id)
+            convention = automation.get("convention") or {}
+            convocation = automation.get("convocation") or {}
+            global_status = automation.get("global_status") or "action_required"
+            stats["trainees"] += 1
+            if global_status == "complete":
+                stats["complete"] += 1
+            elif global_status == "error":
+                stats["errors"] += 1
+            elif global_status == "blocked":
+                stats["blocked"] += 1
+            else:
+                stats["in_progress"] += 1
+            stats["documents_ready"] += int(automation.get("ready_documents") or 0)
+            row = {
+                "session_id": session_id,
+                "trainee_id": trainee_id,
+                "trainee_name": _format_trainee_name(trainee.get("first_name", ""), trainee.get("last_name", "")),
+                "email": (trainee.get("email") or "").strip(),
+                "phone": (trainee.get("phone") or trainee.get("telephone") or "").strip(),
+                "session_name": session_name,
+                "formation": formation,
+                "date_start": _session_get(sess, "date_start", ""),
+                "date_start_label": fr_date(_session_get(sess, "date_start", "")),
+                "global_status": global_status,
+                "progress_percent": automation.get("progress_percent") or 0,
+                "ready_documents": automation.get("ready_documents") or 0,
+                "total_documents": automation.get("total_documents") or 0,
+                "convention_label": convention.get("label") or "—",
+                "convention_status": convention.get("status") or "",
+                "convention_tone": convention.get("tone") or _automation_status_tone(convention.get("status") or ""),
+                "convention_date": convention.get("signed_at") or convention.get("sent_at") or convention.get("generated_at") or "",
+                "convocation_label": convocation.get("label") or "—",
+                "convocation_status": convocation.get("status") or "",
+                "convocation_tone": convocation.get("tone") or _automation_status_tone(convocation.get("status") or ""),
+                "convocation_date": convocation.get("sent_at") or convocation.get("generated_at") or "",
+                "block_reason": convocation.get("block_reason") or "",
+                "error": convention.get("error") or convocation.get("error") or "",
+                "trainee_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
+            }
+            rows.append(row)
+    rows.sort(key=lambda r: (r["global_status"] == "complete", r["global_status"] != "error", r.get("date_start") or "9999-12-31", r.get("trainee_name", "").lower()))
+    return {"rows": rows, "stats": stats}
+
+
+@app.get("/admin/sessions/automatisations")
+@admin_login_required
+def admin_sessions_automations():
+    data = load_data()
+    dashboard = _build_automations_dashboard(data)
+    response = make_response(render_template(
+        "admin_sessions_automations.html",
+        rows=dashboard["rows"],
+        stats=dashboard["stats"],
+    ))
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
+
 @app.get("/admin/wedof")
 @admin_login_required
 def admin_wedof_requests():
