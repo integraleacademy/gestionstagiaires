@@ -637,6 +637,33 @@ class ApsConventionGenerationTests(unittest.TestCase):
         self.assertIn(f"sha256={template_hash_before}", "\n".join(logs.output))
         self.assertNotRegex(generated_xml, r"Intégrale Academy SAS|93830739683")
 
+
+    def test_aps_convention_period_variables_use_admin_session_aps_dates(self):
+        session = {
+            "training_type": "APS",
+            "name": "APS TEST",
+            "date_start": "2026-09-01",
+            "date_end": "2026-10-01",
+            "aps_remote_start": "2026-09-01",
+            "aps_remote_end": "2026-09-11",
+            "aps_in_person_start": "2026-09-14",
+            "aps_in_person_end": "2026-10-01",
+            "periode_elearning": "ancienne période e-learning",
+            "periode_presentiel": "ancienne période présentiel",
+        }
+        trainee = {
+            "first_name": "Jean",
+            "last_name": "Dupont",
+            "periode_elearning": "période stagiaire e-learning",
+            "periode_presentiel": "période stagiaire présentiel",
+        }
+
+        replacements = app._aps_convention_replacements(session, trainee)
+
+        self.assertEqual(replacements["periode_formation"], "du 01/09/2026 au 01/10/2026")
+        self.assertEqual(replacements["periode_elearning"], "du 01/09/2026 au 11/09/2026")
+        self.assertEqual(replacements["periode_presentiel"], "du 14/09/2026 au 01/10/2026")
+
     def test_aps_convention_replaces_all_business_variables_from_real_template(self):
         session = {
             "id": "session-1",

@@ -22324,6 +22324,18 @@ def _assert_aps_convention_has_no_business_placeholders(docx_path: str) -> Tuple
     return remaining, anchors
 
 
+def _format_period_from_dates(start: Any, end: Any) -> str:
+    start_fr = fr_date(str(start or "").strip())
+    end_fr = fr_date(str(end or "").strip())
+    if start_fr and end_fr:
+        return f"du {start_fr} au {end_fr}"
+    if start_fr:
+        return f"à partir du {start_fr}"
+    if end_fr:
+        return f"jusqu’au {end_fr}"
+    return ""
+
+
 def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
     """Return values allowed for APS convention ``{{ variable }}`` placeholders.
 
@@ -22345,9 +22357,19 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
     if personal_amount in (None, ""):
         personal_amount = training_price
     other_amount = _first_non_empty(trainee.get("other_amount"), trainee.get("montant_autre"), default="0")
-    date_start = fr_date(str(_session_get(session_obj, "date_start", "")))
-    date_end = fr_date(str(_session_get(session_obj, "date_end", "")))
-    periode = f"du {date_start} au {date_end}" if date_start or date_end else ""
+    date_start_raw = str(_session_get(session_obj, "date_start", "")).strip()
+    date_end_raw = str(_session_get(session_obj, "date_end", "")).strip()
+    date_start = fr_date(date_start_raw)
+    date_end = fr_date(date_end_raw)
+    periode = _format_period_from_dates(date_start_raw, date_end_raw)
+    aps_elearning_period = _format_period_from_dates(
+        _session_get(session_obj, "aps_remote_start", ""),
+        _session_get(session_obj, "aps_remote_end", ""),
+    )
+    aps_presentiel_period = _format_period_from_dates(
+        _session_get(session_obj, "aps_in_person_start", ""),
+        _session_get(session_obj, "aps_in_person_end", ""),
+    )
     address = _first_non_empty(trainee.get("address"), trainee.get("adresse"))
     replacements = {
         "civilite": _first_non_empty(trainee.get("civilite"), trainee.get("gender"), default=""),
@@ -22379,8 +22401,8 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
         "date_debut_formation": date_start,
         "date_fin_formation": date_end,
         "periode_formation": periode,
-        "periode_elearning": _first_non_empty(trainee.get("periode_elearning"), _session_get(session_obj, "periode_elearning", ""), periode),
-        "periode_presentiel": _first_non_empty(trainee.get("periode_presentiel"), _session_get(session_obj, "periode_presentiel", ""), periode),
+        "periode_elearning": _first_non_empty(aps_elearning_period, trainee.get("periode_elearning"), _session_get(session_obj, "periode_elearning", ""), periode),
+        "periode_presentiel": _first_non_empty(aps_presentiel_period, trainee.get("periode_presentiel"), _session_get(session_obj, "periode_presentiel", ""), periode),
         "date_ouverture": fr_date(_first_non_empty(trainee.get("date_ouverture"), _session_get(session_obj, "date_ouverture", ""))),
         "h_elearning": _first_non_empty(trainee.get("h_elearning"), _session_get(session_obj, "h_elearning", ""), default="0"),
         "h_presentiel": _first_non_empty(trainee.get("h_presentiel"), _session_get(session_obj, "h_presentiel", ""), default="0"),
