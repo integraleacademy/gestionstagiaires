@@ -737,8 +737,10 @@
   {% set is_vtc = "VTC" in training_upper %}
   {% set elearning_done = s.public_logged_in_total or 0 %}
   {% set elearning_total = s.total or 0 %}
-  {% set docs_done = s.cmar_registered_total or 0 if is_vtc else s.deliverables_done or 0 %}
-  {% set docs_total = s.total if is_vtc else s.deliverables_total or 0 %}
+  {% set docs_done = s.dossier_complete_total or 0 %}
+  {% set docs_total = s.total or 0 %}
+  {% set cnaps_done = s.cnaps_accepted_count or 0 %}
+  {% set cnaps_total = s.total or 0 %}
   <article class="card session-card session-card--{{ s.status_key }} training-{{ s.training_type_class }}{% if 'VAE' in training_upper %} training-vae{% endif %}{% if s.show_cash_payment_alert %} has-cash-alert session-card--alert{% endif %}" data-session-training-type="{{ training_upper }}">
     <div class="session-card__header">
       <div class="session-card__identity">
@@ -809,9 +811,9 @@
     {% endif %}
 
     <div class="session-metrics" aria-label="Indicateurs de session">
-      <div class="session-metric{% if s.total == 0 %} is-muted{% endif %}"><span class="session-metric__icon">👥</span><span class="session-metric__label">Stagiaires</span><strong>{{ s.total }}</strong></div>
+      <div class="session-metric{% if cnaps_total and cnaps_done >= cnaps_total %} is-ok{% elif cnaps_total and cnaps_done < cnaps_total %} is-warn{% else %} is-muted{% endif %}"><span class="session-metric__icon">🛡️</span><span class="session-metric__label">CNAPS validé</span><strong>{{ cnaps_done }}/{{ cnaps_total }}</strong></div>
       <div class="session-metric is-elearning"><span class="session-metric__icon">🛜</span><span class="session-metric__label">Connexion Espace Stagiaire</span><strong>{{ elearning_done }}/{{ elearning_total }}</strong></div>
-      <div class="session-metric{% if docs_total and docs_done >= docs_total %} is-ok{% elif docs_total and docs_done < docs_total %} is-warn{% else %} is-muted{% endif %}"><span class="session-metric__icon">📄</span><span class="session-metric__label">{{ "Inscriptions CMAR" if is_vtc else "Docs fin de formation" }}</span><strong>{{ docs_done }}/{{ docs_total }}</strong></div>
+      <div class="session-metric{% if docs_total and docs_done >= docs_total %} is-ok{% elif docs_total and docs_done < docs_total %} is-warn{% else %} is-muted{% endif %}"><span class="session-metric__icon">📁</span><span class="session-metric__label">Dossiers complets</span><strong>{{ docs_done }}/{{ docs_total }}</strong></div>
       <div class="session-metric{% if s.exclude_from_sales_tracking %} is-muted{% else %} is-ok{% endif %}"><span class="session-metric__icon">📈</span><span class="session-metric__label">Suivi ventes</span><strong>{{ "exclu" if s.exclude_from_sales_tracking else "inclus" }}</strong></div>
     </div>
 
