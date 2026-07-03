@@ -83,8 +83,8 @@ document.addEventListener('submit', async event => {
   event.preventDefault();
   event.stopImmediatePropagation();
   const previewUrl = form.dataset.conventionPreviewUrl || '';
-  if(previewUrl){ window.open(previewUrl, '_blank', 'noopener'); }
-  const message = 'L’aperçu de la convention vient de s’ouvrir dans un nouvel onglet. Vérifiez le document avant de l’envoyer au stagiaire. Confirmer l’envoi Yousign maintenant ?';
+  if(previewUrl){ await window.openConventionPreview?.(previewUrl); }
+  const message = 'La prévisualisation est fermée. Confirmer l’envoi Yousign maintenant ?';
   const ok = window.AppModal
     ? await window.AppModal.confirm({type:'info', title:'Vérifier la convention avant envoi', message, primaryText:'Envoyer maintenant', secondaryText:'Annuler'})
     : window.confirm(message);

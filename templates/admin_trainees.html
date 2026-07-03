@@ -3284,6 +3284,15 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       }
     });
     if(!conventionPayload || !result.convention_signature_url){ continueAfterConvention(); return; }
+    const previewUrl = result.convention_preview_url || "";
+    if(previewUrl){ await window.openConventionPreview?.(previewUrl); }
+    const previewMessage = previewUrl
+      ? "La prévisualisation est fermée. Confirmer l’envoi Yousign maintenant ?"
+      : "Aucun aperçu n’est disponible pour cette convention. Confirmer tout de même l’envoi Yousign maintenant ?";
+    const previewOk = window.AppModal
+      ? await window.AppModal.confirm({type: previewUrl ? "info" : "warning", title: "Envoyer la convention", message: previewMessage, primaryText: "Envoyer maintenant", secondaryText: "Annuler"})
+      : window.confirm(previewMessage);
+    if(!previewOk){ continueAfterConvention(); return; }
     window.showConventionTransmissionProgress?.();
     try{
       const response = await fetch(result.convention_signature_url, {

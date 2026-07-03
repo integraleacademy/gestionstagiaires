@@ -1374,9 +1374,9 @@
     });
     if(!conventionPayload || !result.convention_signature_url){ continueAfterConvention(); return; }
     const previewUrl = result.convention_preview_url || "";
-    if(previewUrl){ window.open(previewUrl, "_blank", "noopener"); }
+    if(previewUrl){ await window.openConventionPreview?.(previewUrl); }
     const previewMessage = previewUrl
-      ? "L’aperçu de la convention vient de s’ouvrir dans un nouvel onglet. Vérifiez le document avant de l’envoyer au stagiaire. Confirmer l’envoi Yousign maintenant ?"
+      ? "La prévisualisation est fermée. Confirmer l’envoi Yousign maintenant ?"
       : "Aucun aperçu n’est disponible pour cette convention. Confirmer tout de même l’envoi Yousign maintenant ?";
     const previewOk = window.AppModal
       ? await window.AppModal.confirm({type: previewUrl ? "info" : "warning", title: "Vérifier la convention avant envoi", message: previewMessage, primaryText: "Envoyer maintenant", secondaryText: "Annuler"})
