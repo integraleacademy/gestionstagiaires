@@ -274,6 +274,7 @@
       </div>
       <div class="modal-foot ypareo-modal-actions" id="conventionTransmissionConfirmActions">
         <button class="btn ypareo-btn-secondary" id="conventionTransmissionNo" type="button">Non, plus tard</button>
+        <button class="btn btn-outline" id="conventionTransmissionPreview" type="button">Prévisualiser la convention</button>
         <button class="btn btn-primary ypareo-btn-primary" id="conventionTransmissionYes" type="button">Envoyer la convention</button>
       </div>
     </div>
@@ -449,11 +450,12 @@
   }
 
 
-  function openConventionTransmission({defaults} = {}){
+  function openConventionTransmission({defaults, previewUrl, onPreview} = {}){
     return new Promise((resolve)=>{
       const modal = document.getElementById("conventionTransmissionModal");
       const yesButton = document.getElementById("conventionTransmissionYes");
       const noButton = document.getElementById("conventionTransmissionNo");
+      const previewButton = document.getElementById("conventionTransmissionPreview");
       const fields = {
         training_price: document.getElementById("conventionTrainingPrice"),
         cpf_amount: document.getElementById("conventionCpfAmount"),
@@ -461,7 +463,7 @@
         other_amount: document.getElementById("conventionOtherAmount")
       };
       const errorEl = document.getElementById("conventionFinanceError");
-      if(!modal || !yesButton || !noButton || Object.values(fields).some((el)=>!el)){
+      if(!modal || !yesButton || !noButton || !previewButton || Object.values(fields).some((el)=>!el)){
         resolve(null);
         return;
       }
@@ -497,6 +499,7 @@
       const cleanup = ()=>{
         yesButton.onclick = null;
         noButton.onclick = null;
+        previewButton.onclick = null;
         Object.values(fields).forEach((field)=>field.removeEventListener("input", clearFinanceError));
       };
       const finish = (payload)=>{
@@ -508,24 +511,47 @@
       clearFinanceError();
       Object.values(fields).forEach((field)=>field.addEventListener("input", clearFinanceError));
 
-      noButton.onclick = ()=>finish(null);
-      yesButton.onclick = ()=>{
+      const buildPayload = ()=>{
         const trainingPrice = parseAmount(fields.training_price.value);
         const financingTotal = parseAmount(fields.cpf_amount.value) + parseAmount(fields.personal_amount.value) + parseAmount(fields.other_amount.value);
         if(Math.abs(financingTotal - trainingPrice) > 0.01){
           const diff = trainingPrice - financingTotal;
           showFinanceError(`Impossible de continuer : le total CPF + Perso + autre financement (${formatAmount(financingTotal)} €) doit être égal au montant de la formation (${formatAmount(trainingPrice)} €). Écart : ${formatAmount(diff)} €.`);
-          return;
+          return null;
         }
-        finish({
+        return {
           training_price: fields.training_price.value,
           cpf_amount: fields.cpf_amount.value,
           personal_amount: fields.personal_amount.value,
           other_amount: fields.other_amount.value
-        });
+        };
+      };
+      noButton.onclick = ()=>finish(null);
+      previewButton.onclick = async ()=>{
+        const payload = buildPayload();
+        if(!payload) return;
+        previewButton.disabled = true;
+        previewButton.setAttribute("aria-busy", "true");
+        try{
+          if(typeof onPreview === "function"){
+            await onPreview(payload);
+          }else if(previewUrl){
+            await window.openConventionPreview?.(previewUrl);
+          }
+        }catch(error){
+          await (window.showConventionResult?.({type:"error", title:"Prévisualisation impossible", message:error.message || "Impossible de générer l’aperçu de la convention.", buttonText:"Compris"}) || Promise.resolve(window.alert(error.message || "Impossible de générer l’aperçu de la convention.")));
+        }finally{
+          previewButton.disabled = false;
+          previewButton.removeAttribute("aria-busy");
+        }
+      };
+      yesButton.onclick = ()=>{
+        const payload = buildPayload();
+        if(payload) finish(payload);
       };
 
       yesButton.disabled = false;
+      previewButton.hidden = !(previewUrl || typeof onPreview === "function");
       openModal("conventionTransmissionModal");
     });
   }
