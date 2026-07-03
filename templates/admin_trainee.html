@@ -2108,6 +2108,24 @@ window.hideConventionTransmissionProgress = function(){
   document.body.classList.remove("yousign-sync-is-running");
 };
 
+
+document.addEventListener("submit", async (event)=>{
+  const form = event.target.closest('form[data-convention-preview-required="true"]');
+  if(!form || form.dataset.conventionPreviewConfirmed === "1") return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  const previewUrl = form.dataset.conventionPreviewUrl || "";
+  if(previewUrl){ window.open(previewUrl, "_blank", "noopener"); }
+  const message = "L’aperçu de la convention vient de s’ouvrir dans un nouvel onglet. Vérifiez le document avant de l’envoyer au stagiaire. Confirmer l’envoi Yousign maintenant ?";
+  const ok = window.AppModal
+    ? await window.AppModal.confirm({type:"info", title:"Vérifier la convention avant envoi", message, primaryText:"Envoyer maintenant", secondaryText:"Annuler"})
+    : window.confirm(message);
+  if(ok){
+    form.dataset.conventionPreviewConfirmed = "1";
+    form.requestSubmit ? form.requestSubmit() : form.submit();
+  }
+}, true);
+
 document.addEventListener("submit", async (event)=>{
   const form = event.target.closest('form[data-yousign-force-new="true"]');
   if(!form || form.dataset.yousignRegenerateConfirmed === "1") return;
