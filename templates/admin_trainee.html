@@ -3463,13 +3463,16 @@ function updateDocsRelanceState(status, plannedDateIso){
       .catch((error)=>{ console.error('Synchronisation statut financement impossible', error); })
       .finally(()=>{ financeStatusSyncInFlight = false; });
   }
-  function renderFinancingValidation(c, lines){
+  function applyFinancingValidationState(state){
     if(!financeValidationStatus) return;
-    const state = financingValidationFrom(c, lines);
     financeValidationStatus.className = `finance-validation-status finance-validation-status--${state.tone}`;
     financeValidationStatus.innerHTML = `<span class="finance-validation-status__icon">${esc(state.icon)}</span><span class="finance-validation-status__label">${esc(state.label)}</span>${state.manual?'<span class="finance-validation-status__manual">manuel</span>':''}`;
     financeValidationForceBtn?.toggleAttribute('disabled', state.manual);
     if(financeValidationAutoBtn) financeValidationAutoBtn.style.display = state.manual ? '' : 'none';
+  }
+  function renderFinancingValidation(c, lines){
+    const state = financingValidationFrom(c, lines);
+    applyFinancingValidationState(state);
     syncFinancementStatusIfValidated(state);
   }
   const isoToday=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10);};
@@ -3673,8 +3676,12 @@ function updateDocsRelanceState(status, plannedDateIso){
       await saveFinanceValidationOverride({financing_validation_manual_mode:'manual', financing_validation_manual_status:'validated', financement_status:'validated'});
       financeValidationManualMode = true;
       financeValidationManualStatus = 'validated';
+      if(financeValidationWrap){
+        financeValidationWrap.dataset.manualMode = 'manual';
+        financeValidationWrap.dataset.manualStatus = 'validated';
+      }
       currentFinancementStatus = 'validated';
-      renderFinancingValidation(computeFinance(currentLines), currentLines);
+      applyFinancingValidationState({label:'Financement validé', tone:'green', icon:'✓', manual:true});
       setFinanceSaveIndicator('Financement validé','saved');
     }catch(e){
       alert(e.message || 'Forçage du statut impossible');
@@ -3690,6 +3697,10 @@ function updateDocsRelanceState(status, plannedDateIso){
       await updateTrainee({financing_validation_manual_mode:'', financing_validation_manual_status:''});
       financeValidationManualMode = false;
       financeValidationManualStatus = '';
+      if(financeValidationWrap){
+        financeValidationWrap.dataset.manualMode = '';
+        financeValidationWrap.dataset.manualStatus = '';
+      }
       renderFinancingValidation(computeFinance(currentLines), currentLines);
     }catch(e){ alert(e.message || 'Retour au calcul automatique impossible'); }
     finally{ financeValidationAutoBtn.disabled = false; renderFinancingValidation(computeFinance(currentLines), currentLines); }
