@@ -15602,7 +15602,8 @@ def api_create_trainee(session_id: str):
         t["access_sent_email_ok"] = False
         t["access_sent_sms_ok"] = False
 
-    _auto_send_convention_signature_if_needed(s, trainees, t, session_id, trainee_id, trigger="create_100_cpf")
+    # La convention est envoyée depuis la confirmation côté interface afin de
+    # laisser l’administrateur vérifier l’aperçu PDF avant toute transmission.
     save_data(data)
 
     return jsonify({
@@ -15619,6 +15620,7 @@ def api_create_trainee(session_id: str):
         "cpf_amount": t.get("cpf_amount", ""),
         "personal_amount": t.get("personal_amount", ""),
         "other_amount": t.get("other_amount", ""),
+        "convention_preview_url": url_for("admin_preview_convention", session_id=session_id, trainee_id=trainee_id),
         "convention_signature_url": url_for("api_create_convention_signature", session_id=session_id, trainee_id=trainee_id)
     })
 
