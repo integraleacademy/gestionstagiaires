@@ -22115,10 +22115,17 @@ def _build_aps_end_attestation_context(session_obj: Dict[str, Any], trainee: Dic
     first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
     last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper()
     full_name = f"{last_name} {first_name}".strip()
+    date_start = str(_session_get(session_obj, "date_start", "") or "").strip()
+    date_end = str(_session_get(session_obj, "date_end", "") or "").strip()
     if not full_name:
         raise ValueError("Impossible de générer l’attestation de fin APS : nom du stagiaire manquant")
+    if not date_start or not date_end:
+        raise ValueError("Impossible de générer l’attestation de fin APS : dates de formation manquantes")
     return {
         "nom_complet": full_name,
+        "date_debut_formation": fr_date(date_start),
+        "date_fin_formation": fr_date(date_end),
+        "periode_formation": f"du {fr_date(date_start)} au {fr_date(date_end)}",
         "date_jour": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
     }
 
