@@ -1922,3 +1922,55 @@ body.app-modal-open{overflow:hidden}.app-modal-backdrop{position:fixed;inset:0;z
   font-size:11px;
   line-height:1.15;
 }
+
+/* Thème couleur des cartes de sessions aligné sur les filtres de formation */
+.session-card.training-aps{
+  --session-accent:#1d4ed8;
+  --session-accent-bg:#dbeafe;
+  --session-accent-border:#bfdbfe;
+  border-left-color:var(--session-accent);
+}
+.session-card.training-a3p{
+  --session-accent:#15803d;
+  --session-accent-bg:#dcfce7;
+  --session-accent-border:#bbf7d0;
+  border-left-color:var(--session-accent);
+}
+.session-card.training-ssiap{
+  --session-accent:#b91c1c;
+  --session-accent-bg:#fee2e2;
+  --session-accent-border:#fecaca;
+  border-left-color:var(--session-accent);
+}
+.session-card.training-dirigeant{
+  --session-accent:#9a3412;
+  --session-accent-bg:#ffedd5;
+  --session-accent-border:#fed7aa;
+  border-left-color:var(--session-accent);
+}
+.session-card.training-vtc{
+  --session-accent:#7e22ce;
+  --session-accent-bg:#f3e8ff;
+  --session-accent-border:#e9d5ff;
+  border-left-color:var(--session-accent);
+}
+.session-card:is(.training-aps,.training-a3p,.training-ssiap,.training-dirigeant,.training-vtc) .pill-training,
+.session-card:is(.training-aps,.training-a3p,.training-ssiap,.training-dirigeant,.training-vtc) .session-kpi,
+.session-card:is(.training-aps,.training-a3p,.training-ssiap,.training-dirigeant,.training-vtc) .session-date-row__icon{
+  background:var(--session-accent-bg);
+  border-color:var(--session-accent-border);
+  color:var(--session-accent);
+}
+.session-card:is(.training-aps,.training-a3p,.training-ssiap,.training-dirigeant,.training-vtc) .session-kpi__value,
+.session-card:is(.training-aps,.training-a3p,.training-ssiap,.training-dirigeant,.training-vtc) .session-card__title{
+  color:var(--session-accent);
+}
+.session-card:is(.training-aps,.training-a3p,.training-ssiap,.training-dirigeant,.training-vtc)::before{
+  content:"";
+  position:absolute;
+  inset:0 0 auto 0;
+  height:4px;
+  background:linear-gradient(90deg, var(--session-accent), transparent 70%);
+  opacity:.22;
+  pointer-events:none;
+}

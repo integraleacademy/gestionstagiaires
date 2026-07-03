@@ -11088,6 +11088,8 @@ def admin_sessions():
             # ✅ new
             "deliverables_done": done_total,
             "deliverables_total": total_total,
+            "dossier_complete_total": dossier_complete_total,
+            "cnaps_accepted_count": st["cnaps_accepted_count"],
             "public_logged_in_total": public_logged_in_total,
             "cmar_registered_total": cmar_registered_total,
             "cash_payment_total": round(cash_payment_total, 2),
