@@ -684,8 +684,8 @@
     <details class="automation-card automation-doc automation-doc--convocation automation-card--{{ v.card_tone|default('blocked') }}"><summary class="automation-doc__summary"><span class="automation-card__icon">{{ automation_icon('mail') }}</span><div class="automation-doc__title"><h3>Convocation</h3><p>Document envoyé après validation ou signature de la convention.</p></div><span class="automation-status automation-status--{{ v.tone }}">{{ automation_icon(v.icon, v.icon_class|default('')) }}{{ v.label }}</span><div class="automation-doc__summary-action">{% if is_aps %}<form class="automation-loading-form" method="post" action="{{ url_for('admin_generate_aps_convocation_automation', session_id=session.id, trainee_id=trainee.id) }}" onclick="event.stopPropagation()"><button class="btn btn-primary" type="submit" {% if is_read_only or not v.can_generate %}disabled title='{{ v.block_reason or "Action indisponible" }}'{% endif %}>{% if is_read_only or not v.can_generate %}{{ automation_icon('lock') }}{% endif %}Générer la convocation</button></form>{% if v.status in ['generated', 'sent'] or v.can_send %}<button class="btn btn-primary" id="btnAutomationSendConvocation" type="button" {% if is_read_only or not v.can_send %}disabled title='{{ v.block_reason or "Action indisponible" }}'{% endif %}>{% if is_read_only or not v.can_send %}{{ automation_icon('lock') }}{% endif %}{% if v.status == 'sent' %}Renvoyer la convocation{% else %}Envoyer la convocation{% endif %}</button>{% endif %}{% endif %}</div></summary>
       <div class="automation-card-details automation-doc__body"><div class="automation-meta">{% for step in v.timeline_steps %}<div class="automation-meta__row"><i class="automation-meta__dot automation-meta__dot--{{ step.state }}"></i><span>{{ step.label }}</span><strong>{{ step.value }}</strong></div>{% endfor %}</div>{% if v.error %}<div class="automation-error">{{ v.error }}</div>{% endif %}<div class="automation-actions">{% if v.download_url %}<a class="btn btn-outline" href="{{ v.download_url }}" target="_blank" rel="noopener">Télécharger</a>{% endif %}<button class="btn btn-outline" type="button" disabled title="Historique affiché ci-dessus">Voir l’historique</button></div></div>
     </details>
-    <div class="automation-card automation-doc automation-placeholder automation-card--pending"><div class="automation-doc__summary"><span class="automation-card__icon">{{ automation_icon('calendar') }}</span><div class="automation-doc__title"><h3>Attestation d'entrée en formation</h3><p>Document disponible au démarrage de la formation.</p></div><span class="automation-status automation-status--muted">{{ automation_icon('clock') }}{% if session.date_start %}Envoi prévu le {{ session.date_start|frdate }}{% else %}Envoi prévu{% endif %}</span></div></div>
-    <div class="automation-card automation-doc automation-placeholder automation-card--pending"><div class="automation-doc__summary"><span class="automation-card__icon">{{ automation_icon('graduation') }}</span><div class="automation-doc__title"><h3>Attestation de fin de formation</h3><p>Document disponible à la fin du parcours.</p></div><span class="automation-status automation-status--muted">{{ automation_icon('calendar') }}{% if session.date_end %}Envoi prévu le {{ session.date_end|frdate }}{% else %}Envoi prévu{% endif %}</span></div></div>
+    <div class="automation-card automation-doc automation-card--ready"><div class="automation-doc__summary"><span class="automation-card__icon">{{ automation_icon('calendar') }}</span><div class="automation-doc__title"><h3>Attestation d'entrée en formation</h3><p>Aperçu et envoi manuel depuis le modèle APS.</p></div><span class="automation-status automation-status--muted">{{ automation_icon('clock') }}{% if trainee.attestation_entree_aps_sent_at %}Envoyée le {{ trainee.attestation_entree_aps_sent_at|frdatetime }}{% elif session.date_start %}Envoi prévu le {{ session.date_start|frdate }}{% else %}Envoi prévu{% endif %}</span><div class="automation-doc__summary-action">{% if is_aps %}<a class="btn btn-outline" href="{{ url_for('admin_preview_aps_entry_attestation', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Aperçu</a><button class="btn btn-primary" id="btnAutomationSendEntryAttestation" type="button" {% if is_read_only %}disabled{% endif %}>Envoyer</button>{% endif %}</div></div>{% if trainee.attestation_entree_aps_last_error %}<div class="automation-card-details automation-doc__body"><div class="automation-error">{{ trainee.attestation_entree_aps_last_error }}</div></div>{% endif %}</div>
+    <div class="automation-card automation-doc automation-card--ready"><div class="automation-doc__summary"><span class="automation-card__icon">{{ automation_icon('graduation') }}</span><div class="automation-doc__title"><h3>Attestation de fin de formation</h3><p>Aperçu et envoi manuel depuis le modèle APS.</p></div><span class="automation-status automation-status--muted">{{ automation_icon('calendar') }}{% if trainee.attestation_fin_aps_sent_at %}Envoyée le {{ trainee.attestation_fin_aps_sent_at|frdatetime }}{% elif session.date_end %}Envoi prévu le {{ session.date_end|frdate }}{% else %}Envoi prévu{% endif %}</span><div class="automation-doc__summary-action">{% if is_aps %}<a class="btn btn-outline" href="{{ url_for('admin_preview_aps_end_attestation', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Aperçu</a><button class="btn btn-primary" id="btnAutomationSendEndAttestation" type="button" {% if is_read_only %}disabled{% endif %}>Envoyer</button>{% endif %}</div></div>{% if trainee.attestation_fin_aps_last_error %}<div class="automation-card-details automation-doc__body"><div class="automation-error">{{ trainee.attestation_fin_aps_last_error }}</div></div>{% endif %}</div>
     </div>
   </details>
 </section>
@@ -2147,6 +2147,50 @@ document.querySelectorAll(".automation-loading-form").forEach((form)=>{
     }
   });
 });
+const btnAutomationSendEntryAttestation = document.getElementById("btnAutomationSendEntryAttestation");
+if(btnAutomationSendEntryAttestation){
+  btnAutomationSendEntryAttestation.addEventListener("click", async ()=>{
+    if(btnAutomationSendEntryAttestation.disabled) return;
+    const original = btnAutomationSendEntryAttestation.textContent;
+    btnAutomationSendEntryAttestation.disabled = true;
+    btnAutomationSendEntryAttestation.setAttribute("aria-busy", "true");
+    btnAutomationSendEntryAttestation.textContent = "Envoi…";
+    try{
+      const response = await fetch("{{ url_for('admin_send_aps_entry_attestation', session_id=session.id, trainee_id=trainee.id) }}", {method:"POST", headers:{"Content-Type":"application/json"}});
+      const result = await response.json().catch(()=>({ok:false,error:"Réponse serveur invalide."}));
+      if(!response.ok || !result.ok) throw new Error(result.error || "Erreur lors de l’envoi de l’attestation d’entrée.");
+      window.location.reload();
+    }catch(error){
+      alert(error.message || "Erreur lors de l’envoi de l’attestation d’entrée.");
+      btnAutomationSendEntryAttestation.disabled = false;
+      btnAutomationSendEntryAttestation.removeAttribute("aria-busy");
+      btnAutomationSendEntryAttestation.textContent = original;
+    }
+  });
+}
+
+const btnAutomationSendEndAttestation = document.getElementById("btnAutomationSendEndAttestation");
+if(btnAutomationSendEndAttestation){
+  btnAutomationSendEndAttestation.addEventListener("click", async ()=>{
+    if(btnAutomationSendEndAttestation.disabled) return;
+    const original = btnAutomationSendEndAttestation.textContent;
+    btnAutomationSendEndAttestation.disabled = true;
+    btnAutomationSendEndAttestation.setAttribute("aria-busy", "true");
+    btnAutomationSendEndAttestation.textContent = "Envoi…";
+    try{
+      const response = await fetch("{{ url_for('admin_send_aps_end_attestation', session_id=session.id, trainee_id=trainee.id) }}", {method:"POST", headers:{"Content-Type":"application/json"}});
+      const result = await response.json().catch(()=>({ok:false,error:"Réponse serveur invalide."}));
+      if(!response.ok || !result.ok) throw new Error(result.error || "Erreur lors de l’envoi de l’attestation de fin.");
+      window.location.reload();
+    }catch(error){
+      alert(error.message || "Erreur lors de l’envoi de l’attestation de fin.");
+      btnAutomationSendEndAttestation.disabled = false;
+      btnAutomationSendEndAttestation.removeAttribute("aria-busy");
+      btnAutomationSendEndAttestation.textContent = original;
+    }
+  });
+}
+
 const btnAutomationSendConvocation = document.getElementById("btnAutomationSendConvocation");
 if(btnAutomationSendConvocation){
   btnAutomationSendConvocation.addEventListener("click", async ()=>{
