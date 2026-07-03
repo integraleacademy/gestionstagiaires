@@ -11367,6 +11367,7 @@ def admin_sessions_conventions():
                 "trainee_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
                 "create_url": url_for("admin_create_convention_signature", session_id=session_id, trainee_id=trainee_id),
                 "reminder_url": url_for("admin_send_convention_signature_reminder_for_session", session_id=session_id, trainee_id=trainee_id),
+                "preview_url": url_for("admin_preview_convention", session_id=session_id, trainee_id=trainee_id),
                 "original_pdf_url": url_for("admin_view_original_convention", session_id=session_id, trainee_id=trainee_id) if original_pdf else "",
                 "signed_pdf_url": url_for("admin_view_signed_convention", session_id=session_id, trainee_id=trainee_id) if signed_pdf else "",
                 "download_url": convention.get("download_url") or "",
@@ -24498,6 +24499,27 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         save_data(data)
         return jsonify({"ok": False, "error": message}), 400
 
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/preview")
+@admin_login_required
+def admin_preview_convention(session_id: str, trainee_id: str):
+    data = load_data()
+    s, _, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        abort(404)
+    if "VAE" in str(_session_get(s, "training_type", "") or "").upper():
+        abort(404)
+    try:
+        _, pdf_path = _generate_aps_convention_files(s, t, session_id, trainee_id)
+    except Exception as exc:
+        flash(f"Aperçu convention : {_sanitize_yousign_error(str(exc))}", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+    abs_path = os.path.abspath(pdf_path) if pdf_path else ""
+    root = os.path.abspath(YOUSIGN_CONVENTION_DIR)
+    if not abs_path or not abs_path.startswith(root + os.sep) or not os.path.exists(abs_path):
+        abort(404)
+    return send_file(abs_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(abs_path))
 
 
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/convention/signature/create")
