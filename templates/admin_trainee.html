@@ -1304,7 +1304,7 @@
           </div>
           <div class="finance-edit-grid finance-edit-grid--cards">
             <div class="finance-field finance-field-card finance-field-card--cpf"><div class="label">Montant CPF</div><input id="cpfAmount" type="number" min="0" step="0.01" value="{{ trainee.cpf_amount or '' }}" {{ read_only_attr }}><div class="hint">Montant CPF (suivi uniquement, sans facturation CPF)</div></div>
-            <div class="finance-field finance-field-card finance-field-card--personal"><div class="label">Montant financement personnel</div><input id="personalAmount" type="number" min="0" step="0.01" value="{{ trainee.personal_amount or '' }}" {{ read_only_attr }}><div class="hint">Reste à charge stagiaire</div></div>
+            <div class="finance-field finance-field-card finance-field-card--personal"><div class="label">Montant financement personnel</div><input id="personalAmount" type="number" min="0" step="0.01" value="{{ trainee.personal_amount if trainee.personal_amount not in [none, ''] else '0' }}" {{ read_only_attr }}><div class="hint">Reste à charge stagiaire</div></div>
             <div class="finance-field finance-field-card finance-field-card--other"><div class="label">Montant autre</div><input id="otherAmount" type="number" min="0" step="0.01" value="{{ trainee.other_amount or '' }}" {{ read_only_attr }}><div class="hint">OPCO, entreprise, France Travail…</div></div>
           </div>
           <div class="finance-edit-grid finance-edit-grid--wide">
