@@ -20893,8 +20893,10 @@ APS_CONVOCATION_CENTER_ZIP = "83480"
 APS_CONVOCATION_CENTER_CITY = "Puget-sur-Argens"
 APS_CONVOCATION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "convocations_aps")
 APS_ENTRY_ATTESTATION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "attestations_entree_aps")
+APS_END_ATTESTATION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "attestations_fin_aps")
 os.makedirs(APS_CONVOCATION_DIR, exist_ok=True)
 os.makedirs(APS_ENTRY_ATTESTATION_DIR, exist_ok=True)
+os.makedirs(APS_END_ATTESTATION_DIR, exist_ok=True)
 YOUSIGN_CONVENTION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "conventions_aps")
 YOUSIGN_SIGNED_DIR = os.path.join(PERSIST_DIR, "generated_documents", "yousign_signed_conventions")
 os.makedirs(YOUSIGN_CONVENTION_DIR, exist_ok=True)
@@ -22004,6 +22006,68 @@ def _generate_aps_entry_attestation_files(session_obj: Dict[str, Any], trainee: 
     if not os.path.exists(final_pdf_path) or os.path.getsize(final_pdf_path) <= 0:
         raise RuntimeError("Le PDF final de l’attestation d’entrée APS est introuvable ou vide après conversion LibreOffice.")
     return final_docx_path, final_pdf_path
+
+
+
+def _aps_end_attestation_template_path() -> str:
+    return os.path.join(app.root_path, "templates_word", "attestationfinaps.docx")
+
+
+def _aps_end_attestation_base_filename(trainee: Dict[str, Any], trainee_id: str = "") -> str:
+    last_name = _safe_filename_part(trainee.get("last_name") or trainee.get("nom") or trainee_id)
+    first_name = _safe_filename_part(trainee.get("first_name") or trainee.get("prenom") or "")
+    suffix = f"_{first_name}" if first_name else ""
+    return f"attestation_fin_formation_aps_{last_name}{suffix}"
+
+
+def _build_aps_end_attestation_context(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
+    first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
+    last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper()
+    full_name = f"{last_name} {first_name}".strip()
+    if not full_name:
+        raise ValueError("Impossible de générer l’attestation de fin APS : nom du stagiaire manquant")
+    return {
+        "nom_complet": full_name,
+        "date_jour": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
+    }
+
+
+def _generate_aps_end_attestation_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
+    template_path = _aps_end_attestation_template_path()
+    if not os.path.exists(template_path):
+        raise FileNotFoundError("Modèle Word obligatoire manquant : gestionstagiaires/templates_word/attestationfinaps.docx")
+    os.makedirs(APS_END_ATTESTATION_DIR, exist_ok=True)
+    base = _aps_end_attestation_base_filename(trainee, trainee_id)
+    final_docx_path = os.path.join(APS_END_ATTESTATION_DIR, base + ".docx")
+    final_pdf_path = os.path.join(APS_END_ATTESTATION_DIR, base + ".pdf")
+    shutil.copyfile(template_path, final_docx_path)
+    _replace_docx_xml_placeholders(final_docx_path, _build_aps_end_attestation_context(session_obj, trainee))
+    _assert_docx_has_no_unresolved_variables(final_docx_path)
+    lo_binary = _find_libreoffice_binary()
+    if os.path.exists(final_pdf_path):
+        os.remove(final_pdf_path)
+    command = [lo_binary, "--headless", "--convert-to", "pdf", "--outdir", APS_END_ATTESTATION_DIR, final_docx_path]
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True, timeout=120)
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(f"Conversion LibreOffice impossible : {(exc.stderr or exc.stdout or '').strip()}") from exc
+    if not os.path.exists(final_pdf_path) or os.path.getsize(final_pdf_path) <= 0:
+        raise RuntimeError("Le PDF final de l’attestation de fin APS est introuvable ou vide après conversion LibreOffice.")
+    return final_docx_path, final_pdf_path
+
+
+def _build_aps_end_attestation_email(first_name: str, date_end: str = "") -> Tuple[str, str]:
+    subject = "Attestation de fin de formation APS - Intégrale Academy"
+    safe_first_name = html.escape(str(first_name or "").strip() or "Madame, Monsieur")
+    period = fr_date(date_end) if date_end else ""
+    period_line = f"<p><strong>Date de fin de formation :</strong> {html.escape(period)}</p>" if period else ""
+    html_body = f"""<!doctype html><html lang="fr"><body style="font-family:Arial,Helvetica,sans-serif;color:#172033;line-height:1.6;">
+      <p>Bonjour {safe_first_name},</p>
+      <p>Veuillez trouver en pièce jointe votre attestation de fin de formation APS.</p>
+      {period_line}
+      <p>Bien cordialement,<br>Intégrale Academy</p>
+    </body></html>"""
+    return subject, html_body
 
 
 def _build_aps_entry_attestation_email(first_name: str, date_start: str = "") -> Tuple[str, str]:
@@ -24588,6 +24652,63 @@ def admin_send_aps_entry_attestation(session_id: str, trainee_id: str):
         message = str(exc) or "Erreur inconnue pendant l’envoi de l’attestation d’entrée APS."
         t["attestation_entree_aps_status"] = t.get("attestation_entree_aps_status") or "pending"
         t["attestation_entree_aps_last_error"] = message
+        t["updated_at"] = _now_iso()
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        return jsonify({"ok": False, "error": message}), 400
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/attestation-fin-aps/preview")
+@admin_login_required
+def admin_preview_aps_end_attestation(session_id: str, trainee_id: str):
+    data = load_data()
+    s, _, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t or not _is_aps_session(s):
+        abort(404)
+    try:
+        _, pdf_path = _generate_aps_end_attestation_files(s, t, session_id, trainee_id)
+        return send_file(pdf_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(pdf_path))
+    except Exception as exc:
+        app.logger.exception("[ATTESTATION FIN APS] Aperçu impossible")
+        return make_response(f"Aperçu attestation de fin APS impossible : {html.escape(str(exc))}", 400)
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/attestation-fin-aps/send")
+@admin_login_required
+@admin_write_required
+def admin_send_aps_end_attestation(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if not _is_aps_session(s):
+        return jsonify({"ok": False, "error": "Attestation de fin réservée aux formations APS"}), 400
+    try:
+        docx_path, pdf_path = _generate_aps_end_attestation_files(s, t, session_id, trainee_id)
+        with open(pdf_path, "rb") as fh:
+            encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
+        subject, html_content = _build_aps_end_attestation_email(str(t.get("first_name") or ""), _session_get(s, "date_end", ""))
+        email_ok = brevo_send_email(str(t.get("email") or "").strip(), subject, html_content, trainee=t, attachments=[{"name": os.path.basename(pdf_path), "content": encoded_pdf}])
+        if not email_ok:
+            raise RuntimeError("Impossible d’envoyer l’attestation de fin : échec d’envoi email")
+        sent_at = _now_iso()
+        t["attestation_fin_aps_status"] = "sent"
+        t["attestation_fin_aps_generated_at"] = t.get("attestation_fin_aps_generated_at") or sent_at
+        t["attestation_fin_aps_sent_at"] = sent_at
+        t["attestation_fin_aps_pdf_path"] = pdf_path
+        t["attestation_fin_aps_docx_path"] = docx_path
+        t["attestation_fin_aps_last_error"] = ""
+        t["updated_at"] = sent_at
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        return jsonify({"ok": True, "status": "sent", "sent_at": sent_at, "sent_at_label": fr_datetime(sent_at)})
+    except Exception as exc:
+        app.logger.exception("[ATTESTATION FIN APS] Envoi impossible")
+        message = str(exc) or "Erreur inconnue pendant l’envoi de l’attestation de fin APS."
+        t["attestation_fin_aps_status"] = t.get("attestation_fin_aps_status") or "pending"
+        t["attestation_fin_aps_last_error"] = message
         t["updated_at"] = _now_iso()
         s["trainees"] = trainees
         s.pop("stagiaires", None)
