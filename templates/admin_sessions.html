@@ -1372,6 +1372,27 @@
       }
     });
     if(!conventionPayload || !result.convention_signature_url){ continueAfterConvention(); return; }
+    const financingUrl = result.convention_financing_url || "";
+    if(financingUrl){
+      try{
+        const financingResponse = await fetch(financingUrl, {
+          method: "POST",
+          headers: {"Content-Type":"application/json", "Accept":"application/json"},
+          body: JSON.stringify(conventionPayload)
+        });
+        const financingPayload = await financingResponse.json().catch(()=>({}));
+        if(!financingResponse.ok || !financingPayload.ok){ throw new Error(financingPayload.error || "Sauvegarde des montants impossible."); }
+      }catch(error){
+        await (window.showConventionResult?.({
+          type: "error",
+          title: "Montants non sauvegardés",
+          message: error.message || "Impossible de sauvegarder les montants avant de générer l’aperçu de la convention.",
+          buttonText: "Compris"
+        }) || Promise.resolve(window.alert(error.message || "Impossible de sauvegarder les montants avant l’aperçu.")));
+        continueAfterConvention();
+        return;
+      }
+    }
     const previewUrl = result.convention_preview_url || "";
     if(previewUrl){ await window.openConventionPreview?.(previewUrl); }
     const previewMessage = previewUrl
