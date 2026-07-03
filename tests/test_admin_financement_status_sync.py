@@ -52,6 +52,8 @@ class AdminFinancementStatusSyncTests(unittest.TestCase):
         self.assertIn("function syncFinancementStatusIfValidated(state)", template)
         self.assertIn("updateTrainee({financement_status:'validated'})", template)
         self.assertIn("financing_validation_manual_status:'validated', financement_status:'validated'", template)
+        self.assertIn("function saveFinanceValidationOverride(payload)", template)
+        self.assertIn("setFinanceSaveIndicator('Financement validé','saved')", template)
 
 
 if __name__ == "__main__":
