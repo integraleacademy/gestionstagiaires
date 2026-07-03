@@ -197,6 +197,12 @@ class ApsConvocationGenerationTests(unittest.TestCase):
         }, clear=False):
             self.assertEqual(app._yousign_environment(), "sandbox")
 
+    def test_yousign_production_base_url_is_accepted_without_environment_flag(self):
+        with mock.patch.dict(app.os.environ, {
+            "YOUSIGN_BASE_URL": "https://api.yousign.app/v3",
+        }, clear=True):
+            self.assertEqual(app._yousign_environment(), "production")
+
     def test_yousign_signature_creation_requires_valid_sms_phone(self):
         session = {"id": "2ebec35a", "training_type": "APS", "name": "Formation APS"}
         trainee = {

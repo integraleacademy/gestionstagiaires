@@ -20948,18 +20948,25 @@ def _is_production_environment() -> bool:
     return any(str(value or "").strip().lower() == "production" for value in markers)
 
 
-def _yousign_expected_environment() -> str:
+def _yousign_configured_environment() -> str:
     configured = (os.environ.get("YOUSIGN_ENV") or os.environ.get("YOUSIGN_ENVIRONMENT") or "").strip().lower()
     if configured in {"prod", "production", "live"}:
         return "production"
     if configured in {"sandbox", "test", "testing"}:
         return "sandbox"
+    return ""
+
+
+def _yousign_expected_environment() -> str:
+    configured_environment = _yousign_configured_environment()
+    if configured_environment:
+        return configured_environment
     api_key = _yousign_api_key().lower()
     if "sandbox" in api_key:
         return "sandbox"
     if "production" in api_key or "prod" in api_key or "live" in api_key:
         return "production"
-    return "production" if _is_production_environment() else "sandbox"
+    return "production" if _is_production_environment() else ""
 
 
 def _yousign_environment_from_base_url(base_url: str) -> str:
@@ -20973,7 +20980,7 @@ def _yousign_base_url() -> str:
         raise RuntimeError("Configuration Yousign invalide : utilisez https://api.yousign.app/v3 en production ou https://api-sandbox.yousign.app/v3 en test.")
     url_environment = _yousign_environment_from_base_url(base_url)
     expected_environment = _yousign_expected_environment()
-    if url_environment != expected_environment:
+    if expected_environment and url_environment != expected_environment:
         raise RuntimeError(f"Configuration Yousign invalide : l’URL API {base_url} ne correspond pas à l’environnement {expected_environment}.")
     if _is_production_environment() and url_environment == "sandbox":
         raise RuntimeError("Configuration Yousign invalide : l’URL sandbox est interdite en production.")
