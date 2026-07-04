@@ -11379,6 +11379,7 @@ def admin_sessions_conventions():
                 "download_url": convention.get("download_url") or "",
                 "can_send": True,
                 "can_remind": status_key in {"waiting_signature", "sent"} and bool(state.get("signature_link")),
+                "printed": bool(trainee.get("printed")),
                 "is_problem": is_problem,
             }
             convention_rows.append(row)
