@@ -397,6 +397,22 @@ class ApsConvocationEmailTests(unittest.TestCase):
         self.assertIn("Convocation officielle en pièce jointe", html_body)
         self.assertIn("Nous avons bien reçu votre Convention de formation signée et nous vous en remercions.", html_body)
 
+    def test_convocation_email_uses_a3p_labels_for_a3p_session(self):
+        session = {"training_type": "A3P", "name": "Formation A3P"}
+
+        subject, html_body = app._build_aps_convocation_email(
+            "Clément",
+            "2026-11-01",
+            "2026-12-01",
+            session,
+        )
+
+        self.assertEqual(subject, "Convocation formation A3P - Intégrale Academy")
+        self.assertIn("Convocation formation A3P", html_body)
+        self.assertIn("Agent de Protection Physique des Personnes (A3P)", html_body)
+        self.assertNotIn("Convocation formation APS", html_body)
+        self.assertNotIn("Agent de Prévention et de Sécurité (APS)", html_body)
+
 class YousignSignatureEmailTests(unittest.TestCase):
     def test_signature_email_html_escapes_values_and_uses_button(self):
         html_body = app.build_signature_email_html(

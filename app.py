@@ -22739,8 +22739,18 @@ def _aps_convocation_pdf_is_allowed(pdf_path: str) -> bool:
     return any(abs_pdf_path.startswith(root + os.sep) for root in _aps_convocation_allowed_pdf_roots())
 
 
-def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end: str = "") -> Tuple[str, str]:
-    subject = "Convocation formation APS - Intégrale Academy"
+def _convocation_email_training_labels(session_obj: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
+    config = _automation_document_config(session_obj or {})
+    short_label = str(config.get("label") or "APS").strip() or "APS"
+    long_label = FORMATION_LONG_LABELS.get(short_label.upper(), str(config.get("label") or short_label).strip() or short_label)
+    return short_label, long_label
+
+
+def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end: str = "", session_obj: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
+    short_label, long_label = _convocation_email_training_labels(session_obj)
+    safe_short_label = html.escape(short_label)
+    safe_long_label = html.escape(long_label)
+    subject = f"Convocation formation {short_label} - Intégrale Academy"
     safe_first_name = html.escape(str(first_name or "").strip() or "Madame, Monsieur")
     safe_logo_url = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
     safe_space_url = html.escape(f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espacestagiaire", quote=True)
@@ -22758,20 +22768,20 @@ def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end
     html_body = f'''<!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Convocation formation APS</title>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Convocation formation {safe_short_label}</title>
 </head>
 <body style="margin:0;padding:0;background:#f3f6fa;font-family:Arial,Helvetica,sans-serif;color:#172033;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f3f6fa;margin:0;padding:24px 12px;">
     <tr><td align="center">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,0.08);">
-        <tr><td style="background:#0b2f5b;padding:28px 30px;color:#ffffff;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td style="width:88px;padding-right:18px;vertical-align:middle;"><img src="{safe_logo_url}" width="74" alt="Logo Intégrale Academy" style="display:block;width:74px;height:auto;border:0;outline:none;text-decoration:none;background:#ffffff;border-radius:14px;padding:7px;"></td><td style="vertical-align:middle;"><div style="font-size:24px;font-weight:700;line-height:1.2;">Intégrale Academy</div><div style="font-size:15px;opacity:.92;margin-top:6px;line-height:1.4;">Convocation formation APS</div></td></tr></table></td></tr>
+        <tr><td style="background:#0b2f5b;padding:28px 30px;color:#ffffff;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td style="width:88px;padding-right:18px;vertical-align:middle;"><img src="{safe_logo_url}" width="74" alt="Logo Intégrale Academy" style="display:block;width:74px;height:auto;border:0;outline:none;text-decoration:none;background:#ffffff;border-radius:14px;padding:7px;"></td><td style="vertical-align:middle;"><div style="font-size:24px;font-weight:700;line-height:1.2;">Intégrale Academy</div><div style="font-size:15px;opacity:.92;margin-top:6px;line-height:1.4;">Convocation formation {safe_short_label}</div></td></tr></table></td></tr>
         <tr><td style="padding:32px 30px 10px 30px;">
           <p style="margin:0 0 16px 0;font-size:18px;line-height:1.5;">Bonjour {safe_first_name},</p>
           <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">Nous avons bien reçu votre Convention de formation signée et nous vous en remercions.</p>
-          <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">Nous revenons vers vous concernant votre formation <strong>Agent de Prévention et de Sécurité (APS)</strong>{period_sentence}.</p>
+          <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">Nous revenons vers vous concernant votre formation <strong>{safe_long_label}</strong>{period_sentence}.</p>
           <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#415166;">Vous trouverez en pièce jointe votre convocation officielle.</p>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f7faff;border:1px solid #dbeafe;border-radius:14px;margin:0 0 28px 0;"><tr><td style="padding:18px 20px;">
-            <p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Formation :</strong> Agent de Prévention et de Sécurité (APS)</p>{session_line}<p style="margin:0;font-size:15px;line-height:1.5;"><strong>Document :</strong> Convocation officielle en pièce jointe</p>
+            <p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Formation :</strong> {safe_long_label}</p>{session_line}<p style="margin:0;font-size:15px;line-height:1.5;"><strong>Document :</strong> Convocation officielle en pièce jointe</p>
           </td></tr></table>
           <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;font-weight:700;color:#0f172a;">Merci de lire attentivement l’ensemble du document.</p>
           <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 26px auto;"><tr><td bgcolor="#0b5ed7" style="border-radius:12px;text-align:center;box-shadow:0 10px 22px rgba(11,94,215,.25);"><a href="{safe_space_url}" style="display:inline-block;padding:16px 28px;font-size:17px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;">Accéder à mon espace stagiaire</a></td></tr></table>
@@ -22803,7 +22813,7 @@ def _send_convocation_after_convention_signed(session_obj: Dict[str, Any], train
     docx_path, pdf_path = _generate_aps_convocation_files(session_obj, trainee, session_id, trainee_id)
     with open(pdf_path, "rb") as fh:
         encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
-    subject, html_content = _build_aps_convocation_email(str(trainee.get("first_name") or ""), _session_get(session_obj, "date_start", ""), _session_get(session_obj, "date_end", ""))
+    subject, html_content = _build_aps_convocation_email(str(trainee.get("first_name") or ""), _session_get(session_obj, "date_start", ""), _session_get(session_obj, "date_end", ""), session_obj)
     if not brevo_send_email(str(trainee.get("email") or "").strip(), subject, html_content, trainee=trainee, attachments=[{"name": os.path.basename(pdf_path), "content": encoded_pdf}]):
         raise RuntimeError("Impossible d’envoyer la convocation : échec d’envoi email")
     now = _now_iso()
@@ -24945,7 +24955,7 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
             raise Exception("Le PDF de convocation APS n’a pas été généré.")
         with open(pdf_path, "rb") as fh:
             encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
-        subject, html_content = _build_aps_convocation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), _session_get(s, "date_end", ""))
+        subject, html_content = _build_aps_convocation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), _session_get(s, "date_end", ""), s)
         email_ok = brevo_send_email(
             str(t.get("email") or "").strip(),
             subject,
