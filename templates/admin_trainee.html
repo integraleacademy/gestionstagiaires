@@ -2299,6 +2299,8 @@ if(financementDetails){
     if (trainingType === "APS") return 1650;
     if (trainingType === "DIRIGEANT INITIAL") return 4300;
     if (trainingType === "DIRIGEANT VAE") return 3800;
+    if (trainingType.includes("VTC")) return 1500;
+    if (trainingType.includes("SSIAP")) return 980;
     return 0;
   };
 
@@ -3278,6 +3280,7 @@ function updateDocsRelanceState(status, plannedDateIso){
     signatureUrl: "{{ url_for('api_create_convention_signature', session_id=session.id, trainee_id=trainee.id) }}",
     previewUrl: "{{ url_for('admin_preview_convention', session_id=session.id, trainee_id=trainee.id) }}",
     isVae: {{ ('VAE' in (session.training_type or '')|upper)|tojson }},
+    trainingType: {{ (session.training_type or '')|tojson }},
     defaults: {
       training_price: {{ (trainee.training_price or trainee.montant_formation or session.training_price or '')|tojson }},
       cpf_amount: {{ (trainee.cpf_amount or trainee.montant_cpf or '')|tojson }},
@@ -3301,6 +3304,7 @@ function updateDocsRelanceState(status, plannedDateIso){
   async function requestVaeConventionTransmission(){
     return await window.openConventionTransmission?.({
       defaults: vaeConventionConfig.defaults,
+      trainingType: vaeConventionConfig.trainingType,
       previewUrl: vaeConventionConfig.previewUrl,
       onPreview: async (payload)=>{
         await saveVaeConventionFinancing(payload);
@@ -3667,7 +3671,7 @@ function updateDocsRelanceState(status, plannedDateIso){
   function statusFromRatio(value,total,labels){if(total<=0)return [labels.none,'gray'];if(value<=0)return [labels.zero,'gray'];if(value<total)return [labels.partial,'orange'];if(value===total)return [labels.done,'green'];return [labels.over,'red'];}
   function computeFinance(lines){
     const parseMoneyValue=(value)=>{const n=parseFloat(String(value||'').replace(',','.').trim());return Number.isNaN(n)?0:n;};
-    const defaultPrice=()=>{const details=document.getElementById('financementDetails');const dataDefault=parseMoneyValue(details?.dataset.defaultPrice);if(dataDefault>0)return dataDefault;const type=String(details?.dataset.trainingType||'').toUpperCase();if(type==='A3P')return 4200;if(type==='APS')return 1650;if(type==='DIRIGEANT INITIAL')return 4300;if(type==='DIRIGEANT VAE')return 3800;if(type.includes('VTC'))return 1600;return 0;};
+    const defaultPrice=()=>{const details=document.getElementById('financementDetails');const dataDefault=parseMoneyValue(details?.dataset.defaultPrice);if(dataDefault>0)return dataDefault;const type=String(details?.dataset.trainingType||'').toUpperCase();if(type==='A3P')return 4200;if(type==='APS')return 1650;if(type==='DIRIGEANT INITIAL')return 4300;if(type==='DIRIGEANT VAE')return 3800;if(type.includes('VTC'))return 1500;if(type.includes('SSIAP'))return 980;return 0;};
     const prixFormation=parseMoneyValue(trainingPrice?.value)||defaultPrice();
     const montantCpf=parseMoneyValue(cpfAmount?.value), montantPersonnel=parseMoneyValue(personalAmount?.value), montantAutre=parseMoneyValue(otherAmount?.value);
     const totalFinancement=montantCpf+montantPersonnel+montantAutre;
@@ -3704,7 +3708,7 @@ function updateDocsRelanceState(status, plannedDateIso){
   function statusFromRatio(value,total,labels){if(total<=0)return [labels.none,'gray'];if(value<=0)return [labels.zero,'gray'];if(value<total)return [labels.partial,'orange'];if(value===total)return [labels.done,'green'];return [labels.over,'red'];}
   function computeFinance(lines){
     const parseMoneyValue=(value)=>{const n=parseFloat(String(value||'').replace(',','.').trim());return Number.isNaN(n)?0:n;};
-    const defaultPrice=()=>{const details=document.getElementById('financementDetails');const dataDefault=parseMoneyValue(details?.dataset.defaultPrice);if(dataDefault>0)return dataDefault;const type=String(details?.dataset.trainingType||'').toUpperCase();if(type==='A3P')return 4200;if(type==='APS')return 1650;if(type==='DIRIGEANT INITIAL')return 4300;if(type==='DIRIGEANT VAE')return 3800;if(type.includes('VTC'))return 1600;return 0;};
+    const defaultPrice=()=>{const details=document.getElementById('financementDetails');const dataDefault=parseMoneyValue(details?.dataset.defaultPrice);if(dataDefault>0)return dataDefault;const type=String(details?.dataset.trainingType||'').toUpperCase();if(type==='A3P')return 4200;if(type==='APS')return 1650;if(type==='DIRIGEANT INITIAL')return 4300;if(type==='DIRIGEANT VAE')return 3800;if(type.includes('VTC'))return 1500;if(type.includes('SSIAP'))return 980;return 0;};
     const prixFormation=parseMoneyValue(trainingPrice?.value)||defaultPrice();
     const montantCpf=parseMoneyValue(cpfAmount?.value), montantPersonnel=parseMoneyValue(personalAmount?.value), montantAutre=parseMoneyValue(otherAmount?.value);
     const totalFinancement=montantCpf+montantPersonnel+montantAutre;
