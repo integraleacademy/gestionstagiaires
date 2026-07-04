@@ -879,7 +879,7 @@
           </select>
         </label>
 
-        <label>
+        <label id="dateStartField">
           <div class="label">Date début</div>
           <input id="dateStart" type="date">
         </label>
@@ -1101,7 +1101,7 @@
           <input id="editSessionTrainingType" type="text" disabled>
         </label>
 
-        <label>
+        <label id="editDateStartField">
           <div class="label">Date début</div>
           <input id="editDateStart" type="date">
         </label>
@@ -1755,8 +1755,9 @@
     const startValue = (document.getElementById(isEdit ? "editDateStart" : "dateStart")?.value || "").trim();
     const inPersonStartValue = (document.getElementById(isEdit ? "editApsInPersonStart" : "apsInPersonStart")?.value || "").trim();
     const isAps = type.startsWith("APS");
+    const isDirigeant = type.startsWith("DIRIGEANT");
     if(container) container.style.display = isAps ? "" : "none";
-    if(dateEndField) dateEndField.style.display = "";
+    if(dateEndField) dateEndField.style.display = isDirigeant ? "none" : "";
     if(!isAps) return;
     const periods = calculateApsPeriods(startValue, inPersonStartValue);
     const manualEndValue = (document.getElementById(isEdit ? "editDateEnd" : "dateEnd")?.value || "").trim();
@@ -1775,6 +1776,23 @@
     });
   }
 
+  function setFieldVisible(id, visible){
+    const field = document.getElementById(id);
+    if(field) field.style.display = visible ? "" : "none";
+  }
+
+  function resolveDirigeantSessionDates(prefix = ""){
+    const fieldId = suffix => `${prefix}${suffix}`;
+    const remoteStart = (document.getElementById(fieldId("DirigeantRemoteStart"))?.value || "").trim();
+    const remoteEnd = (document.getElementById(fieldId("DirigeantRemoteEnd"))?.value || "").trim();
+    const inPersonStart = (document.getElementById(fieldId("DirigeantInPersonStart"))?.value || "").trim();
+    const inPersonEnd = (document.getElementById(fieldId("DirigeantInPersonEnd"))?.value || "").trim();
+    return {
+      dateStart: remoteStart || inPersonStart,
+      dateEnd: inPersonEnd || remoteEnd || inPersonStart || remoteStart
+    };
+  }
+
   function toggleExamFields(){
     const type = (document.getElementById("sessionType")?.value || "").toUpperCase();
     const examDateField = document.getElementById("examDateField");
@@ -1788,7 +1806,9 @@
     const isDirigeant = type.startsWith("DIRIGEANT");
 
     setDirigeantDateFieldsVisible("", isDirigeant);
-    if(examDateField) examDateField.style.display = isVtc ? "none" : "";
+    setFieldVisible("dateStartField", !isDirigeant);
+    setFieldVisible("dateEndField", !isDirigeant);
+    if(examDateField) examDateField.style.display = isVtc || isDirigeant ? "none" : "";
     if(apsInPersonStartField) apsInPersonStartField.style.display = isAps ? "" : "none";
     if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
     if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
@@ -1818,7 +1838,9 @@
     const isDirigeant = type.startsWith("DIRIGEANT");
 
     setDirigeantDateFieldsVisible("edit", isDirigeant);
-    if(examDateField) examDateField.style.display = isVtc ? "none" : "";
+    setFieldVisible("editDateStartField", !isDirigeant);
+    setFieldVisible("editDateEndField", !isDirigeant);
+    if(examDateField) examDateField.style.display = isVtc || isDirigeant ? "none" : "";
     if(apsInPersonStartField) apsInPersonStartField.style.display = isAps ? "" : "none";
     if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
     if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
@@ -1831,9 +1853,11 @@
   document.getElementById("btnCreateSession")?.addEventListener("click", async ()=>{
     const name = (document.getElementById("sessionName").value || "").trim();
     const training_type = (document.getElementById("sessionType").value || "").trim();
-    const date_start = (document.getElementById("dateStart").value || "").trim();
-    const date_end = (document.getElementById("dateEnd").value || "").trim();
-    const exam_date = (document.getElementById("examDate").value || "").trim();
+    const isDirigeant = training_type.toUpperCase().startsWith("DIRIGEANT");
+    const dirigeantDates = isDirigeant ? resolveDirigeantSessionDates("") : null;
+    const date_start = dirigeantDates ? dirigeantDates.dateStart : (document.getElementById("dateStart").value || "").trim();
+    const date_end = dirigeantDates ? dirigeantDates.dateEnd : (document.getElementById("dateEnd").value || "").trim();
+    const exam_date = isDirigeant ? "" : (document.getElementById("examDate").value || "").trim();
     const exam_theory_date = (document.getElementById("examTheoryDate")?.value || "").trim();
     const exam_practice_date = (document.getElementById("examPracticeDate")?.value || "").trim();
     const practice_training_date = (document.getElementById("practiceTrainingDate")?.value || "").trim();
@@ -1928,9 +1952,9 @@
         method:"POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({
-          date_start: (document.getElementById("editDateStart").value || "").trim(),
-          date_end: (document.getElementById("editDateEnd").value || "").trim(),
-          exam_date: (document.getElementById("editExamDate").value || "").trim(),
+          date_start: (document.getElementById("editSessionTrainingType").value || "").toUpperCase().startsWith("DIRIGEANT") ? resolveDirigeantSessionDates("edit").dateStart : (document.getElementById("editDateStart").value || "").trim(),
+          date_end: (document.getElementById("editSessionTrainingType").value || "").toUpperCase().startsWith("DIRIGEANT") ? resolveDirigeantSessionDates("edit").dateEnd : (document.getElementById("editDateEnd").value || "").trim(),
+          exam_date: (document.getElementById("editSessionTrainingType").value || "").toUpperCase().startsWith("DIRIGEANT") ? "" : (document.getElementById("editExamDate").value || "").trim(),
           exam_theory_date: (document.getElementById("editExamTheoryDate").value || "").trim(),
           exam_practice_date: (document.getElementById("editExamPracticeDate").value || "").trim(),
           practice_training_date: (document.getElementById("editPracticeTrainingDate").value || "").trim(),
