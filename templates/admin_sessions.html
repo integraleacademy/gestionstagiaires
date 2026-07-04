@@ -737,7 +737,8 @@
   {% set is_vtc = "VTC" in training_upper %}
   {% set is_vae = "VAE" in training_upper %}
   {% set is_ssiap = "SSIAP" in training_upper %}
-  {% set show_cnaps_metric = not (is_vtc or is_vae or is_ssiap) %}
+  {% set is_dirigeant = training_upper.startswith("DIRIGEANT") %}
+  {% set show_cnaps_metric = not (is_vtc or is_vae or is_ssiap or is_dirigeant) %}
   {% set elearning_done = s.public_logged_in_total or 0 %}
   {% set elearning_total = s.total or 0 %}
   {% set docs_done = s.dossier_complete_total or 0 %}
