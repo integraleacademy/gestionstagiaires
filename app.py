@@ -22380,7 +22380,8 @@ def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[s
         raise FileNotFoundError(f"Modèle Word obligatoire manquant : gestionstagiaires/templates_word/{os.path.basename(template_path)}")
     context = _build_aps_convocation_context(session_obj, trainee)
     app.logger.info("[CONVOCATION APS] Données injectées : stagiaire=%s formation=%s période=%s examen=%s", context.get("nom_complet"), context.get("formation_nom"), context.get("periode_formation"), context.get("date_examen"))
-    base = f"convocation_aps_{_safe_filename_part(trainee.get('id') or trainee_id)}"
+    doc_slug = _automation_document_config(session_obj).get("slug") or "aps"
+    base = f"convocation_{_safe_filename_part(doc_slug)}_{_safe_filename_part(trainee.get('id') or trainee_id)}"
     final_docx_path = os.path.join(APS_CONVOCATION_DIR, base + ".docx")
     final_pdf_path = os.path.join(APS_CONVOCATION_DIR, base + ".pdf")
     protected_template_path = os.path.join(APS_CONVOCATION_DIR, base + "_template.docx")

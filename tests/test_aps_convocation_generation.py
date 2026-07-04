@@ -332,6 +332,8 @@ class ApsConvocationGenerationTests(unittest.TestCase):
                  mock.patch.object(app, "_find_libreoffice_binary", return_value="libreoffice"), \
                  mock.patch.object(app.subprocess, "run", side_effect=fake_run):
                 docx_path, pdf_path = app._generate_aps_convocation_files(session, trainee, "session-1", "trainee-1")
+                self.assertTrue(docx_path.endswith("convocation_a3p_trainee-1.docx"))
+                self.assertTrue(pdf_path.endswith("convocation_a3p_trainee-1.pdf"))
                 self.assertTrue(os.path.exists(docx_path))
                 self.assertTrue(os.path.exists(pdf_path))
 
