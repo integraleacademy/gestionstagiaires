@@ -39,6 +39,28 @@ class AutomationDateTimeFormatTests(unittest.TestCase):
         self.assertEqual(status["convocation"]["timeline_steps"][1]["value"], "03/07/2026 à 10h13")
         self.assertEqual(status["convocation"]["timeline_steps"][2]["value"], "Envoyée le 03/07/2026 à 10h13")
 
+
+    def test_vae_admin_automation_keeps_only_convention_and_signature_steps(self):
+        trainee = {
+            "id": "T-VAE",
+            "email": "vae@example.com",
+            "convention_signature": {
+                "status": "done",
+                "signature_request_id": "req_vae",
+                "unsigned_pdf_path": "/tmp/convention-vae.pdf",
+                "signed_at": "2026-07-03T08:08:38.737981Z",
+            },
+        }
+        session = {"training_type": "DIRIGEANT VAE", "name": "VAE DESP 2026"}
+
+        with gestion_app.app.test_request_context():
+            status = gestion_app._build_trainee_automation_status(session, trainee, "S-VAE", "T-VAE")
+
+        self.assertEqual([step["label"] for step in status["timeline"]], ["Convention", "Signature"])
+        self.assertEqual(status["ready_documents"], 2)
+        self.assertEqual(status["total_documents"], 2)
+        self.assertEqual(status["progress_percent"], 100)
+
     def test_conventions_dashboard_excludes_not_generated_conventions(self):
         captured = {}
         data = {
