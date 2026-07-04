@@ -21072,7 +21072,7 @@ def _automation_document_config(session_obj: Dict[str, Any]) -> Dict[str, Any]:
         return {"enabled": True, "slug": "vtc", "label": "Chauffeur VTC", "convention_template": "conventionvtc.docx", "entry_template": ""}
     if "DIRIGEANT" in text or "DESP" in text:
         if "PARIS" in text:
-            return {"enabled": True, "slug": "desp_paris", "label": "Dirigeant Paris", "convention_template": "conventiondespparis.docx", "entry_template": "attestationentreedespparis.docx", "end_template": "attestationfindespparis.docx", "convocation_template": "convocationdespparis.docx"}
+            return {"enabled": True, "slug": "desp_paris", "label": "Dirigeant Paris", "convention_template": "conventiondespparis.docx", "entry_template": "attestationentreedesparis.docx", "end_template": "attestationfindespparis.docx", "convocation_template": "convocationdespparis.docx"}
         return {"enabled": True, "slug": "desp_puget", "label": "Dirigeant Puget", "convention_template": "conventiondesp.docx", "entry_template": "attestationentreedesp.docx", "end_template": "attestationfindesp.docx", "convocation_template": "convocationdesp.docx"}
     if "SSIAP" in text:
         return {"enabled": True, "slug": "ssiap", "label": "SSIAP", "convention_template": "conventionssiap.docx", "entry_template": "attestationentreessiap.docx", "end_template": "attestationfinssiap.docx", "convocation_template": "convocationssiap.docx"}
