@@ -22968,12 +22968,14 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     total_documents = 1 + int(is_aps_automation) + int(has_entry_attestation) + int(has_end_attestation)
     progress_percent = round((ready_documents / total_documents) * 100) if total_documents else 0
 
-    planned_automations = ["Convention"]
-    if is_aps_automation:
+    planned_automations = []
+    if not has_generated_convention:
+        planned_automations.append("Convention")
+    if is_aps_automation and convocation_status not in {"sent", "generated"}:
         planned_automations.append("Convocation")
-    if has_entry_attestation:
+    if has_entry_attestation and not entry_sent:
         planned_automations.append("Attestation d’entrée")
-    if has_end_attestation:
+    if has_end_attestation and not end_sent:
         planned_automations.append("Attestation de sortie")
 
     return {
