@@ -15750,6 +15750,7 @@ def api_create_trainee(session_id: str):
         "trainee_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
         "summary_url": url_for("admin_trainee_summary", session_id=session_id, trainee_id=trainee_id),
         "is_vae": bool(show_vae),
+        "training_type": training_type,
         "training_price": t.get("training_price", ""),
         "cpf_amount": t.get("cpf_amount", ""),
         "personal_amount": t.get("personal_amount", ""),

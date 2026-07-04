@@ -450,8 +450,8 @@
   }
 
 
-  function openConventionTransmission({defaults, previewUrl, onPreview} = {}){
-    return new Promise((resolve)=>{
+  function openConventionTransmission({defaults, trainingType, previewUrl, onPreview} = {}){
+    return new Promise(async (resolve)=>{
       const modal = document.getElementById("conventionTransmissionModal");
       const yesButton = document.getElementById("conventionTransmissionYes");
       const noButton = document.getElementById("conventionTransmissionNo");
@@ -468,17 +468,31 @@
         return;
       }
 
-      const values = defaults || {};
-      fields.training_price.value = values.training_price || "";
-      fields.cpf_amount.value = values.cpf_amount || "";
-      fields.personal_amount.value = values.personal_amount || "";
-      fields.other_amount.value = values.other_amount || "";
-
       const parseAmount = (value)=>{
         const normalized = String(value || "").replace(",", ".").trim();
         const amount = Number.parseFloat(normalized);
         return Number.isFinite(amount) ? amount : 0;
       };
+      const values = defaults || {};
+      const normalizedTrainingType = String(trainingType || values.training_type || "").toUpperCase();
+      let defaultTrainingPrice = values.training_price || "";
+      if(normalizedTrainingType.includes("SSIAP") && parseAmount(defaultTrainingPrice) <= 0){
+        const withSst = window.AppModal
+          ? await window.AppModal.confirm({
+              type: "info",
+              title: "Inscription SSIAP",
+              message: "Cette inscription SSIAP est-elle avec le SST ? Le montant sera automatiquement renseigné.",
+              primaryText: "Avec SST — 1 200 €",
+              secondaryText: "Sans SST — 980 €"
+            })
+          : window.confirm("Inscription SSIAP avec SST ? OK = avec SST (1 200 €), Annuler = sans SST (980 €)");
+        defaultTrainingPrice = withSst ? "1200" : "980";
+      }
+      fields.training_price.value = defaultTrainingPrice;
+      fields.cpf_amount.value = values.cpf_amount || "";
+      fields.personal_amount.value = values.personal_amount || "";
+      fields.other_amount.value = values.other_amount || "";
+
       const formatAmount = (amount)=>new Intl.NumberFormat("fr-FR", {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(amount);
       const clearFinanceError = ()=>{
         if(errorEl){

@@ -1412,6 +1412,7 @@
     };
     const previewUrl = result.convention_preview_url || "";
     const conventionPayload = await window.openConventionTransmission?.({
+      trainingType: result.training_type || result.session_training_type || "",
       defaults: {
         training_price: result.training_price || "",
         cpf_amount: result.cpf_amount || "",
