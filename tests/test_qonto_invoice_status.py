@@ -183,6 +183,15 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertTrue(result.get("ignored"))
 
+    def test_billing_dashboard_total_to_invoice_excludes_external_lines(self):
+        template = os.path.join(os.path.dirname(__file__), "..", "templates", "admin_sessions_billing.html")
+        with open(template, encoding="utf-8") as fh:
+            source = fh.read()
+
+        self.assertIn("const notGenerated=filtered.filter(l=>!hasInvoice(l)), total=notGenerated.reduce", source)
+        self.assertIn("['Total à facturer',fmtMoney(total)]", source)
+        self.assertIn("['Montant non généré',fmtMoney(total)]", source)
+
     def test_billing_invoice_download_streams_qonto_pdf_inline(self):
         line_id = gestion_app._billing_line_id("S1", "T1", "CPF", "legacy")
         data = {
