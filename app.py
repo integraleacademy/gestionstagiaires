@@ -21081,6 +21081,18 @@ def _automation_document_config(session_obj: Dict[str, Any]) -> Dict[str, Any]:
     return {"enabled": False}
 
 
+def _can_send_convocation_without_signed_convention(session_obj: Dict[str, Any]) -> bool:
+    """Return whether the convocation can be sent before convention signature.
+
+    DESP convocations were already allowed before signature. SSIAP convocations
+    must also remain sendable even when the convention has not been generated
+    yet, because the convocation process is operationally independent from the
+    convention workflow for these sessions.
+    """
+    slug = str(_automation_document_config(session_obj).get("slug") or "")
+    return slug.startswith("desp_") or slug == "ssiap"
+
+
 def _automation_is_enabled(session_obj: Dict[str, Any]) -> bool:
     return bool(_automation_document_config(session_obj).get("enabled"))
 
@@ -22970,7 +22982,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     automation_slug = str(config.get("slug") or "")
     is_vae_automation = automation_slug == "vae"
     is_aps_automation = _is_aps_session(session_obj)
-    can_send_convocation_without_signed_convention = automation_slug.startswith("desp_")
+    can_send_convocation_without_signed_convention = _can_send_convocation_without_signed_convention(session_obj)
     has_entry_attestation = bool(config.get("entry_template"))
     has_end_attestation = bool(config.get("end_template"))
     entry_sent = bool(trainee.get("attestation_entree_aps_sent_at"))
@@ -23064,7 +23076,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
             "preview_url": url_for("admin_preview_aps_convocation", session_id=session_id, trainee_id=trainee_id),
             "error": convocation_error,
             "timeline_steps": [
-                {"label": "Convention validée", "value": "Signée" if convention_signed else (convocation_block_reason or "Pas encore effectué"), "state": "done" if convention_signed else "blocked"},
+                {"label": "Convention validée", "value": "Signée" if convention_signed else ("Non requise pour l’envoi" if can_send_convocation_without_signed_convention else (convocation_block_reason or "Pas encore effectué")), "state": "done" if (convention_signed or can_send_convocation_without_signed_convention) else "blocked"},
                 {"label": "Génération", "value": convocation_generated_at or "Pas encore effectué", "state": "done" if convocation_generated_at_raw else "pending"},
                 {"label": "Envoi", "value": ("Envoyée le " + convocation_sent_at) if convocation_sent_at else "Pas encore effectué", "state": "done" if convocation_sent_at else ("pending" if has_convocation_file else "blocked")},
             ],
@@ -25055,8 +25067,7 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
     if not _is_aps_session(s):
         return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
-    config = _automation_document_config(s)
-    can_send_without_signed_convention = str(config.get("slug") or "").startswith("desp_")
+    can_send_without_signed_convention = _can_send_convocation_without_signed_convention(s)
     if not can_send_without_signed_convention and not _is_yousign_signature_done(_yousign_state(t)):
         return jsonify({"ok": False, "error": "En attente de signature de la convention"}), 400
     try:
