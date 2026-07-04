@@ -65,12 +65,11 @@ class AdminSessionsConventionsTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
-        self.assertIn("CLASSIQUE", html)
-        self.assertIn("SEUIL", html)
-        self.assertIn("APRES", html)
+        self.assertNotIn("CLASSIQUE", html)
+        self.assertNotIn("SEUIL", html)
+        self.assertNotIn("APRES", html)
         self.assertNotIn("AVANT", html)
         self.assertNotIn("SIGNEE", html)
-        self.assertIn("Les VAE sont incluses à partir du statut", html)
 
     def test_conventions_use_vae_label_and_action_dates_to_apply_threshold(self):
         fake_data = {
@@ -104,8 +103,8 @@ class AdminSessionsConventionsTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
-        self.assertIn("LIBELLE", html)
-        self.assertIn("ACTION", html)
+        self.assertNotIn("LIBELLE", html)
+        self.assertNotIn("ACTION", html)
 
 
     def test_convention_history_dates_are_displayed_in_french_timezone(self):
@@ -156,15 +155,15 @@ class AdminSessionsConventionsTests(unittest.TestCase):
                     "id": "S-APS",
                     "training_type": "APS",
                     "trainees": [
-                        {"last_name": "APS-SOON", "first_name": "Alice", "convention_status": "soon"},
-                        {"last_name": "APS-SIGNING", "first_name": "Bruno", "convention_status": "signing"},
+                        {"id": "T-APS-SOON", "last_name": "APS-SOON", "first_name": "Alice", "convention_status": "soon"},
+                        {"id": "T-APS-SIGNING", "last_name": "APS-SIGNING", "first_name": "Bruno", "convention_status": "signing"},
                     ],
                 },
                 {
                     "id": "S-A3P",
                     "training_type": "A3P",
                     "trainees": [
-                        {"last_name": "A3P-SOON", "first_name": "Chloé", "convention_status": "soon"},
+                        {"id": "T-A3P-SOON", "last_name": "A3P-SOON", "first_name": "Chloé", "convention_status": "soon"},
                     ],
                 },
             ]
@@ -179,7 +178,7 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertNotIn("APS-SOON", html)
         self.assertNotIn("A3P-SOON", html)
         self.assertIn('option value="APS" selected', html)
-        self.assertIn('option value="signing" selected', html)
+        self.assertIn('option value="waiting_signature" selected', html)
         self.assertIn("Réinitialiser", html)
 
 

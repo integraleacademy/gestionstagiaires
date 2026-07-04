@@ -11290,11 +11290,12 @@ def admin_sessions_conventions():
     data = load_data()
     selected_formation = (request.args.get("formation") or "").strip().upper()
     selected_status = (request.args.get("status") or "").strip().lower()
+    legacy_status_aliases = {"signing": "waiting_signature", "soon": "not_generated"}
+    selected_status = legacy_status_aliases.get(selected_status, selected_status)
     selected_q = (request.args.get("q") or "").strip().lower()
     convention_rows = []
     formation_options_by_key = {}
     status_options = [
-        {"key": "not_generated", "label": "À générer"},
         {"key": "generated", "label": "Générée"},
         {"key": "waiting_signature", "label": "En attente de signature"},
         {"key": "sent", "label": "Envoyée"},
@@ -11334,6 +11335,11 @@ def admin_sessions_conventions():
             automation = _build_trainee_automation_status(sess, trainee, session_id, trainee_id)
             convention = automation["convention"]
             status_key = convention.get("status") or "not_generated"
+            if status_key == "not_generated":
+                legacy_convention_status = (trainee.get("convention_status") or "").strip().lower()
+                status_key = legacy_status_aliases.get(legacy_convention_status, legacy_convention_status) or status_key
+            if status_key == "not_generated":
+                continue
             if selected_status and status_key != selected_status:
                 continue
 
@@ -11388,7 +11394,7 @@ def admin_sessions_conventions():
                 stats["waiting_signature"] += 1
             if status_key == "signed":
                 stats["signed"] += 1
-            if status_key in {"not_generated", "generated", "expired", "refused"}:
+            if status_key in {"generated", "expired", "refused"}:
                 stats["action_required"] += 1
             if is_problem:
                 stats["errors"] += 1
