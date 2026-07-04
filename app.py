@@ -22291,14 +22291,17 @@ def _split_address_lines(address: str, max_lines: int = 4) -> List[str]:
 
 
 def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
+    config = _automation_document_config(session_obj)
+    is_dirigeant = str(config.get("slug") or "").startswith("desp_")
     required = [
         (trainee.get("email"), "email du stagiaire manquant"),
         (trainee.get("first_name") or trainee.get("prenom"), "prénom du stagiaire manquant"),
         (trainee.get("last_name") or trainee.get("nom"), "nom du stagiaire manquant"),
         (_session_get(session_obj, "date_start", ""), "date de début de formation manquante"),
         (_session_get(session_obj, "date_end", ""), "date de fin de formation manquante"),
-        (_session_get(session_obj, "exam_date", ""), "date d’examen manquante"),
     ]
+    if not is_dirigeant:
+        required.append((_session_get(session_obj, "exam_date", ""), "date d’examen manquante"))
     for value, message in required:
         if not str(value or "").strip():
             raise ValueError(f"Impossible de générer la convocation APS : {message}")
@@ -22312,15 +22315,21 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
     zip_code = str(trainee.get("zip_code") or trainee.get("code_postal") or trainee.get("postal_code") or "").strip()
     city = str(trainee.get("city") or trainee.get("ville") or "").strip().upper()
     training_name = str(_session_get(session_obj, "name", "") or _session_get(session_obj, "training_type", "") or "Formation APS").strip()
-    remote_start = str(_session_get(session_obj, "aps_remote_start", "") or _session_get(session_obj, "date_start", "")).strip()
-    remote_end = str(_session_get(session_obj, "aps_remote_end", "") or remote_start).strip()
-    in_person_start = str(_session_get(session_obj, "aps_in_person_start", "") or _session_get(session_obj, "date_start", "")).strip()
-    in_person_end = str(_session_get(session_obj, "aps_in_person_end", "") or _session_get(session_obj, "date_end", "")).strip()
+    if is_dirigeant:
+        remote_start = str(_session_get(session_obj, "dirigeant_remote_start", "") or _session_get(session_obj, "date_start", "")).strip()
+        remote_end = str(_session_get(session_obj, "dirigeant_remote_end", "") or remote_start).strip()
+        in_person_start = str(_session_get(session_obj, "dirigeant_in_person_start", "") or _session_get(session_obj, "date_start", "")).strip()
+        in_person_end = str(_session_get(session_obj, "dirigeant_in_person_end", "") or _session_get(session_obj, "date_end", "")).strip()
+    else:
+        remote_start = str(_session_get(session_obj, "aps_remote_start", "") or _session_get(session_obj, "date_start", "")).strip()
+        remote_end = str(_session_get(session_obj, "aps_remote_end", "") or remote_start).strip()
+        in_person_start = str(_session_get(session_obj, "aps_in_person_start", "") or _session_get(session_obj, "date_start", "")).strip()
+        in_person_end = str(_session_get(session_obj, "aps_in_person_end", "") or _session_get(session_obj, "date_end", "")).strip()
     public_token = (trainee.get("public_token") or trainee.get("token") or "").strip()
     trainee_space_url = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}" if public_token else f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espacestagiaire"
     date_start = str(_session_get(session_obj, "date_start", "")).strip()
     date_end = str(_session_get(session_obj, "date_end", "")).strip()
-    exam_date = str(_session_get(session_obj, "exam_date", "")).strip()
+    exam_date = str(_session_get(session_obj, "exam_date", "") or (in_person_end if is_dirigeant else "")).strip()
     convocation_time = str(_session_get(session_obj, "convocation_time", "") or session_obj.get("heure_convocation") or "08h30").strip() or "08h30"
     exam_time = str(_session_get(session_obj, "exam_time", "") or session_obj.get("heure_examen") or "08h00").strip() or "08h00"
     place = f"{APS_CONVOCATION_CENTER_NAME} - {APS_CONVOCATION_CENTER_ADDRESS} - {APS_CONVOCATION_CENTER_ZIP} {APS_CONVOCATION_CENTER_CITY}"
