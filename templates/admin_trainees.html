@@ -3553,24 +3553,30 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     const printButton = tr.querySelector("[data-print-row]");
     if (printButton) {
       printButton.addEventListener("click", async () => {
-        if (printButton.classList.contains("is-printed") || printButton.disabled) return;
-        const originalText = printButton.querySelector(".print-row-btn__label")?.textContent || "Imprimer";
+        if (printButton.disabled) return;
+        const wasPrinted = printButton.classList.contains("is-printed");
+        const nextPrinted = !wasPrinted;
+        const originalText = printButton.querySelector(".print-row-btn__label")?.textContent || (wasPrinted ? "Imprimé" : "Imprimer");
         const label = printButton.querySelector(".print-row-btn__label");
         printButton.disabled = true;
         if (label) label.textContent = "...";
         try {
-          const response = await fetch(`/api/stagiaires/${traineeId}/mark-printed`, { method: "POST" });
+          const response = await fetch(`/api/stagiaires/${traineeId}/mark-printed`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ printed: nextPrinted })
+          });
           const result = await response.json().catch(() => ({}));
           if (!response.ok || result?.success === false) {
             throw new Error(result?.error || `Erreur impression (${response.status})`);
           }
-          printButton.classList.add("is-printed");
-          printButton.setAttribute("aria-pressed", "true");
-          printButton.setAttribute("title", "Déjà imprimé");
-          if (label) label.textContent = "Imprimé";
+          printButton.classList.toggle("is-printed", nextPrinted);
+          printButton.setAttribute("aria-pressed", nextPrinted ? "true" : "false");
+          printButton.setAttribute("title", nextPrinted ? "Déjà imprimé" : "Marquer comme imprimé");
+          if (label) label.textContent = nextPrinted ? "Imprimé" : "Imprimer";
         } catch (error) {
           console.error(error);
-          alert("Impossible de marquer ce stagiaire comme imprimé.");
+          alert("Impossible de modifier l’état d’impression de ce stagiaire.");
           if (label) label.textContent = originalText;
         } finally {
           printButton.disabled = false;
