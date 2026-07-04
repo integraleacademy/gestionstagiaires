@@ -22950,8 +22950,6 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     convocation_generated_at = _format_automation_datetime(convocation_generated_at_raw)
     if convocation_error:
         convocation_status = "error"
-    elif not convention_signed:
-        convocation_status = "blocked_waiting_convention"
     elif convocation_sent_at or trainee.get("convocation_aps_status") == "sent":
         convocation_status = "sent"
     elif has_convocation_file:
@@ -22982,7 +22980,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     else:
         timeline = [
             convention_step,
-            {"label": "Convocation", "state": "complete" if convocation_status == "sent" else ("error" if convocation_status == "error" else "blocked" if not convention_signed else "pending")} if is_aps_automation else signature_step,
+            {"label": "Convocation", "state": "complete" if convocation_status == "sent" else ("error" if convocation_status == "error" else "pending")} if is_aps_automation else signature_step,
             {"label": "Attestation entrée", "state": "complete" if entry_sent else ("blocked" if not convention_signed else "pending")} if has_entry_attestation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
             {"label": "Attestation sortie", "state": "complete" if end_sent else ("blocked" if not convention_signed else "pending")} if has_end_attestation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
         ]
@@ -23065,7 +23063,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
             "error": convocation_error,
             "timeline_steps": [
                 {"label": "Convention validée", "value": "Signée" if convention_signed else (convocation_block_reason or "Pas encore effectué"), "state": "done" if convention_signed else "blocked"},
-                {"label": "Génération", "value": convocation_generated_at or "Pas encore effectué", "state": "done" if convocation_generated_at_raw else ("pending" if convention_signed else "blocked")},
+                {"label": "Génération", "value": convocation_generated_at or "Pas encore effectué", "state": "done" if convocation_generated_at_raw else "pending"},
                 {"label": "Envoi", "value": ("Envoyée le " + convocation_sent_at) if convocation_sent_at else "Pas encore effectué", "state": "done" if convocation_sent_at else ("pending" if has_convocation_file else "blocked")},
             ],
         },
@@ -25024,8 +25022,6 @@ def admin_generate_aps_convocation_automation(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
     if not _is_aps_session(s):
         return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
-    if not _is_yousign_signature_done(_yousign_state(t)):
-        return jsonify({"ok": False, "error": "En attente de signature de la convention"}), 400
     try:
         docx_path, pdf_path = _generate_aps_convocation_files(s, t, session_id, trainee_id)
         now = _now_iso()

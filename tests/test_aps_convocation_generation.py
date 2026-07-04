@@ -375,9 +375,40 @@ class ApsAutomationStatusTests(unittest.TestCase):
             status = app._build_trainee_automation_status(session, trainee, "session-1", "trainee-1")
 
         self.assertEqual(status["convention"]["status"], "not_generated")
-        self.assertEqual(status["convocation"]["status"], "blocked_waiting_convention")
+        self.assertEqual(status["convocation"]["status"], "not_generated")
+        self.assertEqual(status["convocation"]["label"], "Prêt")
         self.assertTrue(status["convocation"]["can_generate"])
         self.assertFalse(status["convocation"]["can_send"])
+
+
+    def test_manual_convocation_generation_endpoint_does_not_require_convention_signature(self):
+        data = {
+            "sessions": [
+                {
+                    "id": "session-1",
+                    "training_type": "APS",
+                    "name": "Formation APS",
+                    "trainees": [{"id": "trainee-1", "first_name": "Jean", "last_name": "Dupont"}],
+                }
+            ]
+        }
+
+        with app.app.test_client() as client:
+            with client.session_transaction() as sess:
+                sess["admin_logged_in"] = True
+                sess["admin_role"] = "admin"
+            with mock.patch.object(app, "load_data", return_value=data), \
+                 mock.patch.object(app, "save_data") as save_data, \
+                 mock.patch.object(app, "_generate_aps_convocation_files", return_value=("/tmp/convocation.docx", "/tmp/convocation.pdf")):
+                response = client.post("/admin/sessions/session-1/stagiaires/trainee-1/automation/convocation/generate")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        trainee = data["sessions"][0]["trainees"][0]
+        self.assertEqual(trainee["convocation_aps_status"], "generated")
+        self.assertEqual(trainee["convocation_aps_pdf_path"], "/tmp/convocation.pdf")
+        save_data.assert_called_once_with(data)
 
     def test_sent_convocation_without_generation_timestamp_is_displayed_as_generated(self):
         session = {"id": "session-1", "training_type": "APS", "name": "Formation APS"}
@@ -402,7 +433,7 @@ class ApsAutomationStatusTests(unittest.TestCase):
         generation_step = status["convocation"]["timeline_steps"][1]
         self.assertEqual(status["convocation"]["status"], "sent")
         self.assertEqual(status["convocation"]["generated_at"], "2026-07-03T08:13:43.852227Z")
-        self.assertEqual(generation_step["value"], "2026-07-03T08:13:43.852227Z")
+        self.assertEqual(generation_step["value"], "03/07/2026 à 10h13")
         self.assertEqual(generation_step["state"], "done")
 
 class ApsConvocationEmailTests(unittest.TestCase):
