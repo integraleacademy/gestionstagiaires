@@ -380,6 +380,59 @@ class ApsAutomationStatusTests(unittest.TestCase):
         self.assertTrue(status["convocation"]["can_generate"])
         self.assertFalse(status["convocation"]["can_send"])
 
+    def test_desp_generated_convocation_can_be_sent_without_signed_convention(self):
+        session = {"id": "session-desp", "training_type": "DIRIGEANT initial", "name": "Formation DESP"}
+        trainee = {
+            "id": "trainee-desp",
+            "first_name": "Jean",
+            "last_name": "Dupont",
+            "convocation_aps_status": "generated",
+            "convocation_aps_pdf_path": "/tmp/convocation-desp.pdf",
+        }
+
+        with app.app.test_request_context():
+            status = app._build_trainee_automation_status(session, trainee, "session-desp", "trainee-desp")
+
+        self.assertEqual(status["convocation"]["status"], "generated")
+        self.assertTrue(status["convocation"]["can_send"])
+        self.assertEqual(status["convocation"]["block_reason"], "")
+
+
+    def test_manual_desp_convocation_send_endpoint_does_not_require_convention_signature(self):
+        data = {
+            "sessions": [
+                {
+                    "id": "session-desp",
+                    "training_type": "DIRIGEANT initial",
+                    "name": "Formation DESP",
+                    "date_start": "2026-09-01",
+                    "date_end": "2026-09-05",
+                    "trainees": [{"id": "trainee-desp", "first_name": "Jean", "last_name": "Dupont", "email": "jean@example.com"}],
+                }
+            ]
+        }
+
+        with tempfile.NamedTemporaryFile(suffix=".pdf") as pdf_file, tempfile.NamedTemporaryFile(suffix=".docx") as docx_file:
+            pdf_file.write(b"PDF")
+            pdf_file.flush()
+            with app.app.test_client() as client:
+                with client.session_transaction() as sess:
+                    sess["admin_logged_in"] = True
+                    sess["admin_role"] = "admin"
+                with mock.patch.object(app, "load_data", return_value=data), \
+                     mock.patch.object(app, "save_data") as save_data, \
+                     mock.patch.object(app, "_generate_aps_convocation_files", return_value=(docx_file.name, pdf_file.name)), \
+                     mock.patch.object(app, "_aps_convocation_pdf_is_allowed", return_value=True), \
+                     mock.patch.object(app, "brevo_send_email", return_value=True):
+                    response = client.post("/admin/sessions/session-desp/stagiaires/trainee-desp/convocation-aps/send")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        trainee = data["sessions"][0]["trainees"][0]
+        self.assertEqual(trainee["convocation_aps_status"], "sent")
+        self.assertTrue(trainee["convocation_aps_sent_at"])
+        save_data.assert_called_once_with(data)
 
     def test_manual_convocation_generation_endpoint_does_not_require_convention_signature(self):
         data = {

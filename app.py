@@ -22967,8 +22967,10 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         convocation_block_reason = ""
 
     config = _automation_document_config(session_obj)
-    is_vae_automation = config.get("slug") == "vae"
+    automation_slug = str(config.get("slug") or "")
+    is_vae_automation = automation_slug == "vae"
     is_aps_automation = _is_aps_session(session_obj)
+    can_send_convocation_without_signed_convention = automation_slug.startswith("desp_")
     has_entry_attestation = bool(config.get("entry_template"))
     has_end_attestation = bool(config.get("end_template"))
     entry_sent = bool(trainee.get("attestation_entree_aps_sent_at"))
@@ -23056,7 +23058,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         },
         "convocation": {
             "status": convocation_status, "label": v_label, "icon": v_icon, "icon_class": "automation-icon--hourglass" if v_icon == "hourglass" else "", "tone": v_tone, "card_tone": v_card_tone,
-            "can_generate": True, "can_send": convention_signed and convocation_status in {"generated", "sent"}, "block_reason": convocation_block_reason,
+            "can_generate": True, "can_send": (convention_signed or can_send_convocation_without_signed_convention) and convocation_status in {"generated", "sent"}, "block_reason": "" if can_send_convocation_without_signed_convention else convocation_block_reason,
             "generated_at": convocation_generated_at_raw, "generated_at_label": convocation_generated_at, "sent_at": convocation_sent_at,
             "download_url": url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id) if has_convocation_file else "",
             "preview_url": url_for("admin_preview_aps_convocation", session_id=session_id, trainee_id=trainee_id),
@@ -25053,7 +25055,9 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
     if not _is_aps_session(s):
         return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
-    if not _is_yousign_signature_done(_yousign_state(t)):
+    config = _automation_document_config(s)
+    can_send_without_signed_convention = str(config.get("slug") or "").startswith("desp_")
+    if not can_send_without_signed_convention and not _is_yousign_signature_done(_yousign_state(t)):
         return jsonify({"ok": False, "error": "En attente de signature de la convention"}), 400
     try:
         docx_path, pdf_path = _generate_aps_convocation_files(s, t, session_id, trainee_id)
