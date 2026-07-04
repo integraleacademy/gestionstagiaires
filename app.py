@@ -25515,26 +25515,34 @@ def admin_trainee_summary_print(session_id: str, trainee_id: str):
 @admin_login_required
 def api_mark_trainee_printed(trainee_id: str):
     try:
-        app.logger.info("MARK PRINTED START trainee_id=%s", trainee_id)
+        payload = request.get_json(silent=True) or {}
+        printed = payload.get("printed", True)
+        printed = printed if isinstance(printed, bool) else str(printed).strip().lower() in {"1", "true", "yes", "oui"}
+        app.logger.info("MARK PRINTED START trainee_id=%s printed=%s", trainee_id, printed)
 
         data = load_data()
         found = False
+        printed_at = _now_iso() if printed else ""
 
         for s in data.get("sessions", []):
             if isinstance(s.get("trainees"), list):
                 for t in s["trainees"]:
                     if str(t.get("id")) == str(trainee_id):
                         app.logger.info("FOUND in trainees[]")
-                        t["printed"] = True
-                        t["printed_at"] = _now_iso()
+                        t["printed"] = printed
+                        t["printed_at"] = printed_at
+                        if not printed:
+                            t["summary_printed_at"] = ""
                         found = True
 
             if isinstance(s.get("stagiaires"), list):
                 for t in s["stagiaires"]:
                     if str(t.get("id")) == str(trainee_id):
                         app.logger.info("FOUND in stagiaires[]")
-                        t["printed"] = True
-                        t["printed_at"] = _now_iso()
+                        t["printed"] = printed
+                        t["printed_at"] = printed_at
+                        if not printed:
+                            t["summary_printed_at"] = ""
                         found = True
 
         if not found:
@@ -25542,9 +25550,9 @@ def api_mark_trainee_printed(trainee_id: str):
             return jsonify({"success": False, "error": "not found"}), 404
 
         save_data(data)
-        app.logger.info("SAVE OK trainee_id=%s", trainee_id)
+        app.logger.info("SAVE OK trainee_id=%s printed=%s", trainee_id, printed)
 
-        return jsonify({"success": True})
+        return jsonify({"success": True, "printed": printed, "printed_at": printed_at})
 
     except Exception as e:
         import traceback
