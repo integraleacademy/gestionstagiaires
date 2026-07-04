@@ -735,6 +735,9 @@
   {% set training_upper = (s.training_type or "")|upper %}
   {% set is_aps = training_upper.startswith("APS") %}
   {% set is_vtc = "VTC" in training_upper %}
+  {% set is_vae = "VAE" in training_upper %}
+  {% set is_ssiap = "SSIAP" in training_upper %}
+  {% set show_cnaps_metric = not (is_vtc or is_vae or is_ssiap) %}
   {% set elearning_done = s.public_logged_in_total or 0 %}
   {% set elearning_total = s.total or 0 %}
   {% set docs_done = s.dossier_complete_total or 0 %}
@@ -811,10 +814,12 @@
     {% endif %}
 
     <div class="session-metrics" aria-label="Indicateurs de session">
-      <div class="session-metric{% if cnaps_total and cnaps_done >= cnaps_total %} is-ok{% elif cnaps_total and cnaps_done < cnaps_total %} is-warn{% else %} is-muted{% endif %}"><span class="session-metric__icon">🛡️</span><span class="session-metric__label">CNAPS validé</span><strong>{{ cnaps_done }}/{{ cnaps_total }}</strong></div>
+      {% if show_cnaps_metric %}
+      <div class="session-metric{% if cnaps_total and cnaps_done >= cnaps_total %} is-ok{% elif cnaps_total and cnaps_done < cnaps_total %} is-warn{% else %} is-muted{% endif %}"><span class="session-metric__icon">👮</span><span class="session-metric__label">CNAPS validé</span><strong>{{ cnaps_done }}/{{ cnaps_total }}</strong></div>
+      {% endif %}
       <div class="session-metric is-elearning"><span class="session-metric__icon">🛜</span><span class="session-metric__label">Connexion Espace Stagiaire</span><strong>{{ elearning_done }}/{{ elearning_total }}</strong></div>
       <div class="session-metric{% if docs_total and docs_done >= docs_total %} is-ok{% elif docs_total and docs_done < docs_total %} is-warn{% else %} is-muted{% endif %}"><span class="session-metric__icon">📁</span><span class="session-metric__label">Dossiers complets</span><strong>{{ docs_done }}/{{ docs_total }}</strong></div>
-      <div class="session-metric{% if s.exclude_from_sales_tracking %} is-muted{% else %} is-ok{% endif %}"><span class="session-metric__icon">📈</span><span class="session-metric__label">Suivi ventes</span><strong>{{ "exclu" if s.exclude_from_sales_tracking else "inclus" }}</strong></div>
+      <div class="session-metric{% if s.exclude_from_sales_tracking %} is-muted{% else %} is-ok{% endif %}" data-sales-tracking-metric><span class="session-metric__icon">📈</span><span class="session-metric__label">Suivi ventes</span><strong>{{ "exclu" if s.exclude_from_sales_tracking else "inclus" }}</strong></div>
     </div>
 
     <div class="session-options">
@@ -1998,6 +2003,15 @@
         if(!r.ok || !res.ok){
           alert("Impossible de mettre à jour le suivi des ventes pour cette session.");
           checkbox.checked = !checkbox.checked;
+          return;
+        }
+        const card = checkbox.closest(".session-card");
+        const metric = card?.querySelector("[data-sales-tracking-metric]");
+        if(metric){
+          metric.classList.toggle("is-muted", checkbox.checked);
+          metric.classList.toggle("is-ok", !checkbox.checked);
+          const value = metric.querySelector("strong");
+          if(value) value.textContent = checkbox.checked ? "exclu" : "inclus";
         }
       }catch(e){
         alert("Erreur réseau");
