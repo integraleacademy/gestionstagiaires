@@ -22938,6 +22938,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     progress_percent = round((ready_documents / total_documents) * 100) if total_documents else 0
 
     return {
+        "has_convocation": is_aps_automation,
         "has_entry_attestation": has_entry_attestation,
         "has_end_attestation": has_end_attestation,
         "global_status": global_status,

@@ -4,7 +4,7 @@
 
 {% set pre_reception_open = request.args.get("pre_reception") %}
 {% set is_vtc = "VTC" in (session.training_type or "")|upper %}
-{% set is_aps = ((session.training_type or "")|upper).startswith("APS") %}
+{% set is_aps = automation_status.has_convocation if automation_status is not none else ((session.training_type or "")|upper).startswith("APS") %}
 {% set show_automation = automation_status is not none %}
 {% set is_dirigeant = "DIRIGEANT" in (session.training_type or "")|upper %}
 {% set show_no_bac_toggle = is_dirigeant %}
