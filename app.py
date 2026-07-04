@@ -21020,7 +21020,13 @@ APS_CONVOCATION_VARIABLES = [
 
 
 def _is_aps_session(session_obj: Dict[str, Any]) -> bool:
-    return (_session_get(session_obj, "training_type", "") or "").strip().upper().startswith("APS")
+    """Return whether the session has the full automated document suite.
+
+    The historical name is kept because routes, templates and stored fields still
+    use the APS suffix, but the same automation cards are also used for A3P,
+    DESP initial and SSIAP sessions. VTC intentionally remains convention-only.
+    """
+    return bool(_automation_document_config(session_obj).get("convocation_template"))
 
 
 def _automation_training_text(session_obj: Dict[str, Any]) -> str:
@@ -21032,15 +21038,15 @@ def _automation_document_config(session_obj: Dict[str, Any]) -> Dict[str, Any]:
     if "VAE" in text:
         return {"enabled": False}
     if "A3P" in text:
-        return {"enabled": True, "slug": "a3p", "label": "A3P", "convention_template": "conventiona3p.docx", "entry_template": "attestationentreea3p.docx"}
+        return {"enabled": True, "slug": "a3p", "label": "A3P", "convention_template": "conventiona3p.docx", "entry_template": "attestationentreea3p.docx", "end_template": "attestationfina3p.docx", "convocation_template": "convocationa3p.docx"}
     if "VTC" in text:
         return {"enabled": True, "slug": "vtc", "label": "Chauffeur VTC", "convention_template": "conventionvtc.docx", "entry_template": ""}
-    if "DIRIGEANT" in text:
+    if "DIRIGEANT" in text or "DESP" in text:
         if "PARIS" in text:
-            return {"enabled": True, "slug": "desp_paris", "label": "Dirigeant Paris", "convention_template": "conventiondespparis.docx", "entry_template": "attestationentreedespparis.docx"}
-        return {"enabled": True, "slug": "desp_puget", "label": "Dirigeant Puget", "convention_template": "conventiondesp.docx", "entry_template": "attestationentreedesp.docx"}
+            return {"enabled": True, "slug": "desp_paris", "label": "Dirigeant Paris", "convention_template": "conventiondespparis.docx", "entry_template": "attestationentreedespparis.docx", "end_template": "attestationfindespparis.docx", "convocation_template": "convocationdespparis.docx"}
+        return {"enabled": True, "slug": "desp_puget", "label": "Dirigeant Puget", "convention_template": "conventiondesp.docx", "entry_template": "attestationentreedesp.docx", "end_template": "attestationfindesp.docx", "convocation_template": "convocationdesp.docx"}
     if "SSIAP" in text:
-        return {"enabled": True, "slug": "ssiap", "label": "SSIAP", "convention_template": "conventionssiap.docx", "entry_template": "attestationentreessiap.docx"}
+        return {"enabled": True, "slug": "ssiap", "label": "SSIAP", "convention_template": "conventionssiap.docx", "entry_template": "attestationentreessiap.docx", "end_template": "attestationfinssiap.docx", "convocation_template": "convocationssiap.docx"}
     if text.startswith("APS") or " APS" in text:
         return {"enabled": True, "slug": "aps", "label": "APS", "convention_template": "conventionaps.docx", "entry_template": "attestationentreeaps.docx", "end_template": "attestationfinaps.docx", "convocation_template": "convocationaps.docx"}
     return {"enabled": False}
@@ -21052,6 +21058,10 @@ def _automation_is_enabled(session_obj: Dict[str, Any]) -> bool:
 
 def _automation_has_entry_attestation(session_obj: Dict[str, Any]) -> bool:
     return bool(_automation_document_config(session_obj).get("entry_template"))
+
+
+def _automation_has_end_attestation(session_obj: Dict[str, Any]) -> bool:
+    return bool(_automation_document_config(session_obj).get("end_template"))
 
 
 # =========================
@@ -22149,8 +22159,9 @@ def _generate_aps_entry_attestation_files(session_obj: Dict[str, Any], trainee: 
 
 
 
-def _aps_end_attestation_template_path() -> str:
-    return os.path.join(app.root_path, "templates_word", "attestationfinaps.docx")
+def _aps_end_attestation_template_path(session_obj: Optional[Dict[str, Any]] = None) -> str:
+    template_name = (_automation_document_config(session_obj or {}).get("end_template") or "attestationfinaps.docx")
+    return os.path.join(app.root_path, "templates_word", template_name)
 
 
 def _aps_end_attestation_base_filename(trainee: Dict[str, Any], trainee_id: str = "") -> str:
@@ -22180,7 +22191,7 @@ def _build_aps_end_attestation_context(session_obj: Dict[str, Any], trainee: Dic
 
 
 def _generate_aps_end_attestation_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
-    template_path = _aps_end_attestation_template_path()
+    template_path = _aps_end_attestation_template_path(session_obj)
     if not os.path.exists(template_path):
         raise FileNotFoundError("Modèle Word obligatoire manquant : gestionstagiaires/templates_word/attestationfinaps.docx")
     os.makedirs(APS_END_ATTESTATION_DIR, exist_ok=True)
@@ -22237,8 +22248,9 @@ def _aps_entry_attestation_pdf_is_allowed(pdf_path: str) -> bool:
     return abs_pdf_path.startswith(root + os.sep)
 
 
-def _aps_template_path() -> str:
-    return os.path.join(app.root_path, "templates_word", "convocationaps.docx")
+def _aps_template_path(session_obj: Optional[Dict[str, Any]] = None) -> str:
+    template_name = (_automation_document_config(session_obj or {}).get("convocation_template") or "convocationaps.docx")
+    return os.path.join(app.root_path, "templates_word", template_name)
 
 
 def _split_address_lines(address: str, max_lines: int = 4) -> List[str]:
@@ -22362,10 +22374,10 @@ def _render_docx_with_python_template(template_path: str, output_docx_path: str,
 
 
 def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
-    template_path = _aps_template_path()
+    template_path = _aps_template_path(session_obj)
     app.logger.info("[CONVOCATION APS] Modèle Word utilisé : %s", template_path)
     if not os.path.exists(template_path):
-        raise FileNotFoundError("Modèle Word obligatoire manquant : gestionstagiaires/templates_word/convocationaps.docx")
+        raise FileNotFoundError(f"Modèle Word obligatoire manquant : gestionstagiaires/templates_word/{os.path.basename(template_path)}")
     if not _docx_text_contains_yousign_smart_anchor(template_path, signer_index=1):
         raise RuntimeError(YOUSIGN_SMART_ANCHOR_MISSING_MESSAGE)
     context = _build_aps_convocation_context(session_obj, trainee)
@@ -22878,19 +22890,21 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     else:
         convocation_block_reason = ""
 
-    timeline = [
-        {"label": "Convention", "state": "complete" if has_generated_convention else ("error" if convention_status == "error" else "pending")},
-        {"label": "Signature", "state": "complete" if convention_signed else ("error" if convention_status in {"error", "refused", "expired"} else "pending" if has_signature_request else "blocked")},
-        {"label": "Convocation", "state": "complete" if convocation_status == "sent" else ("error" if convocation_status == "error" else "blocked" if not convention_signed else "pending")} if _is_aps_session(session_obj) else {"label": "Signature", "state": "complete" if convention_signed else "pending"},
-        {"label": "Attestation entrée", "state": "complete" if trainee.get("attestation_entree_aps_sent_at") else ("blocked" if not convention_signed else "pending")} if _automation_has_entry_attestation(session_obj) else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
-    ]
     config = _automation_document_config(session_obj)
     is_aps_automation = _is_aps_session(session_obj)
     has_entry_attestation = bool(config.get("entry_template"))
+    has_end_attestation = bool(config.get("end_template"))
     entry_sent = bool(trainee.get("attestation_entree_aps_sent_at"))
+    end_sent = bool(trainee.get("attestation_fin_aps_sent_at"))
+    timeline = [
+        {"label": "Convention", "state": "complete" if has_generated_convention else ("error" if convention_status == "error" else "pending")},
+        {"label": "Convocation", "state": "complete" if convocation_status == "sent" else ("error" if convocation_status == "error" else "blocked" if not convention_signed else "pending")} if is_aps_automation else {"label": "Signature", "state": "complete" if convention_signed else ("error" if convention_status in {"error", "refused", "expired"} else "pending" if has_signature_request else "blocked")},
+        {"label": "Attestation entrée", "state": "complete" if entry_sent else ("blocked" if not convention_signed else "pending")} if has_entry_attestation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
+        {"label": "Attestation sortie", "state": "complete" if end_sent else ("blocked" if not convention_signed else "pending")} if has_end_attestation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
+    ]
     if convention_status == "error" or (is_aps_automation and convocation_status == "error"):
         global_status = "error"
-    elif convention_signed and (not is_aps_automation or convocation_status == "sent") and (not has_entry_attestation or entry_sent):
+    elif convention_signed and (not is_aps_automation or convocation_status == "sent") and (not has_entry_attestation or entry_sent) and (not has_end_attestation or end_sent):
         global_status = "complete"
     elif convention_status == "waiting_signature":
         global_status = "in_progress"
@@ -22898,7 +22912,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         global_status = "blocked" if has_generated_convention or has_signature_request else "action_required"
     else:
         global_status = "action_required"
-    ready_documents = int(convention_signed) + int(is_aps_automation and convocation_status == "sent") + int(has_entry_attestation and entry_sent)
+    ready_documents = int(convention_signed) + int(is_aps_automation and convocation_status == "sent") + int(has_entry_attestation and entry_sent) + int(has_end_attestation and end_sent)
 
     convention_labels = {
         "not_generated": ("Non générée", "file", "pending", "pending", "Générer la convention"),
@@ -22920,11 +22934,12 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     }
     v_label, v_icon, v_tone, v_card_tone = convocation_labels.get(convocation_status, convocation_labels["error"])
 
-    total_documents = 2 + int(is_aps_automation) + int(has_entry_attestation)
+    total_documents = 1 + int(is_aps_automation) + int(has_entry_attestation) + int(has_end_attestation)
     progress_percent = round((ready_documents / total_documents) * 100) if total_documents else 0
 
     return {
         "has_entry_attestation": has_entry_attestation,
+        "has_end_attestation": has_end_attestation,
         "global_status": global_status,
         "ready_documents": ready_documents,
         "total_documents": total_documents,
@@ -24819,7 +24834,7 @@ def admin_send_aps_entry_attestation(session_id: str, trainee_id: str):
 def admin_preview_aps_end_attestation(session_id: str, trainee_id: str):
     data = load_data()
     s, _, t = _find_session_trainee(data, session_id, trainee_id)
-    if not s or not t or not _is_aps_session(s):
+    if not s or not t or not _automation_has_end_attestation(s):
         abort(404)
     try:
         _, pdf_path = _generate_aps_end_attestation_files(s, t, session_id, trainee_id)
@@ -24837,8 +24852,8 @@ def admin_send_aps_end_attestation(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
-    if not _is_aps_session(s):
-        return jsonify({"ok": False, "error": "Attestation de fin réservée aux formations APS"}), 400
+    if not _automation_has_end_attestation(s):
+        return jsonify({"ok": False, "error": "Attestation de fin non configurée pour cette formation"}), 400
     try:
         docx_path, pdf_path = _generate_aps_end_attestation_files(s, t, session_id, trainee_id)
         with open(pdf_path, "rb") as fh:
