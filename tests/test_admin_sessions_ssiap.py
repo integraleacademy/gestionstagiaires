@@ -76,6 +76,40 @@ class AdminSessionsSsiapTests(unittest.TestCase):
             ),
         )
 
+    def test_dirigeant_session_modal_shows_dates_in_expected_order(self):
+        fake_data = {"sessions": []}
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data), patch.object(
+            gestion_app, "_load_wedof_webhooks", return_value=[]
+        ):
+            response = self.client.get("/admin/sessions")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        create_modal = html[
+            html.index('<div class="modal-backdrop" id="createSessionModal"') : html.index(
+                '<!-- MODALE CREATION STAGIAIRE'
+            )
+        ]
+        expected_order = [
+            'id="dateStartField"',
+            'id="dateEndField"',
+            'id="dirigeantInPersonStartField"',
+            'id="dirigeantInPersonEndField"',
+            'id="dirigeantRemoteStartField"',
+            'id="dirigeantRemoteEndField"',
+        ]
+        positions = [create_modal.index(marker) for marker in expected_order]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn(
+            'const ids = ["DirigeantInPersonStartField", "DirigeantInPersonEndField", '
+            '"DirigeantRemoteStartField", "DirigeantRemoteEndField"];',
+            html,
+        )
+        self.assertIn('setFieldVisible("dateEndField", true);', html)
+        self.assertIn('setFieldVisible("editDateEndField", true);', html)
+        self.assertIn('if(dateEndField) dateEndField.style.display = "";', html)
+
     def test_ssiap_summary_displays_red_ssiap_1_badge(self):
         fake_data = {
             "sessions": [
