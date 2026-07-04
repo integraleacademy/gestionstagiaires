@@ -21075,7 +21075,7 @@ def _automation_document_config(session_obj: Dict[str, Any]) -> Dict[str, Any]:
             return {"enabled": True, "slug": "desp_paris", "label": "Dirigeant d'une entreprise de sécurité privée (DESP)", "convention_template": "conventiondespparis.docx", "entry_template": "attestationentreedesparis.docx", "end_template": "attestationfindespparis.docx", "convocation_template": "convocationdespparis.docx"}
         return {"enabled": True, "slug": "desp_puget", "label": "Dirigeant d'une entreprise de sécurité privée (DESP)", "convention_template": "conventiondesp.docx", "entry_template": "attestationentreedesp.docx", "end_template": "attestationfindesp.docx", "convocation_template": "convocationdesp.docx"}
     if "SSIAP" in text:
-        return {"enabled": True, "slug": "ssiap", "label": "SSIAP", "convention_template": "conventionssiap.docx", "entry_template": "attestationentreessiap.docx", "end_template": "attestationfinssiap.docx", "convocation_template": "convocationssiap.docx"}
+        return {"enabled": True, "slug": "ssiap", "label": "agent de sécurité incendie SSIAP 1", "convention_template": "conventionssiap.docx", "entry_template": "attestationentreessiap.docx", "end_template": "attestationfinssiap.docx", "convocation_template": "convocationssiap.docx"}
     if text.startswith("APS") or " APS" in text:
         return {"enabled": True, "slug": "aps", "label": "APS", "convention_template": "conventionaps.docx", "entry_template": "attestationentreeaps.docx", "end_template": "attestationfinaps.docx", "convocation_template": "convocationaps.docx"}
     return {"enabled": False}
