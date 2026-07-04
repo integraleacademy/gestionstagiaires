@@ -47,6 +47,7 @@ async function api(url, method="GET", body=null) {
    SESSIONS PAGE
 ------------------------- */
 (function initSessions(){
+  if (document.body.classList.contains("endpoint-admin-sessions")) return;
   const btnOpen = qs("#btnOpenCreateSession");
   const modalId = "createSessionModal";
   if (btnOpen) {
@@ -64,10 +65,19 @@ async function api(url, method="GET", body=null) {
         training_type: (qs("#sessionType")?.value || "").trim(),
         date_start: qs("#dateStart")?.value,
         date_end: qs("#dateEnd")?.value,
-        exam_date: qs("#examDate")?.value
+        exam_date: qs("#examDate")?.value,
+        exam_theory_date: qs("#examTheoryDate")?.value,
+        exam_practice_date: qs("#examPracticeDate")?.value,
+        practice_training_date: qs("#practiceTrainingDate")?.value,
+        aps_in_person_start: qs("#apsInPersonStart")?.value,
+        aps_elearning_enabled: !!qs("#apsElearningEnabled")?.checked,
+        dirigeant_remote_start: qs("#dirigeantRemoteStart")?.value,
+        dirigeant_remote_end: qs("#dirigeantRemoteEnd")?.value,
+        dirigeant_in_person_start: qs("#dirigeantInPersonStart")?.value,
+        dirigeant_in_person_end: qs("#dirigeantInPersonEnd")?.value
       };
       try {
-        await api("/admin/sessions/create", "POST", payload);
+        await api("/api/sessions/create", "POST", payload);
         toast("Session créée ✅");
         closeModal(modalId);
         window.location.reload();

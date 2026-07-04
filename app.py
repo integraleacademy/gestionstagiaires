@@ -11081,6 +11081,10 @@ def admin_sessions():
             "aps_remote_end": _session_get(s, "aps_remote_end", ""),
             "aps_in_person_start": _session_get(s, "aps_in_person_start", ""),
             "aps_in_person_end": _session_get(s, "aps_in_person_end", ""),
+            "dirigeant_remote_start": _session_get(s, "dirigeant_remote_start", ""),
+            "dirigeant_remote_end": _session_get(s, "dirigeant_remote_end", ""),
+            "dirigeant_in_person_start": _session_get(s, "dirigeant_in_person_start", ""),
+            "dirigeant_in_person_end": _session_get(s, "dirigeant_in_person_end", ""),
             "total": st["total"],
             "session_is_conform": st["session_is_conform"],
             "session_dossier_complete": session_dossier_complete,
@@ -15338,6 +15342,10 @@ def api_create_session():
     ssiap_exam_date = (payload.get("ssiap_exam_date") or "").strip()
     exclude_from_sales_tracking = bool(payload.get("exclude_from_sales_tracking"))
     aps_in_person_start = (payload.get("aps_in_person_start") or "").strip()
+    dirigeant_remote_start = (payload.get("dirigeant_remote_start") or "").strip()
+    dirigeant_remote_end = (payload.get("dirigeant_remote_end") or "").strip()
+    dirigeant_in_person_start = (payload.get("dirigeant_in_person_start") or "").strip()
+    dirigeant_in_person_end = (payload.get("dirigeant_in_person_end") or "").strip()
     aps_elearning_enabled = bool(payload.get("aps_elearning_enabled")) and training_type.upper().startswith("APS")
 
     if not name or not training_type:
@@ -15356,6 +15364,10 @@ def api_create_session():
         "practice_training_date": practice_training_date,
         "ssiap_exam_date": ssiap_exam_date,
         "aps_in_person_start": aps_in_person_start,
+        "dirigeant_remote_start": dirigeant_remote_start,
+        "dirigeant_remote_end": dirigeant_remote_end,
+        "dirigeant_in_person_start": dirigeant_in_person_start,
+        "dirigeant_in_person_end": dirigeant_in_person_end,
         "aps_elearning_enabled": aps_elearning_enabled,
         "exclude_from_sales_tracking": exclude_from_sales_tracking,
         "created_at": _now_iso(),
@@ -15393,6 +15405,10 @@ def api_update_session(session_id: str):
         "practice_training_date",
         "ssiap_exam_date",
         "aps_in_person_start",
+        "dirigeant_remote_start",
+        "dirigeant_remote_end",
+        "dirigeant_in_person_start",
+        "dirigeant_in_person_end",
         "prospects_comment",
     ):
         if key in payload:

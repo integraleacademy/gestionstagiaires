@@ -840,7 +840,7 @@
     <div class="card-actions session-actions">
       <a class="btn session-action session-action--primary" href="{{ url_for('admin_trainees', session_id=s.id, **request.args) }}">👥 Voir les stagiaires</a>
       {% if not is_read_only %}
-        <button class="btn btn-outline session-action" data-edit-session="{{ s.id }}" data-training-type="{{ s.training_type }}" data-date-start="{{ s.date_start }}" data-date-end="{{ s.date_end }}" data-exam-date="{{ s.exam_date }}" data-exam-theory-date="{{ s.exam_theory_date }}" data-exam-practice-date="{{ s.exam_practice_date }}" data-practice-training-date="{{ s.practice_training_date }}" data-aps-remote-start="{{ s.aps_remote_start }}" data-aps-remote-end="{{ s.aps_remote_end }}" data-aps-in-person-start="{{ s.aps_in_person_start }}" data-aps-in-person-end="{{ s.aps_in_person_end }}" data-aps-elearning-enabled="{{ '1' if s.aps_elearning_enabled else '0' }}">✏️ Modifier</button>
+        <button class="btn btn-outline session-action" data-edit-session="{{ s.id }}" data-training-type="{{ s.training_type }}" data-date-start="{{ s.date_start }}" data-date-end="{{ s.date_end }}" data-exam-date="{{ s.exam_date }}" data-exam-theory-date="{{ s.exam_theory_date }}" data-exam-practice-date="{{ s.exam_practice_date }}" data-practice-training-date="{{ s.practice_training_date }}" data-aps-remote-start="{{ s.aps_remote_start }}" data-aps-remote-end="{{ s.aps_remote_end }}" data-aps-in-person-start="{{ s.aps_in_person_start }}" data-aps-in-person-end="{{ s.aps_in_person_end }}" data-dirigeant-remote-start="{{ s.dirigeant_remote_start }}" data-dirigeant-remote-end="{{ s.dirigeant_remote_end }}" data-dirigeant-in-person-start="{{ s.dirigeant_in_person_start }}" data-dirigeant-in-person-end="{{ s.dirigeant_in_person_end }}" data-aps-elearning-enabled="{{ '1' if s.aps_elearning_enabled else '0' }}">✏️ Modifier</button>
         <button class="btn btn-outline session-action" data-archive-session="{{ s.id }}">📦 Archiver</button>
         <button class="btn btn-danger session-action session-action--danger" data-delete-session="{{ s.id }}">🗑️ Supprimer</button>
       {% endif %}
@@ -892,6 +892,23 @@
         <label id="apsInPersonStartField" style="display:none;">
           <div class="label">Début présentiel APS</div>
           <input id="apsInPersonStart" type="date">
+        </label>
+
+        <label id="dirigeantRemoteStartField" style="display:none;">
+          <div class="label">Début distanciel</div>
+          <input id="dirigeantRemoteStart" type="date">
+        </label>
+        <label id="dirigeantRemoteEndField" style="display:none;">
+          <div class="label">Fin distanciel</div>
+          <input id="dirigeantRemoteEnd" type="date">
+        </label>
+        <label id="dirigeantInPersonStartField" style="display:none;">
+          <div class="label">Début présentiel</div>
+          <input id="dirigeantInPersonStart" type="date">
+        </label>
+        <label id="dirigeantInPersonEndField" style="display:none;">
+          <div class="label">Fin présentiel</div>
+          <input id="dirigeantInPersonEnd" type="date">
         </label>
 
         <label id="examDateField">
@@ -1097,6 +1114,23 @@
         <label id="editApsInPersonStartField" style="display:none;">
           <div class="label">Début présentiel APS</div>
           <input id="editApsInPersonStart" type="date">
+        </label>
+
+        <label id="editDirigeantRemoteStartField" style="display:none;">
+          <div class="label">Début distanciel</div>
+          <input id="editDirigeantRemoteStart" type="date">
+        </label>
+        <label id="editDirigeantRemoteEndField" style="display:none;">
+          <div class="label">Fin distanciel</div>
+          <input id="editDirigeantRemoteEnd" type="date">
+        </label>
+        <label id="editDirigeantInPersonStartField" style="display:none;">
+          <div class="label">Début présentiel</div>
+          <input id="editDirigeantInPersonStart" type="date">
+        </label>
+        <label id="editDirigeantInPersonEndField" style="display:none;">
+          <div class="label">Fin présentiel</div>
+          <input id="editDirigeantInPersonEnd" type="date">
         </label>
 
         <label id="editExamDateField">
@@ -1733,6 +1767,14 @@
     if(inPersonEnd) inPersonEnd.textContent = periods ? formatApsPeriodDate(manualEnd && !Number.isNaN(manualEnd.getTime()) ? manualEnd : periods.presentielEnd) : "—";
   }
 
+  function setDirigeantDateFieldsVisible(prefix, visible){
+    const ids = ["DirigeantRemoteStartField", "DirigeantRemoteEndField", "DirigeantInPersonStartField", "DirigeantInPersonEndField"];
+    ids.forEach(id=>{
+      const field = document.getElementById(prefix ? `${prefix}${id}` : `${id.charAt(0).toLowerCase()}${id.slice(1)}`);
+      if(field) field.style.display = visible ? "" : "none";
+    });
+  }
+
   function toggleExamFields(){
     const type = (document.getElementById("sessionType")?.value || "").toUpperCase();
     const examDateField = document.getElementById("examDateField");
@@ -1743,7 +1785,9 @@
     const apsElearningField = document.getElementById("apsElearningField");
     const isVtc = type.includes("VTC");
     const isAps = type.startsWith("APS");
+    const isDirigeant = type.startsWith("DIRIGEANT");
 
+    setDirigeantDateFieldsVisible("", isDirigeant);
     if(examDateField) examDateField.style.display = isVtc ? "none" : "";
     if(apsInPersonStartField) apsInPersonStartField.style.display = isAps ? "" : "none";
     if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
@@ -1771,7 +1815,9 @@
     const apsElearningField = document.getElementById("editApsElearningField");
     const isVtc = type.includes("VTC");
     const isAps = type.startsWith("APS");
+    const isDirigeant = type.startsWith("DIRIGEANT");
 
+    setDirigeantDateFieldsVisible("edit", isDirigeant);
     if(examDateField) examDateField.style.display = isVtc ? "none" : "";
     if(apsInPersonStartField) apsInPersonStartField.style.display = isAps ? "" : "none";
     if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
@@ -1793,6 +1839,10 @@
     const practice_training_date = (document.getElementById("practiceTrainingDate")?.value || "").trim();
     const aps_in_person_start = (document.getElementById("apsInPersonStart")?.value || "").trim();
     const aps_elearning_enabled = !!document.getElementById("apsElearningEnabled")?.checked;
+    const dirigeant_remote_start = (document.getElementById("dirigeantRemoteStart")?.value || "").trim();
+    const dirigeant_remote_end = (document.getElementById("dirigeantRemoteEnd")?.value || "").trim();
+    const dirigeant_in_person_start = (document.getElementById("dirigeantInPersonStart")?.value || "").trim();
+    const dirigeant_in_person_end = (document.getElementById("dirigeantInPersonEnd")?.value || "").trim();
 
     if(!name || !training_type){
       alert("Nom + type de formation obligatoires");
@@ -1816,7 +1866,11 @@
           exam_practice_date,
           practice_training_date,
           aps_in_person_start,
-          aps_elearning_enabled
+          aps_elearning_enabled,
+          dirigeant_remote_start,
+          dirigeant_remote_end,
+          dirigeant_in_person_start,
+          dirigeant_in_person_end
         })
       });
 
@@ -1848,6 +1902,10 @@
       document.getElementById("editPracticeTrainingDate").value = btn.getAttribute("data-practice-training-date") || "";
       document.getElementById("editApsInPersonStart").value = btn.getAttribute("data-aps-in-person-start") || "";
       document.getElementById("editApsElearningEnabled").checked = btn.getAttribute("data-aps-elearning-enabled") === "1";
+      document.getElementById("editDirigeantRemoteStart").value = btn.getAttribute("data-dirigeant-remote-start") || "";
+      document.getElementById("editDirigeantRemoteEnd").value = btn.getAttribute("data-dirigeant-remote-end") || "";
+      document.getElementById("editDirigeantInPersonStart").value = btn.getAttribute("data-dirigeant-in-person-start") || "";
+      document.getElementById("editDirigeantInPersonEnd").value = btn.getAttribute("data-dirigeant-in-person-end") || "";
 
       refreshApsPeriodPreview("edit");
       toggleEditExamFields(trainingType);
@@ -1877,7 +1935,11 @@
           exam_practice_date: (document.getElementById("editExamPracticeDate").value || "").trim(),
           practice_training_date: (document.getElementById("editPracticeTrainingDate").value || "").trim(),
           aps_in_person_start: (document.getElementById("editApsInPersonStart").value || "").trim(),
-          aps_elearning_enabled: !!document.getElementById("editApsElearningEnabled")?.checked
+          aps_elearning_enabled: !!document.getElementById("editApsElearningEnabled")?.checked,
+          dirigeant_remote_start: (document.getElementById("editDirigeantRemoteStart").value || "").trim(),
+          dirigeant_remote_end: (document.getElementById("editDirigeantRemoteEnd").value || "").trim(),
+          dirigeant_in_person_start: (document.getElementById("editDirigeantInPersonStart").value || "").trim(),
+          dirigeant_in_person_end: (document.getElementById("editDirigeantInPersonEnd").value || "").trim()
         })
       });
       const res = await r.json();
