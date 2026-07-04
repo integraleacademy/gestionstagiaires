@@ -22963,6 +22963,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
             "can_generate": True, "can_send": convention_signed and convocation_status in {"generated", "sent"}, "block_reason": convocation_block_reason,
             "generated_at": convocation_generated_at_raw, "generated_at_label": convocation_generated_at, "sent_at": convocation_sent_at,
             "download_url": url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id) if has_convocation_file else "",
+            "preview_url": url_for("admin_preview_aps_convocation", session_id=session_id, trainee_id=trainee_id),
             "error": convocation_error,
             "timeline_steps": [
                 {"label": "Convention validée", "value": "Signée" if convention_signed else (convocation_block_reason or "Pas encore effectué"), "state": "done" if convention_signed else "blocked"},

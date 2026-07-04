@@ -125,6 +125,20 @@ class ApsConvocationGenerationTests(unittest.TestCase):
         self.assertEqual(state["signature_link"], "https://new.test/sign")
         self.assertEqual(trainee["convention_signature_history"][0]["signature_request_id"], "old-req")
 
+
+    def test_a3p_automation_status_exposes_convocation_preview_url(self):
+        session = {"id": "session-a3p", "training_type": "A3P", "name": "Formation A3P"}
+        trainee = {"id": "trainee-a3p", "first_name": "Alice", "last_name": "Martin"}
+
+        with app.app.test_request_context():
+            status = app._build_trainee_automation_status(session, trainee, "session-a3p", "trainee-a3p")
+
+        self.assertTrue(status["has_convocation"])
+        self.assertEqual(
+            status["convocation"]["preview_url"],
+            "/admin/sessions/session-a3p/stagiaires/trainee-a3p/convocation-aps/preview",
+        )
+
     def test_signed_convention_can_be_regenerated_from_automation_status(self):
         session = {"id": "session-1", "training_type": "APS", "name": "Formation APS"}
         trainee = {
