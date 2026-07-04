@@ -11342,6 +11342,8 @@ def admin_sessions_conventions():
             if _refresh_yousign_convention_status_if_pending(data, sess, trainees, trainee):
                 data_changed = True
                 state = _yousign_state(trainee)
+            if not _has_generated_yousign_convention(trainee):
+                continue
             automation = _build_trainee_automation_status(sess, trainee, session_id, trainee_id)
             convention = automation["convention"]
             status_key = convention.get("status") or "not_generated"
@@ -22861,6 +22863,18 @@ def _format_automation_datetime(value: Any) -> str:
     return fr_datetime(str(value))
 
 
+def _has_generated_yousign_convention(trainee: Dict[str, Any]) -> bool:
+    """Return True once a convention document or Yousign request exists."""
+    state = _yousign_state(trainee)
+    return bool(
+        state.get("signature_request_id")
+        or state.get("unsigned_pdf_path")
+        or state.get("signed_pdf_path")
+        or trainee.get("convention_aps_pdf_path")
+        or trainee.get("convention_aps_docx_path")
+    )
+
+
 def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> Dict[str, Any]:
     """Centralise l'état des documents automatisés affiché sur la fiche stagiaire."""
     state = _yousign_state(trainee)
@@ -22871,7 +22885,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     generated_at = _format_automation_datetime(generated_at_raw)
     sent_at = _format_automation_datetime(sent_at_raw)
     signed_at = _format_automation_datetime(signed_at_raw)
-    has_generated_convention = bool(state.get("unsigned_pdf_path") or trainee.get("convention_aps_pdf_path"))
+    has_generated_convention = _has_generated_yousign_convention(trainee)
     has_signature_request = bool(state.get("signature_request_id"))
     convention_error = state.get("last_error") or state.get("signature_email_last_error") or state.get("last_email_error") or state.get("last_status_sync_error") or ""
     if raw_status in {"error", "download_error"}:
@@ -23007,7 +23021,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
             "error": convocation_error,
             "timeline_steps": [
                 {"label": "Convention validée", "value": "Signée" if convention_signed else (convocation_block_reason or "Pas encore effectué"), "state": "done" if convention_signed else "blocked"},
-                {"label": "Génération", "value": convocation_generated_at_raw or "Pas encore effectué", "state": "done" if convocation_generated_at_raw else ("pending" if convention_signed else "blocked")},
+                {"label": "Génération", "value": convocation_generated_at or "Pas encore effectué", "state": "done" if convocation_generated_at_raw else ("pending" if convention_signed else "blocked")},
                 {"label": "Envoi", "value": ("Envoyée le " + convocation_sent_at) if convocation_sent_at else "Pas encore effectué", "state": "done" if convocation_sent_at else ("pending" if has_convocation_file else "blocked")},
             ],
         },
