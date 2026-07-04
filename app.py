@@ -11289,7 +11289,8 @@ def admin_cash_payments():
 def admin_sessions_conventions():
     data = load_data()
     selected_formation = (request.args.get("formation") or "").strip().upper()
-    selected_status = (request.args.get("status") or "").strip().lower()
+    selected_status_param = (request.args.get("status") or "").strip().lower()
+    selected_status = selected_status_param
     selected_q = (request.args.get("q") or "").strip().lower()
     convention_rows = []
     formation_options_by_key = {}
@@ -11303,6 +11304,8 @@ def admin_sessions_conventions():
         {"key": "refused", "label": "Refusée"},
         {"key": "error", "label": "Erreur"},
     ]
+    if selected_status == "signing":
+        selected_status = "waiting_signature"
     valid_statuses = {option["key"] for option in status_options}
     if selected_status and selected_status not in valid_statuses:
         selected_status = ""
@@ -11323,10 +11326,18 @@ def admin_sessions_conventions():
             continue
 
         trainees = _session_trainees_list(sess)
-        for trainee in trainees:
-            trainee_id = str(trainee.get("id") or "")
-            if not trainee_id:
-                continue
+        for trainee_index, trainee in enumerate(trainees):
+            trainee_id = str(trainee.get("id") or f"trainee-{trainee_index + 1}")
+            is_vae_convention_row = "VAE" in str(training_type or "").upper()
+            if is_vae_convention_row:
+                vae_key = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))["key"]
+                inferred_vae_key = _infer_vae_status_from_action_dates(trainee.get("vae_action_dates"))
+                if inferred_vae_key and VAE_STATUS_RANK.get(inferred_vae_key, -1) > VAE_STATUS_RANK.get(vae_key, -1):
+                    vae_key = inferred_vae_key
+                if VAE_STATUS_RANK.get(vae_key, -1) < VAE_STATUS_RANK.get("financement_validated", 0):
+                    continue
+                if (trainee.get("convention_status") or "").strip().lower() == "signed":
+                    continue
             state = _yousign_state(trainee)
             if _refresh_yousign_convention_status_if_pending(data, sess, trainees, trainee):
                 data_changed = True
@@ -11334,6 +11345,18 @@ def admin_sessions_conventions():
             automation = _build_trainee_automation_status(sess, trainee, session_id, trainee_id)
             convention = automation["convention"]
             status_key = convention.get("status") or "not_generated"
+            legacy_convention_status = (trainee.get("convention_status") or "").strip().lower()
+            if not state.get("signature_request_id") and not state.get("unsigned_pdf_path") and not trainee.get("convention_aps_pdf_path"):
+                if legacy_convention_status == "signing":
+                    status_key = "waiting_signature"
+                    convention["status"] = status_key
+                    convention["label"] = "Signature attendue"
+                    convention["tone"] = "waiting"
+                elif legacy_convention_status == "signed":
+                    status_key = "signed"
+                    convention["status"] = status_key
+                    convention["label"] = "Signée"
+                    convention["tone"] = "complete"
             if selected_status and status_key != selected_status:
                 continue
 
@@ -11409,7 +11432,8 @@ def admin_sessions_conventions():
         formation_options=formation_options,
         status_options=status_options,
         selected_formation=selected_formation,
-        selected_status=selected_status,
+        selected_status=(selected_status_param or selected_status),
+        selected_status_effective=selected_status,
         selected_q=request.args.get("q") or "",
     ))
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
@@ -21038,7 +21062,7 @@ def _automation_training_text(session_obj: Dict[str, Any]) -> str:
 def _automation_document_config(session_obj: Dict[str, Any]) -> Dict[str, Any]:
     text = _automation_training_text(session_obj)
     if "VAE" in text:
-        return {"enabled": False}
+        return {"enabled": True, "slug": "vae", "label": "VAE", "convention_template": "conventionvae.docx"}
     if "A3P" in text:
         return {"enabled": True, "slug": "a3p", "label": "A3P", "convention_template": "conventiona3p.docx", "entry_template": "attestationentreea3p.docx", "end_template": "attestationfina3p.docx", "convocation_template": "convocationa3p.docx"}
     if "VTC" in text:
@@ -21812,8 +21836,6 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
         return existing_state
     if force_new and has_existing_request:
         _cancel_yousign_convention_signature(trainee, "other")
-    if "VAE" in str(_session_get(session_obj, "training_type", "") or "").upper():
-        raise RuntimeError("La signature Yousign de convention n’est pas proposée pour les formations VAE.")
     if not _yousign_is_configured():
         raise RuntimeError("Yousign Sandbox n’est pas configuré : vérifiez YOUSIGN_API_KEY et YOUSIGN_WEBHOOK_SECRET dans Render.")
     email = str(trainee.get("email") or "").strip()
@@ -25014,8 +25036,6 @@ def admin_preview_convention(session_id: str, trainee_id: str):
     s, _, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         abort(404)
-    if "VAE" in str(_session_get(s, "training_type", "") or "").upper():
-        abort(404)
     try:
         _, pdf_path = _generate_aps_convention_files(s, t, session_id, trainee_id)
     except Exception as exc:
@@ -25045,8 +25065,6 @@ def api_update_convention_financing(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
-    if "VAE" in str(_session_get(s, "training_type", "") or "").upper():
-        return jsonify({"ok": False, "error": "Convention non proposée pour les formations VAE"}), 400
     payload = request.get_json(silent=True) or {}
     _apply_convention_financing_payload(t, payload)
     s["trainees"] = trainees
@@ -25063,8 +25081,6 @@ def api_create_convention_signature(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
-    if "VAE" in str(_session_get(s, "training_type", "") or "").upper():
-        return jsonify({"ok": False, "error": "Convention non proposée pour les formations VAE"}), 400
     payload = request.get_json(silent=True) or {}
     _apply_convention_financing_payload(t, payload)
     try:

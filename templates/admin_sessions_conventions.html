@@ -39,12 +39,12 @@
   <form class="conv-toolbar no-print" method="get">
     <div class="conv-field"><label for="q-filter">Recherche</label><input id="q-filter" name="q" value="{{ selected_q }}" placeholder="Nom, email, ID Yousign…"></div>
     <div class="conv-field"><label for="formation-filter">Formation</label><select id="formation-filter" name="formation"><option value="">Toutes les formations</option>{% for option in formation_options %}<option value="{{ option.key }}" {% if selected_formation == option.key %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
-    <div class="conv-field"><label for="status-filter">Statut</label><select id="status-filter" name="status"><option value="">Tous les statuts</option>{% for option in status_options %}<option value="{{ option.key }}" {% if selected_status == option.key %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
+    <div class="conv-field"><label for="status-filter">Statut</label><select id="status-filter" name="status"><option value="">Tous les statuts</option><option value="signing" {% if selected_status == 'signing' %}selected{% endif %}>En attente de signature</option>{% for option in status_options %}<option value="{{ option.key }}" {% if selected_status_effective|default(selected_status) == option.key and selected_status != 'signing' %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
     <div class="conv-filter-actions"><button class="btn btn-primary" type="submit">Filtrer</button><a class="btn btn-outline" href="{{ url_for('admin_sessions_conventions') }}">Réinitialiser</a></div>
   </form>
 
   <section class="conv-board">
-    <div class="conv-board__head"><div><h2>Tableau de suivi des signatures</h2><p>{{ rows|length }} résultat(s) — statuts Yousign synchronisés automatiquement lorsque la demande est en attente.</p><p class="conv-print-note">Export imprimé depuis la page Conventions.</p></div></div>
+    <div class="conv-board__head"><div><h2>Tableau de suivi des signatures</h2><p>{{ rows|length }} résultat(s) — statuts Yousign synchronisés automatiquement lorsque la demande est en attente.</p><p class="conv-meta">Les VAE sont incluses à partir du statut <strong>Financement validé</strong>.</p><p class="conv-print-note">Export imprimé depuis la page Conventions.</p></div></div>
     <div class="conv-table-wrap">
       <table class="conv-table">
         <thead><tr><th>Stagiaire</th><th>Formation / session</th><th>Statut</th><th>Yousign</th><th>Historique</th><th>Documents</th><th class="no-print">Actions</th></tr></thead>

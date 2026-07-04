@@ -2150,10 +2150,16 @@ document.querySelectorAll(".automation-loading-form").forEach((form)=>{
   form.addEventListener("submit", async (event)=>{
     const btn = form.querySelector("button");
     const isConventionTransmission = form.dataset.conventionTransmissionForm === "true" || /\/convention\/(?:yousign|signature\/create)(?:$|[?#])/.test(form.action || "");
-    if(isConventionTransmission && typeof window.showConventionTransmissionProgress === "function"){
-      window.showConventionTransmissionProgress();
+    if(isConventionTransmission){
+      event.preventDefault();
+      const conventionPayload = await requestVaeConventionTransmission();
+      if(!conventionPayload) return;
+      if(btn){ btn.disabled = true; btn.setAttribute("aria-busy", "true"); btn.dataset.originalText = btn.textContent; btn.textContent = "Transmission…"; }
+      const sent = await sendVaeConventionSignature(conventionPayload, {forceNew: form.dataset.yousignForceNew === "true"});
+      if(!sent && btn){ btn.disabled = false; btn.removeAttribute("aria-busy"); btn.textContent = btn.dataset.originalText || "Réessayer"; }
+      return;
     }
-    if(btn){ btn.disabled = true; btn.setAttribute("aria-busy", "true"); btn.dataset.originalText = btn.textContent; btn.textContent = isConventionTransmission ? "Transmission…" : "Traitement…"; }
+    if(btn){ btn.disabled = true; btn.setAttribute("aria-busy", "true"); btn.dataset.originalText = btn.textContent; btn.textContent = "Traitement…"; }
     if(form.action.includes("/automation/")){
       event.preventDefault();
       try{
@@ -3266,6 +3272,75 @@ function updateDocsRelanceState(status, plannedDateIso){
   });
 
 
+
+  const vaeConventionConfig = {
+    financingUrl: "{{ url_for('api_update_convention_financing', session_id=session.id, trainee_id=trainee.id) }}",
+    signatureUrl: "{{ url_for('api_create_convention_signature', session_id=session.id, trainee_id=trainee.id) }}",
+    previewUrl: "{{ url_for('admin_preview_convention', session_id=session.id, trainee_id=trainee.id) }}",
+    isVae: {{ ('VAE' in (session.training_type or '')|upper)|tojson }},
+    defaults: {
+      training_price: {{ (trainee.training_price or trainee.montant_formation or session.training_price or '')|tojson }},
+      cpf_amount: {{ (trainee.cpf_amount or trainee.montant_cpf or '')|tojson }},
+      personal_amount: {{ (trainee.personal_amount or trainee.montant_financement_personnel or trainee.montant_personnel or '')|tojson }},
+      other_amount: {{ (trainee.other_amount or trainee.montant_autre or '')|tojson }}
+    }
+  };
+
+  async function saveVaeConventionFinancing(payload){
+    const response = await fetch(vaeConventionConfig.financingUrl, {
+      method: "POST",
+      headers: {"Content-Type":"application/json", "Accept":"application/json"},
+      body: JSON.stringify(payload || {})
+    });
+    const data = await response.json().catch(()=>({}));
+    if(!response.ok || data.ok === false){
+      throw new Error(data.error || "Impossible de sauvegarder les montants de financement.");
+    }
+  }
+
+  async function requestVaeConventionTransmission(){
+    return await window.openConventionTransmission?.({
+      defaults: vaeConventionConfig.defaults,
+      previewUrl: vaeConventionConfig.previewUrl,
+      onPreview: async (payload)=>{
+        await saveVaeConventionFinancing(payload);
+        await window.openConventionPreview?.(vaeConventionConfig.previewUrl, {
+          title: vaeConventionConfig.isVae ? "Convention VAE" : "Convention",
+          description: vaeConventionConfig.isVae ? "Vérifiez la convention VAE avant l’envoi pour signature électronique." : "Vérifiez la convention avant l’envoi pour signature électronique.",
+          frameTitle: vaeConventionConfig.isVae ? "Aperçu de la convention VAE" : "Aperçu de la convention"
+        });
+      }
+    });
+  }
+
+  async function sendVaeConventionSignature(payload, options = {}){
+    try{
+      await saveVaeConventionFinancing(payload);
+      window.showConventionTransmissionProgress?.();
+      const response = await fetch(vaeConventionConfig.signatureUrl, {
+        method: "POST",
+        headers: {"Content-Type":"application/json", "Accept":"application/json"},
+        body: JSON.stringify({...payload, force_new: !!options.forceNew})
+      });
+      const data = await response.json().catch(()=>({}));
+      if(!response.ok || data.ok === false){
+        throw new Error(data.error || "Envoi Yousign impossible.");
+      }
+      window.hideConventionTransmissionProgress?.();
+      await (window.showConventionResult?.({
+        title: vaeConventionConfig.isVae ? "Convention VAE envoyée" : "Convention envoyée",
+        message: data.email_ok === false ? "La demande Yousign a été créée, mais l’e-mail n’a pas pu être envoyé automatiquement." : (vaeConventionConfig.isVae ? "La convention VAE a été envoyée au stagiaire pour signature électronique." : "La convention a été envoyée au stagiaire pour signature électronique."),
+        type: data.email_ok === false ? "warning" : "success"
+      }) || Promise.resolve(window.alert(vaeConventionConfig.isVae ? "Convention VAE envoyée." : "Convention envoyée.")));
+      window.location.reload();
+      return true;
+    }catch(error){
+      window.hideConventionTransmissionProgress?.();
+      await (window.showConventionResult?.({type:"error", title: vaeConventionConfig.isVae ? "Convention VAE non envoyée" : "Convention non envoyée", message:error.message || (vaeConventionConfig.isVae ? "Impossible d’envoyer la convention VAE." : "Impossible d’envoyer la convention."), buttonText:"Compris"}) || Promise.resolve(window.alert(error.message || (vaeConventionConfig.isVae ? "Impossible d’envoyer la convention VAE." : "Impossible d’envoyer la convention."))));
+      return false;
+    }
+  }
+
   // VAE (actions dédiées DIRIGEANT VAE)
   let vaeActionRequestInFlight = false;
   window.setVaeAction = async function setVaeAction(actionKey){
@@ -3351,6 +3426,12 @@ function updateDocsRelanceState(status, plannedDateIso){
       };
     }
 
+    let vaeConventionPayload = null;
+    if(!isReset && actionKey === "financement_validated"){
+      vaeConventionPayload = await requestVaeConventionTransmission();
+      if(!vaeConventionPayload) return;
+    }
+
     vaeActionRequestInFlight = true;
 
     let sendVaeNotification = !isReset;
@@ -3370,6 +3451,10 @@ function updateDocsRelanceState(status, plannedDateIso){
       const data = await res.json().catch(()=>({}));
       if(!res.ok || data.ok === false){
         throw new Error('save_failed');
+      }
+      if(vaeConventionPayload){
+        const sent = await sendVaeConventionSignature(vaeConventionPayload);
+        if(sent) return;
       }
       if(!isReset && (actionKey === "livret_1_transmitted_scotia" || actionKey === "livret_2_transmitted_scotia")){
         window.location.href = "/scotia";
