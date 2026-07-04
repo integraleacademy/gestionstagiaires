@@ -899,14 +899,6 @@
           <input id="apsInPersonStart" type="date">
         </label>
 
-        <label id="dirigeantRemoteStartField" style="display:none;">
-          <div class="label">Début distanciel</div>
-          <input id="dirigeantRemoteStart" type="date">
-        </label>
-        <label id="dirigeantRemoteEndField" style="display:none;">
-          <div class="label">Fin distanciel</div>
-          <input id="dirigeantRemoteEnd" type="date">
-        </label>
         <label id="dirigeantInPersonStartField" style="display:none;">
           <div class="label">Début présentiel</div>
           <input id="dirigeantInPersonStart" type="date">
@@ -914,6 +906,14 @@
         <label id="dirigeantInPersonEndField" style="display:none;">
           <div class="label">Fin présentiel</div>
           <input id="dirigeantInPersonEnd" type="date">
+        </label>
+        <label id="dirigeantRemoteStartField" style="display:none;">
+          <div class="label">Début distanciel</div>
+          <input id="dirigeantRemoteStart" type="date">
+        </label>
+        <label id="dirigeantRemoteEndField" style="display:none;">
+          <div class="label">Fin distanciel</div>
+          <input id="dirigeantRemoteEnd" type="date">
         </label>
 
         <label id="examDateField">
@@ -1121,14 +1121,6 @@
           <input id="editApsInPersonStart" type="date">
         </label>
 
-        <label id="editDirigeantRemoteStartField" style="display:none;">
-          <div class="label">Début distanciel</div>
-          <input id="editDirigeantRemoteStart" type="date">
-        </label>
-        <label id="editDirigeantRemoteEndField" style="display:none;">
-          <div class="label">Fin distanciel</div>
-          <input id="editDirigeantRemoteEnd" type="date">
-        </label>
         <label id="editDirigeantInPersonStartField" style="display:none;">
           <div class="label">Début présentiel</div>
           <input id="editDirigeantInPersonStart" type="date">
@@ -1136,6 +1128,14 @@
         <label id="editDirigeantInPersonEndField" style="display:none;">
           <div class="label">Fin présentiel</div>
           <input id="editDirigeantInPersonEnd" type="date">
+        </label>
+        <label id="editDirigeantRemoteStartField" style="display:none;">
+          <div class="label">Début distanciel</div>
+          <input id="editDirigeantRemoteStart" type="date">
+        </label>
+        <label id="editDirigeantRemoteEndField" style="display:none;">
+          <div class="label">Fin distanciel</div>
+          <input id="editDirigeantRemoteEnd" type="date">
         </label>
 
         <label id="editExamDateField">
@@ -1761,9 +1761,8 @@
     const startValue = (document.getElementById(isEdit ? "editDateStart" : "dateStart")?.value || "").trim();
     const inPersonStartValue = (document.getElementById(isEdit ? "editApsInPersonStart" : "apsInPersonStart")?.value || "").trim();
     const isAps = type.startsWith("APS");
-    const isDirigeant = type.startsWith("DIRIGEANT");
     if(container) container.style.display = isAps ? "" : "none";
-    if(dateEndField) dateEndField.style.display = isDirigeant ? "none" : "";
+    if(dateEndField) dateEndField.style.display = "";
     if(!isAps) return;
     const periods = calculateApsPeriods(startValue, inPersonStartValue);
     const manualEndValue = (document.getElementById(isEdit ? "editDateEnd" : "dateEnd")?.value || "").trim();
