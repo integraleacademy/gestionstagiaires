@@ -23910,7 +23910,7 @@ def _qonto_payment_global_status(line: Dict[str, Any]) -> str:
 
 def _normalize_billing_invoice_status(status: Any) -> str:
     value = str(status or '').strip().lower()
-    return {'not_generated': 'not_invoiced', 'generated': 'finalized', 'unpaid': 'sent', 'missing': 'control', 'deleted': 'control', 'sync_error': 'control', 'error': 'control'}.get(value, value or 'not_invoiced')
+    return {'not_generated': 'not_invoiced', 'generated': 'finalized', 'unpaid': 'sent', 'missing': 'control', 'deleted': 'control', 'sync_error': 'control', 'error': 'control', 'external': 'external_generated', 'external_generated': 'external_generated', 'generated_externally': 'external_generated'}.get(value, value or 'not_invoiced')
 
 
 def _financing_entries(trainee: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -24016,7 +24016,7 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     'qonto_mandate_sign_url': persisted.get('qonto_mandate_sign_url') or '',
                     'qonto_mandate_signed_at': persisted.get('qonto_mandate_signed_at') or '',
                     'sepa_payment_plan': persisted.get('sepa_payment_plan') if isinstance(persisted.get('sepa_payment_plan'), dict) else {},
-                    'generationInProgress': bool(persisted.get('generationInProgress')), 'syncWarning': persisted.get('syncWarning') or '', 'createdAt': persisted.get('createdAt') or _now_iso(),
+                    'generationInProgress': bool(persisted.get('generationInProgress')), 'syncWarning': persisted.get('syncWarning') or '', 'externalInvoiceMarkedAt': persisted.get('externalInvoiceMarkedAt') or '', 'externalInvoiceNote': persisted.get('externalInvoiceNote') or '', 'createdAt': persisted.get('createdAt') or _now_iso(),
                     'updatedAt': persisted.get('updatedAt') or _now_iso(), 'logs': persisted.get('logs') if isinstance(persisted.get('logs'), list) else [],
                     'traineeLastName': trainee.get('last_name') or '', 'traineeFirstName': trainee.get('first_name') or '',
                     'traineeEmail': trainee.get('email') or '', 'financeurName': persisted.get('financeurName') or financing.get('label') or financing['type'], 'typeFinanceur': financing['type'], 'clientName': (CPF_QONTO_CLIENT_NAME if is_cpf_billing_context(financing) else (persisted.get('clientName') or buildInvoiceCustomer(financing['type'], trainee, sess, financing).get('name') or f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip())),
@@ -24042,7 +24042,7 @@ def _billing_lines(data: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
     all_map = _billing_existing_map(data)
-    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','sepa_payment_plan')}
+    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote')}
     persisted['updatedAt'] = _now_iso()
     all_map[line['id']] = persisted
     data['billing_lines'] = list(all_map.values())
@@ -24056,10 +24056,10 @@ def _reset_missing_qonto_invoice(line: Dict[str, Any]) -> None:
     for key in (
         'qontoInvoiceId', 'qonto_invoice_id', 'qontoStatus', 'qonto_status', 'invoiceNumber', 'invoice_number',
         'qontoInvoiceNumber', 'invoiceDate', 'invoice_date', 'invoicePdfUrl', 'pdf_url', 'qontoPdfUrl',
-        'draftCreatedAt', 'invoiceGeneratedAt', 'invoiceDownloadedAt', 'qontoDraftId', 'finalizedAt', 'sentAt', 'paidAt', 'cancelledAt'
+        'draftCreatedAt', 'invoiceGeneratedAt', 'invoiceDownloadedAt', 'qontoDraftId', 'finalizedAt', 'sentAt', 'paidAt', 'cancelledAt', 'externalInvoiceMarkedAt', 'externalInvoiceNote'
     ):
         line[key] = '' if key in line else line.get(key, '')
-    if (line.get('invoiceStatus') or '') in {'draft', 'generated', 'finalized', 'sent', 'paid', 'cancelled', 'deleted', 'control'}:
+    if (line.get('invoiceStatus') or '') in {'draft', 'generated', 'finalized', 'sent', 'paid', 'cancelled', 'deleted', 'control', 'external_generated', 'external', 'generated_externally'}:
         line['invoiceStatus'] = 'not_invoiced'
     if (line.get('paymentStatus') or '') in {'unpaid', 'unknown', 'paid', 'control'}:
         line['paymentStatus'] = 'not_applicable'
@@ -24186,7 +24186,7 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
         current = _find_billing_line(data, line['id']) or line
         if is_cpf_billing_context(current):
             return False, {'error': 'La facturation CPF est gérée dans un logiciel externe.', 'message': 'La facturation CPF est gérée dans un logiciel externe.', 'line': current}
-        if current.get('qontoInvoiceId') or _normalize_billing_invoice_status(current.get('invoiceStatus')) in {'draft','finalized','sent','paid'}:
+        if current.get('qontoInvoiceId') or _normalize_billing_invoice_status(current.get('invoiceStatus')) in {'draft','finalized','sent','paid','external_generated'}:
             _billing_log(current, 'Génération facture bloquée', 'ignored', 'Facture déjà existante', current.get('qontoInvoiceId') or '')
             _save_billing_line(data, current); save_data(data)
             return False, {'error': 'Facture déjà créée', 'message': 'Facture déjà créée', 'line': current, 'ignored': True}
@@ -24379,6 +24379,24 @@ def api_billing_send():
         return jsonify({'ok': False, 'error': _sanitize_qonto_error(str(exc))}), 400
 
 
+
+@app.post('/api/billing/mark-external')
+@admin_login_required
+@admin_write_required
+def api_billing_mark_external():
+    data = load_data(); payload = request.get_json(silent=True) or {}; line = _line_from_payload(data, payload)
+    if not line: return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
+    if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
+        return jsonify({'ok': False, 'error': 'Une facture Qonto est déjà liée à cette ligne.'}), 400
+    line['invoiceStatus'] = 'external_generated'
+    line['paymentStatus'] = 'not_applicable'
+    line['externalInvoiceMarkedAt'] = _now_iso()
+    line['externalInvoiceNote'] = str(payload.get('note') or 'Facture générée via un autre logiciel').strip()[:500]
+    line['generationInProgress'] = False
+    _billing_log(line, 'Facture marquée comme générée hors Qonto', 'success', line['externalInvoiceNote'])
+    _save_billing_line(data, line); save_data(data)
+    return jsonify({'ok': True, 'line': _find_billing_line(data, line['id'])})
+
 @app.post('/api/billing/cancel-or-reset')
 @admin_login_required
 @admin_write_required
@@ -24534,7 +24552,7 @@ def api_admin_billing_bulk_generate():
     for line_id in ids:
         line = _find_billing_line(data, str(line_id))
         if not line: summary['failed'].append({'id': line_id, 'error': 'introuvable'}); continue
-        if line.get('qontoInvoiceId') or _normalize_billing_invoice_status(line.get('invoiceStatus')) in {'finalized','sent','paid'}: summary['ignored'].append(line); continue
+        if line.get('qontoInvoiceId') or _normalize_billing_invoice_status(line.get('invoiceStatus')) in {'draft','finalized','sent','paid','external_generated'}: summary['ignored'].append(line); continue
         ok, res = _create_invoice_for_billing_line(data, line)
         summary['created' if ok else 'failed'].append(res.get('line') or {'id': line_id, 'error': res.get('error')})
         data = load_data()
