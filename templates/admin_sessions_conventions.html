@@ -79,23 +79,29 @@ document.addEventListener('click', async event => {
 document.addEventListener('click', async event => {
   const btn = event.target.closest('[data-convention-print-row]');
   if(!btn) return;
-  if(btn.classList.contains('is-printed') || btn.disabled) return;
+  if(btn.disabled) return;
   const traineeId = btn.getAttribute('data-trainee-id') || '';
+  const wasPrinted = btn.classList.contains('is-printed');
+  const nextPrinted = !wasPrinted;
   const label = btn.querySelector('.conv-print-row-btn__label');
-  const originalText = label?.textContent || 'Imprimer';
+  const originalText = label?.textContent || (wasPrinted ? 'Imprimé' : 'Imprimer');
   btn.disabled = true;
   if(label) label.textContent = '...';
   try{
-    const response = await fetch(`/api/stagiaires/${traineeId}/mark-printed`, {method:'POST'});
+    const response = await fetch(`/api/stagiaires/${traineeId}/mark-printed`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({printed:nextPrinted})
+    });
     const result = await response.json().catch(()=>({}));
     if(!response.ok || result?.success === false){ throw new Error(result?.error || `Erreur impression (${response.status})`); }
-    btn.classList.add('is-printed');
-    btn.setAttribute('aria-pressed', 'true');
-    btn.setAttribute('title', 'Déjà imprimé');
-    if(label) label.textContent = 'Imprimé';
+    btn.classList.toggle('is-printed', nextPrinted);
+    btn.setAttribute('aria-pressed', nextPrinted ? 'true' : 'false');
+    btn.setAttribute('title', nextPrinted ? 'Déjà imprimé' : 'Marquer comme imprimé');
+    if(label) label.textContent = nextPrinted ? 'Imprimé' : 'Imprimer';
   }catch(e){
     console.error(e);
-    alert('Impossible de marquer cette convention comme imprimée.');
+    alert('Impossible de modifier l’état d’impression de cette convention.');
     if(label) label.textContent = originalText;
   }finally{
     btn.disabled = false;
