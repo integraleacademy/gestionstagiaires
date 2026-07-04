@@ -101,7 +101,13 @@ class AdminSessionsSsiapTests(unittest.TestCase):
         ]
         positions = [create_modal.index(marker) for marker in expected_order]
         self.assertEqual(positions, sorted(positions))
+        self.assertIn(
+            'const ids = ["DirigeantInPersonStartField", "DirigeantInPersonEndField", '
+            '"DirigeantRemoteStartField", "DirigeantRemoteEndField"];',
+            html,
+        )
         self.assertIn('setFieldVisible("dateEndField", true);', html)
+        self.assertIn('setFieldVisible("editDateEndField", true);', html)
         self.assertIn('if(dateEndField) dateEndField.style.display = "";', html)
 
     def test_ssiap_summary_displays_red_ssiap_1_badge(self):

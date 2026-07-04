@@ -1774,7 +1774,7 @@
   }
 
   function setDirigeantDateFieldsVisible(prefix, visible){
-    const ids = ["DirigeantRemoteStartField", "DirigeantRemoteEndField", "DirigeantInPersonStartField", "DirigeantInPersonEndField"];
+    const ids = ["DirigeantInPersonStartField", "DirigeantInPersonEndField", "DirigeantRemoteStartField", "DirigeantRemoteEndField"];
     ids.forEach(id=>{
       const field = document.getElementById(prefix ? `${prefix}${id}` : `${id.charAt(0).toLowerCase()}${id.slice(1)}`);
       if(field) field.style.display = visible ? "" : "none";
@@ -1822,6 +1822,7 @@
     if(practiceTrainingField) practiceTrainingField.style.display = isVtc ? "" : "none";
     if(apsElearningField) apsElearningField.style.display = isAps ? "" : "none";
     refreshApsPeriodPreview("");
+    setFieldVisible("dateEndField", true);
     if(!isAps) document.getElementById("apsElearningEnabled").checked = false;
   }
 
@@ -1854,6 +1855,7 @@
     if(practiceTrainingField) practiceTrainingField.style.display = isVtc ? "" : "none";
     if(apsElearningField) apsElearningField.style.display = isAps ? "" : "none";
     refreshApsPeriodPreview("edit");
+    setFieldVisible("editDateEndField", true);
   }
 
   // create session
