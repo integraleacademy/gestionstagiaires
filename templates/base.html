@@ -299,7 +299,7 @@
         <div>
           <div class="convention-preview-modal__kicker">Prévisualisation</div>
           <h2 id="conventionPreviewTitle">Convention de formation</h2>
-          <p>Vérifiez le document avant de confirmer l’envoi pour signature électronique.</p>
+          <p id="conventionPreviewDescription">Vérifiez le document avant de confirmer l’envoi pour signature électronique.</p>
         </div>
         <button class="icon-btn convention-preview-modal__x" id="conventionPreviewCloseIcon" type="button" aria-label="Fermer la prévisualisation">×</button>
       </div>
@@ -556,17 +556,30 @@
     });
   }
 
-  function openConventionPreview(url){
+  function openConventionPreview(url, options = {}){
     return new Promise((resolve)=>{
       const modal = document.getElementById("conventionPreviewModal");
       const frame = document.getElementById("conventionPreviewFrame");
       const loader = document.getElementById("conventionPreviewLoader");
       const closeButton = document.getElementById("conventionPreviewClose");
       const closeIcon = document.getElementById("conventionPreviewCloseIcon");
+      const title = document.getElementById("conventionPreviewTitle");
+      const description = document.getElementById("conventionPreviewDescription");
       if(!url || !modal || !frame || !closeButton || !closeIcon){
         resolve(false);
         return;
       }
+      const defaultTitle = title?.dataset.defaultText || title?.textContent || "Prévisualisation";
+      const defaultDescription = description?.dataset.defaultText || description?.textContent || "Vérifiez le document avant de confirmer l’envoi.";
+      if(title){
+        title.dataset.defaultText = defaultTitle;
+        title.textContent = options.title || defaultTitle;
+      }
+      if(description){
+        description.dataset.defaultText = defaultDescription;
+        description.textContent = options.description || defaultDescription;
+      }
+      frame.title = options.frameTitle || options.title || "Aperçu du document";
       const finish = ()=>{
         closeButton.removeEventListener("click", finish);
         closeIcon.removeEventListener("click", finish);
@@ -574,6 +587,8 @@
         frame.classList.remove("is-loaded");
         loader?.classList.remove("is-hidden");
         frame.removeAttribute("src");
+        if(title){ title.textContent = defaultTitle; }
+        if(description){ description.textContent = defaultDescription; }
         closeModal("conventionPreviewModal");
         resolve(true);
       };
@@ -642,6 +657,18 @@
       closeBtn.focus();
     });
   }
+
+  document.addEventListener("click", (event)=>{
+    const trigger = event.target.closest?.("[data-open-document-preview-modal]");
+    if(!trigger || !trigger.href){ return; }
+    event.preventDefault();
+    event.stopPropagation();
+    openConventionPreview(trigger.href, {
+      title: trigger.dataset.previewTitle,
+      description: trigger.dataset.previewDescription,
+      frameTitle: trigger.dataset.previewFrameTitle,
+    });
+  });
 
   window.openConventionPreview = openConventionPreview;
   window.openConventionTransmission = openConventionTransmission;
