@@ -22378,8 +22378,6 @@ def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[s
     app.logger.info("[CONVOCATION APS] Modèle Word utilisé : %s", template_path)
     if not os.path.exists(template_path):
         raise FileNotFoundError(f"Modèle Word obligatoire manquant : gestionstagiaires/templates_word/{os.path.basename(template_path)}")
-    if not _docx_text_contains_yousign_smart_anchor(template_path, signer_index=1):
-        raise RuntimeError(YOUSIGN_SMART_ANCHOR_MISSING_MESSAGE)
     context = _build_aps_convocation_context(session_obj, trainee)
     app.logger.info("[CONVOCATION APS] Données injectées : stagiaire=%s formation=%s période=%s examen=%s", context.get("nom_complet"), context.get("formation_nom"), context.get("periode_formation"), context.get("date_examen"))
     base = f"convocation_aps_{_safe_filename_part(trainee.get('id') or trainee_id)}"
@@ -22397,8 +22395,6 @@ def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[s
         except OSError:
             pass
     _restore_yousign_smart_anchors_in_docx(final_docx_path, anchor_replacements)
-    if not _docx_text_contains_yousign_smart_anchor(final_docx_path, signer_index=1):
-        raise RuntimeError(YOUSIGN_SMART_ANCHOR_MISSING_MESSAGE)
     app.logger.info("[CONVOCATION APS] DOCX final généré : %s", final_docx_path)
     if not os.path.exists(final_docx_path) or os.path.getsize(final_docx_path) <= 0:
         raise RuntimeError("Le DOCX final de convocation APS est introuvable ou vide.")
