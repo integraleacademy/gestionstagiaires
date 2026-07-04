@@ -11482,6 +11482,7 @@ def _build_automations_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
                 "convocation_status": convocation.get("status") or "",
                 "convocation_tone": convocation.get("tone") or _automation_status_tone(convocation.get("status") or ""),
                 "convocation_date": convocation.get("sent_at") or convocation.get("generated_at") or "",
+                "planned_automations": automation.get("planned_automations") or [],
                 "block_reason": convocation.get("block_reason") or "",
                 "error": convention.get("error") or convocation.get("error") or "",
                 "trainee_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
@@ -22945,10 +22946,19 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     total_documents = 1 + int(is_aps_automation) + int(has_entry_attestation) + int(has_end_attestation)
     progress_percent = round((ready_documents / total_documents) * 100) if total_documents else 0
 
+    planned_automations = ["Convention"]
+    if is_aps_automation:
+        planned_automations.append("Convocation")
+    if has_entry_attestation:
+        planned_automations.append("Attestation d’entrée")
+    if has_end_attestation:
+        planned_automations.append("Attestation de sortie")
+
     return {
         "has_convocation": is_aps_automation,
         "has_entry_attestation": has_entry_attestation,
         "has_end_attestation": has_end_attestation,
+        "planned_automations": planned_automations,
         "global_status": global_status,
         "ready_documents": ready_documents,
         "total_documents": total_documents,
