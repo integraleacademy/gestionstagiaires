@@ -17,6 +17,32 @@ class ApsConvocationGenerationTests(unittest.TestCase):
         self.assertEqual(external_id, "convocation_2ebec35a_bad_TRN-2E16579A_2026")
         self.assertNotIn(":", external_id)
 
+
+    def test_dirigeant_paris_convocation_context_uses_dirigeant_dates_without_exam_date(self):
+        session = {
+            "training_type": "DIRIGEANT initial",
+            "name": "Dirigeant Paris",
+            "date_start": "2026-09-01",
+            "date_end": "2026-09-30",
+            "dirigeant_remote_start": "2026-09-01",
+            "dirigeant_remote_end": "2026-09-10",
+            "dirigeant_in_person_start": "2026-09-14",
+            "dirigeant_in_person_end": "2026-09-30",
+        }
+        trainee = {
+            "email": "stagiaire@example.com",
+            "first_name": "Jean",
+            "last_name": "Dupont",
+            "zip_code": "75001",
+            "city": "Paris",
+        }
+
+        context = app._build_aps_convocation_context(session, trainee)
+
+        self.assertEqual(context["periode_elearning"], "du 01/09/2026 au 10/09/2026")
+        self.assertEqual(context["periode_presentiel"], "du 14/09/2026 au 30/09/2026")
+        self.assertEqual(context["date_examen"], "30/09/2026")
+
     def test_yousign_signature_request_payload_uses_sanitized_external_id(self):
         session = {"id": "2ebec35a", "training_type": "APS", "name": "Formation APS"}
         trainee = {
