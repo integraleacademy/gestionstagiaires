@@ -291,11 +291,11 @@ class ApsConvocationGenerationTests(unittest.TestCase):
         self.assertTrue(docx_path.endswith("convocation_aps_trainee-1.docx"))
         self.assertTrue(pdf_path.endswith("convocation_aps_trainee-1.pdf"))
 
-    def test_generation_fails_clearly_without_yousign_smart_anchor(self):
+    def test_convocation_generation_allows_template_without_signature_anchor(self):
         session = {
             "id": "session-1",
-            "training_type": "APS",
-            "name": "Formation APS",
+            "training_type": "A3P",
+            "name": "Formation A3P",
             "date_start": "2026-07-08",
             "date_end": "2026-08-12",
             "exam_date": "2026-08-13",
@@ -308,13 +308,32 @@ class ApsConvocationGenerationTests(unittest.TestCase):
         }
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            template_path = os.path.join(tmpdir, "convocationaps.docx")
+            template_path = os.path.join(tmpdir, "convocationa3p.docx")
             with zipfile.ZipFile(template_path, "w") as zf:
                 zf.writestr("word/document.xml", "<w:document><w:body>{{prenom}} {{nom}}</w:body></w:document>")
 
-            with mock.patch.object(app, "_aps_template_path", return_value=template_path):
-                with self.assertRaisesRegex(RuntimeError, "Aucune zone de signature trouvée"):
-                    app._generate_aps_convocation_files(session, trainee, "session-1", "trainee-1")
+            output_dir = os.path.join(tmpdir, "generated")
+
+            def fake_render(_template_path, output_docx_path, context):
+                os.makedirs(os.path.dirname(output_docx_path), exist_ok=True)
+                with zipfile.ZipFile(output_docx_path, "w") as zf:
+                    zf.writestr("word/document.xml", f"<w:document><w:body>{context['prenom']} {context['nom']}</w:body></w:document>")
+
+            def fake_run(command, check, capture_output, text, timeout):
+                docx_path = command[-1]
+                pdf_path = os.path.splitext(docx_path)[0] + ".pdf"
+                with open(pdf_path, "wb") as fh:
+                    fh.write(b"pdf")
+                return mock.Mock(returncode=0, stdout="", stderr="")
+
+            with mock.patch.object(app, "APS_CONVOCATION_DIR", output_dir), \
+                 mock.patch.object(app, "_aps_template_path", return_value=template_path), \
+                 mock.patch.object(app, "_render_docx_with_python_template", side_effect=fake_render), \
+                 mock.patch.object(app, "_find_libreoffice_binary", return_value="libreoffice"), \
+                 mock.patch.object(app.subprocess, "run", side_effect=fake_run):
+                docx_path, pdf_path = app._generate_aps_convocation_files(session, trainee, "session-1", "trainee-1")
+                self.assertTrue(os.path.exists(docx_path))
+                self.assertTrue(os.path.exists(pdf_path))
 
 
 
