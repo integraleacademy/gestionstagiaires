@@ -22586,6 +22586,36 @@ def _format_period_from_dates(start: Any, end: Any) -> str:
     return ""
 
 
+
+def _session_period_replacements(session_obj: Dict[str, Any]) -> Dict[str, str]:
+    date_start_raw = str(_session_get(session_obj, "date_start", "") or "").strip()
+    date_end_raw = str(_session_get(session_obj, "date_end", "") or "").strip()
+    training_type = str(_session_get(session_obj, "training_type", "") or "").strip().upper()
+    elearning_period = _format_period_from_dates(
+        _session_get(session_obj, "aps_remote_start", ""),
+        _session_get(session_obj, "aps_remote_end", ""),
+    )
+    presentiel_period = _format_period_from_dates(
+        _session_get(session_obj, "aps_in_person_start", ""),
+        _session_get(session_obj, "aps_in_person_end", ""),
+    )
+    if training_type.startswith("DIRIGEANT"):
+        elearning_period = _format_period_from_dates(
+            _session_get(session_obj, "dirigeant_remote_start", ""),
+            _session_get(session_obj, "dirigeant_remote_end", ""),
+        )
+        presentiel_period = _format_period_from_dates(
+            _session_get(session_obj, "dirigeant_in_person_start", ""),
+            _session_get(session_obj, "dirigeant_in_person_end", ""),
+        )
+    return {
+        "date_debut_formation": fr_date(date_start_raw),
+        "date_fin_formation": fr_date(date_end_raw),
+        "periode_formation": _format_period_from_dates(date_start_raw, date_end_raw),
+        "periode_elearning": elearning_period,
+        "periode_presentiel": presentiel_period,
+    }
+
 def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
     """Return values allowed for APS convention ``{{ variable }}`` placeholders.
 
@@ -22607,19 +22637,12 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
     if personal_amount in (None, ""):
         personal_amount = "0"
     other_amount = _first_non_empty(trainee.get("other_amount"), trainee.get("montant_autre"), default="0")
-    date_start_raw = str(_session_get(session_obj, "date_start", "")).strip()
-    date_end_raw = str(_session_get(session_obj, "date_end", "")).strip()
-    date_start = fr_date(date_start_raw)
-    date_end = fr_date(date_end_raw)
-    periode = _format_period_from_dates(date_start_raw, date_end_raw)
-    aps_elearning_period = _format_period_from_dates(
-        _session_get(session_obj, "aps_remote_start", ""),
-        _session_get(session_obj, "aps_remote_end", ""),
-    )
-    aps_presentiel_period = _format_period_from_dates(
-        _session_get(session_obj, "aps_in_person_start", ""),
-        _session_get(session_obj, "aps_in_person_end", ""),
-    )
+    session_periods = _session_period_replacements(session_obj)
+    date_start = session_periods["date_debut_formation"]
+    date_end = session_periods["date_fin_formation"]
+    periode = session_periods["periode_formation"]
+    elearning_period = session_periods["periode_elearning"]
+    presentiel_period = session_periods["periode_presentiel"]
     address = _first_non_empty(trainee.get("address"), trainee.get("adresse"))
     replacements = {
         "civilite": _first_non_empty(trainee.get("civilite"), trainee.get("gender"), default=""),
@@ -22651,8 +22674,8 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
         "date_debut_formation": date_start,
         "date_fin_formation": date_end,
         "periode_formation": periode,
-        "periode_elearning": _first_non_empty(aps_elearning_period, trainee.get("periode_elearning"), _session_get(session_obj, "periode_elearning", ""), periode),
-        "periode_presentiel": _first_non_empty(aps_presentiel_period, trainee.get("periode_presentiel"), _session_get(session_obj, "periode_presentiel", ""), periode),
+        "periode_elearning": _first_non_empty(elearning_period, trainee.get("periode_elearning"), _session_get(session_obj, "periode_elearning", ""), periode),
+        "periode_presentiel": _first_non_empty(presentiel_period, trainee.get("periode_presentiel"), _session_get(session_obj, "periode_presentiel", ""), periode),
         "date_ouverture": fr_date(_first_non_empty(trainee.get("date_ouverture"), _session_get(session_obj, "date_ouverture", ""))),
         "h_elearning": _first_non_empty(trainee.get("h_elearning"), _session_get(session_obj, "h_elearning", ""), default="0"),
         "h_presentiel": _first_non_empty(trainee.get("h_presentiel"), _session_get(session_obj, "h_presentiel", ""), default="0"),

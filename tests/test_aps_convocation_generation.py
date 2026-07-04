@@ -715,6 +715,27 @@ class ApsConventionGenerationTests(unittest.TestCase):
         self.assertEqual(replacements["periode_elearning"], "du 01/09/2026 au 11/09/2026")
         self.assertEqual(replacements["periode_presentiel"], "du 14/09/2026 au 01/10/2026")
 
+    def test_aps_convention_period_variables_use_admin_session_dirigeant_dates(self):
+        session = {
+            "training_type": "DIRIGEANT initial",
+            "name": "Dirigeant Paris",
+            "date_start": "2026-09-01",
+            "date_end": "2026-09-30",
+            "dirigeant_remote_start": "2026-09-01",
+            "dirigeant_remote_end": "2026-09-10",
+            "dirigeant_in_person_start": "2026-09-14",
+            "dirigeant_in_person_end": "2026-09-30",
+        }
+        trainee = {"first_name": "Jean", "last_name": "Dupont"}
+
+        replacements = app._aps_convention_replacements(session, trainee)
+
+        self.assertEqual(replacements["date_debut_formation"], "01/09/2026")
+        self.assertEqual(replacements["date_fin_formation"], "30/09/2026")
+        self.assertEqual(replacements["periode_formation"], "du 01/09/2026 au 30/09/2026")
+        self.assertEqual(replacements["periode_elearning"], "du 01/09/2026 au 10/09/2026")
+        self.assertEqual(replacements["periode_presentiel"], "du 14/09/2026 au 30/09/2026")
+
     def test_aps_convention_empty_personal_amount_is_zero(self):
         replacements = app._aps_convention_replacements(
             {"training_type": "APS", "training_price": "1650"},
