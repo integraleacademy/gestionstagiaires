@@ -377,6 +377,7 @@
         <th class="col-thread">Fil actu</th>
         {% endif %}
         {% if is_ssiap_session %}<th class="col-ssiap-exam">Examen</th><th class="col-ssiap-diploma">Diplôme</th>{% endif %}
+        <th class="col-print">Impression</th>
         <th class="col-comment">Commentaire</th>
       </tr>
     </thead>
@@ -715,6 +716,17 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           {% if t.ssiap_diploma_number %}<div class="ssiap-diploma-number">{{ t.ssiap_diploma_number }}</div>{% endif %}
         </td>
         {% endif %}
+        <td class="col-print">
+          <button type="button"
+                  class="print-row-btn {% if t.printed %}is-printed{% endif %}"
+                  data-print-row
+                  aria-pressed="{{ 'true' if t.printed else 'false' }}"
+                  title="{{ 'Déjà imprimé' if t.printed else 'Marquer comme imprimé' }}"
+                  {% if is_read_only %}disabled{% endif %}>
+            <span class="print-row-btn__icon" aria-hidden="true">🖨️</span>
+            <span class="print-row-btn__label">{{ 'Imprimé' if t.printed else 'Imprimer' }}</span>
+          </button>
+        </td>
         <td class="col-comment">
           <input class="comment" data-field="comment" value="{{ t.comment }}" placeholder="Ajouter un commentaire..." {{ read_only_attr }}>
         </td>
@@ -1878,6 +1890,49 @@ body.vae-analysis-filter-active #traineesTable .mini-btn{
 @keyframes vaeLiveShine{ 0%,45%{transform:translateX(-120%);} 75%,100%{transform:translateX(120%);} }
 @keyframes vaeLivePulse{ 0%,100%{transform:scale(1);opacity:.9;} 50%{transform:scale(1.28);opacity:1;} }
 @keyframes vaeLiveGlow{ 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.38),0 18px 38px rgba(220,38,38,.28);} 50%{box-shadow:0 0 0 10px rgba(239,68,68,0),0 20px 42px rgba(220,38,38,.38);} }
+
+.col-print{ min-width:124px; text-align:center; }
+.print-row-btn{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-width:108px;
+  border:0;
+  border-radius:999px;
+  padding:9px 13px;
+  color:#fff;
+  font-weight:1000;
+  line-height:1;
+  cursor:pointer;
+  overflow:hidden;
+  background:linear-gradient(135deg,#fb923c 0%,#f97316 52%,#ea580c 100%);
+  box-shadow:0 10px 22px rgba(249,115,22,.28);
+  transform:translateY(0);
+  transition:background .22s ease, box-shadow .22s ease, transform .16s ease, filter .22s ease;
+  animation:printButtonPulse 1.9s ease-in-out infinite;
+}
+.print-row-btn::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(110deg,transparent 0%,rgba(255,255,255,.38) 45%,transparent 72%);
+  transform:translateX(-130%);
+  animation:printButtonShine 2.35s ease-in-out infinite;
+}
+.print-row-btn:hover:not(:disabled){ transform:translateY(-2px) scale(1.03); box-shadow:0 14px 28px rgba(249,115,22,.34); }
+.print-row-btn:active:not(:disabled){ transform:translateY(0) scale(.98); }
+.print-row-btn__icon,.print-row-btn__label{ position:relative; z-index:1; }
+.print-row-btn.is-printed{
+  background:linear-gradient(135deg,#9ca3af 0%,#6b7280 58%,#4b5563 100%);
+  box-shadow:0 8px 18px rgba(75,85,99,.22);
+  animation:none;
+}
+.print-row-btn.is-printed::before{ animation:none; opacity:0; }
+.print-row-btn:disabled{ cursor:not-allowed; filter:saturate(.75); opacity:.72; }
+@keyframes printButtonPulse{ 0%,100%{box-shadow:0 10px 22px rgba(249,115,22,.28);} 50%{box-shadow:0 0 0 6px rgba(249,115,22,.12),0 14px 30px rgba(249,115,22,.38);} }
+@keyframes printButtonShine{ 0%,45%{transform:translateX(-130%);} 75%,100%{transform:translateX(130%);} }
 
 </style>
 
@@ -3494,6 +3549,34 @@ document.querySelectorAll("select.sel").forEach(sel=>{
 
   
 
+
+    const printButton = tr.querySelector("[data-print-row]");
+    if (printButton) {
+      printButton.addEventListener("click", async () => {
+        if (printButton.classList.contains("is-printed") || printButton.disabled) return;
+        const originalText = printButton.querySelector(".print-row-btn__label")?.textContent || "Imprimer";
+        const label = printButton.querySelector(".print-row-btn__label");
+        printButton.disabled = true;
+        if (label) label.textContent = "...";
+        try {
+          const response = await fetch(`/api/stagiaires/${traineeId}/mark-printed`, { method: "POST" });
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok || result?.success === false) {
+            throw new Error(result?.error || `Erreur impression (${response.status})`);
+          }
+          printButton.classList.add("is-printed");
+          printButton.setAttribute("aria-pressed", "true");
+          printButton.setAttribute("title", "Déjà imprimé");
+          if (label) label.textContent = "Imprimé";
+        } catch (error) {
+          console.error(error);
+          alert("Impossible de marquer ce stagiaire comme imprimé.");
+          if (label) label.textContent = originalText;
+        } finally {
+          printButton.disabled = false;
+        }
+      });
+    }
 
     const dossierSelect = tr.querySelector('select[data-field="dossier_status"]');
     const forceDossier = tr.querySelector('input.force-dossier');
