@@ -509,6 +509,23 @@ class ApsConvocationEmailTests(unittest.TestCase):
         self.assertIn("Convocation officielle en pièce jointe", html_body)
         self.assertIn("Nous avons bien reçu votre Convention de formation signée et nous vous en remercions.", html_body)
 
+    def test_convocation_email_uses_full_desp_label_for_dirigeant_paris_session(self):
+        session = {"training_type": "DIRIGEANT initial", "name": "Dirigeant Paris"}
+
+        subject, html_body = app._build_aps_convocation_email(
+            "Clément",
+            "2026-09-01",
+            "2026-11-01",
+            session,
+        )
+
+        expected_label = "Dirigeant d'une entreprise de sécurité privée (DESP)"
+        self.assertEqual(subject, f"Convocation formation {expected_label} - Intégrale Academy")
+        escaped_label = "Dirigeant d&#x27;une entreprise de sécurité privée (DESP)"
+        self.assertIn(f"Convocation formation {escaped_label}", html_body)
+        self.assertIn(f"<strong>Formation :</strong> {escaped_label}", html_body)
+        self.assertNotIn("Dirigeant Paris", html_body)
+
     def test_convocation_email_uses_a3p_labels_for_a3p_session(self):
         session = {"training_type": "A3P", "name": "Formation A3P"}
 

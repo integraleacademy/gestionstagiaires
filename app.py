@@ -7431,7 +7431,7 @@ EDOF_TRAININGS = {
         "calendly": "https://calendly.com/integraleacademy/chauffeurvtc",
     },
     "DESP": {
-        "label": "Dirigeant d'entreprise de sécurité privée (DESP)",
+        "label": "Dirigeant d'une entreprise de sécurité privée (DESP)",
         "calendly": "https://calendly.com/integraleacademy/dirigeant",
     },
 }
@@ -7440,7 +7440,7 @@ FINANCEMENT_REFUSE_TRAININGS = {
     "A3P": "Agent de protection physique des personnes (A3P)",
     "APS": "Agent de prévention et de sécurité (APS)",
     "VTC": "Chauffeur VTC",
-    "DIRIGEANT": "Dirigeant d'entreprise de sécurité privée (DESP)",
+    "DIRIGEANT": "Dirigeant d'une entreprise de sécurité privée (DESP)",
 }
 
 def formation_label(training_type: str) -> str:
@@ -21072,8 +21072,8 @@ def _automation_document_config(session_obj: Dict[str, Any]) -> Dict[str, Any]:
         return {"enabled": True, "slug": "vtc", "label": "Chauffeur VTC", "convention_template": "conventionvtc.docx", "entry_template": ""}
     if "DIRIGEANT" in text or "DESP" in text:
         if "PARIS" in text:
-            return {"enabled": True, "slug": "desp_paris", "label": "Dirigeant Paris", "convention_template": "conventiondespparis.docx", "entry_template": "attestationentreedesparis.docx", "end_template": "attestationfindespparis.docx", "convocation_template": "convocationdespparis.docx"}
-        return {"enabled": True, "slug": "desp_puget", "label": "Dirigeant Puget", "convention_template": "conventiondesp.docx", "entry_template": "attestationentreedesp.docx", "end_template": "attestationfindesp.docx", "convocation_template": "convocationdesp.docx"}
+            return {"enabled": True, "slug": "desp_paris", "label": "Dirigeant d'une entreprise de sécurité privée (DESP)", "convention_template": "conventiondespparis.docx", "entry_template": "attestationentreedesparis.docx", "end_template": "attestationfindespparis.docx", "convocation_template": "convocationdespparis.docx"}
+        return {"enabled": True, "slug": "desp_puget", "label": "Dirigeant d'une entreprise de sécurité privée (DESP)", "convention_template": "conventiondesp.docx", "entry_template": "attestationentreedesp.docx", "end_template": "attestationfindesp.docx", "convocation_template": "convocationdesp.docx"}
     if "SSIAP" in text:
         return {"enabled": True, "slug": "ssiap", "label": "SSIAP", "convention_template": "conventionssiap.docx", "entry_template": "attestationentreessiap.docx", "end_template": "attestationfinssiap.docx", "convocation_template": "convocationssiap.docx"}
     if text.startswith("APS") or " APS" in text:
