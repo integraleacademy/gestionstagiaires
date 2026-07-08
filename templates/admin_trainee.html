@@ -498,6 +498,7 @@
           <input id="editEmail"
                  type="email"
                  value="{{ trainee.email or '' }}"
+                 title="{{ trainee.email or '' }}"
                  placeholder="email@exemple.com"
                  class="trainee-inline-input trainee-inline-input--email"
                  {{ read_only_attr }}>

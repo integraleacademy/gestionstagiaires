@@ -1143,7 +1143,7 @@ select.status-pill{
   font-weight:950;
   box-shadow:0 10px 26px rgba(15,23,42,.055);
 }
-.trainee-info-grid__email{grid-column:span 1;}
+.trainee-info-grid__email{grid-column:1 / -1;}
 .trainee-inline-input{
   width:100%;
   min-width:0;
@@ -1158,7 +1158,9 @@ select.status-pill{
   text-overflow:clip;
 }
 .trainee-inline-input--email{
-  font-size:14px;
+  width:100%;
+  box-sizing:border-box;
+  font-size:15px;
 }
 .trainee-cnaps-panel{
   grid-column:1 / -1;
