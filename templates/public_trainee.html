@@ -1338,6 +1338,7 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
 {% set candidate_sheet_sent = d.key == "candidate_info_sheet" and up not in ["NON DÉPOSÉ", "NON DEPOSE", ""] %}
   {% set scotia_added_documents = trainee.scotia_added_documents or [] %}
   {% set complementary_documents_new_expected = d.key == "complementary_documents" and trainee.scotia_complementary_documents_review_status == "complement_documents_new_expected" and not scotia_added_documents %}
+{% set is_optional_doc = d.optional|default(false) %}
 {% set has_submission = has_file or candidate_sheet_sent %}
   {% set can_replace = (has_file and up == "NON CONFORME") %}
   {% set is_pending_review = (has_submission and up != "CONFORME" and up != "NON CONFORME") %}
@@ -1345,7 +1346,7 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
   {% set can_add_more = (d.key in ["livret_2", "complementary_documents"]) or ((file_tokens|length) < max_files) %}
 {% set show_upload = ((not has_file) or can_replace or complementary_documents_new_expected or (d.key in ["livret_2", "complementary_documents"] and can_add_more and not is_pending_review)) and not (d.key == "permis" and trainee.no_permis) %}
 
-    {% set row_cls = "missing" %}
+    {% set row_cls = "" if is_optional_doc else "missing" %}
     {% if has_submission %}
       {% if up == "CONFORME" %}
         {% set row_cls = "" %}
@@ -1388,7 +1389,7 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
 
 <div class="docrow {{ row_cls }}" id="doc_{{ d.key }}">
       <div class="docmeta">
-        <div class="label">{{ "Fiche de renseignement candidat à compléter" if d.key == "candidate_info_sheet" else d.label }}</div>
+        <div class="label">{{ "Fiche de renseignement candidat à compléter" if d.key == "candidate_info_sheet" else d.label }}{% if is_optional_doc %} <span class="doctag" style="margin-left:8px;">Facultatif</span>{% endif %}</div>
         {% if d.key == "candidate_info_sheet" %}
           {% set candidate_sheet_pending_review = up not in ["NON DÉPOSÉ", "NON DEPOSE", "", "NON CONFORME", "CONFORME"] %}
           <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -1433,12 +1434,12 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
             </ul>
           </div>
         {% endif %}
-        {% if d.key == "certificat_medical_ssiap_afc" %}
+        {% if d.key in ["certificat_medical_ssiap", "certificat_medical_ssiap_afc"] %}
           <div class="doc-format-box">
             <div class="doc-format-title">📥 Modèle obligatoire</div>
             <ul class="doc-format-list">
               <li>Téléchargez le modèle, faites-le compléter par votre médecin, puis déposez-le ici.</li>
-              <li><a href="{{ url_for('static', filename='certificat.pdf') }}" target="_blank" rel="noopener">Télécharger le modèle du certificat médical</a></li>
+              <li><a href="{{ url_for('public_ssiap_medical_certificate_template') }}" target="_blank" rel="noopener">Télécharger le modèle officiel du certificat médical</a></li>
             </ul>
           </div>
           {% if ssiap_exam_date and ssiap_medical_from_date %}
@@ -1541,12 +1542,12 @@ id="upload_{{ d.key }}"
          name="files"
          multiple
          accept="{{ accept }}"
-         {% if not (d.key == "permis" and trainee.no_permis) %}required{% endif %}>
+         {% if not (d.key == "permis" and trainee.no_permis) and not is_optional_doc %}required{% endif %}>
 {% else %}
   <input type="file"
          name="file"
          accept="{{ accept }}"
-         {% if not (d.key == "permis" and trainee.no_permis) %}required{% endif %}>
+         {% if not (d.key == "permis" and trainee.no_permis) and not is_optional_doc %}required{% endif %}>
 {% endif %}
 
 <button class="btn small upload-cta" type="submit">

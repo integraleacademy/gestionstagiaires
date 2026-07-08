@@ -59,6 +59,35 @@ class RequiredDocsForDirigeantTests(unittest.TestCase):
         keys = [doc.get("key") for doc in gestion_app.required_docs_for_training("APS", trainee)]
         self.assertIn("certificat_medical_ssiap_afc", keys)
 
+
+    def test_ssiap_replaces_cnaps_with_medical_and_optional_first_aid(self):
+        docs = gestion_app.required_docs_for_training("SSIAP 1")
+        by_key = {doc.get("key"): doc for doc in docs}
+
+        self.assertNotIn("cnaps_doc", by_key)
+        self.assertEqual(
+            by_key["certificat_medical_ssiap"].get("label"),
+            "Certificat médical de moins de 3 mois à la date de l'examen, selon le modèle officiel",
+        )
+        self.assertEqual(
+            by_key["certificat_medical_ssiap"].get("template_url_endpoint"),
+            "public_ssiap_medical_certificate_template",
+        )
+        self.assertTrue(by_key["attestation_secourisme_ssiap"].get("optional"))
+
+    def test_ssiap_optional_first_aid_does_not_block_completion(self):
+        trainee = {
+            "documents": [
+                {"key": "id", "status": "CONFORME", "files": ["id.pdf"]},
+                {"key": "photo", "status": "CONFORME", "files": ["photo.png"]},
+                {"key": "carte_vitale_doc", "status": "CONFORME", "files": ["vitale.pdf"]},
+                {"key": "certificat_medical_ssiap", "status": "CONFORME", "files": ["certificat.pdf"]},
+            ]
+        }
+
+        self.assertTrue(gestion_app.dossier_is_complete(trainee, "SSIAP 1"))
+        self.assertTrue(gestion_app.required_docs_are_deposited(trainee, "SSIAP 1"))
+
     def test_subtract_months_for_ssiap_window(self):
         self.assertEqual(gestion_app._subtract_months("2026-07-15", 3), "2026-04-15")
 
