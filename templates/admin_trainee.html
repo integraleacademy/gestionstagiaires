@@ -1755,7 +1755,14 @@
           {% set cur = (d.status or ("A CONTRÔLER" if has_status_source else "NON DÉPOSÉ")) %}
 
           <tr data-doc-key="{{ d.key }}">
-            <td style="font-weight:800;">{{ d.label }}</td>
+            <td style="font-weight:800;">
+              {{ d.label }}{% if d.optional|default(false) %} <span class="badge" style="margin-left:8px;">Facultatif</span>{% endif %}
+              {% if d.key in ["certificat_medical_ssiap", "certificat_medical_ssiap_afc"] %}
+                <div class="hint" style="margin-top:6px;">
+                  <a href="{{ url_for('public_ssiap_medical_certificate_template') }}" target="_blank" rel="noopener">Télécharger le modèle officiel du certificat médical</a>
+                </div>
+              {% endif %}
+            </td>
 
             <td style="min-width:190px;">
               <select class="status sel-doc" data-field="status" {% if not has_status_source %}disabled{% endif %} {{ read_only_attr }}>

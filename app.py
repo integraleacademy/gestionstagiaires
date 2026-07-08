@@ -1579,6 +1579,24 @@ def public_dirigeant_initial_attestation_template():
         download_name="attestation-honneur-examen-desp.pdf",
     )
 
+
+@app.get("/espace/modeles/certificat-medical-ssiap.pdf")
+def public_ssiap_medical_certificate_template():
+    app_root = os.path.dirname(os.path.abspath(__file__))
+    template_path = os.path.join(app_root, "templates_word", "certificat.pdf")
+    if not os.path.exists(template_path):
+        # Fallback vers le modèle déjà versionné pour éviter d'ajouter un PDF
+        # binaire supplémentaire aux demandes d'extraction de code.
+        template_path = os.path.join(app_root, "static", "certificat.pdf")
+    if not os.path.exists(template_path):
+        abort(404)
+    return send_file(
+        template_path,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name="certificat-medical-ssiap.pdf",
+    )
+
 app.config.update(
     SESSION_COOKIE_NAME="integrale_admin",
     SESSION_COOKIE_HTTPONLY=True,
@@ -7474,6 +7492,20 @@ REQUIRED_DOCS = {
         {"key": "certif_med", "label": "Certificat médical (-3 mois)", "accept": "application/pdf"},
         {"key": "assurance_rc", "label": "Attestation d’assurance responsabilité civile", "accept": "application/pdf"},
     ],
+    "SSIAP_ONLY": [
+        {
+            "key": "certificat_medical_ssiap",
+            "label": "Certificat médical de moins de 3 mois à la date de l'examen, selon le modèle officiel",
+            "accept": "application/pdf,image/jpeg,image/png",
+            "template_url_endpoint": "public_ssiap_medical_certificate_template",
+        },
+        {
+            "key": "attestation_secourisme_ssiap",
+            "label": "Attestation secourisme, PSC1 ou SST de moins de 2 ans, si détenu",
+            "accept": "application/pdf,image/jpeg,image/png",
+            "optional": True,
+        },
+    ],
     "AFC_SSIAP_MEDICAL_CERT": [
         {
             "key": "certificat_medical_ssiap_afc",
@@ -7563,13 +7595,15 @@ def required_docs_for_training(training_type: str, trainee: Optional[Dict[str, A
     tt = (training_type or "").strip().upper()
     docs = list(REQUIRED_DOCS["COMMON"])
 
-    # Pour les parcours dirigeant (initial / VAE),
+    # Pour les parcours dirigeant (initial / VAE) et SSIAP,
     # ne pas demander le justificatif CNAPS à l'inscription.
-    if tt in {"DIRIGEANT INITIAL", "DIRIGEANT VAE"}:
+    if tt in {"DIRIGEANT INITIAL", "DIRIGEANT VAE"} or tt.startswith("SSIAP"):
         docs = [d for d in docs if d.get("key") != "cnaps_doc"]
 
     if tt == "A3P":
         docs += list(REQUIRED_DOCS["A3P_ONLY"])
+    if tt.startswith("SSIAP"):
+        docs += list(REQUIRED_DOCS["SSIAP_ONLY"])
     if tt in {"DIRIGEANT INITIAL", "DIRIGEANT VAE"}:
         docs += list(REQUIRED_DOCS["DIRIGEANT_CANDIDATE_SHEET"])
     if tt.startswith("DIRIGEANT"):
@@ -7623,6 +7657,12 @@ def ensure_documents_schema_for_trainee(t: Dict[str, Any], training_type: str) -
             if "files" not in d or not isinstance(d.get("files"), list):
                 d["files"] = []
                 changed = True
+            if rd.get("optional") and not d.get("optional"):
+                d["optional"] = True; changed = True
+            if rd.get("template_url_endpoint") and d.get("template_url_endpoint") != rd.get("template_url_endpoint"):
+                d["template_url_endpoint"] = rd.get("template_url_endpoint"); changed = True
+            if d.get("label") != rd["label"]:
+                d["label"] = rd["label"]; changed = True
             out.append(d)
         else:
             out.append({
@@ -7633,6 +7673,8 @@ def ensure_documents_schema_for_trainee(t: Dict[str, Any], training_type: str) -
                 "comment": "",
                 "file": "",
                 "files": [],
+                **({"optional": True} if rd.get("optional") else {}),
+                **({"template_url_endpoint": rd.get("template_url_endpoint")} if rd.get("template_url_endpoint") else {}),
             })
             changed = True
 
@@ -7833,6 +7875,8 @@ def dossier_is_complete(trainee: Dict[str, Any], training_type: str, training_st
         # permis optionnel si no_permis
         if tt == "A3P" and k == "permis" and no_permis:
             continue
+        if rd.get("optional"):
+            continue
 
         d = by_key.get(k)
         if not d:
@@ -7862,6 +7906,8 @@ def required_docs_are_deposited(trainee: Dict[str, Any], training_type: str, tra
         k = rd["key"]
 
         if tt == "A3P" and k == "permis" and no_permis:
+            continue
+        if rd.get("optional"):
             continue
 
         # En parcours DIRIGEANT VAE, la fiche d'entretien pré-requis ne doit
