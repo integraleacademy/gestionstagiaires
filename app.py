@@ -15454,6 +15454,17 @@ def api_update_trainee(session_id: str, trainee_id: str):
         t["vae_status_label"] = previous_view["label"]
     current_vae_status = vae_status_view(t.get("vae_status"))["key"]
     if vae_fields_changed and current_vae_status != previous_vae_status:
+        if current_vae_status == "certified":
+            current_vae_action_dates = t.get("vae_action_dates") if isinstance(t.get("vae_action_dates"), dict) else {}
+            app.logger.warning(
+                "[VAE_STATUS_CERTIFIED] trainee_id=%s previous_status=%s payload_keys=%s action_dates_keys=%s requested_status=%s transmission_only=%s",
+                t.get("id"),
+                previous_vae_status,
+                sorted(payload.keys()),
+                sorted(current_vae_action_dates.keys()),
+                payload.get("vae_status") or payload.get("vae_status_label") or "",
+                transmission_only_vae_action_update,
+            )
         if send_vae_notification:
             _notify_vae_status_change(t, current_vae_status)
         if (_session_get(s, "training_type", "") or "").strip().upper() == "DIRIGEANT VAE":
