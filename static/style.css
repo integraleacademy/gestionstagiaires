@@ -1002,6 +1002,129 @@ select.status-pill{
 }
 
 
+
+.trainee-profile-card{
+  margin-top:12px;
+  padding:22px;
+  border-radius:24px;
+  background:linear-gradient(135deg,#ffffff 0%,#fbfdff 58%,#f8fafc 100%);
+}
+.trainee-profile-card__main{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 240px;
+  gap:24px;
+  align-items:start;
+}
+.trainee-profile-card__identity{min-width:0;}
+.trainee-identity-head{
+  display:grid;
+  grid-template-columns:132px minmax(0,1fr);
+  gap:20px;
+  align-items:start;
+}
+.trainee-photo-block{width:132px;flex-shrink:0;}
+.trainee-photo{
+  width:132px;
+  height:168px;
+  object-fit:cover;
+  border-radius:18px;
+  border:1px solid #dbe4f0;
+  background:#fff;
+  box-shadow:0 10px 24px rgba(15,23,42,.06);
+}
+.trainee-photo--empty{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-style:dashed;
+  background:linear-gradient(135deg,#f8fafc,#fff);
+  color:#64748b;
+  font-size:13px;
+  font-weight:800;
+  text-align:center;
+}
+.trainee-dossier-status{margin-top:10px;text-align:center;}
+.trainee-dossier-status .pill{
+  justify-content:center;
+  width:100%;
+  box-sizing:border-box;
+  font-size:11px;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+.trainee-contact-chip-row{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:14px;
+}
+.trainee-info-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(170px,1fr));
+  gap:12px;
+  margin-top:18px;
+  padding:14px;
+  border:1px solid #eef2f7;
+  border-radius:18px;
+  background:#fff;
+}
+.trainee-info-grid .mono{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  min-width:0;
+  color:#64748b;
+  font-size:12px;
+  font-weight:850;
+}
+.trainee-inline-input{
+  width:100%;
+  min-width:0;
+  border:none;
+  background:transparent;
+  padding:0;
+  outline:none;
+  color:#0f172a;
+  font:inherit;
+  font-size:13px;
+}
+.trainee-cnaps-panel{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:14px;
+  padding:12px 14px;
+  border:1px solid #e2e8f0;
+  border-radius:18px;
+  background:#f8fafc;
+}
+.trainee-cnaps-panel__check{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  cursor:pointer;
+  padding:8px 10px;
+  border-radius:12px;
+  background:#fff;
+  border:1px solid #e2e8f0;
+}
+.trainee-cnaps-history{
+  margin-top:8px;
+  color:#64748b;
+  font-size:12px;
+  line-height:1.45;
+}
+@media (max-width:1100px){
+  .trainee-profile-card__main{grid-template-columns:1fr;}
+  .trainee-profile-card__actions{align-items:stretch;}
+  .btn-admin-trainee-side-action{width:100%;}
+}
+@media (max-width:760px){
+  .trainee-identity-head,.trainee-info-grid{grid-template-columns:1fr;}
+  .trainee-photo-block,.trainee-photo{width:100%;max-width:180px;}
+}
+
 .admin-trainee-side-actions{
   display:flex;
   flex-direction:column;
