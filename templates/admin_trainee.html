@@ -1122,39 +1122,7 @@
 
 {% endif %}
 
-{% if not show_vae %}
-<div class="card" style="grid-column:1 / -1;">
-  <div style="font-weight:900;">Visibilité espace stagiaire</div>
-  <div class="hint" style="margin-top:6px;">Ces options masquent des blocs côté stagiaire.</div>
 
-  <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;align-items:center;">
-
-    <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-      <input type="checkbox" id="chkHideInfos"
-             {% if trainee.public_hide_infos %}checked{% endif %}
-             {{ read_only_attr }}>
-      <span>Masquer Infos à compléter</span>
-    </label>
-
-    <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-      <input type="checkbox" id="chkHideDocs"
-             {% if trainee.public_hide_docs %}checked{% endif %}
-             {{ read_only_attr }}>
-      <span>Masquer Mes documents</span>
-    </label>
-
-    <label style="display:flex;align-items:center;gap:8px;">
-      <input type="checkbox"
-             id="public_hide_suivi"
-             {% if trainee.public_hide_suivi %}checked{% endif %}
-             {{ read_only_attr }}>
-      <span><strong>Masquer Suivi dossier</strong></span>
-    </label>
-
-
-  </div>
-</div>
-{% endif %}
 
 <script>
   document.getElementById("photoInput")?.addEventListener("change", function(){
@@ -1248,6 +1216,56 @@
       {% endif %}
     </div>
   {% endif %}
+
+  <div class="trainee-side-column">
+    {% if not show_vae %}
+      <div class="card">
+        <div style="font-weight:900;">Visibilité espace stagiaire</div>
+        <div class="hint" style="margin-top:6px;">Ces options masquent des blocs côté stagiaire.</div>
+
+        <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;align-items:center;">
+
+          <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="chkHideInfos"
+                   {% if trainee.public_hide_infos %}checked{% endif %}
+                   {{ read_only_attr }}>
+            <span>Masquer Infos à compléter</span>
+          </label>
+
+          <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="chkHideDocs"
+                   {% if trainee.public_hide_docs %}checked{% endif %}
+                   {{ read_only_attr }}>
+            <span>Masquer Mes documents</span>
+          </label>
+
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox"
+                   id="public_hide_suivi"
+                   {% if trainee.public_hide_suivi %}checked{% endif %}
+                   {{ read_only_attr }}>
+            <span><strong>Masquer Suivi dossier</strong></span>
+          </label>
+
+
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- ===================== -->
+    <!-- COMMENTAIRE (ADMIN)    -->
+    <!-- ===================== -->
+    <div class="card">
+      <div style="font-weight:900;">Commentaire (admin)</div>
+      <div class="hint" style="margin-top:6px;">Visible dans la liste stagiaires + fiche. Sauvegarde automatique.</div>
+
+      <textarea id="traineeComment"
+                style="width:100%;min-height:90px;margin-top:10px;"
+                placeholder="Tape ton commentaire..."
+                {{ read_only_attr }}
+      >{{ trainee.comment or "" }}</textarea>
+    </div>
+  </div>
 
   <!-- ===================== -->
   <!-- FINANCEMENT & FACTURATION -->
@@ -1352,19 +1370,6 @@
     </div>
   </details>
 
-  <!-- ===================== -->
-<!-- COMMENTAIRE (ADMIN)    -->
-<!-- ===================== -->
-<div class="card" style="grid-column:1 / -1;">
-  <div style="font-weight:900;">Commentaire (admin)</div>
-  <div class="hint" style="margin-top:6px;">Visible dans la liste stagiaires + fiche. Sauvegarde automatique.</div>
-
-  <textarea id="traineeComment"
-            style="width:100%;min-height:90px;margin-top:10px;"
-            placeholder="Tape ton commentaire..."
-            {{ read_only_attr }}
-  >{{ trainee.comment or "" }}</textarea>
-</div>
 
  <!-- ===================== -->
 <!-- RELANCE TELEPHONIQUE  -->
