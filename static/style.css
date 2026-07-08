@@ -1021,17 +1021,17 @@ select.status-pill{
 }
 .trainee-profile-card__identity{
   display:grid;
-  grid-template-columns:220px minmax(0,1fr);
-  gap:16px 18px;
+  grid-template-columns:180px minmax(0,1fr);
+  gap:14px 18px;
   min-width:0;
   align-items:start;
 }
 .trainee-identity-head{display:contents;}
 .trainee-photo-block{
   grid-column:1;
-  grid-row:1 / span 2;
-  width:220px;
-  padding:16px;
+  grid-row:1 / span 3;
+  width:180px;
+  padding:12px;
   border:1px solid #e2e8f0;
   border-radius:26px;
   background:rgba(255,255,255,.88);
@@ -1041,7 +1041,7 @@ select.status-pill{
 .trainee-photo-block label{width:100%;}
 .trainee-photo{
   width:100%;
-  height:230px;
+  height:170px;
   object-fit:cover;
   border-radius:20px;
   border:1px solid #dbe4f0;
@@ -1064,8 +1064,8 @@ select.status-pill{
   justify-content:center;
   width:100%;
   box-sizing:border-box;
-  min-height:42px;
-  font-size:13px;
+  min-height:38px;
+  font-size:12px;
   letter-spacing:.06em;
   text-transform:uppercase;
 }
@@ -1078,7 +1078,7 @@ select.status-pill{
   gap:10px;
   margin:0;
   padding:22px 24px;
-  min-height:86px;
+  min-height:76px;
   border:1px solid #dbeafe;
   border-radius:26px;
   background:linear-gradient(135deg,#eff6ff,#ffffff 70%);
@@ -1102,12 +1102,13 @@ select.status-pill{
 .trainee-name-input--last{width:clamp(190px,28vw,360px);text-transform:uppercase;}
 .trainee-name-input--first{width:clamp(120px,14vw,210px);text-transform:capitalize;}
 .trainee-contact-chip-row{
-  grid-column:1;
+  grid-column:2;
   grid-row:3;
   display:flex;
   gap:8px;
   flex-wrap:wrap;
   min-width:0;
+  align-self:start;
 }
 .trainee-contact-chip-row .btn{
   width:100%;
