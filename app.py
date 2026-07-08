@@ -15242,6 +15242,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
     previous_elearning_link = (t.get("elearning_link") or "").strip()
     previous_cnaps_status = (t.get("cnaps") or "").strip()
     previous_vae_action_dates = t.get("vae_action_dates") if isinstance(t.get("vae_action_dates"), dict) else {}
+    previous_vae_status = vae_status_view(t.get("vae_status") or t.get("vae_status_label"))["key"]
 
     # Your template uses:
     # - convention_status, test_fr_status, dossier_status, financement_status, vae_status, comment, cnaps
@@ -15322,8 +15323,23 @@ def api_update_trainee(session_id: str, trainee_id: str):
 
     }
 
-    previous_vae_status = vae_status_view(t.get("vae_status"))["key"]
     vae_fields_changed = any(k in payload for k in ("vae_status", "vae_status_label", "vae_action_dates", "vae_jury_date"))
+    transmission_only_vae_action_update = False
+    if (
+        "vae_action_dates" in payload
+        and "vae_status" not in payload
+        and "vae_status_label" not in payload
+        and isinstance(payload.get("vae_action_dates"), dict)
+    ):
+        previous_action_items = {
+            key: value for key, value in previous_vae_action_dates.items()
+            if key not in {"livret_1_transmitted_scotia", "livret_2_transmitted_scotia"}
+        }
+        incoming_action_items = {
+            key: value for key, value in payload["vae_action_dates"].items()
+            if key not in {"livret_1_transmitted_scotia", "livret_2_transmitted_scotia"}
+        }
+        transmission_only_vae_action_update = previous_action_items == incoming_action_items
 
     send_vae_notification = True if payload.get("send_vae_notification", True) in (True, "true", "1", 1, "yes", "on") else False
     send_exam_fees_notification = True if payload.get("send_exam_fees_notification", True) in (True, "true", "1", 1, "yes", "on") else False
@@ -15432,6 +15448,10 @@ def api_update_trainee(session_id: str, trainee_id: str):
         t["vae_status_label"] = view["label"]
 
     _sync_vae_status_with_actions(t)
+    if transmission_only_vae_action_update:
+        previous_view = vae_status_view(previous_vae_status)
+        t["vae_status"] = previous_view["key"]
+        t["vae_status_label"] = previous_view["label"]
     current_vae_status = vae_status_view(t.get("vae_status"))["key"]
     if vae_fields_changed and current_vae_status != previous_vae_status:
         if send_vae_notification:
