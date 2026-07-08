@@ -425,15 +425,14 @@
 </div>
 {% endif %}
 
-<div class="card" style="margin-top:12px;">
-  <!-- LIGNE 1 : NOM + PHOTO CÔTE À CÔTE -->
-  <div style="display:flex;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;">
-    <div style="flex:1;min-width:320px;">
+<div class="card trainee-profile-card">
+  <div class="trainee-profile-card__main">
+    <div class="trainee-profile-card__identity">
 
-<div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:nowrap;">
+<div class="trainee-identity-head">
 
   <!-- PHOTO À GAUCHE -->
-  <div style="width:110px;flex-shrink:0;">
+  <div class="trainee-photo-block">
     {% if not is_read_only %}
       <form id="photoForm" method="post" enctype="multipart/form-data"
             action="{{ url_for('admin_upload_identity_photo', session_id=session.id, trainee_id=trainee.id) }}">
@@ -443,10 +442,10 @@
             <img
               src="{{ url_for('admin_view_upload', path=trainee.identity_photo) }}"
               alt="Photo d'identité"
-              style="width:110px;height:140px;object-fit:cover;border-radius:12px;border:1px solid #e5e7eb;background:#fff;"
+              class="trainee-photo"
             />
           {% else %}
-            <div style="width:110px;height:140px;border-radius:12px;border:1px dashed #cbd5e1;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:12px;color:#64748b;text-align:center;">
+            <div class="trainee-photo trainee-photo--empty">
               Aucune photo
             </div>
           {% endif %}
@@ -457,17 +456,17 @@
         <img
           src="{{ url_for('admin_view_upload', path=trainee.identity_photo) }}"
           alt="Photo d'identité"
-          style="width:110px;height:140px;object-fit:cover;border-radius:12px;border:1px solid #e5e7eb;background:#fff;"
+          class="trainee-photo"
         />
       {% else %}
-        <div style="width:110px;height:140px;border-radius:12px;border:1px dashed #cbd5e1;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:12px;color:#64748b;text-align:center;">
+        <div class="trainee-photo trainee-photo--empty">
           Aucune photo
         </div>
       {% endif %}
     {% endif %}
     {% if not (is_vtc and not dossier_is_complete) %}
-      <div style="margin-top:8px;text-align:center;">
-        <span class="pill {% if dossier_is_complete %}pill-green{% else %}pill-red{% endif %}" style="display:inline-flex;justify-content:center;min-width:110px;font-size:11px;padding:4px 8px;">
+      <div class="trainee-dossier-status">
+        <span class="pill {% if dossier_is_complete %}pill-green{% else %}pill-red{% endif %}">
           {% if dossier_is_complete %}Dossier complet{% else %}Dossier incomplet{% endif %}
         </span>
       </div>
@@ -494,20 +493,20 @@
 </div>
 
 
-<div class="meta-line" style="margin-top:8px;gap:8px;">
+<div class="trainee-contact-chip-row">
   {% if trainee.email %}
     <a class="btn btn-outline btn-uniform" href="mailto:{{ trainee.email }}">✉️ {{ trainee.email }}</a>
   {% endif %}
 </div>
 
-      <div class="meta-line" style="margin-top:10px;">
+      <div class="trainee-info-grid">
         <span class="mono">
           Email :
           <input id="editEmail"
                  type="email"
                  value="{{ trainee.email or '' }}"
                  placeholder="email@exemple.com"
-                 style="border:none;background:transparent;padding:0;outline:none;min-width:220px;"
+                 class="trainee-inline-input trainee-inline-input--email"
                  {{ read_only_attr }}>
         </span>
         <span class="mono">
@@ -516,7 +515,7 @@
                  type="tel"
                  value="{{ trainee.phone or '' }}"
                  placeholder="+33600000000"
-                 style="border:none;background:transparent;padding:0;outline:none;min-width:150px;"
+                 class="trainee-inline-input trainee-inline-input--phone"
                  {{ read_only_attr }}>
         </span>
         {% if "AFC" in (session.name or "")|upper %}
@@ -558,7 +557,7 @@
       {% endif %}
 
       {% if not is_vtc and not show_vae and not is_dirigeant %}
-        <div class="meta-line" style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <div class="trainee-cnaps-panel">
           {% set c = (trainee.cnaps or "INCONNU")|upper %}
           <span class="cnaps
             {% if "TRANSM" in c %}cnaps-transmis
@@ -572,27 +571,21 @@
             CNAPS : {{ c }}
           </span>
 
-          <button class="mini-btn" id="btnRefreshCnaps" type="button" {{ read_only_attr }}>↻ Rafraîchir CNAPS</button>
-          <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <button class="mini-btn trainee-cnaps-panel__refresh" id="btnRefreshCnaps" type="button" {{ read_only_attr }}>↻ Rafraîchir CNAPS</button>
+          <label class="chk-inline trainee-cnaps-panel__check">
             <input type="checkbox" id="chkCnapsOk"
                    {% if c == "CARTE PROFESSIONNELLE OK" %}checked{% endif %}
                    {{ read_only_attr }}>
             <span>CNAPS OK</span>
           </label>
-          {% if not is_read_only %}
-            <button class="btn btn-outline btn-uniform" id="btnCnapsPreRelance" type="button">
-              Relance PRE
-            </button>
-          {% endif %}
-
           {% if trainee.access_sent_at %}
             <span class="hint">✅ Accès envoyé le : <strong>{{ trainee.access_sent_at|frdatetime }}</strong></span>
           {% endif %}
         </div>
         {% set cnaps_history = trainee.cnaps_history or [] %}
         {% if cnaps_history %}
-          <div class="hint" style="margin-top:6px;">
-            Historique CNAPS :
+          <div class="trainee-cnaps-history">
+            <strong>Historique CNAPS :</strong>
             {% for entry in cnaps_history %}
               {% if entry.kind != "pre_request" %}
                 <span style="display:inline-block;margin-right:10px;">
@@ -606,7 +599,7 @@
     </div>
 
     <!-- BOUTONS ACTIONS À DROITE -->
-    <div class="admin-trainee-side-actions">
+    <div class="admin-trainee-side-actions trainee-profile-card__actions">
 
 <a class="btn btn-outline btn-uniform btn-admin-trainee-side-action {% if trainee.etiquette_word_downloaded_at %}btn-word-downloaded{% endif %}"
    id="btnEtiquetteWord"
