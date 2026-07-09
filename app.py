@@ -628,10 +628,78 @@ def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = N
         raise RuntimeError(_sanitize_qonto_error(str(exc))) from exc
 
 
+QONTO_FIELD_LABELS = {
+    "street_address": "adresse de facturation",
+    "address_line_1": "adresse de facturation",
+    "address": "adresse de facturation",
+    "city": "ville",
+    "zip_code": "code postal",
+    "postal_code": "code postal",
+    "country_code": "pays",
+    "name": "nom du client",
+    "first_name": "prénom",
+    "last_name": "nom",
+    "email": "e-mail",
+}
+
+
+def _format_qonto_missing_fields_message(message: str) -> str:
+    """Turn Qonto's technical required-field errors into an actionable French message."""
+    if not message:
+        return ""
+    missing_fields = re.findall(r"`([^`]+)`\s+must have a value", message, flags=re.IGNORECASE)
+    if not missing_fields:
+        return ""
+    labels: List[str] = []
+    seen = set()
+    for field in missing_fields:
+        label = QONTO_FIELD_LABELS.get(field, field.replace("_", " "))
+        if label not in seen:
+            labels.append(label)
+            seen.add(label)
+    if not labels:
+        return ""
+    if len(labels) == 1:
+        fields_text = labels[0]
+    else:
+        fields_text = ", ".join(labels[:-1]) + f" et {labels[-1]}"
+    return (
+        "Impossible de créer la facture Qonto : informations client incomplètes. "
+        f"Il manque : {fields_text}. "
+        "Complétez ces champs dans la fiche du stagiaire / financeur, puis relancez la création de facture."
+    )
+
+
+def _format_qonto_validation_errors(errors: List[Dict[str, str]]) -> str:
+    labels = []
+    seen = set()
+    for error in errors or []:
+        label = (error.get("label") or QONTO_FIELD_LABELS.get(error.get("field", "")) or error.get("field") or "champ").strip()
+        if label and label not in seen:
+            labels.append(label)
+            seen.add(label)
+    if not labels:
+        return "Qonto refuse la facture car les informations client sont incomplètes."
+    fields_text = labels[0] if len(labels) == 1 else ", ".join(labels[:-1]) + f" et {labels[-1]}"
+    return (
+        "Impossible de créer la facture Qonto : informations client incomplètes. "
+        f"Il manque : {fields_text}. "
+        "Complétez ces champs dans la fiche du stagiaire / financeur, puis relancez la création de facture."
+    )
+
+
 def format_qonto_error_for_front(exc: Exception) -> str:
     if isinstance(exc, QontoApiError):
-        return f"Erreur Qonto : {exc.status_code} {_extract_qonto_error_message(exc.body) or str(exc)}"
-    return f"Erreur Qonto : {_sanitize_qonto_error(str(exc))}"
+        extracted = _extract_qonto_error_message(exc.body)
+        friendly = _format_qonto_missing_fields_message(extracted or str(exc))
+        if friendly:
+            return friendly
+        return f"Erreur Qonto : {exc.status_code} {extracted or str(exc)}"
+    sanitized = _sanitize_qonto_error(str(exc))
+    friendly = _format_qonto_missing_fields_message(sanitized)
+    if friendly:
+        return friendly
+    return f"Erreur Qonto : {sanitized}"
 
 def _first_qonto_client(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     clients = data.get("clients") or data.get("client_list") or data.get("items") or []
@@ -24277,7 +24345,7 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
             qonto_client_payload = build_qonto_client_payload(current, current, {'id': current.get('sessionId')}, current.get('financingType') or current.get('financingLabel'))
             validation_errors = validate_qonto_client_payload(qonto_client_payload, current if is_cpf else current.get('financingType'))
             if validation_errors:
-                message = 'Qonto refuse la facture car les informations client sont incomplètes.'
+                message = _format_qonto_validation_errors(validation_errors)
                 current['generationInProgress'] = False
                 _billing_log(current, 'Validation locale client Qonto bloquée', 'error', message)
                 _save_billing_line(data, current); save_data(data)
@@ -24308,7 +24376,7 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
             _save_billing_line(data, current); save_data(data)
             return True, {'line': current}
         except Exception as exc:
-            msg = _sanitize_qonto_error(str(exc)); current['generationInProgress'] = False; current['invoiceStatus'] = 'not_invoiced' if not current.get('qontoInvoiceId') else 'draft'; _billing_log(current, 'Erreur création facture Qonto', 'error', msg); _save_billing_line(data, current); save_data(data); return False, {'error': msg, 'message': format_qonto_error_for_front(exc), 'line': current}
+            msg = _sanitize_qonto_error(str(exc)); front_msg = format_qonto_error_for_front(exc); current['generationInProgress'] = False; current['invoiceStatus'] = 'not_invoiced' if not current.get('qontoInvoiceId') else 'draft'; _billing_log(current, 'Erreur création facture Qonto', 'error', msg); _save_billing_line(data, current); save_data(data); return False, {'error': front_msg, 'message': front_msg, 'technical_error': msg, 'line': current}
     finally:
         lock.release()
 
