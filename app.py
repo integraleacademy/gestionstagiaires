@@ -49,6 +49,13 @@ MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024))
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
 
 
+
+
+@app.get("/templates/cpf.jpg")
+def cpf_logo_asset():
+    return send_file(os.path.join(app.root_path, "templates", "cpf.jpg"), mimetype="image/jpeg")
+
+
 @app.after_request
 def add_no_store_headers(response):
     """Avoid serving stale admin/API data after autosaved changes."""
@@ -15915,6 +15922,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "exclude_from_sales_tracking",
         "sales_tracking_amount",
         "cpf_amount",
+        "cpf_validated",
         "personal_amount",
         "other_amount",
         "birth_city",
@@ -16018,6 +16026,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
             "vtc_elearning_manual_ok",
             "vtc_book_manual_ok",
             "exclude_from_sales_tracking",
+            "cpf_validated",
         ):
             t[k] = True if v in (True, "true", "1", 1, "yes", "on") else False
             continue
