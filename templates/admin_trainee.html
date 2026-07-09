@@ -3750,8 +3750,8 @@ function updateDocsRelanceState(status, plannedDateIso){
     const fundingTotal=c.totalFacture+validatedCpfAmount;
     const fundingDiff=fundingTotal-c.prixFormation;
     const fundingTone=c.prixFormation<=0?'orange':(Math.abs(fundingDiff)<=0.01?'green':(fundingDiff<0?'orange':'red'));
-    const fundingTitle=fundingTone==='green'?'Financement OK':(fundingDiff<0?'À compléter':'Trop financé');
-    const fundingIcon=fundingTone==='green'?'✅':(fundingDiff<0?'🚨':'⚠️');
+    const fundingTitle=fundingTone==='green'?'Financement OK':(fundingDiff<0?'Attention, financement incomplet':'Trop financé');
+    const fundingIcon=fundingTone==='green'?'✅':(fundingDiff<0?'⚠️':'⚠️');
     document.getElementById('financeAlerts').style.display='block';
     document.getElementById('financeAlerts').innerHTML=`<div class="finance-funding-check finance-funding-check--${fundingTone}"><div class="finance-funding-check__icon">${fundingIcon}</div><div><div class="finance-funding-check__title">${fundingTitle}</div><div class="finance-funding-check__detail">Autres financements ${fmtMoney(c.totalFacture)} + CPF ${cpfValidated?'validé':'non validé'} ${fmtMoney(validatedCpfAmount)} = ${fmtMoney(fundingTotal)} / prix formation ${fmtMoney(c.prixFormation)}${Math.abs(fundingDiff)>0.01?` · Écart : ${fmtMoney(Math.abs(fundingDiff))}`:''}</div></div></div>`;
     document.getElementById('financeProgressPanel').innerHTML=`<div class="finance-progress-row"><strong>Facturation</strong><div class="finance-progress-track"><div class="finance-progress-fill" style="width:${Math.min(c.progressFacturation,100)}%"></div></div><strong>${Math.round(c.progressFacturation)}%</strong></div><div class="finance-progress-row"><strong>Paiement</strong><div class="finance-progress-track"><div class="finance-progress-fill finance-progress-fill--green" style="width:${Math.min(c.progressPaiement,100)}%"></div></div><strong>${Math.round(c.progressPaiement)}%</strong></div>`;
