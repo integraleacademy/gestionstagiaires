@@ -86,6 +86,38 @@ class AdminFinancementStatusSyncTests(unittest.TestCase):
         save_data.assert_called_once()
 
 
+    def test_cpf_validated_update_persists(self):
+        fake_data = {
+            "sessions": [
+                {
+                    "id": "S-APS",
+                    "name": "APS TEST",
+                    "training_type": "APS",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "last_name": "VAILLANT",
+                            "first_name": "Clément",
+                            "cpf_amount": "1000",
+                            "documents": [],
+                        }
+                    ],
+                }
+            ]
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data), patch.object(gestion_app, "save_data") as save_data:
+            response = self.client.post(
+                "/api/sessions/S-APS/stagiaires/T1/update",
+                json={"cpf_validated": True},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["ok"])
+        self.assertTrue(fake_data["sessions"][0]["trainees"][0]["cpf_validated"])
+        save_data.assert_called_once()
+
+
     def test_force_financement_validated_route_works_without_javascript_for_cpf_plus_personal(self):
         fake_data = {
             "sessions": [
