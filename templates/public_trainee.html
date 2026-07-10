@@ -1022,7 +1022,7 @@
 <details id="infosToCompleteDetails" class="collapse-card saas-section-card info-completion-card">
   <summary class="collapse-summary">
     <span class="collapse-summary-main">
-      <span class="saas-title-row"><span class="saas-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg></span><span><span class="card-kicker">Informations obligatoires</span><span class="card-title">{{ '1️⃣ Infos à compléter' if is_security_training else 'Infos à compléter' }}</span></span></span>
+      <span class="saas-title-row"><span class="saas-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg></span><span><span class="card-kicker">Informations obligatoires</span>{% if not is_security_training %}<span class="card-title">Infos à compléter</span>{% endif %}</span></span>
       <span id="infosToCompleteOk" class="oktag" hidden>Tout est OK ✅</span>
       <span id="infosToCompleteAlert" class="infos-warning" role="status" aria-live="polite" hidden>
         ⚠️ Ouvrez cet onglet pour compléter vos informations
@@ -1223,7 +1223,7 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
 <details id="documentsDetails" class="collapse-card saas-section-card documents-upload-card">
   <summary id="documentsSummary" class="collapse-summary">
     <span class="collapse-summary-main">
-      <span class="saas-title-row"><span class="saas-title-icon green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 18h3"/></svg></span><span><span class="card-kicker">Documents à déposer</span><span class="card-title">{{ '2️⃣ Mes documents' if is_security_training else 'Mes documents' }} <span id="documentsLockIcon" hidden>🔒</span></span></span></span>
+      <span class="saas-title-row"><span class="saas-title-icon green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 18h3"/></svg></span><span><span class="card-kicker">Documents à déposer</span>{% if not is_security_training %}<span class="card-title">Mes documents <span id="documentsLockIcon" hidden>🔒</span></span>{% else %}<span id="documentsLockIcon" hidden>🔒</span>{% endif %}</span></span>
       <span id="documentsOkTag" class="oktag" hidden>Tout est OK ✅</span>
       <span id="documentsAlert" class="infos-warning" role="status" aria-live="polite" hidden>
         ⚠️ Ouvrez cet onglet pour déposer vos documents
