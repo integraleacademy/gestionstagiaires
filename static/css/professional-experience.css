@@ -38,3 +38,7 @@
 @keyframes proSheetSyncSpin{to{transform:rotate(360deg)}}
 @keyframes proSheetSyncTravel{from{transform:translateX(-20%)}to{transform:translateX(145%)}}
 @media(prefers-reduced-motion:reduce){.pro-sheet-sync-progress,.pro-sheet-sync-progress__panel{transition:none}.pro-sheet-sync-progress__spinner{animation-duration:1.8s}.pro-sheet-sync-progress__steps i::after{animation:none;width:100%}}
+.documents-upload-card .docs-stack > .docrow.professional-experience-docrow{padding:0!important;border-color:var(--pro-gold)!important;background:transparent!important;box-shadow:0 10px 24px rgba(17,17,17,.08)!important}
+.documents-upload-card .docs-stack > .docrow.professional-experience-docrow:before{content:none!important}
+.documents-upload-card .docs-stack .professional-experience-docrow .docmeta{padding:0!important}
+.documents-upload-card .docs-stack .professional-experience-docrow .pro-sheet-launch{margin-top:0}
