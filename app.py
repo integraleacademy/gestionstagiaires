@@ -1361,30 +1361,11 @@ def inject_read_only():
 
 @app.get("/admin/login")
 def admin_login():
-    # mini page sans template (pour aller vite)
     next_url = request.args.get("next") or url_for("admin_sessions")
-    return f"""
-    <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Connexion admin</title></head>
-    <body style="font-family:Arial,sans-serif;max-width:420px;margin:60px auto;padding:20px">
-      <h2>Connexion</h2>
-      <p style="color:#6b7280;font-size:13px;margin-top:-4px">
-        Un compte de consultation peut être configuré pour un accès en lecture seule.
-      </p>
-      <form method="post" action="/admin/login" autocomplete="off">
-        <input type="hidden" name="next" value="{next_url}">
-        <div style="margin:10px 0">
-          <label>Identifiant</label><br>
-          <input name="username" autocomplete="off" style="width:100%;padding:10px">
-        </div>
-        <div style="margin:10px 0">
-          <label>Mot de passe</label><br>
-          <input name="password" type="password" autocomplete="new-password" style="width:100%;padding:10px">
-        </div>
-        <button style="padding:10px 14px">Se connecter</button>
-      </form>
-    </body></html>
-    """
+    error_message = None
+    if request.args.get("error") == "invalid_credentials":
+        error_message = "Identifiant ou mot de passe incorrect."
+    return render_template("admin_login.html", next_url=next_url, error_message=error_message)
 
 @app.post("/admin/login")
 def admin_login_post():
@@ -1413,7 +1394,7 @@ def admin_login_post():
             session.permanent = False
             return redirect(next_url)
 
-    return redirect(url_for("admin_login", next=next_url))
+    return redirect(url_for("admin_login", next=next_url, error="invalid_credentials"))
 
 
 @app.get("/scotia/login")
