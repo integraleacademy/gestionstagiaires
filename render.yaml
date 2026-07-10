@@ -15,4 +15,6 @@ services:
         value: INTEGRALE ACADEMY
       - key: QONTO_API_BASE_URL
         value: https://thirdparty.qonto.com
+      - key: PUBLIC_STUDENT_PORTAL_BASE
+        value: https://gestionstagiaires-test-v2.onrender.com
 
