@@ -1536,6 +1536,21 @@ id="upload_{{ d.key }}"
       </div>  <!-- ferme .docmeta -->
     </div>    <!-- ferme .docrow -->
   {% endfor %}
+  {% if show_professional_experience_sheet %}
+    <div class="docrow professional-experience-docrow {{ '' if trainee.professional_experience_sheet else 'missing' }}" id="doc_professional_experience_sheet">
+      <div class="docmeta">
+        <button class="pro-sheet-launch{% if not trainee.professional_experience_sheet %} needs-attention{% else %} is-sent{% endif %}" type="button"{% if trainee.professional_experience_sheet %} disabled aria-disabled="true"{% else %} data-pro-sheet-open{% endif %}>
+          <span class="pro-sheet-launch-icon" aria-hidden="true">✦</span>
+          <span class="pro-sheet-launch-copy">
+            <strong>Fiche expérience professionnelle <span class="pro-sheet-required-label">Obligatoire</span></strong>
+            <small>{% if trainee.professional_experience_sheet %}Votre fiche a bien été transmise. Elle ne peut plus être modifiée.{% else %}Complétez et transmettez votre parcours professionnel.{% endif %}</small>
+            <span class="pro-sheet-launch-status {% if trainee.professional_experience_sheet %}sent{% else %}required{% endif %}">{% if trainee.professional_experience_sheet %}Fichier envoyé{% else %}À compléter{% endif %}</span>
+          </span>
+          <span class="pro-sheet-launch-arrow" aria-hidden="true">{% if trainee.professional_experience_sheet %}✓{% else %}→{% endif %}</span>
+        </button>
+      </div>
+    </div>
+  {% endif %}
 </div>
 {% if show_vae or is_security_training %}
   </div>
@@ -1545,7 +1560,7 @@ id="upload_{{ d.key }}"
 {% endif %}
 
   {% endif %}
-  {% if show_professional_experience_sheet %}
+  {% if show_professional_experience_sheet and (trainee.public_hide_docs or show_vtc) %}
   <button class="pro-sheet-launch{% if not trainee.professional_experience_sheet %} needs-attention{% else %} is-sent{% endif %}" type="button"{% if trainee.professional_experience_sheet %} disabled aria-disabled="true"{% else %} data-pro-sheet-open{% endif %}>
     <span class="pro-sheet-launch-icon" aria-hidden="true">✦</span>
     <span class="pro-sheet-launch-copy">

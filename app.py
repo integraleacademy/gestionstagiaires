@@ -20474,7 +20474,7 @@ def _professional_experience_sheet_payload(raw: Any, trainee: Dict[str, Any], se
             errors[f"experiences.{index}.company_name"] = "Renseignez le nom de l’entreprise."
         if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", start_date):
             errors[f"experiences.{index}.start_date"] = "Renseignez la date d’entrée."
-        if end_date and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", end_date):
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", end_date):
             errors[f"experiences.{index}.end_date"] = "Renseignez une date de sortie valide."
         if contract_type not in allowed_contracts or not contract_type:
             errors[f"experiences.{index}.contract_type"] = "Sélectionnez le type de contrat."
