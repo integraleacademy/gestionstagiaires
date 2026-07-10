@@ -24406,7 +24406,12 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
                 q_client = get_or_create_cpf_qonto_client()
             else:
                 q_client = search_qonto_client({'email': qonto_client_payload.get('email'), 'name': qonto_client_payload.get('name') or f"{qonto_client_payload.get('first_name','')} {qonto_client_payload.get('last_name','')}".strip()})
-                if not q_client:
+                if q_client:
+                    existing_client_id = (q_client.get('client') or q_client).get('id')
+                    if existing_client_id and not qonto_client_has_complete_billing_address(q_client):
+                        app.logger.info('[QONTO] Existing billing client incomplete, updating billing address client_id=%s', existing_client_id)
+                        q_client = update_qonto_client(existing_client_id, remove_invalid_qonto_phone(qonto_client_payload)) or q_client
+                else:
                     q_client = create_qonto_client({'client': remove_invalid_qonto_phone(qonto_client_payload)})
             q_client_id = (q_client.get('client') or q_client).get('id')
             if not q_client_id:
