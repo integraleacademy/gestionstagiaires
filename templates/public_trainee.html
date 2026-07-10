@@ -1244,7 +1244,7 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
         ⚠️ Ouvrez cet onglet pour déposer vos documents
       </span>
       <span id="documentsSummaryProgress" class="documents-summary-progress" role="status" aria-live="polite" hidden>
-        <span id="documentsSummaryProgressLabel">0/0 déposé</span>
+        <span id="documentsSummaryProgressLabel">0/0 déposés</span>
         <span class="documents-summary-progress-track" aria-hidden="true"><span id="documentsSummaryProgressFill" class="documents-summary-progress-fill"></span></span>
         <span id="documentsSummaryProgressPercent">0%</span>
       </span>
@@ -1255,21 +1255,6 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
 <div class="saas-section-card documents-upload-card" style="padding:20px 22px;">
   <div class="saas-card-header"><div class="saas-title-row"><span class="saas-title-icon green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 18h3"/></svg></span><div><p class="card-kicker">Documents à déposer</p><h2 class="card-title">Mes documents</h2></div></div></div>
 {% endif %}
-  <div id="documentsHint" class="saas-helper">⚠️ Ouvrez cet onglet pour déposer vos documents. Chaque ligne indique le format attendu, le statut et l’action disponible.</div>
-
-  <div id="documentsProgress" class="documents-upload-progress" role="status" aria-live="polite">
-    <div class="documents-upload-progress-head">
-      <div>
-        <div class="documents-upload-progress-title">Avancement du dépôt</div>
-        <div id="documentsProgressText" class="documents-upload-progress-text">Chargement de votre progression…</div>
-      </div>
-      <div id="documentsProgressBadge" class="documents-upload-progress-badge">0%</div>
-    </div>
-    <div class="documents-upload-progress-track" aria-hidden="true">
-      <div id="documentsProgressFill" class="documents-upload-progress-fill"></div>
-    </div>
-  </div>
-
   <div class="docs-stack">
 
   {% for d in (trainee.documents or []) if not (is_dirigeant_vae and d.key == "livret_2") and d.key != "prerequis_interview_sheet" %}
@@ -2351,7 +2336,7 @@ function closeUploadSuccessModal(event) {
       documentsSummaryProgress.hidden = totalDocs === 0;
       documentsSummaryProgress.classList.toggle("is-complete", progressComplete);
     }
-    if (documentsSummaryProgressLabel) documentsSummaryProgressLabel.textContent = locked ? "Verrouillé" : `${submittedDocs}/${totalDocs} déposé${submittedDocs > 1 ? "s" : ""}`;
+    if (documentsSummaryProgressLabel) documentsSummaryProgressLabel.textContent = locked ? "Verrouillé" : `${submittedDocs}/${totalDocs} déposé${submittedDocs === 1 ? "" : "s"}`;
     if (documentsSummaryProgressFill) documentsSummaryProgressFill.style.width = `${progressPercent}%`;
     if (documentsSummaryProgressPercent) documentsSummaryProgressPercent.textContent = `${progressPercent}%`;
     if (documentsProgressText) {
@@ -2360,7 +2345,7 @@ function closeUploadSuccessModal(event) {
       } else if (submittedDocs === totalDocs && !hasMissing) {
         documentsProgressText.textContent = `Tous les documents sont déposés (${submittedDocs}/${totalDocs}). ${pendingDocs ? `${pendingDocs} en attente de contrôle.` : ""}`.trim();
       } else {
-        documentsProgressText.textContent = `${submittedDocs}/${totalDocs} document${totalDocs > 1 ? "s" : ""} déposé${submittedDocs > 1 ? "s" : ""}. ${missingDocs} restant${missingDocs > 1 ? "s" : ""} à déposer.`;
+        documentsProgressText.textContent = `${submittedDocs}/${totalDocs} document${totalDocs > 1 ? "s" : ""} déposé${submittedDocs === 1 ? "" : "s"}. ${missingDocs} restant${missingDocs > 1 ? "s" : ""} à déposer.`;
       }
     }
 
