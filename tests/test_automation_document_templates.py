@@ -1,3 +1,4 @@
+import html
 import os
 import unittest
 
@@ -36,6 +37,46 @@ class AutomationDocumentTemplateConfigTests(unittest.TestCase):
             "attestationentreedesparis.docx",
         )
         self.assertTrue(os.path.exists(gestion_app._aps_entry_attestation_template_path(session)))
+
+
+class AttestationEmailTrainingLabelTests(unittest.TestCase):
+    def test_entry_and_end_attestation_emails_use_supported_training_labels(self):
+        cases = [
+            (
+                {"training_type": "SSIAP", "name": "Formation SSIAP 1"},
+                "SSIAP",
+                "Agent de sécurité incendie SSIAP 1",
+            ),
+            (
+                {"training_type": "A3P", "name": "Formation A3P"},
+                "A3P",
+                "Agent de Protection Physique des Personnes A3P",
+            ),
+            (
+                {"training_type": "DIRIGEANT", "name": "Formation DESP"},
+                "DESP",
+                "Dirigeant d'une entreprise de sécurité privée (DESP)",
+            ),
+        ]
+
+        for session, short_label, long_label in cases:
+            with self.subTest(short_label=short_label):
+                entry_subject, entry_html = gestion_app._build_aps_entry_attestation_email(
+                    "Jean", "2026-09-01", session
+                )
+                end_subject, end_html = gestion_app._build_aps_end_attestation_email(
+                    "Jean", "2026-09-30", session
+                )
+
+                self.assertIn(f"formation {short_label}", entry_subject)
+                self.assertIn(f"formation {short_label}", end_subject)
+                escaped_long_label = html.escape(long_label)
+                self.assertIn(escaped_long_label, entry_html)
+                self.assertIn(escaped_long_label, end_html)
+                self.assertNotIn("formation APS", entry_subject)
+                self.assertNotIn("formation APS", end_subject)
+                self.assertNotIn("formation APS", entry_html)
+                self.assertNotIn("formation APS", end_html)
 
 
 if __name__ == "__main__":

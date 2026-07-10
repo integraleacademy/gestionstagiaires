@@ -22376,28 +22376,47 @@ def _generate_aps_end_attestation_files(session_obj: Dict[str, Any], trainee: Di
     return final_docx_path, final_pdf_path
 
 
-def _build_aps_end_attestation_email(first_name: str, date_end: str = "") -> Tuple[str, str]:
-    subject = "Attestation de fin de formation APS - Intégrale Academy"
+def _attestation_email_training_labels(session_obj: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
+    config = _automation_document_config(session_obj or {})
+    slug = str(config.get("slug") or "").strip().lower()
+    short_label = str(config.get("label") or "APS").strip() or "APS"
+    if slug == "a3p":
+        return "A3P", "Agent de Protection Physique des Personnes A3P"
+    if slug.startswith("desp_"):
+        return "DESP", "Dirigeant d'une entreprise de sécurité privée (DESP)"
+    if slug == "ssiap":
+        return "SSIAP", "Agent de sécurité incendie SSIAP 1"
+    if slug == "aps":
+        return "APS", "Agent de Prévention et de Sécurité (APS)"
+    return short_label, FORMATION_LONG_LABELS.get(short_label.upper(), short_label)
+
+
+def _build_aps_end_attestation_email(first_name: str, date_end: str = "", session_obj: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
+    short_label, long_label = _attestation_email_training_labels(session_obj)
+    subject = f"Attestation de fin de formation {short_label} - Intégrale Academy"
     safe_first_name = html.escape(str(first_name or "").strip() or "Madame, Monsieur")
+    safe_long_label = html.escape(long_label)
     period = fr_date(date_end) if date_end else ""
     period_line = f"<p><strong>Date de fin de formation :</strong> {html.escape(period)}</p>" if period else ""
     html_body = f"""<!doctype html><html lang="fr"><body style="font-family:Arial,Helvetica,sans-serif;color:#172033;line-height:1.6;">
       <p>Bonjour {safe_first_name},</p>
-      <p>Veuillez trouver en pièce jointe votre attestation de fin de formation APS.</p>
+      <p>Veuillez trouver en pièce jointe votre attestation de fin de formation {safe_long_label}.</p>
       {period_line}
       <p>Bien cordialement,<br>Intégrale Academy</p>
     </body></html>"""
     return subject, html_body
 
 
-def _build_aps_entry_attestation_email(first_name: str, date_start: str = "") -> Tuple[str, str]:
-    subject = "Attestation d’entrée en formation APS - Intégrale Academy"
+def _build_aps_entry_attestation_email(first_name: str, date_start: str = "", session_obj: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
+    short_label, long_label = _attestation_email_training_labels(session_obj)
+    subject = f"Attestation d’entrée en formation {short_label} - Intégrale Academy"
     safe_first_name = html.escape(str(first_name or "").strip() or "Madame, Monsieur")
+    safe_long_label = html.escape(long_label)
     period = fr_date(date_start) if date_start else ""
     period_line = f"<p><strong>Date d’entrée en formation :</strong> {html.escape(period)}</p>" if period else ""
     html_body = f"""<!doctype html><html lang="fr"><body style="font-family:Arial,Helvetica,sans-serif;color:#172033;line-height:1.6;">
       <p>Bonjour {safe_first_name},</p>
-      <p>Veuillez trouver en pièce jointe votre attestation d’entrée en formation APS.</p>
+      <p>Veuillez trouver en pièce jointe votre attestation d’entrée en formation {safe_long_label}.</p>
       {period_line}
       <p>Bien cordialement,<br>Intégrale Academy</p>
     </body></html>"""
@@ -25054,7 +25073,7 @@ def admin_send_aps_entry_attestation(session_id: str, trainee_id: str):
         docx_path, pdf_path = _generate_aps_entry_attestation_files(s, t, session_id, trainee_id)
         with open(pdf_path, "rb") as fh:
             encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
-        subject, html_content = _build_aps_entry_attestation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""))
+        subject, html_content = _build_aps_entry_attestation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), s)
         email_ok = brevo_send_email(str(t.get("email") or "").strip(), subject, html_content, trainee=t, attachments=[{"name": os.path.basename(pdf_path), "content": encoded_pdf}])
         if not email_ok:
             raise RuntimeError("Impossible d’envoyer l’attestation d’entrée : échec d’envoi email")
@@ -25111,7 +25130,7 @@ def admin_send_aps_end_attestation(session_id: str, trainee_id: str):
         docx_path, pdf_path = _generate_aps_end_attestation_files(s, t, session_id, trainee_id)
         with open(pdf_path, "rb") as fh:
             encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
-        subject, html_content = _build_aps_end_attestation_email(str(t.get("first_name") or ""), _session_get(s, "date_end", ""))
+        subject, html_content = _build_aps_end_attestation_email(str(t.get("first_name") or ""), _session_get(s, "date_end", ""), s)
         email_ok = brevo_send_email(str(t.get("email") or "").strip(), subject, html_content, trainee=t, attachments=[{"name": os.path.basename(pdf_path), "content": encoded_pdf}])
         if not email_ok:
             raise RuntimeError("Impossible d’envoyer l’attestation de fin : échec d’envoi email")
