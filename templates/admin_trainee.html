@@ -3744,10 +3744,12 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     const adjusted=(parseFloat(String(salesTrackingAmount?.value||'').replace(',','.'))||0)>0;
     const cpfTone=cpfValidated?'green':'orange';
     const cpfValue=cpfValidated?c.montantCpf:0;
+    const hasCpfAmount=c.montantCpf>0;
+    const hasOtherFundingAmount=(c.montantPersonnel+c.montantAutre)>0;
     const cards=[
       {label:'Prix formation',icon:'€',value:fmtMoney(c.prixFormation),badge:adjusted?badge('Tarif ajusté','blue'):badge('Tarif standard','gray'),tone:adjusted?'blue':'gray',meta:'Montant de référence'},
-      {label:'CPF',icon:'<img class="finance-summary-card__cpf-logo" src="/templates/cpf.jpg" alt="Logo CPF">',value:`${fmtMoney(cpfValue)} / ${fmtMoney(c.montantCpf)}`,badge:badge(cpfValidated?'CPF validé':'CPF non validé',cpfTone),tone:cpfTone,meta:cpfValidated?'Montant CPF confirmé':'Cliquez quand le CPF est confirmé',cpf:true},
-      {label:'AUTRES FINANCEMENTS',icon:'👨',value:`${fmtMoney(c.totalFacture)} / ${fmtMoney(c.objectifFacturation)}`,badge:badge(fact[0],fact[1]),tone:(c.objectifFacturation>0&&c.totalFacture<c.objectifFacturation)?'orange':fact[1],meta:`Reste à facturer : ${fmtMoney(Math.max(c.resteAFacturer,0))}`},
+      ...(hasCpfAmount?[{label:'CPF',icon:'<img class="finance-summary-card__cpf-logo" src="/templates/cpf.jpg" alt="Logo CPF">',value:`${fmtMoney(cpfValue)} / ${fmtMoney(c.montantCpf)}`,badge:badge(cpfValidated?'CPF validé':'CPF non validé',cpfTone),tone:cpfTone,meta:cpfValidated?'Montant CPF confirmé':'Cliquez quand le CPF est confirmé',cpf:true}]:[]),
+      ...(hasOtherFundingAmount?[{label:'AUTRES FINANCEMENTS',icon:'👨',value:`${fmtMoney(c.totalFacture)} / ${fmtMoney(c.objectifFacturation)}`,badge:badge(fact[0],fact[1]),tone:(c.objectifFacturation>0&&c.totalFacture<c.objectifFacturation)?'orange':fact[1],meta:`Reste à facturer : ${fmtMoney(Math.max(c.resteAFacturer,0))}`}]:[]),
       {label:'Payé',icon:(pay[1]==='green'?'✓':'✕'),iconTone:pay[1]==='green'?'green':'red',value:`${fmtMoney(c.totalPaye)} / ${fmtMoney(c.objectifFacturation)}`,badge:badge(pay[0],pay[1]),tone:(c.objectifFacturation>0&&c.totalPaye<c.objectifFacturation)?'orange':pay[1],meta:`Reste à payer : ${fmtMoney(Math.max(c.resteAPayer,0))}`},
       {label:'Prélèvements',icon:'↻',value:`${c.mensualitesPayees}/${c.totalMensualites}`,badge:badge(inst[0],inst[1]),tone:inst[1],meta:c.prochaineEcheance?`Prochain : ${formatIsoDateFr(c.prochaineEcheance.date)} — ${fmtMoney(c.prochaineEcheance.amount)}`:'Aucune prochaine échéance'}
     ];
