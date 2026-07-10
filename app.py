@@ -17365,8 +17365,9 @@ def _token_belongs_to_trainee(t: dict, file_token: str) -> bool:
     conv_sig = t.get("convention_signature") if isinstance(t.get("convention_signature"), dict) else {}
     if (conv_sig.get("signed_pdf_token") or "").strip() == file_token:
         return True
-    if (t.get("convocation_aps_pdf_token") or "").strip() == file_token:
-        return True
+    for key in ("convocation_aps_pdf_token", "attestation_entree_aps_pdf_token", "attestation_fin_aps_pdf_token"):
+        if (t.get(key) or "").strip() == file_token:
+            return True
 
     return False
 
@@ -20354,6 +20355,16 @@ def public_trainee_space(token):
             file_tokens.insert(0, file_token)
         d["file_tokens"] = file_tokens
 
+    # Expose generated training documents in the public trainee space when their PDF exists.
+    # Older records may only have the PDF path, so compute the token at render time too.
+    for path_key, token_key in (
+        ("convocation_aps_pdf_path", "convocation_aps_pdf_token"),
+        ("attestation_entree_aps_pdf_path", "attestation_entree_aps_pdf_token"),
+        ("attestation_fin_aps_pdf_path", "attestation_fin_aps_pdf_token"),
+    ):
+        if not (t.get(token_key) or "").strip() and (t.get(path_key) or "").strip():
+            t[token_key] = _store_public_file_token(str(t.get(path_key) or ""))
+
     show_hosting = ((training_type or "").strip().upper() == "A3P")
     show_vae = ("VAE" in (training_type or "").upper())
     show_professional_experience_sheet = _professional_experience_sheet_is_required(training_type, _session_get(s, "date_start", ""))
@@ -20384,6 +20395,7 @@ def public_trainee_space(token):
         show_vae=show_vae,
         show_professional_experience_sheet=show_professional_experience_sheet,
         show_vtc=show_vtc,
+        is_aps_training=is_aps_training,
         aps_elearning_enabled=aps_elearning_enabled,
         aps_elearning_available=aps_elearning_available,
         dossier_ok=dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")),
@@ -25104,6 +25116,7 @@ def admin_send_aps_entry_attestation(session_id: str, trainee_id: str):
         t["attestation_entree_aps_sent_at"] = sent_at
         t["attestation_entree_aps_pdf_path"] = pdf_path
         t["attestation_entree_aps_docx_path"] = docx_path
+        t["attestation_entree_aps_pdf_token"] = _store_public_file_token(pdf_path)
         t["attestation_entree_aps_last_error"] = ""
         t["updated_at"] = sent_at
         s["trainees"] = trainees
@@ -25161,6 +25174,7 @@ def admin_send_aps_end_attestation(session_id: str, trainee_id: str):
         t["attestation_fin_aps_sent_at"] = sent_at
         t["attestation_fin_aps_pdf_path"] = pdf_path
         t["attestation_fin_aps_docx_path"] = docx_path
+        t["attestation_fin_aps_pdf_token"] = _store_public_file_token(pdf_path)
         t["attestation_fin_aps_last_error"] = ""
         t["updated_at"] = sent_at
         s["trainees"] = trainees
@@ -25258,6 +25272,7 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         t["convocation_aps_sent_at"] = sent_at
         t["convocation_aps_pdf_path"] = pdf_path
         t["convocation_aps_docx_path"] = docx_path
+        t["convocation_aps_pdf_token"] = _store_public_file_token(pdf_path)
         t["convocation_aps_generated_from"] = "word"
         t["convocation_aps_view_url"] = url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id)
         t["convocation_aps_last_error"] = ""
