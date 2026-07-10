@@ -990,15 +990,21 @@
     </div>
     {% endif %}
 
-    {% if conv_sig.signed_pdf_token or trainee.convocation_aps_pdf_token %}
+    {% if conv_sig.signed_pdf_token or is_aps_training %}
     <div class="card" style="border-left:4px solid #16a34a;">
       <h2>Documents de formation</h2>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        {% if conv_sig.signed_pdf_token %}
-          <a class="btn" href="{{ url_for('public_download_file', token=token_safe, file_token=conv_sig.signed_pdf_token) }}" target="_blank" rel="noopener">📄 Voir ma convention signée</a>
-        {% endif %}
+      {% if conv_sig.signed_pdf_token %}
+      <div class="docrow">
+        <div class="docmeta"><div class="label">Convention signée</div></div>
+        <a class="btn outline small" href="{{ url_for('public_download_file', token=token_safe, file_token=conv_sig.signed_pdf_token) }}" target="_blank" rel="noopener">Voir</a>
+      </div>
+      {% endif %}
+      <div class="docrow">
+        <div class="docmeta"><div class="label">Convocation</div></div>
         {% if trainee.convocation_aps_pdf_token %}
-          <a class="btn" href="{{ url_for('public_download_file', token=token_safe, file_token=trainee.convocation_aps_pdf_token) }}" target="_blank" rel="noopener">📄 Voir ma convocation</a>
+          <a class="btn outline small" href="{{ url_for('public_download_file', token=token_safe, file_token=trainee.convocation_aps_pdf_token) }}" target="_blank" rel="noopener">Voir</a>
+        {% else %}
+          <span class="pill gray">Prochainement</span>
         {% endif %}
       </div>
     </div>
@@ -1672,10 +1678,21 @@ id="upload_{{ d.key }}"
 </div>
 
 <div class="docrow">
-  <div class="docmeta"><div class="label">Mes attestations de fin de formation</div></div>
-  {% if deliv.get('attestation_fin_formation') %}
+  <div class="docmeta"><div class="label">Attestation d'entrée en formation</div></div>
+  {% if trainee.attestation_entree_aps_pdf_token %}
+    <a class="btn outline small" target="_blank"
+   href="/espace/{{ token_safe }}/download/{{ trainee.attestation_entree_aps_pdf_token }}">Voir</a>
+  {% else %}
+    <span class="pill gray">Prochainement</span>
+  {% endif %}
+</div>
+
+<div class="docrow">
+  <div class="docmeta"><div class="label">Attestation de fin de formation</div></div>
+  {% set end_attestation_token = trainee.attestation_fin_aps_pdf_token or deliv.get('attestation_fin_formation') %}
+  {% if end_attestation_token %}
    <a class="btn outline small" target="_blank"
-   href="/espace/{{ token_safe }}/download/{{ deliv.get('attestation_fin_formation') }}">Voir</a>
+   href="/espace/{{ token_safe }}/download/{{ end_attestation_token }}">Voir</a>
 
   {% else %}
     <span class="pill gray">Prochainement</span>
