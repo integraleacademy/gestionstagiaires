@@ -134,7 +134,14 @@ def page_not_found(error):
     trainee_login_url = None
     path_parts = [part for part in request.path.split("/") if part]
     if len(path_parts) >= 2 and path_parts[0] == "espace":
-        trainee_login_url = url_for("public_trainee_login", token=path_parts[1])
+        token = path_parts[1]
+        data = load_data()
+        _, trainee = find_session_and_trainee_by_token(data, token)
+        trainee_login_url = (
+            url_for("public_trainee_login", token=token)
+            if trainee
+            else url_for("public_trainee_global_login")
+        )
 
     return render_template("404.html", trainee_login_url=trainee_login_url), 404
 
