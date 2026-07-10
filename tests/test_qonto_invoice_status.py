@@ -266,5 +266,49 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(lines[0]["invoiceStatus"], "finalized")
         self.assertEqual(lines[0]["paymentStatus"], "unpaid")
 
+    def test_billing_qonto_generation_updates_existing_client_missing_billing_address(self):
+        line = {
+            "id": "bill_test",
+            "traineeId": "T1",
+            "sessionId": "S1",
+            "financingType": "PERSONNEL",
+            "amount": 4300,
+            "clientName": "Alice Dupont",
+            "traineeFirstName": "Alice",
+            "traineeLastName": "Dupont",
+            "traineeEmail": "alice@example.test",
+            "clientAddress": "47 allée des cistes",
+            "clientZipCode": "83520",
+            "clientCity": "Roquebrune sur Argens",
+            "dateStart": "2026-07-15",
+            "dateEnd": "2026-10-28",
+            "formationName": "APS",
+            "sessionName": "APS",
+            "vatRate": 0,
+            "invoiceStatus": "not_invoiced",
+            "paymentStatus": "not_applicable",
+        }
+        data = {"billing_lines": [line], "sessions": []}
+        existing_client = {"client": {"id": "client_123", "email": "alice@example.test"}}
+        updated_client = {"client": {"id": "client_123", "billing_address": {"street_address": "47 allée des cistes", "zip_code": "83520", "city": "Roquebrune sur Argens", "country_code": "FR"}}}
+
+        with patch.object(gestion_app, "_qonto_is_configured", return_value=True), \
+             patch.object(gestion_app, "get_qonto_invoice_iban", return_value="FR7612345678901234567890123"), \
+             patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data", side_effect=self.saved.append), \
+             patch.object(gestion_app, "search_qonto_client", return_value=existing_client), \
+             patch.object(gestion_app, "update_qonto_client", return_value=updated_client) as update_client, \
+             patch.object(gestion_app, "create_qonto_invoice", return_value={"client_invoice": {"id": "inv_123", "number": "F-123"}}), \
+             patch.object(gestion_app, "_setup_qonto_direct_debit_for_line"):
+            ok, result = gestion_app._create_invoice_for_billing_line(data, line, {})
+
+        self.assertTrue(ok)
+        update_client.assert_called_once()
+        payload = update_client.call_args.args[1]
+        self.assertEqual(payload["address_line_1"], "47 allée des cistes")
+        self.assertEqual(payload["zip_code"], "83520")
+        self.assertEqual(payload["city"], "Roquebrune sur Argens")
+        self.assertEqual(result["line"]["qontoInvoiceId"], "inv_123")
+
 if __name__ == "__main__":
     unittest.main()
