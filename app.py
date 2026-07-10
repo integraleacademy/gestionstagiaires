@@ -88,6 +88,7 @@ SCOTIA_COMMENT_AUTHOR_LABELS = {
 }
 SCOTIA_NOTIFICATION_EMAIL = os.environ.get("SCOTIA_NOTIFICATION_EMAIL", "scotiaformation@gmail.com").strip()
 SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "30"))
+AUTH_SESSION_VERSION = os.environ.get("AUTH_SESSION_VERSION", "2026-07-10-force-login")
 ADMIN_PUSH_TITLE = os.environ.get("ADMIN_PUSH_TITLE", "Intégrale Academy")
 WEB_PUSH_VAPID_PUBLIC_KEY = os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY", "").strip()
 WEB_PUSH_VAPID_PRIVATE_KEY = os.environ.get("WEB_PUSH_VAPID_PRIVATE_KEY", "").strip()
@@ -1236,10 +1237,32 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=datetime.timedelta(days=SESSION_DAYS),
 )
 
+
+def _auth_session_is_current() -> bool:
+    """Invalidate old persistent auth cookies that predate forced re-login."""
+    if not (session.get("admin_logged_in") or session.get("scotia_logged_in")):
+        return True
+    if session.get("auth_session_version") == AUTH_SESSION_VERSION:
+        return True
+    session.clear()
+    return False
+
+
+def _mark_auth_session_current() -> None:
+    session["auth_session_version"] = AUTH_SESSION_VERSION
+
+
+def _admin_logged_in() -> bool:
+    return _auth_session_is_current() and bool(session.get("admin_logged_in"))
+
+
+def _scotia_logged_in() -> bool:
+    return _auth_session_is_current() and bool(session.get("scotia_logged_in"))
+
 def admin_login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if not session.get("admin_logged_in"):
+        if not _admin_logged_in():
             return redirect(url_for("admin_login", next=request.path))
         return view(*args, **kwargs)
     return wrapped
@@ -1252,35 +1275,11 @@ def admin_write_required(view):
         return view(*args, **kwargs)
     return wrapped
 
-def _is_integrale_scotia_admin_session() -> bool:
-    """Return True when the active admin session belongs to Clément.
-
-    Older persistent admin sessions did not store the username, so we also trust
-    the configured admin account when it is Clément's account.
-    """
-    if not session.get("admin_logged_in") or session.get("admin_role") != "admin":
-        return False
-
-    admin_username = (session.get("admin_username") or "").strip().lower()
-    if admin_username:
-        return admin_username == INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL
-
-    return (ADMIN_USER or "").strip().lower() == INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL
-
-
-def _enable_scotia_session_for_integrale_admin() -> None:
-    session["scotia_logged_in"] = True
-    session["scotia_username"] = INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL
-    session.permanent = True
-
-
 def scotia_login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-        if not session.get("scotia_logged_in"):
+        if not _scotia_logged_in():
             return redirect(url_for("scotia_login", next=request.path))
-        # Garde le cookie Scotia persistant tant que l'utilisateur reste actif.
-        session.permanent = True
         return view(*args, **kwargs)
     return wrapped
 
@@ -1293,7 +1292,7 @@ def protect_sensitive_routes():
     """
     path = request.path or ""
     if path.startswith("/admin/") and path != "/admin/login":
-        if not session.get("admin_logged_in"):
+        if not _admin_logged_in():
             return redirect(url_for("admin_login", next=request.full_path if request.query_string else path))
 
     protected_api_prefixes = (
@@ -1302,7 +1301,7 @@ def protect_sensitive_routes():
         "/api/cnaps",
     )
     if path.startswith(protected_api_prefixes):
-        if not session.get("admin_logged_in"):
+        if not _admin_logged_in():
             app.logger.warning("[SECURITY] blocked_by_global_guard path=%s", path)
             return jsonify({"ok": False, "error": "auth_required"}), 401
         if request.method not in {"GET", "HEAD", "OPTIONS"} and session.get("admin_role") == "viewer":
@@ -1311,14 +1310,14 @@ def protect_sensitive_routes():
 @app.context_processor
 def inject_read_only():
     admin_notifications = {"notifications": [], "unresolved_total": 0}
-    if session.get("admin_logged_in") and _admin_can_view_notifications():
+    if _admin_logged_in() and _admin_can_view_notifications():
         try:
             admin_notifications = _admin_notifications_payload(load_data())
         except Exception:
             admin_notifications = {"notifications": [], "unresolved_total": 0}
     mail_sent_notice = bool(session.pop("_mail_sent_notice", False))
     return {
-        "is_admin_logged_in": bool(session.get("admin_logged_in")),
+        "is_admin_logged_in": _admin_logged_in(),
         "is_read_only": session.get("admin_role") == "viewer",
         "admin_notifications": admin_notifications["notifications"],
         "admin_unresolved_total": admin_notifications["unresolved_total"],
@@ -1339,15 +1338,15 @@ def admin_login():
       <p style="color:#6b7280;font-size:13px;margin-top:-4px">
         Un compte de consultation peut être configuré pour un accès en lecture seule.
       </p>
-      <form method="post" action="/admin/login">
+      <form method="post" action="/admin/login" autocomplete="off">
         <input type="hidden" name="next" value="{next_url}">
         <div style="margin:10px 0">
           <label>Identifiant</label><br>
-          <input name="username" autocomplete="username" style="width:100%;padding:10px">
+          <input name="username" autocomplete="off" style="width:100%;padding:10px">
         </div>
         <div style="margin:10px 0">
           <label>Mot de passe</label><br>
-          <input name="password" type="password" autocomplete="current-password" style="width:100%;padding:10px">
+          <input name="password" type="password" autocomplete="new-password" style="width:100%;padding:10px">
         </div>
         <button style="padding:10px 14px">Se connecter</button>
       </form>
@@ -1368,7 +1367,8 @@ def admin_login_post():
         session["admin_logged_in"] = True
         session["admin_role"] = "admin"
         session["admin_username"] = username.lower()
-        session.permanent = True  # ✅ cookie persistant
+        _mark_auth_session_current()
+        session.permanent = False
         return redirect(next_url)
 
     if SECRETARY_USER and SECRETARY_PASSWORD:
@@ -1376,7 +1376,8 @@ def admin_login_post():
             session["admin_logged_in"] = True
             session["admin_role"] = "viewer"
             session["admin_username"] = username.lower()
-            session.permanent = True
+            _mark_auth_session_current()
+            session.permanent = False
             return redirect(next_url)
 
     return redirect(url_for("admin_login", next=next_url))
@@ -1385,21 +1386,17 @@ def admin_login_post():
 @app.get("/scotia/login")
 def scotia_login():
     next_url = request.args.get("next") or url_for("scotia_dashboard")
-    if session.get("scotia_logged_in"):
-        session.permanent = True
-        return redirect(next_url)
-    if _is_integrale_scotia_admin_session():
-        _enable_scotia_session_for_integrale_admin()
+    if _scotia_logged_in():
         return redirect(next_url)
     return f"""
     <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Connexion SCOTIA</title></head>
     <body style="font-family:Arial,sans-serif;max-width:420px;margin:60px auto;padding:20px">
       <h2>Connexion SCOTIA</h2>
-      <form method="post" action="/scotia/login">
+      <form method="post" action="/scotia/login" autocomplete="off">
         <input type="hidden" name="next" value="{next_url}">
-        <div style="margin:10px 0"><label>Identifiant</label><br><input name="username" autocomplete="username" style="width:100%;padding:10px"></div>
-        <div style="margin:10px 0"><label>Mot de passe</label><br><input name="password" type="password" autocomplete="current-password" style="width:100%;padding:10px"></div>
+        <div style="margin:10px 0"><label>Identifiant</label><br><input name="username" autocomplete="off" style="width:100%;padding:10px"></div>
+        <div style="margin:10px 0"><label>Mot de passe</label><br><input name="password" type="password" autocomplete="new-password" style="width:100%;padding:10px"></div>
         <button style="padding:10px 14px">Se connecter</button>
       </form>
     </body></html>
@@ -1421,12 +1418,12 @@ def scotia_login_post():
         session.clear()
         session["scotia_logged_in"] = True
         session["scotia_username"] = username.lower()
+        _mark_auth_session_current()
         if admin_ok:
             session["admin_logged_in"] = True
             session["admin_role"] = "admin"
             session["admin_username"] = username.lower()
-        # Cookie de session persistant (durée définie par SESSION_DAYS).
-        session.permanent = True
+        session.permanent = False
         return redirect(next_url)
 
     return redirect(url_for("scotia_login", next=next_url))
