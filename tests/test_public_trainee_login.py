@@ -24,6 +24,37 @@ class PublicTraineeLoginTests(unittest.TestCase):
             ]
         }
 
+
+
+    def test_public_student_portal_base_rewrites_legacy_render_host(self):
+        self.assertEqual(
+            gestion_app._normalize_public_student_portal_base("https://gestionstagiaires-r5no.onrender.com/"),
+            "https://gestionstagiaires-test-v2.onrender.com",
+        )
+
+    def test_public_student_portal_base_keeps_current_target_host(self):
+        self.assertEqual(
+            gestion_app._normalize_public_student_portal_base("https://gestionstagiaires-test-v2.onrender.com/"),
+            "https://gestionstagiaires-test-v2.onrender.com",
+        )
+
+    def test_404_unknown_space_token_links_to_global_login(self):
+        with patch.object(gestion_app, "load_data", return_value=self.data):
+            response = self.client.get("/espace/UNKNOWN-TOKEN", follow_redirects=False)
+
+        body = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 404)
+        self.assertIn('href="/espacestagiaire"', body)
+        self.assertNotIn('/espace/UNKNOWN-TOKEN/login', body)
+
+    def test_404_known_space_token_links_to_token_login(self):
+        with patch.object(gestion_app, "load_data", return_value=self.data):
+            response = self.client.get("/espace/PUBLIC-TOKEN/does-not-exist", follow_redirects=False)
+
+        body = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 404)
+        self.assertIn('href="/espace/PUBLIC-TOKEN/login"', body)
+
     def test_birth_to_ddmmyyyy_keeps_public_ddmmyyyy_when_day_starts_with_19(self):
         self.assertEqual(gestion_app._birth_to_ddmmyyyy("19081999"), "19081999")
 

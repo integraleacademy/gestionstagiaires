@@ -134,7 +134,14 @@ def page_not_found(error):
     trainee_login_url = None
     path_parts = [part for part in request.path.split("/") if part]
     if len(path_parts) >= 2 and path_parts[0] == "espace":
-        trainee_login_url = url_for("public_trainee_login", token=path_parts[1])
+        token = path_parts[1]
+        data = load_data()
+        _, trainee = find_session_and_trainee_by_token(data, token)
+        trainee_login_url = (
+            url_for("public_trainee_login", token=token)
+            if trainee
+            else url_for("public_trainee_global_login")
+        )
 
     return render_template("404.html", trainee_login_url=trainee_login_url), 404
 
@@ -2383,10 +2390,24 @@ CNAPSV3_NOTIFICATIONS_ENDPOINT = os.environ.get("CNAPSV3_NOTIFICATIONS_ENDPOINT"
 CNAPSV3_BASE_URL = os.environ.get("CNAPSV3_BASE_URL", "https://cnapsv3.onrender.com").strip().rstrip("/")
 GESTIONSTAGIAIRE_SYNC_TOKEN = os.environ.get("GESTIONSTAGIAIRE_SYNC_TOKEN", "").strip()
 
-PUBLIC_STUDENT_PORTAL_BASE = os.environ.get(
-    "PUBLIC_STUDENT_PORTAL_BASE",
-    APP_BASE_URL
-).strip().rstrip("/")
+PUBLIC_STUDENT_PORTAL_BASE_DEFAULT = "https://gestionstagiaires-test-v2.onrender.com"
+PUBLIC_STUDENT_PORTAL_LEGACY_HOSTS = {"gestionstagiaires-r5no.onrender.com"}
+
+
+def _normalize_public_student_portal_base(value: str) -> str:
+    raw = (value or "").strip().rstrip("/")
+    if not raw:
+        return PUBLIC_STUDENT_PORTAL_BASE_DEFAULT
+
+    parsed = urlparse(raw if "://" in raw else f"https://{raw}")
+    if parsed.netloc in PUBLIC_STUDENT_PORTAL_LEGACY_HOSTS:
+        return PUBLIC_STUDENT_PORTAL_BASE_DEFAULT
+    return raw
+
+
+PUBLIC_STUDENT_PORTAL_BASE = _normalize_public_student_portal_base(
+    os.environ.get("PUBLIC_STUDENT_PORTAL_BASE") or APP_BASE_URL
+)
 
 PUBLIC_BASE_URL = os.environ.get(
     "PUBLIC_BASE_URL",
