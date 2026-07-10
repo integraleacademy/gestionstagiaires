@@ -747,6 +747,16 @@
   .info-completion-card .field + .field{margin-top:10px;}
   .info-completion-card .field input,.info-completion-card .field select{border-color:#dbe3ee;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.03);}
   .info-completion-card .saved.show{padding:6px 10px;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;}
+  .documents-upload-progress{margin:0 0 16px;padding:14px 16px;border:1px solid #dbeafe;border-radius:18px;background:linear-gradient(135deg,#eff6ff 0%,#ffffff 100%);box-shadow:0 8px 20px rgba(37,99,235,.06);}
+  .documents-upload-progress-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;}
+  .documents-upload-progress-title{font-weight:1000;color:#0f172a;line-height:1.2;}
+  .documents-upload-progress-text{margin-top:3px;color:#64748b;font-size:13px;font-weight:800;line-height:1.35;}
+  .documents-upload-progress-badge{padding:7px 11px;border:1px solid #bfdbfe;border-radius:999px;background:#fff;color:#1d4ed8;font-size:13px;font-weight:1000;white-space:nowrap;}
+  .documents-upload-progress-track{height:10px;border-radius:999px;background:#dbeafe;overflow:hidden;}
+  .documents-upload-progress-fill{height:100%;width:0%;border-radius:inherit;background:linear-gradient(90deg,#2563eb,#22c55e);transition:width .25s ease;}
+  .documents-upload-progress.is-complete{border-color:#bbf7d0;background:linear-gradient(135deg,#ecfdf5 0%,#ffffff 100%);}
+  .documents-upload-progress.is-complete .documents-upload-progress-badge{border-color:#bbf7d0;color:#047857;background:#f0fdf4;}
+  .documents-upload-progress.is-complete .documents-upload-progress-track{background:#dcfce7;}
   .documents-upload-card .docs-stack{display:grid;gap:12px;margin-top:14px;}
   .documents-upload-card .docs-stack > .docrow{position:relative;display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:12px!important;padding:16px!important;border:1px solid #e6edf5!important;border-radius:18px!important;background:#fbfdff!important;box-shadow:0 8px 20px rgba(15,23,42,.04);}
   .documents-upload-card .docs-stack > .docrow:before{content:"";position:absolute;left:16px;top:18px;width:38px;height:38px;border-radius:14px;background:#eff6ff;}
@@ -1237,6 +1247,19 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
 {% endif %}
   <div id="documentsHint" class="saas-helper">⚠️ Ouvrez cet onglet pour déposer vos documents. Chaque ligne indique le format attendu, le statut et l’action disponible.</div>
 
+  <div id="documentsProgress" class="documents-upload-progress" role="status" aria-live="polite">
+    <div class="documents-upload-progress-head">
+      <div>
+        <div class="documents-upload-progress-title">Avancement du dépôt</div>
+        <div id="documentsProgressText" class="documents-upload-progress-text">Chargement de votre progression…</div>
+      </div>
+      <div id="documentsProgressBadge" class="documents-upload-progress-badge">0%</div>
+    </div>
+    <div class="documents-upload-progress-track" aria-hidden="true">
+      <div id="documentsProgressFill" class="documents-upload-progress-fill"></div>
+    </div>
+  </div>
+
   <div class="docs-stack">
 
   {% for d in (trainee.documents or []) if not (is_dirigeant_vae and d.key == "livret_2") and d.key != "prerequis_interview_sheet" %}
@@ -1308,7 +1331,7 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
       ] %}
     {% endif %}
 
-<div class="docrow {{ row_cls }}" id="doc_{{ d.key }}">
+<div class="docrow {{ row_cls }}" id="doc_{{ d.key }}" data-doc-required="{{ 'false' if is_optional_doc else 'true' }}" data-doc-submitted="{{ 'true' if has_submission or (d.key == 'permis' and trainee.no_permis) else 'false' }}">
       <div class="docmeta">
         <div class="label">{{ "Fiche de renseignement candidat à compléter" if d.key == "candidate_info_sheet" else d.label }}{% if is_optional_doc %} <span class="doctag" style="margin-left:8px;">Facultatif</span>{% endif %}</div>
         {% if d.key == "candidate_info_sheet" %}
@@ -1537,7 +1560,7 @@ id="upload_{{ d.key }}"
     </div>    <!-- ferme .docrow -->
   {% endfor %}
   {% if show_professional_experience_sheet %}
-    <div class="docrow professional-experience-docrow {{ '' if trainee.professional_experience_sheet else 'missing' }}" id="doc_professional_experience_sheet">
+    <div class="docrow professional-experience-docrow {{ '' if trainee.professional_experience_sheet else 'missing' }}" id="doc_professional_experience_sheet" data-doc-required="true" data-doc-submitted="{{ 'true' if trainee.professional_experience_sheet else 'false' }}">
       <div class="docmeta">
         <button class="pro-sheet-launch{% if not trainee.professional_experience_sheet %} needs-attention{% else %} is-sent{% endif %}" type="button"{% if trainee.professional_experience_sheet %} disabled aria-disabled="true"{% else %} data-pro-sheet-open{% endif %}>
           <span class="pro-sheet-launch-icon" aria-hidden="true">✦</span>
@@ -2277,6 +2300,13 @@ function closeUploadSuccessModal(event) {
   };
 
   const updateDocumentsWarning = () => {
+    const docRows = Array.from(document.querySelectorAll(".documents-upload-card .docs-stack .docrow[data-doc-required=\"true\"]"));
+    const submittedRows = docRows.filter((row) => row.dataset.docSubmitted === "true");
+    const totalDocs = docRows.length;
+    const submittedDocs = submittedRows.length;
+    const missingDocs = docRows.filter((row) => row.classList.contains("missing") && row.dataset.docSubmitted !== "true").length;
+    const pendingDocs = docRows.filter((row) => row.classList.contains("pending")).length;
+    const progressPercent = totalDocs ? Math.round((submittedDocs / totalDocs) * 100) : 100;
     const hasMissing = !!document.querySelector(".docs-stack .docrow.missing");
     const infosComplete = infosAreComplete();
     const locked = documentsLockEnabled && !infosComplete;
@@ -2290,11 +2320,32 @@ function closeUploadSuccessModal(event) {
     }
     if (documentsLockIcon) documentsLockIcon.hidden = !locked;
 
+    const documentsProgress = document.getElementById("documentsProgress");
+    const documentsProgressText = document.getElementById("documentsProgressText");
+    const documentsProgressBadge = document.getElementById("documentsProgressBadge");
+    const documentsProgressFill = document.getElementById("documentsProgressFill");
+
+    if (documentsProgress) {
+      documentsProgress.hidden = locked || totalDocs === 0;
+      documentsProgress.classList.toggle("is-complete", !locked && totalDocs > 0 && submittedDocs === totalDocs && !hasMissing);
+    }
+    if (documentsProgressFill) documentsProgressFill.style.width = `${progressPercent}%`;
+    if (documentsProgressBadge) documentsProgressBadge.textContent = `${progressPercent}%`;
+    if (documentsProgressText) {
+      if (totalDocs === 0) {
+        documentsProgressText.textContent = "Aucun document obligatoire à déposer pour le moment.";
+      } else if (submittedDocs === totalDocs && !hasMissing) {
+        documentsProgressText.textContent = `Tous les documents sont déposés (${submittedDocs}/${totalDocs}). ${pendingDocs ? `${pendingDocs} en attente de contrôle.` : ""}`.trim();
+      } else {
+        documentsProgressText.textContent = `${submittedDocs}/${totalDocs} document${totalDocs > 1 ? "s" : ""} déposé${submittedDocs > 1 ? "s" : ""}. ${missingDocs} restant${missingDocs > 1 ? "s" : ""} à déposer.`;
+      }
+    }
+
     if (documentsHint) {
       if (locked) {
         documentsHint.textContent = "🔒 Vous pourrez déposer vos documents quand vous aurez saisi vos informations.";
       } else if (hasMissing) {
-        documentsHint.textContent = "⚠️ Déposez maintenant vos documents.";
+        documentsHint.textContent = `⚠️ Déposez maintenant vos documents (${submittedDocs}/${totalDocs} déposés).`;
       } else {
         documentsHint.textContent = "Tout est OK ✅";
       }
