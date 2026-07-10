@@ -88,6 +88,56 @@ SCOTIA_COMMENT_AUTHOR_LABELS = {
 }
 SCOTIA_NOTIFICATION_EMAIL = os.environ.get("SCOTIA_NOTIFICATION_EMAIL", "scotiaformation@gmail.com").strip()
 SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "30"))
+
+SESSION_INVALIDATION_CUTOFF = os.environ.get("SESSION_INVALIDATION_CUTOFF", "2026-07-10T00:00:00Z").strip()
+SESSION_ISSUED_AT_KEY = "session_issued_at"
+
+def _parse_session_cutoff(raw_value: str) -> Optional[datetime.datetime]:
+    value = str(raw_value or "").strip()
+    if not value:
+        return None
+    if value.endswith("Z"):
+        value = value[:-1] + "+00:00"
+    try:
+        parsed = datetime.datetime.fromisoformat(value)
+    except ValueError:
+        app.logger.warning("SESSION_INVALIDATION_CUTOFF invalide: %r", raw_value)
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+    return parsed.astimezone(datetime.timezone.utc)
+
+def _session_issue_datetime() -> Optional[datetime.datetime]:
+    issued_at = str(session.get(SESSION_ISSUED_AT_KEY) or "").strip()
+    if not issued_at:
+        return None
+    if issued_at.endswith("Z"):
+        issued_at = issued_at[:-1] + "+00:00"
+    try:
+        parsed = datetime.datetime.fromisoformat(issued_at)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+    return parsed.astimezone(datetime.timezone.utc)
+
+def _stamp_authenticated_session() -> None:
+    session[SESSION_ISSUED_AT_KEY] = (
+        datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+    )
+
+def _session_has_authentication_marker() -> bool:
+    return any(
+        key in session or any(str(existing_key).startswith(key) for existing_key in session.keys())
+        for key in ("admin_logged_in", "scotia_logged_in", "public_auth_")
+    )
+
+def _current_session_is_still_valid() -> bool:
+    cutoff = _parse_session_cutoff(SESSION_INVALIDATION_CUTOFF)
+    if cutoff is None:
+        return True
+    issued_at = _session_issue_datetime()
+    return bool(issued_at and issued_at >= cutoff)
 ADMIN_PUSH_TITLE = os.environ.get("ADMIN_PUSH_TITLE", "Intégrale Academy")
 WEB_PUSH_VAPID_PUBLIC_KEY = os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY", "").strip()
 WEB_PUSH_VAPID_PRIVATE_KEY = os.environ.get("WEB_PUSH_VAPID_PRIVATE_KEY", "").strip()
@@ -1268,6 +1318,12 @@ def protect_sensitive_routes():
     whole sensitive namespaces without changing public candidate/VAE flows.
     """
     path = request.path or ""
+    if _session_has_authentication_marker() and not _current_session_is_still_valid():
+        app.logger.info("[SECURITY] session invalidée par cutoff path=%s", path)
+        session.clear()
+        if path.startswith("/api/"):
+            return jsonify({"ok": False, "error": "session_expired"}), 401
+
     if path.startswith("/admin/") and path != "/admin/login":
         if not session.get("admin_logged_in"):
             return redirect(url_for("admin_login", next=request.full_path if request.query_string else path))
@@ -1344,6 +1400,7 @@ def admin_login_post():
         session["admin_logged_in"] = True
         session["admin_role"] = "admin"
         session["admin_username"] = username.lower()
+        _stamp_authenticated_session()
         session.permanent = False
         return redirect(next_url)
 
@@ -1352,6 +1409,7 @@ def admin_login_post():
             session["admin_logged_in"] = True
             session["admin_role"] = "viewer"
             session["admin_username"] = username.lower()
+            _stamp_authenticated_session()
             session.permanent = False
             return redirect(next_url)
 
@@ -1393,6 +1451,7 @@ def scotia_login_post():
         session.clear()
         session["scotia_logged_in"] = True
         session["scotia_username"] = username.lower()
+        _stamp_authenticated_session()
         if admin_ok:
             session["admin_logged_in"] = True
             session["admin_role"] = "admin"
@@ -16764,6 +16823,7 @@ def public_trainee_global_login_post():
         _birth_to_ddmmyyyy(birth_in),
     )
     session[f"public_auth_{token}"] = True
+    _stamp_authenticated_session()
     session.permanent = True
     _mark_public_login(data, session_obj, trainee)
     return redirect(url_for("public_trainee_space", token=token))
@@ -16956,6 +17016,7 @@ def public_trainee_login_post(token: str):
     # 🔒 contrôle strict
     if _public_trainee_identity_matches(t, last_in, birth_in):
         session[f"public_auth_{token}"] = True
+        _stamp_authenticated_session()
         session.permanent = True  # cookie persistant (comme admin)
         _mark_public_login(data, s, t)
         return redirect(url_for("public_trainee_space", token=token))
