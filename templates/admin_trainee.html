@@ -4210,7 +4210,9 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
     const samePage = !href || href.startsWith("#") || href.split("#")[0] === window.location.pathname;
     if(!samePage) return;
     event.preventDefault();
-    closeBillingModal();
+    document.querySelectorAll(".billing-modal-overlay").forEach((modal)=>modal.remove());
+    currentLine = null;
+    modalLoading = false;
     openAdminDetailsSection(hash || "conventionFinancementSection");
     if(hash) history.replaceState(null, "", `#${hash}`);
   });
