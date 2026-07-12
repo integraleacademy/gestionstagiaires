@@ -2273,6 +2273,16 @@ def _is_partner_scoped_session() -> bool:
     return bool(_current_partner_id()) and not _is_super_admin_session()
 
 
+def _active_admin_partner_id() -> str:
+    return _current_partner_id() or INTEGRALE_PARTNER_ID
+
+
+def _session_belongs_to_active_admin_space(session_obj: Dict[str, Any]) -> bool:
+    active_partner_id = _active_admin_partner_id()
+    session_partner_id = str((session_obj or {}).get("partner_id") or INTEGRALE_PARTNER_ID)
+    return session_partner_id == active_partner_id
+
+
 def _integrale_partner() -> Dict[str, Any]:
     now = _now_iso() if "_now_iso" in globals() else datetime.datetime.utcnow().isoformat() + "Z"
     return {
@@ -11941,6 +11951,8 @@ def admin_sessions():
         return None
 
     for s in data.get("sessions", []):
+        if not _session_belongs_to_active_admin_space(s):
+            continue
         if _is_wedof_leads_session(s):
             continue
 
@@ -16404,6 +16416,7 @@ def api_create_session():
         "dirigeant_in_person_end": dirigeant_in_person_end,
         "aps_elearning_enabled": aps_elearning_enabled,
         "exclude_from_sales_tracking": exclude_from_sales_tracking,
+        "partner_id": _active_admin_partner_id(),
         "created_at": _now_iso(),
         "trainees": [],
         "archived": False,
@@ -27613,6 +27626,8 @@ def admin_sessions_archived():
     out_sessions = []
 
     for s in data.get("sessions", []):
+        if not _session_belongs_to_active_admin_space(s):
+            continue
         if not bool(s.get("archived")):
             continue
         if _is_wedof_leads_session(s):

@@ -106,6 +106,105 @@ class MultiPartnerIsolationTests(unittest.TestCase):
         self.assertEqual(data["sessions"][0]["partner_id"], gestion_app.INTEGRALE_PARTNER_ID)
         self.assertEqual(data["sessions"][0]["trainees"][0]["partner_id"], gestion_app.INTEGRALE_PARTNER_ID)
 
+
+    def test_partner_session_create_attaches_session_to_partner(self):
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "partner_admin"
+            sess["partner_id"] = self.partner_a
+
+        response = self.client.post(
+            "/api/sessions/create",
+            json={"name": "Session partenaire", "training_type": "APS"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        session_id = response.get_json()["id"]
+        with open(gestion_app.DATA_FILE, encoding="utf-8") as f:
+            persisted = json.load(f)
+        created = next(s for s in persisted["sessions"] if s["id"] == session_id)
+        self.assertEqual(created["partner_id"], self.partner_a)
+
+    def test_super_admin_assist_session_create_attaches_session_to_assisted_partner(self):
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+            sess["platform_role"] = "super_admin"
+            sess["partner_id"] = gestion_app.INTEGRALE_PARTNER_ID
+            sess["assist_partner_id"] = self.partner_b
+
+        response = self.client.post(
+            "/api/sessions/create",
+            json={"name": "Session assistée", "training_type": "VTC"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        session_id = response.get_json()["id"]
+        with open(gestion_app.DATA_FILE, encoding="utf-8") as f:
+            persisted = json.load(f)
+        created = next(s for s in persisted["sessions"] if s["id"] == session_id)
+        self.assertEqual(created["partner_id"], self.partner_b)
+
+
+    def test_admin_sessions_page_shows_only_integrale_space_by_default(self):
+        data = gestion_app.load_data()
+        data["sessions"].append({
+            "id": "integrale-session",
+            "partner_id": gestion_app.INTEGRALE_PARTNER_ID,
+            "name": "Session visible admin integrale",
+            "training_type": "APS",
+            "trainees": [],
+        })
+        data["sessions"].append({
+            "id": "partner-hidden-session",
+            "partner_id": self.partner_b,
+            "name": "Session cachee partenaire",
+            "training_type": "VTC",
+            "trainees": [],
+        })
+        gestion_app.save_data(data)
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+            sess["partner_id"] = gestion_app.INTEGRALE_PARTNER_ID
+
+        response = self.client.get("/admin/sessions")
+
+        body = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Session visible admin integrale", body)
+        self.assertNotIn("Session cachee partenaire", body)
+
+    def test_assisted_partner_sessions_page_shows_only_assisted_partner_space(self):
+        data = gestion_app.load_data()
+        data["sessions"].append({
+            "id": "integrale-hidden-session",
+            "partner_id": gestion_app.INTEGRALE_PARTNER_ID,
+            "name": "Session cachee integrale",
+            "training_type": "APS",
+            "trainees": [],
+        })
+        data["sessions"].append({
+            "id": "partner-visible-session",
+            "partner_id": self.partner_b,
+            "name": "Session visible partenaire assiste",
+            "training_type": "VTC",
+            "trainees": [],
+        })
+        gestion_app.save_data(data)
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+            sess["partner_id"] = gestion_app.INTEGRALE_PARTNER_ID
+            sess["assist_partner_id"] = self.partner_b
+
+        response = self.client.get("/admin/sessions")
+
+        body = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Session visible partenaire assiste", body)
+        self.assertNotIn("Session cachee integrale", body)
+
     def test_partner_storage_path_rejects_traversal(self):
         path = gestion_app.get_partner_storage_path(self.partner_a, "stagiaires")
         self.assertTrue(path.startswith(os.path.realpath(os.path.join(self.temp_dir.name, "partners", self.partner_a))))
