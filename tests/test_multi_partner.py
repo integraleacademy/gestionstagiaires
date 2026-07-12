@@ -114,6 +114,22 @@ class MultiPartnerIsolationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             gestion_app.get_partner_storage_path(self.partner_a, "../secret")
 
+    def test_static_admin_login_tolerates_render_whitespace_and_email_case(self):
+        original_admin_user = gestion_app.ADMIN_USER
+        original_admin_password = gestion_app.ADMIN_PASSWORD
+        try:
+            gestion_app.ADMIN_USER = " Admin@Example.com "
+            gestion_app.ADMIN_PASSWORD = " Secret1234 "
+            response = self.client.post(
+                "/admin/login",
+                data={"username": "admin@example.com", "password": "Secret1234", "next": "/admin/sessions"},
+            )
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(response.headers["Location"], "/admin/sessions")
+        finally:
+            gestion_app.ADMIN_USER = original_admin_user
+            gestion_app.ADMIN_PASSWORD = original_admin_password
+
     def test_partner_login_with_password_hash_opens_requested_admin_page(self):
         data = gestion_app.load_data()
         data["users"].append({
