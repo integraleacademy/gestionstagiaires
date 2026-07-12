@@ -16,6 +16,7 @@ import importlib.util
 import time
 import subprocess
 import secrets
+import base64
 from typing import Dict, Any, Optional, List, Iterable, Tuple, Set
 from functools import wraps
 from zoneinfo import ZoneInfo
@@ -43,6 +44,7 @@ from pypdf import PdfReader, PdfWriter
 import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape
 from urllib.parse import urlparse, urljoin, quote, urlencode
+from cryptography.fernet import Fernet
 
 
 app = Flask(__name__)
@@ -2328,27 +2330,87 @@ def _verify_password(password: str, stored: str) -> bool:
         return False
 
 
+
+
+def _invitation_fernet() -> Fernet:
+    digest = hashlib.sha256((app.secret_key or "dev-secret-change-me").encode()).digest()
+    return Fernet(base64.urlsafe_b64encode(digest))
+
+
+def _encrypt_invitation_token(raw_token: str) -> str:
+    return _invitation_fernet().encrypt((raw_token or "").encode()).decode()
+
+
+def _decrypt_invitation_token(value: str) -> str:
+    if not value:
+        return ""
+    try:
+        return _invitation_fernet().decrypt(value.encode()).decode()
+    except Exception:
+        return ""
+
 def _create_invitation(data: Dict[str, Any], user_id: str, partner_id: str, hours: int = 48) -> str:
     raw = secrets.token_urlsafe(48)
     data.setdefault("invitations", []).append({
         "id": str(uuid.uuid4()), "user_id": user_id, "partner_id": partner_id,
-        "token_hash": _hash_token(raw), "created_at": _now_iso(),
+        "token_hash": _hash_token(raw), "token_encrypted": _encrypt_invitation_token(raw), "created_at": _now_iso(),
         "expires_at": (datetime.datetime.utcnow() + datetime.timedelta(hours=hours)).isoformat() + "Z",
-        "used_at": "", "cancelled_at": "",
+        "used_at": "", "cancelled_at": "", "last_send_status": "", "last_send_error": "", "last_sent_at": "", "brevo_message_id": "",
     })
     return raw
 
 
-def _send_partner_invitation_email(user: Dict[str, Any], partner: Dict[str, Any], raw_token: str) -> bool:
-    activation_url = f"{APP_BASE_URL}/activate-account?token={quote(raw_token)}"
+def _public_base_url() -> str:
+    return (os.environ.get("APP_BASE_URL") or os.environ.get("PUBLIC_BASE_URL") or APP_BASE_URL or "").strip().rstrip("/")
+
+
+def _activation_url(raw_token: str) -> str:
+    return f"{_public_base_url()}/activate-account?token={quote(raw_token or '')}"
+
+
+def _brevo_config_diagnostics() -> Dict[str, Any]:
+    base = _public_base_url()
+    return {
+        "api_key_present": bool((BREVO_API_KEY or "").strip()),
+        "sender_email_present": bool((BREVO_SENDER_EMAIL or "").strip()),
+        "sender_name_present": bool((BREVO_SENDER_NAME or "").strip()),
+        "base_url_present": bool(base),
+        "sender_email": "adresse configurée" if (BREVO_SENDER_EMAIL or "").strip() else "absente",
+        "sender_name": "nom configuré" if (BREVO_SENDER_NAME or "").strip() else "absent",
+        "base_url": "URL configurée" if base else "absente",
+    }
+
+
+def _missing_brevo_config() -> List[str]:
+    missing = []
+    if not (BREVO_API_KEY or "").strip():
+        missing.append("BREVO_API_KEY")
+    if not (BREVO_SENDER_EMAIL or "").strip():
+        missing.append("BREVO_SENDER_EMAIL")
+    if not (BREVO_SENDER_NAME or "").strip():
+        missing.append("BREVO_SENDER_NAME")
+    if not _public_base_url():
+        missing.append("APP_BASE_URL ou PUBLIC_BASE_URL")
+    return missing
+
+
+def _safe_brevo_log(action: str, **details: Any) -> None:
+    redacted = {k: v for k, v in details.items() if k not in {"api_key", "token", "raw_token", "activation_url"}}
+    app.logger.info("[BREVO_INVITATION] %s %s", action, json.dumps(redacted, ensure_ascii=False, default=str))
+
+
+def _send_partner_invitation_email(user: Dict[str, Any], partner: Dict[str, Any], raw_token: str) -> Dict[str, Any]:
+    activation_url = _activation_url(raw_token)
     html_body = mail_layout(f"""
       <h2>Activation de votre espace partenaire</h2>
       <p>Bonjour {html.escape(user.get('first_name') or '')},</p>
       <p>Votre espace <strong>{html.escape(partner.get('name') or '')}</strong> est prêt.</p>
-      <p><a href=\"{activation_url}\">Définir mon mot de passe</a></p>
+      <p><a href=\"{html.escape(activation_url, quote=True)}\">Définir mon mot de passe</a></p>
       <p>Ce lien est personnel, utilisable une seule fois et expire sous 48 heures.</p>
     """)
-    return brevo_send_email(user.get("email") or "", "Activation de votre espace partenaire", html_body)
+    text_body = f"Activez votre espace partenaire : {activation_url}"
+    result = brevo_send_email(user.get("email") or "", "Activation de votre espace partenaire", html_body, text_content=text_body, metadata={"partner_id": partner.get("id"), "partner_name": partner.get("name"), "user_id": user.get("id"), "purpose": "partner_invitation"})
+    return result
 
 
 def _partner_counts(data: Dict[str, Any], partner_id: str) -> Dict[str, int]:
@@ -3582,13 +3644,19 @@ def brevo_send_email(
     trainee: Optional[Dict[str, Any]] = None,
     attachments: Optional[List[Dict[str, str]]] = None,
     text_content: str = "",
-) -> bool:
+    metadata: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     to_email = (to_email or "").strip()
-    if not BREVO_API_KEY or not to_email:
-        return False
+    missing = _missing_brevo_config()
+    if not to_email:
+        missing.append("destinataire")
+    if missing:
+        result = {"ok": False, "status_code": None, "message_id": "", "error": "Configuration Brevo incomplète : " + ", ".join(missing)}
+        return result if metadata is not None else False
     if _is_blocked_email_recipient(to_email):
         print(f"[EMAIL] blocked recipient skipped: {to_email}")
-        return False
+        result = {"ok": False, "status_code": None, "message_id": "", "error": "Destinataire bloqué"}
+        return result if metadata is not None else False
 
     url = "https://api.brevo.com/v3/smtp/email"
     headers = {
@@ -3622,9 +3690,14 @@ def brevo_send_email(
 
     try:
         r = requests.post(url, headers=headers, json=payload, timeout=12)
-        print("[EMAIL] status=", r.status_code)
-        print("[EMAIL] response=", r.text)
         ok = r.status_code in (200, 201, 202)
+        try:
+            response_json = r.json()
+        except Exception:
+            response_json = {}
+        message_id = str(response_json.get("messageId") or response_json.get("message_id") or "")
+        error_message = str(response_json.get("message") or response_json.get("error") or (r.text or ""))[:500]
+        _safe_brevo_log("send", timestamp=_now_iso(), partner_id=(metadata or {}).get("partner_id"), partner_name=(metadata or {}).get("partner_name"), user_id=(metadata or {}).get("user_id"), to_email=to_email, status_code=r.status_code, error="" if ok else error_message, message_id=message_id)
         if ok and has_request_context():
             session["_mail_sent_notice"] = True
         if ok and isinstance(trainee, dict):
@@ -3640,9 +3713,12 @@ def brevo_send_email(
             trainee["sent_email_history"] = sent_history[:200]
         if (not ok) and _brevo_no_credit_detected(r.text):
             _register_brevo_no_credit("email", to_email, r.text)
-        return ok
-    except Exception:
-        return False
+        result = {"ok": ok, "status_code": r.status_code, "message_id": message_id, "error": "" if ok else error_message}
+        return result if metadata is not None else ok
+    except Exception as exc:
+        _safe_brevo_log("exception", timestamp=_now_iso(), partner_id=(metadata or {}).get("partner_id"), partner_name=(metadata or {}).get("partner_name"), user_id=(metadata or {}).get("user_id"), to_email=to_email, status_code=None, error=str(exc)[:500], message_id="")
+        result = {"ok": False, "status_code": None, "message_id": "", "error": str(exc)}
+        return result if metadata is not None else False
 
 
 def brevo_send_sms(phone: str, message: str) -> bool:
@@ -11381,10 +11457,17 @@ def admin_partner_new():
     token = _create_invitation(data, user["id"], partner_id)
     data.setdefault("partners", []).append(partner)
     data.setdefault("users", []).append(user)
-    _send_partner_invitation_email(user, partner, token)
+    send_result = _send_partner_invitation_email(user, partner, token)
+    invitation = data.get("invitations", [])[-1]
+    invitation["last_sent_at"] = _now_iso()
+    invitation["last_send_status"] = "réussi" if send_result.get("ok") else "échoué"
+    invitation["last_send_error"] = "" if send_result.get("ok") else (send_result.get("error") or "Erreur Brevo inconnue")
+    invitation["brevo_message_id"] = send_result.get("message_id") or ""
     _append_activity_log(data, "partner_created", "partner", partner_id, partner_id)
-    _append_activity_log(data, "invitation_sent", "user", user["id"], partner_id)
+    _append_activity_log(data, "invitation_sent" if send_result.get("ok") else "invitation_send_failed", "user", user["id"], partner_id, {"status_code": send_result.get("status_code"), "error": invitation["last_send_error"], "message_id": invitation["brevo_message_id"]})
     save_data(data)
+    if not send_result.get("ok"):
+        flash("Le partenaire a été créé, mais l’e-mail d’invitation n’a pas pu être envoyé : " + invitation["last_send_error"], "error")
     return redirect(url_for("admin_partner_detail", partner_id=partner_id))
 
 
@@ -11407,7 +11490,97 @@ def admin_partner_detail(partner_id: str):
         _append_activity_log(data, "partner_updated", "partner", partner_id, partner_id)
         save_data(data)
         return redirect(url_for("admin_partner_detail", partner_id=partner_id))
-    return render_template("admin_partner_detail.html", partner=partner, counts=_partner_counts(data, partner_id), users=[u for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id])
+    users = [u for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id]
+    invitations = [i for i in data.get("invitations", []) if isinstance(i, dict) and i.get("partner_id") == partner_id and not i.get("cancelled_at")]
+    invitations.sort(key=lambda i: i.get("created_at") or "", reverse=True)
+    return render_template("admin_partner_detail.html", partner=partner, counts=_partner_counts(data, partner_id), users=users, invitation=invitations[0] if invitations else None, brevo_diag=_brevo_config_diagnostics(), can_copy_test_activation_link=_can_show_test_activation_link())
+
+
+def _can_show_test_activation_link() -> bool:
+    return _is_super_admin_session() and ((os.environ.get("ENABLE_TEST_ACTIVATION_LINK") or "").lower() == "true" or (os.environ.get("APP_ENV") or "").lower() == "test" or (os.environ.get("FLASK_ENV") or "").lower() == "development")
+
+
+def _partner_admin_user(data: Dict[str, Any], partner_id: str) -> Optional[Dict[str, Any]]:
+    return next((u for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id and u.get("role") == "partner_admin"), None)
+
+
+def _active_partner_invitation(data: Dict[str, Any], partner_id: str) -> Optional[Dict[str, Any]]:
+    invitations = [i for i in data.get("invitations", []) if isinstance(i, dict) and i.get("partner_id") == partner_id and not i.get("used_at") and not i.get("cancelled_at")]
+    invitations.sort(key=lambda i: i.get("created_at") or "", reverse=True)
+    return invitations[0] if invitations else None
+
+
+def _send_and_record_invitation(data: Dict[str, Any], partner: Dict[str, Any], user: Dict[str, Any], invitation: Dict[str, Any]) -> Dict[str, Any]:
+    raw_token = _decrypt_invitation_token(invitation.get("token_encrypted") or "")
+    if not raw_token:
+        result = {"ok": False, "status_code": None, "message_id": "", "error": "Token d’invitation indisponible sous forme sécurisée pour renvoi"}
+    else:
+        result = _send_partner_invitation_email(user, partner, raw_token)
+    invitation["last_sent_at"] = _now_iso()
+    invitation["last_send_status"] = "réussi" if result.get("ok") else "échoué"
+    invitation["last_send_error"] = "" if result.get("ok") else (result.get("error") or "Erreur Brevo inconnue")
+    invitation["brevo_message_id"] = result.get("message_id") or ""
+    _append_activity_log(data, "invitation_sent" if result.get("ok") else "invitation_send_failed", "user", user.get("id"), partner.get("id"), {"status_code": result.get("status_code"), "error": invitation["last_send_error"], "message_id": invitation["brevo_message_id"]})
+    return result
+
+
+@app.post("/admin/partners/<partner_id>/send-invitation")
+@admin_login_required
+@require_super_admin
+def admin_partner_send_invitation(partner_id: str):
+    data = load_data(); partner = _partner_or_404(data, partner_id); user = _partner_admin_user(data, partner_id)
+    if not user:
+        abort(400, "Aucun utilisateur partner_admin")
+    invitation = _active_partner_invitation(data, partner_id)
+    if not invitation:
+        raw = _create_invitation(data, user.get("id"), partner_id); invitation = data.get("invitations", [])[-1]
+    result = _send_and_record_invitation(data, partner, user, invitation)
+    save_data(data)
+    flash("Invitation envoyée." if result.get("ok") else "Le partenaire existe, mais l’e-mail d’invitation n’a pas pu être envoyé : " + invitation.get("last_send_error", ""), "success" if result.get("ok") else "error")
+    return redirect(url_for("admin_partner_detail", partner_id=partner_id))
+
+
+@app.post("/admin/partners/<partner_id>/new-invitation")
+@admin_login_required
+@require_super_admin
+def admin_partner_new_invitation(partner_id: str):
+    data = load_data(); partner = _partner_or_404(data, partner_id); user = _partner_admin_user(data, partner_id)
+    if not user:
+        abort(400, "Aucun utilisateur partner_admin")
+    for inv in data.get("invitations", []):
+        if isinstance(inv, dict) and inv.get("partner_id") == partner_id and not inv.get("used_at") and not inv.get("cancelled_at"):
+            inv["cancelled_at"] = _now_iso()
+    raw = _create_invitation(data, user.get("id"), partner_id); invitation = data.get("invitations", [])[-1]
+    result = _send_and_record_invitation(data, partner, user, invitation)
+    save_data(data)
+    flash("Nouvelle invitation envoyée." if result.get("ok") else "Nouvelle invitation créée, mais l’e-mail n’a pas pu être envoyé : " + invitation.get("last_send_error", ""), "success" if result.get("ok") else "error")
+    return redirect(url_for("admin_partner_detail", partner_id=partner_id))
+
+
+@app.get("/admin/partners/<partner_id>/activation-link")
+@admin_login_required
+@require_super_admin
+def admin_partner_activation_link(partner_id: str):
+    if not _can_show_test_activation_link():
+        abort(403)
+    data = load_data(); _partner_or_404(data, partner_id); invitation = _active_partner_invitation(data, partner_id)
+    raw = _decrypt_invitation_token((invitation or {}).get("token_encrypted") or "")
+    if not raw:
+        abort(404)
+    return jsonify({"activation_url": _activation_url(raw)})
+
+
+@app.route("/admin/brevo-test", methods=["GET", "POST"])
+@admin_login_required
+@require_super_admin
+def admin_brevo_test():
+    if not _can_show_test_activation_link():
+        abort(403)
+    result = None
+    if request.method == "POST":
+        to_email = (request.form.get("email") or "").strip()
+        result = brevo_send_email(to_email, "Test Brevo", "<p>Test Brevo gestion stagiaires.</p>", text_content="Test Brevo gestion stagiaires.", metadata={"purpose": "brevo_test", "user_id": session.get("admin_user_id")})
+    return render_template("admin_brevo_test.html", result=result, brevo_diag=_brevo_config_diagnostics())
 
 
 @app.post("/admin/partners/<partner_id>/toggle-status")
