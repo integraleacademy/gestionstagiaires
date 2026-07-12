@@ -570,14 +570,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
                  data-cnaps-status="{{ t.cnaps or '' }}"
                  data-fallback-activity="Autorisation préalable - Surveillance humaine ou gardiennage">
               <div class="card-pro-result" data-card-pro-result>Chargement CNAPS…</div>
-              <a class="mini-btn"
-                 href="https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/app/annuaire-public"
-                 target="_blank"
-                 rel="noopener"
-                 title="Ouvrir l'annuaire public CNAPS avec le nom {{ t.last_name or '' }} et le NUB {{ card_pro_nub }}">
-                🔎 Vérifier
-              </a>
-              <button class="mini-btn" data-card-pro-refresh type="button" title="Rafraîchir le suivi carte pro">↻</button>
+              <button class="mini-btn card-pro-refresh-btn" data-card-pro-refresh type="button" title="Rafraîchir le suivi carte pro">↻</button>
               <div class="muted">Nom : <strong>{{ t.last_name or "—" }}</strong></div>
               <div class="muted">NUB : <strong>{{ card_pro_nub }}</strong></div>
             </div>
@@ -1092,15 +1085,15 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 <style>
 
 #traineesTable .col-card-pro-followup{
-  width:142px;
-  min-width:142px;
-  max-width:150px;
+  width:220px;
+  min-width:220px;
+  max-width:240px;
   vertical-align:middle;
 }
 .card-pro-followup{
   display:grid;
-  grid-template-columns:1fr auto auto;
-  gap:4px;
+  grid-template-columns:minmax(0, 1fr) auto;
+  gap:4px 6px;
   align-items:center;
   font-size:11px;
   line-height:1.15;
@@ -1114,6 +1107,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   display:inline-flex;
   align-items:center;
   gap:4px;
+  min-width:0;
   max-width:100%;
   border:1px solid var(--line);
   border-radius:999px;
@@ -1123,8 +1117,9 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   font-weight:900;
   white-space:nowrap;
 }
-.card-pro-result__activity{letter-spacing:.02em;}
-.card-pro-result__validity{font-size:9px;text-transform:uppercase;opacity:.9;}
+.card-pro-result__activity{letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;}
+.card-pro-result__validity{font-size:9px;text-transform:uppercase;opacity:.9;overflow:hidden;text-overflow:ellipsis;}
+.card-pro-refresh-btn{padding:5px 8px;}
 .card-pro-result__date{display:none;}
 .card-pro-result.is-active{background:#16a34a;border-color:#16a34a;color:#fff;}
 .card-pro-result.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
