@@ -109,6 +109,55 @@ class ProfessionalExperienceSheetTests(unittest.TestCase):
         self.assertIn("data-pro-sheet-open", html)
         self.assertIn('id="professionalExperienceModal"', html)
 
+    def test_public_tracking_shows_test_fr_and_cnaps_for_aps(self):
+        self.payload["sessions"][0].update({
+            "name": "APS Juin 2026",
+            "training_type": "APS",
+            "date_start": "2026-06-09",
+            "date_end": "2026-06-30",
+        })
+        trainee = self.payload["sessions"][0]["trainees"][0]
+        trainee.update({
+            "test_fr_status": "validated",
+            "cnaps": "ACCEPTÉ",
+            "financement_status": "validated",
+            "convention_status": "signed",
+        })
+        self._authenticate_public()
+
+        response = self.client.get("/espace/public-token")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        tracking = html.split('id="trackingTitle"', 1)[1].split('</section>', 1)[0]
+        self.assertIn("Test de français", tracking)
+        self.assertIn("CNAPS", tracking)
+        self.assertIn("ACCEPTÉ", tracking)
+
+    def test_public_tracking_shows_test_fr_and_cnaps_for_a3p(self):
+        self.payload["sessions"][0].update({
+            "name": "A3P Juin 2026",
+            "training_type": "A3P",
+            "date_start": "2026-06-09",
+            "date_end": "2026-06-30",
+        })
+        trainee = self.payload["sessions"][0]["trainees"][0]
+        trainee.update({
+            "test_fr_status": "in_progress",
+            "cnaps": "INSTRUCTION",
+        })
+        self._authenticate_public()
+
+        response = self.client.get("/espace/public-token")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        tracking = html.split('id="trackingTitle"', 1)[1].split('</section>', 1)[0]
+        self.assertIn("Test de français", tracking)
+        self.assertIn("EN COURS", tracking)
+        self.assertIn("CNAPS", tracking)
+        self.assertIn("INSTRUCTION", tracking)
+
     def test_non_vae_training_accepts_sheet_submission(self):
         self.payload["sessions"][0]["name"] = "SSIAP 1 Juin 2026"
         self.payload["sessions"][0]["training_type"] = "SSIAP 1"
