@@ -154,12 +154,12 @@ def page_not_found(error):
 # =========================
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
-ADMIN_USER = os.environ.get("ADMIN_USER", "")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
-SECRETARY_USER = os.environ.get("SECRETARY_USER", "")
-SECRETARY_PASSWORD = os.environ.get("SECRETARY_PASSWORD", "")
-SCOTIA_USER = os.environ.get("SCOTIA_USER", "")
-SCOTIA_PASSWORD = os.environ.get("SCOTIA_PASSWORD", "")
+ADMIN_USER = os.environ.get("ADMIN_USER", "").strip()
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "").strip()
+SECRETARY_USER = os.environ.get("SECRETARY_USER", "").strip()
+SECRETARY_PASSWORD = os.environ.get("SECRETARY_PASSWORD", "").strip()
+SCOTIA_USER = os.environ.get("SCOTIA_USER", "").strip()
+SCOTIA_PASSWORD = os.environ.get("SCOTIA_PASSWORD", "").strip()
 INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL = "clement@integraleacademy.com"
 SCOTIA_COMMENT_AUTHOR_LABELS = {
     INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL: "Intégrale Academy",
@@ -1694,6 +1694,21 @@ app.config.update(
 def _request_expects_json() -> bool:
     return request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json"
 
+
+def _static_credentials_match(username: str, password: str, expected_username: str, expected_password: str) -> bool:
+    """Validate Render/static credentials while tolerating common copy/paste issues.
+
+    Partner accounts are stored in the JSON data file as password hashes and
+    intentionally keep password spaces significant.  This helper is only for
+    environment-configured admin/secretary/SCOTIA credentials, where accidental
+    leading/trailing spaces in Render variables should not block login.
+    """
+    expected_username = (expected_username or "").strip()
+    expected_password = (expected_password or "").strip()
+    if not expected_username or not expected_password:
+        return False
+    return (username or "").strip().lower() == expected_username.lower() and (password or "").strip() == expected_password
+
 def admin_login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
@@ -1855,7 +1870,7 @@ def admin_login_post():
     if not (ADMIN_USER and ADMIN_PASSWORD) and not (SECRETARY_USER and SECRETARY_PASSWORD) and not data.get("users"):
         abort(500, "ADMIN_USER/ADMIN_PASSWORD non configurés")
 
-    if username == ADMIN_USER and password == ADMIN_PASSWORD:
+    if _static_credentials_match(username, password, ADMIN_USER, ADMIN_PASSWORD):
         _append_activity_log(data, "login", "user", username.lower(), INTEGRALE_PARTNER_ID)
         save_data(data)
         session["admin_logged_in"] = True
@@ -1897,7 +1912,7 @@ def admin_login_post():
         save_data(data)
 
     if SECRETARY_USER and SECRETARY_PASSWORD:
-        if username == SECRETARY_USER and password == SECRETARY_PASSWORD:
+        if _static_credentials_match(username, password, SECRETARY_USER, SECRETARY_PASSWORD):
             session["admin_logged_in"] = True
             session["admin_role"] = "viewer"
             session["admin_username"] = username.lower()
@@ -1937,8 +1952,8 @@ def scotia_login_post():
     password = (request.form.get("password") or "").strip()
     next_url = request.form.get("next") or url_for("scotia_dashboard")
 
-    admin_ok = bool(ADMIN_USER and ADMIN_PASSWORD and username == ADMIN_USER and password == ADMIN_PASSWORD)
-    scotia_ok = bool(SCOTIA_USER and SCOTIA_PASSWORD and username == SCOTIA_USER and password == SCOTIA_PASSWORD)
+    admin_ok = _static_credentials_match(username, password, ADMIN_USER, ADMIN_PASSWORD)
+    scotia_ok = _static_credentials_match(username, password, SCOTIA_USER, SCOTIA_PASSWORD)
 
     if not (SCOTIA_USER and SCOTIA_PASSWORD) and not (ADMIN_USER and ADMIN_PASSWORD):
         abort(500, "SCOTIA_USER/SCOTIA_PASSWORD ou ADMIN_USER/ADMIN_PASSWORD non configurés")
