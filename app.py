@@ -2360,8 +2360,20 @@ def _create_invitation(data: Dict[str, Any], user_id: str, partner_id: str, hour
     return raw
 
 
+def _normalize_public_base_url(value: str) -> str:
+    raw = (value or "").strip().rstrip("/")
+    if not raw:
+        return raw
+
+    parsed = urlparse(raw if "://" in raw else f"https://{raw}")
+    if parsed.netloc in PUBLIC_STUDENT_PORTAL_LEGACY_HOSTS:
+        return PUBLIC_STUDENT_PORTAL_BASE_DEFAULT
+    return raw
+
+
 def _public_base_url() -> str:
-    return (os.environ.get("APP_BASE_URL") or os.environ.get("PUBLIC_BASE_URL") or APP_BASE_URL or "").strip().rstrip("/")
+    raw = os.environ.get("APP_BASE_URL") or os.environ.get("PUBLIC_BASE_URL") or APP_BASE_URL or ""
+    return _normalize_public_base_url(raw)
 
 
 def _activation_url(raw_token: str) -> str:

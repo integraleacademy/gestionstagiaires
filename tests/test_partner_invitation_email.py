@@ -78,6 +78,13 @@ class PartnerInvitationEmailTests(unittest.TestCase):
         self.assertEqual(len([i for i in data["invitations"] if not i.get("cancelled_at")]), 1)
         self.assertEqual(data["invitations"][0]["last_send_status"], "échoué")
 
+
+    def test_activation_url_rewrites_legacy_render_host(self):
+        with mock.patch.dict(os.environ, {"APP_BASE_URL": "https://gestionstagiaires-r5no.onrender.com"}, clear=False):
+            activation_url = gestion_app._activation_url(self.raw)
+        self.assertTrue(activation_url.startswith("https://gestionstagiaires-test-v2.onrender.com/activate-account?token="))
+        self.assertNotIn("gestionstagiaires-r5no.onrender.com", activation_url)
+
     def test_resend_invitation_reuses_existing_link_and_test_url(self):
         gestion_app.BREVO_API_KEY = "key"
         gestion_app.BREVO_SENDER_EMAIL = "sender@example.com"
