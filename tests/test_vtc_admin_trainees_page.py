@@ -177,7 +177,10 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Suivi carte pro", html)
         self.assertIn("https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/app/annuaire-public", html)
-        self.assertIn('data-card-pro-followup data-nom="NONVTC" data-nub="1050370"', html)
+        self.assertIn('data-card-pro-followup', html)
+        self.assertIn('data-nom="NONVTC"', html)
+        self.assertIn('data-nub="1050370"', html)
+        self.assertIn('data-fallback-activity="Autorisation préalable - Surveillance humaine ou gardiennage"', html)
         self.assertIn("NUB : <strong>1050370</strong>", html)
 
 
