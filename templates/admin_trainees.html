@@ -9,6 +9,7 @@
 {% set is_dirigeant_session = is_dirigeant or ("DIRIGEANT" in (session.training_type or "")|upper) or ("DIRIGEANT" in (session.name or "")|upper) %}
 {% set is_all_vtc = all_vtc|default(false) %}
 {% set is_ssiap_session = "SSIAP" in ((session.training_type or "") ~ " " ~ (session.name or ""))|upper %}
+{% set is_aps_or_a3p_session = ("APS" in ((session.training_type or "") ~ " " ~ (session.name or ""))|upper) or ("A3P" in ((session.training_type or "") ~ " " ~ (session.name or ""))|upper) %}
 
 <div class="breadcrumbs">
   <a href="{{ url_for('admin_sessions', **request.args) }}">← Retour sessions</a>
@@ -363,6 +364,7 @@
         {% if not is_vtc %}<th class="col-dossier-status">Dossier</th>{% endif %}
         {% if not is_vtc %}<th class="col-dossier-complete">Dossier complet</th>{% endif %}
         {% if not is_vtc and not show_vae and not is_dirigeant_session and not is_ssiap_session %}<th>CNAPS</th>{% endif %}
+        {% if is_aps_or_a3p_session and not show_vae and not is_vtc %}<th class="col-card-pro-followup">Suivi carte pro</th>{% endif %}
         {% if is_vtc %}<th>Inscription CMAR</th>{% endif %}
         {% if is_vtc %}<th>E-learning</th>{% endif %}
         {% if is_vtc %}<th>Livre</th>{% endif %}
@@ -554,6 +556,27 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
             <span class="cnaps" data-cnaps>{{ t.cnaps or "INCONNU" }}</span>
             <button class="mini-btn" data-refresh type="button" {{ read_only_attr }}>↻</button>
           </div>
+        </td>
+        {% endif %}
+
+        {% if is_aps_or_a3p_session and not show_vae and not is_vtc %}
+        {% set card_pro_nub = extract_nub_from_pre_car(t.pre_number or '') %}
+        <td class="col-card-pro-followup">
+          {% if card_pro_nub %}
+            <div class="card-pro-followup">
+              <a class="mini-btn"
+                 href="https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/app/annuaire-public"
+                 target="_blank"
+                 rel="noopener"
+                 title="Ouvrir l'annuaire public CNAPS et vérifier avec le nom {{ t.last_name or '' }} et le NUB {{ card_pro_nub }}">
+                🔎 Vérifier
+              </a>
+              <div class="muted">Nom : <strong>{{ t.last_name or "—" }}</strong></div>
+              <div class="muted">NUB : <strong>{{ card_pro_nub }}</strong></div>
+            </div>
+          {% else %}
+            <span class="muted">NUB manquant</span>
+          {% endif %}
         </td>
         {% endif %}
 
@@ -1060,6 +1083,20 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 </div>
 
 <style>
+
+#traineesTable .col-card-pro-followup{
+  min-width:170px;
+  max-width:190px;
+  vertical-align:middle;
+}
+.card-pro-followup{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  align-items:flex-start;
+  font-size:12px;
+  line-height:1.25;
+}
 
 #traineesTable .col-ssiap-exam{
   width:220px;

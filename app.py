@@ -8330,6 +8330,19 @@ def _normalize_pre_car(value: str) -> str:
     return normalized
 
 
+def extract_nub_from_pre_car(value: str) -> str:
+    """Return the NUB (last 7 digits) from a PRE/CAR number."""
+    normalized = _normalize_pre_car(value)
+    digits_groups = re.findall(r"\d+", normalized)
+    if not digits_groups:
+        return ""
+    last_digits = digits_groups[-1]
+    return last_digits[-7:] if len(last_digits) >= 7 else ""
+
+
+app.jinja_env.globals["extract_nub_from_pre_car"] = extract_nub_from_pre_car
+
+
 def _is_valid_pre_car(value: str) -> bool:
     normalized = _normalize_pre_car(value)
     return any(pattern.match(normalized) for pattern in PRE_CAR_PATTERNS)

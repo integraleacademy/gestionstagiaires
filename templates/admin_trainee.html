@@ -534,6 +534,10 @@
         </span>
         {% endif %}
         <span class="mono">ID : {{ trainee.personal_id or trainee.id }}</span>
+        {% set trainee_nub = extract_nub_from_pre_car(trainee.pre_number or '') %}
+        {% if trainee_nub %}
+        <span class="mono">NUB : {{ trainee_nub }}</span>
+        {% endif %}
       </div>
 
       {% if is_vtc %}
