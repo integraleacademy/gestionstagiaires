@@ -2231,3 +2231,89 @@ body.app-modal-open{overflow:hidden}.app-modal-backdrop{position:fixed;inset:0;z
   opacity:.22;
   pointer-events:none;
 }
+
+/* =========================
+   PARTENAIRES (ADMIN) — mise en page lisible
+   ========================= */
+.endpoint-admin-partners .container{
+  max-width: min(1560px, calc(100vw - 48px));
+}
+
+.endpoint-admin-partners .page-head{
+  align-items:flex-end;
+}
+
+.partners-filter{
+  display:grid;
+  grid-template-columns:minmax(220px, 1.3fr) minmax(150px, .7fr) minmax(220px, 1fr) auto;
+  gap:12px;
+  align-items:end;
+  margin-bottom:18px;
+}
+
+.partners-filter label{
+  font-weight:800;
+}
+
+.partners-filter input,
+.partners-filter select{
+  width:100%;
+  min-height:46px;
+  margin-top:4px;
+  padding:10px 12px;
+  border:1px solid #d1d5db;
+  border-radius:12px;
+  background:#fff;
+  color:var(--text);
+  font:inherit;
+}
+
+.partners-table-wrap{
+  max-width:100%;
+  overflow-x:auto;
+}
+
+.partners-table{
+  min-width:0 !important;
+  table-layout:fixed;
+}
+
+.partners-table th,
+.partners-table td{
+  padding:14px 12px !important;
+}
+
+.partners-table th:nth-child(1),
+.partners-table td:nth-child(1){width:17%;min-width:0 !important;}
+.partners-table th:nth-child(2),
+.partners-table td:nth-child(2){width:26%;min-width:0 !important;max-width:none !important;overflow-wrap:anywhere;}
+.partners-table th:nth-child(3),
+.partners-table td:nth-child(3){width:8%;min-width:0 !important;max-width:none !important;}
+.partners-table th:nth-child(4),
+.partners-table td:nth-child(4),
+.partners-table th:nth-child(5),
+.partners-table td:nth-child(5){width:7%;min-width:0 !important;text-align:center;}
+.partners-table th:nth-child(6),
+.partners-table td:nth-child(6){width:10%;min-width:0 !important;}
+.partners-table th:nth-child(7),
+.partners-table td:nth-child(7){width:7%;min-width:0 !important;}
+.partners-table th:nth-child(8),
+.partners-table td:nth-child(8){width:17%;min-width:0 !important;}
+
+.partners-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  align-items:center;
+}
+
+.partners-actions form{
+  margin:0;
+}
+
+@media (max-width: 900px){
+  .endpoint-admin-partners .container{max-width:100%;padding:14px 12px 28px;}
+  .endpoint-admin-partners .page-head{align-items:stretch;flex-direction:column;}
+  .partners-filter{grid-template-columns:1fr;}
+  .partners-table{min-width:980px !important;table-layout:auto;}
+}
