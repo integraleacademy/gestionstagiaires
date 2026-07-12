@@ -1,7 +1,7 @@
 {
-  "name": "Intégrale Academy",
-  "short_name": "Intégrale",
-  "description": "Plateforme de gestion des stagiaires Intégrale Academy",
+  "name": "Intégrale Connect",
+  "short_name": "Connect",
+  "description": "Plateforme de gestion des stagiaires Intégrale Connect",
   "start_url": "/admin/sessions",
   "scope": "/",
   "display": "standalone",

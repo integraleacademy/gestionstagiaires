@@ -162,12 +162,12 @@ SCOTIA_USER = os.environ.get("SCOTIA_USER", "").strip()
 SCOTIA_PASSWORD = os.environ.get("SCOTIA_PASSWORD", "").strip()
 INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL = "clement@integraleacademy.com"
 SCOTIA_COMMENT_AUTHOR_LABELS = {
-    INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL: "Intégrale Academy",
+    INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL: "Intégrale Connect",
     "scotiaformation@gmail.com": "Scotia",
 }
 SCOTIA_NOTIFICATION_EMAIL = os.environ.get("SCOTIA_NOTIFICATION_EMAIL", "scotiaformation@gmail.com").strip()
 SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "30"))
-ADMIN_PUSH_TITLE = os.environ.get("ADMIN_PUSH_TITLE", "Intégrale Academy")
+ADMIN_PUSH_TITLE = os.environ.get("ADMIN_PUSH_TITLE", "Intégrale Connect")
 WEB_PUSH_VAPID_PUBLIC_KEY = os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY", "").strip()
 WEB_PUSH_VAPID_PRIVATE_KEY = os.environ.get("WEB_PUSH_VAPID_PRIVATE_KEY", "").strip()
 WEB_PUSH_VAPID_CLAIMS_SUB = os.environ.get("WEB_PUSH_VAPID_CLAIMS_SUB", "mailto:admin@example.com").strip()
@@ -2277,7 +2277,7 @@ def _integrale_partner() -> Dict[str, Any]:
     now = _now_iso() if "_now_iso" in globals() else datetime.datetime.utcnow().isoformat() + "Z"
     return {
         "id": INTEGRALE_PARTNER_ID,
-        "name": "Intégrale Academy",
+        "name": "Intégrale Connect",
         "legal_name": "Intégrale Sécurité Formations",
         "siret": "",
         "address": "54 chemin du Carreou",
@@ -6805,7 +6805,7 @@ def _send_admin_push_notifications(data: Dict[str, Any], notification: Dict[str,
     from pywebpush import webpush, WebPushException
 
     payload = json.dumps({
-        "title": ADMIN_PUSH_TITLE or "Intégrale Academy",
+        "title": ADMIN_PUSH_TITLE or "Intégrale Connect",
         "body": (notification.get("label") or "").strip() or "Nouvelle notification admin",
         "url": url_for("admin_sessions", _external=True),
         "notification_id": notification.get("id") or "",
@@ -10132,14 +10132,14 @@ def _scotia_comment_party_from_label(label: str) -> str:
 
 
 def _scotia_comment_party_label(party: str) -> str:
-    return "Intégrale Academy" if party == "integrale" else "SCOTIA"
+    return "Intégrale Connect" if party == "integrale" else "SCOTIA"
 
 
 def _current_scotia_comment_author_label() -> str:
     if not has_request_context():
         return "Scotia"
     if session.get("admin_logged_in"):
-        return "Intégrale Academy"
+        return "Intégrale Connect"
     return _scotia_comment_author_label(str(session.get("scotia_username") or ""))
 
 
@@ -10838,7 +10838,7 @@ def api_admin_scotia_thread_comment(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "comment_too_long"}), 400
 
     created_at = _now_iso()
-    entry = _append_scotia_thread_comment(t, content, "Intégrale Academy", created_at, "admin")
+    entry = _append_scotia_thread_comment(t, content, "Intégrale Connect", created_at, "admin")
     if (_session_get(s, "training_type", "") or "").strip().upper() == "DIRIGEANT VAE":
         _add_vae_live_notification(
             s,
@@ -12627,7 +12627,7 @@ def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, An
 
     if not last_name:
         last_name = "Nom inconnu"
-    company = "Intégrale Academy"
+    company = "Intégrale Connect"
 
     salesforce_payload = {
         "oid": "00DJ9000000PT9F",
@@ -29515,7 +29515,7 @@ VAE_AVIS_ADMIN_DEFAULTS = {
     "nom_accompagnateur": "Clément VAILLANT",
     "email": "clement@integraleacademy.com",
     "telephone": "04 22 47 07 68",
-    "organisme": "Intégrale Academy",
+    "organisme": "Intégrale Connect",
 }
 
 def _now_iso_utc() -> str:
