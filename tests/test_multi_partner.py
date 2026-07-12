@@ -226,3 +226,118 @@ class MultiPartnerIsolationTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("pas encore activé", response.get_data(as_text=True))
+
+class PartnerAuthFlowTests(MultiPartnerIsolationTests):
+    def _seed_partner_user(self, status="active", active=True, password="Password1234", email="admin@example.com"):
+        data = gestion_app.load_data()
+        for p in data["partners"]:
+            if p["id"] == self.partner_a:
+                p["status"] = status
+        user = {"id": "user-a", "partner_id": self.partner_a, "email": email, "role": "partner_admin", "active": active, "password_hash": gestion_app._hash_password(password) if password is not None else ""}
+        data["users"] = [user]
+        gestion_app.save_data(data)
+        return user
+
+    def test_activation_persists_password_hash_after_reload(self):
+        data = gestion_app.load_data()
+        data["users"].append({"id": "user-a", "partner_id": self.partner_a, "email": "admin@example.com", "role": "partner_admin", "active": True, "password_hash": ""})
+        token = gestion_app._create_invitation(data, "user-a", self.partner_a)
+        gestion_app.save_data(data)
+        response = self.client.post("/activate-account", data={"token": token, "password": "Password1234", "confirm": "Password1234"})
+        self.assertEqual(response.status_code, 302)
+        reloaded = gestion_app.load_data()
+        user = gestion_app._find_user_by_email(reloaded, "admin@example.com")
+        invitation = reloaded["invitations"][-1]
+        self.assertTrue(user["password_hash"])
+        self.assertEqual(user["role"], "partner_admin")
+        self.assertEqual(user["partner_id"], self.partner_a)
+        self.assertTrue(invitation["used_at"])
+
+    def test_partner_login_exact_email_sets_expected_session(self):
+        user = self._seed_partner_user(email="admin@example.com")
+        response = self.client.post("/admin/login", data={"username": "admin@example.com", "password": "Password1234", "next": "/admin/sessions"})
+        self.assertEqual(response.status_code, 302)
+        with self.client.session_transaction() as sess:
+            self.assertEqual(sess["user_id"], user["id"])
+            self.assertEqual(sess["admin_role"], "partner_admin")
+            self.assertEqual(sess["partner_id"], self.partner_a)
+
+    def test_partner_login_email_case_insensitive(self):
+        self._seed_partner_user(email="Admin@Example.com")
+        response = self.client.post("/admin/login", data={"username": "ADMIN@example.COM", "password": "Password1234", "next": "/admin/sessions"})
+        self.assertEqual(response.status_code, 302)
+
+    def test_partner_login_rejects_bad_password(self):
+        self._seed_partner_user()
+        response = self.client.post("/admin/login", data={"username": "admin@example.com", "password": "WrongPassword1", "next": "/admin/sessions"}, follow_redirects=True)
+        self.assertIn("Identifiant ou mot de passe incorrect", response.get_data(as_text=True))
+
+    def test_partner_login_rejects_missing_password_hash(self):
+        self._seed_partner_user(password=None)
+        response = self.client.post("/admin/login", data={"username": "admin@example.com", "password": "Password1234", "next": "/admin/sessions"}, follow_redirects=True)
+        self.assertIn("pas encore activé", response.get_data(as_text=True))
+
+    def test_partner_login_rejects_inactive_user(self):
+        self._seed_partner_user(active=False)
+        response = self.client.post("/admin/login", data={"username": "admin@example.com", "password": "Password1234", "next": "/admin/sessions"}, follow_redirects=True)
+        self.assertIn("désactivé", response.get_data(as_text=True))
+
+    def test_partner_login_rejects_suspended_partner(self):
+        self._seed_partner_user(status="suspended")
+        response = self.client.post("/admin/login", data={"username": "admin@example.com", "password": "Password1234", "next": "/admin/sessions"}, follow_redirects=True)
+        self.assertIn("suspendu", response.get_data(as_text=True))
+
+    def test_partner_login_rejects_archived_partner(self):
+        self._seed_partner_user(status="archived")
+        response = self.client.post("/admin/login", data={"username": "admin@example.com", "password": "Password1234", "next": "/admin/sessions"}, follow_redirects=True)
+        self.assertIn("archivé", response.get_data(as_text=True))
+
+    def test_partner_login_accepts_active_and_trial_statuses(self):
+        for status in ("active", "trial"):
+            with self.subTest(status=status):
+                self.client = gestion_app.app.test_client()
+                self._seed_partner_user(status=status)
+                response = self.client.post("/admin/login", data={"username": "admin@example.com", "password": "Password1234", "next": "/admin/sessions"})
+                self.assertEqual(response.status_code, 302)
+
+    def test_static_admin_login_still_works(self):
+        original_admin_user = gestion_app.ADMIN_USER
+        original_admin_password = gestion_app.ADMIN_PASSWORD
+        try:
+            gestion_app.ADMIN_USER = "admin"
+            gestion_app.ADMIN_PASSWORD = "Password1234"
+            response = self.client.post("/admin/login", data={"username": "admin", "password": "Password1234", "next": "/admin/sessions"})
+            self.assertEqual(response.status_code, 302)
+        finally:
+            gestion_app.ADMIN_USER = original_admin_user
+            gestion_app.ADMIN_PASSWORD = original_admin_password
+
+
+    def test_static_admin_login_wins_when_email_also_partner_user(self):
+        original_admin_user = gestion_app.ADMIN_USER
+        original_admin_password = gestion_app.ADMIN_PASSWORD
+        try:
+            gestion_app.ADMIN_USER = "admin@example.com"
+            gestion_app.ADMIN_PASSWORD = "AdminSecret123"
+            self._seed_partner_user(email="admin@example.com", password="PartnerSecret123")
+            response = self.client.post("/admin/login", data={"username": "admin@example.com", "password": "AdminSecret123", "next": "/admin/sessions"})
+            self.assertEqual(response.status_code, 302)
+            with self.client.session_transaction() as sess:
+                self.assertEqual(sess["admin_role"], "admin")
+                self.assertEqual(sess["platform_role"], "super_admin")
+                self.assertEqual(sess["partner_id"], gestion_app.INTEGRALE_PARTNER_ID)
+                self.assertNotIn("user_id", sess)
+        finally:
+            gestion_app.ADMIN_USER = original_admin_user
+            gestion_app.ADMIN_PASSWORD = original_admin_password
+
+    def test_no_leak_between_two_partners_after_partner_login(self):
+        self._seed_partner_user()
+        self.client.post("/admin/login", data={"username": "admin@example.com", "password": "Password1234", "next": "/admin/sessions"})
+        with gestion_app.app.test_request_context("/admin/sessions"):
+            gestion_app.session["admin_logged_in"] = True
+            gestion_app.session["admin_role"] = "partner_admin"
+            gestion_app.session["partner_id"] = self.partner_a
+            scoped = gestion_app.load_data()
+        self.assertEqual([s["id"] for s in scoped["sessions"]], ["session-a"])
+        self.assertEqual(scoped["sessions"][0]["trainees"][0]["id"], "trainee-a")

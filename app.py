@@ -1830,6 +1830,8 @@ def admin_login():
         "inactive": "Ce compte partenaire est désactivé.",
         "not_activated": "Ce compte partenaire n’est pas encore activé. Utilisez le lien d’invitation pour définir le mot de passe.",
         "partner_status": "L’espace partenaire est suspendu ou archivé. Contactez l’administrateur.",
+        "partner_suspended": "L’espace partenaire est suspendu. Contactez l’administrateur.",
+        "partner_archived": "L’espace partenaire est archivé. Contactez l’administrateur.",
     }
     error_html = ""
     if error_code in messages:
@@ -1840,13 +1842,14 @@ def admin_login():
     <body style="font-family:Arial,sans-serif;max-width:420px;margin:60px auto;padding:20px">
       <h2>Connexion</h2>
       <p style="color:#6b7280;font-size:13px;margin-top:-4px">
-        Un compte de consultation peut être configuré pour un accès en lecture seule.
+        Un compte de consultation peut être configuré pour un accès en lecture seule.<br>
+        Les utilisateurs partenaires doivent se connecter avec l’adresse e-mail utilisée lors de l’activation de leur compte.
       </p>
       {error_html}
       <form method="post" action="/admin/login">
         <input type="hidden" name="next" value="{html.escape(next_url, quote=True)}">
         <div style="margin:10px 0">
-          <label>Identifiant</label><br>
+          <label>Adresse e-mail ou identifiant</label><br>
           <input name="username" autocomplete="username" style="width:100%;padding:10px">
         </div>
         <div style="margin:10px 0">
@@ -1861,64 +1864,92 @@ def admin_login():
 @app.post("/admin/login")
 def admin_login_post():
     username = (request.form.get("username") or "").strip()
+    username_normalized = username.lower()
     password = request.form.get("password") or ""
     next_url = request.form.get("next") or url_for("admin_sessions")
 
     data = load_data()
+    _log_partner_auth_event("login_attempt", data, username_normalized)
 
     # sécurité minimale : si aucun accès plateforme ni partenaire n’est configuré, on refuse.
     if not (ADMIN_USER and ADMIN_PASSWORD) and not (SECRETARY_USER and SECRETARY_PASSWORD) and not data.get("users"):
+        _log_partner_auth_event("data_file_inaccessible_or_no_auth_config", data, username_normalized)
         abort(500, "ADMIN_USER/ADMIN_PASSWORD non configurés")
 
-    if _static_credentials_match(username, password, ADMIN_USER, ADMIN_PASSWORD):
-        _append_activity_log(data, "login", "user", username.lower(), INTEGRALE_PARTNER_ID)
+    if _static_credentials_match(username_normalized, password, ADMIN_USER, ADMIN_PASSWORD):
+        session.clear()
+        _append_activity_log(data, "login", "user", username_normalized, INTEGRALE_PARTNER_ID)
         save_data(data)
         session["admin_logged_in"] = True
         session["admin_role"] = "admin"
         session["platform_role"] = "super_admin"
-        session["admin_username"] = username.lower()
+        session["admin_username"] = username_normalized
         session["partner_id"] = INTEGRALE_PARTNER_ID
-        session.permanent = True  # ✅ cookie persistant
+        session.permanent = True
         return redirect(next_url)
 
-    user = _find_user_by_email(data, username)
-    if user and not user.get("active", True):
-        _append_activity_log(data, "login_blocked_inactive", "user", user.get("id"), user.get("partner_id") or "")
-        save_data(data)
-        return redirect(url_for("admin_login", next=next_url, error="inactive"))
-    if user and not user.get("password_hash"):
-        _append_activity_log(data, "login_blocked_not_activated", "user", user.get("id"), user.get("partner_id") or "")
-        save_data(data)
-        return redirect(url_for("admin_login", next=next_url, error="not_activated"))
-    if user and _verify_password(password, user.get("password_hash") or ""):
-        partner = _partner_or_404(data, user.get("partner_id") or "")
-        if partner.get("status") in {"suspended", "archived"}:
+    if SECRETARY_USER and SECRETARY_PASSWORD and _static_credentials_match(username_normalized, password, SECRETARY_USER, SECRETARY_PASSWORD):
+        session.clear()
+        session["admin_logged_in"] = True
+        session["admin_role"] = "viewer"
+        session["admin_username"] = username_normalized
+        session["partner_id"] = INTEGRALE_PARTNER_ID
+        session.permanent = True
+        return redirect(next_url)
+
+    user = _find_user_by_email(data, username_normalized)
+    if user:
+        partner = next((p for p in data.get("partners", []) if isinstance(p, dict) and p.get("id") == user.get("partner_id")), None)
+        if not user.get("active", True):
+            _log_partner_auth_event("utilisateur désactivé", data, username_normalized, user, partner)
+            _append_activity_log(data, "login_blocked_inactive", "user", user.get("id"), user.get("partner_id") or "")
+            save_data(data)
+            return redirect(url_for("admin_login", next=next_url, error="inactive"))
+        if not user.get("password_hash"):
+            _log_partner_auth_event("aucun mot de passe défini", data, username_normalized, user, partner)
+            _append_activity_log(data, "login_blocked_not_activated", "user", user.get("id"), user.get("partner_id") or "")
+            save_data(data)
+            return redirect(url_for("admin_login", next=next_url, error="not_activated"))
+        password_ok = _verify_password(password, user.get("password_hash") or "")
+        if not password_ok:
+            _log_partner_auth_event("mauvais mot de passe", data, username_normalized, user, partner, password_ok=False)
+            _append_activity_log(data, "login_failed", "user", user.get("id"), user.get("partner_id") or "")
+            save_data(data)
+            return redirect(url_for("admin_login", next=next_url, error="invalid"))
+        if not partner:
+            _log_partner_auth_event("partenaire introuvable", data, username_normalized, user, None, password_ok=True)
+            _append_activity_log(data, "login_blocked_partner_missing", "user", user.get("id"), user.get("partner_id") or "")
+            save_data(data)
+            return redirect(url_for("admin_login", next=next_url, error="invalid"))
+        if partner.get("status") == "suspended":
+            _log_partner_auth_event("partenaire suspendu", data, username_normalized, user, partner, password_ok=True)
             _append_activity_log(data, "login_blocked_partner_status", "user", user.get("id"), partner.get("id"), {"status": partner.get("status")})
             save_data(data)
-            return redirect(url_for("admin_login", next=next_url, error="partner_status"))
+            return redirect(url_for("admin_login", next=next_url, error="partner_suspended"))
+        if partner.get("status") == "archived":
+            _log_partner_auth_event("partenaire archivé", data, username_normalized, user, partner, password_ok=True)
+            _append_activity_log(data, "login_blocked_partner_status", "user", user.get("id"), partner.get("id"), {"status": partner.get("status")})
+            save_data(data)
+            return redirect(url_for("admin_login", next=next_url, error="partner_archived"))
+        if partner.get("status") not in {"active", "trial"}:
+            _log_partner_auth_event("statut partenaire refusé", data, username_normalized, user, partner, password_ok=True)
+            return redirect(url_for("admin_login", next=next_url, error="invalid"))
+
+        _log_partner_auth_event("connexion partenaire réussie", data, username_normalized, user, partner, password_ok=True)
+        session.clear()
         session["admin_logged_in"] = True
-        session["admin_role"] = user.get("role") or "partner_admin"
-        session["admin_username"] = username.lower()
+        session["admin_username"] = user.get("email") or username_normalized
+        session["user_id"] = user.get("id")
         session["admin_user_id"] = user.get("id")
-        session["partner_id"] = partner.get("id")
+        session["admin_role"] = user.get("role") or "partner_admin"
+        session["partner_id"] = user.get("partner_id")
         session.permanent = True
         user["last_login_at"] = _now_iso()
         _append_activity_log(data, "login", "user", user.get("id"), partner.get("id"))
         save_data(data)
         return redirect(next_url)
 
-    if user:
-        _append_activity_log(data, "login_failed", "user", user.get("id"), user.get("partner_id") or "")
-        save_data(data)
-
-    if SECRETARY_USER and SECRETARY_PASSWORD:
-        if _static_credentials_match(username, password, SECRETARY_USER, SECRETARY_PASSWORD):
-            session["admin_logged_in"] = True
-            session["admin_role"] = "viewer"
-            session["admin_username"] = username.lower()
-            session["partner_id"] = INTEGRALE_PARTNER_ID
-            session.permanent = True
-            return redirect(next_url)
+    _log_partner_auth_event("utilisateur partenaire introuvable", data, username_normalized)
 
     return redirect(url_for("admin_login", next=next_url, error="invalid"))
 
@@ -2334,6 +2365,37 @@ def _merge_partner_scoped_payload(scoped: Dict[str, Any], partner_id: str) -> Di
             current[key] = [x for x in current.get(key, []) if not isinstance(x, dict) or x.get("partner_id") != partner_id] + [x for x in scoped.get(key, []) if isinstance(x, dict)]
     return current
 
+
+
+
+def _data_file_diagnostics() -> Dict[str, Any]:
+    path = os.path.abspath(DATA_FILE)
+    return {
+        "data_file": path,
+        "persist_dir": os.path.abspath(PERSIST_DIR),
+        "exists": os.path.exists(DATA_FILE),
+    }
+
+
+def _log_partner_auth_event(reason: str, data: Optional[Dict[str, Any]] = None, username: str = "", user: Optional[Dict[str, Any]] = None, partner: Optional[Dict[str, Any]] = None, password_ok: Optional[bool] = None) -> None:
+    users = data.get("users", []) if isinstance(data, dict) else []
+    wanted = (username or "").strip().lower()
+    found = bool(user)
+    app.logger.info(
+        "partner_auth reason=%s data_file=%s persist_dir=%s exists=%s partner_users=%s searched_user_present=%s role=%s user_active=%s password_hash_present=%s password_check=%s partner_id_present=%s partner_status=%s",
+        reason,
+        os.path.abspath(DATA_FILE),
+        os.path.abspath(PERSIST_DIR),
+        os.path.exists(DATA_FILE),
+        sum(1 for u in users if isinstance(u, dict) and u.get("role") == "partner_admin"),
+        found if wanted else False,
+        (user or {}).get("role") or "",
+        bool((user or {}).get("active", True)) if user else "",
+        bool((user or {}).get("password_hash")) if user else False,
+        "success" if password_ok is True else ("failure" if password_ok is False else "not_checked"),
+        bool((user or {}).get("partner_id")) if user else False,
+        (partner or {}).get("status") or "",
+    )
 
 def _find_user_by_email(data: Dict[str, Any], email: str) -> Optional[Dict[str, Any]]:
     wanted = (email or "").strip().lower()
@@ -11793,14 +11855,39 @@ def activate_account():
             user = next((u for u in data.get("users", []) if isinstance(u, dict) and u.get("id") == invitation.get("user_id")), None)
             if not user:
                 error = "Utilisateur introuvable."
+            elif user.get("partner_id") != invitation.get("partner_id"):
+                app.logger.warning("activation_failed invitation_user_partner_mismatch data_file=%s exists=%s user_id=%s partner_id_present=%s", os.path.abspath(DATA_FILE), os.path.exists(DATA_FILE), user.get("id"), bool(user.get("partner_id")))
+                error = "Invitation invalide."
             else:
                 user["password_hash"] = _hash_password(password)
+                if not user.get("role"):
+                    user["role"] = "partner_admin"
                 user["invitation_activated_at"] = _now_iso()
                 user["updated_at"] = _now_iso()
                 invitation["used_at"] = _now_iso()
                 _append_activity_log(data, "invitation_activated", "user", user.get("id"), user.get("partner_id") or "")
                 save_data(data)
-                return redirect(url_for("admin_login", activated="1"))
+                reloaded = load_data()
+                persisted_user = next((u for u in reloaded.get("users", []) if isinstance(u, dict) and u.get("id") == user.get("id")), None)
+                persisted_invitation = next((i for i in reloaded.get("invitations", []) if isinstance(i, dict) and i.get("id") == invitation.get("id")), None)
+                persisted_ok = bool(
+                    persisted_user
+                    and persisted_user.get("password_hash")
+                    and persisted_user.get("role") == "partner_admin"
+                    and persisted_user.get("partner_id")
+                    and persisted_invitation
+                    and persisted_invitation.get("used_at")
+                )
+                app.logger.info(
+                    "activation_persist_check ok=%s data_file=%s persist_dir=%s exists=%s user_present=%s role=%s partner_id_present=%s password_hash_present=%s invitation_used=%s",
+                    persisted_ok, os.path.abspath(DATA_FILE), os.path.abspath(PERSIST_DIR), os.path.exists(DATA_FILE), bool(persisted_user),
+                    (persisted_user or {}).get("role") or "", bool((persisted_user or {}).get("partner_id")),
+                    bool((persisted_user or {}).get("password_hash")), bool((persisted_invitation or {}).get("used_at")),
+                )
+                if not persisted_ok:
+                    error = "Activation impossible : l’enregistrement persistant du compte n’a pas pu être confirmé."
+                else:
+                    return redirect(url_for("admin_login", activated="1"))
     return render_template("activate_account.html", token=token, error=error)
 
 
