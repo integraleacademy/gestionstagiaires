@@ -3831,21 +3831,33 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     const status = (box.getAttribute("data-cnaps-status") || "").toUpperCase();
     const fallbackActivity = box.getAttribute("data-fallback-activity") || "";
     const isAccepted = status.includes("OK") || status.includes("ACCEPTE") || status.includes("ACCEPTÉ");
-    if(!fallbackActivity && !isAccepted) return null;
     const isCartePro = status.includes("CARTE") || status.includes("PROFESSIONNELLE") || status.includes("CAR") || status.includes("CP");
-    const activity = isCartePro ? "Carte professionnelle - Surveillance humaine ou gardiennage" : fallbackActivity;
-    return {
-      activite: activity,
-      validite_titre: isAccepted ? "ACTIF" : "À vérifier",
-    };
+    const rows = [];
+    if(fallbackActivity){
+      rows.push({
+        activite: fallbackActivity,
+        validite_titre: isAccepted ? "ACTIF" : "À vérifier",
+      });
+    }
+    if(isAccepted && isCartePro){
+      rows.push({
+        activite: "Carte professionnelle - Surveillance humaine ou gardiennage",
+        validite_titre: "ACTIF",
+      });
+    }
+    if(!rows.length) return null;
+    return {results: rows};
   }
 
   function withLocalCardProFallback(data, fallback){
     if(!fallback) return data;
     const rows = Array.isArray(data.results) && data.results.length ? data.results.slice() : [data];
-    const fallbackActivity = normalizedCardProActivity(fallback.activite);
-    const alreadyDisplayed = rows.some((row)=>normalizedCardProActivity(row.activite) === fallbackActivity);
-    if(!alreadyDisplayed) rows.push(fallback);
+    const fallbackRows = Array.isArray(fallback.results) && fallback.results.length ? fallback.results : [fallback];
+    fallbackRows.forEach((fallbackRow)=>{
+      const fallbackActivity = normalizedCardProActivity(fallbackRow.activite);
+      const alreadyDisplayed = rows.some((row)=>normalizedCardProActivity(row.activite) === fallbackActivity);
+      if(!alreadyDisplayed) rows.push(fallbackRow);
+    });
     return {...data, results: rows};
   }
 
