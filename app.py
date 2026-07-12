@@ -11940,7 +11940,11 @@ def admin_sessions():
             return "VAE"
         return None
 
+    visible_partner_id = _current_partner_id() or INTEGRALE_PARTNER_ID
+
     for s in data.get("sessions", []):
+        if isinstance(s, dict) and s.get("partner_id") != visible_partner_id:
+            continue
         if _is_wedof_leads_session(s):
             continue
 
