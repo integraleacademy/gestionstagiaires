@@ -1808,6 +1808,16 @@ def inject_read_only():
 def admin_login():
     # mini page sans template (pour aller vite)
     next_url = request.args.get("next") or url_for("admin_sessions")
+    error_code = (request.args.get("error") or "").strip()
+    messages = {
+        "invalid": "Identifiant ou mot de passe incorrect.",
+        "inactive": "Ce compte partenaire est désactivé.",
+        "not_activated": "Ce compte partenaire n’est pas encore activé. Utilisez le lien d’invitation pour définir le mot de passe.",
+        "partner_status": "L’espace partenaire est suspendu ou archivé. Contactez l’administrateur.",
+    }
+    error_html = ""
+    if error_code in messages:
+        error_html = f'<p role="alert" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:10px;padding:10px;font-weight:700">{html.escape(messages[error_code])}</p>'
     return f"""
     <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Connexion admin</title></head>
@@ -1816,8 +1826,9 @@ def admin_login():
       <p style="color:#6b7280;font-size:13px;margin-top:-4px">
         Un compte de consultation peut être configuré pour un accès en lecture seule.
       </p>
+      {error_html}
       <form method="post" action="/admin/login">
-        <input type="hidden" name="next" value="{next_url}">
+        <input type="hidden" name="next" value="{html.escape(next_url, quote=True)}">
         <div style="margin:10px 0">
           <label>Identifiant</label><br>
           <input name="username" autocomplete="username" style="width:100%;padding:10px">
@@ -1826,7 +1837,7 @@ def admin_login():
           <label>Mot de passe</label><br>
           <input name="password" type="password" autocomplete="current-password" style="width:100%;padding:10px">
         </div>
-        <button style="padding:10px 14px">Se connecter</button>
+        <button type="submit" style="padding:10px 14px">Se connecter</button>
       </form>
     </body></html>
     """
@@ -1837,12 +1848,13 @@ def admin_login_post():
     password = (request.form.get("password") or "").strip()
     next_url = request.form.get("next") or url_for("admin_sessions")
 
-    # sécurité minimale : si pas configuré, on refuse
-    if not (ADMIN_USER and ADMIN_PASSWORD) and not (SECRETARY_USER and SECRETARY_PASSWORD):
+    data = load_data()
+
+    # sécurité minimale : si aucun accès plateforme ni partenaire n’est configuré, on refuse.
+    if not (ADMIN_USER and ADMIN_PASSWORD) and not (SECRETARY_USER and SECRETARY_PASSWORD) and not data.get("users"):
         abort(500, "ADMIN_USER/ADMIN_PASSWORD non configurés")
 
     if username == ADMIN_USER and password == ADMIN_PASSWORD:
-        data = load_data()
         _append_activity_log(data, "login", "user", username.lower(), INTEGRALE_PARTNER_ID)
         save_data(data)
         session["admin_logged_in"] = True
@@ -1853,14 +1865,21 @@ def admin_login_post():
         session.permanent = True  # ✅ cookie persistant
         return redirect(next_url)
 
-    data = load_data()
     user = _find_user_by_email(data, username)
-    if user and user.get("active", True) and user.get("password_hash") and _verify_password(password, user.get("password_hash") or ""):
+    if user and not user.get("active", True):
+        _append_activity_log(data, "login_blocked_inactive", "user", user.get("id"), user.get("partner_id") or "")
+        save_data(data)
+        return redirect(url_for("admin_login", next=next_url, error="inactive"))
+    if user and not user.get("password_hash"):
+        _append_activity_log(data, "login_blocked_not_activated", "user", user.get("id"), user.get("partner_id") or "")
+        save_data(data)
+        return redirect(url_for("admin_login", next=next_url, error="not_activated"))
+    if user and _verify_password(password, user.get("password_hash") or ""):
         partner = _partner_or_404(data, user.get("partner_id") or "")
         if partner.get("status") in {"suspended", "archived"}:
             _append_activity_log(data, "login_blocked_partner_status", "user", user.get("id"), partner.get("id"), {"status": partner.get("status")})
             save_data(data)
-            return redirect(url_for("admin_login", next=next_url))
+            return redirect(url_for("admin_login", next=next_url, error="partner_status"))
         session["admin_logged_in"] = True
         session["admin_role"] = user.get("role") or "partner_admin"
         session["admin_username"] = username.lower()
@@ -1885,7 +1904,7 @@ def admin_login_post():
             session.permanent = True
             return redirect(next_url)
 
-    return redirect(url_for("admin_login", next=next_url))
+    return redirect(url_for("admin_login", next=next_url, error="invalid"))
 
 
 @app.get("/scotia/login")
@@ -2360,8 +2379,20 @@ def _create_invitation(data: Dict[str, Any], user_id: str, partner_id: str, hour
     return raw
 
 
+def _normalize_public_base_url(value: str) -> str:
+    raw = (value or "").strip().rstrip("/")
+    if not raw:
+        return raw
+
+    parsed = urlparse(raw if "://" in raw else f"https://{raw}")
+    if parsed.netloc in PUBLIC_STUDENT_PORTAL_LEGACY_HOSTS:
+        return PUBLIC_STUDENT_PORTAL_BASE_DEFAULT
+    return raw
+
+
 def _public_base_url() -> str:
-    return (os.environ.get("APP_BASE_URL") or os.environ.get("PUBLIC_BASE_URL") or APP_BASE_URL or "").strip().rstrip("/")
+    raw = os.environ.get("APP_BASE_URL") or os.environ.get("PUBLIC_BASE_URL") or APP_BASE_URL or ""
+    return _normalize_public_base_url(raw)
 
 
 def _activation_url(raw_token: str) -> str:
@@ -3630,7 +3661,15 @@ def _normalize_afc_email(raw_email: Any) -> str:
 
 import base64
 
-EMAIL_RECIPIENT_BLOCKLIST = {"clement@integraleacademy.com"}
+def _parse_email_recipient_blocklist(raw_value: str) -> Set[str]:
+    return {
+        item.strip().lower()
+        for item in re.split(r"[,;\s]+", raw_value or "")
+        if item.strip()
+    }
+
+
+EMAIL_RECIPIENT_BLOCKLIST = _parse_email_recipient_blocklist(os.environ.get("EMAIL_RECIPIENT_BLOCKLIST", ""))
 
 
 def _is_blocked_email_recipient(email: str) -> bool:
