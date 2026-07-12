@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head"><h1>Test Brevo</h1><a class="btn" href="{{ url_for('admin_partners') }}">← Partenaires</a></div>
+<div class="card">
+  <h2>Diagnostic sécurisé</h2>
+  <p>BREVO_API_KEY présente : {{ 'oui' if brevo_diag.api_key_present else 'non' }}</p>
+  <p>BREVO_SENDER_EMAIL : {{ brevo_diag.sender_email }}</p>
+  <p>BREVO_SENDER_NAME : {{ brevo_diag.sender_name }}</p>
+  <p>APP_BASE_URL / PUBLIC_BASE_URL : {{ brevo_diag.base_url }}</p>
+  <form method="post" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-top:12px;">
+    <label>Adresse de test<br><input name="email" type="email" required style="padding:10px;border:1px solid #d1d5db;border-radius:10px;"></label>
+    <button class="btn btn-blue" type="submit">Envoyer un test</button>
+  </form>
+  {% if result %}
+    <div style="margin-top:14px;padding:12px;border-radius:10px;background:{{ '#dcfce7' if result.ok else '#fee2e2' }};">
+      <strong>{{ 'Envoi réussi' if result.ok else 'Erreur d’envoi' }}</strong><br>
+      Code HTTP : {{ result.status_code or '—' }}<br>
+      Identifiant message : {{ result.message_id or '—' }}<br>
+      {% if result.error %}Erreur : {{ result.error }}{% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

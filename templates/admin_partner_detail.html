@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="page-head"><h1>{{ partner.name }}</h1><a class="btn" href="{{ url_for('admin_partners') }}">← Partenaires</a></div>
+{% for category,message in get_flashed_messages(with_categories=true) %}<div class="card" style="margin-bottom:12px;background:{{ '#fee2e2' if category=='error' else '#dcfce7' }};">{{ message }}</div>{% endfor %}
 <div class="grid" style="display:grid;grid-template-columns:2fr 1fr;gap:18px;align-items:start;">
 <form id="edit" method="post" class="card" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;">
   <h2 style="grid-column:1/-1">Informations générales</h2>
@@ -12,5 +13,37 @@
   <button class="btn btn-blue" type="submit">Enregistrer</button>
 </form>
 <div class="card"><h2>Utilisation</h2><p><strong>{{ counts.users }}</strong> utilisateurs</p><p><strong>{{ counts.trainees }}</strong> stagiaires</p><p><strong>{{ counts.sessions }}</strong> sessions</p><p>Créé le {{ partner.created_at|frdatetime }}</p><h3>Utilisateurs</h3>{% for u in users %}<p>{{ u.email }} — {{ u.role }} {% if not u.active %}(désactivé){% endif %}</p>{% else %}<p>Aucun utilisateur.</p>{% endfor %}</div>
+
+<div class="card" style="grid-column:1/-1">
+  <h2>Invitation partenaire</h2>
+  <p><strong>E-mail de connexion :</strong> {{ users[0].email if users else partner.email }}</p>
+  <p><strong>Statut du compte :</strong> {{ 'actif' if users and users[0].active else 'désactivé' }}</p>
+  <p><strong>Statut de l’invitation :</strong> {% if invitation %}{% if invitation.used_at %}utilisée{% elif invitation.cancelled_at %}annulée{% else %}active{% endif %}{% else %}aucune{% endif %}</p>
+  <p><strong>Date du dernier envoi :</strong> {{ invitation.last_sent_at|frdatetime if invitation else '—' }}</p>
+  <p><strong>Date d’expiration :</strong> {{ invitation.expires_at|frdatetime if invitation else '—' }}</p>
+  <p><strong>Statut du dernier envoi :</strong> {{ invitation.last_send_status if invitation and invitation.last_send_status else '—' }}</p>
+  <p><strong>Erreur du dernier envoi :</strong> {{ invitation.last_send_error if invitation and invitation.last_send_error else '—' }}</p>
+  <p><strong>Identifiant Brevo :</strong> {{ invitation.brevo_message_id if invitation and invitation.brevo_message_id else '—' }}</p>
+  <h3>Diagnostic Brevo sécurisé</h3>
+  <p>BREVO_API_KEY présente : {{ 'oui' if brevo_diag.api_key_present else 'non' }}</p>
+  <p>BREVO_SENDER_EMAIL : {{ brevo_diag.sender_email }}</p>
+  <p>BREVO_SENDER_NAME : {{ brevo_diag.sender_name }}</p>
+  <p>APP_BASE_URL / PUBLIC_BASE_URL : {{ brevo_diag.base_url }}</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <form method="post" action="{{ url_for('admin_partner_send_invitation', partner_id=partner.id) }}"><button class="btn btn-blue" type="submit">Envoyer l’invitation</button></form>
+    <form method="post" action="{{ url_for('admin_partner_send_invitation', partner_id=partner.id) }}"><button class="btn" type="submit">Renvoyer l’invitation</button></form>
+    <form method="post" action="{{ url_for('admin_partner_new_invitation', partner_id=partner.id) }}"><button class="btn" type="submit">Générer une nouvelle invitation</button></form>
+    {% if can_copy_test_activation_link %}<button class="btn" type="button" data-copy-activation-url="{{ url_for('admin_partner_activation_link', partner_id=partner.id) }}">Copier le lien d’activation de test</button>{% endif %}
+  </div>
 </div>
+</div>
+{% if can_copy_test_activation_link %}<script>
+document.querySelectorAll('[data-copy-activation-url]').forEach(btn => btn.addEventListener('click', async () => {
+  const res = await fetch(btn.dataset.copyActivationUrl, {credentials:'same-origin'});
+  if (!res.ok) { alert('Lien indisponible'); return; }
+  const data = await res.json();
+  await navigator.clipboard.writeText(data.activation_url);
+  alert('Lien copié');
+}));
+</script>{% endif %}
 {% endblock %}
