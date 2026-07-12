@@ -11568,9 +11568,13 @@ def _active_partner_invitation(data: Dict[str, Any], partner_id: str) -> Optiona
 def _send_and_record_invitation(data: Dict[str, Any], partner: Dict[str, Any], user: Dict[str, Any], invitation: Dict[str, Any]) -> Dict[str, Any]:
     raw_token = _decrypt_invitation_token(invitation.get("token_encrypted") or "")
     if not raw_token:
-        result = {"ok": False, "status_code": None, "message_id": "", "error": "Token d’invitation indisponible sous forme sécurisée pour renvoi"}
-    else:
-        result = _send_partner_invitation_email(user, partner, raw_token)
+        invitation["cancelled_at"] = _now_iso()
+        invitation["last_send_status"] = "annulé"
+        invitation["last_send_error"] = "Token d’invitation sécurisé indisponible ; une nouvelle invitation a été générée."
+        _append_activity_log(data, "invitation_cancelled", "user", user.get("id"), partner.get("id"), {"reason": "missing_secure_token_for_resend"})
+        raw_token = _create_invitation(data, user.get("id"), partner.get("id"))
+        invitation = data.get("invitations", [])[-1]
+    result = _send_partner_invitation_email(user, partner, raw_token)
     invitation["last_sent_at"] = _now_iso()
     invitation["last_send_status"] = "réussi" if result.get("ok") else "échoué"
     invitation["last_send_error"] = "" if result.get("ok") else (result.get("error") or "Erreur Brevo inconnue")

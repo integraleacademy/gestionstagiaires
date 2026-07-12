@@ -93,6 +93,29 @@ class PartnerInvitationEmailTests(unittest.TestCase):
         self.assertEqual(len([i for i in data["invitations"] if not i.get("cancelled_at")]), 1)
         self.assertEqual(data["invitations"][0]["last_send_status"], "réussi")
 
+
+    def test_resend_with_unreadable_token_generates_new_invitation(self):
+        gestion_app.BREVO_API_KEY = "key"
+        gestion_app.BREVO_SENDER_EMAIL = "sender@example.com"
+        gestion_app.BREVO_SENDER_NAME = "Sender"
+        data = gestion_app.load_data()
+        data["invitations"][0]["token_encrypted"] = "unreadable-token"
+        gestion_app.save_data(data)
+        with mock.patch("app.requests.post") as post:
+            post.return_value.status_code = 201
+            post.return_value.text = '{"messageId":"mid"}'
+            post.return_value.json.return_value = {"messageId": "mid"}
+            response = self.client.post(f"/admin/partners/{self.partner_id}/send-invitation", follow_redirects=True)
+        html = response.get_data(as_text=True)
+        self.assertIn("Invitation envoyée", html)
+        data = gestion_app.load_data()
+        active_invitations = [i for i in data["invitations"] if not i.get("cancelled_at")]
+        cancelled_invitations = [i for i in data["invitations"] if i.get("cancelled_at")]
+        self.assertEqual(len(active_invitations), 1)
+        self.assertEqual(len(cancelled_invitations), 1)
+        self.assertEqual(active_invitations[0]["last_send_status"], "réussi")
+        self.assertIn("https://test.example.com/activate-account?token=", post.call_args.kwargs["json"]["textContent"])
+
     def test_manual_link_inaccessible_to_partner_user(self):
         with self.client.session_transaction() as sess:
             sess["admin_role"] = "partner_admin"
