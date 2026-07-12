@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="page-head"><h1>Gérer les partenaires</h1><a class="btn btn-blue" href="{{ url_for('admin_partner_new') }}">+ Nouveau partenaire</a></div>
-<form method="get" class="card" style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-bottom:18px;">
-  <label>Recherche<br><input name="q" value="{{ q }}" placeholder="Nom, email, ville" style="padding:10px;border:1px solid #d1d5db;border-radius:10px;"></label>
-  <label>Statut<br><select name="status" style="padding:10px;border:1px solid #d1d5db;border-radius:10px;"><option value="">Tous</option>{% for key,label in status_labels.items() %}<option value="{{ key }}" {% if status==key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
-  <label>Formule<br><input name="plan" value="{{ plan }}" placeholder="legacy, pro..." style="padding:10px;border:1px solid #d1d5db;border-radius:10px;"></label>
+<form method="get" class="card partners-filter">
+  <label>Recherche<br><input name="q" value="{{ q }}" placeholder="Nom, email, ville"></label>
+  <label>Statut<br><select name="status"><option value="">Tous</option>{% for key,label in status_labels.items() %}<option value="{{ key }}" {% if status==key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Formule<br><input name="plan" value="{{ plan }}" placeholder="legacy, pro..."></label>
   <button class="btn" type="submit">Filtrer</button>
 </form>
-<div class="table-wrap card"><table class="table"><thead><tr><th>Centre</th><th>Contact</th><th>Statut</th><th>Utilisateurs</th><th>Stagiaires</th><th>Création</th><th>Formule</th><th>Actions</th></tr></thead><tbody>
+<div class="table-wrap card partners-table-wrap"><table class="table partners-table"><thead><tr><th>Centre</th><th>Contact</th><th>Statut</th><th>Utilisateurs</th><th>Stagiaires</th><th>Création</th><th>Formule</th><th>Actions</th></tr></thead><tbody>
 {% for p in partners %}<tr>
 <td><strong>{{ p.name }}</strong><br><span class="muted">{{ p.legal_name }}</span></td><td>{{ p.contact_first_name }} {{ p.contact_last_name }}<br><a href="mailto:{{ p.email }}">{{ p.email }}</a><br>{{ p.phone }}</td>
 <td><span class="badge badge-{{ p.status }}">{{ status_labels.get(p.status,p.status) }}</span></td><td>{{ p.counts.users }}</td><td>{{ p.counts.trainees }}</td><td>{{ p.created_at|frdatetime }}</td><td>{{ p.subscription_plan }}</td>
-<td style="display:flex;gap:6px;flex-wrap:wrap"><a class="btn btn-small" href="{{ url_for('admin_partner_detail', partner_id=p.id) }}">Voir</a><a class="btn btn-small" href="{{ url_for('admin_partner_detail', partner_id=p.id) }}#edit">Modifier</a><form method="post" action="{{ url_for('admin_partner_toggle_status', partner_id=p.id) }}"><button class="btn btn-small" type="submit">{{ 'Réactiver' if p.status in ['suspended','archived'] else 'Suspendre' }}</button></form><form method="post" action="{{ url_for('admin_partner_assist', partner_id=p.id) }}"><button class="btn btn-small btn-blue" type="submit">Assister</button></form></td>
+<td class="partners-actions"><a class="btn btn-small" href="{{ url_for('admin_partner_detail', partner_id=p.id) }}">Voir</a><a class="btn btn-small" href="{{ url_for('admin_partner_detail', partner_id=p.id) }}#edit">Modifier</a><form method="post" action="{{ url_for('admin_partner_toggle_status', partner_id=p.id) }}"><button class="btn btn-small" type="submit">{{ 'Réactiver' if p.status in ['suspended','archived'] else 'Suspendre' }}</button></form><form method="post" action="{{ url_for('admin_partner_assist', partner_id=p.id) }}"><button class="btn btn-small btn-blue" type="submit">Assister</button></form></td>
 </tr>{% else %}<tr><td colspan="8">Aucun partenaire.</td></tr>{% endfor %}</tbody></table></div>
 <style>.badge{padding:5px 10px;border-radius:999px;font-weight:800;font-size:12px}.badge-active{background:#dcfce7;color:#166534}.badge-trial{background:#dbeafe;color:#1d4ed8}.badge-suspended{background:#fee2e2;color:#991b1b}.badge-archived{background:#f3f4f6;color:#374151}.btn-small{font-size:12px;padding:6px 9px}.muted{color:#6b7280}</style>
 {% endblock %}
