@@ -5,6 +5,7 @@ import json
 import os
 import tempfile
 import unittest
+from werkzeug.security import generate_password_hash
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import app as gestion_app
@@ -134,6 +135,43 @@ class MultiPartnerIsolationTests(unittest.TestCase):
             self.assertTrue(sess["admin_logged_in"])
             self.assertEqual(sess["admin_role"], "partner_admin")
             self.assertEqual(sess["partner_id"], self.partner_a)
+
+
+    def test_partner_login_accepts_werkzeug_password_hash(self):
+        data = gestion_app.load_data()
+        data["users"].append({
+            "id": "user-a",
+            "partner_id": self.partner_a,
+            "email": "admin@example.com",
+            "role": "partner_admin",
+            "active": True,
+            "password_hash": generate_password_hash("Password1234"),
+        })
+        gestion_app.save_data(data)
+        response = self.client.post(
+            "/admin/login",
+            data={"username": "admin@example.com", "password": "Password1234", "next": "/admin/sessions"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/admin/sessions")
+
+    def test_partner_login_preserves_password_spaces(self):
+        data = gestion_app.load_data()
+        data["users"].append({
+            "id": "user-a",
+            "partner_id": self.partner_a,
+            "email": "admin@example.com",
+            "role": "partner_admin",
+            "active": True,
+            "password_hash": gestion_app._hash_password(" Password1234 "),
+        })
+        gestion_app.save_data(data)
+        response = self.client.post(
+            "/admin/login",
+            data={"username": "admin@example.com", "password": " Password1234 ", "next": "/admin/sessions"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/admin/sessions")
 
     def test_partner_login_failure_displays_visible_error(self):
         data = gestion_app.load_data()

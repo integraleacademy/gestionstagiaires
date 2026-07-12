@@ -21,6 +21,7 @@ from typing import Dict, Any, Optional, List, Iterable, Tuple, Set
 from functools import wraps
 from zoneinfo import ZoneInfo
 from flask import session
+from werkzeug.security import check_password_hash
 from PIL import Image, ImageOps
 import tempfile
 import fcntl
@@ -1845,7 +1846,7 @@ def admin_login():
 @app.post("/admin/login")
 def admin_login_post():
     username = (request.form.get("username") or "").strip()
-    password = (request.form.get("password") or "").strip()
+    password = request.form.get("password") or ""
     next_url = request.form.get("next") or url_for("admin_sessions")
 
     data = load_data()
@@ -2339,12 +2340,19 @@ def _hash_password(password: str) -> str:
 
 
 def _verify_password(password: str, stored: str) -> bool:
+    stored = stored or ""
     try:
-        algo, rounds, salt, digest = (stored or "").split("$", 3)
-        if algo != "pbkdf2_sha256":
-            return False
-        candidate = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), int(rounds)).hex()
-        return hmac.compare_digest(candidate, digest)
+        algo, rounds, salt, digest = stored.split("$", 3)
+        if algo == "pbkdf2_sha256":
+            candidate = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), int(rounds)).hex()
+            return hmac.compare_digest(candidate, digest)
+    except Exception:
+        pass
+
+    # Compatibilité avec les hashs Werkzeug/Flask éventuellement créés par
+    # d’anciennes versions ou par un outil d’administration externe.
+    try:
+        return check_password_hash(stored, password)
     except Exception:
         return False
 
