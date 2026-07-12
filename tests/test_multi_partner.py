@@ -130,6 +130,39 @@ class MultiPartnerIsolationTests(unittest.TestCase):
             gestion_app.ADMIN_USER = original_admin_user
             gestion_app.ADMIN_PASSWORD = original_admin_password
 
+
+    def test_static_admin_login_takes_priority_over_partner_same_email(self):
+        original_admin_user = gestion_app.ADMIN_USER
+        original_admin_password = gestion_app.ADMIN_PASSWORD
+        try:
+            gestion_app.ADMIN_USER = "admin@example.com"
+            gestion_app.ADMIN_PASSWORD = "AdminPassword123"
+            data = gestion_app.load_data()
+            data["users"].append({
+                "id": "partner-admin-same-email",
+                "partner_id": self.partner_a,
+                "email": "admin@example.com",
+                "role": "partner_admin",
+                "active": True,
+                "password_hash": gestion_app._hash_password("PartnerPassword123"),
+            })
+            gestion_app.save_data(data)
+
+            response = self.client.post(
+                "/admin/login",
+                data={"username": "admin@example.com", "password": "AdminPassword123", "next": "/admin/sessions"},
+            )
+
+            self.assertEqual(response.status_code, 302)
+            with self.client.session_transaction() as sess:
+                self.assertEqual(sess["admin_role"], "admin")
+                self.assertEqual(sess["platform_role"], "super_admin")
+                self.assertEqual(sess["partner_id"], gestion_app.INTEGRALE_PARTNER_ID)
+                self.assertNotIn("user_id", sess)
+        finally:
+            gestion_app.ADMIN_USER = original_admin_user
+            gestion_app.ADMIN_PASSWORD = original_admin_password
+
     def test_partner_login_with_password_hash_opens_requested_admin_page(self):
         data = gestion_app.load_data()
         data["users"].append({

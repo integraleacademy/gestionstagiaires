@@ -1876,6 +1876,31 @@ def admin_login_post():
         _log_partner_auth_event("data_file_inaccessible_or_no_auth_config", data, username_normalized)
         abort(500, "ADMIN_USER/ADMIN_PASSWORD non configurés")
 
+    # Les accès plateforme (admin / consultation) sont prioritaires sur les
+    # comptes partenaires. Un administrateur peut partager la même adresse
+    # e-mail qu'un utilisateur partenaire ; dans ce cas ses identifiants
+    # statiques doivent toujours ouvrir l'espace d'administration complet.
+    if _static_credentials_match(username_normalized, password, ADMIN_USER, ADMIN_PASSWORD):
+        session.clear()
+        _append_activity_log(data, "login", "user", username_normalized, INTEGRALE_PARTNER_ID)
+        save_data(data)
+        session["admin_logged_in"] = True
+        session["admin_role"] = "admin"
+        session["platform_role"] = "super_admin"
+        session["admin_username"] = username_normalized
+        session["partner_id"] = INTEGRALE_PARTNER_ID
+        session.permanent = True
+        return redirect(next_url)
+
+    if SECRETARY_USER and SECRETARY_PASSWORD and _static_credentials_match(username_normalized, password, SECRETARY_USER, SECRETARY_PASSWORD):
+        session.clear()
+        session["admin_logged_in"] = True
+        session["admin_role"] = "viewer"
+        session["admin_username"] = username_normalized
+        session["partner_id"] = INTEGRALE_PARTNER_ID
+        session.permanent = True
+        return redirect(next_url)
+
     user = _find_user_by_email(data, username_normalized)
     if user:
         partner = next((p for p in data.get("partners", []) if isinstance(p, dict) and p.get("id") == user.get("partner_id")), None)
@@ -1929,27 +1954,6 @@ def admin_login_post():
         return redirect(next_url)
 
     _log_partner_auth_event("utilisateur partenaire introuvable", data, username_normalized)
-
-    if _static_credentials_match(username_normalized, password, ADMIN_USER, ADMIN_PASSWORD):
-        session.clear()
-        _append_activity_log(data, "login", "user", username_normalized, INTEGRALE_PARTNER_ID)
-        save_data(data)
-        session["admin_logged_in"] = True
-        session["admin_role"] = "admin"
-        session["platform_role"] = "super_admin"
-        session["admin_username"] = username_normalized
-        session["partner_id"] = INTEGRALE_PARTNER_ID
-        session.permanent = True
-        return redirect(next_url)
-
-    if SECRETARY_USER and SECRETARY_PASSWORD and _static_credentials_match(username_normalized, password, SECRETARY_USER, SECRETARY_PASSWORD):
-        session.clear()
-        session["admin_logged_in"] = True
-        session["admin_role"] = "viewer"
-        session["admin_username"] = username_normalized
-        session["partner_id"] = INTEGRALE_PARTNER_ID
-        session.permanent = True
-        return redirect(next_url)
 
     return redirect(url_for("admin_login", next=next_url, error="invalid"))
 
