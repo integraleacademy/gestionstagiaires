@@ -168,6 +168,27 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         gestion_app.load_data = self.original_load_data
         gestion_app.save_data = self.original_save_data
 
+    def test_aps_admin_trainees_shows_card_pro_followup_with_nub(self):
+        self.data["sessions"][2]["trainees"][0]["pre_number"] = "2026-0002805-PRE-3P-1050370"
+
+        response = self.client.get("/admin/sessions/S-APS/trainees")
+        html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Suivi carte pro", html)
+        self.assertIn("https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/app/annuaire-public", html)
+        self.assertIn("NUB : <strong>1050370</strong>", html)
+
+    def test_nub_is_extracted_from_legacy_pre_car_format(self):
+        self.assertEqual(
+            gestion_app.extract_nub_from_pre_car("PRE-013-2029-07-25-20240908920"),
+            "0908920",
+        )
+        self.assertEqual(
+            gestion_app.extract_nub_from_pre_car("2026-0002805-CAR-3P-1050370"),
+            "1050370",
+        )
+
 
     def test_history_and_thread_columns_are_reserved_for_vae_sessions(self):
         vae_response = self.client.get("/admin/sessions/S-VAE/trainees")
