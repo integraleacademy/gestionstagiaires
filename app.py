@@ -16404,6 +16404,7 @@ def api_create_session():
         "dirigeant_in_person_end": dirigeant_in_person_end,
         "aps_elearning_enabled": aps_elearning_enabled,
         "exclude_from_sales_tracking": exclude_from_sales_tracking,
+        "partner_id": _current_partner_id() or INTEGRALE_PARTNER_ID,
         "created_at": _now_iso(),
         "trainees": [],
         "archived": False,
