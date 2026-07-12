@@ -3823,15 +3823,30 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     resultEl.innerHTML = chips;
   }
 
+  function normalizedCardProActivity(value){
+    return shortCardProActivity(value).replace(/\s+/g, " ").trim().toUpperCase();
+  }
+
   function fallbackCardProFollowup(box){
     const status = (box.getAttribute("data-cnaps-status") || "").toUpperCase();
-    const activity = box.getAttribute("data-fallback-activity") || "";
+    const fallbackActivity = box.getAttribute("data-fallback-activity") || "";
     const isAccepted = status.includes("OK") || status.includes("ACCEPTE") || status.includes("ACCEPTÉ");
-    if(!activity && !isAccepted) return null;
+    if(!fallbackActivity && !isAccepted) return null;
+    const isCartePro = status.includes("CARTE") || status.includes("PROFESSIONNELLE") || status.includes("CAR") || status.includes("CP");
+    const activity = isCartePro ? "Carte professionnelle - Surveillance humaine ou gardiennage" : fallbackActivity;
     return {
       activite: activity,
       validite_titre: isAccepted ? "ACTIF" : "À vérifier",
     };
+  }
+
+  function withLocalCardProFallback(data, fallback){
+    if(!fallback) return data;
+    const rows = Array.isArray(data.results) && data.results.length ? data.results.slice() : [data];
+    const fallbackActivity = normalizedCardProActivity(fallback.activite);
+    const alreadyDisplayed = rows.some((row)=>normalizedCardProActivity(row.activite) === fallbackActivity);
+    if(!alreadyDisplayed) rows.push(fallback);
+    return {...data, results: rows};
   }
 
   async function refreshCardProFollowup(box){
@@ -3845,7 +3860,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       const r = await fetch(`/api/cnaps_public_annuaire?nom=${encodeURIComponent(nom)}&nub=${encodeURIComponent(nub)}`);
       const data = await r.json().catch(()=>({}));
       if(r.ok && data.ok){
-        renderCardProFollowupResult(resultEl, data, "remote");
+        renderCardProFollowupResult(resultEl, withLocalCardProFallback(data, fallbackCardProFollowup(box)), "remote");
         return;
       }
     }catch(e){

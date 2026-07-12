@@ -183,6 +183,8 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn('data-nom="NONVTC"', html)
         self.assertIn('data-nub="1050370"', html)
         self.assertIn('data-fallback-activity="Autorisation préalable - Surveillance humaine ou gardiennage"', html)
+        self.assertIn('withLocalCardProFallback(data, fallbackCardProFollowup(box))', html)
+        self.assertIn('Carte professionnelle - Surveillance humaine ou gardiennage', html)
         self.assertIn("NUB : <strong>1050370</strong>", html)
         self.assertIn('["autorisation préalable - surveillance humaine ou gardiennage", "AP SH"]', html)
         self.assertIn('["autorisation préalable - agent de protection physique des personnes", "AP A3P"]', html)
