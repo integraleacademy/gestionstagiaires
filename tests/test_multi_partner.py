@@ -106,6 +106,30 @@ class MultiPartnerIsolationTests(unittest.TestCase):
         self.assertEqual(data["sessions"][0]["partner_id"], gestion_app.INTEGRALE_PARTNER_ID)
         self.assertEqual(data["sessions"][0]["trainees"][0]["partner_id"], gestion_app.INTEGRALE_PARTNER_ID)
 
+    def test_admin_sessions_page_hides_other_partner_sessions(self):
+        data = gestion_app.load_data()
+        data["sessions"].append({
+            "id": "integrale-session",
+            "partner_id": gestion_app.INTEGRALE_PARTNER_ID,
+            "name": "Session Intégrale",
+            "training_type": "APS",
+            "trainees": [],
+        })
+        gestion_app.save_data(data)
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+            sess["partner_id"] = gestion_app.INTEGRALE_PARTNER_ID
+
+        response = self.client.get("/admin/sessions")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Session Intégrale", html)
+        self.assertNotIn("Partenaire A", html)
+        self.assertNotIn(">A<", html)
+        self.assertNotIn(">B<", html)
 
     def test_partner_session_create_attaches_session_to_partner(self):
         with self.client.session_transaction() as sess:
