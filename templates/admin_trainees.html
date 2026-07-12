@@ -1104,6 +1104,17 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   line-height:1.1;
 }
 .card-pro-result{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:4px;
+  min-width:0;
+  max-width:100%;
+  font-size:11px;
+  line-height:1;
+  font-weight:900;
+}
+.card-pro-result__chip{
   display:inline-flex;
   align-items:center;
   gap:4px;
@@ -1112,19 +1123,19 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
   border:1px solid var(--line);
   border-radius:999px;
   padding:5px 8px;
-  font-size:11px;
-  line-height:1;
-  font-weight:900;
   white-space:nowrap;
 }
 .card-pro-result__activity{letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;}
 .card-pro-result__validity{font-size:9px;text-transform:uppercase;opacity:.9;overflow:hidden;text-overflow:ellipsis;}
 .card-pro-refresh-btn{padding:5px 8px;}
 .card-pro-result__date{display:none;}
-.card-pro-result.is-active{background:#16a34a;border-color:#16a34a;color:#fff;}
-.card-pro-result.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
-.card-pro-result.is-unknown{background:#ffedd5;border-color:#fdba74;color:#9a3412;}
-.card-pro-result.is-loading{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;}
+.card-pro-result.is-loading{background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;color:#1d4ed8;padding:5px 8px;}
+.card-pro-result__chip.is-active{background:#16a34a;border-color:#16a34a;color:#fff;}
+.card-pro-result__chip.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
+.card-pro-result__chip.is-unknown{background:#ffedd5;border-color:#fdba74;color:#9a3412;}
+.card-pro-result.is-active .card-pro-result__chip.is-active{background:#16a34a;border-color:#16a34a;color:#fff;}
+.card-pro-result.is-inactive .card-pro-result__chip.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
+.card-pro-result.is-unknown .card-pro-result__chip.is-unknown{background:#ffedd5;border-color:#fdba74;color:#9a3412;}
 
 #traineesTable .col-ssiap-exam{
   width:220px;
@@ -3793,28 +3804,49 @@ document.querySelectorAll("select.sel").forEach(sel=>{
   }
 
   function renderCardProFollowupResult(resultEl, data, mode){
-    const activity = shortCardProActivity(data.activite);
-    const validity = data.validite_titre || (mode === "unknown" ? "INCONNU" : "À vérifier");
-    const validityMode = mode === "unknown" ? "unknown" : cardProValidityMode(validity);
-    const title = [data.activite, data.validite_titre, data.date_validite_titre].filter(Boolean).join(" • ");
-    resultEl.className = `card-pro-result is-${validityMode}`;
-    if(title) resultEl.title = title;
-    resultEl.innerHTML = `
-      <span class="card-pro-result__activity">${escapeHtml(activity)}</span>
-      <span class="card-pro-result__validity">${escapeHtml(validityMode === "unknown" ? "INCONNU" : validity)}</span>
-      ${data.date_validite_titre ? `<span class="card-pro-result__date">${escapeHtml(data.date_validite_titre)}</span>` : ""}
-    `;
+    const rows = Array.isArray(data.results) && data.results.length ? data.results : [data];
+    const chips = rows.map((row)=>{
+      const activity = shortCardProActivity(row.activite);
+      const validity = row.validite_titre || (mode === "unknown" ? "INCONNU" : "À vérifier");
+      const validityMode = mode === "unknown" ? "unknown" : cardProValidityMode(validity);
+      const title = [row.activite, row.validite_titre, row.date_validite_titre].filter(Boolean).join(" • ");
+      return `
+        <span class="card-pro-result__chip is-${validityMode}"${title ? ` title="${escapeHtml(title)}"` : ""}>
+          <span class="card-pro-result__activity">${escapeHtml(activity)}</span>
+          <span class="card-pro-result__validity">${escapeHtml(validityMode === "unknown" ? "INCONNU" : validity)}</span>
+          ${row.date_validite_titre ? `<span class="card-pro-result__date">${escapeHtml(row.date_validite_titre)}</span>` : ""}
+        </span>
+      `;
+    }).join("");
+    const aggregateMode = rows.some((row)=>cardProValidityMode(row.validite_titre || "") === "active") ? "active" : (rows.some((row)=>cardProValidityMode(row.validite_titre || "") === "inactive") ? "inactive" : "unknown");
+    resultEl.className = `card-pro-result is-${mode === "unknown" ? "unknown" : aggregateMode}`;
+    resultEl.innerHTML = chips;
+  }
+
+  function normalizedCardProActivity(value){
+    return shortCardProActivity(value).replace(/\s+/g, " ").trim().toUpperCase();
   }
 
   function fallbackCardProFollowup(box){
     const status = (box.getAttribute("data-cnaps-status") || "").toUpperCase();
-    const activity = box.getAttribute("data-fallback-activity") || "";
+    const fallbackActivity = box.getAttribute("data-fallback-activity") || "";
     const isAccepted = status.includes("OK") || status.includes("ACCEPTE") || status.includes("ACCEPTÉ");
-    if(!activity && !isAccepted) return null;
+    if(!fallbackActivity && !isAccepted) return null;
+    const isCartePro = status.includes("CARTE") || status.includes("PROFESSIONNELLE") || status.includes("CAR") || status.includes("CP");
+    const activity = isCartePro ? "Carte professionnelle - Surveillance humaine ou gardiennage" : fallbackActivity;
     return {
       activite: activity,
       validite_titre: isAccepted ? "ACTIF" : "À vérifier",
     };
+  }
+
+  function withLocalCardProFallback(data, fallback){
+    if(!fallback) return data;
+    const rows = Array.isArray(data.results) && data.results.length ? data.results.slice() : [data];
+    const fallbackActivity = normalizedCardProActivity(fallback.activite);
+    const alreadyDisplayed = rows.some((row)=>normalizedCardProActivity(row.activite) === fallbackActivity);
+    if(!alreadyDisplayed) rows.push(fallback);
+    return {...data, results: rows};
   }
 
   async function refreshCardProFollowup(box){
@@ -3828,7 +3860,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       const r = await fetch(`/api/cnaps_public_annuaire?nom=${encodeURIComponent(nom)}&nub=${encodeURIComponent(nub)}`);
       const data = await r.json().catch(()=>({}));
       if(r.ok && data.ok){
-        renderCardProFollowupResult(resultEl, data, "remote");
+        renderCardProFollowupResult(resultEl, withLocalCardProFallback(data, fallbackCardProFollowup(box)), "remote");
         return;
       }
     }catch(e){
