@@ -177,7 +177,26 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Suivi carte pro", html)
         self.assertIn("https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/app/annuaire-public", html)
+        self.assertIn('data-card-pro-followup data-nom="NONVTC" data-nub="1050370"', html)
         self.assertIn("NUB : <strong>1050370</strong>", html)
+
+
+    def test_cnaps_public_annuaire_api_returns_activity_and_validity(self):
+        original_fetch = gestion_app.fetch_cnaps_public_annuaire
+        gestion_app.fetch_cnaps_public_annuaire = lambda nom, nub: {
+            "activite": "Autorisation préalable - Surveillance humaine ou gardiennage",
+            "validite_titre": "ACTIF",
+            "date_validite_titre": "16/08/2026",
+        }
+        try:
+            response = self.client.get("/api/cnaps_public_annuaire?nom=OUFQIH&nub=0971426")
+        finally:
+            gestion_app.fetch_cnaps_public_annuaire = original_fetch
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["activite"], "Autorisation préalable - Surveillance humaine ou gardiennage")
+        self.assertEqual(response.json["validite_titre"], "ACTIF")
+        self.assertEqual(response.json["date_validite_titre"], "16/08/2026")
 
     def test_nub_is_extracted_from_legacy_pre_car_format(self):
         self.assertEqual(

@@ -2646,6 +2646,7 @@ BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 BREVO_SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL", "ecole@integraleacademy.com")
 BREVO_SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "Intégrale Academy")
 CNAPS_LOOKUP_ENDPOINT = os.environ.get("CNAPS_LOOKUP_ENDPOINT", "")
+CNAPS_PUBLIC_ANNUAIRE_ENDPOINT = os.environ.get("CNAPS_PUBLIC_ANNUAIRE_ENDPOINT", "https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/api/annuaire-public").strip()
 CNAPSV3_NOTIFICATIONS_ENDPOINT = os.environ.get("CNAPSV3_NOTIFICATIONS_ENDPOINT", "")
 CNAPSV3_BASE_URL = os.environ.get("CNAPSV3_BASE_URL", "https://cnapsv3.onrender.com").strip().rstrip("/")
 GESTIONSTAGIAIRE_SYNC_TOKEN = os.environ.get("GESTIONSTAGIAIRE_SYNC_TOKEN", "").strip()
@@ -7173,6 +7174,60 @@ def merge_cnaps_history_entries(t: Dict[str, Any], entries: List[Dict[str, str]]
 
     t["cnaps_history"] = history
 
+
+
+
+def _first_non_empty_value(payload: Any, keys: Iterable[str]) -> str:
+    wanted = {str(k).lower().replace("_", "").replace("-", "") for k in keys}
+
+    def _walk(value: Any) -> str:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                normalized_key = str(key).lower().replace("_", "").replace("-", "")
+                if normalized_key in wanted and item not in (None, ""):
+                    return str(item).strip()
+            for item in value.values():
+                found = _walk(item)
+                if found:
+                    return found
+        elif isinstance(value, list):
+            for item in value:
+                found = _walk(item)
+                if found:
+                    return found
+        return ""
+
+    return _walk(payload)
+
+
+def fetch_cnaps_public_annuaire(nom: str, nub: str) -> Optional[Dict[str, str]]:
+    endpoint = (CNAPS_PUBLIC_ANNUAIRE_ENDPOINT or "").strip()
+    nom = " ".join((nom or "").strip().split()).upper()
+    nub = re.sub(r"\D+", "", str(nub or ""))[-7:]
+    if not endpoint or not nom or not nub:
+        return None
+
+    payload = {"nom": nom, "nub": nub, "numeroBeneficiaireUnique": nub, "typeRecherche": "AGENT"}
+    headers = {"Accept": "application/json", "User-Agent": "gestionstagiaires/1.0"}
+    try:
+        try:
+            response = requests.post(endpoint, json=payload, headers=headers, timeout=12)
+        except Exception:
+            response = requests.get(endpoint, params={"nom": nom, "nub": nub}, headers=headers, timeout=12)
+        if response.status_code >= 400:
+            response = requests.get(endpoint, params={"nom": nom, "nub": nub}, headers=headers, timeout=12)
+        if response.status_code != 200:
+            return None
+        data = response.json()
+    except Exception:
+        return None
+
+    activite = _first_non_empty_value(data, ["activite", "activité", "activity", "libelleActivite"])
+    validite = _first_non_empty_value(data, ["validiteTitre", "validité du titre", "validite_du_titre", "validity", "statutTitre", "etatTitre"])
+    date_validite = _first_non_empty_value(data, ["dateValiditeTitre", "date de validité du titre", "date_validite_titre", "dateFinValidite"])
+    if not activite and not validite and not date_validite:
+        return None
+    return {"activite": activite, "validite_titre": validite, "date_validite_titre": date_validite}
 
 def fetch_cnaps_lookup_by_name(nom: str, prenom: str) -> Optional[Dict[str, Any]]:
     if not CNAPS_LOOKUP_ENDPOINT:
@@ -17516,6 +17571,19 @@ def api_cnaps_lookup():
         "statut_cnaps_history": history,
     })
 
+
+
+@app.get("/api/cnaps_public_annuaire")
+@admin_login_required
+def api_cnaps_public_annuaire():
+    nom = (request.args.get("nom") or "").strip()
+    nub = (request.args.get("nub") or "").strip()
+    if not nom or not nub:
+        return jsonify({"ok": False, "error": "missing_nom_or_nub"}), 400
+    result = fetch_cnaps_public_annuaire(nom, nub)
+    if not result:
+        return jsonify({"ok": False, "error": "not_found"}), 404
+    return jsonify({"ok": True, **result})
 
 
 # =========================
