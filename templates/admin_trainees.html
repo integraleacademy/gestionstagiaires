@@ -1092,18 +1092,44 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 <style>
 
 #traineesTable .col-card-pro-followup{
-  min-width:170px;
-  max-width:190px;
+  width:142px;
+  min-width:142px;
+  max-width:150px;
   vertical-align:middle;
 }
 .card-pro-followup{
-  display:flex;
-  flex-direction:column;
+  display:grid;
+  grid-template-columns:1fr auto auto;
   gap:4px;
-  align-items:flex-start;
-  font-size:12px;
-  line-height:1.25;
+  align-items:center;
+  font-size:11px;
+  line-height:1.15;
 }
+.card-pro-followup .muted{
+  grid-column:1 / -1;
+  font-size:10px;
+  line-height:1.1;
+}
+.card-pro-result{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  max-width:100%;
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:5px 8px;
+  font-size:11px;
+  line-height:1;
+  font-weight:900;
+  white-space:nowrap;
+}
+.card-pro-result__activity{letter-spacing:.02em;}
+.card-pro-result__validity{font-size:9px;text-transform:uppercase;opacity:.9;}
+.card-pro-result__date{display:none;}
+.card-pro-result.is-active{background:#16a34a;border-color:#16a34a;color:#fff;}
+.card-pro-result.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
+.card-pro-result.is-unknown{background:#ffedd5;border-color:#fdba74;color:#9a3412;}
+.card-pro-result.is-loading{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;}
 
 #traineesTable .col-ssiap-exam{
   width:220px;
@@ -3752,13 +3778,37 @@ document.querySelectorAll("select.sel").forEach(sel=>{
   // =========================
   // Suivi carte pro CNAPS (annuaire public)
   // =========================
+  function shortCardProActivity(value){
+    const normalized = (value || "").replace(/\s+/g, " ").trim().toLowerCase();
+    const map = new Map([
+      ["autorisation préalable - surveillance humaine ou gardiennage", "AP SH"],
+      ["autorisation préalable - agent de protection physique des personnes", "AP A3P"],
+      ["carte professionnelle - surveillance humaine ou gardiennage", "CP SH"],
+      ["carte professionnelle - agent de protection physique des personnes", "CP A3P"],
+    ]);
+    return map.get(normalized) || (value || "—");
+  }
+
+  function cardProValidityMode(value){
+    const normalized = (value || "").replace(/\s+/g, " ").trim().toUpperCase();
+    if(!normalized) return "unknown";
+    if(normalized.includes("INACTIF") || normalized.includes("EXPIR") || normalized.includes("ÉCHU") || normalized.includes("ECHU") || normalized.includes("REFUS")) return "inactive";
+    if(normalized.includes("ACTIF") || normalized.includes("VALIDE")) return "active";
+    return "unknown";
+  }
+
   function renderCardProFollowupResult(resultEl, data, mode){
-    const parts = [];
-    if(data.activite) parts.push(`<div><strong>Activité :</strong> ${escapeHtml(data.activite)}</div>`);
-    if(data.validite_titre) parts.push(`<div><strong>Validité du titre :</strong> ${escapeHtml(data.validite_titre)}</div>`);
-    if(data.date_validite_titre) parts.push(`<div><strong>Date validité :</strong> ${escapeHtml(data.date_validite_titre)}</div>`);
-    resultEl.className = `card-pro-result ${mode === "fallback" ? "is-fallback" : "is-ok"}`;
-    resultEl.innerHTML = parts.join("") || "Aucune donnée CNAPS";
+    const activity = shortCardProActivity(data.activite);
+    const validity = data.validite_titre || (mode === "unknown" ? "INCONNU" : "À vérifier");
+    const validityMode = mode === "unknown" ? "unknown" : cardProValidityMode(validity);
+    const title = [data.activite, data.validite_titre, data.date_validite_titre].filter(Boolean).join(" • ");
+    resultEl.className = `card-pro-result is-${validityMode}`;
+    if(title) resultEl.title = title;
+    resultEl.innerHTML = `
+      <span class="card-pro-result__activity">${escapeHtml(activity)}</span>
+      <span class="card-pro-result__validity">${escapeHtml(validityMode === "unknown" ? "INCONNU" : validity)}</span>
+      ${data.date_validite_titre ? `<span class="card-pro-result__date">${escapeHtml(data.date_validite_titre)}</span>` : ""}
+    `;
   }
 
   function fallbackCardProFollowup(box){
@@ -3795,8 +3845,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       renderCardProFollowupResult(resultEl, fallback, "fallback");
       return;
     }
-    resultEl.className = "card-pro-result is-error";
-    resultEl.textContent = "Résultat CNAPS indisponible";
+    renderCardProFollowupResult(resultEl, {validite_titre: "INCONNU"}, "unknown");
   }
 
   document.querySelectorAll("[data-card-pro-followup]").forEach(box=>{

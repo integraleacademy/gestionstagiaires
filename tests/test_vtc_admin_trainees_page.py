@@ -182,6 +182,13 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn('data-nub="1050370"', html)
         self.assertIn('data-fallback-activity="Autorisation préalable - Surveillance humaine ou gardiennage"', html)
         self.assertIn("NUB : <strong>1050370</strong>", html)
+        self.assertIn('["autorisation préalable - surveillance humaine ou gardiennage", "AP SH"]', html)
+        self.assertIn('["autorisation préalable - agent de protection physique des personnes", "AP A3P"]', html)
+        self.assertIn('["carte professionnelle - surveillance humaine ou gardiennage", "CP SH"]', html)
+        self.assertIn('["carte professionnelle - agent de protection physique des personnes", "CP A3P"]', html)
+        self.assertIn(".card-pro-result.is-active", html)
+        self.assertIn(".card-pro-result.is-inactive", html)
+        self.assertIn(".card-pro-result.is-unknown", html)
 
 
     def test_cnaps_public_annuaire_api_returns_activity_and_validity(self):
