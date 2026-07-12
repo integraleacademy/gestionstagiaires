@@ -106,6 +106,45 @@ class MultiPartnerIsolationTests(unittest.TestCase):
         self.assertEqual(data["sessions"][0]["partner_id"], gestion_app.INTEGRALE_PARTNER_ID)
         self.assertEqual(data["sessions"][0]["trainees"][0]["partner_id"], gestion_app.INTEGRALE_PARTNER_ID)
 
+
+    def test_partner_session_create_attaches_session_to_partner(self):
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "partner_admin"
+            sess["partner_id"] = self.partner_a
+
+        response = self.client.post(
+            "/api/sessions/create",
+            json={"name": "Session partenaire", "training_type": "APS"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        session_id = response.get_json()["id"]
+        with open(gestion_app.DATA_FILE, encoding="utf-8") as f:
+            persisted = json.load(f)
+        created = next(s for s in persisted["sessions"] if s["id"] == session_id)
+        self.assertEqual(created["partner_id"], self.partner_a)
+
+    def test_super_admin_assist_session_create_attaches_session_to_assisted_partner(self):
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+            sess["platform_role"] = "super_admin"
+            sess["partner_id"] = gestion_app.INTEGRALE_PARTNER_ID
+            sess["assist_partner_id"] = self.partner_b
+
+        response = self.client.post(
+            "/api/sessions/create",
+            json={"name": "Session assistée", "training_type": "VTC"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        session_id = response.get_json()["id"]
+        with open(gestion_app.DATA_FILE, encoding="utf-8") as f:
+            persisted = json.load(f)
+        created = next(s for s in persisted["sessions"] if s["id"] == session_id)
+        self.assertEqual(created["partner_id"], self.partner_b)
+
     def test_partner_storage_path_rejects_traversal(self):
         path = gestion_app.get_partner_storage_path(self.partner_a, "stagiaires")
         self.assertTrue(path.startswith(os.path.realpath(os.path.join(self.temp_dir.name, "partners", self.partner_a))))
