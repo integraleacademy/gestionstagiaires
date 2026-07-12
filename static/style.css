@@ -418,6 +418,14 @@ input:focus, select:focus{
 }
 .mini-btn:hover{border-color:#cbd5e1}
 
+
+.card-pro-followup{display:grid;grid-template-columns:1fr auto auto;gap:6px 8px;align-items:start;min-width:240px}
+.card-pro-followup .muted{grid-column:1 / -1}
+.card-pro-result{grid-column:1 / -1;border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:#f8fafc;font-size:12px;line-height:1.35;font-weight:700;color:#334155}
+.card-pro-result.is-ok{background:#ecfdf5;border-color:#bbf7d0;color:#14532d}
+.card-pro-result.is-error{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
+.card-pro-result.is-loading{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
+
 /* =========================
    CNAPS badge
    ========================= */
