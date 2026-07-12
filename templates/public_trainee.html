@@ -1065,18 +1065,6 @@
     ⚠️ Ces informations sont <strong>obligatoires</strong>. Les champs incomplets restent clairement signalés.
   </div>
 
-  <div id="infosProgress" class="infos-completion-progress" role="status" aria-live="polite">
-    <div class="infos-completion-progress-head">
-      <div>
-        <div class="infos-completion-progress-title">Avancement des informations</div>
-        <div id="infosProgressText" class="infos-completion-progress-text">Chargement de votre progression…</div>
-      </div>
-      <div id="infosProgressBadge" class="infos-completion-progress-badge">0%</div>
-    </div>
-    <div class="infos-completion-progress-track" aria-hidden="true">
-      <div id="infosProgressFill" class="infos-completion-progress-fill"></div>
-    </div>
-  </div>
 
 {% macro field(label, id, value, placeholder) %}
   {% set ok = value and value|length > 3 %}
@@ -2343,10 +2331,6 @@ function closeUploadSuccessModal(event) {
     const infosSummaryProgressLabel = document.getElementById("infosSummaryProgressLabel");
     const infosSummaryProgressFill = document.getElementById("infosSummaryProgressFill");
     const infosSummaryProgressPercent = document.getElementById("infosSummaryProgressPercent");
-    const infosProgress = document.getElementById("infosProgress");
-    const infosProgressText = document.getElementById("infosProgressText");
-    const infosProgressBadge = document.getElementById("infosProgressBadge");
-    const infosProgressFill = document.getElementById("infosProgressFill");
 
     if (infosWarning && infosDetails) {
       infosWarning.hidden = complete || infosDetails.open;
@@ -2360,17 +2344,6 @@ function closeUploadSuccessModal(event) {
     if (infosSummaryProgressLabel) infosSummaryProgressLabel.textContent = `${progress.completed}/${progress.total} complété${progress.completed > 1 ? "s" : ""}`;
     if (infosSummaryProgressFill) infosSummaryProgressFill.style.width = `${progress.percent}%`;
     if (infosSummaryProgressPercent) infosSummaryProgressPercent.textContent = `${progress.percent}%`;
-    if (infosProgress) {
-      infosProgress.hidden = progress.total === 0;
-      infosProgress.classList.toggle("is-complete", complete);
-    }
-    if (infosProgressFill) infosProgressFill.style.width = `${progress.percent}%`;
-    if (infosProgressBadge) infosProgressBadge.textContent = `${progress.percent}%`;
-    if (infosProgressText) {
-      infosProgressText.textContent = complete
-        ? `Toutes les informations sont complétées (${progress.completed}/${progress.total}).`
-        : `${progress.completed}/${progress.total} champ${progress.total > 1 ? "s" : ""} complété${progress.completed > 1 ? "s" : ""}. ${progress.remaining} restant${progress.remaining > 1 ? "s" : ""} à compléter.`;
-    }
   };
 
   const updateDocumentsWarning = () => {
