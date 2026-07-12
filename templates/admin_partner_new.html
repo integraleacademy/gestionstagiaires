@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head"><h1>Nouveau partenaire</h1><a class="btn" href="{{ url_for('admin_partners') }}">Annuler</a></div>
+<form method="post" class="card" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:980px;">
+{% for name,label,required in [('name','Nom commercial',1),('legal_name','Raison sociale',0),('siret','SIRET',0),('contact_first_name','Prénom responsable',1),('contact_last_name','Nom responsable',1),('email','Email responsable',1),('phone','Téléphone',0),('address','Adresse',0),('postal_code','Code postal',0),('city','Ville',0),('subscription_plan','Formule',0),('max_users','Nombre maximal utilisateurs',0)] %}
+<label>{{ label }}<input name="{{ name }}" {% if required %}required{% endif %} style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;"></label>
+{% endfor %}
+<label>Statut initial<select name="status" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;"><option value="trial">En essai</option><option value="active">Actif</option><option value="suspended">Suspendu</option></select></label>
+<label>Fin d'essai<input type="date" name="trial_ends_at" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;"></label>
+<section class="module-section" style="grid-column:1/-1;border:1px solid #dbeafe;border-radius:18px;background:#f8fbff;padding:16px;">
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+    <div>
+      <h2 style="margin:0 0 6px;">Modules accessibles</h2>
+      <p style="margin:0;color:#64748b;">Sélectionnez les fonctionnalités disponibles pour ce partenaire. Les dépendances sont appliquées automatiquement côté serveur.</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button type="button" class="btn btn-outline" data-module-action="all">Tout sélectionner</button>
+      <button type="button" class="btn btn-outline" data-module-action="none">Tout désélectionner</button>
+      <button type="button" class="btn btn-blue" data-module-action="recommended" data-recommended-modules="{{ module_form.recommended|join(',') }}">Modules recommandés</button>
+    </div>
+  </div>
+  <div class="module-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:14px;">
+    {% for module in module_form.modules %}
+      <label class="module-card" style="display:flex;gap:12px;align-items:flex-start;border:1px solid #dbeafe;border-radius:16px;background:#fff;padding:13px;box-shadow:0 8px 18px rgba(15,23,42,.05);cursor:pointer;">
+        <input type="checkbox" name="enabled_modules" value="{{ module.id }}" data-module-id="{{ module.id }}" data-module-dependencies="{{ (module.dependencies or [])|join(',') }}" {% if module.id in module_form.selected %}checked{% endif %} style="margin-top:5px;">
+        <span style="font-size:24px;line-height:1;">{{ module.icon }}</span>
+        <span>
+          <strong style="display:block;color:#0f172a;">{{ module.name }}</strong>
+          <span style="display:block;color:#64748b;font-size:13px;margin-top:4px;">{{ module.description }}</span>
+          {% if module.dependencies %}
+            <small style="display:block;margin-top:8px;color:#1d4ed8;font-weight:800;">Nécessite : {% for dep in module.dependencies %}{{ module_form.catalog_by_id.get(dep, {}).get('name', dep) }}{% if not loop.last %}, {% endif %}{% endfor %}</small>
+          {% endif %}
+          {% if not module.is_fully_multi_partner %}
+            <small style="display:block;margin-top:6px;color:#92400e;font-weight:800;">Compatibilité multi-partenaires en cours</small>
+          {% endif %}
+        </span>
+      </label>
+    {% endfor %}
+  </div>
+</section>
+<script>
+(function(){
+  const root = document.currentScript.previousElementSibling;
+  if(!root || root.dataset.modulesReady === '1') return;
+  root.dataset.modulesReady = '1';
+  const boxes = [...root.querySelectorAll('input[data-module-id]')];
+  const byId = Object.fromEntries(boxes.map(box => [box.dataset.moduleId, box]));
+  function applyDependencies(){
+    let changed = true;
+    while(changed){
+      changed = false;
+      boxes.forEach(box => {
+        if(!box.checked) return;
+        (box.dataset.moduleDependencies || '').split(',').filter(Boolean).forEach(dep => {
+          if(byId[dep] && !byId[dep].checked){ byId[dep].checked = true; changed = true; }
+        });
+      });
+    }
+    boxes.forEach(box => {
+      const requiredBy = boxes.filter(other => other.checked && (other.dataset.moduleDependencies || '').split(',').includes(box.dataset.moduleId));
+      box.disabled = requiredBy.length > 0;
+      box.closest('.module-card').style.opacity = box.disabled ? '.88' : '1';
+      box.title = requiredBy.length ? 'Module requis par : ' + requiredBy.map(b => b.dataset.moduleId).join(', ') : '';
+    });
+  }
+  boxes.forEach(box => box.addEventListener('change', applyDependencies));
+  root.querySelector('[data-module-action="all"]')?.addEventListener('click', () => { boxes.forEach(b => b.checked = true); applyDependencies(); });
+  root.querySelector('[data-module-action="none"]')?.addEventListener('click', () => { boxes.slice().reverse().forEach(b => { if(!b.disabled) b.checked = false; }); applyDependencies(); });
+  root.querySelector('[data-module-action="recommended"]')?.addEventListener('click', event => { const ids = (event.currentTarget.dataset.recommendedModules || '').split(',').filter(Boolean); boxes.forEach(b => b.checked = ids.includes(b.dataset.moduleId)); applyDependencies(); });
+  const form = root.closest('form');
+  form?.addEventListener('submit', () => { boxes.forEach(b => b.disabled = false); });
+  applyDependencies();
+})();
+</script>
+
+<button class="btn btn-blue" type="submit">Créer et inviter</button>
+</form>
+{% endblock %}

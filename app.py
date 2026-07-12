@@ -11,6 +11,7 @@ import html
 import unicodedata
 import threading
 import shutil
+import copy
 import importlib.util
 import time
 import subprocess
@@ -156,6 +157,7 @@ SECRETARY_USER = os.environ.get("SECRETARY_USER", "")
 SECRETARY_PASSWORD = os.environ.get("SECRETARY_PASSWORD", "")
 SCOTIA_USER = os.environ.get("SCOTIA_USER", "")
 SCOTIA_PASSWORD = os.environ.get("SCOTIA_PASSWORD", "")
+SUPER_ADMIN_USERS = {u.strip().lower() for u in os.environ.get("SUPER_ADMIN_USERS", "").split(",") if u.strip()}
 INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL = "clement@integraleacademy.com"
 SCOTIA_COMMENT_AUTHOR_LABELS = {
     INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL: "Intégrale Academy",
@@ -1716,7 +1718,7 @@ def _is_integrale_scotia_admin_session() -> bool:
     Older persistent admin sessions did not store the username, so we also trust
     the configured admin account when it is Clément's account.
     """
-    if not session.get("admin_logged_in") or session.get("admin_role") != "admin":
+    if not session.get("admin_logged_in") or session.get("admin_role") not in {"admin", "super_admin"}:
         return False
 
     admin_username = (session.get("admin_username") or "").strip().lower()
@@ -1775,14 +1777,32 @@ def inject_read_only():
         except Exception:
             admin_notifications = {"notifications": [], "unresolved_total": 0}
     mail_sent_notice = bool(session.pop("_mail_sent_notice", False))
+    current_partner_name = ""
+    assisted_partner_name = ""
+    ctx_data = None
+    if session.get("admin_logged_in"):
+        try:
+            ctx_data = load_data()
+            active_partner_id = _current_partner_id()
+            partner = next((p for p in ctx_data.get("partners", []) if isinstance(p, dict) and p.get("id") == active_partner_id), None)
+            current_partner_name = (partner or {}).get("name") or ""
+            if session.get("assist_partner_id"):
+                assisted_partner_name = current_partner_name
+        except Exception:
+            pass
     return {
         "is_admin_logged_in": bool(session.get("admin_logged_in")),
+        "is_super_admin": _is_super_admin_session(),
+        "current_partner_name": current_partner_name,
+        "assisted_partner_name": assisted_partner_name,
         "is_read_only": session.get("admin_role") == "viewer",
         "admin_notifications": admin_notifications["notifications"],
         "admin_unresolved_total": admin_notifications["unresolved_total"],
         "admin_can_access_notifications": _admin_can_view_notifications(),
         "admin_can_manage_notifications": _admin_can_manage_notifications(),
         "global_mail_sent_notice": mail_sent_notice,
+        "current_enabled_modules": set(get_partner_enabled_modules(_current_partner_id(), data=ctx_data) if session.get("admin_logged_in") and _current_partner_id() else []),
+        "has_module": lambda module_id: (_is_super_admin_session() and not session.get("assist_partner_id")) or partner_has_module(_current_partner_id(), module_id, data=ctx_data),
         "public_base_url": PUBLIC_BASE_URL.rstrip("/"),
     }
 
@@ -1824,17 +1844,46 @@ def admin_login_post():
         abort(500, "ADMIN_USER/ADMIN_PASSWORD non configurés")
 
     if username == ADMIN_USER and password == ADMIN_PASSWORD:
+        data = load_data()
+        _append_activity_log(data, "login", "user", username.lower(), INTEGRALE_PARTNER_ID)
+        save_data(data)
         session["admin_logged_in"] = True
-        session["admin_role"] = "admin"
+        session["admin_role"] = "super_admin" if _is_configured_super_admin_username(username) else "admin"
+        session["platform_role"] = session["admin_role"]
         session["admin_username"] = username.lower()
+        session["partner_id"] = INTEGRALE_PARTNER_ID
         session.permanent = True  # ✅ cookie persistant
         return redirect(next_url)
+
+    data = load_data()
+    user = _find_user_by_email(data, username)
+    if user and user.get("active", True) and user.get("password_hash") and _verify_password(password, user.get("password_hash") or ""):
+        partner = _partner_or_404(data, user.get("partner_id") or "")
+        if partner.get("status") in {"suspended", "archived"}:
+            _append_activity_log(data, "login_blocked_partner_status", "user", user.get("id"), partner.get("id"), {"status": partner.get("status")})
+            save_data(data)
+            return redirect(url_for("admin_login", next=next_url))
+        session["admin_logged_in"] = True
+        session["admin_role"] = user.get("role") or "partner_admin"
+        session["admin_username"] = username.lower()
+        session["admin_user_id"] = user.get("id")
+        session["partner_id"] = partner.get("id")
+        session.permanent = True
+        user["last_login_at"] = _now_iso()
+        _append_activity_log(data, "login", "user", user.get("id"), partner.get("id"))
+        save_data(data)
+        return redirect(next_url)
+
+    if user:
+        _append_activity_log(data, "login_failed", "user", user.get("id"), user.get("partner_id") or "")
+        save_data(data)
 
     if SECRETARY_USER and SECRETARY_PASSWORD:
         if username == SECRETARY_USER and password == SECRETARY_PASSWORD:
             session["admin_logged_in"] = True
             session["admin_role"] = "viewer"
             session["admin_username"] = username.lower()
+            session["partner_id"] = INTEGRALE_PARTNER_ID
             session.permanent = True
             return redirect(next_url)
 
@@ -2112,10 +2161,464 @@ _storage_startup_logged = False
 UPLOADS_DIR = os.path.join(PERSIST_DIR, "uploads")
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
+PARTNER_STORAGE_CATEGORIES = {"stagiaires", "contrats", "conventions", "signatures", "factures", "logos", "documents"}
+INTEGRALE_PARTNER_ID = "11111111-1111-4111-8111-111111111111"
+PARTNER_STATUSES = {"active", "trial", "suspended", "archived"}
+PLATFORM_ROLES = {"super_admin", "partner_admin", "admin", "viewer"}
+
+MODULE_CATALOG: List[Dict[str, Any]] = [
+    {"id": "student_management", "name": "Gestion des stagiaires et des sessions", "description": "Sessions, fiches stagiaires, documents, absences, examens, jurys, diplômes, espace stagiaire et exports associés.", "category": "Formation", "icon": "🎓", "dependencies": [], "is_core": False, "is_active": True, "is_standard": True, "is_fully_multi_partner": True, "is_recommended": True, "display_order": 10},
+    {"id": "document_automation", "name": "Documents, conventions et signatures", "description": "Conventions, convocations, attestations, modèles documentaires, génération PDF/Word et signatures Yousign.", "category": "Documents", "icon": "📝", "dependencies": ["student_management"], "is_core": False, "is_active": True, "is_standard": True, "is_fully_multi_partner": False, "is_recommended": True, "display_order": 20},
+    {"id": "billing", "name": "Facturation et paiements", "description": "Factures, financeurs, paiements, prélèvements, factures fournisseurs lorsqu'elles seront modélisées, CPF et intégration Qonto.", "category": "Finance", "icon": "🧾", "dependencies": ["student_management"], "is_core": False, "is_active": True, "is_standard": True, "is_fully_multi_partner": True, "is_recommended": True, "display_order": 30},
+    {"id": "sales_tracking", "name": "Suivi des ventes", "description": "Tableau de bord commercial, objectifs, prospects issus des inscriptions et statistiques de ventes.", "category": "Commercial", "icon": "📈", "dependencies": ["student_management"], "is_core": False, "is_active": True, "is_standard": True, "is_fully_multi_partner": True, "is_recommended": True, "display_order": 40},
+    {"id": "candidate_acquisition", "name": "Candidatures et admissions", "description": "Tests de positionnement, pré-inscriptions, candidats AFC, fiches candidat, imports et exports d'admission.", "category": "Admissions", "icon": "🧲", "dependencies": [], "is_core": False, "is_active": True, "is_standard": True, "is_fully_multi_partner": False, "is_recommended": True, "display_order": 50},
+    {"id": "trainer_management", "name": "Gestion des formateurs", "description": "Formateurs, contrats formateurs, affectations aux sessions et futures signatures Yousign des contrats formateurs.", "category": "Ressources", "icon": "👩‍🏫", "dependencies": [], "is_core": False, "is_active": True, "is_standard": True, "is_fully_multi_partner": False, "is_recommended": False, "display_order": 60},
+    {"id": "secretariat_notifications", "name": "Secrétariat et relances", "description": "Notifications, relances téléphoniques, rejets, suivi EDOF/CPF et actions secrétariat.", "category": "Organisation", "icon": "📬", "dependencies": ["student_management"], "is_core": False, "is_active": True, "is_standard": True, "is_fully_multi_partner": False, "is_recommended": True, "display_order": 70},
+    {"id": "vae", "name": "VAE", "description": "Demandes et dossiers VAE, Livrets, exports VAE, relances et espace candidat VAE.", "category": "Formation", "icon": "🎯", "dependencies": [], "is_core": False, "is_active": True, "is_standard": True, "is_fully_multi_partner": False, "is_recommended": False, "display_order": 80},
+    {"id": "external_training_integrations", "name": "Intégrations métier", "description": "YPareo, Wedof, CNAPS, Salesforce, imports PRE et contrôles VTC.", "category": "Intégrations", "icon": "🔌", "dependencies": ["student_management"], "is_core": False, "is_active": True, "is_standard": True, "is_fully_multi_partner": False, "is_recommended": False, "display_order": 90},
+    {"id": "system_core", "name": "Socle système", "description": "Connexion, sécurité, santé, activation de compte et fonctionnalités indispensables.", "category": "Système", "icon": "🔒", "dependencies": [], "is_core": True, "is_active": True, "is_standard": False, "is_fully_multi_partner": True, "is_recommended": True, "display_order": 900},
+    {"id": "scotia_portal", "name": "Portail Scotia", "description": "Portail spécifique réservé à Intégrale Academy ou activable en option avancée par le super administrateur.", "category": "Option avancée", "icon": "🤝", "dependencies": ["vae"], "is_core": False, "is_active": True, "is_standard": False, "is_advanced": True, "is_fully_multi_partner": False, "is_recommended": False, "display_order": 950},
+]
+MODULE_CATALOG_BY_ID = {module["id"]: module for module in MODULE_CATALOG}
+MODULE_ROUTE_PREFIXES = {
+    "billing": ("/admin/sessions/facturation", "/admin/sessions/paiement-especes", "/admin/billing", "/admin/qonto", "/admin/reglages/qonto", "/api/admin/billing-lines", "/api/admin/invoicing", "/api/billing", "/api/qonto", "/api/admin/trainees/"),
+    "sales_tracking": ("/admin/suivi-ventes",),
+    "student_management": ("/admin/sessions", "/admin/trainees", "/api/sessions", "/api/trainees", "/api/trainees_search", "/api/docs_to_control", "/docs_to_control.json", "/admin/uploads"),
+}
+MODULE_ROUTE_EXCLUSIONS = {
+    "student_management": ("/admin/sessions/facturation", "/admin/sessions/paiement-especes"),
+}
+
+
+def get_partner_storage_path(partner_id: str, category: str) -> str:
+    """Return a safe partner-scoped storage path on the persistent disk."""
+    partner_id = str(partner_id or "").strip()
+    category = str(category or "").strip().lower()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{8,64}", partner_id):
+        raise ValueError("partner_id invalide")
+    if category not in PARTNER_STORAGE_CATEGORIES:
+        raise ValueError("catégorie de stockage invalide")
+    root = os.path.realpath(os.path.join(PERSIST_DIR, "partners", partner_id))
+    target = os.path.realpath(os.path.join(root, category))
+    if not target.startswith(root + os.sep):
+        raise ValueError("chemin partenaire invalide")
+    os.makedirs(target, exist_ok=True)
+    return target
+
+
+def _current_session_role() -> str:
+    return (session.get("admin_role") or "").strip() if has_request_context() else ""
+
+
+def _is_super_admin_session() -> bool:
+    return bool(session.get("admin_logged_in")) and _current_session_role() == "super_admin"
+
+
+def _is_configured_super_admin_username(username: str) -> bool:
+    """Return True only for explicitly configured platform super administrators.
+
+    Set SUPER_ADMIN_USERS on Render to a comma-separated list of e-mail/login
+    values. Historical ADMIN_USER accounts remain Intégrale Academy admins unless
+    their username is explicitly present in this allow-list.
+    """
+    return (username or "").strip().lower() in SUPER_ADMIN_USERS
+
+
+def _current_partner_id() -> str:
+    if not has_request_context():
+        return ""
+    if session.get("assist_partner_id") and _is_super_admin_session():
+        return str(session.get("assist_partner_id") or "")
+    return str(session.get("partner_id") or "")
+
+
+def _is_partner_scoped_session() -> bool:
+    if not has_request_context() or not session.get("admin_logged_in"):
+        return False
+    return bool(_current_partner_id()) and not _is_super_admin_session()
+
+
+def active_module_catalog(include_core: bool = True, include_advanced: bool = False) -> List[Dict[str, Any]]:
+    return sorted(
+        [
+            module for module in MODULE_CATALOG
+            if module.get("is_active")
+            and (include_core or not module.get("is_core"))
+            and (include_advanced or module.get("is_standard", True))
+        ],
+        key=lambda item: int(item.get("display_order") or 0),
+    )
+
+
+def _all_enabled_module_ids_for_integrale() -> List[str]:
+    return [module["id"] for module in active_module_catalog(include_core=True, include_advanced=True)]
+
+
+def normalize_enabled_modules(raw_modules: Any, include_core: bool = True, include_advanced: bool = False) -> List[str]:
+    if isinstance(raw_modules, str):
+        candidates = [raw_modules]
+    elif isinstance(raw_modules, Iterable):
+        candidates = list(raw_modules)
+    else:
+        candidates = []
+
+    allowed_catalog = active_module_catalog(include_core=include_core, include_advanced=include_advanced)
+    allowed = {module["id"] for module in allowed_catalog}
+    enabled: Set[str] = set()
+    for module_id in candidates:
+        module_id = str(module_id or "").strip()
+        if module_id in allowed:
+            enabled.add(module_id)
+
+    if include_core:
+        enabled.update(module["id"] for module in MODULE_CATALOG if module.get("is_core") and module.get("is_active"))
+
+    changed = True
+    while changed:
+        changed = False
+        for module_id in list(enabled):
+            module = MODULE_CATALOG_BY_ID.get(module_id)
+            if not module:
+                continue
+            for dependency in module.get("dependencies") or []:
+                if dependency in allowed and dependency not in enabled:
+                    enabled.add(dependency)
+                    changed = True
+
+    return sorted(enabled, key=lambda module_id: int(MODULE_CATALOG_BY_ID.get(module_id, {}).get("display_order") or 0))
+
+
+def _module_form_context(selected_modules: Optional[Iterable[str]] = None, include_advanced: bool = False) -> Dict[str, Any]:
+    selected = set(normalize_enabled_modules(selected_modules or [], include_core=True, include_advanced=include_advanced))
+    commercial_modules = active_module_catalog(include_core=False, include_advanced=include_advanced)
+    recommended_modules = [module["id"] for module in commercial_modules if module.get("is_recommended")]
+    return {
+        "modules": commercial_modules,
+        "selected": selected,
+        "recommended": normalize_enabled_modules(recommended_modules, include_core=False, include_advanced=include_advanced),
+        "catalog_by_id": MODULE_CATALOG_BY_ID,
+    }
+
+
+def _partner_by_id_from_data(data: Dict[str, Any], partner_id: str) -> Optional[Dict[str, Any]]:
+    return next((p for p in data.get("partners", []) if isinstance(p, dict) and p.get("id") == partner_id), None)
+
+
+def get_partner_enabled_modules(partner_id: str, data: Optional[Dict[str, Any]] = None) -> List[str]:
+    data = data or (_load_valid_json_payload(DATA_FILE) or _empty_data_payload())
+    partner = _partner_by_id_from_data(data, partner_id)
+    if not partner:
+        return []
+    include_advanced = partner_id == INTEGRALE_PARTNER_ID or bool(partner.get("advanced_modules_enabled"))
+    return normalize_enabled_modules(partner.get("enabled_modules") or [], include_core=True, include_advanced=include_advanced)
+
+
+def partner_has_module(partner_id: str, module_id: str, data: Optional[Dict[str, Any]] = None) -> bool:
+    module_id = str(module_id or "").strip()
+    module = MODULE_CATALOG_BY_ID.get(module_id)
+    if not module or not module.get("is_active"):
+        return False
+    if module.get("is_core"):
+        return True
+    return module_id in set(get_partner_enabled_modules(partner_id, data=data))
+
+
+def _module_for_request_path(path: str) -> str:
+    if not path:
+        return ""
+    if path.startswith("/api/qonto/oauth/ping") or path.startswith("/api/qonto/oauth/callback"):
+        return ""
+    if path.startswith("/api/admin/trainees/") and "/qonto-" not in path:
+        return ""
+    for module_id, prefixes in MODULE_ROUTE_PREFIXES.items():
+        for prefix in prefixes:
+            if not path.startswith(prefix):
+                continue
+            if any(path.startswith(excluded) for excluded in MODULE_ROUTE_EXCLUSIONS.get(module_id, ())):
+                continue
+            return module_id
+    return ""
+
+
+def _module_denied_response(module_id: str):
+    data = _load_valid_json_payload(DATA_FILE) or _empty_data_payload()
+    _ensure_multi_partner_payload(data)
+    _append_activity_log(data, "module_access_denied", "module", module_id, _current_partner_id(), {"path": request.path})
+    _write_json_with_backups(DATA_FILE, data, _data_lock)
+    if _request_expects_json():
+        return jsonify({"ok": False, "error": "module_not_available", "module": module_id}), 403
+    abort(403)
+
+
+def require_partner_module(module_id: str):
+    def decorator(view):
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            if _is_super_admin_session() and not session.get("assist_partner_id"):
+                return view(*args, **kwargs)
+            partner_id = _current_partner_id()
+            if _current_session_role() == "admin" and not session.get("partner_id"):
+                return view(*args, **kwargs)
+            if not partner_id or not partner_has_module(partner_id, module_id):
+                return _module_denied_response(module_id)
+            return view(*args, **kwargs)
+        return wrapped
+    return decorator
+
+
+@app.before_request
+def enforce_partner_modules_for_core_routes():
+    if not session.get("admin_logged_in"):
+        return None
+    module_id = _module_for_request_path(request.path or "")
+    if not module_id:
+        return None
+    if _is_super_admin_session() and not session.get("assist_partner_id"):
+        return None
+    # Compatibilité avec les anciens tests/sessions admin créés avant partner_id :
+    # ces sessions représentent l'espace Intégrale Academy, qui conserve tous les modules.
+    if _current_session_role() == "admin" and not session.get("partner_id"):
+        return None
+    partner_id = _current_partner_id()
+    if not partner_id or not partner_has_module(partner_id, module_id):
+        return _module_denied_response(module_id)
+    return None
+
+
+def _integrale_partner() -> Dict[str, Any]:
+    now = _now_iso() if "_now_iso" in globals() else datetime.datetime.utcnow().isoformat() + "Z"
+    return {
+        "id": INTEGRALE_PARTNER_ID,
+        "name": "Intégrale Academy",
+        "legal_name": "Intégrale Sécurité Formations",
+        "siret": "",
+        "address": "54 chemin du Carreou",
+        "postal_code": "83480",
+        "city": "Puget-sur-Argens",
+        "phone": "04 22 47 07 68",
+        "email": "integralesecuriteformations@gmail.com",
+        "contact_first_name": "",
+        "contact_last_name": "",
+        "logo_path": "",
+        "status": "active",
+        "subscription_plan": "legacy",
+        "max_users": 10,
+        "storage_limit": 0,
+        "trial_ends_at": "",
+        "subscription_started_at": now,
+        "subscription_ends_at": "",
+        "internal_notes": "Partenaire créé automatiquement pour rattacher les données historiques.",
+        "enabled_modules": _all_enabled_module_ids_for_integrale(),
+        "modules_updated_at": now,
+        "modules_updated_by": "system",
+        "created_at": now,
+        "updated_at": now,
+    }
+
+
+def _append_activity_log(data: Dict[str, Any], action: str, resource_type: str = "", resource_id: str = "", partner_id: str = "", details: Optional[Dict[str, Any]] = None) -> None:
+    logs = data.setdefault("activity_logs", [])
+    safe_details = dict(details or {})
+    for secret_key in ("token", "password", "secret"):
+        safe_details.pop(secret_key, None)
+    logs.append({
+        "id": str(uuid.uuid4()),
+        "user": (session.get("admin_username") if has_request_context() else "system") or "system",
+        "partner_id": partner_id or _current_partner_id() or "",
+        "action": action,
+        "resource_type": resource_type,
+        "resource_id": str(resource_id or ""),
+        "created_at": _now_iso() if "_now_iso" in globals() else datetime.datetime.utcnow().isoformat() + "Z",
+        "ip": (request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip() if has_request_context() else ""),
+        "details": safe_details,
+    })
+    del logs[:-1000]
+
+
+def _ensure_multi_partner_payload(data: Dict[str, Any]) -> bool:
+    changed = False
+    if not isinstance(data.get("partners"), list):
+        data["partners"] = []
+        changed = True
+    if not any(p.get("id") == INTEGRALE_PARTNER_ID for p in data["partners"] if isinstance(p, dict)):
+        data["partners"].append(_integrale_partner())
+        changed = True
+    if not isinstance(data.get("users"), list):
+        data["users"] = []
+        changed = True
+    if not isinstance(data.get("invitations"), list):
+        data["invitations"] = []
+        changed = True
+    if not isinstance(data.get("activity_logs"), list):
+        data["activity_logs"] = []
+        changed = True
+    for partner in data.get("partners") or []:
+        if not isinstance(partner, dict):
+            continue
+        include_advanced = partner.get("id") == INTEGRALE_PARTNER_ID or bool(partner.get("advanced_modules_enabled"))
+        target_modules = _all_enabled_module_ids_for_integrale() if partner.get("id") == INTEGRALE_PARTNER_ID else normalize_enabled_modules(partner.get("enabled_modules") or [], include_core=True, include_advanced=include_advanced)
+        if partner.get("enabled_modules") != target_modules:
+            partner["enabled_modules"] = target_modules
+            changed = True
+        if not partner.get("modules_updated_at"):
+            partner["modules_updated_at"] = partner.get("updated_at") or partner.get("created_at") or (_now_iso() if "_now_iso" in globals() else datetime.datetime.utcnow().isoformat() + "Z")
+            changed = True
+        if not partner.get("modules_updated_by"):
+            partner["modules_updated_by"] = "system"
+            changed = True
+    for s in data.get("sessions") or []:
+        if isinstance(s, dict) and not s.get("partner_id"):
+            s["partner_id"] = INTEGRALE_PARTNER_ID; changed = True
+        for t in _session_trainees_list(s) if isinstance(s, dict) else []:
+            if isinstance(t, dict) and not t.get("partner_id"):
+                t["partner_id"] = s.get("partner_id") or INTEGRALE_PARTNER_ID; changed = True
+    for key in ("positioning_tests", "notifications_edof", "notifications_financement_refuse", "notifications_prelevements", "notifications_prelevement_non_valides", "notifications_phone_relances", "notifications_vae_relances", "notifications_cnaps_pre_relances", "notifications_test_fr", "notifications_convention_unsigned", "notifications_vtc_books", "notifications_admin"):
+        for item in data.get(key) or []:
+            if isinstance(item, dict) and not item.get("partner_id"):
+                item["partner_id"] = INTEGRALE_PARTNER_ID; changed = True
+    return changed
+
+
+def _filter_data_for_partner(data: Dict[str, Any], partner_id: str) -> Dict[str, Any]:
+    scoped = copy.deepcopy(data)
+    scoped["sessions"] = [s for s in scoped.get("sessions", []) if not isinstance(s, dict) or s.get("partner_id") == partner_id]
+    scoped["users"] = [u for u in scoped.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id]
+    for key in ("positioning_tests", "notifications_edof", "notifications_financement_refuse", "notifications_prelevements", "notifications_prelevement_non_valides", "notifications_phone_relances", "notifications_vae_relances", "notifications_cnaps_pre_relances", "notifications_test_fr", "notifications_convention_unsigned", "notifications_vtc_books", "notifications_admin"):
+        if isinstance(scoped.get(key), list):
+            scoped[key] = [x for x in scoped[key] if not isinstance(x, dict) or x.get("partner_id") == partner_id]
+    return scoped
+
+
+def _normalize_scoped_item_for_partner(item: Dict[str, Any], partner_id: str, *, nested_session: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+    if not isinstance(item, dict):
+        return None
+    item_partner_id = item.get("partner_id")
+    if item_partner_id and item_partner_id != partner_id:
+        app.logger.warning("[SECURITY] rejected forged partner_id=%s expected=%s", item_partner_id, partner_id)
+        return None
+    normalized = copy.deepcopy(item)
+    normalized["partner_id"] = partner_id
+    if nested_session is not None:
+        trainees = []
+        for trainee in _session_trainees_list(normalized):
+            if not isinstance(trainee, dict):
+                continue
+            trainee_partner_id = trainee.get("partner_id")
+            if trainee_partner_id and trainee_partner_id != partner_id:
+                app.logger.warning("[SECURITY] rejected forged trainee partner_id=%s expected=%s", trainee_partner_id, partner_id)
+                continue
+            trainee = copy.deepcopy(trainee)
+            trainee["partner_id"] = partner_id
+            trainees.append(trainee)
+        normalized["trainees"] = trainees
+        normalized.pop("stagiaires", None)
+    return normalized
+
+
+def _merge_partner_scoped_payload(scoped: Dict[str, Any], partner_id: str) -> Dict[str, Any]:
+    current = _load_valid_json_payload(DATA_FILE) or _empty_data_payload()
+    _ensure_multi_partner_payload(current)
+    safe_sessions = []
+    for session_item in scoped.get("sessions", []) if isinstance(scoped.get("sessions"), list) else []:
+        normalized_session = _normalize_scoped_item_for_partner(session_item, partner_id, nested_session=session_item)
+        if normalized_session is not None:
+            safe_sessions.append(normalized_session)
+    current["sessions"] = [s for s in current.get("sessions", []) if not isinstance(s, dict) or s.get("partner_id") != partner_id] + safe_sessions
+    for key in ("users", "positioning_tests", "notifications_edof", "notifications_financement_refuse", "notifications_prelevements", "notifications_prelevement_non_valides", "notifications_phone_relances", "notifications_vae_relances", "notifications_cnaps_pre_relances", "notifications_test_fr", "notifications_convention_unsigned", "notifications_vtc_books", "notifications_admin"):
+        if isinstance(scoped.get(key), list):
+            safe_items = [normalized for item in scoped.get(key, []) if (normalized := _normalize_scoped_item_for_partner(item, partner_id)) is not None]
+            current[key] = [x for x in current.get(key, []) if not isinstance(x, dict) or x.get("partner_id") != partner_id] + safe_items
+    return current
+
+
+def _find_user_by_email(data: Dict[str, Any], email: str) -> Optional[Dict[str, Any]]:
+    wanted = (email or "").strip().lower()
+    return next((u for u in data.get("users", []) if isinstance(u, dict) and (u.get("email") or "").strip().lower() == wanted), None)
+
+
+def _hash_token(raw_token: str) -> str:
+    return hashlib.sha256((raw_token or "").encode("utf-8")).hexdigest()
+
+
+def _password_is_valid(password: str) -> bool:
+    return bool(password) and len(password) >= 10 and any(c.isalpha() for c in password) and any(c.isdigit() for c in password)
+
+
+def _hash_password(password: str) -> str:
+    salt = secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 260000).hex()
+    return f"pbkdf2_sha256$260000${salt}${digest}"
+
+
+def _verify_password(password: str, stored: str) -> bool:
+    try:
+        algo, rounds, salt, digest = (stored or "").split("$", 3)
+        if algo != "pbkdf2_sha256":
+            return False
+        candidate = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), int(rounds)).hex()
+        return hmac.compare_digest(candidate, digest)
+    except Exception:
+        return False
+
+
+def _create_invitation(data: Dict[str, Any], user_id: str, partner_id: str, hours: int = 48) -> str:
+    raw = secrets.token_urlsafe(48)
+    data.setdefault("invitations", []).append({
+        "id": str(uuid.uuid4()), "user_id": user_id, "partner_id": partner_id,
+        "token_hash": _hash_token(raw), "created_at": _now_iso(),
+        "expires_at": (datetime.datetime.utcnow() + datetime.timedelta(hours=hours)).isoformat() + "Z",
+        "used_at": "", "cancelled_at": "",
+    })
+    return raw
+
+
+def _send_partner_invitation_email(user: Dict[str, Any], partner: Dict[str, Any], raw_token: str) -> bool:
+    activation_url = f"{APP_BASE_URL}/activate-account?token={quote(raw_token)}"
+    html_body = mail_layout(f"""
+      <h2>Activation de votre espace partenaire</h2>
+      <p>Bonjour {html.escape(user.get('first_name') or '')},</p>
+      <p>Votre espace <strong>{html.escape(partner.get('name') or '')}</strong> est prêt.</p>
+      <p><a href=\"{activation_url}\">Définir mon mot de passe</a></p>
+      <p>Ce lien est personnel, utilisable une seule fois et expire sous 48 heures.</p>
+    """)
+    return brevo_send_email(user.get("email") or "", "Activation de votre espace partenaire", html_body)
+
+
+def _partner_counts(data: Dict[str, Any], partner_id: str) -> Dict[str, int]:
+    sessions_for_partner = [s for s in data.get("sessions", []) if isinstance(s, dict) and s.get("partner_id") == partner_id]
+    return {"users": sum(1 for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id), "sessions": len(sessions_for_partner), "trainees": sum(len(_session_trainees_list(s)) for s in sessions_for_partner)}
+
+
+def _partner_or_404(data: Dict[str, Any], partner_id: str) -> Dict[str, Any]:
+    partner = next((p for p in data.get("partners", []) if isinstance(p, dict) and p.get("id") == partner_id), None)
+    if not partner:
+        abort(404)
+    return partner
+
+
+def require_super_admin(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not _is_super_admin_session():
+            abort(403)
+        return view(*args, **kwargs)
+    return wrapped
+
+
 def trainee_upload_dir(session_id: str, trainee_id: str) -> str:
-    d = os.path.join(UPLOADS_DIR, session_id, trainee_id)
-    os.makedirs(d, exist_ok=True)
-    return d
+    partner_id = _current_partner_id()
+    if partner_id and partner_id != INTEGRALE_PARTNER_ID:
+        base = get_partner_storage_path(partner_id, "stagiaires")
+        d = os.path.join(base, str(session_id or ""), str(trainee_id or ""))
+    else:
+        # Compatibilité avec les fichiers historiques Intégrale Academy.
+        d = os.path.join(UPLOADS_DIR, session_id, trainee_id)
+    real_base = os.path.realpath(get_partner_storage_path(partner_id, "stagiaires") if partner_id and partner_id != INTEGRALE_PARTNER_ID else UPLOADS_DIR)
+    real_dir = os.path.realpath(d)
+    if not real_dir.startswith(real_base + os.sep):
+        raise ValueError("chemin upload stagiaire invalide")
+    os.makedirs(real_dir, exist_ok=True)
+    return real_dir
 
 
 def _cleanup_backups_for(prefix: str) -> None:
@@ -5482,11 +5985,13 @@ def load_data() -> Dict[str, Any]:
         if recovered_from:
             loaded = _load_valid_json_payload(DATA_FILE)
             if loaded is not None:
+                _ensure_multi_partner_payload(loaded)
                 _log_storage_state(loaded)
-                return loaded
+                return _filter_data_for_partner(loaded, _current_partner_id()) if _is_partner_scoped_session() else loaded
         base = _empty_data_payload()
+        _ensure_multi_partner_payload(base)
         _log_storage_state(base)
-        return base
+        return _filter_data_for_partner(base, _current_partner_id()) if _is_partner_scoped_session() else base
 
     data = _load_valid_json_payload(DATA_FILE)
     if data is None:
@@ -5557,6 +6062,9 @@ def load_data() -> Dict[str, Any]:
             data["notifications_admin_dismissed_schedule_keys"] = []
             changed = True
 
+        if _ensure_multi_partner_payload(data):
+            changed = True
+
         if _send_vtc_credentials_missing_reminders(data):
             changed = True
 
@@ -5597,10 +6105,13 @@ def load_data() -> Dict[str, Any]:
         app.logger.exception("Post-processing failed for %s; returning current in-memory data without reset", DATA_FILE)
 
     _log_storage_state(data)
-    return data
+    return _filter_data_for_partner(data, _current_partner_id()) if _is_partner_scoped_session() else data
 
 
 def save_data(data: Dict[str, Any]) -> None:
+    if _is_partner_scoped_session():
+        data = _merge_partner_scoped_payload(data, _current_partner_id())
+    _ensure_multi_partner_payload(data)
     _write_json_with_backups(DATA_FILE, data, _data_lock)
 
 def _load_wedof_webhooks() -> List[Dict[str, Any]]:
@@ -6294,7 +6805,7 @@ def _admin_can_view_notifications() -> bool:
 
 
 def _admin_can_manage_notifications() -> bool:
-    return session.get("admin_role") == "admin"
+    return session.get("admin_role") in {"admin", "super_admin"}
 
 
 def _format_trainee_name(first_name: str, last_name: str) -> str:
@@ -11029,6 +11540,192 @@ def scotia_vae_justificatif_download(dossier_id: str, doc_id: str):
     if not os.path.exists(fp):
         abort(404)
     return send_file(fp, as_attachment=False)
+
+
+PARTNER_STATUS_LABELS = {"active": "Actif", "trial": "En essai", "suspended": "Suspendu", "archived": "Archivé"}
+
+
+@app.get("/admin/partners")
+@admin_login_required
+@require_super_admin
+def admin_partners():
+    data = load_data()
+    q = (request.args.get("q") or "").strip().lower()
+    status = (request.args.get("status") or "").strip()
+    plan = (request.args.get("plan") or "").strip().lower()
+    partners = []
+    for partner in data.get("partners", []):
+        if not isinstance(partner, dict):
+            continue
+        haystack = " ".join(str(partner.get(k) or "") for k in ("name", "legal_name", "email", "city", "phone")).lower()
+        if q and q not in haystack:
+            continue
+        if status and partner.get("status") != status:
+            continue
+        if plan and plan not in str(partner.get("subscription_plan") or "").lower():
+            continue
+        row = dict(partner)
+        row["counts"] = _partner_counts(data, partner.get("id") or "")
+        partners.append(row)
+    partners.sort(key=lambda item: (item.get("name") or "").lower())
+    return render_template("admin_partners.html", partners=partners, q=q, status=status, plan=plan, status_labels=PARTNER_STATUS_LABELS)
+
+
+@app.route("/admin/partners/new", methods=["GET", "POST"])
+@admin_login_required
+@require_super_admin
+def admin_partner_new():
+    if request.method == "GET":
+        return render_template("admin_partner_new.html", module_form=_module_form_context(selected_modules=["student_management", "billing", "sales_tracking"]))
+    data = load_data()
+    email = (request.form.get("email") or "").strip().lower()
+    if not email or _find_user_by_email(data, email):
+        abort(400, "Email responsable invalide ou déjà utilisé")
+    now = _now_iso()
+    partner_id = str(uuid.uuid4())
+    partner = {
+        "id": partner_id,
+        "name": (request.form.get("name") or "").strip(),
+        "legal_name": (request.form.get("legal_name") or "").strip(),
+        "siret": (request.form.get("siret") or "").strip(),
+        "address": (request.form.get("address") or "").strip(),
+        "postal_code": (request.form.get("postal_code") or "").strip(),
+        "city": (request.form.get("city") or "").strip(),
+        "phone": (request.form.get("phone") or "").strip(),
+        "email": email,
+        "contact_first_name": (request.form.get("contact_first_name") or "").strip(),
+        "contact_last_name": (request.form.get("contact_last_name") or "").strip(),
+        "logo_path": "",
+        "status": (request.form.get("status") or "trial").strip() if (request.form.get("status") or "trial").strip() in PARTNER_STATUSES else "trial",
+        "subscription_plan": (request.form.get("subscription_plan") or "starter").strip(),
+        "max_users": int((request.form.get("max_users") or "5").strip() or 5),
+        "storage_limit": 0,
+        "trial_ends_at": (request.form.get("trial_ends_at") or "").strip(),
+        "subscription_started_at": now,
+        "subscription_ends_at": "",
+        "internal_notes": "",
+        "enabled_modules": normalize_enabled_modules(request.form.getlist("enabled_modules"), include_core=True, include_advanced=False),
+        "modules_updated_at": now,
+        "modules_updated_by": session.get("admin_username") or "system",
+        "created_at": now,
+        "updated_at": now,
+    }
+    user = {"id": str(uuid.uuid4()), "partner_id": partner_id, "email": email, "first_name": partner["contact_first_name"], "last_name": partner["contact_last_name"], "role": "partner_admin", "active": True, "password_hash": "", "invitation_activated_at": "", "created_at": now, "updated_at": now}
+    token = _create_invitation(data, user["id"], partner_id)
+    data.setdefault("partners", []).append(partner)
+    data.setdefault("users", []).append(user)
+    invitation_ok = bool(_send_partner_invitation_email(user, partner, token))
+    invitation_error = "" if invitation_ok else "service e-mail indisponible ou destinataire refusé"
+    user["last_invitation_sent_at"] = _now_iso() if invitation_ok else ""
+    user["last_invitation_status"] = "sent" if invitation_ok else "failed"
+    user["last_invitation_error"] = invitation_error
+    _append_activity_log(data, "partner_created", "partner", partner_id, partner_id)
+    if invitation_ok:
+        _append_activity_log(data, "invitation_sent", "user", user["id"], partner_id, {"email": email})
+        flash(f"Le partenaire a été créé et l’invitation a été envoyée à {email}.", "success")
+    else:
+        _append_activity_log(data, "invitation_failed", "user", user["id"], partner_id, {"email": email, "error": invitation_error})
+        flash(f"Le partenaire a été créé, mais l’invitation n’a pas pu être envoyée : {invitation_error}.", "warning")
+    save_data(data)
+    return redirect(url_for("admin_partner_detail", partner_id=partner_id))
+
+
+@app.route("/admin/partners/<partner_id>", methods=["GET", "POST"])
+@admin_login_required
+@require_super_admin
+def admin_partner_detail(partner_id: str):
+    data = load_data()
+    partner = _partner_or_404(data, partner_id)
+    if request.method == "POST":
+        old_modules = list(partner.get("enabled_modules") or [])
+        for key in ("name", "legal_name", "siret", "address", "postal_code", "city", "phone", "email", "contact_first_name", "contact_last_name", "subscription_plan", "internal_notes"):
+            partner[key] = (request.form.get(key) or "").strip()
+        partner["status"] = (request.form.get("status") or partner.get("status") or "active") if (request.form.get("status") or "") in PARTNER_STATUSES else partner.get("status", "active")
+        for int_key in ("max_users", "storage_limit"):
+            try:
+                partner[int_key] = int((request.form.get(int_key) or partner.get(int_key) or 0))
+            except ValueError:
+                pass
+        new_modules = normalize_enabled_modules(request.form.getlist("enabled_modules"), include_core=True, include_advanced=(partner_id == INTEGRALE_PARTNER_ID or bool(partner.get("advanced_modules_enabled"))))
+        if partner_id == INTEGRALE_PARTNER_ID:
+            new_modules = _all_enabled_module_ids_for_integrale()
+        partner["enabled_modules"] = new_modules
+        if old_modules != new_modules:
+            partner["modules_updated_at"] = _now_iso()
+            partner["modules_updated_by"] = session.get("admin_username") or "system"
+            _append_activity_log(data, "partner_modules_updated", "partner", partner_id, partner_id, {"old_modules": old_modules, "new_modules": new_modules})
+        partner["updated_at"] = _now_iso()
+        _append_activity_log(data, "partner_updated", "partner", partner_id, partner_id)
+        save_data(data)
+        return redirect(url_for("admin_partner_detail", partner_id=partner_id))
+    return render_template("admin_partner_detail.html", partner=partner, counts=_partner_counts(data, partner_id), users=[u for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id], module_form=_module_form_context(selected_modules=partner.get("enabled_modules") or [], include_advanced=(partner_id == INTEGRALE_PARTNER_ID or bool(partner.get("advanced_modules_enabled")))) )
+
+
+@app.post("/admin/partners/<partner_id>/toggle-status")
+@admin_login_required
+@require_super_admin
+def admin_partner_toggle_status(partner_id: str):
+    data = load_data(); partner = _partner_or_404(data, partner_id)
+    partner["status"] = "active" if partner.get("status") in {"suspended", "archived"} else "suspended"
+    partner["updated_at"] = _now_iso()
+    _append_activity_log(data, "partner_status_changed", "partner", partner_id, partner_id, {"status": partner["status"]})
+    save_data(data)
+    return redirect(url_for("admin_partners"))
+
+
+@app.post("/admin/partners/<partner_id>/assist")
+@admin_login_required
+@require_super_admin
+def admin_partner_assist(partner_id: str):
+    data = load_data(); partner = _partner_or_404(data, partner_id)
+    session["assist_partner_id"] = partner_id
+    session["assist_started_at"] = _now_iso()
+    _append_activity_log(data, "super_admin_assist_started", "partner", partner_id, partner_id)
+    save_data(data)
+    return redirect(url_for("admin_sessions"))
+
+
+@app.post("/admin/partners/assist/exit")
+@admin_login_required
+@require_super_admin
+def admin_partner_assist_exit():
+    data = load_data(); partner_id = session.pop("assist_partner_id", "")
+    started = session.pop("assist_started_at", "")
+    if partner_id:
+        _append_activity_log(data, "super_admin_assist_finished", "partner", partner_id, partner_id, {"started_at": started})
+        save_data(data)
+    return redirect(url_for("admin_partners"))
+
+
+@app.route("/activate-account", methods=["GET", "POST"])
+def activate_account():
+    token = (request.values.get("token") or "").strip()
+    error = ""
+    if request.method == "POST":
+        password = request.form.get("password") or ""
+        confirm = request.form.get("confirm") or ""
+        data = load_data()
+        invitation = next((i for i in data.get("invitations", []) if isinstance(i, dict) and hmac.compare_digest(i.get("token_hash") or "", _hash_token(token))), None)
+        now_dt = datetime.datetime.utcnow()
+        if not invitation or invitation.get("used_at") or invitation.get("cancelled_at"):
+            error = "Invitation invalide ou déjà utilisée."
+        elif _parse_iso_datetime(invitation.get("expires_at")) and _parse_iso_datetime(invitation.get("expires_at")).replace(tzinfo=None) < now_dt:
+            error = "Invitation expirée."
+        elif password != confirm or not _password_is_valid(password):
+            error = "Le mot de passe doit contenir au moins 10 caractères, avec lettres et chiffres."
+        else:
+            user = next((u for u in data.get("users", []) if isinstance(u, dict) and u.get("id") == invitation.get("user_id")), None)
+            if not user:
+                error = "Utilisateur introuvable."
+            else:
+                user["password_hash"] = _hash_password(password)
+                user["invitation_activated_at"] = _now_iso()
+                user["updated_at"] = _now_iso()
+                invitation["used_at"] = _now_iso()
+                _append_activity_log(data, "invitation_activated", "user", user.get("id"), user.get("partner_id") or "")
+                save_data(data)
+                return redirect(url_for("admin_login", activated="1"))
+    return render_template("activate_account.html", token=token, error=error)
 
 
 @app.get("/admin/sessions")
@@ -17319,6 +18016,13 @@ def _detokenize_path(token: str) -> str:
     root = os.path.realpath(PERSIST_DIR)
     if candidate != root and not candidate.startswith(root + os.sep):
         abort(403)
+
+    parts = [part for part in token.split("/") if part]
+    if len(parts) >= 2 and parts[0] == "partners":
+        owner_partner_id = parts[1]
+        current_partner_id = _current_partner_id()
+        if not (_is_super_admin_session() and not session.get("assist_partner_id")) and owner_partner_id != current_partner_id:
+            abort(403)
     return candidate
 
 @app.get("/admin/uploads/<path:path>")

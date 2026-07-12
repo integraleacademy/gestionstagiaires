@@ -567,9 +567,9 @@
   </div>
 
   <div class="admin-actions" aria-label="Actions sessions">
-    <a class="btn btn-primary" href="{{ url_for('admin_secretariat') }}">📬 Secrétariat</a>
-    <a class="btn btn-outline" href="{{ url_for('admin_qonto_settings') }}">🧾 Réglages Qonto</a>
-    <a class="btn btn-violet {% if (wedof_new_requests_count or 0) > 0 %}is-has-request{% else %}is-idle{% endif %}" href="{{ url_for('admin_wedof_requests') }}">
+    {% if has_module('secretariat_notifications') %}<a class="btn btn-primary" href="{{ url_for('admin_secretariat') }}">📬 Secrétariat</a>{% endif %}
+    {% if has_module('billing') %}<a class="btn btn-outline" href="{{ url_for('admin_qonto_settings') }}">🧾 Réglages Qonto</a>{% endif %}
+    {% if has_module('external_training_integrations') %}<a class="btn btn-violet {% if (wedof_new_requests_count or 0) > 0 %}is-has-request{% else %}is-idle{% endif %}" href="{{ url_for('admin_wedof_requests') }}">
       CPF
       <span class="cpf-badge-count">{{ wedof_new_requests_count or 0 }}</span>
     </a>
@@ -583,20 +583,20 @@
         <button class="btn btn-outline" id="btnOpenCnapsImport" type="button">Import PRE CNAPS</button>
         <a class="btn btn-outline" href="{{ url_for('admin_cnaps_unknown') }}">CNAPS inconnus</a>
       </div>
-    </details>
+    </details>{% endif %}
 
     <details class="admin-action-menu">
       <summary class="btn btn-outline">⚙️ Outils</summary>
       <div class="admin-action-panel">
         <div class="admin-action-section">Gestion</div>
-        <a class="btn btn-outline" href="{{ url_for('admin_afc') }}">AFC</a>
-        <a class="btn btn-outline" href="{{ url_for('admin_sessions_conventions') }}">Conventions</a>
-        <a class="btn btn-primary" href="{{ url_for('admin_sessions_automations') }}">⚡ Automatisations</a>
-        <a class="btn btn-outline" href="{{ url_for('admin_sessions_billing') }}">🧾 Facturation</a>
+        {% if has_module('candidate_acquisition') %}<a class="btn btn-outline" href="{{ url_for('admin_afc') }}">AFC</a>{% endif %}
+        {% if has_module('document_automation') %}<a class="btn btn-outline" href="{{ url_for('admin_sessions_conventions') }}">Conventions</a>{% endif %}
+        {% if has_module('document_automation') %}<a class="btn btn-primary" href="{{ url_for('admin_sessions_automations') }}">⚡ Automatisations</a>{% endif %}
+        {% if has_module('billing') %}<a class="btn btn-outline" href="{{ url_for('admin_sessions_billing') }}">🧾 Facturation</a>{% endif %}
         <a class="btn btn-outline" href="{{ url_for('admin_sessions_archived') }}">Sessions archivées</a>
-        <a class="btn btn-outline" href="{{ url_for('admin_cash_payments') }}">💶 Paiement espèces</a>
-        <a class="btn btn-outline" href="{{ url_for('scotia_login') }}" target="_blank" rel="noopener">SCOTIA</a>
-        {% if not is_read_only %}
+        {% if has_module('billing') %}<a class="btn btn-outline" href="{{ url_for('admin_cash_payments') }}">💶 Paiement espèces</a>{% endif %}
+        {% if has_module('scotia_portal') %}<a class="btn btn-outline" href="{{ url_for('scotia_login') }}" target="_blank" rel="noopener">SCOTIA</a>{% endif %}
+        {% if not is_read_only and has_module('external_training_integrations') %}
           <div class="admin-action-section">Contrôles VTC</div>
           <button class="btn btn-outline" id="btnOpenVtcCheck" type="button">Check VTC théorie</button>
           <button class="btn btn-outline" id="btnOpenVtcPracticeCheck" type="button">Check VTC pratique</button>
@@ -699,9 +699,9 @@
       <div class="dashboard-total-card__label">TOTAL STAGIAIRES</div>
       <div class="dashboard-total-card__count">{{ yearly_total }}</div>
     </div>
-    <a href="{{ url_for('admin_sales_tracking') }}" class="btn btn-outline" style="background:rgba(255,255,255,.92);border-color:rgba(255,255,255,.75);color:#1e3a8a;">
+    {% if has_module('sales_tracking') %}<a href="{{ url_for('admin_sales_tracking') }}" class="btn btn-outline" style="background:rgba(255,255,255,.92);border-color:rgba(255,255,255,.75);color:#1e3a8a;">
       Suivi des ventes
-    </a>
+    </a>{% endif %}
   </button>
 </div>
 
