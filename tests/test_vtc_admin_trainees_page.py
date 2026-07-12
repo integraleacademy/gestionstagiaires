@@ -176,7 +176,9 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Suivi carte pro", html)
-        self.assertIn("https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/app/annuaire-public", html)
+        self.assertNotIn("https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/app/annuaire-public", html)
+        self.assertNotIn("🔎 Vérifier", html)
+        self.assertIn('data-card-pro-refresh type="button" title="Rafraîchir le suivi carte pro"', html)
         self.assertIn('data-card-pro-followup', html)
         self.assertIn('data-nom="NONVTC"', html)
         self.assertIn('data-nub="1050370"', html)
