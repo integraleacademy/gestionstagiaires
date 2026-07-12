@@ -6,7 +6,7 @@ self.addEventListener('push', (event) => {
     data = {};
   }
 
-  const title = (data.title || 'Intégrale Academy').trim() || 'Intégrale Academy';
+  const title = (data.title || 'Intégrale Connect').trim() || 'Intégrale Connect';
   const body = (data.body || 'Nouvelle notification admin').trim() || 'Nouvelle notification admin';
   const icon = data.icon || '/static/logo-integrale.png';
   const badge = data.badge || icon;
