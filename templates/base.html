@@ -60,6 +60,12 @@
     .notif-icon-btn{ border:1px solid #d1d5db; background:#fff; border-radius:10px; padding:4px 8px; cursor:pointer; }
     .notif-empty{ color:#6b7280; font-size:13px; padding:8px; }
   </style>
+  {% if assisted_partner_name %}
+    <div style="background:#1d4ed8;color:#fff;text-align:center;font-weight:800;padding:10px 12px;">
+      Vous consultez actuellement l’espace de {{ assisted_partner_name }}
+      <form method="post" action="{{ url_for('admin_partner_assist_exit') }}" style="display:inline;margin-left:12px;"><button type="submit" style="border:0;border-radius:999px;padding:5px 10px;font-weight:800;">Quitter l’espace partenaire</button></form>
+    </div>
+  {% endif %}
   <div class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="{{ url_for('admin_sessions') }}">
@@ -131,6 +137,15 @@
           <button type="button" class="btn" style="font-size:13px;padding:6px 10px;background:#dc2626;color:#fff;border-color:#dc2626;" onclick="openModal('financementRefuseModal')">
             FT Refusé
           </button>
+          {% if is_super_admin %}
+            <a href="{{ url_for('admin_partners') }}"
+               style="font-size:13px;color:#0f172a;text-decoration:none;padding:7px 12px;border:1px solid #bfdbfe;border-radius:10px;background:linear-gradient(135deg,#eff6ff,#dbeafe);font-weight:900;">
+              Gérer les partenaires
+            </a>
+          {% endif %}
+          {% if current_partner_name %}
+            <span style="font-size:12px;color:#475569;font-weight:800;">{{ current_partner_name }}</span>
+          {% endif %}
           <a href="{{ url_for('admin_logout') }}"
              style="font-size:13px;color:#555;text-decoration:none;padding:6px 10px;border:1px solid #ddd;border-radius:8px;">
             Déconnexion

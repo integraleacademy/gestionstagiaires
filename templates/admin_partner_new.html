@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head"><h1>Nouveau partenaire</h1><a class="btn" href="{{ url_for('admin_partners') }}">Annuler</a></div>
+<form method="post" class="card" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:980px;">
+{% for name,label,required in [('name','Nom commercial',1),('legal_name','Raison sociale',0),('siret','SIRET',0),('contact_first_name','Prénom responsable',1),('contact_last_name','Nom responsable',1),('email','Email responsable',1),('phone','Téléphone',0),('address','Adresse',0),('postal_code','Code postal',0),('city','Ville',0),('subscription_plan','Formule',0),('max_users','Nombre maximal utilisateurs',0)] %}
+<label>{{ label }}<input name="{{ name }}" {% if required %}required{% endif %} style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;"></label>
+{% endfor %}
+<label>Statut initial<select name="status" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;"><option value="trial">En essai</option><option value="active">Actif</option><option value="suspended">Suspendu</option></select></label>
+<label>Fin d'essai<input type="date" name="trial_ends_at" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;"></label>
+<button class="btn btn-blue" type="submit">Créer et inviter</button>
+</form>
+{% endblock %}
