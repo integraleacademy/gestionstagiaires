@@ -15,6 +15,19 @@
 <div class="card"><h2>Utilisation</h2><p><strong>{{ counts.users }}</strong> utilisateurs</p><p><strong>{{ counts.trainees }}</strong> stagiaires</p><p><strong>{{ counts.sessions }}</strong> sessions</p><p>Créé le {{ partner.created_at|frdatetime }}</p><h3>Utilisateurs</h3>{% for u in users %}<p>{{ u.email }} — {{ u.role }} {% if not u.active %}(désactivé){% endif %}</p>{% else %}<p>Aucun utilisateur.</p>{% endfor %}</div>
 
 <div class="card" style="grid-column:1/-1">
+  <h2>Accès au compte</h2>
+  {% set account_user = users[0] if users else {} %}
+  <p><strong>Adresse e-mail de connexion :</strong> {{ account_user.email if account_user else partner.email }}</p>
+  <p><strong>Rôle :</strong> {{ account_user.role if account_user else '—' }}</p>
+  <p><strong>Statut de l’utilisateur :</strong> {{ 'actif' if account_user and account_user.active else 'désactivé' }}</p>
+  <p><strong>Compte activé :</strong> {{ 'oui' if account_user and account_user.invitation_activated_at else 'non' }}</p>
+  <p><strong>Mot de passe défini :</strong> {{ 'oui' if account_user and account_user.password_hash else 'non' }}</p>
+  <p><strong>Date d’activation :</strong> {{ account_user.invitation_activated_at|frdatetime if account_user and account_user.invitation_activated_at else '—' }}</p>
+  <p><strong>Dernière connexion :</strong> {{ account_user.last_login_at|frdatetime if account_user and account_user.last_login_at else '—' }}</p>
+  <p><strong>Statut du partenaire :</strong> {{ partner.status }}</p>
+</div>
+
+<div class="card" style="grid-column:1/-1">
   <h2>Invitation partenaire</h2>
   <p><strong>E-mail de connexion :</strong> {{ users[0].email if users else partner.email }}</p>
   <p><strong>Statut du compte :</strong> {{ 'actif' if users and users[0].active else 'désactivé' }}</p>
@@ -33,7 +46,7 @@
     <form method="post" action="{{ url_for('admin_partner_send_invitation', partner_id=partner.id) }}"><button class="btn btn-blue" type="submit">Envoyer l’invitation</button></form>
     <form method="post" action="{{ url_for('admin_partner_send_invitation', partner_id=partner.id) }}"><button class="btn" type="submit">Renvoyer l’invitation</button></form>
     <form method="post" action="{{ url_for('admin_partner_new_invitation', partner_id=partner.id) }}"><button class="btn" type="submit">Générer une nouvelle invitation</button></form>
-    {% if can_copy_test_activation_link %}<button class="btn" type="button" data-copy-activation-url="{{ url_for('admin_partner_activation_link', partner_id=partner.id) }}">Copier le lien d’activation de test</button>{% endif %}
+    {% if can_copy_test_activation_link %}<button class="btn" type="button" data-copy-activation-url="{{ url_for('admin_partner_activation_link', partner_id=partner.id) }}">Générer un nouveau lien d’activation</button>{% endif %}
   </div>
 </div>
 </div>
