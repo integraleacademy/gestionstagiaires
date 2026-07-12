@@ -7284,7 +7284,42 @@ def _first_non_empty_value(payload: Any, keys: Iterable[str]) -> str:
     return _walk(payload)
 
 
-def fetch_cnaps_public_annuaire(nom: str, nub: str) -> Optional[Dict[str, str]]:
+def _extract_cnaps_public_annuaire_results(payload: Any) -> List[Dict[str, str]]:
+    """Return all title rows found in the CNAPS public annuaire response."""
+    rows: List[Dict[str, str]] = []
+    seen: Set[Tuple[str, str, str]] = set()
+    activity_keys = ["activite", "activité", "activity", "libelleActivite"]
+    validity_keys = ["validiteTitre", "validité du titre", "validite_du_titre", "validity", "statutTitre", "etatTitre"]
+    date_keys = ["dateValiditeTitre", "date de validité du titre", "date_validite_titre", "dateFinValidite"]
+
+    def add_from(value: Any) -> None:
+        if not isinstance(value, dict):
+            return
+        activite = _first_non_empty_value(value, activity_keys)
+        validite = _first_non_empty_value(value, validity_keys)
+        date_validite = _first_non_empty_value(value, date_keys)
+        if not activite and not validite and not date_validite:
+            return
+        key = (activite, validite, date_validite)
+        if key in seen:
+            return
+        seen.add(key)
+        rows.append({"activite": activite, "validite_titre": validite, "date_validite_titre": date_validite})
+
+    def walk(value: Any) -> None:
+        if isinstance(value, dict):
+            add_from(value)
+            for item in value.values():
+                walk(item)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+
+    walk(payload)
+    return rows
+
+
+def fetch_cnaps_public_annuaire(nom: str, nub: str) -> Optional[Dict[str, Any]]:
     endpoint = (CNAPS_PUBLIC_ANNUAIRE_ENDPOINT or "").strip()
     nom = " ".join((nom or "").strip().split()).upper()
     nub = re.sub(r"\D+", "", str(nub or ""))[-7:]
@@ -7306,12 +7341,10 @@ def fetch_cnaps_public_annuaire(nom: str, nub: str) -> Optional[Dict[str, str]]:
     except Exception:
         return None
 
-    activite = _first_non_empty_value(data, ["activite", "activité", "activity", "libelleActivite"])
-    validite = _first_non_empty_value(data, ["validiteTitre", "validité du titre", "validite_du_titre", "validity", "statutTitre", "etatTitre"])
-    date_validite = _first_non_empty_value(data, ["dateValiditeTitre", "date de validité du titre", "date_validite_titre", "dateFinValidite"])
-    if not activite and not validite and not date_validite:
+    results = _extract_cnaps_public_annuaire_results(data)
+    if not results:
         return None
-    return {"activite": activite, "validite_titre": validite, "date_validite_titre": date_validite}
+    return {**results[0], "results": results}
 
 def fetch_cnaps_lookup_by_name(nom: str, prenom: str) -> Optional[Dict[str, Any]]:
     if not CNAPS_LOOKUP_ENDPOINT:
