@@ -3630,7 +3630,15 @@ def _normalize_afc_email(raw_email: Any) -> str:
 
 import base64
 
-EMAIL_RECIPIENT_BLOCKLIST = {"clement@integraleacademy.com"}
+def _parse_email_recipient_blocklist(raw_value: str) -> Set[str]:
+    return {
+        item.strip().lower()
+        for item in re.split(r"[,;\s]+", raw_value or "")
+        if item.strip()
+    }
+
+
+EMAIL_RECIPIENT_BLOCKLIST = _parse_email_recipient_blocklist(os.environ.get("EMAIL_RECIPIENT_BLOCKLIST", ""))
 
 
 def _is_blocked_email_recipient(email: str) -> bool:
