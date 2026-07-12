@@ -112,3 +112,63 @@ class MultiPartnerIsolationTests(unittest.TestCase):
             gestion_app.get_partner_storage_path("../../etc", "stagiaires")
         with self.assertRaises(ValueError):
             gestion_app.get_partner_storage_path(self.partner_a, "../secret")
+
+    def test_partner_login_with_password_hash_opens_requested_admin_page(self):
+        data = gestion_app.load_data()
+        data["users"].append({
+            "id": "user-a",
+            "partner_id": self.partner_a,
+            "email": "Admin@Example.com",
+            "role": "partner_admin",
+            "active": True,
+            "password_hash": gestion_app._hash_password("Password1234"),
+        })
+        gestion_app.save_data(data)
+        response = self.client.post(
+            "/admin/login",
+            data={"username": "admin@example.com", "password": "Password1234", "next": "/admin/sessions"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/admin/sessions")
+        with self.client.session_transaction() as sess:
+            self.assertTrue(sess["admin_logged_in"])
+            self.assertEqual(sess["admin_role"], "partner_admin")
+            self.assertEqual(sess["partner_id"], self.partner_a)
+
+    def test_partner_login_failure_displays_visible_error(self):
+        data = gestion_app.load_data()
+        data["users"].append({
+            "id": "user-a",
+            "partner_id": self.partner_a,
+            "email": "admin@example.com",
+            "role": "partner_admin",
+            "active": True,
+            "password_hash": gestion_app._hash_password("Password1234"),
+        })
+        gestion_app.save_data(data)
+        response = self.client.post(
+            "/admin/login",
+            data={"username": "admin@example.com", "password": "wrong", "next": "/admin/sessions"},
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Identifiant ou mot de passe incorrect", response.get_data(as_text=True))
+
+    def test_unactivated_partner_login_displays_activation_message(self):
+        data = gestion_app.load_data()
+        data["users"].append({
+            "id": "user-a",
+            "partner_id": self.partner_a,
+            "email": "admin@example.com",
+            "role": "partner_admin",
+            "active": True,
+            "password_hash": "",
+        })
+        gestion_app.save_data(data)
+        response = self.client.post(
+            "/admin/login",
+            data={"username": "admin@example.com", "password": "Password1234", "next": "/admin/sessions"},
+            follow_redirects=True,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("pas encore activé", response.get_data(as_text=True))
