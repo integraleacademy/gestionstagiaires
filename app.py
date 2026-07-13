@@ -11959,7 +11959,16 @@ def partner_subscription():
     if not partner:
         return redirect(url_for("admin_sessions"))
     save_data(data)
-    return render_template("partner_subscription.html", partner=partner, subscription=partner.get("subscription") or {}, module_pricing=PARTNER_SUBSCRIPTION_MODULE_PRICING, status_labels=PARTNER_SUBSCRIPTION_STATUS_LABELS, integral_plus_price=PARTNER_INTEGRAL_CONNECT_PLUS_MONTHLY_PRICE, annual_free_months=PARTNER_SUBSCRIPTION_ANNUAL_FREE_MONTHS)
+    return render_template("partner_subscription.html", partner=partner, subscription=partner.get("subscription") or {}, module_pricing=PARTNER_SUBSCRIPTION_MODULE_PRICING, status_labels=PARTNER_SUBSCRIPTION_STATUS_LABELS)
+
+@app.get("/admin/partner/abonnement/evolution")
+@admin_login_required
+def partner_subscription_upgrade():
+    data, partner = _partner_space_partner_or_redirect()
+    if not partner:
+        return redirect(url_for("admin_sessions"))
+    save_data(data)
+    return render_template("partner_subscription_upgrade.html", partner=partner, subscription=partner.get("subscription") or {}, module_pricing=PARTNER_SUBSCRIPTION_MODULE_PRICING, status_labels=PARTNER_SUBSCRIPTION_STATUS_LABELS, integral_plus_price=PARTNER_INTEGRAL_CONNECT_PLUS_MONTHLY_PRICE, annual_free_months=PARTNER_SUBSCRIPTION_ANNUAL_FREE_MONTHS)
 
 @app.post("/admin/partner/abonnement")
 @admin_login_required
