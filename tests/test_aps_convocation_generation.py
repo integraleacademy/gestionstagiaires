@@ -969,6 +969,27 @@ class ApsConventionGenerationTests(unittest.TestCase):
         self.assertNotIn("Intégrale Academy SAS", generated_text)
         self.assertNotIn("93830739683", generated_text)
 
+class AutomationPartnerModuleTests(unittest.TestCase):
+    def test_partner_without_automations_module_disables_trainee_automation(self):
+        session_obj = {"training_type": "APS", "name": "Formation APS"}
+        partner = {"id": "partner-1", "enabled_modules": ["training_aps", "cnaps"]}
+
+        with app.app.test_request_context("/"):
+            with mock.patch.object(app, "_is_super_admin_session", return_value=False), \
+                 mock.patch.object(app, "_is_partner_scoped_session", return_value=True), \
+                 mock.patch.object(app, "_current_partner", return_value=partner):
+                self.assertFalse(app._automation_is_enabled(session_obj))
+
+    def test_partner_with_automations_module_enables_trainee_automation(self):
+        session_obj = {"training_type": "APS", "name": "Formation APS"}
+        partner = {"id": "partner-1", "enabled_modules": ["training_aps", "automations"]}
+
+        with app.app.test_request_context("/"):
+            with mock.patch.object(app, "_is_super_admin_session", return_value=False), \
+                 mock.patch.object(app, "_is_partner_scoped_session", return_value=True), \
+                 mock.patch.object(app, "_current_partner", return_value=partner):
+                self.assertTrue(app._automation_is_enabled(session_obj))
+
 
 if __name__ == "__main__":
     unittest.main()
