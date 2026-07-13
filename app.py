@@ -2356,13 +2356,17 @@ def _ensure_multi_partner_payload(data: Dict[str, Any]) -> bool:
     if not isinstance(data.get("activity_logs"), list):
         data["activity_logs"] = []
         changed = True
+    for key in ("partner_notifications", "support_tickets"):
+        if not isinstance(data.get(key), list):
+            data[key] = []
+            changed = True
     for s in data.get("sessions") or []:
         if isinstance(s, dict) and not s.get("partner_id"):
             s["partner_id"] = INTEGRALE_PARTNER_ID; changed = True
         for t in _session_trainees_list(s) if isinstance(s, dict) else []:
             if isinstance(t, dict) and not t.get("partner_id"):
                 t["partner_id"] = s.get("partner_id") or INTEGRALE_PARTNER_ID; changed = True
-    for key in ("positioning_tests", "notifications_edof", "notifications_financement_refuse", "notifications_prelevements", "notifications_prelevement_non_valides", "notifications_phone_relances", "notifications_vae_relances", "notifications_cnaps_pre_relances", "notifications_test_fr", "notifications_convention_unsigned", "notifications_vtc_books", "notifications_admin"):
+    for key in ("positioning_tests", "notifications_edof", "notifications_financement_refuse", "notifications_prelevements", "notifications_prelevement_non_valides", "notifications_phone_relances", "notifications_vae_relances", "notifications_cnaps_pre_relances", "notifications_test_fr", "notifications_convention_unsigned", "notifications_vtc_books", "notifications_admin", "partner_notifications", "support_tickets", "activity_logs"):
         for item in data.get(key) or []:
             if isinstance(item, dict) and not item.get("partner_id"):
                 item["partner_id"] = INTEGRALE_PARTNER_ID; changed = True
@@ -2373,7 +2377,7 @@ def _filter_data_for_partner(data: Dict[str, Any], partner_id: str) -> Dict[str,
     scoped = copy.deepcopy(data)
     scoped["sessions"] = [s for s in scoped.get("sessions", []) if not isinstance(s, dict) or s.get("partner_id") == partner_id]
     scoped["users"] = [u for u in scoped.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id]
-    for key in ("positioning_tests", "notifications_edof", "notifications_financement_refuse", "notifications_prelevements", "notifications_prelevement_non_valides", "notifications_phone_relances", "notifications_vae_relances", "notifications_cnaps_pre_relances", "notifications_test_fr", "notifications_convention_unsigned", "notifications_vtc_books", "notifications_admin"):
+    for key in ("positioning_tests", "notifications_edof", "notifications_financement_refuse", "notifications_prelevements", "notifications_prelevement_non_valides", "notifications_phone_relances", "notifications_vae_relances", "notifications_cnaps_pre_relances", "notifications_test_fr", "notifications_convention_unsigned", "notifications_vtc_books", "notifications_admin", "partner_notifications", "support_tickets", "activity_logs"):
         if isinstance(scoped.get(key), list):
             scoped[key] = [x for x in scoped[key] if not isinstance(x, dict) or x.get("partner_id") == partner_id]
     return scoped
@@ -11680,8 +11684,16 @@ PARTNER_SUBSCRIPTION_MODULE_PRICING = {
     "partners": {"label": "Partenaires", "icon": "🤝", "price": 39, "description": "Gestion multi-partenaires et accès dédiés.", "features": ["Comptes partenaires", "Isolation données", "Modules"]},
     "cpf": {"label": "CPF", "icon": "🎓", "price": 59, "description": "Suivi des demandes CPF et dossiers WeDoF.", "features": ["Demandes CPF", "Statuts", "Exports"]},
     "training_management": {"label": "Gestion OF", "icon": "🏫", "price": 79, "description": "Gestion opérationnelle des sessions et stagiaires.", "features": ["Sessions", "Stagiaires", "Documents"]},
+    "electronic_signature": {"label": "Signature électronique", "icon": "✍️", "price": 29, "description": "Parcours de signature des documents.", "features": ["Envois", "Suivi", "Preuves"]},
+    "digital_attendance": {"label": "Émargement numérique", "icon": "🧾", "price": 35, "description": "Feuilles d’émargement digitales.", "features": ["Présences", "Relances", "Exports"]},
+    "invoicing": {"label": "Facturation", "icon": "💶", "price": 45, "description": "Préparation et suivi des factures.", "features": ["Devis", "Factures", "Suivi"]},
+    "qualiopi": {"label": "Qualiopi", "icon": "🏅", "price": 25, "description": "Aide au suivi qualité.", "features": ["Indicateurs", "Preuves", "Alertes"]},
+    "document_management": {"label": "Gestion documentaire", "icon": "📂", "price": 39, "description": "Centralisation des documents.", "features": ["Classement", "Recherche", "Historique"]},
+    "student_extranet": {"label": "Extranet stagiaire", "icon": "🎒", "price": 49, "description": "Accès dédié aux stagiaires.", "features": ["Documents", "Suivi", "Dépôts"]},
+    "trainer_extranet": {"label": "Extranet formateur", "icon": "👩‍🏫", "price": 49, "description": "Accès dédié aux formateurs.", "features": ["Sessions", "Présences", "Documents"]},
+    "api_integrations": {"label": "API et intégrations", "icon": "🔌", "price": 99, "description": "Connecteurs et API sur demande.", "features": ["API", "Webhooks", "Connecteurs"]},
 }
-PARTNER_SUBSCRIPTION_STATUS_LABELS = {"active": "Actif", "trial": "Essai", "suspended": "Suspendu", "expired": "Expiré"}
+PARTNER_SUBSCRIPTION_STATUS_LABELS = {"active": "Actif", "trial": "Essai", "suspended": "Suspendu", "expired": "Expiré", "cancelled": "Résilié"}
 PARTNER_INFO_FIELDS = ("name", "legal_name", "siret", "activity_declaration_number", "address", "address_extra", "postal_code", "city", "country", "contact_first_name", "contact_last_name", "contact_role", "email", "phone", "website")
 PARTNER_LOGO_MAX_BYTES = 3 * 1024 * 1024
 PARTNER_LOGO_ALLOWED_MIMES = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp"}
@@ -11689,14 +11701,49 @@ PARTNER_LOGO_ALLOWED_MIMES = {"image/png": ".png", "image/jpeg": ".jpg", "image/
 def _count_partner_trainees(data: Dict[str, Any], partner_id: str) -> int:
     return sum(len(_session_trainees_list(s)) for s in data.get("sessions", []) if isinstance(s, dict) and s.get("partner_id") == partner_id)
 
+def _new_billing_period(subscription: Dict[str, Any], *, usage_count: int = 0, status: str = "open") -> Dict[str, Any]:
+    now = _now_iso() if "_now_iso" in globals() else datetime.datetime.utcnow().isoformat() + "Z"
+    limit = subscription.get("trainee_limit")
+    unlimited = bool(subscription.get("trainee_unlimited")) or limit is None
+    included = None if unlimited else int(limit or 0)
+    unit_price = float(subscription.get("extra_trainee_unit_price") or 0)
+    overage = 0 if unlimited else max(int(usage_count or 0) - int(included or 0), 0)
+    return {
+        "id": str(uuid.uuid4()),
+        "started_at": now,
+        "ended_at": None,
+        "status": status,
+        "trainee_usage_count": int(usage_count or 0),
+        "trainee_limit": None if unlimited else int(included or 0),
+        "included_trainees": None if unlimited else int(included or 0),
+        "unit_price": unit_price,
+        "estimated_amount": round(overage * unit_price, 2),
+        "closed_by_user_id": None,
+        "closed_at": None,
+        "pricing_snapshot": {"trainee_limit": None if unlimited else int(included or 0), "included_trainees": None if unlimited else int(included or 0), "unit_price": unit_price},
+    }
+
 def _default_subscription_for_partner(data: Dict[str, Any], partner: Dict[str, Any]) -> Dict[str, Any]:
     enabled = _partner_enabled_modules(partner) if "_partner_enabled_modules" in globals() else set(partner.get("enabled_modules") or [])
-    return {"plan_name": partner.get("subscription_plan") or "Essentiel", "status": "trial" if partner.get("status") == "trial" else ("suspended" if partner.get("status") == "suspended" else "active"), "started_at": partner.get("subscription_started_at") or None, "renews_at": partner.get("subscription_ends_at") or None, "modules": {"crm": "sales" in enabled, "partners": True, "cpf": "cpf" in enabled, "training_management": any(k in enabled for k in ("training_aps", "training_ssiap", "training_a3p", "training_vtc", "training_dirigeant"))}, "module_prices": {}, "trainee_limit": 100, "trainee_unlimited": False, "trainee_usage_count": _count_partner_trainees(data, partner.get("id") or ""), "trainee_usage_reset_at": None, "trainee_usage_migrated_at": _now_iso() if "_now_iso" in globals() else datetime.datetime.utcnow().isoformat()+"Z", "trainee_usage_reset_history": []}
+    count = _count_partner_trainees(data, partner.get("id") or "")
+    sub = {"plan_name": partner.get("subscription_plan") or "Essentiel", "status": "trial" if partner.get("status") == "trial" else ("suspended" if partner.get("status") == "suspended" else "active"), "started_at": partner.get("subscription_started_at") or None, "renews_at": partner.get("subscription_ends_at") or None, "billing_mode": "fixed", "modules": {"crm": "sales" in enabled, "partners": True, "cpf": "cpf" in enabled, "training_management": any(k in enabled for k in ("training_aps", "training_ssiap", "training_a3p", "training_vtc", "training_dirigeant"))}, "module_prices": {}, "trainee_limit": 100, "included_trainees": 100, "extra_trainee_unit_price": 0, "trainee_unlimited": False, "trainee_usage_count": count, "trainee_usage_reset_at": None, "trainee_usage_migrated_at": _now_iso() if "_now_iso" in globals() else datetime.datetime.utcnow().isoformat()+"Z", "trainee_usage_reset_history": [], "billing_periods": [], "current_period_id": None}
+    period = _new_billing_period(sub, usage_count=count)
+    sub["billing_periods"] = [period]
+    sub["current_period_id"] = period["id"]
+    return sub
 
 def normalize_partner_subscription(data: Dict[str, Any], partner: Dict[str, Any]) -> bool:
     changed = False
     if "logo_url" not in partner:
         partner["logo_url"] = partner.get("logo_path") or ""; changed = True
+    if not isinstance(partner.get("branding"), dict):
+        partner["branding"] = {"primary_color": None, "secondary_color": None, "favicon_url": None, "email_signature": None, "footer_text": None, "white_label_enabled": False}; changed = True
+    if not isinstance(partner.get("notification_settings"), dict):
+        partner["notification_settings"] = {"in_app": True, "email": False, "mode": "in_app"}; changed = True
+    if not isinstance(partner.get("support_settings"), dict):
+        partner["support_settings"] = {}; changed = True
+    if not isinstance(partner.get("onboarding"), dict):
+        partner["onboarding"] = {"dismissed": False, "completed_steps": []}; changed = True
     sub = partner.get("subscription") if isinstance(partner.get("subscription"), dict) else None
     default = _default_subscription_for_partner(data, partner)
     if sub is None:
@@ -11710,9 +11757,22 @@ def normalize_partner_subscription(data: Dict[str, Any], partner: Dict[str, Any]
         for k, v in default["modules"].items():
             if k not in sub["modules"]:
                 sub["modules"][k] = v; changed = True
+    if "included_trainees" not in sub:
+        sub["included_trainees"] = sub.get("trainee_limit"); changed = True
+    if "extra_trainee_unit_price" not in sub:
+        sub["extra_trainee_unit_price"] = 0; changed = True
+    if "billing_mode" not in sub:
+        sub["billing_mode"] = "fixed"; changed = True
     if not sub.get("trainee_usage_migrated_at"):
         sub["trainee_usage_count"] = _count_partner_trainees(data, partner.get("id") or "")
         sub["trainee_usage_migrated_at"] = _now_iso(); changed = True
+    periods = sub.get("billing_periods") if isinstance(sub.get("billing_periods"), list) else []
+    if not periods:
+        period = _new_billing_period(sub, usage_count=int(sub.get("trainee_usage_count") or 0))
+        sub["billing_periods"] = [period]; sub["current_period_id"] = period["id"]; changed = True
+    elif not sub.get("current_period_id") or not any(p.get("id") == sub.get("current_period_id") for p in periods if isinstance(p, dict)):
+        open_period = next((p for p in periods if isinstance(p, dict) and p.get("status") == "open"), None) or periods[0]
+        sub["current_period_id"] = open_period.get("id"); changed = True
     return changed
 
 def normalize_all_partner_subscriptions(data: Dict[str, Any]) -> bool:
@@ -11731,9 +11791,18 @@ def increment_partner_trainee_usage(data: Dict[str, Any], partner_id: str, train
     normalize_partner_subscription(data, partner)
     sub = partner.setdefault("subscription", {})
     sub["trainee_usage_count"] = int(sub.get("trainee_usage_count") or 0) + 1
+    periods = sub.setdefault("billing_periods", [])
+    period = next((p for p in periods if isinstance(p, dict) and p.get("id") == sub.get("current_period_id")), None)
+    if not period:
+        period = _new_billing_period(sub, usage_count=0); periods.insert(0, period); sub["current_period_id"] = period["id"]
+    period["trainee_usage_count"] = int(period.get("trainee_usage_count") or 0) + 1
+    limit = period.get("included_trainees")
+    unit = float(period.get("unit_price") or 0)
+    period["estimated_amount"] = 0 if limit is None else round(max(int(period["trainee_usage_count"]) - int(limit or 0), 0) * unit, 2)
     now = _now_iso()
     trainee["subscription_usage_counted"] = True
     trainee["subscription_usage_counted_at"] = now
+    trainee["subscription_usage_period_id"] = period.get("id")
     app.logger.info("partner_usage_increment result=success partner_id=%s trainee_id=%s count=%s", partner_id, trainee.get("id"), sub["trainee_usage_count"])
     return True
 
@@ -11884,6 +11953,104 @@ def _save_partner_logo(partner_id: str, file_storage) -> str:
     file_storage.save(path)
     return _tokenize_path(path)
 
+
+PARTNER_NAV_ITEMS = [
+    ("admin_sessions", "Tableau de bord", "🏠", "view_trainees"),
+    ("partner_information", "Mes informations", "🏢", "edit_partner_information"),
+    ("partner_subscription", "Mon abonnement", "💳", "view_subscription"),
+    ("partner_team", "Mon équipe", "👥", "manage_team"),
+    ("partner_notifications", "Notifications", "🔔", "view_notifications"),
+    ("partner_activity", "Journal d’activité", "📜", "view_activity"),
+    ("partner_security", "Sécurité", "🔐", "manage_security"),
+    ("partner_exports", "Exports", "📤", "export_data"),
+    ("partner_settings", "Paramètres", "⚙️", "manage_settings"),
+    ("partner_support", "Aide et support", "❓", "view_support"),
+]
+PARTNER_ROLE_PERMISSIONS = {
+    "partner_admin": {"view_trainees", "create_trainee", "edit_trainee", "delete_trainee", "view_documents", "export_data", "manage_team", "view_subscription", "edit_partner_information", "view_activity", "view_notifications", "manage_security", "manage_settings", "view_support", "access_crm", "access_cpf", "access_training_management", "access_partners"},
+    "direction": {"view_trainees", "create_trainee", "edit_trainee", "view_documents", "export_data", "view_subscription", "view_activity", "view_notifications", "manage_settings", "view_support", "access_crm", "access_cpf", "access_training_management"},
+    "commercial": {"view_trainees", "create_trainee", "edit_trainee", "view_notifications", "view_support", "access_crm"},
+    "gestionnaire_administratif": {"view_trainees", "create_trainee", "edit_trainee", "view_documents", "export_data", "view_notifications", "view_support", "access_training_management", "access_cpf"},
+    "formateur": {"view_trainees", "view_documents", "view_notifications", "view_support"},
+    "read_only": {"view_trainees", "view_documents", "view_subscription", "view_notifications", "view_support"},
+}
+
+def partner_user_has_permission(permission: str) -> bool:
+    if _is_super_admin_session() and session.get("assist_partner_id"):
+        return True
+    role = _current_session_role() or "read_only"
+    return permission in PARTNER_ROLE_PERMISSIONS.get(role, PARTNER_ROLE_PERMISSIONS.get("read_only", set()))
+
+def partner_permission_required(permission: str):
+    def deco(view):
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            if not _is_partner_scoped_session() and not session.get("assist_partner_id"):
+                abort(403)
+            if not partner_user_has_permission(permission):
+                abort(403)
+            return view(*args, **kwargs)
+        return wrapped
+    return deco
+
+@app.context_processor
+def inject_partner_navigation():
+    return {"partner_nav_items": PARTNER_NAV_ITEMS, "partner_user_has_permission": partner_user_has_permission}
+
+@app.get("/admin/partner/equipe")
+@admin_login_required
+@partner_permission_required("manage_team")
+def partner_team():
+    data, partner = _partner_space_partner_or_redirect()
+    users = [u for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == (partner or {}).get("id")]
+    return render_template("partner_placeholder.html", page_title="Mon équipe", page_intro="Gestion des membres rattachés à votre entreprise.", partner=partner, rows=users, prepared_features=["Invitation et rôles centralisés", "Protection du dernier administrateur partenaire", "Révocation de sessions à connecter au magasin de sessions"])
+
+@app.get("/admin/partner/notifications")
+@admin_login_required
+@partner_permission_required("view_notifications")
+def partner_notifications():
+    data, partner = _partner_space_partner_or_redirect()
+    notes = [n for n in data.get("partner_notifications", []) if isinstance(n, dict) and n.get("partner_id") == (partner or {}).get("id")]
+    return render_template("partner_placeholder.html", page_title="Notifications", page_intro="Centre de notifications préparé avec isolation partenaire.", partner=partner, rows=notes, prepared_features=["Clé d’idempotence par événement", "Préférences in-app / e-mail / aucune", "E-mail non activé sans configuration SMTP/Brevo dédiée"])
+
+@app.get("/admin/partner/activite")
+@admin_login_required
+@partner_permission_required("view_activity")
+def partner_activity():
+    data, partner = _partner_space_partner_or_redirect()
+    logs = [l for l in data.get("activity_logs", []) if isinstance(l, dict) and l.get("partner_id") == (partner or {}).get("id")]
+    return render_template("partner_placeholder.html", page_title="Journal d’activité", page_intro="Actions importantes enregistrées sans secrets ni tokens.", partner=partner, rows=list(reversed(logs[-100:])), prepared_features=["Connexion et erreurs de connexion", "Création/modification de stagiaire", "Abonnement, logo et périodes"])
+
+@app.get("/admin/partner/securite")
+@admin_login_required
+@partner_permission_required("manage_security")
+def partner_security():
+    data, partner = _partner_space_partner_or_redirect()
+    return render_template("partner_placeholder.html", page_title="Sécurité", page_intro="Paramètres de sécurité du compte. La 2FA TOTP nécessite l’ajout d’une librairie et d’un stockage chiffré avant activation.", partner=partner, rows=[], prepared_features=["Cookies sécurisés et expiration de session existants", "Structure pour 2FA réelle, non affichée comme active", "Journalisation des échecs de connexion"])
+
+@app.get("/admin/partner/exports")
+@admin_login_required
+@partner_permission_required("export_data")
+def partner_exports():
+    data, partner = _partner_space_partner_or_redirect()
+    return render_template("partner_placeholder.html", page_title="Exports", page_intro="Exports filtrés côté serveur par partner_id.", partner=partner, rows=[], prepared_features=["CSV stagiaires", "Historique de consommation", "Journal d’activité", "Avertissement données personnelles"])
+
+@app.get("/admin/partner/parametres")
+@admin_login_required
+@partner_permission_required("manage_settings")
+def partner_settings():
+    data, partner = _partner_space_partner_or_redirect()
+    prefs = partner.setdefault("notification_settings", {}) if partner else {}
+    return render_template("partner_placeholder.html", page_title="Paramètres", page_intro="Préférences par défaut : français, Europe/Paris, format français.", partner=partner, rows=[prefs], prepared_features=["Notifications", "Préférences d’affichage", "Préparation marque blanche selon abonnement"])
+
+@app.get("/admin/partner/support")
+@admin_login_required
+@partner_permission_required("view_support")
+def partner_support():
+    data, partner = _partner_space_partner_or_redirect()
+    tickets = [t for t in data.get("support_tickets", []) if isinstance(t, dict) and t.get("partner_id") == (partner or {}).get("id")]
+    return render_template("partner_placeholder.html", page_title="Aide et support", page_intro="FAQ, guides et tickets isolés par partenaire.", partner=partner, rows=tickets, prepared_features=["Formulaire de ticket à brancher", "Notes internes réservées admin", "Historique de statut"])
+
 @app.route("/admin/partner/informations", methods=["GET", "POST"])
 @admin_login_required
 @admin_write_required
@@ -11940,11 +12107,24 @@ def admin_partner_reset_usage(partner_id: str):
     data = load_data(); partner = _partner_or_404(data, partner_id); normalize_partner_subscription(data, partner)
     sub = partner.setdefault("subscription", {})
     old = int(sub.get("trainee_usage_count") or 0); now = _now_iso()
+    periods = sub.setdefault("billing_periods", [])
+    current = next((p for p in periods if isinstance(p, dict) and p.get("id") == sub.get("current_period_id")), None)
+    if current:
+        current["trainee_usage_count"] = old
+        limit = current.get("included_trainees")
+        unit = float(current.get("unit_price") or sub.get("extra_trainee_unit_price") or 0)
+        current["estimated_amount"] = 0 if limit is None else round(max(old - int(limit or 0), 0) * unit, 2)
+        current["status"] = "closed"
+        current["closed_by_user_id"] = session.get("admin_username") or session.get("admin_role") or "admin"
+        current["closed_at"] = now
+        current["ended_at"] = now
     sub["trainee_usage_count"] = 0; sub["trainee_usage_reset_at"] = now
-    sub.setdefault("trainee_usage_reset_history", []).insert(0, {"date": now, "admin": session.get("admin_username") or "admin", "old_value": old, "new_value": 0})
+    new_period = _new_billing_period(sub, usage_count=0)
+    periods.insert(0, new_period); sub["current_period_id"] = new_period["id"]
+    sub.setdefault("trainee_usage_reset_history", []).insert(0, {"date": now, "admin": session.get("admin_username") or "admin", "old_value": old, "new_value": 0, "closed_period_id": (current or {}).get("id"), "new_period_id": new_period.get("id")})
     del sub["trainee_usage_reset_history"][10:]
-    _append_activity_log(data, "partner_subscription_usage_reset", "partner", partner_id, partner_id, {"old_value": old, "new_value": 0})
-    save_data(data); flash("Compteur remis à zéro.", "success")
+    _append_activity_log(data, "partner_subscription_period_closed", "partner", partner_id, partner_id, {"old_value": old, "new_value": 0, "closed_period_id": (current or {}).get("id"), "new_period_id": new_period.get("id")})
+    save_data(data); flash("Période clôturée et nouveau compteur ouvert à zéro.", "success")
     return redirect(url_for("admin_partner_detail", partner_id=partner_id) + "#subscription")
 
 @app.get("/admin/partners")

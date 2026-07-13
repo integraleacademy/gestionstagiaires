@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head"><div><h1>{{ page_title }}</h1><p class="muted">{{ page_intro }}</p></div><a class="btn" href="{{ url_for('admin_sessions') }}">← Tableau de bord</a></div>
+<div class="card saas-card">
+  <h2>Fonctionnalité SaaS préparée proprement</h2>
+  <p>Cette page est disponible dans la navigation et respecte l’isolation du partenaire actif. Les éléments ci-dessous sont prêts côté structure, mais les actions avancées ne sont pas affichées comme pleinement actives tant que les services nécessaires ne sont pas configurés.</p>
+  <div class="module-grid" style="margin-top:14px;">
+  {% for feature in prepared_features %}<div class="module-card included"><div class="module-icon">✓</div><div><h3>{{ feature }}</h3><p>Prévu dans l’architecture cible.</p></div></div>{% endfor %}
+  </div>
+</div>
+<div class="card">
+  <h2>Données disponibles pour {{ partner.name if partner else 'ce partenaire' }}</h2>
+  {% if rows %}<pre style="white-space:pre-wrap;max-height:360px;overflow:auto;background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:12px;">{{ rows|tojson(indent=2) }}</pre>{% else %}<p class="muted">Aucune donnée réelle disponible pour le moment.</p>{% endif %}
+</div>
+{% endblock %}

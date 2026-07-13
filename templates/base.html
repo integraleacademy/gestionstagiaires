@@ -151,8 +151,13 @@
             </a>
           {% endif %}
           {% if is_partner_space %}
-            <a href="{{ url_for('partner_information') }}" class="btn" style="font-size:13px;padding:6px 10px;">🏢 Mes informations</a>
-            <a href="{{ url_for('partner_subscription') }}" class="btn" style="font-size:13px;padding:6px 10px;">💳 Mon abonnement</a>
+            <nav class="partner-saas-nav" aria-label="Navigation partenaire">
+              {% for endpoint,label,icon,permission in partner_nav_items %}
+                {% if partner_user_has_permission(permission) %}
+                  <a href="{{ url_for(endpoint) }}" class="partner-saas-nav-link {% if request.endpoint == endpoint %}active{% endif %}">{{ icon }} <span>{{ label }}</span></a>
+                {% endif %}
+              {% endfor %}
+            </nav>
           {% endif %}
           {% if current_partner_name %}
             <span style="font-size:12px;color:#475569;font-weight:800;display:inline-flex;align-items:center;gap:8px;">{% if current_partner_logo_url %}<img src="{{ current_partner_logo_url }}" alt="" style="width:30px;height:30px;object-fit:contain;border-radius:8px;background:#fff;border:1px solid #e2e8f0;">{% else %}<span style="width:30px;height:30px;border-radius:8px;background:#e0f2fe;color:#075985;display:inline-flex;align-items:center;justify-content:center;font-weight:900;">{{ (current_partner_name[:2] or 'IC')|upper }}</span>{% endif %}{{ current_partner_name }}</span>
