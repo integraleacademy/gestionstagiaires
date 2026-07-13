@@ -87,18 +87,30 @@ class PartnerSubscriptionSpaceTests(unittest.TestCase):
         html = self.client.get("/admin/sessions").get_data(as_text=True)
         self.assertIn(partner["logo_url"], html)
 
-    def test_partner_subscription_page_shows_included_and_non_included_modules(self):
+    def test_partner_subscription_page_shows_current_subscription_only(self):
         self._login_partner()
         html = self.client.get("/admin/partner/abonnement").get_data(as_text=True)
+        self.assertIn("Mon abonnement", html)
+        self.assertIn("Module CPF", html)
+        self.assertIn("Faites évoluer votre abonnement", html)
+        self.assertIn("Factures d’abonnement", html)
+        self.assertNotIn("Module CNAPS", html)
+        self.assertNotIn("Module Facturation", html)
+        self.assertNotIn("Module Suivi des ventes", html)
+        self.assertNotIn("Module automatisations", html)
+        self.assertNotIn("Non inclus", html)
+
+
+    def test_partner_subscription_upgrade_page_shows_available_modules(self):
+        self._login_partner()
+        html = self.client.get("/admin/partner/abonnement/evolution").get_data(as_text=True)
         self.assertIn("Module CNAPS", html)
         self.assertIn("Module CPF", html)
         self.assertIn("Module Facturation", html)
         self.assertIn("Module Suivi des ventes", html)
         self.assertIn("Module formation APS", html)
         self.assertIn("Module automatisations", html)
-        self.assertIn("Inclus", html)
         self.assertIn("Non inclus", html)
-        self.assertIn("Utilisation des stagiaires", html)
 
 
     def test_partner_sessions_dashboard_and_filters_only_show_enabled_trainings(self):
