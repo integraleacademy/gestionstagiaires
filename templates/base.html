@@ -916,7 +916,12 @@
       const action = actionEl.getAttribute('data-sidebar-action');
       if(action === 'toggle-create-menu'){
         const menu = document.getElementById('sidebarCreateMenu');
-        menu?.classList.toggle('is-open');
+        if(!menu) return;
+        if(document.body.classList.contains('partner-sidebar-collapsed') && !isMobile()){
+          const rect = actionEl.getBoundingClientRect();
+          menu.style.setProperty('--sidebar-create-menu-top', `${Math.max(12, rect.top)}px`);
+        }
+        menu.classList.toggle('is-open');
         return;
       }
       if(action === 'create-session') document.getElementById('btnOpenCreateSession')?.click();
