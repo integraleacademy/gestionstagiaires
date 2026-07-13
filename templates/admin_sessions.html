@@ -1418,7 +1418,7 @@
     const continueAfterConvention = ()=>{
       window.location.href = continueUrl;
     };
-    if(result.is_vae){ continueAfterConvention(); return; }
+    if(result.is_vae || result.automation_enabled === false || !result.convention_signature_url){ continueAfterConvention(); return; }
     const financingUrl = result.convention_financing_url || "";
     const saveConventionFinancing = async (payload)=>{
       if(!financingUrl) return;
