@@ -24476,7 +24476,8 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         PUBLIC_STUDENT_PORTAL_BASE=PUBLIC_STUDENT_PORTAL_BASE,
         fr_date=fr_date,
         brevo_no_credit_notice=brevo_no_credit_notice,
-        automation_status=_build_trainee_automation_status(s, t, session_id, trainee_id) if _automation_is_enabled(s) else None,
+        automation_status=_build_trainee_automation_status(s, t, session_id, trainee_id) if _automation_document_config(s).get("enabled") else None,
+        automation_module_locked=bool(_automation_document_config(s).get("enabled")) and not _automation_partner_module_enabled(),
         docs_relance_planned_fr=fr_date(t.get("docs_relance_auto_planned_date") or ""),
         ssiap_medical_from_date=fr_date(_subtract_months(t.get("ssiap_exam_date") or "", 3)),
     )
