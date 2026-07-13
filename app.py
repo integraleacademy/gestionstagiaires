@@ -1785,6 +1785,23 @@ def protect_sensitive_routes():
         if request.method not in {"GET", "HEAD", "OPTIONS"} and session.get("admin_role") == "viewer":
             return jsonify({"ok": False, "error": "read_only"}), 403
 
+    partner_forbidden_endpoints = {
+        "admin_secretariat",
+        "admin_cash_payments",
+        "admin_afc",
+        "admin_afc_candidate_sheet",
+        "admin_afc_export",
+        "admin_positioning_tests",
+        "admin_positioning_test_detail",
+        "admin_financement_refuse_submit",
+        "scotia_login",
+        "scotia_login_post",
+    }
+    if _is_partner_space_session() and (request.endpoint in partner_forbidden_endpoints or path.startswith("/api/vtc/check")):
+        if _request_expects_json():
+            return jsonify({"ok": False, "error": "partner_space_forbidden"}), 403
+        abort(403)
+
 @app.context_processor
 def inject_read_only():
     admin_notifications = {"notifications": [], "unresolved_total": 0}
@@ -1811,7 +1828,7 @@ def inject_read_only():
         "is_super_admin": _is_super_admin_session(),
         "current_partner_name": current_partner_name,
         "assisted_partner_name": assisted_partner_name,
-        "is_partner_space": session.get("admin_role") == "partner_admin" or bool(session.get("assist_partner_id")),
+        "is_partner_space": _is_partner_space_session(),
         "is_read_only": session.get("admin_role") == "viewer",
         "admin_notifications": admin_notifications["notifications"],
         "admin_unresolved_total": admin_notifications["unresolved_total"],
@@ -2272,6 +2289,12 @@ def _is_partner_scoped_session() -> bool:
     if not has_request_context() or not session.get("admin_logged_in"):
         return False
     return bool(_current_partner_id()) and not _is_super_admin_session()
+
+
+def _is_partner_space_session() -> bool:
+    if not has_request_context() or not session.get("admin_logged_in"):
+        return False
+    return _current_session_role() == "partner_admin" or bool(session.get("assist_partner_id"))
 
 
 def _integrale_partner() -> Dict[str, Any]:

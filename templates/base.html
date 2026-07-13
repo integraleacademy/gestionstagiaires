@@ -128,16 +128,20 @@
               </div>
             </div>
           {% endif %}
-          <a href="{{ url_for('admin_positioning_tests') }}"
-             style="font-size:13px;color:#1f2937;text-decoration:none;padding:6px 10px;border:1px solid #d1d5db;border-radius:8px;background:#fff;">
-            Tests de positionnement
-          </a>
+          {% if not is_partner_space %}
+            <a href="{{ url_for('admin_positioning_tests') }}"
+               style="font-size:13px;color:#1f2937;text-decoration:none;padding:6px 10px;border:1px solid #d1d5db;border-radius:8px;background:#fff;">
+              Tests de positionnement
+            </a>
+          {% endif %}
           <button type="button" class="btn btn-blue" style="font-size:13px;padding:6px 10px;" onclick="openModal('edofModal')">
             EDOF
           </button>
-          <button type="button" class="btn" style="font-size:13px;padding:6px 10px;background:#dc2626;color:#fff;border-color:#dc2626;" onclick="openModal('financementRefuseModal')">
-            FT Refusé
-          </button>
+          {% if not is_partner_space %}
+            <button type="button" class="btn" style="font-size:13px;padding:6px 10px;background:#dc2626;color:#fff;border-color:#dc2626;" onclick="openModal('financementRefuseModal')">
+              FT Refusé
+            </button>
+          {% endif %}
           {% if is_super_admin %}
             <a href="{{ url_for('admin_partners') }}"
                style="font-size:13px;color:#0f172a;text-decoration:none;padding:7px 12px;border:1px solid #bfdbfe;border-radius:10px;background:linear-gradient(135deg,#eff6ff,#dbeafe);font-weight:900;">
@@ -160,7 +164,7 @@
     {% block content %}{% endblock %}
   </div>
 
-  {% if is_admin_logged_in and (request.endpoint in ["admin_sessions", "admin_trainees", "admin_trainee_page", "admin_wedof"]) %}
+  {% if is_admin_logged_in and not is_partner_space and (request.endpoint in ["admin_sessions", "admin_trainees", "admin_trainee_page", "admin_wedof"]) %}
   <div class="modal-backdrop" id="financementRefuseModal" aria-hidden="true">
     <div class="modal" style="max-width:560px;">
       <div class="modal-head">

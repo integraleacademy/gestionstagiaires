@@ -140,6 +140,39 @@ class MultiPartnerIsolationTests(unittest.TestCase):
         self.assertIn("IA Connect Partenaires", html)
         self.assertNotIn('src="/static/icone.png"', html)
 
+
+    def test_partner_space_hides_integrale_only_tools(self):
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "partner_admin"
+            sess["partner_id"] = self.partner_a
+        html = self.client.get("/admin/sessions").get_data(as_text=True)
+        self.assertNotIn("Secrétariat", html)
+        self.assertNotIn("Paiement espèces", html)
+        self.assertNotIn("Contrôles VTC", html)
+        self.assertNotIn("SCOTIA", html)
+        self.assertNotIn("Tests de positionnement", html)
+        self.assertNotIn("FT Refusé", html)
+        self.assertNotIn(">AFC<", html)
+
+    def test_partner_space_cannot_open_integrale_only_routes(self):
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "partner_admin"
+            sess["partner_id"] = self.partner_a
+        forbidden_paths = [
+            "/admin/gestion-secretariat",
+            "/admin/sessions/paiement-especes",
+            "/admin/afc",
+            "/admin/test-positionnement",
+            "/scotia/login",
+        ]
+        for path in forbidden_paths:
+            with self.subTest(path=path):
+                self.assertEqual(self.client.get(path).status_code, 403)
+        self.assertEqual(self.client.post("/admin/financement-refuse/submit", json={}).status_code, 403)
+        self.assertEqual(self.client.get("/api/vtc/check?mode=theory").status_code, 403)
+
     def test_integrale_admin_space_keeps_integrale_logo(self):
         with self.client.session_transaction() as sess:
             sess["admin_logged_in"] = True
