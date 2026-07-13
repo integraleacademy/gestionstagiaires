@@ -183,6 +183,24 @@ class MultiPartnerIsolationTests(unittest.TestCase):
         self.assertIn("height:88px", html)
         self.assertNotIn('src="/static/icone.png"', html)
 
+
+    def test_partner_support_email_uses_only_large_partner_logo(self):
+        with gestion_app.app.test_request_context("/admin/partner/aide-support"):
+            gestion_app.session["admin_email"] = "contact@example.com"
+            html = gestion_app._partner_support_mail_html(
+                {"name": "Partenaire A", "email": "fallback@example.com"},
+                "support",
+                "Tableau de bord",
+                "problème convention",
+                "TEST",
+            )
+
+        self.assertIn("/static/iaconnectpartenaires.png", html)
+        self.assertIn("max-height:144px", html)
+        self.assertIn("Intégrale Connect Partenaires", html)
+        self.assertNotIn("/static/logo-integrale.png", html)
+        self.assertNotIn('alt="Intégrale Academy"', html)
+
     def test_integrale_admin_space_keeps_integrale_logo(self):
         with self.client.session_transaction() as sess:
             sess["admin_logged_in"] = True

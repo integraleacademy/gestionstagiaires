@@ -4815,23 +4815,33 @@ def _send_vtc_practice_exam_success_notification(session_obj: Dict[str, Any], tr
     }
 
 
-def mail_layout(inner_html: str) -> str:
+def mail_layout(inner_html: str, show_default_logo: bool = True, footer_text: str = "Intégrale Academy") -> str:
     # ✅ logo en URL HTTPS (fiable dans Gmail)
     logo_src = f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png"
-
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
-      <div style="background:white;padding:18px;border-radius:12px">
+    logo_html = ""
+    if show_default_logo:
+        logo_html = f"""
         <div style="text-align:center;margin-bottom:18px">
           <img src="{logo_src}" alt="Intégrale Academy"
                style="height:60px;width:auto;display:block;margin:0 auto;border:0;outline:none;text-decoration:none">
         </div>
+        """
+    footer_html = ""
+    if footer_text:
+        footer_html = f"""
+        <p style="margin-top:30px;color:#666;font-size:13px;text-align:center">
+          {html.escape(footer_text)}
+        </p>
+        """
+
+    return f"""
+    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
+      <div style="background:white;padding:18px;border-radius:12px">
+        {logo_html}
 
         {inner_html}
 
-        <p style="margin-top:30px;color:#666;font-size:13px;text-align:center">
-          Intégrale Academy
-        </p>
+        {footer_html}
       </div>
     </div>
     """
@@ -11985,12 +11995,12 @@ def _partner_support_mail_html(partner: Dict[str, Any], request_type: str, modul
     kind = "Demande d’assistance" if request_type == "support" else "Demande d’amélioration"
     logo_src = f"{PUBLIC_BASE_URL.rstrip('/')}/static/iaconnectpartenaires.png"
     return mail_layout(f'''
-      <div style="text-align:center;margin-bottom:18px"><img src="{logo_src}" alt="Intégrale Connect" style="max-height:72px;width:auto"></div>
+      <div style="text-align:center;margin-bottom:18px"><img src="{logo_src}" alt="Intégrale Connect Partenaires" style="max-height:144px;width:auto;display:block;margin:0 auto;border:0;outline:none;text-decoration:none"></div>
       <div style="background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#fff;border-radius:18px;padding:22px;margin-bottom:18px"><p style="margin:0 0 6px;text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:#bfdbfe">{html.escape(kind)}</p><h1 style="margin:0;font-size:24px">{html.escape(subject)}</h1></div>
       <p style="font-size:15px;color:#334155">Nous avons bien pris en compte votre demande et nous reviendrons vers vous dans les meilleurs délais.</p>
       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:16px;margin:18px 0"><p><strong>Partenaire :</strong> {html.escape(str(partner.get('name') or ''))}</p><p><strong>Module :</strong> {html.escape(module or 'Non précisé')}</p><p><strong>Contact :</strong> {html.escape(str(session.get('admin_email') or session.get('admin_username') or partner.get('email') or ''))}</p></div>
       <h2 style="font-size:18px;color:#0f172a">Message</h2><p style="white-space:pre-wrap;color:#334155;line-height:1.6">{html.escape(message)}</p>
-    ''')
+    ''', show_default_logo=False, footer_text="Intégrale Connect Partenaires")
 
 @app.route("/admin/partner/aide-support", methods=["GET", "POST"])
 @admin_login_required
