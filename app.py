@@ -1810,12 +1810,29 @@ def inject_read_only():
     mail_sent_notice = bool(session.pop("_mail_sent_notice", False))
     current_partner_name = ""
     assisted_partner_name = ""
+    partner = None
+    partner_sidebar = {}
     if session.get("admin_logged_in"):
         try:
             ctx_data = load_data()
             active_partner_id = _current_partner_id()
             partner = next((p for p in ctx_data.get("partners", []) if isinstance(p, dict) and p.get("id") == active_partner_id), None)
             current_partner_name = (partner or {}).get("name") or ""
+            if partner:
+                normalize_partner_subscription(ctx_data, partner)
+                sub = partner.get("subscription") or {}
+                notification_total = admin_notifications.get("unresolved_total", 0) if _admin_can_view_notifications() else 0
+                enabled_modules = _partner_enabled_modules(partner)
+                partner_sidebar = {
+                    "partner": partner,
+                    "logo_url": _partner_logo_url(partner),
+                    "user_name": session.get("admin_username") or session.get("admin_email") or "",
+                    "subscription": sub,
+                    "enabled_modules": enabled_modules,
+                    "notification_total": notification_total,
+                    "is_active": (partner.get("status") or "active") == "active",
+                    "show_users": bool(partner.get("max_users") or ctx_data.get("users")),
+                }
             if session.get("assist_partner_id"):
                 assisted_partner_name = current_partner_name
         except Exception:
@@ -1837,6 +1854,7 @@ def inject_read_only():
         "partner_modules": PARTNER_MODULES,
         "partner_has_module": partner_has_module,
         "partner_allowed_formation_types": _partner_allowed_formation_types(),
+        "partner_sidebar": partner_sidebar,
     }
 
 @app.get("/admin/login")
