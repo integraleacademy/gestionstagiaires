@@ -11676,10 +11676,16 @@ PARTNER_STATUS_LABELS = {"active": "Actif", "trial": "En essai", "suspended": "S
 
 
 PARTNER_SUBSCRIPTION_MODULE_PRICING = {
-    "crm": {"label": "CRM", "icon": "📈", "price": 49, "description": "Pipeline commercial et suivi des prospects.", "features": ["Tableau de bord", "Relances", "Suivi conversion"]},
-    "partners": {"label": "Partenaires", "icon": "🤝", "price": 39, "description": "Gestion multi-partenaires et accès dédiés.", "features": ["Comptes partenaires", "Isolation données", "Modules"]},
-    "cpf": {"label": "CPF", "icon": "🎓", "price": 59, "description": "Suivi des demandes CPF et dossiers WeDoF.", "features": ["Demandes CPF", "Statuts", "Exports"]},
-    "training_management": {"label": "Gestion OF", "icon": "🏫", "price": 79, "description": "Gestion opérationnelle des sessions et stagiaires.", "features": ["Sessions", "Stagiaires", "Documents"]},
+    "cnaps": {"label": "Module CNAPS", "icon": "🛡️", "price": 49, "description": "Suivi des dossiers CNAPS, vérification automatique du statut CNAPS et fonctionnalités dédiées CNAPS.", "features": ["Suivi des dossiers CNAPS", "Vérification automatique du statut", "Gestion CNAPS complète"]},
+    "cpf": {"label": "Module CPF", "icon": "🎓", "price": 59, "description": "Suivi des dossiers CPF et des demandes WeDoF CPF.", "features": ["Demandes WeDoF CPF", "Statuts des dossiers", "Suivi CPF"]},
+    "billing": {"label": "Module Facturation", "icon": "🧾", "price": 69, "description": "Facturation et suivi des factures avec connexion Qonto requise.", "features": ["Facturation", "Suivi des factures", "Qonto requis"]},
+    "sales": {"label": "Module Suivi des ventes", "icon": "📈", "price": 49, "description": "Pilotage commercial et suivi des ventes.", "features": ["Tableau de bord ventes", "Suivi commercial", "Indicateurs de conversion"]},
+    "training_aps": {"label": "Module formation APS", "icon": "🏫", "price": 79, "description": "Création et gestion de sessions APS uniquement.", "features": ["Sessions APS", "Stagiaires APS", "Documents APS"]},
+    "training_ssiap": {"label": "Module formation SSIAP", "icon": "🔥", "price": 79, "description": "Création et gestion de sessions SSIAP uniquement.", "features": ["Sessions SSIAP", "Stagiaires SSIAP", "Documents SSIAP"]},
+    "training_a3p": {"label": "Module formation A3P", "icon": "🧯", "price": 79, "description": "Création et gestion de sessions A3P uniquement.", "features": ["Sessions A3P", "Stagiaires A3P", "Documents A3P"]},
+    "training_vtc": {"label": "Module formation VTC", "icon": "🚕", "price": 79, "description": "Création et gestion de sessions VTC uniquement.", "features": ["Sessions VTC", "Stagiaires VTC", "Documents VTC"]},
+    "training_dirigeant": {"label": "Module formation Dirigeant / VAE", "icon": "🎯", "price": 79, "description": "Création et gestion de sessions Dirigeant et VAE uniquement.", "features": ["Sessions Dirigeant", "Parcours VAE", "Documents dédiés"]},
+    "automations": {"label": "Module automatisations", "icon": "⚙️", "price": 39, "description": "Automatisation des conventions, convocations et attestations de fin de formation.", "features": ["Conventions de formation", "Convocations", "Attestations de fin de formation"]},
 }
 PARTNER_SUBSCRIPTION_STATUS_LABELS = {"active": "Actif", "trial": "Essai", "suspended": "Suspendu", "expired": "Expiré"}
 PARTNER_INFO_FIELDS = ("name", "legal_name", "siret", "activity_declaration_number", "address", "address_extra", "postal_code", "city", "country", "contact_first_name", "contact_last_name", "contact_role", "email", "phone", "website")
@@ -11691,7 +11697,7 @@ def _count_partner_trainees(data: Dict[str, Any], partner_id: str) -> int:
 
 def _default_subscription_for_partner(data: Dict[str, Any], partner: Dict[str, Any]) -> Dict[str, Any]:
     enabled = _partner_enabled_modules(partner) if "_partner_enabled_modules" in globals() else set(partner.get("enabled_modules") or [])
-    return {"plan_name": partner.get("subscription_plan") or "Essentiel", "status": "trial" if partner.get("status") == "trial" else ("suspended" if partner.get("status") == "suspended" else "active"), "started_at": partner.get("subscription_started_at") or None, "renews_at": partner.get("subscription_ends_at") or None, "modules": {"crm": "sales" in enabled, "partners": True, "cpf": "cpf" in enabled, "training_management": any(k in enabled for k in ("training_aps", "training_ssiap", "training_a3p", "training_vtc", "training_dirigeant"))}, "module_prices": {}, "trainee_limit": 100, "trainee_unlimited": False, "trainee_usage_count": _count_partner_trainees(data, partner.get("id") or ""), "trainee_usage_reset_at": None, "trainee_usage_migrated_at": _now_iso() if "_now_iso" in globals() else datetime.datetime.utcnow().isoformat()+"Z", "trainee_usage_reset_history": []}
+    return {"plan_name": partner.get("subscription_plan") or "Essentiel", "status": "trial" if partner.get("status") == "trial" else ("suspended" if partner.get("status") == "suspended" else "active"), "started_at": partner.get("subscription_started_at") or None, "renews_at": partner.get("subscription_ends_at") or None, "modules": {key: key in enabled for key in PARTNER_SUBSCRIPTION_MODULE_PRICING}, "module_prices": {}, "trainee_limit": 100, "trainee_unlimited": False, "trainee_usage_count": _count_partner_trainees(data, partner.get("id") or ""), "trainee_usage_reset_at": None, "trainee_usage_migrated_at": _now_iso() if "_now_iso" in globals() else datetime.datetime.utcnow().isoformat()+"Z", "trainee_usage_reset_history": []}
 
 def normalize_partner_subscription(data: Dict[str, Any], partner: Dict[str, Any]) -> bool:
     changed = False
