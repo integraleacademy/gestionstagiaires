@@ -80,6 +80,29 @@ class MultiPartnerIsolationTests(unittest.TestCase):
             sess["admin_role"] = "super_admin"
         self.assertEqual(self.client.get("/admin/partners").status_code, 200)
 
+    def test_partner_space_uses_partner_logo_only(self):
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "partner_admin"
+            sess["partner_id"] = self.partner_a
+        html = self.client.get("/admin/sessions").get_data(as_text=True)
+        self.assertIn("/static/iaconnectpartenaires.png", html)
+        self.assertIn("IA Connect Partenaires", html)
+        self.assertIn("height:112px", html)
+        self.assertIn("height:88px", html)
+        self.assertNotIn('src="/static/icone.png"', html)
+
+    def test_integrale_admin_space_keeps_integrale_logo(self):
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+            sess["partner_id"] = gestion_app.INTEGRALE_PARTNER_ID
+        html = self.client.get("/admin/sessions").get_data(as_text=True)
+        self.assertIn("/static/icone.png", html)
+        self.assertIn("height:80px", html)
+        self.assertIn("height:64px", html)
+        self.assertNotIn("/static/iaconnectpartenaires.png", html)
+
     def test_invitation_expires_and_is_single_use(self):
         data = gestion_app.load_data()
         user_id = "user-a"
