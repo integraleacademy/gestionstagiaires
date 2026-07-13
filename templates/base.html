@@ -87,15 +87,11 @@
           Mode consultation (lecture seule)
         </div>
       {% endif %}
-      <div class="topbar-actions" style="display:flex;align-items:center;gap:10px;">
-        {% if is_admin_logged_in and (request.endpoint in ["admin_sessions", "admin_trainees", "admin_trainee_page"]) %}
+      <div class="topbar-actions">
+        {% if is_admin_logged_in and not is_partner_space and (request.endpoint in ["admin_sessions", "admin_trainees", "admin_trainee_page"]) %}
           {% if admin_can_access_notifications %}
             <div class="notif-wrap" id="adminNotifWrap">
-              <button type="button"
-                      id="adminNotifBtn"
-                      class="notif-btn"
-                      aria-expanded="false"
-                      aria-controls="adminNotifPanel">
+              <button type="button" id="adminNotifBtn" class="notif-btn" aria-expanded="false" aria-controls="adminNotifPanel">
                 🔔 Notifications
                 <span id="adminNotifCount" class="notif-count" {% if admin_unresolved_total == 0 %}style="display:none;"{% endif %}>{{ admin_unresolved_total }}</span>
               </button>
@@ -104,71 +100,69 @@
                   {% if admin_notifications %}
                     {% for n in admin_notifications %}
                       <div class="notif-item {% if n.done %}done{% endif %}" data-notification-id="{{ n.id }}">
-                        {% if n.trainee_url %}
-                          <a class="notif-main" href="{{ n.trainee_url }}">
-                        {% else %}
-                          <div class="notif-main">
-                        {% endif %}
-                          <div class="notif-label">{{ n.label }}</div>
-                          <div class="notif-meta">{{ n.created_fr }}</div>
-                          {% if n.details %}
-                            {% for d in n.details %}
-                              <div class="notif-meta">{{ d }}</div>
-                            {% endfor %}
-                          {% endif %}
+                        {% if n.trainee_url %}<a class="notif-main" href="{{ n.trainee_url }}">{% else %}<div class="notif-main">{% endif %}
+                          <div class="notif-label">{{ n.label }}</div><div class="notif-meta">{{ n.created_fr }}</div>
+                          {% if n.details %}{% for d in n.details %}<div class="notif-meta">{{ d }}</div>{% endfor %}{% endif %}
                         {% if n.trainee_url %}</a>{% else %}</div>{% endif %}
-                        <div class="notif-actions">
-                          <button type="button" class="notif-icon-btn" data-action="delete" title="{% if admin_can_manage_notifications %}Supprimer{% else %}Action réservée à l’admin{% endif %}" {% if not admin_can_manage_notifications %}disabled aria-disabled="true"{% endif %}>❌</button>
-                          <button type="button" class="notif-icon-btn" data-action="toggle" title="{% if admin_can_manage_notifications %}Traiter{% else %}Action réservée à l’admin{% endif %}" {% if not admin_can_manage_notifications %}disabled aria-disabled="true"{% endif %}>✅</button>
-                        </div>
+                        <div class="notif-actions"><button type="button" class="notif-icon-btn" data-action="delete" {% if not admin_can_manage_notifications %}disabled aria-disabled="true"{% endif %}>❌</button><button type="button" class="notif-icon-btn" data-action="toggle" {% if not admin_can_manage_notifications %}disabled aria-disabled="true"{% endif %}>✅</button></div>
                       </div>
                     {% endfor %}
-                  {% else %}
-                    <div class="notif-empty">Aucune notification.</div>
-                  {% endif %}
+                  {% else %}<div class="notif-empty">Aucune notification.</div>{% endif %}
                 </div>
               </div>
             </div>
           {% endif %}
-          {% if not is_partner_space %}
-            <a href="{{ url_for('admin_positioning_tests') }}"
-               style="font-size:13px;color:#1f2937;text-decoration:none;padding:6px 10px;border:1px solid #d1d5db;border-radius:8px;background:#fff;">
-              Tests de positionnement
-            </a>
-          {% endif %}
-          <button type="button" class="btn btn-blue" style="font-size:13px;padding:6px 10px;" onclick="openModal('edofModal')">
-            EDOF
-          </button>
-          {% if not is_partner_space %}
-            <button type="button" class="btn" style="font-size:13px;padding:6px 10px;background:#dc2626;color:#fff;border-color:#dc2626;" onclick="openModal('financementRefuseModal')">
-              FT Refusé
-            </button>
-          {% endif %}
-          {% if is_super_admin %}
-            <a href="{{ url_for('admin_partners') }}"
-               style="font-size:13px;color:#0f172a;text-decoration:none;padding:7px 12px;border:1px solid #bfdbfe;border-radius:10px;background:linear-gradient(135deg,#eff6ff,#dbeafe);font-weight:900;">
-              Gérer les partenaires
-            </a>
-          {% endif %}
-          {% if is_partner_space %}
-            <a href="{{ url_for('partner_information') }}" class="btn" style="font-size:13px;padding:6px 10px;">🏢 Mes informations</a>
-            <a href="{{ url_for('partner_subscription') }}" class="btn" style="font-size:13px;padding:6px 10px;">💳 Mon abonnement</a>
-          {% endif %}
-          {% if current_partner_name %}
-            <span style="font-size:12px;color:#475569;font-weight:800;display:inline-flex;align-items:center;gap:8px;">{% if current_partner_logo_url %}<img src="{{ current_partner_logo_url }}" alt="" style="width:30px;height:30px;object-fit:contain;border-radius:8px;background:#fff;border:1px solid #e2e8f0;">{% else %}<span style="width:30px;height:30px;border-radius:8px;background:#e0f2fe;color:#075985;display:inline-flex;align-items:center;justify-content:center;font-weight:900;">{{ (current_partner_name[:2] or 'IC')|upper }}</span>{% endif %}{{ current_partner_name }}</span>
-          {% endif %}
-          <a href="{{ url_for('admin_logout') }}"
-             style="font-size:13px;color:#555;text-decoration:none;padding:6px 10px;border:1px solid #ddd;border-radius:8px;">
-            Déconnexion
-          </a>
+          <a href="{{ url_for('admin_positioning_tests') }}" class="btn topbar-slim-link">Tests de positionnement</a>
+          <button type="button" class="btn btn-blue topbar-slim-link" onclick="openModal('edofModal')">EDOF</button>
+          <button type="button" class="btn topbar-slim-link topbar-danger-link" onclick="openModal('financementRefuseModal')">FT Refusé</button>
+          {% if is_super_admin %}<a href="{{ url_for('admin_partners') }}" class="btn topbar-slim-link">Gérer les partenaires</a>{% endif %}
+          <a href="{{ url_for('admin_logout') }}" class="btn topbar-slim-link">Déconnexion</a>
+        {% elif is_partner_space %}
+          <button type="button" class="partner-sidebar-toggle" data-sidebar-open aria-controls="partnerSidebar" aria-expanded="false">☰ Menu</button>
         {% endif %}
       </div>
     </div>
   </div>
 
-  <div class="container">
-    {% block content %}{% endblock %}
-  </div>
+  {% if is_partner_space %}
+    {% import "partner_sidebar.html" as ps %}
+    {% set module_items = [
+      {"label":"Gestion des stagiaires","icon":"graduation","href":url_for('admin_sessions'),"endpoints":["admin_sessions","admin_trainees","admin_trainee_page"],"locked":False},
+      {"label":"EDOF","icon":"file","href":url_for('admin_wedof_requests'),"endpoints":["admin_wedof_requests"],"locked":not partner_has_module('cpf')},
+      {"label":"CPF","icon":"card","href":url_for('admin_wedof_requests'),"endpoints":["admin_wedof_requests"],"locked":not partner_has_module('cpf')},
+      {"label":"CNAPS","icon":"shield","href":url_for('admin_cnaps_unknown'),"endpoints":["admin_cnaps_unknown"],"locked":not partner_has_module('cnaps')},
+      {"label":"Qonto","icon":"wallet","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings","admin_sessions_billing","admin_direct_debits"],"locked":not partner_has_module('billing')},
+      {"label":"Suivi des ventes","icon":"chart","href":url_for('admin_sales_tracking'),"endpoints":["admin_sales_tracking"],"locked":not partner_has_module('sales')},
+      {"label":"Documents","icon":"folder","href":url_for('admin_sessions_conventions'),"endpoints":["admin_sessions_conventions","admin_sessions_automations"],"locked":not partner_has_module('automations')}
+    ] %}
+    {% set space_items = [
+      {"label":"Tableau de bord","icon":"home","href":url_for('admin_sessions'),"endpoints":["admin_sessions"],"badge":"","locked":False},
+      {"label":"Notifications","icon":"bell","href":"#adminNotifPanel","endpoints":[],"badge":partner_sidebar.notification_total if partner_sidebar.notification_total else "","locked":False},
+      {"label":"Mes informations","icon":"info","href":url_for('partner_information'),"endpoints":["partner_information"],"badge":"","locked":False},
+      {"label":"Mon abonnement","icon":"card","href":url_for('partner_subscription'),"endpoints":["partner_subscription"],"badge":"","locked":False}
+    ] %}
+    <div class="app-shell">
+      <main class="container main-content">{{ self.content() }}</main>
+      <aside class="partner-sidebar" id="partnerSidebar" aria-label="Navigation partenaire">
+        <div class="partner-sidebar__scroll">
+          <div class="partner-sidebar__identity">
+            {% if partner_sidebar.logo_url %}<img class="partner-sidebar__avatar" src="{{ partner_sidebar.logo_url }}" alt="Logo {{ current_partner_name }}">{% else %}<div class="partner-sidebar__avatar partner-sidebar__avatar--initials">{{ (current_partner_name[:2] or 'IC')|upper }}</div>{% endif %}
+            <div class="partner-sidebar__identity-copy"><strong>{{ current_partner_name }}</strong><span>{{ partner_sidebar.user_name or 'Compte partenaire' }}</span><em>{{ partner_sidebar.subscription.get('plan_name') or 'Offre partenaire' }}</em>{% if partner_sidebar.is_active %}<small>Compte actif</small>{% endif %}</div>
+            <button type="button" class="partner-sidebar__collapse" data-sidebar-collapse aria-label="Réduire la barre">{{ ps.sidebar_icon('chevron') }}</button>
+          </div>
+          <section class="partner-sidebar__section"><h2>Mon espace</h2>{% for item in space_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
+          <section class="partner-sidebar__section"><h2>Mes modules</h2>{% for item in module_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
+          {% set sub=partner_sidebar.subscription or {} %}{% set count=sub.get('trainee_usage_count') or 0 %}{% set limit=sub.get('trainee_limit') %}{% set unlimited=sub.get('trainee_unlimited') or not limit %}{% set pct=0 if unlimited else ((count*100/limit)|round(0,'floor')) %}
+          <div class="subscription-usage-card {{ 'is-alert' if pct>=90 and not unlimited else ('is-warning' if pct>=70 and not unlimited else '') }}"><span>Utilisation de l’abonnement</span><strong>{{ count }} stagiaires créés</strong><small>{% if unlimited %}Aucun plafond défini{% else %}Objectif ou palier : {{ limit }}{% endif %}</small>{% if not unlimited %}<div class="subscription-usage-card__bar"><i style="width:{{ [pct,100]|min }}%"></i></div>{% endif %}<a href="{{ url_for('partner_subscription') }}">Voir les détails</a></div>
+          <div class="partner-sidebar__bottom"><a class="partner-sidebar__item" href="mailto:clement@integraleacademy.com?subject=Besoin%20d'aide%20Int%C3%A9grale%20Connect">{{ ps.sidebar_icon('help') }}<span class="partner-sidebar__label">Centre d’aide</span></a><a class="partner-sidebar__item" href="mailto:clement@integraleacademy.com?subject=Support%20Int%C3%A9grale%20Connect">{{ ps.sidebar_icon('mail') }}<span class="partner-sidebar__label">Contacter le support</span></a><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Déconnexion</span></a><div class="partner-sidebar__version"><strong>Intégrale Connect</strong><span>Version partenaire</span></div></div>
+        </div>
+      </aside>
+    </div>
+    <div class="partner-sidebar-overlay" data-sidebar-close></div>
+    <div class="locked-module-modal" id="lockedModuleModal" aria-hidden="true"><div class="locked-module-modal__card" role="dialog" aria-modal="true" aria-labelledby="lockedModuleTitle"><button type="button" class="locked-module-modal__close" data-locked-close>×</button><span class="locked-module-modal__icon">{{ ps.sidebar_icon('lock') }}</span><h2 id="lockedModuleTitle">Ce module n’est pas inclus dans votre abonnement</h2><p>Pour activer ce module ou faire évoluer votre abonnement, contactez Clément VAILLANT.</p><strong>clement@integraleacademy.com</strong><div><a class="btn btn-primary" href="mailto:clement@integraleacademy.com?subject=Activation%20module%20Int%C3%A9grale%20Connect">Contacter Clément</a><a class="btn" href="{{ url_for('partner_subscription') }}">Voir mon abonnement</a></div></div></div>
+  {% else %}
+    <div class="container">{% block content %}{% endblock %}</div>
+  {% endif %}
 
   {% if is_admin_logged_in and (request.endpoint in ["admin_sessions", "admin_trainees", "admin_trainee_page", "admin_wedof"]) %}
   <div class="modal-backdrop" id="financementRefuseModal" aria-hidden="true">
@@ -877,6 +871,45 @@
     });
 
     refreshCount();
+  })();
+
+
+  (function initPartnerSidebar(){
+    const sidebar = document.getElementById('partnerSidebar');
+    if(!sidebar) return;
+    const overlay = document.querySelector('.partner-sidebar-overlay');
+    const openButtons = document.querySelectorAll('[data-sidebar-open]');
+    const closeButtons = document.querySelectorAll('[data-sidebar-close]');
+    const collapse = document.querySelector('[data-sidebar-collapse]');
+    const lockedModal = document.getElementById('lockedModuleModal');
+    const lockedClose = document.querySelectorAll('[data-locked-close]');
+    const openSidebar = () => { sidebar.classList.add('is-open'); overlay?.classList.add('is-open'); document.body.classList.add('partner-sidebar-open'); openButtons.forEach(b=>b.setAttribute('aria-expanded','true')); };
+    const closeSidebar = () => { sidebar.classList.remove('is-open'); overlay?.classList.remove('is-open'); document.body.classList.remove('partner-sidebar-open'); openButtons.forEach(b=>b.setAttribute('aria-expanded','false')); };
+    openButtons.forEach(btn => btn.addEventListener('click', openSidebar));
+    closeButtons.forEach(btn => btn.addEventListener('click', closeSidebar));
+    overlay?.addEventListener('click', closeSidebar);
+    collapse?.addEventListener('click', () => document.body.classList.toggle('partner-sidebar-collapsed'));
+    document.addEventListener('keydown', (event) => {
+      if(event.key === 'Escape'){
+        closeSidebar();
+        lockedModal?.classList.remove('is-open');
+        lockedModal?.setAttribute('aria-hidden','true');
+      }
+    });
+    document.querySelectorAll('[data-locked-module]').forEach(btn => btn.addEventListener('click', () => {
+      lockedModal?.classList.add('is-open');
+      lockedModal?.setAttribute('aria-hidden','false');
+    }));
+    lockedClose.forEach(btn => btn.addEventListener('click', () => {
+      lockedModal?.classList.remove('is-open');
+      lockedModal?.setAttribute('aria-hidden','true');
+    }));
+    lockedModal?.addEventListener('click', (event) => {
+      if(event.target === lockedModal){
+        lockedModal.classList.remove('is-open');
+        lockedModal.setAttribute('aria-hidden','true');
+      }
+    });
   })();
 
 </script>
