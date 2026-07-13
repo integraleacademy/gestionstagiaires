@@ -71,7 +71,7 @@
       {% set header_logo = 'iaconnectpartenaires.png' if is_partner_space else 'icone.png' %}
       {% set header_logo_height = 112 if is_partner_space else 80 %}
       {% set confirm_logo_height = 88 if is_partner_space else 64 %}
-      <a class="brand" href="{{ url_for('admin_sessions') }}">
+      <a class="brand {{ 'brand--partner-hidden' if is_partner_space else '' }}" href="{{ url_for('admin_sessions') }}">
 <img
   src="{{ url_for('static', filename=header_logo) }}"
   alt="{{ 'IA Connect Partenaires' if is_partner_space else 'Intégrale Connect' }}"
@@ -127,11 +127,11 @@
   {% if is_partner_space %}
     {% import "partner_sidebar.html" as ps %}
     {% set module_items = [
-      {"label":"Gestion des stagiaires","icon":"graduation","href":url_for('admin_sessions'),"endpoints":["admin_sessions","admin_trainees","admin_trainee_page"],"locked":False},
-      {"label":"EDOF","icon":"file","href":url_for('admin_wedof_requests'),"endpoints":["admin_wedof_requests"],"locked":not partner_has_module('cpf')},
+      {"label":"Gestion des stagiaires","icon":"graduation","href":url_for('admin_sessions'),"endpoints":["admin_trainees","admin_trainee_page"],"locked":False},
+      {"label":"EDOF","icon":"file","href":url_for('admin_wedof_requests'),"endpoints":[],"locked":not partner_has_module('cpf')},
       {"label":"CPF","icon":"card","href":url_for('admin_wedof_requests'),"endpoints":["admin_wedof_requests"],"locked":not partner_has_module('cpf')},
       {"label":"CNAPS","icon":"shield","href":url_for('admin_cnaps_unknown'),"endpoints":["admin_cnaps_unknown"],"locked":not partner_has_module('cnaps')},
-      {"label":"Qonto","icon":"wallet","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings","admin_sessions_billing","admin_direct_debits"],"locked":not partner_has_module('billing')},
+      {"label":"Qonto","icon":"wallet","href":url_for('admin_qonto_settings'),"endpoints":["admin_sessions_billing","admin_direct_debits"],"locked":not partner_has_module('billing')},
       {"label":"Suivi des ventes","icon":"chart","href":url_for('admin_sales_tracking'),"endpoints":["admin_sales_tracking"],"locked":not partner_has_module('sales')},
       {"label":"Documents","icon":"folder","href":url_for('admin_sessions_conventions'),"endpoints":["admin_sessions_conventions","admin_sessions_automations"],"locked":not partner_has_module('automations')}
     ] %}
@@ -141,22 +141,33 @@
       {"label":"Mes informations","icon":"info","href":url_for('partner_information'),"endpoints":["partner_information"],"badge":"","locked":False},
       {"label":"Mon abonnement","icon":"card","href":url_for('partner_subscription'),"endpoints":["partner_subscription"],"badge":"","locked":False}
     ] %}
+
+    {% set settings_items = [
+      {"label":"Réglages Qonto","icon":"settings","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings"],"locked":not partner_has_module('billing')},
+      {"label":"Conventions","icon":"file","href":url_for('admin_sessions_conventions'),"endpoints":["admin_sessions_conventions"],"locked":not partner_has_module('automations')},
+      {"label":"Automatisations","icon":"tool","href":url_for('admin_sessions_automations'),"endpoints":["admin_sessions_automations"],"locked":not partner_has_module('automations')},
+      {"label":"Facturation","icon":"wallet","href":url_for('admin_sessions_billing'),"endpoints":["admin_sessions_billing"],"locked":not partner_has_module('billing')},
+      {"label":"Sessions archivées","icon":"archive","href":url_for('admin_sessions_archived'),"endpoints":["admin_sessions_archived"],"locked":False}
+    ] %}
+    {% set create_item = {"label":"Créer","icon":"plus","action":"toggle-create-menu","endpoints":[],"locked":is_read_only,"primary":True} %}
     <div class="app-shell">
-      <main class="container main-content">{{ self.content() }}</main>
       <aside class="partner-sidebar" id="partnerSidebar" aria-label="Navigation partenaire">
         <div class="partner-sidebar__scroll">
           <div class="partner-sidebar__identity">
             {% if partner_sidebar.logo_url %}<img class="partner-sidebar__avatar" src="{{ partner_sidebar.logo_url }}" alt="Logo {{ current_partner_name }}">{% else %}<div class="partner-sidebar__avatar partner-sidebar__avatar--initials">{{ (current_partner_name[:2] or 'IC')|upper }}</div>{% endif %}
             <div class="partner-sidebar__identity-copy"><strong>{{ current_partner_name }}</strong><span>{{ partner_sidebar.user_name or 'Compte partenaire' }}</span><em>{{ partner_sidebar.subscription.get('plan_name') or 'Offre partenaire' }}</em>{% if partner_sidebar.is_active %}<small>Compte actif</small>{% endif %}</div>
-            <button type="button" class="partner-sidebar__collapse" data-sidebar-collapse aria-label="Réduire la barre">{{ ps.sidebar_icon('chevron') }}</button>
+            <button type="button" class="partner-sidebar__collapse" data-sidebar-collapse aria-label="Réduire la barre"><span class="collapse-icon collapse-icon--open">{{ ps.sidebar_icon('chevron') }}</span><span class="collapse-icon collapse-icon--closed">{{ ps.sidebar_icon('chevron-right') }}</span></button>
           </div>
+          <div class="partner-sidebar__create">{{ ps.sidebar_nav_item(create_item) }}<div class="quick-create-menu sidebar-create-menu" id="sidebarCreateMenu"><button class="quick-create-option quick-create-option--session" data-sidebar-action="create-session">💼 Nouvelle session</button><button class="quick-create-option quick-create-option--trainee" data-sidebar-action="create-trainee">👨‍🎓 Nouveau stagiaire</button></div></div>
           <section class="partner-sidebar__section"><h2>Mon espace</h2>{% for item in space_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
           <section class="partner-sidebar__section"><h2>Mes modules</h2>{% for item in module_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
+          <section class="partner-sidebar__section"><h2>Paramètres et outils</h2>{% for item in settings_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
           {% set sub=partner_sidebar.subscription or {} %}{% set count=sub.get('trainee_usage_count') or 0 %}{% set limit=sub.get('trainee_limit') %}{% set unlimited=sub.get('trainee_unlimited') or not limit %}{% set pct=0 if unlimited else ((count*100/limit)|round(0,'floor')) %}
           <div class="subscription-usage-card {{ 'is-alert' if pct>=90 and not unlimited else ('is-warning' if pct>=70 and not unlimited else '') }}"><span>Utilisation de l’abonnement</span><strong>{{ count }} stagiaires créés</strong><small>{% if unlimited %}Aucun plafond défini{% else %}Objectif ou palier : {{ limit }}{% endif %}</small>{% if not unlimited %}<div class="subscription-usage-card__bar"><i style="width:{{ [pct,100]|min }}%"></i></div>{% endif %}<a href="{{ url_for('partner_subscription') }}">Voir les détails</a></div>
           <div class="partner-sidebar__bottom"><a class="partner-sidebar__item" href="mailto:clement@integraleacademy.com?subject=Besoin%20d'aide%20Int%C3%A9grale%20Connect">{{ ps.sidebar_icon('help') }}<span class="partner-sidebar__label">Centre d’aide</span></a><a class="partner-sidebar__item" href="mailto:clement@integraleacademy.com?subject=Support%20Int%C3%A9grale%20Connect">{{ ps.sidebar_icon('mail') }}<span class="partner-sidebar__label">Contacter le support</span></a><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Déconnexion</span></a><div class="partner-sidebar__version"><strong>Intégrale Connect</strong><span>Version partenaire</span></div></div>
         </div>
       </aside>
+      <main class="container main-content">{{ self.content() }}</main>
     </div>
     <div class="partner-sidebar-overlay" data-sidebar-close></div>
     <div class="locked-module-modal" id="lockedModuleModal" aria-hidden="true"><div class="locked-module-modal__card" role="dialog" aria-modal="true" aria-labelledby="lockedModuleTitle"><button type="button" class="locked-module-modal__close" data-locked-close>×</button><span class="locked-module-modal__icon">{{ ps.sidebar_icon('lock') }}</span><h2 id="lockedModuleTitle">Ce module n’est pas inclus dans votre abonnement</h2><p>Pour activer ce module ou faire évoluer votre abonnement, contactez Clément VAILLANT.</p><strong>clement@integraleacademy.com</strong><div><a class="btn btn-primary" href="mailto:clement@integraleacademy.com?subject=Activation%20module%20Int%C3%A9grale%20Connect">Contacter Clément</a><a class="btn" href="{{ url_for('partner_subscription') }}">Voir mon abonnement</a></div></div></div>
@@ -888,7 +899,26 @@
     openButtons.forEach(btn => btn.addEventListener('click', openSidebar));
     closeButtons.forEach(btn => btn.addEventListener('click', closeSidebar));
     overlay?.addEventListener('click', closeSidebar);
-    collapse?.addEventListener('click', () => document.body.classList.toggle('partner-sidebar-collapsed'));
+    const storageKey = 'partnerSidebarCollapsed';
+    const isMobile = () => window.matchMedia('(max-width: 860px)').matches;
+    if(localStorage.getItem(storageKey) === '1') document.body.classList.add('partner-sidebar-collapsed');
+    collapse?.addEventListener('click', () => {
+      document.body.classList.toggle('partner-sidebar-collapsed');
+      localStorage.setItem(storageKey, document.body.classList.contains('partner-sidebar-collapsed') ? '1' : '0');
+    });
+    document.querySelectorAll('.partner-sidebar__item[href], [data-sidebar-action]').forEach(el => el.addEventListener('click', () => { if(isMobile()) closeSidebar(); }));
+    document.addEventListener('click', (event) => {
+      const actionEl = event.target.closest('[data-sidebar-action]');
+      if(!actionEl) return;
+      const action = actionEl.getAttribute('data-sidebar-action');
+      if(action === 'toggle-create-menu'){
+        const menu = document.getElementById('sidebarCreateMenu');
+        menu?.classList.toggle('is-open');
+        return;
+      }
+      if(action === 'create-session') document.getElementById('btnOpenCreateSession')?.click();
+      if(action === 'create-trainee') document.getElementById('btnOpenCreateTraineeFromSessions')?.click();
+    });
     document.addEventListener('keydown', (event) => {
       if(event.key === 'Escape'){
         closeSidebar();
