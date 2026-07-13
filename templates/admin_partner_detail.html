@@ -5,6 +5,7 @@
 <div class="grid" style="display:grid;grid-template-columns:2fr 1fr;gap:18px;align-items:start;">
 <form id="edit" method="post" class="card" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;">
   <h2 style="grid-column:1/-1">Informations générales</h2>
+  <div style="grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:10px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc;">{% if partner.logo_url or partner.logo_path %}<img src="{{ url_for('admin_view_upload', path=partner.logo_url or partner.logo_path) }}" alt="Logo {{ partner.name }}" style="width:72px;height:52px;object-fit:contain;background:#fff;border-radius:10px;border:1px solid #e2e8f0;">{% else %}<span style="width:52px;height:52px;border-radius:14px;background:#dcfce7;color:#166534;display:inline-flex;align-items:center;justify-content:center;font-weight:900;">{{ (partner.name[:2] or 'IC')|upper }}</span>{% endif %}<strong>Logo partenaire</strong></div>
   {% for name,label in [('name','Nom commercial'),('legal_name','Raison sociale'),('siret','SIRET'),('contact_first_name','Prénom contact'),('contact_last_name','Nom contact'),('email','Email'),('phone','Téléphone'),('address','Adresse'),('postal_code','Code postal'),('city','Ville'),('subscription_plan','Formule'),('max_users','Utilisateurs max'),('storage_limit','Stockage max')] %}
     <label>{{ label }}<input name="{{ name }}" value="{{ partner.get(name,'') }}" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;"></label>
   {% endfor %}
@@ -28,6 +29,23 @@
   </div>
   <button class="btn btn-blue" type="submit">Enregistrer</button>
 </form>
+
+<div class="card" id="subscription" style="grid-column:1/-1">
+  <h2>Abonnement et utilisation</h2>
+  {% set sub = partner.subscription or {} %}
+  <div class="admin-subscription-grid">
+    <label>Nom de l’abonnement<input form="edit" name="subscription_plan_name" value="{{ sub.get('plan_name','Essentiel') }}"></label>
+    <label>Statut<select form="edit" name="subscription_status">{% for st in ['active','trial','suspended','expired'] %}<option value="{{ st }}" {% if sub.get('status')==st %}selected{% endif %}>{{ st }}</option>{% endfor %}</select></label>
+    <label>Limite de stagiaires<input form="edit" name="trainee_limit" type="number" min="0" value="{{ sub.get('trainee_limit') or '' }}"></label>
+    <label style="align-self:end"><input form="edit" type="checkbox" name="trainee_unlimited" value="1" {% if sub.get('trainee_unlimited') or sub.get('trainee_limit') is none %}checked{% endif %}> Utilisation illimitée</label>
+  </div>
+  <h3>Modules et tarifs</h3>
+  <div class="admin-subscription-grid">{% for key,cfg in subscription_module_pricing.items() %}<label class="admin-module-price"><span><input form="edit" type="checkbox" name="subscription_modules" value="{{ key }}" {% if (sub.get('modules') or {}).get(key) %}checked{% endif %}> {{ cfg.label }}</span><input form="edit" name="module_price_{{ key }}" type="number" min="0" value="{{ (sub.get('module_prices') or {}).get(key, cfg.price) }}"></label>{% endfor %}</div>
+  <p><strong>Stagiaires comptabilisés :</strong> {{ sub.get('trainee_usage_count',0) }}</p>
+  <p><strong>Dernière remise à zéro :</strong> {{ sub.get('trainee_usage_reset_at')|frdatetime if sub.get('trainee_usage_reset_at') else '—' }}</p>
+  <form method="post" action="{{ url_for('admin_partner_reset_usage', partner_id=partner.id) }}" onsubmit="return confirm('Remettre le compteur à zéro ?\n\nCette action remettra à zéro le nombre de stagiaires comptabilisés dans l’abonnement. Elle ne supprimera aucun stagiaire et ne modifiera aucune fiche existante.');"><button class="btn btn-danger" type="submit">Remettre le compteur à zéro</button></form>
+  <h3>Historique des remises à zéro</h3>{% for item in sub.get('trainee_usage_reset_history', [])[:5] %}<p>{{ item.date|frdatetime }} — {{ item.admin }} — {{ item.old_value }} → {{ item.new_value }}</p>{% else %}<p class="muted">Aucune remise à zéro.</p>{% endfor %}
+</div>
 <div class="card"><h2>Utilisation</h2><p><strong>{{ counts.users }}</strong> utilisateurs</p><p><strong>{{ counts.trainees }}</strong> stagiaires</p><p><strong>{{ counts.sessions }}</strong> sessions</p><p>Créé le {{ partner.created_at|frdatetime }}</p><h3>Utilisateurs</h3>{% for u in users %}<p>{{ u.email }} — {{ u.role }} {% if not u.active %}(désactivé){% endif %}</p>{% else %}<p>Aucun utilisateur.</p>{% endfor %}</div>
 
 <div class="card" style="grid-column:1/-1">

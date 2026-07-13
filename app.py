@@ -1832,6 +1832,7 @@ def inject_read_only():
         "admin_can_access_notifications": _admin_can_view_notifications(),
         "admin_can_manage_notifications": _admin_can_manage_notifications(),
         "global_mail_sent_notice": mail_sent_notice,
+        "current_partner_logo_url": _partner_logo_url(partner) if current_partner_name else "",
         "public_base_url": PUBLIC_BASE_URL.rstrip("/"),
         "partner_modules": PARTNER_MODULES,
         "partner_has_module": partner_has_module,
@@ -2382,6 +2383,10 @@ def _merge_partner_scoped_payload(scoped: Dict[str, Any], partner_id: str) -> Di
     current = _load_valid_json_payload(DATA_FILE) or _empty_data_payload()
     _ensure_multi_partner_payload(current)
     current["sessions"] = [s for s in current.get("sessions", []) if not isinstance(s, dict) or s.get("partner_id") != partner_id] + [s for s in scoped.get("sessions", []) if isinstance(s, dict)]
+    if isinstance(scoped.get("partners"), list):
+        scoped_partner = next((p for p in scoped.get("partners", []) if isinstance(p, dict) and p.get("id") == partner_id), None)
+        if scoped_partner:
+            current["partners"] = [p for p in current.get("partners", []) if not isinstance(p, dict) or p.get("id") != partner_id] + [scoped_partner]
     for key in ("users", "positioning_tests", "notifications_edof", "notifications_financement_refuse", "notifications_prelevements", "notifications_prelevement_non_valides", "notifications_phone_relances", "notifications_vae_relances", "notifications_cnaps_pre_relances", "notifications_test_fr", "notifications_convention_unsigned", "notifications_vtc_books", "notifications_admin"):
         if isinstance(scoped.get(key), list):
             current[key] = [x for x in current.get(key, []) if not isinstance(x, dict) or x.get("partner_id") != partner_id] + [x for x in scoped.get(key, []) if isinstance(x, dict)]
@@ -6086,6 +6091,8 @@ def load_data() -> Dict[str, Any]:
 
         if _ensure_multi_partner_payload(data):
             changed = True
+        if normalize_all_partner_subscriptions(data):
+            changed = True
 
         if _send_vtc_credentials_missing_reminders(data):
             changed = True
@@ -6134,6 +6141,7 @@ def save_data(data: Dict[str, Any]) -> None:
     if _is_partner_scoped_session():
         data = _merge_partner_scoped_payload(data, _current_partner_id())
     _ensure_multi_partner_payload(data)
+    normalize_all_partner_subscriptions(data)
     _write_json_with_backups(DATA_FILE, data, _data_lock)
 
 def _load_wedof_webhooks() -> List[Dict[str, Any]]:
@@ -11667,6 +11675,73 @@ def scotia_vae_justificatif_download(dossier_id: str, doc_id: str):
 PARTNER_STATUS_LABELS = {"active": "Actif", "trial": "En essai", "suspended": "Suspendu", "archived": "Archivé"}
 
 
+PARTNER_SUBSCRIPTION_MODULE_PRICING = {
+    "crm": {"label": "CRM", "icon": "📈", "price": 49, "description": "Pipeline commercial et suivi des prospects.", "features": ["Tableau de bord", "Relances", "Suivi conversion"]},
+    "partners": {"label": "Partenaires", "icon": "🤝", "price": 39, "description": "Gestion multi-partenaires et accès dédiés.", "features": ["Comptes partenaires", "Isolation données", "Modules"]},
+    "cpf": {"label": "CPF", "icon": "🎓", "price": 59, "description": "Suivi des demandes CPF et dossiers WeDoF.", "features": ["Demandes CPF", "Statuts", "Exports"]},
+    "training_management": {"label": "Gestion OF", "icon": "🏫", "price": 79, "description": "Gestion opérationnelle des sessions et stagiaires.", "features": ["Sessions", "Stagiaires", "Documents"]},
+}
+PARTNER_SUBSCRIPTION_STATUS_LABELS = {"active": "Actif", "trial": "Essai", "suspended": "Suspendu", "expired": "Expiré"}
+PARTNER_INFO_FIELDS = ("name", "legal_name", "siret", "activity_declaration_number", "address", "address_extra", "postal_code", "city", "country", "contact_first_name", "contact_last_name", "contact_role", "email", "phone", "website")
+PARTNER_LOGO_MAX_BYTES = 3 * 1024 * 1024
+PARTNER_LOGO_ALLOWED_MIMES = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp"}
+
+def _count_partner_trainees(data: Dict[str, Any], partner_id: str) -> int:
+    return sum(len(_session_trainees_list(s)) for s in data.get("sessions", []) if isinstance(s, dict) and s.get("partner_id") == partner_id)
+
+def _default_subscription_for_partner(data: Dict[str, Any], partner: Dict[str, Any]) -> Dict[str, Any]:
+    enabled = _partner_enabled_modules(partner) if "_partner_enabled_modules" in globals() else set(partner.get("enabled_modules") or [])
+    return {"plan_name": partner.get("subscription_plan") or "Essentiel", "status": "trial" if partner.get("status") == "trial" else ("suspended" if partner.get("status") == "suspended" else "active"), "started_at": partner.get("subscription_started_at") or None, "renews_at": partner.get("subscription_ends_at") or None, "modules": {"crm": "sales" in enabled, "partners": True, "cpf": "cpf" in enabled, "training_management": any(k in enabled for k in ("training_aps", "training_ssiap", "training_a3p", "training_vtc", "training_dirigeant"))}, "module_prices": {}, "trainee_limit": 100, "trainee_unlimited": False, "trainee_usage_count": _count_partner_trainees(data, partner.get("id") or ""), "trainee_usage_reset_at": None, "trainee_usage_migrated_at": _now_iso() if "_now_iso" in globals() else datetime.datetime.utcnow().isoformat()+"Z", "trainee_usage_reset_history": []}
+
+def normalize_partner_subscription(data: Dict[str, Any], partner: Dict[str, Any]) -> bool:
+    changed = False
+    if "logo_url" not in partner:
+        partner["logo_url"] = partner.get("logo_path") or ""; changed = True
+    sub = partner.get("subscription") if isinstance(partner.get("subscription"), dict) else None
+    default = _default_subscription_for_partner(data, partner)
+    if sub is None:
+        partner["subscription"] = default; return True
+    for k, v in default.items():
+        if k not in sub:
+            sub[k] = v; changed = True
+    if not isinstance(sub.get("modules"), dict):
+        sub["modules"] = default["modules"]; changed = True
+    else:
+        for k, v in default["modules"].items():
+            if k not in sub["modules"]:
+                sub["modules"][k] = v; changed = True
+    if not sub.get("trainee_usage_migrated_at"):
+        sub["trainee_usage_count"] = _count_partner_trainees(data, partner.get("id") or "")
+        sub["trainee_usage_migrated_at"] = _now_iso(); changed = True
+    return changed
+
+def normalize_all_partner_subscriptions(data: Dict[str, Any]) -> bool:
+    changed = False
+    for p in data.get("partners", []):
+        if isinstance(p, dict) and normalize_partner_subscription(data, p):
+            changed = True
+    return changed
+
+def increment_partner_trainee_usage(data: Dict[str, Any], partner_id: str, trainee: Dict[str, Any]) -> bool:
+    if not partner_id or not isinstance(trainee, dict) or trainee.get("subscription_usage_counted"):
+        return False
+    partner = next((p for p in data.get("partners", []) if isinstance(p, dict) and p.get("id") == partner_id), None)
+    if not partner:
+        app.logger.warning("partner_usage_increment result=partner_missing partner_id=%s trainee_id=%s", partner_id, trainee.get("id")); return False
+    normalize_partner_subscription(data, partner)
+    sub = partner.setdefault("subscription", {})
+    sub["trainee_usage_count"] = int(sub.get("trainee_usage_count") or 0) + 1
+    now = _now_iso()
+    trainee["subscription_usage_counted"] = True
+    trainee["subscription_usage_counted_at"] = now
+    app.logger.info("partner_usage_increment result=success partner_id=%s trainee_id=%s count=%s", partner_id, trainee.get("id"), sub["trainee_usage_count"])
+    return True
+
+def _partner_logo_url(partner: Optional[Dict[str, Any]]) -> str:
+    token = ((partner or {}).get("logo_url") or (partner or {}).get("logo_path") or "").strip()
+    return url_for("admin_view_upload", path=token) if token else ""
+
+
 PARTNER_MODULES = [
     {"key": "cnaps", "label": "Module CNAPS", "description": "Suivi des dossiers CNAPS, vérification automatique du statut CNAPS et accès DRACAR."},
     {"key": "cpf", "label": "Module CPF", "description": "Suivi des dossiers CPF / demandes WeDoF CPF."},
@@ -11768,6 +11843,110 @@ def _partner_allowed_formation_types(partner: Optional[Dict[str, Any]] = None) -
     return [t for t in FORMATION_TYPES if _module_for_training_type(t) in enabled]
 
 
+
+
+def _partner_space_partner_or_redirect():
+    data = load_data()
+    partner_id = _current_partner_id()
+    partner = next((p for p in data.get("partners", []) if isinstance(p, dict) and p.get("id") == partner_id), None)
+    if not partner or not _is_partner_scoped_session():
+        flash("Votre compte partenaire n’est pas correctement rattaché.", "error")
+        return data, None
+    normalize_partner_subscription(data, partner)
+    return data, partner
+
+def _validate_partner_logo_upload(file_storage):
+    from werkzeug.utils import secure_filename
+    if not file_storage or not file_storage.filename:
+        return "", ""
+    raw = file_storage.read(PARTNER_LOGO_MAX_BYTES + 1)
+    file_storage.seek(0)
+    if len(raw) > PARTNER_LOGO_MAX_BYTES:
+        raise ValueError("Le logo ne doit pas dépasser 3 Mo.")
+    mime = (file_storage.mimetype or "").lower()
+    if mime not in PARTNER_LOGO_ALLOWED_MIMES:
+        raise ValueError("Format invalide. Utilisez PNG, JPG, JPEG ou WEBP.")
+    try:
+        img = Image.open(BytesIO(raw)); img.verify()
+        fmt = (img.format or "").lower()
+        if mime == "image/png" and fmt != "png": raise ValueError()
+        if mime == "image/jpeg" and fmt not in {"jpeg", "jpg"}: raise ValueError()
+        if mime == "image/webp" and fmt != "webp": raise ValueError()
+    except Exception:
+        raise ValueError("Le contenu du fichier ne correspond pas à une image valide.")
+    filename = secure_filename(file_storage.filename or "logo")
+    return filename, PARTNER_LOGO_ALLOWED_MIMES[mime]
+
+def _save_partner_logo(partner_id: str, file_storage) -> str:
+    original, ext = _validate_partner_logo_upload(file_storage)
+    target = get_partner_storage_path(partner_id, "logos")
+    path = os.path.join(target, f"logo-{uuid.uuid4().hex[:12]}{ext}")
+    file_storage.save(path)
+    return _tokenize_path(path)
+
+@app.route("/admin/partner/informations", methods=["GET", "POST"])
+@admin_login_required
+@admin_write_required
+def partner_information():
+    data, partner = _partner_space_partner_or_redirect()
+    if not partner:
+        return redirect(url_for("admin_sessions"))
+    if request.method == "POST":
+        changed_fields = []
+        logo_action = "none"
+        try:
+            from werkzeug.utils import secure_filename
+            for key in PARTNER_INFO_FIELDS:
+                new_value = (request.form.get(key) or "").strip()
+                if key == "email":
+                    new_value = new_value.lower()
+                if (partner.get(key) or "") != new_value:
+                    partner[key] = new_value; changed_fields.append(key)
+            if request.form.get("remove_logo") == "1" and (partner.get("logo_url") or partner.get("logo_path")):
+                partner["logo_url"] = ""; partner["logo_path"] = ""; logo_action = "removed"; changed_fields.append("logo_url")
+            logo_file = request.files.get("logo")
+            if logo_file and logo_file.filename:
+                had_logo = bool(partner.get("logo_url") or partner.get("logo_path"))
+                partner["logo_url"] = _save_partner_logo(partner.get("id"), logo_file)
+                partner["logo_path"] = partner["logo_url"]
+                partner["logo_filename"] = secure_filename(logo_file.filename or "logo")
+                logo_action = "replaced" if had_logo else "added"; changed_fields.append("logo_url")
+            partner["updated_at"] = _now_iso()
+            _append_activity_log(data, "partner_self_information_updated", "partner", partner.get("id"), partner.get("id"), {"fields": sorted(set(changed_fields)), "logo_action": logo_action, "result": "success"})
+            app.logger.info("partner_information_save partner_id=%s fields=%s logo_action=%s result=success", partner.get("id"), sorted(set(changed_fields)), logo_action)
+            save_data(data)
+            flash("Informations enregistrées.", "success")
+            return redirect(url_for("partner_information"))
+        except ValueError as exc:
+            flash(str(exc), "error")
+        except Exception:
+            app.logger.exception("partner_information_save partner_id=%s result=error", partner.get("id"))
+            flash("La sauvegarde a échoué. Réessayez ou contactez le support.", "error")
+    return render_template("partner_information.html", partner=partner, logo_url=_partner_logo_url(partner))
+
+@app.get("/admin/partner/abonnement")
+@admin_login_required
+def partner_subscription():
+    data, partner = _partner_space_partner_or_redirect()
+    if not partner:
+        return redirect(url_for("admin_sessions"))
+    save_data(data)
+    return render_template("partner_subscription.html", partner=partner, subscription=partner.get("subscription") or {}, module_pricing=PARTNER_SUBSCRIPTION_MODULE_PRICING, status_labels=PARTNER_SUBSCRIPTION_STATUS_LABELS)
+
+@app.post("/admin/partners/<partner_id>/subscription/reset-usage")
+@admin_login_required
+@require_super_admin
+def admin_partner_reset_usage(partner_id: str):
+    data = load_data(); partner = _partner_or_404(data, partner_id); normalize_partner_subscription(data, partner)
+    sub = partner.setdefault("subscription", {})
+    old = int(sub.get("trainee_usage_count") or 0); now = _now_iso()
+    sub["trainee_usage_count"] = 0; sub["trainee_usage_reset_at"] = now
+    sub.setdefault("trainee_usage_reset_history", []).insert(0, {"date": now, "admin": session.get("admin_username") or "admin", "old_value": old, "new_value": 0})
+    del sub["trainee_usage_reset_history"][10:]
+    _append_activity_log(data, "partner_subscription_usage_reset", "partner", partner_id, partner_id, {"old_value": old, "new_value": 0})
+    save_data(data); flash("Compteur remis à zéro.", "success")
+    return redirect(url_for("admin_partner_detail", partner_id=partner_id) + "#subscription")
+
 @app.get("/admin/partners")
 @admin_login_required
 @require_super_admin
@@ -11860,6 +12039,23 @@ def admin_partner_detail(partner_id: str):
             partner[key] = (request.form.get(key) or "").strip()
         partner["status"] = (request.form.get("status") or partner.get("status") or "active") if (request.form.get("status") or "") in PARTNER_STATUSES else partner.get("status", "active")
         partner["enabled_modules"] = [key for key in request.form.getlist("enabled_modules") if key in PARTNER_MODULE_KEYS]
+        normalize_partner_subscription(data, partner)
+        sub = partner.setdefault("subscription", {})
+        sub["plan_name"] = (request.form.get("subscription_plan_name") or sub.get("plan_name") or "Essentiel").strip()
+        sub["status"] = (request.form.get("subscription_status") or sub.get("status") or "active").strip()
+        sub["trainee_unlimited"] = bool(request.form.get("trainee_unlimited"))
+        try:
+            sub["trainee_limit"] = None if sub["trainee_unlimited"] else int(request.form.get("trainee_limit") or 0)
+        except ValueError:
+            sub["trainee_limit"] = None
+        sub["modules"] = {key: (key in request.form.getlist("subscription_modules")) for key in PARTNER_SUBSCRIPTION_MODULE_PRICING}
+        prices = {}
+        for key, cfg in PARTNER_SUBSCRIPTION_MODULE_PRICING.items():
+            try:
+                prices[key] = int(request.form.get(f"module_price_{key}") or cfg["price"])
+            except ValueError:
+                prices[key] = cfg["price"]
+        sub["module_prices"] = prices
         for int_key in ("max_users", "storage_limit"):
             try:
                 partner[int_key] = int((request.form.get(int_key) or partner.get(int_key) or 0))
@@ -11872,7 +12068,7 @@ def admin_partner_detail(partner_id: str):
     users = [u for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id]
     invitations = [i for i in data.get("invitations", []) if isinstance(i, dict) and i.get("partner_id") == partner_id and not i.get("cancelled_at")]
     invitations.sort(key=lambda i: i.get("created_at") or "", reverse=True)
-    return render_template("admin_partner_detail.html", partner=partner, counts=_partner_counts(data, partner_id), users=users, invitation=invitations[0] if invitations else None, brevo_diag=_brevo_config_diagnostics(), can_copy_test_activation_link=_can_show_test_activation_link(), module_catalog=PARTNER_MODULES, enabled_modules=_partner_enabled_modules(partner))
+    return render_template("admin_partner_detail.html", partner=partner, counts=_partner_counts(data, partner_id), users=users, invitation=invitations[0] if invitations else None, brevo_diag=_brevo_config_diagnostics(), can_copy_test_activation_link=_can_show_test_activation_link(), module_catalog=PARTNER_MODULES, enabled_modules=_partner_enabled_modules(partner), subscription_module_pricing=PARTNER_SUBSCRIPTION_MODULE_PRICING)
 
 
 def _can_show_test_activation_link() -> bool:
@@ -16828,6 +17024,7 @@ def api_create_trainee(session_id: str):
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
+    increment_partner_trainee_usage(data, s.get("partner_id") or _current_partner_id() or INTEGRALE_PARTNER_ID, t)
     save_data(data)
 
     # ✅ ENVOI MAIL + SMS à la création (optionnel)
