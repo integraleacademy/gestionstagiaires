@@ -112,10 +112,7 @@
               </div>
             </div>
           {% endif %}
-          <a href="{{ url_for('admin_positioning_tests') }}" class="btn topbar-slim-link">Tests de positionnement</a>
           <button type="button" class="btn btn-blue topbar-slim-link" onclick="openModal('edofModal')">EDOF</button>
-          <button type="button" class="btn topbar-slim-link topbar-danger-link" onclick="openModal('financementRefuseModal')">FT Refusé</button>
-          {% if is_super_admin %}<a href="{{ url_for('admin_partners') }}" class="btn topbar-slim-link">Gérer les partenaires</a>{% endif %}
           <a href="{{ url_for('admin_logout') }}" class="btn topbar-slim-link">Déconnexion</a>
         {% elif is_partner_space %}
           <img class="partner-software-logo partner-software-logo--header" src="{{ url_for('static', filename='iaconnectpartenaires.png') }}" alt="Intégrale Connect Partenaires" loading="lazy">
@@ -148,9 +145,16 @@
       {"label":"Sessions archivées","icon":"archive","href":url_for('admin_sessions_archived'),"endpoints":["admin_sessions_archived"],"locked":False}
     ] %}
     {% set sidebar_tools_menu = {"label":"Outils","icon":"tool","badge":"","children":sidebar_tools_children} %}
-    {% set settings_menu = {"label":"Réglages","icon":"settings","badge":"","children":([
-      {"label":"Réglages Qonto","icon":"settings","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings"],"locked":False}
-    ] if partner_has_module('billing') else [])} %}
+    {% set admin_management_children = [] %}
+    {% if is_super_admin %}
+      {% set _ = admin_management_children.append({"label":"Tests de positionnement","icon":"file","href":url_for('admin_positioning_tests'),"endpoints":["admin_positioning_tests","admin_positioning_test_detail"],"locked":False}) %}
+      {% set _ = admin_management_children.append({"label":"Gérer les partenaires","icon":"users","href":url_for('admin_partners'),"endpoints":["admin_partners","admin_partner_detail","admin_partner_new"],"locked":False}) %}
+      {% set _ = admin_management_children.append({"label":"Secrétariat","icon":"mail","href":url_for('admin_secretariat'),"endpoints":["admin_secretariat"],"locked":False}) %}
+    {% endif %}
+    {% if partner_has_module('billing') %}
+      {% set _ = admin_management_children.append({"label":"Réglages Qonto","icon":"settings","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings"],"locked":False}) %}
+    {% endif %}
+    {% set admin_management_menu = {"label":"Administration","icon":"settings","badge":"","children":admin_management_children} %}
     {% set settings_items = [
       {"label":"Aide et support","icon":"help","href":url_for('partner_help_support'),"endpoints":["partner_help_support"],"locked":False}
     ] %}
@@ -165,7 +169,7 @@
           </div>
           <div class="partner-sidebar__create">{{ ps.sidebar_nav_item(create_item) }}<div class="quick-create-menu sidebar-create-menu" id="sidebarCreateMenu"><button class="quick-create-option quick-create-option--session" data-sidebar-action="create-session">💼 Nouvelle session</button><button class="quick-create-option quick-create-option--trainee" data-sidebar-action="create-trainee">👨‍🎓 Nouveau stagiaire</button></div></div>
           <section class="partner-sidebar__section"><h2>Navigation principale</h2>{% for item in space_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}{{ ps.sidebar_nav_item(sidebar_cpf_item) }}{{ ps.sidebar_submenu(sidebar_cnaps_menu) }}{{ ps.sidebar_submenu(sidebar_tools_menu) }}</section>
-          <section class="partner-sidebar__section partner-sidebar__section--settings"><h2>Paramètres et outils</h2>{% if settings_menu.children %}{{ ps.sidebar_submenu(settings_menu) }}{% endif %}{% for item in settings_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
+          <section class="partner-sidebar__section partner-sidebar__section--settings"><h2>Paramètres et outils</h2>{% if admin_management_menu.children %}{{ ps.sidebar_submenu(admin_management_menu) }}{% endif %}{% for item in settings_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
           {% set sub=partner_sidebar.subscription or {} %}{% set count=sub.get('trainee_usage_count') or 0 %}{% set limit=sub.get('trainee_limit') %}{% set unlimited=sub.get('trainee_unlimited') or not limit %}{% set pct=0 if unlimited else ((count*100/limit)|round(0,'floor')) %}
           <div class="subscription-usage-card {{ 'is-alert' if pct>=90 and not unlimited else ('is-warning' if pct>=70 and not unlimited else '') }}"><span>Utilisation de l’abonnement</span><strong>{{ count }} stagiaires créés</strong><small>{% if unlimited %}Aucun plafond défini{% else %}{{ [limit-count,0]|max }} stagiaires restants{% endif %}</small>{% if not unlimited %}<div class="subscription-usage-card__bar"><i style="width:{{ [pct,100]|min }}%"></i></div>{% endif %}<a href="{{ url_for('partner_subscription') }}">Voir les détails</a></div>
           <div class="partner-sidebar__bottom"><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}" title="Se déconnecter">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Se déconnecter</span></a><div class="partner-sidebar__powered"><img class="partner-software-logo partner-software-logo--powered" src="{{ url_for('static', filename='icone.png') }}" alt="Intégrale Connect" loading="lazy"><span>Propulsé par Intégrale Connect</span></div></div>
