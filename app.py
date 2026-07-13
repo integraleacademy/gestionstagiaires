@@ -2538,6 +2538,48 @@ def _partner_counts(data: Dict[str, Any], partner_id: str) -> Dict[str, int]:
     return {"users": sum(1 for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id), "sessions": len(sessions_for_partner), "trainees": sum(len(_session_trainees_list(s)) for s in sessions_for_partner)}
 
 
+
+
+def _delete_partner_everywhere(data: Dict[str, Any], partner_id: str) -> Dict[str, int]:
+    """Remove a partner and every partner-scoped record from the JSON payload."""
+    removed: Dict[str, int] = {}
+
+    def prune_list(key: str, predicate) -> None:
+        items = data.get(key)
+        if not isinstance(items, list):
+            return
+        kept = [item for item in items if not predicate(item)]
+        count = len(items) - len(kept)
+        if count:
+            data[key] = kept
+            removed[key] = count
+
+    prune_list("partners", lambda item: isinstance(item, dict) and item.get("id") == partner_id)
+    for key, items in list(data.items()):
+        if isinstance(items, list):
+            prune_list(key, lambda item, pid=partner_id: isinstance(item, dict) and item.get("partner_id") == pid)
+
+    dismissed_keys = data.get("notifications_admin_dismissed_schedule_keys")
+    if isinstance(dismissed_keys, list):
+        kept_keys = [key for key in dismissed_keys if not str(key).startswith(f"{partner_id}:")]
+        count = len(dismissed_keys) - len(kept_keys)
+        if count:
+            data["notifications_admin_dismissed_schedule_keys"] = kept_keys
+            removed["notifications_admin_dismissed_schedule_keys"] = count
+
+    return removed
+
+
+def _remove_partner_storage(partner_id: str) -> bool:
+    root = os.path.realpath(os.path.join(PERSIST_DIR, "partners"))
+    target = os.path.realpath(os.path.join(root, str(partner_id or "")))
+    if not target.startswith(root + os.sep):
+        raise ValueError("chemin partenaire invalide")
+    if os.path.isdir(target):
+        shutil.rmtree(target)
+        return True
+    return False
+
 def _partner_or_404(data: Dict[str, Any], partner_id: str) -> Dict[str, Any]:
     partner = next((p for p in data.get("partners", []) if isinstance(p, dict) and p.get("id") == partner_id), None)
     if not partner:
@@ -11630,7 +11672,7 @@ def admin_partners():
         row["counts"] = _partner_counts(data, partner.get("id") or "")
         partners.append(row)
     partners.sort(key=lambda item: (item.get("name") or "").lower())
-    return render_template("admin_partners.html", partners=partners, q=q, status=status, plan=plan, status_labels=PARTNER_STATUS_LABELS)
+    return render_template("admin_partners.html", partners=partners, q=q, status=status, plan=plan, status_labels=PARTNER_STATUS_LABELS, protected_partner_id=INTEGRALE_PARTNER_ID)
 
 
 @app.route("/admin/partners/new", methods=["GET", "POST"])
@@ -11812,6 +11854,26 @@ def admin_partner_toggle_status(partner_id: str):
     partner["updated_at"] = _now_iso()
     _append_activity_log(data, "partner_status_changed", "partner", partner_id, partner_id, {"status": partner["status"]})
     save_data(data)
+    return redirect(url_for("admin_partners"))
+
+
+@app.post("/admin/partners/<partner_id>/delete")
+@admin_login_required
+@require_super_admin
+def admin_partner_delete(partner_id: str):
+    if partner_id == INTEGRALE_PARTNER_ID:
+        abort(400, "Le partenaire Intégrale Connect ne peut pas être supprimé")
+    data = load_data()
+    partner = _partner_or_404(data, partner_id)
+    partner_name = partner.get("name") or partner_id
+    removed = _delete_partner_everywhere(data, partner_id)
+    storage_removed = _remove_partner_storage(partner_id)
+    if session.get("assist_partner_id") == partner_id:
+        session.pop("assist_partner_id", None)
+        session.pop("assist_started_at", None)
+    _append_activity_log(data, "partner_deleted", "partner", partner_id, "", {"partner_name": partner_name, "removed": removed, "storage_removed": storage_removed})
+    save_data(data)
+    flash(f"Le partenaire {partner_name} et toutes ses données ont été supprimés.", "success")
     return redirect(url_for("admin_partners"))
 
 
