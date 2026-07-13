@@ -57,6 +57,47 @@ class MultiPartnerIsolationTests(unittest.TestCase):
         self.assertEqual([s["id"] for s in data["sessions"]], ["session-a"])
         self.assertEqual(data["sessions"][0]["trainees"][0]["id"], "trainee-a")
 
+
+    def test_partner_sessions_page_hides_integrale_only_tools(self):
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "partner_admin"
+            sess["partner_id"] = self.partner_a
+
+        response = self.client.get("/admin/sessions")
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertNotIn("Secrétariat", html)
+        self.assertNotIn("Paiement espèces", html)
+        self.assertNotIn("Contrôles VTC", html)
+        self.assertNotIn(">SCOTIA<", html)
+        self.assertNotIn("Tests de positionnement", html)
+        self.assertNotIn("FT Refusé", html)
+        self.assertNotIn(">AFC<", html)
+
+    def test_partner_cannot_access_integrale_only_tools_directly(self):
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "partner_admin"
+            sess["partner_id"] = self.partner_a
+
+        forbidden_paths = [
+            "/admin/gestion-secretariat",
+            "/admin/sessions/paiement-especes",
+            "/admin/test-positionnement",
+            "/admin/afc",
+            "/scotia/login",
+        ]
+        for path in forbidden_paths:
+            with self.subTest(path=path):
+                response = self.client.get(path, follow_redirects=False)
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(response.headers.get("Location"), "/admin/sessions")
+
+        api_response = self.client.post("/api/vtc/check/notify", json={})
+        self.assertEqual(api_response.status_code, 403)
+        self.assertEqual(api_response.get_json().get("error"), "partner_space_forbidden")
+
     def test_partner_scoped_save_cannot_delete_other_partner_data(self):
         with gestion_app.app.test_request_context("/admin/sessions"):
             gestion_app.session["admin_logged_in"] = True

@@ -1787,6 +1787,11 @@ def protect_sensitive_routes():
 
     if session.get("admin_logged_in") and (session.get("admin_role") == "partner_admin" or session.get("assist_partner_id")):
         endpoint = request.endpoint or ""
+        if endpoint in PARTNER_SPACE_FORBIDDEN_ENDPOINTS:
+            if path.startswith("/api/") or request.accept_mimetypes.best == "application/json":
+                return jsonify({"ok": False, "error": "partner_space_forbidden"}), 403
+            flash("Cette fonctionnalité n’est pas disponible dans l’espace partenaire.", "error")
+            return redirect(url_for("admin_sessions"))
         for module_key, endpoints in PARTNER_MODULE_ROUTE_ENDPOINTS.items():
             if endpoint in endpoints and not partner_has_module(module_key):
                 if path.startswith("/api/") or request.accept_mimetypes.best == "application/json":
@@ -11681,6 +11686,35 @@ PARTNER_MODULE_ROUTE_ENDPOINTS = {
     "billing": {"admin_qonto_settings", "admin_sessions_billing"},
     "sales": {"admin_sales_tracking", "admin_sales_tracking_data", "admin_sales_tracking_save_objectives"},
     "automations": {"admin_sessions_conventions", "admin_sessions_automations"},
+}
+PARTNER_SPACE_FORBIDDEN_ENDPOINTS = {
+    "admin_secretariat",
+    "admin_cash_payments",
+    "api_cash_payments_settle",
+    "api_cash_payments_export",
+    "api_cash_payments_send_receipt",
+    "api_cash_payments_send_followup",
+    "api_cash_payments_collection_done",
+    "api_cash_payments_collection_cancel",
+    "api_vtc_check_import",
+    "api_vtc_check_notify",
+    "scotia_login",
+    "scotia_login_post",
+    "admin_positioning_tests",
+    "admin_positioning_test_detail",
+    "admin_financement_refuse_submit",
+    "admin_afc",
+    "api_admin_afc_create_candidate",
+    "api_admin_afc_import_from_image",
+    "api_admin_afc_save_mail_templates",
+    "api_admin_afc_save_modules",
+    "api_admin_afc_update_candidate",
+    "api_admin_afc_delete_candidate",
+    "api_admin_afc_delete_all_candidates",
+    "api_admin_afc_notify_candidate",
+    "api_admin_afc_notify_pending_candidates",
+    "admin_afc_candidate_sheet",
+    "admin_afc_export",
 }
 PARTNER_TRAINING_MODULES = {
     "APS": "training_aps",

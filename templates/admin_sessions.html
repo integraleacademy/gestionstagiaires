@@ -567,7 +567,7 @@
   </div>
 
   <div class="admin-actions" aria-label="Actions sessions">
-    <a class="btn btn-primary" href="{{ url_for('admin_secretariat') }}">📬 Secrétariat</a>
+    {% if not is_partner_space %}<a class="btn btn-primary" href="{{ url_for('admin_secretariat') }}">📬 Secrétariat</a>{% endif %}
     {% if partner_has_module('billing') %}<a class="btn btn-outline" href="{{ url_for('admin_qonto_settings') }}">🧾 Réglages Qonto</a>{% else %}<span class="btn btn-outline module-locked" title="Module payant non activé">🔒 Réglages Qonto</span>{% endif %}
     {% if partner_has_module('cpf') %}
       <a class="btn btn-violet {% if (wedof_new_requests_count or 0) > 0 %}is-has-request{% else %}is-idle{% endif %}" href="{{ url_for('admin_wedof_requests') }}">
@@ -599,14 +599,16 @@
       <summary class="btn btn-outline">⚙️ Outils</summary>
       <div class="admin-action-panel">
         <div class="admin-action-section">Gestion</div>
-        <a class="btn btn-outline" href="{{ url_for('admin_afc') }}">AFC</a>
+        {% if not is_partner_space %}<a class="btn btn-outline" href="{{ url_for('admin_afc') }}">AFC</a>{% endif %}
         {% if partner_has_module('automations') %}<a class="btn btn-outline" href="{{ url_for('admin_sessions_conventions') }}">Conventions</a>{% else %}<span class="btn btn-outline module-locked">🔒 Conventions</span>{% endif %}
         {% if partner_has_module('automations') %}<a class="btn btn-primary" href="{{ url_for('admin_sessions_automations') }}">⚡ Automatisations</a>{% else %}<span class="btn btn-primary module-locked">🔒 Automatisations</span>{% endif %}
         {% if partner_has_module('billing') %}<a class="btn btn-outline" href="{{ url_for('admin_sessions_billing') }}">🧾 Facturation</a>{% else %}<span class="btn btn-outline module-locked">🔒 Facturation</span>{% endif %}
         <a class="btn btn-outline" href="{{ url_for('admin_sessions_archived') }}">Sessions archivées</a>
-        <a class="btn btn-outline" href="{{ url_for('admin_cash_payments') }}">💶 Paiement espèces</a>
-        <a class="btn btn-outline" href="{{ url_for('scotia_login') }}" target="_blank" rel="noopener">SCOTIA</a>
-        {% if not is_read_only %}
+        {% if not is_partner_space %}
+          <a class="btn btn-outline" href="{{ url_for('admin_cash_payments') }}">💶 Paiement espèces</a>
+          <a class="btn btn-outline" href="{{ url_for('scotia_login') }}" target="_blank" rel="noopener">SCOTIA</a>
+        {% endif %}
+        {% if not is_read_only and not is_partner_space %}
           <div class="admin-action-section">Contrôles VTC</div>
           <button class="btn btn-outline" id="btnOpenVtcCheck" type="button">Check VTC théorie</button>
           <button class="btn btn-outline" id="btnOpenVtcPracticeCheck" type="button">Check VTC pratique</button>
