@@ -1785,6 +1785,20 @@ def protect_sensitive_routes():
         if request.method not in {"GET", "HEAD", "OPTIONS"} and session.get("admin_role") == "viewer":
             return jsonify({"ok": False, "error": "read_only"}), 403
 
+    if session.get("admin_logged_in") and (session.get("admin_role") == "partner_admin" or session.get("assist_partner_id")):
+        endpoint = request.endpoint or ""
+        if endpoint in PARTNER_SPACE_FORBIDDEN_ENDPOINTS:
+            if path.startswith("/api/") or request.accept_mimetypes.best == "application/json":
+                return jsonify({"ok": False, "error": "partner_space_forbidden"}), 403
+            flash("Cette fonctionnalité n’est pas disponible dans l’espace partenaire.", "error")
+            return redirect(url_for("admin_sessions"))
+        for module_key, endpoints in PARTNER_MODULE_ROUTE_ENDPOINTS.items():
+            if endpoint in endpoints and not partner_has_module(module_key):
+                if path.startswith("/api/") or request.accept_mimetypes.best == "application/json":
+                    return jsonify({"ok": False, "error": "module_locked", "module": module_key}), 403
+                flash("Ce module est verrouillé pour ce partenaire. Activez-le dans la fiche partenaire.", "error")
+                return redirect(url_for("admin_sessions"))
+
 @app.context_processor
 def inject_read_only():
     admin_notifications = {"notifications": [], "unresolved_total": 0}
@@ -1819,6 +1833,9 @@ def inject_read_only():
         "admin_can_manage_notifications": _admin_can_manage_notifications(),
         "global_mail_sent_notice": mail_sent_notice,
         "public_base_url": PUBLIC_BASE_URL.rstrip("/"),
+        "partner_modules": PARTNER_MODULES,
+        "partner_has_module": partner_has_module,
+        "partner_allowed_formation_types": _partner_allowed_formation_types(),
     }
 
 @app.get("/admin/login")
@@ -2538,6 +2555,48 @@ def _partner_counts(data: Dict[str, Any], partner_id: str) -> Dict[str, int]:
     sessions_for_partner = [s for s in data.get("sessions", []) if isinstance(s, dict) and s.get("partner_id") == partner_id]
     return {"users": sum(1 for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id), "sessions": len(sessions_for_partner), "trainees": sum(len(_session_trainees_list(s)) for s in sessions_for_partner)}
 
+
+
+
+def _delete_partner_everywhere(data: Dict[str, Any], partner_id: str) -> Dict[str, int]:
+    """Remove a partner and every partner-scoped record from the JSON payload."""
+    removed: Dict[str, int] = {}
+
+    def prune_list(key: str, predicate) -> None:
+        items = data.get(key)
+        if not isinstance(items, list):
+            return
+        kept = [item for item in items if not predicate(item)]
+        count = len(items) - len(kept)
+        if count:
+            data[key] = kept
+            removed[key] = count
+
+    prune_list("partners", lambda item: isinstance(item, dict) and item.get("id") == partner_id)
+    for key, items in list(data.items()):
+        if isinstance(items, list):
+            prune_list(key, lambda item, pid=partner_id: isinstance(item, dict) and item.get("partner_id") == pid)
+
+    dismissed_keys = data.get("notifications_admin_dismissed_schedule_keys")
+    if isinstance(dismissed_keys, list):
+        kept_keys = [key for key in dismissed_keys if not str(key).startswith(f"{partner_id}:")]
+        count = len(dismissed_keys) - len(kept_keys)
+        if count:
+            data["notifications_admin_dismissed_schedule_keys"] = kept_keys
+            removed["notifications_admin_dismissed_schedule_keys"] = count
+
+    return removed
+
+
+def _remove_partner_storage(partner_id: str) -> bool:
+    root = os.path.realpath(os.path.join(PERSIST_DIR, "partners"))
+    target = os.path.realpath(os.path.join(root, str(partner_id or "")))
+    if not target.startswith(root + os.sep):
+        raise ValueError("chemin partenaire invalide")
+    if os.path.isdir(target):
+        shutil.rmtree(target)
+        return True
+    return False
 
 def _partner_or_404(data: Dict[str, Any], partner_id: str) -> Dict[str, Any]:
     partner = next((p for p in data.get("partners", []) if isinstance(p, dict) and p.get("id") == partner_id), None)
@@ -11608,6 +11667,107 @@ def scotia_vae_justificatif_download(dossier_id: str, doc_id: str):
 PARTNER_STATUS_LABELS = {"active": "Actif", "trial": "En essai", "suspended": "Suspendu", "archived": "Archivé"}
 
 
+PARTNER_MODULES = [
+    {"key": "cnaps", "label": "Module CNAPS", "description": "Suivi des dossiers CNAPS, vérification automatique du statut CNAPS et accès DRACAR."},
+    {"key": "cpf", "label": "Module CPF", "description": "Suivi des dossiers CPF / demandes WeDoF CPF."},
+    {"key": "billing", "label": "Module Facturation (Qonto)", "description": "Facturation, suivi des factures et réglages Qonto."},
+    {"key": "sales", "label": "Module Suivi des ventes", "description": "Tableaux de bord et indicateurs de suivi des ventes."},
+    {"key": "training_aps", "label": "Module formation APS", "description": "Création et gestion de sessions APS uniquement."},
+    {"key": "training_ssiap", "label": "Module formation SSIAP", "description": "Création et gestion de sessions SSIAP uniquement."},
+    {"key": "training_a3p", "label": "Module formation A3P", "description": "Création et gestion de sessions A3P uniquement."},
+    {"key": "training_vtc", "label": "Module formation VTC", "description": "Création et gestion de sessions VTC uniquement."},
+    {"key": "training_dirigeant", "label": "Module formation Dirigeant / VAE", "description": "Création et gestion de sessions Dirigeant initial et Dirigeant VAE."},
+    {"key": "automations", "label": "Module automatisations", "description": "Conventions de formation, convocations et attestations de fin de formation."},
+]
+PARTNER_MODULE_KEYS = {m["key"] for m in PARTNER_MODULES}
+PARTNER_MODULE_ROUTE_ENDPOINTS = {
+    "cnaps": {"admin_cnaps_unknown"},
+    "cpf": {"admin_wedof_requests", "admin_mark_wedof_treated", "send_wedof_to_salesforce"},
+    "billing": {"admin_qonto_settings", "admin_sessions_billing"},
+    "sales": {"admin_sales_tracking", "admin_sales_tracking_data", "admin_sales_tracking_save_objectives"},
+    "automations": {"admin_sessions_conventions", "admin_sessions_automations"},
+}
+PARTNER_SPACE_FORBIDDEN_ENDPOINTS = {
+    "admin_secretariat",
+    "admin_cash_payments",
+    "api_cash_payments_settle",
+    "api_cash_payments_export",
+    "api_cash_payments_send_receipt",
+    "api_cash_payments_send_followup",
+    "api_cash_payments_collection_done",
+    "api_cash_payments_collection_cancel",
+    "api_vtc_check_import",
+    "api_vtc_check_notify",
+    "scotia_login",
+    "scotia_login_post",
+    "admin_positioning_tests",
+    "admin_positioning_test_detail",
+    "admin_financement_refuse_submit",
+    "admin_afc",
+    "api_admin_afc_create_candidate",
+    "api_admin_afc_import_from_image",
+    "api_admin_afc_save_mail_templates",
+    "api_admin_afc_save_modules",
+    "api_admin_afc_update_candidate",
+    "api_admin_afc_delete_candidate",
+    "api_admin_afc_delete_all_candidates",
+    "api_admin_afc_notify_candidate",
+    "api_admin_afc_notify_pending_candidates",
+    "admin_afc_candidate_sheet",
+    "admin_afc_export",
+}
+PARTNER_TRAINING_MODULES = {
+    "APS": "training_aps",
+    "A3P": "training_a3p",
+    "SSIAP": "training_ssiap",
+    "VTC": "training_vtc",
+    "DIRIGEANT": "training_dirigeant",
+}
+
+def _partner_enabled_modules(partner: Optional[Dict[str, Any]]) -> set:
+    if not isinstance(partner, dict):
+        return set()
+    modules = partner.get("enabled_modules")
+    if not isinstance(modules, list):
+        legacy_modules = partner.get("modules")
+        modules = legacy_modules if isinstance(legacy_modules, list) else list(PARTNER_MODULE_KEYS)
+    return {str(item).strip() for item in modules if str(item).strip() in PARTNER_MODULE_KEYS}
+
+def _current_partner(data: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+    partner_id = _current_partner_id()
+    if not partner_id:
+        return None
+    data = data or load_data()
+    return next((p for p in data.get("partners", []) if isinstance(p, dict) and p.get("id") == partner_id), None)
+
+def partner_has_module(module_key: str, partner: Optional[Dict[str, Any]] = None) -> bool:
+    if _is_super_admin_session() and not session.get("assist_partner_id"):
+        return True
+    if not _is_partner_scoped_session() and not session.get("assist_partner_id"):
+        return True
+    return module_key in _partner_enabled_modules(partner or _current_partner())
+
+def _module_for_training_type(training_type: str) -> str:
+    raw = (training_type or "").strip().upper()
+    if raw.startswith("APS"):
+        return "training_aps"
+    if raw.startswith("A3P"):
+        return "training_a3p"
+    if raw.startswith("SSIAP") or "CHEF DE POSTE" in raw:
+        return "training_ssiap"
+    if "VTC" in raw:
+        return "training_vtc"
+    if raw.startswith("DIRIGEANT") or "VAE" in raw:
+        return "training_dirigeant"
+    return ""
+
+def _partner_allowed_formation_types(partner: Optional[Dict[str, Any]] = None) -> List[str]:
+    if not (_is_partner_scoped_session() or session.get("assist_partner_id")):
+        return FORMATION_TYPES
+    enabled = _partner_enabled_modules(partner or _current_partner())
+    return [t for t in FORMATION_TYPES if _module_for_training_type(t) in enabled]
+
+
 @app.get("/admin/partners")
 @admin_login_required
 @require_super_admin
@@ -11631,7 +11791,7 @@ def admin_partners():
         row["counts"] = _partner_counts(data, partner.get("id") or "")
         partners.append(row)
     partners.sort(key=lambda item: (item.get("name") or "").lower())
-    return render_template("admin_partners.html", partners=partners, q=q, status=status, plan=plan, status_labels=PARTNER_STATUS_LABELS)
+    return render_template("admin_partners.html", partners=partners, q=q, status=status, plan=plan, status_labels=PARTNER_STATUS_LABELS, protected_partner_id=INTEGRALE_PARTNER_ID)
 
 
 @app.route("/admin/partners/new", methods=["GET", "POST"])
@@ -11667,6 +11827,7 @@ def admin_partner_new():
         "subscription_started_at": now,
         "subscription_ends_at": "",
         "internal_notes": "",
+        "enabled_modules": [key for key in request.form.getlist("enabled_modules") if key in PARTNER_MODULE_KEYS],
         "created_at": now,
         "updated_at": now,
     }
@@ -11698,6 +11859,7 @@ def admin_partner_detail(partner_id: str):
         for key in ("name", "legal_name", "siret", "address", "postal_code", "city", "phone", "email", "contact_first_name", "contact_last_name", "subscription_plan", "internal_notes"):
             partner[key] = (request.form.get(key) or "").strip()
         partner["status"] = (request.form.get("status") or partner.get("status") or "active") if (request.form.get("status") or "") in PARTNER_STATUSES else partner.get("status", "active")
+        partner["enabled_modules"] = [key for key in request.form.getlist("enabled_modules") if key in PARTNER_MODULE_KEYS]
         for int_key in ("max_users", "storage_limit"):
             try:
                 partner[int_key] = int((request.form.get(int_key) or partner.get(int_key) or 0))
@@ -11710,7 +11872,7 @@ def admin_partner_detail(partner_id: str):
     users = [u for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id]
     invitations = [i for i in data.get("invitations", []) if isinstance(i, dict) and i.get("partner_id") == partner_id and not i.get("cancelled_at")]
     invitations.sort(key=lambda i: i.get("created_at") or "", reverse=True)
-    return render_template("admin_partner_detail.html", partner=partner, counts=_partner_counts(data, partner_id), users=users, invitation=invitations[0] if invitations else None, brevo_diag=_brevo_config_diagnostics(), can_copy_test_activation_link=_can_show_test_activation_link())
+    return render_template("admin_partner_detail.html", partner=partner, counts=_partner_counts(data, partner_id), users=users, invitation=invitations[0] if invitations else None, brevo_diag=_brevo_config_diagnostics(), can_copy_test_activation_link=_can_show_test_activation_link(), module_catalog=PARTNER_MODULES, enabled_modules=_partner_enabled_modules(partner))
 
 
 def _can_show_test_activation_link() -> bool:
@@ -11813,6 +11975,26 @@ def admin_partner_toggle_status(partner_id: str):
     partner["updated_at"] = _now_iso()
     _append_activity_log(data, "partner_status_changed", "partner", partner_id, partner_id, {"status": partner["status"]})
     save_data(data)
+    return redirect(url_for("admin_partners"))
+
+
+@app.post("/admin/partners/<partner_id>/delete")
+@admin_login_required
+@require_super_admin
+def admin_partner_delete(partner_id: str):
+    if partner_id == INTEGRALE_PARTNER_ID:
+        abort(400, "Le partenaire Intégrale Connect ne peut pas être supprimé")
+    data = load_data()
+    partner = _partner_or_404(data, partner_id)
+    partner_name = partner.get("name") or partner_id
+    removed = _delete_partner_everywhere(data, partner_id)
+    storage_removed = _remove_partner_storage(partner_id)
+    if session.get("assist_partner_id") == partner_id:
+        session.pop("assist_partner_id", None)
+        session.pop("assist_started_at", None)
+    _append_activity_log(data, "partner_deleted", "partner", partner_id, "", {"partner_name": partner_name, "removed": removed, "storage_removed": storage_removed})
+    save_data(data)
+    flash(f"Le partenaire {partner_name} et toutes ses données ont été supprimés.", "success")
     return redirect(url_for("admin_partners"))
 
 
@@ -12126,7 +12308,7 @@ def admin_sessions():
     response = make_response(render_template(
         "admin_sessions.html",
         sessions=out_sessions,
-        formation_types=FORMATION_TYPES,
+        formation_types=_partner_allowed_formation_types(),
         dashboard_year=current_year,
         yearly_training_counts=yearly_training_counts,
         wedof_new_requests_count=wedof_new_requests_count,
@@ -16389,6 +16571,9 @@ def api_create_session():
 
     if not name or not training_type:
         return jsonify({"ok": False, "error": "missing_name_or_training_type"}), 400
+    required_module = _module_for_training_type(training_type)
+    if required_module and not partner_has_module(required_module):
+        return jsonify({"ok": False, "error": "module_locked", "module": required_module}), 403
 
     session_id = uuid.uuid4().hex[:10]
     s = {
@@ -27647,7 +27832,7 @@ def admin_sessions_archived():
     return render_template(
         "admin_sessions_archived.html",
         sessions=out_sessions,
-        formation_types=FORMATION_TYPES,
+        formation_types=_partner_allowed_formation_types(),
     )
 
 # =========================
