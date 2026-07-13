@@ -11679,6 +11679,7 @@ PARTNER_SUBSCRIPTION_MODULE_PRICING = {
     "crm": {"label": "CRM", "icon": "📈", "price": 49, "description": "Pipeline commercial et suivi des prospects.", "features": ["Tableau de bord", "Relances", "Suivi conversion"]},
     "partners": {"label": "Partenaires", "icon": "🤝", "price": 39, "description": "Gestion multi-partenaires et accès dédiés.", "features": ["Comptes partenaires", "Isolation données", "Modules"]},
     "cpf": {"label": "CPF", "icon": "🎓", "price": 59, "description": "Suivi des demandes CPF et dossiers WeDoF.", "features": ["Demandes CPF", "Statuts", "Exports"]},
+    "financement": {"label": "Financement", "icon": "💶", "price": 49, "description": "Suivi financier des stagiaires depuis la fiche admin.", "features": ["Montants de financement", "Validation", "Paiements et factures"]},
     "training_management": {"label": "Gestion OF", "icon": "🏫", "price": 79, "description": "Gestion opérationnelle des sessions et stagiaires.", "features": ["Sessions", "Stagiaires", "Documents"]},
 }
 PARTNER_SUBSCRIPTION_STATUS_LABELS = {"active": "Actif", "trial": "Essai", "suspended": "Suspendu", "expired": "Expiré"}
@@ -11691,7 +11692,7 @@ def _count_partner_trainees(data: Dict[str, Any], partner_id: str) -> int:
 
 def _default_subscription_for_partner(data: Dict[str, Any], partner: Dict[str, Any]) -> Dict[str, Any]:
     enabled = _partner_enabled_modules(partner) if "_partner_enabled_modules" in globals() else set(partner.get("enabled_modules") or [])
-    return {"plan_name": partner.get("subscription_plan") or "Essentiel", "status": "trial" if partner.get("status") == "trial" else ("suspended" if partner.get("status") == "suspended" else "active"), "started_at": partner.get("subscription_started_at") or None, "renews_at": partner.get("subscription_ends_at") or None, "modules": {"crm": "sales" in enabled, "partners": True, "cpf": "cpf" in enabled, "training_management": any(k in enabled for k in ("training_aps", "training_ssiap", "training_a3p", "training_vtc", "training_dirigeant"))}, "module_prices": {}, "trainee_limit": 100, "trainee_unlimited": False, "trainee_usage_count": _count_partner_trainees(data, partner.get("id") or ""), "trainee_usage_reset_at": None, "trainee_usage_migrated_at": _now_iso() if "_now_iso" in globals() else datetime.datetime.utcnow().isoformat()+"Z", "trainee_usage_reset_history": []}
+    return {"plan_name": partner.get("subscription_plan") or "Essentiel", "status": "trial" if partner.get("status") == "trial" else ("suspended" if partner.get("status") == "suspended" else "active"), "started_at": partner.get("subscription_started_at") or None, "renews_at": partner.get("subscription_ends_at") or None, "modules": {"crm": "sales" in enabled, "partners": True, "cpf": "cpf" in enabled, "financement": "financement" in enabled, "training_management": any(k in enabled for k in ("training_aps", "training_ssiap", "training_a3p", "training_vtc", "training_dirigeant"))}, "module_prices": {}, "trainee_limit": 100, "trainee_unlimited": False, "trainee_usage_count": _count_partner_trainees(data, partner.get("id") or ""), "trainee_usage_reset_at": None, "trainee_usage_migrated_at": _now_iso() if "_now_iso" in globals() else datetime.datetime.utcnow().isoformat()+"Z", "trainee_usage_reset_history": []}
 
 def normalize_partner_subscription(data: Dict[str, Any], partner: Dict[str, Any]) -> bool:
     changed = False
@@ -11745,6 +11746,7 @@ def _partner_logo_url(partner: Optional[Dict[str, Any]]) -> str:
 PARTNER_MODULES = [
     {"key": "cnaps", "label": "Module CNAPS", "description": "Suivi des dossiers CNAPS, vérification automatique du statut CNAPS et accès DRACAR."},
     {"key": "cpf", "label": "Module CPF", "description": "Suivi des dossiers CPF / demandes WeDoF CPF."},
+    {"key": "financement", "label": "Module Financement", "description": "Suivi du financement des stagiaires, validation, paiements et accès à la facturation depuis la fiche stagiaire."},
     {"key": "billing", "label": "Module Facturation (Qonto)", "description": "Facturation, suivi des factures et réglages Qonto."},
     {"key": "sales", "label": "Module Suivi des ventes", "description": "Tableaux de bord et indicateurs de suivi des ventes."},
     {"key": "training_aps", "label": "Module formation APS", "description": "Création et gestion de sessions APS uniquement."},
@@ -24675,6 +24677,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         brevo_no_credit_notice=brevo_no_credit_notice,
         automation_status=_build_trainee_automation_status(s, t, session_id, trainee_id) if _automation_document_config(s).get("enabled") else None,
         automation_module_locked=bool(_automation_document_config(s).get("enabled")) and not _automation_partner_module_enabled(),
+        financing_module_locked=not partner_has_module("financement"),
         docs_relance_planned_fr=fr_date(t.get("docs_relance_auto_planned_date") or ""),
         ssiap_medical_from_date=fr_date(_subtract_months(t.get("ssiap_exam_date") or "", 3)),
     )

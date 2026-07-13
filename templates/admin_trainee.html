@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
 {% set read_only_attr = "disabled" if is_read_only else "" %}
+{% set financing_locked = financing_module_locked|default(false) %}
+{% set finance_read_only = is_read_only or financing_locked %}
+{% set finance_read_only_attr = "disabled" if finance_read_only else "" %}
 
 {% set pre_reception_open = request.args.get("pre_reception") %}
 {% set is_vtc = "VTC" in (session.training_type or "")|upper %}
@@ -93,6 +96,7 @@
   .btn-vtc-book-ready{
     animation: docsPendingPulse 1.2s ease-in-out infinite;
   }
+  .finance-locked-notice{display:flex;align-items:flex-start;gap:12px;margin:0 0 18px;padding:14px 16px;border:1px solid #cbd5e1;border-radius:18px;background:linear-gradient(135deg,#f8fafc,#f1f5f9);color:#475569;font-weight:900}.finance-dashboard.is-locked{filter:grayscale(.65);background:linear-gradient(135deg,#f8fafc,#fff,#f1f5f9);border-color:#cbd5e1}.finance-dashboard.is-locked input,.finance-dashboard.is-locked button,.finance-dashboard.is-locked select,.finance-dashboard.is-locked textarea{cursor:not-allowed}.btn-financement.is-locked{background:linear-gradient(135deg,#94a3b8,#64748b)!important;border-color:#94a3b8!important;box-shadow:none!important;color:#fff!important}
   .vae-reset-confirm-backdrop{
     backdrop-filter:blur(6px);
     background:rgba(15,23,42,.64);
@@ -366,8 +370,8 @@
         <button class="btn btn-outline btn-uniform" type="button" onclick="openModal('transferTraineeModal')">
           🔁 Transfert
         </button>
-        <button class="btn btn-financement btn-uniform" type="button" data-open-section="conventionFinancementSection">
-          Financement
+        <button class="btn btn-financement{% if financing_locked %} is-locked{% endif %} btn-uniform" type="button" data-open-section="conventionFinancementSection" {% if financing_locked %}title="Module financement non activé pour ce partenaire"{% endif %}>
+          {% if financing_locked %}🔒 Financement{% else %}Financement{% endif %}
         </button>
         <form method="post" action="{{ url_for('admin_delete_trainee', session_id=session.id, trainee_id=trainee.id) }}"
               onsubmit="return confirm('Supprimer ce stagiaire ?');">
@@ -1263,7 +1267,7 @@
   <!-- ===================== -->
   <!-- FINANCEMENT & FACTURATION -->
   <!-- ===================== -->
-  <details class="finance-dashboard is-hidden" id="conventionFinancementSection">
+  <details class="finance-dashboard is-hidden{% if financing_locked %} is-locked{% endif %}" id="conventionFinancementSection">
     <summary class="finance-dashboard__summary">
       <span>Financement &amp; facturation</span>
       <span class="finance-dashboard__summary-hint">Ouvrir le suivi financier</span>
@@ -1271,17 +1275,18 @@
     <div id="financementDetails"
          data-training-type="{{ session.training_type }}"
          data-default-price="{{ default_training_price or '' }}"
-         data-read-only="{{ '1' if is_read_only else '0' }}">
+         data-read-only="{{ '1' if finance_read_only else '0' }}">
       <div class="finance-dashboard__header">
         <div>
           <div class="finance-dashboard__kicker">Suivi financier</div>
           <h2>Financement &amp; facturation</h2>
           <p class="finance-dashboard__subtitle">Suivi du financement, des factures Qonto et des paiements du stagiaire.</p>
-          <span id="financeSaveIndicator" class="finance-save-indicator">Sauvegardé</span>
+          {% if financing_locked %}<div class="finance-locked-notice">🔒 <span>Le module <strong>Financement</strong> n’est pas activé dans l’espace admin de ce partenaire. Cette zone est verrouillée comme les autres modules non inclus.</span></div>{% endif %}
+          <span id="financeSaveIndicator" class="finance-save-indicator">{{ 'Verrouillé' if financing_locked else 'Sauvegardé' }}</span>
         </div>
         <div class="finance-dashboard__actions">
           <button class="btn btn-outline finance-notifications-toggle" type="button" id="btnToggleFinanceNotifications" aria-expanded="false" aria-controls="financeAlerts">🔔 Notifications <span class="finance-notifications-toggle__count" id="financeNotificationsCount">0</span></button>
-          {% if not is_read_only %}
+          {% if not finance_read_only %}
             <button class="btn btn-primary finance-quick-invoice-btn" type="button" id="btnQuickGenerateInvoice" disabled>🧾 Générer une facture</button>
           {% endif %}
           <button class="btn btn-outline" type="button" id="btnSyncQontoTrainee">Synchroniser Qonto</button>
@@ -1292,7 +1297,7 @@
               <span class="finance-validation-status__icon">⌛</span>
               <span class="finance-validation-status__label">Financement à valider</span>
             </button>
-            {% if not is_read_only %}
+            {% if not finance_read_only %}
               <form method="post" action="{{ url_for('admin_force_financement_validated', session_id=session.id, trainee_id=trainee.id) }}" class="finance-validation-form" id="financeForceValidatedForm">
                 <button class="btn btn-outline" type="submit" id="btnForceFinanceValidated">Forcer validé</button>
               </form>
@@ -1348,7 +1353,7 @@
 
       <details class="finance-detail-section">
         <summary><span>Factures Qonto</span><span class="finance-accordion-hint" id="financeInvoicesSummary">Chargement…</span></summary>
-        <div class="finance-detail-section__body"><div id="qontoInvoiceCard" data-session-id="{{ session.id }}" data-trainee-id="{{ trainee.id }}" data-read-only="{{ '1' if is_read_only else '0' }}"><div id="qontoInvoiceHistory" class="finance-list"><div class="finance-empty">Chargement des factures…</div></div></div></div>
+        <div class="finance-detail-section__body"><div id="qontoInvoiceCard" data-session-id="{{ session.id }}" data-trainee-id="{{ trainee.id }}" data-read-only="{{ '1' if finance_read_only else '0' }}"><div id="qontoInvoiceHistory" class="finance-list"><div class="finance-empty">Chargement des factures…</div></div></div></div>
       </details>
 
       <details class="finance-detail-section">
@@ -2277,6 +2282,11 @@ if(financementDetails){
   const totalLine = document.getElementById("paymentTotalLine");
   const diffLine = document.getElementById("paymentDiffLine");
   const isReadOnly = financementDetails.getAttribute("data-read-only") === "1";
+  if(isReadOnly){
+    financementDetails.querySelectorAll("input, select, textarea, button").forEach((control)=>{
+      if(control.id !== "financeValidationStatus") control.disabled = true;
+    });
+  }
 
   const debounceMap = {};
 
