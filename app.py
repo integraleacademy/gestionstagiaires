@@ -11676,17 +11676,18 @@ PARTNER_STATUS_LABELS = {"active": "Actif", "trial": "En essai", "suspended": "S
 
 
 PARTNER_SUBSCRIPTION_MODULE_PRICING = {
-    "cnaps": {"label": "Module CNAPS", "icon": "🛡️", "price": 49, "description": "Suivi des dossiers CNAPS, vérification automatique du statut CNAPS et fonctionnalités dédiées CNAPS.", "features": ["Suivi des dossiers CNAPS", "Vérification automatique du statut", "Gestion CNAPS complète"]},
-    "cpf": {"label": "Module CPF", "icon": "🎓", "price": 59, "description": "Suivi des dossiers CPF et des demandes WeDoF CPF.", "features": ["Demandes WeDoF CPF", "Statuts des dossiers", "Suivi CPF"]},
-    "billing": {"label": "Module Facturation", "icon": "🧾", "price": 69, "description": "Facturation et suivi des factures avec connexion Qonto requise.", "features": ["Facturation", "Suivi des factures", "Qonto requis"]},
-    "sales": {"label": "Module Suivi des ventes", "icon": "📈", "price": 49, "description": "Pilotage commercial et suivi des ventes.", "features": ["Tableau de bord ventes", "Suivi commercial", "Indicateurs de conversion"]},
-    "training_aps": {"label": "Module formation APS", "icon": "🏫", "price": 79, "description": "Création et gestion de sessions APS uniquement.", "features": ["Sessions APS", "Stagiaires APS", "Documents APS"]},
-    "training_ssiap": {"label": "Module formation SSIAP", "icon": "🔥", "price": 79, "description": "Création et gestion de sessions SSIAP uniquement.", "features": ["Sessions SSIAP", "Stagiaires SSIAP", "Documents SSIAP"]},
-    "training_a3p": {"label": "Module formation A3P", "icon": "🧯", "price": 79, "description": "Création et gestion de sessions A3P uniquement.", "features": ["Sessions A3P", "Stagiaires A3P", "Documents A3P"]},
-    "training_vtc": {"label": "Module formation VTC", "icon": "🚕", "price": 79, "description": "Création et gestion de sessions VTC uniquement.", "features": ["Sessions VTC", "Stagiaires VTC", "Documents VTC"]},
-    "training_dirigeant": {"label": "Module formation Dirigeant / VAE", "icon": "🎯", "price": 79, "description": "Création et gestion de sessions Dirigeant et VAE uniquement.", "features": ["Sessions Dirigeant", "Parcours VAE", "Documents dédiés"]},
-    "automations": {"label": "Module automatisations", "icon": "⚙️", "price": 39, "description": "Automatisation des conventions, convocations et attestations de fin de formation.", "features": ["Conventions de formation", "Convocations", "Attestations de fin de formation"]},
+    "cnaps": {"label": "Module CNAPS", "icon": "shield-check", "price": 49, "description": "Suivez vos dossiers et vérifiez automatiquement les statuts CNAPS.", "features": ["Suivi des dossiers", "Vérification des statuts", "Gestion CNAPS centralisée"]},
+    "cpf": {"label": "Module CPF", "icon": "wallet-cards", "price": 59, "description": "Centralisez le suivi de vos dossiers CPF et demandes EDOF.", "features": ["Demandes EDOF", "Statuts des dossiers", "Suivi CPF centralisé"]},
+    "billing": {"label": "Module Facturation", "icon": "receipt-text", "price": 69, "description": "Créez vos factures et suivez leur règlement depuis Intégrale Connect.", "features": ["Création des factures", "Suivi des règlements", "Connexion Qonto"]},
+    "sales": {"label": "Module Suivi des ventes", "icon": "chart-no-axes-combined", "price": 49, "description": "Pilotez vos prospects, vos ventes et vos performances commerciales.", "features": ["Tableau de bord ventes", "Suivi commercial", "Indicateurs de conversion"]},
+    "training_aps": {"label": "Module formation APS", "icon": "graduation-cap", "price": 79, "description": "Créez et gérez vos sessions, stagiaires et documents APS.", "features": ["Sessions APS", "Stagiaires APS", "Documents APS"]},
+    "training_ssiap": {"label": "Module formation SSIAP", "icon": "flame", "price": 79, "description": "Gérez vos sessions, stagiaires et documents SSIAP.", "features": ["Sessions SSIAP", "Stagiaires SSIAP", "Documents SSIAP"]},
+    "training_a3p": {"label": "Module formation A3P", "icon": "fire-extinguisher", "price": 79, "description": "Centralisez l’organisation de vos formations A3P.", "features": ["Sessions A3P", "Stagiaires A3P", "Documents A3P"]},
+    "training_vtc": {"label": "Module formation VTC", "icon": "car-taxi-front", "price": 79, "description": "Gérez vos sessions VTC et le suivi des stagiaires.", "features": ["Sessions VTC", "Stagiaires VTC", "Documents VTC"]},
+    "training_dirigeant": {"label": "Module formation Dirigeant / VAE", "icon": "award", "price": 79, "description": "Pilotez vos parcours Dirigeant et vos dossiers VAE.", "features": ["Sessions Dirigeant", "Parcours VAE", "Documents dédiés"]},
+    "automations": {"label": "Module automatisations", "icon": "workflow", "price": 39, "description": "Automatisez la création et l’envoi de vos documents de formation.", "features": ["Conventions de formation", "Convocations", "Attestations de fin de formation"]},
 }
+PARTNER_SUBSCRIPTION_FULL_PLAN_PRICE = 299
 PARTNER_SUBSCRIPTION_STATUS_LABELS = {"active": "Actif", "trial": "Essai", "suspended": "Suspendu", "expired": "Expiré"}
 PARTNER_INFO_FIELDS = ("name", "legal_name", "siret", "activity_declaration_number", "address", "address_extra", "postal_code", "city", "country", "contact_first_name", "contact_last_name", "contact_role", "email", "phone", "website")
 PARTNER_LOGO_MAX_BYTES = 3 * 1024 * 1024
@@ -11937,7 +11938,53 @@ def partner_subscription():
     if not partner:
         return redirect(url_for("admin_sessions"))
     save_data(data)
-    return render_template("partner_subscription.html", partner=partner, subscription=partner.get("subscription") or {}, module_pricing=PARTNER_SUBSCRIPTION_MODULE_PRICING, status_labels=PARTNER_SUBSCRIPTION_STATUS_LABELS)
+    return render_template("partner_subscription.html", partner=partner, subscription=partner.get("subscription") or {}, module_pricing=PARTNER_SUBSCRIPTION_MODULE_PRICING, status_labels=PARTNER_SUBSCRIPTION_STATUS_LABELS, full_plan_price=PARTNER_SUBSCRIPTION_FULL_PLAN_PRICE)
+
+@app.post("/admin/partner/abonnement/request")
+@admin_login_required
+def partner_subscription_request():
+    data, partner = _partner_space_partner_or_redirect()
+    if not partner:
+        return jsonify({"ok": False, "error": "partner_missing"}), 403
+    payload = request.get_json(silent=True) or request.form.to_dict(flat=False) or {}
+    plan = str(payload.get("plan") or "modules").strip()
+    billing = str(payload.get("billing") or "monthly").strip()
+    if plan not in {"modules", "integrale_plus"}:
+        plan = "modules"
+    if billing not in {"monthly", "annual"}:
+        billing = "monthly"
+    raw_modules = payload.get("modules") or []
+    if isinstance(raw_modules, str):
+        raw_modules = [raw_modules]
+    selected_modules = [str(key) for key in raw_modules if str(key) in PARTNER_SUBSCRIPTION_MODULE_PRICING]
+    if plan == "integrale_plus":
+        selected_modules = list(PARTNER_SUBSCRIPTION_MODULE_PRICING.keys())
+    current_modules = partner.get("subscription", {}).get("modules") or {}
+    active_modules = [key for key in PARTNER_SUBSCRIPTION_MODULE_PRICING if current_modules.get(key)]
+    added = [key for key in selected_modules if key not in active_modules]
+    removed = [key for key in active_modules if key not in selected_modules]
+    module_prices = partner.get("subscription", {}).get("module_prices") or {}
+    monthly_total = PARTNER_SUBSCRIPTION_FULL_PLAN_PRICE if plan == "integrale_plus" else sum(int(module_prices.get(key, PARTNER_SUBSCRIPTION_MODULE_PRICING[key]["price"]) or 0) for key in selected_modules)
+    annual_total = monthly_total * (10 if billing == "annual" else 12)
+    request_item = {
+        "id": str(uuid.uuid4()),
+        "created_at": _now_iso(),
+        "status": "pending",
+        "plan": plan,
+        "billing": billing,
+        "modules": selected_modules,
+        "added_modules": added,
+        "removed_modules": removed,
+        "monthly_total_ht": monthly_total,
+        "annual_total_ht": annual_total if billing == "annual" else None,
+        "current_plan": partner.get("subscription", {}).get("plan_name") or partner.get("subscription_plan") or "",
+        "created_by": session.get("admin_username") or "partner",
+    }
+    partner.setdefault("subscription_requests", []).insert(0, request_item)
+    del partner["subscription_requests"][50:]
+    _append_activity_log(data, "partner_subscription_configuration_requested", "partner", partner.get("id"), partner.get("id"), {"request_id": request_item["id"], "plan": plan, "billing": billing, "added_modules": added, "removed_modules": removed, "monthly_total_ht": monthly_total})
+    save_data(data)
+    return jsonify({"ok": True, "request": request_item})
 
 @app.post("/admin/partners/<partner_id>/subscription/reset-usage")
 @admin_login_required
