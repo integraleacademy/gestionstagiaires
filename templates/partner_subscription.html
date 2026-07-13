@@ -10,6 +10,9 @@
 {% set pct=(0 if unlimited or not limit else ((count*100/limit)|round(0,'floor'))) %}
 {% set enabled_modules=[] %}
 {% for key,cfg in module_pricing.items() %}{% if modules.get(key) %}{% set _ = enabled_modules.append((key,cfg)) %}{% endif %}{% endfor %}
+{% set total_modules=module_pricing|length %}
+{% set active_count=enabled_modules|length %}
+{% set modules_pct=(0 if not total_modules else ((active_count*100/total_modules)|round(0,'floor'))) %}
 <div class="subscription-page-container subscription-current-page">
   <section class="subscription-intro subscription-current-intro">
     <span class="subscription-kicker">MON ABONNEMENT</span>
@@ -18,6 +21,11 @@
     <div class="subscription-current-actions">
       <a class="btn btn-primary" href="{{ url_for('partner_subscription_upgrade') }}">Faites évoluer votre abonnement</a>
     </div>
+  </section>
+
+  <section class="subscription-module-meter" aria-label="Modules activés">
+    <div class="module-meter-copy"><span>Modules activés</span><strong>{{ active_count }} / {{ total_modules }}</strong><p>{{ total_modules - active_count }} modules encore disponibles pour compléter votre espace.</p></div>
+    <div class="module-meter-visual"><div class="module-meter-ring" style="--pct:{{ modules_pct }}"><b>{{ modules_pct }}%</b></div><a class="btn btn-primary" href="{{ url_for('partner_subscription_upgrade') }}">Faites évoluer votre abonnement</a></div>
   </section>
 
   <section class="subscription-current-grid" aria-label="Résumé de l’abonnement">
