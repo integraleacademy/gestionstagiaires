@@ -686,7 +686,10 @@
 </div>
 
 <div class="card" style="margin-bottom:12px;">
-  {% set yearly_total = (yearly_training_counts.APS or 0) + (yearly_training_counts.VTC or 0) + (yearly_training_counts.DIRIGEANT or 0) + (yearly_training_counts.VAE or 0) + (yearly_training_counts.A3P or 0) + (yearly_training_counts.SSIAP or 0) %}
+  {% set yearly_total = namespace(value=0) %}
+  {% for label in dashboard_training_labels %}
+    {% set yearly_total.value = yearly_total.value + (yearly_training_counts[label] or 0) %}
+  {% endfor %}
   <div class="card-row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
     <div>
       <div class="card-title">Tableau de bord stagiaires {{ dashboard_year }}</div>
@@ -695,36 +698,48 @@
   </div>
 
   <div class="dashboard-grid" aria-label="Tableau de bord annuel des stagiaires">
+    {% if "APS" in dashboard_training_labels %}
     <button type="button" class="dashboard-card dashboard-card--aps" data-dashboard-filter="aps" aria-label="Afficher uniquement les formations APS">
       <div class="dashboard-card__label">APS</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.APS or 0 }}</div>
     </button>
+    {% endif %}
+    {% if "VTC" in dashboard_training_labels %}
     <button type="button" class="dashboard-card dashboard-card--vtc" data-dashboard-filter="vtc" aria-label="Afficher uniquement les formations VTC">
       <div class="dashboard-card__label">VTC</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.VTC or 0 }}</div>
     </button>
+    {% endif %}
+    {% if "DIRIGEANT" in dashboard_training_labels %}
     <button type="button" class="dashboard-card dashboard-card--dirigeant" data-dashboard-filter="dirigeant" aria-label="Afficher uniquement les formations dirigeant">
       <div class="dashboard-card__label">DIRIGEANT</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.DIRIGEANT or 0 }}</div>
     </button>
+    {% endif %}
+    {% if "VAE" in dashboard_training_labels %}
     <button type="button" class="dashboard-card dashboard-card--vae" data-dashboard-filter="vae" data-dashboard-url="{{ public_base_url }}/admin/sessions/7d8a231044/trainees" aria-label="Ouvrir directement la session VAE">
       <div class="dashboard-card__label">VAE</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.VAE or 0 }}</div>
     </button>
+    {% endif %}
+    {% if "A3P" in dashboard_training_labels %}
     <button type="button" class="dashboard-card dashboard-card--a3p" data-dashboard-filter="a3p" aria-label="Afficher uniquement les formations A3P">
       <div class="dashboard-card__label">A3P</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.A3P or 0 }}</div>
     </button>
+    {% endif %}
+    {% if "SSIAP" in dashboard_training_labels %}
     <button type="button" class="dashboard-card dashboard-card--ssiap" data-dashboard-filter="ssiap" aria-label="Afficher uniquement les formations SSIAP">
       <div class="dashboard-card__label">SSIAP</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.SSIAP or 0 }}</div>
     </button>
+    {% endif %}
   </div>
 
   <button type="button" class="dashboard-total-card" data-dashboard-reset="true" aria-label="Afficher toutes les formations">
     <div>
       <div class="dashboard-total-card__label">TOTAL STAGIAIRES</div>
-      <div class="dashboard-total-card__count">{{ yearly_total }}</div>
+      <div class="dashboard-total-card__count">{{ yearly_total.value }}</div>
     </div>
     {% if partner_has_module('sales') %}
       <a href="{{ url_for('admin_sales_tracking') }}" class="btn btn-outline" style="background:rgba(255,255,255,.92);border-color:rgba(255,255,255,.75);color:#1e3a8a;">Suivi des ventes</a>
@@ -744,16 +759,16 @@
   </div>
 
   <div class="session-filter-bar" aria-label="Filtres des formations">
-    <button class="filter-btn filter-btn--aps" data-filter-group="training" data-filter-value="aps">APS</button>
-    <button class="filter-btn filter-btn--dirigeant" data-filter-group="training" data-filter-value="dirigeant">DIRIGEANT</button>
-    <button class="filter-btn filter-btn--a3p" data-filter-group="training" data-filter-value="a3p">A3P</button>
-    <button class="filter-btn filter-btn--ssiap" data-filter-group="training" data-filter-value="ssiap">SSIAP</button>
-    <button class="filter-btn filter-btn--vtc" data-filter-group="training" data-filter-value="vtc">VTC</button>
-    <a class="filter-btn filter-btn--vtc" href="{{ url_for('admin_vtc_trainees_all') }}" style="text-decoration:none;display:inline-flex;align-items:center;">Voir tous les stagiaires VTC</a>
+    {% if "APS" in dashboard_training_labels %}<button class="filter-btn filter-btn--aps" data-filter-group="training" data-filter-value="aps">APS</button>{% endif %}
+    {% if "DIRIGEANT" in dashboard_training_labels %}<button class="filter-btn filter-btn--dirigeant" data-filter-group="training" data-filter-value="dirigeant">DIRIGEANT</button>{% endif %}
+    {% if "A3P" in dashboard_training_labels %}<button class="filter-btn filter-btn--a3p" data-filter-group="training" data-filter-value="a3p">A3P</button>{% endif %}
+    {% if "SSIAP" in dashboard_training_labels %}<button class="filter-btn filter-btn--ssiap" data-filter-group="training" data-filter-value="ssiap">SSIAP</button>{% endif %}
+    {% if "VTC" in dashboard_training_labels %}<button class="filter-btn filter-btn--vtc" data-filter-group="training" data-filter-value="vtc">VTC</button>
+    <a class="filter-btn filter-btn--vtc" href="{{ url_for('admin_vtc_trainees_all') }}" style="text-decoration:none;display:inline-flex;align-items:center;">Voir tous les stagiaires VTC</a>{% endif %}
     <button class="filter-btn filter-btn--status" data-filter-group="status" data-filter-value="ongoing">Afficher les formations en cours</button>
     <button class="filter-btn filter-btn--status" data-filter-group="status" data-filter-value="upcoming">Afficher les prochaines formations</button>
     <button class="filter-btn filter-btn--status" data-ended-toggle="true">Afficher les sessions terminées</button>
-    <button class="filter-btn filter-btn--cash" data-filter-group="payment" data-filter-value="cash">Paiements en espèces</button>
+    {% if not is_partner_space %}<button class="filter-btn filter-btn--cash" data-filter-group="payment" data-filter-value="cash">Paiements en espèces</button>{% endif %}
     <button class="filter-btn filter-btn--all" data-filter-reset="true">Réinitialiser les filtres</button>
   </div>
 </div>
