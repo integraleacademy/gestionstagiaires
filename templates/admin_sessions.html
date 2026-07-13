@@ -3,6 +3,11 @@
 
 <style>
 
+  .admin-actions[hidden],
+  .quick-create-wrap[hidden]{
+    display:none !important;
+  }
+
   .search-item{
   display:flex;
   justify-content:space-between;
@@ -628,7 +633,7 @@
   </div>
 
   {% if is_partner_space and not is_read_only %}
-    <div class="quick-create-wrap admin-actions admin-actions--partner-primary">
+    <div class="quick-create-wrap admin-actions admin-actions--partner-primary" hidden>
       <button class="btn btn-primary btn-plus" id="partnerBtnOpenCreateMenu" aria-label="Créer" aria-expanded="false">+</button>
       <div class="quick-create-menu" id="partnerQuickCreateMenu">
         <button class="quick-create-option quick-create-option--session" data-sidebar-action="create-session">💼 Nouvelle session</button>
