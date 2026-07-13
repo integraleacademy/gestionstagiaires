@@ -69,11 +69,13 @@
   <div class="topbar">
     <div class="topbar-inner">
       {% set header_logo = 'iaconnectpartenaires.png' if is_partner_space else 'icone.png' %}
+      {% set header_logo_height = 112 if is_partner_space else 80 %}
+      {% set confirm_logo_height = 88 if is_partner_space else 64 %}
       <a class="brand" href="{{ url_for('admin_sessions') }}">
 <img
   src="{{ url_for('static', filename=header_logo) }}"
   alt="{{ 'IA Connect Partenaires' if is_partner_space else 'Intégrale Connect' }}"
-  style="height:80px;width:auto;display:block;"
+  style="height:{{ header_logo_height }}px;width:auto;display:block;"
 />
         <div>
           <strong>Intégrale Connect</strong>
@@ -261,7 +263,7 @@
   <div class="modal-backdrop" id="mailSmsConfirmModal" aria-hidden="true">
     <div class="modal" style="max-width:500px;border-radius:20px;overflow:hidden;">
       <div style="padding:22px 22px 12px 22px;text-align:center;background:linear-gradient(135deg,#eff6ff,#fef2f2);">
-        <img src="{{ url_for('static', filename=header_logo) }}" alt="{{ 'IA Connect Partenaires' if is_partner_space else 'Intégrale Connect' }}" style="height:64px;width:auto;display:block;margin:0 auto 10px auto;">
+        <img src="{{ url_for('static', filename=header_logo) }}" alt="{{ 'IA Connect Partenaires' if is_partner_space else 'Intégrale Connect' }}" style="height:{{ confirm_logo_height }}px;width:auto;display:block;margin:0 auto 10px auto;">
         <div style="font-size:22px;font-weight:900;color:#1f2937;">Confirmation d’envoi</div>
         <div style="margin-top:8px;color:#4b5563;">Voulez-vous envoyer le mail / SMS&nbsp;?</div>
       </div>

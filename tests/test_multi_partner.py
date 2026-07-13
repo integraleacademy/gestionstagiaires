@@ -179,6 +179,8 @@ class MultiPartnerIsolationTests(unittest.TestCase):
         html = self.client.get("/admin/sessions").get_data(as_text=True)
         self.assertIn("/static/iaconnectpartenaires.png", html)
         self.assertIn("IA Connect Partenaires", html)
+        self.assertIn("height:112px", html)
+        self.assertIn("height:88px", html)
         self.assertNotIn('src="/static/icone.png"', html)
 
     def test_integrale_admin_space_keeps_integrale_logo(self):
@@ -188,6 +190,8 @@ class MultiPartnerIsolationTests(unittest.TestCase):
             sess["partner_id"] = gestion_app.INTEGRALE_PARTNER_ID
         html = self.client.get("/admin/sessions").get_data(as_text=True)
         self.assertIn("/static/icone.png", html)
+        self.assertIn("height:80px", html)
+        self.assertIn("height:64px", html)
         self.assertNotIn("/static/iaconnectpartenaires.png", html)
 
     def test_invitation_expires_and_is_single_use(self):
