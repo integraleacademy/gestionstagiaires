@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head"><div><h1>Mes informations</h1><p class="muted">Mettez à jour les informations de votre entreprise.</p></div><a class="btn" href="{{ url_for('admin_sessions') }}">← Tableau de bord</a></div>
+{% for category,message in get_flashed_messages(with_categories=true) %}<div class="card" style="margin-bottom:12px;background:{{ '#fee2e2' if category=='error' else '#dcfce7' }};">{{ message }}</div>{% endfor %}
+<form method="post" enctype="multipart/form-data" class="card partner-info-form" id="partnerInfoForm">
+  <div class="partner-logo-panel">
+    <div class="partner-logo-preview" id="logoPreview">{% if logo_url %}<img src="{{ logo_url }}" alt="Logo {{ partner.name }}">{% else %}<span>{{ (partner.name[:2] or 'IC')|upper }}</span>{% endif %}</div>
+    <div class="partner-logo-drop" id="logoDrop"><strong>Glissez-déposez votre logo</strong><small>PNG, JPG, JPEG ou WEBP — 3 Mo max.</small><input type="file" name="logo" id="logoInput" accept="image/png,image/jpeg,image/webp" hidden><button class="btn" type="button" id="logoChoose">Choisir un fichier</button><span id="logoName">{{ partner.logo_filename or 'Aucun nouveau fichier' }}</span><label class="logo-remove"><input type="checkbox" name="remove_logo" value="1"> Supprimer le logo actuel</label><div class="hint error" id="logoError"></div></div>
+  </div>
+  <div class="form-grid partner-form-grid">
+    {% set fields=[('name','Nom de l’entreprise','text',1),('legal_name','Raison sociale','text',0),('siret','SIRET','text',0),('activity_declaration_number','N° déclaration d’activité','text',0),('address','Adresse','text',0),('address_extra','Complément d’adresse','text',0),('postal_code','Code postal','text',0),('city','Ville','text',0),('country','Pays','text',0),('contact_last_name','Nom du contact principal','text',0),('contact_first_name','Prénom du contact principal','text',0),('contact_role','Fonction du contact','text',0),('email','Adresse e-mail','email',1),('phone','Numéro de téléphone','tel',0),('website','Site internet','url',0)] %}
+    {% for name,label,type,required in fields %}<label><div class="label">{{ label }}</div><input name="{{ name }}" type="{{ type }}" value="{{ partner.get(name,'') }}" {% if required %}required{% endif %}></label>{% endfor %}
+  </div>
+  <div class="form-actions"><button class="btn btn-primary" id="saveInfoBtn" type="submit">Enregistrer les modifications</button></div>
+</form>
+<script>
+const input=document.getElementById('logoInput'), choose=document.getElementById('logoChoose'), drop=document.getElementById('logoDrop'), nameEl=document.getElementById('logoName'), err=document.getElementById('logoError'), preview=document.getElementById('logoPreview'), form=document.getElementById('partnerInfoForm'), btn=document.getElementById('saveInfoBtn');
+choose.onclick=()=>input.click();
+function setFile(file){err.textContent=''; if(!file)return; if(file.size>3*1024*1024){err.textContent='Le logo ne doit pas dépasser 3 Mo.'; input.value=''; return;} if(!['image/png','image/jpeg','image/webp'].includes(file.type)){err.textContent='Format invalide.'; input.value=''; return;} nameEl.textContent=file.name; const url=URL.createObjectURL(file); preview.innerHTML=`<img src="${url}" alt="Aperçu logo">`;}
+input.onchange=()=>setFile(input.files[0]); ['dragenter','dragover'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('drag')})); ['dragleave','drop'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove('drag')})); drop.addEventListener('drop',ev=>{input.files=ev.dataTransfer.files;setFile(input.files[0]);}); form.addEventListener('submit',()=>{btn.disabled=true;btn.textContent='Enregistrement…'});
+</script>
+{% endblock %}

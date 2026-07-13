@@ -150,8 +150,12 @@
               Gérer les partenaires
             </a>
           {% endif %}
+          {% if is_partner_space %}
+            <a href="{{ url_for('partner_information') }}" class="btn" style="font-size:13px;padding:6px 10px;">🏢 Mes informations</a>
+            <a href="{{ url_for('partner_subscription') }}" class="btn" style="font-size:13px;padding:6px 10px;">💳 Mon abonnement</a>
+          {% endif %}
           {% if current_partner_name %}
-            <span style="font-size:12px;color:#475569;font-weight:800;">{{ current_partner_name }}</span>
+            <span style="font-size:12px;color:#475569;font-weight:800;display:inline-flex;align-items:center;gap:8px;">{% if current_partner_logo_url %}<img src="{{ current_partner_logo_url }}" alt="" style="width:30px;height:30px;object-fit:contain;border-radius:8px;background:#fff;border:1px solid #e2e8f0;">{% else %}<span style="width:30px;height:30px;border-radius:8px;background:#e0f2fe;color:#075985;display:inline-flex;align-items:center;justify-content:center;font-weight:900;">{{ (current_partner_name[:2] or 'IC')|upper }}</span>{% endif %}{{ current_partner_name }}</span>
           {% endif %}
           <a href="{{ url_for('admin_logout') }}"
              style="font-size:13px;color:#555;text-decoration:none;padding:6px 10px;border:1px solid #ddd;border-radius:8px;">
