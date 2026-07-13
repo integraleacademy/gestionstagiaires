@@ -100,6 +100,40 @@ class PartnerSubscriptionSpaceTests(unittest.TestCase):
         self.assertIn("Non inclus", html)
         self.assertIn("Utilisation des stagiaires", html)
 
+
+    def test_partner_sessions_dashboard_and_filters_only_show_enabled_trainings(self):
+        data = gestion_app.load_data()
+        partner = next(p for p in data["partners"] if p["id"] == self.partner_a)
+        partner["enabled_modules"] = ["training_aps"]
+        data["sessions"].append({
+            "id": "session-vtc",
+            "partner_id": self.partner_a,
+            "training_type": "VTC",
+            "date_start": "2026-03-01",
+            "trainees": [{"id": "vtc-a", "partner_id": self.partner_a, "created_at": "2026-03-02"}],
+        })
+        data["sessions"][0]["date_start"] = "2026-02-01"
+        data["sessions"][0]["trainees"][0]["created_at"] = "2026-02-02"
+        gestion_app.save_data(data)
+
+        self._login_partner()
+        html = self.client.get("/admin/sessions").get_data(as_text=True)
+
+        self.assertIn('dashboard-card__label">APS</div>', html)
+        self.assertIn('dashboard-card__count">1</div>', html)
+        self.assertNotIn('dashboard-card__label">VTC</div>', html)
+        self.assertNotIn('dashboard-card__label">DIRIGEANT</div>', html)
+        self.assertIn('data-filter-value="aps">APS</button>', html)
+        self.assertNotIn('data-filter-value="vtc">VTC</button>', html)
+        self.assertNotIn('data-filter-value="dirigeant">DIRIGEANT</button>', html)
+        self.assertNotIn('Paiements en espèces</button>', html)
+        self.assertIn('dashboard-total-card__count">1</div>', html)
+
+    def test_admin_sessions_filters_keep_cash_payment_for_admins(self):
+        self._login_admin()
+        html = self.client.get("/admin/sessions").get_data(as_text=True)
+        self.assertIn('Paiements en espèces</button>', html)
+
     def test_trainee_usage_counter_is_incremental_idempotent_and_resettable(self):
         data = gestion_app.load_data()
         partner = next(p for p in data["partners"] if p["id"] == self.partner_a)

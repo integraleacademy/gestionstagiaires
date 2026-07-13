@@ -11870,6 +11870,23 @@ def _partner_allowed_formation_types(partner: Optional[Dict[str, Any]] = None) -
     enabled = _partner_enabled_modules(partner or _current_partner())
     return [t for t in FORMATION_TYPES if _module_for_training_type(t) in enabled]
 
+def _partner_allowed_dashboard_training_labels(partner: Optional[Dict[str, Any]] = None) -> List[str]:
+    if not (_is_partner_scoped_session() or session.get("assist_partner_id")):
+        return ["APS", "VTC", "DIRIGEANT", "VAE", "A3P", "SSIAP"]
+    enabled = _partner_enabled_modules(partner or _current_partner())
+    labels = []
+    for label, module_key in (
+        ("APS", "training_aps"),
+        ("VTC", "training_vtc"),
+        ("DIRIGEANT", "training_dirigeant"),
+        ("VAE", "training_dirigeant"),
+        ("A3P", "training_a3p"),
+        ("SSIAP", "training_ssiap"),
+    ):
+        if module_key in enabled:
+            labels.append(label)
+    return labels
+
 
 
 
@@ -12363,6 +12380,8 @@ def admin_sessions():
         "A3P": 0,
         "SSIAP": 0,
     }
+    dashboard_training_labels = _partner_allowed_dashboard_training_labels()
+    dashboard_training_label_set = set(dashboard_training_labels)
 
     def _parse_iso_date(raw_value: Any) -> Optional[datetime.date]:
         raw = (raw_value or "").strip()
@@ -12401,7 +12420,7 @@ def admin_sessions():
 
         session_start = _parse_iso_date(_session_get(s, "date_start", ""))
         dashboard_label = _dashboard_training_label(_session_get(s, "training_type", ""))
-        if dashboard_label:
+        if dashboard_label and dashboard_label in dashboard_training_label_set:
             trainees_for_dashboard = _session_trainees_list(s)
             for trainee in trainees_for_dashboard:
                 trainee_created_at = _parse_iso_date(trainee.get("created_at"))
@@ -12579,6 +12598,7 @@ def admin_sessions():
         formation_types=_partner_allowed_formation_types(),
         dashboard_year=current_year,
         yearly_training_counts=yearly_training_counts,
+        dashboard_training_labels=dashboard_training_labels,
         wedof_new_requests_count=wedof_new_requests_count,
     ))
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
