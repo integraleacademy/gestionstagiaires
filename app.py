@@ -1811,6 +1811,7 @@ def inject_read_only():
         "is_super_admin": _is_super_admin_session(),
         "current_partner_name": current_partner_name,
         "assisted_partner_name": assisted_partner_name,
+        "is_partner_space": session.get("admin_role") == "partner_admin" or bool(session.get("assist_partner_id")),
         "is_read_only": session.get("admin_role") == "viewer",
         "admin_notifications": admin_notifications["notifications"],
         "admin_unresolved_total": admin_notifications["unresolved_total"],
