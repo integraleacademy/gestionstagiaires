@@ -11969,6 +11969,56 @@ def partner_information():
             flash("La sauvegarde a échoué. Réessayez ou contactez le support.", "error")
     return render_template("partner_information.html", partner=partner, logo_url=_partner_logo_url(partner))
 
+
+PARTNER_SUPPORT_EMAIL = os.environ.get("PARTNER_SUPPORT_EMAIL", "clement@integraleacademy.com").strip()
+PARTNER_SUPPORT_MODULES = ["Tableau de bord", "Sessions", "Stagiaires", "CPF", "CNAPS", "Conventions", "Automatisations", "Facturation", "Suivi des ventes", "Abonnement", "Autre"]
+PARTNER_HELP_FAQS = [
+    {"q": "À quoi sert Intégrale Connect ?", "a": "La plateforme centralise le suivi de vos sessions, stagiaires, documents, modules métier et demandes d’abonnement dans un espace partenaire unique.", "step": "Depuis le menu gauche, utilisez Tableau de bord pour retrouver vos indicateurs et vos sessions."},
+    {"q": "Comment créer une session ?", "a": "Cliquez sur Créer puis Nouvelle session. Renseignez les dates, le type de formation et les informations nécessaires avant d’enregistrer.", "step": "Menu gauche → bouton vert Créer → Nouvelle session."},
+    {"q": "Comment ajouter un stagiaire ?", "a": "Utilisez le bouton Créer puis Nouveau stagiaire, ou ouvrez une session existante pour rattacher le stagiaire au bon groupe.", "step": "Menu gauche → Créer → Nouveau stagiaire."},
+    {"q": "Où trouver les conventions et automatisations ?", "a": "Les documents automatisés sont disponibles dans Outils lorsque le module Automatisations est inclus dans votre abonnement.", "step": "Menu gauche → Outils → Conventions ou Automatisations."},
+    {"q": "Pourquoi un cadenas apparaît sur un module ?", "a": "Le cadenas indique que le module n’est pas encore inclus. Vous pouvez demander son activation depuis Mon abonnement.", "step": "Menu gauche → Mon abonnement → Faites évoluer votre abonnement."},
+    {"q": "Comment suivre mes ventes ?", "a": "Le module Suivi des ventes affiche vos performances commerciales, objectifs et indicateurs lorsque le module est activé.", "step": "Menu gauche → Outils → Suivi des ventes."},
+]
+
+def _partner_support_mail_html(partner: Dict[str, Any], request_type: str, module: str, subject: str, message: str) -> str:
+    kind = "Demande d’assistance" if request_type == "support" else "Demande d’amélioration"
+    logo_src = f"{PUBLIC_BASE_URL.rstrip('/')}/static/iaconnectpartenaires.png"
+    return mail_layout(f'''
+      <div style="text-align:center;margin-bottom:18px"><img src="{logo_src}" alt="Intégrale Connect" style="max-height:72px;width:auto"></div>
+      <div style="background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#fff;border-radius:18px;padding:22px;margin-bottom:18px"><p style="margin:0 0 6px;text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:#bfdbfe">{html.escape(kind)}</p><h1 style="margin:0;font-size:24px">{html.escape(subject)}</h1></div>
+      <p style="font-size:15px;color:#334155">Nous avons bien pris en compte votre demande et nous reviendrons vers vous dans les meilleurs délais.</p>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:16px;margin:18px 0"><p><strong>Partenaire :</strong> {html.escape(str(partner.get('name') or ''))}</p><p><strong>Module :</strong> {html.escape(module or 'Non précisé')}</p><p><strong>Contact :</strong> {html.escape(str(session.get('admin_email') or session.get('admin_username') or partner.get('email') or ''))}</p></div>
+      <h2 style="font-size:18px;color:#0f172a">Message</h2><p style="white-space:pre-wrap;color:#334155;line-height:1.6">{html.escape(message)}</p>
+    ''')
+
+@app.route("/admin/partner/aide-support", methods=["GET", "POST"])
+@admin_login_required
+def partner_help_support():
+    data, partner = _partner_space_partner_or_redirect()
+    if not partner:
+        return redirect(url_for("admin_sessions"))
+    if request.method == "POST":
+        request_type = (request.form.get("request_type") or "support").strip()
+        module = (request.form.get("module") or "Amélioration produit").strip()
+        subject = (request.form.get("subject") or "Demande support Intégrale Connect").strip()
+        message = (request.form.get("message") or "").strip()
+        attachments = []
+        screenshot = request.files.get("screenshot")
+        if screenshot and screenshot.filename:
+            raw = screenshot.read(5 * 1024 * 1024 + 1)
+            if len(raw) <= 5 * 1024 * 1024 and (screenshot.mimetype or "").lower() in PARTNER_LOGO_ALLOWED_MIMES:
+                attachments.append({"name": screenshot.filename, "content": base64.b64encode(raw).decode("ascii")})
+        if message:
+            html_body = _partner_support_mail_html(partner, request_type, module, subject, message)
+            result = brevo_send_email(PARTNER_SUPPORT_EMAIL, f"[{partner.get('name') or 'Partenaire'}] {subject}", html_body, attachments=attachments, metadata={"partner_id": partner.get("id"), "partner_name": partner.get("name"), "purpose": "partner_support"})
+            flash("Votre demande a bien été envoyée. Nous revenons vers vous dans les meilleurs délais." if result.get("ok") else "Votre demande est enregistrée, mais l’envoi email a échoué. Contactez-nous si besoin.", "success" if result.get("ok") else "error")
+            _append_activity_log(data, "partner_support_request", "partner", partner.get("id"), partner.get("id"), {"type": request_type, "module": module, "subject": subject, "email_ok": bool(result.get("ok"))})
+            save_data(data)
+            return redirect(url_for("partner_help_support"))
+        flash("Merci de décrire votre demande avant l’envoi.", "error")
+    return render_template("partner_help_support.html", partner=partner, modules=PARTNER_SUPPORT_MODULES, faqs=PARTNER_HELP_FAQS)
+
 @app.get("/admin/partner/abonnement")
 @admin_login_required
 def partner_subscription():

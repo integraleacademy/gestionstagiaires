@@ -143,6 +143,7 @@
     {% set sidebar_tools_children = [
       {"label":"Conventions","icon":"file","href":url_for('admin_sessions_conventions'),"endpoints":["admin_sessions_conventions"],"locked":not partner_has_module('automations')},
       {"label":"Automatisations","icon":"tool","href":url_for('admin_sessions_automations'),"endpoints":["admin_sessions_automations"],"locked":not partner_has_module('automations')},
+      {"label":"Suivi des ventes","icon":"chart","href":url_for('admin_sales_tracking'),"endpoints":["admin_sales_tracking"],"locked":not partner_has_module('sales')},
       {"label":"Facturation","icon":"wallet","href":url_for('admin_sessions_billing'),"endpoints":["admin_sessions_billing"],"locked":not partner_has_module('billing')},
       {"label":"Sessions archivées","icon":"archive","href":url_for('admin_sessions_archived'),"endpoints":["admin_sessions_archived"],"locked":False}
     ] %}
@@ -151,7 +152,7 @@
       {"label":"Réglages Qonto","icon":"settings","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings"],"locked":False}
     ] if partner_has_module('billing') else [])} %}
     {% set settings_items = [
-      {"label":"Aide et support","icon":"help","href":"mailto:clement@integraleacademy.com?subject=Support%20Int%C3%A9grale%20Connect","endpoints":[],"locked":False}
+      {"label":"Aide et support","icon":"help","href":url_for('partner_help_support'),"endpoints":["partner_help_support"],"locked":False}
     ] %}
     {% set create_item = {"label":"Créer","icon":"plus","action":"toggle-create-menu","endpoints":[],"locked":is_read_only,"primary":True} %}
     <div class="app-shell">
@@ -166,7 +167,7 @@
           <section class="partner-sidebar__section"><h2>Navigation principale</h2>{% for item in space_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}{{ ps.sidebar_nav_item(sidebar_cpf_item) }}{{ ps.sidebar_submenu(sidebar_cnaps_menu) }}{{ ps.sidebar_submenu(sidebar_tools_menu) }}</section>
           <section class="partner-sidebar__section partner-sidebar__section--settings"><h2>Paramètres et outils</h2>{% if settings_menu.children %}{{ ps.sidebar_submenu(settings_menu) }}{% endif %}{% for item in settings_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
           {% set sub=partner_sidebar.subscription or {} %}{% set count=sub.get('trainee_usage_count') or 0 %}{% set limit=sub.get('trainee_limit') %}{% set unlimited=sub.get('trainee_unlimited') or not limit %}{% set pct=0 if unlimited else ((count*100/limit)|round(0,'floor')) %}
-          <div class="subscription-usage-card {{ 'is-alert' if pct>=90 and not unlimited else ('is-warning' if pct>=70 and not unlimited else '') }}"><span>Utilisation de l’abonnement</span><strong>{{ count }} stagiaires créés</strong><small>{% if unlimited %}Aucun plafond défini{% else %}Objectif ou palier : {{ limit }}{% endif %}</small>{% if not unlimited %}<div class="subscription-usage-card__bar"><i style="width:{{ [pct,100]|min }}%"></i></div>{% endif %}<a href="{{ url_for('partner_subscription') }}">Voir les détails</a></div>
+          <div class="subscription-usage-card {{ 'is-alert' if pct>=90 and not unlimited else ('is-warning' if pct>=70 and not unlimited else '') }}"><span>Utilisation de l’abonnement</span><strong>{{ count }} stagiaires créés</strong><small>{% if unlimited %}Aucun plafond défini{% else %}{{ [limit-count,0]|max }} stagiaires restants{% endif %}</small>{% if not unlimited %}<div class="subscription-usage-card__bar"><i style="width:{{ [pct,100]|min }}%"></i></div>{% endif %}<a href="{{ url_for('partner_subscription') }}">Voir les détails</a></div>
           <div class="partner-sidebar__bottom"><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}" title="Se déconnecter">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Se déconnecter</span></a><div class="partner-sidebar__powered"><img class="partner-software-logo partner-software-logo--powered" src="{{ url_for('static', filename='icone.png') }}" alt="Intégrale Connect" loading="lazy"><span>Propulsé par Intégrale Connect</span></div></div>
         </div>
       </aside>
