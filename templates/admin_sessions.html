@@ -626,6 +626,16 @@
       </div>
     {% endif %}
   </div>
+
+  {% if is_partner_space and not is_read_only %}
+    <div class="quick-create-wrap admin-actions admin-actions--partner-primary">
+      <button class="btn btn-primary btn-plus" id="partnerBtnOpenCreateMenu" aria-label="Créer" aria-expanded="false">+</button>
+      <div class="quick-create-menu" id="partnerQuickCreateMenu">
+        <button class="quick-create-option quick-create-option--session" data-sidebar-action="create-session">💼 Nouvelle session</button>
+        <button class="quick-create-option quick-create-option--trainee" data-sidebar-action="create-trainee">👨‍🎓 Nouveau stagiaire</button>
+      </div>
+    </div>
+  {% endif %}
 </div>
 
 <!-- 🔎 Recherche stagiaire (global) -->
@@ -636,7 +646,7 @@
       <div class="muted">Tape un nom ou un prénom pour ouvrir directement la fiche.</div>
     </div>
 
-    <div style="min-width:min(520px, 100%);position:relative;">
+    <div style="flex:1 1 620px;min-width:min(620px, 100%);position:relative;">
       <input id="traineeSearchInput"
              type="text"
              placeholder="Ex : Dupont, Sarah…"
