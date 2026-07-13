@@ -16,8 +16,8 @@
 
 </head>
 
-<body class="{% if is_read_only %}read-only {% endif %}{% if request.endpoint %}endpoint-{{ request.endpoint|replace('_', '-') }}{% endif %}">
-  <div style="background:#facc15;color:#111827;text-align:center;font-weight:800;padding:8px 12px;letter-spacing:.08em;">VERSION TEST V2</div>
+<body class="{% if is_read_only %}read-only {% endif %}{% if is_partner_space %}partner-space {% endif %}{% if request.endpoint %}endpoint-{{ request.endpoint|replace('_', '-') }}{% endif %}">
+  <div class="test-version-banner">VERSION TEST V2</div>
   <style>
     .notif-wrap{ position:relative; }
     .notif-btn{
@@ -126,15 +126,6 @@
 
   {% if is_partner_space %}
     {% import "partner_sidebar.html" as ps %}
-    {% set module_items = [
-      {"label":"Gestion des stagiaires","icon":"graduation","href":url_for('admin_sessions'),"endpoints":["admin_trainees","admin_trainee_page"],"locked":False},
-      {"label":"EDOF","icon":"file","href":url_for('admin_wedof_requests'),"endpoints":[],"locked":not partner_has_module('cpf')},
-      {"label":"CPF","icon":"card","href":url_for('admin_wedof_requests'),"endpoints":["admin_wedof_requests"],"locked":not partner_has_module('cpf')},
-      {"label":"CNAPS","icon":"shield","href":url_for('admin_cnaps_unknown'),"endpoints":["admin_cnaps_unknown"],"locked":not partner_has_module('cnaps')},
-      {"label":"Qonto","icon":"wallet","href":url_for('admin_qonto_settings'),"endpoints":["admin_sessions_billing","admin_direct_debits"],"locked":not partner_has_module('billing')},
-      {"label":"Suivi des ventes","icon":"chart","href":url_for('admin_sales_tracking'),"endpoints":["admin_sales_tracking"],"locked":not partner_has_module('sales')},
-      {"label":"Documents","icon":"folder","href":url_for('admin_sessions_conventions'),"endpoints":["admin_sessions_conventions","admin_sessions_automations"],"locked":not partner_has_module('automations')}
-    ] %}
     {% set space_items = [
       {"label":"Tableau de bord","icon":"home","href":url_for('admin_sessions'),"endpoints":["admin_sessions"],"badge":"","locked":False},
       {"label":"Notifications","icon":"bell","href":"#adminNotifPanel","endpoints":[],"badge":partner_sidebar.notification_total if partner_sidebar.notification_total else "","locked":False},
@@ -143,11 +134,8 @@
     ] %}
 
     {% set settings_items = [
-      {"label":"Réglages Qonto","icon":"settings","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings"],"locked":not partner_has_module('billing')},
-      {"label":"Conventions","icon":"file","href":url_for('admin_sessions_conventions'),"endpoints":["admin_sessions_conventions"],"locked":not partner_has_module('automations')},
-      {"label":"Automatisations","icon":"tool","href":url_for('admin_sessions_automations'),"endpoints":["admin_sessions_automations"],"locked":not partner_has_module('automations')},
-      {"label":"Facturation","icon":"wallet","href":url_for('admin_sessions_billing'),"endpoints":["admin_sessions_billing"],"locked":not partner_has_module('billing')},
-      {"label":"Sessions archivées","icon":"archive","href":url_for('admin_sessions_archived'),"endpoints":["admin_sessions_archived"],"locked":False}
+      {"label":"Réglages","icon":"settings","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings"],"locked":False},
+      {"label":"Aide et support","icon":"help","href":"mailto:clement@integraleacademy.com?subject=Support%20Int%C3%A9grale%20Connect","endpoints":[],"locked":False}
     ] %}
     {% set create_item = {"label":"Créer","icon":"plus","action":"toggle-create-menu","endpoints":[],"locked":is_read_only,"primary":True} %}
     <div class="app-shell">
@@ -159,12 +147,11 @@
             <button type="button" class="partner-sidebar__collapse" data-sidebar-collapse aria-label="Réduire la barre"><span class="collapse-icon collapse-icon--open">{{ ps.sidebar_icon('chevron') }}</span><span class="collapse-icon collapse-icon--closed">{{ ps.sidebar_icon('chevron-right') }}</span></button>
           </div>
           <div class="partner-sidebar__create">{{ ps.sidebar_nav_item(create_item) }}<div class="quick-create-menu sidebar-create-menu" id="sidebarCreateMenu"><button class="quick-create-option quick-create-option--session" data-sidebar-action="create-session">💼 Nouvelle session</button><button class="quick-create-option quick-create-option--trainee" data-sidebar-action="create-trainee">👨‍🎓 Nouveau stagiaire</button></div></div>
-          <section class="partner-sidebar__section"><h2>Mon espace</h2>{% for item in space_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
-          <section class="partner-sidebar__section"><h2>Mes modules</h2>{% for item in module_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
+          <section class="partner-sidebar__section"><h2>Navigation principale</h2>{% for item in space_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
           <section class="partner-sidebar__section"><h2>Paramètres et outils</h2>{% for item in settings_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
           {% set sub=partner_sidebar.subscription or {} %}{% set count=sub.get('trainee_usage_count') or 0 %}{% set limit=sub.get('trainee_limit') %}{% set unlimited=sub.get('trainee_unlimited') or not limit %}{% set pct=0 if unlimited else ((count*100/limit)|round(0,'floor')) %}
           <div class="subscription-usage-card {{ 'is-alert' if pct>=90 and not unlimited else ('is-warning' if pct>=70 and not unlimited else '') }}"><span>Utilisation de l’abonnement</span><strong>{{ count }} stagiaires créés</strong><small>{% if unlimited %}Aucun plafond défini{% else %}Objectif ou palier : {{ limit }}{% endif %}</small>{% if not unlimited %}<div class="subscription-usage-card__bar"><i style="width:{{ [pct,100]|min }}%"></i></div>{% endif %}<a href="{{ url_for('partner_subscription') }}">Voir les détails</a></div>
-          <div class="partner-sidebar__bottom"><a class="partner-sidebar__item" href="mailto:clement@integraleacademy.com?subject=Besoin%20d'aide%20Int%C3%A9grale%20Connect">{{ ps.sidebar_icon('help') }}<span class="partner-sidebar__label">Centre d’aide</span></a><a class="partner-sidebar__item" href="mailto:clement@integraleacademy.com?subject=Support%20Int%C3%A9grale%20Connect">{{ ps.sidebar_icon('mail') }}<span class="partner-sidebar__label">Contacter le support</span></a><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Déconnexion</span></a><div class="partner-sidebar__version"><strong>Intégrale Connect</strong><span>Version partenaire</span></div></div>
+          <div class="partner-sidebar__bottom"><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}" title="Se déconnecter">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Se déconnecter</span></a><div class="partner-sidebar__powered"><img src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Connect"><span>Propulsé par Intégrale Connect</span></div></div>
         </div>
       </aside>
       <main class="container main-content">{{ self.content() }}</main>
