@@ -2500,3 +2500,22 @@ body.partner-space.partner-sidebar-collapsed .sidebar-create-menu{display:none!i
   body.partner-space.partner-sidebar-collapsed .partner-sidebar__powered img{max-width:118px;max-height:42px;}
 }
 .test-version-banner{background:#facc15;color:#111827;text-align:center;font-weight:800;padding:8px 12px;letter-spacing:.08em;box-sizing:border-box;}
+
+/* Partner identity: organism logo stays in the sidebar, software logo represents Intégrale Connect. */
+body.partner-space .partner-software-logo{display:block;width:auto;object-fit:contain;flex:0 0 auto;}
+body.partner-space .partner-software-logo--header{height:42px;max-width:min(220px,32vw);}
+body.partner-space .partner-software-logo--powered{max-width:118px;max-height:42px;}
+body.partner-space .partner-sidebar__home-link{display:block;width:70px;height:70px;border-radius:20px;cursor:pointer;text-decoration:none;line-height:0;}
+body.partner-space .partner-sidebar__home-link:focus-visible{outline:2px solid rgba(255,107,26,.75);outline-offset:3px;}
+body.partner-space.partner-sidebar-collapsed .partner-sidebar__home-link{width:44px;height:44px;border-radius:14px;}
+@media (max-width:860px){
+  body.partner-space .partner-software-logo--header{height:38px;max-width:min(170px,46vw);}
+  body.partner-space.partner-sidebar-collapsed .partner-sidebar__home-link{width:70px;height:70px;border-radius:20px;}
+}
+@media (max-width:480px){
+  body.partner-space .partner-software-logo--header{height:34px;max-width:42vw;}
+  body.partner-space .topbar-actions{gap:8px;}
+}
+@media (max-width:980px){
+  body.partner-space .topbar-actions{width:auto;margin-left:auto;justify-content:flex-end;}
+}

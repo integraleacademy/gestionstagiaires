@@ -118,6 +118,7 @@
           {% if is_super_admin %}<a href="{{ url_for('admin_partners') }}" class="btn topbar-slim-link">Gérer les partenaires</a>{% endif %}
           <a href="{{ url_for('admin_logout') }}" class="btn topbar-slim-link">Déconnexion</a>
         {% elif is_partner_space %}
+          <img class="partner-software-logo partner-software-logo--header" src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Connect" loading="lazy">
           <button type="button" class="partner-sidebar-toggle" data-sidebar-open aria-controls="partnerSidebar" aria-expanded="false">☰ Menu</button>
         {% endif %}
       </div>
@@ -142,7 +143,7 @@
       <aside class="partner-sidebar" id="partnerSidebar" aria-label="Navigation partenaire">
         <div class="partner-sidebar__scroll">
           <div class="partner-sidebar__identity">
-            {% if partner_sidebar.logo_url %}<img class="partner-sidebar__avatar" src="{{ partner_sidebar.logo_url }}" alt="Logo {{ current_partner_name }}">{% else %}<div class="partner-sidebar__avatar partner-sidebar__avatar--initials">{{ (current_partner_name[:2] or 'IC')|upper }}</div>{% endif %}
+            <a class="partner-sidebar__home-link" href="{{ url_for('admin_sessions') }}" aria-label="Retour à l’accueil">{% if partner_sidebar.logo_url %}<img class="partner-sidebar__avatar" src="{{ partner_sidebar.logo_url }}" alt="Logo {{ current_partner_name }}">{% else %}<div class="partner-sidebar__avatar partner-sidebar__avatar--initials">{{ (current_partner_name[:2] or 'IC')|upper }}</div>{% endif %}</a>
             <div class="partner-sidebar__identity-copy"><strong>{{ current_partner_name }}</strong><span>{{ partner_sidebar.user_name or 'Compte partenaire' }}</span><em>{{ partner_sidebar.subscription.get('plan_name') or 'Offre partenaire' }}</em>{% if partner_sidebar.is_active %}<small>Compte actif</small>{% endif %}</div>
             <button type="button" class="partner-sidebar__collapse" data-sidebar-collapse aria-label="Réduire la barre"><span class="collapse-icon collapse-icon--open">{{ ps.sidebar_icon('chevron') }}</span><span class="collapse-icon collapse-icon--closed">{{ ps.sidebar_icon('chevron-right') }}</span></button>
           </div>
@@ -151,7 +152,7 @@
           <section class="partner-sidebar__section"><h2>Paramètres et outils</h2>{% for item in settings_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
           {% set sub=partner_sidebar.subscription or {} %}{% set count=sub.get('trainee_usage_count') or 0 %}{% set limit=sub.get('trainee_limit') %}{% set unlimited=sub.get('trainee_unlimited') or not limit %}{% set pct=0 if unlimited else ((count*100/limit)|round(0,'floor')) %}
           <div class="subscription-usage-card {{ 'is-alert' if pct>=90 and not unlimited else ('is-warning' if pct>=70 and not unlimited else '') }}"><span>Utilisation de l’abonnement</span><strong>{{ count }} stagiaires créés</strong><small>{% if unlimited %}Aucun plafond défini{% else %}Objectif ou palier : {{ limit }}{% endif %}</small>{% if not unlimited %}<div class="subscription-usage-card__bar"><i style="width:{{ [pct,100]|min }}%"></i></div>{% endif %}<a href="{{ url_for('partner_subscription') }}">Voir les détails</a></div>
-          <div class="partner-sidebar__bottom"><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}" title="Se déconnecter">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Se déconnecter</span></a><div class="partner-sidebar__powered"><img src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Connect"><span>Propulsé par Intégrale Connect</span></div></div>
+          <div class="partner-sidebar__bottom"><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}" title="Se déconnecter">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Se déconnecter</span></a><div class="partner-sidebar__powered"><img class="partner-software-logo partner-software-logo--powered" src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Connect" loading="lazy"><span>Propulsé par Intégrale Connect</span></div></div>
         </div>
       </aside>
       <main class="container main-content">{{ self.content() }}</main>
