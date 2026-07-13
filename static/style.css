@@ -2341,7 +2341,7 @@ body.app-modal-open{overflow:hidden}.app-modal-backdrop{position:fixed;inset:0;z
 /* Partner SaaS left navigation */
 :root{--partner-sidebar-open:285px;--partner-sidebar-closed:76px;--partner-sidebar-speed:250ms;}
 body[class*="endpoint-"] .brand--partner-hidden{display:none;}
-body[class*="endpoint-"] .topbar:has(.brand--partner-hidden){background:transparent;border-bottom:0;box-shadow:none;}
+body[class*="endpoint-"] .topbar:has(.brand--partner-hidden){background:transparent;border-bottom:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;}
 body[class*="endpoint-"] .topbar:has(.brand--partner-hidden) .topbar-inner{min-height:0;padding:8px 20px;justify-content:flex-end;max-width:none;}
 body[class*="endpoint-"] .topbar:has(.brand--partner-hidden) + .app-shell{margin-top:0;}
 .app-shell{max-width:none;margin:0;padding:0;display:block;min-height:100vh;}
