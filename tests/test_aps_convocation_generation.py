@@ -969,6 +969,37 @@ class ApsConventionGenerationTests(unittest.TestCase):
         self.assertNotIn("Intégrale Academy SAS", generated_text)
         self.assertNotIn("93830739683", generated_text)
 
+class AutomationPartnerModuleTests(unittest.TestCase):
+    def test_partner_without_automations_module_shows_locked_trainee_automation(self):
+        session_obj = {"training_type": "APS", "name": "Formation APS"}
+        trainee = {"id": "TRN-1", "email": "stagiaire@example.com"}
+        partner = {"id": "partner-1", "enabled_modules": ["training_aps", "cnaps"]}
+
+        with app.app.test_request_context("/"):
+            with mock.patch.object(app, "_is_super_admin_session", return_value=False), \
+                 mock.patch.object(app, "_is_partner_scoped_session", return_value=True), \
+                 mock.patch.object(app, "_current_partner", return_value=partner):
+                self.assertTrue(app._automation_is_enabled(session_obj))
+                self.assertFalse(app._automation_is_unlocked(session_obj))
+                status = app._build_trainee_automation_status(session_obj, trainee, "session-1", "TRN-1")
+
+        self.assertTrue(status["module_locked"])
+        self.assertEqual(status["global_status"], "blocked")
+        self.assertFalse(status["convention"]["can_send"])
+        self.assertFalse(status["convocation"]["can_generate"])
+        self.assertFalse(status["convocation"]["can_send"])
+
+    def test_partner_with_automations_module_enables_trainee_automation(self):
+        session_obj = {"training_type": "APS", "name": "Formation APS"}
+        partner = {"id": "partner-1", "enabled_modules": ["training_aps", "automations"]}
+
+        with app.app.test_request_context("/"):
+            with mock.patch.object(app, "_is_super_admin_session", return_value=False), \
+                 mock.patch.object(app, "_is_partner_scoped_session", return_value=True), \
+                 mock.patch.object(app, "_current_partner", return_value=partner):
+                self.assertTrue(app._automation_is_enabled(session_obj))
+                self.assertTrue(app._automation_is_unlocked(session_obj))
+
 
 if __name__ == "__main__":
     unittest.main()

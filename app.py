@@ -16900,7 +16900,9 @@ def api_create_trainee(session_id: str):
         t["access_sent_sms_ok"] = False
 
     # La convention est envoyée depuis la confirmation côté interface afin de
-    # laisser l’administrateur vérifier l’aperçu PDF avant toute transmission.
+    # laisser l’administrateur vérifier l’aperçu PDF avant toute transmission,
+    # uniquement lorsque le module automatisations est actif pour le partenaire.
+    automation_enabled = _automation_is_unlocked(s)
     save_data(data)
 
     return jsonify({
@@ -16918,9 +16920,10 @@ def api_create_trainee(session_id: str):
         "cpf_amount": t.get("cpf_amount", ""),
         "personal_amount": t.get("personal_amount", ""),
         "other_amount": t.get("other_amount", ""),
-        "convention_preview_url": url_for("admin_preview_convention", session_id=session_id, trainee_id=trainee_id),
-        "convention_financing_url": url_for("api_update_convention_financing", session_id=session_id, trainee_id=trainee_id),
-        "convention_signature_url": url_for("api_create_convention_signature", session_id=session_id, trainee_id=trainee_id)
+        "automation_enabled": automation_enabled,
+        "convention_preview_url": url_for("admin_preview_convention", session_id=session_id, trainee_id=trainee_id) if automation_enabled else "",
+        "convention_financing_url": url_for("api_update_convention_financing", session_id=session_id, trainee_id=trainee_id) if automation_enabled else "",
+        "convention_signature_url": url_for("api_create_convention_signature", session_id=session_id, trainee_id=trainee_id) if automation_enabled else ""
     })
 
 
@@ -22283,8 +22286,16 @@ def _can_send_convocation_without_signed_convention(session_obj: Dict[str, Any])
     return slug.startswith("desp_") or slug == "ssiap"
 
 
+def _automation_partner_module_enabled() -> bool:
+    return partner_has_module("automations")
+
+
 def _automation_is_enabled(session_obj: Dict[str, Any]) -> bool:
     return bool(_automation_document_config(session_obj).get("enabled"))
+
+
+def _automation_is_unlocked(session_obj: Dict[str, Any]) -> bool:
+    return _automation_is_enabled(session_obj) and _automation_partner_module_enabled()
 
 
 def _automation_has_entry_attestation(session_obj: Dict[str, Any]) -> bool:
@@ -24131,6 +24142,8 @@ def _has_generated_yousign_convention(trainee: Dict[str, Any]) -> bool:
 
 def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> Dict[str, Any]:
     """Centralise l'état des documents automatisés affiché sur la fiche stagiaire."""
+    automation_module_locked = not _automation_partner_module_enabled()
+    automation_lock_reason = "Module automatisations non activé pour ce partenaire" if automation_module_locked else ""
     state = _yousign_state(trainee)
     raw_status = _normalize_yousign_status(state.get("status"))
     generated_at_raw = state.get("created_at") or trainee.get("convention_aps_generated_at") or ""
@@ -24207,7 +24220,9 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
             {"label": "Attestation entrée", "state": "complete" if entry_sent else ("blocked" if not convention_signed else "pending")} if has_entry_attestation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
             {"label": "Attestation sortie", "state": "complete" if end_sent else ("blocked" if not convention_signed else "pending")} if has_end_attestation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
         ]
-    if convention_status == "error" or (is_aps_automation and convocation_status == "error"):
+    if automation_module_locked:
+        global_status = "blocked"
+    elif convention_status == "error" or (is_aps_automation and convocation_status == "error"):
         global_status = "error"
     elif convention_signed and (not is_aps_automation or convocation_status == "sent") and (not has_entry_attestation or entry_sent) and (not has_end_attestation or end_sent):
         global_status = "complete"
@@ -24233,6 +24248,8 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         "error": ("Erreur", "alert", "error", "blocked", "Réessayer"),
     }
     c_label, c_icon, c_tone, c_card_tone, c_primary_action = convention_labels.get(convention_status, convention_labels["error"])
+    if automation_module_locked:
+        c_label, c_icon, c_tone, c_card_tone, c_primary_action = ("Verrouillé", "lock", "blocked", "blocked", "Module verrouillé")
     convocation_labels = {
         "blocked_waiting_convention": (convocation_block_reason or "Bloquée", "hourglass" if has_signature_request else "lock", "blocked", "blocked"),
         "not_generated": ("Prêt", "file", "pending", "ready"),
@@ -24241,6 +24258,8 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         "error": ("Erreur", "alert", "error", "blocked"),
     }
     v_label, v_icon, v_tone, v_card_tone = convocation_labels.get(convocation_status, convocation_labels["error"])
+    if automation_module_locked:
+        v_label, v_icon, v_tone, v_card_tone = ("Verrouillé", "lock", "blocked", "blocked")
 
     total_documents = 2 if is_vae_automation else 1 + int(is_aps_automation) + int(has_entry_attestation) + int(has_end_attestation)
     progress_percent = round((ready_documents / total_documents) * 100) if total_documents else 0
@@ -24256,6 +24275,8 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         planned_automations.append("Attestation de sortie")
 
     return {
+        "module_locked": automation_module_locked,
+        "lock_reason": automation_lock_reason,
         "has_convocation": is_aps_automation,
         "has_entry_attestation": has_entry_attestation,
         "has_end_attestation": has_end_attestation,
@@ -24266,10 +24287,10 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         "progress_percent": progress_percent,
         "convention": {
             "status": convention_status, "label": c_label, "icon": c_icon, "icon_class": "automation-icon--hourglass" if c_icon == "hourglass" else "", "tone": c_tone, "card_tone": c_card_tone,
-            "primary_action": c_primary_action, "can_send": True, "can_download": bool(has_generated_convention or state.get("signed_pdf_path")),
+            "primary_action": c_primary_action, "can_send": not automation_module_locked, "can_download": (not automation_module_locked) and bool(has_generated_convention or state.get("signed_pdf_path")),
             "generated_at": generated_at, "sent_at": sent_at, "signed_at": signed_at,
             "recipient_email": trainee.get("email") or "", "signature_request_id": state.get("signature_request_id") or "",
-            "download_url": url_for("admin_view_signed_convention" if convention_signed and state.get("signed_pdf_path") else "admin_view_original_convention", session_id=session_id, trainee_id=trainee_id) if (has_generated_convention or state.get("signed_pdf_path")) else "",
+            "download_url": url_for("admin_view_signed_convention" if convention_signed and state.get("signed_pdf_path") else "admin_view_original_convention", session_id=session_id, trainee_id=trainee_id) if ((not automation_module_locked) and (has_generated_convention or state.get("signed_pdf_path"))) else "",
             "error": convention_error,
             "timeline_steps": [
                 {"label": "Générée", "value": generated_at or "Pas encore effectué", "state": "done" if generated_at else "blocked"},
@@ -24279,10 +24300,10 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         },
         "convocation": {
             "status": convocation_status, "label": v_label, "icon": v_icon, "icon_class": "automation-icon--hourglass" if v_icon == "hourglass" else "", "tone": v_tone, "card_tone": v_card_tone,
-            "can_generate": True, "can_send": (convention_signed or can_send_convocation_without_signed_convention) and convocation_status in {"generated", "sent"}, "block_reason": "" if can_send_convocation_without_signed_convention else convocation_block_reason,
+            "can_generate": not automation_module_locked, "can_send": (not automation_module_locked) and (convention_signed or can_send_convocation_without_signed_convention) and convocation_status in {"generated", "sent"}, "block_reason": automation_lock_reason if automation_module_locked else ("" if can_send_convocation_without_signed_convention else convocation_block_reason),
             "generated_at": convocation_generated_at_raw, "generated_at_label": convocation_generated_at, "sent_at": convocation_sent_at,
-            "download_url": url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id) if has_convocation_file else "",
-            "preview_url": url_for("admin_preview_aps_convocation", session_id=session_id, trainee_id=trainee_id),
+            "download_url": url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id) if ((not automation_module_locked) and has_convocation_file) else "",
+            "preview_url": url_for("admin_preview_aps_convocation", session_id=session_id, trainee_id=trainee_id) if not automation_module_locked else "",
             "error": convocation_error,
             "timeline_steps": [
                 {"label": "Convention validée", "value": "Signée" if convention_signed else ("Non requise pour l’envoi" if can_send_convocation_without_signed_convention else (convocation_block_reason or "Pas encore effectué")), "state": "done" if (convention_signed or can_send_convocation_without_signed_convention) else "blocked"},
@@ -26091,6 +26112,8 @@ def admin_preview_aps_convocation_by_trainee(trainee_id: str):
     s, _, t = _find_trainee_any_session(data, trainee_id)
     if not s or not t or not _is_aps_session(s):
         abort(404)
+    if not _automation_is_unlocked(s):
+        abort(403)
     try:
         _, pdf_path = _generate_aps_convocation_files(s, t, "", trainee_id)
         return send_file(pdf_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(pdf_path))
@@ -26106,6 +26129,8 @@ def admin_preview_aps_convocation(session_id: str, trainee_id: str):
     s, _, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t or not _is_aps_session(s):
         abort(404)
+    if not _automation_is_unlocked(s):
+        abort(403)
     try:
         _, pdf_path = _generate_aps_convocation_files(s, t, session_id, trainee_id)
         return send_file(pdf_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(pdf_path))
@@ -26123,6 +26148,8 @@ def admin_preview_aps_entry_attestation(session_id: str, trainee_id: str):
     s, _, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t or not _automation_has_entry_attestation(s):
         abort(404)
+    if not _automation_is_unlocked(s):
+        abort(403)
     try:
         _, pdf_path = _generate_aps_entry_attestation_files(s, t, session_id, trainee_id)
         return send_file(pdf_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(pdf_path))
@@ -26139,6 +26166,8 @@ def admin_send_aps_entry_attestation(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if not _automation_is_unlocked(s):
+        return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     if not _automation_has_entry_attestation(s):
         return jsonify({"ok": False, "error": "Attestation d’entrée non configurée pour cette formation"}), 400
     try:
@@ -26181,6 +26210,8 @@ def admin_preview_aps_end_attestation(session_id: str, trainee_id: str):
     s, _, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t or not _automation_has_end_attestation(s):
         abort(404)
+    if not _automation_is_unlocked(s):
+        abort(403)
     try:
         _, pdf_path = _generate_aps_end_attestation_files(s, t, session_id, trainee_id)
         return send_file(pdf_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(pdf_path))
@@ -26197,6 +26228,8 @@ def admin_send_aps_end_attestation(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if not _automation_is_unlocked(s):
+        return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     if not _automation_has_end_attestation(s):
         return jsonify({"ok": False, "error": "Attestation de fin non configurée pour cette formation"}), 400
     try:
@@ -26238,6 +26271,8 @@ def admin_trainee_automation_status(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if not _automation_is_unlocked(s):
+        return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     _refresh_yousign_convention_status_if_pending(data, s, trainees, t)
     return jsonify({"ok": True, "automation_status": _build_trainee_automation_status(s, t, session_id, trainee_id)})
 
@@ -26250,6 +26285,8 @@ def admin_generate_aps_convocation_automation(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if not _automation_is_unlocked(s):
+        return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     if not _is_aps_session(s):
         return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
     try:
@@ -26281,6 +26318,8 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if not _automation_is_unlocked(s):
+        return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     if not _is_aps_session(s):
         return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
     can_send_without_signed_convention = _can_send_convocation_without_signed_convention(s)
@@ -26340,6 +26379,8 @@ def admin_preview_convention(session_id: str, trainee_id: str):
     s, _, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         abort(404)
+    if not _automation_is_unlocked(s):
+        abort(403)
     try:
         _, pdf_path = _generate_aps_convention_files(s, t, session_id, trainee_id)
     except Exception as exc:
@@ -26369,6 +26410,8 @@ def api_update_convention_financing(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if not _automation_is_unlocked(s):
+        return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     payload = request.get_json(silent=True) or {}
     _apply_convention_financing_payload(t, payload)
     s["trainees"] = trainees
@@ -26385,6 +26428,8 @@ def api_create_convention_signature(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if not _automation_is_unlocked(s):
+        return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     payload = request.get_json(silent=True) or {}
     _apply_convention_financing_payload(t, payload)
     try:
@@ -26418,6 +26463,9 @@ def admin_create_convention_signature(session_id: str, trainee_id: str):
     if not s or not t:
         flash("Stagiaire introuvable.", "error")
         abort(404)
+    if not _automation_is_unlocked(s):
+        flash("Ce module est verrouillé pour ce partenaire. Activez-le dans la fiche partenaire.", "error")
+        abort(403)
     try:
         state = create_yousign_convention_signature(s, t, session_id, trainee_id, force_new=bool(request.form.get("force_new")))
         signature_link = str(state.get("signature_link") or "").strip()
