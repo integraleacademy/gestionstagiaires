@@ -21,6 +21,7 @@
     'chevron-right':'M9 18l6-6-6-6',
     'plus':'M12 5v14M5 12h14',
     'settings':'M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Zm0-13v3m0 13v3m9.2-9.5h-3m-13.4 0h-3m16-6.8-2.1 2.1M6.3 17.7l-2.1 2.1m0-15.6 2.1 2.1m11.4 11.4 2.1 2.1',
+    'external':'M14 3h7v7m0-7-9 9m-5-7H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2',
     'tool':'M14.7 6.3a4 4 0 0 0-5 5L3 18v3h3l6.7-6.7a4 4 0 0 0 5-5l-2.8 2.8-2-2 2.8-2.8Z',
     'archive':'M3 7h18M5 7v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7M8 7V4h8v3m-6 5h4'
   } %}
@@ -36,11 +37,30 @@
   {% elif item.action %}
     <button type="button" class="{{ classes }}" data-sidebar-action="{{ item.action }}" title="{{ item.label }}">
   {% else %}
-    <a class="{{ classes }}" href="{{ item.href }}" title="{{ item.label }}">
+    <a class="{{ classes }}" href="{{ item.href }}" title="{{ item.label }}"{% if item.external %} target="_blank" rel="noopener noreferrer"{% endif %}>
   {% endif %}
       {{ sidebar_icon(item.icon) }}
       <span class="partner-sidebar__label">{{ item.label }}</span>
       {% if item.badge %}<span class="partner-sidebar__badge">{{ item.badge }}</span>{% endif %}
       {% if locked %}<span class="partner-sidebar__lock">{{ sidebar_icon('lock') }}</span>{% endif %}
   {% if locked or item.action %}</button>{% else %}</a>{% endif %}
+{%- endmacro %}
+
+
+{% macro sidebar_submenu(menu) -%}
+  {% set ns = namespace(active=false) %}
+  {% for child in menu.children %}{% if request.endpoint in child.endpoints %}{% set ns.active = true %}{% endif %}{% endfor %}
+  <details class="partner-sidebar__submenu {{ 'is-active' if ns.active else '' }}" {% if ns.active %}open{% endif %}>
+    <summary class="partner-sidebar__item" title="{{ menu.label }}">
+      {{ sidebar_icon(menu.icon) }}
+      <span class="partner-sidebar__label">{{ menu.label }}</span>
+      {% if menu.badge %}<span class="partner-sidebar__badge">{{ menu.badge }}</span>{% endif %}
+      <span class="partner-sidebar__chevron">{{ sidebar_icon('chevron-right') }}</span>
+    </summary>
+    <div class="partner-sidebar__submenu-panel" aria-label="{{ menu.label }}">
+      {% for child in menu.children %}
+        {{ sidebar_nav_item(child) }}
+      {% endfor %}
+    </div>
+  </details>
 {%- endmacro %}

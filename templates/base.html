@@ -134,8 +134,25 @@
       {"label":"Mon abonnement","icon":"card","href":url_for('partner_subscription'),"endpoints":["partner_subscription"],"badge":"","locked":False}
     ] %}
 
+    {% set sidebar_cpf_item = {"label":"CPF","icon":"wallet","href":url_for('admin_wedof_requests'),"endpoints":["admin_wedof_requests","admin_wedof"],"badge":wedof_new_requests_count if (wedof_new_requests_count or 0) > 0 else "","locked":False} if partner_has_module('cpf') else none %}
+    {% set sidebar_cnaps_menu = {"label":"CNAPS","icon":"shield","badge":"","children":[
+      {"label":"DRACAR","icon":"external","href":"https://espace-usagers.cnaps.interieur.gouv.fr/usager/app/accueil","endpoints":[],"locked":False,"external":True},
+      {"label":"Import PRE CNAPS","icon":"file","action":"open-cnaps-import","endpoints":[],"locked":is_read_only},
+      {"label":"CNAPS inconnus","icon":"shield","href":url_for('admin_cnaps_unknown'),"endpoints":["admin_cnaps_unknown"],"locked":False}
+    ]} if partner_has_module('cnaps') else none %}
+    {% set sidebar_tools_children =
+      ([
+        {"label":"Conventions","icon":"file","href":url_for('admin_sessions_conventions'),"endpoints":["admin_sessions_conventions"],"locked":False},
+        {"label":"Automatisations","icon":"tool","href":url_for('admin_sessions_automations'),"endpoints":["admin_sessions_automations"],"locked":False}
+      ] if partner_has_module('automations') else [])
+      + ([{"label":"Facturation","icon":"wallet","href":url_for('admin_sessions_billing'),"endpoints":["admin_sessions_billing"],"locked":False}] if partner_has_module('billing') else [])
+      + [{"label":"Sessions archivées","icon":"archive","href":url_for('admin_sessions_archived'),"endpoints":["admin_sessions_archived"],"locked":False}]
+    %}
+    {% set sidebar_tools_menu = {"label":"Outils","icon":"tool","badge":"","children":sidebar_tools_children} %}
+    {% set settings_menu = {"label":"Réglages","icon":"settings","badge":"","children":([
+      {"label":"Réglages Qonto","icon":"settings","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings"],"locked":False}
+    ] if partner_has_module('billing') else [])} %}
     {% set settings_items = [
-      {"label":"Réglages","icon":"settings","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings"],"locked":False},
       {"label":"Aide et support","icon":"help","href":"mailto:clement@integraleacademy.com?subject=Support%20Int%C3%A9grale%20Connect","endpoints":[],"locked":False}
     ] %}
     {% set create_item = {"label":"Créer","icon":"plus","action":"toggle-create-menu","endpoints":[],"locked":is_read_only,"primary":True} %}
@@ -148,8 +165,8 @@
             <button type="button" class="partner-sidebar__collapse" data-sidebar-collapse aria-label="Réduire la barre"><span class="collapse-icon collapse-icon--open">{{ ps.sidebar_icon('chevron') }}</span><span class="collapse-icon collapse-icon--closed">{{ ps.sidebar_icon('chevron-right') }}</span></button>
           </div>
           <div class="partner-sidebar__create">{{ ps.sidebar_nav_item(create_item) }}<div class="quick-create-menu sidebar-create-menu" id="sidebarCreateMenu"><button class="quick-create-option quick-create-option--session" data-sidebar-action="create-session">💼 Nouvelle session</button><button class="quick-create-option quick-create-option--trainee" data-sidebar-action="create-trainee">👨‍🎓 Nouveau stagiaire</button></div></div>
-          <section class="partner-sidebar__section"><h2>Navigation principale</h2>{% for item in space_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
-          <section class="partner-sidebar__section"><h2>Paramètres et outils</h2>{% for item in settings_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
+          <section class="partner-sidebar__section"><h2>Navigation principale</h2>{% for item in space_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}{% if sidebar_cpf_item %}{{ ps.sidebar_nav_item(sidebar_cpf_item) }}{% endif %}{% if sidebar_cnaps_menu %}{{ ps.sidebar_submenu(sidebar_cnaps_menu) }}{% endif %}{% if sidebar_tools_menu.children %}{{ ps.sidebar_submenu(sidebar_tools_menu) }}{% endif %}</section>
+          <section class="partner-sidebar__section partner-sidebar__section--settings"><h2>Paramètres et outils</h2>{% if settings_menu.children %}{{ ps.sidebar_submenu(settings_menu) }}{% endif %}{% for item in settings_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
           {% set sub=partner_sidebar.subscription or {} %}{% set count=sub.get('trainee_usage_count') or 0 %}{% set limit=sub.get('trainee_limit') %}{% set unlimited=sub.get('trainee_unlimited') or not limit %}{% set pct=0 if unlimited else ((count*100/limit)|round(0,'floor')) %}
           <div class="subscription-usage-card {{ 'is-alert' if pct>=90 and not unlimited else ('is-warning' if pct>=70 and not unlimited else '') }}"><span>Utilisation de l’abonnement</span><strong>{{ count }} stagiaires créés</strong><small>{% if unlimited %}Aucun plafond défini{% else %}Objectif ou palier : {{ limit }}{% endif %}</small>{% if not unlimited %}<div class="subscription-usage-card__bar"><i style="width:{{ [pct,100]|min }}%"></i></div>{% endif %}<a href="{{ url_for('partner_subscription') }}">Voir les détails</a></div>
           <div class="partner-sidebar__bottom"><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}" title="Se déconnecter">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Se déconnecter</span></a><div class="partner-sidebar__powered"><img class="partner-software-logo partner-software-logo--powered" src="{{ url_for('static', filename='icone.png') }}" alt="Intégrale Connect" loading="lazy"><span>Propulsé par Intégrale Connect</span></div></div>
@@ -906,6 +923,13 @@
       }
       if(action === 'create-session') document.getElementById('btnOpenCreateSession')?.click();
       if(action === 'create-trainee') document.getElementById('btnOpenCreateTraineeFromSessions')?.click();
+      if(action === 'open-cnaps-import') document.getElementById('btnOpenCnapsImport')?.click();
+    });
+    const partnerCreateBtn = document.getElementById('partnerBtnOpenCreateMenu');
+    const partnerCreateMenu = document.getElementById('partnerQuickCreateMenu');
+    partnerCreateBtn?.addEventListener('click', () => {
+      partnerCreateMenu?.classList.toggle('is-open');
+      partnerCreateBtn.setAttribute('aria-expanded', partnerCreateMenu?.classList.contains('is-open') ? 'true' : 'false');
     });
     document.addEventListener('keydown', (event) => {
       if(event.key === 'Escape'){
