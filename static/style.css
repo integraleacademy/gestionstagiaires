@@ -2317,3 +2317,10 @@ body.app-modal-open{overflow:hidden}.app-modal-backdrop{position:fixed;inset:0;z
   .partners-filter{grid-template-columns:1fr;}
   .partners-table{min-width:980px !important;table-layout:auto;}
 }
+
+.module-locked{cursor:not-allowed!important;opacity:.72;filter:grayscale(.15);pointer-events:none;}
+.partner-module-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:12px;}
+.partner-module-card{display:flex;gap:10px;align-items:flex-start;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc;padding:12px;cursor:pointer;}
+.partner-module-card input{margin-top:3px;accent-color:#2563eb;}
+.partner-module-card strong{display:block;color:#0f172a;font-weight:950;}
+.partner-module-card small{display:block;margin-top:4px;color:#64748b;line-height:1.35;}
