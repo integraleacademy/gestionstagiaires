@@ -7,6 +7,8 @@
 {% set is_aps = automation_status.has_convocation if automation_status is not none else ((session.training_type or "")|upper).startswith("APS") %}
 {% set show_automation = automation_status is not none %}
 {% set automation_locked = automation_module_locked|default(false) %}
+{% set financing_locked = financing_module_locked|default(false) %}
+{% set financing_read_only_attr = "disabled" if is_read_only or financing_locked else "" %}
 {% set is_dirigeant = "DIRIGEANT" in (session.training_type or "")|upper %}
 {% set show_no_bac_toggle = is_dirigeant %}
 {% set is_aps_or_a3p = "APS" in (session.training_type or "")|upper or "A3P" in (session.training_type or "")|upper %}
@@ -366,8 +368,8 @@
         <button class="btn btn-outline btn-uniform" type="button" onclick="openModal('transferTraineeModal')">
           🔁 Transfert
         </button>
-        <button class="btn btn-financement btn-uniform" type="button" data-open-section="conventionFinancementSection">
-          Financement
+        <button class="btn {% if financing_locked %}btn-disabled-muted{% else %}btn-financement{% endif %} btn-uniform" type="button" data-open-section="conventionFinancementSection" {% if financing_locked %}title="Module financement verrouillé pour ce partenaire"{% endif %}>
+          {% if financing_locked %}🔒 {% endif %}Financement
         </button>
         <form method="post" action="{{ url_for('admin_delete_trainee', session_id=session.id, trainee_id=trainee.id) }}"
               onsubmit="return confirm('Supprimer ce stagiaire ?');">
@@ -1271,7 +1273,10 @@
     <div id="financementDetails"
          data-training-type="{{ session.training_type }}"
          data-default-price="{{ default_training_price or '' }}"
-         data-read-only="{{ '1' if is_read_only else '0' }}">
+         data-read-only="{{ '1' if is_read_only or financing_locked else '0' }}">
+      {% if financing_locked %}
+        <div class="automation-locked-notice">🔒 <div>Module financement verrouillé pour ce partenaire. Activez le module <strong>Financement</strong> depuis la fiche admin du partenaire pour modifier les statuts, montants et relances.</div></div>
+      {% endif %}
       <div class="finance-dashboard__header">
         <div>
           <div class="finance-dashboard__kicker">Suivi financier</div>
@@ -1281,10 +1286,10 @@
         </div>
         <div class="finance-dashboard__actions">
           <button class="btn btn-outline finance-notifications-toggle" type="button" id="btnToggleFinanceNotifications" aria-expanded="false" aria-controls="financeAlerts">🔔 Notifications <span class="finance-notifications-toggle__count" id="financeNotificationsCount">0</span></button>
-          {% if not is_read_only %}
+          {% if not is_read_only and not financing_locked %}
             <button class="btn btn-primary finance-quick-invoice-btn" type="button" id="btnQuickGenerateInvoice" disabled>🧾 Générer une facture</button>
           {% endif %}
-          <button class="btn btn-outline" type="button" id="btnSyncQontoTrainee">Synchroniser Qonto</button>
+          <button class="btn btn-outline" type="button" id="btnSyncQontoTrainee" {{ financing_read_only_attr }}>Synchroniser Qonto</button>
           <div class="finance-validation-admin"
                data-manual-mode="{{ trainee.financing_validation_manual_mode or '' }}"
                data-manual-status="{{ trainee.financing_validation_manual_status or '' }}">
@@ -1292,7 +1297,7 @@
               <span class="finance-validation-status__icon">⌛</span>
               <span class="finance-validation-status__label">Financement à valider</span>
             </button>
-            {% if not is_read_only %}
+            {% if not is_read_only and not financing_locked %}
               <form method="post" action="{{ url_for('admin_force_financement_validated', session_id=session.id, trainee_id=trainee.id) }}" class="finance-validation-form" id="financeForceValidatedForm">
                 <button class="btn btn-outline" type="submit" id="btnForceFinanceValidated">Forcer validé</button>
               </form>
@@ -1316,23 +1321,23 @@
             <span class="finance-settings-pill">SaaS ready</span>
           </div>
           <div class="finance-edit-grid finance-edit-grid--cards">
-            <div class="finance-field finance-field-card finance-field-card--cpf"><div class="label">Montant CPF</div><input id="cpfAmount" type="number" min="0" step="0.01" value="{{ trainee.cpf_amount or '' }}" {{ read_only_attr }}><div class="hint">Montant CPF (suivi uniquement, sans facturation CPF)</div></div>
-            <div class="finance-field finance-field-card finance-field-card--personal"><div class="label">Montant financement personnel</div><input id="personalAmount" type="number" min="0" step="0.01" value="{{ trainee.personal_amount if trainee.personal_amount not in [none, ''] else '0' }}" {{ read_only_attr }}><div class="hint">Reste à charge stagiaire</div></div>
-            <div class="finance-field finance-field-card finance-field-card--other"><div class="label">Montant autre</div><input id="otherAmount" type="number" min="0" step="0.01" value="{{ trainee.other_amount or '' }}" {{ read_only_attr }}><div class="hint">OPCO, entreprise, France Travail…</div></div>
+            <div class="finance-field finance-field-card finance-field-card--cpf"><div class="label">Montant CPF</div><input id="cpfAmount" type="number" min="0" step="0.01" value="{{ trainee.cpf_amount or '' }}" {{ financing_read_only_attr }}><div class="hint">Montant CPF (suivi uniquement, sans facturation CPF)</div></div>
+            <div class="finance-field finance-field-card finance-field-card--personal"><div class="label">Montant financement personnel</div><input id="personalAmount" type="number" min="0" step="0.01" value="{{ trainee.personal_amount if trainee.personal_amount not in [none, ''] else '0' }}" {{ financing_read_only_attr }}><div class="hint">Reste à charge stagiaire</div></div>
+            <div class="finance-field finance-field-card finance-field-card--other"><div class="label">Montant autre</div><input id="otherAmount" type="number" min="0" step="0.01" value="{{ trainee.other_amount or '' }}" {{ financing_read_only_attr }}><div class="hint">OPCO, entreprise, France Travail…</div></div>
           </div>
           <div class="finance-edit-grid finance-edit-grid--wide">
-            <div class="finance-field"><div class="label">Tarif formation</div><input id="trainingPrice" type="number" min="0" step="0.01" value="{{ trainee.training_price or default_training_price or '' }}" {{ read_only_attr }}><div class="hint">Tarif par défaut automatiquement repris si le champ est vide.</div></div>
-            <div class="finance-field"><div class="label">Ajustement suivi des ventes</div><input id="salesTrackingAmount" type="number" min="0" step="0.01" value="{{ trainee.sales_tracking_amount or '' }}" placeholder="Ex : 1350" {{ read_only_attr }}><div id="paymentTotalLine" class="hint" style="font-weight:900;margin-top:6px;"></div><div id="paymentDiffLine" class="hint"></div></div>
+            <div class="finance-field"><div class="label">Tarif formation</div><input id="trainingPrice" type="number" min="0" step="0.01" value="{{ trainee.training_price or default_training_price or '' }}" {{ financing_read_only_attr }}><div class="hint">Tarif par défaut automatiquement repris si le champ est vide.</div></div>
+            <div class="finance-field"><div class="label">Ajustement suivi des ventes</div><input id="salesTrackingAmount" type="number" min="0" step="0.01" value="{{ trainee.sales_tracking_amount or '' }}" placeholder="Ex : 1350" {{ financing_read_only_attr }}><div id="paymentTotalLine" class="hint" style="font-weight:900;margin-top:6px;"></div><div id="paymentDiffLine" class="hint"></div></div>
           </div>
-          <div class="finance-field" style="margin-top:12px;"><div class="label">Commentaire financement</div><input id="financementComment" type="text" value="{{ trainee.financement_comment or '' }}" placeholder="Ex : France Travail en attente / OPCO validé / CPF…" {{ read_only_attr }}></div>
+          <div class="finance-field" style="margin-top:12px;"><div class="label">Commentaire financement</div><input id="financementComment" type="text" value="{{ trainee.financement_comment or '' }}" placeholder="Ex : France Travail en attente / OPCO validé / CPF…" {{ financing_read_only_attr }}></div>
           <div class="finance-checks">
-            <label class="finance-check"><input id="excludeFromSalesTracking" type="checkbox" {% if trainee.exclude_from_sales_tracking %}checked{% endif %} {{ read_only_attr }}> Exclure du suivi des ventes</label>
-            <label class="finance-check"><input id="cashPaymentEnabled" type="checkbox" {% if trainee.cash_payment_enabled %}checked{% endif %} {{ read_only_attr }}> Paiement en espèces</label>
+            <label class="finance-check"><input id="excludeFromSalesTracking" type="checkbox" {% if trainee.exclude_from_sales_tracking %}checked{% endif %} {{ financing_read_only_attr }}> Exclure du suivi des ventes</label>
+            <label class="finance-check"><input id="cashPaymentEnabled" type="checkbox" {% if trainee.cash_payment_enabled %}checked{% endif %} {{ financing_read_only_attr }}> Paiement en espèces</label>
           </div>
           <div id="cashPaymentAmountWrap" style="margin-top:12px;{% if trainee.cash_payment_enabled %}display:block;{% else %}display:none;{% endif %}">
-            <div class="finance-edit-grid finance-edit-grid--wide"><div class="finance-field"><div class="label">Montant à régler en espèces</div><input id="cashPaymentAmount" type="number" min="0" step="0.01" value="{{ trainee.cash_payment_amount or '' }}" placeholder="Ex : 300" {{ read_only_attr }}></div><label class="finance-check" style="align-self:end;"><input id="cashPaymentSettled" type="checkbox" {% if trainee.cash_payment_settled %}checked{% endif %} {{ read_only_attr }}> OK réglé</label></div>
-            <div id="cashPaymentSettlementDetails" class="finance-edit-grid finance-edit-grid--wide" style="display:none;margin-top:10px;"><div class="finance-field"><div class="label">Date de règlement</div><input id="cashPaymentSettledDate" type="date" value="{{ trainee.cash_payment_settled_date or '' }}" {{ read_only_attr }}></div><div class="finance-field"><div class="label">Commentaire</div><input id="cashPaymentSettledComment" type="text" value="{{ trainee.cash_payment_settled_comment or '' }}" {{ read_only_attr }}></div></div>
-            <div id="cashPaymentInstallmentsWrap" style="margin-top:10px;"><div class="label">Versements en espèces</div><div id="cashPaymentInstallmentsList" class="finance-list"></div>{% if not is_read_only %}<button type="button" class="btn btn-ghost" id="cashPaymentAddInstallmentBtn" style="margin-top:8px;">+ Ajouter un versement</button>{% endif %}</div>
+            <div class="finance-edit-grid finance-edit-grid--wide"><div class="finance-field"><div class="label">Montant à régler en espèces</div><input id="cashPaymentAmount" type="number" min="0" step="0.01" value="{{ trainee.cash_payment_amount or '' }}" placeholder="Ex : 300" {{ financing_read_only_attr }}></div><label class="finance-check" style="align-self:end;"><input id="cashPaymentSettled" type="checkbox" {% if trainee.cash_payment_settled %}checked{% endif %} {{ financing_read_only_attr }}> OK réglé</label></div>
+            <div id="cashPaymentSettlementDetails" class="finance-edit-grid finance-edit-grid--wide" style="display:none;margin-top:10px;"><div class="finance-field"><div class="label">Date de règlement</div><input id="cashPaymentSettledDate" type="date" value="{{ trainee.cash_payment_settled_date or '' }}" {{ financing_read_only_attr }}></div><div class="finance-field"><div class="label">Commentaire</div><input id="cashPaymentSettledComment" type="text" value="{{ trainee.cash_payment_settled_comment or '' }}" {{ financing_read_only_attr }}></div></div>
+            <div id="cashPaymentInstallmentsWrap" style="margin-top:10px;"><div class="label">Versements en espèces</div><div id="cashPaymentInstallmentsList" class="finance-list"></div>{% if not is_read_only and not financing_locked %}<button type="button" class="btn btn-ghost" id="cashPaymentAddInstallmentBtn" style="margin-top:8px;">+ Ajouter un versement</button>{% endif %}</div>
             <div id="cashPaymentHint" class="hint" style="margin-top:8px;"></div>
           </div>
         </div>
@@ -1348,7 +1353,7 @@
 
       <details class="finance-detail-section">
         <summary><span>Factures Qonto</span><span class="finance-accordion-hint" id="financeInvoicesSummary">Chargement…</span></summary>
-        <div class="finance-detail-section__body"><div id="qontoInvoiceCard" data-session-id="{{ session.id }}" data-trainee-id="{{ trainee.id }}" data-read-only="{{ '1' if is_read_only else '0' }}"><div id="qontoInvoiceHistory" class="finance-list"><div class="finance-empty">Chargement des factures…</div></div></div></div>
+        <div class="finance-detail-section__body"><div id="qontoInvoiceCard" data-session-id="{{ session.id }}" data-trainee-id="{{ trainee.id }}" data-read-only="{{ '1' if is_read_only or financing_locked else '0' }}"><div id="qontoInvoiceHistory" class="finance-list"><div class="finance-empty">Chargement des factures…</div></div></div></div>
       </details>
 
       <details class="finance-detail-section">
@@ -2045,13 +2050,13 @@
                step="0.01"
                placeholder="Ex : 150.00"
                required
-               {{ read_only_attr }}>
+               {{ financing_read_only_attr }}>
 
         <div class="label" style="margin-top:10px;">Date du prélèvement initialement prévue</div>
         <input id="financementRejectDate"
                type="date"
                required
-               {{ read_only_attr }}>
+               {{ financing_read_only_attr }}>
 
         <div class="hint" style="margin-top:8px;">
           Un mail + SMS seront envoyés au stagiaire avec un lien pour proposer une nouvelle date.
@@ -2061,7 +2066,7 @@
       <div class="modal-foot">
         <button class="btn" type="button" data-close-modal="financementRejectModal"
                 onclick="document.getElementById('financementRejectModal').classList.remove('show');document.getElementById('financementRejectModal').setAttribute('aria-hidden','true');">Annuler</button>
-        <button class="btn btn-primary" type="submit" id="btnSendFinancementReject" {{ read_only_attr }}>Envoyer</button>
+        <button class="btn btn-primary" type="submit" id="btnSendFinancementReject" {{ financing_read_only_attr }}>Envoyer</button>
       </div>
     </form>
   </div>

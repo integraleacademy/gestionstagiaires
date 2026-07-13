@@ -11679,6 +11679,7 @@ PARTNER_SUBSCRIPTION_MODULE_PRICING = {
     "cnaps": {"label": "Module CNAPS", "icon": "🛡️", "price": 49, "description": "Suivi des dossiers CNAPS, vérification automatique du statut CNAPS et fonctionnalités dédiées CNAPS.", "features": ["Suivi des dossiers CNAPS", "Vérification automatique du statut", "Gestion CNAPS complète"]},
     "cpf": {"label": "Module CPF", "icon": "🎓", "price": 59, "description": "Suivi des dossiers CPF et des demandes WeDoF CPF.", "features": ["Demandes WeDoF CPF", "Statuts des dossiers", "Suivi CPF"]},
     "billing": {"label": "Module Facturation", "icon": "🧾", "price": 69, "description": "Facturation et suivi des factures avec connexion Qonto requise.", "features": ["Facturation", "Suivi des factures", "Qonto requis"]},
+    "financing": {"label": "Module Financement", "icon": "💶", "price": 49, "description": "Suivi des statuts et montants de financement depuis les fiches stagiaires.", "features": ["Statuts de financement", "Montants CPF/personnel/autre", "Relances de paiement"]},
     "sales": {"label": "Module Suivi des ventes", "icon": "📈", "price": 49, "description": "Pilotage commercial et suivi des ventes.", "features": ["Tableau de bord ventes", "Suivi commercial", "Indicateurs de conversion"]},
     "training_aps": {"label": "Module formation APS", "icon": "🏫", "price": 79, "description": "Création et gestion de sessions APS uniquement.", "features": ["Sessions APS", "Stagiaires APS", "Documents APS"]},
     "training_ssiap": {"label": "Module formation SSIAP", "icon": "🔥", "price": 79, "description": "Création et gestion de sessions SSIAP uniquement.", "features": ["Sessions SSIAP", "Stagiaires SSIAP", "Documents SSIAP"]},
@@ -11752,6 +11753,7 @@ PARTNER_MODULES = [
     {"key": "cnaps", "label": "Module CNAPS", "description": "Suivi des dossiers CNAPS, vérification automatique du statut CNAPS et accès DRACAR."},
     {"key": "cpf", "label": "Module CPF", "description": "Suivi des dossiers CPF / demandes WeDoF CPF."},
     {"key": "billing", "label": "Module Facturation (Qonto)", "description": "Facturation, suivi des factures et réglages Qonto."},
+    {"key": "financing", "label": "Module Financement", "description": "Suivi du financement dans la fiche stagiaire : statuts, montants, validation et relances de paiement."},
     {"key": "sales", "label": "Module Suivi des ventes", "description": "Tableaux de bord et indicateurs de suivi des ventes."},
     {"key": "training_aps", "label": "Module formation APS", "description": "Création et gestion de sessions APS uniquement."},
     {"key": "training_ssiap", "label": "Module formation SSIAP", "description": "Création et gestion de sessions SSIAP uniquement."},
@@ -17325,6 +17327,30 @@ def api_update_trainee(session_id: str, trainee_id: str):
         and bool(s.get("aps_elearning_enabled"))
     )
 
+
+    financing_fields = {
+        "financement_status",
+        "financing_validation_manual_mode",
+        "financing_validation_manual_status",
+        "financement_comment",
+        "cash_payment_enabled",
+        "cash_payment_amount",
+        "cash_payment_installments",
+        "cash_payment_settled",
+        "cash_payment_settled_date",
+        "cash_payment_settled_comment",
+        "financement_new_date_seen",
+        "training_price",
+        "exclude_from_sales_tracking",
+        "sales_tracking_amount",
+        "cpf_amount",
+        "cpf_validated",
+        "personal_amount",
+        "other_amount",
+    }
+    if any(key in payload for key in financing_fields) and not _financing_partner_module_enabled():
+        return jsonify({"ok": False, "error": "module_locked", "module": "financing"}), 403
+
     if "vtc_book_sent_at" in payload:
         vtc_book_sent_payload = payload.get("vtc_book_sent_at")
         if isinstance(vtc_book_sent_payload, str) and vtc_book_sent_payload.strip() and not _is_vtc_book_address_complete(t):
@@ -17623,6 +17649,12 @@ def admin_force_financement_validated(session_id: str, trainee_id: str):
             return jsonify({"ok": False, "error": "trainee_not_found"}), 404
         flash("Stagiaire introuvable.", "error")
         return redirect(url_for("admin_trainees", session_id=session_id))
+
+    if not _financing_partner_module_enabled():
+        if request.accept_mimetypes.best == "application/json":
+            return jsonify({"ok": False, "error": "module_locked", "module": "financing"}), 403
+        flash("Ce module est verrouillé pour ce partenaire. Activez-le dans la fiche partenaire.", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
     was_validated = (t.get("financement_status") or "").strip() == "validated"
     t["financing_validation_manual_mode"] = "manual"
@@ -22527,6 +22559,10 @@ def _automation_partner_module_enabled() -> bool:
     return partner_has_module("automations")
 
 
+def _financing_partner_module_enabled() -> bool:
+    return partner_has_module("financing")
+
+
 def _automation_is_enabled(session_obj: Dict[str, Any]) -> bool:
     return bool(_automation_document_config(session_obj).get("enabled")) and _automation_partner_module_enabled()
 
@@ -24681,6 +24717,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         brevo_no_credit_notice=brevo_no_credit_notice,
         automation_status=_build_trainee_automation_status(s, t, session_id, trainee_id) if _automation_document_config(s).get("enabled") else None,
         automation_module_locked=bool(_automation_document_config(s).get("enabled")) and not _automation_partner_module_enabled(),
+        financing_module_locked=not _financing_partner_module_enabled(),
         docs_relance_planned_fr=fr_date(t.get("docs_relance_auto_planned_date") or ""),
         ssiap_medical_from_date=fr_date(_subtract_months(t.get("ssiap_exam_date") or "", 3)),
     )
@@ -26624,6 +26661,8 @@ def api_update_convention_financing(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
     if not _automation_is_enabled(s):
         return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
+    if not _financing_partner_module_enabled():
+        return jsonify({"ok": False, "error": "module_locked", "module": "financing"}), 403
     payload = request.get_json(silent=True) or {}
     _apply_convention_financing_payload(t, payload)
     s["trainees"] = trainees
@@ -28494,6 +28533,8 @@ def api_financement_rejet_send(session_id: str, trainee_id: str):
     s, t = _find_session_and_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "not_found"}), 404
+    if not _financing_partner_module_enabled():
+        return jsonify({"ok": False, "error": "module_locked", "module": "financing"}), 403
 
     token = uuid.uuid4().hex
     secretariat_token = uuid.uuid4().hex
@@ -28638,6 +28679,8 @@ def api_financement_pending_send(session_id: str, trainee_id: str):
     s, t = _find_session_and_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "not_found"}), 404
+    if not _financing_partner_module_enabled():
+        return jsonify({"ok": False, "error": "module_locked", "module": "financing"}), 403
 
     already_sent_at = (t.get("financement_pending_notification_sent_at") or "").strip()
     if already_sent_at:
