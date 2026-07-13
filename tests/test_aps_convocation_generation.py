@@ -990,6 +990,24 @@ class AutomationPartnerModuleTests(unittest.TestCase):
                  mock.patch.object(app, "_current_partner", return_value=partner):
                 self.assertTrue(app._automation_is_enabled(session_obj))
 
+    def test_partner_without_financing_module_locks_financing(self):
+        partner = {"id": "partner-1", "enabled_modules": ["training_aps", "automations"]}
+
+        with app.app.test_request_context("/"):
+            with mock.patch.object(app, "_is_super_admin_session", return_value=False), \
+                 mock.patch.object(app, "_is_partner_scoped_session", return_value=True), \
+                 mock.patch.object(app, "_current_partner", return_value=partner):
+                self.assertFalse(app._financing_partner_module_enabled())
+
+    def test_partner_with_financing_module_enables_financing(self):
+        partner = {"id": "partner-1", "enabled_modules": ["training_aps", "financing"]}
+
+        with app.app.test_request_context("/"):
+            with mock.patch.object(app, "_is_super_admin_session", return_value=False), \
+                 mock.patch.object(app, "_is_partner_scoped_session", return_value=True), \
+                 mock.patch.object(app, "_current_partner", return_value=partner):
+                self.assertTrue(app._financing_partner_module_enabled())
+
 
 if __name__ == "__main__":
     unittest.main()
