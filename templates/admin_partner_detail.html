@@ -10,6 +10,22 @@
   {% endfor %}
   <label>Statut<select name="status" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;">{% for st in ['active','trial','suspended','archived'] %}<option value="{{ st }}" {% if partner.status==st %}selected{% endif %}>{{ st }}</option>{% endfor %}</select></label>
   <label style="grid-column:1/-1">Notes internes<textarea name="internal_notes" rows="4" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:10px;">{{ partner.internal_notes }}</textarea></label>
+
+  <div class="partner-modules" style="grid-column:1/-1">
+    <h2>Modules payants disponibles</h2>
+    <p class="muted">Cochez les modules inclus dans l’abonnement du partenaire. Les modules non cochés restent visibles dans son espace avec un cadenas, mais sont non fonctionnels.</p>
+    <div class="partner-module-grid">
+      {% for module in module_catalog %}
+        <label class="partner-module-card">
+          <input type="checkbox" name="enabled_modules" value="{{ module.key }}" {% if module.key in enabled_modules %}checked{% endif %}>
+          <span>
+            <strong>{{ module.label }}</strong>
+            <small>{{ module.description }}</small>
+          </span>
+        </label>
+      {% endfor %}
+    </div>
+  </div>
   <button class="btn btn-blue" type="submit">Enregistrer</button>
 </form>
 <div class="card"><h2>Utilisation</h2><p><strong>{{ counts.users }}</strong> utilisateurs</p><p><strong>{{ counts.trainees }}</strong> stagiaires</p><p><strong>{{ counts.sessions }}</strong> sessions</p><p>Créé le {{ partner.created_at|frdatetime }}</p><h3>Utilisateurs</h3>{% for u in users %}<p>{{ u.email }} — {{ u.role }} {% if not u.active %}(désactivé){% endif %}</p>{% else %}<p>Aucun utilisateur.</p>{% endfor %}</div>

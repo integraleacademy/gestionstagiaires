@@ -568,20 +568,30 @@
 
   <div class="admin-actions" aria-label="Actions sessions">
     <a class="btn btn-primary" href="{{ url_for('admin_secretariat') }}">📬 Secrétariat</a>
-    <a class="btn btn-outline" href="{{ url_for('admin_qonto_settings') }}">🧾 Réglages Qonto</a>
-    <a class="btn btn-violet {% if (wedof_new_requests_count or 0) > 0 %}is-has-request{% else %}is-idle{% endif %}" href="{{ url_for('admin_wedof_requests') }}">
-      CPF
-      <span class="cpf-badge-count">{{ wedof_new_requests_count or 0 }}</span>
-    </a>
+    {% if partner_has_module('billing') %}<a class="btn btn-outline" href="{{ url_for('admin_qonto_settings') }}">🧾 Réglages Qonto</a>{% else %}<span class="btn btn-outline module-locked" title="Module payant non activé">🔒 Réglages Qonto</span>{% endif %}
+    {% if partner_has_module('cpf') %}
+      <a class="btn btn-violet {% if (wedof_new_requests_count or 0) > 0 %}is-has-request{% else %}is-idle{% endif %}" href="{{ url_for('admin_wedof_requests') }}">
+        CPF
+        <span class="cpf-badge-count">{{ wedof_new_requests_count or 0 }}</span>
+      </a>
+    {% else %}
+      <span class="btn btn-violet is-idle module-locked" title="Module payant non activé">🔒 CPF <span class="cpf-badge-count">{{ wedof_new_requests_count or 0 }}</span></span>
+    {% endif %}
 
     <details class="admin-action-menu">
-      <summary class="btn btn-outline">👮‍♂️ CNAPS</summary>
+      <summary class="btn btn-outline">{% if partner_has_module('cnaps') %}👮‍♂️ CNAPS{% else %}🔒 CNAPS{% endif %}</summary>
       <div class="admin-action-panel">
         <div class="admin-action-section">CNAPS</div>
         <div class="admin-action-help">Accès regroupés pour éviter une barre d’actions trop chargée.</div>
-        <a class="btn btn-blue" id="btnDracar" href="https://espace-usagers.cnaps.interieur.gouv.fr/usager/app/accueil" target="_blank" rel="noopener noreferrer">DRACAR</a>
-        <button class="btn btn-outline" id="btnOpenCnapsImport" type="button">Import PRE CNAPS</button>
-        <a class="btn btn-outline" href="{{ url_for('admin_cnaps_unknown') }}">CNAPS inconnus</a>
+        {% if partner_has_module('cnaps') %}
+          <a class="btn btn-blue" id="btnDracar" href="https://espace-usagers.cnaps.interieur.gouv.fr/usager/app/accueil" target="_blank" rel="noopener noreferrer">DRACAR</a>
+          <button class="btn btn-outline" id="btnOpenCnapsImport" type="button">Import PRE CNAPS</button>
+          <a class="btn btn-outline" href="{{ url_for('admin_cnaps_unknown') }}">CNAPS inconnus</a>
+        {% else %}
+          <span class="btn btn-blue module-locked">🔒 DRACAR</span>
+          <span class="btn btn-outline module-locked">🔒 Import PRE CNAPS</span>
+          <span class="btn btn-outline module-locked">🔒 CNAPS inconnus</span>
+        {% endif %}
       </div>
     </details>
 
@@ -590,9 +600,9 @@
       <div class="admin-action-panel">
         <div class="admin-action-section">Gestion</div>
         <a class="btn btn-outline" href="{{ url_for('admin_afc') }}">AFC</a>
-        <a class="btn btn-outline" href="{{ url_for('admin_sessions_conventions') }}">Conventions</a>
-        <a class="btn btn-primary" href="{{ url_for('admin_sessions_automations') }}">⚡ Automatisations</a>
-        <a class="btn btn-outline" href="{{ url_for('admin_sessions_billing') }}">🧾 Facturation</a>
+        {% if partner_has_module('automations') %}<a class="btn btn-outline" href="{{ url_for('admin_sessions_conventions') }}">Conventions</a>{% else %}<span class="btn btn-outline module-locked">🔒 Conventions</span>{% endif %}
+        {% if partner_has_module('automations') %}<a class="btn btn-primary" href="{{ url_for('admin_sessions_automations') }}">⚡ Automatisations</a>{% else %}<span class="btn btn-primary module-locked">🔒 Automatisations</span>{% endif %}
+        {% if partner_has_module('billing') %}<a class="btn btn-outline" href="{{ url_for('admin_sessions_billing') }}">🧾 Facturation</a>{% else %}<span class="btn btn-outline module-locked">🔒 Facturation</span>{% endif %}
         <a class="btn btn-outline" href="{{ url_for('admin_sessions_archived') }}">Sessions archivées</a>
         <a class="btn btn-outline" href="{{ url_for('admin_cash_payments') }}">💶 Paiement espèces</a>
         <a class="btn btn-outline" href="{{ url_for('scotia_login') }}" target="_blank" rel="noopener">SCOTIA</a>
@@ -699,9 +709,11 @@
       <div class="dashboard-total-card__label">TOTAL STAGIAIRES</div>
       <div class="dashboard-total-card__count">{{ yearly_total }}</div>
     </div>
-    <a href="{{ url_for('admin_sales_tracking') }}" class="btn btn-outline" style="background:rgba(255,255,255,.92);border-color:rgba(255,255,255,.75);color:#1e3a8a;">
-      Suivi des ventes
-    </a>
+    {% if partner_has_module('sales') %}
+      <a href="{{ url_for('admin_sales_tracking') }}" class="btn btn-outline" style="background:rgba(255,255,255,.92);border-color:rgba(255,255,255,.75);color:#1e3a8a;">Suivi des ventes</a>
+    {% else %}
+      <span class="btn btn-outline module-locked" style="background:rgba(255,255,255,.92);border-color:rgba(255,255,255,.75);color:#1e3a8a;">🔒 Suivi des ventes</span>
+    {% endif %}
   </button>
 </div>
 
