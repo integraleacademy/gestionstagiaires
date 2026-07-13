@@ -566,7 +566,7 @@
     <div class="muted" style="margin-top:4px;">Pilotage des formations, stagiaires et outils administratifs.</div>
   </div>
 
-  <div class="admin-actions" aria-label="Actions sessions">
+  <div class="admin-actions" aria-label="Actions sessions" {% if is_partner_space %}hidden{% endif %}>
     {% if not is_partner_space %}<a class="btn btn-primary" href="{{ url_for('admin_secretariat') }}">📬 Secrétariat</a>{% endif %}
     {% if partner_has_module('billing') %}<a class="btn btn-outline" href="{{ url_for('admin_qonto_settings') }}">🧾 Réglages Qonto</a>{% else %}<span class="btn btn-outline module-locked" title="Module payant non activé">🔒 Réglages Qonto</span>{% endif %}
     {% if partner_has_module('cpf') %}
