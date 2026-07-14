@@ -2405,13 +2405,11 @@ body.endpoint-admin-sessions:not(.partner-sidebar-collapsed) .page-head{margin-b
 
 /* Admin sidebar uses the same dimensions as the partner sidebar.
    This keeps page content from sliding underneath the fixed menu. */
-body.admin-sidebar-active .test-version-banner,
 body.admin-sidebar-active .topbar{
   margin-left:var(--partner-sidebar-open);
   width:calc(100% - var(--partner-sidebar-open));
   transition:margin-left var(--partner-sidebar-speed) ease,width var(--partner-sidebar-speed) ease;
 }
-body.admin-sidebar-active.partner-sidebar-collapsed .test-version-banner,
 body.admin-sidebar-active.partner-sidebar-collapsed .topbar{
   margin-left:var(--partner-sidebar-closed);
   width:calc(100% - var(--partner-sidebar-closed));
@@ -2428,9 +2426,7 @@ body.admin-sidebar-active.partner-sidebar-collapsed .main-content{
 body.admin-sidebar-active .partner-sidebar{width:var(--partner-sidebar-open);}
 body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar{width:var(--partner-sidebar-closed);}
 @media (max-width:860px){
-  body.admin-sidebar-active .test-version-banner,
   body.admin-sidebar-active .topbar,
-  body.admin-sidebar-active.partner-sidebar-collapsed .test-version-banner,
   body.admin-sidebar-active.partner-sidebar-collapsed .topbar{margin-left:0;width:100%;}
   body.admin-sidebar-active .main-content,
   body.admin-sidebar-active.partner-sidebar-collapsed .main-content{margin-left:0;width:100%;}
@@ -2442,13 +2438,11 @@ body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar{width:var(-
   --partner-sidebar-collapsed-width:80px;
   --partner-sidebar-speed:250ms;
 }
-body.partner-space .test-version-banner,
 body.partner-space .topbar{
   margin-left:var(--partner-sidebar-width);
   width:calc(100% - var(--partner-sidebar-width));
   transition:margin-left var(--partner-sidebar-speed) ease,width var(--partner-sidebar-speed) ease;
 }
-body.partner-space.partner-sidebar-collapsed .test-version-banner,
 body.partner-space.partner-sidebar-collapsed .topbar{
   margin-left:var(--partner-sidebar-collapsed-width);
   width:calc(100% - var(--partner-sidebar-collapsed-width));
@@ -2537,7 +2531,7 @@ body.partner-space.partner-sidebar-collapsed .sidebar-create-menu{
 }
 body.partner-space.partner-sidebar-collapsed .sidebar-create-menu.is-open{display:grid;gap:8px;}
 @media (max-width:860px){
-  body.partner-space .test-version-banner,body.partner-space .topbar,body.partner-space.partner-sidebar-collapsed .test-version-banner,body.partner-space.partner-sidebar-collapsed .topbar{margin-left:0;width:100%;}
+  body.partner-space .topbar,body.partner-space.partner-sidebar-collapsed .topbar{margin-left:0;width:100%;}
   body.partner-space .main-content,body.partner-space.partner-sidebar-collapsed .main-content{margin-left:0;width:100%;padding:14px!important;}
   body.partner-space .partner-sidebar,body.partner-space.partner-sidebar-collapsed .partner-sidebar{width:min(88vw,320px);transform:translateX(-110%);}
   body.partner-space .partner-sidebar.is-open{transform:translateX(0);}
@@ -2548,7 +2542,6 @@ body.partner-space.partner-sidebar-collapsed .sidebar-create-menu.is-open{displa
   body.partner-space.partner-sidebar-collapsed .partner-sidebar__item{justify-content:flex-start;padding:11px 12px;}
   body.partner-space.partner-sidebar-collapsed .partner-sidebar__powered img{max-width:118px;max-height:42px;}
 }
-.test-version-banner{background:#facc15;color:#111827;text-align:center;font-weight:800;padding:8px 12px;letter-spacing:.08em;box-sizing:border-box;}
 
 /* Partner identity: organism logo stays in the sidebar, software logo represents Intégrale Connect. */
 body.partner-space .partner-software-logo{display:block;width:auto;object-fit:contain;flex:0 0 auto;}
@@ -2595,13 +2588,11 @@ body.partner-space.partner-sidebar-collapsed .partner-sidebar__submenu-panel .pa
 
 /* Admin sidebar: align the header/content with the fixed left navigation and
    reuse the partner-style nested menus for internal admin tools. */
-body.admin-sidebar-active .test-version-banner,
 body.admin-sidebar-active .topbar{
   margin-left:var(--partner-sidebar-open);
   width:calc(100% - var(--partner-sidebar-open));
   transition:margin-left var(--partner-sidebar-speed) ease,width var(--partner-sidebar-speed) ease;
 }
-body.admin-sidebar-active.partner-sidebar-collapsed .test-version-banner,
 body.admin-sidebar-active.partner-sidebar-collapsed .topbar{
   margin-left:var(--partner-sidebar-closed);
   width:calc(100% - var(--partner-sidebar-closed));
@@ -2622,9 +2613,7 @@ body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__submenu-pa
 body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__submenu-panel .partner-sidebar__label{display:inline-flex;}
 body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__submenu-panel .partner-sidebar__badge{position:static;margin-left:auto;}
 @media (max-width:860px){
-  body.admin-sidebar-active .test-version-banner,
   body.admin-sidebar-active .topbar,
-  body.admin-sidebar-active.partner-sidebar-collapsed .test-version-banner,
   body.admin-sidebar-active.partner-sidebar-collapsed .topbar{margin-left:0;width:100%;}
   body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__submenu-panel,
   body.admin-sidebar-active .partner-sidebar__submenu-panel{position:static;min-width:0;margin:5px 0 8px 28px;padding:6px 0 6px 10px;border:0;border-left:1px solid rgba(148,163,184,.22);border-radius:0;background:transparent;box-shadow:none;}
