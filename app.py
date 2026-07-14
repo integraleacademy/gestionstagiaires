@@ -265,7 +265,7 @@ QONTO_OAUTH_REQUIRED_MESSAGE = "Connexion Qonto OAuth requise pour programmer le
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL")
     or os.environ.get("PUBLIC_BASE_URL")
-    or "https://gestionstagiaires-test-v2.onrender.com"
+    or "https://gestionstagiaires-r5no.onrender.com"
 ).strip().rstrip("/")
 QONTO_OAUTH_REDIRECT_URI = (
     os.environ.get("QONTO_OAUTH_REDIRECT_URI")
@@ -2962,8 +2962,8 @@ CNAPSV3_NOTIFICATIONS_ENDPOINT = os.environ.get("CNAPSV3_NOTIFICATIONS_ENDPOINT"
 CNAPSV3_BASE_URL = os.environ.get("CNAPSV3_BASE_URL", "https://cnapsv3.onrender.com").strip().rstrip("/")
 GESTIONSTAGIAIRE_SYNC_TOKEN = os.environ.get("GESTIONSTAGIAIRE_SYNC_TOKEN", "").strip()
 
-PUBLIC_STUDENT_PORTAL_BASE_DEFAULT = "https://gestionstagiaires-test-v2.onrender.com"
-PUBLIC_STUDENT_PORTAL_LEGACY_HOSTS = {"gestionstagiaires-r5no.onrender.com"}
+PUBLIC_STUDENT_PORTAL_BASE_DEFAULT = "https://gestionstagiaires-r5no.onrender.com"
+PUBLIC_STUDENT_PORTAL_LEGACY_HOSTS = {"gestionstagiaires-test-v2.onrender.com"}
 
 
 def _normalize_public_student_portal_base(value: str) -> str:
