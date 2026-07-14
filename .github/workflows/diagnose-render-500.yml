@@ -18,13 +18,11 @@ jobs:
       AUTO_RESTORE_FROM_BACKUP: "0"
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - name: Install
-        run: pip install -q -r requirements.txt
+          show-progress: false
       - name: Diagnose
         run: |
+          pip install -q -r requirements.txt
           mkdir -p "$PERSIST_DIR"
           python - <<'PY'
           import traceback
