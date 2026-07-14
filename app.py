@@ -49,7 +49,8 @@ from cryptography.fernet import Fernet
 
 
 app = Flask(__name__)
-MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
+DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(DEFAULT_MAX_UPLOAD_BYTES)))
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
 
 
@@ -1756,8 +1757,6 @@ def scotia_login_required(view):
     def wrapped(*args, **kwargs):
         if not session.get("scotia_logged_in"):
             return redirect(url_for("scotia_login", next=request.path))
-        # Garde le cookie Scotia persistant tant que l'utilisateur reste actif.
-        session.permanent = True
         return view(*args, **kwargs)
     return wrapped
 
@@ -1769,6 +1768,12 @@ def protect_sensitive_routes():
     whole sensitive namespaces without changing public candidate/VAE flows.
     """
     path = request.path or ""
+    if _session_has_authentication_marker() and not _current_session_is_still_valid():
+        app.logger.info("[SECURITY] session invalidée par cutoff path=%s", path)
+        session.clear()
+        if path.startswith("/api/"):
+            return jsonify({"ok": False, "error": "session_expired"}), 401
+
     if path.startswith("/admin/") and path != "/admin/login":
         if not session.get("admin_logged_in"):
             return redirect(url_for("admin_login", next=request.full_path if request.query_string else path))
@@ -1859,7 +1864,6 @@ def inject_read_only():
 
 @app.get("/admin/login")
 def admin_login():
-    # mini page sans template (pour aller vite)
     next_url = request.args.get("next") or url_for("admin_sessions")
     error_code = (request.args.get("error") or "").strip()
     messages = {
@@ -1999,20 +2003,16 @@ def admin_login_post():
 def scotia_login():
     next_url = request.args.get("next") or url_for("scotia_dashboard")
     if session.get("scotia_logged_in"):
-        session.permanent = True
-        return redirect(next_url)
-    if _is_integrale_scotia_admin_session():
-        _enable_scotia_session_for_integrale_admin()
         return redirect(next_url)
     return f"""
     <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Connexion SCOTIA</title></head>
     <body style="font-family:Arial,sans-serif;max-width:420px;margin:60px auto;padding:20px">
       <h2>Connexion SCOTIA</h2>
-      <form method="post" action="/scotia/login">
+      <form method="post" action="/scotia/login" autocomplete="off">
         <input type="hidden" name="next" value="{next_url}">
-        <div style="margin:10px 0"><label>Identifiant</label><br><input name="username" autocomplete="username" style="width:100%;padding:10px"></div>
-        <div style="margin:10px 0"><label>Mot de passe</label><br><input name="password" type="password" autocomplete="current-password" style="width:100%;padding:10px"></div>
+        <div style="margin:10px 0"><label>Identifiant</label><br><input name="username" autocomplete="off" style="width:100%;padding:10px"></div>
+        <div style="margin:10px 0"><label>Mot de passe</label><br><input name="password" type="password" autocomplete="new-password" style="width:100%;padding:10px"></div>
         <button style="padding:10px 14px">Se connecter</button>
       </form>
     </body></html>
@@ -2034,12 +2034,12 @@ def scotia_login_post():
         session.clear()
         session["scotia_logged_in"] = True
         session["scotia_username"] = username.lower()
+        _stamp_authenticated_session()
         if admin_ok:
             session["admin_logged_in"] = True
             session["admin_role"] = "admin"
             session["admin_username"] = username.lower()
-        # Cookie de session persistant (durée définie par SESSION_DAYS).
-        session.permanent = True
+        session.permanent = False
         return redirect(next_url)
 
     return redirect(url_for("scotia_login", next=next_url))
@@ -17417,6 +17417,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
     previous_elearning_link = (t.get("elearning_link") or "").strip()
     previous_cnaps_status = (t.get("cnaps") or "").strip()
     previous_vae_action_dates = t.get("vae_action_dates") if isinstance(t.get("vae_action_dates"), dict) else {}
+    previous_vae_status = vae_status_view(t.get("vae_status") or t.get("vae_status_label"))["key"]
 
     # Your template uses:
     # - convention_status, test_fr_status, dossier_status, financement_status, vae_status, comment, cnaps
@@ -17503,6 +17504,22 @@ def api_update_trainee(session_id: str, trainee_id: str):
     previous_vae_status = vae_status_view(t.get("vae_status"))["key"]
     previous_financement_status = str(t.get("financement_status") or "").strip()
     vae_fields_changed = any(k in payload for k in ("vae_status", "vae_status_label", "vae_action_dates", "vae_jury_date"))
+    transmission_only_vae_action_update = False
+    if (
+        "vae_action_dates" in payload
+        and "vae_status" not in payload
+        and "vae_status_label" not in payload
+        and isinstance(payload.get("vae_action_dates"), dict)
+    ):
+        previous_action_items = {
+            key: value for key, value in previous_vae_action_dates.items()
+            if key not in {"livret_1_transmitted_scotia", "livret_2_transmitted_scotia"}
+        }
+        incoming_action_items = {
+            key: value for key, value in payload["vae_action_dates"].items()
+            if key not in {"livret_1_transmitted_scotia", "livret_2_transmitted_scotia"}
+        }
+        transmission_only_vae_action_update = previous_action_items == incoming_action_items
 
     send_vae_notification = True if payload.get("send_vae_notification", True) in (True, "true", "1", 1, "yes", "on") else False
     send_exam_fees_notification = True if payload.get("send_exam_fees_notification", True) in (True, "true", "1", 1, "yes", "on") else False
@@ -17639,6 +17656,17 @@ def api_update_trainee(session_id: str, trainee_id: str):
     _sync_financement_status_from_manual_validation(t)
     current_vae_status = vae_status_view(t.get("vae_status"))["key"]
     if vae_fields_changed and current_vae_status != previous_vae_status:
+        if current_vae_status == "certified":
+            current_vae_action_dates = t.get("vae_action_dates") if isinstance(t.get("vae_action_dates"), dict) else {}
+            app.logger.warning(
+                "[VAE_STATUS_CERTIFIED] trainee_id=%s previous_status=%s payload_keys=%s action_dates_keys=%s requested_status=%s transmission_only=%s",
+                t.get("id"),
+                previous_vae_status,
+                sorted(payload.keys()),
+                sorted(current_vae_action_dates.keys()),
+                payload.get("vae_status") or payload.get("vae_status_label") or "",
+                transmission_only_vae_action_update,
+            )
         if send_vae_notification:
             _notify_vae_status_change(t, current_vae_status)
         if (_session_get(s, "training_type", "") or "").strip().upper() == "DIRIGEANT VAE":
@@ -19038,6 +19066,7 @@ def public_trainee_global_login_post():
         _birth_to_ddmmyyyy(birth_in),
     )
     session[f"public_auth_{token}"] = True
+    _stamp_authenticated_session()
     session.permanent = True
     _mark_public_login(data, session_obj, trainee)
     return redirect(url_for("public_trainee_space", token=token))
@@ -19230,6 +19259,7 @@ def public_trainee_login_post(token: str):
     # 🔒 contrôle strict
     if _public_trainee_identity_matches(t, last_in, birth_in):
         session[f"public_auth_{token}"] = True
+        _stamp_authenticated_session()
         session.permanent = True  # cookie persistant (comme admin)
         _mark_public_login(data, s, t)
         return redirect(url_for("public_trainee_space", token=token))

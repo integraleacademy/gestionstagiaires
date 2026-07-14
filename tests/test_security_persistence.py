@@ -36,6 +36,40 @@ class SecurityPersistenceTests(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.get_json()["error"], "auth_required")
 
+    def test_existing_admin_sessions_without_issue_stamp_are_disconnected(self):
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        response = self.client.get("/admin/sessions", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/admin/login", response.headers["Location"])
+        with self.client.session_transaction() as sess:
+            self.assertNotIn("admin_logged_in", sess)
+
+    def test_existing_admin_api_sessions_without_issue_stamp_are_disconnected(self):
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        response = self.client.get("/api/admin/billing-lines")
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.get_json()["error"], "session_expired")
+
+    def test_new_authenticated_sessions_receive_issue_stamp(self):
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+            sess[gestion_app.SESSION_ISSUED_AT_KEY] = "2099-01-01T00:00:00Z"
+
+        response = self.client.get("/admin/sessions", follow_redirects=False)
+
+        self.assertNotEqual(response.status_code, 302)
+        with self.client.session_transaction() as sess:
+            self.assertIn(gestion_app.SESSION_ISSUED_AT_KEY, sess)
+
     def test_docs_to_control_requires_admin_or_configured_token(self):
         response = self.client.get("/docs_to_control.json")
         self.assertEqual(response.status_code, 403)

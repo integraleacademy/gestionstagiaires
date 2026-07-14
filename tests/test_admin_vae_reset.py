@@ -147,6 +147,57 @@ class AdminVaeResetTests(unittest.TestCase):
             self.assertNotIn(key, trainee)
         self.assertEqual(trainee["activity_history"][0]["label"], "Livret 1 réinitialisé")
 
+    def test_livret_1_scotia_transmission_does_not_promote_vae_status(self):
+        trainee = self.data["sessions"][0]["trainees"][0]
+        trainee["vae_status"] = "livret_1_analysis"
+        trainee["vae_status_label"] = "Livret 1 en cours d'analyse"
+        trainee["vae_action_dates"] = {
+            "livret_1_received": "20/06/2026",
+            # Donnée historique incohérente : la transmission SCOTIA ne doit pas
+            # transformer le statut affiché en certification obtenue.
+            "diplome_obtenu": "27/06/2026",
+        }
+
+        response = self.client.post(
+            "/api/sessions/S-VAE/stagiaires/T-VAE/update",
+            json={
+                "vae_action_dates": {
+                    "livret_1_received": "20/06/2026",
+                    "diplome_obtenu": "27/06/2026",
+                    "livret_1_transmitted_scotia": "08/07/2026",
+                },
+                "send_vae_notification": False,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(trainee["vae_status"], "livret_1_analysis")
+        self.assertEqual(trainee["vae_status_label"], "Livret 1 en cours d'analyse")
+        self.assertEqual(trainee["vae_action_dates"]["livret_1_transmitted_scotia"], "08/07/2026")
+
+    def test_livret_1_scotia_transmission_without_diploma_date_keeps_vae_status(self):
+        trainee = self.data["sessions"][0]["trainees"][0]
+        trainee["vae_status"] = "livret_1_analysis"
+        trainee["vae_status_label"] = "Livret 1 en cours d'analyse"
+        trainee["vae_action_dates"] = {"livret_1_received": "20/06/2026"}
+
+        response = self.client.post(
+            "/api/sessions/S-VAE/stagiaires/T-VAE/update",
+            json={
+                "vae_action_dates": {
+                    "livret_1_received": "20/06/2026",
+                    "livret_1_transmitted_scotia": "08/07/2026",
+                },
+                "send_vae_notification": False,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(trainee["vae_status"], "livret_1_analysis")
+        self.assertEqual(trainee["vae_status_label"], "Livret 1 en cours d'analyse")
+        self.assertNotIn("diplome_obtenu", trainee["vae_action_dates"])
+        self.assertEqual(trainee["vae_action_dates"]["livret_1_transmitted_scotia"], "08/07/2026")
+
 
 if __name__ == "__main__":
     unittest.main()
