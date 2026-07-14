@@ -217,7 +217,7 @@ def _current_session_is_still_valid() -> bool:
     if cutoff is None:
         return True
     issued_at = _session_issue_datetime()
-    return bool(issued_at and issued_at >= cutoff)
+    return issued_at is None or issued_at >= cutoff
 ADMIN_PUSH_TITLE = os.environ.get("ADMIN_PUSH_TITLE", "Intégrale Connect")
 WEB_PUSH_VAPID_PUBLIC_KEY = os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY", "").strip()
 WEB_PUSH_VAPID_PRIVATE_KEY = os.environ.get("WEB_PUSH_VAPID_PRIVATE_KEY", "").strip()
