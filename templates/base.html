@@ -78,17 +78,17 @@
   {% endif %}
   <div class="topbar">
     <div class="topbar-inner">
-      {% set header_logo = 'iaconnectpartenaires.png' if is_partner_space else 'icone.png' %}
+      {% set header_logo = 'iaconnectpartenaires.png' if is_partner_space else 'logo-integrale.png' %}
       {% set header_logo_height = 112 if is_partner_space else 80 %}
       {% set confirm_logo_height = 88 if is_partner_space else 64 %}
       <a class="brand {{ 'brand--partner-hidden' if is_partner_space else '' }}" href="{{ url_for('admin_sessions') }}">
 <img
   src="{{ url_for('static', filename=header_logo) }}"
-  alt="{{ 'IA Connect Partenaires' if is_partner_space else 'Intégrale Connect' }}"
+  alt="{{ 'IA Connect Partenaires' if is_partner_space else 'Intégrale Academy' }}"
   style="height:{{ header_logo_height }}px;width:auto;display:block;"
 />
         <div class="brand-copy">
-          <div class="brand-title-line"><strong>Intégrale Connect</strong><span>Plateforme gestion stagiaires</span></div>
+          <div class="brand-title-line"><strong>{{ 'Intégrale Connect' if is_partner_space else 'Intégrale Academy' }}</strong><span>Plateforme gestion stagiaires</span></div>
           <time class="brand-datetime" id="brandDateTime" datetime=""></time>
         </div>
       </a>
@@ -242,9 +242,9 @@
       <aside class="partner-sidebar admin-sidebar" id="partnerSidebar" aria-label="Navigation admin">
         <div class="partner-sidebar__scroll">
           <div class="partner-sidebar__identity">
-            <a class="partner-sidebar__home-link" href="{{ url_for('admin_sessions') }}" aria-label="Retour à l’accueil"><img class="partner-sidebar__avatar" src="{{ url_for('static', filename='icone.png') }}" alt="Intégrale Connect"></a>
+            <a class="partner-sidebar__home-link" href="{{ url_for('admin_sessions') }}" aria-label="Retour à l’accueil"><img class="partner-sidebar__avatar" src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy"></a>
             <button type="button" class="partner-sidebar__collapse" data-sidebar-collapse aria-label="Réduire la barre"><span class="collapse-icon collapse-icon--open">{{ ps.sidebar_icon('chevron') }}</span><span class="collapse-icon collapse-icon--closed">{{ ps.sidebar_icon('chevron-right') }}</span></button>
-            <div class="partner-sidebar__identity-copy"><strong>Administration</strong><span>Intégrale Connect</span><em>Outils internes</em></div>
+            <div class="partner-sidebar__identity-copy"><strong>Administration</strong><span>Intégrale Academy</span><em>Outils internes</em></div>
           </div>
           <div class="partner-sidebar__create">{{ ps.sidebar_nav_item(admin_create_item) }}<div class="quick-create-menu sidebar-create-menu" id="sidebarCreateMenu"><button class="quick-create-option quick-create-option--session" data-sidebar-action="create-session">💼 Nouvelle session</button><button class="quick-create-option quick-create-option--trainee" data-sidebar-action="create-trainee">👨‍🎓 Nouveau stagiaire</button></div></div>
           <section class="partner-sidebar__section"><h2>Administration</h2>          {% if admin_can_access_notifications %}
@@ -272,7 +272,7 @@
             </div>
           {% endif %}
 {% for item in admin_sidebar_items %}{{ ps.sidebar_nav_item(item) }}{% if loop.first %}{{ ps.sidebar_submenu(admin_tools_menu) }}{% endif %}{% endfor %}{{ ps.sidebar_nav_item(admin_cpf_item) }}{{ ps.sidebar_submenu(admin_cnaps_menu) }}</section>
-          <div class="partner-sidebar__bottom"><a class="partner-sidebar__item" href="{{ url_for('admin_sessions') }}" title="Retour aux sessions">{{ ps.sidebar_icon('home') }}<span class="partner-sidebar__label">Retour aux sessions</span></a><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}" title="Se déconnecter">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Se déconnecter</span></a></div>
+          <div class="partner-sidebar__bottom"><a class="partner-sidebar__item" href="{{ url_for('admin_sessions') }}" title="Retour aux sessions">{{ ps.sidebar_icon('home') }}<span class="partner-sidebar__label">Retour aux sessions</span></a><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}" title="Se déconnecter">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Se déconnecter</span></a><div class="partner-sidebar__powered"><img class="partner-software-logo partner-software-logo--powered" src="{{ url_for('static', filename='icone.png') }}" alt="Intégrale Connect" loading="lazy"><span>Propulsé par Intégrale Connect</span></div></div>
         </div>
       </aside>
       <main class="container main-content">{{ self.content() }}</main>
