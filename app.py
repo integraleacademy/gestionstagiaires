@@ -12287,10 +12287,43 @@ def _partner_admin_user(data: Dict[str, Any], partner_id: str) -> Optional[Dict[
     return next((u for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id and u.get("role") == "partner_admin"), None)
 
 
+def _invitation_is_expired(invitation: Dict[str, Any], now_dt: Optional[datetime.datetime] = None) -> bool:
+    expires_at = _parse_iso_datetime((invitation or {}).get("expires_at"))
+    if not expires_at:
+        return False
+    return expires_at.replace(tzinfo=None) < (now_dt or datetime.datetime.utcnow())
+
+
 def _active_partner_invitation(data: Dict[str, Any], partner_id: str) -> Optional[Dict[str, Any]]:
-    invitations = [i for i in data.get("invitations", []) if isinstance(i, dict) and i.get("partner_id") == partner_id and not i.get("used_at") and not i.get("cancelled_at")]
+    now_dt = datetime.datetime.utcnow()
+    invitations = [
+        i
+        for i in data.get("invitations", [])
+        if isinstance(i, dict)
+        and i.get("partner_id") == partner_id
+        and not i.get("used_at")
+        and not i.get("cancelled_at")
+        and not _invitation_is_expired(i, now_dt)
+    ]
     invitations.sort(key=lambda i: i.get("created_at") or "", reverse=True)
     return invitations[0] if invitations else None
+
+
+def _find_invitation_by_raw_token(data: Dict[str, Any], raw_token: str) -> Optional[Dict[str, Any]]:
+    token_hash = _hash_token(raw_token)
+    for invitation in data.get("invitations", []):
+        if not isinstance(invitation, dict):
+            continue
+        stored_hash = invitation.get("token_hash") or ""
+        if stored_hash and hmac.compare_digest(stored_hash, token_hash):
+            return invitation
+        encrypted_token = invitation.get("token_encrypted") or ""
+        if encrypted_token:
+            decrypted_token = _decrypt_invitation_token(encrypted_token)
+            if decrypted_token and hmac.compare_digest(decrypted_token, raw_token):
+                invitation["token_hash"] = token_hash
+                return invitation
+    return None
 
 
 def _send_and_record_invitation(data: Dict[str, Any], partner: Dict[str, Any], user: Dict[str, Any], invitation: Dict[str, Any]) -> Dict[str, Any]:
@@ -12434,11 +12467,13 @@ def activate_account():
         password = request.form.get("password") or ""
         confirm = request.form.get("confirm") or ""
         data = load_data()
-        invitation = next((i for i in data.get("invitations", []) if isinstance(i, dict) and hmac.compare_digest(i.get("token_hash") or "", _hash_token(token))), None)
+        invitation = _find_invitation_by_raw_token(data, token)
         now_dt = datetime.datetime.utcnow()
-        if not invitation or invitation.get("used_at") or invitation.get("cancelled_at"):
-            error = "Invitation invalide ou déjà utilisée."
-        elif _parse_iso_datetime(invitation.get("expires_at")) and _parse_iso_datetime(invitation.get("expires_at")).replace(tzinfo=None) < now_dt:
+        if not invitation:
+            error = "Invitation invalide. Demandez une nouvelle invitation depuis la fiche partenaire."
+        elif invitation.get("used_at") or invitation.get("cancelled_at"):
+            error = "Invitation déjà utilisée ou annulée. Demandez une nouvelle invitation depuis la fiche partenaire."
+        elif _invitation_is_expired(invitation, now_dt):
             error = "Invitation expirée."
         elif password != confirm or not _password_is_valid(password):
             error = "Le mot de passe doit contenir au moins 10 caractères, avec lettres et chiffres."
