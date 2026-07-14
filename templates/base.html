@@ -17,6 +17,8 @@
 </head>
 
 <body class="{% if is_read_only %}read-only {% endif %}{% if is_partner_space %}partner-space {% endif %}{% if request.endpoint %}endpoint-{{ request.endpoint|replace('_', '-') }}{% endif %}">
+  {% set admin_sidebar_endpoints = ["admin_sessions", "admin_positioning_tests", "admin_positioning_test_detail", "admin_partners", "admin_partner_new", "admin_partner_detail", "admin_secretariat", "admin_qonto_settings"] %}
+  {% set show_admin_sidebar = is_admin_logged_in and not is_partner_space and (request.endpoint in admin_sidebar_endpoints) %}
   <div class="test-version-banner">VERSION TEST V2</div>
   <style>
     .notif-wrap{ position:relative; }
@@ -112,10 +114,10 @@
               </div>
             </div>
           {% endif %}
-          <a href="{{ url_for('admin_positioning_tests') }}" class="btn topbar-slim-link">Tests de positionnement</a>
+          {% if not show_admin_sidebar %}<a href="{{ url_for('admin_positioning_tests') }}" class="btn topbar-slim-link">Tests de positionnement</a>{% endif %}
           <button type="button" class="btn btn-blue topbar-slim-link" onclick="openModal('edofModal')">EDOF</button>
-          <button type="button" class="btn topbar-slim-link topbar-danger-link" onclick="openModal('financementRefuseModal')">FT Refusé</button>
-          {% if is_super_admin %}<a href="{{ url_for('admin_partners') }}" class="btn topbar-slim-link">Gérer les partenaires</a>{% endif %}
+          {% if is_super_admin and not show_admin_sidebar %}<a href="{{ url_for('admin_partners') }}" class="btn topbar-slim-link">Gérer les partenaires</a>{% endif %}
+          {% if show_admin_sidebar %}<button type="button" class="partner-sidebar-toggle" data-sidebar-open aria-controls="partnerSidebar" aria-expanded="false">☰ Menu</button>{% endif %}
           <a href="{{ url_for('admin_logout') }}" class="btn topbar-slim-link">Déconnexion</a>
         {% elif is_partner_space %}
           <img class="partner-software-logo partner-software-logo--header" src="{{ url_for('static', filename='iaconnectpartenaires.png') }}" alt="Intégrale Connect Partenaires" loading="lazy">
@@ -175,6 +177,30 @@
     </div>
     <div class="partner-sidebar-overlay" data-sidebar-close></div>
     <div class="locked-module-modal" id="lockedModuleModal" aria-hidden="true"><div class="locked-module-modal__card" role="dialog" aria-modal="true" aria-labelledby="lockedModuleTitle"><button type="button" class="locked-module-modal__close" data-locked-close>×</button><span class="locked-module-modal__icon">{{ ps.sidebar_icon('lock') }}</span><h2 id="lockedModuleTitle">Ce module n’est pas inclus dans votre abonnement</h2><p>Pour activer ce module ou faire évoluer votre abonnement, contactez Clément VAILLANT.</p><strong>clement@integraleacademy.com</strong><div><a class="btn btn-primary" href="mailto:clement@integraleacademy.com?subject=Activation%20module%20Int%C3%A9grale%20Connect">Contacter Clément</a><a class="btn" href="{{ url_for('partner_subscription') }}">Voir mon abonnement</a></div></div></div>
+  {% elif show_admin_sidebar %}
+    {% import "partner_sidebar.html" as ps %}
+    {% set admin_sidebar_items = [
+      {"label":"Tableau de bord","icon":"home","href":url_for('admin_sessions'),"endpoints":["admin_sessions"],"badge":"","locked":False},
+      {"label":"Tests de positionnement","icon":"graduation","href":url_for('admin_positioning_tests'),"endpoints":["admin_positioning_tests","admin_positioning_test_detail"],"badge":"","locked":False},
+      {"label":"Gérer les partenaires","icon":"users","href":url_for('admin_partners'),"endpoints":["admin_partners","admin_partner_new","admin_partner_detail"],"badge":"","locked":False},
+      {"label":"Secrétariat","icon":"mail","href":url_for('admin_secretariat'),"endpoints":["admin_secretariat"],"badge":"","locked":False},
+      {"label":"Réglages Qonto","icon":"settings","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings"],"badge":"","locked":False}
+    ] %}
+    <div class="app-shell">
+      <aside class="partner-sidebar admin-sidebar" id="partnerSidebar" aria-label="Navigation admin">
+        <div class="partner-sidebar__scroll">
+          <div class="partner-sidebar__identity">
+            <a class="partner-sidebar__home-link" href="{{ url_for('admin_sessions') }}" aria-label="Retour à l’accueil"><img class="partner-sidebar__avatar" src="{{ url_for('static', filename='icone.png') }}" alt="Intégrale Connect"></a>
+            <div class="partner-sidebar__identity-copy"><strong>Administration</strong><span>Intégrale Connect</span><em>Outils internes</em></div>
+            <button type="button" class="partner-sidebar__collapse" data-sidebar-collapse aria-label="Réduire la barre"><span class="collapse-icon collapse-icon--open">{{ ps.sidebar_icon('chevron') }}</span><span class="collapse-icon collapse-icon--closed">{{ ps.sidebar_icon('chevron-right') }}</span></button>
+          </div>
+          <section class="partner-sidebar__section"><h2>Administration</h2>{% for item in admin_sidebar_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
+          <div class="partner-sidebar__bottom"><a class="partner-sidebar__item" href="{{ url_for('admin_sessions') }}" title="Retour aux sessions">{{ ps.sidebar_icon('home') }}<span class="partner-sidebar__label">Retour aux sessions</span></a><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}" title="Se déconnecter">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Se déconnecter</span></a></div>
+        </div>
+      </aside>
+      <main class="container main-content">{{ self.content() }}</main>
+    </div>
+    <div class="partner-sidebar-overlay" data-sidebar-close></div>
   {% else %}
     <div class="container">{% block content %}{% endblock %}</div>
   {% endif %}
