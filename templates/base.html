@@ -27,7 +27,6 @@
   ] %}
   {% set show_admin_sidebar = is_admin_logged_in and not is_partner_space and (request.endpoint in admin_sidebar_endpoints) %}
   {% if show_admin_sidebar %}<script>document.body.classList.add('admin-sidebar-active');</script>{% endif %}
-  <div class="test-version-banner">VERSION TEST V2</div>
   <style>
     .notif-wrap{ position:relative; }
     .notif-btn{
