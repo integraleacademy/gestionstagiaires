@@ -28,14 +28,14 @@ class PublicTraineeLoginTests(unittest.TestCase):
 
     def test_public_student_portal_base_rewrites_legacy_render_host(self):
         self.assertEqual(
-            gestion_app._normalize_public_student_portal_base("https://gestionstagiaires-r5no.onrender.com/"),
-            "https://gestionstagiaires-test-v2.onrender.com",
+            gestion_app._normalize_public_student_portal_base("https://gestionstagiaires-test-v2.onrender.com/"),
+            "https://gestionstagiaires-r5no.onrender.com",
         )
 
     def test_public_student_portal_base_keeps_current_target_host(self):
         self.assertEqual(
-            gestion_app._normalize_public_student_portal_base("https://gestionstagiaires-test-v2.onrender.com/"),
-            "https://gestionstagiaires-test-v2.onrender.com",
+            gestion_app._normalize_public_student_portal_base("https://gestionstagiaires-r5no.onrender.com/"),
+            "https://gestionstagiaires-r5no.onrender.com",
         )
 
     def test_404_unknown_space_token_links_to_global_login(self):
