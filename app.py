@@ -14509,8 +14509,9 @@ def api_qonto_status():
 def admin_qonto_connect():
     app.logger.info("[QONTO OAUTH] /admin/qonto/connect called")
     if not _qonto_oauth_is_configured():
+        app.logger.warning("[QONTO OAUTH] missing OAuth client configuration")
         flash("Variables OAuth Qonto manquantes : QONTO_OAUTH_CLIENT_ID et QONTO_OAUTH_CLIENT_SECRET.", "error")
-        return redirect(url_for("admin_qonto_settings"))
+        return redirect(url_for("admin_qonto_settings", oauth="config_missing"))
     state = secrets.token_urlsafe(32)
     session["qonto_oauth_state"] = state
     params = {

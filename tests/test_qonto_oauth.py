@@ -36,6 +36,13 @@ class QontoOauthTests(unittest.TestCase):
         with self.client.session_transaction() as sess:
             self.assertEqual(sess["qonto_oauth_state"], qs["state"][0])
 
+    def test_admin_connect_missing_oauth_config_redirects_with_visible_reason(self):
+        with patch.dict(os.environ, {"QONTO_OAUTH_CLIENT_ID": "", "QONTO_OAUTH_CLIENT_SECRET": "", "QONTO_CLIENT_ID": "", "QONTO_CLIENT_SECRET": ""}, clear=False):
+            response = self.client.get("/admin/qonto/connect")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/admin/reglages/qonto?oauth=config_missing")
+
     def test_oauth_status_does_not_expose_tokens(self):
         data = {"qonto_oauth": {"connected": True, "access_token": "access-secret", "refresh_token": "refresh-secret", "expires_at": 9999999999, "scope": gestion_app.QONTO_OAUTH_SCOPE, "environment": "production"}}
         with patch.object(gestion_app, "load_data", return_value=data):
