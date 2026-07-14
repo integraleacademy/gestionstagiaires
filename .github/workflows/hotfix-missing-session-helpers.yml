@@ -7,8 +7,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
-  issues: write
 
 jobs:
   hotfix:
@@ -20,72 +18,46 @@ jobs:
       AUTO_RESTORE_FROM_BACKUP: "0"
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: test-v2
-          fetch-depth: 0
-          show-progress: false
-      - name: Apply, verify and report hotfix
+      - name: Apply and verify hotfix
         shell: bash
         run: |
-          set +e
-          (
-            set -euo pipefail
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          set -euo pipefail
+          git clone -q --depth 1 --branch test-v2 "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" repo
+          cd repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-            python - <<'PY'
-            from pathlib import Path
+          python - <<'PY'
+          from pathlib import Path
 
-            path = Path("app.py")
-            text = path.read_text(encoding="utf-8")
+          path = Path("app.py")
+          text = path.read_text(encoding="utf-8")
+          if "def _session_has_authentication_marker" not in text:
+              marker = 'SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "30"))\n'
+              if marker not in text:
+                  raise SystemExit("SESSION_DAYS marker not found")
+              block = '''\nSESSION_INVALIDATION_CUTOFF = os.environ.get("SESSION_INVALIDATION_CUTOFF", "2026-07-10T00:00:00Z").strip()\nSESSION_ISSUED_AT_KEY = "session_issued_at"\n\ndef _parse_session_cutoff(raw_value: str) -> Optional[datetime.datetime]:\n    value = str(raw_value or "").strip()\n    if not value:\n        return None\n    if value.endswith("Z"):\n        value = value[:-1] + "+00:00"\n    try:\n        parsed = datetime.datetime.fromisoformat(value)\n    except ValueError:\n        app.logger.warning("SESSION_INVALIDATION_CUTOFF invalide: %r", raw_value)\n        return None\n    if parsed.tzinfo is None:\n        parsed = parsed.replace(tzinfo=datetime.timezone.utc)\n    return parsed.astimezone(datetime.timezone.utc)\n\ndef _session_issue_datetime() -> Optional[datetime.datetime]:\n    issued_at = str(session.get(SESSION_ISSUED_AT_KEY) or "").strip()\n    if not issued_at:\n        return None\n    if issued_at.endswith("Z"):\n        issued_at = issued_at[:-1] + "+00:00"\n    try:\n        parsed = datetime.datetime.fromisoformat(issued_at)\n    except ValueError:\n        return None\n    if parsed.tzinfo is None:\n        parsed = parsed.replace(tzinfo=datetime.timezone.utc)\n    return parsed.astimezone(datetime.timezone.utc)\n\ndef _stamp_authenticated_session() -> None:\n    session[SESSION_ISSUED_AT_KEY] = (\n        datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")\n    )\n\ndef _session_has_authentication_marker() -> bool:\n    return any(\n        key in session or any(str(existing_key).startswith(key) for existing_key in session.keys())\n        for key in ("admin_logged_in", "scotia_logged_in", "public_auth_")\n    )\n\ndef _current_session_is_still_valid() -> bool:\n    cutoff = _parse_session_cutoff(SESSION_INVALIDATION_CUTOFF)\n    if cutoff is None:\n        return True\n    issued_at = _session_issue_datetime()\n    return bool(issued_at and issued_at >= cutoff)\n'''
+              path.write_text(text.replace(marker, marker + block, 1), encoding="utf-8")
+          PY
 
-            if "def _session_has_authentication_marker" not in text:
-                marker = 'SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "30"))\n'
-                if marker not in text:
-                    raise SystemExit("SESSION_DAYS marker not found")
+          python -m py_compile app.py
+          mkdir -p "$PERSIST_DIR"
+          python - <<'PY'
+          import app as application
+          application.app.config.update(TESTING=True, PROPAGATE_EXCEPTIONS=True)
+          with application.app.test_client() as client:
+              for route in ("/", "/admin/login", "/api/health"):
+                  response = client.get(route, follow_redirects=False)
+                  print(route, response.status_code)
+                  if response.status_code >= 500:
+                      raise SystemExit(f"HTTP {response.status_code} on {route}")
+          PY
 
-                block = '''\nSESSION_INVALIDATION_CUTOFF = os.environ.get("SESSION_INVALIDATION_CUTOFF", "2026-07-10T00:00:00Z").strip()\nSESSION_ISSUED_AT_KEY = "session_issued_at"\n\ndef _parse_session_cutoff(raw_value: str) -> Optional[datetime.datetime]:\n    value = str(raw_value or "").strip()\n    if not value:\n        return None\n    if value.endswith("Z"):\n        value = value[:-1] + "+00:00"\n    try:\n        parsed = datetime.datetime.fromisoformat(value)\n    except ValueError:\n        app.logger.warning("SESSION_INVALIDATION_CUTOFF invalide: %r", raw_value)\n        return None\n    if parsed.tzinfo is None:\n        parsed = parsed.replace(tzinfo=datetime.timezone.utc)\n    return parsed.astimezone(datetime.timezone.utc)\n\ndef _session_issue_datetime() -> Optional[datetime.datetime]:\n    issued_at = str(session.get(SESSION_ISSUED_AT_KEY) or "").strip()\n    if not issued_at:\n        return None\n    if issued_at.endswith("Z"):\n        issued_at = issued_at[:-1] + "+00:00"\n    try:\n        parsed = datetime.datetime.fromisoformat(issued_at)\n    except ValueError:\n        return None\n    if parsed.tzinfo is None:\n        parsed = parsed.replace(tzinfo=datetime.timezone.utc)\n    return parsed.astimezone(datetime.timezone.utc)\n\ndef _stamp_authenticated_session() -> None:\n    session[SESSION_ISSUED_AT_KEY] = (\n        datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")\n    )\n\ndef _session_has_authentication_marker() -> bool:\n    return any(\n        key in session or any(str(existing_key).startswith(key) for existing_key in session.keys())\n        for key in ("admin_logged_in", "scotia_logged_in", "public_auth_")\n    )\n\ndef _current_session_is_still_valid() -> bool:\n    cutoff = _parse_session_cutoff(SESSION_INVALIDATION_CUTOFF)\n    if cutoff is None:\n        return True\n    issued_at = _session_issue_datetime()\n    return bool(issued_at and issued_at >= cutoff)\n'''
-                text = text.replace(marker, marker + block, 1)
-                path.write_text(text, encoding="utf-8")
-            PY
-
-            python -m py_compile app.py
-            mkdir -p "$PERSIST_DIR"
-            python - <<'PY'
-            import traceback
-            import app as application
-            application.app.config.update(TESTING=True, PROPAGATE_EXCEPTIONS=True)
-            with application.app.test_client() as client:
-                for path in ("/", "/admin/login", "/api/health"):
-                    try:
-                        response = client.get(path, follow_redirects=False)
-                        print(path, response.status_code)
-                        if response.status_code >= 500:
-                            raise RuntimeError(f"HTTP {response.status_code} on {path}")
-                    except Exception:
-                        traceback.print_exc()
-                        raise
-            PY
-
-            git add app.py
-            git diff --check
-            if git diff --cached --quiet; then
-              echo "No app.py change required"
-              exit 0
-            fi
-            git commit -m "Fix missing session helper functions"
-            git push origin HEAD:test-v2
-          ) > hotfix.log 2>&1
-          status=$?
-          set -e
-          tail -n 220 hotfix.log > hotfix-tail.log
-          {
-            echo '### Rapport hotfix erreur 500'
-            echo
-            echo '```text'
-            cat hotfix-tail.log
-            echo '```'
-          } > pr-comment.md
-          gh pr comment "${{ github.event.pull_request.number }}" --body-file pr-comment.md
-          exit "$status"
+          git add app.py
+          git diff --check
+          if git diff --cached --quiet; then
+            echo "No app.py change required"
+            exit 0
+          fi
+          git commit -m "Fix missing session helper functions"
+          git push origin HEAD:test-v2
