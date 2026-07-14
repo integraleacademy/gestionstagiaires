@@ -17,7 +17,7 @@
 </head>
 
 <body class="{% if is_read_only %}read-only {% endif %}{% if is_partner_space %}partner-space {% endif %}{% if request.endpoint %}endpoint-{{ request.endpoint|replace('_', '-') }}{% endif %}">
-  {% set admin_sidebar_endpoints = ["admin_positioning_tests", "admin_positioning_test_detail", "admin_partners", "admin_partner_new", "admin_partner_detail", "admin_secretariat", "admin_qonto_settings"] %}
+  {% set admin_sidebar_endpoints = ["admin_sessions", "admin_positioning_tests", "admin_positioning_test_detail", "admin_partners", "admin_partner_new", "admin_partner_detail", "admin_secretariat", "admin_qonto_settings"] %}
   {% set show_admin_sidebar = is_admin_logged_in and not is_partner_space and (request.endpoint in admin_sidebar_endpoints) %}
   <div class="test-version-banner">VERSION TEST V2</div>
   <style>
@@ -180,6 +180,7 @@
   {% elif show_admin_sidebar %}
     {% import "partner_sidebar.html" as ps %}
     {% set admin_sidebar_items = [
+      {"label":"Tableau de bord","icon":"home","href":url_for('admin_sessions'),"endpoints":["admin_sessions"],"badge":"","locked":False},
       {"label":"Tests de positionnement","icon":"graduation","href":url_for('admin_positioning_tests'),"endpoints":["admin_positioning_tests","admin_positioning_test_detail"],"badge":"","locked":False},
       {"label":"Gérer les partenaires","icon":"users","href":url_for('admin_partners'),"endpoints":["admin_partners","admin_partner_new","admin_partner_detail"],"badge":"","locked":False},
       {"label":"Secrétariat","icon":"mail","href":url_for('admin_secretariat'),"endpoints":["admin_secretariat"],"badge":"","locked":False},
