@@ -35,7 +35,8 @@
   }
 
 
-  .trainee-search-drawer{
+  .trainee-search-drawer,
+  .docs-to-control-drawer{
     inset:0 auto 0 0;
     width:0;
     padding:0;
@@ -47,8 +48,10 @@
     pointer-events:none;
     z-index:95;
   }
-  .trainee-search-drawer.show{display:block!important;}
-  .trainee-search-panel{
+  .trainee-search-drawer.show,
+  .docs-to-control-drawer.show{display:block!important;}
+  .trainee-search-panel,
+  .docs-to-control-panel{
     position:fixed;
     left:calc(var(--partner-sidebar-open, 320px) + 18px);
     top:18px;
@@ -65,23 +68,31 @@
     transition:transform .22s cubic-bezier(.2,.8,.2,1), opacity .18s ease, left var(--partner-sidebar-speed,250ms) ease, width var(--partner-sidebar-speed,250ms) ease;
     pointer-events:auto;
   }
-  .trainee-search-drawer.show .trainee-search-panel{transform:translateX(0) scale(1);opacity:1;}
-  body.partner-sidebar-collapsed .trainee-search-panel{
+  .trainee-search-drawer.show .trainee-search-panel,
+  .docs-to-control-drawer.show .docs-to-control-panel{transform:translateX(0) scale(1);opacity:1;}
+  body.partner-sidebar-collapsed .trainee-search-panel,
+  body.partner-sidebar-collapsed .docs-to-control-panel{
     left:calc(var(--partner-sidebar-closed, 80px) + 18px);
     width:min(470px, calc(100vw - var(--partner-sidebar-closed, 80px) - 36px));
   }
-  .trainee-search-panel::before{
+  .trainee-search-panel::before,
+  .docs-to-control-panel::before{
     content:"";
     position:absolute;
     inset:0 0 auto;
     height:6px;
     background:linear-gradient(90deg,#ff6b1a,#2563eb,#22c55e);
   }
-  .trainee-search-head{align-items:flex-start!important;padding:24px 24px 18px!important;}
-  .trainee-search-kicker{display:inline-flex;margin-bottom:8px;color:#2563eb;font-size:11px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;}
-  .trainee-search-title-wrap .modal-title{font-size:24px;font-weight:950;letter-spacing:-.04em;}
-  .trainee-search-close{box-shadow:0 10px 24px rgba(15,23,42,.08);}
-  .trainee-search-body{display:flex;min-height:0;flex:1;flex-direction:column;gap:16px;padding:20px 24px 24px!important;overflow:hidden!important;}
+  .trainee-search-head,
+  .docs-to-control-head{align-items:flex-start!important;padding:24px 24px 18px!important;}
+  .trainee-search-kicker,
+  .docs-to-control-kicker{display:inline-flex;margin-bottom:8px;color:#2563eb;font-size:11px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;}
+  .trainee-search-title-wrap .modal-title,
+  .docs-to-control-title-wrap .modal-title{font-size:24px;font-weight:950;letter-spacing:-.04em;}
+  .trainee-search-close,
+  .docs-to-control-close{box-shadow:0 10px 24px rgba(15,23,42,.08);}
+  .trainee-search-body,
+  .docs-to-control-body{display:flex;min-height:0;flex:1;flex-direction:column;gap:16px;padding:20px 24px 24px!important;overflow:hidden!important;}
   .trainee-search-field{position:relative;}
   .trainee-search-field-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#2563eb;font-size:25px;font-weight:950;line-height:1;}
   .trainee-search-field input{width:100%;box-sizing:border-box;border:1px solid #dbe4f0;border-radius:18px;background:#fff;padding:16px 16px 16px 50px;color:#0f172a;font-size:16px;font-weight:800;outline:none;box-shadow:0 14px 28px rgba(15,23,42,.06),inset 0 1px 2px rgba(15,23,42,.04);}
@@ -92,8 +103,14 @@
   .trainee-search-results .search-name{color:#334155;font-size:15px;letter-spacing:.01em;}
   .trainee-search-results .search-open .btn{padding:7px 10px;font-size:12px;}
   .trainee-search-results .search-section-title{padding:12px 16px 8px;background:#f8fafc;}
+  .docs-to-control-panel{width:min(760px, calc(100vw - var(--partner-sidebar-open, 320px) - 36px));}
+  body.partner-sidebar-collapsed .docs-to-control-panel{width:min(760px, calc(100vw - var(--partner-sidebar-closed, 80px) - 36px));}
+  .docs-to-control-list{min-height:0;overflow:auto;}
+  .docs-to-control-list .table-wrap{margin-top:0!important;}
+  .docs-to-control-list .table{min-width:620px;}
   @media (max-width:860px){
-    .trainee-search-panel{left:12px!important;right:12px;top:76px;bottom:12px;width:auto!important;border-radius:24px!important;}
+    .trainee-search-panel,
+    .docs-to-control-panel{left:12px!important;right:12px;top:76px;bottom:12px;width:auto!important;border-radius:24px!important;}
   }
 
   .btn-warning{
@@ -1169,21 +1186,21 @@
 </div>
 
 <!-- MODALE DOCS A CONTROLER -->
-<div class="modal-backdrop" id="docsToControlModal" aria-hidden="true">
-  <div class="modal modal-wide">
-    <div class="modal-head">
-      <div class="modal-title">Documents à contrôler</div>
-      <button class="icon-btn" data-close-modal="docsToControlModal">✕</button>
+<div class="modal-backdrop docs-to-control-drawer" id="docsToControlModal" aria-hidden="true">
+  <aside class="modal docs-to-control-panel" role="dialog" aria-modal="false" aria-labelledby="docsToControlTitle">
+    <div class="modal-head docs-to-control-head">
+      <div class="docs-to-control-title-wrap">
+        <span class="docs-to-control-kicker">Contrôle rapide</span>
+        <div class="modal-title" id="docsToControlTitle">Documents à contrôler</div>
+        <div class="muted">Ouvre une fiche stagiaire pour vérifier les documents en attente.</div>
+      </div>
+      <button class="icon-btn docs-to-control-close" data-close-modal="docsToControlModal" aria-label="Fermer les documents à contrôler">✕</button>
     </div>
 
-    <div class="modal-body">
-      <div id="docsToControlList" class="muted">Chargement…</div>
+    <div class="modal-body docs-to-control-body">
+      <div id="docsToControlList" class="muted docs-to-control-list">Chargement…</div>
     </div>
-
-    <div class="modal-foot">
-      <button class="btn" data-close-modal="docsToControlModal">Fermer</button>
-    </div>
-  </div>
+  </aside>
 </div>
 
 <!-- MODALE MODIFICATION DATES SESSION -->
@@ -2371,7 +2388,12 @@
 
   // boutons du menu latéral
   document.getElementById("btnOpenDocsToControl")?.addEventListener("click", async ()=>{
-    openModal("docsToControlModal");
+    const panel = document.getElementById("docsToControlModal");
+    if(panel){
+      panel.classList.add("show");
+      panel.style.display = "block";
+      panel.setAttribute("aria-hidden", "false");
+    }
     await loadDocsToControl();
   });
   document.getElementById("btnOpenTraineeSearch")?.addEventListener("click", ()=>{
