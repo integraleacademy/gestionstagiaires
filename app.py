@@ -168,6 +168,13 @@ SCOTIA_COMMENT_AUTHOR_LABELS = {
 }
 SCOTIA_NOTIFICATION_EMAIL = os.environ.get("SCOTIA_NOTIFICATION_EMAIL", "scotiaformation@gmail.com").strip()
 SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "30"))
+SESSION_ISSUED_AT_KEY = "_session_issued_at"
+AUTHENTICATED_SESSION_STAMP_KEY = SESSION_ISSUED_AT_KEY
+SESSION_INVALID_BEFORE = (
+    os.environ.get("SESSION_INVALID_BEFORE")
+    or os.environ.get("AUTH_SESSION_INVALID_BEFORE")
+    or ""
+).strip()
 ADMIN_PUSH_TITLE = os.environ.get("ADMIN_PUSH_TITLE", "Intégrale Connect")
 WEB_PUSH_VAPID_PUBLIC_KEY = os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY", "").strip()
 WEB_PUSH_VAPID_PRIVATE_KEY = os.environ.get("WEB_PUSH_VAPID_PRIVATE_KEY", "").strip()
@@ -1710,6 +1717,57 @@ def _static_credentials_match(username: str, password: str, expected_username: s
         return False
     return (username or "").strip().lower() == expected_username.lower() and (password or "").strip() == expected_password
 
+
+def _parse_session_cutoff(value: str) -> Optional[datetime.datetime]:
+    """Parse an optional ISO cutoff used to invalidate older signed cookies."""
+    value = (value or "").strip()
+    if not value:
+        return None
+    if value.endswith("Z"):
+        value = f"{value[:-1]}+00:00"
+    try:
+        parsed = datetime.datetime.fromisoformat(value)
+    except ValueError:
+        app.logger.warning("[SECURITY] SESSION_INVALID_BEFORE invalide: %s", value)
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+    return parsed.astimezone(datetime.timezone.utc)
+
+
+def _stamp_authenticated_session() -> None:
+    """Mark a freshly authenticated session so it can be expired by cutoff."""
+    session[AUTHENTICATED_SESSION_STAMP_KEY] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+
+def _session_has_authentication_marker() -> bool:
+    """Return True when the cookie contains any authenticated-session flag."""
+    if session.get(AUTHENTICATED_SESSION_STAMP_KEY):
+        return True
+    if session.get("admin_logged_in") or session.get("scotia_logged_in"):
+        return True
+    return any(str(key).startswith("public_auth_") and bool(value) for key, value in session.items())
+
+
+def _current_session_is_still_valid() -> bool:
+    authenticated_at = (session.get(AUTHENTICATED_SESSION_STAMP_KEY) or "").strip()
+    if not authenticated_at:
+        return False
+
+    cutoff = _parse_session_cutoff(SESSION_INVALID_BEFORE)
+    if cutoff is None:
+        return True
+    if authenticated_at.endswith("Z"):
+        authenticated_at = f"{authenticated_at[:-1]}+00:00"
+    try:
+        authenticated_at_dt = datetime.datetime.fromisoformat(authenticated_at)
+    except ValueError:
+        return False
+    if authenticated_at_dt.tzinfo is None:
+        authenticated_at_dt = authenticated_at_dt.replace(tzinfo=datetime.timezone.utc)
+    return authenticated_at_dt.astimezone(datetime.timezone.utc) >= cutoff
+
+
 def admin_login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
@@ -1930,6 +1988,7 @@ def admin_login_post():
         session["platform_role"] = "super_admin"
         session["admin_username"] = username_normalized
         session["partner_id"] = INTEGRALE_PARTNER_ID
+        _stamp_authenticated_session()
         session.permanent = True
         return redirect(next_url)
 
@@ -1939,6 +1998,7 @@ def admin_login_post():
         session["admin_role"] = "viewer"
         session["admin_username"] = username_normalized
         session["partner_id"] = INTEGRALE_PARTNER_ID
+        _stamp_authenticated_session()
         session.permanent = True
         return redirect(next_url)
 
@@ -1988,6 +2048,7 @@ def admin_login_post():
         session["admin_user_id"] = user.get("id")
         session["admin_role"] = user.get("role") or "partner_admin"
         session["partner_id"] = user.get("partner_id")
+        _stamp_authenticated_session()
         session.permanent = True
         user["last_login_at"] = _now_iso()
         _append_activity_log(data, "login", "user", user.get("id"), partner.get("id"))
