@@ -23,7 +23,8 @@
     'settings':'M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Zm0-13v3m0 13v3m9.2-9.5h-3m-13.4 0h-3m16-6.8-2.1 2.1M6.3 17.7l-2.1 2.1m0-15.6 2.1 2.1m11.4 11.4 2.1 2.1',
     'external':'M14 3h7v7m0-7-9 9m-5-7H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2',
     'tool':'M14.7 6.3a4 4 0 0 0-5 5L3 18v3h3l6.7-6.7a4 4 0 0 0 5-5l-2.8 2.8-2-2 2.8-2.8Z',
-    'archive':'M3 7h18M5 7v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7M8 7V4h8v3m-6 5h4'
+    'archive':'M3 7h18M5 7v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7M8 7V4h8v3m-6 5h4',
+    'search':'M21 21l-4.3-4.3M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z'
   } %}
   <svg class="sidebar-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ icons.get(name, icons['file']) }}"/></svg>
 {%- endmacro %}
@@ -41,7 +42,7 @@
   {% endif %}
       {{ sidebar_icon(item.icon) }}
       <span class="partner-sidebar__label">{{ item.label }}</span>
-      {% if item.badge %}<span class="partner-sidebar__badge">{{ item.badge }}</span>{% endif %}
+      {% if item.badge_id %}<span id="{{ item.badge_id }}" class="partner-sidebar__badge" {% if not item.badge %}style="display:none;"{% endif %}>{{ item.badge }}</span>{% elif item.badge %}<span class="partner-sidebar__badge">{{ item.badge }}</span>{% endif %}
       {% if locked %}<span class="partner-sidebar__lock">{{ sidebar_icon('lock') }}</span>{% endif %}
   {% if locked or item.action %}</button>{% else %}</a>{% endif %}
 {%- endmacro %}
