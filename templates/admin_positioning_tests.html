@@ -12,6 +12,10 @@
     <h1 style="margin:0 0 6px;">Tests de positionnement</h1>
     <div class="muted">Liste des candidats ayant passé le test et leur résultat.</div>
   </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+    <a class="btn btn-outline" href="{{ public_base_url }}/test-positionnement" target="_blank" rel="noopener">Ouvrir le test public</a>
+    <button class="btn btn-outline" type="button" data-copy-public-test-url="{{ public_base_url }}/test-positionnement">Copier le lien public</button>
+  </div>
   {% if entries|length > 0 and not is_read_only %}
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-danger" type="button" id="btnDeleteAllTests">Tout supprimer</button>
@@ -64,6 +68,20 @@
 </div>
 
 <script>
+  document.querySelectorAll("[data-copy-public-test-url]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const url = btn.getAttribute("data-copy-public-test-url");
+      try{
+        await navigator.clipboard.writeText(url);
+        const previousText = btn.textContent;
+        btn.textContent = "Lien copié";
+        setTimeout(()=>{ btn.textContent = previousText; }, 1800);
+      }catch(e){
+        window.prompt("Copiez le lien public du test de positionnement :", url);
+      }
+    });
+  });
+
   document.querySelectorAll("[data-delete-test]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       if(!confirm("Supprimer ce candidat ?")) return;

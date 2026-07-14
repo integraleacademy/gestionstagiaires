@@ -2,6 +2,12 @@
 {% block content %}
 
 <style>
+  .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;}
+
+  .admin-actions[hidden],
+  .quick-create-wrap[hidden]{
+    display:none !important;
+  }
 
   .search-item{
   display:flex;
@@ -27,6 +33,86 @@
     cursor:not-allowed;
     opacity:1;
   }
+
+
+  .trainee-search-drawer,
+  .docs-to-control-drawer{
+    inset:0 auto 0 0;
+    width:0;
+    padding:0;
+    background:transparent !important;
+    backdrop-filter:none !important;
+    -webkit-backdrop-filter:none !important;
+    align-items:stretch;
+    justify-content:flex-start;
+    pointer-events:none;
+    z-index:95;
+  }
+  .trainee-search-drawer.show,
+  .docs-to-control-drawer.show{display:block!important;}
+  .trainee-search-panel,
+  .docs-to-control-panel{
+    position:fixed;
+    left:calc(var(--partner-sidebar-open, 320px) + 18px);
+    top:18px;
+    bottom:18px;
+    width:min(470px, calc(100vw - var(--partner-sidebar-open, 320px) - 36px));
+    max-height:none!important;
+    overflow:hidden!important;
+    border:1px solid rgba(226,232,240,.92)!important;
+    border-radius:28px!important;
+    background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%)!important;
+    box-shadow:0 26px 70px rgba(15,23,42,.22),0 0 0 1px rgba(255,255,255,.8) inset!important;
+    transform:translateX(-18px) scale(.98);
+    opacity:0;
+    transition:transform .22s cubic-bezier(.2,.8,.2,1), opacity .18s ease, left var(--partner-sidebar-speed,250ms) ease, width var(--partner-sidebar-speed,250ms) ease;
+    pointer-events:auto;
+  }
+  .trainee-search-drawer.show .trainee-search-panel,
+  .docs-to-control-drawer.show .docs-to-control-panel{transform:translateX(0) scale(1);opacity:1;}
+  body.partner-sidebar-collapsed .trainee-search-panel,
+  body.partner-sidebar-collapsed .docs-to-control-panel{
+    left:calc(var(--partner-sidebar-closed, 80px) + 18px);
+    width:min(470px, calc(100vw - var(--partner-sidebar-closed, 80px) - 36px));
+  }
+  .trainee-search-panel::before,
+  .docs-to-control-panel::before{
+    content:"";
+    position:absolute;
+    inset:0 0 auto;
+    height:6px;
+    background:linear-gradient(90deg,#ff6b1a,#2563eb,#22c55e);
+  }
+  .trainee-search-head,
+  .docs-to-control-head{align-items:flex-start!important;padding:24px 24px 18px!important;}
+  .trainee-search-kicker,
+  .docs-to-control-kicker{display:inline-flex;margin-bottom:8px;color:#2563eb;font-size:11px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;}
+  .trainee-search-title-wrap .modal-title,
+  .docs-to-control-title-wrap .modal-title{font-size:24px;font-weight:950;letter-spacing:-.04em;}
+  .trainee-search-close,
+  .docs-to-control-close{box-shadow:0 10px 24px rgba(15,23,42,.08);}
+  .trainee-search-body,
+  .docs-to-control-body{display:flex;min-height:0;flex:1;flex-direction:column;gap:16px;padding:20px 24px 24px!important;overflow:hidden!important;}
+  .trainee-search-field{position:relative;}
+  .trainee-search-field-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#2563eb;font-size:25px;font-weight:950;line-height:1;}
+  .trainee-search-field input{width:100%;box-sizing:border-box;border:1px solid #dbe4f0;border-radius:18px;background:#fff;padding:16px 16px 16px 50px;color:#0f172a;font-size:16px;font-weight:800;outline:none;box-shadow:0 14px 28px rgba(15,23,42,.06),inset 0 1px 2px rgba(15,23,42,.04);}
+  .trainee-search-field input:focus{border-color:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.14),0 18px 34px rgba(37,99,235,.12);}
+  .trainee-search-results{display:none;min-height:0;flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:20px;box-shadow:0 16px 35px rgba(15,23,42,.07);overflow:hidden;}
+  .trainee-search-results-inner{max-height:100%;overflow:auto;}
+  .trainee-search-results .search-item{padding:14px 16px;align-items:center;}
+  .trainee-search-results .search-name{color:#334155;font-size:15px;letter-spacing:.01em;}
+  .trainee-search-results .search-open .btn{padding:7px 10px;font-size:12px;}
+  .trainee-search-results .search-section-title{padding:12px 16px 8px;background:#f8fafc;}
+  .docs-to-control-panel{width:min(1040px, calc(100vw - var(--partner-sidebar-open, 320px) - 36px));}
+  body.partner-sidebar-collapsed .docs-to-control-panel{width:min(1040px, calc(100vw - var(--partner-sidebar-closed, 80px) - 36px));}
+  .docs-to-control-list{min-height:0;overflow:auto;}
+  .docs-to-control-list .table-wrap{margin-top:0!important;}
+  .docs-to-control-list .table{min-width:860px;}
+  @media (max-width:860px){
+    .trainee-search-panel,
+    .docs-to-control-panel{left:12px!important;right:12px;top:76px;bottom:12px;width:auto!important;border-radius:24px!important;}
+  }
+
   .btn-warning{
     background:linear-gradient(135deg, #facc15, #eab308);
     border-color:#ca8a04;
@@ -447,6 +533,12 @@
   .admin-action-panel .btn:hover{
     background:#f8fafc;
   }
+  .admin-action-panel .btn-primary,
+  .admin-action-panel .btn-primary:hover{
+    background:linear-gradient(135deg, var(--green), var(--green2));
+    border-color:rgba(31,143,74,.35);
+    color:#fff;
+  }
   .admin-action-section{
     padding:4px 6px 2px;
     font-size:11px;
@@ -560,22 +652,32 @@
     <div class="muted" style="margin-top:4px;">Pilotage des formations, stagiaires et outils administratifs.</div>
   </div>
 
-  <div class="admin-actions" aria-label="Actions sessions">
-    <a class="btn btn-primary" href="{{ url_for('admin_secretariat') }}">📬 Secrétariat</a>
-    <a class="btn btn-outline" href="{{ url_for('admin_qonto_settings') }}">🧾 Réglages Qonto</a>
-    <a class="btn btn-violet {% if (wedof_new_requests_count or 0) > 0 %}is-has-request{% else %}is-idle{% endif %}" href="{{ url_for('admin_wedof_requests') }}">
-      CPF
-      <span class="cpf-badge-count">{{ wedof_new_requests_count or 0 }}</span>
-    </a>
+  <div class="admin-actions" aria-label="Actions sessions" {% if is_partner_space or show_admin_sidebar %}hidden{% endif %}>
+    {% if not is_partner_space and not show_admin_sidebar %}<a class="btn btn-primary" href="{{ url_for('admin_secretariat') }}">📬 Secrétariat</a>{% endif %}
+    {% if not show_admin_sidebar %}{% if partner_has_module('billing') %}<a class="btn btn-outline" href="{{ url_for('admin_qonto_settings') }}">🧾 Réglages Qonto</a>{% else %}<span class="btn btn-outline module-locked" title="Module payant non activé">🔒 Réglages Qonto</span>{% endif %}{% endif %}
+    {% if partner_has_module('cpf') %}
+      <a class="btn btn-violet {% if (wedof_new_requests_count or 0) > 0 %}is-has-request{% else %}is-idle{% endif %}" href="{{ url_for('admin_wedof_requests') }}">
+        CPF
+        <span class="cpf-badge-count">{{ wedof_new_requests_count or 0 }}</span>
+      </a>
+    {% else %}
+      <span class="btn btn-violet is-idle module-locked" title="Module payant non activé">🔒 CPF <span class="cpf-badge-count">{{ wedof_new_requests_count or 0 }}</span></span>
+    {% endif %}
 
     <details class="admin-action-menu">
-      <summary class="btn btn-outline">👮‍♂️ CNAPS</summary>
+      <summary class="btn btn-outline">{% if partner_has_module('cnaps') %}👮‍♂️ CNAPS{% else %}🔒 CNAPS{% endif %}</summary>
       <div class="admin-action-panel">
         <div class="admin-action-section">CNAPS</div>
         <div class="admin-action-help">Accès regroupés pour éviter une barre d’actions trop chargée.</div>
-        <a class="btn btn-blue" id="btnDracar" href="https://espace-usagers.cnaps.interieur.gouv.fr/usager/app/accueil" target="_blank" rel="noopener noreferrer">DRACAR</a>
-        <button class="btn btn-outline" id="btnOpenCnapsImport" type="button">Import PRE CNAPS</button>
-        <a class="btn btn-outline" href="{{ url_for('admin_cnaps_unknown') }}">CNAPS inconnus</a>
+        {% if partner_has_module('cnaps') %}
+          <a class="btn btn-blue" id="btnDracar" href="https://espace-usagers.cnaps.interieur.gouv.fr/usager/app/accueil" target="_blank" rel="noopener noreferrer">DRACAR</a>
+          <button class="btn btn-outline" id="btnOpenCnapsImport" type="button">Import PRE CNAPS</button>
+          <a class="btn btn-outline" href="{{ url_for('admin_cnaps_unknown') }}">CNAPS inconnus</a>
+        {% else %}
+          <span class="btn btn-blue module-locked">🔒 DRACAR</span>
+          <span class="btn btn-outline module-locked">🔒 Import PRE CNAPS</span>
+          <span class="btn btn-outline module-locked">🔒 CNAPS inconnus</span>
+        {% endif %}
       </div>
     </details>
 
@@ -583,13 +685,16 @@
       <summary class="btn btn-outline">⚙️ Outils</summary>
       <div class="admin-action-panel">
         <div class="admin-action-section">Gestion</div>
-        <a class="btn btn-outline" href="{{ url_for('admin_afc') }}">AFC</a>
-        <a class="btn btn-outline" href="{{ url_for('admin_sessions_conventions') }}">Conventions</a>
-        <a class="btn btn-outline" href="{{ url_for('admin_sessions_billing') }}">🧾 Facturation</a>
+        {% if not is_partner_space %}<a class="btn btn-outline" href="{{ url_for('admin_afc') }}">AFC</a>{% endif %}
+        {% if partner_has_module('automations') %}<a class="btn btn-outline" href="{{ url_for('admin_sessions_conventions') }}">Conventions</a>{% else %}<span class="btn btn-outline module-locked">🔒 Conventions</span>{% endif %}
+        {% if partner_has_module('automations') %}<a class="btn btn-primary" href="{{ url_for('admin_sessions_automations') }}">⚡ Automatisations</a>{% else %}<span class="btn btn-primary module-locked">🔒 Automatisations</span>{% endif %}
+        {% if partner_has_module('billing') %}<a class="btn btn-outline" href="{{ url_for('admin_sessions_billing') }}">🧾 Facturation</a>{% else %}<span class="btn btn-outline module-locked">🔒 Facturation</span>{% endif %}
         <a class="btn btn-outline" href="{{ url_for('admin_sessions_archived') }}">Sessions archivées</a>
-        <a class="btn btn-outline" href="{{ url_for('admin_cash_payments') }}">💶 Paiement espèces</a>
-        <a class="btn btn-outline" href="{{ url_for('scotia_login') }}" target="_blank" rel="noopener">SCOTIA</a>
-        {% if not is_read_only %}
+        {% if not is_partner_space %}
+          <a class="btn btn-outline" href="{{ url_for('admin_cash_payments') }}">💶 Paiement espèces</a>
+          <a class="btn btn-outline" href="{{ url_for('scotia_login') }}" target="_blank" rel="noopener">SCOTIA</a>
+        {% endif %}
+        {% if not is_read_only and not is_partner_space %}
           <div class="admin-action-section">Contrôles VTC</div>
           <button class="btn btn-outline" id="btnOpenVtcCheck" type="button">Check VTC théorie</button>
           <button class="btn btn-outline" id="btnOpenVtcPracticeCheck" type="button">Check VTC pratique</button>
@@ -607,52 +712,27 @@
       </div>
     {% endif %}
   </div>
-</div>
 
-<!-- 🔎 Recherche stagiaire (global) -->
-<div class="card" style="margin-bottom:12px;">
-  <div class="card-row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-    <div>
-      <div class="card-title">Rechercher un stagiaire</div>
-      <div class="muted">Tape un nom ou un prénom pour ouvrir directement la fiche.</div>
-    </div>
-
-    <div style="min-width:min(520px, 100%);position:relative;">
-      <input id="traineeSearchInput"
-             type="text"
-             placeholder="Ex : Dupont, Sarah…"
-             autocomplete="off"
-             style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:12px;outline:none;">
-      
-      <div id="traineeSearchResults"
-           style="display:none;position:absolute;z-index:50;left:0;right:0;top:calc(100% + 8px);
-                  background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.08);
-                  overflow:hidden;">
-        <div id="traineeSearchResultsInner" style="max-height:320px;overflow:auto;"></div>
+  {% if is_partner_space and not is_read_only %}
+    <div class="quick-create-wrap admin-actions admin-actions--partner-primary" hidden>
+      <button class="btn btn-primary btn-plus" id="partnerBtnOpenCreateMenu" aria-label="Créer" aria-expanded="false">+</button>
+      <div class="quick-create-menu" id="partnerQuickCreateMenu">
+        <button class="quick-create-option quick-create-option--session" data-sidebar-action="create-session">💼 Nouvelle session</button>
+        <button class="quick-create-option quick-create-option--trainee" data-sidebar-action="create-trainee">👨‍🎓 Nouveau stagiaire</button>
       </div>
     </div>
-  </div>
+  {% endif %}
 </div>
 
-<div class="card" id="wedof-cpf-requests" style="margin-bottom:12px;">
-  <div class="card-row" style="justify-content:space-between;align-items:center;">
-    <div>
-      <div class="card-title">Documents à contrôler</div>
-      <div class="muted">Liste des stagiaires avec des documents “A CONTRÔLER”.</div>
-    </div>
-    <button class="btn btn-primary" id="btnOpenDocsToControl">Aucun doc à contrôler</button>
-  </div>
-
-  <!-- ✅ Badge + compteur (plus visuel) -->
-  <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-    <span id="docsToControlBadge" class="docs-badge docs-badge--loading">Chargement…</span>
-    <span class="muted" id="docsToControlCount">Chargement…</span>
-  </div>
-
-</div>
+<button class="sr-only" id="btnOpenTraineeSearch" type="button">Rechercher un stagiaire</button>
+<button class="sr-only" id="btnOpenDocsToControl" type="button">Documents à contrôler</button>
+<span class="muted" id="docsToControlCount" hidden>Chargement…</span>
 
 <div class="card" style="margin-bottom:12px;">
-  {% set yearly_total = (yearly_training_counts.APS or 0) + (yearly_training_counts.VTC or 0) + (yearly_training_counts.DIRIGEANT or 0) + (yearly_training_counts.VAE or 0) + (yearly_training_counts.A3P or 0) + (yearly_training_counts.SSIAP or 0) %}
+  {% set yearly_total = namespace(value=0) %}
+  {% for label in dashboard_training_labels %}
+    {% set yearly_total.value = yearly_total.value + (yearly_training_counts[label] or 0) %}
+  {% endfor %}
   <div class="card-row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
     <div>
       <div class="card-title">Tableau de bord stagiaires {{ dashboard_year }}</div>
@@ -661,40 +741,54 @@
   </div>
 
   <div class="dashboard-grid" aria-label="Tableau de bord annuel des stagiaires">
+    {% if "APS" in dashboard_training_labels %}
     <button type="button" class="dashboard-card dashboard-card--aps" data-dashboard-filter="aps" aria-label="Afficher uniquement les formations APS">
       <div class="dashboard-card__label">APS</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.APS or 0 }}</div>
     </button>
+    {% endif %}
+    {% if "VTC" in dashboard_training_labels %}
     <button type="button" class="dashboard-card dashboard-card--vtc" data-dashboard-filter="vtc" aria-label="Afficher uniquement les formations VTC">
       <div class="dashboard-card__label">VTC</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.VTC or 0 }}</div>
     </button>
+    {% endif %}
+    {% if "DIRIGEANT" in dashboard_training_labels %}
     <button type="button" class="dashboard-card dashboard-card--dirigeant" data-dashboard-filter="dirigeant" aria-label="Afficher uniquement les formations dirigeant">
       <div class="dashboard-card__label">DIRIGEANT</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.DIRIGEANT or 0 }}</div>
     </button>
-    <button type="button" class="dashboard-card dashboard-card--vae" data-dashboard-filter="vae" data-dashboard-url="https://gestionstagiaires-r5no.onrender.com/admin/sessions/7d8a231044/trainees" aria-label="Ouvrir directement la session VAE">
+    {% endif %}
+    {% if "VAE" in dashboard_training_labels %}
+    <button type="button" class="dashboard-card dashboard-card--vae" data-dashboard-filter="vae" data-dashboard-url="{{ public_base_url }}/admin/sessions/7d8a231044/trainees" aria-label="Ouvrir directement la session VAE">
       <div class="dashboard-card__label">VAE</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.VAE or 0 }}</div>
     </button>
+    {% endif %}
+    {% if "A3P" in dashboard_training_labels %}
     <button type="button" class="dashboard-card dashboard-card--a3p" data-dashboard-filter="a3p" aria-label="Afficher uniquement les formations A3P">
       <div class="dashboard-card__label">A3P</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.A3P or 0 }}</div>
     </button>
+    {% endif %}
+    {% if "SSIAP" in dashboard_training_labels %}
     <button type="button" class="dashboard-card dashboard-card--ssiap" data-dashboard-filter="ssiap" aria-label="Afficher uniquement les formations SSIAP">
       <div class="dashboard-card__label">SSIAP</div>
       <div class="dashboard-card__count">{{ yearly_training_counts.SSIAP or 0 }}</div>
     </button>
+    {% endif %}
   </div>
 
   <button type="button" class="dashboard-total-card" data-dashboard-reset="true" aria-label="Afficher toutes les formations">
     <div>
       <div class="dashboard-total-card__label">TOTAL STAGIAIRES</div>
-      <div class="dashboard-total-card__count">{{ yearly_total }}</div>
+      <div class="dashboard-total-card__count">{{ yearly_total.value }}</div>
     </div>
-    <a href="{{ url_for('admin_sales_tracking') }}" class="btn btn-outline" style="background:rgba(255,255,255,.92);border-color:rgba(255,255,255,.75);color:#1e3a8a;">
-      Suivi des ventes
-    </a>
+    {% if partner_has_module('sales') %}
+      <a href="{{ url_for('admin_sales_tracking') }}" class="btn btn-outline" style="background:rgba(255,255,255,.92);border-color:rgba(255,255,255,.75);color:#1e3a8a;">Suivi des ventes</a>
+    {% else %}
+      <span class="btn btn-outline module-locked" style="background:rgba(255,255,255,.92);border-color:rgba(255,255,255,.75);color:#1e3a8a;">🔒 Suivi des ventes</span>
+    {% endif %}
   </button>
 </div>
 
@@ -708,16 +802,16 @@
   </div>
 
   <div class="session-filter-bar" aria-label="Filtres des formations">
-    <button class="filter-btn filter-btn--aps" data-filter-group="training" data-filter-value="aps">APS</button>
-    <button class="filter-btn filter-btn--dirigeant" data-filter-group="training" data-filter-value="dirigeant">DIRIGEANT</button>
-    <button class="filter-btn filter-btn--a3p" data-filter-group="training" data-filter-value="a3p">A3P</button>
-    <button class="filter-btn filter-btn--ssiap" data-filter-group="training" data-filter-value="ssiap">SSIAP</button>
-    <button class="filter-btn filter-btn--vtc" data-filter-group="training" data-filter-value="vtc">VTC</button>
-    <a class="filter-btn filter-btn--vtc" href="{{ url_for('admin_vtc_trainees_all') }}" style="text-decoration:none;display:inline-flex;align-items:center;">Voir tous les stagiaires VTC</a>
+    {% if "APS" in dashboard_training_labels %}<button class="filter-btn filter-btn--aps" data-filter-group="training" data-filter-value="aps">APS</button>{% endif %}
+    {% if "DIRIGEANT" in dashboard_training_labels %}<button class="filter-btn filter-btn--dirigeant" data-filter-group="training" data-filter-value="dirigeant">DIRIGEANT</button>{% endif %}
+    {% if "A3P" in dashboard_training_labels %}<button class="filter-btn filter-btn--a3p" data-filter-group="training" data-filter-value="a3p">A3P</button>{% endif %}
+    {% if "SSIAP" in dashboard_training_labels %}<button class="filter-btn filter-btn--ssiap" data-filter-group="training" data-filter-value="ssiap">SSIAP</button>{% endif %}
+    {% if "VTC" in dashboard_training_labels %}<button class="filter-btn filter-btn--vtc" data-filter-group="training" data-filter-value="vtc">VTC</button>
+    <a class="filter-btn filter-btn--vtc" href="{{ url_for('admin_vtc_trainees_all') }}" style="text-decoration:none;display:inline-flex;align-items:center;">Voir tous les stagiaires VTC</a>{% endif %}
     <button class="filter-btn filter-btn--status" data-filter-group="status" data-filter-value="ongoing">Afficher les formations en cours</button>
     <button class="filter-btn filter-btn--status" data-filter-group="status" data-filter-value="upcoming">Afficher les prochaines formations</button>
     <button class="filter-btn filter-btn--status" data-ended-toggle="true">Afficher les sessions terminées</button>
-    <button class="filter-btn filter-btn--cash" data-filter-group="payment" data-filter-value="cash">Paiements en espèces</button>
+    {% if not is_partner_space %}<button class="filter-btn filter-btn--cash" data-filter-group="payment" data-filter-value="cash">Paiements en espèces</button>{% endif %}
     <button class="filter-btn filter-btn--all" data-filter-reset="true">Réinitialiser les filtres</button>
   </div>
 </div>
@@ -725,126 +819,126 @@
 
 <div class="grid cards" id="sessionsGrid">
   {% for s in sessions %}
-  <div class="card session-card session-card--{{ s.status_key }} training-{{ s.training_type_class }}{% if 'VAE' in (s.training_type or '')|upper %} training-vae{% endif %}{% if s.show_cash_payment_alert %} has-cash-alert{% endif %}" data-session-training-type="{{ (s.training_type or '')|upper }}">
-    <div class="card-row">
-      <div>
-        <div class="card-title {% if not is_read_only %}session-name-editable{% endif %}"
+  {% set training_upper = (s.training_type or "")|upper %}
+  {% set is_aps = training_upper.startswith("APS") %}
+  {% set is_vtc = "VTC" in training_upper %}
+  {% set is_vae = "VAE" in training_upper %}
+  {% set is_ssiap = "SSIAP" in training_upper %}
+  {% set is_dirigeant = training_upper.startswith("DIRIGEANT") %}
+  {% set show_cnaps_metric = not (is_vtc or is_vae or is_ssiap or is_dirigeant) %}
+  {% set elearning_done = s.public_logged_in_total or 0 %}
+  {% set elearning_total = s.total or 0 %}
+  {% set docs_done = s.dossier_complete_total or 0 %}
+  {% set docs_total = s.total or 0 %}
+  {% set cnaps_done = s.cnaps_accepted_count or 0 %}
+  {% set cnaps_total = s.total or 0 %}
+  <article class="card session-card session-card--{{ s.status_key }} training-{{ s.training_type_class }}{% if 'VAE' in training_upper %} training-vae{% endif %}{% if s.show_cash_payment_alert %} has-cash-alert session-card--alert{% endif %}" data-session-training-type="{{ training_upper }}">
+    <div class="session-card__header">
+      <div class="session-card__identity">
+        <h2 class="session-card__title {% if not is_read_only %}session-name-editable{% endif %}"
              {% if not is_read_only %}
              data-inline-session-name="{{ s.id }}"
              data-session-name="{{ s.name }}"
              title="Cliquer pour modifier le nom"
-             {% endif %}>{{ s.name }}</div>
-        <div class="session-tags">
-          <span class="pill pill-training">{{ "CHAUFFEUR VTC" if (s.training_type or "")|upper == "VTC" else s.training_type }}</span>
+             {% endif %}>{{ s.name }}</h2>
+        <div class="session-tags" aria-label="Type et statut de session">
+          <span class="pill pill-training">{{ "CHAUFFEUR VTC" if training_upper == "VTC" else s.training_type }}</span>
           <span class="pill pill-status pill-status--{{ s.status_key }}">{{ s.status_label }}</span>
+          {% if s.session_dossier_complete %}<span class="pill pill-complete">Dossier complet</span>{% endif %}
         </div>
       </div>
-      {% if s.session_dossier_complete %}
-      <div class="bigmark">✅</div>
-      {% endif %}
+      <div class="session-kpi session-kpi--trainees" aria-label="Nombre de stagiaires">
+        <span class="session-kpi__value">{{ s.total }}</span>
+        <span class="session-kpi__label">stagiaires</span>
+      </div>
     </div>
 
-    <div class="card-meta">
-      <div>Formation : <strong>{{ s.date_start|frdate }}</strong> → <strong>{{ s.date_end|frdate }}</strong></div>
-      {% if ((s.training_type or "")|upper).startswith("APS") %}
-        <div>Distanciel : <strong>{{ s.aps_remote_start|frdate }}</strong> → <strong>{{ s.aps_remote_end|frdate }}</strong></div>
-        <div>Présentiel : <strong>{{ s.aps_in_person_start|frdate }}</strong> → <strong>{{ s.aps_in_person_end|frdate }}</strong></div>
+    <div class="session-dates" aria-label="Dates clés de la session">
+      <div class="session-date-row">
+        <span class="session-date-row__icon" aria-hidden="true">📅</span>
+        <span class="session-date-row__label">Formation</span>
+        <strong>{{ s.date_start|frdate }} → {{ s.date_end|frdate }}</strong>
+      </div>
+      {% if is_aps %}
+      <div class="session-date-row">
+        <span class="session-date-row__icon" aria-hidden="true">💻</span>
+        <span class="session-date-row__label">Distanciel</span>
+        <strong>{{ s.aps_remote_start|frdate }} → {{ s.aps_remote_end|frdate }}</strong>
+      </div>
+      <div class="session-date-row">
+        <span class="session-date-row__icon" aria-hidden="true">🏫</span>
+        <span class="session-date-row__label">Présentiel</span>
+        <strong>{{ s.aps_in_person_start|frdate }} → {{ s.aps_in_person_end|frdate }}</strong>
+      </div>
       {% endif %}
-      {% if "VTC" in (s.training_type or "")|upper %}
+      {% if is_vtc %}
         {% set theory_date = s.exam_theory_date or s.exam_date %}
         {% set practice_date = s.exam_practice_date or s.exam_date %}
         {% set practice_training_date = s.practice_training_date %}
-        <div>Examen théorique : <strong>{{ theory_date|frdate }}</strong></div>
-        <div>Examen pratique : <strong>{{ practice_date|frdate }}</strong></div>
-        <div>Formation pratique : <strong>{{ practice_training_date|frdate }}</strong></div>
+      <div class="session-date-row"><span class="session-date-row__icon" aria-hidden="true">📝</span><span class="session-date-row__label">Examen théorique</span><strong>{{ theory_date|frdate }}</strong></div>
+      <div class="session-date-row"><span class="session-date-row__icon" aria-hidden="true">🚘</span><span class="session-date-row__label">Examen pratique</span><strong>{{ practice_date|frdate }}</strong></div>
+      <div class="session-date-row"><span class="session-date-row__icon" aria-hidden="true">🧭</span><span class="session-date-row__label">Formation pratique</span><strong>{{ practice_training_date|frdate }}</strong></div>
       {% else %}
-        <div>Examen : <strong>{{ s.exam_date|frdate }}</strong></div>
-      {% endif %}
-      <div class="trainees-highlight">
-        <span>Stagiaires</span>
-        <span class="trainees-count">{{ s.total }}</span>
-      </div>
-      <div class="muted" style="margin-top:4px;">
-        🛜 {{ s.public_logged_in_total or 0 }}/{{ s.total }}
-      </div>
-      {% if s.show_cash_payment_alert %}
-      <div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;font-weight:800;">
-        <div style="display:flex;flex-direction:column;gap:6px;">
-          <span>⚠️ Espèces à récupérer : {{ s.cash_payment_trainees }} stagiaire(s) — {{ "%.2f"|format(s.cash_payment_total or 0)|replace(".", ",") }} €</span>
-          {% if s.cash_payment_items %}
-          <div style="display:flex;flex-wrap:wrap;gap:6px 10px;font-size:.95rem;">
-            {% for item in s.cash_payment_items %}
-            <a href="{{ url_for('admin_trainee_page', session_id=s.id, trainee_id=item.trainee_id) }}"
-               style="color:#9a3412;text-decoration:underline;">
-              {{ item.trainee_name }}
-            </a>
-            {% endfor %}
-          </div>
-          {% endif %}
-        </div>
+      <div class="session-date-row">
+        <span class="session-date-row__icon session-date-row__icon--text" aria-hidden="true">EX</span>
+        <span class="session-date-row__label">Examen</span>
+        <strong>{{ s.exam_date|frdate }}</strong>
       </div>
       {% endif %}
     </div>
 
-    <div class="docs-progress">
-      {% if "VTC" in (s.training_type or "")|upper %}
-      Inscriptions CMAR :
-      <strong>{{ s.cmar_registered_total or 0 }}/{{ s.total }}</strong>
-      {% else %}
-      Docs fin de formation :
-      <strong>{{ s.deliverables_done or 0 }}/{{ s.deliverables_total or 0 }}</strong>
+    {% if s.show_cash_payment_alert %}
+    <div class="session-alert">
+      <strong>⚠️ Espèces à récupérer</strong>
+      <span>{{ s.cash_payment_trainees }} stagiaire(s) — {{ "%.2f"|format(s.cash_payment_total or 0)|replace(".", ",") }} €</span>
+      {% if s.cash_payment_items %}
+      <div class="session-alert__links">
+        {% for item in s.cash_payment_items %}
+        <a href="{{ url_for('admin_trainee_page', session_id=s.id, trainee_id=item.trainee_id) }}">{{ item.trainee_name }}</a>
+        {% endfor %}
+      </div>
       {% endif %}
     </div>
+    {% endif %}
+
+    <div class="session-metrics" aria-label="Indicateurs de session">
+      {% if show_cnaps_metric %}
+      <div class="session-metric{% if cnaps_total and cnaps_done >= cnaps_total %} is-ok{% elif cnaps_total and cnaps_done < cnaps_total %} is-warn{% else %} is-muted{% endif %}"><span class="session-metric__icon">👮</span><span class="session-metric__label">CNAPS validé</span><strong>{{ cnaps_done }}/{{ cnaps_total }}</strong></div>
+      {% endif %}
+      <div class="session-metric is-elearning"><span class="session-metric__icon">🛜</span><span class="session-metric__label">Connexion Espace Stagiaire</span><strong>{{ elearning_done }}/{{ elearning_total }}</strong></div>
+      <div class="session-metric{% if docs_total and docs_done >= docs_total %} is-ok{% elif docs_total and docs_done < docs_total %} is-warn{% else %} is-muted{% endif %}"><span class="session-metric__icon">📁</span><span class="session-metric__label">Dossiers complets</span><strong>{{ docs_done }}/{{ docs_total }}</strong></div>
+      <div class="session-metric{% if s.exclude_from_sales_tracking %} is-muted{% else %} is-ok{% endif %}" data-sales-tracking-metric><span class="session-metric__icon">📈</span><span class="session-metric__label">Suivi ventes</span><strong>{{ "exclu" if s.exclude_from_sales_tracking else "inclus" }}</strong></div>
+    </div>
+
+    <div class="session-options">
     {% if not is_read_only %}
-      <label class="sales-tracking-toggle">
-        <input type="checkbox"
-               data-sales-tracking-exclude="{{ s.id }}"
-               {% if s.exclude_from_sales_tracking %}checked{% endif %}>
-        Exclure cette session du suivi des ventes
+      <label class="modern-switch">
+        <input type="checkbox" data-sales-tracking-exclude="{{ s.id }}" {% if s.exclude_from_sales_tracking %}checked{% endif %}>
+        <span class="modern-switch__control" aria-hidden="true"></span>
+        <span>Exclure du suivi ventes</span>
       </label>
-      {% if ((s.training_type or "")|upper).startswith("APS") %}
-        <label class="aps-elearning-toggle">
-          <input type="checkbox"
-                 data-aps-elearning-toggle="{{ s.id }}"
-                 {% if s.aps_elearning_enabled %}checked{% endif %}>
-          🎓 E-learning
+      {% if is_aps %}
+        <label class="modern-switch modern-switch--elearning">
+          <input type="checkbox" data-aps-elearning-toggle="{{ s.id }}" {% if s.aps_elearning_enabled %}checked{% endif %}>
+          <span class="modern-switch__control" aria-hidden="true"></span>
+          <span>🎓 E-learning</span>
         </label>
       {% endif %}
     {% else %}
-      {% if s.exclude_from_sales_tracking %}
-        <div class="sales-tracking-note">🚫 Session exclue du suivi des ventes.</div>
-      {% endif %}
-      {% if ((s.training_type or "")|upper).startswith("APS") and s.aps_elearning_enabled %}
-        <div class="aps-elearning-note">🎓 E-learning activé</div>
-      {% endif %}
+      {% if s.exclude_from_sales_tracking %}<div class="sales-tracking-note">Session exclue du suivi des ventes.</div>{% endif %}
+      {% if is_aps and s.aps_elearning_enabled %}<div class="aps-elearning-note">🎓 E-learning activé</div>{% endif %}
     {% endif %}
+    </div>
 
-<div class="card-actions">
-  <a class="btn" href="{{ url_for('admin_trainees', session_id=s.id, **request.args) }}">Voir les stagiaires</a>
-
-  {% if not is_read_only %}
-    <button class="btn btn-outline"
-            data-edit-session="{{ s.id }}"
-            data-training-type="{{ s.training_type }}"
-            data-date-start="{{ s.date_start }}"
-            data-date-end="{{ s.date_end }}"
-            data-exam-date="{{ s.exam_date }}"
-            data-exam-theory-date="{{ s.exam_theory_date }}"
-            data-exam-practice-date="{{ s.exam_practice_date }}"
-            data-practice-training-date="{{ s.practice_training_date }}"
-            data-aps-remote-start="{{ s.aps_remote_start }}"
-            data-aps-remote-end="{{ s.aps_remote_end }}"
-            data-aps-in-person-start="{{ s.aps_in_person_start }}"
-            data-aps-in-person-end="{{ s.aps_in_person_end }}"
-            data-aps-elearning-enabled="{{ '1' if s.aps_elearning_enabled else '0' }}">
-      Modifier la session
-    </button>
-    <button class="btn btn-outline" data-archive-session="{{ s.id }}" aria-label="Archiver">📦</button>
-
-    <button class="btn btn-danger" data-delete-session="{{ s.id }}" aria-label="Supprimer">🗑️</button>
-  {% endif %}
-</div>
-  </div>
+    <div class="card-actions session-actions">
+      <a class="btn session-action session-action--primary" href="{{ url_for('admin_trainees', session_id=s.id, **request.args) }}">👥 Voir les stagiaires</a>
+      {% if not is_read_only %}
+        <button class="btn btn-outline session-action" data-edit-session="{{ s.id }}" data-training-type="{{ s.training_type }}" data-date-start="{{ s.date_start }}" data-date-end="{{ s.date_end }}" data-exam-date="{{ s.exam_date }}" data-exam-theory-date="{{ s.exam_theory_date }}" data-exam-practice-date="{{ s.exam_practice_date }}" data-practice-training-date="{{ s.practice_training_date }}" data-aps-remote-start="{{ s.aps_remote_start }}" data-aps-remote-end="{{ s.aps_remote_end }}" data-aps-in-person-start="{{ s.aps_in_person_start }}" data-aps-in-person-end="{{ s.aps_in_person_end }}" data-dirigeant-remote-start="{{ s.dirigeant_remote_start }}" data-dirigeant-remote-end="{{ s.dirigeant_remote_end }}" data-dirigeant-in-person-start="{{ s.dirigeant_in_person_start }}" data-dirigeant-in-person-end="{{ s.dirigeant_in_person_end }}" data-aps-elearning-enabled="{{ '1' if s.aps_elearning_enabled else '0' }}">✏️ Modifier</button>
+        <button class="btn btn-outline session-action" data-archive-session="{{ s.id }}">📦 Archiver</button>
+        <button class="btn btn-danger session-action session-action--danger" data-delete-session="{{ s.id }}">🗑️ Supprimer</button>
+      {% endif %}
+    </div>
+  </article>
   {% endfor %}
 </div>
 
@@ -878,19 +972,36 @@
           </select>
         </label>
 
-        <label>
-          <div class="label">Date début</div>
+        <label id="dateStartField">
+          <div class="label">Début formation</div>
           <input id="dateStart" type="date">
         </label>
 
         <label id="dateEndField">
-          <div class="label">Date fin</div>
+          <div class="label">Fin formation</div>
           <input id="dateEnd" type="date">
         </label>
 
         <label id="apsInPersonStartField" style="display:none;">
           <div class="label">Début présentiel APS</div>
           <input id="apsInPersonStart" type="date">
+        </label>
+
+        <label id="dirigeantInPersonStartField" style="display:none;">
+          <div class="label">Début présentiel</div>
+          <input id="dirigeantInPersonStart" type="date">
+        </label>
+        <label id="dirigeantInPersonEndField" style="display:none;">
+          <div class="label">Fin présentiel</div>
+          <input id="dirigeantInPersonEnd" type="date">
+        </label>
+        <label id="dirigeantRemoteStartField" style="display:none;">
+          <div class="label">Début distanciel</div>
+          <input id="dirigeantRemoteStart" type="date">
+        </label>
+        <label id="dirigeantRemoteEndField" style="display:none;">
+          <div class="label">Fin distanciel</div>
+          <input id="dirigeantRemoteEnd" type="date">
         </label>
 
         <label id="examDateField">
@@ -943,29 +1054,34 @@
 
 <!-- MODALE CREATION STAGIAIRE (depuis sessions) -->
 <div class="modal-backdrop" id="createTraineeFromSessionsModal" aria-hidden="true">
-  <div class="modal" style="max-width:860px;">
-    <div class="modal-head">
-      <div class="modal-title">Ajouter un stagiaire</div>
+  <div class="modal trainee-create-modal trainee-create-modal-wide" style="max-width:860px;">
+    <div class="modal-head trainee-create-head">
+      <div>
+        <div class="modal-eyebrow">Nouveau dossier</div>
+        <div class="modal-title">Ajouter un stagiaire</div>
+      </div>
       <button class="icon-btn" data-close-modal="createTraineeFromSessionsModal">✕</button>
     </div>
 
-    <div class="modal-body">
-      <div class="label" style="margin-bottom:8px;">Formation</div>
-      <div class="training-chooser" id="trainingChooser">
+    <div class="modal-body trainee-create-body">
+      <div class="trainee-create-section">
+        <div class="label" style="margin-bottom:8px;">Formation</div>
+        <div class="training-chooser" id="trainingChooser">
         <button class="training-choice" data-training="APS">APS</button>
         <button class="training-choice" data-training="A3P">A3P</button>
         <button class="training-choice" data-training="SSIAP">SSIAP</button>
         <button class="training-choice" data-training="DIRIGEANT initial">DIRIGEANT INITIAL</button>
         <button class="training-choice" data-training="DIRIGEANT VAE">VAE DIRIGEANT</button>
         <button class="training-choice" data-training="VTC">CHAUFFEUR VTC</button>
+        </div>
       </div>
 
-      <label style="margin-bottom:14px;display:block;">
+      <label class="trainee-create-section" style="margin-bottom:14px;display:block;">
         <div class="label">Session</div>
         <select id="traineeTargetSession"></select>
       </label>
 
-      <div class="form-grid">
+      <div class="form-grid trainee-create-grid">
         <label>
           <div class="label">Nom</div>
           <input id="sessionTLastName" type="text" placeholder="Nom">
@@ -1002,31 +1118,19 @@
           <div class="label">Ville actuelle (facultatif)</div>
           <input id="sessionTCity" type="text" placeholder="Ville actuelle">
         </label>
-        <label>
-          <div class="label">Montant CPF</div>
-          <input id="sessionTCpfAmount" type="number" min="0" step="0.01" placeholder="0.00">
-        </label>
-        <label>
-          <div class="label">Montant financement personnel</div>
-          <input id="sessionTPersonalAmount" type="number" min="0" step="0.01" placeholder="0.00">
-        </label>
-        <label>
-          <div class="label">Montant autre financement</div>
-          <input id="sessionTOtherAmount" type="number" min="0" step="0.01" placeholder="0.00">
-        </label>
         <label id="sessionVtcRealTrainingDatesField" style="grid-column:1/-1;display:none;">
           <div class="label" style="font-weight:900;color:#f97316;">Dates réelles de formation VTC</div>
           <input id="sessionTVtcRealTrainingDates" type="text" placeholder="Ex : 10/05/2026 au 12/05/2026">
         </label>
-        <label style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+        <label class="trainee-create-check" style="display:flex;align-items:center;gap:10px;margin-top:8px;">
           <input id="sessionTCarteProOk" type="checkbox" style="width:18px;height:18px;">
           <div class="label" style="margin:0;">Carte professionnelle (CNAPS) déjà OK</div>
         </label>
       </div>
     </div>
 
-    <div class="modal-foot">
-      <button class="btn btn-orange" id="btnImportTraineeInfosFromSessions" type="button" style="margin-right:auto;">Importer infos</button>
+    <div class="modal-foot trainee-create-foot">
+      <button class="btn btn-orange trainee-import-btn" id="btnImportTraineeInfosFromSessions" type="button" style="margin-right:auto;">Importer infos</button>
       <input id="importTraineeInfosFromSessionsInput" type="file" accept="image/*" style="display:none;">
       <button class="btn" data-close-modal="createTraineeFromSessionsModal">Annuler</button>
       <button class="btn btn-primary" id="btnCreateTraineeFromSessions">Sauvegarder</button>
@@ -1057,22 +1161,46 @@
   </div>
 </div>
 
+
+<!-- MODALE RECHERCHE STAGIAIRE -->
+<div class="modal-backdrop trainee-search-drawer" id="traineeSearchModal" aria-hidden="true">
+  <aside class="modal trainee-search-panel" role="dialog" aria-modal="false" aria-labelledby="traineeSearchTitle">
+    <div class="modal-head trainee-search-head">
+      <div class="trainee-search-title-wrap">
+        <span class="trainee-search-kicker">Recherche rapide</span>
+        <div class="modal-title" id="traineeSearchTitle">Rechercher un stagiaire</div>
+        <div class="muted">Tape un nom ou un prénom pour ouvrir directement la fiche.</div>
+      </div>
+      <button class="icon-btn trainee-search-close" data-close-modal="traineeSearchModal" aria-label="Fermer la recherche">✕</button>
+    </div>
+    <div class="modal-body trainee-search-body">
+      <div class="trainee-search-field">
+        <span class="trainee-search-field-icon" aria-hidden="true">⌕</span>
+        <input id="traineeSearchInput" type="text" placeholder="Ex : Dupont, Sarah…" autocomplete="off">
+      </div>
+      <div id="traineeSearchResults" class="trainee-search-results">
+        <div id="traineeSearchResultsInner" class="trainee-search-results-inner"></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
 <!-- MODALE DOCS A CONTROLER -->
-<div class="modal-backdrop" id="docsToControlModal" aria-hidden="true">
-  <div class="modal modal-wide">
-    <div class="modal-head">
-      <div class="modal-title">Documents à contrôler</div>
-      <button class="icon-btn" data-close-modal="docsToControlModal">✕</button>
+<div class="modal-backdrop docs-to-control-drawer" id="docsToControlModal" aria-hidden="true">
+  <aside class="modal docs-to-control-panel" role="dialog" aria-modal="false" aria-labelledby="docsToControlTitle">
+    <div class="modal-head docs-to-control-head">
+      <div class="docs-to-control-title-wrap">
+        <span class="docs-to-control-kicker">Contrôle rapide</span>
+        <div class="modal-title" id="docsToControlTitle">Documents à contrôler</div>
+        <div class="muted">Ouvre une fiche stagiaire pour vérifier les documents en attente.</div>
+      </div>
+      <button class="icon-btn docs-to-control-close" data-close-modal="docsToControlModal" aria-label="Fermer les documents à contrôler">✕</button>
     </div>
 
-    <div class="modal-body">
-      <div id="docsToControlList" class="muted">Chargement…</div>
+    <div class="modal-body docs-to-control-body">
+      <div id="docsToControlList" class="muted docs-to-control-list">Chargement…</div>
     </div>
-
-    <div class="modal-foot">
-      <button class="btn" data-close-modal="docsToControlModal">Fermer</button>
-    </div>
-  </div>
+  </aside>
 </div>
 
 <!-- MODALE MODIFICATION DATES SESSION -->
@@ -1090,19 +1218,36 @@
           <input id="editSessionTrainingType" type="text" disabled>
         </label>
 
-        <label>
-          <div class="label">Date début</div>
+        <label id="editDateStartField">
+          <div class="label">Début formation</div>
           <input id="editDateStart" type="date">
         </label>
 
         <label id="editDateEndField">
-          <div class="label">Date fin</div>
+          <div class="label">Fin formation</div>
           <input id="editDateEnd" type="date">
         </label>
 
         <label id="editApsInPersonStartField" style="display:none;">
           <div class="label">Début présentiel APS</div>
           <input id="editApsInPersonStart" type="date">
+        </label>
+
+        <label id="editDirigeantInPersonStartField" style="display:none;">
+          <div class="label">Début présentiel</div>
+          <input id="editDirigeantInPersonStart" type="date">
+        </label>
+        <label id="editDirigeantInPersonEndField" style="display:none;">
+          <div class="label">Fin présentiel</div>
+          <input id="editDirigeantInPersonEnd" type="date">
+        </label>
+        <label id="editDirigeantRemoteStartField" style="display:none;">
+          <div class="label">Début distanciel</div>
+          <input id="editDirigeantRemoteStart" type="date">
+        </label>
+        <label id="editDirigeantRemoteEndField" style="display:none;">
+          <div class="label">Fin distanciel</div>
+          <input id="editDirigeantRemoteEnd" type="date">
         </label>
 
         <label id="editExamDateField">
@@ -1329,9 +1474,6 @@
       address: (document.getElementById("sessionTAddress")?.value || "").trim(),
       zip_code: (document.getElementById("sessionTZipCode")?.value || "").trim(),
       city: (document.getElementById("sessionTCity")?.value || "").trim(),
-      cpf_amount: (document.getElementById("sessionTCpfAmount")?.value || "").trim(),
-      personal_amount: (document.getElementById("sessionTPersonalAmount")?.value || "").trim(),
-      other_amount: (document.getElementById("sessionTOtherAmount")?.value || "").trim(),
       vtc_real_training_dates: (document.getElementById("sessionTVtcRealTrainingDates")?.value || "").trim(),
       carte_pro_ok: !!document.getElementById("sessionTCarteProOk")?.checked,
     };
@@ -1368,32 +1510,87 @@
     });
   }
 
-  async function proposeYpareoTransmissionFromSessions(result){
-    const continueUrl = result.trainee_url || `/admin/sessions/${result.session_id || ""}/trainees`;
-    const shouldTransmit = window.confirm(
-      "Le stagiaire a bien été enregistré.\n\nSouhaitez-vous transmettre ses données à YPAREO NEO maintenant ?"
-    );
-    if(!shouldTransmit || !result.ypareo_url){
+  async function proposeConventionSignatureFromSessions(result){
+    const continueUrl = result.trainee_url || result.summary_url || `/admin/sessions/${result.session_id || ""}/trainees`;
+    const continueAfterConvention = ()=>{
       window.location.href = continueUrl;
+    };
+    if(result.is_vae || result.automation_enabled === false || !result.convention_signature_url){ continueAfterConvention(); return; }
+    const financingUrl = result.convention_financing_url || "";
+    const saveConventionFinancing = async (payload)=>{
+      if(!financingUrl) return;
+      const financingResponse = await fetch(financingUrl, {
+        method: "POST",
+        headers: {"Content-Type":"application/json", "Accept":"application/json"},
+        body: JSON.stringify(payload)
+      });
+      const financingPayload = await financingResponse.json().catch(()=>({}));
+      if(!financingResponse.ok || !financingPayload.ok){ throw new Error(financingPayload.error || "Sauvegarde des montants impossible."); }
+    };
+    const previewUrl = result.convention_preview_url || "";
+    const conventionPayload = await window.openConventionTransmission?.({
+      trainingType: result.training_type || result.session_training_type || "",
+      defaults: {
+        training_price: result.training_price || "",
+        cpf_amount: result.cpf_amount || "",
+        personal_amount: result.personal_amount || "",
+        other_amount: result.other_amount || ""
+      },
+      previewUrl,
+      onPreview: async (payload)=>{
+        await saveConventionFinancing(payload);
+        if(previewUrl){ await window.openConventionPreview?.(previewUrl); }
+      }
+    });
+    if(!conventionPayload || !result.convention_signature_url){ continueAfterConvention(); return; }
+    try{
+      await saveConventionFinancing(conventionPayload);
+    }catch(error){
+      await (window.showConventionResult?.({
+        type: "error",
+        title: "Montants non sauvegardés",
+        message: error.message || "Impossible de sauvegarder les montants avant d’envoyer la convention.",
+        buttonText: "Compris"
+      }) || Promise.resolve(window.alert(error.message || "Impossible de sauvegarder les montants avant l’envoi.")));
+      continueAfterConvention();
       return;
     }
-
+    window.showConventionTransmissionProgress?.();
     try{
-      const response = await fetch(result.ypareo_url, {
-        method: "POST",
-        headers: {"Accept": "application/json"}
+      const response = await fetch(result.convention_signature_url, {
+        method: "POST", headers: {"Content-Type":"application/json", "Accept":"application/json"},
+        body: JSON.stringify(conventionPayload)
       });
       const payload = await response.json().catch(()=> ({}));
+      window.hideConventionTransmissionProgress?.();
       if(response.ok && payload.ok){
-        alert("Données transférées vers YPAREO NEO avec succès.");
-      }else{
-        alert(`Transmission vers YPAREO NEO impossible : ${payload.error || "erreur inconnue"}`);
+        await (window.showConventionResult?.({
+          type: payload.email_ok ? "success" : "warning",
+          title: payload.email_ok ? "Convention envoyée" : "Demande créée",
+          message: payload.email_ok ? "Convention envoyée au stagiaire pour signature." : "La demande de signature est créée, mais l’e-mail n’a pas pu être envoyé.",
+          buttonText: "Voir le dossier"
+        }) || Promise.resolve(window.alert(payload.email_ok ? "Convention envoyée au stagiaire pour signature." : "Demande créée, mais l’e-mail n’a pas pu être envoyé.")));
+      }
+      else{
+        await (window.showConventionResult?.({
+          type: "error",
+          title: "Envoi impossible",
+          message: `Envoi de la convention impossible : ${payload.error || "erreur inconnue"}`,
+          buttonText: "Compris"
+        }) || Promise.resolve(window.alert(`Envoi de la convention impossible : ${payload.error || "erreur inconnue"}`)));
       }
     }catch(error){
-      alert("Transmission vers YPAREO NEO impossible : le serveur ne répond pas.");
+      window.hideConventionTransmissionProgress?.();
+      await (window.showConventionResult?.({
+        type: "error",
+        title: "Serveur indisponible",
+        message: "Envoi de la convention impossible : le serveur ne répond pas.",
+        buttonText: "Compris"
+      }) || Promise.resolve(window.alert("Envoi de la convention impossible : le serveur ne répond pas.")));
     }
-    window.location.href = continueUrl;
+    continueAfterConvention();
   }
+
 
   async function createTraineeFromSessions(send_access){
     const payload = getTraineeCreatePayload();
@@ -1422,10 +1619,7 @@
       }
       closeModal("sendAccessFromSessionsModal");
       closeModal("createTraineeFromSessionsModal");
-      window.openYpareoTransmission({
-        url: res.ypareo_url,
-        continueUrl: res.trainee_url || `/admin/sessions/${sessionId}/trainees`
-      });
+      proposeConventionSignatureFromSessions(res);
     }catch(e){
       alert("Erreur réseau");
     }finally{
@@ -1691,6 +1885,33 @@
     if(inPersonEnd) inPersonEnd.textContent = periods ? formatApsPeriodDate(manualEnd && !Number.isNaN(manualEnd.getTime()) ? manualEnd : periods.presentielEnd) : "—";
   }
 
+  function setDirigeantDateFieldsVisible(prefix, visible){
+    const ids = ["DirigeantInPersonStartField", "DirigeantInPersonEndField", "DirigeantRemoteStartField", "DirigeantRemoteEndField"];
+    ids.forEach(id=>{
+      const field = document.getElementById(prefix ? `${prefix}${id}` : `${id.charAt(0).toLowerCase()}${id.slice(1)}`);
+      if(field) field.style.display = visible ? "" : "none";
+    });
+  }
+
+  function setFieldVisible(id, visible){
+    const field = document.getElementById(id);
+    if(field) field.style.display = visible ? "" : "none";
+  }
+
+  function resolveDirigeantSessionDates(prefix = ""){
+    const fieldId = suffix => prefix ? `${prefix}${suffix}` : `${suffix.charAt(0).toLowerCase()}${suffix.slice(1)}`;
+    const formationStart = (document.getElementById(prefix ? `${prefix}DateStart` : "dateStart")?.value || "").trim();
+    const formationEnd = (document.getElementById(prefix ? `${prefix}DateEnd` : "dateEnd")?.value || "").trim();
+    const remoteStart = (document.getElementById(fieldId("DirigeantRemoteStart"))?.value || "").trim();
+    const remoteEnd = (document.getElementById(fieldId("DirigeantRemoteEnd"))?.value || "").trim();
+    const inPersonStart = (document.getElementById(fieldId("DirigeantInPersonStart"))?.value || "").trim();
+    const inPersonEnd = (document.getElementById(fieldId("DirigeantInPersonEnd"))?.value || "").trim();
+    return {
+      dateStart: formationStart || remoteStart || inPersonStart,
+      dateEnd: formationEnd || inPersonEnd || remoteEnd || inPersonStart || remoteStart
+    };
+  }
+
   function toggleExamFields(){
     const type = (document.getElementById("sessionType")?.value || "").toUpperCase();
     const examDateField = document.getElementById("examDateField");
@@ -1701,14 +1922,19 @@
     const apsElearningField = document.getElementById("apsElearningField");
     const isVtc = type.includes("VTC");
     const isAps = type.startsWith("APS");
+    const isDirigeant = type.startsWith("DIRIGEANT");
 
-    if(examDateField) examDateField.style.display = isVtc ? "none" : "";
+    setDirigeantDateFieldsVisible("", isDirigeant);
+    setFieldVisible("dateStartField", true);
+    setFieldVisible("dateEndField", true);
+    if(examDateField) examDateField.style.display = isVtc || isDirigeant ? "none" : "";
     if(apsInPersonStartField) apsInPersonStartField.style.display = isAps ? "" : "none";
     if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
     if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
     if(practiceTrainingField) practiceTrainingField.style.display = isVtc ? "" : "none";
     if(apsElearningField) apsElearningField.style.display = isAps ? "" : "none";
     refreshApsPeriodPreview("");
+    setFieldVisible("dateEndField", true);
     if(!isAps) document.getElementById("apsElearningEnabled").checked = false;
   }
 
@@ -1729,28 +1955,39 @@
     const apsElearningField = document.getElementById("editApsElearningField");
     const isVtc = type.includes("VTC");
     const isAps = type.startsWith("APS");
+    const isDirigeant = type.startsWith("DIRIGEANT");
 
-    if(examDateField) examDateField.style.display = isVtc ? "none" : "";
+    setDirigeantDateFieldsVisible("edit", isDirigeant);
+    setFieldVisible("editDateStartField", true);
+    setFieldVisible("editDateEndField", true);
+    if(examDateField) examDateField.style.display = isVtc || isDirigeant ? "none" : "";
     if(apsInPersonStartField) apsInPersonStartField.style.display = isAps ? "" : "none";
     if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
     if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
     if(practiceTrainingField) practiceTrainingField.style.display = isVtc ? "" : "none";
     if(apsElearningField) apsElearningField.style.display = isAps ? "" : "none";
     refreshApsPeriodPreview("edit");
+    setFieldVisible("editDateEndField", true);
   }
 
   // create session
   document.getElementById("btnCreateSession")?.addEventListener("click", async ()=>{
     const name = (document.getElementById("sessionName").value || "").trim();
     const training_type = (document.getElementById("sessionType").value || "").trim();
-    const date_start = (document.getElementById("dateStart").value || "").trim();
-    const date_end = (document.getElementById("dateEnd").value || "").trim();
-    const exam_date = (document.getElementById("examDate").value || "").trim();
+    const isDirigeant = training_type.toUpperCase().startsWith("DIRIGEANT");
+    const dirigeantDates = isDirigeant ? resolveDirigeantSessionDates("") : null;
+    const date_start = dirigeantDates ? dirigeantDates.dateStart : (document.getElementById("dateStart").value || "").trim();
+    const date_end = dirigeantDates ? dirigeantDates.dateEnd : (document.getElementById("dateEnd").value || "").trim();
+    const exam_date = isDirigeant ? "" : (document.getElementById("examDate").value || "").trim();
     const exam_theory_date = (document.getElementById("examTheoryDate")?.value || "").trim();
     const exam_practice_date = (document.getElementById("examPracticeDate")?.value || "").trim();
     const practice_training_date = (document.getElementById("practiceTrainingDate")?.value || "").trim();
     const aps_in_person_start = (document.getElementById("apsInPersonStart")?.value || "").trim();
     const aps_elearning_enabled = !!document.getElementById("apsElearningEnabled")?.checked;
+    const dirigeant_remote_start = (document.getElementById("dirigeantRemoteStart")?.value || "").trim();
+    const dirigeant_remote_end = (document.getElementById("dirigeantRemoteEnd")?.value || "").trim();
+    const dirigeant_in_person_start = (document.getElementById("dirigeantInPersonStart")?.value || "").trim();
+    const dirigeant_in_person_end = (document.getElementById("dirigeantInPersonEnd")?.value || "").trim();
 
     if(!name || !training_type){
       alert("Nom + type de formation obligatoires");
@@ -1774,7 +2011,11 @@
           exam_practice_date,
           practice_training_date,
           aps_in_person_start,
-          aps_elearning_enabled
+          aps_elearning_enabled,
+          dirigeant_remote_start,
+          dirigeant_remote_end,
+          dirigeant_in_person_start,
+          dirigeant_in_person_end
         })
       });
 
@@ -1806,6 +2047,10 @@
       document.getElementById("editPracticeTrainingDate").value = btn.getAttribute("data-practice-training-date") || "";
       document.getElementById("editApsInPersonStart").value = btn.getAttribute("data-aps-in-person-start") || "";
       document.getElementById("editApsElearningEnabled").checked = btn.getAttribute("data-aps-elearning-enabled") === "1";
+      document.getElementById("editDirigeantRemoteStart").value = btn.getAttribute("data-dirigeant-remote-start") || "";
+      document.getElementById("editDirigeantRemoteEnd").value = btn.getAttribute("data-dirigeant-remote-end") || "";
+      document.getElementById("editDirigeantInPersonStart").value = btn.getAttribute("data-dirigeant-in-person-start") || "";
+      document.getElementById("editDirigeantInPersonEnd").value = btn.getAttribute("data-dirigeant-in-person-end") || "";
 
       refreshApsPeriodPreview("edit");
       toggleEditExamFields(trainingType);
@@ -1828,14 +2073,18 @@
         method:"POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({
-          date_start: (document.getElementById("editDateStart").value || "").trim(),
-          date_end: (document.getElementById("editDateEnd").value || "").trim(),
-          exam_date: (document.getElementById("editExamDate").value || "").trim(),
+          date_start: (document.getElementById("editSessionTrainingType").value || "").toUpperCase().startsWith("DIRIGEANT") ? resolveDirigeantSessionDates("edit").dateStart : (document.getElementById("editDateStart").value || "").trim(),
+          date_end: (document.getElementById("editSessionTrainingType").value || "").toUpperCase().startsWith("DIRIGEANT") ? resolveDirigeantSessionDates("edit").dateEnd : (document.getElementById("editDateEnd").value || "").trim(),
+          exam_date: (document.getElementById("editSessionTrainingType").value || "").toUpperCase().startsWith("DIRIGEANT") ? "" : (document.getElementById("editExamDate").value || "").trim(),
           exam_theory_date: (document.getElementById("editExamTheoryDate").value || "").trim(),
           exam_practice_date: (document.getElementById("editExamPracticeDate").value || "").trim(),
           practice_training_date: (document.getElementById("editPracticeTrainingDate").value || "").trim(),
           aps_in_person_start: (document.getElementById("editApsInPersonStart").value || "").trim(),
-          aps_elearning_enabled: !!document.getElementById("editApsElearningEnabled")?.checked
+          aps_elearning_enabled: !!document.getElementById("editApsElearningEnabled")?.checked,
+          dirigeant_remote_start: (document.getElementById("editDirigeantRemoteStart").value || "").trim(),
+          dirigeant_remote_end: (document.getElementById("editDirigeantRemoteEnd").value || "").trim(),
+          dirigeant_in_person_start: (document.getElementById("editDirigeantInPersonStart").value || "").trim(),
+          dirigeant_in_person_end: (document.getElementById("editDirigeantInPersonEnd").value || "").trim()
         })
       });
       const res = await r.json();
@@ -1869,6 +2118,15 @@
         if(!r.ok || !res.ok){
           alert("Impossible de mettre à jour le suivi des ventes pour cette session.");
           checkbox.checked = !checkbox.checked;
+          return;
+        }
+        const card = checkbox.closest(".session-card");
+        const metric = card?.querySelector("[data-sales-tracking-metric]");
+        if(metric){
+          metric.classList.toggle("is-muted", checkbox.checked);
+          metric.classList.toggle("is-ok", !checkbox.checked);
+          const value = metric.querySelector("strong");
+          if(value) value.textContent = checkbox.checked ? "exclu" : "inclus";
         }
       }catch(e){
         alert("Erreur réseau");
@@ -2053,6 +2311,11 @@
         btnView.classList.toggle("btn-attention", totalDocs > 0);
         btnView.textContent = (totalDocs === 0) ? "Aucun doc à contrôler" : `Docs à contrôler (${totalDocs})`;
       }
+      const sidebarBadge = document.getElementById("sidebarDocsToControlBadge");
+      if(sidebarBadge){
+        sidebarBadge.textContent = totalDocs;
+        sidebarBadge.style.display = totalDocs > 0 ? "inline-flex" : "none";
+      }
 
       // Texte sous badge
       if(countEl){
@@ -2123,15 +2386,32 @@
     }
   }
 
-  // bouton "Voir"
+  // boutons du menu latéral
   document.getElementById("btnOpenDocsToControl")?.addEventListener("click", async ()=>{
-    openModal("docsToControlModal");
+    const panel = document.getElementById("docsToControlModal");
+    if(panel){
+      panel.classList.add("show");
+      panel.style.display = "block";
+      panel.setAttribute("aria-hidden", "false");
+    }
     await loadDocsToControl();
+  });
+  document.getElementById("btnOpenTraineeSearch")?.addEventListener("click", ()=>{
+    const panel = document.getElementById("traineeSearchModal");
+    if(panel){
+      panel.classList.add("show");
+      panel.style.display = "block";
+      panel.setAttribute("aria-hidden", "false");
+    }
+    setTimeout(()=>document.getElementById("traineeSearchInput")?.focus(), 80);
   });
 
   // charge le compteur dès l'ouverture
   window.addEventListener("load", ()=>{
     loadDocsToControl();
+    const params = new URLSearchParams(window.location.search);
+    if(params.get("openDocsToControl") === "1") document.getElementById("btnOpenDocsToControl")?.click();
+    if(params.get("openTraineeSearch") === "1") document.getElementById("btnOpenTraineeSearch")?.click();
   });
 
   // =========================
@@ -2941,7 +3221,7 @@ Le document sera associé automatiquement si ce stagiaire est ajouté plus tard.
   }
 
 
-  document.getElementById("btnOpenCnapsImport")?.addEventListener("click", ()=>{
+  const openCnapsImportModal = () => {
     const status = document.getElementById("cnapsImportStatus");
     const results = document.getElementById("cnapsImportResults");
     const filesInput = document.getElementById("cnapsImportFiles");
@@ -2951,7 +3231,12 @@ Le document sera associé automatiquement si ce stagiaire est ajouté plus tard.
     if(filesInput) filesInput.value = "";
     if(filesText) filesText.textContent = "Aucun fichier choisi";
     openModal("cnapsImportModal");
-  });
+  };
+
+  document.getElementById("btnOpenCnapsImport")?.addEventListener("click", openCnapsImportModal);
+  if(new URLSearchParams(window.location.search).get("openCnapsImport") === "1"){
+    window.setTimeout(openCnapsImportModal, 0);
+  }
 
   document.getElementById("cnapsImportFiles")?.addEventListener("change", (e)=>{
     const filesText = document.getElementById("cnapsImportFilesText");

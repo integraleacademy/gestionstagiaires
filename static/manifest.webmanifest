@@ -1,7 +1,7 @@
 {
-  "name": "Intégrale Academy",
-  "short_name": "Intégrale",
-  "description": "Plateforme de gestion des stagiaires Intégrale Academy",
+  "name": "Intégrale Connect",
+  "short_name": "Connect",
+  "description": "Plateforme de gestion des stagiaires Intégrale Connect",
   "start_url": "/admin/sessions",
   "scope": "/",
   "display": "standalone",
@@ -9,12 +9,12 @@
   "theme_color": "#111827",
   "icons": [
     {
-      "src": "/static/logo-integrale.png",
+      "src": "/static/icone.png",
       "sizes": "512x512",
       "type": "image/png"
     },
     {
-      "src": "/static/logo-integrale.png",
+      "src": "/static/icone.png",
       "sizes": "192x192",
       "type": "image/png"
     }

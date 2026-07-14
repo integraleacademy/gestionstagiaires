@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% macro module_icon(name) -%}
+<svg class="subscription-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 4v5c0 4.4-2.8 7.8-7 9-4.2-1.2-7-4.6-7-9V7l7-4z"></path><path d="M9 12l2 2 4-4"></path></svg>
+{%- endmacro %}
+{% block content %}
+{% set modules=subscription.get('modules') or {} %}
+{% set limit=subscription.get('trainee_limit') %}
+{% set count=subscription.get('trainee_usage_count') or 0 %}
+{% set unlimited=subscription.get('trainee_unlimited') or limit is none %}
+{% set pct=(0 if unlimited or not limit else ((count*100/limit)|round(0,'floor'))) %}
+{% set enabled_modules=[] %}
+{% for key,cfg in module_pricing.items() %}{% if modules.get(key) %}{% set _ = enabled_modules.append((key,cfg)) %}{% endif %}{% endfor %}
+{% set total_modules=module_pricing|length %}
+{% set active_count=enabled_modules|length %}
+{% set modules_pct=(0 if not total_modules else ((active_count*100/total_modules)|round(0,'floor'))) %}
+<div class="subscription-page-container subscription-current-page">
+  <section class="subscription-intro subscription-current-intro">
+    <span class="subscription-kicker">MON ABONNEMENT</span>
+    <h1>{{ subscription.get('plan_name') or partner.get('subscription_plan') or 'Abonnement actuel' }}</h1>
+    <p>Retrouvez ici uniquement les informations de votre abonnement actuel : votre formule, vos stagiaires comptabilisés et les modules activés. Les factures d’abonnement seront ajoutées prochainement.</p>
+    <div class="subscription-current-actions">
+      <a class="btn btn-primary" href="{{ url_for('partner_subscription_upgrade') }}">Faites évoluer votre abonnement</a>
+    </div>
+  </section>
+
+  <section class="subscription-module-meter" aria-label="Modules activés">
+    <div class="module-meter-copy"><span>Modules activés</span><strong>{{ active_count }} / {{ total_modules }}</strong><p>{{ total_modules - active_count }} modules encore disponibles pour compléter votre espace.</p></div>
+    <div class="module-meter-visual"><div class="module-meter-ring" style="--pct:{{ modules_pct }}"><b>{{ modules_pct }}%</b></div><a class="btn btn-primary" href="{{ url_for('partner_subscription_upgrade') }}">Faites évoluer votre abonnement</a></div>
+  </section>
+
+  <section class="subscription-current-grid" aria-label="Résumé de l’abonnement">
+    <article class="subscription-current-card">
+      <span class="subscription-current-label">Formule</span>
+      <strong>{{ subscription.get('plan_name') or partner.get('subscription_plan') or 'Essentiel' }}</strong>
+      <p><span class="badge badge-{{ subscription.get('status') or 'active' }}">{{ status_labels.get(subscription.get('status') or 'active', subscription.get('status') or 'Actif') }}</span></p>
+      {% if subscription.get('started_at') or subscription.get('renews_at') %}
+      <dl class="subscription-current-dates">
+        {% if subscription.get('started_at') %}<dt>Début</dt><dd>{{ subscription.get('started_at') }}</dd>{% endif %}
+        {% if subscription.get('renews_at') %}<dt>Renouvellement</dt><dd>{{ subscription.get('renews_at') }}</dd>{% endif %}
+      </dl>
+      {% endif %}
+    </article>
+
+    <article class="subscription-current-card subscription-current-card--usage">
+      <span class="subscription-current-label">Stagiaires</span>
+      {% if unlimited %}
+        <strong>{{ count }} stagiaires créés</strong>
+        <p class="usage-message">Utilisation illimitée</p>
+      {% else %}
+        <div class="usage-numbers"><strong>{{ count }}</strong><span>/ {{ limit }} stagiaires comptabilisés</span><span>{{ [limit-count,0]|max }} restants</span></div>
+        <div class="progress"><span style="width:{{ [pct,100]|min }}%"></span></div>
+        <p class="usage-message">{% if count > limit %}Le nombre de stagiaires inclus dans votre offre a été dépassé.{% elif pct >= 90 %}Contactez-nous pour adapter votre abonnement.{% elif pct >= 70 %}Vous approchez de la limite de votre abonnement.{% else %}Votre utilisation est dans les limites de votre abonnement.{% endif %}</p>
+      {% endif %}
+    </article>
+  </section>
+
+  <section class="subscription-section">
+    <div class="section-title"><p>Modules activés</p><h2>Ce que votre abonnement inclut aujourd’hui</h2></div>
+    {% if enabled_modules %}
+      <div class="modules-grid subscription-active-modules">
+        {% for key,cfg in enabled_modules %}
+        <article class="module-card is-active">
+          <div class="module-card-top"><span class="module-icon-box">{{ module_icon(cfg.icon) }}</span><span class="module-badge included">Activé</span></div>
+          <h3>{{ cfg.label }}</h3><p>{{ cfg.description }}</p>
+          <ul>{% for feat in cfg.features[:3] %}<li><span>✓</span>{{ feat }}</li>{% endfor %}</ul>
+        </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="subscription-empty-card"><h3>Aucun module activé</h3><p>Contactez-nous pour activer les modules adaptés à votre activité.</p></div>
+    {% endif %}
+  </section>
+
+  <section class="subscription-section subscription-coming-soon">
+    <div class="section-title"><p>Prochainement</p><h2>Factures d’abonnement</h2></div>
+    <div class="subscription-empty-card"><h3>Vos factures seront bientôt disponibles ici.</h3><p>Cette rubrique accueillera l’historique de vos factures, échéances et documents d’abonnement.</p></div>
+  </section>
+</div>
+{% endblock %}

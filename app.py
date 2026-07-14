@@ -11,13 +11,17 @@ import html
 import unicodedata
 import threading
 import shutil
+import copy
 import importlib.util
 import time
 import subprocess
+import secrets
+import base64
 from typing import Dict, Any, Optional, List, Iterable, Tuple, Set
 from functools import wraps
 from zoneinfo import ZoneInfo
 from flask import session
+from werkzeug.security import check_password_hash
 from PIL import Image, ImageOps
 import tempfile
 import fcntl
@@ -37,15 +41,24 @@ from flask import Flask, request, redirect, url_for, jsonify, render_template, a
 import zipfile
 from io import BytesIO
 from docx import Document
-from pypdf import PdfReader
+from pypdf import PdfReader, PdfWriter
 import xml.etree.ElementTree as ET
-from urllib.parse import urlparse, urljoin, quote
+from xml.sax.saxutils import escape
+from urllib.parse import urlparse, urljoin, quote, urlencode
+from cryptography.fernet import Fernet
 
 
 app = Flask(__name__)
 DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(DEFAULT_MAX_UPLOAD_BYTES)))
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
+
+
+
+
+@app.get("/templates/cpf.jpg")
+def cpf_logo_asset():
+    return send_file(os.path.join(app.root_path, "templates", "cpf.jpg"), mimetype="image/jpeg")
 
 
 @app.after_request
@@ -58,6 +71,66 @@ def add_no_store_headers(response):
     return response
 
 
+@app.get("/api/qonto/oauth/ping")
+def api_qonto_oauth_ping():
+    app.logger.warning("[QONTO OAUTH PING] ROUTE CALLED")
+    return jsonify({"ok": True, "route": "qonto_oauth_ping"})
+
+
+@app.before_request
+def debug_qonto_routes_once():
+    if request.path == "/api/qonto/oauth/ping":
+        app.logger.warning("[QONTO DEBUG] url_map=%s", app.url_map)
+
+
+@app.get("/api/qonto/oauth/callback")
+def api_qonto_oauth_callback():
+    app.logger.info("[QONTO OAUTH CALLBACK] route called")
+    error = request.args.get("error")
+    error_description = request.args.get("error_description") or request.args.get("error_message") or ""
+    code = request.args.get("code") or ""
+    app.logger.info("[QONTO OAUTH CALLBACK] has_code=%s", str(bool(code)).lower())
+    if error:
+        message = error_description or error
+        app.logger.warning("[QONTO OAUTH CALLBACK] provider error status=%s message=%s", error, _sanitize_qonto_error(message))
+        return redirect("/admin/qonto?oauth=error")
+
+    if not code:
+        app.logger.warning("[QONTO OAUTH CALLBACK] missing authorization code")
+        return redirect("/admin/qonto?oauth=error")
+
+    state = request.args.get("state") or ""
+    expected_state = session.pop("qonto_oauth_state", "")
+    if expected_state and (not state or not hmac.compare_digest(state, expected_state)):
+        app.logger.warning("[QONTO OAUTH CALLBACK] state mismatch has_state=%s", bool(state))
+        return redirect("/admin/qonto?oauth=error")
+
+    try:
+        payload = _exchange_qonto_oauth_token({
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": _qonto_oauth_redirect_uri(),
+            "client_id": _qonto_oauth_client_id(),
+            "client_secret": _qonto_oauth_client_secret(),
+        })
+        app.logger.info("[QONTO OAUTH CALLBACK] token exchange status=success")
+        data = load_data()
+        app.logger.info(
+            "[QONTO OAUTH CALLBACK] token payload received has_access_token=%s has_refresh_token=%s expires_in=%s scope=%s",
+            bool(payload.get("access_token")),
+            bool(payload.get("refresh_token")),
+            payload.get("expires_in"),
+            payload.get("scope") or payload.get("scopes") or "",
+        )
+        _store_qonto_oauth_tokens(data, payload)
+        return redirect("/admin/qonto?oauth=success")
+    except QontoApiError as exc:
+        app.logger.warning("[QONTO OAUTH CALLBACK] token exchange status=%s message=%s", getattr(exc, "status_code", "unknown"), _sanitize_qonto_error(str(exc)))
+    except Exception as exc:
+        app.logger.warning("[QONTO OAUTH CALLBACK] token exchange status=unknown message=%s", _sanitize_qonto_error(str(exc)))
+    return redirect("/admin/qonto?oauth=error")
+
+
 @app.errorhandler(404)
 def page_not_found(error):
     if request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json":
@@ -66,7 +139,14 @@ def page_not_found(error):
     trainee_login_url = None
     path_parts = [part for part in request.path.split("/") if part]
     if len(path_parts) >= 2 and path_parts[0] == "espace":
-        trainee_login_url = url_for("public_trainee_login", token=path_parts[1])
+        token = path_parts[1]
+        data = load_data()
+        _, trainee = find_session_and_trainee_by_token(data, token)
+        trainee_login_url = (
+            url_for("public_trainee_login", token=token)
+            if trainee
+            else url_for("public_trainee_global_login")
+        )
 
     return render_template("404.html", trainee_login_url=trainee_login_url), 404
 
@@ -75,70 +155,20 @@ def page_not_found(error):
 # =========================
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 
-ADMIN_USER = os.environ.get("ADMIN_USER", "")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
-SECRETARY_USER = os.environ.get("SECRETARY_USER", "")
-SECRETARY_PASSWORD = os.environ.get("SECRETARY_PASSWORD", "")
-SCOTIA_USER = os.environ.get("SCOTIA_USER", "")
-SCOTIA_PASSWORD = os.environ.get("SCOTIA_PASSWORD", "")
+ADMIN_USER = os.environ.get("ADMIN_USER", "").strip()
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "").strip()
+SECRETARY_USER = os.environ.get("SECRETARY_USER", "").strip()
+SECRETARY_PASSWORD = os.environ.get("SECRETARY_PASSWORD", "").strip()
+SCOTIA_USER = os.environ.get("SCOTIA_USER", "").strip()
+SCOTIA_PASSWORD = os.environ.get("SCOTIA_PASSWORD", "").strip()
 INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL = "clement@integraleacademy.com"
 SCOTIA_COMMENT_AUTHOR_LABELS = {
-    INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL: "Intégrale Academy",
+    INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL: "Intégrale Connect",
     "scotiaformation@gmail.com": "Scotia",
 }
 SCOTIA_NOTIFICATION_EMAIL = os.environ.get("SCOTIA_NOTIFICATION_EMAIL", "scotiaformation@gmail.com").strip()
 SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "30"))
-
-SESSION_INVALIDATION_CUTOFF = os.environ.get("SESSION_INVALIDATION_CUTOFF", "2026-07-10T00:00:00Z").strip()
-SESSION_ISSUED_AT_KEY = "session_issued_at"
-
-def _parse_session_cutoff(raw_value: str) -> Optional[datetime.datetime]:
-    value = str(raw_value or "").strip()
-    if not value:
-        return None
-    if value.endswith("Z"):
-        value = value[:-1] + "+00:00"
-    try:
-        parsed = datetime.datetime.fromisoformat(value)
-    except ValueError:
-        app.logger.warning("SESSION_INVALIDATION_CUTOFF invalide: %r", raw_value)
-        return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
-    return parsed.astimezone(datetime.timezone.utc)
-
-def _session_issue_datetime() -> Optional[datetime.datetime]:
-    issued_at = str(session.get(SESSION_ISSUED_AT_KEY) or "").strip()
-    if not issued_at:
-        return None
-    if issued_at.endswith("Z"):
-        issued_at = issued_at[:-1] + "+00:00"
-    try:
-        parsed = datetime.datetime.fromisoformat(issued_at)
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
-    return parsed.astimezone(datetime.timezone.utc)
-
-def _stamp_authenticated_session() -> None:
-    session[SESSION_ISSUED_AT_KEY] = (
-        datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
-    )
-
-def _session_has_authentication_marker() -> bool:
-    return any(
-        key in session or any(str(existing_key).startswith(key) for existing_key in session.keys())
-        for key in ("admin_logged_in", "scotia_logged_in", "public_auth_")
-    )
-
-def _current_session_is_still_valid() -> bool:
-    cutoff = _parse_session_cutoff(SESSION_INVALIDATION_CUTOFF)
-    if cutoff is None:
-        return True
-    issued_at = _session_issue_datetime()
-    return bool(issued_at and issued_at >= cutoff)
-ADMIN_PUSH_TITLE = os.environ.get("ADMIN_PUSH_TITLE", "Intégrale Academy")
+ADMIN_PUSH_TITLE = os.environ.get("ADMIN_PUSH_TITLE", "Intégrale Connect")
 WEB_PUSH_VAPID_PUBLIC_KEY = os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY", "").strip()
 WEB_PUSH_VAPID_PRIVATE_KEY = os.environ.get("WEB_PUSH_VAPID_PRIVATE_KEY", "").strip()
 WEB_PUSH_VAPID_CLAIMS_SUB = os.environ.get("WEB_PUSH_VAPID_CLAIMS_SUB", "mailto:admin@example.com").strip()
@@ -178,6 +208,21 @@ QONTO_WEBHOOK_SIGNATURE_HEADERS = (
     "X-Signature",
 )
 
+QONTO_OAUTH_SCOPE = "offline_access client.read client.write client_invoice.write client_invoices.read sepa_direct_debit.read sepa_direct_debit.write webhook"
+QONTO_OAUTH_ENVIRONMENT = "production"
+QONTO_OAUTH_PRODUCTION_BASE_URL = "https://oauth.qonto.com"
+QONTO_OAUTH_REQUIRED_MESSAGE = "Connexion Qonto OAuth requise pour programmer les prélèvements SEPA."
+APP_BASE_URL = (
+    os.environ.get("APP_BASE_URL")
+    or os.environ.get("PUBLIC_BASE_URL")
+    or "https://gestionstagiaires-test-v2.onrender.com"
+).strip().rstrip("/")
+QONTO_OAUTH_REDIRECT_URI = (
+    os.environ.get("QONTO_OAUTH_REDIRECT_URI")
+    or f"{APP_BASE_URL}/api/qonto/oauth/callback"
+).strip()
+
+
 
 class QontoConfigurationError(RuntimeError):
     """Raised when Qonto credentials are missing from server environment variables."""
@@ -196,8 +241,108 @@ def _qonto_secret_key() -> str:
 
 
 def _qonto_base_url() -> str:
-    return (os.environ.get("QONTO_API_BASE_URL") or QONTO_API_BASE_URL_DEFAULT).strip().rstrip("/")
+    configured = (os.environ.get("QONTO_API_BASE_URL") or QONTO_API_BASE_URL_DEFAULT).strip().rstrip("/")
+    if "sandbox" in configured and "staging.qonto.co" in configured:
+        return QONTO_API_BASE_URL_DEFAULT
+    return configured
 
+
+def _qonto_oauth_environment() -> str:
+    return QONTO_OAUTH_ENVIRONMENT
+
+
+def _qonto_oauth_base_url() -> str:
+    configured = (os.environ.get("QONTO_OAUTH_BASE_URL") or "").strip().rstrip("/")
+    if configured and not ("sandbox" in configured and "staging.qonto.co" in configured):
+        return configured
+    return QONTO_OAUTH_PRODUCTION_BASE_URL
+
+
+def _qonto_oauth_client_id() -> str:
+    return _qonto_secret(os.environ.get("QONTO_OAUTH_CLIENT_ID") or os.environ.get("QONTO_CLIENT_ID") or "")
+
+
+def _qonto_oauth_client_secret() -> str:
+    return _qonto_secret(os.environ.get("QONTO_OAUTH_CLIENT_SECRET") or os.environ.get("QONTO_CLIENT_SECRET") or "")
+
+
+def _qonto_staging_token() -> str:
+    return _qonto_secret(os.environ.get("QONTO_STAGING_TOKEN") or os.environ.get("QONTO_OAUTH_STAGING_TOKEN") or "")
+
+
+def _qonto_oauth_redirect_uri() -> str:
+    # Qonto requires a byte-for-byte match with the redirect URI configured in
+    # the Developer Portal and reused during the token exchange.
+    return QONTO_OAUTH_REDIRECT_URI
+
+
+def _qonto_oauth_is_configured() -> bool:
+    return bool(_qonto_oauth_client_id() and _qonto_oauth_client_secret())
+
+
+def mask_qonto_iban(iban: Any) -> str:
+    normalized = re.sub(r"\s+", "", str(iban or "")).upper()
+    if not normalized:
+        return ""
+    if len(normalized) <= 8:
+        return "*" * len(normalized)
+    return f"{normalized[:4]}********{normalized[-4:]}"
+
+
+def _qonto_bank_account_summary(account: Any) -> Dict[str, Any]:
+    account = account if isinstance(account, dict) else {}
+    return {
+        "id": account.get("id") or "",
+        "iban": mask_qonto_iban(account.get("iban") or account.get("IBAN")),
+        "name": account.get("name") or "",
+        "status": account.get("status") or "",
+        "main": bool(account.get("main") or account.get("is_main")),
+    }
+
+
+def get_qonto_organization_bank_accounts() -> Dict[str, Any]:
+    data = _qonto_request("GET", "/v2/organization")
+    organization = data.get("organization") if isinstance(data.get("organization"), dict) else data
+    bank_accounts = organization.get("bank_accounts") if isinstance(organization, dict) else []
+    if not isinstance(bank_accounts, list):
+        bank_accounts = []
+    return {
+        "organization": {
+            "id": organization.get("id") or "",
+            "name": organization.get("name") or "",
+        },
+        "bank_accounts": [_qonto_bank_account_summary(account) for account in bank_accounts],
+    }
+
+
+def get_qonto_bank_account_id() -> str:
+    bank_account_id = _qonto_secret(os.environ.get("QONTO_BANK_ACCOUNT_ID") or os.environ.get("QONTO_SEPA_BANK_ACCOUNT_ID") or "")
+    if not bank_account_id:
+        raise QontoConfigurationError("QONTO_BANK_ACCOUNT_ID manquant : renseignez le compte bancaire Qonto à utiliser pour programmer les prélèvements SEPA.")
+    return bank_account_id
+
+
+def _qonto_oauth_missing_scopes(data: Optional[Dict[str, Any]] = None) -> List[str]:
+    data = data or load_data()
+    settings = _qonto_oauth_settings(data)
+    raw = settings.get("scopes") or settings.get("scope") or []
+    if isinstance(raw, str):
+        granted = {item.strip() for item in raw.replace(",", " ").split() if item.strip()}
+    elif isinstance(raw, list):
+        granted = {str(item).strip() for item in raw if str(item).strip()}
+    else:
+        granted = set()
+    required = {item for item in QONTO_OAUTH_SCOPE.split() if item != "offline_access"}
+    return sorted(required - granted)
+
+
+def _ensure_qonto_oauth_ready(data: Optional[Dict[str, Any]] = None) -> None:
+    data = data or load_data()
+    if not _qonto_oauth_connected(data):
+        raise QontoConfigurationError(QONTO_OAUTH_REQUIRED_MESSAGE)
+    missing = _qonto_oauth_missing_scopes(data)
+    if missing:
+        raise QontoConfigurationError("Connexion Qonto OAuth incomplète : reconnectez Qonto depuis Réglages > Qonto pour autoriser les scopes manquants : " + ", ".join(missing))
 
 def get_qonto_invoice_iban():
     iban = os.getenv("QONTO_IBAN", "").strip().replace(" ", "").upper()
@@ -237,10 +382,122 @@ def _qonto_is_configured() -> bool:
 
 def _sanitize_qonto_error(message: str) -> str:
     sanitized = str(message or "")
-    for secret in (_qonto_login(), _qonto_secret_key()):
+    secrets_to_mask = [_qonto_login(), _qonto_secret_key(), _qonto_oauth_client_secret()]
+    if "load_data" in globals():
+        try:
+            data = load_data()
+            secrets_to_mask.extend([_qonto_oauth_access_token(data), _qonto_oauth_refresh_token(data)])
+        except Exception:
+            pass
+    for secret in secrets_to_mask:
         if secret:
             sanitized = sanitized.replace(secret, "[masqué]")
     return sanitized
+
+
+def _qonto_oauth_settings(data: Dict[str, Any]) -> Dict[str, Any]:
+    settings = data.setdefault("qonto_oauth", {})
+    if not isinstance(settings, dict):
+        data["qonto_oauth"] = {}
+        settings = data["qonto_oauth"]
+    return settings
+
+
+def _qonto_oauth_access_token(data: Dict[str, Any]) -> str:
+    return _qonto_secret((_qonto_oauth_settings(data).get("access_token") or ""))
+
+
+def _qonto_oauth_refresh_token(data: Dict[str, Any]) -> str:
+    return _qonto_secret((_qonto_oauth_settings(data).get("refresh_token") or ""))
+
+
+def _qonto_oauth_token_environment(data: Dict[str, Any]) -> str:
+    return str(_qonto_oauth_settings(data).get("environment") or "").strip().lower()
+
+
+def _qonto_oauth_connected(data: Optional[Dict[str, Any]] = None) -> bool:
+    data = data or load_data()
+    settings = _qonto_oauth_settings(data)
+    return bool(settings.get("refresh_token")) and _qonto_oauth_token_environment(data) == _qonto_oauth_environment()
+
+
+def _qonto_oauth_has_incompatible_token(data: Optional[Dict[str, Any]] = None) -> bool:
+    data = data or load_data()
+    settings = _qonto_oauth_settings(data)
+    return bool(settings.get("refresh_token")) and _qonto_oauth_token_environment(data) not in ("", _qonto_oauth_environment())
+
+
+def _reset_qonto_oauth_tokens(data: Dict[str, Any]) -> None:
+    settings = _qonto_oauth_settings(data)
+    for key in ("access_token", "refresh_token", "expires_at", "scope", "scopes", "environment"):
+        settings.pop(key, None)
+    settings["connected"] = False
+    settings["updated_at"] = _now_iso()
+
+
+def _qonto_oauth_status_message(data: Optional[Dict[str, Any]] = None) -> str:
+    data = data or load_data()
+    if _qonto_oauth_connected(data):
+        return "OAuth Qonto : connecté production"
+    if _qonto_oauth_has_incompatible_token(data):
+        return "OAuth Qonto : connecté sandbox, incompatible avec production"
+    return "OAuth Qonto : non connecté"
+
+
+def _store_qonto_oauth_tokens(data: Dict[str, Any], token_payload: Dict[str, Any]) -> None:
+    settings = _qonto_oauth_settings(data)
+    now = int(time.time())
+    expires_in = int(token_payload.get("expires_in") or 3600)
+    refresh_token = token_payload.get("refresh_token") or settings.get("refresh_token") or ""
+    access_token = token_payload.get("access_token") or settings.get("access_token") or ""
+    settings.update({
+        "connected": bool(refresh_token),
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": token_payload.get("token_type") or "bearer",
+        "scope": token_payload.get("scope") or settings.get("scope") or "",
+        "scopes": token_payload.get("scopes") or (str(token_payload.get("scope") or settings.get("scope") or "").split()),
+        "expires_at": now + max(expires_in - 60, 60),
+        "created_at": settings.get("created_at") or _now_iso(),
+        "updated_at": _now_iso(),
+        "environment": _qonto_oauth_environment(),
+    })
+    save_data(data)
+
+
+def _exchange_qonto_oauth_token(form_data: Dict[str, str]) -> Dict[str, Any]:
+    headers = {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"}
+    response = requests.post(f"{QONTO_OAUTH_PRODUCTION_BASE_URL}/oauth2/token", headers=headers, data=form_data, timeout=20)
+    raw_body = response.text or ""
+    if not response.ok:
+        raise QontoApiError(response.status_code, _sanitize_qonto_error(raw_body), _qonto_response_trace_id(response, raw_body))
+    return response.json()
+
+
+def _qonto_oauth_bearer_token(data: Optional[Dict[str, Any]] = None) -> str:
+    data = data or load_data()
+    settings = _qonto_oauth_settings(data)
+    if not _qonto_oauth_connected(data):
+        raise QontoConfigurationError(QONTO_OAUTH_REQUIRED_MESSAGE)
+    if int(settings.get("expires_at") or 0) <= int(time.time()) + 60:
+        try:
+            payload = _exchange_qonto_oauth_token({
+                "client_id": _qonto_oauth_client_id(),
+                "client_secret": _qonto_oauth_client_secret(),
+                "grant_type": "refresh_token",
+                "refresh_token": _qonto_oauth_refresh_token(data),
+            })
+        except QontoApiError as exc:
+            error_text = f"{exc.body} {exc}".lower()
+            if exc.status_code == 400 and "invalid_grant" in error_text:
+                _reset_qonto_oauth_tokens(data)
+                save_data(data)
+                raise QontoConfigurationError(
+                    "Connexion Qonto OAuth expirée ou révoquée : reconnectez Qonto depuis Réglages > Qonto avant de programmer un prélèvement SEPA."
+                ) from exc
+            raise
+        _store_qonto_oauth_tokens(data, payload)
+    return _qonto_oauth_access_token(data)
 
 
 def test_qonto_connection() -> Tuple[bool, int]:
@@ -363,7 +620,10 @@ def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = N
     prepared = requests.Request(method.upper(), url, params=params).prepare()
     called_url = prepared.url or url
     try:
-        response = requests.request(method.upper(), url, headers=get_qonto_headers(), json=cleaned_payload if cleaned_payload is not None else None, params=params, timeout=20)
+        headers = get_qonto_headers()
+        if endpoint.startswith("/v2/sepa/direct_debit"):
+            headers = {"Authorization": f"Bearer {_qonto_oauth_bearer_token()}", "Content-Type": "application/json"}
+        response = requests.request(method.upper(), url, headers=headers, json=cleaned_payload if cleaned_payload is not None else None, params=params, timeout=20)
         raw_body = response.text or ""
         trace_id = _qonto_response_trace_id(response, raw_body)
         app.logger.info("[QONTO] api_call method=%s url=%s payload=%s status=%s trace_id=%s body=%s", method.upper(), called_url, json.dumps(cleaned_payload, ensure_ascii=False) if cleaned_payload is not None else None, response.status_code, trace_id or "", raw_body[:4000])
@@ -380,10 +640,78 @@ def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = N
         raise RuntimeError(_sanitize_qonto_error(str(exc))) from exc
 
 
+QONTO_FIELD_LABELS = {
+    "street_address": "adresse de facturation",
+    "address_line_1": "adresse de facturation",
+    "address": "adresse de facturation",
+    "city": "ville",
+    "zip_code": "code postal",
+    "postal_code": "code postal",
+    "country_code": "pays",
+    "name": "nom du client",
+    "first_name": "prénom",
+    "last_name": "nom",
+    "email": "e-mail",
+}
+
+
+def _format_qonto_missing_fields_message(message: str) -> str:
+    """Turn Qonto's technical required-field errors into an actionable French message."""
+    if not message:
+        return ""
+    missing_fields = re.findall(r"`([^`]+)`\s+must have a value", message, flags=re.IGNORECASE)
+    if not missing_fields:
+        return ""
+    labels: List[str] = []
+    seen = set()
+    for field in missing_fields:
+        label = QONTO_FIELD_LABELS.get(field, field.replace("_", " "))
+        if label not in seen:
+            labels.append(label)
+            seen.add(label)
+    if not labels:
+        return ""
+    if len(labels) == 1:
+        fields_text = labels[0]
+    else:
+        fields_text = ", ".join(labels[:-1]) + f" et {labels[-1]}"
+    return (
+        "Impossible de créer la facture Qonto : informations client incomplètes. "
+        f"Il manque : {fields_text}. "
+        "Complétez ces champs dans la fiche du stagiaire / financeur, puis relancez la création de facture."
+    )
+
+
+def _format_qonto_validation_errors(errors: List[Dict[str, str]]) -> str:
+    labels = []
+    seen = set()
+    for error in errors or []:
+        label = (error.get("label") or QONTO_FIELD_LABELS.get(error.get("field", "")) or error.get("field") or "champ").strip()
+        if label and label not in seen:
+            labels.append(label)
+            seen.add(label)
+    if not labels:
+        return "Qonto refuse la facture car les informations client sont incomplètes."
+    fields_text = labels[0] if len(labels) == 1 else ", ".join(labels[:-1]) + f" et {labels[-1]}"
+    return (
+        "Impossible de créer la facture Qonto : informations client incomplètes. "
+        f"Il manque : {fields_text}. "
+        "Complétez ces champs dans la fiche du stagiaire / financeur, puis relancez la création de facture."
+    )
+
+
 def format_qonto_error_for_front(exc: Exception) -> str:
     if isinstance(exc, QontoApiError):
-        return f"Erreur Qonto : {exc.status_code} {_extract_qonto_error_message(exc.body) or str(exc)}"
-    return f"Erreur Qonto : {_sanitize_qonto_error(str(exc))}"
+        extracted = _extract_qonto_error_message(exc.body)
+        friendly = _format_qonto_missing_fields_message(extracted or str(exc))
+        if friendly:
+            return friendly
+        return f"Erreur Qonto : {exc.status_code} {extracted or str(exc)}"
+    sanitized = _sanitize_qonto_error(str(exc))
+    friendly = _format_qonto_missing_fields_message(sanitized)
+    if friendly:
+        return friendly
+    return f"Erreur Qonto : {sanitized}"
 
 def _first_qonto_client(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     clients = data.get("clients") or data.get("client_list") or data.get("items") or []
@@ -474,6 +802,66 @@ def send_qonto_invoice(invoice_id: str, email_payload: Dict[str, Any]) -> Dict[s
 def get_qonto_invoice(invoice_id: str) -> Dict[str, Any]:
     return _qonto_request("GET", f"/v2/client_invoices/{quote(str(invoice_id), safe='')}")
 
+
+
+
+def _first_non_empty(mapping: Any, *keys: str) -> str:
+    if not isinstance(mapping, dict):
+        return ""
+    for key in keys:
+        value = mapping.get(key)
+        if value:
+            return str(value)
+    return ""
+
+def download_qonto_invoice_pdf(invoice_id: str) -> Tuple[bytes, str]:
+    if not _qonto_is_configured():
+        raise QontoConfigurationError("Qonto n’est pas connecté")
+    endpoint = f"/v2/client_invoices/{quote(str(invoice_id), safe='')}/download"
+    url = f"{_qonto_base_url()}{endpoint}"
+    response = requests.get(url, headers={**get_qonto_headers(), "Accept": "application/pdf,application/json"}, timeout=30)
+    content_type = response.headers.get("Content-Type", "")
+    raw_body = response.text if "json" in content_type.lower() or "text" in content_type.lower() else ""
+    trace_id = _qonto_response_trace_id(response, raw_body)
+    app.logger.info("[QONTO] api_call method=GET url=%s status=%s trace_id=%s content_type=%s", url, response.status_code, trace_id or "", content_type)
+    if not response.ok:
+        if response.status_code == 404:
+            raise QontoNotFoundError(response.status_code, raw_body or response.text[:500], trace_id)
+        raise QontoApiError(response.status_code, raw_body or response.text[:500], trace_id)
+    if response.content.startswith(b"%PDF") or "application/pdf" in content_type.lower():
+        return response.content, "application/pdf"
+    try:
+        payload = response.json()
+    except Exception as exc:
+        raise RuntimeError("La réponse Qonto ne contient pas de PDF exploitable") from exc
+    invoice = _qonto_invoice_payload(payload)
+    pdf_url = _first_non_empty(invoice, "public_url", "url", "file_url", "pdf_url", "download_url") or _first_non_empty(payload, "public_url", "url", "file_url", "pdf_url", "download_url")
+    if not pdf_url:
+        raise RuntimeError("PDF Qonto non exposé par l’API")
+    pdf_response = requests.get(str(pdf_url), timeout=30)
+    if not pdf_response.ok:
+        raise RuntimeError(f"Téléchargement PDF Qonto impossible ({pdf_response.status_code})")
+    return pdf_response.content, pdf_response.headers.get("Content-Type") or "application/pdf"
+
+
+def list_qonto_direct_debit_mandates(client_id: str) -> Dict[str, Any]:
+    return _qonto_request("GET", "/v2/sepa/direct_debit_mandates", params={"client_id": client_id})
+
+def create_qonto_direct_debit_mandate(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return _qonto_request("POST", "/v2/sepa/direct_debit_mandates", {"direct_debit_mandate": payload})
+
+def create_qonto_direct_debit_subscription(payload: Dict[str, Any]) -> Dict[str, Any]:
+    return _qonto_request("POST", "/v2/sepa/direct_debit_subscriptions", {"direct_debit_subscription": payload})
+
+def list_qonto_direct_debit_collections(subscription_id: str = "") -> Dict[str, Any]:
+    params = {"direct_debit_subscription_id": subscription_id} if subscription_id else None
+    return _qonto_request("GET", "/v2/sepa/direct_debit_collections", params=params)
+
+def _qonto_collection_items(response: Dict[str, Any]) -> List[Dict[str, Any]]:
+    for key in ("direct_debit_collections", "collections", "items"):
+        if isinstance(response.get(key), list):
+            return response.get(key)
+    return []
 
 def _qonto_webhook_secret() -> str:
     return _qonto_secret(os.environ.get("QONTO_WEBHOOK_SECRET") or os.environ.get("QONTO_WEBHOOK_SIGNATURE_SECRET") or "")
@@ -616,7 +1004,7 @@ def _ypareo_endpoint(environment_name: str, default: str) -> str:
 
 
 def ypareo_headers(access_token: str) -> Dict[str, str]:
-    """Build headers for an authenticated YPAREO NEO API request."""
+    """Build headers for an authenticated API request."""
     return {
         "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json",
@@ -1278,6 +1666,24 @@ def public_dirigeant_initial_attestation_template():
         download_name="attestation-honneur-examen-desp.pdf",
     )
 
+
+@app.get("/espace/modeles/certificat-medical-ssiap.pdf")
+def public_ssiap_medical_certificate_template():
+    app_root = os.path.dirname(os.path.abspath(__file__))
+    template_path = os.path.join(app_root, "templates_word", "certificat.pdf")
+    if not os.path.exists(template_path):
+        # Fallback vers le modèle déjà versionné pour éviter d'ajouter un PDF
+        # binaire supplémentaire aux demandes d'extraction de code.
+        template_path = os.path.join(app_root, "static", "certificat.pdf")
+    if not os.path.exists(template_path):
+        abort(404)
+    return send_file(
+        template_path,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name="certificat-medical-ssiap.pdf",
+    )
+
 app.config.update(
     SESSION_COOKIE_NAME="integrale_admin",
     SESSION_COOKIE_HTTPONLY=True,
@@ -1286,10 +1692,30 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=datetime.timedelta(days=SESSION_DAYS),
 )
 
+def _request_expects_json() -> bool:
+    return request.path.startswith("/api/") or request.accept_mimetypes.best == "application/json"
+
+
+def _static_credentials_match(username: str, password: str, expected_username: str, expected_password: str) -> bool:
+    """Validate Render/static credentials while tolerating common copy/paste issues.
+
+    Partner accounts are stored in the JSON data file as password hashes and
+    intentionally keep password spaces significant.  This helper is only for
+    environment-configured admin/secretary/SCOTIA credentials, where accidental
+    leading/trailing spaces in Render variables should not block login.
+    """
+    expected_username = (expected_username or "").strip()
+    expected_password = (expected_password or "").strip()
+    if not expected_username or not expected_password:
+        return False
+    return (username or "").strip().lower() == expected_username.lower() and (password or "").strip() == expected_password
+
 def admin_login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if not session.get("admin_logged_in"):
+            if _request_expects_json():
+                return jsonify({"ok": False, "error": "Session administrateur expirée. Reconnectez-vous."}), 401
             return redirect(url_for("admin_login", next=request.path))
         return view(*args, **kwargs)
     return wrapped
@@ -1298,9 +1724,33 @@ def admin_write_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if session.get("admin_role") == "viewer":
+            if _request_expects_json():
+                return jsonify({"ok": False, "error": "Droits insuffisants pour modifier ces données."}), 403
             abort(403)
         return view(*args, **kwargs)
     return wrapped
+
+def _is_integrale_scotia_admin_session() -> bool:
+    """Return True when the active admin session belongs to Clément.
+
+    Older persistent admin sessions did not store the username, so we also trust
+    the configured admin account when it is Clément's account.
+    """
+    if not session.get("admin_logged_in") or session.get("admin_role") not in {"admin", "super_admin"}:
+        return False
+
+    admin_username = (session.get("admin_username") or "").strip().lower()
+    if admin_username:
+        return admin_username == INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL
+
+    return (ADMIN_USER or "").strip().lower() == INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL
+
+
+def _enable_scotia_session_for_integrale_admin() -> None:
+    session["scotia_logged_in"] = True
+    session["scotia_username"] = INTEGRALE_SCOTIA_AUTO_LOGIN_EMAIL
+    session.permanent = True
+
 
 def scotia_login_required(view):
     @wraps(view)
@@ -1340,6 +1790,20 @@ def protect_sensitive_routes():
         if request.method not in {"GET", "HEAD", "OPTIONS"} and session.get("admin_role") == "viewer":
             return jsonify({"ok": False, "error": "read_only"}), 403
 
+    if session.get("admin_logged_in") and (session.get("admin_role") == "partner_admin" or session.get("assist_partner_id")):
+        endpoint = request.endpoint or ""
+        if endpoint in PARTNER_SPACE_FORBIDDEN_ENDPOINTS:
+            if path.startswith("/api/") or request.accept_mimetypes.best == "application/json":
+                return jsonify({"ok": False, "error": "partner_space_forbidden"}), 403
+            flash("Cette fonctionnalité n’est pas disponible dans l’espace partenaire.", "error")
+            return redirect(url_for("admin_sessions"))
+        for module_key, endpoints in PARTNER_MODULE_ROUTE_ENDPOINTS.items():
+            if endpoint in endpoints and not partner_has_module(module_key):
+                if path.startswith("/api/") or request.accept_mimetypes.best == "application/json":
+                    return jsonify({"ok": False, "error": "module_locked", "module": module_key}), 403
+                flash("Ce module est verrouillé pour ce partenaire. Activez-le dans la fiche partenaire.", "error")
+                return redirect(url_for("admin_sessions"))
+
 @app.context_processor
 def inject_read_only():
     admin_notifications = {"notifications": [], "unresolved_total": 0}
@@ -1349,52 +1813,190 @@ def inject_read_only():
         except Exception:
             admin_notifications = {"notifications": [], "unresolved_total": 0}
     mail_sent_notice = bool(session.pop("_mail_sent_notice", False))
+    current_partner_name = ""
+    assisted_partner_name = ""
+    partner = None
+    partner_sidebar = {}
+    if session.get("admin_logged_in"):
+        try:
+            ctx_data = load_data()
+            active_partner_id = _current_partner_id()
+            partner = next((p for p in ctx_data.get("partners", []) if isinstance(p, dict) and p.get("id") == active_partner_id), None)
+            current_partner_name = (partner or {}).get("name") or ""
+            if partner:
+                normalize_partner_subscription(ctx_data, partner)
+                sub = partner.get("subscription") or {}
+                notification_total = admin_notifications.get("unresolved_total", 0) if _admin_can_view_notifications() else 0
+                enabled_modules = _partner_enabled_modules(partner)
+                partner_sidebar = {
+                    "partner": partner,
+                    "logo_url": _partner_logo_url(partner),
+                    "user_name": session.get("admin_username") or session.get("admin_email") or "",
+                    "subscription": sub,
+                    "enabled_modules": enabled_modules,
+                    "notification_total": notification_total,
+                    "is_active": (partner.get("status") or "active") == "active",
+                    "show_users": bool(partner.get("max_users") or ctx_data.get("users")),
+                }
+            if session.get("assist_partner_id"):
+                assisted_partner_name = current_partner_name
+        except Exception:
+            pass
     return {
         "is_admin_logged_in": bool(session.get("admin_logged_in")),
+        "is_super_admin": _is_super_admin_session(),
+        "current_partner_name": current_partner_name,
+        "assisted_partner_name": assisted_partner_name,
+        "is_partner_space": session.get("admin_role") == "partner_admin" or bool(session.get("assist_partner_id")),
         "is_read_only": session.get("admin_role") == "viewer",
         "admin_notifications": admin_notifications["notifications"],
         "admin_unresolved_total": admin_notifications["unresolved_total"],
         "admin_can_access_notifications": _admin_can_view_notifications(),
         "admin_can_manage_notifications": _admin_can_manage_notifications(),
         "global_mail_sent_notice": mail_sent_notice,
+        "current_partner_logo_url": _partner_logo_url(partner) if current_partner_name else "",
+        "public_base_url": PUBLIC_BASE_URL.rstrip("/"),
+        "partner_modules": PARTNER_MODULES,
+        "partner_has_module": partner_has_module,
+        "partner_allowed_formation_types": _partner_allowed_formation_types(),
+        "partner_sidebar": partner_sidebar,
     }
 
 @app.get("/admin/login")
 def admin_login():
     next_url = request.args.get("next") or url_for("admin_sessions")
-    error_message = None
-    if request.args.get("error") == "invalid_credentials":
-        error_message = "Identifiant ou mot de passe incorrect."
-    return render_template("admin_login.html", next_url=next_url, error_message=error_message)
+    error_code = (request.args.get("error") or "").strip()
+    messages = {
+        "invalid": "Identifiant ou mot de passe incorrect.",
+        "inactive": "Ce compte partenaire est désactivé.",
+        "not_activated": "Ce compte partenaire n’est pas encore activé. Utilisez le lien d’invitation pour définir le mot de passe.",
+        "partner_status": "L’espace partenaire est suspendu ou archivé. Contactez l’administrateur.",
+        "partner_suspended": "L’espace partenaire est suspendu. Contactez l’administrateur.",
+        "partner_archived": "L’espace partenaire est archivé. Contactez l’administrateur.",
+    }
+    error_html = ""
+    if error_code in messages:
+        error_html = f'<p role="alert" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:10px;padding:10px;font-weight:700">{html.escape(messages[error_code])}</p>'
+    return f"""
+    <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Connexion admin</title></head>
+    <body style="font-family:Arial,sans-serif;max-width:420px;margin:60px auto;padding:20px">
+      <h2>Connexion</h2>
+      <p style="color:#6b7280;font-size:13px;margin-top:-4px">
+        Un compte de consultation peut être configuré pour un accès en lecture seule.<br>
+        Les utilisateurs partenaires doivent se connecter avec l’adresse e-mail utilisée lors de l’activation de leur compte.
+      </p>
+      {error_html}
+      <form method="post" action="/admin/login">
+        <input type="hidden" name="next" value="{html.escape(next_url, quote=True)}">
+        <div style="margin:10px 0">
+          <label>Adresse e-mail ou identifiant</label><br>
+          <input name="username" autocomplete="username" style="width:100%;padding:10px">
+        </div>
+        <div style="margin:10px 0">
+          <label>Mot de passe</label><br>
+          <input name="password" type="password" autocomplete="current-password" style="width:100%;padding:10px">
+        </div>
+        <button type="submit" style="padding:10px 14px">Se connecter</button>
+      </form>
+    </body></html>
+    """
 
 @app.post("/admin/login")
 def admin_login_post():
     username = (request.form.get("username") or "").strip()
-    password = (request.form.get("password") or "").strip()
+    username_normalized = username.lower()
+    password = request.form.get("password") or ""
     next_url = request.form.get("next") or url_for("admin_sessions")
 
-    # sécurité minimale : si pas configuré, on refuse
-    if not (ADMIN_USER and ADMIN_PASSWORD) and not (SECRETARY_USER and SECRETARY_PASSWORD):
+    data = load_data()
+    _log_partner_auth_event("login_attempt", data, username_normalized)
+
+    # sécurité minimale : si aucun accès plateforme ni partenaire n’est configuré, on refuse.
+    if not (ADMIN_USER and ADMIN_PASSWORD) and not (SECRETARY_USER and SECRETARY_PASSWORD) and not data.get("users"):
+        _log_partner_auth_event("data_file_inaccessible_or_no_auth_config", data, username_normalized)
         abort(500, "ADMIN_USER/ADMIN_PASSWORD non configurés")
 
-    if username == ADMIN_USER and password == ADMIN_PASSWORD:
+    # Les accès plateforme (admin / consultation) sont prioritaires sur les
+    # comptes partenaires. Un administrateur peut partager la même adresse
+    # e-mail qu'un utilisateur partenaire ; dans ce cas ses identifiants
+    # statiques doivent toujours ouvrir l'espace d'administration complet.
+    if _static_credentials_match(username_normalized, password, ADMIN_USER, ADMIN_PASSWORD):
+        session.clear()
+        _append_activity_log(data, "login", "user", username_normalized, INTEGRALE_PARTNER_ID)
+        save_data(data)
         session["admin_logged_in"] = True
         session["admin_role"] = "admin"
-        session["admin_username"] = username.lower()
-        _stamp_authenticated_session()
-        session.permanent = False
+        session["platform_role"] = "super_admin"
+        session["admin_username"] = username_normalized
+        session["partner_id"] = INTEGRALE_PARTNER_ID
+        session.permanent = True
         return redirect(next_url)
 
-    if SECRETARY_USER and SECRETARY_PASSWORD:
-        if username == SECRETARY_USER and password == SECRETARY_PASSWORD:
-            session["admin_logged_in"] = True
-            session["admin_role"] = "viewer"
-            session["admin_username"] = username.lower()
-            _stamp_authenticated_session()
-            session.permanent = False
-            return redirect(next_url)
+    if SECRETARY_USER and SECRETARY_PASSWORD and _static_credentials_match(username_normalized, password, SECRETARY_USER, SECRETARY_PASSWORD):
+        session.clear()
+        session["admin_logged_in"] = True
+        session["admin_role"] = "viewer"
+        session["admin_username"] = username_normalized
+        session["partner_id"] = INTEGRALE_PARTNER_ID
+        session.permanent = True
+        return redirect(next_url)
 
-    return redirect(url_for("admin_login", next=next_url, error="invalid_credentials"))
+    user = _find_user_by_email(data, username_normalized)
+    if user:
+        partner = next((p for p in data.get("partners", []) if isinstance(p, dict) and p.get("id") == user.get("partner_id")), None)
+        if not user.get("active", True):
+            _log_partner_auth_event("utilisateur désactivé", data, username_normalized, user, partner)
+            _append_activity_log(data, "login_blocked_inactive", "user", user.get("id"), user.get("partner_id") or "")
+            save_data(data)
+            return redirect(url_for("admin_login", next=next_url, error="inactive"))
+        if not user.get("password_hash"):
+            _log_partner_auth_event("aucun mot de passe défini", data, username_normalized, user, partner)
+            _append_activity_log(data, "login_blocked_not_activated", "user", user.get("id"), user.get("partner_id") or "")
+            save_data(data)
+            return redirect(url_for("admin_login", next=next_url, error="not_activated"))
+        password_ok = _verify_password(password, user.get("password_hash") or "")
+        if not password_ok:
+            _log_partner_auth_event("mauvais mot de passe", data, username_normalized, user, partner, password_ok=False)
+            _append_activity_log(data, "login_failed", "user", user.get("id"), user.get("partner_id") or "")
+            save_data(data)
+            return redirect(url_for("admin_login", next=next_url, error="invalid"))
+        if not partner:
+            _log_partner_auth_event("partenaire introuvable", data, username_normalized, user, None, password_ok=True)
+            _append_activity_log(data, "login_blocked_partner_missing", "user", user.get("id"), user.get("partner_id") or "")
+            save_data(data)
+            return redirect(url_for("admin_login", next=next_url, error="invalid"))
+        if partner.get("status") == "suspended":
+            _log_partner_auth_event("partenaire suspendu", data, username_normalized, user, partner, password_ok=True)
+            _append_activity_log(data, "login_blocked_partner_status", "user", user.get("id"), partner.get("id"), {"status": partner.get("status")})
+            save_data(data)
+            return redirect(url_for("admin_login", next=next_url, error="partner_suspended"))
+        if partner.get("status") == "archived":
+            _log_partner_auth_event("partenaire archivé", data, username_normalized, user, partner, password_ok=True)
+            _append_activity_log(data, "login_blocked_partner_status", "user", user.get("id"), partner.get("id"), {"status": partner.get("status")})
+            save_data(data)
+            return redirect(url_for("admin_login", next=next_url, error="partner_archived"))
+        if partner.get("status") not in {"active", "trial"}:
+            _log_partner_auth_event("statut partenaire refusé", data, username_normalized, user, partner, password_ok=True)
+            return redirect(url_for("admin_login", next=next_url, error="invalid"))
+
+        _log_partner_auth_event("connexion partenaire réussie", data, username_normalized, user, partner, password_ok=True)
+        session.clear()
+        session["admin_logged_in"] = True
+        session["admin_username"] = user.get("email") or username_normalized
+        session["user_id"] = user.get("id")
+        session["admin_user_id"] = user.get("id")
+        session["admin_role"] = user.get("role") or "partner_admin"
+        session["partner_id"] = user.get("partner_id")
+        session.permanent = True
+        user["last_login_at"] = _now_iso()
+        _append_activity_log(data, "login", "user", user.get("id"), partner.get("id"))
+        save_data(data)
+        return redirect(next_url)
+
+    _log_partner_auth_event("utilisateur partenaire introuvable", data, username_normalized)
+
+    return redirect(url_for("admin_login", next=next_url, error="invalid"))
 
 
 @app.get("/scotia/login")
@@ -1422,8 +2024,8 @@ def scotia_login_post():
     password = (request.form.get("password") or "").strip()
     next_url = request.form.get("next") or url_for("scotia_dashboard")
 
-    admin_ok = bool(ADMIN_USER and ADMIN_PASSWORD and username == ADMIN_USER and password == ADMIN_PASSWORD)
-    scotia_ok = bool(SCOTIA_USER and SCOTIA_PASSWORD and username == SCOTIA_USER and password == SCOTIA_PASSWORD)
+    admin_ok = _static_credentials_match(username, password, ADMIN_USER, ADMIN_PASSWORD)
+    scotia_ok = _static_credentials_match(username, password, SCOTIA_USER, SCOTIA_PASSWORD)
 
     if not (SCOTIA_USER and SCOTIA_PASSWORD) and not (ADMIN_USER and ADMIN_PASSWORD):
         abort(500, "SCOTIA_USER/SCOTIA_PASSWORD ou ADMIN_USER/ADMIN_PASSWORD non configurés")
@@ -1469,12 +2071,16 @@ def fr_datetime(value: str) -> str:
     normalized = s.replace("Z", "+00:00")
     try:
         dt = datetime.datetime.fromisoformat(normalized)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
+        dt = dt.astimezone(ZoneInfo("Europe/Paris"))
         return dt.strftime("%d/%m/%Y à %Hh%M")
     except Exception:
         pass
     for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
         try:
             dt = datetime.datetime.strptime(s[:26], fmt)
+            dt = dt.replace(tzinfo=datetime.timezone.utc).astimezone(ZoneInfo("Europe/Paris"))
             return dt.strftime("%d/%m/%Y à %Hh%M")
         except Exception:
             pass
@@ -1659,6 +2265,377 @@ _storage_startup_logged = False
 
 UPLOADS_DIR = os.path.join(PERSIST_DIR, "uploads")
 os.makedirs(UPLOADS_DIR, exist_ok=True)
+
+PARTNER_STORAGE_CATEGORIES = {"stagiaires", "contrats", "conventions", "signatures", "factures", "logos", "documents"}
+INTEGRALE_PARTNER_ID = "11111111-1111-4111-8111-111111111111"
+PARTNER_STATUSES = {"active", "trial", "suspended", "archived"}
+PLATFORM_ROLES = {"super_admin", "partner_admin", "admin", "viewer"}
+
+
+def get_partner_storage_path(partner_id: str, category: str) -> str:
+    """Return a safe partner-scoped storage path on the persistent disk."""
+    partner_id = str(partner_id or "").strip()
+    category = str(category or "").strip().lower()
+    if not re.fullmatch(r"[A-Za-z0-9_-]{8,64}", partner_id):
+        raise ValueError("partner_id invalide")
+    if category not in PARTNER_STORAGE_CATEGORIES:
+        raise ValueError("catégorie de stockage invalide")
+    root = os.path.realpath(os.path.join(PERSIST_DIR, "partners", partner_id))
+    target = os.path.realpath(os.path.join(root, category))
+    if not target.startswith(root + os.sep):
+        raise ValueError("chemin partenaire invalide")
+    os.makedirs(target, exist_ok=True)
+    return target
+
+
+def _current_session_role() -> str:
+    return (session.get("admin_role") or "").strip() if has_request_context() else ""
+
+
+def _is_super_admin_session() -> bool:
+    return bool(session.get("admin_logged_in")) and _current_session_role() in {"super_admin", "admin"}
+
+
+def _current_partner_id() -> str:
+    if not has_request_context():
+        return ""
+    if session.get("assist_partner_id") and _is_super_admin_session():
+        return str(session.get("assist_partner_id") or "")
+    return str(session.get("partner_id") or "")
+
+
+def _is_partner_scoped_session() -> bool:
+    if not has_request_context() or not session.get("admin_logged_in"):
+        return False
+    return bool(_current_partner_id()) and not _is_super_admin_session()
+
+
+def _integrale_partner() -> Dict[str, Any]:
+    now = _now_iso() if "_now_iso" in globals() else datetime.datetime.utcnow().isoformat() + "Z"
+    return {
+        "id": INTEGRALE_PARTNER_ID,
+        "name": "Intégrale Connect",
+        "legal_name": "Intégrale Sécurité Formations",
+        "siret": "",
+        "address": "54 chemin du Carreou",
+        "postal_code": "83480",
+        "city": "Puget-sur-Argens",
+        "phone": "04 22 47 07 68",
+        "email": "integralesecuriteformations@gmail.com",
+        "contact_first_name": "",
+        "contact_last_name": "",
+        "logo_path": "",
+        "status": "active",
+        "subscription_plan": "legacy",
+        "max_users": 10,
+        "storage_limit": 0,
+        "trial_ends_at": "",
+        "subscription_started_at": now,
+        "subscription_ends_at": "",
+        "internal_notes": "Partenaire créé automatiquement pour rattacher les données historiques.",
+        "created_at": now,
+        "updated_at": now,
+    }
+
+
+def _append_activity_log(data: Dict[str, Any], action: str, resource_type: str = "", resource_id: str = "", partner_id: str = "", details: Optional[Dict[str, Any]] = None) -> None:
+    logs = data.setdefault("activity_logs", [])
+    safe_details = dict(details or {})
+    for secret_key in ("token", "password", "secret"):
+        safe_details.pop(secret_key, None)
+    logs.append({
+        "id": str(uuid.uuid4()),
+        "user": (session.get("admin_username") if has_request_context() else "system") or "system",
+        "partner_id": partner_id or _current_partner_id() or "",
+        "action": action,
+        "resource_type": resource_type,
+        "resource_id": str(resource_id or ""),
+        "created_at": _now_iso() if "_now_iso" in globals() else datetime.datetime.utcnow().isoformat() + "Z",
+        "ip": (request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip() if has_request_context() else ""),
+        "details": safe_details,
+    })
+    del logs[:-1000]
+
+
+def _ensure_multi_partner_payload(data: Dict[str, Any]) -> bool:
+    changed = False
+    if not isinstance(data.get("partners"), list):
+        data["partners"] = []
+        changed = True
+    if not any(p.get("id") == INTEGRALE_PARTNER_ID for p in data["partners"] if isinstance(p, dict)):
+        data["partners"].append(_integrale_partner())
+        changed = True
+    if not isinstance(data.get("users"), list):
+        data["users"] = []
+        changed = True
+    if not isinstance(data.get("invitations"), list):
+        data["invitations"] = []
+        changed = True
+    if not isinstance(data.get("activity_logs"), list):
+        data["activity_logs"] = []
+        changed = True
+    for s in data.get("sessions") or []:
+        if isinstance(s, dict) and not s.get("partner_id"):
+            s["partner_id"] = INTEGRALE_PARTNER_ID; changed = True
+        for t in _session_trainees_list(s) if isinstance(s, dict) else []:
+            if isinstance(t, dict) and not t.get("partner_id"):
+                t["partner_id"] = s.get("partner_id") or INTEGRALE_PARTNER_ID; changed = True
+    for key in ("positioning_tests", "notifications_edof", "notifications_financement_refuse", "notifications_prelevements", "notifications_prelevement_non_valides", "notifications_phone_relances", "notifications_vae_relances", "notifications_cnaps_pre_relances", "notifications_test_fr", "notifications_convention_unsigned", "notifications_vtc_books", "notifications_admin"):
+        for item in data.get(key) or []:
+            if isinstance(item, dict) and not item.get("partner_id"):
+                item["partner_id"] = INTEGRALE_PARTNER_ID; changed = True
+    return changed
+
+
+def _filter_data_for_partner(data: Dict[str, Any], partner_id: str) -> Dict[str, Any]:
+    scoped = copy.deepcopy(data)
+    scoped["sessions"] = [s for s in scoped.get("sessions", []) if not isinstance(s, dict) or s.get("partner_id") == partner_id]
+    scoped["users"] = [u for u in scoped.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id]
+    for key in ("positioning_tests", "notifications_edof", "notifications_financement_refuse", "notifications_prelevements", "notifications_prelevement_non_valides", "notifications_phone_relances", "notifications_vae_relances", "notifications_cnaps_pre_relances", "notifications_test_fr", "notifications_convention_unsigned", "notifications_vtc_books", "notifications_admin"):
+        if isinstance(scoped.get(key), list):
+            scoped[key] = [x for x in scoped[key] if not isinstance(x, dict) or x.get("partner_id") == partner_id]
+    return scoped
+
+
+def _merge_partner_scoped_payload(scoped: Dict[str, Any], partner_id: str) -> Dict[str, Any]:
+    current = _load_valid_json_payload(DATA_FILE) or _empty_data_payload()
+    _ensure_multi_partner_payload(current)
+    current["sessions"] = [s for s in current.get("sessions", []) if not isinstance(s, dict) or s.get("partner_id") != partner_id] + [s for s in scoped.get("sessions", []) if isinstance(s, dict)]
+    if isinstance(scoped.get("partners"), list):
+        scoped_partner = next((p for p in scoped.get("partners", []) if isinstance(p, dict) and p.get("id") == partner_id), None)
+        if scoped_partner:
+            current["partners"] = [p for p in current.get("partners", []) if not isinstance(p, dict) or p.get("id") != partner_id] + [scoped_partner]
+    for key in ("users", "positioning_tests", "notifications_edof", "notifications_financement_refuse", "notifications_prelevements", "notifications_prelevement_non_valides", "notifications_phone_relances", "notifications_vae_relances", "notifications_cnaps_pre_relances", "notifications_test_fr", "notifications_convention_unsigned", "notifications_vtc_books", "notifications_admin"):
+        if isinstance(scoped.get(key), list):
+            current[key] = [x for x in current.get(key, []) if not isinstance(x, dict) or x.get("partner_id") != partner_id] + [x for x in scoped.get(key, []) if isinstance(x, dict)]
+    return current
+
+
+
+
+def _data_file_diagnostics() -> Dict[str, Any]:
+    path = os.path.abspath(DATA_FILE)
+    return {
+        "data_file": path,
+        "persist_dir": os.path.abspath(PERSIST_DIR),
+        "exists": os.path.exists(DATA_FILE),
+    }
+
+
+def _log_partner_auth_event(reason: str, data: Optional[Dict[str, Any]] = None, username: str = "", user: Optional[Dict[str, Any]] = None, partner: Optional[Dict[str, Any]] = None, password_ok: Optional[bool] = None) -> None:
+    users = data.get("users", []) if isinstance(data, dict) else []
+    wanted = (username or "").strip().lower()
+    found = bool(user)
+    app.logger.info(
+        "partner_auth reason=%s data_file=%s persist_dir=%s exists=%s partner_users=%s searched_user_present=%s role=%s user_active=%s password_hash_present=%s password_check=%s partner_id_present=%s partner_status=%s",
+        reason,
+        os.path.abspath(DATA_FILE),
+        os.path.abspath(PERSIST_DIR),
+        os.path.exists(DATA_FILE),
+        sum(1 for u in users if isinstance(u, dict) and u.get("role") == "partner_admin"),
+        found if wanted else False,
+        (user or {}).get("role") or "",
+        bool((user or {}).get("active", True)) if user else "",
+        bool((user or {}).get("password_hash")) if user else False,
+        "success" if password_ok is True else ("failure" if password_ok is False else "not_checked"),
+        bool((user or {}).get("partner_id")) if user else False,
+        (partner or {}).get("status") or "",
+    )
+
+def _find_user_by_email(data: Dict[str, Any], email: str) -> Optional[Dict[str, Any]]:
+    wanted = (email or "").strip().lower()
+    return next((u for u in data.get("users", []) if isinstance(u, dict) and (u.get("email") or "").strip().lower() == wanted), None)
+
+
+def _hash_token(raw_token: str) -> str:
+    return hashlib.sha256((raw_token or "").encode("utf-8")).hexdigest()
+
+
+def _password_is_valid(password: str) -> bool:
+    return bool(password) and len(password) >= 10 and any(c.isalpha() for c in password) and any(c.isdigit() for c in password)
+
+
+def _hash_password(password: str) -> str:
+    salt = secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 260000).hex()
+    return f"pbkdf2_sha256$260000${salt}${digest}"
+
+
+def _verify_password(password: str, stored: str) -> bool:
+    stored = stored or ""
+    try:
+        algo, rounds, salt, digest = stored.split("$", 3)
+        if algo == "pbkdf2_sha256":
+            candidate = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), int(rounds)).hex()
+            return hmac.compare_digest(candidate, digest)
+    except Exception:
+        pass
+
+    # Compatibilité avec les hashs Werkzeug/Flask éventuellement créés par
+    # d’anciennes versions ou par un outil d’administration externe.
+    try:
+        return check_password_hash(stored, password)
+    except Exception:
+        return False
+
+
+
+
+def _invitation_fernet() -> Fernet:
+    digest = hashlib.sha256((app.secret_key or "dev-secret-change-me").encode()).digest()
+    return Fernet(base64.urlsafe_b64encode(digest))
+
+
+def _encrypt_invitation_token(raw_token: str) -> str:
+    return _invitation_fernet().encrypt((raw_token or "").encode()).decode()
+
+
+def _decrypt_invitation_token(value: str) -> str:
+    if not value:
+        return ""
+    try:
+        return _invitation_fernet().decrypt(value.encode()).decode()
+    except Exception:
+        return ""
+
+def _create_invitation(data: Dict[str, Any], user_id: str, partner_id: str, hours: int = 48) -> str:
+    raw = secrets.token_urlsafe(48)
+    data.setdefault("invitations", []).append({
+        "id": str(uuid.uuid4()), "user_id": user_id, "partner_id": partner_id,
+        "token_hash": _hash_token(raw), "token_encrypted": _encrypt_invitation_token(raw), "created_at": _now_iso(),
+        "expires_at": (datetime.datetime.utcnow() + datetime.timedelta(hours=hours)).isoformat() + "Z",
+        "used_at": "", "cancelled_at": "", "last_send_status": "", "last_send_error": "", "last_sent_at": "", "brevo_message_id": "",
+    })
+    return raw
+
+
+def _normalize_public_base_url(value: str) -> str:
+    raw = (value or "").strip().rstrip("/")
+    if not raw:
+        return raw
+
+    parsed = urlparse(raw if "://" in raw else f"https://{raw}")
+    if parsed.netloc in PUBLIC_STUDENT_PORTAL_LEGACY_HOSTS:
+        return PUBLIC_STUDENT_PORTAL_BASE_DEFAULT
+    return raw
+
+
+def _public_base_url() -> str:
+    raw = os.environ.get("APP_BASE_URL") or os.environ.get("PUBLIC_BASE_URL") or APP_BASE_URL or ""
+    return _normalize_public_base_url(raw)
+
+
+def _activation_url(raw_token: str) -> str:
+    return f"{_public_base_url()}/activate-account?token={quote(raw_token or '')}"
+
+
+def _brevo_config_diagnostics() -> Dict[str, Any]:
+    base = _public_base_url()
+    return {
+        "api_key_present": bool((BREVO_API_KEY or "").strip()),
+        "sender_email_present": bool((BREVO_SENDER_EMAIL or "").strip()),
+        "sender_name_present": bool((BREVO_SENDER_NAME or "").strip()),
+        "base_url_present": bool(base),
+        "sender_email": "adresse configurée" if (BREVO_SENDER_EMAIL or "").strip() else "absente",
+        "sender_name": "nom configuré" if (BREVO_SENDER_NAME or "").strip() else "absent",
+        "base_url": "URL configurée" if base else "absente",
+    }
+
+
+def _missing_brevo_config() -> List[str]:
+    missing = []
+    if not (BREVO_API_KEY or "").strip():
+        missing.append("BREVO_API_KEY")
+    if not (BREVO_SENDER_EMAIL or "").strip():
+        missing.append("BREVO_SENDER_EMAIL")
+    if not (BREVO_SENDER_NAME or "").strip():
+        missing.append("BREVO_SENDER_NAME")
+    if not _public_base_url():
+        missing.append("APP_BASE_URL ou PUBLIC_BASE_URL")
+    return missing
+
+
+def _safe_brevo_log(action: str, **details: Any) -> None:
+    redacted = {k: v for k, v in details.items() if k not in {"api_key", "token", "raw_token", "activation_url"}}
+    app.logger.info("[BREVO_INVITATION] %s %s", action, json.dumps(redacted, ensure_ascii=False, default=str))
+
+
+def _send_partner_invitation_email(user: Dict[str, Any], partner: Dict[str, Any], raw_token: str) -> Dict[str, Any]:
+    activation_url = _activation_url(raw_token)
+    html_body = mail_layout(f"""
+      <h2>Activation de votre espace partenaire</h2>
+      <p>Bonjour {html.escape(user.get('first_name') or '')},</p>
+      <p>Votre espace <strong>{html.escape(partner.get('name') or '')}</strong> est prêt.</p>
+      <p><a href=\"{html.escape(activation_url, quote=True)}\">Définir mon mot de passe</a></p>
+      <p>Ce lien est personnel, utilisable une seule fois et expire sous 48 heures.</p>
+    """)
+    text_body = f"Activez votre espace partenaire : {activation_url}"
+    result = brevo_send_email(user.get("email") or "", "Activation de votre espace partenaire", html_body, text_content=text_body, metadata={"partner_id": partner.get("id"), "partner_name": partner.get("name"), "user_id": user.get("id"), "purpose": "partner_invitation"})
+    return result
+
+
+def _partner_counts(data: Dict[str, Any], partner_id: str) -> Dict[str, int]:
+    sessions_for_partner = [s for s in data.get("sessions", []) if isinstance(s, dict) and s.get("partner_id") == partner_id]
+    return {"users": sum(1 for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id), "sessions": len(sessions_for_partner), "trainees": sum(len(_session_trainees_list(s)) for s in sessions_for_partner)}
+
+
+
+
+def _delete_partner_everywhere(data: Dict[str, Any], partner_id: str) -> Dict[str, int]:
+    """Remove a partner and every partner-scoped record from the JSON payload."""
+    removed: Dict[str, int] = {}
+
+    def prune_list(key: str, predicate) -> None:
+        items = data.get(key)
+        if not isinstance(items, list):
+            return
+        kept = [item for item in items if not predicate(item)]
+        count = len(items) - len(kept)
+        if count:
+            data[key] = kept
+            removed[key] = count
+
+    prune_list("partners", lambda item: isinstance(item, dict) and item.get("id") == partner_id)
+    for key, items in list(data.items()):
+        if isinstance(items, list):
+            prune_list(key, lambda item, pid=partner_id: isinstance(item, dict) and item.get("partner_id") == pid)
+
+    dismissed_keys = data.get("notifications_admin_dismissed_schedule_keys")
+    if isinstance(dismissed_keys, list):
+        kept_keys = [key for key in dismissed_keys if not str(key).startswith(f"{partner_id}:")]
+        count = len(dismissed_keys) - len(kept_keys)
+        if count:
+            data["notifications_admin_dismissed_schedule_keys"] = kept_keys
+            removed["notifications_admin_dismissed_schedule_keys"] = count
+
+    return removed
+
+
+def _remove_partner_storage(partner_id: str) -> bool:
+    root = os.path.realpath(os.path.join(PERSIST_DIR, "partners"))
+    target = os.path.realpath(os.path.join(root, str(partner_id or "")))
+    if not target.startswith(root + os.sep):
+        raise ValueError("chemin partenaire invalide")
+    if os.path.isdir(target):
+        shutil.rmtree(target)
+        return True
+    return False
+
+def _partner_or_404(data: Dict[str, Any], partner_id: str) -> Dict[str, Any]:
+    partner = next((p for p in data.get("partners", []) if isinstance(p, dict) and p.get("id") == partner_id), None)
+    if not partner:
+        abort(404)
+    return partner
+
+
+def require_super_admin(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not _is_super_admin_session():
+            abort(403)
+        return view(*args, **kwargs)
+    return wrapped
+
 
 def trainee_upload_dir(session_id: str, trainee_id: str) -> str:
     d = os.path.join(UPLOADS_DIR, session_id, trainee_id)
@@ -1934,19 +2911,34 @@ BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 BREVO_SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL", "ecole@integraleacademy.com")
 BREVO_SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "Intégrale Academy")
 CNAPS_LOOKUP_ENDPOINT = os.environ.get("CNAPS_LOOKUP_ENDPOINT", "")
+CNAPS_PUBLIC_ANNUAIRE_ENDPOINT = os.environ.get("CNAPS_PUBLIC_ANNUAIRE_ENDPOINT", "https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/api/annuaire-public").strip()
 CNAPSV3_NOTIFICATIONS_ENDPOINT = os.environ.get("CNAPSV3_NOTIFICATIONS_ENDPOINT", "")
 CNAPSV3_BASE_URL = os.environ.get("CNAPSV3_BASE_URL", "https://cnapsv3.onrender.com").strip().rstrip("/")
 GESTIONSTAGIAIRE_SYNC_TOKEN = os.environ.get("GESTIONSTAGIAIRE_SYNC_TOKEN", "").strip()
 
-PUBLIC_STUDENT_PORTAL_BASE = os.environ.get(
-    "PUBLIC_STUDENT_PORTAL_BASE",
-    "https://gestionstagiaires-r5no.onrender.com"
+PUBLIC_STUDENT_PORTAL_BASE_DEFAULT = "https://gestionstagiaires-test-v2.onrender.com"
+PUBLIC_STUDENT_PORTAL_LEGACY_HOSTS = {"gestionstagiaires-r5no.onrender.com"}
+
+
+def _normalize_public_student_portal_base(value: str) -> str:
+    raw = (value or "").strip().rstrip("/")
+    if not raw:
+        return PUBLIC_STUDENT_PORTAL_BASE_DEFAULT
+
+    parsed = urlparse(raw if "://" in raw else f"https://{raw}")
+    if parsed.netloc in PUBLIC_STUDENT_PORTAL_LEGACY_HOSTS:
+        return PUBLIC_STUDENT_PORTAL_BASE_DEFAULT
+    return raw
+
+
+PUBLIC_STUDENT_PORTAL_BASE = _normalize_public_student_portal_base(
+    os.environ.get("PUBLIC_STUDENT_PORTAL_BASE") or APP_BASE_URL
 )
 
 PUBLIC_BASE_URL = os.environ.get(
     "PUBLIC_BASE_URL",
-    "https://gestionstagiaires-r5no.onrender.com"
-)
+    APP_BASE_URL
+).strip().rstrip("/")
 
 
 CNAPS_STATUS_ENDPOINT = os.environ.get("CNAPS_STATUS_ENDPOINT", "")
@@ -2841,6 +3833,21 @@ def _normalize_afc_email(raw_email: Any) -> str:
 
 import base64
 
+def _parse_email_recipient_blocklist(raw_value: str) -> Set[str]:
+    return {
+        item.strip().lower()
+        for item in re.split(r"[,;\s]+", raw_value or "")
+        if item.strip()
+    }
+
+
+EMAIL_RECIPIENT_BLOCKLIST = _parse_email_recipient_blocklist(os.environ.get("EMAIL_RECIPIENT_BLOCKLIST", ""))
+
+
+def _is_blocked_email_recipient(email: str) -> bool:
+    return (email or "").strip().lower() in EMAIL_RECIPIENT_BLOCKLIST
+
+
 def brevo_send_email(
     to_email: str,
     subject: str,
@@ -2849,9 +3856,19 @@ def brevo_send_email(
     trainee: Optional[Dict[str, Any]] = None,
     attachments: Optional[List[Dict[str, str]]] = None,
     text_content: str = "",
-) -> bool:
-    if not BREVO_API_KEY or not to_email:
-        return False
+    metadata: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    to_email = (to_email or "").strip()
+    missing = _missing_brevo_config()
+    if not to_email:
+        missing.append("destinataire")
+    if missing:
+        result = {"ok": False, "status_code": None, "message_id": "", "error": "Configuration Brevo incomplète : " + ", ".join(missing)}
+        return result if metadata is not None else False
+    if _is_blocked_email_recipient(to_email):
+        print(f"[EMAIL] blocked recipient skipped: {to_email}")
+        result = {"ok": False, "status_code": None, "message_id": "", "error": "Destinataire bloqué"}
+        return result if metadata is not None else False
 
     url = "https://api.brevo.com/v3/smtp/email"
     headers = {
@@ -2872,7 +3889,11 @@ def brevo_send_email(
     if text_content:
         payload["textContent"] = text_content
 
-    cc_list = [email for email in (cc_emails or []) if email]
+    cc_list = [
+        email.strip()
+        for email in (cc_emails or [])
+        if email and not _is_blocked_email_recipient(email)
+    ]
     if cc_list:
         payload["cc"] = [{"email": email} for email in cc_list]
 
@@ -2881,9 +3902,14 @@ def brevo_send_email(
 
     try:
         r = requests.post(url, headers=headers, json=payload, timeout=12)
-        print("[EMAIL] status=", r.status_code)
-        print("[EMAIL] response=", r.text)
         ok = r.status_code in (200, 201, 202)
+        try:
+            response_json = r.json()
+        except Exception:
+            response_json = {}
+        message_id = str(response_json.get("messageId") or response_json.get("message_id") or "")
+        error_message = str(response_json.get("message") or response_json.get("error") or (r.text or ""))[:500]
+        _safe_brevo_log("send", timestamp=_now_iso(), partner_id=(metadata or {}).get("partner_id"), partner_name=(metadata or {}).get("partner_name"), user_id=(metadata or {}).get("user_id"), to_email=to_email, status_code=r.status_code, error="" if ok else error_message, message_id=message_id)
         if ok and has_request_context():
             session["_mail_sent_notice"] = True
         if ok and isinstance(trainee, dict):
@@ -2899,9 +3925,12 @@ def brevo_send_email(
             trainee["sent_email_history"] = sent_history[:200]
         if (not ok) and _brevo_no_credit_detected(r.text):
             _register_brevo_no_credit("email", to_email, r.text)
-        return ok
-    except Exception:
-        return False
+        result = {"ok": ok, "status_code": r.status_code, "message_id": message_id, "error": "" if ok else error_message}
+        return result if metadata is not None else ok
+    except Exception as exc:
+        _safe_brevo_log("exception", timestamp=_now_iso(), partner_id=(metadata or {}).get("partner_id"), partner_name=(metadata or {}).get("partner_name"), user_id=(metadata or {}).get("user_id"), to_email=to_email, status_code=None, error=str(exc)[:500], message_id="")
+        result = {"ok": False, "status_code": None, "message_id": "", "error": str(exc)}
+        return result if metadata is not None else False
 
 
 def brevo_send_sms(phone: str, message: str) -> bool:
@@ -3786,23 +4815,33 @@ def _send_vtc_practice_exam_success_notification(session_obj: Dict[str, Any], tr
     }
 
 
-def mail_layout(inner_html: str) -> str:
+def mail_layout(inner_html: str, show_default_logo: bool = True, footer_text: str = "Intégrale Academy") -> str:
     # ✅ logo en URL HTTPS (fiable dans Gmail)
     logo_src = f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png"
-
-    return f"""
-    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
-      <div style="background:white;padding:18px;border-radius:12px">
+    logo_html = ""
+    if show_default_logo:
+        logo_html = f"""
         <div style="text-align:center;margin-bottom:18px">
           <img src="{logo_src}" alt="Intégrale Academy"
                style="height:60px;width:auto;display:block;margin:0 auto;border:0;outline:none;text-decoration:none">
         </div>
+        """
+    footer_html = ""
+    if footer_text:
+        footer_html = f"""
+        <p style="margin-top:30px;color:#666;font-size:13px;text-align:center">
+          {html.escape(footer_text)}
+        </p>
+        """
+
+    return f"""
+    <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;background:#f7f7f7;padding:18px;border-radius:12px">
+      <div style="background:white;padding:18px;border-radius:12px">
+        {logo_html}
 
         {inner_html}
 
-        <p style="margin-top:30px;color:#666;font-size:13px;text-align:center">
-          Intégrale Academy
-        </p>
+        {footer_html}
       </div>
     </div>
     """
@@ -5001,11 +6040,13 @@ def load_data() -> Dict[str, Any]:
         if recovered_from:
             loaded = _load_valid_json_payload(DATA_FILE)
             if loaded is not None:
+                _ensure_multi_partner_payload(loaded)
                 _log_storage_state(loaded)
-                return loaded
+                return _filter_data_for_partner(loaded, _current_partner_id()) if _is_partner_scoped_session() else loaded
         base = _empty_data_payload()
+        _ensure_multi_partner_payload(base)
         _log_storage_state(base)
-        return base
+        return _filter_data_for_partner(base, _current_partner_id()) if _is_partner_scoped_session() else base
 
     data = _load_valid_json_payload(DATA_FILE)
     if data is None:
@@ -5076,6 +6117,11 @@ def load_data() -> Dict[str, Any]:
             data["notifications_admin_dismissed_schedule_keys"] = []
             changed = True
 
+        if _ensure_multi_partner_payload(data):
+            changed = True
+        if normalize_all_partner_subscriptions(data):
+            changed = True
+
         if _send_vtc_credentials_missing_reminders(data):
             changed = True
 
@@ -5116,10 +6162,14 @@ def load_data() -> Dict[str, Any]:
         app.logger.exception("Post-processing failed for %s; returning current in-memory data without reset", DATA_FILE)
 
     _log_storage_state(data)
-    return data
+    return _filter_data_for_partner(data, _current_partner_id()) if _is_partner_scoped_session() else data
 
 
 def save_data(data: Dict[str, Any]) -> None:
+    if _is_partner_scoped_session():
+        data = _merge_partner_scoped_payload(data, _current_partner_id())
+    _ensure_multi_partner_payload(data)
+    normalize_all_partner_subscriptions(data)
     _write_json_with_backups(DATA_FILE, data, _data_lock)
 
 def _load_wedof_webhooks() -> List[Dict[str, Any]]:
@@ -5813,7 +6863,7 @@ def _admin_can_view_notifications() -> bool:
 
 
 def _admin_can_manage_notifications() -> bool:
-    return session.get("admin_role") == "admin"
+    return session.get("admin_role") in {"admin", "super_admin"}
 
 
 def _format_trainee_name(first_name: str, last_name: str) -> str:
@@ -5851,7 +6901,7 @@ def _send_admin_push_notifications(data: Dict[str, Any], notification: Dict[str,
     from pywebpush import webpush, WebPushException
 
     payload = json.dumps({
-        "title": ADMIN_PUSH_TITLE or "Intégrale Academy",
+        "title": ADMIN_PUSH_TITLE or "Intégrale Connect",
         "body": (notification.get("label") or "").strip() or "Nouvelle notification admin",
         "url": url_for("admin_sessions", _external=True),
         "notification_id": notification.get("id") or "",
@@ -6424,6 +7474,93 @@ def merge_cnaps_history_entries(t: Dict[str, Any], entries: List[Dict[str, str]]
 
     t["cnaps_history"] = history
 
+
+
+
+def _first_non_empty_value(payload: Any, keys: Iterable[str]) -> str:
+    wanted = {str(k).lower().replace("_", "").replace("-", "") for k in keys}
+
+    def _walk(value: Any) -> str:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                normalized_key = str(key).lower().replace("_", "").replace("-", "")
+                if normalized_key in wanted and item not in (None, ""):
+                    return str(item).strip()
+            for item in value.values():
+                found = _walk(item)
+                if found:
+                    return found
+        elif isinstance(value, list):
+            for item in value:
+                found = _walk(item)
+                if found:
+                    return found
+        return ""
+
+    return _walk(payload)
+
+
+def _extract_cnaps_public_annuaire_results(payload: Any) -> List[Dict[str, str]]:
+    """Return all title rows found in the CNAPS public annuaire response."""
+    rows: List[Dict[str, str]] = []
+    seen: Set[Tuple[str, str, str]] = set()
+    activity_keys = ["activite", "activité", "activity", "libelleActivite"]
+    validity_keys = ["validiteTitre", "validité du titre", "validite_du_titre", "validity", "statutTitre", "etatTitre"]
+    date_keys = ["dateValiditeTitre", "date de validité du titre", "date_validite_titre", "dateFinValidite"]
+
+    def add_from(value: Any) -> None:
+        if not isinstance(value, dict):
+            return
+        activite = _first_non_empty_value(value, activity_keys)
+        validite = _first_non_empty_value(value, validity_keys)
+        date_validite = _first_non_empty_value(value, date_keys)
+        if not activite and not validite and not date_validite:
+            return
+        key = (activite, validite, date_validite)
+        if key in seen:
+            return
+        seen.add(key)
+        rows.append({"activite": activite, "validite_titre": validite, "date_validite_titre": date_validite})
+
+    def walk(value: Any) -> None:
+        if isinstance(value, dict):
+            add_from(value)
+            for item in value.values():
+                walk(item)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+
+    walk(payload)
+    return rows
+
+
+def fetch_cnaps_public_annuaire(nom: str, nub: str) -> Optional[Dict[str, Any]]:
+    endpoint = (CNAPS_PUBLIC_ANNUAIRE_ENDPOINT or "").strip()
+    nom = " ".join((nom or "").strip().split()).upper()
+    nub = re.sub(r"\D+", "", str(nub or ""))[-7:]
+    if not endpoint or not nom or not nub:
+        return None
+
+    payload = {"nom": nom, "nub": nub, "numeroBeneficiaireUnique": nub, "typeRecherche": "AGENT"}
+    headers = {"Accept": "application/json", "User-Agent": "gestionstagiaires/1.0"}
+    try:
+        try:
+            response = requests.post(endpoint, json=payload, headers=headers, timeout=12)
+        except Exception:
+            response = requests.get(endpoint, params={"nom": nom, "nub": nub}, headers=headers, timeout=12)
+        if response.status_code >= 400:
+            response = requests.get(endpoint, params={"nom": nom, "nub": nub}, headers=headers, timeout=12)
+        if response.status_code != 200:
+            return None
+        data = response.json()
+    except Exception:
+        return None
+
+    results = _extract_cnaps_public_annuaire_results(data)
+    if not results:
+        return None
+    return {**results[0], "results": results}
 
 def fetch_cnaps_lookup_by_name(nom: str, prenom: str) -> Optional[Dict[str, Any]]:
     if not CNAPS_LOOKUP_ENDPOINT:
@@ -7064,7 +8201,7 @@ EDOF_TRAININGS = {
         "calendly": "https://calendly.com/integraleacademy/chauffeurvtc",
     },
     "DESP": {
-        "label": "Dirigeant d'entreprise de sécurité privée (DESP)",
+        "label": "Dirigeant d'une entreprise de sécurité privée (DESP)",
         "calendly": "https://calendly.com/integraleacademy/dirigeant",
     },
 }
@@ -7073,7 +8210,7 @@ FINANCEMENT_REFUSE_TRAININGS = {
     "A3P": "Agent de protection physique des personnes (A3P)",
     "APS": "Agent de prévention et de sécurité (APS)",
     "VTC": "Chauffeur VTC",
-    "DIRIGEANT": "Dirigeant d'entreprise de sécurité privée (DESP)",
+    "DIRIGEANT": "Dirigeant d'une entreprise de sécurité privée (DESP)",
 }
 
 def formation_label(training_type: str) -> str:
@@ -7106,6 +8243,20 @@ REQUIRED_DOCS = {
         {"key": "permis", "label": "Permis de conduire (obligatoire sauf si vous n’avez pas le permis)", "accept": "application/pdf"},
         {"key": "certif_med", "label": "Certificat médical (-3 mois)", "accept": "application/pdf"},
         {"key": "assurance_rc", "label": "Attestation d’assurance responsabilité civile", "accept": "application/pdf"},
+    ],
+    "SSIAP_ONLY": [
+        {
+            "key": "certificat_medical_ssiap",
+            "label": "Certificat médical de moins de 3 mois à la date de l'examen, selon le modèle officiel",
+            "accept": "application/pdf,image/jpeg,image/png",
+            "template_url_endpoint": "public_ssiap_medical_certificate_template",
+        },
+        {
+            "key": "attestation_secourisme_ssiap",
+            "label": "Attestation secourisme, PSC1 ou SST de moins de 2 ans, si détenu",
+            "accept": "application/pdf,image/jpeg,image/png",
+            "optional": True,
+        },
     ],
     "AFC_SSIAP_MEDICAL_CERT": [
         {
@@ -7196,13 +8347,15 @@ def required_docs_for_training(training_type: str, trainee: Optional[Dict[str, A
     tt = (training_type or "").strip().upper()
     docs = list(REQUIRED_DOCS["COMMON"])
 
-    # Pour les parcours dirigeant (initial / VAE),
+    # Pour les parcours dirigeant (initial / VAE) et SSIAP,
     # ne pas demander le justificatif CNAPS à l'inscription.
-    if tt in {"DIRIGEANT INITIAL", "DIRIGEANT VAE"}:
+    if tt in {"DIRIGEANT INITIAL", "DIRIGEANT VAE"} or tt.startswith("SSIAP"):
         docs = [d for d in docs if d.get("key") != "cnaps_doc"]
 
     if tt == "A3P":
         docs += list(REQUIRED_DOCS["A3P_ONLY"])
+    if tt.startswith("SSIAP"):
+        docs += list(REQUIRED_DOCS["SSIAP_ONLY"])
     if tt in {"DIRIGEANT INITIAL", "DIRIGEANT VAE"}:
         docs += list(REQUIRED_DOCS["DIRIGEANT_CANDIDATE_SHEET"])
     if tt.startswith("DIRIGEANT"):
@@ -7256,6 +8409,12 @@ def ensure_documents_schema_for_trainee(t: Dict[str, Any], training_type: str) -
             if "files" not in d or not isinstance(d.get("files"), list):
                 d["files"] = []
                 changed = True
+            if rd.get("optional") and not d.get("optional"):
+                d["optional"] = True; changed = True
+            if rd.get("template_url_endpoint") and d.get("template_url_endpoint") != rd.get("template_url_endpoint"):
+                d["template_url_endpoint"] = rd.get("template_url_endpoint"); changed = True
+            if d.get("label") != rd["label"]:
+                d["label"] = rd["label"]; changed = True
             out.append(d)
         else:
             out.append({
@@ -7266,6 +8425,8 @@ def ensure_documents_schema_for_trainee(t: Dict[str, Any], training_type: str) -
                 "comment": "",
                 "file": "",
                 "files": [],
+                **({"optional": True} if rd.get("optional") else {}),
+                **({"template_url_endpoint": rd.get("template_url_endpoint")} if rd.get("template_url_endpoint") else {}),
             })
             changed = True
 
@@ -7466,6 +8627,8 @@ def dossier_is_complete(trainee: Dict[str, Any], training_type: str, training_st
         # permis optionnel si no_permis
         if tt == "A3P" and k == "permis" and no_permis:
             continue
+        if rd.get("optional"):
+            continue
 
         d = by_key.get(k)
         if not d:
@@ -7495,6 +8658,8 @@ def required_docs_are_deposited(trainee: Dict[str, Any], training_type: str, tra
         k = rd["key"]
 
         if tt == "A3P" and k == "permis" and no_permis:
+            continue
+        if rd.get("optional"):
             continue
 
         # En parcours DIRIGEANT VAE, la fiche d'entretien pré-requis ne doit
@@ -7551,6 +8716,19 @@ def _normalize_pre_car(value: str) -> str:
         return f"{m.group(1)}-{m.group(2)}-{m.group(3)}-{m.group(4)}-{m.group(5)}"
 
     return normalized
+
+
+def extract_nub_from_pre_car(value: str) -> str:
+    """Return the NUB (last 7 digits) from a PRE/CAR number."""
+    normalized = _normalize_pre_car(value)
+    digits_groups = re.findall(r"\d+", normalized)
+    if not digits_groups:
+        return ""
+    last_digits = digits_groups[-1]
+    return last_digits[-7:] if len(last_digits) >= 7 else ""
+
+
+app.jinja_env.globals["extract_nub_from_pre_car"] = extract_nub_from_pre_car
 
 
 def _is_valid_pre_car(value: str) -> bool:
@@ -9050,14 +10228,14 @@ def _scotia_comment_party_from_label(label: str) -> str:
 
 
 def _scotia_comment_party_label(party: str) -> str:
-    return "Intégrale Academy" if party == "integrale" else "SCOTIA"
+    return "Intégrale Connect" if party == "integrale" else "SCOTIA"
 
 
 def _current_scotia_comment_author_label() -> str:
     if not has_request_context():
         return "Scotia"
     if session.get("admin_logged_in"):
-        return "Intégrale Academy"
+        return "Intégrale Connect"
     return _scotia_comment_author_label(str(session.get("scotia_username") or ""))
 
 
@@ -9756,7 +10934,7 @@ def api_admin_scotia_thread_comment(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": "comment_too_long"}), 400
 
     created_at = _now_iso()
-    entry = _append_scotia_thread_comment(t, content, "Intégrale Academy", created_at, "admin")
+    entry = _append_scotia_thread_comment(t, content, "Intégrale Connect", created_at, "admin")
     if (_session_get(s, "training_type", "") or "").strip().upper() == "DIRIGEANT VAE":
         _add_vae_live_notification(
             s,
@@ -10522,6 +11700,738 @@ def scotia_vae_justificatif_download(dossier_id: str, doc_id: str):
     return send_file(fp, as_attachment=False)
 
 
+PARTNER_STATUS_LABELS = {"active": "Actif", "trial": "En essai", "suspended": "Suspendu", "archived": "Archivé"}
+
+
+PARTNER_INTEGRAL_CONNECT_PLUS_MONTHLY_PRICE = 299
+PARTNER_SUBSCRIPTION_ANNUAL_FREE_MONTHS = 2
+PARTNER_SUBSCRIPTION_MODULE_PRICING = {
+    "cnaps": {"label": "Module CNAPS", "icon": "ShieldCheck", "price": 49, "description": "Suivez vos dossiers et vérifiez automatiquement les statuts CNAPS.", "features": ["Suivi des dossiers", "Vérification des statuts", "Gestion CNAPS centralisée"]},
+    "cpf": {"label": "Module CPF", "icon": "WalletCards", "price": 59, "description": "Centralisez le suivi de vos dossiers CPF et demandes EDOF.", "features": ["Demandes EDOF", "Statuts des dossiers", "Suivi CPF centralisé"]},
+    "billing": {"label": "Module Facturation", "icon": "ReceiptText", "price": 69, "description": "Créez vos factures et suivez leur règlement depuis Intégrale Connect.", "features": ["Factures", "Suivi des règlements", "Connexion Qonto"]},
+    "financing": {"label": "Module Financement", "icon": "WalletCards", "price": 49, "description": "Suivez les statuts et montants de financement des stagiaires.", "features": ["Statuts de financement", "Montants détaillés", "Relances de paiement"]},
+    "sales": {"label": "Module Suivi des ventes", "icon": "ChartNoAxesCombined", "price": 49, "description": "Pilotez vos prospects, vos ventes et vos performances commerciales.", "features": ["Tableau de bord ventes", "Suivi commercial", "Indicateurs clés"]},
+    "training_aps": {"label": "Module formation APS", "icon": "GraduationCap", "price": 79, "description": "Créez et gérez vos sessions, stagiaires et documents APS.", "features": ["Sessions APS", "Stagiaires APS", "Documents APS"]},
+    "training_ssiap": {"label": "Module formation SSIAP", "icon": "Flame", "price": 79, "description": "Gérez vos sessions, stagiaires et documents SSIAP.", "features": ["Sessions SSIAP", "Stagiaires SSIAP", "Documents SSIAP"]},
+    "training_a3p": {"label": "Module formation A3P", "icon": "FireExtinguisher", "price": 79, "description": "Centralisez l’organisation de vos formations A3P.", "features": ["Sessions A3P", "Stagiaires A3P", "Documents A3P"]},
+    "training_vtc": {"label": "Module formation VTC", "icon": "CarTaxiFront", "price": 79, "description": "Gérez vos sessions VTC et le suivi des stagiaires.", "features": ["Sessions VTC", "Stagiaires VTC", "Documents VTC"]},
+    "training_dirigeant": {"label": "Module formation Dirigeant / VAE", "icon": "Award", "price": 79, "description": "Pilotez vos parcours Dirigeant et vos dossiers VAE.", "features": ["Sessions Dirigeant", "Parcours VAE", "Documents dédiés"]},
+    "automations": {"label": "Module automatisations", "icon": "Workflow", "price": 39, "description": "Automatisez la création et l’envoi de vos documents de formation.", "features": ["Conventions", "Convocations", "Attestations"]},
+}
+PARTNER_SUBSCRIPTION_STATUS_LABELS = {"active": "Actif", "trial": "Essai", "suspended": "Suspendu", "expired": "Expiré"}
+PARTNER_INFO_FIELDS = ("name", "legal_name", "siret", "activity_declaration_number", "address", "address_extra", "postal_code", "city", "country", "contact_first_name", "contact_last_name", "contact_role", "email", "phone", "website")
+PARTNER_LOGO_MAX_BYTES = 3 * 1024 * 1024
+PARTNER_LOGO_ALLOWED_MIMES = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp"}
+
+def _count_partner_trainees(data: Dict[str, Any], partner_id: str) -> int:
+    return sum(len(_session_trainees_list(s)) for s in data.get("sessions", []) if isinstance(s, dict) and s.get("partner_id") == partner_id)
+
+def _default_subscription_for_partner(data: Dict[str, Any], partner: Dict[str, Any]) -> Dict[str, Any]:
+    enabled = _partner_enabled_modules(partner) if "_partner_enabled_modules" in globals() else set(partner.get("enabled_modules") or [])
+    return {"plan_name": partner.get("subscription_plan") or "Essentiel", "status": "trial" if partner.get("status") == "trial" else ("suspended" if partner.get("status") == "suspended" else "active"), "started_at": partner.get("subscription_started_at") or None, "renews_at": partner.get("subscription_ends_at") or None, "modules": {key: key in enabled for key in PARTNER_SUBSCRIPTION_MODULE_PRICING}, "module_prices": {}, "trainee_limit": 100, "trainee_unlimited": False, "trainee_usage_count": _count_partner_trainees(data, partner.get("id") or ""), "trainee_usage_reset_at": None, "trainee_usage_migrated_at": _now_iso() if "_now_iso" in globals() else datetime.datetime.utcnow().isoformat()+"Z", "trainee_usage_reset_history": []}
+
+def normalize_partner_subscription(data: Dict[str, Any], partner: Dict[str, Any]) -> bool:
+    changed = False
+    if "logo_url" not in partner:
+        partner["logo_url"] = partner.get("logo_path") or ""; changed = True
+    sub = partner.get("subscription") if isinstance(partner.get("subscription"), dict) else None
+    default = _default_subscription_for_partner(data, partner)
+    if sub is None:
+        partner["subscription"] = default; return True
+    for k, v in default.items():
+        if k not in sub:
+            sub[k] = v; changed = True
+    if not isinstance(sub.get("modules"), dict):
+        sub["modules"] = default["modules"]; changed = True
+    else:
+        for k, v in default["modules"].items():
+            if k not in sub["modules"]:
+                sub["modules"][k] = v; changed = True
+    if not sub.get("trainee_usage_migrated_at"):
+        sub["trainee_usage_count"] = _count_partner_trainees(data, partner.get("id") or "")
+        sub["trainee_usage_migrated_at"] = _now_iso(); changed = True
+    return changed
+
+def normalize_all_partner_subscriptions(data: Dict[str, Any]) -> bool:
+    changed = False
+    for p in data.get("partners", []):
+        if isinstance(p, dict) and normalize_partner_subscription(data, p):
+            changed = True
+    return changed
+
+def increment_partner_trainee_usage(data: Dict[str, Any], partner_id: str, trainee: Dict[str, Any]) -> bool:
+    if not partner_id or not isinstance(trainee, dict) or trainee.get("subscription_usage_counted"):
+        return False
+    partner = next((p for p in data.get("partners", []) if isinstance(p, dict) and p.get("id") == partner_id), None)
+    if not partner:
+        app.logger.warning("partner_usage_increment result=partner_missing partner_id=%s trainee_id=%s", partner_id, trainee.get("id")); return False
+    normalize_partner_subscription(data, partner)
+    sub = partner.setdefault("subscription", {})
+    sub["trainee_usage_count"] = int(sub.get("trainee_usage_count") or 0) + 1
+    now = _now_iso()
+    trainee["subscription_usage_counted"] = True
+    trainee["subscription_usage_counted_at"] = now
+    app.logger.info("partner_usage_increment result=success partner_id=%s trainee_id=%s count=%s", partner_id, trainee.get("id"), sub["trainee_usage_count"])
+    return True
+
+def _partner_logo_url(partner: Optional[Dict[str, Any]]) -> str:
+    token = ((partner or {}).get("logo_url") or (partner or {}).get("logo_path") or "").strip()
+    return url_for("admin_view_upload", path=token) if token else ""
+
+
+PARTNER_MODULES = [
+    {"key": "cnaps", "label": "Module CNAPS", "description": "Suivi des dossiers CNAPS, vérification automatique du statut CNAPS et accès DRACAR."},
+    {"key": "cpf", "label": "Module CPF", "description": "Suivi des dossiers CPF / demandes WeDoF CPF."},
+    {"key": "billing", "label": "Module Facturation (Qonto)", "description": "Facturation, suivi des factures et réglages Qonto."},
+    {"key": "financing", "label": "Module Financement", "description": "Suivi du financement dans la fiche stagiaire : statuts, montants, validation et relances de paiement."},
+    {"key": "sales", "label": "Module Suivi des ventes", "description": "Tableaux de bord et indicateurs de suivi des ventes."},
+    {"key": "training_aps", "label": "Module formation APS", "description": "Création et gestion de sessions APS uniquement."},
+    {"key": "training_ssiap", "label": "Module formation SSIAP", "description": "Création et gestion de sessions SSIAP uniquement."},
+    {"key": "training_a3p", "label": "Module formation A3P", "description": "Création et gestion de sessions A3P uniquement."},
+    {"key": "training_vtc", "label": "Module formation VTC", "description": "Création et gestion de sessions VTC uniquement."},
+    {"key": "training_dirigeant", "label": "Module formation Dirigeant / VAE", "description": "Création et gestion de sessions Dirigeant initial et Dirigeant VAE."},
+    {"key": "automations", "label": "Module automatisations", "description": "Conventions de formation, convocations et attestations de fin de formation."},
+]
+PARTNER_MODULE_KEYS = {m["key"] for m in PARTNER_MODULES}
+PARTNER_MODULE_ROUTE_ENDPOINTS = {
+    "cnaps": {"admin_cnaps_unknown"},
+    "cpf": {"admin_wedof_requests", "admin_mark_wedof_treated", "send_wedof_to_salesforce"},
+    "billing": {"admin_qonto_settings", "admin_sessions_billing"},
+    "sales": {"admin_sales_tracking", "admin_sales_tracking_data", "admin_sales_tracking_save_objectives"},
+    "automations": {"admin_sessions_conventions", "admin_sessions_automations"},
+}
+PARTNER_SPACE_FORBIDDEN_ENDPOINTS = {
+    "admin_secretariat",
+    "admin_cash_payments",
+    "api_cash_payments_settle",
+    "api_cash_payments_export",
+    "api_cash_payments_send_receipt",
+    "api_cash_payments_send_followup",
+    "api_cash_payments_collection_done",
+    "api_cash_payments_collection_cancel",
+    "api_vtc_check_import",
+    "api_vtc_check_notify",
+    "scotia_login",
+    "scotia_login_post",
+    "admin_positioning_tests",
+    "admin_positioning_test_detail",
+    "admin_financement_refuse_submit",
+    "admin_afc",
+    "api_admin_afc_create_candidate",
+    "api_admin_afc_import_from_image",
+    "api_admin_afc_save_mail_templates",
+    "api_admin_afc_save_modules",
+    "api_admin_afc_update_candidate",
+    "api_admin_afc_delete_candidate",
+    "api_admin_afc_delete_all_candidates",
+    "api_admin_afc_notify_candidate",
+    "api_admin_afc_notify_pending_candidates",
+    "admin_afc_candidate_sheet",
+    "admin_afc_export",
+}
+PARTNER_TRAINING_MODULES = {
+    "APS": "training_aps",
+    "A3P": "training_a3p",
+    "SSIAP": "training_ssiap",
+    "VTC": "training_vtc",
+    "DIRIGEANT": "training_dirigeant",
+}
+
+def _partner_enabled_modules(partner: Optional[Dict[str, Any]]) -> set:
+    if not isinstance(partner, dict):
+        return set()
+    modules = partner.get("enabled_modules")
+    if not isinstance(modules, list):
+        legacy_modules = partner.get("modules")
+        modules = legacy_modules if isinstance(legacy_modules, list) else list(PARTNER_MODULE_KEYS)
+    return {str(item).strip() for item in modules if str(item).strip() in PARTNER_MODULE_KEYS}
+
+def _current_partner(data: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+    partner_id = _current_partner_id()
+    if not partner_id:
+        return None
+    data = data or load_data()
+    return next((p for p in data.get("partners", []) if isinstance(p, dict) and p.get("id") == partner_id), None)
+
+def partner_has_module(module_key: str, partner: Optional[Dict[str, Any]] = None) -> bool:
+    if _is_super_admin_session() and not session.get("assist_partner_id"):
+        return True
+    if not _is_partner_scoped_session() and not session.get("assist_partner_id"):
+        return True
+    return module_key in _partner_enabled_modules(partner or _current_partner())
+
+def _module_for_training_type(training_type: str) -> str:
+    raw = (training_type or "").strip().upper()
+    if raw.startswith("APS"):
+        return "training_aps"
+    if raw.startswith("A3P"):
+        return "training_a3p"
+    if raw.startswith("SSIAP") or "CHEF DE POSTE" in raw:
+        return "training_ssiap"
+    if "VTC" in raw:
+        return "training_vtc"
+    if raw.startswith("DIRIGEANT") or "VAE" in raw:
+        return "training_dirigeant"
+    return ""
+
+def _partner_allowed_formation_types(partner: Optional[Dict[str, Any]] = None) -> List[str]:
+    if not (_is_partner_scoped_session() or session.get("assist_partner_id")):
+        return FORMATION_TYPES
+    enabled = _partner_enabled_modules(partner or _current_partner())
+    return [t for t in FORMATION_TYPES if _module_for_training_type(t) in enabled]
+
+def _partner_allowed_dashboard_training_labels(partner: Optional[Dict[str, Any]] = None) -> List[str]:
+    if not (_is_partner_scoped_session() or session.get("assist_partner_id")):
+        return ["APS", "VTC", "DIRIGEANT", "VAE", "A3P", "SSIAP"]
+    enabled = _partner_enabled_modules(partner or _current_partner())
+    labels = []
+    for label, module_key in (
+        ("APS", "training_aps"),
+        ("VTC", "training_vtc"),
+        ("DIRIGEANT", "training_dirigeant"),
+        ("VAE", "training_dirigeant"),
+        ("A3P", "training_a3p"),
+        ("SSIAP", "training_ssiap"),
+    ):
+        if module_key in enabled:
+            labels.append(label)
+    return labels
+
+
+
+
+def _partner_space_partner_or_redirect():
+    data = load_data()
+    partner_id = _current_partner_id()
+    partner = next((p for p in data.get("partners", []) if isinstance(p, dict) and p.get("id") == partner_id), None)
+    if not partner or not _is_partner_scoped_session():
+        flash("Votre compte partenaire n’est pas correctement rattaché.", "error")
+        return data, None
+    normalize_partner_subscription(data, partner)
+    return data, partner
+
+def _validate_partner_logo_upload(file_storage):
+    from werkzeug.utils import secure_filename
+    if not file_storage or not file_storage.filename:
+        return "", ""
+    raw = file_storage.read(PARTNER_LOGO_MAX_BYTES + 1)
+    file_storage.seek(0)
+    if len(raw) > PARTNER_LOGO_MAX_BYTES:
+        raise ValueError("Le logo ne doit pas dépasser 3 Mo.")
+    mime = (file_storage.mimetype or "").lower()
+    if mime not in PARTNER_LOGO_ALLOWED_MIMES:
+        raise ValueError("Format invalide. Utilisez PNG, JPG, JPEG ou WEBP.")
+    try:
+        img = Image.open(BytesIO(raw)); img.verify()
+        fmt = (img.format or "").lower()
+        if mime == "image/png" and fmt != "png": raise ValueError()
+        if mime == "image/jpeg" and fmt not in {"jpeg", "jpg"}: raise ValueError()
+        if mime == "image/webp" and fmt != "webp": raise ValueError()
+    except Exception:
+        raise ValueError("Le contenu du fichier ne correspond pas à une image valide.")
+    filename = secure_filename(file_storage.filename or "logo")
+    return filename, PARTNER_LOGO_ALLOWED_MIMES[mime]
+
+def _save_partner_logo(partner_id: str, file_storage) -> str:
+    original, ext = _validate_partner_logo_upload(file_storage)
+    target = get_partner_storage_path(partner_id, "logos")
+    path = os.path.join(target, f"logo-{uuid.uuid4().hex[:12]}{ext}")
+    file_storage.save(path)
+    return _tokenize_path(path)
+
+@app.route("/admin/partner/informations", methods=["GET", "POST"])
+@admin_login_required
+@admin_write_required
+def partner_information():
+    data, partner = _partner_space_partner_or_redirect()
+    if not partner:
+        return redirect(url_for("admin_sessions"))
+    if request.method == "POST":
+        changed_fields = []
+        logo_action = "none"
+        try:
+            from werkzeug.utils import secure_filename
+            for key in PARTNER_INFO_FIELDS:
+                new_value = (request.form.get(key) or "").strip()
+                if key == "email":
+                    new_value = new_value.lower()
+                if (partner.get(key) or "") != new_value:
+                    partner[key] = new_value; changed_fields.append(key)
+            if request.form.get("remove_logo") == "1" and (partner.get("logo_url") or partner.get("logo_path")):
+                partner["logo_url"] = ""; partner["logo_path"] = ""; logo_action = "removed"; changed_fields.append("logo_url")
+            logo_file = request.files.get("logo")
+            if logo_file and logo_file.filename:
+                had_logo = bool(partner.get("logo_url") or partner.get("logo_path"))
+                partner["logo_url"] = _save_partner_logo(partner.get("id"), logo_file)
+                partner["logo_path"] = partner["logo_url"]
+                partner["logo_filename"] = secure_filename(logo_file.filename or "logo")
+                logo_action = "replaced" if had_logo else "added"; changed_fields.append("logo_url")
+            partner["updated_at"] = _now_iso()
+            _append_activity_log(data, "partner_self_information_updated", "partner", partner.get("id"), partner.get("id"), {"fields": sorted(set(changed_fields)), "logo_action": logo_action, "result": "success"})
+            app.logger.info("partner_information_save partner_id=%s fields=%s logo_action=%s result=success", partner.get("id"), sorted(set(changed_fields)), logo_action)
+            save_data(data)
+            flash("Informations enregistrées.", "success")
+            return redirect(url_for("partner_information"))
+        except ValueError as exc:
+            flash(str(exc), "error")
+        except Exception:
+            app.logger.exception("partner_information_save partner_id=%s result=error", partner.get("id"))
+            flash("La sauvegarde a échoué. Réessayez ou contactez le support.", "error")
+    return render_template("partner_information.html", partner=partner, logo_url=_partner_logo_url(partner))
+
+
+PARTNER_SUPPORT_EMAIL = os.environ.get("PARTNER_SUPPORT_EMAIL", "clement@integraleacademy.com").strip()
+PARTNER_SUPPORT_MODULES = ["Tableau de bord", "Sessions", "Stagiaires", "CPF", "CNAPS", "Conventions", "Automatisations", "Facturation", "Suivi des ventes", "Abonnement", "Autre"]
+PARTNER_HELP_FAQS = [
+    {"q": "À quoi sert Intégrale Connect ?", "a": "La plateforme centralise le suivi de vos sessions, stagiaires, documents, modules métier et demandes d’abonnement dans un espace partenaire unique.", "step": "Depuis le menu gauche, utilisez Tableau de bord pour retrouver vos indicateurs et vos sessions."},
+    {"q": "Comment créer une session ?", "a": "Cliquez sur Créer puis Nouvelle session. Renseignez les dates, le type de formation et les informations nécessaires avant d’enregistrer.", "step": "Menu gauche → bouton vert Créer → Nouvelle session."},
+    {"q": "Comment ajouter un stagiaire ?", "a": "Utilisez le bouton Créer puis Nouveau stagiaire, ou ouvrez une session existante pour rattacher le stagiaire au bon groupe.", "step": "Menu gauche → Créer → Nouveau stagiaire."},
+    {"q": "Où trouver les conventions et automatisations ?", "a": "Les documents automatisés sont disponibles dans Outils lorsque le module Automatisations est inclus dans votre abonnement.", "step": "Menu gauche → Outils → Conventions ou Automatisations."},
+    {"q": "Pourquoi un cadenas apparaît sur un module ?", "a": "Le cadenas indique que le module n’est pas encore inclus. Vous pouvez demander son activation depuis Mon abonnement.", "step": "Menu gauche → Mon abonnement → Faites évoluer votre abonnement."},
+    {"q": "Comment suivre mes ventes ?", "a": "Le module Suivi des ventes affiche vos performances commerciales, objectifs et indicateurs lorsque le module est activé.", "step": "Menu gauche → Outils → Suivi des ventes."},
+]
+
+def _partner_support_mail_html(partner: Dict[str, Any], request_type: str, module: str, subject: str, message: str) -> str:
+    kind = "Demande d’assistance" if request_type == "support" else "Demande d’amélioration"
+    logo_src = f"{PUBLIC_BASE_URL.rstrip('/')}/static/iaconnectpartenaires.png"
+    return mail_layout(f'''
+      <div style="text-align:center;margin-bottom:18px"><img src="{logo_src}" alt="Intégrale Connect Partenaires" style="max-height:144px;width:auto;display:block;margin:0 auto;border:0;outline:none;text-decoration:none"></div>
+      <div style="background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#fff;border-radius:18px;padding:22px;margin-bottom:18px"><p style="margin:0 0 6px;text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:#bfdbfe">{html.escape(kind)}</p><h1 style="margin:0;font-size:24px">{html.escape(subject)}</h1></div>
+      <p style="font-size:15px;color:#334155">Nous avons bien pris en compte votre demande et nous reviendrons vers vous dans les meilleurs délais.</p>
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:16px;margin:18px 0"><p><strong>Partenaire :</strong> {html.escape(str(partner.get('name') or ''))}</p><p><strong>Module :</strong> {html.escape(module or 'Non précisé')}</p><p><strong>Contact :</strong> {html.escape(str(session.get('admin_email') or session.get('admin_username') or partner.get('email') or ''))}</p></div>
+      <h2 style="font-size:18px;color:#0f172a">Message</h2><p style="white-space:pre-wrap;color:#334155;line-height:1.6">{html.escape(message)}</p>
+    ''', show_default_logo=False, footer_text="Intégrale Connect Partenaires")
+
+@app.route("/admin/partner/aide-support", methods=["GET", "POST"])
+@admin_login_required
+def partner_help_support():
+    data, partner = _partner_space_partner_or_redirect()
+    if not partner:
+        return redirect(url_for("admin_sessions"))
+    if request.method == "POST":
+        request_type = (request.form.get("request_type") or "support").strip()
+        module = (request.form.get("module") or "Amélioration produit").strip()
+        subject = (request.form.get("subject") or "Demande support Intégrale Connect").strip()
+        message = (request.form.get("message") or "").strip()
+        attachments = []
+        screenshot = request.files.get("screenshot")
+        if screenshot and screenshot.filename:
+            raw = screenshot.read(5 * 1024 * 1024 + 1)
+            if len(raw) <= 5 * 1024 * 1024 and (screenshot.mimetype or "").lower() in PARTNER_LOGO_ALLOWED_MIMES:
+                attachments.append({"name": screenshot.filename, "content": base64.b64encode(raw).decode("ascii")})
+        if message:
+            html_body = _partner_support_mail_html(partner, request_type, module, subject, message)
+            result = brevo_send_email(PARTNER_SUPPORT_EMAIL, f"[{partner.get('name') or 'Partenaire'}] {subject}", html_body, attachments=attachments, metadata={"partner_id": partner.get("id"), "partner_name": partner.get("name"), "purpose": "partner_support"})
+            flash("Votre demande a bien été envoyée. Nous revenons vers vous dans les meilleurs délais." if result.get("ok") else "Votre demande est enregistrée, mais l’envoi email a échoué. Contactez-nous si besoin.", "success" if result.get("ok") else "error")
+            _append_activity_log(data, "partner_support_request", "partner", partner.get("id"), partner.get("id"), {"type": request_type, "module": module, "subject": subject, "email_ok": bool(result.get("ok"))})
+            save_data(data)
+            return redirect(url_for("partner_help_support"))
+        flash("Merci de décrire votre demande avant l’envoi.", "error")
+    return render_template("partner_help_support.html", partner=partner, modules=PARTNER_SUPPORT_MODULES, faqs=PARTNER_HELP_FAQS)
+
+@app.get("/admin/partner/abonnement")
+@admin_login_required
+def partner_subscription():
+    data, partner = _partner_space_partner_or_redirect()
+    if not partner:
+        return redirect(url_for("admin_sessions"))
+    save_data(data)
+    return render_template("partner_subscription.html", partner=partner, subscription=partner.get("subscription") or {}, module_pricing=PARTNER_SUBSCRIPTION_MODULE_PRICING, status_labels=PARTNER_SUBSCRIPTION_STATUS_LABELS)
+
+@app.get("/admin/partner/abonnement/evolution")
+@admin_login_required
+def partner_subscription_upgrade():
+    data, partner = _partner_space_partner_or_redirect()
+    if not partner:
+        return redirect(url_for("admin_sessions"))
+    save_data(data)
+    return render_template("partner_subscription_upgrade.html", partner=partner, subscription=partner.get("subscription") or {}, module_pricing=PARTNER_SUBSCRIPTION_MODULE_PRICING, status_labels=PARTNER_SUBSCRIPTION_STATUS_LABELS, integral_plus_price=PARTNER_INTEGRAL_CONNECT_PLUS_MONTHLY_PRICE, annual_free_months=PARTNER_SUBSCRIPTION_ANNUAL_FREE_MONTHS)
+
+@app.post("/admin/partner/abonnement")
+@admin_login_required
+def partner_subscription_request():
+    data, partner = _partner_space_partner_or_redirect()
+    if not partner:
+        return redirect(url_for("admin_sessions"))
+    normalize_partner_subscription(data, partner)
+    subscription = partner.get("subscription") or {}
+    current_modules = subscription.get("modules") or {}
+    selected_plan = (request.form.get("plan") or "custom").strip()
+    billing_frequency = (request.form.get("billing_frequency") or "monthly").strip()
+    if selected_plan not in {"custom", "integral_plus"}:
+        selected_plan = "custom"
+    if billing_frequency not in {"monthly", "annual"}:
+        billing_frequency = "monthly"
+    module_keys = list(PARTNER_SUBSCRIPTION_MODULE_PRICING.keys())
+    selected_modules = set(module_keys if selected_plan == "integral_plus" else [key for key in request.form.getlist("modules") if key in module_keys])
+    prices = subscription.get("module_prices") or {}
+    monthly_total = PARTNER_INTEGRAL_CONNECT_PLUS_MONTHLY_PRICE if selected_plan == "integral_plus" else sum(int(prices.get(key, PARTNER_SUBSCRIPTION_MODULE_PRICING[key]["price"]) or 0) for key in selected_modules)
+    annual_total = monthly_total * (12 - PARTNER_SUBSCRIPTION_ANNUAL_FREE_MONTHS) if billing_frequency == "annual" else None
+    included = {key for key, value in current_modules.items() if value}
+    request_entry = {
+        "id": str(uuid.uuid4()),
+        "partner_id": partner.get("id"),
+        "partner_name": partner.get("name"),
+        "type": "subscription_configuration",
+        "status": "pending",
+        "current_plan": subscription.get("plan_name") or partner.get("subscription_plan") or "Essentiel",
+        "requested_plan": selected_plan,
+        "billing_frequency": billing_frequency,
+        "modules": sorted(selected_modules),
+        "added_modules": sorted(selected_modules - included),
+        "removed_modules": sorted(included - selected_modules),
+        "monthly_total_ht": monthly_total,
+        "annual_total_ht": annual_total,
+        "created_at": _now_iso(),
+        "created_by": session.get("admin_username") or partner.get("email") or "partner",
+    }
+    data.setdefault("subscription_requests", []).append(request_entry)
+    _append_activity_log(data, "partner_subscription_configuration_requested", "partner", partner.get("id"), partner.get("id"), {"request_id": request_entry["id"], "requested_plan": selected_plan, "billing_frequency": billing_frequency})
+    save_data(data)
+    flash("Votre demande de configuration d’abonnement a été envoyée.", "success")
+    return redirect(url_for("partner_subscription"))
+
+@app.post("/admin/partners/<partner_id>/subscription/reset-usage")
+@admin_login_required
+@require_super_admin
+def admin_partner_reset_usage(partner_id: str):
+    data = load_data(); partner = _partner_or_404(data, partner_id); normalize_partner_subscription(data, partner)
+    sub = partner.setdefault("subscription", {})
+    old = int(sub.get("trainee_usage_count") or 0); now = _now_iso()
+    sub["trainee_usage_count"] = 0; sub["trainee_usage_reset_at"] = now
+    sub.setdefault("trainee_usage_reset_history", []).insert(0, {"date": now, "admin": session.get("admin_username") or "admin", "old_value": old, "new_value": 0})
+    del sub["trainee_usage_reset_history"][10:]
+    _append_activity_log(data, "partner_subscription_usage_reset", "partner", partner_id, partner_id, {"old_value": old, "new_value": 0})
+    save_data(data); flash("Compteur remis à zéro.", "success")
+    return redirect(url_for("admin_partner_detail", partner_id=partner_id) + "#subscription")
+
+@app.get("/admin/partners")
+@admin_login_required
+@require_super_admin
+def admin_partners():
+    data = load_data()
+    q = (request.args.get("q") or "").strip().lower()
+    status = (request.args.get("status") or "").strip()
+    plan = (request.args.get("plan") or "").strip().lower()
+    partners = []
+    for partner in data.get("partners", []):
+        if not isinstance(partner, dict):
+            continue
+        haystack = " ".join(str(partner.get(k) or "") for k in ("name", "legal_name", "email", "city", "phone")).lower()
+        if q and q not in haystack:
+            continue
+        if status and partner.get("status") != status:
+            continue
+        if plan and plan not in str(partner.get("subscription_plan") or "").lower():
+            continue
+        row = dict(partner)
+        row["counts"] = _partner_counts(data, partner.get("id") or "")
+        partners.append(row)
+    partners.sort(key=lambda item: (item.get("name") or "").lower())
+    return render_template("admin_partners.html", partners=partners, q=q, status=status, plan=plan, status_labels=PARTNER_STATUS_LABELS, protected_partner_id=INTEGRALE_PARTNER_ID)
+
+
+@app.route("/admin/partners/new", methods=["GET", "POST"])
+@admin_login_required
+@require_super_admin
+def admin_partner_new():
+    if request.method == "GET":
+        return render_template("admin_partner_new.html")
+    data = load_data()
+    email = (request.form.get("email") or "").strip().lower()
+    if not email or _find_user_by_email(data, email):
+        abort(400, "Email responsable invalide ou déjà utilisé")
+    now = _now_iso()
+    partner_id = str(uuid.uuid4())
+    partner = {
+        "id": partner_id,
+        "name": (request.form.get("name") or "").strip(),
+        "legal_name": (request.form.get("legal_name") or "").strip(),
+        "siret": (request.form.get("siret") or "").strip(),
+        "address": (request.form.get("address") or "").strip(),
+        "postal_code": (request.form.get("postal_code") or "").strip(),
+        "city": (request.form.get("city") or "").strip(),
+        "phone": (request.form.get("phone") or "").strip(),
+        "email": email,
+        "contact_first_name": (request.form.get("contact_first_name") or "").strip(),
+        "contact_last_name": (request.form.get("contact_last_name") or "").strip(),
+        "logo_path": "",
+        "status": (request.form.get("status") or "trial").strip() if (request.form.get("status") or "trial").strip() in PARTNER_STATUSES else "trial",
+        "subscription_plan": (request.form.get("subscription_plan") or "starter").strip(),
+        "max_users": int((request.form.get("max_users") or "5").strip() or 5),
+        "storage_limit": 0,
+        "trial_ends_at": (request.form.get("trial_ends_at") or "").strip(),
+        "subscription_started_at": now,
+        "subscription_ends_at": "",
+        "internal_notes": "",
+        "enabled_modules": [key for key in request.form.getlist("enabled_modules") if key in PARTNER_MODULE_KEYS],
+        "created_at": now,
+        "updated_at": now,
+    }
+    user = {"id": str(uuid.uuid4()), "partner_id": partner_id, "email": email, "first_name": partner["contact_first_name"], "last_name": partner["contact_last_name"], "role": "partner_admin", "active": True, "password_hash": "", "invitation_activated_at": "", "created_at": now, "updated_at": now}
+    token = _create_invitation(data, user["id"], partner_id)
+    data.setdefault("partners", []).append(partner)
+    data.setdefault("users", []).append(user)
+    send_result = _send_partner_invitation_email(user, partner, token)
+    invitation = data.get("invitations", [])[-1]
+    invitation["last_sent_at"] = _now_iso()
+    invitation["last_send_status"] = "réussi" if send_result.get("ok") else "échoué"
+    invitation["last_send_error"] = "" if send_result.get("ok") else (send_result.get("error") or "Erreur Brevo inconnue")
+    invitation["brevo_message_id"] = send_result.get("message_id") or ""
+    _append_activity_log(data, "partner_created", "partner", partner_id, partner_id)
+    _append_activity_log(data, "invitation_sent" if send_result.get("ok") else "invitation_send_failed", "user", user["id"], partner_id, {"status_code": send_result.get("status_code"), "error": invitation["last_send_error"], "message_id": invitation["brevo_message_id"]})
+    save_data(data)
+    if not send_result.get("ok"):
+        flash("Le partenaire a été créé, mais l’e-mail d’invitation n’a pas pu être envoyé : " + invitation["last_send_error"], "error")
+    return redirect(url_for("admin_partner_detail", partner_id=partner_id))
+
+
+@app.route("/admin/partners/<partner_id>", methods=["GET", "POST"])
+@admin_login_required
+@require_super_admin
+def admin_partner_detail(partner_id: str):
+    data = load_data()
+    partner = _partner_or_404(data, partner_id)
+    if request.method == "POST":
+        for key in ("name", "legal_name", "siret", "address", "postal_code", "city", "phone", "email", "contact_first_name", "contact_last_name", "subscription_plan", "internal_notes"):
+            partner[key] = (request.form.get(key) or "").strip()
+        partner["status"] = (request.form.get("status") or partner.get("status") or "active") if (request.form.get("status") or "") in PARTNER_STATUSES else partner.get("status", "active")
+        partner["enabled_modules"] = [key for key in request.form.getlist("enabled_modules") if key in PARTNER_MODULE_KEYS]
+        normalize_partner_subscription(data, partner)
+        sub = partner.setdefault("subscription", {})
+        sub["plan_name"] = (request.form.get("subscription_plan_name") or sub.get("plan_name") or "Essentiel").strip()
+        sub["status"] = (request.form.get("subscription_status") or sub.get("status") or "active").strip()
+        sub["trainee_unlimited"] = bool(request.form.get("trainee_unlimited"))
+        try:
+            sub["trainee_limit"] = None if sub["trainee_unlimited"] else int(request.form.get("trainee_limit") or 0)
+        except ValueError:
+            sub["trainee_limit"] = None
+        sub["modules"] = {key: (key in request.form.getlist("subscription_modules")) for key in PARTNER_SUBSCRIPTION_MODULE_PRICING}
+        prices = {}
+        for key, cfg in PARTNER_SUBSCRIPTION_MODULE_PRICING.items():
+            try:
+                prices[key] = int(request.form.get(f"module_price_{key}") or cfg["price"])
+            except ValueError:
+                prices[key] = cfg["price"]
+        sub["module_prices"] = prices
+        for int_key in ("max_users", "storage_limit"):
+            try:
+                partner[int_key] = int((request.form.get(int_key) or partner.get(int_key) or 0))
+            except ValueError:
+                pass
+        partner["updated_at"] = _now_iso()
+        _append_activity_log(data, "partner_updated", "partner", partner_id, partner_id)
+        save_data(data)
+        return redirect(url_for("admin_partner_detail", partner_id=partner_id))
+    users = [u for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id]
+    invitations = [i for i in data.get("invitations", []) if isinstance(i, dict) and i.get("partner_id") == partner_id and not i.get("cancelled_at")]
+    invitations.sort(key=lambda i: i.get("created_at") or "", reverse=True)
+    return render_template("admin_partner_detail.html", partner=partner, counts=_partner_counts(data, partner_id), users=users, invitation=invitations[0] if invitations else None, brevo_diag=_brevo_config_diagnostics(), can_copy_test_activation_link=_can_show_test_activation_link(), module_catalog=PARTNER_MODULES, enabled_modules=_partner_enabled_modules(partner), subscription_module_pricing=PARTNER_SUBSCRIPTION_MODULE_PRICING)
+
+
+def _can_show_test_activation_link() -> bool:
+    return _is_super_admin_session() and ((os.environ.get("ENABLE_TEST_ACTIVATION_LINK") or "").lower() == "true" or (os.environ.get("APP_ENV") or "").lower() == "test" or (os.environ.get("FLASK_ENV") or "").lower() == "development")
+
+
+def _partner_admin_user(data: Dict[str, Any], partner_id: str) -> Optional[Dict[str, Any]]:
+    return next((u for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id and u.get("role") == "partner_admin"), None)
+
+
+def _active_partner_invitation(data: Dict[str, Any], partner_id: str) -> Optional[Dict[str, Any]]:
+    invitations = [i for i in data.get("invitations", []) if isinstance(i, dict) and i.get("partner_id") == partner_id and not i.get("used_at") and not i.get("cancelled_at")]
+    invitations.sort(key=lambda i: i.get("created_at") or "", reverse=True)
+    return invitations[0] if invitations else None
+
+
+def _send_and_record_invitation(data: Dict[str, Any], partner: Dict[str, Any], user: Dict[str, Any], invitation: Dict[str, Any]) -> Dict[str, Any]:
+    raw_token = _decrypt_invitation_token(invitation.get("token_encrypted") or "")
+    if not raw_token:
+        invitation["cancelled_at"] = _now_iso()
+        invitation["last_send_status"] = "annulé"
+        invitation["last_send_error"] = "Token d’invitation sécurisé indisponible ; une nouvelle invitation a été générée."
+        _append_activity_log(data, "invitation_cancelled", "user", user.get("id"), partner.get("id"), {"reason": "missing_secure_token_for_resend"})
+        raw_token = _create_invitation(data, user.get("id"), partner.get("id"))
+        invitation = data.get("invitations", [])[-1]
+    result = _send_partner_invitation_email(user, partner, raw_token)
+    invitation["last_sent_at"] = _now_iso()
+    invitation["last_send_status"] = "réussi" if result.get("ok") else "échoué"
+    invitation["last_send_error"] = "" if result.get("ok") else (result.get("error") or "Erreur Brevo inconnue")
+    invitation["brevo_message_id"] = result.get("message_id") or ""
+    _append_activity_log(data, "invitation_sent" if result.get("ok") else "invitation_send_failed", "user", user.get("id"), partner.get("id"), {"status_code": result.get("status_code"), "error": invitation["last_send_error"], "message_id": invitation["brevo_message_id"]})
+    return result
+
+
+@app.post("/admin/partners/<partner_id>/send-invitation")
+@admin_login_required
+@require_super_admin
+def admin_partner_send_invitation(partner_id: str):
+    data = load_data(); partner = _partner_or_404(data, partner_id); user = _partner_admin_user(data, partner_id)
+    if not user:
+        abort(400, "Aucun utilisateur partner_admin")
+    invitation = _active_partner_invitation(data, partner_id)
+    if not invitation:
+        raw = _create_invitation(data, user.get("id"), partner_id); invitation = data.get("invitations", [])[-1]
+    result = _send_and_record_invitation(data, partner, user, invitation)
+    save_data(data)
+    flash("Invitation envoyée." if result.get("ok") else "Le partenaire existe, mais l’e-mail d’invitation n’a pas pu être envoyé : " + invitation.get("last_send_error", ""), "success" if result.get("ok") else "error")
+    return redirect(url_for("admin_partner_detail", partner_id=partner_id))
+
+
+@app.post("/admin/partners/<partner_id>/new-invitation")
+@admin_login_required
+@require_super_admin
+def admin_partner_new_invitation(partner_id: str):
+    data = load_data(); partner = _partner_or_404(data, partner_id); user = _partner_admin_user(data, partner_id)
+    if not user:
+        abort(400, "Aucun utilisateur partner_admin")
+    for inv in data.get("invitations", []):
+        if isinstance(inv, dict) and inv.get("partner_id") == partner_id and not inv.get("used_at") and not inv.get("cancelled_at"):
+            inv["cancelled_at"] = _now_iso()
+    raw = _create_invitation(data, user.get("id"), partner_id); invitation = data.get("invitations", [])[-1]
+    result = _send_and_record_invitation(data, partner, user, invitation)
+    save_data(data)
+    flash("Nouvelle invitation envoyée." if result.get("ok") else "Nouvelle invitation créée, mais l’e-mail n’a pas pu être envoyé : " + invitation.get("last_send_error", ""), "success" if result.get("ok") else "error")
+    return redirect(url_for("admin_partner_detail", partner_id=partner_id))
+
+
+@app.get("/admin/partners/<partner_id>/activation-link")
+@admin_login_required
+@require_super_admin
+def admin_partner_activation_link(partner_id: str):
+    if not _can_show_test_activation_link():
+        abort(403)
+    data = load_data(); _partner_or_404(data, partner_id); invitation = _active_partner_invitation(data, partner_id)
+    raw = _decrypt_invitation_token((invitation or {}).get("token_encrypted") or "")
+    if not raw:
+        abort(404)
+    return jsonify({"activation_url": _activation_url(raw)})
+
+
+@app.route("/admin/brevo-test", methods=["GET", "POST"])
+@admin_login_required
+@require_super_admin
+def admin_brevo_test():
+    if not _can_show_test_activation_link():
+        abort(403)
+    result = None
+    if request.method == "POST":
+        to_email = (request.form.get("email") or "").strip()
+        result = brevo_send_email(to_email, "Test Brevo", "<p>Test Brevo gestion stagiaires.</p>", text_content="Test Brevo gestion stagiaires.", metadata={"purpose": "brevo_test", "user_id": session.get("admin_user_id")})
+    return render_template("admin_brevo_test.html", result=result, brevo_diag=_brevo_config_diagnostics())
+
+
+@app.post("/admin/partners/<partner_id>/toggle-status")
+@admin_login_required
+@require_super_admin
+def admin_partner_toggle_status(partner_id: str):
+    data = load_data(); partner = _partner_or_404(data, partner_id)
+    partner["status"] = "active" if partner.get("status") in {"suspended", "archived"} else "suspended"
+    partner["updated_at"] = _now_iso()
+    _append_activity_log(data, "partner_status_changed", "partner", partner_id, partner_id, {"status": partner["status"]})
+    save_data(data)
+    return redirect(url_for("admin_partners"))
+
+
+@app.post("/admin/partners/<partner_id>/delete")
+@admin_login_required
+@require_super_admin
+def admin_partner_delete(partner_id: str):
+    if partner_id == INTEGRALE_PARTNER_ID:
+        abort(400, "Le partenaire Intégrale Connect ne peut pas être supprimé")
+    data = load_data()
+    partner = _partner_or_404(data, partner_id)
+    partner_name = partner.get("name") or partner_id
+    removed = _delete_partner_everywhere(data, partner_id)
+    storage_removed = _remove_partner_storage(partner_id)
+    if session.get("assist_partner_id") == partner_id:
+        session.pop("assist_partner_id", None)
+        session.pop("assist_started_at", None)
+    _append_activity_log(data, "partner_deleted", "partner", partner_id, "", {"partner_name": partner_name, "removed": removed, "storage_removed": storage_removed})
+    save_data(data)
+    flash(f"Le partenaire {partner_name} et toutes ses données ont été supprimés.", "success")
+    return redirect(url_for("admin_partners"))
+
+
+@app.post("/admin/partners/<partner_id>/assist")
+@admin_login_required
+@require_super_admin
+def admin_partner_assist(partner_id: str):
+    data = load_data(); partner = _partner_or_404(data, partner_id)
+    session["assist_partner_id"] = partner_id
+    session["assist_started_at"] = _now_iso()
+    _append_activity_log(data, "super_admin_assist_started", "partner", partner_id, partner_id)
+    save_data(data)
+    return redirect(url_for("admin_sessions"))
+
+
+@app.post("/admin/partners/assist/exit")
+@admin_login_required
+@require_super_admin
+def admin_partner_assist_exit():
+    data = load_data(); partner_id = session.pop("assist_partner_id", "")
+    started = session.pop("assist_started_at", "")
+    if partner_id:
+        _append_activity_log(data, "super_admin_assist_finished", "partner", partner_id, partner_id, {"started_at": started})
+        save_data(data)
+    return redirect(url_for("admin_partners"))
+
+
+@app.route("/activate-account", methods=["GET", "POST"])
+def activate_account():
+    token = (request.values.get("token") or "").strip()
+    error = ""
+    if request.method == "POST":
+        password = request.form.get("password") or ""
+        confirm = request.form.get("confirm") or ""
+        data = load_data()
+        invitation = next((i for i in data.get("invitations", []) if isinstance(i, dict) and hmac.compare_digest(i.get("token_hash") or "", _hash_token(token))), None)
+        now_dt = datetime.datetime.utcnow()
+        if not invitation or invitation.get("used_at") or invitation.get("cancelled_at"):
+            error = "Invitation invalide ou déjà utilisée."
+        elif _parse_iso_datetime(invitation.get("expires_at")) and _parse_iso_datetime(invitation.get("expires_at")).replace(tzinfo=None) < now_dt:
+            error = "Invitation expirée."
+        elif password != confirm or not _password_is_valid(password):
+            error = "Le mot de passe doit contenir au moins 10 caractères, avec lettres et chiffres."
+        else:
+            user = next((u for u in data.get("users", []) if isinstance(u, dict) and u.get("id") == invitation.get("user_id")), None)
+            if not user:
+                error = "Utilisateur introuvable."
+            elif user.get("partner_id") != invitation.get("partner_id"):
+                app.logger.warning("activation_failed invitation_user_partner_mismatch data_file=%s exists=%s user_id=%s partner_id_present=%s", os.path.abspath(DATA_FILE), os.path.exists(DATA_FILE), user.get("id"), bool(user.get("partner_id")))
+                error = "Invitation invalide."
+            else:
+                user["password_hash"] = _hash_password(password)
+                if not user.get("role"):
+                    user["role"] = "partner_admin"
+                user["invitation_activated_at"] = _now_iso()
+                user["updated_at"] = _now_iso()
+                invitation["used_at"] = _now_iso()
+                _append_activity_log(data, "invitation_activated", "user", user.get("id"), user.get("partner_id") or "")
+                save_data(data)
+                reloaded = load_data()
+                persisted_user = next((u for u in reloaded.get("users", []) if isinstance(u, dict) and u.get("id") == user.get("id")), None)
+                persisted_invitation = next((i for i in reloaded.get("invitations", []) if isinstance(i, dict) and i.get("id") == invitation.get("id")), None)
+                persisted_ok = bool(
+                    persisted_user
+                    and persisted_user.get("password_hash")
+                    and persisted_user.get("role") == "partner_admin"
+                    and persisted_user.get("partner_id")
+                    and persisted_invitation
+                    and persisted_invitation.get("used_at")
+                )
+                app.logger.info(
+                    "activation_persist_check ok=%s data_file=%s persist_dir=%s exists=%s user_present=%s role=%s partner_id_present=%s password_hash_present=%s invitation_used=%s",
+                    persisted_ok, os.path.abspath(DATA_FILE), os.path.abspath(PERSIST_DIR), os.path.exists(DATA_FILE), bool(persisted_user),
+                    (persisted_user or {}).get("role") or "", bool((persisted_user or {}).get("partner_id")),
+                    bool((persisted_user or {}).get("password_hash")), bool((persisted_invitation or {}).get("used_at")),
+                )
+                if not persisted_ok:
+                    error = "Activation impossible : l’enregistrement persistant du compte n’a pas pu être confirmé."
+                else:
+                    return redirect(url_for("admin_login", activated="1"))
+    return render_template("activate_account.html", token=token, error=error)
+
+
 @app.get("/admin/sessions")
 @admin_login_required
 def admin_sessions():
@@ -10539,6 +12449,8 @@ def admin_sessions():
         "A3P": 0,
         "SSIAP": 0,
     }
+    dashboard_training_labels = _partner_allowed_dashboard_training_labels()
+    dashboard_training_label_set = set(dashboard_training_labels)
 
     def _parse_iso_date(raw_value: Any) -> Optional[datetime.date]:
         raw = (raw_value or "").strip()
@@ -10567,13 +12479,18 @@ def admin_sessions():
             return "VAE"
         return None
 
+    visible_partner_id = _current_partner_id() or INTEGRALE_PARTNER_ID
+    visible_session_keys = set()
+
     for s in data.get("sessions", []):
+        if isinstance(s, dict) and s.get("partner_id") != visible_partner_id:
+            continue
         if _is_wedof_leads_session(s):
             continue
 
         session_start = _parse_iso_date(_session_get(s, "date_start", ""))
         dashboard_label = _dashboard_training_label(_session_get(s, "training_type", ""))
-        if dashboard_label:
+        if dashboard_label and dashboard_label in dashboard_training_label_set:
             trainees_for_dashboard = _session_trainees_list(s)
             for trainee in trainees_for_dashboard:
                 trainee_created_at = _parse_iso_date(trainee.get("created_at"))
@@ -10596,6 +12513,11 @@ def admin_sessions():
 
         if bool(s.get("archived")):
             continue
+
+        duplicate_key = _session_duplicate_key(s, visible_partner_id)
+        if duplicate_key in visible_session_keys:
+            continue
+        visible_session_keys.add(duplicate_key)
 
         trainees = _session_trainees_list(s)
         st = compute_stats(s)
@@ -10714,6 +12636,10 @@ def admin_sessions():
             "aps_remote_end": _session_get(s, "aps_remote_end", ""),
             "aps_in_person_start": _session_get(s, "aps_in_person_start", ""),
             "aps_in_person_end": _session_get(s, "aps_in_person_end", ""),
+            "dirigeant_remote_start": _session_get(s, "dirigeant_remote_start", ""),
+            "dirigeant_remote_end": _session_get(s, "dirigeant_remote_end", ""),
+            "dirigeant_in_person_start": _session_get(s, "dirigeant_in_person_start", ""),
+            "dirigeant_in_person_end": _session_get(s, "dirigeant_in_person_end", ""),
             "total": st["total"],
             "session_is_conform": st["session_is_conform"],
             "session_dossier_complete": session_dossier_complete,
@@ -10721,6 +12647,8 @@ def admin_sessions():
             # ✅ new
             "deliverables_done": done_total,
             "deliverables_total": total_total,
+            "dossier_complete_total": dossier_complete_total,
+            "cnaps_accepted_count": st["cnaps_accepted_count"],
             "public_logged_in_total": public_logged_in_total,
             "cmar_registered_total": cmar_registered_total,
             "cash_payment_total": round(cash_payment_total, 2),
@@ -10742,9 +12670,10 @@ def admin_sessions():
     response = make_response(render_template(
         "admin_sessions.html",
         sessions=out_sessions,
-        formation_types=FORMATION_TYPES,
+        formation_types=_partner_allowed_formation_types(),
         dashboard_year=current_year,
         yearly_training_counts=yearly_training_counts,
+        dashboard_training_labels=dashboard_training_labels,
         wedof_new_requests_count=wedof_new_requests_count,
     ))
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
@@ -10916,88 +12845,248 @@ def admin_cash_payments():
 def admin_sessions_conventions():
     data = load_data()
     selected_formation = (request.args.get("formation") or "").strip().upper()
-    selected_status = (request.args.get("status") or "").strip().lower()
+    selected_status_param = (request.args.get("status") or "").strip().lower()
+    selected_status = selected_status_param
+    selected_q = (request.args.get("q") or "").strip().lower()
     convention_rows = []
     formation_options_by_key = {}
     status_options = [
-        {"key": "soon", "label": "Prochainement"},
-        {"key": "signing", "label": "En cours de signature"},
+        {"key": "not_generated", "label": "À générer"},
+        {"key": "generated", "label": "Générée"},
+        {"key": "waiting_signature", "label": "En attente de signature"},
+        {"key": "sent", "label": "Envoyée"},
+        {"key": "signed", "label": "Signée"},
+        {"key": "expired", "label": "Expirée"},
+        {"key": "refused", "label": "Refusée"},
+        {"key": "error", "label": "Erreur"},
     ]
-    if selected_status and selected_status not in {option["key"] for option in status_options}:
+    if selected_status == "signing":
+        selected_status = "waiting_signature"
+    valid_statuses = {option["key"] for option in status_options}
+    if selected_status and selected_status not in valid_statuses:
         selected_status = ""
 
+    stats = {"total": 0, "waiting_signature": 0, "signed": 0, "action_required": 0, "errors": 0, "downloadable": 0}
+    data_changed = False
+
     for sess in data.get("sessions", []):
-        if bool(sess.get("archived")):
+        if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
             continue
-        if _is_wedof_leads_session(sess):
+        session_id = str(sess.get("id") or "")
+        training_type = _session_get(sess, "training_type", "")
+        formation_key = (training_type or "").strip().upper()
+        formation_display_label = formation_label(training_type)
+        if formation_key:
+            formation_options_by_key[formation_key] = formation_display_label
+        if selected_formation and formation_key != selected_formation:
             continue
-        training_type_raw = (_session_get(sess, "training_type", "") or "").strip().upper()
-        session_is_vae = "VAE" in training_type_raw
+
         trainees = _session_trainees_list(sess)
-        for trainee in trainees:
-            if session_is_vae:
-                vae_status_key = vae_status_view(
-                    trainee.get("vae_status") or trainee.get("vae_status_label")
-                )["key"]
-                inferred_vae_status_key = _infer_vae_status_from_action_dates(
-                    trainee.get("vae_action_dates")
-                )
-                if (
-                    inferred_vae_status_key is not None
-                    and VAE_STATUS_RANK.get(inferred_vae_status_key, -1)
-                    > VAE_STATUS_RANK.get(vae_status_key, -1)
-                ):
-                    vae_status_key = inferred_vae_status_key
-                if (
-                    VAE_STATUS_RANK.get(vae_status_key, -1)
-                    < VAE_STATUS_RANK["financement_validated"]
-                ):
+        for trainee_index, trainee in enumerate(trainees):
+            trainee_id = str(trainee.get("id") or f"trainee-{trainee_index + 1}")
+            is_vae_convention_row = "VAE" in str(training_type or "").upper()
+            if is_vae_convention_row:
+                vae_key = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))["key"]
+                inferred_vae_key = _infer_vae_status_from_action_dates(trainee.get("vae_action_dates"))
+                if inferred_vae_key and VAE_STATUS_RANK.get(inferred_vae_key, -1) > VAE_STATUS_RANK.get(vae_key, -1):
+                    vae_key = inferred_vae_key
+                if VAE_STATUS_RANK.get(vae_key, -1) < VAE_STATUS_RANK.get("financement_validated", 0):
                     continue
-
-            convention_status = (trainee.get("convention_status") or "soon").strip().lower()
-            if convention_status not in {"soon", "signing"}:
+                if (trainee.get("convention_status") or "").strip().lower() == "signed":
+                    continue
+            state = _yousign_state(trainee)
+            if _refresh_yousign_convention_status_if_pending(data, sess, trainees, trainee):
+                data_changed = True
+                state = _yousign_state(trainee)
+            if not _has_generated_yousign_convention(trainee):
+                continue
+            automation = _build_trainee_automation_status(sess, trainee, session_id, trainee_id)
+            convention = automation["convention"]
+            status_key = convention.get("status") or "not_generated"
+            legacy_convention_status = (trainee.get("convention_status") or "").strip().lower()
+            if not state.get("signature_request_id") and not state.get("unsigned_pdf_path") and not trainee.get("convention_aps_pdf_path"):
+                if legacy_convention_status == "signing":
+                    status_key = "waiting_signature"
+                    convention["status"] = status_key
+                    convention["label"] = "Signature attendue"
+                    convention["tone"] = "waiting"
+                elif legacy_convention_status == "signed":
+                    status_key = "signed"
+                    convention["status"] = status_key
+                    convention["label"] = "Signée"
+                    convention["tone"] = "complete"
+            if selected_status and status_key != selected_status:
                 continue
 
-            training_type = _session_get(sess, "training_type", "")
-            formation_key = (training_type or "").strip().upper()
-            formation_display_label = formation_label(training_type)
-            if formation_key:
-                formation_options_by_key[formation_key] = formation_display_label
-
-            if selected_formation and formation_key != selected_formation:
-                continue
-            if selected_status and convention_status != selected_status:
+            full_name = f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip()
+            searchable = " ".join([
+                full_name, str(trainee.get("email") or ""), formation_display_label,
+                str(state.get("signature_request_id") or ""), str(state.get("external_id") or ""),
+            ]).lower()
+            if selected_q and selected_q not in searchable:
                 continue
 
-            convention_rows.append({
+            signed_pdf = bool(state.get("signed_pdf_path"))
+            original_pdf = bool(state.get("unsigned_pdf_path") or trainee.get("convention_aps_pdf_path"))
+            is_problem = status_key in {"error", "expired", "refused"}
+            row = {
+                "session_id": session_id,
+                "trainee_id": trainee_id,
                 "last_name": (trainee.get("last_name") or "").strip(),
                 "first_name": (trainee.get("first_name") or "").strip(),
+                "email": (trainee.get("email") or "").strip(),
+                "phone": (trainee.get("phone") or trainee.get("telephone") or "").strip(),
                 "formation": formation_display_label,
                 "formation_key": formation_key,
                 "date_start_label": fr_date(_session_get(sess, "date_start", "")),
                 "date_end_label": fr_date(_session_get(sess, "date_end", "")),
-                "status_key": convention_status,
-                "status_label": "Prochainement" if convention_status == "soon" else "En cours de signature",
-            })
+                "status_key": status_key,
+                "status_label": convention.get("label") or _convention_signature_admin_label(state),
+                "status_tone": convention.get("tone") or ("error" if is_problem else "waiting" if status_key == "waiting_signature" else "complete" if status_key == "signed" else "pending"),
+                "signature_request_id": state.get("signature_request_id") or "",
+                "signature_link": state.get("signature_link") or "",
+                "created_at": _format_automation_datetime(state.get("created_at") or trainee.get("convention_aps_generated_at") or ""),
+                "sent_at": convention.get("sent_at") or "",
+                "signed_at": convention.get("signed_at") or "",
+                "reminder_count": int(state.get("reminder_count") or 0),
+                "next_reminder_at": _format_automation_datetime(state.get("next_reminder_at") or ""),
+                "error": convention.get("error") or "",
+                "trainee_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
+                "create_url": url_for("admin_create_convention_signature", session_id=session_id, trainee_id=trainee_id),
+                "reminder_url": url_for("admin_send_convention_signature_reminder_for_session", session_id=session_id, trainee_id=trainee_id),
+                "preview_url": url_for("admin_preview_convention", session_id=session_id, trainee_id=trainee_id),
+                "original_pdf_url": url_for("admin_view_original_convention", session_id=session_id, trainee_id=trainee_id) if original_pdf else "",
+                "signed_pdf_url": url_for("admin_view_signed_convention", session_id=session_id, trainee_id=trainee_id) if signed_pdf else "",
+                "download_url": convention.get("download_url") or "",
+                "can_send": True,
+                "can_remind": status_key in {"waiting_signature", "sent"} and bool(state.get("signature_link")),
+                "printed": bool(trainee.get("printed")),
+                "is_problem": is_problem,
+            }
+            convention_rows.append(row)
+            stats["total"] += 1
+            if status_key == "waiting_signature":
+                stats["waiting_signature"] += 1
+            if status_key == "signed":
+                stats["signed"] += 1
+            if status_key in {"not_generated", "generated", "expired", "refused"}:
+                stats["action_required"] += 1
+            if is_problem:
+                stats["errors"] += 1
+            if row["download_url"] or row["signed_pdf_url"] or row["original_pdf_url"]:
+                stats["downloadable"] += 1
 
-    formation_options = [
-        {"key": key, "label": label}
-        for key, label in sorted(formation_options_by_key.items(), key=lambda item: item[1].lower())
-    ]
+    if data_changed:
+        save_data(data)
+    formation_options = [{"key": key, "label": label} for key, label in sorted(formation_options_by_key.items(), key=lambda item: item[1].lower())]
     if selected_formation and selected_formation not in formation_options_by_key:
         selected_formation = ""
 
-    convention_rows.sort(key=lambda row: ((row.get("last_name") or "").lower(), (row.get("first_name") or "").lower()))
-    return render_template(
+    convention_rows.sort(key=lambda row: (row.get("status_key") != "waiting_signature", row.get("date_start_label") or "", (row.get("last_name") or "").lower(), (row.get("first_name") or "").lower()))
+    response = make_response(render_template(
         "admin_sessions_conventions.html",
         rows=convention_rows,
+        stats=stats,
         formation_options=formation_options,
         status_options=status_options,
         selected_formation=selected_formation,
-        selected_status=selected_status,
-    )
+        selected_status=(selected_status_param or selected_status),
+        selected_status_effective=selected_status,
+        selected_q=request.args.get("q") or "",
+    ))
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
 
 
+
+def _automation_status_tone(status: str) -> str:
+    if status in {"signed", "sent", "complete"}:
+        return "complete"
+    if status in {"error", "refused", "expired"}:
+        return "error"
+    if status in {"waiting_signature", "sent", "in_progress"}:
+        return "waiting"
+    if status.startswith("blocked") or status == "blocked":
+        return "blocked"
+    return "pending"
+
+
+def _build_automations_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
+    rows = []
+    stats = {"trainees": 0, "complete": 0, "in_progress": 0, "blocked": 0, "errors": 0, "documents_ready": 0}
+    for sess in data.get("sessions", []) or []:
+        if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
+            continue
+        session_id = str(sess.get("id") or "")
+        if not session_id:
+            continue
+        formation = formation_label(_session_get(sess, "training_type", ""))
+        session_name = _session_get(sess, "name", "")
+        trainees = _session_trainees_list(sess)
+        for trainee in trainees:
+            trainee_id = str(trainee.get("id") or "")
+            if not trainee_id:
+                continue
+            automation = _build_trainee_automation_status(sess, trainee, session_id, trainee_id)
+            convention = automation.get("convention") or {}
+            convocation = automation.get("convocation") or {}
+            global_status = automation.get("global_status") or "action_required"
+            stats["trainees"] += 1
+            if global_status == "complete":
+                stats["complete"] += 1
+            elif global_status == "error":
+                stats["errors"] += 1
+            elif global_status == "blocked":
+                stats["blocked"] += 1
+            else:
+                stats["in_progress"] += 1
+            stats["documents_ready"] += int(automation.get("ready_documents") or 0)
+            row = {
+                "session_id": session_id,
+                "trainee_id": trainee_id,
+                "trainee_name": _format_trainee_name(trainee.get("first_name", ""), trainee.get("last_name", "")),
+                "email": (trainee.get("email") or "").strip(),
+                "phone": (trainee.get("phone") or trainee.get("telephone") or "").strip(),
+                "session_name": session_name,
+                "formation": formation,
+                "date_start": _session_get(sess, "date_start", ""),
+                "date_start_label": fr_date(_session_get(sess, "date_start", "")),
+                "global_status": global_status,
+                "progress_percent": automation.get("progress_percent") or 0,
+                "ready_documents": automation.get("ready_documents") or 0,
+                "total_documents": automation.get("total_documents") or 0,
+                "convention_label": convention.get("label") or "—",
+                "convention_status": convention.get("status") or "",
+                "convention_tone": convention.get("tone") or _automation_status_tone(convention.get("status") or ""),
+                "convention_date": convention.get("signed_at") or convention.get("sent_at") or convention.get("generated_at") or "",
+                "convocation_label": convocation.get("label") or "—",
+                "convocation_status": convocation.get("status") or "",
+                "convocation_tone": convocation.get("tone") or _automation_status_tone(convocation.get("status") or ""),
+                "convocation_date": convocation.get("sent_at") or convocation.get("generated_at") or "",
+                "planned_automations": automation.get("planned_automations") or [],
+                "block_reason": convocation.get("block_reason") or "",
+                "error": convention.get("error") or convocation.get("error") or "",
+                "trainee_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
+            }
+            rows.append(row)
+    rows.sort(key=lambda r: (r["global_status"] == "complete", r["global_status"] != "error", r.get("date_start") or "9999-12-31", r.get("trainee_name", "").lower()))
+    return {"rows": rows, "stats": stats}
+
+
+@app.get("/admin/sessions/automatisations")
+@admin_login_required
+def admin_sessions_automations():
+    data = load_data()
+    dashboard = _build_automations_dashboard(data)
+    response = make_response(render_template(
+        "admin_sessions_automations.html",
+        rows=dashboard["rows"],
+        stats=dashboard["stats"],
+    ))
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
 
 @app.get("/admin/wedof")
 @admin_login_required
@@ -11088,12 +13177,12 @@ def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, An
 
     if not last_name:
         last_name = "Nom inconnu"
-    company = "Intégrale Academy"
+    company = "Intégrale Connect"
 
     salesforce_payload = {
         "oid": "00DJ9000000PT9F",
         "encoding": "UTF-8",
-        "retURL": "https://gestionstagiaires-r5no.onrender.com/admin/wedof",
+        "retURL": f"{PUBLIC_BASE_URL.rstrip('/')}/admin/wedof",
         "first_name": first_name,
         "last_name": last_name,
         "email": email,
@@ -11591,6 +13680,22 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
     annual_revenue = sum(month["revenue"] for month in monthly_rows)
     annual_inscriptions = sum(month["inscriptions"] for month in monthly_rows)
     annual_progress_ratio = (annual_revenue / annual_objective) if annual_objective > 0 else 0
+
+    current_month_row = monthly_rows[today.month - 1] if selected_year == today.year else None
+    current_month_objective = _parse_positive_int(current_month_row.get("objective") if current_month_row else 0)
+    current_month_revenue = _parse_positive_int(current_month_row.get("revenue") if current_month_row else 0)
+    current_month_inscriptions = int(current_month_row.get("inscriptions") or 0) if current_month_row else 0
+    current_month_progress_ratio = (current_month_revenue / current_month_objective) if current_month_objective > 0 else 0
+    current_month_remaining = max(current_month_objective - current_month_revenue, 0) if current_month_objective > 0 else 0
+    _, days_in_current_month = calendar.monthrange(today.year, today.month)
+    elapsed_days = today.day
+    remaining_days = max(days_in_current_month - elapsed_days, 0)
+    current_month_expected_ratio = (elapsed_days / days_in_current_month) if days_in_current_month > 0 else 0
+    current_month_expected_revenue = round(current_month_objective * current_month_expected_ratio) if current_month_objective > 0 else 0
+    current_month_pace_delta = current_month_revenue - current_month_expected_revenue
+    current_month_daily_needed = round(current_month_remaining / max(remaining_days, 1)) if current_month_remaining > 0 else 0
+    current_month_status = "ahead" if current_month_objective > 0 and current_month_pace_delta >= 0 else "behind" if current_month_objective > 0 else "unset"
+
     annual_trainings = sorted(
         annual_trainings_map.values(),
         key=lambda row: row["revenue"],
@@ -11606,6 +13711,20 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
         "annual_revenue": annual_revenue,
         "annual_inscriptions": annual_inscriptions,
         "annual_progress_ratio": annual_progress_ratio,
+        "current_month_index": today.month,
+        "current_month_name": SALES_TRACKING_MONTH_LABELS[today.month - 1],
+        "current_month_revenue": current_month_revenue,
+        "current_month_objective": current_month_objective,
+        "current_month_inscriptions": current_month_inscriptions,
+        "current_month_progress_ratio": current_month_progress_ratio,
+        "current_month_remaining": current_month_remaining,
+        "current_month_days_elapsed": elapsed_days,
+        "current_month_days_total": days_in_current_month,
+        "current_month_days_remaining": remaining_days,
+        "current_month_expected_revenue": current_month_expected_revenue,
+        "current_month_pace_delta": current_month_pace_delta,
+        "current_month_daily_needed": current_month_daily_needed,
+        "current_month_status": current_month_status,
         "annual_trainings": annual_trainings,
         "monthly_rows": monthly_rows,
         "today_revenue": today_revenue,
@@ -12267,6 +14386,7 @@ def admin_afc_export():
 
 
 
+@app.get("/admin/qonto")
 @app.get("/admin/reglages/qonto")
 @admin_login_required
 def admin_qonto_settings():
@@ -12277,10 +14397,23 @@ def admin_qonto_settings():
     last_success_at = str(qonto_settings.get("last_success_at") or "")
     return render_template(
         "admin_qonto_settings.html",
-        connected=False,
+        connected=connected,
         message=message,
         last_success_fr=fr_datetime(last_success_at),
     )
+
+
+@app.get("/api/admin/qonto/bank-accounts")
+@admin_login_required
+@admin_write_required
+def api_admin_qonto_bank_accounts():
+    if not _qonto_is_configured():
+        return jsonify({"ok": False, "error": "Qonto n’est pas connecté"}), 400
+    try:
+        return jsonify({"ok": True, **get_qonto_organization_bank_accounts()})
+    except Exception as exc:
+        app.logger.exception("[QONTO] bank accounts lookup failed: %s", _sanitize_qonto_error(str(exc)))
+        return jsonify({"ok": False, "error": format_qonto_error_for_front(exc)}), 502
 
 
 @app.get("/api/qonto/status")
@@ -12318,6 +14451,58 @@ def api_qonto_status():
     except Exception as exc:
         app.logger.exception("[QONTO] unexpected status check error: %s", _sanitize_qonto_error(str(exc)))
         return jsonify({"connected": False, "message": "Erreur inattendue pendant le test Qonto"}), 200
+
+
+
+@app.get("/admin/qonto/connect")
+@admin_login_required
+def admin_qonto_connect():
+    app.logger.info("[QONTO OAUTH] /admin/qonto/connect called")
+    if not _qonto_oauth_is_configured():
+        flash("Variables OAuth Qonto manquantes : QONTO_OAUTH_CLIENT_ID et QONTO_OAUTH_CLIENT_SECRET.", "error")
+        return redirect(url_for("admin_qonto_settings"))
+    state = secrets.token_urlsafe(32)
+    session["qonto_oauth_state"] = state
+    params = {
+        "client_id": _qonto_oauth_client_id(),
+        "redirect_uri": _qonto_oauth_redirect_uri(),
+        "response_type": "code",
+        "scope": QONTO_OAUTH_SCOPE,
+        "state": state,
+    }
+    authorization_url = f"{_qonto_oauth_base_url()}/oauth2/auth?{urlencode(params)}"
+    app.logger.info("[QONTO OAUTH] generated authorization_url=%s", authorization_url)
+    return redirect(authorization_url)
+
+
+@app.post("/admin/qonto/oauth/reset")
+@admin_login_required
+def admin_qonto_oauth_reset():
+    data = load_data()
+    _reset_qonto_oauth_tokens(data)
+    save_data(data)
+    flash("Connexion Qonto OAuth réinitialisée. Vous pouvez relancer une connexion production.", "success")
+    return redirect(url_for("admin_qonto_settings"))
+
+
+@app.get("/api/qonto/oauth/status")
+@admin_login_required
+def api_qonto_oauth_status():
+    data = load_data()
+    settings = _qonto_oauth_settings(data)
+    scope = settings.get("scope") or ""
+    connected = _qonto_oauth_connected(data)
+    return jsonify({
+        "connected": connected,
+        "has_access_token": bool(settings.get("access_token")),
+        "has_refresh_token": bool(settings.get("refresh_token")),
+        "expires_at": settings.get("expires_at") or None,
+        "scopes": scope.split() if isinstance(scope, str) else list(scope or []),
+        "environment": settings.get("environment") or None,
+        "expected_environment": _qonto_oauth_environment(),
+        "incompatible": _qonto_oauth_has_incompatible_token(data),
+        "message": _qonto_oauth_status_message(data),
+    }), 200
 
 
 @app.get("/admin/gestion-secretariat")
@@ -14240,7 +16425,9 @@ def admin_trainees(session_id: str):
 
         _sync_trainee_afc_medical_requirement(t, session_view["name"])
         ensure_documents_schema_for_trainee(t, training_type)
+        _sync_convention_status_from_yousign(t)
         t["dossier_status"] = "complete" if dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")) else "incomplete"
+        _sync_financement_status_from_manual_validation(t)
 
         current_cnaps = t.get("cnaps") or ""
 
@@ -14717,6 +16904,24 @@ def _sync_aps_period_dates(session_obj: Dict[str, Any]) -> None:
         if not exam or (presentiel_end and presentiel_end >= exam):
             session_obj["exam_date"] = computed_exam_date
 
+def _session_duplicate_key(session_obj: dict, partner_id: str = "") -> tuple:
+    """Stable natural key used to avoid showing/creating exact duplicate sessions."""
+    if not isinstance(session_obj, dict):
+        return (partner_id or INTEGRALE_PARTNER_ID, "", "", "", "", "", "", "", "", "")
+    return (
+        (session_obj.get("partner_id") or partner_id or INTEGRALE_PARTNER_ID),
+        (session_obj.get("name") or "").strip().casefold(),
+        (session_obj.get("training_type") or "").strip().casefold(),
+        (session_obj.get("date_start") or "").strip(),
+        (session_obj.get("date_end") or "").strip(),
+        (session_obj.get("exam_date") or "").strip(),
+        (session_obj.get("exam_theory_date") or "").strip(),
+        (session_obj.get("exam_practice_date") or "").strip(),
+        (session_obj.get("practice_training_date") or "").strip(),
+        (session_obj.get("aps_in_person_start") or "").strip(),
+    )
+
+
 # =========================
 # API - Sessions (used by your modal JS)
 # =========================
@@ -14739,10 +16944,17 @@ def api_create_session():
     ssiap_exam_date = (payload.get("ssiap_exam_date") or "").strip()
     exclude_from_sales_tracking = bool(payload.get("exclude_from_sales_tracking"))
     aps_in_person_start = (payload.get("aps_in_person_start") or "").strip()
+    dirigeant_remote_start = (payload.get("dirigeant_remote_start") or "").strip()
+    dirigeant_remote_end = (payload.get("dirigeant_remote_end") or "").strip()
+    dirigeant_in_person_start = (payload.get("dirigeant_in_person_start") or "").strip()
+    dirigeant_in_person_end = (payload.get("dirigeant_in_person_end") or "").strip()
     aps_elearning_enabled = bool(payload.get("aps_elearning_enabled")) and training_type.upper().startswith("APS")
 
     if not name or not training_type:
         return jsonify({"ok": False, "error": "missing_name_or_training_type"}), 400
+    required_module = _module_for_training_type(training_type)
+    if required_module and not partner_has_module(required_module):
+        return jsonify({"ok": False, "error": "module_locked", "module": required_module}), 403
 
     session_id = uuid.uuid4().hex[:10]
     s = {
@@ -14757,13 +16969,26 @@ def api_create_session():
         "practice_training_date": practice_training_date,
         "ssiap_exam_date": ssiap_exam_date,
         "aps_in_person_start": aps_in_person_start,
+        "dirigeant_remote_start": dirigeant_remote_start,
+        "dirigeant_remote_end": dirigeant_remote_end,
+        "dirigeant_in_person_start": dirigeant_in_person_start,
+        "dirigeant_in_person_end": dirigeant_in_person_end,
         "aps_elearning_enabled": aps_elearning_enabled,
         "exclude_from_sales_tracking": exclude_from_sales_tracking,
+        "partner_id": _current_partner_id() or INTEGRALE_PARTNER_ID,
         "created_at": _now_iso(),
         "trainees": [],
         "archived": False,
     }
     _sync_aps_period_dates(s)
+
+    duplicate_key = _session_duplicate_key(s)
+    for existing in data.get("sessions", []):
+        if not isinstance(existing, dict) or existing.get("archived"):
+            continue
+        if _session_duplicate_key(existing) == duplicate_key:
+            return jsonify({"ok": True, "id": existing.get("id"), "deduplicated": True})
+
     data["sessions"].insert(0, s)
     save_data(data)
     return jsonify({"ok": True, "id": session_id})
@@ -14794,6 +17019,10 @@ def api_update_session(session_id: str):
         "practice_training_date",
         "ssiap_exam_date",
         "aps_in_person_start",
+        "dirigeant_remote_start",
+        "dirigeant_remote_end",
+        "dirigeant_in_person_start",
+        "dirigeant_in_person_end",
         "prospects_comment",
     ):
         if key in payload:
@@ -14988,10 +17217,8 @@ def api_create_trainee(session_id: str):
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
+    increment_partner_trainee_usage(data, s.get("partner_id") or _current_partner_id() or INTEGRALE_PARTNER_ID, t)
     save_data(data)
-
-    # La transmission YPAREO est proposée séparément dans l'interface après
-    # la création locale, afin de toujours demander l'accord de l'utilisateur.
 
     # ✅ ENVOI MAIL + SMS à la création (optionnel)
     link = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}"
@@ -15096,6 +17323,10 @@ def api_create_trainee(session_id: str):
         t["access_sent_email_ok"] = False
         t["access_sent_sms_ok"] = False
 
+    # La convention est envoyée depuis la confirmation côté interface afin de
+    # laisser l’administrateur vérifier l’aperçu PDF avant toute transmission,
+    # uniquement lorsque le module automatisations est actif pour le partenaire.
+    automation_enabled = _automation_is_enabled(s)
     save_data(data)
 
     return jsonify({
@@ -15106,97 +17337,30 @@ def api_create_trainee(session_id: str):
         "access_sms_ok": sms_ok,
         "public_link": link,
         "trainee_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
-        "ypareo_url": url_for("admin_send_trainee_to_ypareo", session_id=session_id, trainee_id=trainee_id),
-        "summary_url": url_for("admin_trainee_summary", session_id=session_id, trainee_id=trainee_id)
+        "summary_url": url_for("admin_trainee_summary", session_id=session_id, trainee_id=trainee_id),
+        "is_vae": bool(show_vae),
+        "training_type": training_type,
+        "training_price": t.get("training_price", ""),
+        "cpf_amount": t.get("cpf_amount", ""),
+        "personal_amount": t.get("personal_amount", ""),
+        "other_amount": t.get("other_amount", ""),
+        "automation_enabled": automation_enabled,
+        "convention_preview_url": url_for("admin_preview_convention", session_id=session_id, trainee_id=trainee_id) if automation_enabled else "",
+        "convention_financing_url": url_for("api_update_convention_financing", session_id=session_id, trainee_id=trainee_id) if automation_enabled else "",
+        "convention_signature_url": url_for("api_create_convention_signature", session_id=session_id, trainee_id=trainee_id) if automation_enabled else ""
     })
 
 
-def _admin_sync_trainee_to_ypareo(session_id: str, trainee_id: str):
-    """Synchronize both the YPAREO person and cursus for a local trainee."""
-    data = load_data()
-    trainee_session = find_session(data, session_id)
-    if not trainee_session:
-        abort(404)
-
-    trainee = find_trainee(trainee_session, trainee_id)
-    if not trainee:
-        abort(404)
-
-    person_created = creer_apprenant_ypareo(trainee, trainee_session)
-    cursus_created = trainee.get("ypareo_cursus_statut") == "Créé"
-    success = bool(person_created and cursus_created)
-
-    if success:
-        message = "Données transférées vers YPAREO NEO avec succès"
-        flash(message, "success")
-    else:
-        reason = (
-            trainee.get("ypareo_cursus_erreur")
-            if person_created and not cursus_created
-            else trainee.get("ypareo_erreur")
-        ) or "Erreur inconnue lors de la transmission"
-        message = str(reason)
-        flash(f"Transmission vers YPAREO NEO impossible : {message}", "error")
-
-    trainee_session["trainees"] = _session_trainees_list(trainee_session)
-    trainee_session.pop("stagiaires", None)
-    save_data(data)
-
-    if request.accept_mimetypes.best == "application/json":
-        return jsonify({
-            "ok": success,
-            "message": "Données transférées vers YPAREO NEO avec succès" if success else "",
-            "error": "" if success else message,
-            "ypareo_id": trainee.get("ypareo_id") or "",
-            "ypareo_cursus_id": trainee.get("ypareo_cursus_id") or "",
-        }), 200 if success else 422
-
-    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
-
-
 @app.post("/admin/sessions/<session_id>/trainees/<trainee_id>/ypareo")
-@admin_login_required
-@admin_write_required
-def admin_send_trainee_to_ypareo(session_id: str, trainee_id: str):
-    return _admin_sync_trainee_to_ypareo(session_id, trainee_id)
-
-
 @app.post("/admin/sessions/<session_id>/trainees/<trainee_id>/ypareo/personne")
-@admin_login_required
-@admin_write_required
-def admin_resend_trainee_ypareo_person(session_id: str, trainee_id: str):
-    """Keep the legacy person retry URL aligned with the complete YPAREO sync."""
-    return _admin_sync_trainee_to_ypareo(session_id, trainee_id)
-
-
 @app.post("/admin/sessions/<session_id>/trainees/<trainee_id>/ypareo/cursus")
 @admin_login_required
 @admin_write_required
-def admin_create_trainee_ypareo_cursus(session_id: str, trainee_id: str):
-    data = load_data()
-    trainee_session = find_session(data, session_id)
-    if not trainee_session:
-        abort(404)
-    trainee = find_trainee(trainee_session, trainee_id)
-    if not trainee:
-        abort(404)
-
-    id_personne = trainee.get("ypareo_id")
-    if not id_personne:
-        trainee["ypareo_cursus_statut"] = "Non envoyé"
-        trainee["ypareo_cursus_erreur"] = "La personne doit d'abord être créée dans YPAREO"
-        flash("Impossible de créer le cursus : personne YPAREO absente.", "error")
-    elif creer_cursus_ypareo(id_personne, trainee, trainee_session):
-        flash("Cursus créé dans YPAREO.", "success")
-    else:
-        flash(
-            f"Création du cursus YPAREO impossible : {trainee.get('ypareo_cursus_erreur') or 'erreur inconnue'}",
-            "error",
-        )
-
-    trainee_session["trainees"] = _session_trainees_list(trainee_session)
-    trainee_session.pop("stagiaires", None)
-    save_data(data)
+def admin_ypareo_removed(session_id: str, trainee_id: str):
+    """Return a clear response for removed synchronization endpoints."""
+    if request.accept_mimetypes.best == "application/json":
+        return jsonify({"ok": False, "error": "Cette synchronisation a été retirée de la plateforme."}), 410
+    flash("Cette synchronisation a été retirée de la plateforme.", "error")
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 
@@ -15265,6 +17429,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "dossier_status",
         "force_dossier_complete",
         "financement_status",
+        "financing_validation_manual_mode",
+        "financing_validation_manual_status",
         "vae_status",
         "comment",
         "financement_comment",
@@ -15294,6 +17460,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "exclude_from_sales_tracking",
         "sales_tracking_amount",
         "cpf_amount",
+        "cpf_validated",
         "personal_amount",
         "other_amount",
         "birth_city",
@@ -15334,6 +17501,8 @@ def api_update_trainee(session_id: str, trainee_id: str):
 
     }
 
+    previous_vae_status = vae_status_view(t.get("vae_status"))["key"]
+    previous_financement_status = str(t.get("financement_status") or "").strip()
     vae_fields_changed = any(k in payload for k in ("vae_status", "vae_status_label", "vae_action_dates", "vae_jury_date"))
     transmission_only_vae_action_update = False
     if (
@@ -15359,6 +17528,30 @@ def api_update_trainee(session_id: str, trainee_id: str):
         (_session_get(s, "training_type", "") or "").strip().upper().startswith("APS")
         and bool(s.get("aps_elearning_enabled"))
     )
+
+
+    financing_fields = {
+        "financement_status",
+        "financing_validation_manual_mode",
+        "financing_validation_manual_status",
+        "financement_comment",
+        "cash_payment_enabled",
+        "cash_payment_amount",
+        "cash_payment_installments",
+        "cash_payment_settled",
+        "cash_payment_settled_date",
+        "cash_payment_settled_comment",
+        "financement_new_date_seen",
+        "training_price",
+        "exclude_from_sales_tracking",
+        "sales_tracking_amount",
+        "cpf_amount",
+        "cpf_validated",
+        "personal_amount",
+        "other_amount",
+    }
+    if any(key in payload for key in financing_fields) and not _financing_partner_module_enabled():
+        return jsonify({"ok": False, "error": "module_locked", "module": "financing"}), 403
 
     if "vtc_book_sent_at" in payload:
         vtc_book_sent_payload = payload.get("vtc_book_sent_at")
@@ -15411,6 +17604,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
             "vtc_elearning_manual_ok",
             "vtc_book_manual_ok",
             "exclude_from_sales_tracking",
+            "cpf_validated",
         ):
             t[k] = True if v in (True, "true", "1", 1, "yes", "on") else False
             continue
@@ -15459,10 +17653,7 @@ def api_update_trainee(session_id: str, trainee_id: str):
         t["vae_status_label"] = view["label"]
 
     _sync_vae_status_with_actions(t)
-    if transmission_only_vae_action_update:
-        previous_view = vae_status_view(previous_vae_status)
-        t["vae_status"] = previous_view["key"]
-        t["vae_status_label"] = previous_view["label"]
+    _sync_financement_status_from_manual_validation(t)
     current_vae_status = vae_status_view(t.get("vae_status"))["key"]
     if vae_fields_changed and current_vae_status != previous_vae_status:
         if current_vae_status == "certified":
@@ -15490,7 +17681,9 @@ def api_update_trainee(session_id: str, trainee_id: str):
                 kind=f"integrale_{current_vae_status}",
             )
 
-    if (payload.get("financement_status") or "").strip() == "validated":
+    financement_was_validated = previous_financement_status == "validated"
+    financement_validated_requested = (payload.get("financement_status") or "").strip() == "validated"
+    if financement_validated_requested:
         t["financement_rejected_note"] = ""
         t["financement_new_date_seen"] = False
 
@@ -15630,6 +17823,9 @@ def api_update_trainee(session_id: str, trainee_id: str):
     if dossier_complete:
         t["docs_relance_auto_sent_at"] = ""
 
+    if financement_validated_requested and not financement_was_validated:
+        _auto_send_convention_signature_if_needed(s, trainees, t, session_id, trainee_id, trigger="financement_validated")
+
     if "VTC" in ((_session_get(s, "training_type", "") or "").upper()):
         _sync_vtc_book_notification(data, s, t)
     save_data(data)
@@ -15644,6 +17840,52 @@ def api_update_trainee(session_id: str, trainee_id: str):
         "vtc_theory_status_manual": t.get("vtc_theory_status_manual") or "",
         "vtc_practice_status_manual": t.get("vtc_practice_status_manual") or "",
     })
+
+
+@app.post("/admin/sessions/<session_id>/trainees/<trainee_id>/finance/force-validated")
+@admin_login_required
+@admin_write_required
+def admin_force_financement_validated(session_id: str, trainee_id: str):
+    """Force le financement en validé, même si JavaScript ne peut pas appeler l'API JSON."""
+    data = load_data()
+    s = find_session(data, session_id)
+    if not s:
+        if request.accept_mimetypes.best == "application/json":
+            return jsonify({"ok": False, "error": "session_not_found"}), 404
+        flash("Session introuvable.", "error")
+        return redirect(url_for("admin_sessions"))
+
+    trainees = _session_trainees_list(s)
+    t = next((x for x in trainees if x.get("id") == trainee_id), None)
+    if not t:
+        if request.accept_mimetypes.best == "application/json":
+            return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+        flash("Stagiaire introuvable.", "error")
+        return redirect(url_for("admin_trainees", session_id=session_id))
+
+    if not _financing_partner_module_enabled():
+        if request.accept_mimetypes.best == "application/json":
+            return jsonify({"ok": False, "error": "module_locked", "module": "financing"}), 403
+        flash("Ce module est verrouillé pour ce partenaire. Activez-le dans la fiche partenaire.", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+    was_validated = (t.get("financement_status") or "").strip() == "validated"
+    t["financing_validation_manual_mode"] = "manual"
+    t["financing_validation_manual_status"] = "validated"
+    t["financement_status"] = "validated"
+    t["financement_rejected_note"] = ""
+    t["financement_new_date_seen"] = False
+    t["updated_at"] = _now_iso()
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    if not was_validated:
+        _auto_send_convention_signature_if_needed(s, trainees, t, session_id, trainee_id, trigger="financement_validated")
+    save_data(data)
+
+    if request.accept_mimetypes.best == "application/json":
+        return jsonify({"ok": True, "financement_status": "validated"})
+    flash("Financement forcé en validé.", "success")
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#conventionFinancementSection")
 
 
 @app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/refresh-external")
@@ -16336,6 +18578,19 @@ def api_cnaps_lookup():
 
 
 
+@app.get("/api/cnaps_public_annuaire")
+@admin_login_required
+def api_cnaps_public_annuaire():
+    nom = (request.args.get("nom") or "").strip()
+    nub = (request.args.get("nub") or "").strip()
+    if not nom or not nub:
+        return jsonify({"ok": False, "error": "missing_nom_or_nub"}), 400
+    result = fetch_cnaps_public_annuaire(nom, nub)
+    if not result:
+        return jsonify({"ok": False, "error": "not_found"}), 404
+    return jsonify({"ok": True, **result})
+
+
 # =========================
 # Health
 # =========================
@@ -16625,6 +18880,13 @@ def _token_belongs_to_trainee(t: dict, file_token: str) -> bool:
     # Photo identité (optionnel mais utile)
     if (t.get("identity_photo") or "").strip() == file_token:
         return True
+
+    conv_sig = t.get("convention_signature") if isinstance(t.get("convention_signature"), dict) else {}
+    if (conv_sig.get("signed_pdf_token") or "").strip() == file_token:
+        return True
+    for key in ("convocation_aps_pdf_token", "attestation_entree_aps_pdf_token", "attestation_fin_aps_pdf_token"):
+        if (t.get(key) or "").strip() == file_token:
+            return True
 
     return False
 
@@ -18790,6 +21052,14 @@ def _normalize_vae_status_text(value: Any) -> str:
     return " ".join(_normalized_token(str(value or "")).replace("_", " ").replace("-", " ").split())
 
 
+def _sync_financement_status_from_manual_validation(trainee: Dict[str, Any]) -> None:
+    """Aligne la pastille financement quand le statut financier manuel est validé."""
+    manual_mode = (trainee.get("financing_validation_manual_mode") or "").strip().lower()
+    manual_status = (trainee.get("financing_validation_manual_status") or "").strip().lower()
+    if manual_mode == "manual" and manual_status == "validated":
+        trainee["financement_status"] = "validated"
+
+
 def vae_status_view(status_key: Optional[str]) -> Dict[str, str]:
     key = (status_key or "").strip()
     if key not in VAE_STATUS_STEPS:
@@ -19606,6 +21876,16 @@ def public_trainee_space(token):
             file_tokens.insert(0, file_token)
         d["file_tokens"] = file_tokens
 
+    # Expose generated training documents in the public trainee space when their PDF exists.
+    # Older records may only have the PDF path, so compute the token at render time too.
+    for path_key, token_key in (
+        ("convocation_aps_pdf_path", "convocation_aps_pdf_token"),
+        ("attestation_entree_aps_pdf_path", "attestation_entree_aps_pdf_token"),
+        ("attestation_fin_aps_pdf_path", "attestation_fin_aps_pdf_token"),
+    ):
+        if not (t.get(token_key) or "").strip() and (t.get(path_key) or "").strip():
+            t[token_key] = _store_public_file_token(str(t.get(path_key) or ""))
+
     show_hosting = ((training_type or "").strip().upper() == "A3P")
     show_vae = ("VAE" in (training_type or "").upper())
     show_professional_experience_sheet = _professional_experience_sheet_is_required(training_type, _session_get(s, "date_start", ""))
@@ -19636,6 +21916,7 @@ def public_trainee_space(token):
         show_vae=show_vae,
         show_professional_experience_sheet=show_professional_experience_sheet,
         show_vtc=show_vtc,
+        is_aps_training=is_aps_training,
         aps_elearning_enabled=aps_elearning_enabled,
         aps_elearning_available=aps_elearning_available,
         dossier_ok=dossier_is_complete_total(t, training_type, _session_get(s, "date_start", "")),
@@ -19714,7 +21995,7 @@ def _professional_experience_sheet_payload(raw: Any, trainee: Dict[str, Any], se
             errors[f"experiences.{index}.company_name"] = "Renseignez le nom de l’entreprise."
         if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", start_date):
             errors[f"experiences.{index}.start_date"] = "Renseignez la date d’entrée."
-        if end_date and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", end_date):
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", end_date):
             errors[f"experiences.{index}.end_date"] = "Renseignez une date de sortie valide."
         if contract_type not in allowed_contracts or not contract_type:
             errors[f"experiences.{index}.contract_type"] = "Sélectionnez le type de contrat."
@@ -20424,7 +22705,11 @@ APS_CONVOCATION_CENTER_ADDRESS = "54 chemin du Carreou"
 APS_CONVOCATION_CENTER_ZIP = "83480"
 APS_CONVOCATION_CENTER_CITY = "Puget-sur-Argens"
 APS_CONVOCATION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "convocations_aps")
+APS_ENTRY_ATTESTATION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "attestations_entree_aps")
+APS_END_ATTESTATION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "attestations_fin_aps")
 os.makedirs(APS_CONVOCATION_DIR, exist_ok=True)
+os.makedirs(APS_ENTRY_ATTESTATION_DIR, exist_ok=True)
+os.makedirs(APS_END_ATTESTATION_DIR, exist_ok=True)
 YOUSIGN_CONVENTION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "conventions_aps")
 YOUSIGN_SIGNED_DIR = os.path.join(PERSIST_DIR, "generated_documents", "yousign_signed_conventions")
 os.makedirs(YOUSIGN_CONVENTION_DIR, exist_ok=True)
@@ -20441,7 +22726,68 @@ APS_CONVOCATION_VARIABLES = [
 
 
 def _is_aps_session(session_obj: Dict[str, Any]) -> bool:
-    return (_session_get(session_obj, "training_type", "") or "").strip().upper().startswith("APS")
+    """Return whether the session has the full automated document suite.
+
+    The historical name is kept because routes, templates and stored fields still
+    use the APS suffix, but the same automation cards are also used for A3P,
+    DESP initial and SSIAP sessions. VTC intentionally remains convention-only.
+    """
+    return bool(_automation_document_config(session_obj).get("convocation_template"))
+
+
+def _automation_training_text(session_obj: Dict[str, Any]) -> str:
+    return f"{_session_get(session_obj, 'training_type', '')} {_session_get(session_obj, 'name', '')}".strip().upper()
+
+
+def _automation_document_config(session_obj: Dict[str, Any]) -> Dict[str, Any]:
+    text = _automation_training_text(session_obj)
+    if "VAE" in text:
+        return {"enabled": True, "slug": "vae", "label": "VAE", "convention_template": "conventionvae.docx"}
+    if "A3P" in text:
+        return {"enabled": True, "slug": "a3p", "label": "A3P", "convention_template": "conventiona3p.docx", "entry_template": "attestationentreea3p.docx", "end_template": "attestationfina3p.docx", "convocation_template": "convocationa3p.docx"}
+    if "VTC" in text:
+        return {"enabled": True, "slug": "vtc", "label": "Chauffeur VTC", "convention_template": "conventionvtc.docx", "entry_template": ""}
+    if "DIRIGEANT" in text or "DESP" in text:
+        if "PARIS" in text:
+            return {"enabled": True, "slug": "desp_paris", "label": "Dirigeant d'une entreprise de sécurité privée (DESP)", "convention_template": "conventiondespparis.docx", "entry_template": "attestationentreedesparis.docx", "end_template": "attestationfindespparis.docx", "convocation_template": "convocationdespparis.docx"}
+        return {"enabled": True, "slug": "desp_puget", "label": "Dirigeant d'une entreprise de sécurité privée (DESP)", "convention_template": "conventiondesp.docx", "entry_template": "attestationentreedesp.docx", "end_template": "attestationfindesp.docx", "convocation_template": "convocationdesp.docx"}
+    if "SSIAP" in text:
+        return {"enabled": True, "slug": "ssiap", "label": "agent de sécurité incendie SSIAP 1", "convention_template": "conventionssiap.docx", "entry_template": "attestationentreessiap.docx", "end_template": "attestationfinssiap.docx", "convocation_template": "convocationssiap.docx"}
+    if text.startswith("APS") or " APS" in text:
+        return {"enabled": True, "slug": "aps", "label": "APS", "convention_template": "conventionaps.docx", "entry_template": "attestationentreeaps.docx", "end_template": "attestationfinaps.docx", "convocation_template": "convocationaps.docx"}
+    return {"enabled": False}
+
+
+def _can_send_convocation_without_signed_convention(session_obj: Dict[str, Any]) -> bool:
+    """Return whether the convocation can be sent before convention signature.
+
+    DESP convocations were already allowed before signature. SSIAP convocations
+    must also remain sendable even when the convention has not been generated
+    yet, because the convocation process is operationally independent from the
+    convention workflow for these sessions.
+    """
+    slug = str(_automation_document_config(session_obj).get("slug") or "")
+    return slug.startswith("desp_") or slug == "ssiap"
+
+
+def _automation_partner_module_enabled() -> bool:
+    return partner_has_module("automations")
+
+
+def _financing_partner_module_enabled() -> bool:
+    return partner_has_module("financing")
+
+
+def _automation_is_enabled(session_obj: Dict[str, Any]) -> bool:
+    return bool(_automation_document_config(session_obj).get("enabled")) and _automation_partner_module_enabled()
+
+
+def _automation_has_entry_attestation(session_obj: Dict[str, Any]) -> bool:
+    return bool(_automation_document_config(session_obj).get("entry_template"))
+
+
+def _automation_has_end_attestation(session_obj: Dict[str, Any]) -> bool:
+    return bool(_automation_document_config(session_obj).get("end_template"))
 
 
 # =========================
@@ -20449,32 +22795,49 @@ def _is_aps_session(session_obj: Dict[str, Any]) -> bool:
 # =========================
 YOUSIGN_BASE_URL_DEFAULT = "https://api-sandbox.yousign.app/v3"
 
-YOUSIGN_SMART_ANCHOR_PATTERN = re.compile(r"\{\{s\d+\|signature\|\d+\|\d+\}\}")
+YOUSIGN_SMART_ANCHOR_PATTERN = re.compile(r"\{\{\s*s(\d+)\|signature\|(\d+)\|(\d+)\s*\}\}")
+YOUSIGN_TECHNICAL_ANCHOR_PATTERN = re.compile(r"\{\{\s*s(\d+)\|([A-Za-z0-9_\-]+)\|([^{}]*)\}\}")
 YOUSIGN_SMART_ANCHOR_MISSING_MESSAGE = "Aucune zone de signature trouvée dans le modèle Word. Ajoutez {{s1|signature|160|60}} à l’endroit souhaité."
 YOUSIGN_SMART_ANCHOR_PLACEHOLDER_PREFIX = "__YOUSIGN_SMART_ANCHOR_"
+YOUSIGN_SMS_AUTHENTICATION_MODE = "otp_sms"
+YOUSIGN_SMS_PHONE_ERROR_MESSAGE = "Impossible d’envoyer la convention : numéro de téléphone manquant ou invalide pour l’authentification SMS Yousign."
 
 
 def _docx_xml_names(zf: zipfile.ZipFile) -> List[str]:
     return [name for name in zf.namelist() if name.startswith("word/") and name.endswith(".xml")]
 
 
-def _docx_text_contains_yousign_smart_anchor(docx_path: str, signer_index: int = 1) -> bool:
-    expected_prefix = f"{{{{s{signer_index}|signature|"
+def _docx_yousign_smart_anchors(docx_path: str, signer_index: Optional[int] = None) -> List[str]:
+    anchors: List[str] = []
+    seen = set()
+    expected_signer = str(signer_index) if signer_index is not None else ""
+
+    def collect(text: str) -> None:
+        for match in YOUSIGN_SMART_ANCHOR_PATTERN.finditer(text):
+            if expected_signer and match.group(1) != expected_signer:
+                continue
+            anchor = match.group(0)
+            if anchor not in seen:
+                seen.add(anchor)
+                anchors.append(anchor)
+
     try:
         with zipfile.ZipFile(docx_path) as zf:
             for name in _docx_xml_names(zf):
                 xml_text = zf.read(name).decode("utf-8", errors="ignore")
-                if expected_prefix in xml_text and YOUSIGN_SMART_ANCHOR_PATTERN.search(xml_text):
-                    return True
+                collect(xml_text)
                 try:
                     plain_text = "".join(ET.fromstring(xml_text).itertext())
-                    if expected_prefix in plain_text and YOUSIGN_SMART_ANCHOR_PATTERN.search(plain_text):
-                        return True
+                    collect(plain_text)
                 except Exception:
                     pass
     except zipfile.BadZipFile:
-        return False
-    return False
+        return []
+    return anchors
+
+
+def _docx_text_contains_yousign_smart_anchor(docx_path: str, signer_index: int = 1) -> bool:
+    return bool(_docx_yousign_smart_anchors(docx_path, signer_index=signer_index))
 
 
 def _rewrite_docx_xml(docx_path: str, rewrite) -> None:
@@ -20526,14 +22889,47 @@ def _is_production_environment() -> bool:
     return any(str(value or "").strip().lower() == "production" for value in markers)
 
 
+def _yousign_configured_environment() -> str:
+    configured = (os.environ.get("YOUSIGN_ENV") or os.environ.get("YOUSIGN_ENVIRONMENT") or "").strip().lower()
+    if configured in {"prod", "production", "live"}:
+        return "production"
+    if configured in {"sandbox", "test", "testing"}:
+        return "sandbox"
+    return ""
+
+
+def _yousign_expected_environment() -> str:
+    configured_environment = _yousign_configured_environment()
+    if configured_environment:
+        return configured_environment
+    api_key = _yousign_api_key().lower()
+    if "sandbox" in api_key:
+        return "sandbox"
+    if "production" in api_key or "prod" in api_key or "live" in api_key:
+        return "production"
+    return "production" if _is_production_environment() else ""
+
+
+def _yousign_environment_from_base_url(base_url: str) -> str:
+    return "sandbox" if "api-sandbox.yousign.app" in base_url else "production"
+
+
 def _yousign_base_url() -> str:
     base_url = (os.environ.get("YOUSIGN_BASE_URL") or YOUSIGN_BASE_URL_DEFAULT).strip().rstrip("/")
     allowed_urls = {"https://api-sandbox.yousign.app/v3", "https://api.yousign.app/v3"}
     if base_url not in allowed_urls:
         raise RuntimeError("Configuration Yousign invalide : utilisez https://api.yousign.app/v3 en production ou https://api-sandbox.yousign.app/v3 en test.")
-    if _is_production_environment() and "api-sandbox.yousign.app" in base_url:
+    url_environment = _yousign_environment_from_base_url(base_url)
+    expected_environment = _yousign_expected_environment()
+    if expected_environment and url_environment != expected_environment:
+        raise RuntimeError(f"Configuration Yousign invalide : l’URL API {base_url} ne correspond pas à l’environnement {expected_environment}.")
+    if _is_production_environment() and url_environment == "sandbox":
         raise RuntimeError("Configuration Yousign invalide : l’URL sandbox est interdite en production.")
     return base_url
+
+
+def _yousign_environment() -> str:
+    return _yousign_environment_from_base_url(_yousign_base_url())
 
 
 def _yousign_api_key() -> str:
@@ -20561,6 +22957,27 @@ def _sanitize_yousign_error(message: Any) -> str:
     return text[:800]
 
 
+
+def _normalize_yousign_sms_phone(raw_phone: Any) -> str:
+    raw = str(raw_phone or "").strip()
+    if not raw:
+        return ""
+    compact = re.sub(r"[\s.()\-]", "", raw)
+    if compact.startswith("00"):
+        compact = "+" + compact[2:]
+    elif compact.startswith("0") and re.fullmatch(r"0[67]\d{8}", compact):
+        compact = "+33" + compact[1:]
+    if not re.fullmatch(r"\+[1-9]\d{7,14}", compact):
+        return ""
+    return compact
+
+
+def _mask_phone_for_logs(phone: Any) -> str:
+    value = str(phone or "")
+    if len(value) <= 5:
+        return "***" if value else ""
+    return f"{value[:3]}***{value[-2:]}"
+
 def make_yousign_external_id(session_id: str, trainee_id: str) -> str:
     raw = f"convocation_{session_id}_{trainee_id}"
     return re.sub(r"[^A-Za-z0-9_\-@.%+ ]", "_", raw)
@@ -20585,6 +23002,102 @@ def _yousign_json(method: str, path: str, **kwargs) -> Dict[str, Any]:
     if not response.content:
         return {}
     return response.json()
+
+
+def _parse_yousign_anchor(anchor_text: str) -> Dict[str, Any]:
+    match = YOUSIGN_TECHNICAL_ANCHOR_PATTERN.fullmatch(str(anchor_text or "").strip())
+    if not match:
+        return {}
+    args = [part.strip() for part in (match.group(3) or "").split("|")]
+    width = int(args[0]) if len(args) >= 1 and args[0].isdigit() else 160
+    height = int(args[1]) if len(args) >= 2 and args[1].isdigit() else 60
+    return {"signer_index": int(match.group(1)), "type": match.group(2).strip().lower(), "width": width, "height": height}
+
+
+def _detect_yousign_pdf_anchors(pdf_path: str, signer_index: int = 1) -> List[Dict[str, Any]]:
+    """Detect Yousign technical tags in the generated PDF before cleaning it."""
+    anchors: List[Dict[str, Any]] = []
+    pattern = YOUSIGN_TECHNICAL_ANCHOR_PATTERN
+    reader = PdfReader(pdf_path)
+    for page_number, page in enumerate(reader.pages, start=1):
+        page_height = float(page.mediabox.height)
+
+        def visitor(text: str, cm: Any, tm: Any, font_dict: Any, font_size: Any) -> None:
+            if not text or "{{" not in text:
+                return
+            for match in pattern.finditer(text):
+                parsed = _parse_yousign_anchor(match.group(0))
+                if not parsed or parsed["signer_index"] != signer_index:
+                    continue
+                x = float(tm[4] if len(tm) > 4 else 0) + float(cm[4] if len(cm) > 4 else 0)
+                baseline_y = float(tm[5] if len(tm) > 5 else 0) + float(cm[5] if len(cm) > 5 else 0)
+                height = parsed["height"]
+                anchors.append({
+                    **parsed,
+                    "raw": match.group(0),
+                    "page": page_number,
+                    "x": max(0, int(round(x))),
+                    "pdf_y": max(0, float(baseline_y) - 2),
+                    "y": max(0, int(round(page_height - baseline_y - height))),
+                })
+
+        page.extract_text(visitor_text=visitor)
+    return anchors
+
+
+def _clean_yousign_pdf_anchors(pdf_path: str, anchors: List[Dict[str, Any]]) -> str:
+    """Create a clean PDF by masking every detected technical Yousign tag."""
+    if not anchors:
+        return pdf_path
+    from reportlab.pdfgen import canvas
+    from pypdf.generic import ContentStream, NameObject
+
+    clean_path = os.path.splitext(pdf_path)[0] + "_clean.pdf"
+    reader = PdfReader(pdf_path)
+    writer = PdfWriter()
+    anchors_by_page: Dict[int, List[Dict[str, Any]]] = {}
+    for anchor in anchors:
+        anchors_by_page.setdefault(int(anchor.get("page") or 1), []).append(anchor)
+    for page_number, page in enumerate(reader.pages, start=1):
+        page_width = float(page.mediabox.width)
+        page_height = float(page.mediabox.height)
+        packet = BytesIO()
+        overlay = canvas.Canvas(packet, pagesize=(page_width, page_height))
+        overlay.setFillColorRGB(1, 1, 1)
+        for anchor in anchors_by_page.get(page_number, []):
+            # Mask the visible marker text, not the future signature area.
+            text_width = max(80, min(page_width - float(anchor["x"]), len(anchor["raw"]) * 7))
+            overlay.rect(float(anchor["x"]) - 1, float(anchor["pdf_y"]) - 1, text_width + 2, 16, stroke=0, fill=1)
+        overlay.save()
+        packet.seek(0)
+        overlay_page = PdfReader(packet).pages[0]
+        page.merge_page(overlay_page)
+        raw_anchors = {str(anchor.get("raw") or "") for anchor in anchors_by_page.get(page_number, [])}
+        if raw_anchors:
+            try:
+                content = ContentStream(page.get_contents(), reader)
+                filtered_operations = []
+                for operands, operator in content.operations:
+                    operand_text = "".join(str(operand) for operand in operands)
+                    if any(raw_anchor and raw_anchor in operand_text for raw_anchor in raw_anchors):
+                        continue
+                    filtered_operations.append((operands, operator))
+                content.operations = filtered_operations
+                page[NameObject("/Contents")] = content
+            except Exception:
+                app.logger.warning("[YOUSIGN] impossible de retirer le texte d’ancre du flux PDF, masquage visuel conservé", exc_info=True)
+        writer.add_page(page)
+    with open(clean_path, "wb") as fh:
+        writer.write(fh)
+    return clean_path
+
+
+def _prepare_yousign_pdf_and_fields(pdf_path: str, signer_index: int = 1) -> Tuple[str, List[Dict[str, Any]]]:
+    anchors = _detect_yousign_pdf_anchors(pdf_path, signer_index=signer_index)
+    if not anchors:
+        return pdf_path, []
+    clean_path = _clean_yousign_pdf_anchors(pdf_path, anchors)
+    return clean_path, anchors
 
 
 def _yousign_state(trainee: Dict[str, Any]) -> Dict[str, Any]:
@@ -20641,6 +23154,31 @@ def _is_yousign_signature_pending(state: Dict[str, Any]) -> bool:
 
 def _is_yousign_signature_done(state: Dict[str, Any]) -> bool:
     return _normalize_yousign_status(state.get("status")) in YOUSIGN_FINAL_STATUSES
+
+
+def _sync_convention_status_from_yousign(trainee: Dict[str, Any]) -> bool:
+    """Keep the admin trainees convention dot aligned with the Yousign automation state."""
+    state = _yousign_state(trainee)
+    signed_at = state.get("signed_at") or trainee.get("convention_aps_signed_at") or ""
+    if not (_is_yousign_signature_done(state) or signed_at or trainee.get("convention_aps_status") == "signed"):
+        return False
+    if trainee.get("convention_status") == "signed":
+        return False
+    trainee["convention_status"] = "signed"
+    return True
+
+
+def _yousign_payload_signature_request(payload: Dict[str, Any]) -> Dict[str, Any]:
+    data = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+    signature_request = data.get("signature_request") if isinstance(data.get("signature_request"), dict) else {}
+    if signature_request:
+        return signature_request
+    return payload if isinstance(payload, dict) else {}
+
+
+def _yousign_signature_request_status(payload: Dict[str, Any]) -> str:
+    signature_request = _yousign_payload_signature_request(payload)
+    return _normalize_yousign_status(signature_request.get("status"))
 
 
 def _is_yousign_signature_stopped(state: Dict[str, Any]) -> bool:
@@ -20804,7 +23342,7 @@ def build_signature_email_text(first_name: str, formation_label: str, dates_sess
     return f"""Bonjour {safe_first_name},
 
 Vous trouverez ci-dessous le lien sécurisé pour signer votre convention de formation.
-Merci de la signer dès que possible.
+Nous vous remercions de bien vouloir procéder à la signature électronique de ce document.
 
 Récapitulatif :
 - Formation : {safe_formation_label}
@@ -20829,22 +23367,29 @@ def build_signature_email_html(first_name: str, formation_label: str, dates_sess
     safe_formation_label = html.escape(str(formation_label or "").strip() or "Formation")
     safe_dates_session = html.escape(str(dates_session or "").strip() or "Dates à confirmer")
     safe_signature_url = html.escape(str(signature_url or "").strip(), quote=True)
+    safe_logo_url = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
     return f'''<!doctype html>
 <html lang="fr">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Convention de formation</title></head>
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Convention de formation</title>
+  <style>
+    @keyframes signPulse {{ 0% {{ transform:scale(1); box-shadow:0 0 0 0 rgba(11,94,215,.42); }} 70% {{ transform:scale(1.04); box-shadow:0 0 0 14px rgba(11,94,215,0); }} 100% {{ transform:scale(1); box-shadow:0 0 0 0 rgba(11,94,215,0); }} }}
+    .signature-button {{ animation:signPulse 1.8s ease-in-out infinite; }}
+  </style>
+</head>
 <body style="margin:0;padding:0;background:#f3f6fa;font-family:Arial,Helvetica,sans-serif;color:#172033;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f3f6fa;margin:0;padding:24px 12px;">
     <tr><td align="center">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,0.08);">
-        <tr><td style="background:#0b2f5b;padding:28px 30px;color:#ffffff;"><div style="font-size:24px;font-weight:700;line-height:1.2;">Intégrale Academy</div><div style="font-size:15px;opacity:.92;margin-top:6px;line-height:1.4;">Convention de formation</div></td></tr>
+        <tr><td style="background:#0b2f5b;padding:28px 30px;color:#ffffff;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td style="width:88px;padding-right:18px;vertical-align:middle;"><img src="{safe_logo_url}" width="74" alt="Logo Intégrale Academy" style="display:block;width:74px;height:auto;border:0;outline:none;text-decoration:none;background:#ffffff;border-radius:14px;padding:7px;"></td><td style="vertical-align:middle;"><div style="font-size:24px;font-weight:700;line-height:1.2;">Intégrale Academy</div><div style="font-size:15px;opacity:.92;margin-top:6px;line-height:1.4;">Convention de formation</div></td></tr></table></td></tr>
         <tr><td style="padding:32px 30px 10px 30px;">
           <p style="margin:0 0 16px 0;font-size:18px;line-height:1.5;">Bonjour {safe_first_name},</p>
           <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">Vous trouverez ci-dessous le lien sécurisé pour signer votre convention de formation.</p>
-          <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#415166;">Merci de la signer dès que possible.</p>
+          <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#415166;">Nous vous remercions de bien vouloir procéder à la signature électronique de ce document.</p>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f7faff;border:1px solid #dbeafe;border-radius:14px;margin:0 0 28px 0;"><tr><td style="padding:18px 20px;">
             <p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Formation :</strong> {safe_formation_label}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Session :</strong> {safe_dates_session}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Document :</strong> Convention de formation</p><p style="margin:0;font-size:15px;line-height:1.5;"><strong>Signature :</strong> électronique sécurisée</p>
           </td></tr></table>
-          <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 26px auto;"><tr><td bgcolor="#0b5ed7" style="border-radius:12px;text-align:center;"><a href="{safe_signature_url}" style="display:inline-block;padding:16px 28px;font-size:17px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;">Signer ma convention</a></td></tr></table>
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 26px auto;"><tr><td bgcolor="#0b5ed7" class="signature-button" style="border-radius:12px;text-align:center;box-shadow:0 10px 22px rgba(11,94,215,.25);animation:signPulse 1.8s ease-in-out infinite;"><a href="{safe_signature_url}" style="display:inline-block;padding:16px 28px;font-size:17px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;">Signer ma convention</a></td></tr></table>
           <p style="margin:0 0 10px 0;font-size:14px;line-height:1.6;color:#5b677a;">Ce lien est personnel. Merci de ne pas le transférer.</p><p style="margin:0 0 8px 0;font-size:13px;line-height:1.6;color:#6b7280;">Si le bouton ne fonctionne pas, copiez-collez le lien ci-dessous dans votre navigateur :</p><p style="margin:0 0 24px 0;font-size:12px;line-height:1.5;word-break:break-all;color:#4b5563;"><a href="{safe_signature_url}" style="color:#0b5ed7;text-decoration:underline;">{safe_signature_url}</a></p>
         </td></tr><tr><td style="background:#f8fafc;border-top:1px solid #e5e7eb;padding:22px 30px;color:#64748b;font-size:13px;line-height:1.6;"><strong style="color:#334155;">Intégrale Academy</strong><br>54 chemin du Carreou<br>83480 Puget-sur-Argens<br>04 22 47 07 68</td></tr>
       </table>
@@ -20854,9 +23399,16 @@ def build_signature_email_html(first_name: str, formation_label: str, dates_sess
 </html>'''
 
 
+def _signature_email_training_label(session_obj: Dict[str, Any]) -> str:
+    training_type = str(_session_get(session_obj, "training_type", "") or "").strip()
+    if training_type:
+        return formation_label(training_type) or training_type
+    return str(_session_get(session_obj, "name", "") or session_obj.get("training_name") or "Formation").strip() or "Formation"
+
+
 def _build_yousign_signature_link_email(session_obj: Dict[str, Any], trainee: Dict[str, Any], signature_link: str) -> Tuple[str, str, str]:
     first_name = str(trainee.get("first_name") or "").strip() or "Madame, Monsieur"
-    training_name = str(_session_get(session_obj, "name", "") or session_obj.get("training_name") or "Formation").strip() or "Formation"
+    training_name = _signature_email_training_label(session_obj)
     dates_session = _aps_session_dates_label(session_obj)
     subject = "Votre convention de formation est à signer"
     html_body = build_signature_email_html(first_name, training_name, dates_session, signature_link)
@@ -20882,29 +23434,133 @@ def send_yousign_signature_link_email(session_obj: Dict[str, Any], trainee: Dict
     return ok
 
 
-def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> Dict[str, Any]:
+
+def _is_trainee_financed_100_percent_cpf(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> bool:
+    """Return True when the CPF amount covers the full training price and no other amount is set."""
+    training_type = _session_get(session_obj, "training_type", "")
+    training_price = _money(trainee.get("training_price") or default_training_price(training_type))
+    cpf_amount = _money(trainee.get("cpf_amount"))
+    personal_amount = _money(trainee.get("personal_amount"))
+    other_amount = _money(trainee.get("other_amount"))
+    return training_price > 0 and cpf_amount >= training_price and personal_amount <= 0 and other_amount <= 0
+
+
+def _auto_send_convention_signature_if_needed(
+    session_obj: Dict[str, Any],
+    trainees: List[Dict[str, Any]],
+    trainee: Dict[str, Any],
+    session_id: str,
+    trainee_id: str,
+    *,
+    trigger: str,
+) -> bool:
+    """Create the Yousign convention and email it once when business rules allow it."""
+    if "VAE" in str(_session_get(session_obj, "training_type", "") or "").upper():
+        return False
+    state = _yousign_state(trainee)
+    if state.get("signature_request_id") or state.get("signature_email_sent_at"):
+        return False
+    if trigger == "create_100_cpf":
+        should_send = _is_trainee_financed_100_percent_cpf(session_obj, trainee)
+    elif trigger == "financement_validated":
+        should_send = not _is_trainee_financed_100_percent_cpf(session_obj, trainee)
+    else:
+        should_send = False
+    if not should_send:
+        return False
+    try:
+        state = create_yousign_convention_signature(session_obj, trainee, session_id, trainee_id)
+        signature_link = str(state.get("signature_link") or "").strip()
+        email_ok = send_yousign_signature_link_email(session_obj, trainee, signature_link)
+        trainee["convention_auto_sent_at"] = _now_iso()
+        trainee["convention_auto_trigger"] = trigger
+        trainee["convention_auto_email_ok"] = bool(email_ok)
+        trainee["convention_auto_last_error"] = ""
+        session_obj["trainees"] = trainees
+        session_obj.pop("stagiaires", None)
+        return True
+    except Exception as exc:
+        message = _sanitize_yousign_error(str(exc))
+        state = _yousign_state(trainee)
+        state["status"] = "error"
+        state["last_error"] = message
+        trainee["convention_auto_last_error"] = message
+        trainee["updated_at"] = _now_iso()
+        session_obj["trainees"] = trainees
+        session_obj.pop("stagiaires", None)
+        app.logger.exception("[YOUSIGN] auto convention signature failed trainee_id=%s trigger=%s error=%s", trainee_id, trigger, message)
+        return False
+
+def _archive_yousign_convention_state(trainee: Dict[str, Any], reason: str) -> None:
+    state = _yousign_state(trainee)
+    if not state.get("signature_request_id") and not state.get("unsigned_pdf_path") and not state.get("signed_pdf_path"):
+        return
+    archive = trainee.setdefault("convention_signature_history", [])
+    if isinstance(archive, list):
+        archived = dict(state)
+        archived["archived_at"] = _now_iso()
+        archived["archive_reason"] = reason
+        archive.append(archived)
+
+
+def _cancel_yousign_convention_signature(trainee: Dict[str, Any], reason: str = "other") -> None:
+    state = _yousign_state(trainee)
+    request_id = str(state.get("signature_request_id") or "").strip()
+    if request_id and _is_yousign_signature_pending(state) and _yousign_is_configured():
+        _yousign_json("POST", f"/signature_requests/{request_id}/cancel", json={
+            "reason": reason or "other",
+            "custom_note": "Annulation depuis la fiche stagiaire pour régénérer une nouvelle convention.",
+        })
+    _archive_yousign_convention_state(trainee, "canceled_for_regeneration")
+    now = _now_iso()
+    state.update({
+        "status": "canceled",
+        "canceled_at": now,
+        "cancel_reason": reason or "other",
+        "last_error": "",
+        "next_reminder_at": "",
+    })
+    trainee["convention_aps_status"] = "canceled"
+    trainee["convention_aps_signed_at"] = ""
+    if trainee.get("convention_status") == "signed":
+        trainee["convention_status"] = "soon"
+    trainee["updated_at"] = now
+
+
+def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str, force_new: bool = False) -> Dict[str, Any]:
     existing_state = _yousign_state(trainee)
-    if existing_state.get("signature_request_id") and existing_state.get("signature_link") and existing_state.get("status") in {"ongoing", "activated"}:
+    has_existing_request = bool(existing_state.get("signature_request_id"))
+    has_active_link = bool(existing_state.get("signature_link"))
+    existing_status = _normalize_yousign_status(existing_state.get("status"))
+    if has_existing_request and has_active_link and existing_status in {"ongoing", "activated"} and not force_new:
         return existing_state
-    if not _is_aps_session(session_obj):
-        raise RuntimeError("La signature Yousign de convention est réservée aux formations APS.")
+    if force_new and has_existing_request:
+        _cancel_yousign_convention_signature(trainee, "other")
     if not _yousign_is_configured():
         raise RuntimeError("Yousign Sandbox n’est pas configuré : vérifiez YOUSIGN_API_KEY et YOUSIGN_WEBHOOK_SECRET dans Render.")
     email = str(trainee.get("email") or "").strip()
     first_name = str(trainee.get("first_name") or "").strip()
     last_name = str(trainee.get("last_name") or "").strip()
+    sms_phone = _normalize_yousign_sms_phone(trainee.get("phone"))
     if not email:
         raise RuntimeError("Adresse e-mail stagiaire manquante, impossible d’envoyer le lien de signature.")
     if not first_name or not last_name:
         raise RuntimeError("Prénom et nom du stagiaire sont obligatoires pour créer la signature Yousign.")
+    if not sms_phone:
+        raise RuntimeError(YOUSIGN_SMS_PHONE_ERROR_MESSAGE)
 
     docx_path, pdf_path = _generate_aps_convention_files(session_obj, trainee, session_id, trainee_id)
     if not os.path.exists(pdf_path) or os.path.getsize(pdf_path) <= 0:
-        raise RuntimeError("Le PDF de convention de formation APS n’a pas été généré.")
+        raise RuntimeError("Le PDF de convention de formation n’a pas été généré.")
+    yousign_pdf_path, pdf_anchors = _prepare_yousign_pdf_and_fields(pdf_path, signer_index=1)
+    if not os.path.exists(yousign_pdf_path) or os.path.getsize(yousign_pdf_path) <= 0:
+        raise RuntimeError("Le PDF nettoyé pour Yousign n’a pas été généré.")
 
-    request_name = f"Convention APS - {first_name} {last_name}".strip()
+    training_label = str(_session_get(session_obj, "training_type", "") or _session_get(session_obj, "name", "") or "Formation").strip()
+    request_name = f"Convention formation - {training_label} - {first_name} {last_name}".strip()
     external_id = make_yousign_external_id(session_id, trainee_id)
-    app.logger.info("[YOUSIGN] create signature request trainee_id=%s sandbox=true", trainee_id)
+    yousign_environment = _yousign_environment()
+    app.logger.info("[YOUSIGN] create signature request trainee_id=%s environment=%s", trainee_id, yousign_environment)
     signature_request = _yousign_json("POST", "/signature_requests", json={
         "name": request_name,
         "delivery_mode": "none",
@@ -20915,39 +23571,69 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
     if not signature_request_id:
         raise RuntimeError("Yousign n’a pas renvoyé d’identifiant de demande de signature.")
 
-    with open(pdf_path, "rb") as fh:
+    with open(yousign_pdf_path, "rb") as fh:
         document = _yousign_json(
             "POST",
             f"/signature_requests/{signature_request_id}/documents",
-            files={"file": (os.path.basename(pdf_path), fh, "application/pdf")},
-            data={"nature": "signable_document", "parse_anchors": "true"},
+            files={"file": (os.path.basename(yousign_pdf_path), fh, "application/pdf")},
+            data={"nature": "signable_document", "parse_anchors": "false"},
         )
     document_id = document.get("id")
     if not document_id:
         raise RuntimeError("Yousign n’a pas renvoyé d’identifiant de document.")
 
     signer_payload = {
-        "info": {"first_name": first_name, "last_name": last_name, "email": email, "locale": "fr"},
+        "info": {"first_name": first_name, "last_name": last_name, "email": email, "phone_number": sms_phone, "locale": "fr"},
         "signature_level": "electronic_signature",
-        "signature_authentication_mode": "no_otp",
+        "signature_authentication_mode": YOUSIGN_SMS_AUTHENTICATION_MODE,
     }
-    if _docx_text_contains_yousign_smart_anchor(docx_path, signer_index=1):
-        # Les champs de signature sont créés par Yousign depuis les Smart Anchors.
-        pass
-    else:
-        signer_payload["fields"] = [{
+    fields: List[Dict[str, Any]] = []
+    for anchor in pdf_anchors:
+        if anchor.get("type") == "signature":
+            fields.append({
+                "document_id": document_id,
+                "type": "signature",
+                "page": anchor["page"],
+                "x": anchor["x"],
+                "y": anchor["y"],
+                "width": anchor["width"],
+                "height": max(80, int(anchor["height"])),
+                "layout": "detailed",
+                "date_time_format": "dd/MM/yyyy",
+                "show_timezone": False,
+            })
+        elif anchor.get("type") in {"date", "signature_date"}:
+            # Yousign v3 no longer accepts a dedicated "signature_date" field type.
+            # The detailed signature field already carries the signing date through
+            # its date_time_format option, so date-only anchors are only cleaned from
+            # the PDF and must not be sent as signer fields.
+            continue
+    if not fields:
+        fields.append({
             "document_id": document_id,
             "type": "signature",
-            "page": _pdf_page_count(pdf_path),
+            "page": _pdf_page_count(yousign_pdf_path),
             "x": 360,
             "y": 650,
-        }]
+            "layout": "detailed",
+            "date_time_format": "dd/MM/yyyy",
+            "show_timezone": False,
+        })
+    signer_payload["fields"] = fields
     signer = _yousign_json("POST", f"/signature_requests/{signature_request_id}/signers", json=signer_payload)
     signer_id = signer.get("id")
+    app.logger.info(
+        "[YOUSIGN] signer created signature_request_id=%s signer_id=%s signature_authentication_mode=%s phone=%s environment=%s",
+        signature_request_id, signer_id or "", signer_payload["signature_authentication_mode"], _mask_phone_for_logs(sms_phone), yousign_environment,
+    )
+    signer_fresh = _yousign_json("GET", f"/signature_requests/{signature_request_id}/signers/{signer_id}") if signer_id else {}
+    app.logger.info(
+        "[YOUSIGN] signer verification signature_request_id=%s signer_id=%s returned_signature_authentication_mode=%s environment=%s",
+        signature_request_id, signer_id or "", signer_fresh.get("signature_authentication_mode") or "", yousign_environment,
+    )
     activated = _yousign_json("POST", f"/signature_requests/{signature_request_id}/activate", json={})
     signature_link = _extract_yousign_signature_link(activated, signer_id) or _extract_yousign_signature_link(signer, signer_id)
     if not signature_link and signer_id:
-        signer_fresh = _yousign_json("GET", f"/signature_requests/{signature_request_id}/signers/{signer_id}")
         signature_link = _extract_yousign_signature_link(signer_fresh, signer_id)
     if not signature_link:
         raise RuntimeError("Demande Yousign créée, mais le lien de signature est introuvable. Vérifiez le mode de livraison Yousign.")
@@ -20962,7 +23648,8 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
         "signer_id": signer_id or "",
         "signature_link": signature_link,
         "signature_link_expires_at": activated.get("signature_link_expiration_date") or signer.get("signature_link_expiration_date") or "",
-        "unsigned_pdf_path": pdf_path,
+        "unsigned_pdf_path": yousign_pdf_path,
+        "source_pdf_with_anchors_path": pdf_path,
         "unsigned_docx_path": docx_path,
         "created_at": now,
         "activated_at": now,
@@ -20978,7 +23665,10 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
         "last_email_error": "",
     })
     trainee["convention_aps_status"] = "signature_ongoing"
-    trainee["convention_aps_pdf_path"] = pdf_path
+    trainee["convention_aps_signed_at"] = ""
+    if trainee.get("convention_status") == "signed":
+        trainee["convention_status"] = "soon"
+    trainee["convention_aps_pdf_path"] = yousign_pdf_path
     trainee["convention_aps_docx_path"] = docx_path
     trainee["updated_at"] = now
     app.logger.info("[YOUSIGN] signature request activated trainee_id=%s request_id=%s", trainee_id, signature_request_id)
@@ -21003,6 +23693,103 @@ def _download_yousign_signed_pdf(signature_request_id: str, trainee_id: str) -> 
     if not os.path.exists(path) or os.path.getsize(path) <= 0:
         raise RuntimeError("Téléchargement du PDF signé Yousign vide.")
     return path
+
+
+APS_CONVOCATION_AUTO_SEND_DELAY_SECONDS = 5 * 60
+_aps_convocation_auto_send_timers: Set[str] = set()
+_aps_convocation_auto_send_timers_lock = threading.Lock()
+
+
+def _send_scheduled_convocation_after_convention_signed(session_id: str, trainee_id: str) -> None:
+    data = load_data()
+    sess, trainees, trainee = _find_session_trainee(data, session_id, trainee_id)
+    if not sess or not trainee:
+        app.logger.warning("[CONVOCATION] scheduled send skipped: trainee not found session_id=%s trainee_id=%s", session_id, trainee_id)
+        return
+    try:
+        _send_convocation_after_convention_signed(sess, trainee, session_id, trainee_id)
+    except Exception as conv_exc:
+        trainee["convocation_auto_last_error"] = str(conv_exc)
+        app.logger.exception("[CONVOCATION] scheduled send after convention signature failed trainee_id=%s", trainee_id)
+    finally:
+        trainee["updated_at"] = _now_iso()
+        sess["trainees"] = trainees
+        sess.pop("stagiaires", None)
+        save_data(data)
+        key = f"{session_id}:{trainee_id}"
+        with _aps_convocation_auto_send_timers_lock:
+            _aps_convocation_auto_send_timers.discard(key)
+
+
+def _schedule_convocation_after_convention_signed(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> None:
+    """Planifie l’envoi automatique de la convocation 5 minutes après signature."""
+    if not _is_aps_session(session_obj) or trainee.get("convocation_aps_sent_at"):
+        return
+    key = f"{session_id}:{trainee_id}"
+    with _aps_convocation_auto_send_timers_lock:
+        if key in _aps_convocation_auto_send_timers:
+            return
+        _aps_convocation_auto_send_timers.add(key)
+    scheduled_at = datetime.datetime.utcnow() + datetime.timedelta(seconds=APS_CONVOCATION_AUTO_SEND_DELAY_SECONDS)
+    trainee["convocation_auto_scheduled_at"] = scheduled_at.replace(microsecond=0).isoformat() + "Z"
+    trainee["convocation_auto_last_error"] = ""
+    timer = threading.Timer(
+        APS_CONVOCATION_AUTO_SEND_DELAY_SECONDS,
+        _send_scheduled_convocation_after_convention_signed,
+        args=(session_id, trainee_id),
+    )
+    timer.daemon = True
+    timer.start()
+
+
+def _mark_yousign_convention_signed(data: Dict[str, Any], sess: Dict[str, Any], trainees: List[Dict[str, Any]], trainee: Dict[str, Any], request_id: str, event_id: str = "") -> None:
+    state = _yousign_state(trainee)
+    if _is_yousign_signature_done(state) and state.get("signed_pdf_path"):
+        return
+    signed_path = _download_yousign_signed_pdf(request_id, str(trainee.get("id") or ""))
+    now = _now_iso()
+    state.update({
+        "status": "done",
+        "signed_at": state.get("signed_at") or now,
+        "next_reminder_at": "",
+        "signed_pdf_path": signed_path,
+        "signed_pdf_token": _store_public_file_token(signed_path),
+        "last_error": "",
+        "last_event_id": event_id or state.get("last_event_id") or "",
+    })
+    trainee["convention_aps_status"] = "signed"
+    trainee["convention_aps_signed_at"] = state.get("signed_at") or now
+    _sync_convention_status_from_yousign(trainee)
+    _schedule_convocation_after_convention_signed(sess, trainee, str(sess.get("id") or ""), str(trainee.get("id") or ""))
+    trainee["updated_at"] = now
+    sess["trainees"] = trainees
+    sess.pop("stagiaires", None)
+
+
+def _refresh_yousign_convention_status_if_pending(data: Dict[str, Any], sess: Dict[str, Any], trainees: List[Dict[str, Any]], trainee: Dict[str, Any]) -> bool:
+    state = _yousign_state(trainee)
+    request_id = str(state.get("signature_request_id") or "").strip()
+    if not request_id or not _is_yousign_signature_pending(state) or not _yousign_is_configured():
+        return False
+    try:
+        signature_request = _yousign_json("GET", f"/signature_requests/{request_id}")
+    except Exception as exc:
+        state["last_status_sync_error"] = _sanitize_yousign_error(str(exc))
+        app.logger.warning("[YOUSIGN] status refresh failed request_id=%s error=%s", request_id, state["last_status_sync_error"])
+        return False
+    status = _yousign_signature_request_status(signature_request)
+    if not status:
+        return False
+    if status in YOUSIGN_FINAL_STATUSES:
+        _mark_yousign_convention_signed(data, sess, trainees, trainee, request_id)
+        return True
+    if status != _normalize_yousign_status(state.get("status")):
+        state["status"] = status
+        trainee["updated_at"] = _now_iso()
+        sess["trainees"] = trainees
+        sess.pop("stagiaires", None)
+        return True
+    return False
 
 
 def _pdf_page_count(pdf_path: str) -> int:
@@ -21041,8 +23828,172 @@ def _format_long_fr_date(value: str) -> str:
 
 
 
-def _aps_template_path() -> str:
-    return os.path.join(app.root_path, "templates_word", "convocationaps.docx")
+
+def _aps_entry_attestation_template_path(session_obj: Optional[Dict[str, Any]] = None) -> str:
+    template_name = (_automation_document_config(session_obj or {}).get("entry_template") or "attestationentreeaps.docx")
+    return os.path.join(app.root_path, "templates_word", template_name)
+
+
+def _aps_entry_attestation_base_filename(trainee: Dict[str, Any], trainee_id: str = "") -> str:
+    last_name = _safe_filename_part(trainee.get("last_name") or trainee.get("nom") or trainee_id)
+    first_name = _safe_filename_part(trainee.get("first_name") or trainee.get("prenom") or "")
+    suffix = f"_{first_name}" if first_name else ""
+    return f"attestation_entree_formation_aps_{last_name}{suffix}"
+
+
+def _build_aps_entry_attestation_context(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
+    first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
+    last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper()
+    full_name = f"{last_name} {first_name}".strip()
+    date_start = str(_session_get(session_obj, "date_start", "") or "").strip()
+    if not full_name:
+        raise ValueError("Impossible de générer l’attestation d’entrée APS : nom du stagiaire manquant")
+    if not date_start:
+        raise ValueError("Impossible de générer l’attestation d’entrée APS : date de début de formation manquante")
+    return {
+        "nom_complet": full_name,
+        "date_debut_formation": fr_date(date_start),
+        "date_jour": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
+    }
+
+
+def _generate_aps_entry_attestation_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
+    template_path = _aps_entry_attestation_template_path(session_obj)
+    template_name = os.path.basename(template_path)
+    if not template_name or not os.path.exists(template_path):
+        raise FileNotFoundError(f"Modèle Word obligatoire manquant : gestionstagiaires/templates_word/{template_name or 'attestation d’entrée'}")
+    os.makedirs(APS_ENTRY_ATTESTATION_DIR, exist_ok=True)
+    base = _aps_entry_attestation_base_filename(trainee, trainee_id)
+    final_docx_path = os.path.join(APS_ENTRY_ATTESTATION_DIR, base + ".docx")
+    final_pdf_path = os.path.join(APS_ENTRY_ATTESTATION_DIR, base + ".pdf")
+    shutil.copyfile(template_path, final_docx_path)
+    _replace_docx_xml_placeholders(final_docx_path, _build_aps_entry_attestation_context(session_obj, trainee))
+    _assert_docx_has_no_unresolved_variables(final_docx_path)
+    lo_binary = _find_libreoffice_binary()
+    if os.path.exists(final_pdf_path):
+        os.remove(final_pdf_path)
+    command = [lo_binary, "--headless", "--convert-to", "pdf", "--outdir", APS_ENTRY_ATTESTATION_DIR, final_docx_path]
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True, timeout=120)
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(f"Conversion LibreOffice impossible : {(exc.stderr or exc.stdout or '').strip()}") from exc
+    if not os.path.exists(final_pdf_path) or os.path.getsize(final_pdf_path) <= 0:
+        raise RuntimeError("Le PDF final de l’attestation d’entrée APS est introuvable ou vide après conversion LibreOffice.")
+    return final_docx_path, final_pdf_path
+
+
+
+def _aps_end_attestation_template_path(session_obj: Optional[Dict[str, Any]] = None) -> str:
+    template_name = (_automation_document_config(session_obj or {}).get("end_template") or "attestationfinaps.docx")
+    return os.path.join(app.root_path, "templates_word", template_name)
+
+
+def _aps_end_attestation_base_filename(trainee: Dict[str, Any], trainee_id: str = "") -> str:
+    last_name = _safe_filename_part(trainee.get("last_name") or trainee.get("nom") or trainee_id)
+    first_name = _safe_filename_part(trainee.get("first_name") or trainee.get("prenom") or "")
+    suffix = f"_{first_name}" if first_name else ""
+    return f"attestation_fin_formation_aps_{last_name}{suffix}"
+
+
+def _build_aps_end_attestation_context(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
+    first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
+    last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper()
+    full_name = f"{last_name} {first_name}".strip()
+    date_start = str(_session_get(session_obj, "date_start", "") or "").strip()
+    date_end = str(_session_get(session_obj, "date_end", "") or "").strip()
+    if not full_name:
+        raise ValueError("Impossible de générer l’attestation de fin APS : nom du stagiaire manquant")
+    if not date_start or not date_end:
+        raise ValueError("Impossible de générer l’attestation de fin APS : dates de formation manquantes")
+    return {
+        "nom_complet": full_name,
+        "date_debut_formation": fr_date(date_start),
+        "date_fin_formation": fr_date(date_end),
+        "periode_formation": f"du {fr_date(date_start)} au {fr_date(date_end)}",
+        "date_jour": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
+    }
+
+
+def _generate_aps_end_attestation_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
+    template_path = _aps_end_attestation_template_path(session_obj)
+    if not os.path.exists(template_path):
+        raise FileNotFoundError("Modèle Word obligatoire manquant : gestionstagiaires/templates_word/attestationfinaps.docx")
+    os.makedirs(APS_END_ATTESTATION_DIR, exist_ok=True)
+    base = _aps_end_attestation_base_filename(trainee, trainee_id)
+    final_docx_path = os.path.join(APS_END_ATTESTATION_DIR, base + ".docx")
+    final_pdf_path = os.path.join(APS_END_ATTESTATION_DIR, base + ".pdf")
+    shutil.copyfile(template_path, final_docx_path)
+    _replace_docx_xml_placeholders(final_docx_path, _build_aps_end_attestation_context(session_obj, trainee))
+    _assert_docx_has_no_unresolved_variables(final_docx_path)
+    lo_binary = _find_libreoffice_binary()
+    if os.path.exists(final_pdf_path):
+        os.remove(final_pdf_path)
+    command = [lo_binary, "--headless", "--convert-to", "pdf", "--outdir", APS_END_ATTESTATION_DIR, final_docx_path]
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True, timeout=120)
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(f"Conversion LibreOffice impossible : {(exc.stderr or exc.stdout or '').strip()}") from exc
+    if not os.path.exists(final_pdf_path) or os.path.getsize(final_pdf_path) <= 0:
+        raise RuntimeError("Le PDF final de l’attestation de fin APS est introuvable ou vide après conversion LibreOffice.")
+    return final_docx_path, final_pdf_path
+
+
+def _attestation_email_training_labels(session_obj: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
+    config = _automation_document_config(session_obj or {})
+    slug = str(config.get("slug") or "").strip().lower()
+    short_label = str(config.get("label") or "APS").strip() or "APS"
+    if slug == "a3p":
+        return "A3P", "Agent de Protection Physique des Personnes A3P"
+    if slug.startswith("desp_"):
+        return "DESP", "Dirigeant d'une entreprise de sécurité privée (DESP)"
+    if slug == "ssiap":
+        return "SSIAP", "Agent de sécurité incendie SSIAP 1"
+    if slug == "aps":
+        return "APS", "Agent de Prévention et de Sécurité (APS)"
+    return short_label, FORMATION_LONG_LABELS.get(short_label.upper(), short_label)
+
+
+def _build_aps_end_attestation_email(first_name: str, date_end: str = "", session_obj: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
+    short_label, long_label = _attestation_email_training_labels(session_obj)
+    subject = f"Attestation de fin de formation {short_label} - Intégrale Academy"
+    safe_first_name = html.escape(str(first_name or "").strip() or "Madame, Monsieur")
+    safe_long_label = html.escape(long_label)
+    period = fr_date(date_end) if date_end else ""
+    period_line = f"<p><strong>Date de fin de formation :</strong> {html.escape(period)}</p>" if period else ""
+    html_body = f"""<!doctype html><html lang="fr"><body style="font-family:Arial,Helvetica,sans-serif;color:#172033;line-height:1.6;">
+      <p>Bonjour {safe_first_name},</p>
+      <p>Veuillez trouver en pièce jointe votre attestation de fin de formation {safe_long_label}.</p>
+      {period_line}
+      <p>Bien cordialement,<br>Intégrale Academy</p>
+    </body></html>"""
+    return subject, html_body
+
+
+def _build_aps_entry_attestation_email(first_name: str, date_start: str = "", session_obj: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
+    short_label, long_label = _attestation_email_training_labels(session_obj)
+    subject = f"Attestation d’entrée en formation {short_label} - Intégrale Academy"
+    safe_first_name = html.escape(str(first_name or "").strip() or "Madame, Monsieur")
+    safe_long_label = html.escape(long_label)
+    period = fr_date(date_start) if date_start else ""
+    period_line = f"<p><strong>Date d’entrée en formation :</strong> {html.escape(period)}</p>" if period else ""
+    html_body = f"""<!doctype html><html lang="fr"><body style="font-family:Arial,Helvetica,sans-serif;color:#172033;line-height:1.6;">
+      <p>Bonjour {safe_first_name},</p>
+      <p>Veuillez trouver en pièce jointe votre attestation d’entrée en formation {safe_long_label}.</p>
+      {period_line}
+      <p>Bien cordialement,<br>Intégrale Academy</p>
+    </body></html>"""
+    return subject, html_body
+
+
+def _aps_entry_attestation_pdf_is_allowed(pdf_path: str) -> bool:
+    root = os.path.abspath(APS_ENTRY_ATTESTATION_DIR)
+    abs_pdf_path = os.path.abspath(pdf_path)
+    return abs_pdf_path.startswith(root + os.sep)
+
+
+def _aps_template_path(session_obj: Optional[Dict[str, Any]] = None) -> str:
+    template_name = (_automation_document_config(session_obj or {}).get("convocation_template") or "convocationaps.docx")
+    return os.path.join(app.root_path, "templates_word", template_name)
 
 
 def _split_address_lines(address: str, max_lines: int = 4) -> List[str]:
@@ -21056,14 +24007,17 @@ def _split_address_lines(address: str, max_lines: int = 4) -> List[str]:
 
 
 def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
+    config = _automation_document_config(session_obj)
+    is_dirigeant = str(config.get("slug") or "").startswith("desp_")
     required = [
         (trainee.get("email"), "email du stagiaire manquant"),
         (trainee.get("first_name") or trainee.get("prenom"), "prénom du stagiaire manquant"),
         (trainee.get("last_name") or trainee.get("nom"), "nom du stagiaire manquant"),
         (_session_get(session_obj, "date_start", ""), "date de début de formation manquante"),
         (_session_get(session_obj, "date_end", ""), "date de fin de formation manquante"),
-        (_session_get(session_obj, "exam_date", ""), "date d’examen manquante"),
     ]
+    if not is_dirigeant:
+        required.append((_session_get(session_obj, "exam_date", ""), "date d’examen manquante"))
     for value, message in required:
         if not str(value or "").strip():
             raise ValueError(f"Impossible de générer la convocation APS : {message}")
@@ -21077,15 +24031,21 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
     zip_code = str(trainee.get("zip_code") or trainee.get("code_postal") or trainee.get("postal_code") or "").strip()
     city = str(trainee.get("city") or trainee.get("ville") or "").strip().upper()
     training_name = str(_session_get(session_obj, "name", "") or _session_get(session_obj, "training_type", "") or "Formation APS").strip()
-    remote_start = str(_session_get(session_obj, "aps_remote_start", "") or _session_get(session_obj, "date_start", "")).strip()
-    remote_end = str(_session_get(session_obj, "aps_remote_end", "") or remote_start).strip()
-    in_person_start = str(_session_get(session_obj, "aps_in_person_start", "") or _session_get(session_obj, "date_start", "")).strip()
-    in_person_end = str(_session_get(session_obj, "aps_in_person_end", "") or _session_get(session_obj, "date_end", "")).strip()
+    if is_dirigeant:
+        remote_start = str(_session_get(session_obj, "dirigeant_remote_start", "") or _session_get(session_obj, "date_start", "")).strip()
+        remote_end = str(_session_get(session_obj, "dirigeant_remote_end", "") or remote_start).strip()
+        in_person_start = str(_session_get(session_obj, "dirigeant_in_person_start", "") or _session_get(session_obj, "date_start", "")).strip()
+        in_person_end = str(_session_get(session_obj, "dirigeant_in_person_end", "") or _session_get(session_obj, "date_end", "")).strip()
+    else:
+        remote_start = str(_session_get(session_obj, "aps_remote_start", "") or _session_get(session_obj, "date_start", "")).strip()
+        remote_end = str(_session_get(session_obj, "aps_remote_end", "") or remote_start).strip()
+        in_person_start = str(_session_get(session_obj, "aps_in_person_start", "") or _session_get(session_obj, "date_start", "")).strip()
+        in_person_end = str(_session_get(session_obj, "aps_in_person_end", "") or _session_get(session_obj, "date_end", "")).strip()
     public_token = (trainee.get("public_token") or trainee.get("token") or "").strip()
     trainee_space_url = f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{public_token}" if public_token else f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espacestagiaire"
     date_start = str(_session_get(session_obj, "date_start", "")).strip()
     date_end = str(_session_get(session_obj, "date_end", "")).strip()
-    exam_date = str(_session_get(session_obj, "exam_date", "")).strip()
+    exam_date = str(_session_get(session_obj, "exam_date", "") or (in_person_end if is_dirigeant else "")).strip()
     convocation_time = str(_session_get(session_obj, "convocation_time", "") or session_obj.get("heure_convocation") or "08h30").strip() or "08h30"
     exam_time = str(_session_get(session_obj, "exam_time", "") or session_obj.get("heure_examen") or "08h00").strip() or "08h00"
     place = f"{APS_CONVOCATION_CENTER_NAME} - {APS_CONVOCATION_CENTER_ADDRESS} - {APS_CONVOCATION_CENTER_ZIP} {APS_CONVOCATION_CENTER_CITY}"
@@ -21166,15 +24126,14 @@ def _render_docx_with_python_template(template_path: str, output_docx_path: str,
 
 
 def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
-    template_path = _aps_template_path()
+    template_path = _aps_template_path(session_obj)
     app.logger.info("[CONVOCATION APS] Modèle Word utilisé : %s", template_path)
     if not os.path.exists(template_path):
-        raise FileNotFoundError("Modèle Word obligatoire manquant : gestionstagiaires/templates_word/convocationaps.docx")
-    if not _docx_text_contains_yousign_smart_anchor(template_path, signer_index=1):
-        raise RuntimeError(YOUSIGN_SMART_ANCHOR_MISSING_MESSAGE)
+        raise FileNotFoundError(f"Modèle Word obligatoire manquant : gestionstagiaires/templates_word/{os.path.basename(template_path)}")
     context = _build_aps_convocation_context(session_obj, trainee)
     app.logger.info("[CONVOCATION APS] Données injectées : stagiaire=%s formation=%s période=%s examen=%s", context.get("nom_complet"), context.get("formation_nom"), context.get("periode_formation"), context.get("date_examen"))
-    base = f"convocation_aps_{_safe_filename_part(trainee.get('id') or trainee_id)}"
+    doc_slug = _automation_document_config(session_obj).get("slug") or "aps"
+    base = f"convocation_{_safe_filename_part(doc_slug)}_{_safe_filename_part(trainee.get('id') or trainee_id)}"
     final_docx_path = os.path.join(APS_CONVOCATION_DIR, base + ".docx")
     final_pdf_path = os.path.join(APS_CONVOCATION_DIR, base + ".pdf")
     protected_template_path = os.path.join(APS_CONVOCATION_DIR, base + "_template.docx")
@@ -21189,8 +24148,6 @@ def _generate_aps_convocation_files(session_obj: Dict[str, Any], trainee: Dict[s
         except OSError:
             pass
     _restore_yousign_smart_anchors_in_docx(final_docx_path, anchor_replacements)
-    if not _docx_text_contains_yousign_smart_anchor(final_docx_path, signer_index=1):
-        raise RuntimeError(YOUSIGN_SMART_ANCHOR_MISSING_MESSAGE)
     app.logger.info("[CONVOCATION APS] DOCX final généré : %s", final_docx_path)
     if not os.path.exists(final_docx_path) or os.path.getsize(final_docx_path) <= 0:
         raise RuntimeError("Le DOCX final de convocation APS est introuvable ou vide.")
@@ -21220,8 +24177,9 @@ def _generate_aps_convocation_pdf(session_obj: Dict[str, Any], trainee: Dict[str
     return _generate_aps_convocation_files(session_obj, trainee, session_id, trainee_id)[1]
 
 
-def _aps_convention_template_path() -> str:
-    return os.path.join(app.root_path, "templates_word", "conventionaps.docx")
+def _aps_convention_template_path(session_obj: Optional[Dict[str, Any]] = None) -> str:
+    template_name = (_automation_document_config(session_obj or {}).get("convention_template") or "conventionaps.docx")
+    return os.path.join(app.root_path, "templates_word", template_name)
 
 
 def _aps_convention_base_filename(trainee: Dict[str, Any], trainee_id: str = "") -> str:
@@ -21231,29 +24189,297 @@ def _aps_convention_base_filename(trainee: Dict[str, Any], trainee_id: str = "")
     return f"convention_formation_aps_{last_name}{suffix}"
 
 
+
+def _format_euro_amount(value: Any) -> str:
+    raw = str(value if value is not None else "").strip().replace(" ", "").replace(",", ".")
+    if not raw:
+        return "0 €"
+    try:
+        amount = float(raw)
+    except Exception:
+        return str(value).strip()
+    if amount.is_integer():
+        return f"{int(amount):,}".replace(",", " ") + " €"
+    whole, decimals = f"{amount:,.2f}".split(".")
+    return whole.replace(",", " ") + "," + decimals + " €"
+
+
+APS_CONVENTION_VARIABLES = [
+    "civilite", "prenom", "nom", "nom_complet",
+    "email", "mail", "telephone",
+    "adresse", "adresse_ligne1", "adresse_ligne2", "adresse_ligne3", "adresse_ligne4", "code_postal", "ville",
+    "formation_nom", "nom_pedagogique",
+    "montant_formation", "montant_formation_eur", "montant_cpf", "montant_cpf_eur",
+    "montant_financement_personnel", "montant_financement_personnel_eur",
+    "montant_personnel", "montant_personnel_eur", "montant_autre", "montant_autre_eur",
+    "date_debut_formation", "date_fin_formation", "periode_formation", "periode_elearning", "periode_presentiel", "date_ouverture",
+    "h_elearning", "h_presentiel", "h_total",
+    "date_convocation", "heure_convocation", "date_examen", "heure_examen", "duree_exam",
+    "lieu_formation", "lieu_examen", "espace_stagiaire_url", "modalites_suivi", "date_jour",
+]
+
+
+def _first_non_empty(*values: Any, default: str = "") -> str:
+    for value in values:
+        if value not in (None, ""):
+            text = str(value).strip()
+            if text:
+                return text
+    return default
+
+
+def _plain_amount(value: Any) -> str:
+    raw = str(value if value is not None else "").strip().replace(" ", "").replace(",", ".")
+    if not raw:
+        return "0"
+    try:
+        amount = float(raw)
+    except Exception:
+        return str(value).strip()
+    if amount.is_integer():
+        return str(int(amount))
+    return f"{amount:.2f}".rstrip("0").rstrip(".").replace(".", ",")
+
+
+def _docx_replace_in_paragraph(paragraph: Any, replacements: Dict[str, str]) -> None:
+    if not paragraph.runs:
+        return
+    original = "".join(run.text for run in paragraph.runs)
+    replaced = original
+    for key, value in replacements.items():
+        replaced = re.sub(r"\{\{\s*" + re.escape(key) + r"\s*\}\}", str(value), replaced)
+    if replaced == original:
+        return
+    paragraph.runs[0].text = replaced
+    for run in paragraph.runs[1:]:
+        run.text = ""
+
+
+def _iter_docx_paragraphs(container: Any) -> Iterable[Any]:
+    for paragraph in getattr(container, "paragraphs", []):
+        yield paragraph
+    for table in getattr(container, "tables", []):
+        for row in table.rows:
+            for cell in row.cells:
+                yield from _iter_docx_paragraphs(cell)
+
+
+def _docx_business_placeholders(docx_path: str) -> List[str]:
+    found: List[str] = []
+    seen: Set[str] = set()
+    pattern = re.compile(r"\{\{[^{}]+\}\}")
+    try:
+        document = Document(docx_path)
+        containers: List[Any] = [document]
+        for section in document.sections:
+            containers.extend([section.header, section.footer, section.first_page_header, section.first_page_footer, section.even_page_header, section.even_page_footer])
+        for container in containers:
+            for paragraph in _iter_docx_paragraphs(container):
+                for match in pattern.findall(paragraph.text):
+                    if match not in seen:
+                        seen.add(match)
+                        found.append(match)
+    except Exception:
+        with zipfile.ZipFile(docx_path) as zf:
+            for name in _docx_xml_names(zf):
+                text = "".join(ET.fromstring(zf.read(name).decode("utf-8", errors="ignore")).itertext())
+                for match in pattern.findall(text):
+                    if match not in seen:
+                        seen.add(match)
+                        found.append(match)
+    return found
+
+
+def _assert_aps_convention_has_no_business_placeholders(docx_path: str) -> Tuple[List[str], List[str]]:
+    remaining = _docx_business_placeholders(docx_path)
+    anchors = [p for p in remaining if YOUSIGN_SMART_ANCHOR_PATTERN.fullmatch(p)]
+    business = [p for p in remaining if not YOUSIGN_SMART_ANCHOR_PATTERN.fullmatch(p)]
+    if business:
+        raise RuntimeError(f"Variables non remplacées dans la convention APS : {business}")
+    return remaining, anchors
+
+
+def _format_period_from_dates(start: Any, end: Any) -> str:
+    start_fr = fr_date(str(start or "").strip())
+    end_fr = fr_date(str(end or "").strip())
+    if start_fr and end_fr:
+        return f"du {start_fr} au {end_fr}"
+    if start_fr:
+        return f"à partir du {start_fr}"
+    if end_fr:
+        return f"jusqu’au {end_fr}"
+    return ""
+
+
+
+def _session_period_replacements(session_obj: Dict[str, Any]) -> Dict[str, str]:
+    date_start_raw = str(_session_get(session_obj, "date_start", "") or "").strip()
+    date_end_raw = str(_session_get(session_obj, "date_end", "") or "").strip()
+    training_type = str(_session_get(session_obj, "training_type", "") or "").strip().upper()
+    elearning_period = _format_period_from_dates(
+        _session_get(session_obj, "aps_remote_start", ""),
+        _session_get(session_obj, "aps_remote_end", ""),
+    )
+    presentiel_period = _format_period_from_dates(
+        _session_get(session_obj, "aps_in_person_start", ""),
+        _session_get(session_obj, "aps_in_person_end", ""),
+    )
+    if training_type.startswith("DIRIGEANT"):
+        elearning_period = _format_period_from_dates(
+            _session_get(session_obj, "dirigeant_remote_start", ""),
+            _session_get(session_obj, "dirigeant_remote_end", ""),
+        )
+        presentiel_period = _format_period_from_dates(
+            _session_get(session_obj, "dirigeant_in_person_start", ""),
+            _session_get(session_obj, "dirigeant_in_person_end", ""),
+        )
+    return {
+        "date_debut_formation": fr_date(date_start_raw),
+        "date_fin_formation": fr_date(date_end_raw),
+        "periode_formation": _format_period_from_dates(date_start_raw, date_end_raw),
+        "periode_elearning": elearning_period,
+        "periode_presentiel": presentiel_period,
+    }
+
+def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> Dict[str, str]:
+    """Return values allowed for APS convention ``{{ variable }}`` placeholders.
+
+    The APS convention is immutable outside of explicit ``{{ nom_variable }}``
+    placeholders.  In particular, fixed legal text, article titles, tables,
+    styles, colours, images, headers and footers must never be rebuilt or
+    rewritten by application code.
+    """
+    first_name = str(trainee.get("first_name") or trainee.get("prenom") or "").strip()
+    last_name = str(trainee.get("last_name") or trainee.get("nom") or "").strip().upper()
+    full_name = f"{last_name} {first_name}".strip()
+    zip_code = str(trainee.get("zip_code") or trainee.get("code_postal") or trainee.get("postal_code") or "").strip()
+    city = str(trainee.get("city") or trainee.get("ville") or "").strip().upper()
+    training_type = str(_session_get(session_obj, "training_type", "") or "APS").strip()
+    formation_name = _first_non_empty(trainee.get("formation_nom"), trainee.get("training_name"), _session_get(session_obj, "name", ""), training_type, default="APS")
+    training_price = _first_non_empty(trainee.get("training_price"), trainee.get("montant_formation"), _session_get(session_obj, "training_price", ""), default=str(default_training_price(training_type) or 1650))
+    cpf_amount = _first_non_empty(trainee.get("cpf_amount"), trainee.get("montant_cpf"), default="0")
+    personal_amount = _first_non_empty(trainee.get("personal_amount"), trainee.get("montant_financement_personnel"), trainee.get("montant_personnel"), default="")
+    if personal_amount in (None, ""):
+        personal_amount = "0"
+    other_amount = _first_non_empty(trainee.get("other_amount"), trainee.get("montant_autre"), default="0")
+    session_periods = _session_period_replacements(session_obj)
+    date_start = session_periods["date_debut_formation"]
+    date_end = session_periods["date_fin_formation"]
+    periode = session_periods["periode_formation"]
+    elearning_period = session_periods["periode_elearning"]
+    presentiel_period = session_periods["periode_presentiel"]
+    address = _first_non_empty(trainee.get("address"), trainee.get("adresse"))
+    replacements = {
+        "civilite": _first_non_empty(trainee.get("civilite"), trainee.get("gender"), default=""),
+        "prenom": first_name,
+        "nom": last_name,
+        "nom_complet": full_name,
+        "email": _first_non_empty(trainee.get("email"), trainee.get("mail")),
+        "mail": _first_non_empty(trainee.get("email"), trainee.get("mail")),
+        "telephone": _first_non_empty(trainee.get("phone"), trainee.get("telephone")),
+        "adresse": address,
+        "adresse_ligne1": _first_non_empty(trainee.get("adresse_ligne1"), address),
+        "adresse_ligne2": _first_non_empty(trainee.get("adresse_ligne2")),
+        "adresse_ligne3": _first_non_empty(trainee.get("adresse_ligne3")),
+        "adresse_ligne4": _first_non_empty(trainee.get("adresse_ligne4")),
+        "code_postal": zip_code,
+        "ville": city,
+        "formation_nom": formation_name,
+        "nom_pedagogique": _first_non_empty(trainee.get("nom_pedagogique"), _session_get(session_obj, "nom_pedagogique", ""), formation_name),
+        "montant_formation": _plain_amount(training_price),
+        "montant_formation_eur": _format_euro_amount(training_price),
+        "montant_cpf": _plain_amount(cpf_amount),
+        "montant_cpf_eur": _format_euro_amount(cpf_amount),
+        "montant_financement_personnel": _plain_amount(personal_amount),
+        "montant_financement_personnel_eur": _format_euro_amount(personal_amount),
+        "montant_personnel": _plain_amount(personal_amount),
+        "montant_personnel_eur": _format_euro_amount(personal_amount),
+        "montant_autre": _plain_amount(other_amount),
+        "montant_autre_eur": _format_euro_amount(other_amount),
+        "date_debut_formation": date_start,
+        "date_fin_formation": date_end,
+        "periode_formation": periode,
+        "periode_elearning": _first_non_empty(elearning_period, trainee.get("periode_elearning"), _session_get(session_obj, "periode_elearning", ""), periode),
+        "periode_presentiel": _first_non_empty(presentiel_period, trainee.get("periode_presentiel"), _session_get(session_obj, "periode_presentiel", ""), periode),
+        "date_ouverture": fr_date(_first_non_empty(trainee.get("date_ouverture"), _session_get(session_obj, "date_ouverture", ""))),
+        "h_elearning": _first_non_empty(trainee.get("h_elearning"), _session_get(session_obj, "h_elearning", ""), default="0"),
+        "h_presentiel": _first_non_empty(trainee.get("h_presentiel"), _session_get(session_obj, "h_presentiel", ""), default="0"),
+        "h_total": _first_non_empty(trainee.get("h_total"), _session_get(session_obj, "h_total", ""), default="0"),
+        "date_convocation": fr_date(_first_non_empty(trainee.get("date_convocation"), _session_get(session_obj, "date_convocation", ""))),
+        "heure_convocation": _first_non_empty(trainee.get("heure_convocation"), _session_get(session_obj, "heure_convocation", "")),
+        "date_examen": fr_date(_first_non_empty(trainee.get("date_examen"), _session_get(session_obj, "exam_date", ""))),
+        "heure_examen": _first_non_empty(trainee.get("heure_examen"), _session_get(session_obj, "heure_examen", "")),
+        "duree_exam": _first_non_empty(trainee.get("duree_exam"), _session_get(session_obj, "duree_exam", "")),
+        "lieu_formation": _first_non_empty(trainee.get("lieu_formation"), _session_get(session_obj, "lieu_formation", ""), default="À préciser"),
+        "lieu_examen": _first_non_empty(trainee.get("lieu_examen"), _session_get(session_obj, "lieu_examen", ""), default="À préciser"),
+        "espace_stagiaire_url": _first_non_empty(trainee.get("espace_stagiaire_url"), trainee.get("public_url")),
+        "modalites_suivi": _first_non_empty(trainee.get("modalites_suivi"), _session_get(session_obj, "modalites_suivi", ""), default="À préciser"),
+        "date_jour": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
+        "nom_identite": full_name,
+        "date_debut": date_start,
+        "date_fin": date_end,
+        "code_rncp": "RNCP36648",
+        "montant_ttc": _format_euro_amount(personal_amount),
+        "ville_edition": "Puget-sur-Argens",
+        "date_edition": datetime.datetime.utcnow().strftime("%d/%m/%Y"),
+    }
+    return {key: str(replacements.get(key) or "") for key in replacements}
+
+
+def _sha256_file(path: str) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _replace_docx_xml_placeholders(docx_path: str, replacements: Dict[str, str]) -> None:
+    """Replace only known APS convention variables written as ``{{ name }}``.
+
+    No legacy placeholder syntax and no fixed literal text is matched.  A token
+    is replaced only when the DOCX text contains a ``{{ variable_name }}``
+    placeholder whose ``variable_name`` is present in ``replacements``.  This
+    works even when Microsoft Word splits one placeholder across several runs.
+    """
+    document = Document(docx_path)
+    containers: List[Any] = [document]
+    for section in document.sections:
+        containers.extend([section.header, section.footer, section.first_page_header, section.first_page_footer, section.even_page_header, section.even_page_footer])
+    for container in containers:
+        for paragraph in _iter_docx_paragraphs(container):
+            _docx_replace_in_paragraph(paragraph, replacements)
+    document.save(docx_path)
+
 def _generate_aps_convention_files(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str = "", trainee_id: str = "") -> Tuple[str, str]:
     """Generate the APS training convention used exclusively for Yousign."""
-    template_path = _aps_convention_template_path()
-    app.logger.info("[CONVENTION APS] Modèle Word utilisé : %s", template_path)
+    config = _automation_document_config(session_obj)
+    if not config.get("enabled"):
+        raise RuntimeError("La convention automatisée n’est pas proposée pour cette formation.")
+    template_path = os.path.abspath(_aps_convention_template_path(session_obj))
+    template_name = os.path.basename(template_path)
     if not os.path.exists(template_path):
-        raise FileNotFoundError("Modèle Word obligatoire manquant : gestionstagiaires/templates_word/conventionaps.docx")
+        raise FileNotFoundError(f"Modèle Word obligatoire manquant : gestionstagiaires/templates_word/{template_name}")
+    template_size = os.path.getsize(template_path)
+    template_sha256 = _sha256_file(template_path)
+    app.logger.info("Convention APS template utilisé : %s taille=%s sha256=%s", template_path, template_size, template_sha256)
     os.makedirs(YOUSIGN_CONVENTION_DIR, exist_ok=True)
     base = _aps_convention_base_filename(trainee, trainee_id)
     final_docx_path = os.path.join(YOUSIGN_CONVENTION_DIR, base + ".docx")
     final_pdf_path = os.path.join(YOUSIGN_CONVENTION_DIR, base + ".pdf")
-    context: Dict[str, str] = {}
-    try:
-        doc = DocxTemplate(template_path) if DocxTemplate is not None else None
-        variables = sorted(doc.get_undeclared_template_variables()) if doc is not None else []
-    except Exception as exc:
-        app.logger.warning("[CONVENTION APS] Lecture des variables du modèle impossible, copie simple du modèle : %s", exc)
-        variables = []
-    if variables:
-        base_context = _build_aps_convocation_context(session_obj, trainee)
-        context = {key: str(base_context.get(key, "")) for key in variables}
-        _render_docx_with_python_template(template_path, final_docx_path, context)
-    else:
-        shutil.copyfile(template_path, final_docx_path)
+    shutil.copyfile(template_path, final_docx_path)
+    replacements = _aps_convention_replacements(session_obj, trainee)
+    app.logger.info("Variables convention APS attendues : %s", APS_CONVENTION_VARIABLES)
+    app.logger.info("Variables convention APS remplacées : %s", sorted([key for key in APS_CONVENTION_VARIABLES if replacements.get(key)]))
+    app.logger.info("Variables convention APS sans valeur : %s", sorted([key for key in APS_CONVENTION_VARIABLES if not replacements.get(key)]))
+    _replace_docx_xml_placeholders(final_docx_path, replacements)
+    remaining_variables, detected_anchors = _assert_aps_convention_has_no_business_placeholders(final_docx_path)
+    app.logger.info("Variables restantes après remplacement : %s", remaining_variables)
+    app.logger.info("Ancres Yousign détectées : %s", detected_anchors)
+    signature_anchors = _docx_yousign_smart_anchors(final_docx_path, signer_index=1)
+    app.logger.info("Zones de signature détectées dans la convention APS : %s", signature_anchors)
+    if not signature_anchors:
+        raise RuntimeError(YOUSIGN_SMART_ANCHOR_MISSING_MESSAGE)
     if not os.path.exists(final_docx_path) or os.path.getsize(final_docx_path) <= 0:
         raise RuntimeError("Le DOCX final de convention APS est introuvable ou vide.")
     lo_binary = _find_libreoffice_binary()
@@ -21289,21 +24515,278 @@ def _aps_convocation_pdf_is_allowed(pdf_path: str) -> bool:
     return any(abs_pdf_path.startswith(root + os.sep) for root in _aps_convocation_allowed_pdf_roots())
 
 
-def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end: str = "") -> Tuple[str, str]:
-    subject = "Convocation formation APS - Intégrale Academy"
-    period = f" qui se déroulera du {fr_date(date_start)} au {fr_date(date_end)}" if date_start and date_end else ""
-    html_body = mail_layout(f"""
-      <h2 style="margin:0 0 14px;color:#0f172a;">Bonjour {html.escape(first_name or "")},</h2>
-      <p>Nous revenons vers vous concernant votre formation <strong>Agent de Prévention et de Sécurité (APS)</strong>{period}.</p>
-      <p>Vous trouverez en pièce jointe votre convocation officielle.</p>
-      <p style="font-weight:700;color:#0f172a;">Merci de lire attentivement l’ensemble du document.</p>
-      <div style="text-align:center;margin:26px 0;"><a href="https://gestionstagiaires-r5no.onrender.com/espacestagiaire" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;font-weight:800;padding:13px 20px;border-radius:12px;">Accéder à mon espace stagiaire</a></div>
-      <p>En cas de question, vous pouvez nous contacter au <strong>04 22 47 07 68</strong> ou par email à <a href="mailto:ecole@integraleacademy.com">ecole@integraleacademy.com</a>.</p>
-      <p>À très bientôt,</p>
-      <p style="margin-top:18px;"><strong>Intégrale Academy</strong><br>54 chemin du Carreou<br>83480 Puget-sur-Argens<br>04 22 47 07 68</p>
-    """)
+def _convocation_email_training_labels(session_obj: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
+    config = _automation_document_config(session_obj or {})
+    short_label = str(config.get("label") or "APS").strip() or "APS"
+    long_label = FORMATION_LONG_LABELS.get(short_label.upper(), str(config.get("label") or short_label).strip() or short_label)
+    return short_label, long_label
+
+
+def _build_aps_convocation_email(first_name: str, date_start: str = "", date_end: str = "", session_obj: Optional[Dict[str, Any]] = None) -> Tuple[str, str]:
+    short_label, long_label = _convocation_email_training_labels(session_obj)
+    safe_short_label = html.escape(short_label)
+    safe_long_label = html.escape(long_label)
+    subject = f"Convocation formation {short_label} - Intégrale Academy"
+    safe_first_name = html.escape(str(first_name or "").strip() or "Madame, Monsieur")
+    safe_logo_url = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
+    safe_space_url = html.escape(f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espacestagiaire", quote=True)
+    period_label = ""
+    if date_start and date_end:
+        period_label = f"du {html.escape(fr_date(date_start))} au {html.escape(fr_date(date_end))}"
+
+    session_line = (
+        f'<p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Session :</strong> {period_label}</p>'
+        if period_label
+        else ""
+    )
+    period_sentence = f" qui se déroulera {period_label}" if period_label else ""
+
+    html_body = f'''<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Convocation formation {safe_short_label}</title>
+</head>
+<body style="margin:0;padding:0;background:#f3f6fa;font-family:Arial,Helvetica,sans-serif;color:#172033;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f3f6fa;margin:0;padding:24px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,0.08);">
+        <tr><td style="background:#0b2f5b;padding:28px 30px;color:#ffffff;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td style="width:88px;padding-right:18px;vertical-align:middle;"><img src="{safe_logo_url}" width="74" alt="Logo Intégrale Academy" style="display:block;width:74px;height:auto;border:0;outline:none;text-decoration:none;background:#ffffff;border-radius:14px;padding:7px;"></td><td style="vertical-align:middle;"><div style="font-size:24px;font-weight:700;line-height:1.2;">Intégrale Academy</div><div style="font-size:15px;opacity:.92;margin-top:6px;line-height:1.4;">Convocation formation {safe_short_label}</div></td></tr></table></td></tr>
+        <tr><td style="padding:32px 30px 10px 30px;">
+          <p style="margin:0 0 16px 0;font-size:18px;line-height:1.5;">Bonjour {safe_first_name},</p>
+          <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">Nous avons bien reçu votre Convention de formation signée et nous vous en remercions.</p>
+          <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">Nous revenons vers vous concernant votre formation <strong>{safe_long_label}</strong>{period_sentence}.</p>
+          <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#415166;">Vous trouverez en pièce jointe votre convocation officielle.</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f7faff;border:1px solid #dbeafe;border-radius:14px;margin:0 0 28px 0;"><tr><td style="padding:18px 20px;">
+            <p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Formation :</strong> {safe_long_label}</p>{session_line}<p style="margin:0;font-size:15px;line-height:1.5;"><strong>Document :</strong> Convocation officielle en pièce jointe</p>
+          </td></tr></table>
+          <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;font-weight:700;color:#0f172a;">Merci de lire attentivement l’ensemble du document.</p>
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 26px auto;"><tr><td bgcolor="#0b5ed7" style="border-radius:12px;text-align:center;box-shadow:0 10px 22px rgba(11,94,215,.25);"><a href="{safe_space_url}" style="display:inline-block;padding:16px 28px;font-size:17px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px;">Accéder à mon espace stagiaire</a></td></tr></table>
+          <p style="margin:0 0 10px 0;font-size:15px;line-height:1.6;">En cas de question, vous pouvez nous contacter au <strong>04 22 47 07 68</strong> ou par email à <a href="mailto:ecole@integraleacademy.com" style="color:#0b5ed7;text-decoration:underline;">ecole@integraleacademy.com</a>.</p>
+          <p style="margin:0 0 24px 0;font-size:15px;line-height:1.6;">À très bientôt,</p>
+        </td></tr><tr><td style="background:#f8fafc;border-top:1px solid #e5e7eb;padding:22px 30px;color:#64748b;font-size:13px;line-height:1.6;"><strong style="color:#334155;">Intégrale Academy</strong><br>54 chemin du Carreou<br>83480 Puget-sur-Argens<br>04 22 47 07 68</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>'''
     return subject, html_body
 
+
+def _store_public_file_token(path: str) -> str:
+    try:
+        return _tokenize_path(path)
+    except Exception:
+        return path
+
+
+def _send_convocation_after_convention_signed(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> bool:
+    """Generate, send by email, and expose the convocation once the convention is signed."""
+    if not _is_aps_session(session_obj):
+        trainee["convocation_auto_last_error"] = "Envoi automatique de convocation configuré uniquement pour APS."
+        return False
+    if trainee.get("convocation_aps_sent_at"):
+        return True
+    docx_path, pdf_path = _generate_aps_convocation_files(session_obj, trainee, session_id, trainee_id)
+    with open(pdf_path, "rb") as fh:
+        encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
+    subject, html_content = _build_aps_convocation_email(str(trainee.get("first_name") or ""), _session_get(session_obj, "date_start", ""), _session_get(session_obj, "date_end", ""), session_obj)
+    if not brevo_send_email(str(trainee.get("email") or "").strip(), subject, html_content, trainee=trainee, attachments=[{"name": os.path.basename(pdf_path), "content": encoded_pdf}]):
+        raise RuntimeError("Impossible d’envoyer la convocation : échec d’envoi email")
+    now = _now_iso()
+    trainee["convocation_aps_status"] = "sent"
+    trainee["convocation_aps_generated_at"] = trainee.get("convocation_aps_generated_at") or now
+    trainee["convocation_aps_sent_at"] = now
+    trainee["convocation_aps_pdf_path"] = pdf_path
+    trainee["convocation_aps_docx_path"] = docx_path
+    trainee["convocation_aps_pdf_token"] = _store_public_file_token(pdf_path)
+    trainee["convocation_aps_last_error"] = ""
+    trainee["convocation_auto_last_error"] = ""
+    return True
+
+
+
+def _format_automation_datetime(value: Any) -> str:
+    """Affiche les horodatages d'automatisation au format français, heure de Paris."""
+    if not value:
+        return ""
+    return fr_datetime(str(value))
+
+
+def _has_generated_yousign_convention(trainee: Dict[str, Any]) -> bool:
+    """Return True once a convention document or Yousign request exists."""
+    state = _yousign_state(trainee)
+    return bool(
+        state.get("signature_request_id")
+        or state.get("unsigned_pdf_path")
+        or state.get("signed_pdf_path")
+        or trainee.get("convention_aps_pdf_path")
+        or trainee.get("convention_aps_docx_path")
+    )
+
+
+def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> Dict[str, Any]:
+    """Centralise l'état des documents automatisés affiché sur la fiche stagiaire."""
+    state = _yousign_state(trainee)
+    raw_status = _normalize_yousign_status(state.get("status"))
+    generated_at_raw = state.get("created_at") or trainee.get("convention_aps_generated_at") or ""
+    sent_at_raw = state.get("signature_email_sent_at") or state.get("activated_at") or ""
+    signed_at_raw = state.get("signed_at") or trainee.get("convention_aps_signed_at") or ""
+    generated_at = _format_automation_datetime(generated_at_raw)
+    sent_at = _format_automation_datetime(sent_at_raw)
+    signed_at = _format_automation_datetime(signed_at_raw)
+    has_generated_convention = _has_generated_yousign_convention(trainee)
+    has_signature_request = bool(state.get("signature_request_id"))
+    convention_error = state.get("last_error") or state.get("signature_email_last_error") or state.get("last_email_error") or state.get("last_status_sync_error") or ""
+    if raw_status in {"error", "download_error"}:
+        convention_status = "error"
+    elif raw_status in {"declined", "refused"}:
+        convention_status = "refused"
+    elif raw_status in {"expired", "canceled", "cancelled"} or _yousign_signature_link_is_expired(state):
+        convention_status = "expired"
+    elif _is_yousign_signature_done(state) or signed_at or trainee.get("convention_aps_status") == "signed":
+        convention_status = "signed"
+    elif has_signature_request and _is_yousign_signature_pending(state):
+        convention_status = "waiting_signature"
+    elif has_signature_request:
+        convention_status = "sent"
+    elif has_generated_convention:
+        convention_status = "generated"
+    else:
+        convention_status = "not_generated"
+
+    convention_signed = convention_status == "signed"
+    convention_sent = convention_status in {"sent", "waiting_signature", "signed"}
+    convocation_error = trainee.get("convocation_aps_last_error") or trainee.get("convocation_auto_last_error") or ""
+    if not convention_signed and convocation_error == "En attente de signature de la convention":
+        convocation_error = ""
+    convocation_sent_at_raw = trainee.get("convocation_aps_sent_at") or ""
+    convocation_sent_at = _format_automation_datetime(convocation_sent_at_raw)
+    has_convocation_file = bool(trainee.get("convocation_aps_pdf_path") or trainee.get("convocation_aps_docx_path"))
+    convocation_generated_at_raw = trainee.get("convocation_aps_generated_at") or (convocation_sent_at_raw if has_convocation_file else "")
+    convocation_generated_at = _format_automation_datetime(convocation_generated_at_raw)
+    if convocation_error:
+        convocation_status = "error"
+    elif convocation_sent_at or trainee.get("convocation_aps_status") == "sent":
+        convocation_status = "sent"
+    elif has_convocation_file:
+        convocation_status = "generated"
+    else:
+        convocation_status = "not_generated"
+
+    if not has_generated_convention:
+        convocation_block_reason = "En attente de génération de la convention"
+    elif not convention_sent:
+        convocation_block_reason = "En attente d’envoi de la convention"
+    elif not convention_signed:
+        convocation_block_reason = "En attente signature convention"
+    else:
+        convocation_block_reason = ""
+
+    config = _automation_document_config(session_obj)
+    automation_slug = str(config.get("slug") or "")
+    is_vae_automation = automation_slug == "vae"
+    is_aps_automation = _is_aps_session(session_obj)
+    can_send_convocation_without_signed_convention = _can_send_convocation_without_signed_convention(session_obj)
+    has_entry_attestation = bool(config.get("entry_template"))
+    has_end_attestation = bool(config.get("end_template"))
+    entry_sent = bool(trainee.get("attestation_entree_aps_sent_at"))
+    end_sent = bool(trainee.get("attestation_fin_aps_sent_at"))
+    convention_step = {"label": "Convention", "state": "complete" if has_generated_convention else ("error" if convention_status == "error" else "pending")}
+    signature_step = {"label": "Signature", "state": "complete" if convention_signed else ("error" if convention_status in {"error", "refused", "expired"} else "pending" if has_signature_request else "blocked")}
+    if is_vae_automation:
+        timeline = [convention_step, signature_step]
+    else:
+        timeline = [
+            convention_step,
+            {"label": "Convocation", "state": "complete" if convocation_status == "sent" else ("error" if convocation_status == "error" else "pending")} if is_aps_automation else signature_step,
+            {"label": "Attestation entrée", "state": "complete" if entry_sent else ("blocked" if not convention_signed else "pending")} if has_entry_attestation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
+            {"label": "Attestation sortie", "state": "complete" if end_sent else ("blocked" if not convention_signed else "pending")} if has_end_attestation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
+        ]
+    if convention_status == "error" or (is_aps_automation and convocation_status == "error"):
+        global_status = "error"
+    elif convention_signed and (not is_aps_automation or convocation_status == "sent") and (not has_entry_attestation or entry_sent) and (not has_end_attestation or end_sent):
+        global_status = "complete"
+    elif convention_status == "waiting_signature":
+        global_status = "in_progress"
+    elif not convention_signed:
+        global_status = "blocked" if has_generated_convention or has_signature_request else "action_required"
+    else:
+        global_status = "action_required"
+    if is_vae_automation:
+        ready_documents = int(has_generated_convention) + int(convention_signed)
+    else:
+        ready_documents = int(convention_signed) + int(is_aps_automation and convocation_status == "sent") + int(has_entry_attestation and entry_sent) + int(has_end_attestation and end_sent)
+
+    convention_labels = {
+        "not_generated": ("Non générée", "file", "pending", "pending", "Générer la convention"),
+        "generated": ("Générée", "file", "pending", "ready", "Envoyer pour signature"),
+        "sent": ("Envoyée", "send", "pending", "pending", "Voir le statut Yousign"),
+        "waiting_signature": ("Signature attendue", "hourglass", "waiting", "pending", "Voir le statut Yousign"),
+        "signed": ("Signée", "check", "complete", "done", "Convention signée"),
+        "refused": ("Refusée", "alert", "error", "blocked", "Créer une nouvelle demande"),
+        "expired": ("Expirée", "alert", "error", "blocked", "Créer une nouvelle demande"),
+        "error": ("Erreur", "alert", "error", "blocked", "Réessayer"),
+    }
+    c_label, c_icon, c_tone, c_card_tone, c_primary_action = convention_labels.get(convention_status, convention_labels["error"])
+    convocation_labels = {
+        "blocked_waiting_convention": (convocation_block_reason or "Bloquée", "hourglass" if has_signature_request else "lock", "blocked", "blocked"),
+        "not_generated": ("Prêt", "file", "pending", "ready"),
+        "generated": ("Générée", "file", "pending", "ready"),
+        "sent": ("Envoyée", "check", "complete", "done"),
+        "error": ("Erreur", "alert", "error", "blocked"),
+    }
+    v_label, v_icon, v_tone, v_card_tone = convocation_labels.get(convocation_status, convocation_labels["error"])
+
+    total_documents = 2 if is_vae_automation else 1 + int(is_aps_automation) + int(has_entry_attestation) + int(has_end_attestation)
+    progress_percent = round((ready_documents / total_documents) * 100) if total_documents else 0
+
+    planned_automations = []
+    if not has_generated_convention:
+        planned_automations.append("Convention")
+    if is_aps_automation and convocation_status not in {"sent", "generated"}:
+        planned_automations.append("Convocation")
+    if has_entry_attestation and not entry_sent:
+        planned_automations.append("Attestation d’entrée")
+    if has_end_attestation and not end_sent:
+        planned_automations.append("Attestation de sortie")
+
+    return {
+        "has_convocation": is_aps_automation,
+        "has_entry_attestation": has_entry_attestation,
+        "has_end_attestation": has_end_attestation,
+        "planned_automations": planned_automations,
+        "global_status": global_status,
+        "ready_documents": ready_documents,
+        "total_documents": total_documents,
+        "progress_percent": progress_percent,
+        "convention": {
+            "status": convention_status, "label": c_label, "icon": c_icon, "icon_class": "automation-icon--hourglass" if c_icon == "hourglass" else "", "tone": c_tone, "card_tone": c_card_tone,
+            "primary_action": c_primary_action, "can_send": True, "can_download": bool(has_generated_convention or state.get("signed_pdf_path")),
+            "generated_at": generated_at, "sent_at": sent_at, "signed_at": signed_at,
+            "recipient_email": trainee.get("email") or "", "signature_request_id": state.get("signature_request_id") or "",
+            "download_url": url_for("admin_view_signed_convention" if convention_signed and state.get("signed_pdf_path") else "admin_view_original_convention", session_id=session_id, trainee_id=trainee_id) if (has_generated_convention or state.get("signed_pdf_path")) else "",
+            "error": convention_error,
+            "timeline_steps": [
+                {"label": "Générée", "value": generated_at or "Pas encore effectué", "state": "done" if generated_at else "blocked"},
+                {"label": "Envoyée", "value": sent_at or "Pas encore effectué", "state": "done" if sent_at else ("pending" if has_generated_convention else "blocked")},
+                {"label": "Signature", "value": ("Signée le " + signed_at) if signed_at else ("En attente de signature" if has_signature_request else "Pas encore effectué"), "state": "done" if signed_at else ("blocked" if convention_status in {"refused", "expired"} else "pending" if has_signature_request else "blocked")},
+            ],
+        },
+        "convocation": {
+            "status": convocation_status, "label": v_label, "icon": v_icon, "icon_class": "automation-icon--hourglass" if v_icon == "hourglass" else "", "tone": v_tone, "card_tone": v_card_tone,
+            "can_generate": True, "can_send": (convention_signed or can_send_convocation_without_signed_convention) and convocation_status in {"generated", "sent"}, "block_reason": "" if can_send_convocation_without_signed_convention else convocation_block_reason,
+            "generated_at": convocation_generated_at_raw, "generated_at_label": convocation_generated_at, "sent_at": convocation_sent_at,
+            "download_url": url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id) if has_convocation_file else "",
+            "preview_url": url_for("admin_preview_aps_convocation", session_id=session_id, trainee_id=trainee_id),
+            "error": convocation_error,
+            "timeline_steps": [
+                {"label": "Convention validée", "value": "Signée" if convention_signed else ("Non requise pour l’envoi" if can_send_convocation_without_signed_convention else (convocation_block_reason or "Pas encore effectué")), "state": "done" if (convention_signed or can_send_convocation_without_signed_convention) else "blocked"},
+                {"label": "Génération", "value": convocation_generated_at or "Pas encore effectué", "state": "done" if convocation_generated_at_raw else "pending"},
+                {"label": "Envoi", "value": ("Envoyée le " + convocation_sent_at) if convocation_sent_at else "Pas encore effectué", "state": "done" if convocation_sent_at else ("pending" if has_convocation_file else "blocked")},
+            ],
+        },
+        "timeline": timeline,
+    }
 
 # =========================
 # ✅ Remplace ta page JSON par une vraie page HTML
@@ -21403,6 +24886,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         t["docs_relance_auto_sent_at"] = ""
     t["updated_at"] = _now_iso()
     ensure_cnaps_history(t)
+    _refresh_yousign_convention_status_if_pending(data, s, trainees, t)
 
     # ✅ persistance
     s["trainees"] = trainees
@@ -21446,6 +24930,9 @@ def admin_trainee_page(session_id: str, trainee_id: str):
         PUBLIC_STUDENT_PORTAL_BASE=PUBLIC_STUDENT_PORTAL_BASE,
         fr_date=fr_date,
         brevo_no_credit_notice=brevo_no_credit_notice,
+        automation_status=_build_trainee_automation_status(s, t, session_id, trainee_id) if _automation_document_config(s).get("enabled") else None,
+        automation_module_locked=bool(_automation_document_config(s).get("enabled")) and not _automation_partner_module_enabled(),
+        financing_module_locked=not _financing_partner_module_enabled(),
         docs_relance_planned_fr=fr_date(t.get("docs_relance_auto_planned_date") or ""),
         ssiap_medical_from_date=fr_date(_subtract_months(t.get("ssiap_exam_date") or "", 3)),
     )
@@ -21666,6 +25153,25 @@ def _qonto_client_kind(payload: Dict[str, Any]) -> str:
     return value or "individual"
 
 
+
+QONTO_FORMATION_FULL_NAMES = {
+    "aps": "Agent de Prévention et de Sécurité (APS)",
+}
+
+
+def qonto_formation_invoice_name(formation_name: Any) -> str:
+    raw = str(formation_name or "").strip()
+    if not raw:
+        return "Formation"
+    normalized = _normalize_financeur_type(raw)
+    return QONTO_FORMATION_FULL_NAMES.get(normalized, raw)
+
+
+def qonto_invoice_item_label(line: Dict[str, Any]) -> str:
+    formation = qonto_formation_invoice_name(line.get('formationName') or 'Formation')
+    trainee_name = f"{line.get('traineeFirstName','')} {line.get('traineeLastName','')}".strip()
+    return f"Formation {formation} - {trainee_name} - Session du {fr_date(line.get('dateStart'))} au {fr_date(line.get('dateEnd') or line.get('dateStart'))}"
+
 def build_qonto_client_payload(invoice_line: Dict[str, Any], trainee: Optional[Dict[str, Any]] = None, session_data: Optional[Dict[str, Any]] = None, financeur: Any = None) -> Dict[str, Any]:
     """Construit le client Qonto canonique (company/individual) avant toute création API.
 
@@ -21831,25 +25337,353 @@ def _billing_log(line: Dict[str, Any], action: str, result: str = 'success', mes
     line['billingHistory'] = history[-200:]
 
 
+
+def _add_months(raw_date: datetime.date, months: int) -> datetime.date:
+    month = raw_date.month - 1 + months
+    year = raw_date.year + month // 12
+    month = month % 12 + 1
+    day = min(raw_date.day, calendar.monthrange(year, month)[1])
+    return datetime.date(year, month, day)
+
+
+def _split_amount_installments(total: Any, count: int) -> List[float]:
+    cents = int(round(_money(total) * 100))
+    count = max(1, int(count or 1))
+    base = cents // count
+    amounts = [base for _ in range(count)]
+    amounts[-1] += cents - (base * count)
+    return [round(v / 100, 2) for v in amounts]
+
+
+def _build_direct_debit_schedule(total: Any, count: int, first_date: str) -> List[Dict[str, Any]]:
+    start = _parse_date_safe(first_date) or (datetime.date.today() + datetime.timedelta(days=7))
+    return [{'date': _add_months(start, idx).isoformat(), 'amount': amount, 'status': 'scheduled'} for idx, amount in enumerate(_split_amount_installments(total, count))]
+
+
+def _normalize_payment_plan(raw: Dict[str, Any], total: Any) -> Dict[str, Any]:
+    mode = str(raw.get('paymentMode') or raw.get('mode') or 'cash').strip().lower()
+    if mode not in {'sepa', 'direct_debit', 'sepa_direct_debit'}:
+        return {'mode': 'cash', 'label': 'Comptant'}
+    installments = int(raw.get('installments') or raw.get('numberOfInstallments') or 1)
+    installments = max(1, min(60, installments))
+    first_date = str(raw.get('firstDebitDate') or raw.get('first_date') or (datetime.date.today() + datetime.timedelta(days=7)).isoformat())[:10]
+    schedule = raw.get('schedule') if isinstance(raw.get('schedule'), list) else []
+    if schedule:
+        cleaned = []
+        for item in schedule:
+            if isinstance(item, dict):
+                cleaned.append({'date': str(item.get('date') or first_date)[:10], 'amount': _money(item.get('amount')), 'status': 'scheduled'})
+        schedule = cleaned
+    else:
+        schedule = _build_direct_debit_schedule(total, installments, first_date)
+    expected_cents = int(round(_money(total) * 100))
+    got_cents = sum(int(round(_money(item.get('amount')) * 100)) for item in schedule)
+    if got_cents != expected_cents and schedule:
+        schedule[-1]['amount'] = round((_money(schedule[-1].get('amount')) * 100 + expected_cents - got_cents) / 100, 2)
+    return {'mode': 'sepa_direct_debit', 'label': f"Prélèvement {len(schedule)}x", 'installments': len(schedule), 'frequency': 'monthly', 'firstDebitDate': first_date, 'schedule': schedule}
+
+
+def _active_qonto_mandate(client_id: str) -> Optional[Dict[str, Any]]:
+    mandates = list_qonto_direct_debit_mandates(client_id)
+    items = mandates.get('direct_debit_mandates') or mandates.get('mandates') or mandates.get('items') or []
+    for mandate in items if isinstance(items, list) else []:
+        if str(mandate.get('status') or '').lower() in {'approved', 'active', 'signed'}:
+            return mandate
+    return None
+
+
+def _map_mandate_status(status: Any) -> str:
+    value = str(status or '').lower()
+    return {'pending_signature': 'pending', 'approved': 'active', 'signed': 'signed', 'active': 'active', 'failed': 'failed'}.get(value, value or 'pending')
+
+
+def _map_collection_status(status: Any) -> str:
+    value = str(status or '').lower()
+    return {'pending': 'scheduled', 'declined': 'failed', 'rejected': 'failed', 'canceled': 'failed', 'completed': 'completed', 'returned': 'returned', 'refunded': 'refunded', 'on_hold': 'on_hold'}.get(value, value or 'scheduled')
+
+
+def _format_euro(value: Any) -> str:
+    return f"{_money(value):,.2f} €".replace(",", " ").replace(".", ",")
+
+
+def _qonto_mandate_schedule(line: Dict[str, Any]) -> List[Dict[str, Any]]:
+    installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
+    if installments:
+        return [item for item in installments if isinstance(item, dict)]
+    plan = line.get('paymentPlan') if isinstance(line.get('paymentPlan'), dict) else {}
+    schedule = plan.get('schedule') if isinstance(plan.get('schedule'), list) else []
+    return [item for item in schedule if isinstance(item, dict)]
+
+
+def _build_qonto_mandate_email_html(line: Dict[str, Any], sign_url: str) -> str:
+    first_name = html.escape(str(line.get('traineeFirstName') or '').strip() or 'Madame, Monsieur')
+    safe_sign_url = html.escape(sign_url, quote=True)
+    logo_url = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
+    formation = html.escape(str(line.get('formationName') or line.get('sessionName') or 'Formation').strip())
+    session_label = html.escape(str(line.get('dateLabel') or '').strip() or f"du {fr_date(line.get('dateStart'))} au {fr_date(line.get('dateEnd') or line.get('dateStart'))}")
+    invoice_ref = html.escape(str(line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId') or 'En cours de finalisation').strip())
+    schedule = _qonto_mandate_schedule(line)
+    total = sum(_money(item.get('amount')) for item in schedule) if schedule else _money(line.get('amountTTC') or line.get('amount'))
+    count = len(schedule) if schedule else int((line.get('paymentPlan') or {}).get('installments') or 1)
+    monthly = _money(schedule[0].get('amount')) if schedule else round(total / max(count, 1), 2)
+    row_parts = []
+    for idx, item in enumerate(schedule, start=1):
+        row_parts.append(
+            f'<tr><td style="padding:12px 14px;border-bottom:1px solid #e5e7eb;color:#334155;font-size:14px;">Échéance {idx}</td>'
+            f'<td style="padding:12px 14px;border-bottom:1px solid #e5e7eb;color:#334155;font-size:14px;text-align:center;">{html.escape(fr_date(str(item.get("date") or "")))}</td>'
+            f'<td style="padding:12px 14px;border-bottom:1px solid #e5e7eb;color:#0f172a;font-size:14px;font-weight:700;text-align:right;">{html.escape(_format_euro(item.get("amount")))}</td></tr>'
+        )
+    rows = ''.join(row_parts) or '<tr><td colspan="3" style="padding:14px;color:#64748b;font-size:14px;text-align:center;">Échéancier en cours de confirmation par notre équipe.</td></tr>'
+    return f"""<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Mandat SEPA</title>
+<style>@keyframes mandatePulse {{ 0% {{ transform:scale(1); box-shadow:0 0 0 0 rgba(212,163,64,.45); }} 70% {{ transform:scale(1.045); box-shadow:0 0 0 16px rgba(212,163,64,0); }} 100% {{ transform:scale(1); box-shadow:0 0 0 0 rgba(212,163,64,0); }} }} .mandate-button {{ animation:mandatePulse 1.7s ease-in-out infinite; }} @media (max-width:560px) {{ .summary-cell {{ display:block !important;width:100% !important;box-sizing:border-box !important; }} }}</style></head>
+<body style="margin:0;padding:0;background:#f3f6fa;font-family:Arial,Helvetica,sans-serif;color:#172033;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f3f6fa;margin:0;padding:24px 12px;"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:680px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 12px 32px rgba(15,23,42,0.10);">
+<tr><td style="background:linear-gradient(135deg,#0b2f5b 0%,#10233f 55%,#d4a340 100%);padding:30px;color:#ffffff;"><table role="presentation" width="100%"><tr><td style="width:92px;padding-right:18px;vertical-align:middle;"><img src="{logo_url}" width="76" alt="Intégrale Academy" style="display:block;width:76px;height:auto;border:0;background:#ffffff;border-radius:16px;padding:8px;"></td><td style="vertical-align:middle;"><div style="font-size:25px;font-weight:800;line-height:1.2;">Signature de votre mandat SEPA</div><div style="font-size:15px;opacity:.94;margin-top:7px;line-height:1.4;">Paiement sécurisé par prélèvement bancaire</div></td></tr></table></td></tr>
+<tr><td style="padding:32px 30px 8px 30px;"><p style="margin:0 0 14px 0;font-size:18px;line-height:1.5;">Bonjour {first_name},</p><p style="margin:0 0 20px 0;font-size:16px;line-height:1.65;color:#334155;">Votre règlement est prévu par prélèvement SEPA. Merci de signer votre mandat sécurisé afin de valider l’échéancier ci-dessous.</p>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px 0;"><tr><td class="summary-cell" width="33.33%" style="padding:8px;"><div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:16px;padding:16px;text-align:center;"><div style="font-size:12px;color:#9a3412;text-transform:uppercase;letter-spacing:.06em;font-weight:700;">Montant total</div><div style="font-size:22px;color:#0f172a;font-weight:800;margin-top:6px;">{html.escape(_format_euro(total))}</div></div></td><td class="summary-cell" width="33.33%" style="padding:8px;"><div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:16px;text-align:center;"><div style="font-size:12px;color:#475569;text-transform:uppercase;letter-spacing:.06em;font-weight:700;">Nombre d’échéances</div><div style="font-size:22px;color:#0f172a;font-weight:800;margin-top:6px;">{count}</div></div></td><td class="summary-cell" width="33.33%" style="padding:8px;"><div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:16px;padding:16px;text-align:center;"><div style="font-size:12px;color:#1d4ed8;text-transform:uppercase;letter-spacing:.06em;font-weight:700;">Montant / mois</div><div style="font-size:22px;color:#0f172a;font-weight:800;margin-top:6px;">{html.escape(_format_euro(monthly))}</div></div></td></tr></table>
+<div style="background:#f7faff;border:1px solid #dbeafe;border-radius:16px;padding:18px 20px;margin:0 0 24px 0;"><p style="margin:0 0 8px 0;font-size:15px;"><strong>Formation :</strong> {formation}</p><p style="margin:0 0 8px 0;font-size:15px;"><strong>Session :</strong> {session_label}</p><p style="margin:0;font-size:15px;"><strong>Référence facture :</strong> {invoice_ref}</p></div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;margin:0 0 28px 0;"><thead><tr><th align="left" style="background:#0b2f5b;color:#ffffff;padding:13px 14px;font-size:13px;">Échéance</th><th style="background:#0b2f5b;color:#ffffff;padding:13px 14px;font-size:13px;">Date</th><th align="right" style="background:#0b2f5b;color:#ffffff;padding:13px 14px;font-size:13px;">Montant</th></tr></thead><tbody>{rows}</tbody></table>
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 28px auto;"><tr><td bgcolor="#d4a340" class="mandate-button" style="border-radius:14px;text-align:center;box-shadow:0 12px 24px rgba(212,163,64,.30);animation:mandatePulse 1.7s ease-in-out infinite;"><a href="{safe_sign_url}" style="display:inline-block;padding:17px 30px;font-size:17px;font-weight:800;color:#10233f;text-decoration:none;border-radius:14px;">Signer le mandat de prélèvement</a></td></tr></table>
+<p style="margin:0 0 8px 0;font-size:14px;line-height:1.6;color:#5b677a;">Ce lien est personnel et sécurisé. Il permet uniquement d’autoriser les prélèvements liés à l’échéancier présenté.</p><p style="margin:0 0 24px 0;font-size:12px;line-height:1.5;word-break:break-all;color:#64748b;">Si le bouton ne fonctionne pas : <a href="{safe_sign_url}" style="color:#0b5ed7;text-decoration:underline;">{safe_sign_url}</a></p></td></tr>
+<tr><td style="background:#f8fafc;border-top:1px solid #e5e7eb;padding:22px 30px;color:#64748b;font-size:13px;line-height:1.6;"><strong style="color:#334155;">Intégrale Academy</strong><br>54 chemin du Carreou<br>83480 Puget-sur-Argens<br>04 22 47 07 68</td></tr></table></td></tr></table></body></html>"""
+
+
+def _build_qonto_mandate_email_text(line: Dict[str, Any], sign_url: str) -> str:
+    schedule = _qonto_mandate_schedule(line)
+    total = sum(_money(item.get('amount')) for item in schedule) if schedule else _money(line.get('amountTTC') or line.get('amount'))
+    count = len(schedule) if schedule else int((line.get('paymentPlan') or {}).get('installments') or 1)
+    monthly = _money(schedule[0].get('amount')) if schedule else round(total / max(count, 1), 2)
+    rows = "\n".join(f"- Échéance {idx}: {fr_date(str(item.get('date') or ''))} — {_format_euro(item.get('amount'))}" for idx, item in enumerate(schedule, start=1)) or "Échéancier en cours de confirmation."
+    return f"""Bonjour {str(line.get('traineeFirstName') or '').strip() or 'Madame, Monsieur'},
+
+Votre règlement est prévu par prélèvement SEPA.
+
+Récapitulatif :
+- Montant total : {_format_euro(total)}
+- Nombre d'échéances : {count}
+- Montant par mois : {_format_euro(monthly)}
+- Formation : {line.get('formationName') or line.get('sessionName') or 'Formation'}
+- Session : {line.get('dateLabel') or ''}
+
+Échéancier :
+{rows}
+
+Signer le mandat de prélèvement :
+{sign_url}
+
+Intégrale Academy
+54 chemin du Carreou
+83480 Puget-sur-Argens
+04 22 47 07 68"""
+
+
+def _send_qonto_mandate_link(line: Dict[str, Any]) -> bool:
+    sign_url = (line.get('sign_url') or '').strip()
+    email = (line.get('traineeEmail') or '').strip()
+    if not sign_url or not email:
+        return False
+    html_body = _build_qonto_mandate_email_html(line, sign_url)
+    text_body = _build_qonto_mandate_email_text(line, sign_url)
+    return brevo_send_email(email, 'Signature de votre mandat SEPA', html_body, text_content=text_body)
+
+def _sepa_installments(line: Dict[str, Any]) -> List[Dict[str, Any]]:
+    plan = line.get('sepa_payment_plan') if isinstance(line.get('sepa_payment_plan'), dict) else {}
+    installments = plan.get('installments') if isinstance(plan.get('installments'), list) else []
+    if not installments:
+        installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
+    return [item for item in installments if isinstance(item, dict)]
+
+
+def _sync_sepa_aliases(line: Dict[str, Any]) -> None:
+    installments = _sepa_installments(line)
+    total_due = round(sum(_money(item.get('amount')) for item in installments), 2)
+    total_paid = round(sum(_money(item.get('amount')) for item in installments if item.get('status') == 'completed'), 2)
+    paid_count = sum(1 for item in installments if item.get('status') == 'completed')
+    failed = any(item.get('status') in {'failed', 'returned', 'refunded'} for item in installments)
+    if not installments:
+        status = 'pending_signature'
+    elif failed:
+        status = 'failed'
+    elif paid_count == len(installments):
+        status = 'paid'
+    elif paid_count:
+        status = 'partially_paid'
+    elif all(item.get('qonto_direct_debit_subscription_id') for item in installments):
+        status = 'scheduled'
+    else:
+        status = 'pending_signature'
+    plan = line.get('sepa_payment_plan') if isinstance(line.get('sepa_payment_plan'), dict) else {}
+    plan.update({
+        'status': status,
+        'installments': installments,
+        'total_due': total_due,
+        'total_paid': total_paid,
+        'total_remaining': round(max(total_due - total_paid, 0), 2),
+        'paid_installments': paid_count,
+        'remaining_installments': max(len(installments) - paid_count, 0),
+        'updated_at': _now_iso(),
+    })
+    line['sepa_payment_plan'] = plan
+    line['directDebitInstallments'] = installments
+    line['qonto_direct_debit_mandate_id'] = line.get('qonto_direct_debit_mandate_id') or line.get('qonto_mandate_id') or ''
+    line['qonto_mandate_status'] = line.get('qonto_mandate_status') or line.get('mandateStatus') or ''
+    line['qonto_mandate_sign_url'] = line.get('qonto_mandate_sign_url') or line.get('sign_url') or ''
+    line['mandateStatus'] = line.get('mandateStatus') or line.get('qonto_mandate_status') or ''
+    line['sign_url'] = line.get('sign_url') or line.get('qonto_mandate_sign_url') or ''
+    line['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(line)
+
+
+def _prepare_sepa_payment_plan(line: Dict[str, Any], payment_plan: Dict[str, Any]) -> None:
+    existing_by_index = {int(item.get('index') or idx): item for idx, item in enumerate(_sepa_installments(line), start=1)}
+    installments = []
+    count = len(payment_plan.get('schedule') or [])
+    now = _now_iso()
+    for idx, item in enumerate(payment_plan.get('schedule') or [], start=1):
+        current = existing_by_index.get(idx, {})
+        current.update({
+            'index': idx,
+            'amount': _money(item.get('amount')),
+            'due_date': str(item.get('due_date') or item.get('date') or '')[:10],
+            'status': current.get('status') or item.get('status') or 'pending',
+            'status_reason': current.get('status_reason') or current.get('failureReason') or '',
+            'created_at': current.get('created_at') or now,
+            'updated_at': now,
+        })
+        installments.append(current)
+    line['paymentPlan'] = payment_plan
+    line['paymentMode'] = 'sepa_direct_debit'
+    line['sepa_payment_plan'] = {'status': 'pending_signature', 'installments': installments}
+    _sync_sepa_aliases(line)
+
+
+def _setup_qonto_direct_debit_for_line(line: Dict[str, Any], payment_plan: Dict[str, Any]) -> None:
+    if payment_plan.get('mode') != 'sepa_direct_debit':
+        line['paymentPlan'] = payment_plan
+        line['paymentMode'] = 'cash'
+        return
+    _ensure_qonto_oauth_ready()
+    client_id = line.get('qontoClientId') or line.get('qontoCustomerId')
+    if not client_id:
+        raise RuntimeError('Client Qonto manquant pour créer le prélèvement SEPA')
+    _prepare_sepa_payment_plan(line, payment_plan)
+    first = payment_plan['schedule'][0]
+    mandate = _active_qonto_mandate(client_id)
+    if not mandate and line.get('qonto_direct_debit_mandate_id'):
+        mandate = {'id': line.get('qonto_direct_debit_mandate_id'), 'status': line.get('qonto_mandate_status') or line.get('mandateStatus') or 'pending_signature', 'sign_url': line.get('qonto_mandate_sign_url') or line.get('sign_url')}
+    if not mandate:
+        ref = line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId') or line.get('id')
+        created = create_qonto_direct_debit_mandate({'client_id': client_id, 'payment_info': {'first_payment': {'collection_date': first['date'], 'amount': {'value': f"{_money(first['amount']):.2f}", 'currency': 'EUR'}, 'reference': ref}, 'notify_client': True, 'schedule_type': 'one_off'}, 'send_mandate_signature_email': False})
+        mandate = created.get('direct_debit_mandate') or created.get('mandate') or created
+        app.logger.info('[QONTO] mandat créé client_id=%s mandate_id=%s', client_id, mandate.get('id'))
+        _billing_log(line, 'Mandat SEPA Qonto créé', 'success', 'Lien de signature en attente', mandate.get('id') or '')
+    line['qonto_direct_debit_mandate_id'] = mandate.get('id') or line.get('qonto_direct_debit_mandate_id')
+    line['qonto_mandate_status'] = _map_mandate_status(mandate.get('status'))
+    line['mandateStatus'] = line['qonto_mandate_status']
+    line['qonto_mandate_sign_url'] = mandate.get('sign_url') or line.get('qonto_mandate_sign_url') or ''
+    line['sign_url'] = line['qonto_mandate_sign_url']
+    if line.get('sign_url'):
+        app.logger.info('[QONTO] lien de signature mandat reçu mandate_id=%s', line.get('qonto_direct_debit_mandate_id'))
+        _send_qonto_mandate_link(line)
+    ensure_qonto_sepa_installments_for_line(line)
+
+
+def ensure_qonto_sepa_installments_for_line(line: Dict[str, Any]) -> Dict[str, Any]:
+    if line.get('paymentMode') != 'sepa_direct_debit':
+        return {'created': 0, 'skipped': True}
+    _ensure_qonto_oauth_ready()
+    client_id = line.get('qontoClientId') or line.get('qontoCustomerId')
+    mandate_id = line.get('qonto_direct_debit_mandate_id')
+    if not client_id or not mandate_id:
+        return {'created': 0, 'pending_signature': True}
+    status = _map_mandate_status(line.get('qonto_mandate_status') or line.get('mandateStatus'))
+    if status not in {'active', 'signed'}:
+        _sync_sepa_aliases(line)
+        return {'created': 0, 'pending_signature': True}
+    bank_account_id = get_qonto_bank_account_id()
+    installments = _sepa_installments(line)
+    total = len(installments)
+    created_count = 0
+    invoice_ref = line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId') or line.get('id')
+    for inst in installments:
+        if inst.get('qonto_direct_debit_subscription_id'):
+            continue
+        idx = int(inst.get('index') or (installments.index(inst) + 1))
+        ref = f"{invoice_ref} - échéance {idx}/{total}"
+        payload = {'client_id': client_id, 'bank_account_id': bank_account_id, 'initial_collection_date': inst.get('due_date') or inst.get('date'), 'amount': {'value': f"{_money(inst.get('amount')):.2f}", 'currency': 'EUR'}, 'reference': ref, 'notify_client': True, 'schedule_type': 'one_off', 'direct_debit_mandate_id': mandate_id, 'send_mandate_signature_email': True}
+        sub = create_qonto_direct_debit_subscription(payload)
+        sub_item = sub.get('direct_debit_subscription') or sub.get('subscription') or sub
+        inst['qonto_direct_debit_subscription_id'] = sub_item.get('id') or ''
+        inst['status'] = 'scheduled'
+        inst['updated_at'] = _now_iso()
+        created_count += 1
+        app.logger.info('[QONTO] subscription créée pour échéance %s/%s subscription_id=%s', idx, total, inst['qonto_direct_debit_subscription_id'])
+        _billing_log(line, f'Subscription SEPA Qonto créée pour échéance {idx}/{total}', 'success', ref, inst['qonto_direct_debit_subscription_id'])
+    line['qonto_direct_debit_subscription_id'] = next((i.get('qonto_direct_debit_subscription_id') for i in installments if i.get('qonto_direct_debit_subscription_id')), line.get('qonto_direct_debit_subscription_id') or '')
+    _sync_sepa_aliases(line)
+    return {'created': created_count, 'pending_signature': False}
+
+
+def _qonto_payment_global_status(line: Dict[str, Any]) -> str:
+    if line.get('paymentMode') != 'sepa_direct_debit':
+        return 'Comptant'
+    mandate = line.get('mandateStatus') or 'pending'
+    installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
+    statuses = [i.get('status') for i in installments]
+    if mandate == 'pending': return 'Mandat à signer'
+    if any(s in {'failed','returned','refunded'} for s in statuses): return 'Rejeté'
+    if statuses and all(s == 'completed' for s in statuses): return 'Payé'
+    if any(s == 'completed' for s in statuses): return 'Paiement partiel'
+    return 'Prélèvements programmés'
+
 def _normalize_billing_invoice_status(status: Any) -> str:
     value = str(status or '').strip().lower()
-    return {'not_generated': 'not_invoiced', 'generated': 'finalized', 'unpaid': 'sent', 'missing': 'control', 'deleted': 'control', 'sync_error': 'control', 'error': 'control'}.get(value, value or 'not_invoiced')
+    return {'not_generated': 'not_invoiced', 'generated': 'finalized', 'unpaid': 'sent', 'missing': 'control', 'deleted': 'control', 'sync_error': 'control', 'error': 'control', 'external': 'external_generated', 'external_generated': 'external_generated', 'generated_externally': 'external_generated'}.get(value, value or 'not_invoiced')
 
 
 def _financing_entries(trainee: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Return financing entries handled by the platform billing workflow.
+
+    CPF amounts remain available on trainee records for financing follow-up, but CPF
+    invoicing is performed in an external tool.  Consequently CPF entries are
+    deliberately excluded from Qonto billing lines generated by this platform.
+    """
     entries = []
     structured = trainee.get('financings') if isinstance(trainee.get('financings'), list) else []
     for idx, item in enumerate(structured):
         amount = _money(item.get('amount') or item.get('amount_ttc'))
         ftype = str(item.get('type') or item.get('financing_type') or '').strip().upper()
+        if ftype == 'CPF':
+            continue
         if ftype and amount > 0:
             entries.append({'type': ftype, 'label': item.get('label') or ftype, 'amount': amount, 'ref': item.get('id') or str(idx)})
-    legacy = [('CPF', trainee.get('cpf_amount')), ('PERSONNEL', trainee.get('personal_amount') or trainee.get('personal_financing_amount'))]
+    legacy = [('PERSONNEL', trainee.get('personal_amount') or trainee.get('personal_financing_amount')), ('AUTRE', trainee.get('other_amount') or trainee.get('other_financing_amount'))]
     for ftype, raw in legacy:
         amount = _money(raw)
         if amount > 0:
-            entries.append({'type': ftype, 'label': 'Personnel' if ftype == 'PERSONNEL' else 'CPF', 'amount': amount, 'ref': 'legacy'})
+            entries.append({'type': ftype, 'label': 'Personnel' if ftype == 'PERSONNEL' else 'Autre financement', 'amount': amount, 'ref': 'legacy'})
     return entries
+
+
+def _legacy_trainee_qonto_invoice_candidate(trainee: Dict[str, Any], financing: Dict[str, Any], persisted: Dict[str, Any]) -> Dict[str, Any]:
+    """Return trainee-level Qonto invoice state when it belongs to this billing line.
+
+    Older admin-trainee invoice actions stored the Qonto invoice on the trainee
+    record only. The billing dashboard is line-based, so bridge that legacy state
+    onto the matching generated line when no line-level invoice is persisted yet.
+    """
+    if persisted.get('qontoInvoiceId') or persisted.get('qontoDraftId'):
+        return {}
+    inv = trainee.get('qonto_invoice') if isinstance(trainee.get('qonto_invoice'), dict) else {}
+    invoice_id = (inv.get('qonto_invoice_id') or inv.get('qontoInvoiceId') or '').strip()
+    if not invoice_id:
+        return {}
+    inv_amount = _money(inv.get('amount_ttc') or inv.get('amountTTC') or inv.get('amount'))
+    if inv_amount > 0 and abs(inv_amount - _money(financing.get('amount'))) > 0.01:
+        return {}
+    inv_financing = str(inv.get('financingType') or inv.get('typeFinanceur') or inv.get('financeur_type') or '').strip().upper()
+    if inv_financing and inv_financing != str(financing.get('type') or '').strip().upper():
+        return {}
+    return inv
 
 
 def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Optional[Dict[str, Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
@@ -21871,6 +25705,22 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
             for financing in _financing_entries(trainee):
                 line_id = _billing_line_id(session_id, trainee_id, financing['type'], financing.get('ref'))
                 persisted = dict(existing.get(line_id) or {})
+                legacy_inv = _legacy_trainee_qonto_invoice_candidate(trainee, financing, persisted)
+                if legacy_inv:
+                    legacy_status = _normalize_billing_invoice_status(legacy_inv.get('qonto_invoice_status') or ('draft' if legacy_inv.get('qonto_invoice_id') else 'not_invoiced'))
+                    persisted.update({
+                        'qontoInvoiceId': legacy_inv.get('qonto_invoice_id') or legacy_inv.get('qontoInvoiceId') or '',
+                        'qontoDraftId': legacy_inv.get('qonto_invoice_id') or legacy_inv.get('qontoInvoiceId') or '',
+                        'qontoInvoiceNumber': legacy_inv.get('qonto_invoice_number') or legacy_inv.get('qontoInvoiceNumber') or '',
+                        'qontoClientId': legacy_inv.get('qonto_client_id') or legacy_inv.get('qontoClientId') or '',
+                        'qontoCustomerId': legacy_inv.get('qonto_client_id') or legacy_inv.get('qontoCustomerId') or '',
+                        'invoiceStatus': legacy_status,
+                        'paymentStatus': 'paid' if legacy_status == 'paid' or legacy_inv.get('qonto_invoice_paid_at') else 'unpaid',
+                        'invoiceGeneratedAt': legacy_inv.get('created_at') or legacy_inv.get('invoiceGeneratedAt') or _now_iso(),
+                        'paidAt': legacy_inv.get('qonto_invoice_paid_at') or '',
+                        'invoicePdfUrl': legacy_inv.get('qonto_invoice_url') or legacy_inv.get('invoicePdfUrl') or '',
+                        'clientName': legacy_inv.get('client_name') or legacy_inv.get('clientName') or persisted.get('clientName') or '',
+                    })
                 status = _normalize_billing_invoice_status(persisted.get('invoiceStatus') or 'not_invoiced')
                 line = {
                     'id': line_id, 'traineeId': trainee_id, 'sessionId': session_id,
@@ -21881,7 +25731,19 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     'qontoCustomerId': persisted.get('qontoCustomerId') or persisted.get('qontoClientId'), 'qontoClientId': persisted.get('qontoClientId'), 'invoiceGeneratedAt': persisted.get('invoiceGeneratedAt'),
                     'finalizedAt': persisted.get('finalizedAt'), 'sentAt': persisted.get('sentAt'), 'paidAt': persisted.get('paidAt'), 'cancelledAt': persisted.get('cancelledAt'), 'invoiceDownloadedAt': persisted.get('invoiceDownloadedAt'), 'invoicePdfUrl': persisted.get('invoicePdfUrl'), 'qontoPdfUrl': persisted.get('qontoPdfUrl') or persisted.get('invoicePdfUrl'),
                     'creditNoteStatus': persisted.get('creditNoteStatus'), 'qontoCreditNoteId': persisted.get('qontoCreditNoteId'),
-                    'generationInProgress': bool(persisted.get('generationInProgress')), 'syncWarning': persisted.get('syncWarning') or '', 'createdAt': persisted.get('createdAt') or _now_iso(),
+                    'paymentPlan': persisted.get('paymentPlan') if isinstance(persisted.get('paymentPlan'), dict) else {},
+                    'paymentMode': persisted.get('paymentMode') or 'cash',
+                    'directDebitInstallments': persisted.get('directDebitInstallments') if isinstance(persisted.get('directDebitInstallments'), list) else [],
+                    'qontoPaymentGlobalStatus': persisted.get('qontoPaymentGlobalStatus') or '',
+                    'qonto_direct_debit_mandate_id': persisted.get('qonto_direct_debit_mandate_id') or '',
+                    'qonto_direct_debit_subscription_id': persisted.get('qonto_direct_debit_subscription_id') or '',
+                    'sign_url': persisted.get('sign_url') or persisted.get('qonto_mandate_sign_url') or '',
+                    'mandateStatus': persisted.get('mandateStatus') or persisted.get('qonto_mandate_status') or '',
+                    'qonto_mandate_status': persisted.get('qonto_mandate_status') or '',
+                    'qonto_mandate_sign_url': persisted.get('qonto_mandate_sign_url') or '',
+                    'qonto_mandate_signed_at': persisted.get('qonto_mandate_signed_at') or '',
+                    'sepa_payment_plan': persisted.get('sepa_payment_plan') if isinstance(persisted.get('sepa_payment_plan'), dict) else {},
+                    'generationInProgress': bool(persisted.get('generationInProgress')), 'syncWarning': persisted.get('syncWarning') or '', 'externalInvoiceMarkedAt': persisted.get('externalInvoiceMarkedAt') or '', 'externalInvoiceNote': persisted.get('externalInvoiceNote') or '', 'createdAt': persisted.get('createdAt') or _now_iso(),
                     'updatedAt': persisted.get('updatedAt') or _now_iso(), 'logs': persisted.get('logs') if isinstance(persisted.get('logs'), list) else [],
                     'traineeLastName': trainee.get('last_name') or '', 'traineeFirstName': trainee.get('first_name') or '',
                     'traineeEmail': trainee.get('email') or '', 'financeurName': persisted.get('financeurName') or financing.get('label') or financing['type'], 'typeFinanceur': financing['type'], 'clientName': (CPF_QONTO_CLIENT_NAME if is_cpf_billing_context(financing) else (persisted.get('clientName') or buildInvoiceCustomer(financing['type'], trainee, sess, financing).get('name') or f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip())),
@@ -21907,7 +25769,7 @@ def _billing_lines(data: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
     all_map = _billing_existing_map(data)
-    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning')}
+    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote')}
     persisted['updatedAt'] = _now_iso()
     all_map[line['id']] = persisted
     data['billing_lines'] = list(all_map.values())
@@ -21921,10 +25783,10 @@ def _reset_missing_qonto_invoice(line: Dict[str, Any]) -> None:
     for key in (
         'qontoInvoiceId', 'qonto_invoice_id', 'qontoStatus', 'qonto_status', 'invoiceNumber', 'invoice_number',
         'qontoInvoiceNumber', 'invoiceDate', 'invoice_date', 'invoicePdfUrl', 'pdf_url', 'qontoPdfUrl',
-        'draftCreatedAt', 'invoiceGeneratedAt', 'invoiceDownloadedAt', 'qontoDraftId', 'finalizedAt', 'sentAt', 'paidAt', 'cancelledAt'
+        'draftCreatedAt', 'invoiceGeneratedAt', 'invoiceDownloadedAt', 'qontoDraftId', 'finalizedAt', 'sentAt', 'paidAt', 'cancelledAt', 'externalInvoiceMarkedAt', 'externalInvoiceNote'
     ):
         line[key] = '' if key in line else line.get(key, '')
-    if (line.get('invoiceStatus') or '') in {'draft', 'generated', 'finalized', 'sent', 'paid', 'cancelled', 'deleted', 'control'}:
+    if (line.get('invoiceStatus') or '') in {'draft', 'generated', 'finalized', 'sent', 'paid', 'cancelled', 'deleted', 'control', 'external_generated', 'external', 'generated_externally'}:
         line['invoiceStatus'] = 'not_invoiced'
     if (line.get('paymentStatus') or '') in {'unpaid', 'unknown', 'paid', 'control'}:
         line['paymentStatus'] = 'not_applicable'
@@ -21984,6 +25846,12 @@ def admin_sessions_billing():
     return render_template('admin_sessions_billing.html')
 
 
+@app.get('/admin/billing/direct-debits')
+@admin_login_required
+def admin_direct_debits():
+    return render_template('admin_direct_debits.html')
+
+
 @app.get('/api/admin/billing-lines')
 @admin_login_required
 def api_admin_billing_lines():
@@ -22036,14 +25904,16 @@ def api_admin_billing_history(line_id: str):
     return jsonify({'ok': True, 'logs': line.get('logs') or []})
 
 
-def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> Tuple[bool, Dict[str, Any]]:
+def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any], payment_plan_payload: Optional[Dict[str, Any]] = None) -> Tuple[bool, Dict[str, Any]]:
     with _billing_generation_locks_guard:
         lock = _billing_generation_locks.setdefault(line['id'], threading.Lock())
     if not lock.acquire(blocking=False):
         return False, {'error': 'Génération déjà en cours pour cette ligne', 'message': 'Génération déjà en cours pour cette ligne'}
     try:
         current = _find_billing_line(data, line['id']) or line
-        if current.get('qontoInvoiceId') or _normalize_billing_invoice_status(current.get('invoiceStatus')) in {'draft','finalized','sent','paid'}:
+        if is_cpf_billing_context(current):
+            return False, {'error': 'La facturation CPF est gérée dans un logiciel externe.', 'message': 'La facturation CPF est gérée dans un logiciel externe.', 'line': current}
+        if current.get('qontoInvoiceId') or _normalize_billing_invoice_status(current.get('invoiceStatus')) in {'draft','finalized','sent','paid','external_generated'}:
             _billing_log(current, 'Génération facture bloquée', 'ignored', 'Facture déjà existante', current.get('qontoInvoiceId') or '')
             _save_billing_line(data, current); save_data(data)
             return False, {'error': 'Facture déjà créée', 'message': 'Facture déjà créée', 'line': current, 'ignored': True}
@@ -22058,7 +25928,7 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any])
             qonto_client_payload = build_qonto_client_payload(current, current, {'id': current.get('sessionId')}, current.get('financingType') or current.get('financingLabel'))
             validation_errors = validate_qonto_client_payload(qonto_client_payload, current if is_cpf else current.get('financingType'))
             if validation_errors:
-                message = 'Qonto refuse la facture car les informations client sont incomplètes.'
+                message = _format_qonto_validation_errors(validation_errors)
                 current['generationInProgress'] = False
                 _billing_log(current, 'Validation locale client Qonto bloquée', 'error', message)
                 _save_billing_line(data, current); save_data(data)
@@ -22067,7 +25937,12 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any])
                 q_client = get_or_create_cpf_qonto_client()
             else:
                 q_client = search_qonto_client({'email': qonto_client_payload.get('email'), 'name': qonto_client_payload.get('name') or f"{qonto_client_payload.get('first_name','')} {qonto_client_payload.get('last_name','')}".strip()})
-                if not q_client:
+                if q_client:
+                    existing_client_id = (q_client.get('client') or q_client).get('id')
+                    if existing_client_id and not qonto_client_has_complete_billing_address(q_client):
+                        app.logger.info('[QONTO] Existing billing client incomplete, updating billing address client_id=%s', existing_client_id)
+                        q_client = update_qonto_client(existing_client_id, remove_invalid_qonto_phone(qonto_client_payload)) or q_client
+                else:
                     q_client = create_qonto_client({'client': remove_invalid_qonto_phone(qonto_client_payload)})
             q_client_id = (q_client.get('client') or q_client).get('id')
             if not q_client_id:
@@ -22075,17 +25950,21 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any])
             amount_ttc = _money(current.get('amount'))
             vat_rate = 0.0 if is_cpf else _money(current.get('vatRate'))
             amount_ht = round(amount_ttc / (1 + vat_rate / 100), 2) if vat_rate else amount_ttc
-            q_payload = {'client_id': q_client_id, 'issue_date': datetime.date.today().isoformat(), 'due_date': (datetime.date.today()+datetime.timedelta(days=30)).isoformat(), 'currency': 'EUR', 'payment_methods': {'iban': invoice_iban}, 'performance_start_date': current.get('dateStart'), 'performance_end_date': current.get('dateEnd') or current.get('dateStart'), 'status': 'draft', 'terms_and_conditions': 'Paiement à réception de facture.', 'items': [{'title': f"Formation {current.get('formationName') or 'Formation'} - {current.get('traineeFirstName','')} {current.get('traineeLastName','')} - Session du {fr_date(current.get('dateStart'))} au {fr_date(current.get('dateEnd') or current.get('dateStart'))}", 'description': f"Formation {current.get('formationName') or 'Formation'} - {current.get('traineeFirstName','')} {current.get('traineeLastName','')} - Session du {fr_date(current.get('dateStart'))} au {fr_date(current.get('dateEnd') or current.get('dateStart'))}", 'quantity': '1', 'unit_price': {'value': str(amount_ht), 'currency': 'EUR'}, 'vat_rate': format_qonto_vat_rate(vat_rate)}]}
+            invoice_item_label = qonto_invoice_item_label(current)
+            q_payload = {'client_id': q_client_id, 'issue_date': datetime.date.today().isoformat(), 'due_date': (datetime.date.today()+datetime.timedelta(days=30)).isoformat(), 'currency': 'EUR', 'payment_methods': {'iban': invoice_iban}, 'performance_start_date': current.get('dateStart'), 'performance_end_date': current.get('dateEnd') or current.get('dateStart'), 'status': 'draft', 'terms_and_conditions': 'Paiement à réception de facture.', 'items': [{'title': invoice_item_label, 'description': invoice_item_label, 'quantity': '1', 'unit_price': {'value': str(amount_ht), 'currency': 'EUR'}, 'vat_rate': format_qonto_vat_rate(vat_rate)}]}
             q_inv = create_qonto_invoice(q_payload)
             qi = q_inv.get('client_invoice') or q_inv.get('invoice') or q_inv
             if is_cpf:
                 current['clientName'] = CPF_QONTO_CLIENT_NAME
             current.update({'qontoClientId': q_client_id, 'qontoCustomerId': q_client_id, 'qontoInvoiceId': qi.get('id'), 'qontoDraftId': qi.get('id'), 'qontoInvoiceNumber': qi.get('number') or qi.get('invoice_number') or '', 'invoiceStatus': 'draft' if qi.get('id') else 'not_invoiced', 'paymentStatus': 'paid' if (qi.get('status') == 'paid' or qi.get('paid_at')) else 'unpaid', 'invoiceGeneratedAt': _now_iso(), 'createdAt': current.get('createdAt') or _now_iso(), 'invoicePdfUrl': qi.get('public_url') or qi.get('url') or '', 'generationInProgress': False})
+            payment_plan = _normalize_payment_plan(payment_plan_payload or {}, amount_ttc)
+            _setup_qonto_direct_debit_for_line(current, payment_plan)
+            current['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(current)
             _billing_log(current, 'Facture brouillon créée dans Qonto', 'success', current.get('qontoInvoiceNumber') or '', current.get('qontoInvoiceId') or '')
             _save_billing_line(data, current); save_data(data)
             return True, {'line': current}
         except Exception as exc:
-            msg = _sanitize_qonto_error(str(exc)); current['generationInProgress'] = False; current['invoiceStatus'] = 'not_invoiced' if not current.get('qontoInvoiceId') else 'draft'; _billing_log(current, 'Erreur création facture Qonto', 'error', msg); _save_billing_line(data, current); save_data(data); return False, {'error': msg, 'message': format_qonto_error_for_front(exc), 'line': current}
+            msg = _sanitize_qonto_error(str(exc)); front_msg = format_qonto_error_for_front(exc); current['generationInProgress'] = False; current['invoiceStatus'] = 'not_invoiced' if not current.get('qontoInvoiceId') else 'draft'; _billing_log(current, 'Erreur création facture Qonto', 'error', msg); _save_billing_line(data, current); save_data(data); return False, {'error': front_msg, 'message': front_msg, 'technical_error': msg, 'line': current}
     finally:
         lock.release()
 
@@ -22160,7 +26039,7 @@ def _billing_line_qonto_preview(line: Dict[str, Any]) -> Dict[str, Any]:
     amount_ttc = _money(line.get('amount'))
     amount_ht = round(amount_ttc / (1 + vat_rate / 100), 2) if vat_rate else amount_ttc
     amount_tva = round(amount_ttc - amount_ht, 2)
-    label = f"Formation {line.get('formationName') or 'Formation'} - {line.get('traineeFirstName','')} {line.get('traineeLastName','')} - Session du {fr_date(line.get('dateStart'))} au {fr_date(line.get('dateEnd') or line.get('dateStart'))}"
+    label = qonto_invoice_item_label(line)
     client = build_qonto_client_payload(line, line, {'id': line.get('sessionId')}, line.get('financingType') or line.get('financingLabel'))
     errors = validate_qonto_client_payload(client, line if is_cpf_billing_context(line) else line.get('financingType'))
     return {
@@ -22197,7 +26076,7 @@ def api_billing_line_qonto_preview(line_id: str):
 def api_billing_create_draft():
     data = load_data(); payload = request.get_json(silent=True) or {}; line = _line_from_payload(data, payload)
     if not line: return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
-    ok, result = _create_invoice_for_billing_line(data, line)
+    ok, result = _create_invoice_for_billing_line(data, line, payload.get('paymentPlan') if isinstance(payload.get('paymentPlan'), dict) else payload)
     return jsonify({'ok': ok, **result}), (200 if ok else 400)
 
 
@@ -22232,6 +26111,24 @@ def api_billing_send():
         return jsonify({'ok': False, 'error': _sanitize_qonto_error(str(exc))}), 400
 
 
+
+@app.post('/api/billing/mark-external')
+@admin_login_required
+@admin_write_required
+def api_billing_mark_external():
+    data = load_data(); payload = request.get_json(silent=True) or {}; line = _line_from_payload(data, payload)
+    if not line: return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
+    if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
+        return jsonify({'ok': False, 'error': 'Une facture Qonto est déjà liée à cette ligne.'}), 400
+    line['invoiceStatus'] = 'external_generated'
+    line['paymentStatus'] = 'not_applicable'
+    line['externalInvoiceMarkedAt'] = _now_iso()
+    line['externalInvoiceNote'] = str(payload.get('note') or 'Facture générée via un autre logiciel').strip()[:500]
+    line['generationInProgress'] = False
+    _billing_log(line, 'Facture marquée comme générée hors Qonto', 'success', line['externalInvoiceNote'])
+    _save_billing_line(data, line); save_data(data)
+    return jsonify({'ok': True, 'line': _find_billing_line(data, line['id'])})
+
 @app.post('/api/billing/cancel-or-reset')
 @admin_login_required
 @admin_write_required
@@ -22243,6 +26140,119 @@ def api_billing_cancel_or_reset():
     _save_billing_line(data, line); save_data(data)
     return jsonify({'ok': True, 'line': _find_billing_line(data, line['id'])})
 
+
+
+def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
+    installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
+    for item in installments:
+        sid = item.get('qonto_direct_debit_subscription_id')
+        if not sid:
+            continue
+        collections = _qonto_collection_items(list_qonto_direct_debit_collections(sid))
+        if not collections:
+            continue
+        collection = collections[-1]
+        item['qonto_direct_debit_collection_id'] = collection.get('id') or item.get('qonto_direct_debit_collection_id') or ''
+        item['status'] = _map_collection_status(collection.get('status'))
+        if item['status'] == 'completed':
+            item['paidAt'] = collection.get('paid_at') or collection.get('completed_at') or _now_iso()
+        if collection.get('status_reason'):
+            item['failureReason'] = collection.get('status_reason')
+            item['status_reason'] = collection.get('status_reason')
+        item['updated_at'] = _now_iso()
+    line['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(line)
+    if line['qontoPaymentGlobalStatus'] == 'Payé':
+        line['paymentStatus'] = 'paid'
+        line['paidAt'] = line.get('paidAt') or _now_iso()
+    elif line['qontoPaymentGlobalStatus'] == 'Paiement partiel':
+        line['paymentStatus'] = 'partial'
+    elif line['qontoPaymentGlobalStatus'] == 'Rejeté':
+        line['paymentStatus'] = 'failed'
+
+
+def _apply_qonto_collection_webhook(data: Dict[str, Any], item: Dict[str, Any]) -> bool:
+    collection_id = str(item.get('id') or '')
+    subscription_id = str(item.get('direct_debit_subscription_id') or '')
+    if not (collection_id or subscription_id):
+        return False
+    updated = False
+    for line in _billing_lines(data):
+        installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
+        for inst in installments:
+            if subscription_id and str(inst.get('qonto_direct_debit_subscription_id') or '') != subscription_id:
+                continue
+            inst['qonto_direct_debit_collection_id'] = collection_id or inst.get('qonto_direct_debit_collection_id') or ''
+            inst['status'] = _map_collection_status(item.get('status') or item.get('event'))
+            if inst['status'] == 'completed':
+                inst['paidAt'] = item.get('paid_at') or item.get('completed_at') or _now_iso()
+            if item.get('status_reason'):
+                inst['failureReason'] = item.get('status_reason')
+                inst['status_reason'] = item.get('status_reason')
+            inst['updated_at'] = _now_iso()
+            app.logger.info('[QONTO] collection %s subscription_id=%s collection_id=%s', inst['status'], subscription_id, collection_id)
+            _billing_log(line, f"Collection SEPA Qonto {inst['status']}", 'success' if inst['status'] == 'completed' else 'error', inst.get('status_reason') or '', collection_id)
+            line['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(line)
+            if line['qontoPaymentGlobalStatus'] == 'Payé': line['paymentStatus'] = 'paid'
+            elif line['qontoPaymentGlobalStatus'] == 'Paiement partiel': line['paymentStatus'] = 'partial'
+            elif line['qontoPaymentGlobalStatus'] == 'Rejeté': line['paymentStatus'] = 'failed'
+            _save_billing_line(data, line)
+            updated = True
+    return updated
+
+
+def _apply_qonto_mandate_webhook(data: Dict[str, Any], item: Dict[str, Any]) -> bool:
+    mandate_id = str(item.get('id') or item.get('direct_debit_mandate_id') or '')
+    if not mandate_id:
+        return False
+    updated = False
+    status = _map_mandate_status(item.get('status') or item.get('event'))
+    for line in _billing_lines(data):
+        if str(line.get('qonto_direct_debit_mandate_id') or '') != mandate_id:
+            continue
+        line['qonto_mandate_status'] = status
+        line['mandateStatus'] = status
+        if status in {'active', 'signed'}:
+            line['qonto_mandate_signed_at'] = item.get('accepted_at') or item.get('signed_at') or item.get('approved_at') or line.get('qonto_mandate_signed_at') or _now_iso()
+            app.logger.info('[QONTO] webhook mandat signé reçu mandate_id=%s', mandate_id)
+            _billing_log(line, 'Webhook mandat SEPA signé reçu', 'success', status, mandate_id)
+            try:
+                ensure_qonto_sepa_installments_for_line(line)
+            except Exception as exc:
+                _billing_log(line, 'Erreur création subscriptions après signature mandat', 'error', _sanitize_qonto_error(str(exc)), mandate_id)
+        _sync_sepa_aliases(line)
+        _save_billing_line(data, line)
+        updated = True
+    return updated
+
+
+def ensureQontoSepaInstallments(traineeId: str) -> Dict[str, Any]:
+    data = load_data()
+    created = 0
+    matched = 0
+    for line in _billing_lines(data):
+        if str(line.get('traineeId') or '') != str(traineeId):
+            continue
+        if line.get('paymentMode') != 'sepa_direct_debit':
+            continue
+        matched += 1
+        result = ensure_qonto_sepa_installments_for_line(line)
+        created += int(result.get('created') or 0)
+        _save_billing_line(data, line)
+    save_data(data)
+    return {'matched': matched, 'created': created}
+
+
+@app.post('/api/billing/resend-mandate')
+@admin_login_required
+@admin_write_required
+def api_billing_resend_mandate():
+    data = load_data(); payload = request.get_json(silent=True) or {}; line = _line_from_payload(data, payload)
+    if not line or not line.get('sign_url'):
+        return jsonify({'ok': False, 'error': 'Aucun lien de mandat à renvoyer'}), 400
+    sent = _send_qonto_mandate_link(line)
+    _billing_log(line, 'Lien mandat SEPA renvoyé', 'success' if sent else 'error', 'Email envoyé' if sent else 'Email non envoyé')
+    _save_billing_line(data, line); save_data(data)
+    return jsonify({'ok': bool(sent), 'message': 'Lien de mandat renvoyé' if sent else 'Email non envoyé'}), (200 if sent else 400)
 
 @app.post('/api/billing/sync-qonto')
 @admin_login_required
@@ -22258,7 +26268,7 @@ def api_billing_sync_qonto():
     for line in lines:
         if not (line.get('qontoInvoiceId') or line.get('qontoDraftId')): continue
         try:
-            reset, _ = _sync_billing_line_with_qonto(data, line); reset_count += 1 if reset else 0; synced_count += 0 if reset else 1
+            reset, _ = _sync_billing_line_with_qonto(data, line); _sync_qonto_direct_debit_line(line) if line.get('paymentMode') == 'sepa_direct_debit' else None; _save_billing_line(data, line); reset_count += 1 if reset else 0; synced_count += 0 if reset else 1
         except Exception as exc:
             errors.append({'id': line.get('id'), 'message': _sanitize_qonto_error(str(exc))})
     save_data(data)
@@ -22274,7 +26284,7 @@ def api_admin_billing_bulk_generate():
     for line_id in ids:
         line = _find_billing_line(data, str(line_id))
         if not line: summary['failed'].append({'id': line_id, 'error': 'introuvable'}); continue
-        if line.get('qontoInvoiceId') or _normalize_billing_invoice_status(line.get('invoiceStatus')) in {'finalized','sent','paid'}: summary['ignored'].append(line); continue
+        if line.get('qontoInvoiceId') or _normalize_billing_invoice_status(line.get('invoiceStatus')) in {'draft','finalized','sent','paid','external_generated'}: summary['ignored'].append(line); continue
         ok, res = _create_invoice_for_billing_line(data, line)
         summary['created' if ok else 'failed'].append(res.get('line') or {'id': line_id, 'error': res.get('error')})
         data = load_data()
@@ -22301,9 +26311,19 @@ def api_admin_billing_sync_payment(line_id: str):
 def api_admin_billing_download(line_id: str):
     data = load_data(); line = _find_billing_line(data, line_id)
     if not line or not line.get('qontoInvoiceId'): return jsonify({'ok': False, 'error': 'Facture indisponible'}), 404
-    line['invoiceDownloadedAt'] = _now_iso(); _billing_log(line, 'PDF téléchargé', 'success'); _save_billing_line(data, line); save_data(data)
-    if line.get('invoicePdfUrl'): return redirect(line['invoicePdfUrl'])
-    return jsonify({'ok': True, 'message': 'PDF Qonto non exposé par l’API', 'qontoInvoiceId': line.get('qontoInvoiceId')})
+    try:
+        if line.get('invoicePdfUrl'):
+            line['invoiceDownloadedAt'] = _now_iso(); _billing_log(line, 'PDF téléchargé', 'success'); _save_billing_line(data, line); save_data(data)
+            return redirect(line['invoicePdfUrl'])
+        pdf_bytes, content_type = download_qonto_invoice_pdf(line['qontoInvoiceId'])
+        line['invoiceDownloadedAt'] = _now_iso(); _billing_log(line, 'PDF téléchargé', 'success'); _save_billing_line(data, line); save_data(data)
+        filename = re.sub(r'[^A-Za-z0-9_.-]+', '_', f"FACTURE_{line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId')}.pdf")
+        response = send_file(BytesIO(pdf_bytes), mimetype=content_type or 'application/pdf', as_attachment=False, download_name=filename)
+        response.headers['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+    except Exception as exc:
+        _billing_log(line, 'PDF téléchargé', 'error', _sanitize_qonto_error(str(exc)), line.get('qontoInvoiceId') or ''); _save_billing_line(data, line); save_data(data)
+        return jsonify({'ok': False, 'error': _sanitize_qonto_error(str(exc)), 'qontoInvoiceId': line.get('qontoInvoiceId')}), 502
 
 
 @app.post('/api/admin/billing-lines/bulk-download')
@@ -22370,7 +26390,7 @@ def api_qonto_invoice_create(trainee_id: str):
     client = payload.get("client") or {}; invoice = payload.get("invoice") or {}
     is_cpf_invoice = is_cpf_billing_context(payload) or is_cpf_billing_context(trainee) or _is_cpf_financeur(client.get("name")) or (client.get("name") == CPF_QONTO_CLIENT_NAME)
     if is_cpf_invoice:
-        client = dict(CPF_QONTO_CUSTOMER)
+        return jsonify({"ok": False, "error": "La facturation CPF est gérée dans un logiciel externe."}), 400
     missing = []
     if not is_cpf_invoice and not (client.get("email") or "").strip(): missing.append("email")
     try:
@@ -22515,6 +26535,17 @@ def api_qonto_invoice_send(trainee_id: str):
         return jsonify({"ok": False, "error": "Impossible d’envoyer la facture"}), 400
 
 
+@app.post("/api/admin/trainees/<trainee_id>/qonto-sepa/ensure")
+@admin_login_required
+@admin_write_required
+def api_admin_trainee_qonto_sepa_ensure(trainee_id: str):
+    try:
+        result = ensureQontoSepaInstallments(trainee_id)
+        return jsonify({'ok': True, **result})
+    except Exception as exc:
+        return jsonify({'ok': False, 'error': _sanitize_qonto_error(str(exc)), 'message': format_qonto_error_for_front(exc)}), 400
+
+
 @app.post("/api/qonto/webhooks")
 def api_qonto_webhooks():
     raw_body = request.get_data(cache=True)
@@ -22522,9 +26553,15 @@ def api_qonto_webhooks():
         return jsonify({"ok": False, "error": "invalid_signature"}), 401
     payload = request.get_json(silent=True) or {}
     event = (payload.get("event") or payload.get("type") or "").strip()
+    item = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+    if "sepa-direct-debit-mandates" in event:
+        data = load_data(); updated = _apply_qonto_mandate_webhook(data, item); save_data(data)
+        return jsonify({"ok": True, "updated": updated})
+    if "sepa-direct-debit-collections" in event:
+        data = load_data(); updated = _apply_qonto_collection_webhook(data, item); save_data(data)
+        return jsonify({"ok": True, "updated": updated})
     if event and "client-invoices" not in event and "client_invoice" not in event:
         return jsonify({"ok": True, "ignored": True})
-    item = payload.get("data") if isinstance(payload.get("data"), dict) else {}
     invoice_id = item.get("id") or item.get("qonto_invoice_id")
     if not invoice_id:
         return jsonify({"ok": False, "error": "missing_invoice_id"}), 400
@@ -22574,6 +26611,169 @@ def admin_preview_aps_convocation(session_id: str, trainee_id: str):
         return make_response(f"Aperçu convocation APS impossible : {html.escape(str(exc))}", 400)
 
 
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/attestation-entree-aps/preview")
+@admin_login_required
+def admin_preview_aps_entry_attestation(session_id: str, trainee_id: str):
+    data = load_data()
+    s, _, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t or not _automation_has_entry_attestation(s):
+        abort(404)
+    try:
+        _, pdf_path = _generate_aps_entry_attestation_files(s, t, session_id, trainee_id)
+        return send_file(pdf_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(pdf_path))
+    except Exception as exc:
+        app.logger.exception("[ATTESTATION ENTREE APS] Aperçu impossible")
+        return make_response(f"Aperçu attestation d’entrée APS impossible : {html.escape(str(exc))}", 400)
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/attestation-entree-aps/send")
+@admin_login_required
+@admin_write_required
+def admin_send_aps_entry_attestation(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if not _automation_has_entry_attestation(s):
+        return jsonify({"ok": False, "error": "Attestation d’entrée non configurée pour cette formation"}), 400
+    try:
+        docx_path, pdf_path = _generate_aps_entry_attestation_files(s, t, session_id, trainee_id)
+        with open(pdf_path, "rb") as fh:
+            encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
+        subject, html_content = _build_aps_entry_attestation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), s)
+        email_ok = brevo_send_email(str(t.get("email") or "").strip(), subject, html_content, trainee=t, attachments=[{"name": os.path.basename(pdf_path), "content": encoded_pdf}])
+        if not email_ok:
+            raise RuntimeError("Impossible d’envoyer l’attestation d’entrée : échec d’envoi email")
+        sent_at = _now_iso()
+        t["attestation_entree_aps_status"] = "sent"
+        t["attestation_entree_aps_generated_at"] = t.get("attestation_entree_aps_generated_at") or sent_at
+        t["attestation_entree_aps_sent_at"] = sent_at
+        t["attestation_entree_aps_pdf_path"] = pdf_path
+        t["attestation_entree_aps_docx_path"] = docx_path
+        t["attestation_entree_aps_pdf_token"] = _store_public_file_token(pdf_path)
+        t["attestation_entree_aps_last_error"] = ""
+        t["updated_at"] = sent_at
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        return jsonify({"ok": True, "status": "sent", "sent_at": sent_at, "sent_at_label": fr_datetime(sent_at)})
+    except Exception as exc:
+        app.logger.exception("[ATTESTATION ENTREE APS] Envoi impossible")
+        message = str(exc) or "Erreur inconnue pendant l’envoi de l’attestation d’entrée APS."
+        t["attestation_entree_aps_status"] = t.get("attestation_entree_aps_status") or "pending"
+        t["attestation_entree_aps_last_error"] = message
+        t["updated_at"] = _now_iso()
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        return jsonify({"ok": False, "error": message}), 400
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/attestation-fin-aps/preview")
+@admin_login_required
+def admin_preview_aps_end_attestation(session_id: str, trainee_id: str):
+    data = load_data()
+    s, _, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t or not _automation_has_end_attestation(s):
+        abort(404)
+    try:
+        _, pdf_path = _generate_aps_end_attestation_files(s, t, session_id, trainee_id)
+        return send_file(pdf_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(pdf_path))
+    except Exception as exc:
+        app.logger.exception("[ATTESTATION FIN APS] Aperçu impossible")
+        return make_response(f"Aperçu attestation de fin APS impossible : {html.escape(str(exc))}", 400)
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/attestation-fin-aps/send")
+@admin_login_required
+@admin_write_required
+def admin_send_aps_end_attestation(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if not _automation_has_end_attestation(s):
+        return jsonify({"ok": False, "error": "Attestation de fin non configurée pour cette formation"}), 400
+    try:
+        docx_path, pdf_path = _generate_aps_end_attestation_files(s, t, session_id, trainee_id)
+        with open(pdf_path, "rb") as fh:
+            encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
+        subject, html_content = _build_aps_end_attestation_email(str(t.get("first_name") or ""), _session_get(s, "date_end", ""), s)
+        email_ok = brevo_send_email(str(t.get("email") or "").strip(), subject, html_content, trainee=t, attachments=[{"name": os.path.basename(pdf_path), "content": encoded_pdf}])
+        if not email_ok:
+            raise RuntimeError("Impossible d’envoyer l’attestation de fin : échec d’envoi email")
+        sent_at = _now_iso()
+        t["attestation_fin_aps_status"] = "sent"
+        t["attestation_fin_aps_generated_at"] = t.get("attestation_fin_aps_generated_at") or sent_at
+        t["attestation_fin_aps_sent_at"] = sent_at
+        t["attestation_fin_aps_pdf_path"] = pdf_path
+        t["attestation_fin_aps_docx_path"] = docx_path
+        t["attestation_fin_aps_pdf_token"] = _store_public_file_token(pdf_path)
+        t["attestation_fin_aps_last_error"] = ""
+        t["updated_at"] = sent_at
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        return jsonify({"ok": True, "status": "sent", "sent_at": sent_at, "sent_at_label": fr_datetime(sent_at)})
+    except Exception as exc:
+        app.logger.exception("[ATTESTATION FIN APS] Envoi impossible")
+        message = str(exc) or "Erreur inconnue pendant l’envoi de l’attestation de fin APS."
+        t["attestation_fin_aps_status"] = t.get("attestation_fin_aps_status") or "pending"
+        t["attestation_fin_aps_last_error"] = message
+        t["updated_at"] = _now_iso()
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        return jsonify({"ok": False, "error": message}), 400
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/automation/status")
+@admin_login_required
+def admin_trainee_automation_status(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if not _automation_is_enabled(s):
+        return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
+    _refresh_yousign_convention_status_if_pending(data, s, trainees, t)
+    return jsonify({"ok": True, "automation_status": _build_trainee_automation_status(s, t, session_id, trainee_id)})
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/automation/convocation/generate")
+@admin_login_required
+@admin_write_required
+def admin_generate_aps_convocation_automation(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if not _automation_is_enabled(s):
+        return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
+    if not _is_aps_session(s):
+        return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
+    try:
+        docx_path, pdf_path = _generate_aps_convocation_files(s, t, session_id, trainee_id)
+        now = _now_iso()
+        t["convocation_aps_status"] = t.get("convocation_aps_status") or "generated"
+        t["convocation_aps_generated_at"] = now
+        t["convocation_aps_pdf_path"] = pdf_path
+        t["convocation_aps_docx_path"] = docx_path
+        t["convocation_aps_last_error"] = ""
+        t["updated_at"] = now
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        return jsonify({"ok": True, "status": "generated", "view_url": url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id)})
+    except Exception as exc:
+        message = str(exc) or "Erreur inconnue pendant la génération de la convocation APS."
+        t["convocation_aps_last_error"] = message
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        return jsonify({"ok": False, "error": message}), 400
+
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-aps/send")
 @admin_login_required
 @admin_write_required
@@ -22582,15 +26782,20 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
     s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if not _automation_is_enabled(s):
+        return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
     if not _is_aps_session(s):
         return jsonify({"ok": False, "error": "Convocation APS réservée aux formations APS"}), 400
+    can_send_without_signed_convention = _can_send_convocation_without_signed_convention(s)
+    if not can_send_without_signed_convention and not _is_yousign_signature_done(_yousign_state(t)):
+        return jsonify({"ok": False, "error": "En attente de signature de la convention"}), 400
     try:
         docx_path, pdf_path = _generate_aps_convocation_files(s, t, session_id, trainee_id)
         if not os.path.exists(pdf_path):
             raise Exception("Le PDF de convocation APS n’a pas été généré.")
         with open(pdf_path, "rb") as fh:
             encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
-        subject, html_content = _build_aps_convocation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), _session_get(s, "date_end", ""))
+        subject, html_content = _build_aps_convocation_email(str(t.get("first_name") or ""), _session_get(s, "date_start", ""), _session_get(s, "date_end", ""), s)
         email_ok = brevo_send_email(
             str(t.get("email") or "").strip(),
             subject,
@@ -22605,9 +26810,11 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
             raise RuntimeError("Le PDF de convocation APS n’est pas consultable depuis l’administration.")
         sent_at = _now_iso()
         t["convocation_aps_status"] = "sent"
+        t["convocation_aps_generated_at"] = t.get("convocation_aps_generated_at") or sent_at
         t["convocation_aps_sent_at"] = sent_at
         t["convocation_aps_pdf_path"] = pdf_path
         t["convocation_aps_docx_path"] = docx_path
+        t["convocation_aps_pdf_token"] = _store_public_file_token(pdf_path)
         t["convocation_aps_generated_from"] = "word"
         t["convocation_aps_view_url"] = url_for("admin_view_aps_convocation", session_id=session_id, trainee_id=trainee_id)
         t["convocation_aps_last_error"] = ""
@@ -22628,6 +26835,89 @@ def admin_send_aps_convocation(session_id: str, trainee_id: str):
         return jsonify({"ok": False, "error": message}), 400
 
 
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/preview")
+@admin_login_required
+def admin_preview_convention(session_id: str, trainee_id: str):
+    data = load_data()
+    s, _, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        abort(404)
+    if not _automation_is_enabled(s):
+        abort(403)
+    try:
+        _, pdf_path = _generate_aps_convention_files(s, t, session_id, trainee_id)
+    except Exception as exc:
+        flash(f"Aperçu convention : {_sanitize_yousign_error(str(exc))}", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+    abs_path = os.path.abspath(pdf_path) if pdf_path else ""
+    root = os.path.abspath(YOUSIGN_CONVENTION_DIR)
+    if not abs_path or not abs_path.startswith(root + os.sep) or not os.path.exists(abs_path):
+        abort(404)
+    return send_file(abs_path, mimetype="application/pdf", as_attachment=False, download_name=os.path.basename(abs_path))
+
+
+CONVENTION_FINANCING_FIELDS = ("training_price", "cpf_amount", "personal_amount", "other_amount")
+
+
+def _apply_convention_financing_payload(trainee: Dict[str, Any], payload: Dict[str, Any]) -> None:
+    for key in CONVENTION_FINANCING_FIELDS:
+        if key in payload:
+            trainee[key] = str(payload.get(key) or "").strip()
+
+
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/convention/financing")
+@admin_login_required
+@admin_write_required
+def api_update_convention_financing(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if not _automation_is_enabled(s):
+        return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
+    if not _financing_partner_module_enabled():
+        return jsonify({"ok": False, "error": "module_locked", "module": "financing"}), 403
+    payload = request.get_json(silent=True) or {}
+    _apply_convention_financing_payload(t, payload)
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+    return jsonify({"ok": True})
+
+
+@app.post("/api/sessions/<session_id>/stagiaires/<trainee_id>/convention/signature/create")
+@admin_login_required
+@admin_write_required
+def api_create_convention_signature(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        return jsonify({"ok": False, "error": "Stagiaire introuvable"}), 404
+    if not _automation_is_enabled(s):
+        return jsonify({"ok": False, "error": "module_locked", "module": "automations"}), 403
+    payload = request.get_json(silent=True) or {}
+    _apply_convention_financing_payload(t, payload)
+    try:
+        force_new = str(payload.get("force_new") or "").lower() in {"1", "true", "yes", "on"}
+        state = create_yousign_convention_signature(s, t, session_id, trainee_id, force_new=force_new)
+        signature_link = str(state.get("signature_link") or "").strip()
+        email_ok = send_yousign_signature_link_email(s, t, signature_link)
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        return jsonify({"ok": True, "email_ok": bool(email_ok), "status": state.get("status")})
+    except Exception as exc:
+        message = _sanitize_yousign_error(str(exc))
+        state = _yousign_state(t)
+        state["status"] = "error"
+        state["last_error"] = message
+        t["updated_at"] = _now_iso()
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        return jsonify({"ok": False, "error": message}), 400
+
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-signature/create")
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/yousign")
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/signature/create")
@@ -22639,8 +26929,11 @@ def admin_create_convention_signature(session_id: str, trainee_id: str):
     if not s or not t:
         flash("Stagiaire introuvable.", "error")
         abort(404)
+    if not _automation_is_enabled(s):
+        flash("Ce module est verrouillé pour ce partenaire. Activez-le dans la fiche partenaire.", "error")
+        abort(403)
     try:
-        state = create_yousign_convention_signature(s, t, session_id, trainee_id)
+        state = create_yousign_convention_signature(s, t, session_id, trainee_id, force_new=bool(request.form.get("force_new")))
         signature_link = str(state.get("signature_link") or "").strip()
         if send_yousign_signature_link_email(s, t, signature_link):
             flash("Demande Yousign créée et e-mail envoyé au stagiaire.", "success")
@@ -22780,7 +27073,7 @@ def public_convention_signature_redirect(token: str):
         return redirect(url_for("public_trainee_login", token=token))
     state = _yousign_state(t)
     link = str(state.get("signature_link") or "").strip()
-    if not link or state.get("status") == "signed":
+    if not link or _is_yousign_signature_done(state):
         flash("Aucune convention n’est en attente de signature.", "error")
         return redirect(url_for("public_trainee_space", token=token))
     app.logger.info("[YOUSIGN] public signature redirect trainee_id=%s", t.get("id"))
@@ -22799,7 +27092,9 @@ def webhooks_yousign():
     if not request_id:
         return jsonify({"ok": True, "ignored": True, "reason": "missing_signature_request_id"})
     app.logger.info("[YOUSIGN] webhook received event=%s request_id=%s", event_name, request_id)
-    if event_name != "signature_request.done":
+    payload_status = _yousign_signature_request_status(payload)
+    done_events = {"signature_request.done", "signature_request.completed", "signer.done", "signer.completed"}
+    if event_name not in done_events and payload_status not in YOUSIGN_FINAL_STATUSES:
         return jsonify({"ok": True, "ignored": True})
     data = load_data()
     sess, trainees, trainee = _find_trainee_by_yousign_request_id(data, request_id)
@@ -22807,21 +27102,7 @@ def webhooks_yousign():
         return jsonify({"ok": True, "updated": False, "reason": "signature_request_not_found"})
     state = _yousign_state(trainee)
     try:
-        signed_path = _download_yousign_signed_pdf(request_id, str(trainee.get("id") or ""))
-        now = _now_iso()
-        state.update({
-            "status": "done",
-            "signed_at": now,
-            "next_reminder_at": "",
-            "signed_pdf_path": signed_path,
-            "last_error": "",
-            "last_event_id": payload.get("event_id") or "",
-        })
-        trainee["convention_aps_status"] = "signed"
-        trainee["convention_aps_signed_at"] = now
-        trainee["updated_at"] = now
-        sess["trainees"] = trainees
-        sess.pop("stagiaires", None)
+        _mark_yousign_convention_signed(data, sess, trainees, trainee, request_id, str(payload.get("event_id") or ""))
         save_data(data)
         app.logger.info("[YOUSIGN] convention signed stored trainee_id=%s request_id=%s", trainee.get("id"), request_id)
         return jsonify({"ok": True, "updated": True, "status": "signed"})
@@ -23052,26 +27333,34 @@ def admin_trainee_summary_print(session_id: str, trainee_id: str):
 @admin_login_required
 def api_mark_trainee_printed(trainee_id: str):
     try:
-        app.logger.info("MARK PRINTED START trainee_id=%s", trainee_id)
+        payload = request.get_json(silent=True) or {}
+        printed = payload.get("printed", True)
+        printed = printed if isinstance(printed, bool) else str(printed).strip().lower() in {"1", "true", "yes", "oui"}
+        app.logger.info("MARK PRINTED START trainee_id=%s printed=%s", trainee_id, printed)
 
         data = load_data()
         found = False
+        printed_at = _now_iso() if printed else ""
 
         for s in data.get("sessions", []):
             if isinstance(s.get("trainees"), list):
                 for t in s["trainees"]:
                     if str(t.get("id")) == str(trainee_id):
                         app.logger.info("FOUND in trainees[]")
-                        t["printed"] = True
-                        t["printed_at"] = _now_iso()
+                        t["printed"] = printed
+                        t["printed_at"] = printed_at
+                        if not printed:
+                            t["summary_printed_at"] = ""
                         found = True
 
             if isinstance(s.get("stagiaires"), list):
                 for t in s["stagiaires"]:
                     if str(t.get("id")) == str(trainee_id):
                         app.logger.info("FOUND in stagiaires[]")
-                        t["printed"] = True
-                        t["printed_at"] = _now_iso()
+                        t["printed"] = printed
+                        t["printed_at"] = printed_at
+                        if not printed:
+                            t["summary_printed_at"] = ""
                         found = True
 
         if not found:
@@ -23079,9 +27368,9 @@ def api_mark_trainee_printed(trainee_id: str):
             return jsonify({"success": False, "error": "not found"}), 404
 
         save_data(data)
-        app.logger.info("SAVE OK trainee_id=%s", trainee_id)
+        app.logger.info("SAVE OK trainee_id=%s printed=%s", trainee_id, printed)
 
-        return jsonify({"success": True})
+        return jsonify({"success": True, "printed": printed, "printed_at": printed_at})
 
     except Exception as e:
         import traceback
@@ -24023,7 +28312,7 @@ def admin_sessions_archived():
     return render_template(
         "admin_sessions_archived.html",
         sessions=out_sessions,
-        formation_types=FORMATION_TYPES,
+        formation_types=_partner_allowed_formation_types(),
     )
 
 # =========================
@@ -24459,6 +28748,8 @@ def api_financement_rejet_send(session_id: str, trainee_id: str):
     s, t = _find_session_and_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "not_found"}), 404
+    if not _financing_partner_module_enabled():
+        return jsonify({"ok": False, "error": "module_locked", "module": "financing"}), 403
 
     token = uuid.uuid4().hex
     secretariat_token = uuid.uuid4().hex
@@ -24603,6 +28894,8 @@ def api_financement_pending_send(session_id: str, trainee_id: str):
     s, t = _find_session_and_trainee(data, session_id, trainee_id)
     if not s or not t:
         return jsonify({"ok": False, "error": "not_found"}), 404
+    if not _financing_partner_module_enabled():
+        return jsonify({"ok": False, "error": "module_locked", "module": "financing"}), 403
 
     already_sent_at = (t.get("financement_pending_notification_sent_at") or "").strip()
     if already_sent_at:
@@ -25896,7 +30189,7 @@ VAE_AVIS_ADMIN_DEFAULTS = {
     "nom_accompagnateur": "Clément VAILLANT",
     "email": "clement@integraleacademy.com",
     "telephone": "04 22 47 07 68",
-    "organisme": "Intégrale Academy",
+    "organisme": "Intégrale Connect",
 }
 
 def _now_iso_utc() -> str:

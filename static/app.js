@@ -47,6 +47,7 @@ async function api(url, method="GET", body=null) {
    SESSIONS PAGE
 ------------------------- */
 (function initSessions(){
+  if (document.body.classList.contains("endpoint-admin-sessions")) return;
   const btnOpen = qs("#btnOpenCreateSession");
   const modalId = "createSessionModal";
   if (btnOpen) {
@@ -64,10 +65,19 @@ async function api(url, method="GET", body=null) {
         training_type: (qs("#sessionType")?.value || "").trim(),
         date_start: qs("#dateStart")?.value,
         date_end: qs("#dateEnd")?.value,
-        exam_date: qs("#examDate")?.value
+        exam_date: qs("#examDate")?.value,
+        exam_theory_date: qs("#examTheoryDate")?.value,
+        exam_practice_date: qs("#examPracticeDate")?.value,
+        practice_training_date: qs("#practiceTrainingDate")?.value,
+        aps_in_person_start: qs("#apsInPersonStart")?.value,
+        aps_elearning_enabled: !!qs("#apsElearningEnabled")?.checked,
+        dirigeant_remote_start: qs("#dirigeantRemoteStart")?.value,
+        dirigeant_remote_end: qs("#dirigeantRemoteEnd")?.value,
+        dirigeant_in_person_start: qs("#dirigeantInPersonStart")?.value,
+        dirigeant_in_person_end: qs("#dirigeantInPersonEnd")?.value
       };
       try {
-        await api("/admin/sessions/create", "POST", payload);
+        await api("/api/sessions/create", "POST", payload);
         toast("Session créée ✅");
         closeModal(modalId);
         window.location.reload();
@@ -80,7 +90,7 @@ async function api(url, method="GET", body=null) {
   qsa("[data-delete-session]").forEach(btn => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-delete-session");
-      if (!confirm("Supprimer cette session ? (stagiaires inclus)")) return;
+      if (!(await AppModal.confirm({type:"danger", title:"Supprimer cette session", message:"Supprimer cette session ? (stagiaires inclus). Cette action est définitive.", primaryText:"Supprimer définitivement"}))) return;
       try {
         await api(`/admin/sessions/${id}/delete`, "POST");
         toast("Session supprimée");
@@ -264,4 +274,13 @@ async function api(url, method="GET", body=null) {
       });
     }
   });
+})();
+(function(){
+  if(window.AppModal) return;
+  const tones={danger:{icon:'🗑️',k:'Action sensible'},success:{icon:'✓',k:'Succès'},info:{icon:'i',k:'Information'},warning:{icon:'!',k:'Attention'},loading:{icon:'⏳',k:'Traitement'}};
+  function ensure(){let r=document.getElementById('appModalRoot');if(r)return r;r=document.createElement('div');r.id='appModalRoot';r.innerHTML=`<div class="app-modal-backdrop" role="presentation"><section class="app-modal-card" role="dialog" aria-modal="true" aria-labelledby="appModalTitle"><button type="button" class="app-modal-x" aria-label="Fermer">×</button><div class="app-modal-content"><div class="app-modal-icon" aria-hidden="true"></div><div class="app-modal-copy"><div class="app-modal-kicker"></div><h2 id="appModalTitle"></h2><p class="app-modal-message"></p><div class="app-modal-extra"></div></div></div><div class="app-modal-actions"><button type="button" class="app-modal-btn app-modal-secondary"></button><button type="button" class="app-modal-btn app-modal-tertiary"></button><button type="button" class="app-modal-btn app-modal-primary"></button></div></section></div>`;document.body.appendChild(r);return r;}
+  function show(opts={}){return new Promise(resolve=>{const tone=opts.type||'info',meta=tones[tone]||tones.info,root=ensure(),bd=root.firstElementChild,card=bd.querySelector('.app-modal-card'),x=bd.querySelector('.app-modal-x'),primary=bd.querySelector('.app-modal-primary'),secondary=bd.querySelector('.app-modal-secondary'),tertiary=bd.querySelector('.app-modal-tertiary'),extra=bd.querySelector('.app-modal-extra');card.className=`app-modal-card app-modal-${tone}`;bd.querySelector('.app-modal-icon').textContent=opts.icon||meta.icon;bd.querySelector('.app-modal-kicker').textContent=opts.kicker||meta.k;bd.querySelector('h2').textContent=opts.title||'Information';bd.querySelector('.app-modal-message').textContent=opts.message||'';extra.innerHTML=opts.html||'';primary.textContent=opts.primaryText||'Fermer';secondary.textContent=opts.secondaryText||'Annuler';tertiary.textContent=opts.tertiaryText||'';secondary.style.display=opts.showSecondary?'':'none';tertiary.style.display=opts.tertiaryText?'':'none';x.style.display=opts.closable===false?'none':'';function value(v){if(opts.input)return v===true?(extra.querySelector('.app-modal-input')?.value??''):null;return v;}function done(v){bd.classList.remove('is-visible');document.body.classList.remove('app-modal-open');setTimeout(()=>{primary.onclick=secondary.onclick=tertiary.onclick=x.onclick=bd.onclick=document.onkeydown=null;resolve(value(v));},120)}primary.onclick=()=>done(true);secondary.onclick=()=>done(false);tertiary.onclick=()=>done('tertiary');x.onclick=()=>done(false);bd.onclick=e=>{if(e.target===bd&&opts.closable!==false)done(false)};document.onkeydown=e=>{if(e.key==='Escape'&&opts.closable!==false)done(false);if(e.key==='Enter'&&opts.input)done(true)};requestAnimationFrame(()=>{bd.classList.add('is-visible');document.body.classList.add('app-modal-open');(extra.querySelector('.app-modal-input')||primary).focus();});});}
+  function escapeHtml(v){return String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+  window.AppModal={show,alert:(message,options={})=>show({message,type:options.type||'info',title:options.title||((options.type==='error'||options.type==='danger')?'Action impossible':'Information'),primaryText:options.primaryText||'Fermer'}),confirm:(options={})=>show({type:options.type||'warning',title:options.title||'Confirmer l’action',message:options.message||'',primaryText:options.primaryText||'Confirmer',secondaryText:options.secondaryText||'Annuler',tertiaryText:options.tertiaryText||'',showSecondary:true,closable:true}),prompt:(message,defaultValue='',options={})=>show({type:options.type||'info',title:options.title||'Saisie requise',message,primaryText:options.primaryText||'Valider',secondaryText:options.secondaryText||'Annuler',showSecondary:true,closable:true,input:true,html:`<input class="app-modal-input" type="text" value="${escapeHtml(defaultValue)}" autocomplete="off">`})};
+  document.addEventListener('submit',function(e){const form=e.target;if(form.dataset.appModalConfirmed==='1'){delete form.dataset.appModalConfirmed;return;}const attr=form.getAttribute('onsubmit')||'';const m=attr.match(/confirm\((['"])(.*?)\1\)/);if(!m)return;e.preventDefault();e.stopImmediatePropagation();AppModal.confirm({type:/supprimer|retirer|réinitialiser/i.test(m[2])?'danger':'warning',title:/supprimer/i.test(m[2])?'Suppression définitive':'Confirmation',message:m[2]+(/supprimer/i.test(m[2])?' Cette action est définitive.':''),primaryText:/supprimer/i.test(m[2])?'Supprimer définitivement':'Confirmer'}).then(ok=>{if(ok){form.dataset.appModalConfirmed='1';form.submit();}});},true);
 })();

@@ -168,6 +168,61 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         gestion_app.load_data = self.original_load_data
         gestion_app.save_data = self.original_save_data
 
+    def test_aps_admin_trainees_shows_card_pro_followup_with_nub(self):
+        self.data["sessions"][2]["trainees"][0]["pre_number"] = "2026-0002805-PRE-3P-1050370"
+
+        response = self.client.get("/admin/sessions/S-APS/trainees")
+        html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Suivi carte pro", html)
+        self.assertNotIn("https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/app/annuaire-public", html)
+        self.assertNotIn("🔎 Vérifier", html)
+        self.assertIn('data-card-pro-refresh type="button" title="Rafraîchir le suivi carte pro"', html)
+        self.assertIn('data-card-pro-followup', html)
+        self.assertIn('data-nom="NONVTC"', html)
+        self.assertIn('data-nub="1050370"', html)
+        self.assertIn('data-fallback-activity="Autorisation préalable - Surveillance humaine ou gardiennage"', html)
+        self.assertIn('withLocalCardProFallback(data, fallbackCardProFollowup(box))', html)
+        self.assertIn('const fallbackRows = Array.isArray(fallback.results)', html)
+        self.assertIn('Carte professionnelle - Surveillance humaine ou gardiennage', html)
+        self.assertIn("NUB : <strong>1050370</strong>", html)
+        self.assertIn('["autorisation préalable - surveillance humaine ou gardiennage", "AP SH"]', html)
+        self.assertIn('["autorisation préalable - agent de protection physique des personnes", "AP A3P"]', html)
+        self.assertIn('["carte professionnelle - surveillance humaine ou gardiennage", "CP SH"]', html)
+        self.assertIn('["carte professionnelle - agent de protection physique des personnes", "CP A3P"]', html)
+        self.assertIn(".card-pro-result.is-active", html)
+        self.assertIn(".card-pro-result.is-inactive", html)
+        self.assertIn(".card-pro-result.is-unknown", html)
+
+
+    def test_cnaps_public_annuaire_api_returns_activity_and_validity(self):
+        original_fetch = gestion_app.fetch_cnaps_public_annuaire
+        gestion_app.fetch_cnaps_public_annuaire = lambda nom, nub: {
+            "activite": "Autorisation préalable - Surveillance humaine ou gardiennage",
+            "validite_titre": "ACTIF",
+            "date_validite_titre": "16/08/2026",
+        }
+        try:
+            response = self.client.get("/api/cnaps_public_annuaire?nom=OUFQIH&nub=0971426")
+        finally:
+            gestion_app.fetch_cnaps_public_annuaire = original_fetch
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["activite"], "Autorisation préalable - Surveillance humaine ou gardiennage")
+        self.assertEqual(response.json["validite_titre"], "ACTIF")
+        self.assertEqual(response.json["date_validite_titre"], "16/08/2026")
+
+    def test_nub_is_extracted_from_legacy_pre_car_format(self):
+        self.assertEqual(
+            gestion_app.extract_nub_from_pre_car("PRE-013-2029-07-25-20240908920"),
+            "0908920",
+        )
+        self.assertEqual(
+            gestion_app.extract_nub_from_pre_car("2026-0002805-CAR-3P-1050370"),
+            "1050370",
+        )
+
 
     def test_history_and_thread_columns_are_reserved_for_vae_sessions(self):
         vae_response = self.client.get("/admin/sessions/S-VAE/trainees")

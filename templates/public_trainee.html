@@ -697,6 +697,90 @@
     }
   }
   
+
+  /* =========================
+   ✅ Espace stagiaire — design SaaS compact
+   ========================= */
+  .public-wrap{max-width:1180px;background:#f6f8fb;border-radius:26px;padding:22px;}
+  .public-grid{gap:18px;align-items:stretch;}
+  .trainee-overview-card{position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:100%;padding:22px;border:1px solid #e5ebf3;border-radius:20px;background:#fff;box-shadow:0 14px 34px rgba(15,23,42,.06);}
+  .trainee-overview-card:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,#2563eb,#38bdf8);}
+  .trainee-overview-card.documents-card{grid-column:1/-1;}
+  .trainee-overview-card.documents-card:before{background:linear-gradient(90deg,#16a34a,#22c55e);}
+  .card-kicker{margin:0 0 6px;color:#64748b;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;}
+  .card-title{margin:0;color:#0f172a;font-size:22px;line-height:1.15;letter-spacing:-.03em;}
+  .formation-hero{display:flex;gap:14px;align-items:flex-start;margin-bottom:18px;}
+  .icon-tile{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex:0 0 auto;background:#eff6ff;color:#2563eb;}
+  .icon-tile svg,.info-icon svg,.step-icon svg,.document-icon svg{width:20px;height:20px;display:block;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .formation-subtitle{margin-top:4px;color:#475569;font-weight:800;line-height:1.35;}
+  .formation-info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:auto;}
+  .info-chip{display:flex;gap:10px;align-items:flex-start;min-width:0;padding:12px;border:1px solid #edf2f7;border-radius:16px;background:#f8fafc;}
+  .info-icon{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;flex:0 0 auto;background:#fff;color:#2563eb;border:1px solid #e2e8f0;}
+  .info-label{color:#64748b;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;}.info-value{margin-top:3px;color:#0f172a;font-weight:900;line-height:1.25;overflow-wrap:anywhere;}
+  .progress-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px;}.progress-percent{font-size:13px;font-weight:900;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;padding:7px 10px;white-space:nowrap;}
+  .progress-track{height:8px;border-radius:999px;background:#e2e8f0;overflow:hidden;margin-bottom:16px;}.progress-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,#2563eb,#22c55e);}
+  .steps-list{display:flex;flex-direction:column;gap:10px;}.step-item{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px;border:1px solid #edf2f7;border-radius:16px;background:#fff;}
+  .step-icon{width:38px;height:38px;border-radius:14px;display:grid;place-items:center;background:#f1f5f9;color:#64748b;}.step-item.done .step-icon{background:#ecfdf5;color:#16a34a;}.step-item.current .step-icon{background:#eff6ff;color:#2563eb;}.step-item.blocked .step-icon{background:#fef2f2;color:#dc2626;}
+  .step-title{font-weight:1000;color:#0f172a;line-height:1.2;}.step-desc{margin-top:2px;color:#64748b;font-size:13px;line-height:1.35;}.pill{padding:5px 9px;font-size:11px;letter-spacing:.04em;text-transform:uppercase;}
+  .documents-list{display:grid;gap:12px;margin-top:14px;}.document-card{display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;align-items:center;padding:14px;border:1px solid #e6edf5;border-radius:18px;background:#fbfdff;}
+  .document-icon{width:40px;height:40px;border-radius:14px;display:grid;place-items:center;background:#eff6ff;color:#2563eb;}.document-title{font-weight:1000;color:#0f172a;}.document-subtitle{margin-top:2px;color:#64748b;font-size:13px;font-weight:700;}
+  .btn{transition:transform .18s ease,box-shadow .18s ease,background .18s ease,border-color .18s ease;}.btn:hover{transform:translateY(-1px);box-shadow:0 10px 20px rgba(15,23,42,.10);}.btn.outline:hover{border-color:#bfdbfe;background:#eff6ff;color:#1d4ed8;}
+  @media(max-width:899px){.trainee-overview-card{grid-column:1/-1;}}
+  @media(max-width:640px){.public-wrap{border-radius:0;padding:14px;}.formation-info-grid{grid-template-columns:1fr;}.progress-head{flex-direction:column;}.progress-percent{white-space:normal;}.step-item{grid-template-columns:auto 1fr;align-items:flex-start;}.step-item .pill{grid-column:1/-1;justify-content:center;width:100%;}.document-card{grid-template-columns:auto 1fr;align-items:flex-start;}.document-card .pill,.document-card .btn{grid-column:1/-1;width:100%;justify-content:center;}}
+
+
+  /* Modernisation SaaS des sections complémentaires */
+  .saas-section-card{grid-column:1/-1;border:1px solid #e5ebf3;border-radius:20px;background:#fff;box-shadow:0 14px 34px rgba(15,23,42,.06);overflow:hidden;}
+  details.saas-section-card{padding:0;}
+  .saas-section-card .collapse-summary{padding:20px 22px;background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);border-bottom:1px solid #edf2f7;font-size:20px;letter-spacing:-.02em;}
+  .saas-section-card .collapse-summary::after{font-size:18px;color:#2563eb;animation:none;}
+  .saas-section-card .collapse-content{padding:20px 22px 22px;}
+  .saas-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px;}
+  .saas-title-row{display:flex;align-items:flex-start;gap:12px;min-width:0;}
+  .saas-title-icon{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;flex:0 0 auto;background:#eff6ff;color:#2563eb;}
+  .saas-title-icon.green{background:#ecfdf5;color:#16a34a;}
+  .saas-title-icon.purple{background:#f5f3ff;color:#7c3aed;}
+  .saas-title-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .saas-section-card .infos-warning{border-color:#fde68a;background:#fffbeb;color:#92400e;}
+  .saas-helper{margin:0 0 16px;padding:14px 16px;border:1px solid #dbeafe;border-radius:16px;background:#eff6ff;color:#1e3a8a;font-weight:750;line-height:1.45;}
+  .info-completion-card .field{border-left:0!important;padding:14px!important;border:1px solid #edf2f7;border-radius:16px;background:#fbfdff;}
+  .info-completion-card .field + .field{margin-top:10px;}
+  .info-completion-card .field input,.info-completion-card .field select{border-color:#dbe3ee;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.03);}
+  .info-completion-card .saved.show{padding:6px 10px;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;}
+  .documents-summary-progress,.infos-summary-progress{display:flex;align-items:center;gap:10px;min-width:220px;padding:8px 10px;border:1px solid #bfdbfe;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:13px;font-weight:1000;}
+  .documents-summary-progress-track,.infos-summary-progress-track{width:92px;height:7px;border-radius:999px;background:#dbeafe;overflow:hidden;}
+  .documents-summary-progress-fill,.infos-summary-progress-fill{height:100%;width:0%;border-radius:inherit;background:linear-gradient(90deg,#2563eb,#22c55e);transition:width .25s ease;}
+  .documents-summary-progress.is-complete,.infos-summary-progress.is-complete{border-color:#bbf7d0;background:#f0fdf4;color:#047857;}
+  .documents-summary-progress.is-complete .documents-summary-progress-track,.infos-summary-progress.is-complete .infos-summary-progress-track{background:#dcfce7;}
+  .documents-upload-progress,.infos-completion-progress{margin:0 0 16px;padding:14px 16px;border:1px solid #dbeafe;border-radius:18px;background:linear-gradient(135deg,#eff6ff 0%,#ffffff 100%);box-shadow:0 8px 20px rgba(37,99,235,.06);}
+  .documents-upload-progress-head,.infos-completion-progress-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;}
+  .documents-upload-progress-title,.infos-completion-progress-title{font-weight:1000;color:#0f172a;line-height:1.2;}
+  .documents-upload-progress-text,.infos-completion-progress-text{margin-top:3px;color:#64748b;font-size:13px;font-weight:800;line-height:1.35;}
+  .documents-upload-progress-badge,.infos-completion-progress-badge{padding:7px 11px;border:1px solid #bfdbfe;border-radius:999px;background:#fff;color:#1d4ed8;font-size:13px;font-weight:1000;white-space:nowrap;}
+  .documents-upload-progress-track,.infos-completion-progress-track{height:10px;border-radius:999px;background:#dbeafe;overflow:hidden;}
+  .documents-upload-progress-fill,.infos-completion-progress-fill{height:100%;width:0%;border-radius:inherit;background:linear-gradient(90deg,#2563eb,#22c55e);transition:width .25s ease;}
+  .documents-upload-progress.is-complete,.infos-completion-progress.is-complete{border-color:#bbf7d0;background:linear-gradient(135deg,#ecfdf5 0%,#ffffff 100%);}
+  .documents-upload-progress.is-complete .documents-upload-progress-badge,.infos-completion-progress.is-complete .infos-completion-progress-badge{border-color:#bbf7d0;color:#047857;background:#f0fdf4;}
+  .documents-upload-progress.is-complete .documents-upload-progress-track,.infos-completion-progress.is-complete .infos-completion-progress-track{background:#dcfce7;}
+  .documents-upload-card .docs-stack{display:grid;gap:12px;margin-top:14px;}
+  .documents-upload-card .docs-stack > .docrow{position:relative;display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:12px!important;padding:16px!important;border:1px solid #e6edf5!important;border-radius:18px!important;background:#fbfdff!important;box-shadow:0 8px 20px rgba(15,23,42,.04);}
+  .documents-upload-card .docs-stack > .docrow:before{content:"";position:absolute;left:16px;top:18px;width:38px;height:38px;border-radius:14px;background:#eff6ff;}
+  .documents-upload-card .docs-stack > .docrow.missing{border-color:#fecaca!important;background:#fffafa!important;}
+  .documents-upload-card .docs-stack > .docrow.missing:before{background:#fef2f2;}
+  .documents-upload-card .docs-stack > .docrow.pending{border-color:#fed7aa!important;background:#fffdf8!important;}
+  .documents-upload-card .docs-stack > .docrow.pending:before{background:#fff7ed;}
+  .documents-upload-card .docs-stack .docmeta{padding-left:52px;gap:8px;}
+  .documents-upload-card .docs-stack .docmeta > .label{font-size:16px;color:#0f172a;letter-spacing:-.01em;}
+  .documents-upload-card .docs-stack .docmeta > .label:before{content:"📄";position:absolute;left:25px;top:26px;font-size:18px;z-index:1;}
+  .documents-upload-card .docs-stack .doc-format-box{border-color:#dbeafe;background:linear-gradient(135deg,#eff6ff,#fff);}
+  .documents-upload-card .docs-stack .upload-form{padding:12px;border:1px dashed #bfdbfe;border-radius:14px;background:#f8fbff;}
+  .deliverables-list{display:grid;gap:12px;margin-top:14px;}
+  .deliverable-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;align-items:center;padding:14px;border:1px solid #e6edf5;border-radius:18px;background:#fbfdff;}
+  .deliverable-icon{width:40px;height:40px;border-radius:14px;display:grid;place-items:center;background:#f5f3ff;color:#7c3aed;}
+  .deliverable-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .deliverable-title{font-weight:1000;color:#0f172a;}.deliverable-subtitle{margin-top:2px;color:#64748b;font-size:13px;font-weight:700;}
+  @media(max-width:640px){.saas-card-header{flex-direction:column;}.saas-section-card .collapse-summary{padding:16px;}.saas-section-card .collapse-content{padding:16px;}.deliverable-row{grid-template-columns:auto 1fr;}.deliverable-row .pill,.deliverable-row .btn{grid-column:1/-1;width:100%;justify-content:center;}.documents-summary-progress,.infos-summary-progress{width:100%;}.documents-summary-progress-track,.infos-summary-progress-track{flex:1;width:auto;}.documents-upload-card .docs-stack .docmeta{padding-left:0;padding-top:50px;}.documents-upload-card .docs-stack .docmeta > .label:before{top:25px;}}
+
 </style>
 
 {% set tt = (session.training_type or '')|string|upper %}
@@ -705,6 +789,7 @@
 {% set is_dirigeant_vae = (tt == 'DIRIGEANT VAE') %}
 {% set is_dirigeant_training = ('DIRIGEANT' in tt) or ('DESP' in tt) %}
 {% set is_security_training = ('APS' in tt) or ('A3P' in tt) or ('DIRIGEANT' in tt) %}
+{% set is_aps_or_a3p_training = ('APS' in tt) or ('A3P' in tt) %}
 
 {% if 'A3P' in tt %}
   {% set formation_label = "Agent de protection physique des personnes (A3P)" %}
@@ -759,7 +844,7 @@
 
   {# CNAPS #}
   {% if kind=='cnaps' %}
-    {% if up in ['DELIVREE','DÉLIVRÉE','VALIDE','VALIDEE','VALIDÉE'] %}{% set cls='green' %}
+    {% if up in ['ACCEPTE','ACCEPTÉ','DELIVREE','DÉLIVRÉE','VALIDE','VALIDEE','VALIDÉE','CARTE PROFESSIONNELLE OK'] %}{% set cls='green' %}
     {% elif up in ['INSTRUCTION','EN INSTRUCTION','EN_INSTRUCTION'] %}{% set cls='yellow' %}
     {% elif up in ['REFUSEE','REFUSÉE','EXPIREE','EXPIRÉE'] %}{% set cls='red' %}
     {% else %}{% set cls='gray' %}{% endif %}
@@ -804,7 +889,7 @@
 
 {# CNAPS #}
 {% if kind=='cnaps' %}
-  {% if up in ['DELIVREE','DÉLIVRÉE','VALIDE','VALIDEE','VALIDÉE'] %}{% set cls='green' %}
+  {% if up in ['ACCEPTE','ACCEPTÉ','DELIVREE','DÉLIVRÉE','VALIDE','VALIDEE','VALIDÉE','CARTE PROFESSIONNELLE OK'] %}{% set cls='green' %}
   {% elif up in ['INSTRUCTION','EN INSTRUCTION','EN_INSTRUCTION'] %}{% set cls='yellow' %}
   {% elif up in ['REFUSEE','REFUSÉE','EXPIREE','EXPIRÉE'] %}{% set cls='red' %}
   {% elif up in ['INCONNU','UNKNOWN',''] %}{% set cls='red' %}
@@ -915,194 +1000,71 @@
       </div>
     {% endif %}
 
-    <!-- Encadré 1 : infos générales -->
-    <div class="card">
-      <h2>Infos générales</h2>
+    <!-- Composition SaaS compacte : formation, suivi et documents -->
+    {% set conv_sig = trainee.convention_signature or trainee.convocation_signature or {} %}
+    {% set convention_state = trainee.convention_status %}
+    {% if conv_sig.status in ['signed', 'done'] %}{% set convention_state = 'signed' %}{% endif %}
+    {% set convention_action_required = conv_sig.signature_link and conv_sig.status not in ['signed', 'done'] %}
+    {% set financement_done = trainee.financement_status == 'validated' %}
+    {% set convention_done = convention_state == 'signed' %}
+    {% set dossier_done = dossier_ok %}
+    {% set test_fr_done = (trainee.test_fr_status or '') == 'validated' %}
+    {% set cnaps_up = (trainee.cnaps or '')|upper %}
+    {% set cnaps_done = cnaps_up in ['ACCEPTE','ACCEPTÉ','DELIVREE','DÉLIVRÉE','VALIDE','VALIDEE','VALIDÉE','CARTE PROFESSIONNELLE OK'] %}
+    {% set progress_count = (1 if not is_dirigeant_vae else 0) + (1 if convention_done else 0) + (1 if financement_done else 0) + (1 if dossier_done else 0) + (1 if is_aps_or_a3p_training and test_fr_done else 0) + (1 if is_aps_or_a3p_training and cnaps_done else 0) %}
+    {% set progress_total = (4 if not is_dirigeant_vae else 3) + (2 if is_aps_or_a3p_training else 0) %}
+    {% set progress_percent = (progress_count * 100 // progress_total) if progress_total else 0 %}
 
-      <div class="line">
-        <div class="label">Nom</div>
-        <div class="value">{{ (trainee.last_name or '')|upper }}</div>
+    <section class="trainee-overview-card formation-card" aria-labelledby="formationTitle">
+      <div class="formation-hero"><div class="icon-tile" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5-10-5Z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg></div><div><p class="card-kicker">Votre formation</p><h2 id="formationTitle" class="card-title">{{ (trainee.first_name or '')|capitalize }} {{ (trainee.last_name or '')|upper }}</h2><div class="formation-subtitle">{{ formation_label }}{% if training_type_label %} — {{ training_type_label }}{% endif %}</div></div></div>
+      <div class="formation-info-grid">
+        <div class="info-chip"><span class="info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg></span><div><div class="info-label">Parcours</div><div class="info-value">{{ 'Formation initiale' if 'initial' in (training_type_label or '')|lower else training_type_label }}</div></div></div>
+        {% if not is_dirigeant_vae %}<div class="info-chip"><span class="info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg></span><div><div class="info-label">Début</div><div class="info-value">{{ session.date_start|frdate }}</div></div></div><div class="info-chip"><span class="info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg></span><div><div class="info-label">Fin</div><div class="info-value">{{ session.date_end|frdate }}</div></div></div><div class="info-chip"><span class="info-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg></span><div><div class="info-label">Examen</div><div class="info-value">{{ session.exam_date|frdate if session.exam_date else 'Date à venir' }}</div></div></div>{% endif %}
       </div>
-      <div class="line">
-        <div class="label">Prénom</div>
-        <div class="value">{{ (trainee.first_name or '')|upper }}</div>
-      </div>
-      <div class="line">
-  <div class="label">Formation</div>
-  <div class="value">{{ formation_label }}</div>
-</div>
-<div class="line">
-  <div class="label">Type</div>
-  <div class="value">{{ training_type_label }}</div>
-</div>
+    </section>
 
+    {% if not trainee.public_hide_suivi %}<section class="trainee-overview-card tracking-card" aria-labelledby="trackingTitle"><div class="progress-head"><div><p class="card-kicker">Suivi de votre inscription</p><h2 id="trackingTitle" class="card-title">Votre parcours</h2></div><div class="progress-percent">Dossier complété à {{ progress_percent }} %</div></div><div class="progress-track" aria-hidden="true"><div class="progress-fill" style="width:{{ progress_percent }}%;"></div></div><div class="steps-list">
+      {% if not is_dirigeant_vae %}<div class="step-item done"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><div><div class="step-title">Inscription validée</div></div><span class="pill green">Validée</span></div>{% endif %}
+      <div class="step-item {{ 'done' if convention_done else ('current' if convention_action_required or convention_state == 'signing' else 'blocked' if convention_state in ['refused','expired'] else 'current') }}"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-4"/></svg></span><div><div class="step-title">Convention signée</div></div>{% if convention_done %}<span class="pill green">Signée</span>{% elif convention_action_required %}<span class="pill blue">À signer</span>{% elif convention_state == 'signing' %}<span class="pill blue">En attente</span>{% elif convention_state in ['refused','expired'] %}<span class="pill red">{{ 'Expirée' if convention_state == 'expired' else 'Refusée' }}</span>{% else %}<span class="pill gray">À venir</span>{% endif %}</div>
+      {% if is_aps_or_a3p_training %}<div class="step-item {{ 'done' if test_fr_done else 'current' if trainee.test_fr_status in ['in_progress','relance'] else 'future' }}"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/></svg></span><div><div class="step-title">Test de français</div></div>{{ pill_for('test_fr', trainee.test_fr_status or 'soon') }}</div>
+      <div class="step-item {{ 'done' if cnaps_done else 'current' if cnaps_up in ['INSTRUCTION','EN INSTRUCTION','EN_INSTRUCTION','TRANSMIS','ENREGISTRE','ENREGISTRÉ'] else 'blocked' }}"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></span><div><div class="step-title">CNAPS</div></div>{{ pill_for('cnaps', trainee.cnaps or 'INCONNU') }}</div>{% endif %}
+      <div class="step-item {{ 'done' if financement_done else 'current' if trainee.financement_status == 'in_review' else 'future' }}"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span><div><div class="step-title">Financement validé</div></div>{% if financement_done %}<span class="pill green">Validé</span>{% elif trainee.financement_status == 'in_review' %}<span class="pill blue">En cours</span>{% else %}<span class="pill gray">À venir</span>{% endif %}</div>
+      <div class="step-item {{ 'done' if dossier_done else 'blocked' }}"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><div><div class="step-title">Dossier complet</div></div>{{ pill_for('dossier', 'complete' if dossier_done else 'incomplete') }}</div>
+    </div></section>{% endif %}
 
-      {% if not is_dirigeant_vae %}
-      <div class="line">
-        <div class="label">Dates de formation</div>
-        <div class="value">{{ session.date_start|frdate }} → {{ session.date_end|frdate }}</div>
-      </div>
-      {% if show_vtc or is_dirigeant_vae %}
-        {% set theory_date = session.exam_theory_date or session.exam_date %}
-        {% set practice_date = session.exam_practice_date or session.exam_date %}
-        {% set practice_training_date = session.practice_training_date %}
-        <div class="line">
-          <div class="label">Examen théorique</div>
-          <div class="value">{{ theory_date|frdate }}</div>
-        </div>
-        <div class="line">
-          <div class="label">Examen pratique</div>
-          <div class="value">{{ practice_date|frdate }}</div>
-        </div>
-        {% if show_vtc %}
-        <div class="line" style="display:block;">
-          <div class="label">Formation pratique VTC</div>
-          <div class="practice-training-box">
-            La formation pratique se déroulera le {{ practice_training_date|frdate }} de 08h30 à 12h00 dans nos locaux Intégrale Academy, 54 chemin du Carreou 83480 PUGET SUR ARGENS.
-            <span class="muted">Une convocation pour la formation pratique sera envoyée par mail.</span>
-          </div>
-        </div>
-        {% endif %}
-      {% else %}
-        <div class="line">
-          <div class="label">Date d’examen</div>
-          <div class="value">{{ session.exam_date|frdate }}</div>
-        </div>
-      {% endif %}
-      {% endif %}
-    </div>
-
-    {% set conv_sig = trainee.convocation_signature or {} %}
-    {% if conv_sig.signature_link and conv_sig.status not in ['signed', 'done'] %}
-    <div class="card" style="border-left:4px solid #2563eb;">
-      <h2>Signature de votre convocation</h2>
-      <p class="muted" style="margin:0 0 12px;">
-        Votre convocation de formation est prête. Merci de la signer électroniquement.
-      </p>
-      <a class="btn" href="{{ url_for('public_convocation_signature_redirect', token=token_safe) }}" target="_blank" rel="noopener">
-        ✍️ Signer ma convocation
-      </a>
-    </div>
-    {% elif conv_sig.status == 'signed' %}
-    <div class="card" style="border-left:4px solid #16a34a;">
-      <h2>Signature de votre convocation</h2>
-      <span class="pill green">✅ Convocation signée</span>
-    </div>
-    {% endif %}
-
-    <!-- Encadré 2 : suivi de dossier -->
-  {% if not trainee.public_hide_suivi %}
-    <div class="card">
-      <h2>Suivi de dossier</h2>
-
-      {% if not is_dirigeant_vae %}
-      <div class="docrow">
-  <div class="docmeta"><div class="label">Inscription validée</div></div>
-  <span class="pill green">✅ VALIDÉE</span>
-</div>
-      {% endif %}
-
-
-      <div class="docrow">
-        <div class="docmeta"><div class="label">{{ 'Convention VAE' if is_dirigeant_vae else 'Convention de formation' }}</div></div>
-        {{ pill_for('convention', trainee.convention_status) }}
-      </div>
-
-      <div class="docrow">
-        <div class="docmeta"><div class="label">Financement</div></div>
-        {{ pill_for('financement', trainee.financement_status) }}
-      </div>
-
-      {% if show_vae %}
-      {% set vae_key = trainee.vae_status or 'livret_1_todo' %}
-      {% set vae_map = {
-        'livret_1_todo': {'label':'Livret 1 à compléter','cls':'orange'},
-        'livret_1_analysis': {'label':"Livret 1 en cours d'analyse",'cls':'gray'},
-        'complement_requested': {'label':'Demande de complément en cours','cls':'orange'},
-        'livret_2_todo': {'label':'Livret 2 à compléter','cls':'orange'},
-        'livret_2_analysis': {'label':'Réception livret 2','cls':'gray'},
-        'livret_2_validated': {'label':'Livret 2 validé','cls':'green'},
-        'financement_l2_validated': {'label':'Financement L2 validé','cls':'green'},
-        'livret_1_validated': {'label':'Livret 1 validé','cls':'green'},
-        'financement_validated': {'label':'Financement validé','cls':'green'},
-        'jury': {'label':'Passage devant le jury','cls':'yellow'},
-        'certified': {'label':'Diplôme obtenu','cls':'green'}
-      } %}
-      {% set vae_current = vae_map[vae_key] if vae_key in vae_map else vae_map['livret_1_todo'] %}
-      <div class="docrow">
-        <div class="docmeta"><div class="label">Statut VAE</div></div>
-        <span class="pill {{ vae_current.cls }}">{{ vae_current.label }}</span>
-      </div>
-      {% endif %}
-
-      {% if not show_vtc and not is_dirigeant_vae %}
-      <div class="docrow">
-        <div class="docmeta"><div class="label">Dossier</div></div>
-        {{ pill_for('dossier', 'complete' if dossier_ok else 'incomplete') }}
-      </div>
-
-      {% if "DIRIGEANT" not in tt and "DESP" not in tt %}
-
-      <div class="docrow">
-        <div class="docmeta"><div class="label">CNAPS</div></div>
-        {{ pill_for('cnaps', trainee.cnaps) }}
-      </div>
-
-      {% set cnaps_upper = (trainee.cnaps or '')|trim|upper %}
-      {% if is_security_training and cnaps_upper in ['INCONNU', 'UNKNOWN', ''] %}
-      <div class="hint">
-        <strong>IMPORTANT :</strong> Veuillez déposer votre dossier CNAPS en cliquant ici :
-        <a class="btn outline small" target="_blank" rel="noopener" href="https://cnapsv3.onrender.com/public-form">https://cnapsv3.onrender.com/public-form</a>
-      </div>
-      {% endif %}
-
-      <div class="docrow">
-        <div class="docmeta"><div class="label">Test de français</div></div>
-        {{ pill_for('test_fr', trainee.test_fr_status) }}
-      </div>
-      {% endif %}
-      {% endif %}
-
-      {% if show_hosting %}
-        <div class="docrow">
-          <div class="docmeta"><div class="label">Hébergement</div></div>
-          {{ pill_for('hosting', trainee.hosting_status) }}
-        </div>
-
-        {% if (trainee.hosting_status or 'unknown') == 'unknown' %}
-          <div class="hint">
-            <div style="font-weight:900;margin-bottom:6px;">Hébergement non réservé</div>
-            Pour réserver l’hébergement :
-            <a class="btn outline small" target="_blank" href="https://assistance-alw9.onrender.com/hebergement">Cliquez ici</a>
-          </div>
-        {% endif %}
-      {% endif %}
-    </div>
-{% endif %}
+    {% if conv_sig.signed_pdf_token or convention_action_required or is_aps_training %}<section class="trainee-overview-card documents-card" aria-labelledby="documentsTitle"><div><p class="card-kicker">Vos documents</p><h2 id="documentsTitle" class="card-title">Documents de formation</h2></div><div class="documents-list">
+      <div class="document-card"><span class="document-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 18h3"/></svg></span><div><div class="document-title">Convention de formation</div><div class="document-subtitle">{% if convention_done %}Signée{% elif convention_action_required %}Prête à signer{% else %}En préparation{% endif %}</div></div>{% if convention_done %}<span class="pill green">Signée</span>{% elif convention_action_required %}<span class="pill blue">À signer</span>{% else %}<span class="pill gray">À venir</span>{% endif %}{% if conv_sig.signed_pdf_token %}<a class="btn outline small" href="{{ url_for('public_download_file', token=token_safe, file_token=conv_sig.signed_pdf_token) }}" target="_blank" rel="noopener">Consulter</a>{% elif convention_action_required %}<a class="btn small" href="{{ url_for('public_convocation_signature_redirect', token=token_safe) }}" target="_blank" rel="noopener">Signer</a>{% else %}<span></span>{% endif %}</div>
+      <div class="document-card"><span class="document-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 2v4M16 2v4M8 12h8M8 16h5"/></svg></span><div><div class="document-title">Convocation à la formation</div><div class="document-subtitle">{{ 'Disponible' if trainee.convocation_aps_pdf_token else 'Disponible prochainement' }}</div></div>{% if trainee.convocation_aps_pdf_token %}<span class="pill blue">Disponible</span><a class="btn outline small" href="{{ url_for('public_download_file', token=token_safe, file_token=trainee.convocation_aps_pdf_token) }}" target="_blank" rel="noopener">Télécharger</a>{% else %}<span class="pill gray">À venir</span><span></span>{% endif %}</div>
+    </div></section>{% endif %}
 
     {% if not trainee.public_hide_infos %}
 <!-- Encadré : infos à compléter (autosave) -->
 {% if show_vtc or is_security_training %}
-<details id="infosToCompleteDetails" class="collapse-card" style="grid-column:1/-1;">
+<details id="infosToCompleteDetails" class="collapse-card saas-section-card info-completion-card">
   <summary class="collapse-summary">
     <span class="collapse-summary-main">
-      <span>{{ '1️⃣ Infos à compléter' if is_security_training else 'Infos à compléter' }}</span>
+      <span class="saas-title-row"><span class="saas-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg></span><span><span class="card-kicker">Informations obligatoires</span>{% if not is_security_training %}<span class="card-title">Infos à compléter</span>{% endif %}</span></span>
       <span id="infosToCompleteOk" class="oktag" hidden>Tout est OK ✅</span>
       <span id="infosToCompleteAlert" class="infos-warning" role="status" aria-live="polite" hidden>
         ⚠️ Ouvrez cet onglet pour compléter vos informations
+      </span>
+      <span id="infosSummaryProgress" class="infos-summary-progress" role="status" aria-live="polite" hidden>
+        <span id="infosSummaryProgressLabel">0/0 complété</span>
+        <span class="infos-summary-progress-track" aria-hidden="true"><span id="infosSummaryProgressFill" class="infos-summary-progress-fill"></span></span>
+        <span id="infosSummaryProgressPercent">0%</span>
       </span>
     </span>
   </summary>
   <div class="collapse-content">
 {% else %}
-<div class="card" style="grid-column:1/-1;">
-  <h2>Infos à compléter</h2>
+<div class="saas-section-card info-completion-card" style="padding:20px 22px;">
+  <div class="saas-card-header"><div class="saas-title-row"><span class="saas-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg></span><div><p class="card-kicker">Informations obligatoires</p><h2 class="card-title">Infos à compléter</h2></div></div></div>
 {% endif %}
-  <div class="muted" style="margin-bottom:10px;">
+  <div class="saas-helper">
     ✅ <strong>Tout ce que vous saisissez est enregistré automatiquement.</strong><br>
-    ⚠️ Ces informations sont <strong>obligatoires</strong>.
-    Quand un champ est incomplet, il apparaît en <span style="color:#b91c1c;font-weight:900;">rouge</span>.
+    ⚠️ Ces informations sont <strong>obligatoires</strong>. Les champs incomplets restent clairement signalés.
   </div>
+
 
 {% macro field(label, id, value, placeholder) %}
   {% set ok = value and value|length > 3 %}
@@ -1285,22 +1247,40 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
   
 <!-- Encadré 3 : mes documents (upload) -->
 {% if show_vae or is_security_training %}
-<details id="documentsDetails" class="collapse-card" style="grid-column:1/-1;">
+<details id="documentsDetails" class="collapse-card saas-section-card documents-upload-card">
   <summary id="documentsSummary" class="collapse-summary">
     <span class="collapse-summary-main">
-      <span>{{ '2️⃣ Mes documents' if is_security_training else 'Mes documents' }} <span id="documentsLockIcon" hidden>🔒</span></span>
+      <span class="saas-title-row"><span class="saas-title-icon green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 18h3"/></svg></span><span><span class="card-kicker">Documents à déposer</span>{% if not is_security_training %}<span class="card-title">Mes documents <span id="documentsLockIcon" hidden>🔒</span></span>{% else %}<span id="documentsLockIcon" hidden>🔒</span>{% endif %}</span></span>
       <span id="documentsOkTag" class="oktag" hidden>Tout est OK ✅</span>
       <span id="documentsAlert" class="infos-warning" role="status" aria-live="polite" hidden>
         ⚠️ Ouvrez cet onglet pour déposer vos documents
+      </span>
+      <span id="documentsSummaryProgress" class="documents-summary-progress" role="status" aria-live="polite" hidden>
+        <span id="documentsSummaryProgressLabel">0/0 déposé</span>
+        <span class="documents-summary-progress-track" aria-hidden="true"><span id="documentsSummaryProgressFill" class="documents-summary-progress-fill"></span></span>
+        <span id="documentsSummaryProgressPercent">0%</span>
       </span>
     </span>
   </summary>
   <div class="collapse-content">
 {% else %}
-<div class="card" style="grid-column:1/-1;">
-  <h2>Mes documents</h2>
+<div class="saas-section-card documents-upload-card" style="padding:20px 22px;">
+  <div class="saas-card-header"><div class="saas-title-row"><span class="saas-title-icon green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 18h3"/></svg></span><div><p class="card-kicker">Documents à déposer</p><h2 class="card-title">Mes documents</h2></div></div></div>
 {% endif %}
-  <div id="documentsHint" class="muted">⚠️ Ouvrez cet onglet pour déposer vos documents.</div>
+  <div id="documentsHint" class="saas-helper">⚠️ Ouvrez cet onglet pour déposer vos documents. Chaque ligne indique le format attendu, le statut et l’action disponible.</div>
+
+  <div id="documentsProgress" class="documents-upload-progress" role="status" aria-live="polite">
+    <div class="documents-upload-progress-head">
+      <div>
+        <div class="documents-upload-progress-title">Avancement du dépôt</div>
+        <div id="documentsProgressText" class="documents-upload-progress-text">Chargement de votre progression…</div>
+      </div>
+      <div id="documentsProgressBadge" class="documents-upload-progress-badge">0%</div>
+    </div>
+    <div class="documents-upload-progress-track" aria-hidden="true">
+      <div id="documentsProgressFill" class="documents-upload-progress-fill"></div>
+    </div>
+  </div>
 
   <div class="docs-stack">
 
@@ -1324,6 +1304,7 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
 {% set candidate_sheet_sent = d.key == "candidate_info_sheet" and up not in ["NON DÉPOSÉ", "NON DEPOSE", ""] %}
   {% set scotia_added_documents = trainee.scotia_added_documents or [] %}
   {% set complementary_documents_new_expected = d.key == "complementary_documents" and trainee.scotia_complementary_documents_review_status == "complement_documents_new_expected" and not scotia_added_documents %}
+{% set is_optional_doc = d.optional|default(false) %}
 {% set has_submission = has_file or candidate_sheet_sent %}
   {% set can_replace = (has_file and up == "NON CONFORME") %}
   {% set is_pending_review = (has_submission and up != "CONFORME" and up != "NON CONFORME") %}
@@ -1331,7 +1312,7 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
   {% set can_add_more = (d.key in ["livret_2", "complementary_documents"]) or ((file_tokens|length) < max_files) %}
 {% set show_upload = ((not has_file) or can_replace or complementary_documents_new_expected or (d.key in ["livret_2", "complementary_documents"] and can_add_more and not is_pending_review)) and not (d.key == "permis" and trainee.no_permis) %}
 
-    {% set row_cls = "missing" %}
+    {% set row_cls = "" if is_optional_doc else "missing" %}
     {% if has_submission %}
       {% if up == "CONFORME" %}
         {% set row_cls = "" %}
@@ -1372,9 +1353,9 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
       ] %}
     {% endif %}
 
-<div class="docrow {{ row_cls }}" id="doc_{{ d.key }}">
+<div class="docrow {{ row_cls }}" id="doc_{{ d.key }}" data-doc-required="{{ 'false' if is_optional_doc else 'true' }}" data-doc-submitted="{{ 'true' if has_submission or (d.key == 'permis' and trainee.no_permis) else 'false' }}">
       <div class="docmeta">
-        <div class="label">{{ "Fiche de renseignement candidat à compléter" if d.key == "candidate_info_sheet" else d.label }}</div>
+        <div class="label">{{ "Fiche de renseignement candidat à compléter" if d.key == "candidate_info_sheet" else d.label }}{% if is_optional_doc %} <span class="doctag" style="margin-left:8px;">Facultatif</span>{% endif %}</div>
         {% if d.key == "candidate_info_sheet" %}
           {% set candidate_sheet_pending_review = up not in ["NON DÉPOSÉ", "NON DEPOSE", "", "NON CONFORME", "CONFORME"] %}
           <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -1419,12 +1400,12 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
             </ul>
           </div>
         {% endif %}
-        {% if d.key == "certificat_medical_ssiap_afc" %}
+        {% if d.key in ["certificat_medical_ssiap", "certificat_medical_ssiap_afc"] %}
           <div class="doc-format-box">
             <div class="doc-format-title">📥 Modèle obligatoire</div>
             <ul class="doc-format-list">
               <li>Téléchargez le modèle, faites-le compléter par votre médecin, puis déposez-le ici.</li>
-              <li><a href="{{ url_for('static', filename='certificat.pdf') }}" target="_blank" rel="noopener">Télécharger le modèle du certificat médical</a></li>
+              <li><a href="{{ url_for('public_ssiap_medical_certificate_template') }}" target="_blank" rel="noopener">Télécharger le modèle officiel du certificat médical</a></li>
             </ul>
           </div>
           {% if ssiap_exam_date and ssiap_medical_from_date %}
@@ -1527,12 +1508,12 @@ id="upload_{{ d.key }}"
          name="files"
          multiple
          accept="{{ accept }}"
-         {% if not (d.key == "permis" and trainee.no_permis) %}required{% endif %}>
+         {% if not (d.key == "permis" and trainee.no_permis) and not is_optional_doc %}required{% endif %}>
 {% else %}
   <input type="file"
          name="file"
          accept="{{ accept }}"
-         {% if not (d.key == "permis" and trainee.no_permis) %}required{% endif %}>
+         {% if not (d.key == "permis" and trainee.no_permis) and not is_optional_doc %}required{% endif %}>
 {% endif %}
 
 <button class="btn small upload-cta" type="submit">
@@ -1600,6 +1581,21 @@ id="upload_{{ d.key }}"
       </div>  <!-- ferme .docmeta -->
     </div>    <!-- ferme .docrow -->
   {% endfor %}
+  {% if show_professional_experience_sheet %}
+    <div class="docrow professional-experience-docrow {{ '' if trainee.professional_experience_sheet else 'missing' }}" id="doc_professional_experience_sheet" data-doc-required="true" data-doc-submitted="{{ 'true' if trainee.professional_experience_sheet else 'false' }}">
+      <div class="docmeta">
+        <button class="pro-sheet-launch{% if not trainee.professional_experience_sheet %} needs-attention{% else %} is-sent{% endif %}" type="button"{% if trainee.professional_experience_sheet %} disabled aria-disabled="true"{% else %} data-pro-sheet-open{% endif %}>
+          <span class="pro-sheet-launch-icon" aria-hidden="true">✦</span>
+          <span class="pro-sheet-launch-copy">
+            <strong>Fiche expérience professionnelle <span class="pro-sheet-required-label">Obligatoire</span></strong>
+            <small>{% if trainee.professional_experience_sheet %}Votre fiche a bien été transmise. Elle ne peut plus être modifiée.{% else %}Complétez et transmettez votre parcours professionnel.{% endif %}</small>
+            <span class="pro-sheet-launch-status {% if trainee.professional_experience_sheet %}sent{% else %}required{% endif %}">{% if trainee.professional_experience_sheet %}Fichier envoyé{% else %}À compléter{% endif %}</span>
+          </span>
+          <span class="pro-sheet-launch-arrow" aria-hidden="true">{% if trainee.professional_experience_sheet %}✓{% else %}→{% endif %}</span>
+        </button>
+      </div>
+    </div>
+  {% endif %}
 </div>
 {% if show_vae or is_security_training %}
   </div>
@@ -1609,7 +1605,7 @@ id="upload_{{ d.key }}"
 {% endif %}
 
   {% endif %}
-  {% if show_professional_experience_sheet %}
+  {% if show_professional_experience_sheet and (trainee.public_hide_docs or show_vtc) %}
   <button class="pro-sheet-launch{% if not trainee.professional_experience_sheet %} needs-attention{% else %} is-sent{% endif %}" type="button"{% if trainee.professional_experience_sheet %} disabled aria-disabled="true"{% else %} data-pro-sheet-open{% endif %}>
     <span class="pro-sheet-launch-icon" aria-hidden="true">✦</span>
     <span class="pro-sheet-launch-copy">
@@ -1625,49 +1621,25 @@ id="upload_{{ d.key }}"
   {% endif %}
     {% if not show_vtc and not is_dirigeant_vae %}
     <!-- Encadré 4 : diplômes et attestations -->
-    <div class="card diplomas-card" style="grid-column:1/-1;">
-      <h2>Mes diplômes et attestations</h2>
+    <section class="saas-section-card diplomas-card" style="padding:20px 22px;">
+      <div class="saas-card-header">
+        <div class="saas-title-row">
+          <span class="saas-title-icon purple" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg></span>
+          <div><p class="card-kicker">Documents délivrés</p><h2 class="card-title">Mes diplômes et attestations</h2></div>
+        </div>
+      </div>
 
-
-
-    {% set deliv = trainee.deliverables or {} %}
-
-{% if not is_dirigeant_training %}
-<div class="docrow">
-  <div class="docmeta"><div class="label">Ma carte SST</div></div>
-  {% if deliv.get('carte_sst') %}
-<a class="btn outline small" target="_blank"
-   href="/espace/{{ token_safe }}/download/{{ deliv.get('carte_sst') }}">Voir</a>
-
-  {% else %}
-    <span class="pill gray">Prochainement</span>
-  {% endif %}
-</div>
-{% endif %}
-
-<div class="docrow">
-  <div class="docmeta"><div class="label">Mon diplôme</div></div>
-  {% if deliv.get('diplome') %}
-    <a class="btn outline small" target="_blank"
-   href="/espace/{{ token_safe }}/download/{{ deliv.get('diplome') }}">Voir</a>
-
-  {% else %}
-    <span class="pill gray">Prochainement</span>
-  {% endif %}
-</div>
-
-<div class="docrow">
-  <div class="docmeta"><div class="label">Mes attestations de fin de formation</div></div>
-  {% if deliv.get('attestation_fin_formation') %}
-   <a class="btn outline small" target="_blank"
-   href="/espace/{{ token_safe }}/download/{{ deliv.get('attestation_fin_formation') }}">Voir</a>
-
-  {% else %}
-    <span class="pill gray">Prochainement</span>
-  {% endif %}
-</div>
-
-    </div>
+      {% set deliv = trainee.deliverables or {} %}
+      {% set end_attestation_token = trainee.attestation_fin_aps_pdf_token or deliv.get('attestation_fin_formation') %}
+      <div class="deliverables-list">
+        {% if not is_dirigeant_training %}
+        <div class="deliverable-row"><span class="deliverable-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M7 8h5M7 12h3M16 12h1"/></svg></span><div><div class="deliverable-title">Ma carte SST</div><div class="deliverable-subtitle">{{ 'Disponible' if deliv.get('carte_sst') else 'Disponible prochainement' }}</div></div>{% if deliv.get('carte_sst') %}<span class="pill green">Disponible</span><a class="btn outline small" target="_blank" href="/espace/{{ token_safe }}/download/{{ deliv.get('carte_sst') }}">Consulter</a>{% else %}<span class="pill gray">À venir</span><span></span>{% endif %}</div>
+        {% endif %}
+        <div class="deliverable-row"><span class="deliverable-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5-10-5Z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg></span><div><div class="deliverable-title">Mon diplôme</div><div class="deliverable-subtitle">{{ 'Disponible' if deliv.get('diplome') else 'Disponible prochainement' }}</div></div>{% if deliv.get('diplome') %}<span class="pill green">Disponible</span><a class="btn outline small" target="_blank" href="/espace/{{ token_safe }}/download/{{ deliv.get('diplome') }}">Consulter</a>{% else %}<span class="pill gray">À venir</span><span></span>{% endif %}</div>
+        <div class="deliverable-row"><span class="deliverable-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="m9 15 2 2 4-4"/></svg></span><div><div class="deliverable-title">Attestation d'entrée en formation</div><div class="deliverable-subtitle">{{ 'Disponible' if trainee.attestation_entree_aps_pdf_token else 'Disponible prochainement' }}</div></div>{% if trainee.attestation_entree_aps_pdf_token %}<span class="pill blue">Disponible</span><a class="btn outline small" target="_blank" href="/espace/{{ token_safe }}/download/{{ trainee.attestation_entree_aps_pdf_token }}">Télécharger</a>{% else %}<span class="pill gray">À venir</span><span></span>{% endif %}</div>
+        <div class="deliverable-row"><span class="deliverable-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 14h6M9 18h4"/></svg></span><div><div class="deliverable-title">Attestation de fin de formation</div><div class="deliverable-subtitle">{{ 'Disponible' if end_attestation_token else 'Disponible prochainement' }}</div></div>{% if end_attestation_token %}<span class="pill blue">Disponible</span><a class="btn outline small" target="_blank" href="/espace/{{ token_safe }}/download/{{ end_attestation_token }}">Télécharger</a>{% else %}<span class="pill gray">À venir</span><span></span>{% endif %}</div>
+      </div>
+    </section>
     {% endif %}
 
   {% if is_dirigeant_vae %}
@@ -2065,6 +2037,8 @@ id="upload_{{ d.key }}"
     margin:0 auto 12px auto;
   }
   @keyframes iaSpin{to{transform:rotate(360deg)}}
+
+
 </style>
 
 {% if not trainee.public_hide_welcome_popup %}
@@ -2331,23 +2305,55 @@ function closeUploadSuccessModal(event) {
     if (vtcCredentialsHint) vtcCredentialsHint.style.display = "none";
   };
 
-  const infosAreComplete = () => {
+  const getInfosProgress = () => {
     const fieldsToCheck = ["carte_vitale","birth_date","birth_city","birth_country","nationality","address","zip_code","city"];
     if (document.getElementById("pre_number")) fieldsToCheck.push("pre_number");
     if (document.getElementById("tshirt_size")) fieldsToCheck.push("tshirt_size");
-    return !fieldsToCheck.some((id) => {
+
+    const total = fieldsToCheck.length;
+    const completed = fieldsToCheck.filter((id) => {
       const statusEl = document.getElementById(`ok_${id}`);
-      return statusEl && (statusEl.textContent || "").includes("À compléter");
-    });
+      return statusEl && !(statusEl.textContent || "").includes("À compléter");
+    }).length;
+
+    return { total, completed, remaining: Math.max(total - completed, 0), percent: total ? Math.round((completed / total) * 100) : 100 };
+  };
+
+  const infosAreComplete = () => {
+    const progress = getInfosProgress();
+    return progress.total > 0 && progress.completed === progress.total;
   };
 
   const updateInfosToCompleteWarning = () => {
-    const complete = infosAreComplete();
-    if (infosWarning && infosDetails) infosWarning.hidden = complete || infosDetails.open;
+    const progress = getInfosProgress();
+    const complete = progress.total > 0 && progress.completed === progress.total;
+    const infosSummaryProgress = document.getElementById("infosSummaryProgress");
+    const infosSummaryProgressLabel = document.getElementById("infosSummaryProgressLabel");
+    const infosSummaryProgressFill = document.getElementById("infosSummaryProgressFill");
+    const infosSummaryProgressPercent = document.getElementById("infosSummaryProgressPercent");
+
+    if (infosWarning && infosDetails) {
+      infosWarning.hidden = complete || infosDetails.open;
+      if (!complete) infosWarning.textContent = `⚠️ Complétez vos informations (${progress.completed}/${progress.total} complétées).`;
+    }
     if (infosOk) infosOk.hidden = !complete;
+    if (infosSummaryProgress) {
+      infosSummaryProgress.hidden = progress.total === 0;
+      infosSummaryProgress.classList.toggle("is-complete", complete);
+    }
+    if (infosSummaryProgressLabel) infosSummaryProgressLabel.textContent = `${progress.completed}/${progress.total} complété${progress.completed > 1 ? "s" : ""}`;
+    if (infosSummaryProgressFill) infosSummaryProgressFill.style.width = `${progress.percent}%`;
+    if (infosSummaryProgressPercent) infosSummaryProgressPercent.textContent = `${progress.percent}%`;
   };
 
   const updateDocumentsWarning = () => {
+    const docRows = Array.from(document.querySelectorAll(".documents-upload-card .docs-stack .docrow[data-doc-required=\"true\"]"));
+    const submittedRows = docRows.filter((row) => row.dataset.docSubmitted === "true");
+    const totalDocs = docRows.length;
+    const submittedDocs = submittedRows.length;
+    const missingDocs = docRows.filter((row) => row.classList.contains("missing") && row.dataset.docSubmitted !== "true").length;
+    const pendingDocs = docRows.filter((row) => row.classList.contains("pending")).length;
+    const progressPercent = totalDocs ? Math.round((submittedDocs / totalDocs) * 100) : 100;
     const hasMissing = !!document.querySelector(".docs-stack .docrow.missing");
     const infosComplete = infosAreComplete();
     const locked = documentsLockEnabled && !infosComplete;
@@ -2361,11 +2367,45 @@ function closeUploadSuccessModal(event) {
     }
     if (documentsLockIcon) documentsLockIcon.hidden = !locked;
 
+    const documentsProgress = document.getElementById("documentsProgress");
+    const documentsProgressText = document.getElementById("documentsProgressText");
+    const documentsProgressBadge = document.getElementById("documentsProgressBadge");
+    const documentsProgressFill = document.getElementById("documentsProgressFill");
+    const documentsSummaryProgress = document.getElementById("documentsSummaryProgress");
+    const documentsSummaryProgressLabel = document.getElementById("documentsSummaryProgressLabel");
+    const documentsSummaryProgressFill = document.getElementById("documentsSummaryProgressFill");
+    const documentsSummaryProgressPercent = document.getElementById("documentsSummaryProgressPercent");
+
+    const progressComplete = !locked && totalDocs > 0 && submittedDocs === totalDocs && !hasMissing;
+
+    if (documentsProgress) {
+      documentsProgress.hidden = locked || totalDocs === 0;
+      documentsProgress.classList.toggle("is-complete", progressComplete);
+    }
+    if (documentsProgressFill) documentsProgressFill.style.width = `${progressPercent}%`;
+    if (documentsProgressBadge) documentsProgressBadge.textContent = `${progressPercent}%`;
+    if (documentsSummaryProgress) {
+      documentsSummaryProgress.hidden = totalDocs === 0;
+      documentsSummaryProgress.classList.toggle("is-complete", progressComplete);
+    }
+    if (documentsSummaryProgressLabel) documentsSummaryProgressLabel.textContent = locked ? "Verrouillé" : `${submittedDocs}/${totalDocs} déposé${submittedDocs > 1 ? "s" : ""}`;
+    if (documentsSummaryProgressFill) documentsSummaryProgressFill.style.width = `${progressPercent}%`;
+    if (documentsSummaryProgressPercent) documentsSummaryProgressPercent.textContent = `${progressPercent}%`;
+    if (documentsProgressText) {
+      if (totalDocs === 0) {
+        documentsProgressText.textContent = "Aucun document obligatoire à déposer pour le moment.";
+      } else if (submittedDocs === totalDocs && !hasMissing) {
+        documentsProgressText.textContent = `Tous les documents sont déposés (${submittedDocs}/${totalDocs}). ${pendingDocs ? `${pendingDocs} en attente de contrôle.` : ""}`.trim();
+      } else {
+        documentsProgressText.textContent = `${submittedDocs}/${totalDocs} document${totalDocs > 1 ? "s" : ""} déposé${submittedDocs > 1 ? "s" : ""}. ${missingDocs} restant${missingDocs > 1 ? "s" : ""} à déposer.`;
+      }
+    }
+
     if (documentsHint) {
       if (locked) {
         documentsHint.textContent = "🔒 Vous pourrez déposer vos documents quand vous aurez saisi vos informations.";
       } else if (hasMissing) {
-        documentsHint.textContent = "⚠️ Déposez maintenant vos documents.";
+        documentsHint.textContent = `⚠️ Déposez maintenant vos documents (${submittedDocs}/${totalDocs} déposés).`;
       } else {
         documentsHint.textContent = "Tout est OK ✅";
       }

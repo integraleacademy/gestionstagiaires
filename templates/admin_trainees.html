@@ -9,6 +9,7 @@
 {% set is_dirigeant_session = is_dirigeant or ("DIRIGEANT" in (session.training_type or "")|upper) or ("DIRIGEANT" in (session.name or "")|upper) %}
 {% set is_all_vtc = all_vtc|default(false) %}
 {% set is_ssiap_session = "SSIAP" in ((session.training_type or "") ~ " " ~ (session.name or ""))|upper %}
+{% set is_aps_or_a3p_session = ("APS" in ((session.training_type or "") ~ " " ~ (session.name or ""))|upper) or ("A3P" in ((session.training_type or "") ~ " " ~ (session.name or ""))|upper) %}
 
 <div class="breadcrumbs">
   <a href="{{ url_for('admin_sessions', **request.args) }}">← Retour sessions</a>
@@ -363,7 +364,7 @@
         {% if not is_vtc %}<th class="col-dossier-status">Dossier</th>{% endif %}
         {% if not is_vtc %}<th class="col-dossier-complete">Dossier complet</th>{% endif %}
         {% if not is_vtc and not show_vae and not is_dirigeant_session and not is_ssiap_session %}<th>CNAPS</th>{% endif %}
-        {% if is_aps %}<th>Signature convocation</th>{% endif %}
+        {% if is_aps_or_a3p_session and not show_vae and not is_vtc %}<th class="col-card-pro-followup">Suivi carte pro</th>{% endif %}
         {% if is_vtc %}<th>Inscription CMAR</th>{% endif %}
         {% if is_vtc %}<th>E-learning</th>{% endif %}
         {% if is_vtc %}<th>Livre</th>{% endif %}
@@ -558,11 +559,27 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         </td>
         {% endif %}
 
-        {% if is_aps %}
-        <td>
-          <span class="pill {% if t.convocation_signature_label == 'Signée' %}green{% elif t.convocation_signature_label in ['Expirée / refusée / erreur', 'Non envoyée'] %}gray{% else %}blue{% endif %}">{{ t.convocation_signature_label }}</span>
+        {% if is_aps_or_a3p_session and not show_vae and not is_vtc %}
+        {% set card_pro_nub = extract_nub_from_pre_car(t.pre_number or '') %}
+        <td class="col-card-pro-followup">
+          {% if card_pro_nub %}
+            <div class="card-pro-followup"
+                 data-card-pro-followup
+                 data-nom="{{ t.last_name or '' }}"
+                 data-nub="{{ card_pro_nub }}"
+                 data-cnaps-status="{{ t.cnaps or '' }}"
+                 data-fallback-activity="Autorisation préalable - Surveillance humaine ou gardiennage">
+              <div class="card-pro-result" data-card-pro-result>Chargement CNAPS…</div>
+              <button class="mini-btn card-pro-refresh-btn" data-card-pro-refresh type="button" title="Rafraîchir le suivi carte pro">↻</button>
+              <div class="muted">Nom : <strong>{{ t.last_name or "—" }}</strong></div>
+              <div class="muted">NUB : <strong>{{ card_pro_nub }}</strong></div>
+            </div>
+          {% else %}
+            <span class="muted">NUB manquant</span>
+          {% endif %}
         </td>
         {% endif %}
+
         {% if is_vtc %}
         {% set vtc_cmar_ok = t.exam_fees_paid or t.vtc_cmar_manual_ok %}
         {% set vtc_elearning_ok = ((t.elearning_link or "")|trim) or t.vtc_elearning_manual_ok %}
@@ -889,14 +906,17 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 
 <!-- MODALE CREATION STAGIAIRE -->
 <div class="modal-backdrop" id="createTraineeModal" aria-hidden="true">
-  <div class="modal">
-    <div class="modal-head">
-      <div class="modal-title">Ajouter un stagiaire</div>
+  <div class="modal trainee-create-modal">
+    <div class="modal-head trainee-create-head">
+      <div>
+        <div class="modal-eyebrow">Nouveau dossier</div>
+        <div class="modal-title">Ajouter un stagiaire</div>
+      </div>
       <button class="icon-btn" data-close-modal="createTraineeModal">✕</button>
     </div>
 
-    <div class="modal-body">
-      <div class="form-grid">
+    <div class="modal-body trainee-create-body">
+      <div class="form-grid trainee-create-grid">
         <label>
           <div class="label">Nom</div>
           <input id="tLastName" type="text" placeholder="Nom">
@@ -934,25 +954,13 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
           <div class="label">Ville actuelle (facultatif)</div>
           <input id="tCity" type="text" placeholder="Ville actuelle">
         </label>
-        <label>
-          <div class="label">Montant CPF</div>
-          <input id="tCpfAmount" type="number" min="0" step="0.01" placeholder="0.00">
-        </label>
-        <label>
-          <div class="label">Montant financement personnel</div>
-          <input id="tPersonalAmount" type="number" min="0" step="0.01" placeholder="0.00">
-        </label>
-        <label>
-          <div class="label">Montant autre financement</div>
-          <input id="tOtherAmount" type="number" min="0" step="0.01" placeholder="0.00">
-        </label>
         {% if is_vtc %}
         <label style="grid-column:1/-1;">
           <div class="label" style="font-weight:900;color:#f97316;">Dates réelles de formation VTC</div>
           <input id="tVtcRealTrainingDates" type="text" placeholder="Ex : 10/05/2026 au 12/05/2026">
         </label>
         {% endif %}
-        <label style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+        <label class="trainee-create-check" style="display:flex;align-items:center;gap:10px;margin-top:8px;">
   <input id="tCarteProOk" type="checkbox" style="width:18px;height:18px;">
   <div class="label" style="margin:0;">Carte professionnelle (CNAPS) déjà OK</div>
 </label>
@@ -960,8 +968,8 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
       </div>
     </div>
 
-    <div class="modal-foot">
-      <button class="btn btn-orange" id="btnImportTraineeInfos" type="button" style="margin-right:auto;">Importer infos</button>
+    <div class="modal-foot trainee-create-foot">
+      <button class="btn btn-orange trainee-import-btn" id="btnImportTraineeInfos" type="button" style="margin-right:auto;">Importer infos</button>
       <input id="importTraineeInfosInput" type="file" accept="image/*" style="display:none;">
       <button class="btn" data-close-modal="createTraineeModal">Annuler</button>
       <button class="btn btn-primary" id="btnCreateTrainee">Sauvegarder</button>
@@ -1075,6 +1083,59 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 </div>
 
 <style>
+
+#traineesTable .col-card-pro-followup{
+  width:220px;
+  min-width:220px;
+  max-width:240px;
+  vertical-align:middle;
+}
+.card-pro-followup{
+  display:grid;
+  grid-template-columns:minmax(0, 1fr) auto;
+  gap:4px 6px;
+  align-items:center;
+  font-size:11px;
+  line-height:1.15;
+}
+.card-pro-followup .muted{
+  grid-column:1 / -1;
+  font-size:10px;
+  line-height:1.1;
+}
+.card-pro-result{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:4px;
+  min-width:0;
+  max-width:100%;
+  font-size:11px;
+  line-height:1;
+  font-weight:900;
+}
+.card-pro-result__chip{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  min-width:0;
+  max-width:100%;
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:5px 8px;
+  white-space:nowrap;
+}
+.card-pro-result__activity{letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;}
+.card-pro-result__validity{font-size:9px;text-transform:uppercase;opacity:.9;overflow:hidden;text-overflow:ellipsis;}
+.card-pro-refresh-btn{padding:5px 8px;}
+.card-pro-result__date{display:none;}
+.card-pro-result.is-loading{background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;color:#1d4ed8;padding:5px 8px;}
+.card-pro-result__chip.is-active{background:#16a34a;border-color:#16a34a;color:#fff;}
+.card-pro-result__chip.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
+.card-pro-result__chip.is-unknown{background:#ffedd5;border-color:#fdba74;color:#9a3412;}
+.card-pro-result.is-active .card-pro-result__chip.is-active{background:#16a34a;border-color:#16a34a;color:#fff;}
+.card-pro-result.is-inactive .card-pro-result__chip.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
+.card-pro-result.is-unknown .card-pro-result__chip.is-unknown{background:#ffedd5;border-color:#fdba74;color:#9a3412;}
 
 #traineesTable .col-ssiap-exam{
   width:220px;
@@ -1308,10 +1369,10 @@ tr.row-todo td{
 }
 
 .prospects-notes-wrap{
-  width:100vw;
-  margin-top:18px;
-  margin-left:calc(50% - 50vw);
-  margin-right:calc(50% - 50vw);
+  width:100%;
+  max-width:100%;
+  margin:18px 0 0;
+  box-sizing:border-box;
 }
 
 .prospects-notes-card{
@@ -1319,6 +1380,8 @@ tr.row-todo td{
   border-radius:12px;
   background:#fff;
   padding:14px;
+  box-sizing:border-box;
+  overflow:hidden;
 }
 
 .prospects-notes-head{
@@ -3240,9 +3303,6 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     const address = (document.getElementById("tAddress").value || "").trim();
     const zip_code = (document.getElementById("tZipCode").value || "").trim();
     const city = (document.getElementById("tCity").value || "").trim();
-    const cpf_amount = (document.getElementById("tCpfAmount").value || "").trim();
-    const personal_amount = (document.getElementById("tPersonalAmount").value || "").trim();
-    const other_amount = (document.getElementById("tOtherAmount").value || "").trim();
     const vtc_real_training_dates = (document.getElementById("tVtcRealTrainingDates")?.value || "").trim();
     const carte_pro_ok = !!document.getElementById("tCarteProOk")?.checked;
     return {
@@ -3255,9 +3315,6 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       address,
       zip_code,
       city,
-      cpf_amount,
-      personal_amount,
-      other_amount,
       vtc_real_training_dates,
       carte_pro_ok
     };
@@ -3290,32 +3347,87 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     });
   }
 
-  async function proposeYpareoTransmission(result){
-    const continueUrl = result.trainee_url || result.summary_url || window.location.href;
-    const shouldTransmit = window.confirm(
-      "Le stagiaire a bien été enregistré.\n\nSouhaitez-vous transmettre ses données à YPAREO NEO maintenant ?"
-    );
-    if(!shouldTransmit || !result.ypareo_url){
+  async function proposeConventionSignature(result){
+    const continueUrl = result.trainee_url || result.summary_url || `/admin/sessions/${result.session_id || ""}/trainees`;
+    const continueAfterConvention = ()=>{
       window.location.href = continueUrl;
+    };
+    if(result.is_vae || result.automation_enabled === false || !result.convention_signature_url){ continueAfterConvention(); return; }
+    const financingUrl = result.convention_financing_url || "";
+    const saveConventionFinancing = async (payload)=>{
+      if(!financingUrl) return;
+      const financingResponse = await fetch(financingUrl, {
+        method: "POST",
+        headers: {"Content-Type":"application/json", "Accept":"application/json"},
+        body: JSON.stringify(payload)
+      });
+      const financingPayload = await financingResponse.json().catch(()=>({}));
+      if(!financingResponse.ok || !financingPayload.ok){ throw new Error(financingPayload.error || "Sauvegarde des montants impossible."); }
+    };
+    const previewUrl = result.convention_preview_url || "";
+    const conventionPayload = await window.openConventionTransmission?.({
+      trainingType: result.training_type || result.session_training_type || "",
+      defaults: {
+        training_price: result.training_price || "",
+        cpf_amount: result.cpf_amount || "",
+        personal_amount: result.personal_amount || "",
+        other_amount: result.other_amount || ""
+      },
+      previewUrl,
+      onPreview: async (payload)=>{
+        await saveConventionFinancing(payload);
+        if(previewUrl){ await window.openConventionPreview?.(previewUrl); }
+      }
+    });
+    if(!conventionPayload || !result.convention_signature_url){ continueAfterConvention(); return; }
+    try{
+      await saveConventionFinancing(conventionPayload);
+    }catch(error){
+      await (window.showConventionResult?.({
+        type: "error",
+        title: "Montants non sauvegardés",
+        message: error.message || "Impossible de sauvegarder les montants avant d’envoyer la convention.",
+        buttonText: "Compris"
+      }) || Promise.resolve(window.alert(error.message || "Impossible de sauvegarder les montants avant l’envoi.")));
+      continueAfterConvention();
       return;
     }
-
+    window.showConventionTransmissionProgress?.();
     try{
-      const response = await fetch(result.ypareo_url, {
-        method: "POST",
-        headers: {"Accept": "application/json"}
+      const response = await fetch(result.convention_signature_url, {
+        method: "POST", headers: {"Content-Type":"application/json", "Accept":"application/json"},
+        body: JSON.stringify(conventionPayload)
       });
       const payload = await response.json().catch(()=> ({}));
+      window.hideConventionTransmissionProgress?.();
       if(response.ok && payload.ok){
-        alert("Données transférées vers YPAREO NEO avec succès.");
-      }else{
-        alert(`Transmission vers YPAREO NEO impossible : ${payload.error || "erreur inconnue"}`);
+        await (window.showConventionResult?.({
+          type: payload.email_ok ? "success" : "warning",
+          title: payload.email_ok ? "Convention envoyée" : "Demande créée",
+          message: payload.email_ok ? "Convention envoyée au stagiaire pour signature." : "La demande de signature est créée, mais l’e-mail n’a pas pu être envoyé.",
+          buttonText: "Voir le dossier"
+        }) || Promise.resolve(window.alert(payload.email_ok ? "Convention envoyée au stagiaire pour signature." : "Demande créée, mais l’e-mail n’a pas pu être envoyé.")));
+      }
+      else{
+        await (window.showConventionResult?.({
+          type: "error",
+          title: "Envoi impossible",
+          message: `Envoi de la convention impossible : ${payload.error || "erreur inconnue"}`,
+          buttonText: "Compris"
+        }) || Promise.resolve(window.alert(`Envoi de la convention impossible : ${payload.error || "erreur inconnue"}`)));
       }
     }catch(error){
-      alert("Transmission vers YPAREO NEO impossible : le serveur ne répond pas.");
+      window.hideConventionTransmissionProgress?.();
+      await (window.showConventionResult?.({
+        type: "error",
+        title: "Serveur indisponible",
+        message: "Envoi de la convention impossible : le serveur ne répond pas.",
+        buttonText: "Compris"
+      }) || Promise.resolve(window.alert("Envoi de la convention impossible : le serveur ne répond pas.")));
     }
-    window.location.href = continueUrl;
+    continueAfterConvention();
   }
+
 
   async function createTrainee(send_access){
     const {
@@ -3328,9 +3440,6 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       address,
       zip_code,
       city,
-      cpf_amount,
-      personal_amount,
-      other_amount,
       vtc_real_training_dates,
       carte_pro_ok
     } = readCreateForm();
@@ -3356,9 +3465,6 @@ document.querySelectorAll("select.sel").forEach(sel=>{
           address,
           zip_code,
           city,
-          cpf_amount,
-          personal_amount,
-          other_amount,
           vtc_real_training_dates,
           carte_pro_ok,
           send_access
@@ -3372,10 +3478,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       }
 
       closeModal("createTraineeModal");
-      window.openYpareoTransmission({
-        url: res.ypareo_url,
-        continueUrl: res.trainee_url || res.summary_url || window.location.href
-      });
+      proposeConventionSignature(res);
     }catch(e){
       alert("Erreur réseau");
     }finally{
@@ -3469,7 +3572,6 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     const traineeSessionId = tr.getAttribute("data-session-id") || sessionId;
 
   
-
 
     const dossierSelect = tr.querySelector('select[data-field="dossier_status"]');
     const forceDossier = tr.querySelector('input.force-dossier');
@@ -3678,6 +3780,118 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       });
     }
 
+  });
+
+
+  // =========================
+  // Suivi carte pro CNAPS (annuaire public)
+  // =========================
+  function shortCardProActivity(value){
+    const normalized = (value || "").replace(/\s+/g, " ").trim().toLowerCase();
+    const map = new Map([
+      ["autorisation préalable - surveillance humaine ou gardiennage", "AP SH"],
+      ["autorisation préalable - agent de protection physique des personnes", "AP A3P"],
+      ["carte professionnelle - surveillance humaine ou gardiennage", "CP SH"],
+      ["carte professionnelle - agent de protection physique des personnes", "CP A3P"],
+    ]);
+    return map.get(normalized) || (value || "—");
+  }
+
+  function cardProValidityMode(value){
+    const normalized = (value || "").replace(/\s+/g, " ").trim().toUpperCase();
+    if(!normalized) return "unknown";
+    if(normalized.includes("INACTIF") || normalized.includes("EXPIR") || normalized.includes("ÉCHU") || normalized.includes("ECHU") || normalized.includes("REFUS")) return "inactive";
+    if(normalized.includes("ACTIF") || normalized.includes("VALIDE")) return "active";
+    return "unknown";
+  }
+
+  function renderCardProFollowupResult(resultEl, data, mode){
+    const rows = Array.isArray(data.results) && data.results.length ? data.results : [data];
+    const chips = rows.map((row)=>{
+      const activity = shortCardProActivity(row.activite);
+      const validity = row.validite_titre || (mode === "unknown" ? "INCONNU" : "À vérifier");
+      const validityMode = mode === "unknown" ? "unknown" : cardProValidityMode(validity);
+      const title = [row.activite, row.validite_titre, row.date_validite_titre].filter(Boolean).join(" • ");
+      return `
+        <span class="card-pro-result__chip is-${validityMode}"${title ? ` title="${escapeHtml(title)}"` : ""}>
+          <span class="card-pro-result__activity">${escapeHtml(activity)}</span>
+          <span class="card-pro-result__validity">${escapeHtml(validityMode === "unknown" ? "INCONNU" : validity)}</span>
+          ${row.date_validite_titre ? `<span class="card-pro-result__date">${escapeHtml(row.date_validite_titre)}</span>` : ""}
+        </span>
+      `;
+    }).join("");
+    const aggregateMode = rows.some((row)=>cardProValidityMode(row.validite_titre || "") === "active") ? "active" : (rows.some((row)=>cardProValidityMode(row.validite_titre || "") === "inactive") ? "inactive" : "unknown");
+    resultEl.className = `card-pro-result is-${mode === "unknown" ? "unknown" : aggregateMode}`;
+    resultEl.innerHTML = chips;
+  }
+
+  function normalizedCardProActivity(value){
+    return shortCardProActivity(value).replace(/\s+/g, " ").trim().toUpperCase();
+  }
+
+  function fallbackCardProFollowup(box){
+    const status = (box.getAttribute("data-cnaps-status") || "").toUpperCase();
+    const fallbackActivity = box.getAttribute("data-fallback-activity") || "";
+    const isAccepted = status.includes("OK") || status.includes("ACCEPTE") || status.includes("ACCEPTÉ");
+    const isCartePro = status.includes("CARTE") || status.includes("PROFESSIONNELLE") || status.includes("CAR") || status.includes("CP");
+    const rows = [];
+    if(fallbackActivity){
+      rows.push({
+        activite: fallbackActivity,
+        validite_titre: isAccepted ? "ACTIF" : "À vérifier",
+      });
+    }
+    if(isAccepted && isCartePro){
+      rows.push({
+        activite: "Carte professionnelle - Surveillance humaine ou gardiennage",
+        validite_titre: "ACTIF",
+      });
+    }
+    if(!rows.length) return null;
+    return {results: rows};
+  }
+
+  function withLocalCardProFallback(data, fallback){
+    if(!fallback) return data;
+    const rows = Array.isArray(data.results) && data.results.length ? data.results.slice() : [data];
+    const fallbackRows = Array.isArray(fallback.results) && fallback.results.length ? fallback.results : [fallback];
+    fallbackRows.forEach((fallbackRow)=>{
+      const fallbackActivity = normalizedCardProActivity(fallbackRow.activite);
+      const alreadyDisplayed = rows.some((row)=>normalizedCardProActivity(row.activite) === fallbackActivity);
+      if(!alreadyDisplayed) rows.push(fallbackRow);
+    });
+    return {...data, results: rows};
+  }
+
+  async function refreshCardProFollowup(box){
+    const resultEl = box.querySelector("[data-card-pro-result]");
+    const nom = box.getAttribute("data-nom") || "";
+    const nub = box.getAttribute("data-nub") || "";
+    if(!resultEl || !nom || !nub) return;
+    resultEl.className = "card-pro-result is-loading";
+    resultEl.textContent = "Chargement CNAPS…";
+    try{
+      const r = await fetch(`/api/cnaps_public_annuaire?nom=${encodeURIComponent(nom)}&nub=${encodeURIComponent(nub)}`);
+      const data = await r.json().catch(()=>({}));
+      if(r.ok && data.ok){
+        renderCardProFollowupResult(resultEl, withLocalCardProFallback(data, fallbackCardProFollowup(box)), "remote");
+        return;
+      }
+    }catch(e){
+      // Si l'annuaire public bloque l'appel serveur, on affiche au moins les informations
+      // déductibles du dossier au lieu de laisser la colonne en erreur.
+    }
+    const fallback = fallbackCardProFollowup(box);
+    if(fallback){
+      renderCardProFollowupResult(resultEl, fallback, "fallback");
+      return;
+    }
+    renderCardProFollowupResult(resultEl, {validite_titre: "INCONNU"}, "unknown");
+  }
+
+  document.querySelectorAll("[data-card-pro-followup]").forEach(box=>{
+    refreshCardProFollowup(box);
+    box.querySelector("[data-card-pro-refresh]")?.addEventListener("click", ()=>refreshCardProFollowup(box));
   });
 
   // =========================

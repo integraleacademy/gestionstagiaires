@@ -4,7 +4,11 @@
 
 {% set pre_reception_open = request.args.get("pre_reception") %}
 {% set is_vtc = "VTC" in (session.training_type or "")|upper %}
-{% set is_aps = ((session.training_type or "")|upper).startswith("APS") %}
+{% set is_aps = automation_status.has_convocation if automation_status is not none else ((session.training_type or "")|upper).startswith("APS") %}
+{% set show_automation = automation_status is not none %}
+{% set automation_locked = automation_module_locked|default(false) %}
+{% set financing_locked = financing_module_locked|default(false) %}
+{% set financing_read_only_attr = "disabled" if is_read_only or financing_locked else "" %}
 {% set is_dirigeant = "DIRIGEANT" in (session.training_type or "")|upper %}
 {% set show_no_bac_toggle = is_dirigeant %}
 {% set is_aps_or_a3p = "APS" in (session.training_type or "")|upper or "A3P" in (session.training_type or "")|upper %}
@@ -14,6 +18,37 @@
 {% set vtc_book_address_complete = (trainee.address or "")|trim and (trainee.zip_code or "")|trim and (trainee.city or "")|trim %}
 
 <style>
+
+  .finance-dashboard{grid-column:1 / -1;position:relative;overflow:hidden;border:1px solid #dbe4f0;border-radius:30px;background:radial-gradient(circle at 0% 0%,rgba(37,99,235,.10),transparent 30%),linear-gradient(135deg,#f8fbff 0%,#fff 58%,#f8fafc 100%);box-shadow:0 28px 80px rgba(15,23,42,.12);padding:28px;}.finance-dashboard.is-hidden{display:none}.finance-dashboard__summary{list-style:none;cursor:pointer;font-weight:950;color:#0f172a;display:flex;justify-content:space-between;align-items:center;gap:14px}.finance-dashboard__summary::-webkit-details-marker{display:none}.finance-dashboard__summary::after{content:'⌄';display:grid;place-items:center;flex:0 0 auto;width:32px;height:32px;border-radius:12px;background:#eff6ff;color:#64748b}.finance-dashboard[open]>.finance-dashboard__summary{margin-bottom:18px}.finance-dashboard[open]>.finance-dashboard__summary::after{content:'⌃'}.finance-dashboard__summary-hint{margin-left:auto;color:#64748b;font-size:12px;font-weight:900}.finance-dashboard[open] .finance-dashboard__summary-hint{display:none}.finance-dashboard__close{position:absolute;top:18px;right:18px;width:38px;height:38px;border:1px solid #dbe4f0;border-radius:14px;background:#fff;color:#64748b;font-size:22px;line-height:1;cursor:pointer;box-shadow:0 10px 22px rgba(15,23,42,.08)}.finance-dashboard__close:hover{color:#0f172a;border-color:#bfdbfe;background:#eff6ff}
+  .finance-dashboard__header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap;margin-bottom:20px}.finance-dashboard__actions{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}.finance-quick-invoice-btn{box-shadow:0 16px 32px rgba(37,99,235,.20);font-weight:950}.finance-notifications-toggle{position:relative}.finance-notifications-toggle__count{display:none;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:#f43f5e;color:#fff;font-size:12px;font-weight:950}.finance-notifications-toggle.has-alerts .finance-notifications-toggle__count{display:inline-flex}.finance-quick-invoice-btn:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}.finance-dashboard__kicker{font-size:11px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;color:#2563eb}.finance-dashboard__header h2{margin:4px 0 6px;color:#0f172a;font-size:27px;letter-spacing:-.04em}.finance-dashboard__subtitle{margin:0;color:#64748b;font-size:14px;line-height:1.5}.finance-save-indicator{display:inline-flex;align-items:center;gap:7px;margin-top:10px;padding:7px 10px;border-radius:999px;background:#f1f5f9;color:#64748b;font-size:12px;font-weight:900}.finance-save-indicator.is-saving{background:#eff6ff;color:#1d4ed8}.finance-save-indicator.is-saved{background:#dcfce7;color:#166534}.finance-save-indicator.is-error{background:#fee2e2;color:#991b1b}
+  .finance-summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin:18px 0}.finance-summary-card{position:relative;overflow:hidden;border:1px solid #e2e8f0;border-radius:24px;background:rgba(255,255,255,.92);padding:18px;box-shadow:0 14px 34px rgba(15,23,42,.07)}.finance-summary-card::before{content:'';position:absolute;inset:0 0 auto;height:4px;background:#cbd5e1}.finance-summary-card.is-green::before{background:#22c55e}.finance-summary-card.is-orange{border-color:#f97316}.finance-summary-card.is-orange::before{background:#f97316}.finance-summary-card.is-red::before{background:#ef4444}.finance-summary-card.is-blue::before{background:#3b82f6}.finance-summary-card--cpf{border-width:2px;background:linear-gradient(145deg,#fff 0%,#fff7ed 100%)}.finance-summary-card--cpf.is-green{border-color:#22c55e;background:linear-gradient(145deg,#fff 0%,#f0fdf4 100%)}.finance-summary-card--cpf.is-orange{border-color:#f97316}.finance-summary-card--cpf .finance-summary-card__icon{padding:0;background:#fff;box-shadow:0 10px 20px rgba(15,23,42,.10)}.finance-summary-card__cpf-logo{width:100%;height:100%;object-fit:contain;border-radius:12px;padding:3px;box-sizing:border-box}.finance-summary-card__cpf-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}.finance-summary-card__cpf-btn{border:0;border-radius:999px;width:30px;height:30px;padding:0;display:inline-grid;place-items:center;font-weight:950;cursor:pointer;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;box-shadow:0 12px 22px rgba(34,197,94,.24);font-size:15px;line-height:1}.finance-summary-card__cpf-btn:hover{transform:translateY(-1px)}.finance-summary-card__cpf-btn:disabled{opacity:.58;cursor:not-allowed;transform:none;box-shadow:none}.finance-summary-card__cpf-btn--undo{background:linear-gradient(135deg,#ef4444,#f97316);box-shadow:0 12px 22px rgba(239,68,68,.20)}.finance-funding-check{margin:0 0 16px 0;border-radius:22px;padding:18px 22px;font-weight:850;box-shadow:0 18px 42px rgba(15,23,42,.10);display:flex;align-items:center;gap:16px}.finance-funding-check--green{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534}.finance-funding-check--orange{background:linear-gradient(135deg,#fff7ed,#ffedd5);border:2px solid #fb923c;color:#9a3412}.finance-funding-check--red{background:linear-gradient(135deg,#fef2f2,#fee2e2);border:2px solid #ef4444;color:#991b1b}.finance-funding-check__icon{display:grid;place-items:center;flex:0 0 52px;width:52px;height:52px;border-radius:18px;background:rgba(255,255,255,.72);font-size:28px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.65)}.finance-funding-check__title{font-weight:950;font-size:20px;margin-bottom:4px}.finance-funding-check__detail{font-size:13px;line-height:1.4}.finance-summary-card__cpf-meter{height:9px;border-radius:999px;background:#fed7aa;overflow:hidden;margin-top:12px}.finance-summary-card__cpf-meter span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#22c55e,#86efac);transition:width .25s ease}.finance-summary-card__top{display:flex;justify-content:space-between;gap:10px;align-items:center;color:#64748b;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}.finance-summary-card__icon{display:grid;place-items:center;width:32px;height:32px;border-radius:12px;background:#eff6ff;font-size:17px}.finance-summary-card__icon--green{background:#dcfce7;color:#16a34a}.finance-summary-card__icon--red{background:#fee2e2;color:#dc2626}.finance-summary-card__value{margin-top:14px;color:#0f172a;font-size:26px;font-weight:950;letter-spacing:-.05em}.finance-summary-card__meta{margin-top:8px;color:#64748b;font-size:12px;font-weight:800;line-height:1.35}
+  .finance-badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:950;white-space:nowrap;border:1px solid transparent}.finance-badge--green{background:#dcfce7;color:#166534;border-color:#bbf7d0}.finance-badge--orange{background:#fff7ed;color:#c2410c;border-color:#fed7aa}.finance-badge--red{background:#fee2e2;color:#991b1b;border-color:#fecaca}.finance-badge--blue{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe}.finance-badge--gray{background:#f1f5f9;color:#475569;border-color:#e2e8f0}
+  .finance-validation-status{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:9px 13px;border-radius:999px;border:1px solid #e2e8f0;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.08);font-size:12px;font-weight:950;white-space:nowrap}.finance-validation-status--gray{background:linear-gradient(135deg,#f8fafc,#f1f5f9);color:#475569;border-color:#cbd5e1}.finance-validation-status--orange{background:linear-gradient(135deg,#fff7ed,#ffedd5);color:#c2410c;border-color:#fdba74}.finance-validation-status--green{background:linear-gradient(135deg,#f0fdf4,#dcfce7);color:#166534;border-color:#86efac}.finance-validation-status__icon{display:grid;place-items:center;width:22px;height:22px;border-radius:999px;background:rgba(255,255,255,.72);box-shadow:inset 0 0 0 1px rgba(255,255,255,.65)}.finance-validation-status__manual{padding:3px 7px;border-radius:999px;background:rgba(15,23,42,.08);font-size:10px;text-transform:uppercase;letter-spacing:.06em}.finance-validation-admin{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.finance-validation-form{margin:0;display:inline-flex}.finance-validation-admin .btn{min-height:40px}
+  .finance-progress-panel,.finance-section{border:1px solid #e2e8f0;border-radius:24px;background:rgba(255,255,255,.88);box-shadow:0 12px 30px rgba(15,23,42,.055);padding:18px;margin-top:18px}.finance-section__head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px}.finance-section__head h3{margin:0;color:#0f172a;font-size:17px}.finance-section__head p{margin:5px 0 0;color:#64748b;font-size:13px}.finance-progress-row{display:grid;grid-template-columns:130px 1fr 60px;gap:12px;align-items:center;margin:10px 0}.finance-progress-track{height:10px;border-radius:999px;background:#e7ecf7;overflow:hidden}.finance-progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#2563eb,#60a5fa)}.finance-progress-fill--green{background:linear-gradient(90deg,#16a34a,#86efac)}
+  .finance-detail-section{margin-top:18px;border:1px solid #e2e8f0;border-radius:24px;background:rgba(255,255,255,.78);overflow:hidden}.finance-detail-section>summary{list-style:none;cursor:pointer;padding:16px 18px;font-weight:950;color:#0f172a;display:flex;justify-content:space-between;align-items:center}.finance-detail-section>summary::-webkit-details-marker{display:none}.finance-detail-section>summary::after{content:'⌄';color:#64748b}.finance-detail-section[open]>summary::after{content:'⌃'}.finance-detail-section__body{border-top:1px solid #eef2f7;padding:18px}.finance-edit-grid{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:12px}.finance-edit-grid--wide{grid-template-columns:repeat(2,minmax(180px,1fr));margin-top:12px}.finance-field{min-width:0}.finance-field .label{margin-bottom:5px}.finance-field input,.finance-field textarea{width:100%}.finance-checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:12px}.finance-check{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc;font-weight:850;color:#334155}.finance-list{display:grid;gap:10px}.finance-line{display:grid;grid-template-columns:minmax(150px,1.2fr) repeat(4,minmax(95px,1fr)) auto;gap:10px;align-items:center;padding:12px;border:1px solid #e2e8f0;border-radius:16px;background:#fff}.finance-line strong{color:#0f172a}.finance-mini-label{display:block;color:#64748b;font-size:11px;font-weight:900;text-transform:uppercase}.finance-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.qonto-invoice-row{display:grid;grid-template-columns:minmax(135px,.8fr) minmax(0,1.7fr) auto;gap:14px;align-items:center;padding:12px 14px;border:1px solid #dbe4f0;border-radius:18px;background:linear-gradient(135deg,#fff,#f8fafc);box-shadow:0 10px 28px rgba(15,23,42,.06)}.qonto-invoice-row__type{display:flex;align-items:center;gap:10px;min-width:0;font-weight:950;color:#0f172a}.qonto-invoice-row__icon{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;background:#eff6ff;color:#1d4ed8;flex:0 0 auto}.qonto-invoice-row__content{display:grid;grid-template-columns:minmax(150px,1.25fr) repeat(3,minmax(88px,.75fr)) auto;gap:10px;align-items:center;min-width:0}.qonto-invoice-row__value{min-width:0;color:#0f172a;font-weight:850}.qonto-invoice-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;white-space:nowrap}.qonto-action-btn{min-height:36px;display:inline-flex;align-items:center;justify-content:center;gap:7px;border-radius:10px;padding:8px 11px;font-weight:900;font-size:13px;line-height:1}.qonto-action-btn--primary{background:#0f172a;color:#fff;border:1px solid #0f172a}.qonto-action-btn--primary:hover{background:#166534;border-color:#166534}.qonto-action-btn--secondary{background:#fff;color:#334155;border:1px solid #cbd5e1}.qonto-action-btn--danger{background:#fff5f5;color:#b91c1c;border:1px solid #fecaca}.qonto-action-btn--danger:hover{background:#fee2e2}.qonto-action-btn[disabled]{opacity:.62;cursor:not-allowed}.qonto-mobile-actions{display:none;position:relative}.qonto-mobile-actions summary{list-style:none;cursor:pointer}.qonto-mobile-actions summary::-webkit-details-marker{display:none}.qonto-mobile-actions__menu{position:absolute;right:0;top:calc(100% + 6px);z-index:20;display:grid;gap:6px;min-width:190px;padding:8px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;box-shadow:0 18px 40px rgba(15,23,42,.14)}.qonto-feedback{padding:10px 12px;border-radius:14px;font-weight:850}.qonto-feedback--success{background:#ecfdf5;color:#166534;border:1px solid #bbf7d0}.qonto-feedback--error{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}.finance-footer{display:flex;justify-content:flex-end;margin-top:20px;padding-top:18px;border-top:1px solid #e2e8f0}.finance-empty{padding:18px;border:1px dashed #cbd5e1;border-radius:16px;background:#f8fafc;color:#64748b;font-weight:850}.finance-alert{display:flex;align-items:center;gap:10px;padding:13px 14px;border-radius:16px;border:1px solid #fed7aa;background:#fff7ed;color:#9a3412;font-weight:900}.finance-alert--orange{border-color:#fed7aa;background:#fff7ed;color:#9a3412}.finance-alert--red{border-color:#fecaca;background:#fef2f2;color:#991b1b}.finance-alert--green{border-color:#bbf7d0;background:#f0fdf4;color:#166534}.finance-alert + .finance-alert{margin-top:10px}.finance-notifications{border-color:#fecaca;background:linear-gradient(135deg,#fff7ed,#fff);box-shadow:0 16px 38px rgba(244,63,94,.08)}.finance-notifications__head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.finance-notifications__title{display:inline-flex;align-items:center;gap:9px;padding:10px 14px;border:1px solid #fda4af;border-radius:14px;background:#fef3c7;color:#9f1239;font-size:17px;font-weight:950}.finance-notifications__count{display:inline-grid;place-items:center;min-width:34px;height:34px;padding:0 10px;border-radius:999px;background:#f43f5e;color:#fff;font-weight:950;font-size:16px}.finance-notifications__list{display:grid;gap:10px}.finance-notifications__list .finance-alert{margin-top:0}
+
+  .finance-accordion-hint{margin-left:auto;margin-right:12px;display:inline-flex;align-items:center;border-radius:999px;padding:6px 10px;background:#eef2ff;color:#334155;font-size:12px;font-weight:950;white-space:nowrap}.finance-detail-section--settings{border-color:#bfdbfe;background:linear-gradient(135deg,rgba(239,246,255,.96),rgba(255,255,255,.9));box-shadow:0 18px 44px rgba(37,99,235,.10)}.finance-detail-section--settings>summary{background:linear-gradient(90deg,rgba(37,99,235,.10),rgba(34,197,94,.08));}.finance-detail-section__body--settings{background:radial-gradient(circle at 12% 0%,rgba(59,130,246,.12),transparent 34%),#fff}.finance-settings-hero{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px;padding:16px;border:1px solid #dbeafe;border-radius:20px;background:linear-gradient(135deg,#eff6ff,#fff 62%,#f0fdf4)}.finance-settings-hero h3{margin:4px 0 4px;color:#0f172a;font-size:18px}.finance-settings-hero p{margin:0;color:#64748b;font-weight:750}.finance-settings-pill{display:inline-flex;align-items:center;padding:8px 11px;border-radius:999px;background:#0f172a;color:#fff;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}.finance-edit-grid--cards{margin-bottom:12px}.finance-field-card{position:relative;overflow:hidden;padding:15px;border:1px solid #e2e8f0;border-radius:18px;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.06)}.finance-field-card::before{content:'';position:absolute;inset:0 0 auto;height:4px;background:#cbd5e1}.finance-field-card--cpf::before{background:linear-gradient(90deg,#2563eb,#60a5fa)}.finance-field-card--personal::before{background:linear-gradient(90deg,#16a34a,#86efac)}.finance-field-card--other::before{background:linear-gradient(90deg,#f97316,#fdba74)}.finance-field-card--cpf .label{color:#1d4ed8}.finance-field-card--personal .label{color:#15803d}.finance-field-card--other .label{color:#c2410c}.finance-line--paid{border-color:#bbf7d0;background:linear-gradient(90deg,#f0fdf4,#fff)}.finance-line--unpaid{border-color:#fed7aa;background:linear-gradient(90deg,#fff7ed,#fff)}.finance-line--danger{border-color:#fecaca;background:linear-gradient(90deg,#fef2f2,#fff)}.finance-line--info{border-color:#bfdbfe;background:linear-gradient(90deg,#eff6ff,#fff)}.finance-line--cpf{border-color:#bfdbfe;background:linear-gradient(90deg,#eff6ff,#fff)}.finance-line--personal{border-color:#bbf7d0;background:linear-gradient(90deg,#f0fdf4,#fff)}.finance-line--other{border-color:#fed7aa;background:linear-gradient(90deg,#fff7ed,#fff)}.finance-line--cpf strong,.finance-line--cpf .finance-mini-label{color:#1d4ed8}.finance-line--personal strong,.finance-line--personal .finance-mini-label{color:#15803d}.finance-line--other strong,.finance-line--other .finance-mini-label{color:#c2410c}
+  @media(max-width:1180px){.finance-summary-grid{grid-template-columns:repeat(2,1fr)}.finance-line{grid-template-columns:1fr 1fr}.finance-actions{grid-column:1 / -1}.qonto-invoice-row{grid-template-columns:1fr}.qonto-invoice-row__content{grid-template-columns:repeat(2,minmax(120px,1fr))}.qonto-invoice-actions{justify-content:flex-start}}@media(max-width:720px){.finance-dashboard{padding:16px}.finance-summary-grid,.finance-edit-grid,.finance-edit-grid--wide{grid-template-columns:1fr}.finance-progress-row{grid-template-columns:1fr}.finance-line{grid-template-columns:1fr}.finance-dashboard__header .btn,.finance-dashboard__actions{width:100%}.finance-dashboard__actions{justify-content:stretch}.qonto-invoice-row{padding:12px}.qonto-invoice-row__content{grid-template-columns:1fr 1fr}.qonto-invoice-row__content .finance-badge{justify-self:start}.qonto-invoice-actions{justify-content:flex-start}.qonto-desktop-secondary{display:none}.qonto-mobile-actions{display:block}.qonto-action-btn--primary{flex:1}.qonto-invoice-actions{width:100%}}
+
+
+  @keyframes fadeInUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes softPulse{0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,.24)}50%{box-shadow:0 0 0 7px rgba(249,115,22,0)}}
+  @keyframes bluePulse{0%,100%{box-shadow:0 0 0 0 rgba(37,99,235,.22)}50%{box-shadow:0 0 0 8px rgba(37,99,235,0)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  @keyframes accordionOpen{from{opacity:0;transform:translateY(-6px);max-height:0}to{opacity:1;transform:translateY(0);max-height:520px}}
+  @keyframes hourglassTilt{0%,100%{transform:rotate(0deg)}50%{transform:rotate(180deg)}}
+  .automation-panel,.automation-hub{position:relative;grid-column:1 / -1;margin-top:12px;padding:30px 28px;overflow:hidden;border:1px solid rgba(148,163,184,.25);border-radius:28px;background:linear-gradient(135deg,#f8fbff 0%,#fff 58%,#f8fafc 100%);box-shadow:0 24px 70px rgba(15,23,42,.10),inset 0 1px 0 rgba(255,255,255,.9);animation:fadeInUp .55s ease both;}
+  .automation-hub__glow{position:absolute;top:-150px;right:-90px;width:360px;height:360px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(37,99,235,.12),rgba(99,102,241,.07) 48%,transparent 72%);}
+  .automation-header,.automation-hub__header{position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:22px;}
+  .automation-hub__brand{display:flex;align-items:center;gap:18px;min-width:0;}.automation-hub__logo{display:grid;width:64px;height:64px;flex:0 0 64px;place-items:center;border-radius:21px;color:#fff;background:linear-gradient(145deg,#1d4ed8,#4f46e5 58%,#7c3aed);box-shadow:0 16px 34px rgba(37,99,235,.24),inset 0 1px 0 rgba(255,255,255,.3);}.automation-icon{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.automation-icon--spin{animation:spin 1s linear infinite}.automation-icon--hourglass{animation:hourglassTilt 2.4s ease-in-out infinite;transform-origin:center}.automation-hub__eyebrow{margin-bottom:6px;color:#2563eb;font-size:10px;font-weight:950;letter-spacing:.18em;text-transform:uppercase;}.automation-hub h2{margin:0;color:#0f172a;font-size:27px;line-height:1.08;letter-spacing:-.04em;text-transform:none;}.automation-hub__brand p{margin:10px 0 0;color:#64748b;font-size:14px;line-height:1.5;max-width:760px;}
+  .automation-badge{display:inline-flex;align-items:center;gap:8px;flex:0 0 auto;margin-top:8px;padding:10px 15px;border:1px solid #dbe4f0;border-radius:999px;background:rgba(255,255,255,.88);color:#475569;font-size:12px;font-weight:950;box-shadow:0 10px 22px rgba(15,23,42,.06);}.automation-badge .automation-icon{width:15px;height:15px}.automation-badge--complete{color:#047857;border-color:#a7f3d0;background:#ecfdf5}.automation-badge--error{color:#be123c;border-color:#fecdd3;background:#fff1f2}.automation-badge--waiting{color:#1d4ed8;border-color:#bfdbfe;background:#eff6ff}.automation-badge--blocked,.automation-badge--action{color:#b45309;border-color:#fed7aa;background:#fff7ed;animation:softPulse 2.8s ease-in-out infinite}.automation-badge--locked{color:#64748b;border-color:#cbd5e1;background:#f1f5f9;animation:none}
+  .automation-locked-notice{position:relative;display:flex;align-items:flex-start;gap:12px;margin:0 0 18px;padding:14px 16px;border:1px solid #cbd5e1;border-radius:18px;background:linear-gradient(135deg,#f8fafc,#f1f5f9);color:#475569;font-weight:900}.automation-locked-notice .automation-icon{flex:0 0 auto;margin-top:1px}.automation-hub.is-locked{filter:grayscale(.72);background:linear-gradient(135deg,#f8fafc,#fff,#f1f5f9);border-color:#cbd5e1}.automation-hub.is-locked .automation-hub__logo,.automation-hub.is-locked .automation-progress__bar{background:linear-gradient(135deg,#94a3b8,#64748b);box-shadow:none}.automation-hub.is-locked .automation-actions a,.automation-hub.is-locked .automation-doc__summary-action a{pointer-events:none;color:#8a97aa!important;border-color:#d7deea!important;background:linear-gradient(180deg,#f8fafc,#edf2f7)!important;box-shadow:none}.automation-hub.is-locked .automation-actions a::before,.automation-hub.is-locked .automation-doc__summary-action a::before{content:"🔒";margin-right:6px}.automation-progress{position:relative;margin:0 0 24px;padding:16px 18px;border:1px solid rgba(226,232,240,.95);border-radius:18px;background:rgba(255,255,255,.72);box-shadow:inset 0 1px 0 rgba(255,255,255,.9);}.automation-progress__top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;color:#334155;font-size:13px;font-weight:900}.automation-progress__top strong{font-weight:950}.automation-progress__track{height:8px;overflow:hidden;border-radius:999px;background:#e7ecf7}.automation-progress__bar{height:100%;min-width:6px;border-radius:999px;background:linear-gradient(90deg,#2563eb,#7aa2ff);box-shadow:0 0 16px rgba(37,99,235,.22);transition:width .4s ease;}
+  .automation-docs-accordion{position:relative;margin-top:2px}.automation-docs-accordion__summary{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;padding:14px 18px;border:1px solid #dbeafe;border-radius:18px;background:rgba(239,246,255,.82);color:#1d4ed8;font-size:13px;font-weight:950;list-style:none;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}.automation-docs-accordion__summary::-webkit-details-marker{display:none}.automation-docs-accordion__summary::after{content:"";display:block;width:9px;height:9px;border-right:2px solid #2563eb;border-bottom:2px solid #2563eb;transform:rotate(45deg);transition:transform .18s ease}.automation-docs-accordion[open]>.automation-docs-accordion__summary::after{transform:rotate(225deg)}.automation-docs-accordion__summary strong{margin-left:auto;color:#64748b;font-size:12px;font-weight:950}
+  .automation-timeline{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:64px;margin:0 2px 24px;}.automation-timeline__step{position:relative;display:flex;align-items:center;min-height:54px;gap:12px;padding:12px 16px;border:1px solid #e2e8f0;border-radius:18px;background:rgba(255,255,255,.78);color:#64748b;font-size:13px;font-weight:950;}.automation-timeline__step:not(:last-child)::after{content:"";position:absolute;left:calc(100% + 10px);top:50%;width:44px;border-top:2px dotted #9fb3d0;transform:translateY(-50%)}.automation-timeline__icon{position:relative;display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border-radius:999px;background:#f1f5f9;color:#64748b}.automation-timeline__index{position:absolute;right:-5px;top:-7px;display:grid;place-items:center;width:17px;height:17px;border-radius:999px;background:#fff;color:#64748b;font-size:9px;font-weight:950;box-shadow:0 2px 8px rgba(15,23,42,.08)}.automation-timeline__step.is-complete{color:#047857;border-color:#bbf7d0;background:#f0fdf4}.automation-timeline__step.is-complete .automation-timeline__icon{background:#22c55e;color:#fff}.automation-timeline__step.is-pending{color:#1d4ed8;border-color:#bfdbfe;background:#eff6ff}.automation-timeline__step.is-pending .automation-timeline__icon{background:#2563eb;color:#fff;animation:bluePulse 2.2s ease-in-out infinite}.automation-timeline__step.is-blocked{color:#64748b;border-color:#e2e8f0;background:#f8fafc}.automation-timeline__step.is-blocked .automation-timeline__icon{background:#eef2f7;color:#64748b}.automation-timeline__step.is-error{color:#be123c;border-color:#fecdd3;background:#fff1f2}.automation-timeline__step.is-error .automation-timeline__icon{background:#f43f5e;color:#fff}
+  .automation-grid{display:grid;gap:12px}.automation-card,.automation-doc{position:relative;border:1px solid #e2e8f0;border-radius:22px;background:rgba(255,255,255,.94);box-shadow:0 10px 28px rgba(15,23,42,.055);overflow:hidden;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease;}.automation-card:hover,.automation-doc:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(15,23,42,.09);border-color:#bfdbfe}.automation-card--blocked{border-color:#e2e8f0}.automation-card--done{border-color:#bbf7d0}.automation-card--pending{border-color:#bfdbfe}.automation-card--ready{border-color:#dbeafe}.automation-doc__summary{display:grid;grid-template-columns:auto minmax(300px,1fr) minmax(160px,auto) minmax(220px,auto) auto;align-items:center;gap:18px;padding:18px 20px;list-style:none;cursor:pointer;}.automation-doc__summary::-webkit-details-marker{display:none}.automation-doc__summary::after{content:"";display:block;width:9px;height:9px;border-right:2px solid #64748b;border-bottom:2px solid #64748b;transform:rotate(45deg);transition:transform .18s ease;}.automation-doc[open] .automation-doc__summary::after{transform:rotate(225deg)}.automation-card__icon{display:grid;place-items:center;width:52px;height:52px;border-radius:18px;background:linear-gradient(135deg,#eff6ff,#eef2ff);color:#2563eb;box-shadow:inset 0 0 0 1px rgba(37,99,235,.12)}.automation-card--blocked .automation-card__icon{background:linear-gradient(135deg,#f8fafc,#eef2f7);color:#64748b;box-shadow:inset 0 0 0 1px rgba(100,116,139,.12)}.automation-doc__title{min-width:0}.automation-doc__title h3{margin:0;color:#0f172a;font-size:18px;line-height:1.2}.automation-doc__title p{margin:6px 0 0;color:#475569;font-size:13px;line-height:1.35}.automation-doc__summary-action{display:flex;justify-content:flex-end;align-items:center;gap:10px;min-width:0}.automation-doc__summary-action form{margin:0}.automation-doc__summary-action .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;white-space:nowrap;border-radius:11px;font-weight:900}.automation-doc__summary-action .btn-primary:not([disabled]){background:linear-gradient(180deg,#2f9a57,#238044);border-color:#238044;color:#fff;box-shadow:0 10px 20px rgba(34,128,68,.18)}.automation-doc__summary-action .btn[disabled]{opacity:1;cursor:not-allowed;color:#8a97aa;border-color:#d7deea;background:linear-gradient(180deg,#f8fafc,#edf2f7);box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}.automation-doc__summary-action .btn-primary[disabled]{color:#f8fafc;border-color:#bdd8c6;background:linear-gradient(180deg,#c7e1d0,#a8cfb7)}.automation-download-signed{color:#1d4ed8!important;border-color:#93c5fd!important;background:linear-gradient(180deg,#fff,#eff6ff)!important;box-shadow:0 10px 20px rgba(37,99,235,.14);}.automation-download-signed:hover{color:#1e40af!important;border-color:#60a5fa!important;background:linear-gradient(180deg,#eff6ff,#dbeafe)!important}.automation-download-signed .automation-icon{width:16px;height:16px}.automation-status-badge,.automation-status{display:inline-flex;align-items:center;justify-content:center;gap:7px;justify-self:center;max-width:100%;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:950;white-space:nowrap;transition:background .2s ease,color .2s ease}.automation-status .automation-icon,.automation-status-badge .automation-icon{width:14px;height:14px}.automation-status--complete,.automation-status-badge--done{background:#dcfce7;color:#166534}.automation-status--error,.automation-status-badge--error{background:#fee2e2;color:#991b1b}.automation-status--waiting,.automation-status-badge--pending{background:#fff7ed;color:#c2410c}.automation-status--blocked,.automation-status-badge--blocked{background:#fff3e6;color:#c2410c;border:1px solid #fed7aa}.automation-status--pending,.automation-status-badge--ready{background:#dbeafe;color:#1d4ed8}.automation-status--muted{background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0}.automation-doc[open] .automation-doc__body{animation:accordionOpen .24s ease both}.automation-doc__body,.automation-card-details{border-top:1px solid #eef2f7;padding:0 18px 18px;overflow:hidden}.automation-meta{display:grid;gap:8px;margin:14px 0}.automation-meta__row{display:grid;grid-template-columns:18px 1fr auto;align-items:center;gap:10px;padding:9px 10px;border:1px solid #eef2f7;border-radius:12px;background:#f8fafc;font-size:12px;min-width:0}.automation-meta__dot{width:10px;height:10px;border-radius:999px;background:#cbd5e1}.automation-meta__dot--done{background:#22c55e}.automation-meta__dot--pending{background:#2563eb}.automation-meta__dot--blocked{background:#f97316}.automation-meta__dot--error{background:#ef4444}.automation-meta__row span{color:#64748b;font-weight:850}.automation-meta__row strong{color:#0f172a;text-align:right;overflow-wrap:anywhere}.automation-error{margin:2px 0 12px;padding:10px 12px;border:1px solid #fecaca;border-radius:12px;background:#fef2f2;color:#991b1b;font-size:12px;font-weight:800;overflow-wrap:anywhere}.automation-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.automation-actions .btn{min-height:38px}.automation-actions form{margin:0}.automation-actions .btn[disabled]{cursor:not-allowed;opacity:.62}.automation-placeholder{cursor:default}.automation-placeholder .automation-doc__summary{cursor:default}.automation-placeholder .automation-doc__summary::after{display:none}.automation-placeholder:hover{transform:none}.automation-muted-note{display:none}.automation-lock-note{display:none}
+  @media(max-width:1500px){.automation-doc__summary{grid-template-columns:auto minmax(280px,1fr) auto;gap:14px}.automation-doc__summary::after{position:absolute;right:18px;top:50%;transform:translateY(-50%) rotate(45deg)}.automation-doc[open] .automation-doc__summary::after{transform:translateY(-50%) rotate(225deg)}.automation-status{justify-self:end;margin-right:28px}.automation-doc__summary-action{grid-column:2 / -1;justify-content:flex-end;padding-right:28px}.automation-placeholder .automation-doc__summary{grid-template-columns:auto 1fr auto}.automation-placeholder .automation-status{margin-right:0}}@media(max-width:1080px){.automation-timeline{gap:20px}.automation-timeline__step:not(:last-child)::after{display:none}}@media(max-width:920px){.automation-hub{padding:20px}.automation-hub__header{flex-direction:column;margin-bottom:16px}.automation-timeline{grid-template-columns:1fr 1fr}.automation-doc__summary{grid-template-columns:auto 1fr;gap:12px}.automation-doc__summary::after{right:16px;top:26px;transform:rotate(45deg)}.automation-doc[open] .automation-doc__summary::after{transform:rotate(225deg)}.automation-doc__title{padding-right:34px}.automation-status{justify-self:start;margin-right:0;grid-column:2}.automation-doc__summary-action{grid-column:1 / -1;justify-content:stretch;padding-right:0}.automation-doc__summary-action .btn,.automation-doc__summary-action form{width:100%}.automation-meta__row{grid-template-columns:14px 1fr}.automation-meta__row strong{text-align:left;grid-column:2}.automation-actions .btn,.automation-actions form{width:100%}.automation-actions form .btn{width:100%}}
+  @media(max-width:560px){.automation-timeline{grid-template-columns:1fr}.automation-hub__brand{align-items:flex-start}.automation-hub__logo{width:48px;height:48px;flex-basis:48px}.automation-card__icon{width:42px;height:42px}}
 
   .aps-doc-card{grid-column:1 / -1;margin-top:16px;background:#fff;border:1px solid rgba(148,163,184,.28);border-radius:22px;box-shadow:0 18px 45px rgba(15,23,42,.08);padding:22px;}
   .aps-doc-card__head{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
@@ -290,13 +325,6 @@
 
     </div>
     <div class="meta-line" style="margin-top:8px;">
-      {% if not is_vtc and not show_vae and not is_dirigeant %}
-        <a class="btn btn-outline btn-uniform"
-           data-pre-reception
-           href="{{ url_for('admin_trainee_page', session_id=session.id, trainee_id=trainee.id, pre_reception=1) }}">
-          ✅ Réception PRE
-        </a>
-      {% endif %}
       {% if not is_vtc %}
         <button class="btn btn-outline btn-uniform" type="button" data-open-section="documentsSection" id="btnOpenDocumentsSection">
           📁 Mes documents
@@ -340,8 +368,8 @@
         <button class="btn btn-outline btn-uniform" type="button" onclick="openModal('transferTraineeModal')">
           🔁 Transfert
         </button>
-        <button class="btn btn-financement btn-uniform" type="button" data-open-section="conventionFinancementSection">
-          Financement
+        <button class="btn {% if financing_locked %}btn-disabled-muted{% else %}btn-financement{% endif %} btn-uniform" type="button" data-open-section="conventionFinancementSection" {% if financing_locked %}title="Module financement verrouillé pour ce partenaire"{% endif %}>
+          {% if financing_locked %}🔒 {% endif %}Financement
         </button>
         <form method="post" action="{{ url_for('admin_delete_trainee', session_id=session.id, trainee_id=trainee.id) }}"
               onsubmit="return confirm('Supprimer ce stagiaire ?');">
@@ -393,15 +421,14 @@
 </div>
 {% endif %}
 
-<div class="card" style="margin-top:12px;">
-  <!-- LIGNE 1 : NOM + PHOTO CÔTE À CÔTE -->
-  <div style="display:flex;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;">
-    <div style="flex:1;min-width:320px;">
+<div class="card trainee-profile-card">
+  <div class="trainee-profile-card__main">
+    <div class="trainee-profile-card__identity">
 
-<div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:nowrap;">
+<div class="trainee-identity-head">
 
   <!-- PHOTO À GAUCHE -->
-  <div style="width:110px;flex-shrink:0;">
+  <div class="trainee-photo-block">
     {% if not is_read_only %}
       <form id="photoForm" method="post" enctype="multipart/form-data"
             action="{{ url_for('admin_upload_identity_photo', session_id=session.id, trainee_id=trainee.id) }}">
@@ -411,10 +438,10 @@
             <img
               src="{{ url_for('admin_view_upload', path=trainee.identity_photo) }}"
               alt="Photo d'identité"
-              style="width:110px;height:140px;object-fit:cover;border-radius:12px;border:1px solid #e5e7eb;background:#fff;"
+              class="trainee-photo"
             />
           {% else %}
-            <div style="width:110px;height:140px;border-radius:12px;border:1px dashed #cbd5e1;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:12px;color:#64748b;text-align:center;">
+            <div class="trainee-photo trainee-photo--empty">
               Aucune photo
             </div>
           {% endif %}
@@ -425,17 +452,17 @@
         <img
           src="{{ url_for('admin_view_upload', path=trainee.identity_photo) }}"
           alt="Photo d'identité"
-          style="width:110px;height:140px;object-fit:cover;border-radius:12px;border:1px solid #e5e7eb;background:#fff;"
+          class="trainee-photo"
         />
       {% else %}
-        <div style="width:110px;height:140px;border-radius:12px;border:1px dashed #cbd5e1;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:12px;color:#64748b;text-align:center;">
+        <div class="trainee-photo trainee-photo--empty">
           Aucune photo
         </div>
       {% endif %}
     {% endif %}
     {% if not (is_vtc and not dossier_is_complete) %}
-      <div style="margin-top:8px;text-align:center;">
-        <span class="pill {% if dossier_is_complete %}pill-green{% else %}pill-red{% endif %}" style="display:inline-flex;justify-content:center;min-width:110px;font-size:11px;padding:4px 8px;">
+      <div class="trainee-dossier-status">
+        <span class="pill {% if dossier_is_complete %}pill-green{% else %}pill-red{% endif %}">
           {% if dossier_is_complete %}Dossier complet{% else %}Dossier incomplet{% endif %}
         </span>
       </div>
@@ -462,29 +489,30 @@
 </div>
 
 
-<div class="meta-line" style="margin-top:8px;gap:8px;">
+<div class="trainee-contact-chip-row">
   {% if trainee.email %}
     <a class="btn btn-outline btn-uniform" href="mailto:{{ trainee.email }}">✉️ {{ trainee.email }}</a>
   {% endif %}
 </div>
 
-      <div class="meta-line" style="margin-top:10px;">
-        <span class="mono">
+      <div class="trainee-info-grid">
+        <span class="mono trainee-info-grid__email">
           Email :
           <input id="editEmail"
                  type="email"
                  value="{{ trainee.email or '' }}"
+                 title="{{ trainee.email or '' }}"
                  placeholder="email@exemple.com"
-                 style="border:none;background:transparent;padding:0;outline:none;min-width:220px;"
+                 class="trainee-inline-input trainee-inline-input--email"
                  {{ read_only_attr }}>
         </span>
-        <span class="mono">
+        <span class="mono trainee-info-grid__phone">
           Tel :
           <input id="editPhone"
                  type="tel"
                  value="{{ trainee.phone or '' }}"
                  placeholder="+33600000000"
-                 style="border:none;background:transparent;padding:0;outline:none;min-width:150px;"
+                 class="trainee-inline-input trainee-inline-input--phone"
                  {{ read_only_attr }}>
         </span>
         {% if "AFC" in (session.name or "")|upper %}
@@ -509,6 +537,10 @@
         </span>
         {% endif %}
         <span class="mono">ID : {{ trainee.personal_id or trainee.id }}</span>
+        {% set trainee_nub = extract_nub_from_pre_car(trainee.pre_number or '') %}
+        {% if trainee_nub %}
+        <span class="mono">NUB : {{ trainee_nub }}</span>
+        {% endif %}
       </div>
 
       {% if is_vtc %}
@@ -526,7 +558,7 @@
       {% endif %}
 
       {% if not is_vtc and not show_vae and not is_dirigeant %}
-        <div class="meta-line" style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <div class="trainee-cnaps-panel">
           {% set c = (trainee.cnaps or "INCONNU")|upper %}
           <span class="cnaps
             {% if "TRANSM" in c %}cnaps-transmis
@@ -540,41 +572,35 @@
             CNAPS : {{ c }}
           </span>
 
-          <button class="mini-btn" id="btnRefreshCnaps" type="button" {{ read_only_attr }}>↻ Rafraîchir CNAPS</button>
-          <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <button class="mini-btn trainee-cnaps-panel__refresh" id="btnRefreshCnaps" type="button" {{ read_only_attr }}>↻ Rafraîchir CNAPS</button>
+          <label class="chk-inline trainee-cnaps-panel__check">
             <input type="checkbox" id="chkCnapsOk"
                    {% if c == "CARTE PROFESSIONNELLE OK" %}checked{% endif %}
                    {{ read_only_attr }}>
             <span>CNAPS OK</span>
           </label>
-          {% if not is_read_only %}
-            <button class="btn btn-outline btn-uniform" id="btnCnapsPreRelance" type="button">
-              Relance PRE
-            </button>
-          {% endif %}
-
           {% if trainee.access_sent_at %}
             <span class="hint">✅ Accès envoyé le : <strong>{{ trainee.access_sent_at|frdatetime }}</strong></span>
           {% endif %}
+          {% set cnaps_history = trainee.cnaps_history or [] %}
+          {% if cnaps_history %}
+            <div class="trainee-cnaps-history">
+              <strong>Historique CNAPS :</strong>
+              {% for entry in cnaps_history %}
+                {% if entry.kind != "pre_request" %}
+                  <span class="trainee-cnaps-history__entry">
+                    {{ entry.status|upper }} · {{ entry.date|frdatetime }}
+                  </span>
+                {% endif %}
+              {% endfor %}
+            </div>
+          {% endif %}
         </div>
-        {% set cnaps_history = trainee.cnaps_history or [] %}
-        {% if cnaps_history %}
-          <div class="hint" style="margin-top:6px;">
-            Historique CNAPS :
-            {% for entry in cnaps_history %}
-              {% if entry.kind != "pre_request" %}
-                <span style="display:inline-block;margin-right:10px;">
-                  {{ entry.status|upper }} · {{ entry.date|frdatetime }}
-                </span>
-              {% endif %}
-            {% endfor %}
-          </div>
-        {% endif %}
       {% endif %}
     </div>
 
     <!-- BOUTONS ACTIONS À DROITE -->
-    <div class="admin-trainee-side-actions">
+    <div class="admin-trainee-side-actions trainee-profile-card__actions">
 
 <a class="btn btn-outline btn-uniform btn-admin-trainee-side-action {% if trainee.etiquette_word_downloaded_at %}btn-word-downloaded{% endif %}"
    id="btnEtiquetteWord"
@@ -615,192 +641,68 @@
 </div>
 {% endif %}
 
-{% set conv_sig = trainee.convention_signature or trainee.convocation_signature or {} %}
-{% if is_aps %}
-<div class="card" style="grid-column:1 / -1; margin-top:12px; border-left:4px solid #2563eb;">
-  <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
-    <div>
-      <h2 style="margin:0 0 8px;">Signature convention</h2>
-      {% if conv_sig.status in ["signed", "done"] %}
-        <span class="pill green">✅ Signée{% if conv_sig.signed_at %} le {{ conv_sig.signed_at|frdatetime }}{% endif %}</span>
-      {% elif conv_sig.status in ["ongoing", "activated"] %}
-        <span class="pill blue">✍️ En attente de signature</span>
-      {% elif conv_sig.status in ["error", "download_error"] %}
-        <span class="pill red">Erreur</span>
-      {% else %}
-        <span class="pill gray">Non créée</span>
-      {% endif %}
-      {% if conv_sig.last_error %}
-        <div class="hint" style="margin-top:8px;color:#991b1b;">{{ conv_sig.last_error }}</div>
-      {% endif %}
-      {% if conv_sig.signature_email_last_error %}
-        <div class="hint" style="margin-top:8px;color:#991b1b;">{{ conv_sig.signature_email_last_error }}</div>
-      {% endif %}
-      {% if conv_sig.signature_email_sent_at %}
-        <div class="hint" style="margin-top:8px;">E-mail envoyé le {{ conv_sig.signature_email_sent_at|frdatetime }}</div>
-      {% endif %}
-      <div class="hint" style="margin-top:8px;">Statut actuel : <strong>{{ conv_sig.status or "Non créée" }}</strong></div>
-      {% if conv_sig.created_at %}<div class="hint" style="margin-top:8px;">Demande créée le {{ conv_sig.created_at|frdatetime }}</div>{% endif %}
-      <div class="hint" style="margin-top:8px;">Rappels envoyés : <strong>{{ conv_sig.reminder_count or 0 }}/3</strong></div>
-      {% if conv_sig.last_reminder_sent_at %}<div class="hint" style="margin-top:8px;">Dernier rappel : {{ conv_sig.last_reminder_sent_at|frdatetime }}</div>{% endif %}
-      {% if conv_sig.next_reminder_at %}<div class="hint" style="margin-top:8px;">Prochain rappel : {{ conv_sig.next_reminder_at|frdatetime }}</div>{% endif %}
-      {% if conv_sig.last_email_error %}<div class="hint" style="margin-top:8px;color:#991b1b;">{{ conv_sig.last_email_error }}</div>{% endif %}
-      {% if conv_sig.signature_link_expires_at %}<div class="hint" style="margin-top:8px;">Expiration du lien : {{ conv_sig.signature_link_expires_at|frdatetime }}</div>{% endif %}
-      {% if conv_sig.signature_request_id %}
-        <div class="hint" style="margin-top:8px;">Demande Yousign : <span class="mono">{{ conv_sig.signature_request_id }}</span></div>
-      {% endif %}
+{% macro automation_icon(name, extra='') -%}
+  {% if name == 'file' %}<svg class="automation-icon {{ extra }}" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+  {% elif name == 'check' %}<svg class="automation-icon {{ extra }}" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+  {% elif name == 'mail' %}<svg class="automation-icon {{ extra }}" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+  {% elif name == 'hourglass' %}<svg class="automation-icon {{ extra }}" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12M6 22h12M7 2c0 5 3 6 5 10-2 4-5 5-5 10M17 2c0 5-3 6-5 10 2 4 5 5 5 10"/></svg>
+  {% elif name == 'lock' %}<svg class="automation-icon {{ extra }}" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+  {% elif name == 'alert' %}<svg class="automation-icon {{ extra }}" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 10 18H2L12 3z"/><path d="M12 9v5M12 18h.01"/></svg>
+  {% elif name == 'clock' %}<svg class="automation-icon {{ extra }}" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+  {% elif name == 'calendar' %}<svg class="automation-icon {{ extra }}" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+  {% elif name == 'send' %}<svg class="automation-icon {{ extra }}" viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4 20-7z"/><path d="M22 2 11 13"/></svg>
+  {% elif name == 'download' %}<svg class="automation-icon {{ extra }}" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+  {% elif name == 'graduation' %}<svg class="automation-icon {{ extra }}" viewBox="0 0 24 24" aria-hidden="true"><path d="m22 10-10-5-10 5 10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg>{% endif %}
+{%- endmacro %}
+
+{% if show_automation %}
+{% set auto = automation_status %}
+{% set auto_global = auto.global_status %}
+{% set progress_percent = auto.progress_percent|default(0) %}
+<section class="automation-panel automation-hub{% if automation_locked %} is-locked{% endif %}" id="automationHub" aria-labelledby="automationHubTitle">
+  <div class="automation-hub__glow" aria-hidden="true"></div>
+  <header class="automation-header automation-hub__header">
+    <div class="automation-hub__brand"><span class="automation-hub__logo" aria-hidden="true">{{ automation_icon('file') }}</span><div><div class="automation-hub__eyebrow">Suivi des documents du stagiaire</div><h2 id="automationHubTitle">Automatisation</h2><p>Suivez la génération, l’envoi, la signature et la disponibilité des documents du stagiaire.</p></div></div>
+    <div class="automation-badge automation-badge--{% if automation_locked %}locked{% elif auto_global == 'complete' %}complete{% elif auto_global == 'error' %}error{% elif auto_global == 'in_progress' %}waiting{% elif auto_global == 'blocked' %}blocked{% else %}action{% endif %}">{% if automation_locked %}{{ automation_icon('lock') }}Module verrouillé{% elif auto_global == 'complete' %}{{ automation_icon('check') }}À jour{% elif auto_global == 'error' %}{{ automation_icon('alert') }}Erreur{% elif auto_global == 'in_progress' %}{{ automation_icon('hourglass','automation-icon--hourglass') }}En cours{% elif auto_global == 'blocked' %}{{ automation_icon('lock') }}Bloqué{% else %}{{ automation_icon('clock') }}En cours{% endif %}</div>
+  </header>
+  {% if automation_locked %}<div class="automation-locked-notice">{{ automation_icon('lock') }}<span>Le module Automatisations n’est pas activé pour ce partenaire. Le suivi reste visible, mais toutes les actions sont grisées et non opérationnelles.</span></div>{% endif %}
+  <div class="automation-progress" aria-label="Avancement"><div class="automation-progress__top"><span>Avancement</span><strong>{{ auto.ready_documents|default(0) }} / {{ auto.total_documents|default(4) }} étapes prêtes • {{ progress_percent }} %</strong></div><div class="automation-progress__track"><div class="automation-progress__bar" style="width:{{ progress_percent }}%;"></div></div></div>
+  <div class="automation-timeline" aria-label="Étapes automatisation">{% for step in auto.timeline %}<div class="automation-timeline__step is-{{ step.state }}"><span class="automation-timeline__icon"><span class="automation-timeline__index">{{ loop.index }}</span>{% if step.state == 'complete' %}{{ automation_icon('check') }}{% elif step.state == 'error' %}{{ automation_icon('alert') }}{% elif step.state == 'blocked' %}{{ automation_icon('lock') }}{% else %}{{ automation_icon('hourglass','automation-icon--hourglass') }}{% endif %}</span><div>{{ step.label }}</div></div>{% endfor %}</div>
+  <details class="automation-docs-accordion">
+    <summary class="automation-docs-accordion__summary">
+      <span>Afficher les documents et actions</span>
+      <strong>{{ auto.ready_documents|default(0) }} / {{ auto.total_documents|default(4) }} prêts</strong>
+    </summary>
+    <div class="automation-grid">
+    {% set c = auto.convention %}
+    <details class="automation-card automation-doc automation-card--{{ c.card_tone|default('pending') }}"><summary class="automation-doc__summary"><span class="automation-card__icon">{{ automation_icon('file') }}</span><div class="automation-doc__title"><h3>Convention</h3><p>Document contractuel à générer, envoyer et faire signer.</p></div><span class="automation-status automation-status--{{ c.tone }}">{{ automation_icon(c.icon, c.icon_class|default('')) }}{{ c.label }}</span><div class="automation-doc__summary-action">{% if c.status == 'signed' and c.download_url %}<a class="btn btn-outline automation-download-signed" href="{{ c.download_url }}" download onclick="event.stopPropagation()" aria-label="Télécharger la convention de formation signée">{{ automation_icon('download') }}Télécharger la convention signée</a>{% endif %}<form class="automation-loading-form" data-convention-transmission-form="true"{% if c.status in ['waiting_signature','sent','signed'] %} data-yousign-force-new="true"{% endif %} method="post" action="{{ url_for('admin_create_convention_signature', session_id=session.id, trainee_id=trainee.id) }}" onclick="event.stopPropagation()">{% if c.status in ['waiting_signature','sent','signed'] %}<input type="hidden" name="force_new" value="1">{% endif %}<button class="btn btn-primary" type="submit" {% if is_read_only or automation_locked or not c.can_send %}disabled{% endif %}>{% if c.status in ['waiting_signature','sent','signed'] %}Annuler et régénérer{% else %}{{ c.primary_action }}{% endif %}</button></form></div></summary>
+      <div class="automation-card-details automation-doc__body"><div class="automation-meta">{% for step in c.timeline_steps %}<div class="automation-meta__row"><i class="automation-meta__dot automation-meta__dot--{{ step.state }}"></i><span>{{ step.label }}</span><strong>{{ step.value }}</strong></div>{% endfor %}<div class="automation-meta__row"><i class="automation-meta__dot"></i><span>Email destinataire</span><strong>{{ c.recipient_email or '—' }}</strong></div><div class="automation-meta__row"><i class="automation-meta__dot"></i><span>ID Yousign</span><strong class="mono">{{ c.signature_request_id or '—' }}</strong></div></div>{% if c.error %}<div class="automation-error">{{ c.error }}</div>{% endif %}<div class="automation-actions">{% if c.status in ['waiting_signature','sent'] %}<form class="automation-loading-form" method="post" action="{{ url_for('admin_send_convention_signature_reminder_for_session', session_id=session.id, trainee_id=trainee.id) }}"><button class="btn btn-outline" type="submit" {% if automation_locked or is_read_only %}disabled{% endif %}>{% if automation_locked %}{{ automation_icon('lock') }}{% endif %}Relancer la signature</button></form>{% endif %}{% if c.download_url %}<a class="btn btn-outline" href="{{ c.download_url }}" target="_blank" rel="noopener">Voir le document</a><a class="btn btn-outline" href="{{ c.download_url }}" download>Télécharger</a>{% endif %}<button class="btn btn-outline" type="button" disabled title="Historique affiché ci-dessus">Voir l’historique</button></div></div>
+    </details>
+    {% if is_aps %}{% set v = auto.convocation %}
+    <details class="automation-card automation-doc automation-doc--convocation automation-card--{{ v.card_tone|default('blocked') }}"><summary class="automation-doc__summary"><span class="automation-card__icon">{{ automation_icon('mail') }}</span><div class="automation-doc__title"><h3>Convocation</h3><p>Document envoyé après validation ou signature de la convention.</p></div><span class="automation-status automation-status--{{ v.tone }}">{{ automation_icon(v.icon, v.icon_class|default('')) }}{{ v.label }}</span><div class="automation-doc__summary-action">{% if is_aps %}<a class="btn btn-outline" href="{{ v.preview_url or url_for('admin_preview_aps_convocation', session_id=session.id, trainee_id=trainee.id) }}" data-open-document-preview-modal data-preview-title="Convocation" data-preview-description="Vérifiez la convocation avant sa génération ou son envoi." data-preview-frame-title="Aperçu de la convocation">Aperçu</a><form class="automation-loading-form" method="post" action="{{ url_for('admin_generate_aps_convocation_automation', session_id=session.id, trainee_id=trainee.id) }}" onclick="event.stopPropagation()"><button class="btn btn-primary" type="submit" {% if automation_locked or is_read_only or not v.can_generate %}disabled title='{{ v.block_reason or "Action indisponible" }}'{% endif %}>{% if automation_locked or is_read_only or not v.can_generate %}{{ automation_icon('lock') }}{% endif %}Générer la convocation</button></form>{% if v.status in ['generated', 'sent'] or v.can_send %}<button class="btn btn-primary" id="btnAutomationSendConvocation" type="button" {% if automation_locked or is_read_only or not v.can_send %}disabled title='{{ v.block_reason or "Action indisponible" }}'{% endif %}>{% if automation_locked or is_read_only or not v.can_send %}{{ automation_icon('lock') }}{% endif %}{% if v.status == 'sent' %}Renvoyer la convocation{% else %}Envoyer la convocation{% endif %}</button>{% endif %}{% endif %}</div></summary>
+      <div class="automation-card-details automation-doc__body"><div class="automation-meta">{% for step in v.timeline_steps %}<div class="automation-meta__row"><i class="automation-meta__dot automation-meta__dot--{{ step.state }}"></i><span>{{ step.label }}</span><strong>{{ step.value }}</strong></div>{% endfor %}</div>{% if v.error %}<div class="automation-error">{{ v.error }}</div>{% endif %}<div class="automation-actions">{% if v.download_url %}<a class="btn btn-outline" href="{{ v.download_url }}" target="_blank" rel="noopener">Télécharger</a>{% endif %}<button class="btn btn-outline" type="button" disabled title="Historique affiché ci-dessus">Voir l’historique</button></div></div>
+    </details>{% endif %}
+    {% if auto.has_entry_attestation %}<details class="automation-card automation-doc automation-card--{% if trainee.attestation_entree_aps_sent_at %}done{% else %}ready{% endif %}"><summary class="automation-doc__summary"><span class="automation-card__icon">{{ automation_icon('calendar') }}</span><div class="automation-doc__title"><h3>Attestation d'entrée en formation</h3><p>Aperçu et envoi manuel depuis le modèle Word.</p></div><span class="automation-status automation-status--{% if trainee.attestation_entree_aps_sent_at %}complete{% else %}muted{% endif %}">{% if trainee.attestation_entree_aps_sent_at %}{{ automation_icon('check') }}Envoyée le {{ trainee.attestation_entree_aps_sent_at|frdatetime }}{% elif session.date_start %}{{ automation_icon('clock') }}Envoi prévu le {{ session.date_start|frdate }}{% else %}{{ automation_icon('clock') }}Envoi prévu{% endif %}</span><div class="automation-doc__summary-action"><a class="btn btn-outline" href="{{ url_for('admin_preview_aps_entry_attestation', session_id=session.id, trainee_id=trainee.id) }}" data-open-document-preview-modal data-preview-title="Attestation d’entrée en formation" data-preview-description="Vérifiez l’attestation avant son envoi manuel depuis le modèle Word." data-preview-frame-title="Aperçu de l’attestation d’entrée en formation">Aperçu</a><button class="btn btn-primary" id="btnAutomationSendEntryAttestation" type="button" onclick="event.stopPropagation()" {% if automation_locked or is_read_only %}disabled{% endif %}>{% if automation_locked %}{{ automation_icon('lock') }}{% endif %}{% if trainee.attestation_entree_aps_sent_at %}Renvoyer{% else %}Envoyer{% endif %}</button></div></summary><div class="automation-card-details automation-doc__body"><div class="automation-meta"><div class="automation-meta__row"><i class="automation-meta__dot automation-meta__dot--{% if trainee.attestation_entree_aps_sent_at %}done{% else %}pending{% endif %}"></i><span>Statut</span><strong>{% if trainee.attestation_entree_aps_sent_at %}Envoyée{% else %}À envoyer{% endif %}</strong></div><div class="automation-meta__row"><i class="automation-meta__dot"></i><span>Date d'envoi</span><strong>{% if trainee.attestation_entree_aps_sent_at %}{{ trainee.attestation_entree_aps_sent_at|frdatetime }}{% else %}—{% endif %}</strong></div><div class="automation-meta__row"><i class="automation-meta__dot"></i><span>Mode d'envoi</span><strong>Email avec pièce jointe PDF</strong></div></div>{% if trainee.attestation_entree_aps_last_error %}<div class="automation-error">{{ trainee.attestation_entree_aps_last_error }}</div>{% endif %}<div class="automation-actions"><a class="btn btn-outline" href="{{ url_for('admin_preview_aps_entry_attestation', session_id=session.id, trainee_id=trainee.id) }}" data-open-document-preview-modal data-preview-title="Attestation d’entrée en formation" data-preview-description="Vérifiez l’attestation avant son envoi manuel depuis le modèle Word." data-preview-frame-title="Aperçu de l’attestation d’entrée en formation">Voir l'aperçu</a></div></div></details>{% endif %}
+    {% if auto.has_end_attestation %}<details class="automation-card automation-doc automation-card--{% if trainee.attestation_fin_aps_sent_at %}done{% else %}ready{% endif %}"><summary class="automation-doc__summary"><span class="automation-card__icon">{{ automation_icon('graduation') }}</span><div class="automation-doc__title"><h3>Attestation de fin de formation</h3><p>Aperçu et envoi manuel depuis le modèle Word.</p></div><span class="automation-status automation-status--{% if trainee.attestation_fin_aps_sent_at %}complete{% else %}muted{% endif %}">{% if trainee.attestation_fin_aps_sent_at %}{{ automation_icon('check') }}Envoyée le {{ trainee.attestation_fin_aps_sent_at|frdatetime }}{% elif session.date_end %}{{ automation_icon('calendar') }}Envoi prévu le {{ session.date_end|frdate }}{% else %}{{ automation_icon('calendar') }}Envoi prévu{% endif %}</span><div class="automation-doc__summary-action"><a class="btn btn-outline" href="{{ url_for('admin_preview_aps_end_attestation', session_id=session.id, trainee_id=trainee.id) }}" data-open-document-preview-modal data-preview-title="Attestation de fin de formation" data-preview-description="Vérifiez l’attestation avant son envoi manuel depuis le modèle Word." data-preview-frame-title="Aperçu de l’attestation de fin de formation">Aperçu</a><button class="btn btn-primary" id="btnAutomationSendEndAttestation" type="button" onclick="event.stopPropagation()" {% if automation_locked or is_read_only %}disabled{% endif %}>{% if automation_locked %}{{ automation_icon('lock') }}{% endif %}{% if trainee.attestation_fin_aps_sent_at %}Renvoyer{% else %}Envoyer{% endif %}</button></div></summary><div class="automation-card-details automation-doc__body"><div class="automation-meta"><div class="automation-meta__row"><i class="automation-meta__dot automation-meta__dot--{% if trainee.attestation_fin_aps_sent_at %}done{% else %}pending{% endif %}"></i><span>Statut</span><strong>{% if trainee.attestation_fin_aps_sent_at %}Envoyée{% else %}À envoyer{% endif %}</strong></div><div class="automation-meta__row"><i class="automation-meta__dot"></i><span>Date d'envoi</span><strong>{% if trainee.attestation_fin_aps_sent_at %}{{ trainee.attestation_fin_aps_sent_at|frdatetime }}{% else %}—{% endif %}</strong></div><div class="automation-meta__row"><i class="automation-meta__dot"></i><span>Mode d'envoi</span><strong>Email avec pièce jointe PDF</strong></div></div>{% if trainee.attestation_fin_aps_last_error %}<div class="automation-error">{{ trainee.attestation_fin_aps_last_error }}</div>{% endif %}<div class="automation-actions"><a class="btn btn-outline" href="{{ url_for('admin_preview_aps_end_attestation', session_id=session.id, trainee_id=trainee.id) }}" data-open-document-preview-modal data-preview-title="Attestation de fin de formation" data-preview-description="Vérifiez l’attestation avant son envoi manuel depuis le modèle Word." data-preview-frame-title="Aperçu de l’attestation de fin de formation">Voir l'aperçu</a></div></div></details>{% endif %}
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-      <form id="yousignSignatureForm" method="post" action="{{ url_for('admin_create_convention_signature', session_id=session.id, trainee_id=trainee.id) }}" style="margin:0;">
-        <button id="yousignSignatureButton" class="btn btn-primary" type="submit" {% if is_read_only %}disabled{% endif %}>
-          {% if conv_sig.signature_request_id and conv_sig.status in ["ongoing", "activated"] %}Réutiliser la demande Yousign{% elif conv_sig.signature_request_id %}Créer une nouvelle demande{% else %}Créer la demande Yousign{% endif %}
-        </button>
-      </form>
-      {% if conv_sig.signature_link and conv_sig.status not in ["signed", "done"] %}
-        <form method="post" action="{{ url_for('admin_send_convention_signature_reminder_for_session', session_id=session.id, trainee_id=trainee.id) }}" style="margin:0;">
-          <button class="btn btn-outline" type="submit" {% if is_read_only %}disabled{% endif %}>Renvoyer le lien de signature par e-mail</button>
-        </form>
-        <button class="btn btn-outline" type="button" data-copy-signature-link="{{ conv_sig.signature_link|e }}">Copier le lien de signature</button>
-        <a class="btn btn-outline" href="{{ url_for('public_convention_signature_redirect', token=trainee.public_token) }}" target="_blank" rel="noopener">Tester le bouton stagiaire</a>
-      {% endif %}
-      {% if conv_sig.signed_pdf_path %}
-        <a class="btn btn-outline" href="{{ url_for('admin_view_signed_convention', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener">Voir convention signée</a>
-      {% endif %}
-      {% if conv_sig.unsigned_pdf_path or trainee.convention_aps_pdf_path %}
-        <a class="btn btn-outline" href="{{ url_for('admin_view_original_convention', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener">Voir convention originale</a>
-      {% endif %}
-    </div>
-  </div>
-  {% if not is_read_only %}
-    <div id="yousignSignatureProgress" class="yousign-sync-progress" role="dialog" aria-modal="true" aria-labelledby="yousignSignatureProgressTitle" aria-describedby="yousignSignatureProgressMessage" aria-hidden="true">
-      <div class="yousign-sync-progress__panel" role="status" aria-live="polite">
-        <div class="yousign-sync-progress__brand" aria-hidden="true">YS</div>
-        <div class="yousign-sync-progress__spinner" aria-hidden="true"></div>
-        <h3 id="yousignSignatureProgressTitle">Demande de signature</h3>
-        <p id="yousignSignatureProgressMessage">Création de la demande Yousign et préparation du lien de signature sécurisé…</p>
-        <div class="yousign-sync-progress__steps" aria-hidden="true">
-          <span class="is-active">Document</span><i></i><span>Yousign</span><i></i><span>E-mail</span>
-        </div>
-        <small>Veuillez patienter et ne fermez pas cette page.</small>
-      </div>
-    </div>
-  {% endif %}
-</div>
+  </details>
+</section>
 {% endif %}
 
-{% set ypareo_person_status = trainee.ypareo_statut or 'Non envoyé' %}
-{% set ypareo_course_status = trainee.ypareo_cursus_statut or 'Non envoyé' %}
-{% set ypareo_person_ok = ypareo_person_status == 'Créé' %}
-{% set ypareo_course_ok = ypareo_course_status == 'Créé' %}
-{% set ypareo_person_error = ypareo_person_status == 'Erreur' %}
-{% set ypareo_course_error = ypareo_course_status == 'Erreur' %}
-<section class="ypareo-hub" aria-labelledby="ypareoHubTitle">
-  <div class="ypareo-hub__glow" aria-hidden="true"></div>
-  <header class="ypareo-hub__header">
-    <div class="ypareo-hub__brand">
-      <span class="ypareo-hub__logo" aria-hidden="true">
-        <svg viewBox="0 0 24 24" role="img"><path d="M12 3v12m0-12 4.5 4.5M12 3 7.5 7.5M5 13.5v4A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2.5-2.5v-4"/></svg>
-      </span>
-      <div>
-        <div class="ypareo-hub__eyebrow">Synchronisation administrative</div>
-        <h2 id="ypareoHubTitle">YPAREO <span>NEO</span></h2>
-        <p>Suivez et pilotez l'envoi de ce stagiaire sans surcharger la liste générale.</p>
+{% if not is_read_only %}
+  <div id="yousignSignatureProgress" class="yousign-sync-progress" role="dialog" aria-modal="true" aria-labelledby="yousignSignatureProgressTitle" aria-describedby="yousignSignatureProgressMessage" aria-hidden="true">
+    <div class="yousign-sync-progress__panel" role="status" aria-live="polite">
+      <div class="yousign-sync-progress__brand" aria-hidden="true">YS</div>
+      <div class="yousign-sync-progress__spinner" aria-hidden="true"></div>
+      <h3 id="yousignSignatureProgressTitle">Demande de signature</h3>
+      <p id="yousignSignatureProgressMessage">Création de la demande Yousign et préparation du lien de signature sécurisé…</p>
+      <div class="yousign-sync-progress__steps" aria-hidden="true">
+        <span class="is-active">Document</span><i></i><span>Yousign</span><i></i><span>E-mail</span>
       </div>
+      <small>Veuillez patienter et ne fermez pas cette page.</small>
     </div>
-    <div class="ypareo-hub__summary {% if ypareo_person_ok and ypareo_course_ok %}is-complete{% elif ypareo_person_error or ypareo_course_error %}is-error{% else %}is-pending{% endif %}">
-      <span class="ypareo-hub__summary-dot"></span>
-      {% if ypareo_person_ok and ypareo_course_ok %}Synchronisation complète
-      {% elif ypareo_person_error or ypareo_course_error %}Action requise
-      {% else %}Synchronisation à finaliser{% endif %}
-    </div>
-  </header>
-
-  <div class="ypareo-flow">
-    <article class="ypareo-step {% if ypareo_person_ok %}is-complete{% elif ypareo_person_error %}is-error{% else %}is-pending{% endif %}">
-      <div class="ypareo-step__topline">
-        <span class="ypareo-step__number">01</span>
-        <span class="ypareo-status">
-          <span class="ypareo-status__dot"></span>{{ ypareo_person_status }}
-        </span>
-      </div>
-      <div class="ypareo-step__content">
-        <div class="ypareo-step__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5.5 20c.7-4.1 3-6.2 6.5-6.2s5.8 2.1 6.5 6.2"/></svg>
-        </div>
-        <div>
-          <div class="ypareo-step__label">Fiche apprenant</div>
-          <h3>Personne YPAREO</h3>
-          <p>Identité et coordonnées du stagiaire.</p>
-        </div>
-      </div>
-      {% if trainee.ypareo_id %}
-        <div class="ypareo-step__identifier"><span>ID personne</span><strong>{{ trainee.ypareo_id }}</strong></div>
-      {% endif %}
-      {% if trainee.ypareo_erreur %}
-        <div class="ypareo-step__error"><strong>Échec de l'envoi</strong><span>{{ trainee.ypareo_erreur }}</span></div>
-      {% endif %}
-    </article>
-
-    <div class="ypareo-flow__connector {% if ypareo_person_ok %}is-active{% endif %}" aria-hidden="true">
-      <span></span><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
-    </div>
-
-    <article class="ypareo-step {% if ypareo_course_ok %}is-complete{% elif ypareo_course_error %}is-error{% else %}is-pending{% endif %}">
-      <div class="ypareo-step__topline">
-        <span class="ypareo-step__number">02</span>
-        <span class="ypareo-status">
-          <span class="ypareo-status__dot"></span>{{ ypareo_course_status }}
-        </span>
-      </div>
-      <div class="ypareo-step__content">
-        <div class="ypareo-step__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M4 7.5 12 4l8 3.5-8 3.5-8-3.5Z"/><path d="M7 9v5.5c2.8 2 7.2 2 10 0V9M20 8v6"/></svg>
-        </div>
-        <div>
-          <div class="ypareo-step__label">Inscription formation</div>
-          <h3>Cursus YPAREO</h3>
-          <p>Rattachement à la formation et à la session.</p>
-        </div>
-      </div>
-      {% if trainee.ypareo_cursus_id %}
-        <div class="ypareo-step__identifier"><span>ID cursus</span><strong>{{ trainee.ypareo_cursus_id }}</strong></div>
-      {% endif %}
-      {% if trainee.ypareo_cursus_erreur %}
-        <div class="ypareo-step__error"><strong>Échec du cursus</strong><span>{{ trainee.ypareo_cursus_erreur }}</span></div>
-      {% endif %}
-      {% if not trainee.ypareo_cursus_id %}
-        <div class="ypareo-step__locked"><span aria-hidden="true">↳</span> Créé automatiquement avec la personne</div>
-      {% endif %}
-    </article>
   </div>
-  {% if not is_read_only %}
-    <form id="ypareoSyncForm" class="ypareo-hub__action" method="post" action="{{ url_for('admin_send_trainee_to_ypareo', session_id=session.id, trainee_id=trainee.id) }}">
-      <button id="ypareoSyncButton" class="ypareo-action{% if trainee.ypareo_id or ypareo_person_error or ypareo_course_error %} ypareo-action--retry{% endif %}" type="submit">
-        {% if trainee.ypareo_id or ypareo_person_error or ypareo_course_error %}
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>
-          Relancer la création de la personne et du cursus YPAREO
-        {% else %}
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0-11 4 4m-4-4L8 8M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg>
-          Créer la personne et le cursus YPAREO
-        {% endif %}
-      </button>
-      <p class="ypareo-action__hint">Une seule action crée la fiche apprenant puis son inscription à la formation.</p>
-    </form>
-
-    <div id="ypareoSyncProgress" class="ypareo-sync-progress" role="dialog" aria-modal="true" aria-labelledby="ypareoSyncProgressTitle" aria-describedby="ypareoSyncProgressMessage" aria-hidden="true">
-      <div class="ypareo-sync-progress__panel" role="status" aria-live="polite">
-        <div class="ypareo-sync-progress__brand" aria-hidden="true">YP</div>
-        <div class="ypareo-sync-progress__spinner" aria-hidden="true"></div>
-        <h3 id="ypareoSyncProgressTitle">Transmission en cours vers YPAREO NEO</h3>
-        <p id="ypareoSyncProgressMessage">Création de la fiche apprenant et de son inscription à la formation…</p>
-        <div class="ypareo-sync-progress__steps" aria-hidden="true">
-          <span class="is-active">Personne</span><i></i><span>Cursus</span>
-        </div>
-        <small>Veuillez patienter et ne fermez pas cette page.</small>
-      </div>
-    </div>
-  {% endif %}
-</section>
+{% endif %}
 
 {% if show_vae %}
 <div class="card" style="grid-column:1 / -1; margin-top:12px;">
@@ -986,41 +888,6 @@
 </div>
 {% endif %}
 
-
-{% if is_aps %}
-<div class="aps-doc-card" id="apsConvocationCard">
-  <div class="aps-doc-card__head">
-    <div class="aps-doc-card__icon" aria-hidden="true">📄</div>
-    <h2 class="aps-doc-card__title">Convocations et attestations</h2>
-  </div>
-  {% set aps_convocation_sent = (trainee.convocation_aps_status == 'sent' or trainee.convocation_aps_sent_at) %}
-  <div class="aps-doc-row">
-    <div>
-      <div class="aps-doc-row__label">Convocation</div>
-      <div class="hint" id="apsConvocationSentHint" style="margin-top:4px;{% if not aps_convocation_sent %}display:none;{% endif %}">
-        Convocation envoyée le <strong id="apsConvocationSentAt">{{ trainee.convocation_aps_sent_at|frdatetime }}</strong>
-      </div>
-    </div>
-    <span id="apsConvocationBadge" class="aps-doc-badge {% if aps_convocation_sent %}aps-doc-badge--sent{% else %}aps-doc-badge--pending{% endif %}">{% if aps_convocation_sent %}Envoyé{% else %}En attente{% endif %}</span>
-    <div class="aps-doc-actions">
-      <a class="btn btn-outline" id="btnPreviewApsConvocation" href="{{ url_for('admin_preview_aps_convocation', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener">Aperçu convocation</a>
-      <button class="btn btn-primary" id="btnSendApsConvocation" type="button" {% if is_read_only %}disabled{% endif %}>{% if aps_convocation_sent %}Renvoyer{% else %}Envoyer la convocation{% endif %}</button>
-      <a class="btn btn-outline" id="btnViewApsConvocation" href="{{ url_for('admin_view_aps_convocation', session_id=session.id, trainee_id=trainee.id) }}" target="_blank" rel="noopener" style="{% if not aps_convocation_sent %}display:none;{% endif %}">Voir la convocation envoyée</a>
-    </div>
-  </div>
-  <div class="aps-doc-row">
-    <div class="aps-doc-row__label">Attestation entrée en formation</div>
-    <span class="aps-doc-badge aps-doc-badge--pending">En attente</span>
-    <div class="aps-doc-actions"><button class="btn btn-disabled-muted" type="button" disabled>Bientôt disponible</button></div>
-  </div>
-  <div class="aps-doc-row">
-    <div class="aps-doc-row__label">Attestation fin de formation</div>
-    <span class="aps-doc-badge aps-doc-badge--pending">En attente</span>
-    <div class="aps-doc-actions"><button class="btn btn-disabled-muted" type="button" disabled>Bientôt disponible</button></div>
-  </div>
-  <div id="apsConvocationFeedback" class="aps-doc-feedback{% if trainee.convocation_aps_last_error %} aps-doc-feedback--error{% endif %}">{{ trainee.convocation_aps_last_error or '' }}</div>
-</div>
-{% endif %}
 
 {% if is_aps and session.aps_elearning_enabled %}
 <div class="card" style="grid-column:1 / -1;margin-top:16px;border:1px solid #bfdbfe;background:linear-gradient(135deg,#eff6ff,#fff);">
@@ -1250,39 +1117,7 @@
 
 {% endif %}
 
-{% if not show_vae %}
-<div class="card" style="grid-column:1 / -1;">
-  <div style="font-weight:900;">Visibilité espace stagiaire</div>
-  <div class="hint" style="margin-top:6px;">Ces options masquent des blocs côté stagiaire.</div>
 
-  <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;align-items:center;">
-
-    <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-      <input type="checkbox" id="chkHideInfos"
-             {% if trainee.public_hide_infos %}checked{% endif %}
-             {{ read_only_attr }}>
-      <span>Masquer Infos à compléter</span>
-    </label>
-
-    <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-      <input type="checkbox" id="chkHideDocs"
-             {% if trainee.public_hide_docs %}checked{% endif %}
-             {{ read_only_attr }}>
-      <span>Masquer Mes documents</span>
-    </label>
-
-    <label style="display:flex;align-items:center;gap:8px;">
-      <input type="checkbox"
-             id="public_hide_suivi"
-             {% if trainee.public_hide_suivi %}checked{% endif %}
-             {{ read_only_attr }}>
-      <span><strong>Masquer Suivi dossier</strong></span>
-    </label>
-
-
-  </div>
-</div>
-{% endif %}
 
 <script>
   document.getElementById("photoInput")?.addEventListener("change", function(){
@@ -1377,240 +1212,164 @@
     </div>
   {% endif %}
 
-  <!-- ===================== -->
-  <!-- CONVENTION & FINANCEMENT -->
-  <!-- ===================== -->
-  {% if is_vtc %}
-  <details class="card card--full" id="conventionFinancementSection">
-    <summary style="cursor:pointer;font-weight:900;">Convention &amp; Financement</summary>
-  {% else %}
-  <div class="card{% if is_vtc %} card--full{% endif %}" id="conventionFinancementSection">
-  {% endif %}
+  <div class="trainee-side-column">
+    {% if not show_vae %}
+      <div class="card">
+        <div style="font-weight:900;">Visibilité espace stagiaire</div>
+        <div class="hint" style="margin-top:6px;">Ces options masquent des blocs côté stagiaire.</div>
 
-    {% if not is_vtc %}
-    <div class="card-head">
-      <div>Convention & Financement</div>
-    </div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;align-items:center;">
+
+          <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="chkHideInfos"
+                   {% if trainee.public_hide_infos %}checked{% endif %}
+                   {{ read_only_attr }}>
+            <span>Masquer Infos à compléter</span>
+          </label>
+
+          <label class="chk-inline" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="chkHideDocs"
+                   {% if trainee.public_hide_docs %}checked{% endif %}
+                   {{ read_only_attr }}>
+            <span>Masquer Mes documents</span>
+          </label>
+
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox"
+                   id="public_hide_suivi"
+                   {% if trainee.public_hide_suivi %}checked{% endif %}
+                   {{ read_only_attr }}>
+            <span><strong>Masquer Suivi dossier</strong></span>
+          </label>
+
+
+        </div>
+      </div>
     {% endif %}
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <!-- ===================== -->
+    <!-- COMMENTAIRE (ADMIN)    -->
+    <!-- ===================== -->
+    <div class="card">
+      <div style="font-weight:900;">Commentaire (admin)</div>
+      <div class="hint" style="margin-top:6px;">Visible dans la liste stagiaires + fiche. Sauvegarde automatique.</div>
 
-      <!-- CONVENTION -->
-      <div>
-        <div style="font-weight:900;margin-bottom:6px;">Convention</div>
-        {% set cs = (trainee.convention_status or "soon") %}
-        <select id="conventionSelect" class="status-pill" style="margin-top:8px;" {{ read_only_attr }}>
-          <option value="soon" {% if cs=="soon" %}selected{% endif %}>PROCHAINEMENT</option>
-          <option value="signing" {% if cs=="signing" %}selected{% endif %}>EN COURS DE SIGNATURE</option>
-          <option value="signed" {% if cs=="signed" %}selected{% endif %}>SIGNÉE</option>
-        </select>
-        {% if not is_read_only %}
-          <form method="post"
-                action="{{ url_for('admin_convention_unsigned_notify', session_id=session.id, trainee_id=trainee.id) }}"
-                style="margin-top:10px;"
-                data-mail-sms-confirm="true">
-            <button class="btn btn-outline btn-uniform" type="submit">📩 Convention non signée</button>
-          </form>
-        {% endif %}
-        {% if trainee.convention_unsigned_notified_at %}
-          <div class="hint" style="margin-top:8px;">🟧 Notifié le : <strong>{{ trainee.convention_unsigned_notified_at|frdatetime }}</strong></div>
-        {% endif %}
-      </div>
-
-      <!-- FINANCEMENT -->
-      <div>
-        <div style="font-weight:900;margin-bottom:6px;">Financement</div>
-        {% set fs = (trainee.financement_status or "soon") %}
-        <select id="financementSelect" class="status-pill" style="margin-top:8px;" {{ read_only_attr }}>
-          <option value="soon" {% if fs=="soon" %}selected{% endif %}>PROCHAINEMENT</option>
-          <option value="in_review" {% if fs=="in_review" %}selected{% endif %}>EN COURS DE VALIDATION</option>
-          <option value="validated" {% if fs=="validated" %}selected{% endif %}>VALIDÉ</option>
-        </select>
-        {% if not is_read_only %}
-          <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;">
-            <button class="btn {% if trainee.financement_rejected_note %}btn-orange{% else %}btn-outline{% endif %}" type="button" id="btnOpenFinancementReject"
-                    onclick="document.getElementById('financementRejectModal').classList.add('show');document.getElementById('financementRejectModal').setAttribute('aria-hidden','false');">
-              Prélèvement rejeté
-            </button>
-            <button class="btn {% if trainee.financement_pending_notification_sent_at %}btn-disabled-muted{% else %}btn-outline{% endif %}"
-                    type="button"
-                    id="btnSendFinancementPending"
-                    {% if trainee.financement_pending_notification_sent_at %}disabled{% endif %}>
-              Prélèvement en attente
-            </button>
-          </div>
-        {% endif %}
-        <div id="financementRejectedNote" class="hint" style="margin-top:8px;{% if not trainee.financement_rejected_note %}display:none;{% endif %}">
-          {{ trainee.financement_rejected_note or "⚠️ Prélèvement rejeté" }}
-        </div>
-        <div id="financementPendingSentAt" class="hint" style="margin-top:4px;{% if not trainee.financement_pending_notification_sent_at or fs == 'validated' %}display:none;{% endif %}">
-          🟧 Prélèvement en attente envoyé le :
-          <strong>{% if trainee.financement_pending_notification_sent_at %}{{ trainee.financement_pending_notification_sent_at[:10]|frdate }}{% endif %}</strong>
-        </div>
-        {% set financement_ns = namespace(new_date=None) %}
-        {% for req in trainee.financement_rejected_requests or [] %}
-          {% if req.new_date and not financement_ns.new_date %}
-            {% set financement_ns.new_date = req.new_date %}
-          {% endif %}
-        {% endfor %}
-        {% if financement_ns.new_date and fs != "validated" %}
-          <div id="financementRejectedNewDate" class="hint" style="margin-top:4px;display:flex;align-items:center;gap:6px;">
-            👉 Un nouveau prélèvement a été proposé le {{ fr_date(financement_ns.new_date) or financement_ns.new_date }}
-            <button type="button" class="icon-btn" id="financementNewDateIndicator" {{ read_only_attr }}
-                    data-seen="{{ '1' if trainee.financement_new_date_seen else '0' }}"
-                    title="Marquer comme vu">
-              {% if trainee.financement_new_date_seen %}🟢{% else %}🔴{% endif %}
-            </button>
-          </div>
-        {% endif %}
-      </div>
-
-      <!-- COMMENTAIRE FINANCEMENT (pleine largeur dans la carte) -->
-      <div style="margin-top:10px;grid-column:1 / -1;">
-        <div class="label">Commentaire financement</div>
-        <input id="financementComment"
-               type="text"
-               value="{{ trainee.financement_comment or '' }}"
-               placeholder="Ex : France Travail en attente / OPCO validé / CPF…"
-               {{ read_only_attr }}>
-        <div class="hint">Sauvegarde automatique.</div>
-      </div>
-
-      <!-- DETAILS FINANCEMENT (pleine largeur dans la carte) -->
-      <div style="margin-top:16px;grid-column:1 / -1;" id="financementDetails"
-           data-training-type="{{ session.training_type }}"
-           data-default-price="{{ default_training_price or '' }}"
-           data-read-only="{{ '1' if is_read_only else '0' }}">
-        <div style="font-weight:900;margin-bottom:6px;">Détail du financement</div>
-        <div class="hint" style="margin-bottom:10px;">
-          Indiquez comment la formation a été payée. Le total se calcule automatiquement.
-        </div>
-
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
-          <div>
-            <div class="label">Montant CPF</div>
-            <input id="cpfAmount" type="number" min="0" step="0.01" value="{{ trainee.cpf_amount or '' }}" {{ read_only_attr }}>
-          </div>
-          <div>
-            <div class="label">Montant financement personnel</div>
-            <input id="personalAmount" type="number" min="0" step="0.01" value="{{ trainee.personal_amount or '' }}" {{ read_only_attr }}>
-          </div>
-          <div>
-            <div class="label">Montant autre</div>
-            <input id="otherAmount" type="number" min="0" step="0.01" value="{{ trainee.other_amount or '' }}" {{ read_only_attr }}>
-          </div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px;align-items:end;">
-          <div>
-            <div class="label">Tarif formation (modifiable)</div>
-            <input id="trainingPrice" type="number" min="0" step="0.01" value="{{ trainee.training_price or default_training_price or '' }}" {{ read_only_attr }}>
-            <div class="hint">Tarif par défaut : A3P 4200 € / APS 1650 € / VTC 1600 € / Dirigeant initial 4300 € / Dirigeant VAE 3800 €.</div>
-          </div>
-          <div>
-            <div class="label">TOTAL (calcul automatique)</div>
-            <div id="paymentTotalLine" style="font-weight:800;">—</div>
-            <div id="paymentDiffLine" class="hint"></div>
-          </div>
-        </div>
-        <div style="margin-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;">
-          <label style="display:flex;align-items:center;gap:8px;">
-            <input id="excludeFromSalesTracking" type="checkbox" {% if trainee.exclude_from_sales_tracking %}checked{% endif %} {{ read_only_attr }}>
-            <span style="font-weight:700;">Exclure cette personne du suivi des ventes</span>
-          </label>
-          <div>
-            <div class="label">Ajuster le montant (suivi des ventes)</div>
-            <input id="salesTrackingAmount"
-                   type="number"
-                   min="0"
-                   step="0.01"
-                   value="{{ trainee.sales_tracking_amount or '' }}"
-                   placeholder="Ex : 1350"
-                   {{ read_only_attr }}>
-            <div class="hint">Laisser vide pour garder le tarif normal.</div>
-          </div>
-        </div>
-
-        <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px;">
-          <label style="display:flex;align-items:center;gap:8px;">
-            <input id="cashPaymentEnabled" type="checkbox" {% if trainee.cash_payment_enabled %}checked{% endif %} {{ read_only_attr }}>
-            <span style="font-weight:800;">Paiement en espèces</span>
-          </label>
-          <div id="cashPaymentAmountWrap"
-               style="max-width:420px;flex-direction:column;gap:8px;{% if trainee.cash_payment_enabled %}display:flex;{% else %}display:none;{% endif %}">
-            <div class="label">Montant à régler en espèces</div>
-            <input id="cashPaymentAmount"
-                   type="number"
-                   min="0"
-                   step="0.01"
-                   value="{{ trainee.cash_payment_amount or '' }}"
-                   placeholder="Ex : 300"
-                   {{ read_only_attr }}>
-            <div id="cashPaymentInstallmentsWrap" style="display:flex;flex-direction:column;gap:8px;">
-              <div class="label">Versements en espèces</div>
-              <div id="cashPaymentInstallmentsList" style="display:flex;flex-direction:column;gap:8px;"></div>
-              {% if not is_read_only %}
-              <button type="button" class="btn btn-ghost" id="cashPaymentAddInstallmentBtn" style="width:max-content;">+ Ajouter un versement</button>
-              {% endif %}
-            </div>
-            <label id="cashPaymentSettledWrap" style="display:flex;align-items:center;gap:8px;">
-              <input id="cashPaymentSettled" type="checkbox" {% if trainee.cash_payment_settled %}checked{% endif %} {{ read_only_attr }}>
-              <span style="font-weight:700;">OK réglé</span>
-            </label>
-            <div id="cashPaymentSettlementDetails"
-                 style="display:none;flex-direction:column;gap:8px;">
-              <div>
-                <div class="label">Date de règlement</div>
-                <input id="cashPaymentSettledDate" type="date" value="{{ trainee.cash_payment_settled_date or '' }}" {{ read_only_attr }}>
-              </div>
-              <div>
-                <div class="label">Commentaire (optionnel)</div>
-                <input id="cashPaymentSettledComment"
-                       type="text"
-                       value="{{ trainee.cash_payment_settled_comment or '' }}"
-                       placeholder="Ex : Réglé à l'accueil, reçu remis."
-                       {{ read_only_attr }}>
-              </div>
-            </div>
-            <div id="cashPaymentHint" class="hint" style="margin-top:4px;"></div>
-          </div>
-        </div>
-
-
-        <!-- FACTURATION QONTO -->
-        <div class="qonto-invoice-card" id="qontoInvoiceCard" data-session-id="{{ session.id }}" data-trainee-id="{{ trainee.id }}" data-read-only="{{ '1' if is_read_only else '0' }}">
-          <div class="qonto-invoice-head">
-            <div>
-              <div class="qonto-eyebrow">Facturation Qonto</div>
-              <div class="qonto-title">Factures centralisées par financeur</div>
-              <div class="hint">Données chargées depuis la source backend unique utilisée par la page Facturation.</div>
-            </div>
-            <button class="btn btn-outline" type="button" id="btnSyncQontoTrainee">Synchroniser Qonto</button>
-          </div>
-          <div class="qonto-history" id="qontoInvoiceHistory"><div>Chargement des factures…</div></div>
-        </div>
-      </div>
-
+      <textarea id="traineeComment"
+                style="width:100%;min-height:90px;margin-top:10px;"
+                placeholder="Tape ton commentaire..."
+                {{ read_only_attr }}
+      >{{ trainee.comment or "" }}</textarea>
     </div>
-  {% if is_vtc %}
-  </details>
-  {% else %}
   </div>
-  {% endif %}
 
   <!-- ===================== -->
-<!-- COMMENTAIRE (ADMIN)    -->
-<!-- ===================== -->
-<div class="card" style="grid-column:1 / -1;">
-  <div style="font-weight:900;">Commentaire (admin)</div>
-  <div class="hint" style="margin-top:6px;">Visible dans la liste stagiaires + fiche. Sauvegarde automatique.</div>
+  <!-- FINANCEMENT & FACTURATION -->
+  <!-- ===================== -->
+  <details class="finance-dashboard is-hidden" id="conventionFinancementSection">
+    <summary class="finance-dashboard__summary">
+      <span>Financement &amp; facturation</span>
+      <span class="finance-dashboard__summary-hint">Ouvrir le suivi financier</span>
+    </summary>
+    <div id="financementDetails"
+         data-training-type="{{ session.training_type }}"
+         data-default-price="{{ default_training_price or '' }}"
+         data-read-only="{{ '1' if is_read_only or financing_locked else '0' }}">
+      {% if financing_locked %}
+        <div class="automation-locked-notice">🔒 <div>Module financement verrouillé pour ce partenaire. Activez le module <strong>Financement</strong> depuis la fiche admin du partenaire pour modifier les statuts, montants et relances.</div></div>
+      {% endif %}
+      <div class="finance-dashboard__header">
+        <div>
+          <div class="finance-dashboard__kicker">Suivi financier</div>
+          <h2>Financement &amp; facturation</h2>
+          <p class="finance-dashboard__subtitle">Suivi du financement, des factures Qonto et des paiements du stagiaire.</p>
+          <span id="financeSaveIndicator" class="finance-save-indicator">Sauvegardé</span>
+        </div>
+        <div class="finance-dashboard__actions">
+          <button class="btn btn-outline finance-notifications-toggle" type="button" id="btnToggleFinanceNotifications" aria-expanded="false" aria-controls="financeAlerts">🔔 Notifications <span class="finance-notifications-toggle__count" id="financeNotificationsCount">0</span></button>
+          {% if not is_read_only and not financing_locked %}
+            <button class="btn btn-primary finance-quick-invoice-btn" type="button" id="btnQuickGenerateInvoice" disabled>🧾 Générer une facture</button>
+          {% endif %}
+          <button class="btn btn-outline" type="button" id="btnSyncQontoTrainee" {{ financing_read_only_attr }}>Synchroniser Qonto</button>
+          <div class="finance-validation-admin"
+               data-manual-mode="{{ trainee.financing_validation_manual_mode or '' }}"
+               data-manual-status="{{ trainee.financing_validation_manual_status or '' }}">
+            <button class="finance-validation-status finance-validation-status--gray" type="button" id="financeValidationStatus" title="Statut de validation du financement">
+              <span class="finance-validation-status__icon">⌛</span>
+              <span class="finance-validation-status__label">Financement à valider</span>
+            </button>
+            {% if not is_read_only and not financing_locked %}
+              <form method="post" action="{{ url_for('admin_force_financement_validated', session_id=session.id, trainee_id=trainee.id) }}" class="finance-validation-form" id="financeForceValidatedForm">
+                <button class="btn btn-outline" type="submit" id="btnForceFinanceValidated">Forcer validé</button>
+              </form>
+              <button class="btn btn-ghost" type="button" id="btnFinanceAutoMode" style="display:none;">Revenir au calcul automatique</button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
 
-  <textarea id="traineeComment"
-            style="width:100%;min-height:90px;margin-top:10px;"
-            placeholder="Tape ton commentaire..."
-            {{ read_only_attr }}
-  >{{ trainee.comment or "" }}</textarea>
-</div>
+      <div id="financeAlerts" class="finance-section finance-notifications" style="display:none;"></div>
+
+      <details class="finance-detail-section finance-detail-section--settings">
+        <summary><span>Paramètres et champs modifiables</span><span class="finance-accordion-hint" id="financeSettingsSummary">Montants et options</span></summary>
+        <div class="finance-detail-section__body finance-detail-section__body--settings">
+          <div class="finance-settings-hero">
+            <div>
+              <div class="finance-dashboard__kicker">Configuration</div>
+              <h3>Réglez la stratégie de financement</h3>
+              <p>Montants, tarif de référence et options de paiement restent modifiables ici.</p>
+            </div>
+            <span class="finance-settings-pill">SaaS ready</span>
+          </div>
+          <div class="finance-edit-grid finance-edit-grid--cards">
+            <div class="finance-field finance-field-card finance-field-card--cpf"><div class="label">Montant CPF</div><input id="cpfAmount" type="number" min="0" step="0.01" value="{{ trainee.cpf_amount or '' }}" {{ financing_read_only_attr }}><div class="hint">Montant CPF (suivi uniquement, sans facturation CPF)</div></div>
+            <div class="finance-field finance-field-card finance-field-card--personal"><div class="label">Montant financement personnel</div><input id="personalAmount" type="number" min="0" step="0.01" value="{{ trainee.personal_amount if trainee.personal_amount not in [none, ''] else '0' }}" {{ financing_read_only_attr }}><div class="hint">Reste à charge stagiaire</div></div>
+            <div class="finance-field finance-field-card finance-field-card--other"><div class="label">Montant autre</div><input id="otherAmount" type="number" min="0" step="0.01" value="{{ trainee.other_amount or '' }}" {{ financing_read_only_attr }}><div class="hint">OPCO, entreprise, France Travail…</div></div>
+          </div>
+          <div class="finance-edit-grid finance-edit-grid--wide">
+            <div class="finance-field"><div class="label">Tarif formation</div><input id="trainingPrice" type="number" min="0" step="0.01" value="{{ trainee.training_price or default_training_price or '' }}" {{ financing_read_only_attr }}><div class="hint">Tarif par défaut automatiquement repris si le champ est vide.</div></div>
+            <div class="finance-field"><div class="label">Ajustement suivi des ventes</div><input id="salesTrackingAmount" type="number" min="0" step="0.01" value="{{ trainee.sales_tracking_amount or '' }}" placeholder="Ex : 1350" {{ financing_read_only_attr }}><div id="paymentTotalLine" class="hint" style="font-weight:900;margin-top:6px;"></div><div id="paymentDiffLine" class="hint"></div></div>
+          </div>
+          <div class="finance-field" style="margin-top:12px;"><div class="label">Commentaire financement</div><input id="financementComment" type="text" value="{{ trainee.financement_comment or '' }}" placeholder="Ex : France Travail en attente / OPCO validé / CPF…" {{ financing_read_only_attr }}></div>
+          <div class="finance-checks">
+            <label class="finance-check"><input id="excludeFromSalesTracking" type="checkbox" {% if trainee.exclude_from_sales_tracking %}checked{% endif %} {{ financing_read_only_attr }}> Exclure du suivi des ventes</label>
+            <label class="finance-check"><input id="cashPaymentEnabled" type="checkbox" {% if trainee.cash_payment_enabled %}checked{% endif %} {{ financing_read_only_attr }}> Paiement en espèces</label>
+          </div>
+          <div id="cashPaymentAmountWrap" style="margin-top:12px;{% if trainee.cash_payment_enabled %}display:block;{% else %}display:none;{% endif %}">
+            <div class="finance-edit-grid finance-edit-grid--wide"><div class="finance-field"><div class="label">Montant à régler en espèces</div><input id="cashPaymentAmount" type="number" min="0" step="0.01" value="{{ trainee.cash_payment_amount or '' }}" placeholder="Ex : 300" {{ financing_read_only_attr }}></div><label class="finance-check" style="align-self:end;"><input id="cashPaymentSettled" type="checkbox" {% if trainee.cash_payment_settled %}checked{% endif %} {{ financing_read_only_attr }}> OK réglé</label></div>
+            <div id="cashPaymentSettlementDetails" class="finance-edit-grid finance-edit-grid--wide" style="display:none;margin-top:10px;"><div class="finance-field"><div class="label">Date de règlement</div><input id="cashPaymentSettledDate" type="date" value="{{ trainee.cash_payment_settled_date or '' }}" {{ financing_read_only_attr }}></div><div class="finance-field"><div class="label">Commentaire</div><input id="cashPaymentSettledComment" type="text" value="{{ trainee.cash_payment_settled_comment or '' }}" {{ financing_read_only_attr }}></div></div>
+            <div id="cashPaymentInstallmentsWrap" style="margin-top:10px;"><div class="label">Versements en espèces</div><div id="cashPaymentInstallmentsList" class="finance-list"></div>{% if not is_read_only and not financing_locked %}<button type="button" class="btn btn-ghost" id="cashPaymentAddInstallmentBtn" style="margin-top:8px;">+ Ajouter un versement</button>{% endif %}</div>
+            <div id="cashPaymentHint" class="hint" style="margin-top:8px;"></div>
+          </div>
+        </div>
+      </details>
+
+      <div id="financeSummaryCards" class="finance-summary-grid"></div>
+      <div id="financeProgressPanel" class="finance-progress-panel"></div>
+
+      <section class="finance-section">
+        <div class="finance-section__head"><div><h3>Répartition du financement</h3></div></div>
+        <div id="financeBreakdown" class="finance-list"></div>
+      </section>
+
+      <details class="finance-detail-section">
+        <summary><span>Factures Qonto</span><span class="finance-accordion-hint" id="financeInvoicesSummary">Chargement…</span></summary>
+        <div class="finance-detail-section__body"><div id="qontoInvoiceCard" data-session-id="{{ session.id }}" data-trainee-id="{{ trainee.id }}" data-read-only="{{ '1' if is_read_only or financing_locked else '0' }}"><div id="qontoInvoiceHistory" class="finance-list"><div class="finance-empty">Chargement des factures…</div></div></div></div>
+      </details>
+
+      <details class="finance-detail-section">
+        <summary><span>Paiements reçus</span><span class="finance-accordion-hint" id="financePaymentsSummary">0,00 € encaissé</span></summary>
+        <div class="finance-detail-section__body"><div id="financePayments" class="finance-list"></div></div>
+      </details>
+
+      <details class="finance-detail-section">
+        <summary><span>Échéancier / prélèvements</span><span class="finance-accordion-hint" id="financeInstallmentsSummary">Aucun échéancier</span></summary>
+        <div class="finance-detail-section__body"><div id="financeInstallments" class="finance-list"></div></div>
+      </details>
+
+      <div class="finance-footer"><button class="btn btn-outline" type="button" data-finance-close>Fermer</button></div>
+    </div>
+  </details>
+
 
  <!-- ===================== -->
 <!-- RELANCE TELEPHONIQUE  -->
@@ -2010,7 +1769,14 @@
           {% set cur = (d.status or ("A CONTRÔLER" if has_status_source else "NON DÉPOSÉ")) %}
 
           <tr data-doc-key="{{ d.key }}">
-            <td style="font-weight:800;">{{ d.label }}</td>
+            <td style="font-weight:800;">
+              {{ d.label }}{% if d.optional|default(false) %} <span class="badge" style="margin-left:8px;">Facultatif</span>{% endif %}
+              {% if d.key in ["certificat_medical_ssiap", "certificat_medical_ssiap_afc"] %}
+                <div class="hint" style="margin-top:6px;">
+                  <a href="{{ url_for('public_ssiap_medical_certificate_template') }}" target="_blank" rel="noopener">Télécharger le modèle officiel du certificat médical</a>
+                </div>
+              {% endif %}
+            </td>
 
             <td style="min-width:190px;">
               <select class="status sel-doc" data-field="status" {% if not has_status_source %}disabled{% endif %} {{ read_only_attr }}>
@@ -2284,13 +2050,13 @@
                step="0.01"
                placeholder="Ex : 150.00"
                required
-               {{ read_only_attr }}>
+               {{ financing_read_only_attr }}>
 
         <div class="label" style="margin-top:10px;">Date du prélèvement initialement prévue</div>
         <input id="financementRejectDate"
                type="date"
                required
-               {{ read_only_attr }}>
+               {{ financing_read_only_attr }}>
 
         <div class="hint" style="margin-top:8px;">
           Un mail + SMS seront envoyés au stagiaire avec un lien pour proposer une nouvelle date.
@@ -2300,7 +2066,7 @@
       <div class="modal-foot">
         <button class="btn" type="button" data-close-modal="financementRejectModal"
                 onclick="document.getElementById('financementRejectModal').classList.remove('show');document.getElementById('financementRejectModal').setAttribute('aria-hidden','true');">Annuler</button>
-        <button class="btn btn-primary" type="submit" id="btnSendFinancementReject" {{ read_only_attr }}>Envoyer</button>
+        <button class="btn btn-primary" type="submit" id="btnSendFinancementReject" {{ financing_read_only_attr }}>Envoyer</button>
       </div>
     </form>
   </div>
@@ -2308,40 +2074,6 @@
 
 
 <script>
-const btnSendApsConvocation = document.getElementById("btnSendApsConvocation");
-if(btnSendApsConvocation){
-  btnSendApsConvocation.addEventListener("click", async ()=>{
-    if(btnSendApsConvocation.disabled) return;
-    const feedback = document.getElementById("apsConvocationFeedback");
-    const badge = document.getElementById("apsConvocationBadge");
-    const viewBtn = document.getElementById("btnViewApsConvocation");
-    const hint = document.getElementById("apsConvocationSentHint");
-    const sentAt = document.getElementById("apsConvocationSentAt");
-    const original = btnSendApsConvocation.textContent;
-    btnSendApsConvocation.disabled = true;
-    btnSendApsConvocation.textContent = "Envoi en cours...";
-    if(feedback){ feedback.className = "aps-doc-feedback"; feedback.textContent = ""; }
-    try{
-      const r = await fetch("{{ url_for('admin_send_aps_convocation', session_id=session.id, trainee_id=trainee.id) }}", {method:"POST", headers:{"Content-Type":"application/json"}});
-      const data = await r.json();
-      if(!r.ok || !data.ok) throw new Error(data.error || "Erreur lors de l’envoi de la convocation.");
-      if(badge){ badge.className = "aps-doc-badge aps-doc-badge--sent"; badge.textContent = "Envoyé"; }
-      if(sentAt) sentAt.textContent = data.sent_at_label || "à l’instant";
-      if(hint) hint.style.display = "block";
-      if(viewBtn){ viewBtn.style.display = "inline-flex"; viewBtn.href = (data.view_url || viewBtn.href) + "?t=" + Date.now(); }
-      btnSendApsConvocation.textContent = "Renvoyer";
-      if(feedback){ feedback.className = "aps-doc-feedback aps-doc-feedback--success"; feedback.textContent = "Convocation envoyée avec succès."; }
-    }catch(e){
-      btnSendApsConvocation.textContent = original;
-      if(feedback){ feedback.className = "aps-doc-feedback aps-doc-feedback--error"; feedback.textContent = e.message || "Erreur lors de l’envoi de la convocation."; }
-    }finally{
-      btnSendApsConvocation.disabled = false;
-    }
-  });
-}
-
-
-
 const vaeResetDossierForm = document.getElementById("vaeResetDossierForm");
 const vaeResetConfirmModal = document.getElementById("vaeResetConfirmModal");
 const vaeResetConfirmYes = document.getElementById("vaeResetConfirmYes");
@@ -2379,62 +2111,150 @@ if(vaeResetConfirmYes && vaeResetDossierForm){
   });
 }
 
-const ypareoSyncForm = document.getElementById("ypareoSyncForm");
-const ypareoSyncButton = document.getElementById("ypareoSyncButton");
-const ypareoSyncProgress = document.getElementById("ypareoSyncProgress");
+const yousignSignatureProgress = document.getElementById("yousignSignatureProgress");
+window.showConventionTransmissionProgress = function(){
+  if(!yousignSignatureProgress) return;
+  yousignSignatureProgress.classList.add("is-visible");
+  yousignSignatureProgress.setAttribute("aria-hidden", "false");
+  document.body.classList.add("yousign-sync-is-running");
+};
+window.hideConventionTransmissionProgress = function(){
+  if(!yousignSignatureProgress) return;
+  yousignSignatureProgress.classList.remove("is-visible");
+  yousignSignatureProgress.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("yousign-sync-is-running");
+};
 
-if(ypareoSyncForm && ypareoSyncProgress){
-  ypareoSyncForm.addEventListener("submit", ()=>{
-    ypareoSyncProgress.classList.add("is-visible");
-    ypareoSyncProgress.setAttribute("aria-hidden", "false");
-    document.body.classList.add("ypareo-sync-is-running");
-    if(ypareoSyncButton){
-      ypareoSyncButton.disabled = true;
-      ypareoSyncButton.setAttribute("aria-busy", "true");
+
+document.addEventListener("submit", async (event)=>{
+  const form = event.target.closest('form[data-convention-preview-required="true"]');
+  if(!form || form.dataset.conventionPreviewConfirmed === "1") return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  const previewUrl = form.dataset.conventionPreviewUrl || "";
+  if(previewUrl){ await window.openConventionPreview?.(previewUrl); }
+  const message = "La prévisualisation est fermée. Confirmer l’envoi Yousign maintenant ?";
+  const ok = window.AppModal
+    ? await window.AppModal.confirm({type:"info", title:"Vérifier la convention avant envoi", message, primaryText:"Envoyer maintenant", secondaryText:"Annuler", tertiaryText:"Envoyer plus tard"})
+    : window.confirm(message);
+  if(ok){
+    form.dataset.conventionPreviewConfirmed = "1";
+    form.requestSubmit ? form.requestSubmit() : form.submit();
+  }
+}, true);
+
+document.addEventListener("submit", async (event)=>{
+  const form = event.target.closest('form[data-yousign-force-new="true"]');
+  if(!form || form.dataset.yousignRegenerateConfirmed === "1") return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  const message = "Annuler la demande Yousign actuelle et générer une nouvelle convention ? L’ancienne signature ne sera plus considérée comme valide.";
+  const ok = window.AppModal
+    ? await window.AppModal.confirm({type:"warning", title:"Annuler et régénérer la convention", message, primaryText:"Annuler et régénérer", secondaryText:"Conserver"})
+    : window.confirm(message);
+  if(ok){
+    form.dataset.yousignRegenerateConfirmed = "1";
+    form.requestSubmit ? form.requestSubmit() : form.submit();
+  }
+}, true);
+
+document.querySelectorAll(".automation-loading-form").forEach((form)=>{
+  form.addEventListener("submit", async (event)=>{
+    const btn = form.querySelector("button");
+    const isConventionTransmission = form.dataset.conventionTransmissionForm === "true" || /\/convention\/(?:yousign|signature\/create)(?:$|[?#])/.test(form.action || "");
+    if(isConventionTransmission){
+      event.preventDefault();
+      const conventionPayload = await requestVaeConventionTransmission();
+      if(!conventionPayload) return;
+      if(btn){ btn.disabled = true; btn.setAttribute("aria-busy", "true"); btn.dataset.originalText = btn.textContent; btn.textContent = "Transmission…"; }
+      const sent = await sendVaeConventionSignature(conventionPayload, {forceNew: form.dataset.yousignForceNew === "true"});
+      if(!sent && btn){ btn.disabled = false; btn.removeAttribute("aria-busy"); btn.textContent = btn.dataset.originalText || "Réessayer"; }
+      return;
+    }
+    if(btn){ btn.disabled = true; btn.setAttribute("aria-busy", "true"); btn.dataset.originalText = btn.textContent; btn.textContent = "Traitement…"; }
+    if(form.action.includes("/automation/")){
+      event.preventDefault();
+      try{
+        const response = await fetch(form.action, {method: "POST", headers: {"X-Requested-With": "fetch"}});
+        const result = await response.json().catch(()=>({ok:false,error:"Réponse serveur invalide."}));
+        if(!response.ok || !result.ok) throw new Error(result.error || "Action impossible.");
+        window.location.reload();
+      }catch(error){
+        if(isConventionTransmission && typeof window.hideConventionTransmissionProgress === "function"){
+          window.hideConventionTransmissionProgress();
+        }
+        alert(error.message || "Action impossible.");
+        if(btn){ btn.disabled = false; btn.removeAttribute("aria-busy"); btn.textContent = btn.dataset.originalText || "Réessayer"; }
+      }
+    }
+  });
+});
+const btnAutomationSendEntryAttestation = document.getElementById("btnAutomationSendEntryAttestation");
+if(btnAutomationSendEntryAttestation){
+  btnAutomationSendEntryAttestation.addEventListener("click", async ()=>{
+    if(btnAutomationSendEntryAttestation.disabled) return;
+    const original = btnAutomationSendEntryAttestation.textContent;
+    btnAutomationSendEntryAttestation.disabled = true;
+    btnAutomationSendEntryAttestation.setAttribute("aria-busy", "true");
+    btnAutomationSendEntryAttestation.textContent = "Envoi…";
+    try{
+      const response = await fetch("{{ url_for('admin_send_aps_entry_attestation', session_id=session.id, trainee_id=trainee.id) }}", {method:"POST", headers:{"Content-Type":"application/json"}});
+      const result = await response.json().catch(()=>({ok:false,error:"Réponse serveur invalide."}));
+      if(!response.ok || !result.ok) throw new Error(result.error || "Erreur lors de l’envoi de l’attestation d’entrée.");
+      window.location.reload();
+    }catch(error){
+      alert(error.message || "Erreur lors de l’envoi de l’attestation d’entrée.");
+      btnAutomationSendEntryAttestation.disabled = false;
+      btnAutomationSendEntryAttestation.removeAttribute("aria-busy");
+      btnAutomationSendEntryAttestation.textContent = original;
+    }
+  });
+}
+const btnAutomationSendEndAttestation = document.getElementById("btnAutomationSendEndAttestation");
+if(btnAutomationSendEndAttestation){
+  btnAutomationSendEndAttestation.addEventListener("click", async ()=>{
+    if(btnAutomationSendEndAttestation.disabled) return;
+    const original = btnAutomationSendEndAttestation.textContent;
+    btnAutomationSendEndAttestation.disabled = true;
+    btnAutomationSendEndAttestation.setAttribute("aria-busy", "true");
+    btnAutomationSendEndAttestation.textContent = "Envoi…";
+    try{
+      const response = await fetch("{{ url_for('admin_send_aps_end_attestation', session_id=session.id, trainee_id=trainee.id) }}", {method:"POST", headers:{"Content-Type":"application/json"}});
+      const result = await response.json().catch(()=>({ok:false,error:"Réponse serveur invalide."}));
+      if(!response.ok || !result.ok) throw new Error(result.error || "Erreur lors de l’envoi de l’attestation de fin.");
+      window.location.reload();
+    }catch(error){
+      alert(error.message || "Erreur lors de l’envoi de l’attestation de fin.");
+      btnAutomationSendEndAttestation.disabled = false;
+      btnAutomationSendEndAttestation.removeAttribute("aria-busy");
+      btnAutomationSendEndAttestation.textContent = original;
     }
   });
 }
 
-const yousignSignatureForm = document.getElementById("yousignSignatureForm");
-const yousignSignatureButton = document.getElementById("yousignSignatureButton");
-const yousignSignatureProgress = document.getElementById("yousignSignatureProgress");
-
-if(yousignSignatureForm && yousignSignatureProgress){
-  yousignSignatureForm.addEventListener("submit", ()=>{
-    yousignSignatureProgress.classList.add("is-visible");
-    yousignSignatureProgress.setAttribute("aria-hidden", "false");
-    document.body.classList.add("yousign-sync-is-running");
-    if(yousignSignatureButton){
-      yousignSignatureButton.disabled = true;
-      yousignSignatureButton.setAttribute("aria-busy", "true");
+const btnAutomationSendConvocation = document.getElementById("btnAutomationSendConvocation");
+if(btnAutomationSendConvocation){
+  btnAutomationSendConvocation.addEventListener("click", async ()=>{
+    if(btnAutomationSendConvocation.disabled) return;
+    const original = btnAutomationSendConvocation.textContent;
+    btnAutomationSendConvocation.disabled = true;
+    btnAutomationSendConvocation.setAttribute("aria-busy", "true");
+    btnAutomationSendConvocation.textContent = "Envoi…";
+    try{
+      const response = await fetch("{{ url_for('admin_send_aps_convocation', session_id=session.id, trainee_id=trainee.id) }}", {method:"POST", headers:{"Content-Type":"application/json"}});
+      const result = await response.json().catch(()=>({ok:false,error:"Réponse serveur invalide."}));
+      if(!response.ok || !result.ok) throw new Error(result.error || "Erreur lors de l’envoi de la convocation.");
+      window.location.reload();
+    }catch(error){
+      alert(error.message || "Erreur lors de l’envoi de la convocation.");
+      btnAutomationSendConvocation.disabled = false;
+      btnAutomationSendConvocation.removeAttribute("aria-busy");
+      btnAutomationSendConvocation.textContent = original;
     }
   });
 }
 
   // =========================
-// Financement comment autosave
-// =========================
-const financementComment = document.getElementById("financementComment");
-if(financementComment){
-  let t=null;
-  financementComment.addEventListener("input", ()=>{
-    if(t) clearTimeout(t);
-    t = setTimeout(async ()=>{
-      try{
-        await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
-          method:"POST",
-          headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({ financement_comment: financementComment.value })
-        });
-      }catch(e){
-        // pas de reload, on évite d'emmerder
-        console.log("Erreur sauvegarde commentaire financement");
-      }
-    }, 450);
-  });
-}
-
-// =========================
 // Financement details autosave + totals
 // =========================
 const financementDetails = document.getElementById("financementDetails");
@@ -2491,6 +2311,8 @@ if(financementDetails){
     if (trainingType === "APS") return 1650;
     if (trainingType === "DIRIGEANT INITIAL") return 4300;
     if (trainingType === "DIRIGEANT VAE") return 3800;
+    if (trainingType.includes("VTC")) return 1500;
+    if (trainingType.includes("SSIAP")) return 980;
     return 0;
   };
 
@@ -2552,6 +2374,8 @@ if(financementDetails){
   const getCashInstallmentsTotal = () => {
     return cashPaymentInstallments.reduce((sum, item)=> sum + parseAmount(item?.amount), 0);
   };
+  window.getFinanceCashInstallmentsTotal = getCashInstallmentsTotal;
+  window.getFinanceCashInstallments = () => cashPaymentInstallments.map(item => ({...item}));
 
   const collectCashInstallmentsPayload = () => {
     return cashPaymentInstallments
@@ -3462,6 +3286,77 @@ function updateDocsRelanceState(status, plannedDateIso){
   });
 
 
+
+  const vaeConventionConfig = {
+    financingUrl: "{{ url_for('api_update_convention_financing', session_id=session.id, trainee_id=trainee.id) }}",
+    signatureUrl: "{{ url_for('api_create_convention_signature', session_id=session.id, trainee_id=trainee.id) }}",
+    previewUrl: "{{ url_for('admin_preview_convention', session_id=session.id, trainee_id=trainee.id) }}",
+    isVae: {{ ('VAE' in (session.training_type or '')|upper)|tojson }},
+    trainingType: {{ (session.training_type or '')|tojson }},
+    defaults: {
+      training_price: {{ (trainee.training_price or trainee.montant_formation or session.training_price or '')|tojson }},
+      cpf_amount: {{ (trainee.cpf_amount or trainee.montant_cpf or '')|tojson }},
+      personal_amount: {{ (trainee.personal_amount or trainee.montant_financement_personnel or trainee.montant_personnel or '')|tojson }},
+      other_amount: {{ (trainee.other_amount or trainee.montant_autre or '')|tojson }}
+    }
+  };
+
+  async function saveVaeConventionFinancing(payload){
+    const response = await fetch(vaeConventionConfig.financingUrl, {
+      method: "POST",
+      headers: {"Content-Type":"application/json", "Accept":"application/json"},
+      body: JSON.stringify(payload || {})
+    });
+    const data = await response.json().catch(()=>({}));
+    if(!response.ok || data.ok === false){
+      throw new Error(data.error || "Impossible de sauvegarder les montants de financement.");
+    }
+  }
+
+  async function requestVaeConventionTransmission(){
+    return await window.openConventionTransmission?.({
+      defaults: vaeConventionConfig.defaults,
+      trainingType: vaeConventionConfig.trainingType,
+      previewUrl: vaeConventionConfig.previewUrl,
+      onPreview: async (payload)=>{
+        await saveVaeConventionFinancing(payload);
+        await window.openConventionPreview?.(vaeConventionConfig.previewUrl, {
+          title: vaeConventionConfig.isVae ? "Convention VAE" : "Convention",
+          description: vaeConventionConfig.isVae ? "Vérifiez la convention VAE avant l’envoi pour signature électronique." : "Vérifiez la convention avant l’envoi pour signature électronique.",
+          frameTitle: vaeConventionConfig.isVae ? "Aperçu de la convention VAE" : "Aperçu de la convention"
+        });
+      }
+    });
+  }
+
+  async function sendVaeConventionSignature(payload, options = {}){
+    try{
+      await saveVaeConventionFinancing(payload);
+      window.showConventionTransmissionProgress?.();
+      const response = await fetch(vaeConventionConfig.signatureUrl, {
+        method: "POST",
+        headers: {"Content-Type":"application/json", "Accept":"application/json"},
+        body: JSON.stringify({...payload, force_new: !!options.forceNew})
+      });
+      const data = await response.json().catch(()=>({}));
+      if(!response.ok || data.ok === false){
+        throw new Error(data.error || "Envoi Yousign impossible.");
+      }
+      window.hideConventionTransmissionProgress?.();
+      await (window.showConventionResult?.({
+        title: vaeConventionConfig.isVae ? "Convention VAE envoyée" : "Convention envoyée",
+        message: data.email_ok === false ? "La demande Yousign a été créée, mais l’e-mail n’a pas pu être envoyé automatiquement." : (vaeConventionConfig.isVae ? "La convention VAE a été envoyée au stagiaire pour signature électronique." : "La convention a été envoyée au stagiaire pour signature électronique."),
+        type: data.email_ok === false ? "warning" : "success"
+      }) || Promise.resolve(window.alert(vaeConventionConfig.isVae ? "Convention VAE envoyée." : "Convention envoyée.")));
+      window.location.reload();
+      return true;
+    }catch(error){
+      window.hideConventionTransmissionProgress?.();
+      await (window.showConventionResult?.({type:"error", title: vaeConventionConfig.isVae ? "Convention VAE non envoyée" : "Convention non envoyée", message:error.message || (vaeConventionConfig.isVae ? "Impossible d’envoyer la convention VAE." : "Impossible d’envoyer la convention."), buttonText:"Compris"}) || Promise.resolve(window.alert(error.message || (vaeConventionConfig.isVae ? "Impossible d’envoyer la convention VAE." : "Impossible d’envoyer la convention."))));
+      return false;
+    }
+  }
+
   // VAE (actions dédiées DIRIGEANT VAE)
   let vaeActionRequestInFlight = false;
   window.setVaeAction = async function setVaeAction(actionKey){
@@ -3547,6 +3442,12 @@ function updateDocsRelanceState(status, plannedDateIso){
       };
     }
 
+    let vaeConventionPayload = null;
+    if(!isReset && actionKey === "financement_validated"){
+      vaeConventionPayload = await requestVaeConventionTransmission();
+      if(!vaeConventionPayload) return;
+    }
+
     vaeActionRequestInFlight = true;
 
     let sendVaeNotification = !isReset;
@@ -3566,6 +3467,10 @@ function updateDocsRelanceState(status, plannedDateIso){
       const data = await res.json().catch(()=>({}));
       if(!res.ok || data.ok === false){
         throw new Error('save_failed');
+      }
+      if(vaeConventionPayload){
+        const sent = await sendVaeConventionSignature(vaeConventionPayload);
+        if(sent) return;
       }
       if(!isReset && (actionKey === "livret_1_transmitted_scotia" || actionKey === "livret_2_transmitted_scotia")){
         window.location.href = "/scotia";
@@ -3618,33 +3523,6 @@ function updateDocsRelanceState(status, plannedDateIso){
   }
 
   // =========================
-// Convention status update
-// =========================
-
-const conventionSelect = document.getElementById("conventionSelect");
-
-if(conventionSelect){
-  applyStatusPill(conventionSelect); // ✅ couleur au chargement
-
-  conventionSelect.addEventListener("change", async ()=>{
-    applyStatusPill(conventionSelect); // ✅ couleur immédiate
-
-    const value = conventionSelect.value;
-
-    try{
-      await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
-        method:"POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ convention_status: value })
-      });
-      window.location.reload();
-    }catch(e){
-      alert("Erreur sauvegarde convention");
-    }
-  });
-}
-
-// =========================
 // Facturation Qonto centralisée
 (function(){
   const card = document.getElementById("qontoInvoiceCard");
@@ -3654,6 +3532,19 @@ if(conventionSelect){
   const readOnly = card.dataset.readOnly === "1";
   const box = document.getElementById("qontoInvoiceHistory");
   const syncBtn = document.getElementById("btnSyncQontoTrainee");
+  const quickGenerateBtn = document.getElementById("btnQuickGenerateInvoice");
+  const financeNotificationsBtn = document.getElementById("btnToggleFinanceNotifications");
+  const financeNotificationsCount = document.getElementById("financeNotificationsCount");
+  let financeNotificationsOpen = false;
+  const financeValidationWrap = document.querySelector('.finance-validation-admin');
+  const financeValidationStatus = document.getElementById('financeValidationStatus');
+  const financeValidationForceForm = document.getElementById('financeForceValidatedForm');
+  const financeValidationForceBtn = document.getElementById('btnForceFinanceValidated');
+  const financeValidationAutoBtn = document.getElementById('btnFinanceAutoMode');
+  let financeValidationManualMode = financeValidationWrap?.dataset.manualMode === 'manual';
+  let financeValidationManualStatus = financeValidationWrap?.dataset.manualStatus || '';
+  let currentFinancementStatus = {{ (trainee.financement_status or 'soon')|tojson }};
+  let financeStatusSyncInFlight = false;
   let currentLines = [];
   let currentLine = null;
   let modalLoading = false;
@@ -3662,56 +3553,359 @@ if(conventionSelect){
   function isCpfQontoLine(line){const blob=[line?.financingType,line?.financeur,line?.financeurName,line?.financingLabel,line?.typeFinanceur].join(' ').toLowerCase();return /\bcpf\b|mon compte formation|caisse des d[ée]p[ôo]ts/.test(blob);}
   function getCpfQontoClientDefaults(){return {...CPF_QONTO_CLIENT};}
   const fmtMoney = n => new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(Number(n||0));
+  const cpfAmount = document.getElementById('cpfAmount');
+  const personalAmount = document.getElementById('personalAmount');
+  const otherAmount = document.getElementById('otherAmount');
+  const trainingPrice = document.getElementById('trainingPrice');
+  const salesTrackingAmount = document.getElementById('salesTrackingAmount');
+  const cashPaymentEnabled = document.getElementById('cashPaymentEnabled');
+  const cashPaymentSettled = document.getElementById('cashPaymentSettled');
+  let cpfValidated = {{ (trainee.cpf_validated or false)|tojson }};
+  const cashPaymentAmount = document.getElementById('cashPaymentAmount');
   const label = s => ({paid:'Payée',sent:'Envoyée',finalized:'Facture finalisée',draft:'Brouillon créé',cancelled:'Non facturé',deleted:'Non facturé',not_invoiced:'Non facturé',not_generated:'Non facturé'}[s]||'Non facturé');
   const cls = s => s==='paid'?'green':(['sent','finalized'].includes(s)?'blue':(s==='draft'?'orange':'gray'));
-  async function api(url, body){ const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}); const j=await r.json(); if(!r.ok||!j.ok) throw new Error(j.error||j.message||'Action impossible'); return j; }
+  async function parseJsonResponse(response, fallbackMessage){
+    const contentType = response.headers.get('content-type') || '';
+    const raw = await response.text();
+    if(contentType.includes('application/json')){
+      try{return raw ? JSON.parse(raw) : {};}
+      catch(err){throw new Error('Réponse API invalide : JSON illisible.');}
+    }
+    const title = raw.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim();
+    const isLoginPage = response.redirected || response.url.includes('/admin/login') || /Connexion|login/i.test(title||'');
+    if(isLoginPage) throw new Error('Votre session administrateur a expiré. Rechargez la page puis reconnectez-vous.');
+    throw new Error(title || fallbackMessage || 'Réponse serveur invalide : HTML reçu au lieu de JSON.');
+  }
+  async function api(url, body){
+    const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(body||{})});
+    const j=await parseJsonResponse(r,'Action impossible');
+    if(!r.ok||!j.ok) throw new Error(j.error||j.message||'Action impossible');
+    return j;
+  }
   async function load(){
-    const r = await fetch(`/api/billing/trainee/${encodeURIComponent(traineeId)}/session/${encodeURIComponent(sessionId)}`);
-    const j = await r.json();
+    const r = await fetch(`/api/billing/trainee/${encodeURIComponent(traineeId)}/session/${encodeURIComponent(sessionId)}`,{headers:{'Accept':'application/json'}});
+    const j = await parseJsonResponse(r,'Chargement impossible');
     if(!r.ok||!j.ok) throw new Error(j.error||'Chargement impossible');
     currentLines = j.lines || [];
     render(currentLines);
+    updateQuickInvoiceAction();
   }
   window.refreshQontoInvoiceHistory = () => load().catch(e=>{ box.innerHTML = `<div class="qonto-error">${esc(e.message)}</div>`; });
   window.addEventListener('qonto-billing-refresh', window.refreshQontoInvoiceHistory);
-  function paymentStatusLabel(status){return ({paid:'Payé',unpaid:'Non payé',unknown:'Inconnu',pending:'En attente'}[status]||status||'Inconnu');}
-  function closeBillingModal(){document.querySelectorAll('.billing-modal-overlay').forEach(m=>m.remove());currentLine=null;modalLoading=false;}
-  function modalMessage(text,type='error'){const msg=document.getElementById('modalMsg');if(!msg)return;msg.className=type==='success'?'billing-modal-success':'billing-modal-error';msg.textContent=text;}
-  function renderInvoiceModalContent(line, created=false){
-    const vat=Number(line.vatRate||0), totalTtc=Number(line.amountTTC||line.amount||0), totalHt=vat?totalTtc/(1+vat/100):totalTtc, totalTva=totalTtc-totalHt, hasInvoice=!!(line.qontoInvoiceId||line.qontoDraftId);
-    return `<div class="billing-modal-head"><div><h2>Vérification avant création Qonto</h2><div class="muted">Même workflow que la page Facturation : contrôle, puis création d’une facture Qonto en brouillon uniquement.</div><span class="billing-modal-step">Étape 1 · Récapitulatif</span></div><button class="billing-modal-close" type="button" data-modal-close aria-label="Fermer">✕</button></div>${hasInvoice?'<div class="billing-modal-existing">Une facture existe déjà pour cette ligne.</div>':''}<div class="billing-modal-summary"><p><strong>Stagiaire :</strong> ${esc(line.traineeFirstName)} ${esc(line.traineeLastName)}</p><p><strong>Formation :</strong> ${esc(line.formationName)}</p><p><strong>Session / nom pédagogique :</strong> ${esc(line.sessionName||line.formationName)}</p><p><strong>Dates :</strong> ${esc(line.dateLabel)}</p><p><strong>Financeur :</strong> ${esc(line.financeurName||line.financingLabel||line.financingType)}</p><p><strong>Montant exact de la ligne :</strong> ${fmtMoney(totalTtc)}</p><p><strong>Numéro facture :</strong> ${esc(line.qontoInvoiceNumber||line.qontoInvoiceId||line.qontoDraftId||'En attente')}</p><p><strong>Statut facture :</strong> ${label(line.invoiceStatus)}</p><p><strong>Statut paiement :</strong> ${paymentStatusLabel(line.paymentStatus)}</p></div>${isCpfQontoLine(line)?'<div class="billing-modal-success">Client CPF pré-rempli automatiquement</div>':''}<div class="billing-modal-grid"><div class="kv"><b>Total HT</b><br>${fmtMoney(totalHt)}</div><div class="kv"><b>TVA / exonération</b><br>${vat}% · ${fmtMoney(totalTva)}</div><div class="kv"><b>Total TTC</b><br>${fmtMoney(totalTtc)}</div><div class="kv"><b>Client</b><br>${esc(line.clientName||'')}</div></div><div id="modalMsg" class="${created?'billing-modal-success':''}">${created?'Brouillon créé. Vous pouvez maintenant consulter la facture ou synchroniser le paiement.':''}</div><div class="billing-modal-actions"><button type="button" class="btn btn-outline" data-modal-close>Fermer</button>${hasInvoice?`<a class="btn btn-outline" href="/api/admin/billing-lines/${encodeURIComponent(line.id)}/download-invoice" target="_blank" rel="noopener">Voir la facture</a>`:`<button type="button" class="btn btn-primary" id="confirmGenerate">Créer la facture en brouillon</button>`}</div>`;
+  function paymentStatusLabel(status){return ({paid:'Payé',partial:'Paiement partiel',failed:'Rejeté',unpaid:'Non payé',unknown:'Inconnu',pending:'En attente'}[status]||status||'Inconnu');}
+  function mandateState(lines){
+    const signedStatuses = new Set(['accepted','approved','signed','validated','active','completed','success','succeeded']);
+    const pendingStatuses = new Set(['pending','sent','created','waiting','waiting_signature','processing','in_progress']);
+    const personalLines = lines.filter(l=>String([l.financingType,l.financingLabel,l.financeurName,l.financeur].join(' ')).toLowerCase().includes('personnel') || l.paymentMode === 'sepa_direct_debit');
+    const statuses = personalLines.map(l=>String(l.qonto_mandate_status || l.qontoMandateStatus || l.mandateStatus || l.qontoPaymentGlobalStatus || '').toLowerCase());
+    const hasSigned = personalLines.some(l=>l.qonto_mandate_signed_at || l.mandateSignedAt || signedStatuses.has(String(l.qonto_mandate_status || l.qontoMandateStatus || l.mandateStatus || '').toLowerCase()));
+    const hasSent = hasSigned || personalLines.some(l=>l.qonto_direct_debit_mandate_id || l.qontoMandateId || l.mandateId || (l.directDebitInstallments || []).length || pendingStatuses.has(String(l.qonto_mandate_status || l.qontoMandateStatus || l.mandateStatus || '').toLowerCase()));
+    return {hasSent, hasSigned, statuses};
   }
-  function openGenerateInvoiceModal(line){currentLine=line;document.body.insertAdjacentHTML('beforeend',`<div class="billing-modal-overlay no-print" role="dialog" aria-modal="true"><div class="billing-modal">${renderInvoiceModalContent(line)}</div></div>`);document.querySelectorAll('[data-modal-close]').forEach(btn=>btn.onclick=closeBillingModal);const confirm=document.getElementById('confirmGenerate');if(confirm)confirm.onclick=createCurrentDraft;}
-  async function createCurrentDraft(){if(!currentLine||modalLoading)return;modalLoading=true;const btn=document.getElementById('confirmGenerate');if(btn){btn.disabled=true;btn.textContent='Création du brouillon...';}try{const data=await api('/api/billing/create-draft',{lineId:currentLine.id,source:'admin_trainee'});const updated=data.line||data;currentLine=updated;currentLines=currentLines.map(line=>line.id===updated.id?updated:line);render(currentLines);document.querySelector('.billing-modal').innerHTML=renderInvoiceModalContent(updated,true);document.querySelectorAll('[data-modal-close]').forEach(closeBtn=>closeBtn.onclick=closeBillingModal);}catch(err){modalMessage(err.message||'Erreur inconnue','error');if(btn){btn.disabled=false;btn.textContent='Créer la facture en brouillon';}}finally{modalLoading=false;}}
+  function generatedCashPersonalInvoiceAmount(lines){
+    return lines
+      .filter(l=>{
+        const label = String([l.financingType,l.financingLabel,l.financeurName,l.financeur].join(' ')).toLowerCase();
+        const isPersonal = label.includes('personnel') || String(l.financingType || '').toUpperCase().includes('PERSONNEL');
+        const isCash = l.paymentMode !== 'sepa_direct_debit';
+        const hasInvoice = !!(l.qontoInvoiceId || l.qontoDraftId || l.invoiceGeneratedAt || ['draft','finalized','sent','paid'].includes(String(l.invoiceStatus || '').toLowerCase()));
+        const isActive = !['cancelled','deleted'].includes(String(l.invoiceStatus || '').toLowerCase());
+        return isPersonal && isCash && hasInvoice && isActive;
+      })
+      .reduce((total, line)=>total + lineAmount(line), 0);
+  }
+  function financingValidationFrom(c, lines){
+    if(financeValidationManualMode && financeValidationManualStatus === 'validated') return {label:'Financement validé', tone:'green', icon:'✓', manual:true};
+    const epsilon = 0.01;
+    if(c.montantCpf <= epsilon && c.montantPersonnel <= epsilon && c.montantAutre <= epsilon) return {label:'Financement à valider', tone:'gray', icon:'⌛'};
+    if(c.montantPersonnel > epsilon){
+      if(generatedCashPersonalInvoiceAmount(lines) + epsilon >= c.montantPersonnel) return {label:'Financement validé', tone:'green', icon:'✓'};
+      const mandate = mandateState(lines);
+      if(mandate.hasSigned) return {label:'Financement validé', tone:'green', icon:'✓'};
+      if(mandate.hasSent) return {label:'Mandat de prélèvement en cours de validation', tone:'orange', icon:'⚠'};
+      return {label:'Financement à valider', tone:'gray', icon:'⌛'};
+    }
+    if(c.prixFormation > epsilon && c.montantCpf + epsilon >= c.prixFormation && c.montantPersonnel <= epsilon && c.montantAutre <= epsilon) return {label:'Financement validé', tone:'green', icon:'✓'};
+    return {label:'Financement à valider', tone:'gray', icon:'⌛'};
+  }
+  function syncFinancementStatusIfValidated(state){
+    if(state.tone !== 'green' || currentFinancementStatus === 'validated' || financeStatusSyncInFlight) return;
+    financeStatusSyncInFlight = true;
+    updateTrainee({financement_status:'validated'})
+      .then(()=>{ currentFinancementStatus = 'validated'; })
+      .catch((error)=>{ console.error('Synchronisation statut financement impossible', error); })
+      .finally(()=>{ financeStatusSyncInFlight = false; });
+  }
+  function applyFinancingValidationState(state){
+    if(!financeValidationStatus) return;
+    financeValidationStatus.className = `finance-validation-status finance-validation-status--${state.tone}`;
+    financeValidationStatus.innerHTML = `<span class="finance-validation-status__icon">${esc(state.icon)}</span><span class="finance-validation-status__label">${esc(state.label)}</span>${state.manual?'<span class="finance-validation-status__manual">manuel</span>':''}`;
+    financeValidationForceBtn?.toggleAttribute('disabled', state.manual);
+    if(financeValidationAutoBtn) financeValidationAutoBtn.style.display = state.manual ? '' : 'none';
+  }
+  function renderFinancingValidation(c, lines){
+    const state = financingValidationFrom(c, lines);
+    applyFinancingValidationState(state);
+    syncFinancementStatusIfValidated(state);
+  }
+  const isoToday=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10);};
+  function addDays(date,days){const d=new Date(date+'T00:00:00');d.setDate(d.getDate()+days);return d.toISOString().slice(0,10);}
+  function addMonths(date, months){const d=new Date(date+'T00:00:00'); const day=d.getDate(); d.setMonth(d.getMonth()+months); if(d.getDate()!==day)d.setDate(0); return d.toISOString().slice(0,10);}
+  function debitCutoffDate(line=currentLine){const limit=line?.examDate||line?.dateEnd||line?.dateStart||''; return limit ? addDays(String(limit).slice(0,10),-3) : '';}
+  function maxInstallmentsFor(first,line=currentLine){const cutoff=debitCutoffDate(line); if(!first||!cutoff||first>cutoff)return 0; let count=0,next=first; while(next<=cutoff&&count<60){count++; next=addMonths(first,count);} return count;}
+  function defaultFirstDebitDate(line=currentLine){const recommended=addDays(isoToday(),7), cutoff=debitCutoffDate(line); return cutoff&&recommended>cutoff?cutoff:recommended;}
+  function splitInstallments(total,count){count=Math.max(1,Number(count||1)); const cents=Math.round(Number(total||0)*100), base=Math.floor(cents/count); return Array.from({length:count},(_,i)=>(base+(i===count-1?cents-base*count:0))/100);}
+  function scheduleRows(total,count,first){return splitInstallments(total,count).map((amount,i)=>({date:addMonths(first,i),amount,status:'scheduled'}));}
+  function currentScheduleRows(){return [...document.querySelectorAll('[data-installment-row]')].map(row=>({date:row.querySelector('[data-installment-date]')?.value||'',amount:Number(String(row.querySelector('[data-installment-amount]')?.value||0).replace(',','.')),status:'scheduled'})).filter(r=>r.date&&r.amount>0);}
+  function rebalanceScheduleAmounts(){const rows=[...document.querySelectorAll('[data-installment-row]')], amounts=splitInstallments(currentLine?.amountTTC||currentLine?.amount||0,rows.length); rows.forEach((row,i)=>{const input=row.querySelector('[data-installment-amount]'); if(input)input.value=amounts[i].toFixed(2);});}
+  function rebuildInstallmentOptions(selected){const select=document.getElementById('installments'); if(!select)return; const first=document.getElementById('firstDebitDate')?.value||defaultFirstDebitDate(); const max=maxInstallmentsFor(first); select.innerHTML=''; if(max<1){select.append(new Option('0', '0', true, true)); return;} for(let i=1;i<=max;i++)select.append(new Option(String(i),String(i),false,i===Math.min(Number(selected||max),max)));}
+  function renderSchedulePreview(){const box=document.getElementById('installmentPreview'); if(!box||!currentLine)return; const mode=document.querySelector('input[name=paymentMode]:checked')?.value||'cash'; const sepaFields=document.getElementById('sepaPaymentFields'); if(sepaFields)sepaFields.style.display=mode==='cash'?'none':''; if(mode==='cash'){box.innerHTML='<div class="hint">Paiement comptant : aucune échéance SEPA.</div>'; return;} const first=document.getElementById('firstDebitDate')?.value||defaultFirstDebitDate(); const count=Number(document.getElementById('installments')?.value||0); const cutoff=debitCutoffDate(); if(!count){box.innerHTML=`<div class="billing-modal-error">Aucune échéance possible${cutoff?` avant le ${esc(formatIsoDateFr(cutoff))}`:''}. Passez en comptant ou modifiez la date de premier prélèvement.</div>`; return;} box.innerHTML=scheduleRows(currentLine.amountTTC||currentLine.amount,count,first).map((r,i)=>`<div class="kv" data-installment-row><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;"><b>Échéance ${i+1}</b><button type="button" class="btn btn-outline" data-remove-installment style="padding:4px 8px;">Supprimer</button></div><div class="label">Date</div><input type="date" data-installment-date value="${esc(r.date)}" max="${esc(cutoff)}"><div class="label">Montant</div><input type="number" data-installment-amount min="0" step="0.01" value="${r.amount.toFixed(2)}"></div>`).join('')+`<div class="hint">Échéances calculées automatiquement jusqu’à 3 jours avant la date limite (examen ou fin de session)${cutoff?` (${esc(formatIsoDateFr(cutoff))})`:''}. Les dates et montants restent modifiables.</div>`; box.querySelectorAll('[data-remove-installment]').forEach(btn=>btn.onclick=()=>{btn.closest('[data-installment-row]')?.remove(); const rows=box.querySelectorAll('[data-installment-row]').length; const select=document.getElementById('installments'); if(select){rebuildInstallmentOptions(rows); select.value=String(rows);} rebalanceScheduleAmounts();});}
+  function getPaymentPlanPayload(){const mode=document.querySelector('input[name=paymentMode]:checked')?.value||'cash'; if(mode==='cash')return {paymentMode:mode,installments:1,firstDebitDate:null,frequency:null,schedule:[]}; const schedule=currentScheduleRows(); return {paymentMode:mode,installments:schedule.length,firstDebitDate:schedule[0]?.date||null,frequency:'monthly',schedule};}
+  function renderScheduleModal(line){const items=line.directDebitInstallments||[]; return `<div class="billing-modal-head"><div><h2>Échéancier Qonto</h2><div class="muted">${esc(line.qontoPaymentGlobalStatus||'')}</div></div><button class="billing-modal-close" type="button" data-modal-close aria-label="Fermer">✕</button></div><div class="billing-modal-grid">${items.map((it,i)=>`<div class="kv"><b>${i+1}. ${esc(formatIsoDateFr(String(it.date || '').slice(0,10)) || it.date || '')}</b><br>${fmtMoney(it.amount)} · ${esc(it.status||'scheduled')} ${it.failureReason?`<br><span class="qonto-error">${esc(it.failureReason)}</span>`:''}</div>`).join('')||'<div class="hint">Aucune échéance.</div>'}</div><div class="billing-modal-actions"><button type="button" class="btn btn-outline" data-modal-close>Fermer</button></div>`;}
+  function closeBillingModal(){document.querySelectorAll('.billing-modal-overlay').forEach(m=>m.remove());currentLine=null;modalLoading=false;}
+  function qontoInfoCompletionUrl(line=currentLine){const sid=line?.sessionId||'{{ session_id }}',tid=line?.traineeId||line?.studentId||'{{ trainee_id }}';return sid&&tid?`/admin/sessions/${encodeURIComponent(sid)}/stagiaires/${encodeURIComponent(tid)}#conventionFinancementSection`:'';}
+function isQontoIncompleteClientError(text){return /informations client incomplètes/i.test(String(text||''));}
+function modalMessage(text,type='error'){const msg=document.getElementById('modalMsg');if(!msg)return;msg.className=type==='success'?'billing-modal-success':'billing-modal-error';if(type==='error'&&isQontoIncompleteClientError(text)){const url=qontoInfoCompletionUrl();const action=url?`<div class="billing-modal-actions" style="justify-content:flex-start;margin-top:12px;"><a class="btn btn-primary" href="${esc(url)}" data-qonto-info-completion>Compléter les informations</a></div>`:'';msg.innerHTML=`<div>${esc(text)}</div>${action}`;return;}msg.textContent=text;}
+  function hasSepaPaymentPlan(line, paymentPlan){return String(paymentPlan?.paymentMode||paymentPlan?.mode||line?.paymentMode||'cash')==='sepa'||String(line?.paymentMode||'')==='sepa_direct_debit'||(Array.isArray(line?.directDebitInstallments)&&line.directDebitInstallments.length>0);}
+  function createdInvoiceMessage(line, paymentPlan){const isFinal=['finalized','sent','paid'].includes(String(line.invoiceStatus||'').toLowerCase());const sepa=hasSepaPaymentPlan(line,paymentPlan);if(sepa)return isFinal?'Facture définitive générée et mandat de prélèvement créé.':'Brouillon créé et mandat de prélèvement créé. Vous pouvez maintenant consulter la facture ou synchroniser le paiement.';return isFinal?'Facture définitive générée avec paiement comptant. Vous pouvez maintenant consulter la facture ou synchroniser le paiement.':'Brouillon créé avec paiement comptant. Vous pouvez maintenant consulter la facture ou synchroniser le paiement.';}
+  function renderInvoiceModalContent(line, created=false, paymentPlan=null){
+    const vat=Number(line.vatRate||0), totalTtc=Number(line.amountTTC||line.amount||0), totalHt=vat?totalTtc/(1+vat/100):totalTtc, totalTva=totalTtc-totalHt, hasInvoice=!!(line.qontoInvoiceId||line.qontoDraftId), completionUrl=qontoInfoCompletionUrl(line), completionButton=completionUrl?`<a class="btn btn-outline" href="${esc(completionUrl)}" data-qonto-info-completion>Compléter les informations</a>`:'';
+    return `<div class="billing-modal-head"><div><h2>Vérification avant création Qonto</h2><div class="muted">Même workflow que la page Facturation : contrôle, puis choix entre brouillon ou facture définitive avec mandat de prélèvement.</div><span class="billing-modal-step">Étape 1 · Récapitulatif</span></div><button class="billing-modal-close" type="button" data-modal-close aria-label="Fermer">✕</button></div>${hasInvoice?'<div class="billing-modal-existing">Une facture existe déjà pour cette ligne.</div>':''}<div class="billing-modal-summary"><p><strong>Stagiaire :</strong> ${esc(line.traineeFirstName)} ${esc(line.traineeLastName)}</p><p><strong>Formation :</strong> ${esc(line.formationName)}</p><p><strong>Session / nom pédagogique :</strong> ${esc(line.sessionName||line.formationName)}</p><p><strong>Dates :</strong> ${esc(line.dateLabel)}</p><p><strong>Financeur :</strong> ${esc(line.financeurName||line.financingLabel||line.financingType)}</p><p><strong>Montant exact de la ligne :</strong> ${fmtMoney(totalTtc)}</p><p><strong>Numéro facture :</strong> ${esc(line.qontoInvoiceNumber||line.qontoInvoiceId||line.qontoDraftId||'En attente')}</p><p><strong>Statut facture :</strong> ${label(line.invoiceStatus)}</p><p><strong>Statut paiement :</strong> ${paymentStatusLabel(line.paymentStatus)}</p></div>${isCpfQontoLine(line)?'<div class="billing-modal-success">Client CPF pré-rempli automatiquement</div>':''}<div class="billing-modal-grid"><div class="kv"><b>Total HT</b><br>${fmtMoney(totalHt)}</div><div class="kv"><b>TVA / exonération</b><br>${vat}% · ${fmtMoney(totalTva)}</div><div class="kv"><b>Total TTC</b><br>${fmtMoney(totalTtc)}</div><div class="kv"><b>Client</b><br>${esc(line.clientName||'')}</div></div><div class="qonto-invoice-card" style="margin-top:14px;"><div class="qonto-title">Mode de paiement</div><label><input type="radio" name="paymentMode" value="cash" checked> Comptant</label><br><label><input type="radio" name="paymentMode" value="sepa"> Prélèvement SEPA en plusieurs fois</label><div id="sepaPaymentFields" class="billing-modal-grid"><div><div class="label">Nombre d’échéances possibles</div><select id="installments"></select></div><div><div class="label">Date du premier prélèvement</div><input id="firstDebitDate" type="date" value="${esc(defaultFirstDebitDate(line))}" max="${esc(debitCutoffDate(line))}"></div><div><div class="label">Fréquence</div><input value="Mensuelle" disabled></div></div><div id="installmentPreview" class="billing-modal-grid"></div></div><div id="modalMsg" class="${created?'billing-modal-success':''}">${created?(['finalized','sent','paid'].includes(String(line.invoiceStatus||'').toLowerCase())?'Facture définitive générée et mandat de prélèvement créé.':'Brouillon créé et mandat de prélèvement créé. Vous pouvez maintenant consulter la facture ou synchroniser le paiement.'):''}</div><div class="billing-modal-actions"><button type="button" class="btn btn-outline" data-modal-close>Fermer</button>${!hasInvoice?completionButton:''}${hasInvoice?`<a class="btn btn-outline" href="/api/admin/billing-lines/${encodeURIComponent(line.id)}/download-invoice" target="_blank" rel="noopener">Voir la facture</a>`:`<button type="button" class="btn btn-primary" id="openInvoiceDecision">Continuer</button>`}</div>`;
+  }
+  function bindModalCloseButtons(){document.querySelectorAll('[data-modal-close]').forEach(btn=>btn.onclick=closeBillingModal);}
+  function bindInvoiceModalControls(){bindModalCloseButtons();const decision=document.getElementById('openInvoiceDecision');if(decision)decision.onclick=showDraftDecision;rebuildInstallmentOptions();const first=document.getElementById('firstDebitDate');if(first)first.addEventListener('change',()=>{rebuildInstallmentOptions();renderSchedulePreview();});const select=document.getElementById('installments');if(select)select.addEventListener('change',renderSchedulePreview);document.querySelectorAll('input[name=paymentMode]').forEach(el=>el.addEventListener('change',renderSchedulePreview));renderSchedulePreview();}
+  function decisionCard(question, yesId, noId, help){return `<div class="qonto-invoice-card" style="margin-top:16px;background:linear-gradient(135deg,#eef6ff,#ffffff);border:1px solid #bfdbfe;box-shadow:0 18px 45px rgba(37,99,235,.12);"><div class="qonto-title" style="font-size:20px;margin-bottom:8px;">${esc(question)}</div>${help?`<div class="muted" style="margin-bottom:16px;">${esc(help)}</div>`:''}<div class="billing-modal-actions" style="justify-content:flex-start;margin-top:10px;"><button type="button" class="btn btn-primary" id="${yesId}">Oui</button><button type="button" class="btn btn-outline" id="${noId}">Non</button></div></div>`;}
+  function showDraftDecision(){const msg=document.getElementById('modalMsg');if(!msg)return;msg.className='';msg.innerHTML=decisionCard('Voulez-vous créer la facture en brouillon ?', 'confirmDraftYes', 'confirmDraftNo', 'Oui : crée le brouillon Qonto avec le mode de paiement sélectionné. Non : vous pourrez choisir une facture définitive.');document.getElementById('confirmDraftYes').onclick=()=>createCurrentDraft(false);document.getElementById('confirmDraftNo').onclick=showFinalDecision;}
+  function showFinalDecision(){const msg=document.getElementById('modalMsg');if(!msg)return;msg.className='';msg.innerHTML=decisionCard('Voulez-vous générer la facture ?', 'confirmFinalYes', 'confirmFinalNo', 'Oui : crée la facture puis la finalise dans Qonto avec le mode de paiement sélectionné.');document.getElementById('confirmFinalYes').onclick=()=>createCurrentDraft(true);document.getElementById('confirmFinalNo').onclick=()=>{msg.innerHTML='';};}
+  function openGenerateInvoiceModal(line){currentLine=line;document.body.insertAdjacentHTML('beforeend',`<div class="billing-modal-overlay no-print" role="dialog" aria-modal="true"><div class="billing-modal">${renderInvoiceModalContent(line)}</div></div>`);bindInvoiceModalControls();}
+  async function createCurrentDraft(finalizeAfterCreate=false){if(!currentLine||modalLoading)return;modalLoading=true;const btn=document.getElementById(finalizeAfterCreate?'confirmFinalYes':'confirmDraftYes')||document.getElementById('openInvoiceDecision');if(btn){btn.disabled=true;btn.textContent=finalizeAfterCreate?'Génération de la facture...':'Création du brouillon...';}try{const paymentPlan=getPaymentPlanPayload();if(paymentPlan.paymentMode!=='cash'&&!paymentPlan.schedule.length){throw new Error('Aucune échéance SEPA possible avant la date limite.');}const draftData=await api('/api/billing/create-draft',{lineId:currentLine.id,source:'admin_trainee',paymentPlan});let updated=draftData.line||draftData;if(finalizeAfterCreate){const finalData=await api('/api/billing/finalize',{lineId:updated.id,source:'admin_trainee'});updated=finalData.line||updated;}currentLine=updated;currentLines=currentLines.map(line=>line.id===updated.id?updated:line);render(currentLines);document.querySelector('.billing-modal').innerHTML=renderInvoiceModalContent(updated,true);bindModalCloseButtons();}catch(err){modalMessage(err.message||'Erreur inconnue','error');if(btn){btn.disabled=false;btn.textContent=finalizeAfterCreate?'Oui':'Oui';}}finally{modalLoading=false;}}
+  function pct(value,total){return total>0?Math.max(0,Math.min(150,(Number(value||0)/total)*100)):0;}
+  function invoiceStatusLabel(line){const has=!!(line.qontoInvoiceId||line.qontoDraftId);if(!has)return 'Facture non générée';return ({paid:'Facture payée',sent:'Facture envoyée',finalized:'Facture générée',draft:'Brouillon',cancelled:'Annulée',control:'À contrôler'}[line.invoiceStatus]||'Facture générée');}
+  function invoiceBadge(line){const has=!!(line.qontoInvoiceId||line.qontoDraftId);if(!has)return 'red';if(line.invoiceStatus==='paid'||line.paymentStatus==='paid')return 'green';if(['sent','finalized'].includes(line.invoiceStatus))return 'blue';if(line.invoiceStatus==='draft')return 'orange';return 'gray';}
+  function badge(text,tone){return `<span class="finance-badge finance-badge--${tone||'gray'}">${esc(text)}</span>`;}
+  function lineAmount(l){return Number(l.amountTTC||l.amount||0)}
+  function linePaid(l){return (l.paymentStatus==='paid'||l.invoiceStatus==='paid')?lineAmount(l):0}
+  function allInstallments(lines){return lines.flatMap(l=>(l.directDebitInstallments||[]).map((it,i)=>({...it,line:l,index:i,total:(l.directDebitInstallments||[]).length})));}
+  function statusFromRatio(value,total,labels){if(total<=0)return [labels.none,'gray'];if(value<=0)return [labels.zero,'gray'];if(value<total)return [labels.partial,'orange'];if(value===total)return [labels.done,'green'];return [labels.over,'red'];}
+  function computeFinance(lines){
+    const parseMoneyValue=(value)=>{const n=parseFloat(String(value||'').replace(',','.').trim());return Number.isNaN(n)?0:n;};
+    const defaultPrice=()=>{const details=document.getElementById('financementDetails');const dataDefault=parseMoneyValue(details?.dataset.defaultPrice);if(dataDefault>0)return dataDefault;const type=String(details?.dataset.trainingType||'').toUpperCase();if(type==='A3P')return 4200;if(type==='APS')return 1650;if(type==='DIRIGEANT INITIAL')return 4300;if(type==='DIRIGEANT VAE')return 3800;if(type.includes('VTC'))return 1500;if(type.includes('SSIAP'))return 980;return 0;};
+    const prixFormation=parseMoneyValue(trainingPrice?.value)||defaultPrice();
+    const montantCpf=parseMoneyValue(cpfAmount?.value), montantPersonnel=parseMoneyValue(personalAmount?.value), montantAutre=parseMoneyValue(otherAmount?.value);
+    const totalFinancement=montantCpf+montantPersonnel+montantAutre;
+    const objectifFacturation=(montantPersonnel+montantAutre)>0?(montantPersonnel+montantAutre):(totalFinancement>0?0:prixFormation);
+    const active=lines.filter(l=>!['cancelled','deleted'].includes(String(l.invoiceStatus||'')));
+    const billable=active.filter(l=>!isCpfQontoLine(l));
+    const invoiced=billable.filter(l=>!!(l.qontoInvoiceId||l.qontoDraftId));
+    const totalFacture=invoiced.reduce((a,l)=>a+lineAmount(l),0);
+    const qontoPaid=billable.reduce((a,l)=>a+linePaid(l),0);
+    const cashInstallmentsTotal=window.getFinanceCashInstallmentsTotal?window.getFinanceCashInstallmentsTotal():0;
+    const cashPaid=(cashPaymentEnabled?.checked&&cashPaymentSettled?.checked)?parseMoneyValue(cashPaymentAmount?.value):cashInstallmentsTotal;
+    const totalPaye=qontoPaid+cashPaid;
+    const installments=allInstallments(lines);const paidStatuses=new Set(['completed','paid','succeeded','success']);const rejectStatuses=new Set(['failed','returned','rejected','refunded']);
+    const mensualitesPayees=installments.filter(i=>paidStatuses.has(String(i.status||'').toLowerCase())).length;
+    const nombreRejets=installments.filter(i=>rejectStatuses.has(String(i.status||'').toLowerCase())).length;
+    const upcoming=installments.filter(i=>!paidStatuses.has(String(i.status||'').toLowerCase())&&!rejectStatuses.has(String(i.status||'').toLowerCase())&&i.date).sort((a,b)=>String(a.date).localeCompare(String(b.date)))[0];
+    return {prixFormation,montantCpf,montantPersonnel,montantAutre,totalFinancement,objectifFacturation,totalFacture,totalPaye,resteAFacturer:objectifFacturation-totalFacture,resteAPayer:objectifFacturation-totalPaye,differenceFinancement:totalFinancement-prixFormation,progressFacturation:pct(totalFacture,objectifFacturation),progressPaiement:pct(totalPaye,objectifFacturation),installments,totalMensualites:installments.length,mensualitesPayees,mensualitesRestantes:Math.max(installments.length-mensualitesPayees,0),montantPreleve:installments.filter(i=>paidStatuses.has(String(i.status||'').toLowerCase())).reduce((a,i)=>a+Number(i.amount||0),0),montantRestantAPrelever:installments.filter(i=>!paidStatuses.has(String(i.status||'').toLowerCase())).reduce((a,i)=>a+Number(i.amount||0),0),prochaineEcheance:upcoming,nombreRejets};
+  }
+  function renderSummary(c){
+    updateAccordionSummaries(currentLines,c);
+    const fact=statusFromRatio(c.totalFacture,c.objectifFacturation,{none:'Non facturé',zero:'Non facturé',partial:'Partiellement facturé',done:'Facturé',over:'Surfacturé'});
+    const pay=statusFromRatio(c.totalPaye,c.objectifFacturation,{none:'Non payé',zero:'Non payé',partial:'Paiement partiel',done:'Payé',over:'Trop-perçu'});
+    const inst=c.totalMensualites===0?['Aucun échéancier','gray']:(c.nombreRejets?['Rejet à traiter','red']:(c.mensualitesPayees===0?['En attente','orange']:(c.mensualitesPayees<c.totalMensualites?['En cours','orange']:['Terminé','green'])));
+    document.getElementById('financeSummaryCards').innerHTML=[['Prix formation',fmtMoney(c.prixFormation),(parseFloat(String(salesTrackingAmount?.value||'').replace(',','.'))||0)>0?badge('Tarif ajusté','blue'):''],['Facturé',`${fmtMoney(c.totalFacture)} / ${fmtMoney(c.objectifFacturation)}`,badge(fact[0],fact[1])],['Payé',`${fmtMoney(c.totalPaye)} / ${fmtMoney(c.objectifFacturation)}`,`${badge(pay[0],pay[1])}<div class="finance-summary-card__meta">Reste à payer : ${fmtMoney(Math.max(c.resteAPayer,0))}</div>`],['Prélèvements',`${c.mensualitesPayees} / ${c.totalMensualites} passées`,`${badge(inst[0],inst[1])}<div class="finance-summary-card__meta">${c.prochaineEcheance?`Prochain : ${formatIsoDateFr(c.prochaineEcheance.date)} — ${fmtMoney(c.prochaineEcheance.amount)}`:'Aucune prochaine échéance'}</div>`]].map(x=>`<div class="finance-summary-card"><div class="finance-summary-card__top"><span>${x[0]}</span>${x[2]&&String(x[2]).startsWith('<span')?x[2]:''}</div><div class="finance-summary-card__value">${x[1]}</div>${x[2]&&!String(x[2]).startsWith('<span')?x[2]:''}</div>`).join('');
+    document.getElementById('financeProgressPanel').innerHTML=`<div class="finance-progress-row"><strong>Facturation</strong><div class="finance-progress-track"><div class="finance-progress-fill" style="width:${Math.min(c.progressFacturation,100)}%"></div></div><strong>${Math.round(c.progressFacturation)}%</strong></div><div class="finance-progress-row"><strong>Paiement</strong><div class="finance-progress-track"><div class="finance-progress-fill finance-progress-fill--green" style="width:${Math.min(c.progressPaiement,100)}%"></div></div><strong>${Math.round(c.progressPaiement)}%</strong></div>`;
+  }
+  function openGenerateInvoiceModal(line){currentLine=line;document.body.insertAdjacentHTML('beforeend',`<div class="billing-modal-overlay no-print" role="dialog" aria-modal="true"><div class="billing-modal">${renderInvoiceModalContent(line)}</div></div>`);bindInvoiceModalControls();}
+  async function createCurrentDraft(finalizeAfterCreate=false){if(!currentLine||modalLoading)return;modalLoading=true;const btn=document.getElementById(finalizeAfterCreate?'confirmFinalYes':'confirmDraftYes')||document.getElementById('openInvoiceDecision');if(btn){btn.disabled=true;btn.textContent=finalizeAfterCreate?'Génération de la facture...':'Création du brouillon...';}try{const paymentPlan=getPaymentPlanPayload();if(paymentPlan.paymentMode!=='cash'&&!paymentPlan.schedule.length){throw new Error('Aucune échéance SEPA possible avant la date limite.');}const draftData=await api('/api/billing/create-draft',{lineId:currentLine.id,source:'admin_trainee',paymentPlan});let updated=draftData.line||draftData;if(finalizeAfterCreate){const finalData=await api('/api/billing/finalize',{lineId:updated.id,source:'admin_trainee'});updated=finalData.line||updated;}currentLine=updated;currentLines=currentLines.map(line=>line.id===updated.id?updated:line);render(currentLines);document.querySelector('.billing-modal').innerHTML=renderInvoiceModalContent(updated,true);bindModalCloseButtons();}catch(err){modalMessage(err.message||'Erreur inconnue','error');if(btn){btn.disabled=false;btn.textContent=finalizeAfterCreate?'Oui':'Oui';}}finally{modalLoading=false;}}
+  function pct(value,total){return total>0?Math.max(0,Math.min(150,(Number(value||0)/total)*100)):0;}
+  function invoiceStatusLabel(line){const has=!!(line.qontoInvoiceId||line.qontoDraftId);if(!has)return 'Facture non générée';if(line.paymentStatus==='paid'||line.invoiceStatus==='paid')return 'Facture payée';if(line.paymentStatus==='unpaid'&&['sent','finalized'].includes(line.invoiceStatus))return 'Facture impayée';return ({sent:'Facture envoyée',finalized:'Facture générée',draft:'Brouillon',cancelled:'Annulée',control:'À contrôler'}[line.invoiceStatus]||'Facture générée');}
+  function invoiceBadge(line){const has=!!(line.qontoInvoiceId||line.qontoDraftId);if(!has)return 'red';if(line.invoiceStatus==='paid'||line.paymentStatus==='paid')return 'green';if(line.paymentStatus==='unpaid'&&['sent','finalized'].includes(line.invoiceStatus))return 'orange';if(['sent','finalized'].includes(line.invoiceStatus))return 'blue';if(line.invoiceStatus==='draft')return 'orange';return 'gray';}
+  function badge(text,tone){return `<span class="finance-badge finance-badge--${tone||'gray'}">${esc(text)}</span>`;}
+  function lineAmount(l){return Number(l.amountTTC||l.amount||0)}
+  function linePaid(l){return (l.paymentStatus==='paid'||l.invoiceStatus==='paid')?lineAmount(l):0}
+  function allInstallments(lines){return lines.flatMap(l=>(l.directDebitInstallments||[]).map((it,i)=>({...it,line:l,index:i,total:(l.directDebitInstallments||[]).length})));}
+  function statusFromRatio(value,total,labels){if(total<=0)return [labels.none,'gray'];if(value<=0)return [labels.zero,'gray'];if(value<total)return [labels.partial,'orange'];if(value===total)return [labels.done,'green'];return [labels.over,'red'];}
+  function computeFinance(lines){
+    const parseMoneyValue=(value)=>{const n=parseFloat(String(value||'').replace(',','.').trim());return Number.isNaN(n)?0:n;};
+    const defaultPrice=()=>{const details=document.getElementById('financementDetails');const dataDefault=parseMoneyValue(details?.dataset.defaultPrice);if(dataDefault>0)return dataDefault;const type=String(details?.dataset.trainingType||'').toUpperCase();if(type==='A3P')return 4200;if(type==='APS')return 1650;if(type==='DIRIGEANT INITIAL')return 4300;if(type==='DIRIGEANT VAE')return 3800;if(type.includes('VTC'))return 1500;if(type.includes('SSIAP'))return 980;return 0;};
+    const prixFormation=parseMoneyValue(trainingPrice?.value)||defaultPrice();
+    const montantCpf=parseMoneyValue(cpfAmount?.value), montantPersonnel=parseMoneyValue(personalAmount?.value), montantAutre=parseMoneyValue(otherAmount?.value);
+    const totalFinancement=montantCpf+montantPersonnel+montantAutre;
+    const objectifFacturation=(montantPersonnel+montantAutre)>0?(montantPersonnel+montantAutre):(totalFinancement>0?0:prixFormation);
+    const active=lines.filter(l=>!['cancelled','deleted'].includes(String(l.invoiceStatus||'')));
+    const billable=active.filter(l=>!isCpfQontoLine(l));
+    const invoiced=billable.filter(l=>!!(l.qontoInvoiceId||l.qontoDraftId));
+    const totalFacture=invoiced.reduce((a,l)=>a+lineAmount(l),0);
+    const qontoPaid=billable.reduce((a,l)=>a+linePaid(l),0);
+    const cashInstallmentsTotal=window.getFinanceCashInstallmentsTotal?window.getFinanceCashInstallmentsTotal():0;
+    const cashPaid=(cashPaymentEnabled?.checked&&cashPaymentSettled?.checked)?parseMoneyValue(cashPaymentAmount?.value):cashInstallmentsTotal;
+    const totalPaye=qontoPaid+cashPaid;
+    const installments=allInstallments(lines);const paidStatuses=new Set(['completed','paid','succeeded','success']);const rejectStatuses=new Set(['failed','returned','rejected','refunded']);
+    const mensualitesPayees=installments.filter(i=>paidStatuses.has(String(i.status||'').toLowerCase())).length;
+    const nombreRejets=installments.filter(i=>rejectStatuses.has(String(i.status||'').toLowerCase())).length;
+    const upcoming=installments.filter(i=>!paidStatuses.has(String(i.status||'').toLowerCase())&&!rejectStatuses.has(String(i.status||'').toLowerCase())&&i.date).sort((a,b)=>String(a.date).localeCompare(String(b.date)))[0];
+    return {prixFormation,montantCpf,montantPersonnel,montantAutre,totalFinancement,objectifFacturation,totalFacture,totalPaye,resteAFacturer:objectifFacturation-totalFacture,resteAPayer:objectifFacturation-totalPaye,differenceFinancement:totalFinancement-prixFormation,progressFacturation:pct(totalFacture,objectifFacturation),progressPaiement:pct(totalPaye,objectifFacturation),installments,totalMensualites:installments.length,mensualitesPayees,mensualitesRestantes:Math.max(installments.length-mensualitesPayees,0),montantPreleve:installments.filter(i=>paidStatuses.has(String(i.status||'').toLowerCase())).reduce((a,i)=>a+Number(i.amount||0),0),montantRestantAPrelever:installments.filter(i=>!paidStatuses.has(String(i.status||'').toLowerCase())).reduce((a,i)=>a+Number(i.amount||0),0),prochaineEcheance:upcoming,nombreRejets};
+  }
+  function renderSummary(c){
+    updateAccordionSummaries(currentLines,c);
+    const fact=statusFromRatio(c.totalFacture,c.objectifFacturation,{none:'Non facturé',zero:'Non facturé',partial:'Partiellement facturé',done:'Facturé',over:'Surfacturé'});
+    const pay=statusFromRatio(c.totalPaye,c.objectifFacturation,{none:'Non payé',zero:'Non payé',partial:'Paiement partiel',done:'Payé',over:'Trop-perçu'});
+    const inst=c.totalMensualites===0?['Aucun échéancier','gray']:(c.nombreRejets?['Rejet à traiter','red']:(c.mensualitesPayees===0?['En attente','orange']:(c.mensualitesPayees<c.totalMensualites?['En cours','orange']:['Terminé','green'])));
+    const adjusted=(parseFloat(String(salesTrackingAmount?.value||'').replace(',','.'))||0)>0;
+    const cpfTone=cpfValidated?'green':'orange';
+    const cpfValue=cpfValidated?c.montantCpf:0;
+    const hasCpfAmount=c.montantCpf>0;
+    const hasOtherFundingAmount=(c.montantPersonnel+c.montantAutre)>0;
+    const cards=[
+      {label:'Prix formation',icon:'€',value:fmtMoney(c.prixFormation),badge:adjusted?badge('Tarif ajusté','blue'):badge('Tarif standard','gray'),tone:adjusted?'blue':'gray',meta:'Montant de référence'},
+      ...(hasCpfAmount?[{label:'CPF',icon:'<img class="finance-summary-card__cpf-logo" src="/templates/cpf.jpg" alt="Logo CPF">',value:`${fmtMoney(cpfValue)} / ${fmtMoney(c.montantCpf)}`,badge:badge(cpfValidated?'CPF validé':'CPF non validé',cpfTone),tone:cpfTone,meta:cpfValidated?'Montant CPF confirmé':'Cliquez quand le CPF est confirmé',cpf:true}]:[]),
+      ...(hasOtherFundingAmount?[{label:'AUTRES FINANCEMENTS',icon:'👨',value:`${fmtMoney(c.totalFacture)} / ${fmtMoney(c.objectifFacturation)}`,badge:badge(fact[0],fact[1]),tone:(c.objectifFacturation>0&&c.totalFacture<c.objectifFacturation)?'orange':fact[1],meta:`Reste à facturer : ${fmtMoney(Math.max(c.resteAFacturer,0))}`}]:[]),
+      {label:'Payé',icon:(pay[1]==='green'?'✓':'✕'),iconTone:pay[1]==='green'?'green':'red',value:`${fmtMoney(c.totalPaye)} / ${fmtMoney(c.objectifFacturation)}`,badge:badge(pay[0],pay[1]),tone:(c.objectifFacturation>0&&c.totalPaye<c.objectifFacturation)?'orange':pay[1],meta:`Reste à payer : ${fmtMoney(Math.max(c.resteAPayer,0))}`},
+      {label:'Prélèvements',icon:'↻',value:`${c.mensualitesPayees}/${c.totalMensualites}`,badge:badge(inst[0],inst[1]),tone:inst[1],meta:c.prochaineEcheance?`Prochain : ${formatIsoDateFr(c.prochaineEcheance.date)} — ${fmtMoney(c.prochaineEcheance.amount)}`:'Aucune prochaine échéance'}
+    ];
+    document.getElementById('financeSummaryCards').innerHTML=cards.map(card=>`<div class="finance-summary-card ${card.cpf?'finance-summary-card--cpf ':''}is-${card.tone}"><div class="finance-summary-card__top"><span>${card.label}</span><span class="finance-summary-card__icon ${card.iconTone?`finance-summary-card__icon--${card.iconTone}`:''}">${card.icon}</span></div><div class="finance-summary-card__value">${card.value}</div>${card.cpf?`<div class="finance-summary-card__cpf-meter"><span style="width:${cpfValidated?100:0}%"></span></div>`:''}<div class="finance-summary-card__cpf-actions"><span>${card.badge}</span>${card.cpf&&!readOnly?`<button class="finance-summary-card__cpf-btn ${cpfValidated?'finance-summary-card__cpf-btn--undo':''}" type="button" data-cpf-toggle="${cpfValidated?'0':'1'}" title="${cpfValidated?'Annuler validation CPF':'Valider le CPF'}" aria-label="${cpfValidated?'Annuler validation CPF':'Valider le CPF'}">${cpfValidated?'✕':'✅'}</button>`:''}</div><div class="finance-summary-card__meta">${card.meta}</div></div>`).join('');
+    document.querySelector('[data-cpf-toggle]')?.addEventListener('click', async (event)=>{const btn=event.currentTarget;const next=btn.dataset.cpfToggle==='1';btn.disabled=true;btn.textContent=next?'…':'…';try{await updateTrainee({cpf_validated:next});cpfValidated=next;renderSummary(computeFinance(currentLines));}catch(e){btn.disabled=false;btn.textContent=next?'✅':'✕';alert(next?'Erreur sauvegarde CPF validé':'Erreur annulation CPF validé');}});
+    const validatedCpfAmount=cpfValidated?c.montantCpf:0;
+    const fundingTotal=c.totalFacture+validatedCpfAmount;
+    const fundingDiff=fundingTotal-c.prixFormation;
+    const fundingTone=c.prixFormation<=0?'orange':(Math.abs(fundingDiff)<=0.01?'green':(fundingDiff<0?'orange':'red'));
+    const fundingTitle=fundingTone==='green'?'Financement OK':(fundingDiff<0?'Attention, financement incomplet':'Trop financé');
+    const fundingIcon=fundingTone==='green'?'✅':(fundingDiff<0?'⚠️':'⚠️');
+    document.getElementById('financeAlerts').style.display='block';
+    document.getElementById('financeAlerts').innerHTML=`<div class="finance-funding-check finance-funding-check--${fundingTone}"><div class="finance-funding-check__icon">${fundingIcon}</div><div><div class="finance-funding-check__title">${fundingTitle}</div><div class="finance-funding-check__detail">Autres financements ${fmtMoney(c.totalFacture)} + CPF ${cpfValidated?'validé':'non validé'} ${fmtMoney(validatedCpfAmount)} = ${fmtMoney(fundingTotal)} / prix formation ${fmtMoney(c.prixFormation)}${Math.abs(fundingDiff)>0.01?` · Écart : ${fmtMoney(Math.abs(fundingDiff))}`:''}</div></div></div>`;
+    document.getElementById('financeProgressPanel').innerHTML=`<div class="finance-progress-row"><strong>Facturation</strong><div class="finance-progress-track"><div class="finance-progress-fill" style="width:${Math.min(c.progressFacturation,100)}%"></div></div><strong>${Math.round(c.progressFacturation)}%</strong></div><div class="finance-progress-row"><strong>Paiement</strong><div class="finance-progress-track"><div class="finance-progress-fill finance-progress-fill--green" style="width:${Math.min(c.progressPaiement,100)}%"></div></div><strong>${Math.round(c.progressPaiement)}%</strong></div>`;
+  }
+  function setAccordionHint(id,text,tone='blue'){const el=document.getElementById(id);if(!el)return;el.textContent=text;el.className=`finance-accordion-hint finance-badge--${tone}`;}
+  function updateAccordionSummaries(lines,c){const invoiceCount=lines.filter(l=>l.qontoInvoiceId||l.qontoDraftId).length;setAccordionHint('financeSettingsSummary',`CPF ${fmtMoney(c.montantCpf)} · Personnel ${fmtMoney(c.montantPersonnel)}`,'blue');setAccordionHint('financeInvoicesSummary',`${invoiceCount}/${lines.length} factures générées`,invoiceCount===lines.length&&lines.length?'green':(invoiceCount?'orange':'red'));setAccordionHint('financePaymentsSummary',`${fmtMoney(c.totalPaye)} encaissé · reste ${fmtMoney(Math.max(c.resteAPayer,0))}`,c.resteAPayer<=0.01&&c.prixFormation>0?'green':(c.totalPaye>0?'orange':'red'));setAccordionHint('financeInstallmentsSummary',c.totalMensualites?`${c.mensualitesPayees} mensualités payées sur ${c.totalMensualites}`:'Aucun échéancier',c.nombreRejets?'red':(c.totalMensualites&&c.mensualitesPayees===c.totalMensualites?'green':(c.totalMensualites?'orange':'gray')));}
+  function renderBreakdown(lines,c){const defs=[['CPF',c.montantCpf,'finance-line--cpf'],['Personnel',c.montantPersonnel,'finance-line--personal'],['Autre financement',c.montantAutre,'finance-line--other']];document.getElementById('financeBreakdown').innerHTML=defs.map(([name,planned,typeClass])=>{const related=lines.filter(l=>(l.financeurName||l.financingLabel||l.financingType||'').toLowerCase().includes(name.split(' ')[0].toLowerCase())||(name==='Personnel'&&String(l.financingType).includes('PERSONNEL'))||(name==='CPF'&&isCpfQontoLine(l))||(name.startsWith('Autre')&&String(l.financingType).includes('AUTRE')));const inv=related.filter(l=>l.qontoInvoiceId||l.qontoDraftId).reduce((a,l)=>a+lineAmount(l),0), paid=related.reduce((a,l)=>a+linePaid(l),0);const st=statusFromRatio(paid,planned,{none:'Non prévu',zero:'Non payé',partial:'Paiement partiel',done:'Payé',over:'Trop-perçu'});return `<div class="finance-line ${typeClass}"><strong>${esc(name)}</strong><div><span class="finance-mini-label">Prévu</span>${fmtMoney(planned)}</div><div><span class="finance-mini-label">Facturé</span>${fmtMoney(inv)}</div><div><span class="finance-mini-label">Payé</span>${fmtMoney(paid)}</div><div><span class="finance-mini-label">Reste à payer</span>${fmtMoney(Math.max(planned-paid,0))}</div>${badge(st[0],st[1])}</div>`;}).join('');}
+  function firstInvoiceToGenerate(){return currentLines.find(line=>!(line.qontoInvoiceId||line.qontoDraftId));}
+  function updateQuickInvoiceAction(){
+    if(!quickGenerateBtn) return;
+    const line=firstInvoiceToGenerate();
+    quickGenerateBtn.disabled=readOnly||!line;
+    quickGenerateBtn.textContent=line?`🧾 Générer une facture ${line.financeurName||line.financingLabel||line.financingType||''}`.trim():'✅ Toutes les factures sont générées';
+    quickGenerateBtn.title=line?'Ouvrir directement la génération de la prochaine facture manquante':'Aucune facture à générer';
+  }
+  function renderAlerts(lines,c){const alerts=[];if(c.nombreRejets)alerts.push(['Un prélèvement a été rejeté. Action requise.','red','⚠️']);if(c.resteAPayer>0.01)alerts.push([`Reste ${fmtMoney(c.resteAPayer)} à facturer.`,'orange','💳']);if(c.resteAPayer<=0.01&&c.objectifFacturation>0)alerts.push(['Montant à encaisser soldé.','green','✅']);lines.filter(l=>!(l.qontoInvoiceId||l.qontoDraftId)).forEach(l=>alerts.push([`Facture à générer pour ${esc(l.financeurName||l.financingLabel||l.financingType)}.`,'orange','🧾']));if(Math.abs(c.differenceFinancement)>=0.01)alerts.push([`Total financé ${c.differenceFinancement<0?'inférieur':'supérieur'} au prix formation de ${fmtMoney(Math.abs(c.differenceFinancement))}.`,'orange','ℹ️']);if(c.resteAPayer<-0.01)alerts.push([`Trop-perçu : ${fmtMoney(Math.abs(c.resteAPayer))}.`,'red','⚠️']);const box=document.getElementById('financeAlerts');if(financeNotificationsCount) financeNotificationsCount.textContent=String(alerts.length);financeNotificationsBtn?.classList.toggle('has-alerts', alerts.length>0);financeNotificationsBtn?.toggleAttribute('disabled', alerts.length===0);financeNotificationsBtn?.setAttribute('aria-expanded', financeNotificationsOpen&&alerts.length?'true':'false');box.style.display=alerts.length&&financeNotificationsOpen?'':'none';box.innerHTML=alerts.length?`<div class="finance-notifications__head"><div class="finance-notifications__title"><span aria-hidden="true">🔔</span><span>Notifications</span></div><span class="finance-notifications__count">${alerts.length}</span></div><div class="finance-notifications__list">${alerts.map(a=>`<div class="finance-alert finance-alert--${a[1]}"><strong>${a[2]}</strong><span>${a[0]}</span></div>`).join('')}</div>`:'';}
+  function renderPayments(lines,c){const rows=[];lines.forEach(l=>{if(linePaid(l)>0)rows.push({date:l.paidAt||l.updatedAt||'',amount:linePaid(l),mode:l.paymentMode==='sepa_direct_debit'?'prélèvement':'virement',status:'encaissé',invoice:l.qontoInvoiceNumber||l.qontoInvoiceId});});const cashItems=window.getFinanceCashInstallments?window.getFinanceCashInstallments():[];const cashTotal=window.getFinanceCashInstallmentsTotal?window.getFinanceCashInstallmentsTotal():0;if(cashPaymentEnabled?.checked&&cashTotal>0){cashItems.forEach(it=>rows.push({date:it.date,amount:it.amount,mode:'espèces',status:'encaissé',invoice:''}));}document.getElementById('financePayments').innerHTML=`<div class="finance-line ${c.resteAPayer<=0.01&&c.objectifFacturation>0?'finance-line--paid':'finance-line--unpaid'}"><strong>Total encaissé</strong><div>${fmtMoney(c.totalPaye)}</div><div><span class="finance-mini-label">Reste à payer</span>${fmtMoney(Math.max(c.resteAPayer,0))}</div><div><span class="finance-mini-label">Écart</span>${fmtMoney(c.totalPaye-c.objectifFacturation)}</div></div>`+(rows.length?rows.map(r=>`<div class="finance-line"><strong>${formatIsoDateFr(String(r.date).slice(0,10))||'Date inconnue'}</strong><div>${fmtMoney(r.amount)}</div><div>${esc(r.mode)}</div><div>${badge(r.status,'green')}</div><div>${esc(r.invoice||'—')}</div></div>`).join(''):'<div class="finance-empty">Aucun paiement enregistré pour le moment.</div>');}
+  function renderInstallments(c){document.getElementById('financeInstallments').innerHTML=c.totalMensualites?`<div class="finance-line"><strong>${c.mensualitesPayees} mensualités payées sur ${c.totalMensualites}</strong><div><span class="finance-mini-label">Prochaine mensualité</span>${c.prochaineEcheance?`${formatIsoDateFr(c.prochaineEcheance.date)} — ${fmtMoney(c.prochaineEcheance.amount)}`:'—'}</div><div><span class="finance-mini-label">Reste à prélever</span>${fmtMoney(c.montantRestantAPrelever)}</div></div>`+c.installments.map((it,i)=>{const st=String(it.status||'scheduled').toLowerCase();const tone=['completed','paid','succeeded'].includes(st)?'green':(['failed','returned','rejected'].includes(st)?'red':'orange');return `<div class="finance-line ${tone==='green'?'finance-line--paid':(tone==='red'?'finance-line--danger':'finance-line--unpaid')}"><strong>${i+1}/${c.totalMensualites}</strong><div><span class="finance-mini-label">Date prévue</span>${formatIsoDateFr(it.date)||'—'}</div><div>${fmtMoney(it.amount)}</div><div>${badge(st==='scheduled'?'À venir':st,tone)}</div><div>${it.paidAt?formatIsoDateFr(String(it.paidAt).slice(0,10)):''} ${it.failureReason?`<span class="qonto-error">${esc(it.failureReason)}</span>`:''}</div></div>`;}).join(''):'<div class="finance-empty">Aucun échéancier enregistré.</div>';}
   function render(lines){
-    if(!lines.length){ box.innerHTML = '<div><span class="qonto-status">Non facturé</span></div>'; return; }
+    const c=computeFinance(lines); renderFinancingValidation(c, lines); renderSummary(c); renderBreakdown(lines,c); renderAlerts(lines,c); renderPayments(lines,c); renderInstallments(c);
+    if(!lines.length){ box.innerHTML = '<div class="finance-empty">Aucune ligne de facturation disponible. Vérifiez les montants de financement.</div>'; return; }
     box.innerHTML = lines.map(l=>{
-      const s = l.invoiceStatus || 'not_invoiced';
       const has = !!(l.qontoInvoiceId || l.qontoDraftId);
-      const view = has ? `<a class="btn btn-outline" href="/api/admin/billing-lines/${encodeURIComponent(l.id)}/download-invoice" target="_blank" rel="noopener">Voir la facture</a>` : '';
-      const create = !has && !readOnly ? `<button class="btn btn-primary" data-create="${esc(l.id)}">Générer facture Qonto</button>` : '';
-      const finalize = has && s==='draft' && !readOnly ? `<button class="btn btn-outline" data-finalize="${esc(l.id)}">Finaliser la facture</button><button class="btn btn-outline" data-reset="${esc(l.id)}">Annuler le brouillon</button>` : '';
-      const send = has && ['finalized'].includes(s) && !readOnly ? `<button class="btn btn-outline" data-send="${esc(l.id)}">Envoyer par Qonto</button>` : '';
-      return `<div style="border:1px solid #dbeafe;border-radius:14px;padding:12px;background:#fff;margin-top:10px;">
-        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;"><strong>${esc(l.financeurName||l.financingLabel||l.financingType)}</strong><span class="badge ${cls(s)}">${label(s)}</span></div>
-        <div class="hint">${fmtMoney(l.amountTTC||l.amount)} TTC · ${esc(l.qontoInvoiceNumber||l.qontoInvoiceId||l.qontoDraftId||'')}</div>
-        ${l.syncWarning?`<div class="qonto-error">${esc(l.syncWarning)}</div>`:''}
-        <div class="qonto-actions">${create}${finalize}${send}${view}</div>
-      </div>`;
+      const rowTone = invoiceBadge(l)==='green'?'finance-line--paid':(invoiceBadge(l)==='orange'?'finance-line--unpaid':(invoiceBadge(l)==='red'?'finance-line--danger':'finance-line--info'));
+      const id = esc(l.id);
+      const view = has ? `<a class="qonto-action-btn qonto-action-btn--secondary" href="/api/admin/billing-lines/${encodeURIComponent(l.id)}/download-invoice" target="_blank" rel="noopener" data-action-control><span aria-hidden="true">👁</span> Voir</a>` : '';
+      const create = !has && !readOnly ? `<button class="qonto-action-btn qonto-action-btn--primary" data-create="${id}" data-action-control><span aria-hidden="true">🧾</span> Générer facture</button>` : '';
+      const sync = has && !readOnly ? `<button class="qonto-action-btn qonto-action-btn--secondary qonto-desktop-secondary" data-sync-line="${id}" data-action-control><span aria-hidden="true">↻</span> Synchroniser</button>` : '';
+      const finalize = has && l.invoiceStatus==='draft' && !readOnly ? `<button class="qonto-action-btn qonto-action-btn--primary" data-finalize="${id}" data-action-control><span aria-hidden="true">✓</span> Finaliser le brouillon</button>` : '';
+      const reset = has && l.invoiceStatus==='draft' && !readOnly ? `<button class="qonto-action-btn qonto-action-btn--danger qonto-desktop-secondary" data-reset="${id}" data-action-control><span aria-hidden="true">✕</span> Annuler le brouillon</button>` : '';
+      const send = has && ['finalized'].includes(l.invoiceStatus) && !readOnly ? `<button class="qonto-action-btn qonto-action-btn--secondary qonto-desktop-secondary" data-send="${id}" data-action-control><span aria-hidden="true">✉</span> Envoyer par Qonto</button>` : '';
+      const schedule = l.paymentMode==='sepa_direct_debit' ? `<button class="qonto-action-btn qonto-action-btn--secondary qonto-desktop-secondary" data-schedule="${id}" data-action-control><span aria-hidden="true">📅</span> Échéancier</button>` : '';
+      const mobileActions = (sync || reset || send || schedule) ? `<details class="qonto-mobile-actions"><summary class="qonto-action-btn qonto-action-btn--secondary" aria-label="Actions secondaires">•••</summary><div class="qonto-mobile-actions__menu">${sync.replace(' qonto-desktop-secondary','')}${send.replace(' qonto-desktop-secondary','')}${schedule.replace(' qonto-desktop-secondary','')}${reset.replace(' qonto-desktop-secondary','')}</div></details>` : '';
+      return `<div class="qonto-invoice-row ${rowTone}"><div class="qonto-invoice-row__type"><span class="qonto-invoice-row__icon" aria-hidden="true">💳</span><strong>${esc(l.financeurName||l.financingLabel||l.financingType)}</strong></div><div class="qonto-invoice-row__content"><div class="qonto-invoice-row__value"><span class="finance-mini-label">Facture</span>${esc(l.qontoInvoiceNumber||'—')}</div><div class="qonto-invoice-row__value"><span class="finance-mini-label">Montant TTC</span>${fmtMoney(lineAmount(l))}</div><div class="qonto-invoice-row__value"><span class="finance-mini-label">Créée le</span>${formatIsoDateFr(String(l.invoiceGeneratedAt||l.createdAt||'').slice(0,10))||'—'}</div><div class="qonto-invoice-row__value"><span class="finance-mini-label">Échéance</span>${formatIsoDateFr(String(l.dueDate||l.due_date||'').slice(0,10))||'—'}</div>${badge(invoiceStatusLabel(l),invoiceBadge(l))}</div><div class="qonto-invoice-actions">${create}${view}${sync}${finalize}${send}${schedule}${mobileActions}</div>${l.syncWarning?`<div class="qonto-error" style="grid-column:1/-1">${esc(l.syncWarning)}</div>`:''}</div>`;
     }).join('');
   }
+  function showQontoFeedback(message,type='success'){
+    const html = `<div class="qonto-feedback qonto-feedback--${type}" role="${type==='error'?'alert':'status'}">${esc(message)}</div>`;
+    box.insertAdjacentHTML('afterbegin', html);
+  }
+  function setRowBusy(btn,busy){
+    const row = btn.closest('.qonto-invoice-row');
+    row?.querySelectorAll('[data-action-control]').forEach(control=>{ if('disabled' in control) control.disabled=busy; else control.setAttribute('aria-disabled', busy?'true':'false'); });
+  }
   box.addEventListener('click', async e=>{
-    const id = e.target.dataset.create || e.target.dataset.finalize || e.target.dataset.send || e.target.dataset.reset;
+    const action = e.target.closest('[data-create],[data-finalize],[data-send],[data-reset],[data-mandate],[data-schedule],[data-sync-line]');
+    if(!action) return;
+    const id = action.dataset.create || action.dataset.finalize || action.dataset.send || action.dataset.reset || action.dataset.mandate || action.dataset.schedule || action.dataset.syncLine;
     if(!id) return;
     try{
-      if(e.target.dataset.create){ const line = currentLines.find(l=>l.id===id); if(line) openGenerateInvoiceModal(line); return; }
-      if(e.target.dataset.finalize) await api('/api/billing/finalize',{lineId:id,source:'admin_trainee'});
-      if(e.target.dataset.send) await api('/api/billing/send',{lineId:id,source:'admin_trainee'});
-      if(e.target.dataset.reset && confirm('Annuler/remettre à zéro ce brouillon ?')) await api('/api/billing/cancel-or-reset',{lineId:id,source:'admin_trainee'});
+      if(action.dataset.create){ const line = currentLines.find(l=>l.id===id); if(line) openGenerateInvoiceModal(line); return; }
+      if(action.dataset.schedule){ const line=currentLines.find(l=>l.id===id); if(line){document.body.insertAdjacentHTML('beforeend',`<div class="billing-modal-overlay no-print" role="dialog" aria-modal="true"><div class="billing-modal">${renderScheduleModal(line)}</div></div>`); document.querySelectorAll('[data-modal-close]').forEach(btn=>btn.onclick=closeBillingModal);} return; }
+      if(action.dataset.reset && !confirm('Voulez-vous vraiment annuler ce brouillon Qonto ? Cette action est irréversible.')) return;
+      const original = action.innerHTML;
+      setRowBusy(action,true);
+      action.innerHTML = '<span aria-hidden="true">⏳</span> Traitement…';
+      let successMessage = 'Action Qonto terminée.';
+      if(action.dataset.mandate){ await api('/api/billing/resend-mandate',{lineId:id,source:'admin_trainee'}); successMessage = 'Lien de mandat renvoyé.'; }
+      if(action.dataset.syncLine){ await api('/api/billing/sync-qonto',{lineId:id,source:'admin_trainee'}); successMessage = 'Facture Qonto synchronisée.'; }
+      if(action.dataset.finalize){ await api('/api/billing/finalize',{lineId:id,source:'admin_trainee'}); successMessage = 'Brouillon Qonto finalisé.'; }
+      if(action.dataset.send){ await api('/api/billing/send',{lineId:id,source:'admin_trainee'}); successMessage = 'Facture envoyée par Qonto.'; }
+      if(action.dataset.reset){ await api('/api/billing/cancel-or-reset',{lineId:id,source:'admin_trainee'}); successMessage = 'Brouillon Qonto annulé.'; }
+      action.innerHTML = original;
       await load();
-    }catch(err){ alert(err.message||'Action impossible'); }
+      showQontoFeedback(successMessage);
+    }catch(err){ showQontoFeedback(err.message||'Action impossible','error'); setRowBusy(action,false); }
   });
+  financeNotificationsBtn?.addEventListener('click', ()=>{ financeNotificationsOpen = !financeNotificationsOpen; render(currentLines); });
+  quickGenerateBtn?.addEventListener('click', ()=>{ const line=firstInvoiceToGenerate(); if(line) openGenerateInvoiceModal(line); });
   syncBtn?.addEventListener('click', async ()=>{ syncBtn.disabled=true; try{ const j=await api('/api/billing/sync-qonto',{traineeId,sessionId,source:'admin_trainee'}); await load(); alert(j.message||'Synchronisation terminée'); }catch(e){ alert(e.message||'Synchronisation Qonto impossible pour le moment'); } finally{ syncBtn.disabled=false; }});
+  [cpfAmount, personalAmount, otherAmount, trainingPrice].forEach(input=>input?.addEventListener('input', ()=>{ const c=computeFinance(currentLines); renderFinancingValidation(c, currentLines); }));
+  async function saveFinanceValidationOverride(payload){
+    if(typeof updateTrainee === 'function') return updateTrainee(payload);
+    const response = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/stagiaires/${encodeURIComponent(traineeId)}/update`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    const result = await parseJsonResponse(response,'Sauvegarde du statut financement impossible');
+    if(!response.ok || !result.ok) throw new Error(result.error || result.message || 'Sauvegarde du statut financement impossible');
+    return result;
+  }
+  function setFinanceSaveIndicator(message, tone='saved'){
+    const indicator = document.getElementById('financeSaveIndicator');
+    if(!indicator) return;
+    indicator.textContent = message;
+    indicator.className = `finance-save-indicator is-${tone}`;
+  }
+  financeValidationForceForm?.addEventListener('submit', async (event)=>{
+    event.preventDefault();
+    if(financeValidationForceBtn.disabled) return;
+    financeValidationForceBtn.disabled = true;
+    const originalLabel = financeValidationForceBtn.textContent;
+    financeValidationForceBtn.textContent = 'Validation…';
+    setFinanceSaveIndicator('Validation du financement…','saving');
+    try{
+      if(financeValidationForceForm?.action){
+        const response = await fetch(financeValidationForceForm.action,{method:'POST',headers:{'Accept':'application/json'}});
+        const result = await parseJsonResponse(response,'Forçage du statut impossible');
+        if(!response.ok || !result.ok) throw new Error(result.error || result.message || 'Forçage du statut impossible');
+      }else{
+        await saveFinanceValidationOverride({financing_validation_manual_mode:'manual', financing_validation_manual_status:'validated', financement_status:'validated'});
+      }
+      financeValidationManualMode = true;
+      financeValidationManualStatus = 'validated';
+      if(financeValidationWrap){
+        financeValidationWrap.dataset.manualMode = 'manual';
+        financeValidationWrap.dataset.manualStatus = 'validated';
+      }
+      currentFinancementStatus = 'validated';
+      applyFinancingValidationState({label:'Financement validé', tone:'green', icon:'✓', manual:true});
+      setFinanceSaveIndicator('Financement validé','saved');
+    }catch(e){
+      alert(e.message || 'Forçage du statut impossible');
+      setFinanceSaveIndicator('Erreur de validation','error');
+      financeValidationForceBtn.disabled = false;
+    }finally{
+      financeValidationForceBtn.textContent = originalLabel;
+    }
+  });
+  financeValidationAutoBtn?.addEventListener('click', async ()=>{
+    financeValidationAutoBtn.disabled = true;
+    try{
+      await updateTrainee({financing_validation_manual_mode:'', financing_validation_manual_status:''});
+      financeValidationManualMode = false;
+      financeValidationManualStatus = '';
+      if(financeValidationWrap){
+        financeValidationWrap.dataset.manualMode = '';
+        financeValidationWrap.dataset.manualStatus = '';
+      }
+      renderFinancingValidation(computeFinance(currentLines), currentLines);
+    }catch(e){ alert(e.message || 'Retour au calcul automatique impossible'); }
+    finally{ financeValidationAutoBtn.disabled = false; renderFinancingValidation(computeFinance(currentLines), currentLines); }
+  });
   load().catch(e=>{ box.innerHTML = `<div class="qonto-error">${esc(e.message)}</div>`; });
 })();
 
@@ -3991,24 +4185,68 @@ phoneRelanceForm?.addEventListener("submit", async (e)=>{
     }
   });
 
+  const financeSection = document.getElementById("conventionFinancementSection");
+  function resetFinanceSection(){
+    if(!financeSection) return;
+    financeSection.open = false;
+    financeSection.classList.add("is-hidden");
+  }
+  resetFinanceSection();
+  window.addEventListener("pageshow", resetFinanceSection);
+
+  function openAdminDetailsSection(targetId, options = {}){
+    if(!targetId) return false;
+    const target = document.getElementById(targetId);
+    if(!target) return false;
+    target.classList.remove("is-hidden");
+    target.open = true;
+    target.scrollIntoView({ behavior: options.behavior || "smooth", block: "start" });
+    return true;
+  }
+
+  document.querySelectorAll("[data-finance-close]").forEach((btn)=>{
+    btn.addEventListener("click", ()=>{
+      resetFinanceSection();
+      financeSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
   document.querySelectorAll("[data-open-section]").forEach((btn)=>{
     btn.addEventListener("click", ()=>{
-      const targetId = btn.getAttribute("data-open-section");
-      if(!targetId) return;
-      const target = document.getElementById(targetId);
-      if(!target) return;
-      target.open = true;
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      openAdminDetailsSection(btn.getAttribute("data-open-section"));
     });
+  });
+  document.addEventListener("click", (event)=>{
+    const link = event.target.closest("[data-qonto-info-completion]");
+    if(!link) return;
+    const href = link.getAttribute("href") || "";
+    const hash = href.includes("#") ? href.slice(href.indexOf("#") + 1) : "conventionFinancementSection";
+    const samePage = !href || href.startsWith("#") || href.split("#")[0] === window.location.pathname;
+    if(!samePage) return;
+    event.preventDefault();
+    document.querySelectorAll(".billing-modal-overlay").forEach((modal)=>modal.remove());
+    currentLine = null;
+    modalLoading = false;
+    openAdminDetailsSection(hash || "conventionFinancementSection");
+    if(hash) history.replaceState(null, "", `#${hash}`);
   });
 
   async function updateTrainee(payload){
-  const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
-    method:"POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify(payload)
-  });
-  return res.json();
+  const saveIndicator = document.getElementById("financeSaveIndicator");
+  if(saveIndicator){ saveIndicator.textContent = "Sauvegarde en cours…"; saveIndicator.className = "finance-save-indicator is-saving"; }
+  try{
+    const res = await fetch(`/api/sessions/{{ session.id }}/stagiaires/{{ trainee.id }}/update`, {
+      method:"POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if(!res.ok || json.ok === false) throw new Error(json.error || json.message || "Erreur de sauvegarde");
+    if(saveIndicator){ saveIndicator.textContent = "Sauvegardé"; saveIndicator.className = "finance-save-indicator is-saved"; }
+    return json;
+  }catch(error){
+    if(saveIndicator){ saveIndicator.textContent = "Erreur de sauvegarde"; saveIndicator.className = "finance-save-indicator is-error"; }
+    throw error;
+  }
 }
 
   const contactDebounce = {};

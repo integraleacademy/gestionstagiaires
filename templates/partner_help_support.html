@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="partner-help-page">
+  <section class="help-hero">
+    <div><span class="subscription-kicker">AIDE ET SUPPORT</span><h1>Centre d’aide Intégrale Connect</h1><p>Déposez une demande, trouvez une réponse rapide et proposez les prochaines améliorations de la plateforme.</p></div>
+    <a class="btn btn-primary" href="#support-ticket">Déposer un ticket</a>
+  </section>
+  <div class="help-grid">
+    <section class="help-card" id="support-ticket"><h2>Demande d’assistance</h2><p>Expliquez le problème rencontré : votre demande est envoyée à l’équipe support.</p>
+      <form method="post" enctype="multipart/form-data" class="help-form">
+        <input type="hidden" name="request_type" value="support">
+        <label>Module concerné<select name="module" required><option value="">Choisir un module</option>{% for m in modules %}<option>{{ m }}</option>{% endfor %}</select></label>
+        <label>Objet<input name="subject" required placeholder="Ex : impossible d’éditer une convention"></label>
+        <label>Description du problème<textarea name="message" rows="6" required placeholder="Décrivez ce qui se passe, la page concernée et les étapes déjà essayées."></textarea></label>
+        <label>Capture d’écran (optionnel)<input type="file" name="screenshot" accept="image/png,image/jpeg,image/webp"></label>
+        <button class="btn btn-primary" type="submit">Soumettre le ticket</button>
+      </form>
+    </section>
+    <section class="help-card improvement-card" id="feature-request"><h2>Demander une amélioration</h2><p>Intégrale Connect évolue toutes les semaines : dites-nous quelle fonctionnalité vous ferait gagner du temps.</p>
+      <form method="post" class="help-form">
+        <input type="hidden" name="request_type" value="feature">
+        <label>Votre idée<input name="subject" required placeholder="Ex : exporter un rapport mensuel"></label>
+        <label>Pourquoi c’est utile ?<textarea name="message" rows="5" required placeholder="Expliquez votre besoin, votre contexte et l’impact attendu."></textarea></label>
+        <button class="btn" type="submit">Envoyer une idée</button>
+      </form>
+    </section>
+  </div>
+  <section class="help-card faq-card"><div class="section-title"><p>Questions fréquentes</p><h2>Comprendre et utiliser la plateforme</h2></div>
+    <div class="faq-list">
+    {% for item in faqs %}<details class="faq-item"><summary>{{ item.q }}</summary><p>{{ item.a }}</p><div class="faq-shot"><span>{{ item.step }}</span></div></details>{% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}
