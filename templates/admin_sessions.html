@@ -3132,7 +3132,7 @@ Le document sera associé automatiquement si ce stagiaire est ajouté plus tard.
   }
 
 
-  document.getElementById("btnOpenCnapsImport")?.addEventListener("click", ()=>{
+  const openCnapsImportModal = () => {
     const status = document.getElementById("cnapsImportStatus");
     const results = document.getElementById("cnapsImportResults");
     const filesInput = document.getElementById("cnapsImportFiles");
@@ -3142,7 +3142,12 @@ Le document sera associé automatiquement si ce stagiaire est ajouté plus tard.
     if(filesInput) filesInput.value = "";
     if(filesText) filesText.textContent = "Aucun fichier choisi";
     openModal("cnapsImportModal");
-  });
+  };
+
+  document.getElementById("btnOpenCnapsImport")?.addEventListener("click", openCnapsImportModal);
+  if(new URLSearchParams(window.location.search).get("openCnapsImport") === "1"){
+    window.setTimeout(openCnapsImportModal, 0);
+  }
 
   document.getElementById("cnapsImportFiles")?.addEventListener("change", (e)=>{
     const filesText = document.getElementById("cnapsImportFilesText");

@@ -173,7 +173,7 @@
             <button type="button" class="partner-sidebar__collapse" data-sidebar-collapse aria-label="Réduire la barre"><span class="collapse-icon collapse-icon--open">{{ ps.sidebar_icon('chevron') }}</span><span class="collapse-icon collapse-icon--closed">{{ ps.sidebar_icon('chevron-right') }}</span></button>
           </div>
           <div class="partner-sidebar__create">{{ ps.sidebar_nav_item(create_item) }}<div class="quick-create-menu sidebar-create-menu" id="sidebarCreateMenu"><button class="quick-create-option quick-create-option--session" data-sidebar-action="create-session">💼 Nouvelle session</button><button class="quick-create-option quick-create-option--trainee" data-sidebar-action="create-trainee">👨‍🎓 Nouveau stagiaire</button></div></div>
-          <section class="partner-sidebar__section"><h2>Navigation principale</h2>{% for item in space_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}{{ ps.sidebar_nav_item(sidebar_cpf_item) }}{{ ps.sidebar_submenu(sidebar_cnaps_menu) }}{{ ps.sidebar_submenu(sidebar_tools_menu) }}</section>
+          <section class="partner-sidebar__section"><h2>Navigation principale</h2>{% for item in space_items %}{{ ps.sidebar_nav_item(item) }}{% if loop.first %}{{ ps.sidebar_submenu(sidebar_tools_menu) }}{% endif %}{% endfor %}{{ ps.sidebar_nav_item(sidebar_cpf_item) }}{{ ps.sidebar_submenu(sidebar_cnaps_menu) }}</section>
           <section class="partner-sidebar__section partner-sidebar__section--settings"><h2>Paramètres et outils</h2>{% if settings_menu.children %}{{ ps.sidebar_submenu(settings_menu) }}{% endif %}{% for item in settings_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
           {% set sub=partner_sidebar.subscription or {} %}{% set count=sub.get('trainee_usage_count') or 0 %}{% set limit=sub.get('trainee_limit') %}{% set unlimited=sub.get('trainee_unlimited') or not limit %}{% set pct=0 if unlimited else ((count*100/limit)|round(0,'floor')) %}
           <div class="subscription-usage-card {{ 'is-alert' if pct>=90 and not unlimited else ('is-warning' if pct>=70 and not unlimited else '') }}"><span>Utilisation de l’abonnement</span><strong>{{ count }} stagiaires créés</strong><small>{% if unlimited %}Aucun plafond défini{% else %}{{ [limit-count,0]|max }} stagiaires restants{% endif %}</small>{% if not unlimited %}<div class="subscription-usage-card__bar"><i style="width:{{ [pct,100]|min }}%"></i></div>{% endif %}<a href="{{ url_for('partner_subscription') }}">Voir les détails</a></div>
@@ -218,7 +218,7 @@
             <button type="button" class="partner-sidebar__collapse" data-sidebar-collapse aria-label="Réduire la barre"><span class="collapse-icon collapse-icon--open">{{ ps.sidebar_icon('chevron') }}</span><span class="collapse-icon collapse-icon--closed">{{ ps.sidebar_icon('chevron-right') }}</span></button>
           </div>
           <div class="partner-sidebar__create">{{ ps.sidebar_nav_item(admin_create_item) }}<div class="quick-create-menu sidebar-create-menu" id="sidebarCreateMenu"><button class="quick-create-option quick-create-option--session" data-sidebar-action="create-session">💼 Nouvelle session</button><button class="quick-create-option quick-create-option--trainee" data-sidebar-action="create-trainee">👨‍🎓 Nouveau stagiaire</button></div></div>
-          <section class="partner-sidebar__section"><h2>Administration</h2>{% for item in admin_sidebar_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}{{ ps.sidebar_nav_item(admin_cpf_item) }}{{ ps.sidebar_submenu(admin_cnaps_menu) }}{{ ps.sidebar_submenu(admin_tools_menu) }}</section>
+          <section class="partner-sidebar__section"><h2>Administration</h2>{% for item in admin_sidebar_items %}{{ ps.sidebar_nav_item(item) }}{% if loop.first %}{{ ps.sidebar_submenu(admin_tools_menu) }}{% endif %}{% endfor %}{{ ps.sidebar_nav_item(admin_cpf_item) }}{{ ps.sidebar_submenu(admin_cnaps_menu) }}</section>
           <div class="partner-sidebar__bottom"><a class="partner-sidebar__item" href="{{ url_for('admin_sessions') }}" title="Retour aux sessions">{{ ps.sidebar_icon('home') }}<span class="partner-sidebar__label">Retour aux sessions</span></a><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}" title="Se déconnecter">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Se déconnecter</span></a></div>
         </div>
       </aside>
@@ -961,6 +961,15 @@
       localStorage.setItem(storageKey, document.body.classList.contains('partner-sidebar-collapsed') ? '1' : '0');
     });
     document.querySelectorAll('.partner-sidebar__item[href], [data-sidebar-action]').forEach(el => el.addEventListener('click', () => { if(isMobile()) closeSidebar(); }));
+    sidebar.querySelectorAll('.partner-sidebar__submenu').forEach(details => {
+      details.addEventListener('toggle', () => {
+        if(!details.open) return;
+        sidebar.querySelectorAll('.partner-sidebar__submenu[open]').forEach(other => {
+          if(other !== details) other.open = false;
+        });
+        document.getElementById('sidebarCreateMenu')?.classList.remove('is-open');
+      });
+    });
     document.addEventListener('click', (event) => {
       const actionEl = event.target.closest('[data-sidebar-action]');
       if(!actionEl) return;
@@ -977,7 +986,11 @@
       }
       if(action === 'create-session') document.getElementById('btnOpenCreateSession')?.click();
       if(action === 'create-trainee') document.getElementById('btnOpenCreateTraineeFromSessions')?.click();
-      if(action === 'open-cnaps-import') document.getElementById('btnOpenCnapsImport')?.click();
+      if(action === 'open-cnaps-import') {
+        const importButton = document.getElementById('btnOpenCnapsImport');
+        if(importButton) importButton.click();
+        else window.location.href = '{{ url_for('admin_sessions') }}?openCnapsImport=1';
+      }
     });
     const partnerCreateBtn = document.getElementById('partnerBtnOpenCreateMenu');
     const partnerCreateMenu = document.getElementById('partnerQuickCreateMenu');
