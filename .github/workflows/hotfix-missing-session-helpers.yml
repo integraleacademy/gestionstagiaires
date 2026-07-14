@@ -62,8 +62,11 @@ jobs:
                       raise SystemExit(f"HTTP {response.status_code} on {path}")
           PY
 
-          git rm -f .github/workflows/hotfix-missing-session-helpers.yml
           git add app.py
           git diff --check
+          if git diff --cached --quiet; then
+            echo "No app.py change required"
+            exit 0
+          fi
           git commit -m "Fix missing session helper functions"
           git push origin HEAD:test-v2
