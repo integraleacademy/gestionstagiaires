@@ -141,7 +141,6 @@
     {% import "partner_sidebar.html" as ps %}
     {% set space_items = [
       {"label":"Tableau de bord","icon":"home","href":url_for('admin_sessions'),"endpoints":["admin_sessions"],"badge":"","locked":False},
-      {"label":"Notifications","icon":"bell","href":"#adminNotifPanel","endpoints":[],"badge":partner_sidebar.notification_total if partner_sidebar.notification_total else "","locked":False},
       {"label":"Rechercher un stagiaire","icon":"search","action":"open-trainee-search","endpoints":[],"badge":"","locked":False},
       {"label":"Documents à contrôler","icon":"file","action":"open-docs-to-control","endpoints":[],"badge":"","badge_id":"sidebarDocsToControlBadge","locked":False},
       {"label":"Mes informations","icon":"info","href":url_for('partner_information'),"endpoints":["partner_information"],"badge":"","locked":False},
@@ -178,7 +177,30 @@
             <div class="partner-sidebar__identity-copy"><strong>{{ current_partner_name }}</strong><span>{{ partner_sidebar.user_name or 'Compte partenaire' }}</span><em>{{ partner_sidebar.subscription.get('plan_name') or 'Offre partenaire' }}</em>{% if partner_sidebar.is_active %}<small>Compte actif</small>{% endif %}</div>
           </div>
           <div class="partner-sidebar__create">{{ ps.sidebar_nav_item(create_item) }}<div class="quick-create-menu sidebar-create-menu" id="sidebarCreateMenu"><button class="quick-create-option quick-create-option--session" data-sidebar-action="create-session">💼 Nouvelle session</button><button class="quick-create-option quick-create-option--trainee" data-sidebar-action="create-trainee">👨‍🎓 Nouveau stagiaire</button></div></div>
-          <section class="partner-sidebar__section"><h2>Navigation principale</h2>{% for item in space_items %}{{ ps.sidebar_nav_item(item) }}{% if loop.first %}{{ ps.sidebar_submenu(sidebar_tools_menu) }}{% endif %}{% endfor %}{{ ps.sidebar_nav_item(sidebar_cpf_item) }}{{ ps.sidebar_submenu(sidebar_cnaps_menu) }}</section>
+          <section class="partner-sidebar__section"><h2>Navigation principale</h2>{% if admin_can_access_notifications %}
+            <div class="notif-wrap admin-sidebar-notif-wrap" id="adminNotifWrap">
+              <button type="button" id="adminNotifBtn" class="partner-sidebar__item admin-sidebar-notif-button" aria-expanded="false" aria-controls="adminNotifPanel" title="Notifications">
+                {{ ps.sidebar_icon('bell') }}
+                <span class="partner-sidebar__label">Notifications</span>
+                <span id="adminNotifCount" class="partner-sidebar__badge admin-sidebar-notif-dot" {% if admin_unresolved_total == 0 %}style="display:none;"{% endif %}>{{ admin_unresolved_total }}</span>
+              </button>
+              <div id="adminNotifPanel" class="notif-panel admin-sidebar-notif-panel" role="menu" aria-label="Notifications admin">
+                <div id="adminNotifList">
+                  {% if admin_notifications %}
+                    {% for n in admin_notifications %}
+                      <div class="notif-item {% if n.done %}done{% endif %}" data-notification-id="{{ n.id }}">
+                        {% if n.trainee_url %}<a class="notif-main" href="{{ n.trainee_url }}">{% else %}<div class="notif-main">{% endif %}
+                          <div class="notif-label">{{ n.label }}</div><div class="notif-meta">{{ n.created_fr }}</div>
+                          {% if n.details %}{% for d in n.details %}<div class="notif-meta">{{ d }}</div>{% endfor %}{% endif %}
+                        {% if n.trainee_url %}</a>{% else %}</div>{% endif %}
+                        <div class="notif-actions"><button type="button" class="notif-icon-btn" data-action="delete" {% if not admin_can_manage_notifications %}disabled aria-disabled="true"{% endif %}>❌</button><button type="button" class="notif-icon-btn" data-action="toggle" {% if not admin_can_manage_notifications %}disabled aria-disabled="true"{% endif %}>✅</button></div>
+                      </div>
+                    {% endfor %}
+                  {% else %}<div class="notif-empty">Aucune notification.</div>{% endif %}
+                </div>
+              </div>
+            </div>
+          {% endif %}{% for item in space_items %}{{ ps.sidebar_nav_item(item) }}{% if loop.first %}{{ ps.sidebar_submenu(sidebar_tools_menu) }}{% endif %}{% endfor %}{{ ps.sidebar_nav_item(sidebar_cpf_item) }}{{ ps.sidebar_submenu(sidebar_cnaps_menu) }}</section>
           <section class="partner-sidebar__section partner-sidebar__section--settings"><h2>Paramètres et outils</h2>{% if settings_menu.children %}{{ ps.sidebar_submenu(settings_menu) }}{% endif %}{% for item in settings_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
           {% set sub=partner_sidebar.subscription or {} %}{% set count=sub.get('trainee_usage_count') or 0 %}{% set limit=sub.get('trainee_limit') %}{% set unlimited=sub.get('trainee_unlimited') or not limit %}{% set pct=0 if unlimited else ((count*100/limit)|round(0,'floor')) %}
           <div class="subscription-usage-card {{ 'is-alert' if pct>=90 and not unlimited else ('is-warning' if pct>=70 and not unlimited else '') }}"><span>Utilisation de l’abonnement</span><strong>{{ count }} stagiaires créés</strong><small>{% if unlimited %}Aucun plafond défini{% else %}{{ [limit-count,0]|max }} stagiaires restants{% endif %}</small>{% if not unlimited %}<div class="subscription-usage-card__bar"><i style="width:{{ [pct,100]|min }}%"></i></div>{% endif %}<a href="{{ url_for('partner_subscription') }}">Voir les détails</a></div>
@@ -1082,6 +1104,33 @@
         lockedModal.classList.remove('is-open');
         lockedModal.setAttribute('aria-hidden','true');
       }
+    });
+  })();
+
+  (function initGlobalDocsToControlBadge(){
+    const sidebarBadge = document.getElementById("sidebarDocsToControlBadge");
+    if(!sidebarBadge) return;
+
+    async function refreshSidebarDocsToControlBadge(){
+      try{
+        const response = await fetch("/api/docs_to_control", { headers: { "Accept": "application/json" } });
+        const payload = await response.json();
+        if(!response.ok || !payload.ok) throw new Error(payload.error || "request_failed");
+        const totalDocs = (payload.items || []).reduce((sum, item) => sum + (Number(item.pending_count) || 0), 0);
+        sidebarBadge.textContent = String(totalDocs);
+        sidebarBadge.style.display = totalDocs > 0 ? "inline-flex" : "none";
+        sidebarBadge.setAttribute("aria-label", `${totalDocs} document(s) à contrôler`);
+      }catch(_error){
+        sidebarBadge.textContent = "!";
+        sidebarBadge.style.display = "inline-flex";
+        sidebarBadge.setAttribute("aria-label", "Impossible de charger les documents à contrôler");
+      }
+    }
+
+    refreshSidebarDocsToControlBadge();
+    window.addEventListener("focus", refreshSidebarDocsToControlBadge);
+    document.addEventListener("visibilitychange", () => {
+      if(!document.hidden) refreshSidebarDocsToControlBadge();
     });
   })();
 
