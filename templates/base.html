@@ -17,8 +17,15 @@
 </head>
 
 <body class="{% if is_read_only %}read-only {% endif %}{% if is_partner_space %}partner-space {% endif %}{% if request.endpoint %}endpoint-{{ request.endpoint|replace('_', '-') }}{% endif %}">
-  {% set admin_sidebar_endpoints = ["admin_sessions", "admin_positioning_tests", "admin_positioning_test_detail", "admin_partners", "admin_partner_new", "admin_partner_detail", "admin_secretariat", "admin_qonto_settings"] %}
+  {% set admin_sidebar_endpoints = [
+    "admin_sessions", "admin_positioning_tests", "admin_positioning_test_detail",
+    "admin_partners", "admin_partner_new", "admin_partner_detail", "admin_secretariat",
+    "admin_qonto_settings", "admin_wedof_requests", "admin_wedof", "admin_cnaps_unknown",
+    "admin_afc", "admin_sessions_conventions", "admin_sessions_automations",
+    "admin_sessions_billing", "admin_sessions_archived", "admin_cash_payments"
+  ] %}
   {% set show_admin_sidebar = is_admin_logged_in and not is_partner_space and (request.endpoint in admin_sidebar_endpoints) %}
+  {% if show_admin_sidebar %}<script>document.body.classList.add('admin-sidebar-active');</script>{% endif %}
   <div class="test-version-banner">VERSION TEST V2</div>
   <style>
     .notif-wrap{ position:relative; }
@@ -186,6 +193,22 @@
       {"label":"Secrétariat","icon":"mail","href":url_for('admin_secretariat'),"endpoints":["admin_secretariat"],"badge":"","locked":False},
       {"label":"Réglages Qonto","icon":"settings","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings"],"badge":"","locked":False}
     ] %}
+    {% set admin_create_item = {"label":"Créer","icon":"plus","action":"toggle-create-menu","endpoints":[],"locked":is_read_only,"primary":True} %}
+    {% set admin_cpf_item = {"label":"CPF","icon":"wallet","href":url_for('admin_wedof_requests'),"endpoints":["admin_wedof_requests","admin_wedof"],"badge":wedof_new_requests_count if (wedof_new_requests_count or 0) > 0 else "","locked":not partner_has_module('cpf')} %}
+    {% set admin_cnaps_menu = {"label":"CNAPS","icon":"shield","badge":"","children":[
+      {"label":"DRACAR","icon":"external","href":"https://espace-usagers.cnaps.interieur.gouv.fr/usager/app/accueil","endpoints":[],"locked":not partner_has_module('cnaps'),"external":True},
+      {"label":"Import PRE CNAPS","icon":"file","action":"open-cnaps-import","endpoints":[],"locked":is_read_only or not partner_has_module('cnaps')},
+      {"label":"CNAPS inconnus","icon":"shield","href":url_for('admin_cnaps_unknown'),"endpoints":["admin_cnaps_unknown"],"locked":not partner_has_module('cnaps')}
+    ]} %}
+    {% set admin_tools_menu = {"label":"Outils","icon":"tool","badge":"","children":[
+      {"label":"AFC","icon":"file","href":url_for('admin_afc'),"endpoints":["admin_afc"],"locked":False},
+      {"label":"Conventions","icon":"file","href":url_for('admin_sessions_conventions'),"endpoints":["admin_sessions_conventions"],"locked":not partner_has_module('automations')},
+      {"label":"Automatisations","icon":"tool","href":url_for('admin_sessions_automations'),"endpoints":["admin_sessions_automations"],"locked":not partner_has_module('automations')},
+      {"label":"Facturation","icon":"wallet","href":url_for('admin_sessions_billing'),"endpoints":["admin_sessions_billing"],"locked":not partner_has_module('billing')},
+      {"label":"Sessions archivées","icon":"archive","href":url_for('admin_sessions_archived'),"endpoints":["admin_sessions_archived"],"locked":False},
+      {"label":"Paiement espèces","icon":"wallet","href":url_for('admin_cash_payments'),"endpoints":["admin_cash_payments"],"locked":False},
+      {"label":"SCOTIA","icon":"external","href":url_for('scotia_login'),"endpoints":[],"locked":False,"external":True}
+    ]} %}
     <div class="app-shell">
       <aside class="partner-sidebar admin-sidebar" id="partnerSidebar" aria-label="Navigation admin">
         <div class="partner-sidebar__scroll">
@@ -194,7 +217,8 @@
             <div class="partner-sidebar__identity-copy"><strong>Administration</strong><span>Intégrale Connect</span><em>Outils internes</em></div>
             <button type="button" class="partner-sidebar__collapse" data-sidebar-collapse aria-label="Réduire la barre"><span class="collapse-icon collapse-icon--open">{{ ps.sidebar_icon('chevron') }}</span><span class="collapse-icon collapse-icon--closed">{{ ps.sidebar_icon('chevron-right') }}</span></button>
           </div>
-          <section class="partner-sidebar__section"><h2>Administration</h2>{% for item in admin_sidebar_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
+          <div class="partner-sidebar__create">{{ ps.sidebar_nav_item(admin_create_item) }}<div class="quick-create-menu sidebar-create-menu" id="sidebarCreateMenu"><button class="quick-create-option quick-create-option--session" data-sidebar-action="create-session">💼 Nouvelle session</button><button class="quick-create-option quick-create-option--trainee" data-sidebar-action="create-trainee">👨‍🎓 Nouveau stagiaire</button></div></div>
+          <section class="partner-sidebar__section"><h2>Administration</h2>{% for item in admin_sidebar_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}{{ ps.sidebar_nav_item(admin_cpf_item) }}{{ ps.sidebar_submenu(admin_cnaps_menu) }}{{ ps.sidebar_submenu(admin_tools_menu) }}</section>
           <div class="partner-sidebar__bottom"><a class="partner-sidebar__item" href="{{ url_for('admin_sessions') }}" title="Retour aux sessions">{{ ps.sidebar_icon('home') }}<span class="partner-sidebar__label">Retour aux sessions</span></a><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}" title="Se déconnecter">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Se déconnecter</span></a></div>
         </div>
       </aside>
