@@ -12480,6 +12480,7 @@ def admin_sessions():
         return None
 
     visible_partner_id = _current_partner_id() or INTEGRALE_PARTNER_ID
+    visible_session_keys = set()
 
     for s in data.get("sessions", []):
         if isinstance(s, dict) and s.get("partner_id") != visible_partner_id:
@@ -12512,6 +12513,11 @@ def admin_sessions():
 
         if bool(s.get("archived")):
             continue
+
+        duplicate_key = _session_duplicate_key(s, visible_partner_id)
+        if duplicate_key in visible_session_keys:
+            continue
+        visible_session_keys.add(duplicate_key)
 
         trainees = _session_trainees_list(s)
         st = compute_stats(s)
@@ -16898,6 +16904,24 @@ def _sync_aps_period_dates(session_obj: Dict[str, Any]) -> None:
         if not exam or (presentiel_end and presentiel_end >= exam):
             session_obj["exam_date"] = computed_exam_date
 
+def _session_duplicate_key(session_obj: dict, partner_id: str = "") -> tuple:
+    """Stable natural key used to avoid showing/creating exact duplicate sessions."""
+    if not isinstance(session_obj, dict):
+        return (partner_id or INTEGRALE_PARTNER_ID, "", "", "", "", "", "", "", "", "")
+    return (
+        (session_obj.get("partner_id") or partner_id or INTEGRALE_PARTNER_ID),
+        (session_obj.get("name") or "").strip().casefold(),
+        (session_obj.get("training_type") or "").strip().casefold(),
+        (session_obj.get("date_start") or "").strip(),
+        (session_obj.get("date_end") or "").strip(),
+        (session_obj.get("exam_date") or "").strip(),
+        (session_obj.get("exam_theory_date") or "").strip(),
+        (session_obj.get("exam_practice_date") or "").strip(),
+        (session_obj.get("practice_training_date") or "").strip(),
+        (session_obj.get("aps_in_person_start") or "").strip(),
+    )
+
+
 # =========================
 # API - Sessions (used by your modal JS)
 # =========================
@@ -16957,6 +16981,14 @@ def api_create_session():
         "archived": False,
     }
     _sync_aps_period_dates(s)
+
+    duplicate_key = _session_duplicate_key(s)
+    for existing in data.get("sessions", []):
+        if not isinstance(existing, dict) or existing.get("archived"):
+            continue
+        if _session_duplicate_key(existing) == duplicate_key:
+            return jsonify({"ok": True, "id": existing.get("id"), "deduplicated": True})
+
     data["sessions"].insert(0, s)
     save_data(data)
     return jsonify({"ok": True, "id": session_id})

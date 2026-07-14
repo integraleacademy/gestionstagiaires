@@ -75,6 +75,52 @@ class MultiPartnerIsolationTests(unittest.TestCase):
         self.assertNotIn("FT Refusé", html)
         self.assertNotIn(">AFC<", html)
 
+
+    def test_admin_sessions_page_hides_exact_duplicate_sessions(self):
+        data = gestion_app.load_data()
+        data["sessions"] = [
+            {"id": "dup-1", "partner_id": self.partner_a, "name": "testadmin", "training_type": "APS", "date_start": "2026-11-02", "date_end": "2026-12-17", "trainees": []},
+            {"id": "dup-2", "partner_id": self.partner_a, "name": " testadmin ", "training_type": "aps", "date_start": "2026-11-02", "date_end": "2026-12-17", "trainees": []},
+            {"id": "other", "partner_id": self.partner_a, "name": "Autre session", "training_type": "APS", "date_start": "2026-11-02", "date_end": "2026-12-17", "trainees": []},
+        ]
+        gestion_app.save_data(data)
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "partner_admin"
+            sess["partner_id"] = self.partner_a
+
+        response = self.client.get("/admin/sessions")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertEqual(html.count('class="card session-card'), 2)
+        self.assertEqual(html.count('>testadmin</h2>'), 1)
+        self.assertIn('>Autre session</h2>', html)
+
+    def test_create_session_reuses_existing_exact_duplicate(self):
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "partner_admin"
+            sess["partner_id"] = self.partner_a
+
+        payload = {
+            "name": "testadmin",
+            "training_type": "APS",
+            "date_start": "2026-11-02",
+            "date_end": "2026-12-17",
+            "exam_date": "2026-12-18",
+        }
+        first = self.client.post("/api/sessions/create", json=payload)
+        second = self.client.post("/api/sessions/create", json=payload)
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertTrue(second.get_json().get("deduplicated"))
+        self.assertEqual(first.get_json().get("id"), second.get_json().get("id"))
+        persisted = gestion_app.load_data()
+        created = [s for s in persisted["sessions"] if s.get("name") == "testadmin"]
+        self.assertEqual(len(created), 1)
+
     def test_partner_cannot_access_integrale_only_tools_directly(self):
         with self.client.session_transaction() as sess:
             sess["admin_logged_in"] = True
