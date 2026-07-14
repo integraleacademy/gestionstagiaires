@@ -229,6 +229,19 @@ class MultiPartnerIsolationTests(unittest.TestCase):
         self.assertIn("height:88px", html)
         self.assertNotIn('src="/static/icone.png"', html)
 
+    def test_partner_invitation_email_uses_connect_branding(self):
+        html = gestion_app._partner_invitation_mail_html(
+            {"first_name": "Alice"},
+            {"name": "Partenaire A"},
+            "https://example.com/activate-account?token=abc",
+        )
+
+        self.assertIn("/static/iaconnectpartenaires.png", html)
+        self.assertIn("max-height:144px", html)
+        self.assertIn("Intégrale Connect Partenaires", html)
+        self.assertIn("background:#f97316", html)
+        self.assertNotIn("/static/logo-integrale.png", html)
+        self.assertNotIn('alt="Intégrale Academy"', html)
 
     def test_partner_support_email_uses_only_large_partner_logo(self):
         with gestion_app.app.test_request_context("/admin/partner/aide-support"):

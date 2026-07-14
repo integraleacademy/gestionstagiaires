@@ -2590,15 +2590,31 @@ def _safe_brevo_log(action: str, **details: Any) -> None:
     app.logger.info("[BREVO_INVITATION] %s %s", action, json.dumps(redacted, ensure_ascii=False, default=str))
 
 
+def _partner_invitation_mail_html(user: Dict[str, Any], partner: Dict[str, Any], activation_url: str) -> str:
+    logo_src = f"{PUBLIC_BASE_URL.rstrip('/')}/static/iaconnectpartenaires.png"
+    escaped_url = html.escape(activation_url, quote=True)
+    first_name = html.escape(user.get('first_name') or '')
+    partner_name = html.escape(partner.get('name') or '')
+    return mail_layout(f"""
+      <div style="text-align:center;margin-bottom:22px">
+        <img src="{logo_src}" alt="Intégrale Connect Partenaires" style="max-height:144px;width:auto;display:block;margin:0 auto;border:0;outline:none;text-decoration:none">
+      </div>
+      <div style="background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#fff;border-radius:20px;padding:24px 22px;margin-bottom:22px;text-align:center">
+        <p style="margin:0 0 8px;text-transform:uppercase;letter-spacing:.14em;font-size:12px;color:#bfdbfe;font-weight:700">Espace partenaire</p>
+        <h1 style="margin:0;font-size:28px;line-height:1.15">Activation de votre espace partenaire</h1>
+      </div>
+      <p style="font-size:16px;color:#334155;line-height:1.55;margin:0 0 14px">Bonjour {first_name},</p>
+      <p style="font-size:16px;color:#334155;line-height:1.55;margin:0 0 22px">Votre espace <strong style="color:#0f172a">{partner_name}</strong> est prêt.</p>
+      <div style="text-align:center;margin:28px 0">
+        <a href="{escaped_url}" style="display:inline-block;background:#f97316;color:#fff;text-decoration:none;font-weight:800;border-radius:999px;padding:14px 24px;box-shadow:0 12px 24px rgba(249,115,22,.22)">Définir mon mot de passe</a>
+      </div>
+      <p style="font-size:14px;color:#64748b;line-height:1.55;margin:0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:14px 16px">Ce lien est personnel, utilisable une seule fois et expire sous 48 heures.</p>
+    """, show_default_logo=False, footer_text="Intégrale Connect Partenaires")
+
+
 def _send_partner_invitation_email(user: Dict[str, Any], partner: Dict[str, Any], raw_token: str) -> Dict[str, Any]:
     activation_url = _activation_url(raw_token)
-    html_body = mail_layout(f"""
-      <h2>Activation de votre espace partenaire</h2>
-      <p>Bonjour {html.escape(user.get('first_name') or '')},</p>
-      <p>Votre espace <strong>{html.escape(partner.get('name') or '')}</strong> est prêt.</p>
-      <p><a href=\"{html.escape(activation_url, quote=True)}\">Définir mon mot de passe</a></p>
-      <p>Ce lien est personnel, utilisable une seule fois et expire sous 48 heures.</p>
-    """)
+    html_body = _partner_invitation_mail_html(user, partner, activation_url)
     text_body = f"Activez votre espace partenaire : {activation_url}"
     result = brevo_send_email(user.get("email") or "", "Activation de votre espace partenaire", html_body, text_content=text_body, metadata={"partner_id": partner.get("id"), "partner_name": partner.get("name"), "user_id": user.get("id"), "purpose": "partner_invitation"})
     return result
