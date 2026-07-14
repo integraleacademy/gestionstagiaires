@@ -1,0 +1,99 @@
+name: Resolve test-v2 merge conflicts
+
+on:
+  push:
+    branches:
+      - test-v2
+    paths:
+      - .github/workflows/resolve-test-v2-main.yml
+
+permissions:
+  contents: write
+
+jobs:
+  resolve-conflicts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout test-v2
+        uses: actions/checkout@v4
+        with:
+          ref: test-v2
+          fetch-depth: 0
+
+      - name: Merge main and resolve expected conflicts
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main test-v2
+
+          set +e
+          git merge --no-commit --no-ff origin/main
+          merge_status=$?
+          set -e
+
+          if [ "$merge_status" -eq 0 ]; then
+            echo "Merge completed without conflicts."
+          else
+            mapfile -t conflicts < <(git diff --name-only --diff-filter=U)
+            printf 'Conflicts detected:\n%s\n' "${conflicts[*]}"
+
+            expected=(
+              "app.py"
+              "static/iaconnectpartenaires.png"
+              "templates_word/conventiondesp.docx"
+            )
+
+            for conflict in "${conflicts[@]}"; do
+              allowed=false
+              for expected_file in "${expected[@]}"; do
+                if [ "$conflict" = "$expected_file" ]; then
+                  allowed=true
+                  break
+                fi
+              done
+              if [ "$allowed" != true ]; then
+                echo "Unexpected conflict: $conflict"
+                exit 1
+              fi
+            done
+
+            for expected_file in "${expected[@]}"; do
+              if ! printf '%s\n' "${conflicts[@]}" | grep -Fxq "$expected_file"; then
+                echo "Expected conflict missing: $expected_file"
+                exit 1
+              fi
+            done
+
+            git show :2:app.py > /tmp/app.ours.py
+            git show :1:app.py > /tmp/app.base.py
+            git show :3:app.py > /tmp/app.theirs.py
+            git merge-file --ours /tmp/app.ours.py /tmp/app.base.py /tmp/app.theirs.py || true
+            cp /tmp/app.ours.py app.py
+            git add app.py
+
+            git checkout --ours -- static/iaconnectpartenaires.png templates_word/conventiondesp.docx
+            git add static/iaconnectpartenaires.png templates_word/conventiondesp.docx
+          fi
+
+          if git diff --name-only --diff-filter=U | grep -q .; then
+            echo "Unresolved conflicts remain:"
+            git diff --name-only --diff-filter=U
+            exit 1
+          fi
+
+          if grep -nE '^(<<<<<<<|=======|>>>>>>>)' app.py; then
+            echo "Conflict markers remain in app.py"
+            exit 1
+          fi
+
+          python -m py_compile app.py
+          git diff --check
+
+          git rm -f .github/workflows/resolve-test-v2-main.yml
+          git add -A
+          git status --short
+          git commit -m "Merge main into test-v2 and resolve conflicts"
+          git push origin HEAD:test-v2
