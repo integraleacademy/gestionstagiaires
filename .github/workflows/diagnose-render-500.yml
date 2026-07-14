@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
+  issues: write
 
 jobs:
   diagnose:
@@ -16,15 +18,18 @@ jobs:
       SECRET_KEY: diagnostic
       PERSIST_DIR: /tmp/gestionstagiaires-diagnostic
       AUTO_RESTORE_FROM_BACKUP: "0"
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
         with:
           show-progress: false
-      - name: Diagnose
+      - name: Diagnose and report
+        shell: bash
         run: |
           pip install -q -r requirements.txt
           mkdir -p "$PERSIST_DIR"
-          python - <<'PY'
+          set +e
+          python - <<'PY' > diagnostic.txt 2>&1
           import traceback
           try:
               import app as application
@@ -41,3 +46,15 @@ jobs:
               traceback.print_exc()
               raise
           PY
+          status=$?
+          set -e
+          tail -n 200 diagnostic.txt > diagnostic-comment.txt
+          {
+            echo '### Diagnostic automatique Render 500'
+            echo
+            echo '```text'
+            cat diagnostic-comment.txt
+            echo '```'
+          } > pr-comment.md
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file pr-comment.md
+          exit "$status"
