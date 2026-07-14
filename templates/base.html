@@ -86,9 +86,9 @@
   alt="{{ 'IA Connect Partenaires' if is_partner_space else 'Intégrale Connect' }}"
   style="height:{{ header_logo_height }}px;width:auto;display:block;"
 />
-        <div>
-          <strong>Intégrale Connect</strong>
-          <span>Plateforme gestion stagiaires</span>
+        <div class="brand-copy">
+          <div class="brand-title-line"><strong>Intégrale Connect</strong><span>Plateforme gestion stagiaires</span></div>
+          <time class="brand-datetime" id="brandDateTime" datetime=""></time>
         </div>
       </a>
       {% if is_read_only %}
@@ -98,34 +98,36 @@
       {% endif %}
       <div class="topbar-actions">
         {% if is_admin_logged_in and not is_partner_space and (request.endpoint in ["admin_sessions", "admin_trainees", "admin_trainee_page"]) %}
-          {% if admin_can_access_notifications %}
-            <div class="notif-wrap" id="adminNotifWrap">
-              <button type="button" id="adminNotifBtn" class="notif-btn" aria-expanded="false" aria-controls="adminNotifPanel">
-                🔔 Notifications
-                <span id="adminNotifCount" class="notif-count" {% if admin_unresolved_total == 0 %}style="display:none;"{% endif %}>{{ admin_unresolved_total }}</span>
-              </button>
-              <div id="adminNotifPanel" class="notif-panel" role="menu" aria-label="Notifications admin">
-                <div id="adminNotifList">
-                  {% if admin_notifications %}
-                    {% for n in admin_notifications %}
-                      <div class="notif-item {% if n.done %}done{% endif %}" data-notification-id="{{ n.id }}">
-                        {% if n.trainee_url %}<a class="notif-main" href="{{ n.trainee_url }}">{% else %}<div class="notif-main">{% endif %}
-                          <div class="notif-label">{{ n.label }}</div><div class="notif-meta">{{ n.created_fr }}</div>
-                          {% if n.details %}{% for d in n.details %}<div class="notif-meta">{{ d }}</div>{% endfor %}{% endif %}
-                        {% if n.trainee_url %}</a>{% else %}</div>{% endif %}
-                        <div class="notif-actions"><button type="button" class="notif-icon-btn" data-action="delete" {% if not admin_can_manage_notifications %}disabled aria-disabled="true"{% endif %}>❌</button><button type="button" class="notif-icon-btn" data-action="toggle" {% if not admin_can_manage_notifications %}disabled aria-disabled="true"{% endif %}>✅</button></div>
-                      </div>
-                    {% endfor %}
-                  {% else %}<div class="notif-empty">Aucune notification.</div>{% endif %}
+          {% if not show_admin_sidebar %}
+            {% if admin_can_access_notifications %}
+              <div class="notif-wrap" id="adminNotifWrap">
+                <button type="button" id="adminNotifBtn" class="notif-btn" aria-expanded="false" aria-controls="adminNotifPanel">
+                  🔔 Notifications
+                  <span id="adminNotifCount" class="notif-count" {% if admin_unresolved_total == 0 %}style="display:none;"{% endif %}>{{ admin_unresolved_total }}</span>
+                </button>
+                <div id="adminNotifPanel" class="notif-panel" role="menu" aria-label="Notifications admin">
+                  <div id="adminNotifList">
+                    {% if admin_notifications %}
+                      {% for n in admin_notifications %}
+                        <div class="notif-item {% if n.done %}done{% endif %}" data-notification-id="{{ n.id }}">
+                          {% if n.trainee_url %}<a class="notif-main" href="{{ n.trainee_url }}">{% else %}<div class="notif-main">{% endif %}
+                            <div class="notif-label">{{ n.label }}</div><div class="notif-meta">{{ n.created_fr }}</div>
+                            {% if n.details %}{% for d in n.details %}<div class="notif-meta">{{ d }}</div>{% endfor %}{% endif %}
+                          {% if n.trainee_url %}</a>{% else %}</div>{% endif %}
+                          <div class="notif-actions"><button type="button" class="notif-icon-btn" data-action="delete" {% if not admin_can_manage_notifications %}disabled aria-disabled="true"{% endif %}>❌</button><button type="button" class="notif-icon-btn" data-action="toggle" {% if not admin_can_manage_notifications %}disabled aria-disabled="true"{% endif %}>✅</button></div>
+                        </div>
+                      {% endfor %}
+                    {% else %}<div class="notif-empty">Aucune notification.</div>{% endif %}
+                  </div>
                 </div>
               </div>
-            </div>
+            {% endif %}
+            <a href="{{ url_for('admin_positioning_tests') }}" class="btn topbar-slim-link">Tests de positionnement</a>
+            {% if is_super_admin %}<a href="{{ url_for('admin_partners') }}" class="btn topbar-slim-link">Gérer les partenaires</a>{% endif %}
+            <a href="{{ url_for('admin_logout') }}" class="btn topbar-slim-link">Déconnexion</a>
+          {% else %}
+            <button type="button" class="partner-sidebar-toggle" data-sidebar-open aria-controls="partnerSidebar" aria-expanded="false">☰ Menu</button>
           {% endif %}
-          {% if not show_admin_sidebar %}<a href="{{ url_for('admin_positioning_tests') }}" class="btn topbar-slim-link">Tests de positionnement</a>{% endif %}
-          <button type="button" class="btn btn-blue topbar-slim-link" onclick="openModal('edofModal')">EDOF</button>
-          {% if is_super_admin and not show_admin_sidebar %}<a href="{{ url_for('admin_partners') }}" class="btn topbar-slim-link">Gérer les partenaires</a>{% endif %}
-          {% if show_admin_sidebar %}<button type="button" class="partner-sidebar-toggle" data-sidebar-open aria-controls="partnerSidebar" aria-expanded="false">☰ Menu</button>{% endif %}
-          <a href="{{ url_for('admin_logout') }}" class="btn topbar-slim-link">Déconnexion</a>
         {% elif is_partner_space %}
           <img class="partner-software-logo partner-software-logo--header" src="{{ url_for('static', filename='iaconnectpartenaires.png') }}" alt="Intégrale Connect Partenaires" loading="lazy">
           <button type="button" class="partner-sidebar-toggle" data-sidebar-open aria-controls="partnerSidebar" aria-expanded="false">☰ Menu</button>
@@ -218,7 +220,31 @@
             <button type="button" class="partner-sidebar__collapse" data-sidebar-collapse aria-label="Réduire la barre"><span class="collapse-icon collapse-icon--open">{{ ps.sidebar_icon('chevron') }}</span><span class="collapse-icon collapse-icon--closed">{{ ps.sidebar_icon('chevron-right') }}</span></button>
           </div>
           <div class="partner-sidebar__create">{{ ps.sidebar_nav_item(admin_create_item) }}<div class="quick-create-menu sidebar-create-menu" id="sidebarCreateMenu"><button class="quick-create-option quick-create-option--session" data-sidebar-action="create-session">💼 Nouvelle session</button><button class="quick-create-option quick-create-option--trainee" data-sidebar-action="create-trainee">👨‍🎓 Nouveau stagiaire</button></div></div>
-          <section class="partner-sidebar__section"><h2>Administration</h2>{% for item in admin_sidebar_items %}{{ ps.sidebar_nav_item(item) }}{% if loop.first %}{{ ps.sidebar_submenu(admin_tools_menu) }}{% endif %}{% endfor %}{{ ps.sidebar_nav_item(admin_cpf_item) }}{{ ps.sidebar_submenu(admin_cnaps_menu) }}</section>
+          <section class="partner-sidebar__section"><h2>Administration</h2>          {% if admin_can_access_notifications %}
+            <div class="notif-wrap admin-sidebar-notif-wrap" id="adminNotifWrap">
+              <button type="button" id="adminNotifBtn" class="partner-sidebar__item admin-sidebar-notif-button" aria-expanded="false" aria-controls="adminNotifPanel" title="Notifications">
+                {{ ps.sidebar_icon('bell') }}
+                <span class="partner-sidebar__label">Notifications</span>
+                <span id="adminNotifCount" class="partner-sidebar__badge admin-sidebar-notif-dot" {% if admin_unresolved_total == 0 %}style="display:none;"{% endif %}>{{ admin_unresolved_total }}</span>
+              </button>
+              <div id="adminNotifPanel" class="notif-panel admin-sidebar-notif-panel" role="menu" aria-label="Notifications admin">
+                <div id="adminNotifList">
+                  {% if admin_notifications %}
+                    {% for n in admin_notifications %}
+                      <div class="notif-item {% if n.done %}done{% endif %}" data-notification-id="{{ n.id }}">
+                        {% if n.trainee_url %}<a class="notif-main" href="{{ n.trainee_url }}">{% else %}<div class="notif-main">{% endif %}
+                          <div class="notif-label">{{ n.label }}</div><div class="notif-meta">{{ n.created_fr }}</div>
+                          {% if n.details %}{% for d in n.details %}<div class="notif-meta">{{ d }}</div>{% endfor %}{% endif %}
+                        {% if n.trainee_url %}</a>{% else %}</div>{% endif %}
+                        <div class="notif-actions"><button type="button" class="notif-icon-btn" data-action="delete" {% if not admin_can_manage_notifications %}disabled aria-disabled="true"{% endif %}>❌</button><button type="button" class="notif-icon-btn" data-action="toggle" {% if not admin_can_manage_notifications %}disabled aria-disabled="true"{% endif %}>✅</button></div>
+                      </div>
+                    {% endfor %}
+                  {% else %}<div class="notif-empty">Aucune notification.</div>{% endif %}
+                </div>
+              </div>
+            </div>
+          {% endif %}
+{% for item in admin_sidebar_items %}{{ ps.sidebar_nav_item(item) }}{% if loop.first %}{{ ps.sidebar_submenu(admin_tools_menu) }}{% endif %}{% endfor %}{{ ps.sidebar_nav_item(admin_cpf_item) }}{{ ps.sidebar_submenu(admin_cnaps_menu) }}</section>
           <div class="partner-sidebar__bottom"><a class="partner-sidebar__item" href="{{ url_for('admin_sessions') }}" title="Retour aux sessions">{{ ps.sidebar_icon('home') }}<span class="partner-sidebar__label">Retour aux sessions</span></a><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}" title="Se déconnecter">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Se déconnecter</span></a></div>
         </div>
       </aside>
@@ -871,6 +897,29 @@
       }
     });
   }
+
+  (function initBrandFrenchDateTime(){
+    const el = document.getElementById("brandDateTime");
+    if(!el) return;
+    const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
+      weekday:"long", day:"numeric", month:"long", year:"numeric", timeZone:"Europe/Paris"
+    });
+    const timeFormatter = new Intl.DateTimeFormat("fr-FR", {
+      hour:"2-digit", minute:"2-digit", second:"2-digit", timeZone:"Europe/Paris"
+    });
+    function titleCaseFirst(value){
+      return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+    }
+    function render(){
+      const now = new Date();
+      const date = titleCaseFirst(dateFormatter.format(now));
+      const time = timeFormatter.format(now);
+      el.textContent = `${date} · Heure française ${time}`;
+      el.dateTime = now.toISOString();
+    }
+    render();
+    setInterval(render, 1000);
+  })();
 
   (function initAdminNotifications(){
     const wrap = document.getElementById("adminNotifWrap");

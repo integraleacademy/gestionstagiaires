@@ -2627,3 +2627,30 @@ body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__submenu-pa
   body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__submenu-panel,
   body.admin-sidebar-active .partner-sidebar__submenu-panel{position:static;min-width:0;margin:5px 0 8px 28px;padding:6px 0 6px 10px;border:0;border-left:1px solid rgba(148,163,184,.22);border-radius:0;background:transparent;box-shadow:none;}
 }
+
+/* Admin header alignment and live date */
+body.admin-sidebar-active .topbar-inner{
+  max-width:none;
+  margin:0;
+  justify-content:flex-start;
+  padding-left:24px;
+  padding-right:24px;
+}
+.brand-copy{display:flex;flex-direction:column;gap:6px;min-width:0;}
+.brand-title-line{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+.brand-title-line span{margin-left:0;}
+.brand-datetime{color:var(--muted);font-size:13px;font-weight:800;}
+body.admin-sidebar-active .topbar-actions{margin-left:auto;}
+body.admin-sidebar-active .admin-sidebar-notif-wrap{position:relative;margin:3px 0;}
+body.admin-sidebar-active .admin-sidebar-notif-button{font:inherit;}
+body.admin-sidebar-active .admin-sidebar-notif-dot{background:#ef4444;color:#fff;box-shadow:0 0 0 3px rgba(239,68,68,.18);}
+body.admin-sidebar-active.partner-sidebar-collapsed .admin-sidebar-notif-dot{position:absolute;right:4px;top:4px;min-width:10px;width:10px;height:10px;padding:0;font-size:0;}
+body.admin-sidebar-active .admin-sidebar-notif-panel{position:fixed;left:calc(var(--partner-sidebar-open) + 12px);top:112px;right:auto;z-index:140;}
+body.admin-sidebar-active.partner-sidebar-collapsed .admin-sidebar-notif-panel{left:calc(var(--partner-sidebar-closed) + 12px);}
+@media (max-width:860px){
+  body.admin-sidebar-active .topbar-inner{padding-left:14px;padding-right:14px;}
+  body.admin-sidebar-active .admin-sidebar-notif-panel{left:12px;right:12px;width:auto;top:78px;}
+}
+body.admin-sidebar-active .admin-sidebar-notif-button .partner-sidebar__label{display:none;}
+body.admin-sidebar-active .admin-sidebar-notif-button{justify-content:center;}
+body.admin-sidebar-active .admin-sidebar-notif-dot{position:absolute;right:7px;top:7px;min-width:10px;width:10px;height:10px;padding:0;font-size:0;}
