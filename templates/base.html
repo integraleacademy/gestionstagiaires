@@ -22,7 +22,8 @@
     "admin_partners", "admin_partner_new", "admin_partner_detail", "admin_secretariat",
     "admin_qonto_settings", "admin_wedof_requests", "admin_wedof", "admin_cnaps_unknown",
     "admin_afc", "admin_sessions_conventions", "admin_sessions_automations",
-    "admin_sessions_billing", "admin_sessions_archived", "admin_cash_payments"
+    "admin_sessions_billing", "admin_sessions_archived", "admin_cash_payments",
+    "admin_trainees", "admin_trainee_page", "admin_vtc_trainees_all"
   ] %}
   {% set show_admin_sidebar = is_admin_logged_in and not is_partner_space and (request.endpoint in admin_sidebar_endpoints) %}
   {% if show_admin_sidebar %}<script>document.body.classList.add('admin-sidebar-active');</script>{% endif %}
