@@ -2,6 +2,7 @@
 {% block content %}
 
 <style>
+  .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;}
 
   .admin-actions[hidden],
   .quick-create-wrap[hidden]{
@@ -643,47 +644,10 @@
   {% endif %}
 </div>
 
-<!-- 🔎 Recherche stagiaire (global) -->
-<div class="card" style="margin-bottom:12px;">
-  <div class="card-row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-    <div>
-      <div class="card-title">Rechercher un stagiaire</div>
-      <div class="muted">Tape un nom ou un prénom pour ouvrir directement la fiche.</div>
-    </div>
-
-    <div style="flex:1 1 620px;min-width:min(620px, 100%);position:relative;">
-      <input id="traineeSearchInput"
-             type="text"
-             placeholder="Ex : Dupont, Sarah…"
-             autocomplete="off"
-             style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:12px;outline:none;">
-      
-      <div id="traineeSearchResults"
-           style="display:none;position:absolute;z-index:50;left:0;right:0;top:calc(100% + 8px);
-                  background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.08);
-                  overflow:hidden;">
-        <div id="traineeSearchResultsInner" style="max-height:320px;overflow:auto;"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="card" id="wedof-cpf-requests" style="margin-bottom:12px;">
-  <div class="card-row" style="justify-content:space-between;align-items:center;">
-    <div>
-      <div class="card-title">Documents à contrôler</div>
-      <div class="muted">Liste des stagiaires avec des documents “A CONTRÔLER”.</div>
-    </div>
-    <button class="btn btn-primary" id="btnOpenDocsToControl">Aucun doc à contrôler</button>
-  </div>
-
-  <!-- ✅ Badge + compteur (plus visuel) -->
-  <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-    <span id="docsToControlBadge" class="docs-badge docs-badge--loading">Chargement…</span>
-    <span class="muted" id="docsToControlCount">Chargement…</span>
-  </div>
-
-</div>
+<button class="sr-only" id="btnOpenTraineeSearch" type="button">Rechercher un stagiaire</button>
+<button class="sr-only" id="btnOpenDocsToControl" type="button">Documents à contrôler</button>
+<span id="docsToControlBadge" class="docs-badge docs-badge--loading" hidden>Chargement…</span>
+<span class="muted" id="docsToControlCount" hidden>Chargement…</span>
 
 <div class="card" style="margin-bottom:12px;">
   {% set yearly_total = namespace(value=0) %}
@@ -1114,6 +1078,28 @@
       <button class="btn" data-close-modal="sendAccessFromSessionsModal">Annuler</button>
       <button class="btn btn-outline" id="btnCreateFromSessionsNoSend">Créer sans envoyer</button>
       <button class="btn btn-primary" id="btnCreateFromSessionsAndSend">Créer + envoyer</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODALE RECHERCHE STAGIAIRE -->
+<div class="modal-backdrop" id="traineeSearchModal" aria-hidden="true">
+  <div class="modal" style="max-width:760px;overflow:visible;">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">Rechercher un stagiaire</div>
+        <div class="muted">Tape un nom ou un prénom pour ouvrir directement la fiche.</div>
+      </div>
+      <button class="icon-btn" data-close-modal="traineeSearchModal">✕</button>
+    </div>
+    <div class="modal-body" style="overflow:visible;">
+      <div style="position:relative;">
+        <input id="traineeSearchInput" type="text" placeholder="Ex : Dupont, Sarah…" autocomplete="off" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:12px;outline:none;">
+        <div id="traineeSearchResults" style="display:none;position:absolute;z-index:50;left:0;right:0;top:calc(100% + 8px);background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.08);overflow:hidden;">
+          <div id="traineeSearchResultsInner" style="max-height:320px;overflow:auto;"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -2244,6 +2230,11 @@
         btnView.classList.toggle("btn-attention", totalDocs > 0);
         btnView.textContent = (totalDocs === 0) ? "Aucun doc à contrôler" : `Docs à contrôler (${totalDocs})`;
       }
+      const sidebarBadge = document.getElementById("sidebarDocsToControlBadge");
+      if(sidebarBadge){
+        sidebarBadge.textContent = totalDocs;
+        sidebarBadge.style.display = totalDocs > 0 ? "inline-flex" : "none";
+      }
 
       // Texte sous badge
       if(countEl){
@@ -2314,15 +2305,22 @@
     }
   }
 
-  // bouton "Voir"
+  // boutons du menu latéral
   document.getElementById("btnOpenDocsToControl")?.addEventListener("click", async ()=>{
     openModal("docsToControlModal");
     await loadDocsToControl();
+  });
+  document.getElementById("btnOpenTraineeSearch")?.addEventListener("click", ()=>{
+    openModal("traineeSearchModal");
+    setTimeout(()=>document.getElementById("traineeSearchInput")?.focus(), 80);
   });
 
   // charge le compteur dès l'ouverture
   window.addEventListener("load", ()=>{
     loadDocsToControl();
+    const params = new URLSearchParams(window.location.search);
+    if(params.get("openDocsToControl") === "1") document.getElementById("btnOpenDocsToControl")?.click();
+    if(params.get("openTraineeSearch") === "1") document.getElementById("btnOpenTraineeSearch")?.click();
   });
 
   // =========================

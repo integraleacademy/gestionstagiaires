@@ -141,6 +141,8 @@
     {% set space_items = [
       {"label":"Tableau de bord","icon":"home","href":url_for('admin_sessions'),"endpoints":["admin_sessions"],"badge":"","locked":False},
       {"label":"Notifications","icon":"bell","href":"#adminNotifPanel","endpoints":[],"badge":partner_sidebar.notification_total if partner_sidebar.notification_total else "","locked":False},
+      {"label":"Rechercher un stagiaire","icon":"search","action":"open-trainee-search","endpoints":[],"badge":"","locked":False},
+      {"label":"Documents à contrôler","icon":"file","action":"open-docs-to-control","endpoints":[],"badge":"","badge_id":"sidebarDocsToControlBadge","locked":False},
       {"label":"Mes informations","icon":"info","href":url_for('partner_information'),"endpoints":["partner_information"],"badge":"","locked":False},
       {"label":"Mon abonnement","icon":"card","href":url_for('partner_subscription'),"endpoints":["partner_subscription"],"badge":"","locked":False}
     ] %}
@@ -190,6 +192,8 @@
     {% import "partner_sidebar.html" as ps %}
     {% set admin_sidebar_items = [
       {"label":"Tableau de bord","icon":"home","href":url_for('admin_sessions'),"endpoints":["admin_sessions"],"badge":"","locked":False},
+      {"label":"Rechercher un stagiaire","icon":"search","action":"open-trainee-search","endpoints":[],"badge":"","locked":False},
+      {"label":"Documents à contrôler","icon":"file","action":"open-docs-to-control","endpoints":[],"badge":"","badge_id":"sidebarDocsToControlBadge","locked":False},
       {"label":"Tests de positionnement","icon":"graduation","href":url_for('admin_positioning_tests'),"endpoints":["admin_positioning_tests","admin_positioning_test_detail"],"badge":"","locked":False},
       {"label":"Gérer les partenaires","icon":"users","href":url_for('admin_partners'),"endpoints":["admin_partners","admin_partner_new","admin_partner_detail"],"badge":"","locked":False},
       {"label":"Secrétariat","icon":"mail","href":url_for('admin_secretariat'),"endpoints":["admin_secretariat"],"badge":"","locked":False},
@@ -1035,6 +1039,16 @@
       }
       if(action === 'create-session') document.getElementById('btnOpenCreateSession')?.click();
       if(action === 'create-trainee') document.getElementById('btnOpenCreateTraineeFromSessions')?.click();
+      if(action === 'open-trainee-search') {
+        const traineeSearchButton = document.getElementById('btnOpenTraineeSearch');
+        if(traineeSearchButton) traineeSearchButton.click();
+        else window.location.href = '{{ url_for('admin_sessions') }}?openTraineeSearch=1';
+      }
+      if(action === 'open-docs-to-control') {
+        const docsButton = document.getElementById('btnOpenDocsToControl');
+        if(docsButton) docsButton.click();
+        else window.location.href = '{{ url_for('admin_sessions') }}?openDocsToControl=1';
+      }
       if(action === 'open-cnaps-import') {
         const importButton = document.getElementById('btnOpenCnapsImport');
         if(importButton) importButton.click();
