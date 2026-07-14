@@ -1,11 +1,9 @@
 name: Fix login session loop
 
 on:
-  push:
+  pull_request:
     branches:
       - test-v2
-    paths:
-      - .github/workflows/fix-login-session-loop.yml
 
 permissions:
   contents: write
