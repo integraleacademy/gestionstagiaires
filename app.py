@@ -1823,10 +1823,6 @@ def inject_read_only():
                 sub = partner.get("subscription") or {}
                 notification_total = admin_notifications.get("unresolved_total", 0) if _admin_can_view_notifications() else 0
                 enabled_modules = _partner_enabled_modules(partner)
-                partner_sessions = [
-                    s for s in (ctx_data.get("sessions") or [])
-                    if isinstance(s, dict) and (not s.get("partner_id") or s.get("partner_id") == active_partner_id)
-                ]
                 partner_sidebar = {
                     "partner": partner,
                     "logo_url": _partner_logo_url(partner),
@@ -1834,7 +1830,6 @@ def inject_read_only():
                     "subscription": sub,
                     "enabled_modules": enabled_modules,
                     "notification_total": notification_total,
-                    "session_count": len(partner_sessions),
                     "is_active": (partner.get("status") or "active") == "active",
                     "show_users": bool(partner.get("max_users") or ctx_data.get("users")),
                 }
@@ -1842,13 +1837,6 @@ def inject_read_only():
                 assisted_partner_name = current_partner_name
         except Exception:
             pass
-    admin_trainee_count = 0
-    admin_session_count = 0
-    if session.get("admin_logged_in"):
-        try:
-            admin_trainee_count, admin_session_count = _count_loaded_objects(load_data())
-        except Exception:
-            admin_trainee_count, admin_session_count = 0, 0
     return {
         "is_admin_logged_in": bool(session.get("admin_logged_in")),
         "is_super_admin": _is_super_admin_session(),
@@ -1867,8 +1855,6 @@ def inject_read_only():
         "partner_has_module": partner_has_module,
         "partner_allowed_formation_types": _partner_allowed_formation_types(),
         "partner_sidebar": partner_sidebar,
-        "admin_trainee_count": admin_trainee_count,
-        "admin_session_count": admin_session_count,
     }
 
 @app.get("/admin/login")

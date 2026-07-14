@@ -77,13 +77,13 @@
   {% endif %}
   <div class="topbar">
     <div class="topbar-inner">
-      {% set header_logo = 'iaconnectpartenaires.png' if is_partner_space else 'logo-integrale.png' %}
+      {% set header_logo = 'iaconnectpartenaires.png' if is_partner_space else 'icone.png' %}
       {% set header_logo_height = 112 if is_partner_space else 80 %}
       {% set confirm_logo_height = 88 if is_partner_space else 64 %}
       <a class="brand {{ 'brand--partner-hidden' if is_partner_space else '' }}" href="{{ url_for('admin_sessions') }}">
 <img
   src="{{ url_for('static', filename=header_logo) }}"
-  alt="{{ 'IA Connect Partenaires' if is_partner_space else 'Intégrale Academy' }}"
+  alt="{{ 'IA Connect Partenaires' if is_partner_space else 'Intégrale Connect' }}"
   style="height:{{ header_logo_height }}px;width:auto;display:block;"
 />
         <div>
@@ -98,7 +98,6 @@
       {% endif %}
       <div class="topbar-actions">
         {% if is_admin_logged_in and not is_partner_space and (request.endpoint in ["admin_sessions", "admin_trainees", "admin_trainee_page"]) %}
-          {% if show_admin_sidebar %}<img class="partner-software-logo partner-software-logo--header" src="{{ url_for('static', filename='iaconnectpartenaires.png') }}" alt="Intégrale Connect" loading="lazy">{% endif %}
           {% if admin_can_access_notifications %}
             <div class="notif-wrap" id="adminNotifWrap">
               <button type="button" id="adminNotifBtn" class="notif-btn" aria-expanded="false" aria-controls="adminNotifPanel">
@@ -174,11 +173,11 @@
             <button type="button" class="partner-sidebar__collapse" data-sidebar-collapse aria-label="Réduire la barre"><span class="collapse-icon collapse-icon--open">{{ ps.sidebar_icon('chevron') }}</span><span class="collapse-icon collapse-icon--closed">{{ ps.sidebar_icon('chevron-right') }}</span></button>
           </div>
           <div class="partner-sidebar__create">{{ ps.sidebar_nav_item(create_item) }}<div class="quick-create-menu sidebar-create-menu" id="sidebarCreateMenu"><button class="quick-create-option quick-create-option--session" data-sidebar-action="create-session">💼 Nouvelle session</button><button class="quick-create-option quick-create-option--trainee" data-sidebar-action="create-trainee">👨‍🎓 Nouveau stagiaire</button></div></div>
-          <section class="partner-sidebar__section"><h2>Navigation principale</h2>{% for item in space_items %}{{ ps.sidebar_nav_item(item) }}{% if loop.first %}{{ ps.sidebar_submenu(sidebar_tools_menu) }}{% endif %}{% endfor %}{{ ps.sidebar_nav_item(sidebar_cpf_item) }}{{ ps.sidebar_submenu(sidebar_cnaps_menu) }}</section>
+          <section class="partner-sidebar__section"><h2>Navigation principale</h2>{% for item in space_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}{{ ps.sidebar_nav_item(sidebar_cpf_item) }}{{ ps.sidebar_submenu(sidebar_cnaps_menu) }}{{ ps.sidebar_submenu(sidebar_tools_menu) }}</section>
           <section class="partner-sidebar__section partner-sidebar__section--settings"><h2>Paramètres et outils</h2>{% if settings_menu.children %}{{ ps.sidebar_submenu(settings_menu) }}{% endif %}{% for item in settings_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
           {% set sub=partner_sidebar.subscription or {} %}{% set count=sub.get('trainee_usage_count') or 0 %}{% set limit=sub.get('trainee_limit') %}{% set unlimited=sub.get('trainee_unlimited') or not limit %}{% set pct=0 if unlimited else ((count*100/limit)|round(0,'floor')) %}
-          <div class="subscription-usage-card {{ 'is-alert' if pct>=90 and not unlimited else ('is-warning' if pct>=70 and not unlimited else '') }}"><span>Utilisation de l’abonnement</span><strong>{{ count }} stagiaires créés</strong><strong>{{ partner_sidebar.session_count or 0 }} sessions créées</strong><small>{% if unlimited %}Aucun plafond défini{% else %}{{ [limit-count,0]|max }} stagiaires restants{% endif %}</small>{% if not unlimited %}<div class="subscription-usage-card__bar"><i style="width:{{ [pct,100]|min }}%"></i></div>{% endif %}<a href="{{ url_for('partner_subscription') }}">Voir les détails</a></div>
-          <div class="partner-sidebar__bottom"><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}" title="Se déconnecter">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Se déconnecter</span></a><div class="partner-sidebar__powered"><img class="partner-software-logo partner-software-logo--powered" src="{{ url_for('static', filename='iaconnectpartenaires.png') }}" alt="Intégrale Connect" loading="lazy"><span>Propulsé par Intégrale Connect</span></div></div>
+          <div class="subscription-usage-card {{ 'is-alert' if pct>=90 and not unlimited else ('is-warning' if pct>=70 and not unlimited else '') }}"><span>Utilisation de l’abonnement</span><strong>{{ count }} stagiaires créés</strong><small>{% if unlimited %}Aucun plafond défini{% else %}{{ [limit-count,0]|max }} stagiaires restants{% endif %}</small>{% if not unlimited %}<div class="subscription-usage-card__bar"><i style="width:{{ [pct,100]|min }}%"></i></div>{% endif %}<a href="{{ url_for('partner_subscription') }}">Voir les détails</a></div>
+          <div class="partner-sidebar__bottom"><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}" title="Se déconnecter">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Se déconnecter</span></a><div class="partner-sidebar__powered"><img class="partner-software-logo partner-software-logo--powered" src="{{ url_for('static', filename='icone.png') }}" alt="Intégrale Connect" loading="lazy"><span>Propulsé par Intégrale Connect</span></div></div>
         </div>
       </aside>
       <main class="container main-content">{{ self.content() }}</main>
@@ -214,13 +213,13 @@
       <aside class="partner-sidebar admin-sidebar" id="partnerSidebar" aria-label="Navigation admin">
         <div class="partner-sidebar__scroll">
           <div class="partner-sidebar__identity">
-            <a class="partner-sidebar__home-link" href="{{ url_for('admin_sessions') }}" aria-label="Retour à l’accueil"><img class="partner-sidebar__avatar" src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy"></a>
+            <a class="partner-sidebar__home-link" href="{{ url_for('admin_sessions') }}" aria-label="Retour à l’accueil"><img class="partner-sidebar__avatar" src="{{ url_for('static', filename='icone.png') }}" alt="Intégrale Connect"></a>
             <div class="partner-sidebar__identity-copy"><strong>Administration</strong><span>Intégrale Connect</span><em>Outils internes</em></div>
             <button type="button" class="partner-sidebar__collapse" data-sidebar-collapse aria-label="Réduire la barre"><span class="collapse-icon collapse-icon--open">{{ ps.sidebar_icon('chevron') }}</span><span class="collapse-icon collapse-icon--closed">{{ ps.sidebar_icon('chevron-right') }}</span></button>
           </div>
           <div class="partner-sidebar__create">{{ ps.sidebar_nav_item(admin_create_item) }}<div class="quick-create-menu sidebar-create-menu" id="sidebarCreateMenu"><button class="quick-create-option quick-create-option--session" data-sidebar-action="create-session">💼 Nouvelle session</button><button class="quick-create-option quick-create-option--trainee" data-sidebar-action="create-trainee">👨‍🎓 Nouveau stagiaire</button></div></div>
-          <section class="partner-sidebar__section"><h2>Administration</h2>{% for item in admin_sidebar_items %}{{ ps.sidebar_nav_item(item) }}{% if loop.first %}{{ ps.sidebar_submenu(admin_tools_menu) }}{% endif %}{% endfor %}{{ ps.sidebar_nav_item(admin_cpf_item) }}{{ ps.sidebar_submenu(admin_cnaps_menu) }}</section>
-          <div class="subscription-usage-card"><span>Activité</span><strong>{{ admin_trainee_count or 0 }} stagiaires créés</strong><strong>{{ admin_session_count or 0 }} sessions créées</strong></div><div class="partner-sidebar__bottom"><a class="partner-sidebar__item" href="{{ url_for('admin_sessions') }}" title="Retour aux sessions">{{ ps.sidebar_icon('home') }}<span class="partner-sidebar__label">Retour aux sessions</span></a><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}" title="Se déconnecter">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Se déconnecter</span></a></div>
+          <section class="partner-sidebar__section"><h2>Administration</h2>{% for item in admin_sidebar_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}{{ ps.sidebar_nav_item(admin_cpf_item) }}{{ ps.sidebar_submenu(admin_cnaps_menu) }}{{ ps.sidebar_submenu(admin_tools_menu) }}</section>
+          <div class="partner-sidebar__bottom"><a class="partner-sidebar__item" href="{{ url_for('admin_sessions') }}" title="Retour aux sessions">{{ ps.sidebar_icon('home') }}<span class="partner-sidebar__label">Retour aux sessions</span></a><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}" title="Se déconnecter">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Se déconnecter</span></a></div>
         </div>
       </aside>
       <main class="container main-content">{{ self.content() }}</main>
@@ -327,7 +326,7 @@
   <div class="modal-backdrop" id="mailSmsConfirmModal" aria-hidden="true">
     <div class="modal" style="max-width:500px;border-radius:20px;overflow:hidden;">
       <div style="padding:22px 22px 12px 22px;text-align:center;background:linear-gradient(135deg,#eff6ff,#fef2f2);">
-        <img src="{{ url_for('static', filename=header_logo) }}" alt="{{ 'IA Connect Partenaires' if is_partner_space else 'Intégrale Academy' }}" style="height:{{ confirm_logo_height }}px;width:auto;display:block;margin:0 auto 10px auto;">
+        <img src="{{ url_for('static', filename=header_logo) }}" alt="{{ 'IA Connect Partenaires' if is_partner_space else 'Intégrale Connect' }}" style="height:{{ confirm_logo_height }}px;width:auto;display:block;margin:0 auto 10px auto;">
         <div style="font-size:22px;font-weight:900;color:#1f2937;">Confirmation d’envoi</div>
         <div style="margin-top:8px;color:#4b5563;">Voulez-vous envoyer le mail / SMS&nbsp;?</div>
       </div>
@@ -961,15 +960,6 @@
       document.body.classList.toggle('partner-sidebar-collapsed');
       localStorage.setItem(storageKey, document.body.classList.contains('partner-sidebar-collapsed') ? '1' : '0');
     });
-    sidebar.querySelectorAll('.partner-sidebar__submenu').forEach((submenu) => {
-      submenu.addEventListener('toggle', () => {
-        if(!submenu.open) return;
-        sidebar.querySelectorAll('.partner-sidebar__submenu[open]').forEach((other) => {
-          if(other !== submenu) other.open = false;
-        });
-        document.getElementById('sidebarCreateMenu')?.classList.remove('is-open');
-      });
-    });
     document.querySelectorAll('.partner-sidebar__item[href], [data-sidebar-action]').forEach(el => el.addEventListener('click', () => { if(isMobile()) closeSidebar(); }));
     document.addEventListener('click', (event) => {
       const actionEl = event.target.closest('[data-sidebar-action]');
@@ -982,7 +972,6 @@
           const rect = actionEl.getBoundingClientRect();
           menu.style.setProperty('--sidebar-create-menu-top', `${Math.max(12, rect.top)}px`);
         }
-        if(!menu.classList.contains('is-open')) sidebar.querySelectorAll('.partner-sidebar__submenu[open]').forEach((submenu) => { submenu.open = false; });
         menu.classList.toggle('is-open');
         return;
       }
