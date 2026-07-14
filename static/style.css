@@ -2654,3 +2654,39 @@ body.admin-sidebar-active.partner-sidebar-collapsed .admin-sidebar-notif-panel{l
 body.admin-sidebar-active .admin-sidebar-notif-button .partner-sidebar__label{display:none;}
 body.admin-sidebar-active .admin-sidebar-notif-button{justify-content:center;}
 body.admin-sidebar-active .admin-sidebar-notif-dot{position:absolute;right:7px;top:7px;min-width:10px;width:10px;height:10px;padding:0;font-size:0;}
+
+/* Place the sidebar collapse handle immediately next to the top-left logo. */
+.partner-sidebar__identity{
+  grid-template-columns:52px 34px minmax(0,1fr);
+}
+body.partner-space .partner-sidebar__identity{
+  grid-template-columns:70px 48px minmax(0,1fr);
+}
+.partner-sidebar__collapse{
+  grid-column:2;
+  grid-row:1;
+  align-self:center;
+  justify-self:start;
+}
+.partner-sidebar__identity-copy{
+  grid-column:3;
+  grid-row:1;
+}
+body.partner-sidebar-collapsed .partner-sidebar__collapse,
+body.partner-space.partner-sidebar-collapsed .partner-sidebar__collapse{
+  position:absolute;
+  right:-18px;
+  top:18px;
+}
+body.partner-sidebar-collapsed .collapse-icon--closed,
+body.partner-space.partner-sidebar-collapsed .collapse-icon--closed{
+  display:inline-flex;
+}
+@media (max-width:860px){
+  body.partner-sidebar-collapsed .partner-sidebar__collapse,
+  body.partner-space.partner-sidebar-collapsed .partner-sidebar__collapse{
+    position:static;
+    right:auto;
+    top:auto;
+  }
+}
