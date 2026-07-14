@@ -2357,7 +2357,12 @@ body[class*="endpoint-"] .topbar:has(.brand--partner-hidden) + .app-shell{margin
 .partner-sidebar__create{position:relative;margin-top:14px;}
 .partner-sidebar__item{min-height:42px;gap:11px;padding:10px 11px;transform:none!important;}
 .partner-sidebar__item:hover,.partner-sidebar__item:focus-visible{background:rgba(255,255,255,.08);color:#fff;outline:0;}
-.partner-sidebar__item.is-primary{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;box-shadow:0 10px 20px rgba(22,163,74,.22);justify-content:center;}
+.partner-sidebar__item.is-primary{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;box-shadow:0 10px 20px rgba(22,163,74,.22);justify-content:center;overflow:hidden;isolation:isolate;animation:createPulse 2.4s ease-in-out infinite;}
+.partner-sidebar__item.is-primary:before{content:"";position:absolute;inset:-35% -55%;background:linear-gradient(120deg,transparent 36%,rgba(255,255,255,.38) 50%,transparent 64%);transform:translateX(-72%);animation:createShine 2.8s ease-in-out infinite;pointer-events:none;}
+.partner-sidebar__item.is-primary:hover,.partner-sidebar__item.is-primary:focus-visible{transform:translateY(-1px) scale(1.015);box-shadow:0 16px 30px rgba(22,163,74,.34);}
+@keyframes createPulse{0%,100%{box-shadow:0 10px 20px rgba(22,163,74,.22);}50%{box-shadow:0 16px 32px rgba(34,197,94,.42);}}
+@keyframes createShine{0%,42%{transform:translateX(-72%);}70%,100%{transform:translateX(72%);}}
+@media (prefers-reduced-motion:reduce){.partner-sidebar__item.is-primary,.partner-sidebar__item.is-primary:before{animation:none;}}
 .partner-sidebar__item.is-active{background:rgba(59,130,246,.24);color:#fff;}
 .partner-sidebar__item.is-active:after{right:0;top:8px;bottom:8px;width:4px;background:#ff6b1a;}
 .sidebar-create-menu{left:0;right:auto;top:calc(100% + 8px);width:100%;z-index:100;display:none;padding:10px;border-radius:16px;background:#fff;box-sizing:border-box;box-shadow:0 18px 45px rgba(2,6,23,.25);}
@@ -2634,17 +2639,20 @@ body.admin-sidebar-active .topbar-inner{
 body.admin-sidebar-active .topbar-actions{margin-left:auto;}
 body.admin-sidebar-active .admin-sidebar-notif-wrap{position:relative;margin:3px 0;}
 body.admin-sidebar-active .admin-sidebar-notif-button{font:inherit;}
-body.admin-sidebar-active .admin-sidebar-notif-dot{background:#ef4444;color:#fff;box-shadow:0 0 0 3px rgba(239,68,68,.18);}
-body.admin-sidebar-active.partner-sidebar-collapsed .admin-sidebar-notif-dot{position:absolute;right:4px;top:4px;min-width:10px;width:10px;height:10px;padding:0;font-size:0;}
-body.admin-sidebar-active .admin-sidebar-notif-panel{position:fixed;left:calc(var(--partner-sidebar-open) + 12px);top:112px;right:auto;z-index:140;}
+body.admin-sidebar-active .admin-sidebar-notif-dot{background:#ff6b1a;color:#fff;box-shadow:none;}
+body.admin-sidebar-active.partner-sidebar-collapsed .admin-sidebar-notif-dot{position:absolute;right:4px;top:4px;}
+body.admin-sidebar-active .admin-sidebar-notif-panel{position:fixed;left:calc(var(--partner-sidebar-open) + 12px);top:112px;right:auto;z-index:140;color:#0f172a;}
+body.admin-sidebar-active .admin-sidebar-notif-panel .notif-label{color:#0f172a;}
+body.admin-sidebar-active .admin-sidebar-notif-panel .notif-meta,
+body.admin-sidebar-active .admin-sidebar-notif-panel .notif-empty{color:#64748b;}
 body.admin-sidebar-active.partner-sidebar-collapsed .admin-sidebar-notif-panel{left:calc(var(--partner-sidebar-closed) + 12px);}
 @media (max-width:860px){
   body.admin-sidebar-active .topbar-inner{padding-left:14px;padding-right:14px;}
   body.admin-sidebar-active .admin-sidebar-notif-panel{left:12px;right:12px;width:auto;top:78px;}
 }
-body.admin-sidebar-active .admin-sidebar-notif-button .partner-sidebar__label{display:none;}
-body.admin-sidebar-active .admin-sidebar-notif-button{justify-content:center;}
-body.admin-sidebar-active .admin-sidebar-notif-dot{position:absolute;right:7px;top:7px;min-width:10px;width:10px;height:10px;padding:0;font-size:0;}
+body.admin-sidebar-active .admin-sidebar-notif-button{justify-content:flex-start;}
+body.admin-sidebar-active.partner-sidebar-collapsed .admin-sidebar-notif-button{justify-content:center;}
+body.admin-sidebar-active.partner-sidebar-collapsed .admin-sidebar-notif-dot{min-width:18px;height:18px;font-size:10px;padding:0 5px;}
 
 /* Place the sidebar collapse handle immediately next to the top-left logo. */
 .partner-sidebar__identity{
