@@ -168,6 +168,56 @@ SCOTIA_COMMENT_AUTHOR_LABELS = {
 }
 SCOTIA_NOTIFICATION_EMAIL = os.environ.get("SCOTIA_NOTIFICATION_EMAIL", "scotiaformation@gmail.com").strip()
 SESSION_DAYS = int(os.environ.get("SESSION_DAYS", "30"))
+
+SESSION_INVALIDATION_CUTOFF = os.environ.get("SESSION_INVALIDATION_CUTOFF", "2026-07-10T00:00:00Z").strip()
+SESSION_ISSUED_AT_KEY = "session_issued_at"
+
+def _parse_session_cutoff(raw_value: str) -> Optional[datetime.datetime]:
+    value = str(raw_value or "").strip()
+    if not value:
+        return None
+    if value.endswith("Z"):
+        value = value[:-1] + "+00:00"
+    try:
+        parsed = datetime.datetime.fromisoformat(value)
+    except ValueError:
+        app.logger.warning("SESSION_INVALIDATION_CUTOFF invalide: %r", raw_value)
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+    return parsed.astimezone(datetime.timezone.utc)
+
+def _session_issue_datetime() -> Optional[datetime.datetime]:
+    issued_at = str(session.get(SESSION_ISSUED_AT_KEY) or "").strip()
+    if not issued_at:
+        return None
+    if issued_at.endswith("Z"):
+        issued_at = issued_at[:-1] + "+00:00"
+    try:
+        parsed = datetime.datetime.fromisoformat(issued_at)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+    return parsed.astimezone(datetime.timezone.utc)
+
+def _stamp_authenticated_session() -> None:
+    session[SESSION_ISSUED_AT_KEY] = (
+        datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+    )
+
+def _session_has_authentication_marker() -> bool:
+    return any(
+        key in session or any(str(existing_key).startswith(key) for existing_key in session.keys())
+        for key in ("admin_logged_in", "scotia_logged_in", "public_auth_")
+    )
+
+def _current_session_is_still_valid() -> bool:
+    cutoff = _parse_session_cutoff(SESSION_INVALIDATION_CUTOFF)
+    if cutoff is None:
+        return True
+    issued_at = _session_issue_datetime()
+    return bool(issued_at and issued_at >= cutoff)
 ADMIN_PUSH_TITLE = os.environ.get("ADMIN_PUSH_TITLE", "Intégrale Connect")
 WEB_PUSH_VAPID_PUBLIC_KEY = os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY", "").strip()
 WEB_PUSH_VAPID_PRIVATE_KEY = os.environ.get("WEB_PUSH_VAPID_PRIVATE_KEY", "").strip()
