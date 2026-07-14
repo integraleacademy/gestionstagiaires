@@ -78,13 +78,13 @@
   {% endif %}
   <div class="topbar">
     <div class="topbar-inner">
-      {% set header_logo = 'iaconnectpartenaires.png' if is_partner_space else 'logo-integrale.png' %}
+      {% set header_logo = 'iaconnectpartenaires.png' if is_partner_space else 'icone.png' %}
       {% set header_logo_height = 112 if is_partner_space else 80 %}
       {% set confirm_logo_height = 88 if is_partner_space else 64 %}
       <a class="brand {{ 'brand--partner-hidden' if is_partner_space else '' }}" href="{{ url_for('admin_sessions') }}">
 <img
   src="{{ url_for('static', filename=header_logo) }}"
-  alt="{{ 'IA Connect Partenaires' if is_partner_space else 'Intégrale Academy' }}"
+  alt="{{ 'IA Connect Partenaires' if is_partner_space else 'Intégrale Connect' }}"
   style="height:{{ header_logo_height }}px;width:auto;display:block;"
 />
         <div class="brand-copy">
