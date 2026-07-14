@@ -1924,33 +1924,13 @@ def admin_login():
         "partner_suspended": "L’espace partenaire est suspendu. Contactez l’administrateur.",
         "partner_archived": "L’espace partenaire est archivé. Contactez l’administrateur.",
     }
-    error_html = ""
-    if error_code in messages:
-        error_html = f'<p role="alert" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:10px;padding:10px;font-weight:700">{html.escape(messages[error_code])}</p>'
-    return f"""
-    <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Connexion admin</title></head>
-    <body style="font-family:Arial,sans-serif;max-width:420px;margin:60px auto;padding:20px">
-      <h2>Connexion</h2>
-      <p style="color:#6b7280;font-size:13px;margin-top:-4px">
-        Un compte de consultation peut être configuré pour un accès en lecture seule.<br>
-        Les utilisateurs partenaires doivent se connecter avec l’adresse e-mail utilisée lors de l’activation de leur compte.
-      </p>
-      {error_html}
-      <form method="post" action="/admin/login">
-        <input type="hidden" name="next" value="{html.escape(next_url, quote=True)}">
-        <div style="margin:10px 0">
-          <label>Adresse e-mail ou identifiant</label><br>
-          <input name="username" autocomplete="username" style="width:100%;padding:10px">
-        </div>
-        <div style="margin:10px 0">
-          <label>Mot de passe</label><br>
-          <input name="password" type="password" autocomplete="current-password" style="width:100%;padding:10px">
-        </div>
-        <button type="submit" style="padding:10px 14px">Se connecter</button>
-      </form>
-    </body></html>
-    """
+    activated_message = "Votre compte est activé. Vous pouvez maintenant vous connecter." if request.args.get("activated") == "1" else ""
+    return render_template(
+        "admin_login.html",
+        next_url=next_url,
+        error_message=messages.get(error_code, ""),
+        activated_message=activated_message,
+    )
 
 @app.post("/admin/login")
 def admin_login_post():
