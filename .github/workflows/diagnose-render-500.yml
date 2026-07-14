@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - diagnostic-render-500
+  pull_request:
+    branches:
+      - test-v2
 
 permissions:
   contents: read
