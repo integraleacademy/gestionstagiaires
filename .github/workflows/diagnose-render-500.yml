@@ -1,9 +1,6 @@
 name: Diagnose Render 500
 
 on:
-  push:
-    branches:
-      - diagnostic-render-500
   pull_request:
     branches:
       - test-v2
@@ -16,11 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      SECRET_KEY: diagnostic-secret
-      ADMIN_USER: diagnostic@example.com
-      ADMIN_PASSWORD: diagnostic-password
-      SECRETARY_USER: secretary@example.com
-      SECRETARY_PASSWORD: diagnostic-password
+      SECRET_KEY: diagnostic
       PERSIST_DIR: /tmp/gestionstagiaires-diagnostic
       AUTO_RESTORE_FROM_BACKUP: "0"
     steps:
@@ -28,32 +21,25 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Run Flask route diagnostics
+      - name: Install
+        run: pip install -q -r requirements.txt
+      - name: Diagnose
         run: |
           mkdir -p "$PERSIST_DIR"
           python - <<'PY'
           import traceback
-          import app as application
-
-          flask_app = application.app
-          flask_app.config.update(TESTING=True, PROPAGATE_EXCEPTIONS=True)
-
-          paths = ["/", "/admin/login", "/api/health"]
-          with flask_app.test_client() as client:
-              for path in paths:
-                  print(f"\n===== GET {path} =====")
-                  try:
+          try:
+              import app as application
+              application.app.config.update(TESTING=True, PROPAGATE_EXCEPTIONS=True)
+              with application.app.test_client() as client:
+                  for path in ("/", "/admin/login", "/api/health"):
+                      print("GET", path, flush=True)
                       response = client.get(path, follow_redirects=False)
-                      print("status:", response.status_code)
-                      print("location:", response.headers.get("Location"))
-                      print(response.get_data(as_text=True)[:2000])
+                      print("STATUS", response.status_code, flush=True)
                       if response.status_code >= 500:
+                          print(response.get_data(as_text=True)[:1000], flush=True)
                           raise RuntimeError(f"HTTP {response.status_code} on {path}")
-                  except Exception:
-                      traceback.print_exc()
-                      raise
+          except Exception:
+              traceback.print_exc()
+              raise
           PY
