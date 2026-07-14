@@ -81,6 +81,8 @@ a:focus{
   display:flex;
   align-items:center;
   gap:10px;
+  margin-left:auto;
+  text-align:right;
   text-decoration:none;
 }
 .logo{
@@ -2636,8 +2638,8 @@ body.admin-sidebar-active .topbar-inner{
   padding-left:24px;
   padding-right:24px;
 }
-.brand-copy{display:flex;flex-direction:column;gap:6px;min-width:0;}
-.brand-title-line{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+.brand-copy{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:0;}
+.brand-title-line{display:flex;align-items:baseline;justify-content:flex-end;gap:10px;flex-wrap:wrap;}
 .brand-title-line span{margin-left:0;}
 .brand-datetime{color:var(--muted);font-size:13px;font-weight:800;}
 body.admin-sidebar-active .topbar-actions{margin-left:auto;}
