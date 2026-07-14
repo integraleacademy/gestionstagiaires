@@ -6,6 +6,9 @@ on:
       - test-v2
     paths:
       - .github/workflows/hotfix-missing-session-helpers.yml
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
