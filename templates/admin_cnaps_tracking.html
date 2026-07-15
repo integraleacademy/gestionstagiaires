@@ -35,10 +35,10 @@
 .cnaps-delete{color:#b91c1c;border-color:#fecaca;background:#fff5f5;}
 .cnaps-delete:hover{background:#fee2e2;}
 .cnaps-empty-filter{display:none;padding:28px;text-align:center;color:#64748b;font-weight:800;}
-.card-pro-followup{display:grid;grid-template-columns:minmax(0, 1fr) auto;gap:6px;align-items:center;font-size:11px;line-height:1.15;}
+.card-pro-followup{display:block;font-size:11px;line-height:1.15;}
 .card-pro-result{display:flex;flex-wrap:wrap;align-items:center;gap:5px;min-width:0;max-width:100%;font-size:11px;line-height:1;font-weight:900;}
 .card-pro-result__chip{display:inline-flex;align-items:center;gap:5px;min-width:0;max-width:100%;border:1px solid var(--line);border-radius:999px;padding:7px 9px;white-space:nowrap;}
-.card-pro-result__activity{letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;}.card-pro-result__validity{font-size:9px;text-transform:uppercase;opacity:.9;overflow:hidden;text-overflow:ellipsis;}.card-pro-result__date{display:none;}.card-pro-refresh-btn{padding:7px 9px;}.card-pro-result.is-loading{background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;color:#1d4ed8;padding:7px 9px;}.card-pro-result__chip.is-active{background:#16a34a;border-color:#16a34a;color:#fff;}.card-pro-result__chip.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}.card-pro-result__chip.is-unknown{background:#ffedd5;border-color:#fdba74;color:#9a3412;}
+.card-pro-result__activity{letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;}.card-pro-result__validity{font-size:9px;text-transform:uppercase;opacity:.9;overflow:hidden;text-overflow:ellipsis;}.card-pro-result__date{display:none;}.card-pro-result.is-loading{background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;color:#1d4ed8;padding:7px 9px;}.card-pro-result__chip.is-active{background:#16a34a;border-color:#16a34a;color:#fff;}.card-pro-result__chip.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}.card-pro-result__chip.is-unknown{background:#ffedd5;border-color:#fdba74;color:#9a3412;}
 @media (max-width:760px){.cnaps-stats{grid-template-columns:1fr}.cnaps-hero{padding:20px;border-radius:22px}}
 </style>
 
@@ -75,7 +75,7 @@
   <div class="cnaps-table-card">
     <div class="cnaps-table-wrap">
       <table class="cnaps-table">
-        <thead><tr><th>NOM</th><th>Prénom</th><th>Inscription formation</th><th>NUB</th><th>Statut Carte pro</th><th>Action</th></tr></thead>
+        <thead><tr><th>NOM</th><th>Prénom</th><th>Inscription formation</th><th>NUB</th><th>Statut</th><th>Action</th></tr></thead>
         <tbody id="cnapsTableBody">
         {% for row in requests_rows %}
           <tr data-cnaps-row data-search="{{ ((row.last_name or '') ~ ' ' ~ (row.first_name or '') ~ ' ' ~ (row.nub or '') ~ ' ' ~ (row.enrollment.session_name if row.enrollment else '') ~ ' ' ~ (row.enrollment.training_type if row.enrollment else ''))|lower|e }}">
@@ -83,7 +83,7 @@
             <td><span class="cnaps-firstname">{{ row.first_name or '—' }}</span></td>
             <td>{% if row.is_enrolled %}<span class="cnaps-pill cnaps-pill--yes">✓ Inscrite</span><div class="cnaps-session" title="{{ row.enrollment.session_name }}">{{ row.enrollment.session_name }}{% if row.enrollment.training_type %} · {{ row.enrollment.training_type }}{% endif %}</div>{% else %}<span class="cnaps-pill cnaps-pill--no">Non inscrite</span>{% endif %}</td>
             <td>{{ row.nub or '—' }}</td>
-            <td><div class="card-pro-followup" data-card-pro-followup data-nom="{{ row.last_name }}" data-prenom="{{ row.first_name }}" data-nub="{{ row.nub }}" data-cnaps-status="{{ row.cnaps_status }}"><div class="card-pro-result" data-card-pro-result>Chargement CNAPS…</div><button type="button" class="btn btn-outline card-pro-refresh-btn" data-card-pro-refresh title="Actualiser">↻</button></div></td>
+            <td><div class="card-pro-followup" data-card-pro-followup data-nom="{{ row.last_name }}" data-prenom="{{ row.first_name }}" data-nub="{{ row.nub }}" data-cnaps-status="{{ row.cnaps_status }}"><div class="card-pro-result" data-card-pro-result>Chargement CNAPS…</div></div></td>
             <td><button type="button" class="btn btn-outline cnaps-delete" data-delete-cnaps-row>Supprimer</button></td>
           </tr>
         {% endfor %}
@@ -104,7 +104,7 @@ function normalizedCardProActivity(value){return shortCardProActivity(value).rep
 function chioccaApShFallback(box){const normalizedLastName=(box.getAttribute("data-nom")||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim().toUpperCase();const normalizedNub=(box.getAttribute("data-nub")||"").replace(/\D+/g,"").slice(-7);if(normalizedLastName==="CHIOCCA"&&normalizedNub==="1079213"){return {results:[{activite:"Autorisation préalable - Surveillance humaine ou gardiennage",validite_titre:"ACTIF"}]};}return null;}
 function withLocalCardProFallback(data,fallback){if(!fallback)return data;const rows=Array.isArray(data.results)&&data.results.length?data.results.slice():[data];const fallbackRows=Array.isArray(fallback.results)&&fallback.results.length?fallback.results:[fallback];fallbackRows.forEach(fallbackRow=>{const fallbackActivity=normalizedCardProActivity(fallbackRow.activite);const alreadyDisplayed=rows.some(row=>normalizedCardProActivity(row.activite)===fallbackActivity);if(!alreadyDisplayed)rows.push(fallbackRow);});return {...data,results:rows};}
 async function refreshCardProFollowup(box){const resultEl=box.querySelector("[data-card-pro-result]");const nom=box.getAttribute("data-nom")||"";const prenom=box.getAttribute("data-prenom")||"";const nub=box.getAttribute("data-nub")||"";const previousStatus=box.getAttribute("data-cnaps-status")||"";if(!resultEl||!nom||!nub){renderCardProFollowupResult(resultEl,{validite_titre:"INCONNU"},"unknown");return;}const fallback=chioccaApShFallback(box);resultEl.className="card-pro-result is-loading";resultEl.textContent="Chargement CNAPS…";try{const r=await fetch(`/api/cnaps_public_annuaire?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}&nub=${encodeURIComponent(nub)}&previous_status=${encodeURIComponent(previousStatus)}`);const data=await r.json().catch(()=>({}));if(r.ok&&data.ok){renderCardProFollowupResult(resultEl,withLocalCardProFallback(data,fallback),"remote");if(data.notification_sent&&window.refreshSidebarCnapsTrackingBadge){window.refreshSidebarCnapsTrackingBadge(data.pending_status_changes_count);}return;}}catch(e){}if(fallback){renderCardProFollowupResult(resultEl,fallback,"fallback");return;}renderCardProFollowupResult(resultEl,{validite_titre:"INCONNU"},"unknown");}
-document.querySelectorAll("[data-card-pro-followup]").forEach(box=>{refreshCardProFollowup(box);box.querySelector("[data-card-pro-refresh]")?.addEventListener("click",()=>refreshCardProFollowup(box));});
+document.querySelectorAll("[data-card-pro-followup]").forEach(box=>refreshCardProFollowup(box));
 const cnapsSearchInput=document.getElementById("cnapsSearchInput");
 const cnapsRows=()=>Array.from(document.querySelectorAll("[data-cnaps-row]"));
 function filterCnapsRows(){const query=(cnapsSearchInput?.value||"").trim().toLowerCase();let visible=0;cnapsRows().forEach(row=>{const match=!query||(row.getAttribute("data-search")||"").includes(query);row.style.display=match?"":"none";if(match)visible++;});const empty=document.getElementById("cnapsEmptyFilter");if(empty)empty.style.display=visible?"none":"block";}
