@@ -3031,7 +3031,7 @@ def _cnapsv3_tracking_endpoint() -> str:
     base_url = (CNAPSV3_BASE_URL or "").strip().rstrip("/")
     if not base_url:
         return ""
-    return f"{base_url}/a-traiter"
+    return f"{base_url}/api/a-traiter"
 
 
 def _extract_cnapsv3_tracking_items(payload: Any) -> List[Dict[str, Any]]:
@@ -3058,19 +3058,109 @@ def _cnapsv3_tracking_value(item: Dict[str, Any], keys: Iterable[str]) -> str:
     return ""
 
 
-def fetch_cnapsv3_tracking_requests(get_func=requests.get) -> Tuple[List[Dict[str, str]], Optional[str]]:
+CNAPSV3_TRACKING_CACHE_TTL_SECONDS = 15
+_cnapsv3_tracking_cache: Dict[str, Any] = {"expires_at": 0.0, "rows": [], "error": None}
+
+
+def _cnapsv3_tracking_response_metadata(response: Any) -> Tuple[int, str, str]:
+    status_code = int(getattr(response, "status_code", 0) or 0)
+    headers = getattr(response, "headers", {}) or {}
+    content_type = str(headers.get("Content-Type") or headers.get("content-type") or "")
+    final_url = str(getattr(response, "url", "") or "")
+    return status_code, content_type, final_url
+
+
+def _cnapsv3_tracking_error(message: str, response: Any = None) -> Tuple[List[Dict[str, str]], str]:
+    if response is not None:
+        status_code, content_type, final_url = _cnapsv3_tracking_response_metadata(response)
+        app.logger.warning(
+            "Suivi CNAPSV3 indisponible: %s (HTTP %s, Content-Type: %s, URL finale: %s)",
+            message,
+            status_code or "inconnu",
+            content_type or "inconnu",
+            final_url or "inconnue",
+        )
+    else:
+        app.logger.warning("Suivi CNAPSV3 indisponible: %s", message)
+    return [], message
+
+
+def fetch_cnapsv3_tracking_requests(get_func=None) -> Tuple[List[Dict[str, str]], Optional[str]]:
+    use_cache = get_func is None
+    if get_func is None:
+        get_func = requests.get
+    now = time.time()
+    if use_cache and now < float(_cnapsv3_tracking_cache.get("expires_at") or 0):
+        return list(_cnapsv3_tracking_cache.get("rows") or []), _cnapsv3_tracking_cache.get("error")
+
     endpoint = _cnapsv3_tracking_endpoint()
     if not endpoint:
         return [], "CNAPSV3_BASE_URL non configuré"
+
+    token = os.environ.get("CNAPSV3_API_TOKEN", "").strip()
+    if not token:
+        rows, error = _cnapsv3_tracking_error("CNAPSV3_API_TOKEN absent")
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {token}",
+    }
+
     try:
-        response = get_func(endpoint, headers={"Accept": "application/json"}, timeout=15)
-        status_code = int(getattr(response, "status_code", 200) or 200)
-        if status_code >= 400:
-            raise RuntimeError(f"HTTP {status_code}")
+        response = get_func(endpoint, headers=headers, timeout=10)
+    except requests.Timeout:
+        rows, error = _cnapsv3_tracking_error("timeout réseau")
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+    except requests.RequestException:
+        rows, error = _cnapsv3_tracking_error("erreur réseau")
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+    except Exception:
+        rows, error = _cnapsv3_tracking_error("erreur inattendue")
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+
+    status_code, content_type, final_url = _cnapsv3_tracking_response_metadata(response)
+    if status_code != 200:
+        if status_code in (401, 403):
+            rows, error = _cnapsv3_tracking_error("authentification CNAPSV3 refusée", response)
+        elif status_code >= 500:
+            rows, error = _cnapsv3_tracking_error("erreur serveur CNAPSV3", response)
+        else:
+            rows, error = _cnapsv3_tracking_error(f"HTTP {status_code}", response)
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+    if "/login" in final_url:
+        rows, error = _cnapsv3_tracking_error("redirection vers la page de connexion", response)
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+    if "application/json" not in content_type.lower():
+        rows, error = _cnapsv3_tracking_error("réponse non JSON", response)
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+
+    try:
         payload = response.json() or {}
-    except Exception as exc:
-        app.logger.exception("Impossible de récupérer le suivi CNAPSV3 (%s)", endpoint)
-        return [], str(exc)
+    except ValueError:
+        rows, error = _cnapsv3_tracking_error("JSON invalide", response)
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+    except Exception:
+        rows, error = _cnapsv3_tracking_error("lecture JSON impossible", response)
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
 
     rows: List[Dict[str, str]] = []
     for item in _extract_cnapsv3_tracking_items(payload):
@@ -3086,6 +3176,8 @@ def fetch_cnapsv3_tracking_requests(get_func=requests.get) -> Tuple[List[Dict[st
             "nub": nub,
             "cnaps_status": status or "INCONNU",
         })
+    if use_cache:
+        _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": None})
     return rows, None
 
 
