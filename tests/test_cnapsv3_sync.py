@@ -1645,9 +1645,9 @@ class CnapsTrackingTests(unittest.TestCase):
             calls.append({"url": url, "headers": headers, "timeout": timeout})
             return DummyResponse(200, {
                 "demandes": [
-                    {"nom": "DOE", "prenom": "Jane", "nub": "NUB123", "statut_cnaps": "ACCEPTE"},
-                    {"last_name": "SMITH", "first_name": "John", "numero_nub": "NUB456"},
-                    {"nom": "DUPONT", "prenom": "clément", "nub": "NUB789"},
+                    {"nom": "DOE", "prenom": "Jane", "nub": "NUB123", "statut_cnaps": "transmis", "created_at": "2026-07-15T08:00:00Z"},
+                    {"last_name": "SMITH", "first_name": "John", "numero_nub": "NUB456", "status": "TRANSMIS", "date_creation": "16/07/2026"},
+                    {"nom": "DUPONT", "prenom": "clément", "nub": "NUB789", "statut": "TRANSMIS", "date_depot": "2026-07-20"},
                 ]
             })
 
@@ -1658,10 +1658,27 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertEqual(calls[0]["headers"], {"Accept": "application/json", "Authorization": "Bearer tracking-token"})
         self.assertEqual(calls[0]["timeout"], 10)
         self.assertEqual(rows, [
-            {"last_name": "DOE", "first_name": "Jane", "nub": "NUB123", "cnaps_status": "ACCEPTE"},
-            {"last_name": "SMITH", "first_name": "John", "nub": "NUB456", "cnaps_status": "INCONNU"},
-            {"last_name": "DUPONT", "first_name": "Clément", "nub": "NUB789", "cnaps_status": "INCONNU"},
+            {"last_name": "DOE", "first_name": "Jane", "nub": "NUB123", "cnaps_status": "transmis"},
+            {"last_name": "SMITH", "first_name": "John", "nub": "NUB456", "cnaps_status": "TRANSMIS"},
+            {"last_name": "DUPONT", "first_name": "Clément", "nub": "NUB789", "cnaps_status": "TRANSMIS"},
         ])
+
+    def test_tracking_requests_keep_only_transmitted_rows_since_cutoff(self):
+        def fake_get(url, headers, timeout):
+            return DummyResponse(200, {
+                "requests": [
+                    {"nom": "KEEP", "prenom": "Since", "nub": "NUB1", "statut_cnaps": "Transmis", "created_at": "2026-07-15T00:00:00Z"},
+                    {"nom": "OLD", "prenom": "Before", "nub": "NUB2", "statut_cnaps": "TRANSMIS", "created_at": "2026-07-14T23:59:59Z"},
+                    {"nom": "STATUS", "prenom": "Other", "nub": "NUB3", "statut_cnaps": "ACCEPTE", "created_at": "2026-07-16T00:00:00Z"},
+                    {"nom": "MISSING", "prenom": "Date", "nub": "NUB4", "statut_cnaps": "TRANSMIS"},
+                ]
+            })
+
+        rows, error = gestion_app.fetch_cnapsv3_tracking_requests(get_func=fake_get)
+
+        self.assertIsNone(error)
+        self.assertEqual([row["last_name"] for row in rows], ["KEEP"])
+
 
 
     def test_tracking_returns_empty_list_on_401(self):
