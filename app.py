@@ -6402,6 +6402,9 @@ def load_data() -> Dict[str, Any]:
         if "admin_push_subscriptions" not in data:
             data["admin_push_subscriptions"] = []
             changed = True
+        if not isinstance(data.get("cnaps_tracking_deleted_keys"), list):
+            data["cnaps_tracking_deleted_keys"] = []
+            changed = True
 
         if not isinstance(data.get("notifications_admin_dismissed_schedule_keys"), list):
             data["notifications_admin_dismissed_schedule_keys"] = []
@@ -13047,15 +13050,56 @@ def admin_cnaps_tracking():
 
 
 
+@app.post("/api/admin/cnaps-tracking/delete")
+@admin_login_required
+@admin_write_required
+def api_admin_cnaps_tracking_delete():
+    payload = request.get_json(silent=True) or {}
+    delete_key = _cnaps_tracking_delete_key(payload.get("last_name"), payload.get("first_name"), payload.get("nub"))
+    if not delete_key.replace("|", "").strip():
+        return jsonify({"ok": False, "error": "missing_identity"}), 400
+    data = load_data()
+    deleted_keys = data.setdefault("cnaps_tracking_deleted_keys", [])
+    if not isinstance(deleted_keys, list):
+        deleted_keys = []
+        data["cnaps_tracking_deleted_keys"] = deleted_keys
+    if delete_key not in deleted_keys:
+        deleted_keys.append(delete_key)
+        _append_activity_log(data, "cnaps_tracking_row_deleted", "cnaps_tracking", delete_key, details={
+            "last_name": str(payload.get("last_name") or ""),
+            "first_name": str(payload.get("first_name") or ""),
+            "nub": str(payload.get("nub") or ""),
+        })
+        save_data(data)
+    return jsonify({"ok": True, "deleted": True})
+
+
+
+def _cnaps_tracking_normalize_key_part(value: Any) -> str:
+    text = unicodedata.normalize("NFKD", str(value or ""))
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    return re.sub(r"[^A-Z0-9]+", " ", text.upper()).strip()
+
+
 def _cnaps_tracking_match_key(last_name: Any, first_name: Any) -> Tuple[str, str]:
-    def normalize_part(value: Any) -> str:
-        text = unicodedata.normalize("NFKD", str(value or ""))
-        text = "".join(ch for ch in text if not unicodedata.combining(ch))
-        return re.sub(r"[^A-Z0-9]+", " ", text.upper()).strip()
-    return normalize_part(last_name), normalize_part(first_name)
+    return _cnaps_tracking_normalize_key_part(last_name), _cnaps_tracking_normalize_key_part(first_name)
+
+
+def _cnaps_tracking_delete_key(last_name: Any, first_name: Any, nub: Any) -> str:
+    return "|".join((
+        _cnaps_tracking_normalize_key_part(last_name),
+        _cnaps_tracking_normalize_key_part(first_name),
+        _cnaps_tracking_normalize_key_part(nub),
+    ))
+
+
+def _cnaps_tracking_deleted_keys(data: Dict[str, Any]) -> Set[str]:
+    raw = data.get("cnaps_tracking_deleted_keys")
+    return {str(key) for key in raw if str(key).strip()} if isinstance(raw, list) else set()
 
 
 def enrich_cnaps_tracking_rows_with_enrollment(rows: List[Dict[str, Any]], data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    deleted_keys = _cnaps_tracking_deleted_keys(data)
     enrolled_by_name: Dict[Tuple[str, str], Dict[str, str]] = {}
     for sess in data.get("sessions", []) or []:
         if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
@@ -13076,6 +13120,8 @@ def enrich_cnaps_tracking_rows_with_enrollment(rows: List[Dict[str, Any]], data:
     enriched: List[Dict[str, Any]] = []
     for row in rows or []:
         item = dict(row)
+        if _cnaps_tracking_delete_key(item.get("last_name"), item.get("first_name"), item.get("nub")) in deleted_keys:
+            continue
         match = enrolled_by_name.get(_cnaps_tracking_match_key(item.get("last_name"), item.get("first_name")))
         item["is_enrolled"] = bool(match)
         item["enrollment"] = match or {}
