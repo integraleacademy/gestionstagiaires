@@ -2808,3 +2808,67 @@ body.partner-space.partner-sidebar-collapsed .collapse-icon--closed{
 .sidebar-icon-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;}
 .sidebar-search-badge{position:absolute;right:-8px;bottom:-7px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;background:#ff6b1a;color:#fff;border:2px solid #071226;font-size:9px;font-weight:950;line-height:15px;text-align:center;box-sizing:content-box;}
 body.partner-sidebar-collapsed .sidebar-search-badge{right:-9px;bottom:-8px;}
+
+/* Shared admin sidebar hardening: this block intentionally comes last so the
+   common include renders identically on /admin/sessions and trainees pages. */
+@media (min-width:861px){
+  body.admin-sidebar-active{
+    --partner-sidebar-open:300px;
+    --partner-sidebar-closed:82px;
+  }
+  body.admin-sidebar-active .topbar{min-height:58px;}
+  body.admin-sidebar-active .topbar-inner{min-height:58px;padding-top:4px;padding-bottom:4px;}
+  body.admin-sidebar-active .brand img{height:44px!important;}
+  body.admin-sidebar-active .main-content{padding-top:10px!important;}
+  body.admin-sidebar-active .partner-sidebar{height:100dvh;overflow:visible;background:#071226;}
+  body.admin-sidebar-active .partner-sidebar__scroll{
+    height:100dvh;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:10px;box-sizing:border-box;
+  }
+  body.admin-sidebar-active .partner-sidebar__identity{flex:0 0 auto;grid-template-columns:48px 32px minmax(0,1fr);padding:8px;gap:8px;}
+  body.admin-sidebar-active .partner-sidebar__home-link,
+  body.admin-sidebar-active .partner-sidebar__avatar{width:48px;height:48px;border-radius:13px;object-fit:contain;overflow:visible;}
+  body.admin-sidebar-active .partner-sidebar__nav{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding-right:2px;scrollbar-width:thin;}
+  body.admin-sidebar-active .partner-sidebar__bottom{flex:0 0 auto;margin-top:8px;padding-top:8px;}
+  body.admin-sidebar-active .partner-sidebar__powered{padding:6px 4px 0;gap:4px;line-height:1.2;}
+  body.admin-sidebar-active .partner-sidebar__powered img{max-width:106px;max-height:32px;}
+  body.admin-sidebar-active .sidebar-icon-wrap{width:20px;height:20px;}
+  body.admin-sidebar-active .sidebar-search-badge{right:-7px;bottom:-6px;min-width:12px;height:12px;padding:0 2px;background:#e0f2fe;color:#075985;border:2px solid #071226;font-size:8px;line-height:12px;box-shadow:0 1px 3px rgba(2,6,23,.25);}
+  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__scroll{padding:10px 11px;overflow:visible;}
+  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__identity{grid-template-columns:54px;justify-items:center;padding:7px 3px;}
+  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__home-link,
+  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__avatar{width:54px;height:54px;border-radius:14px;}
+  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__item{min-height:38px;padding:8px 6px;overflow:visible;}
+  body.admin-sidebar-active.partner-sidebar-collapsed .sidebar-icon{width:20px;height:20px;}
+  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__powered span{display:none;}
+  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__powered img{max-width:42px;max-height:42px;}
+  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__powered:hover::before{content:attr(title);position:absolute;left:calc(100% + 10px);bottom:8px;background:#0f172a;color:#fff;border-radius:8px;padding:7px 10px;white-space:nowrap;font-size:12px;z-index:140;box-shadow:0 10px 24px rgba(2,6,23,.25);}
+  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__badge:not(.admin-sidebar-notif-dot){right:3px;top:3px;}
+  body.admin-sidebar-active.partner-sidebar-collapsed .sidebar-search-badge{right:-8px;bottom:-7px;}
+}
+
+/* Compact the admin trainees workspace without page-level scaling. */
+@media (min-width:861px){
+  body.endpoint-admin-trainees .breadcrumbs{margin:0 0 8px;font-size:13px;}
+  body.endpoint-admin-trainees .session-header{gap:12px;margin:0 0 10px;padding:14px 16px;border-radius:18px;}
+  body.endpoint-admin-trainees .session-header h1{font-size:clamp(22px,2vw,30px);line-height:1.05;margin:0 0 6px;}
+  body.endpoint-admin-trainees .meta-line{gap:7px;font-size:12.5px;}
+  body.endpoint-admin-trainees .session-stats{gap:8px;}
+  body.endpoint-admin-trainees .stat{min-height:58px;padding:9px 11px;border-radius:14px;}
+  body.endpoint-admin-trainees .stat-title{font-size:11px;}
+  body.endpoint-admin-trainees .stat-value{font-size:18px;line-height:1.1;}
+  body.endpoint-admin-trainees .stat-sub{font-size:10.5px;line-height:1.15;}
+  body.endpoint-admin-trainees .page-head{margin:8px 0 10px!important;}
+  body.endpoint-admin-trainees .page-head h2{font-size:20px;}
+  body.endpoint-admin-trainees .page-head [style*="gap:10px"]{gap:7px!important;}
+  body.endpoint-admin-trainees .sel,
+  body.endpoint-admin-trainees input,
+  body.endpoint-admin-trainees select{min-height:34px;padding:7px 9px;font-size:12.5px;}
+  body.endpoint-admin-trainees .btn{min-height:34px;padding:7px 10px;font-size:12.5px;}
+  body.endpoint-admin-trainees .table-wrap{margin-top:8px;}
+  body.endpoint-admin-trainees .table th,
+  body.endpoint-admin-trainees .table td{padding:6px 7px;font-size:12px;line-height:1.22;}
+  body.endpoint-admin-trainees .mini-btn{min-height:28px;padding:5px 7px;font-size:11.5px;}
+  body.endpoint-admin-trainees input.comment,
+  body.endpoint-admin-trainees textarea.comment{min-height:32px;padding:6px 8px;font-size:12px;}
+  body.endpoint-admin-trainees .card{padding:12px;border-radius:16px;}
+}

@@ -1,0 +1,40 @@
+{% import "partner_sidebar.html" as ps %}
+{% set admin_sidebar_items = [
+  {"label":"Tableau de bord","icon":"home","href":url_for('admin_sessions'),"endpoints":["admin_sessions"],"badge":"","locked":False},
+  {"label":"Rechercher un stagiaire","icon":"search","action":"open-trainee-search","endpoints":[],"badge":"","search_badge":"S","locked":False},
+  {"label":"Rechercher une session","icon":"search","action":"open-session-search","endpoints":[],"badge":"","search_badge":"F","locked":False},
+  {"label":"Documents à contrôler","icon":"file","action":"open-docs-to-control","endpoints":[],"badge":"","badge_id":"sidebarDocsToControlBadge","locked":False},
+  {"label":"Tests de positionnement","icon":"graduation","href":url_for('admin_positioning_tests'),"endpoints":["admin_positioning_tests","admin_positioning_test_detail"],"badge":"","locked":False},
+  {"label":"Gérer les partenaires","icon":"users","href":url_for('admin_partners'),"endpoints":["admin_partners","admin_partner_new","admin_partner_detail"],"badge":"","locked":False},
+  {"label":"Secrétariat","icon":"mail","href":url_for('admin_secretariat'),"endpoints":["admin_secretariat"],"badge":"","locked":False},
+  {"label":"Réglages Qonto","icon":"settings","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings"],"badge":"","locked":False}
+] %}
+{% set admin_create_item = {"label":"Créer","icon":"plus","action":"toggle-create-menu","endpoints":[],"locked":is_read_only,"primary":True} %}
+{% set admin_cpf_item = {"label":"CPF","icon":"wallet","href":url_for('admin_wedof_requests'),"endpoints":["admin_wedof_requests","admin_wedof"],"badge":wedof_new_requests_count if (wedof_new_requests_count or 0) > 0 else "","locked":not partner_has_module('cpf')} %}
+{% set admin_cnaps_menu = {"label":"CNAPS","icon":"shield","badge":"","children":[
+  {"label":"DRACAR","icon":"external","href":"https://espace-usagers.cnaps.interieur.gouv.fr/usager/app/accueil","endpoints":[],"locked":not partner_has_module('cnaps'),"external":True},
+  {"label":"Import PRE CNAPS","icon":"file","action":"open-cnaps-import","endpoints":[],"locked":is_read_only or not partner_has_module('cnaps')},
+  {"label":"CNAPS inconnus","icon":"shield","href":url_for('admin_cnaps_unknown'),"endpoints":["admin_cnaps_unknown"],"locked":not partner_has_module('cnaps')}
+]} %}
+{% set admin_tools_menu = {"label":"Outils","icon":"tool","badge":"","children":[
+  {"label":"AFC","icon":"file","href":url_for('admin_afc'),"endpoints":["admin_afc"],"locked":False},
+  {"label":"Conventions","icon":"file","href":url_for('admin_sessions_conventions'),"endpoints":["admin_sessions_conventions"],"locked":not partner_has_module('automations')},
+  {"label":"Automatisations","icon":"tool","href":url_for('admin_sessions_automations'),"endpoints":["admin_sessions_automations"],"locked":not partner_has_module('automations')},
+  {"label":"Facturation","icon":"wallet","href":url_for('admin_sessions_billing'),"endpoints":["admin_sessions_billing"],"locked":not partner_has_module('billing')},
+  {"label":"Sessions archivées","icon":"archive","href":url_for('admin_sessions_archived'),"endpoints":["admin_sessions_archived"],"locked":False},
+  {"label":"Paiement espèces","icon":"wallet","href":url_for('admin_cash_payments'),"endpoints":["admin_cash_payments"],"locked":False},
+  {"label":"SCOTIA","icon":"external","href":url_for('scotia_login'),"endpoints":[],"locked":False,"external":True}
+]} %}
+<aside class="partner-sidebar admin-sidebar" id="partnerSidebar" aria-label="Navigation admin">
+    <div class="partner-sidebar__scroll">
+      <div class="partner-sidebar__identity">
+        <a class="partner-sidebar__home-link" href="{{ url_for('admin_sessions') }}" aria-label="Retour à l’accueil"><img class="partner-sidebar__avatar" src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy"></a>
+        <button type="button" class="partner-sidebar__collapse" data-sidebar-collapse aria-label="Réduire la barre"><span class="collapse-icon collapse-icon--open">{{ ps.sidebar_icon('chevron') }}</span><span class="collapse-icon collapse-icon--closed">{{ ps.sidebar_icon('chevron-right') }}</span></button>
+        <div class="partner-sidebar__identity-copy"><strong>Administration</strong><span>Intégrale Academy</span><em>Outils internes</em></div>
+      </div>
+      <div class="partner-sidebar__create">{{ ps.sidebar_nav_item(admin_create_item) }}<div class="quick-create-menu sidebar-create-menu" id="sidebarCreateMenu"><button class="quick-create-option quick-create-option--session" data-sidebar-action="create-session">💼 Nouvelle session</button><button class="quick-create-option quick-create-option--trainee" data-sidebar-action="create-trainee">👨‍🎓 Nouveau stagiaire</button></div></div>
+      <section class="partner-sidebar__section partner-sidebar__nav"><h2>Administration</h2>{% if admin_can_access_notifications %}<div class="notif-wrap admin-sidebar-notif-wrap" id="adminNotifWrap"><button type="button" id="adminNotifBtn" class="partner-sidebar__item admin-sidebar-notif-button" aria-expanded="false" aria-controls="adminNotifPanel" title="Notifications">{{ ps.sidebar_icon('bell') }}<span class="partner-sidebar__label">Notifications</span><span id="adminNotifCount" class="partner-sidebar__badge admin-sidebar-notif-dot" {% if admin_unresolved_total == 0 %}style="display:none;"{% endif %}>{{ admin_unresolved_total }}</span></button><div id="adminNotifPanel" class="notif-panel admin-sidebar-notif-panel" role="menu" aria-label="Notifications admin"><div id="adminNotifList">{% if admin_notifications %}{% for n in admin_notifications %}<div class="notif-item {% if n.done %}done{% endif %}" data-notification-id="{{ n.id }}">{% if n.trainee_url %}<a class="notif-main" href="{{ n.trainee_url }}">{% else %}<div class="notif-main">{% endif %}<div class="notif-label">{{ n.label }}</div><div class="notif-meta">{{ n.created_fr }}</div>{% if n.details %}{% for d in n.details %}<div class="notif-meta">{{ d }}</div>{% endfor %}{% endif %}{% if n.trainee_url %}</a>{% else %}</div>{% endif %}<div class="notif-actions"><button type="button" class="notif-icon-btn" data-action="delete" {% if not admin_can_manage_notifications %}disabled aria-disabled="true"{% endif %}>❌</button><button type="button" class="notif-icon-btn" data-action="toggle" {% if not admin_can_manage_notifications %}disabled aria-disabled="true"{% endif %}>✅</button></div></div>{% endfor %}{% else %}<div class="notif-empty">Aucune notification.</div>{% endif %}</div></div></div>{% endif %}{% for item in admin_sidebar_items %}{{ ps.sidebar_nav_item(item) }}{% if loop.first %}{{ ps.sidebar_submenu(admin_tools_menu) }}{% endif %}{% endfor %}{{ ps.sidebar_nav_item(admin_cpf_item) }}{{ ps.sidebar_submenu(admin_cnaps_menu) }}</section>
+      <div class="partner-sidebar__bottom"><a class="partner-sidebar__item" href="{{ url_for('admin_sessions') }}" title="Retour aux sessions">{{ ps.sidebar_icon('home') }}<span class="partner-sidebar__label">Retour aux sessions</span></a><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}" title="Se déconnecter">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Se déconnecter</span></a><div class="partner-sidebar__powered" title="Propulsé par Intégrale Connect"><img class="partner-software-logo partner-software-logo--powered" src="{{ url_for('static', filename='icone.png') }}" alt="Intégrale Connect" loading="lazy"><span>Propulsé par Intégrale Connect</span></div></div>
+    </div>
+</aside>
+<div class="partner-sidebar-overlay" data-sidebar-close></div>
