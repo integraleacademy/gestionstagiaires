@@ -3056,7 +3056,6 @@ def _cnapsv3_tracking_value(item: Dict[str, Any], keys: Iterable[str]) -> str:
 
 
 
-CNAPSV3_TRACKING_MIN_CREATED_DATE = datetime.date(2026, 7, 15)
 CNAPSV3_TRACKING_ALLOWED_STATUS = "TRANSMIS"
 
 
@@ -3084,23 +3083,7 @@ def _parse_cnapsv3_tracking_date(value: Any) -> Optional[datetime.date]:
 
 
 def _cnapsv3_tracking_request_matches_scope(item: Dict[str, Any], status: str) -> bool:
-    if _normalize_cnapsv3_tracking_status(status) != CNAPSV3_TRACKING_ALLOWED_STATUS:
-        return False
-    created_raw = _cnapsv3_tracking_value(item, (
-        "created_at",
-        "createdAt",
-        "date_creation",
-        "dateCreation",
-        "created_date",
-        "date_depot",
-        "dateDepot",
-        "submitted_at",
-        "submittedAt",
-        "transmitted_at",
-        "transmittedAt",
-    ))
-    created_date = _parse_cnapsv3_tracking_date(created_raw)
-    return bool(created_date and created_date >= CNAPSV3_TRACKING_MIN_CREATED_DATE)
+    return _normalize_cnapsv3_tracking_status(status) == CNAPSV3_TRACKING_ALLOWED_STATUS
 
 
 CNAPSV3_TRACKING_CACHE_TTL_SECONDS = 15
