@@ -788,13 +788,15 @@
 {% set training_type_label = "CHAUFFEUR VTC" if tt == "VTC" else session.training_type %}
 {% set is_dirigeant_vae = (tt == 'DIRIGEANT VAE') %}
 {% set is_dirigeant_training = ('DIRIGEANT' in tt) or ('DESP' in tt) %}
-{% set is_security_training = ('APS' in tt) or ('A3P' in tt) or ('DIRIGEANT' in tt) %}
+{% set is_security_training = ('APS' in tt) or ('A3P' in tt) or ('SSIAP' in tt) or ('DIRIGEANT' in tt) %}
 {% set is_aps_or_a3p_training = ('APS' in tt) or ('A3P' in tt) %}
 
 {% if 'A3P' in tt %}
   {% set formation_label = "Agent de protection physique des personnes (A3P)" %}
 {% elif 'APS' in tt %}
   {% set formation_label = "Agent de prévention et de sécurité (APS)" %}
+{% elif 'SSIAP' in tt %}
+  {% set formation_label = "Agent de sécurité incendie SSIAP" %}
 {% elif 'DIRIGEANT' in tt or 'DESP' in tt %}
   {% set formation_label = "Dirigeant d'entreprise de sécurité (DESP)" %}
 {% else %}
@@ -1032,8 +1034,8 @@
       <div class="step-item {{ 'done' if dossier_done else 'blocked' }}"><span class="step-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><div><div class="step-title">Dossier complet</div></div>{{ pill_for('dossier', 'complete' if dossier_done else 'incomplete') }}</div>
     </div></section>{% endif %}
 
-    {% if conv_sig.signed_pdf_token or convention_action_required or is_aps_training %}<section class="trainee-overview-card documents-card" aria-labelledby="documentsTitle"><div><p class="card-kicker">Vos documents</p><h2 id="documentsTitle" class="card-title">Documents de formation</h2></div><div class="documents-list">
-      <div class="document-card"><span class="document-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 18h3"/></svg></span><div><div class="document-title">Convention de formation</div><div class="document-subtitle">{% if convention_done %}Signée{% elif convention_action_required %}Prête à signer{% else %}En préparation{% endif %}</div></div>{% if convention_done %}<span class="pill green">Signée</span>{% elif convention_action_required %}<span class="pill blue">À signer</span>{% else %}<span class="pill gray">À venir</span>{% endif %}{% if conv_sig.signed_pdf_token %}<a class="btn outline small" href="{{ url_for('public_download_file', token=token_safe, file_token=conv_sig.signed_pdf_token) }}" target="_blank" rel="noopener">Consulter</a>{% elif convention_action_required %}<a class="btn small" href="{{ url_for('public_convocation_signature_redirect', token=token_safe) }}" target="_blank" rel="noopener">Signer</a>{% else %}<span></span>{% endif %}</div>
+    {% if conv_sig.signed_pdf_token or convention_action_required or is_aps_training or ('SSIAP' in tt) %}<section class="trainee-overview-card documents-card" aria-labelledby="documentsTitle"><div><p class="card-kicker">Vos documents</p><h2 id="documentsTitle" class="card-title">Documents de formation</h2></div><div class="documents-list">
+      <div class="document-card"><span class="document-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 18h3"/></svg></span><div><div class="document-title">Convention de formation</div><div class="document-subtitle">{% if convention_done %}Signée{% elif convention_action_required %}Prête à signer{% else %}En préparation{% endif %}</div></div>{% if convention_done %}<span class="pill green">Signée</span>{% elif convention_action_required %}<span class="pill blue">À signer</span>{% else %}<span class="pill gray">À venir</span>{% endif %}{% if conv_sig.signed_pdf_token %}<a class="btn outline small" href="{{ url_for('public_download_file', token=token_safe, file_token=conv_sig.signed_pdf_token) }}" target="_blank" rel="noopener">Consulter</a>{% elif convention_action_required %}<a class="btn small" href="{{ url_for('public_convention_signature_redirect', token=token_safe) }}" target="_blank" rel="noopener">Signer</a>{% else %}<span></span>{% endif %}</div>
       <div class="document-card"><span class="document-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 2v4M16 2v4M8 12h8M8 16h5"/></svg></span><div><div class="document-title">Convocation à la formation</div><div class="document-subtitle">{{ 'Disponible' if trainee.convocation_aps_pdf_token else 'Disponible prochainement' }}</div></div>{% if trainee.convocation_aps_pdf_token %}<span class="pill blue">Disponible</span><a class="btn outline small" href="{{ url_for('public_download_file', token=token_safe, file_token=trainee.convocation_aps_pdf_token) }}" target="_blank" rel="noopener">Télécharger</a>{% else %}<span class="pill gray">À venir</span><span></span>{% endif %}</div>
     </div></section>{% endif %}
 

@@ -152,7 +152,7 @@
     {% set sidebar_cnaps_menu = {"label":"CNAPS","icon":"shield","badge":"","children":[
       {"label":"DRACAR","icon":"external","href":"https://espace-usagers.cnaps.interieur.gouv.fr/usager/app/accueil","endpoints":[],"locked":not partner_has_module('cnaps'),"external":True},
       {"label":"Import PRE CNAPS","icon":"file","action":"open-cnaps-import","endpoints":[],"locked":is_read_only or not partner_has_module('cnaps')},
-      {"label":"Suivi CNAPS","icon":"shield","href":url_for('admin_cnaps_tracking'),"endpoints":["admin_cnaps_tracking"],"locked":not partner_has_module('cnaps')},
+      {"label":"Suivi CNAPS","icon":"shield","href":url_for('admin_cnaps_tracking'),"endpoints":["admin_cnaps_tracking"],"badge":"","badge_id":"sidebarCnapsTrackingBadge","locked":not partner_has_module('cnaps')},
       {"label":"CNAPS inconnus","icon":"shield","href":url_for('admin_cnaps_unknown'),"endpoints":["admin_cnaps_unknown"],"locked":not partner_has_module('cnaps')}
     ]} %}
     {% set sidebar_tools_children = [
@@ -603,6 +603,12 @@
       clearFinanceError();
       Object.values(fields).forEach((field)=>field.addEventListener("input", clearFinanceError));
 
+      const collectPayload = ()=>({
+        training_price: fields.training_price.value,
+        cpf_amount: fields.cpf_amount.value,
+        personal_amount: fields.personal_amount.value,
+        other_amount: fields.other_amount.value
+      });
       const buildPayload = ()=>{
         const trainingPrice = parseAmount(fields.training_price.value);
         const financingTotal = parseAmount(fields.cpf_amount.value) + parseAmount(fields.personal_amount.value) + parseAmount(fields.other_amount.value);
@@ -611,14 +617,9 @@
           showFinanceError(`Impossible de continuer : le total CPF + Perso + autre financement (${formatAmount(financingTotal)} €) doit être égal au montant de la formation (${formatAmount(trainingPrice)} €). Écart : ${formatAmount(diff)} €.`);
           return null;
         }
-        return {
-          training_price: fields.training_price.value,
-          cpf_amount: fields.cpf_amount.value,
-          personal_amount: fields.personal_amount.value,
-          other_amount: fields.other_amount.value
-        };
+        return collectPayload();
       };
-      noButton.onclick = ()=>finish(null);
+      noButton.onclick = ()=>finish({...collectPayload(), send_convention: false});
       previewButton.onclick = async ()=>{
         const payload = buildPayload();
         if(!payload) return;
@@ -639,7 +640,7 @@
       };
       yesButton.onclick = ()=>{
         const payload = buildPayload();
-        if(payload) finish(payload);
+        if(payload) finish({...payload, send_convention: true});
       };
 
       yesButton.disabled = false;
@@ -1085,6 +1086,41 @@
     window.addEventListener("focus", refreshSidebarDocsToControlBadge);
     document.addEventListener("visibilitychange", () => {
       if(!document.hidden) refreshSidebarDocsToControlBadge();
+    });
+  })();
+
+  (function initGlobalCnapsTrackingBadge(){
+    const sidebarBadge = document.getElementById("sidebarCnapsTrackingBadge");
+    if(!sidebarBadge) return;
+
+    function setCnapsTrackingBadge(count){
+      const total = Number(count) || 0;
+      sidebarBadge.textContent = String(total);
+      sidebarBadge.style.display = total > 0 ? "inline-flex" : "none";
+      sidebarBadge.setAttribute("aria-label", `${total} changement(s) de statut CNAPS à consulter`);
+    }
+
+    window.refreshSidebarCnapsTrackingBadge = async function refreshSidebarCnapsTrackingBadge(nextCount){
+      if(nextCount !== undefined && nextCount !== null){
+        setCnapsTrackingBadge(nextCount);
+        return;
+      }
+      try{
+        const response = await fetch("/api/cnaps_status_changes/pending", { headers: { "Accept": "application/json" } });
+        const payload = await response.json();
+        if(!response.ok || !payload.ok) throw new Error(payload.error || "request_failed");
+        setCnapsTrackingBadge(payload.count);
+      }catch(_error){
+        sidebarBadge.textContent = "!";
+        sidebarBadge.style.display = "inline-flex";
+        sidebarBadge.setAttribute("aria-label", "Impossible de charger les changements de statut CNAPS");
+      }
+    };
+
+    window.refreshSidebarCnapsTrackingBadge();
+    window.addEventListener("focus", () => window.refreshSidebarCnapsTrackingBadge());
+    document.addEventListener("visibilitychange", () => {
+      if(!document.hidden) window.refreshSidebarCnapsTrackingBadge();
     });
   })();
 

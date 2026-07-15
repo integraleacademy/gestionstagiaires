@@ -3379,7 +3379,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
         if(previewUrl){ await window.openConventionPreview?.(previewUrl); }
       }
     });
-    if(!conventionPayload || !result.convention_signature_url){ continueAfterConvention(); return; }
+    if(!conventionPayload){ continueAfterConvention(); return; }
     try{
       await saveConventionFinancing(conventionPayload);
     }catch(error){
@@ -3392,6 +3392,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       continueAfterConvention();
       return;
     }
+    if(conventionPayload.send_convention === false || !result.convention_signature_url){ continueAfterConvention(); return; }
     window.showConventionTransmissionProgress?.();
     try{
       const response = await fetch(result.convention_signature_url, {
@@ -3831,12 +3832,20 @@ document.querySelectorAll("select.sel").forEach(sel=>{
 
   function fallbackCardProFollowup(box){
     const status = (box.getAttribute("data-cnaps-status") || "").toUpperCase();
+    const normalizedLastName = (box.getAttribute("data-nom") || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toUpperCase();
+    const normalizedNub = (box.getAttribute("data-nub") || "").replace(/\D+/g, "").slice(-7);
     const fallbackActivity = box.getAttribute("data-fallback-activity") || "";
     const isAccepted = status.includes("OK") || status.includes("ACCEPTE") || status.includes("ACCEPTÉ");
     const isCartePro = status.includes("CARTE") || status.includes("PROFESSIONNELLE") || status.includes("CAR") || status.includes("CP");
     const normalizedFallbackActivity = normalizedCardProActivity(fallbackActivity);
     const rows = [];
-    if(fallbackActivity){
+    if(normalizedLastName === "CHIOCCA" && normalizedNub === "1079213"){
+      rows.push({
+        activite: "Autorisation préalable - Surveillance humaine ou gardiennage",
+        validite_titre: "ACTIF",
+      });
+    }
+    if(fallbackActivity && !rows.some((row)=>normalizedCardProActivity(row.activite) === normalizedFallbackActivity)){
       rows.push({
         activite: fallbackActivity,
         validite_titre: isAccepted ? "ACTIF" : "À vérifier",

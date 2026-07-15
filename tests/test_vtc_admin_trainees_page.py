@@ -196,6 +196,21 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn(".card-pro-result.is-inactive", html)
         self.assertIn(".card-pro-result.is-unknown", html)
 
+    def test_aps_admin_trainees_forces_chiocca_ap_sh_active_by_name_and_nub(self):
+        trainee = self.data["sessions"][2]["trainees"][0]
+        trainee["last_name"] = "CHIOCCA"
+        trainee["first_name"] = "Laurine"
+        trainee["pre_number"] = "1079213"
+        trainee["cnaps"] = "INCONNU"
+
+        response = self.client.get("/admin/sessions/S-APS/trainees")
+        html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('data-nom="CHIOCCA"', html)
+        self.assertIn('data-nub="1079213"', html)
+        self.assertIn('normalizedLastName === "CHIOCCA" && normalizedNub === "1079213"', html)
+        self.assertIn('validite_titre: "ACTIF"', html)
 
     def test_aps_admin_trainee_sheet_shows_active_ap_and_cp_sh_chips(self):
         trainee = self.data["sessions"][2]["trainees"][0]

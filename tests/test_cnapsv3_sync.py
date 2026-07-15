@@ -1760,6 +1760,101 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertIn("DOE", html)
         self.assertIn("NUB123", html)
 
+    def test_tracking_page_forces_chiocca_ap_sh_active_by_name_and_nub(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        original_fetch = gestion_app.fetch_cnapsv3_tracking_requests
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{
+            "last_name": "CHIOCCA",
+            "first_name": "Laurine",
+            "nub": "1079213",
+            "cnaps_status": "INCONNU",
+        }], None)
+        try:
+            response = client.get("/admin/sessions/suivi-cnaps")
+        finally:
+            gestion_app.fetch_cnapsv3_tracking_requests = original_fetch
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('data-nom="CHIOCCA"', html)
+        self.assertIn('data-nub="1079213"', html)
+        self.assertIn('normalizedLastName==="CHIOCCA"&&normalizedNub==="1079213"', html)
+        self.assertIn('validite_titre:"ACTIF"', html)
+
+    def test_cnaps_public_annuaire_notifies_when_unknown_becomes_active(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        data = {"cnaps_status_change_notifications": {}}
+        saved = []
+        sent = []
+        original_fetch = gestion_app.fetch_cnaps_public_annuaire
+        original_load = gestion_app.load_data
+        original_save = gestion_app.save_data
+        original_email = gestion_app.brevo_send_email
+        gestion_app.fetch_cnaps_public_annuaire = lambda nom, nub: {
+            "activite": "Autorisation préalable - Surveillance humaine ou gardiennage",
+            "validite_titre": "ACTIF",
+            "results": [{"activite": "Autorisation préalable - Surveillance humaine ou gardiennage", "validite_titre": "ACTIF"}],
+        }
+        gestion_app.load_data = lambda: data
+        gestion_app.save_data = lambda payload: saved.append(payload.copy())
+        gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append({"args": args, "kwargs": kwargs}) or {"ok": True}
+        try:
+            response = client.get("/api/cnaps_public_annuaire?nom=DOE&prenom=Jane&nub=1234567&previous_status=INCONNU")
+        finally:
+            gestion_app.fetch_cnaps_public_annuaire = original_fetch
+            gestion_app.load_data = original_load
+            gestion_app.save_data = original_save
+            gestion_app.brevo_send_email = original_email
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["notification_sent"])
+        self.assertEqual(sent[0]["args"][0], "cassandre@integraleacademy.com")
+        self.assertIn("Changement de statut CNAPS", sent[0]["args"][1])
+        self.assertEqual(sent[0]["kwargs"]["cc_emails"], ["elsa@integraleacademy.com", "clement@integraleacademy.com"])
+        self.assertTrue(saved)
+        self.assertIn("DOE|1234567", data["cnaps_status_change_notifications"])
+
+    def test_cnaps_public_annuaire_does_not_notify_duplicate_signature(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        signature = "Autorisation préalable - Surveillance humaine ou gardiennage • ACTIF"
+        data = {"cnaps_status_change_notifications": {"DOE|1234567": {"signature": signature}}}
+        sent = []
+        original_fetch = gestion_app.fetch_cnaps_public_annuaire
+        original_load = gestion_app.load_data
+        original_save = gestion_app.save_data
+        original_email = gestion_app.brevo_send_email
+        gestion_app.fetch_cnaps_public_annuaire = lambda nom, nub: {
+            "activite": "Autorisation préalable - Surveillance humaine ou gardiennage",
+            "validite_titre": "ACTIF",
+            "results": [{"activite": "Autorisation préalable - Surveillance humaine ou gardiennage", "validite_titre": "ACTIF"}],
+        }
+        gestion_app.load_data = lambda: data
+        gestion_app.save_data = lambda payload: self.fail("save_data should not be called for duplicate notification")
+        gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append(args) or {"ok": True}
+        try:
+            response = client.get("/api/cnaps_public_annuaire?nom=DOE&prenom=Jane&nub=1234567&previous_status=INCONNU")
+        finally:
+            gestion_app.fetch_cnaps_public_annuaire = original_fetch
+            gestion_app.load_data = original_load
+            gestion_app.save_data = original_save
+            gestion_app.brevo_send_email = original_email
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.get_json()["notification_sent"])
+        self.assertEqual(sent, [])
+
 
 if __name__ == "__main__":
     unittest.main()

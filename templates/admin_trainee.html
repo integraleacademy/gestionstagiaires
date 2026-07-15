@@ -2203,6 +2203,10 @@ document.querySelectorAll(".automation-loading-form").forEach((form)=>{
       event.preventDefault();
       const conventionPayload = await requestVaeConventionTransmission();
       if(!conventionPayload) return;
+      if(conventionPayload.send_convention === false){
+        try{ await saveVaeConventionFinancing(conventionPayload); }catch(error){ alert(error.message || "Impossible de sauvegarder les montants de financement."); }
+        return;
+      }
       if(btn){ btn.disabled = true; btn.setAttribute("aria-busy", "true"); btn.dataset.originalText = btn.textContent; btn.textContent = "Transmission…"; }
       const sent = await sendVaeConventionSignature(conventionPayload, {forceNew: form.dataset.yousignForceNew === "true"});
       if(!sent && btn){ btn.disabled = false; btn.removeAttribute("aria-busy"); btn.textContent = btn.dataset.originalText || "Réessayer"; }
@@ -3506,8 +3510,12 @@ function updateDocsRelanceState(status, plannedDateIso){
         throw new Error('save_failed');
       }
       if(vaeConventionPayload){
-        const sent = await sendVaeConventionSignature(vaeConventionPayload);
-        if(sent) return;
+        if(vaeConventionPayload.send_convention === false){
+          await saveVaeConventionFinancing(vaeConventionPayload);
+        }else{
+          const sent = await sendVaeConventionSignature(vaeConventionPayload);
+          if(sent) return;
+        }
       }
       if(!isReset && (actionKey === "livret_1_transmitted_scotia" || actionKey === "livret_2_transmitted_scotia")){
         window.location.href = "/scotia";
