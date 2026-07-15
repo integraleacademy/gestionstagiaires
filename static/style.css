@@ -2821,9 +2821,9 @@ body.partner-sidebar-collapsed .sidebar-search-badge{right:-9px;bottom:-8px;}
   body.admin-sidebar-active .topbar-inner{min-height:58px;padding-top:4px;padding-bottom:4px;}
   body.admin-sidebar-active .brand img{height:44px!important;}
   body.admin-sidebar-active .main-content{padding-top:10px!important;}
-  body.admin-sidebar-active .partner-sidebar{height:100dvh;overflow:visible;background:#071226;}
+  body.admin-sidebar-active .partner-sidebar{position:fixed;inset:0 auto 0 0;height:auto;min-height:100vh;overflow:visible;background:#071226;}
   body.admin-sidebar-active .partner-sidebar__scroll{
-    height:100dvh;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:10px;box-sizing:border-box;
+    height:100%;min-height:100vh;display:flex;flex-direction:column;overflow:hidden;padding:10px;box-sizing:border-box;background:#071226;
   }
   body.admin-sidebar-active .partner-sidebar__identity{flex:0 0 auto;grid-template-columns:48px 32px minmax(0,1fr);padding:8px;gap:8px;}
   body.admin-sidebar-active .partner-sidebar__home-link,
@@ -2835,9 +2835,10 @@ body.partner-sidebar-collapsed .sidebar-search-badge{right:-9px;bottom:-8px;}
   body.admin-sidebar-active .sidebar-icon-wrap{width:20px;height:20px;}
   body.admin-sidebar-active .sidebar-search-badge{right:-7px;bottom:-6px;min-width:12px;height:12px;padding:0 2px;background:#e0f2fe;color:#075985;border:2px solid #071226;font-size:8px;line-height:12px;box-shadow:0 1px 3px rgba(2,6,23,.25);}
   body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__scroll{padding:10px 11px;overflow:visible;}
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__identity{grid-template-columns:54px;justify-items:center;padding:7px 3px;}
+  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__identity{grid-template-columns:52px;justify-items:center;padding:7px 4px;}
   body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__home-link,
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__avatar{width:54px;height:54px;border-radius:14px;}
+  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__avatar{width:52px;height:52px;border-radius:14px;box-sizing:border-box;}
+  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__avatar{padding:3px;background:#fff;object-fit:contain;}
   body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__item{min-height:38px;padding:8px 6px;overflow:visible;}
   body.admin-sidebar-active.partner-sidebar-collapsed .sidebar-icon{width:20px;height:20px;}
   body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__powered span{display:none;}
