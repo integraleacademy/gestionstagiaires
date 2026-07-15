@@ -1063,16 +1063,16 @@
       });
     });
     const openSidebarModalOrRedirect = (buttonId, modalId, queryFlag, focusId, beforeOpen) => {
-      const button = document.getElementById(buttonId);
-      if(button){
-        button.click();
-        return;
-      }
       const modal = document.getElementById(modalId);
       if(modal && typeof window.openModal === 'function'){
         if(typeof beforeOpen === 'function') beforeOpen();
         window.openModal(modalId);
         if(focusId) window.setTimeout(() => document.getElementById(focusId)?.focus(), 80);
+        return;
+      }
+      const button = document.getElementById(buttonId);
+      if(button){
+        button.click();
         return;
       }
       window.location.href = `{{ url_for('admin_sessions') }}?${queryFlag}=1`;
