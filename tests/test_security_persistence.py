@@ -99,6 +99,39 @@ class SecurityPersistenceTests(unittest.TestCase):
         self.assertGreaterEqual(len(backups), 1)
         self.assertEqual(len(backups), len(set(backups)))
 
+    def test_large_json_backup_uses_hard_link_snapshot_even_over_copy_limit(self):
+        original_limit = gestion_app.MAX_JSON_BACKUP_BYTES
+        try:
+            gestion_app.MAX_JSON_BACKUP_BYTES = 1
+            with open(gestion_app.DATA_FILE, "w", encoding="utf-8") as f:
+                json.dump({"sessions": [{"id": "S1", "note": "large-enough"}]}, f)
+
+            backup_path = gestion_app._force_backup_snapshot(gestion_app.DATA_FILE, reason="large-file")
+
+            self.assertIsNotNone(backup_path)
+            self.assertTrue(os.path.exists(backup_path))
+            with open(backup_path, "r", encoding="utf-8") as f:
+                self.assertEqual(json.load(f)["sessions"][0]["id"], "S1")
+        finally:
+            gestion_app.MAX_JSON_BACKUP_BYTES = original_limit
+
+    def test_write_json_creates_single_pre_save_snapshot_per_write(self):
+        original_min_interval = gestion_app.BACKUP_MIN_INTERVAL_SECONDS
+        original_times = dict(gestion_app._last_backup_times)
+        try:
+            gestion_app.BACKUP_MIN_INTERVAL_SECONDS = 1
+            gestion_app._last_backup_times.clear()
+
+            gestion_app.save_data({"sessions": [{"id": "S1"}]})
+
+            backups = [name for name in os.listdir(gestion_app.BACKUP_DIR) if name.startswith("data_json.")]
+            self.assertEqual(len(backups), 1)
+            self.assertIn("before-save", backups[0])
+        finally:
+            gestion_app.BACKUP_MIN_INTERVAL_SECONDS = original_min_interval
+            gestion_app._last_backup_times.clear()
+            gestion_app._last_backup_times.update(original_times)
+
 
 class WedofWebhookSecurityTests(unittest.TestCase):
     def setUp(self):
