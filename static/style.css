@@ -2698,31 +2698,113 @@ body.partner-space.partner-sidebar-collapsed .collapse-icon--closed{
   }
 }
 
-/* Compact workspace: approximate the user's preferred 80% browser zoom for content,
-   while keeping the left navigation large and comfortable to read. */
+/* Compact admin/partner workspace tuned for native browser scale. */
 @media (min-width:861px){
   body.admin-sidebar-active,
   body.partner-space{
-    --partner-sidebar-open:340px;
-    --partner-sidebar-width:340px;
-    --partner-sidebar-closed:86px;
-    --partner-sidebar-collapsed-width:86px;
+    --partner-sidebar-open:300px;
+    --partner-sidebar-width:300px;
+    --partner-sidebar-closed:74px;
+    --partner-sidebar-collapsed-width:74px;
+    font-size:15px;
   }
   body.admin-sidebar-active .main-content,
   body.partner-space .main-content{
-    zoom:.86;
+    padding:14px clamp(14px,1.7vw,26px) 26px!important;
   }
   body.admin-sidebar-active .topbar-inner,
   body.partner-space .topbar-inner{
-    zoom:.9;
+    padding-top:6px;
+    padding-bottom:6px;
   }
+  body.admin-sidebar-active .btn,
+  body.partner-space .btn{
+    padding:8px 11px;
+    min-height:38px;
+    font-size:13px;
+  }
+  body.admin-sidebar-active .card,
+  body.partner-space .card{
+    padding:16px;
+    border-radius:18px;
+  }
+  body.admin-sidebar-active .page-head,
+  body.partner-space .page-head{
+    margin-bottom:12px;
+    gap:12px;
+  }
+  body.admin-sidebar-active .page-head h1,
+  body.partner-space .page-head h1{
+    font-size:clamp(24px,2.3vw,34px);
+    line-height:1.08;
+  }
+  body.admin-sidebar-active .page-head p,
+  body.partner-space .page-head p{font-size:13px;}
+  body.admin-sidebar-active .partner-sidebar,
+  body.partner-space .partner-sidebar{height:100dvh;}
+  body.admin-sidebar-active .partner-sidebar__scroll,
+  body.partner-space .partner-sidebar__scroll{
+    height:100%;
+    padding:12px;
+    overflow-y:auto;
+  }
+  body.admin-sidebar-active .partner-sidebar__identity,
+  body.partner-space .partner-sidebar__identity{
+    grid-template-columns:50px 32px minmax(0,1fr);
+    min-height:0;
+    padding:10px;
+    border-radius:17px;
+  }
+  body.admin-sidebar-active .partner-sidebar__avatar,
+  body.partner-space .partner-sidebar__avatar{width:50px;height:50px;border-radius:15px;}
+  body.admin-sidebar-active .partner-sidebar__home-link,
+  body.partner-space .partner-sidebar__home-link{width:50px;height:50px;border-radius:15px;}
+  body.admin-sidebar-active .partner-sidebar__collapse,
+  body.partner-space .partner-sidebar__collapse{width:32px;height:32px;border-radius:11px;}
+  body.admin-sidebar-active .partner-sidebar__create,
+  body.partner-space .partner-sidebar__create{margin-top:10px;}
+  body.admin-sidebar-active .partner-sidebar__section,
+  body.partner-space .partner-sidebar__section{margin-top:12px;}
+  body.admin-sidebar-active .partner-sidebar__section h2,
+  body.partner-space .partner-sidebar__section h2{margin-bottom:6px;font-size:10.5px;}
   body.admin-sidebar-active .partner-sidebar__item,
   body.partner-space .partner-sidebar__item{
-    font-size:15px;
-    min-height:48px;
+    min-height:38px;
+    margin:2px 0;
+    padding:8px 10px;
+    gap:9px;
+    border-radius:12px;
+    font-size:13.5px;
   }
-  body.admin-sidebar-active .partner-sidebar__section h2,
-  body.partner-space .partner-sidebar__section h2{
-    font-size:12px;
-  }
+  body.admin-sidebar-active .partner-sidebar__submenu-panel .partner-sidebar__item,
+  body.partner-space .partner-sidebar__submenu-panel .partner-sidebar__item{min-height:34px;padding:7px 9px;font-size:12.5px;}
+  body.admin-sidebar-active .sidebar-icon,
+  body.partner-space .sidebar-icon{width:18px;height:18px;}
+  body.admin-sidebar-active .partner-sidebar__bottom,
+  body.partner-space .partner-sidebar__bottom{padding-top:10px;padding-bottom:0;}
 }
+@media (min-width:861px) and (max-height:900px){
+  body.admin-sidebar-active .partner-sidebar__scroll,
+  body.partner-space .partner-sidebar__scroll{padding:9px;}
+  body.admin-sidebar-active .partner-sidebar__identity,
+  body.partner-space .partner-sidebar__identity{padding:8px;}
+  body.admin-sidebar-active .partner-sidebar__avatar,
+  body.partner-space .partner-sidebar__avatar,
+  body.admin-sidebar-active .partner-sidebar__home-link,
+  body.partner-space .partner-sidebar__home-link{width:44px;height:44px;border-radius:13px;}
+  body.admin-sidebar-active .partner-sidebar__item,
+  body.partner-space .partner-sidebar__item{min-height:34px;padding:6px 9px;margin:1px 0;font-size:12.8px;}
+  body.admin-sidebar-active .partner-sidebar__section,
+  body.partner-space .partner-sidebar__section{margin-top:8px;}
+  body.admin-sidebar-active .partner-sidebar__section h2,
+  body.partner-space .partner-sidebar__section h2{margin-bottom:4px;font-size:10px;}
+  body.admin-sidebar-active .partner-sidebar__submenu-panel,
+  body.partner-space .partner-sidebar__submenu-panel{gap:2px;margin-top:3px;margin-bottom:5px;padding-top:4px;padding-bottom:4px;}
+  body.admin-sidebar-active .partner-sidebar__powered,
+  body.partner-space .partner-sidebar__powered{padding-top:6px;gap:3px;font-size:10px;}
+  body.admin-sidebar-active .partner-sidebar__powered img,
+  body.partner-space .partner-sidebar__powered img{max-height:30px;}
+}
+.sidebar-icon-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;}
+.sidebar-search-badge{position:absolute;right:-8px;bottom:-7px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;background:#ff6b1a;color:#fff;border:2px solid #071226;font-size:9px;font-weight:950;line-height:15px;text-align:center;box-sizing:content-box;}
+body.partner-sidebar-collapsed .sidebar-search-badge{right:-9px;bottom:-8px;}
