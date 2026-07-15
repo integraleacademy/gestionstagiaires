@@ -3445,100 +3445,36 @@ body.admin-sidebar-active .partner-sidebar__action{
   margin-left:0;
 }
 
-/* Admin sidebar: keep the full, readable navigation on desktop.
-   The partner collapsed rail remains available elsewhere, but the internal
-   admin menu is intentionally stable and expanded to avoid truncated entries. */
+/* Dedicated admin collapse control, isolated from the shared partner sidebar styles. */
+.admin-sidebar-collapse-handle{display:none;}
 @media (min-width:861px){
-  body.admin-sidebar-active.partner-sidebar-collapsed .topbar{
-    margin-left:var(--partner-sidebar-open);
-    width:calc(100% - var(--partner-sidebar-open));
-  }
-  body.admin-sidebar-active.partner-sidebar-collapsed .main-content{
-    margin-left:var(--partner-sidebar-open);
-    width:calc(100% - var(--partner-sidebar-open));
-  }
-  body.admin-sidebar-active .partner-sidebar,
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar{
-    width:var(--partner-sidebar-open);
-  }
-  body.admin-sidebar-active .partner-sidebar__collapse{
-    display:none!important;
-  }
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__scroll{
-    padding:14px 13px;
-    overflow-x:hidden;
-  }
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__identity{
-    display:grid;
-    grid-template-columns:52px minmax(0,1fr);
-    justify-content:stretch;
-    min-height:auto;
-    padding:11px;
-  }
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__home-link,
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__avatar{
-    width:52px;
-    height:52px;
-    flex-basis:52px;
-    border-radius:16px;
-  }
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__identity-copy,
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__section h2,
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__label,
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__powered span,
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__chevron{
+  body.admin-sidebar-active .admin-sidebar-collapse-handle{
     display:flex!important;
+    position:absolute;
+    right:-18px;
+    top:18px;
+    width:36px;
+    height:36px;
+    align-items:center;
+    justify-content:center;
+    border:1px solid rgba(255,255,255,.16);
+    border-radius:12px;
+    background:#10213d;
+    color:#dbeafe;
+    box-shadow:0 10px 24px rgba(2,6,23,.28);
+    z-index:260;
+    cursor:pointer;
   }
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__section,
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__nav,
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__bottom,
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__create{
-    display:block;
-    width:auto;
+  body.admin-sidebar-active .admin-sidebar-collapse-handle .sidebar-icon{
+    width:18px;
+    height:18px;
   }
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__submenu{
-    display:block;
-    width:auto;
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .admin-sidebar-collapse-handle .collapse-icon--closed,
+  body.admin-sidebar-active.partner-sidebar-collapsed .admin-sidebar-collapse-handle .collapse-icon--open{
+    display:none;
   }
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__item{
-    width:100%!important;
-    height:auto;
-    min-height:42px;
-    flex-basis:auto;
-    justify-content:flex-start!important;
-    gap:11px;
-    margin:3px 0!important;
-    padding:10px 11px!important;
-    overflow:visible;
-  }
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__item.is-primary{
-    min-height:42px;
-    height:auto;
-    flex-basis:auto;
-    justify-content:center!important;
-  }
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__action{
-    position:static;
-    inset:auto;
-    margin-left:auto;
-  }
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__badge{
-    position:static!important;
-    min-width:22px;
-    height:22px;
-    padding:0 7px;
-    font-size:12px;
-  }
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__bottom{
-    margin-left:0;
-    margin-right:0;
-    width:auto;
-  }
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__powered{
-    width:auto;
-  }
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__powered img{
-    max-width:118px;
-    max-height:42px;
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .admin-sidebar-collapse-handle .collapse-icon--open,
+  body.admin-sidebar-active.partner-sidebar-collapsed .admin-sidebar-collapse-handle .collapse-icon--closed{
+    display:inline-flex;
   }
 }
