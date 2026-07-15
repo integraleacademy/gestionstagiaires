@@ -1860,6 +1860,44 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertFalse(response.get_json()["notification_sent"])
         self.assertEqual(sent, [])
 
+    def test_tracking_delete_persists_and_filters_refresh(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        data = {"sessions": [], "cnaps_tracking_deleted_keys": []}
+        saved = []
+        original_fetch = gestion_app.fetch_cnapsv3_tracking_requests
+        original_load = gestion_app.load_data
+        original_save = gestion_app.save_data
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{
+            "last_name": "Doe",
+            "first_name": "Jane",
+            "nub": "NUB123",
+            "cnaps_status": "ACCEPTE",
+        }], None)
+        gestion_app.load_data = lambda: data
+        gestion_app.save_data = lambda payload: saved.append(payload.copy())
+        try:
+            delete_response = client.post("/api/admin/cnaps-tracking/delete", json={
+                "last_name": "Doe",
+                "first_name": "Jane",
+                "nub": "NUB123",
+            })
+            page_response = client.get("/admin/sessions/suivi-cnaps")
+        finally:
+            gestion_app.fetch_cnapsv3_tracking_requests = original_fetch
+            gestion_app.load_data = original_load
+            gestion_app.save_data = original_save
+
+        self.assertEqual(delete_response.status_code, 200)
+        self.assertEqual(delete_response.get_json()["ok"], True)
+        self.assertIn("DOE|JANE|NUB123", data["cnaps_tracking_deleted_keys"])
+        self.assertTrue(saved)
+        html = page_response.get_data(as_text=True)
+        self.assertNotIn("NUB123", html)
+
 
 if __name__ == "__main__":
     unittest.main()

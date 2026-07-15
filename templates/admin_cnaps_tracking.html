@@ -46,7 +46,7 @@
   <section class="cnaps-hero">
     <div class="cnaps-hero__content">
       <div>
-        <div class="cnaps-kicker">🛡️ Pilotage CNAPS</div>
+        <div class="cnaps-kicker">👮 Pilotage CNAPS</div>
         <h1 class="cnaps-title">Suivi CNAPS</h1>
         <p class="cnaps-subtitle">Toutes les demandes CNAPS remontées depuis CNAPSV3, avec recherche instantanée, statut d’inscription en formation et suivi carte professionnelle de l’annuaire CNAPS.</p>
       </div>
@@ -78,7 +78,7 @@
         <thead><tr><th>NOM</th><th>Prénom</th><th>Inscription formation</th><th>NUB</th><th>Statut</th><th>Action</th></tr></thead>
         <tbody id="cnapsTableBody">
         {% for row in requests_rows %}
-          <tr data-cnaps-row data-search="{{ ((row.last_name or '') ~ ' ' ~ (row.first_name or '') ~ ' ' ~ (row.nub or '') ~ ' ' ~ (row.enrollment.session_name if row.enrollment else '') ~ ' ' ~ (row.enrollment.training_type if row.enrollment else ''))|lower|e }}">
+          <tr data-cnaps-row data-last-name="{{ row.last_name|e }}" data-first-name="{{ row.first_name|e }}" data-nub="{{ row.nub|e }}" data-search="{{ ((row.last_name or '') ~ ' ' ~ (row.first_name or '') ~ ' ' ~ (row.nub or '') ~ ' ' ~ (row.enrollment.session_name if row.enrollment else '') ~ ' ' ~ (row.enrollment.training_type if row.enrollment else ''))|lower|e }}">
             <td><span class="cnaps-name">{{ (row.last_name or '—')|upper }}</span></td>
             <td><span class="cnaps-firstname">{{ row.first_name or '—' }}</span></td>
             <td>{% if row.is_enrolled %}<span class="cnaps-pill cnaps-pill--yes">✓ Inscrite</span><div class="cnaps-session" title="{{ row.enrollment.session_name }}">{{ row.enrollment.session_name }}{% if row.enrollment.training_type %} · {{ row.enrollment.training_type }}{% endif %}</div>{% else %}<span class="cnaps-pill cnaps-pill--no">Non inscrite</span>{% endif %}</td>
@@ -109,7 +109,7 @@ const cnapsSearchInput=document.getElementById("cnapsSearchInput");
 const cnapsRows=()=>Array.from(document.querySelectorAll("[data-cnaps-row]"));
 function filterCnapsRows(){const query=(cnapsSearchInput?.value||"").trim().toLowerCase();let visible=0;cnapsRows().forEach(row=>{const match=!query||(row.getAttribute("data-search")||"").includes(query);row.style.display=match?"":"none";if(match)visible++;});const empty=document.getElementById("cnapsEmptyFilter");if(empty)empty.style.display=visible?"none":"block";}
 cnapsSearchInput?.addEventListener("input",filterCnapsRows);
-document.querySelectorAll("[data-delete-cnaps-row]").forEach(button=>{button.addEventListener("click",()=>{const row=button.closest("[data-cnaps-row]");if(!row)return;if(window.confirm("Supprimer cette ligne du suivi affiché ?")){row.remove();filterCnapsRows();}});});
+document.querySelectorAll("[data-delete-cnaps-row]").forEach(button=>{button.addEventListener("click",async()=>{const row=button.closest("[data-cnaps-row]");if(!row||button.disabled)return;if(!window.confirm("Supprimer cette personne du suivi CNAPS ?"))return;button.disabled=true;const originalText=button.textContent;button.textContent="Suppression…";try{const r=await fetch("/api/admin/cnaps-tracking/delete",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({last_name:row.getAttribute("data-last-name")||"",first_name:row.getAttribute("data-first-name")||"",nub:row.getAttribute("data-nub")||""})});const data=await r.json().catch(()=>({}));if(!r.ok||!data.ok)throw new Error(data.error||"delete_failed");row.remove();filterCnapsRows();}catch(e){button.disabled=false;button.textContent=originalText;alert("Impossible de supprimer cette personne du suivi CNAPS.");}});});
 </script>
 
 {% endblock %}
