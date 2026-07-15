@@ -1073,7 +1073,8 @@
           const rect = actionEl.getBoundingClientRect();
           menu.style.setProperty('--sidebar-create-menu-top', `${Math.max(12, rect.top)}px`);
         }
-        menu.classList.toggle('is-open');
+        const isOpen = menu.classList.toggle('is-open');
+        actionEl.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         return;
       }
       if(action === 'create-session') {
