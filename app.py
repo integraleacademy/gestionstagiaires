@@ -13033,15 +13033,54 @@ def admin_cnaps_unknown():
 @admin_login_required
 def admin_cnaps_tracking():
     requests_rows, fetch_error = fetch_cnapsv3_tracking_requests()
+    requests_rows = enrich_cnaps_tracking_rows_with_enrollment(requests_rows, load_data())
+    enrolled_count = sum(1 for row in requests_rows if row.get("is_enrolled"))
     response = make_response(render_template(
         "admin_cnaps_tracking.html",
         requests_rows=requests_rows,
+        enrolled_count=enrolled_count,
         fetch_error=fetch_error,
     ))
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
     return response
 
+
+
+def _cnaps_tracking_match_key(last_name: Any, first_name: Any) -> Tuple[str, str]:
+    def normalize_part(value: Any) -> str:
+        text = unicodedata.normalize("NFKD", str(value or ""))
+        text = "".join(ch for ch in text if not unicodedata.combining(ch))
+        return re.sub(r"[^A-Z0-9]+", " ", text.upper()).strip()
+    return normalize_part(last_name), normalize_part(first_name)
+
+
+def enrich_cnaps_tracking_rows_with_enrollment(rows: List[Dict[str, Any]], data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    enrolled_by_name: Dict[Tuple[str, str], Dict[str, str]] = {}
+    for sess in data.get("sessions", []) or []:
+        if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
+            continue
+        session_name = _session_get(sess, "name", "") or str(sess.get("id") or "")
+        training_type = _session_get(sess, "training_type", "")
+        for trainee in _session_trainees_list(sess):
+            key = _cnaps_tracking_match_key(trainee.get("last_name"), trainee.get("first_name"))
+            if not all(key) or key in enrolled_by_name:
+                continue
+            enrolled_by_name[key] = {
+                "session_id": str(sess.get("id") or ""),
+                "session_name": session_name,
+                "training_type": training_type,
+                "trainee_id": str(trainee.get("id") or ""),
+            }
+
+    enriched: List[Dict[str, Any]] = []
+    for row in rows or []:
+        item = dict(row)
+        match = enrolled_by_name.get(_cnaps_tracking_match_key(item.get("last_name"), item.get("first_name")))
+        item["is_enrolled"] = bool(match)
+        item["enrollment"] = match or {}
+        enriched.append(item)
+    return enriched
 
 
 def _cash_amount_value(raw_value: Any) -> float:
