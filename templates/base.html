@@ -1112,6 +1112,12 @@
         openSidebarModalOrRedirect('btnOpenSessionSearch', 'sessionSearchModal', 'openSessionSearch', 'sessionSearchInput');
       }
       if(action === 'open-docs-to-control') {
+        const docsModal = document.getElementById('docsToControlModal');
+        if(docsModal && typeof window.openModal === 'function') {
+          window.openModal('docsToControlModal');
+          if(typeof window.loadDocsToControl === 'function') window.loadDocsToControl();
+          return;
+        }
         const docsButton = document.getElementById('btnOpenDocsToControl');
         if(docsButton) docsButton.click();
         else window.location.href = '{{ url_for('admin_sessions') }}?openDocsToControl=1';
