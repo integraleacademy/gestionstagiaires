@@ -1663,7 +1663,7 @@ class CnapsTrackingTests(unittest.TestCase):
             {"last_name": "DUPONT", "first_name": "Clément", "nub": "NUB789", "cnaps_status": "TRANSMIS"},
         ])
 
-    def test_tracking_requests_keep_only_transmitted_rows_since_cutoff(self):
+    def test_tracking_requests_keep_all_transmitted_rows_regardless_of_date(self):
         def fake_get(url, headers, timeout):
             return DummyResponse(200, {
                 "requests": [
@@ -1671,13 +1671,14 @@ class CnapsTrackingTests(unittest.TestCase):
                     {"nom": "OLD", "prenom": "Before", "nub": "NUB2", "statut_cnaps": "TRANSMIS", "created_at": "2026-07-14T23:59:59Z"},
                     {"nom": "STATUS", "prenom": "Other", "nub": "NUB3", "statut_cnaps": "ACCEPTE", "created_at": "2026-07-16T00:00:00Z"},
                     {"nom": "MISSING", "prenom": "Date", "nub": "NUB4", "statut_cnaps": "TRANSMIS"},
+                    {"nom": "OLD", "prenom": "French", "nub": "NUB5", "statut_cnaps": "transmis", "date_creation": "01/07/2026"},
                 ]
             })
 
         rows, error = gestion_app.fetch_cnapsv3_tracking_requests(get_func=fake_get)
 
         self.assertIsNone(error)
-        self.assertEqual([row["last_name"] for row in rows], ["KEEP"])
+        self.assertEqual([row["last_name"] for row in rows], ["KEEP", "OLD", "MISSING", "OLD"])
 
 
 
