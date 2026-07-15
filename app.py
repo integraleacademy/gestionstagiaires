@@ -17,11 +17,19 @@ import time
 import subprocess
 import secrets
 import base64
+import logging
+import signal
+import atexit
+import sys
+try:
+    import resource
+except ImportError:
+    resource = None
 from typing import Dict, Any, Optional, List, Iterable, Tuple, Set
 from functools import wraps
 from zoneinfo import ZoneInfo
 from flask import session
-from werkzeug.security import check_password_hash
+import werkzeug.security as werkzeug_security
 from PIL import Image, ImageOps
 import tempfile
 import fcntl
@@ -48,12 +56,86 @@ from urllib.parse import urlparse, urljoin, quote, urlencode
 from cryptography.fernet import Fernet
 
 
+_APP_IMPORT_STARTED_AT = time.monotonic()
+_REQUEST_STARTED_AT_KEY = "_memory_request_started_at"
+_BACKGROUND_TASKS_LOCK = threading.Lock()
+_BACKGROUND_TASKS_LAST_RUN_AT = 0.0
+_BACKGROUND_TASKS_MIN_INTERVAL_SECONDS = int(os.environ.get("BACKGROUND_TASKS_MIN_INTERVAL_SECONDS", "300"))
+
+def _rss_mb() -> float:
+    if resource is not None:
+        try:
+            usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            if sys.platform == "darwin":
+                return usage / (1024 * 1024)
+            return usage / 1024
+        except Exception:
+            pass
+    try:
+        with open("/proc/self/statm", "r", encoding="utf-8") as f:
+            pages = int((f.read().split() or ["0"])[1])
+        return pages * os.sysconf("SC_PAGE_SIZE") / (1024 * 1024)
+    except Exception:
+        return -1.0
+
+def _current_route_for_log() -> str:
+    if has_request_context():
+        return request.path or ""
+    return "-"
+
+def _log_memory_stage(stage: str, started_at: Optional[float] = None, route: Optional[str] = None) -> None:
+    duration_ms = 0.0 if started_at is None else (time.monotonic() - started_at) * 1000
+    logging.getLogger(__name__).info(
+        "MEMORY stage=%s pid=%s route=%s rss_mb=%.1f duration_ms=%.1f",
+        stage,
+        os.getpid(),
+        route if route is not None else _current_route_for_log(),
+        _rss_mb(),
+        duration_ms,
+    )
+
+_log_memory_stage("APP_IMPORT_BEGIN", _APP_IMPORT_STARTED_AT, "-")
+
+def _install_shutdown_diagnostics() -> None:
+    def _signal_handler(signum, frame):
+        name = signal.Signals(signum).name if signum in signal.Signals.__members__.values() else str(signum)
+        logging.getLogger(__name__).warning("WORKER_SIGNAL signal=%s pid=%s rss_mb=%.1f", name, os.getpid(), _rss_mb())
+        raise SystemExit(128 + signum)
+
+    def _normal_exit():
+        logging.getLogger(__name__).info("WORKER_EXIT_NORMAL pid=%s rss_mb=%.1f", os.getpid(), _rss_mb())
+
+    def _unhandled(exc_type, exc, tb):
+        logging.getLogger(__name__).critical("WORKER_UNHANDLED_EXCEPTION pid=%s rss_mb=%.1f", os.getpid(), _rss_mb(), exc_info=(exc_type, exc, tb))
+        if exc_type is SystemExit:
+            return
+        sys.__excepthook__(exc_type, exc, tb)
+
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        try:
+            signal.signal(sig, _signal_handler)
+        except Exception:
+            logging.getLogger(__name__).exception("WORKER_SIGNAL_HANDLER_INSTALL_FAILED signal=%s", sig)
+    atexit.register(_normal_exit)
+    sys.excepthook = _unhandled
+
+_install_shutdown_diagnostics()
+
+
 app = Flask(__name__)
 DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(DEFAULT_MAX_UPLOAD_BYTES)))
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
+_log_memory_stage("APP_IMPORT_END", _APP_IMPORT_STARTED_AT, "-")
 
 
+@app.before_request
+def _log_request_begin_memory():
+    if request.path == "/healthz":
+        return None
+    setattr(request, _REQUEST_STARTED_AT_KEY, time.monotonic())
+    _log_memory_stage("REQUEST_BEGIN")
+    return None
 
 
 @app.get("/templates/cpf.jpg")
@@ -79,6 +161,8 @@ def api_qonto_oauth_ping():
 
 @app.before_request
 def debug_qonto_routes_once():
+    if request.path == "/healthz":
+        return None
     if request.path == "/api/qonto/oauth/ping":
         app.logger.warning("[QONTO DEBUG] url_map=%s", app.url_map)
 
@@ -1812,6 +1896,8 @@ def scotia_login_required(view):
 
 @app.before_request
 def protect_sensitive_routes():
+    if request.path == "/healthz":
+        return None
     """Central safety net for sensitive admin/API routes.
 
     Some legacy endpoints were missing explicit decorators.  This hook protects
@@ -2504,48 +2590,104 @@ def _hash_password(password: str) -> str:
     return f"pbkdf2_sha256$260000${salt}${digest}"
 
 
-def _verify_password(password: str, stored: str) -> bool:
+def _describe_password_hash(stored: str) -> Tuple[bool, str, str]:
+    """Inspect a stored hash string without running a KDF."""
     stored = stored or ""
-    try:
-        algo, rounds, salt, digest = stored.split("$", 3)
-        if algo == "pbkdf2_sha256":
+    if not stored:
+        return False, "empty", "empty_hash"
+
+    if stored.startswith("pbkdf2_sha256$"):
+        parts = stored.split("$", 3)
+        if len(parts) != 4 or not all(parts):
+            return False, "pbkdf2_sha256", "incomplete_hash"
+        _, rounds, salt, digest = parts
+        try:
             rounds_int = int(rounds)
-            if rounds_int < 1 or rounds_int > 600000:
-                app.logger.warning("Refus d’un hash partenaire PBKDF2 aux paramètres invalides")
-                return False
-            candidate = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), rounds_int).hex()
-            return hmac.compare_digest(candidate, digest)
-    except Exception:
-        pass
+        except ValueError:
+            return False, "pbkdf2_sha256", "non_numeric_iterations"
+        if rounds_int < 1 or rounds_int > 600000:
+            return False, "pbkdf2_sha256", "iterations_out_of_range"
+        return True, "pbkdf2_sha256", "ok"
 
-    if _werkzeug_hash_uses_unsafe_memory(stored):
-        app.logger.warning("Refus d’un hash partenaire Werkzeug aux paramètres mémoire dangereux")
+    method = stored.split("$", 1)[0]
+    if method.startswith("pbkdf2:"):
+        parts = method.split(":")
+        if len(parts) != 3 or not all(parts):
+            return False, "werkzeug_pbkdf2", "incomplete_hash"
+        try:
+            iterations = int(parts[2])
+        except ValueError:
+            return False, "werkzeug_pbkdf2", "non_numeric_iterations"
+        if iterations < 1 or iterations > 600000:
+            return False, "werkzeug_pbkdf2", "iterations_out_of_range"
+        if len(stored.split("$")) != 3:
+            return False, "werkzeug_pbkdf2", "incomplete_hash"
+        return True, "werkzeug_pbkdf2", "ok"
+
+    if method.startswith("scrypt"):
+        parts = method.split(":")
+        if len(parts) != 4 or not all(parts):
+            return False, "werkzeug_scrypt", "incomplete_hash"
+        try:
+            n, r, p = (int(value) for value in parts[1:])
+        except ValueError:
+            return False, "werkzeug_scrypt", "non_numeric_parameters"
+        if n < 2 or n & (n - 1):
+            return False, "werkzeug_scrypt", "n_not_power_of_two"
+        if r < 1 or p < 1:
+            return False, "werkzeug_scrypt", "r_or_p_below_one"
+        if 128 * n * r > 64 * 1024 * 1024:
+            return False, "werkzeug_scrypt", "memory_above_64mb"
+        if len(stored.split("$")) != 3:
+            return False, "werkzeug_scrypt", "incomplete_hash"
+        return True, "werkzeug_scrypt", "ok"
+
+    return False, method or "unknown", "unknown_hash_format"
+
+
+def _log_refused_user_password_hashes(data: Dict[str, Any]) -> None:
+    for user in data.get("users", []) if isinstance(data, dict) else []:
+        if not isinstance(user, dict) or not user.get("password_hash"):
+            continue
+        ok, hash_type, reason = _describe_password_hash(str(user.get("password_hash") or ""))
+        if not ok:
+            app.logger.warning(
+                "PASSWORD_HASH_REFUSED user_id=%s partner_id=%s hash_type=%s reason=%s",
+                user.get("id") or "",
+                user.get("partner_id") or "",
+                hash_type,
+                reason,
+            )
+
+
+def _verify_password(password: str, stored: str) -> bool:
+    started_at = time.monotonic()
+    _log_memory_stage("BEFORE_PASSWORD_VERIFY", route=_current_route_for_log())
+    stored = stored or ""
+    ok, hash_type, reason = _describe_password_hash(stored)
+    if not ok:
+        app.logger.warning("PASSWORD_HASH_REFUSED hash_type=%s reason=%s", hash_type, reason)
+        _log_memory_stage("AFTER_PASSWORD_VERIFY", started_at, _current_route_for_log())
         return False
 
-    # Compatibilité avec les hashs Werkzeug/Flask éventuellement créés par
-    # d’anciennes versions ou par un outil d’administration externe.
     try:
-        return check_password_hash(stored, password)
+        if hash_type == "pbkdf2_sha256":
+            _, rounds, salt, digest = stored.split("$", 3)
+            candidate = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), int(rounds)).hex()
+            result = hmac.compare_digest(candidate, digest)
+        else:
+            result = werkzeug_security.check_password_hash(stored, password)
+        return result
     except Exception:
+        app.logger.exception("PASSWORD_VERIFY_FAILED hash_type=%s", hash_type)
         return False
+    finally:
+        _log_memory_stage("AFTER_PASSWORD_VERIFY", started_at, _current_route_for_log())
 
 
 def _werkzeug_hash_uses_unsafe_memory(stored: str) -> bool:
-    """Reject malformed Werkzeug scrypt hashes before they can allocate GBs."""
-    method = (stored or "").split("$", 1)[0]
-    if not method.startswith("scrypt"):
-        return False
-    parts = method.split(":")
-    if len(parts) != 4:
-        return True
-    try:
-        n, r, p = (int(value) for value in parts[1:])
-    except ValueError:
-        return True
-    if n < 2 or n & (n - 1):
-        return True
-    estimated_bytes = 128 * n * r
-    return r < 1 or p < 1 or estimated_bytes > 64 * 1024 * 1024
+    ok, hash_type, _reason = _describe_password_hash(stored or "")
+    return hash_type == "werkzeug_scrypt" and not ok
 
 
 
@@ -6377,18 +6519,51 @@ def _empty_data_payload() -> Dict[str, Any]:
     }
 
 
-def load_data(run_background_tasks: bool = True) -> Dict[str, Any]:
+def run_deferred_background_tasks(data: Dict[str, Any], force: bool = False) -> bool:
+    global _BACKGROUND_TASKS_LAST_RUN_AT
+    if has_request_context() and request.path == "/healthz":
+        return False
+    now = time.monotonic()
+    if not force and now - _BACKGROUND_TASKS_LAST_RUN_AT < _BACKGROUND_TASKS_MIN_INTERVAL_SECONDS:
+        return False
+    if not _BACKGROUND_TASKS_LOCK.acquire(blocking=False):
+        return False
+    started_at = time.monotonic()
+    _log_memory_stage("BACKGROUND_TASKS_BEGIN", route=_current_route_for_log())
+    changed = False
+    try:
+        if _send_vtc_credentials_missing_reminders(data):
+            changed = True
+        if _send_vae_relance_reminders(data):
+            changed = True
+        if _send_docs_relance_reminders(data):
+            changed = True
+        if _inject_vtc_exam_results_notifications(data):
+            changed = True
+        _BACKGROUND_TASKS_LAST_RUN_AT = time.monotonic()
+        return changed
+    finally:
+        _log_memory_stage("BACKGROUND_TASKS_END", started_at, _current_route_for_log())
+        _BACKGROUND_TASKS_LOCK.release()
+
+
+def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
+    load_started_at = time.monotonic()
+    _log_memory_stage("BEFORE_LOAD_DATA", route=_current_route_for_log())
     if not os.path.exists(DATA_FILE):
         recovered_from = _recover_data_file(DATA_FILE)
         if recovered_from:
             loaded = _load_valid_json_payload(DATA_FILE)
             if loaded is not None:
                 _ensure_multi_partner_payload(loaded)
+                _log_refused_user_password_hashes(loaded)
                 _log_storage_state(loaded)
+                _log_memory_stage("AFTER_LOAD_DATA", load_started_at, _current_route_for_log())
                 return _filter_data_for_partner(loaded, _current_partner_id()) if _is_partner_scoped_session() else loaded
         base = _empty_data_payload()
         _ensure_multi_partner_payload(base)
         _log_storage_state(base)
+        _log_memory_stage("AFTER_LOAD_DATA", load_started_at, _current_route_for_log())
         return _filter_data_for_partner(base, _current_partner_id()) if _is_partner_scoped_session() else base
 
     data = _load_valid_json_payload(DATA_FILE)
@@ -6400,6 +6575,7 @@ def load_data(run_background_tasks: bool = True) -> Dict[str, Any]:
             app.logger.error("Unable to read %s and no valid recovery source found", DATA_FILE)
             base = _empty_data_payload()
             _log_storage_state(base)
+            _log_memory_stage("AFTER_LOAD_DATA", load_started_at, _current_route_for_log())
             return base
 
     # Les post-traitements ne doivent jamais vider la base en cas d'erreur.
@@ -6465,18 +6641,8 @@ def load_data(run_background_tasks: bool = True) -> Dict[str, Any]:
         if normalize_all_partner_subscriptions(data):
             changed = True
 
-        if run_background_tasks:
-            if _send_vtc_credentials_missing_reminders(data):
-                changed = True
-
-            if _send_vae_relance_reminders(data):
-                changed = True
-
-            if _send_docs_relance_reminders(data):
-                changed = True
-
-            if _inject_vtc_exam_results_notifications(data):
-                changed = True
+        if run_background_tasks and run_deferred_background_tasks(data):
+            changed = True
 
         for session_obj in (data.get("sessions") or []):
             for trainee in _session_trainees_list(session_obj):
@@ -6505,7 +6671,9 @@ def load_data(run_background_tasks: bool = True) -> Dict[str, Any]:
     except Exception:
         app.logger.exception("Post-processing failed for %s; returning current in-memory data without reset", DATA_FILE)
 
+    _log_refused_user_password_hashes(data)
     _log_storage_state(data)
+    _log_memory_stage("AFTER_LOAD_DATA", load_started_at, _current_route_for_log())
     return _filter_data_for_partner(data, _current_partner_id()) if _is_partner_scoped_session() else data
 
 
