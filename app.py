@@ -19034,6 +19034,17 @@ def _storage_file_health(path: str, required_list_key: Optional[str] = None) -> 
     }
 
 
+@app.get("/healthz")
+def healthz():
+    """Lightweight liveness probe for Render.
+
+    Keep this endpoint independent from persisted JSON files so deploy health
+    checks only verify that the Flask worker booted and can answer requests.
+    Deeper storage diagnostics remain available on /api/health.
+    """
+    return jsonify({"ok": True, "service": "gestionstagiaires"})
+
+
 @app.get("/api/health")
 def health():
     data_health = _storage_file_health(DATA_FILE, required_list_key="sessions")
