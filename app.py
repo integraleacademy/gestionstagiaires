@@ -2286,6 +2286,11 @@ BACKUP_MIN_INTERVAL_SECONDS = int(os.environ.get("BACKUP_MIN_INTERVAL_SECONDS", 
 AUTO_RESTORE_FROM_BACKUP = (os.environ.get("AUTO_RESTORE_FROM_BACKUP", "1") or "").strip().lower() in {"1", "true", "yes", "on"}
 BACKUP_SNAPSHOT_BEFORE_SAVE = (os.environ.get("BACKUP_SNAPSHOT_BEFORE_SAVE", "1") or "").strip().lower() in {"1", "true", "yes", "on"}
 DOCS_TO_CONTROL_PUBLIC_TOKEN = (os.environ.get("DOCS_TO_CONTROL_PUBLIC_TOKEN") or "").strip()
+DOCS_TO_CONTROL_TRUSTED_USER_AGENT = (
+    os.environ.get("DOCS_TO_CONTROL_TRUSTED_USER_AGENT")
+    or "plateformegestion/1.0 (+https://plateformegestion.onrender.com)"
+).strip()
+
 def _int_env(name: str, default: int) -> int:
     try:
         return int(os.environ.get(name, str(default)))
@@ -28103,12 +28108,25 @@ def api_docs_to_control():
 
 from flask import make_response
 
-@app.get("/docs_to_control.json")
+@app.route("/docs_to_control.json", methods=["GET", "OPTIONS"])
 def public_docs_to_control():
     supplied_token = (request.args.get("token") or request.headers.get("X-Docs-To-Control-Token") or "").strip()
     public_token_ok = bool(DOCS_TO_CONTROL_PUBLIC_TOKEN and hmac.compare_digest(supplied_token, DOCS_TO_CONTROL_PUBLIC_TOKEN))
-    if not session.get("admin_logged_in") and not public_token_ok:
+    trusted_user_agent_ok = (
+        not DOCS_TO_CONTROL_PUBLIC_TOKEN
+        and bool(DOCS_TO_CONTROL_TRUSTED_USER_AGENT)
+        and hmac.compare_digest((request.headers.get("User-Agent") or "").strip(), DOCS_TO_CONTROL_TRUSTED_USER_AGENT)
+    )
+    if not session.get("admin_logged_in") and not public_token_ok and not trusted_user_agent_ok:
         abort(403)
+
+    if request.method == "OPTIONS":
+        resp = make_response("", 204)
+        if public_token_ok or trusted_user_agent_ok:
+            resp.headers["Access-Control-Allow-Origin"] = "*"
+            resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+            resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Docs-To-Control-Token"
+        return resp
 
     data = load_data()
     out = []
@@ -28148,8 +28166,8 @@ def public_docs_to_control():
 
     resp = make_response(jsonify({"ok": True, "items": out, "count": len(out)}))
 
-    # CORS uniquement lorsque l'accès public est volontairement protégé par token.
-    if public_token_ok:
+    # CORS uniquement lorsque l'accès public est volontairement activé.
+    if public_token_ok or trusted_user_agent_ok:
         resp.headers["Access-Control-Allow-Origin"] = "*"
         resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
         resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Docs-To-Control-Token"
