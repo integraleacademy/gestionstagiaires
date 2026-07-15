@@ -2551,6 +2551,95 @@ body.partner-space.partner-sidebar-collapsed .sidebar-create-menu.is-open{displa
   body.partner-space.partner-sidebar-collapsed .partner-sidebar__powered img{max-width:118px;max-height:42px;}
 }
 
+
+/* Collapsed sidebar hardening: keep every rail entry icon-only and centered. */
+body.partner-sidebar-collapsed .partner-sidebar__scroll{
+  overflow-x:visible;
+}
+body.partner-sidebar-collapsed .partner-sidebar__identity{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:auto;
+}
+body.partner-sidebar-collapsed .partner-sidebar__home-link,
+body.partner-sidebar-collapsed .partner-sidebar__avatar{
+  flex:0 0 44px;
+  width:44px;
+  height:44px;
+  border-radius:14px;
+}
+body.partner-sidebar-collapsed .partner-sidebar__identity-copy,
+body.partner-sidebar-collapsed .partner-sidebar__section h2,
+body.partner-sidebar-collapsed .partner-sidebar__label,
+body.partner-sidebar-collapsed .partner-sidebar__version,
+body.partner-sidebar-collapsed .subscription-usage-card,
+body.partner-sidebar-collapsed .partner-sidebar__powered span,
+body.partner-sidebar-collapsed .partner-sidebar__chevron{
+  display:none!important;
+}
+body.partner-sidebar-collapsed .partner-sidebar__item{
+  display:flex;
+  align-items:center;
+  justify-content:center!important;
+  width:100%;
+  min-width:0;
+  padding-left:8px!important;
+  padding-right:8px!important;
+  overflow:visible;
+}
+body.partner-sidebar-collapsed .partner-sidebar__item .sidebar-icon{
+  margin:0;
+}
+body.partner-sidebar-collapsed .partner-sidebar__action{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+}
+body.partner-sidebar-collapsed .partner-sidebar__badge{
+  position:absolute!important;
+  right:2px!important;
+  top:2px!important;
+  margin:0!important;
+  min-width:18px;
+  height:18px;
+  padding:0 5px;
+  font-size:10px;
+}
+body.partner-sidebar-collapsed .partner-sidebar__lock{
+  position:absolute!important;
+  right:3px!important;
+  bottom:2px!important;
+  margin:0!important;
+}
+body.partner-sidebar-collapsed .partner-sidebar__powered img{
+  max-width:44px;
+  max-height:44px;
+}
+body.partner-sidebar-collapsed .partner-sidebar__collapse{
+  position:absolute;
+  right:-20px;
+  top:52px;
+  z-index:3;
+}
+@media (max-width:860px){
+  body.partner-sidebar-collapsed .partner-sidebar__identity{
+    display:grid;
+    min-height:104px;
+  }
+  body.partner-sidebar-collapsed .partner-sidebar__label,
+  body.partner-sidebar-collapsed .partner-sidebar__identity-copy,
+  body.partner-sidebar-collapsed .partner-sidebar__section h2,
+  body.partner-sidebar-collapsed .subscription-usage-card,
+  body.partner-sidebar-collapsed .partner-sidebar__powered span{
+    display:flex!important;
+  }
+  body.partner-sidebar-collapsed .partner-sidebar__action{
+    position:static;
+    inset:auto;
+  }
+}
+
 /* Partner identity: organism logo stays in the sidebar, software logo represents Intégrale Connect. */
 body.partner-space .partner-software-logo{display:block;width:auto;object-fit:contain;flex:0 0 auto;}
 body.partner-space .partner-software-logo--header{height:152px;max-width:min(720px,76vw);}
