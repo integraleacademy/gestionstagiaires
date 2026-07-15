@@ -185,6 +185,7 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn('data-fallback-activity="Autorisation préalable - Surveillance humaine ou gardiennage"', html)
         self.assertIn('withLocalCardProFallback(data, fallbackCardProFollowup(box))', html)
         self.assertIn('const fallbackRows = Array.isArray(fallback.results)', html)
+        self.assertIn('normalizedFallbackActivity === "AP SH"', html)
         self.assertIn('Carte professionnelle - Surveillance humaine ou gardiennage', html)
         self.assertIn("NUB : <strong>1050370</strong>", html)
         self.assertIn('["autorisation préalable - surveillance humaine ou gardiennage", "AP SH"]', html)
