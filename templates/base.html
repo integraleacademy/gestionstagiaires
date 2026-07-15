@@ -1062,10 +1062,28 @@
         document.getElementById('sidebarCreateMenu')?.classList.remove('is-open');
       });
     });
+    const openSidebarModalOrRedirect = (buttonId, modalId, queryFlag, focusId, beforeOpen) => {
+      const button = document.getElementById(buttonId);
+      if(button){
+        button.click();
+        return;
+      }
+      const modal = document.getElementById(modalId);
+      if(modal && typeof window.openModal === 'function'){
+        if(typeof beforeOpen === 'function') beforeOpen();
+        window.openModal(modalId);
+        if(focusId) window.setTimeout(() => document.getElementById(focusId)?.focus(), 80);
+        return;
+      }
+      window.location.href = `{{ url_for('admin_sessions') }}?${queryFlag}=1`;
+    };
     document.addEventListener('click', (event) => {
       const actionEl = event.target.closest('[data-sidebar-action]');
       if(!actionEl) return;
+      event.preventDefault();
+      event.stopPropagation();
       const action = actionEl.getAttribute('data-sidebar-action');
+      if(action !== 'toggle-create-menu') document.getElementById('sidebarCreateMenu')?.classList.remove('is-open');
       if(action === 'toggle-create-menu'){
         const menu = document.getElementById('sidebarCreateMenu');
         if(!menu) return;
@@ -1088,14 +1106,10 @@
         else window.location.href = '{{ url_for('admin_sessions') }}?openCreateTrainee=1';
       }
       if(action === 'open-trainee-search') {
-        const traineeSearchButton = document.getElementById('btnOpenTraineeSearch');
-        if(traineeSearchButton) traineeSearchButton.click();
-        else window.location.href = '{{ url_for('admin_sessions') }}?openTraineeSearch=1';
+        openSidebarModalOrRedirect('btnOpenTraineeSearch', 'traineeSearchModal', 'openTraineeSearch', 'traineeSearchInput');
       }
       if(action === 'open-session-search') {
-        const sessionSearchButton = document.getElementById('btnOpenSessionSearch');
-        if(sessionSearchButton) sessionSearchButton.click();
-        else window.location.href = '{{ url_for('admin_sessions') }}?openSessionSearch=1';
+        openSidebarModalOrRedirect('btnOpenSessionSearch', 'sessionSearchModal', 'openSessionSearch', 'sessionSearchInput');
       }
       if(action === 'open-docs-to-control') {
         const docsButton = document.getElementById('btnOpenDocsToControl');
@@ -1103,9 +1117,16 @@
         else window.location.href = '{{ url_for('admin_sessions') }}?openDocsToControl=1';
       }
       if(action === 'open-cnaps-import') {
-        const importButton = document.getElementById('btnOpenCnapsImport');
-        if(importButton) importButton.click();
-        else window.location.href = '{{ url_for('admin_sessions') }}?openCnapsImport=1';
+        openSidebarModalOrRedirect('btnOpenCnapsImport', 'cnapsImportModal', 'openCnapsImport', '', () => {
+          const status = document.getElementById('cnapsImportStatus');
+          const results = document.getElementById('cnapsImportResults');
+          const filesInput = document.getElementById('cnapsImportFiles');
+          const filesText = document.getElementById('cnapsImportFilesText');
+          if(status) status.textContent = '';
+          if(results) results.innerHTML = '';
+          if(filesInput) filesInput.value = '';
+          if(filesText) filesText.textContent = 'Aucun fichier choisi';
+        });
       }
     });
     const partnerCreateBtn = document.getElementById('partnerBtnOpenCreateMenu');
