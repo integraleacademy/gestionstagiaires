@@ -2640,6 +2640,67 @@ body.partner-sidebar-collapsed .partner-sidebar__collapse{
   }
 }
 
+
+/* Collapsed sidebar final pass: compact, stable icon rail. */
+body.partner-sidebar-collapsed .partner-sidebar__section,
+body.partner-sidebar-collapsed .partner-sidebar__nav,
+body.partner-sidebar-collapsed .partner-sidebar__bottom,
+body.partner-sidebar-collapsed .partner-sidebar__create{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  width:100%;
+}
+body.partner-sidebar-collapsed .partner-sidebar__submenu{
+  width:100%;
+  display:flex;
+  justify-content:center;
+}
+body.partner-sidebar-collapsed .partner-sidebar__submenu-panel{
+  display:none!important;
+}
+body.partner-sidebar-collapsed .partner-sidebar__item{
+  position:relative;
+  width:62px!important;
+  height:62px;
+  min-height:62px;
+  margin:4px auto!important;
+  padding:0!important;
+  border-radius:16px;
+  flex:0 0 62px;
+  overflow:hidden;
+}
+body.partner-sidebar-collapsed .partner-sidebar__item.is-primary{
+  height:86px;
+  min-height:86px;
+  flex-basis:86px;
+}
+body.partner-sidebar-collapsed .partner-sidebar__item > .sidebar-icon{
+  width:24px;
+  height:24px;
+  flex:0 0 24px;
+}
+body.partner-sidebar-collapsed .partner-sidebar__badge,
+body.partner-sidebar-collapsed .partner-sidebar__lock{
+  pointer-events:none;
+}
+body.partner-sidebar-collapsed .partner-sidebar__item.is-active:after{
+  right:0;
+  top:10px;
+  bottom:10px;
+  width:5px;
+}
+body.partner-sidebar-collapsed .partner-sidebar__bottom{
+  width:62px;
+  margin-left:auto;
+  margin-right:auto;
+}
+body.partner-sidebar-collapsed .partner-sidebar__powered{
+  width:62px;
+  padding-left:0;
+  padding-right:0;
+}
+
 /* Partner identity: organism logo stays in the sidebar, software logo represents Intégrale Connect. */
 body.partner-space .partner-software-logo{display:block;width:auto;object-fit:contain;flex:0 0 auto;}
 body.partner-space .partner-software-logo--header{height:152px;max-width:min(720px,76vw);}
