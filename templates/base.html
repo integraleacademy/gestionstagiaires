@@ -20,7 +20,7 @@
   {% set admin_sidebar_endpoints = [
     "admin_sessions", "admin_positioning_tests", "admin_positioning_test_detail",
     "admin_partners", "admin_partner_new", "admin_partner_detail", "admin_secretariat",
-    "admin_qonto_settings", "admin_wedof_requests", "admin_wedof", "admin_cnaps_unknown",
+    "admin_qonto_settings", "admin_wedof_requests", "admin_wedof", "admin_cnaps_unknown", "admin_cnaps_tracking",
     "admin_afc", "admin_sessions_conventions", "admin_sessions_automations",
     "admin_sessions_billing", "admin_sessions_archived", "admin_cash_payments",
     "admin_trainees", "admin_trainee_page", "admin_vtc_trainees_all",
@@ -152,6 +152,7 @@
     {% set sidebar_cnaps_menu = {"label":"CNAPS","icon":"shield","badge":"","children":[
       {"label":"DRACAR","icon":"external","href":"https://espace-usagers.cnaps.interieur.gouv.fr/usager/app/accueil","endpoints":[],"locked":not partner_has_module('cnaps'),"external":True},
       {"label":"Import PRE CNAPS","icon":"file","action":"open-cnaps-import","endpoints":[],"locked":is_read_only or not partner_has_module('cnaps')},
+      {"label":"Suivi CNAPS","icon":"shield","href":url_for('admin_cnaps_tracking'),"endpoints":["admin_cnaps_tracking"],"locked":not partner_has_module('cnaps')},
       {"label":"CNAPS inconnus","icon":"shield","href":url_for('admin_cnaps_unknown'),"endpoints":["admin_cnaps_unknown"],"locked":not partner_has_module('cnaps')}
     ]} %}
     {% set sidebar_tools_children = [

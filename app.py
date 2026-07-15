@@ -3027,6 +3027,68 @@ def _cnapsv3_lookup_endpoint() -> str:
     return f"{base_url}/integrations/gestionstagiaire/cnaps/lookup"
 
 
+def _cnapsv3_tracking_endpoint() -> str:
+    base_url = (CNAPSV3_BASE_URL or "").strip().rstrip("/")
+    if not base_url:
+        return ""
+    return f"{base_url}/a-traiter"
+
+
+def _extract_cnapsv3_tracking_items(payload: Any) -> List[Dict[str, Any]]:
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    if not isinstance(payload, dict):
+        return []
+    for key in ("demandes", "requests", "items", "data", "a_traiter", "to_process"):
+        value = payload.get(key)
+        if isinstance(value, list):
+            return [item for item in value if isinstance(item, dict)]
+        if isinstance(value, dict):
+            nested = _extract_cnapsv3_tracking_items(value)
+            if nested:
+                return nested
+    return []
+
+
+def _cnapsv3_tracking_value(item: Dict[str, Any], keys: Iterable[str]) -> str:
+    for key in keys:
+        value = item.get(key)
+        if value not in (None, ""):
+            return str(value).strip()
+    return ""
+
+
+def fetch_cnapsv3_tracking_requests(get_func=requests.get) -> Tuple[List[Dict[str, str]], Optional[str]]:
+    endpoint = _cnapsv3_tracking_endpoint()
+    if not endpoint:
+        return [], "CNAPSV3_BASE_URL non configuré"
+    try:
+        response = get_func(endpoint, headers={"Accept": "application/json"}, timeout=15)
+        status_code = int(getattr(response, "status_code", 200) or 200)
+        if status_code >= 400:
+            raise RuntimeError(f"HTTP {status_code}")
+        payload = response.json() or {}
+    except Exception as exc:
+        app.logger.exception("Impossible de récupérer le suivi CNAPSV3 (%s)", endpoint)
+        return [], str(exc)
+
+    rows: List[Dict[str, str]] = []
+    for item in _extract_cnapsv3_tracking_items(payload):
+        last_name = _cnapsv3_tracking_value(item, ("nom", "last_name", "lastname", "name"))
+        first_name = _cnapsv3_tracking_value(item, ("prenom", "first_name", "firstname"))
+        nub = _cnapsv3_tracking_value(item, ("nub", "NUB", "numero_nub", "nub_number", "num_nub"))
+        status = _cnapsv3_tracking_value(item, ("statut_cnaps", "cnaps_status", "status", "statut"))
+        if not any((last_name, first_name, nub, status)):
+            continue
+        rows.append({
+            "last_name": last_name,
+            "first_name": first_name,
+            "nub": nub,
+            "cnaps_status": status or "INCONNU",
+        })
+    return rows, None
+
+
 def sync_cnapsv3_lookup_identifier(
     first_name: str,
     last_name: str,
@@ -12748,6 +12810,20 @@ def admin_cnaps_unknown():
     response = make_response(render_template(
         "admin_cnaps_unknown.html",
         trainees=trainees,
+    ))
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
+
+
+@app.get("/admin/sessions/suivi-cnaps")
+@admin_login_required
+def admin_cnaps_tracking():
+    requests_rows, fetch_error = fetch_cnapsv3_tracking_requests()
+    response = make_response(render_template(
+        "admin_cnaps_tracking.html",
+        requests_rows=requests_rows,
+        fetch_error=fetch_error,
     ))
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"

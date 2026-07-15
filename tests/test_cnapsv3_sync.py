@@ -1617,5 +1617,65 @@ class ScotiaDashboardFilterCategoryTests(unittest.TestCase):
         self.assertIn('1 action à mener', html)
         self.assertIn('data-category="l1-action"', html)
 
+
+class CnapsTrackingTests(unittest.TestCase):
+    def setUp(self):
+        self.original_base = gestion_app.CNAPSV3_BASE_URL
+        gestion_app.CNAPSV3_BASE_URL = "https://cnapsv3.example"
+
+    def tearDown(self):
+        gestion_app.CNAPSV3_BASE_URL = self.original_base
+
+    def test_tracking_requests_are_normalized_from_a_traiter_payload(self):
+        calls = []
+
+        def fake_get(url, headers, timeout):
+            calls.append({"url": url, "headers": headers, "timeout": timeout})
+            return DummyResponse(200, {
+                "demandes": [
+                    {"nom": "DOE", "prenom": "Jane", "nub": "NUB123", "statut_cnaps": "ACCEPTE"},
+                    {"last_name": "SMITH", "first_name": "John", "numero_nub": "NUB456"},
+                ]
+            })
+
+        rows, error = gestion_app.fetch_cnapsv3_tracking_requests(get_func=fake_get)
+
+        self.assertIsNone(error)
+        self.assertEqual(calls[0]["url"], "https://cnapsv3.example/a-traiter")
+        self.assertEqual(calls[0]["headers"], {"Accept": "application/json"})
+        self.assertEqual(rows, [
+            {"last_name": "DOE", "first_name": "Jane", "nub": "NUB123", "cnaps_status": "ACCEPTE"},
+            {"last_name": "SMITH", "first_name": "John", "nub": "NUB456", "cnaps_status": "INCONNU"},
+        ])
+
+    def test_tracking_page_renders_table(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        original_fetch = gestion_app.fetch_cnapsv3_tracking_requests
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{
+            "last_name": "DOE",
+            "first_name": "Jane",
+            "nub": "NUB123",
+            "cnaps_status": "ACCEPTE",
+        }], None)
+        try:
+            response = client.get("/admin/sessions/suivi-cnaps")
+        finally:
+            gestion_app.fetch_cnapsv3_tracking_requests = original_fetch
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Suivi CNAPS", html)
+        self.assertIn("<th>Nom</th>", html)
+        self.assertIn("<th>Prénom</th>", html)
+        self.assertIn("<th>NUB</th>", html)
+        self.assertIn("<th>Statut Carte pro</th>", html)
+        self.assertIn("DOE", html)
+        self.assertIn("NUB123", html)
+
+
 if __name__ == "__main__":
     unittest.main()
