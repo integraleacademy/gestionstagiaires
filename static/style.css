@@ -3059,3 +3059,71 @@ body.admin-sidebar-active .partner-sidebar__scroll{
     overflow-y:auto;
   }
 }
+
+/* Make the expanded admin sidebar more comfortable while keeping the collapsed rail unchanged. */
+@media (min-width:861px){
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__scroll{
+    padding:10px 8px;
+  }
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__identity{
+    grid-template-columns:66px minmax(0,1fr) 38px;
+    min-height:94px;
+    padding:11px;
+    gap:10px;
+    border-radius:18px;
+  }
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__home-link{
+    width:66px;
+    height:66px;
+    padding:6px;
+    border-radius:18px;
+  }
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__avatar{
+    width:100%;
+    height:100%;
+    border-radius:13px;
+  }
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__collapse{
+    width:38px;
+    height:38px;
+    border-radius:12px;
+  }
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__identity-copy strong{font-size:15px;}
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__identity-copy span,
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__identity-copy em{font-size:12px;}
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__create,
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__section{margin-top:10px;}
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__section h2{
+    margin-bottom:6px;
+    font-size:10.5px;
+  }
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__item{
+    min-height:40px;
+    margin:2px 0;
+    padding:8px 11px;
+    gap:10px;
+    border-radius:13px;
+    font-size:14px;
+  }
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .sidebar-icon-wrap{
+    flex-basis:34px;
+    width:34px;
+    height:34px;
+  }
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .sidebar-icon-wrap .sidebar-icon,
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .sidebar-icon{
+    width:19px;
+    height:19px;
+  }
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__submenu{margin:2px 0;}
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__submenu-panel{
+    gap:2px;
+    margin:4px 0 6px 28px;
+    padding:4px 0 4px 8px;
+  }
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__submenu-panel .partner-sidebar__item{
+    min-height:34px;
+    padding:6px 9px;
+    font-size:12.5px;
+  }
+}
