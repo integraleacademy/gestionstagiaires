@@ -2904,3 +2904,39 @@ body.partner-sidebar-collapsed .sidebar-search-badge{right:-9px;bottom:-8px;}
     zoom:.8;
   }
 }
+
+/* Admin sidebar refinements: keep create button centered and animated. */
+body.admin-sidebar-active .partner-sidebar__item.is-primary{
+  align-items:center;
+  justify-content:center;
+  min-height:52px;
+  overflow:hidden;
+  transition:background .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+body.admin-sidebar-active .partner-sidebar__item.is-primary .sidebar-icon-wrap{
+  width:24px;
+  height:24px;
+  margin:0;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+body.admin-sidebar-active .partner-sidebar__item.is-primary .sidebar-icon{
+  width:24px;
+  height:24px;
+  display:block;
+}
+body.admin-sidebar-active .partner-sidebar__item.is-primary:hover,
+body.admin-sidebar-active .partner-sidebar__item.is-primary:focus-visible{
+  transform:translateY(-1px)!important;
+  box-shadow:0 14px 26px rgba(22,163,74,.30);
+}
+body.admin-sidebar-active .partner-sidebar__item.is-primary:active{
+  transform:translateY(0)!important;
+}
+body.admin-sidebar-active .partner-sidebar__item.is-primary[aria-expanded="true"] .sidebar-icon,
+body.admin-sidebar-active .partner-sidebar__item.is-primary.is-open .sidebar-icon,
+body.admin-sidebar-active .partner-sidebar__create:has(.sidebar-create-menu.is-open) .partner-sidebar__item.is-primary .sidebar-icon{
+  transform:rotate(45deg);
+  transition:transform .18s ease;
+}
