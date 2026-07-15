@@ -7592,15 +7592,24 @@ def fetch_cnaps_public_annuaire(nom: str, nub: str) -> Optional[Dict[str, Any]]:
     if not endpoint or not nom or not nub:
         return None
 
-    payload = {"nom": nom, "nub": nub, "numeroBeneficiaireUnique": nub, "typeRecherche": "AGENT"}
+    payload = {
+        "nom": nom,
+        "nub": nub,
+        "numeroBeneficiaireUnique": nub,
+        "typeRecherche": "AGENT",
+        "page": 0,
+        "size": 100,
+        "limit": 100,
+    }
+    params = {"nom": nom, "nub": nub, "numeroBeneficiaireUnique": nub, "page": 0, "size": 100, "limit": 100}
     headers = {"Accept": "application/json", "User-Agent": "gestionstagiaires/1.0"}
     try:
         try:
             response = requests.post(endpoint, json=payload, headers=headers, timeout=12)
         except Exception:
-            response = requests.get(endpoint, params={"nom": nom, "nub": nub}, headers=headers, timeout=12)
+            response = requests.get(endpoint, params=params, headers=headers, timeout=12)
         if response.status_code >= 400:
-            response = requests.get(endpoint, params={"nom": nom, "nub": nub}, headers=headers, timeout=12)
+            response = requests.get(endpoint, params=params, headers=headers, timeout=12)
         if response.status_code != 200:
             return None
         data = response.json()
