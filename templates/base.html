@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{{ title or "Intégrale Connect • Gestion stagiaires" }}</title>
 
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=static_version|default('20260715-main-sidebar')) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=static_version|default('20260715-sidebar-exact-restore')) }}">
 
   <meta name="apple-mobile-web-app-title" content="Intégrale Connect">
   <meta name="application-name" content="Intégrale Connect">
@@ -1022,7 +1022,8 @@
 
   (function initPartnerSidebar(){
     const sidebar = document.getElementById('partnerSidebar');
-    if(!sidebar) return;
+    if(!sidebar || sidebar.dataset.sidebarInitialized === '1') return;
+    sidebar.dataset.sidebarInitialized = '1';
     const overlay = document.querySelector('.partner-sidebar-overlay');
     const openButtons = document.querySelectorAll('[data-sidebar-open]');
     const closeButtons = document.querySelectorAll('[data-sidebar-close]');
@@ -1034,15 +1035,14 @@
     openButtons.forEach(btn => btn.addEventListener('click', openSidebar));
     closeButtons.forEach(btn => btn.addEventListener('click', closeSidebar));
     overlay?.addEventListener('click', closeSidebar);
-    const storageKey = 'partnerSidebarCollapsed';
+    const storageKey = document.body.classList.contains('admin-sidebar-active') ? 'adminSidebarCollapsed' : 'partnerSidebarCollapsed';
     const isMobile = () => window.matchMedia('(max-width: 860px)').matches;
     const closeCollapsedSubmenus = () => {
       if(!document.body.classList.contains('partner-sidebar-collapsed') || isMobile()) return;
       sidebar.querySelectorAll('.partner-sidebar__submenu[open]').forEach(details => { details.open = false; });
     };
     const storedSidebarState = localStorage.getItem(storageKey);
-    const isAdminSidebar = document.body.classList.contains('admin-sidebar-active');
-    if(isAdminSidebar || storedSidebarState === '1') document.body.classList.add('partner-sidebar-collapsed');
+    if(storedSidebarState === '1') document.body.classList.add('partner-sidebar-collapsed');
     closeCollapsedSubmenus();
     collapseButtons.forEach((collapse) => collapse.addEventListener('click', () => {
       document.body.classList.toggle('partner-sidebar-collapsed');
