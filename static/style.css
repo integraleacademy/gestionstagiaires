@@ -3175,3 +3175,122 @@ body.partner-space.partner-sidebar-collapsed .partner-sidebar__submenu-panel{
 .docs-to-control-drawer.show{display:block!important;}
 .trainee-search-drawer:not(.show),
 .docs-to-control-drawer:not(.show){display:none!important;}
+
+/* Admin sidebar grid alignment: one shared row structure for icons, labels and right actions. */
+body.admin-sidebar-active .partner-sidebar__item{
+  display:grid;
+  grid-template-columns:40px minmax(0,1fr) 40px;
+  align-items:center;
+  column-gap:16px;
+  min-height:64px;
+  width:100%;
+  box-sizing:border-box;
+  line-height:1.25;
+}
+body.admin-sidebar-active .partner-sidebar__item.is-primary{
+  grid-template-columns:40px minmax(0,1fr) 40px;
+  justify-content:initial;
+}
+body.admin-sidebar-active .sidebar-icon-wrap{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:40px;
+  height:40px;
+  flex:0 0 40px;
+  justify-self:center;
+}
+body.admin-sidebar-active .sidebar-icon-wrap .sidebar-icon,
+body.admin-sidebar-active .sidebar-icon{
+  width:22px;
+  height:22px;
+}
+body.admin-sidebar-active .partner-sidebar__label{
+  min-width:0;
+  line-height:1.25;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+body.admin-sidebar-active .partner-sidebar__action{
+  min-width:40px;
+  width:40px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  justify-self:end;
+}
+body.admin-sidebar-active .partner-sidebar__chevron,
+body.admin-sidebar-active .partner-sidebar__badge,
+body.admin-sidebar-active .partner-sidebar__lock{
+  margin-left:0;
+}
+body.admin-sidebar-active .partner-sidebar__badge{
+  align-self:center;
+}
+body.admin-sidebar-active .partner-sidebar__item.is-active:after{
+  top:12px;
+  bottom:12px;
+}
+body.admin-sidebar-active .admin-sidebar-notif-button .partner-sidebar__label{
+  display:block;
+}
+body.admin-sidebar-active .admin-sidebar-notif-button{
+  justify-content:initial;
+}
+body.admin-sidebar-active .partner-sidebar__submenu>summary.partner-sidebar__item{
+  display:grid;
+}
+body.admin-sidebar-active .partner-sidebar__submenu-panel{
+  margin-left:56px;
+}
+body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__submenu-panel{
+  margin-left:56px;
+}
+body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__item{
+  min-height:64px;
+  padding:0 10px;
+  gap:0;
+}
+body.admin-sidebar-active:not(.partner-sidebar-collapsed) .sidebar-icon-wrap{
+  flex-basis:40px;
+  width:40px;
+  height:40px;
+}
+body.admin-sidebar-active:not(.partner-sidebar-collapsed) .sidebar-icon-wrap .sidebar-icon,
+body.admin-sidebar-active:not(.partner-sidebar-collapsed) .sidebar-icon{
+  width:22px;
+  height:22px;
+}
+body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__item{
+  display:flex;
+  min-height:38px;
+  padding:8px 6px;
+}
+body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__action{
+  min-width:0;
+  width:auto;
+}
+@media (max-width:860px){
+  body.admin-sidebar-active .partner-sidebar__item,
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__item{
+    display:grid;
+    grid-template-columns:40px minmax(0,1fr) 40px;
+    column-gap:16px;
+    min-height:64px;
+    padding:0 10px;
+  }
+  body.admin-sidebar-active .partner-sidebar__submenu-panel,
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__submenu-panel{
+    margin-left:56px;
+  }
+}
+.partner-sidebar__action{
+  margin-left:auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+}
+body.admin-sidebar-active .partner-sidebar__action{
+  margin-left:0;
+}

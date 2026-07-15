@@ -14,7 +14,7 @@
   {"label":"Suivi CNAPS","icon":"shield","href":url_for('admin_cnaps_tracking'),"endpoints":["admin_cnaps_tracking"],"badge":"","badge_id":"sidebarCnapsTrackingBadge","locked":not partner_has_module('cnaps')},
   {"label":"CNAPS inconnus","icon":"shield","href":url_for('admin_cnaps_unknown'),"endpoints":["admin_cnaps_unknown"],"locked":not partner_has_module('cnaps')}
 ]} %}
-{% set admin_search_menu = {"label":"Rechercher","icon":"search","badge":"","hide_label":True,"children":[
+{% set admin_search_menu = {"label":"Rechercher","icon":"search","badge":"","children":[
   {"label":"Stagiaire","icon":"users","action":"open-trainee-search","endpoints":[],"locked":False},
   {"label":"Session","icon":"folder","action":"open-session-search","endpoints":[],"locked":False}
 ]} %}
