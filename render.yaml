@@ -4,6 +4,7 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
+    healthCheckPath: /healthz
     envVars:
       - key: QONTO_LOGIN
         sync: false
