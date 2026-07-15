@@ -31,7 +31,7 @@
   <div class="card-row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
     <div>
       <div class="card-title">{{ requests_rows|length }} demande{% if requests_rows|length > 1 %}s{% endif %} CNAPS</div>
-      <div class="muted">Source : {{ cnapsv3_base_url if cnapsv3_base_url is defined else 'CNAPSV3' }}/a-traiter</div>
+      <div class="muted">Source : {{ cnapsv3_base_url if cnapsv3_base_url is defined else 'CNAPSV3' }}/api/a-traiter</div>
     </div>
     <a class="btn btn-outline" href="{{ url_for('admin_cnaps_tracking') }}">Actualiser</a>
   </div>
