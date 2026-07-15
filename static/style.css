@@ -2951,3 +2951,10 @@ body.admin-sidebar-active.partner-sidebar-collapsed .admin-sidebar-notif-panel{l
 .docs-to-control-drawer.show{display:block!important;}
 .trainee-search-drawer:not(.show),
 .docs-to-control-drawer:not(.show){display:none!important;}
+
+/* Restore the desktop workspace scale: the base site should render at 80% on larger screens. */
+@media (min-width:861px){
+  html{
+    zoom:.8;
+  }
+}
