@@ -2810,6 +2810,8 @@ body.partner-space.partner-sidebar-collapsed .collapse-icon--closed{
   body.partner-space .partner-sidebar__powered img{max-height:30px;}
 }
 .sidebar-icon-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;}
+.partner-sidebar__item--orange-icon .sidebar-icon{stroke:#ff6b1a;}
+.partner-sidebar__item--orange-icon .sidebar-icon-wrap{color:#ff6b1a;}
 .sidebar-search-badge{position:absolute;right:-8px;bottom:-7px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;background:#ff6b1a;color:#fff;border:2px solid #071226;font-size:9px;font-weight:950;line-height:15px;text-align:center;box-sizing:content-box;}
 body.partner-sidebar-collapsed .sidebar-search-badge{right:-9px;bottom:-8px;}
 
