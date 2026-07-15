@@ -2497,6 +2497,10 @@ body.partner-space .partner-sidebar__create{position:relative;margin-top:18px;fl
 body.partner-space .partner-sidebar__item{min-height:46px;margin:4px 0;padding:11px 12px;gap:12px;border-radius:14px;box-sizing:border-box;}
 body.partner-space .partner-sidebar__section{margin-top:18px;flex:0 0 auto;}
 body.partner-space .partner-sidebar__section h2{margin:0 0 10px;padding:0 10px;}
+body.admin-sidebar-active:not(.partner-sidebar-collapsed) .admin-sidebar .partner-sidebar__nav{display:flex;flex-direction:column;gap:8px;}
+body.admin-sidebar-active:not(.partner-sidebar-collapsed) .admin-sidebar .partner-sidebar__nav h2{margin:0 0 2px;}
+body.admin-sidebar-active:not(.partner-sidebar-collapsed) .admin-sidebar .partner-sidebar__nav>.partner-sidebar__item,body.admin-sidebar-active:not(.partner-sidebar-collapsed) .admin-sidebar .partner-sidebar__nav>.partner-sidebar__submenu,body.admin-sidebar-active:not(.partner-sidebar-collapsed) .admin-sidebar .partner-sidebar__nav>.notif-wrap{margin:0;}
+body.admin-sidebar-active:not(.partner-sidebar-collapsed) .admin-sidebar .partner-sidebar__nav>.partner-sidebar__submenu>summary.partner-sidebar__item{margin:0;}
 body.partner-space .sidebar-create-menu{
   position:static!important;
   display:none;
