@@ -971,12 +971,21 @@
     overlay?.addEventListener('click', closeSidebar);
     const storageKey = 'partnerSidebarCollapsed';
     const isMobile = () => window.matchMedia('(max-width: 860px)').matches;
+    const closeCollapsedSubmenus = () => {
+      if(!document.body.classList.contains('partner-sidebar-collapsed') || isMobile()) return;
+      sidebar.querySelectorAll('.partner-sidebar__submenu[open]').forEach(details => { details.open = false; });
+    };
     if(localStorage.getItem(storageKey) === '1') document.body.classList.add('partner-sidebar-collapsed');
+    closeCollapsedSubmenus();
     collapse?.addEventListener('click', () => {
       document.body.classList.toggle('partner-sidebar-collapsed');
       localStorage.setItem(storageKey, document.body.classList.contains('partner-sidebar-collapsed') ? '1' : '0');
+      closeCollapsedSubmenus();
     });
-    document.querySelectorAll('.partner-sidebar__item[href], [data-sidebar-action]').forEach(el => el.addEventListener('click', () => { if(isMobile()) closeSidebar(); }));
+    document.querySelectorAll('.partner-sidebar__item[href], [data-sidebar-action]').forEach(el => el.addEventListener('click', () => {
+      if(isMobile()) closeSidebar();
+      if(el.matches('.partner-sidebar__submenu-panel .partner-sidebar__item[href]')) closeCollapsedSubmenus();
+    }));
     sidebar.querySelectorAll('.partner-sidebar__submenu').forEach(details => {
       details.addEventListener('toggle', () => {
         if(!details.open) return;
