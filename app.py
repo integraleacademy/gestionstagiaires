@@ -1857,9 +1857,12 @@ def protect_sensitive_routes():
 @app.context_processor
 def inject_read_only():
     admin_notifications = {"notifications": [], "unresolved_total": 0}
+    cnaps_status_change_badge_count = 0
     if session.get("admin_logged_in") and _admin_can_view_notifications():
         try:
-            admin_notifications = _admin_notifications_payload(load_data())
+            ctx_notifications_data = load_data()
+            admin_notifications = _admin_notifications_payload(ctx_notifications_data)
+            cnaps_status_change_badge_count = _cnaps_status_change_unread_count(ctx_notifications_data)
         except Exception:
             admin_notifications = {"notifications": [], "unresolved_total": 0}
     mail_sent_notice = bool(session.pop("_mail_sent_notice", False))
@@ -1901,6 +1904,7 @@ def inject_read_only():
         "is_read_only": session.get("admin_role") == "viewer",
         "admin_notifications": admin_notifications["notifications"],
         "admin_unresolved_total": admin_notifications["unresolved_total"],
+        "cnaps_status_change_badge_count": cnaps_status_change_badge_count,
         "admin_can_access_notifications": _admin_can_view_notifications(),
         "admin_can_manage_notifications": _admin_can_manage_notifications(),
         "global_mail_sent_notice": mail_sent_notice,
@@ -4047,6 +4051,104 @@ EMAIL_RECIPIENT_BLOCKLIST = _parse_email_recipient_blocklist(os.environ.get("EMA
 def _is_blocked_email_recipient(email: str) -> bool:
     return (email or "").strip().lower() in EMAIL_RECIPIENT_BLOCKLIST
 
+
+CNAPS_STATUS_CHANGE_NOTIFICATION_TO = "cassandre@integraleacademy.com"
+CNAPS_STATUS_CHANGE_NOTIFICATION_CC = ["elsa@integraleacademy.com", "clement@integraleacademy.com"]
+
+def _cnaps_status_change_key(last_name: str, nub: str) -> str:
+    normalized_name = unicodedata.normalize("NFD", str(last_name or ""))
+    normalized_name = "".join(ch for ch in normalized_name if unicodedata.category(ch) != "Mn")
+    normalized_name = re.sub(r"\s+", " ", normalized_name).strip().upper()
+    normalized_nub = re.sub(r"\D+", "", str(nub or ""))[-7:]
+    return f"{normalized_name}|{normalized_nub}"
+
+def _cnaps_result_signature(result: Dict[str, Any]) -> str:
+    rows = result.get("results") if isinstance(result.get("results"), list) else [result]
+    parts = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        values = [str(row.get(key) or "").strip() for key in ("activite", "validite_titre", "date_validite_titre")]
+        parts.append(" • ".join(value for value in values if value))
+    return " || ".join(part for part in parts if part).strip()
+
+def _cnaps_result_has_known_status(result: Dict[str, Any]) -> bool:
+    signature = _cnaps_result_signature(result).upper()
+    return bool(signature and "INCONNU" not in signature)
+
+def build_cnaps_status_change_email(first_name: str, last_name: str, nub: str, new_status: str) -> Tuple[str, str]:
+    full_name = " ".join(part for part in [str(first_name or "").strip(), str(last_name or "").strip()] if part) or "Stagiaire"
+    safe_name = html.escape(full_name)
+    safe_nub = html.escape(str(nub or "—"))
+    safe_status = html.escape(new_status or "Statut à vérifier")
+    subject = f"Changement de statut CNAPS — {full_name}"
+    html_body = f"""
+    <div style="margin:0;padding:0;background:#f4f7fb;font-family:Inter,Arial,sans-serif;color:#0f172a;">
+      <div style="max-width:680px;margin:0 auto;padding:32px 18px;">
+        <div style="background:linear-gradient(135deg,#111827,#2563eb);border-radius:28px;padding:28px;color:#fff;box-shadow:0 24px 70px rgba(15,23,42,.22);">
+          <div style="font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;opacity:.82;">Intégrale Academy · CNAPS</div>
+          <h1 style="margin:16px 0 8px;font-size:30px;line-height:1.1;">Changement de statut</h1>
+          <p style="margin:0;font-size:16px;line-height:1.55;opacity:.9;">Un dossier auparavant indiqué comme inconnu possède désormais un statut CNAPS exploitable.</p>
+        </div>
+        <div style="margin-top:-18px;background:#fff;border:1px solid #e5e7eb;border-radius:24px;padding:26px;box-shadow:0 18px 55px rgba(15,23,42,.10);">
+          <div style="display:inline-block;background:#dcfce7;color:#166534;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;">Nouveau statut détecté</div>
+          <h2 style="margin:18px 0 6px;font-size:24px;color:#111827;">{safe_name}</h2>
+          <p style="margin:0 0 18px;color:#64748b;font-size:14px;">NUB : <strong style="color:#111827;">{safe_nub}</strong></p>
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:18px;padding:18px;">
+            <div style="font-size:12px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.12em;">Statut CNAPS</div>
+            <div style="margin-top:8px;font-size:18px;font-weight:900;color:#0f172a;line-height:1.45;">{safe_status}</div>
+          </div>
+          <p style="margin:20px 0 0;color:#475569;font-size:14px;line-height:1.6;">Merci de vérifier le dossier dans le suivi CNAPS et de réaliser les actions nécessaires.</p>
+        </div>
+      </div>
+    </div>
+    """
+    return subject, html_body
+
+def _notify_cnaps_unknown_status_change(data: Dict[str, Any], *, first_name: str, last_name: str, nub: str, previous_status: str, result: Dict[str, Any]) -> bool:
+    if (previous_status or "").strip().upper() != "INCONNU" or not _cnaps_result_has_known_status(result):
+        return False
+    key = _cnaps_status_change_key(last_name, nub)
+    if not key or key == "|":
+        return False
+    signature = _cnaps_result_signature(result)
+    sent = data.setdefault("cnaps_status_change_notifications", {})
+    if not isinstance(sent, dict):
+        sent = {}
+        data["cnaps_status_change_notifications"] = sent
+    if sent.get(key, {}).get("signature") == signature:
+        return False
+    subject, html_body = build_cnaps_status_change_email(first_name, last_name, nub, signature)
+    response = brevo_send_email(
+        CNAPS_STATUS_CHANGE_NOTIFICATION_TO,
+        subject,
+        html_body,
+        cc_emails=CNAPS_STATUS_CHANGE_NOTIFICATION_CC,
+        metadata={"purpose": "cnaps_status_change", "cnaps_key": key},
+    )
+    if response.get("ok"):
+        sent[key] = {"signature": signature, "sent_at": _now_iso(), "seen_at": "", "first_name": first_name, "last_name": last_name, "nub": nub}
+        return True
+    app.logger.warning("[CNAPS_STATUS_CHANGE] email non envoyé key=%s error=%s", key, response.get("error"))
+    return False
+
+def _cnaps_status_change_unread_count(data: Dict[str, Any]) -> int:
+    sent = data.get("cnaps_status_change_notifications")
+    if not isinstance(sent, dict):
+        return 0
+    return sum(1 for item in sent.values() if isinstance(item, dict) and not item.get("seen_at"))
+
+def _mark_cnaps_status_change_notifications_seen(data: Dict[str, Any]) -> bool:
+    sent = data.get("cnaps_status_change_notifications")
+    if not isinstance(sent, dict):
+        return False
+    now_iso = _now_iso()
+    changed = False
+    for item in sent.values():
+        if isinstance(item, dict) and not item.get("seen_at"):
+            item["seen_at"] = now_iso
+            changed = True
+    return changed
 
 def brevo_send_email(
     to_email: str,
@@ -12942,6 +13044,9 @@ def admin_cnaps_unknown():
 @app.get("/admin/sessions/suivi-cnaps")
 @admin_login_required
 def admin_cnaps_tracking():
+    data = load_data()
+    if _mark_cnaps_status_change_notifications_seen(data):
+        save_data(data)
     requests_rows, fetch_error = fetch_cnapsv3_tracking_requests()
     response = make_response(render_template(
         "admin_cnaps_tracking.html",
@@ -18841,13 +18946,21 @@ def api_cnaps_lookup():
 @admin_login_required
 def api_cnaps_public_annuaire():
     nom = (request.args.get("nom") or "").strip()
+    prenom = (request.args.get("prenom") or "").strip()
     nub = (request.args.get("nub") or "").strip()
+    previous_status = (request.args.get("previous_status") or "").strip()
     if not nom or not nub:
         return jsonify({"ok": False, "error": "missing_nom_or_nub"}), 400
     result = fetch_cnaps_public_annuaire(nom, nub)
     if not result:
         return jsonify({"ok": False, "error": "not_found"}), 404
-    return jsonify({"ok": True, **result})
+    notified = False
+    if previous_status.upper() == "INCONNU":
+        data = load_data()
+        notified = _notify_cnaps_unknown_status_change(data, first_name=prenom, last_name=nom, nub=nub, previous_status=previous_status, result=result)
+        if notified:
+            save_data(data)
+    return jsonify({"ok": True, "notification_sent": notified, **result})
 
 
 # =========================
