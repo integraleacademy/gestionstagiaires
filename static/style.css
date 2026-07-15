@@ -3135,3 +3135,20 @@ body.admin-sidebar-active .partner-sidebar__scroll{
     font-size:12.5px;
   }
 }
+
+
+/* Stabilise le logo Intégrale Connect dans la barre latérale : aucun déplacement au survol. */
+body.admin-sidebar-active .partner-sidebar__powered,
+body.admin-sidebar-active .partner-sidebar__powered img,
+body.partner-space .partner-sidebar__powered,
+body.partner-space .partner-sidebar__powered img{
+  transform:none!important;
+  transition:none!important;
+  animation:none!important;
+}
+
+/* Garde les sous-menus de la barre latérale au-dessus du contenu cliquable. */
+body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__submenu-panel,
+body.partner-space.partner-sidebar-collapsed .partner-sidebar__submenu-panel{
+  z-index:300!important;
+}
