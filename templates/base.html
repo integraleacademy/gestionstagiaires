@@ -1040,7 +1040,9 @@
       if(!document.body.classList.contains('partner-sidebar-collapsed') || isMobile()) return;
       sidebar.querySelectorAll('.partner-sidebar__submenu[open]').forEach(details => { details.open = false; });
     };
-    if(localStorage.getItem(storageKey) === '1') document.body.classList.add('partner-sidebar-collapsed');
+    const storedSidebarState = localStorage.getItem(storageKey);
+    const isAdminSidebar = document.body.classList.contains('admin-sidebar-active');
+    if(storedSidebarState === '1' || (storedSidebarState === null && isAdminSidebar)) document.body.classList.add('partner-sidebar-collapsed');
     closeCollapsedSubmenus();
     collapse?.addEventListener('click', () => {
       document.body.classList.toggle('partner-sidebar-collapsed');
