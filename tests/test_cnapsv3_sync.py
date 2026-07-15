@@ -1647,6 +1647,7 @@ class CnapsTrackingTests(unittest.TestCase):
                 "demandes": [
                     {"nom": "DOE", "prenom": "Jane", "nub": "NUB123", "statut_cnaps": "ACCEPTE"},
                     {"last_name": "SMITH", "first_name": "John", "numero_nub": "NUB456"},
+                    {"nom": "DUPONT", "prenom": "clément", "nub": "NUB789"},
                 ]
             })
 
@@ -1659,6 +1660,7 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertEqual(rows, [
             {"last_name": "DOE", "first_name": "Jane", "nub": "NUB123", "cnaps_status": "ACCEPTE"},
             {"last_name": "SMITH", "first_name": "John", "nub": "NUB456", "cnaps_status": "INCONNU"},
+            {"last_name": "DUPONT", "first_name": "Clément", "nub": "NUB789", "cnaps_status": "INCONNU"},
         ])
 
 
