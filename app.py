@@ -2286,7 +2286,15 @@ BACKUP_MIN_INTERVAL_SECONDS = int(os.environ.get("BACKUP_MIN_INTERVAL_SECONDS", 
 AUTO_RESTORE_FROM_BACKUP = (os.environ.get("AUTO_RESTORE_FROM_BACKUP", "1") or "").strip().lower() in {"1", "true", "yes", "on"}
 BACKUP_SNAPSHOT_BEFORE_SAVE = (os.environ.get("BACKUP_SNAPSHOT_BEFORE_SAVE", "1") or "").strip().lower() in {"1", "true", "yes", "on"}
 DOCS_TO_CONTROL_PUBLIC_TOKEN = (os.environ.get("DOCS_TO_CONTROL_PUBLIC_TOKEN") or "").strip()
-MAX_JSON_BACKUP_BYTES = int(os.environ.get("MAX_JSON_BACKUP_BYTES", "52428800"))
+def _int_env(name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(name, str(default)))
+    except (TypeError, ValueError):
+        app.logger.warning("Invalid integer for %s; using default %s", name, default)
+        return default
+
+
+MAX_JSON_BACKUP_BYTES = _int_env("MAX_JSON_BACKUP_BYTES", 52428800)
 
 _data_lock = threading.RLock()
 _wedof_webhook_lock = threading.RLock()
@@ -2717,22 +2725,35 @@ def _copy_file_durable(src_path: str, dst_path: str) -> None:
         os.fsync(dst.fileno())
 
 
+def _snapshot_file_durable(src_path: str, dst_path: str) -> None:
+    """Create a durable point-in-time snapshot without copying large JSON files when possible."""
+    try:
+        os.link(src_path, dst_path)
+        _fsync_parent_dir(dst_path)
+        return
+    except OSError:
+        pass
+
+    if os.path.getsize(src_path) > MAX_JSON_BACKUP_BYTES:
+        raise ValueError("file larger than MAX_JSON_BACKUP_BYTES")
+
+    _copy_file_durable(src_path, dst_path)
+    _fsync_parent_dir(dst_path)
+
+
 def _force_backup_snapshot(path: str, reason: str = "manual") -> Optional[str]:
     base_name = os.path.basename(path)
     prefix = base_name.replace(".", "_")
     if not os.path.exists(path):
         return None
-    try:
-        if os.path.getsize(path) > MAX_JSON_BACKUP_BYTES:
-            app.logger.warning("Backup skipped for %s: file larger than MAX_JSON_BACKUP_BYTES", path)
-            return None
-    except Exception:
-        pass
     backup_path = _json_backup_path(prefix, reason)
     try:
-        _copy_file_durable(path, backup_path)
+        _snapshot_file_durable(path, backup_path)
         _cleanup_backups_for(prefix)
         return backup_path
+    except ValueError:
+        app.logger.warning("Backup skipped for %s: file larger than MAX_JSON_BACKUP_BYTES and hard-link snapshot unavailable", path)
+        return None
     except Exception:
         app.logger.exception("Unable to create JSON backup for %s", path)
         return None
@@ -2763,7 +2784,8 @@ def _write_json_with_backups(path: str, payload: Any, lock: threading.RLock) -> 
                 # Snapshot systématique avant écriture pour éviter toute fenêtre de perte
                 # de données entre deux backups périodiques.
                 if BACKUP_SNAPSHOT_BEFORE_SAVE:
-                    _force_backup_snapshot(path, reason="before-save")
+                    if _force_backup_snapshot(path, reason="before-save"):
+                        _last_backup_times[path] = now_ts
 
                 if os.path.exists(path):
                     last = _last_backup_times.get(path, 0)
