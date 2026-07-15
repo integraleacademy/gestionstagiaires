@@ -27865,6 +27865,64 @@ def _trainee_search_item(s: dict, t: dict) -> dict:
     }
 
 
+
+def _session_search_item(s: dict) -> dict:
+    session_id = s.get("id")
+    date_start = _session_get(s, "date_start", "")
+    date_end = _session_get(s, "date_end", "")
+    date_range = " → ".join(part for part in [fr_date(date_start), fr_date(date_end)] if part and part != "—")
+    return {
+        "session_id": session_id,
+        "session_name": _session_get(s, "name", ""),
+        "training_type": _session_get(s, "training_type", ""),
+        "date_start": date_start,
+        "date_end": date_end,
+        "date_range": date_range,
+        "exam_date": _session_get(s, "exam_date", ""),
+        "total": len(_session_trainees_list(s)),
+        "archived": bool(s.get("archived")),
+        "admin_url": f"/admin/sessions/{session_id}/trainees",
+    }
+
+
+@app.get("/api/sessions_search")
+@admin_login_required
+def api_sessions_search():
+    q = (request.args.get("q") or "").strip().lower()
+    data = load_data()
+    visible_partner_id = _current_partner_id() or INTEGRALE_PARTNER_ID
+    all_items = []
+
+    for s in data.get("sessions", []):
+        if not isinstance(s, dict):
+            continue
+        if s.get("partner_id") != visible_partner_id:
+            continue
+        if _is_wedof_leads_session(s):
+            continue
+        all_items.append(_session_search_item(s))
+
+    if len(q) < 2:
+        items = sorted(
+            all_items,
+            key=lambda item: (str(item.get("date_start") or ""), str(item.get("session_name") or "")),
+            reverse=True,
+        )[:10]
+        return jsonify({"ok": True, "items": items, "count": len(items)})
+
+    out = []
+    for item in all_items:
+        haystack = " ".join(str(item.get(key) or "") for key in (
+            "session_name", "training_type", "date_start", "date_end", "date_range", "exam_date"
+        )).lower()
+        if q in haystack:
+            out.append(item)
+
+    out.sort(key=lambda item: (bool(item.get("archived")), str(item.get("date_start") or "")), reverse=False)
+    out = out[:30]
+    return jsonify({"ok": True, "items": out, "count": len(out)})
+
+
 @app.get("/api/trainees_search")
 @admin_login_required
 def api_trainees_search():

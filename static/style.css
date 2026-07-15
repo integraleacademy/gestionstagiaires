@@ -2697,3 +2697,32 @@ body.partner-space.partner-sidebar-collapsed .collapse-icon--closed{
     top:auto;
   }
 }
+
+/* Compact workspace: approximate the user's preferred 80% browser zoom for content,
+   while keeping the left navigation large and comfortable to read. */
+@media (min-width:861px){
+  body.admin-sidebar-active,
+  body.partner-space{
+    --partner-sidebar-open:340px;
+    --partner-sidebar-width:340px;
+    --partner-sidebar-closed:86px;
+    --partner-sidebar-collapsed-width:86px;
+  }
+  body.admin-sidebar-active .main-content,
+  body.partner-space .main-content{
+    zoom:.86;
+  }
+  body.admin-sidebar-active .topbar-inner,
+  body.partner-space .topbar-inner{
+    zoom:.9;
+  }
+  body.admin-sidebar-active .partner-sidebar__item,
+  body.partner-space .partner-sidebar__item{
+    font-size:15px;
+    min-height:48px;
+  }
+  body.admin-sidebar-active .partner-sidebar__section h2,
+  body.partner-space .partner-sidebar__section h2{
+    font-size:12px;
+  }
+}
