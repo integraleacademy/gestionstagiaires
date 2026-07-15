@@ -2877,3 +2877,114 @@ body.partner-sidebar-collapsed .sidebar-search-badge{right:2px;bottom:1px;}
   body.endpoint-admin-trainees textarea.comment{min-height:32px;padding:6px 8px;font-size:12px;}
   body.endpoint-admin-trainees .card{padding:12px;border-radius:16px;}
 }
+
+/* Global default display scale requested for desktop workspaces. */
+@media (min-width:861px){
+  html{
+    zoom:.8;
+  }
+}
+
+/* Keep the fixed left menu fully visible at the default 80% display scale. */
+@media (min-width:861px){
+  body.admin-sidebar-active .partner-sidebar__scroll,
+  body.partner-space .partner-sidebar__scroll{
+    padding:8px;
+    overflow:hidden;
+  }
+  body.admin-sidebar-active .partner-sidebar__identity,
+  body.partner-space .partner-sidebar__identity{
+    min-height:0;
+    padding:7px;
+    gap:8px;
+    border-radius:14px;
+  }
+  body.admin-sidebar-active .partner-sidebar__home-link,
+  body.partner-space .partner-sidebar__home-link,
+  body.admin-sidebar-active .partner-sidebar__avatar,
+  body.partner-space .partner-sidebar__avatar{
+    width:42px;
+    height:42px;
+    border-radius:12px;
+  }
+  body.admin-sidebar-active .partner-sidebar__collapse,
+  body.partner-space .partner-sidebar__collapse{
+    width:30px;
+    height:30px;
+    border-radius:10px;
+  }
+  body.admin-sidebar-active .partner-sidebar__identity-copy strong,
+  body.partner-space .partner-sidebar__identity-copy strong{font-size:13px;}
+  body.admin-sidebar-active .partner-sidebar__identity-copy span,
+  body.admin-sidebar-active .partner-sidebar__identity-copy em,
+  body.partner-space .partner-sidebar__identity-copy span,
+  body.partner-space .partner-sidebar__identity-copy em{font-size:10.5px;}
+  body.partner-space .partner-sidebar__identity-copy small{display:none;}
+  body.admin-sidebar-active .partner-sidebar__create,
+  body.partner-space .partner-sidebar__create,
+  body.admin-sidebar-active .partner-sidebar__section,
+  body.partner-space .partner-sidebar__section{margin-top:7px;}
+  body.admin-sidebar-active .partner-sidebar__section h2,
+  body.partner-space .partner-sidebar__section h2{
+    margin-bottom:3px;
+    font-size:9px;
+    line-height:1.1;
+  }
+  body.admin-sidebar-active .partner-sidebar__item,
+  body.partner-space .partner-sidebar__item{
+    min-height:30px;
+    margin:1px 0;
+    padding:5px 8px;
+    gap:7px;
+    border-radius:10px;
+    font-size:12px;
+  }
+  body.admin-sidebar-active .sidebar-icon-wrap,
+  body.partner-space .sidebar-icon-wrap{
+    flex-basis:28px;
+    width:28px;
+    height:28px;
+  }
+  body.admin-sidebar-active .sidebar-icon-wrap .sidebar-icon,
+  body.partner-space .sidebar-icon-wrap .sidebar-icon,
+  body.admin-sidebar-active .sidebar-icon,
+  body.partner-space .sidebar-icon{
+    width:16px;
+    height:16px;
+  }
+  body.admin-sidebar-active .partner-sidebar__submenu,
+  body.partner-space .partner-sidebar__submenu{margin:1px 0;}
+  body.admin-sidebar-active .partner-sidebar__submenu-panel,
+  body.partner-space .partner-sidebar__submenu-panel{
+    gap:1px;
+    margin:2px 0 4px 23px;
+    padding:2px 0 2px 7px;
+  }
+  body.admin-sidebar-active .partner-sidebar__submenu-panel .partner-sidebar__item,
+  body.partner-space .partner-sidebar__submenu-panel .partner-sidebar__item{
+    min-height:27px;
+    padding:4px 7px;
+    font-size:11.2px;
+    border-radius:9px;
+  }
+  body.admin-sidebar-active .partner-sidebar__bottom,
+  body.partner-space .partner-sidebar__bottom{
+    margin-top:auto;
+    padding-top:6px;
+  }
+  body.admin-sidebar-active .partner-sidebar__powered,
+  body.partner-space .partner-sidebar__powered{
+    padding-top:4px;
+    gap:2px;
+    font-size:9px;
+    line-height:1.1;
+  }
+  body.admin-sidebar-active .partner-sidebar__powered img,
+  body.partner-space .partner-sidebar__powered img{
+    max-width:86px;
+    max-height:24px;
+  }
+  body.partner-space .subscription-usage-card{
+    display:none;
+  }
+}
