@@ -4072,6 +4072,16 @@ def _cnaps_result_has_known_status(result: Dict[str, Any]) -> bool:
     signature = _cnaps_result_signature(result).upper()
     return bool(signature and "INCONNU" not in signature)
 
+def _cnaps_pending_status_change_count(data: Dict[str, Any]) -> int:
+    notifications = data.get("cnaps_status_change_notifications") or {}
+    if not isinstance(notifications, dict):
+        return 0
+    return sum(
+        1
+        for item in notifications.values()
+        if isinstance(item, dict) and not item.get("reviewed_at")
+    )
+
 def build_cnaps_status_change_email(first_name: str, last_name: str, nub: str, new_status: str) -> Tuple[str, str]:
     full_name = " ".join(part for part in [str(first_name or "").strip(), str(last_name or "").strip()] if part) or "Stagiaire"
     safe_name = html.escape(full_name)
@@ -18935,7 +18945,14 @@ def api_cnaps_public_annuaire():
         notified = _notify_cnaps_unknown_status_change(data, first_name=prenom, last_name=nom, nub=nub, previous_status=previous_status, result=result)
         if notified:
             save_data(data)
-    return jsonify({"ok": True, "notification_sent": notified, **result})
+    return jsonify({"ok": True, "notification_sent": notified, "pending_status_changes_count": _cnaps_pending_status_change_count(data) if notified else None, **result})
+
+
+@app.get("/api/cnaps_status_changes/pending")
+@admin_login_required
+def api_cnaps_status_changes_pending():
+    data = load_data()
+    return jsonify({"ok": True, "count": _cnaps_pending_status_change_count(data)})
 
 
 # =========================
