@@ -13,14 +13,22 @@ function toast(msg, ok=true) {
 function openModal(id) {
   const el = qs(`#${id}`);
   if (!el) return;
+  if (typeof window.closeAllPanels === "function") window.closeAllPanels({ exceptId: id });
   el.setAttribute("aria-hidden", "false");
   el.classList.add("open", "show");
+  el.style.display = (el.classList.contains("trainee-search-drawer") || el.classList.contains("docs-to-control-drawer")) ? "block" : "flex";
+  el.style.pointerEvents = "auto";
+  document.body.style.overflow = "hidden";
 }
 function closeModal(id) {
   const el = qs(`#${id}`);
   if (!el) return;
   el.setAttribute("aria-hidden", "true");
-  el.classList.remove("open", "show");
+  el.classList.remove("open", "show", "active", "is-open");
+  el.style.display = "none";
+  el.style.pointerEvents = "none";
+  if (typeof window.closeAllPanels === "function") window.closeAllPanels();
+  else document.body.style.overflow = "";
 }
 
 function withAdminKey(url) {
