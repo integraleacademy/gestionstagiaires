@@ -3161,7 +3161,7 @@ def fetch_cnapsv3_tracking_requests(get_func=None) -> Tuple[List[Dict[str, str]]
     rows: List[Dict[str, str]] = []
     for item in _extract_cnapsv3_tracking_items(payload):
         last_name = _cnapsv3_tracking_value(item, ("nom", "last_name", "lastname", "name"))
-        first_name = _cnapsv3_tracking_value(item, ("prenom", "first_name", "firstname"))
+        first_name = normalize_first_name(_cnapsv3_tracking_value(item, ("prenom", "first_name", "firstname")))
         nub = _cnapsv3_tracking_value(item, ("nub", "NUB", "numero_nub", "nub_number", "num_nub"))
         status = _cnapsv3_tracking_value(item, ("statut_cnaps", "cnaps_status", "status", "statut"))
         if not any((last_name, first_name, nub, status)):
