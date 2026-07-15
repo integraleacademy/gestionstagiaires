@@ -25055,14 +25055,15 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     has_end_attestation = bool(config.get("end_template"))
     entry_sent = bool(trainee.get("attestation_entree_aps_sent_at"))
     end_sent = bool(trainee.get("attestation_fin_aps_sent_at"))
-    convention_step = {"label": "Convention", "state": "complete" if has_generated_convention else ("error" if convention_status == "error" else "pending")}
-    signature_step = {"label": "Signature", "state": "complete" if convention_signed else ("error" if convention_status in {"error", "refused", "expired"} else "pending" if has_signature_request else "blocked")}
+    convention_sent_step = {"label": "Convention envoyée", "state": "complete" if convention_sent else ("error" if convention_status == "error" else "pending" if has_generated_convention else "blocked")}
+    convention_signed_step = {"label": "Convention signée", "state": "complete" if convention_signed else ("error" if convention_status in {"error", "refused", "expired"} else "pending" if has_signature_request else "blocked")}
     if is_vae_automation:
-        timeline = [convention_step, signature_step]
+        timeline = [convention_sent_step, convention_signed_step]
     else:
         timeline = [
-            convention_step,
-            {"label": "Convocation", "state": "complete" if convocation_status == "sent" else ("error" if convocation_status == "error" else "pending")} if is_aps_automation else signature_step,
+            convention_sent_step,
+            convention_signed_step,
+            {"label": "Convocation", "state": "complete" if convocation_status == "sent" else ("error" if convocation_status == "error" else "blocked" if not convention_signed else "pending")} if is_aps_automation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
             {"label": "Attestation entrée", "state": "complete" if entry_sent else ("blocked" if not convention_signed else "pending")} if has_entry_attestation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
             {"label": "Attestation sortie", "state": "complete" if end_sent else ("blocked" if not convention_signed else "pending")} if has_end_attestation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
         ]
@@ -25077,9 +25078,9 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     else:
         global_status = "action_required"
     if is_vae_automation:
-        ready_documents = int(has_generated_convention) + int(convention_signed)
+        ready_documents = int(convention_sent) + int(convention_signed)
     else:
-        ready_documents = int(convention_signed) + int(is_aps_automation and convocation_status == "sent") + int(has_entry_attestation and entry_sent) + int(has_end_attestation and end_sent)
+        ready_documents = int(convention_sent) + int(convention_signed) + int(is_aps_automation and convocation_status == "sent") + int(has_entry_attestation and entry_sent) + int(has_end_attestation and end_sent)
 
     convention_labels = {
         "not_generated": ("Non générée", "file", "pending", "pending", "Générer la convention"),
@@ -25101,7 +25102,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     }
     v_label, v_icon, v_tone, v_card_tone = convocation_labels.get(convocation_status, convocation_labels["error"])
 
-    total_documents = 2 if is_vae_automation else 1 + int(is_aps_automation) + int(has_entry_attestation) + int(has_end_attestation)
+    total_documents = 2 if is_vae_automation else 2 + int(is_aps_automation) + int(has_entry_attestation) + int(has_end_attestation)
     progress_percent = round((ready_documents / total_documents) * 100) if total_documents else 0
 
     planned_automations = []
