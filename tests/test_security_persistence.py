@@ -31,6 +31,15 @@ class SecurityPersistenceTests(unittest.TestCase):
         gestion_app.DOCS_TO_CONTROL_PUBLIC_TOKEN = self.original_docs_token
         self.temp_dir.cleanup()
 
+    def test_public_home_head_does_not_crash_in_global_session_guard(self):
+        response = self.client.head("/")
+        self.assertNotEqual(response.status_code, 500)
+
+    def test_secretariat_notifications_without_auth_returns_401_not_name_error(self):
+        response = self.client.get("/api/secretariat/notifications")
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.get_json()["error"], "auth_required")
+
     def test_admin_api_requires_authentication(self):
         response = self.client.post("/api/admin/afc/candidates/delete-all")
         self.assertEqual(response.status_code, 401)

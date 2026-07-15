@@ -80,10 +80,10 @@ class PartnerInvitationEmailTests(unittest.TestCase):
 
 
     def test_activation_url_rewrites_legacy_render_host(self):
-        with mock.patch.dict(os.environ, {"APP_BASE_URL": "https://gestionstagiaires-r5no.onrender.com"}, clear=False):
+        with mock.patch.dict(os.environ, {"APP_BASE_URL": "https://gestionstagiaires-test-v2.onrender.com"}, clear=False):
             activation_url = gestion_app._activation_url(self.raw)
-        self.assertTrue(activation_url.startswith("https://gestionstagiaires-test-v2.onrender.com/activate-account?token="))
-        self.assertNotIn("gestionstagiaires-r5no.onrender.com", activation_url)
+        self.assertTrue(activation_url.startswith("https://gestionstagiaires-r5no.onrender.com/activate-account?token="))
+        self.assertNotIn("gestionstagiaires-test-v2.onrender.com", activation_url)
 
     def test_resend_invitation_reuses_existing_link_and_test_url(self):
         gestion_app.BREVO_API_KEY = "key"
@@ -122,6 +122,41 @@ class PartnerInvitationEmailTests(unittest.TestCase):
         self.assertEqual(len(cancelled_invitations), 1)
         self.assertEqual(active_invitations[0]["last_send_status"], "réussi")
         self.assertIn("https://test.example.com/activate-account?token=", post.call_args.kwargs["json"]["textContent"])
+
+
+    def test_send_invitation_replaces_expired_invitation(self):
+        gestion_app.BREVO_API_KEY = "key"
+        gestion_app.BREVO_SENDER_EMAIL = "sender@example.com"
+        gestion_app.BREVO_SENDER_NAME = "Sender"
+        data = gestion_app.load_data()
+        data["invitations"][0]["expires_at"] = "2020-01-01T00:00:00Z"
+        gestion_app.save_data(data)
+        with mock.patch("app.requests.post") as post:
+            post.return_value.status_code = 201
+            post.return_value.text = '{"messageId":"mid"}'
+            post.return_value.json.return_value = {"messageId": "mid"}
+            self.client.post(f"/admin/partners/{self.partner_id}/send-invitation")
+        data = gestion_app.load_data()
+        active_invitations = [i for i in data["invitations"] if not i.get("cancelled_at") and not i.get("used_at")]
+        self.assertEqual(len(active_invitations), 2)
+        self.assertNotEqual(active_invitations[-1]["expires_at"], "2020-01-01T00:00:00Z")
+        sent_token = post.call_args.kwargs["json"]["textContent"].split("token=", 1)[1]
+        self.assertIs(gestion_app._find_invitation_by_raw_token(data, sent_token), active_invitations[-1])
+
+    def test_activate_account_accepts_invitation_missing_hash_when_encrypted_token_matches(self):
+        data = gestion_app.load_data()
+        data["invitations"][0]["token_hash"] = ""
+        gestion_app.save_data(data)
+        response = self.client.post(
+            f"/activate-account?token={self.raw}",
+            data={"password": "Password123", "confirm": "Password123"},
+            follow_redirects=False,
+        )
+        self.assertEqual(response.status_code, 302)
+        data = gestion_app.load_data()
+        self.assertTrue(data["users"][0]["password_hash"])
+        self.assertTrue(data["invitations"][0]["used_at"])
+        self.assertEqual(data["invitations"][0]["token_hash"], gestion_app._hash_token(self.raw))
 
     def test_manual_link_inaccessible_to_partner_user(self):
         with self.client.session_transaction() as sess:

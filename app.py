@@ -265,7 +265,7 @@ QONTO_OAUTH_REQUIRED_MESSAGE = "Connexion Qonto OAuth requise pour programmer le
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL")
     or os.environ.get("PUBLIC_BASE_URL")
-    or "https://gestionstagiaires-test-v2.onrender.com"
+    or "https://gestionstagiaires-r5no.onrender.com"
 ).strip().rstrip("/")
 QONTO_OAUTH_REDIRECT_URI = (
     os.environ.get("QONTO_OAUTH_REDIRECT_URI")
@@ -1924,33 +1924,13 @@ def admin_login():
         "partner_suspended": "L’espace partenaire est suspendu. Contactez l’administrateur.",
         "partner_archived": "L’espace partenaire est archivé. Contactez l’administrateur.",
     }
-    error_html = ""
-    if error_code in messages:
-        error_html = f'<p role="alert" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:10px;padding:10px;font-weight:700">{html.escape(messages[error_code])}</p>'
-    return f"""
-    <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Connexion admin</title></head>
-    <body style="font-family:Arial,sans-serif;max-width:420px;margin:60px auto;padding:20px">
-      <h2>Connexion</h2>
-      <p style="color:#6b7280;font-size:13px;margin-top:-4px">
-        Un compte de consultation peut être configuré pour un accès en lecture seule.<br>
-        Les utilisateurs partenaires doivent se connecter avec l’adresse e-mail utilisée lors de l’activation de leur compte.
-      </p>
-      {error_html}
-      <form method="post" action="/admin/login">
-        <input type="hidden" name="next" value="{html.escape(next_url, quote=True)}">
-        <div style="margin:10px 0">
-          <label>Adresse e-mail ou identifiant</label><br>
-          <input name="username" autocomplete="username" style="width:100%;padding:10px">
-        </div>
-        <div style="margin:10px 0">
-          <label>Mot de passe</label><br>
-          <input name="password" type="password" autocomplete="current-password" style="width:100%;padding:10px">
-        </div>
-        <button type="submit" style="padding:10px 14px">Se connecter</button>
-      </form>
-    </body></html>
-    """
+    activated_message = "Votre compte est activé. Vous pouvez maintenant vous connecter." if request.args.get("activated") == "1" else ""
+    return render_template(
+        "admin_login.html",
+        next_url=next_url,
+        error_message=messages.get(error_code, ""),
+        activated_message=activated_message,
+    )
 
 @app.post("/admin/login")
 def admin_login_post():
@@ -2610,15 +2590,31 @@ def _safe_brevo_log(action: str, **details: Any) -> None:
     app.logger.info("[BREVO_INVITATION] %s %s", action, json.dumps(redacted, ensure_ascii=False, default=str))
 
 
+def _partner_invitation_mail_html(user: Dict[str, Any], partner: Dict[str, Any], activation_url: str) -> str:
+    logo_src = f"{PUBLIC_BASE_URL.rstrip('/')}/static/iaconnectpartenaires.png"
+    escaped_url = html.escape(activation_url, quote=True)
+    first_name = html.escape(user.get('first_name') or '')
+    partner_name = html.escape(partner.get('name') or '')
+    return mail_layout(f"""
+      <div style="text-align:center;margin-bottom:22px">
+        <img src="{logo_src}" alt="Intégrale Connect Partenaires" style="max-height:144px;width:auto;display:block;margin:0 auto;border:0;outline:none;text-decoration:none">
+      </div>
+      <div style="background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#fff;border-radius:20px;padding:24px 22px;margin-bottom:22px;text-align:center">
+        <p style="margin:0 0 8px;text-transform:uppercase;letter-spacing:.14em;font-size:12px;color:#bfdbfe;font-weight:700">Espace partenaire</p>
+        <h1 style="margin:0;font-size:28px;line-height:1.15">Activation de votre espace partenaire</h1>
+      </div>
+      <p style="font-size:16px;color:#334155;line-height:1.55;margin:0 0 14px">Bonjour {first_name},</p>
+      <p style="font-size:16px;color:#334155;line-height:1.55;margin:0 0 22px">Votre espace <strong style="color:#0f172a">{partner_name}</strong> est prêt.</p>
+      <div style="text-align:center;margin:28px 0">
+        <a href="{escaped_url}" style="display:inline-block;background:#f97316;color:#fff;text-decoration:none;font-weight:800;border-radius:999px;padding:14px 24px;box-shadow:0 12px 24px rgba(249,115,22,.22)">Définir mon mot de passe</a>
+      </div>
+      <p style="font-size:14px;color:#64748b;line-height:1.55;margin:0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:14px 16px">Ce lien est personnel, utilisable une seule fois et expire sous 48 heures.</p>
+    """, show_default_logo=False, footer_text="Intégrale Connect Partenaires")
+
+
 def _send_partner_invitation_email(user: Dict[str, Any], partner: Dict[str, Any], raw_token: str) -> Dict[str, Any]:
     activation_url = _activation_url(raw_token)
-    html_body = mail_layout(f"""
-      <h2>Activation de votre espace partenaire</h2>
-      <p>Bonjour {html.escape(user.get('first_name') or '')},</p>
-      <p>Votre espace <strong>{html.escape(partner.get('name') or '')}</strong> est prêt.</p>
-      <p><a href=\"{html.escape(activation_url, quote=True)}\">Définir mon mot de passe</a></p>
-      <p>Ce lien est personnel, utilisable une seule fois et expire sous 48 heures.</p>
-    """)
+    html_body = _partner_invitation_mail_html(user, partner, activation_url)
     text_body = f"Activez votre espace partenaire : {activation_url}"
     result = brevo_send_email(user.get("email") or "", "Activation de votre espace partenaire", html_body, text_content=text_body, metadata={"partner_id": partner.get("id"), "partner_name": partner.get("name"), "user_id": user.get("id"), "purpose": "partner_invitation"})
     return result
@@ -2966,8 +2962,8 @@ CNAPSV3_NOTIFICATIONS_ENDPOINT = os.environ.get("CNAPSV3_NOTIFICATIONS_ENDPOINT"
 CNAPSV3_BASE_URL = os.environ.get("CNAPSV3_BASE_URL", "https://cnapsv3.onrender.com").strip().rstrip("/")
 GESTIONSTAGIAIRE_SYNC_TOKEN = os.environ.get("GESTIONSTAGIAIRE_SYNC_TOKEN", "").strip()
 
-PUBLIC_STUDENT_PORTAL_BASE_DEFAULT = "https://gestionstagiaires-test-v2.onrender.com"
-PUBLIC_STUDENT_PORTAL_LEGACY_HOSTS = {"gestionstagiaires-r5no.onrender.com"}
+PUBLIC_STUDENT_PORTAL_BASE_DEFAULT = "https://gestionstagiaires-r5no.onrender.com"
+PUBLIC_STUDENT_PORTAL_LEGACY_HOSTS = {"gestionstagiaires-test-v2.onrender.com"}
 
 
 def _normalize_public_student_portal_base(value: str) -> str:
@@ -12450,10 +12446,43 @@ def _partner_admin_user(data: Dict[str, Any], partner_id: str) -> Optional[Dict[
     return next((u for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id and u.get("role") == "partner_admin"), None)
 
 
+def _invitation_is_expired(invitation: Dict[str, Any], now_dt: Optional[datetime.datetime] = None) -> bool:
+    expires_at = _parse_iso_datetime((invitation or {}).get("expires_at"))
+    if not expires_at:
+        return False
+    return expires_at.replace(tzinfo=None) < (now_dt or datetime.datetime.utcnow())
+
+
 def _active_partner_invitation(data: Dict[str, Any], partner_id: str) -> Optional[Dict[str, Any]]:
-    invitations = [i for i in data.get("invitations", []) if isinstance(i, dict) and i.get("partner_id") == partner_id and not i.get("used_at") and not i.get("cancelled_at")]
+    now_dt = datetime.datetime.utcnow()
+    invitations = [
+        i
+        for i in data.get("invitations", [])
+        if isinstance(i, dict)
+        and i.get("partner_id") == partner_id
+        and not i.get("used_at")
+        and not i.get("cancelled_at")
+        and not _invitation_is_expired(i, now_dt)
+    ]
     invitations.sort(key=lambda i: i.get("created_at") or "", reverse=True)
     return invitations[0] if invitations else None
+
+
+def _find_invitation_by_raw_token(data: Dict[str, Any], raw_token: str) -> Optional[Dict[str, Any]]:
+    token_hash = _hash_token(raw_token)
+    for invitation in data.get("invitations", []):
+        if not isinstance(invitation, dict):
+            continue
+        stored_hash = invitation.get("token_hash") or ""
+        if stored_hash and hmac.compare_digest(stored_hash, token_hash):
+            return invitation
+        encrypted_token = invitation.get("token_encrypted") or ""
+        if encrypted_token:
+            decrypted_token = _decrypt_invitation_token(encrypted_token)
+            if decrypted_token and hmac.compare_digest(decrypted_token, raw_token):
+                invitation["token_hash"] = token_hash
+                return invitation
+    return None
 
 
 def _send_and_record_invitation(data: Dict[str, Any], partner: Dict[str, Any], user: Dict[str, Any], invitation: Dict[str, Any]) -> Dict[str, Any]:
@@ -12597,11 +12626,13 @@ def activate_account():
         password = request.form.get("password") or ""
         confirm = request.form.get("confirm") or ""
         data = load_data()
-        invitation = next((i for i in data.get("invitations", []) if isinstance(i, dict) and hmac.compare_digest(i.get("token_hash") or "", _hash_token(token))), None)
+        invitation = _find_invitation_by_raw_token(data, token)
         now_dt = datetime.datetime.utcnow()
-        if not invitation or invitation.get("used_at") or invitation.get("cancelled_at"):
-            error = "Invitation invalide ou déjà utilisée."
-        elif _parse_iso_datetime(invitation.get("expires_at")) and _parse_iso_datetime(invitation.get("expires_at")).replace(tzinfo=None) < now_dt:
+        if not invitation:
+            error = "Invitation invalide. Demandez une nouvelle invitation depuis la fiche partenaire."
+        elif invitation.get("used_at") or invitation.get("cancelled_at"):
+            error = "Invitation déjà utilisée ou annulée. Demandez une nouvelle invitation depuis la fiche partenaire."
+        elif _invitation_is_expired(invitation, now_dt):
             error = "Invitation expirée."
         elif password != confirm or not _password_is_valid(password):
             error = "Le mot de passe doit contenir au moins 10 caractères, avec lettres et chiffres."
@@ -14686,8 +14717,9 @@ def api_qonto_status():
 def admin_qonto_connect():
     app.logger.info("[QONTO OAUTH] /admin/qonto/connect called")
     if not _qonto_oauth_is_configured():
+        app.logger.warning("[QONTO OAUTH] missing OAuth client configuration")
         flash("Variables OAuth Qonto manquantes : QONTO_OAUTH_CLIENT_ID et QONTO_OAUTH_CLIENT_SECRET.", "error")
-        return redirect(url_for("admin_qonto_settings"))
+        return redirect(url_for("admin_qonto_settings", oauth="config_missing"))
     state = secrets.token_urlsafe(32)
     session["qonto_oauth_state"] = state
     params = {
