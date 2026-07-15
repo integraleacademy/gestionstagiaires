@@ -141,6 +141,7 @@
     {% set space_items = [
       {"label":"Tableau de bord","icon":"home","href":url_for('admin_sessions'),"endpoints":["admin_sessions"],"badge":"","locked":False},
       {"label":"Rechercher un stagiaire","icon":"search","action":"open-trainee-search","endpoints":[],"badge":"","locked":False},
+      {"label":"Rechercher une session","icon":"search","action":"open-session-search","endpoints":[],"badge":"","locked":False},
       {"label":"Documents à contrôler","icon":"file","action":"open-docs-to-control","endpoints":[],"badge":"","badge_id":"sidebarDocsToControlBadge","locked":False},
       {"label":"Mes informations","icon":"info","href":url_for('partner_information'),"endpoints":["partner_information"],"badge":"","locked":False},
       {"label":"Mon abonnement","icon":"card","href":url_for('partner_subscription'),"endpoints":["partner_subscription"],"badge":"","locked":False}
@@ -215,6 +216,7 @@
     {% set admin_sidebar_items = [
       {"label":"Tableau de bord","icon":"home","href":url_for('admin_sessions'),"endpoints":["admin_sessions"],"badge":"","locked":False},
       {"label":"Rechercher un stagiaire","icon":"search","action":"open-trainee-search","endpoints":[],"badge":"","locked":False},
+      {"label":"Rechercher une session","icon":"search","action":"open-session-search","endpoints":[],"badge":"","locked":False},
       {"label":"Documents à contrôler","icon":"file","action":"open-docs-to-control","endpoints":[],"badge":"","badge_id":"sidebarDocsToControlBadge","locked":False},
       {"label":"Tests de positionnement","icon":"graduation","href":url_for('admin_positioning_tests'),"endpoints":["admin_positioning_tests","admin_positioning_test_detail"],"badge":"","locked":False},
       {"label":"Gérer les partenaires","icon":"users","href":url_for('admin_partners'),"endpoints":["admin_partners","admin_partner_new","admin_partner_detail"],"badge":"","locked":False},
@@ -1065,6 +1067,11 @@
         const traineeSearchButton = document.getElementById('btnOpenTraineeSearch');
         if(traineeSearchButton) traineeSearchButton.click();
         else window.location.href = '{{ url_for('admin_sessions') }}?openTraineeSearch=1';
+      }
+      if(action === 'open-session-search') {
+        const sessionSearchButton = document.getElementById('btnOpenSessionSearch');
+        if(sessionSearchButton) sessionSearchButton.click();
+        else window.location.href = '{{ url_for('admin_sessions') }}?openSessionSearch=1';
       }
       if(action === 'open-docs-to-control') {
         const docsButton = document.getElementById('btnOpenDocsToControl');
