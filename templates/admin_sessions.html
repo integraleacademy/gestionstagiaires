@@ -1593,7 +1593,7 @@
         if(previewUrl){ await window.openConventionPreview?.(previewUrl); }
       }
     });
-    if(!conventionPayload || !result.convention_signature_url){ continueAfterConvention(); return; }
+    if(!conventionPayload){ continueAfterConvention(); return; }
     try{
       await saveConventionFinancing(conventionPayload);
     }catch(error){
@@ -1606,6 +1606,7 @@
       continueAfterConvention();
       return;
     }
+    if(conventionPayload.send_convention === false || !result.convention_signature_url){ continueAfterConvention(); return; }
     window.showConventionTransmissionProgress?.();
     try{
       const response = await fetch(result.convention_signature_url, {

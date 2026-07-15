@@ -603,6 +603,12 @@
       clearFinanceError();
       Object.values(fields).forEach((field)=>field.addEventListener("input", clearFinanceError));
 
+      const collectPayload = ()=>({
+        training_price: fields.training_price.value,
+        cpf_amount: fields.cpf_amount.value,
+        personal_amount: fields.personal_amount.value,
+        other_amount: fields.other_amount.value
+      });
       const buildPayload = ()=>{
         const trainingPrice = parseAmount(fields.training_price.value);
         const financingTotal = parseAmount(fields.cpf_amount.value) + parseAmount(fields.personal_amount.value) + parseAmount(fields.other_amount.value);
@@ -611,14 +617,9 @@
           showFinanceError(`Impossible de continuer : le total CPF + Perso + autre financement (${formatAmount(financingTotal)} €) doit être égal au montant de la formation (${formatAmount(trainingPrice)} €). Écart : ${formatAmount(diff)} €.`);
           return null;
         }
-        return {
-          training_price: fields.training_price.value,
-          cpf_amount: fields.cpf_amount.value,
-          personal_amount: fields.personal_amount.value,
-          other_amount: fields.other_amount.value
-        };
+        return collectPayload();
       };
-      noButton.onclick = ()=>finish(null);
+      noButton.onclick = ()=>finish({...collectPayload(), send_convention: false});
       previewButton.onclick = async ()=>{
         const payload = buildPayload();
         if(!payload) return;
@@ -639,7 +640,7 @@
       };
       yesButton.onclick = ()=>{
         const payload = buildPayload();
-        if(payload) finish(payload);
+        if(payload) finish({...payload, send_convention: true});
       };
 
       yesButton.disabled = false;
