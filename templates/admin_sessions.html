@@ -2440,30 +2440,15 @@
 
   // boutons du menu latéral
   document.getElementById("btnOpenDocsToControl")?.addEventListener("click", async ()=>{
-    const panel = document.getElementById("docsToControlModal");
-    if(panel){
-      panel.classList.add("show");
-      panel.style.display = "block";
-      panel.setAttribute("aria-hidden", "false");
-    }
+    openModal("docsToControlModal");
     await loadDocsToControl();
   });
   document.getElementById("btnOpenTraineeSearch")?.addEventListener("click", ()=>{
-    const panel = document.getElementById("traineeSearchModal");
-    if(panel){
-      panel.classList.add("show");
-      panel.style.display = "block";
-      panel.setAttribute("aria-hidden", "false");
-    }
+    openModal("traineeSearchModal");
     setTimeout(()=>document.getElementById("traineeSearchInput")?.focus(), 80);
   });
   document.getElementById("btnOpenSessionSearch")?.addEventListener("click", ()=>{
-    const panel = document.getElementById("sessionSearchModal");
-    if(panel){
-      panel.classList.add("show");
-      panel.style.display = "block";
-      panel.setAttribute("aria-hidden", "false");
-    }
+    openModal("sessionSearchModal");
     setTimeout(()=>document.getElementById("sessionSearchInput")?.focus(), 80);
   });
 

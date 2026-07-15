@@ -3152,3 +3152,25 @@ body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__submenu-pa
 body.partner-space.partner-sidebar-collapsed .partner-sidebar__submenu-panel{
   z-index:300!important;
 }
+
+/* Admin overlay safety: closed overlays must never intercept clicks. */
+.modal-backdrop,
+.partner-sidebar-overlay,
+.locked-module-modal{
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+}
+.modal-backdrop.show,
+.modal-backdrop.open,
+.partner-sidebar-overlay.is-open,
+.locked-module-modal.is-open{
+  opacity:1;
+  visibility:visible;
+  pointer-events:auto;
+}
+.modal-backdrop.show{display:flex;}
+.trainee-search-drawer.show,
+.docs-to-control-drawer.show{display:block!important;}
+.trainee-search-drawer:not(.show),
+.docs-to-control-drawer:not(.show){display:none!important;}
