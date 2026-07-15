@@ -3445,36 +3445,36 @@ body.admin-sidebar-active .partner-sidebar__action{
   margin-left:0;
 }
 
-/* Admin sidebar collapse handle: always visible and clickable on desktop.
-   It sits on the right edge of the rail like the original compact menu. */
+/* Dedicated admin collapse control, isolated from the shared partner sidebar styles. */
+.admin-sidebar-collapse-handle{display:none;}
 @media (min-width:861px){
-  body.admin-sidebar-active .partner-sidebar{
-    overflow:visible;
-  }
-  body.admin-sidebar-active .partner-sidebar__identity{
-    position:relative;
-  }
-  body.admin-sidebar-active .partner-sidebar__collapse,
-  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__collapse,
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__collapse{
+  body.admin-sidebar-active .admin-sidebar-collapse-handle{
     display:flex!important;
-    position:absolute!important;
-    right:-18px!important;
-    top:18px!important;
-    width:36px!important;
-    height:36px!important;
+    position:absolute;
+    right:-18px;
+    top:18px;
+    width:36px;
+    height:36px;
     align-items:center;
     justify-content:center;
     border:1px solid rgba(255,255,255,.16);
-    border-radius:12px!important;
-    background:#10213d!important;
-    color:#dbeafe!important;
+    border-radius:12px;
+    background:#10213d;
+    color:#dbeafe;
     box-shadow:0 10px 24px rgba(2,6,23,.28);
-    z-index:220;
+    z-index:260;
     cursor:pointer;
   }
-  body.admin-sidebar-active .partner-sidebar__collapse .sidebar-icon{
+  body.admin-sidebar-active .admin-sidebar-collapse-handle .sidebar-icon{
     width:18px;
     height:18px;
+  }
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .admin-sidebar-collapse-handle .collapse-icon--closed,
+  body.admin-sidebar-active.partner-sidebar-collapsed .admin-sidebar-collapse-handle .collapse-icon--open{
+    display:none;
+  }
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .admin-sidebar-collapse-handle .collapse-icon--open,
+  body.admin-sidebar-active.partner-sidebar-collapsed .admin-sidebar-collapse-handle .collapse-icon--closed{
+    display:inline-flex;
   }
 }

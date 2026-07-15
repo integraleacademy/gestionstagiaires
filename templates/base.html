@@ -1026,7 +1026,7 @@
     const overlay = document.querySelector('.partner-sidebar-overlay');
     const openButtons = document.querySelectorAll('[data-sidebar-open]');
     const closeButtons = document.querySelectorAll('[data-sidebar-close]');
-    const collapse = document.querySelector('[data-sidebar-collapse]');
+    const collapseButtons = document.querySelectorAll('[data-sidebar-collapse]');
     const lockedModal = document.getElementById('lockedModuleModal');
     const lockedClose = document.querySelectorAll('[data-locked-close]');
     const openSidebar = () => { window.closeAllPanels?.(); sidebar.classList.add('is-open'); overlay?.classList.add('is-open'); overlay && (overlay.style.pointerEvents = 'auto'); document.body.classList.add('partner-sidebar-open'); openButtons.forEach(b=>b.setAttribute('aria-expanded','true')); };
@@ -1042,13 +1042,13 @@
     };
     const storedSidebarState = localStorage.getItem(storageKey);
     const isAdminSidebar = document.body.classList.contains('admin-sidebar-active');
-    if(storedSidebarState === '1' || (storedSidebarState === null && isAdminSidebar)) document.body.classList.add('partner-sidebar-collapsed');
+    if(isAdminSidebar || storedSidebarState === '1') document.body.classList.add('partner-sidebar-collapsed');
     closeCollapsedSubmenus();
-    collapse?.addEventListener('click', () => {
+    collapseButtons.forEach((collapse) => collapse.addEventListener('click', () => {
       document.body.classList.toggle('partner-sidebar-collapsed');
       localStorage.setItem(storageKey, document.body.classList.contains('partner-sidebar-collapsed') ? '1' : '0');
       closeCollapsedSubmenus();
-    });
+    }));
     document.querySelectorAll('.partner-sidebar__item[href], [data-sidebar-action]').forEach(el => el.addEventListener('click', () => {
       if(isMobile()) closeSidebar();
       if(el.matches('.partner-sidebar__submenu-panel .partner-sidebar__item[href]')) closeCollapsedSubmenus();
