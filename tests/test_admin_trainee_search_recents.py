@@ -109,7 +109,49 @@ class AdminTraineeSearchRecentsTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertIn("2 derniers inscrits", html)
         self.assertIn("2 derniers dossiers consultés", html)
+        self.assertIn("Rechercher une session", html)
+        self.assertIn("/api/sessions_search", html)
         self.assertIn('input.addEventListener("focus", loadResults)', html)
+
+    def test_session_search_filters_by_name_and_training(self):
+        fake_data = {
+            "sessions": [
+                {
+                    "id": "S-APS",
+                    "partner_id": gestion_app.INTEGRALE_PARTNER_ID,
+                    "name": "APS Juillet 2026",
+                    "training_type": "APS",
+                    "date_start": "2026-07-01",
+                    "date_end": "2026-07-12",
+                    "trainees": [{"id": "T-1"}],
+                },
+                {
+                    "id": "S-VTC",
+                    "partner_id": gestion_app.INTEGRALE_PARTNER_ID,
+                    "name": "VTC Août 2026",
+                    "training_type": "VTC",
+                    "date_start": "2026-08-01",
+                    "date_end": "2026-08-12",
+                    "trainees": [],
+                },
+                {
+                    "id": "S-OTHER",
+                    "partner_id": "other-partner",
+                    "name": "APS autre partenaire",
+                    "training_type": "APS",
+                },
+            ]
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            response = self.client.get("/api/sessions_search?q=aps")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["count"], 1)
+        self.assertEqual(payload["items"][0]["session_id"], "S-APS")
+        self.assertEqual(payload["items"][0]["total"], 1)
+        self.assertEqual(payload["items"][0]["admin_url"], "/admin/sessions/S-APS/trainees")
 
 
 if __name__ == "__main__":

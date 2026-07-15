@@ -644,6 +644,32 @@
     color:#fff;
     border-color:#1d4ed8;
   }
+
+  @media (min-width: 861px){
+    body.endpoint-admin-sessions .dashboard-grid{gap:8px;margin-top:10px;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));}
+    body.endpoint-admin-sessions .dashboard-total-card{margin-top:10px;padding:13px 15px;border-radius:14px;}
+    body.endpoint-admin-sessions .dashboard-total-card__count{font-size:38px;}
+    body.endpoint-admin-sessions .dashboard-card{padding:10px;border-radius:11px;}
+    body.endpoint-admin-sessions .dashboard-card__count{font-size:24px;margin-top:2px;}
+    body.endpoint-admin-sessions .session-filter-bar{gap:6px;margin-top:10px;}
+    body.endpoint-admin-sessions .filter-btn{padding:6px 10px;font-size:11.5px;}
+    body.endpoint-admin-sessions .grid.cards{gap:14px;}
+    body.endpoint-admin-sessions .session-card{padding:15px!important;}
+    body.endpoint-admin-sessions .session-card__header{gap:10px;margin-bottom:10px;}
+    body.endpoint-admin-sessions .session-card__title{font-size:18px;line-height:1.15;}
+    body.endpoint-admin-sessions .session-tags{gap:5px;margin-top:6px;}
+    body.endpoint-admin-sessions .pill{padding:4px 7px;font-size:10.5px;}
+    body.endpoint-admin-sessions .session-kpi{padding:8px 10px;min-width:68px;}
+    body.endpoint-admin-sessions .session-kpi__value{font-size:24px;}
+    body.endpoint-admin-sessions .session-date-row{padding:7px 9px;gap:7px;}
+    body.endpoint-admin-sessions .session-metrics{gap:7px;margin-top:10px;}
+    body.endpoint-admin-sessions .session-metric{padding:8px 9px;border-radius:11px;}
+    body.endpoint-admin-sessions .session-options{margin-top:10px;gap:8px;}
+    body.endpoint-admin-sessions .aps-elearning-toggle{padding:7px 10px;font-size:12.5px;}
+    body.endpoint-admin-sessions .session-actions{gap:7px;margin-top:12px;}
+    body.endpoint-admin-sessions .session-action{min-height:36px;padding:7px 9px;font-size:12.5px;}
+  }
+
 </style>
 
 <div class="page-head">
@@ -725,6 +751,7 @@
 </div>
 
 <button class="sr-only" id="btnOpenTraineeSearch" type="button">Rechercher un stagiaire</button>
+<button class="sr-only" id="btnOpenSessionSearch" type="button">Rechercher une session</button>
 <button class="sr-only" id="btnOpenDocsToControl" type="button">Documents à contrôler</button>
 <span class="muted" id="docsToControlCount" hidden>Chargement…</span>
 
@@ -1180,6 +1207,30 @@
       </div>
       <div id="traineeSearchResults" class="trainee-search-results">
         <div id="traineeSearchResultsInner" class="trainee-search-results-inner"></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+
+<!-- MODALE RECHERCHE SESSION -->
+<div class="modal-backdrop trainee-search-drawer" id="sessionSearchModal" aria-hidden="true">
+  <aside class="modal trainee-search-panel" role="dialog" aria-modal="false" aria-labelledby="sessionSearchTitle">
+    <div class="modal-head trainee-search-head">
+      <div class="trainee-search-title-wrap">
+        <span class="trainee-search-kicker">Recherche rapide</span>
+        <div class="modal-title" id="sessionSearchTitle">Rechercher une session</div>
+        <div class="muted">Tape un nom, une formation ou une date pour ouvrir la liste des stagiaires.</div>
+      </div>
+      <button class="icon-btn trainee-search-close" data-close-modal="sessionSearchModal" aria-label="Fermer la recherche session">✕</button>
+    </div>
+    <div class="modal-body trainee-search-body">
+      <div class="trainee-search-field">
+        <span class="trainee-search-field-icon" aria-hidden="true">⌕</span>
+        <input id="sessionSearchInput" type="text" placeholder="Ex : APS Mars, VTC, 2026…" autocomplete="off">
+      </div>
+      <div id="sessionSearchResults" class="trainee-search-results">
+        <div id="sessionSearchResultsInner" class="trainee-search-results-inner"></div>
       </div>
     </div>
   </aside>
@@ -2405,6 +2456,15 @@
     }
     setTimeout(()=>document.getElementById("traineeSearchInput")?.focus(), 80);
   });
+  document.getElementById("btnOpenSessionSearch")?.addEventListener("click", ()=>{
+    const panel = document.getElementById("sessionSearchModal");
+    if(panel){
+      panel.classList.add("show");
+      panel.style.display = "block";
+      panel.setAttribute("aria-hidden", "false");
+    }
+    setTimeout(()=>document.getElementById("sessionSearchInput")?.focus(), 80);
+  });
 
   // charge le compteur dès l'ouverture
   window.addEventListener("load", ()=>{
@@ -2412,6 +2472,7 @@
     const params = new URLSearchParams(window.location.search);
     if(params.get("openDocsToControl") === "1") document.getElementById("btnOpenDocsToControl")?.click();
     if(params.get("openTraineeSearch") === "1") document.getElementById("btnOpenTraineeSearch")?.click();
+    if(params.get("openSessionSearch") === "1") document.getElementById("btnOpenSessionSearch")?.click();
   });
 
   // =========================
@@ -2717,6 +2778,52 @@
         input.blur();
       }
     });
+  })();
+
+
+  // =========================
+  // 🔎 Recherche session (global)
+  // =========================
+  (function(){
+    const input = document.getElementById("sessionSearchInput");
+    const box = document.getElementById("sessionSearchResults");
+    const inner = document.getElementById("sessionSearchResultsInner");
+    if(!input || !box || !inner) return;
+    let timer = null;
+    let requestSequence = 0;
+    function closeBox(){ box.style.display = "none"; inner.innerHTML = ""; }
+    function openBox(){ box.style.display = "block"; }
+    function escapeHtml(value){ return String(value ?? "").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[char]); }
+    function sessionDetails(it){ return [it.training_type, it.date_range, `${it.total || 0} stagiaire(s)`, it.archived ? "archivée" : "active"].filter(Boolean).join(" • "); }
+    function resultItem(it){
+      const url = it.admin_url || `/admin/sessions/${it.session_id}/trainees`;
+      return `<a class="search-item search-suggestion" href="${escapeHtml(url)}">
+        <div><div class="search-name">${escapeHtml(it.session_name || "—")}</div><div class="search-sub">${escapeHtml(sessionDetails(it) || "—")}</div></div>
+        <div class="search-open">Ouvrir →</div>
+      </a>`;
+    }
+    function render(res, q){
+      const items = res.items || [];
+      if(!items.length){ inner.innerHTML = `<div class="search-empty">${q.length < 2 ? "Aucune session récente." : "Aucune session trouvée."}</div>`; return; }
+      inner.innerHTML = `${q.length < 2 ? '<div class="search-section-title">Sessions récentes</div>' : ''}${items.map(resultItem).join("")}`;
+    }
+    async function loadResults(){
+      const q = input.value.trim();
+      const currentRequest = ++requestSequence;
+      inner.innerHTML = `<div class="muted" style="padding:12px;">Chargement…</div>`;
+      openBox();
+      try{
+        const r = await fetch(`/api/sessions_search?q=${encodeURIComponent(q)}`);
+        const res = await r.json();
+        if(currentRequest !== requestSequence || input.value.trim() !== q) return;
+        if(!r.ok || !res.ok){ inner.innerHTML = `<div class="muted" style="padding:12px;">Erreur de recherche.</div>`; return; }
+        render(res, q);
+      }catch(e){ if(currentRequest === requestSequence) inner.innerHTML = `<div class="muted" style="padding:12px;">Erreur réseau.</div>`; }
+    }
+    input.addEventListener("focus", loadResults);
+    input.addEventListener("input", ()=>{ clearTimeout(timer); timer = setTimeout(loadResults, 220); });
+    document.addEventListener("click", (e)=>{ const target = e.target; if(!target || target === input || box.contains(target)) return; closeBox(); });
+    input.addEventListener("keydown", (e)=>{ if(e.key === "Escape"){ closeBox(); input.blur(); } });
   })();
 
   // archive session

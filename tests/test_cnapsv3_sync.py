@@ -7,11 +7,15 @@ import app as gestion_app
 
 
 class DummyResponse:
-    def __init__(self, status_code, body=None):
+    def __init__(self, status_code, body=None, headers=None, url="https://cnapsv3.example/api/a-traiter"):
         self.status_code = status_code
-        self._body = body or {}
+        self._body = body if body is not None else {}
+        self.headers = headers or {"Content-Type": "application/json"}
+        self.url = url
 
     def json(self):
+        if isinstance(self._body, Exception):
+            raise self._body
         return self._body
 
 
@@ -1616,6 +1620,146 @@ class ScotiaDashboardFilterCategoryTests(unittest.TestCase):
         self.assertIn('<strong>1</strong><span>Livrets 1 à valider', html)
         self.assertIn('1 action à mener', html)
         self.assertIn('data-category="l1-action"', html)
+
+
+class CnapsTrackingTests(unittest.TestCase):
+    def setUp(self):
+        self.original_base = gestion_app.CNAPSV3_BASE_URL
+        self.original_token = gestion_app.os.environ.get("CNAPSV3_API_TOKEN")
+        gestion_app.CNAPSV3_BASE_URL = "https://cnapsv3.example"
+        gestion_app.os.environ["CNAPSV3_API_TOKEN"] = "tracking-token"
+        gestion_app._cnapsv3_tracking_cache.update({"expires_at": 0.0, "rows": [], "error": None})
+
+    def tearDown(self):
+        gestion_app.CNAPSV3_BASE_URL = self.original_base
+        if self.original_token is None:
+            gestion_app.os.environ.pop("CNAPSV3_API_TOKEN", None)
+        else:
+            gestion_app.os.environ["CNAPSV3_API_TOKEN"] = self.original_token
+        gestion_app._cnapsv3_tracking_cache.update({"expires_at": 0.0, "rows": [], "error": None})
+
+    def test_tracking_requests_are_normalized_from_a_traiter_payload(self):
+        calls = []
+
+        def fake_get(url, headers, timeout):
+            calls.append({"url": url, "headers": headers, "timeout": timeout})
+            return DummyResponse(200, {
+                "demandes": [
+                    {"nom": "DOE", "prenom": "Jane", "nub": "NUB123", "statut_cnaps": "ACCEPTE"},
+                    {"last_name": "SMITH", "first_name": "John", "numero_nub": "NUB456"},
+                ]
+            })
+
+        rows, error = gestion_app.fetch_cnapsv3_tracking_requests(get_func=fake_get)
+
+        self.assertIsNone(error)
+        self.assertEqual(calls[0]["url"], "https://cnapsv3.example/api/a-traiter")
+        self.assertEqual(calls[0]["headers"], {"Accept": "application/json", "Authorization": "Bearer tracking-token"})
+        self.assertEqual(calls[0]["timeout"], 10)
+        self.assertEqual(rows, [
+            {"last_name": "DOE", "first_name": "Jane", "nub": "NUB123", "cnaps_status": "ACCEPTE"},
+            {"last_name": "SMITH", "first_name": "John", "nub": "NUB456", "cnaps_status": "INCONNU"},
+        ])
+
+
+    def test_tracking_returns_empty_list_on_401(self):
+        rows, error = gestion_app.fetch_cnapsv3_tracking_requests(
+            get_func=lambda *_, **__: DummyResponse(401, {"detail": "unauthorized"})
+        )
+        self.assertEqual(rows, [])
+        self.assertIn("authentification", error)
+
+    def test_tracking_returns_empty_list_on_html_response(self):
+        rows, error = gestion_app.fetch_cnapsv3_tracking_requests(
+            get_func=lambda *_, **__: DummyResponse(200, "<html>login</html>", headers={"Content-Type": "text/html"})
+        )
+        self.assertEqual(rows, [])
+        self.assertIn("non JSON", error)
+
+    def test_tracking_returns_empty_list_on_invalid_json(self):
+        rows, error = gestion_app.fetch_cnapsv3_tracking_requests(
+            get_func=lambda *_, **__: DummyResponse(200, ValueError("bad json"))
+        )
+        self.assertEqual(rows, [])
+        self.assertIn("JSON invalide", error)
+
+    def test_tracking_returns_empty_list_on_timeout(self):
+        def fake_get(*_, **__):
+            raise gestion_app.requests.Timeout("timeout")
+
+        rows, error = gestion_app.fetch_cnapsv3_tracking_requests(get_func=fake_get)
+        self.assertEqual(rows, [])
+        self.assertIn("timeout", error)
+
+    def test_tracking_returns_empty_list_without_token(self):
+        gestion_app.os.environ.pop("CNAPSV3_API_TOKEN", None)
+        called = {"value": False}
+
+        def fake_get(*_, **__):
+            called["value"] = True
+            return DummyResponse(200, {"requests": []})
+
+        rows, error = gestion_app.fetch_cnapsv3_tracking_requests(get_func=fake_get)
+        self.assertEqual(rows, [])
+        self.assertFalse(called["value"])
+        self.assertIn("CNAPSV3_API_TOKEN", error)
+
+    def test_tracking_rejects_login_final_url(self):
+        rows, error = gestion_app.fetch_cnapsv3_tracking_requests(
+            get_func=lambda *_, **__: DummyResponse(200, {"requests": []}, url="https://cnapsv3.example/login")
+        )
+        self.assertEqual(rows, [])
+        self.assertIn("connexion", error)
+
+
+    def test_tracking_default_get_uses_short_server_cache(self):
+        calls = []
+        original_get = gestion_app.requests.get
+
+        def fake_default_get(url, headers, timeout):
+            calls.append({"url": url, "headers": headers, "timeout": timeout})
+            return DummyResponse(200, {"requests": [{"nom": "CACHE", "prenom": "Hit", "nub": "NUB-C"}]})
+
+        gestion_app.requests.get = fake_default_get
+        try:
+            rows_1, error_1 = gestion_app.fetch_cnapsv3_tracking_requests()
+            rows_2, error_2 = gestion_app.fetch_cnapsv3_tracking_requests()
+        finally:
+            gestion_app.requests.get = original_get
+
+        self.assertIsNone(error_1)
+        self.assertIsNone(error_2)
+        self.assertEqual(rows_1, rows_2)
+        self.assertEqual(len(calls), 1)
+
+    def test_tracking_page_renders_table(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        original_fetch = gestion_app.fetch_cnapsv3_tracking_requests
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{
+            "last_name": "DOE",
+            "first_name": "Jane",
+            "nub": "NUB123",
+            "cnaps_status": "ACCEPTE",
+        }], None)
+        try:
+            response = client.get("/admin/sessions/suivi-cnaps")
+        finally:
+            gestion_app.fetch_cnapsv3_tracking_requests = original_fetch
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("Suivi CNAPS", html)
+        self.assertIn("<th>Nom</th>", html)
+        self.assertIn("<th>Prénom</th>", html)
+        self.assertIn("<th>NUB</th>", html)
+        self.assertIn("<th>Statut Carte pro</th>", html)
+        self.assertIn("DOE", html)
+        self.assertIn("NUB123", html)
+
 
 if __name__ == "__main__":
     unittest.main()

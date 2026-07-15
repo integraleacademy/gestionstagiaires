@@ -3834,6 +3834,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     const fallbackActivity = box.getAttribute("data-fallback-activity") || "";
     const isAccepted = status.includes("OK") || status.includes("ACCEPTE") || status.includes("ACCEPTÉ");
     const isCartePro = status.includes("CARTE") || status.includes("PROFESSIONNELLE") || status.includes("CAR") || status.includes("CP");
+    const normalizedFallbackActivity = normalizedCardProActivity(fallbackActivity);
     const rows = [];
     if(fallbackActivity){
       rows.push({
@@ -3841,7 +3842,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
         validite_titre: isAccepted ? "ACTIF" : "À vérifier",
       });
     }
-    if(isAccepted && isCartePro){
+    if(isAccepted && (isCartePro || normalizedFallbackActivity === "AP SH")){
       rows.push({
         activite: "Carte professionnelle - Surveillance humaine ou gardiennage",
         validite_titre: "ACTIF",

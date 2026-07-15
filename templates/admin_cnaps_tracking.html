@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+  <div>
+    <h1 style="margin:0">Suivi CNAPS</h1>
+    <div class="muted" style="margin-top:6px;">
+      Toutes les demandes CNAPS remontées depuis CNAPSV3, avec le suivi carte professionnelle de l’annuaire CNAPS.
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <a class="btn btn-outline" href="{{ url_for('admin_sessions') }}">← Retour sessions</a>
+  </div>
+</div>
+
+<style>
+.card-pro-followup{display:grid;grid-template-columns:minmax(0, 1fr) auto;gap:4px 6px;align-items:center;font-size:11px;line-height:1.15;}
+.card-pro-result{display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-width:0;max-width:100%;font-size:11px;line-height:1;font-weight:900;}
+.card-pro-result__chip{display:inline-flex;align-items:center;gap:4px;min-width:0;max-width:100%;border:1px solid var(--line);border-radius:999px;padding:5px 8px;white-space:nowrap;}
+.card-pro-result__activity{letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;}
+.card-pro-result__validity{font-size:9px;text-transform:uppercase;opacity:.9;overflow:hidden;text-overflow:ellipsis;}
+.card-pro-result__date{display:none;}
+.card-pro-refresh-btn{padding:5px 8px;}
+.card-pro-result.is-loading{background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;color:#1d4ed8;padding:5px 8px;}
+.card-pro-result__chip.is-active{background:#16a34a;border-color:#16a34a;color:#fff;}
+.card-pro-result__chip.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
+.card-pro-result__chip.is-unknown{background:#ffedd5;border-color:#fdba74;color:#9a3412;}
+</style>
+
+<div class="card" style="margin-top:12px;">
+  <div class="card-row" style="justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div>
+      <div class="card-title">{{ requests_rows|length }} demande{% if requests_rows|length > 1 %}s{% endif %} CNAPS</div>
+      <div class="muted">Source : {{ cnapsv3_base_url if cnapsv3_base_url is defined else 'CNAPSV3' }}/api/a-traiter</div>
+    </div>
+    <a class="btn btn-outline" href="{{ url_for('admin_cnaps_tracking') }}">Actualiser</a>
+  </div>
+</div>
+
+{% if fetch_error %}
+  <div class="card" style="margin-top:12px;color:#991b1b;background:#fee2e2;border-color:#fca5a5;">
+    Impossible de récupérer les demandes CNAPSV3 pour le moment : {{ fetch_error }}
+  </div>
+{% endif %}
+
+{% if requests_rows|length == 0 and not fetch_error %}
+  <div class="card" style="margin-top:12px;color:var(--muted)">Aucune demande CNAPS à afficher.</div>
+{% elif requests_rows|length > 0 %}
+  <div class="card" style="margin-top:12px;overflow:auto;">
+    <table class="table" style="min-width:860px;">
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>Prénom</th>
+          <th>NUB</th>
+          <th>Statut Carte pro</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in requests_rows %}
+          <tr>
+            <td><strong>{{ row.last_name or '—' }}</strong></td>
+            <td>{{ row.first_name or '—' }}</td>
+            <td>{{ row.nub or '—' }}</td>
+            <td>
+              <div class="card-pro-followup" data-card-pro-followup data-nom="{{ row.last_name }}" data-nub="{{ row.nub }}" data-cnaps-status="{{ row.cnaps_status }}">
+                <div class="card-pro-result" data-card-pro-result>Chargement CNAPS…</div>
+                <button type="button" class="btn btn-outline card-pro-refresh-btn" data-card-pro-refresh title="Actualiser">↻</button>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+
+<script>
+function escapeHtml(value){return String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));}
+function shortCardProActivity(value){const normalized=(value||"").replace(/\s+/g," ").trim().toLowerCase();const map=new Map([["autorisation préalable - surveillance humaine ou gardiennage","AP SH"],["autorisation préalable - agent de protection physique des personnes","AP A3P"],["carte professionnelle - surveillance humaine ou gardiennage","CP SH"],["carte professionnelle - agent de protection physique des personnes","CP A3P"]]);return map.get(normalized)||(value||"—");}
+function cardProValidityMode(value){const normalized=(value||"").replace(/\s+/g," ").trim().toUpperCase();if(!normalized)return "unknown";if(normalized.includes("INACTIF")||normalized.includes("EXPIR")||normalized.includes("ÉCHU")||normalized.includes("ECHU")||normalized.includes("REFUS"))return "inactive";if(normalized.includes("ACTIF")||normalized.includes("VALIDE"))return "active";return "unknown";}
+function renderCardProFollowupResult(resultEl,data,mode){const rows=Array.isArray(data.results)&&data.results.length?data.results:[data];const chips=rows.map(row=>{const activity=shortCardProActivity(row.activite);const validity=row.validite_titre||(mode==="unknown"?"INCONNU":"À vérifier");const validityMode=mode==="unknown"?"unknown":cardProValidityMode(validity);const title=[row.activite,row.validite_titre,row.date_validite_titre].filter(Boolean).join(" • ");return `<span class="card-pro-result__chip is-${validityMode}"${title?` title="${escapeHtml(title)}"`:""}><span class="card-pro-result__activity">${escapeHtml(activity)}</span><span class="card-pro-result__validity">${escapeHtml(validityMode==="unknown"?"INCONNU":validity)}</span>${row.date_validite_titre?`<span class="card-pro-result__date">${escapeHtml(row.date_validite_titre)}</span>`:""}</span>`;}).join("");const aggregateMode=rows.some(row=>cardProValidityMode(row.validite_titre||"")==="active")?"active":(rows.some(row=>cardProValidityMode(row.validite_titre||"")==="inactive")?"inactive":"unknown");resultEl.className=`card-pro-result is-${mode==="unknown"?"unknown":aggregateMode}`;resultEl.innerHTML=chips;}
+async function refreshCardProFollowup(box){const resultEl=box.querySelector("[data-card-pro-result]");const nom=box.getAttribute("data-nom")||"";const nub=box.getAttribute("data-nub")||"";if(!resultEl||!nom||!nub){renderCardProFollowupResult(resultEl,{validite_titre:"INCONNU"},"unknown");return;}resultEl.className="card-pro-result is-loading";resultEl.textContent="Chargement CNAPS…";try{const r=await fetch(`/api/cnaps_public_annuaire?nom=${encodeURIComponent(nom)}&nub=${encodeURIComponent(nub)}`);const data=await r.json().catch(()=>({}));if(r.ok&&data.ok){renderCardProFollowupResult(resultEl,data,"remote");return;}}catch(e){}renderCardProFollowupResult(resultEl,{validite_titre:"INCONNU"},"unknown");}
+document.querySelectorAll("[data-card-pro-followup]").forEach(box=>{refreshCardProFollowup(box);box.querySelector("[data-card-pro-refresh]")?.addEventListener("click",()=>refreshCardProFollowup(box));});
+</script>
+
+{% endblock %}

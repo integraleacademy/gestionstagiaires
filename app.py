@@ -3023,6 +3023,160 @@ def _cnapsv3_lookup_endpoint() -> str:
     return f"{base_url}/integrations/gestionstagiaire/cnaps/lookup"
 
 
+def _cnapsv3_tracking_endpoint() -> str:
+    base_url = (CNAPSV3_BASE_URL or "").strip().rstrip("/")
+    if not base_url:
+        return ""
+    return f"{base_url}/api/a-traiter"
+
+
+def _extract_cnapsv3_tracking_items(payload: Any) -> List[Dict[str, Any]]:
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    if not isinstance(payload, dict):
+        return []
+    for key in ("demandes", "requests", "items", "data", "a_traiter", "to_process"):
+        value = payload.get(key)
+        if isinstance(value, list):
+            return [item for item in value if isinstance(item, dict)]
+        if isinstance(value, dict):
+            nested = _extract_cnapsv3_tracking_items(value)
+            if nested:
+                return nested
+    return []
+
+
+def _cnapsv3_tracking_value(item: Dict[str, Any], keys: Iterable[str]) -> str:
+    for key in keys:
+        value = item.get(key)
+        if value not in (None, ""):
+            return str(value).strip()
+    return ""
+
+
+CNAPSV3_TRACKING_CACHE_TTL_SECONDS = 15
+_cnapsv3_tracking_cache: Dict[str, Any] = {"expires_at": 0.0, "rows": [], "error": None}
+
+
+def _cnapsv3_tracking_response_metadata(response: Any) -> Tuple[int, str, str]:
+    status_code = int(getattr(response, "status_code", 0) or 0)
+    headers = getattr(response, "headers", {}) or {}
+    content_type = str(headers.get("Content-Type") or headers.get("content-type") or "")
+    final_url = str(getattr(response, "url", "") or "")
+    return status_code, content_type, final_url
+
+
+def _cnapsv3_tracking_error(message: str, response: Any = None) -> Tuple[List[Dict[str, str]], str]:
+    if response is not None:
+        status_code, content_type, final_url = _cnapsv3_tracking_response_metadata(response)
+        app.logger.warning(
+            "Suivi CNAPSV3 indisponible: %s (HTTP %s, Content-Type: %s, URL finale: %s)",
+            message,
+            status_code or "inconnu",
+            content_type or "inconnu",
+            final_url or "inconnue",
+        )
+    else:
+        app.logger.warning("Suivi CNAPSV3 indisponible: %s", message)
+    return [], message
+
+
+def fetch_cnapsv3_tracking_requests(get_func=None) -> Tuple[List[Dict[str, str]], Optional[str]]:
+    use_cache = get_func is None
+    if get_func is None:
+        get_func = requests.get
+    now = time.time()
+    if use_cache and now < float(_cnapsv3_tracking_cache.get("expires_at") or 0):
+        return list(_cnapsv3_tracking_cache.get("rows") or []), _cnapsv3_tracking_cache.get("error")
+
+    endpoint = _cnapsv3_tracking_endpoint()
+    if not endpoint:
+        return [], "CNAPSV3_BASE_URL non configuré"
+
+    token = os.environ.get("CNAPSV3_API_TOKEN", "").strip()
+    if not token:
+        rows, error = _cnapsv3_tracking_error("CNAPSV3_API_TOKEN absent")
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {token}",
+    }
+
+    try:
+        response = get_func(endpoint, headers=headers, timeout=10)
+    except requests.Timeout:
+        rows, error = _cnapsv3_tracking_error("timeout réseau")
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+    except requests.RequestException:
+        rows, error = _cnapsv3_tracking_error("erreur réseau")
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+    except Exception:
+        rows, error = _cnapsv3_tracking_error("erreur inattendue")
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+
+    status_code, content_type, final_url = _cnapsv3_tracking_response_metadata(response)
+    if status_code != 200:
+        if status_code in (401, 403):
+            rows, error = _cnapsv3_tracking_error("authentification CNAPSV3 refusée", response)
+        elif status_code >= 500:
+            rows, error = _cnapsv3_tracking_error("erreur serveur CNAPSV3", response)
+        else:
+            rows, error = _cnapsv3_tracking_error(f"HTTP {status_code}", response)
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+    if "/login" in final_url:
+        rows, error = _cnapsv3_tracking_error("redirection vers la page de connexion", response)
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+    if "application/json" not in content_type.lower():
+        rows, error = _cnapsv3_tracking_error("réponse non JSON", response)
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+
+    try:
+        payload = response.json() or {}
+    except ValueError:
+        rows, error = _cnapsv3_tracking_error("JSON invalide", response)
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+    except Exception:
+        rows, error = _cnapsv3_tracking_error("lecture JSON impossible", response)
+        if use_cache:
+            _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": error})
+        return rows, error
+
+    rows: List[Dict[str, str]] = []
+    for item in _extract_cnapsv3_tracking_items(payload):
+        last_name = _cnapsv3_tracking_value(item, ("nom", "last_name", "lastname", "name"))
+        first_name = _cnapsv3_tracking_value(item, ("prenom", "first_name", "firstname"))
+        nub = _cnapsv3_tracking_value(item, ("nub", "NUB", "numero_nub", "nub_number", "num_nub"))
+        status = _cnapsv3_tracking_value(item, ("statut_cnaps", "cnaps_status", "status", "statut"))
+        if not any((last_name, first_name, nub, status)):
+            continue
+        rows.append({
+            "last_name": last_name,
+            "first_name": first_name,
+            "nub": nub,
+            "cnaps_status": status or "INCONNU",
+        })
+    if use_cache:
+        _cnapsv3_tracking_cache.update({"expires_at": now + CNAPSV3_TRACKING_CACHE_TTL_SECONDS, "rows": rows, "error": None})
+    return rows, None
+
+
 def sync_cnapsv3_lookup_identifier(
     first_name: str,
     last_name: str,
@@ -7588,15 +7742,24 @@ def fetch_cnaps_public_annuaire(nom: str, nub: str) -> Optional[Dict[str, Any]]:
     if not endpoint or not nom or not nub:
         return None
 
-    payload = {"nom": nom, "nub": nub, "numeroBeneficiaireUnique": nub, "typeRecherche": "AGENT"}
+    payload = {
+        "nom": nom,
+        "nub": nub,
+        "numeroBeneficiaireUnique": nub,
+        "typeRecherche": "AGENT",
+        "page": 0,
+        "size": 100,
+        "limit": 100,
+    }
+    params = {"nom": nom, "nub": nub, "numeroBeneficiaireUnique": nub, "page": 0, "size": 100, "limit": 100}
     headers = {"Accept": "application/json", "User-Agent": "gestionstagiaires/1.0"}
     try:
         try:
             response = requests.post(endpoint, json=payload, headers=headers, timeout=12)
         except Exception:
-            response = requests.get(endpoint, params={"nom": nom, "nub": nub}, headers=headers, timeout=12)
+            response = requests.get(endpoint, params=params, headers=headers, timeout=12)
         if response.status_code >= 400:
-            response = requests.get(endpoint, params={"nom": nom, "nub": nub}, headers=headers, timeout=12)
+            response = requests.get(endpoint, params=params, headers=headers, timeout=12)
         if response.status_code != 200:
             return None
         data = response.json()
@@ -12770,6 +12933,20 @@ def admin_cnaps_unknown():
     response = make_response(render_template(
         "admin_cnaps_unknown.html",
         trainees=trainees,
+    ))
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    return response
+
+
+@app.get("/admin/sessions/suivi-cnaps")
+@admin_login_required
+def admin_cnaps_tracking():
+    requests_rows, fetch_error = fetch_cnapsv3_tracking_requests()
+    response = make_response(render_template(
+        "admin_cnaps_tracking.html",
+        requests_rows=requests_rows,
+        fetch_error=fetch_error,
     ))
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
@@ -27895,6 +28072,64 @@ def _trainee_search_item(s: dict, t: dict) -> dict:
         "test_fr_status": t.get("test_fr_status") or "soon",
         "admin_url": f"/admin/sessions/{session_id}/stagiaires/{trainee_id}",
     }
+
+
+
+def _session_search_item(s: dict) -> dict:
+    session_id = s.get("id")
+    date_start = _session_get(s, "date_start", "")
+    date_end = _session_get(s, "date_end", "")
+    date_range = " → ".join(part for part in [fr_date(date_start), fr_date(date_end)] if part and part != "—")
+    return {
+        "session_id": session_id,
+        "session_name": _session_get(s, "name", ""),
+        "training_type": _session_get(s, "training_type", ""),
+        "date_start": date_start,
+        "date_end": date_end,
+        "date_range": date_range,
+        "exam_date": _session_get(s, "exam_date", ""),
+        "total": len(_session_trainees_list(s)),
+        "archived": bool(s.get("archived")),
+        "admin_url": f"/admin/sessions/{session_id}/trainees",
+    }
+
+
+@app.get("/api/sessions_search")
+@admin_login_required
+def api_sessions_search():
+    q = (request.args.get("q") or "").strip().lower()
+    data = load_data()
+    visible_partner_id = _current_partner_id() or INTEGRALE_PARTNER_ID
+    all_items = []
+
+    for s in data.get("sessions", []):
+        if not isinstance(s, dict):
+            continue
+        if s.get("partner_id") != visible_partner_id:
+            continue
+        if _is_wedof_leads_session(s):
+            continue
+        all_items.append(_session_search_item(s))
+
+    if len(q) < 2:
+        items = sorted(
+            all_items,
+            key=lambda item: (str(item.get("date_start") or ""), str(item.get("session_name") or "")),
+            reverse=True,
+        )[:10]
+        return jsonify({"ok": True, "items": items, "count": len(items)})
+
+    out = []
+    for item in all_items:
+        haystack = " ".join(str(item.get(key) or "") for key in (
+            "session_name", "training_type", "date_start", "date_end", "date_range", "exam_date"
+        )).lower()
+        if q in haystack:
+            out.append(item)
+
+    out.sort(key=lambda item: (bool(item.get("archived")), str(item.get("date_start") or "")), reverse=False)
+    out = out[:30]
+    return jsonify({"ok": True, "items": out, "count": len(out)})
 
 
 @app.get("/api/trainees_search")
