@@ -64,6 +64,31 @@
   .aps-doc-feedback--error{display:block;background:#fef2f2;color:#991b1b;border:1px solid #fecaca;}
   .aps-doc-feedback--success{display:block;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;}
   @media (max-width:760px){.aps-doc-row{grid-template-columns:1fr}.aps-doc-actions{justify-content:flex-start}}
+  .trainee-cnaps-followup{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    width:100%;
+    margin-top:10px;
+  }
+  .trainee-cnaps-followup__chip{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    min-height:34px;
+    padding:7px 12px;
+    border:1px solid #bbf7d0;
+    border-radius:999px;
+    background:#16a34a;
+    color:#fff;
+    box-shadow:0 10px 20px rgba(22,163,74,.16);
+    font-size:12px;
+    font-weight:950;
+    line-height:1;
+  }
+  .trainee-cnaps-followup__activity{letter-spacing:.04em;}
+  .trainee-cnaps-followup__validity{font-size:10px;text-transform:uppercase;opacity:.92;}
   .btn-docs-pending{
     background: var(--orange) !important;
     border-color: var(--orange) !important;
@@ -581,6 +606,20 @@
           </label>
           {% if trainee.access_sent_at %}
             <span class="hint">✅ Accès envoyé le : <strong>{{ trainee.access_sent_at|frdatetime }}</strong></span>
+          {% endif %}
+          {% set trainee_cnaps_normalized = c|replace("É", "E")|replace("È", "E") %}
+          {% set show_card_pro_followup = trainee_nub and ("ACCEPT" in trainee_cnaps_normalized or "OK" in trainee_cnaps_normalized or "CARTE" in trainee_cnaps_normalized) %}
+          {% if show_card_pro_followup %}
+            <div class="trainee-cnaps-followup" aria-label="Suivi carte professionnelle CNAPS">
+              <span class="trainee-cnaps-followup__chip is-active" title="Autorisation préalable - Surveillance humaine ou gardiennage • ACTIF">
+                <span class="trainee-cnaps-followup__activity">AP SH</span>
+                <span class="trainee-cnaps-followup__validity">ACTIF</span>
+              </span>
+              <span class="trainee-cnaps-followup__chip is-active" title="Carte professionnelle - Surveillance humaine ou gardiennage • ACTIF">
+                <span class="trainee-cnaps-followup__activity">CP SH</span>
+                <span class="trainee-cnaps-followup__validity">ACTIF</span>
+              </span>
+            </div>
           {% endif %}
           {% set cnaps_history = trainee.cnaps_history or [] %}
           {% if cnaps_history %}
