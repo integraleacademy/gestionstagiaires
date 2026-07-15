@@ -33,7 +33,7 @@
     <div class="partner-sidebar__scroll">
       <div class="partner-sidebar__identity">
         <a class="partner-sidebar__home-link" href="{{ url_for('admin_sessions') }}" aria-label="Retour à l’accueil"><img class="partner-sidebar__avatar" src="{{ url_for('static', filename='logo-integrale.png') }}" alt="Intégrale Academy"></a>
-        <button type="button" class="admin-sidebar-collapse-handle" data-sidebar-collapse aria-label="Réduire la barre"><span class="collapse-icon collapse-icon--open">{{ ps.sidebar_icon('chevron') }}</span><span class="collapse-icon collapse-icon--closed">{{ ps.sidebar_icon('chevron-right') }}</span></button>
+        <button type="button" class="partner-sidebar__collapse" data-sidebar-collapse aria-label="Réduire la barre"><span class="collapse-icon collapse-icon--open">{{ ps.sidebar_icon('chevron') }}</span><span class="collapse-icon collapse-icon--closed">{{ ps.sidebar_icon('chevron-right') }}</span></button>
         <div class="partner-sidebar__identity-copy"><strong>Administration</strong><span>Intégrale Academy</span><em>Outils internes</em></div>
       </div>
       <div class="partner-sidebar__create">{{ ps.sidebar_nav_item(admin_create_item) }}<div class="quick-create-menu sidebar-create-menu" id="sidebarCreateMenu"><button class="quick-create-option quick-create-option--session" data-sidebar-action="create-session">💼 Nouvelle session</button><button class="quick-create-option quick-create-option--trainee" data-sidebar-action="create-trainee">👨‍🎓 Nouveau stagiaire</button></div></div>
