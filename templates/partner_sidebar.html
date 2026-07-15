@@ -34,13 +34,13 @@
   {% set active = request.endpoint in item.endpoints %}
   {% set classes = 'partner-sidebar__item ' ~ ('is-active' if active else '') ~ (' is-primary' if item.primary else '') %}
   {% if locked %}
-    <button type="button" class="{{ classes }} is-locked" data-locked-module="{{ item.label }}" title="{{ item.label }}">
+    <button type="button" class="{{ classes }} is-locked" data-locked-module="{{ item.label }}" title="{{ item.label }}" aria-label="{{ item.label }}">
   {% elif item.action %}
-    <button type="button" class="{{ classes }}" data-sidebar-action="{{ item.action }}" title="{{ item.label }}">
+    <button type="button" class="{{ classes }}" data-sidebar-action="{{ item.action }}" title="{{ item.label }}" aria-label="{{ item.label }}">
   {% else %}
-    <a class="{{ classes }}" href="{{ item.href }}" title="{{ item.label }}"{% if item.external %} target="_blank" rel="noopener noreferrer"{% endif %}>
+    <a class="{{ classes }}" href="{{ item.href }}" title="{{ item.label }}" aria-label="{{ item.label }}"{% if item.external %} target="_blank" rel="noopener noreferrer"{% endif %}>
   {% endif %}
-      {{ sidebar_icon(item.icon) }}
+      <span class="sidebar-icon-wrap">{{ sidebar_icon(item.icon) }}{% if item.search_badge %}<span class="sidebar-search-badge" aria-hidden="true">{{ item.search_badge }}</span>{% endif %}</span>
       <span class="partner-sidebar__label">{{ item.label }}</span>
       {% if item.badge_id %}<span id="{{ item.badge_id }}" class="partner-sidebar__badge" {% if not item.badge %}style="display:none;"{% endif %}>{{ item.badge }}</span>{% elif item.badge %}<span class="partner-sidebar__badge">{{ item.badge }}</span>{% endif %}
       {% if locked %}<span class="partner-sidebar__lock">{{ sidebar_icon('lock') }}</span>{% endif %}
