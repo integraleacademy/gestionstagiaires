@@ -51,7 +51,7 @@
   {% set ns = namespace(active=false) %}
   {% for child in menu.children %}{% if request.endpoint in child.endpoints %}{% set ns.active = true %}{% endif %}{% endfor %}
   <details class="partner-sidebar__submenu {{ 'is-active' if ns.active else '' }}" {% if ns.active %}open{% endif %}>
-    <summary class="partner-sidebar__item" title="{{ menu.label }}">
+    <summary class="partner-sidebar__item{% if menu.icon_accent %} partner-sidebar__item--{{ menu.icon_accent }}-icon{% endif %}" title="{{ menu.label }}">
       <span class="sidebar-icon-wrap">{{ sidebar_icon(menu.icon) }}</span>
       <span class="partner-sidebar__label{% if menu.hide_label %} sr-only{% endif %}">{{ menu.label }}</span>
       <span class="partner-sidebar__action">{% if menu.badge %}<span class="partner-sidebar__badge">{{ menu.badge }}</span>{% endif %}<span class="partner-sidebar__chevron">{{ sidebar_icon('chevron-right') }}</span></span>
