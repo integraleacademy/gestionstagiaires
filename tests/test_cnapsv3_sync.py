@@ -1760,6 +1760,31 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertIn("DOE", html)
         self.assertIn("NUB123", html)
 
+    def test_tracking_page_forces_chiocca_ap_sh_active_by_name_and_nub(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        original_fetch = gestion_app.fetch_cnapsv3_tracking_requests
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{
+            "last_name": "CHIOCCA",
+            "first_name": "Laurine",
+            "nub": "1079213",
+            "cnaps_status": "INCONNU",
+        }], None)
+        try:
+            response = client.get("/admin/sessions/suivi-cnaps")
+        finally:
+            gestion_app.fetch_cnapsv3_tracking_requests = original_fetch
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('data-nom="CHIOCCA"', html)
+        self.assertIn('data-nub="1079213"', html)
+        self.assertIn('normalizedLastName==="CHIOCCA"&&normalizedNub==="1079213"', html)
+        self.assertIn('validite_titre:"ACTIF"', html)
+
 
 if __name__ == "__main__":
     unittest.main()
