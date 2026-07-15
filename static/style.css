@@ -3444,3 +3444,37 @@ body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__action{
 body.admin-sidebar-active .partner-sidebar__action{
   margin-left:0;
 }
+
+/* Admin sidebar collapse handle: always visible and clickable on desktop.
+   It sits on the right edge of the rail like the original compact menu. */
+@media (min-width:861px){
+  body.admin-sidebar-active .partner-sidebar{
+    overflow:visible;
+  }
+  body.admin-sidebar-active .partner-sidebar__identity{
+    position:relative;
+  }
+  body.admin-sidebar-active .partner-sidebar__collapse,
+  body.admin-sidebar-active:not(.partner-sidebar-collapsed) .partner-sidebar__collapse,
+  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__collapse{
+    display:flex!important;
+    position:absolute!important;
+    right:-18px!important;
+    top:18px!important;
+    width:36px!important;
+    height:36px!important;
+    align-items:center;
+    justify-content:center;
+    border:1px solid rgba(255,255,255,.16);
+    border-radius:12px!important;
+    background:#10213d!important;
+    color:#dbeafe!important;
+    box-shadow:0 10px 24px rgba(2,6,23,.28);
+    z-index:220;
+    cursor:pointer;
+  }
+  body.admin-sidebar-active .partner-sidebar__collapse .sidebar-icon{
+    width:18px;
+    height:18px;
+  }
+}
