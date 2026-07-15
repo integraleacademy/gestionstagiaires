@@ -440,6 +440,50 @@ class MultiPartnerIsolationTests(unittest.TestCase):
             self.assertEqual(sess["partner_id"], self.partner_a)
 
 
+
+    def test_partner_login_rejects_unsafe_scrypt_hash_without_verifying_it(self):
+        data = gestion_app.load_data()
+        data["users"].append({
+            "id": "user-a",
+            "partner_id": self.partner_a,
+            "email": "admin@example.com",
+            "role": "partner_admin",
+            "active": True,
+            "password_hash": "scrypt:1073741824:8:1$salt$digest",
+        })
+        gestion_app.save_data(data)
+        response = self.client.post(
+            "/admin/login",
+            data={"username": "admin@example.com", "password": "Password1234", "next": "/admin/sessions"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("error=invalid", response.headers["Location"])
+
+    def test_partner_login_skips_background_tasks_during_authentication(self):
+        data = gestion_app.load_data()
+        data["users"].append({
+            "id": "user-a",
+            "partner_id": self.partner_a,
+            "email": "admin@example.com",
+            "role": "partner_admin",
+            "active": True,
+            "password_hash": gestion_app._hash_password("Password1234"),
+        })
+        gestion_app.save_data(data)
+        original = gestion_app._send_docs_relance_reminders
+        def fail_if_called(_data):
+            raise AssertionError("background task should not run during login")
+        gestion_app._send_docs_relance_reminders = fail_if_called
+        try:
+            response = self.client.post(
+                "/admin/login",
+                data={"username": "admin@example.com", "password": "Password1234", "next": "/admin/sessions"},
+            )
+        finally:
+            gestion_app._send_docs_relance_reminders = original
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/admin/sessions")
+
     def test_partner_login_accepts_werkzeug_password_hash(self):
         data = gestion_app.load_data()
         data["users"].append({

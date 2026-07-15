@@ -1939,7 +1939,7 @@ def admin_login_post():
     password = request.form.get("password") or ""
     next_url = request.form.get("next") or url_for("admin_sessions")
 
-    data = load_data()
+    data = load_data(run_background_tasks=False)
     _log_partner_auth_event("login_attempt", data, username_normalized)
 
     # sécurité minimale : si aucun accès plateforme ni partenaire n’est configuré, on refuse.
@@ -2509,10 +2509,18 @@ def _verify_password(password: str, stored: str) -> bool:
     try:
         algo, rounds, salt, digest = stored.split("$", 3)
         if algo == "pbkdf2_sha256":
-            candidate = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), int(rounds)).hex()
+            rounds_int = int(rounds)
+            if rounds_int < 1 or rounds_int > 600000:
+                app.logger.warning("Refus d’un hash partenaire PBKDF2 aux paramètres invalides")
+                return False
+            candidate = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), rounds_int).hex()
             return hmac.compare_digest(candidate, digest)
     except Exception:
         pass
+
+    if _werkzeug_hash_uses_unsafe_memory(stored):
+        app.logger.warning("Refus d’un hash partenaire Werkzeug aux paramètres mémoire dangereux")
+        return False
 
     # Compatibilité avec les hashs Werkzeug/Flask éventuellement créés par
     # d’anciennes versions ou par un outil d’administration externe.
@@ -2520,6 +2528,24 @@ def _verify_password(password: str, stored: str) -> bool:
         return check_password_hash(stored, password)
     except Exception:
         return False
+
+
+def _werkzeug_hash_uses_unsafe_memory(stored: str) -> bool:
+    """Reject malformed Werkzeug scrypt hashes before they can allocate GBs."""
+    method = (stored or "").split("$", 1)[0]
+    if not method.startswith("scrypt"):
+        return False
+    parts = method.split(":")
+    if len(parts) != 4:
+        return True
+    try:
+        n, r, p = (int(value) for value in parts[1:])
+    except ValueError:
+        return True
+    if n < 2 or n & (n - 1):
+        return True
+    estimated_bytes = 128 * n * r
+    return r < 1 or p < 1 or estimated_bytes > 64 * 1024 * 1024
 
 
 
@@ -6351,7 +6377,7 @@ def _empty_data_payload() -> Dict[str, Any]:
     }
 
 
-def load_data() -> Dict[str, Any]:
+def load_data(run_background_tasks: bool = True) -> Dict[str, Any]:
     if not os.path.exists(DATA_FILE):
         recovered_from = _recover_data_file(DATA_FILE)
         if recovered_from:
@@ -6439,17 +6465,18 @@ def load_data() -> Dict[str, Any]:
         if normalize_all_partner_subscriptions(data):
             changed = True
 
-        if _send_vtc_credentials_missing_reminders(data):
-            changed = True
+        if run_background_tasks:
+            if _send_vtc_credentials_missing_reminders(data):
+                changed = True
 
-        if _send_vae_relance_reminders(data):
-            changed = True
+            if _send_vae_relance_reminders(data):
+                changed = True
 
-        if _send_docs_relance_reminders(data):
-            changed = True
+            if _send_docs_relance_reminders(data):
+                changed = True
 
-        if _inject_vtc_exam_results_notifications(data):
-            changed = True
+            if _inject_vtc_exam_results_notifications(data):
+                changed = True
 
         for session_obj in (data.get("sessions") or []):
             for trainee in _session_trainees_list(session_obj):
@@ -12742,7 +12769,7 @@ def activate_account():
     if request.method == "POST":
         password = request.form.get("password") or ""
         confirm = request.form.get("confirm") or ""
-        data = load_data()
+        data = load_data(run_background_tasks=False)
         invitation = _find_invitation_by_raw_token(data, token)
         now_dt = datetime.datetime.utcnow()
         if not invitation:
@@ -12769,7 +12796,7 @@ def activate_account():
                 invitation["used_at"] = _now_iso()
                 _append_activity_log(data, "invitation_activated", "user", user.get("id"), user.get("partner_id") or "")
                 save_data(data)
-                reloaded = load_data()
+                reloaded = load_data(run_background_tasks=False)
                 persisted_user = next((u for u in reloaded.get("users", []) if isinstance(u, dict) and u.get("id") == user.get("id")), None)
                 persisted_invitation = next((i for i in reloaded.get("invitations", []) if isinstance(i, dict) and i.get("id") == invitation.get("id")), None)
                 persisted_ok = bool(
