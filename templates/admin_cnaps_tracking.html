@@ -48,7 +48,7 @@
       <div>
         <div class="cnaps-kicker">👮 Pilotage CNAPS</div>
         <h1 class="cnaps-title">Suivi CNAPS</h1>
-        <p class="cnaps-subtitle">Toutes les demandes CNAPS remontées depuis CNAPSV3, avec recherche instantanée, statut d’inscription en formation et suivi carte professionnelle de l’annuaire CNAPS.</p>
+        <p class="cnaps-subtitle">Uniquement les nouveaux dossiers CNAPS V3 créés à compter du 15/07/2026, ainsi que tous les dossiers ayant le statut « transmis », avec recherche instantanée, statut d’inscription en formation et suivi carte professionnelle de l’annuaire CNAPS.</p>
       </div>
       <div class="cnaps-actions">
         <a class="btn btn-outline" href="{{ url_for('admin_sessions') }}">← Retour sessions</a>
@@ -56,7 +56,7 @@
       </div>
     </div>
     <div class="cnaps-stats">
-      <div class="cnaps-stat"><div class="cnaps-stat__value">{{ requests_rows|length }}</div><div class="cnaps-stat__label">Demandes CNAPS</div></div>
+      <div class="cnaps-stat"><div class="cnaps-stat__value">{{ requests_rows|length }}</div><div class="cnaps-stat__label">Nouveaux ou transmis</div></div>
       <div class="cnaps-stat"><div class="cnaps-stat__value">{{ enrolled_count|default(0) }}</div><div class="cnaps-stat__label">Inscrites en session</div></div>
       <div class="cnaps-stat"><div class="cnaps-stat__value">{{ requests_rows|length - (enrolled_count|default(0)) }}</div><div class="cnaps-stat__label">Non inscrites</div></div>
     </div>
@@ -71,7 +71,7 @@
   </div>
 
   {% if fetch_error %}<div class="card" style="color:#991b1b;background:#fee2e2;border-color:#fca5a5;">Impossible de récupérer les demandes CNAPSV3 pour le moment : {{ fetch_error }}</div>{% endif %}
-  {% if requests_rows|length == 0 and not fetch_error %}<div class="card" style="color:var(--muted)">Aucune demande CNAPS à afficher.</div>{% elif requests_rows|length > 0 %}
+  {% if requests_rows|length == 0 and not fetch_error %}<div class="card" style="color:var(--muted)">Aucun nouveau dossier CNAPS depuis le 15/07/2026 ni dossier transmis à afficher.</div>{% elif requests_rows|length > 0 %}
   <div class="cnaps-table-card">
     <div class="cnaps-table-wrap">
       <table class="cnaps-table">

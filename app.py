@@ -3054,6 +3054,55 @@ def _cnapsv3_tracking_value(item: Dict[str, Any], keys: Iterable[str]) -> str:
     return ""
 
 
+
+
+CNAPSV3_TRACKING_MIN_CREATED_DATE = datetime.date(2026, 7, 15)
+CNAPSV3_TRACKING_ALLOWED_STATUS = "TRANSMIS"
+
+
+def _normalize_cnapsv3_tracking_status(value: Any) -> str:
+    text = unicodedata.normalize("NFKD", str(value or ""))
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    return re.sub(r"[^A-Z0-9]+", " ", text.upper()).strip()
+
+
+def _parse_cnapsv3_tracking_date(value: Any) -> Optional[datetime.date]:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    normalized = raw.replace("Z", "+00:00")
+    try:
+        return datetime.datetime.fromisoformat(normalized).date()
+    except ValueError:
+        pass
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
+        try:
+            return datetime.datetime.strptime(raw[:10], fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def _cnapsv3_tracking_request_matches_scope(item: Dict[str, Any], status: str) -> bool:
+    if _normalize_cnapsv3_tracking_status(status) == CNAPSV3_TRACKING_ALLOWED_STATUS:
+        return True
+    created_raw = _cnapsv3_tracking_value(item, (
+        "created_at",
+        "createdAt",
+        "date_creation",
+        "dateCreation",
+        "created_date",
+        "date_depot",
+        "dateDepot",
+        "submitted_at",
+        "submittedAt",
+        "transmitted_at",
+        "transmittedAt",
+    ))
+    created_date = _parse_cnapsv3_tracking_date(created_raw)
+    return bool(created_date and created_date >= CNAPSV3_TRACKING_MIN_CREATED_DATE)
+
+
 CNAPSV3_TRACKING_CACHE_TTL_SECONDS = 15
 _cnapsv3_tracking_cache: Dict[str, Any] = {"expires_at": 0.0, "rows": [], "error": None}
 
@@ -3165,6 +3214,8 @@ def fetch_cnapsv3_tracking_requests(get_func=None) -> Tuple[List[Dict[str, str]]
         nub = _cnapsv3_tracking_value(item, ("nub", "NUB", "numero_nub", "nub_number", "num_nub"))
         status = _cnapsv3_tracking_value(item, ("statut_cnaps", "cnaps_status", "status", "statut"))
         if not any((last_name, first_name, nub, status)):
+            continue
+        if not _cnapsv3_tracking_request_matches_scope(item, status):
             continue
         rows.append({
             "last_name": last_name,
