@@ -3807,6 +3807,23 @@ document.querySelectorAll("select.sel").forEach(sel=>{
   }
 
   function renderCardProFollowupResult(resultEl, data, mode){
+    if(data && data.check_status === "error"){
+      resultEl.className = "card-pro-result is-unknown";
+      resultEl.innerHTML = '<span class="card-pro-result__chip is-unknown"><span class="card-pro-result__activity">Vérification CNAPS impossible</span></span>';
+      return;
+    }
+    const activeTitles = Array.isArray(data?.active_titles) ? data.active_titles : [];
+    if(data && data.check_status === "success" && !activeTitles.length){
+      resultEl.className = "card-pro-result is-unknown";
+      resultEl.innerHTML = '<span class="card-pro-result__chip is-unknown"><span class="card-pro-result__activity">Aucun titre actif trouvé</span></span>';
+      return;
+    }
+    if(activeTitles.length){
+      const chips = activeTitles.map((title)=>`<span class="card-pro-result__chip is-active" title="${escapeHtml([title.activity, title.validity, title.valid_until].filter(Boolean).join(" • "))}"><span class="card-pro-result__activity">${escapeHtml(title.label)}</span></span>`).join("");
+      resultEl.className = "card-pro-result is-active";
+      resultEl.innerHTML = chips;
+      return;
+    }
     const rows = Array.isArray(data.results) && data.results.length ? data.results : [data];
     const chips = rows.map((row)=>{
       const activity = shortCardProActivity(row.activite);
@@ -3884,19 +3901,14 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       const r = await fetch(`/api/cnaps_public_annuaire?nom=${encodeURIComponent(nom)}&nub=${encodeURIComponent(nub)}`);
       const data = await r.json().catch(()=>({}));
       if(r.ok && data.ok){
-        renderCardProFollowupResult(resultEl, withLocalCardProFallback(data, fallbackCardProFollowup(box)), "remote");
+        renderCardProFollowupResult(resultEl, data, "remote");
         return;
       }
     }catch(e){
       // Si l'annuaire public bloque l'appel serveur, on affiche au moins les informations
       // déductibles du dossier au lieu de laisser la colonne en erreur.
     }
-    const fallback = fallbackCardProFollowup(box);
-    if(fallback){
-      renderCardProFollowupResult(resultEl, fallback, "fallback");
-      return;
-    }
-    renderCardProFollowupResult(resultEl, {validite_titre: "INCONNU"}, "unknown");
+    renderCardProFollowupResult(resultEl, {check_status: "error", active_titles: [], error: "cnaps_unavailable"}, "error");
   }
 
   document.querySelectorAll("[data-card-pro-followup]").forEach(box=>{
