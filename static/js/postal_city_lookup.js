@@ -2,7 +2,7 @@
   "use strict";
 
   const API_URL = "https://geo.api.gouv.fr/communes";
-  const ADDRESS_API_URL = "https://data.geopf.fr/geocodage/search";
+  const ADDRESS_API_URL = "https://data.geopf.fr/geocodage/completion/";
   const DEBOUNCE_MS = 300;
   const REQUEST_TIMEOUT_MS = 5000;
   const instances = [];
@@ -152,21 +152,23 @@
     return state;
   }
 
-  function mapAddressFeature(feature){
-    const props = (feature && feature.properties) || {};
-    const streetParts = [props.housenumber, props.street].filter(Boolean).join(" ").trim();
-    const address = (props.name || streetParts || "").trim();
-    const postcode = (props.postcode || "").trim();
-    const city = (props.city || props.municipality || "").trim();
-    const label = (props.label || [address, postcode, city].filter(Boolean).join(" ")).trim();
-    return {address, postcode, city, label, type: props.type || ""};
+  function mapAddressCompletionResult(result){
+    const fulltext = (result && result.fulltext || "").trim();
+    const street = (result && result.street || "").trim();
+    const zipcode = (result && result.zipcode || "").trim();
+    const city = (result && result.city || "").trim();
+    const kind = (result && result.kind || "").trim();
+    const address = street || fulltext.replace(new RegExp(`\\s+${zipcode}\\s+${city}$`, "i"), "").trim();
+    const label = fulltext || [address, zipcode, city].filter(Boolean).join(" ").trim();
+    return {address, postcode: zipcode, city, label, kind};
   }
 
   function initFrenchAddressAutocomplete(options){
     const addressInput = options && options.addressInput;
     const postalCodeInput = options && options.postalCodeInput;
     const cityInput = options && options.cityInput;
-    if(!addressInput || !postalCodeInput || !cityInput || addressInput.dataset.frenchAddressAutocomplete === "1") return null;
+    if(!addressInput || !postalCodeInput || !cityInput || addressInput.dataset.addressAutocompleteInitialized === "true") return null;
+    addressInput.dataset.addressAutocompleteInitialized = "true";
     addressInput.dataset.frenchAddressAutocomplete = "1";
     addressInput.setAttribute("role", "combobox");
     addressInput.setAttribute("aria-autocomplete", "list");
@@ -174,12 +176,12 @@
     addressInput.setAttribute("autocomplete", "street-address");
 
     const wrapper = addressInput.closest("label") || addressInput.parentElement;
-    if(wrapper) wrapper.classList.add("french-address-field");
+    if(wrapper) wrapper.classList.add("french-address-field", "address-field-wrapper");
     const status = document.createElement("div");
     status.className = "french-address-status";
     status.setAttribute("aria-live", "polite");
     const list = options.addressResultsContainer || document.createElement("div");
-    list.className = "french-address-list";
+    list.className = "french-address-list address-suggestions";
     list.id = list.id || `${addressInput.id || "french-address"}-results`;
     list.setAttribute("role", "listbox");
     list.hidden = true;
@@ -210,7 +212,7 @@
         button.setAttribute("aria-selected", "false");
         const main = document.createElement("span");
         main.className = "french-address-option__main";
-        main.textContent = item.address || item.label || "Adresse";
+        main.textContent = item.label || item.address || "Adresse";
         const meta = document.createElement("span");
         meta.className = "french-address-option__meta";
         meta.textContent = [item.postcode, item.city].filter(Boolean).join(" ");
@@ -243,17 +245,28 @@
       setStatus("Recherche d’adresse…", true);
       closeList();
       try{
-        const params = new URLSearchParams({q: query, limit: "6", index: "address"});
-        const response = await fetch(`${ADDRESS_API_URL}?${params.toString()}`, {signal: controller.signal, headers:{"Accept":"application/json"}});
+        const params = new URLSearchParams({
+          text: query,
+          type: "StreetAddress",
+          maximumResponses: "6"
+        });
+        const url = `${ADDRESS_API_URL}?${params.toString()}`;
+        console.debug("[ADDRESS] input", query);
+        console.debug("[ADDRESS] request", url);
+        const response = await fetch(url, {signal: controller.signal, headers:{"Accept":"application/json"}});
+        console.debug("[ADDRESS] status", response.status);
         if(!response.ok) throw new Error(response.status === 429 ? "address_rate_limited" : "address_api_error");
         const data = await response.json();
         if(requestId !== state.requestId || addressInput.value.trim() !== query) return;
-        const suggestions = Array.isArray(data.features) ? data.features.map(mapAddressFeature).filter(item=>item.address && item.postcode && item.city).slice(0, 6) : [];
+        const results = Array.isArray(data.results) ? data.results : [];
+        const suggestions = results.map(mapAddressCompletionResult).filter(item=>item.label && item.postcode && item.city).slice(0, 6);
+        console.debug("[ADDRESS] result count", suggestions.length);
         state.suggestions = suggestions;
         if(suggestions.length){ renderSuggestions(suggestions); setStatus("", false); }
         else { closeList(); setStatus("", false); }
       }catch(error){
         if(error && error.name === "AbortError") return;
+        console.error("[ADDRESS] autocomplete failed", error);
         if(requestId === state.requestId){ closeList(); setStatus("Recherche d’adresse indisponible, saisie manuelle possible.", false); }
       }finally{
         window.clearTimeout(timeout);
@@ -309,6 +322,30 @@
   window.initFrenchAddressAutocompletes = initFrenchAddressAutocompletes;
   window.initPostalCityLookups = initPostalCityLookups;
   window.__postalCityLookupInstances = instances;
-  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", ()=>{ initPostalCityLookups(document); initFrenchAddressAutocompletes(document); });
-  else { initPostalCityLookups(document); initFrenchAddressAutocompletes(document); }
+  function initLookups(root){
+    initPostalCityLookups(root || document);
+    initFrenchAddressAutocompletes(root || document);
+  }
+
+  function observeDynamicAddressFields(){
+    if(!document.body || window.__addressAutocompleteObserver) return;
+    const observer = new MutationObserver(mutations=>{
+      for(const mutation of mutations){
+        if(mutation.type === "childList"){
+          mutation.addedNodes.forEach(node=>{
+            if(node && node.nodeType === 1) initLookups(node);
+          });
+        }else if(mutation.type === "attributes" && mutation.target && mutation.target.nodeType === 1){
+          initLookups(mutation.target);
+        }
+      }
+    });
+    observer.observe(document.body, {childList:true, subtree:true, attributes:true, attributeFilter:["class", "aria-hidden", "style"]});
+    window.__addressAutocompleteObserver = observer;
+  }
+
+  window.addEventListener("modal:opened", event=>{ initLookups(event.detail && event.detail.modal ? event.detail.modal : document); });
+
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", ()=>{ initLookups(document); observeDynamicAddressFields(); });
+  else { initLookups(document); observeDynamicAddressFields(); }
 })();
