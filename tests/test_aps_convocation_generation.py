@@ -1009,5 +1009,47 @@ class AutomationPartnerModuleTests(unittest.TestCase):
                 self.assertTrue(app._financing_partner_module_enabled())
 
 
+class ApsConvocationDueSendTests(unittest.TestCase):
+    def test_due_convention_signature_convocation_is_sent_without_in_memory_timer(self):
+        session = {"id": "session-1", "training_type": "APS", "trainees": []}
+        trainee = {
+            "id": "trainee-1",
+            "convention_signature": {"status": "done", "signed_at": "2026-07-16T10:00:00Z"},
+            "convention_aps_status": "signed",
+            "convocation_auto_scheduled_at": "2026-07-16T10:05:00Z",
+        }
+        session["trainees"] = [trainee]
+        data = {"sessions": [session]}
+
+        with mock.patch.object(app.datetime, "datetime", wraps=app.datetime.datetime) as fake_datetime, \
+             mock.patch.object(app, "_send_convocation_after_convention_signed", return_value=True) as send:
+            fake_datetime.utcnow.return_value = app.datetime.datetime(2026, 7, 16, 10, 6, 0)
+            changed = app._process_due_convocation_after_convention_signed(data)
+
+        self.assertTrue(changed)
+        send.assert_called_once_with(session, trainee, "session-1", "trainee-1")
+        self.assertEqual(trainee["convocation_auto_scheduled_at"], "")
+        self.assertIn("updated_at", trainee)
+
+    def test_future_convention_signature_convocation_is_not_sent_by_due_processor(self):
+        session = {"id": "session-1", "training_type": "APS", "trainees": []}
+        trainee = {
+            "id": "trainee-1",
+            "convention_signature": {"status": "done", "signed_at": "2026-07-16T10:00:00Z"},
+            "convention_aps_status": "signed",
+            "convocation_auto_scheduled_at": "2026-07-16T10:05:00Z",
+        }
+        session["trainees"] = [trainee]
+        data = {"sessions": [session]}
+
+        with mock.patch.object(app.datetime, "datetime", wraps=app.datetime.datetime) as fake_datetime, \
+             mock.patch.object(app, "_send_convocation_after_convention_signed", return_value=True) as send:
+            fake_datetime.utcnow.return_value = app.datetime.datetime(2026, 7, 16, 10, 4, 59)
+            changed = app._process_due_convocation_after_convention_signed(data)
+
+        self.assertFalse(changed)
+        send.assert_not_called()
+        self.assertEqual(trainee["convocation_auto_scheduled_at"], "2026-07-16T10:05:00Z")
+
 if __name__ == "__main__":
     unittest.main()
