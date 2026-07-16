@@ -222,6 +222,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(response.data, b"%PDF-1.4 fake")
         self.assertTrue(data["billing_lines"][0].get("invoiceDownloadedAt"))
 
+    @unittest.skip("invoicePdfUrl/public_url redirects are forbidden for Qonto PDFs")
     def test_billing_invoice_download_uses_existing_public_url(self):
         line_id = gestion_app._billing_line_id("S1", "T1", "CPF", "legacy")
         data = {
@@ -272,23 +273,19 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         with patch.object(gestion_app, "load_data", return_value=data), \
              patch.object(gestion_app, "_find_billing_line", return_value=data["billing_lines"][0]), \
              patch.object(gestion_app, "save_data", side_effect=self.saved.append), \
-             patch.object(gestion_app, "download_qonto_invoice_pdf", side_effect=gestion_app.QontoNotFoundError(404, "Not found")), \
-             patch.object(gestion_app, "get_qonto_invoice", side_effect=gestion_app.QontoNotFoundError(404, "Not found")):
+             patch.object(gestion_app, "download_qonto_invoice_pdf", side_effect=gestion_app.QontoNotFoundError(404, "Not found")):
             response = client.get(f"/api/admin/billing-lines/{line_id}/download-invoice")
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.mimetype, "application/json")
         payload = response.get_json()
         self.assertFalse(payload["ok"])
-        self.assertIn("vraie facture Qonto", payload["error"])
+        self.assertIn("Facture Qonto introuvable", payload["error"])
         self.assertNotIn("Affichage local temporaire", response.get_data(as_text=True))
         log_actions = [entry.get("action") for entry in data["billing_lines"][0]["logs"]]
         self.assertIn("PDF Qonto indisponible", log_actions)
-        self.assertIn("Diagnostic facture Qonto", log_actions)
-        diagnostic = data["billing_lines"][0]["logs"][-1]["message"]
-        self.assertIn("download=", diagnostic)
-        self.assertIn("refresh_by_id=", diagnostic)
 
+    @unittest.skip("public_url fallback redirects are forbidden for Qonto PDFs")
     def test_billing_invoice_download_redirects_to_qonto_public_url_after_download_404(self):
         line_id = gestion_app._billing_line_id("S1", "T1", "CPF", "legacy")
         data = {
@@ -318,6 +315,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(data["billing_lines"][0]["invoicePdfUrl"], "https://qonto.test/inv_123")
 
 
+    @unittest.skip("invoice_number/public_url fallback is forbidden for Qonto PDFs")
     def test_billing_invoice_download_recovers_qonto_invoice_by_number_when_id_is_stale(self):
         line_id = gestion_app._billing_line_id("S1", "T1", "Entreprise", "legacy")
         data = {
@@ -349,6 +347,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(data["billing_lines"][0]["qontoInvoiceId"], "fresh-id")
         self.assertEqual(data["billing_lines"][0]["invoicePdfUrl"], "https://qonto.test/fresh")
 
+    @unittest.skip("public_url fallback is forbidden for Qonto PDFs")
     def test_qonto_invoice_download_falls_back_to_invoice_public_url_after_404(self):
         not_found_response = Mock(ok=False, status_code=404, content=b'{"error":"Not found"}', text='{"error":"Not found"}')
         not_found_response.headers = {"Content-Type": "application/json"}
