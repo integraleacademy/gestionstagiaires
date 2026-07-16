@@ -605,18 +605,16 @@
           {% if trainee.access_sent_at %}
             <span class="hint">✅ Accès envoyé le : <strong>{{ trainee.access_sent_at|frdatetime }}</strong></span>
           {% endif %}
-          {% set trainee_cnaps_normalized = c|replace("É", "E")|replace("È", "E") %}
-          {% set show_card_pro_followup = trainee_nub and ("ACCEPT" in trainee_cnaps_normalized or "OK" in trainee_cnaps_normalized or "CARTE" in trainee_cnaps_normalized) %}
-          {% if show_card_pro_followup %}
-            <div class="trainee-cnaps-followup" aria-label="Suivi carte professionnelle CNAPS">
-              <span class="trainee-cnaps-followup__chip is-active" title="Autorisation préalable - Surveillance humaine ou gardiennage • ACTIF">
-                <span class="trainee-cnaps-followup__activity">AP SH</span>
-                <span class="trainee-cnaps-followup__validity">ACTIF</span>
-              </span>
-              <span class="trainee-cnaps-followup__chip is-active" title="Carte professionnelle - Surveillance humaine ou gardiennage • ACTIF">
-                <span class="trainee-cnaps-followup__activity">CP SH</span>
-                <span class="trainee-cnaps-followup__validity">ACTIF</span>
-              </span>
+          {% if trainee_nub %}
+            <div class="trainee-cnaps-followup"
+                 data-trainee-card-pro-followup
+                 data-nom="{{ trainee.last_name or '' }}"
+                 data-prenom="{{ trainee.first_name or '' }}"
+                 data-nub="{{ trainee_nub }}"
+                 data-cnaps-status="{{ trainee.cnaps or '' }}"
+                 data-fallback-activity="Autorisation préalable - Surveillance humaine ou gardiennage"
+                 aria-label="Suivi carte professionnelle CNAPS">
+              <span class="hint" data-trainee-card-pro-result>Chargement CNAPS…</span>
             </div>
           {% endif %}
           {% set cnaps_history = trainee.cnaps_history or [] %}
@@ -4894,6 +4892,80 @@ if(btnEtiquetteWord){
     </div>
   </div>
 </div>
+
+<script>
+(function(){
+  function escapeHtml(value){return String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));}
+  function shortCardProActivity(value){
+    const normalized = (value || "").replace(/\s+/g, " ").trim().toLowerCase();
+    const map = new Map([
+      ["autorisation préalable - surveillance humaine ou gardiennage", "AP SH"],
+      ["autorisation préalable - agent de protection physique des personnes", "AP A3P"],
+      ["carte professionnelle - surveillance humaine ou gardiennage", "CP SH"],
+      ["carte professionnelle - agent de protection physique des personnes", "CP A3P"],
+    ]);
+    return map.get(normalized) || (value || "—");
+  }
+  function cardProValidityMode(value){
+    const normalized = (value || "").replace(/\s+/g, " ").trim().toUpperCase();
+    if(!normalized) return "unknown";
+    if(normalized.includes("INACTIF") || normalized.includes("EXPIR") || normalized.includes("ÉCHU") || normalized.includes("ECHU") || normalized.includes("REFUS")) return "inactive";
+    if(normalized.includes("ACTIF") || normalized.includes("VALIDE")) return "active";
+    return "unknown";
+  }
+  function normalizedCardProActivity(value){return shortCardProActivity(value).replace(/\s+/g, " ").trim().toUpperCase();}
+  function renderTraineeCardProResult(resultEl, data, mode){
+    if(!resultEl) return;
+    const rows = Array.isArray(data.results) && data.results.length ? data.results : [data];
+    resultEl.outerHTML = rows.map((row)=>{
+      const activity = shortCardProActivity(row.activite);
+      const validity = row.validite_titre || (mode === "unknown" ? "INCONNU" : "À vérifier");
+      const validityMode = mode === "unknown" ? "unknown" : cardProValidityMode(validity);
+      const title = [row.activite, row.validite_titre, row.date_validite_titre].filter(Boolean).join(" • ");
+      return `<span class="trainee-cnaps-followup__chip is-${validityMode}"${title ? ` title="${escapeHtml(title)}"` : ""} data-trainee-card-pro-result>` +
+        `<span class="trainee-cnaps-followup__activity">${escapeHtml(activity)}</span>` +
+        `<span class="trainee-cnaps-followup__validity">${escapeHtml(validityMode === "unknown" ? "INCONNU" : validity)}</span>` +
+        `${row.date_validite_titre ? `<span class="trainee-cnaps-followup__validity">${escapeHtml(row.date_validite_titre)}</span>` : ""}` +
+      `</span>`;
+    }).join("");
+  }
+  function fallbackCardProFollowup(box){
+    const status = (box.getAttribute("data-cnaps-status") || "").toUpperCase();
+    const fallbackActivity = box.getAttribute("data-fallback-activity") || "";
+    const isAccepted = status.includes("OK") || status.includes("ACCEPTE") || status.includes("ACCEPTÉ");
+    if(!fallbackActivity) return null;
+    return {results: [{activite: fallbackActivity, validite_titre: isAccepted ? "ACTIF" : "À vérifier"}]};
+  }
+  function withLocalCardProFallback(data, fallback){
+    if(!fallback) return data;
+    const rows = Array.isArray(data.results) && data.results.length ? data.results.slice() : [data];
+    const fallbackRows = Array.isArray(fallback.results) && fallback.results.length ? fallback.results : [fallback];
+    fallbackRows.forEach((fallbackRow)=>{
+      const fallbackActivity = normalizedCardProActivity(fallbackRow.activite);
+      if(!rows.some((row)=>normalizedCardProActivity(row.activite) === fallbackActivity)) rows.push(fallbackRow);
+    });
+    return {...data, results: rows};
+  }
+  async function refreshTraineeCardProFollowup(box){
+    const resultEl = box.querySelector("[data-trainee-card-pro-result]");
+    const nom = box.getAttribute("data-nom") || "";
+    const prenom = box.getAttribute("data-prenom") || "";
+    const nub = box.getAttribute("data-nub") || "";
+    if(!resultEl || !nom || !nub) return;
+    try{
+      const r = await fetch(`/api/cnaps_public_annuaire?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}&nub=${encodeURIComponent(nub)}`);
+      const data = await r.json().catch(()=>({}));
+      if(r.ok && data.ok){
+        renderTraineeCardProResult(resultEl, withLocalCardProFallback(data, fallbackCardProFollowup(box)), "remote");
+        return;
+      }
+    }catch(e){}
+    const fallback = fallbackCardProFollowup(box);
+    renderTraineeCardProResult(resultEl, fallback || {validite_titre: "INCONNU"}, fallback ? "fallback" : "unknown");
+  }
+  document.querySelectorAll("[data-trainee-card-pro-followup]").forEach(box=>refreshTraineeCardProFollowup(box));
+})();
+</script>
 
 <script>
 document.addEventListener('click', async (event) => {
