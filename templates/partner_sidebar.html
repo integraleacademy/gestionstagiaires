@@ -54,7 +54,7 @@
     <summary class="partner-sidebar__item{% if menu.icon_accent %} partner-sidebar__item--{{ menu.icon_accent }}-icon{% endif %}" title="{{ menu.label }}">
       <span class="sidebar-icon-wrap">{{ sidebar_icon(menu.icon) }}</span>
       <span class="partner-sidebar__label{% if menu.hide_label %} sr-only{% endif %}">{{ menu.label }}</span>
-      <span class="partner-sidebar__action">{% if menu.badge %}<span class="partner-sidebar__badge">{{ menu.badge }}</span>{% endif %}<span class="partner-sidebar__chevron">{{ sidebar_icon('chevron-right') }}</span></span>
+      <span class="partner-sidebar__action">{% if menu.badge_id %}<span id="{{ menu.badge_id }}" class="partner-sidebar__badge" {% if not menu.badge %}style="display:none;"{% endif %}>{{ menu.badge }}</span>{% elif menu.badge %}<span class="partner-sidebar__badge">{{ menu.badge }}</span>{% endif %}<span class="partner-sidebar__chevron">{{ sidebar_icon('chevron-right') }}</span></span>
     </summary>
     <div class="partner-sidebar__submenu-panel" aria-label="{{ menu.label }}">
       {% for child in menu.children %}

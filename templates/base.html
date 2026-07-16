@@ -166,7 +166,7 @@
       {"label":"Réglages Qonto","icon":"settings","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings"],"locked":not partner_has_module('billing')},
       {"label":"Sessions archivées","icon":"archive","href":url_for('admin_sessions_archived'),"endpoints":["admin_sessions_archived"],"locked":False}
     ] %}
-    {% set sidebar_tools_menu = {"label":"Outils","icon":"tool","badge":"","children":sidebar_tools_children} %}
+    {% set sidebar_tools_menu = {"label":"Outils","icon":"tool","badge":"","badge_id":"sidebarToolsConventionsSignedBadge","children":sidebar_tools_children} %}
     {% set settings_items = [
       {"label":"Aide et support","icon":"help","href":url_for('partner_help_support'),"endpoints":["partner_help_support"],"locked":False}
     ] %}
@@ -1191,8 +1191,11 @@
   })();
 
   (function initGlobalConventionsSignedBadge(){
-    const sidebarBadge = document.getElementById("sidebarConventionsSignedBadge");
-    if(!sidebarBadge) return;
+    const sidebarBadges = [
+      document.getElementById("sidebarConventionsSignedBadge"),
+      document.getElementById("sidebarToolsConventionsSignedBadge")
+    ].filter(Boolean);
+    if(!sidebarBadges.length) return;
 
     async function refreshSidebarConventionsSignedBadge(){
       try{
@@ -1200,13 +1203,17 @@
         const payload = await response.json();
         if(!response.ok || !payload.ok) throw new Error(payload.error || "request_failed");
         const total = Number(payload.count || 0);
-        sidebarBadge.textContent = String(total);
-        sidebarBadge.style.display = total > 0 ? "inline-flex" : "none";
-        sidebarBadge.setAttribute("aria-label", `${total} convention(s) signée(s) à consulter`);
+        sidebarBadges.forEach((sidebarBadge) => {
+          sidebarBadge.textContent = String(total);
+          sidebarBadge.style.display = total > 0 ? "inline-flex" : "none";
+          sidebarBadge.setAttribute("aria-label", `${total} convention(s) signée(s) à consulter`);
+        });
       }catch(_error){
-        sidebarBadge.textContent = "!";
-        sidebarBadge.style.display = "inline-flex";
-        sidebarBadge.setAttribute("aria-label", "Impossible de charger les conventions signées");
+        sidebarBadges.forEach((sidebarBadge) => {
+          sidebarBadge.textContent = "!";
+          sidebarBadge.style.display = "inline-flex";
+          sidebarBadge.setAttribute("aria-label", "Impossible de charger les conventions signées");
+        });
       }
     }
 

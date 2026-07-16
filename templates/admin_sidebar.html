@@ -17,7 +17,7 @@
   {"label":"Sessions","icon":"folder","action":"open-session-search","endpoints":[],"locked":False},
   {"label":"Stagiaires","icon":"users","action":"open-trainee-search","endpoints":[],"locked":False}
 ]} %}
-{% set admin_tools_menu = {"label":"Outils","icon":"tool","badge":"","children":[
+{% set admin_tools_menu = {"label":"Outils","icon":"tool","badge":"","badge_id":"sidebarToolsConventionsSignedBadge","children":[
   {"label":"AFC","icon":"file","href":url_for('admin_afc'),"endpoints":["admin_afc"],"locked":False},
   {"label":"Conventions","icon":"file","href":url_for('admin_sessions_conventions'),"endpoints":["admin_sessions_conventions"],"badge":"","badge_id":"sidebarConventionsSignedBadge","locked":not partner_has_module('automations')},
   {"label":"Automatisations","icon":"tool","href":url_for('admin_sessions_automations'),"endpoints":["admin_sessions_automations"],"locked":not partner_has_module('automations')},
