@@ -839,7 +839,7 @@
       return;
     }
     const backdrop = e.target.closest?.(".modal-backdrop.show");
-    if(backdrop && e.target === backdrop && backdrop.id){
+    if(backdrop && e.target === backdrop && backdrop.id && !backdrop.hasAttribute("data-static-backdrop")){
       closeModal(backdrop.id);
       return;
     }
