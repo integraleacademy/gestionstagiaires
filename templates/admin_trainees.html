@@ -570,9 +570,6 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
                  data-cnaps-status="{{ t.cnaps or '' }}"
                  data-fallback-activity="Autorisation préalable - Surveillance humaine ou gardiennage">
               <div class="card-pro-result" data-card-pro-result>Chargement CNAPS…</div>
-              <button class="mini-btn card-pro-refresh-btn" data-card-pro-refresh type="button" title="Rafraîchir le suivi carte pro">↻</button>
-              <div class="muted">Nom : <strong>{{ t.last_name or "—" }}</strong></div>
-              <div class="muted">NUB : <strong>{{ card_pro_nub }}</strong></div>
             </div>
           {% else %}
             <span class="muted">NUB manquant</span>
@@ -905,7 +902,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 </div>
 
 <!-- MODALE CREATION STAGIAIRE -->
-<div class="modal-backdrop" id="createTraineeModal" aria-hidden="true">
+<div class="modal-backdrop" id="createTraineeModal" aria-hidden="true" data-static-backdrop>
   <div class="modal trainee-create-modal">
     <div class="modal-head trainee-create-head">
       <div>
@@ -1085,16 +1082,14 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 <style>
 
 #traineesTable .col-card-pro-followup{
-  width:220px;
-  min-width:220px;
-  max-width:240px;
+  width:130px;
+  min-width:130px;
+  max-width:150px;
   vertical-align:middle;
 }
 .card-pro-followup{
-  display:grid;
-  grid-template-columns:minmax(0, 1fr) auto;
-  gap:4px 6px;
-  align-items:center;
+  display:block;
+  min-width:0;
   font-size:11px;
   line-height:1.15;
 }
@@ -1127,13 +1122,24 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 }
 .card-pro-result__activity{letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;}
 .card-pro-result__validity{font-size:9px;text-transform:uppercase;opacity:.9;overflow:hidden;text-overflow:ellipsis;}
+#traineesTable .col-comment{
+  width:clamp(320px, 24vw, 460px);
+  min-width:320px;
+}
+#traineesTable input.comment{
+  width:100%;
+  min-width:300px;
+  box-sizing:border-box;
+}
 .card-pro-refresh-btn{padding:5px 8px;}
 .card-pro-result__date{display:none;}
 .card-pro-result.is-loading{background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;color:#1d4ed8;padding:5px 8px;}
-.card-pro-result__chip.is-active{background:#16a34a;border-color:#16a34a;color:#fff;}
+.card-pro-result__chip.is-active,.card-pro-result__chip.is-cp{background:#16a34a;border-color:#16a34a;color:#fff;}
+.card-pro-result__chip.is-ap{background:#f97316;border-color:#f97316;color:#fff;}
 .card-pro-result__chip.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
 .card-pro-result__chip.is-unknown{background:#ffedd5;border-color:#fdba74;color:#9a3412;}
-.card-pro-result.is-active .card-pro-result__chip.is-active{background:#16a34a;border-color:#16a34a;color:#fff;}
+.card-pro-result.is-active .card-pro-result__chip.is-active,.card-pro-result.is-active .card-pro-result__chip.is-cp{background:#16a34a;border-color:#16a34a;color:#fff;}
+.card-pro-result.is-active .card-pro-result__chip.is-ap{background:#f97316;border-color:#f97316;color:#fff;}
 .card-pro-result.is-inactive .card-pro-result__chip.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
 .card-pro-result.is-unknown .card-pro-result__chip.is-unknown{background:#ffedd5;border-color:#fdba74;color:#9a3412;}
 
@@ -1317,7 +1323,7 @@ tr.row-todo td{
 .vtc-legend-toulon{ background:#dbeafe; }
 
   tr.row-warning td{
-    background: #fff1f2;   /* rose clair (commentaire) */
+    background: #ffffff;   /* commentaire sans coloration de ligne */
   }
 
  .doc-badges{
@@ -2009,6 +2015,7 @@ body.vae-analysis-filter-active #traineesTable .mini-btn{
     if(!el) return;
     el.classList.add("show");
     el.setAttribute("aria-hidden", "false");
+    window.dispatchEvent(new CustomEvent("modal:opened", {detail:{id, modal:el}}));
   }
 
   function closeModal(id){
@@ -3798,6 +3805,13 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     return map.get(normalized) || (value || "—");
   }
 
+  function cardProActivityColorClass(value){
+    const normalized = shortCardProActivity(value).replace(/\s+/g, " ").trim().toUpperCase();
+    if(normalized.startsWith("AP") || normalized.includes("AUTORISATION PRÉALABLE") || normalized.includes("AUTORISATION PREALABLE")) return "is-ap";
+    if(normalized.startsWith("CP") || normalized.includes("CARTE PROFESSIONNELLE")) return "is-cp";
+    return "is-active";
+  }
+
   function cardProValidityMode(value){
     const normalized = (value || "").replace(/\s+/g, " ").trim().toUpperCase();
     if(!normalized) return "unknown";
@@ -3806,15 +3820,38 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     return "unknown";
   }
 
+  function formatCnapsDateFr(value){const x=String(value||"").trim();const m=x.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}/${m[2]}/${m[1]}`:x;}
   function renderCardProFollowupResult(resultEl, data, mode){
+    if(data && data.check_status === "error"){
+      resultEl.className = "card-pro-result is-unknown";
+      resultEl.innerHTML = '<span class="card-pro-result__chip is-unknown"><span class="card-pro-result__activity">Vérification CNAPS impossible</span></span>';
+      return;
+    }
+    const activeTitles = Array.isArray(data?.active_titles) ? data.active_titles : [];
+    if(data && data.check_status === "success" && !activeTitles.length){
+      resultEl.className = "card-pro-result is-unknown";
+      resultEl.innerHTML = '<span class="card-pro-result__chip is-unknown"><span class="card-pro-result__activity">Aucun titre CNAPS trouvé</span></span>';
+      return;
+    }
+    if(activeTitles.length){
+      const chips = activeTitles.map((title)=>{
+        const activity = title.display_status || title.label;
+        const colorClass = cardProActivityColorClass(`${activity || ""} ${title.label || ""}`);
+        return `<span class="card-pro-result__chip ${colorClass}" title="${escapeHtml([title.label, title.status || title.validity, title.date_fin_validite || title.valid_until].filter(Boolean).join(" • "))}"><span class="card-pro-result__activity">${escapeHtml(activity)}</span>${(title.date_fin_validite||title.valid_until)?`<span class="card-pro-result__date">Expire le ${escapeHtml(formatCnapsDateFr(title.date_fin_validite||title.valid_until))}</span>`:""}</span>`;
+      }).join("");
+      resultEl.className = "card-pro-result is-active";
+      resultEl.innerHTML = chips;
+      return;
+    }
     const rows = Array.isArray(data.results) && data.results.length ? data.results : [data];
     const chips = rows.map((row)=>{
       const activity = shortCardProActivity(row.activite);
       const validity = row.validite_titre || (mode === "unknown" ? "INCONNU" : "À vérifier");
       const validityMode = mode === "unknown" ? "unknown" : cardProValidityMode(validity);
       const title = [row.activite, row.validite_titre, row.date_validite_titre].filter(Boolean).join(" • ");
+      const colorClass = validityMode === "active" ? cardProActivityColorClass(row.activite) : `is-${validityMode}`;
       return `
-        <span class="card-pro-result__chip is-${validityMode}"${title ? ` title="${escapeHtml(title)}"` : ""}>
+        <span class="card-pro-result__chip ${colorClass}"${title ? ` title="${escapeHtml(title)}"` : ""}>
           <span class="card-pro-result__activity">${escapeHtml(activity)}</span>
           <span class="card-pro-result__validity">${escapeHtml(validityMode === "unknown" ? "INCONNU" : validity)}</span>
           ${row.date_validite_titre ? `<span class="card-pro-result__date">${escapeHtml(row.date_validite_titre)}</span>` : ""}
@@ -3851,7 +3888,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
         validite_titre: isAccepted ? "ACTIF" : "À vérifier",
       });
     }
-    if(isAccepted && (isCartePro || normalizedFallbackActivity === "AP SH")){
+    if(isAccepted && isCartePro){
       rows.push({
         activite: "Carte professionnelle - Surveillance humaine ou gardiennage",
         validite_titre: "ACTIF",
@@ -3873,7 +3910,30 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     return {...data, results: rows};
   }
 
-  async function refreshCardProFollowup(box){
+  const cnapsRequestCache = new Map();
+  const cnapsRequestQueue = [];
+  let cnapsActiveRequests = 0;
+  const CNAPS_MAX_CONCURRENT = 2;
+  const CNAPS_QUEUE_DELAY_MS = 250;
+
+  function enqueueCnapsRequest(task){
+    return new Promise((resolve, reject)=>{
+      cnapsRequestQueue.push({task, resolve, reject});
+      drainCnapsRequestQueue();
+    });
+  }
+
+  function drainCnapsRequestQueue(){
+    if(cnapsActiveRequests >= CNAPS_MAX_CONCURRENT || !cnapsRequestQueue.length) return;
+    const item = cnapsRequestQueue.shift();
+    cnapsActiveRequests += 1;
+    Promise.resolve().then(item.task).then(item.resolve, item.reject).finally(()=>{
+      cnapsActiveRequests -= 1;
+      window.setTimeout(drainCnapsRequestQueue, CNAPS_QUEUE_DELAY_MS);
+    });
+  }
+
+  async function refreshCardProFollowup(box, options = {}){
     const resultEl = box.querySelector("[data-card-pro-result]");
     const nom = box.getAttribute("data-nom") || "";
     const nub = box.getAttribute("data-nub") || "";
@@ -3881,27 +3941,30 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     resultEl.className = "card-pro-result is-loading";
     resultEl.textContent = "Chargement CNAPS…";
     try{
-      const r = await fetch(`/api/cnaps_public_annuaire?nom=${encodeURIComponent(nom)}&nub=${encodeURIComponent(nub)}`);
-      const data = await r.json().catch(()=>({}));
-      if(r.ok && data.ok){
-        renderCardProFollowupResult(resultEl, withLocalCardProFallback(data, fallbackCardProFollowup(box)), "remote");
+      const cacheKey = String(nub || "").replace(/\D+/g, "").slice(-7);
+      if(!options.bypassCache && cnapsRequestCache.has(cacheKey)){
+        renderCardProFollowupResult(resultEl, cnapsRequestCache.get(cacheKey), "remote");
         return;
       }
+      const data = await enqueueCnapsRequest(async ()=>{
+        const r = await fetch(`/api/cnaps_public_annuaire?nom=${encodeURIComponent(nom)}&nub=${encodeURIComponent(nub)}${options.bypassCache ? "&cache=bypass" : ""}`);
+        const payload = await r.json().catch(()=>({}));
+        if(!r.ok || !payload.ok) throw new Error(payload.error || "cnaps_unavailable");
+        return payload;
+      });
+      cnapsRequestCache.set(cacheKey, data);
+      renderCardProFollowupResult(resultEl, data, "remote");
+      return;
     }catch(e){
       // Si l'annuaire public bloque l'appel serveur, on affiche au moins les informations
       // déductibles du dossier au lieu de laisser la colonne en erreur.
     }
-    const fallback = fallbackCardProFollowup(box);
-    if(fallback){
-      renderCardProFollowupResult(resultEl, fallback, "fallback");
-      return;
-    }
-    renderCardProFollowupResult(resultEl, {validite_titre: "INCONNU"}, "unknown");
+    renderCardProFollowupResult(resultEl, {check_status: "error", active_titles: [], error: "cnaps_unavailable"}, "error");
   }
 
   document.querySelectorAll("[data-card-pro-followup]").forEach(box=>{
     refreshCardProFollowup(box);
-    box.querySelector("[data-card-pro-refresh]")?.addEventListener("click", ()=>refreshCardProFollowup(box));
+    box.querySelector("[data-card-pro-refresh]")?.addEventListener("click", ()=>refreshCardProFollowup(box, {bypassCache: true}));
   });
 
   // =========================
@@ -3940,4 +4003,5 @@ applyRowFilters();
 </script>
 
 
+<script src="{{ url_for('static', filename='js/postal_city_lookup.js') }}"></script>
 {% endblock %}

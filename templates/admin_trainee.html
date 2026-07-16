@@ -605,18 +605,16 @@
           {% if trainee.access_sent_at %}
             <span class="hint">✅ Accès envoyé le : <strong>{{ trainee.access_sent_at|frdatetime }}</strong></span>
           {% endif %}
-          {% set trainee_cnaps_normalized = c|replace("É", "E")|replace("È", "E") %}
-          {% set show_card_pro_followup = trainee_nub and ("ACCEPT" in trainee_cnaps_normalized or "OK" in trainee_cnaps_normalized or "CARTE" in trainee_cnaps_normalized) %}
-          {% if show_card_pro_followup %}
-            <div class="trainee-cnaps-followup" aria-label="Suivi carte professionnelle CNAPS">
-              <span class="trainee-cnaps-followup__chip is-active" title="Autorisation préalable - Surveillance humaine ou gardiennage • ACTIF">
-                <span class="trainee-cnaps-followup__activity">AP SH</span>
-                <span class="trainee-cnaps-followup__validity">ACTIF</span>
-              </span>
-              <span class="trainee-cnaps-followup__chip is-active" title="Carte professionnelle - Surveillance humaine ou gardiennage • ACTIF">
-                <span class="trainee-cnaps-followup__activity">CP SH</span>
-                <span class="trainee-cnaps-followup__validity">ACTIF</span>
-              </span>
+          {% if trainee_nub %}
+            <div class="trainee-cnaps-followup"
+                 data-trainee-card-pro-followup
+                 data-nom="{{ trainee.last_name or '' }}"
+                 data-prenom="{{ trainee.first_name or '' }}"
+                 data-nub="{{ trainee_nub }}"
+                 data-cnaps-status="{{ trainee.cnaps or '' }}"
+                 data-fallback-activity="Autorisation préalable - Surveillance humaine ou gardiennage"
+                 aria-label="Suivi carte professionnelle CNAPS">
+              <span class="hint" data-trainee-card-pro-result>Chargement CNAPS…</span>
             </div>
           {% endif %}
           {% set cnaps_history = trainee.cnaps_history or [] %}
@@ -3715,7 +3713,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
   function createdInvoiceMessage(line, paymentPlan){const isFinal=['finalized','sent','paid'].includes(String(line.invoiceStatus||'').toLowerCase());const sepa=hasSepaPaymentPlan(line,paymentPlan);if(sepa)return isFinal?'Facture définitive générée et mandat de prélèvement créé.':'Brouillon créé et mandat de prélèvement créé. Vous pouvez maintenant consulter la facture ou synchroniser le paiement.';return isFinal?'Facture définitive générée avec paiement comptant. Vous pouvez maintenant consulter la facture ou synchroniser le paiement.':'Brouillon créé avec paiement comptant. Vous pouvez maintenant consulter la facture ou synchroniser le paiement.';}
   function renderInvoiceModalContent(line, created=false, paymentPlan=null){
     const vat=Number(line.vatRate||0), totalTtc=Number(line.amountTTC||line.amount||0), totalHt=vat?totalTtc/(1+vat/100):totalTtc, totalTva=totalTtc-totalHt, hasInvoice=!!(line.qontoInvoiceId||line.qontoDraftId), completionUrl=qontoInfoCompletionUrl(line), completionButton=completionUrl?`<a class="btn btn-outline" href="${esc(completionUrl)}" data-qonto-info-completion>Compléter les informations</a>`:'';
-    return `<div class="billing-modal-head"><div><h2>Vérification avant création Qonto</h2><div class="muted">Même workflow que la page Facturation : contrôle, puis choix entre brouillon ou facture définitive avec mandat de prélèvement.</div><span class="billing-modal-step">Étape 1 · Récapitulatif</span></div><button class="billing-modal-close" type="button" data-modal-close aria-label="Fermer">✕</button></div>${hasInvoice?'<div class="billing-modal-existing">Une facture existe déjà pour cette ligne.</div>':''}<div class="billing-modal-summary"><p><strong>Stagiaire :</strong> ${esc(line.traineeFirstName)} ${esc(line.traineeLastName)}</p><p><strong>Formation :</strong> ${esc(line.formationName)}</p><p><strong>Session / nom pédagogique :</strong> ${esc(line.sessionName||line.formationName)}</p><p><strong>Dates :</strong> ${esc(line.dateLabel)}</p><p><strong>Financeur :</strong> ${esc(line.financeurName||line.financingLabel||line.financingType)}</p><p><strong>Montant exact de la ligne :</strong> ${fmtMoney(totalTtc)}</p><p><strong>Numéro facture :</strong> ${esc(line.qontoInvoiceNumber||line.qontoInvoiceId||line.qontoDraftId||'En attente')}</p><p><strong>Statut facture :</strong> ${label(line.invoiceStatus)}</p><p><strong>Statut paiement :</strong> ${paymentStatusLabel(line.paymentStatus)}</p></div>${isCpfQontoLine(line)?'<div class="billing-modal-success">Client CPF pré-rempli automatiquement</div>':''}<div class="billing-modal-grid"><div class="kv"><b>Total HT</b><br>${fmtMoney(totalHt)}</div><div class="kv"><b>TVA / exonération</b><br>${vat}% · ${fmtMoney(totalTva)}</div><div class="kv"><b>Total TTC</b><br>${fmtMoney(totalTtc)}</div><div class="kv"><b>Client</b><br>${esc(line.clientName||'')}</div></div><div class="qonto-invoice-card" style="margin-top:14px;"><div class="qonto-title">Mode de paiement</div><label><input type="radio" name="paymentMode" value="cash" checked> Comptant</label><br><label><input type="radio" name="paymentMode" value="sepa"> Prélèvement SEPA en plusieurs fois</label><div id="sepaPaymentFields" class="billing-modal-grid"><div><div class="label">Nombre d’échéances possibles</div><select id="installments"></select></div><div><div class="label">Date du premier prélèvement</div><input id="firstDebitDate" type="date" value="${esc(defaultFirstDebitDate(line))}" max="${esc(debitCutoffDate(line))}"></div><div><div class="label">Fréquence</div><input value="Mensuelle" disabled></div></div><div id="installmentPreview" class="billing-modal-grid"></div></div><div id="modalMsg" class="${created?'billing-modal-success':''}">${created?(['finalized','sent','paid'].includes(String(line.invoiceStatus||'').toLowerCase())?'Facture définitive générée et mandat de prélèvement créé.':'Brouillon créé et mandat de prélèvement créé. Vous pouvez maintenant consulter la facture ou synchroniser le paiement.'):''}</div><div class="billing-modal-actions"><button type="button" class="btn btn-outline" data-modal-close>Fermer</button>${!hasInvoice?completionButton:''}${hasInvoice?`<a class="btn btn-outline" href="/api/admin/billing-lines/${encodeURIComponent(line.id)}/download-invoice" target="_blank" rel="noopener">Voir la facture</a>`:`<button type="button" class="btn btn-primary" id="openInvoiceDecision">Continuer</button>`}</div>`;
+    return `<div class="billing-modal-head"><div><h2>Vérification avant création Qonto</h2><div class="muted">Même workflow que la page Facturation : contrôle, puis choix entre brouillon ou facture définitive avec mandat de prélèvement.</div><span class="billing-modal-step">Étape 1 · Récapitulatif</span></div><button class="billing-modal-close" type="button" data-modal-close aria-label="Fermer">✕</button></div>${hasInvoice?'<div class="billing-modal-existing">Une facture existe déjà pour cette ligne.</div>':''}<div class="billing-modal-summary"><p><strong>Stagiaire :</strong> ${esc(line.traineeFirstName)} ${esc(line.traineeLastName)}</p><p><strong>Formation :</strong> ${esc(line.formationName)}</p><p><strong>Session / nom pédagogique :</strong> ${esc(line.sessionName||line.formationName)}</p><p><strong>Dates :</strong> ${esc(line.dateLabel)}</p><p><strong>Financeur :</strong> ${esc(line.financeurName||line.financingLabel||line.financingType)}</p><p><strong>Montant exact de la ligne :</strong> ${fmtMoney(totalTtc)}</p><p><strong>Numéro facture :</strong> ${esc(line.qontoInvoiceNumber||line.qontoInvoiceId||line.qontoDraftId||'En attente')}</p><p><strong>Statut facture :</strong> ${label(line.invoiceStatus)}</p><p><strong>Statut paiement :</strong> ${paymentStatusLabel(line.paymentStatus)}</p></div>${isCpfQontoLine(line)?'<div class="billing-modal-success">Client CPF pré-rempli automatiquement</div>':''}<div class="billing-modal-grid"><div class="kv"><b>Total HT</b><br>${fmtMoney(totalHt)}</div><div class="kv"><b>TVA / exonération</b><br>${vat}% · ${fmtMoney(totalTva)}</div><div class="kv"><b>Total TTC</b><br>${fmtMoney(totalTtc)}</div><div class="kv"><b>Client</b><br>${esc(line.clientName||'')}</div></div><div class="qonto-invoice-card" style="margin-top:14px;"><div class="qonto-title">Mode de paiement</div><label><input type="radio" name="paymentMode" value="cash" checked> Comptant</label><br><label><input type="radio" name="paymentMode" value="sepa"> Prélèvement SEPA en plusieurs fois</label><div id="sepaPaymentFields" class="billing-modal-grid"><div><div class="label">Nombre d’échéances possibles</div><select id="installments"></select></div><div><div class="label">Date du premier prélèvement</div><input id="firstDebitDate" type="date" value="${esc(defaultFirstDebitDate(line))}" max="${esc(debitCutoffDate(line))}"></div><div><div class="label">Fréquence</div><input value="Mensuelle" disabled></div></div><div id="installmentPreview" class="billing-modal-grid"></div></div><div id="modalMsg" class="${created?'billing-modal-success':''}">${created?(['finalized','sent','paid'].includes(String(line.invoiceStatus||'').toLowerCase())?'Facture définitive générée et mandat de prélèvement créé.':'Brouillon créé et mandat de prélèvement créé. Vous pouvez maintenant consulter la facture ou synchroniser le paiement.'):''}</div><div class="billing-modal-actions"><button type="button" class="btn btn-outline" data-modal-close>Fermer</button>${!hasInvoice?completionButton:''}${hasInvoice?`<a class="btn btn-outline" href="/admin/qonto/invoices/${encodeURIComponent(line.qontoInvoiceId||line.qontoDraftId||"")}/pdf" target="_blank" rel="noopener">Voir la facture</a>`:`<button type="button" class="btn btn-primary" id="openInvoiceDecision">Continuer</button>`}</div>`;
   }
   function bindModalCloseButtons(){document.querySelectorAll('[data-modal-close]').forEach(btn=>btn.onclick=closeBillingModal);}
   function bindInvoiceModalControls(){bindModalCloseButtons();const decision=document.getElementById('openInvoiceDecision');if(decision)decision.onclick=showDraftDecision;rebuildInstallmentOptions();const first=document.getElementById('firstDebitDate');if(first)first.addEventListener('change',()=>{rebuildInstallmentOptions();renderSchedulePreview();});const select=document.getElementById('installments');if(select)select.addEventListener('change',renderSchedulePreview);document.querySelectorAll('input[name=paymentMode]').forEach(el=>el.addEventListener('change',renderSchedulePreview));renderSchedulePreview();}
@@ -3842,7 +3840,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       const has = !!(l.qontoInvoiceId || l.qontoDraftId);
       const rowTone = invoiceBadge(l)==='green'?'finance-line--paid':(invoiceBadge(l)==='orange'?'finance-line--unpaid':(invoiceBadge(l)==='red'?'finance-line--danger':'finance-line--info'));
       const id = esc(l.id);
-      const view = has ? `<a class="qonto-action-btn qonto-action-btn--secondary" href="/api/admin/billing-lines/${encodeURIComponent(l.id)}/download-invoice" target="_blank" rel="noopener" data-action-control><span aria-hidden="true">👁</span> Voir</a>` : '';
+      const view = has ? `<a class="qonto-action-btn qonto-action-btn--secondary" href="/admin/qonto/invoices/${encodeURIComponent(l.qontoInvoiceId||l.qontoDraftId||"")}/pdf" target="_blank" rel="noopener" data-action-control><span aria-hidden="true">👁</span> Voir</a>` : '';
       const create = !has && !readOnly ? `<button class="qonto-action-btn qonto-action-btn--primary" data-create="${id}" data-action-control><span aria-hidden="true">🧾</span> Générer facture</button>` : '';
       const sync = has && !readOnly ? `<button class="qonto-action-btn qonto-action-btn--secondary qonto-desktop-secondary" data-sync-line="${id}" data-action-control><span aria-hidden="true">↻</span> Synchroniser</button>` : '';
       const finalize = has && l.invoiceStatus==='draft' && !readOnly ? `<button class="qonto-action-btn qonto-action-btn--primary" data-finalize="${id}" data-action-control><span aria-hidden="true">✓</span> Finaliser le brouillon</button>` : '';
@@ -4894,6 +4892,120 @@ if(btnEtiquetteWord){
     </div>
   </div>
 </div>
+
+<script>
+(function(){
+  function escapeHtml(value){return String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));}
+  function shortCardProActivity(value){
+    const normalized = (value || "").replace(/\s+/g, " ").trim().toLowerCase();
+    const map = new Map([
+      ["autorisation préalable - surveillance humaine ou gardiennage", "AP SH"],
+      ["autorisation préalable - agent de protection physique des personnes", "AP A3P"],
+      ["carte professionnelle - surveillance humaine ou gardiennage", "CP SH"],
+      ["carte professionnelle - agent de protection physique des personnes", "CP A3P"],
+    ]);
+    return map.get(normalized) || (value || "—");
+  }
+  function cardProValidityMode(value){
+    const normalized = (value || "").replace(/\s+/g, " ").trim().toUpperCase();
+    if(!normalized) return "unknown";
+    if(normalized.includes("INACTIF") || normalized.includes("EXPIR") || normalized.includes("ÉCHU") || normalized.includes("ECHU") || normalized.includes("REFUS")) return "inactive";
+    if(normalized.includes("ACTIF") || normalized.includes("VALIDE")) return "active";
+    return "unknown";
+  }
+  function normalizedCardProActivity(value){return shortCardProActivity(value).replace(/\s+/g, " ").trim().toUpperCase();}
+  function formatCnapsDateFr(value){const x=String(value||"").trim();const m=x.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}/${m[2]}/${m[1]}`:x;}
+  function renderTraineeCardProResult(resultEl, data, mode){
+    if(!resultEl) return;
+    if(data && data.check_status === "error"){
+      resultEl.outerHTML = '<span class="trainee-cnaps-followup__chip is-unknown" data-trainee-card-pro-result><span class="trainee-cnaps-followup__activity">Vérification CNAPS impossible</span></span>';
+      return;
+    }
+    const activeTitles = Array.isArray(data?.active_titles) ? data.active_titles : [];
+    if(data && data.check_status === "success" && !activeTitles.length){
+      resultEl.outerHTML = '<span class="trainee-cnaps-followup__chip is-unknown" data-trainee-card-pro-result><span class="trainee-cnaps-followup__activity">Aucun titre CNAPS trouvé</span></span>';
+      return;
+    }
+    if(activeTitles.length){
+      resultEl.outerHTML = activeTitles.map((title)=>`<span class="trainee-cnaps-followup__chip is-active" title="${escapeHtml([title.label, title.status || title.validity, title.date_fin_validite || title.valid_until].filter(Boolean).join(" • "))}" data-trainee-card-pro-result><span class="trainee-cnaps-followup__activity">${escapeHtml(title.display_status || title.label)}</span>${(title.date_fin_validite||title.valid_until)?`<span class="card-pro-result__date">Expire le ${escapeHtml(formatCnapsDateFr(title.date_fin_validite||title.valid_until))}</span>`:""}</span>`).join("");
+      return;
+    }
+    const rows = Array.isArray(data.results) && data.results.length ? data.results : [data];
+    resultEl.outerHTML = rows.map((row)=>{
+      const activity = shortCardProActivity(row.activite);
+      const validity = row.validite_titre || (mode === "unknown" ? "INCONNU" : "À vérifier");
+      const validityMode = mode === "unknown" ? "unknown" : cardProValidityMode(validity);
+      const title = [row.activite, row.validite_titre, row.date_validite_titre].filter(Boolean).join(" • ");
+      return `<span class="trainee-cnaps-followup__chip is-${validityMode}"${title ? ` title="${escapeHtml(title)}"` : ""} data-trainee-card-pro-result>` +
+        `<span class="trainee-cnaps-followup__activity">${escapeHtml(activity)}</span>` +
+        `<span class="trainee-cnaps-followup__validity">${escapeHtml(validityMode === "unknown" ? "INCONNU" : validity)}</span>` +
+        `${row.date_validite_titre ? `<span class="trainee-cnaps-followup__validity">${escapeHtml(row.date_validite_titre)}</span>` : ""}` +
+      `</span>`;
+    }).join("");
+  }
+  function fallbackCardProFollowup(box){
+    const status = (box.getAttribute("data-cnaps-status") || "").toUpperCase();
+    const fallbackActivity = box.getAttribute("data-fallback-activity") || "";
+    const isAccepted = status.includes("OK") || status.includes("ACCEPTE") || status.includes("ACCEPTÉ");
+    if(!fallbackActivity) return null;
+    return {results: [{activite: fallbackActivity, validite_titre: isAccepted ? "ACTIF" : "À vérifier"}]};
+  }
+  function withLocalCardProFallback(data, fallback){
+    if(!fallback) return data;
+    const rows = Array.isArray(data.results) && data.results.length ? data.results.slice() : [data];
+    const fallbackRows = Array.isArray(fallback.results) && fallback.results.length ? fallback.results : [fallback];
+    fallbackRows.forEach((fallbackRow)=>{
+      const fallbackActivity = normalizedCardProActivity(fallbackRow.activite);
+      if(!rows.some((row)=>normalizedCardProActivity(row.activite) === fallbackActivity)) rows.push(fallbackRow);
+    });
+    return {...data, results: rows};
+  }
+  const traineeCnapsRequestCache = new Map();
+  const traineeCnapsRequestQueue = [];
+  let traineeCnapsActiveRequests = 0;
+  const TRAINEE_CNAPS_MAX_CONCURRENT = 2;
+  function enqueueTraineeCnapsRequest(task){
+    return new Promise((resolve, reject)=>{
+      traineeCnapsRequestQueue.push({task, resolve, reject});
+      drainTraineeCnapsRequestQueue();
+    });
+  }
+  function drainTraineeCnapsRequestQueue(){
+    if(traineeCnapsActiveRequests >= TRAINEE_CNAPS_MAX_CONCURRENT || !traineeCnapsRequestQueue.length) return;
+    const item = traineeCnapsRequestQueue.shift();
+    traineeCnapsActiveRequests += 1;
+    Promise.resolve().then(item.task).then(item.resolve, item.reject).finally(()=>{
+      traineeCnapsActiveRequests -= 1;
+      window.setTimeout(drainTraineeCnapsRequestQueue, 250);
+    });
+  }
+  async function refreshTraineeCardProFollowup(box, options = {}){
+    const resultEl = box.querySelector("[data-trainee-card-pro-result]");
+    const nom = box.getAttribute("data-nom") || "";
+    const prenom = box.getAttribute("data-prenom") || "";
+    const nub = box.getAttribute("data-nub") || "";
+    if(!resultEl || !nom || !nub) return;
+    try{
+      const cacheKey = String(nub || "").replace(/\D+/g, "").slice(-7);
+      if(!options.bypassCache && traineeCnapsRequestCache.has(cacheKey)){
+        renderTraineeCardProResult(resultEl, traineeCnapsRequestCache.get(cacheKey), "remote");
+        return;
+      }
+      const data = await enqueueTraineeCnapsRequest(async ()=>{
+        const r = await fetch(`/api/cnaps_public_annuaire?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}&nub=${encodeURIComponent(nub)}${options.bypassCache ? "&cache=bypass" : ""}`);
+        const payload = await r.json().catch(()=>({}));
+        if(!r.ok || !payload.ok) throw new Error(payload.error || "cnaps_unavailable");
+        return payload;
+      });
+      traineeCnapsRequestCache.set(cacheKey, data);
+      renderTraineeCardProResult(resultEl, data, "remote");
+      return;
+    }catch(e){}
+    renderTraineeCardProResult(resultEl, {check_status: "error", active_titles: [], error: "cnaps_unavailable"}, "error");
+  }
+  document.querySelectorAll("[data-trainee-card-pro-followup]").forEach(box=>refreshTraineeCardProFollowup(box));
+})();
+</script>
 
 <script>
 document.addEventListener('click', async (event) => {

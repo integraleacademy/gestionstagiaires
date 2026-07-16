@@ -3,7 +3,7 @@ import hmac
 import json
 import os
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import app as gestion_app
 
@@ -222,6 +222,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(response.data, b"%PDF-1.4 fake")
         self.assertTrue(data["billing_lines"][0].get("invoiceDownloadedAt"))
 
+    @unittest.skip("invoicePdfUrl/public_url redirects are forbidden for Qonto PDFs")
     def test_billing_invoice_download_uses_existing_public_url(self):
         line_id = gestion_app._billing_line_id("S1", "T1", "CPF", "legacy")
         data = {
@@ -245,6 +246,125 @@ class QontoInvoiceStatusTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["Location"], "https://qonto.test/invoice.pdf")
+
+    def test_billing_invoice_download_returns_qonto_error_when_pdf_is_missing(self):
+        line_id = gestion_app._billing_line_id("S1", "T1", "Entreprise", "legacy")
+        data = {
+            "sessions": [{"id": "S1", "name": "Session", "trainees": [{"id": "T1", "first_name": "Ada", "last_name": "Lovelace"}]}],
+            "billing_lines": [{
+                "id": line_id,
+                "traineeId": "T1",
+                "sessionId": "S1",
+                "traineeFirstName": "Ada",
+                "traineeLastName": "Lovelace",
+                "formationName": "APS",
+                "financingType": "Entreprise",
+                "financingRef": "legacy",
+                "amount": 1200,
+                "vatRate": 20,
+                "qontoInvoiceId": "019f6a9e-734e-757c-80b4-5ca32b33b784",
+                "qontoInvoiceNumber": "F-001",
+                "logs": [],
+            }]
+        }
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "_find_billing_line", return_value=data["billing_lines"][0]), \
+             patch.object(gestion_app, "save_data", side_effect=self.saved.append), \
+             patch.object(gestion_app, "download_qonto_invoice_pdf", side_effect=gestion_app.QontoNotFoundError(404, "Not found")):
+            response = client.get(f"/api/admin/billing-lines/{line_id}/download-invoice")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.mimetype, "application/json")
+        payload = response.get_json()
+        self.assertFalse(payload["ok"])
+        self.assertIn("Facture Qonto introuvable", payload["error"])
+        self.assertNotIn("Affichage local temporaire", response.get_data(as_text=True))
+        log_actions = [entry.get("action") for entry in data["billing_lines"][0]["logs"]]
+        self.assertIn("PDF Qonto indisponible", log_actions)
+
+    @unittest.skip("public_url fallback redirects are forbidden for Qonto PDFs")
+    def test_billing_invoice_download_redirects_to_qonto_public_url_after_download_404(self):
+        line_id = gestion_app._billing_line_id("S1", "T1", "CPF", "legacy")
+        data = {
+            "sessions": [{"id": "S1", "name": "Session", "trainees": [{"id": "T1", "first_name": "Ada", "last_name": "Lovelace", "cpf_amount": 1200}]}],
+            "billing_lines": [{
+                "id": line_id,
+                "traineeId": "T1",
+                "sessionId": "S1",
+                "financingType": "CPF",
+                "financingRef": "legacy",
+                "qontoInvoiceId": "inv_123",
+                "logs": [],
+            }]
+        }
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "_find_billing_line", return_value=data["billing_lines"][0]), \
+             patch.object(gestion_app, "save_data", side_effect=self.saved.append), \
+             patch.object(gestion_app, "download_qonto_invoice_pdf", side_effect=gestion_app.QontoNotFoundError(404, "Not found")), \
+             patch.object(gestion_app, "get_qonto_invoice", return_value={"client_invoice": {"id": "inv_123", "public_url": "https://qonto.test/inv_123"}}):
+            response = client.get(f"/api/admin/billing-lines/{line_id}/download-invoice")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "https://qonto.test/inv_123")
+        self.assertEqual(data["billing_lines"][0]["invoicePdfUrl"], "https://qonto.test/inv_123")
+
+
+    @unittest.skip("invoice_number/public_url fallback is forbidden for Qonto PDFs")
+    def test_billing_invoice_download_recovers_qonto_invoice_by_number_when_id_is_stale(self):
+        line_id = gestion_app._billing_line_id("S1", "T1", "Entreprise", "legacy")
+        data = {
+            "sessions": [{"id": "S1", "name": "Session", "trainees": [{"id": "T1", "first_name": "Ada", "last_name": "Lovelace"}]}],
+            "billing_lines": [{
+                "id": line_id,
+                "traineeId": "T1",
+                "sessionId": "S1",
+                "financingType": "Entreprise",
+                "financingRef": "legacy",
+                "qontoInvoiceId": "stale-id",
+                "qontoInvoiceNumber": "F-001",
+                "logs": [],
+            }]
+        }
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "_find_billing_line", return_value=data["billing_lines"][0]), \
+             patch.object(gestion_app, "save_data", side_effect=self.saved.append), \
+             patch.object(gestion_app, "download_qonto_invoice_pdf", side_effect=gestion_app.QontoNotFoundError(404, "Not found")), \
+             patch.object(gestion_app, "get_qonto_invoice", side_effect=gestion_app.QontoNotFoundError(404, "Not found")), \
+             patch.object(gestion_app, "find_qonto_invoice_by_number", return_value={"id": "fresh-id", "number": "F-001", "public_url": "https://qonto.test/fresh"}):
+            response = client.get(f"/api/admin/billing-lines/{line_id}/download-invoice")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "https://qonto.test/fresh")
+        self.assertEqual(data["billing_lines"][0]["qontoInvoiceId"], "fresh-id")
+        self.assertEqual(data["billing_lines"][0]["invoicePdfUrl"], "https://qonto.test/fresh")
+
+    @unittest.skip("public_url fallback is forbidden for Qonto PDFs")
+    def test_qonto_invoice_download_falls_back_to_invoice_public_url_after_404(self):
+        not_found_response = Mock(ok=False, status_code=404, content=b'{"error":"Not found"}', text='{"error":"Not found"}')
+        not_found_response.headers = {"Content-Type": "application/json"}
+        pdf_response = Mock(ok=True, status_code=200, content=b"%PDF-1.4 fallback")
+        pdf_response.headers = {"Content-Type": "application/pdf"}
+
+        with patch.object(gestion_app, "_qonto_is_configured", return_value=True), \
+             patch.object(gestion_app, "get_qonto_headers", return_value={"Authorization": "login:secret"}), \
+             patch.object(gestion_app, "_qonto_base_url", return_value="https://qonto.test"), \
+             patch.object(gestion_app, "get_qonto_invoice", return_value={"client_invoice": {"id": "inv_123", "public_url": "https://qonto.test/inv_123.pdf"}}), \
+             patch.object(gestion_app.requests, "get", side_effect=[not_found_response, pdf_response]) as mocked_get:
+            pdf_bytes, content_type = gestion_app.download_qonto_invoice_pdf("inv_123")
+
+        self.assertEqual(pdf_bytes, b"%PDF-1.4 fallback")
+        self.assertEqual(content_type, "application/pdf")
+        self.assertEqual(mocked_get.call_args_list[0].args[0], "https://qonto.test/v2/client_invoices/inv_123/download")
+        self.assertEqual(mocked_get.call_args_list[1].args[0], "https://qonto.test/inv_123.pdf")
 
     def test_qonto_webhook_rejects_invalid_signature(self):
         client = gestion_app.app.test_client()
@@ -309,6 +429,39 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(payload["zip_code"], "83520")
         self.assertEqual(payload["city"], "Roquebrune sur Argens")
         self.assertEqual(result["line"]["qontoInvoiceId"], "inv_123")
+
+
+class BillingStartDateFilterTests(unittest.TestCase):
+    def test_billing_lines_include_only_sessions_starting_from_june_2026(self):
+        sessions = [
+            {
+                "id": "S-MAY",
+                "name": "APS MAI 2026",
+                "date_start": "2026-05-31",
+                "date_end": "2026-06-04",
+                "trainees": [{"id": "T-MAY", "first_name": "Alice", "last_name": "Avant", "personal_amount": 100}],
+            },
+            {
+                "id": "S-JUNE",
+                "name": "APS JUIN 2026",
+                "date_start": "2026-06-01",
+                "date_end": "2026-06-05",
+                "trainees": [{"id": "T-JUNE", "first_name": "Bruno", "last_name": "Debut", "personal_amount": 200}],
+            },
+            {
+                "id": "S-FR",
+                "nom": "APS JUIN FR 2026",
+                "date_debut": "01/06/2026",
+                "date_fin": "05/06/2026",
+                "trainees": [{"id": "T-FR", "first_name": "Camille", "last_name": "France", "personal_amount": 300}],
+            },
+        ]
+
+        lines = gestion_app.buildBillingLinesFromSessions(sessions)
+
+        self.assertEqual({line["sessionId"] for line in lines}, {"S-JUNE", "S-FR"})
+        self.assertTrue(all(line["dateStart"] >= "2026-06-01" for line in lines))
+
 
 if __name__ == "__main__":
     unittest.main()

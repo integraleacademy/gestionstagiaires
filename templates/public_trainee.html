@@ -53,6 +53,13 @@
   .pill.gray{background:#f3f4f6;border-color:#e5e7eb;color:#374151}
   .pill.blue{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
 
+  .invoice-list{display:grid;gap:10px;margin-top:12px}
+  .invoices-card{margin-top:14px;margin-bottom:8px}
+  .invoice-row{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;border:1px solid #e5e7eb;border-radius:14px;padding:12px;background:#f8fafc}
+  .invoice-title{font-weight:950;color:#111827}
+  .invoice-subtitle{font-size:12px;color:#6b7280;margin-top:2px}
+  @media(max-width:640px){.invoice-row{grid-template-columns:1fr}.invoice-row .btn{width:100%}}
+
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:10px 12px;font-weight:900;border:1px solid #e5e7eb;background:#111827;color:#fff;text-decoration:none;cursor:pointer}
   .btn.outline{background:#fff;color:#111827}
   .btn.small{padding:8px 10px;border-radius:10px;font-size:13px}
@@ -599,7 +606,7 @@
     padding:0 16px 16px 16px;
   }
   .diplomas-card{
-    margin-top:10px;
+    margin-top:16px;
   }
   .infos-warning{
     margin:0;
@@ -764,11 +771,22 @@
   .documents-upload-progress.is-complete .documents-upload-progress-track,.infos-completion-progress.is-complete .infos-completion-progress-track{background:#dcfce7;}
   .documents-upload-card .docs-stack{display:grid;gap:12px;margin-top:14px;}
   .documents-upload-card .docs-stack > .docrow{position:relative;display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:12px!important;padding:16px!important;border:1px solid #e6edf5!important;border-radius:18px!important;background:#fbfdff!important;box-shadow:0 8px 20px rgba(15,23,42,.04);}
-  .documents-upload-card .docs-stack > .docrow:before{content:"";position:absolute;left:16px;top:18px;width:38px;height:38px;border-radius:14px;background:#eff6ff;}
+  .documents-upload-card .docs-stack > .docrow:before{content:"✕";position:absolute;left:16px;top:18px;width:38px;height:38px;border-radius:14px;display:grid;place-items:center;background:#eff6ff;color:#1d4ed8;font-size:18px;font-weight:1000;line-height:1;}
+  .documents-upload-card .docs-stack > .docrow.valid:before{content:"✓";background:#ecfdf5;color:#047857;}
   .documents-upload-card .docs-stack > .docrow.missing{border-color:#fecaca!important;background:#fffafa!important;}
-  .documents-upload-card .docs-stack > .docrow.missing:before{background:#fef2f2;}
+  .documents-upload-card .docs-stack > .docrow.missing:before{content:"✕";background:#fef2f2;color:#b91c1c;}
   .documents-upload-card .docs-stack > .docrow.pending{border-color:#fed7aa!important;background:#fffdf8!important;}
-  .documents-upload-card .docs-stack > .docrow.pending:before{background:#fff7ed;}
+  .documents-upload-card .docs-stack > .docrow.pending:before{content:"⌛";background:#fff7ed;color:#9a3412;font-size:16px;}
+  .documents-upload-card .docs-stack > details.docrow:not([open]){cursor:pointer;}
+  .documents-upload-card .docs-stack > details.docrow:not([open]) .docmeta{display:none;}
+  .documents-upload-card .docs-stack .docrow-summary{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-left:52px;list-style:none;cursor:pointer;}
+  .documents-upload-card .docs-stack .docrow-summary::-webkit-details-marker{display:none;}
+  .documents-upload-card .docs-stack .docrow-summary:after{content:"⌄";flex:0 0 auto;width:30px;height:30px;border-radius:999px;display:grid;place-items:center;background:#eff6ff;color:#1d4ed8;font-weight:1000;transition:transform .18s ease;}
+  .documents-upload-card .docs-stack details[open] .docrow-summary:after{transform:rotate(180deg);}
+  .documents-upload-card .docs-stack .docrow-summary-title{font-weight:1000;color:#0f172a;font-size:16px;line-height:1.25;}
+  .documents-upload-card .docs-stack .docrow-summary-status{margin-left:auto;padding:7px 10px;border-radius:999px;border:1px solid #dbeafe;background:#fff;color:#1e40af;font-size:12px;font-weight:1000;white-space:nowrap;}
+  .documents-upload-card .docs-stack .docrow.missing .docrow-summary-status{border-color:#fecaca;color:#b91c1c;background:#fff5f5;}
+  .documents-upload-card .docs-stack .docrow.pending .docrow-summary-status{border-color:#fed7aa;color:#9a3412;background:#fff7ed;}
   .documents-upload-card .docs-stack .docmeta{padding-left:52px;gap:8px;}
   .documents-upload-card .docs-stack .docmeta > .label{font-size:16px;color:#0f172a;letter-spacing:-.01em;}
   .documents-upload-card .docs-stack .docmeta > .label:before{content:"📄";position:absolute;left:25px;top:26px;font-size:18px;z-index:1;}
@@ -779,7 +797,7 @@
   .deliverable-icon{width:40px;height:40px;border-radius:14px;display:grid;place-items:center;background:#f5f3ff;color:#7c3aed;}
   .deliverable-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
   .deliverable-title{font-weight:1000;color:#0f172a;}.deliverable-subtitle{margin-top:2px;color:#64748b;font-size:13px;font-weight:700;}
-  @media(max-width:640px){.saas-card-header{flex-direction:column;}.saas-section-card .collapse-summary{padding:16px;}.saas-section-card .collapse-content{padding:16px;}.deliverable-row{grid-template-columns:auto 1fr;}.deliverable-row .pill,.deliverable-row .btn{grid-column:1/-1;width:100%;justify-content:center;}.documents-summary-progress,.infos-summary-progress{width:100%;}.documents-summary-progress-track,.infos-summary-progress-track{flex:1;width:auto;}.documents-upload-card .docs-stack .docmeta{padding-left:0;padding-top:50px;}.documents-upload-card .docs-stack .docmeta > .label:before{top:25px;}}
+  @media(max-width:640px){.saas-card-header{flex-direction:column;}.saas-section-card .collapse-summary{padding:16px;}.saas-section-card .collapse-content{padding:16px;}.deliverable-row{grid-template-columns:auto 1fr;}.deliverable-row .pill,.deliverable-row .btn{grid-column:1/-1;width:100%;justify-content:center;}.documents-summary-progress,.infos-summary-progress{width:100%;}.documents-summary-progress-track,.infos-summary-progress-track{flex:1;width:auto;}.documents-upload-card .docs-stack .docrow-summary{padding-left:48px;align-items:flex-start;}.documents-upload-card .docs-stack .docrow-summary-status{margin-left:0;}.documents-upload-card .docs-stack .docmeta{padding-left:0;padding-top:50px;}.documents-upload-card .docs-stack .docmeta > .label:before{top:25px;}}
 
 </style>
 
@@ -912,6 +930,7 @@
       <div class="muted">Vos informations et documents — Intégrale Academy</div>
     </div>
   </div>
+
 
   {% if is_dirigeant_vae %}
   <div class="vae-welcome-banner">🚀 Bienvenue dans votre Espace VAE Dirigeant d'entreprise de sécurité privée (DESP)</div>
@@ -1046,7 +1065,6 @@
   <summary class="collapse-summary">
     <span class="collapse-summary-main">
       <span class="saas-title-row"><span class="saas-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg></span><span><span class="card-kicker">Informations obligatoires</span>{% if not is_security_training %}<span class="card-title">Infos à compléter</span>{% endif %}</span></span>
-      <span id="infosToCompleteOk" class="oktag" hidden>Tout est OK ✅</span>
       <span id="infosToCompleteAlert" class="infos-warning" role="status" aria-live="polite" hidden>
         ⚠️ Ouvrez cet onglet pour compléter vos informations
       </span>
@@ -1253,7 +1271,6 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
   <summary id="documentsSummary" class="collapse-summary">
     <span class="collapse-summary-main">
       <span class="saas-title-row"><span class="saas-title-icon green" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 18h3"/></svg></span><span><span class="card-kicker">Documents à déposer</span>{% if not is_security_training %}<span class="card-title">Mes documents <span id="documentsLockIcon" hidden>🔒</span></span>{% else %}<span id="documentsLockIcon" hidden>🔒</span>{% endif %}</span></span>
-      <span id="documentsOkTag" class="oktag" hidden>Tout est OK ✅</span>
       <span id="documentsAlert" class="infos-warning" role="status" aria-live="polite" hidden>
         ⚠️ Ouvrez cet onglet pour déposer vos documents
       </span>
@@ -1315,9 +1332,11 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
 {% set show_upload = ((not has_file) or can_replace or complementary_documents_new_expected or (d.key in ["livret_2", "complementary_documents"] and can_add_more and not is_pending_review)) and not (d.key == "permis" and trainee.no_permis) %}
 
     {% set row_cls = "" if is_optional_doc else "missing" %}
-    {% if has_submission %}
+    {% if d.key == "permis" and trainee.no_permis %}
+      {% set row_cls = "valid" %}
+    {% elif has_submission %}
       {% if up == "CONFORME" %}
-        {% set row_cls = "" %}
+        {% set row_cls = "valid" %}
       {% elif up == "NON CONFORME" %}
         {% set row_cls = "missing" %}
       {% else %}
@@ -1355,7 +1374,15 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
       ] %}
     {% endif %}
 
-<div class="docrow {{ row_cls }}" id="doc_{{ d.key }}" data-doc-required="{{ 'false' if is_optional_doc else 'true' }}" data-doc-submitted="{{ 'true' if has_submission or (d.key == 'permis' and trainee.no_permis) else 'false' }}">
+<details class="docrow {{ row_cls }}" id="doc_{{ d.key }}" data-doc-required="{{ 'false' if is_optional_doc else 'true' }}" data-doc-submitted="{{ 'true' if has_submission or (d.key == 'permis' and trainee.no_permis) else 'false' }}">
+      <summary class="docrow-summary">
+        <span class="docrow-summary-title">{{ "Fiche de renseignement candidat à compléter" if d.key == "candidate_info_sheet" else d.label }}{% if is_optional_doc %} <span class="doctag" style="margin-left:8px;">Facultatif</span>{% endif %}</span>
+        <span class="docrow-summary-status">
+          {% if d.key == "permis" and trainee.no_permis %}Permis non requis
+          {% elif has_submission %}{% if up == "CONFORME" %}Conforme{% elif up == "NON CONFORME" %}À corriger{% else %}Déposé{% endif %}
+          {% else %}À déposer{% endif %}
+        </span>
+      </summary>
       <div class="docmeta">
         <div class="label">{{ "Fiche de renseignement candidat à compléter" if d.key == "candidate_info_sheet" else d.label }}{% if is_optional_doc %} <span class="doctag" style="margin-left:8px;">Facultatif</span>{% endif %}</div>
         {% if d.key == "candidate_info_sheet" %}
@@ -1581,10 +1608,10 @@ id="upload_{{ d.key }}"
   </div>
 {% endif %}
       </div>  <!-- ferme .docmeta -->
-    </div>    <!-- ferme .docrow -->
+    </details>    <!-- ferme .docrow -->
   {% endfor %}
   {% if show_professional_experience_sheet %}
-    <div class="docrow professional-experience-docrow {{ '' if trainee.professional_experience_sheet else 'missing' }}" id="doc_professional_experience_sheet" data-doc-required="true" data-doc-submitted="{{ 'true' if trainee.professional_experience_sheet else 'false' }}">
+    <div class="docrow professional-experience-docrow {{ 'valid' if trainee.professional_experience_sheet else 'missing' }}" id="doc_professional_experience_sheet" data-doc-required="true" data-doc-submitted="{{ 'true' if trainee.professional_experience_sheet else 'false' }}">
       <div class="docmeta">
         <button class="pro-sheet-launch{% if not trainee.professional_experience_sheet %} needs-attention{% else %} is-sent{% endif %}" type="button"{% if trainee.professional_experience_sheet %} disabled aria-disabled="true"{% else %} data-pro-sheet-open{% endif %}>
           <span class="pro-sheet-launch-icon" aria-hidden="true">✦</span>
@@ -1621,6 +1648,30 @@ id="upload_{{ d.key }}"
   {% if show_professional_experience_sheet and not trainee.professional_experience_sheet %}
     {% include "_professional_experience_sheet_modal.html" %}
   {% endif %}
+
+  {% if public_invoices %}
+  <section class="saas-section-card invoices-card" style="padding:20px 22px;">
+    <div class="saas-card-header">
+      <div class="saas-title-row">
+        <span class="saas-title-icon blue" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5M8 9h2"/></svg></span>
+        <div><p class="card-kicker">Facturation</p><h2 class="card-title">Mes factures</h2></div>
+      </div>
+    </div>
+    <div class="invoice-list">
+      {% for invoice in public_invoices %}
+      <div class="invoice-row">
+        <div>
+          <div class="invoice-title">Facture {{ invoice.number }}</div>
+          <div class="invoice-subtitle">{{ invoice.financeur or 'Formation' }}{% if invoice.generated_at %} · Générée le {{ invoice.generated_at[:10]|frdate }}{% endif %}</div>
+        </div>
+        <span class="pill {{ 'green' if invoice.status in ['sent','paid','finalized'] else 'blue' }}">{{ invoice.status_label }}</span>
+        <a class="btn outline small" target="_blank" rel="noopener" href="{{ url_for('public_trainee_invoice_pdf', token=token_safe, line_id=invoice.id) }}">Voir le PDF{% if invoice.amount_label %} · {{ invoice.amount_label }}{% endif %}</a>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
     {% if not show_vtc and not is_dirigeant_vae %}
     <!-- Encadré 4 : diplômes et attestations -->
     <section class="saas-section-card diplomas-card" style="padding:20px 22px;">
@@ -2338,7 +2389,6 @@ function closeUploadSuccessModal(event) {
       infosWarning.hidden = complete || infosDetails.open;
       if (!complete) infosWarning.textContent = `⚠️ Complétez vos informations (${progress.completed}/${progress.total} complétées).`;
     }
-    if (infosOk) infosOk.hidden = !complete;
     if (infosSummaryProgress) {
       infosSummaryProgress.hidden = progress.total === 0;
       infosSummaryProgress.classList.toggle("is-complete", complete);
@@ -2407,9 +2457,9 @@ function closeUploadSuccessModal(event) {
       if (locked) {
         documentsHint.textContent = "🔒 Vous pourrez déposer vos documents quand vous aurez saisi vos informations.";
       } else if (hasMissing) {
-        documentsHint.textContent = `⚠️ Déposez maintenant vos documents (${submittedDocs}/${totalDocs} déposés).`;
+        documentsHint.textContent = "Ouvrez uniquement la ligne que vous souhaitez consulter ou compléter.";
       } else {
-        documentsHint.textContent = "Tout est OK ✅";
+        documentsHint.textContent = "Ouvrez une ligne pour consulter les détails ou les fichiers déposés.";
       }
     }
 
@@ -2422,7 +2472,6 @@ function closeUploadSuccessModal(event) {
         documentsWarning.textContent = "⚠️ Déposez maintenant vos documents";
       }
     }
-    if (documentsOk) documentsOk.hidden = locked || hasMissing;
   };
 
   const syncVtcPanel = () => {
@@ -3207,4 +3256,5 @@ function normalizePRE(s){
 })();
 </script>
 {% if show_professional_experience_sheet %}<script src="{{ url_for('static', filename='js/professional-experience.js') }}" defer></script>{% endif %}
+<script src="{{ url_for('static', filename='js/postal_city_lookup.js') }}"></script>
 {% endblock %}

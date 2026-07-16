@@ -48,6 +48,38 @@ class MultiPartnerIsolationTests(unittest.TestCase):
         gestion_app.UPLOADS_DIR = self.original_uploads_dir
         self.temp_dir.cleanup()
 
+
+    def test_healthz_bypasses_data_auth_password_and_background_work(self):
+        originals = {
+            "load_data": gestion_app.load_data,
+            "check_password_hash": gestion_app.werkzeug_security.check_password_hash,
+            "vtc": gestion_app._send_vtc_credentials_missing_reminders,
+            "vae": gestion_app._send_vae_relance_reminders,
+            "docs": gestion_app._send_docs_relance_reminders,
+            "exam": gestion_app._inject_vtc_exam_results_notifications,
+        }
+
+        def fail(*_args, **_kwargs):
+            raise AssertionError("healthz must not trigger heavy work")
+
+        gestion_app.load_data = fail
+        gestion_app.werkzeug_security.check_password_hash = fail
+        gestion_app._send_vtc_credentials_missing_reminders = fail
+        gestion_app._send_vae_relance_reminders = fail
+        gestion_app._send_docs_relance_reminders = fail
+        gestion_app._inject_vtc_exam_results_notifications = fail
+        try:
+            response = self.client.get("/healthz")
+        finally:
+            gestion_app.load_data = originals["load_data"]
+            gestion_app.werkzeug_security.check_password_hash = originals["check_password_hash"]
+            gestion_app._send_vtc_credentials_missing_reminders = originals["vtc"]
+            gestion_app._send_vae_relance_reminders = originals["vae"]
+            gestion_app._send_docs_relance_reminders = originals["docs"]
+            gestion_app._inject_vtc_exam_results_notifications = originals["exam"]
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["ok"], True)
+
     def test_partner_user_only_loads_own_sessions_and_trainees(self):
         with gestion_app.app.test_request_context("/admin/sessions"):
             gestion_app.session["admin_logged_in"] = True
@@ -439,6 +471,76 @@ class MultiPartnerIsolationTests(unittest.TestCase):
             self.assertEqual(sess["admin_role"], "partner_admin")
             self.assertEqual(sess["partner_id"], self.partner_a)
 
+
+
+    def test_partner_login_rejects_unsafe_scrypt_hash_without_verifying_it(self):
+        data = gestion_app.load_data()
+        data["users"].append({
+            "id": "user-a",
+            "partner_id": self.partner_a,
+            "email": "admin@example.com",
+            "role": "partner_admin",
+            "active": True,
+            "password_hash": "scrypt:1073741824:8:1$salt$digest",
+        })
+        gestion_app.save_data(data)
+        response = self.client.post(
+            "/admin/login",
+            data={"username": "admin@example.com", "password": "Password1234", "next": "/admin/sessions"},
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("error=invalid", response.headers["Location"])
+
+
+    def test_partner_login_rejects_excessive_pbkdf2_without_verifying_it(self):
+        data = gestion_app.load_data()
+        data["users"].append({
+            "id": "user-a",
+            "partner_id": self.partner_a,
+            "email": "admin@example.com",
+            "role": "partner_admin",
+            "active": True,
+            "password_hash": "pbkdf2:sha256:600001$salt$digest",
+        })
+        gestion_app.save_data(data)
+        original = gestion_app.werkzeug_security.check_password_hash
+        def fail_if_called(*_args, **_kwargs):
+            raise AssertionError("unsafe PBKDF2 must be rejected before Werkzeug verification")
+        gestion_app.werkzeug_security.check_password_hash = fail_if_called
+        try:
+            response = self.client.post(
+                "/admin/login",
+                data={"username": "admin@example.com", "password": "Password1234", "next": "/admin/sessions"},
+            )
+        finally:
+            gestion_app.werkzeug_security.check_password_hash = original
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("error=invalid", response.headers["Location"])
+
+    def test_partner_login_skips_background_tasks_during_authentication(self):
+        data = gestion_app.load_data()
+        data["users"].append({
+            "id": "user-a",
+            "partner_id": self.partner_a,
+            "email": "admin@example.com",
+            "role": "partner_admin",
+            "active": True,
+            "password_hash": gestion_app._hash_password("Password1234"),
+        })
+        gestion_app.save_data(data)
+        original = gestion_app._send_docs_relance_reminders
+        def fail_if_called(_data):
+            raise AssertionError("background task should not run during login")
+        gestion_app._send_docs_relance_reminders = fail_if_called
+        try:
+            response = self.client.post(
+                "/admin/login",
+                data={"username": "admin@example.com", "password": "Password1234", "next": "/admin/sessions"},
+            )
+        finally:
+            gestion_app._send_docs_relance_reminders = original
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/admin/sessions")
 
     def test_partner_login_accepts_werkzeug_password_hash(self):
         data = gestion_app.load_data()

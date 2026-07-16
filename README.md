@@ -27,7 +27,8 @@ python app.py
 - `WEDOF_WEBHOOK_SECRET` (recommandé : si défini, une signature invalide/manquante est refusée)
 - `WEDOF_API_TOKEN` (token API WeDoF pour récupérer le détail complet d'un dossier)
 - `DOCS_TO_CONTROL_PUBLIC_TOKEN` (optionnel : token requis pour exposer `/docs_to_control.json` à un dashboard externe sans session admin)
-- `MAX_JSON_BACKUP_BYTES` (optionnel, défaut `52428800` : limite de taille d'un JSON sauvegardé automatiquement)
+- `DOCS_TO_CONTROL_TRUSTED_USER_AGENT` (optionnel : User-Agent exact autorisé pour le dashboard externe historique si aucun token public n’est configuré ; défaut `plateformegestion/1.0 (+https://plateformegestion.onrender.com)`)
+- `MAX_JSON_BACKUP_BYTES` (optionnel, défaut `52428800` : limite de copie d'un JSON sauvegardé automatiquement si la création de snapshot par lien dur n'est pas disponible)
 - `YPAREO_API_URL` (défaut `https://api.ypareo-neo.com`)
 - `YPAREO_AUTH_TOKEN` (obligatoire ; token initial fourni par YPAREO, utilisé uniquement par `/authenticate`)
 - `YPAREO_AUTH_ENDPOINT` (défaut `/authenticate`)
@@ -62,7 +63,7 @@ Les dossiers VAE sont persistés dans `data_vae.json` dans `PERSIST_DIR`.
 ## Sauvegardes anti-perte de données
 
 - Chaque écriture de `data.json`, `data_vae.json` et `wedof_webhooks.json` est protégée par un verrou fichier inter-processus, écrite dans un fichier temporaire unique, synchronisée (`fsync`) puis remplacée par `os.replace`.
-- Un snapshot JSON est créé automatiquement dans `PERSIST_DIR/backups` avant les écritures et au plus toutes les 5 minutes par défaut pour les snapshots périodiques.
+- Un snapshot JSON est créé automatiquement dans `PERSIST_DIR/backups` avant les écritures et au plus toutes les 5 minutes par défaut pour les snapshots périodiques. Les snapshots utilisent d’abord un lien dur pour protéger aussi les gros fichiers `data.json` sans copie coûteuse ; la limite `MAX_JSON_BACKUP_BYTES` ne s’applique qu’au repli par copie.
 - Les noms de sauvegardes incluent un timestamp précis et un suffixe aléatoire pour éviter qu'une sauvegarde écrase une autre version.
 - Les fichiers supprimés par les routes sensibles sont déplacés dans `PERSIST_DIR/trash` quand c'est possible.
 - L'endpoint `GET /api/health` expose le nombre de sauvegardes présentes pour vérification rapide.

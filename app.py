@@ -17,11 +17,20 @@ import time
 import subprocess
 import secrets
 import base64
+import logging
+import signal
+import atexit
+import sys
+try:
+    import resource
+except ImportError:
+    resource = None
 from typing import Dict, Any, Optional, List, Iterable, Tuple, Set
 from functools import wraps
 from zoneinfo import ZoneInfo
 from flask import session
-from werkzeug.security import check_password_hash
+import werkzeug.security as werkzeug_security
+from werkzeug.utils import secure_filename
 from PIL import Image, ImageOps
 import tempfile
 import fcntl
@@ -36,7 +45,7 @@ except ImportError:
     DocxTemplate = None
 
 import requests
-from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file, flash, has_request_context, make_response
+from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file, flash, has_request_context, make_response, g, Response
 
 import zipfile
 from io import BytesIO
@@ -48,12 +57,109 @@ from urllib.parse import urlparse, urljoin, quote, urlencode
 from cryptography.fernet import Fernet
 
 
+_APP_IMPORT_STARTED_AT = time.monotonic()
+_REQUEST_STARTED_AT_KEY = "_memory_request_started_at"
+_BACKGROUND_TASKS_LOCK = threading.Lock()
+_BACKGROUND_TASKS_LAST_RUN_AT = 0.0
+_BACKGROUND_TASKS_MIN_INTERVAL_SECONDS = int(os.environ.get("BACKGROUND_TASKS_MIN_INTERVAL_SECONDS", "300"))
+
+def _current_rss_mb() -> float:
+    try:
+        with open("/proc/self/status", "r", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    return float(line.split()[1]) / 1024
+    except Exception:
+        pass
+    try:
+        with open("/proc/self/statm", "r", encoding="utf-8") as f:
+            pages = int((f.read().split() or ["0", "0"])[1])
+        return pages * os.sysconf("SC_PAGE_SIZE") / (1024 * 1024)
+    except Exception:
+        return -1.0
+
+def _peak_rss_mb() -> float:
+    if resource is not None:
+        try:
+            usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            if sys.platform == "darwin":
+                return usage / (1024 * 1024)
+            return usage / 1024
+        except Exception:
+            pass
+    return _current_rss_mb()
+
+def _rss_mb() -> float:
+    return _current_rss_mb()
+
+def _current_route_for_log() -> str:
+    if has_request_context():
+        return request.path or ""
+    return "-"
+
+def _log_memory_stage(stage: str, started_at: Optional[float] = None, route: Optional[str] = None, baseline_mb: Optional[float] = None) -> float:
+    current_rss_mb = _current_rss_mb()
+    peak_rss_mb = _peak_rss_mb()
+    duration_ms = 0.0 if started_at is None else (time.monotonic() - started_at) * 1000
+    delta_mb = 0.0 if baseline_mb is None else current_rss_mb - baseline_mb
+    message = (
+        f"MEMORY stage={stage} current_rss_mb={current_rss_mb:.1f} "
+        f"peak_rss_mb={peak_rss_mb:.1f} delta_mb={delta_mb:.1f} "
+        f"duration_ms={duration_ms:.1f}"
+    )
+    print(message, file=sys.stderr, flush=True)
+    logging.getLogger(__name__).info(
+        "%s pid=%s route=%s",
+        message,
+        os.getpid(),
+        route if route is not None else _current_route_for_log(),
+    )
+    return current_rss_mb
+
+_log_memory_stage("IMPORT_BEGIN", _APP_IMPORT_STARTED_AT, "-")
+_log_memory_stage("AFTER_IMPORTS", _APP_IMPORT_STARTED_AT, "-")
+
+def _install_shutdown_diagnostics() -> None:
+    def _signal_handler(signum, frame):
+        name = signal.Signals(signum).name if signum in signal.Signals.__members__.values() else str(signum)
+        logging.getLogger(__name__).warning("WORKER_SIGNAL signal=%s pid=%s rss_mb=%.1f", name, os.getpid(), _rss_mb())
+        raise SystemExit(128 + signum)
+
+    def _normal_exit():
+        logging.getLogger(__name__).info("WORKER_EXIT_NORMAL pid=%s rss_mb=%.1f", os.getpid(), _rss_mb())
+
+    def _unhandled(exc_type, exc, tb):
+        logging.getLogger(__name__).critical("WORKER_UNHANDLED_EXCEPTION pid=%s rss_mb=%.1f", os.getpid(), _rss_mb(), exc_info=(exc_type, exc, tb))
+        if exc_type is SystemExit:
+            return
+        sys.__excepthook__(exc_type, exc, tb)
+
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        try:
+            signal.signal(sig, _signal_handler)
+        except Exception:
+            logging.getLogger(__name__).exception("WORKER_SIGNAL_HANDLER_INSTALL_FAILED signal=%s", sig)
+    atexit.register(_normal_exit)
+    sys.excepthook = _unhandled
+
+_install_shutdown_diagnostics()
+
+
 app = Flask(__name__)
 DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(DEFAULT_MAX_UPLOAD_BYTES)))
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
+_log_memory_stage("AFTER_FLASK_CREATION", _APP_IMPORT_STARTED_AT, "-")
 
 
+@app.before_request
+def _log_request_begin_memory():
+    if request.path == "/healthz":
+        return None
+    setattr(request, _REQUEST_STARTED_AT_KEY, time.monotonic())
+    g.load_data_call_count = 0
+    _log_memory_stage("REQUEST_BEGIN")
+    return None
 
 
 @app.get("/templates/cpf.jpg")
@@ -79,6 +185,8 @@ def api_qonto_oauth_ping():
 
 @app.before_request
 def debug_qonto_routes_once():
+    if request.path == "/healthz":
+        return None
     if request.path == "/api/qonto/oauth/ping":
         app.logger.warning("[QONTO DEBUG] url_map=%s", app.url_map)
 
@@ -419,10 +527,10 @@ def _is_qonto_missing_iban_error(message: str) -> bool:
 
 
 def get_qonto_headers() -> Dict[str, str]:
-    """Build Qonto API headers without Bearer, Basic or Base64 encoding."""
+    """Build Qonto API key headers without Bearer, Basic or Base64 encoding."""
     return {
         "Authorization": f"{_qonto_login()}:{_qonto_secret_key()}",
-        "Content-Type": "application/json",
+        "Accept": "application/json",
     }
 
 
@@ -671,6 +779,8 @@ def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = N
     called_url = prepared.url or url
     try:
         headers = get_qonto_headers()
+        if cleaned_payload is not None:
+            headers = {**headers, "Content-Type": "application/json"}
         if endpoint.startswith("/v2/sepa/direct_debit"):
             headers = {"Authorization": f"Bearer {_qonto_oauth_bearer_token()}", "Content-Type": "application/json"}
         response = requests.request(method.upper(), url, headers=headers, json=cleaned_payload if cleaned_payload is not None else None, params=params, timeout=20)
@@ -853,6 +963,48 @@ def get_qonto_invoice(invoice_id: str) -> Dict[str, Any]:
     return _qonto_request("GET", f"/v2/client_invoices/{quote(str(invoice_id), safe='')}")
 
 
+def list_qonto_invoices(params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    return _qonto_request("GET", "/v2/client_invoices", params=params or {})
+
+
+def _iter_qonto_invoice_payloads(payload: Any):
+    if isinstance(payload, dict):
+        invoice = _qonto_invoice_payload(payload)
+        if isinstance(invoice, dict) and invoice is not payload:
+            yield invoice
+        for key in ("client_invoices", "invoices", "items", "data"):
+            value = payload.get(key)
+            if isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        yield _qonto_invoice_payload(item)
+    elif isinstance(payload, list):
+        for item in payload:
+            if isinstance(item, dict):
+                yield _qonto_invoice_payload(item)
+
+
+def find_qonto_invoice_by_number(invoice_number: str) -> Optional[Dict[str, Any]]:
+    needle = str(invoice_number or "").strip()
+    if not needle:
+        return None
+    param_attempts = (
+        {"filter[number]": needle},
+        {"number": needle},
+        {"query": needle},
+        {"search": needle},
+    )
+    for params in param_attempts:
+        try:
+            payload = list_qonto_invoices(params)
+        except Exception as exc:
+            app.logger.info("[QONTO] invoice number lookup failed number=%s params=%s error=%s", needle, params, exc)
+            continue
+        for invoice in _iter_qonto_invoice_payloads(payload):
+            current_number = str(invoice.get("number") or invoice.get("invoice_number") or "").strip()
+            if current_number == needle:
+                return invoice
+    return None
 
 
 def _first_non_empty(mapping: Any, *keys: str) -> str:
@@ -864,34 +1016,198 @@ def _first_non_empty(mapping: Any, *keys: str) -> str:
             return str(value)
     return ""
 
-def download_qonto_invoice_pdf(invoice_id: str) -> Tuple[bytes, str]:
-    if not _qonto_is_configured():
-        raise QontoConfigurationError("Qonto n’est pas connecté")
-    endpoint = f"/v2/client_invoices/{quote(str(invoice_id), safe='')}/download"
-    url = f"{_qonto_base_url()}{endpoint}"
-    response = requests.get(url, headers={**get_qonto_headers(), "Accept": "application/pdf,application/json"}, timeout=30)
+
+def _find_qonto_pdf_url(payload: Any) -> str:
+    """Find the first PDF/public invoice URL exposed by a Qonto invoice payload."""
+    url_keys = {"public_url", "url", "file_url", "pdf_url", "download_url"}
+    if isinstance(payload, dict):
+        for key in ("public_url", "pdf_url", "download_url", "file_url", "url"):
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        for key, value in payload.items():
+            if key in url_keys and value:
+                return str(value).strip()
+            nested = _find_qonto_pdf_url(value)
+            if nested:
+                return nested
+    elif isinstance(payload, list):
+        for item in payload:
+            nested = _find_qonto_pdf_url(item)
+            if nested:
+                return nested
+    return ""
+
+
+def _find_qonto_attachment_id(payload: Any) -> str:
+    """Find the first Qonto attachment id exposed by an invoice payload."""
+    if isinstance(payload, dict):
+        for key in ("attachment_id", "attachmentId", "pdf_attachment_id", "pdfAttachmentId"):
+            value = payload.get(key)
+            if value:
+                return str(value).strip()
+        attachment = payload.get("attachment")
+        if isinstance(attachment, dict):
+            value = attachment.get("id")
+            if value:
+                return str(value).strip()
+        attachments = payload.get("attachments")
+        if isinstance(attachments, list):
+            for item in attachments:
+                value = _find_qonto_attachment_id(item)
+                if value:
+                    return value
+        for value in payload.values():
+            nested = _find_qonto_attachment_id(value)
+            if nested:
+                return nested
+    elif isinstance(payload, list):
+        for item in payload:
+            nested = _find_qonto_attachment_id(item)
+            if nested:
+                return nested
+    return ""
+
+
+def get_qonto_attachment(attachment_id: str) -> Dict[str, Any]:
+    return _qonto_request("GET", f"/v2/attachments/{quote(str(attachment_id), safe='')}")
+
+
+class QontoPdfUnavailableError(RuntimeError):
+    def __init__(self, message: str, status_code: int = 502):
+        self.status_code = status_code
+        super().__init__(message)
+
+
+def _qonto_json_response(response: requests.Response, context: str) -> Dict[str, Any]:
     content_type = response.headers.get("Content-Type", "")
-    raw_body = response.text if "json" in content_type.lower() or "text" in content_type.lower() else ""
-    trace_id = _qonto_response_trace_id(response, raw_body)
-    app.logger.info("[QONTO] api_call method=GET url=%s status=%s trace_id=%s content_type=%s", url, response.status_code, trace_id or "", content_type)
+    raw_body = response.text or ""
     if not response.ok:
+        app.logger.warning("QONTO PDF: %s status=%s", context, response.status_code)
         if response.status_code == 404:
-            raise QontoNotFoundError(response.status_code, raw_body or response.text[:500], trace_id)
-        raise QontoApiError(response.status_code, raw_body or response.text[:500], trace_id)
-    if response.content.startswith(b"%PDF") or "application/pdf" in content_type.lower():
-        return response.content, "application/pdf"
+            raise QontoNotFoundError(response.status_code, "Not found", _qonto_response_trace_id(response, raw_body))
+        if response.status_code in (401, 403):
+            raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502)
+        if response.status_code == 429:
+            raise QontoPdfUnavailableError("Qonto limite temporairement les demandes. Réessayez dans quelques secondes.", 429)
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502)
+    if "json" not in content_type.lower():
+        app.logger.warning("QONTO PDF: %s réponse non JSON content_type=%s", context, content_type[:80])
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502)
     try:
         payload = response.json()
-    except Exception as exc:
-        raise RuntimeError("La réponse Qonto ne contient pas de PDF exploitable") from exc
-    invoice = _qonto_invoice_payload(payload)
-    pdf_url = _first_non_empty(invoice, "public_url", "url", "file_url", "pdf_url", "download_url") or _first_non_empty(payload, "public_url", "url", "file_url", "pdf_url", "download_url")
+    except ValueError as exc:
+        app.logger.warning("QONTO PDF: %s JSON invalide", context)
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502) from exc
+    if not isinstance(payload, dict):
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502)
+    return payload
+
+
+def _qonto_get_json(path: str, context: str) -> Dict[str, Any]:
+    if not _qonto_is_configured():
+        raise QontoConfigurationError("Qonto n’est pas connecté")
+    url = f"{_qonto_base_url()}{path if path.startswith('/') else '/' + path}"
+    try:
+        response = requests.get(url, headers=get_qonto_headers(), timeout=20)
+    except requests.Timeout as exc:
+        app.logger.warning("QONTO PDF: timeout %s", context)
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 504) from exc
+    return _qonto_json_response(response, context)
+
+
+def _qonto_attachment_payload(attachment_payload: Dict[str, Any]) -> Dict[str, Any]:
+    attachment = attachment_payload.get("attachment") if isinstance(attachment_payload, dict) else None
+    if not isinstance(attachment, dict):
+        app.logger.warning("QONTO PDF: champ attachment absent")
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502)
+    return attachment
+
+
+def fetch_qonto_client_invoice_pdf(invoice_id: str, max_attempts: int = 3, retry_delay: float = 0.35) -> Tuple[bytes, str]:
+    invoice_id = str(invoice_id or "").strip()
+    if not invoice_id or not re.match(r"^[A-Za-z0-9_-]+$", invoice_id):
+        raise QontoPdfUnavailableError("Facture Qonto invalide ou absente.", 400)
+    if not _qonto_is_configured():
+        raise QontoConfigurationError("Qonto n’est pas connecté")
+
+    attachment_id = ""
+    invoice_payload: Dict[str, Any] = {}
+    attempts = max(1, min(int(max_attempts or 1), 3))
+    for attempt in range(attempts):
+        invoice_payload = _qonto_get_json(f"/v2/client_invoices/{quote(invoice_id, safe='')}", "invoice")
+        client_invoice = invoice_payload.get("client_invoice")
+        if not isinstance(client_invoice, dict):
+            app.logger.warning("QONTO PDF: champ client_invoice absent invoice_id=%s", invoice_id)
+            raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502)
+        attachment_id = str(client_invoice.get("attachment_id") or "").strip()
+        if attachment_id:
+            break
+        app.logger.info("QONTO PDF: attachment_id absent invoice_id=%s attempt=%s", invoice_id, attempt + 1)
+        if attempt < attempts - 1:
+            time.sleep(max(0.0, retry_delay))
+    if not attachment_id:
+        raise QontoPdfUnavailableError("Le PDF de cette facture est encore en cours de génération. Réessayez dans quelques secondes.", 409)
+
+    attachment_payload = _qonto_get_json(f"/v2/attachments/{quote(attachment_id, safe='')}", "attachment")
+    attachment = _qonto_attachment_payload(attachment_payload)
+    declared_type = str(attachment.get("file_content_type") or "").lower()
+    if declared_type and declared_type != "application/pdf":
+        app.logger.warning("QONTO PDF: attachment non PDF invoice_id=%s attachment_id=%s", invoice_id, attachment_id)
+        raise QontoPdfUnavailableError("Le document retourné par Qonto n’est pas un PDF valide.", 502)
+    pdf_url = str(attachment.get("url") or "").strip()
     if not pdf_url:
-        raise RuntimeError("PDF Qonto non exposé par l’API")
+        app.logger.warning("QONTO PDF: attachment.url absent invoice_id=%s attachment_id=%s", invoice_id, attachment_id)
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502)
+    try:
+        pdf_response = requests.get(pdf_url, timeout=30)
+    except requests.Timeout as exc:
+        app.logger.warning("QONTO PDF: timeout lors du téléchargement invoice_id=%s", invoice_id)
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 504) from exc
+    if not pdf_response.ok:
+        app.logger.warning("QONTO PDF: téléchargement status=%s invoice_id=%s", pdf_response.status_code, invoice_id)
+        msg = "Impossible de récupérer le PDF auprès de Qonto."
+        if pdf_response.status_code in (401, 403, 404):
+            msg = "Impossible de récupérer le PDF auprès de Qonto."
+        raise QontoPdfUnavailableError(msg, 502)
+    pdf_content = pdf_response.content or b""
+    if not pdf_content:
+        app.logger.warning("QONTO PDF: téléchargement vide invoice_id=%s", invoice_id)
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502)
+    if not pdf_content.startswith(b"%PDF"):
+        app.logger.warning("QONTO PDF: contenu non PDF invoice_id=%s", invoice_id)
+        raise QontoPdfUnavailableError("Le document retourné par Qonto n’est pas un PDF valide.", 502)
+    filename = secure_filename(str(attachment.get("file_name") or attachment.get("filename") or f"facture-qonto-{invoice_id}.pdf")) or f"facture-qonto-{invoice_id}.pdf"
+    if not filename.lower().endswith(".pdf"):
+        filename = f"{filename}.pdf"
+    return pdf_content, filename
+
+
+def _download_qonto_attachment_pdf(attachment_id: str) -> Tuple[bytes, str]:
+    attachment_id = str(attachment_id or "").strip()
+    if not attachment_id:
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 400)
+    attachment_payload = _qonto_get_json(f"/v2/attachments/{quote(attachment_id, safe='')}", "attachment")
+    attachment = _qonto_attachment_payload(attachment_payload)
+    pdf_url = str(attachment.get("url") or "").strip()
+    if not pdf_url:
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502)
+    pdf_content, content_type = _download_pdf_from_url(pdf_url)
+    return pdf_content, content_type
+
+
+def _download_pdf_from_url(pdf_url: str) -> Tuple[bytes, str]:
     pdf_response = requests.get(str(pdf_url), timeout=30)
     if not pdf_response.ok:
         raise RuntimeError(f"Téléchargement PDF Qonto impossible ({pdf_response.status_code})")
-    return pdf_response.content, pdf_response.headers.get("Content-Type") or "application/pdf"
+    if not (pdf_response.content or b"").startswith(b"%PDF"):
+        raise RuntimeError("Le document retourné par Qonto n’est pas un PDF valide.")
+    return pdf_response.content, "application/pdf"
+
+
+def download_qonto_invoice_pdf(invoice_id: str, invoice_number: str = "") -> Tuple[bytes, str]:
+    pdf_content, _filename = fetch_qonto_client_invoice_pdf(invoice_id)
+    return pdf_content, "application/pdf"
 
 
 def list_qonto_direct_debit_mandates(client_id: str) -> Dict[str, Any]:
@@ -1812,6 +2128,8 @@ def scotia_login_required(view):
 
 @app.before_request
 def protect_sensitive_routes():
+    if request.path == "/healthz":
+        return None
     """Central safety net for sensitive admin/API routes.
 
     Some legacy endpoints were missing explicit decorators.  This hook protects
@@ -1939,7 +2257,7 @@ def admin_login_post():
     password = request.form.get("password") or ""
     next_url = request.form.get("next") or url_for("admin_sessions")
 
-    data = load_data()
+    data = load_data(run_background_tasks=False)
     _log_partner_auth_event("login_attempt", data, username_normalized)
 
     # sécurité minimale : si aucun accès plateforme ni partenaire n’est configuré, on refuse.
@@ -2286,7 +2604,20 @@ BACKUP_MIN_INTERVAL_SECONDS = int(os.environ.get("BACKUP_MIN_INTERVAL_SECONDS", 
 AUTO_RESTORE_FROM_BACKUP = (os.environ.get("AUTO_RESTORE_FROM_BACKUP", "1") or "").strip().lower() in {"1", "true", "yes", "on"}
 BACKUP_SNAPSHOT_BEFORE_SAVE = (os.environ.get("BACKUP_SNAPSHOT_BEFORE_SAVE", "1") or "").strip().lower() in {"1", "true", "yes", "on"}
 DOCS_TO_CONTROL_PUBLIC_TOKEN = (os.environ.get("DOCS_TO_CONTROL_PUBLIC_TOKEN") or "").strip()
-MAX_JSON_BACKUP_BYTES = int(os.environ.get("MAX_JSON_BACKUP_BYTES", "52428800"))
+DOCS_TO_CONTROL_TRUSTED_USER_AGENT = (
+    os.environ.get("DOCS_TO_CONTROL_TRUSTED_USER_AGENT")
+    or "plateformegestion/1.0 (+https://plateformegestion.onrender.com)"
+).strip()
+
+def _int_env(name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(name, str(default)))
+    except (TypeError, ValueError):
+        app.logger.warning("Invalid integer for %s; using default %s", name, default)
+        return default
+
+
+MAX_JSON_BACKUP_BYTES = _int_env("MAX_JSON_BACKUP_BYTES", 52428800)
 
 _data_lock = threading.RLock()
 _wedof_webhook_lock = threading.RLock()
@@ -2295,6 +2626,7 @@ _storage_startup_logged = False
 
 UPLOADS_DIR = os.path.join(PERSIST_DIR, "uploads")
 os.makedirs(UPLOADS_DIR, exist_ok=True)
+_log_memory_stage("AFTER_STORAGE_CONFIGURATION", _APP_IMPORT_STARTED_AT, "-")
 
 PARTNER_STORAGE_CATEGORIES = {"stagiaires", "contrats", "conventions", "signatures", "factures", "logos", "documents"}
 INTEGRALE_PARTNER_ID = "11111111-1111-4111-8111-111111111111"
@@ -2418,12 +2750,15 @@ def _ensure_multi_partner_payload(data: Dict[str, Any]) -> bool:
 
 
 def _filter_data_for_partner(data: Dict[str, Any], partner_id: str) -> Dict[str, Any]:
-    scoped = copy.deepcopy(data)
-    scoped["sessions"] = [s for s in scoped.get("sessions", []) if not isinstance(s, dict) or s.get("partner_id") == partner_id]
-    scoped["users"] = [u for u in scoped.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id]
+    # Avoid copy.deepcopy(data): partner requests only need a shallow top-level
+    # payload with filtered collection lists. Deep-copying the full production
+    # JSON temporarily duplicated every nested trainee/session/document object.
+    scoped = dict(data)
+    scoped["sessions"] = [s for s in data.get("sessions", []) if not isinstance(s, dict) or s.get("partner_id") == partner_id]
+    scoped["users"] = [u for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id]
     for key in ("positioning_tests", "notifications_edof", "notifications_financement_refuse", "notifications_prelevements", "notifications_prelevement_non_valides", "notifications_phone_relances", "notifications_vae_relances", "notifications_cnaps_pre_relances", "notifications_test_fr", "notifications_convention_unsigned", "notifications_vtc_books", "notifications_admin"):
-        if isinstance(scoped.get(key), list):
-            scoped[key] = [x for x in scoped[key] if not isinstance(x, dict) or x.get("partner_id") == partner_id]
+        if isinstance(data.get(key), list):
+            scoped[key] = [x for x in data[key] if not isinstance(x, dict) or x.get("partner_id") == partner_id]
     return scoped
 
 
@@ -2491,22 +2826,104 @@ def _hash_password(password: str) -> str:
     return f"pbkdf2_sha256$260000${salt}${digest}"
 
 
-def _verify_password(password: str, stored: str) -> bool:
+def _describe_password_hash(stored: str) -> Tuple[bool, str, str]:
+    """Inspect a stored hash string without running a KDF."""
     stored = stored or ""
-    try:
-        algo, rounds, salt, digest = stored.split("$", 3)
-        if algo == "pbkdf2_sha256":
-            candidate = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), int(rounds)).hex()
-            return hmac.compare_digest(candidate, digest)
-    except Exception:
-        pass
+    if not stored:
+        return False, "empty", "empty_hash"
 
-    # Compatibilité avec les hashs Werkzeug/Flask éventuellement créés par
-    # d’anciennes versions ou par un outil d’administration externe.
-    try:
-        return check_password_hash(stored, password)
-    except Exception:
+    if stored.startswith("pbkdf2_sha256$"):
+        parts = stored.split("$", 3)
+        if len(parts) != 4 or not all(parts):
+            return False, "pbkdf2_sha256", "incomplete_hash"
+        _, rounds, salt, digest = parts
+        try:
+            rounds_int = int(rounds)
+        except ValueError:
+            return False, "pbkdf2_sha256", "non_numeric_iterations"
+        if rounds_int < 1 or rounds_int > 600000:
+            return False, "pbkdf2_sha256", "iterations_out_of_range"
+        return True, "pbkdf2_sha256", "ok"
+
+    method = stored.split("$", 1)[0]
+    if method.startswith("pbkdf2:"):
+        parts = method.split(":")
+        if len(parts) != 3 or not all(parts):
+            return False, "werkzeug_pbkdf2", "incomplete_hash"
+        try:
+            iterations = int(parts[2])
+        except ValueError:
+            return False, "werkzeug_pbkdf2", "non_numeric_iterations"
+        if iterations < 1 or iterations > 600000:
+            return False, "werkzeug_pbkdf2", "iterations_out_of_range"
+        if len(stored.split("$")) != 3:
+            return False, "werkzeug_pbkdf2", "incomplete_hash"
+        return True, "werkzeug_pbkdf2", "ok"
+
+    if method.startswith("scrypt"):
+        parts = method.split(":")
+        if len(parts) != 4 or not all(parts):
+            return False, "werkzeug_scrypt", "incomplete_hash"
+        try:
+            n, r, p = (int(value) for value in parts[1:])
+        except ValueError:
+            return False, "werkzeug_scrypt", "non_numeric_parameters"
+        if n < 2 or n & (n - 1):
+            return False, "werkzeug_scrypt", "n_not_power_of_two"
+        if r < 1 or p < 1:
+            return False, "werkzeug_scrypt", "r_or_p_below_one"
+        if 128 * n * r > 64 * 1024 * 1024:
+            return False, "werkzeug_scrypt", "memory_above_64mb"
+        if len(stored.split("$")) != 3:
+            return False, "werkzeug_scrypt", "incomplete_hash"
+        return True, "werkzeug_scrypt", "ok"
+
+    return False, method or "unknown", "unknown_hash_format"
+
+
+def _log_refused_user_password_hashes(data: Dict[str, Any]) -> None:
+    for user in data.get("users", []) if isinstance(data, dict) else []:
+        if not isinstance(user, dict) or not user.get("password_hash"):
+            continue
+        ok, hash_type, reason = _describe_password_hash(str(user.get("password_hash") or ""))
+        if not ok:
+            app.logger.warning(
+                "PASSWORD_HASH_REFUSED user_id=%s partner_id=%s hash_type=%s reason=%s",
+                user.get("id") or "",
+                user.get("partner_id") or "",
+                hash_type,
+                reason,
+            )
+
+
+def _verify_password(password: str, stored: str) -> bool:
+    started_at = time.monotonic()
+    _log_memory_stage("BEFORE_PASSWORD_VERIFY", route=_current_route_for_log())
+    stored = stored or ""
+    ok, hash_type, reason = _describe_password_hash(stored)
+    if not ok:
+        app.logger.warning("PASSWORD_HASH_REFUSED hash_type=%s reason=%s", hash_type, reason)
+        _log_memory_stage("AFTER_PASSWORD_VERIFY", started_at, _current_route_for_log())
         return False
+
+    try:
+        if hash_type == "pbkdf2_sha256":
+            _, rounds, salt, digest = stored.split("$", 3)
+            candidate = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), int(rounds)).hex()
+            result = hmac.compare_digest(candidate, digest)
+        else:
+            result = werkzeug_security.check_password_hash(stored, password)
+        return result
+    except Exception:
+        app.logger.exception("PASSWORD_VERIFY_FAILED hash_type=%s", hash_type)
+        return False
+    finally:
+        _log_memory_stage("AFTER_PASSWORD_VERIFY", started_at, _current_route_for_log())
+
+
+def _werkzeug_hash_uses_unsafe_memory(stored: str) -> bool:
+    ok, hash_type, _reason = _describe_password_hash(stored or "")
+    return hash_type == "werkzeug_scrypt" and not ok
 
 
 
@@ -2717,22 +3134,35 @@ def _copy_file_durable(src_path: str, dst_path: str) -> None:
         os.fsync(dst.fileno())
 
 
+def _snapshot_file_durable(src_path: str, dst_path: str) -> None:
+    """Create a durable point-in-time snapshot without copying large JSON files when possible."""
+    try:
+        os.link(src_path, dst_path)
+        _fsync_parent_dir(dst_path)
+        return
+    except OSError:
+        pass
+
+    if os.path.getsize(src_path) > MAX_JSON_BACKUP_BYTES:
+        raise ValueError("file larger than MAX_JSON_BACKUP_BYTES")
+
+    _copy_file_durable(src_path, dst_path)
+    _fsync_parent_dir(dst_path)
+
+
 def _force_backup_snapshot(path: str, reason: str = "manual") -> Optional[str]:
     base_name = os.path.basename(path)
     prefix = base_name.replace(".", "_")
     if not os.path.exists(path):
         return None
-    try:
-        if os.path.getsize(path) > MAX_JSON_BACKUP_BYTES:
-            app.logger.warning("Backup skipped for %s: file larger than MAX_JSON_BACKUP_BYTES", path)
-            return None
-    except Exception:
-        pass
     backup_path = _json_backup_path(prefix, reason)
     try:
-        _copy_file_durable(path, backup_path)
+        _snapshot_file_durable(path, backup_path)
         _cleanup_backups_for(prefix)
         return backup_path
+    except ValueError:
+        app.logger.warning("Backup skipped for %s: file larger than MAX_JSON_BACKUP_BYTES and hard-link snapshot unavailable", path)
+        return None
     except Exception:
         app.logger.exception("Unable to create JSON backup for %s", path)
         return None
@@ -2763,7 +3193,8 @@ def _write_json_with_backups(path: str, payload: Any, lock: threading.RLock) -> 
                 # Snapshot systématique avant écriture pour éviter toute fenêtre de perte
                 # de données entre deux backups périodiques.
                 if BACKUP_SNAPSHOT_BEFORE_SAVE:
-                    _force_backup_snapshot(path, reason="before-save")
+                    if _force_backup_snapshot(path, reason="before-save"):
+                        _last_backup_times[path] = now_ts
 
                 if os.path.exists(path):
                     last = _last_backup_times.get(path, 0)
@@ -2957,7 +3388,9 @@ BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 BREVO_SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL", "ecole@integraleacademy.com")
 BREVO_SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "Intégrale Academy")
 CNAPS_LOOKUP_ENDPOINT = os.environ.get("CNAPS_LOOKUP_ENDPOINT", "")
-CNAPS_PUBLIC_ANNUAIRE_ENDPOINT = os.environ.get("CNAPS_PUBLIC_ANNUAIRE_ENDPOINT", "https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/api/annuaire-public").strip()
+CNAPS_PUBLIC_ANNUAIRE_LEGACY_ENDPOINT = "https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/api/annuaire-public"
+CNAPS_PUBLIC_ANNUAIRE_PAGE_URL = "https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/app/annuaire-public"
+CNAPS_PUBLIC_ANNUAIRE_ENDPOINT = os.environ.get("CNAPS_PUBLIC_ANNUAIRE_ENDPOINT", "https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/api/back/public/annuaire/search/personne-physique").strip()
 CNAPSV3_NOTIFICATIONS_ENDPOINT = os.environ.get("CNAPSV3_NOTIFICATIONS_ENDPOINT", "")
 CNAPSV3_BASE_URL = os.environ.get("CNAPSV3_BASE_URL", "https://cnapsv3.onrender.com").strip().rstrip("/")
 GESTIONSTAGIAIRE_SYNC_TOKEN = os.environ.get("GESTIONSTAGIAIRE_SYNC_TOKEN", "").strip()
@@ -5478,7 +5911,7 @@ def build_vtc_credentials_invalid_email(first_name: str, form_link: str) -> Tupl
         </a>
       </p>
       <p>
-        À réception, nous pourrons procéder au paiement des frais d'examen. Si vous avez besoin d'aide, vous pouvez nous contacter au 04 22 47 07 68. 
+        À réception, nous pourrons procéder au paiement des frais d'examen. Si vous avez besoin d'aide, vous pouvez nous contacter au 04 22 47 07 68.
       </p>
       <p>
         Merci pour votre compréhension.
@@ -6371,21 +6804,58 @@ def _empty_data_payload() -> Dict[str, Any]:
     }
 
 
-def load_data() -> Dict[str, Any]:
+def run_deferred_background_tasks(data: Dict[str, Any], force: bool = False) -> bool:
+    global _BACKGROUND_TASKS_LAST_RUN_AT
+    if has_request_context() and request.path == "/healthz":
+        return False
+    now = time.monotonic()
+    if not force and now - _BACKGROUND_TASKS_LAST_RUN_AT < _BACKGROUND_TASKS_MIN_INTERVAL_SECONDS:
+        return False
+    if not _BACKGROUND_TASKS_LOCK.acquire(blocking=False):
+        return False
+    started_at = time.monotonic()
+    _log_memory_stage("BACKGROUND_TASKS_BEGIN", route=_current_route_for_log())
+    changed = False
+    try:
+        if _send_vtc_credentials_missing_reminders(data):
+            changed = True
+        if _send_vae_relance_reminders(data):
+            changed = True
+        if _send_docs_relance_reminders(data):
+            changed = True
+        if _inject_vtc_exam_results_notifications(data):
+            changed = True
+        _BACKGROUND_TASKS_LAST_RUN_AT = time.monotonic()
+        return changed
+    finally:
+        _log_memory_stage("BACKGROUND_TASKS_END", started_at, _current_route_for_log())
+        _BACKGROUND_TASKS_LOCK.release()
+
+
+def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
+    load_started_at = time.monotonic()
+    if has_request_context():
+        g.load_data_call_count = getattr(g, "load_data_call_count", 0) + 1
+    baseline_mb = _log_memory_stage("LOAD_DATA_BEGIN", load_started_at, _current_route_for_log())
     if not os.path.exists(DATA_FILE):
         recovered_from = _recover_data_file(DATA_FILE)
         if recovered_from:
             loaded = _load_valid_json_payload(DATA_FILE)
             if loaded is not None:
                 _ensure_multi_partner_payload(loaded)
+                _log_refused_user_password_hashes(loaded)
                 _log_storage_state(loaded)
+                _log_memory_stage("AFTER_LOAD_DATA", load_started_at, _current_route_for_log())
                 return _filter_data_for_partner(loaded, _current_partner_id()) if _is_partner_scoped_session() else loaded
         base = _empty_data_payload()
         _ensure_multi_partner_payload(base)
         _log_storage_state(base)
+        _log_memory_stage("AFTER_LOAD_DATA", load_started_at, _current_route_for_log())
         return _filter_data_for_partner(base, _current_partner_id()) if _is_partner_scoped_session() else base
 
+    _log_memory_stage("BEFORE_JSON_LOAD", load_started_at, _current_route_for_log(), baseline_mb)
     data = _load_valid_json_payload(DATA_FILE)
+    baseline_mb = _log_memory_stage("AFTER_JSON_LOAD", load_started_at, _current_route_for_log(), baseline_mb)
     if data is None:
         recovered_from = _recover_data_file(DATA_FILE)
         if recovered_from:
@@ -6394,6 +6864,7 @@ def load_data() -> Dict[str, Any]:
             app.logger.error("Unable to read %s and no valid recovery source found", DATA_FILE)
             base = _empty_data_payload()
             _log_storage_state(base)
+            _log_memory_stage("AFTER_LOAD_DATA", load_started_at, _current_route_for_log())
             return base
 
     # Les post-traitements ne doivent jamais vider la base en cas d'erreur.
@@ -6402,10 +6873,12 @@ def load_data() -> Dict[str, Any]:
         # ✅ Assure que tous les stagiaires ont un public_token
         if ensure_public_tokens(data):
             changed = True
+        baseline_mb = _log_memory_stage("NORMALIZATION ensure_public_tokens", load_started_at, _current_route_for_log(), baseline_mb)
 
         # ✅ IMPORTANT : normalise en "trainees" partout (sinon admin/public désynchronisés)
         if normalize_sessions_schema(data):
             changed = True
+        baseline_mb = _log_memory_stage("NORMALIZATION normalize_sessions_schema", load_started_at, _current_route_for_log(), baseline_mb)
 
         if "positioning_tests" not in data:
             data["positioning_tests"] = []
@@ -6459,20 +6932,14 @@ def load_data() -> Dict[str, Any]:
 
         if _ensure_multi_partner_payload(data):
             changed = True
+        baseline_mb = _log_memory_stage("NORMALIZATION _ensure_multi_partner_payload", load_started_at, _current_route_for_log(), baseline_mb)
         if normalize_all_partner_subscriptions(data):
             changed = True
+        baseline_mb = _log_memory_stage("NORMALIZATION normalize_all_partner_subscriptions", load_started_at, _current_route_for_log(), baseline_mb)
 
-        if _send_vtc_credentials_missing_reminders(data):
+        if run_background_tasks and run_deferred_background_tasks(data):
             changed = True
-
-        if _send_vae_relance_reminders(data):
-            changed = True
-
-        if _send_docs_relance_reminders(data):
-            changed = True
-
-        if _inject_vtc_exam_results_notifications(data):
-            changed = True
+        baseline_mb = _log_memory_stage("NORMALIZATION run_deferred_background_tasks", load_started_at, _current_route_for_log(), baseline_mb)
 
         for session_obj in (data.get("sessions") or []):
             for trainee in _session_trainees_list(session_obj):
@@ -6495,14 +6962,22 @@ def load_data() -> Dict[str, Any]:
                 if _sync_vtc_book_notification(data, session_obj, trainee):
                     changed = True
 
+        baseline_mb = _log_memory_stage("NORMALIZATION vae_action_dates_and_vtc_book_notifications", load_started_at, _current_route_for_log(), baseline_mb)
+
         if changed:
             save_data(data)
 
     except Exception:
         app.logger.exception("Post-processing failed for %s; returning current in-memory data without reset", DATA_FILE)
 
+    _log_refused_user_password_hashes(data)
+    baseline_mb = _log_memory_stage("AFTER_PASSWORD_HASH_INSPECTION", load_started_at, _current_route_for_log(), baseline_mb)
     _log_storage_state(data)
-    return _filter_data_for_partner(data, _current_partner_id()) if _is_partner_scoped_session() else data
+    _log_memory_stage("BEFORE_PARTNER_FILTER", load_started_at, _current_route_for_log(), baseline_mb)
+    result = _filter_data_for_partner(data, _current_partner_id()) if _is_partner_scoped_session() else data
+    _log_memory_stage("AFTER_PARTNER_FILTER", load_started_at, _current_route_for_log(), baseline_mb)
+    _log_memory_stage("LOAD_DATA_END", load_started_at, _current_route_for_log())
+    return result
 
 
 def save_data(data: Dict[str, Any]) -> None:
@@ -7840,76 +8315,258 @@ def _first_non_empty_value(payload: Any, keys: Iterable[str]) -> str:
     return _walk(payload)
 
 
+CNAPS_PUBLIC_ANNUAIRE_PAGE_SIZE = 10
+CNAPS_PUBLIC_ANNUAIRE_MAX_PAGES = 25
+CNAPS_TITLE_ORDER = ["AP SH", "AP A3P", "CP SH", "CP A3P"]
+CNAPS_EXPLICIT_ACTIVITY_CODES = {
+    "autorisation prealable - surveillance humaine ou gardiennage": "AP SH",
+    "carte professionnelle - surveillance humaine ou gardiennage": "CP SH",
+    "autorisation prealable - agent de protection physique des personnes": "AP A3P",
+    "carte professionnelle - agent de protection physique des personnes": "CP A3P",
+}
+CNAPS_ACTIVITY_LABELS = {
+    "AP SH": "Autorisation préalable - Surveillance humaine ou gardiennage",
+    "CP SH": "Carte professionnelle - Surveillance humaine ou gardiennage",
+    "AP A3P": "Autorisation préalable - Agent de protection physique des personnes",
+    "CP A3P": "Carte professionnelle - Agent de protection physique des personnes",
+}
+
+
+def _normalize_cnaps_nub(value: Any) -> str:
+    return re.sub(r"\D+", "", str(value or ""))
+
+
+def _normalize_cnaps_name(value: Any) -> str:
+    raw = unicodedata.normalize("NFD", str(value or ""))
+    raw = "".join(ch for ch in raw if unicodedata.category(ch) != "Mn")
+    return re.sub(r"\s+", " ", raw).strip().casefold()
+
+
+def _normalize_cnaps_activity(value: Any) -> str:
+    raw = str(value or "").strip()
+    raw = unicodedata.normalize("NFD", raw)
+    raw = "".join(ch for ch in raw if unicodedata.category(ch) != "Mn")
+    raw = raw.replace("—", "-").replace("–", "-").replace("‑", "-")
+    raw = raw.replace("’", "'").replace("`", "'")
+    raw = re.sub(r"\s*-\s*", " - ", raw)
+    raw = re.sub(r"\s+", " ", raw)
+    return raw.strip().casefold()
+
+
+def _build_cnaps_public_annuaire_payload(normalized_nom: str, normalized_nub: str, page_number: int) -> Dict[str, Any]:
+    return {
+        "nom": normalized_nom,
+        "nub": normalized_nub,
+        "page": page_number,
+        "size": CNAPS_PUBLIC_ANNUAIRE_PAGE_SIZE,
+        "sorts": [
+            {"field": "nom", "asc": True},
+            {"field": "dateFinValidite", "asc": True},
+        ],
+    }
+
+
+def _cnaps_activity_code(label: Any) -> str:
+    original = str(label or "").strip()
+    normalized = _normalize_cnaps_activity(original)
+    explicit = CNAPS_EXPLICIT_ACTIVITY_CODES.get(normalized)
+    if explicit:
+        return explicit
+    principal = ""
+    if normalized.startswith("autorisation prealable"):
+        principal = "AP"
+    elif normalized.startswith("carte professionnelle"):
+        principal = "CP"
+    activity = ""
+    if "surveillance humaine ou gardiennage" in normalized:
+        activity = "SH"
+    elif "agent de protection physique des personnes" in normalized:
+        activity = "A3P"
+    if principal and activity:
+        return f"{principal} {activity}"
+    return original or "Titre CNAPS inconnu"
+
+
+def _cnaps_display_status(code: str, status: str) -> str:
+    return " ".join(part for part in [str(code or "").strip(), str(status or "").strip().upper()] if part).strip()
+
+
 def _extract_cnaps_public_annuaire_results(payload: Any) -> List[Dict[str, str]]:
-    """Return all title rows found in the CNAPS public annuaire response."""
+    """Return title rows from the real CNAPS response_json['results'] list only."""
+    if not isinstance(payload, dict) or not isinstance(payload.get("results"), list):
+        return []
     rows: List[Dict[str, str]] = []
-    seen: Set[Tuple[str, str, str]] = set()
-    activity_keys = ["activite", "activité", "activity", "libelleActivite"]
-    validity_keys = ["validiteTitre", "validité du titre", "validite_du_titre", "validity", "statutTitre", "etatTitre"]
-    date_keys = ["dateValiditeTitre", "date de validité du titre", "date_validite_titre", "dateFinValidite"]
-
-    def add_from(value: Any) -> None:
-        if not isinstance(value, dict):
-            return
-        activite = _first_non_empty_value(value, activity_keys)
-        validite = _first_non_empty_value(value, validity_keys)
-        date_validite = _first_non_empty_value(value, date_keys)
-        if not activite and not validite and not date_validite:
-            return
-        key = (activite, validite, date_validite)
+    seen: Set[Tuple[str, str, str, str]] = set()
+    for item in payload["results"]:
+        if not isinstance(item, dict):
+            continue
+        row = {
+            "nom": str(item.get("nom") or "").strip(),
+            "prenom": str(item.get("prenom") or "").strip(),
+            "nub": _normalize_cnaps_nub(item.get("nub")),
+            "typeActivite": str(item.get("typeActivite") or "").strip(),
+            "agrementStatutEs": str(item.get("agrementStatutEs") or "").strip().upper(),
+            "dateFinValidite": str(item.get("dateFinValidite") or "").strip(),
+            "recepisse": item.get("recepisse"),
+        }
+        key = (row["nub"], row["typeActivite"], row["dateFinValidite"], row["agrementStatutEs"])
         if key in seen:
-            return
+            continue
         seen.add(key)
-        rows.append({"activite": activite, "validite_titre": validite, "date_validite_titre": date_validite})
-
-    def walk(value: Any) -> None:
-        if isinstance(value, dict):
-            add_from(value)
-            for item in value.values():
-                walk(item)
-        elif isinstance(value, list):
-            for item in value:
-                walk(item)
-
-    walk(payload)
+        rows.append(row)
     return rows
 
 
-def fetch_cnaps_public_annuaire(nom: str, nub: str) -> Optional[Dict[str, Any]]:
-    endpoint = (CNAPS_PUBLIC_ANNUAIRE_ENDPOINT or "").strip()
-    nom = " ".join((nom or "").strip().split()).upper()
-    nub = re.sub(r"\D+", "", str(nub or ""))[-7:]
-    if not endpoint or not nom or not nub:
-        return None
-
-    payload = {
-        "nom": nom,
-        "nub": nub,
-        "numeroBeneficiaireUnique": nub,
-        "typeRecherche": "AGENT",
-        "page": 0,
-        "size": 100,
-        "limit": 100,
+def build_cnaps_public_annuaire_snapshot(rows: List[Dict[str, str]], nub: str, nom: str = "") -> Dict[str, Any]:
+    normalized_nub = _normalize_cnaps_nub(nub)
+    normalized_nom = _normalize_cnaps_name(nom)
+    matched_rows = []
+    seen: Set[Tuple[str, str, str, str]] = set()
+    for row in rows:
+        if _normalize_cnaps_nub(row.get("nub")) != normalized_nub:
+            continue
+        if normalized_nom and _normalize_cnaps_name(row.get("nom")) != normalized_nom:
+            continue
+        key = (_normalize_cnaps_nub(row.get("nub")), str(row.get("typeActivite") or ""), str(row.get("dateFinValidite") or ""), str(row.get("agrementStatutEs") or ""))
+        if key in seen:
+            continue
+        seen.add(key)
+        matched_rows.append(row)
+    titles = []
+    for row in matched_rows:
+        label = str(row.get("typeActivite") or "").strip()
+        status = str(row.get("agrementStatutEs") or "").strip().upper()
+        code = _cnaps_activity_code(label)
+        titles.append({
+            "code": code,
+            "label": label,
+            "activity": label,
+            "status": status,
+            "validity": status,
+            "display_status": _cnaps_display_status(code, status),
+            "date_fin_validite": str(row.get("dateFinValidite") or "").strip(),
+            "valid_until": str(row.get("dateFinValidite") or "").strip(),
+        })
+    titles.sort(key=lambda t: (CNAPS_TITLE_ORDER.index(t["code"]) if t["code"] in CNAPS_TITLE_ORDER else 999, t["label"], t["date_fin_validite"]))
+    active_title_objects = [t for t in titles if t["status"] == "ACTIF"]
+    active_title_labels = [t["display_status"] for t in active_title_objects]
+    app.logger.info(
+        'CNAPS check rows=%s matched=%s active_titles=%s nub_masked=%s',
+        len(rows), len(matched_rows), active_title_labels, _mask_cnaps_nub(normalized_nub),
+    )
+    message = None if titles else "Aucun titre CNAPS trouvé"
+    return {
+        "status": "ok",
+        "matched": bool(matched_rows),
+        "checked_at": _now_iso(),
+        "check_status": "success",
+        "nub": normalized_nub,
+        "titles": titles,
+        "active_titles": active_title_objects,
+        "cnaps_active_titles": active_title_labels,
+        "results": matched_rows,
+        "message": message,
+        "error": None,
     }
-    params = {"nom": nom, "nub": nub, "numeroBeneficiaireUnique": nub, "page": 0, "size": 100, "limit": 100}
-    headers = {"Accept": "application/json", "User-Agent": "gestionstagiaires/1.0"}
-    try:
-        try:
-            response = requests.post(endpoint, json=payload, headers=headers, timeout=12)
-        except Exception:
-            response = requests.get(endpoint, params=params, headers=headers, timeout=12)
-        if response.status_code >= 400:
-            response = requests.get(endpoint, params=params, headers=headers, timeout=12)
-        if response.status_code != 200:
-            return None
-        data = response.json()
-    except Exception:
-        return None
 
-    results = _extract_cnaps_public_annuaire_results(data)
-    if not results:
-        return None
-    return {**results[0], "results": results}
+
+def _mask_cnaps_nub(nub: str) -> str:
+    value = _normalize_cnaps_nub(nub)
+    return "***" + value[-3:] if value else ""
+
+
+def _cnaps_public_error_snapshot(nub: str, error: str, status_code: Optional[int] = None, previous_success: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    checked_at = _now_iso()
+    snapshot = {
+        "status": "error",
+        "matched": False,
+        "checked_at": checked_at,
+        "check_status": "error",
+        "nub": _normalize_cnaps_nub(nub),
+        "titles": [],
+        "active_titles": [],
+        "cnaps_active_titles": [],
+        "results": [],
+        "message": "Vérification CNAPS impossible",
+        "error": (error or "CNAPS error")[:120],
+        "http_status": status_code,
+        "last_attempt": {"checked_at": checked_at, "status": "error", "error": (error or "CNAPS error")[:120]},
+    }
+    if previous_success:
+        snapshot["last_successful_check"] = previous_success
+    return snapshot
+
+
+def _validate_cnaps_json_response(response: Any) -> Any:
+    status_code = getattr(response, "status_code", None)
+    content_type = (getattr(response, "headers", {}) or {}).get("Content-Type", "")
+    final_url = getattr(response, "url", "") or CNAPS_PUBLIC_ANNUAIRE_ENDPOINT
+    app.logger.info(
+        "CNAPS outbound method=POST url=%s status=%s content_type=%s final_url=%s",
+        CNAPS_PUBLIC_ANNUAIRE_ENDPOINT, status_code, content_type or "unknown", final_url,
+    )
+    if status_code != 200:
+        raise RuntimeError(f"CNAPS HTTP {status_code}")
+    if "json" not in (content_type or "").lower():
+        text = (getattr(response, "text", "") or "")[:200].lstrip().lower()
+        if text.startswith("<") or "<!doctype html" in text or "<html" in text:
+            raise RuntimeError("CNAPS unexpected HTML response")
+        if content_type:
+            raise RuntimeError(f"CNAPS unexpected Content-Type {content_type}")
+    try:
+        data = response.json()
+    except Exception as exc:
+        raise RuntimeError("CNAPS invalid JSON") from exc
+    if not isinstance(data, dict):
+        raise RuntimeError("CNAPS unexpected JSON structure")
+    if "results" not in data or not isinstance(data.get("results"), list):
+        raise RuntimeError("CNAPS missing results")
+    return data
+
+
+def fetch_cnaps_public_annuaire(nom: str, nub: str, previous_success: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    endpoint = (CNAPS_PUBLIC_ANNUAIRE_ENDPOINT or "").strip()
+    normalized_nom = " ".join((nom or "").strip().split()).upper()
+    normalized_nub = _normalize_cnaps_nub(nub)
+    if not endpoint or not normalized_nom or not normalized_nub:
+        return _cnaps_public_error_snapshot(normalized_nub, "missing_cnaps_query", previous_success=previous_success)
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Referer": CNAPS_PUBLIC_ANNUAIRE_PAGE_URL,
+        "Origin": "https://espace-consultation.cnaps.interieur.gouv.fr",
+        "User-Agent": "Mozilla/5.0 (compatible; gestionstagiaires/1.0; +https://gestionstagiaires-r5no.onrender.com)",
+    }
+    rows: List[Dict[str, str]] = []
+    total_elements = 0
+    try:
+        session = requests.Session()
+        total_pages = 1
+        page = 0
+        while page < min(total_pages, CNAPS_PUBLIC_ANNUAIRE_MAX_PAGES):
+            payload = _build_cnaps_public_annuaire_payload(normalized_nom, normalized_nub, page)
+            response = session.post(endpoint, json=payload, headers=headers, timeout=(5, 15), allow_redirects=True)
+            data = _validate_cnaps_json_response(response)
+            rows.extend(_extract_cnaps_public_annuaire_results(data))
+            total_elements = int(data.get("totalElements") or total_elements or 0)
+            if page == 0:
+                total_pages = max(1, int(data.get("totalPages") or 1))
+            page += 1
+        snapshot = build_cnaps_public_annuaire_snapshot(rows, normalized_nub, normalized_nom)
+        snapshot["total_elements"] = total_elements
+        snapshot["last_successful_check"] = {"checked_at": snapshot["checked_at"], "active_titles": snapshot["active_titles"]}
+        snapshot["last_attempt"] = {"checked_at": snapshot["checked_at"], "status": "success", "error": None}
+        return snapshot
+    except Exception as exc:
+        app.logger.warning(
+            "CNAPS check rows=%s matched=0 active_titles=[] status=error nub_masked=%s error=%s",
+            len(rows), _mask_cnaps_nub(normalized_nub), exc,
+        )
+        status_code = None
+        m = re.search(r"CNAPS HTTP (\d+)", str(exc))
+        if m:
+            status_code = int(m.group(1))
+        return _cnaps_public_error_snapshot(normalized_nub, str(exc), status_code=status_code, previous_success=previous_success)
 
 def fetch_cnaps_lookup_by_name(nom: str, prenom: str) -> Optional[Dict[str, Any]]:
     if not CNAPS_LOOKUP_ENDPOINT:
@@ -12765,7 +13422,7 @@ def activate_account():
     if request.method == "POST":
         password = request.form.get("password") or ""
         confirm = request.form.get("confirm") or ""
-        data = load_data()
+        data = load_data(run_background_tasks=False)
         invitation = _find_invitation_by_raw_token(data, token)
         now_dt = datetime.datetime.utcnow()
         if not invitation:
@@ -12792,7 +13449,7 @@ def activate_account():
                 invitation["used_at"] = _now_iso()
                 _append_activity_log(data, "invitation_activated", "user", user.get("id"), user.get("partner_id") or "")
                 save_data(data)
-                reloaded = load_data()
+                reloaded = load_data(run_background_tasks=False)
                 persisted_user = next((u for u in reloaded.get("users", []) if isinstance(u, dict) and u.get("id") == user.get("id")), None)
                 persisted_invitation = next((i for i in reloaded.get("invitations", []) if isinstance(i, dict) and i.get("id") == invitation.get("id")), None)
                 persisted_ok = bool(
@@ -12819,7 +13476,10 @@ def activate_account():
 @app.get("/admin/sessions")
 @admin_login_required
 def admin_sessions():
+    admin_sessions_started_at = time.monotonic()
+    _log_memory_stage("ADMIN_SESSIONS_BEGIN", admin_sessions_started_at, "/admin/sessions")
     data = load_data()
+    _log_memory_stage("ADMIN_SESSIONS_AFTER_LOAD_DATA", admin_sessions_started_at, "/admin/sessions")
     wedof_new_requests_count = sum(1 for item in _load_wedof_webhooks() if not bool(item.get("processed")))
     out_sessions = []
     current_year = datetime.date.today().year
@@ -13051,6 +13711,7 @@ def admin_sessions():
             "exclude_from_sales_tracking": bool(s.get("exclude_from_sales_tracking")),
         })
 
+    _log_memory_stage("ADMIN_SESSIONS_BEFORE_RENDER", admin_sessions_started_at, "/admin/sessions")
     response = make_response(render_template(
         "admin_sessions.html",
         sessions=out_sessions,
@@ -13061,6 +13722,8 @@ def admin_sessions():
         wedof_new_requests_count=wedof_new_requests_count,
     ))
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    _log_memory_stage("ADMIN_SESSIONS_AFTER_RENDER", getattr(request, _REQUEST_STARTED_AT_KEY, None), "/admin/sessions")
+    app.logger.info("LOAD_DATA_CALLS route=/admin/sessions count=%s", getattr(g, "load_data_call_count", 0))
     response.headers["Pragma"] = "no-cache"
     return response
 
@@ -13324,8 +13987,13 @@ def admin_cash_payments():
 def _signed_conventions_unseen_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Return signed conventions that have not yet been acknowledged from the sidebar."""
     items: List[Dict[str, Any]] = []
+    minimum_session_start_date = datetime.date(2026, 7, 16)
+
     for sess in data.get("sessions", []):
         if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
+            continue
+        session_start_date = _session_start_date(sess)
+        if session_start_date and session_start_date < minimum_session_start_date:
             continue
         session_id = str(sess.get("id") or "")
         training_type = _session_get(sess, "training_type", "")
@@ -13337,8 +14005,6 @@ def _signed_conventions_unseen_items(data: Dict[str, Any]) -> List[Dict[str, Any
             is_signed = (
                 _is_yousign_signature_done(state)
                 or bool(signed_at)
-                or (trainee.get("convention_aps_status") or "").strip().lower() == "signed"
-                or (trainee.get("convention_status") or "").strip().lower() == "signed"
             )
             if not is_signed:
                 continue
@@ -13378,6 +14044,8 @@ def _mark_signed_conventions_seen(data: Dict[str, Any]) -> bool:
 @admin_login_required
 def admin_sessions_conventions():
     data = load_data()
+    if _process_due_convocation_after_convention_signed(data):
+        save_data(data)
     selected_formation = (request.args.get("formation") or "").strip().upper()
     selected_status_param = (request.args.get("status") or "").strip().lower()
     selected_status = selected_status_param
@@ -13396,15 +14064,20 @@ def admin_sessions_conventions():
     ]
     if selected_status == "signing":
         selected_status = "waiting_signature"
-    valid_statuses = {option["key"] for option in status_options}
+    virtual_statuses = {"action_required", "downloadable"}
+    valid_statuses = {option["key"] for option in status_options} | virtual_statuses
     if selected_status and selected_status not in valid_statuses:
         selected_status = ""
 
     stats = {"total": 0, "waiting_signature": 0, "signed": 0, "action_required": 0, "errors": 0, "downloadable": 0}
     data_changed = False
+    minimum_session_start_date = datetime.date(2026, 7, 16)
 
     for sess in data.get("sessions", []):
         if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
+            continue
+        session_start_date = _session_start_date(sess)
+        if session_start_date and session_start_date < minimum_session_start_date:
             continue
         session_id = str(sess.get("id") or "")
         training_type = _session_get(sess, "training_type", "")
@@ -13426,15 +14099,13 @@ def admin_sessions_conventions():
                     vae_key = inferred_vae_key
                 if VAE_STATUS_RANK.get(vae_key, -1) < VAE_STATUS_RANK.get("financement_validated", 0):
                     continue
-                if (trainee.get("convention_status") or "").strip().lower() == "signed":
-                    continue
             state = _yousign_state(trainee)
             if _refresh_yousign_convention_status_if_pending(data, sess, trainees, trainee):
                 data_changed = True
                 state = _yousign_state(trainee)
             legacy_convention_status = (trainee.get("convention_status") or "").strip().lower()
-            if not _has_generated_yousign_convention(trainee) and legacy_convention_status not in {"soon", "signing", "signed"}:
-                continue
+            # Afficher aussi les conventions non générées afin de pouvoir marquer
+            # les signatures réalisées dans l'ancien logiciel.
             automation = _build_trainee_automation_status(sess, trainee, session_id, trainee_id)
             convention = automation["convention"]
             status_key = convention.get("status") or "not_generated"
@@ -13444,12 +14115,37 @@ def admin_sessions_conventions():
                     convention["status"] = status_key
                     convention["label"] = "Signature attendue"
                     convention["tone"] = "waiting"
-                elif legacy_convention_status == "signed":
+                elif legacy_convention_status == "signed" and _has_legacy_signed_convention(trainee):
                     status_key = "signed"
                     convention["status"] = status_key
                     convention["label"] = "Signée"
                     convention["tone"] = "complete"
-            if selected_status and status_key != selected_status:
+            signed_pdf = bool(state.get("signed_pdf_path"))
+            original_pdf = bool(state.get("unsigned_pdf_path") or trainee.get("convention_aps_pdf_path"))
+            row_has_download = bool(convention.get("download_url") or signed_pdf or original_pdf)
+            row_needs_action = status_key in {"not_generated", "generated", "expired", "refused"}
+            is_problem = status_key in {"error", "expired", "refused"}
+
+            # Les compteurs des tuiles KPI décrivent le périmètre courant (ex. formation),
+            # mais restent indépendants du filtre de statut sélectionné. Ainsi, cliquer sur
+            # "Signées" ou "Actions" n'altère pas les chiffres affichés sur les autres tuiles.
+            stats["total"] += 1
+            if status_key == "waiting_signature":
+                stats["waiting_signature"] += 1
+            if status_key == "signed":
+                stats["signed"] += 1
+            if row_needs_action:
+                stats["action_required"] += 1
+            if is_problem:
+                stats["errors"] += 1
+            if row_has_download:
+                stats["downloadable"] += 1
+
+            if selected_status == "action_required" and not row_needs_action:
+                continue
+            if selected_status == "downloadable" and not row_has_download:
+                continue
+            if selected_status and selected_status not in virtual_statuses and status_key != selected_status:
                 continue
 
             full_name = f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip()
@@ -13460,9 +14156,6 @@ def admin_sessions_conventions():
             if selected_q and selected_q not in searchable:
                 continue
 
-            signed_pdf = bool(state.get("signed_pdf_path"))
-            original_pdf = bool(state.get("unsigned_pdf_path") or trainee.get("convention_aps_pdf_path"))
-            is_problem = status_key in {"error", "expired", "refused"}
             row = {
                 "session_id": session_id,
                 "trainee_id": trainee_id,
@@ -13494,21 +14187,12 @@ def admin_sessions_conventions():
                 "download_url": convention.get("download_url") or "",
                 "can_send": True,
                 "can_remind": status_key in {"waiting_signature", "sent"} and bool(state.get("signature_link")),
+                "legacy_signed": _has_legacy_signed_convention(trainee),
+                "legacy_toggle_url": url_for("admin_toggle_legacy_convention_signed", session_id=session_id, trainee_id=trainee_id),
                 "printed": bool(trainee.get("printed")),
                 "is_problem": is_problem,
             }
             convention_rows.append(row)
-            stats["total"] += 1
-            if status_key == "waiting_signature":
-                stats["waiting_signature"] += 1
-            if status_key == "signed":
-                stats["signed"] += 1
-            if status_key in {"not_generated", "generated", "expired", "refused"}:
-                stats["action_required"] += 1
-            if is_problem:
-                stats["errors"] += 1
-            if row["download_url"] or row["signed_pdf_url"] or row["original_pdf_url"]:
-                stats["downloadable"] += 1
 
     if data_changed:
         save_data(data)
@@ -13546,11 +14230,23 @@ def _automation_status_tone(status: str) -> str:
     return "pending"
 
 
+
+def _automation_dashboard_block_reason(convention: Dict[str, Any], convocation: Dict[str, Any]) -> str:
+    if (convention.get("status") or "") == "not_generated":
+        return "En attente de génération de la convention"
+    return convocation.get("block_reason") or ""
+
+
 def _build_automations_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
     rows = []
     stats = {"trainees": 0, "complete": 0, "in_progress": 0, "blocked": 0, "errors": 0, "documents_ready": 0}
+    minimum_session_start_date = datetime.date(2026, 7, 16)
+
     for sess in data.get("sessions", []) or []:
         if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
+            continue
+        session_start_date = _session_start_date(sess)
+        if not session_start_date or session_start_date < minimum_session_start_date:
             continue
         session_id = str(sess.get("id") or "")
         if not session_id:
@@ -13599,7 +14295,7 @@ def _build_automations_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
                 "convocation_tone": convocation.get("tone") or _automation_status_tone(convocation.get("status") or ""),
                 "convocation_date": convocation.get("sent_at") or convocation.get("generated_at") or "",
                 "planned_automations": automation.get("planned_automations") or [],
-                "block_reason": convocation.get("block_reason") or "",
+                "block_reason": _automation_dashboard_block_reason(convention, convocation),
                 "error": convention.get("error") or convocation.get("error") or "",
                 "trainee_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
             }
@@ -19123,14 +19819,17 @@ def api_cnaps_public_annuaire():
     if not nom or not nub:
         return jsonify({"ok": False, "error": "missing_nom_or_nub"}), 400
     result = fetch_cnaps_public_annuaire(nom, nub)
-    if not result:
-        return jsonify({"ok": False, "error": "not_found"}), 404
+    if result.get("check_status") is None:
+        result["check_status"] = "success"
     notified = False
-    if previous_status.upper() == "INCONNU":
+    if result.get("check_status") == "success" and previous_status.upper() == "INCONNU":
         data = load_data()
         notified = _notify_cnaps_unknown_status_change(data, first_name=prenom, last_name=nom, nub=nub, previous_status=previous_status, result=result)
         if notified:
             save_data(data)
+
+    if result.get("check_status") == "error":
+        return jsonify({"ok": False, "notification_sent": False, "pending_status_changes_count": None, **result}), 502
     return jsonify({"ok": True, "notification_sent": notified, "pending_status_changes_count": _cnaps_pending_status_change_count(data) if notified else None, **result})
 
 
@@ -19191,6 +19890,17 @@ def _storage_file_health(path: str, required_list_key: Optional[str] = None) -> 
         "backups_count": len(backups),
         "recoverable_from_backup": recoverable,
     }
+
+
+@app.get("/healthz")
+def healthz():
+    """Lightweight liveness probe for Render.
+
+    Keep this endpoint independent from persisted JSON files so deploy health
+    checks only verify that the Flask worker booted and can answer requests.
+    Deeper storage diagnostics remain available on /api/health.
+    """
+    return jsonify({"ok": True, "service": "gestionstagiaires"})
 
 
 @app.get("/api/health")
@@ -19457,6 +20167,50 @@ def public_download_file(token: str, file_token: str):
         abort(404)
 
     return send_file(full, as_attachment=False)
+
+
+@app.get("/espace/<token>/factures/<line_id>")
+def public_trainee_invoice_pdf(token: str, line_id: str):
+    data = load_data()
+    session_obj, trainee = find_session_and_trainee_by_token(data, token)
+    if not session_obj or not trainee:
+        abort(404)
+    if not _public_is_authed(token):
+        return redirect(url_for("public_trainee_login", token=token))
+
+    line = _find_billing_line(data, line_id)
+    if not line:
+        abort(404)
+    if str(line.get("sessionId") or "") != str(session_obj.get("id") or ""):
+        abort(403)
+    if str(line.get("traineeId") or "") != str(trainee.get("id") or trainee.get("trainee_id") or ""):
+        abort(403)
+
+    invoice_id = str(line.get("qontoInvoiceId") or line.get("qontoDraftId") or "").strip()
+    if not invoice_id:
+        abort(404)
+    status = _normalize_billing_invoice_status(line.get("invoiceStatus"))
+    if status not in {"draft", "finalized", "sent", "paid"}:
+        abort(404)
+
+    try:
+        pdf_content, filename = fetch_qonto_client_invoice_pdf(invoice_id)
+    except QontoConfigurationError:
+        abort(503)
+    except QontoNotFoundError:
+        abort(404)
+    except QontoPdfUnavailableError as exc:
+        abort(getattr(exc, "status_code", 502), str(exc))
+
+    safe_filename = secure_filename(filename) or f"facture-qonto-{secure_filename(invoice_id) or 'facture'}.pdf"
+    return Response(
+        pdf_content,
+        mimetype="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{safe_filename}"',
+            "Cache-Control": "private, no-store",
+        },
+    )
 
 
 def _public_trainee_last_names(trainee: Dict[str, Any]) -> set[str]:
@@ -22392,6 +23146,38 @@ def _vae_extract_trainee_token_from_referer(referer: str) -> str:
     return token
 
 
+
+def _public_invoice_lines_for_trainee(data: Dict[str, Any], session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> List[Dict[str, Any]]:
+    session_id = str(session_obj.get("id") or "")
+    trainee_id = str(trainee.get("id") or trainee.get("trainee_id") or "")
+    if not session_id or not trainee_id:
+        return []
+
+    visible_statuses = {"draft", "finalized", "sent", "paid"}
+    invoices: List[Dict[str, Any]] = []
+    for line in _billing_lines(data):
+        if str(line.get("sessionId") or "") != session_id:
+            continue
+        if str(line.get("traineeId") or "") != trainee_id:
+            continue
+        invoice_id = str(line.get("qontoInvoiceId") or line.get("qontoDraftId") or "").strip()
+        status = _normalize_billing_invoice_status(line.get("invoiceStatus"))
+        if not invoice_id or status not in visible_statuses:
+            continue
+        invoices.append({
+            "id": str(line.get("id") or ""),
+            "invoice_id": invoice_id,
+            "number": str(line.get("qontoInvoiceNumber") or invoice_id),
+            "status": status,
+            "status_label": _billing_status_label(status),
+            "amount": _money(line.get("amountTTC") or line.get("amount") or 0),
+            "amount_label": _format_euro(line.get("amountTTC") or line.get("amount") or 0),
+            "financeur": str(line.get("financeurName") or line.get("financingLabel") or line.get("financingType") or "").strip(),
+            "generated_at": str(line.get("finalizedAt") or line.get("invoiceGeneratedAt") or line.get("createdAt") or ""),
+        })
+    invoices.sort(key=lambda item: item.get("generated_at") or "", reverse=True)
+    return invoices
+
 @app.get("/espace/<token>")
 def public_trainee_space(token):
     data = load_data()
@@ -22456,6 +23242,7 @@ def public_trainee_space(token):
 
     ssiap_exam_date = str(_session_get(s, "ssiap_exam_date", "") or "").strip() or str(t.get("ssiap_exam_date") or "").strip()
     ssiap_medical_from_date = _subtract_months(ssiap_exam_date, 3) if ssiap_exam_date else ""
+    public_invoices = _public_invoice_lines_for_trainee(data, s, t)
 
     return render_template(
         "public_trainee.html",
@@ -22473,6 +23260,7 @@ def public_trainee_space(token):
         vae_required_docs_deposited=required_docs_are_deposited(t, training_type, _session_get(s, "date_start", "")),
         ssiap_exam_date=ssiap_exam_date,
         ssiap_medical_from_date=ssiap_medical_from_date,
+        public_invoices=public_invoices,
     )
 
 
@@ -23706,11 +24494,15 @@ def _is_yousign_signature_done(state: Dict[str, Any]) -> bool:
     return _normalize_yousign_status(state.get("status")) in YOUSIGN_FINAL_STATUSES
 
 
+def _has_legacy_signed_convention(trainee: Dict[str, Any]) -> bool:
+    return bool(trainee.get("convention_legacy_signed") or trainee.get("legacy_convention_signed"))
+
+
 def _sync_convention_status_from_yousign(trainee: Dict[str, Any]) -> bool:
     """Keep the admin trainees convention dot aligned with the Yousign automation state."""
     state = _yousign_state(trainee)
-    signed_at = state.get("signed_at") or trainee.get("convention_aps_signed_at") or ""
-    if not (_is_yousign_signature_done(state) or signed_at or trainee.get("convention_aps_status") == "signed"):
+    signed_at = state.get("signed_at") or trainee.get("convention_aps_signed_at") or trainee.get("convention_legacy_signed_at") or ""
+    if not (_is_yousign_signature_done(state) or signed_at or _has_legacy_signed_convention(trainee)):
         return False
     if trainee.get("convention_status") == "signed":
         return False
@@ -24290,6 +25082,38 @@ def _schedule_convocation_after_convention_signed(session_obj: Dict[str, Any], t
     )
     timer.daemon = True
     timer.start()
+
+
+def _process_due_convocation_after_convention_signed(data: Dict[str, Any]) -> bool:
+    """Rattrape les envois de convocation planifiés si le timer en mémoire a été perdu."""
+    now = datetime.datetime.utcnow()
+    changed = False
+    for sess in data.get("sessions", []):
+        if not _is_aps_session(sess):
+            continue
+        trainees = _session_trainees_list(sess)
+        session_changed = False
+        for trainee in trainees:
+            if trainee.get("convocation_aps_sent_at"):
+                continue
+            scheduled_at = _parse_iso_datetime(trainee.get("convocation_auto_scheduled_at"))
+            if not scheduled_at or scheduled_at > now:
+                continue
+            try:
+                sent = _send_convocation_after_convention_signed(sess, trainee, str(sess.get("id") or ""), str(trainee.get("id") or ""))
+            except Exception as conv_exc:
+                sent = False
+                trainee["convocation_auto_last_error"] = str(conv_exc)
+                app.logger.exception("[CONVOCATION] due scheduled send failed trainee_id=%s", trainee.get("id"))
+            if sent:
+                trainee["convocation_auto_scheduled_at"] = ""
+            trainee["updated_at"] = _now_iso()
+            session_changed = True
+            changed = True
+        if session_changed:
+            sess["trainees"] = trainees
+            sess.pop("stagiaires", None)
+    return changed
 
 
 def _mark_yousign_convention_signed(data: Dict[str, Any], sess: Dict[str, Any], trainees: List[Dict[str, Any]], trainee: Dict[str, Any], request_id: str, event_id: str = "") -> None:
@@ -25131,6 +25955,10 @@ def _store_public_file_token(path: str) -> str:
 
 def _send_convocation_after_convention_signed(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> bool:
     """Generate, send by email, and expose the convocation once the convention is signed."""
+    automation = _build_trainee_automation_status(session_obj, trainee, session_id, trainee_id)
+    if (automation.get("convention") or {}).get("status") != "signed":
+        trainee["convocation_auto_last_error"] = "En attente de signature de la convention"
+        return False
     if not _is_aps_session(session_obj):
         trainee["convocation_auto_last_error"] = "Envoi automatique de convocation configuré uniquement pour APS."
         return False
@@ -25166,7 +25994,8 @@ def _has_generated_yousign_convention(trainee: Dict[str, Any]) -> bool:
     """Return True once a convention document or Yousign request exists."""
     state = _yousign_state(trainee)
     return bool(
-        state.get("signature_request_id")
+        _has_legacy_signed_convention(trainee)
+        or state.get("signature_request_id")
         or state.get("unsigned_pdf_path")
         or state.get("signed_pdf_path")
         or trainee.get("convention_aps_pdf_path")
@@ -25180,7 +26009,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     raw_status = _normalize_yousign_status(state.get("status"))
     generated_at_raw = state.get("created_at") or trainee.get("convention_aps_generated_at") or ""
     sent_at_raw = state.get("signature_email_sent_at") or state.get("activated_at") or ""
-    signed_at_raw = state.get("signed_at") or trainee.get("convention_aps_signed_at") or ""
+    signed_at_raw = state.get("signed_at") or trainee.get("convention_aps_signed_at") or trainee.get("convention_legacy_signed_at") or ""
     generated_at = _format_automation_datetime(generated_at_raw)
     sent_at = _format_automation_datetime(sent_at_raw)
     signed_at = _format_automation_datetime(signed_at_raw)
@@ -25193,7 +26022,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         convention_status = "refused"
     elif raw_status in {"expired", "canceled", "cancelled"} or _yousign_signature_link_is_expired(state):
         convention_status = "expired"
-    elif _is_yousign_signature_done(state) or signed_at or trainee.get("convention_aps_status") == "signed":
+    elif _is_yousign_signature_done(state) or signed_at or _has_legacy_signed_convention(trainee):
         convention_status = "signed"
     elif has_signature_request and _is_yousign_signature_pending(state):
         convention_status = "waiting_signature"
@@ -25854,10 +26683,19 @@ _billing_generation_locks_guard = threading.Lock()
 
 
 def _parse_date_safe(raw: Any) -> Optional[datetime.date]:
-    try:
-        return datetime.datetime.strptime(str(raw or '')[:10], '%Y-%m-%d').date()
-    except Exception:
+    value = str(raw or '').strip()
+    if not value:
         return None
+    for fmt, candidate in (
+        ('%Y-%m-%d', value[:10]),
+        ('%d/%m/%Y', value[:10]),
+        ('%d-%m-%Y', value[:10]),
+    ):
+        try:
+            return datetime.datetime.strptime(candidate, fmt).date()
+        except Exception:
+            continue
+    return None
 
 
 def _billing_line_id(session_id: str, trainee_id: str, financing_type: str, financing_ref: str = '0') -> str:
@@ -26189,6 +27027,21 @@ def _qonto_payment_global_status(line: Dict[str, Any]) -> str:
 def _normalize_billing_invoice_status(status: Any) -> str:
     value = str(status or '').strip().lower()
     return {'not_generated': 'not_invoiced', 'generated': 'finalized', 'unpaid': 'sent', 'missing': 'control', 'deleted': 'control', 'sync_error': 'control', 'error': 'control', 'external': 'external_generated', 'external_generated': 'external_generated', 'generated_externally': 'external_generated'}.get(value, value or 'not_invoiced')
+
+
+def _billing_status_label(status: Any) -> str:
+    normalized = _normalize_billing_invoice_status(status)
+    labels = {
+        "not_invoiced": "Non générée",
+        "draft": "Brouillon créé",
+        "finalized": "Facture générée",
+        "sent": "Facture envoyée",
+        "paid": "Payée",
+        "cancelled": "Annulée",
+        "control": "À contrôler",
+        "external_generated": "Générée hors plateforme",
+    }
+    return labels.get(normalized, normalized or "Non générée")
 
 
 def _financing_entries(trainee: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -26614,6 +27467,53 @@ def _billing_line_qonto_preview(line: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _billing_invoice_fallback_html(line: Dict[str, Any], error_message: str = "") -> str:
+    preview = _billing_line_qonto_preview(line)
+    invoice = preview.get('invoice') or {}
+    client = preview.get('client') or {}
+    client_full_name = f"{client.get('first_name','')} {client.get('last_name','')}".strip()
+    client_name = html.escape(str(client.get('name') or client_full_name or line.get('clientName') or 'Client'))
+    trainee = html.escape(str(invoice.get('trainee') or ''))
+    invoice_ref = html.escape(str(line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId') or 'Facture'))
+    label = html.escape(str(invoice.get('label') or line.get('formationName') or 'Formation'))
+    amount_ht = html.escape(f"{_money(invoice.get('amount_ht')):.2f} €")
+    amount_tva = html.escape(f"{_money(invoice.get('amount_tva')):.2f} €")
+    amount_ttc = html.escape(f"{_money(invoice.get('amount_ttc')):.2f} €")
+    issue_date_raw = str(invoice.get('issue_date') or '')
+    due_date_raw = str(invoice.get('due_date') or '')
+    issue_date = html.escape(fr_date(issue_date_raw) or issue_date_raw)
+    due_date = html.escape(fr_date(due_date_raw) or due_date_raw)
+    warning = ''
+    if error_message:
+        sanitized = html.escape(_sanitize_qonto_error(error_message))
+        warning = f'<p class="warning">Affichage local temporaire : le PDF Qonto n’est pas encore disponible ({sanitized}).</p>'
+    return f'''<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Facture {invoice_ref}</title>
+<style>
+body{{font-family:Arial,sans-serif;margin:32px;color:#172033}}
+.header{{display:flex;justify-content:space-between;gap:24px;border-bottom:2px solid #111827;padding-bottom:18px}}
+h1{{margin:0;font-size:32px}}
+.card{{margin-top:24px;padding:18px;border:1px solid #d8dee9;border-radius:12px}}
+table{{width:100%;border-collapse:collapse;margin-top:24px}}
+th,td{{padding:12px;border-bottom:1px solid #e5e7eb;text-align:left}}
+th{{background:#f8fafc}}
+.total{{font-weight:700;font-size:18px}}
+.warning{{padding:12px;border-radius:8px;background:#fff7ed;color:#9a3412}}
+@media print{{button{{display:none}} body{{margin:18mm}}}}
+</style>
+</head>
+<body>
+<button onclick="window.print()">Imprimer / enregistrer en PDF</button>
+{warning}
+<div class="header"><div><h1>Facture</h1><p>Intégrale Academy</p></div><div><strong>{invoice_ref}</strong><br>Émise le {issue_date}<br>Échéance {due_date}</div></div>
+<div class="card"><strong>Client</strong><br>{client_name}<br><br><strong>Stagiaire</strong><br>{trainee}</div>
+<table><thead><tr><th>Désignation</th><th>HT</th><th>TVA</th><th>TTC</th></tr></thead><tbody><tr><td>{label}</td><td>{amount_ht}</td><td>{amount_tva}</td><td>{amount_ttc}</td></tr></tbody><tfoot><tr><td colspan="3" class="total">Total TTC</td><td class="total">{amount_ttc}</td></tr></tfoot></table>
+</body></html>'''
+
+
 @app.get('/api/billing/line/<line_id>/qonto-preview')
 @admin_login_required
 def api_billing_line_qonto_preview(line_id: str):
@@ -26857,24 +27757,56 @@ def api_admin_billing_sync_payment(line_id: str):
         save_data(data); return jsonify({'ok': False, 'error': 'Synchronisation impossible : facture conservée localement'}), 400
 
 
+@app.get("/admin/qonto/invoices/<invoice_id>/pdf")
+@admin_login_required
+def admin_qonto_invoice_pdf(invoice_id: str):
+    try:
+        pdf_content, filename = fetch_qonto_client_invoice_pdf(invoice_id)
+        safe_filename = secure_filename(filename) or f"facture-qonto-{secure_filename(str(invoice_id)) or 'facture'}.pdf"
+        response = Response(
+            pdf_content,
+            mimetype="application/pdf",
+            headers={
+                "Content-Disposition": f'inline; filename="{safe_filename}"',
+                "Cache-Control": "private, no-store",
+            },
+        )
+        return response
+    except QontoConfigurationError:
+        return jsonify({"ok": False, "error": "Qonto n’est pas connecté"}), 503
+    except QontoNotFoundError:
+        return jsonify({"ok": False, "error": "Facture Qonto introuvable"}), 404
+    except QontoPdfUnavailableError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), getattr(exc, "status_code", 502)
+    except Exception as exc:
+        app.logger.warning("QONTO PDF: erreur inattendue invoice_id=%s error=%s", invoice_id, _sanitize_qonto_error(str(exc)))
+        return jsonify({"ok": False, "error": "Impossible de récupérer le PDF auprès de Qonto."}), 502
+
+
 @app.get('/api/admin/billing-lines/<line_id>/download-invoice')
 @admin_login_required
 def api_admin_billing_download(line_id: str):
     data = load_data(); line = _find_billing_line(data, line_id)
-    if not line or not line.get('qontoInvoiceId'): return jsonify({'ok': False, 'error': 'Facture indisponible'}), 404
+    if not line or not line.get('qontoInvoiceId'):
+        return jsonify({'ok': False, 'error': 'Ancienne facture sans identifiant Qonto récupérable'}), 404
     try:
-        if line.get('invoicePdfUrl'):
-            line['invoiceDownloadedAt'] = _now_iso(); _billing_log(line, 'PDF téléchargé', 'success'); _save_billing_line(data, line); save_data(data)
-            return redirect(line['invoicePdfUrl'])
-        pdf_bytes, content_type = download_qonto_invoice_pdf(line['qontoInvoiceId'])
+        pdf_bytes, content_type = download_qonto_invoice_pdf(line['qontoInvoiceId'], line.get('qontoInvoiceNumber') or '')
         line['invoiceDownloadedAt'] = _now_iso(); _billing_log(line, 'PDF téléchargé', 'success'); _save_billing_line(data, line); save_data(data)
-        filename = re.sub(r'[^A-Za-z0-9_.-]+', '_', f"FACTURE_{line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId')}.pdf")
-        response = send_file(BytesIO(pdf_bytes), mimetype=content_type or 'application/pdf', as_attachment=False, download_name=filename)
-        response.headers['Content-Disposition'] = f'inline; filename="{filename}"'
-        return response
+        safe_filename = secure_filename(f"FACTURE_{line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId')}.pdf") or f"facture-qonto-{line.get('qontoInvoiceId')}.pdf"
+        return Response(pdf_bytes, mimetype='application/pdf', headers={'Content-Disposition': f'inline; filename="{safe_filename}"', 'Cache-Control': 'private, no-store'})
+    except QontoConfigurationError:
+        return jsonify({'ok': False, 'error': 'Qonto n’est pas connecté'}), 503
+    except QontoNotFoundError:
+        _billing_log(line, 'PDF Qonto indisponible', 'error', 'Facture Qonto introuvable', line.get('qontoInvoiceId') or '')
+        _save_billing_line(data, line); save_data(data)
+        return jsonify({'ok': False, 'error': 'Facture Qonto introuvable'}), 404
+    except QontoPdfUnavailableError as exc:
+        _billing_log(line, 'PDF Qonto indisponible', 'error', str(exc), line.get('qontoInvoiceId') or '')
+        _save_billing_line(data, line); save_data(data)
+        return jsonify({'ok': False, 'error': str(exc), 'qontoInvoiceId': line.get('qontoInvoiceId')}), getattr(exc, 'status_code', 502)
     except Exception as exc:
-        _billing_log(line, 'PDF téléchargé', 'error', _sanitize_qonto_error(str(exc)), line.get('qontoInvoiceId') or ''); _save_billing_line(data, line); save_data(data)
-        return jsonify({'ok': False, 'error': _sanitize_qonto_error(str(exc)), 'qontoInvoiceId': line.get('qontoInvoiceId')}), 502
+        app.logger.warning("QONTO PDF: invoice download failed line_id=%s invoice_id=%s error=%s", line_id, line.get('qontoInvoiceId') or '', _sanitize_qonto_error(str(exc)))
+        return jsonify({'ok': False, 'error': 'Impossible de récupérer le PDF auprès de Qonto.'}), 502
 
 
 @app.post('/api/admin/billing-lines/bulk-download')
@@ -27468,6 +28400,57 @@ def api_create_convention_signature(session_id: str, trainee_id: str):
         s.pop("stagiaires", None)
         save_data(data)
         return jsonify({"ok": False, "error": message}), 400
+
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/legacy-signed")
+@admin_login_required
+@admin_write_required
+def admin_toggle_legacy_convention_signed(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        flash("Stagiaire introuvable.", "error")
+        abort(404)
+    checked = str(request.form.get("legacy_signed") or "").lower() in {"1", "true", "yes", "on"}
+    now = _now_iso()
+    state = _yousign_state(t)
+    if checked:
+        t["convention_legacy_signed"] = True
+        t["convention_legacy_signed_at"] = t.get("convention_legacy_signed_at") or now
+        t["convention_status"] = "signed"
+        t["convention_aps_status"] = "signed"
+        t["convention_aps_signed_at"] = t.get("convention_aps_signed_at") or t["convention_legacy_signed_at"]
+        state.update({
+            "status": "done",
+            "signed_at": state.get("signed_at") or t["convention_legacy_signed_at"],
+            "next_reminder_at": "",
+            "last_error": "",
+            "legacy_signed": True,
+            "legacy_signed_at": t["convention_legacy_signed_at"],
+        })
+        _schedule_convocation_after_convention_signed(s, t, session_id, trainee_id)
+        flash("Convention marquée comme générée et signée via l’ancien logiciel.", "success")
+    else:
+        t["convention_legacy_signed"] = False
+        t["legacy_convention_signed"] = False
+        t["convention_legacy_signed_at"] = ""
+        if state.get("legacy_signed") and not state.get("signature_request_id") and not state.get("signed_pdf_path"):
+            state.clear()
+        else:
+            state["legacy_signed"] = False
+        if t.get("convention_aps_status") == "signed" and not state.get("signed_pdf_path"):
+            t["convention_aps_status"] = ""
+            t["convention_aps_signed_at"] = ""
+        if (t.get("convention_status") or "").strip().lower() == "signed" and not state.get("signed_pdf_path"):
+            t["convention_status"] = "soon"
+        t["convocation_auto_scheduled_at"] = ""
+        flash("Marquage ancien logiciel annulé.", "success")
+    t["updated_at"] = now
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+    return redirect(request.referrer or url_for("admin_sessions_conventions"))
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-signature/create")
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/yousign")
@@ -28274,12 +29257,25 @@ def api_docs_to_control():
 
 from flask import make_response
 
-@app.get("/docs_to_control.json")
+@app.route("/docs_to_control.json", methods=["GET", "OPTIONS"])
 def public_docs_to_control():
     supplied_token = (request.args.get("token") or request.headers.get("X-Docs-To-Control-Token") or "").strip()
     public_token_ok = bool(DOCS_TO_CONTROL_PUBLIC_TOKEN and hmac.compare_digest(supplied_token, DOCS_TO_CONTROL_PUBLIC_TOKEN))
-    if not session.get("admin_logged_in") and not public_token_ok:
+    trusted_user_agent_ok = (
+        not DOCS_TO_CONTROL_PUBLIC_TOKEN
+        and bool(DOCS_TO_CONTROL_TRUSTED_USER_AGENT)
+        and hmac.compare_digest((request.headers.get("User-Agent") or "").strip(), DOCS_TO_CONTROL_TRUSTED_USER_AGENT)
+    )
+    if not session.get("admin_logged_in") and not public_token_ok and not trusted_user_agent_ok:
         abort(403)
+
+    if request.method == "OPTIONS":
+        resp = make_response("", 204)
+        if public_token_ok or trusted_user_agent_ok:
+            resp.headers["Access-Control-Allow-Origin"] = "*"
+            resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+            resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Docs-To-Control-Token"
+        return resp
 
     data = load_data()
     out = []
@@ -28319,8 +29315,8 @@ def public_docs_to_control():
 
     resp = make_response(jsonify({"ok": True, "items": out, "count": len(out)}))
 
-    # CORS uniquement lorsque l'accès public est volontairement protégé par token.
-    if public_token_ok:
+    # CORS uniquement lorsque l'accès public est volontairement activé.
+    if public_token_ok or trusted_user_agent_ok:
         resp.headers["Access-Control-Allow-Origin"] = "*"
         resp.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
         resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Docs-To-Control-Token"
@@ -28369,6 +29365,8 @@ def _trainee_search_item(s: dict, t: dict) -> dict:
         "convention_signed_done": bool(t.get("convention_signed_done")),
         "test_fr_status": t.get("test_fr_status") or "soon",
         "admin_url": f"/admin/sessions/{session_id}/stagiaires/{trainee_id}",
+        "public_token": (t.get("public_token") or "").strip(),
+        "public_url": f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{(t.get('public_token') or '').strip()}",
     }
 
 
@@ -31762,6 +32760,9 @@ def admin_sessions_slash_redirect():
     return redirect(url_for("admin_sessions"), code=301)
 
 
+
+_log_memory_stage("AFTER_ROUTE_REGISTRATION", _APP_IMPORT_STARTED_AT, "-")
+_log_memory_stage("IMPORT_END_REAL", _APP_IMPORT_STARTED_AT, "-")
 
 if __name__ == "__main__":
     debug_enabled = os.environ.get("FLASK_DEBUG", "0") == "1"

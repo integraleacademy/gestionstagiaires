@@ -69,8 +69,74 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertIn("SEUIL", html)
         self.assertIn("APRES", html)
         self.assertNotIn("AVANT", html)
-        self.assertNotIn("SIGNEE", html)
+        self.assertIn("SIGNEE", html)
         self.assertIn("Les VAE sont incluses à partir du statut", html)
+
+    def test_convention_status_signed_without_signature_evidence_is_not_displayed_as_signed(self):
+        fake_data = {
+            "sessions": [
+                {
+                    "id": "S-APS",
+                    "training_type": "APS",
+                    "date_start": "2026-09-01",
+                    "date_end": "2026-09-15",
+                    "trainees": [
+                        {
+                            "id": "T-DIRTY",
+                            "last_name": "DIRTY",
+                            "first_name": "Data",
+                            "convention_status": "signed",
+                            "convention_aps_status": "signed",
+                        }
+                    ],
+                }
+            ]
+        }
+
+        captured = {}
+
+        def fake_render_template(template_name, **context):
+            captured.update(context)
+            return "OK"
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data), \
+             patch.object(gestion_app, "render_template", side_effect=fake_render_template):
+            response = self.client.get("/admin/sessions/conventions")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(captured["rows"][0]["trainee_id"], "T-DIRTY")
+        self.assertEqual(captured["rows"][0]["status_key"], "not_generated")
+        self.assertEqual(captured["rows"][0]["status_label"], "Non générée")
+
+    def test_legacy_signed_checkbox_keeps_trainee_visible_as_signed(self):
+        fake_data = {
+            "sessions": [
+                {
+                    "id": "S-APS",
+                    "training_type": "APS",
+                    "date_start": "2026-09-01",
+                    "date_end": "2026-09-15",
+                    "trainees": [
+                        {
+                            "id": "T-LEGACY",
+                            "last_name": "LEGACY",
+                            "first_name": "Lina",
+                            "convention_status": "signed",
+                            "convention_legacy_signed": True,
+                            "convention_legacy_signed_at": "2026-07-16T10:00:00Z",
+                        }
+                    ],
+                }
+            ]
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            response = self.client.get("/admin/sessions/conventions")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("LEGACY", html)
+        self.assertIn("Signée", html)
 
     def test_conventions_use_vae_label_and_action_dates_to_apply_threshold(self):
         fake_data = {
@@ -217,9 +283,9 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertEqual(api_response.status_code, 200)
         self.assertEqual(api_response.get_json()["count"], 1)
         self.assertEqual(page_response.status_code, 200)
-        self.assertTrue(saved_payloads)
-        self.assertEqual(fake_data["sessions"][0]["trainees"][0]["convention_signed_seen_at"], "2026-07-16T10:00:00Z")
-        self.assertEqual(api_after_response.get_json()["count"], 0)
+        self.assertFalse(saved_payloads)
+        self.assertNotIn("convention_signed_seen_at", fake_data["sessions"][0]["trainees"][0])
+        self.assertEqual(api_after_response.get_json()["count"], 1)
 
     def test_signed_conventions_badge_stays_until_convention_is_printed(self):
         fake_data = {

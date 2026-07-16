@@ -27,4 +27,4 @@ RUN libreoffice --version || soffice --version || true
 
 EXPOSE 10000
 
-CMD ["sh", "-c", "gunicorn app:app --bind 0.0.0.0:${PORT:-10000}"]
+CMD ["gunicorn", "--config", "gunicorn.conf.py", "app:app"]

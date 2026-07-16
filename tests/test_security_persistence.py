@@ -16,6 +16,7 @@ class SecurityPersistenceTests(unittest.TestCase):
         self.original_backup_dir = gestion_app.BACKUP_DIR
         self.original_persist_dir = gestion_app.PERSIST_DIR
         self.original_docs_token = gestion_app.DOCS_TO_CONTROL_PUBLIC_TOKEN
+        self.original_docs_trusted_user_agent = gestion_app.DOCS_TO_CONTROL_TRUSTED_USER_AGENT
 
         gestion_app.PERSIST_DIR = self.temp_dir.name
         gestion_app.DATA_FILE = os.path.join(self.temp_dir.name, "data.json")
@@ -29,6 +30,7 @@ class SecurityPersistenceTests(unittest.TestCase):
         gestion_app.BACKUP_DIR = self.original_backup_dir
         gestion_app.PERSIST_DIR = self.original_persist_dir
         gestion_app.DOCS_TO_CONTROL_PUBLIC_TOKEN = self.original_docs_token
+        gestion_app.DOCS_TO_CONTROL_TRUSTED_USER_AGENT = self.original_docs_trusted_user_agent
         self.temp_dir.cleanup()
 
     def test_public_home_head_does_not_crash_in_global_session_guard(self):
@@ -80,6 +82,7 @@ class SecurityPersistenceTests(unittest.TestCase):
             self.assertIn(gestion_app.SESSION_ISSUED_AT_KEY, sess)
 
     def test_docs_to_control_requires_admin_or_configured_token(self):
+        gestion_app.DOCS_TO_CONTROL_TRUSTED_USER_AGENT = ""
         response = self.client.get("/docs_to_control.json")
         self.assertEqual(response.status_code, 403)
 
@@ -87,6 +90,29 @@ class SecurityPersistenceTests(unittest.TestCase):
         response = self.client.get("/docs_to_control.json?token=external-dashboard-token")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()["ok"], True)
+
+    def test_docs_to_control_allows_legacy_platform_user_agent_without_token(self):
+        gestion_app.DOCS_TO_CONTROL_PUBLIC_TOKEN = ""
+        gestion_app.DOCS_TO_CONTROL_TRUSTED_USER_AGENT = "plateformegestion/1.0 (+https://plateformegestion.onrender.com)"
+
+        response = self.client.get(
+            "/docs_to_control.json",
+            headers={"User-Agent": "plateformegestion/1.0 (+https://plateformegestion.onrender.com)"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["ok"], True)
+
+    def test_docs_to_control_token_takes_precedence_over_legacy_user_agent(self):
+        gestion_app.DOCS_TO_CONTROL_PUBLIC_TOKEN = "external-dashboard-token"
+        gestion_app.DOCS_TO_CONTROL_TRUSTED_USER_AGENT = "plateformegestion/1.0 (+https://plateformegestion.onrender.com)"
+
+        response = self.client.get(
+            "/docs_to_control.json",
+            headers={"User-Agent": "plateformegestion/1.0 (+https://plateformegestion.onrender.com)"},
+        )
+
+        self.assertEqual(response.status_code, 403)
 
     def test_detokenize_rejects_path_escape(self):
         with self.assertRaises(Exception):
@@ -98,6 +124,39 @@ class SecurityPersistenceTests(unittest.TestCase):
         backups = [name for name in os.listdir(gestion_app.BACKUP_DIR) if name.startswith("data_json.")]
         self.assertGreaterEqual(len(backups), 1)
         self.assertEqual(len(backups), len(set(backups)))
+
+    def test_large_json_backup_uses_hard_link_snapshot_even_over_copy_limit(self):
+        original_limit = gestion_app.MAX_JSON_BACKUP_BYTES
+        try:
+            gestion_app.MAX_JSON_BACKUP_BYTES = 1
+            with open(gestion_app.DATA_FILE, "w", encoding="utf-8") as f:
+                json.dump({"sessions": [{"id": "S1", "note": "large-enough"}]}, f)
+
+            backup_path = gestion_app._force_backup_snapshot(gestion_app.DATA_FILE, reason="large-file")
+
+            self.assertIsNotNone(backup_path)
+            self.assertTrue(os.path.exists(backup_path))
+            with open(backup_path, "r", encoding="utf-8") as f:
+                self.assertEqual(json.load(f)["sessions"][0]["id"], "S1")
+        finally:
+            gestion_app.MAX_JSON_BACKUP_BYTES = original_limit
+
+    def test_write_json_creates_single_pre_save_snapshot_per_write(self):
+        original_min_interval = gestion_app.BACKUP_MIN_INTERVAL_SECONDS
+        original_times = dict(gestion_app._last_backup_times)
+        try:
+            gestion_app.BACKUP_MIN_INTERVAL_SECONDS = 1
+            gestion_app._last_backup_times.clear()
+
+            gestion_app.save_data({"sessions": [{"id": "S1"}]})
+
+            backups = [name for name in os.listdir(gestion_app.BACKUP_DIR) if name.startswith("data_json.")]
+            self.assertEqual(len(backups), 1)
+            self.assertIn("before-save", backups[0])
+        finally:
+            gestion_app.BACKUP_MIN_INTERVAL_SECONDS = original_min_interval
+            gestion_app._last_backup_times.clear()
+            gestion_app._last_backup_times.update(original_times)
 
 
 class WedofWebhookSecurityTests(unittest.TestCase):

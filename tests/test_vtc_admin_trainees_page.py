@@ -178,16 +178,16 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn("Suivi carte pro", html)
         self.assertNotIn("https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/app/annuaire-public", html)
         self.assertNotIn("🔎 Vérifier", html)
-        self.assertIn('data-card-pro-refresh type="button" title="Rafraîchir le suivi carte pro"', html)
+        self.assertNotIn('data-card-pro-refresh type="button" title="Rafraîchir le suivi carte pro"', html)
         self.assertIn('data-card-pro-followup', html)
         self.assertIn('data-nom="NONVTC"', html)
         self.assertIn('data-nub="1050370"', html)
         self.assertIn('data-fallback-activity="Autorisation préalable - Surveillance humaine ou gardiennage"', html)
-        self.assertIn('withLocalCardProFallback(data, fallbackCardProFollowup(box))', html)
         self.assertIn('const fallbackRows = Array.isArray(fallback.results)', html)
-        self.assertIn('normalizedFallbackActivity === "AP SH"', html)
-        self.assertIn('Carte professionnelle - Surveillance humaine ou gardiennage', html)
-        self.assertIn("NUB : <strong>1050370</strong>", html)
+        self.assertIn('if(isAccepted && isCartePro)', html)
+        self.assertNotIn('normalizedFallbackActivity === "AP SH"', html)
+        self.assertNotIn("NUB : <strong>1050370</strong>", html)
+        self.assertNotIn("Nom : <strong>NONVTC</strong>", html)
         self.assertIn('["autorisation préalable - surveillance humaine ou gardiennage", "AP SH"]', html)
         self.assertIn('["autorisation préalable - agent de protection physique des personnes", "AP A3P"]', html)
         self.assertIn('["carte professionnelle - surveillance humaine ou gardiennage", "CP SH"]', html)
@@ -212,7 +212,7 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn('normalizedLastName === "CHIOCCA" && normalizedNub === "1079213"', html)
         self.assertIn('validite_titre: "ACTIF"', html)
 
-    def test_aps_admin_trainee_sheet_shows_active_ap_and_cp_sh_chips(self):
+    def test_aps_admin_trainee_sheet_loads_annuaire_followup_without_static_cp_chip(self):
         trainee = self.data["sessions"][2]["trainees"][0]
         trainee["pre_number"] = "2026-0002805-PRE-3P-1050370"
         trainee["cnaps"] = "ACCEPTÉ"
@@ -222,11 +222,10 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn('aria-label="Suivi carte professionnelle CNAPS"', html)
-        self.assertIn("AP SH", html)
-        self.assertIn("CP SH", html)
-        self.assertIn("ACTIF", html)
-        self.assertIn("Autorisation préalable - Surveillance humaine ou gardiennage • ACTIF", html)
-        self.assertIn("Carte professionnelle - Surveillance humaine ou gardiennage • ACTIF", html)
+        self.assertIn('data-trainee-card-pro-followup', html)
+        self.assertIn('data-trainee-card-pro-result', html)
+        self.assertIn('Chargement CNAPS…', html)
+        self.assertNotIn('title="Carte professionnelle - Surveillance humaine ou gardiennage • ACTIF"', html)
 
 
     def test_cnaps_public_annuaire_api_returns_activity_and_validity(self):
