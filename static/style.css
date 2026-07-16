@@ -2644,7 +2644,7 @@ body.admin-sidebar-active .topbar-inner{
 .brand-title-line{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;flex-wrap:nowrap;}
 .brand-title-line strong{color:var(--ink);font-size:16px;line-height:1.1;}
 .brand-title-line span{margin-left:0;color:#64748b;font-size:12px;font-weight:700;letter-spacing:.01em;line-height:1.15;}
-.brand-datetime{color:#7c8da5;font-size:11px;font-weight:600;line-height:1.15;}
+.brand-datetime{color:#7c8da5;font-size:11px;font-weight:600;line-height:1.15;font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;}
 body.admin-sidebar-active .brand{order:3;margin-left:auto;margin-right:36px;}
 body.admin-sidebar-active .brand img{height:56px!important;}
 body.admin-sidebar-active .topbar-actions{order:2;margin-left:0;}
