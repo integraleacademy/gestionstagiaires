@@ -1,0 +1,310 @@
+<!-- MODALE RECHERCHE STAGIAIRE -->
+<div class="modal-backdrop trainee-search-drawer" id="traineeSearchModal" aria-hidden="true">
+  <aside class="modal trainee-search-panel" role="dialog" aria-modal="false" aria-labelledby="traineeSearchTitle">
+    <div class="modal-head trainee-search-head">
+      <div class="trainee-search-title-wrap">
+        <span class="trainee-search-kicker">Recherche rapide</span>
+        <div class="modal-title" id="traineeSearchTitle">Rechercher un stagiaire</div>
+        <div class="muted">Tape un nom ou un prénom pour ouvrir directement la fiche.</div>
+      </div>
+      <button class="icon-btn trainee-search-close" data-close-modal="traineeSearchModal" aria-label="Fermer la recherche">✕</button>
+    </div>
+    <div class="modal-body trainee-search-body">
+      <div class="trainee-search-field">
+        <span class="trainee-search-field-icon" aria-hidden="true">⌕</span>
+        <input id="traineeSearchInput" type="text" placeholder="Ex : Dupont, Sarah…" autocomplete="off">
+      </div>
+      <div id="traineeSearchResults" class="trainee-search-results">
+        <div id="traineeSearchResultsInner" class="trainee-search-results-inner"></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+
+<!-- MODALE RECHERCHE SESSION -->
+<div class="modal-backdrop trainee-search-drawer" id="sessionSearchModal" aria-hidden="true">
+  <aside class="modal trainee-search-panel" role="dialog" aria-modal="false" aria-labelledby="sessionSearchTitle">
+    <div class="modal-head trainee-search-head">
+      <div class="trainee-search-title-wrap">
+        <span class="trainee-search-kicker">Recherche rapide</span>
+        <div class="modal-title" id="sessionSearchTitle">Rechercher une session</div>
+        <div class="muted">Tape un nom, une formation ou une date pour ouvrir la liste des stagiaires.</div>
+      </div>
+      <button class="icon-btn trainee-search-close" data-close-modal="sessionSearchModal" aria-label="Fermer la recherche session">✕</button>
+    </div>
+    <div class="modal-body trainee-search-body">
+      <div class="trainee-search-field">
+        <span class="trainee-search-field-icon" aria-hidden="true">⌕</span>
+        <input id="sessionSearchInput" type="text" placeholder="Ex : APS Mars, VTC, 2026…" autocomplete="off">
+      </div>
+      <div id="sessionSearchResults" class="trainee-search-results">
+        <div id="sessionSearchResultsInner" class="trainee-search-results-inner"></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+
+<script>
+(function(){
+  function openSearchModal(id, focusId){
+    if(typeof window.openModal === 'function') window.openModal(id);
+    else { const modal=document.getElementById(id); if(modal){ modal.classList.add('show'); modal.setAttribute('aria-hidden','false'); } }
+    if(focusId) window.setTimeout(()=>document.getElementById(focusId)?.focus(),80);
+  }
+  document.getElementById('btnOpenTraineeSearch')?.addEventListener('click',()=>openSearchModal('traineeSearchModal','traineeSearchInput'));
+  document.getElementById('btnOpenSessionSearch')?.addEventListener('click',()=>openSearchModal('sessionSearchModal','sessionSearchInput'));
+  window.addEventListener('load',()=>{
+    const params = new URLSearchParams(window.location.search);
+    if(params.get('openTraineeSearch') === '1') document.getElementById('btnOpenTraineeSearch')?.click();
+    if(params.get('openSessionSearch') === '1') document.getElementById('btnOpenSessionSearch')?.click();
+  });
+})();
+    // =========================
+  // 🔎 Recherche stagiaire (global)
+  // =========================
+  (function(){
+    const input = document.getElementById("traineeSearchInput");
+    const box = document.getElementById("traineeSearchResults");
+    const inner = document.getElementById("traineeSearchResultsInner");
+    if(!input || !box || !inner) return;
+
+    let timer = null;
+    let requestSequence = 0;
+
+    function closeBox(){
+      box.style.display = "none";
+      inner.innerHTML = "";
+    }
+
+    function openBox(){
+      box.style.display = "block";
+    }
+
+    function escapeHtml(value){
+      return String(value ?? "").replace(/[&<>'"]/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
+      })[char]);
+    }
+
+    function itemDetails(it){
+      const trainingType = it.training_type ? `• ${it.training_type}` : "";
+      return `${it.session_name || ""} ${trainingType}`.trim();
+    }
+
+    function suggestionItem(it){
+      const full = `${(it.first_name || "").toUpperCase()} ${(it.last_name || "").toUpperCase()}`.trim();
+      const url = it.admin_url || `/admin/sessions/${it.session_id}/stagiaires/${it.trainee_id}`;
+      return `
+        <a class="search-item search-suggestion" href="${escapeHtml(url)}">
+          <div>
+            <div class="search-name">${escapeHtml(full || "—")}</div>
+            <div class="search-sub">${escapeHtml(itemDetails(it) || "—")}</div>
+          </div>
+          <div class="search-open">Ouvrir →</div>
+        </a>
+      `;
+    }
+
+    function renderSuggestions(res){
+      const latest = res.latest_registered || [];
+      const recent = res.recent_consulted || [];
+      inner.innerHTML = `
+        <div class="search-section-title">2 derniers inscrits</div>
+        ${latest.length ? latest.map(suggestionItem).join("") : '<div class="search-empty">Aucun stagiaire inscrit.</div>'}
+        <div class="search-section-title">2 derniers dossiers consultés</div>
+        ${recent.length ? recent.map(suggestionItem).join("") : '<div class="search-empty">Aucun dossier consulté récemment.</div>'}
+      `;
+    }
+
+    function renderSearchResults(items){
+      if(items.length === 0){
+        inner.innerHTML = `<div class="muted" style="padding:12px;">Aucun résultat.</div>`;
+        return;
+      }
+
+      inner.innerHTML = items.map(it => {
+        const full = `${(it.first_name||"").toUpperCase()} ${(it.last_name||"").toUpperCase()}`.trim();
+        const url = it.admin_url || `/admin/sessions/${it.session_id}/stagiaires/${it.trainee_id}`;
+        const conventionStatus = (it.convention_status || "soon");
+        const conventionSaisieDone = !!it.convention_saisie_done || conventionStatus === "signing" || conventionStatus === "signed";
+        const conventionSignedDone = !!it.convention_signed_done || conventionStatus === "signed";
+        const conventionDone = conventionSaisieDone && conventionSignedDone;
+        const testFrValidated = (it.test_fr_status || "soon") === "validated";
+
+        return `
+          <div class="search-item" data-session-id="${escapeHtml(it.session_id)}" data-trainee-id="${escapeHtml(it.trainee_id)}" data-convention-status="${escapeHtml(conventionStatus)}" data-convention-saisie-done="${conventionSaisieDone ? "1" : "0"}" data-convention-signed-done="${conventionSignedDone ? "1" : "0"}">
+            <div>
+              <div class="search-name">${escapeHtml(full || "—")}</div>
+              <div class="search-sub">${escapeHtml(itemDetails(it) || "—")}</div>
+            </div>
+            <div class="search-open">
+              <a class="btn btn-outline" href="${escapeHtml(url)}" style="text-decoration:none;display:inline-block">Ouvrir</a>
+              <button type="button" class="btn btn-primary btn-quick-action" data-quick-action="convention" ${conventionDone ? "disabled" : ""}>Convention</button>
+              <button type="button" class="btn btn-warning btn-quick-action quick-convention-state is-hidden" data-quick-action="convention-saisie" ${conventionSaisieDone ? "disabled" : ""}>Saisie</button>
+              <button type="button" class="btn btn-success btn-quick-action quick-convention-state is-hidden" data-quick-action="convention-signee" ${conventionSignedDone ? "disabled" : ""}>Signée</button>
+              <button type="button" class="btn btn-primary btn-quick-action" data-quick-action="test-fr" ${testFrValidated ? "disabled" : ""}>Test FR</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function loadResults(){
+      const q = input.value.trim();
+      const currentRequest = ++requestSequence;
+      inner.innerHTML = `<div class="muted" style="padding:12px;">Chargement…</div>`;
+      openBox();
+
+      try{
+        const r = await fetch(`/api/trainees_search?q=${encodeURIComponent(q)}`);
+        const res = await r.json();
+        if(currentRequest !== requestSequence || input.value.trim() !== q) return;
+        if(!r.ok || !res.ok){
+          inner.innerHTML = `<div class="muted" style="padding:12px;">Erreur de recherche.</div>`;
+          return;
+        }
+        if(q.length < 2) renderSuggestions(res);
+        else renderSearchResults(res.items || []);
+      }catch(e){
+        if(currentRequest === requestSequence){
+          inner.innerHTML = `<div class="muted" style="padding:12px;">Erreur réseau.</div>`;
+        }
+      }
+    }
+
+    input.addEventListener("focus", loadResults);
+    input.addEventListener("input", ()=>{
+      clearTimeout(timer);
+      timer = setTimeout(loadResults, 220);
+    });
+
+    inner.addEventListener("click", async (e)=>{
+      const btn = e.target.closest("[data-quick-action]");
+      if(!btn || btn.disabled) return;
+
+      const item = btn.closest(".search-item");
+      if(!item) return;
+
+      const sessionId = item.getAttribute("data-session-id");
+      const traineeId = item.getAttribute("data-trainee-id");
+      const action = btn.getAttribute("data-quick-action");
+      if(!sessionId || !traineeId || !action) return;
+
+      if(action === "convention"){
+        item.querySelectorAll('.quick-convention-state').forEach(el=>el.classList.remove('is-hidden'));
+        return;
+      }
+
+      const payload = {};
+      if(action === "convention-saisie"){
+        payload.convention_status = "signing";
+        payload.convention_saisie_done = true;
+      }
+      if(action === "convention-signee"){
+        payload.convention_status = "signed";
+        payload.convention_signed_done = true;
+      }
+      if(action === "test-fr") payload.test_fr_status = "validated";
+      if(!Object.keys(payload).length) return;
+
+      const oldText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "...";
+
+      try{
+        const r = await fetch(`/api/sessions/${sessionId}/stagiaires/${traineeId}/update`, {
+          method:"POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify(payload)
+        });
+        const res = await r.json().catch(()=>({}));
+        if(!r.ok || res.ok === false) throw new Error("update_failed");
+
+        btn.textContent = oldText;
+        if(action === "convention-saisie") item.setAttribute("data-convention-saisie-done", "1");
+        if(action === "convention-saisie") item.setAttribute("data-convention-status", "signing");
+        if(action === "convention-signee") item.setAttribute("data-convention-signed-done", "1");
+        if(action === "convention-signee") item.setAttribute("data-convention-status", "signed");
+
+        const conventionStatus = item.getAttribute("data-convention-status") || "soon";
+        const saisieBtn = item.querySelector('[data-quick-action="convention-saisie"]');
+        const signeeBtn = item.querySelector('[data-quick-action="convention-signee"]');
+        if(saisieBtn && (conventionStatus === "signing" || conventionStatus === "signed")) saisieBtn.disabled = true;
+        if(signeeBtn && conventionStatus === "signed") signeeBtn.disabled = true;
+
+        const saisieDone = item.getAttribute("data-convention-saisie-done") === "1";
+        const signedDone = item.getAttribute("data-convention-signed-done") === "1";
+        if(saisieDone && signedDone){
+          const conventionBtn = item.querySelector('[data-quick-action="convention"]');
+          if(conventionBtn) conventionBtn.disabled = true;
+        }
+      }catch(err){
+        btn.disabled = false;
+        btn.textContent = oldText;
+        alert("Erreur de mise à jour.");
+      }
+    });
+
+    document.addEventListener("click", (e)=>{
+      const target = e.target;
+      if(!target || target === input || box.contains(target)) return;
+      closeBox();
+    });
+
+    input.addEventListener("keydown", (e)=>{
+      if(e.key === "Escape"){
+        closeBox();
+        input.blur();
+      }
+    });
+  })();
+
+
+  // =========================
+  // 🔎 Recherche session (global)
+  // =========================
+  (function(){
+    const input = document.getElementById("sessionSearchInput");
+    const box = document.getElementById("sessionSearchResults");
+    const inner = document.getElementById("sessionSearchResultsInner");
+    if(!input || !box || !inner) return;
+    let timer = null;
+    let requestSequence = 0;
+    function closeBox(){ box.style.display = "none"; inner.innerHTML = ""; }
+    function openBox(){ box.style.display = "block"; }
+    function escapeHtml(value){ return String(value ?? "").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[char]); }
+    function sessionDetails(it){ return [it.training_type, it.date_range, `${it.total || 0} stagiaire(s)`, it.archived ? "archivée" : "active"].filter(Boolean).join(" • "); }
+    function resultItem(it){
+      const url = it.admin_url || `/admin/sessions/${it.session_id}/trainees`;
+      return `<a class="search-item search-suggestion" href="${escapeHtml(url)}">
+        <div><div class="search-name">${escapeHtml(it.session_name || "—")}</div><div class="search-sub">${escapeHtml(sessionDetails(it) || "—")}</div></div>
+        <div class="search-open">Ouvrir →</div>
+      </a>`;
+    }
+    function render(res, q){
+      const items = res.items || [];
+      if(!items.length){ inner.innerHTML = `<div class="search-empty">${q.length < 2 ? "Aucune session récente." : "Aucune session trouvée."}</div>`; return; }
+      inner.innerHTML = `${q.length < 2 ? '<div class="search-section-title">Sessions récentes</div>' : ''}${items.map(resultItem).join("")}`;
+    }
+    async function loadResults(){
+      const q = input.value.trim();
+      const currentRequest = ++requestSequence;
+      inner.innerHTML = `<div class="muted" style="padding:12px;">Chargement…</div>`;
+      openBox();
+      try{
+        const r = await fetch(`/api/sessions_search?q=${encodeURIComponent(q)}`);
+        const res = await r.json();
+        if(currentRequest !== requestSequence || input.value.trim() !== q) return;
+        if(!r.ok || !res.ok){ inner.innerHTML = `<div class="muted" style="padding:12px;">Erreur de recherche.</div>`; return; }
+        render(res, q);
+      }catch(e){ if(currentRequest === requestSequence) inner.innerHTML = `<div class="muted" style="padding:12px;">Erreur réseau.</div>`; }
+    }
+    input.addEventListener("focus", loadResults);
+    input.addEventListener("input", ()=>{ clearTimeout(timer); timer = setTimeout(loadResults, 220); });
+    document.addEventListener("click", (e)=>{ const target = e.target; if(!target || target === input || box.contains(target)) return; closeBox(); });
+    input.addEventListener("keydown", (e)=>{ if(e.key === "Escape"){ closeBox(); input.blur(); } });
+  })();
+
+</script>
