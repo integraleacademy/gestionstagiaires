@@ -13653,6 +13653,8 @@ def _mark_signed_conventions_seen(data: Dict[str, Any]) -> bool:
 @admin_login_required
 def admin_sessions_conventions():
     data = load_data()
+    if _process_due_convocation_after_convention_signed(data):
+        save_data(data)
     selected_formation = (request.args.get("formation") or "").strip().upper()
     selected_status_param = (request.args.get("status") or "").strip().lower()
     selected_status = selected_status_param
@@ -24591,6 +24593,38 @@ def _schedule_convocation_after_convention_signed(session_obj: Dict[str, Any], t
     )
     timer.daemon = True
     timer.start()
+
+
+def _process_due_convocation_after_convention_signed(data: Dict[str, Any]) -> bool:
+    """Rattrape les envois de convocation planifiés si le timer en mémoire a été perdu."""
+    now = datetime.datetime.utcnow()
+    changed = False
+    for sess in data.get("sessions", []):
+        if not _is_aps_session(sess):
+            continue
+        trainees = _session_trainees_list(sess)
+        session_changed = False
+        for trainee in trainees:
+            if trainee.get("convocation_aps_sent_at"):
+                continue
+            scheduled_at = _parse_iso_datetime(trainee.get("convocation_auto_scheduled_at"))
+            if not scheduled_at or scheduled_at > now:
+                continue
+            try:
+                sent = _send_convocation_after_convention_signed(sess, trainee, str(sess.get("id") or ""), str(trainee.get("id") or ""))
+            except Exception as conv_exc:
+                sent = False
+                trainee["convocation_auto_last_error"] = str(conv_exc)
+                app.logger.exception("[CONVOCATION] due scheduled send failed trainee_id=%s", trainee.get("id"))
+            if sent:
+                trainee["convocation_auto_scheduled_at"] = ""
+            trainee["updated_at"] = _now_iso()
+            session_changed = True
+            changed = True
+        if session_changed:
+            sess["trainees"] = trainees
+            sess.pop("stagiaires", None)
+    return changed
 
 
 def _mark_yousign_convention_signed(data: Dict[str, Any], sess: Dict[str, Any], trainees: List[Dict[str, Any]], trainee: Dict[str, Any], request_id: str, event_id: str = "") -> None:
