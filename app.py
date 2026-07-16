@@ -30,6 +30,7 @@ from functools import wraps
 from zoneinfo import ZoneInfo
 from flask import session
 import werkzeug.security as werkzeug_security
+from werkzeug.utils import secure_filename
 from PIL import Image, ImageOps
 import tempfile
 import fcntl
@@ -44,7 +45,7 @@ except ImportError:
     DocxTemplate = None
 
 import requests
-from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file, flash, has_request_context, make_response, g
+from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file, flash, has_request_context, make_response, g, Response
 
 import zipfile
 from io import BytesIO
@@ -526,10 +527,10 @@ def _is_qonto_missing_iban_error(message: str) -> bool:
 
 
 def get_qonto_headers() -> Dict[str, str]:
-    """Build Qonto API headers without Bearer, Basic or Base64 encoding."""
+    """Build Qonto API key headers without Bearer, Basic or Base64 encoding."""
     return {
         "Authorization": f"{_qonto_login()}:{_qonto_secret_key()}",
-        "Content-Type": "application/json",
+        "Accept": "application/json",
     }
 
 
@@ -778,6 +779,8 @@ def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = N
     called_url = prepared.url or url
     try:
         headers = get_qonto_headers()
+        if cleaned_payload is not None:
+            headers = {**headers, "Content-Type": "application/json"}
         if endpoint.startswith("/v2/sepa/direct_debit"):
             headers = {"Authorization": f"Bearer {_qonto_oauth_bearer_token()}", "Content-Type": "application/json"}
         response = requests.request(method.upper(), url, headers=headers, json=cleaned_payload if cleaned_payload is not None else None, params=params, timeout=20)
@@ -1070,85 +1073,141 @@ def get_qonto_attachment(attachment_id: str) -> Dict[str, Any]:
     return _qonto_request("GET", f"/v2/attachments/{quote(str(attachment_id), safe='')}")
 
 
-def _download_qonto_attachment_pdf(attachment_id: str) -> Tuple[bytes, str]:
-    attachment_payload = get_qonto_attachment(attachment_id)
+class QontoPdfUnavailableError(RuntimeError):
+    def __init__(self, message: str, status_code: int = 502):
+        self.status_code = status_code
+        super().__init__(message)
+
+
+def _qonto_json_response(response: requests.Response, context: str) -> Dict[str, Any]:
+    content_type = response.headers.get("Content-Type", "")
+    raw_body = response.text or ""
+    if not response.ok:
+        app.logger.warning("QONTO PDF: %s status=%s", context, response.status_code)
+        if response.status_code == 404:
+            raise QontoNotFoundError(response.status_code, "Not found", _qonto_response_trace_id(response, raw_body))
+        if response.status_code in (401, 403):
+            raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502)
+        if response.status_code == 429:
+            raise QontoPdfUnavailableError("Qonto limite temporairement les demandes. Réessayez dans quelques secondes.", 429)
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502)
+    if "json" not in content_type.lower():
+        app.logger.warning("QONTO PDF: %s réponse non JSON content_type=%s", context, content_type[:80])
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502)
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        app.logger.warning("QONTO PDF: %s JSON invalide", context)
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502) from exc
+    if not isinstance(payload, dict):
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502)
+    return payload
+
+
+def _qonto_get_json(path: str, context: str) -> Dict[str, Any]:
+    if not _qonto_is_configured():
+        raise QontoConfigurationError("Qonto n’est pas connecté")
+    url = f"{_qonto_base_url()}{path if path.startswith('/') else '/' + path}"
+    try:
+        response = requests.get(url, headers=get_qonto_headers(), timeout=20)
+    except requests.Timeout as exc:
+        app.logger.warning("QONTO PDF: timeout %s", context)
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 504) from exc
+    return _qonto_json_response(response, context)
+
+
+def _qonto_attachment_payload(attachment_payload: Dict[str, Any]) -> Dict[str, Any]:
     attachment = attachment_payload.get("attachment") if isinstance(attachment_payload, dict) else None
     if not isinstance(attachment, dict):
-        attachment = attachment_payload if isinstance(attachment_payload, dict) else {}
-    pdf_url = _find_qonto_pdf_url(attachment) or _find_qonto_pdf_url(attachment_payload)
+        app.logger.warning("QONTO PDF: champ attachment absent")
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502)
+    return attachment
+
+
+def fetch_qonto_client_invoice_pdf(invoice_id: str, max_attempts: int = 3, retry_delay: float = 0.35) -> Tuple[bytes, str]:
+    invoice_id = str(invoice_id or "").strip()
+    if not invoice_id or not re.match(r"^[A-Za-z0-9_-]+$", invoice_id):
+        raise QontoPdfUnavailableError("Facture Qonto invalide ou absente.", 400)
+    if not _qonto_is_configured():
+        raise QontoConfigurationError("Qonto n’est pas connecté")
+
+    attachment_id = ""
+    invoice_payload: Dict[str, Any] = {}
+    attempts = max(1, min(int(max_attempts or 1), 3))
+    for attempt in range(attempts):
+        invoice_payload = _qonto_get_json(f"/v2/client_invoices/{quote(invoice_id, safe='')}", "invoice")
+        client_invoice = invoice_payload.get("client_invoice")
+        if not isinstance(client_invoice, dict):
+            app.logger.warning("QONTO PDF: champ client_invoice absent invoice_id=%s", invoice_id)
+            raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502)
+        attachment_id = str(client_invoice.get("attachment_id") or "").strip()
+        if attachment_id:
+            break
+        app.logger.info("QONTO PDF: attachment_id absent invoice_id=%s attempt=%s", invoice_id, attempt + 1)
+        if attempt < attempts - 1:
+            time.sleep(max(0.0, retry_delay))
+    if not attachment_id:
+        raise QontoPdfUnavailableError("Le PDF de cette facture est encore en cours de génération. Réessayez dans quelques secondes.", 409)
+
+    attachment_payload = _qonto_get_json(f"/v2/attachments/{quote(attachment_id, safe='')}", "attachment")
+    attachment = _qonto_attachment_payload(attachment_payload)
+    declared_type = str(attachment.get("file_content_type") or "").lower()
+    if declared_type and declared_type != "application/pdf":
+        app.logger.warning("QONTO PDF: attachment non PDF invoice_id=%s attachment_id=%s", invoice_id, attachment_id)
+        raise QontoPdfUnavailableError("Le document retourné par Qonto n’est pas un PDF valide.", 502)
+    pdf_url = str(attachment.get("url") or "").strip()
     if not pdf_url:
-        raise RuntimeError("URL de téléchargement de la pièce jointe Qonto introuvable")
-    return _download_pdf_from_url(pdf_url)
+        app.logger.warning("QONTO PDF: attachment.url absent invoice_id=%s attachment_id=%s", invoice_id, attachment_id)
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502)
+    try:
+        pdf_response = requests.get(pdf_url, timeout=30)
+    except requests.Timeout as exc:
+        app.logger.warning("QONTO PDF: timeout lors du téléchargement invoice_id=%s", invoice_id)
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 504) from exc
+    if not pdf_response.ok:
+        app.logger.warning("QONTO PDF: téléchargement status=%s invoice_id=%s", pdf_response.status_code, invoice_id)
+        msg = "Impossible de récupérer le PDF auprès de Qonto."
+        if pdf_response.status_code in (401, 403, 404):
+            msg = "Impossible de récupérer le PDF auprès de Qonto."
+        raise QontoPdfUnavailableError(msg, 502)
+    pdf_content = pdf_response.content or b""
+    if not pdf_content:
+        app.logger.warning("QONTO PDF: téléchargement vide invoice_id=%s", invoice_id)
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502)
+    if not pdf_content.startswith(b"%PDF"):
+        app.logger.warning("QONTO PDF: contenu non PDF invoice_id=%s", invoice_id)
+        raise QontoPdfUnavailableError("Le document retourné par Qonto n’est pas un PDF valide.", 502)
+    filename = secure_filename(str(attachment.get("file_name") or attachment.get("filename") or f"facture-qonto-{invoice_id}.pdf")) or f"facture-qonto-{invoice_id}.pdf"
+    if not filename.lower().endswith(".pdf"):
+        filename = f"{filename}.pdf"
+    return pdf_content, filename
+
+
+def _download_qonto_attachment_pdf(attachment_id: str) -> Tuple[bytes, str]:
+    attachment_id = str(attachment_id or "").strip()
+    if not attachment_id:
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 400)
+    attachment_payload = _qonto_get_json(f"/v2/attachments/{quote(attachment_id, safe='')}", "attachment")
+    attachment = _qonto_attachment_payload(attachment_payload)
+    pdf_url = str(attachment.get("url") or "").strip()
+    if not pdf_url:
+        raise QontoPdfUnavailableError("Impossible de récupérer le PDF auprès de Qonto.", 502)
+    pdf_content, content_type = _download_pdf_from_url(pdf_url)
+    return pdf_content, content_type
+
 
 def _download_pdf_from_url(pdf_url: str) -> Tuple[bytes, str]:
     pdf_response = requests.get(str(pdf_url), timeout=30)
     if not pdf_response.ok:
         raise RuntimeError(f"Téléchargement PDF Qonto impossible ({pdf_response.status_code})")
-    return pdf_response.content, pdf_response.headers.get("Content-Type") or "application/pdf"
-
-
-def _download_qonto_legacy_invoice_pdf(invoice_id: str) -> Tuple[bytes, str]:
-    endpoint = f"/v2/client_invoices/{quote(str(invoice_id), safe='')}/download"
-    url = f"{_qonto_base_url()}{endpoint}"
-    response = requests.get(url, headers={**get_qonto_headers(), "Accept": "application/pdf,application/json"}, timeout=30)
-    content_type = response.headers.get("Content-Type", "")
-    raw_body = response.text if "json" in content_type.lower() or "text" in content_type.lower() else ""
-    trace_id = _qonto_response_trace_id(response, raw_body)
-    app.logger.info("[QONTO] api_call method=GET url=%s status=%s trace_id=%s content_type=%s", url, response.status_code, trace_id or "", content_type)
-    if not response.ok:
-        if response.status_code == 404:
-            raise QontoNotFoundError(response.status_code, raw_body or response.text[:500], trace_id)
-        raise QontoApiError(response.status_code, raw_body or response.text[:500], trace_id)
-    if response.content.startswith(b"%PDF") or "application/pdf" in content_type.lower():
-        return response.content, "application/pdf"
-    try:
-        payload = response.json()
-    except Exception as exc:
-        raise RuntimeError("La réponse Qonto ne contient pas de PDF exploitable") from exc
-    pdf_url = _find_qonto_pdf_url(_qonto_invoice_payload(payload)) or _find_qonto_pdf_url(payload)
-    if not pdf_url:
-        raise RuntimeError("PDF Qonto non exposé par l’API")
-    return _download_pdf_from_url(pdf_url)
+    if not (pdf_response.content or b"").startswith(b"%PDF"):
+        raise RuntimeError("Le document retourné par Qonto n’est pas un PDF valide.")
+    return pdf_response.content, "application/pdf"
 
 
 def download_qonto_invoice_pdf(invoice_id: str, invoice_number: str = "") -> Tuple[bytes, str]:
-    if not _qonto_is_configured():
-        raise QontoConfigurationError("Qonto n’est pas connecté")
-
-    def _download_from_invoice_payload(invoice_payload: Any) -> Optional[Tuple[bytes, str]]:
-        pdf_url = _find_qonto_pdf_url(invoice_payload)
-        if pdf_url:
-            try:
-                return _download_pdf_from_url(pdf_url)
-            except Exception as exc:
-                app.logger.info("[QONTO] invoice public URL download failed invoice_id=%s error=%s", invoice_id, exc)
-        attachment_id = _find_qonto_attachment_id(invoice_payload)
-        if attachment_id:
-            return _download_qonto_attachment_pdf(attachment_id)
-        return None
-
-    try:
-        return _download_qonto_legacy_invoice_pdf(invoice_id)
-    except QontoNotFoundError as exc:
-        app.logger.info("[QONTO] legacy invoice download endpoint unavailable invoice_id=%s error=%s", invoice_id, exc)
-
-    try:
-        invoice_payload = get_qonto_invoice(invoice_id)
-    except QontoApiError as exc:
-        app.logger.info("[QONTO] invoice retrieval by id failed before attachment download invoice_id=%s error=%s", invoice_id, exc)
-        invoice_payload = None
-    downloaded = _download_from_invoice_payload(invoice_payload)
-    if downloaded:
-        return downloaded
-
-    invoice = find_qonto_invoice_by_number(invoice_number)
-    downloaded = _download_from_invoice_payload(invoice)
-    if downloaded:
-        return downloaded
-    if invoice and invoice.get("id") and str(invoice.get("id")) != str(invoice_id):
-        return download_qonto_invoice_pdf(str(invoice.get("id")), str(invoice.get("number") or invoice.get("invoice_number") or invoice_number))
-
-    raise RuntimeError("PDF Qonto non exposé par l’API : attachment_id absent ou pièce jointe encore en génération")
+    pdf_content, _filename = fetch_qonto_client_invoice_pdf(invoice_id)
+    return pdf_content, "application/pdf"
 
 
 def list_qonto_direct_debit_mandates(client_id: str) -> Dict[str, Any]:
@@ -27586,91 +27645,56 @@ def api_admin_billing_sync_payment(line_id: str):
         save_data(data); return jsonify({'ok': False, 'error': 'Synchronisation impossible : facture conservée localement'}), 400
 
 
+@app.get("/admin/qonto/invoices/<invoice_id>/pdf")
+@admin_login_required
+def admin_qonto_invoice_pdf(invoice_id: str):
+    try:
+        pdf_content, filename = fetch_qonto_client_invoice_pdf(invoice_id)
+        safe_filename = secure_filename(filename) or f"facture-qonto-{secure_filename(str(invoice_id)) or 'facture'}.pdf"
+        response = Response(
+            pdf_content,
+            mimetype="application/pdf",
+            headers={
+                "Content-Disposition": f'inline; filename="{safe_filename}"',
+                "Cache-Control": "private, no-store",
+            },
+        )
+        return response
+    except QontoConfigurationError:
+        return jsonify({"ok": False, "error": "Qonto n’est pas connecté"}), 503
+    except QontoNotFoundError:
+        return jsonify({"ok": False, "error": "Facture Qonto introuvable"}), 404
+    except QontoPdfUnavailableError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), getattr(exc, "status_code", 502)
+    except Exception as exc:
+        app.logger.warning("QONTO PDF: erreur inattendue invoice_id=%s error=%s", invoice_id, _sanitize_qonto_error(str(exc)))
+        return jsonify({"ok": False, "error": "Impossible de récupérer le PDF auprès de Qonto."}), 502
+
+
 @app.get('/api/admin/billing-lines/<line_id>/download-invoice')
 @admin_login_required
 def api_admin_billing_download(line_id: str):
     data = load_data(); line = _find_billing_line(data, line_id)
-    if not line or not line.get('qontoInvoiceId'): return jsonify({'ok': False, 'error': 'Facture indisponible'}), 404
+    if not line or not line.get('qontoInvoiceId'):
+        return jsonify({'ok': False, 'error': 'Ancienne facture sans identifiant Qonto récupérable'}), 404
     try:
-        if line.get('invoicePdfUrl'):
-            line['invoiceDownloadedAt'] = _now_iso(); _billing_log(line, 'PDF téléchargé', 'success'); _save_billing_line(data, line); save_data(data)
-            return redirect(line['invoicePdfUrl'])
         pdf_bytes, content_type = download_qonto_invoice_pdf(line['qontoInvoiceId'], line.get('qontoInvoiceNumber') or '')
         line['invoiceDownloadedAt'] = _now_iso(); _billing_log(line, 'PDF téléchargé', 'success'); _save_billing_line(data, line); save_data(data)
-        filename = re.sub(r'[^A-Za-z0-9_.-]+', '_', f"FACTURE_{line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId')}.pdf")
-        response = send_file(BytesIO(pdf_bytes), mimetype=content_type or 'application/pdf', as_attachment=False, download_name=filename)
-        response.headers['Content-Disposition'] = f'inline; filename="{filename}"'
-        return response
-    except Exception as exc:
-        download_error = _sanitize_qonto_error(str(exc))
-        invoice_number = str(line.get('qontoInvoiceNumber') or '')
-        diagnostics = [f"download={download_error}"]
-        app.logger.warning(
-            "[QONTO] invoice download failed line_id=%s invoice_id=%s invoice_number=%s error=%s",
-            line_id, line.get('qontoInvoiceId') or '', invoice_number, download_error,
-        )
-        _billing_log(line, 'PDF Qonto indisponible', 'error', download_error, line.get('qontoInvoiceId') or '')
+        safe_filename = secure_filename(f"FACTURE_{line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId')}.pdf") or f"facture-qonto-{line.get('qontoInvoiceId')}.pdf"
+        return Response(pdf_bytes, mimetype='application/pdf', headers={'Content-Disposition': f'inline; filename="{safe_filename}"', 'Cache-Control': 'private, no-store'})
+    except QontoConfigurationError:
+        return jsonify({'ok': False, 'error': 'Qonto n’est pas connecté'}), 503
+    except QontoNotFoundError:
+        _billing_log(line, 'PDF Qonto indisponible', 'error', 'Facture Qonto introuvable', line.get('qontoInvoiceId') or '')
         _save_billing_line(data, line); save_data(data)
-        if _qonto_invoice_is_missing_error(exc):
-            try:
-                invoice_payload = None
-                try:
-                    invoice_payload = get_qonto_invoice(line['qontoInvoiceId'])
-                    app.logger.info(
-                        "[QONTO] invoice refresh by id succeeded line_id=%s invoice_id=%s has_pdf_url=%s",
-                        line_id, line.get('qontoInvoiceId'), bool(_find_qonto_pdf_url(invoice_payload)),
-                    )
-                except Exception as refresh_by_id_exc:
-                    by_id_error = _sanitize_qonto_error(str(refresh_by_id_exc))
-                    diagnostics.append(f"refresh_by_id={by_id_error}")
-                    app.logger.warning(
-                        "[QONTO] invoice refresh by id failed line_id=%s invoice_id=%s invoice_number=%s error=%s",
-                        line_id, line.get('qontoInvoiceId'), invoice_number, by_id_error,
-                    )
-                pdf_url = _find_qonto_pdf_url(invoice_payload)
-                if not pdf_url:
-                    try:
-                        invoice_payload = find_qonto_invoice_by_number(invoice_number)
-                        pdf_url = _find_qonto_pdf_url(invoice_payload)
-                        diagnostics.append(f"refresh_by_number={'found' if invoice_payload else 'not_found'}")
-                        app.logger.info(
-                            "[QONTO] invoice refresh by number completed line_id=%s invoice_id=%s invoice_number=%s found=%s has_pdf_url=%s",
-                            line_id, line.get('qontoInvoiceId'), invoice_number, bool(invoice_payload), bool(pdf_url),
-                        )
-                    except Exception as refresh_by_number_exc:
-                        by_number_error = _sanitize_qonto_error(str(refresh_by_number_exc))
-                        diagnostics.append(f"refresh_by_number={by_number_error}")
-                        app.logger.warning(
-                            "[QONTO] invoice refresh by number failed line_id=%s invoice_id=%s invoice_number=%s error=%s",
-                            line_id, line.get('qontoInvoiceId'), invoice_number, by_number_error,
-                        )
-                        invoice_payload = None
-                    if invoice_payload and invoice_payload.get('id'):
-                        line['qontoInvoiceId'] = str(invoice_payload.get('id'))
-                if pdf_url:
-                    line['invoicePdfUrl'] = pdf_url
-                    line['qontoPdfUrl'] = pdf_url
-                    line['invoiceDownloadedAt'] = _now_iso()
-                    _billing_log(line, 'Lien facture Qonto récupéré', 'success', 'URL PDF/public retrouvée après échec du téléchargement Qonto')
-                    _save_billing_line(data, line)
-                    save_data(data)
-                    return redirect(pdf_url)
-            except Exception as refresh_exc:
-                refresh_error = _sanitize_qonto_error(str(refresh_exc))
-                diagnostics.append(f"refresh_unhandled={refresh_error}")
-                app.logger.warning(
-                    "[QONTO] invoice public URL refresh failed line_id=%s invoice_id=%s invoice_number=%s error=%s",
-                    line_id, line.get('qontoInvoiceId'), invoice_number, refresh_error,
-                )
-            diagnostic_message = "; ".join(diagnostics)
-            _billing_log(line, 'Diagnostic facture Qonto', 'error', diagnostic_message, line.get('qontoInvoiceId') or '')
-            _save_billing_line(data, line); save_data(data)
-            return jsonify({
-                'ok': False,
-                'error': 'La vraie facture Qonto est indisponible pour le moment. Synchronisez Qonto ou vérifiez que la facture existe toujours dans Qonto.',
-                'qontoInvoiceId': line.get('qontoInvoiceId'),
-            }), 404
-        return jsonify({'ok': False, 'error': download_error, 'qontoInvoiceId': line.get('qontoInvoiceId')}), 502
+        return jsonify({'ok': False, 'error': 'Facture Qonto introuvable'}), 404
+    except QontoPdfUnavailableError as exc:
+        _billing_log(line, 'PDF Qonto indisponible', 'error', str(exc), line.get('qontoInvoiceId') or '')
+        _save_billing_line(data, line); save_data(data)
+        return jsonify({'ok': False, 'error': str(exc), 'qontoInvoiceId': line.get('qontoInvoiceId')}), getattr(exc, 'status_code', 502)
+    except Exception as exc:
+        app.logger.warning("QONTO PDF: invoice download failed line_id=%s invoice_id=%s error=%s", line_id, line.get('qontoInvoiceId') or '', _sanitize_qonto_error(str(exc)))
+        return jsonify({'ok': False, 'error': 'Impossible de récupérer le PDF auprès de Qonto.'}), 502
 
 
 @app.post('/api/admin/billing-lines/bulk-download')
