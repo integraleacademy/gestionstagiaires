@@ -15,12 +15,12 @@
     return el;
   }
 
-  function createList(cityInput){
+  function createList(zipInput){
     const el = document.createElement("div");
     el.className = "postal-city-list";
     el.setAttribute("role", "listbox");
     el.hidden = true;
-    if(cityInput.id) el.setAttribute("aria-labelledby", cityInput.id);
+    if(zipInput.id) el.setAttribute("aria-labelledby", zipInput.id);
     return el;
   }
 
@@ -33,13 +33,12 @@
     cityInput.setAttribute("autocomplete", "address-level2");
     cityInput.setAttribute("aria-autocomplete", "list");
 
-    const cityWrapper = cityInput.closest("label") || cityInput.parentElement;
-    if(cityWrapper) cityWrapper.classList.add("postal-city-field");
     const zipWrapper = zipInput.closest("label") || zipInput.parentElement;
+    if(zipWrapper) zipWrapper.classList.add("postal-city-field");
     const status = createStatus();
-    const list = createList(cityInput);
+    const list = createList(zipInput);
     (zipWrapper || zipInput).appendChild(status);
-    (cityWrapper || cityInput).appendChild(list);
+    (zipWrapper || zipInput).appendChild(list);
 
     const state = { timer:null, controller:null, requestId:0, cities:[], activeIndex:-1, autoCity:"" };
 
@@ -138,7 +137,7 @@
       else if(event.key === "Enter" && state.activeIndex >= 0){ event.preventDefault(); const city = state.cities[state.activeIndex]; if(city) selectCity(city.nom); }
       else if(event.key === "Escape"){ event.preventDefault(); closeList(); }
     });
-    document.addEventListener("click", event=>{ if(!list.hidden && !list.contains(event.target) && event.target !== cityInput) closeList(); });
+    document.addEventListener("click", event=>{ if(!list.hidden && !list.contains(event.target) && event.target !== cityInput && event.target !== zipInput) closeList(); });
     instances.push({zipInput, cityInput, state});
     return state;
   }

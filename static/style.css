@@ -3169,7 +3169,7 @@ body.admin-sidebar-active .admin-sidebar-notif-panel .notif-empty{
 .postal-city-field{position:relative;}
 .postal-city-status{min-height:16px;margin-top:5px;color:#64748b;font-size:12px;font-weight:700;line-height:1.25;}
 .postal-city-status.is-loading::before{content:"";display:inline-block;width:8px;height:8px;margin-right:6px;border:2px solid #cbd5e1;border-top-color:#f97316;border-radius:999px;vertical-align:-1px;animation:postal-city-spin .7s linear infinite;}
-.postal-city-list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:1200;max-height:190px;overflow:auto;border:1px solid #dbe4f0;border-radius:12px;background:#fff;box-shadow:0 16px 38px rgba(15,23,42,.14);padding:5px;}
+.postal-city-list{position:absolute;left:0;right:0;top:calc(100% + 4px);width:100%;z-index:1200;max-height:240px;overflow-y:auto;border:1px solid #dbe4f0;border-radius:12px;background:#fff;box-shadow:0 16px 38px rgba(15,23,42,.14);padding:5px;}
 .postal-city-option{display:block;width:100%;border:0;border-radius:9px;background:transparent;color:#0f172a;text-align:left;padding:9px 10px;font:inherit;font-size:14px;font-weight:800;cursor:pointer;}
 .postal-city-option:hover,.postal-city-option.is-active{background:#fff7ed;color:#c2410c;}
 @keyframes postal-city-spin{to{transform:rotate(360deg);}}
