@@ -44,7 +44,7 @@ except ImportError:
     DocxTemplate = None
 
 import requests
-from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file, flash, has_request_context, make_response
+from flask import Flask, request, redirect, url_for, jsonify, render_template, abort, send_file, flash, has_request_context, make_response, g
 
 import zipfile
 from io import BytesIO
@@ -62,7 +62,22 @@ _BACKGROUND_TASKS_LOCK = threading.Lock()
 _BACKGROUND_TASKS_LAST_RUN_AT = 0.0
 _BACKGROUND_TASKS_MIN_INTERVAL_SECONDS = int(os.environ.get("BACKGROUND_TASKS_MIN_INTERVAL_SECONDS", "300"))
 
-def _rss_mb() -> float:
+def _current_rss_mb() -> float:
+    try:
+        with open("/proc/self/status", "r", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    return float(line.split()[1]) / 1024
+    except Exception:
+        pass
+    try:
+        with open("/proc/self/statm", "r", encoding="utf-8") as f:
+            pages = int((f.read().split() or ["0", "0"])[1])
+        return pages * os.sysconf("SC_PAGE_SIZE") / (1024 * 1024)
+    except Exception:
+        return -1.0
+
+def _peak_rss_mb() -> float:
     if resource is not None:
         try:
             usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
@@ -71,30 +86,37 @@ def _rss_mb() -> float:
             return usage / 1024
         except Exception:
             pass
-    try:
-        with open("/proc/self/statm", "r", encoding="utf-8") as f:
-            pages = int((f.read().split() or ["0"])[1])
-        return pages * os.sysconf("SC_PAGE_SIZE") / (1024 * 1024)
-    except Exception:
-        return -1.0
+    return _current_rss_mb()
+
+def _rss_mb() -> float:
+    return _current_rss_mb()
 
 def _current_route_for_log() -> str:
     if has_request_context():
         return request.path or ""
     return "-"
 
-def _log_memory_stage(stage: str, started_at: Optional[float] = None, route: Optional[str] = None) -> None:
+def _log_memory_stage(stage: str, started_at: Optional[float] = None, route: Optional[str] = None, baseline_mb: Optional[float] = None) -> float:
+    current_rss_mb = _current_rss_mb()
+    peak_rss_mb = _peak_rss_mb()
     duration_ms = 0.0 if started_at is None else (time.monotonic() - started_at) * 1000
+    delta_mb = 0.0 if baseline_mb is None else current_rss_mb - baseline_mb
+    message = (
+        f"MEMORY stage={stage} current_rss_mb={current_rss_mb:.1f} "
+        f"peak_rss_mb={peak_rss_mb:.1f} delta_mb={delta_mb:.1f} "
+        f"duration_ms={duration_ms:.1f}"
+    )
+    print(message, file=sys.stderr, flush=True)
     logging.getLogger(__name__).info(
-        "MEMORY stage=%s pid=%s route=%s rss_mb=%.1f duration_ms=%.1f",
-        stage,
+        "%s pid=%s route=%s",
+        message,
         os.getpid(),
         route if route is not None else _current_route_for_log(),
-        _rss_mb(),
-        duration_ms,
     )
+    return current_rss_mb
 
-_log_memory_stage("APP_IMPORT_BEGIN", _APP_IMPORT_STARTED_AT, "-")
+_log_memory_stage("IMPORT_BEGIN", _APP_IMPORT_STARTED_AT, "-")
+_log_memory_stage("AFTER_IMPORTS", _APP_IMPORT_STARTED_AT, "-")
 
 def _install_shutdown_diagnostics() -> None:
     def _signal_handler(signum, frame):
@@ -126,7 +148,7 @@ app = Flask(__name__)
 DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(DEFAULT_MAX_UPLOAD_BYTES)))
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
-_log_memory_stage("APP_IMPORT_END", _APP_IMPORT_STARTED_AT, "-")
+_log_memory_stage("AFTER_FLASK_CREATION", _APP_IMPORT_STARTED_AT, "-")
 
 
 @app.before_request
@@ -134,6 +156,7 @@ def _log_request_begin_memory():
     if request.path == "/healthz":
         return None
     setattr(request, _REQUEST_STARTED_AT_KEY, time.monotonic())
+    g.load_data_call_count = 0
     _log_memory_stage("REQUEST_BEGIN")
     return None
 
@@ -2394,6 +2417,7 @@ _storage_startup_logged = False
 
 UPLOADS_DIR = os.path.join(PERSIST_DIR, "uploads")
 os.makedirs(UPLOADS_DIR, exist_ok=True)
+_log_memory_stage("AFTER_STORAGE_CONFIGURATION", _APP_IMPORT_STARTED_AT, "-")
 
 PARTNER_STORAGE_CATEGORIES = {"stagiaires", "contrats", "conventions", "signatures", "factures", "logos", "documents"}
 INTEGRALE_PARTNER_ID = "11111111-1111-4111-8111-111111111111"
@@ -2517,12 +2541,15 @@ def _ensure_multi_partner_payload(data: Dict[str, Any]) -> bool:
 
 
 def _filter_data_for_partner(data: Dict[str, Any], partner_id: str) -> Dict[str, Any]:
-    scoped = copy.deepcopy(data)
-    scoped["sessions"] = [s for s in scoped.get("sessions", []) if not isinstance(s, dict) or s.get("partner_id") == partner_id]
-    scoped["users"] = [u for u in scoped.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id]
+    # Avoid copy.deepcopy(data): partner requests only need a shallow top-level
+    # payload with filtered collection lists. Deep-copying the full production
+    # JSON temporarily duplicated every nested trainee/session/document object.
+    scoped = dict(data)
+    scoped["sessions"] = [s for s in data.get("sessions", []) if not isinstance(s, dict) or s.get("partner_id") == partner_id]
+    scoped["users"] = [u for u in data.get("users", []) if isinstance(u, dict) and u.get("partner_id") == partner_id]
     for key in ("positioning_tests", "notifications_edof", "notifications_financement_refuse", "notifications_prelevements", "notifications_prelevement_non_valides", "notifications_phone_relances", "notifications_vae_relances", "notifications_cnaps_pre_relances", "notifications_test_fr", "notifications_convention_unsigned", "notifications_vtc_books", "notifications_admin"):
-        if isinstance(scoped.get(key), list):
-            scoped[key] = [x for x in scoped[key] if not isinstance(x, dict) or x.get("partner_id") == partner_id]
+        if isinstance(data.get(key), list):
+            scoped[key] = [x for x in data[key] if not isinstance(x, dict) or x.get("partner_id") == partner_id]
     return scoped
 
 
@@ -6549,7 +6576,9 @@ def run_deferred_background_tasks(data: Dict[str, Any], force: bool = False) -> 
 
 def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
     load_started_at = time.monotonic()
-    _log_memory_stage("BEFORE_LOAD_DATA", route=_current_route_for_log())
+    if has_request_context():
+        g.load_data_call_count = getattr(g, "load_data_call_count", 0) + 1
+    baseline_mb = _log_memory_stage("LOAD_DATA_BEGIN", load_started_at, _current_route_for_log())
     if not os.path.exists(DATA_FILE):
         recovered_from = _recover_data_file(DATA_FILE)
         if recovered_from:
@@ -6566,7 +6595,9 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
         _log_memory_stage("AFTER_LOAD_DATA", load_started_at, _current_route_for_log())
         return _filter_data_for_partner(base, _current_partner_id()) if _is_partner_scoped_session() else base
 
+    _log_memory_stage("BEFORE_JSON_LOAD", load_started_at, _current_route_for_log(), baseline_mb)
     data = _load_valid_json_payload(DATA_FILE)
+    baseline_mb = _log_memory_stage("AFTER_JSON_LOAD", load_started_at, _current_route_for_log(), baseline_mb)
     if data is None:
         recovered_from = _recover_data_file(DATA_FILE)
         if recovered_from:
@@ -6584,10 +6615,12 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
         # ✅ Assure que tous les stagiaires ont un public_token
         if ensure_public_tokens(data):
             changed = True
+        baseline_mb = _log_memory_stage("NORMALIZATION ensure_public_tokens", load_started_at, _current_route_for_log(), baseline_mb)
 
         # ✅ IMPORTANT : normalise en "trainees" partout (sinon admin/public désynchronisés)
         if normalize_sessions_schema(data):
             changed = True
+        baseline_mb = _log_memory_stage("NORMALIZATION normalize_sessions_schema", load_started_at, _current_route_for_log(), baseline_mb)
 
         if "positioning_tests" not in data:
             data["positioning_tests"] = []
@@ -6638,11 +6671,14 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
 
         if _ensure_multi_partner_payload(data):
             changed = True
+        baseline_mb = _log_memory_stage("NORMALIZATION _ensure_multi_partner_payload", load_started_at, _current_route_for_log(), baseline_mb)
         if normalize_all_partner_subscriptions(data):
             changed = True
+        baseline_mb = _log_memory_stage("NORMALIZATION normalize_all_partner_subscriptions", load_started_at, _current_route_for_log(), baseline_mb)
 
         if run_background_tasks and run_deferred_background_tasks(data):
             changed = True
+        baseline_mb = _log_memory_stage("NORMALIZATION run_deferred_background_tasks", load_started_at, _current_route_for_log(), baseline_mb)
 
         for session_obj in (data.get("sessions") or []):
             for trainee in _session_trainees_list(session_obj):
@@ -6665,6 +6701,8 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
                 if _sync_vtc_book_notification(data, session_obj, trainee):
                     changed = True
 
+        baseline_mb = _log_memory_stage("NORMALIZATION vae_action_dates_and_vtc_book_notifications", load_started_at, _current_route_for_log(), baseline_mb)
+
         if changed:
             save_data(data)
 
@@ -6672,9 +6710,13 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
         app.logger.exception("Post-processing failed for %s; returning current in-memory data without reset", DATA_FILE)
 
     _log_refused_user_password_hashes(data)
+    baseline_mb = _log_memory_stage("AFTER_PASSWORD_HASH_INSPECTION", load_started_at, _current_route_for_log(), baseline_mb)
     _log_storage_state(data)
-    _log_memory_stage("AFTER_LOAD_DATA", load_started_at, _current_route_for_log())
-    return _filter_data_for_partner(data, _current_partner_id()) if _is_partner_scoped_session() else data
+    _log_memory_stage("BEFORE_PARTNER_FILTER", load_started_at, _current_route_for_log(), baseline_mb)
+    result = _filter_data_for_partner(data, _current_partner_id()) if _is_partner_scoped_session() else data
+    _log_memory_stage("AFTER_PARTNER_FILTER", load_started_at, _current_route_for_log(), baseline_mb)
+    _log_memory_stage("LOAD_DATA_END", load_started_at, _current_route_for_log())
+    return result
 
 
 def save_data(data: Dict[str, Any]) -> None:
@@ -12991,7 +13033,10 @@ def activate_account():
 @app.get("/admin/sessions")
 @admin_login_required
 def admin_sessions():
+    admin_sessions_started_at = time.monotonic()
+    _log_memory_stage("ADMIN_SESSIONS_BEGIN", admin_sessions_started_at, "/admin/sessions")
     data = load_data()
+    _log_memory_stage("ADMIN_SESSIONS_AFTER_LOAD_DATA", admin_sessions_started_at, "/admin/sessions")
     wedof_new_requests_count = sum(1 for item in _load_wedof_webhooks() if not bool(item.get("processed")))
     out_sessions = []
     current_year = datetime.date.today().year
@@ -13223,6 +13268,7 @@ def admin_sessions():
             "exclude_from_sales_tracking": bool(s.get("exclude_from_sales_tracking")),
         })
 
+    _log_memory_stage("ADMIN_SESSIONS_BEFORE_RENDER", admin_sessions_started_at, "/admin/sessions")
     response = make_response(render_template(
         "admin_sessions.html",
         sessions=out_sessions,
@@ -13233,6 +13279,8 @@ def admin_sessions():
         wedof_new_requests_count=wedof_new_requests_count,
     ))
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    _log_memory_stage("ADMIN_SESSIONS_AFTER_RENDER", getattr(request, _REQUEST_STARTED_AT_KEY, None), "/admin/sessions")
+    app.logger.info("LOAD_DATA_CALLS route=/admin/sessions count=%s", getattr(g, "load_data_call_count", 0))
     response.headers["Pragma"] = "no-cache"
     return response
 
@@ -31800,6 +31848,9 @@ def admin_sessions_slash_redirect():
     return redirect(url_for("admin_sessions"), code=301)
 
 
+
+_log_memory_stage("AFTER_ROUTE_REGISTRATION", _APP_IMPORT_STARTED_AT, "-")
+_log_memory_stage("IMPORT_END_REAL", _APP_IMPORT_STARTED_AT, "-")
 
 if __name__ == "__main__":
     debug_enabled = os.environ.get("FLASK_DEBUG", "0") == "1"
