@@ -87,6 +87,31 @@ class PartnerSubscriptionSpaceTests(unittest.TestCase):
         html = self.client.get("/admin/sessions").get_data(as_text=True)
         self.assertIn(partner["logo_url"], html)
 
+
+    def test_automations_dashboard_trainee_name_links_to_admin_trainee_page(self):
+        data = gestion_app.load_data()
+        data["sessions"][0].update({
+            "date_start": "2026-07-20",
+            "name": "Session APS été",
+            "trainees": [{
+                "id": "trainee-link",
+                "partner_id": self.partner_a,
+                "first_name": "Alice",
+                "last_name": "Martin",
+                "email": "alice@example.com",
+            }],
+        })
+        gestion_app.save_data(data)
+
+        self._login_admin()
+        html = self.client.get("/admin/sessions/automatisations").get_data(as_text=True)
+
+        self.assertIn(
+            '<a class="person" href="${esc(r.trainee_url)}">${esc(r.trainee_name)}</a>',
+            html,
+        )
+        self.assertIn('"trainee_url": "/admin/sessions/session-a/stagiaires/trainee-link"', html)
+
     def test_partner_subscription_page_shows_current_subscription_only(self):
         self._login_partner()
         html = self.client.get("/admin/partner/abonnement").get_data(as_text=True)
