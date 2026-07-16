@@ -221,6 +221,43 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertEqual(fake_data["sessions"][0]["trainees"][0]["convention_signed_seen_at"], "2026-07-16T10:00:00Z")
         self.assertEqual(api_after_response.get_json()["count"], 0)
 
+    def test_signed_conventions_unseen_api_and_page_acknowledgement(self):
+        fake_data = {
+            "sessions": [
+                {
+                    "id": "S-APS",
+                    "name": "Session APS",
+                    "training_type": "APS",
+                    "date_start": "2026-09-01",
+                    "date_end": "2026-09-15",
+                    "trainees": [
+                        {
+                            "id": "T1",
+                            "last_name": "SIGNEE",
+                            "first_name": "Sarah",
+                            "convention_status": "signed",
+                            "convention_aps_status": "signed",
+                            "convention_aps_pdf_path": "unsigned.pdf",
+                            "convention_signature": {"status": "done", "signed_at": "2026-07-16T10:00:00Z"},
+                        }
+                    ],
+                }
+            ]
+        }
+        saved_payloads = []
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data), patch.object(gestion_app, "save_data", side_effect=lambda data: saved_payloads.append(data)):
+            api_response = self.client.get("/api/conventions_signed_unseen")
+            page_response = self.client.get("/admin/sessions/conventions")
+            api_after_response = self.client.get("/api/conventions_signed_unseen")
+
+        self.assertEqual(api_response.status_code, 200)
+        self.assertEqual(api_response.get_json()["count"], 1)
+        self.assertEqual(page_response.status_code, 200)
+        self.assertTrue(saved_payloads)
+        self.assertEqual(fake_data["sessions"][0]["trainees"][0]["convention_signed_seen_at"], "2026-07-16T10:00:00Z")
+        self.assertEqual(api_after_response.get_json()["count"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()
