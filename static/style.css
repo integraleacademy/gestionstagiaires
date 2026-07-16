@@ -1470,10 +1470,10 @@ input[type="file"]{
   background: #86efac !important;
 }
 
-/* ORANGE = commentaire (optionnel) */
+/* Les commentaires ne colorent plus toute la ligne : on garde le fond neutre. */
 #traineesTable tr.row-warning,
 #traineesTable tr.row-warning td{
-  background: #fed7aa !important;
+  background: #ffffff !important;
 }
 
 /* PAS de hover qui recolorie */
@@ -2861,31 +2861,31 @@ body.partner-sidebar-collapsed .sidebar-search-badge{right:-9px;bottom:-8px;}
   body.admin-sidebar-active.partner-sidebar-collapsed .sidebar-search-badge{right:-8px;bottom:-7px;}
 }
 
-/* Compact the admin trainees workspace without page-level scaling. */
+/* Page stagiaires admin : affichage plus lisible, sans effet de dézoom. */
 @media (min-width:861px){
-  body.endpoint-admin-trainees .breadcrumbs{margin:0 0 8px;font-size:13px;}
-  body.endpoint-admin-trainees .session-header{gap:12px;margin:0 0 10px;padding:14px 16px;border-radius:18px;}
-  body.endpoint-admin-trainees .session-header h1{font-size:clamp(22px,2vw,30px);line-height:1.05;margin:0 0 6px;}
-  body.endpoint-admin-trainees .meta-line{gap:7px;font-size:12.5px;}
-  body.endpoint-admin-trainees .session-stats{gap:8px;}
-  body.endpoint-admin-trainees .stat{min-height:58px;padding:9px 11px;border-radius:14px;}
-  body.endpoint-admin-trainees .stat-title{font-size:11px;}
-  body.endpoint-admin-trainees .stat-value{font-size:18px;line-height:1.1;}
-  body.endpoint-admin-trainees .stat-sub{font-size:10.5px;line-height:1.15;}
-  body.endpoint-admin-trainees .page-head{margin:8px 0 10px!important;}
-  body.endpoint-admin-trainees .page-head h2{font-size:20px;}
-  body.endpoint-admin-trainees .page-head [style*="gap:10px"]{gap:7px!important;}
+  body.endpoint-admin-trainees .breadcrumbs{margin:0 0 10px;font-size:14px;}
+  body.endpoint-admin-trainees .session-header{gap:14px;margin:0 0 14px;padding:18px 20px;border-radius:20px;}
+  body.endpoint-admin-trainees .session-header h1{font-size:clamp(28px,2.45vw,36px);line-height:1.08;margin:0 0 8px;}
+  body.endpoint-admin-trainees .meta-line{gap:9px;font-size:14px;}
+  body.endpoint-admin-trainees .session-stats{gap:10px;}
+  body.endpoint-admin-trainees .stat{min-height:66px;padding:12px 14px;border-radius:16px;}
+  body.endpoint-admin-trainees .stat-title{font-size:12px;}
+  body.endpoint-admin-trainees .stat-value{font-size:22px;line-height:1.1;}
+  body.endpoint-admin-trainees .stat-sub{font-size:11.5px;line-height:1.2;}
+  body.endpoint-admin-trainees .page-head{margin:12px 0 12px!important;}
+  body.endpoint-admin-trainees .page-head h2{font-size:24px;}
+  body.endpoint-admin-trainees .page-head [style*="gap:10px"]{gap:9px!important;}
   body.endpoint-admin-trainees .sel,
   body.endpoint-admin-trainees input,
-  body.endpoint-admin-trainees select{min-height:34px;padding:7px 9px;font-size:12.5px;}
-  body.endpoint-admin-trainees .btn{min-height:34px;padding:7px 10px;font-size:12.5px;}
-  body.endpoint-admin-trainees .table-wrap{margin-top:8px;}
+  body.endpoint-admin-trainees select{min-height:38px;padding:8px 11px;font-size:14px;}
+  body.endpoint-admin-trainees .btn{min-height:38px;padding:8px 12px;font-size:14px;}
+  body.endpoint-admin-trainees .table-wrap{margin-top:10px;}
   body.endpoint-admin-trainees .table th,
-  body.endpoint-admin-trainees .table td{padding:6px 7px;font-size:12px;line-height:1.22;}
-  body.endpoint-admin-trainees .mini-btn{min-height:28px;padding:5px 7px;font-size:11.5px;}
+  body.endpoint-admin-trainees .table td{padding:9px 10px;font-size:14px;line-height:1.3;}
+  body.endpoint-admin-trainees .mini-btn{min-height:30px;padding:6px 8px;font-size:12.5px;}
   body.endpoint-admin-trainees input.comment,
-  body.endpoint-admin-trainees textarea.comment{min-height:32px;padding:6px 8px;font-size:12px;}
-  body.endpoint-admin-trainees .card{padding:12px;border-radius:16px;}
+  body.endpoint-admin-trainees textarea.comment{min-height:36px;padding:8px 10px;font-size:14px;}
+  body.endpoint-admin-trainees .card{padding:14px;border-radius:18px;}
 }
 
 /* Overlay safety: closed overlays must never intercept clicks. */
