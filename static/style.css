@@ -3182,3 +3182,62 @@ body.admin-sidebar-active .admin-sidebar-notif-panel .notif-empty{
 .french-address-option__main{display:block;font-size:14px;font-weight:900;line-height:1.25;}
 .french-address-option__meta{display:block;margin-top:3px;color:#64748b;font-size:12px;font-weight:750;line-height:1.25;}
 .french-address-option:hover .french-address-option__meta,.french-address-option.is-active .french-address-option__meta{color:#9a3412;}
+
+/* Recherche rapide stagiaire/session: keep the same side-drawer layout as Import PRE CNAPS on every admin page. */
+.trainee-search-drawer{
+  inset:0 auto 0 0;
+  width:0;
+  padding:0;
+  background:transparent!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  align-items:stretch;
+  justify-content:flex-start;
+  pointer-events:none;
+  z-index:95;
+}
+.trainee-search-drawer.show{display:block!important;}
+.trainee-search-panel{
+  position:fixed;
+  left:calc(var(--partner-sidebar-open, 320px) + 18px);
+  top:18px;
+  bottom:18px;
+  width:min(470px, calc(100vw - var(--partner-sidebar-open, 320px) - 36px));
+  max-height:none!important;
+  overflow:hidden!important;
+  border:1px solid rgba(226,232,240,.92)!important;
+  border-radius:28px!important;
+  background:linear-gradient(180deg,#fff 0%,#f8fbff 100%)!important;
+  box-shadow:0 26px 70px rgba(15,23,42,.22),0 0 0 1px rgba(255,255,255,.8) inset!important;
+  transform:translateX(-18px) scale(.98);
+  opacity:0;
+  transition:transform .22s cubic-bezier(.2,.8,.2,1),opacity .18s ease,left var(--partner-sidebar-speed,250ms) ease,width var(--partner-sidebar-speed,250ms) ease;
+  pointer-events:auto;
+}
+.trainee-search-drawer.show .trainee-search-panel{transform:translateX(0) scale(1);opacity:1;}
+body.partner-sidebar-collapsed .trainee-search-panel{
+  left:calc(var(--partner-sidebar-closed, 80px) + 18px);
+  width:min(470px, calc(100vw - var(--partner-sidebar-closed, 80px) - 36px));
+}
+.trainee-search-panel::before{content:"";position:absolute;inset:0 0 auto;height:6px;background:linear-gradient(90deg,#ff6b1a,#2563eb,#22c55e);}
+.trainee-search-head{align-items:flex-start!important;padding:24px 24px 18px!important;}
+.trainee-search-kicker{display:inline-flex;margin-bottom:8px;color:#2563eb;font-size:11px;font-weight:950;letter-spacing:.16em;text-transform:uppercase;}
+.trainee-search-title-wrap .modal-title{font-size:24px;font-weight:950;letter-spacing:-.04em;}
+.trainee-search-close{box-shadow:0 10px 24px rgba(15,23,42,.08);}
+.trainee-search-body{display:flex;min-height:0;flex:1;flex-direction:column;gap:16px;padding:20px 24px 24px!important;overflow:hidden!important;}
+.trainee-search-field{position:relative;}
+.trainee-search-field-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#2563eb;font-size:25px;font-weight:950;line-height:1;}
+.trainee-search-field input{width:100%;box-sizing:border-box;border:1px solid #dbe4f0;border-radius:18px;background:#fff;padding:16px 16px 16px 50px;color:#0f172a;font-size:16px;font-weight:800;outline:none;box-shadow:0 14px 28px rgba(15,23,42,.06),inset 0 1px 2px rgba(15,23,42,.04);}
+.trainee-search-field input:focus{border-color:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.14),0 18px 34px rgba(37,99,235,.12);}
+.trainee-search-results{display:none;min-height:0;flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:20px;box-shadow:0 16px 35px rgba(15,23,42,.07);overflow:hidden;}
+.trainee-search-results-inner{max-height:100%;overflow:auto;}
+.trainee-search-results .search-item{display:flex;justify-content:space-between;gap:10px;padding:14px 16px;align-items:center;border-top:1px solid #f1f5f9;color:inherit;text-decoration:none;}
+.trainee-search-results .search-item:first-child{border-top:none;}
+.trainee-search-results .search-item:hover{background:#f9fafb;}
+.trainee-search-results .search-name{color:#334155;font-size:15px;font-weight:900;letter-spacing:.01em;}
+.trainee-search-results .search-sub{color:#6b7280;font-size:12px;margin-top:2px;}
+.trainee-search-results .search-open{white-space:nowrap;display:flex;gap:8px;align-items:center;color:#15803d;font-weight:900;}
+.trainee-search-results .search-section-title{padding:12px 16px 8px;background:#f8fafc;color:#475569;font-size:12px;font-weight:900;letter-spacing:.02em;text-transform:uppercase;border-top:1px solid #e2e8f0;}
+.trainee-search-results .search-section-title:first-child{border-top:none;}
+.trainee-search-results .search-empty{padding:10px 12px;color:#94a3b8;font-size:13px;}
+@media (max-width:860px){.trainee-search-panel{left:12px!important;right:12px;top:76px;bottom:12px;width:auto!important;border-radius:24px!important;}}
