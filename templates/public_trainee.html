@@ -764,11 +764,12 @@
   .documents-upload-progress.is-complete .documents-upload-progress-track,.infos-completion-progress.is-complete .infos-completion-progress-track{background:#dcfce7;}
   .documents-upload-card .docs-stack{display:grid;gap:12px;margin-top:14px;}
   .documents-upload-card .docs-stack > .docrow{position:relative;display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:12px!important;padding:16px!important;border:1px solid #e6edf5!important;border-radius:18px!important;background:#fbfdff!important;box-shadow:0 8px 20px rgba(15,23,42,.04);}
-  .documents-upload-card .docs-stack > .docrow:before{content:"";position:absolute;left:16px;top:18px;width:38px;height:38px;border-radius:14px;background:#eff6ff;}
+  .documents-upload-card .docs-stack > .docrow:before{content:"✕";position:absolute;left:16px;top:18px;width:38px;height:38px;border-radius:14px;display:grid;place-items:center;background:#eff6ff;color:#1d4ed8;font-size:18px;font-weight:1000;line-height:1;}
+  .documents-upload-card .docs-stack > .docrow.valid:before{content:"✓";background:#ecfdf5;color:#047857;}
   .documents-upload-card .docs-stack > .docrow.missing{border-color:#fecaca!important;background:#fffafa!important;}
-  .documents-upload-card .docs-stack > .docrow.missing:before{background:#fef2f2;}
+  .documents-upload-card .docs-stack > .docrow.missing:before{content:"✕";background:#fef2f2;color:#b91c1c;}
   .documents-upload-card .docs-stack > .docrow.pending{border-color:#fed7aa!important;background:#fffdf8!important;}
-  .documents-upload-card .docs-stack > .docrow.pending:before{background:#fff7ed;}
+  .documents-upload-card .docs-stack > .docrow.pending:before{content:"⌛";background:#fff7ed;color:#9a3412;font-size:16px;}
   .documents-upload-card .docs-stack > details.docrow:not([open]){cursor:pointer;}
   .documents-upload-card .docs-stack > details.docrow:not([open]) .docmeta{display:none;}
   .documents-upload-card .docs-stack .docrow-summary{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-left:52px;list-style:none;cursor:pointer;}
@@ -1323,9 +1324,11 @@ La Chambre des Métiers vous adressera prochainement votre convocation, sous ré
 {% set show_upload = ((not has_file) or can_replace or complementary_documents_new_expected or (d.key in ["livret_2", "complementary_documents"] and can_add_more and not is_pending_review)) and not (d.key == "permis" and trainee.no_permis) %}
 
     {% set row_cls = "" if is_optional_doc else "missing" %}
-    {% if has_submission %}
+    {% if d.key == "permis" and trainee.no_permis %}
+      {% set row_cls = "valid" %}
+    {% elif has_submission %}
       {% if up == "CONFORME" %}
-        {% set row_cls = "" %}
+        {% set row_cls = "valid" %}
       {% elif up == "NON CONFORME" %}
         {% set row_cls = "missing" %}
       {% else %}
@@ -1600,7 +1603,7 @@ id="upload_{{ d.key }}"
     </details>    <!-- ferme .docrow -->
   {% endfor %}
   {% if show_professional_experience_sheet %}
-    <div class="docrow professional-experience-docrow {{ '' if trainee.professional_experience_sheet else 'missing' }}" id="doc_professional_experience_sheet" data-doc-required="true" data-doc-submitted="{{ 'true' if trainee.professional_experience_sheet else 'false' }}">
+    <div class="docrow professional-experience-docrow {{ 'valid' if trainee.professional_experience_sheet else 'missing' }}" id="doc_professional_experience_sheet" data-doc-required="true" data-doc-submitted="{{ 'true' if trainee.professional_experience_sheet else 'false' }}">
       <div class="docmeta">
         <button class="pro-sheet-launch{% if not trainee.professional_experience_sheet %} needs-attention{% else %} is-sent{% endif %}" type="button"{% if trainee.professional_experience_sheet %} disabled aria-disabled="true"{% else %} data-pro-sheet-open{% endif %}>
           <span class="pro-sheet-launch-icon" aria-hidden="true">✦</span>
