@@ -14218,6 +14218,13 @@ def _automation_status_tone(status: str) -> str:
     return "pending"
 
 
+
+def _automation_dashboard_block_reason(convention: Dict[str, Any], convocation: Dict[str, Any]) -> str:
+    if (convention.get("status") or "") == "not_generated":
+        return "En attente de génération de la convention"
+    return convocation.get("block_reason") or ""
+
+
 def _build_automations_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
     rows = []
     stats = {"trainees": 0, "complete": 0, "in_progress": 0, "blocked": 0, "errors": 0, "documents_ready": 0}
@@ -14276,7 +14283,7 @@ def _build_automations_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
                 "convocation_tone": convocation.get("tone") or _automation_status_tone(convocation.get("status") or ""),
                 "convocation_date": convocation.get("sent_at") or convocation.get("generated_at") or "",
                 "planned_automations": automation.get("planned_automations") or [],
-                "block_reason": convocation.get("block_reason") or "",
+                "block_reason": _automation_dashboard_block_reason(convention, convocation),
                 "error": convention.get("error") or convocation.get("error") or "",
                 "trainee_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
             }
