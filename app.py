@@ -13307,6 +13307,61 @@ def admin_cash_payments():
     response.headers["Pragma"] = "no-cache"
     return response
 
+
+def _signed_conventions_unseen_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Return signed conventions that have not yet been acknowledged from the sidebar."""
+    items: List[Dict[str, Any]] = []
+    for sess in data.get("sessions", []):
+        if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
+            continue
+        session_id = str(sess.get("id") or "")
+        training_type = _session_get(sess, "training_type", "")
+        formation_display_label = formation_label(training_type)
+        for trainee_index, trainee in enumerate(_session_trainees_list(sess)):
+            trainee_id = str(trainee.get("id") or f"trainee-{trainee_index + 1}")
+            state = _yousign_state(trainee)
+            signed_at = str(state.get("signed_at") or trainee.get("convention_aps_signed_at") or "").strip()
+            is_signed = (
+                _is_yousign_signature_done(state)
+                or bool(signed_at)
+                or (trainee.get("convention_aps_status") or "").strip().lower() == "signed"
+                or (trainee.get("convention_status") or "").strip().lower() == "signed"
+            )
+            if not is_signed:
+                continue
+            seen_at = str(trainee.get("convention_signed_seen_at") or "").strip()
+            if seen_at and (not signed_at or seen_at >= signed_at):
+                continue
+            items.append({
+                "session_id": session_id,
+                "session_name": _session_get(sess, "name", ""),
+                "training_type": training_type,
+                "formation": formation_display_label,
+                "trainee_id": trainee_id,
+                "last_name": trainee.get("last_name", ""),
+                "first_name": trainee.get("first_name", ""),
+                "signed_at": signed_at,
+                "admin_url": f"/admin/sessions/{session_id}/stagiaires/{trainee_id}",
+            })
+    items.sort(key=lambda item: item.get("signed_at") or "", reverse=True)
+    return items
+
+
+def _mark_signed_conventions_seen(data: Dict[str, Any]) -> bool:
+    changed = False
+    now = _now_iso()
+    for item in _signed_conventions_unseen_items(data):
+        sess = find_session(data, item.get("session_id"))
+        if not sess:
+            continue
+        trainee = next((t for t in _session_trainees_list(sess) if str(t.get("id") or "") == str(item.get("trainee_id") or "")), None)
+        if not trainee:
+            continue
+        trainee["convention_signed_seen_at"] = item.get("signed_at") or now
+        trainee["updated_at"] = now
+        changed = True
+    return changed
+
 @app.get("/admin/sessions/conventions")
 @admin_login_required
 def admin_sessions_conventions():
@@ -13365,12 +13420,12 @@ def admin_sessions_conventions():
             if _refresh_yousign_convention_status_if_pending(data, sess, trainees, trainee):
                 data_changed = True
                 state = _yousign_state(trainee)
-            if not _has_generated_yousign_convention(trainee):
+            legacy_convention_status = (trainee.get("convention_status") or "").strip().lower()
+            if not _has_generated_yousign_convention(trainee) and legacy_convention_status not in {"soon", "signing", "signed"}:
                 continue
             automation = _build_trainee_automation_status(sess, trainee, session_id, trainee_id)
             convention = automation["convention"]
             status_key = convention.get("status") or "not_generated"
-            legacy_convention_status = (trainee.get("convention_status") or "").strip().lower()
             if not state.get("signature_request_id") and not state.get("unsigned_pdf_path") and not trainee.get("convention_aps_pdf_path"):
                 if legacy_convention_status == "signing":
                     status_key = "waiting_signature"
@@ -13443,6 +13498,8 @@ def admin_sessions_conventions():
             if row["download_url"] or row["signed_pdf_url"] or row["original_pdf_url"]:
                 stats["downloadable"] += 1
 
+    if _mark_signed_conventions_seen(data):
+        data_changed = True
     if data_changed:
         save_data(data)
     formation_options = [{"key": key, "label": label} for key, label in sorted(formation_options_by_key.items(), key=lambda item: item[1].lower())]
@@ -28154,6 +28211,12 @@ def admin_trainee_candidate_sheet_save(session_id: str, trainee_id: str):
     save_data(data)
 
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#doc_candidate_info_sheet")
+
+@app.get("/api/conventions_signed_unseen")
+@admin_login_required
+def api_conventions_signed_unseen():
+    items = _signed_conventions_unseen_items(load_data())
+    return jsonify({"ok": True, "items": items, "count": len(items)})
 
 @app.get("/api/docs_to_control")
 @admin_login_required

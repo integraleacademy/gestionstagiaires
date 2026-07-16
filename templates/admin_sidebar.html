@@ -19,7 +19,7 @@
 ]} %}
 {% set admin_tools_menu = {"label":"Outils","icon":"tool","badge":"","children":[
   {"label":"AFC","icon":"file","href":url_for('admin_afc'),"endpoints":["admin_afc"],"locked":False},
-  {"label":"Conventions","icon":"file","href":url_for('admin_sessions_conventions'),"endpoints":["admin_sessions_conventions"],"locked":not partner_has_module('automations')},
+  {"label":"Conventions","icon":"file","href":url_for('admin_sessions_conventions'),"endpoints":["admin_sessions_conventions"],"badge":"","badge_id":"sidebarConventionsSignedBadge","locked":not partner_has_module('automations')},
   {"label":"Automatisations","icon":"tool","href":url_for('admin_sessions_automations'),"endpoints":["admin_sessions_automations"],"locked":not partner_has_module('automations')},
   {"label":"Suivi des ventes","icon":"chart","href":url_for('admin_sales_tracking'),"endpoints":["admin_sales_tracking"],"locked":not partner_has_module('sales')},
   {"label":"Facturation","icon":"wallet","href":url_for('admin_sessions_billing'),"endpoints":["admin_sessions_billing"],"locked":not partner_has_module('billing')},

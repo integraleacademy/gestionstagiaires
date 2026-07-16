@@ -159,7 +159,7 @@
       {"label":"Session","icon":"folder","action":"open-session-search","endpoints":[],"locked":False}
     ]} %}
     {% set sidebar_tools_children = [
-      {"label":"Conventions","icon":"file","href":url_for('admin_sessions_conventions'),"endpoints":["admin_sessions_conventions"],"locked":not partner_has_module('automations')},
+      {"label":"Conventions","icon":"file","href":url_for('admin_sessions_conventions'),"endpoints":["admin_sessions_conventions"],"badge":"","badge_id":"sidebarConventionsSignedBadge","locked":not partner_has_module('automations')},
       {"label":"Automatisations","icon":"tool","href":url_for('admin_sessions_automations'),"endpoints":["admin_sessions_automations"],"locked":not partner_has_module('automations')},
       {"label":"Suivi des ventes","icon":"chart","href":url_for('admin_sales_tracking'),"endpoints":["admin_sales_tracking"],"locked":not partner_has_module('sales')},
       {"label":"Facturation","icon":"wallet","href":url_for('admin_sessions_billing'),"endpoints":["admin_sessions_billing"],"locked":not partner_has_module('billing')},
@@ -1187,6 +1187,33 @@
     window.addEventListener("focus", refreshSidebarDocsToControlBadge);
     document.addEventListener("visibilitychange", () => {
       if(!document.hidden) refreshSidebarDocsToControlBadge();
+    });
+  })();
+
+  (function initGlobalConventionsSignedBadge(){
+    const sidebarBadge = document.getElementById("sidebarConventionsSignedBadge");
+    if(!sidebarBadge) return;
+
+    async function refreshSidebarConventionsSignedBadge(){
+      try{
+        const response = await fetch("/api/conventions_signed_unseen", { headers: { "Accept": "application/json" } });
+        const payload = await response.json();
+        if(!response.ok || !payload.ok) throw new Error(payload.error || "request_failed");
+        const total = Number(payload.count || 0);
+        sidebarBadge.textContent = String(total);
+        sidebarBadge.style.display = total > 0 ? "inline-flex" : "none";
+        sidebarBadge.setAttribute("aria-label", `${total} convention(s) signée(s) à consulter`);
+      }catch(_error){
+        sidebarBadge.textContent = "!";
+        sidebarBadge.style.display = "inline-flex";
+        sidebarBadge.setAttribute("aria-label", "Impossible de charger les conventions signées");
+      }
+    }
+
+    refreshSidebarConventionsSignedBadge();
+    window.addEventListener("focus", refreshSidebarConventionsSignedBadge);
+    document.addEventListener("visibilitychange", () => {
+      if(!document.hidden) refreshSidebarConventionsSignedBadge();
     });
   })();
 
