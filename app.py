@@ -20150,6 +20150,50 @@ def public_download_file(token: str, file_token: str):
     return send_file(full, as_attachment=False)
 
 
+@app.get("/espace/<token>/factures/<line_id>")
+def public_trainee_invoice_pdf(token: str, line_id: str):
+    data = load_data()
+    session_obj, trainee = find_session_and_trainee_by_token(data, token)
+    if not session_obj or not trainee:
+        abort(404)
+    if not _public_is_authed(token):
+        return redirect(url_for("public_trainee_login", token=token))
+
+    line = _find_billing_line(data, line_id)
+    if not line:
+        abort(404)
+    if str(line.get("sessionId") or "") != str(session_obj.get("id") or ""):
+        abort(403)
+    if str(line.get("traineeId") or "") != str(trainee.get("id") or trainee.get("trainee_id") or ""):
+        abort(403)
+
+    invoice_id = str(line.get("qontoInvoiceId") or line.get("qontoDraftId") or "").strip()
+    if not invoice_id:
+        abort(404)
+    status = _normalize_billing_invoice_status(line.get("invoiceStatus"))
+    if status not in {"draft", "finalized", "sent", "paid"}:
+        abort(404)
+
+    try:
+        pdf_content, filename = fetch_qonto_client_invoice_pdf(invoice_id)
+    except QontoConfigurationError:
+        abort(503)
+    except QontoNotFoundError:
+        abort(404)
+    except QontoPdfUnavailableError as exc:
+        abort(getattr(exc, "status_code", 502), str(exc))
+
+    safe_filename = secure_filename(filename) or f"facture-qonto-{secure_filename(invoice_id) or 'facture'}.pdf"
+    return Response(
+        pdf_content,
+        mimetype="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{safe_filename}"',
+            "Cache-Control": "private, no-store",
+        },
+    )
+
+
 def _public_trainee_last_names(trainee: Dict[str, Any]) -> set[str]:
     names = {
         _norm_lastname(trainee.get("last_name", "")),
@@ -23083,6 +23127,38 @@ def _vae_extract_trainee_token_from_referer(referer: str) -> str:
     return token
 
 
+
+def _public_invoice_lines_for_trainee(data: Dict[str, Any], session_obj: Dict[str, Any], trainee: Dict[str, Any]) -> List[Dict[str, Any]]:
+    session_id = str(session_obj.get("id") or "")
+    trainee_id = str(trainee.get("id") or trainee.get("trainee_id") or "")
+    if not session_id or not trainee_id:
+        return []
+
+    visible_statuses = {"draft", "finalized", "sent", "paid"}
+    invoices: List[Dict[str, Any]] = []
+    for line in _billing_lines(data):
+        if str(line.get("sessionId") or "") != session_id:
+            continue
+        if str(line.get("traineeId") or "") != trainee_id:
+            continue
+        invoice_id = str(line.get("qontoInvoiceId") or line.get("qontoDraftId") or "").strip()
+        status = _normalize_billing_invoice_status(line.get("invoiceStatus"))
+        if not invoice_id or status not in visible_statuses:
+            continue
+        invoices.append({
+            "id": str(line.get("id") or ""),
+            "invoice_id": invoice_id,
+            "number": str(line.get("qontoInvoiceNumber") or invoice_id),
+            "status": status,
+            "status_label": _billing_status_label(status),
+            "amount": _money(line.get("amountTTC") or line.get("amount") or 0),
+            "amount_label": _format_euro(line.get("amountTTC") or line.get("amount") or 0),
+            "financeur": str(line.get("financeurName") or line.get("financingLabel") or line.get("financingType") or "").strip(),
+            "generated_at": str(line.get("finalizedAt") or line.get("invoiceGeneratedAt") or line.get("createdAt") or ""),
+        })
+    invoices.sort(key=lambda item: item.get("generated_at") or "", reverse=True)
+    return invoices
+
 @app.get("/espace/<token>")
 def public_trainee_space(token):
     data = load_data()
@@ -23147,6 +23223,7 @@ def public_trainee_space(token):
 
     ssiap_exam_date = str(_session_get(s, "ssiap_exam_date", "") or "").strip() or str(t.get("ssiap_exam_date") or "").strip()
     ssiap_medical_from_date = _subtract_months(ssiap_exam_date, 3) if ssiap_exam_date else ""
+    public_invoices = _public_invoice_lines_for_trainee(data, s, t)
 
     return render_template(
         "public_trainee.html",
@@ -23164,6 +23241,7 @@ def public_trainee_space(token):
         vae_required_docs_deposited=required_docs_are_deposited(t, training_type, _session_get(s, "date_start", "")),
         ssiap_exam_date=ssiap_exam_date,
         ssiap_medical_from_date=ssiap_medical_from_date,
+        public_invoices=public_invoices,
     )
 
 
