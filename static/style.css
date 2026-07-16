@@ -2924,7 +2924,8 @@ body.partner-sidebar-collapsed .sidebar-search-badge{right:-9px;bottom:-8px;}
   justify-content:center;
   min-height:52px;
   overflow:hidden;
-  animation:sidebarCreatePulse 1.9s ease-in-out infinite;
+  isolation:isolate;
+  animation:sidebarCreatePulse 1.8s ease-in-out infinite;
 }
 .partner-sidebar__item.is-primary .sidebar-icon-wrap{
   width:24px;
@@ -2939,6 +2940,25 @@ body.partner-sidebar-collapsed .sidebar-search-badge{right:-9px;bottom:-8px;}
   width:24px;
   height:24px;
   display:block;
+  animation:sidebarCreateIconBounce 1.8s ease-in-out infinite;
+}
+.partner-sidebar__item.is-primary::before{
+  content:"";
+  position:absolute;
+  inset:-45%;
+  z-index:-1;
+  background:linear-gradient(120deg, transparent 38%, rgba(255,255,255,.42) 50%, transparent 62%);
+  transform:translateX(-70%) rotate(12deg);
+  animation:sidebarCreateShine 2.4s ease-in-out infinite;
+}
+.partner-sidebar__item.is-primary::after{
+  content:"";
+  position:absolute;
+  inset:4px;
+  border-radius:inherit;
+  border:1px solid rgba(255,255,255,.28);
+  opacity:.72;
+  pointer-events:none;
 }
 .partner-sidebar__item.is-primary .partner-sidebar__label,
 .partner-sidebar__item.is-primary .partner-sidebar__action{
@@ -2955,10 +2975,22 @@ body.partner-sidebar-collapsed .sidebar-search-badge{right:-9px;bottom:-8px;}
 }
 @keyframes sidebarCreatePulse{
   0%,100%{box-shadow:0 10px 20px rgba(22,163,74,.22);filter:brightness(1);}
-  50%{box-shadow:0 16px 34px rgba(22,163,74,.38),0 0 0 6px rgba(34,197,94,.10);filter:brightness(1.05);}
+  50%{box-shadow:0 16px 34px rgba(22,163,74,.40),0 0 0 8px rgba(34,197,94,.13);filter:brightness(1.06);}
+}
+@keyframes sidebarCreateIconBounce{
+  0%,100%{transform:scale(1) rotate(0deg);}
+  45%{transform:scale(1.16) rotate(90deg);}
+  70%{transform:scale(1.04) rotate(90deg);}
+}
+@keyframes sidebarCreateShine{
+  0%,42%{transform:translateX(-70%) rotate(12deg);opacity:0;}
+  55%{opacity:1;}
+  78%,100%{transform:translateX(70%) rotate(12deg);opacity:0;}
 }
 @media (prefers-reduced-motion:reduce){
-  .partner-sidebar__item.is-primary{animation:none;}
+  .partner-sidebar__item.is-primary,
+  .partner-sidebar__item.is-primary .sidebar-icon,
+  .partner-sidebar__item.is-primary::before{animation:none;}
 }
 
 /* Admin sidebar refinements: keep create button centered and animated. */
@@ -2967,6 +2999,7 @@ body.admin-sidebar-active .partner-sidebar__item.is-primary{
   justify-content:center;
   min-height:52px;
   overflow:hidden;
+  animation:sidebarCreatePulse 1.8s ease-in-out infinite;
   transition:background .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 body.admin-sidebar-active .partner-sidebar__item.is-primary .sidebar-icon-wrap{
@@ -2981,6 +3014,7 @@ body.admin-sidebar-active .partner-sidebar__item.is-primary .sidebar-icon{
   width:24px;
   height:24px;
   display:block;
+  animation:sidebarCreateIconBounce 1.8s ease-in-out infinite;
 }
 body.admin-sidebar-active .partner-sidebar__item.is-primary:hover,
 body.admin-sidebar-active .partner-sidebar__item.is-primary:focus-visible{
