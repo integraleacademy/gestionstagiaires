@@ -14064,7 +14064,8 @@ def admin_sessions_conventions():
     ]
     if selected_status == "signing":
         selected_status = "waiting_signature"
-    valid_statuses = {option["key"] for option in status_options}
+    virtual_statuses = {"action_required", "downloadable"}
+    valid_statuses = {option["key"] for option in status_options} | virtual_statuses
     if selected_status and selected_status not in valid_statuses:
         selected_status = ""
 
@@ -14119,7 +14120,15 @@ def admin_sessions_conventions():
                     convention["status"] = status_key
                     convention["label"] = "Signée"
                     convention["tone"] = "complete"
-            if selected_status and status_key != selected_status:
+            signed_pdf = bool(state.get("signed_pdf_path"))
+            original_pdf = bool(state.get("unsigned_pdf_path") or trainee.get("convention_aps_pdf_path"))
+            row_has_download = bool(convention.get("download_url") or signed_pdf or original_pdf)
+            row_needs_action = status_key in {"not_generated", "generated", "expired", "refused"}
+            if selected_status == "action_required" and not row_needs_action:
+                continue
+            if selected_status == "downloadable" and not row_has_download:
+                continue
+            if selected_status and selected_status not in virtual_statuses and status_key != selected_status:
                 continue
 
             full_name = f"{trainee.get('first_name','')} {trainee.get('last_name','')}".strip()
@@ -14130,8 +14139,6 @@ def admin_sessions_conventions():
             if selected_q and selected_q not in searchable:
                 continue
 
-            signed_pdf = bool(state.get("signed_pdf_path"))
-            original_pdf = bool(state.get("unsigned_pdf_path") or trainee.get("convention_aps_pdf_path"))
             is_problem = status_key in {"error", "expired", "refused"}
             row = {
                 "session_id": session_id,
@@ -14175,7 +14182,7 @@ def admin_sessions_conventions():
                 stats["waiting_signature"] += 1
             if status_key == "signed":
                 stats["signed"] += 1
-            if status_key in {"not_generated", "generated", "expired", "refused"}:
+            if row_needs_action:
                 stats["action_required"] += 1
             if is_problem:
                 stats["errors"] += 1
