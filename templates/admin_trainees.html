@@ -2009,6 +2009,7 @@ body.vae-analysis-filter-active #traineesTable .mini-btn{
     if(!el) return;
     el.classList.add("show");
     el.setAttribute("aria-hidden", "false");
+    window.dispatchEvent(new CustomEvent("modal:opened", {detail:{id, modal:el}}));
   }
 
   function closeModal(id){

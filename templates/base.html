@@ -549,6 +549,7 @@
     closeAllPanels({exceptId:id});
     el.classList.add("show");
     el.setAttribute("aria-hidden", "false");
+    window.dispatchEvent(new CustomEvent("modal:opened", {detail:{id, modal:el}}));
     el.style.display = (el.classList.contains("trainee-search-drawer") || el.classList.contains("docs-to-control-drawer")) ? "block" : "flex";
     el.style.pointerEvents = "auto";
     document.body.style.overflow = "hidden";
