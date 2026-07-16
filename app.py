@@ -27542,42 +27542,75 @@ def api_admin_billing_download(line_id: str):
         response.headers['Content-Disposition'] = f'inline; filename="{filename}"'
         return response
     except Exception as exc:
-        _billing_log(line, 'PDF téléchargé', 'error', _sanitize_qonto_error(str(exc)), line.get('qontoInvoiceId') or ''); _save_billing_line(data, line); save_data(data)
+        download_error = _sanitize_qonto_error(str(exc))
+        invoice_number = str(line.get('qontoInvoiceNumber') or '')
+        diagnostics = [f"download={download_error}"]
+        app.logger.warning(
+            "[QONTO] invoice download failed line_id=%s invoice_id=%s invoice_number=%s error=%s",
+            line_id, line.get('qontoInvoiceId') or '', invoice_number, download_error,
+        )
+        _billing_log(line, 'PDF Qonto indisponible', 'error', download_error, line.get('qontoInvoiceId') or '')
+        _save_billing_line(data, line); save_data(data)
         if _qonto_invoice_is_missing_error(exc):
             try:
                 invoice_payload = None
                 try:
                     invoice_payload = get_qonto_invoice(line['qontoInvoiceId'])
-                except Exception as refresh_by_id_exc:
                     app.logger.info(
-                        "[QONTO] invoice refresh by id failed line_id=%s invoice_id=%s error=%s",
-                        line_id, line.get('qontoInvoiceId'), refresh_by_id_exc,
+                        "[QONTO] invoice refresh by id succeeded line_id=%s invoice_id=%s has_pdf_url=%s",
+                        line_id, line.get('qontoInvoiceId'), bool(_find_qonto_pdf_url(invoice_payload)),
+                    )
+                except Exception as refresh_by_id_exc:
+                    by_id_error = _sanitize_qonto_error(str(refresh_by_id_exc))
+                    diagnostics.append(f"refresh_by_id={by_id_error}")
+                    app.logger.warning(
+                        "[QONTO] invoice refresh by id failed line_id=%s invoice_id=%s invoice_number=%s error=%s",
+                        line_id, line.get('qontoInvoiceId'), invoice_number, by_id_error,
                     )
                 pdf_url = _find_qonto_pdf_url(invoice_payload)
                 if not pdf_url:
-                    invoice_payload = find_qonto_invoice_by_number(line.get('qontoInvoiceNumber') or '')
-                    pdf_url = _find_qonto_pdf_url(invoice_payload)
+                    try:
+                        invoice_payload = find_qonto_invoice_by_number(invoice_number)
+                        pdf_url = _find_qonto_pdf_url(invoice_payload)
+                        diagnostics.append(f"refresh_by_number={'found' if invoice_payload else 'not_found'}")
+                        app.logger.info(
+                            "[QONTO] invoice refresh by number completed line_id=%s invoice_id=%s invoice_number=%s found=%s has_pdf_url=%s",
+                            line_id, line.get('qontoInvoiceId'), invoice_number, bool(invoice_payload), bool(pdf_url),
+                        )
+                    except Exception as refresh_by_number_exc:
+                        by_number_error = _sanitize_qonto_error(str(refresh_by_number_exc))
+                        diagnostics.append(f"refresh_by_number={by_number_error}")
+                        app.logger.warning(
+                            "[QONTO] invoice refresh by number failed line_id=%s invoice_id=%s invoice_number=%s error=%s",
+                            line_id, line.get('qontoInvoiceId'), invoice_number, by_number_error,
+                        )
+                        invoice_payload = None
                     if invoice_payload and invoice_payload.get('id'):
                         line['qontoInvoiceId'] = str(invoice_payload.get('id'))
                 if pdf_url:
                     line['invoicePdfUrl'] = pdf_url
                     line['qontoPdfUrl'] = pdf_url
                     line['invoiceDownloadedAt'] = _now_iso()
-                    _billing_log(line, 'Lien facture Qonto récupéré', 'success')
+                    _billing_log(line, 'Lien facture Qonto récupéré', 'success', 'URL PDF/public retrouvée après échec du téléchargement Qonto')
                     _save_billing_line(data, line)
                     save_data(data)
                     return redirect(pdf_url)
             except Exception as refresh_exc:
-                app.logger.info(
-                    "[QONTO] invoice public URL refresh failed line_id=%s invoice_id=%s error=%s",
-                    line_id, line.get('qontoInvoiceId'), refresh_exc,
+                refresh_error = _sanitize_qonto_error(str(refresh_exc))
+                diagnostics.append(f"refresh_unhandled={refresh_error}")
+                app.logger.warning(
+                    "[QONTO] invoice public URL refresh failed line_id=%s invoice_id=%s invoice_number=%s error=%s",
+                    line_id, line.get('qontoInvoiceId'), invoice_number, refresh_error,
                 )
+            diagnostic_message = "; ".join(diagnostics)
+            _billing_log(line, 'Diagnostic facture Qonto', 'error', diagnostic_message, line.get('qontoInvoiceId') or '')
+            _save_billing_line(data, line); save_data(data)
             return jsonify({
                 'ok': False,
                 'error': 'La vraie facture Qonto est indisponible pour le moment. Synchronisez Qonto ou vérifiez que la facture existe toujours dans Qonto.',
                 'qontoInvoiceId': line.get('qontoInvoiceId'),
             }), 404
-        return jsonify({'ok': False, 'error': _sanitize_qonto_error(str(exc)), 'qontoInvoiceId': line.get('qontoInvoiceId')}), 502
+        return jsonify({'ok': False, 'error': download_error, 'qontoInvoiceId': line.get('qontoInvoiceId')}), 502
 
 
 @app.post('/api/admin/billing-lines/bulk-download')
