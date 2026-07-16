@@ -27010,6 +27010,21 @@ def _normalize_billing_invoice_status(status: Any) -> str:
     return {'not_generated': 'not_invoiced', 'generated': 'finalized', 'unpaid': 'sent', 'missing': 'control', 'deleted': 'control', 'sync_error': 'control', 'error': 'control', 'external': 'external_generated', 'external_generated': 'external_generated', 'generated_externally': 'external_generated'}.get(value, value or 'not_invoiced')
 
 
+def _billing_status_label(status: Any) -> str:
+    normalized = _normalize_billing_invoice_status(status)
+    labels = {
+        "not_invoiced": "Non générée",
+        "draft": "Brouillon créé",
+        "finalized": "Facture générée",
+        "sent": "Facture envoyée",
+        "paid": "Payée",
+        "cancelled": "Annulée",
+        "control": "À contrôler",
+        "external_generated": "Générée hors plateforme",
+    }
+    return labels.get(normalized, normalized or "Non générée")
+
+
 def _financing_entries(trainee: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Return financing entries handled by the platform billing workflow.
 
