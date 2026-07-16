@@ -29346,6 +29346,8 @@ def _trainee_search_item(s: dict, t: dict) -> dict:
         "convention_signed_done": bool(t.get("convention_signed_done")),
         "test_fr_status": t.get("test_fr_status") or "soon",
         "admin_url": f"/admin/sessions/{session_id}/stagiaires/{trainee_id}",
+        "public_token": (t.get("public_token") or "").strip(),
+        "public_url": f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{(t.get('public_token') or '').strip()}",
     }
 
 
