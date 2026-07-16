@@ -4116,6 +4116,19 @@ def _cnaps_pending_status_change_count(data: Dict[str, Any]) -> int:
         if isinstance(item, dict) and not item.get("reviewed_at")
     )
 
+
+def _mark_cnaps_status_change_imported(data: Dict[str, Any], *, last_name: str, nub: str) -> bool:
+    key = _cnaps_status_change_key(last_name, nub)
+    notifications = data.get("cnaps_status_change_notifications")
+    if not key or key == "|" or not isinstance(notifications, dict):
+        return False
+    item = notifications.get(key)
+    if not isinstance(item, dict) or item.get("reviewed_at"):
+        return False
+    item["reviewed_at"] = _now_iso()
+    item["reviewed_reason"] = "import_pre_cnaps"
+    return True
+
 def build_cnaps_status_change_email(first_name: str, last_name: str, nub: str, new_status: str) -> Tuple[str, str]:
     full_name = " ".join(part for part in [str(first_name or "").strip(), str(last_name or "").strip()] if part) or "Stagiaire"
     safe_name = html.escape(full_name)
@@ -28676,6 +28689,7 @@ def api_cnaps_import_pre_merge():
     session_id = (request.form.get("session_id") or "").strip()
     trainee_id = (request.form.get("trainee_id") or "").strip()
     pre_raw = (request.form.get("pre_number") or "").strip()
+    nub = (request.form.get("nub") or "").strip()
     uploaded = request.files.get("file")
 
     if not session_id or not trainee_id:
@@ -28706,12 +28720,13 @@ def api_cnaps_import_pre_merge():
     _attach_cnaps_to_trainee(t, training_type, pre_number, token, "Import PRE CNAPS fusionné", _session_get(s, "date_start", ""))
     t["cnaps_import_merged_once"] = True
     t["cnaps_import_merged_at"] = _now_iso()
+    _mark_cnaps_status_change_imported(data, last_name=t.get("last_name", ""), nub=nub)
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     save_data(data)
 
-    return jsonify({"ok": True, "pre_number": pre_number})
+    return jsonify({"ok": True, "pre_number": pre_number, "pending_status_changes_count": _cnaps_pending_status_change_count(data)})
 
 
 @app.post("/api/cnaps/import-pre/save")
@@ -28719,6 +28734,7 @@ def api_cnaps_import_pre_merge():
 @admin_write_required
 def api_cnaps_import_pre_save():
     pre_raw = (request.form.get("pre_number") or "").strip()
+    nub = (request.form.get("nub") or "").strip()
     last_name = _normalize_person_name(request.form.get("last_name") or "")
     first_name = _normalize_person_name(request.form.get("first_name") or "")
     uploaded = request.files.get("file")
@@ -28745,7 +28761,16 @@ def api_cnaps_import_pre_save():
     digest = hashlib.sha1(file_bytes).hexdigest()
     duplicate = next((x for x in pending if (x.get("sha1") or "") == digest), None)
     if duplicate:
-        return jsonify({"ok": True, "saved": True, "already_saved": True})
+        notification_reviewed = _mark_cnaps_status_change_imported(data, last_name=last_name, nub=nub)
+        if notification_reviewed:
+            save_data(data)
+        return jsonify({
+            "ok": True,
+            "saved": True,
+            "already_saved": True,
+            "notification_reviewed": notification_reviewed,
+            "pending_status_changes_count": _cnaps_pending_status_change_count(data),
+        })
 
     token = _store_cnaps_pending_pdf(file_bytes, uploaded.filename or "document.pdf")
     identifiers = _find_cnapsv3_identifier_for_pending(data, last_name, first_name)
@@ -28792,6 +28817,7 @@ def api_cnaps_import_pre_save():
     if not pending_item.get("email"):
         pending_item["email"] = _find_pending_trainee_email(data, last_name, first_name)
 
+    notification_reviewed = _mark_cnaps_status_change_imported(data, last_name=last_name, nub=nub)
     save_data(data)
 
     cnapsv3_match_found = bool(request_id or dossier_id)
@@ -28806,6 +28832,8 @@ def api_cnaps_import_pre_save():
         "already_saved": False,
         "cnapsv3_sync_ok": sync_ok,
         "cnapsv3_match_found": cnapsv3_match_found,
+        "notification_reviewed": notification_reviewed,
+        "pending_status_changes_count": _cnaps_pending_status_change_count(data),
     })
 
 

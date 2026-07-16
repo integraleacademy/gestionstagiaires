@@ -227,6 +227,57 @@ class CnapsImportPreSaveLookupTests(unittest.TestCase):
         self.assertEqual(called["lookup"], 1)
         self.assertEqual(called["accept"], 0)
 
+    def test_save_with_nub_marks_matching_status_change_notification_reviewed(self):
+        self._install_common_stubs()
+        self.data["cnaps_status_change_notifications"] = {
+            "DOE|1234567": {"signature": "Autorisation préalable - Surveillance humaine ou gardiennage • ACTIF"},
+            "OTHER|7654321": {"signature": "Autorisation préalable - Surveillance humaine ou gardiennage • ACTIF"},
+        }
+        saved = []
+        gestion_app.save_data = lambda data: saved.append(data.copy())
+        gestion_app.sync_cnapsv3_lookup_identifier = lambda *_, **__: None
+        gestion_app.sync_cnapsv3_accept_status = lambda **kwargs: True
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        response = self.client.post(
+            "/api/cnaps/import-pre/save",
+            data={
+                "pre_number": "PRE-1234-12-12-12345678901",
+                "first_name": "John",
+                "last_name": "Doe",
+                "nub": "1234567",
+                "file": (io.BytesIO(b"%PDF-1.4 fake notification"), "doc.pdf"),
+            },
+            content_type="multipart/form-data",
+        )
+        payload = response.get_json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(payload["notification_reviewed"])
+        self.assertEqual(payload["pending_status_changes_count"], 1)
+        self.assertIn("reviewed_at", self.data["cnaps_status_change_notifications"]["DOE|1234567"])
+        self.assertNotIn("reviewed_at", self.data["cnaps_status_change_notifications"]["OTHER|7654321"])
+        self.assertTrue(saved)
+
+    def test_save_without_matching_nub_keeps_status_change_notification_pending(self):
+        self._install_common_stubs()
+        self.data["cnaps_status_change_notifications"] = {
+            "DOE|1234567": {"signature": "Autorisation préalable - Surveillance humaine ou gardiennage • ACTIF"},
+        }
+        gestion_app.sync_cnapsv3_lookup_identifier = lambda *_, **__: None
+        gestion_app.sync_cnapsv3_accept_status = lambda **kwargs: True
+
+        response = self._post_save()
+        payload = response.get_json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(payload["notification_reviewed"])
+        self.assertEqual(payload["pending_status_changes_count"], 1)
+        self.assertNotIn("reviewed_at", self.data["cnaps_status_change_notifications"]["DOE|1234567"])
+
     def test_lookup_200_triggers_accept_with_request_id(self):
         self._install_common_stubs()
         accept_args = []
@@ -1782,6 +1833,8 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertNotIn("data-card-pro-refresh", html)
         self.assertIn("Rechercher une personne", html)
         self.assertIn("data-delete-cnaps-row", html)
+        self.assertIn("data-import-pre-cnaps-row", html)
+        self.assertIn("IMPORT PRE CNAPS", html)
         self.assertIn("DOE", html)
         self.assertIn("NUB123", html)
 
