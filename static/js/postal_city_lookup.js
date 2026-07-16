@@ -152,15 +152,41 @@
     return state;
   }
 
+  function escapeRegExp(value){ return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
+  function extractStreetAddressFromFulltext(fulltext, result){
+    let address = String(fulltext || "").replace(/\s+/g, " ").trim();
+    if(!address) return "";
+
+    const zipcode = String(result && result.zipcode || "").trim();
+    const city = String(result && result.city || "").trim();
+    if(zipcode && city){
+      address = address.replace(new RegExp(`\\s+${escapeRegExp(zipcode)}\\s+${escapeRegExp(city)}$`, "i"), "").trim();
+    }else if(zipcode){
+      address = address.replace(new RegExp(`\\s+${escapeRegExp(zipcode)}$`, "i"), "").trim();
+    }else if(city){
+      address = address.replace(new RegExp(`\\s+${escapeRegExp(city)}$`, "i"), "").trim();
+    }
+    return address;
+  }
+
+  function buildPostalAddress(result){
+    const houseNumber = String((result && (result.housenumber ?? result.number)) ?? "").trim();
+    const street = String(result && result.street || "").trim();
+
+    if(houseNumber && street) return `${houseNumber} ${street}`.trim();
+    if(street) return street;
+    return extractStreetAddressFromFulltext(result && result.fulltext || "", result);
+  }
+
   function mapAddressCompletionResult(result){
-    const fulltext = (result && result.fulltext || "").trim();
-    const street = (result && result.street || "").trim();
-    const zipcode = (result && result.zipcode || "").trim();
-    const city = (result && result.city || "").trim();
-    const kind = (result && result.kind || "").trim();
-    const address = street || fulltext.replace(new RegExp(`\\s+${zipcode}\\s+${city}$`, "i"), "").trim();
+    const fulltext = String(result && result.fulltext || "").trim();
+    const zipcode = String(result && result.zipcode || "").trim();
+    const city = String(result && result.city || "").trim();
+    const kind = String(result && result.kind || "").trim();
+    const address = buildPostalAddress(result || {});
     const label = fulltext || [address, zipcode, city].filter(Boolean).join(" ").trim();
-    return {address, postcode: zipcode, city, label, kind};
+    return {address, postcode: zipcode, city, label, kind, raw: result || {}};
   }
 
   function initFrenchAddressAutocomplete(options){
@@ -259,6 +285,7 @@
         const data = await response.json();
         if(requestId !== state.requestId || addressInput.value.trim() !== query) return;
         const results = Array.isArray(data.results) ? data.results : [];
+        if(results.length) console.debug("[ADDRESS] sample result", results[0]);
         const suggestions = results.map(mapAddressCompletionResult).filter(item=>item.label && item.postcode && item.city).slice(0, 6);
         console.debug("[ADDRESS] result count", suggestions.length);
         state.suggestions = suggestions;
@@ -318,6 +345,8 @@
   }
 
   window.setupPostalCityLookup = setupPostalCityLookup;
+  window.extractStreetAddressFromFulltext = extractStreetAddressFromFulltext;
+  window.buildPostalAddress = buildPostalAddress;
   window.initFrenchAddressAutocomplete = initFrenchAddressAutocomplete;
   window.initFrenchAddressAutocompletes = initFrenchAddressAutocompletes;
   window.initPostalCityLookups = initPostalCityLookups;

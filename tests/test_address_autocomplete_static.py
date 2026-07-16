@@ -65,3 +65,78 @@ def test_address_suggestions_positioning():
     assert 'z-index:10000' in CSS
     assert 'max-height:260px' in CSS
     assert 'overflow-y:auto' in CSS
+
+
+def test_build_postal_address_preserves_numbers_suffixes_and_fulltext_fallback():
+    assert 'function buildPostalAddress(result)' in JS
+    assert 'result.housenumber ?? result.number' in JS
+    assert 'parseInt' not in JS[JS.index('function buildPostalAddress'):JS.index('function mapAddressCompletionResult')]
+    assert '`${houseNumber} ${street}`.trim()' in JS
+    assert 'return extractStreetAddressFromFulltext(result && result.fulltext || "", result);' in JS
+    assert '650 Route d’Aumont' not in JS  # examples are covered by executable backend/static tests, not hardcoded behavior
+
+
+def test_fulltext_fallback_removes_only_trailing_zipcode_and_city():
+    block = JS[JS.index('function extractStreetAddressFromFulltext'):JS.index('function buildPostalAddress')]
+    assert 'function extractStreetAddressFromFulltext(fulltext, result)' in JS
+    assert 'replace(/\\s+/g, " ").trim()' in block
+    assert '${escapeRegExp(zipcode)}\\\\s+${escapeRegExp(city)}$' in block
+    assert 'replace(/\\D+/g' not in block
+
+
+def test_completion_result_keeps_raw_api_shape_for_diagnostics():
+    assert 'console.debug("[ADDRESS] sample result", results[0]);' in JS
+    assert 'housenumber' in JS
+    assert 'number' in JS
+    assert 'return {address, postcode: zipcode, city, label, kind, raw: result || {}};' in JS
+
+
+def test_selection_uses_built_address_not_street_directly():
+    mapping_block = JS[JS.index('function mapAddressCompletionResult'):JS.index('function initFrenchAddressAutocomplete')]
+    selection_block = JS[JS.index('function selectAddress'):JS.index('async function fetchAddresses')]
+    assert 'const address = buildPostalAddress(result || {});' in mapping_block
+    assert 'addressInput.value = item.address || item.label || "";' in selection_block
+    assert 'addressInput.value = selectedResult.street' not in JS
+    assert 'addressInput.value = item.street' not in JS
+
+
+def test_build_postal_address_executable_examples(tmp_path):
+    import json
+    import subprocess
+
+    cases = [
+        ({"housenumber": "650", "street": "Route d’Aumont"}, "650 Route d’Aumont"),
+        ({"housenumber": "12 bis", "street": "Rue des Écoles"}, "12 bis Rue des Écoles"),
+        ({"number": "4 ter", "street": "Avenue de la République"}, "4 ter Avenue de la République"),
+        ({"street": "Rue sans numéro"}, "Rue sans numéro"),
+        ({"housenumber": "8 quater", "street": "Impasse des Lilas"}, "8 quater Impasse des Lilas"),
+        ({"number": "12 bis", "street": "Rue des Écoles"}, "12 bis Rue des Écoles"),
+        ({"fulltext": "650 Route d’Aumont 15130 Arpajon-sur-Cère", "zipcode": "15130", "city": "Arpajon-sur-Cère"}, "650 Route d’Aumont"),
+    ]
+    script = tmp_path / "address_check.js"
+    script.write_text(
+        """
+const fs = require('fs');
+const vm = require('vm');
+const context = {
+  console,
+  MutationObserver: function(){ this.observe = () => {}; },
+  Event: function(){},
+  window: { addEventListener: () => {} },
+  document: {
+    readyState: 'loading', body: null, addEventListener: () => {}, getElementById: () => null,
+    createElement: () => ({ className: '', hidden: false, setAttribute: () => {}, appendChild: () => {}, classList: { add: () => {}, toggle: () => {}, remove: () => {} } })
+  }
+};
+context.window.window = context.window;
+context.window.document = context.document;
+vm.createContext(context);
+vm.runInContext(fs.readFileSync('static/js/postal_city_lookup.js', 'utf8'), context);
+const cases = JSON.parse(process.argv[2]);
+for (const [input, expected] of cases) {
+  const actual = context.window.buildPostalAddress(input);
+  if (actual !== expected) throw new Error(`${JSON.stringify(input)} => ${actual}, expected ${expected}`);
+}
+"""
+    )
+    subprocess.run(["node", str(script), json.dumps(cases, ensure_ascii=False)], check=True, cwd=Path.cwd())
