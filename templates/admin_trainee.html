@@ -4914,6 +4914,7 @@ if(btnEtiquetteWord){
     return "unknown";
   }
   function normalizedCardProActivity(value){return shortCardProActivity(value).replace(/\s+/g, " ").trim().toUpperCase();}
+  function formatCnapsDateFr(value){const x=String(value||"").trim();const m=x.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}/${m[2]}/${m[1]}`:x;}
   function renderTraineeCardProResult(resultEl, data, mode){
     if(!resultEl) return;
     if(data && data.check_status === "error"){
@@ -4922,11 +4923,11 @@ if(btnEtiquetteWord){
     }
     const activeTitles = Array.isArray(data?.active_titles) ? data.active_titles : [];
     if(data && data.check_status === "success" && !activeTitles.length){
-      resultEl.outerHTML = '<span class="trainee-cnaps-followup__chip is-unknown" data-trainee-card-pro-result><span class="trainee-cnaps-followup__activity">Aucun titre actif trouvé</span></span>';
+      resultEl.outerHTML = '<span class="trainee-cnaps-followup__chip is-unknown" data-trainee-card-pro-result><span class="trainee-cnaps-followup__activity">Aucun titre CNAPS trouvé</span></span>';
       return;
     }
     if(activeTitles.length){
-      resultEl.outerHTML = activeTitles.map((title)=>`<span class="trainee-cnaps-followup__chip is-active" title="${escapeHtml([title.activity, title.validity, title.valid_until].filter(Boolean).join(" • "))}" data-trainee-card-pro-result><span class="trainee-cnaps-followup__activity">${escapeHtml(title.label)}</span></span>`).join("");
+      resultEl.outerHTML = activeTitles.map((title)=>`<span class="trainee-cnaps-followup__chip is-active" title="${escapeHtml([title.label, title.status || title.validity, title.date_fin_validite || title.valid_until].filter(Boolean).join(" • "))}" data-trainee-card-pro-result><span class="trainee-cnaps-followup__activity">${escapeHtml(title.display_status || title.label)}</span>${(title.date_fin_validite||title.valid_until)?`<span class="card-pro-result__date">Expire le ${escapeHtml(formatCnapsDateFr(title.date_fin_validite||title.valid_until))}</span>`:""}</span>`).join("");
       return;
     }
     const rows = Array.isArray(data.results) && data.results.length ? data.results : [data];
