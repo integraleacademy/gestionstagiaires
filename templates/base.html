@@ -227,6 +227,7 @@
     <button class="sr-only" id="btnOpenTraineeSearch" type="button">Rechercher un stagiaire</button>
     <button class="sr-only" id="btnOpenSessionSearch" type="button">Rechercher une session</button>
     {% include "_global_search_modals.html" %}
+    {% include "_global_docs_cnaps_modals.html" %}
   {% endif %}
 
   {% if is_admin_logged_in and (request.endpoint in ["admin_sessions", "admin_trainees", "admin_trainee_page", "admin_wedof"]) %}

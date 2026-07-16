@@ -1,0 +1,147 @@
+<button class="sr-only" id="btnOpenDocsToControl" type="button">Documents à contrôler</button>
+<span class="muted" id="docsToControlCount" hidden>Chargement…</span>
+
+<div class="modal-backdrop docs-to-control-drawer" id="docsToControlModal" aria-hidden="true">
+  <aside class="modal docs-to-control-panel" role="dialog" aria-modal="false" aria-labelledby="docsToControlTitle">
+    <div class="modal-head docs-to-control-head">
+      <div class="docs-to-control-title-wrap">
+        <span class="docs-to-control-kicker">Contrôle rapide</span>
+        <div class="modal-title" id="docsToControlTitle">Documents à contrôler</div>
+        <div class="muted">Ouvre une fiche stagiaire pour vérifier les documents en attente.</div>
+      </div>
+      <button class="icon-btn docs-to-control-close" data-close-modal="docsToControlModal" aria-label="Fermer les documents à contrôler">✕</button>
+    </div>
+    <div class="modal-body docs-to-control-body">
+      <div id="docsToControlList" class="muted docs-to-control-list">Chargement…</div>
+    </div>
+  </aside>
+</div>
+
+<div class="modal-backdrop trainee-search-drawer" id="cnapsImportModal" aria-hidden="true">
+  <aside class="modal trainee-search-panel" role="dialog" aria-modal="false" aria-labelledby="cnapsImportTitle">
+    <div class="modal-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div class="modal-title" id="cnapsImportTitle">Import PRE CNAPS</div>
+        <a class="btn btn-outline" href="{{ url_for('admin_cnaps_pending_imports') }}">En attente</a>
+      </div>
+      <button class="icon-btn" data-close-modal="cnapsImportModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <label>
+        <div class="label">Fichiers PDF CNAPS</div>
+        <div class="cnaps-file-picker">
+          <input id="cnapsImportFiles" class="cnaps-file-input" type="file" accept="application/pdf,.pdf" multiple>
+          <label for="cnapsImportFiles" class="cnaps-file-btn">Sélect. fichiers</label>
+          <span id="cnapsImportFilesText" class="cnaps-file-text">Aucun fichier choisi</span>
+        </div>
+      </label>
+      <div class="hint" style="margin-top:8px;">Le système lit nom, prénom et numéro PRE/CAR dans les PDF puis cherche le stagiaire correspondant.</div>
+      <div id="cnapsImportStatus" class="muted" style="margin-top:10px;"></div>
+      <div id="cnapsImportResults" class="cnaps-list" style="margin-top:12px;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" data-close-modal="cnapsImportModal">Fermer</button>
+      <button class="btn btn-primary" id="btnCnapsImportRun">Analyser</button>
+    </div>
+  </aside>
+</div>
+
+<script>
+(function initGlobalDocsAndCnapsModals(){
+  if(window.__globalDocsAndCnapsModalsInitialized) return;
+  window.__globalDocsAndCnapsModalsInitialized = true;
+  const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[char]);
+
+  async function loadDocsToControl(){
+    const countEl = document.getElementById("docsToControlCount");
+    const listEl  = document.getElementById("docsToControlList");
+    const btnView = document.getElementById("btnOpenDocsToControl");
+    if(countEl) countEl.textContent = "Chargement…";
+    if(listEl) listEl.textContent = "Chargement…";
+    try{
+      const r = await fetch("/api/docs_to_control", {headers:{"Accept":"application/json"}});
+      const res = await r.json();
+      if(!r.ok || !res.ok) throw new Error(res.error || "request_failed");
+      const items = res.items || [];
+      const totalDocs = items.reduce((sum, it)=> sum + (Number(it.pending_count)||0), 0);
+      if(btnView){
+        btnView.classList.toggle("btn-attention", totalDocs > 0);
+        btnView.textContent = (totalDocs === 0) ? "Aucun doc à contrôler" : `Docs à contrôler (${totalDocs})`;
+      }
+      const sidebarBadge = document.getElementById("sidebarDocsToControlBadge");
+      if(sidebarBadge){
+        sidebarBadge.textContent = totalDocs;
+        sidebarBadge.style.display = totalDocs > 0 ? "inline-flex" : "none";
+      }
+      if(countEl) countEl.textContent = (totalDocs === 0) ? "Tout est à jour." : `${items.length} stagiaire(s) concerné(s)`;
+      if(!listEl) return;
+      if(!items.length){ listEl.innerHTML = `<div class="pill green">✅ Aucun document à contrôler</div>`; return; }
+      listEl.innerHTML = `<div class="table-wrap" style="margin-top:6px;"><table class="table"><thead><tr><th>Stagiaire</th><th>Session</th><th>Docs</th><th></th></tr></thead><tbody>${items.map(it => {
+        const full = `${(it.first_name||"").toUpperCase()} ${(it.last_name||"").toUpperCase()}`.trim();
+        const sess = `${it.session_name || ""} (${it.training_type || ""})`.trim();
+        const nbNum = Number(it.pending_count ?? 0) || 0;
+        const url = `/admin/sessions/${encodeURIComponent(it.session_id)}/stagiaires/${encodeURIComponent(it.trainee_id)}`;
+        const rowClass = (nbNum >= 3) ? "row-danger" : (nbNum >= 1 ? "row-warn" : "");
+        const pillClass = (nbNum >= 3) ? "danger" : "warn";
+        return `<tr class="${rowClass}"><td style="font-weight:900;">${escapeHtml(full || "—")}</td><td>${escapeHtml(sess || "—")}</td><td class="mono"><span class="doccount ${pillClass}">${nbNum}</span></td><td style="text-align:right;"><a class="btn btn-outline" href="${url}" style="text-decoration:none;display:inline-block">Ouvrir la fiche</a></td></tr>`;
+      }).join("")}</tbody></table></div>`;
+    }catch(e){
+      if(countEl) countEl.textContent = "Erreur chargement.";
+      if(listEl) listEl.textContent = "Erreur chargement.";
+      if(btnView){ btnView.classList.remove("btn-attention"); btnView.textContent = "Aucun doc à contrôler"; }
+    }
+  }
+  window.loadDocsToControl = loadDocsToControl;
+
+  document.getElementById("btnOpenDocsToControl")?.addEventListener("click", async ()=>{ window.openModal?.("docsToControlModal"); await loadDocsToControl(); });
+
+  const findCnapsImportedFile = (match, files) => {
+    const idx = Number(match?.source_index);
+    if(Number.isInteger(idx) && idx >= 0 && idx < files.length) return files[idx];
+    const targetName = (match?.file_name || "").trim();
+    return targetName ? (files.find(f => (f?.name || "").trim() === targetName) || null) : null;
+  };
+
+  function renderCnapsImportResults(matches, unmatched, files){
+    const status = document.getElementById("cnapsImportStatus");
+    const results = document.getElementById("cnapsImportResults");
+    if(!results) return;
+    const unmatchedHtml = unmatched.length ? `<div class="hint" style="margin:12px 0 4px 0;"><strong>Fichiers non associés (${unmatched.length})</strong></div>${unmatched.map(item => `<div class="cnaps-search-empty">${escapeHtml(item.file_name || "Fichier")} • ${escapeHtml(item.reason || "inconnu")}</div>`).join("")}` : "";
+    if(!matches.length){ results.innerHTML = `<div class="cnaps-search-empty">Aucune correspondance trouvée.</div>${unmatchedHtml}`; return; }
+    results.innerHTML = matches.map((item, idx) => {
+      const matchFound = item.match_found !== false;
+      const alreadyMerged = !!item.already_merged;
+      const alreadySaved = !!item.already_saved;
+      const buttonLabel = matchFound ? (alreadyMerged ? "Fusionné" : "Fusionner") : "Enregistrer";
+      const buttonClass = matchFound ? "btn btn-primary cnaps-merge-btn" : `btn btn-outline cnaps-save-btn ${(!matchFound && alreadySaved) ? "cnaps-save-btn-imported" : ""}`.trim();
+      const buttonDisabled = matchFound ? alreadyMerged : alreadySaved;
+      return `<div class="cnaps-item" style="display:flex;" data-cnaps-row="${idx}"><div class="cnaps-item-main"><strong>${escapeHtml(item.file_name || "Document PDF")}</strong><div class="cnaps-inline-fields"><input class="cnaps-inline-input" data-field="last_name" value="${escapeHtml(item.last_name || "")}" placeholder="Nom"><input class="cnaps-inline-input" data-field="first_name" value="${escapeHtml(item.first_name || "")}" placeholder="Prénom"></div><span>PRE: ${escapeHtml(item.pre_number || "—")}</span><br><span>Dates de formation: ${escapeHtml(item.training_dates?.start || "—")} → ${escapeHtml(item.training_dates?.end || "—")}</span><br><span>Formation: ${escapeHtml(item.formation || (matchFound ? "—" : "Stagiaire introuvable pour le moment"))}</span></div><div class="cnaps-item-actions"><button type="button" class="${buttonClass} ${buttonDisabled ? "btn-disabled-muted" : ""}" data-match-index="${idx}" ${buttonDisabled ? "disabled aria-disabled=\"true\"" : ""}>${buttonLabel}</button>${(!matchFound && alreadySaved) ? `<div class="hint" style="margin-top:6px;color:#6b7280;">Document déjà importé</div>` : ""}</div></div>`;
+    }).join("") + unmatchedHtml;
+    results.querySelectorAll("[data-cnaps-row]").forEach(row => row.querySelectorAll(".cnaps-inline-input").forEach(input => input.addEventListener("input", ()=>{ const item = matches[Number(row.dataset.cnapsRow)]; if(item) item[input.dataset.field] = (input.value || "").trim(); })));
+    results.querySelectorAll(".cnaps-merge-btn,.cnaps-save-btn").forEach(btn => btn.addEventListener("click", async ()=>{
+      const item = matches[Number(btn.dataset.matchIndex)]; if(!item) return;
+      const sourceFile = findCnapsImportedFile(item, files); if(!sourceFile){ if(status) status.textContent = "Impossible de retrouver le PDF source."; return; }
+      const isMerge = btn.classList.contains("cnaps-merge-btn");
+      const fd = new FormData(); fd.append("pre_number", item.pre_number || ""); fd.append("file", sourceFile);
+      if(isMerge){ fd.append("session_id", item.session_id || ""); fd.append("trainee_id", item.trainee_id || ""); }
+      else { const lastName=(item.last_name||"").trim(); const firstName=(item.first_name||"").trim(); if(!lastName || !firstName){ if(status) status.textContent = "Renseigne le nom et le prénom avant d'enregistrer."; return; } fd.append("last_name", lastName); fd.append("first_name", firstName); }
+      btn.disabled = true; if(status) status.textContent = isMerge ? "Fusion en cours…" : "Enregistrement en cours…";
+      try{ const r = await fetch(isMerge ? "/api/cnaps/import-pre/merge" : "/api/cnaps/import-pre/save", { method:"POST", body: fd }); const res = await r.json(); if(!r.ok || !res.ok) throw new Error(res.error || "request_failed"); btn.textContent = isMerge ? "Fusionné" : "Enregistré"; btn.classList.add("btn-disabled-muted"); if(status) status.textContent = isMerge ? "Fusion effectuée." : "Enregistrement effectué."; }
+      catch(e){ btn.disabled = false; if(status) status.textContent = isMerge ? "Erreur pendant la fusion." : "Erreur pendant l'enregistrement."; }
+    }));
+  }
+
+  const openCnapsImportModal = () => { ["cnapsImportStatus","cnapsImportResults"].forEach(id => { const el = document.getElementById(id); if(el) id.endsWith("Results") ? el.innerHTML = "" : el.textContent = ""; }); const input = document.getElementById("cnapsImportFiles"); const text = document.getElementById("cnapsImportFilesText"); if(input) input.value = ""; if(text) text.textContent = "Aucun fichier choisi"; window.openModal?.("cnapsImportModal"); };
+  document.getElementById("btnOpenCnapsImport")?.addEventListener("click", openCnapsImportModal);
+  document.getElementById("cnapsImportFiles")?.addEventListener("change", (e)=>{ const filesText = document.getElementById("cnapsImportFilesText"); const count = e.target?.files?.length || 0; if(filesText) filesText.textContent = count ? `${count} fichier${count > 1 ? "s" : ""} sélectionné${count > 1 ? "s" : ""}` : "Aucun fichier choisi"; });
+  document.getElementById("btnCnapsImportRun")?.addEventListener("click", async ()=>{
+    const input = document.getElementById("cnapsImportFiles"); const status = document.getElementById("cnapsImportStatus"); const results = document.getElementById("cnapsImportResults"); const btn = document.getElementById("btnCnapsImportRun"); const files = Array.from(input?.files || []);
+    if(!files.length){ if(status) status.textContent = "Choisis au moins un fichier PDF."; return; }
+    const fd = new FormData(); files.forEach(file => fd.append("files", file)); btn.disabled = true; if(status) status.textContent = "Analyse en cours…"; if(results) results.innerHTML = "";
+    try{ const r = await fetch("/api/cnaps/import-pre", { method:"POST", body: fd }); const res = await r.json(); if(!r.ok || !res.ok) throw new Error(res.error || "request_failed"); const matches = res.matches || []; const unmatched = res.unmatched || []; if(status) status.textContent = `${matches.length} fichier(s) analysé(s) avec PRE détecté(s).`; renderCnapsImportResults(matches, unmatched, files); }
+    catch(e){ if(status) status.textContent = "Erreur réseau."; }
+    finally{ btn.disabled = false; }
+  });
+  window.addEventListener("load", ()=>{ loadDocsToControl(); const params = new URLSearchParams(window.location.search); if(params.get("openDocsToControl") === "1") document.getElementById("btnOpenDocsToControl")?.click(); if(params.get("openCnapsImport") === "1") window.setTimeout(openCnapsImportModal, 0); });
+})();
+</script>
