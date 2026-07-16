@@ -26149,10 +26149,19 @@ _billing_generation_locks_guard = threading.Lock()
 
 
 def _parse_date_safe(raw: Any) -> Optional[datetime.date]:
-    try:
-        return datetime.datetime.strptime(str(raw or '')[:10], '%Y-%m-%d').date()
-    except Exception:
+    value = str(raw or '').strip()
+    if not value:
         return None
+    for fmt, candidate in (
+        ('%Y-%m-%d', value[:10]),
+        ('%d/%m/%Y', value[:10]),
+        ('%d-%m-%Y', value[:10]),
+    ):
+        try:
+            return datetime.datetime.strptime(candidate, fmt).date()
+        except Exception:
+            continue
+    return None
 
 
 def _billing_line_id(session_id: str, trainee_id: str, financing_type: str, financing_ref: str = '0') -> str:
