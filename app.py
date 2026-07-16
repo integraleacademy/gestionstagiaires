@@ -14124,6 +14124,23 @@ def admin_sessions_conventions():
             original_pdf = bool(state.get("unsigned_pdf_path") or trainee.get("convention_aps_pdf_path"))
             row_has_download = bool(convention.get("download_url") or signed_pdf or original_pdf)
             row_needs_action = status_key in {"not_generated", "generated", "expired", "refused"}
+            is_problem = status_key in {"error", "expired", "refused"}
+
+            # Les compteurs des tuiles KPI décrivent le périmètre courant (ex. formation),
+            # mais restent indépendants du filtre de statut sélectionné. Ainsi, cliquer sur
+            # "Signées" ou "Actions" n'altère pas les chiffres affichés sur les autres tuiles.
+            stats["total"] += 1
+            if status_key == "waiting_signature":
+                stats["waiting_signature"] += 1
+            if status_key == "signed":
+                stats["signed"] += 1
+            if row_needs_action:
+                stats["action_required"] += 1
+            if is_problem:
+                stats["errors"] += 1
+            if row_has_download:
+                stats["downloadable"] += 1
+
             if selected_status == "action_required" and not row_needs_action:
                 continue
             if selected_status == "downloadable" and not row_has_download:
@@ -14139,7 +14156,6 @@ def admin_sessions_conventions():
             if selected_q and selected_q not in searchable:
                 continue
 
-            is_problem = status_key in {"error", "expired", "refused"}
             row = {
                 "session_id": session_id,
                 "trainee_id": trainee_id,
@@ -14177,17 +14193,6 @@ def admin_sessions_conventions():
                 "is_problem": is_problem,
             }
             convention_rows.append(row)
-            stats["total"] += 1
-            if status_key == "waiting_signature":
-                stats["waiting_signature"] += 1
-            if status_key == "signed":
-                stats["signed"] += 1
-            if row_needs_action:
-                stats["action_required"] += 1
-            if is_problem:
-                stats["errors"] += 1
-            if row["download_url"] or row["signed_pdf_url"] or row["original_pdf_url"]:
-                stats["downloadable"] += 1
 
     if data_changed:
         save_data(data)
