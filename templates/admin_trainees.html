@@ -3893,8 +3893,8 @@ document.querySelectorAll("select.sel").forEach(sel=>{
   const cnapsRequestCache = new Map();
   const cnapsRequestQueue = [];
   let cnapsActiveRequests = 0;
-  const CNAPS_MAX_CONCURRENT = 2;
-  const CNAPS_QUEUE_DELAY_MS = 250;
+  const CNAPS_MAX_CONCURRENT = 1;
+  const CNAPS_QUEUE_DELAY_MS = 1000;
 
   function enqueueCnapsRequest(task){
     return new Promise((resolve, reject)=>{
@@ -3943,7 +3943,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
   }
 
   document.querySelectorAll("[data-card-pro-followup]").forEach(box=>{
-    refreshCardProFollowup(box);
+    // Diagnostic CNAPS: no global automatic refresh. Use the individual button to bypass cache.
     box.querySelector("[data-card-pro-refresh]")?.addEventListener("click", ()=>refreshCardProFollowup(box, {bypassCache: true}));
   });
 
