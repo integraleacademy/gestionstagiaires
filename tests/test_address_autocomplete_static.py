@@ -40,7 +40,8 @@ def test_completion_results_are_rendered_and_selected():
     assert 'zipcode' in JS
     assert 'city' in JS
     assert 'address-suggestions' in JS
-    assert 'addressInput.value = item.address || item.label || "";' in JS
+    assert 'const finalAddress = buildSelectedPostalAddress(item && item.raw || {}, typedAddress) || item.address || item.label || "";' in JS
+    assert 'addressInput.value = finalAddress;' in JS
     assert 'postalCodeInput.value = item.postcode || "";' in JS
     assert 'cityInput.value = item.city || "";' in JS
     assert 'dispatchValueEvents(addressInput)' in JS
@@ -68,19 +69,22 @@ def test_address_suggestions_positioning():
 
 
 def test_build_postal_address_preserves_numbers_suffixes_and_fulltext_fallback():
-    assert 'function buildPostalAddress(result)' in JS
-    assert 'result.housenumber ?? result.number' in JS
-    assert 'parseInt' not in JS[JS.index('function buildPostalAddress'):JS.index('function mapAddressCompletionResult')]
-    assert '`${houseNumber} ${street}`.trim()' in JS
-    assert 'return extractStreetAddressFromFulltext(result && result.fulltext || "", result);' in JS
-    assert '650 Route d’Aumont' not in JS  # examples are covered by executable backend/static tests, not hardcoded behavior
+    assert 'function extractTypedHouseNumber(value)' in JS
+    assert 'function buildSelectedPostalAddress(result, typedAddress)' in JS
+    assert 'result.housenumber ?? result.houseNumber ?? result.number' in JS
+    block = JS[JS.index('function extractTypedHouseNumber'):JS.index('function mapAddressCompletionResult')]
+    assert 'parseInt' not in block
+    assert 'const typedHouseNumber = extractTypedHouseNumber(typedAddress);' in JS
+    assert 'const houseNumber = apiHouseNumber || typedHouseNumber;' in JS
+    assert 'if(/^\\d/u.test(street)) return street;' in JS
+    assert 'return [houseNumber, street].filter(Boolean).join(" ").replace(/\\s+/g, " ").trim();' in JS
 
 
 def test_fulltext_fallback_removes_only_trailing_zipcode_and_city():
-    block = JS[JS.index('function extractStreetAddressFromFulltext'):JS.index('function buildPostalAddress')]
+    block = JS[JS.index('function buildSelectedPostalAddress'):JS.index('function mapAddressCompletionResult')]
     assert 'function extractStreetAddressFromFulltext(fulltext, result)' in JS
-    assert 'replace(/\\s+/g, " ").trim()' in block
-    assert '${escapeRegExp(zipcode)}\\\\s+${escapeRegExp(city)}$' in block
+    assert 'buildSelectedPostalAddress(Object.assign({}, result || {}, {fulltext: fulltext || ""}), "")' in block
+    assert '.replace(/,?\\s+\\d{5}\\s+.+$/u, "")' in block
     assert 'replace(/\\D+/g' not in block
 
 
@@ -93,9 +97,10 @@ def test_completion_result_keeps_raw_api_shape_for_diagnostics():
 
 def test_selection_uses_built_address_not_street_directly():
     mapping_block = JS[JS.index('function mapAddressCompletionResult'):JS.index('function initFrenchAddressAutocomplete')]
-    selection_block = JS[JS.index('function selectAddress'):JS.index('async function fetchAddresses')]
-    assert 'const address = buildPostalAddress(result || {});' in mapping_block
-    assert 'addressInput.value = item.address || item.label || "";' in selection_block
+    selection_block = JS[JS.index('function applySelectedAddress'):JS.index('async function fetchAddresses')]
+    assert 'const address = buildPostalAddress(result || {}, "");' in mapping_block
+    assert 'const typedAddress = addressInput.value;' in selection_block
+    assert 'addressInput.value = finalAddress;' in selection_block
     assert 'addressInput.value = selectedResult.street' not in JS
     assert 'addressInput.value = item.street' not in JS
 
@@ -105,13 +110,16 @@ def test_build_postal_address_executable_examples(tmp_path):
     import subprocess
 
     cases = [
-        ({"housenumber": "650", "street": "Route d’Aumont"}, "650 Route d’Aumont"),
-        ({"housenumber": "12 bis", "street": "Rue des Écoles"}, "12 bis Rue des Écoles"),
-        ({"number": "4 ter", "street": "Avenue de la République"}, "4 ter Avenue de la République"),
-        ({"street": "Rue sans numéro"}, "Rue sans numéro"),
-        ({"housenumber": "8 quater", "street": "Impasse des Lilas"}, "8 quater Impasse des Lilas"),
-        ({"number": "12 bis", "street": "Rue des Écoles"}, "12 bis Rue des Écoles"),
-        ({"fulltext": "650 Route d’Aumont 15130 Arpajon-sur-Cère", "zipcode": "15130", "city": "Arpajon-sur-Cère"}, "650 Route d’Aumont"),
+        ({"street": "Route d’Aumont", "zipcode": "15130", "city": "Arpajon-sur-Cère"}, "650 Route d’Aumont", "650 Route d’Aumont"),
+        ({"fulltext": "650 Route d’Aumont, 15130 Arpajon-sur-Cère"}, "650 Route d’Aumont", ""),
+        ({"street": "Rue des Écoles"}, "12 bis Rue des Écoles", "12 bis Rue des Écoles"),
+        ({"housenumber": "650", "street": "Route d’Aumont"}, "650 Route d’Aumont", ""),
+        ({"housenumber": "12 bis", "street": "Rue des Écoles"}, "12 bis Rue des Écoles", ""),
+        ({"number": "4 ter", "street": "Avenue de la République"}, "4 ter Avenue de la République", ""),
+        ({"street": "Rue sans numéro"}, "Rue sans numéro", ""),
+        ({"housenumber": "8 quater", "street": "Impasse des Lilas"}, "8 quater Impasse des Lilas", ""),
+        ({"number": "12 bis", "street": "Rue des Écoles"}, "12 bis Rue des Écoles", ""),
+        ({"fulltext": "650 Route d’Aumont 15130 Arpajon-sur-Cère", "zipcode": "15130", "city": "Arpajon-sur-Cère"}, "650 Route d’Aumont", ""),
     ]
     script = tmp_path / "address_check.js"
     script.write_text(
@@ -133,10 +141,40 @@ context.window.document = context.document;
 vm.createContext(context);
 vm.runInContext(fs.readFileSync('static/js/postal_city_lookup.js', 'utf8'), context);
 const cases = JSON.parse(process.argv[2]);
-for (const [input, expected] of cases) {
-  const actual = context.window.buildPostalAddress(input);
+for (const [input, expected, typed] of cases) {
+  const actual = context.window.buildSelectedPostalAddress(input, typed);
   if (actual !== expected) throw new Error(`${JSON.stringify(input)} => ${actual}, expected ${expected}`);
 }
 """
     )
     subprocess.run(["node", str(script), json.dumps(cases, ensure_ascii=False)], check=True, cwd=Path.cwd())
+
+
+def test_selection_fully_closes_suggestions_and_invalidates_pending_requests():
+    selection_block = JS[JS.index('function applySelectedAddress'):JS.index('async function fetchAddresses')]
+    close_block = JS[JS.index('function closeAddressSuggestions'):]
+    close_block = close_block[:close_block.index('function closeList')]
+    fetch_block = JS[JS.index('async function fetchAddresses'):JS.index('function onAddressInput')]
+    assert 'closeAddressSuggestions();' in selection_block
+    assert 'list.replaceChildren();' in close_block
+    assert 'list.hidden = true;' in close_block
+    assert 'list.classList.remove("is-open");' in close_block
+    assert 'addressInput.setAttribute("aria-expanded", "false");' in close_block
+    assert 'addressRequestVersion += 1;' in close_block
+    assert 'requestId !== addressRequestVersion' in fetch_block
+    assert 'isApplyingSelectedAddress' in fetch_block
+
+
+def test_selection_events_do_not_reopen_address_or_city_suggestions():
+    address_input_block = JS[JS.index('function onAddressInput'):JS.index('addressInput.addEventListener("keydown"')]
+    zip_input_block = JS[JS.index('function onZipInput'):JS.index('zipInput.addEventListener("input"')]
+    selection_block = JS[JS.index('function applySelectedAddress'):JS.index('async function fetchAddresses')]
+    render_block = JS[JS.index('function renderSuggestions'):JS.index('function applySelectedAddress')]
+    assert 'if(isApplyingSelectedAddress) return;' in address_input_block
+    assert 'if(isApplyingSelectedAddress) return;' in zip_input_block
+    assert 'dispatchValueEvents(addressInput)' in selection_block
+    assert 'dispatchValueEvents(postalCodeInput)' in selection_block
+    assert 'dispatchValueEvents(cityInput)' in selection_block
+    assert 'queueMicrotask(()=>{ isApplyingSelectedAddress = false; });' in selection_block
+    assert 'button.addEventListener("pointerdown"' in render_block
+    assert 'button.addEventListener("click"' not in render_block

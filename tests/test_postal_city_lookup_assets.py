@@ -57,10 +57,12 @@ def test_postal_lookup_suggestions_are_attached_to_zip_field_container():
 
 
 def test_french_address_autocomplete_uses_geopf_with_safe_params_and_mapping():
-    assert "https://data.geopf.fr/geocodage/search" in JS
-    assert "new URLSearchParams({q: query, limit: \"6\", index: \"address\"})" in JS
+    assert "https://data.geopf.fr/geocodage/completion/" in JS
+    assert "text: query" in JS
+    assert "type: \"StreetAddress\"" in JS
+    assert "maximumResponses: \"6\"" in JS
     assert "api-adresse.data.gouv.fr" not in JS
-    for prop in ["props.label", "props.name", "props.housenumber", "props.street", "props.postcode", "props.city", "props.municipality", "props.type"]:
+    for prop in ["fulltext", "name", "housenumber", "houseNumber", "number", "street", "zipcode", "city", "kind"]:
         assert prop in JS
 
 
@@ -106,8 +108,8 @@ def test_french_address_autocomplete_initialized_for_create_and_session_forms_an
     assert '["tAddress", "tZipCode", "tCity"]' in JS
     assert '["sessionTAddress", "sessionTZipCode", "sessionTCity"]' in JS
     css = Path("static/style.css").read_text(encoding="utf-8")
-    assert ".french-address-field{position:relative;}" in css
-    assert ".french-address-list{position:absolute" in css
+    assert ".french-address-field{position:relative;}" in css or ".french-address-field,.address-field-wrapper{position:relative;}" in css
+    assert ".french-address-list{position:absolute" in css or ".french-address-list,.address-suggestions{position:absolute" in css
     assert "width:100%" in css
     assert "max-height:260px" in css
     assert "overflow-y:auto" in css

@@ -8,6 +8,7 @@
   const instances = [];
   const addressInstances = [];
   let isApplyingSelectedAddress = false;
+  let addressRequestVersion = 0;
 
   function normalizeZip(value){ return (value || "").replace(/\D+/g, "").slice(0, 5); }
   function usefulLength(value){ return (value || "").replace(/[\s,.;:!?\-\'’]+/g, "").length; }
@@ -154,29 +155,31 @@
 
   function escapeRegExp(value){ return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 
-  function extractStreetAddressFromFulltext(fulltext, result){
-    let address = String(fulltext || "").replace(/\s+/g, " ").trim();
-    if(!address) return "";
-
-    const zipcode = String(result && result.zipcode || "").trim();
-    const city = String(result && result.city || "").trim();
-    if(zipcode && city){
-      address = address.replace(new RegExp(`\\s+${escapeRegExp(zipcode)}\\s+${escapeRegExp(city)}$`, "i"), "").trim();
-    }else if(zipcode){
-      address = address.replace(new RegExp(`\\s+${escapeRegExp(zipcode)}$`, "i"), "").trim();
-    }else if(city){
-      address = address.replace(new RegExp(`\\s+${escapeRegExp(city)}$`, "i"), "").trim();
-    }
-    return address;
+  function extractTypedHouseNumber(value){
+    const normalized = String(value || "").trim();
+    const match = normalized.match(/^(\d+(?:\s*(?:bis|ter|quater)|[a-z])?)(?=\s|,|$)/i);
+    return match ? match[1].replace(/\s+/g, " ").trim() : "";
   }
 
-  function buildPostalAddress(result){
-    const houseNumber = String((result && (result.housenumber ?? result.number)) ?? "").trim();
-    const street = String(result && result.street || "").trim();
+  function buildSelectedPostalAddress(result, typedAddress){
+    const apiHouseNumber = String((result && (result.housenumber ?? result.houseNumber ?? result.number)) ?? "").trim();
+    const typedHouseNumber = extractTypedHouseNumber(typedAddress);
+    const houseNumber = apiHouseNumber || typedHouseNumber;
+    let street = String((result && (result.street ?? result.name ?? result.fulltext ?? result.label)) ?? "").trim();
 
-    if(houseNumber && street) return `${houseNumber} ${street}`.trim();
-    if(street) return street;
-    return extractStreetAddressFromFulltext(result && result.fulltext || "", result);
+    street = street.replace(/,?\s+\d{5}\s+.+$/u, "").trim();
+
+    if(/^\d/u.test(street)) return street;
+
+    return [houseNumber, street].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+  }
+
+  function extractStreetAddressFromFulltext(fulltext, result){
+    return buildSelectedPostalAddress(Object.assign({}, result || {}, {fulltext: fulltext || ""}), "");
+  }
+
+  function buildPostalAddress(result, typedAddress){
+    return buildSelectedPostalAddress(result || {}, typedAddress || "");
   }
 
   function mapAddressCompletionResult(result){
@@ -184,7 +187,7 @@
     const zipcode = String(result && result.zipcode || "").trim();
     const city = String(result && result.city || "").trim();
     const kind = String(result && result.kind || "").trim();
-    const address = buildPostalAddress(result || {});
+    const address = buildPostalAddress(result || {}, "");
     const label = fulltext || [address, zipcode, city].filter(Boolean).join(" ").trim();
     return {address, postcode: zipcode, city, label, kind, raw: result || {}};
   }
@@ -217,8 +220,22 @@
 
     const state = {timer:null, controller:null, requestId:0, suggestions:[], activeIndex:-1, selectedAddress:""};
     function setStatus(message, loading){ status.textContent = message || ""; status.classList.toggle("is-loading", !!loading); }
-    function closeList(){ list.hidden = true; state.activeIndex = -1; addressInput.setAttribute("aria-expanded", "false"); addressInput.removeAttribute("aria-activedescendant"); }
-    function abortPending(){ state.requestId += 1; if(state.timer) window.clearTimeout(state.timer); state.timer = null; if(state.controller) state.controller.abort(); state.controller = null; }
+    function closeAddressSuggestions(){
+      if(state.timer) window.clearTimeout(state.timer);
+      state.timer = null;
+      if(state.controller) state.controller.abort();
+      state.controller = null;
+      state.requestId += 1;
+      addressRequestVersion += 1;
+      list.replaceChildren();
+      list.hidden = true;
+      list.classList.remove("is-open");
+      state.activeIndex = -1;
+      addressInput.setAttribute("aria-expanded", "false");
+      addressInput.removeAttribute("aria-activedescendant");
+    }
+    function closeList(){ list.hidden = true; list.classList.remove("is-open"); state.activeIndex = -1; addressInput.setAttribute("aria-expanded", "false"); addressInput.removeAttribute("aria-activedescendant"); }
+    function abortPending(){ state.requestId += 1; addressRequestVersion += 1; if(state.timer) window.clearTimeout(state.timer); state.timer = null; if(state.controller) state.controller.abort(); state.controller = null; }
     function setActive(index){
       const options = Array.from(list.querySelectorAll(".french-address-option"));
       if(!options.length) return;
@@ -244,26 +261,30 @@
         meta.textContent = [item.postcode, item.city].filter(Boolean).join(" ");
         button.appendChild(main);
         button.appendChild(meta);
-        button.addEventListener("click", ()=>selectAddress(item));
+        button.addEventListener("pointerdown", event=>{ event.preventDefault(); applySelectedAddress(item); });
         list.appendChild(button);
       });
       list.hidden = items.length === 0;
+      list.classList.toggle("is-open", items.length > 0);
       addressInput.setAttribute("aria-expanded", items.length ? "true" : "false");
       state.activeIndex = -1;
     }
-    function selectAddress(item){
+    function applySelectedAddress(item){
+      const typedAddress = addressInput.value;
       isApplyingSelectedAddress = true;
-      addressInput.value = item.address || item.label || "";
+      closeAddressSuggestions();
+      const finalAddress = buildSelectedPostalAddress(item && item.raw || {}, typedAddress) || item.address || item.label || "";
+      addressInput.value = finalAddress;
       postalCodeInput.value = item.postcode || "";
       cityInput.value = item.city || "";
       state.selectedAddress = addressInput.value.trim();
-      closeList();
       setStatus("", false);
       dispatchValueEvents(addressInput);
       dispatchValueEvents(postalCodeInput);
       dispatchValueEvents(cityInput);
-      window.setTimeout(()=>{ isApplyingSelectedAddress = false; }, 0);
+      queueMicrotask(()=>{ isApplyingSelectedAddress = false; });
     }
+    function selectAddress(item){ applySelectedAddress(item); }
     async function fetchAddresses(query, requestId){
       const controller = new AbortController();
       state.controller = controller;
@@ -283,7 +304,7 @@
         console.debug("[ADDRESS] status", response.status);
         if(!response.ok) throw new Error(response.status === 429 ? "address_rate_limited" : "address_api_error");
         const data = await response.json();
-        if(requestId !== state.requestId || addressInput.value.trim() !== query) return;
+        if(requestId !== state.requestId || requestId !== addressRequestVersion || isApplyingSelectedAddress || addressInput.value.trim() !== query) return;
         const results = Array.isArray(data.results) ? data.results : [];
         if(results.length) console.debug("[ADDRESS] sample result", results[0]);
         const suggestions = results.map(mapAddressCompletionResult).filter(item=>item.label && item.postcode && item.city).slice(0, 6);
@@ -302,14 +323,18 @@
       }
     }
     function onAddressInput(){
+      if(isApplyingSelectedAddress) return;
       if(addressInput.value.trim() !== state.selectedAddress) state.selectedAddress = "";
       abortPending(); closeList(); setStatus("", false);
       const query = addressInput.value.trim();
       if(usefulLength(query) < 3) return;
-      const requestId = state.requestId;
+      const requestId = ++addressRequestVersion;
+      state.requestId = requestId;
       state.timer = window.setTimeout(()=>fetchAddresses(query, requestId), DEBOUNCE_MS);
     }
     addressInput.addEventListener("input", onAddressInput);
+    const form = addressInput.form || (addressInput.closest ? addressInput.closest("form") : null);
+    if(form) form.addEventListener("submit", ()=>{ console.debug("[ADDRESS] value before save", addressInput.value); });
     addressInput.addEventListener("keydown", event=>{
       if(event.key === "Escape"){ if(!list.hidden){ event.preventDefault(); closeList(); } return; }
       if(list.hidden) return;
@@ -345,6 +370,8 @@
   }
 
   window.setupPostalCityLookup = setupPostalCityLookup;
+  window.extractTypedHouseNumber = extractTypedHouseNumber;
+  window.buildSelectedPostalAddress = buildSelectedPostalAddress;
   window.extractStreetAddressFromFulltext = extractStreetAddressFromFulltext;
   window.buildPostalAddress = buildPostalAddress;
   window.initFrenchAddressAutocomplete = initFrenchAddressAutocomplete;
