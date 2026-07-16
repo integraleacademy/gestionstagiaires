@@ -971,6 +971,36 @@ def _first_non_empty(mapping: Any, *keys: str) -> str:
             return str(value)
     return ""
 
+
+def _find_qonto_pdf_url(payload: Any) -> str:
+    """Find the first PDF/public invoice URL exposed by a Qonto invoice payload."""
+    url_keys = {"public_url", "url", "file_url", "pdf_url", "download_url"}
+    if isinstance(payload, dict):
+        for key in ("public_url", "pdf_url", "download_url", "file_url", "url"):
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        for key, value in payload.items():
+            if key in url_keys and value:
+                return str(value).strip()
+            nested = _find_qonto_pdf_url(value)
+            if nested:
+                return nested
+    elif isinstance(payload, list):
+        for item in payload:
+            nested = _find_qonto_pdf_url(item)
+            if nested:
+                return nested
+    return ""
+
+
+def _download_pdf_from_url(pdf_url: str) -> Tuple[bytes, str]:
+    pdf_response = requests.get(str(pdf_url), timeout=30)
+    if not pdf_response.ok:
+        raise RuntimeError(f"Téléchargement PDF Qonto impossible ({pdf_response.status_code})")
+    return pdf_response.content, pdf_response.headers.get("Content-Type") or "application/pdf"
+
+
 def download_qonto_invoice_pdf(invoice_id: str) -> Tuple[bytes, str]:
     if not _qonto_is_configured():
         raise QontoConfigurationError("Qonto n’est pas connecté")
@@ -983,6 +1013,15 @@ def download_qonto_invoice_pdf(invoice_id: str) -> Tuple[bytes, str]:
     app.logger.info("[QONTO] api_call method=GET url=%s status=%s trace_id=%s content_type=%s", url, response.status_code, trace_id or "", content_type)
     if not response.ok:
         if response.status_code == 404:
+            try:
+                invoice_payload = get_qonto_invoice(invoice_id)
+                pdf_url = _find_qonto_pdf_url(invoice_payload)
+                if pdf_url:
+                    return _download_pdf_from_url(pdf_url)
+            except QontoApiError:
+                raise QontoNotFoundError(response.status_code, raw_body or response.text[:500], trace_id)
+            except Exception as exc:
+                app.logger.info("[QONTO] invoice download fallback failed invoice_id=%s error=%s", invoice_id, exc)
             raise QontoNotFoundError(response.status_code, raw_body or response.text[:500], trace_id)
         raise QontoApiError(response.status_code, raw_body or response.text[:500], trace_id)
     if response.content.startswith(b"%PDF") or "application/pdf" in content_type.lower():
@@ -992,13 +1031,10 @@ def download_qonto_invoice_pdf(invoice_id: str) -> Tuple[bytes, str]:
     except Exception as exc:
         raise RuntimeError("La réponse Qonto ne contient pas de PDF exploitable") from exc
     invoice = _qonto_invoice_payload(payload)
-    pdf_url = _first_non_empty(invoice, "public_url", "url", "file_url", "pdf_url", "download_url") or _first_non_empty(payload, "public_url", "url", "file_url", "pdf_url", "download_url")
+    pdf_url = _find_qonto_pdf_url(invoice) or _find_qonto_pdf_url(payload)
     if not pdf_url:
         raise RuntimeError("PDF Qonto non exposé par l’API")
-    pdf_response = requests.get(str(pdf_url), timeout=30)
-    if not pdf_response.ok:
-        raise RuntimeError(f"Téléchargement PDF Qonto impossible ({pdf_response.status_code})")
-    return pdf_response.content, pdf_response.headers.get("Content-Type") or "application/pdf"
+    return _download_pdf_from_url(pdf_url)
 
 
 def list_qonto_direct_debit_mandates(client_id: str) -> Dict[str, Any]:

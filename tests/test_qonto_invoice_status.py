@@ -3,7 +3,7 @@ import hmac
 import json
 import os
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import app as gestion_app
 
@@ -245,6 +245,25 @@ class QontoInvoiceStatusTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["Location"], "https://qonto.test/invoice.pdf")
+
+
+    def test_qonto_invoice_download_falls_back_to_invoice_public_url_after_404(self):
+        not_found_response = Mock(ok=False, status_code=404, content=b'{"error":"Not found"}', text='{"error":"Not found"}')
+        not_found_response.headers = {"Content-Type": "application/json"}
+        pdf_response = Mock(ok=True, status_code=200, content=b"%PDF-1.4 fallback")
+        pdf_response.headers = {"Content-Type": "application/pdf"}
+
+        with patch.object(gestion_app, "_qonto_is_configured", return_value=True), \
+             patch.object(gestion_app, "get_qonto_headers", return_value={"Authorization": "login:secret"}), \
+             patch.object(gestion_app, "_qonto_base_url", return_value="https://qonto.test"), \
+             patch.object(gestion_app, "get_qonto_invoice", return_value={"client_invoice": {"id": "inv_123", "public_url": "https://qonto.test/inv_123.pdf"}}), \
+             patch.object(gestion_app.requests, "get", side_effect=[not_found_response, pdf_response]) as mocked_get:
+            pdf_bytes, content_type = gestion_app.download_qonto_invoice_pdf("inv_123")
+
+        self.assertEqual(pdf_bytes, b"%PDF-1.4 fallback")
+        self.assertEqual(content_type, "application/pdf")
+        self.assertEqual(mocked_get.call_args_list[0].args[0], "https://qonto.test/v2/client_invoices/inv_123/download")
+        self.assertEqual(mocked_get.call_args_list[1].args[0], "https://qonto.test/inv_123.pdf")
 
     def test_qonto_webhook_rejects_invalid_signature(self):
         client = gestion_app.app.test_client()
