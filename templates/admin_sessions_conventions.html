@@ -99,6 +99,7 @@ document.addEventListener('click', async event => {
     btn.setAttribute('aria-pressed', nextPrinted ? 'true' : 'false');
     btn.setAttribute('title', nextPrinted ? 'Déjà imprimé' : 'Marquer comme imprimé');
     if(label) label.textContent = nextPrinted ? 'Imprimé' : 'Imprimer';
+    window.refreshSidebarConventionsSignedBadge?.();
   }catch(e){
     console.error(e);
     alert('Impossible de modifier l’état d’impression de cette convention.');
