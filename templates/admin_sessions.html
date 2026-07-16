@@ -103,11 +103,13 @@
   .trainee-search-results .search-name{color:#334155;font-size:15px;letter-spacing:.01em;}
   .trainee-search-results .search-open .btn{padding:7px 10px;font-size:12px;}
   .trainee-search-results .search-section-title{padding:12px 16px 8px;background:#f8fafc;}
-  .docs-to-control-panel{width:min(1040px, calc(100vw - var(--partner-sidebar-open, 320px) - 36px));}
-  body.partner-sidebar-collapsed .docs-to-control-panel{width:min(1040px, calc(100vw - var(--partner-sidebar-closed, 80px) - 36px));}
   .docs-to-control-list{min-height:0;overflow:auto;}
   .docs-to-control-list .table-wrap{margin-top:0!important;}
-  .docs-to-control-list .table{min-width:860px;}
+  .docs-to-control-list .table{min-width:0;width:100%;}
+  .docs-to-control-list .table th:last-child,
+  .docs-to-control-list .table td:last-child{display:none;}
+  .docs-to-control-list [data-docs-to-control-href]{cursor:pointer;}
+  .docs-to-control-list [data-docs-to-control-href]:hover{background:#f8fafc;}
   @media (max-width:860px){
     .trainee-search-panel,
     .docs-to-control-panel{left:12px!important;right:12px;top:76px;bottom:12px;width:auto!important;border-radius:24px!important;}
@@ -2405,7 +2407,7 @@
                 const pillClass = (nbNum >= 3) ? "danger" : "warn";
 
                 return `
-                  <tr class="${rowClass}">
+                  <tr class="${rowClass}" data-docs-to-control-href="${url}" tabindex="0" role="link">
                     <td style="font-weight:900;">${full || "—"}</td>
                     <td>${sess || "—"}</td>
                     <td class="mono">
@@ -2439,6 +2441,25 @@
   }
 
   window.loadDocsToControl = loadDocsToControl;
+
+  function openDocsToControlRow(row){
+    const href = row?.dataset?.docsToControlHref;
+    if(href) window.location.href = href;
+  }
+
+  document.getElementById("docsToControlList")?.addEventListener("click", (event)=>{
+    const row = event.target.closest("[data-docs-to-control-href]");
+    if(row && !event.target.closest("a,button")) openDocsToControlRow(row);
+  });
+
+  document.getElementById("docsToControlList")?.addEventListener("keydown", (event)=>{
+    if(event.key !== "Enter" && event.key !== " ") return;
+    const row = event.target.closest("[data-docs-to-control-href]");
+    if(!row) return;
+    event.preventDefault();
+    openDocsToControlRow(row);
+  });
+
 
   // boutons du menu latéral
   document.getElementById("btnOpenDocsToControl")?.addEventListener("click", async ()=>{
