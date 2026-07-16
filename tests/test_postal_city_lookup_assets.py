@@ -47,3 +47,10 @@ def test_postal_lookup_is_loaded_on_create_and_existing_trainee_forms():
     assert '["sessionTZipCode", "sessionTCity"]' in JS
     assert '["enrollZipCode", "enrollCity"]' in JS
     assert '["zip_code", "city"]' in JS
+
+
+def test_postal_lookup_suggestions_are_attached_to_zip_field_container():
+    assert 'zipWrapper.classList.add("postal-city-field")' in JS
+    assert 'const list = createList(zipInput)' in JS
+    assert '(zipWrapper || zipInput).appendChild(list)' in JS
+    assert '(cityWrapper || cityInput).appendChild(list)' not in JS
