@@ -13594,8 +13594,13 @@ def admin_cash_payments():
 def _signed_conventions_unseen_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Return signed conventions that have not yet been acknowledged from the sidebar."""
     items: List[Dict[str, Any]] = []
+    minimum_session_start_date = datetime.date(2026, 7, 16)
+
     for sess in data.get("sessions", []):
         if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
+            continue
+        session_start_date = _session_start_date(sess)
+        if not session_start_date or session_start_date < minimum_session_start_date:
             continue
         session_id = str(sess.get("id") or "")
         training_type = _session_get(sess, "training_type", "")
@@ -13672,9 +13677,13 @@ def admin_sessions_conventions():
 
     stats = {"total": 0, "waiting_signature": 0, "signed": 0, "action_required": 0, "errors": 0, "downloadable": 0}
     data_changed = False
+    minimum_session_start_date = datetime.date(2026, 7, 16)
 
     for sess in data.get("sessions", []):
         if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
+            continue
+        session_start_date = _session_start_date(sess)
+        if not session_start_date or session_start_date < minimum_session_start_date:
             continue
         session_id = str(sess.get("id") or "")
         training_type = _session_get(sess, "training_type", "")
@@ -13819,8 +13828,13 @@ def _automation_status_tone(status: str) -> str:
 def _build_automations_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
     rows = []
     stats = {"trainees": 0, "complete": 0, "in_progress": 0, "blocked": 0, "errors": 0, "documents_ready": 0}
+    minimum_session_start_date = datetime.date(2026, 7, 16)
+
     for sess in data.get("sessions", []) or []:
         if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
+            continue
+        session_start_date = _session_start_date(sess)
+        if not session_start_date or session_start_date < minimum_session_start_date:
             continue
         session_id = str(sess.get("id") or "")
         if not session_id:
