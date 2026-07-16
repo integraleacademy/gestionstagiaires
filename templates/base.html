@@ -22,7 +22,7 @@
     "admin_partners", "admin_partner_new", "admin_partner_detail", "admin_secretariat",
     "admin_qonto_settings", "admin_wedof_requests", "admin_wedof", "admin_cnaps_unknown", "admin_cnaps_tracking",
     "admin_afc", "admin_sessions_conventions", "admin_sessions_automations",
-    "admin_sessions_billing", "admin_sessions_archived", "admin_cash_payments",
+    "admin_sessions_billing", "admin_direct_debits", "admin_sessions_archived", "admin_cash_payments",
     "admin_trainees", "admin_trainee_page", "admin_vtc_trainees_all",
     "admin_sales_tracking"
   ] %}
@@ -162,7 +162,7 @@
       {"label":"Conventions","icon":"file","href":url_for('admin_sessions_conventions'),"endpoints":["admin_sessions_conventions"],"badge":"","badge_id":"sidebarConventionsSignedBadge","locked":not partner_has_module('automations')},
       {"label":"Automatisations","icon":"tool","href":url_for('admin_sessions_automations'),"endpoints":["admin_sessions_automations"],"locked":not partner_has_module('automations')},
       {"label":"Suivi des ventes","icon":"chart","href":url_for('admin_sales_tracking'),"endpoints":["admin_sales_tracking"],"locked":not partner_has_module('sales')},
-      {"label":"Facturation","icon":"wallet","href":url_for('admin_sessions_billing'),"endpoints":["admin_sessions_billing"],"locked":not partner_has_module('billing')},
+      {"label":"Facturation","icon":"wallet","href":url_for('admin_sessions_billing'),"endpoints":["admin_sessions_billing","admin_direct_debits"],"locked":not partner_has_module('billing')},
       {"label":"Réglages Qonto","icon":"settings","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings"],"locked":not partner_has_module('billing')},
       {"label":"Sessions archivées","icon":"archive","href":url_for('admin_sessions_archived'),"endpoints":["admin_sessions_archived"],"locked":False}
     ] %}
