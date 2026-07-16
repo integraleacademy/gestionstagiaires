@@ -3,7 +3,7 @@ import hmac
 import json
 import os
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import app as gestion_app
 
@@ -245,6 +245,61 @@ class QontoInvoiceStatusTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["Location"], "https://qonto.test/invoice.pdf")
+
+
+
+    def test_billing_invoice_download_generates_local_pdf_when_qonto_is_missing(self):
+        line_id = gestion_app._billing_line_id("S1", "T1", "PERSONNEL", "legacy")
+        data = {
+            "sessions": [{"id": "S1", "name": "Session", "trainees": [{"id": "T1", "first_name": "Ada", "last_name": "Lovelace"}]}],
+            "billing_lines": [{
+                "id": line_id,
+                "traineeId": "T1",
+                "sessionId": "S1",
+                "traineeFirstName": "Ada",
+                "traineeLastName": "Lovelace",
+                "formationName": "DIRIGEANT initial",
+                "financingType": "PERSONNEL",
+                "amount": 125,
+                "amountTTC": 125,
+                "qontoInvoiceId": "missing_inv",
+                "qontoInvoiceNumber": "FL-2026-312",
+                "logs": [],
+            }]
+        }
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "_find_billing_line", return_value=data["billing_lines"][0]), \
+             patch.object(gestion_app, "save_data", side_effect=self.saved.append), \
+             patch.object(gestion_app, "download_qonto_invoice_pdf", side_effect=gestion_app.QontoNotFoundError(404, "Not found")):
+            response = client.get(f"/api/admin/billing-lines/{line_id}/download-invoice")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "application/pdf")
+        self.assertIn("inline", response.headers.get("Content-Disposition", ""))
+        self.assertTrue(response.data.startswith(b"%PDF"))
+        self.assertTrue(data["billing_lines"][0].get("invoiceDownloadedAt"))
+        self.assertIn("copie locale", data["billing_lines"][0].get("syncWarning"))
+
+    def test_qonto_invoice_download_falls_back_to_invoice_public_url_after_404(self):
+        not_found_response = Mock(ok=False, status_code=404, content=b'{"error":"Not found"}', text='{"error":"Not found"}')
+        not_found_response.headers = {"Content-Type": "application/json"}
+        pdf_response = Mock(ok=True, status_code=200, content=b"%PDF-1.4 fallback")
+        pdf_response.headers = {"Content-Type": "application/pdf"}
+
+        with patch.object(gestion_app, "_qonto_is_configured", return_value=True), \
+             patch.object(gestion_app, "get_qonto_headers", return_value={"Authorization": "login:secret"}), \
+             patch.object(gestion_app, "_qonto_base_url", return_value="https://qonto.test"), \
+             patch.object(gestion_app, "get_qonto_invoice", return_value={"client_invoice": {"id": "inv_123", "public_url": "https://qonto.test/inv_123.pdf"}}), \
+             patch.object(gestion_app.requests, "get", side_effect=[not_found_response, pdf_response]) as mocked_get:
+            pdf_bytes, content_type = gestion_app.download_qonto_invoice_pdf("inv_123")
+
+        self.assertEqual(pdf_bytes, b"%PDF-1.4 fallback")
+        self.assertEqual(content_type, "application/pdf")
+        self.assertEqual(mocked_get.call_args_list[0].args[0], "https://qonto.test/v2/client_invoices/inv_123/download")
+        self.assertEqual(mocked_get.call_args_list[1].args[0], "https://qonto.test/inv_123.pdf")
 
     def test_qonto_webhook_rejects_invalid_signature(self):
         client = gestion_app.app.test_client()

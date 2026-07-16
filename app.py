@@ -971,6 +971,124 @@ def _first_non_empty(mapping: Any, *keys: str) -> str:
             return str(value)
     return ""
 
+
+def _find_qonto_pdf_url(payload: Any) -> str:
+    """Find the first PDF/public invoice URL exposed by a Qonto invoice payload."""
+    url_keys = {"public_url", "url", "file_url", "pdf_url", "download_url"}
+    if isinstance(payload, dict):
+        for key in ("public_url", "pdf_url", "download_url", "file_url", "url"):
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        for key, value in payload.items():
+            if key in url_keys and value:
+                return str(value).strip()
+            nested = _find_qonto_pdf_url(value)
+            if nested:
+                return nested
+    elif isinstance(payload, list):
+        for item in payload:
+            nested = _find_qonto_pdf_url(item)
+            if nested:
+                return nested
+    return ""
+
+
+def _download_pdf_from_url(pdf_url: str) -> Tuple[bytes, str]:
+    pdf_response = requests.get(str(pdf_url), timeout=30)
+    if not pdf_response.ok:
+        raise RuntimeError(f"Téléchargement PDF Qonto impossible ({pdf_response.status_code})")
+    return pdf_response.content, pdf_response.headers.get("Content-Type") or "application/pdf"
+
+
+def _build_billing_line_invoice_pdf(line: Dict[str, Any]) -> bytes:
+    """Build a local invoice PDF when Qonto no longer exposes the remote PDF."""
+    if not REPORTLAB_LIBRARY_AVAILABLE:
+        raise RuntimeError("Génération PDF indisponible sur ce serveur")
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.pdfgen import canvas
+
+    buffer = BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    left = 20 * mm
+    top = height - 22 * mm
+
+    invoice_ref = str(line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId') or line.get('id') or 'Facture').strip()
+    trainee = f"{line.get('traineeFirstName') or ''} {line.get('traineeLastName') or ''}".strip() or str(line.get('clientName') or 'Client')
+    formation = str(line.get('formationName') or line.get('sessionName') or 'Formation').strip()
+    session_dates = str(line.get('dateLabel') or '').strip()
+    amount_ttc = _money(line.get('amountTTC') or line.get('amount'))
+    vat_rate = _money(line.get('vatRate'))
+    amount_ht = _money(line.get('amountHT')) or (round(amount_ttc / (1 + vat_rate / 100), 2) if vat_rate else amount_ttc)
+    vat_amount = round(amount_ttc - amount_ht, 2)
+    issue_date = fr_date(str(line.get('invoiceGeneratedAt') or line.get('createdAt') or _now_iso())[:10])
+
+    pdf.setTitle(f"Facture {invoice_ref}")
+    pdf.setFont("Helvetica-Bold", 18)
+    pdf.drawString(left, top, "FACTURE")
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawRightString(width - left, top, invoice_ref)
+
+    y = top - 18 * mm
+    pdf.setFont("Helvetica-Bold", 11)
+    pdf.drawString(left, y, "Intégrale Academy")
+    pdf.setFont("Helvetica", 10)
+    for text in ("54 chemin du Carreou", "83480 Puget-sur-Argens", "04 22 47 07 68"):
+        y -= 5 * mm
+        pdf.drawString(left, y, text)
+
+    y -= 12 * mm
+    pdf.setFont("Helvetica-Bold", 11)
+    pdf.drawString(left, y, "Facturé à")
+    pdf.setFont("Helvetica", 10)
+    y -= 6 * mm
+    pdf.drawString(left, y, trainee)
+    financeur = str(line.get('financeurName') or line.get('financingLabel') or line.get('financingType') or '').strip()
+    if financeur:
+        y -= 5 * mm
+        pdf.drawString(left, y, financeur)
+
+    pdf.setFont("Helvetica", 10)
+    pdf.drawRightString(width - left, top - 30 * mm, f"Date : {issue_date}")
+    pdf.drawRightString(width - left, top - 36 * mm, f"Statut : {line.get('invoiceStatus') or 'facture'}")
+
+    y -= 18 * mm
+    pdf.setFont("Helvetica-Bold", 10)
+    pdf.drawString(left, y, "Désignation")
+    pdf.drawRightString(width - left, y, "Montant TTC")
+    y -= 3 * mm
+    pdf.line(left, y, width - left, y)
+    y -= 8 * mm
+    pdf.setFont("Helvetica", 10)
+    pdf.drawString(left, y, formation[:90])
+    pdf.drawRightString(width - left, y, _format_euro(amount_ttc))
+    if session_dates:
+        y -= 5 * mm
+        pdf.setFont("Helvetica", 9)
+        pdf.drawString(left, y, session_dates[:110])
+
+    y -= 20 * mm
+    pdf.line(width - 80 * mm, y + 6 * mm, width - left, y + 6 * mm)
+    pdf.setFont("Helvetica", 10)
+    pdf.drawRightString(width - 45 * mm, y, "Total HT")
+    pdf.drawRightString(width - left, y, _format_euro(amount_ht))
+    y -= 7 * mm
+    pdf.drawRightString(width - 45 * mm, y, f"TVA {vat_rate:g} %")
+    pdf.drawRightString(width - left, y, _format_euro(vat_amount))
+    y -= 8 * mm
+    pdf.setFont("Helvetica-Bold", 12)
+    pdf.drawRightString(width - 45 * mm, y, "Total TTC")
+    pdf.drawRightString(width - left, y, _format_euro(amount_ttc))
+
+    pdf.setFont("Helvetica", 8)
+    pdf.drawString(left, 20 * mm, "Copie locale générée depuis les données de facturation, la pièce Qonto n’étant pas disponible via l’API.")
+    pdf.save()
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
 def download_qonto_invoice_pdf(invoice_id: str) -> Tuple[bytes, str]:
     if not _qonto_is_configured():
         raise QontoConfigurationError("Qonto n’est pas connecté")
@@ -983,6 +1101,15 @@ def download_qonto_invoice_pdf(invoice_id: str) -> Tuple[bytes, str]:
     app.logger.info("[QONTO] api_call method=GET url=%s status=%s trace_id=%s content_type=%s", url, response.status_code, trace_id or "", content_type)
     if not response.ok:
         if response.status_code == 404:
+            try:
+                invoice_payload = get_qonto_invoice(invoice_id)
+                pdf_url = _find_qonto_pdf_url(invoice_payload)
+                if pdf_url:
+                    return _download_pdf_from_url(pdf_url)
+            except QontoApiError:
+                raise QontoNotFoundError(response.status_code, raw_body or response.text[:500], trace_id)
+            except Exception as exc:
+                app.logger.info("[QONTO] invoice download fallback failed invoice_id=%s error=%s", invoice_id, exc)
             raise QontoNotFoundError(response.status_code, raw_body or response.text[:500], trace_id)
         raise QontoApiError(response.status_code, raw_body or response.text[:500], trace_id)
     if response.content.startswith(b"%PDF") or "application/pdf" in content_type.lower():
@@ -992,13 +1119,10 @@ def download_qonto_invoice_pdf(invoice_id: str) -> Tuple[bytes, str]:
     except Exception as exc:
         raise RuntimeError("La réponse Qonto ne contient pas de PDF exploitable") from exc
     invoice = _qonto_invoice_payload(payload)
-    pdf_url = _first_non_empty(invoice, "public_url", "url", "file_url", "pdf_url", "download_url") or _first_non_empty(payload, "public_url", "url", "file_url", "pdf_url", "download_url")
+    pdf_url = _find_qonto_pdf_url(invoice) or _find_qonto_pdf_url(payload)
     if not pdf_url:
         raise RuntimeError("PDF Qonto non exposé par l’API")
-    pdf_response = requests.get(str(pdf_url), timeout=30)
-    if not pdf_response.ok:
-        raise RuntimeError(f"Téléchargement PDF Qonto impossible ({pdf_response.status_code})")
-    return pdf_response.content, pdf_response.headers.get("Content-Type") or "application/pdf"
+    return _download_pdf_from_url(pdf_url)
 
 
 def list_qonto_direct_debit_mandates(client_id: str) -> Dict[str, Any]:
@@ -27313,6 +27437,20 @@ def api_admin_billing_download(line_id: str):
         response = send_file(BytesIO(pdf_bytes), mimetype=content_type or 'application/pdf', as_attachment=False, download_name=filename)
         response.headers['Content-Disposition'] = f'inline; filename="{filename}"'
         return response
+    except QontoNotFoundError as exc:
+        try:
+            pdf_bytes = _build_billing_line_invoice_pdf(line)
+            line['invoiceDownloadedAt'] = _now_iso()
+            line['syncWarning'] = 'PDF Qonto introuvable : copie locale générée depuis les données de facturation.'
+            _billing_log(line, 'PDF local généré', 'warning', _sanitize_qonto_error(str(exc)), line.get('qontoInvoiceId') or '')
+            _save_billing_line(data, line); save_data(data)
+            filename = re.sub(r'[^A-Za-z0-9_.-]+', '_', f"FACTURE_{line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId')}.pdf")
+            response = send_file(BytesIO(pdf_bytes), mimetype='application/pdf', as_attachment=False, download_name=filename)
+            response.headers['Content-Disposition'] = f'inline; filename="{filename}"'
+            return response
+        except Exception as fallback_exc:
+            _billing_log(line, 'PDF téléchargé', 'error', _sanitize_qonto_error(str(fallback_exc)), line.get('qontoInvoiceId') or ''); _save_billing_line(data, line); save_data(data)
+            return jsonify({'ok': False, 'error': _sanitize_qonto_error(str(fallback_exc)), 'qontoInvoiceId': line.get('qontoInvoiceId')}), 502
     except Exception as exc:
         _billing_log(line, 'PDF téléchargé', 'error', _sanitize_qonto_error(str(exc)), line.get('qontoInvoiceId') or ''); _save_billing_line(data, line); save_data(data)
         return jsonify({'ok': False, 'error': _sanitize_qonto_error(str(exc)), 'qontoInvoiceId': line.get('qontoInvoiceId')}), 502
