@@ -3851,7 +3851,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
         validite_titre: isAccepted ? "ACTIF" : "À vérifier",
       });
     }
-    if(isAccepted && (isCartePro || normalizedFallbackActivity === "AP SH")){
+    if(isAccepted && isCartePro){
       rows.push({
         activite: "Carte professionnelle - Surveillance humaine ou gardiennage",
         validite_titre: "ACTIF",
