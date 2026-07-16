@@ -4959,19 +4959,46 @@ if(btnEtiquetteWord){
     });
     return {...data, results: rows};
   }
-  async function refreshTraineeCardProFollowup(box){
+  const traineeCnapsRequestCache = new Map();
+  const traineeCnapsRequestQueue = [];
+  let traineeCnapsActiveRequests = 0;
+  const TRAINEE_CNAPS_MAX_CONCURRENT = 2;
+  function enqueueTraineeCnapsRequest(task){
+    return new Promise((resolve, reject)=>{
+      traineeCnapsRequestQueue.push({task, resolve, reject});
+      drainTraineeCnapsRequestQueue();
+    });
+  }
+  function drainTraineeCnapsRequestQueue(){
+    if(traineeCnapsActiveRequests >= TRAINEE_CNAPS_MAX_CONCURRENT || !traineeCnapsRequestQueue.length) return;
+    const item = traineeCnapsRequestQueue.shift();
+    traineeCnapsActiveRequests += 1;
+    Promise.resolve().then(item.task).then(item.resolve, item.reject).finally(()=>{
+      traineeCnapsActiveRequests -= 1;
+      window.setTimeout(drainTraineeCnapsRequestQueue, 250);
+    });
+  }
+  async function refreshTraineeCardProFollowup(box, options = {}){
     const resultEl = box.querySelector("[data-trainee-card-pro-result]");
     const nom = box.getAttribute("data-nom") || "";
     const prenom = box.getAttribute("data-prenom") || "";
     const nub = box.getAttribute("data-nub") || "";
     if(!resultEl || !nom || !nub) return;
     try{
-      const r = await fetch(`/api/cnaps_public_annuaire?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}&nub=${encodeURIComponent(nub)}`);
-      const data = await r.json().catch(()=>({}));
-      if(r.ok && data.ok){
-        renderTraineeCardProResult(resultEl, data, "remote");
+      const cacheKey = String(nub || "").replace(/\D+/g, "").slice(-7);
+      if(!options.bypassCache && traineeCnapsRequestCache.has(cacheKey)){
+        renderTraineeCardProResult(resultEl, traineeCnapsRequestCache.get(cacheKey), "remote");
         return;
       }
+      const data = await enqueueTraineeCnapsRequest(async ()=>{
+        const r = await fetch(`/api/cnaps_public_annuaire?nom=${encodeURIComponent(nom)}&prenom=${encodeURIComponent(prenom)}&nub=${encodeURIComponent(nub)}${options.bypassCache ? "&cache=bypass" : ""}`);
+        const payload = await r.json().catch(()=>({}));
+        if(!r.ok || !payload.ok) throw new Error(payload.error || "cnaps_unavailable");
+        return payload;
+      });
+      traineeCnapsRequestCache.set(cacheKey, data);
+      renderTraineeCardProResult(resultEl, data, "remote");
+      return;
     }catch(e){}
     renderTraineeCardProResult(resultEl, {check_status: "error", active_titles: [], error: "cnaps_unavailable"}, "error");
   }
