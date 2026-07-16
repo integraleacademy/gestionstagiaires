@@ -87,7 +87,7 @@ class AutomationDateTimeFormatTests(unittest.TestCase):
         self.assertEqual(status["total_documents"], 5)
         self.assertEqual(status["progress_percent"], 20)
 
-    def test_conventions_dashboard_excludes_not_generated_conventions(self):
+    def test_conventions_dashboard_includes_not_generated_conventions(self):
         captured = {}
         data = {
             "sessions": [
@@ -127,8 +127,8 @@ class AutomationDateTimeFormatTests(unittest.TestCase):
             response = client.get("/admin/sessions/conventions")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual([row["trainee_id"] for row in captured["rows"]], ["generated"])
-        self.assertEqual(captured["stats"]["total"], 1)
+        self.assertEqual([row["trainee_id"] for row in captured["rows"]], ["generated", "not-generated"])
+        self.assertEqual(captured["stats"]["total"], 2)
 
 
 if __name__ == "__main__":

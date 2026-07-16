@@ -13612,8 +13612,6 @@ def _signed_conventions_unseen_items(data: Dict[str, Any]) -> List[Dict[str, Any
             is_signed = (
                 _is_yousign_signature_done(state)
                 or bool(signed_at)
-                or (trainee.get("convention_aps_status") or "").strip().lower() == "signed"
-                or (trainee.get("convention_status") or "").strip().lower() == "signed"
             )
             if not is_signed:
                 continue
@@ -13707,8 +13705,6 @@ def admin_sessions_conventions():
                     vae_key = inferred_vae_key
                 if VAE_STATUS_RANK.get(vae_key, -1) < VAE_STATUS_RANK.get("financement_validated", 0):
                     continue
-                if (trainee.get("convention_status") or "").strip().lower() == "signed" and not _has_legacy_signed_convention(trainee):
-                    continue
             state = _yousign_state(trainee)
             if _refresh_yousign_convention_status_if_pending(data, sess, trainees, trainee):
                 data_changed = True
@@ -13725,7 +13721,7 @@ def admin_sessions_conventions():
                     convention["status"] = status_key
                     convention["label"] = "Signature attendue"
                     convention["tone"] = "waiting"
-                elif legacy_convention_status == "signed":
+                elif legacy_convention_status == "signed" and _has_legacy_signed_convention(trainee):
                     status_key = "signed"
                     convention["status"] = status_key
                     convention["label"] = "Signée"
@@ -24013,7 +24009,7 @@ def _sync_convention_status_from_yousign(trainee: Dict[str, Any]) -> bool:
     """Keep the admin trainees convention dot aligned with the Yousign automation state."""
     state = _yousign_state(trainee)
     signed_at = state.get("signed_at") or trainee.get("convention_aps_signed_at") or trainee.get("convention_legacy_signed_at") or ""
-    if not (_is_yousign_signature_done(state) or signed_at or trainee.get("convention_aps_status") == "signed" or _has_legacy_signed_convention(trainee)):
+    if not (_is_yousign_signature_done(state) or signed_at or _has_legacy_signed_convention(trainee)):
         return False
     if trainee.get("convention_status") == "signed":
         return False
@@ -25533,7 +25529,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         convention_status = "refused"
     elif raw_status in {"expired", "canceled", "cancelled"} or _yousign_signature_link_is_expired(state):
         convention_status = "expired"
-    elif _is_yousign_signature_done(state) or signed_at or trainee.get("convention_aps_status") == "signed" or _has_legacy_signed_convention(trainee):
+    elif _is_yousign_signature_done(state) or signed_at or _has_legacy_signed_convention(trainee):
         convention_status = "signed"
     elif has_signature_request and _is_yousign_signature_pending(state):
         convention_status = "waiting_signature"
