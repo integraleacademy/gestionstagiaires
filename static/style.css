@@ -3222,7 +3222,15 @@ body.admin-sidebar-active .admin-sidebar-notif-panel .notif-empty{
 body.partner-sidebar-collapsed .trainee-search-panel,
 body.partner-sidebar-collapsed .docs-to-control-panel{
   left:calc(var(--partner-sidebar-closed, 80px) + 18px);
+}
+body.partner-sidebar-collapsed .trainee-search-panel{
   width:min(470px, calc(100vw - var(--partner-sidebar-closed, 80px) - 36px));
+}
+body.partner-sidebar-collapsed .docs-to-control-panel{
+  width:min(680px, calc(100vw - var(--partner-sidebar-closed, 80px) - 36px));
+}
+.docs-to-control-panel{
+  width:min(680px, calc(100vw - var(--partner-sidebar-open, 320px) - 36px));
 }
 .trainee-search-panel::before,
 .docs-to-control-panel::before{content:"";position:absolute;inset:0 0 auto;height:6px;background:linear-gradient(90deg,#ff6b1a,#2563eb,#22c55e);}
