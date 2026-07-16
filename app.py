@@ -960,6 +960,48 @@ def get_qonto_invoice(invoice_id: str) -> Dict[str, Any]:
     return _qonto_request("GET", f"/v2/client_invoices/{quote(str(invoice_id), safe='')}")
 
 
+def list_qonto_invoices(params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    return _qonto_request("GET", "/v2/client_invoices", params=params or {})
+
+
+def _iter_qonto_invoice_payloads(payload: Any):
+    if isinstance(payload, dict):
+        invoice = _qonto_invoice_payload(payload)
+        if isinstance(invoice, dict) and invoice is not payload:
+            yield invoice
+        for key in ("client_invoices", "invoices", "items", "data"):
+            value = payload.get(key)
+            if isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        yield _qonto_invoice_payload(item)
+    elif isinstance(payload, list):
+        for item in payload:
+            if isinstance(item, dict):
+                yield _qonto_invoice_payload(item)
+
+
+def find_qonto_invoice_by_number(invoice_number: str) -> Optional[Dict[str, Any]]:
+    needle = str(invoice_number or "").strip()
+    if not needle:
+        return None
+    param_attempts = (
+        {"filter[number]": needle},
+        {"number": needle},
+        {"query": needle},
+        {"search": needle},
+    )
+    for params in param_attempts:
+        try:
+            payload = list_qonto_invoices(params)
+        except Exception as exc:
+            app.logger.info("[QONTO] invoice number lookup failed number=%s params=%s error=%s", needle, params, exc)
+            continue
+        for invoice in _iter_qonto_invoice_payloads(payload):
+            current_number = str(invoice.get("number") or invoice.get("invoice_number") or "").strip()
+            if current_number == needle:
+                return invoice
+    return None
 
 
 def _first_non_empty(mapping: Any, *keys: str) -> str:
@@ -1001,7 +1043,7 @@ def _download_pdf_from_url(pdf_url: str) -> Tuple[bytes, str]:
     return pdf_response.content, pdf_response.headers.get("Content-Type") or "application/pdf"
 
 
-def download_qonto_invoice_pdf(invoice_id: str) -> Tuple[bytes, str]:
+def download_qonto_invoice_pdf(invoice_id: str, invoice_number: str = "") -> Tuple[bytes, str]:
     if not _qonto_is_configured():
         raise QontoConfigurationError("Qonto n’est pas connecté")
     endpoint = f"/v2/client_invoices/{quote(str(invoice_id), safe='')}/download"
@@ -1018,7 +1060,19 @@ def download_qonto_invoice_pdf(invoice_id: str) -> Tuple[bytes, str]:
                 pdf_url = _find_qonto_pdf_url(invoice_payload)
                 if pdf_url:
                     return _download_pdf_from_url(pdf_url)
+                invoice = find_qonto_invoice_by_number(invoice_number)
+                pdf_url = _find_qonto_pdf_url(invoice)
+                if pdf_url:
+                    return _download_pdf_from_url(pdf_url)
+                if invoice and invoice.get("id") and str(invoice.get("id")) != str(invoice_id):
+                    return download_qonto_invoice_pdf(str(invoice.get("id")), str(invoice.get("number") or invoice.get("invoice_number") or invoice_number))
             except QontoApiError:
+                invoice = find_qonto_invoice_by_number(invoice_number)
+                pdf_url = _find_qonto_pdf_url(invoice)
+                if pdf_url:
+                    return _download_pdf_from_url(pdf_url)
+                if invoice and invoice.get("id") and str(invoice.get("id")) != str(invoice_id):
+                    return download_qonto_invoice_pdf(str(invoice.get("id")), str(invoice.get("number") or invoice.get("invoice_number") or invoice_number))
                 raise QontoNotFoundError(response.status_code, raw_body or response.text[:500], trace_id)
             except Exception as exc:
                 app.logger.info("[QONTO] invoice download fallback failed invoice_id=%s error=%s", invoice_id, exc)
@@ -27454,7 +27508,7 @@ def api_admin_billing_download(line_id: str):
         if line.get('invoicePdfUrl'):
             line['invoiceDownloadedAt'] = _now_iso(); _billing_log(line, 'PDF téléchargé', 'success'); _save_billing_line(data, line); save_data(data)
             return redirect(line['invoicePdfUrl'])
-        pdf_bytes, content_type = download_qonto_invoice_pdf(line['qontoInvoiceId'])
+        pdf_bytes, content_type = download_qonto_invoice_pdf(line['qontoInvoiceId'], line.get('qontoInvoiceNumber') or '')
         line['invoiceDownloadedAt'] = _now_iso(); _billing_log(line, 'PDF téléchargé', 'success'); _save_billing_line(data, line); save_data(data)
         filename = re.sub(r'[^A-Za-z0-9_.-]+', '_', f"FACTURE_{line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId')}.pdf")
         response = send_file(BytesIO(pdf_bytes), mimetype=content_type or 'application/pdf', as_attachment=False, download_name=filename)
@@ -27464,8 +27518,20 @@ def api_admin_billing_download(line_id: str):
         _billing_log(line, 'PDF téléchargé', 'error', _sanitize_qonto_error(str(exc)), line.get('qontoInvoiceId') or ''); _save_billing_line(data, line); save_data(data)
         if _qonto_invoice_is_missing_error(exc):
             try:
-                invoice_payload = get_qonto_invoice(line['qontoInvoiceId'])
+                invoice_payload = None
+                try:
+                    invoice_payload = get_qonto_invoice(line['qontoInvoiceId'])
+                except Exception as refresh_by_id_exc:
+                    app.logger.info(
+                        "[QONTO] invoice refresh by id failed line_id=%s invoice_id=%s error=%s",
+                        line_id, line.get('qontoInvoiceId'), refresh_by_id_exc,
+                    )
                 pdf_url = _find_qonto_pdf_url(invoice_payload)
+                if not pdf_url:
+                    invoice_payload = find_qonto_invoice_by_number(line.get('qontoInvoiceNumber') or '')
+                    pdf_url = _find_qonto_pdf_url(invoice_payload)
+                    if invoice_payload and invoice_payload.get('id'):
+                        line['qontoInvoiceId'] = str(invoice_payload.get('id'))
                 if pdf_url:
                     line['invoicePdfUrl'] = pdf_url
                     line['qontoPdfUrl'] = pdf_url

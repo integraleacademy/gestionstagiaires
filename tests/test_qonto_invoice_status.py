@@ -311,6 +311,38 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(response.headers["Location"], "https://qonto.test/inv_123")
         self.assertEqual(data["billing_lines"][0]["invoicePdfUrl"], "https://qonto.test/inv_123")
 
+
+    def test_billing_invoice_download_recovers_qonto_invoice_by_number_when_id_is_stale(self):
+        line_id = gestion_app._billing_line_id("S1", "T1", "Entreprise", "legacy")
+        data = {
+            "sessions": [{"id": "S1", "name": "Session", "trainees": [{"id": "T1", "first_name": "Ada", "last_name": "Lovelace"}]}],
+            "billing_lines": [{
+                "id": line_id,
+                "traineeId": "T1",
+                "sessionId": "S1",
+                "financingType": "Entreprise",
+                "financingRef": "legacy",
+                "qontoInvoiceId": "stale-id",
+                "qontoInvoiceNumber": "F-001",
+                "logs": [],
+            }]
+        }
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "_find_billing_line", return_value=data["billing_lines"][0]), \
+             patch.object(gestion_app, "save_data", side_effect=self.saved.append), \
+             patch.object(gestion_app, "download_qonto_invoice_pdf", side_effect=gestion_app.QontoNotFoundError(404, "Not found")), \
+             patch.object(gestion_app, "get_qonto_invoice", side_effect=gestion_app.QontoNotFoundError(404, "Not found")), \
+             patch.object(gestion_app, "find_qonto_invoice_by_number", return_value={"id": "fresh-id", "number": "F-001", "public_url": "https://qonto.test/fresh"}):
+            response = client.get(f"/api/admin/billing-lines/{line_id}/download-invoice")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "https://qonto.test/fresh")
+        self.assertEqual(data["billing_lines"][0]["qontoInvoiceId"], "fresh-id")
+        self.assertEqual(data["billing_lines"][0]["invoicePdfUrl"], "https://qonto.test/fresh")
+
     def test_qonto_invoice_download_falls_back_to_invoice_public_url_after_404(self):
         not_found_response = Mock(ok=False, status_code=404, content=b'{"error":"Not found"}', text='{"error":"Not found"}')
         not_found_response.headers = {"Content-Type": "application/json"}
