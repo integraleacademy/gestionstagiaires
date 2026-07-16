@@ -2995,3 +2995,52 @@ body.admin-sidebar-active .partner-sidebar__item.is-primary.is-open .sidebar-ico
 body.admin-sidebar-active .partner-sidebar__create:has(.sidebar-create-menu.is-open) .partner-sidebar__item.is-primary .sidebar-icon{
   transform:rotate(45deg);
 }
+
+/* Admin sidebar readability: larger top-left logo and slightly larger labels. */
+@media (min-width:861px){
+  body.admin-sidebar-active{
+    --partner-sidebar-open:320px;
+  }
+  body.admin-sidebar-active .partner-sidebar__identity{
+    grid-template-columns:64px 38px minmax(0,1fr);
+    gap:10px;
+    padding:10px;
+  }
+  body.admin-sidebar-active .partner-sidebar__home-link,
+  body.admin-sidebar-active .partner-sidebar__avatar{
+    width:64px;
+    height:64px;
+    border-radius:18px;
+  }
+  body.admin-sidebar-active .partner-sidebar__avatar{
+    padding:4px;
+  }
+  body.admin-sidebar-active .partner-sidebar__collapse{
+    width:38px;
+    height:38px;
+    border-radius:13px;
+  }
+  body.admin-sidebar-active .partner-sidebar__identity-copy strong{
+    font-size:17px;
+  }
+  body.admin-sidebar-active .partner-sidebar__identity-copy span,
+  body.admin-sidebar-active .partner-sidebar__identity-copy em{
+    font-size:14px;
+  }
+  body.admin-sidebar-active .partner-sidebar__section h2{
+    font-size:12px;
+  }
+  body.admin-sidebar-active .partner-sidebar__item{
+    min-height:42px;
+    font-size:15.5px;
+    gap:11px;
+  }
+  body.admin-sidebar-active .partner-sidebar__submenu-panel .partner-sidebar__item{
+    min-height:38px;
+    font-size:14px;
+  }
+  body.admin-sidebar-active .sidebar-icon{
+    width:21px;
+    height:21px;
+  }
+}
