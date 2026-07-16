@@ -13329,8 +13329,7 @@ def _signed_conventions_unseen_items(data: Dict[str, Any]) -> List[Dict[str, Any
             )
             if not is_signed:
                 continue
-            seen_at = str(trainee.get("convention_signed_seen_at") or "").strip()
-            if seen_at and (not signed_at or seen_at >= signed_at):
+            if bool(trainee.get("printed")):
                 continue
             items.append({
                 "session_id": session_id,
@@ -13498,8 +13497,6 @@ def admin_sessions_conventions():
             if row["download_url"] or row["signed_pdf_url"] or row["original_pdf_url"]:
                 stats["downloadable"] += 1
 
-    if _mark_signed_conventions_seen(data):
-        data_changed = True
     if data_changed:
         save_data(data)
     formation_options = [{"key": key, "label": label} for key, label in sorted(formation_options_by_key.items(), key=lambda item: item[1].lower())]
