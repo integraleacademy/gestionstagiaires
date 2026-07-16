@@ -630,10 +630,8 @@ select.status-pill{
    ========================= */
 
 /* ⚠️ on cible admin_trainees.html */
-#traineesTable th:nth-child(3),
-#traineesTable td:nth-child(3),
-#traineesTable th:nth-child(4),
-#traineesTable td:nth-child(4){
+#traineesTable .col-email,
+#traineesTable .col-phone{
   display:none;
 }
 
@@ -1699,6 +1697,17 @@ input[type="file"]{
 #traineesTable .col-last-name,
 #traineesTable .col-first-name{
   display:table-cell !important;
+}
+
+#traineesTable .col-convention{
+  min-width:96px;
+  padding-left:22px;
+  text-align:center;
+}
+
+#traineesTable .col-convention .status-dot{
+  display:inline-flex;
+  justify-content:center;
 }
 
 /* Page stagiaires admin : utiliser toute la largeur disponible pour les tableaux larges. */
