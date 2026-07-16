@@ -13600,7 +13600,7 @@ def _signed_conventions_unseen_items(data: Dict[str, Any]) -> List[Dict[str, Any
         if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
             continue
         session_start_date = _session_start_date(sess)
-        if not session_start_date or session_start_date < minimum_session_start_date:
+        if session_start_date and session_start_date < minimum_session_start_date:
             continue
         session_id = str(sess.get("id") or "")
         training_type = _session_get(sess, "training_type", "")
@@ -13683,7 +13683,7 @@ def admin_sessions_conventions():
         if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
             continue
         session_start_date = _session_start_date(sess)
-        if not session_start_date or session_start_date < minimum_session_start_date:
+        if session_start_date and session_start_date < minimum_session_start_date:
             continue
         session_id = str(sess.get("id") or "")
         training_type = _session_get(sess, "training_type", "")
@@ -13705,15 +13705,15 @@ def admin_sessions_conventions():
                     vae_key = inferred_vae_key
                 if VAE_STATUS_RANK.get(vae_key, -1) < VAE_STATUS_RANK.get("financement_validated", 0):
                     continue
-                if (trainee.get("convention_status") or "").strip().lower() == "signed":
+                if (trainee.get("convention_status") or "").strip().lower() == "signed" and not _has_legacy_signed_convention(trainee):
                     continue
             state = _yousign_state(trainee)
             if _refresh_yousign_convention_status_if_pending(data, sess, trainees, trainee):
                 data_changed = True
                 state = _yousign_state(trainee)
             legacy_convention_status = (trainee.get("convention_status") or "").strip().lower()
-            if not _has_generated_yousign_convention(trainee) and legacy_convention_status not in {"soon", "signing", "signed"}:
-                continue
+            # Afficher aussi les conventions non générées afin de pouvoir marquer
+            # les signatures réalisées dans l'ancien logiciel.
             automation = _build_trainee_automation_status(sess, trainee, session_id, trainee_id)
             convention = automation["convention"]
             status_key = convention.get("status") or "not_generated"
@@ -13773,6 +13773,8 @@ def admin_sessions_conventions():
                 "download_url": convention.get("download_url") or "",
                 "can_send": True,
                 "can_remind": status_key in {"waiting_signature", "sent"} and bool(state.get("signature_link")),
+                "legacy_signed": _has_legacy_signed_convention(trainee),
+                "legacy_toggle_url": url_for("admin_toggle_legacy_convention_signed", session_id=session_id, trainee_id=trainee_id),
                 "printed": bool(trainee.get("printed")),
                 "is_problem": is_problem,
             }
@@ -24001,11 +24003,15 @@ def _is_yousign_signature_done(state: Dict[str, Any]) -> bool:
     return _normalize_yousign_status(state.get("status")) in YOUSIGN_FINAL_STATUSES
 
 
+def _has_legacy_signed_convention(trainee: Dict[str, Any]) -> bool:
+    return bool(trainee.get("convention_legacy_signed") or trainee.get("legacy_convention_signed"))
+
+
 def _sync_convention_status_from_yousign(trainee: Dict[str, Any]) -> bool:
     """Keep the admin trainees convention dot aligned with the Yousign automation state."""
     state = _yousign_state(trainee)
-    signed_at = state.get("signed_at") or trainee.get("convention_aps_signed_at") or ""
-    if not (_is_yousign_signature_done(state) or signed_at or trainee.get("convention_aps_status") == "signed"):
+    signed_at = state.get("signed_at") or trainee.get("convention_aps_signed_at") or trainee.get("convention_legacy_signed_at") or ""
+    if not (_is_yousign_signature_done(state) or signed_at or trainee.get("convention_aps_status") == "signed" or _has_legacy_signed_convention(trainee)):
         return False
     if trainee.get("convention_status") == "signed":
         return False
@@ -24543,6 +24549,18 @@ def _download_yousign_signed_pdf(signature_request_id: str, trainee_id: str) -> 
 APS_CONVOCATION_AUTO_SEND_DELAY_SECONDS = 5 * 60
 _aps_convocation_auto_send_timers: Set[str] = set()
 _aps_convocation_auto_send_timers_lock = threading.Lock()
+_aps_convocation_due_runner_lock = threading.Lock()
+_aps_convocation_due_runner_last_check = 0.0
+_aps_convocation_background_started = False
+
+
+def _convocation_auto_timer_key(session_id: str, trainee_id: str) -> str:
+    return f"{session_id}:{trainee_id}"
+
+
+def _discard_convocation_auto_timer(session_id: str, trainee_id: str) -> None:
+    with _aps_convocation_auto_send_timers_lock:
+        _aps_convocation_auto_send_timers.discard(_convocation_auto_timer_key(session_id, trainee_id))
 
 
 def _send_scheduled_convocation_after_convention_signed(session_id: str, trainee_id: str) -> None:
@@ -24561,16 +24579,14 @@ def _send_scheduled_convocation_after_convention_signed(session_id: str, trainee
         sess["trainees"] = trainees
         sess.pop("stagiaires", None)
         save_data(data)
-        key = f"{session_id}:{trainee_id}"
-        with _aps_convocation_auto_send_timers_lock:
-            _aps_convocation_auto_send_timers.discard(key)
+        _discard_convocation_auto_timer(session_id, trainee_id)
 
 
 def _schedule_convocation_after_convention_signed(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> None:
     """Planifie l’envoi automatique de la convocation 5 minutes après signature."""
     if not _is_aps_session(session_obj) or trainee.get("convocation_aps_sent_at"):
         return
-    key = f"{session_id}:{trainee_id}"
+    key = _convocation_auto_timer_key(session_id, trainee_id)
     with _aps_convocation_auto_send_timers_lock:
         if key in _aps_convocation_auto_send_timers:
             return
@@ -24585,6 +24601,103 @@ def _schedule_convocation_after_convention_signed(session_obj: Dict[str, Any], t
     )
     timer.daemon = True
     timer.start()
+
+
+
+def run_due_convocation_auto_sends() -> Dict[str, int]:
+    """Send persisted convocation jobs whose 5-minute delay has elapsed.
+
+    The in-memory Timer is useful while the worker stays alive, but production
+    workers can restart, scale, or sleep. This persisted sweep makes the
+    checkbox/Yousign signature flow reliable after a restart as soon as any
+    worker is active again.
+    """
+    data = load_data()
+    now = datetime.datetime.utcnow()
+    due: List[Tuple[str, str]] = []
+    for sess in data.get("sessions", []) or []:
+        if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
+            continue
+        session_id = str(sess.get("id") or "")
+        if not session_id or not _is_aps_session(sess):
+            continue
+        for trainee in _session_trainees_list(sess):
+            trainee_id = str(trainee.get("id") or "")
+            if not trainee_id or trainee.get("convocation_aps_sent_at"):
+                continue
+            scheduled_at = _parse_iso_datetime(trainee.get("convocation_auto_scheduled_at"))
+            if scheduled_at and scheduled_at <= now:
+                due.append((session_id, trainee_id))
+    sent = failed = skipped = 0
+    for session_id, trainee_id in due:
+        data = load_data()
+        sess, trainees, trainee = _find_session_trainee(data, session_id, trainee_id)
+        if not sess or not trainee:
+            skipped += 1
+            continue
+        before_sent = bool(trainee.get("convocation_aps_sent_at"))
+        try:
+            ok = _send_convocation_after_convention_signed(sess, trainee, session_id, trainee_id)
+            if ok and not before_sent and trainee.get("convocation_aps_sent_at"):
+                sent += 1
+            else:
+                skipped += 1
+        except Exception as exc:
+            failed += 1
+            trainee["convocation_auto_last_error"] = str(exc)
+            app.logger.exception("[CONVOCATION] due send after convention signature failed trainee_id=%s", trainee_id)
+        finally:
+            trainee["updated_at"] = _now_iso()
+            sess["trainees"] = trainees
+            sess.pop("stagiaires", None)
+            save_data(data)
+            _discard_convocation_auto_timer(session_id, trainee_id)
+    return {"checked": len(due), "sent": sent, "failed": failed, "skipped": skipped}
+
+
+def _run_due_convocation_auto_sends_throttled(interval_seconds: int = 60) -> None:
+    global _aps_convocation_due_runner_last_check
+    now_monotonic = time.monotonic()
+    if now_monotonic - _aps_convocation_due_runner_last_check < interval_seconds:
+        return
+    if not _aps_convocation_due_runner_lock.acquire(blocking=False):
+        return
+    try:
+        _aps_convocation_due_runner_last_check = now_monotonic
+        result = run_due_convocation_auto_sends()
+        if result.get("checked"):
+            app.logger.info("[CONVOCATION] due auto-send sweep result=%s", result)
+    finally:
+        _aps_convocation_due_runner_lock.release()
+
+
+def _convocation_auto_send_background_loop() -> None:
+    while True:
+        try:
+            _run_due_convocation_auto_sends_throttled(interval_seconds=30)
+        except Exception:
+            app.logger.exception("[CONVOCATION] background due auto-send sweep failed")
+        time.sleep(30)
+
+
+def _ensure_convocation_auto_send_background_worker() -> None:
+    global _aps_convocation_background_started
+    if _aps_convocation_background_started:
+        return
+    with _aps_convocation_due_runner_lock:
+        if _aps_convocation_background_started:
+            return
+        thread = threading.Thread(target=_convocation_auto_send_background_loop, name="convocation-auto-send", daemon=True)
+        thread.start()
+        _aps_convocation_background_started = True
+
+
+@app.before_request
+def run_due_convocation_auto_sends_before_request():
+    if request.path == "/healthz":
+        return None
+    _run_due_convocation_auto_sends_throttled()
+    return None
 
 
 def _mark_yousign_convention_signed(data: Dict[str, Any], sess: Dict[str, Any], trainees: List[Dict[str, Any]], trainee: Dict[str, Any], request_id: str, event_id: str = "") -> None:
@@ -25426,6 +25539,10 @@ def _store_public_file_token(path: str) -> str:
 
 def _send_convocation_after_convention_signed(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str) -> bool:
     """Generate, send by email, and expose the convocation once the convention is signed."""
+    automation = _build_trainee_automation_status(session_obj, trainee, session_id, trainee_id)
+    if (automation.get("convention") or {}).get("status") != "signed":
+        trainee["convocation_auto_last_error"] = "En attente de signature de la convention"
+        return False
     if not _is_aps_session(session_obj):
         trainee["convocation_auto_last_error"] = "Envoi automatique de convocation configuré uniquement pour APS."
         return False
@@ -25461,7 +25578,8 @@ def _has_generated_yousign_convention(trainee: Dict[str, Any]) -> bool:
     """Return True once a convention document or Yousign request exists."""
     state = _yousign_state(trainee)
     return bool(
-        state.get("signature_request_id")
+        _has_legacy_signed_convention(trainee)
+        or state.get("signature_request_id")
         or state.get("unsigned_pdf_path")
         or state.get("signed_pdf_path")
         or trainee.get("convention_aps_pdf_path")
@@ -25475,7 +25593,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     raw_status = _normalize_yousign_status(state.get("status"))
     generated_at_raw = state.get("created_at") or trainee.get("convention_aps_generated_at") or ""
     sent_at_raw = state.get("signature_email_sent_at") or state.get("activated_at") or ""
-    signed_at_raw = state.get("signed_at") or trainee.get("convention_aps_signed_at") or ""
+    signed_at_raw = state.get("signed_at") or trainee.get("convention_aps_signed_at") or trainee.get("convention_legacy_signed_at") or ""
     generated_at = _format_automation_datetime(generated_at_raw)
     sent_at = _format_automation_datetime(sent_at_raw)
     signed_at = _format_automation_datetime(signed_at_raw)
@@ -25488,7 +25606,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
         convention_status = "refused"
     elif raw_status in {"expired", "canceled", "cancelled"} or _yousign_signature_link_is_expired(state):
         convention_status = "expired"
-    elif _is_yousign_signature_done(state) or signed_at or trainee.get("convention_aps_status") == "signed":
+    elif _is_yousign_signature_done(state) or signed_at or trainee.get("convention_aps_status") == "signed" or _has_legacy_signed_convention(trainee):
         convention_status = "signed"
     elif has_signature_request and _is_yousign_signature_pending(state):
         convention_status = "waiting_signature"
@@ -27772,6 +27890,58 @@ def api_create_convention_signature(session_id: str, trainee_id: str):
         s.pop("stagiaires", None)
         save_data(data)
         return jsonify({"ok": False, "error": message}), 400
+
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/legacy-signed")
+@admin_login_required
+@admin_write_required
+def admin_toggle_legacy_convention_signed(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        flash("Stagiaire introuvable.", "error")
+        abort(404)
+    checked = str(request.form.get("legacy_signed") or "").lower() in {"1", "true", "yes", "on"}
+    now = _now_iso()
+    state = _yousign_state(t)
+    if checked:
+        t["convention_legacy_signed"] = True
+        t["convention_legacy_signed_at"] = t.get("convention_legacy_signed_at") or now
+        t["convention_status"] = "signed"
+        t["convention_aps_status"] = "signed"
+        t["convention_aps_signed_at"] = t.get("convention_aps_signed_at") or t["convention_legacy_signed_at"]
+        state.update({
+            "status": "done",
+            "signed_at": state.get("signed_at") or t["convention_legacy_signed_at"],
+            "next_reminder_at": "",
+            "last_error": "",
+            "legacy_signed": True,
+            "legacy_signed_at": t["convention_legacy_signed_at"],
+        })
+        _schedule_convocation_after_convention_signed(s, t, session_id, trainee_id)
+        flash("Convention marquée comme générée et signée via l’ancien logiciel.", "success")
+    else:
+        t["convention_legacy_signed"] = False
+        t["legacy_convention_signed"] = False
+        t["convention_legacy_signed_at"] = ""
+        if state.get("legacy_signed") and not state.get("signature_request_id") and not state.get("signed_pdf_path"):
+            state.clear()
+        else:
+            state["legacy_signed"] = False
+        if t.get("convention_aps_status") == "signed" and not state.get("signed_pdf_path"):
+            t["convention_aps_status"] = ""
+            t["convention_aps_signed_at"] = ""
+        if (t.get("convention_status") or "").strip().lower() == "signed" and not state.get("signed_pdf_path"):
+            t["convention_status"] = "soon"
+        t["convocation_auto_scheduled_at"] = ""
+        _discard_convocation_auto_timer(session_id, trainee_id)
+        flash("Marquage ancien logiciel annulé.", "success")
+    t["updated_at"] = now
+    s["trainees"] = trainees
+    s.pop("stagiaires", None)
+    save_data(data)
+    return redirect(request.referrer or url_for("admin_sessions_conventions"))
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convocation-signature/create")
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/convention/yousign")
@@ -32080,6 +32250,7 @@ def admin_sessions_slash_redirect():
 
 
 
+_ensure_convocation_auto_send_background_worker()
 _log_memory_stage("AFTER_ROUTE_REGISTRATION", _APP_IMPORT_STARTED_AT, "-")
 _log_memory_stage("IMPORT_END_REAL", _APP_IMPORT_STARTED_AT, "-")
 
