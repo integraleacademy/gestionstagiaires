@@ -27463,12 +27463,27 @@ def api_admin_billing_download(line_id: str):
     except Exception as exc:
         _billing_log(line, 'PDF téléchargé', 'error', _sanitize_qonto_error(str(exc)), line.get('qontoInvoiceId') or ''); _save_billing_line(data, line); save_data(data)
         if _qonto_invoice_is_missing_error(exc):
-            response = app.response_class(
-                _billing_invoice_fallback_html(line, str(exc)),
-                mimetype='text/html; charset=utf-8',
-            )
-            response.headers['X-Qonto-PDF-Fallback'] = 'local-html'
-            return response
+            try:
+                invoice_payload = get_qonto_invoice(line['qontoInvoiceId'])
+                pdf_url = _find_qonto_pdf_url(invoice_payload)
+                if pdf_url:
+                    line['invoicePdfUrl'] = pdf_url
+                    line['qontoPdfUrl'] = pdf_url
+                    line['invoiceDownloadedAt'] = _now_iso()
+                    _billing_log(line, 'Lien facture Qonto récupéré', 'success')
+                    _save_billing_line(data, line)
+                    save_data(data)
+                    return redirect(pdf_url)
+            except Exception as refresh_exc:
+                app.logger.info(
+                    "[QONTO] invoice public URL refresh failed line_id=%s invoice_id=%s error=%s",
+                    line_id, line.get('qontoInvoiceId'), refresh_exc,
+                )
+            return jsonify({
+                'ok': False,
+                'error': 'La vraie facture Qonto est indisponible pour le moment. Synchronisez Qonto ou vérifiez que la facture existe toujours dans Qonto.',
+                'qontoInvoiceId': line.get('qontoInvoiceId'),
+            }), 404
         return jsonify({'ok': False, 'error': _sanitize_qonto_error(str(exc)), 'qontoInvoiceId': line.get('qontoInvoiceId')}), 502
 
 
