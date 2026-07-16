@@ -2665,24 +2665,17 @@
       inner.innerHTML = items.map(it => {
         const full = `${(it.first_name||"").toUpperCase()} ${(it.last_name||"").toUpperCase()}`.trim();
         const url = it.admin_url || `/admin/sessions/${it.session_id}/stagiaires/${it.trainee_id}`;
-        const conventionStatus = (it.convention_status || "soon");
-        const conventionSaisieDone = !!it.convention_saisie_done || conventionStatus === "signing" || conventionStatus === "signed";
-        const conventionSignedDone = !!it.convention_signed_done || conventionStatus === "signed";
-        const conventionDone = conventionSaisieDone && conventionSignedDone;
-        const testFrValidated = (it.test_fr_status || "soon") === "validated";
+        const publicUrl = it.public_url || `/espace/${encodeURIComponent(it.public_token || "")}`;
 
         return `
-          <div class="search-item" data-session-id="${escapeHtml(it.session_id)}" data-trainee-id="${escapeHtml(it.trainee_id)}" data-convention-status="${escapeHtml(conventionStatus)}" data-convention-saisie-done="${conventionSaisieDone ? "1" : "0"}" data-convention-signed-done="${conventionSignedDone ? "1" : "0"}">
+          <div class="search-item" data-session-id="${escapeHtml(it.session_id)}" data-trainee-id="${escapeHtml(it.trainee_id)}">
             <div>
               <div class="search-name">${escapeHtml(full || "—")}</div>
               <div class="search-sub">${escapeHtml(itemDetails(it) || "—")}</div>
             </div>
             <div class="search-open">
-              <a class="btn btn-outline" href="${escapeHtml(url)}" style="text-decoration:none;display:inline-block">Ouvrir</a>
-              <button type="button" class="btn btn-primary btn-quick-action" data-quick-action="convention" ${conventionDone ? "disabled" : ""}>Convention</button>
-              <button type="button" class="btn btn-warning btn-quick-action quick-convention-state is-hidden" data-quick-action="convention-saisie" ${conventionSaisieDone ? "disabled" : ""}>Saisie</button>
-              <button type="button" class="btn btn-success btn-quick-action quick-convention-state is-hidden" data-quick-action="convention-signee" ${conventionSignedDone ? "disabled" : ""}>Signée</button>
-              <button type="button" class="btn btn-primary btn-quick-action" data-quick-action="test-fr" ${testFrValidated ? "disabled" : ""}>Test FR</button>
+              <a class="btn" href="${escapeHtml(url)}" style="text-decoration:none;display:inline-block;background:linear-gradient(135deg,#22c55e,#16a34a);border-color:#15803d;color:#fff;">Fiche interne</a>
+              <a class="btn" href="${escapeHtml(publicUrl)}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block;background:#f3f4f6;border-color:#d1d5db;color:#374151;">Espace stagiaire</a>
             </div>
           </div>
         `;
