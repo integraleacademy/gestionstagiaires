@@ -8289,17 +8289,38 @@ def _cnaps_public_error_snapshot(nub: str, error: str, status_code: Optional[int
     return snapshot
 
 
-def _validate_cnaps_json_response(response: Any) -> Any:
+def _cnaps_safe_response_preview(response: Any, limit: int = 300) -> str:
+    text = (getattr(response, "text", "") or "")[:limit]
+    text = re.sub(r"(?i)(cookie|csrf|token|authorization|password|secret)([\"\'\s:=]+)[^&\s\"\'<>;,]+", r"\1\2[REDACTED]", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _log_cnaps_outbound_response(method: str, url: str, response: Any) -> None:
     status_code = getattr(response, "status_code", None)
     content_type = (getattr(response, "headers", {}) or {}).get("Content-Type", "")
-    final_url = getattr(response, "url", "") or CNAPS_PUBLIC_ANNUAIRE_ENDPOINT
-    app.logger.info(
-        "CNAPS outbound method=POST url=%s status=%s content_type=%s final_url=%s",
-        CNAPS_PUBLIC_ANNUAIRE_ENDPOINT,
-        status_code,
-        content_type or "unknown",
-        final_url,
-    )
+    final_url = getattr(response, "url", "") or url
+    app.logger.warning("CNAPS outbound method=%s", method.upper())
+    app.logger.warning("CNAPS outbound url=%s", url)
+    app.logger.warning("CNAPS outbound final_url=%s", final_url)
+    app.logger.warning("CNAPS outbound status=%s", status_code)
+    app.logger.warning("CNAPS outbound content_type=%s", content_type or "unknown")
+    app.logger.warning("CNAPS outbound response_preview=%s", _cnaps_safe_response_preview(response))
+
+
+def _log_cnaps_outbound_exception(method: str, url: str, exc: Exception) -> None:
+    preview = re.sub(r"(?i)(cookie|csrf|token|authorization|password|secret)([\"\'\s:=]+)[^&\s\"\'<>;,]+", r"\1\2[REDACTED]", str(exc))[:300]
+    app.logger.warning("CNAPS outbound method=%s", method.upper())
+    app.logger.warning("CNAPS outbound url=%s", url)
+    app.logger.warning("CNAPS outbound final_url=%s", url)
+    app.logger.warning("CNAPS outbound status=exception")
+    app.logger.warning("CNAPS outbound content_type=unknown")
+    app.logger.warning("CNAPS outbound response_preview=%s", preview)
+
+
+def _validate_cnaps_json_response(response: Any, method: str = "POST", url: Optional[str] = None) -> Any:
+    status_code = getattr(response, "status_code", None)
+    content_type = (getattr(response, "headers", {}) or {}).get("Content-Type", "")
+    _log_cnaps_outbound_response(method, url or CNAPS_PUBLIC_ANNUAIRE_ENDPOINT, response)
     if status_code != 200:
         raise RuntimeError(f"CNAPS HTTP {status_code}")
     if "json" not in (content_type or "").lower():
@@ -8345,9 +8366,18 @@ def fetch_cnaps_public_annuaire(nom: str, nub: str, previous_success: Optional[D
     rows: List[Dict[str, str]] = []
     try:
         session = requests.Session()
-        session.get(CNAPS_PUBLIC_ANNUAIRE_PAGE_URL, headers={"Accept": "text/html", "User-Agent": headers["User-Agent"]}, timeout=(5, 15), allow_redirects=True)
-        response = session.post(endpoint, json=payload, headers=headers, timeout=(5, 15), allow_redirects=True)
-        data = _validate_cnaps_json_response(response)
+        try:
+            session.get(CNAPS_PUBLIC_ANNUAIRE_PAGE_URL, headers={"Accept": "text/html", "User-Agent": headers["User-Agent"]}, timeout=(5, 15), allow_redirects=True)
+        except Exception:
+            # Some environments block the public HTML bootstrap while still allowing the API call.
+            # Continue so the diagnostic logs identify the actual API request/response.
+            pass
+        try:
+            response = session.post(endpoint, json=payload, headers=headers, timeout=(5, 15), allow_redirects=True)
+        except Exception as outbound_exc:
+            _log_cnaps_outbound_exception("POST", endpoint, outbound_exc)
+            raise
+        data = _validate_cnaps_json_response(response, method="POST", url=endpoint)
         rows = _extract_cnaps_public_annuaire_results(data)
         snapshot = build_cnaps_public_annuaire_snapshot(rows, normalized_nub)
         snapshot["last_successful_check"] = {"checked_at": snapshot["checked_at"], "active_titles": snapshot["active_titles"]}
