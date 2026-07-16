@@ -2839,8 +2839,8 @@ body.partner-sidebar-collapsed .sidebar-search-badge{right:-9px;bottom:-8px;}
   }
   body.admin-sidebar-active .partner-sidebar__identity{flex:0 0 auto;grid-template-columns:50px 34px minmax(0,1fr);padding:7px;gap:8px;}
   body.admin-sidebar-active .partner-sidebar__home-link,
-  body.admin-sidebar-active .partner-sidebar__avatar{width:50px;height:50px;border-radius:14px;object-fit:contain;overflow:visible;}
-  body.admin-sidebar-active .partner-sidebar__avatar{padding:3px;background:#fff;box-sizing:border-box;}
+  body.admin-sidebar-active .partner-sidebar__avatar{width:50px;height:50px;border-radius:14px;object-fit:contain;overflow:hidden;}
+  body.admin-sidebar-active .partner-sidebar__avatar{padding:6px;background:#fff;box-sizing:border-box;}
   body.admin-sidebar-active .partner-sidebar__nav{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding-right:2px;scrollbar-width:thin;}
   body.admin-sidebar-active .partner-sidebar__bottom{flex:0 0 auto;margin-top:6px;padding-top:7px;}
   body.admin-sidebar-active .partner-sidebar__powered{padding:5px 4px 0;gap:3px;line-height:1.15;}
@@ -2851,7 +2851,7 @@ body.partner-sidebar-collapsed .sidebar-search-badge{right:-9px;bottom:-8px;}
   body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__identity{grid-template-columns:58px;justify-items:center;padding:6px 3px;}
   body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__home-link,
   body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__avatar{width:58px;height:58px;border-radius:16px;box-sizing:border-box;}
-  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__avatar{padding:6px;background:#fff;object-fit:contain;}
+  body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__avatar{padding:7px;background:#fff;object-fit:contain;overflow:hidden;}
   body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__item{min-height:40px;padding:8px 7px;overflow:visible;}
   body.admin-sidebar-active.partner-sidebar-collapsed .sidebar-icon{width:22px;height:22px;}
   body.admin-sidebar-active.partner-sidebar-collapsed .partner-sidebar__powered span{display:none;}
@@ -3013,7 +3013,8 @@ body.admin-sidebar-active .partner-sidebar__create:has(.sidebar-create-menu.is-o
     border-radius:18px;
   }
   body.admin-sidebar-active .partner-sidebar__avatar{
-    padding:4px;
+    padding:8px;
+    overflow:hidden;
   }
   body.admin-sidebar-active .partner-sidebar__collapse{
     width:38px;
