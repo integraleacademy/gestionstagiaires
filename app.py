@@ -27155,6 +27155,53 @@ def _billing_line_qonto_preview(line: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _billing_invoice_fallback_html(line: Dict[str, Any], error_message: str = "") -> str:
+    preview = _billing_line_qonto_preview(line)
+    invoice = preview.get('invoice') or {}
+    client = preview.get('client') or {}
+    client_full_name = f"{client.get('first_name','')} {client.get('last_name','')}".strip()
+    client_name = html.escape(str(client.get('name') or client_full_name or line.get('clientName') or 'Client'))
+    trainee = html.escape(str(invoice.get('trainee') or ''))
+    invoice_ref = html.escape(str(line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId') or 'Facture'))
+    label = html.escape(str(invoice.get('label') or line.get('formationName') or 'Formation'))
+    amount_ht = html.escape(f"{_money(invoice.get('amount_ht')):.2f} €")
+    amount_tva = html.escape(f"{_money(invoice.get('amount_tva')):.2f} €")
+    amount_ttc = html.escape(f"{_money(invoice.get('amount_ttc')):.2f} €")
+    issue_date_raw = str(invoice.get('issue_date') or '')
+    due_date_raw = str(invoice.get('due_date') or '')
+    issue_date = html.escape(fr_date(issue_date_raw) or issue_date_raw)
+    due_date = html.escape(fr_date(due_date_raw) or due_date_raw)
+    warning = ''
+    if error_message:
+        sanitized = html.escape(_sanitize_qonto_error(error_message))
+        warning = f'<p class="warning">Affichage local temporaire : le PDF Qonto n’est pas encore disponible ({sanitized}).</p>'
+    return f'''<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Facture {invoice_ref}</title>
+<style>
+body{{font-family:Arial,sans-serif;margin:32px;color:#172033}}
+.header{{display:flex;justify-content:space-between;gap:24px;border-bottom:2px solid #111827;padding-bottom:18px}}
+h1{{margin:0;font-size:32px}}
+.card{{margin-top:24px;padding:18px;border:1px solid #d8dee9;border-radius:12px}}
+table{{width:100%;border-collapse:collapse;margin-top:24px}}
+th,td{{padding:12px;border-bottom:1px solid #e5e7eb;text-align:left}}
+th{{background:#f8fafc}}
+.total{{font-weight:700;font-size:18px}}
+.warning{{padding:12px;border-radius:8px;background:#fff7ed;color:#9a3412}}
+@media print{{button{{display:none}} body{{margin:18mm}}}}
+</style>
+</head>
+<body>
+<button onclick="window.print()">Imprimer / enregistrer en PDF</button>
+{warning}
+<div class="header"><div><h1>Facture</h1><p>Intégrale Academy</p></div><div><strong>{invoice_ref}</strong><br>Émise le {issue_date}<br>Échéance {due_date}</div></div>
+<div class="card"><strong>Client</strong><br>{client_name}<br><br><strong>Stagiaire</strong><br>{trainee}</div>
+<table><thead><tr><th>Désignation</th><th>HT</th><th>TVA</th><th>TTC</th></tr></thead><tbody><tr><td>{label}</td><td>{amount_ht}</td><td>{amount_tva}</td><td>{amount_ttc}</td></tr></tbody><tfoot><tr><td colspan="3" class="total">Total TTC</td><td class="total">{amount_ttc}</td></tr></tfoot></table>
+</body></html>'''
+
+
 @app.get('/api/billing/line/<line_id>/qonto-preview')
 @admin_login_required
 def api_billing_line_qonto_preview(line_id: str):
@@ -27415,6 +27462,13 @@ def api_admin_billing_download(line_id: str):
         return response
     except Exception as exc:
         _billing_log(line, 'PDF téléchargé', 'error', _sanitize_qonto_error(str(exc)), line.get('qontoInvoiceId') or ''); _save_billing_line(data, line); save_data(data)
+        if _qonto_invoice_is_missing_error(exc):
+            response = app.response_class(
+                _billing_invoice_fallback_html(line, str(exc)),
+                mimetype='text/html; charset=utf-8',
+            )
+            response.headers['X-Qonto-PDF-Fallback'] = 'local-html'
+            return response
         return jsonify({'ok': False, 'error': _sanitize_qonto_error(str(exc)), 'qontoInvoiceId': line.get('qontoInvoiceId')}), 502
 
 
