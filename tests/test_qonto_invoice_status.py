@@ -282,6 +282,12 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertFalse(payload["ok"])
         self.assertIn("vraie facture Qonto", payload["error"])
         self.assertNotIn("Affichage local temporaire", response.get_data(as_text=True))
+        log_actions = [entry.get("action") for entry in data["billing_lines"][0]["logs"]]
+        self.assertIn("PDF Qonto indisponible", log_actions)
+        self.assertIn("Diagnostic facture Qonto", log_actions)
+        diagnostic = data["billing_lines"][0]["logs"][-1]["message"]
+        self.assertIn("download=", diagnostic)
+        self.assertIn("refresh_by_id=", diagnostic)
 
     def test_billing_invoice_download_redirects_to_qonto_public_url_after_download_404(self):
         line_id = gestion_app._billing_line_id("S1", "T1", "CPF", "legacy")
