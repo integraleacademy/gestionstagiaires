@@ -310,5 +310,38 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(payload["city"], "Roquebrune sur Argens")
         self.assertEqual(result["line"]["qontoInvoiceId"], "inv_123")
 
+
+class BillingStartDateFilterTests(unittest.TestCase):
+    def test_billing_lines_include_only_sessions_starting_from_june_2026(self):
+        sessions = [
+            {
+                "id": "S-MAY",
+                "name": "APS MAI 2026",
+                "date_start": "2026-05-31",
+                "date_end": "2026-06-04",
+                "trainees": [{"id": "T-MAY", "first_name": "Alice", "last_name": "Avant", "personal_amount": 100}],
+            },
+            {
+                "id": "S-JUNE",
+                "name": "APS JUIN 2026",
+                "date_start": "2026-06-01",
+                "date_end": "2026-06-05",
+                "trainees": [{"id": "T-JUNE", "first_name": "Bruno", "last_name": "Debut", "personal_amount": 200}],
+            },
+            {
+                "id": "S-FR",
+                "nom": "APS JUIN FR 2026",
+                "date_debut": "01/06/2026",
+                "date_fin": "05/06/2026",
+                "trainees": [{"id": "T-FR", "first_name": "Camille", "last_name": "France", "personal_amount": 300}],
+            },
+        ]
+
+        lines = gestion_app.buildBillingLinesFromSessions(sessions)
+
+        self.assertEqual({line["sessionId"] for line in lines}, {"S-JUNE", "S-FR"})
+        self.assertTrue(all(line["dateStart"] >= "2026-06-01" for line in lines))
+
+
 if __name__ == "__main__":
     unittest.main()
