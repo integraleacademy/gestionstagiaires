@@ -53,6 +53,12 @@
   .pill.gray{background:#f3f4f6;border-color:#e5e7eb;color:#374151}
   .pill.blue{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
 
+  .invoice-list{display:grid;gap:10px;margin-top:12px}
+  .invoice-row{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;border:1px solid #e5e7eb;border-radius:14px;padding:12px;background:#f8fafc}
+  .invoice-title{font-weight:950;color:#111827}
+  .invoice-subtitle{font-size:12px;color:#6b7280;margin-top:2px}
+  @media(max-width:640px){.invoice-row{grid-template-columns:1fr}.invoice-row .btn{width:100%}}
+
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:10px 12px;font-weight:900;border:1px solid #e5e7eb;background:#111827;color:#fff;text-decoration:none;cursor:pointer}
   .btn.outline{background:#fff;color:#111827}
   .btn.small{padding:8px 10px;border-radius:10px;font-size:13px}
@@ -923,6 +929,30 @@
       <div class="muted">Vos informations et documents — Intégrale Academy</div>
     </div>
   </div>
+
+
+    {% if public_invoices %}
+    <section class="saas-section-card invoices-card" style="padding:20px 22px;">
+      <div class="saas-card-header">
+        <div class="saas-title-row">
+          <span class="saas-title-icon blue" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5M8 9h2"/></svg></span>
+          <div><p class="card-kicker">Facturation</p><h2 class="card-title">Mes factures</h2></div>
+        </div>
+      </div>
+      <div class="invoice-list">
+        {% for invoice in public_invoices %}
+        <div class="invoice-row">
+          <div>
+            <div class="invoice-title">Facture {{ invoice.number }}</div>
+            <div class="invoice-subtitle">{{ invoice.financeur or 'Formation' }}{% if invoice.generated_at %} · Générée le {{ invoice.generated_at[:10]|frdate }}{% endif %}</div>
+          </div>
+          <span class="pill {{ 'green' if invoice.status in ['sent','paid','finalized'] else 'blue' }}">{{ invoice.status_label }}</span>
+          <a class="btn outline small" target="_blank" rel="noopener" href="{{ url_for('public_trainee_invoice_pdf', token=token_safe, line_id=invoice.id) }}">Voir le PDF{% if invoice.amount_label %} · {{ invoice.amount_label }}{% endif %}</a>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
 
   {% if is_dirigeant_vae %}
   <div class="vae-welcome-banner">🚀 Bienvenue dans votre Espace VAE Dirigeant d'entreprise de sécurité privée (DESP)</div>
