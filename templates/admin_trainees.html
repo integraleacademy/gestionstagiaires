@@ -570,9 +570,6 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
                  data-cnaps-status="{{ t.cnaps or '' }}"
                  data-fallback-activity="Autorisation préalable - Surveillance humaine ou gardiennage">
               <div class="card-pro-result" data-card-pro-result>Chargement CNAPS…</div>
-              <button class="mini-btn card-pro-refresh-btn" data-card-pro-refresh type="button" title="Rafraîchir le suivi carte pro">↻</button>
-              <div class="muted">Nom : <strong>{{ t.last_name or "—" }}</strong></div>
-              <div class="muted">NUB : <strong>{{ card_pro_nub }}</strong></div>
             </div>
           {% else %}
             <span class="muted">NUB manquant</span>
@@ -1085,16 +1082,14 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 <style>
 
 #traineesTable .col-card-pro-followup{
-  width:220px;
-  min-width:220px;
-  max-width:240px;
+  width:130px;
+  min-width:130px;
+  max-width:150px;
   vertical-align:middle;
 }
 .card-pro-followup{
-  display:grid;
-  grid-template-columns:minmax(0, 1fr) auto;
-  gap:4px 6px;
-  align-items:center;
+  display:block;
+  min-width:0;
   font-size:11px;
   line-height:1.15;
 }
@@ -1127,6 +1122,15 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 }
 .card-pro-result__activity{letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;}
 .card-pro-result__validity{font-size:9px;text-transform:uppercase;opacity:.9;overflow:hidden;text-overflow:ellipsis;}
+#traineesTable .col-comment{
+  width:clamp(320px, 24vw, 460px);
+  min-width:320px;
+}
+#traineesTable input.comment{
+  width:100%;
+  min-width:300px;
+  box-sizing:border-box;
+}
 .card-pro-refresh-btn{padding:5px 8px;}
 .card-pro-result__date{display:none;}
 .card-pro-result.is-loading{background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;color:#1d4ed8;padding:5px 8px;}
