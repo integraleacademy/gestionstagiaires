@@ -3890,7 +3890,30 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     return {...data, results: rows};
   }
 
-  async function refreshCardProFollowup(box){
+  const cnapsRequestCache = new Map();
+  const cnapsRequestQueue = [];
+  let cnapsActiveRequests = 0;
+  const CNAPS_MAX_CONCURRENT = 2;
+  const CNAPS_QUEUE_DELAY_MS = 250;
+
+  function enqueueCnapsRequest(task){
+    return new Promise((resolve, reject)=>{
+      cnapsRequestQueue.push({task, resolve, reject});
+      drainCnapsRequestQueue();
+    });
+  }
+
+  function drainCnapsRequestQueue(){
+    if(cnapsActiveRequests >= CNAPS_MAX_CONCURRENT || !cnapsRequestQueue.length) return;
+    const item = cnapsRequestQueue.shift();
+    cnapsActiveRequests += 1;
+    Promise.resolve().then(item.task).then(item.resolve, item.reject).finally(()=>{
+      cnapsActiveRequests -= 1;
+      window.setTimeout(drainCnapsRequestQueue, CNAPS_QUEUE_DELAY_MS);
+    });
+  }
+
+  async function refreshCardProFollowup(box, options = {}){
     const resultEl = box.querySelector("[data-card-pro-result]");
     const nom = box.getAttribute("data-nom") || "";
     const nub = box.getAttribute("data-nub") || "";
@@ -3898,12 +3921,20 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     resultEl.className = "card-pro-result is-loading";
     resultEl.textContent = "Chargement CNAPS…";
     try{
-      const r = await fetch(`/api/cnaps_public_annuaire?nom=${encodeURIComponent(nom)}&nub=${encodeURIComponent(nub)}`);
-      const data = await r.json().catch(()=>({}));
-      if(r.ok && data.ok){
-        renderCardProFollowupResult(resultEl, data, "remote");
+      const cacheKey = String(nub || "").replace(/\D+/g, "").slice(-7);
+      if(!options.bypassCache && cnapsRequestCache.has(cacheKey)){
+        renderCardProFollowupResult(resultEl, cnapsRequestCache.get(cacheKey), "remote");
         return;
       }
+      const data = await enqueueCnapsRequest(async ()=>{
+        const r = await fetch(`/api/cnaps_public_annuaire?nom=${encodeURIComponent(nom)}&nub=${encodeURIComponent(nub)}${options.bypassCache ? "&cache=bypass" : ""}`);
+        const payload = await r.json().catch(()=>({}));
+        if(!r.ok || !payload.ok) throw new Error(payload.error || "cnaps_unavailable");
+        return payload;
+      });
+      cnapsRequestCache.set(cacheKey, data);
+      renderCardProFollowupResult(resultEl, data, "remote");
+      return;
     }catch(e){
       // Si l'annuaire public bloque l'appel serveur, on affiche au moins les informations
       // déductibles du dossier au lieu de laisser la colonne en erreur.
@@ -3913,7 +3944,7 @@ document.querySelectorAll("select.sel").forEach(sel=>{
 
   document.querySelectorAll("[data-card-pro-followup]").forEach(box=>{
     refreshCardProFollowup(box);
-    box.querySelector("[data-card-pro-refresh]")?.addEventListener("click", ()=>refreshCardProFollowup(box));
+    box.querySelector("[data-card-pro-refresh]")?.addEventListener("click", ()=>refreshCardProFollowup(box, {bypassCache: true}));
   });
 
   // =========================

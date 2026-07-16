@@ -3215,7 +3215,9 @@ BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 BREVO_SENDER_EMAIL = os.environ.get("BREVO_SENDER_EMAIL", "ecole@integraleacademy.com")
 BREVO_SENDER_NAME = os.environ.get("BREVO_SENDER_NAME", "Intégrale Academy")
 CNAPS_LOOKUP_ENDPOINT = os.environ.get("CNAPS_LOOKUP_ENDPOINT", "")
-CNAPS_PUBLIC_ANNUAIRE_ENDPOINT = os.environ.get("CNAPS_PUBLIC_ANNUAIRE_ENDPOINT", "https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/api/annuaire-public").strip()
+CNAPS_PUBLIC_ANNUAIRE_LEGACY_ENDPOINT = "https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/api/annuaire-public"
+CNAPS_PUBLIC_ANNUAIRE_PAGE_URL = "https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/app/annuaire-public"
+CNAPS_PUBLIC_ANNUAIRE_ENDPOINT = os.environ.get("CNAPS_PUBLIC_ANNUAIRE_ENDPOINT", "https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/api/annuaire-public/recherche").strip()
 CNAPSV3_NOTIFICATIONS_ENDPOINT = os.environ.get("CNAPSV3_NOTIFICATIONS_ENDPOINT", "")
 CNAPSV3_BASE_URL = os.environ.get("CNAPSV3_BASE_URL", "https://cnapsv3.onrender.com").strip().rstrip("/")
 GESTIONSTAGIAIRE_SYNC_TOKEN = os.environ.get("GESTIONSTAGIAIRE_SYNC_TOKEN", "").strip()
@@ -5736,7 +5738,7 @@ def build_vtc_credentials_invalid_email(first_name: str, form_link: str) -> Tupl
         </a>
       </p>
       <p>
-        À réception, nous pourrons procéder au paiement des frais d'examen. Si vous avez besoin d'aide, vous pouvez nous contacter au 04 22 47 07 68. 
+        À réception, nous pourrons procéder au paiement des frais d'examen. Si vous avez besoin d'aide, vous pouvez nous contacter au 04 22 47 07 68.
       </p>
       <p>
         Merci pour votre compréhension.
@@ -8269,12 +8271,58 @@ def build_cnaps_public_annuaire_snapshot(rows: List[Dict[str, str]], nub: str) -
     }
 
 
-def fetch_cnaps_public_annuaire(nom: str, nub: str) -> Dict[str, Any]:
+def _cnaps_public_error_snapshot(nub: str, error: str, status_code: Optional[int] = None, previous_success: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    checked_at = _now_iso()
+    snapshot = {
+        "checked_at": checked_at,
+        "check_status": "error",
+        "nub": _normalize_cnaps_nub(nub),
+        "active_titles": [],
+        "cnaps_active_titles": [],
+        "results": [],
+        "error": (error or "CNAPS error")[:120],
+        "http_status": status_code,
+        "last_attempt": {"checked_at": checked_at, "status": "error", "error": (error or "CNAPS error")[:120]},
+    }
+    if previous_success:
+        snapshot["last_successful_check"] = previous_success
+    return snapshot
+
+
+def _validate_cnaps_json_response(response: Any) -> Any:
+    status_code = getattr(response, "status_code", None)
+    content_type = (getattr(response, "headers", {}) or {}).get("Content-Type", "")
+    final_url = getattr(response, "url", "") or CNAPS_PUBLIC_ANNUAIRE_ENDPOINT
+    app.logger.info(
+        "CNAPS outbound method=POST url=%s status=%s content_type=%s final_url=%s",
+        CNAPS_PUBLIC_ANNUAIRE_ENDPOINT,
+        status_code,
+        content_type or "unknown",
+        final_url,
+    )
+    if status_code != 200:
+        raise RuntimeError(f"CNAPS HTTP {status_code}")
+    if "json" not in (content_type or "").lower():
+        text = (getattr(response, "text", "") or "")[:200].lstrip().lower()
+        if text.startswith("<") or "<!doctype html" in text or "<html" in text:
+            raise RuntimeError("CNAPS unexpected HTML response")
+        if content_type:
+            raise RuntimeError(f"CNAPS unexpected Content-Type {content_type}")
+    try:
+        data = response.json()
+    except Exception as exc:
+        raise RuntimeError("CNAPS invalid JSON") from exc
+    if not isinstance(data, (dict, list)):
+        raise RuntimeError("CNAPS unexpected JSON structure")
+    return data
+
+
+def fetch_cnaps_public_annuaire(nom: str, nub: str, previous_success: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     endpoint = (CNAPS_PUBLIC_ANNUAIRE_ENDPOINT or "").strip()
     nom = " ".join((nom or "").strip().split()).upper()
     normalized_nub = _normalize_cnaps_nub(nub)
     if not endpoint or not nom or not normalized_nub:
-        return {"checked_at": _now_iso(), "check_status": "error", "nub": normalized_nub, "active_titles": [], "cnaps_active_titles": [], "results": [], "error": "missing_cnaps_query"}
+        return _cnaps_public_error_snapshot(normalized_nub, "missing_cnaps_query", previous_success=previous_success)
 
     payload = {
         "nom": nom,
@@ -8285,21 +8333,28 @@ def fetch_cnaps_public_annuaire(nom: str, nub: str) -> Dict[str, Any]:
         "size": 100,
         "limit": 100,
     }
-    params = {"nom": nom, "nub": normalized_nub, "numeroBeneficiaireUnique": normalized_nub, "page": 0, "size": 100, "limit": 100, "_": int(time.time() * 1000)}
-    headers = {"Accept": "application/json", "Cache-Control": "no-cache", "Pragma": "no-cache", "User-Agent": "gestionstagiaires/1.0"}
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+        "Referer": CNAPS_PUBLIC_ANNUAIRE_PAGE_URL,
+        "Origin": "https://espace-consultation.cnaps.interieur.gouv.fr",
+        "User-Agent": "Mozilla/5.0 (compatible; gestionstagiaires/1.0; +https://gestionstagiaires-r5no.onrender.com)",
+    }
     rows: List[Dict[str, str]] = []
     try:
-        try:
-            response = requests.post(endpoint, json=payload, headers=headers, timeout=12)
-        except Exception:
-            response = requests.get(endpoint, params=params, headers=headers, timeout=12)
-        if response.status_code >= 400:
-            response = requests.get(endpoint, params=params, headers=headers, timeout=12)
-        if response.status_code != 200:
-            raise RuntimeError(f"CNAPS HTTP {response.status_code}")
-        data = response.json()
+        session = requests.Session()
+        session.get(CNAPS_PUBLIC_ANNUAIRE_PAGE_URL, headers={"Accept": "text/html", "User-Agent": headers["User-Agent"]}, timeout=(5, 15), allow_redirects=True)
+        response = session.post(endpoint, json=payload, headers=headers, timeout=(5, 15), allow_redirects=True)
+        data = _validate_cnaps_json_response(response)
         rows = _extract_cnaps_public_annuaire_results(data)
-        return build_cnaps_public_annuaire_snapshot(rows, normalized_nub)
+        snapshot = build_cnaps_public_annuaire_snapshot(rows, normalized_nub)
+        snapshot["last_successful_check"] = {"checked_at": snapshot["checked_at"], "active_titles": snapshot["active_titles"]}
+        snapshot["last_attempt"] = {"checked_at": snapshot["checked_at"], "status": "success", "error": None}
+        if not snapshot["active_titles"]:
+            snapshot["message"] = "Aucun titre actif trouvé"
+        return snapshot
     except Exception as exc:
         app.logger.warning(
             "CNAPS check nub=%s rows=%s matched=0 active_titles=[] status=error cache=bypass error=%s",
@@ -8307,7 +8362,11 @@ def fetch_cnaps_public_annuaire(nom: str, nub: str) -> Dict[str, Any]:
             len(rows),
             exc,
         )
-        return {"checked_at": _now_iso(), "check_status": "error", "nub": normalized_nub, "active_titles": [], "cnaps_active_titles": [], "results": [], "error": str(exc)[:120] or "CNAPS error"}
+        status_code = None
+        m = re.search(r"CNAPS HTTP (\d+)", str(exc))
+        if m:
+            status_code = int(m.group(1))
+        return _cnaps_public_error_snapshot(normalized_nub, str(exc), status_code=status_code, previous_success=previous_success)
 
 def fetch_cnaps_lookup_by_name(nom: str, prenom: str) -> Optional[Dict[str, Any]]:
     if not CNAPS_LOOKUP_ENDPOINT:
@@ -19541,12 +19600,17 @@ def api_cnaps_public_annuaire():
     if not nom or not nub:
         return jsonify({"ok": False, "error": "missing_nom_or_nub"}), 400
     result = fetch_cnaps_public_annuaire(nom, nub)
+    if result.get("check_status") is None:
+        result["check_status"] = "success"
     notified = False
     if result.get("check_status") == "success" and previous_status.upper() == "INCONNU":
         data = load_data()
         notified = _notify_cnaps_unknown_status_change(data, first_name=prenom, last_name=nom, nub=nub, previous_status=previous_status, result=result)
         if notified:
             save_data(data)
+
+    if result.get("check_status") == "error":
+        return jsonify({"ok": False, "notification_sent": False, "pending_status_changes_count": None, **result}), 502
     return jsonify({"ok": True, "notification_sent": notified, "pending_status_changes_count": _cnaps_pending_status_change_count(data) if notified else None, **result})
 
 
