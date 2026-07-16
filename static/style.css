@@ -3079,3 +3079,88 @@ body.admin-sidebar-active .partner-sidebar__create:has(.sidebar-create-menu.is-o
     height:21px;
   }
 }
+
+/* Admin notifications: improve contrast inside the sidebar popover. */
+body.admin-sidebar-active .admin-sidebar-notif-panel{
+  width:min(704px, calc(100vw - var(--partner-sidebar-open) - 48px));
+  padding:14px;
+  border:1px solid rgba(252,165,165,.72);
+  background:linear-gradient(180deg,#fff7f7 0%,#ffffff 58%);
+  box-shadow:0 24px 60px rgba(15,23,42,.22);
+}
+body.admin-sidebar-active.partner-sidebar-collapsed .admin-sidebar-notif-panel{
+  width:min(704px, calc(100vw - var(--partner-sidebar-closed) - 48px));
+}
+body.admin-sidebar-active .admin-sidebar-notif-panel .notif-item{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:14px;
+  margin-bottom:10px;
+  padding:16px;
+  border-color:#dbe4f0;
+  border-radius:18px;
+  background:#f8fafc;
+  color:#0f172a;
+}
+body.admin-sidebar-active .admin-sidebar-notif-panel .notif-item.done{
+  background:#ecfdf5;
+  border-color:#86efac;
+}
+body.admin-sidebar-active .admin-sidebar-notif-panel .notif-main{
+  min-width:0;
+  padding:8px 10px;
+  color:#0f172a;
+}
+body.admin-sidebar-active .admin-sidebar-notif-panel .notif-label{
+  color:#0f172a;
+  font-size:15px;
+  font-weight:900;
+}
+body.admin-sidebar-active .admin-sidebar-notif-panel .notif-meta{
+  color:#667085;
+  font-size:13px;
+  font-weight:700;
+  line-height:1.35;
+}
+body.admin-sidebar-active .admin-sidebar-notif-panel .notif-actions{
+  margin-top:0;
+  align-self:center;
+}
+body.admin-sidebar-active .admin-sidebar-notif-panel .notif-icon-btn{
+  width:46px;
+  height:46px;
+  padding:0;
+  border-radius:14px;
+  background:#fff;
+  border-color:#dbe4f0;
+  box-shadow:0 8px 18px rgba(15,23,42,.08);
+  font-size:22px;
+  line-height:1;
+}
+body.admin-sidebar-active .admin-sidebar-notif-panel .notif-icon-btn[data-action="delete"]{
+  background:#fff1f2;
+  border-color:#fecdd3;
+}
+body.admin-sidebar-active .admin-sidebar-notif-panel .notif-icon-btn[data-action="toggle"]{
+  background:#ecfdf5;
+  border-color:#bbf7d0;
+}
+body.admin-sidebar-active .admin-sidebar-notif-panel .notif-empty{
+  color:#475467;
+  background:#f8fafc;
+  border:1px dashed #cbd5e1;
+  border-radius:14px;
+}
+@media (max-width:860px){
+  body.admin-sidebar-active .admin-sidebar-notif-panel,
+  body.admin-sidebar-active.partner-sidebar-collapsed .admin-sidebar-notif-panel{
+    width:auto;
+  }
+  body.admin-sidebar-active .admin-sidebar-notif-panel .notif-item{
+    grid-template-columns:1fr;
+  }
+  body.admin-sidebar-active .admin-sidebar-notif-panel .notif-actions{
+    justify-content:flex-start;
+  }
+}
