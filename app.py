@@ -8104,13 +8104,54 @@ def _first_non_empty_value(payload: Any, keys: Iterable[str]) -> str:
     return _walk(payload)
 
 
+CNAPS_ACTIVE_TITLE_ORDER = ["AP_SH", "AP_A3P", "CP_SH", "CP_A3P"]
+CNAPS_ACTIVITY_TITLES = {
+    "autorisation prealable - surveillance humaine ou gardiennage": {
+        "code": "AP_SH",
+        "label": "AP SH ACTIF",
+        "activity": "Autorisation préalable - Surveillance humaine ou gardiennage",
+    },
+    "autorisation prealable - agent de protection physique des personnes": {
+        "code": "AP_A3P",
+        "label": "AP A3P ACTIF",
+        "activity": "Autorisation préalable - Agent de protection physique des personnes",
+    },
+    "carte professionnelle - surveillance humaine ou gardiennage": {
+        "code": "CP_SH",
+        "label": "CP SH ACTIF",
+        "activity": "Carte professionnelle - Surveillance humaine ou gardiennage",
+    },
+    "carte professionnelle - agent de protection physique des personnes": {
+        "code": "CP_A3P",
+        "label": "CP A3P ACTIF",
+        "activity": "Carte professionnelle - Agent de protection physique des personnes",
+    },
+}
+
+
+def _normalize_cnaps_nub(value: Any) -> str:
+    return re.sub(r"\D+", "", str(value or ""))
+
+
+def _normalize_cnaps_activity(value: Any) -> str:
+    raw = str(value or "").strip()
+    raw = unicodedata.normalize("NFD", raw)
+    raw = "".join(ch for ch in raw if unicodedata.category(ch) != "Mn")
+    raw = raw.replace("—", "-").replace("–", "-").replace("‑", "-")
+    raw = raw.replace("’", "'").replace("`", "'")
+    raw = re.sub(r"\s*-\s*", " - ", raw)
+    raw = re.sub(r"\s+", " ", raw)
+    return raw.strip().casefold()
+
+
 def _extract_cnaps_public_annuaire_results(payload: Any) -> List[Dict[str, str]]:
     """Return all title rows found in the CNAPS public annuaire response."""
     rows: List[Dict[str, str]] = []
-    seen: Set[Tuple[str, str, str]] = set()
+    seen: Set[Tuple[str, str, str, str]] = set()
     activity_keys = ["activite", "activité", "activity", "libelleActivite"]
     validity_keys = ["validiteTitre", "validité du titre", "validite_du_titre", "validity", "statutTitre", "etatTitre"]
     date_keys = ["dateValiditeTitre", "date de validité du titre", "date_validite_titre", "dateFinValidite"]
+    nub_keys = ["nub", "numeroBeneficiaireUnique", "numero_beneficiaire_unique", "numéro bénéficiaire unique", "beneficiaireUnique"]
 
     def add_from(value: Any) -> None:
         if not isinstance(value, dict):
@@ -8118,13 +8159,14 @@ def _extract_cnaps_public_annuaire_results(payload: Any) -> List[Dict[str, str]]
         activite = _first_non_empty_value(value, activity_keys)
         validite = _first_non_empty_value(value, validity_keys)
         date_validite = _first_non_empty_value(value, date_keys)
-        if not activite and not validite and not date_validite:
+        nub = _first_non_empty_value(value, nub_keys)
+        if not activite and not validite and not date_validite and not nub:
             return
-        key = (activite, validite, date_validite)
+        key = (nub, activite, validite, date_validite)
         if key in seen:
             return
         seen.add(key)
-        rows.append({"activite": activite, "validite_titre": validite, "date_validite_titre": date_validite})
+        rows.append({"nub": nub, "activite": activite, "validite_titre": validite, "date_validite_titre": date_validite})
 
     def walk(value: Any) -> None:
         if isinstance(value, dict):
@@ -8139,24 +8181,77 @@ def _extract_cnaps_public_annuaire_results(payload: Any) -> List[Dict[str, str]]
     return rows
 
 
-def fetch_cnaps_public_annuaire(nom: str, nub: str) -> Optional[Dict[str, Any]]:
+def build_cnaps_public_annuaire_snapshot(rows: List[Dict[str, str]], nub: str) -> Dict[str, Any]:
+    normalized_nub = _normalize_cnaps_nub(nub)
+    matched_rows = [row for row in rows if _normalize_cnaps_nub(row.get("nub")) == normalized_nub]
+    titles_by_code: Dict[str, Dict[str, str]] = {}
+    matched_activities: List[str] = []
+    for row in matched_rows:
+        activity = str(row.get("activite") or "").strip()
+        matched_activities.append(activity)
+        if str(row.get("validite_titre") or "").strip().upper() != "ACTIF":
+            continue
+        title_def = CNAPS_ACTIVITY_TITLES.get(_normalize_cnaps_activity(activity))
+        if not title_def:
+            continue
+        code = title_def["code"]
+        titles_by_code.setdefault(code, {
+            "code": code,
+            "label": title_def["label"],
+            "activity": title_def["activity"],
+            "validity": "ACTIF",
+            "valid_until": str(row.get("date_validite_titre") or "").strip(),
+        })
+    active_titles = [titles_by_code[code] for code in CNAPS_ACTIVE_TITLE_ORDER if code in titles_by_code]
+    status = "success"
+    app.logger.info(
+        'CNAPS check nub=%s rows=%s matched=%s activities=%s active_titles=%s status=%s cache=%s',
+        normalized_nub,
+        len(rows),
+        len(matched_rows),
+        matched_activities,
+        [title["code"] for title in active_titles],
+        status if active_titles else "empty",
+        "bypass",
+    )
+    return {
+        "checked_at": _now_iso(),
+        "check_status": status,
+        "nub": normalized_nub,
+        "active_titles": active_titles,
+        "cnaps_active_titles": [title["label"] for title in active_titles],
+        "results": [
+            {
+                "nub": row.get("nub") or "",
+                "activite": row.get("activite") or "",
+                "validite_titre": row.get("validite_titre") or "",
+                "date_validite_titre": row.get("date_validite_titre") or "",
+            }
+            for row in matched_rows
+        ],
+        "error": None,
+    }
+
+
+def fetch_cnaps_public_annuaire(nom: str, nub: str) -> Dict[str, Any]:
     endpoint = (CNAPS_PUBLIC_ANNUAIRE_ENDPOINT or "").strip()
     nom = " ".join((nom or "").strip().split()).upper()
-    nub = re.sub(r"\D+", "", str(nub or ""))[-7:]
-    if not endpoint or not nom or not nub:
-        return None
+    normalized_nub = _normalize_cnaps_nub(nub)
+    if not endpoint or not nom or not normalized_nub:
+        return {"checked_at": _now_iso(), "check_status": "error", "nub": normalized_nub, "active_titles": [], "cnaps_active_titles": [], "results": [], "error": "missing_cnaps_query"}
 
     payload = {
         "nom": nom,
-        "nub": nub,
-        "numeroBeneficiaireUnique": nub,
+        "nub": normalized_nub,
+        "numeroBeneficiaireUnique": normalized_nub,
         "typeRecherche": "AGENT",
         "page": 0,
         "size": 100,
         "limit": 100,
     }
-    params = {"nom": nom, "nub": nub, "numeroBeneficiaireUnique": nub, "page": 0, "size": 100, "limit": 100}
-    headers = {"Accept": "application/json", "User-Agent": "gestionstagiaires/1.0"}
+    params = {"nom": nom, "nub": normalized_nub, "numeroBeneficiaireUnique": normalized_nub, "page": 0, "size": 100, "limit": 100, "_": int(time.time() * 1000)}
+    headers = {"Accept": "application/json", "Cache-Control": "no-cache", "Pragma": "no-cache", "User-Agent": "gestionstagiaires/1.0"}
+    rows: List[Dict[str, str]] = []
     try:
         try:
             response = requests.post(endpoint, json=payload, headers=headers, timeout=12)
@@ -8165,15 +8260,18 @@ def fetch_cnaps_public_annuaire(nom: str, nub: str) -> Optional[Dict[str, Any]]:
         if response.status_code >= 400:
             response = requests.get(endpoint, params=params, headers=headers, timeout=12)
         if response.status_code != 200:
-            return None
+            raise RuntimeError(f"CNAPS HTTP {response.status_code}")
         data = response.json()
-    except Exception:
-        return None
-
-    results = _extract_cnaps_public_annuaire_results(data)
-    if not results:
-        return None
-    return {**results[0], "results": results}
+        rows = _extract_cnaps_public_annuaire_results(data)
+        return build_cnaps_public_annuaire_snapshot(rows, normalized_nub)
+    except Exception as exc:
+        app.logger.warning(
+            "CNAPS check nub=%s rows=%s matched=0 active_titles=[] status=error cache=bypass error=%s",
+            normalized_nub,
+            len(rows),
+            exc,
+        )
+        return {"checked_at": _now_iso(), "check_status": "error", "nub": normalized_nub, "active_titles": [], "cnaps_active_titles": [], "results": [], "error": str(exc)[:120] or "CNAPS error"}
 
 def fetch_cnaps_lookup_by_name(nom: str, prenom: str) -> Optional[Dict[str, Any]]:
     if not CNAPS_LOOKUP_ENDPOINT:
@@ -19407,10 +19505,8 @@ def api_cnaps_public_annuaire():
     if not nom or not nub:
         return jsonify({"ok": False, "error": "missing_nom_or_nub"}), 400
     result = fetch_cnaps_public_annuaire(nom, nub)
-    if not result:
-        return jsonify({"ok": False, "error": "not_found"}), 404
     notified = False
-    if previous_status.upper() == "INCONNU":
+    if result.get("check_status") == "success" and previous_status.upper() == "INCONNU":
         data = load_data()
         notified = _notify_cnaps_unknown_status_change(data, first_name=prenom, last_name=nom, nub=nub, previous_status=previous_status, result=result)
         if notified:
