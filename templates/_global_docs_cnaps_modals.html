@@ -83,7 +83,7 @@
         const url = `/admin/sessions/${encodeURIComponent(it.session_id)}/stagiaires/${encodeURIComponent(it.trainee_id)}`;
         const rowClass = (nbNum >= 3) ? "row-danger" : (nbNum >= 1 ? "row-warn" : "");
         const pillClass = (nbNum >= 3) ? "danger" : "warn";
-        return `<tr class="${rowClass}"><td style="font-weight:900;">${escapeHtml(full || "—")}</td><td>${escapeHtml(sess || "—")}</td><td class="mono"><span class="doccount ${pillClass}">${nbNum}</span></td><td style="text-align:right;"><a class="btn btn-outline" href="${url}" style="text-decoration:none;display:inline-block">Ouvrir la fiche</a></td></tr>`;
+        return `<tr class="${rowClass}" data-docs-to-control-href="${url}" tabindex="0" role="link"><td style="font-weight:900;">${escapeHtml(full || "—")}</td><td>${escapeHtml(sess || "—")}</td><td class="mono"><span class="doccount ${pillClass}">${nbNum}</span></td><td style="text-align:right;"><a class="btn btn-outline" href="${url}" style="text-decoration:none;display:inline-block">Ouvrir la fiche</a></td></tr>`;
       }).join("")}</tbody></table></div>`;
     }catch(e){
       if(countEl) countEl.textContent = "Erreur chargement.";
@@ -92,6 +92,25 @@
     }
   }
   window.loadDocsToControl = loadDocsToControl;
+
+  function openDocsToControlRow(row){
+    const href = row?.dataset?.docsToControlHref;
+    if(href) window.location.href = href;
+  }
+
+  document.getElementById("docsToControlList")?.addEventListener("click", (event)=>{
+    const row = event.target.closest("[data-docs-to-control-href]");
+    if(row && !event.target.closest("a,button")) openDocsToControlRow(row);
+  });
+
+  document.getElementById("docsToControlList")?.addEventListener("keydown", (event)=>{
+    if(event.key !== "Enter" && event.key !== " ") return;
+    const row = event.target.closest("[data-docs-to-control-href]");
+    if(!row) return;
+    event.preventDefault();
+    openDocsToControlRow(row);
+  });
+
 
   document.getElementById("btnOpenDocsToControl")?.addEventListener("click", async ()=>{ window.openModal?.("docsToControlModal"); await loadDocsToControl(); });
 
