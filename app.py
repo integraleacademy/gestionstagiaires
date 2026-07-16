@@ -3276,6 +3276,38 @@ def _cnapsv3_tracking_value(item: Dict[str, Any], keys: Iterable[str]) -> str:
     return ""
 
 
+
+
+CNAPSV3_TRACKING_ALLOWED_STATUS = "TRANSMIS"
+
+
+def _normalize_cnapsv3_tracking_status(value: Any) -> str:
+    text = unicodedata.normalize("NFKD", str(value or ""))
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    return re.sub(r"[^A-Z0-9]+", " ", text.upper()).strip()
+
+
+def _parse_cnapsv3_tracking_date(value: Any) -> Optional[datetime.date]:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    normalized = raw.replace("Z", "+00:00")
+    try:
+        return datetime.datetime.fromisoformat(normalized).date()
+    except ValueError:
+        pass
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
+        try:
+            return datetime.datetime.strptime(raw[:10], fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def _cnapsv3_tracking_request_matches_scope(item: Dict[str, Any], status: str) -> bool:
+    return _normalize_cnapsv3_tracking_status(status) == CNAPSV3_TRACKING_ALLOWED_STATUS
+
+
 CNAPSV3_TRACKING_CACHE_TTL_SECONDS = 15
 _cnapsv3_tracking_cache: Dict[str, Any] = {"expires_at": 0.0, "rows": [], "error": None}
 
@@ -3383,10 +3415,12 @@ def fetch_cnapsv3_tracking_requests(get_func=None) -> Tuple[List[Dict[str, str]]
     rows: List[Dict[str, str]] = []
     for item in _extract_cnapsv3_tracking_items(payload):
         last_name = _cnapsv3_tracking_value(item, ("nom", "last_name", "lastname", "name"))
-        first_name = _cnapsv3_tracking_value(item, ("prenom", "first_name", "firstname"))
+        first_name = normalize_first_name(_cnapsv3_tracking_value(item, ("prenom", "first_name", "firstname")))
         nub = _cnapsv3_tracking_value(item, ("nub", "NUB", "numero_nub", "nub_number", "num_nub"))
         status = _cnapsv3_tracking_value(item, ("statut_cnaps", "cnaps_status", "status", "statut"))
         if not any((last_name, first_name, nub, status)):
+            continue
+        if not _cnapsv3_tracking_request_matches_scope(item, status):
             continue
         rows.append({
             "last_name": last_name,
@@ -4303,6 +4337,19 @@ def _cnaps_pending_status_change_count(data: Dict[str, Any]) -> int:
         for item in notifications.values()
         if isinstance(item, dict) and not item.get("reviewed_at")
     )
+
+
+def _mark_cnaps_status_change_imported(data: Dict[str, Any], *, last_name: str, nub: str) -> bool:
+    key = _cnaps_status_change_key(last_name, nub)
+    notifications = data.get("cnaps_status_change_notifications")
+    if not key or key == "|" or not isinstance(notifications, dict):
+        return False
+    item = notifications.get(key)
+    if not isinstance(item, dict) or item.get("reviewed_at"):
+        return False
+    item["reviewed_at"] = _now_iso()
+    item["reviewed_reason"] = "import_pre_cnaps"
+    return True
 
 def build_cnaps_status_change_email(first_name: str, last_name: str, nub: str, new_status: str) -> Tuple[str, str]:
     full_name = " ".join(part for part in [str(first_name or "").strip(), str(last_name or "").strip()] if part) or "Stagiaire"
@@ -6663,6 +6710,9 @@ def load_data(run_background_tasks: bool = False) -> Dict[str, Any]:
             changed = True
         if "admin_push_subscriptions" not in data:
             data["admin_push_subscriptions"] = []
+            changed = True
+        if not isinstance(data.get("cnaps_tracking_deleted_keys"), list):
+            data["cnaps_tracking_deleted_keys"] = []
             changed = True
 
         if not isinstance(data.get("notifications_admin_dismissed_schedule_keys"), list):
@@ -13303,15 +13353,97 @@ def admin_cnaps_unknown():
 @admin_login_required
 def admin_cnaps_tracking():
     requests_rows, fetch_error = fetch_cnapsv3_tracking_requests()
+    requests_rows = enrich_cnaps_tracking_rows_with_enrollment(requests_rows, load_data())
+    enrolled_count = sum(1 for row in requests_rows if row.get("is_enrolled"))
     response = make_response(render_template(
         "admin_cnaps_tracking.html",
         requests_rows=requests_rows,
+        enrolled_count=enrolled_count,
         fetch_error=fetch_error,
     ))
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
     return response
 
+
+
+@app.post("/api/admin/cnaps-tracking/delete")
+@admin_login_required
+@admin_write_required
+def api_admin_cnaps_tracking_delete():
+    payload = request.get_json(silent=True) or {}
+    delete_key = _cnaps_tracking_delete_key(payload.get("last_name"), payload.get("first_name"), payload.get("nub"))
+    if not delete_key.replace("|", "").strip():
+        return jsonify({"ok": False, "error": "missing_identity"}), 400
+    data = load_data()
+    deleted_keys = data.setdefault("cnaps_tracking_deleted_keys", [])
+    if not isinstance(deleted_keys, list):
+        deleted_keys = []
+        data["cnaps_tracking_deleted_keys"] = deleted_keys
+    if delete_key not in deleted_keys:
+        deleted_keys.append(delete_key)
+        _append_activity_log(data, "cnaps_tracking_row_deleted", "cnaps_tracking", delete_key, details={
+            "last_name": str(payload.get("last_name") or ""),
+            "first_name": str(payload.get("first_name") or ""),
+            "nub": str(payload.get("nub") or ""),
+        })
+        save_data(data)
+    return jsonify({"ok": True, "deleted": True})
+
+
+
+def _cnaps_tracking_normalize_key_part(value: Any) -> str:
+    text = unicodedata.normalize("NFKD", str(value or ""))
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    return re.sub(r"[^A-Z0-9]+", " ", text.upper()).strip()
+
+
+def _cnaps_tracking_match_key(last_name: Any, first_name: Any) -> Tuple[str, str]:
+    return _cnaps_tracking_normalize_key_part(last_name), _cnaps_tracking_normalize_key_part(first_name)
+
+
+def _cnaps_tracking_delete_key(last_name: Any, first_name: Any, nub: Any) -> str:
+    return "|".join((
+        _cnaps_tracking_normalize_key_part(last_name),
+        _cnaps_tracking_normalize_key_part(first_name),
+        _cnaps_tracking_normalize_key_part(nub),
+    ))
+
+
+def _cnaps_tracking_deleted_keys(data: Dict[str, Any]) -> Set[str]:
+    raw = data.get("cnaps_tracking_deleted_keys")
+    return {str(key) for key in raw if str(key).strip()} if isinstance(raw, list) else set()
+
+
+def enrich_cnaps_tracking_rows_with_enrollment(rows: List[Dict[str, Any]], data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    deleted_keys = _cnaps_tracking_deleted_keys(data)
+    enrolled_by_name: Dict[Tuple[str, str], Dict[str, str]] = {}
+    for sess in data.get("sessions", []) or []:
+        if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
+            continue
+        session_name = _session_get(sess, "name", "") or str(sess.get("id") or "")
+        training_type = _session_get(sess, "training_type", "")
+        for trainee in _session_trainees_list(sess):
+            key = _cnaps_tracking_match_key(trainee.get("last_name"), trainee.get("first_name"))
+            if not all(key) or key in enrolled_by_name:
+                continue
+            enrolled_by_name[key] = {
+                "session_id": str(sess.get("id") or ""),
+                "session_name": session_name,
+                "training_type": training_type,
+                "trainee_id": str(trainee.get("id") or ""),
+            }
+
+    enriched: List[Dict[str, Any]] = []
+    for row in rows or []:
+        item = dict(row)
+        if _cnaps_tracking_delete_key(item.get("last_name"), item.get("first_name"), item.get("nub")) in deleted_keys:
+            continue
+        match = enrolled_by_name.get(_cnaps_tracking_match_key(item.get("last_name"), item.get("first_name")))
+        item["is_enrolled"] = bool(match)
+        item["enrollment"] = match or {}
+        enriched.append(item)
+    return enriched
 
 
 def _cash_amount_value(raw_value: Any) -> float:
@@ -13458,6 +13590,60 @@ def admin_cash_payments():
     response.headers["Pragma"] = "no-cache"
     return response
 
+
+def _signed_conventions_unseen_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Return signed conventions that have not yet been acknowledged from the sidebar."""
+    items: List[Dict[str, Any]] = []
+    for sess in data.get("sessions", []):
+        if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
+            continue
+        session_id = str(sess.get("id") or "")
+        training_type = _session_get(sess, "training_type", "")
+        formation_display_label = formation_label(training_type)
+        for trainee_index, trainee in enumerate(_session_trainees_list(sess)):
+            trainee_id = str(trainee.get("id") or f"trainee-{trainee_index + 1}")
+            state = _yousign_state(trainee)
+            signed_at = str(state.get("signed_at") or trainee.get("convention_aps_signed_at") or "").strip()
+            is_signed = (
+                _is_yousign_signature_done(state)
+                or bool(signed_at)
+                or (trainee.get("convention_aps_status") or "").strip().lower() == "signed"
+                or (trainee.get("convention_status") or "").strip().lower() == "signed"
+            )
+            if not is_signed:
+                continue
+            if bool(trainee.get("printed")):
+                continue
+            items.append({
+                "session_id": session_id,
+                "session_name": _session_get(sess, "name", ""),
+                "training_type": training_type,
+                "formation": formation_display_label,
+                "trainee_id": trainee_id,
+                "last_name": trainee.get("last_name", ""),
+                "first_name": trainee.get("first_name", ""),
+                "signed_at": signed_at,
+                "admin_url": f"/admin/sessions/{session_id}/stagiaires/{trainee_id}",
+            })
+    items.sort(key=lambda item: item.get("signed_at") or "", reverse=True)
+    return items
+
+
+def _mark_signed_conventions_seen(data: Dict[str, Any]) -> bool:
+    changed = False
+    now = _now_iso()
+    for item in _signed_conventions_unseen_items(data):
+        sess = find_session(data, item.get("session_id"))
+        if not sess:
+            continue
+        trainee = next((t for t in _session_trainees_list(sess) if str(t.get("id") or "") == str(item.get("trainee_id") or "")), None)
+        if not trainee:
+            continue
+        trainee["convention_signed_seen_at"] = item.get("signed_at") or now
+        trainee["updated_at"] = now
+        changed = True
+    return changed
+
 @app.get("/admin/sessions/conventions")
 @admin_login_required
 def admin_sessions_conventions():
@@ -13516,12 +13702,12 @@ def admin_sessions_conventions():
             if _refresh_yousign_convention_status_if_pending(data, sess, trainees, trainee):
                 data_changed = True
                 state = _yousign_state(trainee)
-            if not _has_generated_yousign_convention(trainee):
+            legacy_convention_status = (trainee.get("convention_status") or "").strip().lower()
+            if not _has_generated_yousign_convention(trainee) and legacy_convention_status not in {"soon", "signing", "signed"}:
                 continue
             automation = _build_trainee_automation_status(sess, trainee, session_id, trainee_id)
             convention = automation["convention"]
             status_key = convention.get("status") or "not_generated"
-            legacy_convention_status = (trainee.get("convention_status") or "").strip().lower()
             if not state.get("signature_request_id") and not state.get("unsigned_pdf_path") and not trainee.get("convention_aps_pdf_path"):
                 if legacy_convention_status == "signing":
                     status_key = "waiting_signature"
@@ -25336,14 +25522,15 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     has_end_attestation = bool(config.get("end_template"))
     entry_sent = bool(trainee.get("attestation_entree_aps_sent_at"))
     end_sent = bool(trainee.get("attestation_fin_aps_sent_at"))
-    convention_step = {"label": "Convention", "state": "complete" if has_generated_convention else ("error" if convention_status == "error" else "pending")}
-    signature_step = {"label": "Signature", "state": "complete" if convention_signed else ("error" if convention_status in {"error", "refused", "expired"} else "pending" if has_signature_request else "blocked")}
+    convention_sent_step = {"label": "Convention envoyée", "state": "complete" if convention_sent else ("error" if convention_status == "error" else "pending" if has_generated_convention else "blocked")}
+    convention_signed_step = {"label": "Convention signée", "state": "complete" if convention_signed else ("error" if convention_status in {"error", "refused", "expired"} else "pending" if has_signature_request else "blocked")}
     if is_vae_automation:
-        timeline = [convention_step, signature_step]
+        timeline = [convention_sent_step, convention_signed_step]
     else:
         timeline = [
-            convention_step,
-            {"label": "Convocation", "state": "complete" if convocation_status == "sent" else ("error" if convocation_status == "error" else "pending")} if is_aps_automation else signature_step,
+            convention_sent_step,
+            convention_signed_step,
+            {"label": "Convocation", "state": "complete" if convocation_status == "sent" else ("error" if convocation_status == "error" else "blocked" if not convention_signed else "pending")} if is_aps_automation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
             {"label": "Attestation entrée", "state": "complete" if entry_sent else ("blocked" if not convention_signed else "pending")} if has_entry_attestation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
             {"label": "Attestation sortie", "state": "complete" if end_sent else ("blocked" if not convention_signed else "pending")} if has_end_attestation else {"label": "Documents", "state": "complete" if convention_signed else "pending"},
         ]
@@ -25358,9 +25545,9 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     else:
         global_status = "action_required"
     if is_vae_automation:
-        ready_documents = int(has_generated_convention) + int(convention_signed)
+        ready_documents = int(convention_sent) + int(convention_signed)
     else:
-        ready_documents = int(convention_signed) + int(is_aps_automation and convocation_status == "sent") + int(has_entry_attestation and entry_sent) + int(has_end_attestation and end_sent)
+        ready_documents = int(convention_sent) + int(convention_signed) + int(is_aps_automation and convocation_status == "sent") + int(has_entry_attestation and entry_sent) + int(has_end_attestation and end_sent)
 
     convention_labels = {
         "not_generated": ("Non générée", "file", "pending", "pending", "Générer la convention"),
@@ -25382,7 +25569,7 @@ def _build_trainee_automation_status(session_obj: Dict[str, Any], trainee: Dict[
     }
     v_label, v_icon, v_tone, v_card_tone = convocation_labels.get(convocation_status, convocation_labels["error"])
 
-    total_documents = 2 if is_vae_automation else 1 + int(is_aps_automation) + int(has_entry_attestation) + int(has_end_attestation)
+    total_documents = 2 if is_vae_automation else 2 + int(is_aps_automation) + int(has_entry_attestation) + int(has_end_attestation)
     progress_percent = round((ready_documents / total_documents) * 100) if total_documents else 0
 
     planned_automations = []
@@ -28316,6 +28503,12 @@ def admin_trainee_candidate_sheet_save(session_id: str, trainee_id: str):
 
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#doc_candidate_info_sheet")
 
+@app.get("/api/conventions_signed_unseen")
+@admin_login_required
+def api_conventions_signed_unseen():
+    items = _signed_conventions_unseen_items(load_data())
+    return jsonify({"ok": True, "items": items, "count": len(items)})
+
 @app.get("/api/docs_to_control")
 @admin_login_required
 def api_docs_to_control():
@@ -28790,6 +28983,7 @@ def api_cnaps_import_pre_merge():
     session_id = (request.form.get("session_id") or "").strip()
     trainee_id = (request.form.get("trainee_id") or "").strip()
     pre_raw = (request.form.get("pre_number") or "").strip()
+    nub = (request.form.get("nub") or "").strip()
     uploaded = request.files.get("file")
 
     if not session_id or not trainee_id:
@@ -28820,12 +29014,13 @@ def api_cnaps_import_pre_merge():
     _attach_cnaps_to_trainee(t, training_type, pre_number, token, "Import PRE CNAPS fusionné", _session_get(s, "date_start", ""))
     t["cnaps_import_merged_once"] = True
     t["cnaps_import_merged_at"] = _now_iso()
+    _mark_cnaps_status_change_imported(data, last_name=t.get("last_name", ""), nub=nub)
 
     s["trainees"] = trainees
     s.pop("stagiaires", None)
     save_data(data)
 
-    return jsonify({"ok": True, "pre_number": pre_number})
+    return jsonify({"ok": True, "pre_number": pre_number, "pending_status_changes_count": _cnaps_pending_status_change_count(data)})
 
 
 @app.post("/api/cnaps/import-pre/save")
@@ -28833,6 +29028,7 @@ def api_cnaps_import_pre_merge():
 @admin_write_required
 def api_cnaps_import_pre_save():
     pre_raw = (request.form.get("pre_number") or "").strip()
+    nub = (request.form.get("nub") or "").strip()
     last_name = _normalize_person_name(request.form.get("last_name") or "")
     first_name = _normalize_person_name(request.form.get("first_name") or "")
     uploaded = request.files.get("file")
@@ -28859,7 +29055,16 @@ def api_cnaps_import_pre_save():
     digest = hashlib.sha1(file_bytes).hexdigest()
     duplicate = next((x for x in pending if (x.get("sha1") or "") == digest), None)
     if duplicate:
-        return jsonify({"ok": True, "saved": True, "already_saved": True})
+        notification_reviewed = _mark_cnaps_status_change_imported(data, last_name=last_name, nub=nub)
+        if notification_reviewed:
+            save_data(data)
+        return jsonify({
+            "ok": True,
+            "saved": True,
+            "already_saved": True,
+            "notification_reviewed": notification_reviewed,
+            "pending_status_changes_count": _cnaps_pending_status_change_count(data),
+        })
 
     token = _store_cnaps_pending_pdf(file_bytes, uploaded.filename or "document.pdf")
     identifiers = _find_cnapsv3_identifier_for_pending(data, last_name, first_name)
@@ -28906,6 +29111,7 @@ def api_cnaps_import_pre_save():
     if not pending_item.get("email"):
         pending_item["email"] = _find_pending_trainee_email(data, last_name, first_name)
 
+    notification_reviewed = _mark_cnaps_status_change_imported(data, last_name=last_name, nub=nub)
     save_data(data)
 
     cnapsv3_match_found = bool(request_id or dossier_id)
@@ -28920,6 +29126,8 @@ def api_cnaps_import_pre_save():
         "already_saved": False,
         "cnapsv3_sync_ok": sync_ok,
         "cnapsv3_match_found": cnapsv3_match_found,
+        "notification_reviewed": notification_reviewed,
+        "pending_status_changes_count": _cnaps_pending_status_change_count(data),
     })
 
 

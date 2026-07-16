@@ -396,7 +396,7 @@
   .dashboard-card--dirigeant{ background:#ffedd5; color:#c2410c; }
   .dashboard-card--vae{ background:#ffedd5; color:#c2410c; }
   .dashboard-card--a3p{ background:#dcfce7; color:#15803d; }
-  .dashboard-card--ssiap{ background:#fee2e2; color:#b91c1c; }
+  .dashboard-card[class*="--ssiap"]{ background:#fee2e2; color:#b91c1c; }
   .session-name-editable{
     cursor:text;
     border-radius:6px;
@@ -1379,11 +1379,11 @@
 </div>
 
 <!-- MODALE IMPORT CNAPS PRE -->
-<div class="modal-backdrop" id="cnapsImportModal" aria-hidden="true">
-  <div class="modal">
+<div class="modal-backdrop trainee-search-drawer" id="cnapsImportModal" aria-hidden="true">
+  <aside class="modal trainee-search-panel" role="dialog" aria-modal="false" aria-labelledby="cnapsImportTitle">
     <div class="modal-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <div class="modal-title">Import PRE CNAPS</div>
+        <div class="modal-title" id="cnapsImportTitle">Import PRE CNAPS</div>
         <a class="btn btn-outline" href="{{ url_for('admin_cnaps_pending_imports') }}">En attente</a>
       </div>
       <button class="icon-btn" data-close-modal="cnapsImportModal">✕</button>
@@ -1407,7 +1407,7 @@
       <button class="btn" data-close-modal="cnapsImportModal">Fermer</button>
       <button class="btn btn-primary" id="btnCnapsImportRun">Analyser</button>
     </div>
-  </div>
+  </aside>
 </div>
 
 <!-- MODALE CHECK VTC -->
@@ -2438,32 +2438,19 @@
     }
   }
 
+  window.loadDocsToControl = loadDocsToControl;
+
   // boutons du menu latéral
   document.getElementById("btnOpenDocsToControl")?.addEventListener("click", async ()=>{
-    const panel = document.getElementById("docsToControlModal");
-    if(panel){
-      panel.classList.add("show");
-      panel.style.display = "block";
-      panel.setAttribute("aria-hidden", "false");
-    }
+    openModal("docsToControlModal");
     await loadDocsToControl();
   });
   document.getElementById("btnOpenTraineeSearch")?.addEventListener("click", ()=>{
-    const panel = document.getElementById("traineeSearchModal");
-    if(panel){
-      panel.classList.add("show");
-      panel.style.display = "block";
-      panel.setAttribute("aria-hidden", "false");
-    }
+    openModal("traineeSearchModal");
     setTimeout(()=>document.getElementById("traineeSearchInput")?.focus(), 80);
   });
   document.getElementById("btnOpenSessionSearch")?.addEventListener("click", ()=>{
-    const panel = document.getElementById("sessionSearchModal");
-    if(panel){
-      panel.classList.add("show");
-      panel.style.display = "block";
-      panel.setAttribute("aria-hidden", "false");
-    }
+    openModal("sessionSearchModal");
     setTimeout(()=>document.getElementById("sessionSearchInput")?.focus(), 80);
   });
 
@@ -2474,6 +2461,8 @@
     if(params.get("openDocsToControl") === "1") document.getElementById("btnOpenDocsToControl")?.click();
     if(params.get("openTraineeSearch") === "1") document.getElementById("btnOpenTraineeSearch")?.click();
     if(params.get("openSessionSearch") === "1") document.getElementById("btnOpenSessionSearch")?.click();
+    if(params.get("openCreateSession") === "1") document.getElementById("btnOpenCreateSession")?.click();
+    if(params.get("openCreateTrainee") === "1") document.getElementById("btnOpenCreateTraineeFromSessions")?.click();
   });
 
   // =========================

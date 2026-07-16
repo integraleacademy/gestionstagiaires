@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{{ title or "Intégrale Connect • Gestion stagiaires" }}</title>
 
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=static_version|default('20260715-admin-layout')) }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=static_version|default('20260716-sidebar-admin-logo-fit')) }}">
 
   <meta name="apple-mobile-web-app-title" content="Intégrale Connect">
   <meta name="application-name" content="Intégrale Connect">
@@ -78,8 +78,9 @@
   {% endif %}
   <div class="topbar">
     <div class="topbar-inner">
-      {% set header_logo = 'iaconnectpartenaires.png' if is_partner_space else 'icone.png' %}
-      {% set header_logo_height = 112 if is_partner_space else 80 %}
+      {% set use_academy_public_logo = request.endpoint in ['public_trainee_space', 'public_trainee_login'] %}
+      {% set header_logo = 'iaconnectpartenaires.png' if is_partner_space else ('logo-integrale.png' if use_academy_public_logo else 'icone.png') %}
+      {% set header_logo_height = 112 if is_partner_space else (80 if use_academy_public_logo else 80) %}
       {% set confirm_logo_height = 88 if is_partner_space else 64 %}
       <a class="brand {{ 'brand--partner-hidden' if is_partner_space else '' }}" href="{{ url_for('admin_sessions') }}">
 <img
@@ -141,8 +142,6 @@
     {% import "partner_sidebar.html" as ps %}
     {% set space_items = [
       {"label":"Tableau de bord","icon":"home","href":url_for('admin_sessions'),"endpoints":["admin_sessions"],"badge":"","locked":False},
-      {"label":"Rechercher un stagiaire","icon":"search","action":"open-trainee-search","endpoints":[],"badge":"","search_badge":"S","locked":False},
-      {"label":"Rechercher une session","icon":"search","action":"open-session-search","endpoints":[],"badge":"","search_badge":"F","locked":False},
       {"label":"Documents à contrôler","icon":"file","action":"open-docs-to-control","endpoints":[],"badge":"","badge_id":"sidebarDocsToControlBadge","locked":False},
       {"label":"Mes informations","icon":"info","href":url_for('partner_information'),"endpoints":["partner_information"],"badge":"","locked":False},
       {"label":"Mon abonnement","icon":"card","href":url_for('partner_subscription'),"endpoints":["partner_subscription"],"badge":"","locked":False}
@@ -155,17 +154,19 @@
       {"label":"Suivi CNAPS","icon":"shield","href":url_for('admin_cnaps_tracking'),"endpoints":["admin_cnaps_tracking"],"badge":"","badge_id":"sidebarCnapsTrackingBadge","locked":not partner_has_module('cnaps')},
       {"label":"CNAPS inconnus","icon":"shield","href":url_for('admin_cnaps_unknown'),"endpoints":["admin_cnaps_unknown"],"locked":not partner_has_module('cnaps')}
     ]} %}
+    {% set sidebar_search_menu = {"label":"Rechercher","icon":"search","badge":"","hide_label":True,"icon_accent":"orange","children":[
+      {"label":"Stagiaire","icon":"users","action":"open-trainee-search","endpoints":[],"locked":False},
+      {"label":"Session","icon":"folder","action":"open-session-search","endpoints":[],"locked":False}
+    ]} %}
     {% set sidebar_tools_children = [
-      {"label":"Conventions","icon":"file","href":url_for('admin_sessions_conventions'),"endpoints":["admin_sessions_conventions"],"locked":not partner_has_module('automations')},
+      {"label":"Conventions","icon":"file","href":url_for('admin_sessions_conventions'),"endpoints":["admin_sessions_conventions"],"badge":"","badge_id":"sidebarConventionsSignedBadge","locked":not partner_has_module('automations')},
       {"label":"Automatisations","icon":"tool","href":url_for('admin_sessions_automations'),"endpoints":["admin_sessions_automations"],"locked":not partner_has_module('automations')},
       {"label":"Suivi des ventes","icon":"chart","href":url_for('admin_sales_tracking'),"endpoints":["admin_sales_tracking"],"locked":not partner_has_module('sales')},
       {"label":"Facturation","icon":"wallet","href":url_for('admin_sessions_billing'),"endpoints":["admin_sessions_billing"],"locked":not partner_has_module('billing')},
+      {"label":"Réglages Qonto","icon":"settings","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings"],"locked":not partner_has_module('billing')},
       {"label":"Sessions archivées","icon":"archive","href":url_for('admin_sessions_archived'),"endpoints":["admin_sessions_archived"],"locked":False}
     ] %}
-    {% set sidebar_tools_menu = {"label":"Outils","icon":"tool","badge":"","children":sidebar_tools_children} %}
-    {% set settings_menu = {"label":"Réglages","icon":"settings","badge":"","children":([
-      {"label":"Réglages Qonto","icon":"settings","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings"],"locked":False}
-    ] if partner_has_module('billing') else [])} %}
+    {% set sidebar_tools_menu = {"label":"Outils","icon":"tool","badge":"","badge_id":"sidebarToolsConventionsSignedBadge","children":sidebar_tools_children} %}
     {% set settings_items = [
       {"label":"Aide et support","icon":"help","href":url_for('partner_help_support'),"endpoints":["partner_help_support"],"locked":False}
     ] %}
@@ -202,8 +203,8 @@
                 </div>
               </div>
             </div>
-          {% endif %}{% for item in space_items %}{{ ps.sidebar_nav_item(item) }}{% if loop.first %}{{ ps.sidebar_submenu(sidebar_tools_menu) }}{% endif %}{% endfor %}{{ ps.sidebar_nav_item(sidebar_cpf_item) }}{{ ps.sidebar_submenu(sidebar_cnaps_menu) }}</section>
-          <section class="partner-sidebar__section partner-sidebar__section--settings"><h2>Paramètres et outils</h2>{% if settings_menu.children %}{{ ps.sidebar_submenu(settings_menu) }}{% endif %}{% for item in settings_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
+          {% endif %}{% for item in space_items %}{{ ps.sidebar_nav_item(item) }}{% if loop.first %}{{ ps.sidebar_submenu(sidebar_search_menu) }}{{ ps.sidebar_submenu(sidebar_tools_menu) }}{% endif %}{% endfor %}{{ ps.sidebar_nav_item(sidebar_cpf_item) }}{{ ps.sidebar_submenu(sidebar_cnaps_menu) }}</section>
+          <section class="partner-sidebar__section partner-sidebar__section--settings"><h2>Paramètres et outils</h2>{% for item in settings_items %}{{ ps.sidebar_nav_item(item) }}{% endfor %}</section>
           {% set sub=partner_sidebar.subscription or {} %}{% set count=sub.get('trainee_usage_count') or 0 %}{% set limit=sub.get('trainee_limit') %}{% set unlimited=sub.get('trainee_unlimited') or not limit %}{% set pct=0 if unlimited else ((count*100/limit)|round(0,'floor')) %}
           <div class="subscription-usage-card {{ 'is-alert' if pct>=90 and not unlimited else ('is-warning' if pct>=70 and not unlimited else '') }}"><span>Utilisation de l’abonnement</span><strong>{{ count }} stagiaires créés</strong><small>{% if unlimited %}Aucun plafond défini{% else %}{{ [limit-count,0]|max }} stagiaires restants{% endif %}</small>{% if not unlimited %}<div class="subscription-usage-card__bar"><i style="width:{{ [pct,100]|min }}%"></i></div>{% endif %}<a href="{{ url_for('partner_subscription') }}">Voir les détails</a></div>
           <div class="partner-sidebar__bottom"><a class="partner-sidebar__item partner-sidebar__logout" href="{{ url_for('admin_logout') }}" title="Se déconnecter">{{ ps.sidebar_icon('logout') }}<span class="partner-sidebar__label">Se déconnecter</span></a><div class="partner-sidebar__powered"><img class="partner-software-logo partner-software-logo--powered" src="{{ url_for('static', filename='icone.png') }}" alt="Intégrale Connect" loading="lazy"><span>Propulsé par Intégrale Connect</span></div></div>
@@ -484,11 +485,66 @@
   </style>
 
 <script>
+  function normalizeClosedOverlay(el){
+    if(!el) return;
+    el.classList.remove("show", "open", "active", "is-open");
+    el.setAttribute("aria-hidden", "true");
+    el.style.pointerEvents = "none";
+    if(el.classList.contains("trainee-search-drawer") || el.classList.contains("docs-to-control-drawer")){
+      el.style.display = "none";
+    }else{
+      el.style.display = "none";
+    }
+  }
+
+  function restoreAdminPageInteractivity(){
+    const hasOpenOverlay = document.querySelector(".modal-backdrop.show, .modal-backdrop.open, .billing-modal-overlay, .app-modal-backdrop.is-visible, .locked-module-modal.is-open");
+    const hasOpenSidebar = document.querySelector(".partner-sidebar.is-open");
+    if(!hasOpenOverlay && !hasOpenSidebar){
+      document.body.classList.remove("modal-open", "sidebar-open", "search-open", "partner-sidebar-open");
+      document.documentElement.classList.remove("modal-open", "sidebar-open", "search-open", "partner-sidebar-open");
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+      document.querySelectorAll(".overlay, .backdrop, .modal-backdrop, .partner-sidebar-overlay").forEach((el)=>{
+        if(!el.classList.contains("show") && !el.classList.contains("open") && !el.classList.contains("is-open")){
+          el.style.pointerEvents = "none";
+        }
+      });
+    }
+  }
+
+  function closeAllPanels(options = {}){
+    const exceptId = options.exceptId || null;
+    document.querySelectorAll(".modal-backdrop").forEach((el)=>{
+      if(exceptId && el.id === exceptId) return;
+      normalizeClosedOverlay(el);
+    });
+    document.querySelectorAll(".billing-modal-overlay").forEach((el)=>el.remove());
+    document.querySelectorAll(".partner-sidebar__submenu[open]").forEach((el)=>{ el.open = false; });
+    document.querySelectorAll(".sidebar-create-menu, .quick-create-menu").forEach((el)=>el.classList.remove("is-open"));
+    document.querySelectorAll("[aria-expanded='true']").forEach((el)=>{
+      if(el.matches("[data-sidebar-open], [data-sidebar-action], [data-sidebar-collapse], #adminNotifBtn, #btnOpenCreateMenu, #partnerBtnOpenCreateMenu")){
+        el.setAttribute("aria-expanded", "false");
+      }
+    });
+    document.querySelector(".partner-sidebar")?.classList.remove("is-open");
+    document.querySelector(".partner-sidebar-overlay")?.classList.remove("is-open");
+    document.querySelector(".locked-module-modal.is-open")?.classList.remove("is-open");
+    document.body.classList.remove("modal-open", "sidebar-open", "search-open", "partner-sidebar-open");
+    document.documentElement.classList.remove("modal-open", "sidebar-open", "search-open", "partner-sidebar-open");
+    restoreAdminPageInteractivity();
+  }
+
+  window.closeAllPanels = closeAllPanels;
+
   function openModal(id){
     const el = document.getElementById(id);
     if(!el) return;
+    closeAllPanels({exceptId:id});
     el.classList.add("show");
-    el.style.display = "flex"; // optionnel, mais safe
+    el.setAttribute("aria-hidden", "false");
+    el.style.display = (el.classList.contains("trainee-search-drawer") || el.classList.contains("docs-to-control-drawer")) ? "block" : "flex";
+    el.style.pointerEvents = "auto";
     document.body.style.overflow = "hidden";
   }
 
@@ -522,9 +578,8 @@
   function closeModal(id){
     const el = document.getElementById(id);
     if(!el) return;
-    el.classList.remove("show");
-    el.style.display = "none"; // optionnel, mais safe
-    document.body.style.overflow = "";
+    normalizeClosedOverlay(el);
+    restoreAdminPageInteractivity();
   }
 
 
@@ -776,6 +831,15 @@
       closeModal(closeBtn.getAttribute("data-close-modal"));
       return;
     }
+    const backdrop = e.target.closest?.(".modal-backdrop.show");
+    if(backdrop && e.target === backdrop && backdrop.id){
+      closeModal(backdrop.id);
+      return;
+    }
+    const openDrawer = document.querySelector(".trainee-search-drawer.show, .docs-to-control-drawer.show");
+    if(openDrawer && !openDrawer.querySelector(".modal")?.contains(e.target) && !e.target.closest?.(".partner-sidebar, [data-sidebar-action], [data-sidebar-open]")){
+      closeModal(openDrawer.id);
+    }
   });
 
   const financementRefuseForm = document.getElementById("financementRefuseForm");
@@ -958,31 +1022,33 @@
 
   (function initPartnerSidebar(){
     const sidebar = document.getElementById('partnerSidebar');
-    if(!sidebar) return;
+    if(!sidebar || sidebar.dataset.sidebarInitialized === '1') return;
+    sidebar.dataset.sidebarInitialized = '1';
     const overlay = document.querySelector('.partner-sidebar-overlay');
     const openButtons = document.querySelectorAll('[data-sidebar-open]');
     const closeButtons = document.querySelectorAll('[data-sidebar-close]');
-    const collapse = document.querySelector('[data-sidebar-collapse]');
+    const collapseButtons = document.querySelectorAll('[data-sidebar-collapse]');
     const lockedModal = document.getElementById('lockedModuleModal');
     const lockedClose = document.querySelectorAll('[data-locked-close]');
-    const openSidebar = () => { sidebar.classList.add('is-open'); overlay?.classList.add('is-open'); document.body.classList.add('partner-sidebar-open'); openButtons.forEach(b=>b.setAttribute('aria-expanded','true')); };
-    const closeSidebar = () => { sidebar.classList.remove('is-open'); overlay?.classList.remove('is-open'); document.body.classList.remove('partner-sidebar-open'); openButtons.forEach(b=>b.setAttribute('aria-expanded','false')); };
+    const openSidebar = () => { window.closeAllPanels?.(); sidebar.classList.add('is-open'); overlay?.classList.add('is-open'); overlay && (overlay.style.pointerEvents = 'auto'); document.body.classList.add('partner-sidebar-open'); openButtons.forEach(b=>b.setAttribute('aria-expanded','true')); };
+    const closeSidebar = () => { sidebar.classList.remove('is-open'); overlay?.classList.remove('is-open'); overlay && (overlay.style.pointerEvents = 'none'); document.body.classList.remove('partner-sidebar-open'); openButtons.forEach(b=>b.setAttribute('aria-expanded','false')); window.closeAllPanels?.(); };
     openButtons.forEach(btn => btn.addEventListener('click', openSidebar));
     closeButtons.forEach(btn => btn.addEventListener('click', closeSidebar));
     overlay?.addEventListener('click', closeSidebar);
-    const storageKey = 'partnerSidebarCollapsed';
+    const storageKey = document.body.classList.contains('admin-sidebar-active') ? 'adminSidebarCollapsed' : 'partnerSidebarCollapsed';
     const isMobile = () => window.matchMedia('(max-width: 860px)').matches;
     const closeCollapsedSubmenus = () => {
       if(!document.body.classList.contains('partner-sidebar-collapsed') || isMobile()) return;
       sidebar.querySelectorAll('.partner-sidebar__submenu[open]').forEach(details => { details.open = false; });
     };
-    if(localStorage.getItem(storageKey) === '1') document.body.classList.add('partner-sidebar-collapsed');
+    const storedSidebarState = localStorage.getItem(storageKey);
+    if(storedSidebarState === '1') document.body.classList.add('partner-sidebar-collapsed');
     closeCollapsedSubmenus();
-    collapse?.addEventListener('click', () => {
+    collapseButtons.forEach((collapse) => collapse.addEventListener('click', () => {
       document.body.classList.toggle('partner-sidebar-collapsed');
       localStorage.setItem(storageKey, document.body.classList.contains('partner-sidebar-collapsed') ? '1' : '0');
       closeCollapsedSubmenus();
-    });
+    }));
     document.querySelectorAll('.partner-sidebar__item[href], [data-sidebar-action]').forEach(el => el.addEventListener('click', () => {
       if(isMobile()) closeSidebar();
       if(el.matches('.partner-sidebar__submenu-panel .partner-sidebar__item[href]')) closeCollapsedSubmenus();
@@ -996,10 +1062,28 @@
         document.getElementById('sidebarCreateMenu')?.classList.remove('is-open');
       });
     });
+    const openSidebarModalOrRedirect = (buttonId, modalId, queryFlag, focusId, beforeOpen) => {
+      const modal = document.getElementById(modalId);
+      if(modal && typeof window.openModal === 'function'){
+        if(typeof beforeOpen === 'function') beforeOpen();
+        window.openModal(modalId);
+        if(focusId) window.setTimeout(() => document.getElementById(focusId)?.focus(), 80);
+        return;
+      }
+      const button = document.getElementById(buttonId);
+      if(button){
+        button.click();
+        return;
+      }
+      window.location.href = `{{ url_for('admin_sessions') }}?${queryFlag}=1`;
+    };
     document.addEventListener('click', (event) => {
       const actionEl = event.target.closest('[data-sidebar-action]');
       if(!actionEl) return;
+      event.preventDefault();
+      event.stopPropagation();
       const action = actionEl.getAttribute('data-sidebar-action');
+      if(action !== 'toggle-create-menu') document.getElementById('sidebarCreateMenu')?.classList.remove('is-open');
       if(action === 'toggle-create-menu'){
         const menu = document.getElementById('sidebarCreateMenu');
         if(!menu) return;
@@ -1007,30 +1091,48 @@
           const rect = actionEl.getBoundingClientRect();
           menu.style.setProperty('--sidebar-create-menu-top', `${Math.max(12, rect.top)}px`);
         }
-        menu.classList.toggle('is-open');
+        const isOpen = menu.classList.toggle('is-open');
+        actionEl.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         return;
       }
-      if(action === 'create-session') document.getElementById('btnOpenCreateSession')?.click();
-      if(action === 'create-trainee') document.getElementById('btnOpenCreateTraineeFromSessions')?.click();
+      if(action === 'create-session') {
+        const createSessionButton = document.getElementById('btnOpenCreateSession');
+        if(createSessionButton) createSessionButton.click();
+        else window.location.href = '{{ url_for('admin_sessions') }}?openCreateSession=1';
+      }
+      if(action === 'create-trainee') {
+        const createTraineeButton = document.getElementById('btnOpenCreateTraineeFromSessions');
+        if(createTraineeButton) createTraineeButton.click();
+        else window.location.href = '{{ url_for('admin_sessions') }}?openCreateTrainee=1';
+      }
       if(action === 'open-trainee-search') {
-        const traineeSearchButton = document.getElementById('btnOpenTraineeSearch');
-        if(traineeSearchButton) traineeSearchButton.click();
-        else window.location.href = '{{ url_for('admin_sessions') }}?openTraineeSearch=1';
+        openSidebarModalOrRedirect('btnOpenTraineeSearch', 'traineeSearchModal', 'openTraineeSearch', 'traineeSearchInput');
       }
       if(action === 'open-session-search') {
-        const sessionSearchButton = document.getElementById('btnOpenSessionSearch');
-        if(sessionSearchButton) sessionSearchButton.click();
-        else window.location.href = '{{ url_for('admin_sessions') }}?openSessionSearch=1';
+        openSidebarModalOrRedirect('btnOpenSessionSearch', 'sessionSearchModal', 'openSessionSearch', 'sessionSearchInput');
       }
       if(action === 'open-docs-to-control') {
+        const docsModal = document.getElementById('docsToControlModal');
+        if(docsModal && typeof window.openModal === 'function') {
+          window.openModal('docsToControlModal');
+          if(typeof window.loadDocsToControl === 'function') window.loadDocsToControl();
+          return;
+        }
         const docsButton = document.getElementById('btnOpenDocsToControl');
         if(docsButton) docsButton.click();
         else window.location.href = '{{ url_for('admin_sessions') }}?openDocsToControl=1';
       }
       if(action === 'open-cnaps-import') {
-        const importButton = document.getElementById('btnOpenCnapsImport');
-        if(importButton) importButton.click();
-        else window.location.href = '{{ url_for('admin_sessions') }}?openCnapsImport=1';
+        openSidebarModalOrRedirect('btnOpenCnapsImport', 'cnapsImportModal', 'openCnapsImport', '', () => {
+          const status = document.getElementById('cnapsImportStatus');
+          const results = document.getElementById('cnapsImportResults');
+          const filesInput = document.getElementById('cnapsImportFiles');
+          const filesText = document.getElementById('cnapsImportFilesText');
+          if(status) status.textContent = '';
+          if(results) results.innerHTML = '';
+          if(filesInput) filesInput.value = '';
+          if(filesText) filesText.textContent = 'Aucun fichier choisi';
+        });
       }
     });
     const partnerCreateBtn = document.getElementById('partnerBtnOpenCreateMenu');
@@ -1041,8 +1143,7 @@
     });
     document.addEventListener('keydown', (event) => {
       if(event.key === 'Escape'){
-        closeSidebar();
-        lockedModal?.classList.remove('is-open');
+        window.closeAllPanels?.();
         lockedModal?.setAttribute('aria-hidden','true');
       }
     });
@@ -1086,6 +1187,41 @@
     window.addEventListener("focus", refreshSidebarDocsToControlBadge);
     document.addEventListener("visibilitychange", () => {
       if(!document.hidden) refreshSidebarDocsToControlBadge();
+    });
+  })();
+
+  (function initGlobalConventionsSignedBadge(){
+    const sidebarBadges = [
+      document.getElementById("sidebarConventionsSignedBadge"),
+      document.getElementById("sidebarToolsConventionsSignedBadge")
+    ].filter(Boolean);
+    if(!sidebarBadges.length) return;
+
+    async function refreshSidebarConventionsSignedBadge(){
+      try{
+        const response = await fetch("/api/conventions_signed_unseen", { headers: { "Accept": "application/json" } });
+        const payload = await response.json();
+        if(!response.ok || !payload.ok) throw new Error(payload.error || "request_failed");
+        const total = Number(payload.count || 0);
+        sidebarBadges.forEach((sidebarBadge) => {
+          sidebarBadge.textContent = String(total);
+          sidebarBadge.style.display = total > 0 ? "inline-flex" : "none";
+          sidebarBadge.setAttribute("aria-label", `${total} convention(s) signée(s) à consulter`);
+        });
+      }catch(_error){
+        sidebarBadges.forEach((sidebarBadge) => {
+          sidebarBadge.textContent = "!";
+          sidebarBadge.style.display = "inline-flex";
+          sidebarBadge.setAttribute("aria-label", "Impossible de charger les conventions signées");
+        });
+      }
+    }
+
+    window.refreshSidebarConventionsSignedBadge = refreshSidebarConventionsSignedBadge;
+    refreshSidebarConventionsSignedBadge();
+    window.addEventListener("focus", refreshSidebarConventionsSignedBadge);
+    document.addEventListener("visibilitychange", () => {
+      if(!document.hidden) refreshSidebarConventionsSignedBadge();
     });
   })();
 
