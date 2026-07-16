@@ -1059,7 +1059,7 @@
     }));
     document.querySelectorAll('.partner-sidebar__item[href], [data-sidebar-action]').forEach(el => el.addEventListener('click', () => {
       if(isMobile()) closeSidebar();
-      if(el.matches('.partner-sidebar__submenu-panel .partner-sidebar__item[href]')) closeCollapsedSubmenus();
+      if(el.matches('.partner-sidebar__submenu-panel .partner-sidebar__item')) closeCollapsedSubmenus();
     }));
     sidebar.querySelectorAll('.partner-sidebar__submenu').forEach(details => {
       details.addEventListener('toggle', () => {
