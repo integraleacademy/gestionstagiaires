@@ -1130,10 +1130,12 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
 .card-pro-refresh-btn{padding:5px 8px;}
 .card-pro-result__date{display:none;}
 .card-pro-result.is-loading{background:#eff6ff;border:1px solid #bfdbfe;border-radius:999px;color:#1d4ed8;padding:5px 8px;}
-.card-pro-result__chip.is-active{background:#16a34a;border-color:#16a34a;color:#fff;}
+.card-pro-result__chip.is-active,.card-pro-result__chip.is-cp{background:#16a34a;border-color:#16a34a;color:#fff;}
+.card-pro-result__chip.is-ap{background:#f97316;border-color:#f97316;color:#fff;}
 .card-pro-result__chip.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
 .card-pro-result__chip.is-unknown{background:#ffedd5;border-color:#fdba74;color:#9a3412;}
-.card-pro-result.is-active .card-pro-result__chip.is-active{background:#16a34a;border-color:#16a34a;color:#fff;}
+.card-pro-result.is-active .card-pro-result__chip.is-active,.card-pro-result.is-active .card-pro-result__chip.is-cp{background:#16a34a;border-color:#16a34a;color:#fff;}
+.card-pro-result.is-active .card-pro-result__chip.is-ap{background:#f97316;border-color:#f97316;color:#fff;}
 .card-pro-result.is-inactive .card-pro-result__chip.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
 .card-pro-result.is-unknown .card-pro-result__chip.is-unknown{background:#ffedd5;border-color:#fdba74;color:#9a3412;}
 
@@ -3799,6 +3801,13 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     return map.get(normalized) || (value || "—");
   }
 
+  function cardProActivityColorClass(value){
+    const normalized = shortCardProActivity(value).replace(/\s+/g, " ").trim().toUpperCase();
+    if(normalized.startsWith("AP") || normalized.includes("AUTORISATION PRÉALABLE") || normalized.includes("AUTORISATION PREALABLE")) return "is-ap";
+    if(normalized.startsWith("CP") || normalized.includes("CARTE PROFESSIONNELLE")) return "is-cp";
+    return "is-active";
+  }
+
   function cardProValidityMode(value){
     const normalized = (value || "").replace(/\s+/g, " ").trim().toUpperCase();
     if(!normalized) return "unknown";
@@ -3821,7 +3830,11 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       return;
     }
     if(activeTitles.length){
-      const chips = activeTitles.map((title)=>`<span class="card-pro-result__chip is-active" title="${escapeHtml([title.label, title.status || title.validity, title.date_fin_validite || title.valid_until].filter(Boolean).join(" • "))}"><span class="card-pro-result__activity">${escapeHtml(title.display_status || title.label)}</span>${(title.date_fin_validite||title.valid_until)?`<span class="card-pro-result__date">Expire le ${escapeHtml(formatCnapsDateFr(title.date_fin_validite||title.valid_until))}</span>`:""}</span>`).join("");
+      const chips = activeTitles.map((title)=>{
+        const activity = title.display_status || title.label;
+        const colorClass = cardProActivityColorClass(`${activity || ""} ${title.label || ""}`);
+        return `<span class="card-pro-result__chip ${colorClass}" title="${escapeHtml([title.label, title.status || title.validity, title.date_fin_validite || title.valid_until].filter(Boolean).join(" • "))}"><span class="card-pro-result__activity">${escapeHtml(activity)}</span>${(title.date_fin_validite||title.valid_until)?`<span class="card-pro-result__date">Expire le ${escapeHtml(formatCnapsDateFr(title.date_fin_validite||title.valid_until))}</span>`:""}</span>`;
+      }).join("");
       resultEl.className = "card-pro-result is-active";
       resultEl.innerHTML = chips;
       return;
@@ -3832,8 +3845,9 @@ document.querySelectorAll("select.sel").forEach(sel=>{
       const validity = row.validite_titre || (mode === "unknown" ? "INCONNU" : "À vérifier");
       const validityMode = mode === "unknown" ? "unknown" : cardProValidityMode(validity);
       const title = [row.activite, row.validite_titre, row.date_validite_titre].filter(Boolean).join(" • ");
+      const colorClass = validityMode === "active" ? cardProActivityColorClass(row.activite) : `is-${validityMode}`;
       return `
-        <span class="card-pro-result__chip is-${validityMode}"${title ? ` title="${escapeHtml(title)}"` : ""}>
+        <span class="card-pro-result__chip ${colorClass}"${title ? ` title="${escapeHtml(title)}"` : ""}>
           <span class="card-pro-result__activity">${escapeHtml(activity)}</span>
           <span class="card-pro-result__validity">${escapeHtml(validityMode === "unknown" ? "INCONNU" : validity)}</span>
           ${row.date_validite_titre ? `<span class="card-pro-result__date">${escapeHtml(row.date_validite_titre)}</span>` : ""}
