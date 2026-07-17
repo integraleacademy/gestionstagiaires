@@ -17892,6 +17892,7 @@ def admin_trainees(session_id: str):
         is_vtc=is_vtc,
         is_aps=is_aps,
         is_dirigeant=is_dirigeant,
+        finance_summary=_admin_trainees_finance_summary(session_view, trainees),
         vae_dashboard_counts=vae_dashboard_counts,
         enums=ENUMS,
         is_adef=_is_adef_training(session_view["training_type"]),
@@ -17985,6 +17986,84 @@ def admin_vtc_trainees_all():
 # =========================
 
 
+
+def _parse_financial_amount(value: Any) -> float:
+    if value is None:
+        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+    raw = str(value).strip()
+    if not raw:
+        return 0.0
+    cleaned = raw.replace("€", "").replace(" ", "").replace(" ", "").replace("'", "")
+    if "," in cleaned and "." in cleaned:
+        cleaned = cleaned.replace(".", "").replace(",", ".")
+    else:
+        cleaned = cleaned.replace(",", ".")
+    try:
+        return float(cleaned)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _admin_trainees_finance_summary(session_view: Dict[str, Any], trainees: List[Dict[str, Any]]) -> Dict[str, Any]:
+    label = f"{session_view.get('training_type') or ''} {session_view.get('name') or ''}".upper()
+    is_target = (
+        "APS" in label
+        or "A3P" in label
+        or "SSIAP" in label
+        or ("DIRIGEANT" in label and "VAE" not in label)
+    )
+    if not is_target:
+        return {"show": False}
+
+    revenue = 0.0
+    cpf = 0.0
+    personal = 0.0
+    other = 0.0
+    funded_count = 0
+    missing_price_count = 0
+    default_price = default_training_price(session_view.get("training_type") or "")
+
+    for trainee in trainees:
+        price = _parse_financial_amount(trainee.get("training_price"))
+        if price <= 0 and default_price is not None:
+            price = float(default_price)
+        if price <= 0:
+            missing_price_count += 1
+        revenue += max(price, 0.0)
+
+        cpf_amount = max(_parse_financial_amount(trainee.get("cpf_amount")), 0.0)
+        personal_amount = max(_parse_financial_amount(trainee.get("personal_amount")), 0.0)
+        other_amount = max(_parse_financial_amount(trainee.get("other_amount")), 0.0)
+        cpf += cpf_amount
+        personal += personal_amount
+        other += other_amount
+        if cpf_amount or personal_amount or other_amount:
+            funded_count += 1
+
+    collected = cpf + personal + other
+    remaining = max(revenue - collected, 0.0)
+
+    def pct(amount: float) -> int:
+        return int(round((amount / revenue) * 100)) if revenue > 0 else 0
+
+    return {
+        "show": True,
+        "revenue": round(revenue, 2),
+        "cpf": round(cpf, 2),
+        "personal": round(personal, 2),
+        "other": round(other, 2),
+        "collected": round(collected, 2),
+        "remaining": round(remaining, 2),
+        "cpf_pct": pct(cpf),
+        "personal_pct": pct(personal),
+        "other_pct": pct(other),
+        "remaining_pct": pct(remaining),
+        "trainees_count": len(trainees),
+        "funded_count": funded_count,
+        "missing_price_count": missing_price_count,
+    }
 
 
 def _easter_date(year: int) -> datetime.date:
