@@ -27445,13 +27445,14 @@ def _reset_missing_qonto_invoice(line: Dict[str, Any]) -> None:
     for key in (
         'qontoInvoiceId', 'qonto_invoice_id', 'qontoStatus', 'qonto_status', 'invoiceNumber', 'invoice_number',
         'qontoInvoiceNumber', 'invoiceDate', 'invoice_date', 'invoicePdfUrl', 'pdf_url', 'qontoPdfUrl',
-        'draftCreatedAt', 'invoiceGeneratedAt', 'invoiceDownloadedAt', 'qontoDraftId', 'finalizedAt', 'sentAt', 'paidAt', 'cancelledAt', 'externalInvoiceMarkedAt', 'externalInvoiceNote'
+        'draftCreatedAt', 'invoiceGeneratedAt', 'invoiceDownloadedAt', 'qontoDraftId', 'finalizedAt', 'sentAt', 'paidAt', 'cancelledAt', 'externalInvoiceMarkedAt', 'externalInvoiceNote', 'syncWarning', 'qontoPaymentGlobalStatus', 'paymentMode', 'qonto_direct_debit_subscription_id', 'qonto_mandate_sign_url', 'qonto_mandate_signed_at'
     ):
         line[key] = '' if key in line else line.get(key, '')
     if (line.get('invoiceStatus') or '') in {'draft', 'generated', 'finalized', 'sent', 'paid', 'cancelled', 'deleted', 'control', 'external_generated', 'external', 'generated_externally'}:
         line['invoiceStatus'] = 'not_invoiced'
-    if (line.get('paymentStatus') or '') in {'unpaid', 'unknown', 'paid', 'control'}:
+    if (line.get('paymentStatus') or '') in {'unpaid', 'unknown', 'paid', 'control', 'partial', 'failed'}:
         line['paymentStatus'] = 'not_applicable'
+    line['directDebitInstallments'] = []
     if (line.get('sentAt') and _normalize_billing_invoice_status(line.get('invoiceStatus')) == 'not_invoiced'):
         line['sentAt'] = ''
     line['generationInProgress'] = False
