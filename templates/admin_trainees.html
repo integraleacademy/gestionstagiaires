@@ -102,6 +102,53 @@
   </div>
 </div>
 
+{% if finance_summary.show %}
+<section class="finance-group-dashboard" aria-label="Données financières du groupe">
+  <div class="finance-group-dashboard__hero">
+    <div>
+      <p class="finance-group-dashboard__kicker">Pilotage financier du groupe</p>
+      <h3>Vue instantanée du chiffre d’affaires et des financements</h3>
+      <p>{{ finance_summary.funded_count }} dossier(s) avec ventilation financière sur {{ finance_summary.trainees_count }} stagiaire(s).</p>
+    </div>
+    <div class="finance-group-dashboard__amount">
+      <span>CA du groupe</span>
+      <strong>{{ "{:,.0f}".format(finance_summary.revenue).replace(',', ' ') }} €</strong>
+    </div>
+  </div>
+
+  <div class="finance-group-dashboard__grid">
+    <article class="finance-kpi finance-kpi--cpf">
+      <span class="finance-kpi__icon">🟦</span>
+      <span class="finance-kpi__label">Financement CPF</span>
+      <strong>{{ "{:,.0f}".format(finance_summary.cpf).replace(',', ' ') }} €</strong>
+      <div class="finance-kpi__bar"><span style="width: {{ finance_summary.cpf_pct }}%;"></span></div>
+      <small>{{ finance_summary.cpf_pct }}% du CA</small>
+    </article>
+    <article class="finance-kpi finance-kpi--personal">
+      <span class="finance-kpi__icon">💳</span>
+      <span class="finance-kpi__label">Financement perso</span>
+      <strong>{{ "{:,.0f}".format(finance_summary.personal).replace(',', ' ') }} €</strong>
+      <div class="finance-kpi__bar"><span style="width: {{ finance_summary.personal_pct }}%;"></span></div>
+      <small>{{ finance_summary.personal_pct }}% du CA</small>
+    </article>
+    <article class="finance-kpi finance-kpi--other">
+      <span class="finance-kpi__icon">🏦</span>
+      <span class="finance-kpi__label">Autres financeurs</span>
+      <strong>{{ "{:,.0f}".format(finance_summary.other).replace(',', ' ') }} €</strong>
+      <div class="finance-kpi__bar"><span style="width: {{ finance_summary.other_pct }}%;"></span></div>
+      <small>{{ finance_summary.other_pct }}% du CA</small>
+    </article>
+    <article class="finance-kpi finance-kpi--remaining">
+      <span class="finance-kpi__icon">✨</span>
+      <span class="finance-kpi__label">Reste à ventiler</span>
+      <strong>{{ "{:,.0f}".format(finance_summary.remaining).replace(',', ' ') }} €</strong>
+      <div class="finance-kpi__bar"><span style="width: {{ finance_summary.remaining_pct }}%;"></span></div>
+      <small>{{ finance_summary.remaining_pct }}% du CA{% if finance_summary.missing_price_count %} · {{ finance_summary.missing_price_count }} tarif(s) à compléter{% endif %}</small>
+    </article>
+  </div>
+</section>
+{% endif %}
+
 <div class="page-head" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
   <h2 style="margin:0;">Stagiaires</h2>
 
@@ -4074,4 +4121,26 @@ applyRowFilters();
 
 
 <script src="{{ url_for('static', filename='js/postal_city_lookup.js') }}"></script>
+<style>
+
+.finance-group-dashboard{
+  position:relative;overflow:hidden;margin:18px 0 22px;padding:22px;border-radius:28px;color:#fff;
+  background:radial-gradient(circle at top left,rgba(56,189,248,.55),transparent 30%),linear-gradient(135deg,#0f172a 0%,#1e1b4b 52%,#312e81 100%);
+  box-shadow:0 24px 70px rgba(15,23,42,.22);
+}
+.finance-group-dashboard::after{content:"";position:absolute;right:-90px;top:-110px;width:270px;height:270px;border-radius:999px;background:rgba(255,255,255,.12);filter:blur(1px);}
+.finance-group-dashboard__hero{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:22px;margin-bottom:18px;}
+.finance-group-dashboard__kicker{margin:0 0 6px;color:#93c5fd;font-weight:900;text-transform:uppercase;letter-spacing:.13em;font-size:12px;}
+.finance-group-dashboard h3{margin:0;font-size:24px;letter-spacing:-.03em;}
+.finance-group-dashboard p{margin:7px 0 0;color:rgba(255,255,255,.75);font-weight:600;}
+.finance-group-dashboard__amount{min-width:210px;padding:16px 18px;border:1px solid rgba(255,255,255,.18);border-radius:22px;background:rgba(255,255,255,.12);backdrop-filter:blur(16px);text-align:right;}
+.finance-group-dashboard__amount span{display:block;color:rgba(255,255,255,.72);font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.12em;}
+.finance-group-dashboard__amount strong{display:block;margin-top:5px;font-size:31px;letter-spacing:-.04em;}
+.finance-group-dashboard__grid{position:relative;z-index:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;}
+.finance-kpi{padding:16px;border-radius:22px;background:rgba(255,255,255,.94);color:#0f172a;box-shadow:0 14px 35px rgba(15,23,42,.16);}
+.finance-kpi__icon{font-size:22px}.finance-kpi__label{display:block;margin-top:10px;color:#64748b;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}.finance-kpi strong{display:block;margin-top:4px;font-size:25px;letter-spacing:-.03em}.finance-kpi small{display:block;margin-top:8px;color:#64748b;font-weight:800}.finance-kpi__bar{height:8px;margin-top:12px;border-radius:999px;background:#e2e8f0;overflow:hidden}.finance-kpi__bar span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#2563eb,#06b6d4)}.finance-kpi--personal .finance-kpi__bar span{background:linear-gradient(90deg,#7c3aed,#ec4899)}.finance-kpi--other .finance-kpi__bar span{background:linear-gradient(90deg,#059669,#84cc16)}.finance-kpi--remaining .finance-kpi__bar span{background:linear-gradient(90deg,#f59e0b,#f97316)}
+@media (max-width: 980px){.finance-group-dashboard__hero{flex-direction:column}.finance-group-dashboard__amount{text-align:left;width:100%}.finance-group-dashboard__grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media (max-width: 620px){.finance-group-dashboard__grid{grid-template-columns:1fr}.finance-group-dashboard{padding:18px;border-radius:22px}.finance-group-dashboard h3{font-size:20px}}
+
+</style>
 {% endblock %}
