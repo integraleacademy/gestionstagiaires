@@ -3805,7 +3805,18 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     const mensualitesPayees=installments.filter(i=>paidStatuses.has(String(i.status||'').toLowerCase())).length;
     const nombreRejets=installments.filter(i=>rejectStatuses.has(String(i.status||'').toLowerCase())).length;
     const upcoming=installments.filter(i=>!paidStatuses.has(String(i.status||'').toLowerCase())&&!rejectStatuses.has(String(i.status||'').toLowerCase())&&i.date).sort((a,b)=>String(a.date).localeCompare(String(b.date)))[0];
-    return {prixFormation,montantCpf,montantPersonnel,montantAutre,totalFinancement,objectifFacturation,totalFacture,totalPaye,resteAFacturer:objectifFacturation-totalFacture,resteAPayer:objectifFacturation-totalPaye,differenceFinancement:totalFinancement-prixFormation,progressFacturation:pct(totalFacture,objectifFacturation),progressPaiement:pct(totalPaye,objectifFacturation),installments,totalMensualites:installments.length,mensualitesPayees,mensualitesRestantes:Math.max(installments.length-mensualitesPayees,0),montantPreleve:installments.filter(i=>paidStatuses.has(String(i.status||'').toLowerCase())).reduce((a,i)=>a+Number(i.amount||0),0),montantRestantAPrelever:installments.filter(i=>!paidStatuses.has(String(i.status||'').toLowerCase())).reduce((a,i)=>a+Number(i.amount||0),0),prochaineEcheance:upcoming,nombreRejets};
+    const computed = {prixFormation,montantCpf,montantPersonnel,montantAutre,totalFinancement,objectifFacturation,totalFacture,totalPaye,resteAFacturer:objectifFacturation-totalFacture,resteAPayer:objectifFacturation-totalPaye,differenceFinancement:totalFinancement-prixFormation,progressFacturation:pct(totalFacture,objectifFacturation),progressPaiement:pct(totalPaye,objectifFacturation),installments,totalMensualites:installments.length,mensualitesPayees,mensualitesRestantes:Math.max(installments.length-mensualitesPayees,0),montantPreleve:installments.filter(i=>paidStatuses.has(String(i.status||'').toLowerCase())).reduce((a,i)=>a+Number(i.amount||0),0),montantRestantAPrelever:installments.filter(i=>!paidStatuses.has(String(i.status||'').toLowerCase())).reduce((a,i)=>a+Number(i.amount||0),0),prochaineEcheance:upcoming,nombreRejets,qontoPaymentEntries:[]};
+    if(currentFinancialSummary){
+      computed.objectifFacturation = Number(currentFinancialSummary.planned_total_cents||0)/100 || computed.objectifFacturation;
+      computed.totalFacture = Number(currentFinancialSummary.invoiced_total_cents||0)/100;
+      computed.totalPaye = Number(currentFinancialSummary.paid_total_cents||0)/100;
+      computed.resteAFacturer = computed.objectifFacturation-computed.totalFacture;
+      computed.resteAPayer = Number(currentFinancialSummary.remaining_total_cents||0)/100;
+      computed.progressFacturation = Number(currentFinancialSummary.invoicing_percentage||0);
+      computed.progressPaiement = Number(currentFinancialSummary.payment_percentage||0);
+      computed.qontoPaymentEntries = currentFinancialSummary.qonto_payment_entries || [];
+    }
+    return computed;
   }
   function renderSummary(c){
     updateAccordionSummaries(currentLines,c);
@@ -3890,7 +3901,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       action.innerHTML = '<span aria-hidden="true">⏳</span> Traitement…';
       let successMessage = 'Action Qonto terminée.';
       if(action.dataset.mandate){ await billingApi('/api/billing/resend-mandate',{lineId:id,source:'admin_trainee'}); successMessage = 'Lien de mandat renvoyé.'; }
-      if(action.dataset.syncLine){ const syncData=await billingApi('/api/billing/sync-qonto',{lineId:id,source:'admin_trainee'}); const paid=syncData?.invoice?.amount_paid_cents; successMessage = paid!=null ? `Facture Qonto synchronisée — ${fmtMoney(paid/100)} encaissés` : 'Facture Qonto synchronisée.'; }
+      if(action.dataset.syncLine){ const syncData=await billingApi('/api/billing/sync-qonto',{lineId:id,source:'admin_trainee'}); const paid=syncData?.invoice?.amount_paid_cents; successMessage = paid!=null ? `Facture Qonto synchronisée — ${fmtMoney(paid/100)} encaissés` : 'Facture Qonto synchronisée.'; window.location.reload(); return; }
       if(action.dataset.finalize){ await billingApi('/api/billing/finalize',{lineId:id,source:'admin_trainee'}); successMessage = 'Brouillon Qonto finalisé.'; }
       if(action.dataset.send){ await billingApi('/api/billing/send',{lineId:id,source:'admin_trainee'}); successMessage = 'Facture envoyée par Qonto.'; }
       if(action.dataset.reset){ await billingApi('/api/billing/cancel-or-reset',{lineId:id,source:'admin_trainee'}); successMessage = 'Brouillon Qonto annulé.'; }
@@ -3901,7 +3912,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
   });
   financeNotificationsBtn?.addEventListener('click', ()=>{ financeNotificationsOpen = !financeNotificationsOpen; render(currentLines); });
   quickGenerateBtn?.addEventListener('click', ()=>{ const line=firstInvoiceToGenerate(); if(line) openGenerateInvoiceModal(line); });
-  syncBtn?.addEventListener('click', async ()=>{ syncBtn.disabled=true; try{ const j=await billingApi('/api/billing/sync-qonto',{traineeId,sessionId,source:'admin_trainee'}); await load(); alert(j.message||'Synchronisation terminée'); }catch(e){ alert(e.message||'Synchronisation Qonto impossible pour le moment'); } finally{ syncBtn.disabled=false; }});
+  syncBtn?.addEventListener('click', async ()=>{ syncBtn.disabled=true; try{ const j=await billingApi('/api/billing/sync-qonto',{traineeId,sessionId,source:'admin_trainee'}); alert(j.message||'Synchronisation terminée'); window.location.reload(); }catch(e){ alert(e.message||'Synchronisation Qonto impossible pour le moment'); syncBtn.disabled=false; }});
   [cpfAmount, personalAmount, otherAmount, trainingPrice].forEach(input=>input?.addEventListener('input', ()=>{ const c=computeFinance(currentLines); renderFinancingValidation(c, currentLines); }));
   async function saveFinanceValidationOverride(payload){
     if(typeof updateTrainee === 'function') return updateTrainee(payload);

@@ -147,6 +147,7 @@ _install_shutdown_diagnostics()
 
 
 app = Flask(__name__)
+app.logger.info("FINANCIAL_QONTO_FIX_VERSION=20260717-01")
 DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(DEFAULT_MAX_UPLOAD_BYTES)))
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
@@ -27619,12 +27620,45 @@ def _apply_qonto_invoice_payment_to_billing_line(line: Dict[str, Any], invoice: 
         line['invoiceStatus'] = remote_status
 
 
+
+def _qonto_invoice_diagnostic_values(envelope: Dict[str, Any], line: Dict[str, Any], http_status: Any = "") -> Dict[str, Any]:
+    client_invoice = _qonto_invoice_payload(envelope) if isinstance(envelope, dict) else {}
+    if not isinstance(client_invoice, dict):
+        client_invoice = {}
+    amount_paid_raw = client_invoice.get('amount_paid')
+    total_amount_raw = client_invoice.get('total_amount')
+    return {
+        'local_invoice_number': line.get('qontoInvoiceNumber') or line.get('invoiceNumber') or '',
+        'qonto_invoice_id': client_invoice.get('id') or line.get('qontoInvoiceId') or line.get('qontoDraftId') or '',
+        'http_status': http_status,
+        'qonto_status': client_invoice.get('status') or '',
+        'total_amount_raw': (total_amount_raw.get('value') if isinstance(total_amount_raw, dict) else total_amount_raw),
+        'amount_paid_raw': (amount_paid_raw.get('value') if isinstance(amount_paid_raw, dict) else amount_paid_raw),
+        'paid_at': client_invoice.get('paid_at') or '',
+    }
+
+
+def _log_qonto_invoice_diagnostic(diag: Dict[str, Any]) -> None:
+    app.logger.info(
+        "QONTO_INVOICE_DIAGNOSTIC local_invoice_number=%s qonto_invoice_id=%s http_status=%s qonto_status=%s total_amount_raw=%s amount_paid_raw=%s paid_at=%s",
+        diag.get('local_invoice_number') or '',
+        diag.get('qonto_invoice_id') or '',
+        diag.get('http_status') or '',
+        diag.get('qonto_status') or '',
+        diag.get('total_amount_raw') if diag.get('total_amount_raw') is not None else '',
+        diag.get('amount_paid_raw') if diag.get('amount_paid_raw') is not None else '',
+        diag.get('paid_at') or '',
+    )
+
 def _sync_billing_line_with_qonto(data: Dict[str, Any], line: Dict[str, Any]) -> Tuple[bool, str]:
     invoice_id = (line.get('qontoInvoiceId') or line.get('qontoDraftId') or line.get('qonto_invoice_id') or '').strip()
     if not invoice_id:
         return False, 'Aucune facture Qonto liée'
     try:
-        remote = _qonto_invoice_payload(get_qonto_invoice(invoice_id))
+        envelope = get_qonto_invoice(invoice_id)
+        diag = _qonto_invoice_diagnostic_values(envelope, line, 200)
+        _log_qonto_invoice_diagnostic(diag)
+        remote = _qonto_invoice_payload(envelope)
         _apply_qonto_invoice_payment_to_billing_line(line, remote)
         line['qontoInvoiceNumber'] = _qonto_invoice_number(remote) or line.get('qontoInvoiceNumber') or ''
         line['invoicePdfUrl'] = remote.get('public_url') or remote.get('url') or line.get('invoicePdfUrl') or ''
@@ -28160,10 +28194,26 @@ def api_billing_sync_qonto():
                     trainee = t; break
             if trainee: break
     summary = calculate_trainee_financial_summary(trainee or {}, all_lines) if trainee else {}
+    if trainee:
+        app.logger.info(
+            "FINANCIAL_TEMPLATE_DIAGNOSTIC trainee_id=%s planned_total_cents=%s paid_total_cents=%s remaining_total_cents=%s payment_percentage=%s",
+            trainee.get('id') or '', summary.get('planned_total_cents'), summary.get('paid_total_cents'), summary.get('remaining_total_cents'), summary.get('payment_percentage')
+        )
     invoice = None
     if last_line:
         invoice = {'number': last_line.get('qontoInvoiceNumber') or '', 'total_amount_cents': last_line.get('qontoTotalAmountCents') or money_value_to_cents(last_line.get('amountTTC') or last_line.get('amount') or 0), 'amount_paid_cents': last_line.get('qontoAmountPaidCents') or money_value_to_cents(last_line.get('qontoInvoiceAmountPaid') or 0), 'remaining_amount_cents': last_line.get('qontoRemainingAmountCents') or 0, 'payment_status': last_line.get('qontoPaymentStatus') or last_line.get('paymentStatus') or '', 'qonto_status': last_line.get('qontoStatus') or last_line.get('invoiceStatus') or '', 'last_synced_at': last_line.get('qontoLastSyncedAt') or ''}
-    return jsonify({'ok': True, 'success': True, 'synced_count': synced_count, 'failed_count': len(errors), 'message': f'Synchronisation terminée : {synced_count} facture(s) vérifiée(s), {reset_count} ligne(s) à contrôler.', 'lines': all_lines, 'errors': errors, 'invoice': invoice, 'financial_summary': summary})
+    debug = None
+    if last_line:
+        debug = {
+            'qonto_invoice_id': last_line.get('qontoInvoiceId') or last_line.get('qontoDraftId') or '',
+            'qonto_status': last_line.get('qontoStatus') or last_line.get('invoiceStatus') or '',
+            'qonto_total_amount_raw': str(cents_to_money(last_line.get('qontoTotalAmountCents') or 0)),
+            'qonto_amount_paid_raw': str(cents_to_money(last_line.get('qontoAmountPaidCents') or 0)),
+            'stored_total_amount_cents': last_line.get('qontoTotalAmountCents') or 0,
+            'stored_amount_paid_cents': last_line.get('qontoAmountPaidCents') or 0,
+            'summary_paid_total_cents': summary.get('paid_total_cents') if summary else 0,
+        }
+    return jsonify({'ok': True, 'success': True, 'synced_count': synced_count, 'failed_count': len(errors), 'message': f'Synchronisation terminée : {synced_count} facture(s) vérifiée(s), {reset_count} ligne(s) à contrôler.', 'lines': all_lines, 'errors': errors, 'invoice': invoice, 'financial_summary': summary, 'debug': debug})
 
 
 @app.post('/api/admin/billing-lines/bulk-generate')
