@@ -15221,9 +15221,11 @@ def admin_afc():
             candidate["complement_refus"] = ""
             candidate["complement_refus_autre"] = ""
         if not (candidate.get("cnaps_status") or "").strip():
-            cnaps_status = fetch_cnaps_status_by_name(candidate.get("nom") or "", candidate.get("prenom") or "")
+            cnaps_lookup = fetch_cnaps_lookup_by_name(candidate.get("nom") or "", candidate.get("prenom") or "") or {}
+            cnaps_status = cnaps_lookup.get("status")
             if cnaps_status:
                 candidate["cnaps_status"] = cnaps_status
+                candidate["cnaps_status_history"] = cnaps_lookup.get("statut_cnaps_history") or []
                 changed = True
         if candidate.get("cnaps_priority") and (candidate.get("cnaps_status") or "").strip().upper() != "ACCEPTE":
             candidate["cnaps_status"] = "ACCEPTE"
@@ -15257,6 +15259,7 @@ def api_admin_afc_create_candidate():
     telephone = str(payload.get("telephone") or "").strip()
     if not nom or not prenom:
         return jsonify({"ok": False, "error": "Nom et prénom obligatoires"}), 400
+    cnaps_lookup = fetch_cnaps_lookup_by_name(nom, prenom) or {}
     candidate = {
         "id": "AFC-" + uuid.uuid4().hex[:8].upper(),
         "identifiant_ft": str(payload.get("identifiant_ft") or "").strip(),
@@ -15266,7 +15269,8 @@ def api_admin_afc_create_candidate():
         "telephone": telephone,
         "decision": "",
         "notification_status": "",
-        "cnaps_status": fetch_cnaps_status_by_name(nom, prenom) or "INCONNU",
+        "cnaps_status": cnaps_lookup.get("status") or "INCONNU",
+        "cnaps_status_history": cnaps_lookup.get("statut_cnaps_history") or [],
         "motif_refus": "",
         "complement_refus": "",
         "complement_refus_autre": "",
@@ -15332,6 +15336,7 @@ def api_admin_afc_import_from_image():
             skipped_count += 1
             continue
 
+        cnaps_lookup = fetch_cnaps_lookup_by_name(nom, prenom) or {}
         candidate = {
             "id": "AFC-" + uuid.uuid4().hex[:8].upper(),
             "identifiant_ft": str(parsed.get("identifiant_ft") or "").strip(),
@@ -15341,7 +15346,8 @@ def api_admin_afc_import_from_image():
             "telephone": str(parsed.get("telephone") or "").strip(),
             "decision": "",
             "notification_status": "",
-            "cnaps_status": fetch_cnaps_status_by_name(nom, prenom) or "INCONNU",
+            "cnaps_status": cnaps_lookup.get("status") or "INCONNU",
+            "cnaps_status_history": cnaps_lookup.get("statut_cnaps_history") or [],
             "motif_refus": "",
             "complement_refus": "",
             "complement_refus_autre": "",
@@ -15430,15 +15436,20 @@ def api_admin_afc_update_candidate(candidate_id: str):
                 value = value.upper()
             candidate[field] = value
 
+    if "cnaps_status_history" in payload:
+        candidate["cnaps_status_history"] = _normalize_cnaps_remote_history(payload.get("cnaps_status_history"))
+
     if "decision" in payload and (candidate.get("decision") or "").strip().upper() == "RETENU":
         candidate["motif_refus"] = ""
         candidate["complement_refus"] = ""
         candidate["complement_refus_autre"] = ""
 
     if any(k in payload for k in ("nom", "prenom")) and not candidate.get("cnaps_priority"):
-        cnaps_status = fetch_cnaps_status_by_name(candidate.get("nom") or "", candidate.get("prenom") or "")
+        cnaps_lookup = fetch_cnaps_lookup_by_name(candidate.get("nom") or "", candidate.get("prenom") or "") or {}
+        cnaps_status = cnaps_lookup.get("status")
         if cnaps_status:
             candidate["cnaps_status"] = cnaps_status
+            candidate["cnaps_status_history"] = cnaps_lookup.get("statut_cnaps_history") or []
 
     modules = candidate.setdefault("modules", {})
     if isinstance(payload.get("modules"), dict):
