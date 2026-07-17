@@ -27409,14 +27409,16 @@ def api_admin_billing_lines():
     reset_count = 0
     sync_warning = ''
     if _qonto_is_configured():
+        sync_touched = False
         for line in _billing_lines(data):
             if line.get('qontoInvoiceId'):
                 try:
                     did_reset, _ = _sync_billing_line_with_qonto(data, line)
+                    sync_touched = True
                     reset_count += 1 if did_reset else 0
                 except Exception:
                     sync_warning = 'Synchronisation Qonto temporairement indisponible : les factures locales ont été conservées.'
-        if reset_count or sync_warning:
+        if sync_touched or sync_warning:
             save_data(data)
     return jsonify({'ok': True, 'lines': _billing_lines(data), 'start_date': BILLING_START_DATE.isoformat(), 'reset_count': reset_count, 'sync_warning': sync_warning})
 
@@ -27876,16 +27878,41 @@ def api_billing_sync_qonto():
 @admin_login_required
 @admin_write_required
 def api_admin_billing_bulk_generate():
-    ids = (request.get_json(silent=True) or {}).get('ids') or []
+    payload = request.get_json(silent=True) or {}
+    ids = payload.get('ids') or []
+    finalize_after_create = bool(payload.get('finalize') or payload.get('finalizeAfterCreate'))
     data = load_data(); summary = {'created': [], 'ignored': [], 'failed': []}
     for line_id in ids:
         line = _find_billing_line(data, str(line_id))
         if not line: summary['failed'].append({'id': line_id, 'error': 'introuvable'}); continue
         if line.get('qontoInvoiceId') or _normalize_billing_invoice_status(line.get('invoiceStatus')) in {'draft','finalized','sent','paid','external_generated'}: summary['ignored'].append(line); continue
         ok, res = _create_invoice_for_billing_line(data, line)
-        summary['created' if ok else 'failed'].append(res.get('line') or {'id': line_id, 'error': res.get('error')})
         data = load_data()
-    return jsonify({'ok': True, **summary})
+        created_line = _find_billing_line(data, str(line_id)) or res.get('line')
+        if ok and created_line and created_line.get('qontoInvoiceId'):
+            if finalize_after_create:
+                try:
+                    qi = _qonto_invoice_payload(finalize_qonto_invoice(created_line['qontoInvoiceId']))
+                    created_line['invoiceStatus'] = _normalize_billing_invoice_status(qi.get('status') or 'finalized')
+                    created_line['finalizedAt'] = _now_iso()
+                    created_line['qontoInvoiceNumber'] = qi.get('number') or qi.get('invoice_number') or created_line.get('qontoInvoiceNumber') or ''
+                    _billing_log(created_line, 'Facture finalisée après génération en masse', 'success', '', created_line.get('qontoInvoiceId') or '')
+                    _save_billing_line(data, created_line); save_data(data)
+                    data = load_data()
+                    created_line = _find_billing_line(data, str(line_id)) or created_line
+                except Exception as exc:
+                    summary['failed'].append({'id': line_id, 'error': _sanitize_qonto_error(str(exc)), 'line': created_line})
+                    data = load_data()
+                    continue
+            try:
+                _sync_billing_line_with_qonto(data, created_line)
+                save_data(data)
+                created_line = _find_billing_line(data, str(line_id)) or created_line
+            except Exception as exc:
+                app.logger.warning('[QONTO] Synchronisation après génération en masse impossible line_id=%s: %s', line_id, exc)
+        summary['created' if ok else 'failed'].append(created_line or {'id': line_id, 'error': res.get('error')})
+        data = load_data()
+    return jsonify({'ok': True, **summary, 'lines': _billing_lines(data)})
 
 
 @app.post('/api/admin/billing-lines/<line_id>/sync-payment')
