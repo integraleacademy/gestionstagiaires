@@ -3799,8 +3799,10 @@ document.querySelectorAll("select.sel").forEach(sel=>{
     const map = new Map([
       ["autorisation préalable - surveillance humaine ou gardiennage", "AP SH"],
       ["autorisation préalable - agent de protection physique des personnes", "AP A3P"],
+      ["autorisation préalable - protection physique des personnes", "AP A3P"],
       ["carte professionnelle - surveillance humaine ou gardiennage", "CP SH"],
       ["carte professionnelle - agent de protection physique des personnes", "CP A3P"],
+      ["carte professionnelle - protection physique des personnes", "CP A3P"],
     ]);
     return map.get(normalized) || (value || "—");
   }

@@ -86,6 +86,10 @@
     line-height:1;
   }
   .trainee-cnaps-followup__activity{letter-spacing:.04em;}
+  .trainee-cnaps-followup__chip.is-active,.trainee-cnaps-followup__chip.is-cp{background:#16a34a;border-color:#16a34a;color:#fff;box-shadow:0 10px 20px rgba(22,163,74,.16);}
+  .trainee-cnaps-followup__chip.is-ap{background:#f97316;border-color:#f97316;color:#fff;box-shadow:0 10px 20px rgba(249,115,22,.16);}
+  .trainee-cnaps-followup__chip.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;box-shadow:none;}
+  .trainee-cnaps-followup__chip.is-unknown{background:#ffedd5;border-color:#fdba74;color:#9a3412;box-shadow:none;}
   .trainee-cnaps-followup__validity{font-size:10px;text-transform:uppercase;opacity:.92;}
   .btn-docs-pending{
     background: var(--orange) !important;
@@ -4901,10 +4905,18 @@ if(btnEtiquetteWord){
     const map = new Map([
       ["autorisation préalable - surveillance humaine ou gardiennage", "AP SH"],
       ["autorisation préalable - agent de protection physique des personnes", "AP A3P"],
+      ["autorisation préalable - protection physique des personnes", "AP A3P"],
       ["carte professionnelle - surveillance humaine ou gardiennage", "CP SH"],
       ["carte professionnelle - agent de protection physique des personnes", "CP A3P"],
+      ["carte professionnelle - protection physique des personnes", "CP A3P"],
     ]);
     return map.get(normalized) || (value || "—");
+  }
+  function cardProActivityColorClass(value){
+    const normalized = shortCardProActivity(value).replace(/\s+/g, " ").trim().toUpperCase();
+    if(normalized.startsWith("AP") || normalized.includes("AUTORISATION PRÉALABLE") || normalized.includes("AUTORISATION PREALABLE")) return "is-ap";
+    if(normalized.startsWith("CP") || normalized.includes("CARTE PROFESSIONNELLE")) return "is-cp";
+    return "is-active";
   }
   function cardProValidityMode(value){
     const normalized = (value || "").replace(/\s+/g, " ").trim().toUpperCase();
@@ -4927,7 +4939,11 @@ if(btnEtiquetteWord){
       return;
     }
     if(activeTitles.length){
-      resultEl.outerHTML = activeTitles.map((title)=>`<span class="trainee-cnaps-followup__chip is-active" title="${escapeHtml([title.label, title.status || title.validity, title.date_fin_validite || title.valid_until].filter(Boolean).join(" • "))}" data-trainee-card-pro-result><span class="trainee-cnaps-followup__activity">${escapeHtml(title.display_status || title.label)}</span>${(title.date_fin_validite||title.valid_until)?`<span class="card-pro-result__date">Expire le ${escapeHtml(formatCnapsDateFr(title.date_fin_validite||title.valid_until))}</span>`:""}</span>`).join("");
+      resultEl.outerHTML = activeTitles.map((title)=>{
+        const activity = title.display_status || title.label;
+        const colorClass = cardProActivityColorClass(`${activity || ""} ${title.label || ""}`);
+        return `<span class="trainee-cnaps-followup__chip ${colorClass}" title="${escapeHtml([title.label, title.status || title.validity, title.date_fin_validite || title.valid_until].filter(Boolean).join(" • "))}" data-trainee-card-pro-result><span class="trainee-cnaps-followup__activity">${escapeHtml(activity)}</span>${(title.date_fin_validite||title.valid_until)?`<span class="card-pro-result__date">Expire le ${escapeHtml(formatCnapsDateFr(title.date_fin_validite||title.valid_until))}</span>`:""}</span>`;
+      }).join("");
       return;
     }
     const rows = Array.isArray(data.results) && data.results.length ? data.results : [data];
@@ -4936,7 +4952,8 @@ if(btnEtiquetteWord){
       const validity = row.validite_titre || (mode === "unknown" ? "INCONNU" : "À vérifier");
       const validityMode = mode === "unknown" ? "unknown" : cardProValidityMode(validity);
       const title = [row.activite, row.validite_titre, row.date_validite_titre].filter(Boolean).join(" • ");
-      return `<span class="trainee-cnaps-followup__chip is-${validityMode}"${title ? ` title="${escapeHtml(title)}"` : ""} data-trainee-card-pro-result>` +
+      const colorClass = validityMode === "active" ? cardProActivityColorClass(row.activite) : `is-${validityMode}`;
+      return `<span class="trainee-cnaps-followup__chip ${colorClass}"${title ? ` title="${escapeHtml(title)}"` : ""} data-trainee-card-pro-result>` +
         `<span class="trainee-cnaps-followup__activity">${escapeHtml(activity)}</span>` +
         `<span class="trainee-cnaps-followup__validity">${escapeHtml(validityMode === "unknown" ? "INCONNU" : validity)}</span>` +
         `${row.date_validite_titre ? `<span class="trainee-cnaps-followup__validity">${escapeHtml(row.date_validite_titre)}</span>` : ""}` +
