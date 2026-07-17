@@ -1275,16 +1275,34 @@ def normalize_qonto_invoice_payment_data(client_invoice: Dict[str, Any], local_i
     else:
         total_cents = money_value_to_cents(local_invoice.get("amountTTC") or local_invoice.get("amount_ttc") or local_invoice.get("amount") or 0)
     amount_paid = _qonto_money_value(client_invoice.get("amount_paid"))
+    if amount_paid is None:
+        amount_paid = _qonto_money_value(client_invoice.get("paid_amount"))
+    remaining_amount = _qonto_money_value(client_invoice.get("remaining_amount"))
+    if remaining_amount is None:
+        remaining_amount = _qonto_money_value(client_invoice.get("amount_due"))
     if amount_paid is None and client_invoice.get("amount_paid_cents") is not None:
         amount_paid_cents = int(client_invoice.get("amount_paid_cents") or 0)
+    elif amount_paid is None and client_invoice.get("paid_amount_cents") is not None:
+        amount_paid_cents = int(client_invoice.get("paid_amount_cents") or 0)
+    elif amount_paid is None and remaining_amount is not None:
+        amount_paid_cents = max(total_cents - money_value_to_cents(remaining_amount), 0)
+    elif amount_paid is None and client_invoice.get("remaining_amount_cents") is not None:
+        amount_paid_cents = max(total_cents - int(client_invoice.get("remaining_amount_cents") or 0), 0)
     elif amount_paid is None and local_invoice.get("qonto_amount_paid_cents") is not None:
         amount_paid_cents = int(local_invoice.get("qonto_amount_paid_cents") or 0)
     elif amount_paid is None and local_invoice.get("qontoAmountPaidCents") is not None:
         amount_paid_cents = int(local_invoice.get("qontoAmountPaidCents") or 0)
+    elif amount_paid is None and local_invoice.get("qontoInvoiceAmountPaid") is not None:
+        amount_paid_cents = money_value_to_cents(local_invoice.get("qontoInvoiceAmountPaid") or 0)
     else:
         amount_paid_cents = 0 if amount_paid is None else money_value_to_cents(amount_paid)
     qonto_status = (client_invoice.get("status") or local_invoice.get("qonto_status") or local_invoice.get("qontoStatus") or local_invoice.get("qonto_invoice_status") or "").strip() or "unpaid"
-    remaining_cents = max(total_cents - amount_paid_cents, 0)
+    if remaining_amount is not None:
+        remaining_cents = max(money_value_to_cents(remaining_amount), 0)
+    elif client_invoice.get("remaining_amount_cents") is not None:
+        remaining_cents = max(int(client_invoice.get("remaining_amount_cents") or 0), 0)
+    else:
+        remaining_cents = max(total_cents - amount_paid_cents, 0)
     if qonto_status == "canceled":
         payment_status = "canceled"
     elif qonto_status == "draft":

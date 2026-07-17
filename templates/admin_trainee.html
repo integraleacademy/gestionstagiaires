@@ -3756,7 +3756,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
   function badge(text,tone){return `<span class="finance-badge finance-badge--${tone||'gray'}">${esc(text)}</span>`;}
   function canonicalInvoiceEntry(l){const entries=currentFinancialSummary?.qonto_payment_entries||[];return entries.find(e=>String(e.invoice_id||'')===String(l.qontoInvoiceId||l.qontoDraftId||'')||String(e.invoice_number||'')===String(l.qontoInvoiceNumber||''))||null;}
   function lineAmount(l){const e=canonicalInvoiceEntry(l);return e?Number(e.total_amount_cents||0)/100:Number(l.qonto_total_amount_cents??l.qontoTotalAmountCents??0)/100||Number(l.amountTTC||l.amount||0)}
-  function linePaid(l){const e=canonicalInvoiceEntry(l);return e?Number(e.paid_amount_cents||0)/100:Number(l.qonto_amount_paid_cents??l.qontoAmountPaidCents??0)/100}
+  function linePaid(l){const e=canonicalInvoiceEntry(l);if(e)return Number(e.paid_amount_cents||0)/100;const cents=l.qonto_amount_paid_cents??l.qontoAmountPaidCents;if(cents!==undefined&&cents!==null)return Number(cents||0)/100;return Number(l.qontoInvoiceAmountPaid||0)}
   function lineRemaining(l){const e=canonicalInvoiceEntry(l);if(e)return Number(e.remaining_amount_cents||0)/100;return Math.max(lineAmount(l)-linePaid(l),0)}
   function linePaymentStatus(l){const e=canonicalInvoiceEntry(l);return e?.payment_status||l.payment_status||l.qontoPaymentStatus||l.paymentStatus||'unpaid'}
   function allInstallments(lines){return lines.flatMap(l=>(l.directDebitInstallments||[]).map((it,i)=>({...it,line:l,index:i,total:(l.directDebitInstallments||[]).length})));}
