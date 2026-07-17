@@ -27353,6 +27353,30 @@ def _qonto_invoice_is_missing_error(exc: Exception) -> bool:
     return 'qonto http 404' in msg or 'not found' in msg or 'introuvable' in msg or 'deleted' in msg or 'supprim' in msg
 
 
+def _qonto_invoice_lookup_numbers_for_line(line: Dict[str, Any]) -> List[str]:
+    """Return likely Qonto invoice numbers to recover a line after a stale id."""
+    raw = str(line.get('qontoInvoiceNumber') or '').strip()
+    if not raw:
+        return []
+    candidates = [raw]
+    proforma_suffix = '-PROFORMA'
+    if raw.upper().endswith(proforma_suffix):
+        candidates.append(raw[:-len(proforma_suffix)])
+    return list(dict.fromkeys(candidates))
+
+
+def _recover_billing_line_invoice_by_number(line: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    for number in _qonto_invoice_lookup_numbers_for_line(line):
+        try:
+            invoice = find_qonto_invoice_by_number(number)
+        except Exception as exc:
+            app.logger.info("[QONTO] invoice recovery lookup failed line_id=%s number=%s error=%s", line.get('id'), number, exc)
+            continue
+        if invoice:
+            return invoice
+    return None
+
+
 
 def _qonto_invoice_number(invoice: Dict[str, Any]) -> str:
     if not isinstance(invoice, dict):
@@ -27427,6 +27451,17 @@ def _sync_billing_line_with_qonto(data: Dict[str, Any], line: Dict[str, Any]) ->
         return False, 'Synchronisée'
     except Exception as exc:
         if _qonto_invoice_is_missing_error(exc):
+            recovered = _recover_billing_line_invoice_by_number(line)
+            if recovered:
+                recovered_id = str(recovered.get('id') or '').strip()
+                _refresh_billing_line_invoice_from_qonto(line, recovered)
+                _apply_qonto_invoice_payment_to_billing_line(line, recovered)
+                line['syncWarning'] = ''
+                line['generationInProgress'] = False
+                line['updatedAt'] = _now_iso()
+                _billing_log(line, 'Facture Qonto récupérée par numéro', 'success', line.get('qontoInvoiceNumber') or '', recovered_id)
+                _save_billing_line(data, line)
+                return False, 'Facture Qonto retrouvée par numéro et synchronisée'
             _billing_log(line, 'Facture Qonto supprimée ou introuvable, à contrôler', 'error', _sanitize_qonto_error(str(exc)), invoice_id)
             print(f"Facture Qonto supprimée ou introuvable, à contrôler: {invoice_id}")
             for key in ('qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','invoicePdfUrl','qontoPdfUrl','invoiceGeneratedAt','finalizedAt','sentAt','paidAt'):

@@ -97,6 +97,42 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(saved_line["paymentStatus"], "control")
         self.assertIn("introuvable", saved_line.get("syncWarning", ""))
 
+    def test_missing_qonto_billing_invoice_recovers_final_invoice_by_number(self):
+        line_id = gestion_app._billing_line_id("S1", "T1", "PERSONNEL", "legacy")
+        data = {
+            "sessions": [{"id": "S1", "name": "APS NOVEMBRE 2026", "date_start": "2026-11-01", "date_end": "2026-11-05", "trainees": [{"id": "T1", "first_name": "Rafael", "last_name": "BONELLO-GUTIERREZ", "personal_amount": 1650}]}],
+            "billing_lines": [{
+                "id": line_id,
+                "traineeId": "T1", "sessionId": "S1", "financingType": "PERSONNEL", "financingRef": "legacy",
+                "amount": 1650, "invoiceStatus": "draft", "paymentStatus": "unpaid",
+                "qontoInvoiceId": "stale-draft-id", "qontoDraftId": "stale-draft-id",
+                "qontoInvoiceNumber": "FL-2026-315-PROFORMA",
+                "invoiceGeneratedAt": "2026-07-17T10:00:00Z",
+            }]
+        }
+        remote_final = {
+            "id": "final-invoice-id",
+            "number": "FL-2026-315",
+            "status": "sent",
+            "public_url": "https://qonto.test/final-invoice-id",
+        }
+        line = gestion_app._find_billing_line(data, line_id)
+        with patch.object(gestion_app, "get_qonto_invoice", side_effect=gestion_app.QontoNotFoundError("Qonto HTTP 404: not_found")), \
+             patch.object(gestion_app, "find_qonto_invoice_by_number", side_effect=[None, remote_final]) as lookup:
+            did_reset, message = gestion_app._sync_billing_line_with_qonto(data, line)
+
+        self.assertFalse(did_reset)
+        self.assertIn("retrouvée", message)
+        self.assertEqual(lookup.call_args_list[0].args[0], "FL-2026-315-PROFORMA")
+        self.assertEqual(lookup.call_args_list[1].args[0], "FL-2026-315")
+        saved_line = gestion_app._find_billing_line(data, line_id)
+        self.assertEqual(saved_line["qontoInvoiceId"], "final-invoice-id")
+        self.assertEqual(saved_line["qontoInvoiceNumber"], "FL-2026-315")
+        self.assertEqual(saved_line["invoiceStatus"], "sent")
+        self.assertEqual(saved_line["paymentStatus"], "unpaid")
+        self.assertEqual(saved_line["invoicePdfUrl"], "https://qonto.test/final-invoice-id")
+        self.assertFalse(saved_line.get("syncWarning"))
+
     def test_billing_lines_keep_direct_debit_schedule_from_persisted_line(self):
         line_id = gestion_app._billing_line_id("S1", "T1", "PERSONNEL", "legacy")
         data = {
