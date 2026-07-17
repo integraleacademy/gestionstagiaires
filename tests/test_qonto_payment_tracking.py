@@ -17,6 +17,25 @@ class QontoPaymentTrackingTests(unittest.TestCase):
         lines=[{"traineeId":"T1","financingType":"PERSONNEL","qontoInvoiceId":"inv","qontoTotalAmountCents":165000,"qontoAmountPaidCents":60000,"amount":1650}]
         s=gestion_app.calculate_trainee_financial_summary(trainee,lines)
         self.assertEqual(s['invoiced_amount_cents'],165000); self.assertEqual(s['paid_amount_cents'],60000); self.assertEqual(s['remaining_amount_cents'],105000); self.assertAlmostEqual(s['payment_percentage'],36.36)
+
+    def test_qonto_invoice_partial_payment_without_manual_payment_builds_entry(self):
+        trainee={"id":"T1","personal_amount":1650}
+        lines=[{"traineeId":"T1","financingType":"PERSONNEL","qontoInvoiceId":"inv","qontoInvoiceNumber":"FL-2026-314","qontoTotalAmountCents":165000,"qontoAmountPaidCents":60000,"qontoStatus":"unpaid","amount":1650}]
+        s=gestion_app.calculate_trainee_financial_summary(trainee,lines)
+        self.assertEqual(s['paid_total_cents'],60000)
+        self.assertEqual(s['remaining_total_cents'],105000)
+        self.assertAlmostEqual(s['payment_percentage'],36.36)
+        self.assertEqual(s['qonto_payment_entries'][0]['payment_status'],'partially_paid')
+        self.assertEqual(s['qonto_payment_entries'][0]['invoice_number'],'FL-2026-314')
+
+    def test_qonto_invoice_and_linked_manual_payment_are_not_double_counted(self):
+        trainee={"id":"T1","personal_amount":1650}
+        lines=[{"traineeId":"T1","financingType":"PERSONNEL","qontoInvoiceId":"inv","qontoTotalAmountCents":165000,"qontoAmountPaidCents":60000,"qontoStatus":"unpaid","amount":1650},{"traineeId":"T1","financingType":"PERSONNEL","manualPaymentInvoiceId":"inv","amountPaid":600}]
+        s=gestion_app.calculate_trainee_financial_summary(trainee,lines)
+        self.assertEqual(s['paid_total_cents'],60000)
+        self.assertEqual(s['qonto_paid_total_cents'],60000)
+        self.assertEqual(s['manual_paid_total_cents'],0)
+
     def test_api_error_keeps_existing_amount(self):
         data={"sessions":[{"id":"S1","date_start":"2026-01-01","trainees":[{"id":"T1","personal_amount":1650}]}],"billing_lines":[{"id":gestion_app._billing_line_id("S1","T1","PERSONNEL","0"),"traineeId":"T1","sessionId":"S1","financingType":"PERSONNEL","amount":1650,"qontoInvoiceId":"inv","qontoInvoiceAmountPaid":600,"qontoAmountPaidCents":60000}]}
         line=data["billing_lines"][0]
