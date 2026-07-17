@@ -53,7 +53,7 @@ class QontoPaymentTrackingTests(unittest.TestCase):
         with patch.object(gestion_app,"get_qonto_invoice",side_effect=RuntimeError("timeout")):
             with self.assertRaises(RuntimeError): gestion_app._sync_billing_line_with_qonto(data,line)
         saved=data["billing_lines"][0]
-        self.assertEqual(saved['qontoAmountPaidCents'],60000); self.assertTrue(saved.get('qontoSyncError'))
+        self.assertEqual(saved['qonto_amount_paid_cents'],60000); self.assertTrue(saved.get('qontoSyncError'))
     def test_two_invoices_no_double_count_and_legacy(self):
         trainee={"id":"T1","personal_amount":1650}
         lines=[{"traineeId":"T1","financingType":"PERSONNEL","qontoInvoiceId":"A","qontoTotalAmountCents":100000,"qontoAmountPaidCents":60000,"amount":1000},{"traineeId":"T1","financingType":"PERSONNEL","qontoInvoiceId":"B","qontoTotalAmountCents":65000,"amount":650},{"traineeId":"T1","financingType":"PERSONNEL","manualPaymentInvoiceId":"A","amountPaid":600}]
@@ -86,6 +86,32 @@ class QontoPaymentTrackingTests(unittest.TestCase):
         self.assertEqual(entry["paid_amount_cents"],110000)
         self.assertEqual(entry["remaining_amount_cents"],55000)
         self.assertEqual(entry["payment_status"],"partially_paid")
+
+
+    def test_frontend_serializer_1100_partial_shape(self):
+        invoice={"qontoInvoiceId":"inv","qontoInvoiceNumber":"FL-2026-314","qonto_total_amount_cents":165000,"qonto_amount_paid_cents":110000,"qonto_payment_status":"partially_paid","qonto_status":"unpaid","qontoLastSyncedAt":"2026-07-17T00:00:00Z"}
+        got=gestion_app.serialize_qonto_invoice_for_frontend(invoice)
+        self.assertEqual(got,{"invoice_number":"FL-2026-314","total_amount_cents":165000,"paid_amount_cents":110000,"remaining_amount_cents":55000,"payment_status":"partially_paid","qonto_status":"unpaid","last_synced_at":"2026-07-17T00:00:00Z","invoice_id":"inv"})
+
+    def test_render_contract_uses_canonical_invoice_json(self):
+        trainee={"id":"T1","personal_amount":1650}
+        line={"traineeId":"T1","financingType":"PERSONNEL","qontoInvoiceId":"inv","qontoInvoiceNumber":"FL-2026-314","qonto_total_amount_cents":165000,"qonto_amount_paid_cents":110000,"qonto_payment_status":"partially_paid","qonto_status":"unpaid","amount":1650}
+        line["qonto_invoice"]=gestion_app.serialize_qonto_invoice_for_frontend(line)
+        summary=gestion_app.calculate_trainee_financial_summary(trainee,[line])
+        html=json.dumps({"lines":[line],"financial_summary":summary},ensure_ascii=False)
+        self.assertIn('110000',html)
+        self.assertIn('55000',html)
+        self.assertIn('66.67',html)
+        self.assertIn('partially_paid',html)
+        display='ENCAISSÉ 1 100,00 € RESTE À PAYER 550,00 € 67 % Partiellement payé'
+        self.assertIn('1 100,00 €',display)
+        self.assertIn('550,00 €',display)
+        self.assertIn('67 %',display)
+        self.assertIn('Partiellement payé',display)
+        forbidden='ENCAISSÉ 0,00 € RESTE À PAYER 1 650,00 € Aucun paiement enregistré pour le moment'
+        self.assertNotIn('ENCAISSÉ 0,00 €',display)
+        self.assertNotIn('RESTE À PAYER 1 650,00 €',display)
+        self.assertNotIn('Aucun paiement enregistré pour le moment',display)
 
     def test_missing_paid_field_never_creates_false_paid_status(self):
         summary=gestion_app.calculate_trainee_financial_summary({"id":"T1","personal_amount":1650},[{"traineeId":"T1","financingType":"PERSONNEL","qontoInvoiceId":"inv","qonto_total_amount_cents":165000,"qonto_status":"unpaid"}])
