@@ -21,7 +21,7 @@
   {"label":"AFC","icon":"file","href":url_for('admin_afc'),"endpoints":["admin_afc"],"locked":False},
   {"label":"Conventions","icon":"file","href":url_for('admin_sessions_conventions'),"endpoints":["admin_sessions_conventions"],"badge":"","badge_id":"sidebarConventionsSignedBadge","locked":not partner_has_module('automations')},
   {"label":"Automatisations","icon":"tool","href":url_for('admin_sessions_automations'),"endpoints":["admin_sessions_automations"],"locked":not partner_has_module('automations')},
-  {"label":"Suivi des ventes","icon":"chart","href":url_for('admin_sales_tracking'),"endpoints":["admin_sales_tracking"],"locked":not partner_has_module('sales')},
+  {"label":"Suivi des ventes","icon":"chart","href":url_for('admin_sales_tracking'),"endpoints":["admin_sales_tracking"],"badge":sales_today_notification_count if (sales_today_notification_count or 0) > 0 else "","locked":not partner_has_module('sales')},
   {"label":"Facturation","icon":"wallet","href":url_for('admin_sessions_billing'),"endpoints":["admin_sessions_billing","admin_direct_debits"],"locked":not partner_has_module('billing')},
   {"label":"Sessions archivées","icon":"archive","href":url_for('admin_sessions_archived'),"endpoints":["admin_sessions_archived"],"locked":False},
   {"label":"Paiement espèces","icon":"wallet","href":url_for('admin_cash_payments'),"endpoints":["admin_cash_payments"],"locked":False},
