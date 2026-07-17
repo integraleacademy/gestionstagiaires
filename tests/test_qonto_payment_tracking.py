@@ -51,6 +51,45 @@ class QontoPaymentTrackingTests(unittest.TestCase):
     def test_canceled_excluded(self):
         s=gestion_app.calculate_trainee_financial_summary({"id":"T1","personal_amount":1650},[{"traineeId":"T1","financingType":"PERSONNEL","qontoInvoiceId":"A","qontoTotalAmountCents":165000,"qontoAmountPaidCents":165000,"invoiceStatus":"canceled"}])
         self.assertEqual(s['invoiced_amount_cents'],0); self.assertEqual(s['paid_amount_cents'],0)
+
+    def test_real_partial_invoice_1100_over_1650_is_canonical(self):
+        got=gestion_app.normalize_qonto_invoice_payment_data({"total_amount":{"value":"1650.00"},"amount_paid":{"value":"1100.00"},"status":"unpaid"})
+        self.assertEqual(got["qonto_total_amount_cents"],165000)
+        self.assertEqual(got["qonto_amount_paid_cents"],110000)
+        self.assertEqual(got["qonto_remaining_amount_cents"],55000)
+        self.assertEqual(got["qonto_payment_status"],"partially_paid")
+        trainee={"id":"T1","personal_amount":1650}
+        lines=[{"traineeId":"T1","financingType":"PERSONNEL","qontoInvoiceId":"inv","qontoInvoiceNumber":"FL-2026-314","qonto_total_amount_cents":165000,"qonto_amount_paid_cents":110000,"qonto_status":"unpaid","amount":1650}]
+        summary=gestion_app.calculate_trainee_financial_summary(trainee,lines)
+        self.assertEqual(summary["planned_total_cents"],165000)
+        self.assertEqual(summary["invoiced_total_cents"],165000)
+        self.assertEqual(summary["qonto_paid_total_cents"],110000)
+        self.assertEqual(summary["manual_paid_total_cents"],0)
+        self.assertEqual(summary["paid_total_cents"],110000)
+        self.assertEqual(summary["remaining_total_cents"],55000)
+        self.assertAlmostEqual(summary["payment_percentage"],66.67,places=2)
+        self.assertEqual(summary["payment_status"],"partially_paid")
+        entry=summary["qonto_payment_entries"][0]
+        self.assertEqual(entry["invoice_number"],"FL-2026-314")
+        self.assertEqual(entry["total_amount_cents"],165000)
+        self.assertEqual(entry["paid_amount_cents"],110000)
+        self.assertEqual(entry["remaining_amount_cents"],55000)
+        self.assertEqual(entry["payment_status"],"partially_paid")
+
+    def test_missing_paid_field_never_creates_false_paid_status(self):
+        summary=gestion_app.calculate_trainee_financial_summary({"id":"T1","personal_amount":1650},[{"traineeId":"T1","financingType":"PERSONNEL","qontoInvoiceId":"inv","qonto_total_amount_cents":165000,"qonto_status":"unpaid"}])
+        self.assertEqual(summary["paid_total_cents"],0)
+        self.assertEqual(summary["remaining_total_cents"],165000)
+        self.assertEqual(summary["payment_status"],"unpaid")
+        self.assertEqual(summary["qonto_payment_entries"],[])
+
+    def test_admin_template_uses_canonical_payment_rendering(self):
+        html=open("templates/admin_trainee.html",encoding="utf-8").read()
+        self.assertIn("canonicalInvoiceEntry",html)
+        self.assertIn("lineRemaining(l)>0?fmtMoney(lineRemaining(l))",html)
+        self.assertIn("Partiellement payé",html)
+        self.assertIn("Math.round(c.progressPaiement)}%",html)
+
     def test_webhook_invalid_signature_and_idempotent_valid(self):
         client=gestion_app.app.test_client(); raw=json.dumps({"event":"v1/client-invoices.updated","data":{"id":"inv"}}).encode(); secret="s"
         with patch.dict(os.environ,{"QONTO_WEBHOOK_SECRET":secret}), patch.object(gestion_app,"load_data",return_value={"sessions":[],"billing_lines":[]}):
