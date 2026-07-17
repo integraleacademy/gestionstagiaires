@@ -2176,11 +2176,17 @@ def protect_sensitive_routes():
 def inject_read_only():
     admin_notifications = {"notifications": [], "unresolved_total": 0}
     wedof_new_requests_count = 0
+    sales_today_notification_count = 0
     if session.get("admin_logged_in"):
         try:
             wedof_new_requests_count = sum(1 for item in _load_wedof_webhooks() if not bool(item.get("processed")))
         except Exception:
             wedof_new_requests_count = 0
+        try:
+            sales_metrics = _build_sales_tracking_metrics(load_data(), datetime.date.today().year)
+            sales_today_notification_count = max(int(sales_metrics.get("today_inscriptions") or 0), 0)
+        except Exception:
+            sales_today_notification_count = 0
     if session.get("admin_logged_in") and _admin_can_view_notifications():
         try:
             admin_notifications = _admin_notifications_payload(load_data())
@@ -2226,6 +2232,7 @@ def inject_read_only():
         "admin_notifications": admin_notifications["notifications"],
         "admin_unresolved_total": admin_notifications["unresolved_total"],
         "wedof_new_requests_count": wedof_new_requests_count,
+        "sales_today_notification_count": sales_today_notification_count,
         "admin_can_access_notifications": _admin_can_view_notifications(),
         "admin_can_manage_notifications": _admin_can_manage_notifications(),
         "global_mail_sent_notice": mail_sent_notice,
