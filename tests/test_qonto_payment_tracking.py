@@ -12,6 +12,17 @@ class QontoPaymentTrackingTests(unittest.TestCase):
         for payload,total,paid,remaining,status in cases:
             got=gestion_app.normalize_qonto_invoice_payment_data(payload)
             self.assertEqual((got['qonto_total_amount_cents'],got['qonto_amount_paid_cents'],got['qonto_remaining_amount_cents'],got['qonto_payment_status']),(total,paid,remaining,status))
+
+    def test_qonto_paid_amount_aliases_are_normalized(self):
+        got=gestion_app.normalize_qonto_invoice_payment_data({"total_amount":{"value":"1650.00"},"paid_amount":{"value":"600.00"},"status":"unpaid"})
+        self.assertEqual(got["qonto_amount_paid_cents"],60000)
+        self.assertEqual(got["qonto_remaining_amount_cents"],105000)
+        self.assertEqual(got["qonto_payment_status"],"partially_paid")
+        got=gestion_app.normalize_qonto_invoice_payment_data({"total_amount":{"value":"1650.00"},"remaining_amount":{"value":"1050.00"},"status":"unpaid"})
+        self.assertEqual(got["qonto_amount_paid_cents"],60000)
+        self.assertEqual(got["qonto_remaining_amount_cents"],105000)
+        self.assertEqual(got["qonto_payment_status"],"partially_paid")
+
     def test_partial_progress(self):
         trainee={"id":"T1","personal_amount":1650}
         lines=[{"traineeId":"T1","financingType":"PERSONNEL","qontoInvoiceId":"inv","qontoTotalAmountCents":165000,"qontoAmountPaidCents":60000,"amount":1650}]
