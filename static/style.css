@@ -3279,3 +3279,4 @@ body.partner-sidebar-collapsed .docs-to-control-panel{
 .docs-to-control-list [data-docs-to-control-href]{cursor:pointer;}
 .docs-to-control-list [data-docs-to-control-href]:hover{background:#f8fafc;}
 @media (max-width:860px){.trainee-search-panel,.docs-to-control-panel{left:12px!important;right:12px;top:76px;bottom:12px;width:auto!important;border-radius:24px!important;}}
+.finance-progress-fill--orange{background:linear-gradient(90deg,#f97316,#fb923c)!important}.text-green{color:#16a34a;font-weight:950}.finance-badge--orange{background:#ffedd5;color:#9a3412}.qonto-invoice-row__value .text-green{display:inline-block}.qonto-invoice-row__content{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));}
