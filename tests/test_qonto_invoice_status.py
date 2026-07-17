@@ -418,7 +418,8 @@ class QontoInvoiceStatusTests(unittest.TestCase):
              patch.object(gestion_app, "save_data", side_effect=self.saved.append), \
              patch.object(gestion_app, "search_qonto_client", return_value=existing_client), \
              patch.object(gestion_app, "update_qonto_client", return_value=updated_client) as update_client, \
-             patch.object(gestion_app, "create_qonto_invoice", return_value={"client_invoice": {"id": "inv_123", "number": "F-123"}}), \
+             patch.object(gestion_app, "create_qonto_invoice", return_value={"client_invoice": {"id": "inv_123"}}), \
+             patch.object(gestion_app, "get_qonto_invoice", return_value={"client_invoice": {"id": "inv_123", "number": "F-123", "status": "draft"}}), \
              patch.object(gestion_app, "_setup_qonto_direct_debit_for_line"):
             ok, result = gestion_app._create_invoice_for_billing_line(data, line, {})
 
@@ -429,6 +430,18 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(payload["zip_code"], "83520")
         self.assertEqual(payload["city"], "Roquebrune sur Argens")
         self.assertEqual(result["line"]["qontoInvoiceId"], "inv_123")
+
+    def test_apply_qonto_invoice_to_billing_line_backfills_number_and_generated_status(self):
+        line = {"id": "bill_test", "invoiceStatus": "not_invoiced", "paymentStatus": "not_applicable"}
+        gestion_app._apply_qonto_invoice_to_billing_line(line, {"client_invoice": {"id": "inv_123", "number": "F-2026-123", "status": "finalized", "public_url": "https://qonto.test/inv.pdf"}})
+
+        self.assertEqual(line["qontoInvoiceId"], "inv_123")
+        self.assertEqual(line["qontoInvoiceNumber"], "F-2026-123")
+        self.assertEqual(line["invoiceStatus"], "finalized")
+        self.assertEqual(line["paymentStatus"], "unpaid")
+        self.assertTrue(line.get("invoiceGeneratedAt"))
+        self.assertFalse(line.get("generationInProgress"))
+
 
 
 class BillingStartDateFilterTests(unittest.TestCase):

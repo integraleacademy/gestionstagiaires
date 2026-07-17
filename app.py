@@ -27353,22 +27353,36 @@ def _qonto_invoice_is_missing_error(exc: Exception) -> bool:
     return 'qonto http 404' in msg or 'not found' in msg or 'introuvable' in msg or 'deleted' in msg or 'supprim' in msg
 
 
+def _apply_qonto_invoice_to_billing_line(line: Dict[str, Any], remote: Dict[str, Any]) -> None:
+    remote = _qonto_invoice_payload(remote or {})
+    invoice_id = remote.get('id') or line.get('qontoInvoiceId') or line.get('qontoDraftId') or ''
+    remote_status = _normalize_billing_invoice_status(remote.get('status') or line.get('invoiceStatus') or ('draft' if invoice_id else 'not_invoiced'))
+    if remote.get('paid_at') or remote_status == 'paid':
+        remote_status = 'paid'
+    if invoice_id:
+        line['qontoInvoiceId'] = invoice_id
+        if remote_status == 'draft' or not line.get('qontoDraftId'):
+            line['qontoDraftId'] = invoice_id
+    line['invoiceStatus'] = remote_status
+    line['paymentStatus'] = 'paid' if remote_status == 'paid' else ('unpaid' if remote_status in {'draft', 'finalized', 'sent'} else 'control')
+    line['qontoInvoiceNumber'] = remote.get('number') or remote.get('invoice_number') or line.get('qontoInvoiceNumber') or ''
+    line['invoicePdfUrl'] = remote.get('public_url') or remote.get('url') or line.get('invoicePdfUrl') or ''
+    line['qontoPdfUrl'] = line.get('invoicePdfUrl') or ''
+    if remote_status in {'draft', 'finalized', 'sent', 'paid'} and not line.get('invoiceGeneratedAt'):
+        line['invoiceGeneratedAt'] = remote.get('created_at') or remote.get('issued_at') or _now_iso()
+    if remote_status in {'finalized', 'sent', 'paid'} and not line.get('finalizedAt'):
+        line['finalizedAt'] = remote.get('finalized_at') or remote.get('issued_at') or _now_iso()
+    if remote_status == 'paid' and not line.get('paidAt'):
+        line['paidAt'] = remote.get('paid_at') or _now_iso()
+    line['generationInProgress'] = False
+
+
 def _sync_billing_line_with_qonto(data: Dict[str, Any], line: Dict[str, Any]) -> Tuple[bool, str]:
     invoice_id = (line.get('qontoInvoiceId') or line.get('qontoDraftId') or line.get('qonto_invoice_id') or '').strip()
     if not invoice_id:
         return False, 'Aucune facture Qonto liée'
     try:
-        remote = _qonto_invoice_payload(get_qonto_invoice(invoice_id))
-        remote_status = _normalize_billing_invoice_status(remote.get('status') or line.get('invoiceStatus') or 'draft')
-        if remote.get('paid_at') or remote_status == 'paid':
-            remote_status = 'paid'
-        line['paymentStatus'] = 'paid' if remote_status == 'paid' else ('unpaid' if remote_status in {'draft', 'finalized', 'sent'} else 'control')
-        line['invoiceStatus'] = remote_status
-        line['qontoInvoiceNumber'] = remote.get('number') or remote.get('invoice_number') or line.get('qontoInvoiceNumber') or ''
-        line['invoicePdfUrl'] = remote.get('public_url') or remote.get('url') or line.get('invoicePdfUrl') or ''
-        line['qontoPdfUrl'] = line.get('invoicePdfUrl') or ''
-        if remote_status == 'paid' and not line.get('paidAt'):
-            line['paidAt'] = remote.get('paid_at') or _now_iso()
+        _apply_qonto_invoice_to_billing_line(line, get_qonto_invoice(invoice_id))
         _billing_log(line, 'Facture Qonto synchronisée', 'success', line['paymentStatus'], invoice_id)
         _save_billing_line(data, line)
         return False, 'Synchronisée'
@@ -27507,6 +27521,11 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
             if is_cpf:
                 current['clientName'] = CPF_QONTO_CLIENT_NAME
             current.update({'qontoClientId': q_client_id, 'qontoCustomerId': q_client_id, 'qontoInvoiceId': qi.get('id'), 'qontoDraftId': qi.get('id'), 'qontoInvoiceNumber': qi.get('number') or qi.get('invoice_number') or '', 'invoiceStatus': 'draft' if qi.get('id') else 'not_invoiced', 'paymentStatus': 'paid' if (qi.get('status') == 'paid' or qi.get('paid_at')) else 'unpaid', 'invoiceGeneratedAt': _now_iso(), 'createdAt': current.get('createdAt') or _now_iso(), 'invoicePdfUrl': qi.get('public_url') or qi.get('url') or '', 'generationInProgress': False})
+            if current.get('qontoInvoiceId'):
+                try:
+                    _apply_qonto_invoice_to_billing_line(current, get_qonto_invoice(current['qontoInvoiceId']))
+                except Exception as exc:
+                    app.logger.info('[QONTO] Impossible de relire la facture après création id=%s: %s', current.get('qontoInvoiceId'), exc)
             payment_plan = _normalize_payment_plan(payment_plan_payload or {}, amount_ttc)
             _setup_qonto_direct_debit_for_line(current, payment_plan)
             current['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(current)
@@ -27685,8 +27704,12 @@ def api_billing_finalize():
     if not line or not line.get('qontoInvoiceId'): return jsonify({'ok': False, 'error': 'Aucune facture Qonto liée'}), 400
     try:
         qi = _qonto_invoice_payload(finalize_qonto_invoice(line['qontoInvoiceId']))
-        line['invoiceStatus'] = _normalize_billing_invoice_status(qi.get('status') or 'finalized')
-        line['finalizedAt'] = _now_iso(); line['qontoInvoiceNumber'] = qi.get('number') or qi.get('invoice_number') or line.get('qontoInvoiceNumber') or ''
+        try:
+            qi = _qonto_invoice_payload(get_qonto_invoice(line['qontoInvoiceId'])) or qi
+        except Exception as exc:
+            app.logger.info('[QONTO] Impossible de relire la facture après finalisation id=%s: %s', line.get('qontoInvoiceId'), exc)
+        _apply_qonto_invoice_to_billing_line(line, {**qi, 'status': qi.get('status') or 'finalized'})
+        line['finalizedAt'] = line.get('finalizedAt') or _now_iso()
         _billing_log(line, 'Facture finalisée', 'success', '', line.get('qontoInvoiceId') or ''); _save_billing_line(data, line); save_data(data)
         return jsonify({'ok': True, 'line': _find_billing_line(data, line['id'])})
     except Exception as exc:
@@ -27889,9 +27912,12 @@ def api_admin_billing_bulk_generate():
         if ok and finalize_after_create and created_line and created_line.get('qontoInvoiceId'):
             try:
                 qi = _qonto_invoice_payload(finalize_qonto_invoice(created_line['qontoInvoiceId']))
-                created_line['invoiceStatus'] = _normalize_billing_invoice_status(qi.get('status') or 'finalized')
-                created_line['finalizedAt'] = _now_iso()
-                created_line['qontoInvoiceNumber'] = qi.get('number') or qi.get('invoice_number') or created_line.get('qontoInvoiceNumber') or ''
+                try:
+                    qi = _qonto_invoice_payload(get_qonto_invoice(created_line['qontoInvoiceId'])) or qi
+                except Exception as exc:
+                    app.logger.info('[QONTO] Impossible de relire la facture après finalisation en masse id=%s: %s', created_line.get('qontoInvoiceId'), exc)
+                _apply_qonto_invoice_to_billing_line(created_line, {**qi, 'status': qi.get('status') or 'finalized'})
+                created_line['finalizedAt'] = created_line.get('finalizedAt') or _now_iso()
                 _billing_log(created_line, 'Facture finalisée après génération en masse', 'success', '', created_line.get('qontoInvoiceId') or '')
                 _save_billing_line(data, created_line); save_data(data)
                 created_line = _find_billing_line(data, str(created_line.get('id'))) or created_line
