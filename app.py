@@ -27319,7 +27319,7 @@ def _billing_lines(data: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
     all_map = _billing_existing_map(data)
-    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote')}
+    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote','qontoInvoiceAmountPaid')}
     persisted['updatedAt'] = _now_iso()
     all_map[line['id']] = persisted
     data['billing_lines'] = list(all_map.values())
@@ -27353,22 +27353,35 @@ def _qonto_invoice_is_missing_error(exc: Exception) -> bool:
     return 'qonto http 404' in msg or 'not found' in msg or 'introuvable' in msg or 'deleted' in msg or 'supprim' in msg
 
 
+def _apply_qonto_invoice_payment_to_billing_line(line: Dict[str, Any], invoice: Dict[str, Any]) -> None:
+    remote_status = _normalize_billing_invoice_status(invoice.get('status') or line.get('invoiceStatus') or 'draft')
+    if invoice.get('paid_at') or remote_status == 'paid':
+        remote_status = 'paid'
+    amount_paid = _normalize_qonto_amount(invoice.get('amount_paid'))
+    line_amount = _money(line.get('amountTTC') or line.get('amount'))
+    line['qontoInvoiceAmountPaid'] = amount_paid
+    if remote_status == 'paid' or (line_amount > 0 and amount_paid + 0.01 >= line_amount):
+        line['paymentStatus'] = 'paid'
+        line['invoiceStatus'] = 'paid'
+        line['paidAt'] = line.get('paidAt') or invoice.get('paid_at') or _now_iso()
+    elif amount_paid > 0:
+        line['paymentStatus'] = 'partial'
+        line['invoiceStatus'] = remote_status
+    else:
+        line['paymentStatus'] = 'unpaid' if remote_status in {'draft', 'finalized', 'sent'} else 'control'
+        line['invoiceStatus'] = remote_status
+
+
 def _sync_billing_line_with_qonto(data: Dict[str, Any], line: Dict[str, Any]) -> Tuple[bool, str]:
     invoice_id = (line.get('qontoInvoiceId') or line.get('qontoDraftId') or line.get('qonto_invoice_id') or '').strip()
     if not invoice_id:
         return False, 'Aucune facture Qonto liée'
     try:
         remote = _qonto_invoice_payload(get_qonto_invoice(invoice_id))
-        remote_status = _normalize_billing_invoice_status(remote.get('status') or line.get('invoiceStatus') or 'draft')
-        if remote.get('paid_at') or remote_status == 'paid':
-            remote_status = 'paid'
-        line['paymentStatus'] = 'paid' if remote_status == 'paid' else ('unpaid' if remote_status in {'draft', 'finalized', 'sent'} else 'control')
-        line['invoiceStatus'] = remote_status
+        _apply_qonto_invoice_payment_to_billing_line(line, remote)
         line['qontoInvoiceNumber'] = remote.get('number') or remote.get('invoice_number') or line.get('qontoInvoiceNumber') or ''
         line['invoicePdfUrl'] = remote.get('public_url') or remote.get('url') or line.get('invoicePdfUrl') or ''
         line['qontoPdfUrl'] = line.get('invoicePdfUrl') or ''
-        if remote_status == 'paid' and not line.get('paidAt'):
-            line['paidAt'] = remote.get('paid_at') or _now_iso()
         _billing_log(line, 'Facture Qonto synchronisée', 'success', line['paymentStatus'], invoice_id)
         _save_billing_line(data, line)
         return False, 'Synchronisée'
@@ -28211,19 +28224,27 @@ def api_qonto_webhooks():
     if not invoice_id:
         return jsonify({"ok": False, "error": "missing_invoice_id"}), 400
     data = load_data()
-    sess, trainees, trainee = _find_trainee_by_qonto_invoice_id(data, invoice_id)
-    if not trainee:
-        return jsonify({"ok": True, "updated": False, "reason": "invoice_not_found"}), 200
-    inv = _qonto_invoice_state(trainee)
-    _apply_qonto_invoice_status(inv, {
+    invoice_payload = {
         "id": invoice_id,
         "status": item.get("status"),
         "paid_at": item.get("paid_at"),
         "amount_paid": item.get("amount_paid"),
-    })
-    sess["trainees"] = trainees
+    }
+    updated = False
+    for line in _billing_lines(data):
+        if str(line.get('qontoInvoiceId') or line.get('qontoDraftId') or '') == str(invoice_id):
+            _apply_qonto_invoice_payment_to_billing_line(line, invoice_payload)
+            _billing_log(line, 'Paiement facture Qonto synchronisé', 'success', line.get('paymentStatus') or '', str(invoice_id))
+            _save_billing_line(data, line)
+            updated = True
+    sess, trainees, trainee = _find_trainee_by_qonto_invoice_id(data, invoice_id)
+    if trainee:
+        inv = _qonto_invoice_state(trainee)
+        _apply_qonto_invoice_status(inv, invoice_payload)
+        sess["trainees"] = trainees
+        updated = True
     save_data(data)
-    return jsonify({"ok": True, "updated": True, "status": inv.get("qonto_invoice_status")})
+    return jsonify({"ok": True, "updated": updated})
 
 
 @app.get("/admin/trainee/<trainee_id>/convocation-aps/preview")
