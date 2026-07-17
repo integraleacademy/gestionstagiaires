@@ -166,7 +166,8 @@
       {"label":"Réglages Qonto","icon":"settings","href":url_for('admin_qonto_settings'),"endpoints":["admin_qonto_settings"],"locked":not partner_has_module('billing')},
       {"label":"Sessions archivées","icon":"archive","href":url_for('admin_sessions_archived'),"endpoints":["admin_sessions_archived"],"locked":False}
     ] %}
-    {% set sidebar_tools_menu = {"label":"Outils","icon":"tool","badge":"","badge_id":"sidebarToolsConventionsSignedBadge","children":sidebar_tools_children} %}
+    {% set sidebar_tools_notifications_count = sales_today_notification_count if (sales_today_notification_count or 0) > 0 else 0 %}
+    {% set sidebar_tools_menu = {"label":"Outils","icon":"tool","badge":sidebar_tools_notifications_count if sidebar_tools_notifications_count > 0 else "","badge_id":"sidebarToolsConventionsSignedBadge","children":sidebar_tools_children} %}
     {% set settings_items = [
       {"label":"Aide et support","icon":"help","href":url_for('partner_help_support'),"endpoints":["partner_help_support"],"locked":False}
     ] %}
@@ -1199,28 +1200,32 @@
   })();
 
   (function initGlobalConventionsSignedBadge(){
-    const sidebarBadges = [
-      document.getElementById("sidebarConventionsSignedBadge"),
-      document.getElementById("sidebarToolsConventionsSignedBadge")
-    ].filter(Boolean);
-    if(!sidebarBadges.length) return;
+    const conventionsBadge = document.getElementById("sidebarConventionsSignedBadge");
+    const toolsBadge = document.getElementById("sidebarToolsConventionsSignedBadge");
+    const salesNotificationsTotal = Number({{ (sales_today_notification_count or 0)|tojson }});
+    if(!conventionsBadge && !toolsBadge) return;
+
+    function updateBadge(sidebarBadge, total, label){
+      if(!sidebarBadge) return;
+      sidebarBadge.textContent = String(total);
+      sidebarBadge.style.display = total > 0 ? "inline-flex" : "none";
+      sidebarBadge.setAttribute("aria-label", label);
+    }
 
     async function refreshSidebarConventionsSignedBadge(){
       try{
         const response = await fetch("/api/conventions_signed_unseen", { headers: { "Accept": "application/json" } });
         const payload = await response.json();
         if(!response.ok || !payload.ok) throw new Error(payload.error || "request_failed");
-        const total = Number(payload.count || 0);
-        sidebarBadges.forEach((sidebarBadge) => {
-          sidebarBadge.textContent = String(total);
-          sidebarBadge.style.display = total > 0 ? "inline-flex" : "none";
-          sidebarBadge.setAttribute("aria-label", `${total} convention(s) signée(s) à consulter`);
-        });
+        const conventionsTotal = Number(payload.count || 0);
+        const toolsTotal = conventionsTotal + salesNotificationsTotal;
+        updateBadge(conventionsBadge, conventionsTotal, `${conventionsTotal} convention(s) signée(s) à consulter`);
+        updateBadge(toolsBadge, toolsTotal, `${toolsTotal} notification(s) dans les outils`);
       }catch(_error){
-        sidebarBadges.forEach((sidebarBadge) => {
+        [conventionsBadge, toolsBadge].filter(Boolean).forEach((sidebarBadge) => {
           sidebarBadge.textContent = "!";
           sidebarBadge.style.display = "inline-flex";
-          sidebarBadge.setAttribute("aria-label", "Impossible de charger les conventions signées");
+          sidebarBadge.setAttribute("aria-label", "Impossible de charger les notifications des outils");
         });
       }
     }
