@@ -61,7 +61,8 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         raw = json.dumps(body).encode("utf-8")
         signature = "sha256=" + hmac.new(secret.encode("utf-8"), raw, hashlib.sha256).hexdigest()
         client = gestion_app.app.test_client()
-        with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": secret}), patch.object(gestion_app, "load_data", return_value=self.data), patch.object(gestion_app, "save_data", side_effect=self.saved.append):
+        remote = {"client_invoice": {"id": "inv_123", "status": "paid", "paid_at": "2026-06-29T11:30:00Z", "total_amount": {"value": "950"}, "amount_paid": {"value": "950"}}}
+        with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": secret}), patch.object(gestion_app, "load_data", return_value=self.data), patch.object(gestion_app, "save_data", side_effect=self.saved.append), patch.object(gestion_app, "get_qonto_invoice", return_value=remote):
             response = client.post("/api/qonto/webhooks", data=raw, headers={"Content-Type": "application/json", "X-Qonto-Signature": signature})
 
         self.assertEqual(response.status_code, 200)
@@ -90,12 +91,13 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertTrue(did_reset)
         self.assertIn("à contrôler", message)
         saved_line = gestion_app._find_billing_line(data, data["billing_lines"][0]["id"])
-        self.assertFalse(saved_line.get("qontoInvoiceId"))
-        self.assertFalse(saved_line.get("qontoInvoiceNumber"))
-        self.assertFalse(saved_line.get("invoiceGeneratedAt"))
+        self.assertEqual(saved_line.get("qontoInvoiceId"), "inv_deleted")
+        self.assertEqual(saved_line.get("qontoInvoiceNumber"), "F-2026-001-PROFORMA")
+        self.assertEqual(saved_line.get("invoiceGeneratedAt"), "2026-06-29T10:00:00Z")
         self.assertEqual(saved_line["invoiceStatus"], "control")
         self.assertEqual(saved_line["paymentStatus"], "control")
         self.assertIn("introuvable", saved_line.get("syncWarning", ""))
+        self.assertIn("qonto_sync_error", saved_line)
 
     def test_billing_lines_keep_direct_debit_schedule_from_persisted_line(self):
         line_id = gestion_app._billing_line_id("S1", "T1", "PERSONNEL", "legacy")

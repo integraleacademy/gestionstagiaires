@@ -26,6 +26,7 @@ try:
 except ImportError:
     resource = None
 from typing import Dict, Any, Optional, List, Iterable, Tuple, Set
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from functools import wraps
 from zoneinfo import ZoneInfo
 from flask import session
@@ -1239,6 +1240,63 @@ def _normalize_qonto_amount(value: Any) -> float:
     return _money(value)
 
 
+
+def money_value_to_cents(value: Any) -> int:
+    if isinstance(value, dict):
+        value = value.get("value") if "value" in value else value.get("amount")
+    if value is None or value == "":
+        return 0
+    try:
+        decimal_value = Decimal(str(value).replace(",", "."))
+    except (InvalidOperation, TypeError, ValueError) as exc:
+        raise ValueError("Montant Qonto invalide") from exc
+    return int((decimal_value * Decimal("100")).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
+
+def cents_to_euros(cents: Any) -> Decimal:
+    try:
+        return (Decimal(int(cents or 0)) / Decimal("100")).quantize(Decimal("0.01"))
+    except Exception:
+        return Decimal("0.00")
+
+
+def _qonto_invoice_local_payment_status(qonto_status: str, total_amount_cents: int, amount_paid_cents: int) -> str:
+    status = str(qonto_status or "").strip().lower()
+    if status == "canceled":
+        return "canceled"
+    if status == "draft":
+        return "draft"
+    if total_amount_cents > 0 and amount_paid_cents >= total_amount_cents:
+        return "paid"
+    if amount_paid_cents > 0:
+        return "partially_paid"
+    return "unpaid"
+
+
+def normalize_qonto_invoice_payment_data(client_invoice: Dict[str, Any], fallback_total_cents: Optional[int] = None) -> Dict[str, Any]:
+    if not isinstance(client_invoice, dict):
+        raise ValueError("Réponse Qonto invalide")
+    total_raw = client_invoice.get("total_amount")
+    if total_raw is None and client_invoice.get("total_amount_cents") not in (None, ""):
+        total_cents = int(client_invoice.get("total_amount_cents") or 0)
+    elif total_raw is None and fallback_total_cents is not None:
+        total_cents = int(fallback_total_cents or 0)
+    else:
+        total_cents = money_value_to_cents(total_raw)
+    amount_paid_raw = client_invoice.get("amount_paid")
+    amount_paid_cents = money_value_to_cents(amount_paid_raw) if amount_paid_raw is not None else 0
+    remaining_cents = max(total_cents - amount_paid_cents, 0)
+    qonto_status = str(client_invoice.get("status") or "").strip().lower()
+    payment_status = _qonto_invoice_local_payment_status(qonto_status, total_cents, amount_paid_cents)
+    return {
+        "qonto_status": qonto_status,
+        "total_amount_cents": total_cents,
+        "amount_paid_cents": amount_paid_cents,
+        "remaining_amount_cents": remaining_cents,
+        "payment_status": payment_status,
+        "paid_at": client_invoice.get("paid_at") or None,
+    }
+
 def _qonto_invoice_payload(data: Dict[str, Any]) -> Dict[str, Any]:
     return data.get("client_invoice") if isinstance(data.get("client_invoice"), dict) else (data.get("invoice") if isinstance(data.get("invoice"), dict) else data)
 
@@ -1252,14 +1310,23 @@ def _apply_qonto_invoice_status(inv: Dict[str, Any], invoice: Dict[str, Any]) ->
     if status:
         inv["qonto_invoice_status"] = status
     inv["qonto_invoice_paid_at"] = paid_at or ""
-    inv["qonto_invoice_amount_paid"] = _normalize_qonto_amount(amount_paid)
+    normalized = normalize_qonto_invoice_payment_data(invoice, fallback_total_cents=money_value_to_cents(inv.get("amount_ttc") or inv.get("total_amount") or 0))
+    inv["qonto_invoice_amount_paid"] = float(cents_to_euros(normalized["amount_paid_cents"]))
+    inv["qonto_total_amount_cents"] = normalized["total_amount_cents"]
+    inv["qonto_amount_paid_cents"] = normalized["amount_paid_cents"]
+    inv["qonto_remaining_amount_cents"] = normalized["remaining_amount_cents"]
+    inv["qonto_payment_status"] = normalized["payment_status"]
+    inv["qonto_status"] = normalized["qonto_status"]
+    inv["qonto_paid_at"] = normalized["paid_at"]
+    inv["qonto_last_synced_at"] = _now_iso()
+    inv["qonto_sync_error"] = None
     if invoice.get("id"):
         inv["qonto_invoice_id"] = invoice.get("id")
     if invoice.get("number") or invoice.get("invoice_number"):
         inv["qonto_invoice_number"] = invoice.get("number") or invoice.get("invoice_number") or ""
     if invoice.get("public_url") or invoice.get("url"):
         inv["qonto_invoice_url"] = invoice.get("public_url") or invoice.get("url") or inv.get("qonto_invoice_url")
-    inv["qonto_invoice_synced_at"] = _now_iso()
+    inv["qonto_invoice_synced_at"] = inv.get("qonto_last_synced_at") or _now_iso()
     inv["last_error"] = ""
 
 
@@ -1294,11 +1361,20 @@ def _verify_qonto_webhook_signature(raw_body: bytes) -> bool:
     secret = _qonto_webhook_secret()
     if not secret:
         return False
-    signatures = []
-    for header in QONTO_WEBHOOK_SIGNATURE_HEADERS:
-        value = (request.headers.get(header) or "").strip()
-        if value:
-            signatures.append(value)
+    header = (request.headers.get("X-Qonto-Signature") or "").strip()
+    if header and "t=" in header and "v1=" in header:
+        parts = dict(part.split("=", 1) for part in header.split(",") if "=" in part)
+        timestamp = parts.get("t", "").strip()
+        signature = parts.get("v1", "").strip()
+        try:
+            if abs(time.time() - int(timestamp)) > 300:
+                return False
+        except Exception:
+            return False
+        signed = f"{timestamp}.".encode("utf-8") + raw_body
+        digest = hmac.new(secret.encode("utf-8"), signed, hashlib.sha256).hexdigest()
+        return hmac.compare_digest(signature, digest)
+    signatures = [(request.headers.get(h) or "").strip() for h in QONTO_WEBHOOK_SIGNATURE_HEADERS if (request.headers.get(h) or "").strip()]
     if not signatures:
         return False
     digest = hmac.new(secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
@@ -27277,7 +27353,7 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     'financingType': financing['type'], 'financingLabel': financing.get('label') or financing['type'],
                     'financingRef': financing.get('ref') or '0', 'amount': financing['amount'], 'amountTTC': financing['amount'], 'amountHT': persisted.get('amountHT') or financing['amount'], 'currency': 'EUR',
                     'invoiceStatus': status, 'paymentStatus': ('not_applicable' if status == 'not_invoiced' and not (persisted.get('qontoInvoiceId') or persisted.get('qontoDraftId')) else (persisted.get('paymentStatus') or 'unpaid')),
-                    'qontoInvoiceId': persisted.get('qontoInvoiceId'), 'qontoDraftId': persisted.get('qontoDraftId') or (persisted.get('qontoInvoiceId') if status == 'draft' else ''), 'qontoInvoiceNumber': persisted.get('qontoInvoiceNumber'),
+                    'qontoInvoiceId': persisted.get('qontoInvoiceId'), 'qontoDraftId': persisted.get('qontoDraftId') or (persisted.get('qontoInvoiceId') if status == 'draft' else ''), 'qontoInvoiceNumber': persisted.get('qontoInvoiceNumber'), 'qonto_status': persisted.get('qonto_status'), 'qontoStatus': persisted.get('qontoStatus'), 'qonto_total_amount_cents': persisted.get('qonto_total_amount_cents'), 'qonto_amount_paid_cents': persisted.get('qonto_amount_paid_cents'), 'qonto_remaining_amount_cents': persisted.get('qonto_remaining_amount_cents'), 'qonto_payment_status': persisted.get('qonto_payment_status'), 'qonto_paid_at': persisted.get('qonto_paid_at'), 'qonto_last_synced_at': persisted.get('qonto_last_synced_at'), 'qonto_sync_error': persisted.get('qonto_sync_error'), 'qontoInvoiceAmountPaid': persisted.get('qontoInvoiceAmountPaid'),
                     'qontoCustomerId': persisted.get('qontoCustomerId') or persisted.get('qontoClientId'), 'qontoClientId': persisted.get('qontoClientId'), 'invoiceGeneratedAt': persisted.get('invoiceGeneratedAt'),
                     'finalizedAt': persisted.get('finalizedAt'), 'sentAt': persisted.get('sentAt'), 'paidAt': persisted.get('paidAt'), 'cancelledAt': persisted.get('cancelledAt'), 'invoiceDownloadedAt': persisted.get('invoiceDownloadedAt'), 'invoicePdfUrl': persisted.get('invoicePdfUrl'), 'qontoPdfUrl': persisted.get('qontoPdfUrl') or persisted.get('invoicePdfUrl'),
                     'creditNoteStatus': persisted.get('creditNoteStatus'), 'qontoCreditNoteId': persisted.get('qontoCreditNoteId'),
@@ -27319,7 +27395,7 @@ def _billing_lines(data: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
     all_map = _billing_existing_map(data)
-    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote','qontoInvoiceAmountPaid')}
+    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote','qontoInvoiceAmountPaid','qonto_status','qontoStatus','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','qonto_paid_at','qonto_last_synced_at','qonto_sync_error')}
     persisted['updatedAt'] = _now_iso()
     all_map[line['id']] = persisted
     data['billing_lines'] = list(all_map.values())
@@ -27394,22 +27470,44 @@ def _refresh_billing_line_invoice_from_qonto(line: Dict[str, Any], fallback_invo
     return invoice
 
 def _apply_qonto_invoice_payment_to_billing_line(line: Dict[str, Any], invoice: Dict[str, Any]) -> None:
-    remote_status = _normalize_billing_invoice_status(invoice.get('status') or line.get('invoiceStatus') or 'draft')
-    if invoice.get('paid_at') or remote_status == 'paid':
-        remote_status = 'paid'
-    amount_paid = _normalize_qonto_amount(invoice.get('amount_paid'))
-    line_amount = _money(line.get('amountTTC') or line.get('amount'))
-    line['qontoInvoiceAmountPaid'] = amount_paid
-    if remote_status == 'paid' or (line_amount > 0 and amount_paid + 0.01 >= line_amount):
-        line['paymentStatus'] = 'paid'
-        line['invoiceStatus'] = 'paid'
-        line['paidAt'] = line.get('paidAt') or invoice.get('paid_at') or _now_iso()
-    elif amount_paid > 0:
-        line['paymentStatus'] = 'partial'
-        line['invoiceStatus'] = remote_status
+    fallback_total = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
+    normalized = normalize_qonto_invoice_payment_data(invoice, fallback_total_cents=fallback_total)
+    remote_status = _normalize_billing_invoice_status(normalized['qonto_status'] or line.get('invoiceStatus') or 'draft')
+    now = _now_iso()
+    line.update({
+        'qonto_status': normalized['qonto_status'],
+        'qontoStatus': normalized['qonto_status'],
+        'qonto_total_amount_cents': normalized['total_amount_cents'],
+        'qonto_amount_paid_cents': normalized['amount_paid_cents'],
+        'qonto_remaining_amount_cents': normalized['remaining_amount_cents'],
+        'qonto_payment_status': normalized['payment_status'],
+        'qonto_paid_at': normalized['paid_at'],
+        'qonto_last_synced_at': now,
+        'qonto_sync_error': None,
+        'qontoInvoiceAmountPaid': float(cents_to_euros(normalized['amount_paid_cents'])),
+    })
+    if invoice.get('id'):
+        line['qontoInvoiceId'] = invoice.get('id')
+    number = _qonto_invoice_number(invoice)
+    if number:
+        line['qontoInvoiceNumber'] = number
+    if invoice.get('public_url') or invoice.get('url'):
+        line['invoicePdfUrl'] = invoice.get('public_url') or invoice.get('url') or line.get('invoicePdfUrl') or ''
+        line['qontoPdfUrl'] = line['invoicePdfUrl']
+    if normalized['payment_status'] == 'paid':
+        line['paymentStatus'] = 'paid'; line['invoiceStatus'] = 'paid'; line['paidAt'] = line.get('paidAt') or normalized['paid_at'] or now
+    elif normalized['payment_status'] == 'partially_paid':
+        line['paymentStatus'] = 'partial'; line['invoiceStatus'] = remote_status
+    elif normalized['payment_status'] in {'draft','canceled'}:
+        line['paymentStatus'] = normalized['payment_status']; line['invoiceStatus'] = remote_status
     else:
-        line['paymentStatus'] = 'unpaid' if remote_status in {'draft', 'finalized', 'sent'} else 'control'
-        line['invoiceStatus'] = remote_status
+        line['paymentStatus'] = 'unpaid'; line['invoiceStatus'] = remote_status
+
+
+def _billing_line_error(line: Dict[str, Any], message: str) -> None:
+    line['qonto_sync_error'] = message
+    line['syncWarning'] = message
+    line['updatedAt'] = _now_iso()
 
 
 def _sync_billing_line_with_qonto(data: Dict[str, Any], line: Dict[str, Any]) -> Tuple[bool, str]:
@@ -27426,19 +27524,11 @@ def _sync_billing_line_with_qonto(data: Dict[str, Any], line: Dict[str, Any]) ->
         _save_billing_line(data, line)
         return False, 'Synchronisée'
     except Exception as exc:
+        message = 'Facture Qonto introuvable ou supprimée côté Qonto : à contrôler' if _qonto_invoice_is_missing_error(exc) else _sanitize_qonto_error(str(exc))
+        _billing_log(line, 'Erreur API synchronisation facture', 'error', message, invoice_id)
+        _billing_line_error(line, message)
         if _qonto_invoice_is_missing_error(exc):
-            _billing_log(line, 'Facture Qonto supprimée ou introuvable, à contrôler', 'error', _sanitize_qonto_error(str(exc)), invoice_id)
-            print(f"Facture Qonto supprimée ou introuvable, à contrôler: {invoice_id}")
-            for key in ('qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','invoicePdfUrl','qontoPdfUrl','invoiceGeneratedAt','finalizedAt','sentAt','paidAt'):
-                line[key] = ''
-            line['invoiceStatus'] = 'control'
-            line['paymentStatus'] = 'control'
-            line['syncWarning'] = 'Facture Qonto introuvable ou supprimée côté Qonto'
-            line['generationInProgress'] = False
-            line['updatedAt'] = _now_iso()
-            _save_billing_line(data, line)
-            return True, 'Facture Qonto introuvable ou supprimée côté Qonto : à contrôler'
-        _billing_log(line, 'Erreur API synchronisation facture', 'error', _sanitize_qonto_error(str(exc)), invoice_id)
+            line['invoiceStatus'] = 'control'; line['paymentStatus'] = 'control'; _save_billing_line(data, line); return True, message
         _save_billing_line(data, line)
         raise
 
@@ -27582,6 +27672,39 @@ def api_admin_billing_generate(line_id: str):
     ok, result = _create_invoice_for_billing_line(data, line)
     return jsonify({'ok': ok, 'success': ok, **result}), (200 if ok else (409 if result.get('ignored') else 400))
 
+
+
+def _line_total_cents(line: Dict[str, Any]) -> int:
+    if line.get('qonto_total_amount_cents') not in (None, ''):
+        return int(line.get('qonto_total_amount_cents') or 0)
+    return money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
+
+
+def _line_paid_cents(line: Dict[str, Any]) -> int:
+    if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
+        return int(line.get('qonto_amount_paid_cents') or money_value_to_cents(line.get('qontoInvoiceAmountPaid') or 0))
+    if str(line.get('paymentStatus') or '').lower() == 'paid':
+        return _line_total_cents(line)
+    return 0
+
+
+def calculate_trainee_financial_summary_from_lines(lines: List[Dict[str, Any]]) -> Dict[str, Any]:
+    active = [l for l in lines if str(l.get('qonto_payment_status') or l.get('invoiceStatus') or '').lower() not in {'canceled','cancelled','deleted'}]
+    planned = sum(money_value_to_cents(l.get('amountTTC') or l.get('amount') or 0) for l in active)
+    invoiced = sum(_line_total_cents(l) for l in active if l.get('qontoInvoiceId') or l.get('qontoDraftId'))
+    paid = sum(_line_paid_cents(l) for l in active)
+    remaining = max(planned - paid, 0)
+    pct_inv = float((Decimal(invoiced) / Decimal(planned) * Decimal('100')).quantize(Decimal('0.01'))) if planned else 0.0
+    pct_paid = float((Decimal(paid) / Decimal(planned) * Decimal('100')).quantize(Decimal('0.01'))) if planned else 0.0
+    return {'planned_amount_cents': planned, 'invoiced_amount_cents': min(invoiced, planned) if planned else invoiced, 'paid_amount_cents': paid, 'remaining_amount_cents': remaining, 'invoicing_percentage': min(pct_inv, 100.0), 'payment_percentage': min(pct_paid, 100.0)}
+
+
+def _financial_summary_for_line(data: Dict[str, Any], line: Dict[str, Any]) -> Dict[str, Any]:
+    return calculate_trainee_financial_summary_from_lines(_billing_lines_for_trainee_session(data, str(line.get('traineeId') or ''), str(line.get('sessionId') or '')))
+
+
+def _billing_sync_invoice_payload(line: Dict[str, Any]) -> Dict[str, Any]:
+    return {'number': line.get('qontoInvoiceNumber') or '', 'total_amount_cents': _line_total_cents(line), 'amount_paid_cents': int(line.get('qonto_amount_paid_cents') or 0), 'remaining_amount_cents': int(line.get('qonto_remaining_amount_cents') or max(_line_total_cents(line)-_line_paid_cents(line),0)), 'payment_status': line.get('qonto_payment_status') or line.get('paymentStatus') or '', 'qonto_status': line.get('qonto_status') or line.get('invoiceStatus') or '', 'last_synced_at': line.get('qonto_last_synced_at') or ''}
 
 def _billing_lines_for_session(data: Dict[str, Any], session_id: str) -> List[Dict[str, Any]]:
     return [l for l in _billing_lines(data) if str(l.get('sessionId')) == str(session_id)]
@@ -27915,15 +28038,18 @@ def api_billing_sync_qonto():
         if line: lines = [line]
     if not lines:
         lines = _billing_lines(data)
-    reset_count = synced_count = 0; errors = []
+    reset_count = synced_count = failed_count = 0; errors = []; synced_line = None
     for line in lines:
         if not (line.get('qontoInvoiceId') or line.get('qontoDraftId')): continue
         try:
-            reset, _ = _sync_billing_line_with_qonto(data, line); _sync_qonto_direct_debit_line(line) if line.get('paymentMode') == 'sepa_direct_debit' else None; _save_billing_line(data, line); reset_count += 1 if reset else 0; synced_count += 0 if reset else 1
+            reset, _ = _sync_billing_line_with_qonto(data, line); _sync_qonto_direct_debit_line(line) if line.get('paymentMode') == 'sepa_direct_debit' else None; _save_billing_line(data, line); reset_count += 1 if reset else 0; synced_count += 0 if reset else 1; synced_line = line
         except Exception as exc:
-            errors.append({'id': line.get('id'), 'message': _sanitize_qonto_error(str(exc))})
+            failed_count += 1; msg = _sanitize_qonto_error(str(exc)); _billing_line_error(line, msg); _save_billing_line(data, line); errors.append({'id': line.get('id'), 'invoice_number': line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId') or '', 'message': msg})
     save_data(data)
-    return jsonify({'ok': True, 'message': f'Synchronisation terminée : {synced_count} facture(s) vérifiée(s), {reset_count} ligne(s) à contrôler.', 'lines': _billing_lines(data), 'errors': errors})
+    summary = _financial_summary_for_line(data, synced_line or lines[0]) if (synced_line or lines) else calculate_trainee_financial_summary_from_lines([])
+    payload_out = {'ok': True, 'success': True, 'message': f'{synced_count} facture(s) synchronisée(s)' + (f', {failed_count} erreur(s)' if failed_count else ''), 'synced_count': synced_count, 'failed_count': failed_count, 'reset_count': reset_count, 'lines': _billing_lines(data), 'errors': errors, 'financial_summary': summary}
+    if synced_line and len(lines) == 1: payload_out['invoice'] = _billing_sync_invoice_payload(synced_line)
+    return jsonify(payload_out)
 
 
 @app.post('/api/admin/billing-lines/bulk-generate')
@@ -28251,7 +28377,7 @@ def api_qonto_webhooks():
     if not _verify_qonto_webhook_signature(raw_body):
         return jsonify({"ok": False, "error": "invalid_signature"}), 401
     payload = request.get_json(silent=True) or {}
-    event = (payload.get("event") or payload.get("type") or "").strip()
+    event = (payload.get("type") or payload.get("event") or "").strip()
     item = payload.get("data") if isinstance(payload.get("data"), dict) else {}
     if "sepa-direct-debit-mandates" in event:
         data = load_data(); updated = _apply_qonto_mandate_webhook(data, item); save_data(data)
@@ -28265,12 +28391,11 @@ def api_qonto_webhooks():
     if not invoice_id:
         return jsonify({"ok": False, "error": "missing_invoice_id"}), 400
     data = load_data()
-    invoice_payload = {
-        "id": invoice_id,
-        "status": item.get("status"),
-        "paid_at": item.get("paid_at"),
-        "amount_paid": item.get("amount_paid"),
-    }
+    try:
+        invoice_payload = _qonto_invoice_payload(get_qonto_invoice(str(invoice_id)))
+    except Exception as exc:
+        app.logger.warning("[QONTO] webhook invoice refetch failed invoice_id=%s error=%s", invoice_id, _sanitize_qonto_error(str(exc)))
+        return jsonify({"ok": True, "updated": False, "message": "refetch_failed"})
     updated = False
     for line in _billing_lines(data):
         if str(line.get('qontoInvoiceId') or line.get('qontoDraftId') or '') == str(invoice_id):
