@@ -8,6 +8,7 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.client = gestion_app.app.test_client()
         self.original_load_data = gestion_app.load_data
         self.original_save_data = gestion_app.save_data
+        self.original_fetch_cnapsv3_tracking_requests = gestion_app.fetch_cnapsv3_tracking_requests
         self.data = {
             "sessions": [
                 {
@@ -167,6 +168,7 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
     def tearDown(self):
         gestion_app.load_data = self.original_load_data
         gestion_app.save_data = self.original_save_data
+        gestion_app.fetch_cnapsv3_tracking_requests = self.original_fetch_cnapsv3_tracking_requests
 
     def test_aps_admin_trainees_shows_card_pro_followup_with_nub(self):
         self.data["sessions"][2]["trainees"][0]["pre_number"] = "2026-0002805-PRE-3P-1050370"
@@ -195,6 +197,27 @@ class AdminTraineesVtcPageTests(unittest.TestCase):
         self.assertIn(".card-pro-result.is-active", html)
         self.assertIn(".card-pro-result.is-inactive", html)
         self.assertIn(".card-pro-result.is-unknown", html)
+
+    def test_aps_admin_trainees_uses_suivi_cnaps_nub_when_pre_number_missing(self):
+        trainee = self.data["sessions"][2]["trainees"][0]
+        trainee["last_name"] = "Dupont"
+        trainee["first_name"] = "Noa"
+        trainee.pop("pre_number", None)
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{
+            "last_name": "DUPONT",
+            "first_name": "Noa",
+            "nub": "1050370",
+            "cnaps_status": "TRANSMIS",
+        }], None)
+
+        response = self.client.get("/admin/sessions/S-APS/trainees")
+        html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('data-nom="DUPONT"', html)
+        self.assertIn('data-nub="1050370"', html)
+        self.assertEqual(trainee["cnaps_tracking_nub"], "1050370")
+        self.assertNotIn("NUB manquant", html)
 
     def test_aps_admin_trainees_forces_chiocca_ap_sh_active_by_name_and_nub(self):
         trainee = self.data["sessions"][2]["trainees"][0]

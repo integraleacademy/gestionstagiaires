@@ -560,7 +560,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
         {% endif %}
 
         {% if is_aps_or_a3p_session and not show_vae and not is_vtc %}
-        {% set card_pro_nub = extract_nub_from_pre_car(t.pre_number or '') %}
+        {% set card_pro_nub = extract_nub_from_pre_car(t.pre_number or t.cnaps_tracking_nub or '') %}
         <td class="col-card-pro-followup">
           {% if card_pro_nub %}
             <div class="card-pro-followup"
@@ -572,7 +572,7 @@ data-has-sst="{{ '1' if (t.get('deliverables', {}).get('carte_sst')) else '0' }}
               <div class="card-pro-result" data-card-pro-result>Chargement CNAPS…</div>
             </div>
           {% else %}
-            <span class="muted">NUB manquant</span>
+            <span class="muted">NUB manquant{% if t.cnaps_tracking_nub %} (Suivi CNAPS indisponible){% endif %}</span>
           {% endif %}
         </td>
         {% endif %}
