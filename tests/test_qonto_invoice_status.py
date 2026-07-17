@@ -386,6 +386,43 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(lines[0]["invoiceStatus"], "finalized")
         self.assertEqual(lines[0]["paymentStatus"], "unpaid")
 
+    def test_bulk_generate_finalized_refreshes_invoice_number_when_finalize_response_is_sparse(self):
+        line_id = gestion_app._billing_line_id("S1", "T1", "PERSONNEL", "legacy")
+        data = {
+            "sessions": [{
+                "id": "S1",
+                "name": "APS JUILLET 2026",
+                "training_type": "APS",
+                "date_start": "2026-07-01",
+                "date_end": "2026-07-05",
+                "trainees": [{"id": "T1", "first_name": "Alice", "last_name": "Dupont", "email": "alice@example.test", "personal_amount": 900, "address": "1 rue Test", "zip_code": "75001", "city": "Paris"}],
+            }],
+            "billing_lines": [],
+        }
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data", side_effect=self.saved.append), \
+             patch.object(gestion_app, "_qonto_is_configured", return_value=True), \
+             patch.object(gestion_app, "get_qonto_invoice_iban", return_value="FR7612345678901234567890123"), \
+             patch.object(gestion_app, "search_qonto_client", return_value={"client": {"id": "client_123", "billing_address": {"street_address": "1 rue Test", "zip_code": "75001", "city": "Paris", "country_code": "FR"}}}), \
+             patch.object(gestion_app, "create_qonto_invoice", return_value={"client_invoice": {"id": "inv_123", "status": "draft"}}), \
+             patch.object(gestion_app, "finalize_qonto_invoice", return_value={"client_invoice": {"id": "inv_123", "status": "finalized"}}), \
+             patch.object(gestion_app, "get_qonto_invoice", return_value={"client_invoice": {"id": "inv_123", "number": "F-2026-123", "status": "finalized"}}), \
+             patch.object(gestion_app, "_setup_qonto_direct_debit_for_line"):
+            response = client.post("/api/admin/billing-lines/bulk-generate", json={"ids": [line_id], "finalize": True})
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["created"][0]["qontoInvoiceNumber"], "F-2026-123")
+        self.assertEqual(payload["created"][0]["invoiceStatus"], "finalized")
+        saved_line = gestion_app._find_billing_line(data, line_id)
+        self.assertEqual(saved_line["qontoInvoiceNumber"], "F-2026-123")
+        self.assertTrue(saved_line.get("invoiceGeneratedAt"))
+
     def test_billing_qonto_generation_updates_existing_client_missing_billing_address(self):
         line = {
             "id": "bill_test",
