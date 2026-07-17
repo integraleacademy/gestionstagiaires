@@ -27405,40 +27405,89 @@ def _find_billing_line(data: Dict[str, Any], line_id: str) -> Optional[Dict[str,
 
 
 def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
-    lines = [l for l in (lines or []) if str(l.get('traineeId') or l.get('studentId') or '') == str(trainee.get('id') or '')]
-    planned_cents = money_value_to_cents((trainee.get('personal_amount') or 0)) + money_value_to_cents((trainee.get('other_financing_amount') or trainee.get('other_amount') or 0))
+    """Centralized trainee finance rollup.
+
+    Qonto client invoices are the source of truth for Qonto-collected amounts.
+    Manual payments are added only when they are not linked to a Qonto invoice,
+    which prevents double counting local legacy rows mirroring the same invoice.
+    """
+    trainee_id = str(trainee.get('id') or '')
+    lines = [l for l in (lines or []) if str(l.get('traineeId') or l.get('studentId') or '') == trainee_id]
+    personal_cents = money_value_to_cents(trainee.get('personal_amount') or 0)
+    other_cents = money_value_to_cents(trainee.get('other_financing_amount') or trainee.get('other_amount') or 0)
     cpf_cents = money_value_to_cents(trainee.get('cpf_amount') or 0)
-    planned_total_cents = planned_cents + cpf_cents
+    planned_total_cents = personal_cents + other_cents + cpf_cents
     invoiced_total_cents = 0
-    paid_total_cents = 0
+    qonto_paid_total_cents = 0
+    manual_paid_total_cents = 0
+    qonto_payment_entries: List[Dict[str, Any]] = []
+    linked_invoice_ids = {str(l.get('qontoInvoiceId') or l.get('qontoDraftId') or '') for l in lines if l.get('qontoInvoiceId') or l.get('qontoDraftId')}
     by_financer: Dict[str, Dict[str, Any]] = {}
-    for key, planned in (('CPF', cpf_cents), ('PERSONNEL', money_value_to_cents(trainee.get('personal_amount') or 0)), ('AUTRE', money_value_to_cents(trainee.get('other_financing_amount') or trainee.get('other_amount') or 0))):
+    for key, planned in (('CPF', cpf_cents), ('PERSONNEL', personal_cents), ('AUTRE', other_cents)):
         by_financer[key] = {'planned_amount_cents': planned, 'invoiced_amount_cents': 0, 'paid_amount_cents': 0, 'remaining_amount_cents': planned}
+
     for line in lines:
-        if str(line.get('invoiceStatus') or '').lower() in {'canceled', 'cancelled', 'deleted'}:
+        invoice_status = str(line.get('invoiceStatus') or line.get('qontoStatus') or '').lower()
+        if invoice_status in {'canceled', 'cancelled', 'deleted'}:
             continue
-        financer = 'CPF' if 'CPF' in str(line.get('financingType') or line.get('financeurName') or '').upper() else ('AUTRE' if 'AUTRE' in str(line.get('financingType') or '').upper() else 'PERSONNEL')
-        total_cents = int(line.get('qontoTotalAmountCents') or money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0))
-        paid_cents = int(line.get('qontoAmountPaidCents') or money_value_to_cents(line.get('qontoInvoiceAmountPaid') or 0))
-        if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
+        financing_text = str(line.get('financingType') or line.get('financeurName') or '').upper()
+        financer = 'CPF' if 'CPF' in financing_text else ('AUTRE' if 'AUTRE' in financing_text else 'PERSONNEL')
+        by_financer.setdefault(financer, {'planned_amount_cents': 0, 'invoiced_amount_cents': 0, 'paid_amount_cents': 0, 'remaining_amount_cents': 0})
+        invoice_id = str(line.get('qontoInvoiceId') or line.get('qontoDraftId') or '').strip()
+        if invoice_id:
+            total_cents = int(line.get('qontoTotalAmountCents') or money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0))
+            paid_cents = int(line.get('qontoAmountPaidCents') or money_value_to_cents(line.get('qontoInvoiceAmountPaid') or 0))
+            remaining_cents = max(int(line.get('qontoRemainingAmountCents') or (total_cents - paid_cents)), 0)
+            status = line.get('qontoPaymentStatus') or ('paid' if total_cents > 0 and paid_cents >= total_cents else ('partially_paid' if paid_cents > 0 else 'unpaid'))
             invoiced_total_cents += total_cents
-            paid_total_cents += paid_cents
-            by_financer.setdefault(financer, {'planned_amount_cents': 0, 'invoiced_amount_cents': 0, 'paid_amount_cents': 0, 'remaining_amount_cents': 0})
+            qonto_paid_total_cents += paid_cents
             by_financer[financer]['invoiced_amount_cents'] += total_cents
             by_financer[financer]['paid_amount_cents'] += paid_cents
+            if paid_cents > 0:
+                qonto_payment_entries.append({
+                    'invoice_id': invoice_id,
+                    'invoice_number': line.get('qontoInvoiceNumber') or line.get('invoiceNumber') or invoice_id,
+                    'source': 'qonto',
+                    'total_amount_cents': total_cents,
+                    'paid_amount_cents': paid_cents,
+                    'remaining_amount_cents': remaining_cents,
+                    'payment_status': status,
+                    'qonto_status': line.get('qontoStatus') or line.get('invoiceStatus') or '',
+                    'last_synced_at': line.get('qontoLastSyncedAt') or line.get('updatedAt') or '',
+                })
+            continue
+        linked_manual_invoice = str(line.get('manualPaymentInvoiceId') or line.get('qontoInvoiceId') or '').strip()
+        if linked_manual_invoice and linked_manual_invoice in linked_invoice_ids:
+            continue
+        manual_cents = money_value_to_cents(line.get('amountPaid') or line.get('amount_paid') or 0)
+        if manual_cents > 0:
+            manual_paid_total_cents += manual_cents
+            by_financer[financer]['paid_amount_cents'] += manual_cents
+
+    paid_total_cents = qonto_paid_total_cents + manual_paid_total_cents
     for item in by_financer.values():
         item['remaining_amount_cents'] = max(item['planned_amount_cents'] - item['paid_amount_cents'], 0)
         item['payment_status'] = 'not_planned' if item['planned_amount_cents'] <= 0 else ('paid' if item['paid_amount_cents'] >= item['planned_amount_cents'] else ('partially_paid' if item['paid_amount_cents'] > 0 else 'unpaid'))
     pct = lambda value, total: 0 if total <= 0 else float(min((Decimal(value) / Decimal(total) * Decimal('100')), Decimal('100')).quantize(Decimal('0.01')))
-    return {
-        'planned_amount_cents': planned_total_cents,
-        'invoiced_amount_cents': invoiced_total_cents,
-        'paid_amount_cents': paid_total_cents,
-        'remaining_amount_cents': max(planned_total_cents - paid_total_cents, 0),
+    summary = {
+        'planned_total_cents': planned_total_cents,
+        'invoiced_total_cents': invoiced_total_cents,
+        'qonto_paid_total_cents': qonto_paid_total_cents,
+        'manual_paid_total_cents': manual_paid_total_cents,
+        'paid_total_cents': paid_total_cents,
+        'remaining_total_cents': max(planned_total_cents - paid_total_cents, 0),
         'invoicing_percentage': pct(invoiced_total_cents, planned_total_cents),
         'payment_percentage': pct(paid_total_cents, planned_total_cents),
+        'qonto_payment_entries': qonto_payment_entries,
         'by_financer': by_financer,
     }
+    summary.update({
+        'planned_amount_cents': summary['planned_total_cents'],
+        'invoiced_amount_cents': summary['invoiced_total_cents'],
+        'paid_amount_cents': summary['paid_total_cents'],
+        'remaining_amount_cents': summary['remaining_total_cents'],
+    })
+    return summary
 
 
 def _reset_missing_qonto_invoice(line: Dict[str, Any]) -> None:
@@ -27532,6 +27581,14 @@ def _refresh_billing_line_invoice_from_qonto(line: Dict[str, Any], fallback_invo
 
 def _apply_qonto_invoice_payment_to_billing_line(line: Dict[str, Any], invoice: Dict[str, Any]) -> None:
     normalized = normalize_qonto_invoice_payment_data(invoice, line)
+    app.logger.info(
+        "Qonto invoice sync: invoice_id=%s number=%s status=%s total_amount=%.2f amount_paid=%.2f",
+        invoice.get('id') or line.get('qontoInvoiceId') or line.get('qontoDraftId') or '',
+        _qonto_invoice_number(invoice) or line.get('qontoInvoiceNumber') or '',
+        normalized.get('qonto_status') or '',
+        cents_to_money(normalized.get('qonto_total_amount_cents') or 0),
+        cents_to_money(normalized.get('qonto_amount_paid_cents') or 0),
+    )
     remote_status = _normalize_billing_invoice_status(normalized['qonto_status'] or line.get('invoiceStatus') or 'draft')
     amount_paid_cents = normalized['qonto_amount_paid_cents']
     line_amount_cents = normalized['qonto_total_amount_cents']
@@ -27784,7 +27841,18 @@ def api_billing_trainee_session(trainee_id: str, session_id: str):
                     line['syncWarning'] = 'Synchronisation Qonto impossible pour le moment'
         if changed:
             save_data(data)
-    return jsonify({'ok': True, 'lines': _billing_lines_for_trainee_session(data, trainee_id, session_id)})
+    
+    trainee = None
+    for sess in data.get('sessions', []):
+        if str(sess.get('id')) != str(session_id):
+            continue
+        for t in _session_trainees_list(sess):
+            if str(t.get('id')) == str(trainee_id):
+                trainee = t
+                break
+    fresh_lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
+    summary = calculate_trainee_financial_summary(trainee or {'id': trainee_id}, fresh_lines)
+    return jsonify({'ok': True, 'lines': fresh_lines, 'financial_summary': summary})
 
 
 def _line_from_payload(data: Dict[str, Any], payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
