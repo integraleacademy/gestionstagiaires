@@ -13841,6 +13841,43 @@ def enrich_cnaps_tracking_rows_with_enrollment(rows: List[Dict[str, Any]], data:
     return enriched
 
 
+
+
+def _cnaps_tracking_nub_by_name(rows: List[Dict[str, Any]]) -> Dict[Tuple[str, str], str]:
+    nub_by_name: Dict[Tuple[str, str], str] = {}
+    for row in rows or []:
+        key = _cnaps_tracking_match_key(row.get("last_name"), row.get("first_name"))
+        nub = re.sub(r"\D+", "", str(row.get("nub") or ""))
+        if not all(key) or not nub or key in nub_by_name:
+            continue
+        nub_by_name[key] = nub[-7:] if len(nub) >= 7 else nub
+    return nub_by_name
+
+
+def _hydrate_missing_trainee_nubs_from_cnaps_tracking(trainees: List[Dict[str, Any]]) -> bool:
+    candidates = [
+        trainee for trainee in trainees
+        if not extract_nub_from_pre_car(str(trainee.get("pre_number") or trainee.get("cnaps_tracking_nub") or ""))
+        and all(_cnaps_tracking_match_key(trainee.get("last_name"), trainee.get("first_name")))
+    ]
+    if not candidates:
+        return False
+
+    rows, error = fetch_cnapsv3_tracking_requests()
+    if error or not rows:
+        return False
+
+    nub_by_name = _cnaps_tracking_nub_by_name(rows)
+    changed = False
+    for trainee in candidates:
+        nub = nub_by_name.get(_cnaps_tracking_match_key(trainee.get("last_name"), trainee.get("first_name")))
+        if not nub:
+            continue
+        if str(trainee.get("cnaps_tracking_nub") or "").strip() != nub:
+            trainee["cnaps_tracking_nub"] = nub
+            changed = True
+    return changed
+
 def _cash_amount_value(raw_value: Any) -> float:
     try:
         return max(float(str(raw_value or "").replace(",", ".").strip() or "0"), 0.0)
@@ -17821,6 +17858,9 @@ def admin_trainees(session_id: str):
         for t in trainees:
             key = (str(session_view["id"] or ""), str(t.get("id") or ""))
             t["scotia_admin_status"] = _scotia_admin_status_badge(scotia_items_by_trainee.get(key))
+
+    if session_view["training_type"] in {"APS", "A3P"}:
+        _hydrate_missing_trainee_nubs_from_cnaps_tracking(trainees)
 
     # persist normalized trainees back into storage
     s["trainees"] = trainees
