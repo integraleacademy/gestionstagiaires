@@ -8322,7 +8322,9 @@ CNAPS_EXPLICIT_ACTIVITY_CODES = {
     "autorisation prealable - surveillance humaine ou gardiennage": "AP SH",
     "carte professionnelle - surveillance humaine ou gardiennage": "CP SH",
     "autorisation prealable - agent de protection physique des personnes": "AP A3P",
+    "autorisation prealable - protection physique des personnes": "AP A3P",
     "carte professionnelle - agent de protection physique des personnes": "CP A3P",
+    "carte professionnelle - protection physique des personnes": "CP A3P",
 }
 CNAPS_ACTIVITY_LABELS = {
     "AP SH": "Autorisation préalable - Surveillance humaine ou gardiennage",
@@ -8380,7 +8382,7 @@ def _cnaps_activity_code(label: Any) -> str:
     activity = ""
     if "surveillance humaine ou gardiennage" in normalized:
         activity = "SH"
-    elif "agent de protection physique des personnes" in normalized:
+    elif "agent de protection physique des personnes" in normalized or "protection physique des personnes" in normalized:
         activity = "A3P"
     if principal and activity:
         return f"{principal} {activity}"
