@@ -7,13 +7,19 @@ class AdminDirectDebitsSidebarTests(unittest.TestCase):
     def setUp(self):
         self.client = gestion_app.app.test_client()
         self.original_load_data = gestion_app.load_data
+        self.original_load_wedof_webhooks = gestion_app._load_wedof_webhooks
         gestion_app.load_data = lambda: {"sessions": [], "partners": []}
+        gestion_app._load_wedof_webhooks = lambda: [
+            {"id": "cpf-new", "processed": False},
+            {"id": "cpf-done", "processed": True},
+        ]
         with self.client.session_transaction() as sess:
             sess["admin_logged_in"] = True
             sess["admin_role"] = "admin"
 
     def tearDown(self):
         gestion_app.load_data = self.original_load_data
+        gestion_app._load_wedof_webhooks = self.original_load_wedof_webhooks
 
     def test_direct_debits_page_uses_admin_sidebar_layout(self):
         response = self.client.get("/admin/billing/direct-debits")
@@ -24,3 +30,5 @@ class AdminDirectDebitsSidebarTests(unittest.TestCase):
         self.assertIn("Suivi des prélèvements", html)
         self.assertIn('class="container main-content"', html)
         self.assertIn('href="/admin/sessions/facturation"', html)
+        self.assertIn('aria-label="CPF"', html)
+        self.assertIn('>1</span>', html)
