@@ -97,3 +97,16 @@ Headers envoyés:
 - `Authorization: Bearer ${GESTIONSTAGIAIRE_SYNC_TOKEN}`
 
 En cas d'erreur réseau/timeout, l'appel est retenté automatiquement (3 tentatives, backoff 1s/2s/4s).
+
+## Webhook Qonto — factures clients
+
+Endpoint à déclarer côté Qonto : `https://<votre-domaine>/api/qonto/webhooks`.
+
+Configuration requise :
+
+- variable d'environnement `QONTO_WEBHOOK_SECRET` contenant le secret de signature du webhook ;
+- événement webhook `v1/client-invoices` pour les événements `created` et `updated` ;
+- scope API `client_invoices.read` pour relire systématiquement `GET /v2/client_invoices/{id}` après réception du signal webhook ;
+- scope de gestion des webhooks uniquement si la souscription est créée ou maintenue depuis Qonto. L'application ne crée pas automatiquement de souscription webhook au démarrage.
+
+Le webhook ne stocke jamais le secret dans `data.json` et ne fait pas confiance au montant reçu dans le payload : il relit la facture Qonto puis met à jour les montants agrégés en centimes.
