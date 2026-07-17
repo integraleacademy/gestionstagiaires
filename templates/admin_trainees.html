@@ -106,14 +106,18 @@
   <h2 style="margin:0;">Stagiaires</h2>
 
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-    {% if show_vae %}
-      <label for="vaeNameSearch" class="muted vae-filter-label" style="font-weight:700;">Recherche VAE</label>
-      <input id="vaeNameSearch"
-             class="vae-name-search"
+    <div class="trainee-search-field" role="search">
+      <span class="trainee-search-field__icon" aria-hidden="true">🔎</span>
+      <label for="traineeNameSearch" class="sr-only">Rechercher un stagiaire par nom ou prénom</label>
+      <input id="traineeNameSearch"
+             class="trainee-name-search"
              type="search"
-             placeholder="Nom ou prénom"
+             placeholder="Rechercher un stagiaire..."
              autocomplete="off"
-             aria-label="Rechercher un stagiaire VAE par nom ou prénom">
+             aria-label="Rechercher un stagiaire par nom ou prénom">
+      <button class="trainee-search-field__clear" id="traineeNameSearchClear" type="button" aria-label="Effacer la recherche" hidden>×</button>
+    </div>
+    {% if show_vae %}
       <label for="vaeStatusFilter" class="muted vae-filter-label" style="font-weight:700;">Filtre statut VAE</label>
       <select id="vaeStatusFilter" class="sel vae-filter-select" style="min-width:280px;">
         <option value="all">Tous les statuts VAE</option>
@@ -1709,28 +1713,78 @@ body.vae-l2-validated-card-active .col-vae-exam-status{
   letter-spacing:0;
 }
 
+.trainee-search-field{
+  position:relative;
+  display:flex;
+  align-items:center;
+  min-width:min(100%, 340px);
+  height:48px;
+  border:1px solid rgba(37,99,235,.22);
+  border-radius:18px;
+  background:linear-gradient(135deg,rgba(255,255,255,.96),rgba(239,246,255,.94));
+  box-shadow:0 16px 34px rgba(37,99,235,.13), inset 0 1px 0 rgba(255,255,255,.88);
+  transition:border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.trainee-search-field:focus-within{
+  border-color:#2563eb;
+  box-shadow:0 18px 40px rgba(37,99,235,.20),0 0 0 4px rgba(37,99,235,.13);
+  transform:translateY(-1px);
+}
+
+.trainee-search-field__icon{
+  display:grid;
+  place-items:center;
+  flex:0 0 44px;
+  color:#2563eb;
+  font-size:18px;
+}
+
+.trainee-name-search,
 .vae-name-search{
-  min-width:260px;
-  height:42px;
-  border:1px solid #cbd5e1;
-  border-radius:16px;
-  background:#fff;
-  padding:0 14px;
+  width:100%;
+  height:100%;
+  border:0;
+  background:transparent;
+  padding:0 42px 0 0;
   font:inherit;
-  font-weight:700;
+  font-weight:850;
   color:#0f172a;
   outline:none;
-  box-shadow:0 1px 2px rgba(15, 23, 42, .04);
 }
 
+.trainee-name-search::placeholder,
 .vae-name-search::placeholder{
   color:#64748b;
-  font-weight:600;
+  font-weight:700;
 }
 
-.vae-name-search:focus{
-  border-color:#2563eb;
-  box-shadow:0 0 0 3px rgba(37, 99, 235, .14);
+.trainee-search-field__clear{
+  position:absolute;
+  right:10px;
+  top:50%;
+  transform:translateY(-50%);
+  width:28px;
+  height:28px;
+  border:0;
+  border-radius:999px;
+  background:#dbeafe;
+  color:#1d4ed8;
+  font-size:20px;
+  font-weight:900;
+  line-height:1;
+  cursor:pointer;
+}
+
+.trainee-search-field__clear:hover{
+  background:#bfdbfe;
+}
+
+@media (max-width: 720px){
+  .trainee-search-field{
+    flex:1 1 100%;
+    min-width:100%;
+  }
 }
  
 .thread-btn{
@@ -3185,7 +3239,7 @@ function getVtcStatusValues(tr){
 
 function applyRowFilters(){
   const vaeFilter = document.getElementById("vaeStatusFilter");
-  const vaeNameSearch = document.getElementById("vaeNameSearch");
+  const vaeNameSearch = document.getElementById("traineeNameSearch") || document.getElementById("vaeNameSearch");
   const vtcTheoryFilter = document.getElementById("vtcTheoryFilter");
   const vtcPracticeFilter = document.getElementById("vtcPracticeFilter");
   const selectedVae = vaeFilter?.value || "all";
@@ -3266,11 +3320,25 @@ function bindImmediateRowFilters(){
   });
 
   document.addEventListener("input", event => {
-    if(event.target?.matches?.("#vaeNameSearch")){
+    if(event.target?.matches?.("#traineeNameSearch, #vaeNameSearch")){
+      const clearButton = document.getElementById("traineeNameSearchClear");
+      if(clearButton){
+        clearButton.hidden = !event.target.value;
+      }
       applyRowFilters();
     }
   });
 }
+
+document.getElementById("traineeNameSearchClear")?.addEventListener("click", () => {
+  const input = document.getElementById("traineeNameSearch");
+  if(input){
+    input.value = "";
+    input.focus();
+  }
+  document.getElementById("traineeNameSearchClear").hidden = true;
+  applyRowFilters();
+});
 
 bindImmediateRowFilters();
 bindVaeDashboardFilters();
