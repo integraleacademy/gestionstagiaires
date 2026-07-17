@@ -3731,7 +3731,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
   function invoiceBadge(line){const has=!!(line.qontoInvoiceId||line.qontoDraftId);if(!has)return 'red';if(line.invoiceStatus==='paid'||line.paymentStatus==='paid')return 'green';if(['sent','finalized'].includes(line.invoiceStatus))return 'blue';if(line.invoiceStatus==='draft')return 'orange';return 'gray';}
   function badge(text,tone){return `<span class="finance-badge finance-badge--${tone||'gray'}">${esc(text)}</span>`;}
   function lineAmount(l){return Number(l.amountTTC||l.amount||0)}
-  function linePaid(l){return (l.paymentStatus==='paid'||l.invoiceStatus==='paid')?lineAmount(l):0}
+  function linePaid(l){const explicit=Number(l.qontoInvoiceAmountPaid??l.qonto_invoice_amount_paid??l.amountPaid??l.amount_paid??0);if(explicit>0)return Math.min(explicit,lineAmount(l));return (l.paymentStatus==='paid'||l.invoiceStatus==='paid')?lineAmount(l):0}
   function allInstallments(lines){return lines.flatMap(l=>(l.directDebitInstallments||[]).map((it,i)=>({...it,line:l,index:i,total:(l.directDebitInstallments||[]).length})));}
   function statusFromRatio(value,total,labels){if(total<=0)return [labels.none,'gray'];if(value<=0)return [labels.zero,'gray'];if(value<total)return [labels.partial,'orange'];if(value===total)return [labels.done,'green'];return [labels.over,'red'];}
   function computeFinance(lines){
@@ -3770,7 +3770,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
   function invoiceBadge(line){const has=!!(line.qontoInvoiceId||line.qontoDraftId);if(!has)return 'red';if(line.invoiceStatus==='paid'||line.paymentStatus==='paid')return 'green';if(line.paymentStatus==='unpaid'&&['sent','finalized'].includes(line.invoiceStatus))return 'orange';if(['sent','finalized'].includes(line.invoiceStatus))return 'blue';if(line.invoiceStatus==='draft')return 'orange';return 'gray';}
   function badge(text,tone){return `<span class="finance-badge finance-badge--${tone||'gray'}">${esc(text)}</span>`;}
   function lineAmount(l){return Number(l.amountTTC||l.amount||0)}
-  function linePaid(l){return (l.paymentStatus==='paid'||l.invoiceStatus==='paid')?lineAmount(l):0}
+  function linePaid(l){const explicit=Number(l.qontoInvoiceAmountPaid??l.qonto_invoice_amount_paid??l.amountPaid??l.amount_paid??0);if(explicit>0)return Math.min(explicit,lineAmount(l));return (l.paymentStatus==='paid'||l.invoiceStatus==='paid')?lineAmount(l):0}
   function allInstallments(lines){return lines.flatMap(l=>(l.directDebitInstallments||[]).map((it,i)=>({...it,line:l,index:i,total:(l.directDebitInstallments||[]).length})));}
   function statusFromRatio(value,total,labels){if(total<=0)return [labels.none,'gray'];if(value<=0)return [labels.zero,'gray'];if(value<total)return [labels.partial,'orange'];if(value===total)return [labels.done,'green'];return [labels.over,'red'];}
   function computeFinance(lines){
