@@ -302,6 +302,18 @@ function normalizeAfcCnapsHistory(rawHistory){
   }).filter((entry) => entry.status);
 }
 
+function afcCnapsStatusFallbackEntries(status){
+  const text = String(status || '').trim().toUpperCase();
+  if(!text) return [];
+  if(text.includes('ACCEPT') || text.includes('ACCEPTÉ') || text.includes('ACCEPTE')){
+    return [{ status: 'AP SH ACTIF', date: '' }];
+  }
+  if(text.includes('CARTE PROFESSIONNELLE OK')){
+    return [{ status: 'CP SH ACTIF', date: '' }];
+  }
+  return [];
+}
+
 function afcCnapsChipClass(status){
   const text = String(status || '').toUpperCase();
   if(text.includes('INACTIF') || text.includes('EXPIR') || text.includes('REFUS')) return 'is-inactive';
@@ -313,21 +325,25 @@ function afcCnapsChipClass(status){
 
 function renderAfcCnapsStatuses(span, status, history){
   if(!span) return;
+  const rawStatus = String(status || '').trim().toUpperCase() || 'INCONNU';
   const entries = normalizeAfcCnapsHistory(history);
+  const displayEntries = entries.length ? entries : afcCnapsStatusFallbackEntries(rawStatus);
+  span.dataset.cnapsStatus = rawStatus;
   span.dataset.cnapsHistory = JSON.stringify(entries);
-  if(entries.length){
-    span.innerHTML = entries.map((entry) => `<span class="afc-cnaps-status-chip ${afcCnapsChipClass(entry.status)}"${entry.date ? ` title="${escapeHtml(entry.date)}"` : ''}>${escapeHtml(entry.status)}</span>`).join('');
+  if(displayEntries.length){
+    span.innerHTML = displayEntries.map((entry) => `<span class="afc-cnaps-status-chip ${afcCnapsChipClass(entry.status)}"${entry.date ? ` title="${escapeHtml(entry.date)}"` : ''}>${escapeHtml(entry.status)}</span>`).join('');
     return;
   }
-  span.textContent = status || 'INCONNU';
+  span.textContent = rawStatus;
   applyCnapsBadge(span);
 }
 
 function applyCnapsBadge(span){
   if(!span) return;
   const history = normalizeAfcCnapsHistory(JSON.parse(span.dataset.cnapsHistory || '[]'));
-  if(history.length){
-    renderAfcCnapsStatuses(span, span.textContent, history);
+  const storedStatus = span.dataset.cnapsStatus || span.textContent;
+  if(history.length || afcCnapsStatusFallbackEntries(storedStatus).length){
+    renderAfcCnapsStatuses(span, storedStatus, history);
     return;
   }
   span.classList.add('cnaps');
@@ -389,7 +405,8 @@ function rowMatchesPresenceFilter(tr, filter){
 }
 
 function cnapsStatusGroup(tr){
-  const txt = (tr.querySelector('[data-cnaps]')?.textContent || '').trim().toUpperCase();
+  const cnapsEl = tr.querySelector('[data-cnaps]');
+  const txt = (cnapsEl?.dataset.cnapsStatus || cnapsEl?.textContent || '').trim().toUpperCase();
   if(!txt || txt === 'INCONNU') return 'inconnu';
   if(txt.includes('ACCEPT') || txt.includes('CARTE PROFESSIONNELLE OK')) return 'accepte';
   if(txt.includes('REFUS')) return 'refuse';
