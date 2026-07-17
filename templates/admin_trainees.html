@@ -103,8 +103,9 @@
 </div>
 
 {% if finance_summary.show %}
-<section class="finance-group-dashboard" aria-label="Données financières du groupe">
-  <div class="finance-group-dashboard__hero">
+<details class="finance-group-dashboard" aria-label="Données financières du groupe">
+  <summary class="finance-group-dashboard__summary">
+    <div class="finance-group-dashboard__hero">
     <div>
       <p class="finance-group-dashboard__kicker">Pilotage financier du groupe</p>
       <h3>Vue instantanée du chiffre d’affaires et des financements</h3>
@@ -114,7 +115,9 @@
       <span>CA du groupe</span>
       <strong>{{ "{:,.0f}".format(finance_summary.revenue).replace(',', ' ') }} €</strong>
     </div>
-  </div>
+    </div>
+    <span class="finance-group-dashboard__toggle" aria-hidden="true">Afficher le détail</span>
+  </summary>
 
   <div class="finance-group-dashboard__grid">
     <article class="finance-kpi finance-kpi--cpf">
@@ -146,7 +149,7 @@
       <small>{{ finance_summary.remaining_pct }}% du CA{% if finance_summary.missing_price_count %} · {{ finance_summary.missing_price_count }} tarif(s) à compléter{% endif %}</small>
     </article>
   </div>
-</section>
+</details>
 {% endif %}
 
 <div class="page-head" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
@@ -4129,7 +4132,18 @@ applyRowFilters();
   box-shadow:0 24px 70px rgba(15,23,42,.22);
 }
 .finance-group-dashboard::after{content:"";position:absolute;right:-90px;top:-110px;width:270px;height:270px;border-radius:999px;background:rgba(255,255,255,.12);filter:blur(1px);}
-.finance-group-dashboard__hero{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:22px;margin-bottom:18px;}
+.finance-group-dashboard__summary{position:relative;z-index:1;display:block;list-style:none;cursor:pointer;}
+.finance-group-dashboard__summary::-webkit-details-marker{display:none;}
+.finance-group-dashboard__summary::marker{content:"";}
+.finance-group-dashboard[open] .finance-group-dashboard__summary{margin-bottom:18px;}
+.finance-group-dashboard__hero{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:22px;margin-bottom:0;}
+.finance-group-dashboard__toggle{display:inline-flex;align-items:center;gap:8px;margin-top:14px;color:rgba(255,255,255,.82);font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;}
+.finance-group-dashboard__toggle::after{content:"⌄";font-size:16px;line-height:1;transition:transform .2s ease;}
+.finance-group-dashboard[open] .finance-group-dashboard__toggle::before{content:"Masquer le détail";}
+.finance-group-dashboard:not([open]) .finance-group-dashboard__toggle::before{content:"Afficher le détail";}
+.finance-group-dashboard__toggle{font-size:0;}
+.finance-group-dashboard__toggle::before{font-size:13px;}
+.finance-group-dashboard[open] .finance-group-dashboard__toggle::after{transform:rotate(180deg);}
 .finance-group-dashboard__kicker{margin:0 0 6px;color:#93c5fd;font-weight:900;text-transform:uppercase;letter-spacing:.13em;font-size:12px;}
 .finance-group-dashboard h3{margin:0;font-size:24px;letter-spacing:-.03em;}
 .finance-group-dashboard p{margin:7px 0 0;color:rgba(255,255,255,.75);font-weight:600;}
