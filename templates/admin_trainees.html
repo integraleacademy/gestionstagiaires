@@ -102,6 +102,13 @@
   </div>
 </div>
 
+{% if finance_summary.show %}
+<div class="finance-group-dashboard" aria-label="Chiffre d’affaires du groupe">
+  <span class="finance-group-dashboard__label">CA du groupe</span>
+  <strong class="finance-group-dashboard__amount">{{ "{:,.0f}".format(finance_summary.revenue).replace(',', ' ') }} €</strong>
+</div>
+{% endif %}
+
 <div class="page-head" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
   <h2 style="margin:0;">Stagiaires</h2>
 
@@ -4074,4 +4081,14 @@ applyRowFilters();
 
 
 <script src="{{ url_for('static', filename='js/postal_city_lookup.js') }}"></script>
+<style>
+
+.finance-group-dashboard{
+  display:inline-flex;align-items:center;gap:12px;margin:12px 0 16px;padding:10px 14px;border:1px solid #dbeafe;border-radius:14px;background:#eff6ff;color:#1e3a8a;box-shadow:0 8px 22px rgba(37,99,235,.10);
+}
+.finance-group-dashboard__label{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#2563eb;}
+.finance-group-dashboard__amount{font-size:24px;line-height:1;font-weight:900;letter-spacing:-.03em;color:#0f172a;}
+@media (max-width: 620px){.finance-group-dashboard{display:flex;justify-content:space-between;width:100%;}.finance-group-dashboard__amount{font-size:22px;}}
+
+</style>
 {% endblock %}

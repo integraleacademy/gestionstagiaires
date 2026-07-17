@@ -21,7 +21,7 @@
 
 
     <g transform="translate(0 0) scale(1.0)">
-      <rect x="32" y="32" width="960" height="960" rx="190" ry="190" fill="url(#orangeGrad)"/>
+      <rect x="32" y="32" width="960" height="960" rx="190" ry="190" fill="#000000"/>
       <text class="font" x="138" y="738" font-size="650" font-weight="800" fill="white" letter-spacing="-50">iC</text>
       <circle cx="765" cy="510" r="54" fill="white"/>
     </g>

@@ -2175,6 +2175,18 @@ def protect_sensitive_routes():
 @app.context_processor
 def inject_read_only():
     admin_notifications = {"notifications": [], "unresolved_total": 0}
+    wedof_new_requests_count = 0
+    sales_today_notification_count = 0
+    if session.get("admin_logged_in"):
+        try:
+            wedof_new_requests_count = sum(1 for item in _load_wedof_webhooks() if not bool(item.get("processed")))
+        except Exception:
+            wedof_new_requests_count = 0
+        try:
+            sales_metrics = _build_sales_tracking_metrics(load_data(), datetime.date.today().year)
+            sales_today_notification_count = max(int(sales_metrics.get("today_inscriptions") or 0), 0)
+        except Exception:
+            sales_today_notification_count = 0
     if session.get("admin_logged_in") and _admin_can_view_notifications():
         try:
             admin_notifications = _admin_notifications_payload(load_data())
@@ -2219,6 +2231,8 @@ def inject_read_only():
         "is_read_only": session.get("admin_role") == "viewer",
         "admin_notifications": admin_notifications["notifications"],
         "admin_unresolved_total": admin_notifications["unresolved_total"],
+        "wedof_new_requests_count": wedof_new_requests_count,
+        "sales_today_notification_count": sales_today_notification_count,
         "admin_can_access_notifications": _admin_can_view_notifications(),
         "admin_can_manage_notifications": _admin_can_manage_notifications(),
         "global_mail_sent_notice": mail_sent_notice,
@@ -15207,9 +15221,11 @@ def admin_afc():
             candidate["complement_refus"] = ""
             candidate["complement_refus_autre"] = ""
         if not (candidate.get("cnaps_status") or "").strip():
-            cnaps_status = fetch_cnaps_status_by_name(candidate.get("nom") or "", candidate.get("prenom") or "")
+            cnaps_lookup = fetch_cnaps_lookup_by_name(candidate.get("nom") or "", candidate.get("prenom") or "") or {}
+            cnaps_status = cnaps_lookup.get("status")
             if cnaps_status:
                 candidate["cnaps_status"] = cnaps_status
+                candidate["cnaps_status_history"] = cnaps_lookup.get("statut_cnaps_history") or []
                 changed = True
         if candidate.get("cnaps_priority") and (candidate.get("cnaps_status") or "").strip().upper() != "ACCEPTE":
             candidate["cnaps_status"] = "ACCEPTE"
@@ -15243,6 +15259,7 @@ def api_admin_afc_create_candidate():
     telephone = str(payload.get("telephone") or "").strip()
     if not nom or not prenom:
         return jsonify({"ok": False, "error": "Nom et prénom obligatoires"}), 400
+    cnaps_lookup = fetch_cnaps_lookup_by_name(nom, prenom) or {}
     candidate = {
         "id": "AFC-" + uuid.uuid4().hex[:8].upper(),
         "identifiant_ft": str(payload.get("identifiant_ft") or "").strip(),
@@ -15252,7 +15269,8 @@ def api_admin_afc_create_candidate():
         "telephone": telephone,
         "decision": "",
         "notification_status": "",
-        "cnaps_status": fetch_cnaps_status_by_name(nom, prenom) or "INCONNU",
+        "cnaps_status": cnaps_lookup.get("status") or "INCONNU",
+        "cnaps_status_history": cnaps_lookup.get("statut_cnaps_history") or [],
         "motif_refus": "",
         "complement_refus": "",
         "complement_refus_autre": "",
@@ -15318,6 +15336,7 @@ def api_admin_afc_import_from_image():
             skipped_count += 1
             continue
 
+        cnaps_lookup = fetch_cnaps_lookup_by_name(nom, prenom) or {}
         candidate = {
             "id": "AFC-" + uuid.uuid4().hex[:8].upper(),
             "identifiant_ft": str(parsed.get("identifiant_ft") or "").strip(),
@@ -15327,7 +15346,8 @@ def api_admin_afc_import_from_image():
             "telephone": str(parsed.get("telephone") or "").strip(),
             "decision": "",
             "notification_status": "",
-            "cnaps_status": fetch_cnaps_status_by_name(nom, prenom) or "INCONNU",
+            "cnaps_status": cnaps_lookup.get("status") or "INCONNU",
+            "cnaps_status_history": cnaps_lookup.get("statut_cnaps_history") or [],
             "motif_refus": "",
             "complement_refus": "",
             "complement_refus_autre": "",
@@ -15416,15 +15436,20 @@ def api_admin_afc_update_candidate(candidate_id: str):
                 value = value.upper()
             candidate[field] = value
 
+    if "cnaps_status_history" in payload:
+        candidate["cnaps_status_history"] = _normalize_cnaps_remote_history(payload.get("cnaps_status_history"))
+
     if "decision" in payload and (candidate.get("decision") or "").strip().upper() == "RETENU":
         candidate["motif_refus"] = ""
         candidate["complement_refus"] = ""
         candidate["complement_refus_autre"] = ""
 
     if any(k in payload for k in ("nom", "prenom")) and not candidate.get("cnaps_priority"):
-        cnaps_status = fetch_cnaps_status_by_name(candidate.get("nom") or "", candidate.get("prenom") or "")
+        cnaps_lookup = fetch_cnaps_lookup_by_name(candidate.get("nom") or "", candidate.get("prenom") or "") or {}
+        cnaps_status = cnaps_lookup.get("status")
         if cnaps_status:
             candidate["cnaps_status"] = cnaps_status
+            candidate["cnaps_status_history"] = cnaps_lookup.get("statut_cnaps_history") or []
 
     modules = candidate.setdefault("modules", {})
     if isinstance(payload.get("modules"), dict):
@@ -17934,6 +17959,7 @@ def admin_trainees(session_id: str):
         is_vtc=is_vtc,
         is_aps=is_aps,
         is_dirigeant=is_dirigeant,
+        finance_summary=_admin_trainees_finance_summary(session_view, trainees),
         vae_dashboard_counts=vae_dashboard_counts,
         enums=ENUMS,
         is_adef=_is_adef_training(session_view["training_type"]),
@@ -18027,6 +18053,84 @@ def admin_vtc_trainees_all():
 # =========================
 
 
+
+def _parse_financial_amount(value: Any) -> float:
+    if value is None:
+        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+    raw = str(value).strip()
+    if not raw:
+        return 0.0
+    cleaned = raw.replace("€", "").replace(" ", "").replace(" ", "").replace("'", "")
+    if "," in cleaned and "." in cleaned:
+        cleaned = cleaned.replace(".", "").replace(",", ".")
+    else:
+        cleaned = cleaned.replace(",", ".")
+    try:
+        return float(cleaned)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _admin_trainees_finance_summary(session_view: Dict[str, Any], trainees: List[Dict[str, Any]]) -> Dict[str, Any]:
+    label = f"{session_view.get('training_type') or ''} {session_view.get('name') or ''}".upper()
+    is_target = (
+        "APS" in label
+        or "A3P" in label
+        or "SSIAP" in label
+        or ("DIRIGEANT" in label and "VAE" not in label)
+    )
+    if not is_target:
+        return {"show": False}
+
+    revenue = 0.0
+    cpf = 0.0
+    personal = 0.0
+    other = 0.0
+    funded_count = 0
+    missing_price_count = 0
+    default_price = default_training_price(session_view.get("training_type") or "")
+
+    for trainee in trainees:
+        price = _parse_financial_amount(trainee.get("training_price"))
+        if price <= 0 and default_price is not None:
+            price = float(default_price)
+        if price <= 0:
+            missing_price_count += 1
+        revenue += max(price, 0.0)
+
+        cpf_amount = max(_parse_financial_amount(trainee.get("cpf_amount")), 0.0)
+        personal_amount = max(_parse_financial_amount(trainee.get("personal_amount")), 0.0)
+        other_amount = max(_parse_financial_amount(trainee.get("other_amount")), 0.0)
+        cpf += cpf_amount
+        personal += personal_amount
+        other += other_amount
+        if cpf_amount or personal_amount or other_amount:
+            funded_count += 1
+
+    collected = cpf + personal + other
+    remaining = max(revenue - collected, 0.0)
+
+    def pct(amount: float) -> int:
+        return int(round((amount / revenue) * 100)) if revenue > 0 else 0
+
+    return {
+        "show": True,
+        "revenue": round(revenue, 2),
+        "cpf": round(cpf, 2),
+        "personal": round(personal, 2),
+        "other": round(other, 2),
+        "collected": round(collected, 2),
+        "remaining": round(remaining, 2),
+        "cpf_pct": pct(cpf),
+        "personal_pct": pct(personal),
+        "other_pct": pct(other),
+        "remaining_pct": pct(remaining),
+        "trainees_count": len(trainees),
+        "funded_count": funded_count,
+        "missing_price_count": missing_price_count,
+    }
 
 
 def _easter_date(year: int) -> datetime.date:

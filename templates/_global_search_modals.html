@@ -10,8 +10,8 @@
       <button class="icon-btn trainee-search-close" data-close-modal="traineeSearchModal" aria-label="Fermer la recherche">✕</button>
     </div>
     <div class="modal-body trainee-search-body">
-      <div class="trainee-search-field">
-        <span class="trainee-search-field-icon" aria-hidden="true">⌕</span>
+      <div class="trainee-search-field quick-search-field">
+        <span class="trainee-search-field-icon quick-search-field-icon" aria-hidden="true">🔎</span>
         <input id="traineeSearchInput" type="text" placeholder="Ex : Dupont, Sarah…" autocomplete="off">
       </div>
       <div id="traineeSearchResults" class="trainee-search-results">
@@ -34,8 +34,8 @@
       <button class="icon-btn trainee-search-close" data-close-modal="sessionSearchModal" aria-label="Fermer la recherche session">✕</button>
     </div>
     <div class="modal-body trainee-search-body">
-      <div class="trainee-search-field">
-        <span class="trainee-search-field-icon" aria-hidden="true">⌕</span>
+      <div class="trainee-search-field quick-search-field">
+        <span class="trainee-search-field-icon quick-search-field-icon" aria-hidden="true">🔎</span>
         <input id="sessionSearchInput" type="text" placeholder="Ex : APS Mars, VTC, 2026…" autocomplete="off">
       </div>
       <div id="sessionSearchResults" class="trainee-search-results">
@@ -45,6 +45,60 @@
   </aside>
 </div>
 
+<style>
+  /* Scoped to the sidebar quick-search drawers so page-specific admin-trainees search styles cannot override the modal field. */
+  .trainee-search-panel .quick-search-field{
+    position:relative;
+    display:block;
+    min-width:0;
+    height:auto;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+    transform:none;
+  }
+  .trainee-search-panel .quick-search-field:focus-within{
+    border-color:transparent;
+    box-shadow:none;
+    transform:none;
+  }
+  .trainee-search-panel .quick-search-field-icon{
+    position:absolute;
+    left:16px;
+    top:50%;
+    display:flex;
+    width:22px;
+    height:22px;
+    align-items:center;
+    justify-content:center;
+    transform:translateY(-50%);
+    color:#2563eb;
+    font-size:14px;
+    line-height:1;
+    pointer-events:none;
+    z-index:1;
+  }
+  .trainee-search-panel .quick-search-field input{
+    width:100%;
+    box-sizing:border-box;
+    border:1px solid #dbe4f0;
+    border-radius:18px;
+    background:#fff;
+    padding:16px 16px 16px 52px;
+    color:#0f172a;
+    font:inherit;
+    font-size:16px;
+    font-weight:800;
+    line-height:1.25;
+    outline:none;
+    box-shadow:0 14px 28px rgba(15,23,42,.06),inset 0 1px 2px rgba(15,23,42,.04);
+  }
+  .trainee-search-panel .quick-search-field input:focus{
+    border-color:#2563eb;
+    box-shadow:0 0 0 4px rgba(37,99,235,.14),0 18px 34px rgba(37,99,235,.12);
+  }
+</style>
 
 <script>
 (function(){
