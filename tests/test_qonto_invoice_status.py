@@ -224,7 +224,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         with open(template, encoding="utf-8") as fh:
             source = fh.read()
 
-        self.assertIn("const notGenerated=filtered.filter(l=>!hasInvoice(l)), total=notGenerated.reduce", source)
+        self.assertIn("const statLines=lines;const notGenerated=statLines.filter(l=>!hasInvoice(l)), total=notGenerated.reduce", source)
         self.assertIn("['Total à facturer',fmtMoney(total)]", source)
         self.assertIn("['Montant non généré',fmtMoney(total)]", source)
 
