@@ -8,6 +8,8 @@ import app as gestion_app
 ENDPOINT = "https://espace-consultation.cnaps.interieur.gouv.fr/annuaire/api/back/public/annuaire/search/personne-physique"
 AP_SH = "Autorisation préalable - Surveillance humaine ou gardiennage"
 CP_SH = "Carte professionnelle - Surveillance humaine ou gardiennage"
+AP_A3P_SHORT = "Autorisation préalable - Protection physique des personnes"
+CP_A3P_SHORT = "Carte professionnelle - Protection physique des personnes"
 REAL_RESPONSE = {
     "results": [
         {"id": 1134465, "siret": None, "raisonSociale": None, "nom": "LARDJANE", "prenom": "Zinedine", "nub": "1000731", "typeActivite": AP_SH, "agrementStatutEs": "ACTIF", "dateFinValidite": "2026-10-07", "recepisse": False},
@@ -66,6 +68,17 @@ class CnapsPublicAnnuaireTests(unittest.TestCase):
         self.assertEqual(by_code["AP SH"]["date_fin_validite"], "2026-10-07")
         self.assertEqual(by_code["CP SH"]["date_fin_validite"], "2031-06-30")
         self.assertEqual({t["label"] for t in result["titles"]}, {AP_SH, CP_SH})
+
+    def test_a3p_short_protection_physique_labels_are_abbreviated(self):
+        result, _ = self.run_fetch([response({"results": [
+            api_row(activity=AP_A3P_SHORT, date="2026-12-05"),
+            api_row(activity=CP_A3P_SHORT, date="2026-12-05"),
+        ], "totalPages": 1})])
+
+        self.assertEqual(result["cnaps_active_titles"], ["AP A3P ACTIF", "CP A3P ACTIF"])
+        by_code = {t["code"]: t for t in result["titles"]}
+        self.assertEqual(by_code["AP A3P"]["display_status"], "AP A3P ACTIF")
+        self.assertEqual(by_code["CP A3P"]["display_status"], "CP A3P ACTIF")
 
     def test_results_empty_is_success(self):
         result, _ = self.run_fetch([response({"results": [], "totalElements": 0, "totalPages": 1})])
