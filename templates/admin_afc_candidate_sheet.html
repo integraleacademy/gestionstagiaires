@@ -60,6 +60,7 @@
 
   <button class="btn btn-primary" id="btnNotify" style="display:none;margin-top:10px;">NOTIFIER LE CANDIDAT</button>
   <div id="notifyStatus" style="display:none;margin-top:8px;font-size:14px;color:#475569;font-weight:600;"></div>
+  <div id="candidateAutosaveStatus" style="display:none;margin-top:8px;font-size:13px;color:#475569;font-weight:600;"></div>
   <button class="btn" id="btnSave" style="margin-top:10px;">Enregistrer</button>
 </div>
 
@@ -227,6 +228,7 @@ const testResultsComment = document.getElementById('test_results_comment');
 const commentSaveStatus = document.getElementById('commentSaveStatus');
 const modulesSaveStatus = document.getElementById('modulesSaveStatus');
 const datesFormation = document.getElementById('dates_formation');
+const candidateAutosaveStatus = document.getElementById('candidateAutosaveStatus');
 const enrollModal = document.getElementById('enrollModal');
 const btnOpenEnrollModal = document.getElementById('btnOpenEnrollModal');
 const saveEnrollBtn = document.getElementById('saveEnrollBtn');
@@ -251,6 +253,8 @@ let commentSaveTimer = null;
 let savingComment = false;
 let modulesSaveTimer = null;
 let savingModules = false;
+let candidateAutosaveTimer = null;
+let savingCandidateAutosave = false;
 let savingEnroll = false;
 let enrolledAt = "{{ candidate.enrolled_at or "" }}";
 
@@ -450,8 +454,8 @@ if(cnapsPriority?.checked){
   cnapsStatusBadge.textContent = 'ACCEPTE';
 }
 applyCnapsBadge(cnapsStatusBadge);
-decision.addEventListener('change', refreshUI);
-complement.addEventListener('change', refreshUI);
+decision.addEventListener('change', ()=>{ refreshUI(); scheduleCandidateAutosave(); });
+complement.addEventListener('change', ()=>{ refreshUI(); scheduleCandidateAutosave(); });
 testFrancaisReussi.addEventListener('change', refreshUI);
 presenceAfcStatusSelect.addEventListener('change', async ()=>{
   if(savingPresenceAfc) return;
@@ -501,6 +505,44 @@ cnapsPriority.addEventListener('change', async ()=>{
     applyCnapsBadge(cnapsStatusBadge);
   }
 });
+
+function showCandidateAutosaveStatus(message, isError=false){
+  if(!candidateAutosaveStatus) return;
+  candidateAutosaveStatus.textContent = message;
+  candidateAutosaveStatus.style.display = 'block';
+  candidateAutosaveStatus.style.color = isError ? '#b91c1c' : '#475569';
+}
+
+function scheduleCandidateAutosave(){
+  if(candidateAutosaveTimer) clearTimeout(candidateAutosaveTimer);
+  showCandidateAutosaveStatus('Modifications en attente...');
+  candidateAutosaveTimer = setTimeout(async ()=>{
+    if(savingCandidateAutosave) return;
+    savingCandidateAutosave = true;
+    showCandidateAutosaveStatus('Sauvegarde...');
+    try {
+      const ok = await saveCandidate({silent:true});
+      showCandidateAutosaveStatus(ok ? 'Candidat sauvegardé automatiquement' : 'Erreur de sauvegarde', !ok);
+      if(ok){
+        setTimeout(()=>{
+          if(candidateAutosaveStatus) candidateAutosaveStatus.style.display = 'none';
+        }, 1600);
+      }
+    } finally {
+      savingCandidateAutosave = false;
+    }
+  }, 600);
+}
+
+['identifiant_ft','nom','prenom','email','telephone','complement_refus_autre','date_icop'].forEach((id)=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('input', scheduleCandidateAutosave);
+});
+['motif_refus'].forEach((id)=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('change', scheduleCandidateAutosave);
+});
+
 function scheduleModulesAutosave(){
   if(modulesSaveTimer) clearTimeout(modulesSaveTimer);
   modulesSaveStatus.style.display = 'block';
@@ -510,7 +552,7 @@ function scheduleModulesAutosave(){
     savingModules = true;
     modulesSaveStatus.textContent = 'Sauvegarde...';
     try {
-      const ok = await saveCandidate();
+      const ok = await saveCandidate({silent:true});
       modulesSaveStatus.textContent = ok ? 'Modules sauvegardés automatiquement' : 'Erreur de sauvegarde';
       if(ok){
         setTimeout(()=>{
@@ -572,7 +614,7 @@ document.getElementById('btnModulesDefault').addEventListener('click', async ()=
   if(ok) alert('Modules par défaut appliqués et enregistrés');
 });
 
-async function saveCandidate(){
+async function saveCandidate(options = {}){
   const payload = {
     identifiant_ft: document.getElementById('identifiant_ft').value,
     nom: document.getElementById('nom').value,
@@ -584,6 +626,7 @@ async function saveCandidate(){
     complement_refus: document.getElementById('complement_refus').value,
     complement_refus_autre: document.getElementById('complement_refus_autre').value,
     dates_formation: document.getElementById('dates_formation').value,
+    date_icop: dateIcop.value,
     test_francais_reussi: testFrancaisReussi.checked,
     cnaps_priority: cnapsPriority.checked,
     presence_afc_status: presenceAfcStatusSelect.value,
@@ -597,7 +640,7 @@ async function saveCandidate(){
   };
   const r = await fetch(`/api/admin/afc/candidates/${candidateId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   if(!r.ok) {
-    alert('Erreur sauvegarde');
+    if(!options.silent) alert('Erreur sauvegarde');
     return false;
   }
   return true;
