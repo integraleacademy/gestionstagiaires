@@ -99,8 +99,9 @@ class QontoPaymentTrackingTests(unittest.TestCase):
         self.assertIn('width:${width}%', template)
         self.assertIn('payment-progress--partial', template)
         self.assertIn("function matchesPaymentFilter(pay, filter)", template)
-        self.assertIn("if(filter==='paid')return ['paid','partially_paid'].includes(pay)", template)
-        self.assertIn("<option value=\"paid\">Payée / partiel</option>", template)
+        self.assertIn("function matchesPaymentFilter(pay, filter){if(!filter)return true;return pay===filter;}", template)
+        self.assertIn('<option value="partially_paid">Paiement partiel</option>', template)
+        self.assertIn('<option value="paid">Payée</option>', template)
         self.assertNotIn('badge yellow">En attente</span>', template)
         self.assertNotEqual(partial['payment_status'], 'paid')
 
