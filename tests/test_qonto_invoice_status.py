@@ -226,7 +226,11 @@ class QontoInvoiceStatusTests(unittest.TestCase):
 
         self.assertIn("const statLines=lines;const notGenerated=statLines.filter(l=>!hasInvoice(l)), total=notGenerated.reduce", source)
         self.assertIn("['Total à facturer',fmtMoney(total)]", source)
-        self.assertIn("['Montant non généré',fmtMoney(total)]", source)
+        self.assertNotIn("Montant non généré", source)
+        self.assertIn("['Factures en brouillon',drafts.length]", source)
+        self.assertIn("['Factures en attente de paiement',toPay.length]", source)
+        self.assertIn("['Factures payées',paid.length]", source)
+        self.assertIn("['Factures à contrôler',control.length]", source)
 
     def test_billing_invoice_download_streams_qonto_pdf_inline(self):
         line_id = gestion_app._billing_line_id("S1", "T1", "CPF", "legacy")
