@@ -87,11 +87,35 @@ class QontoPaymentTrackingTests(unittest.TestCase):
         self.assertEqual(entry["remaining_amount_cents"],55000)
         self.assertEqual(entry["payment_status"],"partially_paid")
 
+    def test_billing_payment_progress_template_contract(self):
+        template = open('templates/admin_sessions_billing.html', encoding='utf-8').read()
+        partial = gestion_app.serialize_qonto_invoice_for_frontend({'qontoInvoiceId':'inv','qontoInvoiceNumber':'FL-2026-314','qonto_total_amount_cents':165000,'qonto_amount_paid_cents':110000})
+        self.assertEqual(partial['remaining_amount_cents'], 55000)
+        self.assertAlmostEqual(partial['payment_percentage'], 66.67, places=2)
+        self.assertEqual(partial['payment_status'], 'partially_paid')
+        self.assertIn('paymentProgressCell', template)
+        self.assertIn('fmtMoneyCents(p.paid_amount_cents)} encaissé', template)
+        self.assertIn('Reste ${fmtMoneyCents(p.remaining_amount_cents)}', template)
+        self.assertIn('width:${width}%', template)
+        self.assertIn('payment-progress--partial', template)
+        self.assertNotIn('badge yellow">En attente</span>', template)
+        self.assertNotEqual(partial['payment_status'], 'paid')
+
+    def test_billing_payment_progress_unpaid_and_paid_cases(self):
+        unpaid = gestion_app.serialize_qonto_invoice_for_frontend({'qontoInvoiceId':'inv','qonto_total_amount_cents':165000,'qonto_amount_paid_cents':0})
+        self.assertEqual(unpaid['remaining_amount_cents'], 165000)
+        self.assertEqual(unpaid['payment_percentage'], 0)
+        self.assertEqual(unpaid['payment_status'], 'unpaid')
+        paid = gestion_app.serialize_qonto_invoice_for_frontend({'qontoInvoiceId':'inv','qonto_total_amount_cents':165000,'qonto_amount_paid_cents':165000})
+        self.assertEqual(paid['remaining_amount_cents'], 0)
+        self.assertEqual(paid['payment_percentage'], 100)
+        self.assertEqual(paid['payment_status'], 'paid')
+
 
     def test_frontend_serializer_1100_partial_shape(self):
         invoice={"qontoInvoiceId":"inv","qontoInvoiceNumber":"FL-2026-314","qonto_total_amount_cents":165000,"qonto_amount_paid_cents":110000,"qonto_payment_status":"partially_paid","qonto_status":"unpaid","qontoLastSyncedAt":"2026-07-17T00:00:00Z"}
         got=gestion_app.serialize_qonto_invoice_for_frontend(invoice)
-        self.assertEqual(got,{"invoice_number":"FL-2026-314","total_amount_cents":165000,"paid_amount_cents":110000,"remaining_amount_cents":55000,"payment_status":"partially_paid","qonto_status":"unpaid","last_synced_at":"2026-07-17T00:00:00Z","invoice_id":"inv"})
+        self.assertEqual(got,{"invoice_number":"FL-2026-314","total_amount_cents":165000,"paid_amount_cents":110000,"remaining_amount_cents":55000,"payment_percentage":66.67,"payment_status":"partially_paid","qonto_status":"unpaid","last_synced_at":"2026-07-17T00:00:00Z","invoice_id":"inv"})
 
     def test_render_contract_uses_canonical_invoice_json(self):
         trainee={"id":"T1","personal_amount":1650}

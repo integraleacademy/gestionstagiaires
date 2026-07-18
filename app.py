@@ -1283,6 +1283,7 @@ def serialize_qonto_invoice_for_frontend(invoice: Dict[str, Any]) -> Dict[str, A
         invoice.get("paidAmountCents"),
     )
     remaining_amount_cents = max(total_amount_cents - paid_amount_cents, 0)
+    payment_percentage = 0 if total_amount_cents == 0 else float(min((Decimal(paid_amount_cents) / Decimal(total_amount_cents) * Decimal('100')), Decimal('100')).quantize(Decimal('0.01')))
     raw_payment_status = invoice.get("qonto_payment_status") or invoice.get("payment_status") or invoice.get("qontoPaymentStatus") or invoice.get("paymentStatus")
     if total_amount_cents > 0 and paid_amount_cents >= total_amount_cents:
         payment_status = "paid"
@@ -1297,6 +1298,7 @@ def serialize_qonto_invoice_for_frontend(invoice: Dict[str, Any]) -> Dict[str, A
         "total_amount_cents": total_amount_cents,
         "paid_amount_cents": paid_amount_cents,
         "remaining_amount_cents": remaining_amount_cents,
+        "payment_percentage": payment_percentage,
         "payment_status": payment_status,
         "qonto_status": invoice.get("qonto_status") or invoice.get("qontoStatus") or invoice.get("invoiceStatus") or "",
         "last_synced_at": invoice.get("qontoLastSyncedAt") or invoice.get("qonto_last_synced_at") or invoice.get("updatedAt") or "",
@@ -1315,6 +1317,7 @@ def normalize_qonto_invoice_storage_fields(invoice: Dict[str, Any]) -> None:
     invoice["qonto_total_amount_cents"] = serialized["total_amount_cents"]
     invoice["qonto_amount_paid_cents"] = serialized["paid_amount_cents"]
     invoice["qonto_remaining_amount_cents"] = serialized["remaining_amount_cents"]
+    invoice["payment_percentage"] = serialized["payment_percentage"]
     invoice["qonto_payment_status"] = serialized["payment_status"]
     invoice["paymentStatus"] = serialized["payment_status"]
 
@@ -27519,6 +27522,11 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     line['qonto_total_amount_cents'] = qonto_source['qonto_total_amount_cents']
                     line['qonto_amount_paid_cents'] = qonto_source['qonto_amount_paid_cents']
                     line['qonto_remaining_amount_cents'] = qonto_source['qonto_remaining_amount_cents']
+                    line['total_amount_cents'] = qonto_source['qonto_total_amount_cents']
+                    line['paid_amount_cents'] = qonto_source['qonto_amount_paid_cents']
+                    line['remaining_amount_cents'] = qonto_source['qonto_remaining_amount_cents']
+                    line['payment_percentage'] = qonto_source['payment_percentage']
+                    line['payment_status'] = qonto_source['qonto_payment_status']
                     line['qonto_payment_status'] = qonto_source['qonto_payment_status']
                     line['paymentStatus'] = qonto_source['qonto_payment_status']
                     line['qonto_status'] = qonto_source.get('qonto_status') or qonto_source.get('qontoStatus') or line.get('invoiceStatus') or ''
