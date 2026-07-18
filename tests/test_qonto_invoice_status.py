@@ -230,6 +230,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertIn("['Factures en brouillon',drafts.length]", source)
         self.assertIn("['Factures en attente de paiement',toPay.length]", source)
         self.assertIn("['Factures payées',paid.length]", source)
+        self.assertIn('<option value="paid_or_partially_paid">Payée ou partielle</option>', source)
         self.assertIn("['Factures à contrôler',control.length]", source)
 
     def test_billing_invoice_download_streams_qonto_pdf_inline(self):
