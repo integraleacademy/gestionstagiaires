@@ -14515,6 +14515,7 @@ def admin_sessions_conventions():
                 "legacy_signed": _has_legacy_signed_convention(trainee),
                 "legacy_toggle_url": url_for("admin_toggle_legacy_convention_signed", session_id=session_id, trainee_id=trainee_id),
                 "printed": bool(trainee.get("printed")),
+                "needs_printing": status_key == "signed" and not bool(trainee.get("printed")),
                 "is_problem": is_problem,
             }
             convention_rows.append(row)

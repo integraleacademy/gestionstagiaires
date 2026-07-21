@@ -426,5 +426,43 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertEqual(api_after_print_response.get_json()["count"], 0)
 
 
+    def test_print_button_is_highlighted_only_for_unprinted_signed_conventions(self):
+        fake_data = {
+            "sessions": [{
+                "id": "S-APS",
+                "training_type": "APS",
+                "trainees": [
+                    {
+                        "id": "T-SIGNED-UNPRINTED",
+                        "last_name": "SIGNED-UNPRINTED",
+                        "convention_signature": {"status": "done", "created_at": "2026-07-16T10:00:00Z"},
+                    },
+                    {
+                        "id": "T-SIGNED-PRINTED",
+                        "last_name": "SIGNED-PRINTED",
+                        "printed": True,
+                        "convention_signature": {"status": "done", "created_at": "2026-07-16T10:00:00Z"},
+                    },
+                    {"id": "T-UNSIGNED", "last_name": "UNSIGNED", "convention_status": "signing"},
+                ],
+            }],
+        }
+        captured = {}
+
+        def fake_render_template(template_name, **context):
+            captured.update(context)
+            return "OK"
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data), \
+             patch.object(gestion_app, "render_template", side_effect=fake_render_template):
+            response = self.client.get("/admin/sessions/conventions")
+
+        self.assertEqual(response.status_code, 200)
+        rows_by_id = {row["trainee_id"]: row for row in captured["rows"]}
+        self.assertTrue(rows_by_id["T-SIGNED-UNPRINTED"]["needs_printing"])
+        self.assertFalse(rows_by_id["T-SIGNED-PRINTED"]["needs_printing"])
+        self.assertFalse(rows_by_id["T-UNSIGNED"]["needs_printing"])
+
+
 if __name__ == "__main__":
     unittest.main()
