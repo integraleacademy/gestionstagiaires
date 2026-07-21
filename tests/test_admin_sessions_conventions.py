@@ -108,6 +108,27 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertEqual(captured["rows"][0]["status_key"], "not_generated")
         self.assertEqual(captured["rows"][0]["status_label"], "Non générée")
 
+    def test_fiche_button_links_to_trainee_summary(self):
+        fake_data = {
+            "sessions": [{
+                "id": "S-APS",
+                "training_type": "APS",
+                "date_start": "2026-09-01",
+                "trainees": [{
+                    "id": "T-SUMMARY",
+                    "last_name": "RECAP",
+                    "first_name": "Rania",
+                }],
+            }]
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            response = self.client.get("/admin/sessions/conventions")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('href="/admin/sessions/S-APS/stagiaires/T-SUMMARY/summary">Fiche</a>', html)
+
     def test_legacy_signed_checkbox_keeps_trainee_visible_as_signed(self):
         fake_data = {
             "sessions": [

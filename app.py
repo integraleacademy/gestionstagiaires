@@ -14433,6 +14433,7 @@ def admin_sessions_conventions():
                 "next_reminder_at": _format_automation_datetime(state.get("next_reminder_at") or ""),
                 "error": convention.get("error") or "",
                 "trainee_url": url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id),
+                "summary_url": url_for("admin_trainee_summary", session_id=session_id, trainee_id=trainee_id),
                 "create_url": url_for("admin_create_convention_signature", session_id=session_id, trainee_id=trainee_id),
                 "reminder_url": url_for("admin_send_convention_signature_reminder_for_session", session_id=session_id, trainee_id=trainee_id),
                 "preview_url": url_for("admin_preview_convention", session_id=session_id, trainee_id=trainee_id),
