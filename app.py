@@ -14372,13 +14372,8 @@ def admin_sessions_conventions():
 
     stats = {"total": 0, "waiting_signature": 0, "signed": 0, "action_required": 0, "errors": 0, "downloadable": 0}
     data_changed = False
-    minimum_session_start_date = datetime.date(2026, 7, 16)
-
     for sess in data.get("sessions", []):
         if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
-            continue
-        session_start_date = _session_start_date(sess)
-        if session_start_date and session_start_date < minimum_session_start_date:
             continue
         session_id = str(sess.get("id") or "")
         training_type = _session_get(sess, "training_type", "")

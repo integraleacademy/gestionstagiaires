@@ -271,6 +271,32 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertIn('id="sidebarConventionsSignedBadge"', html)
         self.assertIn('id="sidebarToolsConventionsSignedBadge"', html)
 
+    def test_non_signed_conventions_from_past_sessions_are_displayed(self):
+        fake_data = {
+            "sessions": [
+                {
+                    "id": "S-PAST",
+                    "training_type": "APS",
+                    "date_start": "2026-06-01",
+                    "date_end": "2026-06-15",
+                    "trainees": [
+                        {
+                            "id": "T-PAST-UNSIGNED",
+                            "last_name": "NON-SIGNEE",
+                            "first_name": "Nora",
+                            "convention_status": "signing",
+                        },
+                    ],
+                },
+            ],
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            response = self.client.get("/admin/sessions/conventions?status=signing")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("NON-SIGNEE", response.get_data(as_text=True))
+
     def test_signed_conventions_unseen_api_and_page_acknowledgement(self):
         fake_data = {
             "sessions": [
