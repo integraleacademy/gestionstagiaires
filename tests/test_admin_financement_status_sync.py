@@ -177,6 +177,10 @@ class AdminFinancementStatusSyncTests(unittest.TestCase):
         self.assertIn("/api/sessions/${encodeURIComponent(sessionId)}/stagiaires/${encodeURIComponent(traineeId)}/update", template)
         self.assertNotIn("/admin/sessions/${encodeURIComponent(sessionId)}/trainees/${encodeURIComponent(traineeId)}/update", template)
         self.assertIn("setFinanceSaveIndicator('Financement validé','saved')", template)
+        self.assertIn("computed.otherFundingPlanned", template)
+        self.assertIn("computed.otherFundingInvoiced", template)
+        self.assertIn("value:`${fmtMoney(c.otherFundingInvoiced)} / ${fmtMoney(c.otherFundingPlanned)}`", template)
+        self.assertIn("badge(otherFundingFact[0],otherFundingFact[1])", template)
 
 
 if __name__ == "__main__":

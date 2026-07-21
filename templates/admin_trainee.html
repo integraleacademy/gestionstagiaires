@@ -3795,11 +3795,19 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
       computed.progressPaiement=Number(currentFinancialSummary.payment_percentage||0);
       computed.qontoPaymentEntries=currentFinancialSummary.qonto_payment_entries||[];
     }
+    const otherFundingBuckets=['PERSONNEL','AUTRE'].map(key=>currentFinancialSummary?.by_financer?.[key]);
+    computed.otherFundingPlanned=otherFundingBuckets.some(Boolean)
+      ?otherFundingBuckets.reduce((total,bucket)=>total+Number(bucket?.planned_amount_cents||0)/100,0)
+      :montantPersonnel+montantAutre;
+    computed.otherFundingInvoiced=otherFundingBuckets.some(Boolean)
+      ?otherFundingBuckets.reduce((total,bucket)=>total+Number(bucket?.invoiced_amount_cents||0)/100,0)
+      :invoiced.reduce((total,line)=>total+lineAmount(line),0);
+    computed.otherFundingRemainingToInvoice=Math.max(computed.otherFundingPlanned-computed.otherFundingInvoiced,0);
     return computed;
   }
   function renderSummary(c){
     updateAccordionSummaries(currentLines,c);
-    const fact=statusFromRatio(c.totalFacture,c.objectifFacturation,{none:'Non facturé',zero:'Non facturé',partial:'Partiellement facturé',done:'Facturé',over:'Surfacturé'});
+    const otherFundingFact=statusFromRatio(c.otherFundingInvoiced,c.otherFundingPlanned,{none:'Non facturé',zero:'Non facturé',partial:'Partiellement facturé',done:'Facturé',over:'Surfacturé'});
     const pay=statusFromRatio(c.totalPaye,c.objectifFacturation,{none:'Non payé',zero:'Non payé',partial:'Paiement partiel',done:'Payé',over:'Trop-perçu'});
     const inst=c.totalMensualites===0?['Aucun échéancier','gray']:(c.nombreRejets?['Rejet à traiter','red']:(c.mensualitesPayees===0?['En attente','orange']:(c.mensualitesPayees<c.totalMensualites?['En cours','orange']:['Terminé','green'])));
     const adjusted=(parseFloat(String(salesTrackingAmount?.value||'').replace(',','.'))||0)>0;
@@ -3810,7 +3818,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     const cards=[
       {label:'Prix formation',icon:'€',value:fmtMoney(c.prixFormation),badge:adjusted?badge('Tarif ajusté','blue'):badge('Tarif standard','gray'),tone:adjusted?'blue':'gray',meta:'Montant de référence'},
       ...(hasCpfAmount?[{label:'CPF',icon:'<img class="finance-summary-card__cpf-logo" src="/templates/cpf.jpg" alt="Logo CPF">',value:`${fmtMoney(cpfValue)} / ${fmtMoney(c.montantCpf)}`,badge:badge(cpfValidated?'CPF validé':'CPF non validé',cpfTone),tone:cpfTone,meta:cpfValidated?'Montant CPF confirmé':'Cliquez quand le CPF est confirmé',cpf:true}]:[]),
-      ...(hasOtherFundingAmount?[{label:'AUTRES FINANCEMENTS',icon:'👨',value:`${fmtMoney(c.totalFacture)} / ${fmtMoney(c.objectifFacturation)}`,badge:badge(fact[0],fact[1]),tone:(c.objectifFacturation>0&&c.totalFacture<c.objectifFacturation)?'orange':fact[1],meta:`Reste à facturer : ${fmtMoney(Math.max(c.resteAFacturer,0))}`}]:[]),
+      ...(hasOtherFundingAmount?[{label:'AUTRES FINANCEMENTS',icon:'👨',value:`${fmtMoney(c.otherFundingInvoiced)} / ${fmtMoney(c.otherFundingPlanned)}`,badge:badge(otherFundingFact[0],otherFundingFact[1]),tone:(c.otherFundingPlanned>0&&c.otherFundingInvoiced<c.otherFundingPlanned)?'orange':otherFundingFact[1],meta:`Reste à facturer : ${fmtMoney(c.otherFundingRemainingToInvoice)}`}]:[]),
       {label:'Payé',icon:(pay[1]==='green'?'✓':'✕'),iconTone:pay[1]==='green'?'green':'red',value:`${fmtMoney(c.totalPaye)} / ${fmtMoney(c.objectifFacturation)}`,badge:badge(pay[0],pay[1]),tone:(c.objectifFacturation>0&&c.totalPaye<c.objectifFacturation)?'orange':pay[1],meta:`Reste à payer : ${fmtMoney(Math.max(c.resteAPayer,0))}`},
       {label:'Prélèvements',icon:'↻',value:`${c.mensualitesPayees}/${c.totalMensualites}`,badge:badge(inst[0],inst[1]),tone:inst[1],meta:c.prochaineEcheance?`Prochain : ${formatIsoDateFr(c.prochaineEcheance.date)} — ${fmtMoney(c.prochaineEcheance.amount)}`:'Aucune prochaine échéance'}
     ];
