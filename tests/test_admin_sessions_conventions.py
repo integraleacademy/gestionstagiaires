@@ -156,17 +156,37 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertNotIn("LEGACY", html)
 
-    def test_signed_convention_signature_is_excluded_from_tracking(self):
+    def test_signed_conventions_created_since_july_15_are_included_in_tracking(self):
         fake_data = {
             "sessions": [{
                 "id": "S-APS",
                 "training_type": "APS",
                 "trainees": [
                     {
-                        "id": "T-SIGNED",
-                        "last_name": "SIGNATURE",
+                        "id": "T-SIGNED-BEFORE",
+                        "last_name": "SIGNATURE-AVANT",
                         "first_name": "Samira",
-                        "convention_signature": {"status": "signed"},
+                        "convention_signature": {
+                            "status": "signed",
+                            "created_at": "2026-07-14T23:59:59Z",
+                        },
+                    },
+                    {
+                        "id": "T-SIGNED-FROM",
+                        "last_name": "SIGNATURE-DEPUIS",
+                        "first_name": "Sonia",
+                        "convention_signature": {
+                            "status": "signed",
+                            "created_at": "2026-07-15T00:00:00Z",
+                        },
+                    },
+                    {
+                        "id": "T-APS-SIGNED-FROM",
+                        "last_name": "APS-DEPUIS",
+                        "first_name": "Sofia",
+                        "convention_status": "signed",
+                        "convention_aps_generated_at": "2026-07-15T12:00:00Z",
+                        "convention_aps_pdf_path": "convention.pdf",
                     },
                     {
                         "id": "T-PENDING",
@@ -183,7 +203,9 @@ class AdminSessionsConventionsTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
-        self.assertNotIn("SIGNATURE", html)
+        self.assertNotIn("SIGNATURE-AVANT", html)
+        self.assertIn("SIGNATURE-DEPUIS", html)
+        self.assertIn("APS-DEPUIS", html)
         self.assertIn("PENDING", html)
 
     def test_conventions_use_vae_label_and_action_dates_to_apply_threshold(self):

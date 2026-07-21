@@ -14341,6 +14341,9 @@ def _mark_signed_conventions_seen(data: Dict[str, Any]) -> bool:
         changed = True
     return changed
 
+CONVENTIONS_SIGNED_TRACKING_START_DATE = datetime.date(2026, 7, 15)
+
+
 def _public_trainee_convention_is_signed(trainee: Dict[str, Any]) -> bool:
     """Match the signed convention state displayed in the public journey card."""
     convention_signature = trainee.get("convention_signature") or trainee.get("convocation_signature") or {}
@@ -14348,6 +14351,14 @@ def _public_trainee_convention_is_signed(trainee: Dict[str, Any]) -> bool:
         convention_signature.get("status") in {"signed", "done"}
         or trainee.get("convention_status") == "signed"
     )
+
+
+def _convention_created_on_or_after_tracking_start(trainee: Dict[str, Any]) -> bool:
+    """Return whether a convention was created on the signed-tracking start date."""
+    state = _yousign_state(trainee)
+    created_at = state.get("created_at") or trainee.get("convention_aps_generated_at") or ""
+    created_datetime = _parse_iso_datetime(created_at)
+    return bool(created_datetime and created_datetime.date() >= CONVENTIONS_SIGNED_TRACKING_START_DATE)
 
 
 @app.get("/admin/sessions/conventions")
@@ -14396,9 +14407,13 @@ def admin_sessions_conventions():
         trainees = _session_trainees_list(sess)
         for trainee_index, trainee in enumerate(trainees):
             trainee_id = str(trainee.get("id") or f"trainee-{trainee_index + 1}")
-            # Les conventions déjà signalées comme signées dans la carte publique
-            # « Votre parcours » ne nécessitent plus de suivi dans cette liste.
-            if _public_trainee_convention_is_signed(trainee):
+            # Les conventions signées avant le 15 juillet ne nécessitent plus de
+            # suivi. Celles créées depuis cette date restent visibles, y compris
+            # lorsqu'elles ont déjà été signées.
+            if (
+                _public_trainee_convention_is_signed(trainee)
+                and not _convention_created_on_or_after_tracking_start(trainee)
+            ):
                 continue
             is_vae_convention_row = "VAE" in str(training_type or "").upper()
             if is_vae_convention_row:
