@@ -69,10 +69,10 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertIn("SEUIL", html)
         self.assertIn("APRES", html)
         self.assertNotIn("AVANT", html)
-        self.assertIn("SIGNEE", html)
+        self.assertNotIn("SIGNEE", html)
         self.assertIn("Les VAE sont incluses à partir du statut", html)
 
-    def test_convention_status_signed_without_signature_evidence_is_not_displayed_as_signed(self):
+    def test_convention_signed_in_public_journey_is_excluded_without_signature_evidence(self):
         fake_data = {
             "sessions": [
                 {
@@ -104,9 +104,7 @@ class AdminSessionsConventionsTests(unittest.TestCase):
             response = self.client.get("/admin/sessions/conventions")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(captured["rows"][0]["trainee_id"], "T-DIRTY")
-        self.assertEqual(captured["rows"][0]["status_key"], "not_generated")
-        self.assertEqual(captured["rows"][0]["status_label"], "Non générée")
+        self.assertEqual(captured["rows"], [])
 
     def test_fiche_button_links_to_trainee_summary(self):
         fake_data = {
@@ -129,7 +127,7 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         html = response.get_data(as_text=True)
         self.assertIn('href="/admin/sessions/S-APS/stagiaires/T-SUMMARY/summary">Fiche</a>', html)
 
-    def test_legacy_signed_checkbox_keeps_trainee_visible_as_signed(self):
+    def test_legacy_signed_convention_is_excluded_when_public_journey_shows_signed(self):
         fake_data = {
             "sessions": [
                 {
@@ -156,8 +154,37 @@ class AdminSessionsConventionsTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         html = response.get_data(as_text=True)
-        self.assertIn("LEGACY", html)
-        self.assertIn("Signée", html)
+        self.assertNotIn("LEGACY", html)
+
+    def test_signed_convention_signature_is_excluded_from_tracking(self):
+        fake_data = {
+            "sessions": [{
+                "id": "S-APS",
+                "training_type": "APS",
+                "trainees": [
+                    {
+                        "id": "T-SIGNED",
+                        "last_name": "SIGNATURE",
+                        "first_name": "Samira",
+                        "convention_signature": {"status": "signed"},
+                    },
+                    {
+                        "id": "T-PENDING",
+                        "last_name": "PENDING",
+                        "first_name": "Paul",
+                        "convention_signature": {"status": "ongoing"},
+                    },
+                ],
+            }]
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            response = self.client.get("/admin/sessions/conventions")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertNotIn("SIGNATURE", html)
+        self.assertIn("PENDING", html)
 
     def test_conventions_use_vae_label_and_action_dates_to_apply_threshold(self):
         fake_data = {
