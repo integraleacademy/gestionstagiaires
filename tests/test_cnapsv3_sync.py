@@ -1885,6 +1885,25 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertIn("data-edit-nub", html)
         self.assertIn("/api/admin/cnaps-tracking/nub", html)
 
+    def test_tracking_page_treats_a_non_numeric_nub_as_missing(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        original_fetch = gestion_app.fetch_cnapsv3_tracking_requests
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{
+            "last_name": "DOE", "first_name": "Jane", "nub": "Dossier reçu via formulaire public", "cnaps_status": "ACCEPTE",
+        }], None)
+        try:
+            response = client.get("/admin/sessions/suivi-cnaps")
+        finally:
+            gestion_app.fetch_cnapsv3_tracking_requests = original_fetch
+
+        html = response.get_data(as_text=True)
+        self.assertIn('const nubDigits=nub.replace(/\\D+/g,"");if(nubDigits.length!==7)', html)
+        self.assertIn('renderCardProFollowupResult(resultEl,null,"nub-missing")', html)
+
     def test_manual_tracking_nub_is_saved_and_enriches_matching_row(self):
         client = gestion_app.app.test_client()
         with client.session_transaction() as sess:
