@@ -27641,7 +27641,11 @@ def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional
     personal_cents = money_value_to_cents(trainee.get('personal_amount') or 0)
     other_cents = money_value_to_cents(trainee.get('other_financing_amount') or trainee.get('other_amount') or 0)
     cpf_cents = money_value_to_cents(trainee.get('cpf_amount') or 0)
-    planned_total_cents = personal_cents + other_cents + cpf_cents
+    # CPF invoices and collections are managed in the external CPF software, not
+    # in Qonto.  The financial dashboard must therefore use only the amounts
+    # that we can invoice and collect here as its billing/payment objective.
+    # CPF is still exposed as externally invoiced in its financer breakdown.
+    collectable_total_cents = personal_cents + other_cents
     invoiced_total_cents = 0
     qonto_paid_total_cents = 0
     manual_paid_total_cents = 0
@@ -27649,15 +27653,30 @@ def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional
     linked_invoice_ids = {str(l.get('qontoInvoiceId') or l.get('qontoDraftId') or '') for l in lines if l.get('qontoInvoiceId') or l.get('qontoDraftId')}
     by_financer: Dict[str, Dict[str, Any]] = {}
     for key, planned in (('CPF', cpf_cents), ('PERSONNEL', personal_cents), ('AUTRE', other_cents)):
-        by_financer[key] = {'planned_amount_cents': planned, 'invoiced_amount_cents': 0, 'paid_amount_cents': 0, 'remaining_amount_cents': planned}
+        externally_managed = key == 'CPF'
+        by_financer[key] = {
+            'planned_amount_cents': planned,
+            # A CPF amount represents an invoice generated in the dedicated
+            # external tool. It must not leave the dashboard's billing rate
+            # stuck below 100%.
+            'invoiced_amount_cents': planned if externally_managed else 0,
+            'paid_amount_cents': 0,
+            'remaining_amount_cents': 0 if externally_managed else planned,
+            'externally_managed': externally_managed,
+        }
 
     for line in lines:
         invoice_status = str(line.get('invoiceStatus') or line.get('qontoStatus') or '').lower()
         if invoice_status in {'canceled', 'cancelled', 'deleted'}:
             continue
         financing_text = str(line.get('financingType') or line.get('financeurName') or '').upper()
-        financer = 'CPF' if 'CPF' in financing_text else ('AUTRE' if 'AUTRE' in financing_text else 'PERSONNEL')
-        by_financer.setdefault(financer, {'planned_amount_cents': 0, 'invoiced_amount_cents': 0, 'paid_amount_cents': 0, 'remaining_amount_cents': 0})
+        financer = 'CPF' if is_cpf_billing_context(line) else ('AUTRE' if 'AUTRE' in financing_text else 'PERSONNEL')
+        by_financer.setdefault(financer, {'planned_amount_cents': 0, 'invoiced_amount_cents': 0, 'paid_amount_cents': 0, 'remaining_amount_cents': 0, 'externally_managed': financer == 'CPF'})
+        # CPF billing/payment tracking belongs to the external CPF software.
+        # Do not include a CPF line in Qonto totals, even if legacy data has an
+        # invoice identifier attached to it.
+        if financer == 'CPF':
+            continue
         invoice_id = str(line.get('qontoInvoiceId') or line.get('qontoDraftId') or '').strip()
         if invoice_id:
             frontend_invoice = line.get('qonto_invoice') if isinstance(line.get('qonto_invoice'), dict) else serialize_qonto_invoice_for_frontend(line)
@@ -27693,20 +27712,26 @@ def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional
 
     paid_total_cents = qonto_paid_total_cents + manual_paid_total_cents
     for item in by_financer.values():
-        item['remaining_amount_cents'] = max(item['planned_amount_cents'] - item['paid_amount_cents'], 0)
-        item['payment_status'] = 'not_planned' if item['planned_amount_cents'] <= 0 else ('paid' if item['paid_amount_cents'] >= item['planned_amount_cents'] else ('partially_paid' if item['paid_amount_cents'] > 0 else 'unpaid'))
+        if item.get('externally_managed'):
+            item['remaining_amount_cents'] = 0
+            item['payment_status'] = 'externally_managed'
+        else:
+            item['remaining_amount_cents'] = max(item['planned_amount_cents'] - item['paid_amount_cents'], 0)
+            item['payment_status'] = 'not_planned' if item['planned_amount_cents'] <= 0 else ('paid' if item['paid_amount_cents'] >= item['planned_amount_cents'] else ('partially_paid' if item['paid_amount_cents'] > 0 else 'unpaid'))
     pct = lambda value, total: 0 if total <= 0 else float(min((Decimal(value) / Decimal(total) * Decimal('100')), Decimal('100')).quantize(Decimal('0.01')))
     summary = {
-        'planned_total_cents': planned_total_cents,
+        'planned_total_cents': collectable_total_cents,
+        'funded_total_cents': collectable_total_cents + cpf_cents,
+        'externally_invoiced_total_cents': cpf_cents,
         'invoiced_total_cents': invoiced_total_cents,
         'qonto_paid_total_cents': qonto_paid_total_cents,
         'manual_paid_total_cents': manual_paid_total_cents,
         'paid_total_cents': paid_total_cents,
-        'remaining_total_cents': max(planned_total_cents - paid_total_cents, 0),
-        'invoicing_percentage': pct(invoiced_total_cents, planned_total_cents),
-        'payment_percentage': pct(paid_total_cents, planned_total_cents),
+        'remaining_total_cents': max(collectable_total_cents - paid_total_cents, 0),
+        'invoicing_percentage': pct(invoiced_total_cents, collectable_total_cents),
+        'payment_percentage': pct(paid_total_cents, collectable_total_cents),
         'qonto_payment_entries': qonto_payment_entries,
-        'payment_status': 'paid' if planned_total_cents > 0 and paid_total_cents >= planned_total_cents else ('partially_paid' if paid_total_cents > 0 else 'unpaid'),
+        'payment_status': 'paid' if collectable_total_cents > 0 and paid_total_cents >= collectable_total_cents else ('partially_paid' if paid_total_cents > 0 else 'unpaid'),
         'by_financer': by_financer,
     }
     summary.update({

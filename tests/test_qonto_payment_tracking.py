@@ -29,6 +29,26 @@ class QontoPaymentTrackingTests(unittest.TestCase):
         s=gestion_app.calculate_trainee_financial_summary(trainee,lines)
         self.assertEqual(s['invoiced_amount_cents'],165000); self.assertEqual(s['paid_amount_cents'],60000); self.assertEqual(s['remaining_amount_cents'],105000); self.assertAlmostEqual(s['payment_percentage'],36.36)
 
+    def test_cpf_external_billing_is_excluded_from_qonto_payment_objective(self):
+        trainee={"id":"T1","cpf_amount":3885,"personal_amount":415}
+        lines=[
+            {"traineeId":"T1","financingType":"CPF","amount":3885},
+            {"traineeId":"T1","financingType":"PERSONNEL","qontoInvoiceId":"inv","qontoTotalAmountCents":41500,"qontoAmountPaidCents":0,"amount":415},
+        ]
+        summary=gestion_app.calculate_trainee_financial_summary(trainee, lines)
+        # CPF is invoiced and collected in its dedicated external system. Only
+        # the personal invoice is expected and collected through Qonto here.
+        self.assertEqual(summary["funded_total_cents"], 430000)
+        self.assertEqual(summary["externally_invoiced_total_cents"], 388500)
+        self.assertEqual(summary["planned_total_cents"], 41500)
+        self.assertEqual(summary["invoiced_total_cents"], 41500)
+        self.assertEqual(summary["remaining_total_cents"], 41500)
+        self.assertEqual(summary["invoicing_percentage"], 100)
+        self.assertEqual(summary["payment_percentage"], 0)
+        self.assertEqual(summary["by_financer"]["CPF"]["invoiced_amount_cents"], 388500)
+        self.assertTrue(summary["by_financer"]["CPF"]["externally_managed"])
+        self.assertEqual(summary["by_financer"]["CPF"]["remaining_amount_cents"], 0)
+
     def test_qonto_invoice_partial_payment_without_manual_payment_builds_entry(self):
         trainee={"id":"T1","personal_amount":1650}
         lines=[{"traineeId":"T1","financingType":"PERSONNEL","qontoInvoiceId":"inv","qontoInvoiceNumber":"FL-2026-314","qontoTotalAmountCents":165000,"qontoAmountPaidCents":60000,"qontoStatus":"unpaid","amount":1650}]
@@ -154,6 +174,9 @@ class QontoPaymentTrackingTests(unittest.TestCase):
         self.assertIn("lineRemaining(l)>0?fmtMoney(lineRemaining(l))",html)
         self.assertIn("Partiellement payé",html)
         self.assertIn("Math.round(c.progressPaiement)}%",html)
+        self.assertIn("function lineHasGeneratedInvoice", html)
+        self.assertIn("c.resteAFacturer>0.01", html)
+        self.assertIn("Géré hors plateforme", html)
 
     def test_webhook_invalid_signature_and_idempotent_valid(self):
         client=gestion_app.app.test_client(); raw=json.dumps({"event":"v1/client-invoices.updated","data":{"id":"inv"}}).encode(); secret="s"
