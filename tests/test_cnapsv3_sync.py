@@ -1880,6 +1880,8 @@ class CnapsTrackingTests(unittest.TestCase):
 
         html = response.get_data(as_text=True)
         self.assertIn("NUB absent", html)
+        self.assertIn('card-pro-result__chip is-nub-missing', html)
+        self.assertIn('background:#111827', html)
         self.assertIn("data-edit-nub", html)
         self.assertIn("/api/admin/cnaps-tracking/nub", html)
 
