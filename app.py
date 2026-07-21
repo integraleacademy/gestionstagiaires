@@ -14001,6 +14001,34 @@ def api_admin_cnaps_tracking_delete():
     return jsonify({"ok": True, "deleted": True})
 
 
+@app.post("/api/admin/cnaps-tracking/nub")
+@admin_login_required
+@admin_write_required
+def api_admin_cnaps_tracking_nub():
+    """Persist a manually supplied NUB for a CNAPS tracking row."""
+    payload = request.get_json(silent=True) or {}
+    last_name = str(payload.get("last_name") or "").strip()
+    first_name = str(payload.get("first_name") or "").strip()
+    nub = re.sub(r"\D+", "", str(payload.get("nub") or ""))
+    if not last_name or not first_name:
+        return jsonify({"ok": False, "error": "missing_identity"}), 400
+    if len(nub) != 7:
+        return jsonify({"ok": False, "error": "invalid_nub", "message": "Le NUB doit comporter 7 chiffres."}), 400
+
+    data = load_data()
+    manual_nubs = data.setdefault("cnaps_tracking_manual_nubs", {})
+    if not isinstance(manual_nubs, dict):
+        manual_nubs = {}
+        data["cnaps_tracking_manual_nubs"] = manual_nubs
+    manual_nubs[_cnaps_tracking_manual_nub_key(last_name, first_name)] = nub
+    _append_activity_log(data, "cnaps_tracking_nub_updated", "cnaps_tracking", nub, details={
+        "last_name": last_name,
+        "first_name": first_name,
+    })
+    save_data(data)
+    return jsonify({"ok": True, "nub": nub})
+
+
 
 def _cnaps_tracking_normalize_key_part(value: Any) -> str:
     text = unicodedata.normalize("NFKD", str(value or ""))
@@ -14020,6 +14048,21 @@ def _cnaps_tracking_delete_key(last_name: Any, first_name: Any, nub: Any) -> str
     ))
 
 
+def _cnaps_tracking_manual_nub_key(last_name: Any, first_name: Any) -> str:
+    return "|".join(_cnaps_tracking_match_key(last_name, first_name))
+
+
+def _cnaps_tracking_manual_nubs(data: Dict[str, Any]) -> Dict[str, str]:
+    raw = data.get("cnaps_tracking_manual_nubs")
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        str(key): re.sub(r"\D+", "", str(nub))
+        for key, nub in raw.items()
+        if len(re.sub(r"\D+", "", str(nub))) == 7
+    }
+
+
 def _cnaps_tracking_deleted_keys(data: Dict[str, Any]) -> Set[str]:
     raw = data.get("cnaps_tracking_deleted_keys")
     return {str(key) for key in raw if str(key).strip()} if isinstance(raw, list) else set()
@@ -14027,6 +14070,7 @@ def _cnaps_tracking_deleted_keys(data: Dict[str, Any]) -> Set[str]:
 
 def enrich_cnaps_tracking_rows_with_enrollment(rows: List[Dict[str, Any]], data: Dict[str, Any]) -> List[Dict[str, Any]]:
     deleted_keys = _cnaps_tracking_deleted_keys(data)
+    manual_nubs = _cnaps_tracking_manual_nubs(data)
     enrolled_by_name: Dict[Tuple[str, str], Dict[str, str]] = {}
     for sess in data.get("sessions", []) or []:
         if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
@@ -14047,6 +14091,9 @@ def enrich_cnaps_tracking_rows_with_enrollment(rows: List[Dict[str, Any]], data:
     enriched: List[Dict[str, Any]] = []
     for row in rows or []:
         item = dict(row)
+        manual_nub = manual_nubs.get(_cnaps_tracking_manual_nub_key(item.get("last_name"), item.get("first_name")))
+        if manual_nub:
+            item["nub"] = manual_nub
         if _cnaps_tracking_delete_key(item.get("last_name"), item.get("first_name"), item.get("nub")) in deleted_keys:
             continue
         match = enrolled_by_name.get(_cnaps_tracking_match_key(item.get("last_name"), item.get("first_name")))
