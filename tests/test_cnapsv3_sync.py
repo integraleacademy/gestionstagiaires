@@ -1863,6 +1863,55 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertIn('normalizedLastName==="CHIOCCA"&&normalizedNub==="1079213"', html)
         self.assertIn('validite_titre:"ACTIF"', html)
 
+    def test_tracking_page_offers_manual_nub_entry_when_nub_is_missing(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        original_fetch = gestion_app.fetch_cnapsv3_tracking_requests
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{
+            "last_name": "DOE", "first_name": "Jane", "nub": "", "cnaps_status": "ACCEPTE",
+        }], None)
+        try:
+            response = client.get("/admin/sessions/suivi-cnaps")
+        finally:
+            gestion_app.fetch_cnapsv3_tracking_requests = original_fetch
+
+        html = response.get_data(as_text=True)
+        self.assertIn("NUB absent", html)
+        self.assertIn("data-edit-nub", html)
+        self.assertIn("/api/admin/cnaps-tracking/nub", html)
+
+    def test_manual_tracking_nub_is_saved_and_enriches_matching_row(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        data = {"sessions": []}
+        saved = []
+        original_load = gestion_app.load_data
+        original_save = gestion_app.save_data
+        gestion_app.load_data = lambda: data
+        gestion_app.save_data = lambda payload: saved.append(payload.copy())
+        try:
+            response = client.post("/api/admin/cnaps-tracking/nub", json={
+                "last_name": "Doe", "first_name": "Jane", "nub": "1234567",
+            })
+        finally:
+            gestion_app.load_data = original_load
+            gestion_app.save_data = original_save
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json(), {"ok": True, "nub": "1234567"})
+        self.assertEqual(data["cnaps_tracking_manual_nubs"]["DOE|JANE"], "1234567")
+        self.assertTrue(saved)
+        rows = gestion_app.enrich_cnaps_tracking_rows_with_enrollment([{
+            "last_name": "Doe", "first_name": "Jane", "nub": "",
+        }], data)
+        self.assertEqual(rows[0]["nub"], "1234567")
+
     def test_cnaps_public_annuaire_notifies_when_unknown_becomes_active(self):
         client = gestion_app.app.test_client()
         with client.session_transaction() as sess:
