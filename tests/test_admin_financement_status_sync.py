@@ -182,6 +182,15 @@ class AdminFinancementStatusSyncTests(unittest.TestCase):
         self.assertIn("value:`${fmtMoney(c.otherFundingInvoiced)} / ${fmtMoney(c.otherFundingPlanned)}`", template)
         self.assertIn("badge(otherFundingFact[0],otherFundingFact[1])", template)
 
+    def test_completed_invoice_generation_is_not_a_notification(self):
+        template = gestion_app.app.jinja_loader.get_source(
+            gestion_app.app.jinja_env,
+            "admin_trainee.html",
+        )[0]
+
+        self.assertIn("function renderAlerts(lines,c)", template)
+        self.assertNotIn("Toutes les factures à gérer ici sont générées.", template)
+
 
 if __name__ == "__main__":
     unittest.main()
