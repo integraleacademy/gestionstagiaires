@@ -14643,12 +14643,12 @@ def admin_sessions_conventions():
     ]
     if selected_status == "signing":
         selected_status = "waiting_signature"
-    virtual_statuses = {"action_required", "downloadable", "to_print"}
+    virtual_statuses = {"action_required", "to_print"}
     valid_statuses = {option["key"] for option in status_options} | virtual_statuses
     if selected_status and selected_status not in valid_statuses:
         selected_status = ""
 
-    stats = {"total": 0, "waiting_signature": 0, "signed": 0, "to_print": 0, "action_required": 0, "errors": 0, "downloadable": 0}
+    stats = {"total": 0, "waiting_signature": 0, "signed": 0, "to_print": 0, "action_required": 0, "errors": 0}
     data_changed = False
     for sess in data.get("sessions", []):
         if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
@@ -14704,7 +14704,6 @@ def admin_sessions_conventions():
                     convention["tone"] = "complete"
             signed_pdf = bool(state.get("signed_pdf_path"))
             original_pdf = bool(state.get("unsigned_pdf_path") or trainee.get("convention_aps_pdf_path"))
-            row_has_download = bool(convention.get("download_url") or signed_pdf or original_pdf)
             row_needs_action = status_key in {"not_generated", "generated", "expired", "refused"}
             row_needs_printing = status_key == "signed" and not bool(trainee.get("printed"))
             is_problem = status_key in {"error", "expired", "refused"}
@@ -14723,12 +14722,7 @@ def admin_sessions_conventions():
                 stats["action_required"] += 1
             if is_problem:
                 stats["errors"] += 1
-            if row_has_download:
-                stats["downloadable"] += 1
-
             if selected_status == "action_required" and not row_needs_action:
-                continue
-            if selected_status == "downloadable" and not row_has_download:
                 continue
             if selected_status == "to_print" and not row_needs_printing:
                 continue
