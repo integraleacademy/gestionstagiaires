@@ -14128,10 +14128,12 @@ def admin_cnaps_tracking():
     requests_rows = enrich_cnaps_tracking_rows_with_enrollment(requests_rows, data)
     requests_rows = _annotate_cnaps_tracking_status_changes(requests_rows, data)
     enrolled_count = sum(1 for row in requests_rows if row.get("is_enrolled"))
+    status_change_count = sum(1 for row in requests_rows if row.get("status_change_notified"))
     response = make_response(render_template(
         "admin_cnaps_tracking.html",
         requests_rows=requests_rows,
         enrolled_count=enrolled_count,
+        status_change_count=status_change_count,
         fetch_error=fetch_error,
     ))
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
