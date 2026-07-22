@@ -18,4 +18,17 @@ services:
         value: https://thirdparty.qonto.com
       - key: PUBLIC_STUDENT_PORTAL_BASE
         value: https://gestionstagiaires-r5no.onrender.com
-
+      - key: CNAPS_MONITOR_TOKEN
+        sync: false
+  - type: cron
+    name: gestionstagiaires-cnaps-monitor
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    schedule: "*/15 * * * *"
+    dockerCommand: python scripts/run_cnaps_monitor.py
+    envVars:
+      - key: CNAPS_MONITOR_URL
+        value: https://gestionstagiaires-r5no.onrender.com/internal/jobs/cnaps-public-annuaire-monitor
+      - key: CNAPS_MONITOR_TOKEN
+        sync: false

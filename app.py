@@ -4735,6 +4735,8 @@ def _is_blocked_email_recipient(email: str) -> bool:
 
 CNAPS_STATUS_CHANGE_NOTIFICATION_TO = "cassandre@integraleacademy.com"
 CNAPS_STATUS_CHANGE_NOTIFICATION_CC = ["elsa@integraleacademy.com", "clement@integraleacademy.com"]
+CNAPS_MONITOR_TOKEN = os.environ.get("CNAPS_MONITOR_TOKEN", "").strip()
+CNAPS_MONITOR_REQUEST_DELAY_SECONDS = max(0.0, float(os.environ.get("CNAPS_MONITOR_REQUEST_DELAY_SECONDS", "1")))
 
 def _cnaps_status_change_key(last_name: str, nub: str) -> str:
     normalized_name = unicodedata.normalize("NFD", str(last_name or ""))
@@ -4881,6 +4883,38 @@ def _record_cnaps_public_annuaire_status(data: Dict[str, Any], *, first_name: st
         previous_status="INCONNU",
         result=result,
     )
+
+
+def run_cnaps_public_annuaire_monitor() -> Dict[str, Any]:
+    """Check tracked CNAPS files without requiring an administrator page visit."""
+    rows, fetch_error = fetch_cnapsv3_tracking_requests()
+    if fetch_error:
+        raise RuntimeError(fetch_error)
+    data = load_data(run_background_tasks=False)
+    checked = notified = errors = 0
+    seen: Set[str] = set()
+    for row in rows:
+        last_name = str(row.get("last_name") or "").strip()
+        first_name = str(row.get("first_name") or "").strip()
+        nub = re.sub(r"\D+", "", str(row.get("nub") or ""))[-7:]
+        key = _cnaps_public_annuaire_status_key(last_name, nub)
+        if not last_name or len(nub) != 7 or key in seen:
+            continue
+        seen.add(key)
+        result = fetch_cnaps_public_annuaire(last_name, nub)
+        if result.get("check_status") != "success":
+            errors += 1
+            continue
+        checked += 1
+        if _record_cnaps_public_annuaire_status(
+            data, first_name=first_name, last_name=last_name, nub=nub, result=result,
+        ):
+            notified += 1
+        if CNAPS_MONITOR_REQUEST_DELAY_SECONDS:
+            time.sleep(CNAPS_MONITOR_REQUEST_DELAY_SECONDS)
+    if checked:
+        save_data(data)
+    return {"checked": checked, "notified": notified, "errors": errors}
 
 def brevo_send_email(
     to_email: str,
@@ -20312,6 +20346,19 @@ def api_cnaps_public_annuaire():
 def api_cnaps_status_changes_pending():
     data = load_data()
     return jsonify({"ok": True, "count": _cnaps_pending_status_change_count(data)})
+
+
+@app.post("/internal/jobs/cnaps-public-annuaire-monitor")
+def internal_cnaps_public_annuaire_monitor():
+    """Render Cron target; intentionally independent from browser/admin sessions."""
+    supplied_token = request.headers.get("X-CNAPS-Monitor-Token", "")
+    if not CNAPS_MONITOR_TOKEN or not hmac.compare_digest(supplied_token, CNAPS_MONITOR_TOKEN):
+        abort(401)
+    try:
+        return jsonify({"ok": True, **run_cnaps_public_annuaire_monitor()})
+    except Exception as exc:
+        app.logger.exception("[CNAPS_MONITOR] execution failed")
+        return jsonify({"ok": False, "error": str(exc)[:160]}), 502
 
 
 # =========================

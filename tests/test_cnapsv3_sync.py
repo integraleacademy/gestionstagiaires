@@ -2020,6 +2020,34 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertEqual(len(sent), 1)
         self.assertEqual(response.get_json()["pending_status_changes_count"], 1)
 
+    def test_background_monitor_checks_tracked_rows_and_notifies(self):
+        data = {"cnaps_public_annuaire_statuses": {"DOE|1234567": {"known": False, "signature": ""}}}
+        sent = []
+        original_tracking = gestion_app.fetch_cnapsv3_tracking_requests
+        original_fetch = gestion_app.fetch_cnaps_public_annuaire
+        original_load = gestion_app.load_data
+        original_save = gestion_app.save_data
+        original_email = gestion_app.brevo_send_email
+        original_delay = gestion_app.CNAPS_MONITOR_REQUEST_DELAY_SECONDS
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{"last_name": "DOE", "first_name": "Jane", "nub": "1234567"}], None)
+        gestion_app.fetch_cnaps_public_annuaire = lambda nom, nub: {"check_status": "success", "active_titles": [{"display_status": "AP SH ACTIF"}]}
+        gestion_app.load_data = lambda **kwargs: data
+        gestion_app.save_data = lambda payload: None
+        gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append(args) or {"ok": True}
+        gestion_app.CNAPS_MONITOR_REQUEST_DELAY_SECONDS = 0
+        try:
+            result = gestion_app.run_cnaps_public_annuaire_monitor()
+        finally:
+            gestion_app.fetch_cnapsv3_tracking_requests = original_tracking
+            gestion_app.fetch_cnaps_public_annuaire = original_fetch
+            gestion_app.load_data = original_load
+            gestion_app.save_data = original_save
+            gestion_app.brevo_send_email = original_email
+            gestion_app.CNAPS_MONITOR_REQUEST_DELAY_SECONDS = original_delay
+
+        self.assertEqual(result, {"checked": 1, "notified": 1, "errors": 0})
+        self.assertEqual(len(sent), 1)
+
     def test_cnaps_public_annuaire_does_not_notify_duplicate_signature(self):
         client = gestion_app.app.test_client()
         with client.session_transaction() as sess:
