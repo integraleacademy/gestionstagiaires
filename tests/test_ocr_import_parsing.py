@@ -357,6 +357,71 @@ class CnapsImportPreApiMatchingTests(unittest.TestCase):
         self.assertEqual(payload["matches"][0]["last_name"], "PLET")
         self.assertEqual(payload["matches"][0]["first_name"], "FRANCK")
 
+    def test_matches_aps_enrolment_when_candidate_is_also_in_an_ineligible_formation(self):
+        data = {
+            "sessions": [
+                {
+                    "id": "VTC-1",
+                    "training_type": "VTC",
+                    "trainees": [{"id": "T-VTC", "last_name": "DOE", "first_name": "John"}],
+                },
+                {
+                    "id": "APS-1",
+                    "training_type": "APS",
+                    "date_start": "2026-03-07",
+                    "date_end": "2026-05-04",
+                    "trainees": [{"id": "T-APS", "last_name": "DOE", "first_name": "John"}],
+                },
+            ],
+            "cnaps_pending_imports": [],
+        }
+        gestion_app.load_data = lambda: data
+        gestion_app._extract_pdf_text = lambda *_: "contenu pdf"
+        gestion_app._build_pdf_search_haystacks = lambda *_: ("", "")
+        gestion_app._extract_pre_from_text = lambda *_: "2026-0024376-PRE-SH-1055859"
+        gestion_app._extract_name_from_cnaps_text = lambda *_: ("DOE", "JOHN")
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+
+        response = self.client.post(
+            "/api/cnaps/import-pre",
+            data={"file": (io.BytesIO(b"%PDF-1.4 fake"), "agrement.pdf")},
+            content_type="multipart/form-data",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        match = response.get_json()["matches"][0]
+        self.assertTrue(match["match_found"])
+        self.assertEqual(match["session_id"], "APS-1")
+        self.assertEqual(match["trainee_id"], "T-APS")
+
+
+class CnapsPendingImportEligibilityTests(unittest.TestCase):
+    def test_pending_import_waits_for_aps_or_a3p_and_is_consumed_once(self):
+        pending = {
+            "id": "CPN-1",
+            "last_name": "DOE",
+            "first_name": "JOHN",
+            "pre_number": "2026-0024376-PRE-SH-1055859",
+            "file_token": "uploads/cnaps_pending/doc.pdf",
+        }
+        data = {"cnaps_pending_imports": [pending]}
+        trainee = {"id": "T1", "last_name": "DOE", "first_name": "John", "documents": []}
+
+        applied = gestion_app._apply_pending_cnaps_imports_for_trainee(
+            data, {"training_type": "VTC"}, trainee
+        )
+        self.assertEqual(applied, 0)
+        self.assertEqual(data["cnaps_pending_imports"], [pending])
+
+        applied = gestion_app._apply_pending_cnaps_imports_for_trainee(
+            data, {"training_type": "APS"}, trainee
+        )
+        self.assertEqual(applied, 1)
+        self.assertEqual(data["cnaps_pending_imports"], [])
+        self.assertEqual(trainee["pre_number"], "2026-0024376-PRE-SH-1055859")
+
 
 class AfcBulkNotifyApiTests(unittest.TestCase):
     def setUp(self):

@@ -7079,6 +7079,11 @@ def _cnaps_unknown_training_type_is_allowed(training_type: Optional[str]) -> boo
     return normalized.startswith("APS") or normalized.startswith("A3P")
 
 
+def _cnaps_pre_training_type_is_allowed(training_type: Optional[str]) -> bool:
+    """PRE/CAR imports only apply to APS and A3P training sessions."""
+    return _cnaps_unknown_training_type_is_allowed(training_type)
+
+
 def _collect_cnaps_unknown_trainees(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     rows = []
     for session_data in data.get("sessions", []):
@@ -10433,10 +10438,12 @@ def _apply_pending_cnaps_imports_for_trainee(data: Dict[str, Any], session_obj: 
     trainee_first = _normalize_person_name(trainee.get("first_name", ""))
     if not trainee_last or not trainee_first:
         return 0
+    if not _cnaps_pre_training_type_is_allowed(_session_get(session_obj, "training_type", "")):
+        return 0
 
     applied = 0
     remaining = []
-    for item in pending:
+    for item_index, item in enumerate(pending):
         item_last = _normalize_person_name(item.get("last_name", ""))
         item_first = _normalize_person_name(item.get("first_name", ""))
         same_order = (item_last == trainee_last and item_first == trainee_first)
@@ -10462,6 +10469,12 @@ def _apply_pending_cnaps_imports_for_trainee(data: Dict[str, Any], session_obj: 
         trainee["cnaps_import_merged_once"] = True
         trainee["cnaps_import_merged_at"] = _now_iso()
         applied += 1
+
+        # An imported PRE/CAR is for one eligible enrolment only.  Without this,
+        # a candidate enrolled in several sessions could receive the same file
+        # on every session created after the import.
+        remaining.extend(pending[item_index + 1:])
+        break
 
     data["cnaps_pending_imports"] = remaining
     return applied
@@ -30515,7 +30528,7 @@ def api_cnaps_import_pre():
     trainees_by_last_name: Dict[str, List[Dict[str, Any]]] = {}
 
     for sess in data.get("sessions", []):
-        if bool(sess.get("archived")):
+        if bool(sess.get("archived")) or not _cnaps_pre_training_type_is_allowed(_session_get(sess, "training_type", "")):
             continue
         trainees = _session_trainees_list(sess)
         for trainee in trainees:
@@ -30657,6 +30670,9 @@ def api_cnaps_import_pre_merge():
         return jsonify({"ok": False, "error": "trainee_not_found"}), 404
 
     training_type = _session_get(s, "training_type", "")
+    if not _cnaps_pre_training_type_is_allowed(training_type):
+        return jsonify({"ok": False, "error": "training_not_eligible"}), 400
+
     stored = _store_file(session_id, trainee_id, "documents", uploaded)
     token = _tokenize_path(stored)
 
