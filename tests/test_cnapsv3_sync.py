@@ -1689,6 +1689,36 @@ class CnapsTrackingTests(unittest.TestCase):
             gestion_app.os.environ["CNAPSV3_API_TOKEN"] = self.original_token
         gestion_app._cnapsv3_tracking_cache.update({"expires_at": 0.0, "rows": [], "error": None})
 
+    def test_status_change_email_displays_active_enrollment_with_french_dates(self):
+        data = {
+            "sessions": [{
+                "training_type": "APS",
+                "date_start": "2026-08-03",
+                "date_end": "2026-08-21",
+                "trainees": [{"first_name": "Jane", "last_name": "DOE"}],
+            }],
+        }
+
+        enrollments = gestion_app._cnaps_trainee_enrollments(
+            data, first_name="Jane", last_name="DOE", nub="1234567",
+        )
+        _, email_html = gestion_app.build_cnaps_status_change_email(
+            "Jane", "DOE", "1234567", "AP SH ACTIF", enrollments,
+        )
+
+        self.assertIn("/static/logo-integrale.png", email_html)
+        self.assertIn("Inscrit(e) en formation : OUI", email_html)
+        self.assertIn(gestion_app.formation_label("APS"), email_html)
+        self.assertIn("Du 03/08/2026 au 21/08/2026", email_html)
+        self.assertNotIn("Un dossier auparavant indiqué comme inconnu", email_html)
+
+    def test_status_change_email_displays_no_when_not_enrolled(self):
+        _, email_html = gestion_app.build_cnaps_status_change_email(
+            "Jane", "DOE", "1234567", "AP SH ACTIF",
+        )
+
+        self.assertIn("Inscrit(e) en formation : NON", email_html)
+
     def test_tracking_requests_are_normalized_from_a_traiter_payload(self):
         calls = []
 
