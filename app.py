@@ -3704,13 +3704,7 @@ def _cnapsv3_tracking_value(item: Dict[str, Any], keys: Iterable[str]) -> str:
 
 
 
-CNAPSV3_TRACKING_ALLOWED_STATUS = "TRANSMIS"
-
-
-def _normalize_cnapsv3_tracking_status(value: Any) -> str:
-    text = unicodedata.normalize("NFKD", str(value or ""))
-    text = "".join(ch for ch in text if not unicodedata.combining(ch))
-    return re.sub(r"[^A-Z0-9]+", " ", text.upper()).strip()
+CNAPSV3_TRACKING_MIN_CREATED_DATE = datetime.date(2026, 6, 1)
 
 
 def _parse_cnapsv3_tracking_date(value: Any) -> Optional[datetime.date]:
@@ -3730,11 +3724,23 @@ def _parse_cnapsv3_tracking_date(value: Any) -> Optional[datetime.date]:
     return None
 
 
-def _cnapsv3_tracking_request_matches_scope(item: Dict[str, Any], status: str) -> bool:
-    # CNAPSV3 has used both "TRANSMIS" and "Transmis au CNAPS" for the
-    # same workflow state.  Keeping an exact comparison silently hid the
-    # latter from the tracking screen.
-    return _normalize_cnapsv3_tracking_status(status).startswith(CNAPSV3_TRACKING_ALLOWED_STATUS)
+def _cnapsv3_tracking_request_matches_scope(item: Dict[str, Any]) -> bool:
+    """Keep every CNAPSV3 dossier created on or after the tracking cutoff."""
+    created_raw = _cnapsv3_tracking_value(item, (
+        "created_at",
+        "createdAt",
+        "date_creation",
+        "dateCreation",
+        "created_date",
+        "date_depot",
+        "dateDepot",
+        "submitted_at",
+        "submittedAt",
+        "transmitted_at",
+        "transmittedAt",
+    ))
+    created_date = _parse_cnapsv3_tracking_date(created_raw)
+    return bool(created_date and created_date >= CNAPSV3_TRACKING_MIN_CREATED_DATE)
 
 
 CNAPSV3_TRACKING_CACHE_TTL_SECONDS = 15
@@ -3849,7 +3855,7 @@ def fetch_cnapsv3_tracking_requests(get_func=None) -> Tuple[List[Dict[str, str]]
         status = _cnapsv3_tracking_value(item, ("statut_cnaps", "cnaps_status", "status", "statut"))
         if not any((last_name, first_name, nub, status)):
             continue
-        if not _cnapsv3_tracking_request_matches_scope(item, status):
+        if not _cnapsv3_tracking_request_matches_scope(item):
             continue
         rows.append({
             "last_name": last_name,

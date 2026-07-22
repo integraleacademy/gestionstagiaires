@@ -51,7 +51,7 @@
       <div>
         <div class="cnaps-kicker">👮 Pilotage CNAPS</div>
         <h1 class="cnaps-title">Suivi CNAPS</h1>
-        <p class="cnaps-subtitle">Tous les dossiers CNAPS V3 avec le statut « transmis », y compris ceux créés avant le 15/07/2026, avec recherche instantanée, statut d’inscription en formation et suivi carte professionnelle de l’annuaire CNAPS.</p>
+        <p class="cnaps-subtitle">Tous les dossiers CNAPS V3 créés depuis le 01/06/2026, quel que soit leur statut, avec recherche instantanée, statut d’inscription en formation et suivi carte professionnelle de l’annuaire CNAPS.</p>
       </div>
       <div class="cnaps-actions">
         <a class="btn btn-outline" href="{{ url_for('admin_sessions') }}">← Retour sessions</a>
@@ -59,7 +59,7 @@
       </div>
     </div>
     <div class="cnaps-stats">
-      <button type="button" class="cnaps-stat is-active" data-cnaps-filter="all" aria-pressed="true"><div class="cnaps-stat__value">{{ requests_rows|length }}</div><div class="cnaps-stat__label">Dossiers transmis</div></button>
+      <button type="button" class="cnaps-stat is-active" data-cnaps-filter="all" aria-pressed="true"><div class="cnaps-stat__value">{{ requests_rows|length }}</div><div class="cnaps-stat__label">Dossiers depuis le 01/06/2026</div></button>
       <button type="button" class="cnaps-stat" data-cnaps-filter="enrolled" aria-pressed="false"><div class="cnaps-stat__value">{{ enrolled_count|default(0) }}</div><div class="cnaps-stat__label">Inscrites en session</div></button>
       <button type="button" class="cnaps-stat" data-cnaps-filter="not-enrolled" aria-pressed="false"><div class="cnaps-stat__value">{{ requests_rows|length - (enrolled_count|default(0)) }}</div><div class="cnaps-stat__label">Non inscrites</div></button>
       <button type="button" class="cnaps-stat" data-cnaps-filter="status-change" aria-pressed="false"><div class="cnaps-stat__value">{{ status_change_count|default(0) }}</div><div class="cnaps-stat__label">Changements de statut</div></button>
@@ -75,7 +75,7 @@
   </div>
 
   {% if fetch_error %}<div class="card" style="color:#991b1b;background:#fee2e2;border-color:#fca5a5;">Impossible de récupérer les demandes CNAPSV3 pour le moment : {{ fetch_error }}</div>{% endif %}
-  {% if requests_rows|length == 0 and not fetch_error %}<div class="card" style="color:var(--muted)">Aucun dossier CNAPS transmis à afficher.</div>{% elif requests_rows|length > 0 %}
+  {% if requests_rows|length == 0 and not fetch_error %}<div class="card" style="color:var(--muted)">Aucun dossier CNAPS créé depuis le 01/06/2026 à afficher.</div>{% elif requests_rows|length > 0 %}
   <div class="cnaps-table-card">
     <div class="cnaps-table-wrap">
       <table class="cnaps-table">
