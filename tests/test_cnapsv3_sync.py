@@ -1731,6 +1731,20 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertIsNone(error)
         self.assertEqual([row["last_name"] for row in rows], ["KEEP", "OLD", "MISSING", "OLD"])
 
+    def test_tracking_requests_keep_transmitted_to_cnaps_status(self):
+        def fake_get(url, headers, timeout):
+            return DummyResponse(200, {
+                "requests": [
+                    {"nom": "DOE", "prenom": "Jane", "nub": "NUB1", "statut_cnaps": "Transmis au CNAPS"},
+                    {"nom": "SMITH", "prenom": "John", "nub": "NUB2", "statut_cnaps": "Accepté"},
+                ]
+            })
+
+        rows, error = gestion_app.fetch_cnapsv3_tracking_requests(get_func=fake_get)
+
+        self.assertIsNone(error)
+        self.assertEqual([row["last_name"] for row in rows], ["DOE"])
+
 
 
     def test_tracking_returns_empty_list_on_401(self):
@@ -1939,7 +1953,10 @@ class CnapsTrackingTests(unittest.TestCase):
             sess["admin_logged_in"] = True
             sess["admin_role"] = "admin"
 
-        data = {"cnaps_status_change_notifications": {}}
+        data = {
+            "cnaps_status_change_notifications": {},
+            "cnaps_public_annuaire_statuses": {"DOE|1234567": {"known": False, "signature": ""}},
+        }
         saved = []
         sent = []
         original_fetch = gestion_app.fetch_cnaps_public_annuaire
@@ -1970,6 +1987,39 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertTrue(saved)
         self.assertIn("DOE|1234567", data["cnaps_status_change_notifications"])
 
+    def test_cnaps_public_annuaire_active_titles_transition_sends_notification(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        data = {"cnaps_public_annuaire_statuses": {"DOE|1234567": {"known": False, "signature": ""}}}
+        sent = []
+        original_fetch = gestion_app.fetch_cnaps_public_annuaire
+        original_load = gestion_app.load_data
+        original_save = gestion_app.save_data
+        original_email = gestion_app.brevo_send_email
+        gestion_app.fetch_cnaps_public_annuaire = lambda nom, nub: {
+            "check_status": "success",
+            "active_titles": [{"display_status": "AP SH ACTIF", "label": "Surveillance humaine", "status": "ACTIF"}],
+            "results": [],
+        }
+        gestion_app.load_data = lambda: data
+        gestion_app.save_data = lambda payload: None
+        gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append(args) or {"ok": True}
+        try:
+            response = client.get("/api/cnaps_public_annuaire?nom=DOE&prenom=Jane&nub=1234567")
+        finally:
+            gestion_app.fetch_cnaps_public_annuaire = original_fetch
+            gestion_app.load_data = original_load
+            gestion_app.save_data = original_save
+            gestion_app.brevo_send_email = original_email
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["notification_sent"])
+        self.assertEqual(len(sent), 1)
+        self.assertEqual(response.get_json()["pending_status_changes_count"], 1)
+
     def test_cnaps_public_annuaire_does_not_notify_duplicate_signature(self):
         client = gestion_app.app.test_client()
         with client.session_transaction() as sess:
@@ -1989,7 +2039,8 @@ class CnapsTrackingTests(unittest.TestCase):
             "results": [{"activite": "Autorisation préalable - Surveillance humaine ou gardiennage", "validite_titre": "ACTIF"}],
         }
         gestion_app.load_data = lambda: data
-        gestion_app.save_data = lambda payload: self.fail("save_data should not be called for duplicate notification")
+        saved = []
+        gestion_app.save_data = lambda payload: saved.append(payload.copy())
         gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append(args) or {"ok": True}
         try:
             response = client.get("/api/cnaps_public_annuaire?nom=DOE&prenom=Jane&nub=1234567&previous_status=INCONNU")
@@ -2002,6 +2053,7 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.get_json()["notification_sent"])
         self.assertEqual(sent, [])
+        self.assertTrue(saved)
 
     def test_tracking_delete_persists_and_filters_refresh(self):
         client = gestion_app.app.test_client()
