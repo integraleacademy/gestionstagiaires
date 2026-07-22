@@ -4790,8 +4790,9 @@ def _cnaps_pending_status_change_count(data: Dict[str, Any]) -> int:
 def _annotate_cnaps_tracking_status_changes(rows: List[Dict[str, Any]], data: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Flag tracking rows that have generated a CNAPS status-change notification.
 
-    These rows are deliberately kept at the top of the tracking screen, whether
-    they are still pending or have already been marked as seen.
+    Only outstanding notifications are kept at the top of the tracking screen.
+    A notification marked as seen remains visible on its dossier for context,
+    but is no longer a status change to be handled.
     """
     notifications = data.get("cnaps_status_change_notifications") or {}
     if not isinstance(notifications, dict):
@@ -4800,7 +4801,7 @@ def _annotate_cnaps_tracking_status_changes(rows: List[Dict[str, Any]], data: Di
         notification = notifications.get(_cnaps_status_change_key(row.get("last_name"), row.get("nub")))
         row["status_change_notified"] = isinstance(notification, dict)
         row["status_change_reviewed"] = bool(notification.get("reviewed_at")) if isinstance(notification, dict) else False
-    return sorted(rows, key=lambda row: (not row["status_change_notified"], not row["status_change_reviewed"]))
+    return sorted(rows, key=lambda row: not (row["status_change_notified"] and not row["status_change_reviewed"]))
 
 
 def _mark_cnaps_status_change_imported(data: Dict[str, Any], *, last_name: str, nub: str) -> bool:
