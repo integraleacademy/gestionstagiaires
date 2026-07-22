@@ -484,6 +484,9 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertIn("A-IMPRIMER", html)
         self.assertNotIn("DEJA-IMPRIMEE", html)
         self.assertIn("À imprimer", html)
+        self.assertIn("has-print-pending", html)
+        self.assertIn("convPrintKpiPulse", html)
+        self.assertNotIn('content:"Filtre actif"', html)
 
 
 if __name__ == "__main__":
