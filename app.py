@@ -3731,7 +3731,10 @@ def _parse_cnapsv3_tracking_date(value: Any) -> Optional[datetime.date]:
 
 
 def _cnapsv3_tracking_request_matches_scope(item: Dict[str, Any], status: str) -> bool:
-    return _normalize_cnapsv3_tracking_status(status) == CNAPSV3_TRACKING_ALLOWED_STATUS
+    # CNAPSV3 has used both "TRANSMIS" and "Transmis au CNAPS" for the
+    # same workflow state.  Keeping an exact comparison silently hid the
+    # latter from the tracking screen.
+    return _normalize_cnapsv3_tracking_status(status).startswith(CNAPSV3_TRACKING_ALLOWED_STATUS)
 
 
 CNAPSV3_TRACKING_CACHE_TTL_SECONDS = 15
@@ -4732,6 +4735,8 @@ def _is_blocked_email_recipient(email: str) -> bool:
 
 CNAPS_STATUS_CHANGE_NOTIFICATION_TO = "cassandre@integraleacademy.com"
 CNAPS_STATUS_CHANGE_NOTIFICATION_CC = ["elsa@integraleacademy.com", "clement@integraleacademy.com"]
+CNAPS_MONITOR_TOKEN = os.environ.get("CNAPS_MONITOR_TOKEN", "").strip()
+CNAPS_MONITOR_REQUEST_DELAY_SECONDS = max(0.0, float(os.environ.get("CNAPS_MONITOR_REQUEST_DELAY_SECONDS", "1")))
 
 def _cnaps_status_change_key(last_name: str, nub: str) -> str:
     normalized_name = unicodedata.normalize("NFD", str(last_name or ""))
@@ -4741,12 +4746,23 @@ def _cnaps_status_change_key(last_name: str, nub: str) -> str:
     return f"{normalized_name}|{normalized_nub}"
 
 def _cnaps_result_signature(result: Dict[str, Any]) -> str:
-    rows = result.get("results") if isinstance(result.get("results"), list) else [result]
+    active_titles = result.get("active_titles")
+    if isinstance(active_titles, list):
+        rows = active_titles
+    else:
+        rows = result.get("results") if isinstance(result.get("results"), list) else [result]
     parts = []
     for row in rows:
         if not isinstance(row, dict):
             continue
-        values = [str(row.get(key) or "").strip() for key in ("activite", "validite_titre", "date_validite_titre")]
+        values = [
+            str(row.get(key) or "").strip()
+            for key in (
+                "display_status", "label", "activity", "activite", "typeActivite",
+                "status", "validity", "validite_titre", "agrementStatutEs",
+                "date_fin_validite", "valid_until", "date_validite_titre", "dateFinValidite",
+            )
+        ]
         parts.append(" • ".join(value for value in values if value))
     return " || ".join(part for part in parts if part).strip()
 
@@ -4832,6 +4848,73 @@ def _notify_cnaps_unknown_status_change(data: Dict[str, Any], *, first_name: str
         return True
     app.logger.warning("[CNAPS_STATUS_CHANGE] email non envoyé key=%s error=%s", key, response.get("error"))
     return False
+
+
+def _cnaps_public_annuaire_status_key(last_name: str, nub: str) -> str:
+    return _cnaps_status_change_key(last_name, nub)
+
+
+def _record_cnaps_public_annuaire_status(data: Dict[str, Any], *, first_name: str, last_name: str, nub: str, result: Dict[str, Any]) -> bool:
+    """Record a successful annuaire check and notify only on an actual transition.
+
+    The CNAPSV3 request status (for example ``TRANSMIS``) is unrelated to the
+    public-annuaire result.  The old client-side comparison therefore could
+    never detect a change from "Aucun titre CNAPS trouvé".
+    """
+    key = _cnaps_public_annuaire_status_key(last_name, nub)
+    if not key or key == "|":
+        return False
+    statuses = data.setdefault("cnaps_public_annuaire_statuses", {})
+    if not isinstance(statuses, dict):
+        statuses = {}
+        data["cnaps_public_annuaire_statuses"] = statuses
+    signature = _cnaps_result_signature(result)
+    known = bool(signature)
+    previous = statuses.get(key) if isinstance(statuses.get(key), dict) else {}
+    previously_known = bool(previous.get("known"))
+    statuses[key] = {"known": known, "signature": signature, "checked_at": _now_iso()}
+    if previously_known or not known:
+        return False
+    return _notify_cnaps_unknown_status_change(
+        data,
+        first_name=first_name,
+        last_name=last_name,
+        nub=nub,
+        previous_status="INCONNU",
+        result=result,
+    )
+
+
+def run_cnaps_public_annuaire_monitor() -> Dict[str, Any]:
+    """Check tracked CNAPS files without requiring an administrator page visit."""
+    rows, fetch_error = fetch_cnapsv3_tracking_requests()
+    if fetch_error:
+        raise RuntimeError(fetch_error)
+    data = load_data(run_background_tasks=False)
+    checked = notified = errors = 0
+    seen: Set[str] = set()
+    for row in rows:
+        last_name = str(row.get("last_name") or "").strip()
+        first_name = str(row.get("first_name") or "").strip()
+        nub = re.sub(r"\D+", "", str(row.get("nub") or ""))[-7:]
+        key = _cnaps_public_annuaire_status_key(last_name, nub)
+        if not last_name or len(nub) != 7 or key in seen:
+            continue
+        seen.add(key)
+        result = fetch_cnaps_public_annuaire(last_name, nub)
+        if result.get("check_status") != "success":
+            errors += 1
+            continue
+        checked += 1
+        if _record_cnaps_public_annuaire_status(
+            data, first_name=first_name, last_name=last_name, nub=nub, result=result,
+        ):
+            notified += 1
+        if CNAPS_MONITOR_REQUEST_DELAY_SECONDS:
+            time.sleep(CNAPS_MONITOR_REQUEST_DELAY_SECONDS)
+    if checked:
+        save_data(data)
+    return {"checked": checked, "notified": notified, "errors": errors}
 
 def brevo_send_email(
     to_email: str,
@@ -20239,22 +20322,23 @@ def api_cnaps_public_annuaire():
     nom = (request.args.get("nom") or "").strip()
     prenom = (request.args.get("prenom") or "").strip()
     nub = (request.args.get("nub") or "").strip()
-    previous_status = (request.args.get("previous_status") or "").strip()
     if not nom or not nub:
         return jsonify({"ok": False, "error": "missing_nom_or_nub"}), 400
     result = fetch_cnaps_public_annuaire(nom, nub)
     if result.get("check_status") is None:
         result["check_status"] = "success"
     notified = False
-    if result.get("check_status") == "success" and previous_status.upper() == "INCONNU":
+    data = None
+    if result.get("check_status") == "success":
         data = load_data()
-        notified = _notify_cnaps_unknown_status_change(data, first_name=prenom, last_name=nom, nub=nub, previous_status=previous_status, result=result)
-        if notified:
-            save_data(data)
+        notified = _record_cnaps_public_annuaire_status(
+            data, first_name=prenom, last_name=nom, nub=nub, result=result,
+        )
+        save_data(data)
 
     if result.get("check_status") == "error":
         return jsonify({"ok": False, "notification_sent": False, "pending_status_changes_count": None, **result}), 502
-    return jsonify({"ok": True, "notification_sent": notified, "pending_status_changes_count": _cnaps_pending_status_change_count(data) if notified else None, **result})
+    return jsonify({"ok": True, "notification_sent": notified, "pending_status_changes_count": _cnaps_pending_status_change_count(data) if data is not None else None, **result})
 
 
 @app.get("/api/cnaps_status_changes/pending")
@@ -20262,6 +20346,19 @@ def api_cnaps_public_annuaire():
 def api_cnaps_status_changes_pending():
     data = load_data()
     return jsonify({"ok": True, "count": _cnaps_pending_status_change_count(data)})
+
+
+@app.post("/internal/jobs/cnaps-public-annuaire-monitor")
+def internal_cnaps_public_annuaire_monitor():
+    """Render Cron target; intentionally independent from browser/admin sessions."""
+    supplied_token = request.headers.get("X-CNAPS-Monitor-Token", "")
+    if not CNAPS_MONITOR_TOKEN or not hmac.compare_digest(supplied_token, CNAPS_MONITOR_TOKEN):
+        abort(401)
+    try:
+        return jsonify({"ok": True, **run_cnaps_public_annuaire_monitor()})
+    except Exception as exc:
+        app.logger.exception("[CNAPS_MONITOR] execution failed")
+        return jsonify({"ok": False, "error": str(exc)[:160]}), 502
 
 
 # =========================
