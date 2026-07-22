@@ -14141,7 +14141,14 @@ def admin_cnaps_tracking():
     requests_rows = enrich_cnaps_tracking_rows_with_enrollment(requests_rows, data)
     requests_rows = _annotate_cnaps_tracking_status_changes(requests_rows, data)
     enrolled_count = sum(1 for row in requests_rows if row.get("is_enrolled"))
-    status_change_count = sum(1 for row in requests_rows if row.get("status_change_notified"))
+    # The dashboard badge and this tile both represent outstanding changes that
+    # can actually be reviewed from the tracking list.  Notifications for a
+    # dossier that is no longer returned by CNAPSV3 must not inflate the count.
+    status_change_count = sum(
+        1
+        for row in requests_rows
+        if row.get("status_change_notified") and not row.get("status_change_reviewed")
+    )
     response = make_response(render_template(
         "admin_cnaps_tracking.html",
         requests_rows=requests_rows,
@@ -20472,7 +20479,20 @@ def api_cnaps_public_annuaire():
 @admin_login_required
 def api_cnaps_status_changes_pending():
     data = load_data()
-    return jsonify({"ok": True, "count": _cnaps_pending_status_change_count(data)})
+    requests_rows, fetch_error = fetch_cnapsv3_tracking_requests()
+    if fetch_error:
+        # Do not clear a visible alert just because CNAPSV3 is temporarily
+        # unavailable.  The next successful refresh will remove stale entries.
+        count = _cnaps_pending_status_change_count(data)
+    else:
+        requests_rows = enrich_cnaps_tracking_rows_with_enrollment(requests_rows, data)
+        requests_rows = _annotate_cnaps_tracking_status_changes(requests_rows, data)
+        count = sum(
+            1
+            for row in requests_rows
+            if row.get("status_change_notified") and not row.get("status_change_reviewed")
+        )
+    return jsonify({"ok": True, "count": count})
 
 
 @app.post("/internal/jobs/cnaps-public-annuaire-monitor")
