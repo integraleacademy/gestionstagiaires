@@ -1744,36 +1744,36 @@ class CnapsTrackingTests(unittest.TestCase):
             {"last_name": "DUPONT", "first_name": "Clément", "nub": "NUB789", "cnaps_status": "TRANSMIS"},
         ])
 
-    def test_tracking_requests_keep_all_transmitted_rows_regardless_of_date(self):
+    def test_tracking_requests_keep_all_statuses_since_june_cutoff(self):
         def fake_get(url, headers, timeout):
             return DummyResponse(200, {
                 "requests": [
-                    {"nom": "KEEP", "prenom": "Since", "nub": "NUB1", "statut_cnaps": "Transmis", "created_at": "2026-07-15T00:00:00Z"},
-                    {"nom": "OLD", "prenom": "Before", "nub": "NUB2", "statut_cnaps": "TRANSMIS", "created_at": "2026-07-14T23:59:59Z"},
+                    {"nom": "KEEP", "prenom": "Since", "nub": "NUB1", "statut_cnaps": "Transmis", "created_at": "2026-06-01T00:00:00Z"},
+                    {"nom": "OLD", "prenom": "Before", "nub": "NUB2", "statut_cnaps": "TRANSMIS", "created_at": "2026-05-31T23:59:59Z"},
                     {"nom": "STATUS", "prenom": "Other", "nub": "NUB3", "statut_cnaps": "ACCEPTE", "created_at": "2026-07-16T00:00:00Z"},
                     {"nom": "MISSING", "prenom": "Date", "nub": "NUB4", "statut_cnaps": "TRANSMIS"},
-                    {"nom": "OLD", "prenom": "French", "nub": "NUB5", "statut_cnaps": "transmis", "date_creation": "01/07/2026"},
+                    {"nom": "FRENCH", "prenom": "Date", "nub": "NUB5", "statut_cnaps": "REFUSE", "date_creation": "01/06/2026"},
                 ]
             })
 
         rows, error = gestion_app.fetch_cnapsv3_tracking_requests(get_func=fake_get)
 
         self.assertIsNone(error)
-        self.assertEqual([row["last_name"] for row in rows], ["KEEP", "OLD", "MISSING", "OLD"])
+        self.assertEqual([row["last_name"] for row in rows], ["KEEP", "STATUS", "FRENCH"])
 
-    def test_tracking_requests_keep_transmitted_to_cnaps_status(self):
+    def test_tracking_requests_keep_every_status_since_june_cutoff(self):
         def fake_get(url, headers, timeout):
             return DummyResponse(200, {
                 "requests": [
-                    {"nom": "DOE", "prenom": "Jane", "nub": "NUB1", "statut_cnaps": "Transmis au CNAPS"},
-                    {"nom": "SMITH", "prenom": "John", "nub": "NUB2", "statut_cnaps": "Accepté"},
+                    {"nom": "DOE", "prenom": "Jane", "nub": "NUB1", "statut_cnaps": "Transmis au CNAPS", "created_at": "2026-06-01"},
+                    {"nom": "SMITH", "prenom": "John", "nub": "NUB2", "statut_cnaps": "Accepté", "created_at": "2026-06-02"},
                 ]
             })
 
         rows, error = gestion_app.fetch_cnapsv3_tracking_requests(get_func=fake_get)
 
         self.assertIsNone(error)
-        self.assertEqual([row["last_name"] for row in rows], ["DOE"])
+        self.assertEqual([row["last_name"] for row in rows], ["DOE", "SMITH"])
 
 
 
