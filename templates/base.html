@@ -148,7 +148,7 @@
     ] %}
 
     {% set sidebar_cpf_item = {"label":"CPF","icon":"wallet","href":url_for('admin_wedof_requests'),"endpoints":["admin_wedof_requests","admin_wedof"],"badge":wedof_new_requests_count if (wedof_new_requests_count or 0) > 0 else "","locked":not partner_has_module('cpf')} %}
-    {% set sidebar_cnaps_menu = {"label":"CNAPS","icon":"shield","badge":"","children":[
+    {% set sidebar_cnaps_menu = {"label":"CNAPS","icon":"shield","badge":"","badge_id":"sidebarCnapsBadge","children":[
       {"label":"DRACAR","icon":"external","href":"https://espace-usagers.cnaps.interieur.gouv.fr/usager/app/accueil","endpoints":[],"locked":not partner_has_module('cnaps'),"external":True},
       {"label":"Import PRE CNAPS","icon":"file","action":"open-cnaps-import","endpoints":[],"locked":is_read_only or not partner_has_module('cnaps')},
       {"label":"Suivi CNAPS","icon":"shield","href":url_for('admin_cnaps_tracking'),"endpoints":["admin_cnaps_tracking"],"badge":"","badge_id":"sidebarCnapsTrackingBadge","locked":not partner_has_module('cnaps')},
@@ -1239,14 +1239,19 @@
   })();
 
   (function initGlobalCnapsTrackingBadge(){
-    const sidebarBadge = document.getElementById("sidebarCnapsTrackingBadge");
-    if(!sidebarBadge) return;
+    const sidebarBadges = [
+      document.getElementById("sidebarCnapsBadge"),
+      document.getElementById("sidebarCnapsTrackingBadge")
+    ].filter(Boolean);
+    if(!sidebarBadges.length) return;
 
     function setCnapsTrackingBadge(count){
       const total = Number(count) || 0;
-      sidebarBadge.textContent = String(total);
-      sidebarBadge.style.display = total > 0 ? "inline-flex" : "none";
-      sidebarBadge.setAttribute("aria-label", `${total} changement(s) de statut CNAPS à consulter`);
+      sidebarBadges.forEach((sidebarBadge) => {
+        sidebarBadge.textContent = String(total);
+        sidebarBadge.style.display = total > 0 ? "inline-flex" : "none";
+        sidebarBadge.setAttribute("aria-label", `${total} changement(s) de statut CNAPS à consulter`);
+      });
     }
 
     window.refreshSidebarCnapsTrackingBadge = async function refreshSidebarCnapsTrackingBadge(nextCount){
@@ -1260,9 +1265,11 @@
         if(!response.ok || !payload.ok) throw new Error(payload.error || "request_failed");
         setCnapsTrackingBadge(payload.count);
       }catch(_error){
-        sidebarBadge.textContent = "!";
-        sidebarBadge.style.display = "inline-flex";
-        sidebarBadge.setAttribute("aria-label", "Impossible de charger les changements de statut CNAPS");
+        sidebarBadges.forEach((sidebarBadge) => {
+          sidebarBadge.textContent = "!";
+          sidebarBadge.style.display = "inline-flex";
+          sidebarBadge.setAttribute("aria-label", "Impossible de charger les changements de statut CNAPS");
+        });
       }
     };
 
