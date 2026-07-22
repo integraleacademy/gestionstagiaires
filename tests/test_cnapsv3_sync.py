@@ -1883,11 +1883,15 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertIn('data-cnaps-filter="not-enrolled"', html)
         self.assertIn('data-cnaps-filter="status-change"', html)
         self.assertIn("Changements de statut", html)
+        self.assertIn('cnaps-stat--status-change is-disabled', html)
+        self.assertIn('data-cnaps-filter="status-change" aria-pressed="false" disabled aria-disabled="true"', html)
+        self.assertLess(html.index('data-cnaps-filter="status-change"'), html.index('data-cnaps-filter="all"'))
         self.assertIn("rowMatchesCnapsFilter", html)
+        self.assertIn("updateCnapsStatusChangeTile", html)
         self.assertIn("DOE", html)
         self.assertIn("NUB123", html)
 
-    def test_tracking_page_prioritizes_notified_status_changes_and_toggles_seen(self):
+    def test_tracking_page_prioritizes_pending_status_changes_and_excludes_seen_ones(self):
         client = gestion_app.app.test_client()
         with client.session_transaction() as sess:
             sess["admin_logged_in"] = True
@@ -1895,12 +1899,14 @@ class CnapsTrackingTests(unittest.TestCase):
 
         data = {"sessions": [], "cnaps_status_change_notifications": {
             "PRIORITY|1234567": {"signature": "AP SH • ACTIF", "nub": "1234567"},
+            "SEEN|2345678": {"signature": "AP SH • ACTIF", "nub": "2345678", "reviewed_at": "2026-07-22T10:00:00+00:00"},
         }}
         original_fetch = gestion_app.fetch_cnapsv3_tracking_requests
         original_load = gestion_app.load_data
         original_save = gestion_app.save_data
         gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([
             {"last_name": "ORDINARY", "first_name": "Olivia", "nub": "7654321", "cnaps_status": "TRANSMIS"},
+            {"last_name": "SEEN", "first_name": "Sam", "nub": "2345678", "cnaps_status": "ACCEPTE"},
             {"last_name": "PRIORITY", "first_name": "Paul", "nub": "1234567", "cnaps_status": "ACCEPTE"},
         ], None)
         gestion_app.load_data = lambda *_, **__: data
@@ -1918,6 +1924,9 @@ class CnapsTrackingTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertLess(html.index("PRIORITY"), html.index("ORDINARY"))
+        self.assertEqual(html.count('data-status-change="true"'), 1)
+        self.assertIn('data-status-change="false" data-last-name="SEEN"', html)
+        self.assertLess(html.index("ORDINARY"), html.index("SEEN"))
         self.assertIn("data-toggle-cnaps-status-change", html)
         self.assertIn("Changement notifié", html)
         self.assertIn('data-status-change="true"', html)
