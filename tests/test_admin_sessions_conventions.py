@@ -487,6 +487,31 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertIn("has-print-pending", html)
         self.assertIn("convPrintKpiPulse", html)
         self.assertNotIn('content:"Filtre actif"', html)
+        self.assertLess(html.index("À imprimer"), html.index("Total"))
+        self.assertNotIn("<span>Documents</span>", html)
+
+    def test_empty_print_kpi_is_disabled_and_has_no_filter_link(self):
+        fake_data = {
+            "sessions": [{
+                "id": "S-APS",
+                "training_type": "APS",
+                "trainees": [{
+                    "id": "T-PRINTED",
+                    "last_name": "DEJA-IMPRIMEE",
+                    "printed": True,
+                    "convention_signature": {"status": "done", "created_at": "2026-07-16T10:00:00Z"},
+                }],
+            }],
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            response = self.client.get("/admin/sessions/conventions")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn('class="conv-kpi is-disabled" aria-disabled="true"', html)
+        self.assertIn("aucune convention à imprimer", html)
+        self.assertNotIn('href="/admin/sessions/conventions?status=to_print"', html)
 
 
 if __name__ == "__main__":
