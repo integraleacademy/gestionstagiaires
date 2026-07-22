@@ -1882,6 +1882,44 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertIn("DOE", html)
         self.assertIn("NUB123", html)
 
+    def test_tracking_page_prioritizes_notified_status_changes_and_toggles_seen(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        data = {"sessions": [], "cnaps_status_change_notifications": {
+            "PRIORITY|1234567": {"signature": "AP SH • ACTIF", "nub": "1234567"},
+        }}
+        original_fetch = gestion_app.fetch_cnapsv3_tracking_requests
+        original_load = gestion_app.load_data
+        original_save = gestion_app.save_data
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([
+            {"last_name": "ORDINARY", "first_name": "Olivia", "nub": "7654321", "cnaps_status": "TRANSMIS"},
+            {"last_name": "PRIORITY", "first_name": "Paul", "nub": "1234567", "cnaps_status": "ACCEPTE"},
+        ], None)
+        gestion_app.load_data = lambda *_, **__: data
+        gestion_app.save_data = lambda _data: None
+        try:
+            response = client.get("/admin/sessions/suivi-cnaps")
+            html = response.get_data(as_text=True)
+            mark_seen = client.post("/api/admin/cnaps-status-changes/toggle-reviewed", json={"last_name": "priority", "nub": "1234567"})
+            was_marked_seen = "reviewed_at" in data["cnaps_status_change_notifications"]["PRIORITY|1234567"]
+            mark_unseen = client.post("/api/admin/cnaps-status-changes/toggle-reviewed", json={"last_name": "priority", "nub": "1234567"})
+        finally:
+            gestion_app.fetch_cnapsv3_tracking_requests = original_fetch
+            gestion_app.load_data = original_load
+            gestion_app.save_data = original_save
+
+        self.assertEqual(response.status_code, 200)
+        self.assertLess(html.index("PRIORITY"), html.index("ORDINARY"))
+        self.assertIn("data-toggle-cnaps-status-change", html)
+        self.assertIn("Changement notifié", html)
+        self.assertEqual(mark_seen.get_json(), {"ok": True, "reviewed": True, "pending_status_changes_count": 0})
+        self.assertTrue(was_marked_seen)
+        self.assertEqual(mark_unseen.get_json(), {"ok": True, "reviewed": False, "pending_status_changes_count": 1})
+        self.assertNotIn("reviewed_at", data["cnaps_status_change_notifications"]["PRIORITY|1234567"])
+
     def test_tracking_page_forces_chiocca_ap_sh_active_by_name_and_nub(self):
         client = gestion_app.app.test_client()
         with client.session_transaction() as sess:
