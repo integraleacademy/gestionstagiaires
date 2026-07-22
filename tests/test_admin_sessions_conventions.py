@@ -462,6 +462,28 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertTrue(rows_by_id["T-SIGNED-UNPRINTED"]["needs_printing"])
         self.assertFalse(rows_by_id["T-SIGNED-PRINTED"]["needs_printing"])
         self.assertFalse(rows_by_id["T-UNSIGNED"]["needs_printing"])
+        self.assertEqual(captured["stats"]["to_print"], 1)
+
+    def test_conventions_can_filter_signed_conventions_to_print(self):
+        fake_data = {
+            "sessions": [{
+                "id": "S-APS",
+                "training_type": "APS",
+                "trainees": [
+                    {"id": "T-TO-PRINT", "last_name": "A-IMPRIMER", "convention_signature": {"status": "done", "created_at": "2026-07-16T10:00:00Z"}},
+                    {"id": "T-PRINTED", "last_name": "DEJA-IMPRIMEE", "printed": True, "convention_signature": {"status": "done", "created_at": "2026-07-16T10:00:00Z"}},
+                ],
+            }],
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            response = self.client.get("/admin/sessions/conventions?status=to_print")
+
+        self.assertEqual(response.status_code, 200)
+        html = response.get_data(as_text=True)
+        self.assertIn("A-IMPRIMER", html)
+        self.assertNotIn("DEJA-IMPRIMEE", html)
+        self.assertIn("À imprimer", html)
 
 
 if __name__ == "__main__":
