@@ -1710,6 +1710,10 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertIn("Inscrit(e) en formation : OUI", email_html)
         self.assertIn(gestion_app.formation_label("APS"), email_html)
         self.assertIn("Du 03/08/2026 au 21/08/2026", email_html)
+        self.assertIn("Jane DOE", email_html)
+        self.assertIn("Stagiaire", email_html)
+        self.assertIn('align="center"', email_html)
+        self.assertIn('margin:0 auto 24px', email_html)
         self.assertNotIn("Un dossier auparavant indiqué comme inconnu", email_html)
 
     def test_status_change_email_displays_no_when_not_enrolled(self):
@@ -1718,6 +1722,31 @@ class CnapsTrackingTests(unittest.TestCase):
         )
 
         self.assertIn("Inscrit(e) en formation : NON", email_html)
+
+    def test_status_change_notification_uses_trainee_first_name_when_tracking_row_omits_it(self):
+        data = {
+            "sessions": [{
+                "trainees": [{"first_name": "Jane", "last_name": "DOE", "nub": "1234567"}],
+            }],
+            "cnaps_status_change_notifications": {},
+        }
+        sent = []
+        original_email = gestion_app.brevo_send_email
+        gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append(args) or {"ok": True}
+        try:
+            notified = gestion_app._notify_cnaps_unknown_status_change(
+                data,
+                first_name="",
+                last_name="DOE",
+                nub="1234567",
+                previous_status="INCONNU",
+                result={"active_titles": [{"display_status": "AP SH ACTIF"}]},
+            )
+        finally:
+            gestion_app.brevo_send_email = original_email
+
+        self.assertTrue(notified)
+        self.assertIn("Jane DOE", sent[0][2])
 
     def test_tracking_requests_are_normalized_from_a_traiter_payload(self):
         calls = []
