@@ -4781,6 +4781,22 @@ def _cnaps_pending_status_change_count(data: Dict[str, Any]) -> int:
     )
 
 
+def _annotate_cnaps_tracking_status_changes(rows: List[Dict[str, Any]], data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Flag tracking rows that have generated a CNAPS status-change notification.
+
+    These rows are deliberately kept at the top of the tracking screen, whether
+    they are still pending or have already been marked as seen.
+    """
+    notifications = data.get("cnaps_status_change_notifications") or {}
+    if not isinstance(notifications, dict):
+        notifications = {}
+    for row in rows:
+        notification = notifications.get(_cnaps_status_change_key(row.get("last_name"), row.get("nub")))
+        row["status_change_notified"] = isinstance(notification, dict)
+        row["status_change_reviewed"] = bool(notification.get("reviewed_at")) if isinstance(notification, dict) else False
+    return sorted(rows, key=lambda row: (not row["status_change_notified"], not row["status_change_reviewed"]))
+
+
 def _mark_cnaps_status_change_imported(data: Dict[str, Any], *, last_name: str, nub: str) -> bool:
     key = _cnaps_status_change_key(last_name, nub)
     notifications = data.get("cnaps_status_change_notifications")
@@ -14046,7 +14062,9 @@ def admin_cnaps_unknown():
 @admin_login_required
 def admin_cnaps_tracking():
     requests_rows, fetch_error = fetch_cnapsv3_tracking_requests()
-    requests_rows = enrich_cnaps_tracking_rows_with_enrollment(requests_rows, load_data())
+    data = load_data()
+    requests_rows = enrich_cnaps_tracking_rows_with_enrollment(requests_rows, data)
+    requests_rows = _annotate_cnaps_tracking_status_changes(requests_rows, data)
     enrolled_count = sum(1 for row in requests_rows if row.get("is_enrolled"))
     response = make_response(render_template(
         "admin_cnaps_tracking.html",
@@ -14057,6 +14075,38 @@ def admin_cnaps_tracking():
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
     return response
+
+
+@app.post("/api/admin/cnaps-status-changes/toggle-reviewed")
+@admin_login_required
+@admin_write_required
+def api_admin_cnaps_status_change_toggle_reviewed():
+    payload = request.get_json(silent=True) or {}
+    last_name = str(payload.get("last_name") or "").strip()
+    nub = str(payload.get("nub") or "").strip()
+    key = _cnaps_status_change_key(last_name, nub)
+    if not last_name or not re.sub(r"\D+", "", nub) or key == "|":
+        return jsonify({"ok": False, "error": "missing_identity"}), 400
+
+    data = load_data()
+    notifications = data.get("cnaps_status_change_notifications")
+    notification = notifications.get(key) if isinstance(notifications, dict) else None
+    if not isinstance(notification, dict):
+        return jsonify({"ok": False, "error": "notification_not_found"}), 404
+
+    reviewed = not bool(notification.get("reviewed_at"))
+    if reviewed:
+        notification["reviewed_at"] = _now_iso()
+        notification["reviewed_reason"] = "manual_seen"
+    else:
+        notification.pop("reviewed_at", None)
+        notification.pop("reviewed_reason", None)
+    save_data(data)
+    return jsonify({
+        "ok": True,
+        "reviewed": reviewed,
+        "pending_status_changes_count": _cnaps_pending_status_change_count(data),
+    })
 
 
 
