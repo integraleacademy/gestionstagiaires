@@ -1926,6 +1926,33 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertEqual(mark_unseen.get_json(), {"ok": True, "reviewed": False, "pending_status_changes_count": 1})
         self.assertNotIn("reviewed_at", data["cnaps_status_change_notifications"]["PRIORITY|1234567"])
 
+    def test_pending_badge_only_counts_changes_visible_in_tracking(self):
+        client = gestion_app.app.test_client()
+        with client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_role"] = "admin"
+
+        data = {"sessions": [], "cnaps_status_change_notifications": {
+            "VISIBLE|1234567": {"signature": "AP SH • ACTIF", "nub": "1234567"},
+            "STALE|7654321": {"signature": "AP SH • ACTIF", "nub": "7654321"},
+        }}
+        original_fetch = gestion_app.fetch_cnapsv3_tracking_requests
+        original_load = gestion_app.load_data
+        gestion_app.fetch_cnapsv3_tracking_requests = lambda: ([{
+            "last_name": "VISIBLE", "first_name": "Vera", "nub": "1234567", "cnaps_status": "TRANSMIS",
+        }], None)
+        gestion_app.load_data = lambda *_, **__: data
+        try:
+            page = client.get("/admin/sessions/suivi-cnaps")
+            badge = client.get("/api/cnaps_status_changes/pending")
+        finally:
+            gestion_app.fetch_cnapsv3_tracking_requests = original_fetch
+            gestion_app.load_data = original_load
+
+        self.assertEqual(page.status_code, 200)
+        self.assertIn('>1</div><div class="cnaps-stat__label">Changements de statut</div>', page.get_data(as_text=True))
+        self.assertEqual(badge.get_json(), {"ok": True, "count": 1})
+
     def test_tracking_page_forces_chiocca_ap_sh_active_by_name_and_nub(self):
         client = gestion_app.app.test_client()
         with client.session_transaction() as sess:
