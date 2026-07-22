@@ -4853,6 +4853,36 @@ def _cnaps_trainee_enrollments(data: Dict[str, Any], *, first_name: str, last_na
     return enrollments
 
 
+def _cnaps_trainee_first_name(data: Dict[str, Any], *, last_name: str, nub: str) -> str:
+    """Find a missing first name from an active trainee record when possible."""
+    normalized_nub = re.sub(r"\D+", "", str(nub or ""))[-7:]
+    normalized_last_name = _normalized_token(last_name)
+    if not normalized_nub and not normalized_last_name:
+        return ""
+
+    for session_obj in data.get("sessions", []) or []:
+        if not isinstance(session_obj, dict) or bool(session_obj.get("archived")) or _is_wedof_leads_session(session_obj):
+            continue
+        for trainee in _session_trainees_list(session_obj):
+            trainee_nub = re.sub(
+                r"\D+", "", str(
+                    trainee.get("nub")
+                    or trainee.get("cnaps_nub")
+                    or trainee.get("cnaps_tracking_nub")
+                    or extract_nub_from_pre_car(str(trainee.get("pre_number") or ""))
+                    or ""
+                ),
+            )[-7:]
+            matches_nub = bool(normalized_nub and trainee_nub == normalized_nub)
+            matches_last_name = bool(
+                normalized_last_name
+                and _normalized_token(trainee.get("last_name")) == normalized_last_name
+            )
+            if matches_nub or matches_last_name:
+                return str(trainee.get("first_name") or "").strip()
+    return ""
+
+
 def build_cnaps_status_change_email(
     first_name: str,
     last_name: str,
@@ -4885,14 +4915,17 @@ def build_cnaps_status_change_email(
     html_body = f"""
     <div style="margin:0;padding:0;background:#f4f7fb;font-family:Inter,Arial,sans-serif;color:#0f172a;">
       <div style="max-width:680px;margin:0 auto;padding:32px 18px;">
-        <div style="background:linear-gradient(135deg,#111827,#2563eb);border-radius:28px;padding:28px;color:#fff;box-shadow:0 24px 70px rgba(15,23,42,.22);">
-          <img src="{safe_logo_url}" alt="Intégrale Academy" style="display:block;max-width:190px;width:100%;height:auto;margin:0 0 24px;">
+        <div style="background:linear-gradient(135deg,#111827,#2563eb);border-radius:28px;padding:28px;color:#fff;box-shadow:0 24px 70px rgba(15,23,42,.22);text-align:center;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td align="center">
+            <img src="{safe_logo_url}" alt="Intégrale Academy" width="176" style="display:block;width:176px;max-width:100%;height:auto;margin:0 auto 24px;">
+          </td></tr></table>
           <div style="font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;opacity:.82;">Intégrale Academy · CNAPS</div>
           <h1 style="margin:16px 0 8px;font-size:30px;line-height:1.1;">Changement de statut</h1>
         </div>
         <div style="margin-top:-18px;background:#fff;border:1px solid #e5e7eb;border-radius:24px;padding:26px;box-shadow:0 18px 55px rgba(15,23,42,.10);">
           <div style="display:inline-block;background:#dcfce7;color:#166534;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;">Nouveau statut détecté</div>
-          <h2 style="margin:18px 0 6px;font-size:24px;color:#111827;">{safe_name}</h2>
+          <div style="margin:18px 0 4px;font-size:12px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.12em;">Stagiaire</div>
+          <h2 style="margin:0 0 6px;font-size:24px;color:#111827;">{safe_name}</h2>
           <p style="margin:0 0 18px;color:#64748b;font-size:14px;">NUB : <strong style="color:#111827;">{safe_nub}</strong></p>
           <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:18px;padding:18px;">
             <div style="font-size:12px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.12em;">Statut CNAPS</div>
@@ -4919,6 +4952,7 @@ def _notify_cnaps_unknown_status_change(data: Dict[str, Any], *, first_name: str
         data["cnaps_status_change_notifications"] = sent
     if sent.get(key, {}).get("signature") == signature:
         return False
+    first_name = str(first_name or "").strip() or _cnaps_trainee_first_name(data, last_name=last_name, nub=nub)
     enrollments = _cnaps_trainee_enrollments(data, first_name=first_name, last_name=last_name, nub=nub)
     subject, html_body = build_cnaps_status_change_email(first_name, last_name, nub, signature, enrollments)
     response = brevo_send_email(
