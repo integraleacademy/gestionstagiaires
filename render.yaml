@@ -16,6 +16,8 @@ services:
         value: INTEGRALE ACADEMY
       - key: QONTO_API_BASE_URL
         value: https://thirdparty.qonto.com
+      - key: QONTO_OAUTH_REDIRECT_URI
+        value: https://gestionstagiaires-r5no.onrender.com/api/qonto/oauth/callback
       - key: PUBLIC_STUDENT_PORTAL_BASE
         value: https://gestionstagiaires-r5no.onrender.com
       - key: CNAPS_MONITOR_TOKEN

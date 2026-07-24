@@ -43,6 +43,14 @@ class QontoOauthTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["Location"], "/admin/reglages/qonto?oauth=config_missing")
 
+    def test_legacy_qonto_oauth_redirect_uri_is_replaced_with_production_uri(self):
+        self.assertEqual(
+            gestion_app._normalize_qonto_oauth_redirect_uri(
+                "https://gestionstagiaires-test-v2.onrender.com/api/qonto/oauth/callback"
+            ),
+            "https://gestionstagiaires-r5no.onrender.com/api/qonto/oauth/callback",
+        )
+
     def test_oauth_status_does_not_expose_tokens(self):
         data = {"qonto_oauth": {"connected": True, "access_token": "access-secret", "refresh_token": "refresh-secret", "expires_at": 9999999999, "scope": gestion_app.QONTO_OAUTH_SCOPE, "environment": "production"}}
         with patch.object(gestion_app, "load_data", return_value=data):
