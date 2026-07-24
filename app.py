@@ -28136,7 +28136,14 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
         start = _parse_date_safe(_session_get(sess, 'date_start', ''))
         end = _parse_date_safe(_session_get(sess, 'date_end', '')) or start
         if not start or start < BILLING_START_DATE:
-            continue
+            # VAE dossiers can remain billable well after their administrative
+            # session started.  Do not hide their personal-financing line from
+            # Qonto solely because that start date predates the general billing
+            # rollout; otherwise the trainee page has a balance to invoice but
+            # no invoice action.
+            training_name = (_session_get(sess, 'training_type', '') or _session_get(sess, 'name', '') or '').upper()
+            if not start or 'VAE' not in training_name:
+                continue
         session_id = str(sess.get('id') or '')
         training = (_session_get(sess, 'training_type', '') or _session_get(sess, 'name', '') or '').strip()
         if not session_id or not training:
