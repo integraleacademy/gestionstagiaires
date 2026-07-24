@@ -127,10 +127,12 @@ class QontoInvoiceStatusTests(unittest.TestCase):
             result = gestion_app.ensure_qonto_webhook_subscription()
 
         self.assertTrue(result["created"])
-        self.assertEqual(
-            request.call_args_list[1].args[2]["webhook_subscription"]["event_types"],
-            gestion_app.QONTO_WEBHOOK_EVENT_TYPES,
-        )
+        self.assertEqual(request.call_args_list[1].args[2], {
+            "callback_url": "https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto",
+            "types": gestion_app.QONTO_WEBHOOK_EVENT_TYPES,
+            "secret": "s" * 32,
+            "description": "Synchronisation Qonto - Gestion stagiaires",
+        })
 
     def test_webhook_subscription_keeps_existing_valid_subscription(self):
         existing = {"id": "sub_1", "url": "https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto", "event_types": list(gestion_app.QONTO_WEBHOOK_EVENT_TYPES)}
@@ -148,6 +150,11 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertTrue(result["updated"])
         self.assertFalse(result["created"])
         self.assertEqual(request.call_args_list[1].args[:2], ("PUT", "/v2/webhook_subscriptions/sub_1"))
+        self.assertEqual(request.call_args_list[1].args[2], {
+            "callback_url": "https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto",
+            "types": gestion_app.QONTO_WEBHOOK_EVENT_TYPES,
+            "description": "Synchronisation Qonto - Gestion stagiaires",
+        })
 
     def test_webhook_subscription_creates_only_when_absent(self):
         created = {"id": "sub_new", "event_types": list(gestion_app.QONTO_WEBHOOK_EVENT_TYPES)}
@@ -155,7 +162,38 @@ class QontoInvoiceStatusTests(unittest.TestCase):
             result = gestion_app.ensure_qonto_webhook_subscription()
         self.assertTrue(result["created"])
         self.assertEqual(request.call_args_list[1].args[:2], ("POST", "/v2/webhook_subscriptions"))
-        self.assertEqual(request.call_args_list[1].args[2]["webhook_subscription"]["secret"], "s" * 32)
+        self.assertEqual(request.call_args_list[1].args[2]["secret"], "s" * 32)
+        self.assertNotIn("webhook_subscription", request.call_args_list[1].args[2])
+
+
+    def test_webhook_creation_posts_flat_json_payload_without_params(self):
+        oauth_data = {"qonto_oauth": {"access_token": "webhook-token", "refresh_token": "refresh-token", "expires_at": 9999999999, "scope": gestion_app.QONTO_OAUTH_SCOPE, "environment": "production"}}
+        response = Mock(ok=True, status_code=201, text='{"webhook_subscription": {"id": "sub_1"}}', headers={})
+        response.json.return_value = {"webhook_subscription": {"id": "sub_1"}}
+        payload = {
+            "callback_url": "https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto",
+            "types": list(gestion_app.QONTO_WEBHOOK_EVENT_TYPES),
+            "secret": "s" * 32,
+            "description": "Synchronisation Qonto - Gestion stagiaires",
+        }
+        with patch.dict(os.environ, {"QONTO_API_BASE_URL": "https://qonto.test"}, clear=False), \
+             patch.object(gestion_app, "load_data", return_value=oauth_data), \
+             patch.object(gestion_app.requests, "post", return_value=response) as post:
+            result = gestion_app._qonto_request("POST", "/v2/webhook_subscriptions", payload)
+
+        self.assertEqual(result, {"webhook_subscription": {"id": "sub_1"}})
+        post.assert_called_once()
+        args, kwargs = post.call_args
+        self.assertEqual(args[0], "https://qonto.test/v2/webhook_subscriptions")
+        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer webhook-token")
+        self.assertEqual(kwargs["headers"]["Content-Type"], "application/json")
+        self.assertEqual(kwargs["headers"]["Accept"], "application/json")
+        self.assertEqual(kwargs["json"], payload)
+        self.assertNotIn("params", kwargs)
+        self.assertNotIn("data", kwargs)
+        self.assertNotIn("webhook_subscription", kwargs["json"])
+        self.assertTrue(kwargs["json"]["secret"])
+        self.assertEqual(kwargs["json"]["types"], gestion_app.QONTO_WEBHOOK_EVENT_TYPES)
 
     def test_webhook_subscription_requires_configured_secret(self):
         with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": ""}, clear=False):

@@ -830,11 +830,26 @@ def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = N
         if cleaned_payload is not None:
             headers = {**headers, "Content-Type": "application/json"}
         if is_sepa_endpoint or is_webhook_endpoint:
-            headers = {"Authorization": f"Bearer {_qonto_oauth_bearer_token()}", "Content-Type": "application/json"}
-        response = requests.request(method.upper(), url, headers=headers, json=cleaned_payload if cleaned_payload is not None else None, params=params, timeout=20)
+            headers = {"Authorization": f"Bearer {_qonto_oauth_bearer_token()}", "Content-Type": "application/json", "Accept": "application/json"}
+        # Webhook creation must use a JSON request body.  Keep this explicit so
+        # a generic-client argument mismatch cannot silently turn it into query
+        # parameters or an empty form body.
+        if is_webhook_endpoint and method.upper() == "POST":
+            app.logger.info(
+                "[QONTO] webhook_subscription_request method=%s url=%s payload_keys=%s callback_url=%s types=%s secret_present=%s content_type=%s",
+                method.upper(), called_url, sorted((cleaned_payload or {}).keys()),
+                (cleaned_payload or {}).get("callback_url"), (cleaned_payload or {}).get("types"),
+                bool((cleaned_payload or {}).get("secret")), headers.get("Content-Type"),
+            )
+            response = requests.post(url, json=cleaned_payload, headers=headers, timeout=20)
+        else:
+            response = requests.request(method.upper(), url, headers=headers, json=cleaned_payload if cleaned_payload is not None else None, params=params, timeout=20)
         raw_body = response.text or ""
         trace_id = _qonto_response_trace_id(response, raw_body)
-        safe_payload = _sanitize_qonto_error(json.dumps(cleaned_payload, ensure_ascii=False)) if cleaned_payload is not None else None
+        log_payload = cleaned_payload
+        if is_webhook_endpoint and isinstance(cleaned_payload, dict) and "secret" in cleaned_payload:
+            log_payload = {**cleaned_payload, "secret": "***"}
+        safe_payload = _sanitize_qonto_error(json.dumps(log_payload, ensure_ascii=False)) if log_payload is not None else None
         app.logger.info("[QONTO] api_call method=%s url=%s payload=%s status=%s trace_id=%s body=%s", method.upper(), called_url, safe_payload, response.status_code, trace_id or "", _sanitize_qonto_error(raw_body[:4000]))
         if not response.ok:
             if response.status_code == 404:
@@ -1551,10 +1566,19 @@ def ensure_qonto_webhook_subscription() -> Dict[str, Any]:
         subscription_id = str(reusable.get("id") or "").strip()
         if not subscription_id:
             raise RuntimeError("Souscription Qonto existante sans identifiant, mise à jour impossible")
-        payload = {"webhook_subscription": {"url": callback_url, "event_types": list(dict.fromkeys([*(reusable.get("event_types") or reusable.get("types") or []), *QONTO_WEBHOOK_EVENT_TYPES])), "secret": webhook_secret}}
+        payload = {
+            "callback_url": callback_url,
+            "types": list(dict.fromkeys([*(reusable.get("event_types") or reusable.get("types") or []), *QONTO_WEBHOOK_EVENT_TYPES])),
+            "description": "Synchronisation Qonto - Gestion stagiaires",
+        }
         updated = _qonto_request("PUT", f"/v2/webhook_subscriptions/{quote(subscription_id, safe='')}", payload)
         return {"ok": True, "created": False, "updated": True, "subscription": updated.get("webhook_subscription") or updated, "callback_url": callback_url}
-    payload = {"webhook_subscription": {"url": callback_url, "event_types": QONTO_WEBHOOK_EVENT_TYPES, "secret": webhook_secret}}
+    payload = {
+        "callback_url": callback_url,
+        "types": list(QONTO_WEBHOOK_EVENT_TYPES),
+        "secret": webhook_secret,
+        "description": "Synchronisation Qonto - Gestion stagiaires",
+    }
     created = _qonto_request("POST", "/v2/webhook_subscriptions", payload)
     return {"ok": True, "created": True, "updated": False, "subscription": created.get("webhook_subscription") or created, "callback_url": callback_url}
 

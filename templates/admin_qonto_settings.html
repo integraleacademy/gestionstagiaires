@@ -59,8 +59,9 @@
     <section class="qonto-panel" aria-labelledby="qontoStatusTitle">
       <h2 id="qontoStatusTitle" style="margin-top:0;">Statut Qonto</h2>
       <div class="qonto-status-line">
-        <span id="qontoBadge" class="qonto-badge {{ 'connected' if connected else 'disconnected' }}">{{ '✅ Connecté' if connected else '⚪ Non connecté' }}</span>
+        <span id="qontoBadge" class="qonto-badge {{ 'connected' if connected else 'disconnected' }}">Connexion Qonto : {{ 'connectée' if connected else 'non connectée' }}</span>
         <span id="qontoMessage" class="qonto-message">{{ message }}</span>
+        <span id="qontoWebhookActivation" class="qonto-muted">Activation du webhook : non vérifiée</span>
       </div>
       <div class="qonto-muted">Dernier test réussi : <strong id="qontoLastSuccess">{{ last_success_fr or 'Aucun test réussi pour le moment' }}</strong></div>
       <div id="qontoSuccess" class="qonto-success" role="status" aria-live="polite"></div>
@@ -143,7 +144,7 @@
   function setFeedback(payload){
     const connected = Boolean(payload && payload.connected);
     badge.className = 'qonto-badge ' + (connected ? 'connected' : 'disconnected');
-    badge.textContent = connected ? '✅ Connecté' : '⚪ Non connecté';
+    badge.textContent = connected ? 'Connexion Qonto : connectée' : 'Connexion Qonto : non connectée';
     message.textContent = (payload && payload.message) || 'Statut Qonto indisponible';
     success.style.display = connected ? 'block' : 'none';
     error.style.display = connected ? 'none' : 'block';
@@ -190,8 +191,9 @@
     webhookEnsureBtn.disabled=true; const original=webhookEnsureBtn.textContent; webhookEnsureBtn.textContent='Vérification…';
     try { const res=await fetch('/api/admin/qonto/webhook-subscription/ensure',{method:'POST',headers:{'Accept':'application/json'}}); const p=await res.json();
       if(!res.ok || !p.ok) throw new Error(p.error||'Activation impossible');
+      document.getElementById('qontoWebhookActivation').textContent='Activation du webhook : active';
       success.style.display='block'; success.textContent=p.created?'Souscription webhook Qonto créée.':(p.updated?'Souscription webhook Qonto complétée.':'Souscription webhook Qonto déjà valide.');
-    } catch(e) { error.style.display='block'; error.textContent=e.message||'Activation webhook impossible.'; }
+    } catch(e) { const detail=e.message||'Activation webhook impossible.'; document.getElementById('qontoWebhookActivation').textContent=`Activation du webhook : erreur ${detail.match(/HTTP \d+/)?.[0]||''}`.trim(); error.style.display='block'; error.textContent=detail; }
     finally { webhookEnsureBtn.disabled=false; webhookEnsureBtn.textContent=original; await refreshWebhookStatus(); }
   });
   refreshOauthStatus();
