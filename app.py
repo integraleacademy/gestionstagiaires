@@ -27658,6 +27658,15 @@ def _sepa_installments(line: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 def _sync_sepa_aliases(line: Dict[str, Any]) -> None:
     installments = _sepa_installments(line)
+    # The SEPA persistence model uses ``due_date`` while the billing API and
+    # its clients historically expose ``date``.  Keep both aliases populated
+    # so a signed mandate immediately shows its upcoming collections instead
+    # of blank dates in the trainee dashboard.
+    for installment in installments:
+        due_date = str(installment.get('due_date') or installment.get('date') or '')[:10]
+        if due_date:
+            installment['due_date'] = due_date
+            installment['date'] = due_date
     total_due = round(sum(_money(item.get('amount')) for item in installments), 2)
     total_paid = round(sum(_money(item.get('amount')) for item in installments if item.get('status') == 'completed'), 2)
     paid_count = sum(1 for item in installments if item.get('status') == 'completed')
