@@ -114,6 +114,10 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertIn("function installmentDate(installment)", template)
         self.assertIn("installment?.date||installment?.due_date", template)
         self.assertIn("Prélèvements programmés", template)
+        self.assertIn("function qontoScheduleState(lines)", template)
+        self.assertIn("✅ Mandat OK", template)
+        self.assertIn("✅ Échéancier OK", template)
+        self.assertIn("qonto_direct_debit_subscription_id", template)
 
     def test_webhook_subscription_includes_sepa_events(self):
         with patch.object(gestion_app, "_qonto_request", side_effect=[
