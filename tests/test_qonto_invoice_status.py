@@ -707,6 +707,27 @@ class BillingStartDateFilterTests(unittest.TestCase):
         self.assertEqual({line["sessionId"] for line in lines}, {"S-JUNE", "S-FR"})
         self.assertTrue(all(line["dateStart"] >= "2026-06-01" for line in lines))
 
+    def test_billing_lines_include_vae_sessions_started_before_general_rollout(self):
+        sessions = [{
+            "id": "S-VAE",
+            "training_type": "DIRIGEANT VAE",
+            "date_start": "2026-05-01",
+            "date_end": "2026-05-30",
+            "trainees": [{
+                "id": "T-VAE",
+                "first_name": "Valerie",
+                "last_name": "A",
+                "personal_amount": 2640,
+            }],
+        }]
+
+        lines = gestion_app.buildBillingLinesFromSessions(sessions)
+
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0]["sessionId"], "S-VAE")
+        self.assertEqual(lines[0]["financingType"], "PERSONNEL")
+        self.assertEqual(lines[0]["amount"], 2640)
+
 
 if __name__ == "__main__":
     unittest.main()

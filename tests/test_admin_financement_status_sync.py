@@ -191,6 +191,16 @@ class AdminFinancementStatusSyncTests(unittest.TestCase):
         self.assertIn("function renderAlerts(lines,c)", template)
         self.assertNotIn("Toutes les factures à gérer ici sont générées.", template)
 
+    def test_quick_invoice_action_does_not_report_completion_with_an_amount_remaining(self):
+        template = gestion_app.app.jinja_loader.get_source(
+            gestion_app.app.jinja_env,
+            "admin_trainee.html",
+        )[0]
+
+        self.assertIn("const remainingToInvoice=Number(computeFinance(currentLines).resteAFacturer||0);", template)
+        self.assertIn("const hasUnrepresentedInvoice=remainingToInvoice>0.01;", template)
+        self.assertIn("⚠ Facture à générer : actualiser les financements", template)
+
 
 if __name__ == "__main__":
     unittest.main()
