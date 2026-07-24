@@ -1479,8 +1479,15 @@ def _qonto_webhook_callback_url() -> str:
     return os.environ.get("QONTO_WEBHOOK_CALLBACK_URL") or "https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto"
 
 
+QONTO_WEBHOOK_EVENT_TYPES = [
+    "v1/client-invoices",
+    "v2/sepa-direct-debit-mandates",
+    "v2/sepa-direct-debit-collections",
+]
+
+
 def ensure_qonto_webhook_subscription() -> Dict[str, Any]:
-    """Create or repair the Qonto client invoice webhook subscription on demand.
+    """Create or repair the Qonto invoice and SEPA webhook subscription on demand.
 
     This function is intentionally not called at startup so Render restarts never
     create duplicate subscriptions.
@@ -1490,13 +1497,12 @@ def ensure_qonto_webhook_subscription() -> Dict[str, Any]:
     subscriptions_payload = _qonto_request("GET", "/v2/webhook_subscriptions")
     subscriptions = subscriptions_payload.get("webhook_subscriptions") or subscriptions_payload.get("subscriptions") or []
     for sub in subscriptions if isinstance(subscriptions, list) else []:
-        if configured_id and str(sub.get("id")) == configured_id:
-            return {"ok": True, "created": False, "subscription": sub, "callback_url": callback_url}
         types = sub.get("event_types") or sub.get("types") or []
         url = sub.get("url") or sub.get("callback_url") or sub.get("target_url")
-        if url == callback_url and any("client-invoices" in str(t) or "client_invoice" in str(t) for t in types):
+        includes_required_events = set(QONTO_WEBHOOK_EVENT_TYPES).issubset({str(t) for t in types})
+        if (configured_id and str(sub.get("id")) == configured_id and includes_required_events) or (url == callback_url and includes_required_events):
             return {"ok": True, "created": False, "subscription": sub, "callback_url": callback_url}
-    payload = {"webhook_subscription": {"url": callback_url, "event_types": ["v1/client-invoices"]}}
+    payload = {"webhook_subscription": {"url": callback_url, "event_types": QONTO_WEBHOOK_EVENT_TYPES}}
     created = _qonto_request("POST", "/v2/webhook_subscriptions", payload)
     return {"ok": True, "created": True, "subscription": created.get("webhook_subscription") or created, "callback_url": callback_url}
 
@@ -27546,7 +27552,11 @@ def _active_qonto_mandate(client_id: str) -> Optional[Dict[str, Any]]:
 
 def _map_mandate_status(status: Any) -> str:
     value = str(status or '').lower()
-    return {'pending_signature': 'pending', 'approved': 'active', 'signed': 'signed', 'active': 'active', 'failed': 'failed'}.get(value, value or 'pending')
+    return {
+        'pending_signature': 'pending', 'pending': 'pending', 'approved': 'active',
+        'accepted': 'signed', 'validated': 'signed', 'signed': 'signed',
+        'active': 'active', 'completed': 'signed', 'failed': 'failed',
+    }.get(value, value or 'pending')
 
 
 def _map_collection_status(status: Any) -> str:
@@ -28614,6 +28624,31 @@ def api_billing_cancel_or_reset():
 
 
 def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
+    """Refresh the mandate before collections, then create missing subscriptions.
+
+    Mandate signature does not change the invoice.  Refreshing it here makes the
+    manual “Synchroniser Qonto” action a reliable recovery path when a SEPA
+    webhook was not delivered.
+    """
+    client_id = line.get('qontoClientId') or line.get('qontoCustomerId')
+    mandate_id = str(line.get('qonto_direct_debit_mandate_id') or '')
+    if client_id and mandate_id:
+        mandates = list_qonto_direct_debit_mandates(str(client_id))
+        items = mandates.get('direct_debit_mandates') or mandates.get('mandates') or mandates.get('items') or []
+        mandate = next((item for item in items if str(item.get('id') or '') == mandate_id), None)
+        if isinstance(mandate, dict):
+            status = _map_mandate_status(mandate.get('status'))
+            line['qonto_mandate_status'] = status
+            line['mandateStatus'] = status
+            if status in {'active', 'signed'}:
+                line['qonto_mandate_signed_at'] = (
+                    mandate.get('accepted_at') or mandate.get('signed_at') or mandate.get('approved_at')
+                    or line.get('qonto_mandate_signed_at') or _now_iso()
+                )
+                result = ensure_qonto_sepa_installments_for_line(line)
+                if result.get('created'):
+                    _billing_log(line, 'Échéances SEPA créées après synchronisation du mandat', 'success', str(result['created']), mandate_id)
+            _sync_sepa_aliases(line)
     installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
     for item in installments:
         sid = item.get('qonto_direct_debit_subscription_id')
@@ -28631,6 +28666,7 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
             item['failureReason'] = collection.get('status_reason')
             item['status_reason'] = collection.get('status_reason')
         item['updated_at'] = _now_iso()
+    _sync_sepa_aliases(line)
     line['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(line)
     if line['qontoPaymentGlobalStatus'] == 'Payé':
         line['paymentStatus'] = 'paid'
@@ -28737,9 +28773,17 @@ def api_billing_sync_qonto():
         lines = _billing_lines(data)
     reset_count = synced_count = 0; errors = []; last_line = None
     for line in lines:
-        if not (line.get('qontoInvoiceId') or line.get('qontoDraftId')): continue
+        has_invoice = bool(line.get('qontoInvoiceId') or line.get('qontoDraftId'))
+        has_sepa_mandate = line.get('paymentMode') == 'sepa_direct_debit' and bool(line.get('qonto_direct_debit_mandate_id'))
+        if not (has_invoice or has_sepa_mandate):
+            continue
         try:
-            reset, _ = _sync_billing_line_with_qonto(data, line); _sync_qonto_direct_debit_line(line) if line.get('paymentMode') == 'sepa_direct_debit' else None; _save_billing_line(data, line); reset_count += 1 if reset else 0; synced_count += 0 if reset else 1; last_line = line
+            reset = False
+            if has_invoice:
+                reset, _ = _sync_billing_line_with_qonto(data, line)
+            if line.get('paymentMode') == 'sepa_direct_debit':
+                _sync_qonto_direct_debit_line(line)
+            _save_billing_line(data, line); reset_count += 1 if reset else 0; synced_count += 0 if reset else 1; last_line = line
         except Exception as exc:
             errors.append({'id': line.get('id'), 'message': _sanitize_qonto_error(str(exc))})
     save_data(data)
@@ -29104,11 +29148,12 @@ def api_qonto_webhooks():
         return jsonify({"ok": False, "error": "invalid_signature"}), 401
     payload = request.get_json(silent=True) or {}
     event = (payload.get("event") or payload.get("type") or "").strip()
+    normalized_event = event.lower().replace("_", "-")
     item = payload.get("data") if isinstance(payload.get("data"), dict) else {}
-    if "sepa-direct-debit-mandates" in event:
+    if "sepa-direct-debit-mandate" in normalized_event:
         data = load_data(); updated = _apply_qonto_mandate_webhook(data, item); save_data(data)
         return jsonify({"ok": True, "updated": updated})
-    if "sepa-direct-debit-collections" in event:
+    if "sepa-direct-debit-collection" in normalized_event:
         data = load_data(); updated = _apply_qonto_collection_webhook(data, item); save_data(data)
         return jsonify({"ok": True, "updated": updated})
     if event and "client-invoices" not in event and "client_invoice" not in event:
