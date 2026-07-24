@@ -71,6 +71,53 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(invoice["qonto_invoice_amount_paid"], 950.0)
         self.assertEqual(len(self.saved), 1)
 
+    def test_manual_sepa_sync_refreshes_signed_mandate_and_creates_installments(self):
+        line = {
+            "paymentMode": "sepa_direct_debit",
+            "qontoClientId": "client_123",
+            "qonto_direct_debit_mandate_id": "mandate_123",
+            "qonto_mandate_status": "pending",
+            "mandateStatus": "pending",
+            "sepa_payment_plan": {"installments": [{"index": 1, "amount": 100, "status": "pending"}]},
+        }
+        with patch.object(gestion_app, "list_qonto_direct_debit_mandates", return_value={
+            "direct_debit_mandates": [{"id": "mandate_123", "status": "signed", "signed_at": "2026-07-24T10:00:00Z"}]
+        }), patch.object(gestion_app, "ensure_qonto_sepa_installments_for_line", return_value={"created": 4}):
+            gestion_app._sync_qonto_direct_debit_line(line)
+
+        self.assertEqual(line["qonto_mandate_status"], "signed")
+        self.assertEqual(line["mandateStatus"], "signed")
+        self.assertEqual(line["qonto_mandate_signed_at"], "2026-07-24T10:00:00Z")
+
+    def test_webhook_subscription_includes_sepa_events(self):
+        with patch.object(gestion_app, "_qonto_request", side_effect=[
+            {"webhook_subscriptions": []},
+            {"webhook_subscription": {"id": "hook_123"}},
+        ]) as request:
+            result = gestion_app.ensure_qonto_webhook_subscription()
+
+        self.assertTrue(result["created"])
+        self.assertEqual(
+            request.call_args_list[1].args[2]["webhook_subscription"]["event_types"],
+            gestion_app.QONTO_WEBHOOK_EVENT_TYPES,
+        )
+
+    def test_mandate_webhook_accepts_singular_event_name(self):
+        secret = "webhook-secret"
+        body = {"event": "v2/sepa_direct_debit_mandate.signed", "data": {"id": "mandate_123", "status": "signed"}}
+        raw = json.dumps(body).encode("utf-8")
+        signature = "sha256=" + hmac.new(secret.encode("utf-8"), raw, hashlib.sha256).hexdigest()
+        client = gestion_app.app.test_client()
+        with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": secret}), \
+             patch.object(gestion_app, "load_data", return_value={"sessions": [], "billing_lines": []}), \
+             patch.object(gestion_app, "save_data"), \
+             patch.object(gestion_app, "_apply_qonto_mandate_webhook", return_value=True) as apply:
+            response = client.post("/api/qonto/webhooks", data=raw, headers={"Content-Type": "application/json", "X-Qonto-Signature": signature})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["updated"])
+        apply.assert_called_once()
+
 
     def test_missing_qonto_billing_invoice_marks_line_to_control(self):
         data = {
