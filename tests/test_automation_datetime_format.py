@@ -5,6 +5,32 @@ import app as gestion_app
 
 
 class AutomationDateTimeFormatTests(unittest.TestCase):
+    def test_reset_trainee_automations_removes_every_automation_state(self):
+        trainee = {
+            "id": "T1",
+            "convention_signature": {
+                "status": "done",
+                "signature_request_id": "req_123",
+                "unsigned_pdf_path": "/tmp/convention.pdf",
+                "signed_pdf_path": "/tmp/convention-signed.pdf",
+            },
+            "convention_aps_status": "signed",
+            "convocation_aps_status": "sent",
+            "convocation_aps_pdf_path": "/tmp/convocation.pdf",
+            "attestation_entree_aps_sent_at": "2026-07-03T08:13:43Z",
+            "attestation_fin_aps_sent_at": "2026-07-03T08:13:43Z",
+            "convention_auto_last_error": "ancienne erreur",
+            "other_field": "à conserver",
+        }
+
+        with unittest.mock.patch.object(gestion_app, "_yousign_is_configured", return_value=False):
+            gestion_app._reset_trainee_automations(trainee)
+
+        self.assertEqual(trainee["other_field"], "à conserver")
+        self.assertIn("updated_at", trainee)
+        for key in gestion_app.AUTOMATION_TRAINEE_FIELDS:
+            self.assertNotIn(key, trainee)
+
     def test_fr_datetime_converts_utc_iso_to_paris_display(self):
         self.assertEqual(
             gestion_app.fr_datetime("2026-07-03T09:35:45.602126Z"),

@@ -25638,6 +25638,86 @@ def _cancel_yousign_convention_signature(trainee: Dict[str, Any], reason: str = 
     trainee["updated_at"] = now
 
 
+AUTOMATION_TRAINEE_FIELDS = (
+    "convention_signature",
+    "convocation_signature",
+    "convention_signature_history",
+    "convention_status",
+    "convention_aps_status",
+    "convention_aps_generated_at",
+    "convention_aps_signed_at",
+    "convention_aps_pdf_path",
+    "convention_aps_docx_path",
+    "convention_legacy_signed",
+    "convention_legacy_signed_at",
+    "legacy_convention_signed",
+    "convention_auto_sent_at",
+    "convention_auto_trigger",
+    "convention_auto_email_ok",
+    "convention_auto_last_error",
+    "convocation_aps_status",
+    "convocation_aps_generated_at",
+    "convocation_aps_sent_at",
+    "convocation_aps_pdf_path",
+    "convocation_aps_docx_path",
+    "convocation_aps_pdf_token",
+    "convocation_aps_generated_from",
+    "convocation_aps_view_url",
+    "convocation_aps_last_error",
+    "convocation_auto_scheduled_at",
+    "convocation_auto_last_error",
+    "attestation_entree_aps_status",
+    "attestation_entree_aps_generated_at",
+    "attestation_entree_aps_sent_at",
+    "attestation_entree_aps_pdf_path",
+    "attestation_entree_aps_docx_path",
+    "attestation_entree_aps_pdf_token",
+    "attestation_entree_aps_last_error",
+    "attestation_fin_aps_status",
+    "attestation_fin_aps_generated_at",
+    "attestation_fin_aps_sent_at",
+    "attestation_fin_aps_pdf_path",
+    "attestation_fin_aps_docx_path",
+    "attestation_fin_aps_pdf_token",
+    "attestation_fin_aps_last_error",
+)
+
+
+def _remove_automation_generated_file(path: Any) -> None:
+    """Remove a generated automation file without ever deleting an arbitrary path."""
+    raw_path = str(path or "").strip()
+    if not raw_path:
+        return
+    try:
+        real_path = os.path.realpath(raw_path)
+        allowed_dirs = (APS_CONVOCATION_DIR, APS_ENTRY_ATTESTATION_DIR, APS_END_ATTESTATION_DIR, YOUSIGN_CONVENTION_DIR, YOUSIGN_SIGNED_DIR)
+        if any(os.path.commonpath((real_path, os.path.realpath(directory))) == os.path.realpath(directory) for directory in allowed_dirs) and os.path.isfile(real_path):
+            os.remove(real_path)
+    except (OSError, ValueError):
+        app.logger.warning("[AUTOMATIONS] impossible de supprimer le fichier généré %s", raw_path, exc_info=True)
+
+
+def _reset_trainee_automations(trainee: Dict[str, Any]) -> None:
+    """Return one trainee's document automations to their initial state."""
+    state = _yousign_state(trainee)
+    request_id = str(state.get("signature_request_id") or "").strip()
+    if request_id and _is_yousign_signature_pending(state) and _yousign_is_configured():
+        _yousign_json("POST", f"/signature_requests/{request_id}/cancel", json={
+            "reason": "other",
+            "custom_note": "Remise à zéro des automatisations depuis la fiche stagiaire.",
+        })
+
+    generated_paths = [
+        state.get("unsigned_pdf_path"), state.get("source_pdf_with_anchors_path"), state.get("unsigned_docx_path"), state.get("signed_pdf_path"),
+        *(trainee.get(key) for key in AUTOMATION_TRAINEE_FIELDS if key.endswith(("_pdf_path", "_docx_path"))),
+    ]
+    for path in generated_paths:
+        _remove_automation_generated_file(path)
+    for key in AUTOMATION_TRAINEE_FIELDS:
+        trainee.pop(key, None)
+    trainee["updated_at"] = _now_iso()
+
+
 def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str, force_new: bool = False) -> Dict[str, Any]:
     existing_state = _yousign_state(trainee)
     has_existing_request = bool(existing_state.get("signature_request_id"))
@@ -29616,6 +29696,31 @@ def admin_create_convention_signature(session_id: str, trainee_id: str):
         s.pop("stagiaires", None)
         save_data(data)
         flash(f"Signature convention : {message}", "error")
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/automations/reset")
+@admin_login_required
+@admin_write_required
+def admin_reset_trainee_automations(session_id: str, trainee_id: str):
+    data = load_data()
+    s, trainees, t = _find_session_trainee(data, session_id, trainee_id)
+    if not s or not t:
+        flash("Stagiaire introuvable.", "error")
+        abort(404)
+    if not _automation_is_enabled(s):
+        flash("Ce module est verrouillé pour ce partenaire. Activez-le dans la fiche partenaire.", "error")
+        abort(403)
+    try:
+        _reset_trainee_automations(t)
+        s["trainees"] = trainees
+        s.pop("stagiaires", None)
+        save_data(data)
+        flash("Les automatisations ont été remises à zéro. Vous pouvez reprendre la génération des documents.", "success")
+    except Exception as exc:
+        message = _sanitize_yousign_error(str(exc))
+        app.logger.exception("[AUTOMATIONS] remise à zéro impossible trainee_id=%s error=%s", trainee_id, message)
+        flash(f"Remise à zéro des automatisations : {message}", "error")
     return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id))
 
 
