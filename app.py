@@ -4939,8 +4939,8 @@ def build_cnaps_status_change_email(
     """
     return subject, html_body
 
-def _notify_cnaps_unknown_status_change(data: Dict[str, Any], *, first_name: str, last_name: str, nub: str, previous_status: str, result: Dict[str, Any]) -> bool:
-    if (previous_status or "").strip().upper() != "INCONNU" or not _cnaps_result_has_known_status(result):
+def _notify_cnaps_status_change(data: Dict[str, Any], *, first_name: str, last_name: str, nub: str, result: Dict[str, Any]) -> bool:
+    if not _cnaps_result_has_known_status(result):
         return False
     key = _cnaps_status_change_key(last_name, nub)
     if not key or key == "|":
@@ -4950,11 +4950,9 @@ def _notify_cnaps_unknown_status_change(data: Dict[str, Any], *, first_name: str
     if not isinstance(sent, dict):
         sent = {}
         data["cnaps_status_change_notifications"] = sent
-    # This alert is specifically for the first transition from an unknown
-    # dossier to a known one.  The public directory can return the same title
-    # with slightly different formatting (or temporarily no title at all), so
-    # comparing its volatile signature could resend the same alert later.
-    if isinstance(sent.get(key), dict):
+    # Do not resend an alert for the exact same CNAPS status.  A later,
+    # genuinely different status is nevertheless a new change to notify.
+    if isinstance(sent.get(key), dict) and sent[key].get("signature") == signature:
         return False
     first_name = str(first_name or "").strip() or _cnaps_trainee_first_name(data, last_name=last_name, nub=nub)
     enrollments = _cnaps_trainee_enrollments(data, first_name=first_name, last_name=last_name, nub=nub)
@@ -4978,7 +4976,7 @@ def _cnaps_public_annuaire_status_key(last_name: str, nub: str) -> str:
 
 
 def _record_cnaps_public_annuaire_status(data: Dict[str, Any], *, first_name: str, last_name: str, nub: str, result: Dict[str, Any]) -> bool:
-    """Record a successful annuaire check and notify only on an actual transition.
+    """Record a successful annuaire check and notify only on an actual change.
 
     The CNAPSV3 request status (for example ``TRANSMIS``) is unrelated to the
     public-annuaire result.  The old client-side comparison therefore could
@@ -4993,7 +4991,19 @@ def _record_cnaps_public_annuaire_status(data: Dict[str, Any], *, first_name: st
         data["cnaps_public_annuaire_statuses"] = statuses
     signature = _cnaps_result_signature(result)
     known = bool(signature)
-    previous = statuses.get(key) if isinstance(statuses.get(key), dict) else {}
+    previous = statuses.get(key) if isinstance(statuses.get(key), dict) else None
+    # The first successful check is a baseline, not a change.  This is
+    # especially important when monitoring starts after a dossier has already
+    # been updated on the CNAPS site: discovering its current status weeks
+    # later must never produce a retrospective email.
+    if previous is None:
+        statuses[key] = {
+            "known": known,
+            "signature": signature,
+            "checked_at": _now_iso(),
+        }
+        return False
+
     previously_known = bool(previous.get("known"))
     checked_at = _now_iso()
     # A successful HTTP response with no title is not evidence that a title
@@ -5013,14 +5023,16 @@ def _record_cnaps_public_annuaire_status(data: Dict[str, Any], *, first_name: st
         "checked_at": checked_at,
         **({"last_empty_result_at": previous["last_empty_result_at"]} if previous.get("last_empty_result_at") else {}),
     }
-    if previously_known or not known:
+    if not known:
         return False
-    return _notify_cnaps_unknown_status_change(
+    previous_signature = str(previous.get("signature") or "")
+    if previously_known and previous_signature == signature:
+        return False
+    return _notify_cnaps_status_change(
         data,
         first_name=first_name,
         last_name=last_name,
         nub=nub,
-        previous_status="INCONNU",
         result=result,
     )
 

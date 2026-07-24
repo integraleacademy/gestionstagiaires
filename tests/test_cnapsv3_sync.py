@@ -1734,12 +1734,11 @@ class CnapsTrackingTests(unittest.TestCase):
         original_email = gestion_app.brevo_send_email
         gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append(args) or {"ok": True}
         try:
-            notified = gestion_app._notify_cnaps_unknown_status_change(
+            notified = gestion_app._notify_cnaps_status_change(
                 data,
                 first_name="",
                 last_name="DOE",
                 nub="1234567",
-                previous_status="INCONNU",
                 result={"active_titles": [{"display_status": "AP SH ACTIF"}]},
             )
         finally:
@@ -2168,8 +2167,8 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertEqual(len(sent), 1)
         self.assertEqual(response.get_json()["pending_status_changes_count"], 1)
 
-    def test_background_monitor_checks_tracked_rows_and_notifies(self):
-        data = {"cnaps_public_annuaire_statuses": {"DOE|1234567": {"known": False, "signature": ""}}}
+    def test_background_monitor_baselines_existing_status_without_notifying(self):
+        data = {"cnaps_public_annuaire_statuses": {}}
         sent = []
         original_tracking = gestion_app.fetch_cnapsv3_tracking_requests
         original_fetch = gestion_app.fetch_cnaps_public_annuaire
@@ -2193,8 +2192,40 @@ class CnapsTrackingTests(unittest.TestCase):
             gestion_app.brevo_send_email = original_email
             gestion_app.CNAPS_MONITOR_REQUEST_DELAY_SECONDS = original_delay
 
-        self.assertEqual(result, {"checked": 1, "notified": 1, "errors": 0})
+        self.assertEqual(result, {"checked": 1, "notified": 0, "errors": 0})
+        self.assertEqual(sent, [])
+        self.assertEqual(
+            data["cnaps_public_annuaire_statuses"]["DOE|1234567"]["signature"],
+            "AP SH ACTIF",
+        )
+
+    def test_public_annuaire_notifies_when_a_known_status_changes(self):
+        data = {
+            "cnaps_public_annuaire_statuses": {
+                "DOE|1234567": {"known": True, "signature": "AP SH ACTIF"},
+            },
+            "cnaps_status_change_notifications": {},
+        }
+        sent = []
+        original_email = gestion_app.brevo_send_email
+        gestion_app.brevo_send_email = lambda *args, **kwargs: sent.append(args) or {"ok": True}
+        try:
+            notified = gestion_app._record_cnaps_public_annuaire_status(
+                data,
+                first_name="Jane",
+                last_name="DOE",
+                nub="1234567",
+                result={"check_status": "success", "active_titles": [{"display_status": "AP SH REFUSÉ"}]},
+            )
+        finally:
+            gestion_app.brevo_send_email = original_email
+
+        self.assertTrue(notified)
         self.assertEqual(len(sent), 1)
+        self.assertEqual(
+            data["cnaps_status_change_notifications"]["DOE|1234567"]["signature"],
+            "AP SH REFUSÉ",
+        )
 
     def test_public_annuaire_empty_response_does_not_reset_known_status_or_resend(self):
         data = {
