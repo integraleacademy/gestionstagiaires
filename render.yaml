@@ -18,6 +18,10 @@ services:
         value: https://thirdparty.qonto.com
       - key: QONTO_OAUTH_REDIRECT_URI
         value: https://gestionstagiaires-r5no.onrender.com/api/qonto/oauth/callback
+      - key: QONTO_WEBHOOK_SECRET
+        sync: false
+      - key: QONTO_WEBHOOK_CALLBACK_URL
+        value: https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto
       - key: PUBLIC_STUDENT_PORTAL_BASE
         value: https://gestionstagiaires-r5no.onrender.com
       - key: CNAPS_MONITOR_TOKEN

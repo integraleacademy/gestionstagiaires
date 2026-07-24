@@ -1341,6 +1341,11 @@ def serialize_qonto_invoice_for_frontend(invoice: Dict[str, Any]) -> Dict[str, A
 
 def normalize_qonto_invoice_storage_fields(invoice: Dict[str, Any]) -> None:
     serialized = serialize_qonto_invoice_for_frontend(invoice)
+    # ``control`` is a deliberate local safety state (for a missing or
+    # unverifiable remote invoice), not a Qonto payment state.  Do not erase it
+    # merely because the normalizer has no fresh remote payment amount.
+    if invoice.get("invoiceStatus") == "control" or invoice.get("paymentStatus") == "control":
+        serialized["payment_status"] = "control"
     invoice["qonto_total_amount_cents"] = serialized["total_amount_cents"]
     invoice["qonto_amount_paid_cents"] = serialized["paid_amount_cents"]
     invoice["qonto_remaining_amount_cents"] = serialized["remaining_amount_cents"]
@@ -1476,7 +1481,9 @@ def syncQontoInvoiceStatus(invoiceId: str) -> Optional[Dict[str, Any]]:
     return inv
 
 def _qonto_webhook_callback_url() -> str:
-    return os.environ.get("QONTO_WEBHOOK_CALLBACK_URL") or "https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto"
+    # Keep a single stable public target.  Qonto must be configured with this
+    # exact URL (the legacy /api/qonto/webhooks route remains an inbound alias).
+    return "https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto"
 
 
 QONTO_WEBHOOK_EVENT_TYPES = [
@@ -1496,15 +1503,77 @@ def ensure_qonto_webhook_subscription() -> Dict[str, Any]:
     configured_id = os.environ.get("QONTO_WEBHOOK_SUBSCRIPTION_ID", "").strip()
     subscriptions_payload = _qonto_request("GET", "/v2/webhook_subscriptions")
     subscriptions = subscriptions_payload.get("webhook_subscriptions") or subscriptions_payload.get("subscriptions") or []
-    for sub in subscriptions if isinstance(subscriptions, list) else []:
-        types = sub.get("event_types") or sub.get("types") or []
-        url = sub.get("url") or sub.get("callback_url") or sub.get("target_url")
-        includes_required_events = set(QONTO_WEBHOOK_EVENT_TYPES).issubset({str(t) for t in types})
-        if (configured_id and str(sub.get("id")) == configured_id and includes_required_events) or (url == callback_url and includes_required_events):
-            return {"ok": True, "created": False, "subscription": sub, "callback_url": callback_url}
+    subscriptions = subscriptions if isinstance(subscriptions, list) else []
+    configured = next((sub for sub in subscriptions if configured_id and str(sub.get("id")) == configured_id), None)
+    canonical = next((sub for sub in subscriptions if (sub.get("url") or sub.get("callback_url") or sub.get("target_url")) == callback_url), None)
+    reusable = canonical or configured or next(
+        (sub for sub in subscriptions if set(QONTO_WEBHOOK_EVENT_TYPES).issubset({str(t) for t in (sub.get("event_types") or sub.get("types") or [])})),
+        None,
+    )
+    if reusable:
+        types = {str(t) for t in (reusable.get("event_types") or reusable.get("types") or [])}
+        missing_events = [event for event in QONTO_WEBHOOK_EVENT_TYPES if event not in types]
+        current_url = reusable.get("url") or reusable.get("callback_url") or reusable.get("target_url")
+        if not missing_events and current_url == callback_url:
+            return {"ok": True, "created": False, "updated": False, "subscription": reusable, "callback_url": callback_url}
+        # Repair the existing subscription instead of creating a second one.
+        subscription_id = str(reusable.get("id") or "").strip()
+        if not subscription_id:
+            raise RuntimeError("Souscription Qonto existante sans identifiant, mise à jour impossible")
+        payload = {"webhook_subscription": {"url": callback_url, "event_types": list(dict.fromkeys([*(reusable.get("event_types") or reusable.get("types") or []), *QONTO_WEBHOOK_EVENT_TYPES]))}}
+        updated = _qonto_request("PATCH", f"/v2/webhook_subscriptions/{quote(subscription_id, safe='')}", payload)
+        return {"ok": True, "created": False, "updated": True, "subscription": updated.get("webhook_subscription") or updated, "callback_url": callback_url}
     payload = {"webhook_subscription": {"url": callback_url, "event_types": QONTO_WEBHOOK_EVENT_TYPES}}
     created = _qonto_request("POST", "/v2/webhook_subscriptions", payload)
-    return {"ok": True, "created": True, "subscription": created.get("webhook_subscription") or created, "callback_url": callback_url}
+    return {"ok": True, "created": True, "updated": False, "subscription": created.get("webhook_subscription") or created, "callback_url": callback_url}
+
+
+QONTO_WEBHOOK_HISTORY_LIMIT = 50
+
+
+def _qonto_webhook_resource_id(item: Dict[str, Any]) -> str:
+    return str(item.get("id") or item.get("qonto_invoice_id") or item.get("direct_debit_mandate_id") or item.get("direct_debit_collection_id") or "")
+
+
+def _record_qonto_webhook(data: Dict[str, Any], event: str, item: Dict[str, Any], result: str, error: str = "") -> None:
+    """Persist a small, secret-free delivery history for the admin diagnostics."""
+    entries = data.setdefault("qonto_webhook_history", [])
+    if not isinstance(entries, list):
+        entries = []
+        data["qonto_webhook_history"] = entries
+    entries.insert(0, {"received_at": _now_iso(), "event": str(event or "unknown"), "resource_id": _qonto_webhook_resource_id(item), "result": result, "error": _sanitize_qonto_error(error)[:500] if error else ""})
+    del entries[QONTO_WEBHOOK_HISTORY_LIMIT:]
+
+
+def qonto_webhook_status() -> Dict[str, Any]:
+    data = load_data()
+    history = data.get("qonto_webhook_history") if isinstance(data.get("qonto_webhook_history"), list) else []
+    last = history[0] if history else {}
+    status = {
+        "api_connected": False, "webhook_secret_configured": bool(_qonto_webhook_secret()),
+        "callback_url": _qonto_webhook_callback_url(), "subscription_found": False,
+        "subscription_id": "", "event_types": [], "missing_events": list(QONTO_WEBHOOK_EVENT_TYPES),
+        "last_received_at": last.get("received_at") or "", "last_event": last.get("event") or "",
+        "last_result": last.get("result") or "", "last_error": last.get("error") or "",
+    }
+    if not _qonto_is_configured():
+        status["api_error"] = "Qonto n’est pas connecté"
+        return status
+    try:
+        connected, status_code = test_qonto_connection()
+        if not connected:
+            status["api_error"] = f"Connexion Qonto refusée (HTTP {status_code})"
+            return status
+        status["api_connected"] = True
+        payload = _qonto_request("GET", "/v2/webhook_subscriptions")
+        subscriptions = payload.get("webhook_subscriptions") or payload.get("subscriptions") or []
+        canonical = next((sub for sub in subscriptions if isinstance(sub, dict) and (sub.get("url") or sub.get("callback_url") or sub.get("target_url")) == status["callback_url"]), None)
+        if canonical:
+            event_types = [str(value) for value in (canonical.get("event_types") or canonical.get("types") or [])]
+            status.update({"subscription_found": True, "subscription_id": str(canonical.get("id") or ""), "event_types": event_types, "missing_events": [event for event in QONTO_WEBHOOK_EVENT_TYPES if event not in event_types]})
+    except Exception as exc:
+        status["api_error"] = _sanitize_qonto_error(str(exc))
+    return status
 
 
 def _verify_qonto_webhook_signature(raw_body: bytes) -> bool:
@@ -16293,6 +16362,12 @@ def admin_qonto_settings():
     )
 
 
+@app.get("/api/admin/qonto/webhook-status")
+@admin_login_required
+def api_admin_qonto_webhook_status():
+    return jsonify({"ok": True, **qonto_webhook_status()})
+
+
 @app.get("/api/admin/qonto/bank-accounts")
 @admin_login_required
 @admin_write_required
@@ -28386,6 +28461,11 @@ def _sync_billing_line_with_qonto(data: Dict[str, Any], line: Dict[str, Any]) ->
             return True, 'Facture Qonto introuvable ou supprimée côté Qonto : à contrôler'
         _billing_log(line, 'Erreur API synchronisation facture', 'error', _sanitize_qonto_error(str(exc)), invoice_id)
         line['qontoSyncError'] = _sanitize_qonto_error(str(exc))
+        # A line already flagged for manual verification must never be silently
+        # downgraded to unpaid when the remote verification cannot be completed.
+        if line.get('invoiceStatus') == 'control' or line.get('paymentStatus') == 'control':
+            line['invoiceStatus'] = 'control'
+            line['paymentStatus'] = 'control'
         _save_billing_line(data, line)
         raise
 
@@ -29261,22 +29341,25 @@ def api_admin_qonto_webhook_subscription_ensure():
 @app.post("/api/webhooks/qonto")
 def api_qonto_webhooks():
     raw_body = request.get_data(cache=True)
-    if not _verify_qonto_webhook_signature(raw_body):
-        return jsonify({"ok": False, "error": "invalid_signature"}), 401
     payload = request.get_json(silent=True) or {}
     event = (payload.get("event") or payload.get("type") or "").strip()
-    normalized_event = event.lower().replace("_", "-")
     item = payload.get("data") if isinstance(payload.get("data"), dict) else {}
+    if not _verify_qonto_webhook_signature(raw_body):
+        data = load_data(); _record_qonto_webhook(data, event, item, "rejected", "invalid_signature"); save_data(data)
+        return jsonify({"ok": False, "error": "invalid_signature"}), 401
+    normalized_event = event.lower().replace("_", "-")
     if "sepa-direct-debit-mandate" in normalized_event:
-        data = load_data(); updated = _apply_qonto_mandate_webhook(data, item); save_data(data)
+        data = load_data(); updated = _apply_qonto_mandate_webhook(data, item); _record_qonto_webhook(data, event, item, "updated" if updated else "ignored"); save_data(data)
         return jsonify({"ok": True, "updated": updated})
     if "sepa-direct-debit-collection" in normalized_event:
-        data = load_data(); updated = _apply_qonto_collection_webhook(data, item); save_data(data)
+        data = load_data(); updated = _apply_qonto_collection_webhook(data, item); _record_qonto_webhook(data, event, item, "updated" if updated else "ignored"); save_data(data)
         return jsonify({"ok": True, "updated": updated})
     if event and "client-invoices" not in event and "client_invoice" not in event:
+        data = load_data(); _record_qonto_webhook(data, event, item, "ignored"); save_data(data)
         return jsonify({"ok": True, "ignored": True})
     invoice_id = item.get("id") or item.get("qonto_invoice_id")
     if not invoice_id:
+        data = load_data(); _record_qonto_webhook(data, event, item, "error", "missing_invoice_id"); save_data(data)
         return jsonify({"ok": False, "error": "missing_invoice_id"}), 400
     data = load_data()
     try:
@@ -29297,6 +29380,7 @@ def api_qonto_webhooks():
         _apply_qonto_invoice_status(inv, invoice_payload)
         sess["trainees"] = trainees
         updated = True
+    _record_qonto_webhook(data, event, item, "updated" if updated else "ignored")
     save_data(data)
     return jsonify({"ok": True, "updated": updated})
 
