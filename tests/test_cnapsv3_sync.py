@@ -2196,6 +2196,31 @@ class CnapsTrackingTests(unittest.TestCase):
         self.assertEqual(result, {"checked": 1, "notified": 1, "errors": 0})
         self.assertEqual(len(sent), 1)
 
+    def test_public_annuaire_empty_response_does_not_reset_known_status_or_resend(self):
+        data = {
+            "cnaps_public_annuaire_statuses": {
+                "DOE|1234567": {"known": True, "signature": "AP SH ACTIF", "checked_at": "2026-07-23T10:00:00+00:00"},
+            },
+            "cnaps_status_change_notifications": {
+                "DOE|1234567": {"signature": "AP SH ACTIF", "sent_at": "2026-07-23T10:00:00+00:00"},
+            },
+        }
+
+        empty_notified = gestion_app._record_cnaps_public_annuaire_status(
+            data, first_name="Jane", last_name="DOE", nub="1234567",
+            result={"check_status": "success", "active_titles": []},
+        )
+        known_notified = gestion_app._record_cnaps_public_annuaire_status(
+            data, first_name="Jane", last_name="DOE", nub="1234567",
+            result={"check_status": "success", "active_titles": [{"display_status": "AP SH ACTIF"}]},
+        )
+
+        self.assertFalse(empty_notified)
+        self.assertFalse(known_notified)
+        self.assertTrue(data["cnaps_public_annuaire_statuses"]["DOE|1234567"]["known"])
+        self.assertEqual(data["cnaps_public_annuaire_statuses"]["DOE|1234567"]["signature"], "AP SH ACTIF")
+        self.assertIn("last_empty_result_at", data["cnaps_public_annuaire_statuses"]["DOE|1234567"])
+
     def test_cnaps_public_annuaire_does_not_notify_duplicate_signature(self):
         client = gestion_app.app.test_client()
         with client.session_transaction() as sess:

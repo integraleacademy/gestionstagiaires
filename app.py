@@ -4950,7 +4950,11 @@ def _notify_cnaps_unknown_status_change(data: Dict[str, Any], *, first_name: str
     if not isinstance(sent, dict):
         sent = {}
         data["cnaps_status_change_notifications"] = sent
-    if sent.get(key, {}).get("signature") == signature:
+    # This alert is specifically for the first transition from an unknown
+    # dossier to a known one.  The public directory can return the same title
+    # with slightly different formatting (or temporarily no title at all), so
+    # comparing its volatile signature could resend the same alert later.
+    if isinstance(sent.get(key), dict):
         return False
     first_name = str(first_name or "").strip() or _cnaps_trainee_first_name(data, last_name=last_name, nub=nub)
     enrollments = _cnaps_trainee_enrollments(data, first_name=first_name, last_name=last_name, nub=nub)
@@ -4991,7 +4995,24 @@ def _record_cnaps_public_annuaire_status(data: Dict[str, Any], *, first_name: st
     known = bool(signature)
     previous = statuses.get(key) if isinstance(statuses.get(key), dict) else {}
     previously_known = bool(previous.get("known"))
-    statuses[key] = {"known": known, "signature": signature, "checked_at": _now_iso()}
+    checked_at = _now_iso()
+    # A successful HTTP response with no title is not evidence that a title
+    # previously found by the directory disappeared.  Keeping the last known
+    # state avoids treating a transient/partial annuaire response as a new
+    # ``INCONNU → connu`` transition on the next refresh.
+    if previously_known and not known:
+        statuses[key] = {
+            **previous,
+            "checked_at": checked_at,
+            "last_empty_result_at": checked_at,
+        }
+        return False
+    statuses[key] = {
+        "known": known,
+        "signature": signature,
+        "checked_at": checked_at,
+        **({"last_empty_result_at": previous["last_empty_result_at"]} if previous.get("last_empty_result_at") else {}),
+    }
     if previously_known or not known:
         return False
     return _notify_cnaps_unknown_status_change(
