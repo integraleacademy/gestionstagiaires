@@ -522,6 +522,16 @@ def _qonto_oauth_missing_scopes(data: Optional[Dict[str, Any]] = None) -> List[s
     return sorted(required - granted)
 
 
+def _qonto_oauth_has_scope(scope: str, data: Optional[Dict[str, Any]] = None) -> bool:
+    """Never infer a granted scope from the presence of an old OAuth token."""
+    data = data or load_data()
+    settings = _qonto_oauth_settings(data)
+    raw = settings.get("scopes") or settings.get("scope") or []
+    granted = ({item.strip() for item in raw.replace(",", " ").split() if item.strip()}
+               if isinstance(raw, str) else {str(item).strip() for item in raw if str(item).strip()})
+    return scope in granted
+
+
 def _ensure_qonto_oauth_ready(data: Optional[Dict[str, Any]] = None) -> None:
     data = data or load_data()
     if not _qonto_oauth_connected(data):
@@ -568,7 +578,7 @@ def _qonto_is_configured() -> bool:
 
 def _sanitize_qonto_error(message: str) -> str:
     sanitized = str(message or "")
-    secrets_to_mask = [_qonto_login(), _qonto_secret_key(), _qonto_oauth_client_secret()]
+    secrets_to_mask = [_qonto_login(), _qonto_secret_key(), _qonto_oauth_client_secret(), _qonto_webhook_secret() if "_qonto_webhook_secret" in globals() else ""]
     if "load_data" in globals():
         try:
             data = load_data()
@@ -795,9 +805,19 @@ def _contains_invalid_qonto_search_marker(value: Any) -> bool:
 
 
 def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    if not _qonto_is_configured():
-        raise QontoConfigurationError("Qonto n’est pas connecté")
     endpoint = path if path.startswith("/") else f"/{path}"
+    is_webhook_endpoint = endpoint.startswith("/v2/webhook_subscriptions")
+    is_sepa_endpoint = endpoint.startswith("/v2/sepa/direct_debit")
+    # Qonto explicitly requires OAuth2 for webhook subscriptions.  Do not let
+    # the API-key fallback leak onto these endpoints (it returns HTTP 401).
+    if is_webhook_endpoint:
+        if not _qonto_oauth_connected():
+            raise QontoConfigurationError(QONTO_OAUTH_REQUIRED_MESSAGE)
+        if not _qonto_oauth_has_scope("webhook"):
+            raise QontoConfigurationError("La connexion OAuth actuelle ne possède pas l’autorisation webhook. Réinitialisez puis reconnectez Qonto.")
+        _ensure_qonto_oauth_ready()
+    elif not is_sepa_endpoint and not _qonto_is_configured():
+        raise QontoConfigurationError("Qonto n’est pas connecté")
     cleaned_payload = cleanQontoPayload(payload) if payload is not None else None
     if _contains_invalid_qonto_search_marker(endpoint) or _contains_invalid_qonto_search_marker(params) or _contains_invalid_qonto_search_marker(cleaned_payload):
         app.logger.error("[QONTO] invalid client search blocked method=%s path=%s params=%s", method.upper(), endpoint, params)
@@ -809,12 +829,13 @@ def _qonto_request(method: str, path: str, payload: Optional[Dict[str, Any]] = N
         headers = get_qonto_headers()
         if cleaned_payload is not None:
             headers = {**headers, "Content-Type": "application/json"}
-        if endpoint.startswith("/v2/sepa/direct_debit"):
+        if is_sepa_endpoint or is_webhook_endpoint:
             headers = {"Authorization": f"Bearer {_qonto_oauth_bearer_token()}", "Content-Type": "application/json"}
         response = requests.request(method.upper(), url, headers=headers, json=cleaned_payload if cleaned_payload is not None else None, params=params, timeout=20)
         raw_body = response.text or ""
         trace_id = _qonto_response_trace_id(response, raw_body)
-        app.logger.info("[QONTO] api_call method=%s url=%s payload=%s status=%s trace_id=%s body=%s", method.upper(), called_url, json.dumps(cleaned_payload, ensure_ascii=False) if cleaned_payload is not None else None, response.status_code, trace_id or "", raw_body[:4000])
+        safe_payload = _sanitize_qonto_error(json.dumps(cleaned_payload, ensure_ascii=False)) if cleaned_payload is not None else None
+        app.logger.info("[QONTO] api_call method=%s url=%s payload=%s status=%s trace_id=%s body=%s", method.upper(), called_url, safe_payload, response.status_code, trace_id or "", _sanitize_qonto_error(raw_body[:4000]))
         if not response.ok:
             if response.status_code == 404:
                 raise QontoNotFoundError(response.status_code, raw_body, trace_id)
@@ -1258,7 +1279,16 @@ def _qonto_collection_items(response: Dict[str, Any]) -> List[Dict[str, Any]]:
     return []
 
 def _qonto_webhook_secret() -> str:
-    return _qonto_secret(os.environ.get("QONTO_WEBHOOK_SECRET") or os.environ.get("QONTO_WEBHOOK_SIGNATURE_SECRET") or "")
+    return _qonto_secret(os.environ.get("QONTO_WEBHOOK_SECRET") or "")
+
+
+def _require_qonto_webhook_secret() -> str:
+    secret = _qonto_webhook_secret()
+    if not secret:
+        raise QontoConfigurationError("QONTO_WEBHOOK_SECRET est requis avant d’activer le webhook Qonto.")
+    if not 32 <= len(secret) <= 128:
+        raise QontoConfigurationError("QONTO_WEBHOOK_SECRET doit comporter entre 32 et 128 caractères.")
+    return secret
 
 
 def money_value_to_cents(value: Any) -> int:
@@ -1483,13 +1513,13 @@ def syncQontoInvoiceStatus(invoiceId: str) -> Optional[Dict[str, Any]]:
 def _qonto_webhook_callback_url() -> str:
     # Keep a single stable public target.  Qonto must be configured with this
     # exact URL (the legacy /api/qonto/webhooks route remains an inbound alias).
-    return "https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto"
+    return os.environ.get("QONTO_WEBHOOK_CALLBACK_URL", "https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto").strip()
 
 
 QONTO_WEBHOOK_EVENT_TYPES = [
     "v1/client-invoices",
-    "v2/sepa-direct-debit-mandates",
-    "v2/sepa-direct-debit-collections",
+    "v1/sepa-direct-debit-mandates",
+    "v1/sepa-direct-debit-collections",
 ]
 
 
@@ -1500,6 +1530,7 @@ def ensure_qonto_webhook_subscription() -> Dict[str, Any]:
     create duplicate subscriptions.
     """
     callback_url = _qonto_webhook_callback_url()
+    webhook_secret = _require_qonto_webhook_secret()
     configured_id = os.environ.get("QONTO_WEBHOOK_SUBSCRIPTION_ID", "").strip()
     subscriptions_payload = _qonto_request("GET", "/v2/webhook_subscriptions")
     subscriptions = subscriptions_payload.get("webhook_subscriptions") or subscriptions_payload.get("subscriptions") or []
@@ -1520,10 +1551,10 @@ def ensure_qonto_webhook_subscription() -> Dict[str, Any]:
         subscription_id = str(reusable.get("id") or "").strip()
         if not subscription_id:
             raise RuntimeError("Souscription Qonto existante sans identifiant, mise à jour impossible")
-        payload = {"webhook_subscription": {"url": callback_url, "event_types": list(dict.fromkeys([*(reusable.get("event_types") or reusable.get("types") or []), *QONTO_WEBHOOK_EVENT_TYPES]))}}
-        updated = _qonto_request("PATCH", f"/v2/webhook_subscriptions/{quote(subscription_id, safe='')}", payload)
+        payload = {"webhook_subscription": {"url": callback_url, "event_types": list(dict.fromkeys([*(reusable.get("event_types") or reusable.get("types") or []), *QONTO_WEBHOOK_EVENT_TYPES])), "secret": webhook_secret}}
+        updated = _qonto_request("PUT", f"/v2/webhook_subscriptions/{quote(subscription_id, safe='')}", payload)
         return {"ok": True, "created": False, "updated": True, "subscription": updated.get("webhook_subscription") or updated, "callback_url": callback_url}
-    payload = {"webhook_subscription": {"url": callback_url, "event_types": QONTO_WEBHOOK_EVENT_TYPES}}
+    payload = {"webhook_subscription": {"url": callback_url, "event_types": QONTO_WEBHOOK_EVENT_TYPES, "secret": webhook_secret}}
     created = _qonto_request("POST", "/v2/webhook_subscriptions", payload)
     return {"ok": True, "created": True, "updated": False, "subscription": created.get("webhook_subscription") or created, "callback_url": callback_url}
 
@@ -1550,21 +1581,35 @@ def qonto_webhook_status() -> Dict[str, Any]:
     history = data.get("qonto_webhook_history") if isinstance(data.get("qonto_webhook_history"), list) else []
     last = history[0] if history else {}
     status = {
-        "api_connected": False, "webhook_secret_configured": bool(_qonto_webhook_secret()),
+        "configuration_present": bool(_qonto_is_configured()), "api_connected": False,
+        "oauth_connected": False, "webhook_scope_authorized": False,
+        "webhook_secret_configured": bool(_qonto_webhook_secret()),
         "callback_url": _qonto_webhook_callback_url(), "subscription_found": False,
         "subscription_id": "", "event_types": [], "missing_events": list(QONTO_WEBHOOK_EVENT_TYPES),
         "last_received_at": last.get("received_at") or "", "last_event": last.get("event") or "",
         "last_result": last.get("result") or "", "last_error": last.get("error") or "",
     }
-    if not _qonto_is_configured():
-        status["api_error"] = "Qonto n’est pas connecté"
-        return status
-    try:
+    if _qonto_is_configured():
+      try:
         connected, status_code = test_qonto_connection()
         if not connected:
             status["api_error"] = f"Connexion Qonto refusée (HTTP {status_code})"
-            return status
-        status["api_connected"] = True
+        else:
+            status["api_connected"] = True
+      except Exception as exc:
+        status["api_error"] = _sanitize_qonto_error(str(exc))
+    else:
+        status["api_error"] = "Configuration API Key Qonto absente"
+    data = load_data()
+    status["oauth_connected"] = _qonto_oauth_connected(data)
+    status["webhook_scope_authorized"] = status["oauth_connected"] and _qonto_oauth_has_scope("webhook", data)
+    if not status["oauth_connected"]:
+        status["oauth_error"] = QONTO_OAUTH_REQUIRED_MESSAGE
+        return status
+    if not status["webhook_scope_authorized"]:
+        status["oauth_error"] = "La connexion OAuth actuelle ne possède pas l’autorisation webhook. Réinitialisez puis reconnectez Qonto."
+        return status
+    try:
         payload = _qonto_request("GET", "/v2/webhook_subscriptions")
         subscriptions = payload.get("webhook_subscriptions") or payload.get("subscriptions") or []
         canonical = next((sub for sub in subscriptions if isinstance(sub, dict) and (sub.get("url") or sub.get("callback_url") or sub.get("target_url")) == status["callback_url"]), None)
@@ -1572,7 +1617,10 @@ def qonto_webhook_status() -> Dict[str, Any]:
             event_types = [str(value) for value in (canonical.get("event_types") or canonical.get("types") or [])]
             status.update({"subscription_found": True, "subscription_id": str(canonical.get("id") or ""), "event_types": event_types, "missing_events": [event for event in QONTO_WEBHOOK_EVENT_TYPES if event not in event_types]})
     except Exception as exc:
-        status["api_error"] = _sanitize_qonto_error(str(exc))
+        status["webhook_error"] = _sanitize_qonto_error(str(exc))
+        if isinstance(exc, QontoApiError) and exc.status_code in (401, 403):
+            status["oauth_connected"] = False
+            status["oauth_error"] = f"Connexion OAuth refusée (HTTP {exc.status_code})"
     return status
 
 
@@ -16351,8 +16399,10 @@ def admin_afc_export():
 def admin_qonto_settings():
     data = load_data()
     qonto_settings = data.get("qonto_settings") if isinstance(data.get("qonto_settings"), dict) else {}
-    connected = bool(_qonto_is_configured())
-    message = "Configuration présente, testez la connexion Qonto." if connected else QONTO_STATUS_NOT_CONFIGURED_MESSAGE
+    # Configuration is not a successful connection: only a live test may show
+    # the green badge, preventing a stale 401 from being presented as connected.
+    connected = False
+    message = "Configuration présente, testez la connexion Qonto." if _qonto_is_configured() else QONTO_STATUS_NOT_CONFIGURED_MESSAGE
     last_success_at = str(qonto_settings.get("last_success_at") or "")
     return render_template(
         "admin_qonto_settings.html",

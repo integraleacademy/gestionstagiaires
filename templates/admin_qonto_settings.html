@@ -83,7 +83,7 @@
       <p class="qonto-muted">Les identifiants Qonto restent uniquement dans les variables d’environnement Render et les appels API sont effectués côté backend.</p>
       <ul class="qonto-secure-list">
         <li>Aucun secret Qonto dans le JavaScript frontend.</li>
-        <li>Le Bearer OAuth est utilisé uniquement pour les routes SEPA Direct Debit.</li>
+        <li>Le Bearer OAuth de production est utilisé pour les routes SEPA et les souscriptions webhook ; aucune API Key n’est envoyée aux webhooks.</li>
         <li>Les détails techniques restent dans les logs serveur masqués.</li>
       </ul>
     </aside>
@@ -91,7 +91,10 @@
       <h2 id="qontoSyncTitle" style="margin-top:0;">État de la synchronisation Qonto</h2>
       <p class="qonto-muted">Le webhook est le mécanisme principal. La vérification ne révèle jamais de secret.</p>
       <dl class="qonto-sync-grid">
-        <dt>Connexion API Qonto</dt><dd id="webhookApiStatus">Vérification…</dd>
+        <dt>Configuration présente</dt><dd id="webhookConfigurationStatus">Vérification…</dd>
+        <dt>Connexion API Key fonctionnelle</dt><dd id="webhookApiStatus">Vérification…</dd>
+        <dt>Connexion OAuth fonctionnelle</dt><dd id="webhookOauthStatus">Vérification…</dd>
+        <dt>Scope webhook autorisé</dt><dd id="webhookScopeStatus">Vérification…</dd>
         <dt>Secret webhook configuré</dt><dd id="webhookSecretStatus">Vérification…</dd>
         <dt>URL de callback</dt><dd id="webhookCallback">—</dd>
         <dt>Souscription Qonto trouvée</dt><dd id="webhookSubscription">—</dd>
@@ -124,7 +127,10 @@
     try {
       const res=await fetch('/api/admin/qonto/webhook-status',{headers:{'Accept':'application/json'}});
       const p=await res.json();
+      setText('webhookConfigurationStatus',p.configuration_present?'✅ Oui':'⚪ Non');
       setText('webhookApiStatus',p.api_connected?'✅ Active':`⚪ Inactive${p.api_error?` — ${p.api_error}`:''}`);
+      setText('webhookOauthStatus',p.oauth_connected?'✅ Active':`⚪ Inactive${p.oauth_error?` — ${p.oauth_error}`:''}`);
+      setText('webhookScopeStatus',p.webhook_scope_authorized?'✅ Oui':`⚪ Non${p.oauth_error?` — ${p.oauth_error}`:''}`);
       setText('webhookSecretStatus',p.webhook_secret_configured?'✅ Oui':'⚠️ Non');
       setText('webhookCallback',p.callback_url); setText('webhookSubscription',p.subscription_found?'✅ Oui':'⚪ Non');
       setText('webhookSubscriptionId',p.subscription_id); setText('webhookEvents',(p.event_types||[]).join(', '));
@@ -152,7 +158,10 @@
     try {
       const res = await fetch('/api/qonto/oauth/status', {headers:{'Accept':'application/json'}});
       const payload = await res.json();
-      oauthMessage.textContent = payload.message || (payload.connected ? 'OAuth Qonto : connecté production' : 'OAuth Qonto : non connecté');
+      const hasWebhookScope = (payload.scopes || []).includes('webhook');
+      oauthMessage.textContent = !hasWebhookScope && payload.connected
+        ? 'La connexion OAuth actuelle ne possède pas l’autorisation webhook. Réinitialisez puis reconnectez Qonto.'
+        : (payload.message || (payload.connected ? 'OAuth Qonto : connecté production' : 'OAuth Qonto : non connecté'));
       oauthMessage.style.color = payload.connected ? '#166534' : (payload.incompatible ? '#b45309' : '#991b1b');
       oauthMessage.style.fontWeight = '800';
     } catch (e) {
