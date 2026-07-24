@@ -25,6 +25,8 @@
   .qonto-secure-list{margin:12px 0 0;padding-left:20px;color:#475569;}
   .qonto-oauth-box{margin-top:18px;padding:16px;border:1px solid #bfdbfe;border-radius:16px;background:#eff6ff;}
   .qonto-oauth-box strong{color:#1d4ed8;}
+  .qonto-sync-grid{display:grid;grid-template-columns:minmax(150px,1fr) minmax(220px,2fr);gap:10px 16px;margin-top:14px;align-items:start;}
+  .qonto-sync-grid dt{font-weight:800;color:#334155;}.qonto-sync-grid dd{margin:0;color:#475569;word-break:break-word;}
   @media(max-width:840px){.qonto-settings-head{flex-direction:column}.qonto-settings-body{grid-template-columns:1fr;padding:18px}.qonto-title h1{font-size:24px}}
 </style>
 
@@ -85,6 +87,25 @@
         <li>Les détails techniques restent dans les logs serveur masqués.</li>
       </ul>
     </aside>
+    <section class="qonto-panel" aria-labelledby="qontoSyncTitle" style="grid-column:1/-1;">
+      <h2 id="qontoSyncTitle" style="margin-top:0;">État de la synchronisation Qonto</h2>
+      <p class="qonto-muted">Le webhook est le mécanisme principal. La vérification ne révèle jamais de secret.</p>
+      <dl class="qonto-sync-grid">
+        <dt>Connexion API Qonto</dt><dd id="webhookApiStatus">Vérification…</dd>
+        <dt>Secret webhook configuré</dt><dd id="webhookSecretStatus">Vérification…</dd>
+        <dt>URL de callback</dt><dd id="webhookCallback">—</dd>
+        <dt>Souscription Qonto trouvée</dt><dd id="webhookSubscription">—</dd>
+        <dt>Identifiant de souscription</dt><dd id="webhookSubscriptionId">—</dd>
+        <dt>Événements souscrits</dt><dd id="webhookEvents">—</dd>
+        <dt>Événements manquants</dt><dd id="webhookMissingEvents">—</dd>
+        <dt>Dernier webhook reçu</dt><dd id="webhookLastReceived">—</dd>
+        <dt>Type du dernier événement</dt><dd id="webhookLastEvent">—</dd>
+        <dt>Résultat du dernier traitement</dt><dd id="webhookLastResult">—</dd>
+        <dt>Dernière erreur</dt><dd id="webhookLastError">—</dd>
+      </dl>
+      <div class="qonto-actions"><button type="button" id="qontoWebhookEnsureBtn" class="btn btn-primary">Vérifier et activer le webhook Qonto</button></div>
+      <p class="qonto-muted">Test de production : cliquez sur ce bouton, effectuez un paiement test dans Qonto, puis actualisez cette page. Le dernier webhook doit passer à <strong>updated</strong> et la facture doit être mise à jour sans utiliser « Synchronisation Qonto ».</p>
+    </section>
   </div>
 </div>
 
@@ -96,6 +117,22 @@
   const success = document.getElementById('qontoSuccess');
   const error = document.getElementById('qontoError');
   const lastSuccess = document.getElementById('qontoLastSuccess');
+  const webhookEnsureBtn = document.getElementById('qontoWebhookEnsureBtn');
+
+  function setText(id, value){ const node=document.getElementById(id); if(node) node.textContent=value || '—'; }
+  async function refreshWebhookStatus(){
+    try {
+      const res=await fetch('/api/admin/qonto/webhook-status',{headers:{'Accept':'application/json'}});
+      const p=await res.json();
+      setText('webhookApiStatus',p.api_connected?'✅ Active':`⚪ Inactive${p.api_error?` — ${p.api_error}`:''}`);
+      setText('webhookSecretStatus',p.webhook_secret_configured?'✅ Oui':'⚠️ Non');
+      setText('webhookCallback',p.callback_url); setText('webhookSubscription',p.subscription_found?'✅ Oui':'⚪ Non');
+      setText('webhookSubscriptionId',p.subscription_id); setText('webhookEvents',(p.event_types||[]).join(', '));
+      setText('webhookMissingEvents',(p.missing_events||[]).join(', ') || 'Aucun');
+      setText('webhookLastReceived',p.last_received_at); setText('webhookLastEvent',p.last_event);
+      setText('webhookLastResult',p.last_result); setText('webhookLastError',p.last_error);
+    } catch(e) { setText('webhookApiStatus','Statut webhook indisponible'); }
+  }
 
   function setFeedback(payload){
     const connected = Boolean(payload && payload.connected);
@@ -140,7 +177,16 @@
       btn.textContent = originalText;
     }
   });
+  webhookEnsureBtn.addEventListener('click', async function(){
+    webhookEnsureBtn.disabled=true; const original=webhookEnsureBtn.textContent; webhookEnsureBtn.textContent='Vérification…';
+    try { const res=await fetch('/api/admin/qonto/webhook-subscription/ensure',{method:'POST',headers:{'Accept':'application/json'}}); const p=await res.json();
+      if(!res.ok || !p.ok) throw new Error(p.error||'Activation impossible');
+      success.style.display='block'; success.textContent=p.created?'Souscription webhook Qonto créée.':(p.updated?'Souscription webhook Qonto complétée.':'Souscription webhook Qonto déjà valide.');
+    } catch(e) { error.style.display='block'; error.textContent=e.message||'Activation webhook impossible.'; }
+    finally { webhookEnsureBtn.disabled=false; webhookEnsureBtn.textContent=original; await refreshWebhookStatus(); }
+  });
   refreshOauthStatus();
+  refreshWebhookStatus();
 })();
 </script>
 {% endblock %}

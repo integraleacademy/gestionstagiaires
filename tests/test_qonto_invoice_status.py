@@ -132,6 +132,52 @@ class QontoInvoiceStatusTests(unittest.TestCase):
             gestion_app.QONTO_WEBHOOK_EVENT_TYPES,
         )
 
+    def test_webhook_subscription_keeps_existing_valid_subscription(self):
+        existing = {"id": "sub_1", "url": "https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto", "event_types": list(gestion_app.QONTO_WEBHOOK_EVENT_TYPES)}
+        with patch.object(gestion_app, "_qonto_request", return_value={"webhook_subscriptions": [existing]}) as request:
+            result = gestion_app.ensure_qonto_webhook_subscription()
+        self.assertTrue(result["ok"])
+        self.assertFalse(result["created"])
+        self.assertFalse(result["updated"])
+        request.assert_called_once_with("GET", "/v2/webhook_subscriptions")
+
+    def test_webhook_subscription_repairs_incomplete_subscription_without_duplicate(self):
+        existing = {"id": "sub_1", "url": "https://gestionstagiaires-r5no.onrender.com/api/webhooks/qonto", "event_types": ["v1/client-invoices"]}
+        with patch.object(gestion_app, "_qonto_request", side_effect=[{"webhook_subscriptions": [existing]}, {"webhook_subscription": {**existing, "event_types": list(gestion_app.QONTO_WEBHOOK_EVENT_TYPES)}}]) as request:
+            result = gestion_app.ensure_qonto_webhook_subscription()
+        self.assertTrue(result["updated"])
+        self.assertFalse(result["created"])
+        self.assertEqual(request.call_args_list[1].args[:2], ("PATCH", "/v2/webhook_subscriptions/sub_1"))
+
+    def test_webhook_subscription_creates_only_when_absent(self):
+        created = {"id": "sub_new", "event_types": list(gestion_app.QONTO_WEBHOOK_EVENT_TYPES)}
+        with patch.object(gestion_app, "_qonto_request", side_effect=[{"webhook_subscriptions": []}, {"webhook_subscription": created}]) as request:
+            result = gestion_app.ensure_qonto_webhook_subscription()
+        self.assertTrue(result["created"])
+        self.assertEqual(request.call_args_list[1].args[:2], ("POST", "/v2/webhook_subscriptions"))
+
+    def test_webhook_without_secret_is_rejected_and_recorded(self):
+        client = gestion_app.app.test_client()
+        data = {"sessions": [], "billing_lines": []}
+        with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": "", "QONTO_WEBHOOK_SIGNATURE_SECRET": ""}, clear=False), patch.object(gestion_app, "load_data", return_value=data), patch.object(gestion_app, "save_data"):
+            response = client.post("/api/qonto/webhooks", json={"event": "v1/client-invoices", "data": {"id": "inv_1"}})
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(data["qonto_webhook_history"][0]["result"], "rejected")
+
+    def test_webhook_records_last_reception(self):
+        client = gestion_app.app.test_client()
+        data = {"sessions": [], "billing_lines": []}
+        raw = b'{"event":"v1/client-invoices","data":{"id":"inv_1"}}'
+        secret = "history-secret"
+        signature = hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+        with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": secret}), patch.object(gestion_app, "load_data", return_value=data), patch.object(gestion_app, "save_data"), patch.object(gestion_app, "get_qonto_invoice", return_value={"client_invoice": {"id": "inv_1", "status": "paid", "total_amount": 10, "amount_paid": 10}}):
+            response = client.post("/api/qonto/webhooks", data=raw, headers={"Content-Type": "application/json", "X-Qonto-Signature": signature})
+        self.assertEqual(response.status_code, 200)
+        entry = data["qonto_webhook_history"][0]
+        self.assertEqual(entry["event"], "v1/client-invoices")
+        self.assertEqual(entry["resource_id"], "inv_1")
+        self.assertEqual(entry["result"], "ignored")
+
     def test_mandate_webhook_accepts_singular_event_name(self):
         secret = "webhook-secret"
         body = {"event": "v2/sepa_direct_debit_mandate.signed", "data": {"id": "mandate_123", "status": "signed"}}

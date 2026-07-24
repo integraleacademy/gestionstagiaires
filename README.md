@@ -110,3 +110,11 @@ Configuration requise :
 - scope de gestion des webhooks uniquement si la souscription est créée ou maintenue depuis Qonto. L'application ne crée pas automatiquement de souscription webhook au démarrage.
 
 Le webhook ne stocke jamais le secret dans `data.json` et ne fait pas confiance au montant reçu dans le payload : il relit la facture Qonto puis met à jour les montants agrégés en centimes.
+
+### Activation et test en production
+
+1. Dans Qonto, créez/ouvrez la souscription webhook et récupérez le **secret de signature fourni par Qonto**. Copiez cette valeur exacte dans la variable Render `QONTO_WEBHOOK_SECRET` ; l'application ne génère pas ce secret et il n'est pas retourné ni sauvegardé par elle.
+2. Dans **Réglages > Qonto**, cliquez sur **Vérifier et activer le webhook Qonto**. L'application conserve une souscription canonique existante, complète ses événements si besoin et ne crée une souscription que si aucune n'est réutilisable.
+3. Effectuez un paiement de test. Actualisez la section **État de la synchronisation Qonto** : le dernier webhook doit indiquer une date, un type et le résultat `updated`. Vérifiez ensuite la facture dans l'administration sans cliquer sur « Synchronisation Qonto ».
+
+La synchronisation manuelle et la synchronisation à l'ouverture d'une fiche restent des mécanismes de récupération ; ne copiez jamais une valeur différente dans Render que le secret de signature communiqué par Qonto.
