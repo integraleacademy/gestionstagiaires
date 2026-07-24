@@ -11,6 +11,38 @@ import app
 
 
 class ApsConvocationGenerationTests(unittest.TestCase):
+    def test_yousign_request_retries_rate_limit_using_retry_after(self):
+        class FakeResponse:
+            def __init__(self, status_code, headers=None):
+                self.status_code = status_code
+                self.headers = headers or {}
+
+        limited = FakeResponse(429, {"Retry-After": "2"})
+        success = FakeResponse(200)
+        with mock.patch.object(app, "_yousign_base_url", return_value="https://api.yousign.test/v3"), \
+             mock.patch.object(app, "_yousign_headers", return_value={"Authorization": "Bearer test"}), \
+             mock.patch.object(app.requests, "request", side_effect=[limited, success]) as request_mock, \
+             mock.patch.object(app.time, "sleep") as sleep_mock:
+            response = app._yousign_request("GET", "/signature_requests/request-1")
+
+        self.assertIs(response, success)
+        self.assertEqual(request_mock.call_count, 2)
+        sleep_mock.assert_called_once_with(2.0)
+
+    def test_yousign_request_returns_clear_error_after_rate_limit_retries(self):
+        class FakeResponse:
+            status_code = 429
+            headers = {}
+
+        with mock.patch.object(app, "_yousign_base_url", return_value="https://api.yousign.test/v3"), \
+             mock.patch.object(app, "_yousign_headers", return_value={"Authorization": "Bearer test"}), \
+             mock.patch.object(app.requests, "request", return_value=FakeResponse()) as request_mock, \
+             mock.patch.object(app.time, "sleep"):
+            with self.assertRaisesRegex(RuntimeError, "Yousign limite temporairement les demandes"):
+                app._yousign_request("POST", "/signature_requests", json={})
+
+        self.assertEqual(request_mock.call_count, app.YOUSIGN_RATE_LIMIT_MAX_RETRIES + 1)
+
     def test_yousign_external_id_uses_allowed_characters_without_colons(self):
         external_id = app.make_yousign_external_id("2ebec35a:bad", "TRN-2E16579A/2026")
 

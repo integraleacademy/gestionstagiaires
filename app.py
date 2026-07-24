@@ -25090,11 +25090,39 @@ def make_yousign_external_id(session_id: str, trainee_id: str) -> str:
     return re.sub(r"[^A-Za-z0-9_\-@.%+ ]", "_", raw)
 
 
+YOUSIGN_RATE_LIMIT_MAX_RETRIES = 2
+YOUSIGN_RATE_LIMIT_RETRY_DELAY_SECONDS = 1.0
+
+
+def _yousign_rate_limit_retry_delay(response: requests.Response, retry_number: int) -> float:
+    """Return a bounded delay while honoring Yousign's Retry-After header."""
+    retry_after = str(response.headers.get("Retry-After") or "").strip()
+    try:
+        if retry_after:
+            return min(10.0, max(0.0, float(retry_after)))
+    except (TypeError, ValueError):
+        pass
+    return YOUSIGN_RATE_LIMIT_RETRY_DELAY_SECONDS * retry_number
+
+
 def _yousign_request(method: str, path: str, **kwargs) -> requests.Response:
     url = f"{_yousign_base_url()}/{path.lstrip('/')}"
     headers = dict(_yousign_headers())
     headers.update(kwargs.pop("headers", {}) or {})
-    response = requests.request(method.upper(), url, headers=headers, timeout=30, **kwargs)
+    response = None
+    for attempt in range(YOUSIGN_RATE_LIMIT_MAX_RETRIES + 1):
+        response = requests.request(method.upper(), url, headers=headers, timeout=30, **kwargs)
+        if response.status_code != 429:
+            break
+        if attempt == YOUSIGN_RATE_LIMIT_MAX_RETRIES:
+            raise RuntimeError("Yousign limite temporairement les demandes. Réessayez dans quelques instants.")
+        delay = _yousign_rate_limit_retry_delay(response, attempt + 1)
+        app.logger.warning(
+            "[YOUSIGN] rate limited method=%s path=%s retry=%s delay_seconds=%.1f",
+            method.upper(), path, attempt + 1, delay,
+        )
+        time.sleep(delay)
+    assert response is not None
     if response.status_code >= 400:
         try:
             detail = response.json()
