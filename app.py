@@ -202,17 +202,17 @@ def api_qonto_oauth_callback():
     if error:
         message = error_description or error
         app.logger.warning("[QONTO OAUTH CALLBACK] provider error status=%s message=%s", error, _sanitize_qonto_error(message))
-        return redirect("/admin/qonto?oauth=error")
+        return redirect(_qonto_oauth_settings_redirect("error"))
 
     if not code:
         app.logger.warning("[QONTO OAUTH CALLBACK] missing authorization code")
-        return redirect("/admin/qonto?oauth=error")
+        return redirect(_qonto_oauth_settings_redirect("error"))
 
     state = request.args.get("state") or ""
     expected_state = session.pop("qonto_oauth_state", "")
     if expected_state and (not state or not hmac.compare_digest(state, expected_state)):
         app.logger.warning("[QONTO OAUTH CALLBACK] state mismatch has_state=%s", bool(state))
-        return redirect("/admin/qonto?oauth=error")
+        return redirect(_qonto_oauth_settings_redirect("error"))
 
     try:
         payload = _exchange_qonto_oauth_token({
@@ -232,12 +232,12 @@ def api_qonto_oauth_callback():
             payload.get("scope") or payload.get("scopes") or "",
         )
         _store_qonto_oauth_tokens(data, payload)
-        return redirect("/admin/qonto?oauth=success")
+        return redirect(_qonto_oauth_settings_redirect("success"))
     except QontoApiError as exc:
         app.logger.warning("[QONTO OAUTH CALLBACK] token exchange status=%s message=%s", getattr(exc, "status_code", "unknown"), _sanitize_qonto_error(str(exc)))
     except Exception as exc:
         app.logger.warning("[QONTO OAUTH CALLBACK] token exchange status=unknown message=%s", _sanitize_qonto_error(str(exc)))
-    return redirect("/admin/qonto?oauth=error")
+    return redirect(_qonto_oauth_settings_redirect("error"))
 
 
 @app.errorhandler(404)
@@ -371,15 +371,36 @@ QONTO_OAUTH_SCOPE = "offline_access client.read client.write client_invoice.writ
 QONTO_OAUTH_ENVIRONMENT = "production"
 QONTO_OAUTH_PRODUCTION_BASE_URL = "https://oauth.qonto.com"
 QONTO_OAUTH_REQUIRED_MESSAGE = "Connexion Qonto OAuth requise pour programmer les prélèvements SEPA."
+QONTO_OAUTH_PRODUCTION_REDIRECT_URI = "https://gestionstagiaires-r5no.onrender.com/api/qonto/oauth/callback"
+QONTO_OAUTH_LEGACY_HOSTS = {"gestionstagiaires-test-v2.onrender.com"}
 APP_BASE_URL = (
     os.environ.get("APP_BASE_URL")
     or os.environ.get("PUBLIC_BASE_URL")
     or "https://gestionstagiaires-r5no.onrender.com"
 ).strip().rstrip("/")
+
+
+def _normalize_qonto_oauth_redirect_uri(value: str) -> str:
+    """Keep Qonto OAuth callbacks on the production application host.
+
+    The previous Render hostname must never be sent to Qonto: it would make
+    the provider return the administrator to the retired application.
+    """
+    raw = (value or "").strip().rstrip("/")
+    if not raw:
+        return QONTO_OAUTH_PRODUCTION_REDIRECT_URI
+    parsed = urlparse(raw if "://" in raw else f"https://{raw}")
+    if parsed.hostname in QONTO_OAUTH_LEGACY_HOSTS:
+        return QONTO_OAUTH_PRODUCTION_REDIRECT_URI
+    return raw
+
+
 QONTO_OAUTH_REDIRECT_URI = (
-    os.environ.get("QONTO_OAUTH_REDIRECT_URI")
-    or f"{APP_BASE_URL}/api/qonto/oauth/callback"
-).strip()
+    _normalize_qonto_oauth_redirect_uri(
+        os.environ.get("QONTO_OAUTH_REDIRECT_URI")
+        or f"{APP_BASE_URL}/api/qonto/oauth/callback"
+    )
+)
 
 
 
@@ -433,6 +454,12 @@ def _qonto_oauth_redirect_uri() -> str:
     # Qonto requires a byte-for-byte match with the redirect URI configured in
     # the Developer Portal and reused during the token exchange.
     return QONTO_OAUTH_REDIRECT_URI
+
+
+def _qonto_oauth_settings_redirect(outcome: str):
+    """Return administrators to the canonical host after an OAuth callback."""
+    callback = urlparse(_qonto_oauth_redirect_uri())
+    return f"{callback.scheme}://{callback.netloc}/admin/qonto?oauth={quote(outcome)}"
 
 
 def _qonto_oauth_is_configured() -> bool:
