@@ -3,6 +3,7 @@ import hmac
 import json
 import os
 import unittest
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 import app as gestion_app
@@ -88,6 +89,31 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(line["qonto_mandate_status"], "signed")
         self.assertEqual(line["mandateStatus"], "signed")
         self.assertEqual(line["qonto_mandate_signed_at"], "2026-07-24T10:00:00Z")
+
+    def test_sepa_installments_expose_due_dates_to_the_dashboard(self):
+        line = {
+            "paymentMode": "sepa_direct_debit",
+            "mandateStatus": "signed",
+            "sepa_payment_plan": {
+                "installments": [
+                    {"index": 1, "amount": 582.5, "due_date": "2026-08-24", "status": "scheduled"},
+                ],
+            },
+        }
+
+        gestion_app._sync_sepa_aliases(line)
+
+        installment = line["directDebitInstallments"][0]
+        self.assertEqual(installment["date"], "2026-08-24")
+        self.assertEqual(installment["due_date"], "2026-08-24")
+        self.assertEqual(line["qontoPaymentGlobalStatus"], "Prélèvements programmés")
+
+    def test_trainee_dashboard_supports_legacy_due_date_and_scheduled_mandates(self):
+        template = Path("templates/admin_trainee.html").read_text(encoding="utf-8")
+
+        self.assertIn("function installmentDate(installment)", template)
+        self.assertIn("installment?.date||installment?.due_date", template)
+        self.assertIn("Prélèvements programmés", template)
 
     def test_webhook_subscription_includes_sepa_events(self):
         with patch.object(gestion_app, "_qonto_request", side_effect=[
