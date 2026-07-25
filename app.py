@@ -28321,7 +28321,22 @@ def _recover_qonto_installments_for_mandate(line: Dict[str, Any], mandate_id: st
             count = 1
             while count < 60 and _add_months(start, count) <= end:
                 count += 1
+        # Some Qonto responses omit both the final date and the occurrence
+        # count for a recurring subscription.  The invoice amount still lets
+        # us restore the complete schedule instead of reducing it to the first
+        # (possibly rejected) collection.
+        recurring_types = {'monthly', 'recurring', 'recurring_monthly'}
+        if count == 1 and schedule_type in recurring_types:
+            installment_amount = _money(amount)
+            invoice_cents = _cents_first_non_null(
+                line.get('qonto_total_amount_cents'), line.get('qontoTotalAmountCents'),
+                money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0),
+            )
+            installment_cents = money_value_to_cents(installment_amount)
+            if invoice_cents > installment_cents > 0:
+                count = max(1, min(60, int(round(invoice_cents / installment_cents))))
         dates = [_add_months(start, offset).isoformat() for offset in range(count)] if start else [first_date]
+        subscription_status = _map_collection_status(subscription.get('status'))
         for offset, due_date in enumerate(dates):
             # A recurring Qonto subscription represents several collections.
             # Keep one dashboard row per collection instead of collapsing it to
@@ -28332,7 +28347,9 @@ def _recover_qonto_installments_for_mandate(line: Dict[str, Any], mandate_id: st
                 'amount': _money(amount),
                 'due_date': due_date,
                 'date': due_date,
-                'status': _map_collection_status(subscription.get('status')),
+                # A subscription-level rejection describes the collection
+                # that was attempted, not every future monthly occurrence.
+                'status': subscription_status if offset == 0 or subscription_status not in {'failed', 'returned', 'refunded'} else 'scheduled',
                 'qonto_direct_debit_subscription_id': subscription_id,
                 'qonto_subscription_occurrence': offset + 1,
                 'updated_at': _now_iso(),
@@ -29410,9 +29427,26 @@ def _apply_qonto_collection_webhook(data: Dict[str, Any], item: Dict[str, Any]) 
     updated = False
     for line in _billing_lines(data):
         installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
-        for inst in installments:
-            if subscription_id and str(inst.get('qonto_direct_debit_subscription_id') or '') != subscription_id:
-                continue
+        matching = [
+            inst for inst in installments
+            if not subscription_id or str(inst.get('qonto_direct_debit_subscription_id') or '') == subscription_id
+        ]
+        event_date = str(
+            item.get('collection_date') or item.get('scheduled_at') or item.get('due_date')
+            or item.get('date') or item.get('completed_at') or item.get('paid_at') or ''
+        )[:10]
+        if len(matching) > 1:
+            dated = [
+                inst for inst in matching
+                if str(inst.get('due_date') or inst.get('date') or '')[:10] == event_date
+            ]
+            # Never propagate one recurring collection's rejection to every
+            # future installment when Qonto has not supplied a usable date.
+            matching = dated or [
+                inst for inst in matching
+                if str(inst.get('qonto_direct_debit_collection_id') or '') == collection_id
+            ]
+        for inst in matching:
             inst['qonto_direct_debit_collection_id'] = collection_id or inst.get('qonto_direct_debit_collection_id') or ''
             inst['status'] = _map_collection_status(item.get('status') or item.get('event'))
             if inst['status'] == 'completed':
