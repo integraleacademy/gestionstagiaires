@@ -28207,6 +28207,13 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     'description': f"Formation {training} - {trainee.get('first_name','')} {trainee.get('last_name','')} - {financing.get('label') or financing['type']}",
                     'vatRate': _money(trainee.get('qonto_vat_rate') if trainee.get('qonto_vat_rate') not in (None, '') else 0),
                 }
+                cash_specific = bool(trainee.get('cash_payment_enabled'))
+                line['specificCase'] = cash_specific or bool(persisted.get('specificCase'))
+                line['specificCaseAutomatic'] = cash_specific
+                line['specificCaseReason'] = (
+                    'Paiement en espèces indiqué dans la fiche stagiaire.'
+                    if cash_specific else str(persisted.get('specificCaseReason') or '').strip()
+                )
                 if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
                     qonto_source = dict(persisted)
                     qonto_source.update({
@@ -28250,7 +28257,7 @@ def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
     all_map = _billing_existing_map(data)
     if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
         normalize_qonto_invoice_storage_fields(line)
-    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError')}
+    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError')}
     persisted['updatedAt'] = _now_iso()
     all_map[line['id']] = persisted
     data['billing_lines'] = list(all_map.values())
@@ -28607,6 +28614,29 @@ def api_admin_billing_history(line_id: str):
     return jsonify({'ok': True, 'logs': line.get('logs') or []})
 
 
+@app.post('/api/admin/billing-lines/<line_id>/specific-case')
+@admin_login_required
+@admin_write_required
+def api_admin_billing_specific_case(line_id: str):
+    data = load_data()
+    line = _find_billing_line(data, line_id)
+    if not line:
+        return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
+    payload = request.get_json(silent=True) or {}
+    enabled = bool(payload.get('enabled'))
+    reason = str(payload.get('reason') or '').strip()
+    if enabled and not reason:
+        return jsonify({'ok': False, 'error': 'Indiquez pourquoi cette ligne est un cas spécifique.'}), 400
+    if line.get('specificCaseAutomatic') and not enabled:
+        return jsonify({'ok': False, 'error': 'Le cas spécifique est automatique car un paiement en espèces est indiqué.'}), 409
+    line['specificCase'] = enabled
+    line['specificCaseReason'] = reason if enabled else ''
+    _billing_log(line, 'Cas spécifique activé' if enabled else 'Cas spécifique désactivé', 'success', reason)
+    _save_billing_line(data, line)
+    save_data(data)
+    return jsonify({'ok': True, 'line': _find_billing_line(data, line_id)})
+
+
 def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any], payment_plan_payload: Optional[Dict[str, Any]] = None) -> Tuple[bool, Dict[str, Any]]:
     with _billing_generation_locks_guard:
         lock = _billing_generation_locks.setdefault(line['id'], threading.Lock())
@@ -28614,6 +28644,8 @@ def _create_invoice_for_billing_line(data: Dict[str, Any], line: Dict[str, Any],
         return False, {'error': 'Génération déjà en cours pour cette ligne', 'message': 'Génération déjà en cours pour cette ligne'}
     try:
         current = _find_billing_line(data, line['id']) or line
+        if current.get('specificCase'):
+            return False, {'error': 'Génération désactivée pour ce cas spécifique.', 'message': 'Génération désactivée pour ce cas spécifique.', 'line': current, 'ignored': True}
         if is_cpf_billing_context(current):
             return False, {'error': 'La facturation CPF est gérée dans un logiciel externe.', 'message': 'La facturation CPF est gérée dans un logiciel externe.', 'line': current}
         if current.get('qontoInvoiceId') or _normalize_billing_invoice_status(current.get('invoiceStatus')) in {'draft','finalized','sent','paid','external_generated'}:
