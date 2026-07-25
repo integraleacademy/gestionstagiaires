@@ -1042,6 +1042,40 @@ class AutomationPartnerModuleTests(unittest.TestCase):
 
 
 class ApsConvocationDueSendTests(unittest.TestCase):
+    def test_sent_convocation_is_resent_seven_days_before_training_only_once(self):
+        session = {
+            "id": "session-1", "training_type": "APS", "date_start": "2026-08-01", "trainees": []
+        }
+        trainee = {
+            "id": "trainee-1", "convocation_aps_sent_at": "2026-07-01T10:00:00Z"
+        }
+        session["trainees"] = [trainee]
+        data = {"sessions": [session]}
+
+        with mock.patch.object(app.datetime, "datetime", wraps=app.datetime.datetime) as fake_datetime, \
+             mock.patch.object(app, "_resend_convocation_before_training", return_value=True) as resend:
+            fake_datetime.utcnow.return_value = app.datetime.datetime(2026, 7, 25, 6, 0, 0)
+            first = app.run_training_convocation_reminders(data)
+            trainee["convocation_aps_reminder_sent_at"] = "2026-07-25T06:00:00Z"
+            second = app.run_training_convocation_reminders(data)
+
+        self.assertEqual(first, {"checked": 1, "sent": 1, "failed": 0})
+        self.assertEqual(second, {"checked": 0, "sent": 0, "failed": 0})
+        resend.assert_called_once_with(session, trainee, "session-1", "trainee-1")
+
+    def test_convocation_is_not_resent_before_seven_day_window(self):
+        session = {
+            "id": "session-1", "training_type": "APS", "date_start": "2026-08-02",
+            "trainees": [{"id": "trainee-1", "convocation_aps_sent_at": "2026-07-01T10:00:00Z"}],
+        }
+        with mock.patch.object(app.datetime, "datetime", wraps=app.datetime.datetime) as fake_datetime, \
+             mock.patch.object(app, "_resend_convocation_before_training") as resend:
+            fake_datetime.utcnow.return_value = app.datetime.datetime(2026, 7, 25, 6, 0, 0)
+            result = app.run_training_convocation_reminders({"sessions": [session]})
+
+        self.assertEqual(result, {"checked": 0, "sent": 0, "failed": 0})
+        resend.assert_not_called()
+
     def test_due_convention_signature_convocation_is_sent_without_in_memory_timer(self):
         session = {"id": "session-1", "training_type": "APS", "trainees": []}
         trainee = {

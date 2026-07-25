@@ -25846,6 +25846,8 @@ AUTOMATION_TRAINEE_FIELDS = (
     "convocation_aps_last_error",
     "convocation_auto_scheduled_at",
     "convocation_auto_last_error",
+    "convocation_aps_reminder_sent_at",
+    "convocation_aps_reminder_last_error",
     "attestation_entree_aps_status",
     "attestation_entree_aps_generated_at",
     "attestation_entree_aps_sent_at",
@@ -26067,6 +26069,7 @@ def _download_yousign_signed_pdf(signature_request_id: str, trainee_id: str) -> 
 
 
 APS_CONVOCATION_AUTO_SEND_DELAY_SECONDS = 5 * 60
+APS_CONVOCATION_REMINDER_DAYS_BEFORE_START = 7
 _aps_convocation_auto_send_timers: Set[str] = set()
 _aps_convocation_auto_send_timers_lock = threading.Lock()
 
@@ -26143,6 +26146,77 @@ def _process_due_convocation_after_convention_signed(data: Dict[str, Any]) -> bo
             sess["trainees"] = trainees
             sess.pop("stagiaires", None)
     return changed
+
+
+def _resend_convocation_before_training(
+    session_obj: Dict[str, Any], trainee: Dict[str, Any], session_id: str, trainee_id: str
+) -> bool:
+    """Regenerate and resend a previously issued convocation before training."""
+    docx_path, pdf_path = _generate_aps_convocation_files(session_obj, trainee, session_id, trainee_id)
+    with open(pdf_path, "rb") as fh:
+        encoded_pdf = base64.b64encode(fh.read()).decode("ascii")
+    subject, html_content = _build_aps_convocation_email(
+        str(trainee.get("first_name") or ""),
+        _session_get(session_obj, "date_start", ""),
+        _session_get(session_obj, "date_end", ""),
+        session_obj,
+    )
+    if not brevo_send_email(
+        str(trainee.get("email") or "").strip(),
+        subject,
+        html_content,
+        trainee=trainee,
+        attachments=[{"name": os.path.basename(pdf_path), "content": encoded_pdf}],
+    ):
+        raise RuntimeError("Impossible de renvoyer la convocation : échec d’envoi email")
+    now = _now_iso()
+    trainee["convocation_aps_pdf_path"] = pdf_path
+    trainee["convocation_aps_docx_path"] = docx_path
+    trainee["convocation_aps_pdf_token"] = _store_public_file_token(pdf_path)
+    trainee["convocation_aps_reminder_sent_at"] = now
+    trainee["convocation_aps_reminder_last_error"] = ""
+    trainee["updated_at"] = now
+    return True
+
+
+def run_training_convocation_reminders(data: Optional[Dict[str, Any]] = None) -> Dict[str, int]:
+    """Resend each already-issued convocation exactly seven days before training."""
+    owns_data = data is None
+    data = data if data is not None else load_data()
+    today = datetime.datetime.utcnow().date()
+    due_date = today + datetime.timedelta(days=APS_CONVOCATION_REMINDER_DAYS_BEFORE_START)
+    checked = sent = failed = 0
+    changed = False
+    for sess in data.get("sessions", []):
+        if not _is_aps_session(sess):
+            continue
+        start_date = _session_start_date(sess)
+        if start_date != due_date:
+            continue
+        trainees = _session_trainees_list(sess)
+        session_changed = False
+        for trainee in trainees:
+            if not trainee.get("convocation_aps_sent_at") or trainee.get("convocation_aps_reminder_sent_at"):
+                continue
+            checked += 1
+            try:
+                _resend_convocation_before_training(
+                    sess, trainee, str(sess.get("id") or ""), str(trainee.get("id") or "")
+                )
+                sent += 1
+            except Exception as exc:
+                failed += 1
+                trainee["convocation_aps_reminder_last_error"] = str(exc)
+                trainee["updated_at"] = _now_iso()
+                app.logger.exception("[CONVOCATION] seven-day reminder failed trainee_id=%s", trainee.get("id"))
+            changed = True
+            session_changed = True
+        if session_changed:
+            sess["trainees"] = trainees
+            sess.pop("stagiaires", None)
+    if owns_data and changed:
+        save_data(data)
+    return {"checked": checked, "sent": sent, "failed": failed}
 
 
 def _mark_yousign_convention_signed(data: Dict[str, Any], sess: Dict[str, Any], trainees: List[Dict[str, Any]], trainee: Dict[str, Any], request_id: str, event_id: str = "") -> None:
@@ -30006,12 +30080,16 @@ def internal_cron_convocation_signature_reminders():
     if expected and not hmac.compare_digest(expected, provided):
         return jsonify({"ok": False, "error": "forbidden"}), 403
     result = run_convocation_signature_reminders()
-    return jsonify({"ok": True, **result})
+    convocation_reminders = run_training_convocation_reminders()
+    return jsonify({"ok": True, **result, "training_convocations": convocation_reminders})
 
 
 @app.cli.command("send-convocation-signature-reminders")
 def cli_send_convocation_signature_reminders():
-    result = run_convocation_signature_reminders()
+    result = {
+        "signature_reminders": run_convocation_signature_reminders(),
+        "training_convocations": run_training_convocation_reminders(),
+    }
     print(json.dumps(result, ensure_ascii=False))
 
 
