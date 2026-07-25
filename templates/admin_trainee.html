@@ -354,9 +354,22 @@
 
     </div>
     <div class="meta-line" style="margin-top:8px;">
+      {% if show_automation %}
+        <button class="btn btn-outline btn-uniform" type="button" data-open-section="automationHub">
+          ⚙️ Automatisation
+        </button>
+      {% endif %}
       {% if not is_vtc %}
         <button class="btn btn-outline btn-uniform" type="button" data-open-section="documentsSection" id="btnOpenDocumentsSection">
           📁 Mes documents
+        </button>
+      {% endif %}
+      <button class="btn btn-outline btn-uniform" type="button" data-open-section="miscDocumentsSection">
+        🔒 Documents divers
+      </button>
+      {% if not is_vtc %}
+        <button class="btn btn-outline btn-uniform" type="button" data-open-section="certificatesSection">
+          🎓 Diplômes &amp; attestations
         </button>
       {% endif %}
       <button class="btn btn-outline btn-uniform" type="button" data-open-section="phoneRelanceSection">
@@ -1992,7 +2005,7 @@
 <!-- DIPLÔMES / ATTESTATIONS -->
 <!-- ===================== -->
 {% if not is_vtc %}
-<details class="card" style="grid-column:1 / -1; margin-top:12px;">
+<details class="card" id="certificatesSection" style="grid-column:1 / -1; margin-top:12px;">
 
   <summary style="cursor:pointer;font-weight:900;">
     🎓 Diplômes & attestations
