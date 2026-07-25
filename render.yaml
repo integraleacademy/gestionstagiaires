@@ -32,6 +32,8 @@ services:
         value: https://gestionstagiaires-r5no.onrender.com
       - key: CNAPS_MONITOR_TOKEN
         sync: false
+      - key: CRON_SECRET
+        sync: false
   - type: cron
     name: gestionstagiaires-cnaps-monitor
     runtime: docker
@@ -43,4 +45,16 @@ services:
       - key: CNAPS_MONITOR_URL
         value: https://gestionstagiaires-r5no.onrender.com/internal/jobs/cnaps-public-annuaire-monitor
       - key: CNAPS_MONITOR_TOKEN
+        sync: false
+  - type: cron
+    name: gestionstagiaires-qonto-sync
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    schedule: "*/15 * * * *"
+    dockerCommand: python scripts/run_qonto_sync.py
+    envVars:
+      - key: QONTO_SYNC_URL
+        value: https://gestionstagiaires-r5no.onrender.com/internal/cron/qonto-sync
+      - key: CRON_SECRET
         sync: false

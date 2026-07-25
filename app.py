@@ -28231,6 +28231,12 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     line['payment_status'] = qonto_source['qonto_payment_status']
                     line['qonto_payment_status'] = qonto_source['qonto_payment_status']
                     line['paymentStatus'] = qonto_source['qonto_payment_status']
+                    # Keep an explicit reconciliation error visible instead
+                    # of turning it back into an apparently ordinary unpaid
+                    # invoice while rebuilding the dashboard lines.
+                    if persisted.get('paymentStatus') == 'control':
+                        line['paymentStatus'] = 'control'
+                        line['payment_status'] = 'control'
                     line['qonto_status'] = qonto_source.get('qonto_status') or qonto_source.get('qontoStatus') or line.get('invoiceStatus') or ''
                     line['qontoLastSyncedAt'] = qonto_source.get('qontoLastSyncedAt') or qonto_source.get('updatedAt') or ''
                 out.append(line)
@@ -28248,8 +28254,12 @@ def _billing_lines(data: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
     all_map = _billing_existing_map(data)
+    payment_status_before_normalization = line.get('paymentStatus')
     if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
         normalize_qonto_invoice_storage_fields(line)
+    if payment_status_before_normalization == 'control':
+        line['paymentStatus'] = 'control'
+        line['payment_status'] = 'control'
     persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError')}
     persisted['updatedAt'] = _now_iso()
     all_map[line['id']] = persisted
@@ -28945,6 +28955,52 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
         line['paymentStatus'] = 'partial'
     elif line['qontoPaymentGlobalStatus'] == 'Rejeté':
         line['paymentStatus'] = 'failed'
+
+
+def sync_all_qonto_records(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Synchronize every Qonto invoice and SEPA mandate stored locally.
+
+    Webhooks provide the fastest update path.  This full refresh is their
+    fallback: it catches events that were delayed or missed by Qonto without
+    requiring an administrator to open a page and press the sync button.
+    """
+    result = {"synced_count": 0, "failed_count": 0, "errors": []}
+    synced_invoice_ids = set()
+
+    for line in _billing_lines(data):
+        invoice_id = str(line.get("qontoInvoiceId") or line.get("qontoDraftId") or "").strip()
+        has_mandate = line.get("paymentMode") == "sepa_direct_debit" and bool(line.get("qonto_direct_debit_mandate_id"))
+        if not (invoice_id or has_mandate):
+            continue
+        try:
+            if invoice_id:
+                _sync_billing_line_with_qonto(data, line)
+                synced_invoice_ids.add(invoice_id)
+            if has_mandate:
+                _sync_qonto_direct_debit_line(line)
+                _save_billing_line(data, line)
+            result["synced_count"] += 1
+        except Exception as exc:
+            result["failed_count"] += 1
+            result["errors"].append({"id": line.get("id"), "message": _sanitize_qonto_error(str(exc))})
+
+    # Some older trainee records pre-date billing_lines. Keep their invoice
+    # status current as well, while avoiding a duplicate API request for an
+    # invoice already refreshed through its billing line.
+    for session_obj in data.get("sessions", []):
+        for trainee in _session_trainees_list(session_obj):
+            invoice = _qonto_invoice_state(trainee)
+            invoice_id = str(invoice.get("qonto_invoice_id") or "").strip()
+            if not invoice_id or invoice_id in synced_invoice_ids:
+                continue
+            try:
+                remote = _qonto_invoice_payload(get_qonto_invoice(invoice_id))
+                _apply_qonto_invoice_status(invoice, remote)
+                result["synced_count"] += 1
+            except Exception as exc:
+                result["failed_count"] += 1
+                result["errors"].append({"id": invoice_id, "message": _sanitize_qonto_error(str(exc))})
+    return result
 
 
 def _apply_qonto_collection_webhook(data: Dict[str, Any], item: Dict[str, Any]) -> bool:
@@ -29969,6 +30025,25 @@ def internal_cron_convocation_signature_reminders():
     if expected and not hmac.compare_digest(expected, provided):
         return jsonify({"ok": False, "error": "forbidden"}), 403
     result = run_convocation_signature_reminders()
+    return jsonify({"ok": True, **result})
+
+
+@app.post("/internal/cron/qonto-sync")
+def internal_cron_qonto_sync():
+    """Protected Render Cron target for the automatic Qonto fallback sync."""
+    expected = os.environ.get("CRON_SECRET", "").strip()
+    provided = (request.headers.get("X-Cron-Secret") or request.args.get("token") or "").strip()
+    if not expected or not hmac.compare_digest(expected, provided):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    if not _qonto_is_configured():
+        return jsonify({"ok": False, "error": "qonto_not_configured"}), 503
+    data = load_data()
+    result = sync_all_qonto_records(data)
+    save_data(data)
+    app.logger.info(
+        "[QONTO] automatic sync complete synced_count=%s failed_count=%s",
+        result["synced_count"], result["failed_count"],
+    )
     return jsonify({"ok": True, **result})
 
 
