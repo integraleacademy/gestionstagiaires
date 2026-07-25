@@ -1277,6 +1277,10 @@ def download_qonto_invoice_pdf(invoice_id: str, invoice_number: str = "") -> Tup
 def list_qonto_direct_debit_mandates(client_id: str) -> Dict[str, Any]:
     return _qonto_request("GET", "/v2/sepa/direct_debit_mandates", params={"client_id": client_id})
 
+def get_qonto_direct_debit_mandate(mandate_id: str) -> Dict[str, Any]:
+    """Fetch one mandate by its Qonto identifier."""
+    return _qonto_request("GET", f"/v2/sepa/direct_debit_mandates/{quote(str(mandate_id), safe='')}")
+
 def create_qonto_direct_debit_mandate(payload: Dict[str, Any]) -> Dict[str, Any]:
     return _qonto_request("POST", "/v2/sepa/direct_debit_mandates", {"direct_debit_mandate": payload})
 
@@ -29631,6 +29635,68 @@ def api_admin_trainee_qonto_sepa_ensure(trainee_id: str):
         return jsonify({'ok': True, **result})
     except Exception as exc:
         return jsonify({'ok': False, 'error': _sanitize_qonto_error(str(exc)), 'message': format_qonto_error_for_front(exc)}), 400
+
+
+@app.post("/api/admin/trainees/<trainee_id>/qonto-mandate/search")
+@admin_login_required
+@admin_write_required
+def api_admin_trainee_qonto_mandate_search(trainee_id: str):
+    """Find a Qonto mandate entered by an admin and associate it with the trainee."""
+    payload = request.get_json(silent=True) or {}
+    mandate_id = str(payload.get("mandate_id") or "").strip()
+    if not mandate_id:
+        return jsonify({"ok": False, "error": "Saisissez un numéro de mandat."}), 400
+    if len(mandate_id) > 160 or not re.fullmatch(r"[A-Za-z0-9._:-]+", mandate_id):
+        return jsonify({"ok": False, "error": "Le numéro de mandat n’est pas valide."}), 400
+
+    data = load_data()
+    sess, trainees, trainee = _find_trainee_any_session(data, trainee_id)
+    if not trainee:
+        return jsonify({"ok": False, "error": "Stagiaire introuvable."}), 404
+    try:
+        response = get_qonto_direct_debit_mandate(mandate_id)
+        mandate = response.get("direct_debit_mandate") or response.get("mandate") or response
+        if not isinstance(mandate, dict) or not mandate.get("id"):
+            return jsonify({"ok": False, "error": "Mandat introuvable sur Qonto."}), 404
+
+        status = _map_mandate_status(mandate.get("status"))
+        trainee["qonto_direct_debit_mandate_id"] = str(mandate.get("id"))
+        trainee["qonto_mandate_status"] = status
+        trainee["qonto_mandate_searched_at"] = _now_iso()
+        trainee["qonto_mandate_client_id"] = str(mandate.get("client_id") or "")
+        candidate_lines = [line for line in _billing_lines(data) if str(line.get("traineeId") or "") == str(trainee_id)]
+        line = next((item for item in candidate_lines if item.get("paymentMode") == "sepa_direct_debit"), None)
+        if line is None:
+            line = next((item for item in candidate_lines if str(item.get("financingType") or "").lower() in {"personal", "personnel"}), None)
+        if line is not None:
+            line["qonto_direct_debit_mandate_id"] = str(mandate.get("id"))
+            line["qonto_mandate_status"] = status
+            line["mandateStatus"] = status
+            line["qonto_mandate_sign_url"] = mandate.get("sign_url") or line.get("qonto_mandate_sign_url") or ""
+            line["sign_url"] = line["qonto_mandate_sign_url"]
+            if mandate.get("client_id"):
+                line["qontoClientId"] = mandate.get("client_id")
+            _billing_log(line, "Mandat Qonto retrouvé manuellement", "success", status, str(mandate.get("id")))
+            _save_billing_line(data, line)
+        sess["trainees"] = trainees
+        save_data(data)
+        return jsonify({
+            "ok": True,
+            "message": "Mandat retrouvé sur Qonto et associé au stagiaire.",
+            "mandate": {
+                "id": str(mandate.get("id")),
+                "status": status,
+                "client_id": str(mandate.get("client_id") or ""),
+                "created_at": mandate.get("created_at") or "",
+            },
+        })
+    except QontoApiError as exc:
+        status_code = 404 if getattr(exc, "status_code", 0) == 404 else 502
+        message = "Mandat introuvable sur Qonto." if status_code == 404 else format_qonto_error_for_front(exc)
+        return jsonify({"ok": False, "error": message}), status_code
+    except Exception as exc:
+        app.logger.warning("[QONTO] recherche mandat impossible trainee_id=%s error=%s", trainee_id, _sanitize_qonto_error(str(exc)))
+        return jsonify({"ok": False, "error": format_qonto_error_for_front(exc)}), 502
 
 
 
