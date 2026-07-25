@@ -123,6 +123,46 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
         self.assertEqual([item["date"] for item in line["directDebitInstallments"]], ["2026-08-10", "2026-09-10"])
         self.assertEqual([item["status"] for item in line["directDebitInstallments"]], ["completed", "scheduled"])
 
+    def test_expands_a_recurring_qonto_subscription_into_every_month(self):
+        line = {
+            "id": "line-1", "traineeId": "trainee-1", "sessionId": "session-1",
+            "financingType": "personal", "amount": 3475, "paymentMode": "cash",
+        }
+        subscriptions = {"direct_debit_subscriptions": [{
+            "id": "sub-recurring", "direct_debit_mandate_id": "mandate-123",
+            "initial_collection_date": "2026-06-05", "end_date": "2026-10-05",
+            "amount": {"value": "695.00"}, "status": "pending", "schedule_type": "monthly",
+        }]}
+
+        with patch.object(gestion_app, "list_qonto_direct_debit_subscriptions", return_value=subscriptions):
+            recovered = gestion_app._recover_qonto_installments_for_mandate(line, "mandate-123")
+
+        self.assertEqual(recovered, 5)
+        self.assertEqual(
+            [item["date"] for item in line["directDebitInstallments"]],
+            ["2026-06-05", "2026-07-05", "2026-08-05", "2026-09-05", "2026-10-05"],
+        )
+        self.assertEqual([item["amount"] for item in line["directDebitInstallments"]], [695.0] * 5)
+        self.assertTrue(all(item["status"] == "scheduled" for item in line["directDebitInstallments"]))
+
+    def test_sync_matches_collections_by_date_for_a_recurring_subscription(self):
+        installments = [
+            {"date": "2026-06-05", "due_date": "2026-06-05", "amount": 695, "status": "scheduled", "qonto_direct_debit_subscription_id": "sub-1"},
+            {"date": "2026-07-05", "due_date": "2026-07-05", "amount": 695, "status": "scheduled", "qonto_direct_debit_subscription_id": "sub-1"},
+            {"date": "2026-08-05", "due_date": "2026-08-05", "amount": 695, "status": "scheduled", "qonto_direct_debit_subscription_id": "sub-1"},
+        ]
+        line = {"paymentMode": "sepa_direct_debit", "directDebitInstallments": installments}
+        collections = {"direct_debit_collections": [
+            {"id": "col-paid", "collection_date": "2026-06-05", "status": "completed"},
+            {"id": "col-rejected", "collection_date": "2026-07-05", "status": "rejected", "status_reason": "blocked_account"},
+        ]}
+
+        with patch.object(gestion_app, "list_qonto_direct_debit_collections", return_value=collections):
+            gestion_app._sync_qonto_direct_debit_line(line)
+
+        self.assertEqual([item["status"] for item in installments], ["completed", "failed", "scheduled"])
+        self.assertEqual(installments[1]["failureReason"], "blocked_account")
+
 
 if __name__ == "__main__":
     unittest.main()
