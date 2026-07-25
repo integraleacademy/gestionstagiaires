@@ -28115,7 +28115,7 @@ def _map_mandate_status(status: Any) -> str:
 
 def _map_collection_status(status: Any) -> str:
     value = str(status or '').lower()
-    return {'pending': 'scheduled', 'declined': 'failed', 'rejected': 'failed', 'canceled': 'failed', 'completed': 'completed', 'returned': 'returned', 'refunded': 'refunded', 'on_hold': 'on_hold'}.get(value, value or 'scheduled')
+    return {'pending': 'scheduled', 'active': 'scheduled', 'scheduled': 'scheduled', 'declined': 'failed', 'rejected': 'failed', 'canceled': 'failed', 'completed': 'completed', 'returned': 'returned', 'refunded': 'refunded', 'on_hold': 'on_hold'}.get(value, value or 'scheduled')
 
 
 def _format_euro(value: Any) -> str:
@@ -28290,28 +28290,54 @@ def _recover_qonto_installments_for_mandate(line: Dict[str, Any], mandate_id: st
         if item.get('qonto_direct_debit_subscription_id')
     }
     recovered: List[Dict[str, Any]] = []
-    for index, subscription in enumerate(subscriptions, start=1):
+    for subscription in subscriptions:
         subscription_id = str(subscription.get('id') or '')
         if not subscription_id:
             continue
         amount = subscription.get('amount')
         if isinstance(amount, dict):
             amount = amount.get('value') if amount.get('value') is not None else amount.get('amount')
-        due_date = str(
-            subscription.get('initial_collection_date') or subscription.get('collection_date')
+        first_date = str(
+            subscription.get('initial_collection_date') or subscription.get('start_date')
+            or subscription.get('first_collection_date') or subscription.get('collection_date')
             or subscription.get('scheduled_at') or subscription.get('due_date') or subscription.get('date') or ''
         )[:10]
-        current = existing.get(subscription_id, {})
-        current.update({
-            'index': index,
-            'amount': _money(amount),
-            'due_date': due_date,
-            'date': due_date,
-            'status': _map_collection_status(subscription.get('status')),
-            'qonto_direct_debit_subscription_id': subscription_id,
-            'updated_at': _now_iso(),
-        })
-        recovered.append(current)
+        end_date = str(
+            subscription.get('final_collection_date') or subscription.get('end_date')
+            or subscription.get('last_collection_date') or ''
+        )[:10]
+        count_raw = (
+            subscription.get('number_of_collections') or subscription.get('installments_count')
+            or subscription.get('occurrences') or subscription.get('number_of_installments')
+        )
+        try:
+            count = max(1, min(60, int(count_raw))) if count_raw else 1
+        except (TypeError, ValueError):
+            count = 1
+        start = _parse_date_safe(first_date)
+        end = _parse_date_safe(end_date)
+        schedule_type = str(subscription.get('schedule_type') or subscription.get('frequency') or '').lower()
+        if start and end and end >= start and schedule_type not in {'one_off', 'one-off'}:
+            count = 1
+            while count < 60 and _add_months(start, count) <= end:
+                count += 1
+        dates = [_add_months(start, offset).isoformat() for offset in range(count)] if start else [first_date]
+        for offset, due_date in enumerate(dates):
+            # A recurring Qonto subscription represents several collections.
+            # Keep one dashboard row per collection instead of collapsing it to
+            # a single "subscription" row.
+            current = dict(existing.get(subscription_id, {})) if count == 1 else {}
+            current.update({
+                'index': len(recovered) + 1,
+                'amount': _money(amount),
+                'due_date': due_date,
+                'date': due_date,
+                'status': _map_collection_status(subscription.get('status')),
+                'qonto_direct_debit_subscription_id': subscription_id,
+                'qonto_subscription_occurrence': offset + 1,
+                'updated_at': _now_iso(),
+            })
+            recovered.append(current)
     if not recovered:
         return 0
     recovered.sort(key=lambda item: (item.get('due_date') or '', item.get('index') or 0))
@@ -29341,7 +29367,19 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
             )[:10]
 
         collections.sort(key=lambda collection: (collection_date(collection), str(collection.get('id') or '')))
-        collection = collections[-1]
+        due_date = str(item.get('due_date') or item.get('date') or '')[:10]
+        # Recurring subscriptions share an id across all monthly rows. Match
+        # the collection to its planned date so one paid/rejected collection
+        # cannot incorrectly change every installment in the schedule.
+        collection = next((candidate for candidate in collections if collection_date(candidate) == due_date), None)
+        if collection is None:
+            same_subscription_rows = sum(
+                1 for candidate in installments
+                if candidate.get('qonto_direct_debit_subscription_id') == sid
+            )
+            if same_subscription_rows > 1:
+                continue
+            collection = collections[-1]
         item['qonto_direct_debit_collection_id'] = collection.get('id') or item.get('qonto_direct_debit_collection_id') or ''
         item['status'] = _map_collection_status(collection.get('status'))
         if collection_date(collection):
