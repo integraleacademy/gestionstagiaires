@@ -145,6 +145,45 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
         self.assertEqual([item["amount"] for item in line["directDebitInstallments"]], [695.0] * 5)
         self.assertTrue(all(item["status"] == "scheduled" for item in line["directDebitInstallments"]))
 
+    def test_restores_missing_recurring_occurrences_and_keeps_future_rows_after_rejection(self):
+        line = {"amount": 3475, "paymentMode": "cash"}
+        subscriptions = {"direct_debit_subscriptions": [{
+            "id": "sub-recurring", "direct_debit_mandate_id": "mandate-123",
+            "initial_collection_date": "2026-06-05", "amount": {"value": "695.00"},
+            "status": "rejected", "schedule_type": "monthly",
+        }]}
+
+        with patch.object(gestion_app, "list_qonto_direct_debit_subscriptions", return_value=subscriptions):
+            recovered = gestion_app._recover_qonto_installments_for_mandate(line, "mandate-123")
+
+        self.assertEqual(recovered, 5)
+        self.assertEqual(
+            [item["status"] for item in line["directDebitInstallments"]],
+            ["failed", "scheduled", "scheduled", "scheduled", "scheduled"],
+        )
+        self.assertEqual(line["sepa_payment_plan"]["total_due"], 3475)
+
+    def test_webhook_rejection_only_updates_the_matching_recurring_occurrence(self):
+        installments = [
+            {"date": "2026-06-05", "status": "scheduled", "qonto_direct_debit_subscription_id": "sub-1"},
+            {"date": "2026-07-05", "status": "scheduled", "qonto_direct_debit_subscription_id": "sub-1"},
+            {"date": "2026-08-05", "status": "scheduled", "qonto_direct_debit_subscription_id": "sub-1"},
+        ]
+        line = {"paymentMode": "sepa_direct_debit", "directDebitInstallments": installments}
+        data = {"billing_lines": [line]}
+        event = {
+            "id": "collection-1", "direct_debit_subscription_id": "sub-1",
+            "collection_date": "2026-06-05", "status": "rejected", "status_reason": "blocked_account",
+        }
+
+        with patch.object(gestion_app, "_billing_lines", return_value=[line]), \
+             patch.object(gestion_app, "_save_billing_line"):
+            updated = gestion_app._apply_qonto_collection_webhook(data, event)
+
+        self.assertTrue(updated)
+        self.assertEqual([item["status"] for item in installments], ["failed", "scheduled", "scheduled"])
+        self.assertEqual(installments[0]["failureReason"], "blocked_account")
+
     def test_sync_matches_collections_by_date_for_a_recurring_subscription(self):
         installments = [
             {"date": "2026-06-05", "due_date": "2026-06-05", "amount": 695, "status": "scheduled", "qonto_direct_debit_subscription_id": "sub-1"},
