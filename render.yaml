@@ -33,6 +33,18 @@ services:
       - key: CNAPS_MONITOR_TOKEN
         sync: false
   - type: cron
+    name: gestionstagiaires-convocation-reminders
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    schedule: "0 6 * * *"
+    dockerCommand: python scripts/run_convocation_reminders.py
+    envVars:
+      - key: CONVOCATION_REMINDERS_URL
+        value: https://gestionstagiaires-r5no.onrender.com/internal/cron/convocation-signature-reminders
+      - key: CRON_SECRET
+        sync: false
+  - type: cron
     name: gestionstagiaires-cnaps-monitor
     runtime: docker
     dockerfilePath: ./Dockerfile
