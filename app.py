@@ -1561,6 +1561,7 @@ def ensure_qonto_webhook_subscription() -> Dict[str, Any]:
         missing_events = [event for event in QONTO_WEBHOOK_EVENT_TYPES if event not in types]
         current_url = reusable.get("url") or reusable.get("callback_url") or reusable.get("target_url")
         if not missing_events and current_url == callback_url:
+            data = load_data(); _store_qonto_webhook_subscription(data, reusable); save_data(data)
             return {"ok": True, "created": False, "updated": False, "subscription": reusable, "callback_url": callback_url}
         # Repair the existing subscription instead of creating a second one.
         subscription_id = str(reusable.get("id") or "").strip()
@@ -1572,7 +1573,9 @@ def ensure_qonto_webhook_subscription() -> Dict[str, Any]:
             "description": "Synchronisation Qonto - Gestion stagiaires",
         }
         updated = _qonto_request("PUT", f"/v2/webhook_subscriptions/{quote(subscription_id, safe='')}", payload)
-        return {"ok": True, "created": False, "updated": True, "subscription": updated.get("webhook_subscription") or updated, "callback_url": callback_url}
+        subscription = updated.get("webhook_subscription") or updated
+        data = load_data(); _store_qonto_webhook_subscription(data, subscription); save_data(data)
+        return {"ok": True, "created": False, "updated": True, "subscription": subscription, "callback_url": callback_url}
     payload = {
         "callback_url": callback_url,
         "types": list(QONTO_WEBHOOK_EVENT_TYPES),
@@ -1580,7 +1583,9 @@ def ensure_qonto_webhook_subscription() -> Dict[str, Any]:
         "description": "Synchronisation Qonto - Gestion stagiaires",
     }
     created = _qonto_request("POST", "/v2/webhook_subscriptions", payload)
-    return {"ok": True, "created": True, "updated": False, "subscription": created.get("webhook_subscription") or created, "callback_url": callback_url}
+    subscription = created.get("webhook_subscription") or created
+    data = load_data(); _store_qonto_webhook_subscription(data, subscription); save_data(data)
+    return {"ok": True, "created": True, "updated": False, "subscription": subscription, "callback_url": callback_url}
 
 
 QONTO_WEBHOOK_HISTORY_LIMIT = 50
@@ -1600,52 +1605,50 @@ def _record_qonto_webhook(data: Dict[str, Any], event: str, item: Dict[str, Any]
     del entries[QONTO_WEBHOOK_HISTORY_LIMIT:]
 
 
+def _store_qonto_webhook_subscription(data: Dict[str, Any], subscription: Dict[str, Any]) -> None:
+    """Keep a non-sensitive local snapshot for status polling."""
+    if not isinstance(subscription, dict):
+        return
+    data["qonto_webhook_subscription"] = {
+        "id": str(subscription.get("id") or ""),
+        "event_types": [str(value) for value in (subscription.get("event_types") or subscription.get("types") or [])],
+        "callback_url": str(subscription.get("url") or subscription.get("callback_url") or subscription.get("target_url") or ""),
+        "updated_at": _now_iso(),
+    }
+
+
 def qonto_webhook_status() -> Dict[str, Any]:
+    """Return the locally persisted webhook state; never contacts Qonto."""
     data = load_data()
     history = data.get("qonto_webhook_history") if isinstance(data.get("qonto_webhook_history"), list) else []
+    snapshot = data.get("qonto_webhook_subscription") if isinstance(data.get("qonto_webhook_subscription"), dict) else {}
     last = history[0] if history else {}
-    status = {
-        "configuration_present": bool(_qonto_is_configured()), "api_connected": False,
-        "oauth_connected": False, "webhook_scope_authorized": False,
+    subscribed_events = [str(value) for value in snapshot.get("event_types", [])]
+    missing_events = [event for event in QONTO_WEBHOOK_EVENT_TYPES if event not in subscribed_events]
+    connection_api_key_ok = bool(_qonto_is_configured())
+    oauth_ok = _qonto_oauth_connected(data)
+    webhook_scope_ok = oauth_ok and _qonto_oauth_has_scope("webhook", data)
+    return {
+        # Explicit public names used by the polling client.
+        "connection_api_key_ok": connection_api_key_ok,
+        "oauth_ok": oauth_ok,
+        "webhook_scope_ok": webhook_scope_ok,
         "webhook_secret_configured": bool(_qonto_webhook_secret()),
-        "callback_url": _qonto_webhook_callback_url(), "subscription_found": False,
-        "subscription_id": "", "event_types": [], "missing_events": list(QONTO_WEBHOOK_EVENT_TYPES),
-        "last_received_at": last.get("received_at") or "", "last_event": last.get("event") or "",
-        "last_result": last.get("result") or "", "last_error": last.get("error") or "",
+        "subscription_found": bool(snapshot.get("id")),
+        "subscription_id": str(snapshot.get("id") or ""),
+        "subscribed_events": subscribed_events,
+        "missing_events": missing_events,
+        "last_webhook_received_at": last.get("received_at") or "",
+        "last_event_type": last.get("event") or "",
+        "last_processing_result": last.get("result") or "",
+        "last_error": last.get("error") or "",
+        "callback_url": snapshot.get("callback_url") or _qonto_webhook_callback_url(),
+        # Compatibility names for the existing settings view.
+        "configuration_present": connection_api_key_ok, "api_connected": connection_api_key_ok,
+        "oauth_connected": oauth_ok, "webhook_scope_authorized": webhook_scope_ok,
+        "event_types": subscribed_events, "last_received_at": last.get("received_at") or "",
+        "last_event": last.get("event") or "", "last_result": last.get("result") or "",
     }
-    if _qonto_is_configured():
-      try:
-        connected, status_code = test_qonto_connection()
-        if not connected:
-            status["api_error"] = f"Connexion Qonto refusée (HTTP {status_code})"
-        else:
-            status["api_connected"] = True
-      except Exception as exc:
-        status["api_error"] = _sanitize_qonto_error(str(exc))
-    else:
-        status["api_error"] = "Configuration API Key Qonto absente"
-    data = load_data()
-    status["oauth_connected"] = _qonto_oauth_connected(data)
-    status["webhook_scope_authorized"] = status["oauth_connected"] and _qonto_oauth_has_scope("webhook", data)
-    if not status["oauth_connected"]:
-        status["oauth_error"] = QONTO_OAUTH_REQUIRED_MESSAGE
-        return status
-    if not status["webhook_scope_authorized"]:
-        status["oauth_error"] = "La connexion OAuth actuelle ne possède pas l’autorisation webhook. Réinitialisez puis reconnectez Qonto."
-        return status
-    try:
-        payload = _qonto_request("GET", "/v2/webhook_subscriptions")
-        subscriptions = payload.get("webhook_subscriptions") or payload.get("subscriptions") or []
-        canonical = next((sub for sub in subscriptions if isinstance(sub, dict) and (sub.get("url") or sub.get("callback_url") or sub.get("target_url")) == status["callback_url"]), None)
-        if canonical:
-            event_types = [str(value) for value in (canonical.get("event_types") or canonical.get("types") or [])]
-            status.update({"subscription_found": True, "subscription_id": str(canonical.get("id") or ""), "event_types": event_types, "missing_events": [event for event in QONTO_WEBHOOK_EVENT_TYPES if event not in event_types]})
-    except Exception as exc:
-        status["webhook_error"] = _sanitize_qonto_error(str(exc))
-        if isinstance(exc, QontoApiError) and exc.status_code in (401, 403):
-            status["oauth_connected"] = False
-            status["oauth_error"] = f"Connexion OAuth refusée (HTTP {exc.status_code})"
-    return status
 
 
 def _verify_qonto_webhook_signature(raw_body: bytes) -> bool:
@@ -28566,20 +28569,9 @@ def admin_direct_debits():
 @app.get('/api/admin/billing-lines')
 @admin_login_required
 def api_admin_billing_lines():
+    # Read-only local state: webhook-driven updates are already persisted in data.
     data = load_data()
-    reset_count = 0
-    sync_warning = ''
-    if _qonto_is_configured():
-        for line in _billing_lines(data):
-            if line.get('qontoInvoiceId'):
-                try:
-                    did_reset, _ = _sync_billing_line_with_qonto(data, line)
-                    reset_count += 1 if did_reset else 0
-                except Exception:
-                    sync_warning = 'Synchronisation Qonto temporairement indisponible : les factures locales ont été conservées.'
-        if reset_count or sync_warning:
-            save_data(data)
-    return jsonify({'ok': True, 'lines': _billing_lines(data), 'start_date': BILLING_START_DATE.isoformat(), 'reset_count': reset_count, 'sync_warning': sync_warning})
+    return jsonify({'ok': True, 'lines': _billing_lines(data), 'start_date': BILLING_START_DATE.isoformat(), 'reset_count': 0, 'sync_warning': ''})
 
 
 @app.post('/api/admin/invoicing/sync-qonto')

@@ -3635,7 +3635,7 @@ function updateDocsRelanceState(status, plannedDateIso){
     if(!r.ok||!j.ok) throw new Error(j.error||j.message||'Action impossible');
     return j;
   }
-  async function load(){
+  async function load({allowAutoSync=true}={}){
     const r = await fetch(`/api/billing/trainee/${encodeURIComponent(traineeId)}/session/${encodeURIComponent(sessionId)}`,{headers:{'Accept':'application/json'}});
     const j = await parseJsonResponse(r,'Chargement impossible');
     if(!r.ok||!j.ok) throw new Error(j.error||'Chargement impossible');
@@ -3647,8 +3647,15 @@ function updateDocsRelanceState(status, plannedDateIso){
     });
     render(currentLines);
     updateQuickInvoiceAction();
-    maybeAutoSyncQonto();
+    if(allowAutoSync) maybeAutoSyncQonto();
   }
+  let localTraineePollTimer;
+  function scheduleLocalTraineePoll(immediate=false){
+    clearTimeout(localTraineePollTimer);
+    if(immediate) load({allowAutoSync:false}).catch(()=>{});
+    localTraineePollTimer=setTimeout(async()=>{try{await load({allowAutoSync:false});}catch(e){/* retain current finance display */}scheduleLocalTraineePoll();},document.hidden?30000:5000);
+  }
+  document.addEventListener('visibilitychange',()=>scheduleLocalTraineePoll(!document.hidden));
   window.refreshQontoInvoiceHistory = () => load().catch(e=>{ box.innerHTML = `<div class="qonto-error">${esc(e.message)}</div>`; });
   window.addEventListener('qonto-billing-refresh', window.refreshQontoInvoiceHistory);
   function paymentStatusLabel(status){return ({partially_paid:'Partiellement payé',paid:'Payé',partial:'Paiement partiel',failed:'Rejeté',unpaid:'Non payé',draft:'Brouillon',canceled:'Annulée',cancelled:'Annulée',unknown:'Inconnu',pending:'En attente'}[String(status||'').toLowerCase()]||status||'Inconnu');}
@@ -3994,6 +4001,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     finally{ financeValidationAutoBtn.disabled = false; renderFinancingValidation(computeFinance(currentLines), currentLines); }
   });
   load().catch(e=>{ box.innerHTML = `<div class="qonto-error">${esc(e.message)}</div>`; });
+  scheduleLocalTraineePoll();
 })();
 
 // Financement status update

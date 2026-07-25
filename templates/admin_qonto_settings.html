@@ -65,6 +65,7 @@
       </div>
       <div class="qonto-muted">Dernier test réussi : <strong id="qontoLastSuccess">{{ last_success_fr or 'Aucun test réussi pour le moment' }}</strong></div>
       <div id="qontoSuccess" class="qonto-success" role="status" aria-live="polite"></div>
+      <div id="qontoSyncNotice" class="qonto-success" role="status" aria-live="polite"></div>
       <div id="qontoError" class="qonto-error" role="alert" aria-live="assertive"></div>
       <div class="qonto-actions">
         <button type="button" id="qontoTestBtn" class="btn btn-primary">Tester la connexion Qonto</button>
@@ -124,22 +125,40 @@
   const webhookEnsureBtn = document.getElementById('qontoWebhookEnsureBtn');
 
   function setText(id, value){ const node=document.getElementById(id); if(node) node.textContent=value || '—'; }
+  let lastWebhookReceivedAt = '';
+  let webhookPollTimer;
+  function webhookTime(iso){
+    const date = new Date(iso); return Number.isNaN(date.getTime()) ? iso : date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  }
+  function showWebhookNotice(receivedAt){
+    const notice=document.getElementById('qontoSyncNotice'); if(!notice) return;
+    notice.textContent=`Synchronisation Qonto reçue à ${webhookTime(receivedAt)}`;
+    notice.style.display='block'; window.setTimeout(()=>{notice.style.display='none';}, 5000);
+  }
   async function refreshWebhookStatus(){
     try {
-      const res=await fetch('/api/admin/qonto/webhook-status',{headers:{'Accept':'application/json'}});
-      const p=await res.json();
-      setText('webhookConfigurationStatus',p.configuration_present?'✅ Oui':'⚪ Non');
-      setText('webhookApiStatus',p.api_connected?'✅ Active':`⚪ Inactive${p.api_error?` — ${p.api_error}`:''}`);
-      setText('webhookOauthStatus',p.oauth_connected?'✅ Active':`⚪ Inactive${p.oauth_error?` — ${p.oauth_error}`:''}`);
-      setText('webhookScopeStatus',p.webhook_scope_authorized?'✅ Oui':`⚪ Non${p.oauth_error?` — ${p.oauth_error}`:''}`);
+      const res=await fetch('/api/admin/qonto/webhook-status',{headers:{'Accept':'application/json'},cache:'no-store'});
+      const p=await res.json(); if(!res.ok || !p.ok) throw new Error('Statut indisponible');
+      setText('webhookConfigurationStatus',p.connection_api_key_ok?'✅ Oui':'⚪ Non');
+      setText('webhookApiStatus',p.connection_api_key_ok?'✅ Configurée localement':'⚪ Non configurée');
+      setText('webhookOauthStatus',p.oauth_ok?'✅ Active':'⚪ Inactive');
+      setText('webhookScopeStatus',p.webhook_scope_ok?'✅ Oui':'⚪ Non');
       setText('webhookSecretStatus',p.webhook_secret_configured?'✅ Oui':'⚠️ Non');
       setText('webhookCallback',p.callback_url); setText('webhookSubscription',p.subscription_found?'✅ Oui':'⚪ Non');
-      setText('webhookSubscriptionId',p.subscription_id); setText('webhookEvents',(p.event_types||[]).join(', '));
+      setText('webhookSubscriptionId',p.subscription_id); setText('webhookEvents',(p.subscribed_events||[]).join(', '));
       setText('webhookMissingEvents',(p.missing_events||[]).join(', ') || 'Aucun');
-      setText('webhookLastReceived',p.last_received_at); setText('webhookLastEvent',p.last_event);
-      setText('webhookLastResult',p.last_result); setText('webhookLastError',p.last_error);
-    } catch(e) { setText('webhookApiStatus','Statut webhook indisponible'); }
+      setText('webhookLastReceived',p.last_webhook_received_at); setText('webhookLastEvent',p.last_event_type);
+      setText('webhookLastResult',p.last_processing_result); setText('webhookLastError',p.last_error);
+      if(lastWebhookReceivedAt && p.last_webhook_received_at && p.last_webhook_received_at !== lastWebhookReceivedAt) showWebhookNotice(p.last_webhook_received_at);
+      lastWebhookReceivedAt=p.last_webhook_received_at || lastWebhookReceivedAt;
+    } catch(e) { /* Keep the last successful values visible and retry below. */ }
   }
+  function scheduleWebhookPoll(immediate=false){
+    window.clearTimeout(webhookPollTimer);
+    if(immediate) refreshWebhookStatus();
+    webhookPollTimer=window.setTimeout(async ()=>{await refreshWebhookStatus(); scheduleWebhookPoll();}, document.hidden ? 30000 : 5000);
+  }
+  document.addEventListener('visibilitychange',()=>scheduleWebhookPoll(!document.hidden));
 
   function setFeedback(payload){
     const connected = Boolean(payload && payload.connected);
@@ -197,7 +216,7 @@
     finally { webhookEnsureBtn.disabled=false; webhookEnsureBtn.textContent=original; await refreshWebhookStatus(); }
   });
   refreshOauthStatus();
-  refreshWebhookStatus();
+  scheduleWebhookPoll(true);
 })();
 </script>
 {% endblock %}
