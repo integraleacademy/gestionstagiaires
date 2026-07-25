@@ -21072,6 +21072,117 @@ def _token_belongs_to_trainee(t: dict, file_token: str) -> bool:
     return False
 
 
+def _private_documents(t: dict) -> List[Dict[str, str]]:
+    """Return the admin-only documents attached to a trainee, cleaning legacy data."""
+    documents = t.get("private_documents")
+    if not isinstance(documents, list):
+        documents = []
+
+    cleaned = []
+    for document in documents:
+        if not isinstance(document, dict):
+            continue
+        file_token = str(document.get("file") or "").strip()
+        if not file_token:
+            continue
+        cleaned.append({
+            "id": str(document.get("id") or uuid.uuid4().hex),
+            "name": str(document.get("name") or "Document sans nom").strip()[:120] or "Document sans nom",
+            "file": file_token,
+            "original_name": str(document.get("original_name") or "").strip(),
+            "uploaded_at": str(document.get("uploaded_at") or "").strip(),
+        })
+    t["private_documents"] = cleaned
+    return cleaned
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/private-documents/upload")
+@admin_login_required
+@admin_write_required
+def admin_upload_private_document(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj = find_session(data, session_id)
+    if not session_obj:
+        abort(404)
+    trainee = next((item for item in _session_trainees_list(session_obj) if item.get("id") == trainee_id), None)
+    if not trainee:
+        abort(404)
+
+    display_name = " ".join((request.form.get("display_name") or "").split())[:120]
+    incoming_file = request.files.get("file")
+    if not display_name or not incoming_file or not incoming_file.filename:
+        flash("Choisissez un fichier et indiquez le nom à afficher.", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#miscDocumentsSection")
+
+    try:
+        stored_path = _store_file(session_id, trainee_id, "private_documents", incoming_file)
+    except ValueError:
+        flash("Ce type de fichier n’est pas autorisé.", "error")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#miscDocumentsSection")
+
+    _private_documents(trainee).append({
+        "id": uuid.uuid4().hex,
+        "name": display_name,
+        "file": _tokenize_path(stored_path),
+        "original_name": secure_filename(incoming_file.filename),
+        "uploaded_at": _now_iso(),
+    })
+    trainee["updated_at"] = _now_iso()
+    append_trainee_history_event(trainee, "Document divers ajouté", display_name, "action")
+    save_data(data)
+    flash(f"Le document « {display_name} » a été ajouté.", "success")
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#miscDocumentsSection")
+
+
+@app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/private-documents/<document_id>/delete")
+@admin_login_required
+@admin_write_required
+def admin_delete_private_document(session_id: str, trainee_id: str, document_id: str):
+    data = load_data()
+    session_obj = find_session(data, session_id)
+    if not session_obj:
+        abort(404)
+    trainee = next((item for item in _session_trainees_list(session_obj) if item.get("id") == trainee_id), None)
+    if not trainee:
+        abort(404)
+
+    documents = _private_documents(trainee)
+    document = next((item for item in documents if item.get("id") == document_id), None)
+    if not document:
+        abort(404)
+    documents.remove(document)
+    full_path = _detokenize_path(document.get("file") or "")
+    if os.path.isfile(full_path):
+        os.remove(full_path)
+    trainee["updated_at"] = _now_iso()
+    append_trainee_history_event(trainee, "Document divers supprimé", document.get("name") or "", "action")
+    save_data(data)
+    flash("Le document privé a été supprimé.", "success")
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#miscDocumentsSection")
+
+
+@app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/private-documents/<document_id>")
+@admin_login_required
+def admin_view_private_document(session_id: str, trainee_id: str, document_id: str):
+    data = load_data()
+    session_obj = find_session(data, session_id)
+    if not session_obj:
+        abort(404)
+    trainee = next((item for item in _session_trainees_list(session_obj) if item.get("id") == trainee_id), None)
+    if not trainee:
+        abort(404)
+    document = next((item for item in _private_documents(trainee) if item.get("id") == document_id), None)
+    if not document:
+        abort(404)
+
+    full_path = _detokenize_path(document.get("file") or "")
+    if not os.path.isfile(full_path):
+        abort(404)
+    extension = _safe_ext(document.get("original_name") or full_path)
+    download_name = secure_filename(document.get("name") or "document") + extension
+    return send_file(full_path, as_attachment=False, download_name=download_name)
+
+
 @app.get("/espace/<token>/download/<path:file_token>")
 def public_download_file(token: str, file_token: str):
     data = load_data()
@@ -27317,6 +27428,7 @@ def admin_trainee_page(session_id: str, trainee_id: str):
 
     # ✅ deliverables
     t.setdefault("deliverables", {})
+    _private_documents(t)
 
     # file tokens for template links (documents)
     for d in (t.get("documents") or []):
