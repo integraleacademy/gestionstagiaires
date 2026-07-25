@@ -21112,13 +21112,13 @@ def admin_upload_private_document(session_id: str, trainee_id: str):
     incoming_file = request.files.get("file")
     if not display_name or not incoming_file or not incoming_file.filename:
         flash("Choisissez un fichier et indiquez le nom à afficher.", "error")
-        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#miscDocumentsSection")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id, private_documents=1) + "#miscDocumentsSection")
 
     try:
         stored_path = _store_file(session_id, trainee_id, "private_documents", incoming_file)
     except ValueError:
         flash("Ce type de fichier n’est pas autorisé.", "error")
-        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#miscDocumentsSection")
+        return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id, private_documents=1) + "#miscDocumentsSection")
 
     _private_documents(trainee).append({
         "id": uuid.uuid4().hex,
@@ -21131,7 +21131,7 @@ def admin_upload_private_document(session_id: str, trainee_id: str):
     append_trainee_history_event(trainee, "Document divers ajouté", display_name, "action")
     save_data(data)
     flash(f"Le document « {display_name} » a été ajouté.", "success")
-    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#miscDocumentsSection")
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id, private_documents=1) + "#miscDocumentsSection")
 
 
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/private-documents/<document_id>/delete")
@@ -21158,7 +21158,7 @@ def admin_delete_private_document(session_id: str, trainee_id: str, document_id:
     append_trainee_history_event(trainee, "Document divers supprimé", document.get("name") or "", "action")
     save_data(data)
     flash("Le document privé a été supprimé.", "success")
-    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id) + "#miscDocumentsSection")
+    return redirect(url_for("admin_trainee_page", session_id=session_id, trainee_id=trainee_id, private_documents=1) + "#miscDocumentsSection")
 
 
 @app.get("/admin/sessions/<session_id>/stagiaires/<trainee_id>/private-documents/<document_id>")

@@ -39,6 +39,9 @@ class AdminPrivateDocumentsTests(unittest.TestCase):
             )
 
             self.assertEqual(response.status_code, 302)
+            self.assertTrue(response.location.endswith(
+                "/admin/sessions/SESSION-1/stagiaires/TRAINEE-1?private_documents=1#miscDocumentsSection"
+            ))
             private_document = data["sessions"][0]["trainees"][0]["private_documents"][0]
             self.assertEqual(private_document["name"], "Courrier confidentiel")
             self.assertTrue(os.path.isfile(gestion_app._detokenize_path(private_document["file"])))
@@ -63,6 +66,9 @@ class AdminPrivateDocumentsTests(unittest.TestCase):
             )
 
         self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.location.endswith(
+            "/admin/sessions/SESSION-1/stagiaires/TRAINEE-1?private_documents=1#miscDocumentsSection"
+        ))
         save_data.assert_not_called()
         self.assertNotIn("private_documents", data["sessions"][0]["trainees"][0])
 
