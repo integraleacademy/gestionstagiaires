@@ -1927,6 +1927,66 @@
 {% endif %}
 
 <!-- ===================== -->
+<!-- DOCUMENTS DIVERS PRIVÉS -->
+<!-- ===================== -->
+<details class="card" id="miscDocumentsSection" style="grid-column:1 / -1; margin-top:12px;" {% if request.args.get('private_documents') %}open{% endif %}>
+  <summary style="cursor:pointer;font-weight:900;">
+    🔒 Documents divers
+  </summary>
+
+  <div class="hint" style="margin-top:6px;">
+    Ces documents sont privés : ils restent uniquement dans l’espace administrateur et ne sont jamais affichés au stagiaire.
+  </div>
+
+  {% if not is_read_only %}
+  <form class="upload-form" method="post" enctype="multipart/form-data"
+        action="{{ url_for('admin_upload_private_document', session_id=session.id, trainee_id=trainee.id) }}"
+        style="margin-top:12px;align-items:end;">
+    <label style="display:grid;gap:5px;font-weight:800;min-width:min(100%,280px);">
+      Nom à afficher
+      <input type="text" name="display_name" maxlength="120" required
+             placeholder="Ex. Courrier reçu le 25 juillet">
+    </label>
+    <label style="display:grid;gap:5px;font-weight:800;min-width:min(100%,280px);">
+      Fichier
+      <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.webp,.zip" required>
+    </label>
+    <button class="btn btn-primary" type="submit">⬆️ Importer le document</button>
+  </form>
+  {% endif %}
+
+  {% if trainee.private_documents %}
+  <div class="table-wrap" style="margin-top:14px;">
+    <table class="table">
+      <thead><tr><th>Nom</th><th>Ajouté le</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for document in trainee.private_documents %}
+        <tr>
+          <td style="font-weight:800;">{{ document.name }}</td>
+          <td>{{ document.uploaded_at|frdatetime if document.uploaded_at else '—' }}</td>
+          <td>
+            <div class="btn-row">
+              <a class="btn btn-outline" href="{{ url_for('admin_view_private_document', session_id=session.id, trainee_id=trainee.id, document_id=document.id) }}"
+                 target="_blank" rel="noopener">👁️ Afficher</a>
+              {% if not is_read_only %}
+              <form method="post" action="{{ url_for('admin_delete_private_document', session_id=session.id, trainee_id=trainee.id, document_id=document.id) }}"
+                    onsubmit="return confirm('Supprimer ce document privé ?');">
+                <button class="btn btn-outline" type="submit">🗑️ Supprimer</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="hint" style="margin-top:14px;">Aucun document divers pour le moment.</div>
+  {% endif %}
+</details>
+
+<!-- ===================== -->
 <!-- DIPLÔMES / ATTESTATIONS -->
 <!-- ===================== -->
 {% if not is_vtc %}
