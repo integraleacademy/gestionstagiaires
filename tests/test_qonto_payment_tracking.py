@@ -67,6 +67,69 @@ class QontoPaymentTrackingTests(unittest.TestCase):
         self.assertEqual(s['qonto_paid_total_cents'],60000)
         self.assertEqual(s['manual_paid_total_cents'],0)
 
+    def test_returned_sepa_collections_cancel_cumulative_invoice_paid_amount(self):
+        line={
+            "traineeId":"T1", "financingType":"PERSONNEL", "paymentMode":"sepa_direct_debit",
+            "qontoInvoiceId":"inv", "qonto_total_amount_cents":347400,
+            "qonto_amount_paid_cents":139000, "amount":3474,
+            "directDebitInstallments":[
+                {"date":"2026-06-05","amount":695,"status":"returned"},
+                {"date":"2026-07-06","amount":695,"status":"returned"},
+                {"date":"2026-08-05","amount":695,"status":"scheduled"},
+            ],
+        }
+        self.assertEqual(gestion_app._reconciled_qonto_paid_cents(line,139000),0)
+        line["qonto_amount_paid_cents"]=gestion_app._reconciled_qonto_paid_cents(line,139000)
+        summary=gestion_app.calculate_trainee_financial_summary({"id":"T1","personal_amount":3474},[line])
+        self.assertEqual(summary["paid_total_cents"],0)
+        self.assertEqual(summary["remaining_total_cents"],347400)
+        self.assertEqual(summary["payment_status"],"unpaid")
+
+    def test_collection_history_takes_priority_over_future_schedule(self):
+        line={
+            "paymentMode":"sepa_direct_debit",
+            "qonto_amount_paid_cents":139000,
+            "directDebitInstallments":[{"date":"2026-08-05","amount":695,"status":"scheduled"}],
+            "qontoDirectDebitCollections":[
+                {"date":"2026-06-05","amount":695,"status":"returned"},
+                {"date":"2026-07-06","amount":695,"status":"returned"},
+                {"date":"2026-08-05","amount":695,"status":"scheduled"},
+            ],
+        }
+        self.assertEqual(gestion_app._reconciled_qonto_paid_cents(line,139000),0)
+
+    def test_direct_debit_sync_keeps_every_collection_for_reconciliation(self):
+        line={
+            "paymentMode":"sepa_direct_debit",
+            "qonto_amount_paid_cents":139000,
+            "directDebitInstallments":[{
+                "date":"2026-08-05", "amount":695, "status":"scheduled",
+                "qonto_direct_debit_subscription_id":"sub-1",
+            }],
+        }
+        response={"direct_debit_collections":[
+            {"id":"june","collection_date":"2026-06-05","amount":{"value":"695.00"},"status":"returned"},
+            {"id":"july","collection_date":"2026-07-06","amount":{"value":"695.00"},"status":"returned"},
+            {"id":"august","collection_date":"2026-08-05","amount":{"value":"695.00"},"status":"pending"},
+        ]}
+        with patch.object(gestion_app,"list_qonto_direct_debit_collections",return_value=response):
+            gestion_app._sync_qonto_direct_debit_line(line)
+        self.assertEqual([item["status"] for item in line["qontoDirectDebitCollections"]],["returned","returned","scheduled"])
+        self.assertEqual([item["date"] for item in line["qontoDirectDebitCollections"]],["2026-06-05","2026-07-06","2026-08-05"])
+        self.assertEqual(gestion_app._reconciled_qonto_paid_cents(line,139000),0)
+
+    def test_completed_sepa_collection_is_counted_but_returned_one_is_not(self):
+        line={"paymentMode":"sepa_direct_debit","directDebitInstallments":[
+            {"amount":695,"status":"completed"},{"amount":695,"status":"returned"}
+        ]}
+        self.assertEqual(gestion_app._reconciled_qonto_paid_cents(line,139000),69500)
+
+    def test_pending_sepa_plan_keeps_invoice_amount_until_collection_is_terminal(self):
+        line={"paymentMode":"sepa_direct_debit","directDebitInstallments":[
+            {"amount":695,"status":"scheduled"}
+        ]}
+        self.assertEqual(gestion_app._reconciled_qonto_paid_cents(line,69500),69500)
+
     def test_api_error_keeps_existing_amount(self):
         data={"sessions":[{"id":"S1","date_start":"2026-01-01","trainees":[{"id":"T1","personal_amount":1650}]}],"billing_lines":[{"id":gestion_app._billing_line_id("S1","T1","PERSONNEL","0"),"traineeId":"T1","sessionId":"S1","financingType":"PERSONNEL","amount":1650,"qontoInvoiceId":"inv","qontoInvoiceAmountPaid":600,"qontoAmountPaidCents":60000}]}
         line=data["billing_lines"][0]
@@ -124,6 +187,8 @@ class QontoPaymentTrackingTests(unittest.TestCase):
         self.assertIn('<option value="paid">Payée</option>', template)
         self.assertNotIn('badge yellow">En attente</span>', template)
         self.assertNotEqual(partial['payment_status'], 'paid')
+        trainee_template = open('templates/admin_trainee.html', encoding='utf-8').read()
+        self.assertIn("installmentDate(i)>=today", trainee_template)
 
     def test_billing_payment_progress_unpaid_and_paid_cases(self):
         unpaid = gestion_app.serialize_qonto_invoice_for_frontend({'qontoInvoiceId':'inv','qonto_total_amount_cents':165000,'qonto_amount_paid_cents':0})

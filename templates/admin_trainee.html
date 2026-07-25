@@ -3868,7 +3868,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
   function linePaid(l){const e=canonicalInvoiceEntry(l);return e?Number(e.paid_amount_cents ?? 0)/100:0}
   function lineRemaining(l){const e=canonicalInvoiceEntry(l);return e?Number(e.remaining_amount_cents ?? 0)/100:Math.max(lineAmount(l)-linePaid(l),0)}
   function linePaymentStatus(l){const e=canonicalInvoiceEntry(l);return e?.payment_status||'unpaid'}
-  function allInstallments(lines){return lines.flatMap(l=>(l.directDebitInstallments||[]).map((it,i)=>({...it,line:l,index:i,total:(l.directDebitInstallments||[]).length})));}
+  function allInstallments(lines){return lines.flatMap(l=>{const items=(Array.isArray(l.qontoDirectDebitCollections)&&l.qontoDirectDebitCollections.length)?l.qontoDirectDebitCollections:(l.directDebitInstallments||[]);return items.map((it,i)=>({...it,line:l,index:i,total:items.length}));});}
   function statusFromRatio(value,total,labels){if(total<=0)return [labels.none,'gray'];if(value<=0)return [labels.zero,'gray'];if(value<total)return [labels.partial,'orange'];if(value===total)return [labels.done,'green'];return [labels.over,'red'];}
   function computeFinance(lines){
     const parseMoneyValue=(value)=>{const n=parseFloat(String(value||'').replace(',','.').trim());return Number.isNaN(n)?0:n;};
@@ -3888,7 +3888,8 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
     const installments=allInstallments(lines);const paidStatuses=new Set(['completed','paid','succeeded','success']);const rejectStatuses=new Set(['failed','returned','rejected','refunded']);
     const mensualitesPayees=installments.filter(i=>paidStatuses.has(String(i.status||'').toLowerCase())).length;
     const nombreRejets=installments.filter(i=>rejectStatuses.has(String(i.status||'').toLowerCase())).length;
-    const upcoming=installments.filter(i=>!paidStatuses.has(String(i.status||'').toLowerCase())&&!rejectStatuses.has(String(i.status||'').toLowerCase())&&installmentDate(i)).sort((a,b)=>installmentDate(a).localeCompare(installmentDate(b)))[0];
+    const today=isoToday();
+    const upcoming=installments.filter(i=>!paidStatuses.has(String(i.status||'').toLowerCase())&&!rejectStatuses.has(String(i.status||'').toLowerCase())&&installmentDate(i)>=today).sort((a,b)=>installmentDate(a).localeCompare(installmentDate(b)))[0];
     const computed={prixFormation,montantCpf,montantPersonnel,montantAutre,totalFinancement,objectifFacturation,totalFacture,totalPaye,resteAFacturer:objectifFacturation-totalFacture,resteAPayer:objectifFacturation-totalPaye,differenceFinancement:totalFinancement-prixFormation,progressFacturation:pct(totalFacture,objectifFacturation),progressPaiement:pct(totalPaye,objectifFacturation),installments,totalMensualites:installments.length,mensualitesPayees,mensualitesRestantes:Math.max(installments.length-mensualitesPayees,0),montantPreleve:installments.filter(i=>paidStatuses.has(String(i.status||'').toLowerCase())).reduce((a,i)=>a+Number(i.amount||0),0),montantRestantAPrelever:installments.filter(i=>!paidStatuses.has(String(i.status||'').toLowerCase())).reduce((a,i)=>a+Number(i.amount||0),0),prochaineEcheance:upcoming,nombreRejets,qontoPaymentEntries:[]};
     if(currentFinancialSummary){
       computed.objectifFacturation=Number(currentFinancialSummary.planned_total_cents||0)/100||computed.objectifFacturation;

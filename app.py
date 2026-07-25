@@ -1456,6 +1456,31 @@ def serialize_qonto_invoice_for_frontend(invoice: Dict[str, Any]) -> Dict[str, A
     return out
 
 
+def _reconciled_qonto_paid_cents(invoice: Dict[str, Any], fallback_cents: int) -> int:
+    """Return the net amount actually kept for a SEPA invoice.
+
+    Qonto's client-invoice ``amount_paid`` is cumulative and can keep counting a
+    direct debit after the bank has returned it.  Collection statuses are the
+    source of truth for SEPA: only completed, non-returned collections are cash
+    that is still held.  We deliberately retain the invoice value until at
+    least one collection has reached a terminal state so pending legacy plans
+    do not erase a valid non-SEPA payment.
+    """
+    if invoice.get("paymentMode") != "sepa_direct_debit":
+        return fallback_cents
+    collections = invoice.get("qontoDirectDebitCollections")
+    installments = collections if isinstance(collections, list) and collections else _sepa_installments(invoice)
+    terminal = {"completed", "paid", "succeeded", "success", "failed", "returned", "rejected", "refunded"}
+    if not any(str(item.get("status") or "").lower() in terminal for item in installments):
+        return fallback_cents
+    paid = sum(
+        money_value_to_cents(item.get("amount") or 0)
+        for item in installments
+        if str(item.get("status") or "").lower() in {"completed", "paid", "succeeded", "success"}
+    )
+    return max(paid, 0)
+
+
 def normalize_qonto_invoice_storage_fields(invoice: Dict[str, Any]) -> None:
     serialized = serialize_qonto_invoice_for_frontend(invoice)
     # ``control`` is a deliberate local safety state (for a missing or
@@ -28524,6 +28549,7 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     'paymentPlan': persisted.get('paymentPlan') if isinstance(persisted.get('paymentPlan'), dict) else {},
                     'paymentMode': persisted.get('paymentMode') or 'cash',
                     'directDebitInstallments': persisted.get('directDebitInstallments') if isinstance(persisted.get('directDebitInstallments'), list) else [],
+                    'qontoDirectDebitCollections': persisted.get('qontoDirectDebitCollections') if isinstance(persisted.get('qontoDirectDebitCollections'), list) else [],
                     'qontoPaymentGlobalStatus': persisted.get('qontoPaymentGlobalStatus') or '',
                     'qonto_direct_debit_mandate_id': persisted.get('qonto_direct_debit_mandate_id') or '',
                     'qonto_direct_debit_subscription_id': persisted.get('qonto_direct_debit_subscription_id') or '',
@@ -28566,6 +28592,14 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                         'amount': line.get('amount'),
                         'updatedAt': line.get('updatedAt'),
                     })
+                    if qonto_source.get('qonto_amount_paid_cents') is not None or qonto_source.get('qontoAmountPaidCents') is not None:
+                        raw_paid_cents = _cents_first_non_null(
+                            qonto_source.get('qonto_amount_paid_cents'),
+                            qonto_source.get('qontoAmountPaidCents'),
+                        )
+                    else:
+                        raw_paid_cents = money_value_to_cents(qonto_source.get('qontoInvoiceAmountPaid') or 0)
+                    qonto_source['qonto_amount_paid_cents'] = _reconciled_qonto_paid_cents(qonto_source, raw_paid_cents)
                     normalize_qonto_invoice_storage_fields(qonto_source)
                     line['qonto_invoice'] = serialize_qonto_invoice_for_frontend(qonto_source)
                     line['qonto_total_amount_cents'] = qonto_source['qonto_total_amount_cents']
@@ -28597,7 +28631,7 @@ def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
     all_map = _billing_existing_map(data)
     if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
         normalize_qonto_invoice_storage_fields(line)
-    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError')}
+    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoDirectDebitCollections','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError')}
     persisted['updatedAt'] = _now_iso()
     all_map[line['id']] = persisted
     data['billing_lines'] = list(all_map.values())
@@ -29294,6 +29328,7 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
                     _billing_log(line, 'Échéances SEPA créées après synchronisation du mandat', 'success', str(result['created']), mandate_id)
             _sync_sepa_aliases(line)
     installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
+    reconciled_collections: Dict[str, Dict[str, Any]] = {}
     for item in installments:
         sid = item.get('qonto_direct_debit_subscription_id')
         if not sid:
@@ -29301,15 +29336,46 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
         collections = _qonto_collection_items(list_qonto_direct_debit_collections(sid))
         if not collections:
             continue
+        def collection_date(collection: Dict[str, Any]) -> str:
+            return str(
+                collection.get('collection_date') or collection.get('scheduled_at')
+                or collection.get('due_date') or collection.get('date')
+                or collection.get('completed_at') or collection.get('paid_at') or ''
+            )[:10]
+
+        collections.sort(key=lambda collection: (collection_date(collection), str(collection.get('id') or '')))
+        for position, collection_item in enumerate(collections):
+            collection_id = str(collection_item.get('id') or f"{sid}:{collection_date(collection_item)}:{position}")
+            amount = collection_item.get('amount')
+            normalized_collection = {
+                'id': collection_id,
+                'qonto_direct_debit_collection_id': str(collection_item.get('id') or ''),
+                'qonto_direct_debit_subscription_id': str(sid),
+                'date': collection_date(collection_item),
+                'due_date': collection_date(collection_item),
+                'amount': cents_to_money(money_value_to_cents(amount)) if amount is not None else _money(item.get('amount')),
+                'status': _map_collection_status(collection_item.get('status')),
+                'failureReason': collection_item.get('status_reason') or '',
+                'status_reason': collection_item.get('status_reason') or '',
+                'paidAt': collection_item.get('paid_at') or collection_item.get('completed_at') or '',
+            }
+            reconciled_collections[collection_id] = normalized_collection
         collection = collections[-1]
         item['qonto_direct_debit_collection_id'] = collection.get('id') or item.get('qonto_direct_debit_collection_id') or ''
         item['status'] = _map_collection_status(collection.get('status'))
+        if collection_date(collection):
+            item['date'] = collection_date(collection)
+            item['due_date'] = collection_date(collection)
         if item['status'] == 'completed':
             item['paidAt'] = collection.get('paid_at') or collection.get('completed_at') or _now_iso()
         if collection.get('status_reason'):
             item['failureReason'] = collection.get('status_reason')
             item['status_reason'] = collection.get('status_reason')
         item['updated_at'] = _now_iso()
+    if reconciled_collections:
+        line['qontoDirectDebitCollections'] = sorted(
+            reconciled_collections.values(), key=lambda item: (str(item.get('date') or ''), str(item.get('id') or ''))
+        )
     _sync_sepa_aliases(line)
     line['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(line)
     if line['qontoPaymentGlobalStatus'] == 'Payé':
@@ -29340,6 +29406,22 @@ def _apply_qonto_collection_webhook(data: Dict[str, Any], item: Dict[str, Any]) 
                 inst['failureReason'] = item.get('status_reason')
                 inst['status_reason'] = item.get('status_reason')
             inst['updated_at'] = _now_iso()
+            history = line.get('qontoDirectDebitCollections') if isinstance(line.get('qontoDirectDebitCollections'), list) else []
+            history_id = collection_id or f"{subscription_id}:{str(item.get('collection_date') or item.get('scheduled_at') or item.get('due_date') or item.get('date') or '')[:10]}"
+            history_by_id = {str(entry.get('id') or entry.get('qonto_direct_debit_collection_id') or ''): entry for entry in history if isinstance(entry, dict)}
+            history_entry = history_by_id.get(history_id, {'id': history_id})
+            history_entry.update({
+                'qonto_direct_debit_collection_id': collection_id,
+                'qonto_direct_debit_subscription_id': subscription_id,
+                'date': str(item.get('collection_date') or item.get('scheduled_at') or item.get('due_date') or item.get('date') or '')[:10],
+                'amount': cents_to_money(money_value_to_cents(item.get('amount'))) if item.get('amount') is not None else _money(inst.get('amount')),
+                'status': inst['status'],
+                'failureReason': item.get('status_reason') or '',
+                'status_reason': item.get('status_reason') or '',
+                'paidAt': item.get('paid_at') or item.get('completed_at') or '',
+            })
+            history_by_id[history_id] = history_entry
+            line['qontoDirectDebitCollections'] = sorted(history_by_id.values(), key=lambda entry: (str(entry.get('date') or ''), str(entry.get('id') or '')))
             app.logger.info('[QONTO] collection %s subscription_id=%s collection_id=%s', inst['status'], subscription_id, collection_id)
             _billing_log(line, f"Collection SEPA Qonto {inst['status']}", 'success' if inst['status'] == 'completed' else 'error', inst.get('status_reason') or '', collection_id)
             line['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(line)
