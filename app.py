@@ -1274,8 +1274,61 @@ def download_qonto_invoice_pdf(invoice_id: str, invoice_number: str = "") -> Tup
     return pdf_content, "application/pdf"
 
 
-def list_qonto_direct_debit_mandates(client_id: str) -> Dict[str, Any]:
-    return _qonto_request("GET", "/v2/sepa/direct_debit_mandates", params={"client_id": client_id})
+def list_qonto_direct_debit_mandates(
+    client_id: str = "", page: int = 1, per_page: int = 100
+) -> Dict[str, Any]:
+    """List Qonto mandates, optionally restricted to a client."""
+    params: Dict[str, Any] = {"page": page, "per_page": per_page}
+    if client_id:
+        params["client_id"] = client_id
+    return _qonto_request("GET", "/v2/sepa/direct_debit_mandates", params=params)
+
+
+def _qonto_direct_debit_mandate_items(response: Dict[str, Any]) -> List[Dict[str, Any]]:
+    for key in ("direct_debit_mandates", "mandates", "items"):
+        if isinstance(response.get(key), list):
+            return [item for item in response[key] if isinstance(item, dict)]
+    return []
+
+
+def _qonto_mandate_rum(mandate: Dict[str, Any]) -> str:
+    """Return the RUM exposed by the different Qonto API response versions."""
+    for key in ("rum", "unique_mandate_reference", "mandate_reference", "reference"):
+        value = mandate.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return ""
+
+
+def find_qonto_direct_debit_mandate_by_rum(rum: str) -> Optional[Dict[str, Any]]:
+    """Walk every Qonto result page and find a mandate by its exact RUM."""
+    page, per_page = 1, 100
+    while True:
+        response = list_qonto_direct_debit_mandates(page=page, per_page=per_page)
+        items = _qonto_direct_debit_mandate_items(response)
+        match = next((mandate for mandate in items if _qonto_mandate_rum(mandate) == rum), None)
+        if match is not None:
+            return match
+
+        meta = response.get("meta") if isinstance(response.get("meta"), dict) else {}
+        next_page = meta.get("next_page") or meta.get("nextPage")
+        total_pages = meta.get("total_pages") or meta.get("totalPages")
+        if next_page:
+            try:
+                next_page_number = int(next_page)
+            except (TypeError, ValueError):
+                next_page_number = page + 1
+        elif total_pages:
+            try:
+                next_page_number = page + 1 if page < int(total_pages) else 0
+            except (TypeError, ValueError):
+                next_page_number = 0
+        else:
+            next_page_number = page + 1 if len(items) >= per_page else 0
+        if not next_page_number or next_page_number <= page:
+            return None
+        page = next_page_number
+
 
 def get_qonto_direct_debit_mandate(mandate_id: str) -> Dict[str, Any]:
     """Fetch one mandate by its Qonto identifier."""
@@ -29641,26 +29694,26 @@ def api_admin_trainee_qonto_sepa_ensure(trainee_id: str):
 @admin_login_required
 @admin_write_required
 def api_admin_trainee_qonto_mandate_search(trainee_id: str):
-    """Find a Qonto mandate entered by an admin and associate it with the trainee."""
+    """Find a Qonto mandate by RUM and associate its technical UUID with the trainee."""
     payload = request.get_json(silent=True) or {}
-    mandate_id = str(payload.get("mandate_id") or "").strip()
-    if not mandate_id:
-        return jsonify({"ok": False, "error": "Saisissez un numéro de mandat."}), 400
-    if len(mandate_id) > 160 or not re.fullmatch(r"[A-Za-z0-9._:-]+", mandate_id):
-        return jsonify({"ok": False, "error": "Le numéro de mandat n’est pas valide."}), 400
+    rum = str(payload.get("rum") or "").strip()
+    if not rum:
+        return jsonify({"ok": False, "error": "Saisissez un numéro RUM de mandat."}), 400
+    if len(rum) > 160 or any(ord(character) < 32 for character in rum):
+        return jsonify({"ok": False, "error": "Le numéro RUM du mandat n’est pas valide."}), 400
 
     data = load_data()
     sess, trainees, trainee = _find_trainee_any_session(data, trainee_id)
     if not trainee:
         return jsonify({"ok": False, "error": "Stagiaire introuvable."}), 404
     try:
-        response = get_qonto_direct_debit_mandate(mandate_id)
-        mandate = response.get("direct_debit_mandate") or response.get("mandate") or response
-        if not isinstance(mandate, dict) or not mandate.get("id"):
-            return jsonify({"ok": False, "error": "Mandat introuvable sur Qonto."}), 404
+        mandate = find_qonto_direct_debit_mandate_by_rum(rum)
+        if not mandate or not mandate.get("id"):
+            return jsonify({"ok": False, "error": "Aucun mandat Qonto trouvé avec ce RUM"}), 404
 
         status = _map_mandate_status(mandate.get("status"))
         trainee["qonto_direct_debit_mandate_id"] = str(mandate.get("id"))
+        trainee["qonto_mandate_rum"] = rum
         trainee["qonto_mandate_status"] = status
         trainee["qonto_mandate_searched_at"] = _now_iso()
         trainee["qonto_mandate_client_id"] = str(mandate.get("client_id") or "")
@@ -29670,6 +29723,7 @@ def api_admin_trainee_qonto_mandate_search(trainee_id: str):
             line = next((item for item in candidate_lines if str(item.get("financingType") or "").lower() in {"personal", "personnel"}), None)
         if line is not None:
             line["qonto_direct_debit_mandate_id"] = str(mandate.get("id"))
+            line["qonto_mandate_rum"] = rum
             line["qonto_mandate_status"] = status
             line["mandateStatus"] = status
             line["qonto_mandate_sign_url"] = mandate.get("sign_url") or line.get("qonto_mandate_sign_url") or ""
@@ -29685,6 +29739,7 @@ def api_admin_trainee_qonto_mandate_search(trainee_id: str):
             "message": "Mandat retrouvé sur Qonto et associé au stagiaire.",
             "mandate": {
                 "id": str(mandate.get("id")),
+                "rum": rum,
                 "status": status,
                 "client_id": str(mandate.get("client_id") or ""),
                 "created_at": mandate.get("created_at") or "",
@@ -29692,7 +29747,7 @@ def api_admin_trainee_qonto_mandate_search(trainee_id: str):
         })
     except QontoApiError as exc:
         status_code = 404 if getattr(exc, "status_code", 0) == 404 else 502
-        message = "Mandat introuvable sur Qonto." if status_code == 404 else format_qonto_error_for_front(exc)
+        message = "Aucun mandat Qonto trouvé avec ce RUM" if status_code == 404 else format_qonto_error_for_front(exc)
         return jsonify({"ok": False, "error": message}), status_code
     except Exception as exc:
         app.logger.warning("[QONTO] recherche mandat impossible trainee_id=%s error=%s", trainee_id, _sanitize_qonto_error(str(exc)))

@@ -1391,12 +1391,12 @@
           </div>
           <div class="finance-field" style="margin-top:12px;"><div class="label">Commentaire financement</div><input id="financementComment" type="text" value="{{ trainee.financement_comment or '' }}" placeholder="Ex : France Travail en attente / OPCO validé / CPF…" {{ financing_read_only_attr }}></div>
           <div class="finance-mandate-search" style="margin-top:12px;">
-            <div class="label">Numéro de mandat de prélèvement</div>
+            <div class="label">Numéro RUM du mandat</div>
             <div class="finance-mandate-search__controls">
-              <input id="qontoMandateNumber" type="text" value="{{ trainee.qonto_direct_debit_mandate_id or '' }}" placeholder="Ex : mandat Qonto" autocomplete="off" {{ financing_read_only_attr }}>
+              <input id="qontoMandateNumber" type="text" value="{{ trainee.qonto_mandate_rum or '' }}" placeholder="Ex : RUM Qonto" autocomplete="off" {{ financing_read_only_attr }}>
               <button class="btn btn-outline" id="btnSearchQontoMandate" type="button" {{ financing_read_only_attr }}>🔎 Rechercher sur Qonto</button>
             </div>
-            <div class="hint">Saisissez le numéro du mandat pour récupérer ses informations et l’associer à cette personne.</div>
+            <div class="hint">Saisissez le RUM du mandat pour récupérer ses informations et l’associer à cette personne.</div>
             <div id="qontoMandateSearchFeedback" class="qonto-mandate-search__feedback" role="status" aria-live="polite"></div>
           </div>
           <div class="finance-checks">
@@ -4024,17 +4024,17 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
   const mandateNumberInput=document.getElementById('qontoMandateNumber');
   const mandateSearchFeedback=document.getElementById('qontoMandateSearchFeedback');
   mandateSearchBtn?.addEventListener('click', async ()=>{
-    const mandateId=String(mandateNumberInput?.value||'').trim();
+    const mandateRum=String(mandateNumberInput?.value||'').trim();
     mandateSearchFeedback.className='qonto-mandate-search__feedback';
-    if(!mandateId){ mandateSearchFeedback.textContent='Saisissez un numéro de mandat.'; mandateSearchFeedback.classList.add('is-error'); mandateNumberInput?.focus(); return; }
+    if(!mandateRum){ mandateSearchFeedback.textContent='Saisissez un numéro RUM de mandat.'; mandateSearchFeedback.classList.add('is-error'); mandateNumberInput?.focus(); return; }
     const original=mandateSearchBtn.innerHTML;
     mandateSearchBtn.disabled=true; mandateSearchBtn.textContent='Recherche…';
     try{
-      const response=await fetch(`/api/admin/trainees/${encodeURIComponent(traineeId)}/qonto-mandate/search`,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({mandate_id:mandateId})});
+      const response=await fetch(`/api/admin/trainees/${encodeURIComponent(traineeId)}/qonto-mandate/search`,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({rum:mandateRum})});
       const result=await parseJsonResponse(response,'Recherche du mandat impossible');
-      if(!response.ok||!result.ok) throw new Error(result.error||'Mandat introuvable sur Qonto.');
+      if(!response.ok||!result.ok) throw new Error(result.error||'Aucun mandat Qonto trouvé avec ce RUM');
       const status=result.mandate?.status||'inconnu';
-      mandateSearchFeedback.textContent=`Mandat ${result.mandate?.id||mandateId} retrouvé — statut : ${status}.`;
+      mandateSearchFeedback.textContent=`Mandat RUM ${result.mandate?.rum||mandateRum} retrouvé — statut : ${status}.`;
       mandateSearchFeedback.classList.add('is-success');
       await load();
     }catch(error){ mandateSearchFeedback.textContent=error.message||'Recherche du mandat impossible.'; mandateSearchFeedback.classList.add('is-error'); }
