@@ -36,9 +36,23 @@ class AdminBillingSpecificCasesTests(unittest.TestCase):
         self.assertEqual(lines[0]["specificCaseReason"], "Dossier à vérifier")
         self.assertFalse(lines[0]["specificCaseAutomatic"])
 
+    def test_cash_specific_case_can_be_explicitly_dismissed(self):
+        base = app.buildBillingLinesFromSessions([self._session(cash=True)])[0]
+        lines = app.buildBillingLinesFromSessions([self._session(cash=True)], {
+            base["id"]: {
+                "id": base["id"],
+                "specificCase": False,
+                "specificCaseCashDismissed": True,
+            }
+        })
+        self.assertFalse(lines[0]["specificCase"])
+        self.assertFalse(lines[0]["specificCaseAutomatic"])
+        self.assertTrue(lines[0]["specificCaseCashDismissed"])
+
     def test_billing_page_contains_specific_case_controls(self):
         template = open("templates/admin_sessions_billing.html", encoding="utf-8").read()
         self.assertIn("Cas spécifique", template)
         self.assertIn("Pourquoi est-ce un cas spécifique ?", template)
         self.assertIn("specific-case-row", template)
         self.assertIn("Génération désactivée", template)
+        self.assertNotIn('disabled title="Activé automatiquement par le paiement en espèces"', template)
