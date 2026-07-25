@@ -15218,8 +15218,20 @@ def _send_wedof_entry_to_salesforce(entry: Dict[str, Any]) -> Tuple[Dict[str, An
         "00NSa00000G2PxB": training_type,
         "00NSa00000KDPOT": location,
         "00NSa00000KPDmX": origin,
-        "00NSa00000GcKVx": str(entry.get("raw_payload") or "")[:3000],
+        # Do not send the complete webhook body here.  WeDoF folder payloads can
+        # be several tens of kilobytes (and may even contain the same JSON more
+        # than once).  Salesforce Web-to-Lead rejects oversized form posts with
+        # a 503 instead of a validation error.  The permalink is enough to find
+        # the source folder from the lead and remains safely bounded.
+        "00NSa00000GcKVx": str(payload.get("permalink") or entry.get("permalink") or "")[:255],
         "00NSa00000GcKxN": training_date,
+    }
+    # Empty custom fields provide no information and can trigger Salesforce
+    # validation rules depending on their configured type.
+    salesforce_payload = {
+        key: value
+        for key, value in salesforce_payload.items()
+        if value not in (None, "") or not key.startswith("00N")
     }
     attempted_at = _now_iso()
     entry["salesforce_last_attempt_at"] = attempted_at
