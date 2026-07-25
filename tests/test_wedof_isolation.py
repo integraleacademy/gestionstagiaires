@@ -111,6 +111,42 @@ class WedofIsolationTests(unittest.TestCase):
         self.assertEqual(saved_entry["salesforce_send_count"], 1)
         self.assertFalse(saved_entry["processed"])
 
+    def test_salesforce_payload_uses_bounded_permalink_instead_of_raw_webhook(self):
+        salesforce_response = type(
+            "SalesforceResponse",
+            (),
+            {"status_code": 200, "text": "ok", "url": "https://webto.salesforce.com/lead"},
+        )()
+        entry = {
+            "id": "WEDOF-LARGE",
+            "raw_payload": "x" * 50000,
+            "payload": {
+                "permalink": "https://example.test/dossier-123",
+                "externalId": "123",
+                "attendee": {
+                    "firstName": "Sara",
+                    "lastName": "Boukhari",
+                    "email": "sara@example.com",
+                },
+                "trainingActionInfo": {"title": "Formation dirigeant DESP"},
+            },
+        }
+
+        with patch.object(
+            gestion_app.requests, "post", return_value=salesforce_response
+        ) as salesforce_post:
+            result, status = gestion_app._send_wedof_entry_to_salesforce(entry)
+
+        self.assertEqual(status, 200)
+        self.assertTrue(result["success"])
+        sent_payload = salesforce_post.call_args.kwargs["data"]
+        self.assertEqual(
+            sent_payload["00NSa00000GcKVx"], "https://example.test/dossier-123"
+        )
+        self.assertNotIn("00NSa00000KDPOT", sent_payload)
+        self.assertNotIn("00NSa00000GcKxN", sent_payload)
+        self.assertLess(len(str(sent_payload)), 5000)
+
     def test_admin_wedof_keeps_notification_manual_and_shows_automatic_salesforce_status(self):
         entry = {
             "id": "WEDOF-TEST",
