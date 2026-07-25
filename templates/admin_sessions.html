@@ -2007,7 +2007,7 @@
     setDirigeantDateFieldsVisible("", isDirigeant);
     setFieldVisible("dateStartField", true);
     setFieldVisible("dateEndField", true);
-    if(examDateField) examDateField.style.display = isVtc || isDirigeant ? "none" : "";
+    if(examDateField) examDateField.style.display = isVtc ? "none" : "";
     if(apsInPersonStartField) apsInPersonStartField.style.display = isAps ? "" : "none";
     if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
     if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
@@ -2040,7 +2040,7 @@
     setDirigeantDateFieldsVisible("edit", isDirigeant);
     setFieldVisible("editDateStartField", true);
     setFieldVisible("editDateEndField", true);
-    if(examDateField) examDateField.style.display = isVtc || isDirigeant ? "none" : "";
+    if(examDateField) examDateField.style.display = isVtc ? "none" : "";
     if(apsInPersonStartField) apsInPersonStartField.style.display = isAps ? "" : "none";
     if(examTheoryField) examTheoryField.style.display = isVtc ? "" : "none";
     if(examPracticeField) examPracticeField.style.display = isVtc ? "" : "none";
@@ -2058,7 +2058,7 @@
     const dirigeantDates = isDirigeant ? resolveDirigeantSessionDates("") : null;
     const date_start = dirigeantDates ? dirigeantDates.dateStart : (document.getElementById("dateStart").value || "").trim();
     const date_end = dirigeantDates ? dirigeantDates.dateEnd : (document.getElementById("dateEnd").value || "").trim();
-    const exam_date = isDirigeant ? "" : (document.getElementById("examDate").value || "").trim();
+    const exam_date = (document.getElementById("examDate").value || "").trim();
     const exam_theory_date = (document.getElementById("examTheoryDate")?.value || "").trim();
     const exam_practice_date = (document.getElementById("examPracticeDate")?.value || "").trim();
     const practice_training_date = (document.getElementById("practiceTrainingDate")?.value || "").trim();
@@ -2155,7 +2155,7 @@
         body: JSON.stringify({
           date_start: isDespTraining(document.getElementById("editSessionTrainingType").value) ? resolveDirigeantSessionDates("edit").dateStart : (document.getElementById("editDateStart").value || "").trim(),
           date_end: isDespTraining(document.getElementById("editSessionTrainingType").value) ? resolveDirigeantSessionDates("edit").dateEnd : (document.getElementById("editDateEnd").value || "").trim(),
-          exam_date: isDespTraining(document.getElementById("editSessionTrainingType").value) ? "" : (document.getElementById("editExamDate").value || "").trim(),
+          exam_date: (document.getElementById("editExamDate").value || "").trim(),
           exam_theory_date: (document.getElementById("editExamTheoryDate").value || "").trim(),
           exam_practice_date: (document.getElementById("editExamPracticeDate").value || "").trim(),
           practice_training_date: (document.getElementById("editPracticeTrainingDate").value || "").trim(),
