@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 import app as gestion_app
 
@@ -12,38 +12,80 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
             session["admin_logged_in"] = True
             session["admin_role"] = "admin"
 
-    def test_searches_qonto_and_persists_mandate_on_trainee(self):
+    def test_searches_every_page_by_exact_rum_and_persists_uuid_and_rum(self):
         trainee = {"id": "trainee-1", "first_name": "Anne", "last_name": "Test"}
         data = {"sessions": [{"id": "session-1", "trainees": [trainee]}]}
-        qonto_response = {
-            "direct_debit_mandate": {
-                "id": "mandate_123",
+        first_page = {
+            "direct_debit_mandates": [
+                {"id": f"00000000-0000-4000-8000-{number:012d}", "rum": f"OTHER-{number}"}
+                for number in range(100)
+            ],
+            "meta": {"current_page": 1, "next_page": 2, "total_pages": 2},
+        }
+        qonto_uuid = "123e4567-e89b-42d3-a456-426614174000"
+        second_page = {
+            "direct_debit_mandates": [{
+                "id": qonto_uuid,
+                "rum": "RUM-EXACT-123",
                 "status": "approved",
                 "client_id": "client_456",
                 "created_at": "2026-07-20T10:00:00Z",
-            }
+            }],
+            "meta": {"current_page": 2, "total_pages": 2},
         }
 
         with patch.object(gestion_app, "load_data", return_value=data), \
              patch.object(gestion_app, "save_data") as save_mock, \
-             patch.object(gestion_app, "get_qonto_direct_debit_mandate", return_value=qonto_response) as qonto_mock:
+             patch.object(
+                 gestion_app,
+                 "list_qonto_direct_debit_mandates",
+                 side_effect=[first_page, second_page],
+             ) as qonto_mock, \
+             patch.object(gestion_app, "get_qonto_direct_debit_mandate") as get_mock:
             response = self.client.post(
                 "/api/admin/trainees/trainee-1/qonto-mandate/search",
-                json={"mandate_id": "mandate_123"},
+                json={"rum": "RUM-EXACT-123"},
             )
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["mandate"]["id"], qonto_uuid)
+        self.assertEqual(response.get_json()["mandate"]["rum"], "RUM-EXACT-123")
         self.assertEqual(response.get_json()["mandate"]["status"], "active")
-        qonto_mock.assert_called_once_with("mandate_123")
-        self.assertEqual(trainee["qonto_direct_debit_mandate_id"], "mandate_123")
+        self.assertEqual(
+            qonto_mock.call_args_list,
+            [call(page=1, per_page=100), call(page=2, per_page=100)],
+        )
+        get_mock.assert_not_called()
+        self.assertEqual(trainee["qonto_direct_debit_mandate_id"], qonto_uuid)
+        self.assertEqual(trainee["qonto_mandate_rum"], "RUM-EXACT-123")
         self.assertEqual(trainee["qonto_mandate_client_id"], "client_456")
         save_mock.assert_called_once_with(data)
 
-    def test_rejects_invalid_mandate_number_without_calling_qonto(self):
-        with patch.object(gestion_app, "get_qonto_direct_debit_mandate") as qonto_mock:
+    def test_returns_business_message_when_no_exact_rum_matches(self):
+        trainee = {"id": "trainee-1"}
+        data = {"sessions": [{"id": "session-1", "trainees": [trainee]}]}
+        response_page = {
+            "direct_debit_mandates": [{"id": "some-uuid", "rum": "rum-lowercase"}],
+            "meta": {"current_page": 1, "total_pages": 1},
+        }
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "list_qonto_direct_debit_mandates", return_value=response_page), \
+             patch.object(gestion_app, "get_qonto_direct_debit_mandate") as get_mock:
             response = self.client.post(
                 "/api/admin/trainees/trainee-1/qonto-mandate/search",
-                json={"mandate_id": "mandate avec espaces"},
+                json={"rum": "RUM-LOWERCASE"},
+            )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.get_json()["error"], "Aucun mandat Qonto trouvé avec ce RUM")
+        get_mock.assert_not_called()
+        self.assertNotIn("qonto_direct_debit_mandate_id", trainee)
+
+    def test_rejects_invalid_rum_without_calling_qonto(self):
+        with patch.object(gestion_app, "list_qonto_direct_debit_mandates") as qonto_mock:
+            response = self.client.post(
+                "/api/admin/trainees/trainee-1/qonto-mandate/search",
+                json={"rum": "invalid\nrum"},
             )
 
         self.assertEqual(response.status_code, 400)
