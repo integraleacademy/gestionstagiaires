@@ -1456,6 +1456,30 @@ def serialize_qonto_invoice_for_frontend(invoice: Dict[str, Any]) -> Dict[str, A
     return out
 
 
+def _reconciled_qonto_paid_cents(invoice: Dict[str, Any], fallback_cents: int) -> int:
+    """Return the net amount actually kept for a SEPA invoice.
+
+    Qonto's client-invoice ``amount_paid`` is cumulative and can keep counting a
+    direct debit after the bank has returned it.  Collection statuses are the
+    source of truth for SEPA: only completed, non-returned collections are cash
+    that is still held.  We deliberately retain the invoice value until at
+    least one collection has reached a terminal state so pending legacy plans
+    do not erase a valid non-SEPA payment.
+    """
+    if invoice.get("paymentMode") != "sepa_direct_debit":
+        return fallback_cents
+    installments = _sepa_installments(invoice)
+    terminal = {"completed", "paid", "succeeded", "success", "failed", "returned", "rejected", "refunded"}
+    if not any(str(item.get("status") or "").lower() in terminal for item in installments):
+        return fallback_cents
+    paid = sum(
+        money_value_to_cents(item.get("amount") or 0)
+        for item in installments
+        if str(item.get("status") or "").lower() in {"completed", "paid", "succeeded", "success"}
+    )
+    return max(paid, 0)
+
+
 def normalize_qonto_invoice_storage_fields(invoice: Dict[str, Any]) -> None:
     serialized = serialize_qonto_invoice_for_frontend(invoice)
     # ``control`` is a deliberate local safety state (for a missing or
@@ -28566,6 +28590,14 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                         'amount': line.get('amount'),
                         'updatedAt': line.get('updatedAt'),
                     })
+                    if qonto_source.get('qonto_amount_paid_cents') is not None or qonto_source.get('qontoAmountPaidCents') is not None:
+                        raw_paid_cents = _cents_first_non_null(
+                            qonto_source.get('qonto_amount_paid_cents'),
+                            qonto_source.get('qontoAmountPaidCents'),
+                        )
+                    else:
+                        raw_paid_cents = money_value_to_cents(qonto_source.get('qontoInvoiceAmountPaid') or 0)
+                    qonto_source['qonto_amount_paid_cents'] = _reconciled_qonto_paid_cents(qonto_source, raw_paid_cents)
                     normalize_qonto_invoice_storage_fields(qonto_source)
                     line['qonto_invoice'] = serialize_qonto_invoice_for_frontend(qonto_source)
                     line['qonto_total_amount_cents'] = qonto_source['qonto_total_amount_cents']
@@ -29301,9 +29333,20 @@ def _sync_qonto_direct_debit_line(line: Dict[str, Any]) -> None:
         collections = _qonto_collection_items(list_qonto_direct_debit_collections(sid))
         if not collections:
             continue
+        def collection_date(collection: Dict[str, Any]) -> str:
+            return str(
+                collection.get('collection_date') or collection.get('scheduled_at')
+                or collection.get('due_date') or collection.get('date')
+                or collection.get('completed_at') or collection.get('paid_at') or ''
+            )[:10]
+
+        collections.sort(key=lambda collection: (collection_date(collection), str(collection.get('id') or '')))
         collection = collections[-1]
         item['qonto_direct_debit_collection_id'] = collection.get('id') or item.get('qonto_direct_debit_collection_id') or ''
         item['status'] = _map_collection_status(collection.get('status'))
+        if collection_date(collection):
+            item['date'] = collection_date(collection)
+            item['due_date'] = collection_date(collection)
         if item['status'] == 'completed':
             item['paidAt'] = collection.get('paid_at') or collection.get('completed_at') or _now_iso()
         if collection.get('status_reason'):
