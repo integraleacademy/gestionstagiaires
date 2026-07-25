@@ -14,6 +14,21 @@ class AdminSessionsDespDatesTests(unittest.TestCase):
         self.assertIn('Fin présentiel DESP', self.template)
         self.assertIn('return type.startsWith("DIRIGEANT") || type.includes("DESP");', self.template)
 
+    def test_desp_exam_date_is_visible_and_saved(self):
+        self.assertEqual(
+            self.template.count('examDateField.style.display = isVtc ? "none" : "";'),
+            2,
+        )
+        self.assertIn(
+            'const exam_date = (document.getElementById("examDate").value || "").trim();',
+            self.template,
+        )
+        self.assertIn(
+            'exam_date: (document.getElementById("editExamDate").value || "").trim(),',
+            self.template,
+        )
+        self.assertNotIn('const exam_date = isDirigeant ? ""', self.template)
+
 
 if __name__ == "__main__":
     unittest.main()
