@@ -28207,9 +28207,12 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     'description': f"Formation {training} - {trainee.get('first_name','')} {trainee.get('last_name','')} - {financing.get('label') or financing['type']}",
                     'vatRate': _money(trainee.get('qonto_vat_rate') if trainee.get('qonto_vat_rate') not in (None, '') else 0),
                 }
-                cash_specific = bool(trainee.get('cash_payment_enabled'))
+                # A cash payment suggests a specific case by default, but an admin
+                # can explicitly dismiss that suggestion from the billing page.
+                cash_specific = bool(trainee.get('cash_payment_enabled')) and not bool(persisted.get('specificCaseCashDismissed'))
                 line['specificCase'] = cash_specific or bool(persisted.get('specificCase'))
                 line['specificCaseAutomatic'] = cash_specific
+                line['specificCaseCashDismissed'] = bool(persisted.get('specificCaseCashDismissed'))
                 line['specificCaseReason'] = (
                     'Paiement en espèces indiqué dans la fiche stagiaire.'
                     if cash_specific else str(persisted.get('specificCaseReason') or '').strip()
@@ -28627,10 +28630,12 @@ def api_admin_billing_specific_case(line_id: str):
     reason = str(payload.get('reason') or '').strip()
     if enabled and not reason:
         return jsonify({'ok': False, 'error': 'Indiquez pourquoi cette ligne est un cas spécifique.'}), 400
-    if line.get('specificCaseAutomatic') and not enabled:
-        return jsonify({'ok': False, 'error': 'Le cas spécifique est automatique car un paiement en espèces est indiqué.'}), 409
     line['specificCase'] = enabled
     line['specificCaseReason'] = reason if enabled else ''
+    # Remember an explicit opt-out so rebuilding billing lines does not
+    # immediately re-enable the cash-payment suggestion.
+    line['specificCaseCashDismissed'] = bool(line.get('specificCaseAutomatic') and not enabled)
+    line['specificCaseAutomatic'] = False
     _billing_log(line, 'Cas spécifique activé' if enabled else 'Cas spécifique désactivé', 'success', reason)
     _save_billing_line(data, line)
     save_data(data)
