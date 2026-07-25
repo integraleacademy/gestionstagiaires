@@ -329,9 +329,11 @@
   <a href="{{ url_for('admin_trainees', session_id=session.id, **request.args) }}">← Retour stagiaires</a>
 </div>
 
-<div class="session-header">
+<div class="session-header admin-trainee-hero">
   <div>
+    <div class="admin-trainee-hero__eyebrow">Espace de gestion · Dossier stagiaire</div>
     <h1>Fiche stagiaire</h1>
+    <p class="admin-trainee-hero__subtitle">Centralisez les informations, documents et actions de ce dossier depuis un espace clair et unifié.</p>
 
     <div class="meta-line">
       <span class="pill">{{ training_type_label }}</span>

@@ -1252,6 +1252,187 @@ select.status-pill{
   flex:0 0 auto;
 }
 
+/* =========================================================
+   FICHE STAGIAIRE ADMIN — interface SaaS
+   Habillage uniquement : les formulaires et actions existants
+   conservent leur structure et leur comportement.
+   ========================================================= */
+body.endpoint-admin-trainee-page{
+  --trainee-saas-ink:#0f172a;
+  --trainee-saas-muted:#64748b;
+  --trainee-saas-line:#e2e8f0;
+  --trainee-saas-blue:#2563eb;
+  background:#f6f8fc;
+}
+body.endpoint-admin-trainee-page main{
+  position:relative;
+}
+body.endpoint-admin-trainee-page main::before{
+  content:"";
+  position:absolute;
+  z-index:-1;
+  top:-34px;
+  left:-30px;
+  right:-30px;
+  height:340px;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 15% 15%,rgba(59,130,246,.13),transparent 36%),
+    radial-gradient(circle at 85% 0,rgba(124,58,237,.09),transparent 32%);
+}
+body.endpoint-admin-trainee-page .breadcrumbs{
+  margin-bottom:14px;
+}
+body.endpoint-admin-trainee-page .breadcrumbs a{
+  display:inline-flex;
+  align-items:center;
+  min-height:38px;
+  padding:0 13px;
+  border:1px solid #dbe4f0;
+  border-radius:12px;
+  background:rgba(255,255,255,.88);
+  color:#475569;
+  font-size:13px;
+  font-weight:850;
+  text-decoration:none;
+  box-shadow:0 8px 24px rgba(15,23,42,.05);
+}
+body.endpoint-admin-trainee-page .breadcrumbs a:hover{
+  color:#1d4ed8;
+  border-color:#bfdbfe;
+  background:#fff;
+}
+body.endpoint-admin-trainee-page .admin-trainee-hero{
+  position:relative;
+  overflow:hidden;
+  padding:27px 30px;
+  border:1px solid #dbeafe;
+  border-radius:26px;
+  background:
+    radial-gradient(circle at 100% 0,rgba(96,165,250,.20),transparent 35%),
+    linear-gradient(135deg,#fff 0%,#f8fbff 62%,#eff6ff 100%);
+  box-shadow:0 20px 54px rgba(15,23,42,.09);
+}
+body.endpoint-admin-trainee-page .admin-trainee-hero::after{
+  content:"";
+  position:absolute;
+  top:-58px;
+  right:-40px;
+  width:190px;
+  height:190px;
+  border:32px solid rgba(255,255,255,.48);
+  border-radius:50%;
+  pointer-events:none;
+}
+body.endpoint-admin-trainee-page .admin-trainee-hero > div{
+  position:relative;
+  z-index:1;
+  width:100%;
+}
+.admin-trainee-hero__eyebrow{
+  margin-bottom:5px;
+  color:#2563eb;
+  font-size:11px;
+  font-weight:950;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+body.endpoint-admin-trainee-page .admin-trainee-hero h1{
+  margin:0;
+  color:var(--trainee-saas-ink);
+  font-size:clamp(28px,3vw,40px);
+  line-height:1.08;
+  letter-spacing:-.045em;
+}
+.admin-trainee-hero__subtitle{
+  max-width:720px;
+  margin:8px 0 14px;
+  color:var(--trainee-saas-muted);
+  font-size:14px;
+  line-height:1.55;
+}
+body.endpoint-admin-trainee-page .admin-trainee-hero .meta-line:first-of-type{
+  align-items:center;
+  padding-top:12px;
+  border-top:1px solid rgba(203,213,225,.62);
+}
+body.endpoint-admin-trainee-page .admin-trainee-hero .meta-line:first-of-type > span:not(.pill){
+  padding:7px 10px;
+  border:1px solid #e2e8f0;
+  border-radius:10px;
+  background:rgba(255,255,255,.78);
+  color:#64748b;
+}
+body.endpoint-admin-trainee-page .admin-trainee-hero .meta-line:last-of-type{
+  gap:8px;
+  padding-top:5px;
+}
+body.endpoint-admin-trainee-page .admin-trainee-hero .meta-line:last-of-type form{
+  margin:0;
+}
+body.endpoint-admin-trainee-page .admin-trainee-hero .btn{
+  min-height:40px;
+  border-radius:11px;
+}
+body.endpoint-admin-trainee-page .card,
+body.endpoint-admin-trainee-page details.card{
+  border-color:var(--trainee-saas-line);
+  border-radius:20px;
+  box-shadow:0 12px 34px rgba(15,23,42,.055);
+}
+body.endpoint-admin-trainee-page details.card{
+  overflow:hidden;
+  background:#fff;
+}
+body.endpoint-admin-trainee-page details.card > summary{
+  transition:background .18s ease,color .18s ease;
+}
+body.endpoint-admin-trainee-page details.card > summary:hover{
+  background:#f8fafc;
+  color:#1d4ed8;
+}
+body.endpoint-admin-trainee-page details.card[open] > summary{
+  border-bottom-color:#edf2f7;
+  background:linear-gradient(180deg,#fff,#f8fafc);
+}
+body.endpoint-admin-trainee-page .trainee-profile-card{
+  margin-top:16px;
+  border-radius:26px;
+  background:
+    radial-gradient(circle at 0 0,rgba(37,99,235,.09),transparent 27%),
+    #fff;
+  box-shadow:0 20px 54px rgba(15,23,42,.09);
+}
+body.endpoint-admin-trainee-page .trainee-grid{
+  gap:16px !important;
+  margin-top:16px !important;
+}
+body.endpoint-admin-trainee-page .automation-panel,
+body.endpoint-admin-trainee-page .finance-dashboard{
+  margin-top:16px;
+  border-radius:26px;
+  box-shadow:0 20px 54px rgba(15,23,42,.09);
+}
+body.endpoint-admin-trainee-page input:not([type="checkbox"]):not([type="radio"]),
+body.endpoint-admin-trainee-page select,
+body.endpoint-admin-trainee-page textarea{
+  transition:border-color .18s ease,box-shadow .18s ease,background .18s ease;
+}
+body.endpoint-admin-trainee-page input:not([type="checkbox"]):not([type="radio"]):focus,
+body.endpoint-admin-trainee-page select:focus,
+body.endpoint-admin-trainee-page textarea:focus{
+  border-color:#93c5fd;
+  box-shadow:0 0 0 3px rgba(59,130,246,.12);
+}
+@media(max-width:720px){
+  body.endpoint-admin-trainee-page .admin-trainee-hero{padding:21px 17px;border-radius:22px;}
+  body.endpoint-admin-trainee-page .admin-trainee-hero::after{display:none;}
+  body.endpoint-admin-trainee-page .admin-trainee-hero .meta-line:last-of-type .btn,
+  body.endpoint-admin-trainee-page .admin-trainee-hero .meta-line:last-of-type form{width:100%;}
+  body.endpoint-admin-trainee-page .admin-trainee-hero .meta-line:last-of-type form .btn{width:100%;}
+  body.endpoint-admin-trainee-page .trainee-profile-card{border-radius:22px;}
+}
+
 .btn-admin-trainee-side-action{
   width:210px;
   height:44px;
