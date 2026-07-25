@@ -92,6 +92,37 @@ class AdminTraineeQontoMandateSearchTest(unittest.TestCase):
         self.assertFalse(response.get_json()["ok"])
         qonto_mock.assert_not_called()
 
+    def test_recovers_existing_qonto_installments_with_the_mandate(self):
+        line = {
+            "id": "line-1", "traineeId": "trainee-1", "sessionId": "session-1",
+            "financingType": "personal", "amount": 300, "paymentMode": "cash",
+        }
+        trainee = {"id": "trainee-1", "first_name": "Anne", "last_name": "Test"}
+        data = {"sessions": [{"id": "session-1", "trainees": [trainee]}], "billing_lines": [line]}
+        mandate = {"id": "mandate-123", "rum": "RUM-123", "status": "active", "client_id": "client-1"}
+        subscriptions = {
+            "direct_debit_subscriptions": [
+                {"id": "sub-2", "direct_debit_mandate_id": "mandate-123", "initial_collection_date": "2026-09-10", "amount": {"value": "150.00"}, "status": "pending"},
+                {"id": "sub-1", "direct_debit_mandate_id": "mandate-123", "initial_collection_date": "2026-08-10", "amount": {"value": "150.00"}, "status": "completed"},
+            ],
+            "meta": {"current_page": 1, "total_pages": 1},
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data"), \
+             patch.object(gestion_app, "_billing_lines", return_value=[line]), \
+             patch.object(gestion_app, "find_qonto_direct_debit_mandate_by_rum", return_value=mandate), \
+             patch.object(gestion_app, "list_qonto_direct_debit_subscriptions", return_value=subscriptions):
+            response = self.client.post(
+                "/api/admin/trainees/trainee-1/qonto-mandate/search", json={"rum": "RUM-123"}
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["recovered_installments"], 2)
+        self.assertEqual(line["paymentMode"], "sepa_direct_debit")
+        self.assertEqual([item["date"] for item in line["directDebitInstallments"]], ["2026-08-10", "2026-09-10"])
+        self.assertEqual([item["status"] for item in line["directDebitInstallments"]], ["completed", "scheduled"])
+
 
 if __name__ == "__main__":
     unittest.main()
