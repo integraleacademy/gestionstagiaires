@@ -3867,7 +3867,7 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
   function canonicalInvoiceEntry(l){return l?.qonto_invoice || null;}
   function lineHasGeneratedInvoice(l){return isCpfQontoLine(l)||!!(l.qontoInvoiceId||l.qontoDraftId)||['external_generated','external','generated_externally'].includes(String(l.invoiceStatus||'').toLowerCase());}
   function lineAmount(l){const e=canonicalInvoiceEntry(l);return e?Number(e.total_amount_cents ?? 0)/100:Number(l.amountTTC||l.amount||0)}
-  function linePaid(l){const e=canonicalInvoiceEntry(l);return e?Number(e.paid_amount_cents ?? 0)/100:0}
+  function linePaid(l){const e=canonicalInvoiceEntry(l);if(e)return Number(e.paid_amount_cents ?? 0)/100;const paidStatuses=new Set(['completed','paid','succeeded','success']);return (l.directDebitInstallments||[]).filter(i=>paidStatuses.has(String(i.status||'').toLowerCase())).reduce((total,i)=>total+Number(i.amount||0),0)}
   function lineRemaining(l){const e=canonicalInvoiceEntry(l);return e?Number(e.remaining_amount_cents ?? 0)/100:Math.max(lineAmount(l)-linePaid(l),0)}
   function linePaymentStatus(l){const e=canonicalInvoiceEntry(l);return e?.payment_status||'unpaid'}
   function allInstallments(lines){return lines.flatMap(l=>(l.directDebitInstallments||[]).map((it,i)=>({...it,line:l,index:i,total:(l.directDebitInstallments||[]).length})));}

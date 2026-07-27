@@ -28755,6 +28755,40 @@ def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional
                     'last_synced_at': frontend_invoice.get('last_synced_at') or '',
                 })
             continue
+        line_total_cents = money_value_to_cents(line.get('amountTTC') or line.get('amount') or 0)
+        if invoice_status in {'external_generated', 'external', 'generated_externally'}:
+            # A line explicitly marked as generated in another accounting tool
+            # is just as invoiced as a Qonto line, even though it has no Qonto
+            # invoice identifier.
+            invoiced_total_cents += line_total_cents
+            by_financer[financer]['invoiced_amount_cents'] += line_total_cents
+
+        # Direct-debit collections can be reported before (or independently
+        # from) a client-invoice payment amount.  The schedule is then the only
+        # source of truth available for the money already collected.
+        installments = line.get('directDebitInstallments')
+        if isinstance(installments, list):
+            paid_statuses = {'completed', 'paid', 'succeeded', 'success'}
+            installment_paid_cents = sum(
+                money_value_to_cents(item.get('amount') or 0)
+                for item in installments
+                if isinstance(item, dict) and str(item.get('status') or '').lower() in paid_statuses
+            )
+            if installment_paid_cents > 0:
+                qonto_paid_total_cents += installment_paid_cents
+                by_financer[financer]['paid_amount_cents'] += installment_paid_cents
+                qonto_payment_entries.append({
+                    'invoice_id': '',
+                    'invoice_number': line.get('qontoInvoiceNumber') or '',
+                    'source': 'qonto_direct_debit',
+                    'total_amount_cents': line_total_cents,
+                    'paid_amount_cents': installment_paid_cents,
+                    'remaining_amount_cents': max(line_total_cents - installment_paid_cents, 0),
+                    'payment_status': 'paid' if line_total_cents > 0 and installment_paid_cents >= line_total_cents else 'partially_paid',
+                    'qonto_status': str(line.get('qontoPaymentGlobalStatus') or '').lower(),
+                    'last_synced_at': line.get('qontoLastSyncedAt') or line.get('updatedAt') or '',
+                })
+                continue
         linked_manual_invoice = str(line.get('manualPaymentInvoiceId') or line.get('qontoInvoiceId') or '').strip()
         if linked_manual_invoice and linked_manual_invoice in linked_invoice_ids:
             continue
