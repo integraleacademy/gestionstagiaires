@@ -98,6 +98,9 @@
           Mode consultation (lecture seule)
         </div>
       {% endif %}
+      {% if is_admin_logged_in %}
+        {% include "_global_command_search.html" %}
+      {% endif %}
       <div class="topbar-actions">
         {% if is_admin_logged_in and not is_partner_space and (request.endpoint in ["admin_sessions", "admin_trainees", "admin_trainee_page"]) %}
           {% if not show_admin_sidebar %}

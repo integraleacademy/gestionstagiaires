@@ -284,6 +284,71 @@ async function api(url, method="GET", body=null) {
   });
 })();
 (function(){
+  const root=document.getElementById('commandSearch');
+  if(!root)return;
+  const input=root.querySelector('#commandSearchInput');
+  const panel=root.querySelector('#commandSearchPanel');
+  const results=root.querySelector('#commandSearchResults');
+  const status=root.querySelector('#commandSearchStatus');
+  let functions=[];
+  try{functions=JSON.parse(root.querySelector('#commandSearchFunctions').textContent||'[]');}catch(_error){}
+  let timer=0,sequence=0,activeIndex=-1,currentItems=[];
+  const normalize=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const open=()=>{panel.hidden=false;input.setAttribute('aria-expanded','true');render(input.value);};
+  const close=()=>{panel.hidden=true;input.setAttribute('aria-expanded','false');activeIndex=-1;};
+  function functionMatches(query){
+    const needle=normalize(query);
+    return functions.filter(item=>!needle||normalize(`${item.label} ${item.description} ${item.keywords}`).includes(needle)).slice(0,8)
+      .map(item=>({...item,type:'Fonction'}));
+  }
+  function draw(items,query,loading=false){
+    currentItems=items;activeIndex=-1;
+    status.textContent=loading?'Recherche en cours…':(query?`${items.length} résultat${items.length>1?'s':''}`:'Suggestions');
+    if(!items.length){results.innerHTML='<div class="command-search__empty"><strong>Aucun résultat</strong><span>Essayez un nom, une formation ou un outil.</span></div>';return;}
+    let lastType='';
+    results.innerHTML=items.map((item,index)=>{
+      const heading=item.type!==lastType?`<div class="command-search__group">${escapeHtml(item.type)}</div>`:'';lastType=item.type;
+      return `${heading}<a class="command-search__result" role="option" data-command-index="${index}" href="${escapeHtml(item.href)}"><span class="command-search__icon">${escapeHtml(item.icon)}</span><span class="command-search__copy"><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.description)}</small></span><span class="command-search__type">${escapeHtml(item.type)}</span><span class="command-search__arrow">↗</span></a>`;
+    }).join('');
+  }
+  async function remoteSearch(query,id){
+    try{
+      const [traineesResponse,sessionsResponse]=await Promise.all([
+        fetch(`/api/trainees_search?q=${encodeURIComponent(query)}`,{headers:{Accept:'application/json'}}),
+        fetch(`/api/sessions_search?q=${encodeURIComponent(query)}`,{headers:{Accept:'application/json'}})
+      ]);
+      const [trainees,sessions]=await Promise.all([traineesResponse.json(),sessionsResponse.json()]);
+      if(id!==sequence)return;
+      const people=(trainees.items||[]).slice(0,6).map(item=>({type:'Stagiaires',icon:'●',label:`${item.first_name||''} ${item.last_name||''}`.trim(),description:`${item.session_name||'Session'}${item.training_type?' · '+item.training_type:''}`,href:item.admin_url}));
+      const courses=(sessions.items||[]).slice(0,6).map(item=>({type:'Sessions',icon:'□',label:item.session_name||item.training_type||'Session',description:`${item.training_type||'Formation'}${item.date_range?' · '+item.date_range:''}`,href:item.admin_url}));
+      draw([...functionMatches(query),...people,...courses],query);
+    }catch(_error){if(id===sequence){draw(functionMatches(query),query);status.textContent='Résultats des outils uniquement';}}
+  }
+  function render(value){
+    const query=value.trim();window.clearTimeout(timer);
+    if(query.length<2){draw(functionMatches(query),query);return;}
+    const id=++sequence;draw(functionMatches(query),query,true);
+    timer=window.setTimeout(()=>remoteSearch(query,id),180);
+  }
+  function select(index){
+    const options=[...results.querySelectorAll('[data-command-index]')];if(!options.length)return;
+    activeIndex=(index+options.length)%options.length;
+    options.forEach((option,i)=>option.classList.toggle('is-active',i===activeIndex));
+    options[activeIndex].scrollIntoView({block:'nearest'});
+  }
+  input.addEventListener('focus',open);
+  input.addEventListener('input',()=>{if(panel.hidden)open();else render(input.value);});
+  input.addEventListener('keydown',event=>{
+    if(event.key==='ArrowDown'){event.preventDefault();select(activeIndex+1);}
+    else if(event.key==='ArrowUp'){event.preventDefault();select(activeIndex-1);}
+    else if(event.key==='Enter'&&activeIndex>=0){event.preventDefault();results.querySelector(`[data-command-index="${activeIndex}"]`)?.click();}
+    else if(event.key==='Escape'){event.preventDefault();close();input.blur();}
+  });
+  document.addEventListener('keydown',event=>{if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){event.preventDefault();input.focus();open();}});
+  document.addEventListener('pointerdown',event=>{if(!root.contains(event.target))close();});
+})();
+(function(){
   if(window.AppModal) return;
   const tones={danger:{icon:'🗑️',k:'Action sensible'},success:{icon:'✓',k:'Succès'},info:{icon:'i',k:'Information'},warning:{icon:'!',k:'Attention'},loading:{icon:'⏳',k:'Traitement'}};
   function ensure(){let r=document.getElementById('appModalRoot');if(r)return r;r=document.createElement('div');r.id='appModalRoot';r.innerHTML=`<div class="app-modal-backdrop" role="presentation"><section class="app-modal-card" role="dialog" aria-modal="true" aria-labelledby="appModalTitle"><button type="button" class="app-modal-x" aria-label="Fermer">×</button><div class="app-modal-content"><div class="app-modal-icon" aria-hidden="true"></div><div class="app-modal-copy"><div class="app-modal-kicker"></div><h2 id="appModalTitle"></h2><p class="app-modal-message"></p><div class="app-modal-extra"></div></div></div><div class="app-modal-actions"><button type="button" class="app-modal-btn app-modal-secondary"></button><button type="button" class="app-modal-btn app-modal-tertiary"></button><button type="button" class="app-modal-btn app-modal-primary"></button></div></section></div>`;document.body.appendChild(r);return r;}
