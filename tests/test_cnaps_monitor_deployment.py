@@ -39,12 +39,17 @@ class CnapsMonitorDeploymentTests(unittest.TestCase):
     def test_render_blueprint_runs_cnaps_monitor_in_permanent_worker(self):
         blueprint = (ROOT / "render.yaml").read_text(encoding="utf-8")
         monitor = blueprint.rsplit("  - type: worker", 1)[1]
+        web = blueprint.split("  - type: web", 1)[1].split("  - type: cron", 1)[0]
 
+        self.assertIn("name: gestionstagiaires-cnaps-monitor-secrets", blueprint)
         self.assertIn("name: gestionstagiaires-cnaps-monitor", monitor)
         self.assertNotIn("schedule:", monitor)
         self.assertIn("dockerCommand: python scripts/run_cnaps_monitor_worker.py", monitor)
         self.assertIn("key: CNAPS_MONITOR_URL", monitor)
-        self.assertIn("key: CNAPS_MONITOR_TOKEN", monitor)
+        self.assertIn("fromGroup: gestionstagiaires-cnaps-monitor-secrets", monitor)
+        self.assertIn("fromGroup: gestionstagiaires-cnaps-monitor-secrets", web)
+        self.assertIn("key: CNAPSV3_API_TOKEN", web)
+        self.assertIn("key: BREVO_API_KEY", web)
         self.assertIn("key: CNAPS_MONITOR_INTERVAL_SECONDS", monitor)
         self.assertIn("value: 900", monitor)
 

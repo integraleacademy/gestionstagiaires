@@ -86,7 +86,17 @@ Les dossiers VAE sont persistés dans `data_vae.json` dans `PERSIST_DIR`.
 
 Le Blueprint Render déploie `gestionstagiaires-cnaps-monitor`, un worker permanent qui appelle toutes les 15 minutes le endpoint interne protégé `POST /internal/jobs/cnaps-public-annuaire-monitor`. La vérification et l’envoi des e-mails se font donc côté serveur, même si aucun administrateur n’ouvre le site.
 
-Sur Render, renseigner la même valeur secrète `CNAPS_MONITOR_TOKEN` sur le service web et sur le worker. Le service web doit également disposer de `CNAPSV3_API_TOKEN` et de la configuration Brevo habituelle. L’intervalle est configurable avec `CNAPS_MONITOR_INTERVAL_SECONDS` (900 secondes par défaut).
+Sur Render, le groupe d’environnement partagé du Blueprint fournit automatiquement la même valeur secrète `CNAPS_MONITOR_TOKEN` au service web et au worker. Le service web doit également disposer de `CNAPSV3_API_TOKEN` et de la configuration Brevo habituelle. L’intervalle est configurable avec `CNAPS_MONITOR_INTERVAL_SECONDS` (900 secondes par défaut).
+
+### Configuration dans Render
+
+Lors de l’application du Blueprint, Render demande les trois secrets suivants :
+
+1. Dans le groupe partagé `gestionstagiaires-cnaps-monitor-secrets`, générer `CNAPS_MONITOR_TOKEN` avec une longue valeur aléatoire. Le Blueprint injecte automatiquement cette valeur identique dans le site et dans le worker ; il ne faut pas créer deux valeurs différentes.
+2. Sur le service web `gestionstagiaires`, renseigner `CNAPSV3_API_TOKEN` avec le jeton fourni par CNAPSV3.
+3. Sur ce même service web, renseigner `BREVO_API_KEY` pour permettre l’envoi des e-mails.
+
+Le worker n’a besoin ni du jeton CNAPSV3 ni de la clé Brevo : il réveille le endpoint protégé du service web, qui effectue le contrôle et l’envoi. Après configuration, redéployer le Blueprint et vérifier dans les logs de `gestionstagiaires-cnaps-monitor` qu’une réponse contenant `"ok": true` apparaît environ toutes les 15 minutes.
 
 ## Intégration cnapsv3 (sync ACCEPTÉ)
 
