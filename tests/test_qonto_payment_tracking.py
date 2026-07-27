@@ -91,6 +91,41 @@ class QontoPaymentTrackingTests(unittest.TestCase):
         ]}
         self.assertEqual(gestion_app._reconciled_qonto_paid_cents(line,139000),69500)
 
+    def test_completed_installments_without_invoice_are_counted_as_paid(self):
+        trainee = {"id": "T1", "personal_amount": 3800}
+        line = {
+            "traineeId": "T1", "financingType": "PERSONNEL", "amount": 3800,
+            "paymentMode": "sepa_direct_debit",
+            "directDebitInstallments": [
+                {"amount": 475, "status": "completed"},
+                {"amount": 475, "status": "paid"},
+                {"amount": 475, "status": "succeeded"},
+                {"amount": 475, "status": "rejected"},
+                {"amount": 475, "status": "scheduled"},
+            ],
+        }
+
+        summary = gestion_app.calculate_trainee_financial_summary(trainee, [line])
+
+        self.assertEqual(summary["paid_total_cents"], 142500)
+        self.assertEqual(summary["remaining_total_cents"], 237500)
+        self.assertEqual(summary["payment_percentage"], 37.5)
+        self.assertEqual(summary["by_financer"]["PERSONNEL"]["paid_amount_cents"], 142500)
+        self.assertEqual(summary["qonto_payment_entries"][0]["source"], "qonto_direct_debit")
+
+    def test_external_invoice_is_included_in_invoicing_progress(self):
+        trainee = {"id": "T1", "personal_amount": 3800}
+        line = {
+            "traineeId": "T1", "financingType": "PERSONNEL", "amount": 3800,
+            "invoiceStatus": "external_generated",
+        }
+
+        summary = gestion_app.calculate_trainee_financial_summary(trainee, [line])
+
+        self.assertEqual(summary["invoiced_total_cents"], 380000)
+        self.assertEqual(summary["invoicing_percentage"], 100)
+        self.assertEqual(summary["by_financer"]["PERSONNEL"]["invoiced_amount_cents"], 380000)
+
     def test_pending_sepa_plan_keeps_invoice_amount_until_collection_is_terminal(self):
         line={"paymentMode":"sepa_direct_debit","directDebitInstallments":[
             {"amount":695,"status":"scheduled"}
