@@ -1,0 +1,37 @@
+{% set command_items = [
+  {"label":"Tableau de bord", "description":"Sessions et activité", "icon":"⌂", "href":url_for('admin_sessions'), "keywords":"accueil dashboard sessions"},
+  {"label":"Tests de positionnement", "description":"Consulter les tests", "icon":"✓", "href":url_for('admin_positioning_tests'), "keywords":"test évaluation positionnement"},
+  {"label":"CPF · EDOF", "description":"Demandes de financement", "icon":"€", "href":url_for('admin_wedof_requests'), "keywords":"cpf edof financement mon compte formation"},
+  {"label":"Suivi CNAPS", "description":"Suivre les dossiers CNAPS", "icon":"◇", "href":url_for('admin_cnaps_tracking'), "keywords":"cnaps suivi dracar sécurité autorisation carte professionnelle"},
+  {"label":"CNAPS inconnus", "description":"Dossiers à rapprocher", "icon":"?", "href":url_for('admin_cnaps_unknown'), "keywords":"cnaps inconnus rapprochement pré cnaps"},
+  {"label":"Conventions", "description":"Gérer les conventions", "icon":"▤", "href":url_for('admin_sessions_conventions'), "keywords":"convention signature document"},
+  {"label":"Automatisations", "description":"Configurer les envois", "icon":"⚡", "href":url_for('admin_sessions_automations'), "keywords":"automatisation email sms convocation"},
+  {"label":"Suivi des ventes", "description":"Piloter l’activité commerciale", "icon":"↗", "href":url_for('admin_sales_tracking'), "keywords":"vente commercial chiffre affaires statistiques"},
+  {"label":"Facturation", "description":"Factures et règlements", "icon":"€", "href":url_for('admin_sessions_billing'), "keywords":"fact facture facturation paiement règlement qonto"},
+  {"label":"Prélèvements", "description":"Gérer les prélèvements directs", "icon":"↻", "href":url_for('admin_direct_debits'), "keywords":"prélèvement direct débit banque paiement"},
+  {"label":"Réglages Qonto", "description":"Paramètres de facturation", "icon":"⚙", "href":url_for('admin_qonto_settings'), "keywords":"qonto banque facturation réglages paramètres"},
+  {"label":"Sessions archivées", "description":"Retrouver les anciennes sessions", "icon":"□", "href":url_for('admin_sessions_archived'), "keywords":"archive anciennes sessions historique"}
+] %}
+{% if is_super_admin %}
+  {% set command_items = command_items + [
+    {"label":"Gérer les partenaires", "description":"Comptes et abonnements", "icon":"◎", "href":url_for('admin_partners'), "keywords":"partenaire compte abonnement organisme"},
+    {"label":"Secrétariat", "description":"Outils administratifs", "icon":"▣", "href":url_for('admin_secretariat'), "keywords":"secrétariat administratif"},
+    {"label":"AFC", "description":"Suivi des candidats AFC", "icon":"A", "href":url_for('admin_afc'), "keywords":"afc candidat france travail"},
+    {"label":"Paiements espèces", "description":"Suivi des encaissements", "icon":"€", "href":url_for('admin_cash_payments'), "keywords":"espèces liquide paiement caisse"}
+  ] %}
+{% endif %}
+
+<div class="command-search" id="commandSearch">
+  <label class="command-search__bar" for="commandSearchInput">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+    <input id="commandSearchInput" type="search" placeholder="Que cherchez-vous ?" autocomplete="off" aria-label="Rechercher un stagiaire, une session ou une fonction" aria-expanded="false" aria-controls="commandSearchPanel">
+    <kbd><span>⌘</span>K</kbd>
+  </label>
+  <div class="command-search__panel" id="commandSearchPanel" role="listbox" aria-label="Résultats de recherche" hidden>
+    <div class="command-search__intro"><strong>Recherche rapide</strong><span>Stagiaires, sessions et fonctions</span></div>
+    <div class="command-search__status" id="commandSearchStatus" aria-live="polite"></div>
+    <div class="command-search__results" id="commandSearchResults"></div>
+    <div class="command-search__footer"><span><kbd>↑</kbd><kbd>↓</kbd> naviguer</span><span><kbd>↵</kbd> ouvrir</span><span><kbd>esc</kbd> fermer</span></div>
+  </div>
+  <script type="application/json" id="commandSearchFunctions">{{ command_items|tojson }}</script>
+</div>
