@@ -28223,9 +28223,15 @@ def _normalize_payment_plan(raw: Dict[str, Any], total: Any) -> Dict[str, Any]:
 
 def _active_qonto_mandate(client_id: str) -> Optional[Dict[str, Any]]:
     mandates = list_qonto_direct_debit_mandates(client_id)
-    items = mandates.get('direct_debit_mandates') or mandates.get('mandates') or mandates.get('items') or []
+    items = _qonto_direct_debit_mandate_items(mandates)
     for mandate in items if isinstance(items, list) else []:
-        if str(mandate.get('status') or '').lower() in {'approved', 'active', 'signed'}:
+        # A mandate waiting for the customer's signature is still the mandate
+        # attached to this client.  Ignoring it would create a duplicate rather
+        # than reusing the signature link returned by Qonto.
+        if str(mandate.get('status') or '').lower() in {
+            'pending_signature', 'pending', 'approved', 'active', 'signed',
+            'accepted', 'validated',
+        }:
             return mandate
     return None
 
@@ -28574,17 +28580,34 @@ def _setup_qonto_direct_debit_for_line(line: Dict[str, Any], payment_plan: Dict[
     client_id = line.get('qontoClientId') or line.get('qontoCustomerId')
     if not client_id:
         raise RuntimeError('Client Qonto manquant pour créer le prélèvement SEPA')
-    _prepare_sepa_payment_plan(line, payment_plan)
     first = payment_plan['schedule'][0]
     mandate = _active_qonto_mandate(client_id)
     if not mandate and line.get('qonto_direct_debit_mandate_id'):
-        mandate = {'id': line.get('qonto_direct_debit_mandate_id'), 'status': line.get('qonto_mandate_status') or line.get('mandateStatus') or 'pending_signature', 'sign_url': line.get('qonto_mandate_sign_url') or line.get('sign_url')}
+        # Never trust a locally persisted identifier without checking Qonto.
+        # In particular, an earlier partial failure must not make the UI look
+        # as though a mandate exists when Qonto has no corresponding resource.
+        try:
+            response = get_qonto_direct_debit_mandate(line['qonto_direct_debit_mandate_id'])
+            mandate = response.get('direct_debit_mandate') or response.get('mandate') or response
+        except QontoNotFoundError:
+            mandate = None
     if not mandate:
         ref = line.get('qontoInvoiceNumber') or line.get('qontoInvoiceId') or line.get('id')
         created = create_qonto_direct_debit_mandate({'client_id': client_id, 'payment_info': {'first_payment': {'collection_date': first['date'], 'amount': {'value': f"{_money(first['amount']):.2f}", 'currency': 'EUR'}, 'reference': ref}, 'notify_client': True, 'schedule_type': 'one_off'}, 'send_mandate_signature_email': False})
         mandate = created.get('direct_debit_mandate') or created.get('mandate') or created
+        if not isinstance(mandate, dict) or not str(mandate.get('id') or '').strip():
+            raise RuntimeError(
+                'Qonto n’a pas confirmé la création du mandat SEPA : '
+                'aucun identifiant de mandat n’a été retourné.'
+            )
         app.logger.info('[QONTO] mandat créé client_id=%s mandate_id=%s', client_id, mandate.get('id'))
         _billing_log(line, 'Mandat SEPA Qonto créé', 'success', 'Lien de signature en attente', mandate.get('id') or '')
+    if not isinstance(mandate, dict) or not str(mandate.get('id') or '').strip():
+        raise RuntimeError('Mandat SEPA Qonto introuvable ou invalide')
+    # Only expose the local schedule after Qonto has confirmed that the
+    # mandate exists. Subscriptions themselves remain blocked until it is
+    # signed by ``ensure_qonto_sepa_installments_for_line`` below.
+    _prepare_sepa_payment_plan(line, payment_plan)
     line['qonto_direct_debit_mandate_id'] = mandate.get('id') or line.get('qonto_direct_debit_mandate_id')
     line['qonto_mandate_status'] = _map_mandate_status(mandate.get('status'))
     line['mandateStatus'] = line['qonto_mandate_status']
@@ -28635,10 +28658,13 @@ def ensure_qonto_sepa_installments_for_line(line: Dict[str, Any]) -> Dict[str, A
 def _qonto_payment_global_status(line: Dict[str, Any]) -> str:
     if line.get('paymentMode') != 'sepa_direct_debit':
         return 'Comptant'
-    mandate = line.get('mandateStatus') or 'pending'
+    mandate = _map_mandate_status(
+        line.get('mandateStatus') or line.get('qonto_mandate_status') or 'pending'
+    )
     installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
     statuses = [i.get('status') for i in installments]
-    if mandate == 'pending': return 'Mandat à signer'
+    if not line.get('qonto_direct_debit_mandate_id') or mandate not in {'active', 'signed'}:
+        return 'Mandat à signer'
     if any(s in {'failed','returned','refunded'} for s in statuses): return 'Rejeté'
     if statuses and all(s == 'completed' for s in statuses): return 'Payé'
     if any(s == 'completed' for s in statuses): return 'Paiement partiel'
