@@ -25888,22 +25888,18 @@ def _convention_signature_admin_label(state: Dict[str, Any]) -> str:
         return "Expirée / refusée / erreur"
     if _is_yousign_signature_pending(state):
         count = int(state.get("reminder_count") or 0)
-        if count >= 3:
-            return "Dernier rappel envoyé"
-        if count == 2:
-            return "Rappel 2 envoyé"
-        if count == 1:
-            return "Rappel 1 envoyé"
+        if count:
+            return f"{count} rappel{'s' if count > 1 else ''} envoyé{'s' if count > 1 else ''}"
         return "En attente de signature"
     return "Non envoyée"
 
 
-def _build_yousign_signature_reminder_email(session_obj: Dict[str, Any], trainee: Dict[str, Any], signature_link: str) -> Tuple[str, str]:
+def _build_yousign_signature_reminder_email(session_obj: Dict[str, Any], trainee: Dict[str, Any], signature_link: str) -> Tuple[str, str, str]:
     first_name = str(trainee.get("first_name") or "").strip() or "Madame, Monsieur"
-    training_name = str(_session_get(session_obj, "name", "") or session_obj.get("training_name") or "Formation").strip() or "Formation"
+    training_name = _signature_email_training_label(session_obj)
     dates_session = _aps_session_dates_label(session_obj)
     subject = "Rappel : votre convention de formation est en attente de signature"
-    body = f"""Bonjour {first_name},
+    text_body = f"""Bonjour {first_name},
 
 Nous vous rappelons que votre convention de formation est toujours en attente de signature.
 
@@ -25922,7 +25918,17 @@ Intégrale Academy
 54 chemin du Carreou
 83480 Puget-sur-Argens
 04 22 47 07 68"""
-    return subject, "<br>".join(html.escape(line) for line in body.splitlines())
+    html_body = build_signature_email_html(first_name, training_name, dates_session, signature_link, reminder=True)
+    return subject, html_body, text_body
+
+
+def _convention_reminders_allowed_now(now_utc: Optional[datetime.datetime] = None) -> bool:
+    """Keep all convention reminders inside the 08:00-20:00 Europe/Paris window."""
+    current = now_utc or datetime.datetime.now(datetime.timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=datetime.timezone.utc)
+    paris_hour = current.astimezone(ZoneInfo("Europe/Paris")).hour
+    return 8 <= paris_hour < 20
 
 
 def _find_trainee_by_convocation_signature_id(data: Dict[str, Any], signature_id: str):
@@ -25937,6 +25943,8 @@ def _find_trainee_by_convocation_signature_id(data: Dict[str, Any], signature_id
 
 
 def send_convocation_signature_reminder(signature_id: str) -> Tuple[bool, str]:
+    if not _convention_reminders_allowed_now():
+        return False, "Les rappels sont envoyés uniquement entre 8 h et 20 h (heure française)."
     data = load_data()
     sess, trainees, trainee, state = _find_trainee_by_convocation_signature_id(data, signature_id)
     if not trainee or not state:
@@ -25967,27 +25975,28 @@ def send_convocation_signature_reminder(signature_id: str) -> Tuple[bool, str]:
     if not str(trainee.get("email") or "").strip():
         return False, "Adresse e-mail stagiaire manquante."
     reminder_count = int(state.get("reminder_count") or 0)
-    if reminder_count >= 3:
-        state["next_reminder_at"] = ""
-        save_data(data)
-        return False, "Nombre maximal de rappels déjà atteint."
-    subject, html_body = _build_yousign_signature_reminder_email(sess, trainee, signature_link)
+    subject, html_body, text_body = _build_yousign_signature_reminder_email(sess, trainee, signature_link)
     now = _now_iso()
     try:
-        ok = brevo_send_email(str(trainee.get("email") or "").strip(), subject, html_body, trainee=trainee)
+        phone = str(trainee.get("phone") or "").strip()
+        if not phone:
+            raise RuntimeError("Numéro de téléphone stagiaire manquant, rappel non envoyé")
+        ok = brevo_send_email(str(trainee.get("email") or "").strip(), subject, html_body, trainee=trainee, text_content=text_body)
         if not ok:
             raise RuntimeError("Échec d’envoi e-mail")
+        training_name = _signature_email_training_label(sess)
+        sms = (
+            f"Intégrale Academy : rappel, votre convention de formation {training_name} "
+            f"est toujours à signer. Signez-la ici : {signature_link}"
+        )
+        if not brevo_send_sms(phone, sms):
+            raise RuntimeError("Échec d’envoi SMS")
         new_count = reminder_count + 1
         state["reminder_count"] = new_count
         state["last_reminder_sent_at"] = now
         state[f"reminder_{new_count}_sent_at"] = now
         state["last_email_error"] = ""
-        if new_count == 1:
-            state["next_reminder_at"] = _add_days_iso(state.get("created_at") or now, 4)
-        elif new_count == 2:
-            state["next_reminder_at"] = _add_days_iso(state.get("created_at") or now, 7)
-        else:
-            state["next_reminder_at"] = ""
+        state["next_reminder_at"] = _add_days_iso(now, 1)
         trainee["updated_at"] = now
         sess["trainees"] = trainees
         sess.pop("stagiaires", None)
@@ -26004,6 +26013,8 @@ def send_convocation_signature_reminder(signature_id: str) -> Tuple[bool, str]:
 
 
 def run_convocation_signature_reminders() -> Dict[str, int]:
+    if not _convention_reminders_allowed_now():
+        return {"checked": 0, "sent": 0, "failed": 0}
     data = load_data()
     now = datetime.datetime.utcnow()
     due_ids = []
@@ -26011,7 +26022,7 @@ def run_convocation_signature_reminders() -> Dict[str, int]:
         for trainee in _session_trainees_list(sess):
             state = _yousign_state(trainee)
             due_at = _parse_iso_datetime(state.get("next_reminder_at"))
-            if _is_yousign_signature_pending(state) and due_at and due_at <= now and int(state.get("reminder_count") or 0) < 3:
+            if _is_yousign_signature_pending(state) and due_at and due_at <= now:
                 due_ids.append(str(trainee.get("id") or state.get("signature_request_id") or ""))
     sent = failed = 0
     for signature_id in due_ids:
@@ -26051,12 +26062,15 @@ Intégrale Academy
 04 22 47 07 68"""
 
 
-def build_signature_email_html(first_name: str, formation_label: str, dates_session: str, signature_url: str) -> str:
+def build_signature_email_html(first_name: str, formation_label: str, dates_session: str, signature_url: str, reminder: bool = False) -> str:
     safe_first_name = html.escape(str(first_name or "").strip() or "Madame, Monsieur")
     safe_formation_label = html.escape(str(formation_label or "").strip() or "Formation")
     safe_dates_session = html.escape(str(dates_session or "").strip() or "Dates à confirmer")
     safe_signature_url = html.escape(str(signature_url or "").strip(), quote=True)
     safe_logo_url = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
+    intro = "Votre convention de formation est toujours en attente de signature." if reminder else "Vous trouverez ci-dessous le lien sécurisé pour signer votre convention de formation."
+    request_text = "Merci de la signer dès maintenant en utilisant le bouton sécurisé ci-dessous." if reminder else "Nous vous remercions de bien vouloir procéder à la signature électronique de ce document."
+    banner = '<div style="display:inline-block;margin-bottom:18px;padding:7px 12px;border-radius:999px;background:#fff3cd;color:#8a5700;font-size:13px;font-weight:700;">Rappel de signature</div>' if reminder else ""
     return f'''<!doctype html>
 <html lang="fr">
 <head>
@@ -26072,9 +26086,9 @@ def build_signature_email_html(first_name: str, formation_label: str, dates_sess
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:640px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,0.08);">
         <tr><td style="background:#0b2f5b;padding:28px 30px;color:#ffffff;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td style="width:88px;padding-right:18px;vertical-align:middle;"><img src="{safe_logo_url}" width="74" alt="Logo Intégrale Academy" style="display:block;width:74px;height:auto;border:0;outline:none;text-decoration:none;background:#ffffff;border-radius:14px;padding:7px;"></td><td style="vertical-align:middle;"><div style="font-size:24px;font-weight:700;line-height:1.2;">Intégrale Academy</div><div style="font-size:15px;opacity:.92;margin-top:6px;line-height:1.4;">Convention de formation</div></td></tr></table></td></tr>
         <tr><td style="padding:32px 30px 10px 30px;">
-          <p style="margin:0 0 16px 0;font-size:18px;line-height:1.5;">Bonjour {safe_first_name},</p>
-          <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">Vous trouverez ci-dessous le lien sécurisé pour signer votre convention de formation.</p>
-          <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#415166;">Nous vous remercions de bien vouloir procéder à la signature électronique de ce document.</p>
+          {banner}<p style="margin:0 0 16px 0;font-size:18px;line-height:1.5;">Bonjour {safe_first_name},</p>
+          <p style="margin:0 0 10px 0;font-size:16px;line-height:1.6;">{intro}</p>
+          <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#415166;">{request_text}</p>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f7faff;border:1px solid #dbeafe;border-radius:14px;margin:0 0 28px 0;"><tr><td style="padding:18px 20px;">
             <p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Formation :</strong> {safe_formation_label}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Session :</strong> {safe_dates_session}</p><p style="margin:0 0 10px 0;font-size:15px;line-height:1.5;"><strong>Document :</strong> Convention de formation</p><p style="margin:0;font-size:15px;line-height:1.5;"><strong>Signature :</strong> électronique sécurisée</p>
           </td></tr></table>
@@ -26429,7 +26443,7 @@ def create_yousign_convention_signature(session_obj: Dict[str, Any], trainee: Di
         "last_error": "",
         "reminder_count": 0,
         "last_reminder_sent_at": "",
-        "next_reminder_at": _add_days_iso(now, 2),
+        "next_reminder_at": _add_days_iso(now, 1),
         "reminder_1_sent_at": "",
         "reminder_2_sent_at": "",
         "reminder_3_sent_at": "",

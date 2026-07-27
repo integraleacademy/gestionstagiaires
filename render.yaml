@@ -47,7 +47,9 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    schedule: "0 6 * * *"
+    # Hourly execution lets due reminders go out promptly; the app enforces
+    # the 08:00-20:00 Europe/Paris window (including daylight-saving time).
+    schedule: "0 * * * *"
     dockerCommand: python scripts/run_convocation_reminders.py
     envVars:
       - key: CONVOCATION_REMINDERS_URL
