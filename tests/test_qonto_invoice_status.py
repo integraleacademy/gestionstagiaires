@@ -394,7 +394,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertIn("const statLines=lines;const notGenerated=statLines.filter(l=>!hasInvoice(l)), total=notGenerated.reduce", source)
         self.assertIn("['Total à facturer',fmtMoney(total)]", source)
         self.assertNotIn("Montant non généré", source)
-        self.assertIn("['Factures en brouillon',drafts.length]", source)
+        self.assertIn("['Cas spécifique',specificCases.length]", source)
         self.assertIn("['Factures en attente de paiement',toPay.length]", source)
         self.assertIn("['Factures payées',paid.length]", source)
         self.assertIn("['Factures partiellement payées',partiallyPaid.length]", source)
