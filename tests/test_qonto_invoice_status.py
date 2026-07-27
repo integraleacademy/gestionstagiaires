@@ -183,6 +183,19 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertIn("✅ Échéancier OK", template)
         self.assertIn("qonto_direct_debit_subscription_id", template)
 
+    def test_trainee_dashboard_hides_schedule_until_mandate_is_validated(self):
+        template = Path("templates/admin_trainee.html").read_text(encoding="utf-8")
+
+        self.assertIn("function lineHasValidatedMandate(line)", template)
+        self.assertIn(
+            "lineHasValidatedMandate(l)?(l.directDebitInstallments||[])",
+            template,
+        )
+        self.assertIn(
+            "l.paymentMode === 'sepa_direct_debit' && lineHasValidatedMandate(l)",
+            template,
+        )
+
     def test_webhook_subscription_includes_sepa_events(self):
         with patch.dict(os.environ, {"QONTO_WEBHOOK_SECRET": "s" * 32}), patch.object(gestion_app, "_qonto_request", side_effect=[
             {"webhook_subscriptions": []},

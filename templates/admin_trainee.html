@@ -3774,8 +3774,13 @@ function updateDocsRelanceState(status, plannedDateIso){
     const hasSent = hasSigned || personalLines.some(l=>{const status=String(l.qonto_mandate_status || l.qontoMandateStatus || l.mandateStatus || '').toLowerCase();return !['failed','rejected','cancelled','canceled','expired'].includes(status)&&(l.qonto_direct_debit_mandate_id || l.qontoMandateId || l.mandateId || (l.directDebitInstallments || []).length || pendingStatuses.has(status));});
     return {hasSent, hasSigned, statuses};
   }
+  function lineHasValidatedMandate(line){
+    const signedStatuses = new Set(['accepted','approved','signed','validated','active','completed','success','succeeded']);
+    const status = String(line.qonto_mandate_status || line.qontoMandateStatus || line.mandateStatus || '').toLowerCase();
+    return Boolean(line.qonto_mandate_signed_at || line.mandateSignedAt || signedStatuses.has(status));
+  }
   function qontoScheduleState(lines){
-    const sepaLines = lines.filter(l=>l.paymentMode === 'sepa_direct_debit');
+    const sepaLines = lines.filter(l=>l.paymentMode === 'sepa_direct_debit' && lineHasValidatedMandate(l));
     const schedules = sepaLines
       .map(l=>Array.isArray(l.directDebitInstallments) ? l.directDebitInstallments : [])
       .filter(installments=>installments.length);
@@ -3878,7 +3883,10 @@ function modalMessage(text,type='error'){const msg=document.getElementById('moda
   function linePaid(l){const e=canonicalInvoiceEntry(l);if(e)return Number(e.paid_amount_cents ?? 0)/100;const paidStatuses=new Set(['completed','paid','succeeded','success']);return (l.directDebitInstallments||[]).filter(i=>paidStatuses.has(String(i.status||'').toLowerCase())).reduce((total,i)=>total+Number(i.amount||0),0)}
   function lineRemaining(l){const e=canonicalInvoiceEntry(l);return e?Number(e.remaining_amount_cents ?? 0)/100:Math.max(lineAmount(l)-linePaid(l),0)}
   function linePaymentStatus(l){const e=canonicalInvoiceEntry(l);return e?.payment_status||'unpaid'}
-  function allInstallments(lines){return lines.flatMap(l=>(l.directDebitInstallments||[]).map((it,i)=>({...it,line:l,index:i,total:(l.directDebitInstallments||[]).length})));}
+  // The payment plan is persisted while the mandate is awaiting signature so
+  // subscriptions can be created afterwards.  It must not be presented as a
+  // programmed debit schedule until Qonto confirms the mandate.
+  function allInstallments(lines){return lines.flatMap(l=>lineHasValidatedMandate(l)?(l.directDebitInstallments||[]).map((it,i)=>({...it,line:l,index:i,total:(l.directDebitInstallments||[]).length})):[]);}
   function statusFromRatio(value,total,labels){if(total<=0)return [labels.none,'gray'];if(value<=0)return [labels.zero,'gray'];if(value<total)return [labels.partial,'orange'];if(value===total)return [labels.done,'green'];return [labels.over,'red'];}
   function computeFinance(lines){
     const parseMoneyValue=(value)=>{const n=parseFloat(String(value||'').replace(',','.').trim());return Number.isNaN(n)?0:n;};
