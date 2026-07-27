@@ -45,6 +45,18 @@ services:
       - key: CRON_SECRET
         sync: false
   - type: cron
+    name: gestionstagiaires-cash-payment-reminders
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    schedule: "0 6 * * *"
+    dockerCommand: python scripts/run_cash_payment_reminders.py
+    envVars:
+      - key: CASH_PAYMENT_REMINDERS_URL
+        value: https://gestionstagiaires-r5no.onrender.com/internal/cron/cash-payment-reminders
+      - key: CRON_SECRET
+        sync: false
+  - type: cron
     name: gestionstagiaires-cnaps-monitor
     runtime: docker
     dockerfilePath: ./Dockerfile

@@ -14838,6 +14838,128 @@ def _build_cash_payment_dashboard(data: Dict[str, Any]) -> Dict[str, Any]:
     return {"rows": rows, "stats": stats}
 
 
+CASH_PAYMENT_REMINDER_RECIPIENTS = [
+    "cassandre@integraleacademy.com",
+    "clement@integraleacademy.com",
+]
+
+
+def _format_cash_reminder_date(value: Any) -> str:
+    try:
+        return datetime.date.fromisoformat(str(value or "")[:10]).strftime("%d/%m/%Y")
+    except (TypeError, ValueError):
+        return str(value or "").strip() or "Non renseignée"
+
+
+def _build_cash_payment_reminder_email(session_obj: Dict[str, Any], rows: List[Dict[str, Any]]) -> Tuple[str, str, str]:
+    """Build the internal, email-client-safe cash collection reminder."""
+    session_name = str(_session_get(session_obj, "name", "") or "Formation").strip()
+    training_type = str(_session_get(session_obj, "training_type", "") or "").strip()
+    date_start = _format_cash_reminder_date(_session_get(session_obj, "date_start", ""))
+    date_end = _format_cash_reminder_date(_session_get(session_obj, "date_end", ""))
+    period = f"du {date_start} au {date_end}"
+    total = round(sum(float(row.get("remaining_amount") or 0) for row in rows), 2)
+    amount_label = f"{total:,.2f} €".replace(",", " ").replace(".", ",")
+    subject = f"Espèces à encaisser aujourd’hui — {session_name} ({len(rows)} stagiaire{'s' if len(rows) > 1 else ''})"
+
+    cards = []
+    text_people = []
+    for row in rows:
+        first_name = str(row.get("first_name") or "").strip()
+        last_name = str(row.get("last_name") or "").strip()
+        full_name = " ".join(part for part in (first_name, last_name) if part) or "Stagiaire sans nom"
+        remaining = float(row.get("remaining_amount") or 0)
+        remaining_label = f"{remaining:,.2f} €".replace(",", " ").replace(".", ",")
+        cards.append(f"""
+          <tr><td style="padding:0 0 12px 0;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;">
+              <tr><td style="padding:18px 20px;">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>
+                  <td style="font-size:16px;font-weight:700;color:#0f172a;">{html.escape(full_name)}</td>
+                  <td align="right" style="font-size:18px;font-weight:800;color:#4f46e5;white-space:nowrap;">{html.escape(remaining_label)}</td>
+                </tr></table>
+                <div style="margin-top:7px;font-size:13px;color:#64748b;">À encaisser en espèces</div>
+              </td></tr>
+            </table>
+          </td></tr>""")
+        text_people.append(f"- {full_name} : {remaining_label}")
+
+    safe_session_name = html.escape(session_name)
+    safe_training_type = html.escape(training_type or "Non renseigné")
+    html_body = f"""<!doctype html><html><body style="margin:0;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f5f9;padding:28px 12px;"><tr><td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 12px 32px rgba(15,23,42,.08);">
+          <tr><td style="padding:28px 32px;background-color:#4338ca;background-image:linear-gradient(135deg,#312e81,#4f46e5);color:#fff;">
+            <div style="font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;opacity:.8;">Intégrale Academy · Rappel du jour</div>
+            <h1 style="margin:10px 0 6px;font-size:26px;line-height:1.2;">Encaissements en espèces</h1>
+            <p style="margin:0;font-size:15px;opacity:.88;">La formation débute aujourd’hui.</p>
+          </td></tr>
+          <tr><td style="padding:28px 32px;">
+            <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#475569;">Bonjour Cassandre, bonjour Clément,<br>Voici les règlements en espèces restant à encaisser pour cette session.</p>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:24px;background:#eef2ff;border-radius:14px;">
+              <tr><td style="padding:18px 20px;">
+                <div style="font-size:18px;font-weight:800;color:#312e81;">{safe_session_name}</div>
+                <div style="margin-top:7px;font-size:14px;color:#475569;"><strong>Formation :</strong> {safe_training_type}<br><strong>Dates :</strong> {html.escape(period)}</div>
+              </td></tr>
+            </table>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0">{''.join(cards)}</table>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:10px;border-top:2px solid #e2e8f0;"><tr>
+              <td style="padding-top:20px;font-size:15px;font-weight:700;color:#334155;">Total à encaisser</td>
+              <td align="right" style="padding-top:20px;font-size:24px;font-weight:800;color:#4f46e5;">{html.escape(amount_label)}</td>
+            </tr></table>
+          </td></tr>
+          <tr><td style="padding:18px 32px;background:#f8fafc;text-align:center;font-size:12px;color:#94a3b8;">Notification automatique · Gestion Stagiaires</td></tr>
+        </table>
+      </td></tr></table>
+    </body></html>"""
+    text_body = "\n".join([
+        "Rappel des encaissements en espèces", "", f"Formation : {session_name}",
+        f"Type : {training_type or 'Non renseigné'}", f"Dates : {period}", "",
+        *text_people, "", f"Total à encaisser : {amount_label}",
+    ])
+    return subject, html_body, text_body
+
+
+def run_cash_payment_reminders(today: Optional[datetime.date] = None) -> Dict[str, int]:
+    """Email one reminder per starting session, once, using Paris' calendar day."""
+    paris_today = today or datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+    data = load_data()
+    dashboard_rows = _build_cash_payment_dashboard(data)["rows"]
+    rows_by_session: Dict[str, List[Dict[str, Any]]] = {}
+    for row in dashboard_rows:
+        if row.get("date_start", "")[:10] != paris_today.isoformat() or row.get("is_settled") or float(row.get("remaining_amount") or 0) <= 0:
+            continue
+        rows_by_session.setdefault(str(row.get("session_id") or ""), []).append(row)
+
+    checked = sent = failed = 0
+    changed = False
+    for session_obj in data.get("sessions", []):
+        session_id = str(session_obj.get("id") or "")
+        rows = rows_by_session.get(session_id, [])
+        if not rows or session_obj.get("cash_payment_reminder_sent_on") == paris_today.isoformat():
+            continue
+        checked += 1
+        subject, html_body, text_body = _build_cash_payment_reminder_email(session_obj, rows)
+        result = brevo_send_email(
+            CASH_PAYMENT_REMINDER_RECIPIENTS[0], subject, html_body,
+            cc_emails=CASH_PAYMENT_REMINDER_RECIPIENTS[1:], text_content=text_body,
+            metadata={"purpose": "cash_payment_first_day_reminder", "session_id": session_id},
+        )
+        if isinstance(result, dict) and result.get("ok"):
+            session_obj["cash_payment_reminder_sent_on"] = paris_today.isoformat()
+            session_obj["cash_payment_reminder_sent_at"] = _now_iso()
+            session_obj.pop("cash_payment_reminder_last_error", None)
+            sent += 1
+            changed = True
+        else:
+            session_obj["cash_payment_reminder_last_error"] = (result.get("error") if isinstance(result, dict) else "Échec de l’envoi") or "Échec de l’envoi"
+            failed += 1
+            changed = True
+    if changed:
+        save_data(data)
+    return {"checked": checked, "sent": sent, "failed": failed}
+
+
 @app.get("/admin/sessions/paiement-especes")
 @admin_login_required
 def admin_cash_payments():
@@ -30622,6 +30744,15 @@ def internal_cron_convocation_signature_reminders():
     result = run_convocation_signature_reminders()
     convocation_reminders = run_training_convocation_reminders()
     return jsonify({"ok": True, **result, "training_convocations": convocation_reminders})
+
+
+@app.post("/internal/cron/cash-payment-reminders")
+def internal_cron_cash_payment_reminders():
+    expected = os.environ.get("CRON_SECRET", "").strip()
+    provided = (request.headers.get("X-Cron-Secret") or request.args.get("token") or "").strip()
+    if expected and not hmac.compare_digest(expected, provided):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    return jsonify({"ok": True, **run_cash_payment_reminders()})
 
 
 @app.cli.command("send-convocation-signature-reminders")
