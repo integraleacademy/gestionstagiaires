@@ -182,6 +182,19 @@ class AdminFinancementStatusSyncTests(unittest.TestCase):
         self.assertIn("value:`${fmtMoney(c.otherFundingInvoiced)} / ${fmtMoney(c.otherFundingPlanned)}`", template)
         self.assertIn("badge(otherFundingFact[0],otherFundingFact[1])", template)
 
+    def test_invoiced_card_identifies_qonto_and_external_invoice_origins(self):
+        template = gestion_app.app.jinja_loader.get_source(
+            gestion_app.app.jinja_env,
+            "admin_trainee.html",
+        )[0]
+
+        self.assertIn("function invoiceOriginBadges(lines)", template)
+        self.assertIn("badge('QONTO','black')", template)
+        self.assertIn("badge('Générée ailleurs','purple')", template)
+        self.assertIn("finance-badge--black", template)
+        self.assertIn("finance-badge--purple", template)
+        self.assertIn("invoiceOriginBadges(currentLines)", template)
+
     def test_completed_invoice_generation_is_not_a_notification(self):
         template = gestion_app.app.jinja_loader.get_source(
             gestion_app.app.jinja_env,
