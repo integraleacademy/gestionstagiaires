@@ -22182,6 +22182,49 @@ def infos_missing_text(trainee: dict, training_type: str = "") -> str:
 # =========================
 # Admin actions — trainee
 # =========================
+def _transfer_trainee_billing_lines(
+    data: Dict[str, Any], trainee_id: str, source_session_id: str, target_session_id: str
+) -> int:
+    """Reattach persisted invoices and payment plans to a trainee's new session.
+
+    Billing line identifiers include the session identifier.  Moving only the
+    trainee record would consequently make an existing invoice, mandate and SEPA
+    schedule look like a brand-new amount to invoice in the destination session.
+    """
+    lines = data.get("billing_lines")
+    if not isinstance(lines, list):
+        return 0
+
+    transferred = 0
+    for line in lines:
+        if not isinstance(line, dict):
+            continue
+        if str(line.get("traineeId") or "") != str(trainee_id):
+            continue
+        if str(line.get("sessionId") or "") != str(source_session_id):
+            continue
+
+        financing_type = str(line.get("financingType") or line.get("typeFinanceur") or "").strip()
+        if not financing_type:
+            continue
+        financing_ref = str(line.get("financingRef") or "0")
+        old_line_id = str(line.get("id") or "")
+        line["id"] = _billing_line_id(target_session_id, trainee_id, financing_type, financing_ref)
+        line["sessionId"] = target_session_id
+        line["updatedAt"] = _now_iso()
+        history = line.get("billingHistory") if isinstance(line.get("billingHistory"), list) else []
+        history.append({
+            "at": _now_iso(),
+            "action": "trainee_transferred",
+            "fromSessionId": source_session_id,
+            "toSessionId": target_session_id,
+            "previousLineId": old_line_id,
+        })
+        line["billingHistory"] = history
+        transferred += 1
+    return transferred
+
+
 @app.post("/admin/sessions/<session_id>/stagiaires/<trainee_id>/delete")
 @admin_login_required
 @admin_write_required
@@ -22234,13 +22277,22 @@ def admin_transfer_trainee(session_id: str, trainee_id: str):
     target_session["trainees"] = target_trainees
     target_session.pop("stagiaires", None)
 
+    transferred_billing_lines = _transfer_trainee_billing_lines(
+        data, trainee_id, session_id, target_session_id
+    )
+
     target_training_type = _session_get(target_session, "training_type", "")
     ensure_documents_schema_for_trainee(trainee, target_training_type)
     trainee["dossier_status"] = "complete" if dossier_is_complete_total(trainee, target_training_type, _session_get(target_session, "date_start", "")) else "incomplete"
     trainee["updated_at"] = _now_iso()
 
     save_data(data)
-    flash("Stagiaire transféré avec succès.", "success")
+    finance_message = (
+        f" Les informations de facturation et de prélèvement ont été conservées ({transferred_billing_lines} ligne(s))."
+        if transferred_billing_lines
+        else ""
+    )
+    flash(f"Stagiaire transféré avec succès.{finance_message}", "success")
     return redirect(url_for("admin_trainees", session_id=target_session_id))
 
 def _replace_in_docx(doc: Document, replacements: dict) -> None:
