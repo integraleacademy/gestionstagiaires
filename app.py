@@ -14976,15 +14976,11 @@ def admin_cash_payments():
 
 
 def _signed_conventions_unseen_items(data: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Return signed conventions that have not yet been acknowledged from the sidebar."""
+    """Return the unprinted signed conventions tracked by the conventions page."""
     items: List[Dict[str, Any]] = []
-    minimum_session_start_date = datetime.date(2026, 7, 16)
 
     for sess in data.get("sessions", []):
         if bool(sess.get("archived")) or _is_wedof_leads_session(sess):
-            continue
-        session_start_date = _session_start_date(sess)
-        if session_start_date and session_start_date < minimum_session_start_date:
             continue
         session_id = str(sess.get("id") or "")
         training_type = _session_get(sess, "training_type", "")
@@ -14998,6 +14994,11 @@ def _signed_conventions_unseen_items(data: Dict[str, Any]) -> List[Dict[str, Any
                 or bool(signed_at)
             )
             if not is_signed:
+                continue
+            # Keep the sidebar badge on the exact same tracking perimeter as the
+            # "À imprimer" KPI.  A recently created convention can belong to a
+            # long-running session whose start date predates tracking.
+            if not _convention_created_on_or_after_tracking_start(trainee):
                 continue
             if bool(trainee.get("printed")):
                 continue
