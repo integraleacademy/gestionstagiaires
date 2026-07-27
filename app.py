@@ -28962,6 +28962,7 @@ def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional
     invoiced_total_cents = 0
     qonto_paid_total_cents = 0
     manual_paid_total_cents = 0
+    cash_paid_total_cents = 0
     qonto_payment_entries: List[Dict[str, Any]] = []
     linked_invoice_ids = {str(l.get('qontoInvoiceId') or l.get('qontoDraftId') or '') for l in lines if l.get('qontoInvoiceId') or l.get('qontoDraftId')}
     by_financer: Dict[str, Dict[str, Any]] = {}
@@ -28977,6 +28978,26 @@ def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional
             'remaining_amount_cents': 0 if externally_managed else planned,
             'externally_managed': externally_managed,
         }
+
+    # Cash installments are stored directly on the trainee rather than on a
+    # billing line.  Include them in the same centralized rollup returned to
+    # the trainee finance widget, otherwise its server summary overwrites the
+    # correct client-side cash total with zero.
+    if bool(trainee.get('cash_payment_enabled')):
+        cash_target_cents = money_value_to_cents(trainee.get('cash_payment_amount') or 0)
+        installment_cents = sum(
+            money_value_to_cents(item.get('amount') or 0)
+            for item in (trainee.get('cash_payment_installments') or [])
+            if isinstance(item, dict)
+        )
+        if bool(trainee.get('cash_payment_settled')) and cash_target_cents > 0:
+            cash_paid_total_cents = cash_target_cents
+        elif cash_target_cents > 0:
+            cash_paid_total_cents = min(installment_cents, cash_target_cents)
+        else:
+            cash_paid_total_cents = installment_cents
+        manual_paid_total_cents += cash_paid_total_cents
+        by_financer['PERSONNEL']['paid_amount_cents'] += cash_paid_total_cents
 
     for line in lines:
         invoice_status = str(line.get('invoiceStatus') or line.get('qontoStatus') or '').lower()
@@ -29073,6 +29094,7 @@ def calculate_trainee_financial_summary(trainee: Dict[str, Any], lines: Optional
         'invoiced_total_cents': invoiced_total_cents,
         'qonto_paid_total_cents': qonto_paid_total_cents,
         'manual_paid_total_cents': manual_paid_total_cents,
+        'cash_paid_total_cents': cash_paid_total_cents,
         'paid_total_cents': paid_total_cents,
         'remaining_total_cents': max(collectable_total_cents - paid_total_cents, 0),
         'invoicing_percentage': pct(invoiced_total_cents, collectable_total_cents),

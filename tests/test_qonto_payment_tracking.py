@@ -144,6 +144,40 @@ class QontoPaymentTrackingTests(unittest.TestCase):
         lines=[{"traineeId":"T1","financingType":"PERSONNEL","qontoInvoiceId":"A","qontoTotalAmountCents":100000,"qontoAmountPaidCents":60000,"amount":1000},{"traineeId":"T1","financingType":"PERSONNEL","qontoInvoiceId":"B","qontoTotalAmountCents":65000,"amount":650},{"traineeId":"T1","financingType":"PERSONNEL","manualPaymentInvoiceId":"A","amountPaid":600}]
         s=gestion_app.calculate_trainee_financial_summary(trainee,lines)
         self.assertEqual(s['invoiced_amount_cents'],165000); self.assertEqual(s['paid_amount_cents'],60000); self.assertEqual(s['remaining_amount_cents'],105000); self.assertEqual(s['by_financer']['PERSONNEL']['payment_status'],'partially_paid')
+
+    def test_cash_installment_is_included_in_trainee_financial_summary(self):
+        trainee = {
+            "id": "T1",
+            "personal_amount": 365,
+            "cash_payment_enabled": True,
+            "cash_payment_amount": 365,
+            "cash_payment_installments": [{"amount": 360, "date": "2026-07-27"}],
+        }
+
+        summary = gestion_app.calculate_trainee_financial_summary(trainee, [])
+
+        self.assertEqual(summary["cash_paid_total_cents"], 36000)
+        self.assertEqual(summary["manual_paid_total_cents"], 36000)
+        self.assertEqual(summary["paid_total_cents"], 36000)
+        self.assertEqual(summary["remaining_total_cents"], 500)
+        self.assertEqual(summary["by_financer"]["PERSONNEL"]["paid_amount_cents"], 36000)
+        self.assertEqual(summary["by_financer"]["PERSONNEL"]["payment_status"], "partially_paid")
+
+    def test_settled_cash_payment_uses_target_without_detailed_installments(self):
+        trainee = {
+            "id": "T1",
+            "personal_amount": 365,
+            "cash_payment_enabled": True,
+            "cash_payment_amount": 365,
+            "cash_payment_settled": True,
+        }
+
+        summary = gestion_app.calculate_trainee_financial_summary(trainee, [])
+
+        self.assertEqual(summary["cash_paid_total_cents"], 36500)
+        self.assertEqual(summary["paid_total_cents"], 36500)
+        self.assertEqual(summary["remaining_total_cents"], 0)
+        self.assertEqual(summary["payment_status"], "paid")
     def test_canceled_excluded(self):
         s=gestion_app.calculate_trainee_financial_summary({"id":"T1","personal_amount":1650},[{"traineeId":"T1","financingType":"PERSONNEL","qontoInvoiceId":"A","qontoTotalAmountCents":165000,"qontoAmountPaidCents":165000,"invoiceStatus":"canceled"}])
         self.assertEqual(s['invoiced_amount_cents'],0); self.assertEqual(s['paid_amount_cents'],0)
