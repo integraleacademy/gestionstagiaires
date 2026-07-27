@@ -28611,6 +28611,11 @@ def _setup_qonto_direct_debit_for_line(line: Dict[str, Any], payment_plan: Dict[
     # signed by ``ensure_qonto_sepa_installments_for_line`` below.
     _prepare_sepa_payment_plan(line, payment_plan)
     line['qonto_direct_debit_mandate_id'] = mandate.get('id') or line.get('qonto_direct_debit_mandate_id')
+    # Keep the human-readable Qonto proof alongside the technical mandate UUID.
+    # Qonto can expose it under several keys depending on the API version.
+    mandate_rum = _qonto_mandate_rum(mandate)
+    if mandate_rum:
+        line['qonto_mandate_rum'] = mandate_rum
     line['qonto_mandate_status'] = _map_mandate_status(mandate.get('status'))
     line['mandateStatus'] = line['qonto_mandate_status']
     line['qonto_mandate_sign_url'] = mandate.get('sign_url') or line.get('qonto_mandate_sign_url') or ''
@@ -29794,6 +29799,11 @@ def api_billing_create_mandate():
             raise RuntimeError('Veuillez définir au moins une échéance de prélèvement')
         _setup_qonto_direct_debit_for_line(line, payment_plan)
         line['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(line)
+        _, _, trainee = _find_trainee_any_session(data, str(line.get('traineeId') or ''))
+        if trainee and line.get('qonto_mandate_rum'):
+            trainee['qonto_mandate_rum'] = line['qonto_mandate_rum']
+            trainee['qonto_direct_debit_mandate_id'] = line.get('qonto_direct_debit_mandate_id') or ''
+            trainee['qonto_mandate_status'] = line.get('qonto_mandate_status') or ''
         _save_billing_line(data, line); save_data(data)
         return jsonify({'ok': True, 'message': 'Mandat de prélèvement créé', 'line': _find_billing_line(data, line['id'])})
     except Exception as exc:
