@@ -18612,6 +18612,200 @@ def admin_trainees_print(session_id: str):
     )
 
 
+def _require_a3p_session(data: Dict[str, Any], session_id: str) -> Dict[str, Any]:
+    session_item = find_session(data, session_id)
+    if not session_item:
+        raise LookupError("session_not_found")
+    label = f"{_session_get(session_item, 'training_type', '')} {_session_get(session_item, 'name', '')}".upper()
+    if "A3P" not in label:
+        raise ValueError("Cette action est réservée aux sessions A3P.")
+    return session_item
+
+
+def _a3p_exam_dossier_public_config(session_item: Dict[str, Any]) -> Dict[str, Any]:
+    saved = session_item.get("a3p_exam_dossier") if isinstance(session_item.get("a3p_exam_dossier"), dict) else {}
+    generation = saved.get("generation") if isinstance(saved.get("generation"), dict) else {}
+    return {
+        "training_start_date": saved.get("training_start_date") or _session_get(session_item, "date_start", ""),
+        "training_end_date": saved.get("training_end_date") or _session_get(session_item, "date_end", ""),
+        "exam_date": saved.get("exam_date") or _session_get(session_item, "exam_date", ""),
+        "epi_training_date": saved.get("epi_training_date") or "",
+        "selected_trainee_ids": saved.get("selected_trainee_ids") or [],
+        "generation": {
+            "available": bool(generation.get("archive_path") and os.path.isfile(generation.get("archive_path"))),
+            "created_at": generation.get("created_at") or "",
+            "candidate_count": generation.get("candidate_count") or 0,
+        },
+    }
+
+
+@app.get("/api/admin/sessions/<session_id>/a3p-exam-dossiers")
+@admin_login_required
+def api_a3p_exam_dossier_config(session_id: str):
+    data = load_data()
+    try:
+        session_item = _require_a3p_session(data, session_id)
+    except LookupError:
+        abort(404)
+    except ValueError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+    return jsonify({"ok": True, **_a3p_exam_dossier_public_config(session_item)})
+
+
+def _a3p_exam_context(trainee: Dict[str, Any], values: Dict[str, str]) -> Dict[str, str]:
+    first_name = normalize_first_name(trainee.get("first_name") or "")
+    last_name = normalize_last_name(trainee.get("last_name") or "")
+    address = trainee.get("address") if isinstance(trainee.get("address"), dict) else {}
+    address_line = trainee.get("address_line1") or (trainee.get("address") if isinstance(trainee.get("address"), str) else address.get("line1")) or ""
+    return {
+        "nom": last_name,
+        "prenom": first_name,
+        "nom_complet": " ".join(part for part in (first_name, last_name) if part),
+        "adresse": str(address_line).strip(),
+        "code_postal": str(trainee.get("postal_code") or trainee.get("zip_code") or address.get("postal_code") or "").strip(),
+        "ville": str(trainee.get("city") or address.get("city") or "").strip(),
+        "date_debut_formation": fr_date(values["training_start_date"]),
+        "date_fin_formation": fr_date(values["training_end_date"]),
+        "periode_formation": f"{fr_date(values['training_start_date'])} au {fr_date(values['training_end_date'])}",
+        "date_examen": fr_date(values["exam_date"]),
+        "date_formation_epi": fr_date(values["epi_training_date"]),
+        "date_jour": datetime.datetime.now().strftime("%d/%m/%Y"),
+    }
+
+
+def _prepare_a3p_exam_template(template_path: str, prepared_path: str) -> str:
+    """Create a renderable copy without requiring a binary DOCX change in Git.
+
+    The supplied Word file predates this feature and contains a fixed EPI date.
+    Replacing it in the DOCX XML copy keeps the original binary untouched while
+    still exposing ``date_formation_epi`` to docxtpl at generation time.
+    """
+    placeholder = "{{ date_formation_epi }}"
+    fixed_value = "22 avril 2026"
+    placeholder_found = False
+    fixed_value_found = False
+    with zipfile.ZipFile(template_path, "r") as source, zipfile.ZipFile(prepared_path, "w") as destination:
+        for item in source.infolist():
+            content = source.read(item.filename)
+            if item.filename.startswith("word/") and item.filename.endswith(".xml"):
+                xml_text = content.decode("utf-8")
+                placeholder_found = placeholder_found or placeholder in xml_text
+                if fixed_value in xml_text:
+                    xml_text = xml_text.replace(fixed_value, placeholder)
+                    fixed_value_found = True
+                content = xml_text.encode("utf-8")
+            destination.writestr(item, content)
+    if not placeholder_found and not fixed_value_found:
+        os.remove(prepared_path)
+        raise RuntimeError(
+            "Le modèle Word doit contenir {{ date_formation_epi }} ou la date EPI d'origine « 22 avril 2026 »."
+        )
+    return prepared_path
+
+
+@app.post("/api/admin/sessions/<session_id>/a3p-exam-dossiers/generate")
+@admin_login_required
+@admin_write_required
+def api_generate_a3p_exam_dossiers(session_id: str):
+    payload = request.get_json(silent=True) or {}
+    values = {key: str(payload.get(key) or "").strip() for key in (
+        "training_start_date", "training_end_date", "exam_date", "epi_training_date"
+    )}
+    selected_ids = [str(value) for value in payload.get("selected_trainee_ids", []) if str(value).strip()]
+    if not all(values.values()) or not selected_ids:
+        return jsonify({"ok": False, "message": "Toutes les dates et au moins un candidat sont obligatoires."}), 400
+    if values["training_end_date"] < values["training_start_date"]:
+        return jsonify({"ok": False, "message": "La date de fin doit être postérieure à la date de début."}), 400
+    if DocxTemplate is None:
+        return jsonify({"ok": False, "message": "Le moteur de documents Word est indisponible."}), 503
+    template_path = os.path.join(app.root_path, "templates_word", "docexamena3p.docx")
+    if not os.path.isfile(template_path):
+        return jsonify({"ok": False, "message": "Le modèle de dossier examen A3P est introuvable."}), 503
+    data = load_data()
+    try:
+        session_item = _require_a3p_session(data, session_id)
+    except LookupError:
+        abort(404)
+    except ValueError as exc:
+        return jsonify({"ok": False, "message": str(exc)}), 400
+    trainee_by_id = {str(item.get("id") or ""): item for item in _session_trainees_list(session_item)}
+    selected = [trainee_by_id[item_id] for item_id in selected_ids if item_id in trainee_by_id]
+    if not selected:
+        return jsonify({"ok": False, "message": "Aucun candidat valide n'a été sélectionné."}), 400
+
+    generation_id = uuid.uuid4().hex
+    output_dir = os.path.join(A3P_EXAM_DOSSIER_DIR, str(session_id), generation_id)
+    os.makedirs(output_dir, exist_ok=True)
+    pdf_paths = []
+    try:
+        lo_binary = _find_libreoffice_binary()
+        prepared_template_path = _prepare_a3p_exam_template(
+            template_path, os.path.join(output_dir, "modele_dossier_examen_a3p.docx")
+        )
+        for trainee in selected:
+            display_last = normalize_last_name(trainee.get("last_name") or "")
+            display_first = normalize_first_name(trainee.get("first_name") or "")
+            base_name = f"Dossier examen A3P {display_last} {display_first}".strip()
+            safe_base = secure_filename(base_name) or f"Dossier_examen_A3P_{trainee.get('id')}"
+            docx_path = os.path.join(output_dir, safe_base + ".docx")
+            doc = DocxTemplate(prepared_template_path)
+            doc.render(_a3p_exam_context(trainee, values))
+            doc.save(docx_path)
+            result = subprocess.run(
+                [lo_binary, "--headless", "--convert-to", "pdf", "--outdir", output_dir, docx_path],
+                check=True, capture_output=True, text=True, timeout=120,
+            )
+            pdf_path = os.path.join(output_dir, safe_base + ".pdf")
+            if not os.path.isfile(pdf_path):
+                raise RuntimeError(result.stderr or "Le PDF n'a pas été créé.")
+            pdf_paths.append((pdf_path, base_name + ".pdf"))
+            os.remove(docx_path)
+        os.remove(prepared_template_path)
+
+        combined_path = os.path.join(output_dir, "Tous les dossiers examen A3P.pdf")
+        writer = PdfWriter()
+        for pdf_path, _ in pdf_paths:
+            for page in PdfReader(pdf_path).pages:
+                writer.add_page(page)
+        with open(combined_path, "wb") as combined_file:
+            writer.write(combined_file)
+        archive_path = os.path.join(output_dir, "Dossiers examen A3P.zip")
+        with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED) as archive:
+            for pdf_path, download_name in pdf_paths:
+                archive.write(pdf_path, download_name)
+            archive.write(combined_path, os.path.basename(combined_path))
+    except Exception as exc:
+        shutil.rmtree(output_dir, ignore_errors=True)
+        app.logger.exception("Génération des dossiers examen A3P impossible")
+        return jsonify({"ok": False, "message": f"La génération a échoué : {exc}"}), 500
+
+    session_item["a3p_exam_dossier"] = {
+        **values,
+        "selected_trainee_ids": [str(item.get("id") or "") for item in selected],
+        "generation": {"id": generation_id, "archive_path": archive_path, "created_at": _now_iso(), "candidate_count": len(selected)},
+    }
+    save_data(data)
+    return jsonify({"ok": True, "candidate_count": len(selected), "download_url": url_for("admin_download_a3p_exam_dossiers", session_id=session_id)})
+
+
+@app.get("/admin/sessions/<session_id>/a3p-exam-dossiers/download")
+@admin_login_required
+def admin_download_a3p_exam_dossiers(session_id: str):
+    data = load_data()
+    try:
+        session_item = _require_a3p_session(data, session_id)
+    except LookupError:
+        abort(404)
+    except ValueError as exc:
+        return str(exc), 400
+    generation = (session_item.get("a3p_exam_dossier") or {}).get("generation") or {}
+    archive_path = generation.get("archive_path") or ""
+    expected_root = os.path.realpath(os.path.join(A3P_EXAM_DOSSIER_DIR, str(session_id)))
+    if not archive_path or not os.path.isfile(archive_path) or not os.path.realpath(archive_path).startswith(expected_root + os.sep):
+        abort(404, description="Aucun dossier d'examen généré n'est disponible.")
+    return send_file(archive_path, mimetype="application/zip", as_attachment=True, download_name="Dossiers examen A3P.zip")
+
+
 @app.get("/admin/sessions/<session_id>/tshirt-list")
 @admin_login_required
 def admin_tshirt_list(session_id: str):
@@ -25364,6 +25558,7 @@ APS_CONVOCATION_CENTER_CITY = "Puget-sur-Argens"
 APS_CONVOCATION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "convocations_aps")
 APS_ENTRY_ATTESTATION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "attestations_entree_aps")
 APS_END_ATTESTATION_DIR = os.path.join(PERSIST_DIR, "generated_documents", "attestations_fin_aps")
+A3P_EXAM_DOSSIER_DIR = os.path.join(PERSIST_DIR, "generated_documents", "dossiers_examen_a3p")
 os.makedirs(APS_CONVOCATION_DIR, exist_ok=True)
 os.makedirs(APS_ENTRY_ATTESTATION_DIR, exist_ok=True)
 os.makedirs(APS_END_ATTESTATION_DIR, exist_ok=True)
