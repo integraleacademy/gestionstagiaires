@@ -167,6 +167,43 @@ class AdminTraineeSearchRecentsTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual([item["trainee_id"] for item in response.get_json()["items"]], ["T-OWN"])
 
+    def test_trainee_search_exposes_all_three_destinations(self):
+        with patch.object(gestion_app, "load_data", return_value=self.fake_data):
+            response = self.client.get("/api/trainees_search?q=prenom1")
+
+        item = response.get_json()["items"][0]
+        self.assertEqual(item["admin_url"], "/admin/sessions/S-1/stagiaires/T-1")
+        self.assertIn("/espace/", item["public_url"])
+        self.assertEqual(item["summary_api_url"], "/api/admin/sessions/S-1/trainees/T-1/summary")
+
+    def test_quick_summary_reports_operational_statuses(self):
+        trainee = self.fake_data["sessions"][0]["trainees"][0]
+        trainee.update({
+            "convention_status": "signed",
+            "financement_status": "validated",
+            "cnaps": "ACCEPTÉ",
+            "test_fr_status": "validated",
+        })
+        automation = {
+            "convention": {"status": "signed", "label": "Signée"},
+            "convocation": {"status": "sent", "label": "Envoyée"},
+        }
+        billing = [{"paymentStatus": "paid"}]
+        with patch.object(gestion_app, "load_data", return_value=self.fake_data), patch.object(
+            gestion_app, "_build_trainee_automation_status", return_value=automation
+        ), patch.object(
+            gestion_app, "_billing_lines_for_trainee_session", return_value=billing
+        ), patch.object(gestion_app, "dossier_is_complete_total", return_value=True):
+            response = self.client.get("/api/admin/sessions/S-1/trainees/T-1/summary")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertEqual(payload["progress"], {"completed": 8, "total": 8, "percent": 100})
+        self.assertEqual({item["key"] for item in payload["statuses"]}, {
+            "convention_sent", "convention_signed", "convocation", "financing",
+            "payment", "cnaps", "test_fr", "documents",
+        })
+
     def test_header_contains_unified_command_search(self):
         with patch.object(gestion_app, "load_data", return_value={"sessions": []}), patch.object(
             gestion_app, "_load_wedof_webhooks", return_value=[]

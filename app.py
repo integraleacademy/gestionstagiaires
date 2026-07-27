@@ -29511,8 +29511,62 @@ def _trainee_search_item(s: dict, t: dict) -> dict:
         "convention_signed_done": bool(t.get("convention_signed_done")),
         "test_fr_status": t.get("test_fr_status") or "soon",
         "admin_url": f"/admin/sessions/{session_id}/stagiaires/{trainee_id}",
+        "summary_api_url": f"/api/admin/sessions/{session_id}/trainees/{trainee_id}/summary",
         "public_token": (t.get("public_token") or "").strip(),
         "public_url": f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{(t.get('public_token') or '').strip()}",
+    }
+
+
+def _trainee_quick_summary(data: dict, session_obj: dict, trainee: dict) -> dict:
+    """Build the concise, read-only status payload used by global search."""
+    session_id = str(session_obj.get("id") or "")
+    trainee_id = str(trainee.get("id") or "")
+    training_type = str(_session_get(session_obj, "training_type", "") or "").strip()
+    training_upper = training_type.upper()
+    automation = _build_trainee_automation_status(session_obj, trainee, session_id, trainee_id)
+    convention = automation.get("convention") or {}
+    convocation = automation.get("convocation") or {}
+
+    billing_lines = _billing_lines_for_trainee_session(data, trainee_id, session_id)
+    payable_lines = [line for line in billing_lines if line.get("paymentStatus") != "not_applicable"]
+    paid_lines = [line for line in payable_lines if line.get("paymentStatus") == "paid"]
+    if payable_lines and len(paid_lines) == len(payable_lines):
+        payment_state, payment_label = "complete", "Tout est payé"
+    elif paid_lines:
+        payment_state, payment_label = "pending", f"Paiement partiel · {len(paid_lines)}/{len(payable_lines)} réglé(s)"
+    elif payable_lines:
+        payment_state, payment_label = "pending", "Paiement en attente"
+    else:
+        payment_state, payment_label = "neutral", "Aucune facture à régler"
+
+    cnaps_relevant = training_upper.startswith(("APS", "A3P"))
+    cnaps_ok = _cnaps_is_accepted(trainee.get("cnaps"))
+    test_fr_relevant = training_upper.startswith(("APS", "A3P"))
+    dossier_ok = dossier_is_complete_total(trainee, training_type, _session_get(session_obj, "date_start", ""))
+
+    def status(key: str, label: str, state: str, detail: str = "") -> dict:
+        return {"key": key, "label": label, "state": state, "detail": detail}
+
+    convention_state = str(convention.get("status") or "")
+    statuses = [
+        status("convention_sent", "Convention envoyée", "complete" if convention_state in {"sent", "waiting_signature", "signed"} else "pending", convention.get("label") or "À envoyer"),
+        status("convention_signed", "Convention signée", "complete" if convention_state == "signed" else "pending", "Signature obtenue" if convention_state == "signed" else "Signature en attente"),
+        status("convocation", "Convocation envoyée", "complete" if convocation.get("status") == "sent" else "pending", convocation.get("label") or "À envoyer"),
+        status("financing", "Financement validé", "complete" if trainee.get("financement_status") == "validated" else "pending", "Validé" if trainee.get("financement_status") == "validated" else "À contrôler"),
+        status("payment", "Paiement", payment_state, payment_label),
+        status("cnaps", "CNAPS", "complete" if cnaps_ok else "pending", str(trainee.get("cnaps") or "À contrôler")) if cnaps_relevant else status("cnaps", "CNAPS", "neutral", "Non concerné"),
+        status("test_fr", "Test de français", "complete" if trainee.get("test_fr_status") == "validated" else "pending", "Validé" if trainee.get("test_fr_status") == "validated" else "À valider") if test_fr_relevant else status("test_fr", "Test de français", "neutral", "Non concerné"),
+        status("documents", "Documents", "complete" if dossier_ok else "pending", "Dossier complet" if dossier_ok else "Dossier incomplet"),
+    ]
+    relevant = [item for item in statuses if item["state"] != "neutral"]
+    completed = sum(item["state"] == "complete" for item in relevant)
+    return {
+        "ok": True,
+        "trainee": {"first_name": trainee.get("first_name") or "", "last_name": trainee.get("last_name") or "", "session_name": _session_get(session_obj, "name", ""), "training_type": training_type},
+        "progress": {"completed": completed, "total": len(relevant), "percent": round((completed / len(relevant)) * 100) if relevant else 100},
+        "statuses": statuses,
+        "admin_url": f"/admin/sessions/{session_id}/stagiaires/{trainee_id}",
+        "public_url": f"{PUBLIC_STUDENT_PORTAL_BASE.rstrip('/')}/espace/{(trainee.get('public_token') or '').strip()}",
     }
 
 
@@ -29629,6 +29683,19 @@ def api_trainees_search():
     ))
     out = out[:30]
     return jsonify({"ok": True, "items": out, "count": len(out)})
+
+
+@app.get("/api/admin/sessions/<session_id>/trainees/<trainee_id>/summary")
+@admin_login_required
+def api_admin_trainee_quick_summary(session_id: str, trainee_id: str):
+    data = load_data()
+    session_obj = find_session(data, session_id)
+    if not session_obj or (session_obj.get("partner_id") or INTEGRALE_PARTNER_ID) != (_current_partner_id() or INTEGRALE_PARTNER_ID):
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+    trainee = find_trainee(session_obj, trainee_id)
+    if not trainee:
+        return jsonify({"ok": False, "error": "trainee_not_found"}), 404
+    return jsonify(_trainee_quick_summary(data, session_obj, trainee))
 
 
 @app.get("/api/cnaps/trainees")

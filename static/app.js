@@ -309,7 +309,8 @@ async function api(url, method="GET", body=null) {
     let lastType='';
     results.innerHTML=items.map((item,index)=>{
       const heading=item.type!==lastType?`<div class="command-search__group">${escapeHtml(item.type)}</div>`:'';lastType=item.type;
-      return `${heading}<a class="command-search__result" role="option" data-command-index="${index}" href="${escapeHtml(item.href)}"><span class="command-search__icon">${escapeHtml(item.icon)}</span><span class="command-search__copy"><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.description)}</small></span><span class="command-search__type">${escapeHtml(item.type)}</span><span class="command-search__arrow">↗</span></a>`;
+      const actions=item.type==='Stagiaires'?`<span class="command-search__actions"><a href="${escapeHtml(item.href)}">Fiche</a><a href="${escapeHtml(item.publicUrl)}" target="_blank" rel="noopener">Espace</a><button type="button" data-summary-url="${escapeHtml(item.summaryUrl)}">Synthèse</button></span>`:`<span class="command-search__type">${escapeHtml(item.type)}</span><span class="command-search__arrow">↗</span>`;
+      return `${heading}<div class="command-search__result" role="option" data-command-index="${index}" data-command-href="${escapeHtml(item.href)}"><span class="command-search__icon">${escapeHtml(item.icon)}</span><span class="command-search__copy"><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.description)}</small></span>${actions}</div>`;
     }).join('');
   }
   async function remoteSearch(query,id){
@@ -320,7 +321,7 @@ async function api(url, method="GET", body=null) {
       ]);
       const [trainees,sessions]=await Promise.all([traineesResponse.json(),sessionsResponse.json()]);
       if(id!==sequence)return;
-      const people=(trainees.items||[]).slice(0,6).map(item=>({type:'Stagiaires',icon:'●',label:`${item.first_name||''} ${item.last_name||''}`.trim(),description:`${item.session_name||'Session'}${item.training_type?' · '+item.training_type:''}`,href:item.admin_url}));
+      const people=(trainees.items||[]).slice(0,6).map(item=>({type:'Stagiaires',icon:'●',label:`${item.first_name||''} ${item.last_name||''}`.trim(),description:`${item.session_name||'Session'}${item.training_type?' · '+item.training_type:''}`,href:item.admin_url,publicUrl:item.public_url,summaryUrl:item.summary_api_url}));
       const courses=(sessions.items||[]).slice(0,6).map(item=>({type:'Sessions',icon:'□',label:item.session_name||item.training_type||'Session',description:`${item.training_type||'Formation'}${item.date_range?' · '+item.date_range:''}`,href:item.admin_url}));
       draw([...functionMatches(query),...people,...courses],query);
     }catch(_error){if(id===sequence){draw(functionMatches(query),query);status.textContent='Résultats des outils uniquement';}}
@@ -342,11 +343,28 @@ async function api(url, method="GET", body=null) {
   input.addEventListener('keydown',event=>{
     if(event.key==='ArrowDown'){event.preventDefault();select(activeIndex+1);}
     else if(event.key==='ArrowUp'){event.preventDefault();select(activeIndex-1);}
-    else if(event.key==='Enter'&&activeIndex>=0){event.preventDefault();results.querySelector(`[data-command-index="${activeIndex}"]`)?.click();}
+    else if(event.key==='Enter'&&activeIndex>=0){event.preventDefault();const option=results.querySelector(`[data-command-index="${activeIndex}"]`);if(option?.dataset.commandHref)window.location.href=option.dataset.commandHref;}
     else if(event.key==='Escape'){event.preventDefault();close();input.blur();}
   });
   document.addEventListener('keydown',event=>{if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='k'){event.preventDefault();input.focus();open();}});
   document.addEventListener('pointerdown',event=>{if(!root.contains(event.target))close();});
+  results.addEventListener('click',async event=>{
+    const button=event.target.closest('[data-summary-url]');
+    if(!button){const option=event.target.closest('[data-command-href]');if(option&&!event.target.closest('a,button'))window.location.href=option.dataset.commandHref;return;}
+    event.preventDefault();event.stopPropagation();
+    button.disabled=true;button.textContent='Chargement…';
+    try{const response=await fetch(button.dataset.summaryUrl,{headers:{Accept:'application/json'}});const payload=await response.json();if(!response.ok)throw new Error();showTraineeSummary(payload);close();}
+    catch(_error){window.AppModal?.alert('Impossible de charger la synthèse du stagiaire.',{type:'error'});}
+    finally{button.disabled=false;button.textContent='Synthèse';}
+  });
+  function showTraineeSummary(payload){
+    let modal=document.getElementById('traineeSummaryModal');
+    if(!modal){modal=document.createElement('div');modal.id='traineeSummaryModal';modal.className='trainee-summary-modal';document.body.appendChild(modal);}
+    const person=payload.trainee||{},progress=payload.progress||{};
+    modal.innerHTML=`<div class="trainee-summary__backdrop" data-summary-close></div><section class="trainee-summary__card" role="dialog" aria-modal="true" aria-labelledby="traineeSummaryTitle"><header><div><span class="trainee-summary__kicker">Vue à 360°</span><h2 id="traineeSummaryTitle">${escapeHtml(`${person.first_name||''} ${person.last_name||''}`)}</h2><p>${escapeHtml(person.session_name||'Session')} · ${escapeHtml(person.training_type||'Formation')}</p></div><button type="button" data-summary-close aria-label="Fermer">×</button></header><div class="trainee-summary__score"><div class="trainee-summary__ring" style="--progress:${Number(progress.percent)||0}"><strong>${Number(progress.percent)||0}%</strong></div><div><strong>${progress.completed||0} étapes validées sur ${progress.total||0}</strong><span>${progress.percent===100?'Le dossier est prêt.':'Les points restants sont visibles ci-dessous.'}</span></div></div><div class="trainee-summary__grid">${(payload.statuses||[]).map(item=>`<article class="is-${escapeHtml(item.state)}"><span class="trainee-summary__check">${item.state==='complete'?'✓':item.state==='neutral'?'—':'!'}</span><div><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.detail)}</small></div></article>`).join('')}</div><footer><a href="${escapeHtml(payload.public_url)}" target="_blank" rel="noopener">Ouvrir l’espace stagiaire</a><a class="is-primary" href="${escapeHtml(payload.admin_url)}">Ouvrir la fiche</a></footer></section>`;
+    modal.classList.add('is-visible');document.body.classList.add('trainee-summary-open');
+    modal.querySelectorAll('[data-summary-close]').forEach(el=>el.addEventListener('click',()=>{modal.classList.remove('is-visible');document.body.classList.remove('trainee-summary-open');}));
+  }
 })();
 (function(){
   if(window.AppModal) return;
