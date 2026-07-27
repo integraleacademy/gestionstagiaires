@@ -55,4 +55,5 @@ class AdminBillingSpecificCasesTests(unittest.TestCase):
         self.assertIn("Pourquoi est-ce un cas spécifique ?", template)
         self.assertIn("specific-case-row", template)
         self.assertIn("Génération désactivée", template)
+        self.assertIn('data-external="${id}">Générer ailleurs</button>', template)
         self.assertNotIn('disabled title="Activé automatiquement par le paiement en espèces"', template)
