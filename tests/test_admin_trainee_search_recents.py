@@ -153,6 +153,32 @@ class AdminTraineeSearchRecentsTests(unittest.TestCase):
         self.assertEqual(payload["items"][0]["total"], 1)
         self.assertEqual(payload["items"][0]["admin_url"], "/admin/sessions/S-APS/trainees")
 
+    def test_trainee_search_is_scoped_to_current_partner(self):
+        fake_data = {
+            "sessions": [
+                {"id": "S-OWN", "partner_id": gestion_app.INTEGRALE_PARTNER_ID, "name": "APS", "trainees": [{"id": "T-OWN", "first_name": "Alice", "last_name": "Martin"}]},
+                {"id": "S-OTHER", "partner_id": "other-partner", "name": "APS", "trainees": [{"id": "T-OTHER", "first_name": "Alice", "last_name": "Martin"}]},
+            ]
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            response = self.client.get("/api/trainees_search?q=alice")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([item["trainee_id"] for item in response.get_json()["items"]], ["T-OWN"])
+
+    def test_header_contains_unified_command_search(self):
+        with patch.object(gestion_app, "load_data", return_value={"sessions": []}), patch.object(
+            gestion_app, "_load_wedof_webhooks", return_value=[]
+        ):
+            response = self.client.get("/admin/sessions")
+
+        html = response.get_data(as_text=True)
+        self.assertIn('placeholder="Que cherchez-vous ?"', html)
+        self.assertIn("Facturation", html)
+        self.assertIn("Suivi CNAPS", html)
+        self.assertIn('id="commandSearchPanel"', html)
+
 
 if __name__ == "__main__":
     unittest.main()

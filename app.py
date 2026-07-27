@@ -29579,10 +29579,13 @@ def api_sessions_search():
 def api_trainees_search():
     q = (request.args.get("q") or "").strip().lower()
     data = load_data()
+    visible_partner_id = _current_partner_id() or INTEGRALE_PARTNER_ID
     all_items = []
     items_by_key = {}
 
     for s in data.get("sessions", []):
+        if not isinstance(s, dict) or (s.get("partner_id") or INTEGRALE_PARTNER_ID) != visible_partner_id:
+            continue
         if _is_wedof_leads_session(s):
             continue
         for t in _session_trainees_list(s):
