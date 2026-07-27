@@ -24,6 +24,8 @@ python app.py
 - `AUTO_RESTORE_FROM_BACKUP` (optionnel, défaut `1`) : en cas de `data.json` manquant/corrompu, tente une restauration automatique depuis `PERSIST_DIR/backups`.
 - `CNAPSV3_BASE_URL` (optionnel, défaut `https://cnapsv3.onrender.com`)
 - `GESTIONSTAGIAIRE_SYNC_TOKEN` (obligatoire pour synchroniser le statut CNAPS vers cnapsv3)
+- `CNAPS_MONITOR_TOKEN` (secret partagé entre le cron Render et le endpoint interne de suivi CNAPS)
+- `CNAPSV3_API_TOKEN` (obligatoire sur le service web pour que le suivi automatique lise les dossiers CNAPS)
 - `WEDOF_WEBHOOK_SECRET` (recommandé : si défini, une signature invalide/manquante est refusée)
 - `WEDOF_API_TOKEN` (token API WeDoF pour récupérer le détail complet d'un dossier)
 - `DOCS_TO_CONTROL_PUBLIC_TOKEN` (optionnel : token requis pour exposer `/docs_to_control.json` à un dashboard externe sans session admin)
@@ -79,6 +81,12 @@ Les dossiers VAE sont persistés dans `data_vae.json` dans `PERSIST_DIR`.
 
 > Sans les clés VAPID (`WEB_PUSH_VAPID_PUBLIC_KEY` / `WEB_PUSH_VAPID_PRIVATE_KEY`), le bouton restera désactivé côté interface.
 
+
+## Surveillance automatique des statuts CNAPS
+
+Le Blueprint Render déploie `gestionstagiaires-cnaps-monitor`, un worker permanent qui appelle toutes les 15 minutes le endpoint interne protégé `POST /internal/jobs/cnaps-public-annuaire-monitor`. La vérification et l’envoi des e-mails se font donc côté serveur, même si aucun administrateur n’ouvre le site.
+
+Sur Render, renseigner la même valeur secrète `CNAPS_MONITOR_TOKEN` sur le service web et sur le worker. Le service web doit également disposer de `CNAPSV3_API_TOKEN` et de la configuration Brevo habituelle. L’intervalle est configurable avec `CNAPS_MONITOR_INTERVAL_SECONDS` (900 secondes par défaut).
 
 ## Intégration cnapsv3 (sync ACCEPTÉ)
 
