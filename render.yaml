@@ -56,15 +56,16 @@ services:
         value: https://gestionstagiaires-r5no.onrender.com/internal/cron/cash-payment-reminders
       - key: CRON_SECRET
         sync: false
-  - type: cron
+  - type: worker
     name: gestionstagiaires-cnaps-monitor
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    schedule: "*/15 * * * *"
-    dockerCommand: python scripts/run_cnaps_monitor.py
+    dockerCommand: python scripts/run_cnaps_monitor_worker.py
     envVars:
       - key: CNAPS_MONITOR_URL
         value: https://gestionstagiaires-r5no.onrender.com/internal/jobs/cnaps-public-annuaire-monitor
       - key: CNAPS_MONITOR_TOKEN
         sync: false
+      - key: CNAPS_MONITOR_INTERVAL_SECONDS
+        value: 900
