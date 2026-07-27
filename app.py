@@ -28589,6 +28589,8 @@ def _setup_qonto_direct_debit_for_line(line: Dict[str, Any], payment_plan: Dict[
         try:
             response = get_qonto_direct_debit_mandate(line['qonto_direct_debit_mandate_id'])
             mandate = response.get('direct_debit_mandate') or response.get('mandate') or response
+            if _map_mandate_status(mandate.get('status')) not in {'pending', 'active', 'signed'}:
+                mandate = None
         except QontoNotFoundError:
             mandate = None
     if not mandate:
@@ -29757,6 +29759,47 @@ def api_billing_resend_mandate():
     _billing_log(line, 'Lien mandat SEPA renvoyé', 'success' if sent else 'error', 'Email envoyé' if sent else 'Email non envoyé')
     _save_billing_line(data, line); save_data(data)
     return jsonify({'ok': bool(sent), 'message': 'Lien de mandat renvoyé' if sent else 'Email non envoyé'}), (200 if sent else 400)
+
+
+@app.post('/api/billing/create-mandate')
+@admin_login_required
+@admin_write_required
+def api_billing_create_mandate():
+    """Create (or retry) a SEPA mandate without creating another invoice."""
+    data = load_data(); payload = request.get_json(silent=True) or {}; line = _line_from_payload(data, payload)
+    if not line:
+        return jsonify({'ok': False, 'error': 'Ligne de facturation introuvable'}), 404
+    try:
+        _ensure_qonto_oauth_ready()
+        if not (line.get('qontoClientId') or line.get('qontoCustomerId')):
+            client_payload = build_qonto_client_payload(
+                line, line, {'id': line.get('sessionId')},
+                line.get('financingType') or line.get('financingLabel'),
+            )
+            validation_errors = validate_qonto_client_payload(client_payload, line.get('financingType'))
+            if validation_errors:
+                raise RuntimeError(_format_qonto_validation_errors(validation_errors))
+            q_client = search_qonto_client({
+                'email': client_payload.get('email'),
+                'name': client_payload.get('name') or f"{client_payload.get('first_name', '')} {client_payload.get('last_name', '')}".strip(),
+            })
+            if not q_client:
+                q_client = create_qonto_client({'client': remove_invalid_qonto_phone(client_payload)})
+            client_id = (q_client.get('client') or q_client).get('id')
+            if not client_id:
+                raise RuntimeError('Client Qonto introuvable')
+            line['qontoClientId'] = line['qontoCustomerId'] = client_id
+        payment_plan = _normalize_payment_plan(payload.get('paymentPlan') or payload, _money(line.get('amountTTC') or line.get('amount')))
+        if payment_plan.get('mode') != 'sepa_direct_debit' or not payment_plan.get('schedule'):
+            raise RuntimeError('Veuillez définir au moins une échéance de prélèvement')
+        _setup_qonto_direct_debit_for_line(line, payment_plan)
+        line['qontoPaymentGlobalStatus'] = _qonto_payment_global_status(line)
+        _save_billing_line(data, line); save_data(data)
+        return jsonify({'ok': True, 'message': 'Mandat de prélèvement créé', 'line': _find_billing_line(data, line['id'])})
+    except Exception as exc:
+        _billing_log(line, 'Erreur création mandat SEPA', 'error', _sanitize_qonto_error(str(exc)))
+        _save_billing_line(data, line); save_data(data)
+        return jsonify({'ok': False, 'error': format_qonto_error_for_front(exc)}), 400
 
 @app.post('/api/billing/sync-qonto')
 @admin_login_required
