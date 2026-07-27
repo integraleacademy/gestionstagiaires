@@ -122,9 +122,28 @@ class QontoInvoiceStatusTests(unittest.TestCase):
              patch.object(gestion_app, "create_qonto_direct_debit_mandate", return_value={}):
             with self.assertRaisesRegex(RuntimeError, "aucun identifiant de mandat"):
                 gestion_app._setup_qonto_direct_debit_for_line(line, payment_plan)
-
         self.assertNotIn("directDebitInstallments", line)
         self.assertNotIn("sepa_payment_plan", line)
+
+    def test_failed_persisted_mandate_is_replaced_when_retrying(self):
+        line = {
+            "id": "line_1", "qontoClientId": "client_123",
+            "qonto_direct_debit_mandate_id": "failed_mandate",
+        }
+        payment_plan = {
+            "mode": "sepa_direct_debit", "installments": 1,
+            "schedule": [{"date": "2026-08-12", "amount": 528}],
+        }
+        with patch.object(gestion_app, "_ensure_qonto_oauth_ready"), \
+             patch.object(gestion_app, "_active_qonto_mandate", return_value=None), \
+             patch.object(gestion_app, "get_qonto_direct_debit_mandate", return_value={"direct_debit_mandate": {"id": "failed_mandate", "status": "failed"}}), \
+             patch.object(gestion_app, "create_qonto_direct_debit_mandate", return_value={"direct_debit_mandate": {"id": "new_mandate", "status": "pending_signature"}}) as create, \
+             patch.object(gestion_app, "ensure_qonto_sepa_installments_for_line"):
+            gestion_app._setup_qonto_direct_debit_for_line(line, payment_plan)
+
+        create.assert_called_once()
+        self.assertEqual(line["qonto_direct_debit_mandate_id"], "new_mandate")
+        self.assertEqual(line["qonto_mandate_status"], "pending")
 
     def test_pending_qonto_mandate_never_reports_programmed_debits(self):
         line = {
