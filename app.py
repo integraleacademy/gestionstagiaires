@@ -8360,6 +8360,10 @@ def _admin_notification_details(data: Dict[str, Any], item: Dict[str, Any]) -> L
     if call_status:
         details.append(f"Statut d'appel : {call_status}")
 
+    if meta.get("kind") == "qonto_direct_debit_rejected":
+        details.append(f"Montant rejeté : {_format_euro(meta.get('amount'))}")
+        details.append(f"Date prévue : {fr_date(meta.get('scheduled_date') or '') or 'Non renseignée'}")
+
     return details
 
 
@@ -28122,6 +28126,54 @@ def _format_euro(value: Any) -> str:
     return f"{_money(value):,.2f} €".replace(",", " ").replace(".", ",")
 
 
+QONTO_REJECTED_DEBIT_ALERT_RECIPIENTS = (
+    "cassandre@integraleacademy.com",
+    "clement@integraleacademy.com",
+)
+
+
+def _build_rejected_debit_alert_html(line: Dict[str, Any], installment: Dict[str, Any]) -> str:
+    """Build the internal, email-client-safe alert for a rejected SEPA debit."""
+    trainee_name = html.escape(
+        f"{line.get('traineeFirstName', '')} {line.get('traineeLastName', '')}".strip()
+        or "Stagiaire non renseigné"
+    )
+    formation = html.escape(str(line.get('formationName') or line.get('sessionName') or "Formation non renseignée"))
+    start_date = html.escape(fr_date(line.get('dateStart') or "") or "Non renseignée")
+    end_date = html.escape(fr_date(line.get('dateEnd') or line.get('dateStart') or "") or "Non renseignée")
+    due_date = html.escape(fr_date(installment.get('due_date') or installment.get('date') or "") or "Non renseignée")
+    amount = html.escape(_format_euro(installment.get('amount')))
+    reason = html.escape(str(installment.get('status_reason') or installment.get('failureReason') or "Non communiqué par la banque"))
+    logo_url = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
+    return f"""<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
+<body style="margin:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#0f172a"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:28px 12px;background:#f1f5f9"><tr><td align="center">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 16px 40px rgba(15,23,42,.12)"><tr><td style="padding:28px 32px;background:linear-gradient(135deg,#10233f,#7f1d1d);color:#fff"><table role="presentation" width="100%"><tr><td width="74"><img src="{logo_url}" width="56" alt="Intégrale Academy" style="display:block;background:#fff;border-radius:13px;padding:7px"></td><td><div style="font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#fecaca">Alerte facturation</div><div style="font-size:26px;font-weight:800;margin-top:5px">Prélèvement rejeté</div></td></tr></table></td></tr>
+<tr><td style="padding:30px 32px"><p style="margin:0 0 22px;color:#475569;font-size:16px;line-height:1.6">Une échéance SEPA vient d’être rejetée. Voici toutes les informations nécessaires à son traitement.</p>
+<div style="padding:20px;border:1px solid #fecaca;border-radius:16px;background:#fff7f7;margin-bottom:20px"><div style="color:#991b1b;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em">Montant rejeté</div><div style="font-size:30px;font-weight:900;margin-top:5px">{amount}</div><div style="color:#64748b;margin-top:7px">Prélèvement initialement prévu le <strong>{due_date}</strong></div></div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #e2e8f0;border-radius:16px;overflow:hidden"><tr><td style="padding:13px 16px;background:#f8fafc;color:#64748b;width:38%">Stagiaire</td><td style="padding:13px 16px;font-weight:700">{trainee_name}</td></tr><tr><td style="padding:13px 16px;background:#f8fafc;color:#64748b">Formation</td><td style="padding:13px 16px;font-weight:700">{formation}</td></tr><tr><td style="padding:13px 16px;background:#f8fafc;color:#64748b">Dates de formation</td><td style="padding:13px 16px;font-weight:700">Du {start_date} au {end_date}</td></tr><tr><td style="padding:13px 16px;background:#f8fafc;color:#64748b">Motif bancaire</td><td style="padding:13px 16px;font-weight:700">{reason}</td></tr></table>
+<p style="margin:22px 0 0;color:#64748b;font-size:13px;line-height:1.5">Cette alerte a été générée automatiquement par Intégrale Connect. Une notification est également disponible dans le menu Notifications.</p></td></tr></table></td></tr></table></body></html>"""
+
+
+def _notify_rejected_qonto_debit(data: Dict[str, Any], line: Dict[str, Any], installment: Dict[str, Any], collection_id: str) -> bool:
+    """Send one email and create one admin notification per rejected collection."""
+    alert_key = collection_id or f"{line.get('id', '')}:{installment.get('due_date') or installment.get('date', '')}"
+    notified_keys = line.setdefault('qonto_rejected_collection_ids', [])
+    if alert_key in notified_keys:
+        return False
+    notified_keys.append(alert_key)
+    trainee_name = f"{line.get('traineeFirstName', '')} {line.get('traineeLastName', '')}".strip() or "Stagiaire non renseigné"
+    due_date = installment.get('due_date') or installment.get('date') or ""
+    add_admin_notification(data, f"🔴 Prélèvement rejeté — {trainee_name} — {_format_euro(installment.get('amount'))}", meta={
+        "kind": "qonto_direct_debit_rejected", "trainee_id": line.get('traineeId') or "",
+        "session_id": line.get('sessionId') or "", "training": line.get('formationName') or line.get('sessionName') or "",
+        "date_start": line.get('dateStart') or "", "date_end": line.get('dateEnd') or "",
+        "amount": installment.get('amount'), "scheduled_date": due_date, "collection_id": collection_id,
+    })
+    subject = f"[Alerte] Prélèvement rejeté — {trainee_name} — {_format_euro(installment.get('amount'))}"
+    brevo_send_email(QONTO_REJECTED_DEBIT_ALERT_RECIPIENTS[0], subject, _build_rejected_debit_alert_html(line, installment), cc_emails=[QONTO_REJECTED_DEBIT_ALERT_RECIPIENTS[1]])
+    return True
+
+
 def _qonto_mandate_schedule(line: Dict[str, Any]) -> List[Dict[str, Any]]:
     installments = line.get('directDebitInstallments') if isinstance(line.get('directDebitInstallments'), list) else []
     if installments:
@@ -28599,6 +28651,7 @@ def buildBillingLinesFromSessions(sessions: List[Dict[str, Any]], existing: Opti
                     'qonto_mandate_status': persisted.get('qonto_mandate_status') or '',
                     'qonto_mandate_sign_url': persisted.get('qonto_mandate_sign_url') or '',
                     'qonto_mandate_signed_at': persisted.get('qonto_mandate_signed_at') or '',
+                    'qonto_rejected_collection_ids': persisted.get('qonto_rejected_collection_ids') if isinstance(persisted.get('qonto_rejected_collection_ids'), list) else [],
                     'sepa_payment_plan': persisted.get('sepa_payment_plan') if isinstance(persisted.get('sepa_payment_plan'), dict) else {},
                     'generationInProgress': bool(persisted.get('generationInProgress')), 'syncWarning': persisted.get('syncWarning') or '', 'externalInvoiceMarkedAt': persisted.get('externalInvoiceMarkedAt') or '', 'externalInvoiceNote': persisted.get('externalInvoiceNote') or '', 'createdAt': persisted.get('createdAt') or _now_iso(),
                     'updatedAt': persisted.get('updatedAt') or _now_iso(), 'logs': persisted.get('logs') if isinstance(persisted.get('logs'), list) else [],
@@ -28672,7 +28725,7 @@ def _save_billing_line(data: Dict[str, Any], line: Dict[str, Any]) -> None:
     all_map = _billing_existing_map(data)
     if line.get('qontoInvoiceId') or line.get('qontoDraftId'):
         normalize_qonto_invoice_storage_fields(line)
-    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError')}
+    persisted = {k: line.get(k) for k in ('id','traineeId','sessionId','financingType','typeFinanceur','financeurName','financingRef','amount','amountHT','amountTTC','currency','invoiceStatus','paymentStatus','qontoInvoiceId','qontoDraftId','qontoInvoiceNumber','qontoClientId','qontoCustomerId','invoiceGeneratedAt','finalizedAt','sentAt','paidAt','cancelledAt','invoiceDownloadedAt','invoicePdfUrl','qontoPdfUrl','creditNoteStatus','qontoCreditNoteId','generationInProgress','createdAt','updatedAt','logs','billingHistory','clientName','syncWarning','paymentPlan','paymentMode','directDebitInstallments','qontoPaymentGlobalStatus','qonto_direct_debit_mandate_id','qonto_direct_debit_subscription_id','qonto_mandate_rum','qonto_mandate_client_id','sign_url','mandateStatus','qonto_mandate_status','qonto_mandate_sign_url','qonto_mandate_signed_at','qonto_rejected_collection_ids','sepa_payment_plan','externalInvoiceMarkedAt','externalInvoiceNote','specificCase','specificCaseReason','specificCaseAutomatic','qontoInvoiceAmountPaid','qonto_total_amount_cents','qonto_amount_paid_cents','qonto_remaining_amount_cents','qonto_payment_status','payment_status','qonto_status','qontoPaidAt','qontoLastSyncedAt','qontoSyncError')}
     persisted['updatedAt'] = _now_iso()
     all_map[line['id']] = persisted
     data['billing_lines'] = list(all_map.values())
@@ -29481,6 +29534,7 @@ def _apply_qonto_collection_webhook(data: Dict[str, Any], item: Dict[str, Any]) 
                 if str(inst.get('qonto_direct_debit_collection_id') or '') == collection_id
             ]
         for inst in matching:
+            previous_status = inst.get('status')
             inst['qonto_direct_debit_collection_id'] = collection_id or inst.get('qonto_direct_debit_collection_id') or ''
             inst['status'] = _map_collection_status(item.get('status') or item.get('event'))
             if inst['status'] == 'completed':
@@ -29495,6 +29549,8 @@ def _apply_qonto_collection_webhook(data: Dict[str, Any], item: Dict[str, Any]) 
             if line['qontoPaymentGlobalStatus'] == 'Payé': line['paymentStatus'] = 'paid'
             elif line['qontoPaymentGlobalStatus'] == 'Paiement partiel': line['paymentStatus'] = 'partial'
             elif line['qontoPaymentGlobalStatus'] == 'Rejeté': line['paymentStatus'] = 'failed'
+            if inst['status'] in {'failed', 'returned', 'refunded'} and previous_status not in {'failed', 'returned', 'refunded'}:
+                _notify_rejected_qonto_debit(data, line, inst, collection_id)
             _save_billing_line(data, line)
             updated = True
     return updated
