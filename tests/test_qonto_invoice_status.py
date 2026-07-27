@@ -94,6 +94,7 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         line = {
             "paymentMode": "sepa_direct_debit",
             "mandateStatus": "signed",
+            "qonto_direct_debit_mandate_id": "mandate_123",
             "sepa_payment_plan": {
                 "installments": [
                     {"index": 1, "amount": 582.5, "due_date": "2026-08-24", "status": "scheduled"},
@@ -107,6 +108,50 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertEqual(installment["date"], "2026-08-24")
         self.assertEqual(installment["due_date"], "2026-08-24")
         self.assertEqual(line["qontoPaymentGlobalStatus"], "Prélèvements programmés")
+
+    def test_sepa_setup_does_not_expose_installments_when_qonto_returns_no_mandate_id(self):
+        line = {"qontoClientId": "client_123", "qontoInvoiceId": "inv_123"}
+        payment_plan = {
+            "mode": "sepa_direct_debit",
+            "schedule": [{"date": "2026-08-12", "amount": 528}],
+            "installments": 1,
+        }
+
+        with patch.object(gestion_app, "_ensure_qonto_oauth_ready"), \
+             patch.object(gestion_app, "_active_qonto_mandate", return_value=None), \
+             patch.object(gestion_app, "create_qonto_direct_debit_mandate", return_value={}):
+            with self.assertRaisesRegex(RuntimeError, "aucun identifiant de mandat"):
+                gestion_app._setup_qonto_direct_debit_for_line(line, payment_plan)
+
+        self.assertNotIn("directDebitInstallments", line)
+        self.assertNotIn("sepa_payment_plan", line)
+
+    def test_pending_qonto_mandate_never_reports_programmed_debits(self):
+        line = {
+            "paymentMode": "sepa_direct_debit",
+            "qonto_direct_debit_mandate_id": "mandate_123",
+            "mandateStatus": "pending_signature",
+            "directDebitInstallments": [
+                {"index": 1, "amount": 528, "status": "scheduled"},
+            ],
+        }
+
+        self.assertEqual(
+            gestion_app._qonto_payment_global_status(line),
+            "Mandat à signer",
+        )
+
+    def test_pending_qonto_mandate_is_reused_instead_of_duplicated(self):
+        pending = {"id": "mandate_123", "status": "pending_signature"}
+        with patch.object(
+            gestion_app,
+            "list_qonto_direct_debit_mandates",
+            return_value={"direct_debit_mandates": [pending]},
+        ):
+            self.assertEqual(
+                gestion_app._active_qonto_mandate("client_123"),
+                pending,
+            )
 
     def test_trainee_dashboard_supports_legacy_due_date_and_scheduled_mandates(self):
         template = Path("templates/admin_trainee.html").read_text(encoding="utf-8")
