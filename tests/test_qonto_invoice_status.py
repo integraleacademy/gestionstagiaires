@@ -398,6 +398,10 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertIn("['Factures en attente de paiement',toPay.length]", source)
         self.assertIn("['Factures payées',paid.length]", source)
         self.assertIn("['Factures partiellement payées',partiallyPaid.length]", source)
+        self.assertLess(
+            source.index("['partially_paid','Factures partiellement payées'"),
+            source.index("['paid','Factures payées'"),
+        )
         self.assertIn("['Factures annulées',cancelled.length]", source)
         self.assertIn("['all','Tous les dossiers',statLines.length,fmtMoney(allAmount)]", source)
         self.assertIn("['external_generated','Factures générées ailleurs',externalGenerated.length", source)
