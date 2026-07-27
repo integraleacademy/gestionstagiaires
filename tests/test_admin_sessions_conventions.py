@@ -363,7 +363,11 @@ class AdminSessionsConventionsTests(unittest.TestCase):
                             "convention_status": "signed",
                             "convention_aps_status": "signed",
                             "convention_aps_pdf_path": "unsigned.pdf",
-                            "convention_signature": {"status": "done", "signed_at": "2026-07-16T10:00:00Z"},
+                            "convention_signature": {
+                                "status": "done",
+                                "created_at": "2026-07-16T09:00:00Z",
+                                "signed_at": "2026-07-16T10:00:00Z",
+                            },
                         }
                     ],
                 }
@@ -400,7 +404,11 @@ class AdminSessionsConventionsTests(unittest.TestCase):
                             "convention_status": "signed",
                             "convention_aps_status": "signed",
                             "convention_aps_pdf_path": "unsigned.pdf",
-                            "convention_signature": {"status": "done", "signed_at": "2026-07-16T10:00:00Z"},
+                            "convention_signature": {
+                                "status": "done",
+                                "created_at": "2026-07-16T09:00:00Z",
+                                "signed_at": "2026-07-16T10:00:00Z",
+                            },
                         }
                     ],
                 }
@@ -424,6 +432,47 @@ class AdminSessionsConventionsTests(unittest.TestCase):
         self.assertTrue(fake_data["sessions"][0]["trainees"][0]["printed"])
         self.assertNotIn("convention_signed_seen_at", fake_data["sessions"][0]["trainees"][0])
         self.assertEqual(api_after_print_response.get_json()["count"], 0)
+
+    def test_signed_conventions_badge_counts_recent_conventions_in_older_sessions(self):
+        fake_data = {
+            "sessions": [
+                {
+                    "id": "S-LONG-RUNNING",
+                    "name": "Formation annuelle",
+                    "training_type": "DESP",
+                    "date_start": "2026-01-01",
+                    "date_end": "2026-12-31",
+                    "trainees": [
+                        {
+                            "id": "T-RECENT-1",
+                            "convention_signature": {
+                                "status": "done",
+                                "created_at": "2026-07-27T13:27:00Z",
+                                "signed_at": "2026-07-27T13:38:00Z",
+                            },
+                        },
+                        {
+                            "id": "T-RECENT-2",
+                            "convention_signature": {
+                                "status": "done",
+                                "created_at": "2026-07-27T14:43:00Z",
+                                "signed_at": "2026-07-27T14:54:00Z",
+                            },
+                        },
+                    ],
+                }
+            ]
+        }
+
+        with patch.object(gestion_app, "load_data", return_value=fake_data):
+            response = self.client.get("/api/conventions_signed_unseen")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["count"], 2)
+        self.assertEqual(
+            {item["trainee_id"] for item in response.get_json()["items"]},
+            {"T-RECENT-1", "T-RECENT-2"},
+        )
 
 
     def test_print_button_is_highlighted_only_for_unprinted_signed_conventions(self):
