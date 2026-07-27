@@ -399,6 +399,9 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertIn("['Factures payées',paid.length]", source)
         self.assertIn('<option value="paid_or_partially_paid">Payée ou partielle</option>', source)
         self.assertIn("['Factures à contrôler',control.length]", source)
+        self.assertIn("['a_controler','to_control','needs_review','pending_review']", source)
+        self.assertIn("(!knownInvoiceStatuses.includes(invoiceStatus))", source)
+        self.assertIn("['canceled','void','voided']", source)
 
     def test_billing_invoice_download_streams_qonto_pdf_inline(self):
         line_id = gestion_app._billing_line_id("S1", "T1", "CPF", "legacy")
