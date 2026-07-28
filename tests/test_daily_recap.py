@@ -125,15 +125,46 @@ class DailyRecapTests(unittest.TestCase):
     def test_delivery_targets_four_recipients_and_is_idempotent(self):
         sent = []
         now = datetime.datetime(2026, 7, 28, 8, tzinfo=ZoneInfo("Europe/Paris"))
+        greeting_context = {
+            "date": now.date(), "nameday": "Saint Samson",
+            "weather": {
+                "puget": {"temperature": 31, "description": "la journée sera ensoleillée"},
+                "aurillac": {"temperature": 22, "description": "la journée sera nuageuse"},
+            },
+        }
         with mock.patch.object(app, "load_data", return_value=self.data), \
              mock.patch.object(app, "save_data"), \
+             mock.patch.object(app, "fetch_daily_recap_greeting_context", return_value=greeting_context), \
              mock.patch.object(app, "brevo_send_email", side_effect=lambda *args, **kwargs: sent.append((args, kwargs)) or {"ok": True}):
             result = app.run_daily_recap(now=now)
             duplicate = app.run_daily_recap(now=now)
         self.assertTrue(result["sent"])
         self.assertEqual(duplicate["reason"], "already_sent")
-        self.assertEqual(sent[0][0][0], "elsa@integraleacademy.com")
-        self.assertEqual(sent[0][1]["cc_emails"], list(app.DAILY_RECAP_RECIPIENTS[1:]))
+        self.assertEqual([call[0][0] for call in sent], list(app.DAILY_RECAP_RECIPIENTS))
+        self.assertTrue(all("cc_emails" not in call[1] for call in sent))
+        self.assertIn("Bonjour Elsa", sent[0][0][2])
+        self.assertIn("Puget sur Argens", sent[0][0][2])
+        self.assertIn("Aurillac", sent[0][0][2])
+        self.assertIn("Bonjour Aurélie", sent[1][0][2])
+        self.assertNotIn("Aurillac", sent[1][0][2])
+
+    def test_personalized_greetings_follow_each_recipient_weather_scope(self):
+        context = {
+            "date": datetime.date(2026, 7, 29), "nameday": "Sainte Marthe",
+            "weather": {
+                "puget": {"temperature": 30, "description": "la journée sera ensoleillée"},
+                "aurillac": {"temperature": 19, "description": "la journée sera pluvieuse"},
+            },
+        }
+        cassandre = app._daily_recap_greeting("cassandre@integraleacademy.com", context)
+        clement = app._daily_recap_greeting("clement@integraleacademy.com", context)
+        self.assertIn("Bonjour Cassandre, Nous sommes le mercredi 29 juillet 2026", cassandre)
+        self.assertIn("Sainte Marthe", cassandre)
+        self.assertIn("30°C", cassandre)
+        self.assertNotIn("Aurillac", cassandre)
+        self.assertIn("Bonjour Clément", clement)
+        self.assertIn("Aurillac", clement)
+        self.assertIn("19°C", clement)
 
     def test_endpoint_rejects_bad_secret(self):
         with mock.patch.dict(os.environ, {"CRON_SECRET": "correct"}):
