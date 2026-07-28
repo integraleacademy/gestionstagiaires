@@ -74,6 +74,32 @@ class QontoOauthTests(unittest.TestCase):
         self.assertTrue(payload["incompatible"])
         self.assertEqual(payload["message"], "OAuth Qonto : connecté sandbox, incompatible avec production")
 
+    def test_live_oauth_status_refreshes_token_before_claiming_connection_is_active(self):
+        data = {"qonto_oauth": {"access_token": "old", "refresh_token": "refresh", "expires_at": 9999999999, "scope": gestion_app.QONTO_OAUTH_SCOPE, "environment": "production"}}
+        refreshed = {"access_token": "new", "refresh_token": "new-refresh", "expires_in": 3600, "scope": gestion_app.QONTO_OAUTH_SCOPE}
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data"), \
+             patch.object(gestion_app, "_exchange_qonto_oauth_token", return_value=refreshed) as exchange:
+            response = self.client.get("/api/qonto/oauth/status?validate=1")
+
+        payload = response.get_json()
+        self.assertTrue(payload["connected"])
+        self.assertTrue(payload["validated"])
+        exchange.assert_called_once()
+
+    def test_live_oauth_status_clears_revoked_connection_and_explains_reconnect(self):
+        data = {"qonto_oauth": {"access_token": "old", "refresh_token": "revoked", "expires_at": 9999999999, "scope": gestion_app.QONTO_OAUTH_SCOPE, "environment": "production"}}
+        with patch.object(gestion_app, "load_data", return_value=data), \
+             patch.object(gestion_app, "save_data"), \
+             patch.object(gestion_app, "_exchange_qonto_oauth_token", side_effect=gestion_app.QontoApiError(400, '{"error":"invalid_grant"}')):
+            response = self.client.get("/api/qonto/oauth/status?validate=1")
+
+        payload = response.get_json()
+        self.assertFalse(payload["connected"])
+        self.assertFalse(payload["validated"])
+        self.assertIn("reconnectez Qonto", payload["message"])
+        self.assertNotIn("refresh_token", data["qonto_oauth"])
+
     def test_admin_reset_qonto_oauth_tokens_clears_sensitive_fields(self):
         data = {"qonto_oauth": {"connected": True, "access_token": "access", "refresh_token": "refresh", "expires_at": 123, "scope": "a b", "scopes": ["a"], "environment": "sandbox"}}
         saved = []
