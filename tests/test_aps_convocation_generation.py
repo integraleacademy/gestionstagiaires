@@ -11,6 +11,24 @@ import app
 
 
 class ApsConvocationGenerationTests(unittest.TestCase):
+    def test_word_context_exposes_dates_before_training_and_exam(self):
+        session = {
+            "training_type": "APS",
+            "name": "APS TEST",
+            "date_start": "2026-03-31",
+            "date_end": "2026-05-01",
+            "exam_date": "2026-05-20",
+        }
+        trainee = {"first_name": "Jean", "last_name": "Dupont", "email": "jean@example.com"}
+
+        context = app._build_aps_convocation_context(session, trainee)
+        convention = app._aps_convention_replacements(session, trainee)
+
+        self.assertEqual(context["date_un_mois_avant_debut_formation"], "28/02/2026")
+        self.assertEqual(context["date_15_jours_avant_examen"], "05/05/2026")
+        self.assertEqual(convention["date_un_mois_avant_debut_formation"], "28/02/2026")
+        self.assertEqual(convention["date_15_jours_avant_examen"], "05/05/2026")
+
     def test_yousign_request_retries_rate_limit_using_retry_after(self):
         class FakeResponse:
             def __init__(self, status_code, headers=None):

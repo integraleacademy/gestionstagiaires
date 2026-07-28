@@ -2900,6 +2900,24 @@ def fr_date(value: str) -> str:
     except Exception:
         return value
 
+def _fr_date_offset(value: str, *, months: int = 0, days: int = 0) -> str:
+    """Format an ISO date after applying calendar-month and day offsets."""
+    s = str(value or "").strip()
+    if not s:
+        return ""
+    try:
+        result = datetime.datetime.strptime(s[:10], "%Y-%m-%d").date()
+        if months:
+            month_index = result.year * 12 + result.month - 1 + months
+            year, zero_based_month = divmod(month_index, 12)
+            month = zero_based_month + 1
+            day = min(result.day, calendar.monthrange(year, month)[1])
+            result = result.replace(year=year, month=month, day=day)
+        result += datetime.timedelta(days=days)
+        return result.strftime("%d/%m/%Y")
+    except (TypeError, ValueError):
+        return ""
+
 def fr_datetime(value: str) -> str:
     s = (value or "").strip()
     if not s:
@@ -25713,7 +25731,8 @@ APS_CONVOCATION_VARIABLES = [
     "civilite", "prenom", "nom", "nom_complet", "adresse_ligne1", "adresse_ligne2",
     "adresse_ligne3", "adresse_ligne4", "code_postal", "ville", "formation_nom",
     "nom_pedagogique", "date_convocation", "heure_convocation", "date_debut_formation",
-    "date_fin_formation", "periode_formation", "periode_elearning", "periode_presentiel",
+    "date_fin_formation", "date_un_mois_avant_debut_formation", "date_15_jours_avant_examen",
+    "periode_formation", "periode_elearning", "periode_presentiel",
     "date_examen", "heure_examen", "date_jour", "lieu_formation", "espace_stagiaire_url",
     "h_elearning", "h_presentiel", "h_total", "duree_exam", "modalites_suivi",
     "date_ouverture", "lieu_examen",
@@ -27283,6 +27302,8 @@ def _build_aps_convocation_context(session_obj: Dict[str, Any], trainee: Dict[st
         "nom_pedagogique": str(_session_get(session_obj, "nom_pedagogique", "") or training_name).strip(),
         "date_convocation": fr_date(date_start), "heure_convocation": convocation_time,
         "date_debut_formation": fr_date(date_start), "date_fin_formation": fr_date(date_end),
+        "date_un_mois_avant_debut_formation": _fr_date_offset(date_start, months=-1),
+        "date_15_jours_avant_examen": _fr_date_offset(exam_date, days=-15),
         "periode_formation": f"du {fr_date(date_start)} au {fr_date(date_end)}",
         "periode_elearning": f"du {fr_date(remote_start)} au {fr_date(remote_end)}",
         "periode_presentiel": f"du {fr_date(in_person_start)} au {fr_date(in_person_end)}",
@@ -27439,7 +27460,8 @@ APS_CONVENTION_VARIABLES = [
     "montant_formation", "montant_formation_eur", "montant_cpf", "montant_cpf_eur",
     "montant_financement_personnel", "montant_financement_personnel_eur",
     "montant_personnel", "montant_personnel_eur", "montant_autre", "montant_autre_eur",
-    "date_debut_formation", "date_fin_formation", "periode_formation", "periode_elearning", "periode_presentiel", "date_ouverture",
+    "date_debut_formation", "date_fin_formation", "date_un_mois_avant_debut_formation", "date_15_jours_avant_examen",
+    "periode_formation", "periode_elearning", "periode_presentiel", "date_ouverture",
     "h_elearning", "h_presentiel", "h_total",
     "date_convocation", "heure_convocation", "date_examen", "heure_examen", "duree_exam",
     "lieu_formation", "lieu_examen", "espace_stagiaire_url", "modalites_suivi", "date_jour",
@@ -27625,6 +27647,8 @@ def _aps_convention_replacements(session_obj: Dict[str, Any], trainee: Dict[str,
         "montant_autre_eur": _format_euro_amount(other_amount),
         "date_debut_formation": date_start,
         "date_fin_formation": date_end,
+        "date_un_mois_avant_debut_formation": _fr_date_offset(_session_get(session_obj, "date_start", ""), months=-1),
+        "date_15_jours_avant_examen": _fr_date_offset(_first_non_empty(trainee.get("date_examen"), _session_get(session_obj, "exam_date", "")), days=-15),
         "periode_formation": periode,
         "periode_elearning": _first_non_empty(elearning_period, trainee.get("periode_elearning"), _session_get(session_obj, "periode_elearning", ""), periode),
         "periode_presentiel": _first_non_empty(presentiel_period, trainee.get("periode_presentiel"), _session_get(session_obj, "periode_presentiel", ""), periode),
