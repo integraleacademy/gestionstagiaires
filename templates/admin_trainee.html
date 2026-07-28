@@ -89,8 +89,7 @@
     line-height:1;
   }
   .trainee-cnaps-followup__activity{letter-spacing:.04em;}
-  .trainee-cnaps-followup__chip.is-active,.trainee-cnaps-followup__chip.is-cp{background:#16a34a;border-color:#16a34a;color:#fff;box-shadow:0 10px 20px rgba(22,163,74,.16);}
-  .trainee-cnaps-followup__chip.is-ap{background:#f97316;border-color:#f97316;color:#fff;box-shadow:0 10px 20px rgba(249,115,22,.16);}
+  .trainee-cnaps-followup__chip.is-active,.trainee-cnaps-followup__chip.is-cp,.trainee-cnaps-followup__chip.is-ap{background:#16a34a;border-color:#16a34a;color:#fff;box-shadow:0 10px 20px rgba(22,163,74,.16);}
   .trainee-cnaps-followup__chip.is-inactive{background:#fee2e2;border-color:#fca5a5;color:#991b1b;box-shadow:none;}
   .trainee-cnaps-followup__chip.is-unknown{background:#ffedd5;border-color:#fdba74;color:#9a3412;box-shadow:none;}
   .trainee-cnaps-followup__validity{font-size:10px;text-transform:uppercase;opacity:.92;}
@@ -5189,7 +5188,7 @@ if(btnEtiquetteWord){
       return `<span class="trainee-cnaps-followup__chip ${colorClass}"${title ? ` title="${escapeHtml(title)}"` : ""} data-trainee-card-pro-result>` +
         `<span class="trainee-cnaps-followup__activity">${escapeHtml(activity)}</span>` +
         `<span class="trainee-cnaps-followup__validity">${escapeHtml(validityMode === "unknown" ? "INCONNU" : validity)}</span>` +
-        `${row.date_validite_titre ? `<span class="trainee-cnaps-followup__validity">${escapeHtml(row.date_validite_titre)}</span>` : ""}` +
+        `${row.date_validite_titre ? `<span class="trainee-cnaps-followup__validity">Expire le ${escapeHtml(formatCnapsDateFr(row.date_validite_titre))}</span>` : ""}` +
       `</span>`;
     }).join("");
   }
