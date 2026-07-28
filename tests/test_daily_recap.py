@@ -190,6 +190,29 @@ class DailyRecapTests(unittest.TestCase):
         self.assertEqual(app._daily_recap_weather_icon(61), "🌧️")
         self.assertEqual(app._daily_recap_weather_icon(95), "⛈️")
 
+    def test_nameday_calendar_is_complete_and_used_without_network(self):
+        expected_days = {month: 31 for month in (1, 3, 5, 7, 8, 10, 12)}
+        expected_days.update({month: 30 for month in (4, 6, 9, 11)})
+        expected_days[2] = 28
+        self.assertEqual({month: len(days) for month, days in app.DAILY_RECAP_NAMEDAYS.items()}, expected_days)
+        self.assertEqual(app._daily_recap_nameday(datetime.date(2026, 8, 21)), "Christophe")
+        self.assertEqual(app._daily_recap_nameday(datetime.date(2026, 7, 29)), "Marthe")
+        self.assertEqual(app._daily_recap_nameday(datetime.date(2028, 2, 29)), "Romain")
+
+        weather_response = mock.Mock()
+        weather_response.raise_for_status.return_value = None
+        weather_response.json.return_value = {"daily": {"weather_code": [0], "temperature_2m_max": [28]}}
+        with mock.patch.object(app.requests, "get", return_value=weather_response) as request_get:
+            context = app.fetch_daily_recap_greeting_context(datetime.date(2026, 8, 21))
+        self.assertEqual(context["nameday"], "Christophe")
+        self.assertTrue(all("nominis" not in call.args[0] for call in request_get.call_args_list))
+
+    def test_email_always_displays_calendar_nameday(self):
+        report = app.build_daily_recap_data(self.data, datetime.date(2026, 8, 20))
+        context = {"date": datetime.date(2026, 8, 21), "nameday": app._daily_recap_nameday(datetime.date(2026, 8, 21)), "weather": {}}
+        _subject, body = app.build_daily_recap_email(report, recipient="clement@integraleacademy.com", greeting_context=context)
+        self.assertIn("Aujourd’hui, c’est la Saint Christophe !", body)
+
     def test_endpoint_rejects_bad_secret(self):
         with mock.patch.dict(os.environ, {"CRON_SECRET": "correct"}):
             response = app.app.test_client().post("/internal/cron/daily-recap", headers={"X-Cron-Secret": "wrong"})

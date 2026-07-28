@@ -31371,6 +31371,30 @@ DAILY_RECAP_QUOTES = (
     ("Choisissez un travail que vous aimez et vous n’aurez pas à travailler un seul jour de votre vie.", "Confucius"),
 )
 
+# This calendar is deliberately kept in the application instead of depending on
+# Nominis: the 08:00 cron must still display the celebration when an external
+# service is slow or unavailable.  February 29 intentionally uses February 28.
+DAILY_RECAP_NAMEDAYS = {
+    1: "Marie, mère de Dieu|Basile de Césarée et Grégoire de Nazianze|Geneviève|Odilon|Édouard|Mélaine|Raymond|Lucien|Alix|Guillaume|Paulin|Tatiana|Yvette|Nina|Rémi|Marcel|Roseline|Prisca|Marius|Sébastien|Agnès|Vincent|Barnard|François|Ananie, Conversion de Paul|Paule|Angèle|Thomas|Gildas|Martine|Marcelle".split("|"),
+    2: "Ella|Théophane|Blaise|Véronique|Agathe|Gaston|Eugénie|Jacqueline|Apolline|Arnaud|Héloïse, Notre-Dame de Lourdes|Félix|Béatrice|Valentin|Claude|Julienne|Alexis|Bernadette|Gabin|Aimée|Pierre-Damien|Isabelle|Lazare|Modeste|Roméo|Nestor|Honorine|Romain".split("|"),
+    3: "Aubin|Charles|Guénolé|Casimir|Olive|Colette|Félicité|Jean|Françoise|Vivien|Rosine|Justine|Rodrigue|Mathilde|Louise|Bénédicte|Patrice|Cyrille|Joseph|Herbert|Clémence|Léa|Victorien|Catherine|Humbert|Larissa|Habib|Gontran|Gwladys|Amédée|Benjamin".split("|"),
+    4: "Hugues|Sandrine, Alexandrine|Richard|Isidore|Irène|Marcellin|Jean-Baptiste|Julie|Gauthier|Fulbert|Stanislas|Jules|Ida|Maxime|Paterne|Benoît-Joseph|Anicet|Parfait|Emma|Odette|Anselme|Alexandre|Georges|Fidèle|Marc|Alida|Zita|Valérie|Catherine|Robert".split("|"),
+    5: "Jérémie|Boris|Philippe et Jacques|Sylvain|Judith|Prudence|Gisèle|Désiré|Pacôme|Solange|Estelle|Achille|Rolande|Matthias|Denise|Honoré|Pascal|Éric|Yves|Bernardin|Constantin|Émile|Didier|Donatien|Sophie|Bérenger|Augustin|Germain|Aymard|Ferdinand|Perrine, Visitation de la Vierge Marie".split("|"),
+    6: "Justin|Blandine|Kévin|Clotilde|Igor|Norbert|Gilbert|Médard|Diane|Landry|Barnabé|Guy|Antoine|Élisée|Germaine|Jean-François|Hervé|Léonce|Romuald|Silvère|Rodolphe|Alban|Audrey|Jean-Baptiste|Prosper|Anthelme|Fernand|Irénée|Pierre et Paul|Martial".split("|"),
+    7: "Thierry|Martinien|Thomas|Florent|Antoine|Mariette|Raoul|Thibaut|Amandine|Ulrich|Benoît|Olivier|Henri, Joël|Camille|Donald|Carmen, Notre-Dame du Mont-Carmel|Charlotte|Frédéric|Arsène|Marina|Victor|Marie-Madeleine|Brigitte|Christine|Jacques|Anne et Joachim|Nathalie|Samson|Marthe|Juliette|Ignace".split("|"),
+    8: "Alphonse|Julien|Lydie|Jean-Marie|Abel|Octavien, Transfiguration|Gaétan|Dominique|Amour|Laurent|Claire|Clarisse, Jeanne|Hippolyte|Évrard|Marie, Assomption|Armel|Hyacinthe|Hélène|Jean-Eudes|Bernard|Christophe|Fabrice|Rose|Barthélémy|Louis|Natacha et Adrien|Monique|Augustin|Sabine|Fiacre|Aristide".split("|"),
+    9: "Gilles|Ingrid|Grégoire|Rosalie|Raïssa|Bertrand|Reine, Régine, Réjane|Adrien, Nativité de Marie|Alain|Inès|Adelphe|Apollinaire|Aimé|Cyprien, Fête de la Croix|Roland|Édith|Renaud|Nadège|Émilie|Davy|Matthieu|Maurice|Constant|Thècle|Hermann|Côme et Damien|Vincent|Venceslas|Michel|Jérôme".split("|"),
+    10: "Thérèse|Léger|Gérard|François|Fleur|Bruno|Serge|Pélagie|Denis|Ghislain|Firmin|Wilfried|Géraud|Juste|Aurélie, Thérèse|Edwige|Baudouin|Luc|René|Adeline|Céline|Élodie|Jean|Florentin|Crépin, Enguerrand|Dimitri|Emeline|Simon et Jude|Narcisse|Bienvenue|Quentin".split("|"),
+    11: "Harold, Toussaint|Océane, Défunts|Hubert|Charles|Sylvie|Bertille|Carine|Geoffroy|Théodore|Léon|Martin|Christian|Brice|Sidoine|Albert|Marguerite|Élisabeth|Aude|Tanguy|Edmond|Rufus, Marie|Cécile|Clément, Christ-Roi|Flora|Catherine|Delphine|Séverin, Marie|Jacques|Saturnin|André".split("|"),
+    12: "Florence|Viviane|Xavier|Barbara|Gérald|Nicolas|Ambroise|Elfried|Pierre|Romaric|Daniel|Corentin|Lucie|Odile|Ninon|Alice|Gaël|Gatien|Urbain|Théophile, Ignace|Pierre|Françoise-Xavière|Armand|Adèle|Emmanuel|Étienne|Jean|Gaspard, Saints Innocents|David, Sainte Famille|Roger|Sylvestre".split("|"),
+}
+
+
+def _daily_recap_nameday(value: datetime.date) -> str:
+    """Return the configured celebration for every day of the year."""
+    day = min(value.day, len(DAILY_RECAP_NAMEDAYS[value.month]))
+    return DAILY_RECAP_NAMEDAYS[value.month][day - 1]
+
 
 def _daily_recap_quote(value: datetime.date) -> Dict[str, str]:
     """Return a stable quote for a delivery date, shared by preview and email."""
@@ -31446,19 +31470,10 @@ def fetch_daily_recap_greeting_context(delivery_date: datetime.date) -> Dict[str
     """Fetch the nameday and today's forecasts used by the 08:00 greeting."""
     context: Dict[str, Any] = {
         "date": delivery_date,
-        "nameday": "",
+        "nameday": _daily_recap_nameday(delivery_date),
         "weather": {},
         "quote": _daily_recap_quote(delivery_date),
     }
-    try:
-        response = requests.get("https://nominis.cef.fr/json/nominis.php", params={"date": delivery_date.isoformat()}, timeout=10)
-        response.raise_for_status()
-        saint = (response.json().get("response") or {}).get("saintdujour") or {}
-        nameday = saint.get("nom") if isinstance(saint, dict) else saint
-        if str(nameday or "").strip():
-            context["nameday"] = str(nameday).strip()
-    except (requests.RequestException, ValueError, TypeError):
-        logging.getLogger(__name__).warning("Impossible de récupérer la fête du jour", exc_info=True)
     for key, location in DAILY_RECAP_WEATHER_LOCATIONS.items():
         try:
             response = requests.get("https://api.open-meteo.com/v1/forecast", params={
