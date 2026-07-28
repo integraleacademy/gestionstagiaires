@@ -159,7 +159,7 @@ class DailyRecapTests(unittest.TestCase):
         cassandre = app._daily_recap_greeting("cassandre@integraleacademy.com", context)
         clement = app._daily_recap_greeting("clement@integraleacademy.com", context)
         self.assertIn("Bonjour Cassandre, Nous sommes le mercredi 29 juillet 2026", cassandre)
-        self.assertIn("Sainte Marthe", cassandre)
+        self.assertIn("Sainte-Marthe", cassandre)
         self.assertIn("30°C", cassandre)
         self.assertNotIn("Aurillac", cassandre)
         self.assertIn("Bonjour Clément", clement)
@@ -177,13 +177,20 @@ class DailyRecapTests(unittest.TestCase):
         report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
         _subject, body = app.build_daily_recap_email(report, recipient="clement@integraleacademy.com", greeting_context=context)
         self.assertIn("Bonjour Clément 👋", body)
-        self.assertIn("Aujourd’hui, c’est la Sainte Sophie !", body)
+        self.assertIn("Nous sommes le mardi 28 juillet et aujourd'hui c'est la Sainte-Sophie !", body)
+        self.assertNotIn("🎉", body)
         self.assertIn("☀️", body)
         self.assertIn("🌧️", body)
         expected_quote = app._daily_recap_quote(context["date"])
         self.assertIn(expected_quote["text"], body)
         self.assertIn(expected_quote["author"], body)
+        self.assertLess(body.index("Citation du jour"), body.index(expected_quote["text"]))
         self.assertNotIn("la fête du jour", body)
+
+        marthe_context = {**context, "date": datetime.date(2026, 7, 29), "nameday": "Sainte Marthe"}
+        marthe_html = app._daily_recap_greeting_html("clement@integraleacademy.com", marthe_context)
+        self.assertIn("Nous sommes le mercredi 29 juillet et aujourd'hui c'est la Sainte-Marthe !", marthe_html)
+        self.assertNotIn("🎉 Nous sommes le mercredi 29 juillet", marthe_html)
 
     def test_weather_codes_have_matching_icons(self):
         self.assertEqual(app._daily_recap_weather_icon(0), "☀️")
@@ -196,7 +203,7 @@ class DailyRecapTests(unittest.TestCase):
         expected_days[2] = 28
         self.assertEqual({month: len(days) for month, days in app.DAILY_RECAP_NAMEDAYS.items()}, expected_days)
         self.assertEqual(app._daily_recap_nameday(datetime.date(2026, 8, 21)), "Christophe")
-        self.assertEqual(app._daily_recap_nameday(datetime.date(2026, 7, 29)), "Marthe")
+        self.assertEqual(app._daily_recap_nameday(datetime.date(2026, 7, 29)), "Sainte Marthe")
         self.assertEqual(app._daily_recap_nameday(datetime.date(2028, 2, 29)), "Romain")
 
         weather_response = mock.Mock()
@@ -211,7 +218,7 @@ class DailyRecapTests(unittest.TestCase):
         report = app.build_daily_recap_data(self.data, datetime.date(2026, 8, 20))
         context = {"date": datetime.date(2026, 8, 21), "nameday": app._daily_recap_nameday(datetime.date(2026, 8, 21)), "weather": {}}
         _subject, body = app.build_daily_recap_email(report, recipient="clement@integraleacademy.com", greeting_context=context)
-        self.assertIn("Aujourd’hui, c’est la Saint Christophe !", body)
+        self.assertIn("Nous sommes le vendredi 21 août et aujourd'hui c'est la Saint-Christophe !", body)
 
     def test_endpoint_rejects_bad_secret(self):
         with mock.patch.dict(os.environ, {"CRON_SECRET": "correct"}):
@@ -241,7 +248,7 @@ class DailyRecapTests(unittest.TestCase):
         self.assertIn("Récapitulatif de la veille", body)
         self.assertIn("Ada LOVELACE", body)
         self.assertIn("Bonjour Clément", body)
-        self.assertIn("Aujourd’hui, c’est la Sainte Catherine !", body)
+        self.assertIn("Nous sommes le mercredi 29 juillet et aujourd'hui c'est la Sainte-Catherine !", body)
         self.assertIn("Puget sur Argens", body)
         self.assertIn("Aurillac", body)
         self.assertIn("no-store", response.headers["Cache-Control"])
