@@ -29517,6 +29517,54 @@ def _trainee_search_item(s: dict, t: dict) -> dict:
     }
 
 
+_QUICK_SUMMARY_FRENCH_MONTHS = ("", "janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre")
+
+
+def _quick_summary_date(value: Any) -> str:
+    parsed = _parse_iso_date(str(value or "").strip())
+    if not parsed:
+        return ""
+    return f"{parsed.day}{'er' if parsed.day == 1 else ''} {_QUICK_SUMMARY_FRENCH_MONTHS[parsed.month]} {parsed.year}"
+
+
+def _quick_summary_period(start_value: Any, end_value: Any) -> str:
+    start = _parse_iso_date(str(start_value or "").strip())
+    end = _parse_iso_date(str(end_value or "").strip())
+    if not start and not end:
+        return ""
+    if not start:
+        return f"jusqu’au {_quick_summary_date(end_value)}"
+    if not end:
+        return f"à partir du {_quick_summary_date(start_value)}"
+    if start == end:
+        return f"le {_quick_summary_date(start_value)}"
+    if start.year == end.year and start.month == end.month:
+        first = f"{start.day}{'er' if start.day == 1 else ''}"
+    elif start.year == end.year:
+        first = f"{start.day}{'er' if start.day == 1 else ''} {_QUICK_SUMMARY_FRENCH_MONTHS[start.month]}"
+    else:
+        first = _quick_summary_date(start_value)
+    return f"du {first} au {_quick_summary_date(end_value)}"
+
+
+def _quick_summary_schedule(session_obj: dict) -> dict:
+    """Expose only dates read from the session associated with the trainee."""
+    training_type = str(_session_get(session_obj, "training_type", "") or "").strip().upper()
+    prefix = "dirigeant" if training_type.startswith("DIRIGEANT") else "aps"
+    remote_start = _session_get(session_obj, f"{prefix}_remote_start", "")
+    remote_end = _session_get(session_obj, f"{prefix}_remote_end", "")
+    present_start = _session_get(session_obj, f"{prefix}_in_person_start", "")
+    present_end = _session_get(session_obj, f"{prefix}_in_person_end", "")
+    hybrid = bool(remote_start or remote_end or present_start or present_end)
+    return {
+        "hybrid": hybrid,
+        "formation": _quick_summary_period(_session_get(session_obj, "date_start", ""), _session_get(session_obj, "date_end", "")),
+        "remote": _quick_summary_period(remote_start, remote_end) if hybrid else "",
+        "in_person": _quick_summary_period(present_start, present_end) if hybrid else "",
+        "exam": _quick_summary_date(_session_get(session_obj, "exam_date", "")),
+    }
+
+
 def _trainee_quick_summary(data: dict, session_obj: dict, trainee: dict) -> dict:
     """Build the concise, read-only status payload used by global search."""
     session_id = str(session_obj.get("id") or "")
@@ -29547,10 +29595,17 @@ def _trainee_quick_summary(data: dict, session_obj: dict, trainee: dict) -> dict
     def status(key: str, label: str, state: str, detail: str = "") -> dict:
         return {"key": key, "label": label, "state": state, "detail": detail}
 
-    convention_state = str(convention.get("status") or "")
+    convention_state = str(convention.get("status") or "").strip().lower()
+    if convention_state == "signed":
+        convention_card_state, convention_detail = "complete", "Signée"
+    elif convention_state in {"sent", "waiting_signature"}:
+        convention_card_state, convention_detail = "complete", "Envoyée"
+    elif convention_state in {"error", "refused", "expired"}:
+        convention_card_state, convention_detail = "error", "Erreur"
+    else:
+        convention_card_state, convention_detail = "pending", "Non envoyée"
     statuses = [
-        status("convention_sent", "Convention envoyée", "complete" if convention_state in {"sent", "waiting_signature", "signed"} else "pending", convention.get("label") or "À envoyer"),
-        status("convention_signed", "Convention signée", "complete" if convention_state == "signed" else "pending", "Signature obtenue" if convention_state == "signed" else "Signature en attente"),
+        status("convention", "Convention", convention_card_state, convention_detail),
         status("convocation", "Convocation envoyée", "complete" if convocation.get("status") == "sent" else "pending", convocation.get("label") or "À envoyer"),
         status("financing", "Financement validé", "complete" if trainee.get("financement_status") == "validated" else "pending", "Validé" if trainee.get("financement_status") == "validated" else "À contrôler"),
         status("payment", "Paiement", payment_state, payment_label),
@@ -29563,6 +29618,7 @@ def _trainee_quick_summary(data: dict, session_obj: dict, trainee: dict) -> dict
     return {
         "ok": True,
         "trainee": {"first_name": trainee.get("first_name") or "", "last_name": trainee.get("last_name") or "", "session_name": _session_get(session_obj, "name", ""), "training_type": training_type},
+        "schedule": _quick_summary_schedule(session_obj),
         "progress": {"completed": completed, "total": len(relevant), "percent": round((completed / len(relevant)) * 100) if relevant else 100},
         "statuses": statuses,
         "admin_url": f"/admin/sessions/{session_id}/stagiaires/{trainee_id}",
