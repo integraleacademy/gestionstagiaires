@@ -166,6 +166,27 @@ class DailyRecapTests(unittest.TestCase):
         self.assertIn("Aurillac", clement)
         self.assertIn("19°C", clement)
 
+    def test_greeting_uses_nameday_and_weather_visuals(self):
+        context = {
+            "date": datetime.date(2026, 7, 28), "nameday": "Sainte Sophie",
+            "weather": {
+                "puget": {"temperature": 32, "description": "la journée sera ensoleillée", "icon": "☀️"},
+                "aurillac": {"temperature": 18, "description": "la journée sera pluvieuse", "icon": "🌧️"},
+            },
+        }
+        report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
+        _subject, body = app.build_daily_recap_email(report, recipient="clement@integraleacademy.com", greeting_context=context)
+        self.assertIn("Bonjour Clément 👋", body)
+        self.assertIn("Aujourd’hui, c’est la Sainte Sophie !", body)
+        self.assertIn("☀️", body)
+        self.assertIn("🌧️", body)
+        self.assertNotIn("la fête du jour", body)
+
+    def test_weather_codes_have_matching_icons(self):
+        self.assertEqual(app._daily_recap_weather_icon(0), "☀️")
+        self.assertEqual(app._daily_recap_weather_icon(61), "🌧️")
+        self.assertEqual(app._daily_recap_weather_icon(95), "⛈️")
+
     def test_endpoint_rejects_bad_secret(self):
         with mock.patch.dict(os.environ, {"CRON_SECRET": "correct"}):
             response = app.app.test_client().post("/internal/cron/daily-recap", headers={"X-Cron-Secret": "wrong"})
