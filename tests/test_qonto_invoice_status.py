@@ -200,6 +200,8 @@ class QontoInvoiceStatusTests(unittest.TestCase):
         self.assertIn("Prélèvements programmés", template)
         self.assertIn("function qontoScheduleState(lines)", template)
         self.assertIn("✅ Mandat OK", template)
+        self.assertIn("⚠ Mandat de prélèvement en cours de validation", template)
+        self.assertIn("mandateAction:!mandate.hasSent", template)
         self.assertIn("✅ Échéancier OK", template)
         self.assertIn("qonto_direct_debit_subscription_id", template)
 
