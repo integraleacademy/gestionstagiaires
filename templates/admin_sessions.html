@@ -654,6 +654,18 @@
     color:#fff;
     border-color:#1d4ed8;
   }
+  .trainee-session-search{position:relative;margin-top:4px;}
+  .trainee-session-search__icon{position:absolute;left:14px;top:22px;transform:translateY(-50%);color:#64748b;pointer-events:none;z-index:1;}
+  .trainee-session-search input{padding-left:40px!important;padding-right:40px!important;}
+  .trainee-session-search__clear{position:absolute;right:7px;top:22px;display:none;width:30px;height:30px;transform:translateY(-50%);border:0;border-radius:9px;background:transparent;color:#64748b;font-size:19px;cursor:pointer;}
+  .trainee-session-search.has-value .trainee-session-search__clear{display:grid;place-items:center;}
+  .trainee-session-search__clear:hover{background:#f1f5f9;color:#0f172a;}
+  .trainee-session-results{display:none;margin-top:8px;overflow:hidden;border:1px solid #dbe4ef;border-radius:12px;background:#fff;box-shadow:0 12px 28px rgba(15,23,42,.1);}
+  .trainee-session-results.show{display:block;}
+  .trainee-session-result{display:block;width:100%;padding:10px 12px;border:0;border-bottom:1px solid #eef2f7;background:#fff;color:#0f172a;text-align:left;font:inherit;font-size:13px;font-weight:750;cursor:pointer;}
+  .trainee-session-result:last-child{border-bottom:0;}
+  .trainee-session-result:hover,.trainee-session-result:focus{outline:0;background:#eff6ff;color:#1d4ed8;}
+  .trainee-session-search__status{margin-top:7px;color:#64748b;font-size:12px;font-weight:750;}
 
   @media (min-width: 861px){
     body.endpoint-admin-sessions .dashboard-grid{gap:8px;margin-top:10px;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));}
@@ -1124,6 +1136,14 @@
         <button class="training-choice" data-training="DIRIGEANT VAE">VAE DIRIGEANT</button>
         <button class="training-choice" data-training="VTC">CHAUFFEUR VTC</button>
         </div>
+        <label for="traineeSessionSearch" class="label">Rechercher une session</label>
+        <div class="trainee-session-search" id="traineeSessionSearchWrap">
+          <span class="trainee-session-search__icon" aria-hidden="true">⌕</span>
+          <input id="traineeSessionSearch" type="search" autocomplete="off" placeholder="Ex : septembre, APS septembre 2026…" aria-controls="traineeSessionSearchResults" aria-describedby="traineeSessionSearchStatus">
+          <button class="trainee-session-search__clear" id="traineeSessionSearchClear" type="button" aria-label="Effacer la recherche">×</button>
+        </div>
+        <div class="trainee-session-results" id="traineeSessionSearchResults" role="listbox" aria-label="Sessions correspondant à la recherche"></div>
+        <div class="trainee-session-search__status" id="traineeSessionSearchStatus" aria-live="polite"></div>
       </div>
 
       <label class="trainee-create-section" style="margin-bottom:14px;display:block;">
@@ -1722,30 +1742,78 @@
     const select = document.getElementById("traineeTargetSession");
     if(!select) return;
 
-    const matching = availableSessionsForCreate.filter(s => normalizeTrainingChoice(s.training_type) === selectedTrainingForCreate);
+    const futureOnlyTrainings = new Set(["APS", "A3P", "SSIAP", "DIRIGEANT initial", "VTC"]);
+    const matching = availableSessionsForCreate.filter(s => {
+      if(normalizeTrainingChoice(s.training_type) !== selectedTrainingForCreate) return false;
+      return !futureOnlyTrainings.has(selectedTrainingForCreate) || (s.status_key === "upcoming" && !!s.date_start);
+    });
+    const search = document.getElementById("traineeSessionSearch");
+    const query = normalizeSessionSearch(search?.value || "");
+    const filtered = query ? matching.filter(s => sessionSearchText(s).includes(query)) : matching;
     select.innerHTML = "";
 
-    if(matching.length === 0){
+    if(filtered.length === 0){
       const opt = document.createElement("option");
       opt.value = "";
-      opt.textContent = "Aucune session disponible";
+      opt.textContent = query ? "Aucune session correspondante" : "Aucune session disponible";
       select.appendChild(opt);
       select.disabled = true;
-      return;
+    }else{
+      filtered.forEach(s=>{
+        const opt = document.createElement("option");
+        opt.value = s.id;
+        opt.textContent = sessionDisplayName(s);
+        select.appendChild(opt);
+      });
+      select.disabled = false;
     }
+    renderSessionSearchResults(filtered, query);
+  }
 
-    matching.forEach(s=>{
-      const opt = document.createElement("option");
-      opt.value = s.id;
-      opt.textContent = `${s.name || "Session"} (${s.training_type || ""})`;
-      select.appendChild(opt);
+  function normalizeSessionSearch(value){
+    return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("fr").trim();
+  }
+
+  function sessionDisplayName(session){
+    return `${session.name || "Session"} (${session.training_type || ""})`;
+  }
+
+  function sessionSearchText(session){
+    return normalizeSessionSearch([session.name, session.training_type, session.date_start, session.date_end].filter(Boolean).join(" "));
+  }
+
+  function renderSessionSearchResults(sessions, query){
+    const results = document.getElementById("traineeSessionSearchResults");
+    const status = document.getElementById("traineeSessionSearchStatus");
+    if(!results || !status) return;
+    results.innerHTML = "";
+    results.classList.toggle("show", !!query && sessions.length > 0);
+    status.textContent = query
+      ? `${sessions.length} session${sessions.length > 1 ? "s" : ""} trouvée${sessions.length > 1 ? "s" : ""}`
+      : "Recherche par nom, formation, mois ou année.";
+    if(!query) return;
+    sessions.forEach(session=>{
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "trainee-session-result";
+      button.setAttribute("role", "option");
+      button.textContent = sessionDisplayName(session);
+      button.addEventListener("click", ()=>{
+        const select = document.getElementById("traineeTargetSession");
+        if(select) select.value = session.id;
+        results.classList.remove("show");
+        status.textContent = `Session sélectionnée : ${sessionDisplayName(session)}`;
+      });
+      results.appendChild(button);
     });
-    select.disabled = false;
   }
 
   function initializeTraineeCreateFromSessions(){
     const first = document.querySelector("#trainingChooser .training-choice");
     selectedTrainingForCreate = first?.getAttribute("data-training") || "";
+    const search = document.getElementById("traineeSessionSearch");
+    if(search) search.value = "";
+    document.getElementById("traineeSessionSearchWrap")?.classList.remove("has-value");
     refreshTrainingButtons();
     refreshVtcRealTrainingDatesVisibility();
     refreshSessionChoices();
@@ -1754,10 +1822,27 @@
   document.querySelectorAll("#trainingChooser .training-choice").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       selectedTrainingForCreate = btn.getAttribute("data-training") || "";
+      const search = document.getElementById("traineeSessionSearch");
+      if(search) search.value = "";
+      document.getElementById("traineeSessionSearchWrap")?.classList.remove("has-value");
       refreshTrainingButtons();
       refreshVtcRealTrainingDatesVisibility();
       refreshSessionChoices();
     });
+  });
+
+  document.getElementById("traineeSessionSearch")?.addEventListener("input", event=>{
+    document.getElementById("traineeSessionSearchWrap")?.classList.toggle("has-value", !!event.target.value);
+    refreshSessionChoices();
+  });
+
+  document.getElementById("traineeSessionSearchClear")?.addEventListener("click", ()=>{
+    const search = document.getElementById("traineeSessionSearch");
+    if(!search) return;
+    search.value = "";
+    document.getElementById("traineeSessionSearchWrap")?.classList.remove("has-value");
+    refreshSessionChoices();
+    search.focus();
   });
 
   document.getElementById("btnOpenCreateTraineeFromSessions")?.addEventListener("click", ()=>{
