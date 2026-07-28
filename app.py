@@ -15829,6 +15829,26 @@ def _sales_trainee_item(trainee: Dict[str, Any], session_id: str) -> Dict[str, s
     }
 
 
+def _sales_trainee_anchor_date(trainee: Dict[str, Any], training_label: str) -> Optional[datetime.date]:
+    """Return the sale date used by the sales dashboard and its daily recap."""
+    anchor_date = _parse_flexible_date(trainee.get("created_at") or "")
+    if training_label != "DIRIGEANT VAE":
+        return anchor_date
+    vae_status_key = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))["key"]
+    if vae_status_key != "certified":
+        return None
+    action_dates = trainee.get("vae_action_dates") if isinstance(trainee.get("vae_action_dates"), dict) else {}
+    return _parse_flexible_date(action_dates.get("diplome_obtenu"))
+
+
+def _sales_trainee_price(trainee: Dict[str, Any], training_type: str, training_label: str) -> int:
+    adjusted_price = _parse_positive_int(trainee.get("sales_tracking_amount"))
+    if adjusted_price > 0:
+        return adjusted_price
+    unit_price = _sales_training_unit_price(training_type, training_label)
+    return unit_price if unit_price > 0 else _parse_positive_int(trainee.get("training_price"))
+
+
 def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> Dict[str, Any]:
     today = datetime.date.today()
     yesterday = today - datetime.timedelta(days=1)
@@ -15866,29 +15886,15 @@ def _build_sales_tracking_metrics(data: Dict[str, Any], selected_year: int) -> D
         training_type_raw = _session_get(session, "training_type", "")
         trainees = _session_trainees_list(session)
         training_label = _sales_training_label(training_type_raw)
-        unit_price = _sales_training_unit_price(training_type_raw, training_label)
 
         for trainee in trainees:
             if bool(trainee.get("exclude_from_sales_tracking")):
                 continue
-            anchor_date = _parse_flexible_date(trainee.get("created_at") or "")
-            if training_label == "DIRIGEANT VAE":
-                vae_status_key = vae_status_view(trainee.get("vae_status") or trainee.get("vae_status_label"))["key"]
-                if vae_status_key != "certified":
-                    continue
-                action_dates = trainee.get("vae_action_dates") if isinstance(trainee.get("vae_action_dates"), dict) else {}
-                anchor_date = _parse_flexible_date(action_dates.get("diplome_obtenu"))
-                if not anchor_date:
-                    continue
-
+            anchor_date = _sales_trainee_anchor_date(trainee, training_label)
             if not anchor_date:
                 continue
 
-            adjusted_tracking_price = _parse_positive_int(trainee.get("sales_tracking_amount"))
-            if adjusted_tracking_price > 0:
-                training_price = adjusted_tracking_price
-            else:
-                training_price = unit_price if unit_price > 0 else _parse_positive_int(trainee.get("training_price"))
+            training_price = _sales_trainee_price(trainee, training_type_raw, training_label)
             trainee_ref = str(trainee.get("id") or trainee.get("email") or trainee.get("nom") or trainee.get("name") or "")
             sale_markers.append(f"{session_id}|{trainee_ref}|{anchor_date.isoformat()}|{training_price}")
             trainee_item = _sales_trainee_item(trainee, session_id)
@@ -31369,13 +31375,26 @@ def _daily_recap_rejection_reason(value: Any) -> str:
         "mandate_not_found": "Mandat de prélèvement introuvable",
         "refused_by_bank": "Prélèvement refusé par la banque",
         "debtor_dispute": "Prélèvement contesté par le titulaire",
+        "user_requested": "Rejet demandé par le titulaire",
+        "requested_by_user": "Rejet demandé par le titulaire",
         "duplicate": "Prélèvement en double",
         "regulatory_reason": "Rejet pour raison réglementaire",
         "technical_error": "Erreur technique bancaire",
     }
     if normalized in labels:
         return labels[normalized]
-    return normalized.replace("_", " ").capitalize() if normalized else "Motif non communiqué par la banque"
+    return "Motif bancaire non traduit" if normalized else "Motif non communiqué par la banque"
+
+
+def _daily_recap_convention_is_pending(trainee: Dict[str, Any]) -> bool:
+    """Match the conventions dashboard's actionable signature perimeter."""
+    state = _yousign_state(trainee)
+    has_request = bool(state.get("signature_request_id"))
+    if has_request and _is_yousign_signature_pending(state):
+        return True
+    # Preserve the explicit legacy state also handled by the conventions page,
+    # but do not count orphaned Yousign status strings without a request.
+    return not _has_generated_yousign_convention(trainee) and str(trainee.get("convention_status") or "").strip().lower() == "signing"
 
 
 def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> Dict[str, Any]:
@@ -31402,27 +31421,27 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
         if not isinstance(session_obj, dict) or session_obj.get("archived") or _is_wedof_leads_session(session_obj):
             continue
         training_type = str(_session_get(session_obj, "training_type", "") or _session_get(session_obj, "name", "") or "Formation").strip()
+        training_label = _sales_training_label(training_type)
         start_date = _session_start_date(session_obj)
         end_date = _daily_recap_date(_session_get(session_obj, "date_end", "")) or start_date
         session_label = f"{formation_label(training_type) or training_type} · {fr_date(start_date.isoformat()) if start_date else 'date à confirmer'}"
         for trainee in _session_trainees_list(session_obj):
             name = _daily_recap_name(trainee)
-            created = _daily_recap_date(trainee.get("created_at"))
-            price = _parse_positive_int(trainee.get("sales_tracking_amount")) or _sales_training_unit_price(training_type, _sales_training_label(training_type)) or _parse_positive_int(trainee.get("training_price"))
+            sale_date = _sales_trainee_anchor_date(trainee, training_label)
+            price = _sales_trainee_price(trainee, training_type, training_label)
             excluded_from_sales = bool(trainee.get("exclude_from_sales_tracking") or session_obj.get("exclude_from_sales_tracking"))
-            if not excluded_from_sales and created == report_date:
+            if not excluded_from_sales and sale_date == report_date:
                 sales["revenue"] += price
                 sales["count"] += 1
-                label = _sales_training_label(training_type)
+                label = training_label
                 sales["formations"][label] = sales["formations"].get(label, 0) + 1
             if not excluded_from_sales:
                 for key, comparison_date in comparison_dates.items():
-                    if created == comparison_date:
+                    if sale_date == comparison_date:
                         comparison_sales[key]["revenue"] += price
                         comparison_sales[key]["count"] += 1
 
-            state = trainee.get("convention_signature") if isinstance(trainee.get("convention_signature"), dict) else {}
-            if _is_yousign_signature_pending(state):
+            if _daily_recap_convention_is_pending(trainee):
                 pending_signatures.append({"name": name, "detail": session_label})
 
             if start_date and 0 <= (start_date - today).days < 7 and not dossier_is_complete_total(trainee, training_type, start_date):
@@ -31439,6 +31458,23 @@ def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> 
             # actionable; blank, transmitted or other statuses must stay out.
             if end_date and end_date >= today and cnaps_is_in_progress and not cnaps_is_validated:
                 cnaps_pending.append({"name": name, "detail": f"{session_label} · {cnaps_raw or 'statut non renseigné'}"})
+
+    # The CNAPS tracking page is authoritative: it contains statuses returned by
+    # CNAPSV3 and enrollment matching. Fall back to locally stored trainee
+    # statuses only while that service is unavailable.
+    cnaps_rows, cnaps_error = fetch_cnapsv3_tracking_requests()
+    if not cnaps_error:
+        cnaps_pending = []
+        for row in enrich_cnaps_tracking_rows_with_enrollment(cnaps_rows, data):
+            normalized_status = _normalize_cnaps_status(row.get("cnaps_status")).replace("_", " ")
+            if not row.get("is_enrolled") or normalized_status != "EN COURS":
+                continue
+            enrollment = row.get("enrollment") or {}
+            detail = str(enrollment.get("training_type") or enrollment.get("session_name") or "Formation").strip()
+            cnaps_pending.append({
+                "name": _format_trainee_name(row.get("first_name", ""), row.get("last_name", "")) or "Stagiaire",
+                "detail": f"{detail} · En cours",
+            })
 
     changes = []
     for notification in (data.get("cnaps_status_change_notifications") or {}).values():

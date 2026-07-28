@@ -15,7 +15,7 @@ class DailyRecapTests(unittest.TestCase):
                 "trainees": [{
                     "id": "T1", "first_name": "Ada", "last_name": "Lovelace",
                     "created_at": "2026-07-27T12:00:00Z", "sales_tracking_amount": 1200,
-                    "convention_signature": {"status": "ongoing"}, "cnaps_status": "en cours",
+                    "convention_signature": {"status": "ongoing", "signature_request_id": "req-1"}, "cnaps_status": "en cours",
                 }],
             }],
             "cnaps_status_change_notifications": {
@@ -25,7 +25,8 @@ class DailyRecapTests(unittest.TestCase):
         }
 
     def test_report_contains_all_operational_categories(self):
-        report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
+        with mock.patch.object(app, "fetch_cnapsv3_tracking_requests", return_value=([], "indisponible")):
+            report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
         self.assertEqual(report["sales"]["revenue"], 1200)
         self.assertEqual(report["sales"]["count"], 1)
         self.assertEqual(len(report["cnaps_changes"]), 1)
@@ -46,8 +47,25 @@ class DailyRecapTests(unittest.TestCase):
             {"first_name": "Alan", "last_name": "Turing", "cnaps_status": "validé"},
             {"first_name": "Katherine", "last_name": "Johnson", "cnaps_status": ""},
         ])
-        report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
+        with mock.patch.object(app, "fetch_cnapsv3_tracking_requests", return_value=([], "indisponible")):
+            report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
         self.assertEqual([item["name"] for item in report["cnaps_pending"]], [app._daily_recap_name(trainees[0])])
+
+    def test_cnaps_pending_uses_enrolled_in_progress_tracking_rows(self):
+        rows = [
+            {"first_name": "Ada", "last_name": "Lovelace", "cnaps_status": "EN COURS"},
+            {"first_name": "Grace", "last_name": "Hopper", "cnaps_status": "EN COURS"},
+            {"first_name": "Alan", "last_name": "Turing", "cnaps_status": "ACCEPTE"},
+        ]
+        enriched = [
+            {**rows[0], "is_enrolled": True, "enrollment": {"training_type": "APS"}},
+            {**rows[1], "is_enrolled": False, "enrollment": {}},
+            {**rows[2], "is_enrolled": True, "enrollment": {"training_type": "APS"}},
+        ]
+        with mock.patch.object(app, "fetch_cnapsv3_tracking_requests", return_value=(rows, None)), \
+             mock.patch.object(app, "enrich_cnaps_tracking_rows_with_enrollment", return_value=enriched):
+            report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
+        self.assertEqual([item["name"] for item in report["cnaps_pending"]], [app._format_trainee_name("Ada", "Lovelace")])
 
     def test_rejected_debits_are_translated_and_grouped_by_trainee(self):
         self.data["billing_lines"] = [{
@@ -63,6 +81,32 @@ class DailyRecapTests(unittest.TestCase):
         self.assertIn("Compte bancaire bloqué", report["rejected"][0]["detail"])
         self.assertIn("Solde insuffisant", report["rejected"][0]["detail"])
         self.assertEqual(report["rejected"][0]["detail"].count("APS"), 2)
+
+    def test_user_requested_rejection_reason_is_in_french(self):
+        self.assertEqual(app._daily_recap_rejection_reason("User requested"), "Rejet demandé par le titulaire")
+
+    def test_pending_conventions_match_actionable_yousign_requests(self):
+        trainees = self.data["sessions"][0]["trainees"]
+        trainees[0]["convention_signature"]["signature_request_id"] = "req-1"
+        trainees.append({
+            "id": "T2", "first_name": "Ancien", "last_name": "Statut",
+            "convention_signature": {"status": "ongoing"},
+        })
+        with mock.patch.object(app, "fetch_cnapsv3_tracking_requests", return_value=([], "indisponible")):
+            report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
+        self.assertEqual([item["name"] for item in report["pending_signatures"]], [app._format_trainee_name("Ada", "Lovelace")])
+
+    def test_revenue_uses_same_vae_certification_date_as_sales_dashboard(self):
+        self.data["sessions"][0]["training_type"] = "DIRIGEANT VAE"
+        trainee = self.data["sessions"][0]["trainees"][0]
+        trainee.update({
+            "created_at": "2026-07-20", "vae_status": "certified",
+            "vae_action_dates": {"diplome_obtenu": "2026-07-27"},
+            "sales_tracking_amount": 3800,
+        })
+        with mock.patch.object(app, "fetch_cnapsv3_tracking_requests", return_value=([], "indisponible")):
+            report = app.build_daily_recap_data(self.data, datetime.date(2026, 7, 27))
+        self.assertEqual(report["sales"]["revenue"], 3800)
 
     def test_revenue_has_daily_weekly_monthly_and_yearly_comparisons(self):
         trainees = self.data["sessions"][0]["trainees"]
