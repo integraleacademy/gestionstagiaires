@@ -31386,9 +31386,45 @@ def _daily_recap_weather_description(code: Any) -> str:
     return "la météo sera variable"
 
 
+def _daily_recap_weather_icon(code: Any) -> str:
+    """Return a simple, email-client-safe weather pictogram for a WMO code."""
+    try:
+        code = int(code)
+    except (TypeError, ValueError):
+        return "🌡️"
+    if code == 0:
+        return "☀️"
+    if code in {1, 2}:
+        return "🌤️"
+    if code == 3:
+        return "☁️"
+    if code in {45, 48}:
+        return "🌫️"
+    if code in {51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82}:
+        return "🌧️"
+    if code in {71, 73, 75, 77, 85, 86}:
+        return "🌨️"
+    if code in {95, 96, 99}:
+        return "⛈️"
+    return "🌦️"
+
+
+def _daily_recap_nameday_label(nameday: Any) -> str:
+    """Format Nominis' value as a friendly French celebration label."""
+    value = str(nameday or "").strip().strip(".!")
+    if not value or value.casefold() == "la fête du jour":
+        return ""
+    lowered = value.casefold()
+    if lowered.startswith("sainte "):
+        return f"la Sainte {value[7:].strip()}"
+    if lowered.startswith("saint "):
+        return f"la Saint {value[6:].strip()}"
+    return value if lowered.startswith(("la saint ", "la sainte ")) else f"la Saint {value}"
+
+
 def fetch_daily_recap_greeting_context(delivery_date: datetime.date) -> Dict[str, Any]:
     """Fetch the nameday and today's forecasts used by the 08:00 greeting."""
-    context: Dict[str, Any] = {"date": delivery_date, "nameday": "la fête du jour", "weather": {}}
+    context: Dict[str, Any] = {"date": delivery_date, "nameday": "", "weather": {}}
     try:
         response = requests.get("https://nominis.cef.fr/json/nominis.php", params={"date": delivery_date.isoformat()}, timeout=10)
         response.raise_for_status()
@@ -31410,6 +31446,7 @@ def fetch_daily_recap_greeting_context(delivery_date: datetime.date) -> Dict[str
             context["weather"][key] = {
                 "temperature": round(float((daily.get("temperature_2m_max") or [])[0])),
                 "description": _daily_recap_weather_description((daily.get("weather_code") or [])[0]),
+                "icon": _daily_recap_weather_icon((daily.get("weather_code") or [])[0]),
             }
         except (requests.RequestException, ValueError, TypeError, IndexError):
             logging.getLogger(__name__).warning("Impossible de récupérer la météo de %s", location["label"], exc_info=True)
@@ -31418,7 +31455,10 @@ def fetch_daily_recap_greeting_context(delivery_date: datetime.date) -> Dict[str
 
 def _daily_recap_greeting(recipient: str, context: Dict[str, Any]) -> str:
     first_name = DAILY_RECAP_FIRST_NAMES.get(recipient.lower(), "")
-    parts = [f"Bonjour {first_name}, Nous sommes le {_daily_recap_long_date(context['date'])} et aujourd'hui nous fêtons {context['nameday']}"]
+    parts = [f"Bonjour {first_name}, Nous sommes le {_daily_recap_long_date(context['date'])}"]
+    nameday = _daily_recap_nameday_label(context.get("nameday"))
+    if nameday:
+        parts.append(f"Aujourd'hui, c'est {nameday} !")
     keys = ["puget"] + (["aurillac"] if recipient.lower() in {"elsa@integraleacademy.com", "clement@integraleacademy.com"} else [])
     for key in keys:
         location, forecast = DAILY_RECAP_WEATHER_LOCATIONS[key], (context.get("weather") or {}).get(key)
@@ -31426,7 +31466,38 @@ def _daily_recap_greeting(recipient: str, context: Dict[str, Any]) -> str:
             parts.append(f"la température prévue à {location['label']} aujourd'hui est de {forecast['temperature']}°C et {forecast['description']}")
         else:
             parts.append(f"les prévisions météo de {location['label']} ne sont pas disponibles")
-    return ". ".join(parts) + "."
+    return ". ".join(parts).replace("!. ", "! ") + ("" if parts[-1].endswith("!") else ".")
+
+
+def _daily_recap_greeting_html(recipient: str, context: Dict[str, Any]) -> str:
+    """Render the greeting as a compact hero and individual weather cards."""
+    first_name = DAILY_RECAP_FIRST_NAMES.get(recipient.lower(), "")
+    nameday = _daily_recap_nameday_label(context.get("nameday"))
+    celebration = (
+        f'<div style="margin-top:10px;font-size:17px;font-weight:800;color:#7c3aed">🎉 Aujourd’hui, c’est {html.escape(nameday)} !</div>'
+        if nameday else ""
+    )
+    keys = ["puget"] + (["aurillac"] if recipient.lower() in {"elsa@integraleacademy.com", "clement@integraleacademy.com"} else [])
+    weather_cards = []
+    for key in keys:
+        location = DAILY_RECAP_WEATHER_LOCATIONS[key]
+        forecast = (context.get("weather") or {}).get(key)
+        if forecast:
+            icon = html.escape(str(forecast.get("icon") or "🌡️"))
+            description = str(forecast.get("description") or "météo du jour").removeprefix("la journée sera ")
+            weather_cards.append(
+                f'<td style="padding:6px;vertical-align:top"><div style="min-width:210px;padding:16px 18px;background:linear-gradient(135deg,#eff6ff,#ecfeff);border:1px solid #bae6fd;border-radius:16px">'
+                f'<table role="presentation" width="100%"><tr><td style="font-size:32px;width:44px">{icon}</td><td><div style="font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#0369a1">{html.escape(location["label"])}</div>'
+                f'<div style="margin-top:2px;font-size:22px;font-weight:900;color:#172554">{html.escape(str(forecast["temperature"]))}°C</div><div style="font-size:13px;color:#475569">{html.escape(description.capitalize())}</div></td></tr></table></div></td>'
+            )
+        else:
+            weather_cards.append(f'<td style="padding:6px"><div style="padding:16px;background:#f8fafc;border-radius:16px;color:#64748b">🌡️ Prévisions indisponibles · {html.escape(location["label"])}</div></td>')
+    return (
+        '<tr><td style="padding-top:12px"><div style="padding:22px;background:#fff;border:1px solid #e0e7ff;border-radius:20px;box-shadow:0 8px 24px rgba(30,41,59,.06)">'
+        f'<div style="font-size:23px;font-weight:900;color:#172554">Bonjour {html.escape(first_name)} 👋</div>'
+        f'<div style="margin-top:5px;color:#64748b;font-size:14px">Nous sommes le {html.escape(_daily_recap_long_date(context["date"]))}</div>{celebration}'
+        f'<table role="presentation" width="100%" style="margin-top:14px"><tr>{"".join(weather_cards)}</tr></table></div></td></tr>'
+    )
 
 
 def _daily_recap_date(value: Any) -> Optional[datetime.date]:
@@ -31625,7 +31696,7 @@ def build_daily_recap_email(report: Dict[str, Any], *, recipient: str = "", gree
     cards = "".join(f'<tr><td style="padding:8px 0"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px"><h2 style="margin:0 0 8px;color:#172033;font-size:18px">{icon}&nbsp; {title} <span style="float:right;background:#eef2ff;color:#4338ca;border-radius:99px;padding:4px 9px;font-size:12px">{len(items)}</span></h2>{rows(items, empty)}</div></td></tr>' for icon, title, items, empty in sections)
     greeting = ""
     if recipient and greeting_context:
-        greeting = f'<tr><td style="padding:18px 22px;background:#fff;border-radius:18px;font-size:15px;line-height:1.65;color:#334155">{html.escape(_daily_recap_greeting(recipient, greeting_context))}</td></tr>'
+        greeting = _daily_recap_greeting_html(recipient, greeting_context)
     body = f'''<!doctype html><html lang="fr"><body style="margin:0;background:#f3f6fb;font-family:Arial,Helvetica,sans-serif;color:#172033"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f6fb;padding:28px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:700px"><tr><td style="padding:30px;background:linear-gradient(135deg,#172554,#4f46e5 55%,#06b6d4);border-radius:24px;color:#fff"><img src="{logo}" width="150" alt="Intégrale Academy" style="display:block;background:#fff;border-radius:12px;padding:7px"><div style="margin-top:24px;font-size:12px;font-weight:bold;letter-spacing:.14em;text-transform:uppercase;opacity:.8">Daily operations</div><h1 style="margin:8px 0;font-size:30px">Récapitulatif de la veille</h1><div style="opacity:.86">{html.escape(fr_date(report['date'].isoformat()))}</div></td></tr>{greeting}<tr><td style="padding:10px 0"><table role="presentation" width="100%"><tr><td width="50%" style="padding:8px 4px 8px 0;vertical-align:top"><div style="background:#dcfce7;border-radius:18px;padding:20px"><div style="font-size:12px;color:#166534;font-weight:bold;text-transform:uppercase">Chiffre d’affaires de la veille</div><div style="font-size:28px;font-weight:900;margin-top:5px">{html.escape(_format_euro(sales['revenue']))}</div><div style="font-size:12px;color:#166534;margin-top:8px">{comparison}</div></div></td><td width="50%" style="padding:8px 0 8px 4px;vertical-align:top"><div style="background:#fef3c7;border-radius:18px;padding:20px"><div style="font-size:12px;color:#92400e;font-weight:bold;text-transform:uppercase">Formations vendues</div><div style="font-size:28px;font-weight:900;margin-top:5px">{sales['count']}</div><div style="margin-top:5px">{formation_mix}</div></div></td></tr></table></td></tr>{cards}<tr><td style="padding:22px;text-align:center;color:#94a3b8;font-size:12px">Intégrale Academy · Rapport automatique envoyé chaque jour à 08h00</td></tr></table></td></tr></table></body></html>'''
     return "Récapitulatif de la veille", body
 
