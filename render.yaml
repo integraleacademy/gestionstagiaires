@@ -68,6 +68,20 @@ services:
         value: https://gestionstagiaires-r5no.onrender.com/internal/cron/cash-payment-reminders
       - key: CRON_SECRET
         sync: false
+  - type: cron
+    name: gestionstagiaires-daily-recap
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    # The endpoint sends only during the 08:00 Europe/Paris hour. Running
+    # hourly keeps the delivery correct across winter/summer time changes.
+    schedule: "0 * * * *"
+    dockerCommand: python scripts/run_daily_recap.py
+    envVars:
+      - key: DAILY_RECAP_URL
+        value: https://gestionstagiaires-r5no.onrender.com/internal/cron/daily-recap
+      - key: CRON_SECRET
+        sync: false
   - type: worker
     name: gestionstagiaires-cnaps-monitor
     runtime: docker

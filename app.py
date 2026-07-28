@@ -31317,6 +31317,167 @@ def internal_cron_cash_payment_reminders():
     return jsonify({"ok": True, **run_cash_payment_reminders()})
 
 
+DAILY_RECAP_RECIPIENTS = (
+    "elsa@integraleacademy.com",
+    "aurelie@integraleacademy.com",
+    "clement@integraleacademy.com",
+    "cassandre@integraleacademy.com",
+)
+
+
+def _daily_recap_date(value: Any) -> Optional[datetime.date]:
+    """Extract a calendar date from the heterogeneous timestamps we persist."""
+    if isinstance(value, datetime.datetime):
+        return value.date()
+    if isinstance(value, datetime.date):
+        return value
+    return _parse_flexible_date(str(value or ""))
+
+
+def _daily_recap_name(trainee: Dict[str, Any]) -> str:
+    return _sales_trainee_display_name(trainee)
+
+
+def build_daily_recap_data(data: Dict[str, Any], report_date: datetime.date) -> Dict[str, Any]:
+    """Build the previous-day operational snapshot without mutating stored data."""
+    try:
+        prior_year_date = report_date.replace(year=report_date.year - 1)
+    except ValueError:  # 29 February: compare with the last day of February N-1.
+        prior_year_date = report_date.replace(year=report_date.year - 1, day=28)
+    sales = {"revenue": 0, "count": 0, "formations": {}}
+    prior_sales = {"revenue": 0, "count": 0}
+    pending_signatures: List[Dict[str, str]] = []
+    incomplete_upcoming: List[Dict[str, str]] = []
+    cnaps_pending: List[Dict[str, str]] = []
+    today = report_date + datetime.timedelta(days=1)
+
+    validated_cnaps = {"valide", "validé", "validee", "validée", "accepted", "accepte", "accepté", "active", "actif", "favorable", "done"}
+    for session_obj in data.get("sessions", []) or []:
+        if not isinstance(session_obj, dict) or session_obj.get("archived") or _is_wedof_leads_session(session_obj):
+            continue
+        training_type = str(_session_get(session_obj, "training_type", "") or _session_get(session_obj, "name", "") or "Formation").strip()
+        start_date = _session_start_date(session_obj)
+        end_date = _daily_recap_date(_session_get(session_obj, "date_end", "")) or start_date
+        session_label = f"{formation_label(training_type) or training_type} · {fr_date(start_date.isoformat()) if start_date else 'date à confirmer'}"
+        for trainee in _session_trainees_list(session_obj):
+            name = _daily_recap_name(trainee)
+            created = _daily_recap_date(trainee.get("created_at"))
+            price = _parse_positive_int(trainee.get("sales_tracking_amount")) or _sales_training_unit_price(training_type, _sales_training_label(training_type)) or _parse_positive_int(trainee.get("training_price"))
+            excluded_from_sales = bool(trainee.get("exclude_from_sales_tracking") or session_obj.get("exclude_from_sales_tracking"))
+            if not excluded_from_sales and created == report_date:
+                sales["revenue"] += price
+                sales["count"] += 1
+                label = _sales_training_label(training_type)
+                sales["formations"][label] = sales["formations"].get(label, 0) + 1
+            if not excluded_from_sales and created == prior_year_date:
+                prior_sales["revenue"] += price
+                prior_sales["count"] += 1
+
+            state = trainee.get("convention_signature") if isinstance(trainee.get("convention_signature"), dict) else {}
+            if _is_yousign_signature_pending(state):
+                pending_signatures.append({"name": name, "detail": session_label})
+
+            if start_date and 0 <= (start_date - today).days < 7 and not dossier_is_complete_total(trainee, training_type, start_date):
+                incomplete_upcoming.append({"name": name, "detail": session_label})
+
+            cnaps_raw = str(trainee.get("cnaps_status") or trainee.get("statut_cnaps") or trainee.get("pre_status") or "").strip()
+            normalized_cnaps = unicodedata.normalize("NFD", cnaps_raw.lower())
+            normalized_cnaps = "".join(ch for ch in normalized_cnaps if unicodedata.category(ch) != "Mn")
+            normalized_validated = {unicodedata.normalize('NFD', value).encode('ascii', 'ignore').decode() for value in validated_cnaps}
+            cnaps_is_validated = normalized_cnaps in normalized_validated or normalized_cnaps in {f"cnaps {value}" for value in normalized_validated}
+            if end_date and end_date >= today and not cnaps_is_validated:
+                cnaps_pending.append({"name": name, "detail": f"{session_label} · {cnaps_raw or 'statut non renseigné'}"})
+
+    changes = []
+    for notification in (data.get("cnaps_status_change_notifications") or {}).values():
+        if isinstance(notification, dict) and _daily_recap_date(notification.get("sent_at")) == report_date:
+            changes.append({
+                "name": " ".join(filter(None, [str(notification.get("first_name") or "").strip(), str(notification.get("last_name") or "").strip()])) or "Stagiaire",
+                "detail": str(notification.get("signature") or "Nouveau statut détecté"),
+            })
+
+    rejected = []
+    for line in _billing_lines(data):
+        for installment in _sepa_installments(line):
+            if str(installment.get("status") or "").lower() not in {"failed", "rejected", "returned", "refunded", "declined"}:
+                continue
+            event_date = _daily_recap_date(installment.get("rejected_at") or installment.get("failed_at") or installment.get("updated_at") or installment.get("updatedAt") or installment.get("date") or installment.get("due_date"))
+            if event_date == report_date:
+                rejected.append({"name": f"{line.get('traineeFirstName', '')} {line.get('traineeLastName', '')}".strip() or "Stagiaire", "detail": f"{_format_euro(installment.get('amount'))} · {installment.get('status_reason') or installment.get('failureReason') or 'motif non communiqué'}"})
+
+    return {"date": report_date, "sales": sales, "prior_sales": prior_sales, "cnaps_changes": changes, "rejected": rejected, "pending_signatures": pending_signatures, "incomplete_upcoming": incomplete_upcoming, "cnaps_pending": cnaps_pending}
+
+
+def build_daily_recap_email(report: Dict[str, Any]) -> Tuple[str, str]:
+    """Render an email-client-safe, colourful SaaS-style daily dashboard."""
+    def rows(items: List[Dict[str, str]], empty: str) -> str:
+        if not items:
+            return f'<div style="padding:18px;color:#64748b;text-align:center">✓ {html.escape(empty)}</div>'
+        return "".join(f'<div style="padding:13px 0;border-bottom:1px solid #e2e8f0"><strong style="color:#172033">{html.escape(item["name"])}</strong><div style="margin-top:4px;color:#64748b;font-size:13px">{html.escape(item["detail"])}</div></div>' for item in items)
+
+    sales, previous = report["sales"], report["prior_sales"]
+    delta = sales["revenue"] - previous["revenue"]
+    comparison = "Pas de donnée N-1" if not previous["count"] else f"{delta:+,.0f} € vs N-1".replace(",", " ")
+    formation_mix = " · ".join(f"{html.escape(label)} : {count}" for label, count in sorted(sales["formations"].items())) or "Aucune vente"
+    logo = html.escape(f"{PUBLIC_BASE_URL.rstrip('/')}/static/logo-integrale.png", quote=True)
+    sections = [
+        ("⚡", "Changements CNAPS", report["cnaps_changes"], "Aucun changement détecté"),
+        ("↩", "Prélèvements rejetés", report["rejected"], "Aucun rejet"),
+        ("✍", "Conventions à signer", report["pending_signatures"], "Aucune signature en attente"),
+        ("📁", "Dossiers incomplets · J-7", report["incomplete_upcoming"], "Tous les dossiers sont complets"),
+        ("🛡", "CNAPS à valider", report["cnaps_pending"], "Aucune validation en attente"),
+    ]
+    cards = "".join(f'<tr><td style="padding:8px 0"><div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px"><h2 style="margin:0 0 8px;color:#172033;font-size:18px">{icon}&nbsp; {title} <span style="float:right;background:#eef2ff;color:#4338ca;border-radius:99px;padding:4px 9px;font-size:12px">{len(items)}</span></h2>{rows(items, empty)}</div></td></tr>' for icon, title, items, empty in sections)
+    body = f'''<!doctype html><html lang="fr"><body style="margin:0;background:#f3f6fb;font-family:Arial,Helvetica,sans-serif;color:#172033"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f6fb;padding:28px 12px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:700px"><tr><td style="padding:30px;background:linear-gradient(135deg,#172554,#4f46e5 55%,#06b6d4);border-radius:24px;color:#fff"><img src="{logo}" width="150" alt="Intégrale Academy" style="display:block;background:#fff;border-radius:12px;padding:7px"><div style="margin-top:24px;font-size:12px;font-weight:bold;letter-spacing:.14em;text-transform:uppercase;opacity:.8">Daily operations</div><h1 style="margin:8px 0;font-size:30px">Récapitulatif de la veille</h1><div style="opacity:.86">{html.escape(fr_date(report['date'].isoformat()))}</div></td></tr><tr><td style="padding:10px 0"><table role="presentation" width="100%"><tr><td width="50%" style="padding:8px 4px 8px 0"><div style="background:#dcfce7;border-radius:18px;padding:20px"><div style="font-size:12px;color:#166534;font-weight:bold;text-transform:uppercase">Chiffre d’affaires</div><div style="font-size:28px;font-weight:900;margin-top:5px">{html.escape(_format_euro(sales['revenue']))}</div><div style="font-size:13px;color:#166534;margin-top:5px">{html.escape(comparison)}</div></div></td><td width="50%" style="padding:8px 0 8px 4px"><div style="background:#fef3c7;border-radius:18px;padding:20px"><div style="font-size:12px;color:#92400e;font-weight:bold;text-transform:uppercase">Formations vendues</div><div style="font-size:28px;font-weight:900;margin-top:5px">{sales['count']}</div><div style="font-size:13px;color:#92400e;margin-top:5px">{formation_mix}</div></div></td></tr></table></td></tr>{cards}<tr><td style="padding:22px;text-align:center;color:#94a3b8;font-size:12px">Intégrale Academy · Rapport automatique envoyé chaque jour à 08h00</td></tr></table></td></tr></table></body></html>'''
+    return "Récapitulatif de la veille", body
+
+
+@app.get("/admin/recapitulatif-veille/apercu")
+@admin_login_required
+def admin_daily_recap_preview():
+    """Display the exact email HTML with live data, without sending anything."""
+    paris_today = datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+    requested_date = _daily_recap_date(request.args.get("date"))
+    report_date = requested_date or (paris_today - datetime.timedelta(days=1))
+    report = build_daily_recap_data(load_data(run_background_tasks=False), report_date)
+    _, html_body = build_daily_recap_email(report)
+    response = make_response(html_body)
+    response.headers["Content-Type"] = "text/html; charset=utf-8"
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+def run_daily_recap(*, now: Optional[datetime.datetime] = None, force: bool = False) -> Dict[str, Any]:
+    paris_now = now or datetime.datetime.now(ZoneInfo("Europe/Paris"))
+    if paris_now.tzinfo is None:
+        paris_now = paris_now.replace(tzinfo=ZoneInfo("Europe/Paris"))
+    if not force and paris_now.astimezone(ZoneInfo("Europe/Paris")).hour != 8:
+        return {"sent": False, "reason": "outside_delivery_hour"}
+    report_date = paris_now.astimezone(ZoneInfo("Europe/Paris")).date() - datetime.timedelta(days=1)
+    data = load_data(run_background_tasks=False)
+    history = data.setdefault("daily_recap_sent_dates", [])
+    if report_date.isoformat() in history:
+        return {"sent": False, "reason": "already_sent", "date": report_date.isoformat()}
+    report = build_daily_recap_data(data, report_date)
+    subject, html_body = build_daily_recap_email(report)
+    result = brevo_send_email(DAILY_RECAP_RECIPIENTS[0], subject, html_body, cc_emails=list(DAILY_RECAP_RECIPIENTS[1:]), metadata={"purpose": "daily_recap", "report_date": report_date.isoformat()})
+    if not result.get("ok"):
+        return {"sent": False, "reason": "email_error", "error": result.get("error", "")}
+    history.append(report_date.isoformat())
+    data["daily_recap_sent_dates"] = history[-400:]
+    save_data(data)
+    return {"sent": True, "date": report_date.isoformat(), "recipients": len(DAILY_RECAP_RECIPIENTS)}
+
+
+@app.post("/internal/cron/daily-recap")
+def internal_cron_daily_recap():
+    expected = os.environ.get("CRON_SECRET", "").strip()
+    provided = (request.headers.get("X-Cron-Secret") or request.args.get("token") or "").strip()
+    if expected and not hmac.compare_digest(expected, provided):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    return jsonify({"ok": True, **run_daily_recap()})
+
+
 @app.cli.command("send-convocation-signature-reminders")
 def cli_send_convocation_signature_reminders():
     result = {
