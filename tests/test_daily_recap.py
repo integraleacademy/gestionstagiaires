@@ -174,16 +174,29 @@ class DailyRecapTests(unittest.TestCase):
     def test_sales_tracking_preview_renders_yesterdays_email_without_sending(self):
         client = app.app.test_client()
         yesterday = datetime.datetime.now(ZoneInfo("Europe/Paris")).date() - datetime.timedelta(days=1)
+        greeting_context = {
+            "date": yesterday + datetime.timedelta(days=1), "nameday": "Saint Samson",
+            "weather": {
+                "puget": {"temperature": 31, "description": "la journée sera ensoleillée"},
+                "aurillac": {"temperature": 22, "description": "la journée sera nuageuse"},
+            },
+        }
         self.data["sessions"][0]["trainees"][0]["created_at"] = yesterday.isoformat()
         with client.session_transaction() as browser_session:
             browser_session["admin_logged_in"] = True
         with mock.patch.object(app, "load_data", return_value=self.data), \
+             mock.patch.object(app, "fetch_daily_recap_greeting_context", return_value=greeting_context) as fetch_greeting, \
              mock.patch.object(app, "brevo_send_email") as send_email:
             response = client.get("/admin/suivi-ventes/apercu-mail-quotidien")
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Récapitulatif de la veille", response.get_data(as_text=True))
-        self.assertIn("Ada Lovelace", response.get_data(as_text=True))
+        body = response.get_data(as_text=True)
+        self.assertIn("Récapitulatif de la veille", body)
+        self.assertIn("Ada Lovelace", body)
+        self.assertIn("Bonjour Clément", body)
+        self.assertIn("Puget sur Argens", body)
+        self.assertIn("Aurillac", body)
         self.assertIn("no-store", response.headers["Cache-Control"])
+        fetch_greeting.assert_called_once_with(yesterday + datetime.timedelta(days=1))
         send_email.assert_not_called()
 
     def test_sales_tracking_page_exposes_daily_email_preview(self):
@@ -194,6 +207,7 @@ class DailyRecapTests(unittest.TestCase):
             response = client.get("/admin/suivi-ventes")
         body = response.get_data(as_text=True)
         self.assertIn("Aperçu du mail de 08h", body)
+        self.assertIn("Mail destiné à clement@integraleacademy.com", body)
         self.assertIn("/admin/suivi-ventes/apercu-mail-quotidien", body)
 
 
