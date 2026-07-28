@@ -31381,7 +31381,7 @@ DAILY_RECAP_NAMEDAYS = {
     4: "Hugues|Sandrine, Alexandrine|Richard|Isidore|Irène|Marcellin|Jean-Baptiste|Julie|Gauthier|Fulbert|Stanislas|Jules|Ida|Maxime|Paterne|Benoît-Joseph|Anicet|Parfait|Emma|Odette|Anselme|Alexandre|Georges|Fidèle|Marc|Alida|Zita|Valérie|Catherine|Robert".split("|"),
     5: "Jérémie|Boris|Philippe et Jacques|Sylvain|Judith|Prudence|Gisèle|Désiré|Pacôme|Solange|Estelle|Achille|Rolande|Matthias|Denise|Honoré|Pascal|Éric|Yves|Bernardin|Constantin|Émile|Didier|Donatien|Sophie|Bérenger|Augustin|Germain|Aymard|Ferdinand|Perrine, Visitation de la Vierge Marie".split("|"),
     6: "Justin|Blandine|Kévin|Clotilde|Igor|Norbert|Gilbert|Médard|Diane|Landry|Barnabé|Guy|Antoine|Élisée|Germaine|Jean-François|Hervé|Léonce|Romuald|Silvère|Rodolphe|Alban|Audrey|Jean-Baptiste|Prosper|Anthelme|Fernand|Irénée|Pierre et Paul|Martial".split("|"),
-    7: "Thierry|Martinien|Thomas|Florent|Antoine|Mariette|Raoul|Thibaut|Amandine|Ulrich|Benoît|Olivier|Henri, Joël|Camille|Donald|Carmen, Notre-Dame du Mont-Carmel|Charlotte|Frédéric|Arsène|Marina|Victor|Marie-Madeleine|Brigitte|Christine|Jacques|Anne et Joachim|Nathalie|Samson|Marthe|Juliette|Ignace".split("|"),
+    7: "Thierry|Martinien|Thomas|Florent|Antoine|Mariette|Raoul|Thibaut|Amandine|Ulrich|Benoît|Olivier|Henri, Joël|Camille|Donald|Carmen, Notre-Dame du Mont-Carmel|Charlotte|Frédéric|Arsène|Marina|Victor|Marie-Madeleine|Brigitte|Christine|Jacques|Anne et Joachim|Nathalie|Samson|Sainte Marthe|Juliette|Ignace".split("|"),
     8: "Alphonse|Julien|Lydie|Jean-Marie|Abel|Octavien, Transfiguration|Gaétan|Dominique|Amour|Laurent|Claire|Clarisse, Jeanne|Hippolyte|Évrard|Marie, Assomption|Armel|Hyacinthe|Hélène|Jean-Eudes|Bernard|Christophe|Fabrice|Rose|Barthélémy|Louis|Natacha et Adrien|Monique|Augustin|Sabine|Fiacre|Aristide".split("|"),
     9: "Gilles|Ingrid|Grégoire|Rosalie|Raïssa|Bertrand|Reine, Régine, Réjane|Adrien, Nativité de Marie|Alain|Inès|Adelphe|Apollinaire|Aimé|Cyprien, Fête de la Croix|Roland|Édith|Renaud|Nadège|Émilie|Davy|Matthieu|Maurice|Constant|Thècle|Hermann|Côme et Damien|Vincent|Venceslas|Michel|Jérôme".split("|"),
     10: "Thérèse|Léger|Gérard|François|Fleur|Bruno|Serge|Pélagie|Denis|Ghislain|Firmin|Wilfried|Géraud|Juste|Aurélie, Thérèse|Edwige|Baudouin|Luc|René|Adeline|Céline|Élodie|Jean|Florentin|Crépin, Enguerrand|Dimitri|Emeline|Simon et Jude|Narcisse|Bienvenue|Quentin".split("|"),
@@ -31406,6 +31406,11 @@ def _daily_recap_long_date(value: datetime.date) -> str:
     weekdays = ("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche")
     months = ("", "janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre")
     return f"{weekdays[value.weekday()]} {value.day} {months[value.month]} {value.year}"
+
+
+def _daily_recap_display_date(value: datetime.date) -> str:
+    """Return the shorter date used in the greeting card."""
+    return _daily_recap_long_date(value).rsplit(" ", 1)[0]
 
 
 def _daily_recap_weather_description(code: Any) -> str:
@@ -31460,10 +31465,14 @@ def _daily_recap_nameday_label(nameday: Any) -> str:
         return ""
     lowered = value.casefold()
     if lowered.startswith("sainte "):
-        return f"la Sainte {value[7:].strip()}"
+        return f"la Sainte-{value[7:].strip()}"
     if lowered.startswith("saint "):
-        return f"la Saint {value[6:].strip()}"
-    return value if lowered.startswith(("la saint ", "la sainte ")) else f"la Saint {value}"
+        return f"la Saint-{value[6:].strip()}"
+    if lowered.startswith("la sainte "):
+        return f"la Sainte-{value[10:].strip()}"
+    if lowered.startswith("la saint "):
+        return f"la Saint-{value[9:].strip()}"
+    return value if lowered.startswith(("la saint-", "la sainte-")) else f"la Saint-{value}"
 
 
 def fetch_daily_recap_greeting_context(delivery_date: datetime.date) -> Dict[str, Any]:
@@ -31514,12 +31523,13 @@ def _daily_recap_greeting_html(recipient: str, context: Dict[str, Any]) -> str:
     first_name = DAILY_RECAP_FIRST_NAMES.get(recipient.lower(), "")
     nameday = _daily_recap_nameday_label(context.get("nameday"))
     celebration = (
-        f'<div style="margin-top:10px;font-size:17px;font-weight:800;color:#7c3aed">🎉 Aujourd’hui, c’est {html.escape(nameday)} !</div>'
+        f'<div style="margin-top:5px;color:#64748b;font-size:14px">Nous sommes le {html.escape(_daily_recap_display_date(context["date"]))} et aujourd\'hui c\'est {html.escape(nameday)} !</div>'
         if nameday else ""
     )
     quote = context.get("quote") or _daily_recap_quote(context["date"])
     quote_card = (
-        f'<div style="margin-top:16px;padding:15px 18px;background:#f5f3ff;border-left:4px solid #7c3aed;border-radius:10px;color:#312e81">'
+        f'<div style="margin-top:16px;font-size:14px;font-weight:800;color:#172554">Citation du jour</div>'
+        f'<div style="margin-top:6px;padding:15px 18px;background:#f5f3ff;border-left:4px solid #7c3aed;border-radius:10px;color:#312e81">'
         f'<div style="font-size:16px;font-style:italic;line-height:1.5">« {html.escape(str(quote.get("text") or ""))} »</div>'
         f'<div style="margin-top:6px;font-size:12px;font-weight:800;color:#6d28d9">— {html.escape(str(quote.get("author") or ""))}</div></div>'
     )
@@ -31541,7 +31551,7 @@ def _daily_recap_greeting_html(recipient: str, context: Dict[str, Any]) -> str:
     return (
         '<tr><td style="padding-top:12px"><div style="padding:22px;background:#fff;border:1px solid #e0e7ff;border-radius:20px;box-shadow:0 8px 24px rgba(30,41,59,.06)">'
         f'<div style="font-size:23px;font-weight:900;color:#172554">Bonjour {html.escape(first_name)} 👋</div>'
-        f'<div style="margin-top:5px;color:#64748b;font-size:14px">Nous sommes le {html.escape(_daily_recap_long_date(context["date"]))}</div>{celebration}'
+        f'{celebration}'
         f'<table role="presentation" width="100%" style="margin-top:14px"><tr>{"".join(weather_cards)}</tr></table>{quote_card}</div></td></tr>'
     )
 
