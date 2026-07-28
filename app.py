@@ -16056,8 +16056,8 @@ def admin_sales_tracking():
 @app.get("/admin/suivi-ventes/apercu-mail-quotidien")
 @admin_login_required
 def admin_sales_tracking_daily_recap_preview():
-    """Display Clement's exact daily recap email without sending or persisting it."""
-    delivery_date = datetime.datetime.now(ZoneInfo("Europe/Paris")).date()
+    """Display Clement's next 08:00 recap without sending or persisting it."""
+    delivery_date = datetime.datetime.now(ZoneInfo("Europe/Paris")).date() + datetime.timedelta(days=1)
     report_date = delivery_date - datetime.timedelta(days=1)
     report = build_daily_recap_data(load_data(run_background_tasks=False), report_date)
     greeting_context = fetch_daily_recap_greeting_context(delivery_date)
@@ -31356,6 +31356,26 @@ DAILY_RECAP_WEATHER_LOCATIONS = {
     "puget": {"label": "Puget sur Argens", "latitude": 43.455, "longitude": 6.685},
     "aurillac": {"label": "Aurillac", "latitude": 44.926, "longitude": 2.441},
 }
+DAILY_RECAP_QUOTES = (
+    ("Seuls ceux qui sont assez fous pour penser qu’ils peuvent changer le monde y parviennent.", "Steve Jobs"),
+    ("Le succès, c’est d’aller d’échec en échec sans perdre son enthousiasme.", "Winston Churchill"),
+    ("Ils ne savaient pas que c’était impossible, alors ils l’ont fait.", "Mark Twain"),
+    ("La meilleure façon de prédire l’avenir est de le créer.", "Peter Drucker"),
+    ("Le seul endroit où le succès précède le travail est dans le dictionnaire.", "Vidal Sassoon"),
+    ("Faites de votre vie un rêve, et d’un rêve, une réalité.", "Antoine de Saint-Exupéry"),
+    ("Le courage n’est pas l’absence de peur, mais la capacité de la vaincre.", "Nelson Mandela"),
+    ("La simplicité est la sophistication suprême.", "Léonard de Vinci"),
+    ("On ne voit bien qu’avec le cœur. L’essentiel est invisible pour les yeux.", "Antoine de Saint-Exupéry"),
+    ("Il n’y a qu’une façon d’échouer, c’est d’abandonner avant d’avoir réussi.", "Georges Clemenceau"),
+    ("La vie, c’est comme une bicyclette, il faut avancer pour ne pas perdre l’équilibre.", "Albert Einstein"),
+    ("Choisissez un travail que vous aimez et vous n’aurez pas à travailler un seul jour de votre vie.", "Confucius"),
+)
+
+
+def _daily_recap_quote(value: datetime.date) -> Dict[str, str]:
+    """Return a stable quote for a delivery date, shared by preview and email."""
+    quote, author = DAILY_RECAP_QUOTES[value.toordinal() % len(DAILY_RECAP_QUOTES)]
+    return {"text": quote, "author": author}
 
 
 def _daily_recap_long_date(value: datetime.date) -> str:
@@ -31424,7 +31444,12 @@ def _daily_recap_nameday_label(nameday: Any) -> str:
 
 def fetch_daily_recap_greeting_context(delivery_date: datetime.date) -> Dict[str, Any]:
     """Fetch the nameday and today's forecasts used by the 08:00 greeting."""
-    context: Dict[str, Any] = {"date": delivery_date, "nameday": "", "weather": {}}
+    context: Dict[str, Any] = {
+        "date": delivery_date,
+        "nameday": "",
+        "weather": {},
+        "quote": _daily_recap_quote(delivery_date),
+    }
     try:
         response = requests.get("https://nominis.cef.fr/json/nominis.php", params={"date": delivery_date.isoformat()}, timeout=10)
         response.raise_for_status()
@@ -31477,6 +31502,12 @@ def _daily_recap_greeting_html(recipient: str, context: Dict[str, Any]) -> str:
         f'<div style="margin-top:10px;font-size:17px;font-weight:800;color:#7c3aed">🎉 Aujourd’hui, c’est {html.escape(nameday)} !</div>'
         if nameday else ""
     )
+    quote = context.get("quote") or _daily_recap_quote(context["date"])
+    quote_card = (
+        f'<div style="margin-top:16px;padding:15px 18px;background:#f5f3ff;border-left:4px solid #7c3aed;border-radius:10px;color:#312e81">'
+        f'<div style="font-size:16px;font-style:italic;line-height:1.5">« {html.escape(str(quote.get("text") or ""))} »</div>'
+        f'<div style="margin-top:6px;font-size:12px;font-weight:800;color:#6d28d9">— {html.escape(str(quote.get("author") or ""))}</div></div>'
+    )
     keys = ["puget"] + (["aurillac"] if recipient.lower() in {"elsa@integraleacademy.com", "clement@integraleacademy.com"} else [])
     weather_cards = []
     for key in keys:
@@ -31496,7 +31527,7 @@ def _daily_recap_greeting_html(recipient: str, context: Dict[str, Any]) -> str:
         '<tr><td style="padding-top:12px"><div style="padding:22px;background:#fff;border:1px solid #e0e7ff;border-radius:20px;box-shadow:0 8px 24px rgba(30,41,59,.06)">'
         f'<div style="font-size:23px;font-weight:900;color:#172554">Bonjour {html.escape(first_name)} 👋</div>'
         f'<div style="margin-top:5px;color:#64748b;font-size:14px">Nous sommes le {html.escape(_daily_recap_long_date(context["date"]))}</div>{celebration}'
-        f'<table role="presentation" width="100%" style="margin-top:14px"><tr>{"".join(weather_cards)}</tr></table></div></td></tr>'
+        f'<table role="presentation" width="100%" style="margin-top:14px"><tr>{"".join(weather_cards)}</tr></table>{quote_card}</div></td></tr>'
     )
 
 
